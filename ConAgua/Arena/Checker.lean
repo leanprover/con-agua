@@ -3,6 +3,7 @@ import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.DeclStep
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclStepGo
+import ConAgua.Arena.PromoteRecRef
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -64,6 +65,8 @@ Each stub is a not-yet-translated callee; the spec is what the real code will ha
 /-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
 `promote_new(k, vis, fresh)` (program: `PromoteProg`). -/
 
+/-- **`promote_vg` refines `promoteVG PMemo.empty coreWalkFuel`** under the loop's relation. -/
+@[refines ConRon.Arena.promoteVG]
 theorem promoteVG_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
@@ -73,7 +76,43 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
       LoopR dn s'.mem (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) vis fe pend ds ∧
       PMemoR s'.mem (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 ∧
       decVG (erecP s'.mem) (r.headD 0).toNat =
-        some (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2; ⊤⦄ := sorry
+        some (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend g vg hvg hR
+  refine triple_post (callW_spec p n "promote_vg" [g, vis] s₀) fun r s' ⟨hl, hc⟩ => ?_
+  obtain ⟨pm₀, hP⟩ := hR.pmemo
+  obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
+  obtain ⟨a', pm', vg', hrun, hD, hP', hdec, hg, hts, hcp, hf⟩ :=
+    vg_rel p hpr n s₀.mem a₀ pm₀ g vis vg r s'.mem hR.check.arena hP hvg hiw4 hc
+  have hok : AM.ok (promoteVG PMemo.empty coreWalkFuel vg) a₀ := by simp [AM.ok, hrun]
+  have hst : AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀ = a' := by simp [AM.st, hrun]
+  have hres : AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀ = (pm', vg') := by
+    simp [AM.res, hrun]
+  rw [hst, hres]
+  have hcA : a'.caches = a₀.caches := congrArg Prod.fst hcp
+  have hpA : a'.pins = a₀.pins := congrArg Prod.snd hcp
+  have hA := vg_arrs
+  have hC := vg_ctl
+  have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW :=
+    hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
+  refine ⟨hl, hok, ⟨⟨hD, ?_, ?_, ?_⟩, ?_, ?_, ?_, ⟨pm', hP'⟩⟩, hP', hdec⟩
+  · rw [hcA]
+    exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+      (fun x hx => by have := hC x hx; omega) hf
+  · rw [hpA]
+    exact hR.check.pins.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hf
+  · exact hR.check.env.grow (fun b h1 h2 => hf.1 b (fun h => by
+        have := hA b h; simp only [ArrId] at this; omega)
+      (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
+      hg
+  · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
+      (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
+  · rw [hf.1 DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
+      hf.1 DLP (fun h => by have := hA _ h; revert this; decide) (by decide)]
+    exact hR.decls
+  · refine ⟨?_, hts, ?_, by rw [hf.2.2.1]; exact hiw4, by rw [hf.2.2.1]; exact hiw5⟩
+    · simp only [L.Ind.iwTop, hIW]
+      rw [hf.2.1 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
+    · rw [hIW]; exact hiw3
 
 theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
