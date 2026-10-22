@@ -3758,4 +3758,146 @@ theorem phApp_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Optio
 
 end census
 
+/-! ## `app_hole` -/
+
+def ahC : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => some ([r.headD 0, r.tail.headD 0], m1)
+
+def ahK (n : Nat) (m : Mem) (no nl us nn : Word) : Option (List Word) → Option (List Word × Mem)
+  | none => none
+  | some r => if r.headD 0 = 0 then some ([0, 0], m)
+      else ahC (canonW n m no nl us nn (r.tail.headD 0) (r.tail.tail.headD 0))
+
+def ahW (n : Nat) (m : Mem) (no nl us b nn e : Word) : Option (List Word × Mem) :=
+  ahK n m no nl us nn (phW n m b e nn)
+
+section arms
+variable (n : Nat) (m : Mem) (no nl us nn : Word) (r : List Word)
+theorem ahK_none (h : r.headD 0 = 0) : ahK n m no nl us nn (some r) = some ([0, 0], m) := by
+  simp only [ahK]; rw [if_pos h]
+theorem ahK_some (h : ¬ r.headD 0 = 0) :
+    ahK n m no nl us nn (some r) = ahC (canonW n m no nl us nn (r.tail.headD 0) (r.tail.tail.headD 0)) := by
+  simp only [ahK]; rw [if_neg h]
+theorem ahC_some (r : List Word) (m1 : Mem) : ahC (some (r, m1)) = some ([r.headD 0, r.tail.headD 0], m1) := rfl
+end arms
+attribute [ind_grind] ahK_none ahK_some ahC_some
+
+section spec
+variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hph : p.lookup "ph_app" = some phApp)
+  (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
+  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+  (his : p.lookup "intern_sort" = some internSort)
+  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+  (hif : p.lookup "intern_fvar" = some internFVar)
+  (hcs : p.lookup "nest_canon_sub" = some nestCanonSub)
+  (hp : p.lookup "app_hole" = some appHole)
+include hv hph hf hpw hsf hsp his hff hfp hif hcs hp
+
+theorem appHole_spec (n : Nat) (s₀ : St) (no nl us b nn e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "app_hole" [no, nl, us, b, nn, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ ahW n s₀.mem no nl us b nn e = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, appHole]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      phApp_spec p hv hph n, nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hcs n] <;>
+    finish (gen := 40) [St.setLocs_mem', ahW]
+
+end spec
+
+
+theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (no nl us b nn e : Word) (N : Nat) (names : List NIdx) (r : List Word)
+    (hh : ahW n m no nl us b nn e = some (r, m')) (hS : StageR dn vis fe m a) (hN : nn.toNat = N)
+    (he : H e) (hus : H us) (hb : b.toNat + N < 2 ^ 64)
+    (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
+    (hnn : nn.toNat + names.length < 2 ^ 64) :
+    ∃ x a', (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)).run a = .ok (x, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
+  unfold ahW at hh
+  cases hph : phW n m b e nn with
+  | none => rw [hph] at hh; simp [ahK] at hh
+  | some r0 =>
+    rw [hph] at hh
+    obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
+    by_cases hz : r0.headD 0 = 0
+    · rw [ahK_none n m no nl us nn r0 hz] at hh
+      simp only [Option.some.injEq, Prod.mk.injEq] at hh
+      obtain ⟨rfl, rfl⟩ := hh
+      refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
+      cases o with
+      | none =>
+        simp only [ConRon.Arena.appHole?, StateT.run_bind]
+        rw [hrun]; rfl
+      | some pr =>
+        obtain ⟨c, us0⟩ := pr
+        obtain ⟨w1, w2, hr0, -⟩ := hpo
+        rw [hr0] at hz; simp at hz
+    · rw [ahK_some n m no nl us nn r0 hz] at hh
+      cases o with
+      | none => exact absurd hpo hz
+      | some pr =>
+        obtain ⟨c, us0⟩ := pr
+        obtain ⟨w1, w2, hr0, hw1, hd1, hw2, hd2⟩ := hpo
+        subst hr0
+        cases hcw : canonW n m no nl us nn w1 w2 with
+        | none =>
+          simp only [List.tail_cons, List.headD_cons] at hh
+          rw [hcw] at hh; simp [ahC] at hh
+        | some pc =>
+          obtain ⟨rc, m1⟩ := pc
+          simp only [List.tail_cons, List.headD_cons] at hh
+          rw [hcw, ahC_some] at hh
+          simp only [Option.some.injEq, Prod.mk.injEq] at hh
+          obtain ⟨rfl, rfl⟩ := hh
+          obtain ⟨x, a', hrun', hS', hg, hout⟩ := canonW_ok n dn fe vis m m1 a no nl us nn w1 w2 names rc hcw hS
+            hw1 hus hw2 hdec hno hnn
+          refine ⟨x, a', ?_, hS', hg, ?_⟩
+          · simp only [ConRon.Arena.appHole?, StateT.run_bind]
+            rw [hrun]
+            simp only [except_ok_bind]
+            rw [hN, hd1, hd2] at hrun'
+            exact hrun'
+          · cases x with
+            | none => simpa [decOE] using hout
+            | some e3 =>
+              simp only [decOE, decW0E] at hout ⊢
+              obtain ⟨h1, h2, h3⟩ := hout
+              exact ⟨h1, by simpa using h2, by simpa using h3⟩
+
+
+section census
+variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hph : p.lookup "ph_app" = some phApp)
+  (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
+  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+  (his : p.lookup "intern_sort" = some internSort)
+  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+  (hif : p.lookup "intern_fvar" = some internFVar)
+  (hcs : p.lookup "nest_canon_sub" = some nestCanonSub)
+  (hp : p.lookup "app_hole" = some appHole)
+include hv hph hf hpw hsf hsp his hff hfp hif hcs hp
+
+/-- **`app_hole` refines `appHole?`**. -/
+@[refines ConRon.Arena.appHole?]
+theorem appHole_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis no nl us b nn e : Word) (N : Nat) (names : List NIdx) (hN : nn.toNat = N)
+    (he : H e) (hus : H us) (hb : b.toNat + N < 2 ^ 64) (hS : StageR dn vis fe s₀.mem a₀)
+    (hdec : decHL s₀.mem no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
+    (hnn : nn.toNat + names.length < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "app_hole" [no, nl, us, b, nn, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decOE s'.mem r (AM.res (ConRon.Arena.appHole? names (decI us) b.toNat N (decI e)) a₀); ⊤⦄ := by
+  refine triple_post (appHole_spec p hv hph hf hpw hsf hsp his hff hfp hif hcs hp n s₀ no nl us b nn e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ahW_ok n dn fe vis _ _ a₀ no nl us b nn e N names r hm hS hN he hus hb
+    hdec hno hnn
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+
+end census
+
 end L.Ind
