@@ -5668,3 +5668,13 @@ Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written**
 `installHeader`, `installValueGuards`, `checkValueGroup` now `sorry` — through stubs only); bad
 links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
 `romExprL`/`internAllPinsL` at the program's ROM).
+
+### Landing 2 (lane `defeq`)
+* Merged helpers `defeq-slots` (KnotSlot, InferLeaves). The phase-4 callees landed by lane
+  `exprops4` replace three stub names: `abstract1` → `abs_entry`, `abstract_range` → `ar_entry`;
+  `has_fvar`, `inst_list` already had the right names. `DefeqCallees` keeps their `CoreS`-at-
+  `coreWalkFuel` form as an assumption (the refinements are under `ArenaA` at every `F ≥ n`): the
+  bridge (L fuel `≤ coreWalkFuel`, `AbsR` across `scratch_enter`, `ArenaA` from `CoreS`) is next.
+* `infer_const` passes the record's own name `EREC[p + 1]` to `const_ty_at` (the twin keys
+  `constTyC` by `cv.name`; `EnvR` does not promise `cv.name = n`). Lane `whnf`: the same gap at
+  `WhnfIota.lean`'s `const_ty_at(cj, …)` call.

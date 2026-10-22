@@ -353,11 +353,11 @@ include hp in
 theorem inferLamResult_spec (n : Nat) (s₀ : St) (ty bt d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lam_result" [ty, bt, d]
     ⦃fun r s' => LocEq s' s₀ ∧
-      lamResK p n ty (callW p n "abstract1" [bt, d, 0] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+      lamResK p n ty (callW p n "abs_entry" [bt, d, 0] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.lamResult]
   simp only [callFn, inferLamResultL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "abstract1",
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "abs_entry",
       callW_spec p n "mk_forall"] <;>
     finish [lamResK_some, call1W_some]
 
@@ -380,7 +380,7 @@ theorem inferLamResult_refines (n : Nat) (ha : Abstract1OK p) (s₀ : St) (a₀ 
     (inferLamResult_spec p hp n s₀ ty bt d)
   subst hs0
   refine ⟨hloc, ?_⟩
-  cases hc : callW p n "abstract1" [bt, d, 0] s.mem with
+  cases hc : callW p n "abs_entry" [bt, d, 0] s.mem with
   | none => rw [hc] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
