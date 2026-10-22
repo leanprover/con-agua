@@ -1931,4 +1931,190 @@ theorem decTM_ind {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M)
   obtain ⟨w5, h5, a1, ha1, w4, h4, w3, h3, w2, h2, ac, hac, w1, hw1, w0, h0, a, ha, rfl⟩ := h
   exact h5
 
+
+/-! ## `sl_cons` on a list of numbers (`IW` words read as `Nat`s) -/
+
+/-- **`sl_cons` builds `x :: xs`**, the pool only grown, nothing else written. -/
+theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
+    (h : copyW n (consPre m x l) (rdW (m.arr64 CTL) 200 + 1) o l = some m')
+    (hne : l + 1 ≠ 0)
+    (hroom : (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat ≤ (m.arr64 IW).size)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size)
+    (hsrc : o.toNat + l.toNat ≤ (rdW (m.arr64 CTL) 200).toNat)
+    (hxs : decNL m o.toNat l.toNat = some xs) :
+    decNL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (x.toNat :: xs) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + (l + 1) := by
+  generalize hq : rdW (m.arr64 CTL) 200 = q at *
+  have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun h0 => hne (by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [h0])
+  have hl1 : (l + 1).toNat = l.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp
+    have : l.toNat < 2 ^ 64 := l.toNat_lt
+    omega
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rw [hl1] at hroom
+  -- the memory before the copy
+  have hm1IW : (consPre m x l).arr64 IW = ((m.arr64 IW).set! q.toNat x) := by
+    simp only [consPre, allocMem, hq]
+    rw [Mem.arr64_set64_same, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hm1sz : ((consPre m x l).arr64 IW).size = (m.arr64 IW).size := by rw [hm1IW]; simp
+  obtain ⟨hA, hS, hW, hG⟩ := copyW_get n _ _ _ _ _ h (by rw [hq1]; omega) (by rw [hq1, hm1sz]; omega)
+    (by rw [hm1sz]; exact hsz)
+  have hm1get : ∀ i, ((consPre m x l).arr64 IW)[i]? =
+      if i = q.toNat then some x else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hm1IW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    by_cases hi : q.toNat = i
+    · subst hi; simp [show q.toNat < (m.arr64 IW).size by omega]
+    · simp [hi, Ne.symm hi]
+  have hget : ∀ i, (m'.arr64 IW)[i]? =
+      if i = q.toNat then some x
+      else if q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat then (m.arr64 IW)[o.toNat + (i - (q.toNat + 1))]?
+      else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hG i, hq1]
+    by_cases hi : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + l.toNat
+    · rw [if_pos hi, if_neg (by omega), if_pos hi, hm1get, if_neg (by omega)]
+    · rw [if_neg hi, hm1get]
+      by_cases hiq : i = q.toNat
+      · simp [hiq]
+      · rw [if_neg hiq, if_neg hiq, if_neg hi]
+  -- the other arrays and CTL
+  have hCTL : ∀ i, i ≠ (200 : Word) → rdW (m'.arr64 CTL) i = rdW (m.arr64 CTL) i := by
+    intro i hi
+    rw [hA CTL (by decide)]; exact consPre_ctl m x l i hi
+  have hEREC : m'.arr64 EREC = m.arr64 EREC := by
+    rw [hA EREC (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
+    rw [hA CTL (by decide)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_⟩, htop⟩
+  · rw [hl1, decNL_succ]
+    have h0 : iwN m' q.toNat = some x.toNat := by
+      simp [iwN, nat?, iwA, hget]
+    rw [h0]
+    have : decNL m' (q.toNat + 1) l.toNat = some xs := by
+      rw [← hxs]
+      simp only [decNL]
+      apply mapM_opt_congr
+      intro j hj
+      have hj' : j < l.toNat := List.mem_range.mp hj
+      simp only [iwN, nat?, iwA, hget]
+      rw [if_neg (by omega), if_pos (by omega)]
+      have : o.toNat + (q.toNat + 1 + j - (q.toNat + 1)) = o.toNat + j := by omega
+      simp [this]
+    simp [this]
+  · have : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
+      rw [UInt64.toNat_add, hl1]; simp; omega
+    simp only [iwTop, htop, this, hq]; omega
+  · simp only [erTop, hCTL 129 (by decide)]; exact Nat.le_refl _
+  · intro i hi
+    simp only [iwTop, hq] at hi
+    rw [hget, if_neg (by omega), if_neg (by omega)]
+  · intro i _; rw [hEREC]
+  · intro b hb hbc
+    rw [hA b (by simpa using hb)]; simp only [consPre, allocMem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), Mem.arr64_set64_ne _ _ _ _ _ hbc]
+  · intro i hi; exact hCTL i (by simpa using hi)
+  · intro b
+    by_cases hb : b = IW
+    · subst hb; rw [hS, hm1sz]
+    · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
+  · rw [hW]; simp only [consPre, allocMem, Mem.words_size_set64]
+
+
+/-- `consW` is the memory `slCons_dec` speaks about. -/
+theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
+    (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hxs : decNL m o.toNat l.toNat = some xs) :
+    r = [rdW (m.arr64 CTL) 200, l + 1] ∧
+    decNL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (x.toNat :: xs) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
+    (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
+  simp only [consW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  simp only [allocW] at h
+  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
+  · simp [h1] at h
+  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
+  · simp [h1, h2] at h
+  simp only [h1, h2, if_false] at h
+  cases hcp : copyW (n - 1) ((allocMem m (l + 1)).set64 IW (rdW (m.arr64 CTL) 200) x)
+      (rdW (m.arr64 CTL) 200 + 1) o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+    simp [hcp] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
+    have hq : (rdW (m.arr64 CTL) 200).toNat ≤ (m.arr64 IW).size := by
+      have : ¬ (m.len64 IW).toNat < (rdW (m.arr64 CTL) 200).toNat := h1
+      omega
+    have hroom : (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat ≤ (m.arr64 IW).size := by
+      have : ¬ (m.len64 IW - rdW (m.arr64 CTL) 200).toNat < (l + 1).toNat := h2
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
+      omega
+    have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun e => h0 (by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [e])
+    have hl1 : (l + 1).toNat = l.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; have := l.toNat_lt; omega
+    obtain ⟨hd, hg, hf, ht⟩ := slCons_decN (n := n - 1) (xs := xs) hcp h0 hroom hsz hc
+      (by simpa [iwTop] using hsrc) hxs
+    refine ⟨rfl, hd, hg, hf, hl1, ?_⟩
+    have e : (rdW (m.arr64 CTL) 200 + (l + 1)).toNat =
+        (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat := by
+      rw [UInt64.toNat_add]; omega
+    simp only [iwTop, ht, e]
+
+
+
+/-- The pool's top after a `sl_cons` stays within the array. -/
+theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
+    (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    {xs : List Nat} (hxs : decNL m o.toNat l.toNat = some xs) :
+    iwTop m' ≤ (m'.arr64 IW).size := by
+  obtain ⟨-, -, -, hf, -, ht⟩ := consW_decN h hsz hc hsrc hxs
+  rw [← ht, hf.2.2.1 IW]
+  simp only [consW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  simp only [allocW] at h
+  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
+  · simp [h1] at h
+  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
+  · simp [h1, h2] at h
+  have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
+  have : ¬ (m.len64 IW).toNat < (rdW (m.arr64 CTL) 200).toNat := h1
+  have h2' : ¬ (m.len64 IW - rdW (m.arr64 CTL) 200).toNat < (l + 1).toNat := h2
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at h2'
+  omega
+
+/-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
+`x :: xs`. -/
+theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
+    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hxs : decNL m o.toNat l.toNat = some xs) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (x.toNat :: xs) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_decN h hsz hc hsrc hxs
+  have hroom := consW_roomN h hsz hc hsrc hxs
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  subst hr
+  refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
+  · simp only [erTop, h129, hE]; exact hE1
+  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hE]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
+
+
 end L.Ind
