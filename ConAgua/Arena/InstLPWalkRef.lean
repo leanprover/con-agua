@@ -76,7 +76,7 @@ theorem ilw_set {m m' : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis 
   have hf := msetG_frame lpSch lpSch_wf m m' h 0 r hs
   have hf' : MemFrame [lpSch.arr] [lpSch.cs, lpSch.cs + 1] m m' := hf.mono (by simp) (by simp)
   obtain ⟨hS', hk⟩ := CoreS.frameLP lpSch (.inl rfl) hS hf'
-    (hS.memos.frame hf' (by decide) (by decide) (by decide) (by decide))
+    (hS.memos.frameLP hf' (hM.setLP h r hh hr hs).lpMemos (by decide) (by simp [lpSch, lplSch, lplsSch]))
   exact ⟨hS'.lpMemos _ a.memos.instLPLC a.memos.instLPLsC, hk, hM.setLP h r hh hr hs⟩
 
 /-- `internRebuilt*`: the node itself when every child came back equal (`c`), else the interning. -/

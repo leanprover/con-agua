@@ -80,7 +80,7 @@ theorem ilw_internE {v : ENodeView} {A : List ArrId} {C : List Word} (r : Word)
     ILWStep (internE v) a dn m m' vis fe M eb r := by
   have hrun := AM.run_of_ok _ _ hok
   have hk := Keeps.run (keepsW_internE v) hrun
-  have hS' := hS.arena_frame hD hk hf h128 hpins henv hC128 hCenv hmA hmC hmWA hmWC hscA hscC
+  have hS' := hS.arena_frame hD hk hf h128 hpins henv hC128 hCenv hmA hmC hmWA hmWC hLA hLC hscA hscC
   obtain ⟨hM', hg⟩ := hM.of_internE hok hf hLA hLC
   refine ⟨_, ?_, ⟨M, hS', KeptAll.refl _ _, StackKept.of_frame hf hSA hSC hL⟩, hM', hg, hr⟩
   rw [hrun, hres]

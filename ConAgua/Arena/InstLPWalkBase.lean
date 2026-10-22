@@ -31,17 +31,6 @@ namespace L.Arena
 
 /-! ## The level memos' keys and values -/
 
-/-- A one-word level (or level-list) key: the handle word, second word `0`. -/
-def ilKey {k : IdxKind} : MemoKey (Idx k) where
-  dk k1 _ := decI k1
-  ek x := (x.word.toUInt64, 0)
-  ok k1 k2 := k1.toNat < 2 ^ 32 ∧ k2 = 0
-  ek_dk k1 k2 h := by simp only [(word_decI _ k1 h.1).mpr rfl, h.2]
-  ok_tomb k1 k2 h e := by subst e; exact absurd h.1 (by decide)
-
-/-- A level-valued memo's value relation: a handle word that denotes the entry. -/
-def VI {k : IdxKind} (_ : Mem) (w : Word) (v : Idx k) : Prop := v = decI w ∧ w.toNat < 2 ^ 32
-
 theorem lpSch_wf : lpSch.WF := ⟨by decide, by decide⟩
 theorem lplSch_wf : lplSch.WF := ⟨by decide, by decide⟩
 theorem lplsSch_wf : lplsSch.WF := ⟨by decide, by decide⟩
@@ -231,13 +220,6 @@ theorem ILWMemo.setLPLs {m m' : Mem} {a : AState} (h : ILWMemo m a) (u r : Word)
 
 
 /-! ## The clears -/
-
-/-- **The walk memos are well formed** (at some maps): what the entry needs to clear them (the
-twin starts each call from `∅`). -/
-def LPMemos (m : Mem) : Prop :=
-  (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRV lpSch lfKey VH m mp) ∧
-  (∃ mp : Std.HashMap LIdx LIdx, MemoRV lplSch ilKey VI m mp) ∧
-  (∃ mp : Std.HashMap LsIdx LsIdx, MemoRV lplsSch ilKey VI m mp)
 
 theorem ILWMemo.lpMemos {m : Mem} {a : AState} (h : ILWMemo m a) : LPMemos m :=
   ⟨⟨_, h.lp⟩, ⟨_, h.lpl⟩, ⟨_, h.lpls⟩⟩
