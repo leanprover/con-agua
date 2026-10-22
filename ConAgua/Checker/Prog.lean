@@ -1227,6 +1227,7 @@ def checkerProg : Prog := [
   ("nest_seed_of", L.Ind.nestSeedOfL),
   ("nest_seed_of_go", L.Ind.nestSeedOfGoL),
   ("nest_seeds", L.Ind.nestSeedsL),
+  ("nest_seeds_fuel", L.Ind.nestSeedsFuelL),
   ("nest_uniform", L.Ind.nestUniformL),
   ("nest_uniform_cs", L.Ind.nestUniformCsL),
   ("nest_uniform_ok", L.Ind.nestUniformOkL),
