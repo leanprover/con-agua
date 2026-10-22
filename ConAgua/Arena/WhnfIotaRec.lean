@@ -83,7 +83,7 @@ def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, rl, mo)
 /-- The verified checks of a case-3 redex past `iotaCase3`: the constructor's levels against the
 comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`), its parameters
 (`iota_rec_cmp`), its telescope at the full grade (`iota_certs_full`), the indices
-(`iota_index_ok`; the twin's `(args.take mI).drop rP`, empty at offset `so` when `mI < rP`). -/
+(`iota_index_ok`; the twin's `(args.take mI).drop rP`: the slice from `so + min rP mI`). -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 def iotaRecVckL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)
     locals (lok, ok, tyC) {
@@ -98,7 +98,8 @@ def iotaRecVckL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo
   if ok == 0 { return 0 };
   ok := call iota_index_ok(mode, vis, d, EREC.u64[recP + 5], EREC.u64[recP + 6],
     EREC.u64[rl + 2], tyC, mo, mn,
-    so + EREC.u64[recP + 6] * u64(EREC.u64[recP + 6] <= EREC.u64[recP + 5]),
+    so + (EREC.u64[recP + 6] -
+      (EREC.u64[recP + 6] - EREC.u64[recP + 5]) * u64(EREC.u64[recP + 5] <= EREC.u64[recP + 6])),
     (EREC.u64[recP + 5] - EREC.u64[recP + 6]) * u64(EREC.u64[recP + 6] <= EREC.u64[recP + 5]));
   return ok
 }
@@ -118,13 +119,14 @@ def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo
 
 /-- The fire past the major's arguments `(mo, mn)` (at the stack top): their count, the
 certificate family, the rule's right-hand side at the recursor's levels applied to the leading
-`rP` arguments (the twin's `args.take rP`: all `mI + 1` of them when `mI < rP`) and the fields. -/
+`rP` arguments (the twin's `args.take rP`: all `mI + 1` of them when `mI < rP`, so `rP` is capped
+at `mI + 1`) and the fields. -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 def iotaRecFire2L : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (cp, rP, fam, rhs, x) {
   cp := EREC.u64[rl + 2];
   rP := EREC.u64[recP + 6];
-  if EREC.u64[recP + 5] < rP { rP := EREC.u64[recP + 5] + 1 };
+  rP := rP - (rP - EREC.u64[recP + 5] - 1) * u64(EREC.u64[recP + 5] < rP);
   if mn < cp { return (0, 0) };
   if mn - cp != EREC.u64[rl + 1] { return (0, 0) };
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
