@@ -3558,6 +3558,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
 | 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+| 146‥149 | `PNM`, `PLM`, `PLSM`, `PEM` | `PMemoR` (`LoopR.pmemo`) | the promotion's four memos (names, levels, level lists, expressions; lane `decls2-promote`) |
 | 192 | `LH` | levels' heap (per call, no relation: scratch) | level-algorithm heap, nodes `[tag, a, b]`, bump-allocated below `CTL[192]` (lane `levels`) |
 
 `CTL` words:
@@ -3579,6 +3580,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
+| 140‥147 | `PMemoR` | stamp − 1, live count of `PNM`, `PLM`, `PLSM`, `PEM` (lane `decls2-promote`) |
 | 192 | levels' heap (per call) | the heap top (lane `levels`) |
 
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
