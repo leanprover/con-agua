@@ -228,9 +228,10 @@ if "--publish" in sys.argv:
     if gf.exists():
         gid = gf.read_text().strip()
         subprocess.run(["gh", "gist", "edit", gid, "-f", out.name, str(out)], check=True)
-        r = subprocess.run(["gh", "gist", "edit", gid, "-f", "phases.svg", str(dash / "phases.svg")])
-        if r.returncode != 0:  # first time: add the file
-            subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / "phases.svg")], check=True)
+        for extra in ("phases.svg", "progress.csv"):  # the chart, and the census history (durable copy)
+            r = subprocess.run(["gh", "gist", "edit", gid, "-f", extra, str(dash / extra)])
+            if r.returncode != 0:  # first time: add the file
+                subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / extra)], check=True)
         print("updated gist", gid)
     else:
         r = subprocess.run(["gh", "gist", "create", "--desc", "con-agua progress", str(out)],
