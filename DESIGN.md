@@ -5054,6 +5054,40 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
 * Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
   `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
 
+### Landing 3 (03:10): round-1 helpers done
+* Census phase 8: **55 proven, 30 sorry (through stubs), 130 written** (start of lane: 15 / 1 / 199);
+  totals 362 proven / 81 sorry of 1352.
+* Lead since landing 2: `struct_ctor_resid_ok` (`IndSumSpec4.lean`; `hd` guarded below `2^32`).
+* Helper `parts` (11 functions, ~4.5k proof lines, `IndPartsSpec2‥6`): `BlockShape.nIdxs`,
+  `.memberNames`, `.lps`, `.allCtors`, `BlockParts.complete`, `piBinders`, `blockCounts?`,
+  `recTargetOf`, `blockRecNamesUnreserved`, `blockRecLpsOk` (with an `sl_eq` model),
+  `checkShapelessFormers`, `checkShapeless`, `BlockShape.withSort` (through `lvl_eq`). **Bug:**
+  `member_names_copy` read `EREC[member]` (a member record's word 0 is the `cvT` pointer).
+* Helper `rec` (21 tags, ~4.3k lines): the `RecClass` readers and generators (`classBinder`,
+  `ClassGen.binder`, `exprGetD`, `fvarHead`, `closeLams`, `ClassGen.slotVar`/`.motVar`,
+  `classRecOf`, `ClassRead.motiveSlot`/`.classes`/`.recCls`, `ClassGen.ihParts`), `classMinorSlot`,
+  `classLeafAt`, `classStreamRecs`, `abstractPrefix(List)`, `targetHoles`, `targetPinTys`,
+  `targetPiDomsWith`, `targetCtorAt` (now whole). **Bug:** `class_gen_ih_parts` read
+  `IW[g+3+t]` for the class record pointer instead of `IW[IW[g+3]+t]`.
+* Helper `pos` (~6.2k lines): `nestKindsFlat`, `nestBlockOf`, `nestResHead`, `nestCtorEntry`,
+  `instPisWith`, `closeTelescope`, `nestCanonSub`, `nestFrameMates(.go)`, the memo walks
+  `mentionsAnyGo`/`Const`, `nestOccGo`/`nestOcc`, `replaceAppsGo`/`replaceApps`, `depthGo`/`depth`,
+  `whnfWalkFuel`, `memberIdxAt?`, `phApp`, `appHole`, `nestPhs`, `nestCanonCrest`.
+* **Hypotheses beyond the stage relation** (preconditions a caller must discharge, listed so they
+  are not forgotten): the memo walks take memo well-formedness (`maMR`, `rpMR`, `dpMR`, `noMR`;
+  stubs give no frame, so it cannot be carried across a stub call — helper `pos` suggests putting it
+  into `StageR`); `class_read_rec_cls` takes `hstab` (records stay decodable as the pool grows),
+  `class_stream_recs` `RecsOK`, `class_read_classes` `SlotsExt` (records below the tops); several
+  take slice bounds. A generic "decoders below the tops are stable under `IWGrow`" lemma (one per
+  decoder today: `decHL_grow`, `decBL_grow`, `decCVp_grow`, helper `rec`'s `decCK_grow`,
+  `decNL_grow`) would discharge most.
+* L code: ~20 loops became self-recursion, ~15 handle/overflow guards after master interns
+  (no bound lemma; master has `mkAppW_hw` for `mk_app` only).
+* Cross-helper lemma-name clashes surfaced only when one file imported two helpers' files;
+  `IndAll.lean` (imports every spec file, in the lakefile) now catches them.
+* Round 2 (running): helpers `memo` (`IndSum`'s memo walks), `install` (`IndInstall`), `recb`
+  (rest of `RecGen`/`RecCheck`).
+
 ### The frontend's inductive lines: not hooked yet (decision)
 The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
 `frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
