@@ -528,4 +528,86 @@ theorem lazyDeltaReduction_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : S
       fun s => Triple.step_exec (lazyDeltaLoop_spec p (n + 1) s)] <;>
     finish
 
+theorem decIter_done {r : List Word} (h : r.headD 0 ≠ 3) : decIter r = .inl (decLR r) := by
+  unfold decIter decLR
+  by_cases h0 : r.headD 0 = 0
+  · simp only [h0, ↓reduceIte]
+  by_cases h1 : r.headD 0 = 1
+  · simp only [h1, ↓reduceIte]; rfl
+  rw [if_neg h0, if_neg h1, if_neg h, if_neg h0, if_neg h1]
+
+theorem decIter_cont {r : List Word} (h : r.headD 0 = 3) :
+    decIter r = .inr (decE (r.tail.headD 0), decE (r.tail.tail.headD 0)) := by
+  unfold decIter; rw [h]; rfl
+
+section loopRef
+variable (p : Prog) (hp : LazyProg p) (hc : LazyCallees p)
+
+include hp hc in
+/-- **The loop's model refines `lazyDeltaReduction`** at every twin fuel `K` with `j ≤ K + 1`. -/
+theorem lazyW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d : Word) (hmode : mode < 4)
+    (hd : d.toNat < 2 ^ 63) :
+    ∀ j, j ≤ n + 1 → ∀ K, j ≤ K + 1 → ∀ (a b : Word) (m m' : Mem) (s : AState) (M : ModeMaps)
+      (eb x y z : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
+      lazyW p j m mode vis d a b = some (x, y, z, m') →
+      CoreRef (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
+        (decE a) (decE b)) s decLR dn m vis fe M eb [x, y, z] m' Res3 := by
+  intro j
+  induction j with
+  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [lazyW] at h
+  | succ j ih =>
+    intro hjn K hK a b m m' s M eb x y z hS heb ha hb h
+    cases hc1 : callW p j "lazy_iter" [mode, vis, d, a, b] m with
+    | none => rw [lazyW_n (hc := hc1)] at h; cases h
+    | some q =>
+    obtain ⟨r, m₁⟩ := q
+    obtain ⟨j', rfl⟩ := callW_succ hc1
+    obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
+    rw [lazyDeltaReduction_succ_eq, lazyLvl_eq]
+    have e := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (lazyIter_refines p hp hc j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb mode
+        d a b ⟨hS, hmode, heb⟩ ha hb hd) hc1
+    obtain ⟨-, hr1, hr2⟩ := e.2.2.2
+    refine coreRef_bind e (fun M₁ hS₁ => ?_)
+    by_cases h3 : r.headD 0 ≠ 3
+    · rw [lazyW_done (hc := hc1) (h := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
+        Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := h
+      rw [decIter_done h3]
+      refine coreRef_ret hS₁ rfl ?_
+      obtain ⟨g0, -, -⟩ := e.2.2.2
+      exact ⟨g0, hr1, hr2⟩
+    have h3' : r.headD 0 = 3 := by simpa using h3
+    rw [lazyW_cont (hc := hc1) (h := h3')] at h
+    rw [decIter_cont h3']
+    exact ih (by omega) K' (by omega) _ _ m₁ m' _ M₁ eb x y z hS₁ heb hr1 hr2 h
+
+include hp hc in
+/-- **`lazy_delta_reduction` refines `lazyDeltaReduction` at `defeqLoopFuel`** (the twin's call in
+`defeqBody`). -/
+@[refines ConRon.Arena.lazyDeltaReduction]
+theorem lazyDeltaReduction_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
+    (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
+    CoreSpec p (n + 1) "lazy_delta_reduction" [mode, vis, d, a, b]
+      (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
+        (decE a) (decE b)) decLR s₀ a₀ dn vis fe M eb Res3 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (lazyDeltaReduction_spec p hp n s₀ mode vis d a b)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hL : (2 : Nat) ^ 62 = defeqLoopFuel := rfl
+  obtain ⟨g1, g2, g3, g4⟩ := lazyW_ok p hp hc n hk F hF hn dn vis fe mode d hs.mode4 hd (n + 1)
+    (Nat.le_refl _) defeqLoopFuel (by rw [← hL]; omega) a b s.mem s'.mem a₀ M eb _ _ _ hs.rel
+    hs.eb_mode ha hb hW
+  refine ⟨g1, g2, g3.trans rfl, ?_⟩
+  obtain ⟨h1, h2, h3⟩ := g4
+  exact ⟨h1, h2, h3⟩
+
+end loopRef
+
 end L.Arena
