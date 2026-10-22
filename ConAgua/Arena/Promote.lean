@@ -442,17 +442,17 @@ def cvWr : FunDecl := lfn (d, n, q, l, t) locals () {
   return 0
 }
 
-/-- `promote_cv(f, s, d)`: the constant value at `EREC[s‥s+4)` promoted into `EREC[d‥d+4)`
-(name, level parameters, type, in that order). -/
+/-- `promote_cv(f, s)`: the constant value at `EREC[s‥s+4)` promoted (name, level parameters,
+type, in that order); returns its four words `(name, lps.off, lps.len, type)`, the level
+parameters a fresh `EREC` slice. The caller writes the record after every slice is allocated. -/
 -- con-ron: ConRon/Arena/Promote.lean:229-235 ConRon.Arena.promoteCV
 @[l_impl ConRon.Arena.promoteCV]
-def promoteCVL : FunDecl := lfn (f, s, d) locals (n0, o, l, t0, n, q, t, u) {
+def promoteCVL : FunDecl := lfn (f, s) locals (n0, o, l, t0, n, q, t) {
   (n0, o, l, t0) := call cv_rd(s);
   n := call promote_n(f, n0);
   q := call promote_slice(0, f, o, l);
   t := call promote_e(f, t0);
-  u := call cv_wr(d, n, q, l, t);
-  return 0
+  return (n, q, l, t)
 }
 
 /-- `promote_fire(f, s, d)`: a rule's firing mode (words `3‥8` of the 11-word rule records at
@@ -560,13 +560,15 @@ def promoteProjTableL : FunDecl := lfn (f, p) locals (d, sn, tn, lp, c, ss, bs, 
 }
 
 /-- `pci_cv(f, p, n)`: a fresh `n`-word record with `p`'s kind and `p`'s constant value
-promoted (the arms `axiomInfo`, `thmInfo`, and the head of the others). -/
+promoted, allocated after the value's slice (the arms `axiomInfo`, `thmInfo`, and the head of
+the others). -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciCv : FunDecl := lfn (f, p, n) locals (d, u) {
+def pciCv : FunDecl := lfn (f, p, n) locals (nm, q, l, t, d, u) {
+  (nm, q, l, t) := call promote_cv(f, p + 1);
   d := call erec_alloc(n);
   EREC.u64[d] := EREC.u64[p];
-  u := call promote_cv(f, p + 1, d + 1);
+  u := call cv_wr(d + 1, nm, q, l, t);
   return d
 }
 
@@ -659,25 +661,29 @@ def vgRd : FunDecl := lfn (g) locals () {
   return (EREC.u64[g], EREC.u64[g + 5])
 }
 
-/-- `vg_wr(d, k, x)`: a value group's kind and value words written at `d`. -/
+/-- `vg_wr(d, k, n, q, l, t, x)`: a value group's six words written at `d`. -/
 -- con-ron: none — writes an `EREC` record's words (the twin's `ValueGroup` is a value)
-def vgWr : FunDecl := lfn (d, k, x) locals () {
+def vgWr : FunDecl := lfn (d, k, n, q, l, t, x) locals () {
   EREC.u64[d] := k;
+  EREC.u64[d + 1] := n;
+  EREC.u64[d + 2] := q;
+  EREC.u64[d + 3] := l;
+  EREC.u64[d + 4] := t;
   EREC.u64[d + 5] := x;
   return 0
 }
 
 /-- `promote_vg(g, vis)`: `promoteVG PMemo.empty coreWalkFuel` on the value group record `g`;
-returns the promoted record. -/
+returns the promoted record, allocated after its parts. -/
 -- con-ron: ConRon/Arena/Promote.lean:327-335 ConRon.Arena.promoteVG
 @[l_impl ConRon.Arena.promoteVG]
-def promoteVGL : FunDecl := lfn (g, vis) locals (k, j, d, u, x) {
+def promoteVGL : FunDecl := lfn (g, vis) locals (k, j, n, q, l, t, x, d, u) {
   u := call promote_clear();
   (k, j) := call vg_rd(g);
-  d := call erec_alloc(6);
-  u := call promote_cv(⟪CWF⟫, g + 1, d + 1);
+  (n, q, l, t) := call promote_cv(⟪CWF⟫, g + 1);
   x := call promote_e(⟪CWF⟫, j);
-  u := call vg_wr(d, k, x);
+  d := call erec_alloc(6);
+  u := call vg_wr(d, k, n, q, l, t, x);
   return d
 }
 

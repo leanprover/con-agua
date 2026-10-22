@@ -139,23 +139,23 @@ def cvRdW (m : Mem) (s : Word) : List Word :=
   else [rdW (m.arr64 EREC) s, rdW (m.arr64 EREC) (s + 1), rdW (m.arr64 EREC) (s + 2),
     rdW (m.arr64 EREC) (s + 3)]
 
-/-- `promote_cv`'s continuations. -/
-def cvK (p : Prog) (n : Nat) (f o l t d : Word) : Option (List Word × Mem) → Option Mem
+/-- `promote_cv`'s continuations: the four result words. -/
+def cvK (p : Prog) (n : Nat) (f o l t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (nm, m₁) => cvK₂ p n f l t d (nm.headD 0) (callW p n "promote_slice" [0, f, o, l] m₁)
+  | some (nm, m₁) => cvK₂ p n f l t (nm.headD 0) (callW p n "promote_slice" [0, f, o, l] m₁)
 where
-  cvK₂ (p : Prog) (n : Nat) (f l t d nm : Word) : Option (List Word × Mem) → Option Mem
+  cvK₂ (p : Prog) (n : Nat) (f l t nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
-    | some (q, m₂) => cvK₃ p n l d nm (q.headD 0) (callW p n "promote_e" [f, t] m₂)
-  cvK₃ (p : Prog) (n : Nat) (l d nm q : Word) : Option (List Word × Mem) → Option Mem
+    | some (q, m₂) => cvK₃ l nm (q.headD 0) (callW p n "promote_e" [f, t] m₂)
+  cvK₃ (l nm q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
-    | some (t, m₃) => memK (callW p n "cv_wr" [d, nm, q, l, t.headD 0] m₃)
+    | some (t, m₃) => some ([nm, q, l, t.headD 0], m₃)
 
-/-- **The model of `promote_cv(f, s, d)`** (the memory after; it returns `0`). -/
-def cvW (p : Prog) (n : Nat) (m : Mem) (f s d : Word) : Option Mem :=
+/-- **The model of `promote_cv(f, s)`**: the four words `(name, lps.off, lps.len, type)`. -/
+def cvW (p : Prog) (n : Nat) (m : Mem) (f s : Word) : Option (List Word × Mem) :=
   if cvRdW m s = [] then none
   else cvK p n f ((cvRdW m s).tail.headD 0) ((cvRdW m s).tail.tail.headD 0)
-    ((cvRdW m s).tail.tail.tail.headD 0) d (callW p n "promote_n" [f, (cvRdW m s).headD 0] m)
+    ((cvRdW m s).tail.tail.tail.headD 0) (callW p n "promote_n" [f, (cvRdW m s).headD 0] m)
 
 section eqs2
 variable (p : Prog) (n : Nat) (m m₁ : Mem) (k f o l t d nm q s : Word) (r : List Word)
@@ -165,15 +165,14 @@ theorem sliceK_some : sliceK p n k f o l (some (r, m₁)) =
     if k = 0 then offK (r.headD 0) (callW p n "promote_n_list" [f, o, l, r.headD 0] m₁)
     else if k = 1 then offK (r.headD 0) (callW p n "promote_l_list" [f, o, l, r.headD 0] m₁)
     else offK (r.headD 0) (callW p n "promote_e_list" [f, o, l, r.headD 0] m₁) := rfl
-theorem cvK_some : cvK p n f o l t d (some (r, m₁)) =
-    cvK.cvK₂ p n f l t d (r.headD 0) (callW p n "promote_slice" [0, f, o, l] m₁) := rfl
-theorem cvK₂_some : cvK.cvK₂ p n f l t d nm (some (r, m₁)) =
-    cvK.cvK₃ p n l d nm (r.headD 0) (callW p n "promote_e" [f, t] m₁) := rfl
-theorem cvK₃_some : cvK.cvK₃ p n l d nm q (some (r, m₁)) =
-    memK (callW p n "cv_wr" [d, nm, q, l, r.headD 0] m₁) := rfl
+theorem cvK_some : cvK p n f o l t (some (r, m₁)) =
+    cvK.cvK₂ p n f l t (r.headD 0) (callW p n "promote_slice" [0, f, o, l] m₁) := rfl
+theorem cvK₂_some : cvK.cvK₂ p n f l t nm (some (r, m₁)) =
+    cvK.cvK₃ l nm (r.headD 0) (callW p n "promote_e" [f, t] m₁) := rfl
+theorem cvK₃_some : cvK.cvK₃ l nm q (some (r, m₁)) = some ([nm, q, l, r.headD 0], m₁) := rfl
 theorem cvW_eq (h : cvRdW m s ≠ []) :
-    cvW p n m f s d = cvK p n f ((cvRdW m s).tail.headD 0) ((cvRdW m s).tail.tail.headD 0)
-      ((cvRdW m s).tail.tail.tail.headD 0) d (callW p n "promote_n" [f, (cvRdW m s).headD 0] m) := by
+    cvW p n m f s = cvK p n f ((cvRdW m s).tail.headD 0) ((cvRdW m s).tail.tail.headD 0)
+      ((cvRdW m s).tail.tail.tail.headD 0) (callW p n "promote_n" [f, (cvRdW m s).headD 0] m) := by
   simp only [cvW, h, ↓reduceIte]
 
 end eqs2
@@ -217,17 +216,16 @@ theorem cvWr_spec (d nm q l t : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
       finish [cvStore]
 
-theorem promoteCV_spec (f s d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_cv" [f, s, d]
-    ⦃fun _ s' => LocEq s' s₀ ∧ cvW p n s₀.mem f s d = some s'.mem; ⊤⦄ := by
+theorem promoteCV_spec (f s : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_cv" [f, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ cvW p n s₀.mem f s = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.promote_cv]
   simp only [callFn, promoteCVL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, cvRd_spec p hp n,
-      callW_spec p n "promote_n", callW_spec p n "promote_slice", callW_spec p n "promote_e",
-      callW_spec p n "cv_wr"] <;>
-    -- `l` and `d` are read after three calls: `LocEq` hops (depth, not search)
-    finish (gen := 20) [cvW_eq, cvK_some, cvK₂_some, cvK₃_some, memK_some]
+      callW_spec p n "promote_n", callW_spec p n "promote_slice", callW_spec p n "promote_e"] <;>
+    -- `l` is read after three calls: `LocEq` hops (depth, not search)
+    finish (gen := 20) [cvW_eq, cvK_some, cvK₂_some, cvK₃_some]
 
 end specs2
 
@@ -246,29 +244,36 @@ def vgRdW (m : Mem) (g : Word) : List Word :=
   if (m.arr64 EREC).size ≤ g.toNat ∨ (m.arr64 EREC).size ≤ (g + 5).toNat then []
   else [rdW (m.arr64 EREC) g, rdW (m.arr64 EREC) (g + 5)]
 
-/-- `vg_wr`'s model. -/
-def vgStore (m : Mem) (d k x : Word) : Option Mem :=
-  if (m.arr64 EREC).size ≤ d.toNat ∨ (m.arr64 EREC).size ≤ (d + 5).toNat then none
-  else some ((m.set64 EREC d k).set64 EREC (d + 5) x)
+/-- `vg_wr`'s model: six words at `d`. -/
+def vgStore (m : Mem) (d k nm q l t x : Word) : Option Mem :=
+  if (m.arr64 EREC).size ≤ d.toNat ∨ (m.arr64 EREC).size ≤ (d + 1).toNat ∨
+    (m.arr64 EREC).size ≤ (d + 2).toNat ∨ (m.arr64 EREC).size ≤ (d + 3).toNat ∨
+    (m.arr64 EREC).size ≤ (d + 4).toNat ∨ (m.arr64 EREC).size ≤ (d + 5).toNat then none
+  else some ((((((m.set64 EREC d k).set64 EREC (d + 1) nm).set64 EREC (d + 2) q).set64 EREC
+    (d + 3) l).set64 EREC (d + 4) t).set64 EREC (d + 5) x)
 
 /-- `promote_vg`'s continuations. -/
-def vgK (p : Prog) (n : Nat) (g k j : Word) : Option (List Word × Mem) → Option (Word × Mem)
+def vgK (p : Prog) (n : Nat) (k j : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (d, m₁) => vgK₂ p n j k (d.headD 0) (callW p n "promote_cv" [L.Ind.CWF, g + 1, d.headD 0 + 1] m₁)
+  | some (c, m₁) => vgK₂ p n k c (callW p n "promote_e" [L.Ind.CWF, j] m₁)
 where
-  vgK₂ (p : Prog) (n : Nat) (j k d : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  vgK₂ (p : Prog) (n : Nat) (k : Word) (c : List Word) :
+      Option (List Word × Mem) → Option (Word × Mem)
     | none => none
-    | some (_, m₂) => vgK₃ p n k d (callW p n "promote_e" [L.Ind.CWF, j] m₂)
-  vgK₃ (p : Prog) (n : Nat) (k d : Word) : Option (List Word × Mem) → Option (Word × Mem)
+    | some (x, m₂) => vgK₃ p n k c (x.headD 0) (callW p n "erec_alloc" [6] m₂)
+  vgK₃ (p : Prog) (n : Nat) (k : Word) (c : List Word) (x : Word) :
+      Option (List Word × Mem) → Option (Word × Mem)
     | none => none
-    | some (x, m₃) => offK d (callW p n "vg_wr" [d, k, x.headD 0] m₃)
+    | some (d, m₃) => offK (d.headD 0) (callW p n "vg_wr" [d.headD 0, k, c.headD 0, c.tail.headD 0,
+        c.tail.tail.headD 0, c.tail.tail.tail.headD 0, x] m₃)
 
-/-- After the clears: read the record, allocate, promote. -/
+/-- After the clears: read the record, promote its parts. -/
 def vgK₀ (p : Prog) (n : Nat) (g : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (_, m₁) =>
     if vgRdW m₁ g = [] then none
-    else vgK p n g ((vgRdW m₁ g).headD 0) ((vgRdW m₁ g).tail.headD 0) (callW p n "erec_alloc" [6] m₁)
+    else vgK p n ((vgRdW m₁ g).headD 0) ((vgRdW m₁ g).tail.headD 0)
+      (callW p n "promote_cv" [L.Ind.CWF, g + 1] m₁)
 
 /-- **The model of `promote_vg(g, vis)`.** -/
 def vgW (p : Prog) (n : Nat) (m : Mem) (g : Word) : Option (Word × Mem) :=
@@ -279,14 +284,16 @@ variable (p : Prog) (n : Nat) (m m₁ : Mem) (g k j d x : Word) (r : List Word) 
 
 theorem clrK_some (h : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : clrK S (some m) = some (mclearG S m) := by
   simp [clrK, h]
-theorem vgK_some : vgK p n g k j (some (r, m₁)) =
-    vgK.vgK₂ p n j k (r.headD 0) (callW p n "promote_cv" [L.Ind.CWF, g + 1, r.headD 0 + 1] m₁) := rfl
-theorem vgK₂_some : vgK.vgK₂ p n j k d (some (r, m₁)) =
-    vgK.vgK₃ p n k d (callW p n "promote_e" [L.Ind.CWF, j] m₁) := rfl
-theorem vgK₃_some : vgK.vgK₃ p n k d (some (r, m₁)) =
-    offK d (callW p n "vg_wr" [d, k, r.headD 0] m₁) := rfl
+theorem vgK_some : vgK p n k j (some (r, m₁)) =
+    vgK.vgK₂ p n k r (callW p n "promote_e" [L.Ind.CWF, j] m₁) := rfl
+theorem vgK₂_some (c : List Word) : vgK.vgK₂ p n k c (some (r, m₁)) =
+    vgK.vgK₃ p n k c (r.headD 0) (callW p n "erec_alloc" [6] m₁) := rfl
+theorem vgK₃_some (c : List Word) : vgK.vgK₃ p n k c x (some (r, m₁)) =
+    offK (r.headD 0) (callW p n "vg_wr" [r.headD 0, k, c.headD 0, c.tail.headD 0,
+      c.tail.tail.headD 0, c.tail.tail.tail.headD 0, x] m₁) := rfl
 theorem vgK₀_some (h : vgRdW m₁ g ≠ []) : vgK₀ p n g (some (r, m₁)) =
-    vgK p n g ((vgRdW m₁ g).headD 0) ((vgRdW m₁ g).tail.headD 0) (callW p n "erec_alloc" [6] m₁) := by
+    vgK p n ((vgRdW m₁ g).headD 0) ((vgRdW m₁ g).tail.headD 0)
+      (callW p n "promote_cv" [L.Ind.CWF, g + 1] m₁) := by
   simp only [vgK₀, h, ↓reduceIte]
 
 end eqs3
@@ -318,9 +325,9 @@ theorem vgRd_spec (g : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [vgRdW]
 
-theorem vgWr_spec (d k x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vg_wr" [d, k, x]
-    ⦃fun _ s' => LocEq s' s₀ ∧ vgStore s₀.mem d k x = some s'.mem; ⊤⦄ := by
+theorem vgWr_spec (d k nm q l t x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vg_wr" [d, k, nm, q, l, t, x]
+    ⦃fun _ s' => LocEq s' s₀ ∧ vgStore s₀.mem d k nm q l t x = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp.vg_wr]
   simp only [callFn, vgWr]
   cases n with
@@ -337,9 +344,9 @@ theorem promoteVG_specW (g vis : Word) :
   simp only [callFn, promoteVGL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, vgRd_spec p hp n,
-      callW_spec p n "promote_clear", callW_spec p n "erec_alloc", callW_spec p n "promote_cv",
-      callW_spec p n "promote_e", callW_spec p n "vg_wr"] <;>
-    -- `g`, `k`, `d` are read after several calls: `LocEq` hops (depth, not search)
+      callW_spec p n "promote_clear", callW_spec p n "promote_cv", callW_spec p n "promote_e",
+      callW_spec p n "erec_alloc", callW_spec p n "vg_wr"] <;>
+    -- `k` and the four words are read after several calls: `LocEq` hops (depth, not search)
     finish (gen := 20) [vgW, vgK₀_some, vgK_some, vgK₂_some, vgK₃_some, offK_some, L.Ind.CWF]
 
 end specs3
