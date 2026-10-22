@@ -93,6 +93,7 @@ import ConAgua.Arena.RecGenSpec13
 import ConAgua.Arena.RecGenSpec14
 import ConAgua.Arena.RecGenSpec15
 import ConAgua.Arena.RecGenSpec18
+import ConAgua.Arena.RecGenSpec19
 import ConAgua.Arena.RecCheckSpec8
 import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.IndPosSpec2
