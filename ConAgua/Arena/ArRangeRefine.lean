@@ -425,4 +425,56 @@ theorem arOK (n : Nat) : RGoOK n ∧ RNodeOK n ∧ RArmOK n := by
   | succ n ih => exact ⟨rgoOK_succ n ih.2.1, rnodeOK_succ n ih.2.2, rarmOK_succ n ih.1⟩
 
 
+/-! ## The entry `ar_entry` refines `abstractRangeFast` -/
+
+theorem arFast_run (F : Nat) (e : EIdx) (d k c : Nat) (hk : k ≠ 0) (a : AState) :
+    (abstractRangeFast F e d k c).run a =
+      ((abstractRangeGo d k F e c).run (withAC a ∅) >>= fun p => .ok (p.1, withAC p.2 ∅)) := by
+  simp only [abstractRangeFast, hk, ↓reduceIte, StateT.run_bind, abs1Clear_run, except_ok_bind]
+  cases (abstractRangeGo d k F e c).run (withAC a ∅) <;> rfl
+
+theorem arEntryW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) (hA : ArenaA m a)
+    (e d k c r : Word) (he : e.toNat < 2 ^ 32) (hb : arEntryW n m e d k c = some (r, m')) :
+    ∃ a', (abstractRangeFast F (decE e) d.toNat k.toNat c.toNat).run a = .ok (decE r, a') ∧
+      ArenaA m' a' := by
+  simp only [arEntryW] at hb
+  by_cases hk : k = 0
+  · simp only [hk, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    exact ⟨a, by simp [abstractRangeFast, hk]; rfl, hA⟩
+  have hk' : k.toNat ≠ 0 := fun e => hk (UInt64.toNat_inj.mp e)
+  simp only [hk, ↓reduceIte] at hb
+  by_cases h0 : rdW (m.arr64 CTL) 48 + 2 = 0
+  · simp [h0] at hb
+  simp only [h0, ↓reduceIte] at hb
+  have hA₀ := ArenaA.amemo_clear m a hA h0
+  cases hw : arW n (mclearG abSch m) e c d k with
+  | none => simp [hw, aclrK] at hb
+  | some p =>
+    obtain ⟨r₁, m₁⟩ := p
+    by_cases h1 : rdW (m₁.arr64 CTL) 48 + 2 = 0
+    · simp [hw, aclrK, h1] at hb
+    simp only [hw, aclrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨a₁, ha₁, hA₁⟩ := (arOK n).1 F _ _ _ e c d k r₁ hF hA₀ he hw
+    exact ⟨_, by rw [arFast_run _ _ _ _ _ hk', ha₁]; rfl, ArenaA.amemo_clear m₁ a₁ hA₁ h1⟩
+
+/-- **`ar_entry(e, d, k, c)` refines the arena's `abstractRangeFast` under `ArenaA`.** -/
+@[refines ConRon.Arena.abstractRangeFast]
+theorem arEntry_refines (p : Prog) (hp : ArProg p) (hpe : p.lookup "ar_entry" = some arEntry)
+    (n F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState) (hA : ArenaA s₀.mem a₀) (e d k c : Word)
+    (he : e.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "ar_entry" [e, d, k, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (abstractRangeFast F (decE e) d.toNat k.toNat c.toNat) a₀ ∧
+      ArenaA s'.mem (AM.st (abstractRangeFast F (decE e) d.toNat k.toNat c.toNat) a₀) ∧
+      AM.res (abstractRangeFast F (decE e) d.toNat k.toNat c.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (arEntry_spec p hp hpe n s₀ e d k c)
+  subst hs
+  obtain ⟨a', ha', hA'⟩ := arEntryW_correct n F hF _ _ a₀ hA e d k c _ he hI
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
+  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+
 end L.Arena
