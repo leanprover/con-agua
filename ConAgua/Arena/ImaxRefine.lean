@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.ImaxStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The level `imax` store refines the arena's `imax` tables
@@ -160,19 +161,42 @@ theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom
   grind
 
 theorem iimpushMem_eq (m : Mem) (t u v j c : Word) :
-    impushMem m t u v j c = pushG imaxSch m t [u, v] j c := by
+    impushMem m t u v j c = (pushG imaxSch m t [u, v] j c).set64 IHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
   simp [impushMem, pushG, wrRec, Schema.ad, imaxSch]
 
 theorem iiminternW_eq (m : Mem) (u v : Word) :
-    iminternW m u v = internM imaxSch m 0 (impushOK m) [u, v]
+    iminternW m u v = internMD imaxSch IHP (lvlHPW m u ||| lvlHPW m v) m 0 (impushOK m) [u, v]
       (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
       (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) := by
   have e0 : ∀ x, hdW imaxSch.tag.toUInt64 0 x = imaxP + x := fun x => by
     simp [hdW, imaxSch, imaxP, LTag.imax]
   have e1 : ∀ x, hdW imaxSch.tag.toUInt64 1 x = imaxS + x := fun x => by
     simp [hdW, imaxSch, imaxS, LTag.imax]
-  simp only [iminternW, internM, iimpushMem_eq, e0, e1, true_and]
+  simp only [iminternW, internMD, iimpushMem_eq, e0, e1, true_and]
   rfl
+
+/-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
+theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
+    MemFrame [IREC, ISLOT, IHP] [12, 13] m m' := by
+  rw [iiminternW_eq] at hI
+  exact internMD_frame imaxSch iimaxSch_wf IHP (by decide) _ _ _ _ _ _ _ _ _ hI
+
+/-- `intern_imax`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
+words. -/
+theorem iminternW_eqK (m : Mem) (u v : Word) (hctl : imaxSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    iminternW m u v = mkK IHP imaxSch.ca (cnt2 m imaxSch.ca) (lvlHPW m u ||| lvlHPW m v)
+      (internM imaxSch m 0 (impushOK m) [u, v]
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)) := by
+  rw [iiminternW_eq]
+  refine internMD_mkK imaxSch iimaxSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+
+theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by
+  intro m m' hra _ _; simp only [imaxSch] at hra
+  exact ⟨fun t i k h => by simpa only [IRecRel, hra] using h, fun t i => by simp only [imhash, hra]⟩
 
 /-! ## `intern_imax` refines `internLNode (.imax _ _)` -/
 
@@ -181,17 +205,49 @@ variable (m : Mem) (a : AState) (hR : ImaxR m a) (u v : Word) (hu : u.toNat < 2 
   (hv : v.toNat < 2 ^ 32)
 
 include hR hu hv in
+/-- The library's half of `intern_imax` (before the column). -/
+theorem imintern_core (w : Word) (m₁ : Mem)
+    (hI : internM imaxSch m 0 (impushOK m) [u, v]
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) =
+      some (w, m₁)) :
+    AM.ok (internLNode (.imax (decI u) (decI v))) a ∧
+    ImaxR m₁ (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
+    AM.res (internLNode (.imax (decI u) (decI v))) a = decI w :=
+  intern_correctG imaxSch IRecRel imhash iimaxSch_wf imaxFrame imaxLens a m hR _ _ _ _ _
+    (internLNode_imax_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (imaxMatchOK m u v hu hv)
+    (imaxHomeOK m u v) _ _ (probe_homeG imaxSch m 0 _ _ (iimprobeW_arm m u v 0) _)
+    (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ rfl
+    (imaxNewOK m u v hu hv) w m₁ hI
+
+include hR hu hv in
 /-- **`intern_imax`'s model refines the arena's `internLNode` at an `imax` node.** -/
 theorem imintern_correct (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
     AM.ok (internLNode (.imax (decI u) (decI v))) a ∧
     ImaxR m' (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
     AM.res (internLNode (.imax (decI u) (decI v))) a = decI w := by
-  rw [iiminternW_eq] at hI
-  exact intern_correctG imaxSch IRecRel imhash iimaxSch_wf imaxFrame imaxLens a m hR _ _ _ _ _
-    (internLNode_imax_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (imaxMatchOK m u v hu hv)
-    (imaxHomeOK m u v) _ _ (probe_homeG imaxSch m 0 _ _ (iimprobeW_arm m u v 0) _)
-    (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ rfl
-    (imaxNewOK m u v hu hv) w m' hI
+  rw [iminternW_eqK m u v hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := imintern_core m a hR u v hu hv w m₁ h₁
+  exact ⟨hok, storeR_frame imaxSch IRecRel imhash iimaxSch_wf [] [] imaxLocal [IHP] []
+    (by simp [Apart, imaxSch, IREC, ISLOT, IHP, SCB, POOL, CTL]) m₁ m'
+    (derPutW_frame IHP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+
+include hR hu hv in
+/-- **The column across `intern_imax`**: the new node's word is its record's bit (`hb`). -/
+theorem imintern_hp (hC : ColT2 imaxLens IHP hpW m a)
+    (hb : lvlHPW m u ||| lvlHPW m v = b2w ((a.store.lss.ls.derived (decI u)).hasParam || (a.store.lss.ls.derived (decI v)).hasParam)) (w : Word) (m' : Mem)
+    (hI : iminternW m u v = some (w, m')) :
+    ColT2 imaxLens IHP hpW m' (AM.st (internLNode (.imax (decI u) (decI v))) a) := by
+  rw [iminternW_eqK m u v hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := imintern_core m a hR u v hu hv w m₁ h₁
+  have hcs := AM.proto_casesG imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok
+  have hfr : m₁.arr64 IHP = m.arr64 IHP :=
+    (internM_frame _ iimaxSch_wf _ _ _ _ _ _ _ _ h₁).1 IHP (by simp [imaxSch, IREC, ISLOT, IHP])
+      (by decide)
+  exact colMk imaxSch iimaxSch_wf IRecRel imhash imaxLens IHP hpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
+    hcs hres.symm (by rw [hb]; rfl) hput
 
 end intern
 

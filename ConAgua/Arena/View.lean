@@ -42,8 +42,6 @@ theorem decE_idx (h : Word) : (decE h).idxNat = (idxW h).toNat := by
 theorem decE_pers (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).isPersistent = (tierW h == 0) := by
   rw [decE_eq, isPersistent_decI h hh]; rfl
 
-theorem tierW_le (h : Word) : tierW h ≤ 1 := by
-  simp only [tierW]; exact UInt64.and_le_right
 
 /-! ## Nodes of a table -/
 

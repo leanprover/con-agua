@@ -57,30 +57,6 @@ theorem promoteN_succ (m : PMemo) (fuel : Nat) (h : NIdx) :
 
 /-! ## The view of a name record -/
 
-theorem decI_tag {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) :
-    (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
-  simp only [decI, Idx.tag]
-  apply UInt32.toNat_inj.mp
-  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  omega
-
-theorem decI_idx {k : IdxKind} (h : Word) : (decI h : Idx k).idxNat = (idxW h).toNat := by
-  simp only [decI, Idx.idxNat, Idx.index, idxW]
-  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
-  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
-  rw [this, Nat.and_two_pow_sub_one_eq_mod]
-
-theorem decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
-    ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
-  rw [decI_tag h hh]
-  have hgt : (h >>> 28).toNat < 16 := by
-    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
-  constructor
-  · intro e; apply UInt64.toNat_inj.mp
-    have := congrArg UInt32.toNat e
-    simp [UInt64.toNat_toUInt32] at this ⊢; omega
-  · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
-
 section view
 variable {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
   (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))

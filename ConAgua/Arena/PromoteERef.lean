@@ -165,7 +165,7 @@ theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
 abbrev eArrs : List ArrId :=
   lsArrs ++ [REC, SLOT, AREC, ASLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT,
     FVREC, FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, ADER, LADER, FADER, LEDER, PJDER,
-    PEM]
+    PEM, SOLP, CLP, FVLP]
 abbrev eCtl : List Word :=
   lsCtl ++ [2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 147]
 
@@ -285,7 +285,7 @@ theorem peConst_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f x us : Word
   rw [hs₃] at hW₃
   obtain ⟨a₃, hrun₃, hD₃, hpw₃, hcp₃, hfr₃⟩ := piConst_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ hW₃
   rw [← hm]
-  refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [CREC, CSLOT]) (by simp) hfr₃, hr ▸ hpw₃,
+  refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [CREC, CSLOT, CLP]) (by simp) hfr₃, hr ▸ hpw₃,
     hcp₃.trans (hcp₂.trans hcp₁), ?_⟩
   · unfold peConstT
     rw [run_bind_ok hrun₁]
@@ -441,7 +441,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
       obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piFVar_rel p hp n m₁ a₁ hD₁ _ _ hpw₁ _ _ hW₂
       rw [hi] at hrun₂
       rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [FVREC, FVSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [FVREC, FVSLOT, FVLP]) (by simp) hfr₂, hr ▸ hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp))⟩
       rw [run_bind_ok hv0]
       simp only
@@ -473,7 +473,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
       rw [hs₂] at hW₂
       obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piSort_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ hW₂
       rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [SOREC, SOSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [SOREC, SOSLOT, SOLP]) (by simp) hfr₂, hr ▸ hpw₂,
         hcp₂.trans hcp₁, (hfr₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))⟩
       rw [run_bind_ok hv0]
       simp only
