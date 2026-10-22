@@ -98,7 +98,8 @@ structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s `unfoldDefinition_refines'` takes all of `WhnfCallees` (it uses `instLP`). -/
   unfold : UnfoldDefOK p
   whnfGrows : ∀ n, WhnfGrowsUpTo p n
-  store : StoreDenotes
+  /-- Stored levels read back under `CoreS` (`StoreDen.lean`; to become a field of `CoreS`). -/
+  den : CoreDen
   constTy : ConstTyAtOK p
   bstk : BStkCallees p
   proj : InferProjOK p
@@ -130,7 +131,7 @@ theorem KnotCallees.defeq : DefeqCallees p :=
 include hq hc in
 theorem KnotCallees.lazy : LazyCallees p :=
   ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold,
-    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree) hc.whnfGrows, hc.store⟩
+    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree) hc.whnfGrows, StoreDenotes.of_den hc.den⟩
 
 include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=
