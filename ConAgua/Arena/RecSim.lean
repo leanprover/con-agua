@@ -30,6 +30,7 @@ open L.Arena
 
 /-! ## Result words -/
 
+theorem getD_zero (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
 theorem getD_one (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   cases r with | nil => rfl | cons a t => cases t <;> rfl
 theorem getD_two (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
@@ -57,6 +58,14 @@ theorem loc_init10 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 : Word) (r : List Word) :
     Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: x8 :: x9 :: x10 :: r) 10 = x10 := rfl
 theorem loc_init11 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 : Word) (r : List Word) :
     Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: x8 :: x9 :: x10 :: x11 :: r) 11 = x11 := rfl
+
+/-- The cursor and the count of a non-empty slice, one step on. -/
+theorem slice_step {o l : Word} (hl : l ≠ 0) (hb : o.toNat + l.toNat < 2 ^ 64) :
+    (o + 1).toNat = o.toNat + 1 ∧ (l - 1).toNat = l.toNat - 1 ∧ l.toNat ≠ 0 := by
+  have hl0 : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+  refine ⟨?_, ?_, hl0⟩
+  · rw [UInt64.toNat_add]; simp; omega
+  · rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
 
 /-! ## Fuel `0` -/
 
@@ -123,6 +132,27 @@ theorem bind {K : Option β → Option γ} (hK : K Option.none = Option.none) {o
     show (do let (x, s) ← op a; f x s) = _
     rw [hr1']
     exact hr2
+
+/-- **A callee step at the twin's tail**: the twin ends with the callee, the model post-processes
+its result. -/
+theorem bindPure {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
+    {op : AM α} {a : AState} {Q1 : β → AState → α → Prop} {Q : γ → AState → α → Prop}
+    (h1 : Sim o op a Q1) (h2 : ∀ b x a1, o = some b → Q1 b a1 x → Sim (K (some b)) (Pure.pure x : AM α) a1 Q) :
+    Sim (K o) op a Q := by
+  have h := Sim.bind (f := fun x => (Pure.pure x : AM α)) hK h1 h2
+  rwa [bind_pure] at h
+
+/-- **A twin-only step**: a twin computation the model does not run (a read of the state). -/
+theorem tstep {o : Option β} {op : AM α} {f : α → AM δ} {a a' : AState} {x : α}
+    {Q : β → AState → δ → Prop} (hr : op.run a = .ok (x, a')) (h : Sim o (f x) a' Q) :
+    Sim o (op >>= f) a Q := by
+  intro b hb
+  obtain ⟨y, a2, hr2, hq⟩ := h b hb
+  refine ⟨y, a2, ?_, hq⟩
+  have hr1' : op a = .ok (x, a') := hr
+  show (do let (x, s) ← op a; f x s) = _
+  rw [hr1']
+  exact hr2
 
 /-- **An L-only step**: the model computes something (a pure word model) the twin does not run. -/
 theorem lstep {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
