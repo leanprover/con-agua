@@ -29,8 +29,10 @@ word with bit 1 set (`toEager`: `0 ↦ 2`, `1 ↦ 3`, eager modes fixed) and mov
 verified mode: `infer_type_core(vis, dep, e)`, `is_def_eq_core(vis, dep, a, b)`,
 `ensure_sort_core(vis, dep, t)`. These replace the stubs of the same names in a whole program.
 
-**Stubs** (`DefeqCallees`): the callees with no L code yet, their specs assumed
-(`defeqCallees_stub`, a `sorry`).
+**Stubs** (`DefeqCallees`): callee specs assumed (`defeqCallees_stub`, a `sorry`). `has_fvar`,
+`abs_entry`, `ar_entry` (and lane whnf's `inst_list`) have L code and refinements under `ArenaA`
+at every twin fuel `F ≥ n` (lane `exprops4`); what is assumed is their `CoreS` form at exactly
+`coreWalkFuel` (L fuel `≤ coreWalkFuel`; `AbsR` re-established across `scratch_enter`).
 -/
 
 open ConRon.Arena
@@ -165,18 +167,18 @@ def IsProofFastOK (p : Prog) : Prop :=
     CoreSpec p n "is_proof_fast" [vis, x] (isProofFast fe coreWalkFuel (decE x)) decBool s₀ a₀
       dn vis fe M eb
 
-/-- `abstract1(e, d, k)` refines `abstract1Fast coreWalkFuel e d k` (phase 4). -/
+/-- `abs_entry(e, d, k)` refines `abstract1Fast coreWalkFuel e d k` (phase 4). -/
 def Abstract1OK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb e d k : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW e →
-    CoreSpec p n "abstract1" [e, d, k] (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat) decH
+    CoreSpec p n "abs_entry" [e, d, k] (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat) decH
       s₀ a₀ dn vis fe M eb
 
-/-- `abstract_range(e, d, k, c)` refines `abstractRangeFast coreWalkFuel e d k c` (phase 4). -/
+/-- `ar_entry(e, d, k, c)` refines `abstractRangeFast coreWalkFuel e d k c` (phase 4). -/
 def AbstractRangeOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb e d k c : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW e →
-    CoreSpec p n "abstract_range" [e, d, k, c]
+    CoreSpec p n "ar_entry" [e, d, k, c]
       (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) decH s₀ a₀ dn vis fe M eb
 
 /-- `field_sort_zero(po, pl, us, fs)` refines `fieldSortZeroT` (the level parameters an `EREC`

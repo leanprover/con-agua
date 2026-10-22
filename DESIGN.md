@@ -4381,6 +4381,18 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
+### Lane `exprops4`'s walks as this lane's callees (open)
+
+Lane `exprops4` refined `instantiateList` (on the spine stack, `InstListOK`), `abstract1`,
+`hasFvar`, `bvarB`, `looseBVarsBounded`. To discharge this lane's stubs with them (`inst_list` in
+`WhnfCallees`, `inst1` in `CoreCallees`): (1) `CoreS` must carry the `instLC` memo relation
+(`MemosR`'s array 49), a new field and one more conjunct in every `CoreS` frame lemma; (2) their
+refinements hold for twin fuel `≥` the L fuel, while the core calls them at exactly
+`coreWalkFuel` with an L fuel up to `2^62`: the stub specs must gain `n ≤ coreWalkFuel`, which
+the knot's fuels do not give, or the walks a `coreWalkFuel` counter (finding (1) above); (3) a
+caller crossing `scratch_enter` re-establishes the `abs1C` relation (not cleared there; whnf does
+not cross it). Not done yet.
+
 ### Lane `induct`'s stubs of this phase (adapters, `WhnfEntry.lean`)
 
 Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
@@ -5096,6 +5108,42 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   by pure moves into `IndPos2SpecA‥D`, `RecClassSpecA/B`, `IndSumSpec2A` (the old module imports
   its parts, names unchanged); every spec file is now below 1.4k lines.
 
+### Landing 5 (03:45): round 2, and the lane's totals
+* Census phase 8: **58 proven, 38 sorry (through stubs), 119 written, 8 todo** (lane start: 15 / 1
+  / 199); totals 411 proven / 90 sorry of 1352.
+* Round 2: helper `memo` — `mentionsConstGo`/`mentionsConst` (sorry-free), `hasLooseBVarBIns/Go/Fast`,
+  `structUsedLaterGo`/`structUsedLater`/`structUsedLaterList` (`IndSumSpec5`, `IndSumSpec7`; memo
+  relation `MemoRV` with values exactly `0`/`1`, since L tests `r1 == 1`); helper `recb` —
+  `targetMajorDefault` (through a new `intern_nanon` stub) and eight `RecGen`/`RecCheck` pieces
+  (`RecGenSpec2`, `RecCheckSpec2`); helper `install` — `IndInstall` pieces as `refines_part`
+  (`checkBlockPositivity` init/member, `blockCapsAt` pieces, `checkBlockInds` piece,
+  `checkBlockAgree` one-member body; `IndInstallSpec2‥4`). **Bug** (fixed by the lead):
+  `check_block_agree` opened member 0's telescope and aborted on `ok0 = 0` also for an empty
+  `rest`, where the twin does nothing.
+* **Lane totals.** ~95 `@[refines]`/`@[refines_part]` theorems (89 + 6) over ~100 L functions;
+  24.8k proof lines (spec files, `IndMaster`, library lemmas) against ~1.3k L lines proved, so
+  **~19 proof lines per L line**, flat across modules; the relational lemma is about two thirds.
+  L code: 778 lines added / 356 removed (loops to recursion, guards, two new helpers per loop on
+  average). Wall time 2 h 47 min (lead), 7 sonnet helpers (3 in round 1 ≈ 2 h each, 3 in round 2
+  ≈ 40 min each, plus `memo`), at most 3 at a time; each spec file checks in 5–60 s, `IndAll` (all
+  of them) ~1 min of wall time on the shared cache.
+* **Automation.** `vcgen` + one `finish (gen := 20)` proves almost every L-side spec unchanged
+  from the template (≈ 25 % of the lines); the relational lemmas are hand-written case splits on
+  the model's continuations (`cases h : callee …`, the callee's `_stage`/`RelAM` fact, the twin's
+  run rewritten step by step). `grind` was not used on twin values at all.
+* **Template changes, all rounds:** twins with no equation lemma (unfold by `Nat.brecOn` and an
+  own arm function, `whnfTelescope_eq`, helper `memo`'s `hbArm`); loops become self-recursion;
+  handle guards after master interns; master callees through `IndMaster`'s `_stage` lemmas instead
+  of stubs; `IWOK` and `decRL` strengthened so allocations and stub-returned slices survive later
+  calls; stability of decoded records across pool growth (one `_grow` lemma per decoder; a few
+  helpers took a stability hypothesis instead, listed under landing 3).
+* **Next** (lane or successor): an `env_push` word model under `StageR` (unblocks
+  `consSumCtors`, `checkStructProjTable`, `classFeR`; `envPush_refines` exists but has no memory
+  frame); `lv_leq_top`/`lvl_eq` under `StageR` (unblocks `checkStructFieldSortsI`,
+  `blockLargeElimAllowed`, removes the `lvl_eq` stub); a generic decoder-stability lemma; memo
+  well-formedness inside `StageR` (helper `pos`'s suggestion); then the remaining parents
+  (`checkSumCtor(s)`, `sumRules`, `checkBlock*`, the `nest*` positivity block, `genRecCheck`).
+
 ### The frontend's inductive lines: not hooked yet (decision)
 The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
 `frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
@@ -5109,7 +5157,11 @@ with this template under `StateDR` (the front's relation), then hook in one step
 refinement.
 
 ### `sorry`s
-None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+None but stubs': `IndStubs.lean`'s stub specs (now incl. `lvl_eq` and `intern_nanon`, master
+callees without a stage model), and two stub-level statements in `IndSumSpec5.lean` (helper
+`memo`): `bvarBCwf_spec` (`bvar_b` at `CWF` answers as the twin's `bvarB` at any plentiful fuel —
+provable about the twin once `bvar_b` lands) and `stubHbFrame` (`bvar_b`, `strip_pis` leave the `hb`
+memo alone — a write-set fact for the owning lanes).
 
 ## The fvar-range derived column (2026-10-21, lane `exprops3`)
 
@@ -5265,6 +5317,21 @@ fuel of the top-level run bounds every nested call's), as the whnf slots already
 | `ArRangeSpec.lean` | 173 | 64 s |
 | `ArRangeRefine.lean` | 480 | 1.2 s |
 | `HasFvar.lean` + `HasFvarRefine.lean` | 149 | < 2 s |
+
+### `bvarB`, `looseBVarsBoundedFast` (`BvarB{,Refine}.lean`)
+
+`bvar_b(f, e)` refines `bvarB F e`, `loose_bvars_bounded_fast(f, k, e)` refines
+`looseBVarsBoundedFast F k e`, both under `ArenaD` (**no `sorry`**; the stub interfaces' names and
+arities of lanes `decls`/`indproofs`, `f` unused). `fvarB`'s proof for the bvar range: `der_b`, on
+`32767` `bb_memo` (`bbMemoW_correct`, `ArenaR`); `DerR` across `bb_memo` by `bbW_frame` (the
+`frW_frame` induction renamed: `BMEMO`, `CTL[24‥25]`) and `keeps_bvarBoundMemo`.
+
+Census, phase 4, after this lane: 62 proven / 1 sorry / 1 written / 49 todo (before `abstract1`
+landed: 36 proven / 74 todo, counted after it). Left in phase 4 (todo): `instantiate1LiftGo`/`Fast`,
+`instLPGo`/`Fast`, `leavesSubGo`, `wscopedBGo`/`Fast`, `fvarLeavesGo`/`Fast`, `stripLams`/`stripPis`,
+`substLevelList`/`substLMemoAt`/`substLsMemoAt`, `leafGuard`/`leafMem`, `fvarTypeD`, `takeEidx`
+(the twin's own helpers `internRebuilt*`, `eidxCopyUpto`, `lastEidx` stay todo: inlined in L, reached
+from walks not yet ported).
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
@@ -5326,7 +5393,49 @@ denser than the Rust).
   `Level.isEquiv (Level.subst ks vs fs) .zero` on the heap). The slots' induction steps
   (`WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`, lane `whnf`'s stub) are this lane's to prove
   next; nothing is proved yet.
-None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+
+### The slots one level up (`KnotSlot.lean`, helper `defeq-slots`)
+* `infer_refines`, `inferIO_refines`, `defeq_refines`: `InferSlot`/`InferIOSlot`/`DefeqSlot p (n + 1)`
+  from `KnotUpTo p n` and the body's spec at L-fuel `n` (`InferBodySpec`, `InferIOBodySpec`,
+  `DefeqBodySpec`: hypotheses, the shape of `WhnfLoopSpec`). Copies of lane `whnf`'s `whnf_refines`;
+  new lemmas `CoreS.set_in`/`set_io`/`set_de`, `ModeR.setD` (the `Bool` memo), `KeptAll.inf`/`io`/`de`,
+  `knot_{infer,inferIO,defeq}_{hit,miss}`, the model `memoSlotD` (a hit answers `u64(v != 0)`).
+* **The eager slot needs no relation change.** `DefeqESlot p (n + 1)` from `DefeqSlot p n`
+  (`defeqE_refines`). From an eager mode `defeqE` is `defeq` (`knot_defeqE_eager`); from a plain
+  mode it is the `defeq` slot of `coreKnot mode.toEager … (F + 1)` on the entered caches `enterC`,
+  then `leaveC` (`knot_defeqE_plain`). `CoreS … M 0` on `a` is `CoreS … M 1` on `enterC a.caches` at
+  the same maps (`ModeR.enter`: the stored eager tables are bank 1, the empty slot is `∅`); after the
+  run, `KeptAll M M' 1` gives the plain banks back, so `CoreS … M' 0` holds on the left state
+  (`ModeR.leave`, `CoreS.leave`). The outer `KeptAll` at `eb = 0` is vacuous. `SlotPre`'s
+  `eb = (mode >>> 1) &&& 1` is met by the inner call at `mode ||| 2`.
+* Entry points from the slots at mode 0: `inferTypeCore_refines`, `isDefEqCore_refines`,
+  `ensureSortCore_refines` (the last from `EnsureSortSpec`, a hypothesis: `ensure_sort` has no proof
+  yet); `call1W`/`CoreSpec.of_call1W` for one-call forwarders. Tagged `refines_part` (they rest on
+  slot hypotheses until the knot induction ties them).
+* What is left for `WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`: the three body specs. No
+  `sorry`; ~880 lines, 5.8 s CPU.
+
+### The leaf inference functions (`InferLeaves.lean`, helper `defeq-slots`)
+* `ensureSort_refines : KnotUpTo p n → EnsureSortSpec p (n + 1)` (from the `whnf` slot and
+  `view_sort_f`); `ensureSortCore_refines` now takes only `KnotUpTo` (KnotSlot's old one is
+  `ensureSortCore_of_spec`). `defeqArg_refines` (the two slots, `is_eager_reduce` as the
+  hypothesis `IsEagerReduceH`). `inferLamResult_refines` (`Abstract1OK`; `mk_forall` under
+  `CoreS`: `mkForall_core`, with `mkForallW_hw`/`_frame`, `keeps_cpl_internForall`).
+* Clause fragments, copied from `inferBody` and proved equal to its arm (`inferBody_const`,
+  `inferBody_lit`, `inferBodyIO_lit`): `inferLitT` (`inferLit_refines`, callees as
+  `InferLitCallees`: `nat_lit_supported`/`const_e` are lane `whnf`'s `sorry`s, `str_lit_supported`
+  its stub) and `inferConstT` (`inferConst_refines`, `ConstTyAtOK` a hypothesis: `const_ty_at`
+  is a `sorry` in `WhnfIota.lean`). `inferBodyIO`'s `.const` arm reads `viewLsLen`, a different
+  fragment, not done.
+* **L change**: `infer_const` called `const_ty_at` with the looked-up name `n`; the twin's
+  `constTyAt cv us` keys its cache by `cv.name`, the record's own name word (`p + 1`), and `EnvR`
+  does not promise `cv.name = n`. It now passes `EREC[p + 1]`. Lane `whnf`'s `iota` call site
+  (`WhnfIota.lean:733`, `const_ty_at(cj, …)`) has the same gap.
+* Gap: a guarded model equation with the callee's run as a hypothesis (`callW … = some (r, m₁) →
+  W … = …`) was not instantiated by `finish` in `ensure_sort`; the `memoSlotW` shape (the run as
+  an argument of the model, `W (callW …)`) was. All models here use that shape.
+* Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
+  5.2 s CPU.
 
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
@@ -5465,12 +5574,46 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 * `DeclArms.lean` takes 79 s user (`lake env lean`; the `#guard` runs and the closure check),
   the others 8.4 s and 3.7 s.
 
+### `install_step_go` refines `installStepGo` (`DeclStepGo.lean`, `DeclHeader.lean`, `DeclRec.lean`)
+
+**`installStepGo_spec` is proved** (`@[refines ConRon.Arena.installStepGo]`) through one new
+`sorry`, `checkDecl_loop` (`check_decl` at the loop's relation: its arms are this lane's
+`DeclArms*` and lane `induct`'s code, unproved), and the stubs.
+* L change: the three value arms are one function `install_value(i, vis, ck, vk)` (constant
+  record kind, value-group kind), so its call closure is the arm's alone and its write set comes
+  from the text (`ivProg`, `ivFns`: 25 functions, `ivProg_closed` by `decide +kernel`); `pin_in`
+  now aborts on an empty pin table (the twin's pin reads raise `.internal` there; before, L went on
+  with `0`s — a refinement gap the proof found).
+* `install_step_go`'s model calls `check_decl` and `install_value` through `callW` (lane `whnf`'s
+  pattern: the callee's run as a function of the memory), so their *run-level* specs at `LoopR`
+  (frames included) apply to the model's runs (`triple_of_callW`); its `vcgen` spec is one
+  `finish`. The relational lemma `istgW_ok` is one case per record kind (`DeclAt` fixes the kind
+  word); the pinned-name tests are `pin_in` against the twin's `natOpNames ++ natDivModNames` /
+  `reduceOpNames` (`natOpNames_run` …: the twin's lists are `PINS[15‥29]`/`PINS[44‥45]`,
+  `contains_pins`: `contains` is word equality on handle words).
+* `install_value`: `ivW` (model; `env_push` also through `callW`, because its spec needs the name
+  word's bound, which only the relational lemma has), `ivW_gen`/`ivW_ok` against the arm's twin
+  `ivT` (the header, the guards but for a theorem, the push, the group), `installValue_loop`
+  (model + text frame + `LoopR.of_step`).
+* Helpers: `decls2-header` (`DeclHeader.lean`: `install_header` refines `installHeader`,
+  `@[refines]`, models of `env_find`/`reserved_contains`; 508 lines, 5.8 s) and `decls2-rec`
+  (`DeclRec.lean`: `erec_ci`, `erec_vg`, `env_push` models, specs and `_ok` lemmas, no `sorry`;
+  672 lines, 9.1 s). `DeclStepGo.lean` 893 lines, 6.3 s.
+* For ≈ 120 L lines (`install_step_go`, `install_value`, `install_header`, `erec_ci`, `erec_vg`,
+  `dlp_copy`, `pin_in`, `env_push`'s model): ≈ 2.1k proof lines, ≈ 17 per L line. Every `vcgen`
+  spec is one `finish (gen := 20)` and passed at the first or second attempt; the work is in the
+  relational lemmas (case splits, `ArrExt`/`IWGrow` bookkeeping across the record pool).
+* The relation behind it all is `StageR` at the callee and `LoopR.of_step` around it: the step's
+  callees never see `PEND`/`DECL`/`DLP`, the text says they do not write them.
+
 ### `sorry`s (lane `decls2`)
 
 * `DeclCvg.lean` `lvlEqCStage_spec`: `lvl_eq_c` under `StageR`. Lane `whnf`'s `lvlEqC_refines`
   proves it under `CoreS`, whose readback-cache invariants and `NStoreWF` `StageR` lacks (the same
   gap as lane `indproofs`' `lvlEqStub_spec`); closes when `StageR` carries `CoreS`'s extras.
-* `DeclStepSpec.lean` `installStepGo_spec` (unchanged, in progress).
+* `DeclStepGo.lean` `checkDecl_loop`: `check_decl` at the loop's relation (the arms' proofs;
+  for kind `6` also the front's `DeclAt` for inductive records and lane `induct`'s
+  `check_ind_decl`).
 
 Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
 **130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
@@ -5521,6 +5664,20 @@ said otherwise.
 - **Before/after.** `natShr_spec` 60.9 s → no profiler step over 1 s; the slow goal 52 s → < 2 s;
   module 111 s → 25 s (Lake, contended); grind in the whole file 7.9 s.
 
+Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written** (`installStepGo`,
+`installHeader`, `installValueGuards`, `checkValueGroup` now `sorry` — through stubs only); bad
+links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
+`romExprL`/`internAllPinsL` at the program's ROM).
+
+### Landing 2 (lane `defeq`)
+* Merged helpers `defeq-slots` (KnotSlot, InferLeaves). The phase-4 callees landed by lane
+  `exprops4` replace three stub names: `abstract1` → `abs_entry`, `abstract_range` → `ar_entry`;
+  `has_fvar`, `inst_list` already had the right names. `DefeqCallees` keeps their `CoreS`-at-
+  `coreWalkFuel` form as an assumption (the refinements are under `ArenaA` at every `F ≥ n`): the
+  bridge (L fuel `≤ coreWalkFuel`, `AbsR` across `scratch_enter`, `ArenaA` from `CoreS`) is next.
+* `infer_const` passes the record's own name `EREC[p + 1]` to `const_ty_at` (the twin keys
+  `constTyC` by `cv.name`; `EnvR` does not promise `cv.name = n`). Lane `whnf`: the same gap at
+  `WhnfIota.lean`'s `const_ty_at(cj, …)` call.
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357

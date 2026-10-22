@@ -505,6 +505,22 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     ex4, hrun5, ex5, if_true, Bool.false_eq_true, if_false, StateT.run_pure]
   rfl
 
+/-- **`install_value_guards` refines `installValueGuards`** (through the stubs of the walks). -/
+@[refines ConRon.Arena.installValueGuards]
+theorem installValueGuards_refines (p : Prog) (hC : CvgProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q v : Word) (cv : IConstantVal)
+    (hS : StageR dn vis fe s₀.mem a₀) (hq : decCV (erA s₀.mem) q.toNat = some cv)
+    (hqb : q.toNat + 3 < 2 ^ 64) (hv : v.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_value_guards" [vis, q, v]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installValueGuards fe cv (decI v)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (installValueGuards fe cv (decI v)) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (ivg_specW p hC n s₀ vis q v) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨a', hrun, hS', hg⟩ := ivgW_ok hm hS hq hqb hv
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
+
 /-- **`lvl_eq_c(u, v)` under the stage relation** (`sorry`): lane `whnf`'s `lvlEqC_refines` proves
 it under `CoreS`, which has the readback-cache invariants and `NStoreWF` that `StageR` lacks; the
 stub `lvl_eq` of lane `indproofs` has the same gap (and calls the uncached `lvl_eq`). -/
