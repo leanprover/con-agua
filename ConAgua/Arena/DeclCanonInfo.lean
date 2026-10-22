@@ -550,4 +550,209 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
       rw [hB]
       by_cases e : tbl = tbl' <;> simp [e]
 
+
+/-- **`ci_canon_eq` refines `IConstantInfo.canonEq`.** -/
+@[refines ConRon.Arena.IConstantInfo.canonEq]
+theorem ciCanonEq_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (p q : Word) (c c' : IConstantInfo) :
+    RefAM pr "ci_canon_eq" [p, q]
+      (fun m a => StageR dn vis fe m a ∧ decCI (erecP m) dn p.toNat = some c ∧
+        decCI (erecP m) dn q.toNat = some c' ∧ PoolSmall m ∧ LitInj a)
+      (c.canonEq c') (CPostL dn vis fe decW0B) := by
+  intro n s₀ a₀ ⟨hS, hc, hc', hP, hL⟩
+  refine triple_post (ciCanonEq_spec pr hp n s₀ p q) ?_
+  rintro x s' ⟨hl, hx⟩
+  obtain ⟨b, a', hb, hrb, hS', hg, hP', hL'⟩ := cieW_ok n hx hS hc hc' hP hL
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
+
+/-! ## `canon_eq_list` -/
+
+mutual
+/-- **The model of `canon_eq_list(o, l, o', l')`**. -/
+def celW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, o1, l1, o2, l2 =>
+    if l1 = 0 ∧ l2 = 0 then some (1, m)
+    else if l1 = 0 ∨ l2 = 0 then some (0, m)
+    else celK1 k o1 l1 o2 l2 (cieW k m (rdW (m.arr64 IW) o1) (rdW (m.arr64 IW) o2))
+
+/-- After `ci_canon_eq`. -/
+def celK1 (k : Nat) (o1 l1 o2 l2 : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (e, m1) => if e = 0 then some (0, m1) else celW k m1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1)
+end
+
+section arms
+variable (k : Nat) (m m1 : Mem) (o1 l1 o2 l2 e : Word)
+theorem celW_succ : celW (k + 1) m o1 l1 o2 l2 =
+    (if l1 = 0 ∧ l2 = 0 then some (1, m)
+    else if l1 = 0 ∨ l2 = 0 then some (0, m)
+    else celK1 k o1 l1 o2 l2 (cieW k m (rdW (m.arr64 IW) o1) (rdW (m.arr64 IW) o2))) := by rw [celW]
+theorem celK1_some : celK1 k o1 l1 o2 l2 (some (e, m1)) =
+    (if e = 0 then some (0, m1) else celW k m1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1)) := by
+  rw [celK1]
+end arms
+
+grind_pattern [ind_grind] celW_succ => celW (k + 1) m o1 l1 o2 l2
+grind_pattern [ind_grind] celK1_some => celK1 k o1 l1 o2 l2 (some (e, m1))
+
+theorem canonEqListL_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) :
+    ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
+    ⦃fun s => s = s₀⦄ invoke pr (exec pr n) "canon_eq_list" [o1, l1, o2, l2]
+    ⦃fun x s' => LocEq s' s₀ ∧ celW n s₀.mem o1 l1 o2 l2 = some (x.headD 0, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ o1 l1 o2 l2
+    rw [invoke_eq _ hp.canon_eq_list]; simp only [callFn, canonEqListL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o1 l1 o2 l2
+    rw [invoke_eq _ hp.canon_eq_list]
+    simp only [callFn, canonEqListL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        ciCanonEq_spec pr hp n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+
+theorem decPL_zero {α : Type} (m : Mem) (f : Nat → Option α) (o : Nat) : decPL m f o 0 = some [] := by
+  simp [decPL]
+
+/-- A pointer slice stays decoded when the pool grows (below its top) and the record decoder
+only gains. -/
+theorem decPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : IWGrow m m')
+    (hf : ∀ q x, f q = some x → f' q = some x) :
+    ∀ (c o : Nat) (xs : List α), o + c ≤ iwTop m → decPL m f o c = some xs →
+    decPL m' f' o c = some xs := by
+  intro c
+  induction c with
+  | zero => intro o xs _ h; rw [decPL_zero] at h ⊢; exact h
+  | succ c ih =>
+    intro o xs hb h
+    rw [decPL_succ] at h ⊢
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
+    obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
+    refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
+    simp only [iwN, nat?, iwA] at hv ⊢
+    rw [hg.2.2.1 o (by omega)]; exact hv
+
+
+theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+    ∀ (m m' : Mem) (a : AState) (o1 l1 o2 l2 x : Word) (xs ys : List IConstantInfo),
+    celW k m o1 l1 o2 l2 = some (x, m') → StageR dn vis fe m a →
+    decPL m (fun q => decCI (erecP m) dn q) o1.toNat l1.toNat = some xs →
+    decPL m (fun q => decCI (erecP m) dn q) o2.toNat l2.toNat = some ys →
+    o1.toNat + l1.toNat ≤ iwTop m → o2.toNat + l2.toNat ≤ iwTop m → PoolSmall m → LitInj a →
+    ∃ (b : Bool) (a' : AState), (ConRon.Arena.canonEqList xs ys).run a = .ok (b, a') ∧
+      x = (if b then 1 else 0) ∧ CQ dn vis fe m m' a' := by
+  induction k with
+  | zero => intro m m' a o1 l1 o2 l2 x xs ys h; simp [celW] at h
+  | succ k ih =>
+    intro m m' a o1 l1 o2 l2 x xs ys h hS hxs hys hb1 hb2 hP hL
+    rw [celW_succ] at h
+    have lx := decPL_length (m := m) hxs
+    have ly := decPL_length (m := m) hys
+    by_cases h0 : l1 = 0 ∧ l2 = 0
+    · rw [if_pos h0] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have e1 : xs = [] := List.length_eq_zero_iff.mp (by rw [lx, h0.1]; rfl)
+      have e2 : ys = [] := List.length_eq_zero_iff.mp (by rw [ly, h0.2]; rfl)
+      subst e1 e2
+      exact ⟨true, a, by simp [ConRon.Arena.canonEqList]; rfl, rfl, hS, IWGrow.refl _, hP, hL⟩
+    rw [if_neg h0] at h
+    by_cases h1 : l1 = 0 ∨ l2 = 0
+    · rw [if_pos h1] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
+      rcases xs with _ | ⟨x1, xs'⟩ <;> rcases ys with _ | ⟨y1, ys'⟩
+      · exfalso; apply h0
+        refine ⟨UInt64.toNat_inj.mp (by simpa using lx.symm), UInt64.toNat_inj.mp (by simpa using ly.symm)⟩
+      · simp [ConRon.Arena.canonEqList]; rfl
+      · simp [ConRon.Arena.canonEqList]; rfl
+      · exfalso
+        rcases h1 with h1 | h1 <;> (subst h1; simp at lx ly)
+    rw [if_neg h1] at h
+    rw [not_or] at h1
+    rcases xs with _ | ⟨x1, xs'⟩
+    · exfalso; apply h1.1; exact UInt64.toNat_inj.mp (by simpa using lx.symm)
+    rcases ys with _ | ⟨y1, ys'⟩
+    · exfalso; apply h1.2; exact UInt64.toNat_inj.mp (by simpa using ly.symm)
+    have l1e : l1.toNat = xs'.length + 1 := by simpa using lx.symm
+    have l2e : l2.toNat = ys'.length + 1 := by simpa using ly.symm
+    have t := iwTop_lt m
+    rw [l1e, decPL_succ] at hxs
+    rw [l2e, decPL_succ] at hys
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hxs hys
+    obtain ⟨v1, hv1, x1', hx1, xs'', hxs', hxeq⟩ := hxs
+    obtain ⟨v2, hv2, y1', hy1, ys'', hys', hyeq⟩ := hys
+    obtain ⟨rfl, rfl⟩ := List.cons.inj hxeq
+    obtain ⟨rfl, rfl⟩ := List.cons.inj hyeq
+    obtain ⟨r1, hr1⟩ := iwN_rdW (m := m) (i := o1.toNat) hv1 (by omega)
+    obtain ⟨r2, hr2⟩ := iwN_rdW (m := m) (i := o2.toNat) hv2 (by omega)
+    have eo1 : UInt64.ofNat o1.toNat = o1 := UInt64.ofNat_toNat
+    have eo2 : UInt64.ofNat o2.toNat = o2 := UInt64.ofNat_toNat
+    rw [eo1] at r1
+    rw [eo2] at r2
+    rw [r1, r2] at h
+    have hw1 : (UInt64.ofNat v1).toNat = v1 := by simp; omega
+    have hw2 : (UInt64.ofNat v2).toNat = v2 := by simp; omega
+    unfold celK1 at h
+    cases hc : cieW k m (UInt64.ofNat v1) (UInt64.ofNat v2) with
+    | none => rw [hc] at h; simp at h
+    | some xx =>
+    obtain ⟨e1, m1⟩ := xx
+    rw [hc] at h
+    dsimp only at h
+    obtain ⟨b1, a1, hb1', hr1', hS1, hg1, hP1, hL1⟩ := cieW_ok k hc hS (by rw [hw1]; exact hx1)
+      (by rw [hw2]; exact hy1) hP hL
+    have o1e : (o1 + 1).toNat = o1.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have o2e : (o2 + 1).toNat = o2.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have l1p : (l1 - 1).toNat = xs''.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp [l1e]
+    have l2p : (l2 - 1).toNat = ys''.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp [l2e]
+    simp only [ConRon.Arena.canonEqList]
+    obtain ⟨b, a', hb, hr, hq⟩ := andThen_st (Q := CQ dn vis fe m m') (A := ConRon.Arena.IConstantInfo.canonEq x1' y1')
+      (B := ConRon.Arena.canonEqList xs'' ys'') hb1' hr1'
+      (fun hne => by
+        rw [if_neg hne] at h
+        have hx2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (IWGrow.erecPExtR hg1) hq) xs''.length
+          (o1.toNat + 1) xs'' (by omega) hxs'
+        have hy2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (IWGrow.erecPExtR hg1) hq) ys''.length
+          (o2.toNat + 1) ys'' (by omega) hys'
+        obtain ⟨b2, a2, hb2, hr2', hq2⟩ := ih m1 m' a1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1) x xs'' ys'' h hS1
+          (by rw [o1e, l1p]; exact hx2) (by rw [o2e, l2p]; exact hy2)
+          (by rw [o1e, l1p]; have := hg1.1; omega) (by rw [o2e, l2p]; have := hg1.1; omega) hP1 hL1
+        exact ⟨b2, a2, hb2, hr2', hq2.1, hg1.trans hq2.2.1, hq2.2.2.1, hq2.2.2.2⟩)
+      (fun h0 => by
+        rw [if_pos h0] at h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+        exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
+    exact ⟨b, a', hb, hr, hq⟩
+
+
+/-- **`canon_eq_list` refines `canonEqList`.** The records are `EREC` pointers in two `IW` slices
+(decoded below the record pool's top, as the other record statements). -/
+@[refines ConRon.Arena.canonEqList]
+theorem canonEqList_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (o1 l1 o2 l2 : Word) (xs ys : List IConstantInfo) :
+    RefAM pr "canon_eq_list" [o1, l1, o2, l2]
+      (fun m a => StageR dn vis fe m a ∧
+        decPL m (fun q => decCI (erecP m) dn q) o1.toNat l1.toNat = some xs ∧
+        decPL m (fun q => decCI (erecP m) dn q) o2.toNat l2.toNat = some ys ∧
+        o1.toNat + l1.toNat ≤ iwTop m ∧ o2.toNat + l2.toNat ≤ iwTop m ∧ PoolSmall m ∧ LitInj a)
+      (ConRon.Arena.canonEqList xs ys) (CPostL dn vis fe decW0B) := by
+  intro n s₀ a₀ ⟨hS, hxs, hys, hb1, hb2, hP, hL⟩
+  refine triple_post (canonEqListL_spec pr hp n s₀ o1 l1 o2 l2) ?_
+  rintro x s' ⟨hl, hx⟩
+  obtain ⟨b, a', hb, hrb, hS', hg, hP', hL'⟩ := celW_ok n _ _ a₀ o1 l1 o2 l2 _ xs ys hx hS hxs hys
+    hb1 hb2 hP hL
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
+
 end L.Ind

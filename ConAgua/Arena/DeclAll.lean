@@ -13,6 +13,7 @@ import ConAgua.Arena.DeclCanonExpr2
 import ConAgua.Arena.DeclCanonNames
 import ConAgua.Arena.DeclCanonConst
 import ConAgua.Arena.DeclCanonRules
+import ConAgua.Arena.DeclCanonInfo
 
 /-!
 # Every declaration-loop module (lane `decls3`)
