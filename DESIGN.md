@@ -988,7 +988,7 @@ was free. Files: `L/{Syntax,Notation,Records,Examples}.lean`, tests in `Compiler
 
 ### Measurements
 
-* Compiler and its proof: unchanged (0 lines). `L/Records.lean` 150 lines, 1.5 s.
+* Compiler and its proof: unchanged (0 lines). `L/Records.lean` 147 lines, 0.4 s.
 * **Example** (`L/Examples.lean`, `node_mk`): a node `[tag, a, b]` written field by field, a field
   of another node read, three fields read back; the spec states the results and two frame facts
   over `Mem.fld`. Proof: the standard `vcgen [… evalE_at …] <;> finish`, no hint, 1.8 s. The
