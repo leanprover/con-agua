@@ -488,6 +488,7 @@ variables are the first former's opened telescope, with the members' holes. -/
 def blockNestCtx : FunDecl := lfn (vis, p, cvO, cvL) locals
     (cvTa0, ok, pqO, pqL, body, ctx, ok2, hO, hL) {
   if cvL == 0 { abort };
+  if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
   cvTa0 := IW.u64[cvO];
   (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC.u64[cvTa0 + 3], 0);
   if ok == 0 { abort };

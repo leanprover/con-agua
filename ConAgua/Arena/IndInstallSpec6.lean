@@ -207,23 +207,20 @@ theorem partsShapeWords {m m' : Mem} (hg : IWGrow m m') {q : Word} {bs : BlockSh
   rw [partsRdIW_grow hg (by omega), rdW_of_get? h6.symm hw']
   exact ⟨hwl, hwe.symm⟩
 
-/-- **`block_shape_nest_ctx` refines `BlockShape.nestCtx`** (through `param_levels`' stub
+/-- The model of `block_shape_nest_ctx` against `BlockShape.nestCtx` (through `param_levels`' stub
 `intern_ls_iw`): the shape record decoded below the tops, its members' slice below the top
 (`hsrc`), the parameters' free variables a handle slice below the top; the context record decoded
 below the tops. -/
-@[refines ConRon.Arena.BlockShape.nestCtx]
-theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
     (fvsP : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
     (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
-    (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_nest_ctx" [q, fo, fl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (bs.nestCtx fvsP) a₀ ∧
+    (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)
+    (r : List Word) (hm : nckW n s₀.mem q fo fl = some (r, s'.mem)) :
+    AM.ok (bs.nestCtx fvsP) a₀ ∧
       DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
       StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
-      CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat; ⊤⦄ := by
-  refine triple_post (nck_spec p hP n s₀ q fo fl) ?_
-  rintro r s' ⟨hl, hm⟩
+      CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat := by
   obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, hptr1⟩ := partsShapeFacts hq hsrc
@@ -338,7 +335,7 @@ theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : 
       have := hg6'.1; omega
   have hin4 : CtxIn s'.mem qq.toNat (· < iwTop s'.mem) :=
     ⟨fun j hj => by omega, fun i hi o l ho hl' j hj => by have := hsl4 i hi o l ho hl'; omega⟩
-  refine ⟨hl, hok, ?_, by rw [hst]; exact hS6, hg04.trans hg6, hin4, hsl4⟩
+  refine ⟨hok, ?_, by rw [hst]; exact hS6, hg04.trans hg6, hin4, hsl4⟩
   rw [hres]
   simp only [List.headD_cons, List.tail_cons] at g0 g1 g5 g6 ⊢
   have hn1 : DecB (fun m => decHL m (rdW (s₀.mem.arr64 CTL) 200).toNat (UInt64.ofNat bs.k).toNat) s'.mem
@@ -359,5 +356,23 @@ theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : 
     Option.map_some, Option.bind_some, bind, pure, hnpw, UInt64.toNat_ofNat_of_lt' hnpb, hl4', hsl', if_true]
   simp only [show decHL _ _ _ = _ from hn1, show decHL _ _ _ = _ from hn2, show decNL _ _ _ = _ from hn3,
     show decHL _ _ _ = _ from hn4, Option.bind_some, hle4, hse]
+
+/-- **`block_shape_nest_ctx` refines `BlockShape.nestCtx`** (through `param_levels`' stub
+`intern_ls_iw`): the shape record decoded below the tops, its members' slice below the top
+(`hsrc`), the parameters' free variables a handle slice below the top; the context record decoded
+below the tops. -/
+@[refines ConRon.Arena.BlockShape.nestCtx]
+theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
+    (fvsP : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
+    (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
+    (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_nest_ctx" [q, fo, fl]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (bs.nestCtx fvsP) a₀ ∧
+      DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
+      StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat; ⊤⦄ :=
+  triple_post (nck_spec p hP n s₀ q fo fl) fun r s' ⟨hl, hm⟩ =>
+    ⟨hl, nckW_ok n s₀ s' a₀ dn vis fe q fo fl bs fvsP hS hq hsrc hf hfb r hm⟩
 
 end L.Ind
