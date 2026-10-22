@@ -571,3 +571,78 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   rfl
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_ctors_u4`: a non-ordinary field read later -/
+
+def ustWf : Nat → Mem → Word → Word → Word → Option (Word × Mem)
+  | n + 2, m, cty, nP, j => ustW n m cty nP j
+  | _, _, _, _, _ => none
+
+mutual
+def u4W : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, ko, nF, cl, i =>
+    if nF ≤ i then some ([0], m)
+    else if rdW (m.arr64 IW) (ko + i) ≠ 0 then u4K n ko nF cl i (ustWf n m cl 0 i)
+    else u4W n m ko nF cl (i + 1)
+def u4K (n : Nat) (ko nF cl i : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (su, m1) => if su ≠ 0 then some ([1], m1) else u4W n m1 ko nF cl (i + 1)
+end
+
+section arms
+variable (n : Nat) (m m1 : Mem) (ko nF cl i su : Word)
+theorem u4W_done (h : nF ≤ i) : u4W (n + 1) m ko nF cl i = some ([0], m) := by simp [u4W, h]
+theorem u4W_kind (h : ¬ nF ≤ i) (hk : rdW (m.arr64 IW) (ko + i) ≠ 0) :
+    u4W (n + 1) m ko nF cl i = u4K n ko nF cl i (ustWf n m cl 0 i) := by simp [u4W, h, hk]
+theorem u4W_ord (h : ¬ nF ≤ i) (hk : ¬ rdW (m.arr64 IW) (ko + i) ≠ 0) :
+    u4W (n + 1) m ko nF cl i = u4W n m ko nF cl (i + 1) := by simp only [u4W]; rw [if_neg h, if_neg hk]
+theorem u4K_hit (h : su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = some ([1], m1) := by rw [u4K, if_pos h]
+theorem u4K_miss (h : ¬ su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = u4W n m1 ko nF cl (i + 1) := by
+  rw [u4K, if_neg h]
+end arms
+attribute [ind_grind] u4W_done u4W_kind u4W_ord u4K_hit u4K_miss
+
+/-- The lookups of `struct_used_later`. -/
+structure UslLook (p : Prog) : Prop where
+  hv : p.lookup "e_view" = some eView
+  hf : p.lookup "hb_find" = some (memoFindG hbSch)
+  hput : p.lookup "hb_put" = some (memoPutG hbSch)
+  hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL
+  hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL
+  hbp : BvbProg p
+  hcl : p.lookup "hb_clear" = some (memoClearG hbSch)
+  hfast : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL
+  hp : p.lookup "struct_used_later" = some structUsedLaterL
+
+theorem structUsedLater_spec' (p : Prog) (L : UslLook p) (n : Nat) (s₀ : St) (cty nP j : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later" [cty, nP, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ ustWf n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
+  match n with
+  | 0 => rw [invoke_eq _ L.hp]; simp only [callFn, structUsedLaterL]; vcgen [exec] <;> grind
+  | 1 =>
+    rw [invoke_eq _ L.hp]; simp only [callFn, structUsedLaterL]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, invoke_exec0 p] <;> grind
+  | n + 2 => exact structUsedLater_spec p L.hv L.hf L.hput L.hins L.hgo L.hbp L.hcl L.hfast L.hp n s₀ cty nP j
+
+theorem nestCtorsU4_spec (p : Prog) (L : UslLook p) (hp : p.lookup "nest_ctors_u4" = some nestCtorsU4L)
+    (n : Nat) : ∀ (s₀ : St) (ko nF cl i : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_u4" [ko, nF, cl, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ u4W n s₀.mem ko nF cl i = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ ko nF cl i
+    rw [invoke_eq _ hp]; simp only [callFn, nestCtorsU4L]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ ko nF cl i
+    rw [invoke_eq _ hp]
+    simp only [callFn, nestCtorsU4L]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, structUsedLater_spec' p L n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+end L.Ind
