@@ -4389,10 +4389,8 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   and the pinned zero level denote; a `CoreS` field would be the fix). L changes: `proof_irrel` calls
   the cached `lvl_eq_c` (the twin's `lvlEq?` fills the cache), `expr_view_ok` aborts on a dangling
   handle (the twin's `view` fails), `iota_certs_full_aux`/`iota_ctor_never_prop` split;
-  `caps_never_zero`'s stub statement corrected (its twin runs readbacks). Earlier: `iota_ctor_never_prop`, `iota_case3` (need a
-  corrected `caps_never_zero` stub: its twin runs readbacks), `prepare_major`, `major_to_ctor`,
-  `proof_irrel` (calls `lvl_eq_c`), `iota_certs_full(_aux)`, `iota_rec_at`. Eighteen are proved
-  (`WhnfIotaRefine*.lean`, sub-lane); its fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
+  `caps_never_zero`'s stub statement corrected (its twin runs readbacks). The first sub-lane's
+  fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
   the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
   twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
   `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
