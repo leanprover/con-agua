@@ -1,3 +1,4 @@
+import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCoreSlot
 
 /-!
@@ -255,5 +256,68 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   · rw [hst]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
   · rw [hres]; simp only [decBool]; rw [← hr]; simp only [decOpt]; split <;> simp_all
   · unfold ResH HW; rw [← hr]; split <;> decide
+
+/-! ## Stack writers keep the relation; slices below the top survive -/
+
+theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b = SPN)
+    (hC : ∀ x ∈ C, x = 136) : CoreS dn m' a vis fe M eb := by
+  have aA : ∀ lo hi : Nat, hi ≤ 144 → AvoidA lo hi A := fun lo hi h b hb => by
+    have := hA b hb; simp only [SPN, ArrId] at this ⊢; omega
+  have aC : ∀ lo hi : Nat, hi ≤ 136 → AvoidC lo hi C := fun lo hi h x hx => by
+    have := hA; rw [hC x hx]; right; simpa using h
+  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => by rw [hA b hb]; decide)
+      (fun x hx => by rw [hC x hx]; decide) m m' hf a hS.arena.1,
+      DerR.frameM A C m m' hf (fun b hb => .inr (by rw [hA b hb]; decide)) a hS.arena.2⟩,
+    hS.core.frame (aA 96 128 (by decide)) (aC 96 128 (by decide)) hf,
+    hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
+    hS.env.frame (aA 132 144 (by decide)) (aC 128 136 (by decide)) hf,
+    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩
+
+theorem SpineR.keep {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
+    (hsz : (m'.arr64 SPN).size = (m.arr64 SPN).size)
+    (hk : ∀ i : Word, i < spTop m → spW m' i = spW m i)
+    (htop : off.toNat + cnt.toNat ≤ (spTop m).toNat) (hspn : (m.arr64 SPN).size < 2 ^ 63) :
+    SpineR m' off cnt xs := by
+  have hb := h.bound
+  have hlt : ∀ i : Nat, i < cnt.toNat → off + i.toUInt64 < spTop m := by
+    intro i hi
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat']
+    have : i % 2 ^ 64 = i := Nat.mod_eq_of_lt (by omega)
+    rw [this, Nat.mod_eq_of_lt (by omega)]; omega
+  refine ⟨h.size, hsz ▸ hb, fun i hi => ?_, fun i hi => ?_⟩
+  · rw [hk _ (hlt i hi)]; exact h.lt i hi
+  · rw [hk _ (hlt i (h.size ▸ hi))]; exact h.get i hi
+
+
+/-! ## Stack and word helpers (used by the app arm and `whnf_app`) -/
+
+/-- The top restored after a run that kept everything below the old top. -/
+theorem StackKept.restore {m m₁ : Mem} (hk : ∀ i : Word, i < spTop m → spW m₁ i = spW m i)
+    (hsz : (m₁.arr64 SPN).size = (m.arr64 SPN).size)
+    (h136 : (136 : Word).toNat < (m₁.arr64 CTL).size) :
+    StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
+  have hspn : (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)).arr64 SPN = m₁.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨?_, by rw [hspn, hsz], fun i hi => by simp only [spW, hspn]; exact hk i hi⟩
+  simp only [spTop, rdW_set64]
+  have : (136 : Word).toNat = 136 := rfl
+  simp only [this] at h136
+  simp; intro h; omega
+
+theorem addW (a b : Word) (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
+  rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
+
+/-- The twin's second half of the `.app` clause. -/
+def whnfCoreApp2T (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (v h : EIdx)
+    (args nodes : Array EIdx) : AM WhnfStep := do
+  let hv ← headAndArgs v
+  whnfApp mode r fe depth v hv.1 hv.2 (v == h) args nodes 0
+
+theorem evalW_eq_ne (v h : Word) (hv : HW v) (hh : HW h) :
+    (Cmp.evalW .eq v h != 0) = (decE v == decE h) := by
+  rw [decE_eq, decE_eq, decI_beq v h hv hh]
+  by_cases e : v = h <;> simp [Cmp.evalW, Cmp.eval, e]
 
 end L.Arena
