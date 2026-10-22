@@ -277,8 +277,9 @@ def ofReducePinAL : FunDecl := lfn (n) locals (orn, p) {
 stored reduce opaque, the pin. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:124-134 ConRon.Arena.ofReduceAxOk
 @[l_impl ConRon.Arena.ofReduceAxOk]
-def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (c, en, ea, e, p) {
-  c := call of_reduce_op(EREC.u64[q]);
+def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (nm, c, en, ea, e, p) {
+  nm := EREC.u64[q];
+  c := call of_reduce_op(nm);
   en := call pin_at(0);
   ea := call rom_ci(0);
   e := call find_is(vis, en, ea);
@@ -287,7 +288,7 @@ def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (c, en, ea, e, p) {
   if e == 0 { return 0 };
   e := call reduce_stored_ok(vis, c);
   if e == 0 { return 0 };
-  p := call of_reduce_pin_a(EREC.u64[q]);
+  p := call of_reduce_pin_a(nm);
   e := call matches_pin(q, p);
   return e
 }

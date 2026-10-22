@@ -18,3 +18,4 @@ import ConAgua.Arena.DeclBasisSpec2
 import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.DeclReducePin
 import ConAgua.Arena.DeclArmOpaque
+import ConAgua.Arena.DeclAxiomSpec
