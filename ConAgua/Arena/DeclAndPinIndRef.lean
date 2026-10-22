@@ -21,6 +21,41 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 set_option linter.unusedSimpArgs false
 
+namespace L.Ind
+
+open L.Arena
+
+/-- The words `er_to_iw` leaves: the copy at the old top. -/
+theorem erToIwW_wordsA {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    ∀ i < l.toNat, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + i]? = (m.arr64 EREC)[o.toNat + i]? := by
+  simp only [erToIwW] at h
+  cases hal : allocW m l with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
+  simp only [hal] at h
+  cases hcp : erCopyW (n - 1) m1 q o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq hm1
+  have hIW := allocMem_IW m l
+  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
+    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  obtain ⟨hA, hS, hW, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
+    (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
+  rw [hEE] at hG
+  intro i hi
+  rw [hG, if_pos (by omega)]
+  congr 1; omega
+
+end L.Ind
+
 namespace L.Arena
 
 open L.Front (DECL DLP trunc decCIs IndDeclAt dw)
@@ -188,5 +223,33 @@ theorem decPL_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Nat}
   refine ⟨v, ?_, ArrExt.decCI (IWGrow.erecPExt hg) hy⟩
   simp only [iwN, nat?, iwA] at hv ⊢
   rw [hg.2.2.1 _ (by omega)]; exact hv
+
+/-- **`er_to_iw` of the copied block**: the `IW` slice decodes (in `erecP`) to the block. -/
+theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {block : List IConstantInfo}
+    (h : erToIwW n m o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hd : decCIs (erecP m) dn o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
+      decPL m' (fun q => decCI (erecP m') dn q) (r.headD 0).toNat l.toNat = some block ∧
+      (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hr, -, hg, hf, hE, htop⟩ := L.Ind.erToIwW_dec (k := .name) h hsz (by omega) hEs (by
+    simp only [erTop] at hE1 hb; omega)
+  have hw := L.Ind.erToIwW_wordsA h hsz (by omega) hEs (by simp only [erTop] at hE1 hb; omega)
+  have hS' := (L.Arena.erToIwW_stage h hS (Or.inr (by simp only [erTop] at hE1 hb; omega))).2.2.2.1
+  have hP' : erecP m' = erecP m := erecP_congr hE (hf.2.1 129 (by simp))
+  subst hr
+  simp only [List.headD_cons, List.tail_cons]
+  refine ⟨hS', hg, trivial, ?_, by omega⟩
+  rw [hP']
+  unfold decPL
+  unfold decCIs at hd
+  refine mapM_imp _ _ hd fun j hj y hy => ?_
+  have hj' := List.mem_range.mp hj
+  simp only [bind, Option.bind_eq_some_iff] at hy ⊢
+  obtain ⟨v, hv, hy⟩ := hy
+  refine ⟨v, ?_, hy⟩
+  simp only [iwN, nat?, iwA] at hv ⊢
+  rw [hw j hj', ← erecP_get_lt (by omega)]; exact hv
 
 end L.Arena
