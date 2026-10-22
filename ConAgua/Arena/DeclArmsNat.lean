@@ -38,14 +38,12 @@ open L.Arena
 /-- `nat_op_names()`: `natOpNames` (`pred, add, sub, mul, pow, beq, ble`), an `IW` slice. -/
 -- con-ron: ConRon/Arena/Core.lean:876-882 ConRon.Arena.natOpNames
 @[l_impl ConRon.Arena.natOpNames]
-def natOpNamesL : FunDecl := lfn () locals (q, j, x) {
+def natOpNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, q) {
+  a := call pin_at(14); b := call pin_at(15); c := call pin_at(16); d := call pin_at(17);
+  e := call pin_at(18); f := call pin_at(19); g := call pin_at(20);
   q := call iw_alloc(7);
-  j := 0;
-  while j < 7 {
-    x := call pin_at(14 + j);
-    IW.u64[q + j] := x;
-    j += 1
-  };
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f; IW.u64[q + 6] := g;
   return (q, 7)
 }
 
@@ -53,64 +51,127 @@ def natOpNamesL : FunDecl := lfn () locals (q, j, x) {
 shiftRight`), an `IW` slice. -/
 -- con-ron: ConRon/Arena/Core.lean:884-890 ConRon.Arena.natDivModNames
 @[l_impl ConRon.Arena.natDivModNames]
-def natDivModNamesL : FunDecl := lfn () locals (q, j, x) {
+def natDivModNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, h, q) {
+  a := call pin_at(21); b := call pin_at(22); c := call pin_at(23); d := call pin_at(24);
+  e := call pin_at(25); f := call pin_at(26); g := call pin_at(27); h := call pin_at(28);
   q := call iw_alloc(8);
-  j := 0;
-  while j < 8 {
-    x := call pin_at(21 + j);
-    IW.u64[q + j] := x;
-    j += 1
-  };
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f; IW.u64[q + 6] := g; IW.u64[q + 7] := h;
   return (q, 8)
 }
 
-/-- `nat_op_deps(c)`: `natOpDeps c`, an `IW` slice (every pin read first, as the twin does). -/
+/-- `nat_op_pins_a(q)`: the pin slots `14‥21` (`pred, add, sub, mul, pow, beq, ble, div`) into
+`IW[q‥q+7]`. -/
+-- con-ron: ConRon/Arena/Core.lean:892-915 ConRon.Arena.natOpDeps
+def natOpPinsAL : FunDecl := lfn (q) locals (a, b, c, d, e, f, g, h) {
+  a := call pin_at(14); b := call pin_at(15); c := call pin_at(16); d := call pin_at(17);
+  e := call pin_at(18); f := call pin_at(19); g := call pin_at(20); h := call pin_at(21);
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f; IW.u64[q + 6] := g; IW.u64[q + 7] := h;
+  return 0
+}
+
+/-- `nat_op_pins_b(q)`: the pin slots `22‥28` (`mod, gcd, land, lor, xor, shiftLeft,
+shiftRight`) into `IW[q‥q+6]`. -/
+-- con-ron: ConRon/Arena/Core.lean:892-915 ConRon.Arena.natOpDeps
+def natOpPinsBL : FunDecl := lfn (q) locals (a, b, c, d, e, f, g) {
+  a := call pin_at(22); b := call pin_at(23); c := call pin_at(24); d := call pin_at(25);
+  e := call pin_at(26); f := call pin_at(27); g := call pin_at(28);
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f; IW.u64[q + 6] := g;
+  return 0
+}
+
+/-- `nat_op_pins_c(q)`: the pin slots `1, 2, 3, 30, 31, 29` (`Nat, Nat.zero, Nat.succ,
+Bool.true, Bool.false, Bool`) into `IW[q‥q+5]`. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natOpPinsCL : FunDecl := lfn (q) locals (a, b, c, d, e, f) {
+  a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(30);
+  e := call pin_at(31); f := call pin_at(29);
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f;
+  return 0
+}
+
+/-- `nat_op_pins()`: the names the structural-`Nat` gate reads (the twin reads all fifteen
+operation pins at once, `natOpDeps`' and `natOpEquations`' opening lines), as a 21-word `IW`
+record: words `0‥14` the slots `14‥28`, then `Nat`, `Nat.zero`, `Nat.succ`, `Bool.true`,
+`Bool.false`, `Bool` (words `15‥20`). A pin read changes no state and cannot fail once one has
+succeeded, so reading them up front is the twin's behaviour; the split keeps each proof small. -/
+-- con-ron: ConRon/Arena/Core.lean:892-915 ConRon.Arena.natOpDeps
+def natOpPinsL : FunDecl := lfn () locals (q, u) {
+  q := call iw_alloc(21);
+  u := call nat_op_pins_a(q);
+  u := call nat_op_pins_b(q + 8);
+  u := call nat_op_pins_c(q + 15);
+  return q
+}
+
+/-- `nat_op_deps(c)`: `natOpDeps c`, an `IW` slice. -/
 -- con-ron: ConRon/Arena/Core.lean:892-915 ConRon.Arena.natOpDeps
 @[l_impl ConRon.Arena.natOpDeps]
 def natOpDepsL : FunDecl :=
-    lfn (c) locals (pr, ad, su, mu, po, be, bl, di, mo, gc, la, lo, xo, sl, sr, q) {
-  pr := call pin_at(14); ad := call pin_at(15); su := call pin_at(16);
-  mu := call pin_at(17); po := call pin_at(18); be := call pin_at(19);
-  bl := call pin_at(20); di := call pin_at(21); mo := call pin_at(22);
-  gc := call pin_at(23); la := call pin_at(24); lo := call pin_at(25);
-  xo := call pin_at(26); sl := call pin_at(27); sr := call pin_at(28);
-  if c == pr { q := call iw_alloc(1); IW.u64[q] := pr; return (q, 1) };
-  if c == ad { q := call iw_alloc(1); IW.u64[q] := ad; return (q, 1) };
-  if c == su { q := call iw_alloc(2); IW.u64[q] := pr; IW.u64[q + 1] := su; return (q, 2) };
-  if c == mu { q := call iw_alloc(2); IW.u64[q] := ad; IW.u64[q + 1] := mu; return (q, 2) };
+    lfn (c) locals (pi, pr, ad, su, mu, po, be, bl, di, mo, gc, la, lo, xo, sl, sr, q) {
+  pi := call nat_op_pins();
+  pr := IW.u64[pi + 0]; ad := IW.u64[pi + 1]; su := IW.u64[pi + 2]; mu := IW.u64[pi + 3]; po := IW.u64[pi + 4]; be := IW.u64[pi + 5]; bl := IW.u64[pi + 6]; di := IW.u64[pi + 7]; mo := IW.u64[pi + 8]; gc := IW.u64[pi + 9]; la := IW.u64[pi + 10]; lo := IW.u64[pi + 11]; xo := IW.u64[pi + 12]; sl := IW.u64[pi + 13]; sr := IW.u64[pi + 14];
+  if c == pr {
+    q := call iw_alloc(1); IW.u64[q + 0] := pr;
+    return (q, 1)
+  };
+  if c == ad {
+    q := call iw_alloc(1); IW.u64[q + 0] := ad;
+    return (q, 1)
+  };
+  if c == su {
+    q := call iw_alloc(2); IW.u64[q + 0] := pr; IW.u64[q + 1] := su;
+    return (q, 2)
+  };
+  if c == mu {
+    q := call iw_alloc(2); IW.u64[q + 0] := ad; IW.u64[q + 1] := mu;
+    return (q, 2)
+  };
   if c == po {
-    q := call iw_alloc(3); IW.u64[q] := ad; IW.u64[q + 1] := mu; IW.u64[q + 2] := po;
+    q := call iw_alloc(3); IW.u64[q + 0] := ad; IW.u64[q + 1] := mu; IW.u64[q + 2] := po;
     return (q, 3)
   };
-  if c == be { q := call iw_alloc(1); IW.u64[q] := be; return (q, 1) };
-  if c == bl { q := call iw_alloc(1); IW.u64[q] := bl; return (q, 1) };
-  if c == di || c == mo {
-    q := call iw_alloc(4); IW.u64[q] := pr; IW.u64[q + 1] := su; IW.u64[q + 2] := bl;
-    IW.u64[q + 3] := c;
+  if c == be {
+    q := call iw_alloc(1); IW.u64[q + 0] := be;
+    return (q, 1)
+  };
+  if c == bl {
+    q := call iw_alloc(1); IW.u64[q + 0] := bl;
+    return (q, 1)
+  };
+  if c == di {
+    q := call iw_alloc(4); IW.u64[q + 0] := pr; IW.u64[q + 1] := su; IW.u64[q + 2] := bl; IW.u64[q + 3] := di;
+    return (q, 4)
+  };
+  if c == mo {
+    q := call iw_alloc(4); IW.u64[q + 0] := pr; IW.u64[q + 1] := su; IW.u64[q + 2] := bl; IW.u64[q + 3] := mo;
     return (q, 4)
   };
   if c == gc {
-    q := call iw_alloc(3); IW.u64[q] := bl; IW.u64[q + 1] := mo; IW.u64[q + 2] := gc;
+    q := call iw_alloc(3); IW.u64[q + 0] := bl; IW.u64[q + 1] := mo; IW.u64[q + 2] := gc;
     return (q, 3)
   };
-  if c == la || c == xo {
-    q := call iw_alloc(6); IW.u64[q] := ad; IW.u64[q + 1] := mu; IW.u64[q + 2] := bl;
-    IW.u64[q + 3] := di; IW.u64[q + 4] := mo; IW.u64[q + 5] := c;
+  if c == la {
+    q := call iw_alloc(6); IW.u64[q + 0] := ad; IW.u64[q + 1] := mu; IW.u64[q + 2] := bl; IW.u64[q + 3] := di; IW.u64[q + 4] := mo; IW.u64[q + 5] := la;
     return (q, 6)
   };
   if c == lo {
-    q := call iw_alloc(7); IW.u64[q] := ad; IW.u64[q + 1] := su; IW.u64[q + 2] := mu;
-    IW.u64[q + 3] := bl; IW.u64[q + 4] := di; IW.u64[q + 5] := mo; IW.u64[q + 6] := lo;
+    q := call iw_alloc(7); IW.u64[q + 0] := ad; IW.u64[q + 1] := su; IW.u64[q + 2] := mu; IW.u64[q + 3] := bl; IW.u64[q + 4] := di; IW.u64[q + 5] := mo; IW.u64[q + 6] := lo;
     return (q, 7)
   };
+  if c == xo {
+    q := call iw_alloc(6); IW.u64[q + 0] := ad; IW.u64[q + 1] := mu; IW.u64[q + 2] := bl; IW.u64[q + 3] := di; IW.u64[q + 4] := mo; IW.u64[q + 5] := xo;
+    return (q, 6)
+  };
   if c == sl {
-    q := call iw_alloc(4); IW.u64[q] := su; IW.u64[q + 1] := mu; IW.u64[q + 2] := bl;
-    IW.u64[q + 3] := sl;
+    q := call iw_alloc(4); IW.u64[q + 0] := su; IW.u64[q + 1] := mu; IW.u64[q + 2] := bl; IW.u64[q + 3] := sl;
     return (q, 4)
   };
   if c == sr {
-    q := call iw_alloc(4); IW.u64[q] := su; IW.u64[q + 1] := bl; IW.u64[q + 2] := di;
-    IW.u64[q + 3] := sr;
+    q := call iw_alloc(4); IW.u64[q + 0] := su; IW.u64[q + 1] := bl; IW.u64[q + 2] := di; IW.u64[q + 3] := sr;
     return (q, 4)
   };
   return (0, 0)
@@ -143,10 +204,26 @@ def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
   return u64(EREC.u64[q + 3] == b)
 }
 
+/-- `nat_op_bool_ctors(vis)`: the `Bool` constructors' conjunct of `natOpGuard`: `Bool.true` then
+`Bool.false` stored, level-free, at the type `Bool` (`boolCtorOk`). -/
+-- con-ron: ConRon/Arena/Core.lean:1060-1084 ConRon.Arena.natOpGuard
+def natOpBoolCtorsL : FunDecl := lfn (vis) locals (bt, f, r, ok, bf) {
+  bt := call pin_at(30);
+  (f, r) := call env_find(bt, vis);
+  if f == 0 { return 0 };
+  ok := call bool_ctor_ok(r);
+  if ok == 0 { return 0 };
+  bf := call pin_at(31);
+  (f, r) := call env_find(bf, vis);
+  if f == 0 { return 0 };
+  ok := call bool_ctor_ok(r);
+  return ok
+}
+
 /-- `nat_op_guard(vis, c)`: `natOpGuard fe c`. -/
 -- con-ron: ConRon/Arena/Core.lean:1060-1084 ConRon.Arena.natOpGuard
 @[l_impl ConRon.Arena.natOpGuard]
-def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m, bt, f, r, ok, bf) {
+def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m, ok) {
   s := call nat_lit_supported(vis);
   if s == 0 { return 0 };
   (o, l) := call nat_op_deps(c);
@@ -157,15 +234,7 @@ def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m,
   (mo, ml) := call nat_div_mod_names();
   m := call sl_contains(mo, ml, c);
   if c == be || c == bl || m != 0 {
-    bt := call pin_at(30);
-    (f, r) := call env_find(bt, vis);
-    if f == 0 { return 0 };
-    ok := call bool_ctor_ok(r);
-    if ok == 0 { return 0 };
-    bf := call pin_at(31);
-    (f, r) := call env_find(bf, vis);
-    if f == 0 { return 0 };
-    ok := call bool_ctor_ok(r);
+    ok := call nat_op_bool_ctors(vis);
     return ok
   };
   return 1
@@ -274,97 +343,161 @@ def natEqList2 : FunDecl := lfn (a1, b1, a2, b2) locals (q, p1, p2) {
   return (q, 2)
 }
 
+/-- `nat_eq_list3(a1, b1, a2, b2, a3, b3)`: the three-equation list. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqList3 : FunDecl := lfn (a1, b1, a2, b2, a3, b3) locals (q, p1, p2, p3) {
+  p1 := call rec2(a1, b1);
+  p2 := call rec2(a2, b2);
+  p3 := call rec2(a3, b3);
+  q := call iw_alloc(3);
+  IW.u64[q] := p1; IW.u64[q + 1] := p2; IW.u64[q + 2] := p3;
+  return (q, 3)
+}
+
+/-- `nat_eq_list4(a1, b1, a2, b2, a3, b3, a4, b4)`: the four-equation list. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqList4 : FunDecl :=
+    lfn (a1, b1, a2, b2, a3, b3, a4, b4) locals (q, p1, p2, p3, p4) {
+  p1 := call rec2(a1, b1);
+  p2 := call rec2(a2, b2);
+  p3 := call rec2(a3, b3);
+  p4 := call rec2(a4, b4);
+  q := call iw_alloc(4);
+  IW.u64[q] := p1; IW.u64[q + 1] := p2; IW.u64[q + 2] := p3; IW.u64[q + 3] := p4;
+  return (q, 4)
+}
+
+/-- `nat_eq_pr(c, z, x, sx)`: `Nat.pred`'s equations `pred 0 = 0`, `pred (succ x) = x`. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqPr : FunDecl := lfn (c, z, x, sx) locals (l1, l2, q, u) {
+  l1 := call nat_ap1(c, z);
+  l2 := call nat_ap1(c, sx);
+  (q, u) := call nat_eq_list2(l1, z, l2, x);
+  return (q, 2)
+}
+
+/-- `nat_eq_un(c, x, y, z, sy, w)`: `add`'s and `sub`'s equations: `c x 0 = x`,
+`c x (succ y) = w (c x y)` (`w` the successor for `add`, the predecessor for `sub`). -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqUn : FunDecl := lfn (c, x, y, z, sy, w) locals (l1, l2, r3, r2, q, u) {
+  l1 := call nat_ap2(c, x, z);
+  l2 := call nat_ap2(c, x, sy);
+  r3 := call nat_ap2(c, x, y);
+  r2 := call nat_ap1(w, r3);
+  (q, u) := call nat_eq_list2(l1, x, l2, r2);
+  return (q, 2)
+}
+
+/-- `nat_eq_mu(c, x, y, z, sy, ad)`: `mul`'s equations. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqMu : FunDecl := lfn (c, x, y, z, sy, ad) locals (l1, l2, r3, r2, q, u) {
+  l1 := call nat_ap2(c, x, z);
+  l2 := call nat_ap2(c, x, sy);
+  r3 := call nat_ap2(c, x, y);
+  r2 := call nat_ap2(ad, r3, x);
+  (q, u) := call nat_eq_list2(l1, z, l2, r2);
+  return (q, 2)
+}
+
+/-- `nat_eq_po(c, x, y, z, sy, sN, mu)`: `pow`'s equations. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqPo : FunDecl := lfn (c, x, y, z, sy, sN, mu) locals (l1, sz, l2, r3, r2, q, u) {
+  l1 := call nat_ap2(c, x, z);
+  sz := call nat_ap1(sN, z);
+  l2 := call nat_ap2(c, x, sy);
+  r3 := call nat_ap2(c, x, y);
+  r2 := call nat_ap2(mu, r3, x);
+  (q, u) := call nat_eq_list2(l1, sz, l2, r2);
+  return (q, 2)
+}
+
+/-- `nat_eq_be(c, x, y, z, sx, sy, bT, bF)`: `Nat.beq`'s four equations. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqBe : FunDecl := lfn (c, x, y, z, sx, sy, bT, bF) locals (l1, l2, l3, l4, r4, q, u) {
+  l1 := call nat_ap2(c, z, z);
+  l2 := call nat_ap2(c, z, sy);
+  l3 := call nat_ap2(c, sx, z);
+  l4 := call nat_ap2(c, sx, sy);
+  r4 := call nat_ap2(c, x, y);
+  (q, u) := call nat_eq_list4(l1, bT, l2, bF, l3, bF, l4, r4);
+  return (q, 4)
+}
+
+/-- `nat_eq_bl(c, x, y, z, sx, sy, bT, bF)`: `Nat.ble`'s three equations. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqBl : FunDecl := lfn (c, x, y, z, sx, sy, bT, bF) locals (l1, l2, l3, r3, q, u) {
+  l1 := call nat_ap2(c, z, y);
+  l2 := call nat_ap2(c, sx, z);
+  l3 := call nat_ap2(c, sx, sy);
+  r3 := call nat_ap2(c, x, y);
+  (q, u) := call nat_eq_list3(l1, bT, l2, bF, l3, r3);
+  return (q, 3)
+}
+
+/-- `nat_eq_ctx(pi, d)`: the terms `natOpEquations` builds before it dispatches, in its order: `x :=
+fvar d`, `y := fvar (d + 1)` at `Nat`, `Nat.zero`, `Nat.succ`'s name, `succ x`, `succ y`,
+`Bool.true`, `Bool.false`, as an 8-word `IW` record `[x, y, z, sN, sx, sy, bT, bF]`. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqCtx : FunDecl := lfn (pi, d) locals (nN, natTy, x, y, zN, z, sN, sx, sy, u, bT, bF, q) {
+  nN := IW.u64[pi + 15];
+  natTy := call const_e(nN);
+  x := call intern_fvar(d, natTy);
+  y := call intern_fvar(d + 1, natTy);
+  zN := IW.u64[pi + 16];
+  z := call const_e(zN);
+  sN := IW.u64[pi + 17];
+  sx := call nat_ap1(sN, x);
+  sy := call nat_ap1(sN, y);
+  u := IW.u64[pi + 18];
+  bT := call const_e(u);
+  u := IW.u64[pi + 19];
+  bF := call const_e(u);
+  q := call iw_alloc(8);
+  IW.u64[q] := x; IW.u64[q + 1] := y; IW.u64[q + 2] := z; IW.u64[q + 3] := sN;
+  IW.u64[q + 4] := sx; IW.u64[q + 5] := sy; IW.u64[q + 6] := bT; IW.u64[q + 7] := bF;
+  return q
+}
+
+/-- `nat_eq_disp(c, pi, cx)`: the dispatch of `natOpEquations` over the seven operations, from the
+pin record `pi` and the term record `cx`. -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+def natEqDisp : FunDecl := lfn (c, pi, cx) locals (q, l) {
+  if c == IW.u64[pi] { (q, l) := call nat_eq_pr(c, IW.u64[cx + 2], IW.u64[cx], IW.u64[cx + 4]); return (q, l) };
+  if c == IW.u64[pi + 1] { (q, l) := call nat_eq_un(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[cx + 3]); return (q, l) };
+  if c == IW.u64[pi + 2] { (q, l) := call nat_eq_un(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[pi]); return (q, l) };
+  if c == IW.u64[pi + 3] { (q, l) := call nat_eq_mu(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[pi + 1]); return (q, l) };
+  if c == IW.u64[pi + 4] { (q, l) := call nat_eq_po(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[cx + 3], IW.u64[pi + 3]); return (q, l) };
+  if c == IW.u64[pi + 5] { (q, l) := call nat_eq_be(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 4], IW.u64[cx + 5], IW.u64[cx + 6], IW.u64[cx + 7]); return (q, l) };
+  if c == IW.u64[pi + 6] { (q, l) := call nat_eq_bl(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 4], IW.u64[cx + 5], IW.u64[cx + 6], IW.u64[cx + 7]); return (q, l) };
+  return (0, 0)
+}
+
 /-- `nat_op_equations(d, c)`: `natOpEquations d c`, the equations of the seven structural
 operations over `x := fvar d`, `y := fvar (d + 1)` (every pin read first, as the twin does). -/
 -- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
 @[l_impl ConRon.Arena.natOpEquations]
 def natOpEquationsL : FunDecl :=
-    lfn (d, c) locals (nN, natTy, x, y, zN, z, sN, sx, sy, bT, bF, pr, ad, su, mu, po, be, bl, u,
-      l1, l2, l3, l4, r2, r3, r4, sz, q, p1, p2, p3, p4) {
-  nN := call pin_at(1);
-  natTy := call const_e(nN);
-  x := call intern_fvar(d, natTy);
-  y := call intern_fvar(d + 1, natTy);
-  zN := call pin_at(2);
-  z := call const_e(zN);
-  sN := call pin_at(3);
-  sx := call nat_ap1(sN, x);
-  sy := call nat_ap1(sN, y);
-  u := call pin_at(30);
-  bT := call const_e(u);
-  u := call pin_at(31);
-  bF := call const_e(u);
-  pr := call pin_at(14); ad := call pin_at(15); su := call pin_at(16);
-  mu := call pin_at(17); po := call pin_at(18); be := call pin_at(19);
-  bl := call pin_at(20);
-  u := call pin_at(21); u := call pin_at(22); u := call pin_at(23); u := call pin_at(24);
-  u := call pin_at(25); u := call pin_at(26); u := call pin_at(27); u := call pin_at(28);
-  if c == pr {
-    l1 := call nat_ap1(c, z);
-    l2 := call nat_ap1(c, sx);
-    (q, u) := call nat_eq_list2(l1, z, l2, x);
-    return (q, 2)
-  };
-  if c == ad {
-    l1 := call nat_ap2(c, x, z);
-    l2 := call nat_ap2(c, x, sy);
-    r3 := call nat_ap2(c, x, y);
-    r2 := call nat_ap1(sN, r3);
-    (q, u) := call nat_eq_list2(l1, x, l2, r2);
-    return (q, 2)
-  };
-  if c == su {
-    l1 := call nat_ap2(c, x, z);
-    l2 := call nat_ap2(c, x, sy);
-    r3 := call nat_ap2(c, x, y);
-    r2 := call nat_ap1(pr, r3);
-    (q, u) := call nat_eq_list2(l1, x, l2, r2);
-    return (q, 2)
-  };
-  if c == mu {
-    l1 := call nat_ap2(c, x, z);
-    l2 := call nat_ap2(c, x, sy);
-    r3 := call nat_ap2(c, x, y);
-    r2 := call nat_ap2(ad, r3, x);
-    (q, u) := call nat_eq_list2(l1, z, l2, r2);
-    return (q, 2)
-  };
-  if c == po {
-    l1 := call nat_ap2(c, x, z);
-    sz := call nat_ap1(sN, z);
-    l2 := call nat_ap2(c, x, sy);
-    r3 := call nat_ap2(c, x, y);
-    r2 := call nat_ap2(mu, r3, x);
-    (q, u) := call nat_eq_list2(l1, sz, l2, r2);
-    return (q, 2)
-  };
-  if c == be {
-    l1 := call nat_ap2(c, z, z);
-    l2 := call nat_ap2(c, z, sy);
-    l3 := call nat_ap2(c, sx, z);
-    l4 := call nat_ap2(c, sx, sy);
-    r4 := call nat_ap2(c, x, y);
-    p1 := call rec2(l1, bT);
-    p2 := call rec2(l2, bF);
-    p3 := call rec2(l3, bF);
-    p4 := call rec2(l4, r4);
-    q := call iw_alloc(4);
-    IW.u64[q] := p1; IW.u64[q + 1] := p2; IW.u64[q + 2] := p3; IW.u64[q + 3] := p4;
-    return (q, 4)
-  };
-  if c == bl {
-    l1 := call nat_ap2(c, z, y);
-    l2 := call nat_ap2(c, sx, z);
-    l3 := call nat_ap2(c, sx, sy);
-    r3 := call nat_ap2(c, x, y);
-    p1 := call rec2(l1, bT);
-    p2 := call rec2(l2, bF);
-    p3 := call rec2(l3, r3);
-    q := call iw_alloc(3);
-    IW.u64[q] := p1; IW.u64[q + 1] := p2; IW.u64[q + 2] := p3;
-    return (q, 3)
-  };
-  return (0, 0)
+    lfn (d, c) locals (pi, cx, q, l) {
+  pi := call nat_op_pins();
+  cx := call nat_eq_ctx(pi, d);
+  (q, l) := call nat_eq_disp(c, pi, cx);
+  return (q, l)
+}
+
+/-- `defn_nat_cert(vis, w, n)`: the stored value of `n` at the extended view `w` (a definition),
+its recurrences (`nat_op_equations 0 n`) with `n` replaced by the value, certified at the
+pre-insertion view `vis`. Returns `0`. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+def defnNatCert : FunDecl :=
+    lfn (vis, w, n) locals (f, r, eo, el, so, sl, ok) {
+  (f, r) := call env_find(n, w);
+  if f == 0 { abort };
+  if EREC.u64[r] != 1 { abort };
+  (eo, el) := call nat_op_equations(0, n);
+  (so, sl) := call subst_const0_pairs(n, EREC.u64[r + 5], eo, el);
+  ok := call certify_nat_eqs(vis, so, sl);
+  if ok == 0 { abort };
+  return 0
 }
 
 /-- `subst_const0(n, r, fuel, h)`: `Expr.substConst0`: `.const n []` replaced by `r` through an
@@ -537,38 +670,34 @@ the twin's order. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
 @[l_impl ConRon.Arena.certCtx]
 def certCtxL : FunDecl :=
-    lfn () locals (nt, natTy, x, y, one, bleN, bn, boolTy, u, bT, bF, z, s, two, q, j) {
-  nt := call pin_at(1);
+    lfn () locals (pi, nt, natTy, x, y, one, bleN, bn, boolTy, u, bT, bF, z, s, two, q) {
+  pi := call nat_op_pins();
+  nt := IW.u64[pi + 15];
   natTy := call const_e(nt);
   x := call nat_var(0);
   y := call nat_var(1);
   one := call nat_one();
-  bleN := call pin_at(20);
-  bn := call pin_at(29);
+  bleN := IW.u64[pi + 6];
+  bn := IW.u64[pi + 20];
   boolTy := call const_e(bn);
-  u := call pin_at(30);
+  u := IW.u64[pi + 18];
   bT := call const_e(u);
-  u := call pin_at(31);
+  u := IW.u64[pi + 19];
   bF := call const_e(u);
-  u := call pin_at(2);
+  u := IW.u64[pi + 16];
   z := call const_e(u);
-  s := call pin_at(3);
+  s := IW.u64[pi + 17];
   two := call nat_ap1(s, one);
   q := call iw_alloc(21);
   IW.u64[q] := natTy; IW.u64[q + 1] := x; IW.u64[q + 2] := y; IW.u64[q + 3] := one;
   IW.u64[q + 4] := bleN; IW.u64[q + 5] := boolTy; IW.u64[q + 6] := bT; IW.u64[q + 7] := bF;
   IW.u64[q + 8] := z; IW.u64[q + 9] := two;
-  u := call pin_at(22); IW.u64[q + 10] := u;
-  u := call pin_at(21); IW.u64[q + 11] := u;
-  u := call pin_at(15); IW.u64[q + 12] := u;
-  u := call pin_at(17); IW.u64[q + 13] := u;
-  u := call pin_at(16); IW.u64[q + 14] := u;
-  u := call pin_at(23); IW.u64[q + 15] := u;
-  u := call pin_at(27); IW.u64[q + 16] := u;
-  u := call pin_at(28); IW.u64[q + 17] := u;
-  u := call pin_at(24); IW.u64[q + 18] := u;
-  u := call pin_at(25); IW.u64[q + 19] := u;
-  u := call pin_at(26); IW.u64[q + 20] := u;
+  IW.u64[q + 10] := IW.u64[pi + 8]; IW.u64[q + 11] := IW.u64[pi + 7];
+  IW.u64[q + 12] := IW.u64[pi + 1]; IW.u64[q + 13] := IW.u64[pi + 3];
+  IW.u64[q + 14] := IW.u64[pi + 2]; IW.u64[q + 15] := IW.u64[pi + 9];
+  IW.u64[q + 16] := IW.u64[pi + 13]; IW.u64[q + 17] := IW.u64[pi + 14];
+  IW.u64[q + 18] := IW.u64[pi + 10]; IW.u64[q + 19] := IW.u64[pi + 11];
+  IW.u64[q + 20] := IW.u64[pi + 12];
   return q
 }
 
@@ -1028,11 +1157,15 @@ def checkDivModPinL : FunDecl := lfn (po, pl, vis, vis2, c) locals (g, f, r, z) 
 /-- This module's functions. -/
 def declArmsNatFns : Prog :=
   [("nat_op_names", natOpNamesL), ("nat_div_mod_names", natDivModNamesL),
-   ("nat_op_deps", natOpDepsL), ("nat_op_deps_stored", natOpDepsStoredL),
-   ("bool_ctor_ok", boolCtorOkL), ("nat_op_guard", natOpGuardL), ("nat_op_cod", natOpCodL),
+   ("nat_op_pins_a", natOpPinsAL), ("nat_op_pins_b", natOpPinsBL), ("nat_op_pins_c", natOpPinsCL),
+   ("nat_op_pins", natOpPinsL), ("nat_op_deps", natOpDepsL), ("nat_op_deps_stored", natOpDepsStoredL),
+   ("bool_ctor_ok", boolCtorOkL), ("nat_op_bool_ctors", natOpBoolCtorsL),
+   ("nat_op_guard", natOpGuardL), ("nat_op_cod", natOpCodL),
    ("nat_op_ty_pinned", natOpTyPinnedL), ("nat_op_stored_ok", natOpStoredOkL),
    ("nat_op_stored_ok_all", natOpStoredOkAllL), ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
-   ("nat_eq_list2", natEqList2), ("nat_op_equations", natOpEquationsL),
+   ("nat_eq_list2", natEqList2), ("nat_eq_list3", natEqList3), ("nat_eq_list4", natEqList4),
+   ("nat_eq_pr", natEqPr), ("nat_eq_un", natEqUn), ("nat_eq_mu", natEqMu), ("nat_eq_po", natEqPo),
+   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_eq_disp", natEqDisp), ("nat_op_equations", natOpEquationsL), ("defn_nat_cert", defnNatCert),
    ("subst_const0", substConst0L), ("subst_const_all", substConstAllL),
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
