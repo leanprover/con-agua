@@ -130,3 +130,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,defeq2,opus,10,10,"landing 5: KnotCallees.findProj/projFound from whnf3 proofs; 9 fields left"
 2026-10-22,whnf3,opus,15,10,"landing 4: tower_slots_all on the real find_proj (tsW_ok generalized, tagged statement sorry-free given ProjProg); CoreS.den and instLP plans"
 2026-10-22,defeq2,opus,5,5,"towerSlots plugged (whnf3 landing 4); KnotCallees 8 fields left"
+2026-10-22,indproofs2,opus,30,30,"landing 9: helper pos2 merged (rest of IndPos2, models/specs); 25 census tags removed whose theorems assumed memo WF in every StageR state (vacuous); phase 8: 73 proven / 72 sorry"

@@ -7427,3 +7427,24 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
   `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
   L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
+
+### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
+* Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
+  (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
+  `nestContNew`/`nestContKey`/`nestCont`/`nestPos`, `nestRoot`, `nestSeeds`; L: `nest_root`,
+  `nest_seeds` to self-recursion, `nest_seeds_fuel` split out and added to `checkerProg`).
+* **Finding (lead's review): a family of vacuous hypotheses.** Its census theorems take
+  `PosMemo dn vis fe`, which says *every* memory in the stage relation carries well-formed memos
+  (`∀ m a, StageR dn vis fe m a → ∃ mp, noMR m mp`, likewise `dp`, `hb`, `rp`, `RfInv`). `StageR`
+  says nothing about arrays 201‥208, so this is false (a memory with garbage in a memo array is
+  still in `StageR`), and a theorem assuming it proves nothing. Helper `pos`'s landing-4 theorems
+  had the same pattern (`hMstage`, `hMra`, `hMno`): `nestCanonCrest`, `nestRootCanon`,
+  `nestUniformOk`, `nestUniform`, `nestInstType`, `nestGrowGroup`, `nestCrest`, `nestSeedOf`.
+  **All of them are untagged** (kept as lemmas, with a comment; the census shows them `written`),
+  25 tags in all. The fix is to thread the memo relation of the *current* memory through the posts
+  (as `hasLooseBVarBGo_refines` and the `mentionsAnyGo` walks do: the memo relation in the pre,
+  `∃ mp', …MR m' mp'` in the post, `stubM_memoFrame` across stubs) instead of quantifying over all
+  stage states; or to add "the memos are well formed" (a memory-only `∃ mp` form, plus a weak
+  form that holds for zeroed memory and gives `MemoRV` after a clear) to `StageR` and `LoopR`.
+* Census (master `e49af3c`+ this lane): phase 8 **73 proven, 72 sorry, 70 written, 8 todo**
+  (the untagging moved ~8 targets from `sorry` back to `written`); totals 703 proven / 116 sorry.
