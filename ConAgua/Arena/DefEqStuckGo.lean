@@ -406,8 +406,8 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
     have hg := GrowSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
       (setTail_refines p hq hi hc n' (hk.mono (by omega)) F ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb
         mode d b us T us2 ao an to tn _ _ aargs targs (by omega) (by omega)
-        ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hus hT hus2 (ha.keep hk₅.2.1 hk₅.2.2 hat hspn)
-        (ht.keep hk₅.2.1 hk₅.2.2 htt hspn) (by rw [htop]; exact hat) (by rw [htop]; exact htt))
+        ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hus hT hus2 (ha.keep hk₅.size hk₅.below hat hspn)
+        (ht.keep hk₅.size hk₅.below htt hspn) (by rw [htop]; exact hat) (by rw [htop]; exact htt))
       (fun r r' h => by simp only [decBool, h]) hW5
     rw [← hIR.etaParams, ← hIR.etaFields] at hg
     exact hg

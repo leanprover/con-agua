@@ -685,7 +685,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
     (ra.tail.headD 0) sn lps rule cvj np nf args xs.toArray hS1 hm4 hebm hcw hus husj
   simp only [e1] at hf2
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW (hf2 hlps hrule hci
-    (hsa.keep gr1.2.1 gr1.2.2 hsat hspn)
+    (hsa.keep gr1.size gr1.below hsat hspn)
     (by
       show so.toNat + sn.toNat ≤ (spTop m1).toNat
       have := UInt64.le_iff_toNat_le.mp gr1.1
@@ -713,7 +713,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
   have hgr := gr1.trans hSt2.toGrew
   refine ⟨hokF, ⟨M2, ?_, hK2, ?_⟩, ?_, ?_⟩
   · rw [hstF, ← hm]; exact hS2.frame_stk (MemFrame.setCtl m2 136 _) (by simp) (by simp)
-  · rw [← hm]; exact StackKept.restore hgr.2.2 hgr.2.1 (Classical.not_not.mp h136)
+  · rw [← hm]; exact StackKept.restoreG hgr (Classical.not_not.mp h136)
   · rw [hresF]; simp only [decOptR, h0, h1]
   · unfold ResW at hr2 ⊢; rw [← h0, ← h1]; exact hr2
 
@@ -762,7 +762,7 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
     hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)⟩
   have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hfr.2.1 136 (by simp)
-  exact StackKept.of_frame r
+  exact StackKept.of_frame hfr
 
 /-! ## `iota_rec_major(mode, vis, d, c, us, recP, so, sn)` -/
 

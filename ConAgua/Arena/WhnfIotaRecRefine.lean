@@ -818,7 +818,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
     (by rw [fr3.1 SPN (by simp) (by decide)])
   have hxb := hxs.bound
-  have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.size.trans gr1.2.1
+  have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.size.trans gr1.size
   have hxt : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ (spTop m3).toNat := by
     have h1 : (ra.headD 0 + ra.tail.headD 0).toNat = (ra.headD 0).toNat + (ra.tail.headD 0).toNat := by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
