@@ -87,10 +87,10 @@ theorem promoteNew_rel (dn : NIdx → Option ConLeche.Name) (n : Nat) (m : Mem) 
             rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) hf1)
     obtain ⟨a', pm', L', hrun, hLoop⟩ := pnew_main p hp dn (n + 1) m₁ a PMemo.empty k vis consts idx vb pend ds m'
       hP1 hR₁ hk hW
-    refine ⟨a', pm', _, ?_, ?_⟩
-    · simp only [promoteNew, hk0', Bool.false_eq_true, ↓reduceIte]
-      rw [run_bind_ok hrun]; rfl
-    · exact hLoop
+    refine ⟨a', pm', ⟨⟨L' ++ consts.drop k.toNat⟩,
+      indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb L', vb⟩, ?_, hLoop⟩
+    simp only [promoteNew, hk0', Bool.false_eq_true, ↓reduceIte]
+    rw [run_bind_ok hrun]; rfl
 
 end rel
 
