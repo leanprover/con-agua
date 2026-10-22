@@ -448,7 +448,8 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
       o' + l' ≤ (m.arr64 EREC).size) :
     r = [r.headD 0, r.tail.headD 0] ∧
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
-    IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
+    (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
   have hlen := decPL_length m hg
   obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
@@ -466,7 +467,7 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hms : bs.members = [] := List.eq_nil_of_length_eq_zero (by omega)
-    refine ⟨rfl, ?_, IWGrow.refl m, MemFrame.refl _ _ m⟩
+    refine ⟨rfl, ?_, IWGrow.refl m, MemFrame.refl _ _ m, by simp⟩
     simp [BlockShape.lps, hms, decHL, hslice?]
   · have hz : rdW (m.arr64 IW) (p + 1) ≠ 0 := by
       rw [hl']; intro h0
@@ -516,13 +517,14 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
       rw [ho', hv']; exact hva'
     rw [hv'', e3, e4, hrd1, hrd2] at h
     have hlpb' := hlpb a w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, hw2])
-    obtain ⟨hr, hdec, hgrow, hfr, -, -⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hE hlpb'
+    obtain ⟨hr, hdec, hgrow, hfr, -, htp⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hE hlpb'
     have hh := erToIwW_two h
-    refine ⟨hh, ?_, hgrow, hfr⟩
-    rw [hr] at hh ⊢
-    simp only [List.headD_cons, List.tail_cons]
-    rw [hdec, hlps, ← hlvE]
-    exact hsl
+    refine ⟨hh, ?_, hgrow, hfr, ?_⟩
+    · rw [hr] at hh ⊢
+      simp only [List.headD_cons, List.tail_cons]
+      rw [hdec, hlps, ← hlvE]
+      exact hsl
+    · rw [hr]; simp only [List.headD_cons, List.tail_cons]; omega
 
 /-- **`block_shape_lps` is `BlockShape.lps`**: a fresh `IW` copy of member 0's level parameters. -/
 @[refines ConRon.Arena.BlockShape.lps]
@@ -537,7 +539,8 @@ theorem blockShapeLps_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
     ⦃fun r s' => r = [r.headD 0, r.tail.headD 0] ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
-      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) ?_
   intro r s' ⟨_, h⟩
   exact lpsW_dec h hsz hcl hE hq hb hlpb
