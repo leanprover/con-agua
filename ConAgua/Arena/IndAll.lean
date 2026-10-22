@@ -49,6 +49,7 @@ import ConAgua.Arena.RecGenSpec7
 import ConAgua.Arena.RecGenSpec8
 import ConAgua.Arena.RecClassSpecK
 import ConAgua.Arena.RecClassSpecL
+import ConAgua.Arena.RecClassSpecM
 import ConAgua.Arena.IndPosSpec2
 import ConAgua.Arena.IndPosSpec7
 import ConAgua.Arena.IndPos2SpecE
