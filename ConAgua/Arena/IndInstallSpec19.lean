@@ -29,7 +29,8 @@ def iaoK1 (p : Prog) (n : Nat) (vis isP nF hi srt : Word) : Option (List Word ×
 
 /-- **The model of `check_abs_ctor_sorts_one(vis, ctx, isProp, nF, tyN, hi)`** (body fuel `n`). -/
 def iaoW (p : Prog) (n : Nat) (m : Mem) (vis ctx isP nF tyN hi : Word) : Option (List Word × Mem) :=
-  iaoK1 p n vis isP nF hi (rdW (m.arr64 IW) (ctx + 9)) (callW p n "open_pis_at_fvars_f" [nF, tyN, hi] m)
+  if hi + nF < hi then none
+  else iaoK1 p n vis isP nF hi (rdW (m.arr64 IW) (ctx + 9)) (callW p n "open_pis_at_fvars_f" [nF, tyN, hi] m)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (vis isP nF hi srt : Word) (r : List Word)

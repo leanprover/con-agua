@@ -46,6 +46,7 @@ structure CtorsProg (p : Prog) : Prop extends CstProg p where
   one : p.lookup "check_block_ctors_one" = some checkBlockCtorsOne
   go : p.lookup "check_block_ctors_go" = some checkBlockCtorsGo
   ctors : p.lookup "check_block_ctors" = some checkBlockCtors
+  sum : SumProg p
 
 /-- **A `rec2` header `[off, len]` of a slice decoded below the tops**, decoded below the tops. -/
 theorem installRec2PSl {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
@@ -97,7 +98,7 @@ theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option 
   rw [show (UInt64.ofNat 7 : Word) = 7 from rfl] at h7
   have hmsT : decMS (truncM m) ms.toNat = some msh := hms
   obtain ⟨⟨cvp, hcvp, hcvT⟩, hni, hct⟩ := decMS_some hmsT
-  obtain ⟨co, cl, hco, hcl, hcd, hcb⟩ := partsAt decCN_mono hct
+  obtain ⟨co, cl, hco, hcl, hcd, -⟩ := partsAt decCN_mono hct
   have l3 := partsIwLt hcl
   obtain ⟨hw0, hcvb, -⟩ := partsIwRd hcvp (w := ms) rfl
   obtain ⟨hw1, hnib, -⟩ := partsIwRd hni (w := ms + 1) (by rw [UInt64.toNat_add]; simp; omega)
@@ -110,10 +111,10 @@ theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option 
   refine Sim.tail (K := icboK1 p n) (body := fun r1 m1 => icboK2 p n r1 (callW p n "rec2"
       [r1.headD 0, r1.tail.headD 0] m1)) rfl (fun _ _ => rfl)
     (by
-      have h := installSimStub (p := p) (n := n) (checkSumCtors_pending dn vis fe
+      have h := installSimSumCtors (dn := dn) (fe := fe) hP.sum n
         (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) lo ll (UInt64.ofNat bs.nP) (UInt64.ofNat msh.nIdx)
         (rdW (m.arr64 IW) (pp + 6)) (rdW (m.arr64 IW) (pp + 8)) (rdW (m.arr64 IW) (pp + 7)) cv co cl
-        hn32 hrs32 bs.lps cvv msh.ctors) ⟨hS, hlps, hlb, hcv, hcd, hcb⟩
+        hn32 hrs32 bs.lps cvv msh.ctors ⟨hS, hlps, hlb, hcv, hcd⟩
       rw [hnm, hrse, h8, h7, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib] at h
       exact h) ?_
   rintro r1 ⟨cs, ss⟩ m1 a1 ⟨hS1, hg1, hcs1, hss1⟩ r' m' e
@@ -199,7 +200,7 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
     by simpa using hd4⟩
 
 /-- **`check_block_ctors` refines `checkBlockCtors`** (at one environment, `vis0 = vis`, as
-`check_block_pass` calls it; through `check_sum_ctors`' pending contract): the shape, member and
+`check_block_pass` calls it): the shape, member and
 former slices decoded below the tops; the stored constructors and their fields' sorts, per member,
 two slices of `[off, len]` pointers decoded below the tops (`sl_cons`-built, D18). -/
 @[refines ConRon.Arena.checkBlockCtors]
