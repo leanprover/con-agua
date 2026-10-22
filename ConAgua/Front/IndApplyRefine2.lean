@@ -176,4 +176,135 @@ theorem lkW_expr {m : Mem} {st : StateD} (hD : StateDR m st) {x w : Word} (a : A
     exact ⟨by simp [getDeclD, StateD.expr, h1, decE_eq]; rfl, h2⟩
   · cases h
 
+
+/-! ## The pool's top in range -/
+
+/-- The scratch pool's top is in range, the pool below `2^63` words. -/
+def TopOK (m : Mem) : Prop := (m.arr64 IFL).size < 2 ^ 63 ∧ topN m IFL ≤ (m.arr64 IFL).size
+
+theorem pushLW_ok {m m' : Mem} {x o : Word} (hT : TopOK m) (h : pushLW m x = some (o, m')) :
+    IExt m m' ∧ TopOK m' ∧ topN m' IFL = topN m IFL + 1 ∧ wd m' IFL (topN m IFL + 1) = x := by
+  have ht : topN m IFL < 2 ^ 63 := by have := hT.1; have := hT.2; omega
+  obtain ⟨p1, p2, p3, -, -, -⟩ := pushLW_facts hT.1 ht h
+  obtain ⟨e1, e2, e3⟩ := pushLW_ext hT.1 ht h
+  exact ⟨e1, ⟨by rw [e1.size]; exact hT.1, by rw [e1.size, e2]; omega⟩, e2, e3⟩
+
+theorem allocW_ok {m m' : Mem} {k o : Word} (hT : TopOK m) (h : allocW m IFL k = some (o, m')) :
+    IExt m m' ∧ TopOK m' ∧ o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + k.toNat := by
+  have ht : topN m IFL < 2 ^ 63 := by have := hT.1; have := hT.2; omega
+  obtain ⟨e1, e2, e3, e4⟩ := allocW_ext hT.1 ht h
+  exact ⟨e1, ⟨by rw [e1.size]; exact hT.1, by rw [e1.size, e3]; omega⟩, e2, e3⟩
+
+theorem lkW_congr {m m' : Mem} {B : ArrId} (h : m'.arr64 B = m.arr64 B) (x : Word) :
+    lkW m' B x = lkW m B x := by
+  unfold lkW tblOK tblW Mem.len64; rw [h]
+
+theorem mapLk_ext {m m' : Mem} (h : IExt m m') (f x : Word) : mapLk m' f x = mapLk m f x := by
+  simp only [mapLk, lkW_congr (h.other NID (by decide) (by decide) (by decide)),
+    lkW_congr (h.other EID (by decide) (by decide) (by decide))]
+
+theorem ofNat_toNat' (j : Word) : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
+
+theorem ofNat_succ (j l : Word) (h : j < l) (k : Nat) (hk : k = j.toNat + 1) : UInt64.ofNat k = j + 1 := by
+  apply UInt64.toNat_inj.mp
+  rw [wsucc j l h, UInt64.toNat_ofNat_of_lt' (by
+    have := UInt64.toNat_lt l; have := UInt64.lt_iff_toNat_lt.mp h; simp only [UInt64.size]; omega)]
+  exact hk
+
+/-! ## `vi_map_go`, `vi_ids_go`, `vi_listed_go` -/
+
+/-- **`vi_map_go`**: the lookups of the records `j ‥ l` pushed in order. -/
+theorem mapGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l sz s f j : Word),
+    mapGoW n m o l sz s f j = some m' → TopOK m → j ≤ l →
+    IExt m m' ∧ TopOK m' ∧ topN m' IFL = topN m IFL + (l.toNat - j.toNat) ∧
+    ∀ k : Nat, j.toNat ≤ k → k < l.toNat →
+      mapLk m f (rdW (m.arr64 IFR) (o + sz * UInt64.ofNat k + s)) =
+        some (wd m' IFL (topN m IFL + 1 + (k - j.toNat))) := by
+  intro n
+  induction n with
+  | zero => intro m m' o l sz s f j h; simp [mapGoW] at h
+  | succ n ih =>
+    intro m m' o l sz s f j h hT hjl
+    simp only [mapGoW] at h
+    split at h
+    · rename_i hlj
+      cases h
+      have : j = l := by
+        apply UInt64.toNat_inj.mp
+        have := UInt64.le_iff_toNat_le.mp hjl; have := UInt64.le_iff_toNat_le.mp hlj; omega
+      subst this
+      exact ⟨IExt.refl _, hT, by simp, fun k h1 h2 => by omega⟩
+    rename_i hlj
+    have hjl' : j < l := UInt64.not_le.mp hlj
+    cases hk : mapLk m f (rdW (m.arr64 IFR) (o + sz * j + s)) with
+    | none => rw [hk, lkPushK_none, restK_none] at h; cases h
+    | some w =>
+    rw [hk, lkPushK_some] at h
+    cases hp : pushLW m w with
+    | none => rw [hp, restK_none] at h; cases h
+    | some q =>
+    obtain ⟨o1, m₁⟩ := q
+    rw [hp, restK_some] at h
+    obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
+    have hj1 := wsucc j l hjl'
+    obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l sz s f (j + 1) h x2
+      (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; exact UInt64.lt_iff_toNat_lt.mp hjl'))
+    have hjn := UInt64.lt_iff_toNat_lt.mp hjl'
+    refine ⟨x1.trans y1, y2, by rw [y3, x3, hj1]; omega, fun k h1 h2 => ?_⟩
+    by_cases hkj : k = j.toNat
+    · subst hkj
+      rw [ofNat_toNat', hk, Nat.sub_self, Nat.add_zero, ← x4, y1.keep _ (by omega) (by omega)]
+    · have := y4 k (by rw [hj1]; omega) h2
+      rw [mapLk_ext x1, x1.ifr, x3, hj1] at this
+      rw [this]
+      congr 2; omega
+
+/-- **`vi_ids_go`**: the names of `IFL[o + k ‥ o + l)` pushed in order. -/
+theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
+    idsGoW n m o l k = some m' → TopOK m → k ≤ l → o.toNat + l.toNat ≤ topN m IFL + 1 →
+    IExt m m' ∧ TopOK m' ∧ topN m' IFL = topN m IFL + (l.toNat - k.toNat) ∧
+    ∀ c : Nat, k.toNat ≤ c → c < l.toNat →
+      lkW m NID (wd m IFL (o.toNat + c)) = some (wd m' IFL (topN m IFL + 1 + (c - k.toNat))) := by
+  intro n
+  induction n with
+  | zero => intro m m' o l k h; simp [idsGoW] at h
+  | succ n ih =>
+    intro m m' o l k h hT hkl hol
+    simp only [idsGoW] at h
+    split at h
+    · rename_i hlk
+      cases h
+      have : k = l := by
+        apply UInt64.toNat_inj.mp
+        have := UInt64.le_iff_toNat_le.mp hkl; have := UInt64.le_iff_toNat_le.mp hlk; omega
+      subst this
+      exact ⟨IExt.refl _, hT, by simp, fun c h1 h2 => by omega⟩
+    rename_i hlk
+    have hkl' : k < l := UInt64.not_le.mp hlk
+    have hkn := UInt64.lt_iff_toNat_lt.mp hkl'
+    have hok : (o + k).toNat = o.toNat + k.toNat := widx2 _ _ (by have := hT.1; have := hT.2; omega)
+    cases hk : lkW m NID (rdW (m.arr64 IFL) (o + k)) with
+    | none => rw [hk, lkPushK_none, restK_none] at h; cases h
+    | some w =>
+    rw [hk, lkPushK_some] at h
+    cases hp : pushLW m w with
+    | none => rw [hp, restK_none] at h; cases h
+    | some q =>
+    obtain ⟨o1, m₁⟩ := q
+    rw [hp, restK_some] at h
+    obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
+    have hk1 := wsucc k l hkl'
+    obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l (k + 1) h x2
+      (UInt64.le_iff_toNat_le.mpr (by rw [hk1]; exact hkn)) (by rw [x3]; omega)
+    refine ⟨x1.trans y1, y2, by rw [y3, x3, hk1]; omega, fun c h1 h2 => ?_⟩
+    by_cases hck : c = k.toNat
+    · subst hck
+      rw [wd_eq, hok] at hk
+      rw [hk, Nat.sub_self, Nat.add_zero, ← x4, y1.keep _ (by omega) (by omega)]
+    · have := y4 c (by rw [hk1]; omega) h2
+      rw [lkW_congr (x1.other NID (by decide) (by decide) (by decide)),
+        x1.keep _ (by omega) (by omega), x3, hk1] at this
+      rw [this]
+      congr 2; omega
+
 end L.Front.Ind
