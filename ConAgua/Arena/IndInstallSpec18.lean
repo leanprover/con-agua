@@ -79,6 +79,7 @@ structure IdxProg (p : Prog) : Prop extends CstProg p where
   rec2 : p.lookup "rec2" = some rec2
   one : p.lookup "check_block_idx_sorts_one" = some checkBlockIdxSortsOne
   idx : p.lookup "check_block_idx_sorts" = some checkBlockIdxSorts
+  sum : SumProg p
 
 /-- **`check_block_idx_sorts_one`'s model refines one member's index sorts.** -/
 theorem iisW_sim {p : Prog} (hP : IdxProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
@@ -139,9 +140,10 @@ theorem iisW_sim {p : Prog} (hP : IdxProg p) (n : Nat) {dn : NIdx → Option Con
   refine Sim.tail (K := iisK2 p n) (body := fun r2 m2 => iisK3 (callW p n "rec2"
       [r2.headD 0, r2.tail.headD 0] m2)) rfl (fun _ _ => rfl)
     (by
-      have h := installSimStub (p := p) (n := n) (checkStructFieldSortsI_pending dn vis fe 1 0
+      have h := installSimFsorts (dn := dn) (fe := fe) hP.sum n 1 0
         (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) hrs32
-        (fvs.drop bs.nP) []) ⟨hS1, hdT, hbT, by simp [decHL, hslice?], by simp⟩
+        (fvs.drop bs.nP) [] ⟨hS1, hdT, hbT, by simp [decHL, hslice?], by simp⟩
+        (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _)
       rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
         show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at h
       exact h) ?_

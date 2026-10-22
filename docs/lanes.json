@@ -382,5 +382,17 @@
 "model": "opus",
 "status": "done",
 "focus": "Fresh review of proof cost on 3\u20134 representative functions"
+},
+{
+"lane": "modelgen",
+"model": "opus",
+"status": "running",
+"focus": "Generate word models + vcgen specs from L code (pilot: Lift, Inst1, Level files)"
+},
+{
+"lane": "prooftools",
+"model": "opus",
+"status": "running",
+"focus": "Program-lookup bundles, Sim.bindK style, drop UpTo fuel, handle bound in relation (pilot: done walks, store tables)"
 }
 ]
