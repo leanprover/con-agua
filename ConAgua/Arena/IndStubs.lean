@@ -236,4 +236,21 @@ theorem indParamsOk_spec (nP o l : Word) (blk : List IConstantInfo) :
 
 end specs
 
+
+/-! ## Master callees without a model yet (lane indproofs)
+
+Master functions the stage calls whose word models exist only under `ArenaR` (the `intern*_refinesA`
+lemmas), not under `StageR`: lifting them across `CheckR` (`ArenaD` including `DerR`, the upper
+tiers) is not done, so a stage proof treats them as stubs, with these `RelAM` statements. -/
+
+section masterstubs
+variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+
+/-- `intern_bvar(k)`: interning `.bvar k` (master, under `StageR` only through this statement). -/
+theorem recInternBVar_spec (k : Word) :
+    RelAM "intern_bvar" [k] (StageR dn vis fe)
+      (internE (.bvar k.toNat)) (KeepPost dn vis fe decW0E) := sorry
+
+end masterstubs
+
 end L.Ind

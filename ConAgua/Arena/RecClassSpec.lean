@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.RecClass
+import ConAgua.Arena.IndInstallSpec
 
 /-!
 # Refinements of `RecClass` (lane `induct`)
@@ -185,6 +186,84 @@ theorem classGenBinder_refines (p : Prog) (hp : p.lookup "class_gen_binder" = so
   rintro r s' ⟨hl, hm⟩
   obtain ⟨t, a', hrun, hS', hg, h1, h2⟩ := fvarTypeDW1_ok dn vis fe _ _ a₀ x hx r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.binder G (decI x)) a₀ a' t hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
+
+
+/-! ## `expr_get_d` -/
+
+/-- The word model of `expr_get_d`. -/
+def exprGetDW (m : Mem) (o l i : Word) : Option (List Word × Mem) :=
+  if i < l then
+    (if (o + i).toNat < (m.arr64 IW).size then some ([rdW (m.arr64 IW) (o + i)], m) else none)
+  else
+    match stubM "intern_bvar" m [0] with
+    | none => none
+    | some (r, m') => some ([r.headD 0], m')
+
+theorem exprGetD_spec (p : Prog) (hp : p.lookup "expr_get_d" = some exprGetD) (n : Nat) (s₀ : St)
+    (o l i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "expr_get_d" [o, l, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ exprGetDW s₀.mem o l i = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, exprGetD]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      stubM_spec p "intern_bvar" n] <;>
+    finish [exprGetDW]
+
+theorem exprGetDW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a : AState) (o l i : Word) (xs : List EIdx) (r : List Word)
+    (h : exprGetDW m o l i = some (r, m')) (hS : StageR dn vis fe m a)
+    (hxs : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
+    ∃ x a', (ConRon.Arena.exprGetD xs i.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x := by
+  simp only [exprGetDW] at h
+  by_cases hi : i < l
+  · simp only [hi, if_true] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hit : i.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hi
+      obtain ⟨w, hw1, hw2, hw3⟩ := decHL_get' hxs i.toNat hit hb
+      have hoi : o + i = UInt64.ofNat (o.toNat + i.toNat) := by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+      refine ⟨xs[i.toNat]'(by rw [decHL_length m hxs]; exact hit), a, ?_, hS, IWGrow.refl m, ?_, ?_⟩
+      · simp [ConRon.Arena.exprGetD, hit, decHL_length m hxs]; rfl
+      · simp only [List.headD_cons]; rw [hoi, hw1]; exact hw2
+      · simp only [List.headD_cons]; rw [hoi, hw1]; exact hw3.symm
+    · simp at h
+  · simp only [hi, if_false] at h
+    cases hs : stubM "intern_bvar" m [0] with
+    | none => rw [hs] at h; simp at h
+    | some rm =>
+      obtain ⟨r1, m1⟩ := rm
+      rw [hs] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨x, a', hrun, hS', hg, hd1, hd2⟩ := recInternBVar_spec dn vis fe 0 m m1 a r1 hs hS
+      have hge : l.toNat ≤ i.toNat := by
+        have : ¬ i.toNat < l.toNat := fun h => hi (UInt64.lt_iff_toNat_lt.mpr h)
+        omega
+      refine ⟨x, a', ?_, hS', hg, hd1, by simpa using hd2⟩
+      have hn : xs[i.toNat]? = none := by
+        rw [List.getElem?_eq_none_iff, decHL_length m hxs]; exact hge
+      simp only [ConRon.Arena.exprGetD, hn]
+      exact hrun
+
+/-- **`expr_get_d` refines `exprGetD`** (through the `intern_bvar` master stub). -/
+@[refines ConRon.Arena.exprGetD]
+theorem exprGetD_refines (p : Prog) (hp : p.lookup "expr_get_d" = some exprGetD) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (o l i : Word) (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (hxs : decHL s₀.mem o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "expr_get_d" [o, l, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.exprGetD xs i.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.exprGetD xs i.toNat) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      decI (r.headD 0) = AM.res (ConRon.Arena.exprGetD xs i.toNat) a₀; ⊤⦄ := by
+  refine triple_post (exprGetD_spec p hp n s₀ o l i) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok dn vis fe _ _ a₀ o l i xs r hm hS hxs hb
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.exprGetD xs i.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
 
 end L.Ind
