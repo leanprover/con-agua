@@ -62,29 +62,25 @@ def ifReset : FunDecl := lfn () {
   return 0
 }
 
-/-- `ifr_alloc(n)`: `n` zeroed words of `IFR`; their absolute index. -/
+/-- `ifr_alloc(n)`: `n` words of `IFR` (not cleared); their absolute index. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def ifrAlloc : FunDecl := lfn (n) locals (o, j) {
+def ifrAlloc : FunDecl := lfn (n) locals (o) {
   if len(IFR.u64) == 0 { abort };
   o := IFR.u64[0] + 1;
   if len(IFR.u64) < o { abort };
   if len(IFR.u64) - o < n { abort };
   IFR.u64[0] := o - 1 + n;
-  j := 0;
-  while j < n { IFR.u64[o + j] := 0; j += 1 };
   return o
 }
 
-/-- `ifl_alloc(n)`: `n` zeroed words of `IFL`; their absolute index. -/
+/-- `ifl_alloc(n)`: `n` words of `IFL` (not cleared); their absolute index. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iflAlloc : FunDecl := lfn (n) locals (o, j) {
+def iflAlloc : FunDecl := lfn (n) locals (o) {
   if len(IFL.u64) == 0 { abort };
   o := IFL.u64[0] + 1;
   if len(IFL.u64) < o { abort };
   if len(IFL.u64) - o < n { abort };
   IFL.u64[0] := o - 1 + n;
-  j := 0;
-  while j < n { IFL.u64[o + j] := 0; j += 1 };
   return o
 }
 
@@ -268,7 +264,8 @@ def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
 }
 
 /-- `ind_list(v, sub)`: the list of objects whose `[` is at `v`, each read into a fresh record of
-kind `sub` (consecutive records); `(off, cnt, end)`. -/
+kind `sub` (consecutive records; a constructor record's two optional fields start absent, their
+flags `0`); `(off, cnt, end)`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1732-1736 ConLeche.Frontend.scanIndTypes
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1881-1885 ConLeche.Frontend.scanIndCtors
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1557-1561 ConLeche.Frontend.scanIndRecs
@@ -287,6 +284,7 @@ def indList : FunDecl := lfn (v, sub) locals (i, o, cnt, c, e, q, sz) {
     if c == 93 { return (o, cnt, i + 1) };
     if c == 123 {
       q := call fld_alloc(sub, sz);
+      if sub == 1 { IFR.u64[q + 6] := 0; IFR.u64[q + 8] := 0 };
       e := call ind_obj(i, sub, q);
       if e <= i { abort };
       cnt += 1;

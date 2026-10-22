@@ -1,5 +1,4 @@
 import ConAgua.Front.IndFields
-import ConAgua.Front.FrontRun
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Census.Attr
@@ -15,16 +14,16 @@ reading the state and changing nothing), then `installIndD` (the block's constan
 every `fail` is `abort` (ROADMAP §3 (c)); the error messages are not built. A name comparison is
 a handle (word) comparison.
 
-## The declarations: `DECL` kind `6`, and the constant records in `DIND`
+## The declarations: `DECL` kind `6`, and the constant records in `DIND` (= `DLP`)
 
 `DECL` (67, `ApplyDecl.lean`) gets a sixth record kind: **`6` = `indDecl block nP`**, the eight
 words `[6, 0, block.off, block.cnt, nP, 0, 0, 0]` (written by `decl_push(6, 0, off, cnt, nP, 0, 0,
 0)`), where `block` is a slice of `DIND` words, each a pointer to a constant record in `DIND`.
 
-`DIND` (69, from the front's reserved range 67‥95): word `0` is its top (records at `1 + top`,
-pointers absolute, as in `DLP`). The constant records use lane `pinsenv`'s layout `decCI`
-(`ConAgua/Arena/EnvRec.lean`) over the array `DIND` itself (a constant's `levelParams` slice and a
-recursor's rule slice are `DIND` slices too):
+`DIND` is `DLP` (68): word `0` is its top (records at `1 + top`, pointers absolute), the pool the
+other declarations' universe parameter lists live in; a constant's universe parameters are
+`lp_put`'s slice of it. The constant records use lane `pinsenv`'s layout `decCI`
+(`ConAgua/Arena/EnvRec.lean`) over the pool itself (a recursor's rule slice is a slice of it too):
 
 | constant | words at `p` |
 |---|---|
@@ -32,15 +31,8 @@ recursor's rule slice are `DIND` slices too):
 | `ctorInfo cv nP nF` | `4`, cv, `nP`, `nF` — 7 |
 | `recInfo cv major pre rules` | `5`, cv, `major`, `pre`, rules.off, rules.cnt — 9; each rule 11 words (`decRule`): `ctor, nfields, 0, 0 (plain), 0, 0, 0, 0, rhs, 0, 0` |
 
-`IndDeclAt` below is the relation. **The hooks this needs in files of lane `front`** (not edited
-here):
-
-* `StateDR.lean`, `DeclAt`: take the array `I := m.arr64 DIND` and add the arm
-  `| .indDecl b nP => L.Front.Ind.IndDeclAt D I i b nP` (and `DeclsR`/`StateDR.decls` pass
-  `(m.arr64 DIND)`; `DIND`'s top below its size, as `DLP`'s `ptop`).
-* `Line.lean`, `applyDLine`: after `if pl == 0 { abort };` add
-  `if pl == 25 { z := call apply_ind_line(j); return 0 };` (and `frontAllProg` gets `indApplyFns`
-  and `indFieldsFns`, minus the names it already has).
+The relation is `IndDeclAt` (`StateDR.lean`). The line's hook: `Line.lean`'s `apply_dline` calls
+`apply_ind_line(j)` at `pl = 25`.
 
 ## The work lists
 
@@ -54,7 +46,7 @@ their `IFR` records. `kExpected?` is one word: `0` none, `1` `some false`, `2` `
 `name_rec_pre(n)` (`viewN n` matched against `.str T "rec"`), `ifl_contains`, `ifl_nodup`,
 `ifl_find_last`, `vi_unsafe`, `vi_nparams`, `vi_map`, `vi_listed`, `vi_ctor`, `vi_order`,
 `vi_k_expected`, `vi_rec_idx`, `vi_rec`, `vi_recs`, `validate_ind_d`; `dind_alloc`,
-`ind_lp_put`, `ind_cv`, `ind_caps`, `parse_rule_d`, `ind_rules`, `install_ind_d`; `apply_ind(v)`,
+`ind_cv`, `ind_caps`, `parse_rule_d`, `ind_rules`, `install_ind_d`; `apply_ind(v)`,
 `apply_ind_line(j)`.
 -/
 
@@ -64,8 +56,9 @@ namespace L.Front.Ind
 
 open L.Front
 
-/-- The constant records of the installed inductive blocks. -/
-abbrev DIND : ArrId := 69
+/-- The constant records of the installed inductive blocks: they share `DLP`'s pool (word `0` its
+top), so that the declarations relation reads one pool (`DeclAtF`, `StateDR.lean`). -/
+abbrev DIND : ArrId := DLP
 
 /-! ## Telescopes -/
 
@@ -287,7 +280,8 @@ def viOrder : FunDecl := lfn (to, tn, tyn, fo, cno, co, cn, fuel, np)
 }
 
 /-- `vi_k_expected(to, tn, tyT, oo, fuel)`: `kExpected?` (`0` none, `1` `some false`, `2` `some
-true`): official's `is_K_target` for a block of one type with one constructor. -/
+true`): official's `is_K_target` for a block of one type with one constructor. The sort's level is
+compared with `zero` by `lv_equiv` (`Level.isEquiv`), `zero` a fresh node of the level heap. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def viKExpected : FunDecl := lfn (to, tn, tyt, oo, fuel) locals (r, g, s, y, z, c, q) {
@@ -297,8 +291,9 @@ def viKExpected : FunDecl := lfn (to, tn, tyt, oo, fuel) locals (r, g, s, y, z, 
   (g, s, y, z) := call e_view(r);
   if g != 2 { return 0 };
   c := IFL.u64[oo];
-  z := call intern_zero();
-  q := call lvl_eq(s, z);
+  CTL.u64[192] := 0;
+  z := call lh_mk(0, 0, 0);
+  q := call lv_equiv(s, z);
   if IFR.u64[c + 4] == 0 && q == 2 { return 2 };
   return 1
 }
@@ -385,45 +380,17 @@ def dindAlloc : FunDecl := lfn (n) locals (o) {
   return o
 }
 
-/-- `ind_lp_put(v)`: the universe parameter list whose `[` is at `v`, each item a name id looked
-up in `NID`, the handles appended to `DIND` (as `lp_put` does for `DLP`); `(off, cnt)`. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:226-233 ConRon.Arena.Frontend.parseCVD
-@[l_impl ConRon.Arena.Frontend.parseCVD]
-def indLpPut : FunDecl := lfn (v) locals (i, o, cnt, c, e, x, h) {
-  if len(DIND.u64) == 0 { abort };
-  o := DIND.u64[0] + 1;
-  i := v + 1;
-  while 0 == 0 {
-    if len(IN.u8) <= i { DIND.u64[0] := o - 1 + cnt; return (o, cnt) };
-    c := IN.u8[i];
-    if c == 93 { DIND.u64[0] := o - 1 + cnt; return (o, cnt) };
-    if 48 <= c && c <= 57 {
-      e := call num_end(i);
-      if e <= i { DIND.u64[0] := o - 1 + cnt; return (o, cnt) };
-      x := call read_nat(i, e);
-      if x == 18446744073709551615 { abort };
-      h := call name_get(x);
-      if len(DIND.u64) <= o + cnt { abort };
-      DIND.u64[o + cnt] := h;
-      cnt += 1;
-      i := e
-    } else {
-      i += 1
-    }
-  };
-  return (0, 0)
-}
-
 /-- `ind_cv(q, name, lps, type)`: `parseCVD` (name, type, universe parameters, in that order),
-written as the 4-word constant value at `DIND[q]`. -/
+written as the 4-word constant value at `DIND[q]`; the universe parameters are `lp_put`'s slice
+(`ApplyDecl.lean`, the same pool). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:226-233 ConRon.Arena.Frontend.parseCVD
 @[l_impl ConRon.Arena.Frontend.parseCVD]
 def indCv : FunDecl := lfn (q, nm, lps, ty) locals (n, t, o, l) {
   n := call name_get(nm);
   t := call expr_get(ty);
-  (o, l) := call ind_lp_put(lps);
+  (o, l) := call lp_put(lps);
   DIND.u64[q] := n;
-  DIND.u64[q + 1] := o;
+  DIND.u64[q + 1] := o + 1;
   DIND.u64[q + 2] := l;
   DIND.u64[q + 3] := t;
   return 0
@@ -574,98 +541,20 @@ def indApplyFns : Prog :=
    ("vi_listed", viListed), ("vi_ctor", viCtor), ("vi_order", viOrder),
    ("vi_k_expected", viKExpected), ("vi_rec_idx", viRecIdx), ("vi_rec", viRec),
    ("vi_recs", viRecs), ("validate_ind_d", validateIndD),
-   ("dind_alloc", dindAlloc), ("ind_lp_put", indLpPut), ("ind_cv", indCv), ("ind_caps", indCaps),
+   ("dind_alloc", dindAlloc), ("ind_cv", indCv), ("ind_caps", indCaps),
    ("parse_rule_d", parseRuleD), ("ind_rules", indRules), ("ind_type", indType),
    ("ind_ctor", indCtor), ("ind_rec", indRec), ("install_ind_d", installIndD),
    ("apply_ind", applyInd), ("apply_ind_line", applyIndLine)]
 
-/-- The callees of other files: the id tables (`Apply.lean`, `ApplyExpr.lean`), `decl_push`
-(`ApplyDecl.lean`), the input readers, `e_view` (`IndIface.lean`), `intern_zero`, `lvl_eq`. -/
+/-- The callees of other files: the id tables (`Apply.lean`, `ApplyExpr.lean`), `decl_push`,
+`lp_put` (`ApplyDecl.lean`), `e_view` (`IndIface.lean`), `lh_mk`, `lv_equiv` (the level heap). -/
 def indApplyForeign : Prog :=
-  [("name_get", stub 1), ("expr_get", stub 1), ("decl_push", stub 8), ("e_view", stub 1),
-   ("intern_zero", stub 0), ("lvl_eq", stub 2)]
+  [("name_get", stub 1), ("expr_get", stub 1), ("decl_push", stub 8), ("lp_put", stub 1),
+   ("e_view", stub 1), ("lh_mk", stub 3), ("lv_equiv", stub 2)]
 
 theorem indApply_wf :
     L.Compiler.Prog.wf frontIndTab
       (indApplyFns ++ indFieldsFns ++ indFieldsForeign ++ indApplyForeign) = true :=
   L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
-
-/-! ## The relation: `IndDeclAt` -/
-
-/-- The constants of a slice of record pointers (lane `pinsenv`'s former `decCIs`). -/
-def decCIs (a : Array Word) (dn : ConRon.Arena.NIdx → Option ConLeche.Name) (off cnt : Nat) :
-    Option (List ConRon.Arena.IConstantInfo) :=
-  (List.range cnt).mapM fun j => do L.Arena.decCI a dn (← L.Arena.nat? a (off + j))
-
-/-- **`DECL` record `i` is the inductive block `block` with `nP` parameters**: kind `6`, its
-block a slice of `I` (= `DIND`) words pointing to `decCI` constant records in `I`. A block's
-constants carry no `PropWhen` names (`sortZ := ifAllZero []`), so the name decoder of `decCIs` is
-irrelevant (`fun _ => none`). -/
-def IndDeclAt (D I : Array Word) (i : Nat) (block : List ConRon.Arena.IConstantInfo) (nP : Nat) :
-    Prop :=
-  dw D i 0 = 6 ∧ decCIs I (fun _ => none) (dw D i 2).toNat (dw D i 3).toNat = some block ∧
-    (dw D i 4).toNat = nP
-
-/-! ## Tests -/
-
--- `ind_caps`' 15 words decode to the default `IIndCaps` (`decI 0` is the default handle).
-#guard decCaps #[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] (fun _ => none) 0 ==
-  some ({} : ConRon.Arena.IIndCaps)
-
-/-- The whole frontend with the inductive functions, the level comparison and `e_view`; the
-inductive declaration line's hook is `apply_ind_line` called directly. -/
-def indAllProg : Prog :=
-  frontAllProg ++ indFieldsFns ++ indApplyFns ++ L.Arena.levelProg ++ [("e_view", L.Ind.eView)]
-
-/-- A memory with 224 word arrays of 4096 words and the input `s`. -/
-def indMemOf (s : String) : Mem :=
-  { initMem (List.replicate 224 4096) with bytes := #[s.toUTF8.data] }
-
-/-- The lines before the inductive line: name 1 = `Unit`, 2 = `Unit.unit`, 3 = `Unit.rec`,
-4 = `motive`; level 1 = `succ 0`; expressions: 0 = `Sort 1`, 1 = `Unit`, 2 = `Sort 0`
-(stand-in for a motive's type and the rule's right-hand side). -/
-def unitPre : String :=
-  "{\"in\":1,\"str\":{\"pre\":0,\"str\":\"Unit\"}}\n{\"in\":2,\"str\":{\"pre\":1,\"str\":\"unit\"}}\n\
-  {\"in\":3,\"str\":{\"pre\":1,\"str\":\"rec\"}}\n{\"il\":1,\"succ\":0}\n\
-  {\"ie\":0,\"sort\":1}\n{\"ie\":1,\"const\":{\"name\":1,\"us\":[]}}\n{\"ie\":2,\"sort\":0}\n"
-
-/-- A `Unit`-shaped block: one type `Unit : Sort 1` with the constructor `Unit.unit : Unit`
-(no fields), the recursor `Unit.rec` (one motive, one minor, `k := false`: `Sort 1` is not
-`zero`). `kr` is the recursor's `k`, `nf` the constructor's `numFields`. -/
-def unitLine (kr : String) (nf : Nat) : String :=
-  "{\"inductive\":{\"ctors\":[{\"isUnsafe\":false,\"levelParams\":[],\"name\":2,\"numFields\":" ++
-  toString nf ++ ",\"numParams\":0,\"type\":1,\"cidx\":0,\"induct\":1}],\"recs\":[{\"all\":[1],\
-  \"isUnsafe\":false,\"k\":" ++ kr ++ ",\"levelParams\":[],\"name\":3,\"numIndices\":0,\
-  \"numMinors\":1,\"numMotives\":1,\"numParams\":0,\"rules\":[{\"ctor\":2,\"nfields\":0,\
-  \"rhs\":2}],\"type\":2}],\"types\":[{\"all\":[1],\"ctors\":[2],\"isRec\":false,\
-  \"isReflexive\":false,\"isUnsafe\":false,\"levelParams\":[],\"name\":1,\"numIndices\":0,\
-  \"numNested\":0,\"numParams\":0,\"type\":0}]}}"
-
-/-- Run the prefix lines through `front_run`, then `apply_ind_line` on the inductive line placed
-after them (`j` after its `{`). -/
-def unitRun (kr : String) (nf : Nat) : Option Mem :=
-  let s := unitPre ++ unitLine kr nf
-  match run indAllProg 1000000 "front_run" [] (indMemOf unitPre) with
-  | .ok ([0], m) =>
-    match run indAllProg 1000000 "apply_ind_line"
-        [UInt64.ofNat (unitPre.utf8ByteSize + 1)] { m with bytes := #[s.toUTF8.data] } with
-    | .ok (_, m') => some m'
-    | .error _ => none
-  | _ => none
-
--- The block validates and installs: one `DECL` record of kind 6 with 3 constants and 0
--- parameters, decoding (`IndDeclAt`'s `decCIs`) to `indInfo`, `ctorInfo`, `recInfo`.
-#guard (unitRun "false" 0).map (fun m =>
-    let D := m.arr64 DECL
-    (dw D 0 0, dw D 0 3, dw D 0 4,
-      ((decCIs (m.arr64 DIND) (fun _ => none) (dw D 0 2).toNat (dw D 0 3).toNat).map
-        (·.map fun
-          | .indInfo _ _ => 3 | .ctorInfo _ np nf => 40 + 10 * np + nf
-          | .recInfo _ maj pre rs => 500 + 100 * maj + 10 * pre + rs.length | _ => 0)))) ==
-  some (6, 3, 0, some [3, 40, 721])
--- `k := true` is refused (the generated recursor is not K-like: `Sort 1`).
-#guard (unitRun "true" 0).isNone
--- A constructor whose `numFields` disagrees with its type's telescope is refused.
-#guard (unitRun "false" 1).isNone
 
 end L.Front.Ind
