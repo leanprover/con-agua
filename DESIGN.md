@@ -5171,3 +5171,74 @@ denser than the Rust).
   (`WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`, lane `whnf`'s stub) are this lane's to prove
   next; nothing is proved yet.
 None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+
+## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
+
+### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
+
+Reviewed against the twin at `vendor/UPSTREAM` and lane `whnf`'s `CoreR`, which now carries both
+sets of mode memos (`CoreRM m c M eb`, the eager tower's `eagerMemos` as bank `1`): the L code
+(`Checker.lean`) is the twin's line for line, and the skeleton's proofs go through lane `whnf`'s
+`flushCaches_refinesC`/`scratchEnter_refinesC`/`scratchDrop_refinesC` against the new `CoreR`
+(`flush_loop`, `enter_loop`, `drop_loop` build on master). The flag came from the dropped
+fingerprint census: these four reach the changed `Caches.empty` only through `flushCaches`, which
+is cited and was fixed by lane `whnf` (DESIGN, "Provenance", the `update --old 4c9eaf7` test).
+Nothing left to do; no marker on them.
+
+`LoopR` now carries `IWOK` (lane `induct`'s pool bounds), so the step's callees, which run on
+`StageR = CheckR ∧ IWOK`, can be called from it (`IWOK.frame`: kept by any frame that leaves `IW`,
+`EREC`, `CTL[129]`, `CTL[200]` alone — the bracket's and `pend_push`'s). The two step specs moved
+to `DeclStepSpec.lean`.
+
+### The ROM's pin variants: does declining `Nat.div` decline everything?
+
+**Yes, for every realistic input.** Without a pin variant `checkDivModPin` runs its variant loop
+over `[]` and declines (`notImplemented`) at the install of *any* of the eight pin-certified
+operations (`natDivModNames`: `Nat.div`, `Nat.mod`, `Nat.gcd`, `Nat.land`, `Nat.lor`, `Nat.xor`,
+`Nat.shiftLeft`, `Nat.shiftRight`), not only `Nat.div`. Measured on con-leche's 498 e2e fixtures
+(`_tmp/ref/con-leche/tests/e2e`, expectations from `e2e-expected.txt`; a scan of the `def`/
+`opaque` records by name): of 313 accepting fixtures, **21 (6.7 %) define one of the eight** and
+would become declines; every one of the fixtures that declares `String` or `Char` (`str_lit`,
+`str_proj`, …) defines `Nat.div` and `Nat.mod` — a string literal's type cone reaches them on this
+toolchain — and so does every whole-module export (`Init` itself, `Std`, Mathlib) and every file
+using `/`, `%`, `Fin`/`UInt*` arithmetic or `toString`. What still accepts is pure-logic and
+hand-built cones (the other 292 fixtures). So the L checker as it stands is complete only for
+inputs that never meet these operations: a real completeness gap, still no soundness issue (the
+final theorem holds at every pin list).
+
+**What embedding one variant costs** (the repository toolchain's, con-leche's first, `pins/
+leanprover-lean4-nightly-nightly-2026-09-10.json`, which also covers v4.35.0):
+* Data: 16 terms, **42 036** share-table entries (8 pins 900, 8 certificate lists 41 136; the
+  largest blobs 5–8k entries). The ROM encoding (`encItems [] (itemsPinSet v0)`, the memo mirrored
+  by back references) is **490 465 bytes**, against **9 542** today (the walk's items without
+  variants: 7 942). The three committed variants together ≈ 1.5 MB.
+* Generating it: `#eval` (interpreter) of the encoder ≈ 30 s (the `seen` list is quadratic).
+* **The kernel cannot check it the current way.** The ROM's correctness enters through
+  `romData = … ++ encItems [] (itemsAllPins romPins)` and `decide +kernel` side conditions
+  (`romData_len`, `allPins_fits`, `allPins_noProj`), i.e. the kernel evaluates the encoder on the
+  variant. Measured (`decide +kernel` of `(encItems [] [.ex blob]).length < 2^63`): `Nat.land`'s
+  pin (7 entries, 76 bytes) 0.26 s; `Nat.div`'s pin (277 entries, 3.6 KB) **4.2 s**; `Nat.gcd`'s
+  first certificate (1061 entries, 13.6 KB) **111 s** — growth ≈ entries^2.4 (structural `Expr`
+  equality on the unshared trees behind the `seen` membership tests). Extrapolated quadratically
+  over the 16 blobs: ≥ 6 h of kernel time per variant; really more. Not buildable.
+* Build time otherwise: none to speak of (a 490 KB literal; the x64 binary grows by the same).
+
+**Recommendation: a decoder-side ROM loader, so the kernel never evaluates the variant.** The pin
+list is free in the final theorem, so the L checker need not prove *which* variant its ROM holds,
+only that it interns *some* list `P` the way `internAllPins P` does:
+1. A total decoder `decRom : List UInt8 → List NatOpPinSet` (fuel-bounded, garbage decodes to
+   anything), and the ROM readers' specs restated over it: "if `rom_items` returns, the twin's
+   `internAllPins (decRom bytes)` ran to the related state". Proved once by induction, for all
+   bytes; no evaluation of the data. `P := decRom romBytes` is then simply the program's pin list.
+2. The memo: without the encoder's canonical back references, L may re-intern a subterm the
+   twin's `EMemo` hits; the handles agree by hash-consing, so the one new lemma is the one lane
+   `decls` avoided — "re-interning a denoted tree returns its handle and changes nothing" (store
+   `consP`/`consS`), and `MemoR` relaxed to tolerate duplicate keys.
+3. The bytes: generated by an untrusted `#eval` script into a committed file, embedded with
+   `include_str`; the kernel only checks the length bound (`String.length` of the literal, linear).
+4. Cost estimate: the decoder and the restated reader specs ~1–1.5k proof lines (the five reader
+   files are 3.5k lines today; their arm lemmas carry over, the induction changes from "on `x`
+   with `enc x`" to "on the fuel with `dec`"), the re-intern lemma ~300 lines. Not cheap, so
+   **not implemented this round**; it is the one piece of work between the L checker and
+   accepting ordinary Lean files. The pin-variant check itself (`checkDivModPin`, the certificate
+   loop) is lane `decls2`'s translation work either way.
