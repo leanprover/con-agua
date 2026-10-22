@@ -562,6 +562,8 @@ def checkerProg : Prog := [
   ("class_ctor_of_nfs", L.Ind.classCtorOfNfs),
   ("class_ctors_of", L.Ind.classCtorsOfL),
   ("class_fe_r", L.Ind.classFeRL),
+  ("class_fe_r_go", L.Ind.classFeRGo),
+  ("class_fe_r_rec", L.Ind.classFeRRec),
   ("class_fields_agree", L.Ind.classFieldsAgreeL),
   ("class_fields_of", L.Ind.classFieldsOfL),
   ("class_fields_of_hits", L.Ind.classFieldsOfHits),

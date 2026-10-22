@@ -698,42 +698,59 @@ def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOf
 
 /-! ## `classFeR` -/
 
+/-- `class_fe_r_rec(cv, mi, rp3)`: the rule-less `.recInfo` record of the constant at `cv` (aborts
+unless the copied name word is a handle, which `env_push` needs). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:686-703 ConRon.Arena.classFeR
+@[l_impl ConRon.Arena.classFeR]
+def classFeRRec : FunDecl := lfn (cv, mi, rp3) locals (q) {
+  q := call erec_alloc(9);
+  EREC.u64[q] := 5;
+  EREC.u64[q + 1] := EREC.u64[cv];
+  EREC.u64[q + 2] := EREC.u64[cv + 1];
+  EREC.u64[q + 3] := EREC.u64[cv + 2];
+  EREC.u64[q + 4] := EREC.u64[cv + 3];
+  EREC.u64[q + 5] := mi;
+  EREC.u64[q + 6] := rp3;
+  EREC.u64[q + 7] := 0;
+  EREC.u64[q + 8] := 0;
+  if 4294967296 <= EREC.u64[q + 1] { abort };
+  return q
+}
+
+/-- `class_fe_r_go(cvs.off, cvs.len, rcl, recs.off, recs.len, vis, m)`: the twin's `classFeR.go` at
+recursor `m` (the walked tail `cvs` of `cvGs`, `rcl` entries of `recCls` left), as
+`(vis', prevs.off, prevs.len)`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:686-703 ConRon.Arena.classFeR
+@[l_impl ConRon.Arena.classFeR]
+def classFeRGo : FunDecl := lfn (cvo, cvl, rcl, recsOff, recsLen, vis, m)
+    locals (cv, nm, c, q, mi, rp3, rc, kindp, cur, entry, vo, ro, rl, qo, ql) {
+  if cvl == 0 { return (vis, 0, 0) };
+  if rcl == 0 { return (vis, 0, 0) };
+  cv := IW.u64[cvo];
+  nm := EREC.u64[cv];
+  (c, q) := call env_row_get(nm);
+  mi := 0;
+  rp3 := 0;
+  if m < recsLen {
+    rc := IW.u64[recsOff + m];
+    mi := IW.u64[rc + 2];
+    rp3 := IW.u64[rc + 1]
+  };
+  kindp := call class_fe_r_rec(cv, mi, rp3);
+  cur := call env_push(vis, kindp);
+  entry := call rec3(nm, c, q);
+  (vo, ro, rl) := call class_fe_r_go(cvo + 1, cvl - 1, rcl - 1, recsOff, recsLen, cur, m + 1);
+  (qo, ql) := call sl_cons(entry, ro, rl);
+  return (vo, qo, ql)
+}
+
 /-- `class_fe_r(p, cvGs.off, cvGs.len, recCls.off, recCls.len, vis)`: the rule-less generated
 recursors consed onto the environment, pushed temporarily, as `(vis', prevs.off, prevs.len)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:686-703 ConRon.Arena.classFeR
 @[l_impl ConRon.Arena.classFeR]
-def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis)
-    locals (n, recsOff, recsLen, prevsOff, m, cv, nm, c, q, mi, rp3, rc, kindp, j, cur, entry) {
-  n := cvGsLen;
-  if recClsLen < n { n := recClsLen };
-  recsOff := IW.u64[p + 2];
-  recsLen := IW.u64[p + 3];
-  prevsOff := call iw_alloc(n);
-  m := 0;
-  while m < n {
-    cv := IW.u64[cvGsOff + m];
-    nm := EREC.u64[cv];
-    (c, q) := call env_row_get(nm);
-    if m < recsLen {
-      rc := IW.u64[recsOff + m];
-      mi := IW.u64[rc + 2];
-      rp3 := IW.u64[rc + 1]
-    } else { mi := 0; rp3 := 0 };
-    kindp := call erec_alloc(9);
-    EREC.u64[kindp] := 5;
-    j := 0;
-    while j < 4 { EREC.u64[kindp + 1 + j] := EREC.u64[cv + j]; j += 1 };
-    EREC.u64[kindp + 5] := mi;
-    EREC.u64[kindp + 6] := rp3;
-    EREC.u64[kindp + 7] := 0;
-    EREC.u64[kindp + 8] := 0;
-    cur := call env_push(vis, kindp);
-    vis := cur;
-    entry := call rec3(nm, c, q);
-    IW.u64[prevsOff + m] := entry;
-    m += 1
-  };
-  return (vis, prevsOff, n)
+def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis) locals (v, o, l) {
+  (v, o, l) := call class_fe_r_go(cvGsOff, cvGsLen, recClsLen, IW.u64[p + 2], IW.u64[p + 3], vis, 0);
+  return (v, o, l)
 }
 
 /-! ## `genRecCheck` -/
@@ -907,7 +924,8 @@ def recGenFns : Prog :=
    ("class_key_of_closed", classKeyOfClosed), ("class_key_of", classKeyOfL),
    ("check_block_classes_keys", checkBlockClassesKeys),
    ("check_block_classes_one_per_member", checkBlockClassesOnePerMember),
-   ("check_block_classes", checkBlockClassesL), ("class_fe_r", classFeRL),
+   ("check_block_classes", checkBlockClassesL), ("class_fe_r", classFeRL), ("class_fe_r_go", classFeRGo),
+   ("class_fe_r_rec", classFeRRec),
    ("gen_rec_check_any_no_member", genRecCheckAnyNoMember),
    ("gen_rec_check_former_tys", genRecCheckFormerTys),
    ("gen_rec_check_former_tys_c", genRecCheckFormerTysC),
