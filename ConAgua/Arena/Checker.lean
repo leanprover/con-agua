@@ -63,9 +63,8 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
 /-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
-`promote_new(k, vis, fresh)` (program: `PromoteProg`). -/
-
-/-- **`promote_vg` refines `promoteVG PMemo.empty coreWalkFuel`** under the loop's relation. -/
+`promote_new(k, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
+PMemo.empty coreWalkFuel` under the loop's relation (`PromoteRecRef.lean`'s `vg_rel`). -/
 @[refines ConRon.Arena.promoteVG]
 theorem promoteVG_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
