@@ -184,7 +184,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6
   have hgrow : StackGrew m m6 :=
-    ((StackKept.of_store hfr1.pjStore).trans (StackKept.of_store hfr2.pjStore)).toGrew.trans
+    ((StackKept.of_frame hfr1).trans (StackKept.of_frame hfr2)).toGrew.trans
       (hg3.trans (((StackKept.of_constF hfr4).trans
         ((StackKept.of_app_frame hfr5).trans hSt6)).toGrew))
   refine GrowRef.of_run (v := decH r6) ?_ ⟨M6, hS6, hK6, hgrow⟩
