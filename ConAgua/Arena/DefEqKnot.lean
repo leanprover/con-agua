@@ -112,8 +112,6 @@ structure KnotCallees (p : Prog) : Prop where
   must read back, and its `FireDen` asks for every field guard, past `numFields` too, while
   `StoreDen.proj` gives those below it). -/
   fireOk : FireOkOK p
-  /-- Projection tables' counts are below `2^32` (the loader's invariant, `WhnfCore.lean`). -/
-  projSmall : ProjSmall
   /-- `caps_never_zero`, `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved them at
   `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23). -/
   capsNeverZero : CapsNeverZeroOK p
@@ -201,15 +199,14 @@ theorem KnotCallees.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :
 include hq hc in
 /-- Lane `whnf`'s `CoreCallees`. -/
 theorem KnotCallees.coreC : CoreCallees p :=
-  { toProjCallees := hc.projC hq, inst1 := hq.walks.inst1OK, iota := hc.iota hq,
-    projSmall := hc.projSmall }
+  { toProjCallees := hc.projC hq, inst1 := hq.walks.inst1OK, iota := hc.iota hq }
 
 include hq hc in
 /-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/
 theorem KnotCallees.reduceProjCore : ReduceProjCoreH p :=
   fun n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc' =>
     reduceProjCore_refines' p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str)
-      (hc.projC hq) hc.projSmall hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
+      (hc.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
       mode d sn i c hs hsn hc' (supKeep_of fe)
 
 include hq hc in

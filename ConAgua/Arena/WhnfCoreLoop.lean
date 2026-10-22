@@ -203,7 +203,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     | succ N =>
     obtain ⟨hv, hsn, hpe⟩ := view_proj s.mem a₀ hR e hh ⟨ht, by simpa using hc9⟩ g9
     have hpr := whnfCoreStepProj_refines' p hp hwc.strLitSupported hwc.strLitCtor hcc.toProjCallees
-      hcc.projSmall hp.lsn hcc.erec N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn
+      hp.lsn hcc.erec N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn
       vis fe MM eb mode cheap d e (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3))
       (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1))
       (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe (hsup fe)
