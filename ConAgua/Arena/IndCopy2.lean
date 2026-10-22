@@ -631,4 +631,152 @@ theorem erCopy_spec (p : Prog) (hp : p.lookup "er_copy" = some erCopy) (n : Nat)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20)
 
+
+/-- **What an `EREC → IW` copy leaves**: every array but `IW` as it was, `IW` the same size, the
+destination holding the `EREC` source, the rest of `IW` unchanged. -/
+theorem erCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d s l = some m' →
+    s.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
+    d.toNat + l.toNat ≤ (m.arr64 IW).size → (m.arr64 IW).size < 2 ^ 64 →
+    (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
+    m'.words.size = m.words.size ∧
+    ∀ i, (m'.arr64 IW)[i]? =
+      if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (m.arr64 EREC)[s.toNat + (i - d.toNat)]?
+      else (m.arr64 IW)[i]? := by
+  induction n with
+  | zero => intro m m' d s l h; simp [erCopyW] at h
+  | succ n ih =>
+    intro m m' d s l h hs hE hd hsz
+    by_cases hl : l = 0
+    · rw [erCopyW_nil n m d s l hl] at h
+      cases h
+      subst hl
+      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
+        simp only [UInt64.toNat_zero]; omega
+      simp only [this, if_false]
+    · rw [erCopyW_step n m d s l hl] at h
+      have hl0 : 0 < l.toNat := by
+        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      have hl1 : (l - 1).toNat = l.toNat - 1 := by
+        rw [UInt64.toNat_sub]; simp; omega
+      have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hslt : s.toNat < (m.arr64 EREC).size := by omega
+      have hdlt : d.toNat < (m.arr64 IW).size := by omega
+      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 IW d (rdW (m.arr64 EREC) s) := ⟨_, rfl⟩
+      rw [← hm1] at h
+      have hsz1 : (m1.arr64 IW).size = (m.arr64 IW).size := by
+        rw [hm1, Mem.arr64_set64_same]; simp
+      have hE1 : m1.arr64 EREC = m.arr64 EREC := by
+        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      have hget1 : ∀ i, (m1.arr64 IW)[i]? = if i = d.toNat then (m.arr64 EREC)[s.toNat]?
+          else (m.arr64 IW)[i]? := by
+        intro i
+        rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        by_cases hi : d.toNat = i
+        · subst hi
+          simp only [hdlt, true_and, if_true]
+          simp [rdW, Array.getElem?_eq_getElem hslt]
+        · simp [hi, Ne.symm hi]
+      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+        (by rw [hs1, hl1, hE1]; omega) (by rw [hE1]; exact hE)
+        (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
+      rw [hE1] at hG
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
+      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hG i, hd1, hl1, hs1]
+        by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
+        · rw [if_pos hi]
+          by_cases hid : i = d.toNat
+          · subst hid
+            have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
+            rw [if_neg this, hget1, if_pos rfl]; simp
+          · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
+            rw [if_pos h2]
+            congr 1; omega
+        · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+
+/-- The model of `er_to_iw(o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
+def erToIwW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
+  match allocW m l with
+  | none => none
+  | some (q, m1) =>
+    match erCopyW (n - 1) m1 q o l with
+    | none => none
+    | some m2 => some ([q, l], m2)
+
+theorem erToIw_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (hp : p.lookup "er_to_iw" = some erToIw) (n : Nat)
+    (s₀ : St) (o l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "er_to_iw" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ erToIwW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, erToIw]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ q m1 m2, allocW s₀.mem l = some (q, m1) → erCopyW n m1 q o l = some m2 →
+        erToIwW (n + 1) s₀.mem o l = some ([q, l], m2) := by
+      intro q m1 m2 h1 h2
+      simp [erToIwW, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, erCopy_spec p hc n] <;>
+      finish (gen := 20)
+
+/-- **`er_to_iw` copies an `EREC` slice**: the new `IW` slice decodes as the `EREC` slice. -/
+theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    r = [rdW (m.arr64 CTL) 200, l] ∧
+    (decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat : Option (List (Idx k))) =
+      hslice? (erA m) o.toNat l.toNat ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
+    (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
+  simp only [erToIwW] at h
+  cases hal : allocW m l with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
+  simp only [hal] at h
+  cases hcp : erCopyW (n - 1) m1 q o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq hm1
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hIW := allocMem_IW m l
+  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
+    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  obtain ⟨hA, hS, hW, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
+    (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
+  rw [hIW] at hS hG
+  rw [hEE] at hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m l).trans (copy_frame hA (by rw [hS, hIW]) hW)
+  have htop : rdW (m2.arr64 CTL) 200 = q + l := by
+    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + l).toNat = q.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  refine ⟨rfl, ?_, ?_, hfr, ?_, ?_⟩
+  · simp only [decHL]
+    apply hslice?_congr
+    intro j hj
+    simp only [iwA, erA, hG]
+    rw [if_pos (by omega)]
+    congr 1; omega
+  · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hG, if_neg (by omega)]
+  · rw [hA EREC (by decide), hEE]
+  · simp only [iwTop, htop, hsum]
+
 end L.Ind
