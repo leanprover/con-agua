@@ -807,6 +807,68 @@ theorem ty_loop (m₁ : Mem) (q : Word) :
       rfields
   · dloop_other scanIndTypeLoop
 
+omit h64 hsize in
+theorem numsF_stab (o : Nat) (l : List Nat) (m m' : Mem) (xa : ArrId) (x0 x1 : Nat)
+    (hg : IGrow m m' xa x0 x1) (hxa : xa = IFR) (h : NumsF m o l) : NumsF m' o l := by
+  subst hxa
+  obtain ⟨r1, r2, r3⟩ := h
+  have htl := hg.top IFL (.inr rfl)
+  refine ⟨r1, by omega, fun k hk => ?_⟩
+  rw [hg.wd_keep IFL (.inr rfl) _ (by omega) (by omega) (fun h => absurd h (by decide))]
+  exact r3 k hk
+
+omit h64 hsize in
+theorem tyF_stab (t : Nat) (x : IndTypeRec) (m m' : Mem) (x0 x1 : Nat) (h : TyF b m t x)
+    (h1 : 1 ≤ t) (h2 : t + 11 ≤ topN m IFR + 1) (hg : IGrow m m' IFR x0 x1)
+    (hd : t + 11 ≤ x0 ∨ x1 ≤ t) : TyF b m' t x := by
+  have hw := irec_keep t 11 m m' x0 x1 hg h1 h2 hd
+  obtain ⟨⟨c1, c2, c3⟩, f4, f3, b7, n9, n10⟩ := h
+  have hn := numsF_stab _ _ m m' IFR x0 x1 hg rfl f3
+  rw [← hw 3 (by decide)] at hn
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, hn, ?_, ?_, ?_⟩
+  · rw [show t = t + 0 from rfl, hw 0 (by decide)]; exact c1
+  · rw [hw 1 (by decide)]; exact c2
+  · rw [hw 2 (by decide)]; exact c3
+  · rw [hw 4 (by decide)]; exact f4
+  · rw [hw 7 (by decide)]; exact b7
+  · rw [hw 9 (by decide)]; exact n9
+  · rw [hw 10 (by decide)]; exact n10
+
+theorem tyList_shape : IListLoop b (scanIndTypeListLoop b) (scanIndType b) := by
+  ilist_shape scanIndTypeListLoop
+
+/-- The types of a block: a run of type records in `IFR`. -/
+theorem tys_link (v : USize) (m : Mem) (l : List IndTypeRec) (e : USize) (r : Word × Word × Word)
+    (m' : Mem) (h : scanIndTypes b v = .ok l e) (hR : Room m)
+    (hm : listW b.data m v.toUInt64 0 = some (r, m')) :
+    r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧
+      RunR (fun t x m => TyF b m t x) IFR 11 m' r.1.toNat l ∧ Grow m m' ∧ Room m' ∧
+      r.1.toNat = topN m IFR + 1 ∧ r.1.toNat + 11 * l.length = topN m' IFR + 1 := by
+  refine (fun H => ⟨H.1, H.2.1, H.2.2.1, H.2.2.2.1, H.2.2.2.2.1, H.2.2.2.2.2.1,
+    H.2.2.2.2.2.2.1⟩) (ilistW_link b h64 hsize (scanIndTypeListLoop b)
+    (scanIndType b) (tyList_shape b h64 hsize) (scanIndTypes b) (fun v l e h => by
+      unfold scanIndTypes at h; split at h
+      · rename_i h91; exact ⟨by simpa using h91, h⟩
+      · cases h) 0 IFR (.inl rfl) 11 (by decide) rfl
+    (fun m n => by simp [fldAllocW]) (fun t x m => TyF b m t x)
+    (fun t x m m' x0 x1 h1 h2 h3 hg h4 => tyF_stab b t x m m' x0 x1 h1 h2 h3 hg (.inl h4))
+    (fun _ _ => True) (fun _ => trivial) (fun _ _ _ _ _ => trivial) (fun _ _ _ _ _ => trivial) ?_
+    v m l e r m' h hR hm)
+  · intro i m m₁ q x e e₂ m₂ hi h123 hS hR hal hob
+    rw [show flagsW m₁ 0 q = m₁ by simp [flagsW]] at hob
+    have hI := recInv_alloc IFR (.inl rfl) 11 _ q m m₁ hR rfl hal
+    obtain ⟨t1, ⟨t2, t3⟩, t4⟩ := item_gen b h64 hsize
+      (fun i w seen (st : TySt) => scanIndTypeLoop b i w seen st.ctors st.isRec st.isRefl
+        st.isUns st.lps st.nm st.nIdx st.nNest st.nP st.ty) 0 IFR 11
+      (fun m₁ q d m => (RecInv IFR 11 q m₁ m ∧ topN m IFR = topN m₁ IFR) ∧ TyF b m q.toNat d)
+      (TyLR b) ⟨[], false, false, false, [], 0, 0, 0, 0, 0⟩ (scanIndType b) (fun i x e h => by
+        unfold scanIndType at h; split at h
+        · exact h
+        · cases h) (ty_loop b h64 hsize)
+      i m₁ q x e e₂ m₂ hS ⟨hI, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
+        seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩ hob
+    exact ⟨t1, t4, t2.1, t2.2.1, t3, trivial⟩
+
 end kinds
 
 end L.Front.Ind
