@@ -84,30 +84,6 @@ theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = 
 
 /-! ## `target_ctor_at`'s MEMBER arm -/
 
-/-- `decCV`'s fields, read back (the `Env.lean` decoder, over an explicit array). -/
-theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    hd? a q = some cv.name ∧ hlist? a (q + 1) = some cv.levelParams ∧
-      hd? a (q + 3) = some cv.type := by
-  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨nm, hnm, l, hl, t, ht, heq⟩ := h
-  obtain rfl := (Option.some.injEq _ _).mp heq.symm
-  exact ⟨hnm, hl, ht⟩
-
-/-- A decoded `EREC` handle, read back as a memory word (`iwH_rdW`'s analogue over `EREC`). -/
-theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i = some x)
-    (hi : i < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  simp only [hd?, erA] at h
-  cases hw : (m.arr64 EREC)[i]? with
-  | none => simp [hw] at h
-  | some w =>
-    simp only [hw] at h
-    by_cases hl : w.toNat < 2 ^ 32
-    · simp [hl] at h
-      have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
-      exact ⟨w, by simp [rdW, hiw, hw], hl, h⟩
-    · simp [hl] at h
-
 /-! ## `abstract_prefix` (the round-1 `while` rewritten as a self-recursion) -/
 
 mutual
