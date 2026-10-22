@@ -26,26 +26,6 @@ open L.Arena
 
 /-! ## `ClassSlot.isMinor` -/
 
-/-- A decoded `ClassSlot`'s tag word is `1` exactly when it is `.isMinor`. -/
-theorem decCS_tag {m : Mem} {p : Nat} {cs : ClassSlot} (h : decCS m p = some cs) :
-    iwN m p = some (if cs.isMinor then 1 else 0) := by
-  rw [decCS] at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨t, ht, h⟩ := h
-  match t, h with
-  | 0, h =>
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨q, -, h⟩ := h
-    obtain ⟨k, -, rfl⟩ := h
-    simp [ht, ClassSlot.isMinor]
-  | 1, h =>
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨a, -, h⟩ := h
-    obtain ⟨b, -, h⟩ := h
-    obtain ⟨c2, -, rfl⟩ := h
-    simp [ht, ClassSlot.isMinor]
-  | (k + 2), h => simp at h
-
 /-- **`class_slot_is_minor` is `ClassSlot.isMinor`.** -/
 @[refines ConRon.Arena.ClassSlot.isMinor]
 theorem classSlotIsMinor_refines (p : Prog) (hp : p.lookup "class_slot_is_minor" = some classSlotIsMinor)
@@ -203,30 +183,6 @@ theorem classMinorSlotGo_spec (p : Prog) (hp : p.lookup "class_minor_slot_go" = 
       finish (gen := 20)
 
 
-theorem decCS_motive {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
-    iwN m p = some 0 := by
-  have := decCS_tag h
-  simpa [ClassSlot.isMinor] using this
-
-theorem decCS_minor {m : Mem} {p c' : Nat} {C' : NIdx} {ihs : List (Nat × Nat)}
-    (h : decCS m p = some (.minor c' C' ihs)) :
-    iwN m p = some 1 ∧ iwN m (p + 1) = some c' ∧ iwH m (p + 2) = some C' ∧
-    ∃ o l, iwN m (p + 3) = some o ∧ iwN m (p + 4) = some l ∧ decPL m (decNN m) o l = some ihs := by
-  rw [decCS] at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨t, ht, h⟩ := h
-  match t, h with
-  | 0, h => simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h; obtain ⟨_, _, h⟩ := h; obtain ⟨_, _, h⟩ := h; cases h
-  | 1, h =>
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨a, ha, h⟩ := h
-    obtain ⟨b, hb, h⟩ := h
-    obtain ⟨c2, hc2, h⟩ := h
-    cases h
-    obtain ⟨o, l, ho, hl, hg⟩ := decAt_some hc2
-    exact ⟨ht, ha, hb, o, l, ho, hl, hg⟩
-  | (k + 2), h => simp at h
-
 theorem hit_of_decCS_miss {m : Mem} {p : Nat} {cs : ClassSlot} (c cc : Word) (hcc : cc.toNat < 2 ^ 32)
     (hp : decCS m p = some cs) (hb : p + 5 < 2 ^ 64)
     (hnot : ∀ ihs, cs ≠ .minor c.toNat (decI cc) ihs) :
@@ -297,11 +253,6 @@ def GoRes (m : Mem) (hs : List (Nat × List (Nat × Nat))) (cnt rS rOff rLen x y
   x.toNat = cnt.toNat + hs.length ∧ (hs = [] → y = rS ∧ z = rOff ∧ w = rLen) ∧
   (∀ s ihs, hs.getLast? = some (s, ihs) →
     y = UInt64.ofNat s ∧ decPL m (decNN m) z.toNat w.toNat = some ihs)
-
-theorem decCS_ptr_lt {m : Mem} {p : Nat} {cs : ClassSlot} (h : decCS m p = some cs) :
-    p < (m.arr64 IW).size := by
-  have := decCS_tag h
-  exact iwN_lt this
 
 theorem classMinorSlotGoW_ok (n : Nat) : ∀ (m : Mem) (off rem j c cc cnt rS rOff rLen x y z w : Word)
     (sls : List ClassSlot),

@@ -134,6 +134,56 @@ theorem decPL_le {α : Type} {m : Mem} {f : Nat → Option α} : ∀ {o l : Nat}
     · right; omega
 
 
+/-- A decoded `ClassSlot`'s tag word is `1` exactly when it is `.isMinor`. -/
+theorem decCS_tag {m : Mem} {p : Nat} {cs : ClassSlot} (h : decCS m p = some cs) :
+    iwN m p = some (if cs.isMinor then 1 else 0) := by
+  rw [decCS] at h
+  simp only [bind, Option.bind_eq_some_iff] at h
+  obtain ⟨t, ht, h⟩ := h
+  match t, h with
+  | 0, h =>
+    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨q, -, h⟩ := h
+    obtain ⟨k, -, rfl⟩ := h
+    simp [ht, ClassSlot.isMinor]
+  | 1, h =>
+    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨a, -, h⟩ := h
+    obtain ⟨b, -, h⟩ := h
+    obtain ⟨c2, -, rfl⟩ := h
+    simp [ht, ClassSlot.isMinor]
+  | (k + 2), h => simp at h
+
+theorem decCS_motive {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
+    iwN m p = some 0 := by
+  have := decCS_tag h
+  simpa [ClassSlot.isMinor] using this
+
+theorem decCS_minor {m : Mem} {p c' : Nat} {C' : NIdx} {ihs : List (Nat × Nat)}
+    (h : decCS m p = some (.minor c' C' ihs)) :
+    iwN m p = some 1 ∧ iwN m (p + 1) = some c' ∧ iwH m (p + 2) = some C' ∧
+    ∃ o l, iwN m (p + 3) = some o ∧ iwN m (p + 4) = some l ∧ decPL m (decNN m) o l = some ihs := by
+  rw [decCS] at h
+  simp only [bind, Option.bind_eq_some_iff] at h
+  obtain ⟨t, ht, h⟩ := h
+  match t, h with
+  | 0, h => simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h; obtain ⟨_, _, h⟩ := h; obtain ⟨_, _, h⟩ := h; cases h
+  | 1, h =>
+    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨a, ha, h⟩ := h
+    obtain ⟨b, hb, h⟩ := h
+    obtain ⟨c2, hc2, h⟩ := h
+    cases h
+    obtain ⟨o, l, ho, hl, hg⟩ := decAt_some hc2
+    exact ⟨ht, ha, hb, o, l, ho, hl, hg⟩
+  | (k + 2), h => simp at h
+
+theorem decCS_ptr_lt {m : Mem} {p : Nat} {cs : ClassSlot} (h : decCS m p = some cs) :
+    p < (m.arr64 IW).size := by
+  have := decCS_tag h
+  exact iwN_lt this
+
+
 /-! ## `class_of_motive_var` -/
 
 theorem findIdx_toNat (ws : List Word) (x : Word) :
@@ -949,5 +999,216 @@ theorem classRecOf_refines (p : Prog) (hp : p.lookup "class_rec_of" = some class
   cases hc : crOf t.toNat rc cs with
   | none => exact g1 hc
   | some nm => exact g2 nm hc
+
+
+/-! ## `class_read_motive_slot` (the `while` rewritten as a self-recursion on the shifted slice) -/
+
+/-- After the recursive call: shift the position. -/
+def msK : Option (List Word) → Option (List Word)
+  | none => none
+  | some r => if r.headD 0 = 0 then some [0, 0] else some [1, r.tail.headD 0 + 1]
+
+/-- **The model of `class_read_motive_slot`.** -/
+def msW : Nat → Mem → Word → Word → Word → Option (List Word)
+  | 0, _, _, _, _ => none
+  | n + 1, m, so, sl, c =>
+    if sl = 0 then some [0, 0]
+    else if ¬ so.toNat < (m.arr64 IW).size then none
+    else if ¬ (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size then none
+    else if rdW (m.arr64 IW) (rdW (m.arr64 IW) so) = 0 then
+      (if c = 0 then some [1, 0] else msK (msW n m (so + 1) (sl - 1) (c - 1)))
+    else msK (msW n m (so + 1) (sl - 1) c)
+
+section arms
+variable (n : Nat) (m : Mem) (so sl c : Word)
+theorem msW_nil (h : sl = 0) : msW (n + 1) m so sl c = some [0, 0] := by simp [msW, h]
+theorem msW_oob1 (h : sl ≠ 0) (h1 : ¬ so.toNat < (m.arr64 IW).size) : msW (n + 1) m so sl c = none := by
+  simp [msW, h, h1]
+theorem msW_oob2 (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
+    (h2 : ¬ (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size) : msW (n + 1) m so sl c = none := by
+  simp [msW, h, h1, h2]
+theorem msW_hit (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
+    (h2 : (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size) (h3 : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) = 0)
+    (hc : c = 0) : msW (n + 1) m so sl c = some [1, 0] := by
+  simp [msW, h, h1, h2, h3, hc]
+theorem msW_mot (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
+    (h2 : (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size) (h3 : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) = 0)
+    (hc : c ≠ 0) : msW (n + 1) m so sl c = msK (msW n m (so + 1) (sl - 1) (c - 1)) := by
+  simp [msW, h, h1, h2, h3, hc]
+theorem msW_min (h : sl ≠ 0) (h1 : so.toNat < (m.arr64 IW).size)
+    (h2 : (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size) (h3 : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) ≠ 0) :
+    msW (n + 1) m so sl c = msK (msW n m (so + 1) (sl - 1) c) := by
+  simp [msW, h, h1, h2, h3]
+end arms
+
+grind_pattern [ind_grind] msW_nil => msW (n + 1) m so sl c
+grind_pattern [ind_grind] msW_oob1 => msW (n + 1) m so sl c
+grind_pattern [ind_grind] msW_oob2 => msW (n + 1) m so sl c
+grind_pattern [ind_grind] msW_hit => msW (n + 1) m so sl c
+grind_pattern [ind_grind] msW_mot => msW (n + 1) m so sl c
+grind_pattern [ind_grind] msW_min => msW (n + 1) m so sl c
+
+theorem classReadMotiveSlot_spec (p : Prog) (hp : p.lookup "class_read_motive_slot" = some classReadMotiveSlot)
+    (n : Nat) : ∀ (s₀ : St) (so sl c : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_motive_slot" [so, sl, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ msW n s₀.mem so sl c = some r; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ so sl c; rw [invoke_eq _ hp]; simp only [callFn, classReadMotiveSlot]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ so sl c
+    rw [invoke_eq _ hp]
+    simp only [callFn, classReadMotiveSlot]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20) [msK]
+
+
+/-- The indices of the motive slots, counted from `j`. -/
+def motIdx : Nat → List ClassSlot → List Nat
+  | _, [] => []
+  | j, .motive _ :: sls => j :: motIdx (j + 1) sls
+  | j, .minor .. :: sls => motIdx (j + 1) sls
+
+theorem motIdx_shift : ∀ (sls : List ClassSlot) (j : Nat), motIdx (j + 1) sls = (motIdx j sls).map (· + 1) := by
+  intro sls
+  induction sls with
+  | nil => intro j; simp [motIdx]
+  | cons sl sls ih =>
+    intro j
+    cases sl with
+    | motive k => simp [motIdx, ih (j + 1)]
+    | minor c C ihs => simp [motIdx, ih (j + 1)]
+
+theorem motIdx_eq : ∀ (j : Nat) (sls : List ClassSlot),
+    ((List.range sls.length).filter (fun s => match (sls[s]? : Option ClassSlot) with
+      | some (.motive _) => true
+      | _ => false)).map (j + ·) = motIdx j sls := by
+  intro j sls
+  induction sls generalizing j with
+  | nil => simp [motIdx]
+  | cons sl sls ih =>
+    rw [List.length_cons, List.range_succ_eq_map, List.filter_cons, List.filter_map]
+    have e : (fun s : Nat => match ((sl :: sls)[s]? : Option ClassSlot) with
+        | some (.motive _) => true | _ => false) ∘ Nat.succ =
+        (fun s : Nat => match (sls[s]? : Option ClassSlot) with
+        | some (.motive _) => true | _ => false) := by
+      funext s; simp
+    rw [e]
+    have ih' := ih (j + 1)
+    have e2 : ∀ L : List Nat, (L.map Nat.succ).map (j + ·) = L.map ((j + 1) + ·) := by
+      intro L; simp [List.map_map, Function.comp_def]; intro x _; omega
+    cases sl with
+    | motive k => simp [motIdx, e2, ih']
+    | minor c C ihs => simp [motIdx, e2, ih']
+
+
+/-- The result words of a motive-position query. -/
+def msRes : Option Nat → List Word
+  | some i => [1, UInt64.ofNat i]
+  | none => [0, 0]
+
+theorem msK_of (o : Option Nat) (r1 : List Word) (h : r1 = msRes o) :
+    msK (some r1) = some (msRes (o.map (· + 1))) := by
+  subst h
+  cases o <;> simp [msK, msRes, UInt64.ofNat_add]
+
+theorem msW_ok (n : Nat) : ∀ (m : Mem) (so sl c : Word) (r : List Word) (sls : List ClassSlot),
+    msW n m so sl c = some r → decPL m (decCS m) so.toNat sl.toNat = some sls →
+    so.toNat + sl.toNat < 2 ^ 64 → r = msRes ((motIdx 0 sls)[c.toNat]?) := by
+  induction n with
+  | zero => intro m so sl c r sls h; simp [msW] at h
+  | succ n ih =>
+    intro m so sl c r sls h hdec hb
+    by_cases hsl : sl = 0
+    · rw [msW_nil n m so sl c hsl] at h
+      simp only [Option.some.injEq] at h
+      subst h
+      have : sl.toNat = 0 := by rw [hsl]; rfl
+      rw [this] at hdec
+      simp [decPL] at hdec
+      subst hdec
+      simp [motIdx, msRes]
+    · have hpos : 1 ≤ sl.toNat := by
+        rcases Nat.eq_zero_or_pos sl.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hsl
+        · omega
+      obtain ⟨s1, hs1⟩ : ∃ s1, sl.toNat = s1 + 1 := ⟨sl.toNat - 1, by omega⟩
+      rw [hs1] at hdec
+      obtain ⟨pn, sl', rest, rfl, hpn, hcs, hdec'⟩ := decPL_cons hdec
+      have hso : so.toNat < (m.arr64 IW).size := iwN_lt hpn
+      have hpn' := iwN_rdW hpn (by omega)
+      rw [UInt64.ofNat_toNat] at hpn'
+      have hpsz := decCS_ptr_lt hcs
+      have htag := decCS_tag hcs
+      have htag' := iwN_rdW htag (by have := hpn'.2; omega)
+      have hpl : (rdW (m.arr64 IW) so).toNat < (m.arr64 IW).size := by
+        rw [hpn'.1, UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hpsz
+      have hsl1 : (sl - 1).toNat = s1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+      have hso1 : (so + 1).toNat = so.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hdec1 : decPL m (decCS m) (so + 1).toNat (sl - 1).toNat = some rest := by
+        rw [hso1, hsl1]; exact hdec'
+      have hrd : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) = UInt64.ofNat (if sl'.isMinor then 1 else 0) := by
+        rw [hpn'.1]; exact htag'.1
+      cases sl' with
+      | motive k =>
+        have hz : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) = 0 := by rw [hrd]; rfl
+        by_cases hc : c = 0
+        · rw [msW_hit n m so sl c hsl hso hpl hz hc] at h
+          simp only [Option.some.injEq] at h
+          subst h
+          have : c.toNat = 0 := by rw [hc]; rfl
+          simp [motIdx, this, msRes]
+        · rw [msW_mot n m so sl c hsl hso hpl hz hc] at h
+          cases hr : msW n m (so + 1) (sl - 1) (c - 1) with
+          | none => rw [hr] at h; simp [msK] at h
+          | some r1 =>
+            rw [hr] at h
+            have hc1 : (c - 1).toNat = c.toNat - 1 := by
+              have : c.toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
+              rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
+            have g := ih m (so + 1) (sl - 1) (c - 1) r1 rest hr hdec1 (by rw [hso1, hsl1]; omega)
+            rw [msK_of _ r1 g] at h
+            simp only [Option.some.injEq] at h
+            subst h
+            have hcne : c.toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
+            obtain ⟨c', hc'⟩ : ∃ c', c.toNat = c' + 1 := ⟨c.toNat - 1, by omega⟩
+            rw [hc1, hc'] at *
+            simp only [motIdx, motIdx_shift, List.getElem?_cons_succ, List.getElem?_map, Nat.add_sub_cancel]
+      | minor c0 C0 ihs =>
+        have hnz : rdW (m.arr64 IW) (rdW (m.arr64 IW) so) ≠ 0 := by
+          rw [hrd]; simp [ClassSlot.isMinor]
+        rw [msW_min n m so sl c hsl hso hpl hnz] at h
+        cases hr : msW n m (so + 1) (sl - 1) c with
+        | none => rw [hr] at h; simp [msK] at h
+        | some r1 =>
+          rw [hr] at h
+          have g := ih m (so + 1) (sl - 1) c r1 rest hr hdec1 (by rw [hso1, hsl1]; omega)
+          rw [msK_of _ r1 g] at h
+          simp only [Option.some.injEq] at h
+          subst h
+          simp only [motIdx, motIdx_shift, List.getElem?_map]
+
+
+/-- **`class_read_motive_slot` refines `ClassRead.motiveSlot`**: `(1, i)` for `some i`, `(0, 0)` for
+`none`; memory unchanged. -/
+@[refines ConRon.Arena.ClassRead.motiveSlot]
+theorem classReadMotiveSlot_refines (p : Prog)
+    (hp : p.lookup "class_read_motive_slot" = some classReadMotiveSlot) (n : Nat) (s₀ : St)
+    (so sl c : Word) (sls : List ClassSlot) (hdec : decPL s₀.mem (decCS s₀.mem) so.toNat sl.toNat = some sls)
+    (hb : so.toNat + sl.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_motive_slot" [so, sl, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      r = msRes (ConRon.Arena.ClassRead.motiveSlot sls c.toNat); ⊤⦄ := by
+  refine triple_post (classReadMotiveSlot_spec p hp n s₀ so sl c) ?_
+  rintro r s' ⟨hl, hm, hw⟩
+  refine ⟨hl, hm, ?_⟩
+  rw [msW_ok n _ so sl c r sls hw hdec hb]
+  have := motIdx_eq 0 sls
+  simp only [Nat.zero_add, List.map_id'] at this
+  simp only [ConRon.Arena.ClassRead.motiveSlot]
+  erw [this]
 
 end L.Ind

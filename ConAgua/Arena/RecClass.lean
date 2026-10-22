@@ -44,18 +44,17 @@ def classReadClasses : FunDecl := lfn (so, sl) locals (q, cnt, j, sp) {
 
 /-- `class_read_motive_slot(so, sl, c)`: the prefix position of class `c`'s motive. -/
 @[l_impl ConRon.Arena.ClassRead.motiveSlot]
-def classReadMotiveSlot : FunDecl := lfn (so, sl, c) locals (cnt, j, sp) {
-  cnt := 0;
-  j := 0;
-  while j < sl {
-    sp := IW.u64[so + j];
-    if IW.u64[sp] == 0 {
-      if cnt == c { return (1, j) };
-      cnt += 1
-    };
-    j += 1
+def classReadMotiveSlot : FunDecl := lfn (so, sl, c) locals (sp, ok, j) {
+  if sl == 0 { return (0, 0) };
+  sp := IW.u64[so];
+  if IW.u64[sp] == 0 {
+    if c == 0 { return (1, 0) };
+    (ok, j) := call class_read_motive_slot(so + 1, sl - 1, c - 1)
+  } else {
+    (ok, j) := call class_read_motive_slot(so + 1, sl - 1, c)
   };
-  return (0, 0)
+  if ok == 0 { return (0, 0) };
+  return (1, j + 1)
 }
 
 /-- `class_of_motive_var(nP, mo, ml, p)`: the motive ordinal of prefix variable `p`
