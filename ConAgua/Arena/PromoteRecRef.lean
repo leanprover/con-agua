@@ -681,17 +681,17 @@ theorem clear_rel {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h : clearW m = s
     PMemoR m' PMemo.empty ∧ MemFrame [] [140, 141, 142, 143, 144, 145, 146, 147] m m' := by
   unfold clearW at h
   by_cases h1 : rdW (m.arr64 CTL) pnSch.cs + 2 = 0
-  · simp [clrK, h1] at h
-  rw [clrK_some _ _ h1] at h
+  · simp [pmClrK, h1] at h
+  rw [pmClrK_some _ _ h1] at h
   by_cases h2 : rdW ((mclearG pnSch m).arr64 CTL) plSch.cs + 2 = 0
-  · simp [clrK, h2] at h
-  rw [clrK_some _ _ h2] at h
+  · simp [pmClrK, h2] at h
+  rw [pmClrK_some _ _ h2] at h
   by_cases h3 : rdW ((mclearG plSch (mclearG pnSch m)).arr64 CTL) plsSch.cs + 2 = 0
-  · simp [clrK, h3] at h
-  rw [clrK_some _ _ h3] at h
+  · simp [pmClrK, h3] at h
+  rw [pmClrK_some _ _ h3] at h
   by_cases h4 : rdW ((mclearG plsSch (mclearG plSch (mclearG pnSch m))).arr64 CTL) peSch.cs + 2 = 0
-  · simp [clrK, h4] at h
-  rw [clrK_some _ _ h4] at h
+  · simp [pmClrK, h4] at h
+  rw [pmClrK_some _ _ h4] at h
   cases h
   have f1 := mclearG_frame pnSch m
   have f2 := mclearG_frame plSch (mclearG pnSch m)

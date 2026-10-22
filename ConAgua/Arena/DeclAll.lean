@@ -7,3 +7,7 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.DeclRomStubs
+import ConAgua.Arena.DeclReduceSpec
+import ConAgua.Arena.DeclArmLoop
+import ConAgua.Arena.DeclCheckLoop

@@ -6207,6 +6207,128 @@ start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
   the `CoreS` bridge, landing 1's "tried and dropped").
 * Helper `parts` started (IndParts/IndInstall, stub-free leaves first).
 * Census: phase 8 **67 proven, 57 sorry, 91 written, 8 todo**.
+### The ROM stubs' specs (`DeclRomStubs.lean`), for lane `romload`
+
+The arms read con-leche values the twin interns at the point of use. Their L readers are the
+stubs `rom_ci(id)`, `rom_cv(id)`, `rom_expr(id)`, `rom_basis_decls(kind)`, `rom_basis_decls_a(kind)`
+(`romStubs`, lane `decls2`'s ids). Their specs are stated in lane `induct`'s stub shape (`stubM` +
+`RelAM`, `sorry`): from `StageR`, the twin's `romCiT id` (`eqA`, `natA`, the `Iff`/`Nonempty`
+families), `romCvT id`, `romExprT id`, `BasisKind.decls`/`declsA (basisOfW kind)` runs, `StageR`
+after at the same environment, the pools grown, and the result **decoded below the tops**
+(`DecB`: a record (`decRCI`, `decRCV`), a handle (`decW0E`), an `IW` slice of record pointers
+(`decRBlk`)). **For lane `romload`**: these are the statements the real readers must prove; the
+values all come from the startup data (`romData`), which `PB`'s prefix check makes the program's
+own. `rom_pin_sets()` (the variants, `CTL[150]`/`CTL[151]`) has no spec yet: see "The definition
+arm and the pins" below.
+
+### Through the stubs: the reduce family (`DeclReduceSpec.lean`)
+
+**Refined**: `reduceOpCvA`, `ofReducePinA`, `reduceDeclPin` (one model `selW` for "read a pin,
+pick one of two ROM ids"; through the ROM stubs), `reducePinGuard` (through `rom_expr`'s and the
+walks' stubs), and **sorry-free** `reduceCertVar` (pin reads, `const_e`, `intern_fvar`; L gained a
+handle guard after `const_e`) with `constE_stage` (`const_e` under `StageR`, from lane `whnf`'s
+`constE_spec`). Name clashes met: `DeclCvg.decCV_words` (renamed `decCV_slice`; lane `whnf`'s
+`WhnfDeltaRefine` has its own), `PromoteRec.clrK` (renamed `pmClrK`; `Walk.lean` has one).
+
+### `checkDecl` at the loop's relation (`DeclArmLoop.lean`, `DeclCheckLoop.lean`)
+
+* **The arms' text.** `armText` (the arms' modules, the real master callees they reach,
+  `cvgProg`, `ivProg`, then the step's program) and `armFns`; `armText_closed :
+  closedA armText stepA stepC armFns` by `decide +kernel`. `ArmProg p` (agreement on `armFns`)
+  gives the frame; the callees' lookup structures (`ValProg`, `RecProg`, …) are separate
+  hypotheses (`CheckDeclProg`), as in `DeclCallees` — deriving them from `ArmProg` needs
+  `rfl` on lookups through a ~600-entry program, which times out in the elaborator.
+* **`check_decl_thm` refines the `.thmDecl` arm** at `LoopR` (`checkDeclThm_loop`: model with
+  `callW` for `check_constant_val`/`check_thm_val`, their census theorems on the runs, the text's
+  frame, `LoopR.of_step`).
+* **`checkDecl_loop` is proved** from the five arms' specs (`ArmSpec`): the dispatcher's model,
+  `DeclAt` fixing the kind word, the inductive branch unreachable under the front's records. The
+  theorem arm's spec is proved; the axiom, definition, opaque and quotient arms' specs are
+  `sorry` (`checkDeclAxiom_loop`, …) until the canonical comparisons (helper `decls3-canon`), the
+  `Nat` gate (helper `decls3-nat`) and the ROM readers are in. `CheckDeclSpec` (the statement)
+  lives in `DeclStepGo.lean` and is threaded into `installStepGo_spec` as a hypothesis (no import
+  cycle); `Checker.lean`'s `DeclCallees` gains `cd : CheckDeclProg p`.
+* **The definition arm and the pins.** `CheckDeclSpec` quantifies the pin list `pins`, and nothing
+  in `LoopR` relates it to the memory: true today only because `rom_pin_sets` is an aborting stub
+  (every `Nat.div`-family install declines in L). Once lane `romload` loads variants from `PB`,
+  the loop's relation needs "the variant records (`CTL[150]`, `CTL[151]`) decode to `pins`", and
+  the definition arm's spec takes it.
+
+### `lvl_eq_c` under the stage relation (`DeclLvlStage.lean`): what is left
+
+`lvlEqC_stage` (sorry-free): from `StageR`, **`TwinOK`** (the readback caches hold readbacks,
+`NStoreWF`, the `EREC`/`SPN` sizes below `2^63`), a filled pin table and the two levels'
+denotations, a `lvl_eq_c` run is an `lvlEq?` run with `StageR` and `TwinOK` after and the pools
+untouched (its write set from the text, `lvlText_closed`). So the stub spec `lvlEqStub_spec`
+(`sorry`) reduces to two missing facts, both cross-lane:
+1. **`StageR` must carry `TwinOK`** (lanes `indproofs2`, `whnf2`): a conjunct about the twin state
+   (and two sizes), kept by every memory-only step for free, by interns through "the store only
+   grows" (`denoteL` stable under extension; `NStoreWF` by the name interns), by `flushCaches`
+   (empty caches) and the scratch bracket (whnf's `CoreS` lemmas). Changing `StageR`'s shape
+   touches every anonymous `⟨CheckR, IWOK⟩` in 35 files; not done here.
+2. **The compared handles denote** (`denoteL a.store.ls (decI u) = some _`): the callers get `u`
+   from `ensure_sort_core` (a stub whose post `decW0L` says nothing about denotation) and the zero
+   level from `PinsFull` — lane `whnf`'s open `CoreS.lvl_den`. A store invariant "every level
+   handle in the store denotes" would serve both.
+`DeclLvlStage` is not in `DeclAll` (own lakefile entry): importing it brings `WhnfIotaRefine`'s
+`frW` and `FVarRange`'s `frW` together (a clash between lanes `whnf2` and `exprops`).
+
+### `sorry`s (lane `decls3`, at landing 2)
+
+* `DeclCheckLoop.lean`: `checkDeclAxiom_loop`, `checkDeclDefn_loop`, `checkDeclOpaque_loop`,
+  `checkDeclQuot_loop` (the four arms' specs; replace lane `decls2`'s single `checkDecl_loop`
+  `sorry`, which is now a proof).
+* `DeclRomStubs.lean`: `romCi_spec`, `romCv_spec`, `romExpr_spec`, `romBasisDecls_spec`,
+  `romBasisDeclsA_spec` (the ROM readers; lane `romload`).
+* `IndStubs.lean` `lvlEqStub_spec` now speaks of `lvl_eq_c`; lane `decls2`'s `lvlEqCStage_spec`
+  is gone (see `DeclLvlStage` above for what is left).
+* Unchanged: `Checker.lean` `promoteNew_spec` (helper `decls3-promote` running).
+
+Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 90 todo**.
+### Landing 3 (lane `romload`): the pin stage, proved; numbers
+
+* **The stage theorems** (`ConAgua/Rom/Stage.lean`, for the real program `P`, whose pin readers
+  read byte array `PB`; all sorry-free, axioms `propext`, `Classical.choice`, `Quot.sound`):
+  * `pbCheck_PB`: a returning `pb_check()` means the buffer `bs` is `romData ++ rest`.
+  * `internReservedPins_PB`: `intern_reserved_pins()` over `PB` refines `internReservedPins`.
+  * **`internAllPins_PB`**: `intern_all_pins()` over `PB` refines **`internAllPins P` for the pin
+    list `P` the buffer decodes to** (`∃ pins ips a', (internAllPins pins).run a₀ = .ok (ips, a') ∧
+    ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧ StateOK a' ∧ RsetR s'.mem`). `PinSetsR`
+    (`ConAgua/Rom/PinSets.lean`, helper `romload-sets`, 802 lines: `internPinSetsW_dec`) says the
+    24-word `EREC` records listed at `CTL[150]`/`CTL[151]` hold `ips`; that is what
+    `rom_pin_sets()` and `check_div_mod_pin_loop` read.
+  * Proof route: `triple_subPB` (the run over `PB` is the run of the substituted program, readers
+    at `rom := bs`), the startup items in the encoder direction (`internAllPinsW_fixed`:
+    `internAllPins = internAllPins [] >>= fun _ => internPinSets pins`), the variant list in the
+    decoder direction.
+* **Obligations this leaves to the pipeline composition** (`PipelineRefines`): the hypotheses of
+  `internAllPins_PB`: `PinProg bs (P.subPB bs)` (the assembled program's lookups; the readers by
+  `romName_subPB` etc., every other function by `lookup_subPB_noPB`, a syntactic check), the twin
+  facts `StateOK`/`PinsOK`/`PersPins`/scratch off at that point (as in `stages_frame`), `RsetR`
+  (true on the loaded all-zero memory, `RsetR_zero`, and kept by every stage that leaves `RSET`,
+  `RMEMO`, `CTL[132]`, `CTL[148]` alone: `RsetR.frame`), `pb_check()` called before the first
+  reader; and downstream, `PinSetsR` kept from `intern_all_pins` to the declaration loop (the
+  records lie below `CTL[129]`; every later `EREC` write is above it, `ErecGrow`).
+* **e2e (the twin, `e2e-ref --pins=N`, on con-leche's 313 accepting e2e fixtures, gz ones
+  unpacked)**: with no pins 292 accept (the 21 declines lane `decls2` counted); with the repository
+  toolchain's variant only (`romgen OUT 1`) **296**; with all three committed variants
+  (`romgen OUT 3`, 1 423 897 bytes) **313/313**. Most of the 21 fixtures were exported by older
+  toolchains (v4.33), so the single-variant decision of ROADMAP §3 (c) keeps 17 of them declined;
+  since the pin data is now an input, the harness can simply load the three-variant buffer
+  (completeness only: with several variants L's "no recovery" in `check_div_mod_pin_loop` aborts
+  where the twin would try the next variant after an *error*; a "not defeq" moves on in both).
+  The L checker itself does not accept any fixture yet (lane `e2e`: missing functions); what is
+  tested end to end in L is the pin stage: `romtest` (L interpreter vs the twin) **26/26** handles
+  equal on the 1-variant buffer (55 s) and **78/78** on the 3-variant buffer (580 s). Buffers:
+  `_tmp/romload/pins.bin`, `_tmp/romload/pins3.bin`.
+* Sizes: `ConAgua/Rom/` 3 336 lines (Subst 351, PinRead 214, PinReadSpec 513, Dec 491, DecExpr
+  600, PinSets 802, Stage ~230, PinStream/Gen/Test 170); edits to `Rom*.lean` ≈ +400 lines.
+  Build: every new file under 10 s; `Rom.lean` 3.4 s.
+* Not done: the census link of `internPinSets` itself (only `internAllPins` gets a
+  `refines_part`); a spec of `rom_pin_sets()` against `PinSetsR` (the consumers' lane will want
+  it: `er_to_iw` of the record list); the e2e program does not bind the `PB` readers yet
+  (lane `e2e`, see landing 2).
+
 
 ### Landing 5: helper `rec` done
 * Helper `rec` (5.5 h): 12 whole `@[refines]` — `targetMajorAt`, `blockNestedBit`,
