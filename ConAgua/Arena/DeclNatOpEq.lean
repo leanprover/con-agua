@@ -523,6 +523,139 @@ theorem natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some
       callW_spec p n "nat_op_pins", callW_spec p n "nat_eq_ctx", callW_spec p n "nat_eq_disp"] <;>
     finish (gen := 20) (instances := 10000) [natOpEquationsW, bW]
 
+def natEqTailT (c : NIdx) (ctx : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
+    AM (List (EIdx × EIdx)) := do
+  let (x, y, z, sN, sx, sy, bT, bF) := ctx
+  let pr ← natPredName; let ad ← natAddName; let su ← natSubName
+  let mu ← natMulName; let po ← natPowName; let be ← natBeqName
+  let bl ← natBleName
+  let _di ← natDivName; let _mo ← natModName; let _gc ← natGcdName
+  let _la ← natLandName; let _lo ← natLorName; let _xo ← natXorName
+  let _sl ← natShiftLeftName; let _sr ← natShiftRightName
+  natEqDispT c pr ad su mu po be bl x y z sN sx sy bT bF
+
+theorem natOpEquations_split (d : Nat) (c : NIdx) :
+    natOpEquations d c = (natEqCtxT d >>= natEqTailT c) := by
+  simp only [natOpEquations, natEqCtxT, natEqTailT, natEqDispT, bind_assoc, pure_bind]
+  rfl
+
+theorem keepsP_pinAt (i : Nat) : Keeps (fun a : AState => a.pins) (pinAt i) := by
+  unfold Keeps; intro a r a' h
+  simp only [pinAt, StateT.run_bind, StateT.run_get, StateT.run_pure] at h
+  by_cases hi : i < a.pins.names.size
+  · simp [hi] at h
+    obtain ⟨-, rfl⟩ := h
+    rfl
+  · simp [hi, fail, throwThe, MonadExceptOf.throw] at h
+    cases h
+
+theorem keepsP_natEqCtxT (d : Nat) : Keeps (fun a : AState => a.pins) (natEqCtxT d) := by
+  unfold natEqCtxT
+  refine Keeps.bind (keepsP_pinAt _) fun _ => Keeps.bind (keepsP_constE _) fun _ =>
+    Keeps.bind (keepsP_internE _) fun _ => Keeps.bind (keepsP_internE _) fun _ =>
+    Keeps.bind (keepsP_pinAt _) fun _ => Keeps.bind (keepsP_constE _) fun _ =>
+    Keeps.bind (keepsP_pinAt _) fun _ => Keeps.bind (keepsP_natAp1 _ _) fun _ =>
+    Keeps.bind (keepsP_natAp1 _ _) fun _ => Keeps.bind (keepsP_pinAt _) fun _ =>
+    Keeps.bind (keepsP_constE _) fun _ => Keeps.bind (keepsP_pinAt _) fun _ =>
+    Keeps.bind (keepsP_constE _) fun _ => Keeps.pure _
+
+theorem pinRecW_pins {m m1 : Mem} (h : m1.arr64 PINS = m.arr64 PINS) : pinRecW m1 = pinRecW m := by
+  simp only [pinRecW, pinW, h]
+
+theorem pw_of_get {m : Mem} {cx w : Word} {j : Nat} (hI : IWOK m) (hcx : cx.toNat + 8 ≤ iwTop m)
+    (hj : j < 8) (h : (iwA m)[cx.toNat + j]? = some w) : pw m cx (UInt64.ofNat j) = w := by
+  have hsz := hI.2.2.1
+  have hj64 : (UInt64.ofNat j).toNat = j := UInt64.toNat_ofNat_of_lt' (show j < UInt64.size by unfold UInt64.size; omega)
+  have hadd : (cx + UInt64.ofNat j).toNat = cx.toNat + j := by
+    rw [UInt64.toNat_add, hj64]; have := hI.1; omega
+  simp only [pw, rdW, hadd]
+  simp only [iwA] at h
+  rw [h]; rfl
+
+theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
+    CallRef p "nat_op_equations" [d, c]
+      (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
+      (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hd, hc⟩ hw => ?_
+  have hw := callW_model (M := fun mm => natOpEquationsW p k mm d c) (natOpEquations_specW p hN.toNatSubProg.toNatEqProg.lNatOpEquations k · d c) hw
+  unfold natOpEquationsW at hw
+  have hF := hS.1.pins.full
+  have hGate := hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
+  cases h1 : callW p k "nat_op_pins" [] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q1 =>
+  obtain ⟨rp, m1⟩ := q1
+  rw [h1, bW_some] at hw
+  obtain ⟨h0, hrec, hpins, hrp⟩ := natOpPins_fref hGate k m rp m1 hS.2 h1
+  have hK1 := hrec.2.1
+  have hS1 := hK1.stage hS
+  have hpi : (rp.headD 0).toNat = iwTop m := by rw [hrec.1]; rfl
+  have hP : PinRecAt m1 (rp.headD 0) := by
+    refine ⟨?_, ?_, ?_⟩
+    · simpa [pinW, hpins] using h0
+    · have := hrec.2.2.2.1; rw [hpi]; simp [pinRecW] at this ⊢; omega
+    · intro j hj
+      have := hrec.2.2.2.2 j (by simp [pinRecW]; omega)
+      simp only [iwA, hpi]
+      rw [this]
+      have hv := pinRecW_pins hpins
+      simp [hv, List.getElem?_eq_getElem (show j < (pinRecW m).length by simp [pinRecW]; omega)]
+  have hF0 : PinsFull m a.pins := hF h0
+  cases h2 : callW p k "nat_eq_ctx" [rp.headD 0, d] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨rc, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  obtain ⟨cx0, a2, hrun2, hS2, hg2, wx, wy, wz, wn, wsx, wsy, wt, wf, hcx, hx, hy, hz, hn, hsx, hsy, ht, hf,
+    hroom, hget⟩ := natEqCtx_ref hN (rp.headD 0) d k m1 a rc m2 ⟨hS1, hP, hd⟩ h2
+  have hp2 : a2.pins = a.pins := by
+    have := (keepsP_natEqCtxT d.toNat).run hrun2
+    exact this
+  have hF2 : PinsFull m a2.pins := by rw [hp2]; exact hF0
+  have hnm : ∀ j (hj : j < 51), H (pinW m (1 + j)) := fun j hj => hF0.names_lt j hj
+  have pwr : ∀ j (hj : j < 21), pw m2 (rp.headD 0) (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) := by
+    intro j hj
+    have := pw_of_rec hP hS1.2 hg2 j hj
+    rw [this]; simp only [pinRecW_pins hpins]
+  have cxr : ∀ j (hj : j < 8), pw m2 (rc.headD 0) (UInt64.ofNat j) = [wx, wy, wz, wn, wsx, wsy, wt, wf][j] :=
+    fun j hj => pw_of_get hS2.2 hroom hj (hget j hj)
+  have hnr : ∀ j (hj : j < 15), H (pinW m (15 + j)) := fun j hj => by
+    have := hnm (14 + j) (by omega); rwa [show 1 + (14 + j) = 15 + j by omega] at this
+  cases h3 : callW p k "nat_eq_disp" [c, rp.headD 0, rc.headD 0] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨rr, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  subst hr hm
+  obtain ⟨xx, a3, hrun3, hS3, hg3, hdec⟩ := natEqDisp_ref hN c (rp.headD 0) (rc.headD 0)
+    (pinW m (15+0)) (pinW m (15+1)) (pinW m (15+2)) (pinW m (15+3)) (pinW m (15+4)) (pinW m (15+5)) (pinW m (15+6))
+    wx wy wz wn wsx wsy wt wf k m2 a2 rr m3
+    ⟨hS2, hc, hnr 0 (by decide), hnr 1 (by decide), hnr 2 (by decide), hnr 3 (by decide), hnr 4 (by decide),
+      hnr 5 (by decide), hnr 6 (by decide), hx, hy, hz, hn, hsx, hsy, ht, hf,
+      pwr 0 (by decide), pwr 1 (by decide), pwr 2 (by decide), pwr 3 (by decide), pwr 4 (by decide),
+      pwr 5 (by decide), pwr 6 (by decide), cxr 0 (by decide), cxr 1 (by decide), cxr 2 (by decide),
+      cxr 3 (by decide), cxr 4 (by decide), cxr 5 (by decide), cxr 6 (by decide), cxr 7 (by decide)⟩ h3
+  refine ⟨xx, a3, ?_, hS3, (hK1.1.trans hg2).trans hg3, decEqRL_norm hdec⟩
+  rw [natOpEquations_split, StateT.run_bind, hrun2, hcx]
+  have rr0 := fun i hi => pinAt_run (m := m) (a := a2) hF2 i hi
+  simp (disch := decide) only [natEqTailT, StateT.run_bind, natPredName, natAddName, natSubName, natMulName, natPowName, natBeqName,
+    natBleName, natDivName, natModName, natGcdName, natLandName, natLorName, natXorName, natShiftLeftName,
+    natShiftRightName, pinNatPred, pinNatAdd, pinNatSub, pinNatMul, pinNatPow, pinNatBeq, pinNatBle, pinNatDiv,
+    pinNatMod, pinNatGcd, pinNatLand, pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight,
+    PIN_NAT_PRED, PIN_NAT_ADD, PIN_NAT_SUB, PIN_NAT_MUL, PIN_NAT_POW, PIN_NAT_BEQ, PIN_NAT_BLE, PIN_NAT_DIV,
+    PIN_NAT_MOD, PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
+    StateT.run_pure]
+  simp (disch := decide) only [rr0, bind, Except.bind, pure, Except.pure]
+  exact hrun3
+
+@[refines ConRon.Arena.natOpEquations]
+theorem natOpEquations_refines (hN : NatSubProg' p) (d c : Word) :
+    RefAM p "nat_op_equations" [d, c] (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
+      (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) :=
+  (natOpEquations_ref hN d c).refAM
+
 end opeq
 
 end L.Ind

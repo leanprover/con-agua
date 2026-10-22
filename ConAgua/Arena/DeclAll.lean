@@ -10,6 +10,7 @@ import ConAgua.Arena.DeclNatGuard
 import ConAgua.Arena.DeclNatTy
 import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.DeclNatSub
+import ConAgua.Arena.DeclNatOpEq
 import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.DeclBasisSpec
