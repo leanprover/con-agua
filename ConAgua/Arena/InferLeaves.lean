@@ -35,6 +35,11 @@ structure InferLeafProg (p : Prog) : Prop where
   mkfa : p.lookup "mk_forall" = some mkForall
   inferLit : p.lookup "infer_lit" = some inferLitL
   pinAt : p.lookup "pin_at" = some pinAtL
+  inferConst : p.lookup "infer_const" = some inferConstL
+  envix : p.lookup "env_ix" = some envIxL
+  envrow : p.lookup "env_row_get" = some envRowGetL
+  envfind : p.lookup "env_find" = some envFindL
+  lsNode : p.lookup "ls_node" = some lsNode
 
 /-! ## `ensure_sort` -/
 
@@ -607,5 +612,264 @@ theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees
     rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
     exact litArm_ref p hp hc n 5 (by decide) h₁ h0 hW
       (fun nn hpin => inferLitT_str_run fe str a₀ _ nn hrun₁ hpin)
+
+/-! ## `infer_const`: the `.const` clause -/
+
+/-- **The `.const` clause of `inferBody`**, copied: the twin fragment `infer_const` refines.
+(`inferBodyIO`'s clause reads the length with `viewLsLen` instead: another fragment.) -/
+def inferConstT (fe : IFEnv) (n : NIdx) (us : LsIdx) : AM EIdx :=
+  match fe.find? n with
+  | none => do
+    let err ← unknownConstError n
+    fail err
+  | some ci => do
+    if ci.isTowerEntry then do
+      fail (.invalid "projection table entry used as a constant")
+    else do
+      let cv ← ci.toConstantVal
+      let usl ← viewLs us
+      if usl.length != cv.levelParams.length then do
+        fail (.invalid "incorrect number of universe levels")
+      else constTyAt cv us
+
+/-- `inferBody`'s `.const` arm is `inferConstT`. -/
+@[refines_part ConRon.Arena.inferBody "const"]
+theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState) (n : NIdx)
+    (us : LsIdx) (hv : a.store.view e = some (.const n us)) :
+    (inferBody r fe d e).run a = (inferConstT fe n us).run a := by
+  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  rfl
+
+/-- A decoded record whose kind word is not `6` (a projection table) is a constant with a
+`ConstantVal` at `q + 1`. -/
+theorem decCI_kind_ne6 {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    (h6 : rdW b q ≠ 6) :
+    ci.isTowerEntry = false ∧ ∃ cv, (∀ s, ci.toConstantVal.run s = .ok (cv, s)) ∧
+      decCV b (q.toNat + 1) = some cv := by
+  cases hq : a[q.toNat]? with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  have hqb := hab _ _ hq
+  have hrd : rdW b q = w := by simp [rdW, hqb]
+  rw [hrd] at h6
+  have hne : w.toNat ≠ 6 := fun e => h6 (UInt64.toNat_inj.mp (by rw [e]; rfl))
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+  all_goals (rw [hk] at h hne; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
+  all_goals first
+    | exact absurd rfl hne
+    | (simp at h; done)
+    | ((first
+        | obtain ⟨cv, hcv, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
+        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
+       exact ⟨rfl, cv, fun _ => rfl, hab.decCV hcv⟩)
+
+theorem mapM_len {α β : Type} (f : α → Option β) :
+    ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
+  | [], xs, h => by simp at h; subst h; rfl
+  | a :: l, xs, h => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨y, -, ys, hys, rfl⟩ := h
+    simp [mapM_len f l ys hys]
+
+theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Idx k)}
+    (h : hslice? b o c = some xs) : xs.length = c := by
+  unfold hslice? at h; simpa using mapM_len _ _ _ h
+
+theorem toNat_add_small (q : Word) (k : Nat) (hk : k < 8) (hq : q.toNat < 2 ^ 63) :
+    (q + k.toUInt64).toNat = q.toNat + k := by
+  rw [UInt64.toNat_add]; simp; omega
+
+/-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
+theorem decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
+    (h : decCV b (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
+    HW (rdW b (q + 1)) ∧ cv.name = decI (rdW b (q + 1)) ∧ HW (rdW b (q + 4)) ∧
+      cv.type = decI (rdW b (q + 4)) ∧
+      hslice? b (rdW b (q + 2)).toNat (rdW b (q + 3)).toNat = some cv.levelParams := by
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨nm, hn, ls, hl, ty, ht, rfl⟩ := h
+  obtain ⟨w1, hw1, hl1, rfl⟩ := hd?_eq hn
+  obtain ⟨w4, hw4, hl4, rfl⟩ := hd?_eq ht
+  have hlt : q.toNat + 1 + 3 < b.size := by
+    rcases Nat.lt_or_ge (q.toNat + 1 + 3) b.size with h' | h'
+    · exact h'
+    · simp [Array.getElem?_eq_none h'] at hw4
+  have hq : q.toNat < 2 ^ 63 := by omega
+  have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by decide) hq
+  have e2 : (q + 2).toNat = q.toNat + 2 := toNat_add_small q 2 (by decide) hq
+  have e3 : (q + 3).toNat = q.toNat + 3 := toNat_add_small q 3 (by decide) hq
+  have e4 : (q + 4).toNat = q.toNat + 4 := toNat_add_small q 4 (by decide) hq
+  have r1 : rdW b (q + 1) = w1 := by simp [rdW, e1, hw1]
+  have r4 : rdW b (q + 4) = w4 := by
+    simp only [rdW, e4]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hw4]; rfl
+  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hl
+  obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := hl
+  have r2 : rdW b (q + 2) = wo := by
+    simp only [rdW, e2]; rw [show q.toNat + 2 = q.toNat + 1 + 1 by omega, hwo]; rfl
+  have r3 : rdW b (q + 3) = wc := by
+    simp only [rdW, e3]; rw [show q.toNat + 3 = q.toNat + 1 + 1 + 1 by omega, hwc]; rfl
+  rw [r1, r2, r3, r4]
+  exact ⟨hl1, rfl, hl4, rfl, hs⟩
+
+/-- **A level-list handle `ls_node` reads is a node of the store**, its length the record's
+count. -/
+theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    (hne : lsNodeW m h ≠ []) :
+    ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids ∧
+      (lsNodeW m h).tail.headD 0 = lsL m (tierW h) (idxW h) ∧
+      (lsL m (tierW h) (idxW h)).toNat = ids.length := by
+  have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
+  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
+  have hc : ¬ rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h := fun c => hne (by
+    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
+  have hval : lsNodeW m h = [lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h)] := by
+    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
+  obtain ⟨x, hx, hr⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
+    (idxW h) (by simp only [cntW, lsSch]; simpa using hc)
+  refine ⟨x.us, ?_, by rw [hval]; rfl, ?_⟩
+  · have hfl := hR.ls.2.1
+    have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
+      rw [isPersistent_decI h hh]; rfl
+    have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
+        T.get (decI h) = some x.us := fun T hT => by
+      simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
+        decLs_idx h, hT, Option.map_some]
+    unfold LsStore.view
+    rw [hpers]
+    by_cases ht : tierW h = 0
+    · simp only [ht, ↓reduceIte] at hx; simp only [ht, beq_self_eq_true, ↓reduceIte]; exact hget _ hx
+    · simp only [ht, ↓reduceIte] at hx
+      have hon : a.store.lss.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hsc ⟨ht, h1⟩
+      simp only [ht, beq_iff_eq, ↓reduceIte, hon]; exact hget _ hx
+  · have := sliceL_length (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat (lsL m (tierW h) (idxW h)).toNat
+    rw [hr.2.1] at this; simpa [lsWords] using this.symm
+
+
+theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
+    (viewLs h).run a = .ok (ids, a) := by
+  simp [viewLs, hv, StateT.run_bind, StateT.run_get]; rfl
+
+theorem inferConstT_run (fe : IFEnv) (n : NIdx) (us : LsIdx) (a : AState) (ci : IConstantInfo)
+    (cv : IConstantVal) (ids : List LIdx) (hf : fe.find? n = some ci)
+    (ht : ci.isTowerEntry = false) (hcv : ∀ s, ci.toConstantVal.run s = .ok (cv, s))
+    (hv : (viewLs us).run a = .ok (ids, a)) (hlen : ids.length = cv.levelParams.length) :
+    (inferConstT fe n us).run a = (constTyAt cv us).run a := by
+  simp only [inferConstT, hf, ht, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hcv,
+    except_ok_bind, hv, hlen, bne_self_eq_false]
+
+theorem coreRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r : List Word} {ok : List Word → Prop} (h : T.run a₀ = T'.run a₀)
+    (h' : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
+  unfold CoreRef AM.ok AM.st AM.res at *; rw [h]; exact h'
+
+/-- The model of `infer_const` past `env_find`'s run. -/
+def constArmK (p : Prog) (n : Nat) (us : Word) (res : Option (List Word × Mem)) :
+    Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m₁) =>
+    if r.headD 0 = 0 then none
+    else if rdW (m₁.arr64 EREC) (r.tail.headD 0) = 6 then none
+    else if lsNodeW m₁ us = [] then none
+    else if (lsNodeW m₁ us).tail.headD 0 ≠ rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3) then none
+    else call1W p n "const_ty_at" [rdW (m₁.arr64 EREC) (r.tail.headD 0 + 1),
+      rdW (m₁.arr64 EREC) (r.tail.headD 0 + 2), rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3),
+      rdW (m₁.arr64 EREC) (r.tail.headD 0 + 4), us] m₁
+
+theorem constArmK_ok (p : Prog) (n : Nat) (us : Word) (r : List Word) (m₁ : Mem)
+    (h0 : r.headD 0 ≠ 0) (h6 : rdW (m₁.arr64 EREC) (r.tail.headD 0) ≠ 6)
+    (hne : lsNodeW m₁ us ≠ [])
+    (hl : (lsNodeW m₁ us).tail.headD 0 = rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3)) :
+    constArmK p n us (some (r, m₁)) = call1W p n "const_ty_at" [rdW (m₁.arr64 EREC) (r.tail.headD 0 + 1),
+      rdW (m₁.arr64 EREC) (r.tail.headD 0 + 2), rdW (m₁.arr64 EREC) (r.tail.headD 0 + 3),
+      rdW (m₁.arr64 EREC) (r.tail.headD 0 + 4), us] m₁ := by
+  simp only [constArmK, h0, h6, hne, hl, ne_eq, not_true_eq_false, ↓reduceIte]
+
+section ic
+variable (p : Prog) (hp : InferLeafProg p)
+
+include hp in
+theorem inferConst_spec (n : Nat) (s₀ : St) (vis nm us : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_const" [vis, nm, us]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      constArmK p n us (callW p n "env_find" [nm, vis] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.inferConst]
+  simp only [callFn, inferConstL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "env_find",
+      lsNode_spec p hp.lsNode n, callW_spec p n "const_ty_at"] <;>
+    finish [constArmK_ok, call1W_some]
+
+end ic
+
+/-- **`infer_const(vis, n, us)` refines the `.const` clause** (`inferConstT`), from `const_ty_at`'s
+spec (`ConstTyAtOK`, lane `whnf`'s, a `sorry` there: a hypothesis here). -/
+@[refines_part ConRon.Arena.inferBody "const (inferConstT)"]
+theorem inferConst_refines (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb nm us : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hnm : HW nm)
+    (hus : HW us) :
+    CoreSpec p (n + 1) "infer_const" [vis, nm, us] (inferConstT fe (decI nm) (decI us)) decH s₀ a₀
+      dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferConst_spec p hp n s₀ vis nm us)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "env_find" [nm, vis] s.mem with
+  | none => rw [hc] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc] at hW
+  obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW
+    (envFind_refines p hp.envix hp.envrow hp.envfind n s vis nm hS.env hnm) hc
+  obtain ⟨-, -, -, -, hfound⟩ := triple_of_callW
+    (envFind_found p hp.envix hp.envrow hp.envfind n s vis nm hnm) hc
+  rw [ht₁] at hm₁
+  subst hm₁
+  dsimp only [constArmK] at hW
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [if_pos h0] at hW; cases hW
+  rw [if_neg h0] at hW
+  obtain ⟨htag, hrow, hq⟩ := hfound h0
+  obtain ⟨ci, hci⟩ := hS.env.found_some nm hnm htag hrow
+  have hfind' : fe.find? (decI nm) = some ci := by
+    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
+  rw [← hq] at hci
+  by_cases h6 : rdW (s.mem.arr64 EREC) (r₁.tail.headD 0) = 6
+  · rw [if_pos h6] at hW; cases hW
+  rw [if_neg h6] at hW
+  obtain ⟨htw, cv, hcvr, hcv⟩ := decCI_kind_ne6 hci (erecP_ext _) h6
+  by_cases hne : lsNodeW s.mem us = []
+  · rw [if_pos hne] at hW; cases hW
+  rw [if_neg hne] at hW
+  by_cases hl : (lsNodeW s.mem us).tail.headD 0 ≠ rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 3)
+  · rw [if_pos hl] at hW; cases hW
+  rw [if_neg hl] at hW
+  have hl' : (lsNodeW s.mem us).tail.headD 0 = rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 3) := by
+    simpa using hl
+  obtain ⟨hw1, hname, hw4, hty, hsl⟩ := decCV_words hcv hS.erec
+  obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.1 hus hne
+  have hlen : ids.length = cv.levelParams.length := by
+    rw [hslice?_length hsl, ← hl', hlen1, hlen2]
+  have hT := inferConstT_run fe (decI nm) (decI us) a₀ ci cv ids hfind' htw hcvr
+    (viewLs_run _ _ _ hv) hlen
+  have hcv' : cv = ⟨decI (rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 1)), cv.levelParams,
+      decE (rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4))⟩ := by
+    rw [← hname, decE_eq, ← hty]
+  rw [hcv'] at hT
+  exact coreRef_congr hT (CoreSpec.of_call1W (s₀ := ⟨s.mem, Locals.init []⟩)
+    (hct n _ a₀ dn vis fe M eb _ _ _ _ us cv.levelParams hS hw1 hw4 hus hsl)
+    (fun r r' h => by simp only [decH, h]) hW)
 
 end L.Arena

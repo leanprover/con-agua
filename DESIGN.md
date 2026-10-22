@@ -5290,6 +5290,28 @@ None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above
 * What is left for `WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`: the three body specs. No
   `sorry`; ~880 lines, 5.8 s CPU.
 
+### The leaf inference functions (`InferLeaves.lean`, helper `defeq-slots`)
+* `ensureSort_refines : KnotUpTo p n → EnsureSortSpec p (n + 1)` (from the `whnf` slot and
+  `view_sort_f`); `ensureSortCore_refines` now takes only `KnotUpTo` (KnotSlot's old one is
+  `ensureSortCore_of_spec`). `defeqArg_refines` (the two slots, `is_eager_reduce` as the
+  hypothesis `IsEagerReduceH`). `inferLamResult_refines` (`Abstract1OK`; `mk_forall` under
+  `CoreS`: `mkForall_core`, with `mkForallW_hw`/`_frame`, `keeps_cpl_internForall`).
+* Clause fragments, copied from `inferBody` and proved equal to its arm (`inferBody_const`,
+  `inferBody_lit`, `inferBodyIO_lit`): `inferLitT` (`inferLit_refines`, callees as
+  `InferLitCallees`: `nat_lit_supported`/`const_e` are lane `whnf`'s `sorry`s, `str_lit_supported`
+  its stub) and `inferConstT` (`inferConst_refines`, `ConstTyAtOK` a hypothesis: `const_ty_at`
+  is a `sorry` in `WhnfIota.lean`). `inferBodyIO`'s `.const` arm reads `viewLsLen`, a different
+  fragment, not done.
+* **L change**: `infer_const` called `const_ty_at` with the looked-up name `n`; the twin's
+  `constTyAt cv us` keys its cache by `cv.name`, the record's own name word (`p + 1`), and `EnvR`
+  does not promise `cv.name = n`. It now passes `EREC[p + 1]`. Lane `whnf`'s `iota` call site
+  (`WhnfIota.lean:733`, `const_ty_at(cj, …)`) has the same gap.
+* Gap: a guarded model equation with the callee's run as a hypothesis (`callW … = some (r, m₁) →
+  W … = …`) was not instantiated by `finish` in `ensure_sort`; the `memoSlotW` shape (the run as
+  an argument of the model, `W (callW …)`) was. All models here use that shape.
+* Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
+  5.2 s CPU.
+
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
 ### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
