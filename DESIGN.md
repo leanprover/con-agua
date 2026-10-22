@@ -5581,3 +5581,8 @@ said otherwise.
   proof step (no pattern). No statement changed.
 - **Before/after.** `natShr_spec` 60.9 s → no profiler step over 1 s; the slow goal 52 s → < 2 s;
   module 111 s → 25 s (Lake, contended); grind in the whole file 7.9 s.
+
+Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written** (`installStepGo`,
+`installHeader`, `installValueGuards`, `checkValueGroup` now `sorry` — through stubs only); bad
+links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
+`romExprL`/`internAllPinsL` at the program's ROM).
