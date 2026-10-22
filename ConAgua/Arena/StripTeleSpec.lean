@@ -455,6 +455,77 @@ theorem stripW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wor
       exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
     n dn vis fe k e he
 
+/-! ## The fuel-free model
+
+A returning loop ran at most `k` iterations, so its result does not depend on the fuel beyond
+that: `stripF tg m [k, e]` is the model at fuel `k + 2`, and it is what every call returns,
+whatever its fuel. Callers' models call `stripF` (no fuel, no program). -/
+
+theorem stripGoW_fuel (tg k o : Word) : ∀ (f : Nat) (m : Mem) (n h : Word) (x : List Word × Mem),
+    stripGoW tg k o f m n h = some x → n ≤ k → ∀ f', k.toNat - n.toNat < f' →
+    stripGoW tg k o f' m n h = some x := by
+  intro f
+  induction f with
+  | zero => intro m n h x hm; simp [stripGoW] at hm
+  | succ f ih =>
+  intro m n h x hm hnk f' hf'
+  match f', hf' with
+  | f'' + 1, hf' =>
+  by_cases hn : n < k
+  · have hnk' : n.toNat < k.toNat := UInt64.lt_iff_toNat_lt.mp hn
+    by_cases hg : h >>> 28 ≠ tg
+    · rw [stripGoW_tag tg k o f m n h hn hg] at hm; rw [stripGoW_tag tg k o f'' m n h hn hg, hm]
+    by_cases hv : eViewW m h = []
+    · simp [stripGoW, hn, hg, hv] at hm
+    cases ha : allocW m 1 with
+    | none => simp [stripGoW, hn, hg, ha] at hm
+    | some qm =>
+      obtain ⟨q, m1⟩ := qm
+      rw [stripGoW_step tg k o f m m1 n h q hn hg hv ha] at hm
+      rw [stripGoW_step tg k o f'' m m1 n h q hn hg hv ha]
+      have hn1 : (n + 1).toNat = n.toNat + 1 := by
+        have := k.toNat_lt
+        rw [UInt64.toNat_add]; simp; first | omega | rw [Nat.mod_eq_of_lt (by omega)]
+      exact ih _ _ _ _ hm (UInt64.le_iff_toNat_le.mpr (by omega)) _ (by omega)
+  · rw [stripGoW_ge tg k o f m n h hn] at hm; rw [stripGoW_ge tg k o f'' m n h hn, hm]
+
+/-- **The fuel-free model of the strippers.** -/
+def stripF (tg : Word) (m : Mem) (args : List Word) : Option (List Word × Mem) :=
+  stripW tg ((args.headD 0).toNat + 2) m args
+
+theorem stripF_of_W {tg : Word} {n : Nat} {m : Mem} {k e : Word} {x : List Word × Mem}
+    (h : stripW tg n m [k, e] = some x) : stripF tg m [k, e] = some x := by
+  match n, h with
+  | f + 1, h =>
+    rw [stripW_succ] at h
+    exact stripGoW_fuel tg k _ (f + 1) m 0 e x h (UInt64.le_iff_toNat_le.mpr (by simp)) _ (by simp; omega)
+
+/-- `strip_pis(k, e)` returns `stripF 6`. -/
+theorem stripPis_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_pis" [k, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ stripF 6 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ :=
+  triple_post (stripPis_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_W h.2⟩
+
+/-- `strip_lams(k, e)` returns `stripF 5`. -/
+theorem stripLams_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_lams" [k, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ stripF 5 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ :=
+  triple_post (stripLams_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_W h.2⟩
+
+/-- **`strip_pis` refines `stripPis`**, the fuel-free model (replaces `IndStubs.stripPis_spec`). -/
+theorem stripF_pis_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (k e : Word) (he : H e) :
+    RelW (stripF 6) [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
+      (KeepPost dn vis fe decOLE) :=
+  stripW_pis_ok _ dn vis fe k e he
+
+/-- **`strip_lams` refines `stripLams`**, the fuel-free model (replaces `IndStubs.stripLams_spec`). -/
+theorem stripF_lams_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (k e : Word) (he : H e) :
+    RelW (stripF 5) [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
+      (KeepPost dn vis fe decOLE) :=
+  stripW_lams_ok _ dn vis fe k e he
+
 /-! ## The census theorems -/
 
 /-- **`strip_pis` refines `stripPis`** under the stage relation, at every L fuel. -/
@@ -483,18 +554,12 @@ theorem stripLams_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option Co
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 
-/-- A call of `strip_pis`/`strip_lams` meets its model (for callers whose models use `callW`). -/
-theorem stripW_of_callW {p : Prog} (hp : StripProg p) {n : Nat} {k e : Word} {m m' : Mem}
-    {r : List Word} :
-    (callW p n "strip_pis" [k, e] m = some (r, m') → stripW 6 n m [k, e] = some (r, m')) ∧
-    (callW p n "strip_lams" [k, e] m = some (r, m') → stripW 5 n m [k, e] = some (r, m')) := by
-  constructor
-  · intro hc
-    obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (stripPis_specW p hp n _ k e) hc
-    exact hs
-  · intro hc
-    obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (stripLams_specW p hp n _ k e) hc
-    exact hs
+/-- A call of `strip_pis` meets its model (for callers whose models use `callW`). -/
+theorem stripF_of_callW {p : Prog} (hp : StripProg p) {n : Nat} {k e : Word} {m m' : Mem}
+    {r : List Word} (hc : callW p n "strip_pis" [k, e] m = some (r, m')) :
+    stripF 6 m [k, e] = some (r, m') := by
+  obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (stripPis_specF p hp n _ k e) hc
+  exact hs
 
 /-! ## The write set -/
 
@@ -534,9 +599,8 @@ theorem stripGoW_frame (tg k o : Word) : ∀ (f : Nat) (m m' : Mem) (n h : Word)
     exact MemFrame.refl _ _ _
 
 /-- **The strippers write `IW` and `CTL[200]` only.** -/
-theorem stripW_frame {tg : Word} {n : Nat} {m m' : Mem} {args r : List Word}
-    (h : stripW tg n m args = some (r, m')) : MemFrame [IW] [200] m m' := by
-  match n, h with
-  | f + 1, h => exact stripGoW_frame _ _ _ _ _ _ _ _ _ h
+theorem stripF_frame {tg : Word} {m m' : Mem} {args r : List Word}
+    (h : stripF tg m args = some (r, m')) : MemFrame [IW] [200] m m' :=
+  stripGoW_frame _ _ _ _ _ _ _ _ _ h
 
 end L.Ind
