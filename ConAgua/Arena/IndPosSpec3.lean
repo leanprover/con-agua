@@ -1003,6 +1003,101 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
       · rw [ConRon.Arena.fvMapAt.eq_def]; rfl
       · rw [List.getElem?_eq_none (by omega)]; rfl
 
+theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (h : rxRootW m ctx i = some (r0, r1, m'))
+    (hS : StageR dn vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
+    (hb : c.nP + c.names.length < 2 ^ 64) (hR : RfInv m M G g) :
+    ∃ x a', (ConRon.Arena.nestHoleImg c prog 0 i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
+      RxPost dn fe vis m m' a' M G g := by
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, h11⟩ := ctx_fields hc hin htop
+  have hlen := decHL_length m hn
+  have hhi : (hiW m ctx 0).toNat = c.nP + c.names.length := by
+    simp only [hiW]
+    rw [word_add_toNat (by rw [word_add_toNat (by omega)]; simp; omega), word_add_toNat (by omega), hnP, hlen]
+    simp
+  rw [ConRon.Arena.nestHoleImg.eq_1]
+  by_cases hin2 : rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0
+  · have h1 : c.nP ≤ i.toNat := by rw [← hnP]; exact UInt64.le_iff_toNat_le.mp hin2.1
+    have h2 : i.toNat < c.nP + c.names.length := by rw [← hhi]; exact UInt64.lt_iff_toNat_lt.mp hin2.2
+    rw [if_pos (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact ⟨h1, decide_eq_true h2⟩)]
+    rw [rxRootW_in m ctx i hin2] at h
+    have hsub : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
+      rw [UInt64.toNat_sub_of_le _ _ hin2.1, hnP]
+    have hgd : getDW m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (i - rdW (m.arr64 IW) (ctx + 4)) 0 =
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) ctx + (i - rdW (m.arr64 IW) (ctx + 4))) := by
+      simp only [getDW]; rw [if_neg (fun e => by have := UInt64.le_iff_toNat_le.mp e; omega)]
+    rw [hgd] at h
+    obtain ⟨hnmH, hnmd⟩ := rd_iwH (p := rdW (m.arr64 IW) ctx) (i := i - rdW (m.arr64 IW) (ctx + 4))
+      (by rw [hsub]; exact decHL_getI hn _ (by omega)) (by rw [hsub]; have := hn' (i.toNat - c.nP) (by omega); omega)
+    generalize rdW (m.arr64 IW) (rdW (m.arr64 IW) ctx + (i - rdW (m.arr64 IW) (ctx + 4))) = nm at h hnmH hnmd
+    cases hci : ceinternW m nm (rdW (m.arr64 IW) (ctx + 10)) with
+    | none => rw [hci] at h; simp [rtK1] at h
+    | some p1 =>
+    obtain ⟨hd, m1⟩ := p1
+    rw [hci] at h
+    by_cases hdb : 4294967296 ≤ hd
+    · rw [rtK1_big (h := hdb)] at h; simp at h
+    rw [rtK1_ok (h := hdb)] at h
+    obtain ⟨a1, hr1, hS1, hg1⟩ := internConst_stage hS nm _ hnmH hlvH hci
+    have hiw : m1.arr64 IW = m.arr64 IW := lowFr_iw (ceinternW_low hci)
+    rw [hiw] at h
+    cases hst : stubM "mk_app_n" m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with
+    | none => rw [hst] at h; simp [rtK2] at h
+    | some p2 =>
+    obtain ⟨rr, m2⟩ := p2
+    rw [hst, rtK2_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mkAppN_spec dn vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
+      ⟨hS1, by simp only [decHL, iwA, hiw]; exact hpa⟩
+    refine ⟨some x, a2, ?_, ⟨by simp, by rw [← hx2]; rfl⟩,
+      hR.post hS2 (hg1.trans hg2) ((RfFr.of_low (ceinternW_low hci)).trans (RfFr.stub (by decide) hst))⟩
+    have hnm' : c.names.getD (i.toNat - c.nP) default = decI nm := by
+      rw [hnmd, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]; rfl
+    simp only [hnm', ConRon.Arena.internConstE, StateT.run_bind]
+    rw [← hlv, hr1]
+    simp only [except_ok_bind, StateT.run_bind]
+    rw [show (decE hd : EIdx) = decI hd from rfl, hr2]
+    rfl
+  · rw [rxRootW_out m ctx i hin2] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    have : ¬ (c.nP ≤ i.toNat ∧ i.toNat < c.nP + c.names.length) := fun ⟨e1, e2⟩ => hin2
+      ⟨UInt64.le_iff_toNat_le.mpr (by rw [hnP]; exact e1), UInt64.lt_iff_toNat_lt.mpr (by rw [hhi]; exact e2)⟩
+    rw [if_neg (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact fun ⟨e1, e2⟩ => this ⟨e1, of_decide_eq_true e2⟩)]
+    exact ⟨none, a, rfl, rfl, hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
+
+theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n) : ImgOK dn fe vis (n + 1) := by
+  intro m m' a ctx po pl nn i c prog r0 r1 M G g h hS hc hin hs hb hR
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨hn, -, -, -, hnP, -, -, -, -, h11⟩ := ctx_fields hc hin htop
+  have hlen := decHL_length m hn
+  by_cases h0 : nn = 0
+  · rw [rxImgW_root (h0 := h0)] at h
+    subst h0
+    exact rootOK dn fe vis m m' a ctx i c prog r0 r1 M G g h hS hc hin (by simpa using hb) hR
+  have hnn : nn.toNat ≠ 0 := toNat_ne_zero' h0
+  have hn1 : (nn - 1).toNat = nn.toNat - 1 := toNat_sub_one' h0
+  have hhi : (hiW m ctx (nn - 1)).toNat = c.hiAt (nn.toNat - 1) := by
+    simp only [hiW, ConRon.Arena.NestCtx.hiAt]
+    rw [word_add_toNat (by rw [word_add_toNat (by omega)]; omega), word_add_toNat (by omega), hnP, hlen, hn1]
+  obtain ⟨n1, hn1'⟩ : ∃ n1, nn.toNat = n1 + 1 := ⟨nn.toNat - 1, by omega⟩
+  rw [hn1', nestHoleImg_succ]
+  by_cases hh : i = hiW m ctx (nn - 1)
+  · rw [rxImgW_frame (h0 := h0) (hh := hh)] at h
+    have : (i.toNat == c.hiAt n1) = true := by
+      rw [hh, hhi, hn1']; simp
+    rw [if_pos this]
+    have := hFr m m' a ctx po pl (nn - 1) i c prog r0 r1 M G g h hS hc hin hs (by rw [hn1]; omega) hR
+    rwa [hn1, hn1'] at this
+  · rw [rxImgW_next (h0 := h0) (hh := hh)] at h
+    have : ¬ (i.toNat == c.hiAt n1) = true := by
+      intro e; apply hh; apply UInt64.toNat_inj.mp; rw [hhi, hn1', Nat.add_sub_cancel]; simp at e; exact e
+    rw [if_neg this]
+    have := hImg m m' a ctx po pl (nn - 1) i c prog r0 r1 M G g h hS hc hin hs (by rw [hn1]; omega) hR
+    rwa [hn1, hn1'] at this
+
 end steps
 
 end L.Ind
