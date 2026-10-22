@@ -6986,3 +6986,19 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
   (`CoreS.lvl_den`), `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `reduceProjCore`,
   `unfold`, `whnfGrows` (lane `whnf`'s/`whnf3`'s), `den`, `constTy` (`inst_lp`), `bstk` (after
   `whnf3`'s `StackKept` structure), `proj` (helper `defeq2-proj`: `infer_proj`).
+### Landing 5 (lane `decls3`): helpers `promote` and `canon` merged
+
+* **`promoteNew_spec` proved** (helper `decls3-promote`, `PromoteCI*.lean`, 30 files): the constant
+  records' promotion (`promote_ci` and its parts, the erase/re-index loops) refines the twin's
+  14 steps `promoteNList` … `promoteNew` (`PromoteCITags.lean`). Statement change: `k.toNat ≤
+  vis.toNat` (the twin's `c - 1` truncates; the callers pass `k = v2 - vis` or `0`). L: records are
+  written after their parts (`erec_rd*`/`erec_wr*`, `pci_mk`, `rec_block`).
+* **The canonical comparisons proved** (helper `decls3-canon`): `canon_name_map`, `canon_level_eq`
+  (and lists), `canon_expr_eq`, `canon_names(_go)`, `cv_canon_eq`, `canon_rules_eq`, `ci_canon_eq`,
+  `canon_eq_list`, `cv_eq`, `ci_eq`, `find_is`, `ci_to_cv`. Extra hypotheses their callers must
+  supply: `LitInj` (the store hash-conses literals: L compares literal handles, the twin values),
+  `PoolSmall`, `DnInj` (`ci_eq` only); records decoded in `erecP m`. `CvCanonSpec`/`CiCanonSpec` in
+  the quotient and axiom arms are to be replaced by these.
+* Name clashes after merging (both helpers and master): renamed on the helpers' side (`pm*`, `cn*`).
+  A whole-tree clash check (every `.olean`'s constant names; `_tmp/decls3-logs/clash/Clash.lean`)
+  found them at once where `checker_prog.py` reports one per run.
