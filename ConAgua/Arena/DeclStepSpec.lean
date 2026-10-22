@@ -57,13 +57,16 @@ environment), a frame of the step's write set (`stepA`, `stepC`: nothing of `PEN
 theorem step_keeps : PEND ∉ stepA ∧ DECL ∉ stepA ∧ DLP ∉ stepA ∧ (130 : Word) ∉ stepC := by
   decide +kernel
 
+/-- The step's write set misses the pin variant list's header. -/
+theorem step_pins : (150 : Word) ∉ stepC ∧ (151 : Word) ∉ stepC := by decide +kernel
+
 /-- The step's write set misses the promotion memo (arrays 146‥149, `CTL` 140‥147). -/
 theorem step_pmemo : (∀ b ∈ stepA, b < 146 ∨ 149 < b) ∧
     (∀ x ∈ stepC, x.toNat < 140 ∨ 147 < x.toNat) := by
   refine ⟨fun b hb => ?_, fun x hx => ?_⟩
   · simp only [stepA, List.mem_filter, decide_eq_true_eq] at hb; exact hb.2.2.2.2
   · simp only [stepC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
-    obtain ⟨k, ⟨hk, -, hr⟩, rfl⟩ := hx
+    obtain ⟨k, ⟨hk, -, -, -, hr⟩, rfl⟩ := hx
     rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]; exact hr
 
 theorem LoopR.of_step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis vis' : Word} {fe fe' : IFEnv}

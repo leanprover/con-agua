@@ -64,8 +64,10 @@ theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConst
   fun n s₀ a₀ vis fe pend i hi hd hR =>
     checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hR
 
-/-- `check_decl_defn` (`sorry`: the structural-`Nat` gate and the `Nat.div`-family pin gate; the
-latter needs a relation between the memory's pin variants and `pins`, lane `romload`'s input). -/
+/-- `check_decl_defn` (`sorry`). Proved as `checkDeclDefn_loop'` (`DeclArmDefn.lean`) through the
+two gates' specs (`DefnProg`: `NatGateSpec`, `DivGateSpec`, helpers `decls3-nat`/`decls3-divmod`)
+and lane `romload`'s `PinSetsR s₀.mem pins` at the arm's entry: what is missing here is that
+fact, i.e. the loop's relation carrying the variant list (`LoopR` with `pins`). -/
 theorem checkDeclDefn_loop (hP : CheckDeclProg p) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
     ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) := sorry
