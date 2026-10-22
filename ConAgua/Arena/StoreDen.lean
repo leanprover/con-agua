@@ -20,7 +20,7 @@ the twin's only where the handles L compares do read back. Which handles those a
 * a projection table's structure sort, its fields' sorts and its level parameters
   (`infer_proj`), read from the table records in `EREC` (`decTbl`).
 
-`StoreDen m a fe` states all six. **It is meant as one field of `CoreS`** (`CoreS.den`, the twin's
+`StoreDen dn m a fe` states all six. **It is meant as one field of `CoreS`** (`CoreS.den`, the twin's
 store being well formed: `StoreWF` gives the first four, the environment loader the fifth);
 until that field exists the knot takes `CoreDen` (`DefEqKnot.lean`) as a hypothesis.
 
@@ -39,11 +39,23 @@ namespace L.Arena
 def LvlAll (a : AState) : Prop :=
   ∀ u : LIdx, (a.store.ls.view u).isSome → ∃ l, denoteL a.store.ls u = some l
 
+/-- **Every valid level-list handle reads back.** -/
+def LsAll (a : AState) : Prop :=
+  ∀ us : LsIdx, (a.store.lss.view us).isSome → ∃ ls, denoteLs a.store.lss us = some ls
+
+theorem LsAll.congr {a a' : AState} (h : LsAll a) (e : a'.store.lss = a.store.lss) : LsAll a' := by
+  intro u hu; rw [e] at hu ⊢; exact h u hu
+
+theorem LsAll.of_ext {a a' : AState} (h : LsAll a)
+    (hv : ∀ u, (a'.store.lss.view u).isSome → (a.store.lss.view u).isSome)
+    (hx : LsExt a.store.lss a'.store.lss) : LsAll a' := by
+  intro u hu; obtain ⟨l, hl⟩ := h u (hv u hu); exact ⟨l, hx.lst _ _ hl⟩
+
 theorem LvlAll.congr {a a' : AState} (h : LvlAll a) (e : a'.store.ls = a.store.ls) : LvlAll a' := by
   intro u hu; rw [e] at hu ⊢; exact h u hu
 
 /-- **Stored levels read back** (see the module note). -/
-structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
+structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (fe : IFEnv) : Prop where
   sort : ∀ (h : EIdx) (u : LIdx), a.store.view h = some (.sort u) →
     ∃ l, denoteL a.store.ls u = some l
   constLs : ∀ (h : EIdx) (c : NIdx) (us : LsIdx), a.store.view h = some (.const c us) →
@@ -64,6 +76,12 @@ structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
     (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
   /-- Every valid level handle reads back (what a level interning's cons hit needs). -/
   lvlAll : LvlAll a
+  /-- Every valid level-list handle reads back. -/
+  lsAll : LsAll a
+  /-- The record pool's name decoder `dn` agrees with the name store (`dn` is the store's
+  `denoteN` at the declaration's start; the store only grows): what relates the names inside a
+  record (an inductive's `PropWhen` datum, `caps_never_zero`) to the twin's readbacks. -/
+  dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
 
 /-! ## Keeping `StoreDen` -/
 
@@ -193,7 +211,7 @@ theorem lsExt_of_tables {st st' : LsStore} (hp : st'.pers = st.pers) (hs : st'.s
 
 /-- **`StoreDen` across a step** that extends the level stores, keeps the zero pin and `EREC`,
 caches only readbacks of names, and creates no new `sort`/`const` views. -/
-theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
+theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen dn m a fe)
     (hx : LsExt a.store.lss a'.store.lss) (hz : a'.pins.zeroLevel = a.pins.zeroLevel)
     (hzs : a'.pins.emptyLevels = a.pins.emptyLevels)
     (hr : ∀ (k : NIdx) (x : ConLeche.Name), a'.caches.readNC[k]? = some x →
@@ -202,8 +220,8 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
     (hs : ∀ x u, a'.store.view x = some (.sort u) → a.store.view x = some (.sort u))
     (hc : ∀ x c us, a'.store.view x = some (.const c us) →
       a.store.view x = some (.const c us) ∨ ∃ ls, denoteLs a.store.lss us = some ls)
-    (hlv : LvlAll a') :
-    StoreDen m' a' fe := by
+    (hlv : LvlAll a') (hlsa : LsAll a') :
+    StoreDen dn m' a' fe := by
   have hN : ∀ i n, denoteN a.store.ns i = some n → denoteN a'.store.ns i = some n := hx.ls.ns
   have hNs : ∀ (l : List NIdx) ks, l.mapM (denoteN a.store.ns) = some ks →
       l.mapM (denoteN a'.store.ns) = some ks := by
@@ -216,7 +234,7 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
       obtain ⟨y, hy, ys, hys, rfl⟩ := h
       exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv⟩
+    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e)⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
   · rcases hc x c us hv with h' | ⟨l, hl⟩
     · obtain ⟨l, hl⟩ := h.constLs x c us h'; exact ⟨l, hx.lst _ _ hl⟩
@@ -234,12 +252,12 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
 
 /-- **`StoreDen` across an interning step** that keeps the caches, the pins and the level stores
 (`cpl`) and writes neither `EREC` nor the `sort`/`const` tables (`SOREC`, `CREC`, `CTL` 1, 16‥19). -/
-theorem StoreDen.of_arena {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List ArrId} {C : List Word}
-    (h : StoreDen m a fe) (hR : ArenaR m a) (hR' : ArenaR m' a') (hc : a'.caches = a.caches)
+theorem StoreDen.of_arena {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List ArrId} {C : List Word}
+    (h : StoreDen dn m a fe) (hR : ArenaR m a) (hR' : ArenaR m' a') (hc : a'.caches = a.caches)
     (hp : a'.pins = a.pins) (hl : a'.store.lss = a.store.lss) (hf : MemFrame A C m m')
     (heA : EREC ∉ A) (hscA : SOREC ∉ A ∧ CREC ∉ A)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C) :
-    StoreDen m' a' fe := by
+    StoreDen dn m' a' fe := by
   have hsc : scTabs a' = scTabs a := scTabs_eq hR hR' (hf.1 SOREC hscA.1 (by decide))
     (hf.1 CREC hscA.2 (by decide)) (fun x hx => hf.2.1 x (by
       rcases hx with rfl | rfl | rfl | rfl | rfl <;>
@@ -247,20 +265,21 @@ theorem StoreDen.of_arena {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List Ar
   exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
     (hf.1 EREC heA (by decide)) (fun _ _ hv => view_sort_keep hsc hv)
     (fun _ _ _ hv => .inl (view_const_keep hsc hv)) (h.lvlAll.congr (by simp only [EStore.ls, hl]))
+    (h.lsAll.congr hl)
 
 /-- `StoreDen` across a memory step that keeps `EREC` (the twin unchanged). -/
-theorem StoreDen.frameE {m m' : Mem} {a : AState} {fe : IFEnv} (h : StoreDen m a fe)
-    (he : m'.arr64 EREC = m.arr64 EREC) : StoreDen m' a fe :=
+theorem StoreDen.frameE {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {fe : IFEnv} (h : StoreDen dn m a fe)
+    (he : m'.arr64 EREC = m.arr64 EREC) : StoreDen dn m' a fe :=
   h.mono (LsExt.refl _) rfl rfl (fun _ _ hk => .inl hk) he (fun _ _ hv => hv)
-    (fun _ _ _ hv => .inl hv) h.lvlAll
+    (fun _ _ _ hv => .inl hv) h.lvlAll h.lsAll
 
 /-- `StoreDen` across a step that changes only the twin's caches other than `readNC`. -/
-theorem StoreDen.caches {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
+theorem StoreDen.caches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen dn m a fe)
     (hst : a'.store = a.store) (hp : a'.pins = a.pins) (hn : a'.caches.readNC = a.caches.readNC) :
-    StoreDen m a' fe :=
+    StoreDen dn m a' fe :=
   h.mono (by rw [hst]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hn ▸ hk))
     rfl
     (fun _ _ hv => hst ▸ hv) (fun _ _ _ hv => .inl (hst ▸ hv))
-    (h.lvlAll.congr (by simp only [EStore.ls, hst]))
+    (h.lvlAll.congr (by simp only [EStore.ls, hst])) (h.lsAll.congr (by rw [hst]))
 
 end L.Arena

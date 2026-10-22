@@ -106,7 +106,7 @@ def NatGateSpec (p : Prog) (pins : List INatOpPinSet) : Prop :=
 /-- `defn_div_gate(vis, w, n)` refines `divGateT pins` at the extended view `w`, the variant list
 in memory being `pins`. -/
 def DivGateSpec (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEnv) (n : Word),
+  ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv) (n : Word),
     n.toNat < 2 ^ 32 →
     RefAM p "defn_div_gate" [vis, w, n] (fun m a => StageR dn w fe2 m a ∧ PinSetsR m pins)
       (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n))
@@ -203,7 +203,7 @@ theorem PinSetsR.step {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips
 
 /-- **The definition arm at the stage relation.** -/
 theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOpPinSet}
-    (hG : DefnProg p pins) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hG : DefnProg p pins) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
     {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration}
     {cv : IConstantVal} {v : EIdx} {hh : ConLeche.ReducibilityHint}
     (h : cdfW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a) (hPS : PinSetsR m pins)
@@ -292,7 +292,7 @@ theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, -⟩, -, hf5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (hG.div dn vis w _ wn hwnl n ⟨s4.mem, Locals.init []⟩ _ ⟨hS4, hPS4⟩) h5
+    (hG.div dn hdn vis w _ wn hwnl n ⟨s4.mem, Locals.init []⟩ _ ⟨hS4, hPS4⟩) h5
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
   have hvis : fe.visibleBelow = vis.toNat := hS.1.env.vis
@@ -307,7 +307,7 @@ theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
 list in memory being `pins` (through the gates' specs, `DefnProg`). -/
 theorem checkDeclDefn_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p)
     (pins : List INatOpPinSet) (hG : DefnProg p pins) (dn : NIdx → Option ConLeche.Name)
-    (ds : Array IDeclaration) :
+    (hdn : DnInj dn) (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint), i.toNat < ds.size →
       ds[i.toNat]? = some (.defnDecl cv v hh) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
@@ -323,7 +323,7 @@ theorem checkDeclDefn_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p)
   have hd' : ds[i.toNat] = .defnDecl cv v hh := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨fe', a', hrun', hS', hg', hf⟩ :=
-    cdfW_ok hA hV hG hW ⟨hR.check, hR.iw⟩ hR.pinsets hR.decls hi hd'
+    cdfW_ok hA hV hG hdn hW ⟨hR.check, hR.iw⟩ hR.pinsets hR.decls hi hd'
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hres]

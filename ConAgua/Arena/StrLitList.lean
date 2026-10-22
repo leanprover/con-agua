@@ -905,7 +905,7 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | some q₃ =>
   obtain ⟨l, m₃⟩ := q₃
   rw [h3, nilK3_s] at hW
-  have R3 := ls1_call p hp hS₂ hpl h3
+  have R3 := ls1_call p hp hS₂ hpl hpd₂ h3
   refine coreRef_bind R3 (fun M₃ hS₃ => ?_)
   cases h4 : callW p n "pin_at" [7] m₃ with
   | none => rw [h4] at hW; cases hW
@@ -982,7 +982,7 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | some q₃ =>
   obtain ⟨l, m₃⟩ := q₃
   rw [h3, consK3_s] at hW
-  have R3 := ls1_call p hp hS₂ hpl h3
+  have R3 := ls1_call p hp hS₂ hpl hpd₂ h3
   have hl3 := ls1_den p hp hS₂ hpl h3 hpd₂
   refine coreRef_bind R3 (fun M₃ hS₃ => ?_)
   cases h4 : callW p n "pin_at" [7] m₃ with

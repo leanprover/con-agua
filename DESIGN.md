@@ -7875,3 +7875,81 @@ child dangled when it was interned (no `StoreWF` needed).
   (`lvl_den_later`), `infer_pis`'s loop carries "every binder sort on `BSTK` is stored"
   (`lvNodeW m ws[i] ≠ []`, a new hypothesis of `pisFull_ref`/`inferPisLeaf_refines`/
   `pisOut_ref`), and `ensure_sort`'s answer is a stored sort's level (`ensureSort_view`).
+
+### Landing 12: helper `sum` — `IndSum` complete
+* Helper `sum` (2 h): `sumRules`, `checkStructFieldSortsI`, `checkSumCtor` (precondition: the
+  pre-block environment is `fe.restrictTo vis0`), `checkSumCtors`, `checkStructProjTable` (with
+  its `_scoped` helper and `er_from_iw`; lane decls2's `env_find`/`env_push`), all through stubs.
+  New stub contract `lvLeqTopStub_spec` (`lv_leq_top`: `Level.leq` on the readbacks, `sorry`, like
+  `lvl_eq_c`'s; the real one needs the `CoreS` bridge of landing 1). Program bundles `SumProg`,
+  `TblProg`. L: four loops to self-recursion, `check_field_sort_bound` split off, a handle guard
+  after `intern_const`, D18 extended to `check_sum_ctors`. ~2.9k proof lines for ~205 L lines
+  (**~14 per L line**, down from ~19, with `Sim`, `DecB`, program bundles).
+* Census: phase 8 **78 proven, 97 sorry, 42 written, 6 todo**; totals 719 proven / 140 sorry.
+
+### Landing 8: level lists too (`StoreDen.lsAll`, list counts in `LvlCnt`)
+* **`StoreDen.lsAll : LsAll a`**: every valid level-list handle reads back (the list twin of
+  `lvlAll`); `StoreDen.mono` takes it as its last argument. Kept by name/level steps (`LsAll.congr`,
+  `LsAll.of_ext`) and by list interning (`lsAll_internLsNode`: given the elements read back, the
+  new store has `LsAll` and the new handle reads back).
+* **`LvlCnt` covers the list table counts** (`CTL` 40, 41; `lvlCtlW`), so `LvlFree.of_ge` now needs
+  `42 ≤ x`. A list interning gets it from `lvlCnt_internLsNode` (`LsTables` only push); `CoreS.of_ls`
+  takes `hlsa`/`hlc` and uses `StackKept.of_frameL`; `ls1_call` now needs its element to read back.
+* **Why**: a list stays stored after a run (`lsNodeW_mono`), so `ls_den_later`/`lsNodeW_of_den`
+  read it back later — what whnf4's `instLP`/`LvlsEqDen` need for constants' level lists.
+
+### Landing 9 (defeq2): `KnotCallees.lvlsEqDen` gone
+* `LvlsEqDen` (a successful `lvls_eq_c` compares lists that read back) was stronger than needed and
+  not provable on a memo hit. Instead `lvlsEqC_refines` no longer asks its lists to read back: on a
+  hit the twin reads nothing; on a miss `ls_node` read both handles, so they are stored
+  (`lsNodeW_view`, moved to `LevelArena.lean`) and read back by `StoreDen.lsAll`.
+* Model fix: `lvlsEqW` is `none` when a handle's `lsNodeW` is `[]` (`ls_node` aborts there; the
+  model used to compare an empty slice).
+* `LvlsEqDen` and its `hden` threading through `WhnfIotaRecRefine*` are removed; `iotaRecAt_refines`
+  and `LvlsEqCH`'s callers drop the readback hypotheses' use. `KnotCallees` has 3 fields left.
+### Landing 12 (lane `decls3`): helpers `nat` and `divmod`, the definition arm's gates
+
+* **Structural-`Nat` gate** (helper `decls3-nat`, `DeclNat*.lean`, ~8 h): `natOpNames`,
+  `natDivModNames`, `natOpDeps(Stored)`, `natLitSupported`, `natOpGuard`, `boolCtorOk`, `natOpCod`,
+  `natOpTyPinned`, `natOpStoredOk(All)`, `natAp1/2`, the per-operation equation builders,
+  `natOpEquations`, `substConst0(Pairs)`, `certifyNatEqs`; `natGateSpec : NatGateSpec p pins` from
+  `NatSubProg' p`, the gate's lookups and its text's agreement with `armText` (`natGateFns`,
+  closed by `decide`). L split for tractable `vcgen` (unrolled name loops, `nat_op_pins*`,
+  `nat_op_bool_ctors`, `nat_eq_*`, `defn_nat_cert`).
+* **`Nat.div`-family pin gate** (helper `decls3-divmod`, `DeclDivMod*.lean`, ~3.5 h): every
+  function from `div_mod_slot` to `check_div_mod_pin_at` `@[refines]`; `check_div_mod_pin_loop`,
+  `check_div_mod_pin` `refines_part … (D4)` (a returning L loop is a twin run without recovery);
+  `romPinSets_ref` (`PinSetsR` → the `IW` list); `divGateSpecD`. `DivGateSpec` now takes `DnInj
+  dn` (`div_mod_env_guard`'s `find_is`). L: `cert_ctx` split, `rec2`/`rec3` slices.
+* **`checkDeclDefn_loop`** composes them: `CheckDeclProg` gained the gates' program facts
+  (`natSub`, `natGate`, `natCert`, `natText`, `dm`, `dgClosed`) and two walk specs still open as
+  fields: `subst0` (now discharged: `substC0_of`, from `DeclNatSub`.s `sc0_ref`) and
+  `substAll` (`SubstCAll`, `subst_const_all`, not yet proved).
+* Clashes on merging (helpers vs canon vs master): renamed on the helpers' side (`nt*`, `dm*`,
+  `CertCtxR`); `DeclNatBase`'s interning lemmas ported to master's `*_eqK`/`mkK_split` pushes.
+* Census: phase 2 **206 proven, 50 sorry, 35 written, 40 todo** (the `sorry` count includes
+  functions now proved through upstream stub specs: `isDefEqCore_spec`, `stubM_spec`, the ROM
+  readers).
+
+
+### Landing 10 (defeq2): `KnotCallees.capsNeverZero` discharged (`capsNeverZeroOK_of`)
+* **`StoreDen dn m a fe`** takes the record decoder `dn` and gains `dnN`: `dn` agrees with the
+  name store (`dn` is the store's `denoteN` at the declaration's start, and names only grow, so
+  `mono` keeps it). It relates an inductive's `PropWhen` datum (`decPWw`, through `dn`) to the
+  twin's readbacks (`PWR (nameN ns)`, `pwR_of_decPWw`). `TwinOK` (`DeclLvlStage.lean`) takes `dn` too.
+* The universe arguments need no readback hypothesis: `caps_never_zero` calls `ls_node(us)`, which
+  aborts on a handle not stored (model fix: `capsNeverZeroW` is `none` there), so `StoreDen.lsAll`
+  reads the list back. The level parameters do: `CapsNeverZeroOK` now asks them to read back, and
+  its callers (`iccW_ok`, `m2cEta_ok`, `m2cArms_ok`, now taking the family's `fe.find?`) get
+  them from `StoreDen.constLps`.
+* `CapsNeverZeroCore.lean`: `CoreS.frame_lhs` (a writer of `LH`/`SPN` keeps `CoreS`),
+  `StackKept.of_lhsFrame`, and the proof. `KnotAllProg` gained `caps : LvSubProg p`;
+  `KnotCallees` has 2 fields left (`instLP`, `recFireLevels`, both whnf4's).
+
+### Landing 6: helper `whnf4-ilp`'s level arms (for lane `defeq2`'s `recFireLevels`)
+* `InstLPWalk`, `InstLPWalkBase`, `InstLPWalkGo`, `InstLPWalkArms` (the walk's models and specs,
+  no refinement yet) and `InstLPLevel`, `InstLPLevel2` (under `CoreS`: `lvInternW_core`,
+  `lvSubIntW_core` with `SubOut`/`ILWEnv`, `slsElemW_core`, `spnLs_core`) from the helper's
+  commit `8c21b5d`, adapted to master's `LvlCnt` (list counts) and `CoreS.of_ls`'s `hlsa`/`hlc`.
+  The WIP `InstLPWalkLet` is not landed. No L change. Globals rule: the instLP family uses only
+  existing slots (`CTL[136]` spine top, `CTL[192]` level-heap top, MemoLib schemas `CTL[54‥59]`).

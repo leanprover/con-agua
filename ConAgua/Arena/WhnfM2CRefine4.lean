@@ -219,7 +219,8 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     (eb mode d T indP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hT : HW T) (hmaj : HW major) (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
-    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps)) (r : List Word) (m' : Mem)
+    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
+    (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) (r : List Word) (m' : Mem)
     (h : callW p (N + 1) "m2c_eta" [mode, vis, d, T, indP, major] m = some (r, m')) :
     GrowRef (m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps (decE major)) a
       decH dn m vis fe M eb r m' := by
@@ -286,7 +287,8 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hEe : m2.arr64 EREC = m.arr64 EREC := he2.trans he1
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, -⟩ := CoreSpec.of_callW
     (hc.capsNeverZero (N' + 1) ⟨m2, Locals.init []⟩ a1 dn vis fe M1 eb po pc _ swd so sc
-      cvT.levelParams caps.sortZ hS2 hus (by rw [hEe]; exact hsl) (by rw [hEe]; exact hpw)) c3
+      cvT.levelParams caps.sortZ hS2 hus (by rw [hEe]; exact hsl)
+      (hS2.den.constLps _ _ cvT hfe.choose_spec rfl (fun _ => rfl)) (by rw [hEe]; exact hpw)) c3
   have hrun3 := AM.run_of_ok _ _ ok3
   rw [res3] at hrun3
   have hrun3' : (capsNeverZero cvT.levelParams (decI (L.tail.tail.tail.headD 0)) caps).run a1 =

@@ -313,7 +313,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       (fun x u hv => (hview x _ (.inl ⟨_, rfl⟩) hv).resolve_right (by rintro ⟨_, h⟩; cases h))
       (fun x c us hv => (hview x _ (.inr ⟨_, _, rfl⟩) hv).imp id (by
         rintro ⟨c', h⟩; cases h; exact hS.den.emptyLs))
-      (hS.den.lvlAll.congr (by simp only [EStore.ls, hl]))⟩, by simp only [spTop, h136], by rw [hspn],
+      (hS.den.lvlAll.congr (by simp only [EStore.ls, hl])) (hS.den.lsAll.congr hl)⟩, by simp only [spTop, h136], by rw [hspn],
     fun i _ => by simp only [spW, hspn], BKept.of_frame hf (by decide) (by decide), hP⟩
   · rw [hc]; exact hS.core.frame (by decide) (.of_lt natC_lt (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (by decide) (by decide))
