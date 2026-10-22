@@ -67,7 +67,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
   "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply",
-  "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst"]
+  "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
@@ -144,3 +144,8 @@ supportInterpreter = true
 [[lean_exe]]
 name = "romgen"
 root = "ConAgua.Rom.Gen"
+
+# Lane `romload`: the L pin stages against the twin's on a pin-data buffer (`ConAgua/Rom/Test.lean`).
+[[lean_exe]]
+name = "romtest"
+root = "ConAgua.Rom.Test"
