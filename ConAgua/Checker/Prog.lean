@@ -101,6 +101,7 @@ import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.WhnfIotaRec
 import ConAgua.Arena.WhnfM2C
+import ConAgua.Arena.WhnfProj
 import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.ZeroStore
@@ -139,7 +140,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1607 functions, 18 of them stubs.
+1607 functions, 15 of them stubs.
 -/
 
 namespace L.Checker
@@ -147,7 +148,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["caps_never_zero", "consts_resolve_ffast", "find_proj", "fire_ok", "fvar_b", "inst_lp", "inst_lp_fast", "intern_ls_iw", "lv_zero_caps", "name_rec", "name_rec_i", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported"]
+def checkerStubs : List String := ["caps_never_zero", "consts_resolve_ffast", "fvar_b", "inst_lp", "inst_lp_fast", "intern_ls_iw", "lv_zero_caps", "name_rec", "name_rec_i", "open_pis_at_fvars_f", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's arrays (149; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -748,7 +749,9 @@ def checkerProg : Prog := [
   ("find_is", L.Ind.findIs),
   ("find_pinned", L.Ind.findPinned),
   ("find_pinned_cv", L.Ind.findPinnedCv),
+  ("find_proj", L.Arena.findProjL),
   ("find_rule", L.Arena.findRuleL),
+  ("fire_ok", L.Arena.fireOkL),
   ("first_declaring", L.Checker.firstDeclaringL),
   ("fl_clear", L.Arena.memoClearG L.Arena.flSch),
   ("fl_find", L.Arena.memoFindG L.Arena.flSch),
@@ -1393,6 +1396,7 @@ def checkerProg : Prog := [
   ("proj_find", L.Arena.projFind),
   ("proj_lit_to_ctor", L.Arena.projLitToCtorL),
   ("proj_push", L.Arena.projPush),
+  ("proj_table_name", L.Arena.projTableNameL),
   ("proj_type_at", L.Arena.projTypeAtL),
   ("proj_wr", L.Arena.projWr),
   ("promote_caps", L.Arena.promoteCapsL),
@@ -1897,8 +1901,6 @@ def checkerProg : Prog := [
   ("pre_vi_tail", preFn preTree (L.Front.Ind.viTail)),
   ("caps_never_zero", abortStub 6),
   ("consts_resolve_ffast", abortStub 2),
-  ("find_proj", abortStub 3),
-  ("fire_ok", abortStub 3),
   ("fvar_b", abortStub 2),
   ("inst_lp", abortStub 4),
   ("inst_lp_fast", abortStub 5),
@@ -1907,7 +1909,6 @@ def checkerProg : Prog := [
   ("name_rec", abortStub 1),
   ("name_rec_i", abortStub 2),
   ("open_pis_at_fvars_f", abortStub 3),
-  ("proj_table_name", abortStub 1),
   ("rec_fire_levels", abortStub 8),
   ("rec_rule_bits", abortStub 2),
   ("reserved_rec_name", abortStub 1),
