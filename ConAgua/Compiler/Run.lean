@@ -18,9 +18,20 @@ public import Kraken.X64.PrintATT
 
 namespace L.Compiler
 
-/-- The assembler file for `compileProg tab p entry`. The constant data `tab.rom` is emitted as
-`ca_rom` (`ca_rom_len` bytes) in `.rodata`; the driver copies it into the table. `ca_ng` is the
-number of global variables: the driver zeroes that many words after the result area.
+/-- The assembler file for compiled code `code` with table `tab` (the printer alone; e.g. for
+`L.Checker.checkerAsm`, the kernel-checked literal of the checker's code). The constant data
+`tab.rom` is emitted as `ca_rom` (`ca_rom_len` bytes) in `.rodata`; the driver copies it into the
+table. `ca_ng` is the number of global variables: the driver zeroes that many words after the
+result area. -/
+def asmTextOf (tab : Tab) (code : Program) : String :=
+  ".text\n.globl " ++ enterL ++ "\n" ++
+    Kraken.X64.toATT code ++ "\n" ++
+    ".section .rodata\n.globl ca_rom\n.globl ca_rom_len\n.globl ca_ng\nca_ng: .quad " ++ toString tab.ng ++
+    "\nca_rom_len: .quad " ++ toString tab.rom.length ++
+    "\nca_rom:" ++ (if tab.rom.isEmpty then "" else " .byte " ++ ", ".intercalate (tab.rom.map toString)) ++
+    "\n.section .note.GNU-stack,\"\",@progbits\n"
+
+/-- The assembler file for `compileProg tab p entry` (`asmTextOf`).
 
 Kraken's AT&T printer always prints the two-destination-operand form of `imul` (`.imul (some d)
 a b`) in three-operand syntax, `imul{s} b, a, d`, which binutils accepts only as the APX "new
@@ -32,12 +43,7 @@ legacy two-operand form (`imul{s} b, a`) that every assembler accepts: so `compi
 output, the one `compile_correct` is proved about, is already exactly what gets printed, with no
 separate `Directive`-level rewrite needed before printing. -/
 def asmText (tab : Tab) (p : Prog) (entry : FnName) : String :=
-  ".text\n.globl " ++ enterL ++ "\n" ++
-    Kraken.X64.toATT (compileProg tab p entry) ++ "\n" ++
-    ".section .rodata\n.globl ca_rom\n.globl ca_rom_len\n.globl ca_ng\nca_ng: .quad " ++ toString tab.ng ++
-    "\nca_rom_len: .quad " ++ toString tab.rom.length ++
-    "\nca_rom:" ++ (if tab.rom.isEmpty then "" else " .byte " ++ ", ".intercalate (tab.rom.map toString)) ++
-    "\n.section .note.GNU-stack,\"\",@progbits\n"
+  asmTextOf tab (compileProg tab p entry)
 
 /-- The outcome of a run of compiled code, as `ca_enter` returns it: on success, the `nres`
 results (registers, then the table's result area). -/

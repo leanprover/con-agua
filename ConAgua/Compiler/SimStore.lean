@@ -102,7 +102,7 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
   · intro k hk
-    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
     have := hG.tab_end
     simp only [Layout.tabEnd] at this
     rw [get?_wrW_A hov (by omega) ?_]
@@ -176,7 +176,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
   · intro k hk
-    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
     have := hG.tab_end
     simp only [Layout.tabEnd] at this
     rw [get?_store1_A hx (by omega) ?_]
