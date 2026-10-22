@@ -36,7 +36,7 @@ def LineStepI (Inv : Mem → AState → StateD → Prop) (b : ByteArray) (i : US
 
 /-- `parseBytes` after `StateD.init`: the lines from `i`, then the tail. -/
 def finishFrom (st : StateD) (b : ByteArray) (i : USize) (lineNo : Nat) :
-    AM (Except (CheckError × Nat) ParseResultD) := do
+    AM (Except (ConRon.Arena.CheckError × Nat) ParseResultD) := do
   match ← feedChunk st b i lineNo with
   | .error e => pure (.error e)
   | .ok (st, lineNo, tail) =>

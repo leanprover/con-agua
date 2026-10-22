@@ -226,12 +226,12 @@ theorem promoteLs_eq (m : PMemo) (fuel : Nat) (h : LsIdx) :
       apply bind_congr; intro w
       cases w; simp
 
-theorem viewLs_run {a : AState} {h : LsIdx} {v : LsNodeView} (hw : a.store.lss.view h = some v) :
+theorem promote_viewLs_run {a : AState} {h : LsIdx} {v : LsNodeView} (hw : a.store.lss.view h = some v) :
     (viewLs h).run a = .ok (v, a) := by
   simp only [viewLs, StateT.run_bind, StateT.run_get, pure_bind, hw]; rfl
 
 /-- **L's view of a level-list handle is the arena's**: a returning `ls_node` read a node. -/
-theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hne : lsNodeW m h ≠ []) : ∃ ids, a.store.lss.view (decI h) = some ids := by
   have hfl := hR.ls.2.1
   unfold lsNodeW at hne
@@ -309,7 +309,7 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   · unfold plsArmW at hW
     rw [if_neg (by simp [hh', hne]), if_neg hc0, if_neg h1, if_pos h2] at hW; cases hW
   rw [plsArmW_eq p n m f h hh' hne hc0 h1 h2] at hW
-  obtain ⟨ids, hv⟩ := lsNodeW_view hD.1 hh hne
+  obtain ⟨ids, hv⟩ := promote_lsNodeW_view hD.1 hh hne
   obtain ⟨hw, hol, hsl⟩ := lsNodeW_store hD.1 hh hv
   rw [hw] at hW h2
   simp only [List.headD_cons, List.tail_cons] at hW h2
@@ -362,7 +362,7 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [LSREC, LSSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
     hcp₂.trans hcp₁, ?_, he₁⟩
   · unfold plsArmT
-    rw [run_bind_ok (viewLs_run hv), run_bind_ok hrun₁]
+    rw [run_bind_ok (promote_viewLs_run hv), run_bind_ok hrun₁]
     simp only
     rw [run_bind_ok hrun₂, ← hr]; rfl
   · exact ((hfr₁.mono (by simp) (by simp)).trans

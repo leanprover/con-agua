@@ -5166,17 +5166,50 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   well-formedness inside `StageR` (helper `pos`'s suggestion); then the remaining parents
   (`checkSumCtor(s)`, `sumRules`, `checkBlock*`, the `nest*` positivity block, `genRecCheck`).
 
-### The frontend's inductive lines: not hooked yet (decision)
-The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
-`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
-out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
-(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
-front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
-(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
-`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
-a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
-with this template under `StateDR` (the front's relation), then hook in one step with the
-refinement.
+### The frontend's inductive lines: hooked (2026-10-22, lane `front`)
+
+The front's proven chain (`frontRun_refines` → `parseBytes`, `frontLine_refines` → `applyLine`,
+`processLineCoreD` by parts) now covers `inductive` lines, without `sorry` and without a spec
+hypothesis. Decisions:
+
+* **The hook reads the block where the line scanner found it.** `decl_val` (`FieldsDecl.lean`)
+  keeps an `inductive` member's value position in the `nm` field (`dnameN`), and `apply_dline`
+  calls `apply_ind(nm)` at `pl = 25` (not `apply_ind_line`, which re-finds the first member: the
+  link would need `next_member` ↔ `scanLineLoop` for the first member). `DeclR`'s `.ind` arm says
+  the block scans there (`scanIndDecl b v = .ok (.ind …) e`), proved in `declLine_link`.
+* **A fuel-indexed model under a fuel-free one: `runF`** (`RunModel.lean`). The apply step's
+  models (`validateW`, `installW`, … ~40 of them) carry the interpreter's fuel; the line's model
+  (`applyDLineW`, `frontLineW`, the driver's `lineKW`) does not. `applyDLineW p` takes
+  `apply_ind`'s *run* in `p` as the model (`runF p "apply_ind" [nm] m`, `Classical.choose` of a
+  successful run). It is well defined because the interpreter is monotone in its fuel
+  (`exec_mono`, via `step_mono`: `step p k` is monotone in the continuation `k`) and a call's run
+  does not depend on the caller's locals (`invoke_loc`); `runF_spec` is the callee spec, and the
+  refinement goes back to the fuel-indexed model through `applyInd_spec` (`runF_some`). So the
+  line models gained a `Prog` parameter.
+* **`DIND` is `DLP`** (array 68), not a new array 69: one pool for the declarations' universe
+  parameters and the blocks' constant records, so `DeclAt`/`decl_push` stay as they are.
+  `DeclAt` is unchanged (lane `decls`' `DeclsR` relies on `indDecl` being `False` there); the
+  front's relation is `DeclsF`/`DeclAtF` (`StateDR.lean`), whose `.indDecl` arm is `IndDeclAt`:
+  the block decodes (`decCIs`, lane `pinsenv`'s `decCI` layout) in the pool truncated at a top
+  `t` (`trunc`, so later appends keep it).
+* **`vi_k_expected` compares with a heap `zero`** (`lh_mk(0,0,0)`, `lv_equiv`), which agrees with
+  the twin's `Level.isEquiv _ .zero` only on a well-formed name store: the apply step needs
+  `StateOK`. The driver's invariant `FrontInv` now carries con-ron's bridge invariant `TwinOK`
+  (`StateOK`, scratch off, `PinsOK`, `PersStateD`, `StateDRel` to con-leche's state), kept per line
+  by `ConRon.Bridge.Frontend.applyLine_run` and established by `StateD_init_run`; so
+  `frontRun_refines`/`frontAll_refines`/`frontAll_run`/`frontAll_x64` take `StateOK a₀`,
+  `a₀.store.scratchOn = false` and `PinsOK a₀`.
+* **Scratch arrays**: `IFR`/`IFL` (70, 71) below `2^62` words (`StateDR.ifs`), the level heap at
+  192: `frontAllProg_wf` is over 193 word arrays, `frontMemOf` has 224.
+* Census: `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines` `@[refines
+  parseBytes]`; `processLineCoreD` is `COMPLETE_BY_PARTS` ("axiom, def, thm, opaque, quot",
+  "inductive"); new `@[refines]`: `validateIndD`, `installIndD`, `parseRuleD`, `piResultD`,
+  `indPiTeleLen`, `piSortTeleLen?`, `storeFuel`; parts: `parseCVD` (`ind_cv`), `viewN`
+  (`name_rec_pre`), `scanIndDecl` (`ind_fields`).
+
+Files: `IndRel`, `IndAlloc`, `IndApplySpec{,2,3}`, `IndApplyRefine{,2‥9}`, `IndValidTwin`,
+`IndInstallRefine{,2‥5}`, `IndApplyTwin`, `IndFields{Spec,Link,Link2,Link3}`, `RunModel`,
+`IndTest` (the `Unit` block through `front_run` of `frontAllProg`).
 
 ### `sorry`s
 None but stubs': `IndStubs.lean`'s stub specs (now incl. `lvl_eq` and `intern_nanon`, master
@@ -6423,6 +6456,112 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
   master); cited.
 
 
+### Landing 6: the frontend hook (helper `front`)
+* The front's chain covers `inductive` lines with no `sorry`: `validate_ind_d`/`install_ind_d`
+  refine `validateIndD`/`installIndD`, `apply_ind` the `.ind` arm of `processLineCoreD` (now in
+  `COMPLETE_BY_PARTS`), and `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines`
+  `@[refines parseBytes]` (the "(inductive lines abort)" labels are gone). Details in helper
+  `front`'s own section above (route via `apply_ind` in `decl_val`, `Prog`-indexed line models,
+  `FrontInv` carrying con-ron's `StateOK`/`PinsOK`/scratch-off: new hypotheses of the capstone on
+  `a₀`, `DIND` = `DLP`). ~9.9k lines, 6.25 h.
+* Census: **parseBytes, applyLine, processLineCoreD, validateIndD, installIndD proven**; totals
+  586 proven / 105 sorry / 244 written / 417 todo of 1352 (before this landing 537 / 104 / 279 /
+  432); phase 8 unchanged at 67 / 62.
+
+## The checker as one program (2026-10-22, lane `integrate`)
+
+Lane `e2e` assembled the checker through a text dump because the lanes' modules could not be
+imported together and disagreed at call sites. This lane makes it one Lean program:
+`L.Checker.checkerProg` (`ConAgua/Checker/Prog.lean`), assembled by import.
+
+### Migration notes (integrate)
+
+Every edit in another lane's file is a rename or a call-site fix; no statement changed meaning.
+Merge master and adapt new uses:
+
+* **Declaration renames** (they made modules impossible to import together; the side renamed is
+  the one with fewer uses):
+  `WhnfIotaRefine3`: `arW` → `iotaArW` (clashed with `ArRange.arW`);
+  `DefEqMidPeel`: `internFVar_core` → `peel_internFVar_core`, `keeps_cpl_internFVar` →
+  `peel_keeps_cpl_internFVar`, `pushK` → `peelPushK`, `word_add_toNat` → `peel_word_add_toNat`
+  (and the use in `DefEqMidLams`);
+  `DefEqLeaves`: `lsNodeW_viewLen` → `defeq_lsNodeW_viewLen` (use in `DefEqMidPeel`),
+  `view_lit_nat` → `defeq_view_lit_nat`;
+  `DefEqMidQuick`: `eViewW_head` → `quick_eViewW_head`;
+  `InferLeaves`: `toNat_add_small` → `infer_toNat_add_small`, `decCV_words` → `infer_decCV_words`;
+  `InferBodyLet`: `CoreSpec.zero` → `CoreSpec.zeroLet` (uses in `InferBody{Bind,BindPi,Disp,Spine,SpineF}`);
+  `InferBodyBind`: `lamsW` → `inferLamsW`;
+  `WhnfCoreLoop`: `coreRef_congr` → `whnf_coreRef_congr`;
+  `WhnfCoreProj`: `SpineR.of_spn` → `SpineR.of_spn_core`;
+  `WhnfDeltaRefine2`: `viewLs_run` → `whnf_viewLs_run`;
+  `DeclValRef`: `decCI_defn` → `decls_decCI_defn`;
+  `PromoteLsRef`: `viewLs_run` → `promote_viewLs_run`, `lsNodeW_view` → `promote_lsNodeW_view`;
+  `PromoteERef`: `lit_rec` → `promote_lit_rec`.
+  Left: `LiftBench`/`NatBits` (`L.Arena.bv`), benchmarks only (not imported by the checker).
+* **Call sites.** `fab_scope_ok` (`WhnfIota.lean`) calls `loose_bvars_bounded_fast(4000000000,
+  0, fab)` (lane exprops4's `(fuel, k, e)`); `LooseBVarsBoundedFastOK` and `fsW`
+  (`WhnfIotaRefine3`) take the fuel word `4000000000` too. (indproofs2's `get_app_fn`/`get_app_args`/
+  `pi_result`/`whnf` call sites were already fixed on master.)
+* **One name, one body.** `reserved_contains`: the whnf/knot/defeq loop version
+  (`reservedContainsL`) is now the L function **`reserved_contains_w`** (`WhnfIota.lean`'s calls
+  and `IotaProg` field, `KnotWF.lean`, `DefEq.lean`'s three calls); `reserved_contains` is
+  `IndIface.reservedContains` (lanes induct/decls). `intern_all_pins`: `L.Rom.internAllPinsPB`;
+  the ROM-only versions (`RomCI.internAllPinsAt`, `Prelude.internAllPinsL`) are bound as
+  **`intern_all_pins_rom`** in their theorems (dead in the checker: lane romload may delete them).
+* **Adapters** (`ConAgua/Checker/Entry.lean`): `abstract1_fast(f, e, d, k)` → `abs_entry(e, d, k)`,
+  `instantiate1_fast(f, e, v, d)` → `inst_entry(e, v, d)`, `inst1(e, v, d)` → `inst_entry(e, v,
+  d)` (lane exprops4's entries; the fuel is unused). The stub specs of these names
+  (`IotaInst1OK`, lane induct's `RelAM`s) are now about the adapters: discharge them from
+  `instEntry_refines`/`absEntry_refines`.
+* **The inductive line hook**: lane indproofs2 landed it in `Line.lean` (with its proofs) while
+  this lane worked; the checker takes `L.Front.applyDLine`, and e2e's patch is gone.
+* **New rule: one name, one body, project-wide.** `scripts/checker_prog.py` fails if two non-stub
+  bindings of a name (any `Prog` constant, any `p.lookup "f" = some d` in a type) differ, or a
+  call's argument count differs from the callee's; it also needs every module importable together.
+  Run it (`--check` to verify `Prog.lean` is current) when you add or rename an L function.
+
+### Landing 1: `checkerProg`, the prelude stages, `check`'s entry
+
+* **`ConAgua/Checker/Prog.lean`** (generated by `scripts/checker_prog.py`; `--check` says whether
+  it is current): `checkerProg`, 1419 functions reachable from `check`, each the lanes' own
+  `FunDecl` constant, imported (110 modules); `checkerProg_wf : Prog.wf checkerTab checkerProg`
+  by `Prog.wf_of_wfFast (by decide +kernel)` (35 s with the file's `#guard`). `Prog.wf` includes
+  "every called name defined exactly once with the caller's arity" (`Nodup` of the names, every call
+  resolved). The generator imports all 391 non-benchmark modules in one closure (the clash list is
+  empty), asks `ConAgua/Checker/Sources.lean` for each binding's Lean term, and fails on two bodies
+  for one name or an arity mismatch. Called functions with no L code are `abortStub n`, listed in
+  `checkerStubs` (35).
+* **`ConAgua/Checker/Entry.lean`**: `check()` (moved from `E2E/Check.lean`), now first
+  `cap_check()`: every word array below `2^63` words and `CTL` at least 256 words, else abort
+  (ROADMAP §3's requirement; `arenaR_init`'s `64 ≤ |CTL|`, its pool bound). Not checkable in L:
+  an array of `2^64` words or more (`len` is mod `2^64`); `MemRel` in the final theorem rules
+  such arrays out, `PipelineRefines` (any `s64`) does not yet: it needs a size premise.
+  Also the adapters, `is_proj_fn_shape` (`NIdx.isProjFnShape`: the
+  `num`/`str` views, the pool bytes of `proj`/`projTable`) and `basis_pin_hit` (`basisPinHit`:
+  per kind, `rom_basis_decls(kind)`, the name pre-filter on the records' word 1, then
+  `canon_eq_list`).
+* **`ConAgua/Checker/Prelude.lean`**: `builtin_prelude()` runs **the frontend's own L code on
+  the prelude**: `preFn` renames a frontend function onto byte array `PRE` (2; the bytes copied
+  from the program constant `preludeBytes`, `preludeBytes_eq : preludeBytes =
+  preludeText.data.toList` by the kernel, 15 s) and the id tables `PNID`/`PLID`/`PEID`
+  (208‥210, so the stream's parse starts with empty id tables, as the twin's second `parseBytes`).
+  The generator copies the 129 functions reachable from `front_run` that touch the input or the
+  id tables (`pre_<name>`). `DECL`/`DLP`/`DIND` are shared: the prelude's records first, their
+  count in `CTL[240]`. `prepare_prelude()` is `frontOf` on `DECL` (each prelude record replaced by
+  the stream's first record declaring its key, which leaves the stream), then `hoist_ok`: the
+  ground hoist must be the identity (no pinned `Nat` operation's `natOpDeps` ground first declared
+  after it), else abort (a decline; the twin would reorder), then `DECL` rewritten in that order.
+  Proof obligations (no theorem yet): `preFn` preserves the frontend's refinement with the arrays
+  renamed; `frontRun_refines` from a `DECL` that already holds records; the two stages'
+  refinements.
+* **e2e** (`scripts/e2e.py`): the program is `checkerProg` plus `E2E/Check.lean`'s test entries
+  (`L.E2E.writeChecker`); `--text-dump` keeps the old assembly as a fallback. Byte arrays from 2
+  on get `CA_WORDS` bytes in the harness (and under `L.run`). A second reference: con-ron's Rust
+  binary (`nix develop` in a worktree of `_tmp/ref/con-ron` at `vendor/UPSTREAM`'s revision,
+  `cargo build --release -p con-ron`, `_tmp/ref/con-ron-integrate/target/release/con-ron`;
+  `$CON_RON` overrides), run as `con-ron --jobs=1 --pins P` with `P` the same single pin variant
+  in its `con-ron-pins/1` format (written by `ConRon.Dump.dumpPins`, now built as a root of
+  `ConRonArena`); and `instructions:u` of compiled `check` vs con-ron on fixtures both accept.
 ### Landing 3: the opaque arm, the axiom tests (`DeclBasisSpec2`, `DeclReduceSpec2`, `DeclReducePin`, `DeclArmOpaque`, `DeclAxiomSpec*`)
 
 * **Refined** (through the ROM stubs and, for `checkReducePin`, the core's and the walks' stubs):

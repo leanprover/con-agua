@@ -38,7 +38,7 @@ everything it calls that is not already owned by another file (`WhnfSpine.lean`'
   its level-algorithm leaf. `rec_fire_args`/`inst_spine_pins`/`inst_spine` are NOT stubs: they only
   need `inst_lp` (already a `WhnfCallees` stub) and `inst_entry` (real), so they are written out in
   full.
-* `wscoped_bfast(d, e)`, `loose_bvars_bounded_fast(c, e)`, `leaf_guard(fab, major)`: the task's own
+* `wscoped_bfast(d, e)`, `loose_bvars_bounded_fast(4000000000, c, e)` (lane exprops4's `(fuel, k, e)`), `leaf_guard(fab, major)`: the task's own
   "phase 4 walks, stubs too".
 * `lit_to_ctor_if_nat(vis, h)`: "written by another agent in `WhnfDelta.lean`" (which does not
   exist yet); called by name.
@@ -292,7 +292,7 @@ phase-4-walk stubs. -/
 def fabScopeOkL : FunDecl := lfn (d, fab, major) locals (ok) {
   ok := call wscoped_bfast(d, fab);
   if ok == 0 { return 0 };
-  ok := call loose_bvars_bounded_fast(0, fab);
+  ok := call loose_bvars_bounded_fast(4000000000, 0, fab);
   if ok == 0 { return 0 };
   ok := call leaf_guard(fab, major);
   return ok
@@ -404,9 +404,9 @@ def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
       if tn != EREC.u64[indP + 7] { return major };
       if ustl != EREC.u64[indP + 3] { return major };
       if nz == 0 { return major };
-      resT := call reserved_contains(T);
+      resT := call reserved_contains_w(T);
       if resT != 0 { return major };
-      resEC := call reserved_contains(EREC.u64[indP + 6]);
+      resEC := call reserved_contains_w(EREC.u64[indP + 6]);
       if resEC != 0 { return major };
       slotsOk := call tower_slots_all(vis, T, EREC.u64[indP + 8]);
       if slotsOk == 0 { return major };
@@ -902,7 +902,7 @@ def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn)
 `loose_bvars_bounded_fast`/`leaf_guard`/`lit_to_ctor_if_nat` have none yet). -/
 def iotaProg : Prog :=
   [("is_ctor_app", isCtorAppL), ("is_str_lit", isStrLitL), ("find_rule", findRuleL),
-   ("rec_rule_k", recRuleKL), ("reserved_contains", reservedContainsL),
+   ("rec_rule_k", recRuleKL), ("reserved_contains_w", reservedContainsL),
    ("iota_ctor_never_prop", iotaCtorNeverPropL), ("e_rec_get", eRecGetL),
    ("const_name_of", constNameOfL), ("ind_caps_check", indCapsCheckL), ("iota_case3", iotaCase3L),
    ("tower_slots_all", towerSlotsAllL), ("eta_projs", etaProjsL),
@@ -925,7 +925,7 @@ structure IotaProg (p : Prog) : Prop where
   isStrLit : p.lookup "is_str_lit" = some isStrLitL
   findRule : p.lookup "find_rule" = some findRuleL
   recRuleK : p.lookup "rec_rule_k" = some recRuleKL
-  reservedContains : p.lookup "reserved_contains" = some reservedContainsL
+  reservedContains : p.lookup "reserved_contains_w" = some reservedContainsL
   iotaCtorNeverProp : p.lookup "iota_ctor_never_prop" = some iotaCtorNeverPropL
   eRecGet : p.lookup "e_rec_get" = some eRecGetL
   constNameOf : p.lookup "const_name_of" = some constNameOfL
@@ -1022,12 +1022,12 @@ def WscopedBFastOK (p : Prog) : Prop :=
     CoreSpec p n "wscoped_bfast" [d, e] (wscopedBFast coreWalkFuel d.toNat (decE e)) decBool s₀ a₀
       dn vis fe MM eb
 
-/-- `loose_bvars_bounded_fast(c, e)` refines `looseBVarsBoundedFast coreWalkFuel c.toNat e` (a
-phase-4 walk stub). -/
+/-- `loose_bvars_bounded_fast(4000000000, c, e)` refines `looseBVarsBoundedFast coreWalkFuel c.toNat e`
+(a phase-4 walk stub; the first argument is the L walk fuel of lane exprops4's `(f, k, e)`). -/
 def LooseBVarsBoundedFastOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb c e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
-    CoreSpec p n "loose_bvars_bounded_fast" [c, e]
+    CoreSpec p n "loose_bvars_bounded_fast" [4000000000, c, e]
       (looseBVarsBoundedFast coreWalkFuel c.toNat (decE e)) decBool s₀ a₀ dn vis fe MM eb
 
 /-- `leaf_guard(fab, major)` refines `leafGuard coreWalkFuel fab major` (a phase-4 walk stub). -/

@@ -484,7 +484,7 @@ theorem pv_eq_zero_iff (p : Array Word) (o l : Nat) (hn : Norm p o l) : pv p o l
 
 /-- **A `lit` node past the view checks**: kind word `0` is a `natVal` whose value is `0` iff the
 length word is; another kind word is a `strVal`. -/
-theorem view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
+theorem defeq_view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 →
       ∃ N, a.store.view (decE h) = some (.lit (.natVal N)) ∧
@@ -548,7 +548,7 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
     · simp [hs, hc] at hW
     simp only [hs, hc, ↓reduceIte] at hW
     have hvo : viewOK m e 2 := ⟨hs, by simpa using hc⟩
-    obtain ⟨hnat, hstr⟩ := view_lit_nat m a hR e he hvo h8
+    obtain ⟨hnat, hstr⟩ := defeq_view_lit_nat m a hR e he hvo h8
     simp only [isNatZero, tag_beq_lit e he, h8, decide_true, ↓reduceIte, StateT.run_bind]
     by_cases hk : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) = 0
     · obtain ⟨N, hv, hN⟩ := hnat hk
@@ -928,7 +928,7 @@ theorem hintLt_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (
 /-! ## Level-list lengths -/
 
 /-- **`ls_node`'s length word is the twin's `viewLen`** (when `ls_node` returns). -/
-theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h)
+theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h)
     (hne : lsNodeW m h ≠ []) :
     a.store.lss.viewLen (decI h) = some ((lsNodeW m h).tail.headD 0).toNat := by
   unfold lsNodeW at hne ⊢
@@ -1123,7 +1123,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   have hm₃ : m₃ = s.mem := by rw [← ht₃, heq]
   subst hm₃
   rw [hr₃] at hne
-  have hvl := lsNodeW_viewLen hR huw hne
+  have hvl := defeq_lsNodeW_viewLen hR huw hne
   rw [← hr₃] at hvl
   unfold ufLsF at hW
   simp only at hW
