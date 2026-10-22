@@ -101,7 +101,8 @@ def inferLamResultL : FunDecl := lfn (ty, bt, d) locals (ab, r) {
 /-! ## The binder telescopes
 
 `fvs` is the stack slice `(fo, k)` (`CTL[136] = fo + k`), `stk` the binder-stack slice `(lo, k)`
-(`CTL[137] = lo + k`); `d + k` is the depth of the next binder. The twin's `peelFuel` (`2^24`)
+(`CTL[137] = lo + k`); `d + k` is the depth of the next binder (the depth capacity: `infer_lam`
+and `infer_forall` abort at `d ≥ 2^63`, so `d + k` does not wrap). The twin's `peelFuel` (`2^24`)
 is the exact counter `peel`. -/
 
 /-- The λ loop's leaf and its outward rebuild. -/
@@ -206,6 +207,7 @@ def inferPisL : FunDecl :=
 /-- con-ron: ConRon/Arena/Core.lean:2575-2585 ConRon.Arena.inferLam -/
 @[l_impl ConRon.Arena.inferLam]
 def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, lo, r) {
+  if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
   if w >> 28 != 2 { abort };
@@ -227,6 +229,7 @@ def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, 
 /-- con-ron: ConRon/Arena/Core.lean:2587-2599 ConRon.Arena.inferForall -/
 @[l_impl ConRon.Arena.inferForall]
 def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i, u, fv, so, lo, r) {
+  if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
   if w >> 28 != 2 { abort };
