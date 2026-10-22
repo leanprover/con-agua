@@ -57,8 +57,8 @@ partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
       (bytesToExpr (bs.extract 0 h)) (bytesToExpr (bs.extract h bs.size))
 
 def tabToExpr (t : Tab) : Lean.Expr :=
-  mkApp5 (mkConst ``Tab.mk) (mkNatLit t.nb) (mkNatLit t.nw) (bytesToExpr t.rom.toArray) (mkNatLit t.nres)
-    (mkNatLit t.ng)
+  mkApp7 (mkConst ``Tab.mk) (mkNatLit t.nb) (mkNatLit t.nw) (bytesToExpr t.rom.toArray) (mkNatLit t.nres)
+    (mkNatLit t.ng) (mkNatLit t.rom.length) (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkNatLit t.rom.length))
 
 unsafe def evalNats (e : Lean.Expr) : MetaM (List Nat) :=
   evalExpr (List Nat) (mkApp (mkConst ``List [0]) (mkConst ``Nat)) e
