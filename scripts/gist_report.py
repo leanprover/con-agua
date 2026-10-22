@@ -121,6 +121,15 @@ w("| Proven (count) | Proven (Lean lines) | Proven (Rust lines) | L written (Lea
 w("|---:|---:|---:|---:|---:|---:|---:|---:|")
 eta_s = eta_when.strftime("%b %-d") if eta_when else "—"
 w(f"| {proven} / {targets} | {pct(lean_share)} | {pct(rust_share)} | {pct(lean_l)} | {sorry} | **{eta_s}** | {len(running)} | {pct(over / max(1, work + over))} |\n")
+# the safety net under the shared Lake cache (DESIGN.md, "Cache incident"), written by scripts/buildstats.py
+bcf = root / "_tmp" / "buildcheck.json"
+if bcf.exists():
+    bc = json.loads(bcf.read_text())
+    behind = git("rev-list", "--count", f"{bc['commit']}..HEAD") if bc.get("commit", "?") != "?" else "?"
+    w(f"Last cache-free build of master: `{bc['commit'][:10]}` ({behind} commits behind HEAD, {bc['date']}, "
+      f"{bc['mode']}): " + ("**OK**" if bc["ok"] else f"**FAILED** ({bc['detail']})") + "\n")
+else:
+    w("Last cache-free build of master: **none recorded** (run `scripts/buildstats.py`).\n")
 if eta_rate:
     w(f"_Projected completion: at the least-squares rate of the last 3 days of census runs, {eta_rate:,.0f} Lean lines proven per day; "
       "a straight-line extrapolation, so treat it as a trend, not a promise._\n")

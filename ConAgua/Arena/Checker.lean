@@ -5,6 +5,7 @@ import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.PromoteRecRef
 import ConAgua.Arena.DeclCheckLoop
+import ConAgua.Arena.PromoteCIRef31
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -122,11 +123,21 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
 theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (k fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
-      LoopR dn s₀.mem a₀ vis fe pend ds →
+      LoopR dn s₀.mem a₀ vis fe pend ds → k.toNat ≤ vis.toNat →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_new" [k, vis, fresh]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ ∧
       LoopR dn s'.mem (AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀) vis
-        (AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀).2 pend ds; ⊤⦄ := sorry
+        (AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀).2 pend ds; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend k fresh pm hpm hR hk
+  refine triple_post (callW_spec p n "promote_new" [k, vis, fresh] s₀) fun r s' ⟨hl, hc⟩ => ?_
+  obtain ⟨a', pm', fe', hrun, hLoop⟩ :=
+    promoteNew_rel p hpr dn n s₀.mem a₀ pm k vis fresh fe pend ds r s'.mem hpm hR hk hc
+  have hok : AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ := by simp [AM.ok, hrun]
+  have hst : AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀ = a' := by simp [AM.st, hrun]
+  have hres : AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀ = (pm', fe') := by
+    simp [AM.res, hrun]
+  rw [hst, hres]
+  exact ⟨hl, hok, hLoop⟩
 
 end stubs
 
