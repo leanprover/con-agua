@@ -756,26 +756,28 @@ def pciCtor : FunDecl := lfn (f, p) locals (w5, w6, nm, q, l, t, d, u) {
   return d
 }
 
-/-- `rec_rules(f, s, l)`: the `l` rules at `s` promoted into a fresh slice of `11 l` words, whose
-offset is returned. -/
+/-- `rec_block(d5, w5, w6, l)`: a fresh block of `11 l` words (the rules to come) and the four
+words of the recursor record at `d5` (`majorIdx`, `rulePrefix`, the block, the count) written;
+returns the block's offset. -/
 -- con-ron: ConRon/Arena/Promote.lean:254-261 ConRon.Arena.promoteRules
 @[l_impl ConRon.Arena.promoteRules]
-def recRules : FunDecl := lfn (f, s, l) locals (q, u) {
+def recBlock : FunDecl := lfn (d5, w5, w6, l) locals (b, u) {
   if 1152921504606846976 <= l { abort };
-  q := call erec_alloc(11 * l);
-  u := call promote_rules(f, s, l, q);
-  return q
+  b := call erec_alloc(11 * l);
+  u := call erec_wr4(d5, w5, w6, b, l);
+  return b
 }
 
-/-- `pci_rec(f, p)`: `recInfo cv major pre rules`. -/
+/-- `pci_rec(f, p)`: `recInfo cv major pre rules`. The record's words are written before the
+rules are promoted into the block, so the promoted rules are the last thing written. -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciRec : FunDecl := lfn (f, p) locals (w5, w6, w7, l, nm, q, cl, t, d, r, u) {
+def pciRec : FunDecl := lfn (f, p) locals (w5, w6, w7, l, nm, q, cl, t, d, b, u) {
   (w5, w6, w7, l) := call erec_rd4(p + 5);
   (nm, q, cl, t) := call promote_cv(f, p + 1);
   d := call pci_mk(p, 9, nm, q, cl, t);
-  r := call rec_rules(f, w7, l);
-  u := call erec_wr4(d + 5, w5, w6, r, l);
+  b := call rec_block(d + 5, w5, w6, l);
+  u := call promote_rules(f, w7, l, b);
   return d
 }
 
@@ -914,7 +916,7 @@ def promoteFns : Prog :=
    ("pn_at", pnAt), ("pl_at", plAt), ("ps_at", psAt), ("pe_at", peAt), ("rule_wr", ruleWr), ("caps_wr", capsWr), ("proj_wr", projWr), ("caps_parts", capsParts), ("promote_caps", promoteCapsL), ("proj_a", projA), ("proj_b", projB),
    ("promote_proj_table", promoteProjTableL),
    ("pci_mk", pciMk), ("pci_plain", pciPlain), ("pci_defn", pciDefn), ("pci_ind", pciInd), ("pci_ctor", pciCtor),
-   ("rec_rules", recRules), ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),
+   ("rec_block", recBlock), ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),
    ("promote_clear", promoteClear), ("vg_rd", vgRd), ("vg_wr", vgWr),
    ("promote_vg", promoteVGL),
    ("erase_installed", eraseInstalledL), ("index_promoted", indexPromotedL),

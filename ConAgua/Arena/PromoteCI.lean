@@ -535,29 +535,29 @@ theorem pciCtor_spec (f q : Word) :
       callW_spec p n "erec_wr2"] <;>
     finish (gen := 20) [ctorW, pciMkC, Option.bind_some, Option.bind_none]
 
-/-- **The model of `rec_rules(f, s, l)`.** -/
-def recRulesW (p : Prog) (n : Nat) (m : Mem) (f s l : Word) : Option (Word × Mem) :=
+/-- **The model of `rec_block(d5, w5, w6, l)`.** -/
+def recBlockW (p : Prog) (n : Nat) (m : Mem) (d5 w5 w6 l : Word) : Option (Word × Mem) :=
   if 1152921504606846976 ≤ l then none else
   (callW p n "erec_alloc" [11 * l] m).bind fun r =>
-  (callW p n "promote_rules" [f, s, l, g0 r.1] r.2).bind fun u => some (g0 r.1, u.2)
+  (callW p n "erec_wr4" [d5, w5, w6, g0 r.1, l] r.2).bind fun w => some (g0 r.1, w.2)
 
-theorem recRules_spec (f s l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rules" [f, s, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ recRulesW p n s₀.mem f s l = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.rec_rules]
-  simp only [callFn, recRules]
+theorem recBlock_spec (d5 w5 w6 l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_block" [d5, w5, w6, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ recBlockW p n s₀.mem d5 w5 w6 l = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rec_block]
+  simp only [callFn, recBlock]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "erec_alloc", callW_spec p n "promote_rules"] <;>
-    finish (gen := 20) [recRulesW, Option.bind_some, Option.bind_none]
+      callW_spec p n "erec_alloc", callW_spec p n "erec_wr4"] <;>
+    finish (gen := 20) [recBlockW, Option.bind_some, Option.bind_none]
 
 /-- **The model of `pci_rec(f, q)`.** -/
 def recW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
   (callW p n "erec_rd4" [q + 5] m).bind fun a =>
   (callW p n "promote_cv" [f, q + 1] a.2).bind fun c =>
   (pciMkC p n c.2 q 9 c.1).bind fun d =>
-  (callW p n "rec_rules" [f, g2 a.1, g3 a.1] d.2).bind fun r =>
-  (callW p n "erec_wr4" [d.1 + 5, g0 a.1, g1 a.1, g0 r.1, g3 a.1] r.2).bind fun w => some (d.1, w.2)
+  (callW p n "rec_block" [d.1 + 5, g0 a.1, g1 a.1, g3 a.1] d.2).bind fun b =>
+  (callW p n "promote_rules" [f, g2 a.1, g3 a.1, g0 b.1] b.2).bind fun w => some (d.1, w.2)
 
 theorem pciRec_spec (f q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pci_rec" [f, q]
@@ -567,7 +567,7 @@ theorem pciRec_spec (f q : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "erec_rd4", callW_spec p n "promote_cv", callW_spec p n "pci_mk",
-      callW_spec p n "rec_rules", callW_spec p n "erec_wr4"] <;>
+      callW_spec p n "rec_block", callW_spec p n "promote_rules"] <;>
     finish (gen := 20) [recW, pciMkC, Option.bind_some, Option.bind_none]
 
 /-! ## `promote_ci`, `promote_ci_list` -/

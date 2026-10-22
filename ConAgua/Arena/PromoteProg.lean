@@ -105,7 +105,7 @@ structure PromoteProg (p : Prog) : Prop where
   pci_defn : p.lookup "pci_defn" = some (pciDefn)
   pci_ind : p.lookup "pci_ind" = some (pciInd)
   pci_ctor : p.lookup "pci_ctor" = some (pciCtor)
-  rec_rules : p.lookup "rec_rules" = some (recRules)
+  rec_block : p.lookup "rec_block" = some (recBlock)
   pci_rec : p.lookup "pci_rec" = some (pciRec)
   promote_ci : p.lookup "promote_ci" = some (promoteCIL)
   promote_ci_list : p.lookup "promote_ci_list" = some (promoteCIListL)
@@ -276,7 +276,7 @@ def promoteProg : Prog :=
    ("pci_defn", pciDefn),
    ("pci_ind", pciInd),
    ("pci_ctor", pciCtor),
-   ("rec_rules", recRules),
+   ("rec_block", recBlock),
    ("pci_rec", pciRec),
    ("promote_ci", promoteCIL),
    ("promote_ci_list", promoteCIListL),
