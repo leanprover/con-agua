@@ -617,4 +617,138 @@ theorem targetHoles_refines (p : Prog) (hff : p.lookup "fvar_find" = some fvarFi
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.targetHoles tys base.toNat) a₀ a' xs hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
+
+/-! ## `target_pin_tys` (loop rewritten as recursion) -/
+
+mutual
+/-- **The model of `target_pin_tys`.** -/
+def tptW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, vis, d, xo, xl =>
+    if xl = 0 then some ([], m)
+    else tptK n vis d xo xl (stubM "infer_type_core" m [vis, d, rdW (m.arr64 IW) xo])
+
+/-- After `infer_type_core`. -/
+def tptK (n : Nat) (vis d xo xl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m1) => tptK2 (tptW n m1 vis d (xo + 1) (xl - 1))
+
+/-- After the recursive call: the function falls off its end. -/
+def tptK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m2) => some ([], m2)
+end
+
+section arms
+variable (n : Nat) (m m1 : Mem) (vis d xo xl : Word) (r : List Word)
+theorem tptW_nil (h : xl = 0) : tptW (n + 1) m vis d xo xl = some ([], m) := by simp [tptW, h]
+theorem tptW_cons (h : xl ≠ 0) :
+    tptW (n + 1) m vis d xo xl = tptK n vis d xo xl (stubM "infer_type_core" m [vis, d, rdW (m.arr64 IW) xo]) := by
+  simp [tptW, h]
+theorem tptK_some : tptK n vis d xo xl (some (r, m1)) = tptK2 (tptW n m1 vis d (xo + 1) (xl - 1)) := by rw [tptK]
+theorem tptK2_some : tptK2 (some (r, m1)) = some ([], m1) := by rw [tptK2]
+end arms
+
+grind_pattern [ind_grind] tptW_nil => tptW (n + 1) m vis d xo xl
+grind_pattern [ind_grind] tptW_cons => tptW (n + 1) m vis d xo xl
+grind_pattern [ind_grind] tptK_some => tptK n vis d xo xl (some (r, m1))
+grind_pattern [ind_grind] tptK2_some => tptK2 (some (r, m1))
+
+theorem targetPinTys_spec (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat) :
+    ∀ (s₀ : St) (vis d xo xl : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
+    ⦃fun r s' => LocEq s' s₀ ∧ tptW n s₀.mem vis d xo xl = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ vis d xo xl; rw [invoke_eq _ hp]; simp only [callFn, targetPinTys]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ vis d xo xl
+    rw [invoke_eq _ hp]
+    simp only [callFn, targetPinTys]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "infer_type_core" n, ih] <;>
+      finish (gen := 20)
+
+
+local notation "V" => ConLeche.CheckMode.verified
+
+theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (vis d xo xl : Word) (r : List Word) (xs : List EIdx),
+    tptW n m vis d xo xl = some (r, m') → StageR dn vis fe m a →
+    decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
+    xo.toNat + xl.toNat ≤ iwTop m →
+    ∃ a', (ConRon.Arena.targetPinTys V fe d.toNat xs).run a = .ok ((), a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  induction n with
+  | zero => intro m m' a vis d xo xl r xs h; simp [tptW] at h
+  | succ n ih =>
+    intro m m' a vis d xo xl r xs h hS hxs hb hbt
+    by_cases hxl : xl = 0
+    · rw [tptW_nil n m vis d xo xl hxl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      have hz : xl.toNat = 0 := by rw [hxl]; rfl
+      rw [hz] at hxs
+      simp [decHL, hslice?] at hxs
+      subst hxs
+      exact ⟨a, rfl, hS, IWGrow.refl m⟩
+    · rw [tptW_cons n m vis d xo xl hxl] at h
+      have hpos : 1 ≤ xl.toNat := by
+        rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
+        · omega
+      obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
+      rw [hc1] at hxs
+      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons hxs
+      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
+      rw [UInt64.ofNat_toNat] at hw1
+      have hxl1 : (xl - 1).toNat = c1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+      have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [hw1] at h
+      cases hi : stubM "infer_type_core" m [vis, d, w] with
+      | none => rw [hi] at h; simp [tptK] at h
+      | some rm =>
+        obtain ⟨ri, m1⟩ := rm
+        rw [hi, tptK_some] at h
+        obtain ⟨t1, a1, hrun1, hS1, hg1, -⟩ := inferTypeCore_spec dn vis fe d w hw2 m m1 a ri hi hS
+        cases hr : tptW n m1 vis d (xo + 1) (xl - 1) with
+        | none => rw [hr] at h; simp [tptK2] at h
+        | some rm2 =>
+          obtain ⟨r2, m2⟩ := rm2
+          rw [hr, tptK2_some] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨-, rfl⟩ := h
+          have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
+            rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
+          obtain ⟨a2, hrun2, hS2, hg2⟩ := ih m1 m2 a1 vis d (xo + 1) (xl - 1) r2 xs' hr hS1 hxs1
+            (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
+          refine ⟨a2, ?_, hS2, hg1.trans hg2⟩
+          simp only [ConRon.Arena.targetPinTys, StateT.run_bind]
+          rw [← hw3]
+          have e : (decI w : EIdx) = decI w := rfl
+          rw [hrun1]
+          simp only [bind, Except.bind]
+          exact hrun2
+
+
+/-- **`target_pin_tys` refines `targetPinTys .verified`** (through the `infer_type_core` stub). -/
+@[refines ConRon.Arena.targetPinTys]
+theorem targetPinTys_refines (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis d xo xl : Word)
+    (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs) (hb : xo.toNat + xl.toNat < 2 ^ 64)
+    (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (targetPinTys_spec p hp n s₀ vis d xo xl) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨a', hrun, hS', hg⟩ := tptW_ok dn fe n _ _ a₀ vis d xo xl r xs hm hS hxs hb hbt
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ a₀ a' () hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
+
 end L.Ind

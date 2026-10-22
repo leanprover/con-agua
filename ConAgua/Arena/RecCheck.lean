@@ -426,11 +426,11 @@ def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
 
 /-- **`target_pin_tys`**: an outside major's parameters, typed at the rule prefix, in order. -/
 @[l_impl ConRon.Arena.targetPinTys]
-def targetPinTys : FunDecl := lfn (vis, d, xo, xl) locals (j, u) {
-  j := 0;
-  while j < xl {
-    u := call infer_type_core(vis, d, IW.u64[xo + j]);
-    j += 1
+def targetPinTys : FunDecl := lfn (vis, d, xo, xl) locals (u) {
+  if xl == 0 { skip }
+  else {
+    u := call infer_type_core(vis, d, IW.u64[xo]);
+    u := call target_pin_tys(vis, d, xo + 1, xl - 1)
   }
 }
 
