@@ -24,6 +24,16 @@ reduced to `LoopT.of_fold`'s hypotheses (open end 5 below); the promotion, `drop
   and every denotation is unchanged (`enable_views`, `enable_denote`, `denote*Aux_congr_view`).
   Hypotheses: `StoreWF a.store` (`TwinFold.stateOK`) and `a.store.scratchOn = false` (the last
   `dropScratch`; at the start, the pipeline's state).
+* **The inductive stage's per-call memos** (lane `indproofs3`'s request): `LoopT` has a fourth,
+  memory-only component `memo : StageMemos m`: the eight stage memos (arrays 201‥208, `CTL`
+  202‥219: `PosMR` — `nest_occ`, `depth`, `replace_apps`, `has_loose_bvar_b`, the banked
+  `replace_fvars` — and `maMR`, `mcMR`, `taMR`) hold some well-formed memo, and every epoch word
+  `x` has `CTL[x] + 2 ≠ 0` (what `memoRV_clear` needs). `StageMemos.frame` (any writer outside
+  arrays 201‥208 and `CTL` 202‥219), `StageMemos.zero` (zeroed memory: empty memos, epoch `0`; local
+  version of `memoRV_zero`, `memoRV_zeroAt`, which needs only the memo's own words zero). The bracket,
+  the pending push, the view restriction and core calls keep it (the core's write set now also
+  excludes arrays 201‥208 and `CTL` 202‥219, decided again). Across the stage itself, the stage's
+  theorems return `PosMR`/`maMR`/… afterwards; the epoch bound is theirs to return too.
 * `LoopT.pendPush`, `LoopT.restrict` / `TwinOK.restrict` (phase B's smaller view; a restricted
   hit is a hit, con-ron's `IFEnv.restrictTo_find?_le`).
 * **A core call keeps `LoopT`**: `CoreLoopClosed p` (no function the core entry points reach
@@ -99,7 +109,7 @@ reads memory and every `EREC` writer keeps `TwinOK` by `TwinOK.frame`-style lemm
    `LoopR` at the start (the loop's existing obligation), `TwinFold` (lane `decls4`: `FoldOK` at
    the start, `NodupNames Env.empty`, `PinsDenote`, `PersPinSets`, `PersDecl`, `denoteDecls`, from
    `stages_frame`), the flag (`intern_reserved_pins`' `PinsFull`), `scratchOn = false` (the startup
-   interns run with the scratch tier off), and `TwinMem`: the three sizes (constant: every
+   interns run with the scratch tier off), `StageMemos` (`StageMemos.zero` on the loaded memory), and `TwinMem`: the three sizes (constant: every
    frame keeps array sizes, so the loaded memory's), `CoreMemos` of the loaded memory (zero counts:
    needs a lemma "a memo with count `0` is `MemoRG` of the empty map"), `dnN` (by the choice of `dn`
    as the startup store's `denoteN`), and `proj` on the startup `EREC` (the pin records of

@@ -81,15 +81,15 @@ theorem StageMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : Stag
   rw [hf.2.1 x hx']; exact he x hx
 
 /-- A memo whose stamps are all `0` at epoch word `0` is the empty memo. -/
-theorem memoRV_zero {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
+theorem memoRV_zeroAt {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
     (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν → Prop) (m : Mem)
     (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (he : rdW (m.arr64 CTL) S.cs = 0)
     (hz : ∀ j, rdW (m.arr64 S.arr) j = 0) : MemoRV S K VR m (∅ : Std.HashMap κ ν) := by
   have hep : epG S m = 1 := by simp [epG, he]
   have hst : ∀ j, mstG S m j = 0 := fun j => hz _
-  refine ⟨hctl, by rw [hep]; decide, fun j _ => by rw [hst, hep]; decide,
-    fun j _ h => by rw [hst, hep] at h; cases h, fun j j' _ _ h => by rw [hst, hep] at h; cases h,
-    fun x v h => by simp at h⟩
+  refine ⟨hctl, (by rw [hep]; decide), (fun j _ => by rw [hst, hep]; decide),
+    (fun j _ h => by rw [hst, hep] at h; cases h), (fun j j' _ _ h => by rw [hst, hep] at h; cases h),
+    (fun x v h => by simp at h)⟩
 
 /-- **The zeroed memory has well-formed stage memos** (empty, epoch `0`). -/
 theorem StageMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
@@ -99,7 +99,7 @@ theorem StageMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
       ∀ {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ] (K : MemoKey κ)
         (VR : Mem → Word → ν → Prop), MemoRV S K VR m (∅ : Std.HashMap κ ν) :=
     fun S h1 h2 h3 h4 _ _ _ _ _ _ K VR =>
-      memoRV_zero S K VR m (by omega) (hC _ h3 (by omega)) (hA _ h1 h2)
+      memoRV_zeroAt S K VR m (by omega) (hC _ h3 (by omega)) (hA _ h1 h2)
   refine ⟨⟨⟨_, z noSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
       ⟨_, z dpSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
       ⟨_, z raSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
@@ -470,9 +470,9 @@ memory's half of `TwinOK` and the pin table's flag. -/
 theorem LoopT.of_fold {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
     {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (hR : LoopR pins dn m a vis fe pend ds) (hT : TwinFold pins ds fe pend a) (hm : TwinMem dn m a)
-    (hflag : pinW m 0 ≠ 0) : LoopT pins dn m a vis fe pend ds :=
+    (hflag : pinW m 0 ≠ 0) (hmemo : StageMemos m) : LoopT pins dn m a vis fe pend ds :=
   let ⟨_, hok, _⟩ := hT.fold
-  ⟨hR, TwinOK.of_fold hok hm, hflag⟩
+  ⟨hR, TwinOK.of_fold hok hm, hflag, hmemo⟩
 
 /-! ## `LoopT` across the bracket's L functions -/
 
@@ -498,7 +498,9 @@ theorem flush_loopT {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
   obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
   subst hs
   have hf : MemFrame [] flushCtl s.mem s'.mem := by rw [hm]; exact flushMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag⟩
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag,
+    hR.memo.frame hf (by simp) (fun x h => .inl (by
+      simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide))⟩
   rw [flushCaches_st]
   exact (hR.twin.frameLo hf (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)).flush
 
@@ -518,7 +520,8 @@ theorem enter_loopT {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
     (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
   subst hs
   have hf : MemFrame [] (resetCtl ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag⟩
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag,
+    hR.memo.frame hf (by simp) (fun x h => .inl (Nat.lt_trans (resetCtl_lt x h) (by decide)))⟩
   rw [enterScratch_st]
   exact (hR.twin.frameLo hf (fun x h => by
     simp [resetCtl, scratchCnts, memoCtl, SCB] at h
@@ -540,7 +543,8 @@ theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     h.twin.frame hf (by decide) ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
-    by rw [pinW_frame hf (by decide)]; exact h.flag⟩
+    by rw [pinW_frame hf (by decide)]; exact h.flag,
+    h.memo.frame hf (by simp [PEND]) (by simp)⟩
 
 /-- **`TwinOK` at a smaller view** (phase B checks a group at the view it was installed at): a hit of
 the restricted environment is a hit of the whole one. -/
@@ -557,7 +561,7 @@ theorem LoopT.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (h : LoopT pins dn m a vis fe pend ds) (v : Word) (hv : v.toNat ≤ vis.toNat) :
     LoopT pins dn m a v (fe.restrictTo v.toNat) pend ds :=
-  ⟨h.loop.restrict v, h.twin.restrict (by rw [h.loop.vis]; exact hv), h.flag⟩
+  ⟨h.loop.restrict v, h.twin.restrict (by rw [h.loop.vis]; exact hv), h.flag, h.memo⟩
 
 /-! ## A core call keeps `LoopT`
 
@@ -569,10 +573,12 @@ the pin variants' header `CTL[150]`, `CTL[151]`). Decided for the checker's prog
 `TwinOK` (the projection clause included) comes back with it. -/
 
 /-- The arrays a core function may write, at the loop's granularity. -/
-def coreLoopA : List ArrId := stepA.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS
+def coreLoopA : List ArrId :=
+  stepA.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧ (b < 201 ∨ 208 < b)
 
 /-- The `CTL` words a core function may write, at the loop's granularity. -/
-def coreLoopC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 200
+def coreLoopC : List Word :=
+  stepC.filter fun x => x ≠ 129 ∧ x ≠ 200 ∧ (x.toNat < 202 ∨ 219 < x.toNat)
 
 /-- **The program hypothesis**: the core leaves the loop's state alone. -/
 def CoreLoopClosed (p : Prog) : Prop := closedA p coreLoopA coreLoopC stageCoreFns = true
@@ -602,7 +608,9 @@ theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
   have hst : MemFrame stepA stepC m m' :=
     hfr.mono (fun b hb => (List.mem_filter.mp hb).1) (fun x hx => (List.mem_filter.mp hx).1)
   refine ⟨⟨hL.loop.of_step hS hst (by rw [erecP_congr hE h129]; exact ArrExt.refl _), hT,
-    by rw [pinW_frame hfr coreLoopA_pins]; exact hL.flag⟩, ?_⟩
+    by rw [pinW_frame hfr coreLoopA_pins]; exact hL.flag,
+    hL.memo.frame hfr (fun b hb => (List.mem_filter.mp hb).2 |> fun h => by simp at h; exact h.2.2.2)
+      (fun x hx => (List.mem_filter.mp hx).2 |> fun h => by simp at h; exact h.2.2)⟩, ?_⟩
   exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
 
 /-- **A core entry point's refinement as a `Sim` under `LoopT`** (the loop-level twin of
