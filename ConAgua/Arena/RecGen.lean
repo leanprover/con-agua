@@ -342,27 +342,38 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
   return e
 }
 
+/-- `class_const_ok_header(vis, q)`: `classConstOk`'s guards, the syntactic checks of a constant
+(the body of lane `decls2`'s `install_header`, whose model `ihW` is this function's). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:502-525 ConRon.Arena.classConstOk
+@[l_impl ConRon.Arena.classConstOk]
+def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, b, h, a) {
+  n := EREC.u64[q];
+  t := EREC.u64[q + 3];
+  (f, r) := call env_find(n, vis);
+  if f != 0 { abort };
+  c := call reserved_contains(n);
+  if c != 0 { abort };
+  s := call is_proj_fn_shape(n);
+  if s != 0 { abort };
+  (o, l) := call cv_lps(q);
+  d := call sl_nodup(o, l);
+  if d == 0 { abort };
+  b := call loose_bvars_bounded_fast(4000000000, 0, t);
+  if b == 0 { abort };
+  h := call has_fvar_fast(4000000000, t);
+  if h != 0 { abort };
+  a := call all_level_params_defined(o, l, t);
+  if a == 0 { abort };
+  c := call consts_resolve_ffast(vis, t);
+  if c == 0 { abort };
+  return 0
+}
+
 /-- `class_const_ok(vis, cv)`: a generated constant, checked (`checkConstantValF`). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:502-525 ConRon.Arena.classConstOk
 @[l_impl ConRon.Arena.classConstOk]
-def classConstOkL : FunDecl := lfn (vis, cv) locals (f, qq, r, s, u, lo, ll) {
-  (f, qq) := call env_find(EREC.u64[cv], vis);
-  if f != 0 { abort };
-  r := call reserved_contains(EREC.u64[cv]);
-  if r != 0 { abort };
-  r := call is_proj_fn_shape(EREC.u64[cv]);
-  if r != 0 { abort };
-  (lo, ll) := call cv_lps(cv);
-  r := call sl_nodup(lo, ll);
-  if r == 0 { abort };
-  r := call loose_bvars_bounded_fast(⟪CWF⟫, 0, EREC.u64[cv + 3]);
-  if r == 0 { abort };
-  r := call has_fvar_fast(⟪CWF⟫, EREC.u64[cv + 3]);
-  if r != 0 { abort };
-  r := call all_level_params_defined(lo, ll, EREC.u64[cv + 3]);
-  if r == 0 { abort };
-  r := call consts_resolve_ffast(vis, EREC.u64[cv + 3]);
-  if r == 0 { abort };
+def classConstOkL : FunDecl := lfn (vis, cv) locals (u, s) {
+  u := call class_const_ok_header(vis, cv);
   s := call infer_type_core(vis, 0, EREC.u64[cv + 3]);
   u := call ensure_sort_core(vis, 0, s);
   return 0
@@ -838,7 +849,7 @@ def recGenFns : Prog :=
    ("class_ctor_of", classCtorOfL), ("class_ctors_of", classCtorsOfL),
    ("classes_ctors", classesCtorsL), ("class_majors", classMajorsL),
    ("classes_nfs", classesNfsL), ("class_former_ty", classFormerTyL),
-   ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
+   ("class_const_ok_header", classConstOkHeader), ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
    ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
    ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
    ("class_recs_rules_ok", classRecsRulesOkL), ("class_stream_recs", classStreamRecsL),
