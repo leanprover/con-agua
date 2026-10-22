@@ -257,3 +257,82 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
     simpa using this
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_pos_hole_kind`, `nest_pos_fvar` -/
+
+/-- The model of `nest_pos_hole_kind(ctx, kb, i)` (memory unchanged). -/
+def hkW (m : Mem) (ctx kb i : Word) : Option Word :=
+  if i < nhiW m ctx 0 then
+    (if 1152921504606846976 ≤ i - rdW (m.arr64 IW) (ctx + 4) then none
+     else if kb = 0 then some (1 + 8 * (i - rdW (m.arr64 IW) (ctx + 4)))
+     else some (2 + 8 * (i - rdW (m.arr64 IW) (ctx + 4))))
+  else some 3
+
+def hkWf : Nat → Mem → Word → Word → Word → Option Word
+  | 0, _, _, _, _ => none
+  | _ + 1, m, ctx, kb, i => hkW m ctx kb i
+
+theorem nestPosHoleKind_spec (p : Prog) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
+    (hp : p.lookup "nest_pos_hole_kind" = some nestPosHoleKindL) (n : Nat) (s₀ : St) (ctx kb i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_hole_kind" [ctx, kb, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ hkWf n s₀.mem ctx kb i = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestPosHoleKindL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestCtxHiAt_specE p hh n] <;>
+      finish (gen := 20) [hkWf, hkW, rdW_eq, LocEq]
+
+/-- The twin's field kind of a hole `i`. -/
+def holeKind (c : NestCtx) (kb i : Nat) : NestFieldKind :=
+  if i < c.hiAt 0 then (if kb == 0 then .recursive (i - c.nP) else .reflexive (i - c.nP)) else .inProgress
+
+theorem hkW_ok {m : Mem} {ctx kb i r : Word} {c : NestCtx} (h : hkW m ctx kb i = some r)
+    (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (htop : iwTop m < 2 ^ 64)
+    (hhi : c.hiAt 0 < 2 ^ 64) (hnP : c.nP ≤ i.toNat) :
+    decNFK r = some (holeKind c kb.toNat i.toNat) := by
+  have hhw := nhiW_toNat (nf := 0) hc hin htop (by simpa using hhi)
+  obtain ⟨-, -, -, -, hP, -⟩ := ctx_fields hc hin htop
+  simp only [UInt64.toNat_zero] at hhw
+  unfold hkW at h
+  have ht : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), hP]
+  by_cases hlt : i < nhiW m ctx 0
+  · rw [if_pos hlt] at h
+    have hlt' : i.toNat < c.hiAt 0 := by have := UInt64.lt_iff_toNat_lt.mp hlt; omega
+    by_cases hbig : 1152921504606846976 ≤ i - rdW (m.arr64 IW) (ctx + 4)
+    · rw [if_pos hbig] at h; cases h
+    rw [if_neg hbig] at h
+    have hsmall : i.toNat - c.nP < 1152921504606846976 := by
+      have : ¬ (1152921504606846976 : Word).toNat ≤ (i - rdW (m.arr64 IW) (ctx + 4)).toNat :=
+        fun e => hbig (UInt64.le_iff_toNat_le.mpr e)
+      simp at this; omega
+    simp only [holeKind, hlt', if_true]
+    by_cases hkb : kb = 0
+    · rw [if_pos hkb] at h; cases h; subst hkb
+      have e : (1 + 8 * (i - rdW (m.arr64 IW) (ctx + 4))).toNat = 1 + 8 * (i.toNat - c.nP) := by
+        rw [UInt64.toNat_add, UInt64.toNat_mul, ht]; simp; omega
+      simp only [decNFK, e]
+      have h1 : (1 + 8 * (i.toNat - c.nP)) % 8 = 1 := by omega
+      have h2 : (1 + 8 * (i.toNat - c.nP)) / 8 = i.toNat - c.nP := by omega
+      simp [h1, h2]
+    · rw [if_neg hkb] at h; cases h
+      have hkb' : (kb.toNat == 0) = false := by
+        simp; intro e; exact hkb (UInt64.toNat_inj.mp (by simpa using e))
+      have e : (2 + 8 * (i - rdW (m.arr64 IW) (ctx + 4))).toNat = 2 + 8 * (i.toNat - c.nP) := by
+        rw [UInt64.toNat_add, UInt64.toNat_mul, ht]; simp; omega
+      simp only [decNFK, e, hkb']
+      have h1 : (2 + 8 * (i.toNat - c.nP)) % 8 = 2 := by omega
+      have h2 : (2 + 8 * (i.toNat - c.nP)) / 8 = i.toNat - c.nP := by omega
+      simp [h1, h2]
+  · rw [if_neg hlt] at h; cases h
+    have : ¬ i.toNat < c.hiAt 0 := fun e => hlt (UInt64.lt_iff_toNat_lt.mpr (by omega))
+    simp [holeKind, this, decNFK]
+
+end L.Ind
