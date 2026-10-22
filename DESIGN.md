@@ -5704,3 +5704,18 @@ import `RecordsSpec`.
 * `infer_const` passes the record's own name `EREC[p + 1]` to `const_ty_at` (the twin keys
   `constTyC` by `cv.name`; `EnvR` does not promise `cv.name = n`). Lane `whnf`: the same gap at
   `WhnfIota.lean`'s `const_ty_at(cj, …)` call.
+
+### Landing 3: the defeq leaves (`DefEqLeaves.lean`, `DefEqLeaves2.lean`, helper `defeq-leaves`)
+* `@[refines]`, no `sorry`: `is_bool_true`, `head_is_proj`, `io_neutral`, `is_eager_reduce`,
+  `is_nat_zero`, `head_hint` (`decHintR`), `unfoldable_head`, `same_const_heads`, `nat_pred`
+  (`decOptR`; the `nat_pred_lit` arm interns: `CoreK` = `CoreS` + stack kept, `internLit_core`);
+  `hint_lt` = `hintLtW`, equal to `ReducibilityHint.lt` of the decoded hints; `refines_part`:
+  `er_slice_eq` (`decide (l1 = l2)` on decoded `EREC` slices), `lit_eq` (`l₁ == l₂`).
+* ~1940 proof lines for ~180 L lines (10.5 per L line). CPU: `DefEqLeaves` 150 s (`same_const_heads`
+  alone ~2 min: several node reads in one function slow `grind`; four specs raise
+  `maxHeartbeats`, commented), `DefEqLeaves2` 17 s. Own grind attribute `defeq_grind`
+  (`DefEqGrindAttr.lean`).
+* Copies of `WhnfCoreApp.lean`'s `cpl`/`keeps_cpl_internNodeE`/`CoreS.arena_frame` live in
+  `DefEqLeaves2` (`cplL`, …) from when that file did not build; replace by an import.
+* Lesson: a word model reads memory after a callee returns, where the L code reads it (`callW_spec`
+  says nothing about memory kept), else `finish` fails.
