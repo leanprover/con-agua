@@ -1,5 +1,7 @@
 import ConAgua.Arena.KnotSlot
 import ConAgua.Arena.IndView
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.WhnfCoreApp
 
 /-!
 # The leaf inference functions of `Infer.lean` (lane `defeq`)
@@ -25,6 +27,12 @@ namespace L.Arena
 structure InferLeafProg (p : Prog) : Prop where
   ensureSort : p.lookup "ensure_sort" = some ensureSortL
   defeqArg : p.lookup "defeq_arg" = some defeqArgL
+  lamResult : p.lookup "infer_lam_result" = some inferLamResultL
+  derb : p.lookup "der_b" = some derB
+  faf : p.lookup "forall_find" = some forallFind
+  fap : p.lookup "forall_push" = some forallPush
+  fai : p.lookup "intern_forall" = some internForallL
+  mkfa : p.lookup "mk_forall" = some mkForall
 
 /-! ## `ensure_sort` -/
 
@@ -242,5 +250,150 @@ theorem defeqArg_refines (n : Nat) (he : IsEagerReduceH p) (hd : DefeqSlot p n)
       (fun r r' h => by simp only [decBool, h]) hW) hT
 
 end dar
+
+/-! ## `mk_forall` under `CoreS` -/
+
+theorem EStore.lss_internBind' (st : EStore) (tag : UInt32) (ty b : EIdx) :
+    (st.internBind tag ty b).1.lss = st.lss := by
+  unfold EStore.internBind
+  dsimp only
+  repeat' split
+  all_goals rfl
+
+theorem keeps_cpl_internForall (ty b : EIdx) : Keeps cpl (internE (.forallE ty b)) := by
+  simp only [internE]; unfold Keeps; intro a r a' h
+  simp only [internForallEE, StateT.run_bind, StateT.run_get, pure_bind] at h
+  repeat' split at h
+  all_goals simp only [StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind,
+    ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
+  all_goals first
+    | (cases h; rfl)
+    | (cases h; simp only [cpl, EStore.internForallE, EStore.lss_internBind'])
+    | (simp [throwThe, Functor.map, Except.map] at h)
+
+theorem fainternW_hw (m : Mem) (a : AState) (hR : ForallR m a) (t b : Word) (w : Word) (m' : Mem)
+    (hI : fainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
+  rw [fainternW_eq] at hI
+  exact internM_hw forallSch FaRecRel fahash forallSch_wf m _ _ _ hR (faMt m t b) _ _ _ _
+    (probe_homeG forallSch m 0 _ _ (faprobeW_arm m t b 0) _)
+    (probe_homeG forallSch m 1 _ _ (faprobeW_arm m t b 1) _) _ (fapushOK_room m) _ _ w m' hI
+
+theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : Mem)
+    (hI : mkForallW m t b = some (r, m')) : r.toNat < 2 ^ 32 := by
+  unfold mkForallW at hI
+  split at hI
+  · cases hI
+  cases hI₁ : fainternW m t b with
+  | none => simp [hI₁, mkK] at hI
+  | some p =>
+  obtain ⟨r₁, m₁⟩ := p
+  simp only [hI₁, mkK_some] at hI
+  split at hI
+  · cases hI
+  simp only [Option.some.injEq, Prod.mk.injEq] at hI
+  obtain ⟨rfl, rfl⟩ := hI
+  exact fainternW_hw m a hA.1.forallE t b _ m₁ hI₁
+
+theorem mkForallW_frame {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) :
+    MemFrame [FADER, FAREC, FASLOT] [30, 31] m m' := by
+  unfold mkForallW at hI; split at hI; · cases hI
+  exact L.Ind.mkK_frame (by decide) (fun r₁ m₁ hx => by
+    rw [fainternW_eq] at hx; exact internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx) hI
+
+/-- **`mk_forall` refines `internE (.forallE …)` under `CoreS`.** -/
+theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (t b : Word)
+    (rs : List Word) (hI : mkForallW m t b = some (rs.headD 0, m')) :
+    CoreRef (internE (.forallE (decE t) (decE b))) a decH dn m vis fe M eb rs m' := by
+  obtain ⟨hok, hD, hres⟩ := mkForall_ok m a hS.arena t b _ m' hI
+  have hf := mkForallW_frame hI
+  have hrun := AM.run_of_ok _ _ hok
+  have hS' : CoreS dn m' _ vis fe M eb := hS.arena_frame hD (Keeps.run (keeps_cpl_internForall _ _) hrun) hf
+    (fun b hb => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+      rcases hb with rfl | rfl | rfl <;> decide)
+    (by simp [FADER, FAREC, FASLOT, PINS])
+    (fun b hb => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+      rcases hb with rfl | rfl | rfl <;> decide)
+    (fun x hx => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+      rcases hx with rfl | rfl <;> decide)
+    (fun x hx => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+      rcases hx with rfl | rfl <;> decide)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FADER, FAREC, FASLOT, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  exact ⟨hok, ⟨M, hS', KeptAll.refl _ _,
+      ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩⟩,
+    by rw [hres]; rfl, mkForallW_hw m a hS.arena t b _ m' hI⟩
+
+/-! ## `infer_lam_result` -/
+
+/-- The model of `infer_lam_result` past `abstract1`'s run. -/
+def lamResK (p : Prog) (n : Nat) (ty : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m₁) => call1W p n "mk_forall" [ty, r.headD 0] m₁
+
+theorem lamResK_some (p : Prog) (n : Nat) (ty : Word) (r : List Word) (m₁ : Mem) :
+    lamResK p n ty (some (r, m₁)) = call1W p n "mk_forall" [ty, r.headD 0] m₁ := rfl
+
+section lr
+variable (p : Prog) (hp : InferLeafProg p)
+
+include hp in
+theorem inferLamResult_spec (n : Nat) (s₀ : St) (ty bt d : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lam_result" [ty, bt, d]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      lamResK p n ty (callW p n "abstract1" [bt, d, 0] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.lamResult]
+  simp only [callFn, inferLamResultL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "abstract1",
+      callW_spec p n "mk_forall"] <;>
+    finish [lamResK_some, call1W_some]
+
+theorem inferLamResult_run (ty bt ab : EIdx) (d : Nat) (a a₁ : AState)
+    (h : (abstract1Fast coreWalkFuel bt d 0).run a = .ok (ab, a₁)) :
+    (inferLamResult ty bt d).run a = (internE (.forallE ty ab)).run a₁ := by
+  simp only [inferLamResult, StateT.run_bind, h, except_ok_bind, internE]
+
+include hp in
+/-- **`infer_lam_result` refines `inferLamResult`**, from `abstract1`'s spec (`Abstract1OK`). -/
+@[refines ConRon.Arena.inferLamResult]
+theorem inferLamResult_refines (n : Nat) (ha : Abstract1OK p) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb ty bt d : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hbt : HW bt) :
+    CoreSpec p (n + 1) "infer_lam_result" [ty, bt, d]
+      (inferLamResult (decE ty) (decE bt) d.toNat) decH s₀ a₀ dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (inferLamResult_spec p hp n s₀ ty bt d)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "abstract1" [bt, d, 0] s.mem with
+  | none => rw [hc] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc, lamResK_some] at hW
+  have h₁ := CoreSpec.of_callW (ha n s a₀ dn vis fe M eb bt d 0 hS hbt) hc
+  have hrun₁ := AM.run_of_ok _ _ h₁.1
+  rw [h₁.2.2.1] at hrun₁
+  have hT := inferLamResult_run (decE ty) (decE bt) _ d.toNat a₀ _ hrun₁
+  cases hc2 : callW p n "mk_forall" [ty, r₁.headD 0] m₁ with
+  | none => simp only [call1W, hc2] at hW; cases hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [call1W_some _ _ _ _ _ _ _ hc2] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨s₂, hs₂, -, hmk⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (mkForall_spec p hp.derb hp.faf hp.fap hp.fai hp.mkfa n _ ty (r₁.headD 0)) hc2
+  rw [hs₂, hr] at hmk
+  exact coreRef_then h₁ (fun M' hS' => mkForall_core hS' ty (r₁.headD 0) r hmk) hT
+
+end lr
 
 end L.Arena
