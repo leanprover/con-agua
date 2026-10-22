@@ -293,4 +293,19 @@ theorem rec6Mem_post (m : Mem) (a b c d e f : Word) (hc : 200 < (m.arr64 CTL).si
   exact recMem_post m [a, b, c, d, e, f] 6 rfl hc hroom hsz
 
 
+
+/-! ## `sl_snoc` -/
+
+theorem hslice?_add {k : IdxKind} (a : Array Word) : ∀ (n m off : Nat),
+    (hslice? a off (n + m) : Option (List (Idx k))) = (do
+      let xs ← hslice? a off n
+      let ys ← hslice? a (off + n) m
+      pure (xs ++ ys))
+  | 0, m, off => by simp [hslice?]
+  | n + 1, m, off => by
+    rw [Nat.add_right_comm, hslice?_succ, hslice?_add a n m (off + 1), hslice?_succ]
+    cases hd? a off <;> simp [Nat.add_assoc, Nat.add_comm 1 n] <;>
+      cases hslice? a (off + 1) n <;> simp <;>
+      cases hslice? a (off + (n + 1)) m <;> simp
+
 end L.Ind
