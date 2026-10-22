@@ -1,4 +1,4 @@
-import ConAgua.Arena.WhnfCoreStep
+import ConAgua.Arena.WhnfCoreApp
 
 /-!
 # Refinements of `WhnfCore.lean`'s projection functions
@@ -259,6 +259,421 @@ theorem stepProj_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
   simp_all [stepProjW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
+
+/-! ## The words of a projection table record -/
+
+theorem mapM_option_length {α β : Type} (f : α → Option β) :
+    ∀ (l : List α) (r : List β), l.mapM f = some r → r.length = l.length := by
+  intro l
+  induction l with
+  | nil => intro r h; simp [List.mapM_nil] at h; subst h; rfl
+  | cons x xs ih =>
+    intro r h
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨y, -, ys, hys, rfl⟩ := h
+    simp [ih ys hys]
+
+theorem hslice?_length {k : IdxKind} {a : Array Word} {off cnt : Nat} {l : List (Idx k)}
+    (h : hslice? a off cnt = some l) : l.length = cnt := by
+  have := mapM_option_length _ _ _ h
+  simpa using this
+
+theorem add_toNat_of_lt (q : Word) (c : Nat) (hc : c < 2 ^ 63) (h : q.toNat + c < 2 ^ 63) :
+    (q + c.toUInt64).toNat = q.toNat + c := by
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat']
+  rw [Nat.mod_eq_of_lt (by omega : c < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
+
+/-- **The words of a decoded projection table**: the level-parameter count at `q + 4`, the
+parameter count at `q + 5`, the constructor handle at `q + 6`, the field count at `q + 7`. -/
+theorem decTbl_words {a : Array Word} {q : Word} {tbl : IProjTable}
+    (h : decTbl a q.toNat = some tbl) (hsz : a.size < 2 ^ 63) :
+    tbl.levelParams.length = (rdW a (q + 4)).toNat ∧ tbl.numParams = (rdW a (q + 5)).toNat ∧
+    HW (rdW a (q + 6)) ∧ tbl.ctor = decI (rdW a (q + 6)) ∧
+    tbl.numFields = (rdW a (q + 7)).toNat := by
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨tn, -, sn, -, lps, hlps, np, hnp, ct, hct, nf, hnf, ss, -, bd, -, gd, -, off, -, hc⟩ := h
+  subst hc
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hlps
+  obtain ⟨o, ho, c, hcn, hsl⟩ := hlps
+  simp only [nat?, Option.map_eq_some_iff] at hnp hnf ho hcn
+  obtain ⟨wnp, hwnp, rfl⟩ := hnp
+  obtain ⟨wnf, hwnf, rfl⟩ := hnf
+  obtain ⟨wc, hwc, rfl⟩ := hcn
+  obtain ⟨w6, hw6, hw6l, hw6d⟩ := hd?_eq hct
+  have b4 : q.toNat + 3 + 1 < a.size := by
+    have := (Array.getElem?_eq_some_iff.mp hwc).1; omega
+  have b5 : q.toNat + 5 < a.size := (Array.getElem?_eq_some_iff.mp hwnp).1
+  have b6 : q.toNat + 6 < a.size := (Array.getElem?_eq_some_iff.mp hw6).1
+  have b7 : q.toNat + 7 < a.size := (Array.getElem?_eq_some_iff.mp hwnf).1
+  have e4 := add_toNat_of_lt q 4 (by omega) (by omega)
+  have e5 := add_toNat_of_lt q 5 (by omega) (by omega)
+  have e6 := add_toNat_of_lt q 6 (by omega) (by omega)
+  have e7 := add_toNat_of_lt q 7 (by omega) (by omega)
+  have r4 : rdW a (q + 4) = wc := by
+    simp only [rdW, show (4 : Word) = (4 : Nat).toUInt64 from rfl, e4,
+      show q.toNat + 4 = q.toNat + 3 + 1 from rfl, hwc]; rfl
+  have r5 : rdW a (q + 5) = wnp := by
+    simp only [rdW, show (5 : Word) = (5 : Nat).toUInt64 from rfl, e5, hwnp]; rfl
+  have r6 : rdW a (q + 6) = w6 := by
+    simp only [rdW, show (6 : Word) = (6 : Nat).toUInt64 from rfl, e6, hw6]; rfl
+  have r7 : rdW a (q + 7) = wnf := by
+    simp only [rdW, show (7 : Word) = (7 : Nat).toUInt64 from rfl, e7, hwnf]; rfl
+  rw [r4, r5, r6, r7]
+  exact ⟨hslice?_length hsl, rfl, hw6l, hw6d, rfl⟩
+
+/-! ## `ls_node` against `viewLsLen` -/
+
+/-- **A level-list handle that `ls_node` reads without aborting has a length in the arena**, and it
+is the record's length word. -/
+theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    {o l : Word} (hl : lsNodeW m h = [o, l]) : a.store.lss.viewLen (decI h) = some l.toNat := by
+  have hfl := hR.ls.2.1
+  have ht1 := tierW_le h
+  have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
+    rw [isPersistent_decI h hh]; rfl
+  unfold lsNodeW at hl
+  by_cases g0 : h >>> 28 ≠ 0
+  · simp [g0] at hl
+  rw [if_neg g0] at hl
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [hsc] at hl
+  rw [if_neg hsc] at hl
+  by_cases hbd : rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h
+  · simp [hbd] at hl
+  rw [if_neg hbd] at hl
+  have g0' : h >>> 28 = 0 := by simpa using g0
+  simp only [List.cons.injEq, and_true] at hl
+  obtain ⟨rfl, rfl⟩ := hl
+  have htag := decLs_tag0 h hh
+  simp only [g0', beq_self_eq_true] at htag
+  unfold LsStore.viewLen
+  rw [hpers]
+  rcases word_le_one (tierW h) ht1 with h0 | h1
+  · -- persistent
+    have hT := hR.ls.2.2.1
+    have hlt : (idxW h).toNat < a.store.lss.pers.lists.nodes.size := by
+      rw [← hT.1]
+      have : ¬ rdW (m.arr64 CTL) (40 + 0) ≤ idxW h := by rw [h0] at hbd; exact hbd
+      exact UInt64.not_le.mp this
+    obtain ⟨x, hx⟩ : ∃ x, a.store.lss.pers.lists.nodes[(idxW h).toNat]? = some x :=
+      ⟨_, Array.getElem?_eq_getElem hlt⟩
+    obtain ⟨-, hr⟩ := tier_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) ht1 (idxW h) x
+      (by rw [h0]; simpa using hx)
+    simp only [LsRecRel] at hr
+    have hlen := congrArg List.length hr.2.1
+    rw [sliceL_length] at hlen
+    simp only [lsWords, List.length_map] at hlen
+    simp only [h0, beq_self_eq_true, ↓reduceIte, LsStore.persGetLen, LsTables.getLen, htag,
+      Tbl.node?, decLs_idx h, hx, Option.map_some]
+    simp only [lsL, h0] at hlen
+    rw [hlen]
+  · have hsc' : rdW (m.arr64 CTL) 1 ≠ 0 := fun e => hsc ⟨by rw [h1]; decide, e⟩
+    have hon : a.store.lss.scratchOn = true := by
+      rw [← hfl]; simpa using hsc'
+    have hT := hR.ls.2.2.2
+    have hlt : (idxW h).toNat < a.store.lss.scr.lists.nodes.size := by
+      rw [← hT.1]
+      have : ¬ rdW (m.arr64 CTL) (40 + 1) ≤ idxW h := by rw [h1] at hbd; exact hbd
+      exact UInt64.not_le.mp this
+    obtain ⟨x, hx⟩ : ∃ x, a.store.lss.scr.lists.nodes[(idxW h).toNat]? = some x :=
+      ⟨_, Array.getElem?_eq_getElem hlt⟩
+    obtain ⟨-, hr⟩ := tier_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) ht1 (idxW h) x
+      (by rw [h1]; simpa using hx)
+    simp only [LsRecRel] at hr
+    have hlen := congrArg List.length hr.2.1
+    rw [sliceL_length] at hlen
+    simp only [lsWords, List.length_map] at hlen
+    simp only [h1, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decLs_idx h, hx,
+      Option.map_some]
+    simp only [lsL, h1] at hlen
+    rw [hlen]; simp
+
+/-! ## `intern_bvar` as a run -/
+
+theorem keeps_cpl_internBVar (i : Nat) : Keeps cpl (internE (.bvar i)) := by
+  simp only [internE]; exact keeps_cpl_internNodeE _
+
+/-- An interned `bvar` handle word is below `2^32`. -/
+theorem binternW_hw (m : Mem) (a : AState) (hR : BVarR m a) (u w : Word) (m' : Mem)
+    (hI : binternW m u = some (w, m')) : w.toNat < 2 ^ 32 := by
+  rw [binternW_eq] at hI
+  exact internM_hw bvarSch BRecRel bhash bvarSch_wf m _ _ _ hR (bMt m u) _ _ _ _
+    (probe_homeG bvarSch m 0 _ _ (bprobeW_arm m u 0) _)
+    (probe_homeG bvarSch m 1 _ _ (bprobeW_arm m u 1) _) _ (bpushOK_room m) _ _ w m' hI
+
+theorem binternW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : binternW m u = some (w, m')) :
+    MemFrame [BREC, BSLOT] [22, 23] m m' := by
+  rw [binternW_eq] at hI
+  exact internM_frame bvarSch bvarSch_wf _ _ _ _ _ _ _ _ hI
+
+/-- **`intern_bvar` as a run.** -/
+theorem callW_internBVar (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hD : ArenaD s₀.mem a₀) (u : Word) (r : List Word) (m' : Mem)
+    (h : callW p n "intern_bvar" [u] s₀.mem = some (r, m')) :
+    AM.ok (internE (.bvar u.toNat)) a₀ ∧
+    ArenaD m' (AM.st (internE (.bvar u.toNat)) a₀) ∧
+    AM.res (internE (.bvar u.toNat)) a₀ = decE (r.headD 0) ∧
+    MemFrame [BREC, BSLOT] [22, 23] s₀.mem m' ∧ HW (r.headD 0) := by
+  obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (internBVar_spec p hp.bvf hp.bvp hp.bvi n s₀ u) h
+  obtain ⟨h1, h2, h3⟩ := internBVar_D s₀.mem a₀ hD u _ _ hm
+  exact ⟨h1, h2, h3, binternW_frame _ _ _ _ hm, binternW_hw _ a₀ hD.1.bvar _ _ _ hm⟩
+
+/-- **`CoreS` across a `bvar` interning step.** -/
+theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [BREC, BSLOT] [22, 23] m m') :
+    CoreS dn m' a' vis fe M eb :=
+  hS.arena_frame hD hcpl hf
+    (fun b hb => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+      rcases hb with rfl | rfl <;> decide)
+    (by simp [BREC, BSLOT])
+    (fun b hb => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+      rcases hb with rfl | rfl <;> decide)
+    (fun x hx => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+      rcases hx with rfl | rfl <;> decide)
+    (fun x hx => by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+      rcases hx with rfl | rfl <;> decide)
+
+theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT] [22, 23] m m') :
+    StackKept m m' := by
+  have hspn : m'.arr64 SPN = m.arr64 SPN :=
+    hf.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+
+/-- A slice survives a change that leaves the stack array alone. -/
+theorem SpineR.of_spn {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
+    (hs : m'.arr64 SPN = m.arr64 SPN) : SpineR m' off cnt xs := by
+  obtain ⟨h1, h2, h3, h4⟩ := h
+  refine ⟨h1, by rw [hs]; exact h2, fun i hi => ?_, fun i hi => ?_⟩
+  · simp only [spW, hs] at h3 ⊢; exact h3 i hi
+  · simp only [spW, hs] at h4 ⊢; exact h4 i hi
+
+/-! ## `reduce_proj_arg` -/
+
+/-- The twin's fire: the argument (else `bvar 0`), certified at the verified mode. -/
+def rpArgT (fe : IFEnv) (verified : Bool) (k : NIdx) (args : List EIdx) (j : Nat) :
+    AM (Option EIdx) := do
+  let b0 ← internE (.bvar 0)
+  let arg := args.getD j b0
+  if ← projCertAt fe verified k args then pure (some arg) else pure none
+
+/-- The model of `reduce_proj_arg`. -/
+def rpArgW (p : Prog) (n : Nat) (m : Mem) (mode vis k ao an j : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "intern_bvar" [0] m with
+  | none => none
+  | some (r₁, m₁) =>
+    if mode &&& 1 = 0 then
+      match callW p n "proj_cert" [vis, k, ao, an] m₁ with
+      | none => none
+      | some (r₂, m₂) =>
+        if r₂.headD 0 ≠ 0 then
+          some (1, (if j < an then rdW (m₁.arr64 SPN) (ao + j) else r₁.headD 0), m₂)
+        else some (0, 0, m₂)
+    else some (1, (if j < an then rdW (m₁.arr64 SPN) (ao + j) else r₁.headD 0), m₁)
+
+theorem rpArg_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
+    (mode vis k ao an j : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_proj_arg" [mode, vis, k, ao, an, j]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      rpArgW p n s₀.mem mode vis k ao an j = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rparg]
+  simp only [callFn, reduceProjArgL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "intern_bvar", callW_spec p n "proj_cert"] <;>
+    finish [rpArgW]
+
+theorem mode_cases (mode : Word) (h : mode < 4) : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 := by
+  have h' : mode.toNat < 4 := UInt64.lt_iff_toNat_lt.mp h
+  have : mode.toNat = 0 ∨ mode.toNat = 1 ∨ mode.toNat = 2 ∨ mode.toNat = 3 := by omega
+  rcases this with e | e | e | e
+  · left; exact UInt64.toNat_inj.mp e
+  · right; left; exact UInt64.toNat_inj.mp e
+  · right; right; left; exact UInt64.toNat_inj.mp e
+  · right; right; right; exact UInt64.toNat_inj.mp e
+
+/-- The mode test of `reduce_proj_arg` is `verifiedChecks`. -/
+theorem decMode_verified (mode : Word) (h : mode < 4) :
+    (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by
+  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
+
+theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode k ao an j : Word) (args : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hk : HW k) (har : SpineR s₀.mem ao an args) :
+    CoreSpec p (n + 1) "reduce_proj_arg" [mode, vis, k, ao, an, j]
+      (rpArgT fe (decMode mode).verifiedChecks (decI k) args.toList j.toNat) decOptR s₀ a₀ dn vis fe
+      MM eb ResW := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (rpArg_spec p hp n s₀ mode vis k ao an j)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  unfold rpArgW at hW
+  cases hc1 : callW p n "intern_bvar" [0] s.mem with
+  | none => simp [hc1] at hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  simp only [hc1] at hW
+  obtain ⟨hok1, hD1, hres1, hfr1, hhw1⟩ := callW_internBVar p hp n s a₀ hS.arena 0 r₁ m₁ hc1
+  have h0 : (0 : Word).toNat = 0 := rfl
+  rw [h0] at hok1 hD1 hres1
+  obtain ⟨a₁, ha₁⟩ : ∃ a₁, a₁ = AM.st (internE (.bvar 0)) a₀ := ⟨_, rfl⟩
+  rw [← ha₁] at hD1
+  have hcpl : cpl a₁ = cpl a₀ := by
+    have := AM.run_of_ok _ _ hok1
+    exact Keeps.run (keeps_cpl_internBVar 0) (by rw [ha₁]; exact this)
+  have hS₁ : CoreS dn m₁ a₁ vis fe MM eb := hS.of_bvar hD1 hcpl hfr1
+  have hX : (internE (.bvar 0)).run a₀ = .ok (decE (r₁.headD 0), a₁) := by
+    have := AM.run_of_ok _ _ hok1
+    rw [hres1, ← ha₁] at this; exact this
+  have hspn : m₁.arr64 SPN = s.mem.arr64 SPN := hfr1.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+  have har₁ : SpineR m₁ ao an args := har.of_spn hspn
+  have hSt₁ : StackKept s.mem m₁ := StackKept.of_bvar_frame hfr1
+  have hMD := decMode_verified mode hs.mode4
+  -- the argument word and its decoding
+  have harg : ∀ w : Word, (w = if j < an then rdW (m₁.arr64 SPN) (ao + j) else r₁.headD 0) →
+      HW w ∧ args.toList.getD j.toNat (decE (r₁.headD 0)) = decE w := by
+    intro w hw
+    by_cases hj : j < an
+    · rw [if_pos hj] at hw
+      have hj' : j.toNat < an.toNat := hj
+      have hjs : j.toNat < args.size := by rw [har₁.size]; exact hj'
+      have hat : (ao + j) = ao + j.toNat.toUInt64 := by simp
+      refine ⟨hw ▸ ?_, ?_⟩
+      · rw [hat]; exact har₁.lt j.toNat hj'
+      · rw [List.getD_eq_getElem?_getD, List.getD_getElem?, dif_pos (by simpa using hjs)]
+        simp only [Array.getElem_toList]
+        rw [har₁.get j.toNat hjs, hw, hat]; rfl
+    · rw [if_neg hj] at hw
+      have hj' : ¬ j.toNat < an.toNat := hj
+      refine ⟨hw ▸ hhw1, ?_⟩
+      rw [List.getD_eq_getElem?_getD, List.getD_getElem?, dif_neg (by simp [har₁.size]; omega), hw]
+  by_cases hv : mode &&& 1 = 0
+  · rw [if_pos hv] at hW
+    cases hc2 : callW p n "proj_cert" [vis, k, ao, an] m₁ with
+    | none => simp [hc2] at hW
+    | some q₂ =>
+    obtain ⟨r₂, m₂⟩ := q₂
+    simp only [hc2] at hW
+    cases n with
+    | zero => simp [callW_zero] at hc2
+    | succ N =>
+    have hcert := projCert_refines p hp N { s with mem := m₁ } a₁ dn vis fe MM eb k ao an args
+      hS₁ hk har₁
+    obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, -⟩ := CoreSpec.of_callW hcert hc2
+    have hY := AM.run_of_ok _ _ hok2
+    rw [hres2] at hY
+    have hver : (decMode mode).verifiedChecks = true := by rw [hMD]; simpa using hv
+    by_cases hf : r₂.headD 0 ≠ 0
+    · rw [if_pos hf] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hr0, hr1, hm⟩ := hW
+      obtain ⟨hwh, hwd⟩ := harg _ rfl
+      have hT : (rpArgT fe (decMode mode).verifiedChecks (decI k) args.toList j.toNat).run a₀ =
+          .ok (some (decE (r.tail.headD 0)), AM.st (projCert fe (decI k) args.toList) a₁) := by
+        have hdb : decBool r₂ = true := by simpa [decBool] using hf
+        rw [hdb] at hY
+        simp only [rpArgT, projCertAt, hver, if_true, StateT.run_bind, hX, except_ok_bind, hY]
+        rw [← hr1, hwd]; rfl
+      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+      refine ⟨hok, ?_, ?_, ?_⟩
+      · rw [hst, ← hm]; exact ⟨M₂, hS₂, hK₂, hSt₁.trans hSt₂⟩
+      · rw [hres]; unfold decOptR; rw [← hr0, decOpt_ne _ _ (by decide)]
+      · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hwh⟩
+    · rw [if_neg hf] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hr0, hr1, hm⟩ := hW
+      have hT : (rpArgT fe (decMode mode).verifiedChecks (decI k) args.toList j.toNat).run a₀ =
+          .ok (none, AM.st (projCert fe (decI k) args.toList) a₁) := by
+        have hdb : decBool r₂ = false := by simpa [decBool] using hf
+        rw [hdb] at hY
+        simp only [rpArgT, projCertAt, hver, if_true, StateT.run_bind, hX, except_ok_bind, hY]
+        rfl
+      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+      refine ⟨hok, ?_, ?_, ?_⟩
+      · rw [hst, ← hm]; exact ⟨M₂, hS₂, hK₂, hSt₁.trans hSt₂⟩
+      · rw [hres]; unfold decOptR; rw [← hr0]; rfl
+      · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
+  · rw [if_neg hv] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    obtain ⟨hwh, hwd⟩ := harg _ rfl
+    have hver : (decMode mode).verifiedChecks = false := by rw [hMD]; simpa using hv
+    have hT : (rpArgT fe (decMode mode).verifiedChecks (decI k) args.toList j.toNat).run a₀ =
+        .ok (some (decE (r.tail.headD 0)), a₁) := by
+      simp only [rpArgT, projCertAt, hver, StateT.run_bind, hX, except_ok_bind]
+      rw [← hr1, hwd]; rfl
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst, ← hm]; exact ⟨MM, hS₁, KeptAll.refl _ _, hSt₁⟩
+    · rw [hres]; unfold decOptR; rw [← hr0, decOpt_ne _ _ (by decide)]
+    · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hwh⟩
+
+/-! ## `reduce_proj_fire` -/
+
+/-- The twin at a constant head `k.{us}`: the arguments, the level count, the entry's fire check,
+the shape conditions, the fire. -/
+def rpFireT (mode : ConLeche.CheckMode) (fe : IFEnv) (entry : IProjEntry) (i : Nat) (e' : EIdx)
+    (k : NIdx) (us : LsIdx) : AM (Option EIdx) := do
+  let args ← getAppArgs coreWalkFuel e'
+  match ← viewLsLen us with
+  | none => failDanglingLs
+  | some usl =>
+    let fok ← entry.fireOk us
+    if k = entry.ctor ∧ i < entry.numFields ∧ args.length = entry.numParams + entry.numFields ∧
+        usl = entry.levelParams.length ∧ fok = true then
+      rpArgT fe mode.verifiedChecks k args (entry.numParams + i)
+    else pure none
+
+/-- The model of `reduce_proj_fire`. -/
+def rpFireW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i k us : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "get_app_args" [e1] m with
+  | none => none
+  | some (r₁, m₁) =>
+    match callW p n "ls_node" [us] m₁ with
+    | none => none
+    | some (r₂, m₂) =>
+      match callW p n "fire_ok" [q, i, us] m₂ with
+      | none => none
+      | some (r₃, m₃) =>
+        if k = rdW (m₃.arr64 EREC) (q + 6) ∧ i < rdW (m₃.arr64 EREC) (q + 7) ∧
+            r₁.tail.headD 0 = rdW (m₃.arr64 EREC) (q + 5) + rdW (m₃.arr64 EREC) (q + 7) ∧
+            r₂.tail.headD 0 = rdW (m₃.arr64 EREC) (q + 4) ∧ r₃.headD 0 ≠ 0 then
+          match callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
+              rdW (m₃.arr64 EREC) (q + 5) + i] m₃ with
+          | none => none
+          | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
+        else some (0, 0, m₃)
+
+theorem getElem_rdW' (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
+  simp [rdW, h]
+
+theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
+    (mode vis e1 q i k us : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      rpFireW p n s₀.mem mode vis e1 q i k us = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rpfire]
+  simp only [callFn, reduceProjFireL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "fire_ok",
+      callW_spec p n "reduce_proj_arg"] <;>
+  simp_all [-UInt64.toNat_add, rpFireW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
+    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
+    Sig.retOr] <;>
+  (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
 
 /-! ## `reduce_proj_core` -/
 

@@ -391,6 +391,15 @@ def ErecKept (p : Prog) : Prop :=
     (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
+/-- **Projection tables hold small counts** (added for `reduce_proj_fire`): the L code compares
+`an == np + nf` and indexes `np + i` as `u64` words, the twin as `Nat`s; the two agree only if the
+sum does not wrap. A table's parameter and field counts (the environment loader's invariant, as
+every record pool's capacities) are below `2^32`. -/
+def ProjSmall : Prop :=
+  ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb q : Word) (tbl : IProjTable), CoreS dn m a vis fe M eb →
+    decTbl (m.arr64 EREC) q.toNat = some tbl → tbl.numParams < 2 ^ 32 ∧ tbl.numFields < 2 ^ 32
+
 /-- **The callees of this file not written here.** -/
 structure CoreCallees (p : Prog) : Prop where
   inst1 : Inst1OK p
@@ -399,6 +408,7 @@ structure CoreCallees (p : Prog) : Prop where
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
   erec : ErecKept p
+  projSmall : ProjSmall
 
 /-- The callees' specs, assumed (stubs, phases 4–5; `iota_rec_at` until `WhnfIota.lean`'s
 refinement lands). -/
