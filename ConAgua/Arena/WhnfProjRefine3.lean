@@ -308,4 +308,10 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   · rw [resT, res3]; simp only [decBool, hr0]
   · unfold ResH; rw [← hr0]; exact hr3
 
+/-- **`tower_slots_all` refines `towerSlotsAll`**, on the real `find_proj`. -/
+@[refines ConRon.Arena.towerSlotsAll]
+theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) (hq : ProjProg p) :
+    TowerSlotsAllOK p :=
+  towerSlotsAll_refines' p hp (findProj_refines p hq) (projFound p hq)
+
 end L.Arena
