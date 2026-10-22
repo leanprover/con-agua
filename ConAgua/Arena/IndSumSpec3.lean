@@ -292,4 +292,281 @@ theorem checkSumTeleSlow_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NId
 
 end census
 
+/-! ## `check_sum_tele` -/
+
+theorem getSort_of_get (t : ETables) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.sort)
+    (h : t.get i = some (.sort u)) : t.getSort i = some u := by
+  unfold ETables.get at h
+  rw [ht] at h
+  simp only [show (ETag.sort == ETag.bvar) = false by decide,
+    show (ETag.sort == ETag.fvar) = false by decide, show (ETag.sort == ETag.sort) = true by decide,
+    ite_true, ite_false, Bool.false_eq_true] at h
+  unfold ETables.getSort
+  cases e : t.sorts.node? i.idxNat with
+  | none => rw [e] at h; cases h
+  | some r => rw [e] at h; simp at h; simp [h]
+
+theorem viewSort_of_view (st : EStore) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.sort)
+    (h : st.view i = some (.sort u)) : st.viewSort i = some u := by
+  unfold EStore.view at h; unfold EStore.viewSort EStore.persGetSort
+  split at h
+  · rw [if_pos (by assumption)]; exact getSort_of_get _ _ _ ht h
+  · rw [if_neg (by assumption)]
+    split at h
+    · rw [if_pos (by assumption)]; exact getSort_of_get _ _ _ ht h
+    · cases h
+
+theorem eViewW_head2 (m : Mem) (h : Word) (hg : h >>> 28 = 2) (hne : eViewW m h ≠ []) :
+    (eViewW m h).headD 0 = 2 := by
+  revert hne; unfold eViewW
+  simp only [hg, show ((2 : Word) = 0) = False from by decide, show ((2 : Word) = 1) = False from by decide,
+    if_false, if_true]
+  repeat' split
+  all_goals simp
+
+theorem viewSort_run {a : AState} {h : EIdx} {u : Option LIdx} (hv : a.store.viewSort h = u) :
+    (viewSort h).run a = .ok (u, a) := by
+  simp [viewSort, hv, StateT.run_bind, StateT.run_get]; rfl
+
+/-- After the slow arm. -/
+def ctK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => some ([r.headD 0, r.tail.headD 0], m2)
+/-- After `strip_pis`: the syntactic sort, or the slow arm. -/
+def ctK1 (k : Nat) (vis cv n cvTa0 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) =>
+    if r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2 then
+      if eViewW m1 (r1.tail.tail.tail.headD 0) = [] then none
+      else some ([cvTa0, (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0], m1)
+    else ctK2 (ctsW k m1 vis cv n cvTa0)
+/-- **The model of `check_sum_tele`.** -/
+def ctW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, vis, cv, n, cvTa0 =>
+    ctK1 k vis cv n cvTa0 (stubM "strip_pis" m [n, rdW (m.arr64 EREC) (cvTa0 + 3)])
+
+section arms
+variable (k : Nat) (m m1 m2 : Mem) (vis cv n cvTa0 : Word) (r r1 : List Word)
+theorem ctW_succ : ctW (k + 1) m vis cv n cvTa0 =
+    ctK1 k vis cv n cvTa0 (stubM "strip_pis" m [n, rdW (m.arr64 EREC) (cvTa0 + 3)]) := rfl
+theorem ctK1_fast (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
+    (hne : eViewW m1 (r1.tail.tail.tail.headD 0) ≠ []) : ctK1 k vis cv n cvTa0 (some (r1, m1)) =
+      some ([cvTa0, (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0], m1) := by
+  simp only [ctK1, if_pos h, if_neg hne]
+theorem ctK1_fast0 (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
+    (hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []) : ctK1 k vis cv n cvTa0 (some (r1, m1)) = none := by
+  simp only [ctK1, if_pos h, if_pos hne]
+theorem ctK1_slow (h : ¬ (r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)) :
+    ctK1 k vis cv n cvTa0 (some (r1, m1)) = ctK2 (ctsW k m1 vis cv n cvTa0) := by
+  simp only [ctK1, if_neg h]
+theorem ctK2_some : ctK2 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := rfl
+end arms
+
+grind_pattern [ind_grind] ctW_succ => ctW (k + 1) m vis cv n cvTa0
+grind_pattern [ind_grind] ctK1_fast => ctK1 k vis cv n cvTa0 (some (r1, m1))
+grind_pattern [ind_grind] ctK1_fast0 => ctK1 k vis cv n cvTa0 (some (r1, m1))
+grind_pattern [ind_grind] ctK1_slow => ctK1 k vis cv n cvTa0 (some (r1, m1))
+grind_pattern [ind_grind] ctK2_some => ctK2 (some (r, m2))
+
+section spec
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hv : p.lookup "e_view" = some eView)
+  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+  (hif : p.lookup "intern_fvar" = some internFVar)
+  (hwt : p.lookup "whnf_telescope" = some whnfTelescopeL)
+  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+  (his : p.lookup "intern_sort" = some internSort)
+  (hd : p.lookup "der_b" = some derB)
+  (hpf : p.lookup "forall_find" = some forallFind)
+  (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
+  (hmk : p.lookup "mk_forall" = some mkForall)
+  (hct : p.lookup "close_telescope" = some closeTelescope)
+  (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
+  (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp
+
+theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
+    ⦃fun r s' => LocEq s' s₀ ∧ ctW k s₀.mem vis cv n cvTa0 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkSumTeleL]
+  cases k with
+  | zero => vcgen [exec] <;> grind
+  | succ k =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "strip_pis" k, eView_spec p hv k,
+        ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl k] <;>
+      finish (gen := 20)
+
+end spec
+
+theorem tag_sort_iff (b : Word) (hb : b.toNat < 2 ^ 32) :
+    (decE b).tag = ETag.sort ↔ b >>> 28 = 2 := by
+  rw [decE_tag b hb]
+  have hlt : (b >>> 28).toNat < 16 := by
+    rw [UInt64.toNat_shiftRight]; simp; omega
+  constructor
+  · intro h
+    apply UInt64.toNat_inj.mp
+    have := congrArg UInt32.toNat h
+    simp [ETag.sort] at this
+    simp only [UInt64.toNat_shiftRight] at hlt ⊢
+    simp; omega
+  · intro h; rw [h]; rfl
+
+theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
+    (m m' : Mem) (a : AState) (cv n cvTa0 : Word) (r : List Word) (cvv cvTa : IConstantVal)
+    (h : ctW k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
+    (hcv : decCVp m cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop m)
+    (hsl : ∀ lo ll, nat? (erA m) (cv.toNat + 1) = some lo → nat? (erA m) (cv.toNat + 2) = some ll →
+      lo + ll ≤ erTop m)
+    (hta : decCVp m cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop m)
+    (hslTa : ∀ lo ll, nat? (erA m) (cvTa0.toNat + 1) = some lo →
+      nat? (erA m) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop m) :
+    ∃ res a', (checkSumTele V fe cvv n.toNat cvTa).run a = .ok (res, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decCVp m' (r.headD 0).toNat = some res.1 ∧
+      (r.tail.headD 0).toNat < 2 ^ 32 ∧ decI (r.tail.headD 0) = res.2 := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  cases k with
+  | zero => cases h
+  | succ k =>
+  rw [ctW_succ] at h
+  obtain ⟨w, hw, hw32, hwd⟩ := hd?_rdW (decCV_type hta) (by omega)
+  have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
+    rw [← hw]; congr 1
+  rw [hw'] at h
+  cases h1 : stubM "strip_pis" m [n, w] with
+  | none => rw [h1] at h; cases h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at h
+  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripPis_spec dn vis fe n w hw32 m m1 a r1 h1 hS
+  have hcv1 := decCVp_grow hg1 hcvb hsl hcv
+  have hta1 := decCVp_grow hg1 hta4 hslTa hta
+  have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
+      nat? (erA m1) (q.toNat + j) = nat? (erA m) (q.toNat + j) := fun q hq j hj => by
+    simp only [nat?, erA]; rw [hg1.2.2.2 _ (by omega)]
+  have hrun0 : ∀ {β : Type} (f : Option (List EIdx × EIdx) → AM β),
+      (stripPis n.toNat cvTa.type >>= f).run a = (f x).run a1 := by
+    intro β f; rw [StateT.run_bind, ← hwd, hrun1]; rfl
+  by_cases hf : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2
+  · cases x with
+    | none => simp only [decOLE] at hdec; rw [hf.1] at hdec; cases hdec
+    | some le =>
+    obtain ⟨l, e⟩ := le
+    simp only [decOLE, decW0E] at hdec
+    obtain ⟨-, -, hb32, hbe⟩ := hdec
+    rw [drop3_eq] at hb32 hbe
+    by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
+    · rw [ctK1_fast0 k m1 vis cv n cvTa0 r1 hf hne] at h; cases h
+    rw [ctK1_fast k m1 vis cv n cvTa0 r1 hf hne] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 _ hne
+    have h2 := eViewW_head2 m1 _ hf.2 hne
+    have htag : (decE (r1.tail.tail.tail.headD 0)).tag = ETag.sort :=
+      (tag_sort_iff _ (by simpa using hb32)).mpr hf.2
+    cases vv with
+    | sort u =>
+      obtain ⟨-, hu32, hu⟩ := hVR
+      have hvs := viewSort_of_view _ _ _ htag hview
+      have hx1 : (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0 =
+          (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0 := by
+        cases eViewW m1 (r1.tail.tail.tail.headD 0) with
+        | nil => rfl
+        | cons _ t => cases t <;> rfl
+      refine ⟨(cvTa, u), a1, ?_, hS1, hg1, by simpa using hta1, by simpa [hx1] using hu32,
+        by simpa [hx1] using hu⟩
+      simp only [checkSumTele]
+      rw [hrun0]
+      simp only []
+      rw [← hbe, ← decE_eq, htag]
+      simp only [beq_self_eq_true, ite_true, StateT.run_bind]
+      rw [viewSort_run hvs]
+      rfl
+    | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
+  · rw [ctK1_slow k m1 vis cv n cvTa0 r1 hf] at h
+    cases h2 : ctsW k m1 vis cv n cvTa0 with
+    | none => rw [h2] at h; cases h
+    | some x2 =>
+    obtain ⟨r2, m2⟩ := x2
+    rw [h2, ctK2_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨res, a2, hrun2, hS2, hg2, hdec2, -, hs32, hs⟩ := ctsW_ok dn vis fe k m1 m2 a1 cv n cvTa0 r2 cvv cvTa
+      h2 hS1 hcv1 (by have := hg1.2.1; omega)
+      (fun lo ll e1 e2 => by
+        rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
+        have := hsl lo ll e1 e2; have := hg1.2.1; omega)
+      hta1 (by have := hg1.2.1; omega)
+    refine ⟨res, a2, ?_, hS2, hg1.trans hg2, by simpa using hdec2, by simpa using hs32, by simpa using hs⟩
+    simp only [checkSumTele]
+    rw [hrun0]
+    cases x with
+    | none => exact hrun2
+    | some le =>
+      obtain ⟨l, e⟩ := le
+      simp only [decOLE, decW0E] at hdec
+      obtain ⟨h1', -, hb32, hbe⟩ := hdec
+      rw [drop3_eq] at hb32 hbe
+      have hnt : ¬ (e.tag == ETag.sort) = true := by
+        rw [← hbe, ← decE_eq]
+        intro ht
+        exact hf ⟨h1', (tag_sort_iff _ (by simpa using hb32)).mp (by simpa using ht)⟩
+      simp only [hnt, if_false]
+      simp only [Bool.false_eq_true, ite_false]
+      exact hrun2
+
+section census2
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hv : p.lookup "e_view" = some eView)
+  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+  (hif : p.lookup "intern_fvar" = some internFVar)
+  (hwt : p.lookup "whnf_telescope" = some whnfTelescopeL)
+  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+  (his : p.lookup "intern_sort" = some internSort)
+  (hd : p.lookup "der_b" = some derB)
+  (hpf : p.lookup "forall_find" = some forallFind)
+  (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
+  (hmk : p.lookup "mk_forall" = some mkForall)
+  (hct : p.lookup "close_telescope" = some closeTelescope)
+  (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
+  (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp
+
+/-- **`check_sum_tele` refines `checkSumTele .verified`** (through the stubs `strip_pis`, `whnf`,
+`instantiate1_fast`, `abstract1_fast`, `check_constant_val`). -/
+@[refines ConRon.Arena.checkSumTele]
+theorem checkSumTele_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (cv n cvTa0 : Word) (cvv cvTa : IConstantVal)
+    (hS : StageR dn vis fe s₀.mem a₀)
+    (hcv : decCVp s₀.mem cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop s₀.mem)
+    (hsl' : ∀ lo ll, nat? (erA s₀.mem) (cv.toNat + 1) = some lo →
+      nat? (erA s₀.mem) (cv.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem)
+    (hta : decCVp s₀.mem cvTa0.toNat = some cvTa) (hta4 : cvTa0.toNat + 4 ≤ erTop s₀.mem)
+    (hslTa : ∀ lo ll, nat? (erA s₀.mem) (cvTa0.toNat + 1) = some lo →
+      nat? (erA s₀.mem) (cvTa0.toNat + 2) = some ll → lo + ll ≤ erTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkSumTele V fe cvv n.toNat cvTa) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (checkSumTele V fe cvv n.toNat cvTa) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decCVp s'.mem (r.headD 0).toNat = some (AM.res (checkSumTele V fe cvv n.toNat cvTa) a₀).1 ∧
+      (r.tail.headD 0).toNat < 2 ^ 32 ∧
+      decI (r.tail.headD 0) = (AM.res (checkSumTele V fe cvv n.toNat cvTa) a₀).2; ⊤⦄ := by
+  refine triple_post (ctW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
+    hea hcn hsl hp k s₀ vis cv n cvTa0) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨res, a', hrun, hS', hg, hdec, hs32, hs⟩ :=
+    ctW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl' hta hta4 hslTa
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs⟩
+
+end census2
+
 end L.Ind
