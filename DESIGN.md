@@ -4364,14 +4364,16 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
   two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
-  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone). `whnf_app`
+  `iota_rec_at`; `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone; `ProjSmall`: a
+  projection table's counts are below `2^32` (L compares `an == np + nf` in words, the twin in
+  `Nat`); `ProjFound`: a found table record decodes). `whnf_app`
   and `beta_peel` are proved (`WhnfCoreApp.lean`, sub-lanes: the loop as named blocks, one small
   spec each, fuel induction).
 * `WhnfBase.lean` `supKeep_twin`: `strLitSupported` keeps every stored node's view (twin-side
   store monotonicity, true, unproved).
-* `WhnfCoreProj.lean`: `reduceProjCore_refines'` (a sub-lane on it; the L function is split into
-  `reduce_proj_core`/`_head`/`_fire`/`_arg` so that each spec is a short chain);
-  `proj_lit_to_ctor` and `whnf_core_step_proj` are proved from it.
+* `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
+  `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
+  their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
