@@ -289,6 +289,88 @@ theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
     rw [run_bind_of _ _ _ _ _ hrun]; rfl
   · exact ⟨by simpa using hlt, by simp⟩
 
+/-- **`rci_block(s)` refines `internCIList`** of the block at slot `s`. -/
+theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (s : Word)
+    (hs : s.toNat < 31) (cs : List ConLeche.ConstantInfo)
+    (hcs : ciEntries[s.toNat]'(by rw [ciEntries_len]; exact hs) = encBlock cs)
+    (hfit : cs.all ciFits = true) (hcl : cs.length < 2 ^ 63) {n : Nat} {m m' : Mem} {a : AState}
+    {r : List Word} (hS : StageR dn vis fe m a) (hc : callW p n "rci_block" [s] m = some (r, m')) :
+    ∃ (ics : List IConstantInfo) (a' : AState), (ConRon.Arena.internCIList cs).run a = .ok (ics, a') ∧
+      KeepPost dn vis fe (decRBlk dn) m m' a' r ics := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => blockW p n mq s) (block_specW rom p hL n · s) hc
+  unfold blockW at hw
+  cases h1 : callW p n "rci_slot" [s] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  obtain ⟨rfl, rfl⟩ := slotCall hL h1
+  simp only [List.headD_cons] at hw
+  replace hw := rdU_some hL hw
+  obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom s hs
+  rw [hcs] at hpos
+  have hrl := hr; simp only [RomOK] at hrl
+  have hlenB := drop_len rom _ (u64B cs.length) _ (by rw [hpos, encBlock, List.append_assoc])
+    (by simp [u64B])
+  simp only [u64B, List.length_cons, List.length_nil] at hlenB
+  have hc0 := u64_at hr (ciOff + u64W rom (ciOff + 8 * s)) 0 [] cs.length _
+    (by rw [hpos, encBlock, List.append_assoc]; rfl) (by simp) (by omega)
+  simp only [UInt64.add_zero] at hc0
+  rw [hc0] at hw
+  have hcN : (UInt64.ofNat cs.length).toNat = cs.length := ofNat_toNat_lt (by omega)
+  have hI0 := RInv.refl hS
+  cases h2 : callW p n "rci_fresh" [] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some t2 =>
+  obtain ⟨r2, m2⟩ := t2
+  rw [h2, bW_some] at hw
+  obtain ⟨hI2, hM2, hs2, -, -, -, hi2⟩ := freshCall hL hI0 h2
+  cases h3 : callW p n "iw_alloc" [UInt64.ofNat cs.length] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some t3 =>
+  obtain ⟨r3, m3⟩ := t3
+  rw [h3, bW_some] at hw
+  have hal := iwAllocCall hL h3
+  obtain ⟨hI3, ho3, ht3, -, -, -⟩ := hI2.iwAlloc hal
+  obtain ⟨-, rfl, -⟩ := allocW_facts hal hI2.ok.2.2.1
+  have hf3 := allocMem_frame m2 (UInt64.ofNat cs.length)
+  have hM3 := hM2.frameG hf3 (by decide) (by decide)
+  have hs3 : stkTop (allocMem m2 (UInt64.ofNat cs.length)) = stkTop m2 := hf3.2.1 131 (by decide)
+  cases h4 : callW p n "rci_block_to" [ciOff + u64W rom (ciOff + 8 * s) + 8, r3.headD 0,
+      UInt64.ofNat cs.length] (allocMem m2 (UInt64.ofNat cs.length)) with
+  | none => rw [h4] at hw; simp at hw
+  | some t4 =>
+  obtain ⟨r4, m4⟩ := t4
+  rw [h4, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hq8 : (ciOff + u64W rom (ciOff + 8 * s) + 8).toNat = (ciOff + u64W rom (ciOff + 8 * s)).toNat + 8 := by
+    rw [UInt64.toNat_add, show (8 : Word).toNat = 8 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+  have hd8 : rom.drop (ciOff + u64W rom (ciOff + 8 * s) + 8).toNat = (encCIsM [] cs).1 ++ rest' := by
+    rw [hq8, ← List.drop_drop, hpos, encBlock, List.append_assoc]; simp [u64B]
+  have hlt := hI2.iw_lt
+  obtain ⟨memo', ics, a', hrun, hlen, hI4, -, -, -, -, -, hik4, hB4⟩ :=
+    blockTo_rel hL hr dn cs hfit [] ∅ n _ a _ (r3.headD 0) _ rest' r4 m4 hI3 hM3 (by rw [hs3, hs2])
+      hd8 hcN (by rw [ho3, hi2]; exact Nat.le_refl _) (by rw [ho3, ht3, hcN]; exact Nat.le_refl _) h4
+  refine ⟨ics, a', ?_, hI4.stage hS, hI4.grow, ?_, rfl⟩
+  · simp only [ConRon.Arena.internCIList]
+    rw [run_bind_of _ _ _ _ _ hrun]; rfl
+  · simp only [List.headD_cons, List.tail_cons, hcN]
+    rw [← hlen]
+    have hH := holds_mapM_range (m := m4) (SE := fun i => erTop (allocMem m2 (UInt64.ofNat cs.length)) ≤ i ∧
+        i < erTop m4) (SI := fun i => (r3.headD 0).toNat ≤ i ∧ i < (r3.headD 0).toNat + ics.length)
+      (g := fun m j => do decCI (erA m) dn (← iwN m ((r3.headD 0).toNat + j))) ics (fun j hj => by
+        obtain ⟨w, hw1, hw2⟩ := hB4 j hj
+        intro m'' h1 h2
+        have e := (h2 _ ⟨by omega, by omega⟩).trans hw1
+        have ed := hw2 m'' h1 (fun _ h => h.elim)
+        simp only [iwN, nat?, e, Option.map_some, Option.bind_eq_bind, Option.bind_some]
+        exact ed)
+    exact hH.decB (fun i hi => hi.2) (fun i hi => by rw [hik4.1, ht3, ← ho3]; omega)
+
 end entries
 
 end L.Rom
