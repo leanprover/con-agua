@@ -347,7 +347,9 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .sort u) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
   refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl,
-    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this⟩
+    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this,
+    fun c cv mI rP rules hf r hr lvls pins hfi u hu => by
+      rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'; rw [hls]; exact hu
@@ -371,7 +373,9 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .const c us) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
   refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl,
-    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this⟩
+    fun k x e => by have := h.dnN k x e; simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this,
+    fun c cv mI rP rules hf r hr lvls pins hfi u hu => by
+      rw [hls]; exact h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'

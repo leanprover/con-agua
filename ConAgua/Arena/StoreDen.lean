@@ -82,6 +82,10 @@ structure StoreDen (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (
   `denoteN` at the declaration's start; the store only grows): what relates the names inside a
   record (an inductive's `PropWhen` datum, `caps_never_zero`) to the twin's readbacks. -/
   dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
+  /-- A stored recursor's nested rules' levels read back (`rec_fire_levels`' `substLevelsAt`). -/
+  recRules : ∀ (c : NIdx) (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule),
+    fe.find? c = some (.recInfo cv mI rP rules) → ∀ r ∈ rules, ∀ lvls pins,
+    r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L
 
 /-! ## Keeping `StoreDen` -/
 
@@ -234,7 +238,9 @@ theorem StoreDen.mono {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
       obtain ⟨y, hy, ys, hys, rfl⟩ := h
       exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e)⟩
+    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv, hlsa, fun k x e => hN _ _ (h.dnN k x e),
+    fun c cv mI rP rules hf r hr lvls pins hfi u hu =>
+      (h.recRules c cv mI rP rules hf r hr lvls pins hfi u hu).elim fun L hL => ⟨L, hx.ls.lvl _ _ hL⟩⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
   · rcases hc x c us hv with h' | ⟨l, hl⟩
     · obtain ⟨l, hl⟩ := h.constLs x c us h'; exact ⟨l, hx.lst _ _ hl⟩
