@@ -127,6 +127,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     slElemW EREC n m o l b ko kc vo vc = some m' →
     ∃ hs a', (substLevelsAt ks vs ids).run a = .ok (hs, a') ∧ ArenaD m' a' ∧ StoreWF a'.store ∧
       ReadLCOK a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧ a'.memos = a.memos ∧
+      a'.caches.readNC = a.caches.readNC ∧ a'.caches.readLsC = a.caches.readLsC ∧
       sliceL (m'.arr64 SPN) b.toNat l.toNat = lsWords hs ∧
       (∀ i : Word, i.toNat < b.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i) ∧
       MemFrame (LH :: SPN :: lvArrs) (192 :: lvCtl) m m' := by
@@ -151,7 +152,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     | zero => simp [slElemW] at hW
     | succ n =>
     rw [slElemW_nil _ n m o 0 b ko kc vo vc rfl] at hW; cases hW
-    exact ⟨[], a, rfl, hA, hwf, hrc, Ext.refl _, rfl, rfl, by simp [sliceL, lsWords], fun _ _ => rfl,
+    exact ⟨[], a, rfl, hA, hwf, hrc, Ext.refl _, rfl, rfl, rfl, rfl, by simp [sliceL, lsWords], fun _ _ => rfl,
       MemFrame.refl _ _ _⟩
   | cons u us ih =>
     intro n m m' a o l b hA hwf hrc hs hb hd hk hkb hvs hvb hdv hbs hsz hW
@@ -232,7 +233,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hns₁ : a₁.store.lss.ls.ns = a.store.lss.ls.ns := by rw [hkp₁.2, hstc]
-    obtain ⟨hs', a', hrun', hA', hwf', hrc'', hx', hpi', hme', hsl', hbl', hf'⟩ :=
+    obtain ⟨hs', a', hrun', hA', hwf', hrc'', hx', hpi', hme', hn1', hn2', hsl', hbl', hf'⟩ :=
       ih n (m₁.set64 SPN b h) m' a₁ (o + 1) (l - 1) (b + 1) hA₂ hwf₁
         (hrc'.ext (by rw [hstc]; exact hx₁) (by rw [hca₁]))
         (by rw [herec₂, ho1, hl1]; exact e')
@@ -245,10 +246,12 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
         (by rw [hpool₂]; exact hvs) (by rw [htop₂]; exact hvb)
         (hx₁.lss.ls.lvl |> fun hl => denoteLList_mono_of_lext hx₁.lss.ls _ _ hdv)
         (by rw [hsz₂, hb1, hl1]; omega) (by rw [hsz₂]; exact hsz) hW
-    refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · simp only [substLevelsAt, StateT.run_bind, hrl, except_ok_bind, hrun₁, hrun']; rfl
     · rw [hpi', hpi₁, ← hac]
     · rw [hme', hme₁, ← hac]
+    · rw [hn1', hca₁, ← hac]
+    · rw [hn2', hca₁, ← hac]
     · rw [sliceL_succ]
       have hbb : rdW (m'.arr64 SPN) b = h := by
         rw [hbl' b (by rw [hb1]; omega), rdW_set64]
@@ -313,6 +316,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     slpW n m o l b ko kc vo vc = some m' →
     ∃ hs a', (substParamLevels ks vs ids).run a = .ok (hs, a') ∧ ArenaD m' a' ∧ StoreWF a'.store ∧
       ReadNCOK a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧ a'.memos = a.memos ∧
+      a'.caches.readLC = a.caches.readLC ∧ a'.caches.readLsC = a.caches.readLsC ∧
       sliceL (m'.arr64 SPN) b.toNat l.toNat = lsWords hs ∧
       (∀ i : Word, i.toNat < b.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i) ∧
       MemFrame (SPN :: lvArrs) lvCtl m m' := by
@@ -337,7 +341,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     | zero => simp [slpW] at hW
     | succ n =>
     rw [slpW_nil n m o 0 b ko kc vo vc rfl] at hW; cases hW
-    exact ⟨[], a, rfl, hA, hwf, hrc, Ext.refl _, rfl, rfl, by simp [sliceL, lsWords], fun _ _ => rfl,
+    exact ⟨[], a, rfl, hA, hwf, hrc, Ext.refl _, rfl, rfl, rfl, rfl, by simp [sliceL, lsWords], fun _ _ => rfl,
       MemFrame.refl _ _ _⟩
   | cons u us ih =>
     intro n m m' a o l b hA hwf hrc hs hb hd hk hkb hvs hvb hdv hbs hsz hW
@@ -378,7 +382,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     · simp [hh] at hW
     simp only [hh, ↓reduceIte] at hW
     -- the twin's readback
-    obtain ⟨c, hrl, hrc', -, -⟩ := readNameM_run a (decI w) nm hdu hrc
+    obtain ⟨c, hrl, hrc', hcl, hcls⟩ := readNameM_run a (decI w) nm hdu hrc
     generalize hac : ({ a with caches := c } : AState) = ac at hrl hrc'
     have hAc : ArenaD m ac := by rw [← hac]; exact hA.with_caches _
     have hstc : ac.store = a.store := by rw [← hac]
@@ -414,7 +418,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hl1 : (l - 1).toNat = j := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     have hns₁ : a₁.store.lss.ls.ns = a.store.lss.ls.ns := by rw [hkp₁.2, hstc]
-    obtain ⟨hs', a', hrun', hA', hwf', hrc'', hx', hpi', hme', hsl', hbl', hf'⟩ :=
+    obtain ⟨hs', a', hrun', hA', hwf', hrc'', hx', hpi', hme', hn1', hn2', hsl', hbl', hf'⟩ :=
       ih n (m₁.set64 SPN b h) m' a₁ (o + 1) (l - 1) (b + 1) hA₂ hwf₁
         (hrc'.ext (by rw [hstc]; exact hx₁) (by rw [hca₁]))
         (by rw [herec₂, ho1, hl1]; exact e')
@@ -427,10 +431,12 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
         (by rw [hpool₂]; exact hvs) (by rw [htop₂]; exact hvb)
         (hx₁.lss.ls.lvl |> fun hl => denoteLList_mono_of_lext hx₁.lss.ls _ _ hdv)
         (by rw [hsz₂, hb1, hl1]; omega) (by rw [hsz₂]; exact hsz) hW
-    refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · simp only [substParamLevels, StateT.run_bind, hrl, except_ok_bind, hrun₁, hrun']; rfl
     · rw [hpi', hpi₁, ← hac]
     · rw [hme', hme₁, ← hac]
+    · rw [hn1', hca₁, ← hac]; exact hcl
+    · rw [hn2', hca₁, ← hac]; exact hcls
     · rw [sliceL_succ]
       have hbb : rdW (m'.arr64 SPN) b = h := by
         rw [hbl' b (by rw [hb1]; omega), rdW_set64]
