@@ -913,7 +913,7 @@ theorem mkProjW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m'
   | some p =>
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
-  cases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBF (derBW m e) (derFW m e)) with
+  cases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBFL (derBW m e) (derFW m e) (exprLPW m e)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI

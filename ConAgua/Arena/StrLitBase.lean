@@ -58,18 +58,19 @@ stores' arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64)) (hC : ∀ x ∈ C, x.toNat < 42)
     (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
-    (DerR.frameM A C m m' hf (fun b hb => .inl (hA b hb)) a hS.arena.2) hL.pers hL.scr
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
+      hS.arena.2) hL.pers hL.scr
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
+      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
-        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
-          fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp),
+          fun h => absurd (hA _ h) (by simp)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk,
@@ -170,9 +171,10 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (hdn : ∃ x, denoteN a.store.ls.ns (decI u) = some x) :
     CoreRef (internLNode (.param (decI u))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hS.arena.1.param u hu _ _ hI
+  have hLp := pintern_hp m a hS.arena.1.param u hu hS.arena.1.paramHp _ _ hI
   have hI₂ := hI; rw [pinternW_eq] at hI₂
   have hf := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hR' := hS.arena.1.lift_param _ _ _ _ hX hf
+  have hR' := hS.arena.1.lift_param _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
@@ -195,9 +197,10 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (rs : List Word) (hI : zinternW m = some (rs.headD 0, m')) :
     CoreRef (internLNode .zero) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hS.arena.1.zero _ _ hI
+  have hLp := zintern_hp m a hS.arena.1.zero hS.arena.1.zeroHp _ _ hI
   have hI₂ := hI; rw [zinternW_eq] at hI₂
   have hf := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hR' := hS.arena.1.lift_zero _ _ _ _ hX hf
+  have hR' := hS.arena.1.lift_zero _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
@@ -444,14 +447,17 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   rw [hs₂] at hI
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq
     [decI u] hk _ _ hI
-  have hI₂ := hI; rw [lsinternW_eq] at hI₂
-  have hf := internM_frame _ lsSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hR' := hK.1.arena.1.lift_ls _ _ _ _ hX hf
+  have hf := (lsinternW_frame (hI := hI))
+  have hLp := lsintern_hp m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq [decI u] hk
+    hK.1.arena.1.lsHp (lsOrW_ok m₀ a hK.1.arena.1 m.top 1 hq [decI u] hk) _ _ hI
+  have hI₂ := hI; rw [lsinternW_eqK (hctl := hK.1.arena.1.ls.1.1)] at hI₂
+  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
+  have hR' := hK.1.arena.1.lift_ls _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run _ a) hok)
   have hL := internLsNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hK.1.of_ls hL hR' hf
     (fun b hb => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
   have hw := internM_hw lsSch LsRecRel lshash lsSch_wf m₀ _ _ _ hK.1.arena.1.ls

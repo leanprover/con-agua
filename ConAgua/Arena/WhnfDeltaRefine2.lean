@@ -395,11 +395,11 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
   hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [natA, POOL, CREC, CSLOT])
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+    (by simp [natA, POOL, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -412,7 +412,7 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
 theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, SPN]) (by decide)
+    hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf (by decide) (by decide), hP⟩
@@ -597,7 +597,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     simp only [show (3 : Word).toNat = 3 from rfl] at hr₁; exact hr₁
   rw [hr₁'] at hok hS hres
   have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr.arr_eq POOL (by simp [CREC, CSLOT, POOL]) (by decide)
+    hfr.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hTop : m₂.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.2.1 0 (by simp)
   have hs₂ : SliceOK m₂ o cnt := by unfold SliceOK; rw [hTop]; exact hs
@@ -777,9 +777,9 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     have hdb : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
-    hfr1.arr_eq REC (by simp [CREC, CSLOT, REC, POOL]) (by decide)
+    hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr1.arr_eq POOL (by simp [CREC, CSLOT, POOL]) (by decide)
+    hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
   rw [hE] at hW

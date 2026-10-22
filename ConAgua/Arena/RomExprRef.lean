@@ -89,8 +89,7 @@ theorem binternW_store {m m' : Mem} {u r : Word} (h : binternW m u = some (r, m'
     (by simp [bvarSch])
 theorem fvinternW_store {m m' : Mem} {u t r : Word} (h : fvinternW m u t = some (r, m')) :
     MemFrame StoreA StoreC m m' := by
-  rw [fvinternW_eq] at h
-  exact frame_store (internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ h) (by simp [fvarSch, FVREC, FVSLOT])
+  exact frame_store (fvinternW_frame (hI := h)) (by simp [fvarSch, FVREC, FVSLOT, FVLP])
     (by simp [fvarSch])
 
 /-! ## The memo relation -/
@@ -677,14 +676,14 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     refine ⟨m, _, iEG_sort m a _ _ (decI h) u _ (AM.run_of_ok _ _ ok1)
       (by rw [show (decI h : EIdx) = AM.res (internE (.sort (AM.res (internLevel u) a))) (AM.st (internLevel u) a)
             from res2.symm]; exact AM.run_of_ok _ _ ok2), hR2,
-      (hM.frame (frame_romA hf1)).frame (frame_romA (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT])
+      (hM.frame (frame_romA hf1)).frame (frame_romA (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP])
         (by simp [sortSch]))), hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq1, hp1]; simp; omega
-    · exact frame_storeE (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT]) (by simp [sortSch])))
-    · exact frame_exprA_stk (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT]) (by simp [sortSch])))
-    · exact fun hz => hz.frameS (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT]) (by simp [sortSch])))
+    · exact frame_storeE (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    · exact frame_exprA_stk (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
+    · exact fun hz => hz.frameS (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
   | const nm us =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true, decide_eq_true_eq] at he
@@ -723,7 +722,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
     obtain ⟨ok3, hR3, res3, hf3⟩ := L.Front.internConst_D m₂ _ hR2 h mem' hnm hl hlt1 hlt2 hI
     rw [← res1, ← res2] at ok3 hR3 res3
-    have hf3' := frame_store hf3 (by simp [constSch, CREC, CSLOT]) (by simp [constSch])
+    have hf3' := frame_store hf3 (by simp [constSch, CREC, CSLOT, CLP]) (by simp [constSch])
     refine ⟨m, _, iEG_const m a _ _ _ (decI h) nm us _ _ (AM.run_of_ok _ _ ok1) (AM.run_of_ok _ _ ok2)
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3), hR3,
       ((hM.frame (frame_romA hf1)).frame hf2).frame (frame_romA hf3'), hlt, ?_, ?_, ?_, ?_⟩

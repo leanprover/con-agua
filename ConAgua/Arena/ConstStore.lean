@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -171,24 +173,28 @@ def cecnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (18 + t)
 /-- `const_push`'s room checks: the handle index, the record array, the load limit. -/
 def cepushOK (m : Mem) (t : Word) : Bool :=
   decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 CREC >>> (2 : Word)) &&
+    decide (cecnt m t < m.len64 CLP >>> (1 : Word)) &&
     decide (cecnt m t + 1 ≤ (nSlotsCe m >>> (2 : Word)) * 3)
 
 /-- The memory after `const_push(t, n, us, j)` appended node `c`. -/
 def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 CREC (c * 4 + t * 2) f).set64 CREC (c * 4 + t * 2 + 1) a).set64 CSLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1))
+    (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1)).set64 CLP (c * 2 + t) (lsHPW m a)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def constPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
+def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix) {
+  ⟪lsBlkC⟫;
   c := CTL.u64[18 + t];
   if c >= 134217728 { abort };
   if len(CREC.u64) >> 2 <= c { abort };
+  if len(CLP.u64) >> 1 <= c { abort };
   if ((len(CSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   CREC.u64[k] := f;
   CREC.u64[k + 1] := a;
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
+  CLP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -207,7 +213,7 @@ theorem constPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lsBlkC_spec p (exec p n)] <;>
       finish [cecnt, cepushOK, cepushMem, nSlotsCe, baseW]
 
 end push
@@ -274,7 +280,7 @@ Arrays 0‥17 (the other tables') are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
-      Array.replicate 32 0, Array.replicate 32 0] }
+      Array.replicate 32 0, Array.replicate 32 0] ++ Array.replicate 62 (Array.replicate 32 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internConsts (m : Mem) : List (Word × Word) → Option (List Word)

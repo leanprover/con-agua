@@ -170,12 +170,10 @@ theorem LowFr.trans {m₁ m₂ m₃ : Mem} (h₁ : LowFr m₁ m₂) (h₂ : LowF
   · intro x hx; rcases List.mem_append.mp hx with h | h; exact c₁ x h; exact c₂ x h
 
 theorem sointernW_low {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : LowFr m m' := by
-  have h₂ := h; rw [sointernW_eq] at h₂
-  exact ⟨_, _, internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ h₂, by simp [sortSch, SOREC, SOSLOT], by simp [sortSch]⟩
+  exact ⟨_, _, (sointernW_frame (hI := h)), by simp [sortSch, SOREC, SOSLOT, SOLP], by simp [sortSch]⟩
 
 theorem fvinternW_low {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some (r, m')) : LowFr m m' := by
-  have h₂ := h; rw [fvinternW_eq] at h₂
-  exact ⟨_, _, internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ h₂, by simp [fvarSch, FVREC, FVSLOT], by simp [fvarSch]⟩
+  exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [fvarSch, FVREC, FVSLOT, FVLP], by simp [fvarSch]⟩
 
 theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [ADER, AREC, ASLOT] [4, 5] m m' := by

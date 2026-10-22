@@ -141,15 +141,15 @@ theorem succ_erec {u : Word} (h : callW p n "intern_succ" [u] m = some (r, m')) 
     m'.arr64 EREC = m.arr64 EREC := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internSucc_spec p hp.succFind hp.succPush hp.internSucc n _ u) h
-  rw [hs'] at hI; rw [sinternW_eq] at hI
-  exact (internM_frame _ succSch_wf _ _ _ _ _ _ _ _ hI).1 EREC (by simp [succSch, EREC, SREC, SSLOT]) (by decide)
+  rw [hs'] at hI
+  exact (sinternW_frame (hI := hI)).1 EREC (by simp [succSch, EREC, SREC, SSLOT, SHP]) (by decide)
 
 theorem sort_erec {u : Word} (h : callW p n "intern_sort" [u] m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internSort_spec p hp.sortFind hp.sortPush hp.internSort n _ u) h
-  rw [hs'] at hI; rw [sointernW_eq] at hI
-  exact (internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI).1 EREC (by simp [sortSch, EREC, SOREC, SOSLOT]) (by decide)
+  rw [hs'] at hI
+  exact (sointernW_frame (hI := hI)).1 EREC (by simp [sortSch, EREC, SOREC, SOSLOT, SOLP]) (by decide)
 
 /-- **`str_cv` under `CoreS`**: the twin's `toConstantVal` at the decoded record, the relation
 after it, the record pool unchanged, and the words of the constant value. -/

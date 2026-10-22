@@ -1,5 +1,6 @@
 import ConAgua.Arena.PoolSlice
 import ConAgua.Arena.LsStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The level-list store refines the arena's level-list tables
@@ -200,11 +201,11 @@ theorem lspushOK_room (m : Mem) (t : Word) (h : lspushOK m t = true) : PushRoom 
   grind
 
 theorem lspushMem_eq (m : Mem) (t o l h j c : Word) :
-    lspushMem m t o l h j c = pushG lsSch m t [o, l, h] j c := by
+    lspushMem m t o l h j c = (pushG lsSch m t [o, l, h] j c).set64 LSHP (c * 2 + t) (lsOrW m o l.toNat) := by
   simp [lspushMem, pushG, wrRec, Schema.ad, lsSch]
 
 theorem lsinternW_eq (m : Mem) (o l : Word) :
-    lsinternW m o l = internM lsSch m 0 (lspushOK m)
+    lsinternW m o l = internMD lsSch LSHP (lsOrW m o l.toNat) m 0 (lspushOK m)
       [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
       (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l
         (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlotsLs m)
@@ -216,8 +217,40 @@ theorem lsinternW_eq (m : Mem) (o l : Word) :
     simp [hdW, lsSch, lsP, LsTag.list]
   have e1 : ∀ x, hdW lsSch.tag.toUInt64 1 x = lsS + x := fun x => by
     simp [hdW, lsSch, lsS, LsTag.list]
-  simp only [lsinternW, internM, lspushMem_eq, e0, e1, true_and]
+  simp only [lsinternW, internMD, lspushMem_eq, e0, e1, true_and]
   rfl
+
+/-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
+theorem lsinternW_frame (m : Mem) (o l : Word) (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
+    MemFrame [LSREC, LSSLOT, LSHP] [40, 41] m m' := by
+  rw [lsinternW_eq] at hI
+  exact internMD_frame lsSch lsSch_wf LSHP (by decide) _ _ _ _ _ _ _ _ _ hI
+
+/-- `intern_ls`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
+words. -/
+theorem lsinternW_eqK (m : Mem) (o l : Word) (hctl : lsSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    lsinternW m o l = mkK LSHP lsSch.ca (cnt2 m lsSch.ca) (lsOrW m o l.toNat)
+      (internM lsSch m 0 (lspushOK m)
+      [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
+      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlotsLs m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)
+      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlotsLs m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)) := by
+  rw [lsinternW_eq]
+  refine internMD_mkK lsSch lsSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+
+theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL] [0] := by
+  intro m m' hra hb hc
+  have h0 := hc 0 (by simp)
+  have hp := hb POOL (by simp)
+  simp only [lsSch] at hra
+  refine ⟨fun t i k h => ?_, fun t i => by simp only [lshash, hra]⟩
+  simpa only [LsRecRel, lsO, lsL, hra, hp, top_rdW, h0] using h
 
 /-! ## `intern_ls` refines `internLsNode` -/
 
@@ -226,17 +259,53 @@ variable (m : Mem) (a : AState) (hpool : PoolOK m) (hR : LsR m a) (o l : Word)
   (hq : SliceOK m o l) (us : List LIdx) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us)
 
 include hpool hR hq hk in
-/-- **`intern_ls`'s model refines the arena's `internLsNode`** at the list the slice holds. -/
-theorem lsintern_correct (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
-    AM.ok (internLsNode us) a ∧ LsR m' (AM.st (internLsNode us) a) ∧
-    AM.res (internLsNode us) a = decI w := by
-  rw [lsinternW_eq] at hI
-  exact intern_correctG lsSch LsRecRel lshash lsSch_wf lsFrame lsLens a m hR _ _ _ _ _
+/-- The library's half of `intern_ls` (before the column). -/
+theorem lsintern_core (w : Word) (m₁ : Mem)
+    (hI : internM lsSch m 0 (lspushOK m)
+      [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
+      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlotsLs m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)
+      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlotsLs m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0) =
+      some (w, m₁)) :
+    AM.ok (internLsNode us) a ∧ LsR m₁ (AM.st (internLsNode us) a) ∧
+    AM.res (internLsNode us) a = decI w :=
+  intern_correctG lsSch LsRecRel lshash lsSch_wf lsFrame lsLens a m hR _ _ _ _ _
     (internLsNode_run us a) false rfl 0 (by simp) (by simp) _ _
     (lsMatchOK m hpool o l hq us hk) (lsHomeOK m o l _) _ _
     (probe_homeG lsSch m 0 _ _ (lsprobeW_arm m o l _ 0) _)
     (probe_homeG lsSch m 1 _ _ (lsprobeW_arm m o l _ 1) _) _ (lspushOK_room m) _ rfl
-    (lsNewOK m o l hq us hk) w m' hI
+    (lsNewOK m o l hq us hk) w m₁ hI
+
+include hpool hR hq hk in
+/-- **`intern_ls`'s model refines the arena's `internLsNode`** at the list the slice holds. -/
+theorem lsintern_correct (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
+    AM.ok (internLsNode us) a ∧ LsR m' (AM.st (internLsNode us) a) ∧
+    AM.res (internLsNode us) a = decI w := by
+  rw [lsinternW_eqK m o l hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := lsintern_core m a hpool hR o l hq us hk w m₁ h₁
+  exact ⟨hok, storeR_frame lsSch LsRecRel lshash lsSch_wf [POOL] [0] lsLocal [LSHP] []
+    (by simp [Apart, lsSch, LSREC, LSSLOT, LSHP, SCB, POOL, CTL]) m₁ m'
+    (derPutW_frame LSHP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+
+include hpool hR hq hk in
+/-- **The column across `intern_ls`**: the new node's word is its record's bit (`hb`). -/
+theorem lsintern_hp (hC : ColT2 lsLens LSHP hpW m a)
+    (hb : lsOrW m o l.toNat = b2w (a.store.lss.derOfView us).hasParam) (w : Word) (m' : Mem)
+    (hI : lsinternW m o l = some (w, m')) :
+    ColT2 lsLens LSHP hpW m' (AM.st (internLsNode us) a) := by
+  rw [lsinternW_eqK m o l hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := lsintern_core m a hpool hR o l hq us hk w m₁ h₁
+  have hcs := AM.proto_casesG lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
+  have hfr : m₁.arr64 LSHP = m.arr64 LSHP :=
+    (internM_frame _ lsSch_wf _ _ _ _ _ _ _ _ h₁).1 LSHP (by simp [lsSch, LSREC, LSSLOT, LSHP])
+      (by decide)
+  exact colMk lsSch lsSch_wf LsRecRel lshash lsLens LSHP hpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
+    hcs hres.symm (by rw [hb]; rfl) hput
 
 end intern
 

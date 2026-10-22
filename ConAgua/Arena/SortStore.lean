@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -162,21 +164,26 @@ def socnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (16 + t)
 /-- `sort_push`'s room checks: the handle index, the record array, the load limit. -/
 def sopushOK (m : Mem) (t : Word) : Bool :=
   decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 SOREC >>> (1 : Word)) &&
+    decide (socnt m t < m.len64 SOLP >>> (1 : Word)) &&
     decide (socnt m t + 1 ≤ (nSlotsSo m >>> (2 : Word)) * 3)
 
 /-- The memory after `sort_push(t, u, j)` appended node `c`. -/
 def sopushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1))
+  ((((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1)).set64
+    SOLP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def sortPush : FunDecl := lfn (t, u, j) locals (c) {
+def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix) {
+  ⟪hpBlkS⟫;
   c := CTL.u64[16 + t];
   if c >= 134217728 { abort };
   if len(SOREC.u64) >> 1 <= c { abort };
+  if len(SOLP.u64) >> 1 <= c { abort };
   if ((len(SOSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   SOREC.u64[c * 2 + t] := u;
   SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
+  SOLP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -195,7 +202,7 @@ theorem sortPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n)] <;>
       finish [socnt, sopushOK, sopushMem, nSlotsSo, baseW]
 
 end push
@@ -262,7 +269,7 @@ def sortProg : Prog :=
 def sortMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate 32 0] }
+      Array.replicate 32 0] ++ Array.replicate 44 (Array.replicate 32 0) }
 
 /-- Intern each handle word in turn; the handles. -/
 def internSorts (m : Mem) : List Word → Option (List Word)

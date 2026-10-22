@@ -246,7 +246,9 @@ theorem ArenaD.memo_irrel {m : Mem} {a : AState} (h : ArenaD m a) (X Y : Std.Has
   obtain ⟨hR, hD⟩ := h
   exact ⟨⟨hR.lit, hR.app, hR.sort, hR.const, hR.letE, hR.bvar, hR.fvar, hR.lam, hR.forallE, hR.proj,
     hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum,
-    ⟨hR.memos.bvar, hR.memos.lift, hR.memos.inst1, hR.memos.fvar⟩⟩, DerR.of_store _ _ _ hD rfl⟩
+    ⟨hR.memos.bvar, hR.memos.lift, hR.memos.inst1, hR.memos.fvar⟩, hR.zeroHp, hR.paramHp,
+    hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩,
+    DerR.of_store _ _ _ hD rfl⟩
 
 /-- The abstraction memo's well-formedness across a writer that avoids it. -/
 theorem coreAb_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
