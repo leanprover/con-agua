@@ -1294,11 +1294,14 @@ def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3403-3441 ConRon.Arena.defeqBody -/
+/-- A depth word `≥ 2^63` aborts (the binder descents below add to it, the twin's `Nat` does not
+wrap); the lazy loop's verdict words `0`/`1` are tested one by one (`decLR`: any other is `.unknown`).
+con-ron: ConRon/Arena/Core.lean:3403-3441 ConRon.Arena.defeqBody -/
 @[l_impl ConRon.Arena.defeqBody]
 def defeqBodyL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (bt, hf, sc, qf, qv, pi, a1, b1, lk, la, lb, r) {
   if a == b { return 1 };
+  if d >> 63 != 0 { abort };
   bt := call is_bool_true(b);
   hf := call has_fvar(a);
   sc := 0;
@@ -1315,7 +1318,8 @@ def defeqBodyL : FunDecl :=
   (qf, qv) := call quick_defeq(mode, vis, d, a1, b1);
   if qf != 0 { return qv };
   (lk, la, lb) := call lazy_delta_reduction(mode, vis, d, a1, b1);
-  if lk != 2 { return lk };
+  if lk == 0 { return 0 };
+  if lk == 1 { return 1 };
   r := call defeq_tail(mode, vis, d, la, lb);
   return r
 }
