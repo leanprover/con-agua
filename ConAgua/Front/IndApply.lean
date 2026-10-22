@@ -67,16 +67,24 @@ abbrev DIND : ArrId := DLP
 
 /-! ## Telescopes -/
 
+/-- `ctl_sum(k, c)`: `CTL[k] + … + CTL[k + c - 1]`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:80-86 ConRon.Arena.Frontend.storeFuel
+@[l_impl ConRon.Arena.Frontend.storeFuel]
+def ctlSum : FunDecl := lfn (k, c) locals (r) {
+  if c == 0 { return 0 };
+  r := call ctl_sum(k + 1, c - 1);
+  return CTL.u64[k] + r
+}
+
 /-- `store_fuel()`: `storeFuel`, the expression store's node count `+ 1` (both tiers of the ten
 expression tables, `e_view`'s counts). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:80-86 ConRon.Arena.Frontend.storeFuel
 @[l_impl ConRon.Arena.Frontend.storeFuel]
-def storeFuel : FunDecl := lfn () locals (s) {
-  s := CTL.u64[2] + CTL.u64[3] + CTL.u64[4] + CTL.u64[5] + CTL.u64[16] + CTL.u64[17] +
-    CTL.u64[18] + CTL.u64[19] + CTL.u64[20] + CTL.u64[21] + CTL.u64[22] + CTL.u64[23];
-  s := s + CTL.u64[26] + CTL.u64[27] + CTL.u64[28] + CTL.u64[29] + CTL.u64[30] + CTL.u64[31] +
-    CTL.u64[32] + CTL.u64[33];
-  return s + 1
+def storeFuel : FunDecl := lfn () locals (a, b, c) {
+  a := call ctl_sum(2, 4);
+  b := call ctl_sum(16, 8);
+  c := call ctl_sum(26, 8);
+  return a + b + c + 1
 }
 
 /-- `pi_result_d(f, e)`: `piResultD f e`. -/
@@ -617,7 +625,7 @@ def applyIndLine : FunDecl := lfn (j) locals (tag, ks, w, k, v, u) {
 
 /-- The apply step's functions. -/
 def indApplyFns : Prog :=
-  [("store_fuel", storeFuel), ("pi_result_d", piResultD), ("ind_pi_tele_len", indPiTeleLen),
+  [("ctl_sum", ctlSum), ("store_fuel", storeFuel), ("pi_result_d", piResultD), ("ind_pi_tele_len", indPiTeleLen),
    ("pi_sort_tele_len", piSortTeleLen), ("name_rec_pre", nameRecPre),
    ("ifl_contains", iflContains), ("ifl_nodup", iflNodup), ("ifl_find_last", iflFindLast),
    ("vi_unsafe", viUnsafe), ("vi_np_go", viNpGo), ("vi_nparams", viNparams),
