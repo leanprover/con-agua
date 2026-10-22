@@ -87,12 +87,6 @@
       <div class="ca-chart" id="trendChart" data-source="progress"></div>
     </section>
 
-    <section class="ca-card" id="velocity">
-      <h2>Work vs merge overhead</h2>
-      <p class="note">Minutes per lane, as each lane logged them at landing. Early entries are estimates.</p>
-      <div class="ca-legend"><span style="--sw: var(--ca-c0)">Work</span><span style="--sw: var(--ca-c3)">Overhead</span></div>
-      <div class="ca-chart" id="veloChart" data-source="velolanes"></div>
-    </section>
   </div>
 
   <section class="ca-card" id="phases">
@@ -458,7 +452,7 @@ function health() {
     setText('[data-source=health][data-field=stale]', fmt(h.data[0].stale));
   }
 }
-dash.onData(() => { tiles(); health(); trend(); velocity(); phases(); lanes();
+dash.onData(() => { tiles(); health(); trend(); phases(); lanes();
   simpleTable('recentBody', 'recent', ['at', 'lane', 'what']);
   simpleTable('staleBody', 'stale', ['target', 'status', 'phase', 'owner', 'theorems']); });
 </script>
