@@ -228,4 +228,81 @@ theorem projTableName_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t
       callW_spec p n "intern_nstr", callW_spec p n "intern_nnum"] <;>
     finish [ptnW, ptMem, ptBytes]
 
+/-! ## The pool bytes -/
+
+/-- A pool write above the original top, after a growth that kept the top. -/
+theorem grows_snoc {m m' : Mem} (hg : Grows m m') (htop : m'.top = m.top)
+    (hc : 0 < (m.arr64 CTL).size) (hcs : (m'.arr64 CTL).size = (m.arr64 CTL).size)
+    (hps : (m'.arr64 POOL).size = (m.arr64 POOL).size) {q x : Word}
+    (hq : m.top.toNat ≤ q.toNat) (hs : q.toNat < (m.arr64 POOL).size) :
+    Grows m (m'.set64 POOL q x) ∧ (m'.set64 POOL q x).top = m.top ∧
+      ((m'.set64 POOL q x).arr64 CTL).size = (m.arr64 CTL).size ∧
+      ((m'.set64 POOL q x).arr64 POOL).size = (m.arr64 POOL).size := by
+  have htop' : (m'.set64 POOL q x).top = m'.top := by
+    simp only [top_rdW, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide)]
+  refine ⟨Grows.trans _ _ _ hg (grows_poolSet m' q x (by omega) (by rw [htop]; exact hq) (by omega)), ?_, ?_, ?_⟩
+  · rw [htop', htop]
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ POOL by decide), hcs]
+  · rw [size_set64, hps]
+
+/-- **The nine bytes and the raised top are a growth of the pool.** -/
+theorem grows_ptMem (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 9 < 2 ^ 64)
+    (hs : m.top.toNat + 9 ≤ (m.arr64 POOL).size) : Grows m (ptMem m m.top) := by
+  have hc := hpool.2.1
+  have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e2 : (m.top + 2).toNat = m.top.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have e3 : (m.top + 3).toNat = m.top.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have e4 : (m.top + 4).toNat = m.top.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
+  have e5 : (m.top + 5).toNat = m.top.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have e6 : (m.top + 6).toNat = m.top.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
+  have e7 : (m.top + 7).toNat = m.top.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
+  have e8 : (m.top + 8).toNat = m.top.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+  have e9 : (m.top + 9).toNat = m.top.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
+  have s0 := grows_snoc (m := m) (Grows.refl m hpool) rfl hc rfl rfl (q := m.top) (x := 112) (by omega) (by omega)
+  have s1 := grows_snoc (m := m) s0.1 s0.2.1 hc s0.2.2.1 s0.2.2.2 (q := m.top + 1) (x := 114)
+    (by omega) (by omega)
+  have s2 := grows_snoc (m := m) s1.1 s1.2.1 hc s1.2.2.1 s1.2.2.2 (q := m.top + 2) (x := 111)
+    (by omega) (by omega)
+  have s3 := grows_snoc (m := m) s2.1 s2.2.1 hc s2.2.2.1 s2.2.2.2 (q := m.top + 3) (x := 106)
+    (by omega) (by omega)
+  have s4 := grows_snoc (m := m) s3.1 s3.2.1 hc s3.2.2.1 s3.2.2.2 (q := m.top + 4) (x := 84)
+    (by omega) (by omega)
+  have s5 := grows_snoc (m := m) s4.1 s4.2.1 hc s4.2.2.1 s4.2.2.2 (q := m.top + 5) (x := 97)
+    (by omega) (by omega)
+  have s6 := grows_snoc (m := m) s5.1 s5.2.1 hc s5.2.2.1 s5.2.2.2 (q := m.top + 6) (x := 98)
+    (by omega) (by omega)
+  have s7 := grows_snoc (m := m) s6.1 s6.2.1 hc s6.2.2.1 s6.2.2.2 (q := m.top + 7) (x := 108)
+    (by omega) (by omega)
+  have s8 := grows_snoc (m := m) s7.1 s7.2.1 hc s7.2.2.1 s7.2.2.2 (q := m.top + 8) (x := 101)
+    (by omega) (by omega)
+  refine Grows.trans _ _ _ s8.1 (grows_top _ _ (by rw [s8.2.2.1]; exact hc) ?_ ?_)
+  · rw [s8.2.1]; omega
+  · rw [s8.2.2.2]; omega
+
+theorem strWords_projTable : strWords "projTable" = [112, 114, 111, 106, 84, 97, 98, 108, 101] := by
+  decide
+
+/-- **The slice holds `"projTable"`.** -/
+theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
+    (hs : o.toNat + 9 ≤ (m.arr64 POOL).size) :
+    sliceL ((ptMem m o).arr64 POOL) o.toNat 9 = strWords "projTable" := by
+  have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have e3 : (o + 3).toNat = o.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have e4 : (o + 4).toNat = o.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
+  have e5 : (o + 5).toNat = o.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have e6 : (o + 6).toNat = o.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
+  have e7 : (o + 7).toNat = o.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
+  have e8 : (o + 8).toNat = o.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+  rw [strWords_projTable]
+  simp only [sliceL, ptMem, ptBytes, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide),
+    Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2, e3, e4, e5, e6, e7, e8,
+    List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
+    Array.size_setIfInBounds]
+  simp (config := { decide := true }) [show o.toNat < (m.arr64 POOL).size by omega,
+    show o.toNat + 1 < (m.arr64 POOL).size by omega, show o.toNat + 2 < (m.arr64 POOL).size by omega,
+    show o.toNat + 3 < (m.arr64 POOL).size by omega, show o.toNat + 4 < (m.arr64 POOL).size by omega,
+    show o.toNat + 5 < (m.arr64 POOL).size by omega, show o.toNat + 6 < (m.arr64 POOL).size by omega,
+    show o.toNat + 7 < (m.arr64 POOL).size by omega, show o.toNat + 8 < (m.arr64 POOL).size by omega]
+
 end L.Arena
