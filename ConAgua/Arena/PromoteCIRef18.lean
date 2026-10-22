@@ -16,26 +16,47 @@ theorem ErecGrow.of_eq {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
     (hT : erecTop m' = erecTop m) : ErecGrow m m' :=
   ⟨by omega, fun i _ => by rw [hE], by rw [hE]⟩
 
+theorem rd3W_ne {m : Mem} {s : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64)
+    (hne : rd3W m s ≠ []) :
+    ∃ a b c : Word, rd3W m s = [a, b, c] ∧ (m.arr64 EREC)[s.toNat]? = some a ∧
+      (m.arr64 EREC)[s.toNat + 1]? = some b ∧ (m.arr64 EREC)[s.toNat + 2]? = some c := by
+  unfold rd3W at hne ⊢
+  by_cases hc : (m.arr64 EREC).size ≤ s.toNat ∨ (m.arr64 EREC).size ≤ (s + 1).toNat ∨
+      (m.arr64 EREC).size ≤ (s + 2).toNat
+  · rw [if_pos hc] at hne; exact absurd rfl hne
+  rw [if_neg hc]
+  simp only [not_or, Nat.not_le] at hc
+  obtain ⟨h0, h1, h2⟩ := hc
+  have e1 : (s + 1).toNat = s.toNat + 1 := toNat_add1 _ (by omega)
+  have e2 : (s + 2).toNat = s.toNat + 2 := by
+    rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]
+    exact Nat.mod_eq_of_lt (by omega)
+  rw [e1] at h1; rw [e2] at h2
+  refine ⟨_, _, _, rfl, ?_, ?_, ?_⟩
+  · simp [rdW, Array.getElem?_eq_getElem h0]
+  · rw [rdW, e1]; simp [Array.getElem?_eq_getElem h1]
+  · rw [rdW, e2]; simp [Array.getElem?_eq_getElem h2]
+
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
 
 theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : Nat)
-    (cv : IConstantVal) (kw wv w6 w7 : Word) (r : List Word) (m' : Mem) (hD : ArenaD m a)
+    (cv : IConstantVal) (kw wv : Word) (r : List Word) (m' : Mem) (hD : ArenaD m a)
     (hP : PMemoR m pm) (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (hts : erecTop m ≤ (m.arr64 EREC).size)
     (hcv : decCV (preE m D) (q.toNat + 1) = some cv) (hkw : (m.arr64 EREC)[q.toNat]? = some kw)
     (h5 : (m.arr64 EREC)[q.toNat + 5]? = some wv) (hwv : wv.toNat < 2 ^ 32)
-    (h6 : (m.arr64 EREC)[q.toNat + 6]? = some w6) (h7 : (m.arr64 EREC)[q.toNat + 7]? = some w7)
-    (hqD : q.toNat + 8 ≤ D) (hDt : D ≤ erecTop m)
+    (hqD : q.toNat + 7 ≤ D) (hDt : D ≤ erecTop m)
     (hc : callW p n "pci_defn" [f, q] m = some (r, m')) :
     ArmOk m a r m' 8 kw
       (fun (x : IConstantVal × EIdx) a' pm' => ∃ (a1 : AState) (pm1 : PMemo),
         (promoteCV pm f.toNat cv).run a = .ok ((pm1, x.1), a1) ∧
         (promoteE pm1 f.toNat (decE wv)).run a1 = .ok ((pm', x.2), a'))
       (fun x M d => decCV (erecP M) (d + 1) = some x.1 ∧
-        (hd? (erecP M) (d + 5) : Option EIdx) = some x.2 ∧ (erecP M)[d + 6]? = some w6 ∧
-        (erecP M)[d + 7]? = some w7) := by
+        (hd? (erecP M) (d + 5) : Option EIdx) = some x.2 ∧ ∃ w6 w7 : Word,
+          (erecP M)[d + 6]? = some w6 ∧ (erecP M)[d + 7]? = some w7 ∧
+          (m.arr64 EREC)[q.toNat + 6]? = some w6 ∧ (m.arr64 EREC)[q.toNat + 7]? = some w7) := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -54,10 +75,14 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   obtain ⟨ra, m0⟩ := x
   rw [hrd] at hW
   simp only [Option.bind_some] at hW
-  obtain ⟨hm0, hr0, -⟩ := rd3_call p hp hrd
+  obtain ⟨hm0, hr0, hne⟩ := rd3_call p hp hrd
   obtain rfl := hm0.symm
-  rw [rd3W_of hsz (by rw [e5]; simpa using h5) (by rw [e5]; simpa using h6)
-    (by rw [e5]; simpa using h7)] at hr0
+  rw [hr0] at hne
+  obtain ⟨wa, w6, w7, hr3, hwa, hw6, hw7⟩ := rd3W_ne hsz hne
+  rw [e5] at hwa hw6 hw7
+  have hwav : wv = wa := (Option.some.inj (hwa.symm.trans (by simpa using h5))).symm
+  subst hwav
+  rw [hr3] at hr0
   subst hr0
   simp only [g0, g1, g2, List.headD_cons, List.tail_cons] at hW
   cases hca : callW p (n + 1) "promote_cv" [f, q + 1] m with
@@ -127,7 +152,7 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   · rw [hT2]; exact hg1.1
   · rw [hT4, b2]; omega
   · rw [t3 _ (Or.inl (by omega))]; exact b6
-  · refine ⟨b7.2 m₄ (erecTop m₂ + 8) hgs b5 hts4, ?_, ?_, ?_⟩
+  · refine ⟨b7.2 m₄ (erecTop m₂ + 8) hgs b5 hts4, ?_, w6, w7, ?_, ?_, hw6, hw7⟩
     · exact hd?_of_pre (m := m₄) (T := erecTop m₄) (by rw [hT4, b2]; omega) (by simpa using t4) hpw2.1
     · exact preE_of_get (m := m₄) (T := erecTop m₄) (by rw [hT4, b2]; omega) (by simpa using t5)
     · exact preE_of_get (m := m₄) (T := erecTop m₄) (by rw [hT4, b2]; omega) (by simpa using t6)

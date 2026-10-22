@@ -171,10 +171,10 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
   obtain ⟨hDg, hPg⟩ := arenaD_erec129 hDf hPf u4
   have hg02 : ErecGrow m m₂ := hg1.trans b3
+  have h01 : erecTop m ≤ erecTop m₁ := hg1.1
   have hlow : ArrExt (preE m D) (preE m₃ D) := preE_ext (fun i hi => by
     rw [u3.2.1 i (by omega) (by omega)]; exact hg02.2.1 i (by omega))
-  have hgb : SlotGrow m₂ m₃ (erecTop m₁ + 5) (erecTop m₁ + 5 + 4) := by
-    have := u3; rw [e5d] at this; exact this
+  have hgb : SlotGrow m₂ m₃ (erecTop m₁ + 5) (erecTop m₁ + 5 + 4) := u3
   by_cases hl0 : w8 = 0
   · have hm := rules_zero_gen p hp hl0 hpr
     subst hm
@@ -207,7 +207,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
       · have := preE_size_le m D; omega
     obtain ⟨a3, pm3, rls', hrun3, hD3, hP3, hcp3, hfr3, hgs3, hts3, hdr3⟩ :=
       rules_rel p hp (n + 1) m₃ a1 pm1 f w7 w8 (bl.headD 0) D rls z m₄ hDg hPg hsz3 u5
-        (hlow.decRules hrls) hsD (by have := hg02.1; omega) (by omega) (by omega) (by omega) hpr
+        (hlow.decRules hrls) hsD (by omega) (by omega) (by omega) (by omega) hpr
     have hjoin : SlotGrow m₂ m₄ (erecTop m₁ + 5) ((bl.headD 0).toNat + 11 * w8.toNat) :=
       (hgb.widen (Nat.le_refl _) (by omega)).join (hgs3.widen (by omega) (Nat.le_refl _)) (by omega)
         (by omega)
