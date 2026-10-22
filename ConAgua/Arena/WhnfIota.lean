@@ -813,86 +813,20 @@ def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) 
 
 /-- con-leche: `Core.lean:777-876` `iotaRec`/`iotaRecAt` — one ι step at a spine the caller
 already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the spine's length
-(`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). -/
+(`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). The head's
+`const` view here; the rest is split into small functions (`WhnfIotaRec.lean`, from
+`iota_rec_c` on). -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 @[l_impl ConRon.Arena.iotaRecAt]
-def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn)
-    locals (t, i, c, flag, recP, mI, rP, ro, rc, uso, usl, peelFlag, peelRes,
-            b0, major, hh, t2, i2, cj, ctorFlag, ctorP, rflag, rl, margs, margCnt,
-            fam, usj2, t3, vck, cmpL, lok, cmpAo, cmpAc, deqOk, tyC, certOk, idxOk,
-            rhs, xo, xn, x) {
+def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (t, i, r1, r2) {
   if hd >> 28 != 3 { return (0, 0) };
   t := (hd >> 27) & 1;
   i := hd & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CTL.u64[18 + t] <= i { abort };
-  c := CREC.u64[i * 4 + t * 2];
-  usj2 := CREC.u64[i * 4 + t * 2 + 1];
-  (flag, recP) := call env_find(c, vis);
-  if flag == 0 { return (0, 0) };
-  if EREC.u64[recP] != 5 { return (0, 0) };
-  mI := EREC.u64[recP + 5];
-  rP := EREC.u64[recP + 6];
-  ro := EREC.u64[recP + 7];
-  rc := EREC.u64[recP + 8];
-  if sn != mI + 1 { return (0, 0) };
-  (uso, usl) := call ls_node(usj2);
-  if usl != EREC.u64[recP + 3] { return (0, 0) };
-  (peelFlag, peelRes) := call peel_pis(mI + 1, EREC.u64[recP + 4]);
-  if peelFlag == 0 { return (0, 0) };
-  b0 := call intern_bvar(0);
-  if mI < sn { major := SPN.u64[so + mI] } else { major := b0 };
-  major := call prepare_major(mode, vis, d, c, ro, rc, major);
-  hh := call get_app_fn(major);
-  if hh >> 28 != 3 { return (0, 0) };
-  t2 := (hh >> 27) & 1;
-  i2 := hh & 134217727;
-  if t2 != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t2] <= i2 { abort };
-  cj := CREC.u64[i2 * 4 + t2 * 2];
-  (ctorFlag, ctorP) := call env_find(cj, vis);
-  if ctorFlag == 0 { return (0, 0) };
-  if EREC.u64[ctorP] != 4 { return (0, 0) };
-  (rflag, rl) := call find_rule(ro, rc, cj);
-  if rflag == 0 { return (0, 0) };
-  (margs, margCnt) := call get_app_args(major);
-  if margCnt != EREC.u64[rl + 2] + EREC.u64[rl + 1] { return (0, 0) };
-  vck := u64(mode & 1 == 0);
-  if vck != 0 {
-    cmpL := call rec_fire_levels(EREC.u64[rl + 3], EREC.u64[rl + 4], EREC.u64[rl + 5],
-      EREC.u64[recP + 2], EREC.u64[recP + 3], usj2, EREC.u64[ctorP + 2], EREC.u64[ctorP + 3]);
-    fam := call iota_case3(EREC.u64[rl + 9], vis, ctorP, cmpL);
-    if fam != 0 {
-      t3 := CREC.u64[i2 * 4 + t2 * 2 + 1];
-      lok := call lvls_eq(t3, cmpL);
-      if lok == 0 { abort };
-      if lok == 2 {
-        (cmpAo, cmpAc) := call rec_fire_args(EREC.u64[rl + 3], EREC.u64[rl + 6], EREC.u64[rl + 7],
-          EREC.u64[recP + 2], EREC.u64[recP + 3], usj2, so, rP, EREC.u64[rl + 2]);
-        deqOk := call defeq_list(mode, vis, d, margs, EREC.u64[rl + 2], cmpAo, cmpAc);
-        if deqOk != 0 {
-          tyC := call const_ty_at(cj, EREC.u64[ctorP + 2], EREC.u64[ctorP + 3],
-            EREC.u64[ctorP + 4], t3);
-          certOk := call iota_certs_full(mode, vis, d, tyC, margs, margCnt);
-          if certOk != 0 {
-            idxOk := call iota_index_ok(mode, vis, d, mI, rP, EREC.u64[rl + 2], tyC,
-              margs, margCnt, so + rP, (mI - rP) * u64(rP <= mI));
-            fam := idxOk
-          } else { fam := 0 }
-        } else { fam := 0 }
-      } else { fam := 0 }
-    } else { fam := 1 }
-  } else {
-    fam := 1
-  };
-  if fam == 0 { return (0, 0) };
-  rhs := call rule_rhs_at(c, cj, EREC.u64[recP + 2], EREC.u64[recP + 3], EREC.u64[rl + 8], usj2);
-  if len(SPN.u64) < so + rP { abort };
-  xo := so;
-  xn := rP;
-  x := call mk_app_n(rhs, xo, xn);
-  x := call mk_app_n_from(x, margs, margCnt, EREC.u64[rl + 2]);
-  return (1, x)
+  (r1, r2) := call iota_rec_c(mode, vis, d, CREC.u64[i * 4 + t * 2], CREC.u64[i * 4 + t * 2 + 1],
+    so, sn);
+  return (r1, r2)
 }
 
 /-! ## The program -/
