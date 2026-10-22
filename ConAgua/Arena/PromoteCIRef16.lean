@@ -33,28 +33,55 @@ section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
 
+/-- The record's constant value decodes at `d`, and keeps doing so when later writes land in
+`[d + 5, hi)`. -/
+def CvStable (M : Mem) (d : Nat) (cv : IConstantVal) : Prop :=
+  decCV (erecP M) (d + 1) = some cv ∧
+    ∀ (M' : Mem) (hi : Nat), SlotGrow M M' (d + 5) hi → erecTop M ≤ (M.arr64 EREC).size →
+      erecTop M' ≤ (M'.arr64 EREC).size → decCV (erecP M') (d + 1) = some cv
+
 /-- **The constant value, then `pci_mk`**: the words of the promoted value land in the new
 record, which then decodes. -/
 theorem mk_decode {n : Nat} {M0 M1 M2 : Mem} {c r : List Word} {q k kw : Word}
     {cv' : IConstantVal} (hCV : CVWords M0 c cv') (hext : ArrExt (erecP M0) (erecP M1))
+    (hT01 : erecTop M0 ≤ erecTop M1)
     (hts1 : erecTop M1 ≤ (M1.arr64 EREC).size) (hsz : (M1.arr64 EREC).size < 2 ^ 64)
     (hkw : (M1.arr64 EREC)[q.toNat]? = some kw) (hk5 : 5 ≤ k.toNat)
     (hmk : callW p (n + 1) "pci_mk" [q, k, g0 c, g1 c, g2 c, g3 c] M1 = some (r, M2)) :
     (r.headD 0).toNat = erecTop M1 ∧ erecTop M2 = erecTop M1 + k.toNat ∧ ErecGrow M1 M2 ∧
     MemFrame [EREC] [129] M1 M2 ∧ erecTop M2 ≤ (M2.arr64 EREC).size ∧
-    (M2.arr64 EREC)[erecTop M1]? = some kw ∧ decCV (erecP M2) (erecTop M1 + 1) = some cv' := by
+    (M2.arr64 EREC)[erecTop M1]? = some kw ∧ CvStable M2 (erecTop M1) cv' := by
   obtain ⟨hr, hT, hg, hfr, hroom, w0, w1, w2, w3, w4⟩ := pciMk_rel p hp hsz hkw hk5 hmk
   obtain ⟨-, hpw0, hn0, hsl, hpw3, ht3⟩ := hCV
   have hts2 : erecTop M2 ≤ (M2.arr64 EREC).size := by rw [hT]; exact hroom
   have P : ∀ {i : Nat} {w : Word}, i < erecTop M2 → (M2.arr64 EREC)[i]? = some w →
       (erecP M2)[i]? = some w := fun hi h => preE_of_get hi h
-  have hs' : hslice? (erecP M2) (g1 c).toNat (g2 c).toNat = some cv'.levelParams :=
-    hg.ext.hslice? (hext.hslice? hsl)
+  have hs' : hslice? (erecP M2) (c.tail.headD 0).toNat (c.tail.tail.headD 0).toNat =
+      some cv'.levelParams := hg.ext.hslice? (hext.hslice? hsl)
+  have hbd : (c.tail.tail.headD 0).toNat = 0 ∨
+      (c.tail.headD 0).toNat + (c.tail.tail.headD 0).toNat ≤ erecTop M1 := by
+    rcases hslice?_bound hsl with h0 | h0
+    · exact .inl h0
+    · right; have := erecP_size_le M0; omega
+  have hn0' : decI (g0 c) = cv'.name := hn0
+  have ht3' : decI (g3 c) = cv'.type := ht3
   have hdcv := decCV_mk (A := erecP M2) (d := erecTop M1) (nm := g0 c) (qq := g1 c) (l := g2 c)
     (t := g3 c) (P (by omega) w1) (P (by omega) w2) (P (by omega) w3) (P (by omega) w4) hpw0.1
     hpw3.1 hs'
-  refine ⟨hr, hT, hg, hfr, hts2, w0, ?_⟩
-  rw [hdcv, hn0, ht3]
+  have hdec : decCV (erecP M2) (erecTop M1 + 1) = some cv' := by
+    rw [hdcv, hn0', ht3']
+  refine ⟨hr, hT, hg, hfr, hts2, w0, hdec, ?_⟩
+  intro M' hi hgs hts hts'
+  have Q : ∀ (i : Nat) {w : Word}, erecTop M1 ≤ i → i < erecTop M1 + 5 →
+      (M2.arr64 EREC)[i]? = some w → (erecP M')[i]? = some w := fun i w hi1 hi2 h => by
+    have : (M'.arr64 EREC)[i]? = (M2.arr64 EREC)[i]? := hgs.2.1 i (by omega) (by omega)
+    exact preE_of_get (by have := hgs.1; omega) (by rw [this]; exact h)
+  have hs'' := hgs.hslice? hts hts' hs' (by omega)
+  have h2 := decCV_mk (A := erecP M') (d := erecTop M1) (nm := g0 c) (qq := g1 c) (l := g2 c)
+    (t := g3 c) (Q _ (by omega) (by omega) w1) (Q _ (by omega) (by omega) w2)
+    (Q _ (by omega) (by omega) w3) (Q _ (by omega) (by omega) w4) hpw0.1 hpw3.1 hs''
+  rw [hn0', ht3'] at h2
+  exact h2
 
 theorem plain_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : Nat)
     (cv : IConstantVal) (kw : Word) (r : List Word) (m' : Mem) (hD : ArenaD m a)
@@ -65,7 +92,7 @@ theorem plain_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D 
     (hc : callW p n "pci_plain" [f, q] m = some (r, m')) :
     ArmOk m a r m' 5 kw
       (fun (cv' : IConstantVal) a' pm' => (promoteCV pm f.toNat cv).run a = .ok ((pm', cv'), a'))
-      (fun cv' M d => decCV (erecP M) (d + 1) = some cv') := by
+      (fun cv' M d => CvStable M d cv') := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -97,7 +124,7 @@ theorem plain_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D 
   subst hm2
   have hkw1 : (m₁.arr64 EREC)[q.toNat]? = some kw := by
     rw [hg1.2.1 _ (by omega)]; exact hkw
-  obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := mk_decode p hp (n := n) hCV (ArrExt.refl _) hts1 hsz1 hkw1
+  obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := mk_decode p hp (n := n) hCV (ArrExt.refl _) (Nat.le_refl _) hts1 hsz1 hkw1
     (by simp only [show ((5 : Word)).toNat = 5 from rfl]; omega) hmk
   simp only [show ((5 : Word)).toNat = 5 from rfl] at b2
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
