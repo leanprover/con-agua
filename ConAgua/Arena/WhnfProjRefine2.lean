@@ -33,13 +33,13 @@ def projProgC : Prog :=
 def projFns : List FnName := projProgC.map (·.1)
 
 /-- The pool (0), the `str` (35, 36) and `num` (37, 38) name tables. -/
-def projA : List ArrId := [0, 35, 36, 37, 38]
+def projWA : List ArrId := [0, 35, 36, 37, 38]
 /-- The pool top (0) and the two tables' counts (36‥39). -/
 def projC : List Word := [0, 36, 37, 38, 39]
 
-theorem projProgC_closed : closedA projProgC projA projC projFns = true := by decide +kernel
+theorem projProgC_closed : closedA projProgC projWA projC projFns = true := by decide +kernel
 
-theorem ProjProg.closed {p : Prog} (hp : ProjProg p) : closedA p projA projC projFns = true :=
+theorem ProjProg.closed {p : Prog} (hp : ProjProg p) : closedA p projWA projC projFns = true :=
   closedW_of_agree projProgC_closed (by
     simp only [projFns, projProgC, List.map_cons, List.map_nil, List.forall_mem_cons,
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
@@ -61,13 +61,13 @@ theorem run_of_callW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m : Mem
 /-- **A run of `find_proj` or `proj_table_name` changes only the pool and the name tables.** -/
 theorem proj_frame {p : Prog} (hp : ProjProg p) {f : FnName} (hf : f ∈ projFns) {n : Nat}
     {vs : List Word} {m : Mem} {r : List Word} {m' : Mem} (h : callW p n f vs m = some (r, m')) :
-    MemFrame projA projC m m' :=
+    MemFrame projWA projC m m' :=
   (run_memFrame hp.closed hf (run_of_callW h)).1
 
 theorem proj_frame_erec {p : Prog} (hp : ProjProg p) {f : FnName} (hf : f ∈ projFns) {n : Nat}
     {vs : List Word} {m : Mem} {r : List Word} {m' : Mem} (h : callW p n f vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC ∧ rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-  ⟨(proj_frame hp hf h).1 EREC (by simp [projA, EREC]) (by decide),
+  ⟨(proj_frame hp hf h).1 EREC (by simp [projWA, EREC]) (by decide),
     (proj_frame hp hf h).2.1 129 (by simp [projC])⟩
 
 /-! ## `env_find` as a word model -/

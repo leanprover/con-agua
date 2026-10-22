@@ -1,6 +1,7 @@
 import ConAgua.Arena.WhnfProjRefine2
 import ConAgua.Arena.DeclLvlStage
 import ConAgua.Arena.Knot
+import ConAgua.Arena.InferProj
 
 /-!
 # `fire_ok` refines `IProjEntry.fireOk` under `CoreS` (lane `whnf3`, helper `whnf3-proj`)
@@ -30,6 +31,26 @@ def ProjSortDen : Prop :=
     decTbl (m.arr64 EREC) q.toNat = some tbl →
     (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
       (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l)
+
+/-- **A projection table's readbacks for `field_sort_zero`** (named hypothesis, as
+`ProjSortDen`; lane `defeq2`'s `StoreDen.proj` and `readN` give it once `CoreS` carries `den`): the
+name readback cache holds readbacks, the table's level parameters and every field guard read back. -/
+def FireDen : Prop :=
+  ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb q : Word) (tbl : IProjTable), CoreS dn m a vis fe M eb →
+    decTbl (m.arr64 EREC) q.toNat = some tbl →
+    ReadNCOK a ∧ (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks) ∧
+      ∀ i, ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l
+
+/-- `FireOkOK` at universe arguments `us` that read back (what `field_sort_zero` needs; the
+callers' `us` is a stored `const` node's list, `StoreDen.constLs`). -/
+def FireOkOKD (p : Prog) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
+    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
+    (∃ ls, denoteLs a₀.store.lss (decI us) = some ls) →
+    CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
+      fe M eb
 
 /-- The lookups `fire_ok` needs. -/
 structure FireProg (p : Prog) : Prop where
@@ -129,8 +150,8 @@ theorem fo_toNat_add_small (x : Word) (c : Nat) (h : x.toNat + c < 2 ^ 64) :
 denotation of the table's sort and the zero level (`ProjSortDen`). -/
 @[refines ConRon.Arena.IProjEntry.fireOk]
 theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
-    (hden : ProjSortDen) : FireOkOK p := by
-  intro n s₀ a₀ dn vis fe M eb q i us tbl hS hus htbl
+    (hden : ProjSortDen) (hden2 : FireDen) : FireOkOKD p := by
+  intro n s₀ a₀ dn vis fe M eb q i us tbl hS hus htbl husd
   cases n with
   | zero => exact CoreSpec.zeroW hp.fireOk _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
@@ -254,6 +275,9 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
       have hi' := mt UInt64.lt_iff_toNat_lt.mpr hi
       refine ⟨by unfold HW; decide, ?_⟩
       rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega)]; rfl
+  obtain ⟨hRN, hks, hgd'⟩ := hden2 dn m₂ _ vis fe M2 eb q tbl hS2 (by rw [hE2]; exact htbl)
+  have hstL : (AM.st (lvlEq? (decI w8) (decI (r₁.headD 0))) a₀).store = a₀.store :=
+    lvlEq?_store _ _ _ _ _ lu lz hdu hdz hS.readL hrunL
   have hlps : hslice? (m₂.arr64 EREC) w3.toNat w4.toNat = some tbl.levelParams := by
     rw [hE2]; exact hsl3
   cases c3 : callW p (n' + 2) "field_sort_zero" [rdW (m₂.arr64 EREC) (q + 3),
@@ -267,7 +291,8 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   rw [hrd3, hrd4] at c3
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
     (hfz (n' + 2) ⟨m₂, Locals.init []⟩ (AM.st (lvlEq? (decI w8) (decI (r₁.headD 0))) a₀) dn vis fe
-      M2 eb w3 w4 us (foFs m₂ q i) tbl.levelParams hS2 hus hfs.1 hlps) c3
+      M2 eb w3 w4 us (foFs m₂ q i) tbl.levelParams hS2 hus hfs.1 hlps hRN hks
+      (by rw [hstL]; exact husd) (by rw [hfs.2]; exact hgd' i.toNat)) c3
   have hrun3 := AM.run_of_ok _ _ ok3
   have hT' : ((tbl.entry i.toNat).fireOk (decI us)).run a₀ =
       .ok (AM.res (fieldSortZeroT tbl.levelParams (decI us) (decI (foFs m₂ q i)))
