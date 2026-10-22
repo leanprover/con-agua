@@ -1,5 +1,7 @@
 import ConRon.Bridge.Checker.Split
+import ConAgua.Arena.Refine
 import ConRon.Bridge.Inductives.Decl
+import ConRon.Bridge.Frontend.Shared
 
 /-!
 # The twin's fold invariant, step by step (lane `decls4`)
@@ -37,6 +39,38 @@ theorem denoteDecl_of_mem {st : EStore} :
         rcases List.mem_cons.mp hd with rfl | hd
         · exact ⟨x, ha⟩
         · exact denoteDecl_of_mem has d hd
+
+/-- A well-formed store hash-conses: two handles with the same view are equal (con-ron's
+`EWFAt.view_inj`). This is what makes L's comparison of literal handles the twin's comparison of
+literal values (`LitInj`). -/
+theorem StateOK.view_inj {a : AState} (h : StateOK a) {x y : EIdx} {v : ENodeView}
+    (hx : a.store.view x = some v) (hy : a.store.view y = some v) : x = y := by
+  obtain ⟨rk, hw⟩ := h.wf
+  exact hw.view_inj hx hy
+
+/-- `toConstantVal` keeps the store well formed (its `.projInfo` arm interns `Sort 1`). -/
+theorem toConstantVal_stateOK {s s' : AState} (hok : StateOK s) {ci : IConstantInfo}
+    {v : IConstantVal} (hrun : ci.toConstantVal s = .ok (v, s')) : StateOK s' := by
+  cases ci with
+  | projInfo tbl =>
+    simp only [IConstantInfo.toConstantVal] at hrun
+    obtain ⟨z, s1, h1, hr1⟩ := AM.bind_ok hrun
+    obtain ⟨one, s2, h2, hr2⟩ := AM.bind_ok hr1
+    obtain ⟨ty, s3, h3, hr3⟩ := AM.bind_ok hr2
+    obtain ⟨-, rfl⟩ := AM.pure_ok hr3
+    obtain ⟨hw1, -, -, -, -, -, -, -, hv1, -⟩ := AM.of_run (P := fun t => t = s) rfl h1
+      (internLNode_spec s .zero hok.wf ⟨by simp [LNodeView.lchildren], by simp [LNodeView.nchildren]⟩)
+    obtain ⟨hw2, -, -, -, -, -, -, -, hv2, -⟩ := AM.of_run (P := fun t => t = s1) rfl h2
+      (internLNode_spec s1 (.succ z) hw1
+        ⟨by simp [LNodeView.lchildren, hv1], by simp [LNodeView.nchildren]⟩)
+    obtain ⟨hs3, -⟩ := Frontend.internE_sstep ⟨hw2⟩
+      ⟨by simp [ENodeView.echildren], by simp [ENodeView.nchildren],
+        by simp [ENodeView.lchildren, hv2], by simp [ENodeView.lschildren]⟩ h3
+    exact hs3.ok
+  | _ =>
+    simp only [IConstantInfo.toConstantVal] at hrun
+    obtain ⟨-, rfl⟩ := AM.pure_ok hrun
+    exact hok
 
 end ConRon.Bridge
 
@@ -129,6 +163,25 @@ theorem step (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : 
     · exact hsplit.nodup hnd
   exact ⟨⟨env₁, hok₁, hnd₁⟩, ⟨pinsP, PinsDenote.pmono hx₁ _ _ h.pp hpins⟩, h.pp, h.pd,
     ⟨dsP, denoteDecls_pext hx₁ _ _ h.pd hden⟩, hpend₁⟩
+
+/-! ## In the `AM.ok`/`AM.st` form the loop's theorems use -/
+
+theorem andPinAM (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size)
+    (hok : AM.ok (andPinOk ds[i]) a) : StateOK (AM.st (andPinOk ds[i]) a) :=
+  h.andPin hi (AM.run_of_ok _ _ hok)
+
+theorem enterAM {a : AState} (h : StateOK a) :
+    StateOK (AM.st enterScratch (AM.st flushCaches a)) :=
+  enter h rfl
+
+theorem stepAM (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}
+    {fe' : IFEnv} {pend' : Array PendingCheck}
+    (hok : AM.ok (installDeclStep .verified pins (i, fe, pend) ds[i]) a)
+    (hres : AM.res (installDeclStep .verified pins (i, fe, pend) ds[i]) a = .ok (k, fe', pend')) :
+    TwinFold pins ds fe' pend' (AM.st (installDeclStep .verified pins (i, fe, pend) ds[i]) a) := by
+  have := AM.run_of_ok _ _ hok
+  rw [hres] at this
+  exact h.step hi this
 
 end TwinFold
 

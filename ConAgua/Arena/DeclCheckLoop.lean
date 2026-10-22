@@ -13,10 +13,11 @@ front's records (`DeclsR`: every record is an axiom, definition, theorem, opaque
 (lane `indproofs2`).
 
 Each arm's spec at the loop's relation is a theorem, all five proved: the theorem arm
-(`DeclArmLoop.lean`), the opaque arm (`DeclArmOpaque.lean`), and through specs that are fields of
-`CheckDeclProg` (to be discharged by the callees' proofs): the quotient arm (`CvCanonSpec`), the
-axiom arm (`CiCanonSpec`), the definition arm (`DefnProg`: the two gates' specs, `NatGateSpec`,
-`DivGateSpec`). The callees' own stub specs (the ROM readers, `lvl_eq_c`) are `sorry`.
+(`DeclArmLoop.lean`), the opaque arm (`DeclArmOpaque.lean`), the quotient and axiom arms (the
+canonical comparisons, which need the twin state well formed: `StateOK`, a hypothesis of
+`ArmSpec` and `CheckDeclSpec`, from the fold's `TwinFold`, lane `decls4`), and the definition arm
+through the gates' specs (`DefnProg`: `NatGateSpec`, `DivGateSpec`). The callees' own stub specs
+(the ROM readers, `lvl_eq_c`) are `sorry`.
 -/
 
 open ConRon.Arena
@@ -75,24 +76,25 @@ variable {p : Prog} (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Na
 /-- The shape of an arm's spec at the loop's relation, for the record `d` at `i`. -/
 def ArmSpec (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-    (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d → LoopR pins dn s₀.mem a₀ vis fe pend ds →
+    (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d → ConRon.Bridge.StateOK a₀ →
+    LoopR pins dn s₀.mem a₀ vis fe pend ds →
   ⦃fun s => s = s₀⦄ invoke p (exec p n) f [i, vis]
   ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe d) a₀ ∧
     LoopR pins dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
       (AM.res (checkDecl V pins fe d) a₀) pend ds; ⊤⦄
 
-/-- `check_decl_axiom` (`DeclArmAxiom.lean`; through `CiCanonSpec`, a field of `AxProg`). -/
+/-- `check_decl_axiom` (`DeclArmAxiom.lean`). -/
 theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) :
     ArmSpec pins dn ds p "check_decl_axiom" (.axiomDecl cv) :=
-  fun n s₀ a₀ vis fe pend i hi hd hR =>
-    checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hR
+  fun n s₀ a₀ vis fe pend i hi hd hok hR =>
+    checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hok hR
 
 /-- `check_decl_defn` (`DeclArmDefn.lean`; through the gates' specs, `DefnProg`, a field of
 `CheckDeclProg`). -/
 theorem checkDeclDefn_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
     ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) :=
-  fun n s₀ a₀ vis fe pend i hi hd hR =>
+  fun n s₀ a₀ vis fe pend i hi hd _ hR =>
     checkDeclDefn_loop' hP.arm hP.val pins
       ⟨hP.df, natGateSpec hP.natSub hP.natGate hP.natCert hP.natText pins,
         divGateSpecD hP.dm pins (substC0_of hP.natSub.toNatSubProg) hP.substAll hP.dgClosed⟩
@@ -101,14 +103,14 @@ theorem checkDeclDefn_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConsta
 /-- `check_decl_opaque` (`DeclArmOpaque.lean`). -/
 theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal)
     (v : EIdx) : ArmSpec pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) :=
-  fun n s₀ a₀ vis fe pend i hi hd hR =>
+  fun n s₀ a₀ vis fe pend i hi hd _ hR =>
     checkDeclOpaque_loop' hP.arm hP.val hP.crp hP.op pins dn hdn ds n s₀ a₀ vis fe pend i cv v hi hd hR
 
-/-- `check_decl_quot` (`DeclArmQuot.lean`; through `CvCanonSpec`, a field of `QuotProg`). -/
+/-- `check_decl_quot` (`DeclArmQuot.lean`). -/
 theorem checkDeclQuot_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (k : ConLeche.QuotKind)
     (cv : IConstantVal) : ArmSpec pins dn ds p "check_decl_quot" (.quotDecl k cv) :=
-  fun n s₀ a₀ vis fe pend i hi hd hR =>
-    checkDeclQuot_loop' hP.arm hP.val.rcp hP.quot pins dn hdn ds n s₀ a₀ vis fe pend i k cv hi hd hR
+  fun n s₀ a₀ vis fe pend i hi hd hok hR =>
+    checkDeclQuot_loop' hP.arm hP.val.rcp hP.quot pins dn hdn ds n s₀ a₀ vis fe pend i k cv hi hd hok hR
 
 end pending
 
@@ -180,6 +182,7 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
     {ds : Array IDeclaration} {f : FnName} {d : IDeclaration} (hA : ArmSpec pins dn ds p f d)
     {n : Nat} {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
     {i : Word} {r : List Word} (hi : i.toNat < ds.size) (hd : ds[i.toNat]? = some d)
+    (hok : ConRon.Bridge.StateOK a)
     (hR : LoopR pins dn m a vis fe pend ds) (h : cdRet (callW p n f [i, vis] m) = some (r, m')) :
     AM.ok (checkDecl V pins fe d) a ∧
       LoopR pins dn m' (AM.st (checkDecl V pins fe d) a) (r.headD 0) (AM.res (checkDecl V pins fe d) a)
@@ -192,7 +195,7 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s', hs', -, hok, hL⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (hA n ⟨m, Locals.init []⟩ a vis fe pend i hi hd hR) h1
+    (hA n ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR) h1
   subst hs'
   exact ⟨hok, by simpa using hL⟩
 
@@ -202,7 +205,7 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
 theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinSet)
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
     CheckDeclSpec V pins dn ds p := by
-  intro n s₀ a₀ vis fe pend i hi hR
+  intro n s₀ a₀ vis fe pend i hi hok hR
   refine triple_post (cd_specW p hP.cd n s₀ i vis) ?_
   rintro r s' ⟨hl, h⟩
   refine ⟨hl, ?_⟩
@@ -223,29 +226,29 @@ theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinS
   | axiomDecl cv =>
     rw [hdecl.1] at h
     simp only [cdSel, show (1 : Word) ≠ 6 by decide, if_false, if_true] at h
-    exact arm_callW (checkDeclAxiom_loop pins dn ds hP hdn cv) hi hd hR h
+    exact arm_callW (checkDeclAxiom_loop pins dn ds hP hdn cv) hi hd hok hR h
   | defnDecl cv v hh =>
     rw [hdecl.1] at h
     simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
       if_true] at h
-    exact arm_callW (checkDeclDefn_loop pins dn ds hP hdn cv v hh) hi hd hR h
+    exact arm_callW (checkDeclDefn_loop pins dn ds hP hdn cv v hh) hi hd hok hR h
   | thmDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,
       show (3 : Word) ≠ 2 by decide, if_false, if_true] at h
-    exact arm_callW (fun n s₀ a₀ vis fe pend i hi hd hR =>
-      checkDeclThm_loop hP.arm hP.val hP.th pins dn ds n s₀ a₀ vis fe pend i cv v hi hd hR) hi hd hR h
+    exact arm_callW (fun n s₀ a₀ vis fe pend i hi hd _ hR =>
+      checkDeclThm_loop hP.arm hP.val hP.th pins dn ds n s₀ a₀ vis fe pend i cv v hi hd hR) hi hd hok hR h
   | opaqueDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
       show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at h
-    exact arm_callW (checkDeclOpaque_loop pins dn ds hP hdn cv v) hi hd hR h
+    exact arm_callW (checkDeclOpaque_loop pins dn ds hP hdn cv v) hi hd hok hR h
   | quotDecl k cv =>
     rw [hdecl.1] at h
     simp only [cdSel, show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
       show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide, show (5 : Word) ≠ 4 by decide,
       if_false, if_true] at h
-    exact arm_callW (checkDeclQuot_loop pins dn ds hP hdn k cv) hi hd hR h
+    exact arm_callW (checkDeclQuot_loop pins dn ds hP hdn k cv) hi hd hok hR h
   | indDecl _ _ => exact hdecl.elim
   | basisDecl _ => exact hdecl.elim
 
