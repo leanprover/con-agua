@@ -3,6 +3,8 @@ import ConAgua.Arena.DeclArms
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclNatSpec
 import ConAgua.Arena.DeclNatDeps
+import ConAgua.Arena.DeclNatCv
+import ConAgua.Arena.DeclNatGate
 
 /-!
 # Every declaration-loop module (lane `decls3`)
