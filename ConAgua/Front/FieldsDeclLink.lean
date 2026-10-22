@@ -1009,7 +1009,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       cases K
       all_goals (try dsimp only at h)
       all_goals (try (cases h; done))
-      all_goals simp (config := {decide := true}) only [dlvN, dendDN, dplN, dpickN, declCode, ↓reduceIte, UInt64.not_lt_zero]
+      all_goals simp (config := {decide := true}) only [dlvN, dendDN, dplN, dpickN, dnameN, declCode, ↓reduceIte, UInt64.not_lt_zero]
       all_goals (try exact fun h0 => absurd rfl h0)
       all_goals (try exact fun h0 => h0.elim)
       case kAxiom =>
@@ -1084,7 +1084,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           rw [hd] at hpl
           obtain ⟨x, y, z, rfl⟩ := ind_ind b v d' e' hd
           simp only [← hpl, okW, (lt_toUInt64_iff _ _).mp hie, ↓reduceIte]
-          exact declLine_link e' false ik idx (.decl (.ind x y z)) _ r e h rfl
+          exact declLine_link e' false ik idx (.decl (.ind x y z)) _ r e h ⟨rfl, v, rfl, e', hd⟩
         · cases h
 
     · simp only [show (byteAt b i == 34) = false by simpa using h34, Bool.false_eq_true,

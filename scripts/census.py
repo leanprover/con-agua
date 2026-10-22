@@ -58,6 +58,8 @@ COMPLETE_BY_PARTS = {
     "ConRon.Arena.internLNode": ("ConRon.Arena.internLNode", ["zero", "succ", "max", "imax", "param"]),
     "ConRon.Arena.internNNode": ("ConRon.Arena.internNNode", ["anon", "str", "num"]),
     "ConRon.Arena.Frontend.parseNameEntryD": ("ConRon.Arena.Frontend.parseNameEntryD", ["str", "num"]),
+    "ConRon.Arena.Frontend.processLineCoreD": ("ConRon.Arena.Frontend.processLineCoreD",
+                                               ["axiom, def, thm, opaque, quot", "inductive"]),
 }
 
 # Modules that are constant data, not code: ROM (roadmap §2 item 11: basis blocks, axiom shapes,

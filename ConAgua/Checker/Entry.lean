@@ -67,24 +67,6 @@ def checkL : FunDecl := lfn () locals (r, z) {
 
 example : (71757147230292 : Word) = ConAgua.Final.ACCEPT := rfl
 
-/-! ## The frontend's inductive lines
-
-`apply_dline(j)` with the inductive line's hook to `apply_ind_line` (`ConAgua/Front/IndApply.lean`'s
-header; DESIGN.md lane `indproofs`, "The frontend's inductive lines: not hooked yet"). The front's
-proofs (`frontRun_refines`) are about `L.Front.applyDLine`, which aborts on an inductive line;
-this is the checker's `apply_dline`, and its refinement waits for `apply_ind_line`'s (listed in
-DESIGN.md). -/
-
-/-- `apply_dline(j)`, the inductive lines included. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:405-455 ConRon.Arena.Frontend.processLineCoreD
-def applyDLineInd : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
-  (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
-  if pl == 0 { abort };
-  if pl == 25 { z := call apply_ind_line(j); return 0 };
-  z := call apply_decl(pl, nm, lps, ty, vl, hk, hn, fl);
-  return 0
-}
-
 /-! ## Adapters between the lanes' conventions
 
 Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)`,
@@ -188,7 +170,6 @@ def entryProg : Prog :=
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
    ("intern_reserved_pins", L.Rom.internReservedPinsL),
    ("intern_all_pins", L.Rom.internAllPinsPB),
-   ("apply_dline", applyDLineInd),
    ("abstract1_fast", abstract1FastA), ("instantiate1_fast", instantiate1FastA),
    ("inst1", inst1A),
    ("is_proj_fn_shape", isProjFnShapeL), ("basis_pin_hit", basisPinHitL)]
