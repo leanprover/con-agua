@@ -649,8 +649,20 @@ def certCtxPinsL : FunDecl :=
   return 0
 }
 
+/-- `cert_ctx_main(q, natTy, x, y, one, bleN, boolTy, bT, bF, z, two)`: the first ten words of the
+context record at `q`. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
+def certCtxMainL : FunDecl :=
+    lfn (q, natTy, x, y, one, bleN, boolTy, bT, bF, z, two) {
+  IW.u64[q] := natTy; IW.u64[q + 1] := x; IW.u64[q + 2] := y; IW.u64[q + 3] := one;
+  IW.u64[q + 4] := bleN; IW.u64[q + 5] := boolTy; IW.u64[q + 6] := bT; IW.u64[q + 7] := bF;
+  IW.u64[q + 8] := z; IW.u64[q + 9] := two;
+  return 0
+}
+
 /-- `cert_ctx()`: the 21 pinned handles, a fresh `IW` record (the module doc's layout), built in
-the twin's order (the last eleven words, the operation names, are copied by `cert_ctx_pins`). -/
+the twin's order (the first ten words are written by `cert_ctx_main`, the last eleven, the
+operation names, copied by `cert_ctx_pins`). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
 @[l_impl ConRon.Arena.certCtx]
 def certCtxL : FunDecl :=
@@ -674,9 +686,7 @@ def certCtxL : FunDecl :=
   two := call nat_ap1(s, one);
   q := call iw_alloc(21);
   u := call cert_ctx_pins(q, pi);
-  IW.u64[q] := natTy; IW.u64[q + 1] := x; IW.u64[q + 2] := y; IW.u64[q + 3] := one;
-  IW.u64[q + 4] := bleN; IW.u64[q + 5] := boolTy; IW.u64[q + 6] := bT; IW.u64[q + 7] := bF;
-  IW.u64[q + 8] := z; IW.u64[q + 9] := two;
+  u := call cert_ctx_main(q, natTy, x, y, one, bleN, boolTy, bT, bF, z, two);
   return q
 }
 
@@ -724,9 +734,7 @@ def certTwoEqsL : FunDecl := lfn (cx, c, h1, h2, r1, r2) locals (e1, e2, s1, s2,
   e2 := call cert_eq(cx, c, r2);
   s1 := call stmt1(h1, e1);
   s2 := call stmt1(h2, e2);
-  q := call iw_alloc(2);
-  IW.u64[q] := s1;
-  IW.u64[q + 1] := s2;
+  q := call rec2(s1, s2);
   return (q, 2)
 }
 
@@ -857,14 +865,11 @@ def certDivModEqsL : FunDecl :=
     lfn (cx, c, h1, h2, h3, h4, recRhs, baseRhs) locals (e1, e2, o, s1, s2, s3, q) {
   e1 := call cert_eq(cx, c, recRhs);
   e2 := call cert_eq(cx, c, baseRhs);
-  o := call iw_alloc(2);
-  IW.u64[o] := h1;
-  IW.u64[o + 1] := h2;
+  o := call rec2(h1, h2);
   s1 := call rec3(o, 2, e1);
   s2 := call stmt1(h3, e2);
   s3 := call stmt1(h4, e2);
-  q := call iw_alloc(3);
-  IW.u64[q] := s1; IW.u64[q + 1] := s2; IW.u64[q + 2] := s3;
+  q := call rec3(s1, s2, s3);
   return (q, 3)
 }
 
@@ -1149,7 +1154,8 @@ def declArmsNatFns : Prog :=
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
    ("div_mod_cert_proofs", divModCertProofsL), ("eq_at1", eqAt1L), ("nat_one", natOneL),
-   ("nat_var", natVarL), ("cert_ctx_pins", certCtxPinsL), ("cert_ctx", certCtxL), ("cert_guard", certGuardL),
+   ("nat_var", natVarL), ("cert_ctx_pins", certCtxPinsL), ("cert_ctx_main", certCtxMainL),
+   ("cert_ctx", certCtxL), ("cert_guard", certGuardL),
    ("cert_eq", certEqL), ("cert_halves", certHalvesL), ("stmt1", stmt1),
    ("cert_two_eqs", certTwoEqsL), ("cert_gcd", certGcdL), ("cert_shift_left", certShiftLeftL),
    ("cert_shift_right", certShiftRightL), ("cert_land", certLandL),
