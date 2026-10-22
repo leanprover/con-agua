@@ -458,6 +458,7 @@ def ilwCoreD (p : Prog) (n : Nat) (ko kc us e : Word) : Option (List Word × Mem
   | none => none
   | some (d, m₁) =>
     if d.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m₁)
+    else if lsNodeW m₁ us = [] then none
     else ilwC0 p n ko kc e ((lsNodeW m₁ us).headD 0) ((lsNodeW m₁ us).tail.headD 0)
       (callW p n "keys_ok" [ko, kc] m₁)
 
@@ -478,6 +479,7 @@ variable (p : Prog) (n : Nat) (ko kc us e vo vc r : Word) (x : List Word) (m : M
 @[arena_grind =] theorem ilwCoreD_some :
     ilwCoreD p n ko kc us e (some (x, m)) =
       if x.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m)
+      else if lsNodeW m us = [] then none
       else ilwC0 p n ko kc e ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (callW p n "keys_ok" [ko, kc] m) :=
   rfl
 @[arena_grind =] theorem ilwC0_some :

@@ -28,8 +28,8 @@ def keysOkW : Nat → Mem → Word → Word → Option Unit
     if l = 0 then some ()
     else if 4294967296 ≤ rdW (m.arr64 SPN) o then none
     else if tierW (rdW (m.arr64 SPN) o) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if 3 ≤ rdW (m.arr64 SPN) o >>> 28 then none
-    else if rdW (m.arr64 CTL) (34 + (rdW (m.arr64 SPN) o >>> 28) * 2 + tierW (rdW (m.arr64 SPN) o)) ≤
+    else if (3 : Word) ≤ rdW (m.arr64 SPN) o >>> 28 then none
+    else if rdW (m.arr64 CTL) ((34 : Word) + (rdW (m.arr64 SPN) o >>> 28) * 2 + tierW (rdW (m.arr64 SPN) o)) ≤
         idxW (rdW (m.arr64 SPN) o) then none
     else keysOkW n m (o + 1) (l - 1)
 
@@ -38,8 +38,8 @@ def keysOkW : Nat → Mem → Word → Word → Option Unit
       if l = 0 then some ()
       else if 4294967296 ≤ rdW (m.arr64 SPN) o then none
       else if tierW (rdW (m.arr64 SPN) o) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if 3 ≤ rdW (m.arr64 SPN) o >>> 28 then none
-      else if rdW (m.arr64 CTL) (34 + (rdW (m.arr64 SPN) o >>> 28) * 2 + tierW (rdW (m.arr64 SPN) o)) ≤
+      else if (3 : Word) ≤ rdW (m.arr64 SPN) o >>> 28 then none
+      else if rdW (m.arr64 CTL) ((34 : Word) + (rdW (m.arr64 SPN) o >>> 28) * 2 + tierW (rdW (m.arr64 SPN) o)) ≤
           idxW (rdW (m.arr64 SPN) o) then none
       else keysOkW n m (o + 1) (l - 1) := rfl
 
@@ -60,11 +60,14 @@ theorem keysOk_spec (p : Prog) (hk : p.lookup "keys_ok" = some keysOk) (n : Nat)
 /-- A name handle that views reads back. -/
 theorem viewN_den {a : AState} (hwf : NStoreWF a.store.lss.ls.ns) {h : NIdx} {v : NNodeView} {a' : AState}
     (hr : (viewN h).run a = .ok (v, a')) : ∃ x, denoteN a.store.lss.ls.ns h = some x := by
-  apply denoteN_of_view (NStoreWF'.of_wf hwf)
+  apply ConRon.Bridge.denoteN_of_view (NStoreWF'.of_wf hwf)
   simp only [viewN, StateT.run_bind, StateT.run_get, pure_bind, EStore.ns] at hr
   revert hr
   cases e : a.store.lss.ls.ns.view h with
-  | none => intro hr; simp [e, ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hr
+  | none =>
+    intro hr
+    simp [e, ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, Functor.map,
+      Except.map] at hr
   | some w => intro _; rfl
 
 /-- **The checked keys read back**: their handles' names, as the twin's `readNamesM` needs them,
@@ -93,10 +96,10 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
     by_cases h2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
     · rw [if_pos h2] at hk; cases hk
     rw [if_neg h2] at hk
-    by_cases h3 : 3 ≤ w >>> 28
+    by_cases h3 : (3 : Word) ≤ w >>> 28
     · rw [if_pos h3] at hk; cases hk
     rw [if_neg h3] at hk
-    by_cases h4 : rdW (m.arr64 CTL) (34 + (w >>> 28) * 2 + tierW w) ≤ idxW w
+    by_cases h4 : rdW (m.arr64 CTL) ((34 : Word) + (w >>> 28) * 2 + tierW w) ≤ idxW w
     · rw [if_pos h4] at hk; cases hk
     rw [if_neg h4] at hk
     have hww : w.toNat < 2 ^ 32 := by
@@ -137,13 +140,21 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
     obtain ⟨j, hj⟩ : ∃ j, l.toNat = j + 1 := ⟨l.toNat - 1, by omega⟩
     rw [hj, lp_hslice_succ] at hs
     simp only [Option.bind_eq_bind] at hs
-    have hd : (hd? (m.arr64 SPN) o.toNat : Option NIdx) = some (decI w) := by
-      rw [← hw]
-      simp only [hd?, rdW] at *
+    cases ehd : (hd? (m.arr64 SPN) o.toNat : Option NIdx) with
+    | none => simp [ehd] at hs
+    | some x0 =>
+    have hx0 : x0 = decI w := by
+      simp only [hd?] at ehd
       cases ew : (m.arr64 SPN)[o.toNat]? with
-      | none => simp [ew] at hww
-      | some v => simp [ew] at hww ⊢; exact hww
-    rw [hd] at hs
+      | none => simp [ew] at ehd
+      | some v =>
+        have hv : v = w := by rw [← hw]; simp [rdW, ew]
+        subst hv
+        have hvv : v.toNat < 2 ^ 32 := hww
+        simp only [ew, hvv, Option.bind_eq_bind, Option.bind_some, if_true, Option.some.injEq] at ehd
+        exact ehd.symm
+    subst hx0
+    rw [ehd] at hs
     cases e' : (hslice? (m.arr64 SPN) (o.toNat + 1) j : Option (List NIdx)) with
     | none => simp [e'] at hs
     | some xs =>

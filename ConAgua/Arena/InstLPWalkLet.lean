@@ -24,7 +24,7 @@ section specs
 variable (p : Prog) (hp : ILWProg p)
 include hp
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 3000000 in
 theorem lpLet_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_let" [h, ko, kc, vo, vc, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilwLetW p n s₀.mem h ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -34,7 +34,7 @@ theorem lpLet_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "lp_rb_let"] <;>
-    finish (gen := 20) [ilwLetW, ilwProbe, msetG, tierW, idxW]
+    finish (gen := 30) [ilwLetW, ilwProbe, msetG, tierW, idxW]
 end specs
 
 end L.Arena
