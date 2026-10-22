@@ -121,7 +121,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1459 functions, 31 of them stubs.
+1459 functions, 30 of them stubs.
 -/
 
 namespace L.Checker
@@ -129,7 +129,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
+def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's arrays (140; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -784,6 +784,7 @@ def checkerProg : Prog := [
   ("ind_nlist", L.Front.Ind.indNList),
   ("ind_num", L.Front.Ind.indNum),
   ("ind_obj", L.Front.Ind.indObj),
+  ("ind_params_ok", L.Checker.indParamsOkL),
   ("ind_pi_tele_len", L.Front.Ind.indPiTeleLen),
   ("ind_rec", L.Front.Ind.indRec),
   ("ind_rec_copy", L.Arena.indRecCopy),
@@ -1716,7 +1717,6 @@ def checkerProg : Prog := [
   ("fvar_b", abortStub 2),
   ("fvar_type_d", abortStub 1),
   ("fvar_type_ds", abortStub 2),
-  ("ind_params_ok", abortStub 3),
   ("inst_lp", abortStub 4),
   ("inst_lp_fast", abortStub 5),
   ("inst_pis_at_lift", abortStub 4),

@@ -868,7 +868,7 @@ def main():
             if cap:
                 d["small"] = cap
             if lo == "error" and size <= TRACE_MAX_BYTES:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env) if entry == "check_np" else ("skip", "")
+                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
                 ls = out.splitlines()
                 if st == "ok" and len(ls) >= 2:
                     d["trace"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1] + " (" + ls[1][len("stack "):] + ")"
