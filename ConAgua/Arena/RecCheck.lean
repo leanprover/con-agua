@@ -374,17 +374,15 @@ def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_
 parameters (`ds.allM`, stopping at the first failure). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (j, x, bb, fb) {
-  j := 0;
-  while j < dsl {
-    x := IW.u64[dso + j];
-    bb := call bvar_b(⟪CWF⟫, x);
-    if bb != 0 { return 0 };
-    fb := call fvar_b(⟪CWF⟫, x);
-    if nP < fb { return 0 };
-    j += 1
-  };
-  return 1
+def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb, r) {
+  if dsl == 0 { return 1 };
+  x := IW.u64[dso];
+  bb := call bvar_b(⟪CWF⟫, x);
+  if bb != 0 { return 0 };
+  fb := call fvar_b(⟪CWF⟫, x);
+  if nP < fb { return 0 };
+  r := call target_major_of_outside_closed(dso + 1, dsl - 1, nP);
+  return r
 }
 
 /-- `target_major_of`'s OUTSIDE branch: does any parameter occur as a member or hole

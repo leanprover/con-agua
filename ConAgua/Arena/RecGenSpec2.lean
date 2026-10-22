@@ -426,4 +426,114 @@ theorem classFieldsOfHits_refines (p : Prog)
   rintro r s' ⟨hl, hm, x, y, hw, rfl⟩
   exact ⟨hl, hm, cfhW_ok n s₀.mem o l i x y ihs hw hd hb hsz⟩
 
+
+/-! ## `gen_rec_check_any_no_member`: `ms.any (·.member.isNone)` -/
+
+/-- **The model of `gen_rec_check_any_no_member`.** -/
+def anmW : Nat → Mem → Word → Word → Option Word
+  | 0, _, _, _ => none
+  | n + 1, m, o, l =>
+    if l = 0 then some 0
+    else if rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 8) = 0 then some 1
+    else anmW n m (o + 1) (l - 1)
+
+section arms
+variable (n : Nat) (m : Mem) (o l : Word)
+theorem anmW_nil (h : l = 0) : anmW (n + 1) m o l = some 0 := by simp [anmW, h]
+theorem anmW_hit (h : l ≠ 0) (hx : rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 8) = 0) :
+    anmW (n + 1) m o l = some 1 := by simp [anmW, h, hx]
+theorem anmW_next (h : l ≠ 0) (hx : rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 8) ≠ 0) :
+    anmW (n + 1) m o l = anmW n m (o + 1) (l - 1) := by simp [anmW, h, hx]
+end arms
+
+grind_pattern [ind_grind] anmW_nil => anmW (n + 1) m o l
+grind_pattern [ind_grind] anmW_hit => anmW (n + 1) m o l
+grind_pattern [ind_grind] anmW_next => anmW (n + 1) m o l
+
+theorem genRecCheckAnyNoMember_spec (p : Prog)
+    (hp : p.lookup "gen_rec_check_any_no_member" = some genRecCheckAnyNoMember) (n : Nat) :
+    ∀ (s₀ : St) (o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_any_no_member" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ anmW n s₀.mem o l = some (r.headD 0); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ o l; rw [invoke_eq _ hp]; simp only [callFn, genRecCheckAnyNoMember]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, genRecCheckAnyNoMember]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20)
+
+theorem decTM_member {m : Mem} {pp : Nat} {t : TargetMajor} (h : decTM m pp = some t) :
+    ∃ k, iwN m (pp + 8) = some k ∧ t.member = decON k := by
+  simp only [decTM, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨_, -, _, -, _, -, _, -, _, -, _, -, k, hk, _, -, _, -, rfl⟩ := h
+  exact ⟨k, hk, rfl⟩
+
+theorem anmW_ok (n : Nat) : ∀ (m : Mem) (o l r : Word) (ms : List TargetMajor),
+    anmW n m o l = some r → decPL m (decTM m) o.toNat l.toNat = some ms →
+    o.toNat + l.toNat < 2 ^ 64 → (m.arr64 IW).size < 2 ^ 64 →
+    (r != 0) = ms.any (fun t => t.member.isNone) ∧ r.toNat ≤ 1 := by
+  induction n with
+  | zero => intro m o l r ms h; simp [anmW] at h
+  | succ n ih =>
+    intro m o l r ms h hd hb hsz
+    by_cases hl : l = 0
+    · rw [anmW_nil n m o l hl] at h
+      simp only [Option.some.injEq] at h
+      subst h
+      have hz : l.toNat = 0 := by rw [hl]; rfl
+      rw [hz] at hd
+      simp [decPL] at hd
+      subst hd
+      simp
+    · obtain ⟨hsum, hco1⟩ := toNat_succ_of_lt hb hl
+      obtain ⟨l1, hl1⟩ : ∃ l1, l.toNat = l1 + 1 := ⟨l.toNat - 1, by
+        have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+        omega⟩
+      rw [hl1] at hd
+      obtain ⟨pp, t, ys, rfl, hp, hx, hys⟩ := decPL_cons hd
+      have hrd := iwN_rdW hp (by omega)
+      rw [UInt64.ofNat_toNat] at hrd
+      obtain ⟨k, hk, hmem⟩ := decTM_member hx
+      have hk8 := iwN_lt hk
+      have hk' := iwN_rdW hk (by omega)
+      have e8 : UInt64.ofNat pp + 8 = UInt64.ofNat (pp + 8) := by rw [UInt64.ofNat_add]; rfl
+      have hrd8 : rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 8) = UInt64.ofNat k := by
+        rw [hrd.1, e8]; exact hk'.1
+      have hk0 : (UInt64.ofNat k = 0) ↔ k = 0 := by
+        constructor
+        · intro e
+          have := congrArg UInt64.toNat e
+          rw [UInt64.toNat_ofNat_of_lt' hk'.2] at this; simpa using this
+        · intro e; subst e; rfl
+      by_cases he : k = 0
+      · rw [anmW_hit n m o l hl (by rw [hrd8]; exact hk0.mpr he)] at h
+        simp only [Option.some.injEq] at h
+        subst h
+        simp [List.any_cons, hmem, decON, he]
+      · rw [anmW_next n m o l hl (by rw [hrd8]; exact fun e => he (hk0.mp e))] at h
+        have hys' : decPL m (decTM m) (o + 1).toNat (l - 1).toNat = some ys := by
+          have hl1' : (l - 1).toNat = l1 := by omega
+          rw [hco1, hl1']; exact hys
+        have := ih m (o + 1) (l - 1) r ys h hys' (by omega) hsz
+        simpa [List.any_cons, hmem, decON, he] using this
+
+/-- **`gen_rec_check_any_no_member` is `ms.any (·.member.isNone)`** (a piece of `genRecCheck`;
+pure, the state untouched). -/
+theorem genRecCheckAnyNoMember_refines (p : Prog)
+    (hp : p.lookup "gen_rec_check_any_no_member" = some genRecCheckAnyNoMember) (n : Nat) (s₀ : St)
+    (o l : Word) (ms : List TargetMajor)
+    (hd : decPL s₀.mem (decTM s₀.mem) o.toNat l.toNat = some ms) (hb : o.toNat + l.toNat < 2 ^ 64)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_any_no_member" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      (r.headD 0 != 0) = ms.any (fun t => t.member.isNone) ∧ (r.headD 0).toNat ≤ 1; ⊤⦄ := by
+  refine triple_post (genRecCheckAnyNoMember_spec p hp n s₀ o l) ?_
+  rintro r s' ⟨hl, hm, hw⟩
+  exact ⟨hl, hm, anmW_ok n s₀.mem o l _ ms hw hd hb hsz⟩
+
 end L.Ind

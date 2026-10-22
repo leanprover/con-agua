@@ -684,14 +684,11 @@ def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis)
 /-- `genRecCheck` helper: `nestedBit || ms.any (·.member.isNone)`'s second disjunct. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:705-758 ConRon.Arena.genRecCheck
 @[l_impl ConRon.Arena.genRecCheck]
-def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (j, m, r) {
-  r := 0;
-  j := 0;
-  while j < msLen {
-    m := IW.u64[msOff + j];
-    if IW.u64[m + 8] == 0 { r := 1; break };
-    j += 1
-  };
+def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
+  if msLen == 0 { return 0 };
+  m := IW.u64[msOff];
+  if IW.u64[m + 8] == 0 { return 1 };
+  r := call gen_rec_check_any_no_member(msOff + 1, msLen - 1);
   return r
 }
 

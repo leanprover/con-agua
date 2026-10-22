@@ -1,6 +1,7 @@
 import ConAgua.Arena.RecCheck
 import ConAgua.Arena.RecCheckSpec
 import ConAgua.Arena.IndSumSpec2
+import ConAgua.Arena.RecGenSpec2
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)
@@ -128,5 +129,44 @@ theorem ctorsHaveName_refines (p : Prog) (hp : p.lookup "ctors_have_name" = some
   refine triple_post (ctorsHaveName_spec p hp n s₀ co cl name) ?_
   rintro r s' ⟨hl, hm, hw⟩
   exact ⟨hl, hm, chnW_ok n s₀.mem co cl name _ ctors hw hd hn hb⟩
+
+
+/-! ## `target_major_of_outside_closed`: the same `allM` as `class_key_of_closed` -/
+
+theorem targetMajorOfOutsideClosed_spec (p : Prog)
+    (hp : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed) (n : Nat) :
+    ∀ (s₀ : St) (dso dsl nP : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_of_outside_closed" [dso, dsl, nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ ckcW n s₀.mem nP dso dsl = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ dso dsl nP; rw [invoke_eq _ hp]; simp only [callFn, targetMajorOfOutsideClosed]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ dso dsl nP
+    rw [invoke_eq _ hp]
+    simp only [callFn, targetMajorOfOutsideClosed]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "bvar_b" n, stubM_spec p "fvar_b" n, ih] <;>
+      finish (gen := 20)
+
+/-- **`target_major_of_outside_closed` refines the `allM` closedness test of `targetMajorOf`'s
+outside branch** (through the stubs `bvar_b`, `fvar_b`). A piece of `targetMajorOf`. -/
+theorem targetMajorOfOutsideClosed_refines (p : Prog)
+    (hp : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis dso dsl nP : Word)
+    (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (hd : decHL s₀.mem dso.toNat dsl.toNat = some xs)
+    (hb : dso.toNat + dsl.toNat < 2 ^ 64) (ht : dso.toNat + dsl.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_of_outside_closed" [dso, dsl, nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (keyClosedTest nP.toNat)) a₀ ∧
+      KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (xs.allM (keyClosedTest nP.toNat)) a₀) r
+        (AM.res (xs.allM (keyClosedTest nP.toNat)) a₀); ⊤⦄ := by
+  refine triple_post (targetMajorOfOutsideClosed_spec p hp n s₀ dso dsl nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hpost⟩ := ckcW_ok dn fe n _ _ a₀ vis nP dso dsl xs r hm hS hd hb ht
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
 
 end L.Ind
