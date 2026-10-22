@@ -8,3 +8,4 @@ import ConAgua.Arena.DeclCvg
 Imports every module of the declaration loop's proofs, so one build checks them together and
 lemma-name clashes between files surface here (as `IndAll.lean` does for the inductive stage).
 -/
+import ConAgua.Arena.DeclValSpec
