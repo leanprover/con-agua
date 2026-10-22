@@ -62,10 +62,10 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 /-! ### `bool_ctor_ok` -/
 
 def boolCtorOkW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "ci_to_cv" [c] m) fun r1 m1 =>
+  ntBW (callW p n "ci_to_cv" [c] m) fun r1 m1 =>
   if rdW (m1.arr64 EREC) (r1.headD 0 + 2) ≠ 0 then some ([0], m1) else
-  bW (callW p n "pin_at" [29] m1) fun r2 m2 =>
-  bW (callW p n "const_e" [r2.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "pin_at" [29] m1) fun r2 m2 =>
+  ntBW (callW p n "const_e" [r2.headD 0] m2) fun r3 m3 =>
   some ([if rdW (m3.arr64 EREC) (r1.headD 0 + 3) = r3.headD 0 then 1 else 0], m3)
 
 theorem boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCtorOkL) (n : Nat)
@@ -77,7 +77,7 @@ theorem boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCto
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "ci_to_cv", callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [boolCtorOkW, bW]
+    finish (gen := 20) [boolCtorOkW, ntBW]
 
 theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     CallRef p "bool_ctor_ok" [c]
@@ -452,8 +452,8 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
         simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
           Bool.not_true, Bool.false_eq_true, if_false, boolFalseName_eq, e4', hf2, hrun2]
 
-theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> simp
-theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
+theorem ntGetD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> simp
+theorem ntGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   cases r with
   | nil => simp
   | cons a t => cases t <;> simp
@@ -503,7 +503,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   obtain ⟨deps, a2, hrun2, hS2, hg2, hx2⟩ := natOpDeps_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatGateProg c k m1 a1 r2 m2 ⟨hS1, hc⟩ h2
   have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat = some deps := by
-    have := hx2.1; rw [getD0, getD1] at this; exact this
+    have := hx2.1; rw [ntGetD0, ntGetD1] at this; exact this
   cases h3 : callW p k "nat_op_deps_stored" [vis, r2.headD 0, r2.tail.headD 0] m2 with
   | none => rw [h3] at hw; simp [ngK3] at hw
   | some q3 =>
@@ -556,7 +556,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   obtain ⟨dm, a6, hrun6, hS6, hg6, hx6⟩ := natDivModNames_ref (dn := dn) (vis := vis) (fe := fe)
     hN.toNatGateProg k m3 a3 r6 m6 hS3 h6
   have hd6 : decHL m6 (r6.headD 0).toNat (r6.tail.headD 0).toNat = some dm := by
-    have := hx6.1; rw [getD0, getD1] at this; exact this
+    have := hx6.1; rw [ntGetD0, ntGetD1] at this; exact this
   cases h7 : callW p k "sl_contains" [r6.headD 0, r6.tail.headD 0, c] m6 with
   | none => rw [h7] at hw; simp [ngK7] at hw
   | some q7 =>

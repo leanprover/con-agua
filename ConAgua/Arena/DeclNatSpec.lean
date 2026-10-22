@@ -135,7 +135,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 def natOpNamesW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
   if pinW m 0 = 0 then none else
-  bW (callW p n "iw_alloc" [7] m) fun rq mq =>
+  ntBW (callW p n "iw_alloc" [7] m) fun rq mq =>
   some ([rq.headD 0, 7], (((((((mq.set64 IW (rq.headD 0) (pinW m 15)).set64 IW (rq.headD 0 + 1) (pinW m 16)).set64 IW (rq.headD 0 + 2) (pinW m 17)).set64 IW (rq.headD 0 + 3) (pinW m 18)).set64 IW (rq.headD 0 + 4) (pinW m 19)).set64 IW (rq.headD 0 + 5) (pinW m 20)).set64 IW (rq.headD 0 + 6) (pinW m 21)))
 
 theorem natOpNames_specW (p : Prog) (hp : p.lookup "nat_op_names" = some natOpNamesL)
@@ -147,7 +147,7 @@ theorem natOpNames_specW (p : Prog) (hp : p.lookup "nat_op_names" = some natOpNa
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       pinAt_pure p hpin n, callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [natOpNamesW, bW]
+    finish (gen := 20) [natOpNamesW, ntBW]
 
 theorem natOpNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
     (natOpNames).run a = .ok ([decI (pinW m 15), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18), decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)], a) := by
@@ -198,7 +198,7 @@ theorem natOpNames_refines (hN : NatGateProg p) :
 
 def natDivModNamesW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
   if pinW m 0 = 0 then none else
-  bW (callW p n "iw_alloc" [8] m) fun rq mq =>
+  ntBW (callW p n "iw_alloc" [8] m) fun rq mq =>
   some ([rq.headD 0, 8], ((((((((mq.set64 IW (rq.headD 0) (pinW m 22)).set64 IW (rq.headD 0 + 1) (pinW m 23)).set64 IW (rq.headD 0 + 2) (pinW m 24)).set64 IW (rq.headD 0 + 3) (pinW m 25)).set64 IW (rq.headD 0 + 4) (pinW m 26)).set64 IW (rq.headD 0 + 5) (pinW m 27)).set64 IW (rq.headD 0 + 6) (pinW m 28)).set64 IW (rq.headD 0 + 7) (pinW m 29)))
 
 theorem natDivModNames_specW (p : Prog) (hp : p.lookup "nat_div_mod_names" = some natDivModNamesL)
@@ -210,7 +210,7 @@ theorem natDivModNames_specW (p : Prog) (hp : p.lookup "nat_div_mod_names" = som
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       pinAt_pure p hpin n, callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [natDivModNamesW, bW]
+    finish (gen := 20) [natDivModNamesW, ntBW]
 
 theorem natDivModNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
     (natDivModNames).run a = .ok ([decI (pinW m 22), decI (pinW m 23), decI (pinW m 24), decI (pinW m 25), decI (pinW m 26), decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)], a) := by
@@ -406,10 +406,10 @@ def pinRecW (m : Mem) : List Word :=
    pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30]
 
 def natOpPinsW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
-  bW (callW p n "iw_alloc" [21] m) fun rq mq =>
-  bW (callW p n "nat_op_pins_a" [rq.headD 0] mq) fun _ ma =>
-  bW (callW p n "nat_op_pins_b" [rq.headD 0 + 8] ma) fun _ mb =>
-  bW (callW p n "nat_op_pins_c" [rq.headD 0 + 15] mb) fun _ mc => some ([rq.headD 0], mc)
+  ntBW (callW p n "iw_alloc" [21] m) fun rq mq =>
+  ntBW (callW p n "nat_op_pins_a" [rq.headD 0] mq) fun _ ma =>
+  ntBW (callW p n "nat_op_pins_b" [rq.headD 0 + 8] ma) fun _ mb =>
+  ntBW (callW p n "nat_op_pins_c" [rq.headD 0 + 15] mb) fun _ mc => some ([rq.headD 0], mc)
 
 theorem natOpPins_specW (p : Prog) (hp : p.lookup "nat_op_pins" = some natOpPinsL) (n : Nat)
     (s₀ : St) :
@@ -421,7 +421,7 @@ theorem natOpPins_specW (p : Prog) (hp : p.lookup "nat_op_pins" = some natOpPins
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "iw_alloc", callW_spec p n "nat_op_pins_a", callW_spec p n "nat_op_pins_b",
       callW_spec p n "nat_op_pins_c"] <;>
-    finish (gen := 20) [natOpPinsW, bW]
+    finish (gen := 20) [natOpPinsW, ntBW]
 
 theorem pinW_wrIW (m : Mem) (q : Word) (ws : List Word) (j : Nat) :
     pinW (wrIW m q ws) j = pinW m j := by

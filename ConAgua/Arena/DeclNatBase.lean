@@ -33,14 +33,14 @@ namespace L.Ind
 open L.Arena
 
 /-- The word model's bind: the callee's result words and memory into the continuation. -/
-def bW {β : Type} (x : Option (List Word × Mem)) (k : List Word → Mem → Option β) : Option β :=
+def ntBW {β : Type} (x : Option (List Word × Mem)) (k : List Word → Mem → Option β) : Option β :=
   match x with
   | none => none
   | some (r, m) => k r m
 
-@[simp, grind =] theorem bW_none {β : Type} (k : List Word → Mem → Option β) : bW none k = none := rfl
+@[simp, grind =] theorem bW_none {β : Type} (k : List Word → Mem → Option β) : ntBW none k = none := rfl
 @[simp, grind =] theorem bW_some {β : Type} (r : List Word) (m : Mem) (k : List Word → Mem → Option β) :
-    bW (some (r, m)) k = k r m := rfl
+    ntBW (some (r, m)) k = k r m := rfl
 
 /-- **A refinement of the twin's `op` by the call `f(args)`**, over the runs `callW` gives. -/
 def CallRef {α : Type} (p : Prog) (f : FnName) (args : List Word) (pre : Mem → AState → Prop)
@@ -294,9 +294,9 @@ theorem rec3_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 /-- The model of `sl_new1(x)` (the allocation through `callW`). -/
 def slNew1W (p : Prog) (n : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
-  bW (callW p n "iw_alloc" [1] m) fun r1 m1 => some ([r1.headD 0, 1], m1.set64 IW (r1.headD 0) x)
+  ntBW (callW p n "iw_alloc" [1] m) fun r1 m1 => some ([r1.headD 0, 1], m1.set64 IW (r1.headD 0) x)
 
-theorem slNew1_specW (p : Prog) (hp : p.lookup "sl_new1" = some slNew1) (n : Nat) (s₀ : St)
+theorem ntSlNew1_specW (p : Prog) (hp : p.lookup "sl_new1" = some slNew1) (n : Nat) (s₀ : St)
     (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sl_new1" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ slNew1W p n s₀.mem x = some (r, s'.mem); ⊤⦄ := by
@@ -305,7 +305,7 @@ theorem slNew1_specW (p : Prog) (hp : p.lookup "sl_new1" = some slNew1) (n : Nat
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "iw_alloc"] <;>
-    finish [slNew1W, bW]
+    finish [slNew1W, ntBW]
 
 theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "sl_new1" = some slNew1) (x : Word) :
@@ -313,7 +313,7 @@ theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       (fun m m' r => RecPost m m' r [x] ∧ r = [r.headD 0, 1]) := by
   refine FRef.of_succ fun k m r m' hI hc => ?_
   obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (slNew1_specW p hp k _ x) hc
+    (ntSlNew1_specW p hp k _ x) hc
   change slNew1W p k m x = some (r, s'.mem) at hw
   unfold slNew1W at hw
   cases h1 : callW p k "iw_alloc" [1] m with
@@ -596,8 +596,8 @@ end interners
 
 /-- The model of `const_e(n)`. -/
 def constEW (p : Prog) (n : Nat) (m : Mem) (nm : Word) : Option (List Word × Mem) :=
-  bW (callW p n "pin_word" [52] m) fun r1 m1 =>
-  bW (callW p n "intern_const" [nm, r1.headD 0] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "pin_word" [52] m) fun r1 m1 =>
+  ntBW (callW p n "intern_const" [nm, r1.headD 0] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem constE_specW (p : Prog) (hp : p.lookup "const_e" = some constEL) (n : Nat) (s₀ : St)
     (nm : Word) :
@@ -608,7 +608,7 @@ theorem constE_specW (p : Prog) (hp : p.lookup "const_e" = some constEL) (n : Na
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word", callW_spec p n "intern_const"] <;>
-    finish [constEW, bW]
+    finish [constEW, ntBW]
 
 section prims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -707,7 +707,7 @@ end slc
 
 /-! ## `env_find` -/
 
-theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
+theorem ntRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
   have h1 := tagW_toNat w
   have h2 := ixW_toNat w hw
@@ -780,8 +780,8 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
       simpa using hv
     have hcC : rowC m w ≠ 0 := by rw [← rowCW_eq m w hw ht2]; exact hc
     obtain ⟨ci, hci⟩ := EnvR.hit_some hE w hw htag hcC
-    rw [← hm, if_neg hc, if_pos hv', ← rowPW_eq m w hw ht2]
-    rw [← rowPW_eq m w hw ht2] at hci
+    rw [← hm, if_neg hc, if_pos hv', ← ntRowPW_eq m w hw ht2]
+    rw [← ntRowPW_eq m w hw ht2] at hci
     refine ⟨rfl, ?_⟩
     simp [decFd, hci]
   · rw [if_neg hv] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod

@@ -35,20 +35,20 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 def cmW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
   if sl = 0 ∧ pl = 0 then some ([1], m) else
   if sl = 0 ∨ pl = 0 then some ([0], m) else
-  bW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
+  ntBW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
     rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 2),
     rdW (m.arr64 IW) po] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
-  bW (callW p n "subst_const_all" [c, annVal, 4000000000, rdW (m1.arr64 IW) po] m1) fun r2 m2 =>
-  bW (callW p n "subst_const0_list" [c, annVal, rdW (m2.arr64 IW) (rdW (m.arr64 IW) so),
+  ntBW (callW p n "subst_const_all" [c, annVal, 4000000000, rdW (m1.arr64 IW) po] m1) fun r2 m2 =>
+  ntBW (callW p n "subst_const0_list" [c, annVal, rdW (m2.arr64 IW) (rdW (m.arr64 IW) so),
     rdW (m2.arr64 IW) (rdW (m.arr64 IW) so + 1)] m2) fun r3 m3 =>
-  bW (callW p n "div_mod_cert_applied" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3) fun r4 m4 =>
-  bW (stubM "infer_type_core" m4 [vs, 4, r4.headD 0]) fun r5 m5 =>
-  bW (callW p n "subst_const0" [c, annVal, 4000000000,
+  ntBW (callW p n "div_mod_cert_applied" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3) fun r4 m4 =>
+  ntBW (stubM "infer_type_core" m4 [vs, 4, r4.headD 0]) fun r5 m5 =>
+  ntBW (callW p n "subst_const0" [c, annVal, 4000000000,
     rdW (m5.arr64 IW) (rdW (m.arr64 IW) so + 2)] m5) fun r6 m6 =>
-  bW (stubM "is_def_eq_core" m6 [vs, 4, r5.headD 0, r6.headD 0]) fun r7 m7 =>
+  ntBW (stubM "is_def_eq_core" m6 [vs, 4, r5.headD 0, r6.headD 0]) fun r7 m7 =>
   if r7.headD 0 = 0 then some ([0], m7) else
-  bW (callW p n "check_div_mod_certs" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m7) fun r8 m8 =>
+  ntBW (callW p n "check_div_mod_certs" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m7) fun r8 m8 =>
     some ([r8.headD 0], m8)
 
 set_option maxHeartbeats 3200000 in
@@ -64,7 +64,7 @@ theorem cm_specW (p : Prog) (hp : p.lookup "check_div_mod_certs" = some checkDiv
       callW_spec p n "subst_const0_list", callW_spec p n "div_mod_cert_applied",
       stubM_spec p "infer_type_core" n, callW_spec p n "subst_const0",
       stubM_spec p "is_def_eq_core" n, callW_spec p n "check_div_mod_certs"] <;>
-    finish (gen := 30) (instances := 10000) [cmW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [cmW, ntBW, rdW_eq]
 
 theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
     (c annVal : Word) (hc : H c) (hann : H annVal) :
@@ -182,7 +182,7 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
     have hdh2 : decHL m2 ho.toNat hl.toNat = some hy := by rw [decHL_grow hG2 hbd]; exact hdh
     obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := sc0List_ref hD.toDmProg7.toDmProg6.toDmProg5 hs0 c annVal hc hann hy ho hl k m2 a2 r3 m3 hS2 hdh2
       (Nat.le_trans hbd hG2.1) h3'
-    simp only [decRL, Nat.zero_add, getD0, getD1] at hd3
+    simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd3
     have hG3 : IWGrow m m3 := hG2.trans hg3
     -- the application
     obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
@@ -262,12 +262,12 @@ theorem checkDivModCerts_refines (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe)
 /-! ## `check_div_mod_pin_at` -/
 
 def cpaW (p : Prog) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Word × Mem) :=
-  bW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
-  bW (stubM "is_def_eq_core" m1 [vs, 0, value, r1.headD 0]) fun r2 m2 =>
+  ntBW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
+  ntBW (stubM "is_def_eq_core" m1 [vs, 0, value, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
-  bW (callW p n "div_mod_cert_stmts" [c] m2) fun r3 m3 =>
-  bW (callW p n "div_mod_cert_proofs" [ps, c] m3) fun r4 m4 =>
-  bW (callW p n "check_div_mod_certs" [vs, c, value, r3.headD 0, r3.tail.headD 0, r4.headD 0,
+  ntBW (callW p n "div_mod_cert_stmts" [c] m2) fun r3 m3 =>
+  ntBW (callW p n "div_mod_cert_proofs" [ps, c] m3) fun r4 m4 =>
+  ntBW (callW p n "check_div_mod_certs" [vs, c, value, r3.headD 0, r3.tail.headD 0, r4.headD 0,
     r4.tail.headD 0] m4) fun r5 m5 => some ([r5.headD 0], m5)
 
 set_option maxHeartbeats 3200000 in
@@ -282,7 +282,7 @@ theorem cpa_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_at" = some checkD
       callW_spec p n "div_mod_decl_pin", stubM_spec p "is_def_eq_core" n,
       callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
       callW_spec p n "check_div_mod_certs"] <;>
-    finish (gen := 30) (instances := 10000) [cpaW, bW]
+    finish (gen := 30) (instances := 10000) [cpaW, ntBW]
 
 theorem cpa_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
     (c value ps : Word) (ip : INatOpPinSet) :
@@ -331,9 +331,9 @@ theorem cpa_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p 
   rw [h5, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  simp only [decStmtL, getD0, getD1] at hd3
+  simp only [decStmtL, ntGetD0, ntGetD1] at hd3
   unfold decRL at hd4
-  simp only [Nat.zero_add, getD0, getD1] at hd4
+  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd4
   obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ := cm_ref hD hs0 hsA c value hc hval x3 x4 (r3.headD 0)
     (r3.tail.headD 0) (r4.headD 0) (r4.tail.headD 0) k m4 a4 r5 m5 hS4 (hd3.grow hg4) hd4.1 hd4.2 h5
   refine ⟨x5, a5, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hd5⟩

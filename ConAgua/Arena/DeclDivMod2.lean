@@ -35,7 +35,7 @@ theorem CallRef.bind_ {α β : Type} {p : Prog} {f : FnName} {args : List Word}
     {post : Mem → Mem → AState → List Word → α → Prop}
     (h : CallRef p f args pre op post) {n : Nat} {m : Mem} {a : AState} (hpre : pre m a)
     {K : List Word → Mem → Option β} {res : β}
-    (hw : bW (callW p n f args m) K = some res) :
+    (hw : ntBW (callW p n f args m) K = some res) :
     ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res := by
   cases hc : callW p n f args m with
   | none => rw [hc] at hw; simp at hw
@@ -48,7 +48,7 @@ theorem CallRef.bind_ {α β : Type} {p : Prog} {f : FnName} {args : List Word}
 theorem FRef.bind_ {β : Type} {p : Prog} {f : FnName} {args : List Word} {pre : Mem → Prop}
     {post : Mem → Mem → List Word → Prop} (h : FRef p f args pre post) {n : Nat} {m : Mem}
     (hpre : pre m) {K : List Word → Mem → Option β} {res : β}
-    (hw : bW (callW p n f args m) K = some res) :
+    (hw : ntBW (callW p n f args m) K = some res) :
     ∃ r1 m1, post m m1 r1 ∧ K r1 m1 = some res := by
   cases hc : callW p n f args m with
   | none => rw [hc] at hw; simp at hw
@@ -61,7 +61,7 @@ theorem RelAM.bind_ {α β : Type} {f : FnName} {args : List Word} {pre : Mem �
     {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
     (h : RelAM f args pre op post) {m : Mem} {a : AState} (hpre : pre m a)
     {K : List Word → Mem → Option β} {res : β}
-    (hw : bW (stubM f m args) K = some res) :
+    (hw : ntBW (stubM f m args) K = some res) :
     ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res := by
   cases hc : stubM f m args with
   | none => rw [hc] at hw; simp at hw
@@ -107,9 +107,9 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 /-! ## `nat_var` -/
 
 def natVarW (p : Prog) (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  bW (callW p n "pin_at" [1] m) fun r1 m1 =>
-  bW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
-  bW (callW p n "intern_fvar" [i, r2.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
+  ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
+  ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
+  ntBW (callW p n "intern_fvar" [i, r2.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
 
 theorem natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL) (n : Nat) (s₀ : St)
     (i : Word) :
@@ -120,7 +120,7 @@ theorem natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL) (n : Na
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "intern_fvar"] <;>
-    finish (gen := 20) (instances := 10000) [natVarW, bW]
+    finish (gen := 20) (instances := 10000) [natVarW, ntBW]
 
 theorem natVar_ref (hD : DmProg2 p) (i : Word) :
     CallRef p "nat_var" [i] (StageR dn vis fe) (natVar i.toNat) (KeepPost dn vis fe decW0E) := by
@@ -142,10 +142,10 @@ theorem natVar_ref (hD : DmProg2 p) (i : Word) :
 /-! ## `nat_one` -/
 
 def natOneW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
-  bW (callW p n "pin_at" [3] m) fun r1 m1 =>
-  bW (callW p n "pin_at" [2] m1) fun r2 m2 =>
-  bW (callW p n "const_e" [r2.headD 0] m2) fun r3 m3 =>
-  bW (callW p n "nat_ap1" [r1.headD 0, r3.headD 0] m3) fun r4 m4 => some ([r4.headD 0], m4)
+  ntBW (callW p n "pin_at" [3] m) fun r1 m1 =>
+  ntBW (callW p n "pin_at" [2] m1) fun r2 m2 =>
+  ntBW (callW p n "const_e" [r2.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "nat_ap1" [r1.headD 0, r3.headD 0] m3) fun r4 m4 => some ([r4.headD 0], m4)
 
 theorem natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_one" []
@@ -155,7 +155,7 @@ theorem natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL) (n : Na
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "nat_ap1"] <;>
-    finish (gen := 20) (instances := 10000) [natOneW, bW]
+    finish (gen := 20) (instances := 10000) [natOneW, ntBW]
 
 theorem natOne_ref (hD : DmProg2 p) :
     CallRef p "nat_one" [] (StageR dn vis fe) natOne (KeepPost dn vis fe decW0E) := by
@@ -190,15 +190,15 @@ theorem slNew1_dec {κ : IdxKind} {m m1 : Mem} {r : List Word} {x : Word} (hR : 
   simpa using this
 
 def eqAt1W (p : Prog) (n : Nat) (m : Mem) (ty a b : Word) : Option (List Word × Mem) :=
-  bW (callW p n "pin_word" [53] m) fun r1 m1 =>
-  bW (callW p n "intern_succ" [r1.headD 0] m1) fun r2 m2 =>
-  bW (callW p n "sl_new1" [r2.headD 0] m2) fun r3 m3 =>
-  bW (stubM "intern_ls_iw" m3 [r3.headD 0, r3.tail.headD 0]) fun r4 m4 =>
-  bW (callW p n "pin_at" [0] m4) fun r5 m5 =>
-  bW (callW p n "intern_const" [r5.headD 0, r4.headD 0] m5) fun r6 m6 =>
-  bW (callW p n "mk_app" [r6.headD 0, ty] m6) fun r7 m7 =>
-  bW (callW p n "mk_app" [r7.headD 0, a] m7) fun r8 m8 =>
-  bW (callW p n "mk_app" [r8.headD 0, b] m8) fun r9 m9 => some ([r9.headD 0], m9)
+  ntBW (callW p n "pin_word" [53] m) fun r1 m1 =>
+  ntBW (callW p n "intern_succ" [r1.headD 0] m1) fun r2 m2 =>
+  ntBW (callW p n "sl_new1" [r2.headD 0] m2) fun r3 m3 =>
+  ntBW (stubM "intern_ls_iw" m3 [r3.headD 0, r3.tail.headD 0]) fun r4 m4 =>
+  ntBW (callW p n "pin_at" [0] m4) fun r5 m5 =>
+  ntBW (callW p n "intern_const" [r5.headD 0, r4.headD 0] m5) fun r6 m6 =>
+  ntBW (callW p n "mk_app" [r6.headD 0, ty] m6) fun r7 m7 =>
+  ntBW (callW p n "mk_app" [r7.headD 0, a] m7) fun r8 m8 =>
+  ntBW (callW p n "mk_app" [r8.headD 0, b] m8) fun r9 m9 => some ([r9.headD 0], m9)
 
 theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (n : Nat) (s₀ : St)
     (ty a b : Word) :
@@ -211,7 +211,7 @@ theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (n : Nat) 
       callW_spec p n "pin_word", callW_spec p n "intern_succ", callW_spec p n "sl_new1",
       stubM_spec p "intern_ls_iw" n, callW_spec p n "pin_at", callW_spec p n "intern_const",
       callW_spec p n "mk_app"] <;>
-    finish (gen := 20) (instances := 10000) [eqAt1W, bW]
+    finish (gen := 20) (instances := 10000) [eqAt1W, ntBW]
 
 theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
     CallRef p "eq_at1" [ty, a, b] (StageR dn vis fe)
@@ -391,19 +391,19 @@ theorem certCtxMain_model {p : Prog} (hp : p.lookup "cert_ctx_main" = some certC
 
 /-- The model of `cert_ctx()`. -/
 def certCtxW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
-  bW (callW p n "nat_op_pins" [] m) fun r0 m0 =>
-  bW (callW p n "const_e" [rdW (m0.arr64 IW) (r0.headD 0 + 15)] m0) fun r1 m1 =>
-  bW (callW p n "nat_var" [0] m1) fun r2 m2 =>
-  bW (callW p n "nat_var" [1] m2) fun r3 m3 =>
-  bW (callW p n "nat_one" [] m3) fun r4 m4 =>
-  bW (callW p n "const_e" [rdW (m4.arr64 IW) (r0.headD 0 + 20)] m4) fun r5 m5 =>
-  bW (callW p n "const_e" [rdW (m5.arr64 IW) (r0.headD 0 + 18)] m5) fun r6 m6 =>
-  bW (callW p n "const_e" [rdW (m6.arr64 IW) (r0.headD 0 + 19)] m6) fun r7 m7 =>
-  bW (callW p n "const_e" [rdW (m7.arr64 IW) (r0.headD 0 + 16)] m7) fun r8 m8 =>
-  bW (callW p n "nat_ap1" [rdW (m8.arr64 IW) (r0.headD 0 + 17), r4.headD 0] m8) fun r9 m9 =>
-  bW (callW p n "iw_alloc" [21] m9) fun rq mq =>
-  bW (callW p n "cert_ctx_pins" [rq.headD 0, r0.headD 0] mq) fun _ mp =>
-  bW (callW p n "cert_ctx_main" [rq.headD 0, r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0,
+  ntBW (callW p n "nat_op_pins" [] m) fun r0 m0 =>
+  ntBW (callW p n "const_e" [rdW (m0.arr64 IW) (r0.headD 0 + 15)] m0) fun r1 m1 =>
+  ntBW (callW p n "nat_var" [0] m1) fun r2 m2 =>
+  ntBW (callW p n "nat_var" [1] m2) fun r3 m3 =>
+  ntBW (callW p n "nat_one" [] m3) fun r4 m4 =>
+  ntBW (callW p n "const_e" [rdW (m4.arr64 IW) (r0.headD 0 + 20)] m4) fun r5 m5 =>
+  ntBW (callW p n "const_e" [rdW (m5.arr64 IW) (r0.headD 0 + 18)] m5) fun r6 m6 =>
+  ntBW (callW p n "const_e" [rdW (m6.arr64 IW) (r0.headD 0 + 19)] m6) fun r7 m7 =>
+  ntBW (callW p n "const_e" [rdW (m7.arr64 IW) (r0.headD 0 + 16)] m7) fun r8 m8 =>
+  ntBW (callW p n "nat_ap1" [rdW (m8.arr64 IW) (r0.headD 0 + 17), r4.headD 0] m8) fun r9 m9 =>
+  ntBW (callW p n "iw_alloc" [21] m9) fun rq mq =>
+  ntBW (callW p n "cert_ctx_pins" [rq.headD 0, r0.headD 0] mq) fun _ mp =>
+  ntBW (callW p n "cert_ctx_main" [rq.headD 0, r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0,
     rdW (m4.arr64 IW) (r0.headD 0 + 6), r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0, r9.headD 0] mp) fun _ mf =>
   some ([rq.headD 0], mf)
 
@@ -418,7 +418,7 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
       callW_spec p n "nat_op_pins", callW_spec p n "const_e", callW_spec p n "nat_var",
       callW_spec p n "nat_one", callW_spec p n "nat_ap1", callW_spec p n "iw_alloc",
       callW_spec p n "cert_ctx_pins", callW_spec p n "cert_ctx_main"] <;>
-    finish (gen := 30) (instances := 10000) [certCtxW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [certCtxW, ntBW, rdW_eq]
 
 theorem rdW_iw_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by

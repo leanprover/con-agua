@@ -44,23 +44,23 @@ def depsW (m : Mem) (c : Word) : List Word :=
 def pw (m1 : Mem) (pi j : Word) : Word := rdW (m1.arr64 IW) (pi + j)
 
 def natOpDepsW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_op_pins" [] m) fun rp m1 =>
+  ntBW (callW p n "nat_op_pins" [] m) fun rp m1 =>
   let pi := rp.headD 0
-  if c = pw m1 pi 0 then bW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0))) else
-  if c = pw m1 pi 1 then bW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1))) else
-  if c = pw m1 pi 2 then bW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2))) else
-  if c = pw m1 pi 3 then bW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3))) else
-  if c = pw m1 pi 4 then bW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 4))) else
-  if c = pw m1 pi 5 then bW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 5))) else
-  if c = pw m1 pi 6 then bW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6))) else
-  if c = pw m1 pi 7 then bW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7))) else
-  if c = pw m1 pi 8 then bW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 8))) else
-  if c = pw m1 pi 9 then bW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6)).set64 IW (rq.headD 0 + 1) (pw m1 pi 8)).set64 IW (rq.headD 0 + 2) (pw m1 pi 9))) else
-  if c = pw m1 pi 10 then bW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 10))) else
-  if c = pw m1 pi 11 then bW (callW p n "iw_alloc" [7] m1) fun rq mq => some ([rq.headD 0, 7], (((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 3)).set64 IW (rq.headD 0 + 3) (pw m1 pi 6)).set64 IW (rq.headD 0 + 4) (pw m1 pi 7)).set64 IW (rq.headD 0 + 5) (pw m1 pi 8)).set64 IW (rq.headD 0 + 6) (pw m1 pi 11))) else
-  if c = pw m1 pi 12 then bW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 12))) else
-  if c = pw m1 pi 13 then bW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 13))) else
-  if c = pw m1 pi 14 then bW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 6)).set64 IW (rq.headD 0 + 2) (pw m1 pi 7)).set64 IW (rq.headD 0 + 3) (pw m1 pi 14))) else
+  if c = pw m1 pi 0 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0))) else
+  if c = pw m1 pi 1 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1))) else
+  if c = pw m1 pi 2 then ntBW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2))) else
+  if c = pw m1 pi 3 then ntBW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3))) else
+  if c = pw m1 pi 4 then ntBW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 4))) else
+  if c = pw m1 pi 5 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 5))) else
+  if c = pw m1 pi 6 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6))) else
+  if c = pw m1 pi 7 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7))) else
+  if c = pw m1 pi 8 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 8))) else
+  if c = pw m1 pi 9 then ntBW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6)).set64 IW (rq.headD 0 + 1) (pw m1 pi 8)).set64 IW (rq.headD 0 + 2) (pw m1 pi 9))) else
+  if c = pw m1 pi 10 then ntBW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 10))) else
+  if c = pw m1 pi 11 then ntBW (callW p n "iw_alloc" [7] m1) fun rq mq => some ([rq.headD 0, 7], (((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 3)).set64 IW (rq.headD 0 + 3) (pw m1 pi 6)).set64 IW (rq.headD 0 + 4) (pw m1 pi 7)).set64 IW (rq.headD 0 + 5) (pw m1 pi 8)).set64 IW (rq.headD 0 + 6) (pw m1 pi 11))) else
+  if c = pw m1 pi 12 then ntBW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 12))) else
+  if c = pw m1 pi 13 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 13))) else
+  if c = pw m1 pi 14 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 6)).set64 IW (rq.headD 0 + 2) (pw m1 pi 7)).set64 IW (rq.headD 0 + 3) (pw m1 pi 14))) else
   some ([0, 0], m1)
 
 set_option maxHeartbeats 8000000 in
@@ -73,7 +73,7 @@ theorem natOpDeps_specW (p : Prog) (hp : p.lookup "nat_op_deps" = some natOpDeps
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "nat_op_pins", callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [natOpDepsW, bW, pw]
+    finish (gen := 20) [natOpDepsW, ntBW, pw]
 
 theorem pw_rec {m m1 : Mem} {pi : Word} {ws : List Word} (hI : IWOK m)
     (hrec : RecPost m m1 [pi] ws) (j : Nat) (hj : j < ws.length) :

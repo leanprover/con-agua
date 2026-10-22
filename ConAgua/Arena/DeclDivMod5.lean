@@ -59,18 +59,18 @@ theorem word_eq_of_toNat {w : Word} {k : Nat} (hk : k < 2 ^ 64) (h : w.toNat = k
 /-! ## `div_mod_cert_applied` -/
 
 def appliedW (p : Prog) (n : Nat) (m : Mem) (pr ho hl : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_var" [0] m) fun r1 m1 =>
-  bW (callW p n "nat_var" [1] m1) fun r2 m2 =>
-  bW (callW p n "mk_app" [pr, r1.headD 0] m2) fun r3 m3 =>
-  bW (callW p n "mk_app" [r3.headD 0, r2.headD 0] m3) fun r4 m4 =>
+  ntBW (callW p n "nat_var" [0] m) fun r1 m1 =>
+  ntBW (callW p n "nat_var" [1] m1) fun r2 m2 =>
+  ntBW (callW p n "mk_app" [pr, r1.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "mk_app" [r3.headD 0, r2.headD 0] m3) fun r4 m4 =>
   if hl = 1 then
-    bW (callW p n "intern_fvar" [2, rdW (m4.arr64 IW) ho] m4) fun r5 m5 =>
-    bW (callW p n "mk_app" [r4.headD 0, r5.headD 0] m5) fun r6 m6 => some ([r6.headD 0], m6)
+    ntBW (callW p n "intern_fvar" [2, rdW (m4.arr64 IW) ho] m4) fun r5 m5 =>
+    ntBW (callW p n "mk_app" [r4.headD 0, r5.headD 0] m5) fun r6 m6 => some ([r6.headD 0], m6)
   else if hl = 2 then
-    bW (callW p n "intern_fvar" [2, rdW (m4.arr64 IW) ho] m4) fun r5 m5 =>
-    bW (callW p n "mk_app" [r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
-    bW (callW p n "intern_fvar" [3, rdW (m6.arr64 IW) (ho + 1)] m6) fun r7 m7 =>
-    bW (callW p n "mk_app" [r6.headD 0, r7.headD 0] m7) fun r8 m8 => some ([r8.headD 0], m8)
+    ntBW (callW p n "intern_fvar" [2, rdW (m4.arr64 IW) ho] m4) fun r5 m5 =>
+    ntBW (callW p n "mk_app" [r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
+    ntBW (callW p n "intern_fvar" [3, rdW (m6.arr64 IW) (ho + 1)] m6) fun r7 m7 =>
+    ntBW (callW p n "mk_app" [r6.headD 0, r7.headD 0] m7) fun r8 m8 => some ([r8.headD 0], m8)
   else some ([r4.headD 0], m4)
 
 set_option maxHeartbeats 1600000 in
@@ -83,7 +83,7 @@ theorem applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some di
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_var", callW_spec p n "mk_app", callW_spec p n "intern_fvar"] <;>
-    finish (gen := 30) (instances := 10000) [appliedW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [appliedW, ntBW, rdW_eq]
 
 theorem iw_rd_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by
@@ -198,9 +198,9 @@ theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : Lis
 
 def sc0ListW (p : Prog) (n : Nat) (m : Mem) (nm r o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([0, 0], m) else
-  bW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m) fun r1 m1 =>
-  bW (callW p n "subst_const0_list" [nm, r, o + 1, l - 1] m1) fun r2 m2 =>
-  bW (callW p n "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m) fun r1 m1 =>
+  ntBW (callW p n "subst_const0_list" [nm, r, o + 1, l - 1] m1) fun r2 m2 =>
+  ntBW (callW p n "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
   some ([r3.headD 0, r3.tail.headD 0], m3)
 
 set_option maxHeartbeats 1600000 in
@@ -214,7 +214,7 @@ theorem sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some subst
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "subst_const0", callW_spec p n "subst_const0_list",
       callW_spec p n "sl_cons"] <;>
-    finish (gen := 30) (instances := 10000) [sc0ListW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [sc0ListW, ntBW, rdW_eq]
 
 theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
@@ -285,7 +285,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
       (slCons_specW p hD.lIwAlloc hD.lIwCopy hD.lSlCons k _ (r1.headD 0) (r2.headD 0) (r2.tail.headD 0)) h3
     have hcons' : consW k m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) = some (r3, m3) := by
       rw [← hs']; exact hcons
-    simp only [decRL, Nat.zero_add, getD0, getD1] at hd2
+    simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd2
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcons' hS2 hd2.2 hl1 hd2.1
     refine ⟨x1 :: x2, a2, ?_, hS3, hg1.trans (hg2.trans hg3), ?_⟩
     · simp only [substConst0List, StateT.run_bind, hrun1, exc_ok_bind', hrun2, StateT.run_pure]
@@ -293,7 +293,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
           .ok (x1, a1) := hrun1
       simp only [hrun1', exc_ok_bind', hrun2, StateT.run_pure]
       rfl
-    · simp only [decRL, Nat.zero_add, getD0, getD1, List.headD_cons, List.tail_cons]
+    · simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
       rw [← hx1]
       exact ⟨hd3, by omega⟩
 
@@ -312,9 +312,9 @@ theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm
 
 def craW (p : Prog) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([1], m) else
-  bW (stubM "consts_resolve_ffast" m [vs, rdW (m.arr64 IW) o]) fun r1 m1 =>
+  ntBW (stubM "consts_resolve_ffast" m [vs, rdW (m.arr64 IW) o]) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
-  bW (callW p n "consts_resolve_all" [vs, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "consts_resolve_all" [vs, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 set_option maxHeartbeats 1600000 in
 theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsResolveAllL)
@@ -326,7 +326,7 @@ theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsRe
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       stubM_spec p "consts_resolve_ffast" n, callW_spec p n "consts_resolve_all"] <;>
-    finish (gen := 30) (instances := 10000) [craW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [craW, ntBW, rdW_eq]
 
 theorem cra_ref (hD : DmProg5 p) (vs : Word) (hvs : vs = vis) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
@@ -419,28 +419,28 @@ theorem constsResolveAll_refines (hD : DmProg5 p) (o l : Word) (hyps : List EIdx
 
 /-! ## `div_mod_cert_guard` -/
 
-def cgW (p : Prog) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
+def dmCgW (p : Prog) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
     Option (List Word × Mem) :=
-  bW (callW p n "subst_const_all" [c, annVal, 4000000000, proof] m) fun r1 m1 =>
-  bW (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
+  ntBW (callW p n "subst_const_all" [c, annVal, 4000000000, proof] m) fun r1 m1 =>
+  ntBW (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
-  bW (stubM "has_fvar_fast" m2 [4000000000, r1.headD 0]) fun r3 m3 =>
+  ntBW (stubM "has_fvar_fast" m2 [4000000000, r1.headD 0]) fun r3 m3 =>
   if r3.headD 0 ≠ 0 then some ([0], m3) else
-  bW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
+  ntBW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
-  bW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 =>
+  ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 =>
   if r5.headD 0 = 0 then some ([0], m5) else
-  bW (callW p n "subst_const0_list" [c, annVal, ho, hl] m5) fun r6 m6 =>
-  bW (callW p n "consts_resolve_all" [vs, r6.headD 0, r6.tail.headD 0] m6) fun r7 m7 =>
+  ntBW (callW p n "subst_const0_list" [c, annVal, ho, hl] m5) fun r6 m6 =>
+  ntBW (callW p n "consts_resolve_all" [vs, r6.headD 0, r6.tail.headD 0] m6) fun r7 m7 =>
   if r7.headD 0 = 0 then some ([0], m7) else
-  bW (callW p n "subst_const0" [c, annVal, 4000000000, eqE] m7) fun r8 m8 =>
-  bW (stubM "consts_resolve_ffast" m8 [vs, r8.headD 0]) fun r9 m9 => some ([r9.headD 0], m9)
+  ntBW (callW p n "subst_const0" [c, annVal, 4000000000, eqE] m7) fun r8 m8 =>
+  ntBW (stubM "consts_resolve_ffast" m8 [vs, r8.headD 0]) fun r9 m9 => some ([r9.headD 0], m9)
 
 set_option maxHeartbeats 3200000 in
 theorem cg_specW (p : Prog) (hp : p.lookup "div_mod_cert_guard" = some divModCertGuardL)
     (n : Nat) (s₀ : St) (vs c annVal ho hl eqE proof : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_guard" [vs, c, annVal, ho, hl, eqE, proof]
-    ⦃fun res s' => LocEq s' s₀ ∧ cgW p n s₀.mem vs c annVal ho hl eqE proof = some (res, s'.mem); ⊤⦄ := by
+    ⦃fun res s' => LocEq s' s₀ ∧ dmCgW p n s₀.mem vs c annVal ho hl eqE proof = some (res, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divModCertGuardL]
   sym only [lang_grind, arena_grind] =>
@@ -449,7 +449,7 @@ theorem cg_specW (p : Prog) (hp : p.lookup "div_mod_cert_guard" = some divModCer
       stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n,
       callW_spec p n "subst_const_all", callW_spec p n "subst_const0_list",
       callW_spec p n "consts_resolve_all", callW_spec p n "subst_const0"] <;>
-    finish (gen := 30) (instances := 10000) [cgW, bW]
+    finish (gen := 30) (instances := 10000) [dmCgW, ntBW]
 
 theorem decW0B_false {m : Mem} {r : List Word} {b : Bool} (h : decW0B m r b) (hz : r.headD 0 = 0) :
     b = false := by
@@ -474,9 +474,9 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
       (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof))
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hann, heq, hpr, hd, hb⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => cgW p k mq vis c annVal ho hl eqE proof)
+  have hw := callW_model (M := fun mq => dmCgW p k mq vis c annVal ho hl eqE proof)
     (cg_specW p hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
-  unfold cgW at hw
+  unfold dmCgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- subst_const_all
   cases h1 : callW p k "subst_const_all" [c, annVal, 4000000000, proof] m with
@@ -573,7 +573,7 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
     rw [decHL_grow hG5 hb]; exact hd
   have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.1
   obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ := sc0List_ref hD hs0 c annVal hc hann hyps ho hl k m5 a5 r6 m6 hS5 hd5' hb5 h6
-  simp only [decRL, Nat.zero_add, getD0, getD1] at hd6
+  simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd6
   -- consts resolve of the hypotheses
   cases h7 : callW p k "consts_resolve_all" [vis, r6.headD 0, r6.tail.headD 0] m6 with
   | none => rw [h7] at hw; simp at hw

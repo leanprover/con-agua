@@ -50,15 +50,15 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 def loopW (p : Prog) (n : Nat) (m : Mem) (vs c value po pl : Word) : Option (List Word × Mem) :=
   if pl = 0 then none else
-  bW (callW p n "div_mod_pin_guard" [rdW (m.arr64 IW) po, vs, c] m) fun r1 m1 =>
-  bW (callW p n "div_mod_certs_guard" [rdW (m.arr64 IW) po, vs, c, value] m1) fun r2 m2 =>
+  ntBW (callW p n "div_mod_pin_guard" [rdW (m.arr64 IW) po, vs, c] m) fun r1 m1 =>
+  ntBW (callW p n "div_mod_certs_guard" [rdW (m.arr64 IW) po, vs, c, value] m1) fun r2 m2 =>
   if r1.headD 0 ≠ 0 ∧ r2.headD 0 ≠ 0 then
-    bW (callW p n "check_div_mod_pin_at" [vs, c, value, rdW (m.arr64 IW) po] m2) fun r3 m3 =>
+    ntBW (callW p n "check_div_mod_pin_at" [vs, c, value, rdW (m.arr64 IW) po] m2) fun r3 m3 =>
     if r3.headD 0 ≠ 0 then some ([0], m3) else
-    bW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m3) fun r4 m4 =>
+    ntBW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m3) fun r4 m4 =>
       some ([r4.headD 0], m4)
   else
-    bW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m2) fun r4 m4 =>
+    ntBW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m2) fun r4 m4 =>
       some ([r4.headD 0], m4)
 
 set_option maxHeartbeats 3200000 in
@@ -72,7 +72,7 @@ theorem loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some che
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard",
       callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"] <;>
-    finish (gen := 30) (instances := 10000) [loopW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [loopW, ntBW, rdW_eq]
 
 /-- The twin's attempt step, on a successful attempt. -/
 theorem orElse_run_ok {att : AM Bool} {b : Bool} {a a' : AState} (h : att.run a = Except.ok (b, a')) :
@@ -241,27 +241,27 @@ local notation "V" => ConLeche.CheckMode.verified
 section pin
 variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
-def cpW (p : Prog) (n : Nat) (m : Mem) (po pl vs vs2 c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "div_mod_env_guard" [vs2, c] m) fun r1 m1 =>
+def dmCpW (p : Prog) (n : Nat) (m : Mem) (po pl vs vs2 c : Word) : Option (List Word × Mem) :=
+  ntBW (callW p n "div_mod_env_guard" [vs2, c] m) fun r1 m1 =>
   if r1.headD 0 = 0 then none else
-  bW (callW p n "env_find" [c, vs2] m1) fun r2 m2 =>
+  ntBW (callW p n "env_find" [c, vs2] m1) fun r2 m2 =>
   if r2.headD 0 = 0 then none else
   if rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 1 then none else
-  bW (callW p n "check_div_mod_pin_loop" [vs, c, rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5), po, pl] m2)
+  ntBW (callW p n "check_div_mod_pin_loop" [vs, c, rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5), po, pl] m2)
     fun r3 m3 => some ([0], m3)
 
 set_option maxHeartbeats 1600000 in
 theorem cp_specW (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL) (n : Nat)
     (s₀ : St) (po pl vs vs2 c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin" [po, pl, vs, vs2, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ cpW p n s₀.mem po pl vs vs2 c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dmCpW p n s₀.mem po pl vs vs2 c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkDivModPinL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_env_guard", callW_spec p n "env_find",
       callW_spec p n "check_div_mod_pin_loop"] <;>
-    finish (gen := 30) (instances := 10000) [cpW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [dmCpW, ntBW, rdW_eq]
 
 theorem cp_ref (hD : DmProg9 p) (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
     (hs0 : SubstC0 p dn vis (fe2.restrictTo vis.toNat))
@@ -272,9 +272,9 @@ theorem cp_ref (hD : DmProg9 p) (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
       (checkDivModPin V ips (fe2.restrictTo vis.toNat) fe2 (decI c))
       (KeepPost dn vis2 fe2 decUnit) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hI⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => cpW p k mq po pl vis vis2 c)
+  have hw := callW_model (M := fun mq => dmCpW p k mq po pl vis vis2 c)
     (cp_specW p hD.lCheckDivModPin k · po pl vis vis2 c) hcall
-  unfold cpW at hw
+  unfold dmCpW at hw
   have hD8 := hD.toDmProg8
   have hD7 := hD8.toDmProg7
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hw⟩ :=

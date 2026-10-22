@@ -30,20 +30,20 @@ section envguard
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
 def egW (p : Prog) (n : Nat) (m : Mem) (v c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_op_guard" [v, c] m) fun r1 m1 =>
+  ntBW (callW p n "nat_op_guard" [v, c] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
-  bW (callW p n "nat_op_deps" [c] m1) fun r2 m2 =>
-  bW (callW p n "nat_op_stored_ok_all" [v, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "nat_op_deps" [c] m1) fun r2 m2 =>
+  ntBW (callW p n "nat_op_stored_ok_all" [v, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
   if r3.headD 0 = 0 then some ([0], m3) else
-  bW (callW p n "pin_at" [0] m3) fun r4 m4 =>
-  bW (stubM "rom_ci" m4 [0]) fun r5 m5 =>
-  bW (callW p n "find_is" [v, r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
+  ntBW (callW p n "pin_at" [0] m3) fun r4 m4 =>
+  ntBW (stubM "rom_ci" m4 [0]) fun r5 m5 =>
+  ntBW (callW p n "find_is" [v, r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
   if r6.headD 0 = 0 then some ([0], m6) else
-  bW (callW p n "pin_at" [30] m6) fun r7 m7 =>
-  bW (callW p n "bool_ctor_typed" [v, r7.headD 0] m7) fun r8 m8 =>
+  ntBW (callW p n "pin_at" [30] m6) fun r7 m7 =>
+  ntBW (callW p n "bool_ctor_typed" [v, r7.headD 0] m7) fun r8 m8 =>
   if r8.headD 0 = 0 then some ([0], m8) else
-  bW (callW p n "pin_at" [31] m8) fun r9 m9 =>
-  bW (callW p n "bool_ctor_typed" [v, r9.headD 0] m9) fun r10 m10 => some ([r10.headD 0], m10)
+  ntBW (callW p n "pin_at" [31] m8) fun r9 m9 =>
+  ntBW (callW p n "bool_ctor_typed" [v, r9.headD 0] m9) fun r10 m10 => some ([r10.headD 0], m10)
 
 set_option maxHeartbeats 3200000 in
 theorem eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvGuardL) (n : Nat)
@@ -57,7 +57,7 @@ theorem eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvG
       callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps",
       callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", stubM_spec p "rom_ci" n,
       callW_spec p n "find_is", callW_spec p n "bool_ctor_typed"] <;>
-    finish (gen := 30) (instances := 10000) [egW, bW]
+    finish (gen := 30) (instances := 10000) [egW, ntBW]
 
 theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg
 
@@ -88,7 +88,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     (natOpDeps_ref hT.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg (vis := vis) (fe := fe) (dn := dn) c).bind_
       ⟨hS1, hc⟩ hw
   unfold decRL at hd2
-  simp only [Nat.zero_add, getD0, getD1] at hd2
+  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
   cases h3 : callW p k "nat_op_stored_ok_all" [vis, r2.headD 0, r2.tail.headD 0] m2 with
   | none => rw [h3] at hw; simp at hw
   | some q3 =>

@@ -107,11 +107,11 @@ theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word}
 
 def depsStoredW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([1], m) else
-  bW (callW p n "env_find" [rdW (m.arr64 IW) o, vis] m) fun r1 m1 =>
+  ntBW (callW p n "env_find" [rdW (m.arr64 IW) o, vis] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
   if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 1 then some ([0], m1) else
   if rdW (m1.arr64 EREC) (r1.tail.headD 0 + 3) ≠ 0 then some ([0], m1) else
-  bW (callW p n "nat_op_deps_stored" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "nat_op_deps_stored" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem depsStored_specW (p : Prog) (hp : p.lookup "nat_op_deps_stored" = some natOpDepsStoredL)
     (n : Nat) (s₀ : St) (vis o l : Word) :
@@ -122,7 +122,7 @@ theorem depsStored_specW (p : Prog) (hp : p.lookup "nat_op_deps_stored" = some n
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "env_find", callW_spec p n "nat_op_deps_stored"] <;>
-    finish (gen := 20) [depsStoredW, bW]
+    finish (gen := 20) [depsStoredW, ntBW]
 
 theorem natOpDepsStored_nil (fe : IFEnv) : natOpDepsStored fe [] = pure true := rfl
 

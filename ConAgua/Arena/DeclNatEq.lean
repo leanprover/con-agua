@@ -70,8 +70,8 @@ structure NatEqProg (p : Prog) : Prop extends NatTyProg p where
 /-! ### `nat_ap1`, `nat_ap2` -/
 
 def natAp1W (p : Prog) (n : Nat) (m : Mem) (nm a : Word) : Option (List Word × Mem) :=
-  bW (callW p n "const_e" [nm] m) fun r1 m1 =>
-  bW (callW p n "mk_app" [r1.headD 0, a] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "const_e" [nm] m) fun r1 m1 =>
+  ntBW (callW p n "mk_app" [r1.headD 0, a] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem natAp1_specW (p : Prog) (hp : p.lookup "nat_ap1" = some natAp1L) (n : Nat) (s₀ : St)
     (nm a : Word) :
@@ -82,7 +82,7 @@ theorem natAp1_specW (p : Prog) (hp : p.lookup "nat_ap1" = some natAp1L) (n : Na
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "const_e", callW_spec p n "mk_app"] <;>
-    finish (gen := 20) [natAp1W, bW]
+    finish (gen := 20) [natAp1W, ntBW]
 
 theorem natAp1_ref (hN : NatEqProg p) (nm a : Word) :
     CallRef p "nat_ap1" [nm, a] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a)
@@ -111,8 +111,8 @@ theorem natAp1_ref (hN : NatEqProg p) (nm a : Word) :
   exact hrun2
 
 def natAp2W (p : Prog) (n : Nat) (m : Mem) (nm a b : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap1" [nm, a] m) fun r1 m1 =>
-  bW (callW p n "mk_app" [r1.headD 0, b] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "nat_ap1" [nm, a] m) fun r1 m1 =>
+  ntBW (callW p n "mk_app" [r1.headD 0, b] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem natAp2_specW (p : Prog) (hp : p.lookup "nat_ap2" = some natAp2L) (n : Nat) (s₀ : St)
     (nm a b : Word) :
@@ -123,7 +123,7 @@ theorem natAp2_specW (p : Prog) (hp : p.lookup "nat_ap2" = some natAp2L) (n : Na
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "mk_app"] <;>
-    finish (gen := 20) [natAp2W, bW]
+    finish (gen := 20) [natAp2W, ntBW]
 
 theorem natAp2_ref (hN : NatEqProg p) (nm a b : Word) :
     CallRef p "nat_ap2" [nm, a, b] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a ∧ H b)
@@ -195,9 +195,9 @@ theorem recAt_of_post {m m1 : Mem} {r : List Word} {a b : Word} (h : RecPost m m
   · have := hget 1 (by simp); simp only [iwA, hq']; simpa using this
 
 def natEqList2W (p : Prog) (n : Nat) (m : Mem) (a1 b1 a2 b2 : Word) : Option (List Word × Mem) :=
-  bW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
-  bW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
-  bW (callW p n "iw_alloc" [2] m2) fun rq mq =>
+  ntBW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
+  ntBW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
+  ntBW (callW p n "iw_alloc" [2] m2) fun rq mq =>
   some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0) (r1.headD 0)).set64 IW (rq.headD 0 + 1) (r2.headD 0)))
 
 theorem natEqList2_specW (p : Prog) (hp : p.lookup "nat_eq_list2" = some natEqList2) (n : Nat) (s₀ : St)
@@ -209,7 +209,7 @@ theorem natEqList2_specW (p : Prog) (hp : p.lookup "nat_eq_list2" = some natEqLi
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "rec2", callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [natEqList2W, bW]
+    finish (gen := 20) [natEqList2W, ntBW]
 
 theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
     CallRef p "nat_eq_list2" [a1, b1, a2, b2] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2)
@@ -252,10 +252,10 @@ theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
   exact ⟨_, s, rfl, hall.1, ((hK1.1).trans hK2.1).trans hall.2.1, hall.2.2⟩
 
 def natEqList3W (p : Prog) (n : Nat) (m : Mem) (a1 b1 a2 b2 a3 b3 : Word) : Option (List Word × Mem) :=
-  bW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
-  bW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
-  bW (callW p n "rec2" [a3, b3] m2) fun r3 m3 =>
-  bW (callW p n "iw_alloc" [3] m3) fun rq mq =>
+  ntBW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
+  ntBW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
+  ntBW (callW p n "rec2" [a3, b3] m2) fun r3 m3 =>
+  ntBW (callW p n "iw_alloc" [3] m3) fun rq mq =>
   some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0) (r1.headD 0)).set64 IW (rq.headD 0 + 1) (r2.headD 0)).set64 IW (rq.headD 0 + 2) (r3.headD 0)))
 
 theorem natEqList3_specW (p : Prog) (hp : p.lookup "nat_eq_list3" = some natEqList3) (n : Nat) (s₀ : St)
@@ -267,7 +267,7 @@ theorem natEqList3_specW (p : Prog) (hp : p.lookup "nat_eq_list3" = some natEqLi
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "rec2", callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [natEqList3W, bW]
+    finish (gen := 20) [natEqList3W, ntBW]
 
 theorem natEqList3_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 : Word) :
     CallRef p "nat_eq_list3" [a1, b1, a2, b2, a3, b3] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3)
@@ -320,11 +320,11 @@ theorem natEqList3_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 : Word) :
   exact ⟨_, s, rfl, hall.1, (((hK1.1).trans hK2.1).trans hK3.1).trans hall.2.1, hall.2.2⟩
 
 def natEqList4W (p : Prog) (n : Nat) (m : Mem) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) : Option (List Word × Mem) :=
-  bW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
-  bW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
-  bW (callW p n "rec2" [a3, b3] m2) fun r3 m3 =>
-  bW (callW p n "rec2" [a4, b4] m3) fun r4 m4 =>
-  bW (callW p n "iw_alloc" [4] m4) fun rq mq =>
+  ntBW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
+  ntBW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
+  ntBW (callW p n "rec2" [a3, b3] m2) fun r3 m3 =>
+  ntBW (callW p n "rec2" [a4, b4] m3) fun r4 m4 =>
+  ntBW (callW p n "iw_alloc" [4] m4) fun rq mq =>
   some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0) (r1.headD 0)).set64 IW (rq.headD 0 + 1) (r2.headD 0)).set64 IW (rq.headD 0 + 2) (r3.headD 0)).set64 IW (rq.headD 0 + 3) (r4.headD 0)))
 
 theorem natEqList4_specW (p : Prog) (hp : p.lookup "nat_eq_list4" = some natEqList4) (n : Nat) (s₀ : St)
@@ -336,7 +336,7 @@ theorem natEqList4_specW (p : Prog) (hp : p.lookup "nat_eq_list4" = some natEqLi
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "rec2", callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) [natEqList4W, bW]
+    finish (gen := 20) [natEqList4W, ntBW]
 
 theorem natEqList4_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) :
     CallRef p "nat_eq_list4" [a1, b1, a2, b2, a3, b3, a4, b4] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3 ∧ H a4 ∧ H b4)
@@ -402,7 +402,7 @@ theorem eqL_retag {m : Mem} {rl : List Word} {xl : List (EIdx × EIdx)} {k : Nat
     (h : decEqRL m rl xl) (hk : xl.length = k) :
     EqL m (rl.headD 0).toNat k xl := by
   obtain ⟨h1, h2, h3⟩ := h
-  simp only [getD0, getD1] at h1 h2 h3
+  simp only [ntGetD0, ntGetD1] at h1 h2 h3
   exact ⟨by omega, hk.symm, h3⟩
 
 def natEqPrT (c : NIdx) (z : EIdx) (x : EIdx) (sx : EIdx) : AM (List (EIdx × EIdx)) := do
@@ -411,9 +411,9 @@ def natEqPrT (c : NIdx) (z : EIdx) (x : EIdx) (sx : EIdx) : AM (List (EIdx × EI
   pure [(l1, z), (l2, x)]
 
 def natEqPrW (p : Prog) (n : Nat) (m : Mem) (c z x sx : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap1" [c, z] m) fun r_l1 m_l1 =>
-  bW (callW p n "nat_ap1" [c, sx] m_l1) fun r_l2 m_l2 =>
-  bW (callW p n "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, x] m_l2) fun rl ml =>
+  ntBW (callW p n "nat_ap1" [c, z] m) fun r_l1 m_l1 =>
+  ntBW (callW p n "nat_ap1" [c, sx] m_l1) fun r_l2 m_l2 =>
+  ntBW (callW p n "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, x] m_l2) fun rl ml =>
   some ([rl.headD 0, 2], ml)
 
 theorem natEqPr_specW (p : Prog) (hp : p.lookup "nat_eq_pr" = some natEqPr) (n : Nat) (s₀ : St)
@@ -425,7 +425,7 @@ theorem natEqPr_specW (p : Prog) (hp : p.lookup "nat_eq_pr" = some natEqPr) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
-    finish (gen := 20) (instances := 10000) [natEqPrW, bW]
+    finish (gen := 20) (instances := 10000) [natEqPrW, ntBW]
 
 theorem natEqPr_ref (hN : NatEqProg p) (c z x sx : Word) :
     CallRef p "nat_eq_pr" [c, z, x, sx] (fun m s => StageR dn vis fe m s ∧ H c ∧ H z ∧ H x ∧ H sx)
@@ -473,11 +473,11 @@ def natEqUnT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (w : NIdx) 
   pure [(l1, x), (l2, r2)]
 
 def natEqUnW (p : Prog) (n : Nat) (m : Mem) (c x y z sy w : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
-  bW (callW p n "nat_ap2" [c, x, sy] m_l1) fun r_l2 m_l2 =>
-  bW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
-  bW (callW p n "nat_ap1" [w, r_r3.headD 0] m_r3) fun r_r2 m_r2 =>
-  bW (callW p n "nat_eq_list2" [r_l1.headD 0, x, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
+  ntBW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
+  ntBW (callW p n "nat_ap2" [c, x, sy] m_l1) fun r_l2 m_l2 =>
+  ntBW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
+  ntBW (callW p n "nat_ap1" [w, r_r3.headD 0] m_r3) fun r_r2 m_r2 =>
+  ntBW (callW p n "nat_eq_list2" [r_l1.headD 0, x, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
   some ([rl.headD 0, 2], ml)
 
 theorem natEqUn_specW (p : Prog) (hp : p.lookup "nat_eq_un" = some natEqUn) (n : Nat) (s₀ : St)
@@ -489,7 +489,7 @@ theorem natEqUn_specW (p : Prog) (hp : p.lookup "nat_eq_un" = some natEqUn) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
-    finish (gen := 20) (instances := 10000) [natEqUnW, bW]
+    finish (gen := 20) (instances := 10000) [natEqUnW, ntBW]
 
 theorem natEqUn_ref (hN : NatEqProg p) (c x y z sy w : Word) :
     CallRef p "nat_eq_un" [c, x, y, z, sy, w] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H w)
@@ -556,11 +556,11 @@ def natEqMuT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (ad : NIdx)
   pure [(l1, z), (l2, r2)]
 
 def natEqMuW (p : Prog) (n : Nat) (m : Mem) (c x y z sy ad : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
-  bW (callW p n "nat_ap2" [c, x, sy] m_l1) fun r_l2 m_l2 =>
-  bW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
-  bW (callW p n "nat_ap2" [ad, r_r3.headD 0, x] m_r3) fun r_r2 m_r2 =>
-  bW (callW p n "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
+  ntBW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
+  ntBW (callW p n "nat_ap2" [c, x, sy] m_l1) fun r_l2 m_l2 =>
+  ntBW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
+  ntBW (callW p n "nat_ap2" [ad, r_r3.headD 0, x] m_r3) fun r_r2 m_r2 =>
+  ntBW (callW p n "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
   some ([rl.headD 0, 2], ml)
 
 theorem natEqMu_specW (p : Prog) (hp : p.lookup "nat_eq_mu" = some natEqMu) (n : Nat) (s₀ : St)
@@ -572,7 +572,7 @@ theorem natEqMu_specW (p : Prog) (hp : p.lookup "nat_eq_mu" = some natEqMu) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
-    finish (gen := 20) (instances := 10000) [natEqMuW, bW]
+    finish (gen := 20) (instances := 10000) [natEqMuW, ntBW]
 
 theorem natEqMu_ref (hN : NatEqProg p) (c x y z sy ad : Word) :
     CallRef p "nat_eq_mu" [c, x, y, z, sy, ad] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H ad)
@@ -640,12 +640,12 @@ def natEqPoT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (sN : NIdx)
   pure [(l1, sz), (l2, r2)]
 
 def natEqPoW (p : Prog) (n : Nat) (m : Mem) (c x y z sy sN mu : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
-  bW (callW p n "nat_ap1" [sN, z] m_l1) fun r_sz m_sz =>
-  bW (callW p n "nat_ap2" [c, x, sy] m_sz) fun r_l2 m_l2 =>
-  bW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
-  bW (callW p n "nat_ap2" [mu, r_r3.headD 0, x] m_r3) fun r_r2 m_r2 =>
-  bW (callW p n "nat_eq_list2" [r_l1.headD 0, r_sz.headD 0, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
+  ntBW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
+  ntBW (callW p n "nat_ap1" [sN, z] m_l1) fun r_sz m_sz =>
+  ntBW (callW p n "nat_ap2" [c, x, sy] m_sz) fun r_l2 m_l2 =>
+  ntBW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
+  ntBW (callW p n "nat_ap2" [mu, r_r3.headD 0, x] m_r3) fun r_r2 m_r2 =>
+  ntBW (callW p n "nat_eq_list2" [r_l1.headD 0, r_sz.headD 0, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
   some ([rl.headD 0, 2], ml)
 
 theorem natEqPo_specW (p : Prog) (hp : p.lookup "nat_eq_po" = some natEqPo) (n : Nat) (s₀ : St)
@@ -657,7 +657,7 @@ theorem natEqPo_specW (p : Prog) (hp : p.lookup "nat_eq_po" = some natEqPo) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
-    finish (gen := 20) (instances := 10000) [natEqPoW, bW]
+    finish (gen := 20) (instances := 10000) [natEqPoW, ntBW]
 
 theorem natEqPo_ref (hN : NatEqProg p) (c x y z sy sN mu : Word) :
     CallRef p "nat_eq_po" [c, x, y, z, sy, sN, mu] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H sN ∧ H mu)
@@ -736,12 +736,12 @@ def natEqBeT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sx : EIdx) (sy : EIdx)
   pure [(l1, bT), (l2, bF), (l3, bF), (l4, r4)]
 
 def natEqBeW (p : Prog) (n : Nat) (m : Mem) (c x y z sx sy bT bF : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [c, z, z] m) fun r_l1 m_l1 =>
-  bW (callW p n "nat_ap2" [c, z, sy] m_l1) fun r_l2 m_l2 =>
-  bW (callW p n "nat_ap2" [c, sx, z] m_l2) fun r_l3 m_l3 =>
-  bW (callW p n "nat_ap2" [c, sx, sy] m_l3) fun r_l4 m_l4 =>
-  bW (callW p n "nat_ap2" [c, x, y] m_l4) fun r_r4 m_r4 =>
-  bW (callW p n "nat_eq_list4" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, bF, r_l4.headD 0, r_r4.headD 0] m_r4) fun rl ml =>
+  ntBW (callW p n "nat_ap2" [c, z, z] m) fun r_l1 m_l1 =>
+  ntBW (callW p n "nat_ap2" [c, z, sy] m_l1) fun r_l2 m_l2 =>
+  ntBW (callW p n "nat_ap2" [c, sx, z] m_l2) fun r_l3 m_l3 =>
+  ntBW (callW p n "nat_ap2" [c, sx, sy] m_l3) fun r_l4 m_l4 =>
+  ntBW (callW p n "nat_ap2" [c, x, y] m_l4) fun r_r4 m_r4 =>
+  ntBW (callW p n "nat_eq_list4" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, bF, r_l4.headD 0, r_r4.headD 0] m_r4) fun rl ml =>
   some ([rl.headD 0, 4], ml)
 
 theorem natEqBe_specW (p : Prog) (hp : p.lookup "nat_eq_be" = some natEqBe) (n : Nat) (s₀ : St)
@@ -753,7 +753,7 @@ theorem natEqBe_specW (p : Prog) (hp : p.lookup "nat_eq_be" = some natEqBe) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list4"] <;>
-    finish (gen := 20) (instances := 10000) [natEqBeW, bW]
+    finish (gen := 20) (instances := 10000) [natEqBeW, ntBW]
 
 theorem natEqBe_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
     CallRef p "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
@@ -831,11 +831,11 @@ def natEqBlT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sx : EIdx) (sy : EIdx)
   pure [(l1, bT), (l2, bF), (l3, r3)]
 
 def natEqBlW (p : Prog) (n : Nat) (m : Mem) (c x y z sx sy bT bF : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [c, z, y] m) fun r_l1 m_l1 =>
-  bW (callW p n "nat_ap2" [c, sx, z] m_l1) fun r_l2 m_l2 =>
-  bW (callW p n "nat_ap2" [c, sx, sy] m_l2) fun r_l3 m_l3 =>
-  bW (callW p n "nat_ap2" [c, x, y] m_l3) fun r_r3 m_r3 =>
-  bW (callW p n "nat_eq_list3" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, r_r3.headD 0] m_r3) fun rl ml =>
+  ntBW (callW p n "nat_ap2" [c, z, y] m) fun r_l1 m_l1 =>
+  ntBW (callW p n "nat_ap2" [c, sx, z] m_l1) fun r_l2 m_l2 =>
+  ntBW (callW p n "nat_ap2" [c, sx, sy] m_l2) fun r_l3 m_l3 =>
+  ntBW (callW p n "nat_ap2" [c, x, y] m_l3) fun r_r3 m_r3 =>
+  ntBW (callW p n "nat_eq_list3" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, r_r3.headD 0] m_r3) fun rl ml =>
   some ([rl.headD 0, 3], ml)
 
 theorem natEqBl_specW (p : Prog) (hp : p.lookup "nat_eq_bl" = some natEqBl) (n : Nat) (s₀ : St)
@@ -847,7 +847,7 @@ theorem natEqBl_specW (p : Prog) (hp : p.lookup "nat_eq_bl" = some natEqBl) (n :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list3"] <;>
-    finish (gen := 20) (instances := 10000) [natEqBlW, bW]
+    finish (gen := 20) (instances := 10000) [natEqBlW, ntBW]
 
 theorem natEqBl_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
     CallRef p "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
@@ -925,10 +925,10 @@ theorem EqL.cons {m : Mem} {o l : Nat} {e : EIdx × EIdx} {es : List (EIdx × EI
 
 def certW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([1], m) else
-  bW (stubM "is_def_eq_core" m [vis, 2, rdW (m.arr64 IW) (rdW (m.arr64 IW) o),
+  ntBW (stubM "is_def_eq_core" m [vis, 2, rdW (m.arr64 IW) (rdW (m.arr64 IW) o),
       rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)]) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1)
-  else bW (callW p n "certify_nat_eqs" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  else ntBW (callW p n "certify_nat_eqs" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem certify_specW (p : Prog) (hp : p.lookup "certify_nat_eqs" = some certifyNatEqsL) (n : Nat)
     (s₀ : St) (vis o l : Word) :
@@ -939,7 +939,7 @@ theorem certify_specW (p : Prog) (hp : p.lookup "certify_nat_eqs" = some certify
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       stubM_spec p "is_def_eq_core" n, callW_spec p n "certify_nat_eqs"] <;>
-    finish (gen := 20) [certW, bW]
+    finish (gen := 20) [certW, ntBW]
 
 local notation "V" => ConLeche.CheckMode.verified
 

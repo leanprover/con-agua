@@ -30,11 +30,11 @@ theorem viewR_shape {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
   case const c us =>
     left
     obtain ⟨h0, h1, h2, h3, h4⟩ := h
-    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [getD1, getD2, H]
+    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [ntGetD1, getD2, H]
   case app f a =>
     right; left
     obtain ⟨h0, h1, h2, h3, h4⟩ := h
-    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [getD1, getD2, H]
+    refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [ntGetD1, getD2, H]
   all_goals
     right; right
     refine ⟨?_, ?_, fun _ _ => by simp, fun _ _ => by simp⟩ <;> simp_all
@@ -301,11 +301,11 @@ theorem substConst0_refines (hN : NatSubProg p) (nm r fuel h : Word) :
 
 def pairsW (p : Prog) (n : Nat) (m : Mem) (nm r o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([0, 0], m) else
-  bW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) (rdW (m.arr64 IW) o)] m) fun r1 m1 =>
-  bW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m1.arr64 IW) (rdW (m.arr64 IW) o + 1)] m1) fun r2 m2 =>
-  bW (callW p n "subst_const0_pairs" [nm, r, o + 1, l - 1] m2) fun r3 m3 =>
-  bW (callW p n "rec2" [r1.headD 0, r2.headD 0] m3) fun r4 m4 =>
-  bW (callW p n "sl_cons" [r4.headD 0, r3.headD 0, r3.tail.headD 0] m4) fun r5 m5 =>
+  ntBW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) (rdW (m.arr64 IW) o)] m) fun r1 m1 =>
+  ntBW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m1.arr64 IW) (rdW (m.arr64 IW) o + 1)] m1) fun r2 m2 =>
+  ntBW (callW p n "subst_const0_pairs" [nm, r, o + 1, l - 1] m2) fun r3 m3 =>
+  ntBW (callW p n "rec2" [r1.headD 0, r2.headD 0] m3) fun r4 m4 =>
+  ntBW (callW p n "sl_cons" [r4.headD 0, r3.headD 0, r3.tail.headD 0] m4) fun r5 m5 =>
   some ([r5.headD 0, r5.tail.headD 0], m5)
 
 theorem pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substConst0PairsL) (n : Nat)
@@ -318,7 +318,7 @@ theorem pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substC
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "subst_const0", callW_spec p n "subst_const0_pairs", callW_spec p n "rec2",
       callW_spec p n "sl_cons"] <;>
-    finish (gen := 20) (instances := 10000) [pairsW, bW]
+    finish (gen := 20) (instances := 10000) [pairsW, ntBW]
 
 theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (ps : List (EIdx × EIdx)) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word)
@@ -408,7 +408,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
       (slCons_specW p hN.lIwAlloc hN.lIwCopy hN.lSlCons k _ (r4.headD 0) (r3.headD 0) (r3.tail.headD 0)) h5
     have hE3 : EqL m4 (r3.headD 0).toNat (r3.tail.headD 0).toNat x3 := by
-      have := hd3; simp only [decEqRL, getD0, getD1] at this; exact this.grow hK4.1
+      have := hd3; simp only [decEqRL, ntGetD0, ntGetD1] at this; exact this.grow hK4.1
     have hcons' : consW k m4 (r4.headD 0) (r3.headD 0) (r3.tail.headD 0) = some (r5, m5) := by
       rw [← hs']; exact hcons
     obtain ⟨hS5, hg5, hE5⟩ := eqL_cons hcons' hS4 hE3 rec4 hl1 hl2
@@ -417,7 +417,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     · simp only [substConst0Pairs, StateT.run_bind, hrun1, hrun2, hrun3, exc_ok_bind', StateT.run_pure,
         ← hx1, ← hx2]
       rfl
-    · simp only [decEqRL, getD0, getD1, List.headD_cons, List.tail_cons]
+    · simp only [decEqRL, ntGetD0, ntGetD1, List.headD_cons, List.tail_cons]
       exact hE5
 
 @[refines ConRon.Arena.substConst0Pairs]

@@ -73,8 +73,8 @@ def decStmtL (m : Mem) (r : List Word) (ss : List (List EIdx × EIdx)) : Prop :=
 def decStmt (m : Mem) (r : List Word) (st : List EIdx × EIdx) : Prop := StmtAt m (r.headD 0) st
 
 def certGuardW (p : Prog) (n : Nat) (m : Mem) (cx a b rv : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [rdW (m.arr64 IW) (cx + 4), a, b] m) fun r1 m1 =>
-  bW (callW p n "eq_at1" [rdW (m1.arr64 IW) (cx + 5), r1.headD 0, rv] m1) fun r2 m2 =>
+  ntBW (callW p n "nat_ap2" [rdW (m.arr64 IW) (cx + 4), a, b] m) fun r1 m1 =>
+  ntBW (callW p n "eq_at1" [rdW (m1.arr64 IW) (cx + 5), r1.headD 0, rv] m1) fun r2 m2 =>
   some ([r2.headD 0], m2)
 
 set_option maxHeartbeats 1600000 in
@@ -87,7 +87,7 @@ theorem certGuard_specW (p : Prog) (hp : p.lookup "cert_guard" = some certGuardL
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "eq_at1", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certGuardW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [certGuardW, ntBW, rdW_eq]
 
 theorem certGuard_ref (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
     CallRef p "cert_guard" [cx, a, b, rv] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H a ∧ H b ∧ H rv)
@@ -97,7 +97,7 @@ theorem certGuard_ref (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
   unfold certGuardW at hw
   rw [hC.f4] at hw
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.bleN.word.toUInt64 a b).bind_ ⟨hS, (word_lt32 _), ha, hb⟩ hw
+    (natAp2_ref hD.toNatEqProg cc.bleN.word.toUInt64 a b).bind_ ⟨hS, (dmWord_lt32 _), ha, hb⟩ hw
   rw [(hC.grow hG1).f5] at hw
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
     (eqAt1_ref hD cc.boolTy.word.toUInt64 (r1.headD 0) rv).bind_ hS1 hw
@@ -110,8 +110,8 @@ theorem certGuard_ref (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
   try rfl
 
 def certEqW (p : Prog) (n : Nat) (m : Mem) (cx c rhs : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [c, rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 2)] m) fun r1 m1 =>
-  bW (callW p n "eq_at1" [rdW (m1.arr64 IW) (cx + 0), r1.headD 0, rhs] m1) fun r2 m2 =>
+  ntBW (callW p n "nat_ap2" [c, rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 2)] m) fun r1 m1 =>
+  ntBW (callW p n "eq_at1" [rdW (m1.arr64 IW) (cx + 0), r1.headD 0, rhs] m1) fun r2 m2 =>
   some ([r2.headD 0], m2)
 
 set_option maxHeartbeats 1600000 in
@@ -124,7 +124,7 @@ theorem certEq_specW (p : Prog) (hp : p.lookup "cert_eq" = some certEqL) (n : Na
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "eq_at1", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certEqW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [certEqW, ntBW, rdW_eq]
 
 theorem certEq_ref (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
     CallRef p "cert_eq" [cx, c, rhs] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H rhs)
@@ -135,7 +135,7 @@ theorem certEq_ref (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
   rw [hC.f1] at hw
   rw [hC.f2] at hw
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg c cc.x.word.toUInt64 cc.y.word.toUInt64).bind_ ⟨hS, hc, (word_lt32 _), (word_lt32 _)⟩ hw
+    (natAp2_ref hD.toNatEqProg c cc.x.word.toUInt64 cc.y.word.toUInt64).bind_ ⟨hS, hc, (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
   rw [(hC.grow hG1).f0] at hw
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
     (eqAt1_ref hD cc.natTy.word.toUInt64 (r1.headD 0) rhs).bind_ hS1 hw
@@ -148,9 +148,9 @@ theorem certEq_ref (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
   try rfl
 
 def certHalvesW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_ap2" [rdW (m.arr64 IW) (cx + 11), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 9)] m) fun r1 m1 =>
-  bW (callW p n "nat_ap2" [rdW (m1.arr64 IW) (cx + 11), rdW (m1.arr64 IW) (cx + 2), rdW (m1.arr64 IW) (cx + 9)] m1) fun r2 m2 =>
-  bW (callW p n "nat_ap2" [c, r1.headD 0, r2.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "nat_ap2" [rdW (m.arr64 IW) (cx + 11), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 9)] m) fun r1 m1 =>
+  ntBW (callW p n "nat_ap2" [rdW (m1.arr64 IW) (cx + 11), rdW (m1.arr64 IW) (cx + 2), rdW (m1.arr64 IW) (cx + 9)] m1) fun r2 m2 =>
+  ntBW (callW p n "nat_ap2" [c, r1.headD 0, r2.headD 0] m2) fun r3 m3 =>
   some ([r3.headD 0], m3)
 
 set_option maxHeartbeats 1600000 in
@@ -163,7 +163,7 @@ theorem certHalves_specW (p : Prog) (hp : p.lookup "cert_halves" = some certHalv
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certHalvesW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [certHalvesW, ntBW, rdW_eq]
 
 theorem certHalves_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_halves" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
@@ -175,12 +175,12 @@ theorem certHalves_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   rw [hC.f1] at hw
   rw [hC.f9] at hw
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hG1, hl1, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.divN.word.toUInt64 cc.x.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS, (word_lt32 _), (word_lt32 _), (word_lt32 _)⟩ hw
+    (natAp2_ref hD.toNatEqProg cc.divN.word.toUInt64 cc.x.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
   rw [(hC.grow hG1).f11] at hw
   rw [(hC.grow hG1).f2] at hw
   rw [(hC.grow hG1).f9] at hw
   obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (natAp2_ref hD.toNatEqProg cc.divN.word.toUInt64 cc.y.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS1, (word_lt32 _), (word_lt32 _), (word_lt32 _)⟩ hw
+    (natAp2_ref hD.toNatEqProg cc.divN.word.toUInt64 cc.y.word.toUInt64 cc.two.word.toUInt64).bind_ ⟨hS1, (dmWord_lt32 _), (dmWord_lt32 _), (dmWord_lt32 _)⟩ hw
   have hG2 : IWGrow m m2 := hG1.trans hg2
   obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
     (natAp2_ref hD.toNatEqProg c (r1.headD 0) (r2.headD 0)).bind_ ⟨hS2, hc, hl1, hl2⟩ hw
@@ -263,14 +263,14 @@ theorem stmtL_of_rec3 {m m1 : Mem} {r : List Word} {s1 s2 s3 : Word} {st1 st2 st
 theorem decStmtL_pair {m : Mem} {r : List Word} {ss : List (List EIdx × EIdx)} (h : decStmtL m r ss) :
     decStmtL m [r.headD 0, r.tail.headD 0] ss := by
   unfold decStmtL at *
-  rw [getD0, getD1] at h
+  rw [ntGetD0, ntGetD1] at h
   exact h
 
 /-! ## `stmt1` -/
 
 def stmt1W (p : Prog) (n : Nat) (m : Mem) (h e : Word) : Option (List Word × Mem) :=
-  bW (callW p n "sl_new1" [h] m) fun r1 m1 =>
-  bW (callW p n "rec3" [r1.headD 0, r1.tail.headD 0, e] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "sl_new1" [h] m) fun r1 m1 =>
+  ntBW (callW p n "rec3" [r1.headD 0, r1.tail.headD 0, e] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem stmt1_specW (p : Prog) (hp : p.lookup "stmt1" = some stmt1) (n : Nat) (s₀ : St)
     (h e : Word) :
@@ -281,7 +281,7 @@ theorem stmt1_specW (p : Prog) (hp : p.lookup "stmt1" = some stmt1) (n : Nat) (s
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "sl_new1", callW_spec p n "rec3"] <;>
-    finish (gen := 20) (instances := 10000) [stmt1W, bW]
+    finish (gen := 20) (instances := 10000) [stmt1W, ntBW]
 
 theorem stmt1_ref (hD : DmProg2 p) (h e : Word) :
     CallRef p "stmt1" [h, e] (fun m s => StageR dn vis fe m s ∧ H h ∧ H e)
@@ -309,11 +309,11 @@ theorem stmt1_ref (hD : DmProg2 p) (h e : Word) :
 
 def certTwoEqsW (p : Prog) (n : Nat) (m : Mem) (cx c h1 h2 r1 r2 : Word) :
     Option (List Word × Mem) :=
-  bW (callW p n "cert_eq" [cx, c, r1] m) fun ra ma =>
-  bW (callW p n "cert_eq" [cx, c, r2] ma) fun rb mb =>
-  bW (callW p n "stmt1" [h1, ra.headD 0] mb) fun rs1 ms1 =>
-  bW (callW p n "stmt1" [h2, rb.headD 0] ms1) fun rs2 ms2 =>
-  bW (callW p n "rec2" [rs1.headD 0, rs2.headD 0] ms2) fun rq mq => some ([rq.headD 0, 2], mq)
+  ntBW (callW p n "cert_eq" [cx, c, r1] m) fun ra ma =>
+  ntBW (callW p n "cert_eq" [cx, c, r2] ma) fun rb mb =>
+  ntBW (callW p n "stmt1" [h1, ra.headD 0] mb) fun rs1 ms1 =>
+  ntBW (callW p n "stmt1" [h2, rb.headD 0] ms1) fun rs2 ms2 =>
+  ntBW (callW p n "rec2" [rs1.headD 0, rs2.headD 0] ms2) fun rq mq => some ([rq.headD 0, 2], mq)
 
 theorem certTwoEqs_specW (p : Prog) (hp : p.lookup "cert_two_eqs" = some certTwoEqsL) (n : Nat)
     (s₀ : St) (cx c h1 h2 r1 r2 : Word) :
@@ -324,7 +324,7 @@ theorem certTwoEqs_specW (p : Prog) (hp : p.lookup "cert_two_eqs" = some certTwo
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "cert_eq", callW_spec p n "stmt1", callW_spec p n "rec2"] <;>
-    finish (gen := 20) (instances := 10000) [certTwoEqsW, bW]
+    finish (gen := 20) (instances := 10000) [certTwoEqsW, ntBW]
 
 theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA) :
     CallRef p "cert_two_eqs" [cx, c, h1, h2, r1, r2]

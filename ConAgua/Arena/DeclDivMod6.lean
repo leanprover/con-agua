@@ -33,26 +33,26 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-! ## `bool_ctor_typed` -/
 
-def bctW (p : Prog) (n : Nat) (m : Mem) (v nm : Word) : Option (List Word × Mem) :=
-  bW (callW p n "env_find" [nm, v] m) fun r1 m1 =>
+def dmBctW (p : Prog) (n : Nat) (m : Mem) (v nm : Word) : Option (List Word × Mem) :=
+  ntBW (callW p n "env_find" [nm, v] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
-  bW (callW p n "ci_to_cv" [r1.tail.headD 0] m1) fun r2 m2 =>
-  bW (callW p n "pin_at" [29] m2) fun r3 m3 =>
-  bW (callW p n "const_e" [r3.headD 0] m3) fun r4 m4 =>
+  ntBW (callW p n "ci_to_cv" [r1.tail.headD 0] m1) fun r2 m2 =>
+  ntBW (callW p n "pin_at" [29] m2) fun r3 m3 =>
+  ntBW (callW p n "const_e" [r3.headD 0] m3) fun r4 m4 =>
   some ([if rdW (m4.arr64 EREC) (r2.headD 0 + 3) = r4.headD 0 then 1 else 0], m4)
 
 set_option maxHeartbeats 1600000 in
 theorem bct_specW (p : Prog) (hp : p.lookup "bool_ctor_typed" = some boolCtorTypedL) (n : Nat)
     (s₀ : St) (v nm : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "bool_ctor_typed" [v, nm]
-    ⦃fun r s' => LocEq s' s₀ ∧ bctW p n s₀.mem v nm = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dmBctW p n s₀.mem v nm = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, boolCtorTypedL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "env_find", callW_spec p n "ci_to_cv", callW_spec p n "pin_at",
       callW_spec p n "const_e"] <;>
-    finish (gen := 30) (instances := 10000) [bctW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [dmBctW, ntBW, rdW_eq]
 
 theorem DmProg2.cvProg (hD : DmProg2 p) : NatCvProg p :=
   hD.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg
@@ -61,9 +61,9 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
       (boolCtorTyped fe (decI nm)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => bctW p k mq vis nm)
+  have hw := callW_model (M := fun mq => dmBctW p k mq vis nm)
     (bct_specW p hD.lBoolCtorTyped k · vis nm) hcall
-  unfold bctW at hw
+  unfold dmBctW at hw
   cases h1 : callW p k "env_find" [nm, vis] m with
   | none => rw [h1] at hw; simp at hw
   | some q1 =>
@@ -114,21 +114,21 @@ theorem boolCtorTyped_refines (hD : DmProg6 p) (nm : Word) :
 
 /-! ## `div_mod_pin_guard` -/
 
-def pgW (p : Prog) (n : Nat) (m : Mem) (ps vs c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
-  bW (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
+def dmPgW (p : Prog) (n : Nat) (m : Mem) (ps vs c : Word) : Option (List Word × Mem) :=
+  ntBW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
+  ntBW (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
-  bW (stubM "has_fvar_fast" m2 [4000000000, r1.headD 0]) fun r3 m3 =>
+  ntBW (stubM "has_fvar_fast" m2 [4000000000, r1.headD 0]) fun r3 m3 =>
   if r3.headD 0 ≠ 0 then some ([0], m3) else
-  bW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
+  ntBW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
-  bW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 => some ([r5.headD 0], m5)
+  ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 => some ([r5.headD 0], m5)
 
 set_option maxHeartbeats 1600000 in
 theorem pg_specW (p : Prog) (hp : p.lookup "div_mod_pin_guard" = some divModPinGuardL) (n : Nat)
     (s₀ : St) (ps vs c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_pin_guard" [ps, vs, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ pgW p n s₀.mem ps vs c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dmPgW p n s₀.mem ps vs c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divModPinGuardL]
   sym only [lang_grind, arena_grind] =>
@@ -136,16 +136,16 @@ theorem pg_specW (p : Prog) (hp : p.lookup "div_mod_pin_guard" = some divModPinG
       callW_spec p n "div_mod_decl_pin", stubM_spec p "loose_bvars_bounded_fast" n,
       stubM_spec p "has_fvar_fast" n, stubM_spec p "all_level_params_defined" n,
       stubM_spec p "consts_resolve_ffast" n] <;>
-    finish (gen := 30) (instances := 10000) [pgW, bW]
+    finish (gen := 30) (instances := 10000) [dmPgW, ntBW]
 
 theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
     CallRef p "div_mod_pin_guard" [ps, vis, c]
       (fun m s => StageR dn vis fe m s ∧ H c ∧ PinSetR m ps ip)
       (divModPinGuard ip fe (decI c)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => pgW p k mq ps vis c)
+  have hw := callW_model (M := fun mq => dmPgW p k mq ps vis c)
     (pg_specW p hD.lDivModPinGuard k · ps vis c) hcall
-  unfold pgW at hw
+  unfold dmPgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hw⟩ :=
     (divModDeclPin_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bind_ ⟨hS, hc, hP⟩ hw
@@ -255,11 +255,11 @@ theorem StmtL.cons {m : Mem} {so sl : Word} {s : List EIdx × EIdx} {ss : List (
 
 def cggoW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
   if sl = 0 ∨ pl = 0 then some ([1], m) else
-  bW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
+  ntBW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
     rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 2),
     rdW (m.arr64 IW) po] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
-  bW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m1) fun r2 m2 =>
+  ntBW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m1) fun r2 m2 =>
     some ([r2.headD 0], m2)
 
 set_option maxHeartbeats 1600000 in
@@ -272,7 +272,7 @@ theorem cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some div
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_cert_guard", callW_spec p n "div_mod_certs_guard_go"] <;>
-    finish (gen := 30) (instances := 10000) [cggoW, bW, rdW_eq]
+    finish (gen := 30) (instances := 10000) [cggoW, ntBW, rdW_eq]
 
 theorem cggo_ref (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
     (c annVal : Word) (hc : H c) (hann : H annVal) :
@@ -383,9 +383,9 @@ theorem divModCertsGuardGo_refines (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe)
 /-! ## `div_mod_certs_guard` -/
 
 def cgsW (p : Prog) (n : Nat) (m : Mem) (ps vs c annVal : Word) : Option (List Word × Mem) :=
-  bW (callW p n "div_mod_cert_stmts" [c] m) fun r1 m1 =>
-  bW (callW p n "div_mod_cert_proofs" [ps, c] m1) fun r2 m2 =>
-  bW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, r1.headD 0, r1.tail.headD 0, r2.headD 0,
+  ntBW (callW p n "div_mod_cert_stmts" [c] m) fun r1 m1 =>
+  ntBW (callW p n "div_mod_cert_proofs" [ps, c] m1) fun r2 m2 =>
+  ntBW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, r1.headD 0, r1.tail.headD 0, r2.headD 0,
     r2.tail.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
 
 set_option maxHeartbeats 1600000 in
@@ -399,7 +399,7 @@ theorem cgs_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard" = some divModC
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
       callW_spec p n "div_mod_certs_guard_go"] <;>
-    finish (gen := 20) [cgsW, bW]
+    finish (gen := 20) [cgsW, ntBW]
 
 theorem cgs_ref (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
     (ps c annVal : Word) (ip : INatOpPinSet) :
@@ -422,9 +422,9 @@ theorem cgs_ref (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p 
   rw [h3, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  simp only [decStmtL, getD0, getD1] at hd1
+  simp only [decStmtL, ntGetD0, ntGetD1] at hd1
   unfold decRL at hd2
-  simp only [Nat.zero_add, getD0, getD1] at hd2
+  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := cggo_ref hD hs0 hsA c annVal hc hann x1 x2
     (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) k m2 a2 r3 m3 hS2
     (hd1.grow hg2) hd2.1 hd2.2 h3

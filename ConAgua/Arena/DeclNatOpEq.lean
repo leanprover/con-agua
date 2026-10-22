@@ -70,15 +70,15 @@ def natEqCtxT (d : Nat) : AM (EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EI
   pure (x, y, z, sN, sx, sy, bT, bF)
 
 def natEqCtxW (p : Prog) (n : Nat) (m : Mem) (pi d : Word) : Option (List Word × Mem) :=
-  bW (callW p n "const_e" [pw m pi 15] m) fun r1 m1 =>
-  bW (callW p n "intern_fvar" [d, r1.headD 0] m1) fun r2 m2 =>
-  bW (callW p n "intern_fvar" [d + 1, r1.headD 0] m2) fun r3 m3 =>
-  bW (callW p n "const_e" [pw m3 pi 16] m3) fun r4 m4 =>
-  bW (callW p n "nat_ap1" [pw m4 pi 17, r2.headD 0] m4) fun r5 m5 =>
-  bW (callW p n "nat_ap1" [pw m4 pi 17, r3.headD 0] m5) fun r6 m6 =>
-  bW (callW p n "const_e" [pw m6 pi 18] m6) fun r7 m7 =>
-  bW (callW p n "const_e" [pw m7 pi 19] m7) fun r8 m8 =>
-  bW (callW p n "iw_alloc" [8] m8) fun rq mq =>
+  ntBW (callW p n "const_e" [pw m pi 15] m) fun r1 m1 =>
+  ntBW (callW p n "intern_fvar" [d, r1.headD 0] m1) fun r2 m2 =>
+  ntBW (callW p n "intern_fvar" [d + 1, r1.headD 0] m2) fun r3 m3 =>
+  ntBW (callW p n "const_e" [pw m3 pi 16] m3) fun r4 m4 =>
+  ntBW (callW p n "nat_ap1" [pw m4 pi 17, r2.headD 0] m4) fun r5 m5 =>
+  ntBW (callW p n "nat_ap1" [pw m4 pi 17, r3.headD 0] m5) fun r6 m6 =>
+  ntBW (callW p n "const_e" [pw m6 pi 18] m6) fun r7 m7 =>
+  ntBW (callW p n "const_e" [pw m7 pi 19] m7) fun r8 m8 =>
+  ntBW (callW p n "iw_alloc" [8] m8) fun rq mq =>
   some ([rq.headD 0], ((((((((mq.set64 IW (rq.headD 0) (r2.headD 0)).set64 IW (rq.headD 0 + 1)
     (r3.headD 0)).set64 IW (rq.headD 0 + 2) (r4.headD 0)).set64 IW (rq.headD 0 + 3) (pw m4 pi 17)).set64 IW
     (rq.headD 0 + 4) (r5.headD 0)).set64 IW (rq.headD 0 + 5) (r6.headD 0)).set64 IW (rq.headD 0 + 6)
@@ -95,7 +95,7 @@ theorem natEqCtx_specW (p : Prog) (hp : p.lookup "nat_eq_ctx" = some natEqCtx) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "const_e", callW_spec p n "intern_fvar", callW_spec p n "nat_ap1",
       callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) (instances := 10000) [natEqCtxW, bW, pw]
+    finish (gen := 20) (instances := 10000) [natEqCtxW, ntBW, pw]
 
 /-- The context record of the dispatch: eight handle words at `cx`, below the pool's top. -/
 def NatCtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
@@ -290,13 +290,13 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
 
 def natEqDispW (p : Prog) (n : Nat) (m : Mem) (c pi cx : Word) : Option (List Word × Mem) :=
   let fin := fun (r : List Word) (m' : Mem) => some ([r.headD 0, r.tail.headD 0], m')
-  if c = pw m pi 0 then bW (callW p n "nat_eq_pr" [c, pw m cx 2, pw m cx 0, pw m cx 4] m) fin else
-  if c = pw m pi 1 then bW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3] m) fin else
-  if c = pw m pi 2 then bW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 0] m) fin else
-  if c = pw m pi 3 then bW (callW p n "nat_eq_mu" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 1] m) fin else
-  if c = pw m pi 4 then bW (callW p n "nat_eq_po" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3, pw m pi 3] m) fin else
-  if c = pw m pi 5 then bW (callW p n "nat_eq_be" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
-  if c = pw m pi 6 then bW (callW p n "nat_eq_bl" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
+  if c = pw m pi 0 then ntBW (callW p n "nat_eq_pr" [c, pw m cx 2, pw m cx 0, pw m cx 4] m) fin else
+  if c = pw m pi 1 then ntBW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3] m) fin else
+  if c = pw m pi 2 then ntBW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 0] m) fin else
+  if c = pw m pi 3 then ntBW (callW p n "nat_eq_mu" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 1] m) fin else
+  if c = pw m pi 4 then ntBW (callW p n "nat_eq_po" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3, pw m pi 3] m) fin else
+  if c = pw m pi 5 then ntBW (callW p n "nat_eq_be" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
+  if c = pw m pi 6 then ntBW (callW p n "nat_eq_bl" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
   some ([0, 0], m)
 
 set_option maxHeartbeats 6400000 in
@@ -310,7 +310,7 @@ theorem natEqDisp_specW (p : Prog) (hp : p.lookup "nat_eq_disp" = some natEqDisp
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "nat_eq_pr", callW_spec p n "nat_eq_un", callW_spec p n "nat_eq_mu",
       callW_spec p n "nat_eq_po", callW_spec p n "nat_eq_be", callW_spec p n "nat_eq_bl"] <;>
-    finish (gen := 20) (instances := 10000) [natEqDispW, bW, pw]
+    finish (gen := 20) (instances := 10000) [natEqDispW, ntBW, pw]
 
 def natEqDispT (c pr ad su mu po be bl : NIdx) (x y z : EIdx) (sN : NIdx) (sx sy bT bF : EIdx) :
     AM (List (EIdx × EIdx)) :=
@@ -354,7 +354,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_pos b0] at hw
     cases hcall : callW p k "nat_eq_pr" [c, z, x, sx] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -372,7 +372,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_neg b0, if_pos b1] at hw
     cases hcall : callW p k "nat_eq_un" [c, x, y, z, sy, sN] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -391,7 +391,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_neg b0, if_neg b1, if_pos b2] at hw
     cases hcall : callW p k "nat_eq_un" [c, x, y, z, sy, p0] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -411,7 +411,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_neg b0, if_neg b1, if_neg b2, if_pos b3] at hw
     cases hcall : callW p k "nat_eq_mu" [c, x, y, z, sy, p1] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -432,7 +432,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_pos b4] at hw
     cases hcall : callW p k "nat_eq_po" [c, x, y, z, sy, sN, p3] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -454,7 +454,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_pos b5] at hw
     cases hcall : callW p k "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -477,7 +477,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
     rw [T]
     simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_pos b6] at hw
     cases hcall : callW p k "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] m with
-    | none => simp [hcall, bW] at hw
+    | none => simp [hcall, ntBW] at hw
     | some q =>
     obtain ⟨r1, m1⟩ := q
     rw [hcall, bW_some] at hw
@@ -507,9 +507,9 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
 /-! ### `nat_op_equations` -/
 
 def natOpEquationsW (p : Prog) (n : Nat) (m : Mem) (d c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "nat_op_pins" [] m) fun rp m1 =>
-  bW (callW p n "nat_eq_ctx" [rp.headD 0, d] m1) fun rc m2 =>
-  bW (callW p n "nat_eq_disp" [c, rp.headD 0, rc.headD 0] m2) fun rr m3 =>
+  ntBW (callW p n "nat_op_pins" [] m) fun rp m1 =>
+  ntBW (callW p n "nat_eq_ctx" [rp.headD 0, d] m1) fun rc m2 =>
+  ntBW (callW p n "nat_eq_disp" [c, rp.headD 0, rc.headD 0] m2) fun rr m3 =>
   some ([rr.headD 0, rr.tail.headD 0], m3)
 
 theorem natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some natOpEquationsL)
@@ -521,7 +521,7 @@ theorem natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "nat_op_pins", callW_spec p n "nat_eq_ctx", callW_spec p n "nat_eq_disp"] <;>
-    finish (gen := 20) (instances := 10000) [natOpEquationsW, bW]
+    finish (gen := 20) (instances := 10000) [natOpEquationsW, ntBW]
 
 def natEqTailT (c : NIdx) (ctx : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
     AM (List (EIdx × EIdx)) := do

@@ -65,24 +65,24 @@ def ncK4 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × M
     if e ≠ r4.headD 0 then some ([0], m)
     else ncK5 p n (callW p n "env_find" [r3.headD 0, vis] m)
 
-def ncK3 : Option (List Word × Mem) → Option (List Word × Mem)
+def ntNcK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m) => ncK4 p n vis e r3 (callW p n "const_e" [r3.headD 0] m)
 
-def ncK2 (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ntNcK2 (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m) =>
-    if c = r1.headD 0 ∨ c = r2.headD 0 then ncK3 p n vis e (callW p n "pin_at" [29] m)
+    if c = r1.headD 0 ∨ c = r2.headD 0 then ntNcK3 p n vis e (callW p n "pin_at" [29] m)
     else ncK9 p n e (callW p n "pin_at" [1] m)
 
-def ncK1 : Option (List Word × Mem) → Option (List Word × Mem)
+def ntNcK1 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m) => ncK2 p n vis c e r1 (callW p n "pin_at" [20] m)
+  | some (r1, m) => ntNcK2 p n vis c e r1 (callW p n "pin_at" [20] m)
 
 end codmodel
 
 def natOpCodW (p : Prog) (n : Nat) (m : Mem) (vis c e : Word) : Option (List Word × Mem) :=
-  ncK1 p n vis c e (callW p n "pin_at" [19] m)
+  ntNcK1 p n vis c e (callW p n "pin_at" [19] m)
 
 section codarms
 variable (p : Prog) (n : Nat) (vis c e : Word) (r r1 r3 : List Word) (m : Mem) (q : Word)
@@ -96,11 +96,11 @@ theorem ncK5_some : ncK5 p n (some (r, m)) = if r.headD 0 = 0 then some ([0], m)
     else ncK6 p n (callW p n "ci_to_cv" [r.tail.headD 0] m) := rfl
 theorem ncK4_some : ncK4 p n vis e r3 (some (r, m)) = if e ≠ r.headD 0 then some ([0], m)
     else ncK5 p n (callW p n "env_find" [r3.headD 0, vis] m) := rfl
-theorem ncK3_some : ncK3 p n vis e (some (r, m)) = ncK4 p n vis e r (callW p n "const_e" [r.headD 0] m) := rfl
-theorem ncK2_some : ncK2 p n vis c e r1 (some (r, m)) =
-    if c = r1.headD 0 ∨ c = r.headD 0 then ncK3 p n vis e (callW p n "pin_at" [29] m)
+theorem ncK3_some : ntNcK3 p n vis e (some (r, m)) = ncK4 p n vis e r (callW p n "const_e" [r.headD 0] m) := rfl
+theorem ncK2_some : ntNcK2 p n vis c e r1 (some (r, m)) =
+    if c = r1.headD 0 ∨ c = r.headD 0 then ntNcK3 p n vis e (callW p n "pin_at" [29] m)
     else ncK9 p n e (callW p n "pin_at" [1] m) := rfl
-theorem ncK1_some : ncK1 p n vis c e (some (r, m)) = ncK2 p n vis c e r (callW p n "pin_at" [20] m) := rfl
+theorem ncK1_some : ntNcK1 p n vis c e (some (r, m)) = ntNcK2 p n vis c e r (callW p n "pin_at" [20] m) := rfl
 end codarms
 
 grind_pattern [ind_grind] ncK10_some => ncK10 e (some (r, m))
@@ -109,9 +109,9 @@ grind_pattern [ind_grind] ncK7_some => ncK7 q (some (r, m))
 grind_pattern [ind_grind] ncK6_some => ncK6 p n (some (r, m))
 grind_pattern [ind_grind] ncK5_some => ncK5 p n (some (r, m))
 grind_pattern [ind_grind] ncK4_some => ncK4 p n vis e r3 (some (r, m))
-grind_pattern [ind_grind] ncK3_some => ncK3 p n vis e (some (r, m))
-grind_pattern [ind_grind] ncK2_some => ncK2 p n vis c e r1 (some (r, m))
-grind_pattern [ind_grind] ncK1_some => ncK1 p n vis c e (some (r, m))
+grind_pattern [ind_grind] ncK3_some => ntNcK3 p n vis e (some (r, m))
+grind_pattern [ind_grind] ncK2_some => ntNcK2 p n vis c e r1 (some (r, m))
+grind_pattern [ind_grind] ncK1_some => ntNcK1 p n vis c e (some (r, m))
 
 theorem natOpCod_specW (p : Prog) (hp : p.lookup "nat_op_cod" = some natOpCodL) (n : Nat)
     (s₀ : St) (vis c e : Word) :
@@ -136,14 +136,14 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
   have hw := callW_model (M := fun mm => natOpCodW p k mm vis c e) (natOpCod_specW p hN.lNatOpCod k · vis c e) hcall
   unfold natOpCodW at hw
   cases h1 : callW p k "pin_at" [19] m with
-  | none => rw [h1] at hw; simp [ncK1] at hw
+  | none => rw [h1] at hw; simp [ntNcK1] at hw
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, ncK1_some] at hw
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 20) rfl h1
   rw [hm1] at hw
   cases h2 : callW p k "pin_at" [20] m with
-  | none => rw [h2] at hw; simp [ncK2] at hw
+  | none => rw [h2] at hw; simp [ntNcK2] at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, ncK2_some] at hw
@@ -162,7 +162,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
   by_cases hP : c = r1.headD 0 ∨ c = r2.headD 0
   · rw [if_pos hP] at hw
     cases h3 : callW p k "pin_at" [29] m with
-    | none => rw [h3] at hw; simp [ncK3] at hw
+    | none => rw [h3] at hw; simp [ntNcK3] at hw
     | some q3 =>
     obtain ⟨r3, m3⟩ := q3
     rw [h3, ncK3_some] at hw
@@ -396,7 +396,7 @@ theorem viewR_forall {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
   cases v <;> simp only [ViewR] at h
   all_goals first
     | (left; obtain ⟨h0, h1, h2, h3, h4⟩ := h
-       refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [getD1, getD2, H])
+       refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [ntGetD1, getD2, H])
     | (right; refine ⟨?_, fun _ _ => by simp⟩; simp_all)
 
 theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
@@ -707,9 +707,9 @@ theorem slice_succ {o l : Word} (hl0 : l ≠ 0) (hb : o.toNat + l.toNat < 2 ^ 64
 
 def okAllW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([1], m) else
-  bW (callW p n "nat_op_stored_ok" [vis, rdW (m.arr64 IW) o] m) fun r1 m1 =>
+  ntBW (callW p n "nat_op_stored_ok" [vis, rdW (m.arr64 IW) o] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
-  bW (callW p n "nat_op_stored_ok_all" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
+  ntBW (callW p n "nat_op_stored_ok_all" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 theorem okAll_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok_all" = some natOpStoredOkAllL)
     (n : Nat) (s₀ : St) (vis o l : Word) :
@@ -720,7 +720,7 @@ theorem okAll_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok_all" = some natO
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_op_stored_ok", callW_spec p n "nat_op_stored_ok_all"] <;>
-    finish (gen := 20) [okAllW, bW]
+    finish (gen := 20) [okAllW, ntBW]
 
 theorem natOpStoredOkAll_nil (fe : IFEnv) : natOpStoredOkAll fe [] = pure true := rfl
 

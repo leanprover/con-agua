@@ -147,7 +147,7 @@ def natIndOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Wor
   if found = 0 then some ([0], m) else
   if rdW (m.arr64 EREC) q ≠ 3 then some ([0], m) else
   if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some ([0], m) else
-  bW (callW p n "pin_word" [54] m) fun r1 m1 =>
+  ntBW (callW p n "pin_word" [54] m) fun r1 m1 =>
   some ([if rdW (m1.arr64 EREC) (q + 4) = r1.headD 0 then 1 else 0], m1)
 
 theorem natIndOk_specW (p : Prog) (hp : p.lookup "nat_ind_ok" = some natIndOkL) (n : Nat)
@@ -159,7 +159,7 @@ theorem natIndOk_specW (p : Prog) (hp : p.lookup "nat_ind_ok" = some natIndOkL) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word"] <;>
-    finish (gen := 20) [natIndOkW, bW]
+    finish (gen := 20) [natIndOkW, ntBW]
 
 theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantInfo) :
     CallRef p "nat_ind_ok" [found, q]
@@ -235,8 +235,8 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
 def natZeroOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Word × Mem) :=
   if found = 0 then some ([0], m) else
   if rdW (m.arr64 EREC) q ≠ 4 then some ([0], m) else
-  bW (callW p n "pin_at" [1] m) fun r1 m1 =>
-  bW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
+  ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
+  ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
   if rdW (m2.arr64 EREC) (q + 3) ≠ 0 then some ([0], m2) else
   some ([if rdW (m2.arr64 EREC) (q + 4) = r2.headD 0 then 1 else 0], m2)
 
@@ -249,7 +249,7 @@ theorem natZeroOk_specW (p : Prog) (hp : p.lookup "nat_zero_ok" = some natZeroOk
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [natZeroOkW, bW]
+    finish (gen := 20) [natZeroOkW, ntBW]
 
 theorem natZeroOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natZeroOk (some ci) = pure false := by
   cases ci <;> simp_all [natZeroOk, ciTag]
@@ -355,8 +355,8 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Wo
   if found = 0 then some ([0], m) else
   if rdW (m.arr64 EREC) q ≠ 4 then some ([0], m) else
   if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some ([0], m) else
-  bW (callW p n "pin_at" [1] m) fun r1 m1 =>
-  bW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
+  ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
+  ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
   if rdW (m2.arr64 EREC) (q + 4) >>> 28 ≠ 6 then some ([0], m2) else
   if tierW (rdW (m2.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0 then none else
   if rdW (m2.arr64 CTL) (30 + tierW (rdW (m2.arr64 EREC) (q + 4))) ≤ idxW (rdW (m2.arr64 EREC) (q + 4))
@@ -375,7 +375,7 @@ theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOk
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [natSuccOkW, bW, tierW, idxW]
+    finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW]
 
 
 theorem natSuccOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natSuccOk (some ci) = pure false := by
@@ -494,17 +494,17 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
 /-! ### `nat_lit_supported` -/
 
 def natLitSupportedW (p : Prog) (n : Nat) (m : Mem) (vis : Word) : Option (List Word × Mem) :=
-  bW (callW p n "pin_at" [1] m) fun r1 m1 =>
-  bW (callW p n "env_find" [r1.headD 0, vis] m1) fun rf m2 =>
-  bW (callW p n "nat_ind_ok" [rf.headD 0, rf.tail.headD 0] m2) fun ri m3 =>
+  ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
+  ntBW (callW p n "env_find" [r1.headD 0, vis] m1) fun rf m2 =>
+  ntBW (callW p n "nat_ind_ok" [rf.headD 0, rf.tail.headD 0] m2) fun ri m3 =>
   if ri.headD 0 = 0 then some ([0], m3) else
-  bW (callW p n "pin_at" [2] m3) fun r4 m4 =>
-  bW (callW p n "env_find" [r4.headD 0, vis] m4) fun rg m5 =>
-  bW (callW p n "nat_zero_ok" [rg.headD 0, rg.tail.headD 0] m5) fun rz m6 =>
+  ntBW (callW p n "pin_at" [2] m3) fun r4 m4 =>
+  ntBW (callW p n "env_find" [r4.headD 0, vis] m4) fun rg m5 =>
+  ntBW (callW p n "nat_zero_ok" [rg.headD 0, rg.tail.headD 0] m5) fun rz m6 =>
   if rz.headD 0 = 0 then some ([0], m6) else
-  bW (callW p n "pin_at" [3] m6) fun r7 m7 =>
-  bW (callW p n "env_find" [r7.headD 0, vis] m7) fun rh m8 =>
-  bW (callW p n "nat_succ_ok" [rh.headD 0, rh.tail.headD 0] m8) fun rs m9 =>
+  ntBW (callW p n "pin_at" [3] m6) fun r7 m7 =>
+  ntBW (callW p n "env_find" [r7.headD 0, vis] m7) fun rh m8 =>
+  ntBW (callW p n "nat_succ_ok" [rh.headD 0, rh.tail.headD 0] m8) fun rs m9 =>
   some ([rs.headD 0], m9)
 
 theorem natLitSupported_specW (p : Prog) (hp : p.lookup "nat_lit_supported" = some natLitSupportedL)
@@ -517,7 +517,7 @@ theorem natLitSupported_specW (p : Prog) (hp : p.lookup "nat_lit_supported" = so
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok",
       callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"] <;>
-    finish (gen := 20) [natLitSupportedW, bW]
+    finish (gen := 20) [natLitSupportedW, ntBW]
 
 
 /-- A pin read at slot `1 + j`, as a run. -/

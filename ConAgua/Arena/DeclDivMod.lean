@@ -34,7 +34,7 @@ structure DmProg1 (p : Prog) : Prop extends NatEqProg p where
 
 /-! ## Reading a variant's record -/
 
-theorem word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
+theorem dmWord_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
   have := x.word.toNat_lt
   simpa using this
 
@@ -115,17 +115,17 @@ theorem PinSetR.hdr {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip
 /-! ## `div_mod_slot` -/
 
 /-- The field index of op `c` in a variant. -/
-def slotW (m : Mem) (c : Word) : Word :=
+def dmSlotW (m : Mem) (c : Word) : Word :=
   if c = pinW m 22 then 0 else if c = pinW m 24 then 2 else if c = pinW m 25 then 3
   else if c = pinW m 26 then 4 else if c = pinW m 27 then 5 else if c = pinW m 28 then 6
   else if c = pinW m 29 then 7 else 1
 
-theorem slotW_lt (m : Mem) (c : Word) : (slotW m c).toNat < 8 := by
-  unfold slotW; repeat' split
+theorem slotW_lt (m : Mem) (c : Word) : (dmSlotW m c).toNat < 8 := by
+  unfold dmSlotW; repeat' split
   all_goals decide
 
 def divModSlotW (m : Mem) (c : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else some ([slotW m c], m)
+  if pinW m 0 = 0 then none else some ([dmSlotW m c], m)
 
 theorem divModSlot_specW (p : Prog) (hpin : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "div_mod_slot" = some divModSlot) (n : Nat) (s₀ : St) (c : Word) :
@@ -135,13 +135,13 @@ theorem divModSlot_specW (p : Prog) (hpin : p.lookup "pin_at" = some pinAtL)
   simp only [callFn, divModSlot]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pinAt_pure p hpin n] <;>
-    finish (gen := 20) [divModSlotW, slotW]
+    finish (gen := 20) [divModSlotW, dmSlotW]
 
 /-- A returning `div_mod_slot` leaves the memory, and returns the slot. -/
 theorem divModSlot_model {p : Prog} (hpin : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "div_mod_slot" = some divModSlot) {n : Nat} {m m' : Mem} {c : Word}
     {r : List Word} (h : callW p n "div_mod_slot" [c] m = some (r, m')) :
-    m' = m ∧ pinW m 0 ≠ 0 ∧ r = [slotW m c] := by
+    m' = m ∧ pinW m 0 ≠ 0 ∧ r = [dmSlotW m c] := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ k =>
@@ -157,7 +157,7 @@ theorem divModSlot_model {p : Prog} (hpin : p.lookup "pin_at" = some pinAtL)
 /-- The twin's choice of a pin: `divModDeclPin` is the field at the slot. -/
 theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word} (hc : H c)
     (ip : INatOpPinSet) :
-    (divModDeclPin ip (decI c)).run a = .ok ((pinsOf ip).getD (slotW m c).toNat default, a) := by
+    (divModDeclPin ip (decI c)).run a = .ok ((pinsOf ip).getD (dmSlotW m c).toNat default, a) := by
   have b21 : ((decI c : NIdx) = decI (pinW m 22)) ↔ c = pinW m 22 := decI_inj_iff hc (hF.names_lt 21 (by decide))
   have b23 : ((decI c : NIdx) = decI (pinW m 24)) ↔ c = pinW m 24 := decI_inj_iff hc (hF.names_lt 23 (by decide))
   have b24 : ((decI c : NIdx) = decI (pinW m 25)) ↔ c = pinW m 25 := decI_inj_iff hc (hF.names_lt 24 (by decide))
@@ -174,7 +174,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have p28 : (pinAt 28).run a = .ok (decI (pinW m 29), a) := pinAt_run hF 28 (by decide)
   by_cases e0 : c = pinW m 22
   · have f0 : (decI c = decI (pinW m 22)) = True := eq_true (b21.2 e0)
-    have hsl : slotW m c = 0 := by rw [slotW, if_pos e0]
+    have hsl : dmSlotW m c = 0 := by rw [dmSlotW, if_pos e0]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -185,7 +185,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have f0 : (decI c = decI (pinW m 22)) = False := eq_false (fun h => e0 (b21.1 h))
   by_cases e1 : c = pinW m 24
   · have f1 : (decI c = decI (pinW m 24)) = True := eq_true (b23.2 e1)
-    have hsl : slotW m c = 2 := by rw [slotW, if_neg e0, if_pos e1]
+    have hsl : dmSlotW m c = 2 := by rw [dmSlotW, if_neg e0, if_pos e1]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -196,7 +196,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have f1 : (decI c = decI (pinW m 24)) = False := eq_false (fun h => e1 (b23.1 h))
   by_cases e2 : c = pinW m 25
   · have f2 : (decI c = decI (pinW m 25)) = True := eq_true (b24.2 e2)
-    have hsl : slotW m c = 3 := by rw [slotW, if_neg e0, if_neg e1, if_pos e2]
+    have hsl : dmSlotW m c = 3 := by rw [dmSlotW, if_neg e0, if_neg e1, if_pos e2]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -207,7 +207,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have f2 : (decI c = decI (pinW m 25)) = False := eq_false (fun h => e2 (b24.1 h))
   by_cases e3 : c = pinW m 26
   · have f3 : (decI c = decI (pinW m 26)) = True := eq_true (b25.2 e3)
-    have hsl : slotW m c = 4 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_pos e3]
+    have hsl : dmSlotW m c = 4 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_pos e3]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -218,7 +218,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have f3 : (decI c = decI (pinW m 26)) = False := eq_false (fun h => e3 (b25.1 h))
   by_cases e4 : c = pinW m 27
   · have f4 : (decI c = decI (pinW m 27)) = True := eq_true (b26.2 e4)
-    have hsl : slotW m c = 5 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_pos e4]
+    have hsl : dmSlotW m c = 5 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_pos e4]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -229,7 +229,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have f4 : (decI c = decI (pinW m 27)) = False := eq_false (fun h => e4 (b26.1 h))
   by_cases e5 : c = pinW m 28
   · have f5 : (decI c = decI (pinW m 28)) = True := eq_true (b27.2 e5)
-    have hsl : slotW m c = 6 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_pos e5]
+    have hsl : dmSlotW m c = 6 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_pos e5]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -240,7 +240,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
   have f5 : (decI c = decI (pinW m 28)) = False := eq_false (fun h => e5 (b27.1 h))
   by_cases e6 : c = pinW m 29
   · have f6 : (decI c = decI (pinW m 29)) = True := eq_true (b28.2 e6)
-    have hsl : slotW m c = 7 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_pos e6]
+    have hsl : dmSlotW m c = 7 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_pos e6]
     rw [hsl]
     simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -249,7 +249,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
     StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, f6, pinsOf]
     try rfl
   have f6 : (decI c = decI (pinW m 29)) = False := eq_false (fun h => e6 (b28.1 h))
-  have hsl : slotW m c = 1 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_neg e6]
+  have hsl : dmSlotW m c = 1 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_neg e6]
   rw [hsl]
   simp [divModDeclPin, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -261,7 +261,7 @@ theorem divModDeclPin_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : W
 /-- The twin's choice of a certificate list. -/
 theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word} (hc : H c)
     (ip : INatOpPinSet) :
-    (divModCertProofs ip (decI c)).run a = .ok ((certsOf ip).getD (slotW m c).toNat [], a) := by
+    (divModCertProofs ip (decI c)).run a = .ok ((certsOf ip).getD (dmSlotW m c).toNat [], a) := by
   have b21 : ((decI c : NIdx) = decI (pinW m 22)) ↔ c = pinW m 22 := decI_inj_iff hc (hF.names_lt 21 (by decide))
   have b23 : ((decI c : NIdx) = decI (pinW m 24)) ↔ c = pinW m 24 := decI_inj_iff hc (hF.names_lt 23 (by decide))
   have b24 : ((decI c : NIdx) = decI (pinW m 25)) ↔ c = pinW m 25 := decI_inj_iff hc (hF.names_lt 24 (by decide))
@@ -278,7 +278,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have p28 : (pinAt 28).run a = .ok (decI (pinW m 29), a) := pinAt_run hF 28 (by decide)
   by_cases e0 : c = pinW m 22
   · have f0 : (decI c = decI (pinW m 22)) = True := eq_true (b21.2 e0)
-    have hsl : slotW m c = 0 := by rw [slotW, if_pos e0]
+    have hsl : dmSlotW m c = 0 := by rw [dmSlotW, if_pos e0]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -289,7 +289,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have f0 : (decI c = decI (pinW m 22)) = False := eq_false (fun h => e0 (b21.1 h))
   by_cases e1 : c = pinW m 24
   · have f1 : (decI c = decI (pinW m 24)) = True := eq_true (b23.2 e1)
-    have hsl : slotW m c = 2 := by rw [slotW, if_neg e0, if_pos e1]
+    have hsl : dmSlotW m c = 2 := by rw [dmSlotW, if_neg e0, if_pos e1]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -300,7 +300,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have f1 : (decI c = decI (pinW m 24)) = False := eq_false (fun h => e1 (b23.1 h))
   by_cases e2 : c = pinW m 25
   · have f2 : (decI c = decI (pinW m 25)) = True := eq_true (b24.2 e2)
-    have hsl : slotW m c = 3 := by rw [slotW, if_neg e0, if_neg e1, if_pos e2]
+    have hsl : dmSlotW m c = 3 := by rw [dmSlotW, if_neg e0, if_neg e1, if_pos e2]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -311,7 +311,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have f2 : (decI c = decI (pinW m 25)) = False := eq_false (fun h => e2 (b24.1 h))
   by_cases e3 : c = pinW m 26
   · have f3 : (decI c = decI (pinW m 26)) = True := eq_true (b25.2 e3)
-    have hsl : slotW m c = 4 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_pos e3]
+    have hsl : dmSlotW m c = 4 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_pos e3]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -322,7 +322,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have f3 : (decI c = decI (pinW m 26)) = False := eq_false (fun h => e3 (b25.1 h))
   by_cases e4 : c = pinW m 27
   · have f4 : (decI c = decI (pinW m 27)) = True := eq_true (b26.2 e4)
-    have hsl : slotW m c = 5 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_pos e4]
+    have hsl : dmSlotW m c = 5 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_pos e4]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -333,7 +333,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have f4 : (decI c = decI (pinW m 27)) = False := eq_false (fun h => e4 (b26.1 h))
   by_cases e5 : c = pinW m 28
   · have f5 : (decI c = decI (pinW m 28)) = True := eq_true (b27.2 e5)
-    have hsl : slotW m c = 6 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_pos e5]
+    have hsl : dmSlotW m c = 6 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_pos e5]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -344,7 +344,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
   have f5 : (decI c = decI (pinW m 28)) = False := eq_false (fun h => e5 (b27.1 h))
   by_cases e6 : c = pinW m 29
   · have f6 : (decI c = decI (pinW m 29)) = True := eq_true (b28.2 e6)
-    have hsl : slotW m c = 7 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_pos e6]
+    have hsl : dmSlotW m c = 7 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_pos e6]
     rw [hsl]
     simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -353,7 +353,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
     StateT.run_bind, p21, p23, p24, p25, p26, p27, p28, exc_ok_bind', f0, f1, f2, f3, f4, f5, f6, certsOf]
     try rfl
   have f6 : (decI c = decI (pinW m 29)) = False := eq_false (fun h => e6 (b28.1 h))
-  have hsl : slotW m c = 1 := by rw [slotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_neg e6]
+  have hsl : dmSlotW m c = 1 := by rw [dmSlotW, if_neg e0, if_neg e1, if_neg e2, if_neg e3, if_neg e4, if_neg e5, if_neg e6]
   rw [hsl]
   simp [divModCertProofs, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
@@ -366,7 +366,7 @@ theorem divModCertProofs_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c 
 /-! ## The two reads -/
 
 def divModDeclPinW (p : Prog) (n : Nat) (m : Mem) (ps c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "div_mod_slot" [c] m) fun r1 m1 => some ([rdW (m1.arr64 EREC) (ps + r1.headD 0)], m1)
+  ntBW (callW p n "div_mod_slot" [c] m) fun r1 m1 => some ([rdW (m1.arr64 EREC) (ps + r1.headD 0)], m1)
 
 theorem divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some divModDeclPinL)
     (n : Nat) (s₀ : St) (ps c : Word) :
@@ -377,7 +377,7 @@ theorem divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_slot"] <;>
-    finish (gen := 20) [divModDeclPinW, bW, rdW_eq]
+    finish (gen := 20) [divModDeclPinW, ntBW, rdW_eq]
 
 theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
@@ -400,10 +400,10 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   subst hr1
   have hF := hS.1.pins.full h0
   refine ⟨_, a, divModDeclPin_run hF hc ip, hS, IWGrow.refl _, ?_⟩
-  have := PinSetR.pin hP (j := slotW m c) (slotW_lt m c)
+  have := PinSetR.pin hP (j := dmSlotW m c) (slotW_lt m c)
   simp only [List.headD_cons]
   rw [this]
-  exact ⟨word_lt32 _, decI_word _⟩
+  exact ⟨dmWord_lt32 _, decI_word _⟩
 
 theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hsz : erecTop m ≤ (m.arr64 EREC).size) (j : Nat) (hj : j < hs.length) :
@@ -426,7 +426,7 @@ theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l 
   have := hslice_words (k := IdxKind.expr) (erA m) (hs.map fun x => x.word.toUInt64) o.toNat
     (fun w hw => by
       obtain ⟨x, -, rfl⟩ := List.mem_map.mp hw
-      exact word_lt32 x)
+      exact dmWord_lt32 x)
     (fun j hj => by
       simp only [List.length_map] at hj
       simp only [erA, List.getElem?_map, List.getElem?_eq_getElem hj, Option.map_some]
@@ -435,7 +435,7 @@ theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l 
   simpa [List.map_map, Function.comp_def, decI_word] using this
 
 def divModCertProofsW (p : Prog) (n : Nat) (m : Mem) (ps c : Word) : Option (List Word × Mem) :=
-  bW (callW p n "div_mod_slot" [c] m) fun r1 m1 =>
+  ntBW (callW p n "div_mod_slot" [c] m) fun r1 m1 =>
   erToIwW n m1 (rdW (m1.arr64 EREC) (ps + 8 + 2 * r1.headD 0))
     (rdW (m1.arr64 EREC) (ps + 9 + 2 * r1.headD 0))
 
@@ -449,7 +449,7 @@ theorem divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAll
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_slot", erToIw_specW2 p ha hc he n] <;>
-    finish (gen := 20) [divModCertProofsW, bW, rdW_eq]
+    finish (gen := 20) [divModCertProofsW, ntBW, rdW_eq]
 
 theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
@@ -471,16 +471,16 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   subst hr1
   have hF := hS.1.pins.full h0
   simp only [List.headD_cons] at hw
-  have hsl := PinSetR.hdr hP (j := slotW m c) (slotW_lt m c)
+  have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
   have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.2.2.1
   obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) hw hS (by
     have := hsl.1; omega)
   have hd2 : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat =
-      some ((certsOf ip).getD (slotW m c).toNat []) := by
+      some ((certsOf ip).getD (dmSlotW m c).toNat []) := by
     rw [hdec]; exact sliceR_hslice hsl hsz
-  refine ⟨(certsOf ip).getD (slotW m c).toNat [], a, divModCertProofs_run hF hc ip, hS2, hg2, ?_⟩
+  refine ⟨(certsOf ip).getD (dmSlotW m c).toNat [], a, divModCertProofs_run hF hc ip, hS2, hg2, ?_⟩
   unfold decRL
-  rw [getD0, show (0 + 1 : Nat) = 1 from rfl, getD1]
+  rw [ntGetD0, show (0 + 1 : Nat) = 1 from rfl, ntGetD1]
   exact ⟨hd2, by omega⟩
 
 @[refines ConRon.Arena.divModDeclPin]
