@@ -1353,6 +1353,22 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     simpa using hrun4
 
 
+theorem nbOK_zero : NbOK dn vis fe 0 := by
+  simp only [NbOK, PosOK, BindOK, AppOK, ContOK, KeyOK, NewOK, FrameOK, CtorsOK, OneOK, WalkOK, FieldsOK]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
+    simp_all [nbPosW, nbBindW, nbAppW, nbContW, nbKeyW, nbNewW, nbFrameW, nbCtorsW, nbOneW, nbWalkW, nbFieldsW]
+
+include hM hcs in
+/-- The block's relational content at every fuel up to the walk fuel. -/
+theorem nbOK_all : ∀ n, 2 ^ 31 + n ≤ coreWalkFuel → NbOK dn vis fe n
+  | 0, _ => nbOK_zero dn vis fe
+  | n + 1, hk => by
+    have ih := nbOK_all n (by omega)
+    exact ⟨posOK_step dn vis fe hM n ih, bindOK_step dn vis fe hM n ih, appOK_step dn vis fe hM n ih,
+      contOK_step dn vis fe hM hcs n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe hM n ih,
+      frameOK_step dn vis fe hcs n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe hM n hk ih,
+      walkOK_step dn vis fe hM n hk ih, fieldsOK_step dn vis fe hM n hk ih⟩
+
 end steps
 
 end L.Ind
