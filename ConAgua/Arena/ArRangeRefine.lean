@@ -438,12 +438,12 @@ theorem arFast_run (F : Nat) (e : EIdx) (d k c : Nat) (hk : k ≠ 0) (a : AState
 theorem arEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     (e d k c r : Word) (he : e.toNat < 2 ^ 32) (hb : arEntryW n m e d k c = some (r, m')) :
     ∃ a', (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat).run a = .ok (decE r, a') ∧
-      ArenaA m' a' := by
+      ArenaA m' a' ∧ r.toNat < 2 ^ 32 := by
   simp only [arEntryW] at hb
   by_cases hk : k = 0
   · simp only [hk, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    exact ⟨a, by simp [abstractRangeFast, hk]; rfl, hA⟩
+    exact ⟨a, by simp [abstractRangeFast, hk, decE_and32]; rfl, hA, and32_lt e⟩
   have hk' : k.toNat ≠ 0 := fun e => hk (UInt64.toNat_inj.mp e)
   simp only [hk, ↓reduceIte] at hb
   by_cases h0 : rdW (m.arr64 CTL) 48 + 2 = 0
@@ -460,7 +460,8 @@ theorem arEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (arOK n).1 _ _ _ e c d k 4000000000 r₁ hA₀ he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [arFast_run _ _ _ _ _ hk', ha₁]; rfl, ArenaA.amemo_clear m₁ a₁ hA₁ h1⟩
+    exact ⟨_, by rw [arFast_run _ _ _ _ _ hk', ha₁, decE_and32]; rfl,
+      ArenaA.amemo_clear m₁ a₁ hA₁ h1, and32_lt r₁⟩
 
 /-- **`ar_entry(e, d, k, c)` refines the arena's `abstractRangeFast coreWalkFuel` under `ArenaA`**,
 at every L fuel (the walk's counter starts at `coreWalkFuel`). -/
@@ -472,13 +473,14 @@ theorem arEntry_refines (p : Prog) (hp : ArProg p) (hpe : p.lookup "ar_entry" = 
     invoke p (exec p (n + 1)) "ar_entry" [e, d, k, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) a₀ ∧
       ArenaA s'.mem (AM.st (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) a₀) ∧
-      AM.res (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+      AM.res (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) a₀ = decE (r.headD 0) ∧
+      (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (arEntry_spec p hp hpe n s₀ e d k c)
   subst hs
-  obtain ⟨a', ha', hA'⟩ := arEntryW_correct n _ _ a₀ hA e d k c _ he hI
+  obtain ⟨a', ha', hA', hlt⟩ := arEntryW_correct n _ _ a₀ hA e d k c _ he hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hlt⟩
 
 end L.Arena

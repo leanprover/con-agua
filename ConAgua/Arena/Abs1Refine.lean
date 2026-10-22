@@ -1036,7 +1036,7 @@ theorem absFast_run (F : Nat) (e : EIdx) (d k : Nat) (a : AState) :
 theorem absEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     (e d k r : Word) (he : e.toNat < 2 ^ 32) (hb : absEntryW n m e d k = some (r, m')) :
     ∃ a', (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a = .ok (decE r, a') ∧
-      ArenaA m' a' := by
+      ArenaA m' a' ∧ r.toNat < 2 ^ 32 := by
   simp only [absEntryW] at hb
   by_cases h0 : rdW (m.arr64 CTL) 48 + 2 = 0
   · simp [h0] at hb
@@ -1052,7 +1052,8 @@ theorem absEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (absOK n).1 _ _ _ e k d 4000000000 r₁ hA₀ he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [absFast_run, ha₁]; rfl, ArenaA.amemo_clear m₁ a₁ hA₁ h1⟩
+    exact ⟨_, by rw [absFast_run, ha₁, decE_and32]; rfl, ArenaA.amemo_clear m₁ a₁ hA₁ h1,
+      and32_lt r₁⟩
 
 /-- **`abs_entry` refines the arena's `abstract1Fast coreWalkFuel` under `ArenaA`**, at every L
 fuel (the walk's counter starts at `coreWalkFuel`). -/
@@ -1064,21 +1065,22 @@ theorem absEntry_refines (p : Prog) (hp : AbsProg p) (hpe : p.lookup "abs_entry"
     invoke p (exec p (n + 1)) "abs_entry" [e, d, k]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat) a₀ ∧
       ArenaA s'.mem (AM.st (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat) a₀) ∧
-      AM.res (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+      AM.res (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat) a₀ = decE (r.headD 0) ∧
+      (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (absEntry_spec p hp hpe n s₀ e d k)
   subst hs
-  obtain ⟨a', ha', hA'⟩ := absEntryW_correct n _ _ a₀ hA e d k _ he hI
+  obtain ⟨a', ha', hA', hlt⟩ := absEntryW_correct n _ _ a₀ hA e d k _ he hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hlt⟩
 
 /-- From an L run of `abs_entry` in `absProg` to the arena run of `abstract1Fast coreWalkFuel`. -/
 theorem absEntry_run (fuel : Nat) (m : Mem) (a₀ : AState) (hA : ArenaA m a₀)
     (e d k : Word) (he : e.toNat < 2 ^ 32) (r : List Word) (m' : Mem)
     (hrun : run absProg fuel "abs_entry" [e, d, k] m = .ok (r, m')) :
     ∃ a', (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a₀ = .ok (decE (r.headD 0), a') ∧
-      ArenaA m' a' := by
+      ArenaA m' a' ∧ (r.headD 0).toNat < 2 ^ 32 := by
   cases fuel with
   | zero =>
     have : (invoke absProg (exec absProg 0) "abs_entry" [e, d, k]).run
@@ -1095,7 +1097,7 @@ theorem absEntry_run (fuel : Nat) (m : Mem) (a₀ : AState) (hA : ArenaA m a₀)
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
       have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
         (absEntry_refines absProg absProg_ok rfl n _ a₀ hA e d k he)
-      obtain ⟨-, hok, hA', hres⟩ := this
-      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hA'⟩
+      obtain ⟨-, hok, hA', hres, hlt⟩ := this
+      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hA', hlt⟩
 
 end L.Arena

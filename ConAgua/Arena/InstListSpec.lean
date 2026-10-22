@@ -221,7 +221,8 @@ The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)
 /-- After the walk: clear the memo again. -/
 def ilclrK : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (r, m₁) => if rdW (m₁.arr64 CTL) 50 + 2 = 0 then none else some (r, mclearG ilSch m₁)
+  | some (r, m₁) =>
+    if rdW (m₁.arr64 CTL) 50 + 2 = 0 then none else some (r &&& 4294967295, mclearG ilSch m₁)
 
 /-- **The model of `inst_list`.** -/
 def instListW (n : Nat) (m : Mem) (e o l d : Word) : Option (Word × Mem) :=
@@ -232,7 +233,7 @@ theorem instListW_eq (n : Nat) (m : Mem) (e o l d : Word) (h0 : rdW (m.arr64 CTL
   simp [instListW, h0]
 
 theorem ilclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 50 + 2 ≠ 0) :
-    ilclrK (some (r, m₁)) = some (r, mclearG ilSch m₁) := by simp [ilclrK, h0]
+    ilclrK (some (r, m₁)) = some (r &&& 4294967295, mclearG ilSch m₁) := by simp [ilclrK, h0]
 
 grind_pattern [arena_grind] instListW_eq => instListW n m e o l d
 grind_pattern [arena_grind] ilclrK_some => ilclrK (some (r, m₁))
@@ -243,7 +244,7 @@ def instListL : FunDecl := lfn (e, o, l, d) locals (r, u) {
   u := call ilm_clear();
   r := call ilg_go(e, d, o, l, 4000000000);
   u := call ilm_clear();
-  return r
+  return r & 4294967295
 }
 
 theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL)

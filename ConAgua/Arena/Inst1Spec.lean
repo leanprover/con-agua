@@ -115,10 +115,12 @@ end specs
 
 The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
 
-/-- After the walk: clear the memo again. -/
+/-- After the walk: clear the memo again; the handle word is returned masked to 32 bits (the
+callers' contract `HW`; `decE` reads the same handle). -/
 def iclrK : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (r, m₁) => if rdW (m₁.arr64 CTL) 44 + 2 = 0 then none else some (r, mclearG imSch m₁)
+  | some (r, m₁) =>
+    if rdW (m₁.arr64 CTL) 44 + 2 = 0 then none else some (r &&& 4294967295, mclearG imSch m₁)
 
 /-- **The model of `inst_entry`.** -/
 def instEntryW (n : Nat) (m : Mem) (e v d : Word) : Option (Word × Mem) :=
@@ -129,7 +131,7 @@ theorem instEntryW_eq (n : Nat) (m : Mem) (e v d : Word) (h0 : rdW (m.arr64 CTL)
   simp [instEntryW, h0]
 
 theorem iclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 44 + 2 ≠ 0) :
-    iclrK (some (r, m₁)) = some (r, mclearG imSch m₁) := by simp [iclrK, h0]
+    iclrK (some (r, m₁)) = some (r &&& 4294967295, mclearG imSch m₁) := by simp [iclrK, h0]
 
 grind_pattern [arena_grind] instEntryW_eq => instEntryW n m e v d
 grind_pattern [arena_grind] iclrK_some => iclrK (some (r, m₁))
@@ -140,7 +142,7 @@ def instEntry : FunDecl := lfn (e, v, d) locals (r, u) {
   u := call if_clear();
   r := call inst_go(e, d, v, 4000000000);
   u := call if_clear();
-  return r
+  return r & 4294967295
 }
 
 theorem instEntry_spec (p : Prog) (hp : InstProg p) (he : p.lookup "inst_entry" = some instEntry)

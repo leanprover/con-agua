@@ -38,7 +38,7 @@ theorem instEntry_runC (fuel : Nat) (m : Mem) (a₀ : AState) (vis : Word)
     (m' : Mem) (hrun : run instProg fuel "inst_entry" [e, v, d] m = .ok (r, m')) :
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a₀ =
       .ok (decE (r.headD 0), a') ∧ CheckR dn m' a' vis fe := by
-  obtain ⟨a', hr, hD⟩ := instEntry_run fuel m a₀ hR.arena e v d he r m' hrun
+  obtain ⟨a', hr, hD, -⟩ := instEntry_run fuel m a₀ hR.arena e v d he r m' hrun
   exact ⟨a', hr, hR.of_walk hD (instEntry_frame instProg_ok rfl rfl hrun) (by decide) instC_lt
     ((keeps_inst1Fast _ _ _ _).run hr)⟩
 

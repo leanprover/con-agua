@@ -935,7 +935,7 @@ theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
     (e o l d r : Word) (vs : Array EIdx) (hsl : SpineR m o l vs) (hbd : o.toNat + l.toNat < 2 ^ 64)
     (he : e.toNat < 2 ^ 32) (hb : instListW n m e o l d = some (r, m')) :
     ∃ a', (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
-      m'.arr64 ILSPN = m.arr64 ILSPN := by
+      m'.arr64 ILSPN = m.arr64 ILSPN ∧ r.toNat < 2 ^ 32 := by
   simp only [instListW] at hb
   by_cases h0 : rdW (m.arr64 CTL) 50 + 2 = 0
   · simp [h0] at hb
@@ -954,8 +954,8 @@ theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
     obtain ⟨a₁, ha₁, hA₁, hs₁⟩ :=
       (ilgOK n).1 _ _ _ e d o l 4000000000 r₁ vs hA₀ (hsl.of_spn hs₀) hbd he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [instListFast_run, ha₁]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
-      (spn_of_frame (mclearG_frame ilSch m₁) (by decide)).trans (hs₁.trans hs₀)⟩
+    exact ⟨_, by rw [instListFast_run, ha₁, decE_and32]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
+      (spn_of_frame (mclearG_frame ilSch m₁) (by decide)).trans (hs₁.trans hs₀), and32_lt r₁⟩
 
 /-- **`inst_list(e, o, l, d)` refines the arena's `instantiateListFast coreWalkFuel` under
 `ArenaL`**, at every L fuel (the walk's counter starts at `coreWalkFuel`), the substitution `vs`
@@ -970,13 +970,13 @@ theorem instList_refines (p : Prog) (hp : InstListProg p)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (instantiateListFast coreWalkFuel (decE e) vs d.toNat) a₀ ∧
       ArenaL s'.mem (AM.st (instantiateListFast coreWalkFuel (decE e) vs d.toNat) a₀) ∧
       AM.res (instantiateListFast coreWalkFuel (decE e) vs d.toNat) a₀ = decE (r.headD 0) ∧
-      s'.mem.arr64 ILSPN = s₀.mem.arr64 ILSPN; ⊤⦄ := by
+      s'.mem.arr64 ILSPN = s₀.mem.arr64 ILSPN ∧ (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (instList_spec' p hp hpe n s₀ e o l d)
   subst hs
-  obtain ⟨a', ha', hA', hs'⟩ := instListW_correct n _ _ a₀ hA e o l d _ vs hsl hbd he hI
+  obtain ⟨a', ha', hA', hs', hlt⟩ := instListW_correct n _ _ a₀ hA e o l d _ vs hsl hbd he hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres, hs'⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hs', hlt⟩
 
 end L.Arena
