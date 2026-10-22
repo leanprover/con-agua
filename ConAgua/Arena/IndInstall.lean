@@ -330,26 +330,24 @@ def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals () {
 }
 
 /-- `check_block_inds_cv_tas(cvTa0, rest.off, rest.len)`: `cvTa0 :: rest.map (·.1)`, the
-formers' constants, fresh in `IW`. -/
+formers' constants, a fresh `IW` slice (consed: `sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:192-209 ConRon.Arena.checkBlockInds
 @[l_impl ConRon.Arena.checkBlockInds]
-def checkBlockIndsCvTas : FunDecl := lfn (cvTa0, restO, restL) locals (q, u) {
-  q := call iw_alloc(restL + 1);
-  IW.u64[q] := cvTa0;
-  u := call check_block_inds_cv_tas_go(q + 1, restO, restL);
-  return (q, restL + 1)
+def checkBlockIndsCvTas : FunDecl := lfn (cvTa0, restO, restL) locals (ro, rl, o, l) {
+  (ro, rl) := call check_block_inds_cv_tas_go(restO, restL);
+  (o, l) := call sl_cons(cvTa0, ro, rl);
+  return (o, l)
 }
 
-/-- `check_block_inds_cv_tas_go(d, s, l)`: `IW[d + j] := IW[IW[s + j]]` for `j < l` (each former's
-constant, the first word of its `(cv, s)` pointer), recursively. -/
+/-- `check_block_inds_cv_tas_go(s, l)`: `[IW[IW[s + j]] | j < l]` (each former's constant, the
+first word of its `(cv, s)` pointer), by recursion, each consed onto the rest's slice. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:192-209 ConRon.Arena.checkBlockInds
 @[l_impl ConRon.Arena.checkBlockInds]
-def checkBlockIndsCvTasGo : FunDecl := lfn (d, s, l) locals (rp, u) {
-  if l == 0 { return 0 };
-  rp := IW.u64[s];
-  IW.u64[d] := IW.u64[rp];
-  u := call check_block_inds_cv_tas_go(d + 1, s + 1, l - 1);
-  return 0
+def checkBlockIndsCvTasGo : FunDecl := lfn (s, l) locals (ro, rl, o, l2) {
+  if l == 0 { return (0, 0) };
+  (ro, rl) := call check_block_inds_cv_tas_go(s + 1, l - 1);
+  (o, l2) := call sl_cons(IW.u64[IW.u64[s]], ro, rl);
+  return (o, l2)
 }
 
 /-- `check_block_inds(vis, p, is_rec)`: **stage 1** — the k type formers, checked, agreed and
