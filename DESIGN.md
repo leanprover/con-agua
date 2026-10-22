@@ -6894,3 +6894,37 @@ introduces it; the coordinator reviews the list at each batch of landings.
 `sorry`s now (lane `decls3`): `checkDeclDefn_loop`; the six ROM stub specs (`romAndPin_spec` new);
 `lvlEqStub_spec`; `promoteNew_spec` (helper running). Census at landing 4: phase 2 **146 proven,
 26 sorry, 73 written, 86 todo**.
+
+## Phases 6–7: discharging `KnotCallees` (2026-10-22, lane `defeq2`)
+
+### Landing 1: the real walks, the plain plugs, `StoreDen`
+* **`KnotCallees` lost twelve fields** (`DefEqKnot.lean`): `inst1`, `instList` and `DefeqCallees`'
+  `hasFvar`/`abstract1`/`abstractRange` are lane `whnf2`'s `CoreWalks` bridges (new program field
+  `KnotAllProg.walks : CoreWalkProg p`); `fieldSortZero` is `fieldSortZero_core`, `natPred` is
+  `natPredW_of` (helper `defeq2-fsz`, above); `natOpResult` is `natOpResultOK_of_agree`;
+  `reservedContains` is `reservedContainsOK_of` (from `callW_reservedContains`); `bcap` is
+  `CoreS.bstk`; `lit`'s `natLitSup`/`constE` are lane `whnf`'s proofs; `lvlsEqC` is
+  `lvlsEqCH_of` (below). `defeqCallees_stub` (a `sorry`) is gone. `KnotWF`'s closure list uses the
+  real `field_sort_zero` and `inst1`; `Checker/Prog.lean` regenerated.
+* **`StoreDen m a`** (`StoreDen.lean`): the one store invariant the level readers need, because the
+  twin compares levels on their readbacks and L on handles: a `sort` node's level, a `const`
+  node's level list, the zero pin, the `readNC` cache's rows, and a projection table record's
+  structure sort, field sorts and level-parameter names read back. `CoreDen` (`CoreDen.lean`) is
+  "`CoreS` implies `StoreDen`": a `KnotCallees` field now (`den`), replacing `StoreDenotes`
+  (`StoreDenotes.of_den`). **Proposal (for lane `whnf3`, after its `StackKept` sweep): a field
+  `den : StoreDen m a` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
+  hS.den.zero⟩`), `LvlsEqDen` (the iota lists are stored constants' or the rule's), and
+  `ReadNCOK` (helper `defeq2-fsz`'s proposal). Maintenance: the store only grows inside the core,
+  so old handles keep their readbacks; the view clauses need a proof only where a `sort`/`const`
+  node is interned, `readN` where `readNameM` caches, `proj` where `EREC` is written (outside the
+  core). Until then `CoreDen` stays a named hypothesis.
+* **`LvlsEqCH` restated with the two readbacks** and proved (`lvlsEqCH_of`): its two callers
+  compare stored constants' lists. `struct_eta_cert_go`/`_tail`/`_wtb` take "some `const` node at
+  the call's state has this list" (`∃ x c, a.store.view x = some (.const c us)`); across
+  `tower_slots_all` (which interns name nodes) the node is still there: `towerSlotsAll` keeps the
+  store minus its level/name part (`noLss`, `keeps_noLss_towerSlotsAll`, `constLs_after_tower`).
+* `KnotCallees` now: `whnfCoreStep`, `whnfStep` (lane `whnf`'s steps over its stubs),
+  `notProofFast`, `isProofFast` (helper `defeq2-prop` writing `PropRead` in L), `proofIrrel`
+  (`CoreS.lvl_den`), `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `reduceProjCore`,
+  `unfold`, `whnfGrows` (lane `whnf`'s/`whnf3`'s), `den`, `constTy` (`inst_lp`), `bstk` (after
+  `whnf3`'s `StackKept` structure), `proj` (helper `defeq2-proj`: `infer_proj`).
