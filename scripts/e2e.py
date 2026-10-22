@@ -47,15 +47,21 @@ PER_RUN_GB = 6
 TOTAL_GB = 20
 T_COMPILED = 60      # seconds per compiled L run
 T_REF = 120          # seconds per reference run
-T_INTERP = 60        # seconds per L.run (interpreter) run
+T_INTERP = 400       # seconds per L.run (interpreter) run (the pin stage alone is ~2 min under L.run)
+T_DIFF = 600         # seconds per e2e-diff run
+DIFF_N = 200         # expression handles per fixture in e2e-diff
+DIFF_WORDS = 1 << 18       # words per array in e2e-diff (L.run holds every array in full)
+DIFF_BIG_WORDS = 1 << 19   # words per array on e2e-diff's retry
 INTERP_MAX_BYTES = 20000   # L.run only on fixtures up to this size
-INTERP_WORDS = 1 << 16     # words per array under L.run
+INTERP_WORDS = 1 << 18     # words per array under L.run
 ACCEPT = "accept"
 BIG_WORDS = 1 << 25        # words per array on the retry after an error
 TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to this size
-TRACE_WORDS = 1 << 16
+TRACE_WORDS = 1 << 18
 
 ENTRIES = ["check", "check_np"]
+# further roots of the assembled program (test entries and the functions `e2e-diff` runs)
+ROOTS = ENTRIES + ["e2e_front", "whnf", "whnf_core", "infer"]
 E2E_SOURCE = "L.E2E.e2eProg"
 # modules never imported by the dump: executables (a `main`), the spike, the census exe
 SKIP_MODS = re.compile(r"^ConAgua\.(Spike\.|Census\.Main$|E2E\.(Main|Ref|Explore.*)$)")
@@ -287,7 +293,7 @@ def rename_calls(text, f):
 def assemble(dumps):
     binds, bodies, data_list, errs = read_dumps(dumps)
     chosen, conflicts = {}, []
-    patched = sorted(n for n, bs in binds.items() if n not in ENTRIES and any(s == E2E_SOURCE for s, _, _ in bs))
+    patched = sorted(n for n, bs in binds.items() if n not in ROOTS and any(s == E2E_SOURCE for s, _, _ in bs))
     for name, bs in binds.items():
         mine = [k for s, k, st in bs if s == E2E_SOURCE]
         real = collections.Counter(k for s, k, st in bs if not st)
@@ -296,13 +302,18 @@ def assemble(dumps):
         elif len(real) == 1:
             chosen[name] = next(iter(real))
         elif len(real) > 1:
-            best = real.most_common(1)[0][0]
+            # a closed binding (a `Prog`, a lookup) wins over a ROM instance Dump.lean derived
+            closed = collections.Counter(k for s, k, st in bs if not st and not s.endswith("@rom"))
+            best = (closed or real).most_common(1)[0][0]
+            if len(closed) == 1:
+                chosen[name] = best
+                continue
             chosen[name] = best
             conflicts.append({"name": name, "bodies": [
                 {"key": k, "count": c, "sources": sorted({s for s, kk, _ in bs if kk == k})[:4]}
                 for k, c in real.most_common()], "chosen": best})
     # reachability
-    reach, todo, missing, arity = set(), list(ENTRIES), {}, []
+    reach, todo, missing, arity = set(), list(ROOTS), {}, []
     callers = collections.defaultdict(set)
     while todo:
         f = todo.pop()
@@ -557,12 +568,91 @@ def report(res, asm, compiled, clashes, args, t0):
                       "| fixture | compiled | `L.run` |", "|---|---|---|"]
             lines += [f"| `{r['id']}` | {r[entry]['l']} | {r[entry]['interp']} |" for r in cmp_bugs[:40]]
         lines += [""]
+    if any("diff" in r for r in res):
+        lines += diff_report(res)
     lines += ["## Stubs (called, no L code)", "",
               "| code | function | stub bindings in |", "|---:|---|---|"]
     for g, (code, np_, srcs) in sorted(asm["stubs"].items(), key=lambda x: x[1][0]):
         lines.append(f"| {code} | `{g}` ({np_}) | {', '.join('`' + s + '`' for s in srcs) or '– (no binding at all)'} |")
     lines += [""]
     return "\n".join(lines) + "\n"
+
+
+def max_id(path):
+    """The largest export id (`in`, `il`, `ie`) in a fixture."""
+    best = 0
+    with open(path, "rb") as fh:
+        for m in re.finditer(rb'"i[nle]":(\d+)', fh.read()):
+            best = max(best, int(m.group(1)))
+    return best
+
+
+def parse_diff(out, st):
+    """`e2e-diff`'s output: front, store, and per function the tallies and examples."""
+    d = {"status": st, "front": None, "store": None, "fns": {}}
+    if st != "ok":
+        return d
+    cur = None
+    for line in out.splitlines():
+        if line.startswith("front "):
+            d["front"] = line[6:]
+        elif line.startswith("store "):
+            d["store"] = line[6:]
+        elif line.startswith("fn "):
+            w = line.split()
+            cur = w[1]
+            t = {w[i]: int(w[i + 1]) for i in range(2, 14, 2) if i + 1 < len(w) and w[i + 1].isdigit()}
+            m = re.search(r"missing \[(.*)\]", line)
+            t["missing"] = dict((x.split(":")[0], int(x.split(":")[1])) for x in m.group(1).split(", ") if x) if m else {}
+            t["examples"] = []
+            d["fns"][cur] = t
+        elif line.startswith("  ") and cur:
+            d["fns"][cur]["examples"].append(line.strip())
+    return d
+
+
+def diff_report(res):
+    lines = ["## Per-function differential tests (`e2e-diff`)", "",
+             "From each fixture, the twin's state and L's memory after the stages before the fold "
+             "(`internReservedPins`, `parseBytes`, `internAllPins`; L: `e2e_front()`); the stores' node "
+             f"counts compared; then up to {DIFF_N} persistent expression handles per fixture through "
+             "`whnf`, `whnf_core`, `infer` on both sides (verified mode, the empty environment). "
+             "`both err`: the twin throws and L aborts.", ""]
+    ds = [r for r in res if "diff" in r]
+    front = collections.Counter("both ok" if (r["diff"]["front"] or "").startswith("L ok 0 twin ok") else
+                                (r["diff"]["front"] or r["diff"]["status"]) for r in ds)
+    store = collections.Counter((r["diff"]["store"] or "–").split(" ")[0] for r in ds if r["diff"]["store"])
+    lines += [f"* Front: {front.get('both ok', 0)} fixtures where both succeed; stores agree on "
+              f"{store.get('agree', 0)}, **differ on {store.get('DIFFER', 0)}**."]
+    for r in ds:
+        if (r["diff"]["store"] or "").startswith("DIFFER"):
+            lines.append(f"  * `{r['id']}`: {r['diff']['store'][7:][:300]}")
+    other = [(r["id"], r["diff"]["front"]) for r in ds if r["diff"]["front"] and not r["diff"]["front"].startswith("L ok 0 twin ok")
+             and not re.match(r"L (ok [1-9]|error .*) twin (reject|error)", r["diff"]["front"])]
+    if other:
+        lines.append(f"* Front outcomes differ (L vs twin) on {len(other)}:")
+        lines += [f"  * `{i}`: {f[:200]}" for i, f in other[:20]]
+    lines += ["", "| function | handles | agree | disagree | L error, twin ok | L ok, twin error | both err | missing |",
+              "|---|---:|---:|---:|---:|---:|---:|---|"]
+    names = sorted({f for r in ds for f in r["diff"]["fns"]})
+    ex = []
+    for f in names:
+        tot = collections.Counter()
+        miss = collections.Counter()
+        for r in ds:
+            t = r["diff"]["fns"].get(f)
+            if not t:
+                continue
+            for k in ("n", "agree", "disagree", "lerr", "twinerr", "botherr"):
+                tot[k] += t.get(k, 0)
+            miss.update(t["missing"])
+            ex += [(r["id"], e) for e in t["examples"]]
+        lines.append(f"| `{f}` | {tot['n']} | {tot['agree']} | {tot['disagree']} | {tot['lerr']} | {tot['twinerr']} | "
+                     f"{tot['botherr']} | {', '.join(f'`{k}` {v}' for k, v in miss.most_common(5))} |")
+    if ex:
+        lines += ["", "Examples (handle words; `e2e-diff PROG FIXTURE` reproduces):", ""]
+        lines += [f"* `{i}`: {e[:300]}" for i, e in ex[:40]]
+    return lines + [""]
 
 
 def same_outcome(a, b):
@@ -577,6 +667,10 @@ def main():
     ap.add_argument("--jobs", type=int, default=max(1, min(16, (os.cpu_count() or 4) // 4)))
     ap.add_argument("--only", default=None, help="regex on fixture ids")
     ap.add_argument("--no-interp", action="store_true")
+    ap.add_argument("--no-diff", action="store_true", help="skip the per-function differential tests")
+    ap.add_argument("--diff-sample", type=int, default=24, help="fixtures for e2e-diff (L.run is slow: ~3 min each)")
+    ap.add_argument("--interp-sample", type=int, default=12, help="fixtures for L.run of check_np")
+    ap.add_argument("--assemble-only", action="store_true", help="assemble and compile, run nothing")
     ap.add_argument("--write", action="store_true", help="write docs/e2e.md")
     ap.add_argument("--csv", action="store_true", help="append to docs/e2e.csv")
     args = ap.parse_args()
@@ -585,7 +679,7 @@ def main():
     if not args.no_build:
         log("building")
         lake("build")
-        lake("build", "ConAgua.E2E.Check", "ConAgua.E2E.Dump", "e2e-l", "e2e-ref")
+        lake("build", "ConAgua.E2E.Check", "ConAgua.E2E.Dump", "e2e-l", "e2e-ref", "e2e-diff")
     log("dumping")
     dumps, clashes = dump_sets(all_modules())
     asm = assemble(dumps)
@@ -595,6 +689,8 @@ def main():
     compiled = {e: compile_entry(prog, e) for e in ENTRIES}
     for e, (exe, msg) in compiled.items():
         log(f"compile {e}: {msg[:300] if msg else ''}")
+    if args.assemble_only:
+        return
     stubs_by_code = {code: g for g, (code, _, _) in asm["stubs"].items()}
     # the pin-data buffer (byte array 1, DESIGN.md lane `romload`), once the program reads it
     reads_pins = any(c[0] and re.search(r"\bnb ([2-9]|\d\d)", c[1]) for c in compiled.values())
@@ -603,7 +699,7 @@ def main():
     if reads_pins:
         pins = os.path.join(WORK, "pins.bin")
         if not os.path.exists(pins):
-            lake("exe", "romgen", pins)
+            lake("exe", "romgen", pins, "1")
         env["CA_PINS"] = pins
         npins = 1
     fx = fixtures()
@@ -613,6 +709,11 @@ def main():
     cache = json.load(open(cache_path)) if os.path.exists(cache_path) else {}
     rk = ref_key()
     guard = Guard()
+    # the samples for the slow L.run-based checks: evenly spread over the fixtures up to INTERP_MAX_BYTES
+    small = [f[0] for f in fx if os.path.getsize(f[1]) <= INTERP_MAX_BYTES]
+    def spread(k):
+        return set(small[i * len(small) // k] for i in range(k)) if k and small else set()
+    diff_set, interp_set = spread(args.diff_sample), spread(args.interp_sample)
 
     def one(f):
         fid, path, exp = f
@@ -645,15 +746,24 @@ def main():
             if cap:
                 d["small"] = cap
             if lo == "error" and size <= TRACE_MAX_BYTES:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
+                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env) if entry == "check_np" else ("skip", "")
                 ls = out.splitlines()
                 if st == "ok" and len(ls) >= 2:
                     d["trace"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1] + " (" + ls[1][len("stack "):] + ")"
                     d["stop"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1]
-            if not args.no_interp and size <= INTERP_MAX_BYTES:
+            if not args.no_interp and entry == "check_np" and fid in interp_set:
                 st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
                 d["interp"] = interp_outcome(out, st)
             r[entry] = d
+        if not args.no_diff and fid in diff_set:
+            st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
+                                 str(max_id(path) + 2)], T_DIFF, env=env)
+            r["diff"] = parse_diff(out, st)
+            if (r["diff"]["front"] or "").startswith("L error") and (r["diff"]["front"] or "").endswith("twin ok"):
+                # capacities: once more with larger arrays (`L.run` holds every array in full)
+                st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_BIG_WORDS),
+                                     str(max_id(path) + 2)], T_DIFF, env=env)
+                r["diff"] = parse_diff(out, st)
         return r
 
     res = []

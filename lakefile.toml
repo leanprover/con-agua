@@ -168,6 +168,11 @@ root = "ConAgua.E2E.Main"
 name = "romgen"
 root = "ConAgua.Rom.Gen"
 
+# The e2e lane's per-function differential tests against the twin (`ConAgua/E2E/Diff.lean`).
+[[lean_exe]]
+name = "e2e-diff"
+root = "ConAgua.E2E.Diff"
+
 # Lane `romload`: the L pin stages against the twin's on a pin-data buffer (`ConAgua/Rom/Test.lean`).
 [[lean_exe]]
 name = "romtest"
