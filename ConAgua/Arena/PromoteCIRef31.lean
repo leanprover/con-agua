@@ -79,13 +79,12 @@ theorem promoteNew_rel (dn : NIdx → Option ConLeche.Name) (n : Nat) (m : Mem) 
       LoopR.of_frame hR hD₁ hf1 (fun b hb => by simp at hb)
         (fun x hx => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-          rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> right <;> right <;>
-            exact ⟨by decide, by decide⟩)
+          rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
         rfl (ErecGrow.of_eq hEE₁ hT₁) (by rw [hEE₁, hT₁]; exact hiw2) hP1
         (hR.check.env.frame (fun b hb => by simp at hb)
           (fun x hx => by
             simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-            rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> right <;> decide) hf1)
+            rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) hf1)
     obtain ⟨a', pm', L', hrun, hLoop⟩ := pnew_main p hp dn (n + 1) m₁ a PMemo.empty k vis consts idx vb pend ds m'
       hP1 hR₁ hk hW
     refine ⟨a', pm', _, ?_, ?_⟩
