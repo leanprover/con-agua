@@ -248,6 +248,107 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
       hrun6', hrun7, hx7, if_true]
     exact hrun8
 
+@[refines ConRon.Arena.checkDivModCerts]
+theorem checkDivModCerts_refines (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe)
+    (hsA : SubstCAll p dn vis fe) (c annVal : Word) (hc : H c) (hann : H annVal)
+    (so sl po pl : Word) (ss : List (List EIdx × EIdx)) (proofs : List EIdx) :
+    RefAM p "check_div_mod_certs" [vis, c, annVal, so, sl, po, pl]
+      (fun m s => StageR dn vis fe m s ∧ StmtL m so.toNat sl.toNat ss ∧
+        decHL m po.toNat pl.toNat = some proofs ∧ po.toNat + pl.toNat ≤ iwTop m)
+      (checkDivModCerts V fe (decI c) (decE annVal) ss proofs) (KeepPost dn vis fe decW0B) :=
+  CallRef.refAM (fun k m a res m' ⟨hS, hs, hd, hb⟩ hcall =>
+    cm_ref hD hs0 hsA c annVal hc hann ss proofs so sl po pl k m a res m' hS hs hd hb hcall)
+
+/-! ## `check_div_mod_pin_at` -/
+
+def cpaW (p : Prog) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Word × Mem) :=
+  bW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
+  bW (stubM "is_def_eq_core" m1 [vs, 0, value, r1.headD 0]) fun r2 m2 =>
+  if r2.headD 0 = 0 then some ([0], m2) else
+  bW (callW p n "div_mod_cert_stmts" [c] m2) fun r3 m3 =>
+  bW (callW p n "div_mod_cert_proofs" [ps, c] m3) fun r4 m4 =>
+  bW (callW p n "check_div_mod_certs" [vs, c, value, r3.headD 0, r3.tail.headD 0, r4.headD 0,
+    r4.tail.headD 0] m4) fun r5 m5 => some ([r5.headD 0], m5)
+
+set_option maxHeartbeats 3200000 in
+theorem cpa_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_at" = some checkDivModPinAtL)
+    (n : Nat) (s₀ : St) (vs c value ps : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin_at" [vs, c, value, ps]
+    ⦃fun r s' => LocEq s' s₀ ∧ cpaW p n s₀.mem vs c value ps = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkDivModPinAtL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "div_mod_decl_pin", stubM_spec p "is_def_eq_core" n,
+      callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
+      callW_spec p n "check_div_mod_certs"] <;>
+    finish (gen := 30) (instances := 10000) [cpaW, bW]
+
+theorem cpa_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
+    (c value ps : Word) (ip : INatOpPinSet) :
+    CallRef p "check_div_mod_pin_at" [vis, c, value, ps]
+      (fun m s => StageR dn vis fe m s ∧ H c ∧ H value ∧ PinSetR m ps ip)
+      (checkDivModPinAt V fe (decI c) (decE value) ip) (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hval, hP⟩ hcall => ?_
+  have hw := callW_model (M := fun mq => cpaW p k mq vis c value ps)
+    (cpa_specW p hD.lCheckDivModPinAt k · vis c value ps) hcall
+  unfold cpaW at hw
+  have h0w : (0 : Word).toNat = 0 := rfl
+  have hD5 := hD.toDmProg7.toDmProg6.toDmProg5
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hw⟩ :=
+    (divModDeclPin_ref hD5.toDmProg2.toDmProg1 ps c ip).bind_ ⟨hS, hc, hP⟩ hw
+  cases h2 : stubM "is_def_eq_core" m1 [vis, 0, value, r1.headD 0] with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := isDefEqCore_spec dn vis fe 0 value (r1.headD 0) hval hl1 m1 m2 a1 r2 h2 hS1
+  rw [h0w, hx1] at hrun2
+  have hrun1' : (divModDeclPin ip (decI c)).run s = .ok (decI (r1.headD 0), a1) := by rw [hx1]; exact hrun1
+  have hrun2' : (isDefEqCore V fe checkFuel 0 (decE value) (decI (r1.headD 0))).run a1 = .ok (x2, a2) := by
+    rw [hx1]; exact hrun2
+  by_cases z2 : r2.headD 0 = 0
+  · rw [if_pos z2] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx2 := decW0B_false hd2 z2
+    refine ⟨false, a2, ?_, hS2, hg1.trans hg2, decW0B_of_false _⟩
+    simp only [checkDivModPinAt, StateT.run_bind, hrun1', exc_ok_bind', hrun2', hx2,
+      Bool.false_eq_true, if_false]
+    rfl
+  rw [if_neg z2] at hw
+  have hx2 := decW0B_true hd2 z2
+  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hd3⟩, hw⟩ :=
+    (divModCertStmts_ref hD5.toDmProg2 c).bind_ ⟨hS2, hc⟩ hw
+  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hd4⟩, hw⟩ :=
+    (divModCertProofs_ref hD5.toDmProg2.toDmProg1 ps c ip).bind_
+      ⟨hS3, hc, PinSetR.grow (PinSetR.grow hP hg1) (hg2.trans hg3)⟩ hw
+  cases h5 : callW p k "check_div_mod_certs" [vis, c, value, r3.headD 0, r3.tail.headD 0,
+      r4.headD 0, r4.tail.headD 0] m4 with
+  | none => rw [h5] at hw; simp at hw
+  | some q5 =>
+  obtain ⟨r5, m5⟩ := q5
+  rw [h5, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  simp only [decStmtL, getD0, getD1] at hd3
+  unfold decRL at hd4
+  simp only [Nat.zero_add, getD0, getD1] at hd4
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ := cm_ref hD hs0 hsA c value hc hval x3 x4 (r3.headD 0)
+    (r3.tail.headD 0) (r4.headD 0) (r4.tail.headD 0) k m4 a4 r5 m5 hS4 (hd3.grow hg4) hd4.1 hd4.2 h5
+  refine ⟨x5, a5, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hd5⟩
+  simp only [checkDivModPinAt, StateT.run_bind, hrun1', exc_ok_bind', hrun2', hx2, if_true, hrun3,
+    hrun4]
+  exact hrun5
+
+@[refines ConRon.Arena.checkDivModPinAt]
+theorem checkDivModPinAt_refines (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe)
+    (hsA : SubstCAll p dn vis fe) (c value ps : Word) (ip : INatOpPinSet) :
+    RefAM p "check_div_mod_pin_at" [vis, c, value, ps]
+      (fun m s => StageR dn vis fe m s ∧ H c ∧ H value ∧ PinSetR m ps ip)
+      (checkDivModPinAt V fe (decI c) (decE value) ip) (KeepPost dn vis fe decW0B) :=
+  (cpa_ref hD hs0 hsA c value ps ip).refAM
+
 end certs
 
 end L.Ind
