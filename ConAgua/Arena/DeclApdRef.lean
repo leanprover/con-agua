@@ -557,3 +557,101 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
         simp only [apdArm, StateT.run_bind, h1, h2, h3, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]
 
 end step
+
+section step2
+variable {a : AState} (env : ApdEnv a)
+
+include env in
+theorem apdGo_step_ok (n : Nat) (ih : ApdGoOK a n) : ApdGoOK a (n + 1) := by
+  intro m m' o l f h r mp ks hA hps hh hM hb
+  rw [apdGoW_succ] at hb
+  by_cases hf : f = 0
+  · rw [apdG1_abort n m o l f h hf] at hb; simp at hb
+  rw [apdG1_go n m o l f h hf] at hb
+  obtain ⟨F, hF, hF1⟩ := apd_fuel_pred f hf
+  rw [hF]
+  by_cases hfr : mfindG apdSch m h 0 = []
+  · rw [apdG2_abort n m o l f h _ hfr] at hb; simp at hb
+  by_cases hhit : (mfindG apdSch m h 0).headD 0 ≠ 0
+  · rw [apdG2_hit n m o l f h _ hfr hhit] at hb
+    simp only [Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨b, hb1, hb2⟩ := memoRV_hit apdSch bmKey apdVR m mp hM h 0 hfr hhit ⟨hh, rfl⟩
+    have hk : bmKey.dk h 0 = decE h := rfl
+    rw [hk] at hb1
+    refine ⟨b, mp, ?_, hb2, hM, MemFrame.refl _ _ _⟩
+    rw [allLevelParamsDefinedGo_succ', hb1]
+    rfl
+  · have hhit0 : (mfindG apdSch m h 0).headD 0 = 0 := by simpa using hhit
+    rw [apdG2_miss n m o l f h _ hfr hhit] at hb
+    have hmiss := memoRV_miss apdSch bmKey apdVR m mp hM h 0 ⟨hh, rfl⟩ hfr hhit0
+    have hk : bmKey.dk h 0 = decE h := rfl
+    rw [hk] at hmiss
+    have hne : eViewW m h ≠ [] := fun e => by rw [apdG3_abort n m o l f h _ e] at hb; simp at hb
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA h hne
+    generalize eViewW m h = vl at hb hvr hne
+    rw [apdG3_go n m o l f h vl hne] at hb
+    cases hnode : apdNodeW n m o l f (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
+        (vl.tail.tail.tail.headD 0) with
+    | none => rw [hnode] at hb; simp [apdG4] at hb
+    | some pn =>
+      obtain ⟨rn, m1⟩ := pn
+      rw [hnode, apdG4_some] at hb
+      cases hset : msetG apdSch m1 h 0 rn with
+      | none => rw [hset] at hb; simp [apdG5] at hb
+      | some m2 =>
+        rw [hset, apdG5_some] at hb
+        simp only [Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨b, mp1, harm, hr, hM1, hfr1⟩ :=
+          apdNode_ok env n ih m m1 o l f F h vl v rn mp ks hF1 hvr hv hA hps hM hnode
+        obtain ⟨hrun, hM2, hfs⟩ := apdFinish (a := a) h hh ks mp mp1 F v b rn hv hmiss harm hr hM1 hset
+        exact ⟨b, mp1.insert (decE h) b, hrun, hr, hM2, hfr1.trans hfs⟩
+
+include env in
+theorem apdGoOK (n : Nat) : ApdGoOK a n := by
+  induction n with
+  | zero => intro m m' o l f h r mp ks _ _ _ _ hb; simp [apdGoW] at hb
+  | succ n ih => exact apdGo_step_ok env n ih
+
+end step2
+
+/-! ## The entry -/
+
+theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} (n : Nat) (hS : StageR dn vis fe m a) (env : ApdEnv a) (o l e r : Word)
+    (lps : List NIdx) (ks : List ConLeche.Name) (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
+    (hdec : decHL m o.toNat l.toNat = some lps) (he : H e) (mp0 : Std.HashMap EIdx Bool)
+    (hM : apdMR m mp0) (hb : apdEntryW n m o l e = some (r, m')) :
+    ∃ b, (ConRon.Arena.allLevelParamsDefined lps (decE e)).run a = .ok (b, a) ∧
+      r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' := by
+  unfold apdEntryW at hb
+  by_cases h0 : rdW (m.arr64 CTL) apdSch.cs + 2 = 0
+  · simp [h0] at hb
+  rw [if_neg h0] at hb
+  have hf0 : MemFrame [] [apdSch.cs, apdSch.cs + 1] m (mclearG apdSch m) := mclearG_frame apdSch m
+  have hM0 := memoRV_clear apdSch apdSch_wf bmKey apdVR m mp0 hM h0
+  have hA0 : ArenaR (mclearG apdSch m) a :=
+    ArenaR.frame (A := []) (C := [apdSch.cs, apdSch.cs + 1]) (fun b hb => by simp at hb)
+      (fun x hx => by
+        simp [apdSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
+      hS.1.arena.1
+  have hsz := hS.2.2.2.1
+  have hps0 : NmsR (nameN a.store.lss.ls.ns) m IW o l ks :=
+    nmsR_of_slice hsz _ o l lps ks rfl hdec hks
+  have hps : NmsR (nameN a.store.lss.ls.ns) (mclearG apdSch m) IW o l ks :=
+    nmsR_congr (hf0.1 IW (by simp) (by decide)) hps0
+  obtain ⟨b, mp1, hrun, hr, hM1, hfr1⟩ := apdGoOK env n _ _ o l _ e r _ ks hA0 hps he hM0 hb
+  have hfall : MemFrame [APDM] [apdSch.cs, apdSch.cs + 1] m m' :=
+    (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [apdSch]))
+  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp [apdSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+    (by simp [apdSch])
+  refine ⟨b, ?_, hr, hS', hg⟩
+  have hrn := readNames_run a lps ks hks
+  simp only [ConRon.Arena.allLevelParamsDefined]
+  have hcw : (UInt64.toNat 4000000000) = coreWalkFuel := CWF_eq
+  rw [hcw] at hrun
+  generalize coreWalkFuel = F at hrun ⊢
+  rw [StateT.run_bind, hrn, except_ok_bind, StateT.run_bind, hrun, except_ok_bind]
+  rfl
