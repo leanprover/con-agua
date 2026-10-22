@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclBase
 import ConAgua.Arena.IndProg
+import ConAgua.Arena.DeclArms
 import ConAgua.Front.IndApply
 import ConAgua.Census.Attr
 
@@ -21,8 +22,8 @@ word for the environment, the callee names and argument orders of its `stubFns`)
 * `check_decl(i, vis)` → `vis'`: an inductive block (kind `6`, lane `induct`'s front records in
   `DIND`) is copied into `EREC` (`ind_block_to_erec`: every record, its universe parameters and
   its recursor rules relocated) and checked by lane `induct`'s `check_ind_decl(vis, boff, blen,
-  nP)`; every one-constant record goes to `check_decl_const(i, vis)` (a stub: the axiom, quotient
-  and pinned-value arms of `checkDecl`, lane `decls`' next work).
+  nP)`; every one-constant record goes to its arm (`DeclArms.lean`: `check_decl_axiom`,
+  `check_decl_defn`, `check_decl_thm`, `check_decl_opaque`, `check_decl_quot`, each `(i, vis)`).
 * `install_header(vis, q)`, `install_value_guards(vis, q, v)`: `q` is a constant value in `EREC`
   (`decCV`: name, universe parameters, type). The checks in the twin's order; every `fail` is
   `abort`.
@@ -42,9 +43,11 @@ open L.Ind (IW)
 
 /-! ## Pinned names -/
 
-/-- `pin_in(x, k, hi)`: `1` if `x` is one of `PINS[k‥hi)`. -/
+/-- `pin_in(x, k, hi)`: `1` if `x` is one of `PINS[k‥hi)`; aborts on an empty pin table, where the
+twin's pin reads raise `.internal`. -/
 -- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
 def pinIn : FunDecl := lfn (x, k, hi) locals (r) {
+  if PINS.u64[0] == 0 { abort };
   if hi <= k { return 0 };
   if PINS.u64[k] == x { return 1 };
   r := call pin_in(x, k + 1, hi);
@@ -208,43 +211,52 @@ def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v) {
     v := call check_ind_decl(vis, bo, bl, DECL.u64[5 + 8 * i]);
     return v
   };
-  v := call check_decl_const(i, vis);
-  return v
+  if k == 1 { v := call check_decl_axiom(i, vis); return v };
+  if k == 2 { v := call check_decl_defn(i, vis); return v };
+  if k == 3 { v := call check_decl_thm(i, vis); return v };
+  if k == 4 { v := call check_decl_opaque(i, vis); return v };
+  if k == 5 { v := call check_decl_quot(i, vis); return v };
+  abort
+}
+
+/-- `install_value(i, vis, ck, vk)`: `installStepGo`'s guard-and-install arm on record `i` (a
+definition, theorem or opaque not among the pinned names): its constant record (kind `ck`, `1`
+`defnInfo`, `2` `thmInfo`, `0` `axiomInfo`), the header's guards, the value's guards but for a
+theorem (`vk = 1`), the push, the value group (kind `vk`) → the new view and the group's record.
+Split out of `install_step_go` so that its call closure is the arm's alone (its write set comes
+from the text, `DeclStepSpec.lean`). -/
+-- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
+def installValueL : FunDecl := lfn (i, vis, ck, vk) locals (p, z, v, g) {
+  p := call erec_ci(i, ck);
+  z := call install_header(vis, p + 1);
+  if vk != 1 { z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]) };
+  v := call env_push(vis, p);
+  g := call erec_vg(p, vk);
+  return (v, g)
 }
 
 /-- `install_step_go(i, vis)`: `installStepGo` on record `i` → the new view, the value group's
 flag and record. -/
 -- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
 @[l_impl ConRon.Arena.installStepGo]
-def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
+def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, z, g) {
   z := call iw_reset();
   k := DECL.u64[1 + 8 * i];
   x := DECL.u64[2 + 8 * i] & 4294967295;
   if k == 2 {
     c := call pin_in(x, 15, 30);
     if c != 0 { v := call check_decl(i, vis); return (v, 0, 0) };
-    p := call erec_ci(i, 1);
-    z := call install_header(vis, p + 1);
-    z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]);
-    v := call env_push(vis, p);
-    g := call erec_vg(p, 0);
+    (v, g) := call install_value(i, vis, 1, 0);
     return (v, 1, g)
   };
   if k == 3 {
-    p := call erec_ci(i, 2);
-    z := call install_header(vis, p + 1);
-    v := call env_push(vis, p);
-    g := call erec_vg(p, 1);
+    (v, g) := call install_value(i, vis, 2, 1);
     return (v, 1, g)
   };
   if k == 4 {
     c := call pin_in(x, 44, 46);
     if c != 0 { v := call check_decl(i, vis); return (v, 0, 0) };
-    p := call erec_ci(i, 0);
-    z := call install_header(vis, p + 1);
-    z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]);
-    v := call env_push(vis, p);
-    g := call erec_vg(p, 2);
+    (v, g) := call install_value(i, vis, 0, 2);
     return (v, 1, g)
   };
   v := call check_decl(i, vis);
@@ -255,7 +267,8 @@ def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
 
 /-- `check_value_group(vis, g)`: `checkValueGroup` on the value group record `g`: the type's
 sort, for a theorem the proposition test and the value's guards, the value's type against the
-declared one. -/
+declared one. The level comparison is lane `whnf`'s cached `lvl_eq_c` (`lvlEq?` consults and fills
+`lvlEqC`; `0` none, `1` false, `2` true). -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:95-112 ConRon.Arena.checkValueGroup
 @[l_impl ConRon.Arena.checkValueGroup]
 def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
@@ -266,8 +279,8 @@ def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt
   u := call ensure_sort_core(vis, 0, st);
   if EREC.u64[g] == 1 {
     zr := call pin_word(53);
-    e := call lvl_eq_fueled(u, zr);
-    if e == 0 { abort };
+    e := call lvl_eq_c(u, zr);
+    if e != 2 { abort };
     z := call install_value_guards(vis, g + 1, v)
   };
   vt := call infer_type_core(vis, 0, v);
@@ -284,15 +297,19 @@ def declStepFns : Prog :=
    ("install_header", installHeaderL), ("install_value_guards", installValueGuardsL),
    ("dind_copy", dindCopy), ("ind_rec_copy", indRecCopy), ("ind_copy_go", indCopyGo),
    ("ind_block_to_erec", indBlockToErec), ("check_decl", checkDeclL),
-   ("install_step_go", installStepGoL), ("check_value_group", checkValueGroupL)]
+   ("install_value", installValueL), ("install_step_go", installStepGoL),
+   ("check_value_group", checkValueGroupL)]
 
-/-- Stubs of this module's callees not written yet. -/
-def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2)]
+/-- Master callees lane `induct`'s program lacks, as stubs here (the whole program has the real
+ones): lane `whnf`'s cached level comparison. -/
+def declStepStubs : Prog := [("lvl_eq_c", L.Ind.stub 2)]
 
-/-- The step's program: this module, lane `induct`'s stage (with its stubs), the stubs. -/
-def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.indProg
+/-- The step's program: this module, the arms (`DeclArms*.lean`, with their ROM stubs and the
+master functions lane `induct`'s program lacks), lane `induct`'s stage (with its stubs, but for
+the two the arms provide: `L.Ind.armsReplaced`). -/
+def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
 
-theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true := by
-  decide +kernel
+theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Arena

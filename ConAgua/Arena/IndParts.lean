@@ -907,8 +907,8 @@ def indPartsForeign : Prog :=
 
 theorem indParts_wf :
     L.Compiler.Prog.wf indTab (indPartsFns ++ libFns ++ stubFns ++ masterFns ++ indPartsForeign) =
-      true := by
-  decide +kernel
+      true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## A few runnable tests (no stub on their path) -/
 
