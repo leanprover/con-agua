@@ -190,6 +190,14 @@ def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
   return u64(n1 == CREC.u64[i * 4 + t * 2])
 }
 
+/-- `er_slice_eq`'s loop (named, for its spec). -/
+def erSliceEqLoop : Stmt := lblk (o1, n1, o2, n2, i) {
+  while i < n1 {
+    if EREC.u64[o1 + i] != EREC.u64[o2 + i] { return 0 };
+    i += 1
+  }
+}
+
 /-- `er_slice_eq(o1, n1, o2, n2)`: two `EREC` slices of handles are the same list (the twin's
 `cvc.levelParams = cvT.levelParams`). -/
 -- con-ron: ConRon/Arena/Core.lean:1492-1538 ConRon.Arena.structEtaCertWith
@@ -197,10 +205,7 @@ def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
 def erSliceEqL : FunDecl := lfn (o1, n1, o2, n2) locals (i) {
   if n1 != n2 { return 0 };
   i := 0;
-  while i < n1 {
-    if EREC.u64[o1 + i] != EREC.u64[o2 + i] { return 0 };
-    i += 1
-  };
+  ⟪erSliceEqLoop⟫;
   return 1
 }
 
