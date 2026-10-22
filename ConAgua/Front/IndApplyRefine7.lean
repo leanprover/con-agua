@@ -241,4 +241,106 @@ theorem nestedW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : 
         rw [← h9.1, this]; rfl
       · exact i1 hu k hk (by omega)
 
+
+theorem unsafeW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : Word}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) :
+    ∀ n j, unsafeW n m to tn j = some () →
+      ∀ k (hk : k < tys.length), j.toNat ≤ k → tys[k].isUnsafe = false := by
+  intro n
+  induction n with
+  | zero => intro j h; simp [unsafeW] at h
+  | succ n ih =>
+    intro j h k hk hjk
+    simp only [unsafeW] at h
+    split at h
+    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
+    rename_i hlt
+    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    split at h
+    · cases h
+    rename_i h0
+    by_cases hkj : k = j.toNat
+    · subst hkj
+      have hix : (to + 11 * j + 7).toNat = to.toNat + 11 * j.toNat + 7 := widx _ _ _ _ (by simp; omega)
+      have : rdW (m.arr64 IFR) (to + 11 * j + 7) = 0 := Classical.byContradiction h0
+      rw [wd_eq, hix] at this
+      obtain ⟨-, -, -, h7, -, -⟩ := hL.2.2 j.toNat hk
+      rw [this] at h7
+      cases hu : tys[j.toNat].isUnsafe
+      · rfl
+      · rw [hu] at h7; simp [BoolW] at h7
+    · exact ih (j + 1) h k hk (by rw [hj1]; omega)
+
+theorem npGoW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : Word}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) :
+    ∀ n j, npGoW n m to tn d j = some () →
+      ∀ k (hk : k < tys.length), j.toNat ≤ k → tys[k].numParams = d.toNat := by
+  intro n
+  induction n with
+  | zero => intro j h; simp [npGoW] at h
+  | succ n ih =>
+    intro j h k hk hjk
+    simp only [npGoW] at h
+    split at h
+    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
+    rename_i hlt
+    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    split at h
+    · cases h
+    rename_i h0
+    by_cases hkj : k = j.toNat
+    · subst hkj
+      have hix : (to + 11 * j + 10).toNat = to.toNat + 11 * j.toNat + 10 := widx _ _ _ _ (by simp; omega)
+      have : rdW (m.arr64 IFR) (to + 11 * j + 10) = d := Classical.byContradiction h0
+      rw [wd_eq, hix] at this
+      obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 j.toNat hk
+      rw [← h10.1, this]
+    · exact ih (j + 1) h k hk (by rw [hj1]; omega)
+
+/-- **`vi_nparams` is `nPd`, and every type agrees.** -/
+theorem nparamsW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn np : Word} {n : Nat}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) (h : nparamsW n m to tn = some np) :
+    np.toNat = ((tys.map fun x => x.numParams).head?.getD 0) ∧
+      ((tys.map fun x => x.numParams).all fun x => x == np.toNat) = true ∧ np.toNat < 10 ^ 18 := by
+  cases n with
+  | zero => simp [nparamsW] at h
+  | succ n =>
+  simp only [nparamsW] at h
+  split at h
+  · rename_i h0
+    cases h
+    have : tys = [] := by
+      apply List.eq_nil_of_length_eq_zero; rw [← htn, h0]; rfl
+    subst this
+    simp
+  rename_i h0
+  have hne : tys ≠ [] := fun e => h0 (by apply UInt64.toNat_inj.mp; rw [htn, e]; rfl)
+  cases hg : npGoW n m to tn (rdW (m.arr64 IFR) (to + 10)) 0 with
+  | none => rw [hg, unitK_none] at h; cases h
+  | some u =>
+  rw [hg, unitK_some] at h
+  cases h
+  have hall := npGoW_twin hL htn hto n 0 hg
+  have h0' : 0 < tys.length := by cases tys with | nil => exact absurd rfl hne | cons _ _ => simp
+  have hfirst := hall 0 h0' (Nat.zero_le _)
+  have hix : (to + 10).toNat = to.toNat + 10 := widx2 _ _ (by simp; omega)
+  obtain ⟨-, -, -, -, -, h10⟩ := hL.2.2 0 h0'
+  simp only [Nat.mul_zero, Nat.add_zero] at h10
+  refine ⟨?_, ?_, ?_⟩
+  · rw [← hfirst]
+    cases tys with
+    | nil => exact absurd rfl hne
+    | cons t ts => rfl
+  · rw [List.all_eq_true]
+    intro x hx
+    obtain ⟨y, hy, rfl⟩ := List.mem_map.mp hx
+    obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hy
+    simp [hall k hk (Nat.zero_le _)]
+  · rw [← hfirst]; exact h10.2
+
 end L.Front.Ind
