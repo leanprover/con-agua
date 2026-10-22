@@ -157,7 +157,7 @@ theorem ModeR.setD {S : MemoSch} {m : Mem} {M : Std.HashMap ((EIdx × EIdx) × W
     show (pairKey (k₁ := .expr) (k₂ := .expr)).ok a (genW b eb &&& 0xFFFFFFFF); rw [genW_lo b eb hb]; exact ⟨ha, hb⟩
   have hR := memoRV_set S hS dKeyG VB (fun _ _ _ _ _ h => h) m M h.memo a (genW b eb) r hok
     (decB r) rfl m' hs
-  rw [dKeyG_dk a b eb ha hb heb] at hR
+  rw [dKeyG_dk a b eb hb heb] at hR
   refine ⟨hR, bank_set M eb t h.cur _ _, fun h0 => ?_, h.empty⟩
   exact bank_other M eb 1 te (h.stored h0) (by rw [h0]; decide) _ _
 
@@ -577,5 +577,175 @@ theorem defeq_refines (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) :
   exact ⟨_, hS₂, hK₁.de _ _, hSt₁.trans hSt₂⟩
 
 end slots
+
+
+/-! ## The eager slot
+
+From an eager mode the twin's `defeqE` moves nothing and is the `defeq` slot
+(`knot_defeqE_eager`). From a plain mode it is the `defeq` slot of the knot at `mode.toEager`
+on the eager set (`enterC`), then the sets swap back (`leaveC`, `knot_defeqE_plain`). In L both
+sets live in one memo told apart by the eager bit, and `defeq_e` is `defeq` at the mode word with
+bit 1 set: the relation at `eb = 0` on the twin's state is the relation at `eb = 1` on the entered
+state, at the same maps (`CoreS.enter`: the eager tower's six tables are bank `1`, the stored
+set is empty), and after the run the plain banks are kept (`KeptAll` at `eb = 1`), so the left
+state is related at `eb = 0` again (`CoreS.leave`). No change to `CoreS`/`SlotPre` is needed. -/
+
+theorem mode_cases (mode : Word) (h : mode < 4) : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 := by
+  bv_decide
+
+theorem mode_eager (mode : Word) (h : mode < 4) (he : (decMode mode).eager = true) :
+    mode ||| 2 = mode := by
+  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> revert he <;> decide
+
+theorem mode_plain (mode : Word) (h : mode < 4) (he : (decMode mode).eager = false) :
+    decMode (mode ||| 2) = (decMode mode).toEager ∧ (mode >>> 1) &&& 1 = 0 ∧ mode ||| 2 < 4 ∧
+      (1 : Word) = ((mode ||| 2) >>> 1) &&& 1 := by
+  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> revert he <;> decide
+
+theorem knot_defeqE_eager (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (x y : EIdx)
+    (h : mode.eager = true) :
+    (coreKnot mode fe id (F + 1)).defeqE d x y = (coreKnot mode fe id (F + 1)).defeq d x y := by
+  cases mode <;> simp_all [ConLeche.CheckMode.eager, coreKnot, enterEager, leaveEager,
+    ConLeche.CheckMode.toEager]
+
+/-- The caches after `enterEager false`: the stored eager set in the six fields, the eager slot
+empty. -/
+def enterC (c : Caches) : Caches :=
+  { c with whnfCoreC := c.eagerMemos.whnfCoreC, whnfCoreCheapC := c.eagerMemos.whnfCoreCheapC,
+           whnfC := c.eagerMemos.whnfC, inferC := c.eagerMemos.inferC,
+           inferIOC := c.eagerMemos.inferIOC, defeqC := c.eagerMemos.defeqC,
+           eagerMemos := ModeMemos.empty }
+/-- The caches after `leaveEager (some mm)`: the six fields stored back as the eager set, `mm`
+in the six fields. -/
+def leaveC (c : Caches) (mm : ModeMemos) : Caches :=
+  { c with eagerMemos := c.modeMemos,
+           whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC, whnfC := mm.whnfC,
+           inferC := mm.inferC, inferIOC := mm.inferIOC, defeqC := mm.defeqC }
+/-- **The eager slot from a plain mode** is the `defeq` slot of the knot at `mode.toEager`, run
+on the entered caches, then left. -/
+theorem knot_defeqE_plain (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (x y : EIdx) (a : AState)
+    (h : mode.eager = false) (v : Bool) (a₁ : AState)
+    (hr : ((coreKnot mode.toEager fe id (F + 1)).defeq d x y).run
+      { a with caches := enterC a.caches } = .ok (v, a₁)) :
+    ((coreKnot mode fe id (F + 1)).defeqE d x y).run a =
+      .ok (v, { a₁ with caches := leaveC a₁.caches a.caches.modeMemos }) := by
+  simp only [coreKnot, id] at hr ⊢
+  simp only [enterEager, h, Bool.false_eq_true, ite_false]
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at hr ⊢
+  cases hc : (a.caches.eagerMemos.defeqC)[(x, y)]? with
+  | some w =>
+    simp only [enterC, hc, StateT.run_pure] at hr
+    cases hr
+    simp only [StateT.run_bind, leaveEager, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind]
+    rfl
+  | none =>
+    simp only [enterC, hc, StateT.run_bind] at hr
+    cases hb : (defeqBody mode.toEager (coreKnot mode.toEager fe id F) fe d x y).run
+        { a with caches := enterC a.caches } with
+    | error e => simp only [enterC] at hb; simp only [hb] at hr; cases hr
+    | ok q =>
+      simp only [enterC] at hb
+      simp only [hb, except_ok_bind, defeqSet, StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at hr
+      cases hr
+      simp only [StateT.run_bind, hb, leaveEager, defeqSet, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind, except_ok_bind]
+      rfl
+
+/-- A mode memo at eager bit `0` is, on the entered caches, the memo at eager bit `1`. -/
+theorem ModeR.enter {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
+    {VR : Mem → Word → ν → Prop} {m : Mem} {M : Std.HashMap (κ × Word) ν}
+    {t te : Std.HashMap κ ν} (h : ModeR S K VR m M 0 t te) : ModeR S K VR m M 1 te ∅ :=
+  ⟨h.memo, h.stored rfl, fun h => absurd h (by decide), fun _ => rfl⟩
+
+/-- A mode memo at eager bit `1` whose plain bank was kept is, on the left caches, the memo at
+eager bit `0`. -/
+theorem ModeR.leave {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
+    {VR : Mem → Word → ν → Prop} {m : Mem} {M M' : Std.HashMap (κ × Word) ν}
+    {t t' te' : Std.HashMap κ ν} (h : ModeR S K VR m M' 1 t' te') (h0 : Bank M 0 t)
+    (hk : Kept0 M M') : ModeR S K VR m M' 0 t t' :=
+  ⟨h.memo, fun k => (h0 k).trans (hk k).symm, fun _ => h.cur, fun h => absurd rfl h⟩
+
+/-- **Entering the eager tower**: the relation at `eb = 0` is the relation at `eb = 1` on the
+entered caches, at the same maps. -/
+theorem CoreS.enter {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) :
+    CoreS dn m { a with caches := enterC a.caches } vis fe M 1 :=
+  ⟨hS.arena.caches_irrel _,
+    ⟨hS.core.wc.enter, hS.core.wk.enter, hS.core.wh.enter, hS.core.inf.enter, hS.core.io.enter,
+      hS.core.de.enter, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq, hS.core.lsq⟩,
+    hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
+    hS.spn⟩
+
+/-- **Leaving the eager tower**: after an eager run that kept the plain banks, the relation at
+`eb = 0` holds on the left caches. -/
+theorem CoreS.leave {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a a₁ : AState} {vis : Word}
+    {fe : IFEnv} {M M' : ModeMaps} (hS : CoreS dn m a₁ vis fe M' 1) (h0 : CoreRM m₀ a.caches M 0)
+    (hK : KeptAll M M' 1) :
+    CoreS dn m { a₁ with caches := leaveC a₁.caches a.caches.modeMemos } vis fe M' 0 := by
+  obtain ⟨k1, k2, k3, k4, k5, k6⟩ := hK (by decide)
+  exact ⟨hS.arena.caches_irrel _,
+    ⟨hS.core.wc.leave h0.wc.cur k1, hS.core.wk.leave h0.wk.cur k2, hS.core.wh.leave h0.wh.cur k3,
+      hS.core.inf.leave h0.inf.cur k4, hS.core.io.leave h0.io.cur k5,
+      hS.core.de.leave h0.de.cur k6, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq,
+      hS.core.lsq⟩,
+    hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
+    hS.spn⟩
+
+/-- `defeq_e(mode, vis, d, a, b)` refines the knot's eager slot `defeqE`. -/
+def DefeqESlot (p : Prog) (n : Nat) : Prop :=
+  ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW x → HW y →
+    CoreSpec p n "defeq_e" [mode, vis, d, x, y]
+      ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
+      M eb
+
+section eager
+variable (p : Prog) (hp : KnotProg p)
+
+include hp in
+/-- **`defeq_e` refines the knot's eager slot**: `DefeqESlot p (n + 1)` from the `defeq` slot at
+L-fuel `n` (`DefeqSlot p n`, at the mode word with bit 1 set). -/
+@[refines_part ConRon.Arena.coreKnot "defeqE"]
+theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) := by
+  intro F s₀ a₀ dn vis fe MM eb mode d x y hF hn2 hs hx hy
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (defeqE_spec p hp n s₀ mode vis d x y)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hcall : callW p n "defeq" [mode ||| 2, vis, d, x, y] s.mem with
+  | none => simp [defeqEW, hcall] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  simp only [defeqEW, hcall, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  have hdec : decBool r₁ = decBool r := by simp only [decBool, hr]
+  have hok₁ : ResH r₁ → ResH r := fun h => by unfold ResH at h ⊢; rw [← hr]; exact h
+  cases he : (decMode mode).eager with
+  | true =>
+    rw [mode_eager mode hs.mode4 he] at hcall
+    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW
+      (hd (F' + 1) s a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy) hcall
+    rw [knot_defeqE_eager _ fe F' d.toNat _ _ he]
+    exact ⟨hok, hm ▸ hA, hres.trans hdec, hok₁ hrw⟩
+  | false =>
+    obtain ⟨hdm, heb0, hm4, heb1⟩ := mode_plain mode hs.mode4 he
+    have heb : eb = 0 := hs.eb_mode.trans heb0
+    subst heb
+    have hpre : SlotPre s { a₀ with caches := enterC a₀.caches } dn vis fe MM 1 (mode ||| 2) :=
+      ⟨hs.rel.enter, hm4, heb1⟩
+    obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW
+      (hd (F' + 1) s _ dn vis fe MM 1 (mode ||| 2) d x y (by omega) (by omega) hpre hx hy) hcall
+    rw [hdm] at hok hres hS'
+    have hrun := knot_defeqE_plain (decMode mode) fe F' d.toNat (decE x) (decE y) a₀ he _ _
+      (AM.run_of_ok _ _ hok)
+    obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
+    refine ⟨hok', ?_, by rw [hres', hres, hdec], hok₁ hrw⟩
+    rw [hst', ← hm]
+    exact ⟨M', hS'.leave hs.rel.core hK', fun h => absurd rfl h, hSt'⟩
+
+end eager
 
 end L.Arena
