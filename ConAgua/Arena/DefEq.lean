@@ -687,13 +687,14 @@ def ldsUnfold2L : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, a3
   return (k, x, y)
 }
 
-/-- Equal hints: the same-head shortcut at equal regular hints, else both unfolds. -/
+/-- Equal hints: the same-head shortcut at equal regular hints (a kind word `≥ 2` is regular, as
+`head_hint`'s decoding reads it), else both unfolds. -/
 -- con-ron: ConRon/Arena/Core.lean:3195-3252 ConRon.Arena.lazyDeltaStep
 @[l_impl ConRon.Arena.lazyDeltaStep]
 def ldsSameL : FunDecl := lfn (mode, vis, d, a, b, ka, ha, kb, hb) locals (sch, sp, k, x, y) {
   sch := call same_const_heads(a, b);
   sp := 0;
-  if ka == 2 && kb == 2 && ha == hb && sch != 0 { sp := call defeq_spine(mode, vis, d, a, b) };
+  if 2 <= ka && 2 <= kb && ha == hb && sch != 0 { sp := call defeq_spine(mode, vis, d, a, b) };
   if sp != 0 { return (1, 0, 0) };
   (k, x, y) := call lds_unfold2(mode, vis, d, a, b);
   return (k, x, y)
