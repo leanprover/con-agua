@@ -6,6 +6,7 @@ public import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.L.WriteSet
+public import ConAgua.L.Records
 public import ConAgua.L.Examples
 public import ConAgua.Compiler.Compile
 public import ConAgua.Compiler.Run

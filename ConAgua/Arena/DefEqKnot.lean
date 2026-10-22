@@ -12,7 +12,7 @@ import ConAgua.Arena.InferProj2
 import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.StrLitKeep
-import ConAgua.Arena.WhnfProjRefine2
+import ConAgua.Arena.WhnfProjRefine3
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 
@@ -34,6 +34,8 @@ import ConAgua.Arena.WalkCore
    slot step of this file. Lane `whnf`'s two slot steps then come from its primed proofs over these
    bundles: `whnfCoreSlot_step` (`KnotCallees.whnfCoreStep`) and the `whnf` chain over
    `whnfStep_refines'` (`KnotCallees.whnfStep`).
+4. **`fire_ok` from `CoreDen`** (helper `whnf4-leaves`): `KnotCallees.fireOk` is lane `whnf3`'s
+   `fireOk_refines` with `ProjSortDen`/`FireDen` from `StoreDen` (`fireOk_core`).
 -/
 
 open ConRon.Arena
@@ -91,6 +93,8 @@ structure KnotAllProg (p : Prog) : Prop where
   proj : InferProjProg p
   str : StrLitProg p
   projp : ProjProg p
+  /-- `fire_ok` and its callees (`pin_word`, the level cache, `lvl_eq_c`'s text). -/
+  fire : FireProg p
   /-- The core's write set leaves `EREC` alone (lane `whnf3`'s `CoreErec.lean`). -/
   hcl : closedA p coreErecA coreErecC coreFns = true
   /-- Lane `whnf`'s `whnf_core` family, the ι side (`iota_rec_at`, `major_to_ctor`) and the two
@@ -108,19 +112,17 @@ structure KnotCallees (p : Prog) : Prop where
   den : CoreDen
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
-  /-- `fire_ok` at any universe list (lane `whnf3`'s `fireOk_refines` gives `FireOkOKD`: the list
-  must read back, and its `FireDen` asks for every field guard, past `numFields` too, while
-  `StoreDen.proj` gives those below it). -/
-  fireOk : FireOkOK p
-  /-- Projection tables' counts are below `2^32` (the loader's invariant, `WhnfCore.lean`). -/
-  projSmall : ProjSmall
   /-- `caps_never_zero`, `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved them at
-  `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23). -/
+  `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23; the
+  universe arguments must read back at the call, which `CoreAfter` cannot carry from the
+  recursor head's view without the store's growth `Ext`; DESIGN.md, helper `whnf4-leaves`). -/
   capsNeverZero : CapsNeverZeroOK p
   recFireLevels : RecFireLevelsOK p
-  /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`). -/
+  /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`;
+  the second list is `rec_fire_levels`' interned result: `StoreWF` again). -/
   lvlsEqDen : LvlsEqDen p
-  /-- A stored recursor's rule prefix and plain rules fit its major index (`WhnfIotaRecRefine.lean`). -/
+  /-- A stored recursor's rule prefix and plain rules fit its major index (`WhnfIotaRecRefine.lean`;
+  an invariant of the installed environment, not of the store). -/
   recShape : RecShape
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
@@ -172,15 +174,19 @@ theorem KnotCallees.whnfC : WhnfCallees p :=
   ⟨hq.walks.instListOK, hc.instLP, strLitCtor_core p hq.str, strLitSupported_core p hq.str⟩
 
 include hq hc in
+/-- `fire_ok` (lane `whnf3`'s `fireOk_refines` over `CoreDen`, helper `whnf4-leaves`). -/
+theorem KnotCallees.fireOk : FireOkOK p := fireOk_core p hq.fire (fieldSortZero_core p hq.fsz) hc.den
+
+include hq hc in
 /-- `find_proj`, `fire_ok` and their record-pool facts. -/
 theorem KnotCallees.projC : ProjCallees p :=
-  ⟨findProj_refines p hq.projp, hc.fireOk, erecKept_of hq.hcl, projFound p hq.projp⟩
+  ⟨findProj_refines p hq.projp, hc.fireOk hq, erecKept_of hq.hcl, projFound p hq.projp⟩
 
 include hq hc in
 /-- Lane `whnf`'s `IotaCallees`: the walks, `find_proj`, `lit_to_ctor_if_nat` proved; `fire_ok`,
 `caps_never_zero`, `rec_fire_levels` from `KnotCallees`. -/
 theorem KnotCallees.iotaC : IotaCallees p :=
-  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk, hc.capsNeverZero, hc.recFireLevels,
+  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk hq, hc.capsNeverZero, hc.recFireLevels,
     wscoped_core hq.ws, hq.walks.lbbOK, leafGuard_core hq.lg,
     fun n s₀ a₀ dn vis fe MM eb h hS hh => litToCtorIfNat_refines p hq.delta n s₀ a₀ dn vis fe MM eb h hS hh⟩
 
@@ -201,15 +207,14 @@ theorem KnotCallees.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :
 include hq hc in
 /-- Lane `whnf`'s `CoreCallees`. -/
 theorem KnotCallees.coreC : CoreCallees p :=
-  { toProjCallees := hc.projC hq, inst1 := hq.walks.inst1OK, iota := hc.iota hq,
-    projSmall := hc.projSmall }
+  { toProjCallees := hc.projC hq, inst1 := hq.walks.inst1OK, iota := hc.iota hq }
 
 include hq hc in
 /-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/
 theorem KnotCallees.reduceProjCore : ReduceProjCoreH p :=
   fun n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc' =>
     reduceProjCore_refines' p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str)
-      (hc.projC hq) hc.projSmall hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
+      (hc.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
       mode d sn i c hs hsn hc' (supKeep_of fe)
 
 include hq hc in

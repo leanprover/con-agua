@@ -107,7 +107,7 @@ devf = root / "docs" / "deviations.md"
 if devf.exists():
     for line in devf.read_text().splitlines():
         if re.match(r"\|\s*D\d+", line) and "fixed" not in line.lower():
-            dev_open += 1
+            dev_open += 1  # superseded by the per-section counts below
 
 now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 head = git("rev-parse", "--short", "HEAD")
@@ -181,13 +181,14 @@ w("|---|---|---|")
 for r in landings[:20]:
     w(f"| {r['at'][5:16].replace('T', ' ')} | {r['lane']} | {r['what'].replace('|', '/')} |")
 w("")
-# deviations
-def dev_rows():
+# deviations, by section (docs/deviations.md: Temporary, Deliberate, Fixed)
+def dev_rows(section):
     if not devf.exists():
         return []
     txt = devf.read_text()
-    sec = txt.split("## Open", 1)[1] if "## Open" in txt else ""
-    sec = re.split(r"\n## ", sec, maxsplit=1)[0]
+    if f"\n## {section}\n" not in txt:
+        return []
+    sec = re.split(r"\n## ", txt.split(f"\n## {section}\n", 1)[1], maxsplit=1)[0]
     rows = []
     for line in sec.splitlines():
         m = re.match(r"\|\s*(D\d+)\s*\|(.*)\|\s*$", line)
@@ -201,20 +202,22 @@ def short(t, n=140):
     t = re.sub(r"\s+", " ", t)
     return t if len(t) <= n else t[:n - 1].rstrip() + "…"
 
-drows = dev_rows()
-w(f"## Deviations from the twin ({len(drows)} open)\n")
-w("Places where L deliberately does something other than con-ron (beyond fuel and fixed capacities), from `docs/deviations.md`. "
-  "Effect: completeness = L declines where the twin accepts; performance = same verdicts, more work or memory.\n")
-if drows:
-    w("| id | effect | owner | what L does |")
-    w("|---|---|---|---|")
-    for did, c in drows:
-        w(f"| {did} | {short(c[3], 60)} | {short(c[4], 40)} | {short(c[2])} |")
+def dev_table(title, intro, rows, last_col):
+    w(f"### {title} ({len(rows)})\n")
+    w(intro + "\n")
+    if not rows:
+        return
+    w(f"| id | effect | owner | what L does | {last_col} |")
+    w("|---|---|---|---|---|")
+    for did, c in rows:
+        w(f"| {did} | {short(c[3], 60)} | {short(c[4], 40)} | {short(c[2], 110)} | {short(c[5], 90)} |")
     w("")
-    w("<details><summary>Full rows (twin, L, proposed fix)</summary>\n")
-    for did, c in drows:
-        w(f"- **{did}** ({short(c[0], 120)}). Twin: {c[1]} L: {c[2]} Fix: {c[5]}")
-    w("\n</details>\n")
+
+w("## Deviations from the twin\n")
+w("Places where L does something other than con-ron beyond fuel and fixed capacities, from `docs/deviations.md`. "
+  "Effect: completeness = L declines where the twin accepts; performance = same verdicts, more work or memory.\n")
+dev_table("Temporary: to be fixed", "L differs from the twin for now; each row has an owner and a fix.", dev_rows("Temporary"), "fix")
+dev_table("Deliberate: by design", "L differs from the twin on purpose and stays that way.", dev_rows("Deliberate"), "why")
 
 out.write_text("\n".join(L) + "\n")
 (dash / "phases.svg").write_text(phases_svg())
@@ -225,9 +228,10 @@ if "--publish" in sys.argv:
     if gf.exists():
         gid = gf.read_text().strip()
         subprocess.run(["gh", "gist", "edit", gid, "-f", out.name, str(out)], check=True)
-        r = subprocess.run(["gh", "gist", "edit", gid, "-f", "phases.svg", str(dash / "phases.svg")])
-        if r.returncode != 0:  # first time: add the file
-            subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / "phases.svg")], check=True)
+        for extra in ("phases.svg", "progress.csv"):  # the chart, and the census history (durable copy)
+            r = subprocess.run(["gh", "gist", "edit", gid, "-f", extra, str(dash / extra)])
+            if r.returncode != 0:  # first time: add the file
+                subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / extra)], check=True)
         print("updated gist", gid)
     else:
         r = subprocess.run(["gh", "gist", "create", "--desc", "con-agua progress", str(out)],

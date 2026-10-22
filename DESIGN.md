@@ -957,6 +957,102 @@ with the original (none does).
 
 None.
 
+## Records (2026-10-22, lane `lfeat`)
+
+Struct-of-arrays addressing by hand (`AREC.u64[i * 4 + t * 2 + 1]`) needs the injectivity of the
+address (`Schema.ad_inj`) and bounds in every proof that reads after a write. L now has record
+layouts as **surface syntax plus generic lemmas**: no new constructor, no change to the
+semantics or the compiler (compiler-proof delta 0), so the choice of the smaller compiler delta
+was free. Files: `L/{Syntax,Notation,Records,Examples}.lean`, tests in `Compiler/{Tests,WFAll}.lean`.
+
+### Design
+
+* **Declaration.** `structure Record where arr : ArrId; stride : Nat` and `structure Field where
+  off : Nat`: `abbrev NODE : L.Record := ⟨1, 3⟩`, `abbrev NODE.tag : L.Field := ⟨0⟩`, … (offsets
+  below the stride, distinct).
+* **Syntax.** `NODE[i].tag` reads, `NODE[i].tag := e` writes (the field constant is
+  `NODE.tag`, found by name). Both are `ld64`/`st64` of `NODE.arr` at the address expression
+  `Record.at R i f = i * stride + off`, built by a named function.
+* **Semantics** are those of the word access, so the address wraps around as `UInt64` (as the
+  hand-written form does, and as the compiled code computes it).
+* **Proof support** (`L/Records.lean`, all in `lang_grind`): `evalE_at` (pass it to `vcgen`
+  next to `evalE`: the address is the named word `Record.ad R j f`, not arithmetic), `Mem.fld m R
+  j f` (field `f` of record `j`, `0` out of bounds: what a model is stated with), `fld_getElem`
+  (`vcgen`'s `arr[addr]` read is `Mem.fld`), **`fld_set64`** (a field after a field store is the
+  stored word if it is the same record and field, else the old field, decided on record numbers
+  and offsets), `fld_set64_ne`, `fld_setG`, `fld_set8` (other arrays, globals, byte stores),
+  `Record.ad_inj` (distinct fields or records have distinct addresses), `Record.ad_lt` (a field's
+  bound from a bound on the record number and room for the records). The only side condition is
+  `Record.Ok R j` (`j * stride + stride < 2^64`: no wrap-around), which `grind` discharges from a
+  bound on `j` (`j < 2^32` for any stride below `2^32`).
+
+### Measurements
+
+* Compiler and its proof: unchanged (0 lines). `L/Records.lean` 147 lines, 0.4 s.
+* **Example** (`L/Examples.lean`, `node_mk`): a node `[tag, a, b]` written field by field, a field
+  of another node read, three fields read back; the spec states the results and two frame facts
+  over `Mem.fld`. Proof: the standard `vcgen [… evalE_at …] <;> finish`, no hint, 1.8 s. The
+  same function with raw addresses (`NODES.u64[i * 3 + 1]`, the spec over `rdW … (j * 3 + 1)`,
+  with `arena_grind`/`store_grind`) fails in `finish` after 11 s: `grind` cannot refute
+  `i * 3 + 1 = j * 3 + 1` in `UInt64` without the injectivity lemma.
+* Tests: `node_mk` on Kraken against `L.run`, and an out-of-bounds record.
+
+### How to use
+
+* Declare the layout and the fields as above; write `R[i].f` in `lfn`; pass `evalE_at` (and
+  `ld64`/`st64`) to `vcgen`. State models with `m.fld R j f`. For a store library: its schema can
+  become a `Record` (record number `i * 2 + t` for two tiers) with the field reads `Mem.fld`;
+  `fld_set64` replaces the per-library `ad_inj` reasoning.
+* No migration is forced; existing hand-written addressing keeps working.
+
+### `sorry`s
+
+None.
+
+## Program well-formedness: guarded, and per function (2026-10-22, lane `lfeat`)
+
+Two requests of the coordinator: `decide +kernel` on the structural `Prog.wf` is a trap
+(`declArms_wf` used ~19 GB that way), and `checkerProg_wf` (`Prog.wf_of_wfFast` over 1566
+functions) peaked at 12.2 GB and grows with the program.
+
+* **The guard** (`Compiler/WF.lean`). `FunDecl.wf` and `Prog.wf` are now `kernelOpaque` of their
+  former bodies (`FunDecl.wfSpec`, `Prog.wfSpec`): `kernelOpaque x := cond (Lean.opaqueId true) x
+  x`. The kernel cannot reduce `Lean.opaqueId true` (an `opaque` constant), so neither the
+  kernel nor `decide` gets past the `cond`, and `kernelOpaque_eq : kernelOpaque x = x` (by
+  `cases` on the stuck Boolean) keeps every proof about them. `decide`/`decide +kernel` on
+  `Prog.wf …` now fails at once ("failed to reduce"); compiled code (`#guard`) is unaffected.
+  (`Lean.opaqueId` alone cannot be the wrapper: it has no equation, so nothing could be proved
+  about a wrapped body.) Statements of `compile_correct` and of every `…_wf` theorem unchanged.
+  Three sites decided `Prog.wf` directly and now go through `Prog.wf_of_wfFast`
+  (`Scan/Validator.lean` `valProg_wf`, `Arena/DeclArmsCanon.lean`, `Arena/DeclArmsNat.lean`);
+  `Arena/KnotWF.lean` (`FunDecl.wf` of some functions) through the new `Prog.funsWf_of_fast`.
+* **Per function** (`Compiler/WFSplit.lean`, `prog_wf name : tab p`): separate kernel checks,
+  none of which sees every body: the name tree as a literal and `progTree p = some tree`
+  (names only); one `romOk tab d` per distinct byte string the program reads; one check per
+  chunk of 32 functions (`FunDecl.wfTN`, the check without the constant data, plus each
+  function's byte strings from the `romOk` facts, `FunOk`); the table bound; and the main
+  theorem, `Prog.wf_of_parts'`, assembled from the chunks without evaluation. The table must be
+  a literal: `tab_lit% e` evaluates `e` (compiled code) and inserts it. `Prog.rom` now puts the
+  short strings first (`romSort`), so that finding `LITS` in the table no longer scans the 37 KB
+  ROM. `scripts/checker_prog.py` emits `checkerTab := tab_lit% …` (with a `#guard` that it is
+  `Prog.tab checkerProg …`) and `prog_wf checkerProg_wf : checkerTab checkerProg`.
+* **Measurements** (`Checker/Prog.lean`, `lake env lean`, peak RSS by `VmHWM`): before 12.2 GB,
+  45 s; after **6.3 GB**, 54–62 s. The file without any check is 2.9 GB. Of the rest, the
+  largest single check is `romOk checkerTab romData` (≈ 13 s, ≈ 3 GB): the kernel evaluates
+  `romData` (`encNames pinNames ++ …`, `Arena/Prelude.lean`) and compares 37 KB; it depends on
+  the ROM, not on the number of functions. The name tree is ≈ 5 s, 1.2 GB (UTF-8 codes of 1566
+  names; each name costs the kernel ≈ 5 ms); every chunk ≤ 0.7 s. Next steps if needed: a
+  literal `romData` (lane `romload`) and per-module name trees. For a small program
+  `Prog.wf_of_wfFast (by decide +kernel)` stays faster (`indProg_wf`: 5.0 s, +1.2 GB, against
+  7.2 s, +0.7 GB split), so the other `…_wf` theorems keep it.
+* `harness`/e2e: the ROM's byte order in the table changed (shortest string first); `asmText`
+  and the drivers take it from `Prog.tab`. `scripts/e2e.py --only 'restart_7|basic|nat'`: same
+  classes as on master (2 `l-error`s at `hoist_ok`, the rest blocked by the `strip_pis` stub).
+
+### `sorry`s
+
+None.
+
 ## The `lit` store, `intern_lit`, and the state relation (2026-10-21, lane `store`)
 
 Files: `ConAgua/Arena/Store.lean` (L code, word-level models, `vcgen` specs),
@@ -7478,6 +7574,59 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   module elaborates once); per module: `WhnfDeltaRefine2` 10 s, `WhnfCoreLoop` 8 s,
   `WhnfIotaRefine4` 5 s, `WhnfCoreProj` 4 s, `DefEqKnot` 1.2 s.
 
+### Helper `whnf4-leaves`: `projSmall` and `fireOk` discharged
+* **`projSmall` gone, by an L change with no deviation.** `reduce_proj_fire` tested the twin's
+  `args.length = numParams + numFields` (`Nat`) as `an == np + nf` (`u64`), equal only if the sum
+  does not wrap, hence `ProjSmall` (counts below `2^32`, a loader invariant `CoreS` cannot give: it
+  quantified over every record that decodes). It now tests `nf <= an && an - nf == np`, which is
+  the `Nat` equation for any words; then `np + i < an` (from `i < nf`), so the argument index does
+  not wrap either. `fire_cond_iff`, `rpFire_refines` adjusted; `ProjSmall`, `CoreCallees.projSmall`
+  and the `hps` parameters of the `reduce_proj_*` chain removed. `Checker/Prog.lean`/`coreFns`
+  unchanged (same names; the body is looked up by name).
+* **`fireOk` from `CoreDen`** (`fireOk_core`, `WhnfProjRefine3.lean`; `KnotCallees.fireOk` in
+  `DefEqKnot.lean`; new program field `KnotAllProg.fire : FireProg p`). **`FireOkOK` restated**
+  with two hypotheses its callers can supply, and `FireDen`'s guard clause narrowed to match:
+  - `i.toNat < tbl.numFields`: the twin's `findProj?` only answers an entry below `numFields`
+    (`findProj?_lt`), and both callers (`reduce_proj_core`, `and_rescue_slots`) call `fire_ok` on
+    `find_proj`'s answer. So `FireDen` no longer asks for the guards past `numFields` (the old
+    gap to `StoreDen.proj`): at `i ≥ numFields` the twin would read the `default` level handle,
+    which reads back only under con-ron's `StoreWF` (and a non-empty persistent level tier).
+  - `us` is a stored `const` node's list (`∃ h c, a₀.store.view h = some (.const c (decI us))`),
+    as for `LvlsEqCH`; `StoreDen.constLs` then gives `FireOkOKD`'s readback. `reduce_proj_head`
+    has the node (`view_const_words`); `m2c_and` has it from its prefix (`PreRun.cview`), and
+    `and_rescue_slots`' loop carries it from slot to slot: neither the twin's `findProj?` (it
+    interns names only) nor `fireOk` (it writes the readback and verdict caches only) changes an
+    expression node's view (`ProjView.lean`: `findProj?_eview`, `fireOk_store`, and the readers'
+    `readLevelM_store` … `lvlEq?_store'`, unconditional). `AndRescueSlotsOK` gained the same
+    hypothesis.
+  - `ProjSortDen`/`FireDen` are now theorems over `CoreDen` (`projSortDen_of`, `fireDen_of`).
+  `InferProj2`'s copy of `findProj?_lt` removed (one lemma, in `ProjView.lean`).
+* **Left in `KnotCallees` (6)**: `den`, `instLP` (not this helper's), and:
+  - `capsNeverZero`: the twin reads back the inductive's level parameters and the universe
+    arguments (`capsNeverZero`), so a provable statement needs both readbacks, as
+    `FieldSortZeroOK` has them, plus the `PropWhen` datum's names related by the name store
+    (`PWR (nameN ns)`, what `capsNeverZeroW_run` takes) rather than by `dn` (`decPWw`): nothing in
+    `CoreS` ties `dn` to `denoteN`. The callers cannot supply the `us` readback: in `iota_case3`
+    `us` is the recursor head's list, viewed many core calls earlier, and `CoreAfter` does not
+    say that the twin's store only grew (`Ext`), so no view or readback survives those calls.
+    Needed: `Ext a a'` in `CoreAfter` (or `CoreS.den` plus `StoreWF`), and `dn` agreeing with
+    `denoteN` on the record pool's names.
+  - `recFireLevels`: `recFireLevelsW_ok` needs `StoreWF a.store` (it interns the substituted
+    levels and the list; `slpW_ok`/`sleW_ok`), which `CoreS` does not carry (D23), plus the same
+    readbacks as above.
+  - `lvlsEqDen`: its second list `cmpL` is `rec_fire_levels`' freshly interned result; that it
+    reads back is again `StoreWF` (the interning keeps readbacks), or a `RecFireLevelsOK` whose
+    post says so (a `CoreSpec` post speaks of result words only). The first list `usj` is a
+    stored `const` node's (`StoreDen.constLs`).
+  - `recShape`: an invariant of the installed environment (`rP ≤ mI + 1`, plain rules'
+    `ctorParams ≤ rP`), not of the store: `EnvR` decodes records but bounds nothing. It could
+    go by an L change instead: the twin uses `args.take rP` (`recFireArgs_take`), so L could
+    clamp the prefix to the spine (`min rP sn`) where it now reads `rP` words of the stack;
+    that touches lane `whnf`'s `iota_rec_*` proofs (`WhnfIotaRecRefine2/3`), not done here.
+* Numbers: 12 files, +~400/−~95 lines; new `ProjView.lean` 250 lines. After merging master: the touched cone plus `Checker/Prog`, `Checker/CoreErec` 5.2 min wall, 24 CPU-min. Rebuild of the cone
+  up to `DefEqKnot` + `KnotWF` after the `WhnfCore.lean` change: 5.2 min wall, 14.8 CPU-min
+  (everything downstream of `WhnfCore` elaborates once); `WhnfCoreProj` ~5 s.
+
 ### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
 * Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
   (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
@@ -7521,3 +7670,15 @@ must supply before the `stubM "all_level_params_defined"` uses can go: `ApdEnv a
 (`NStoreWF` and `StoreDen`'s level fields — again the twin's well-formedness the stage relation
 lacks, as for `LitInj`/`TwinOK`), the parameter names read back, and some memo in `APDM` on
 entry. The memo-hit bug (the probe depth returned as the value) was found by this spec.
+
+### Landing 10: helper `rec3`
+* Helper `rec3` (73 min): sorry-free `targetAbsGo`/`targetAbs` (the `ta` memo of the current
+  memory threaded through pre and post), `classFeR`, `ClassRead.classes`; through stubs
+  `classRulesOk`, `classRecsRulesOk`, `auxRuleFire` (with `PoolSmall`, lane decls3's), and
+  `classStreamRecs`. The hypotheses `RecsOK` (class_stream_recs) and `SlotsExt`
+  (class_read_classes) are now derived from `DecB` inputs plus the caller's slice bound
+  (`rec3RecsOK_of_decB`, `rec3SlotsExt_of_decB`); `CVExt`/`CKExt` accept an empty slice at any
+  offset (and `decCV_copy`/`cvNew_stage`/`decCVp_grow`'s matching hypothesis likewise). L: loops
+  to self-recursion, `target_abs_node`'s arms inlined, a capacity abort on `nP + |slots| + nF`, a
+  name-handle guard in `class_fe_r_rec`; D18 extended. ~2.6k proof lines for ~170 L lines.
+* Census: phase 8 **78 proven, 75 sorry, 64 written, 6 todo**; totals 718 proven / 119 sorry.
