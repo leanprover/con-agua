@@ -2,6 +2,7 @@ import ConAgua.Arena.IndPartsSpec2
 import ConAgua.Arena.IndView
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.IndStubs
+import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.PinsNatOp
 
 /-!
@@ -45,29 +46,6 @@ theorem eViewSpec4 (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s
   have h1 := M.of_run (P := fun s => s = s₀) hs hrun (eView_spec p hp n s₀ h)
   have h2 := M.of_run (P := fun s => s = s₀) hs hrun (eViewShape p hp n s₀ h)
   exact ⟨h1.1, h1.2.1, h1.2.2, h2⟩
-
-/-- A returning `e_view` of a `forallE` handle: the view checks hold and the words are the
-binder's. -/
-theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
-    viewOK m h 30 ∧ eViewW m h = [6, rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2),
-      rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1), 0] := by
-  unfold eViewW at hne ⊢
-  have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
-  simp only [h1, if_false] at hne ⊢
-  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [hs] at hne
-  simp only [hs, if_false] at hne ⊢
-  have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
-  have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
-  have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
-  have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
-  have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
-  have n5 : ¬ h >>> 28 = 5 := by rw [hg]; decide
-  simp only [n0, n1, n2, n3, n4, n5, hg, if_false, if_true] at hne ⊢
-  by_cases c : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
-  · simp [c] at hne
-  simp only [c, if_false]
-  exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-! ## `pi_binders` -/
 
@@ -369,7 +347,7 @@ mutual
 /-- **The model of `rec_target_of`**: strip the telescope, look at the major's domain head. -/
 def recTW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | n + 1, m, no, nl, mI, ty => recTK1 n no nl (stubM "strip_pis" m [mI, ty])
+  | n + 1, m, no, nl, mI, ty => recTK1 n no nl (stripF 6 m [mI, ty])
 
 /-- After `strip_pis`. -/
 def recTK1 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -404,7 +382,7 @@ end
 
 section arms
 variable (n : Nat) (m m1 m3 : Mem) (no nl mI ty : Word) (r v rf : List Word)
-theorem recTW_step : recTW (n + 1) m no nl mI ty = recTK1 n no nl (stubM "strip_pis" m [mI, ty]) := rfl
+theorem recTW_step : recTW (n + 1) m no nl mI ty = recTK1 n no nl (stripF 6 m [mI, ty]) := rfl
 theorem recTK1_some_nil (h : r.headD 0 = 0) : recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
   simp only [recTK1]; rw [if_pos h]
 theorem recTK1_some_nf (h : r.headD 0 ≠ 0) (h2 : r.tail.tail.tail.headD 0 >>> 28 ≠ 6) :
@@ -450,8 +428,8 @@ grind_pattern [ind_grind] recTK5_hit => recTK5 nl m3 (some rf)
 
 section spec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
-  (hp : p.lookup "rec_target_of" = some recTargetOf)
-include hv hf hp
+  (hp : p.lookup "rec_target_of" = some recTargetOf) (hst : StripProg p)
+include hv hf hp hst
 
 theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_target_of" [no, nl, mI, ty]
@@ -463,7 +441,7 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "strip_pis" n, stubM_spec p "get_app_fn_f" n, eViewSpec4 p hv n,
+        stripPis_specF p hst n, stubM_spec p "get_app_fn_f" n, eViewSpec4 p hv n,
         slFind_spec p hf n] <;>
       finish (gen := 20)
 
@@ -500,12 +478,12 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
   | succ n =>
   have hnl : nl.toNat = names.length := (decHL_length m hnames).symm
   rw [recTW_step] at hrt
-  cases hra : stubM "strip_pis" m [mI, ty] with
+  cases hra : stripF 6 m [mI, ty] with
   | none => rw [hra] at hrt; simp [recTK1] at hrt
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [hra] at hrt
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripPis_spec dn vis fe mI ty hty m m1 a r1 hra hS
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok dn vis fe mI ty hty m m1 a r1 hra hS
   have hty' : (decI ty : EIdx) = decE ty := rfl
   cases x1 with
   | none =>
@@ -663,11 +641,11 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           · rw [hfk, hi]; rfl
 
 
-/-- **`rec_target_of` refines `recTargetOf`** (through the stubs `strip_pis`, `get_app_fn`). -/
+/-- **`rec_target_of` refines `recTargetOf`** (through the stub `get_app_fn`). -/
 @[refines ConRon.Arena.recTargetOf]
 theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hp : p.lookup "rec_target_of" = some recTargetOf)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (hst : StripProg p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis no nl mI ty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hty : ty.toNat < 2 ^ 32) (hnames : decHL s₀.mem no.toNat nl.toNat = some names)
     (hb : no.toNat + nl.toNat < 2 ^ 64) (hbt : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
@@ -677,7 +655,7 @@ theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
       r = [UInt64.ofNat (AM.res (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀)] ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (recTargetOf_spec p hv hf hp n s₀ no nl mI ty) ?_
+  refine triple_post (recTargetOf_spec p hv hf hp hst n s₀ no nl mI ty) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨t, a', hrun, hr, hS', hg⟩ := recTW_ok n dn fe vis s₀.mem s'.mem a₀ no nl mI ty r names hm
     hS hty hnames hb hbt

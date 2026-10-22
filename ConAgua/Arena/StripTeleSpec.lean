@@ -11,14 +11,14 @@ import ConAgua.Arena.WhnfBase
 The two strippers (`StripTele.lean`, lane `whnf3`) under the stage relation, replacing the stub
 contracts `stripPis_spec`/`stripLams_spec` of `IndStubs.lean`.
 
-* **The word model** `stripW tg n m [k, e]` (`tg` = `6` for `strip_pis`, `5` for `strip_lams`; `n`
+* **The word model** `stripTW tg n m [k, e]` (`tg` = `6` for `strip_pis`, `5` for `strip_lams`; `n`
   the L fuel of the call): the loop's model `stripGoW` at the loop's fuel, its callees by their
   models (`eViewW`, `allocW`). It does not depend on the program, so a caller's model calls it in
   place of the old `stubM "strip_pis"`, and only the caller's `vcgen` spec needs the lookups
   (`StripProg p`).
-* **The relational lemma** `stripW_pis_ok`/`stripW_lams_ok`: a returning model run from the stage
+* **The relational lemma** `stripTW_pis_ok`/`stripTW_lams_ok`: a returning model run from the stage
   relation is a twin run of `stripPis k (decI e)` (`stripLams`) that keeps the twin state, with
-  `KeepPost … decOLE` after — the stub contract's statement, with `stripW` for `stubM` and no
+  `KeepPost … decOLE` after — the stub contract's statement, with `stripTW` for `stubM` and no
   further hypothesis. The domains are consecutive `IW` words from the old top; on `none` the top
   is put back.
 * **The write set**: `stripW_frame` (`IW` and `CTL[200]` only), for the memo frames of callers.
@@ -100,7 +100,7 @@ def stripGoW (tg k o : Word) : Nat → Mem → Word → Word → Option (List Wo
 
 /-- **The model of `strip_pis(k, e)` (`tg = 6`) and `strip_lams(k, e)` (`tg = 5`)** at the call's
 L fuel. -/
-def stripW (tg : Word) : Nat → Mem → List Word → Option (List Word × Mem)
+def stripTW (tg : Word) : Nat → Mem → List Word → Option (List Word × Mem)
   | 0, _, _ => none
   | f + 1, m, args => stripGoW tg (args.headD 0) (rdW (m.arr64 CTL) 200) (f + 1) m 0 (args.tail.headD 0)
 
@@ -161,13 +161,13 @@ theorem stripLamsLoop_spec (p : Prog) (hp : StripProg p) (f : Nat) (s₀ : St) :
         eView_spec p (hp.get "e_view") f, iwAlloc_specW p (hp.get "iw_alloc") f] <;>
       finish [stripGoW_ge, stripGoW_tag, stripGoW_step]
 
-theorem stripW_succ (tg : Word) (f : Nat) (m : Mem) (k e : Word) :
-    stripW tg (f + 1) m [k, e] = stripGoW tg k (rdW (m.arr64 CTL) 200) (f + 1) m 0 e := rfl
+theorem stripTW_succ (tg : Word) (f : Nat) (m : Mem) (k e : Word) :
+    stripTW tg (f + 1) m [k, e] = stripGoW tg k (rdW (m.arr64 CTL) 200) (f + 1) m 0 e := rfl
 
 /-- **`strip_pis(k, e)` returns its model's words.** -/
 theorem stripPis_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_pis" [k, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ stripW 6 n s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ stripTW 6 n s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "strip_pis")]
   simp only [callFn, stripPisL]
   cases n with
@@ -176,12 +176,12 @@ theorem stripPis_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e 
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fun s => Triple.step_exec (stripPisLoop_spec p hp (n + 1) s)] <;>
-      finish [stripW_succ]
+      finish [stripTW_succ]
 
 /-- **`strip_lams(k, e)` returns its model's words.** -/
 theorem stripLams_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_lams" [k, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ stripW 5 n s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ stripTW 5 n s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "strip_lams")]
   simp only [callFn, stripLamsL]
   cases n with
@@ -190,7 +190,7 @@ theorem stripLams_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fun s => Triple.step_exec (stripLamsLoop_spec p hp (n + 1) s)] <;>
-      finish [stripW_succ]
+      finish [stripTW_succ]
 
 /-! ## The relational lemmas -/
 
@@ -386,7 +386,7 @@ def RelW {α : Type} (W : Mem → List Word → Option (List Word × Mem)) (args
   ∀ (m m' : Mem) (a : AState) (r : List Word), W m args = some (r, m') → pre m a →
     ∃ x a', op.run a = .ok (x, a') ∧ post m m' a' r x
 
-theorem stripW_ok (tg : Word) (T : UInt32)
+theorem stripTW_ok (tg : Word) (T : UInt32)
     (tw : Nat → EIdx → AM (Option (List EIdx × EIdx)))
     (h0 : ∀ h, tw 0 h = pure (some ([], h)))
     (hs : ∀ j h, tw (j + 1) h = stripStepT T (tw j) h)
@@ -396,11 +396,11 @@ theorem stripW_ok (tg : Word) (T : UInt32)
         decE ((eViewW m w).tail.tail.headD 0)), a) ∧
       H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
     (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k e : Word) (he : H e) :
-    RelW (stripW tg n) [k, e] (StageR dn vis fe) (tw k.toNat (decI e)) (KeepPost dn vis fe decOLE) := by
+    RelW (stripTW tg n) [k, e] (StageR dn vis fe) (tw k.toNat (decI e)) (KeepPost dn vis fe decOLE) := by
   intro m m' a r hw hS
   match n, hw with
   | f + 1, hw =>
-  rw [stripW_succ] at hw
+  rw [stripTW_succ] at hw
   obtain ⟨x, hrun, hS', hf, hlow, hres⟩ := stripGoW_ok tg T tw h0 hs hT hvb dn vis fe k _ a (f + 1)
     m m' 0 e r hw hS he (UInt64.le_iff_toNat_le.mpr (by simp)) (by simp [iwTop])
   have ht0 : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
@@ -426,11 +426,11 @@ theorem stripW_ok (tg : Word) (T : UInt32)
     · exact hb
 
 /-- **`strip_pis` refines `stripPis`** (the model; the census theorem is `stripPis_refines`). -/
-theorem stripW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripTW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
-    RelW (stripW 6 n) [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
+    RelW (stripTW 6 n) [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
       (KeepPost dn vis fe decOLE) :=
-  stripW_ok 6 ETag.forallE stripPis (fun _ => rfl) stripPis_succ
+  stripTW_ok 6 ETag.forallE stripPis (fun _ => rfl) stripPis_succ
     (fun w hw => tag_beq_iff w hw 6 (by decide))
     (fun m a w hR hw hne hg => by
       obtain ⟨hvok, hew⟩ := eViewW_forall m w hg hne
@@ -441,11 +441,11 @@ theorem stripW_pis_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word
     n dn vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`** (the model). -/
-theorem stripW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem stripTW_lams_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
-    RelW (stripW 5 n) [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
+    RelW (stripTW 5 n) [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
       (KeepPost dn vis fe decOLE) :=
-  stripW_ok 5 ETag.lam stripLams (fun _ => rfl) stripLams_succ
+  stripTW_ok 5 ETag.lam stripLams (fun _ => rfl) stripLams_succ
     (fun w hw => tag_beq_iff w hw 5 (by decide))
     (fun m a w hR hw hne hg => by
       obtain ⟨hvok, hew⟩ := eViewW_lamS m w hg hne
@@ -491,40 +491,40 @@ theorem stripGoW_fuel (tg k o : Word) : ∀ (f : Nat) (m : Mem) (n h : Word) (x 
 
 /-- **The fuel-free model of the strippers.** -/
 def stripF (tg : Word) (m : Mem) (args : List Word) : Option (List Word × Mem) :=
-  stripW tg ((args.headD 0).toNat + 2) m args
+  stripTW tg ((args.headD 0).toNat + 2) m args
 
-theorem stripF_of_W {tg : Word} {n : Nat} {m : Mem} {k e : Word} {x : List Word × Mem}
-    (h : stripW tg n m [k, e] = some x) : stripF tg m [k, e] = some x := by
+theorem stripF_of_TW {tg : Word} {n : Nat} {m : Mem} {k e : Word} {x : List Word × Mem}
+    (h : stripTW tg n m [k, e] = some x) : stripF tg m [k, e] = some x := by
   match n, h with
   | f + 1, h =>
-    rw [stripW_succ] at h
+    rw [stripTW_succ] at h
     exact stripGoW_fuel tg k _ (f + 1) m 0 e x h (UInt64.le_iff_toNat_le.mpr (by simp)) _ (by simp; omega)
 
 /-- `strip_pis(k, e)` returns `stripF 6`. -/
 theorem stripPis_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_pis" [k, e]
     ⦃fun r s' => LocEq s' s₀ ∧ stripF 6 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ :=
-  triple_post (stripPis_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_W h.2⟩
+  triple_post (stripPis_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_TW h.2⟩
 
 /-- `strip_lams(k, e)` returns `stripF 5`. -/
 theorem stripLams_specF (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "strip_lams" [k, e]
     ⦃fun r s' => LocEq s' s₀ ∧ stripF 5 s₀.mem [k, e] = some (r, s'.mem); ⊤⦄ :=
-  triple_post (stripLams_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_W h.2⟩
+  triple_post (stripLams_specW p hp n s₀ k e) fun _ _ h => ⟨h.1, stripF_of_TW h.2⟩
 
 /-- **`strip_pis` refines `stripPis`**, the fuel-free model (replaces `IndStubs.stripPis_spec`). -/
 theorem stripF_pis_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
     RelW (stripF 6) [k, e] (StageR dn vis fe) (stripPis k.toNat (decI e))
       (KeepPost dn vis fe decOLE) :=
-  stripW_pis_ok _ dn vis fe k e he
+  stripTW_pis_ok _ dn vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`**, the fuel-free model (replaces `IndStubs.stripLams_spec`). -/
 theorem stripF_lams_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (k e : Word) (he : H e) :
     RelW (stripF 5) [k, e] (StageR dn vis fe) (stripLams k.toNat (decI e))
       (KeepPost dn vis fe decOLE) :=
-  stripW_lams_ok _ dn vis fe k e he
+  stripTW_lams_ok _ dn vis fe k e he
 
 /-! ## The census theorems -/
 
@@ -537,7 +537,7 @@ theorem stripPis_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option Con
   intro n s₀ a₀ hS
   refine triple_post (stripPis_specW p hp n s₀ k e) ?_
   rintro r s' ⟨hloc, hw⟩
-  obtain ⟨x, a', hrun, hpost⟩ := stripW_pis_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_pis_ok n dn vis fe k e he _ _ _ _ hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 
@@ -550,7 +550,7 @@ theorem stripLams_refines (p : Prog) (hp : StripProg p) (dn : NIdx → Option Co
   intro n s₀ a₀ hS
   refine triple_post (stripLams_specW p hp n s₀ k e) ?_
   rintro r s' ⟨hloc, hw⟩
-  obtain ⟨x, a', hrun, hpost⟩ := stripW_lams_ok n dn vis fe k e he _ _ _ _ hw hS
+  obtain ⟨x, a', hrun, hpost⟩ := stripTW_lams_ok n dn vis fe k e he _ _ _ _ hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hpost⟩
 

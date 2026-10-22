@@ -27,6 +27,13 @@ theorem partsSimStub {α : Type} {f : FnName} {args : List Word} {pre : Mem → 
     Sim (stubM f m args) op a (fun r x m' a' => post m m' a' r x) :=
   fun r m' e => h m m' a r e hpre
 
+/-- A real callee's word-model fact (`RelW`) as a `Sim`. -/
+theorem partsSimW {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : RelW W args pre op post) {m : Mem} {a : AState} (hpre : pre m a) :
+    Sim (W m args) op a (fun r x m' a' => post m m' a' r x) :=
+  fun r m' e => h m m' a r e hpre
+
 /-! ## `ctor_member` -/
 
 /-- `member_idx_at`'s model at every exec fuel. -/
@@ -63,7 +70,7 @@ def ctmK1 (n : Nat) (no nl lvls : Word) : Option (List Word × Mem) → Option (
 /-- **The model of `ctor_member`** (at exec fuel `n + 1`). -/
 def ctmW (n : Nat) (m : Mem) (no nl lvls nP c : Word) : Option (List Word × Mem) :=
   if nP + rdW (m.arr64 IW) (c + 1) < nP then none
-  else ctmK1 n no nl lvls (stubM "strip_pis" m [nP + rdW (m.arr64 IW) (c + 1),
+  else ctmK1 n no nl lvls (stripF 6 m [nP + rdW (m.arr64 IW) (c + 1),
     rdW (m.arr64 EREC) (rdW (m.arr64 IW) c + 3)])
 
 section arms
@@ -80,14 +87,15 @@ attribute [ind_grind] ctmK1_none ctmK1_some ctmK2_some ctmK3_some
 
 theorem ctorMember_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
-    (hp : p.lookup "ctor_member" = some ctorMember) (n : Nat) (s₀ : St) (no nl lvls nP c : Word) :
+    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (n : Nat) (s₀ : St)
+    (no nl lvls nP c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctor_member" [no, nl, lvls, nP, c]
     ⦃fun r s' => LocEq s' s₀ ∧ ctmW n s₀.mem no nl lvls nP c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, ctorMember]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "strip_pis" n, stubM_spec p "get_app_fn_f" n,
+      stripPis_specF p hst n, stubM_spec p "get_app_fn_f" n,
       memberIdxAt_specK p hv hf hm n] <;>
     finish (gen := 20) [ctmW]
 
@@ -98,12 +106,13 @@ def ctmWk : Nat → Mem → Word → Word → Word → Word → Word → Option 
 
 theorem ctorMember_specK (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
-    (hp : p.lookup "ctor_member" = some ctorMember) (n : Nat) (s₀ : St) (no nl lvls nP c : Word) :
+    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (n : Nat) (s₀ : St)
+    (no nl lvls nP c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ctor_member" [no, nl, lvls, nP, c]
     ⦃fun r s' => LocEq s' s₀ ∧ ctmWk n s₀.mem no nl lvls nP c = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ hp]; simp only [callFn, ctorMember]; vcgen [exec] <;> grind
-  | succ n => exact ctorMember_spec p hv hf hm hp n s₀ no nl lvls nP c
+  | succ n => exact ctorMember_spec p hv hf hm hp hst n s₀ no nl lvls nP c
 
 /-! ## Reading decoded records' words -/
 
@@ -194,7 +203,7 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [partsAddNoOv hov, UInt64.toNat_ofNat_of_lt' hnFb]
   revert r m'
   show Sim _ _ a _
-  have h1 := partsSimStub (stripPis_spec dn vis fe (nP + UInt64.ofNat nF)
+  have h1 := partsSimW (stripF_pis_ok dn vis fe (nP + UInt64.ofNat nF)
     (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 3)) htyl) hS
   rw [hk, htye] at h1
   refine Sim.bindK (body := fun r m1 => if r.headD 0 = 0 then some ([0, 0], m1)
@@ -328,7 +337,7 @@ theorem bgo_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some
     simp only [callFn, blockGroupsOne]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ctorMember_specK p hv hf hm hc n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+        ctorMember_specK p hv hf hm hc hP.strip n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- `blockGroups`' filter predicate for member `mm`. -/
@@ -644,7 +653,7 @@ structure IndPartsProg2 (p : Prog) : Prop extends IndPartsProg p where
   ggo : p.lookup "block_groups_go" = some blockGroupsGo
   groups : p.lookup "block_groups" = some blockGroups
 
-/-- **`ctor_member` refines `ctorMember?`** (through the stubs `strip_pis`, `get_app_fn_f`; L
+/-- **`ctor_member` refines `ctorMember?`** (through the stub `get_app_fn_f`; L
 aborts when `nP + nF` wraps, a capacity). -/
 @[refines ConRon.Arena.ctorMember?]
 theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -659,7 +668,7 @@ theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : S
       MemIdxOut r (AM.res (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (ctorMember_spec p hP.view hP.find hP.midx hP.cmem n s₀ no nl lvls nP c)
+  triple_post (ctorMember_spec p hP.view hP.find hP.midx hP.cmem hP.strip n s₀ no nl lvls nP c)
     fun _ _ ⟨hl, hm⟩ =>
       let ⟨hok, hQ⟩ := Sim.run (ctmW_sim n hS hc hnm hnb hlv) hm
       ⟨hl, hok, hQ.1, hQ.2.2.1, hQ.2.2.2⟩
