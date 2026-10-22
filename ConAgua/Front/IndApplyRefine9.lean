@@ -239,6 +239,20 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   simp only [Option.some.injEq, Prod.mk.injEq] at h8
   obtain ⟨hoo5, hm6⟩ := h8
   subst oo₅ m₆
+  -- the order
+  have hps4 : ∀ i, i ≤ tys.length → psum m₄ to i = fpos LS i := fun i hi => by
+    rw [psum_congr e14.ifr]; exact psum_fpos (fun k hk => hTy.2.2 k hk) l9 i hi
+  have hLSl : LS.length = tys.length := by have := congrArg List.length l9; simpa using this
+  have hcnt : ∀ k (hk : k < tys.length), cntF m₄ to k = tys[k].ctors.length := fun k hk => by
+    simp only [cntF, wd, e14.ifr]; exact (hTy.2.2 k hk).2.1
+  obtain ⟨o1, o2, o3, o4, o5⟩ := orderW_twin hR₄ hD₄ v3 (hCt.ext e14 (fun _ _ x => x.ext e14)) hCn v7
+    (by rw [v6, v5]; omega) np3 hco ⟨by omega, by omega, by omega⟩ (by rw [hTn]; omega)
+    (by rw [hTn]; omega)
+    (fun p hp => by
+      rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full] at hp
+      refine ⟨by omega, ?_⟩
+      rw [hkeep34 p hp]; exact l8 p hp)
+    (by rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full, hflen]; exact Nat.le_refl _) h10
   sorry
 
 end L.Front.Ind
