@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndParts
 import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndCopy2
 
 /-!
 # Refinements of `IndParts` (lane `induct`): the record projections
@@ -10,6 +11,7 @@ the post says the memory is unchanged and the result word is the twin's value. T
 -/
 
 set_option experimental.vcgen true
+set_option linter.deprecated false
 
 open ConRon.Arena
 open Std.WP
@@ -600,5 +602,170 @@ theorem nIdxsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nIdxsCopyW n
               simp only [rdW, hm1get]; simp [hne2]
             rw [e6]
         · rw [if_neg hi, if_neg (by omega), hm1get, if_neg (by omega)]
+
+
+/-! ## `BlockShape.nIdxs`: the block-level function -/
+
+/-- The model of `block_shape_n_idxs`. -/
+def nIdxsW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
+  match allocW m (rdW (m.arr64 IW) (p + 1)) with
+  | none => none
+  | some (q, m1) =>
+    match nIdxsCopyW (n - 1) m1 q (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) with
+    | none => none
+    | some m2 => some ([q, rdW (m.arr64 IW) (p + 1)], m2)
+
+theorem blockShapeNIdxs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "n_idxs_copy" = some nIdxsCopy)
+    (hp : p.lookup "block_shape_n_idxs" = some blockShapeNIdxs) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_n_idxs" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ nIdxsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeNIdxs]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
+        nIdxsCopyW n m1 a (rdW (s₀.mem.arr64 IW) q) (rdW (s₀.mem.arr64 IW) (q + 1)) = some m2 →
+        nIdxsW (n + 1) s₀.mem q = some ([a, rdW (s₀.mem.arr64 IW) (q + 1)], m2) := by
+      intro a m1 m2 h1 h2
+      simp [nIdxsW, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, nIdxsCopy_spec p hc n] <;>
+      finish (gen := 20)
+
+
+theorem decNL_of_get (m : Mem) : ∀ (xs : List Nat) (o : Nat),
+    (∀ j (hj : j < xs.length), iwN m (o + j) = some xs[j]) → decNL m o xs.length = some xs
+  | [], o, _ => by simp [decNL]
+  | x :: xs, o, h => by
+    have h0 : iwN m o = some x := h 0 (by simp)
+    have ih := decNL_of_get m xs (o + 1) (fun j hj => by
+      have := h (j + 1) (by simpa using hj)
+      have e : o + (j + 1) = o + 1 + j := by omega
+      simpa [e] using this)
+    show (List.range (xs.length + 1)).mapM (fun j => iwN m (o + j)) = _
+    rw [mapM_shift_succ (fun i => iwN m i) o xs.length]
+    have ih' : (List.range xs.length).mapM (fun j => iwN m (o + 1 + j)) = some xs := ih
+    simp [h0, ih']
+
+theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
+    (h : nIdxsW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hq : decBS m p.toNat = some bs)
+    (hb : p.toNat + 9 < 2 ^ 64)
+    (hsrc : ∀ o l, iwN m p.toNat = some o → iwN m (p.toNat + 1) = some l → o + l ≤ iwTop m)
+    (hptr : ∀ o l j v, iwN m p.toNat = some o → iwN m (p.toNat + 1) = some l → j < l →
+      iwN m (o + j) = some v → v + 1 < iwTop m) :
+    r = [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
+    decNL m' (rdW (m.arr64 CTL) 200).toNat bs.k = some bs.nIdxs ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
+    (rdW (m.arr64 CTL) 200).toNat + bs.k = iwTop m' := by
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
+  have hlen := decPL_length m hg
+  have hk : bs.k = l := by rw [BlockShape.k, hlen]
+  obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ofNat_toNat_word] at ho'
+  rw [e1] at hl'
+  have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
+  have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  have hsrc' := hsrc o l ho hl
+  simp only [nIdxsW, ho', hl'] at h
+  cases hal : allocW m (UInt64.ofNat l) with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
+  rw [hll] at hroom
+  simp only [hal] at h
+  cases hcp : nIdxsCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq' hm1
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hIW := allocMem_IW m (UInt64.ofNat l)
+  have htop0 : iwTop m = q.toNat := by simp only [iwTop, hqq]
+  have hptr' : ∀ j < (UInt64.ofNat l).toNat,
+      (rdW ((allocMem m (UInt64.ofNat l)).arr64 IW) (UInt64.ofNat ((UInt64.ofNat o).toNat + j)) + 1).toNat < q.toNat := by
+    intro j hj
+    rw [hll] at hj
+    obtain ⟨v, y, hv, -, -⟩ := decPL_get l o bs.members hg j hj
+    have hvb := hptr o l j v ho hl hj hv
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    rw [hIW, hoo]
+    have e : UInt64.ofNat (o + j) = UInt64.ofNat o + UInt64.ofNat j := ofNat_add_word _ _
+    rw [hv']
+    have : (UInt64.ofNat v + 1).toNat = v + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    rw [this]; omega
+  obtain ⟨hA, hS, hW, hG⟩ := nIdxsCopyW_get (n - 1) _ _ _ _ _ hcp
+    (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
+    (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
+  rw [hIW] at hS hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]) hW)
+  have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
+    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by
+    rw [UInt64.toNat_add]; simp [hll]; omega
+  refine ⟨by rw [hk], ?_, ?_, hfr, ?_⟩
+  · rw [hk]
+    have hxs : bs.nIdxs.length = l := by simp [BlockShape.nIdxs, hlen]
+    have := decNL_of_get m2 bs.nIdxs q.toNat (fun j hj => by
+      have hj' : j < l := by omega
+      obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
+      obtain ⟨-, hnI, -⟩ := decMS_some hy
+      have hGj := hG (q.toNat + j)
+      rw [if_pos (by rw [hll]; omega)] at hGj
+      have e2 : q.toNat + j - q.toNat = j := by omega
+      rw [e2, hoo] at hGj
+      obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+      have hvb := hptr o l j v ho hl hj' hv
+      rw [hv'] at hGj
+      obtain ⟨hn', hnb⟩ := iwN_rdW hnI (by omega)
+      have e4 : UInt64.ofNat v + 1 = UInt64.ofNat (v + 1) := by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+      rw [e4, hn'] at hGj
+      simp only [iwN, nat?, iwA]
+      rw [hGj]
+      have hy' : bs.members[j]'(by omega) = y := by
+        simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget
+      simp [BlockShape.nIdxs, List.getElem_map, hy', Nat.mod_eq_of_lt hnb])
+    rw [hxs] at this
+    exact this
+  · refine iwGrow_of_frame hfr (N := UInt64.ofNat l) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq, hll]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hG, if_neg (by omega)]
+  · simp only [iwTop, htop, hsum, hk]
+
+
+/-- **`block_shape_n_idxs` is `BlockShape.nIdxs`**: the new `IW` slice holds the members' index counts. -/
+@[refines ConRon.Arena.BlockShape.nIdxs]
+theorem blockShapeNIdxs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "n_idxs_copy" = some nIdxsCopy)
+    (hp : p.lookup "block_shape_n_idxs" = some blockShapeNIdxs) (n : Nat) (s₀ : St) (q : Word)
+    (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs) (hb : q.toNat + 9 < 2 ^ 64)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size)
+    (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l →
+      o + l ≤ iwTop s₀.mem)
+    (hptr : ∀ o l j v, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → j < l →
+      iwN s₀.mem (o + j) = some v → v + 1 < iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_n_idxs" [q]
+    ⦃fun r s' => r = [rdW (s₀.mem.arr64 CTL) 200, UInt64.ofNat bs.k] ∧
+      decNL s'.mem (rdW (s₀.mem.arr64 CTL) 200).toNat bs.k = some bs.nIdxs ∧
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
+      (rdW (s₀.mem.arr64 CTL) 200).toNat + bs.k = iwTop s'.mem; ⊤⦄ := by
+  refine triple_post (blockShapeNIdxs_spec p ha hc hp n s₀ q) ?_
+  intro r s' ⟨_, h⟩
+  exact nIdxsW_dec h hsz hcl hq hb hsrc hptr
+
 
 end L.Ind
