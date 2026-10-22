@@ -428,16 +428,14 @@ recursor's generated type, pairwise with `cvs` and `cs` (stops once `rcs` runs o
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:549-559 ConRon.Arena.classRecTysOk
 @[l_impl ConRon.Arena.classRecTysOk]
 def classRecTysOkL : FunDecl := lfn (vis, g, k, rcsOff, rcsLen, cvsOff, cvsLen, csOff, csLen)
-    locals (q, j, x) {
-  q := call iw_alloc(rcsLen);
-  j := 0;
-  while j < rcsLen {
-    if cvsLen <= j || csLen <= j { abort };
-    x := call class_rec_ty_ok(vis, g, k, IW.u64[rcsOff + j], IW.u64[cvsOff + j], IW.u64[csOff + j]);
-    IW.u64[q + j] := x;
-    j += 1
-  };
-  return (q, rcsLen)
+    locals (x, o, l, o2, l2) {
+  if rcsLen == 0 { return (0, 0) };
+  if cvsLen == 0 || csLen == 0 { abort };
+  x := call class_rec_ty_ok(vis, g, k, IW.u64[rcsOff], IW.u64[cvsOff], IW.u64[csOff]);
+  (o, l) := call class_rec_tys_ok(vis, g, k, rcsOff + 1, rcsLen - 1, cvsOff + 1, cvsLen - 1, csOff + 1,
+    csLen - 1);
+  (o2, l2) := call sl_cons(x, o, l);
+  return (o2, l2)
 }
 
 /-! ## `classRuleOk`, `classRulesOk`, `classRecsRulesOk` -/
