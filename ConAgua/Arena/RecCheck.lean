@@ -133,15 +133,13 @@ def targetAbs : FunDecl := lfn (no, nl, lvls, ho, hl, e) locals (z, r) {
 /-- **`target_holes`**: the rule frame's holes, `fvar (base + j)` at the former's type, in
 member order. -/
 @[l_impl ConRon.Arena.targetHoles]
-def targetHoles : FunDecl := lfn (tyo, tyl, base) locals (q, j, v) {
-  q := call iw_alloc(tyl);
-  j := 0;
-  while j < tyl {
-    v := call intern_fvar(base + j, IW.u64[tyo + j]);
-    IW.u64[q + j] := v;
-    j += 1
-  };
-  return (q, tyl)
+def targetHoles : FunDecl := lfn (tyo, tyl, base) locals (v, ro, rl, qo, ql) {
+  if tyl == 0 { return (0, 0) };
+  v := call intern_fvar(base, IW.u64[tyo]);
+  if 4294967296 <= v { abort };
+  (ro, rl) := call target_holes(tyo + 1, tyl - 1, base + 1);
+  (qo, ql) := call sl_cons(v, ro, rl);
+  return (qo, ql)
 }
 
 /-! ## The major -/

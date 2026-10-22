@@ -442,4 +442,179 @@ theorem abstractPrefixList_refines (p : Prog) (hap : p.lookup "abstract_prefix" 
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.abstractPrefixList rP.toNat ds) a₀ a' xs hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
+
+/-! ## `target_holes` (loop rewritten as recursion: first hole, the rest, `sl_cons`) -/
+
+mutual
+/-- **The model of `target_holes`.** -/
+def thW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, tyo, tyl, base =>
+    if tyl = 0 then some ([0, 0], m)
+    else thK1 n tyo tyl base (fvinternW m base (rdW (m.arr64 IW) tyo))
+
+/-- After the first interning (guarded). -/
+def thK1 (n : Nat) (tyo tyl base : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (v, m1) =>
+    if 4294967296 ≤ v then none
+    else thK2 n v (thW n m1 (tyo + 1) (tyl - 1) (base + 1))
+
+/-- After the recursive call: `sl_cons`. -/
+def thK2 (n : Nat) (v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => thK3 (consW n m2 v (r.headD 0) (r.tail.headD 0))
+
+/-- After `sl_cons`. -/
+def thK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) => some ([r.headD 0, r.tail.headD 0], m3)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 m3 : Mem) (tyo tyl base v : Word) (r : List Word)
+theorem thW_nil (h : tyl = 0) : thW (n + 1) m tyo tyl base = some ([0, 0], m) := by simp [thW, h]
+theorem thW_cons (h : tyl ≠ 0) :
+    thW (n + 1) m tyo tyl base = thK1 n tyo tyl base (fvinternW m base (rdW (m.arr64 IW) tyo)) := by
+  simp [thW, h]
+theorem thK1_big (h : 4294967296 ≤ v) : thK1 n tyo tyl base (some (v, m1)) = none := by
+  rw [thK1]; simp [h]
+theorem thK1_ok (h : ¬ 4294967296 ≤ v) : thK1 n tyo tyl base (some (v, m1)) =
+    thK2 n v (thW n m1 (tyo + 1) (tyl - 1) (base + 1)) := by
+  rw [thK1]; simp [h]
+theorem thK2_some : thK2 n v (some (r, m2)) = thK3 (consW n m2 v (r.headD 0) (r.tail.headD 0)) := by
+  rw [thK2]
+theorem thK3_some : thK3 (some (r, m3)) = some ([r.headD 0, r.tail.headD 0], m3) := by rw [thK3]
+end arms
+
+grind_pattern [ind_grind] thW_nil => thW (n + 1) m tyo tyl base
+grind_pattern [ind_grind] thW_cons => thW (n + 1) m tyo tyl base
+grind_pattern [ind_grind] thK1_big => thK1 n tyo tyl base (some (v, m1))
+grind_pattern [ind_grind] thK1_ok => thK1 n tyo tyl base (some (v, m1))
+grind_pattern [ind_grind] thK2_some => thK2 n v (some (r, m2))
+grind_pattern [ind_grind] thK3_some => thK3 (some (r, m3))
+
+theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
+    (hfp : p.lookup "fvar_push" = some fvarPush) (hif : p.lookup "intern_fvar" = some internFVar)
+    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hsc : p.lookup "sl_cons" = some slCons)
+    (hp : p.lookup "target_holes" = some targetHoles) (n : Nat) :
+    ∀ (s₀ : St) (tyo tyl base : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_holes" [tyo, tyl, base]
+    ⦃fun r s' => LocEq s' s₀ ∧ thW n s₀.mem tyo tyl base = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ tyo tyl base; rw [invoke_eq _ hp]; simp only [callFn, targetHoles]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ tyo tyl base
+    rw [invoke_eq _ hp]
+    simp only [callFn, targetHoles]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        internFVar_spec p hff hfp hif n, slCons_specW p ha hc hsc n, ih] <;>
+      finish (gen := 20)
+
+
+theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (tyo tyl base : Word) (r : List Word) (tys : List EIdx),
+    thW n m tyo tyl base = some (r, m') → StageR dn vis fe m a →
+    decHL m tyo.toNat tyl.toNat = some tys → tyo.toNat + tyl.toNat < 2 ^ 64 →
+    tyo.toNat + tyl.toNat ≤ iwTop m → base.toNat + tyl.toNat < 2 ^ 64 →
+    ∃ xs a', (ConRon.Arena.targetHoles tys base.toNat).run a = .ok (xs, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
+  induction n with
+  | zero => intro m m' a tyo tyl base r tys h; simp [thW] at h
+  | succ n ih =>
+    intro m m' a tyo tyl base r tys h hS htys hb hbt hbase
+    by_cases htyl : tyl = 0
+    · rw [thW_nil n m tyo tyl base htyl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hz : tyl.toNat = 0 := by rw [htyl]; rfl
+      rw [hz] at htys
+      simp [decHL, hslice?] at htys
+      subst htys
+      refine ⟨[], a, rfl, hS, IWGrow.refl m, by simp [decHL, hslice?], by simp⟩
+    · rw [thW_cons n m tyo tyl base htyl] at h
+      have hpos : 1 ≤ tyl.toNat := by
+        rcases Nat.eq_zero_or_pos tyl.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) htyl
+        · omega
+      obtain ⟨c1, hc1⟩ : ∃ c1, tyl.toNat = c1 + 1 := ⟨tyl.toNat - 1, by omega⟩
+      rw [hc1] at htys
+      obtain ⟨ty, tys', rfl, htys', hty⟩ := decHL_cons htys
+      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hty (by omega)
+      rw [UInt64.ofNat_toNat] at hw1
+      have htyl1 : (tyl - 1).toNat = c1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+      have htyo1 : (tyo + 1).toNat = tyo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hbase1 : (base + 1).toNat = base.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [hw1] at h
+      cases hf : fvinternW m base w with
+      | none => rw [hf] at h; simp [thK1] at h
+      | some vm1 =>
+        obtain ⟨v, m1⟩ := vm1
+        rw [hf] at h
+        by_cases hv : 4294967296 ≤ v
+        · rw [thK1_big n m1 tyo tyl base v hv] at h; simp at h
+        rw [thK1_ok n m1 tyo tyl base v hv] at h
+        have hv32 : v.toNat < 2 ^ 32 := by
+          have : ¬ (4294967296 : Nat) ≤ v.toNat := hv
+          omega
+        obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS base w hw2 hf
+        cases hr : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with
+        | none => rw [hr] at h; simp [thK2] at h
+        | some rm =>
+          obtain ⟨r2, m2⟩ := rm
+          rw [hr, thK2_some] at h
+          have htys1 : decHL m1 (tyo + 1).toNat (tyl - 1).toNat = some tys' := by
+            rw [htyo1, htyl1, decHL_grow hg1 (by omega)]; exact htys'
+          obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (tyo + 1) (tyl - 1) (base + 1) r2 tys' hr hS1
+            htys1 (by rw [htyo1, htyl1]; omega) (by rw [htyo1, htyl1]; have := hg1.1; omega)
+            (by rw [hbase1, htyl1]; omega)
+          cases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with
+          | none => rw [hc] at h; simp [thK3] at h
+          | some r3m =>
+            obtain ⟨r3, m3⟩ := r3m
+            rw [hc, thK3_some] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hv32 hd2
+            refine ⟨decE v :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3, by simpa using Nat.le_of_eq ht3⟩
+            rw [hbase1] at hrun2
+            simp only [ConRon.Arena.targetHoles, ConRon.Arena.internFVarE, StateT.run_bind]
+            rw [← hw3, show (decI w : EIdx) = decE w from rfl]
+            rw [hrun1]
+            simp only [bind, Except.bind]
+            rw [hrun2]
+            simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
+            rfl
+
+
+/-- **`target_holes` refines `targetHoles`** (through master's `intern_fvar`). -/
+@[refines ConRon.Arena.targetHoles]
+theorem targetHoles_refines (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
+    (hfp : p.lookup "fvar_push" = some fvarPush) (hif : p.lookup "intern_fvar" = some internFVar)
+    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hsc : p.lookup "sl_cons" = some slCons)
+    (hp : p.lookup "target_holes" = some targetHoles) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (tyo tyl base : Word)
+    (tys : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (htys : decHL s₀.mem tyo.toNat tyl.toNat = some tys) (hb : tyo.toNat + tyl.toNat < 2 ^ 64)
+    (hbt : tyo.toNat + tyl.toNat ≤ iwTop s₀.mem) (hbase : base.toNat + tyl.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_holes" [tyo, tyl, base]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetHoles tys base.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetHoles tys base.toNat) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
+        some (AM.res (ConRon.Arena.targetHoles tys base.toNat) a₀); ⊤⦄ := by
+  refine triple_post (targetHoles_spec p hff hfp hif hc ha hsc hp n s₀ tyo tyl base) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨xs, a', hrun, hS', hg, hd, -⟩ := thW_ok dn vis fe n _ _ a₀ tyo tyl base r tys hm hS htys hb hbt hbase
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.targetHoles tys base.toNat) a₀ a' xs hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
+
 end L.Ind
