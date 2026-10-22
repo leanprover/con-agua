@@ -614,6 +614,19 @@ def instSpineL : FunDecl := lfn (ao, an, t, e) locals (i) {
   return e
 }
 
+/-- The pin walk of `inst_spine_pins` (a named block, for the proofs). Each result is pushed (the top
+is raised) as soon as it is stored: the next iteration's callees may use the stack above the top,
+and the earlier results must lie below it. -/
+def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, rP, pvo, pvc, so, j, q, s) {
+  while j < pvc {
+    q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
+    s := call inst_spine(ao, rP, rP - 1, q);
+    SPN.u64[so + j] := s;
+    CTL.u64[136] := so + j + 1;
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (the nested rule's stored parameter
 pins, `instSpinePins`) — each pin level-instantiated (`inst_lp`) then spined over the leading
 `rP` arguments (`inst_spine`), pushed in order. -/
@@ -624,13 +637,7 @@ def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, rP, pvo, pvc) locals (so, j
   if len(SPN.u64) < so { abort };
   if len(SPN.u64) - so < pvc { abort };
   j := 0;
-  while j < pvc {
-    q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
-    s := call inst_spine(ao, rP, rP - 1, q);
-    SPN.u64[so + j] := s;
-    j += 1
-  };
-  CTL.u64[136] := so + pvc;
+  ⟪instSpinePinsLoop⟫;
   return (so, pvc)
 }
 
