@@ -12,7 +12,7 @@ open ConRon.Arena
 
 namespace L.Arena
 
-open L.Front (DECL DLP trunc)
+open L.Front (DECL DLP trunc decCIs IndDeclAt dw)
 open L.Ind (erAllocW erAllocMem erTop)
 
 /-! ## `EREC` writers -/
@@ -532,5 +532,98 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLe
           apply UInt64.toNat_inj.mp; have := congrArg UInt64.toNat h0; rw [h11] at this; simp at this ⊢; omega)), hb⟩)
     · rw [hW4.2.2.2 _ (by omega) (by omega), hE3]; exact hl j hj
     · rw [hG4, if_pos (by omega), Nat.add_sub_cancel_left, hP3]
+
+/-! ## `ind_copy_go` -/
+
+/-- **`ind_copy_go(o, bo, bl)` copies a front block**: the slots `[o, o + bl)` and fresh records
+above the old top written, and in every array agreeing with the result from `o` to the new top
+the slots decode (`decCIs`) to the block. -/
+theorem icgW_ok {t : Nat} {dn0 dn : NIdx → Option ConLeche.Name} (n : Nat) :
+    ∀ (m m' : Mem) (o bo bl : Word) (block : List IConstantInfo), icgW n m o bo bl = some m' →
+      decCIs (trunc (m.arr64 DLP) t) dn0 bo.toNat bl.toNat = some block → FrontBlock block →
+      (m.arr64 DLP).size < 2 ^ 63 → 129 < (m.arr64 CTL).size →
+      (m.arr64 EREC).size < 2 ^ 64 → erTop m ≤ (m.arr64 EREC).size →
+      o.toNat + bl.toNat ≤ erTop m →
+      EW (fun i => (o.toNat ≤ i ∧ i < o.toNat + bl.toNat) ∨ erTop m ≤ i) m m' ∧
+      ∀ B : Array Word, (∀ i, o.toNat ≤ i → i < erTop m' → B[i]? = (m'.arr64 EREC)[i]?) →
+        decCIs B dn o.toNat bl.toNat = some block := by
+  induction n with
+  | zero => intro m m' o bo bl block h; simp [icgW] at h
+  | succ n ih =>
+  intro m m' o bo bl block h hdec hFB hP hC hE64 hr0 hob
+  by_cases hl : bl = 0
+  · rw [icgW_nil n m o bo bl hl] at h
+    cases h; subst hl
+    simp only [UInt64.toNat_zero, decCIs_zero] at hdec
+    cases hdec
+    exact ⟨EW.refl _ _ hr0, fun _ _ => rfl⟩
+  rw [icgW_step n m o bo bl hl] at h
+  have hl0 : bl.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+  have hl1 : (bl - 1).toNat = bl.toNat - 1 := by
+    have := bl.toNat_lt; rw [UInt64.toNat_sub]; simp; omega
+  obtain ⟨k, hk⟩ : ∃ k, bl.toNat = k + 1 := ⟨bl.toNat - 1, by omega⟩
+  rw [hk, decCIs_succ] at hdec
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
+  obtain ⟨c, ⟨v, hv, hc⟩, cs, hcs, rfl⟩ := hdec
+  obtain ⟨w, hw, rfl⟩ : ∃ w, (trunc (m.arr64 DLP) t)[bo.toNat]? = some w ∧ w.toNat = v := by
+    simpa [nat?] using hv
+  have hFc : FrontCI c := hFB c (by simp)
+  have hbo : bo.toNat ≠ 0 := fun h0 => by
+    rw [h0] at hw
+    have := trunc_get_zero hw; subst this
+    obtain ⟨kk, hkk, hk345⟩ := decCI_front_kind hc hFc
+    simp only [nat?, Option.map_eq_some_iff, UInt64.toNat_zero] at hkk
+    obtain ⟨a, ha, rfl⟩ := hkk
+    rw [hw] at ha; cases ha; simp at hk345
+  have hrd : rdW (m.arr64 DLP) bo = w := rdW_of_trunc hw hbo rfl
+  have hblt := trunc_lt hw hbo
+  rw [hrd] at h
+  cases hi : ircW n m w with
+  | none => rw [hi] at h; cases h
+  | some x =>
+  obtain ⟨p, m1⟩ := x
+  rw [hi, icgK_some] at h
+  obtain ⟨hW1, hp1, hR1⟩ := ircW_ok (dn := dn) hi hc hFc hP hC hE64
+  have hm1 := hW1.2.1
+  have hWs := EW.set (x := o) (v := p) hW1.2.2.1
+  have ho1 : (o + 1).toNat = o.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; have := hW1.2.2.1; omega
+  have hbo1 : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have ht2 : erTop (m1.set64 EREC o p) = erTop m1 := by
+    simp only [erTop, (MemFrame.set64 m1 EREC (by decide) o p).2.1 129 (by simp)]
+  have hs2 : ((m1.set64 EREC o p).arr64 EREC).size = (m.arr64 EREC).size := by
+    rw [size_set64, hW1.esize]
+  have hP2 : (m1.set64 EREC o p).arr64 DLP = m.arr64 DLP := by
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hW1.dlp]
+  obtain ⟨hW3, hB3⟩ := ih (m1.set64 EREC o p) m' (o + 1) (bo + 1) (bl - 1) cs h
+    (by rw [hP2, hbo1, hl1, hk]; exact hcs) (fun c' hc' => hFB c' (by simp [hc']))
+    (by rw [hP2]; exact hP) (by rw [size_set64, hW1.csize]; exact hC) (by rw [hs2]; exact hE64)
+    (by rw [ht2, hs2, ← hW1.esize]; exact hW1.2.2.1) (by rw [ho1, hl1, ht2]; omega)
+  have ht3 := hW3.2.1
+  rw [ht2] at ht3
+  refine ⟨((hW1.mono (fun i hi => Or.inr hi)).trans hWs (fun i _ hi => by left; omega)).trans hW3
+    (fun i _ hi => by rw [ho1, hl1, ht2] at hi; omega), fun B hB => ?_⟩
+  rw [hk, decCIs_succ]
+  -- the slot
+  have hslot : B[o.toNat]? = some p := by
+    rw [hB _ (Nat.le_refl _) (by omega), hW3.2.2.2 _ (by rw [ht2]; omega) (by rw [ho1]; omega)]
+    exact set64_get_same (by rw [hW1.esize]; omega)
+  have hc' : decCI B dn p.toNat = some c := hR1 B fun i h1 h2 => by
+    rw [hB i (by omega) (by omega), hW3.2.2.2 _ (by rw [ht2]; omega) (by rw [ho1, hl1, ht2]; omega),
+      set64_get_ne (by omega)]
+  have hcs' := hB3 B (fun i h1 h2 => hB i (by rw [ho1] at h1; omega) h2)
+  rw [ho1, hl1, hk] at hcs'
+  simp only [nat?, hslot, Option.map_some, bind, Option.bind_some, hc', Nat.add_sub_cancel] at hcs' ⊢
+  rw [hcs']; rfl
+
+/-! ## `ind_block_to_erec` -/
+
+theorem erecP_get_lt {m : Mem} {j : Nat} (h : j < erTop m) : (erecP m)[j]? = (m.arr64 EREC)[j]? := by
+  simp only [erecP, Array.getElem?_extract]
+  split
+  · simp
+  · rename_i h'
+    simp only [erTop, erecTop] at h h' ⊢
+    rw [Array.getElem?_eq_none (by omega)]
 
 end L.Arena
