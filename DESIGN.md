@@ -5492,12 +5492,46 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 * `DeclArms.lean` takes 79 s user (`lake env lean`; the `#guard` runs and the closure check),
   the others 8.4 s and 3.7 s.
 
+### `install_step_go` refines `installStepGo` (`DeclStepGo.lean`, `DeclHeader.lean`, `DeclRec.lean`)
+
+**`installStepGo_spec` is proved** (`@[refines ConRon.Arena.installStepGo]`) through one new
+`sorry`, `checkDecl_loop` (`check_decl` at the loop's relation: its arms are this lane's
+`DeclArms*` and lane `induct`'s code, unproved), and the stubs.
+* L change: the three value arms are one function `install_value(i, vis, ck, vk)` (constant
+  record kind, value-group kind), so its call closure is the arm's alone and its write set comes
+  from the text (`ivProg`, `ivFns`: 25 functions, `ivProg_closed` by `decide +kernel`); `pin_in`
+  now aborts on an empty pin table (the twin's pin reads raise `.internal` there; before, L went on
+  with `0`s — a refinement gap the proof found).
+* `install_step_go`'s model calls `check_decl` and `install_value` through `callW` (lane `whnf`'s
+  pattern: the callee's run as a function of the memory), so their *run-level* specs at `LoopR`
+  (frames included) apply to the model's runs (`triple_of_callW`); its `vcgen` spec is one
+  `finish`. The relational lemma `istgW_ok` is one case per record kind (`DeclAt` fixes the kind
+  word); the pinned-name tests are `pin_in` against the twin's `natOpNames ++ natDivModNames` /
+  `reduceOpNames` (`natOpNames_run` …: the twin's lists are `PINS[15‥29]`/`PINS[44‥45]`,
+  `contains_pins`: `contains` is word equality on handle words).
+* `install_value`: `ivW` (model; `env_push` also through `callW`, because its spec needs the name
+  word's bound, which only the relational lemma has), `ivW_gen`/`ivW_ok` against the arm's twin
+  `ivT` (the header, the guards but for a theorem, the push, the group), `installValue_loop`
+  (model + text frame + `LoopR.of_step`).
+* Helpers: `decls2-header` (`DeclHeader.lean`: `install_header` refines `installHeader`,
+  `@[refines]`, models of `env_find`/`reserved_contains`; 508 lines, 5.8 s) and `decls2-rec`
+  (`DeclRec.lean`: `erec_ci`, `erec_vg`, `env_push` models, specs and `_ok` lemmas, no `sorry`;
+  672 lines, 9.1 s). `DeclStepGo.lean` 893 lines, 6.3 s.
+* For ≈ 120 L lines (`install_step_go`, `install_value`, `install_header`, `erec_ci`, `erec_vg`,
+  `dlp_copy`, `pin_in`, `env_push`'s model): ≈ 2.1k proof lines, ≈ 17 per L line. Every `vcgen`
+  spec is one `finish (gen := 20)` and passed at the first or second attempt; the work is in the
+  relational lemmas (case splits, `ArrExt`/`IWGrow` bookkeeping across the record pool).
+* The relation behind it all is `StageR` at the callee and `LoopR.of_step` around it: the step's
+  callees never see `PEND`/`DECL`/`DLP`, the text says they do not write them.
+
 ### `sorry`s (lane `decls2`)
 
 * `DeclCvg.lean` `lvlEqCStage_spec`: `lvl_eq_c` under `StageR`. Lane `whnf`'s `lvlEqC_refines`
   proves it under `CoreS`, whose readback-cache invariants and `NStoreWF` `StageR` lacks (the same
   gap as lane `indproofs`' `lvlEqStub_spec`); closes when `StageR` carries `CoreS`'s extras.
-* `DeclStepSpec.lean` `installStepGo_spec` (unchanged, in progress).
+* `DeclStepGo.lean` `checkDecl_loop`: `check_decl` at the loop's relation (the arms' proofs;
+  for kind `6` also the front's `DeclAt` for inductive records and lane `induct`'s
+  `check_ind_decl`).
 
 Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
 **130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
@@ -5547,3 +5581,8 @@ said otherwise.
   proof step (no pattern). No statement changed.
 - **Before/after.** `natShr_spec` 60.9 s → no profiler step over 1 s; the slow goal 52 s → < 2 s;
   module 111 s → 25 s (Lake, contended); grind in the whole file 7.9 s.
+
+Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written** (`installStepGo`,
+`installHeader`, `installValueGuards`, `checkValueGroup` now `sorry` — through stubs only); bad
+links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
+`romExprL`/`internAllPinsL` at the program's ROM).

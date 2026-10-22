@@ -43,9 +43,11 @@ open L.Ind (IW)
 
 /-! ## Pinned names -/
 
-/-- `pin_in(x, k, hi)`: `1` if `x` is one of `PINS[k‥hi)`. -/
+/-- `pin_in(x, k, hi)`: `1` if `x` is one of `PINS[k‥hi)`; aborts on an empty pin table, where the
+twin's pin reads raise `.internal`. -/
 -- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
 def pinIn : FunDecl := lfn (x, k, hi) locals (r) {
+  if PINS.u64[0] == 0 { abort };
   if hi <= k { return 0 };
   if PINS.u64[k] == x { return 1 };
   r := call pin_in(x, k + 1, hi);
