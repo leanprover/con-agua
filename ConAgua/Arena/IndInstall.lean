@@ -234,19 +234,17 @@ def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
 }
 
 /-- `check_block_teles(vis, nP, ms.off, ms.len)`: the members' type formers, in block order, each
-a pointer to `[cvTa, s]`. -/
+a pointer to `[cvTa, s]`; recursion as the twin's, each record consed onto the rest's slice
+(`sl_cons`, a copy per element: docs/deviations.md D18). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:133-142 ConRon.Arena.checkBlockTeles
 @[l_impl ConRon.Arena.checkBlockTeles]
-def checkBlockTeles : FunDecl := lfn (vis, nP, msOff, msLen) locals (q, j, cvTa, s, rp) {
-  q := call iw_alloc(msLen);
-  j := 0;
-  while j < msLen {
-    (cvTa, s) := call check_block_tele(vis, nP, IW.u64[msOff + j]);
-    rp := call rec2(cvTa, s);
-    IW.u64[q + j] := rp;
-    j += 1
-  };
-  return (q, msLen)
+def checkBlockTeles : FunDecl := lfn (vis, nP, msOff, msLen) locals (cvTa, s, rp, ro, rl, o, l) {
+  if msLen == 0 { return (0, 0) };
+  (cvTa, s) := call check_block_tele(vis, nP, IW.u64[msOff]);
+  rp := call rec2(cvTa, s);
+  (ro, rl) := call check_block_teles(vis, nP, msOff + 1, msLen - 1);
+  (o, l) := call sl_cons(rp, ro, rl);
+  return (o, l)
 }
 
 /-- `check_block_doms_at(vis, off, fvs.off, fvs.len, doms.off, doms.len, j)`: binder `j - 1`'s
