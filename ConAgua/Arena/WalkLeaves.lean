@@ -20,12 +20,12 @@ function with a walk-local map:
   `(idx, ty)` per leaf in push order, so `acc` is its first `k` entries read from the end; `fl_go`
   returns the new count. A push past the array's capacity aborts.
 * `leaf_mem(k, x, y)`: `leafMem acc x y`, scanning `LVS` from entry `k - 1` down (`acc`'s order).
-* `ls_go(h, k, c)`: `leavesSubGo` — the memoized subset test against the first `k` leaves (memo
+* `lsb_go(h, k, c)`: `leavesSubGo` — the memoized subset test against the first `k` leaves (memo
   table `LSM`, array 153, `CTL[156]`/`CTL[157]`, key `(h, 0)`), the arms short-circuiting as
   `leavesSubArm*`.
 
 `leaf_guard(fab, base)`: the `fvar`-range cutoff on `fab`, then clear `FLM`, `fl_go(base, 0, 4·10⁹)`,
-clear `LSM`, `ls_go(fab, k, 4·10⁹)` (`coreWalkFuel`, the twin's `fuel`).
+clear `LSM`, `lsb_go(fab, k, 4·10⁹)` (`coreWalkFuel`, the twin's `fuel`).
 -/
 
 set_option experimental.vcgen true
@@ -223,6 +223,7 @@ grind_pattern [arena_grind] flNodeW_forall => flNodeW (n + 1) m h k c
 grind_pattern [arena_grind] flNodeW_proj => flNodeW (n + 1) m h k c
 grind_pattern [arena_grind] flNodeW_let => flNodeW (n + 1) m h k c
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1051-1078 ConRon.Arena.fvarLeavesGo -/
 @[l_impl ConRon.Arena.fvarLeavesGo]
 def flGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, u) {
   if c == 0 { abort };
@@ -235,6 +236,10 @@ def flGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, u) {
   return x
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1051-1078 ConRon.Arena.fvarLeavesGo
+con-ron: ConRon/Arena/ExprOps.lean:1080-1087 ConRon.Arena.fvarLeavesGoArmApp
+con-ron: ConRon/Arena/ExprOps.lean:1089-1096 ConRon.Arena.fvarLeavesGoArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1098-1106 ConRon.Arena.fvarLeavesGoArmLet -/
 @[l_impl ConRon.Arena.fvarLeavesGo ConRon.Arena.fvarLeavesGoArmApp ConRon.Arena.fvarLeavesGoArmBind
   ConRon.Arena.fvarLeavesGoArmLet]
 def flNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
@@ -380,6 +385,7 @@ def lmLoop : Stmt := lblk (k, x, y, j) {
   }
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1144-1151 ConRon.Arena.leafMem -/
 @[l_impl ConRon.Arena.leafMem]
 def leafMemL : FunDecl := lfn (k, x, y) locals (j) {
   j := k;
@@ -424,7 +430,7 @@ theorem leafMem_spec (n : Nat) (s₀ : St) (k x y : Word) :
 
 end lm
 
-/-! ## `ls_go`: every leaf of `fab` among the first `k` leaves -/
+/-! ## `lsb_go`: every leaf of `fab` among the first `k` leaves -/
 
 /-- Record the result `r` at `h` and return it. -/
 def lsbSet (m : Mem) (h r : Word) : Option (Word × Mem) :=
@@ -433,7 +439,7 @@ def lsbSet (m : Mem) (h r : Word) : Option (Word × Mem) :=
   | some m' => some (r, m')
 
 mutual
-/-- **The model of `ls_go`**. -/
+/-- **The model of `lsb_go`**. -/
 def lsbW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, h, k, c =>
@@ -447,7 +453,7 @@ def lsbW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
       | none => none
       | some (r, m₁) => lsbSet m₁ h r
 
-/-- **The model of `ls_node`**. -/
+/-- **The model of `lsb_node`**. -/
 def lsbNodeW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, h, k, c =>
@@ -626,19 +632,24 @@ grind_pattern [arena_grind] lsbNodeW_forall => lsbNodeW (n + 1) m h k c
 grind_pattern [arena_grind] lsbNodeW_proj => lsbNodeW (n + 1) m h k c
 grind_pattern [arena_grind] lsbNodeW_let => lsbNodeW (n + 1) m h k c
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1155-1183 ConRon.Arena.leavesSubGo -/
 @[l_impl ConRon.Arena.leavesSubGo]
 def lsbGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
   (b, x) := call der_b(h);
   if x == 0 { return 1 };
-  (fd, j, e) := call ls_find(h, 0);
+  (fd, j, e) := call lsb_find(h, 0);
   if fd != 0 { x := LSM.u64[j * 4 + 3]; if x == 0 { return 0 }; return 1 };
-  r := call ls_node(h, k, c - 1);
-  (fd, j, e) := call ls_find(h, 0);
-  u := call ls_put(h, 0, r, fd, j);
+  r := call lsb_node(h, k, c - 1);
+  (fd, j, e) := call lsb_find(h, 0);
+  u := call lsb_put(h, 0, r, fd, j);
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1155-1183 ConRon.Arena.leavesSubGo
+con-ron: ConRon/Arena/ExprOps.lean:1185-1191 ConRon.Arena.leavesSubArmApp
+con-ron: ConRon/Arena/ExprOps.lean:1193-1199 ConRon.Arena.leavesSubArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1201-1211 ConRon.Arena.leavesSubArmLet -/
 @[l_impl ConRon.Arena.leavesSubGo ConRon.Arena.leavesSubArmApp ConRon.Arena.leavesSubArmBind
   ConRon.Arena.leavesSubArmLet]
 def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
@@ -653,40 +664,40 @@ def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
     a := FVREC.u64[i * 4 + t * 2 + 1];
     x := call leaf_mem(k, f, a);
     if x == 0 { return 0 };
-    x := call ls_go(a, k, c);
+    x := call lsb_go(a, k, c);
     return x
   };
   if g == 4 {
     if CTL.u64[4 + t] <= i { abort };
     f := AREC.u64[i * 4 + t * 2];
     a := AREC.u64[i * 4 + t * 2 + 1];
-    x := call ls_go(f, k, c);
+    x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
-    x := call ls_go(a, k, c);
+    x := call lsb_go(a, k, c);
     return x
   };
   if g == 5 {
     if CTL.u64[28 + t] <= i { abort };
     f := LAREC.u64[i * 4 + t * 2];
     a := LAREC.u64[i * 4 + t * 2 + 1];
-    x := call ls_go(f, k, c);
+    x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
-    x := call ls_go(a, k, c);
+    x := call lsb_go(a, k, c);
     return x
   };
   if g == 6 {
     if CTL.u64[30 + t] <= i { abort };
     f := FAREC.u64[i * 4 + t * 2];
     a := FAREC.u64[i * 4 + t * 2 + 1];
-    x := call ls_go(f, k, c);
+    x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
-    x := call ls_go(a, k, c);
+    x := call lsb_go(a, k, c);
     return x
   };
   if g == 9 {
     if CTL.u64[32 + t] <= i { abort };
     f := PJREC.u64[i * 6 + t * 3 + 2];
-    x := call ls_go(f, k, c);
+    x := call lsb_go(f, k, c);
     return x
   };
   if g == 7 {
@@ -694,11 +705,11 @@ def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
     f := LEREC.u64[i * 6 + t * 3];
     a := LEREC.u64[i * 6 + t * 3 + 1];
     b := LEREC.u64[i * 6 + t * 3 + 2];
-    x := call ls_go(f, k, c);
+    x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
-    x := call ls_go(a, k, c);
+    x := call lsb_go(a, k, c);
     if x == 0 { return 0 };
-    x := call ls_go(b, k, c);
+    x := call lsb_go(b, k, c);
     return x
   };
   if g == 2 { if CTL.u64[16 + t] <= i { abort }; return 1 };
@@ -709,18 +720,18 @@ def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
 
 section lsgo
 variable (p : Prog) (hpd : p.lookup "der_b" = some derB)
-  (hpf : p.lookup "ls_find" = some (memoFindG lsbSch))
-  (hps : p.lookup "ls_put" = some (memoPutG lsbSch)) (hp : p.lookup "ls_go" = some lsbGo)
-  (hpn : p.lookup "ls_node" = some lsbNode) (hpm : p.lookup "leaf_mem" = some leafMemL)
+  (hpf : p.lookup "lsb_find" = some (memoFindG lsbSch))
+  (hps : p.lookup "lsb_put" = some (memoPutG lsbSch)) (hp : p.lookup "lsb_go" = some lsbGo)
+  (hpn : p.lookup "lsb_node" = some lsbNode) (hpm : p.lookup "leaf_mem" = some leafMemL)
 
 def LsbGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k c : Word),
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ls_go" [h, k, c]
+    invoke p (exec p n) "lsb_go" [h, k, c]
     ⦃fun r s' => LocEq s' s₀ ∧ lsbW n s₀.mem h k c = some (r.headD 0, s'.mem); ⊤⦄
 
 def LsbNodeSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k c : Word),
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ls_node" [h, k, c]
+    invoke p (exec p n) "lsb_node" [h, k, c]
     ⦃fun r s' => LocEq s' s₀ ∧ lsbNodeW n s₀.mem h k c = some (r.headD 0, s'.mem); ⊤⦄
 
 include hpd hpf hps hp in
@@ -783,14 +794,16 @@ grind_pattern [arena_grind] lgW_cut => lgW n m fab base
 grind_pattern [arena_grind] lgW_go => lgW n m fab base
 grind_pattern [arena_grind] lgK_some => lgK n fab (some (k, m₁))
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1245-1256 ConRon.Arena.leafGuard
+con-ron: ConRon/Arena/ExprOps.lean:1138-1142 ConRon.Arena.fvarLeavesFast -/
 @[l_impl ConRon.Arena.leafGuard ConRon.Arena.fvarLeavesFast]
 def leafGuardL : FunDecl := lfn (fab, base) locals (b, x, k, r, u) {
   (b, x) := call der_b(fab);
   if x == 0 { return 1 };
   u := call fl_clear();
   k := call fl_go(base, 0, 4000000000);
-  u := call ls_clear();
-  r := call ls_go(fab, k, 4000000000);
+  u := call lsb_clear();
+  r := call lsb_go(fab, k, 4000000000);
   return r
 }
 
@@ -802,11 +815,11 @@ structure LgProg (p : Prog) : Prop where
   flc : p.lookup "fl_clear" = some (memoClearG flSch)
   flgo : p.lookup "fl_go" = some flGo
   flnode : p.lookup "fl_node" = some flNode
-  lsf : p.lookup "ls_find" = some (memoFindG lsbSch)
-  lsp : p.lookup "ls_put" = some (memoPutG lsbSch)
-  lsc : p.lookup "ls_clear" = some (memoClearG lsbSch)
-  lsgo : p.lookup "ls_go" = some lsbGo
-  lsnode : p.lookup "ls_node" = some lsbNode
+  lsf : p.lookup "lsb_find" = some (memoFindG lsbSch)
+  lsp : p.lookup "lsb_put" = some (memoPutG lsbSch)
+  lsc : p.lookup "lsb_clear" = some (memoClearG lsbSch)
+  lsgo : p.lookup "lsb_go" = some lsbGo
+  lsnode : p.lookup "lsb_node" = some lsbNode
   lm : p.lookup "leaf_mem" = some leafMemL
   lg : p.lookup "leaf_guard" = some leafGuardL
 
@@ -829,8 +842,8 @@ theorem leafGuard_spec (p : Prog) (hp : LgProg p) (n : Nat) (s₀ : St) (fab bas
 def lgProg : Prog :=
   [("der_b", derB), ("fl_find", memoFindG flSch), ("fl_put", memoPutG flSch),
     ("fl_clear", memoClearG flSch), ("fl_go", flGo), ("fl_node", flNode),
-    ("ls_find", memoFindG lsbSch), ("ls_put", memoPutG lsbSch), ("ls_clear", memoClearG lsbSch),
-    ("ls_go", lsbGo), ("ls_node", lsbNode), ("leaf_mem", leafMemL), ("leaf_guard", leafGuardL)]
+    ("lsb_find", memoFindG lsbSch), ("lsb_put", memoPutG lsbSch), ("lsb_clear", memoClearG lsbSch),
+    ("lsb_go", lsbGo), ("lsb_node", lsbNode), ("leaf_mem", leafMemL), ("leaf_guard", leafGuardL)]
 
 theorem lgProg_ok : LgProg lgProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 

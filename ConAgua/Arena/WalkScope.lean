@@ -255,6 +255,7 @@ grind_pattern [arena_grind] wsNodeW_forall => wsNodeW (n + 1) m h d c
 grind_pattern [arena_grind] wsNodeW_proj => wsNodeW (n + 1) m h d c
 grind_pattern [arena_grind] wsNodeW_let => wsNodeW (n + 1) m h d c
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:953-981 ConRon.Arena.wscopedBGo -/
 @[l_impl ConRon.Arena.wscopedBGo]
 def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
@@ -268,6 +269,10 @@ def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:953-981 ConRon.Arena.wscopedBGo
+con-ron: ConRon/Arena/ExprOps.lean:983-989 ConRon.Arena.wscopedBGoArmApp
+con-ron: ConRon/Arena/ExprOps.lean:991-998 ConRon.Arena.wscopedBGoArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1000-1010 ConRon.Arena.wscopedBGoArmLet -/
 @[l_impl ConRon.Arena.wscopedBGo ConRon.Arena.wscopedBGoArmApp ConRon.Arena.wscopedBGoArmBind
   ConRon.Arena.wscopedBGoArmLet]
 def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
@@ -396,6 +401,7 @@ theorem wsFastW_eq (n : Nat) (m : Mem) (d e : Word) (h0 : rdW (m.arr64 CTL) 152 
 
 grind_pattern [arena_grind] wsFastW_eq => wsFastW n m d e
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1043-1047 ConRon.Arena.wscopedBFast -/
 @[l_impl ConRon.Arena.wscopedBFast]
 def wscopedBFastL : FunDecl := lfn (d, e) locals (r, u) {
   u := call ws_clear();

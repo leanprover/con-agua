@@ -393,7 +393,7 @@ theorem flGoOK (n : Nat) : FlGoOK n ∧ FlNodeOK n := by
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ hb => by simp [flNodeW] at hb⟩
   | succ n ih => exact ⟨flGoOK_succ n ih.2, flNodeOK_succ n ih.1⟩
 
-/-! ## `ls_go` refines `leavesSubGo` -/
+/-! ## `lsb_go` refines `leavesSubGo` -/
 
 /-- The subset walk's frame. -/
 abbrev LsbFrame (m m' : Mem) : Prop := MemFrame [LSM] [156, 157] m m'

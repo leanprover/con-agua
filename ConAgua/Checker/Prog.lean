@@ -80,6 +80,8 @@ import ConAgua.Arena.Scratch
 import ConAgua.Arena.SortStore
 import ConAgua.Arena.Store
 import ConAgua.Arena.Walk
+import ConAgua.Arena.WalkLeaves
+import ConAgua.Arena.WalkScope
 import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.WhnfEntry
@@ -123,7 +125,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1507 functions, 35 of them stubs.
+1523 functions, 33 of them stubs.
 -/
 
 namespace L.Checker
@@ -131,7 +133,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
+def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's arrays (149; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -711,6 +713,11 @@ def checkerProg : Prog := [
   ("find_pinned_cv", L.Ind.findPinnedCv),
   ("find_rule", L.Arena.findRuleL),
   ("first_declaring", L.Checker.firstDeclaringL),
+  ("fl_clear", L.Arena.memoClearG L.Arena.flSch),
+  ("fl_find", L.Arena.memoFindG L.Arena.flSch),
+  ("fl_go", L.Arena.flGo),
+  ("fl_node", L.Arena.flNode),
+  ("fl_put", L.Arena.memoPutG L.Arena.flSch),
   ("fld_alloc", L.Front.Ind.fldAlloc),
   ("fld_put", L.Front.Ind.fldPut),
   ("flush_caches", L.Arena.flushCachesL),
@@ -953,6 +960,8 @@ def checkerProg : Prog := [
   ("lds_right", L.Arena.ldsRightL),
   ("lds_same", L.Arena.ldsSameL),
   ("lds_unfold2", L.Arena.ldsUnfold2L),
+  ("leaf_guard", L.Arena.leafGuardL),
+  ("leaf_mem", L.Arena.leafMemL),
   ("letE_find", L.Arena.letFind),
   ("letE_push", L.Arena.letPush),
   ("level_fresh", L.Front.levelFresh),
@@ -981,6 +990,11 @@ def checkerProg : Prog := [
   ("ls_node", L.Arena.lsNode),
   ("ls_push", L.Arena.lsPush),
   ("ls_put", L.Front.lsPut),
+  ("lsb_clear", L.Arena.memoClearG L.Arena.lsbSch),
+  ("lsb_find", L.Arena.memoFindG L.Arena.lsbSch),
+  ("lsb_go", L.Arena.lsbGo),
+  ("lsb_node", L.Arena.lsbNode),
+  ("lsb_put", L.Arena.memoPutG L.Arena.lsbSch),
   ("lsp_find", L.Arena.memoFindG (L.Front.spS L.Front.LID)),
   ("lsp_put", L.Arena.memoPutG (L.Front.spS L.Front.LID)),
   ("lsq_clear", L.Arena.memoClearG L.Arena.lsqSch),
@@ -1611,6 +1625,12 @@ def checkerProg : Prog := [
   ("wk_clear", L.Arena.memoClearG L.Arena.wkSch),
   ("wk_find", L.Arena.memoFindG L.Arena.wkSch),
   ("wk_put", L.Arena.memoPutG L.Arena.wkSch),
+  ("ws_clear", L.Arena.memoClearG L.Arena.wsSch),
+  ("ws_find", L.Arena.memoFindG L.Arena.wsSch),
+  ("ws_go", L.Arena.wsGo),
+  ("ws_node", L.Arena.wsNode),
+  ("ws_put", L.Arena.memoPutG L.Arena.wsSch),
+  ("wscoped_bfast", L.Arena.wscopedBFastL),
   ("zero_find", L.Arena.zeroFind),
   ("zero_push", L.Arena.zeroPush),
   ("pre_apply_any", preFn preTree (L.Front.applyAny)),
@@ -1778,7 +1798,6 @@ def checkerProg : Prog := [
   ("instantiate1_lift_fast", abortStub 4),
   ("intern_ls_iw", abortStub 2),
   ("is_proof_fast", abortStub 2),
-  ("leaf_guard", abortStub 2),
   ("lv_zero_caps", abortStub 2),
   ("name_rec", abortStub 1),
   ("name_rec_i", abortStub 2),
@@ -1795,8 +1814,7 @@ def checkerProg : Prog := [
   ("str_lit_ctor", abortStub 1),
   ("str_lit_supported", abortStub 1),
   ("strip_lams", abortStub 2),
-  ("strip_pis", abortStub 2),
-  ("wscoped_bfast", abortStub 2)]
+  ("strip_pis", abortStub 2)]
 
 /-- The table for the arrays the program names (`Prog.wfAuto`'s). -/
 def checkerTab : Tab := Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
