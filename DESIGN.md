@@ -6738,3 +6738,35 @@ stops at the stub `rom_basis_decls` (it aborted in `name_fresh` before).
 **For other lanes** (mechanical): `TblR (m.arr64 NID) t` → `TblR m NID t`; a frame proof
 `rw [hf.1 NID …]; exact h.names` → `h.names.frame hf (.inl rfl) (by simp [..., idArrs]) (by simp)`;
 `lkW_congr` takes a `TblSame` (`IExt.tbl`).
+
+### Landing 2: the deviations audit (`docs/deviations.md`), and a PLAN.md rule
+
+Every place where L deliberately does something else than its twin (beyond fuel and fixed
+capacities) is now a row of `docs/deviations.md`: where, what the twin does, what L does, the
+effect (completeness / performance / none), the owner, a proposed fix. Sources: this journal
+(grep for "for now", "aborts", "deviat", "simplif", "not represented", …), `docs/progress.md`'s
+partial refinements, the L code's comments, `docs/e2e.md`. First count: 17 open (5
+completeness, 5 performance, 7 none), 13 fixed (among them the id tables, landing 1, and
+`iota_rec_at`'s `lvls_eq`, fixed by lane `whnf2` meanwhile).
+
+The work queue, by priority:
+* **D1 (decls3): `and_pin_ok` has no `indDecl` arm.** The twin's `andPinOk` checks an inductive
+  block that names `And`/`And.intro`/`And.rec` against the pinned block; L reads the record's name
+  word (unset for kind-6 records) and answers "free". Harmless while the declaration loop never
+  sees an inductive record, a soundness gap as soon as it does (the front produces them since
+  indproofs2's landing 6). Must land before the loop accepts kind-6 records.
+* D4 (decls3): `check_div_mod_pin_loop` aborts inside an attempt where `orElseAttempt` recovers;
+  then D5 (integrate): load all three pin variants in the e2e harness.
+* D7 (indproofs2): `target_class_match` calls the uncached `lvls_eq`; call `lvls_eq_c`.
+* D2, D3, D6: exotic inputs (numbers past 18 digits, escaped `safety` strings, unusual pin data).
+* D8 (`tbl_fresh` probes where `IdTable.bound` tests `sparse.isEmpty`), D10‥D12 (append-only
+  pools, byte-per-word strings, no memo compaction): performance.
+
+Trivial fixes made here: stale comments that still described fixed deviations
+(`Front/Line.lean`'s header, `Front/ApplyExpr.lean`'s `strVal`/`natVal` note,
+`Arena/LevelEquiv.lean`'s "`lvlEqC` not represented"). Not touched, for the lanes editing them:
+`Arena/Prelude.lean:12` and `Arena/DeclArmsNat.lean:28,1073` still say the ROM has no `Nat`
+pin variant "for now" (lanes `integrate`, `decls3`).
+
+PLAN.md, process rules: a deviation gets its row in `docs/deviations.md` in the commit that
+introduces it; the coordinator reviews the list at each batch of landings.

@@ -15,9 +15,9 @@ import ConAgua.Front.RunModel
 name or level line, reads its fields (`rec_line_loop`, `ConAgua.Front.Fields`) and applies it to
 the parse state (`apply_nstr`, `apply_nnum`, `apply_level`, `ConAgua.Front.Apply`). It returns
 `(0, 0)` for a line that does not scan, `(1, next)` otherwise (`next` as `scan_line`'s). A blank
-line and the `meta` header change nothing. An expression or declaration line, a number of more
-than 18 digits, a string with an escape, a full pool or table abort: the frontend does not apply
-them yet.
+line and the `meta` header change nothing. Expression, declaration and inductive lines go to
+`apply_any`/`apply_dline` (below). A number of more than 18 digits aborts
+(`docs/deviations.md`, D2), as does a full pool or table.
 
 `frontLine_refines`: when `front_line(i)` returns `(1, next)`, con-leche's `scanLineFwd b i` is
 `.ok r next'` with `next'` the word `next`, and con-ron's `applyLine st r` runs, its state is
