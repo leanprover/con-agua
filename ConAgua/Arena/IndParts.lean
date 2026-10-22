@@ -215,7 +215,7 @@ built) with `resSort := s` and `isProp` recomputed (`lvlEq? s zeroLevel`). -/
 @[l_impl ConRon.Arena.BlockShape.withSort]
 def blockShapeWithSort : FunDecl := lfn (p, s) locals (z, eq, isProp, q) {
   z := call pin_word(53);
-  eq := call lvl_eq(s, z);
+  eq := call lvl_eq_c(s, z);
   isProp := u64(eq == 2);
   q := call iw_alloc(9);
   IW.u64[q] := IW.u64[p];
@@ -762,7 +762,7 @@ def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
   if pinsOk == 0 { return (0, 0) };
   s := call block_shape_result_sort(nPd, io, il, EREC.u64[cvT0 + 3]);
   z := call pin_word(53);
-  eq := call lvl_eq(s, z);
+  eq := call lvl_eq_c(s, z);
   isProp := u64(eq == 2);
   (cof, cl2) := call block_shape_ctors_of(cso, csl);
   lvls := call param_levels(lo, ll);

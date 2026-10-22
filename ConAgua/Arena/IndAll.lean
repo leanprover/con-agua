@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndSumSpec9
 import ConAgua.Arena.IndSumSpec8
 import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndSumSpec4
@@ -25,7 +26,6 @@ import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndPosSpec
 import ConAgua.Arena.IndSumSpec2
 import ConAgua.Arena.IndSumSpec3
-import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndSumSpec5
 import ConAgua.Arena.IndSumSpec7
 import ConAgua.Arena.IndSumSpec
@@ -39,6 +39,9 @@ import ConAgua.Arena.RecClassSpecD
 import ConAgua.Arena.RecClassSpecH
 import ConAgua.Arena.RecCheckSpec4
 import ConAgua.Arena.RecGenSpec3
+import ConAgua.Arena.RecGenSpec4
+import ConAgua.Arena.IndPosSpec2
+import ConAgua.Arena.IndPosSpec4
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/

@@ -418,7 +418,7 @@ def targetMajorOfOutside : FunDecl := lfn (vis, p, pfo, pfl, I, us, args_o, args
   cl := call target_major_of_outside_occ(mno, mnl, dso, dsl);
   if cl == 0 { abort };
   (nidx, sI) := call target_outside_inst(vis, I, us, dso, dsl);
-  e := call lvl_eq(sI, IW.u64[p + 6]);
+  e := call lvl_eq_c(sI, IW.u64[p + 6]);
   if e != 2 { abort };
   r := call mk_target_major(I, us, dso, dsl, nPc, nidx, cso, csl, 0, 0, 0, pfo, pfl);
   return r

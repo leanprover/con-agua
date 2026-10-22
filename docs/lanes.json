@@ -284,7 +284,7 @@
 {
 "lane": "perf1",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Slow declarations (grind, Prog.wf checks); split Scan/Records"
 },
 {
