@@ -31,6 +31,7 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
 
 /-- `and_pin_ok(i)`: `1` if record `i`'s name is none of the three pinned `And` names. -/
+-- con-ron: ConRon/Arena/Basis.lean:123-143 ConRon.Arena.andPinOk
 @[l_impl ConRon.Arena.andPinOk]
 def andPinOkL : FunDecl := lfn (i) locals (x) {
   if PINS.u64[0] == 0 { abort };

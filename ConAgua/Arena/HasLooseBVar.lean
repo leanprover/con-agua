@@ -25,6 +25,7 @@ namespace L.Arena
 /-- **The model of `has_loose_bvar`**: `1` iff `i` is below `h`'s derived range. -/
 def hasLooseBVarW (m : Mem) (h i : Word) : Word := if i < derBW m h then 1 else 0
 
+/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:102-115 ConLeche.Expr.hasLooseBVar -/
 def hasLooseBVar : FunDecl := lfn (h, i) locals (x) {
   x := call der_b(h);
   return u64(i < x)

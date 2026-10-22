@@ -44,6 +44,7 @@ theorem memW_hit (n : Nat) (m : Mem) (o k w : Word) (hk : k ≠ 0) (hw : rdW (m.
 theorem memW_next (n : Nat) (m : Mem) (o k w : Word) (hk : k ≠ 0) (hw : rdW (m.arr64 A) o ≠ w) :
     memW A (n + 1) m o k w = memW A n m (o + 1) (k - 1) w := by simp [memW, hk, hw]
 
+/-- con-leche: ConLeche/Kernel/Level.lean:44-49 ConLeche.Level.allParamsDefined -/
 def lvMemG : FunDecl := lfn (o, k, w) locals (x) {
   if k == 0 { return 0 };
   if A.u64[o] == w { return 1 };
@@ -81,6 +82,7 @@ theorem apK_zero : apK A n m b o k (some 0) = some 0 := by rw [apK]; simp
 theorem apK_ne (hx : x ≠ 0) : apK A n m b o k (some x) = apdW A n m b o k := by rw [apK]; simp [hx]
 end arms
 
+/-- con-leche: ConLeche/Kernel/Level.lean:44-49 ConLeche.Level.allParamsDefined -/
 @[l_impl ConLeche.Level.allParamsDefined]
 def lvApd : FunDecl := lfn (l, o, k) locals (g, a, b, x) {
   (g, a, b) := call lv_node(l);

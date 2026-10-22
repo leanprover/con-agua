@@ -98,6 +98,7 @@ def nafindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nanonFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
   n := len(NASLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -169,6 +170,7 @@ def napushOK (m : Mem) (t : Word) : Bool :=
 def napushMem (m : Mem) (t j c : Word) : Mem :=
   (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nanonPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[34 + t];
   if c >= 134217728 { abort };
@@ -227,6 +229,7 @@ def nainternW (m : Mem) : Option (Word × Mem) :=
     some (naP + nacnt m 0, napushMem m 0 (rs₀.tail.tail.headD 0) (nacnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
 @[l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := lfn () locals (h, fd, i, j, d) {
   h := ⟪nahashW⟫;

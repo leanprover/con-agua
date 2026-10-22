@@ -96,6 +96,7 @@ def sfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def succFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
   n := len(SSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -167,6 +168,7 @@ def spushOK (m : Mem) (t : Word) : Bool :=
 def spushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 SREC (c * 2 + t) u).set64 SSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (6 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def succPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[6 + t];
   if c >= 134217728 { abort };
@@ -225,6 +227,7 @@ def sinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (succP + scnt m 0, spushMem m 0 u (rs₀.tail.tail.headD 0) (scnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
 def internSucc : FunDecl := lfn (u) locals (h, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
