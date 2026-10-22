@@ -43,6 +43,9 @@ structure StuckProg (p : Prog) : Prop where
   suHead : p.lookup "struct_unit_head" = some structUnitHeadL
   sunit : p.lookup "struct_unit_cert" = some structUnitCertL
   stuckIrrel : p.lookup "stuck_irrel" = some stuckIrrelL
+  stuckStr : p.lookup "stuck_str" = some stuckStrL
+  stuckAppCong : p.lookup "stuck_app_cong" = some stuckAppCongL
+  stuckApp : p.lookup "stuck_app" = some stuckAppL
 
 /-- `defeq_lst(mode, vis, d, ao, an, bo, bn)` refines the twin's `defEqList` on two stack slices
 below the top (helper `defeq-mid` proves it; a hypothesis here). -/
@@ -86,6 +89,10 @@ structure StuckCallees (p : Prog) : Prop where
   reservedContains : ReservedContainsOK p
   towerSlots : TowerSlotsAllOK p
   lvlsEqC : LvlsEqCH p
+  strLitSupported : StrLitSupportedOK p
+  strLitCtor : StrLitCtorOK p
+  /-- `strLitSupported` keeps every stored node's view (`supKeep_twin`, a `sorry` in `WhnfBase`). -/
+  supKeep : ∀ fe, SupKeep fe
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :

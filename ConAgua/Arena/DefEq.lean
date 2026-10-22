@@ -992,11 +992,12 @@ def stuckIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 /-! ## The stuck comparison, the body -/
 
 /-- `defeqStuck`'s two string-literal arms: the literal `lt` against an application with head
-`fo`; `side` `0` when the literal is on the left (`a`). -/
+`fo`; `side` `0` when the literal is on the left (`a`). The head's record words are read before
+the first call. -/
 -- con-ron: ConRon/Arena/Core.lean:3332-3401 ConRon.Arena.defeqStuck
 @[l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
-    lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, el, sl, ss, c, r) {
+    lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
   t := (lt >> 27) & 1;
   i := lt & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -1006,10 +1007,12 @@ def stuckStrL : FunDecl :=
     i := fo & 134217727;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if CTL.u64[18 + t] <= i { abort };
+    co := CREC.u64[i * 4 + t * 2];
+    uo := CREC.u64[i * 4 + t * 2 + 1];
     el := call pin_word(52);
     sl := call pin_at(6);
     ss := call str_lit_supported(vis);
-    if CREC.u64[i * 4 + t * 2] == sl && CREC.u64[i * 4 + t * 2 + 1] == el && ss != 0 {
+    if co == sl && uo == el && ss != 0 {
       c := call str_lit_ctor(lt);
       if side == 0 { r := call defeq(mode, vis, d, c, b) } else { r := call defeq(mode, vis, d, a, c) };
       return r
@@ -1019,26 +1022,31 @@ def stuckStrL : FunDecl :=
   return r
 }
 
-/-- `defeqStuck`'s application arm: spine-wise congruence. -/
+/-- `defeqStuck`'s application arm, its congruence (split off for the proofs): `1` when the heads
+and the spines agree pairwise; the top put back. -/
 -- con-ron: ConRon/Arena/Core.lean:3332-3401 ConRon.Arena.defeqStuck
 @[l_impl ConRon.Arena.defeqStuck]
-def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo, bn, fa, fb, ok, r) {
+def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo, bn, fa, fb, ok) {
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
   (bo, bn) := call get_app_args(b);
+  ok := 0;
   if an == bn {
     fa := call get_app_fn(a);
     fb := call get_app_fn(b);
     ok := call defeq(mode, vis, d, fa, fb);
-    if ok != 0 {
-      ok := call defeq_lst(mode, vis, d, ao, an, bo, bn);
-      if ok != 0 {
-        CTL.u64[136] := top;
-        return 1
-      }
-    }
+    if ok != 0 { ok := call defeq_lst(mode, vis, d, ao, an, bo, bn) }
   };
   CTL.u64[136] := top;
+  return ok
+}
+
+/-- `defeqStuck`'s application arm: spine-wise congruence, else the stuck fallbacks. -/
+-- con-ron: ConRon/Arena/Core.lean:3332-3401 ConRon.Arena.defeqStuck
+@[l_impl ConRon.Arena.defeqStuck]
+def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
+  ok := call stuck_app_cong(mode, vis, d, a, b);
+  if ok != 0 { return 1 };
   r := call stuck_irrel(mode, vis, d, a, b);
   return r
 }
@@ -1160,7 +1168,7 @@ def defeqFns : Prog :=
    ("struct_eta_cert_with", structEtaCertWithL),
    ("struct_eta_cert", structEtaCertL), ("struct_unit_tail", structUnitTailL),
    ("struct_unit_head", structUnitHeadL), ("struct_unit_cert", structUnitCertL),
-   ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app", stuckAppL),
+   ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app_cong", stuckAppCongL), ("stuck_app", stuckAppL),
    ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]
 
 end L.Arena
