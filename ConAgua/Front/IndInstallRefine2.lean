@@ -169,7 +169,7 @@ def tyT (st : StateD) (t : IndTypeRec) : AM IConstantInfo := do
 def ctT (st : StateD) (c : IndCtorRec) : AM IConstantInfo := do
   pure (IConstantInfo.ctorInfo (← parseCVD st c.cv) c.numParams c.numFields)
 
-theorem rdW_wd (m : Mem) (A : ArrId) (t w : Word) (h : t.toNat + w.toNat < 2 ^ 64) :
+theorem rdW_wdI (m : Mem) (A : ArrId) (t w : Word) (h : t.toNat + w.toNat < 2 ^ 64) :
     rdW (m.arr64 A) (t + w) = wd m A (t.toNat + w.toNat) := by
   simp only [rdW, wd, widx2 t w h]
 
@@ -205,9 +205,9 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   obtain ⟨n0, l0, y0⟩ := hF
   have r0 : rdW (m₁.arr64 IFR) t = wd m IFR t.toNat := by rw [hifr]; rfl
   have r1 : rdW (m₁.arr64 IFR) (t + 1) = wd m IFR (t.toNat + 1) := by
-    rw [hifr, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have r2 : rdW (m₁.arr64 IFR) (t + 2) = wd m IFR (t.toNat + 2) := by
-    rw [hifr, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h2
   have hq1 : (q1 + 1).toNat = q1.toNat + 1 := widx2 _ _ (by simp; omega)
   obtain ⟨cvp, C1, C2, C3, C3', C4, C5, C6⟩ :=
@@ -273,9 +273,9 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   obtain ⟨⟨n0, l0, y0⟩, f0, p0, -, -⟩ := hF
   have r0 : rdW (m₁.arr64 IFR) c = wd m IFR c.toNat := by rw [hifr]; rfl
   have r1 : rdW (m₁.arr64 IFR) (c + 1) = wd m IFR (c.toNat + 1) := by
-    rw [hifr, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have r2 : rdW (m₁.arr64 IFR) (c + 2) = wd m IFR (c.toNat + 2) := by
-    rw [hifr, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h2
   have hq1 : (q1 + 1).toNat = q1.toNat + 1 := widx2 _ _ (by simp; omega)
   obtain ⟨cvp, C1, C2, C3, C3', C4, C5, C6⟩ :=
@@ -289,9 +289,9 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have hq5 : (q1 + 5).toNat = q1.toNat + 5 := widx2 _ _ (by simp; omega)
   have hq6 : (q1 + 6).toNat = q1.toNat + 6 := widx2 _ _ (by simp; omega)
   have w5 : rdW (m₂.arr64 IFR) (c + 5) = wd m IFR (c.toNat + 5) := by
-    rw [hifr2, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr2, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have w4 : rdW (m₂.arr64 IFR) (c + 4) = wd m IFR (c.toNat + 4) := by
-    rw [hifr2, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr2, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [w5, w4]
   have hc0 : ∀ i, (i ≠ q1.toNat + 5 ∧ i ≠ q1.toNat + 6) →
       wd ((m₂.set64 DLP (q1 + 5) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + 6) (wd m IFR (c.toNat + 4))) DLP i =

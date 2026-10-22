@@ -118,9 +118,9 @@ theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp
   unfold ruleW at h
   have r0 : rdW (m.arr64 IFL) rp = wd m IFL rp.toNat := rfl
   have r1 : rdW (m.arr64 IFL) (rp + 1) = wd m IFL (rp.toNat + 1) := by
-    rw [rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have r2 : rdW (m.arr64 IFL) (rp + 2) = wd m IFL (rp.toNat + 2) := by
-    rw [rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h
   cases hn : lkW m NID (wd m IFL rp.toNat) with
   | none => rw [hn, wK_none] at h; cases h
@@ -306,9 +306,9 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
     rw [← P3]; unfold topN; rw [wd_set_ne _ _ _ _ _ (by omega)]
   have hL1 : LkR (m₁.set64 DLP q1 5) st := hD.frame Pq.frame (by rw [ht1, hs1]; omega)
   have r9 : rdW (m₁.arr64 IFR) (r + 9) = wd m IFR (r.toNat + 9) := by
-    rw [hifr, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have r10 : rdW (m₁.arr64 IFR) (r + 10) = wd m IFR (r.toNat + 10) := by
-    rw [hifr, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r9, r10] at h
   cases h2 : rulesW n (m₁.set64 DLP q1 5) (wd m IFR (r.toNat + 9)) (wd m IFR (r.toNat + 10)) with
   | none => rw [h2, pmK_none] at h; cases h
@@ -323,9 +323,9 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
     rw [Q2.other IFR (by decide) (by decide), Pq.other IFR (by decide) (by decide)]
   have s0 : rdW (m₃.arr64 IFR) r = wd m IFR r.toNat := by rw [hifr3]; rfl
   have s1 : rdW (m₃.arr64 IFR) (r + 1) = wd m IFR (r.toNat + 1) := by
-    rw [hifr3, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr3, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have s2 : rdW (m₃.arr64 IFR) (r + 2) = wd m IFR (r.toNat + 2) := by
-    rw [hifr3, rdW_wd _ _ _ _ (by simp; omega)]; rfl
+    rw [hifr3, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [s0, s1, s2] at h
   cases h3 : cvW b.data m₃ (q1 + 1) (wd m IFR r.toNat) (wd m IFR (r.toNat + 1)) (wd m IFR (r.toNat + 2)) with
   | none => rw [h3, mK_none] at h; cases h
@@ -381,16 +381,16 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
       rw [wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega),
-        wd_set_eq _ _ _ _ _ e5 (by omega), hifr4, rdW_wd _ _ _ _ (by simp; omega),
-        rdW_wd _ _ _ _ (by simp; omega), rdW_wd _ _ _ _ (by simp; omega), rdW_wd _ _ _ _ (by simp; omega)]
+        wd_set_eq _ _ _ _ _ e5 (by omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
+        rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega)]
       rfl
     have g6 : P[q1.toNat + 6]? = some (wd m IFR (r.toNat + 8) + wd m IFR (r.toNat + 7) +
         wd m IFR (r.toNat + 6)) := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
       rw [wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega),
-        wd_set_eq _ _ _ _ _ e6 (by simp only [size_set64]; omega), hifr4, rdW_wd _ _ _ _ (by simp; omega),
-        rdW_wd _ _ _ _ (by simp; omega), rdW_wd _ _ _ _ (by simp; omega)]
+        wd_set_eq _ _ _ _ _ e6 (by simp only [size_set64]; omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
+        rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega)]
       rfl
     have g7 : P[q1.toNat + 7]? = some lo := by
       rw [hP.get (by omega) (by omega)]

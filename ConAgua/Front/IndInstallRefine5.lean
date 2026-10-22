@@ -156,7 +156,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       obtain ⟨k, hk, hw, hok⟩ := hptr p hp
       have hp' := ofNat_toNat_lt p (by omega)
       have hrd : rdW (mi.arr64 IFL) (oo + UInt64.ofNat p) = co + 10 * UInt64.ofNat k := by
-        rw [hifl, rdW_wd _ _ _ _ (by rw [hp']; omega), hp', hw]
+        rw [hifl, rdW_wdI _ _ _ _ (by rw [hp']; omega), hp', hw]
       have hk' := ofNat_toNat_lt k (by omega)
       have hw' : (co + 10 * UInt64.ofNat k).toNat = co.toNat + 10 * k := by
         have := w_addmul co (UInt64.ofNat k) 10 (by decide) (by rw [hk']; omega)

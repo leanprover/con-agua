@@ -193,7 +193,7 @@ theorem indFields_link (m m' : Mem)
     (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e) (r : List Word)
     (h : indFieldsW b.data m v.toUInt64 = some (r, m')) :
     ∃ to tn co cn ro rn, r = [to, tn, co, cn, ro, rn] ∧ IndFR b m' to tn co cn ro rn tys cts rcs ∧
-      MemFrame [IFR, IFL] [] m m' := by
+      MemFrame [IFR, IFL] [] m m' ∧ Room m' := by
   unfold indFieldsW at h
   cases hr : ifResetW m with
   | none => rw [hr, fieldsK0_none] at h; cases h
@@ -254,7 +254,7 @@ theorem indFields_link (m m' : Mem)
     have := hI3.1.top IFR (.inl rfl)
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)]
     apply Nat.mod_eq_of_lt; omega
-  refine ⟨_, _, _, _, _, _, rfl, ?_, hfr1.trans (a4.fr.trans hI3.1.fr)⟩
+  refine ⟨_, _, _, _, _, _, rfl, ?_, hfr1.trans (a4.fr.trans hI3.1.fr), hI3.2.1⟩
   have h1 := hp 1 (by decide)
   have h2 := hp 2 (by decide)
   have h3 := hp 3 (by decide)

@@ -150,7 +150,7 @@ structure StateDR (m : Mem) (st : StateD) : Prop where
   levels : TblR (m.arr64 LID) st.levels
   exprs : TblR (m.arr64 EID) st.exprs
   decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) st.decls
-  ifs : (m.arr64 L.Front.Ind.IFR).size < 2 ^ 63 ∧ (m.arr64 L.Front.Ind.IFL).size < 2 ^ 63
+  ifs : (m.arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧ (m.arr64 L.Front.Ind.IFL).size < 2 ^ 62
 
 /-! ## Reads and writes of a table -/
 
@@ -866,7 +866,7 @@ theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
     (hl : sizes[65]?.getD 0 < 2 ^ 63) (he : sizes[66]?.getD 0 < 2 ^ 63)
     (hd : 1 ≤ sizes[67]?.getD 0 ∧ sizes[67]?.getD 0 < 2 ^ 63)
     (hq : 1 ≤ sizes[68]?.getD 0 ∧ sizes[68]?.getD 0 < 2 ^ 63)
-    (hf : sizes[70]?.getD 0 < 2 ^ 63 ∧ sizes[71]?.getD 0 < 2 ^ 63) :
+    (hf : sizes[70]?.getD 0 < 2 ^ 62 ∧ sizes[71]?.getD 0 < 2 ^ 62) :
     StateDR (initMem sizes) StateD.blank := by
   have hT : ∀ (b : ArrId) {k : IdxKind}, sizes[b]?.getD 0 < 2 ^ 63 →
       TblR ((initMem sizes).arr64 b) ({} : IdTable (Idx k)) := by
