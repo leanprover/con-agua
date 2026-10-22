@@ -167,13 +167,103 @@ theorem invoke_natOpResult {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = natAr
   (invoke_agreeOn natArmProg'_closed hp n (by decide) vs).trans
     (invoke_agreeOn natArmProg_closed natArmProg'_agree n (by decide) vs)
 
+/-! ## The arms keep the pool below its old top (`PoolGrew`)
+
+Every arm's refinement is generic in the relation (`NatArms.lean`), so it holds at
+`ArenaR m a ∧ PoolGrew m₀ m` (`ArenaP m₀`): the arithmetic only appends (`Grows`), and `intern_lit`
+and `intern_const` do not write the pool at all (their write sets, from the text). -/
+
+/-- `ArenaR` and "the pool only grew since `m₀`". -/
+def ArenaP (m₀ : Mem) (m : Mem) (a : AState) : Prop := ArenaR m a ∧ PoolGrew m₀ m
+
+theorem arenaP_pool (m₀ : Mem) : ∀ m a, ArenaP m₀ m a → PoolOK m := fun _ _ h => h.1.lit.1
+theorem arenaP_grow (m₀ : Mem) : ∀ m m' a, ArenaP m₀ m a → Grows m m' → ArenaP m₀ m' a :=
+  fun m m' a h hg => ⟨ArenaR.grow m m' hg a h.1, h.2.trans (PoolGrew.of_grows hg)⟩
+
+/-- `intern_lit`'s functions in `natArmProg`: the `lit` table only. -/
+def natLitFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
+theorem natLitFns_closed : closedA natArmProg [REC, SLOT] [2, 3] natLitFns = true := by decide +kernel
+
+/-- `nat_beq_lit`/`nat_ble_lit` and their callees: the `const` table only. -/
+def natCmpFns : List FnName :=
+  ["nat_beq_lit", "nat_ble_lit", "nat_cmp", "intern_const", "const_find", "const_push"]
+theorem natCmpFns_closed : closedA natArmProg [CREC, CSLOT] [18, 19] natCmpFns = true := by
+  decide +kernel
+
+theorem internLit_armsP (m₀ : Mem) : InternSpec natArmProg (ArenaP m₀) := by
+  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hD, hres⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (internLit_arms a₀ n s₀ o l hA hq hn)
+  obtain ⟨hfr, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame natLitFns_closed n (f := "intern_lit") (by decide) [o, l] s₀)
+  subst hs
+  exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres⟩
+
+theorem cmpArmP {g : FnName} {arm : Nat → Nat → AM (Option EIdx)} (hg : g ∈ natCmpFns)
+    (h : CmpArmR ArenaR g arm) (m₀ : Mem) : CmpArmR (ArenaP m₀) g arm := by
+  intro n s₀ a₀ ⟨hA, hP⟩ oa la ob lb t f us ha hb hna hnb ht hf hu hT hF hE
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hD, hres⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (h n s₀ a₀ hA oa la ob lb t f us ha hb hna hnb ht hf hu hT hF hE)
+  obtain ⟨hfr, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame natCmpFns_closed n hg [oa, la, ob, lb, t, f, us] s₀)
+  subst hs
+  exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres⟩
+
+/-- **The sixteen arms under `ArenaP m₀`.** -/
+theorem natArmsR_pool (m₀ : Mem) : NatArmsR (ArenaP m₀) where
+  pred := fun n s₀ a₀ hR oa la ha =>
+    natPredLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ha
+  pow := fun n s₀ a₀ hR oa la ob lb ha hnb =>
+    natPowLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hnb
+  add := fun n s₀ a₀ hR oa la ob lb ha hb _ _ =>
+    natAddLit_refines natArmProg rfl rfl rfl rfl rfl (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀)
+      (internLit_armsP m₀) n s₀ a₀ hR oa la ob lb ha hb
+  sub := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_sub_lit" "nat_sub" _ rfl natSub_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  mul := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_mul_lit" "nat_mul" _ rfl natMul_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  div := fun n s₀ a₀ hR oa la ob lb ha hb _ hnb =>
+    natDivLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb
+  mod := fun n s₀ a₀ hR oa la ob lb ha hb _ hnb =>
+    natModLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb
+  gcd := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    natGcdLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  land := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_land_lit" "nat_land" _ rfl natLand_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  lor := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_lor_lit" "nat_lor" _ rfl natLor_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  xor := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_xor_lit" "nat_xor" _ rfl natXor_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  shl := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_shl_lit" "nat_shl" _ rfl natShl_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  shr := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
+      "nat_shr_lit" "nat_shr" _ rfl natShr_top n s₀ a₀ hR oa la ob lb ha hb hna hnb
+  beq := cmpArmP (by decide) natBeqLit_refinesA m₀
+  ble := cmpArmP (by decide) natBleLit_refinesA m₀
+
 /-! ## The relation -/
 
 /-- **`CoreS` across `nat_op_result`**: the arena relation from the refinement, the derived ranges
 and every upper tier by the frame and the leaf step. -/
 theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hR : ArenaR m' a')
-    (hL : LeafStep a a') (hf : MemFrame natA natC m m') :
+    (hL : LeafStep a a') (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   obtain ⟨hcpl, hder⟩ := hL
   simp only [cpl, Prod.mk.injEq] at hcpl
@@ -184,7 +274,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   refine ⟨⟨⟨hR, hder m' hD⟩, ?_, ?_, hS.env.frame (by decide) (.of_lt natC_lt (by decide)) hf, ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide),
     hf.2.2.1 145 ▸ hS.bstk⟩, by simp only [spTop, h136], by rw [hspn],
-    fun i _ => by simp only [spW, hspn]⟩
+    fun i _ => by simp only [spW, hspn], BKept.of_frame hf (by decide) (by decide), hP⟩
   · rw [hc]; exact hS.core.frame (by decide) (.of_lt natC_lt (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (by decide) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
@@ -200,8 +290,9 @@ theorem natOpResultOK_of_agree {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = n
   simp only [invoke_natOpResult hp]
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hok, hR, hres⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (natOpResultL_refines n s₀ a₀ hS.arena.1 ⟨fun _ => hS.pins⟩ c oa la ob lb hc ha hb hna hnb)
+  obtain ⟨hloc, hok, ⟨hR, hPG⟩, hres⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (natOpResultL_refinesR (ArenaP s₀.mem) (natArmsR_pool s₀.mem) n s₀ a₀ ⟨hS.arena.1, PoolGrew.refl _⟩
+      ⟨fun _ => hS.pins⟩ c oa la ob lb hc ha hb hna hnb)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame natArmProg_closed n (by decide) _ s₀)
   subst hs
@@ -211,7 +302,7 @@ theorem natOpResultOK_of_agree {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = n
     have h := leafOp_natOpResult (decI c) (pv (s.mem.arr64 POOL) oa.toNat la.toNat)
       (pv (s.mem.arr64 POOL) ob.toNat lb.toNat)
     unfold LeafOp at h; exact h _ _ _ hrun'
-  obtain ⟨hS', hSt⟩ := hS.of_natOp hR hL hf
+  obtain ⟨hS', hSt⟩ := hS.of_natOp hR hL hf hPG
   exact ⟨hloc, hok, ⟨MM, hS', KeptAll.refl _ _, hSt⟩, hres, trivial⟩
 
 end L.Arena

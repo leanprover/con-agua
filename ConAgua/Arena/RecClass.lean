@@ -397,15 +397,44 @@ def classGenMotVar : FunDecl := lfn (g, c) locals (ok, s, r, so, sl) {
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
 @[l_impl ConRon.Arena.ClassGen.major]
 def classGenMajor : FunDecl := lfn (g, c, d) locals
-    (ci, fty, ok, ty, fo, fl, body, hd, dso, dsl, mt) {
+    (ci, ind, lvls, ds0, dl0, nIdx, fty, ok, ty, r0, r1, r2, r3) {
   ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  (ind, lvls, ds0, dl0, nIdx) := call class_gen_major_ci(ci);
   fty := call expr_get_d(IW.u64[g + 5], IW.u64[g + 6], c);
-  (ok, ty) := call inst_pis_with(IW.u64[ci + 2], IW.u64[ci + 3], fty);
+  (ok, ty) := call inst_pis_with(ds0, dl0, fty);
   if ok == 0 { return (0, 0, 0, 0) };
-  (ok, fo, fl, body) := call open_pis_at_fvars_f(IW.u64[ci + 5], ty, d);
+  (r0, r1, r2, r3) := call class_gen_major_open(ind, lvls, ds0, dl0, nIdx, ty, d);
+  return (r0, r1, r2, r3)
+}
+
+/-- `class_gen_major_open(ind, lvls, ds.off, ds.len, nIdx, ty, d)`: `ClassGen.major` after the
+parameters are instantiated: the index telescope opened at `d`, then the major domain. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
+@[l_impl ConRon.Arena.ClassGen.major]
+def classGenMajorOpen : FunDecl := lfn (ind, lvls, ds0, dl0, nIdx, ty, d)
+    locals (ok, fo, fl, body, r0, r1, r2, r3) {
+  (ok, fo, fl, body) := call open_pis_at_fvars_f(nIdx, ty, d);
   if ok == 0 { return (0, 0, 0, 0) };
-  hd := call intern_const(IW.u64[ci], IW.u64[ci + 1]);
-  (dso, dsl) := call sl_append(IW.u64[ci + 2], IW.u64[ci + 3], fo, fl);
+  (r0, r1, r2, r3) := call class_gen_major_tail(ind, lvls, ds0, dl0, fo, fl);
+  return (r0, r1, r2, r3)
+}
+
+/-- `class_gen_major_ci(ci)`: the fields of the class's `TargetMajor` record `ClassGen.major` reads
+(read once, before the callees grow the pool). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
+@[l_impl ConRon.Arena.ClassGen.major]
+def classGenMajorCi : FunDecl := lfn (ci) locals () {
+  return (IW.u64[ci], IW.u64[ci + 1], IW.u64[ci + 2], IW.u64[ci + 3], IW.u64[ci + 5])
+}
+
+/-- `class_gen_major_tail(ind, lvls, ds.off, ds.len, ifs.off, ifs.len)`: `ClassGen.major` after the
+index telescope is opened: the major domain `I D⃗ ı⃗`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
+@[l_impl ConRon.Arena.ClassGen.major]
+def classGenMajorTail : FunDecl := lfn (ind, lvls, ds0, dl0, fo, fl) locals (hd, dso, dsl, mt) {
+  hd := call intern_const(ind, lvls);
+  if 4294967296 <= hd { abort };
+  (dso, dsl) := call sl_append(ds0, dl0, fo, fl);
   mt := call mk_app_n_f(hd, dso, dsl);
   return (1, fo, fl, mt)
 }
@@ -417,8 +446,11 @@ def classGenMotiveTy : FunDecl := lfn (g, c, d) locals (ok, fo, fl, maj, srt, bo
   (ok, fo, fl, maj) := call class_gen_major(g, c, d);
   if ok == 0 { return (0, 0) };
   srt := call intern_sort(IW.u64[g + 11]);
+  if 4294967296 <= srt { abort };
   body2 := call mk_forall(maj, srt);
+  if 4294967296 <= body2 { abort };
   (bo, bl) := call fvar_type_ds(fo, fl);
+  if d + bl < d { abort };
   r := call close_telescope(bo, bl, d, body2);
   return (1, r)
 }
@@ -446,33 +478,55 @@ one recursive field `i` landing at class `t`, its inductive hypothesis at depth 
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
 @[l_impl ConRon.Arena.ClassGen.minorTy]
 def classGenMinorTyIh1 : FunDecl := lfn (g, t, tele, wso, wsl, fvso, fvsl, i, e) locals
-    (w, ok, xso, xsl, idxo, idxl, f, fx, mt, appo, appl, body, bso, bsl, ih) {
+    (w, ok, xso, xsl, idxo, idxl, r0, r1) {
   w := call expr_get_d(wso, wsl, i);
   (ok, xso, xsl, idxo, idxl) := call class_gen_ih_parts(g, t, tele, w, e);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_minor_ty_ih1_tail(g, t, xso, xsl, idxo, idxl, fvso, fvsl, i, e);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_ih1_tail(g, t, xs.off, xs.len, idx.off, idx.len, fvs.off, fvs.len, i, e)`:
+the inductive hypothesis after its telescope and indices are read. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyIh1Tail : FunDecl := lfn (g, t, xso, xsl, idxo, idxl, fvso, fvsl, i, e) locals
+    (f, fx, mt, appo, appl, body, r0, r1) {
   f := call expr_get_d(fvso, fvsl, i);
   fx := call mk_app_n_f(f, xso, xsl);
   mt := call class_gen_mot_var(g, t);
   (appo, appl) := call sl_snoc(idxo, idxl, fx);
   body := call mk_app_n_f(mt, appo, appl);
+  (r0, r1) := call class_gen_minor_ty_ih1_close(xso, xsl, e, body);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_ih1_close(xs.off, xs.len, e, body)`: the inductive hypothesis closed over its
+telescope's binders at depth `e` (the depth must not wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyIh1Close : FunDecl := lfn (xso, xsl, e, body) locals (bso, bsl, ih) {
   (bso, bsl) := call fvar_type_ds(xso, xsl);
+  if e + bsl < e { abort };
   ih := call close_telescope(bso, bsl, e, body);
   return (1, ih)
 }
 
 /-- `class_gen_minor_ty_ihs_go(g, x, d, nF, wso, wsl, fvso, fvsl, i, l)`: `ClassGen.minorTy`'s
-`ihsGo`, over constructor `x`'s fields `i ‥< nF`, `l` the count of recursive fields seen. -/
+`ihsGo`, over constructor `x`'s fields `i ‥< nF`, `l` the count of recursive fields seen (the depth
+`d + nF + l` must not wrap). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
 @[l_impl ConRon.Arena.ClassGen.minorTy]
 def classGenMinorTyIhsGo : FunDecl := lfn (g, x, d, nF, wso, wsl, fvso, fvsl, i, l) locals
-    (kp, tag, t, tele, ok, ih, resto, restl, cono, conl) {
+    (kp, tag, ok, ih, resto, restl, cono, conl) {
   if nF <= i { return (1, 0, 0) };
   tag := 0;
   if i < IW.u64[x + 3] { kp := IW.u64[IW.u64[x + 2] + i]; tag := IW.u64[kp] };
   if tag == 1 {
-    t := IW.u64[kp + 1];
-    tele := IW.u64[kp + 2];
-    (ok, ih) := call class_gen_minor_ty_ih1(g, t, tele, wso, wsl, fvso, fvsl, i, d + nF + l);
+    if d + nF < d { abort };
+    if d + nF + l < d + nF { abort };
+    (ok, ih) := call class_gen_minor_ty_ih1(g, IW.u64[kp + 1], IW.u64[kp + 2], wso, wsl, fvso, fvsl, i,
+      d + nF + l);
     if ok == 0 { return (0, 0, 0) };
     (ok, resto, restl) := call class_gen_minor_ty_ihs_go(g, x, d, nF, wso, wsl, fvso, fvsl,
       i + 1, l + 1);
@@ -488,29 +542,76 @@ def classGenMinorTyIhsGo : FunDecl := lfn (g, x, d, nF, wso, wsl, fvso, fvsl, i,
 class `c`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
 @[l_impl ConRon.Arena.ClassGen.minorTy]
-def classGenMinorTy : FunDecl := lfn (g, c, x, d) locals
-    (ci, ok, fo, fl, res, wso, wsl, ihso, ihsl, rao, ral, cc, capo, capl, mc, dOff, dLen,
-     bo, bl, fbso, fbsl, allo, alll, r) {
+def classGenMinorTy : FunDecl := lfn (g, c, x, d) locals (ci, lvls, ds0, dl0, nPc, r0, r1) {
   ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  (lvls, ds0, dl0, nPc) := call class_gen_minor_ci(ci);
+  (r0, r1) := call class_gen_minor_ty_body(g, c, x, d, lvls, ds0, dl0, nPc);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ci(ci)`: the fields of the class's `TargetMajor` record `minorTy` reads. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorCi : FunDecl := lfn (ci) locals () {
+  return (IW.u64[ci + 1], IW.u64[ci + 2], IW.u64[ci + 3], IW.u64[ci + 4])
+}
+
+/-- `class_gen_minor_ty_body(g, c, x, d, lvls, ds.off, ds.len, nPc)`: `minorTy` after the class:
+the fields opened, their walked types, the inductive hypotheses, then the conclusion. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyBody : FunDecl := lfn (g, c, x, d, lvls, ds0, dl0, nPc) locals
+    (ok, fo, fl, res, wso, wsl, ihso, ihsl, r0, r1) {
   (ok, fo, fl, res) := call open_pis_at_fvars_f(IW.u64[x + 1], IW.u64[x + 4], d);
   if ok == 0 { return (0, 0) };
   (ok, wso, wsl) := call target_pi_doms_with(fo, fl, IW.u64[x + 5]);
   if ok == 0 { return (0, 0) };
   (ok, ihso, ihsl) := call class_gen_minor_ty_ihs_go(g, x, d, IW.u64[x + 1], wso, wsl, fo, fl, 0, 0);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_minor_ty_concl(g, c, x, d, lvls, ds0, dl0, nPc, fo, fl, res, ihso, ihsl);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_concl(g, c, x, d, lvls, ds.off, ds.len, nPc, fvs.off, fvs.len, res, ihs.off,
+ihs.len)`: the constructor applied, then the conclusion. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyConcl : FunDecl := lfn (g, c, x, d, lvls, ds0, dl0, nPc, fo, fl, res, ihso, ihsl)
+    locals (rao, ral, cc, capo, capl, r0, r1) {
   (rao, ral) := call get_app_args_f(⟪CWF⟫, res);
-  cc := call intern_const(EREC.u64[IW.u64[x]], IW.u64[ci + 1]);
-  (capo, capl) := call sl_append(IW.u64[ci + 2], IW.u64[ci + 3], fo, fl);
+  cc := call intern_const(EREC.u64[IW.u64[x]], lvls);
+  if 4294967296 <= cc { abort };
+  (capo, capl) := call sl_append(ds0, dl0, fo, fl);
   cc := call mk_app_n_f(cc, capo, capl);
+  (r0, r1) := call class_gen_minor_ty_concl2(g, c, d, nPc, fo, fl, ihso, ihsl, rao, ral, cc);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_concl2(g, c, d, nPc, fvs.off, fvs.len, ihs.off, ihs.len, ra.off, ra.len, capp)`:
+the motive at the result's indices and the constructor applied, closed over the fields' binders and
+the inductive hypotheses. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyConcl2 : FunDecl := lfn (g, c, d, nPc, fo, fl, ihso, ihsl, rao, ral, capp)
+    locals (mc, dOff, dLen, bo, bl, res, r0, r1) {
   mc := call class_gen_mot_var(g, c);
   dOff := rao;
   dLen := ral;
-  if IW.u64[ci + 4] < ral { dOff := rao + IW.u64[ci + 4]; dLen := ral - IW.u64[ci + 4] }
-  else { dLen := 0 };
-  (bo, bl) := call sl_snoc(dOff, dLen, cc);
+  if nPc < ral { dOff := rao + nPc; dLen := ral - nPc } else { dLen := 0 };
+  (bo, bl) := call sl_snoc(dOff, dLen, capp);
   res := call mk_app_n_f(mc, bo, bl);
+  (r0, r1) := call class_gen_minor_ty_close(fo, fl, ihso, ihsl, d, res);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_close(fvs.off, fvs.len, ihs.off, ihs.len, d, concl)`: the conclusion closed
+over the fields' binders and the inductive hypotheses at depth `d` (the depth must not wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyClose : FunDecl := lfn (fo, fl, ihso, ihsl, d, res) locals (fbso, fbsl, allo, alll, r) {
   (fbso, fbsl) := call fvar_type_ds(fo, fl);
   (allo, alll) := call sl_append(fbso, fbsl, ihso, ihsl);
+  if d + alll < d { abort };
   r := call close_telescope(allo, alll, d, res);
   return (1, r)
 }
@@ -519,50 +620,67 @@ def classGenMinorTy : FunDecl := lfn (g, c, x, d) locals
 `cName`, in `g.ctors[c]`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
 @[l_impl ConRon.Arena.ClassGen.prefixBinders]
-def classGenPrefixBindersFindCtor : FunDecl := lfn (g, c, cName) locals (ctorsLen, lp, io, il, j, cp) {
-  ctorsLen := IW.u64[g + 10];
-  if ctorsLen <= c { return (0, 0) };
+def classGenPrefixBindersFindCtor : FunDecl := lfn (g, c, cName) locals (lp, ok, cp) {
+  if IW.u64[g + 10] <= c { return (0, 0) };
   lp := IW.u64[IW.u64[g + 9] + c];
-  io := IW.u64[lp];
-  il := IW.u64[lp + 1];
-  j := 0;
-  while j < il {
-    cp := IW.u64[io + j];
-    if EREC.u64[IW.u64[cp]] == cName { return (1, cp) };
-    j += 1
-  };
-  return (0, 0)
+  (ok, cp) := call class_gen_prefix_binders_find_ctor_go(IW.u64[lp], IW.u64[lp + 1], cName);
+  return (ok, cp)
+}
+
+/-- `class_gen_prefix_binders_find_ctor_go(io, il, cName)`: the first constructor record of the
+slice `(io, il)` named `cName` (`find?`, as a self-recursion). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
+@[l_impl ConRon.Arena.ClassGen.prefixBinders]
+def classGenPrefixBindersFindCtorGo : FunDecl := lfn (io, il, cName) locals (cp, ok, r) {
+  if il == 0 { return (0, 0) };
+  cp := IW.u64[io];
+  if EREC.u64[IW.u64[cp]] == cName { return (1, cp) };
+  (ok, r) := call class_gen_prefix_binders_find_ctor_go(io + 1, il - 1, cName);
+  return (ok, r)
 }
 
 /-- `class_gen_prefix_binders_slots_go(g, s, mc)`: `ClassGen.prefixBinders`'s `slotsGo`, `mc` the
 count of motives before slot `s`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
 @[l_impl ConRon.Arena.ClassGen.prefixBinders]
-def classGenPrefixBindersSlotsGo : FunDecl := lfn (g, s, mc) locals
-    (so, sl, sp, tag, d, ok, ty, cls2, ctor2, ok2, x, restok, resto, restl, co, cl) {
-  so := IW.u64[g + 7];
-  sl := IW.u64[g + 8];
-  if sl <= s { return (1, 0, 0) };
-  sp := IW.u64[so + s];
-  tag := IW.u64[sp];
-  d := IW.u64[g] + s;
-  if tag == 0 {
-    (ok, ty) := call class_gen_motive_ty(g, mc, d);
-    if ok == 0 { return (0, 0, 0) };
-    (restok, resto, restl) := call class_gen_prefix_binders_slots_go(g, s + 1, mc + 1);
-    if restok == 0 { return (0, 0, 0) };
-    (co, cl) := call sl_cons(ty, resto, restl);
-    return (1, co, cl)
+def classGenPrefixBindersSlotsGo : FunDecl := lfn (g, s, mc) locals (sp, r0, r1, r2) {
+  if IW.u64[g + 8] <= s { return (1, 0, 0) };
+  sp := IW.u64[IW.u64[g + 7] + s];
+  if IW.u64[sp] == 0 {
+    (r0, r1, r2) := call class_gen_prefix_binders_slot_motive(g, s, mc, IW.u64[g] + s);
+    return (r0, r1, r2)
   };
-  cls2 := IW.u64[sp + 1];
-  ctor2 := IW.u64[sp + 2];
+  (r0, r1, r2) := call class_gen_prefix_binders_slot_minor(g, s, mc, IW.u64[g] + s, IW.u64[sp + 1],
+    IW.u64[sp + 2]);
+  return (r0, r1, r2)
+}
+
+/-- `class_gen_prefix_binders_slot_motive(g, s, mc, d)`: a motive slot's binder (class `mc`, depth
+`d`), then the rest. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
+@[l_impl ConRon.Arena.ClassGen.prefixBinders]
+def classGenPrefixBindersSlotMotive : FunDecl := lfn (g, s, mc, d) locals (ok, ty, r0, r1, r2, co, cl) {
+  (ok, ty) := call class_gen_motive_ty(g, mc, d);
+  if ok == 0 { return (0, 0, 0) };
+  (r0, r1, r2) := call class_gen_prefix_binders_slots_go(g, s + 1, mc + 1);
+  if r0 == 0 { return (0, 0, 0) };
+  (co, cl) := call sl_cons(ty, r1, r2);
+  return (1, co, cl)
+}
+
+/-- `class_gen_prefix_binders_slot_minor(g, s, mc, d, cls, ctorName)`: a minor slot's binder (its
+constructor's minor premise at depth `d`), then the rest. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
+@[l_impl ConRon.Arena.ClassGen.prefixBinders]
+def classGenPrefixBindersSlotMinor : FunDecl := lfn (g, s, mc, d, cls2, ctor2)
+    locals (ok2, x, ok, ty, r0, r1, r2, co, cl) {
   (ok2, x) := call class_gen_prefix_binders_find_ctor(g, cls2, ctor2);
   if ok2 == 0 { return (0, 0, 0) };
   (ok, ty) := call class_gen_minor_ty(g, cls2, x, d);
   if ok == 0 { return (0, 0, 0) };
-  (restok, resto, restl) := call class_gen_prefix_binders_slots_go(g, s + 1, mc);
-  if restok == 0 { return (0, 0, 0) };
-  (co, cl) := call sl_cons(ty, resto, restl);
+  (r0, r1, r2) := call class_gen_prefix_binders_slots_go(g, s + 1, mc);
+  if r0 == 0 { return (0, 0, 0) };
+  (co, cl) := call sl_cons(ty, r1, r2);
   return (1, co, cl)
 }
 
@@ -581,12 +699,23 @@ def classGenPrefixBinders : FunDecl := lfn (g) locals (pbo, pbl, ok, so, sl, all
 /-- `class_gen_rec_ty(g, c)`: the generated recursor type at class `c`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:241-255 ConRon.Arena.classGenRecTy
 @[l_impl ConRon.Arena.classGenRecTy]
-def classGenRecTy : FunDecl := lfn (g, c) locals
-    (rP, ok, fo, fl, maj, t, ibo, ibl, b1o, b1l, b2o, b2l, mv, a1o, a1l, body, r) {
+def classGenRecTy : FunDecl := lfn (g, c) locals (rP, ok, fo, fl, maj, t, r0, r1) {
   rP := IW.u64[g + 13];
   (ok, fo, fl, maj) := call class_gen_major(g, c, rP);
   if ok == 0 { return (0, 0) };
+  if rP + fl < rP { abort };
   t := call intern_fvar(rP + fl, maj);
+  if 4294967296 <= t { abort };
+  (r0, r1) := call class_gen_rec_ty_tail(g, c, rP, fo, fl, maj, t);
+  return (r0, r1)
+}
+
+/-- `class_gen_rec_ty_tail(g, c, rP, ifs.off, ifs.len, maj, t)`: `classGenRecTy` after the major
+variable `t` is interned: the binders, the motive applied, closed. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:241-255 ConRon.Arena.classGenRecTy
+@[l_impl ConRon.Arena.classGenRecTy]
+def classGenRecTyTail : FunDecl := lfn (g, c, rP, fo, fl, maj, t)
+    locals (ibo, ibl, b1o, b1l, b2o, b2l, mv, a1o, a1l, body, r) {
   (ibo, ibl) := call fvar_type_ds(fo, fl);
   (b1o, b1l) := call sl_append(IW.u64[g + 12], rP, ibo, ibl);
   (b2o, b2l) := call sl_snoc(b1o, b1l, maj);
@@ -615,17 +744,21 @@ def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (v, nr, ok, nm) {
 the minor premise of constructor `ctorName` at class `c`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
 @[l_impl ConRon.Arena.classGenRule]
-def classGenRuleFindSlot : FunDecl := lfn (g, c, ctorName) locals (so, sl, j, sp, tag) {
-  so := IW.u64[g + 7];
-  sl := IW.u64[g + 8];
-  j := 0;
-  while j < sl {
-    sp := IW.u64[so + j];
-    tag := IW.u64[sp];
-    if tag == 1 && IW.u64[sp + 1] == c && IW.u64[sp + 2] == ctorName { return (1, j) };
-    j += 1
-  };
-  return (0, 0)
+def classGenRuleFindSlot : FunDecl := lfn (g, c, ctorName) locals (ok, j) {
+  (ok, j) := call class_gen_rule_find_slot_go(IW.u64[g + 7], IW.u64[g + 8], 0, c, ctorName);
+  return (ok, j)
+}
+
+/-- `class_gen_rule_find_slot_go(so, sl, j, c, ctorName)`: the first slot `j ‥< sl` that is
+`.minor c ctorName _` (as a self-recursion). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleFindSlotGo : FunDecl := lfn (so, sl, j, c, ctorName) locals (sp, ok, r) {
+  if sl <= j { return (0, 0) };
+  sp := IW.u64[so + j];
+  if IW.u64[sp] == 1 && IW.u64[sp + 1] == c && IW.u64[sp + 2] == ctorName { return (1, j) };
+  (ok, r) := call class_gen_rule_find_slot_go(so, sl, j + 1, c, ctorName);
+  return (ok, r)
 }
 
 /-- `class_gen_rule_pvars_go(g, rP, i)`: `classGenRule`'s `pvars`, the prefix variables
@@ -647,20 +780,41 @@ i, e)`: `classGenRule`'s `callsGo` body for one recursive field `i` landing at c
 @[l_impl ConRon.Arena.classGenRule]
 def classGenRuleCall1 : FunDecl := lfn
     (g, t, tele, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, i, e) locals
-    (w, ok, xso, xsl, idxo, idxl, rc, f, fx, a1o, a1l, a2o, a2l, bso, bsl, rv) {
+    (w, ok, xso, xsl, idxo, idxl, rc, r0, r1) {
   w := call expr_get_d(wso, wsl, i);
   (ok, xso, xsl, idxo, idxl) := call class_gen_ih_parts(g, t, tele, w, e);
   if ok == 0 { return (0, 0) };
   (ok, rc) := call class_rec_of(rco, rcl, cgo, cgl, t);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_rule_call1_tail(fvso, fvsl, pvo, pvl, rlvls, xso, xsl, idxo, idxl, rc, i, e);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_call1_tail(fvs.off, fvs.len, pv.off, pv.len, rlvls, xs.off, xs.len, idx.off,
+idx.len, r, i, e)`: one recursive call after its telescope, indices and recursor are known. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleCall1Tail : FunDecl := lfn (fvso, fvsl, pvo, pvl, rlvls, xso, xsl, idxo, idxl, r, i, e)
+    locals (f, fx, rc, a1o, a1l, a2o, a2l, rv, r0, r1) {
   f := call expr_get_d(fvso, fvsl, i);
   fx := call mk_app_n_f(f, xso, xsl);
-  rc := call intern_const(rc, rlvls);
+  rc := call intern_const(r, rlvls);
+  if 4294967296 <= rc { abort };
   (a1o, a1l) := call sl_append(pvo, pvl, idxo, idxl);
   (a2o, a2l) := call sl_snoc(a1o, a1l, fx);
   rv := call mk_app_n_f(rc, a2o, a2l);
+  (r0, r1) := call class_gen_rule_call1_close(xso, xsl, e, rv);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_call1_close(xs.off, xs.len, e, app)`: the call closed over its telescope's
+binders at depth `e` (the depth must not wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleCall1Close : FunDecl := lfn (xso, xsl, e, app) locals (bso, bsl, rv) {
   (bso, bsl) := call fvar_type_ds(xso, xsl);
-  rv := call close_lams(bso, bsl, e, rv);
+  if e + bsl < e { abort };
+  rv := call close_lams(bso, bsl, e, app);
   return (1, rv)
 }
 
@@ -696,28 +850,46 @@ class `c` for its constructor `x`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
 @[l_impl ConRon.Arena.classGenRule]
 def classGenRule : FunDecl := lfn (g, rco, rcl, cgo, cgl, rlvls, c, x) locals
-    (rP, ok, s, fo, fl, jnk, wso, wsl, pvo, pvl, nF, e, ihso, ihsl, sv, a1o, a1l, body,
-     fbso, fbsl, prefo, prefl, allo, alll, r) {
+    (rP, ok, s, fo, fl, jnk, r0, r1) {
   rP := IW.u64[g + 13];
   (ok, s) := call class_gen_rule_find_slot(g, c, EREC.u64[IW.u64[x]]);
   if ok == 0 { return (0, 0) };
   (ok, fo, fl, jnk) := call open_pis_at_fvars_f(IW.u64[x + 1], IW.u64[x + 4], rP);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_rule_body(g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fo, fl);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_body(g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fvs.off, fvs.len)`: the rule after its
+fields are opened: the walked types, the prefix variables, the recursive calls (at depth `rP + nF`,
+which must not wrap), then the closing. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleBody : FunDecl := lfn (g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fo, fl) locals
+    (ok, wso, wsl, pvo, pvl, nF, ihso, ihsl, r0, r1) {
   (ok, wso, wsl) := call target_pi_doms_with(fo, fl, IW.u64[x + 5]);
   if ok == 0 { return (0, 0) };
   (pvo, pvl) := call class_gen_rule_pvars_go(g, rP, 0);
   nF := IW.u64[x + 1];
-  e := rP + nF;
+  if rP + nF < rP { abort };
   (ok, ihso, ihsl) := call class_gen_rule_calls_go(g, x, wso, wsl, fo, fl, pvo, pvl, rlvls,
-    rco, rcl, cgo, cgl, e, nF, 0);
+    rco, rcl, cgo, cgl, rP + nF, nF, 0);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_rule_close(g, s, fo, fl, ihso, ihsl);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_close(g, s, fvs.off, fvs.len, ihs.off, ihs.len)`: the minor premise applied to the
+fields and the calls, closed over the prefix and the fields' binders. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleClose : FunDecl := lfn (g, s, fo, fl, ihso, ihsl) locals
+    (sv, a1o, a1l, body, fbso, fbsl, allo, alll, r) {
   sv := call class_gen_slot_var(g, s);
   (a1o, a1l) := call sl_append(fo, fl, ihso, ihsl);
   body := call mk_app_n_f(sv, a1o, a1l);
   (fbso, fbsl) := call fvar_type_ds(fo, fl);
-  prefo := IW.u64[g + 12];
-  prefl := IW.u64[g + 13];
-  (allo, alll) := call sl_append(prefo, prefl, fbso, fbsl);
+  (allo, alll) := call sl_append(IW.u64[g + 12], IW.u64[g + 13], fbso, fbsl);
   r := call close_lams(allo, alll, 0, body);
   return (1, r)
 }
@@ -739,16 +911,31 @@ def recClassFns : Prog :=
    ("class_read_n_slots", classReadNSlots), ("class_read", classRead),
    ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),
    ("class_gen_binder", classGenBinder), ("class_gen_slot_var", classGenSlotVar),
-   ("class_gen_mot_var", classGenMotVar), ("class_gen_major", classGenMajor),
+   ("class_gen_mot_var", classGenMotVar), ("class_gen_major_tail", classGenMajorTail),
+   ("class_gen_major_ci", classGenMajorCi),
+   ("class_gen_major_open", classGenMajorOpen),
+   ("class_gen_major", classGenMajor),
    ("class_gen_motive_ty", classGenMotiveTy), ("class_gen_ih_parts", classGenIhParts),
    ("class_gen_minor_ty_ih1", classGenMinorTyIh1),
    ("class_gen_minor_ty_ihs_go", classGenMinorTyIhsGo), ("class_gen_minor_ty", classGenMinorTy),
+   ("class_gen_minor_ty_ih1_tail", classGenMinorTyIh1Tail),
+   ("class_gen_minor_ty_ih1_close", classGenMinorTyIh1Close), ("class_gen_minor_ci", classGenMinorCi),
+   ("class_gen_minor_ty_body", classGenMinorTyBody), ("class_gen_minor_ty_concl", classGenMinorTyConcl),
+   ("class_gen_minor_ty_concl2", classGenMinorTyConcl2),
+   ("class_gen_minor_ty_close", classGenMinorTyClose),
    ("class_gen_prefix_binders_find_ctor", classGenPrefixBindersFindCtor),
    ("class_gen_prefix_binders_slots_go", classGenPrefixBindersSlotsGo),
-   ("class_gen_prefix_binders", classGenPrefixBinders), ("class_gen_rec_ty", classGenRecTy),
+   ("class_gen_prefix_binders", classGenPrefixBinders),
+   ("class_gen_prefix_binders_find_ctor_go", classGenPrefixBindersFindCtorGo),
+   ("class_gen_prefix_binders_slot_motive", classGenPrefixBindersSlotMotive),
+   ("class_gen_prefix_binders_slot_minor", classGenPrefixBindersSlotMinor), ("class_gen_rec_ty", classGenRecTy),
+   ("class_gen_rec_ty_tail", classGenRecTyTail),
    ("class_rec_of", classRecOf), ("class_gen_rule_find_slot", classGenRuleFindSlot),
    ("class_gen_rule_pvars_go", classGenRulePvarsGo), ("class_gen_rule_call1", classGenRuleCall1),
-   ("class_gen_rule_calls_go", classGenRuleCallsGo), ("class_gen_rule", classGenRule)]
+   ("class_gen_rule_calls_go", classGenRuleCallsGo), ("class_gen_rule", classGenRule),
+   ("class_gen_rule_find_slot_go", classGenRuleFindSlotGo), ("class_gen_rule_call1_tail", classGenRuleCall1Tail),
+   ("class_gen_rule_call1_close", classGenRuleCall1Close), ("class_gen_rule_body", classGenRuleBody),
+   ("class_gen_rule_close", classGenRuleClose)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `pi_binders` and
 `block_shape_member_names` (`IndParts`), `target_major_at` and `target_pi_doms_with`

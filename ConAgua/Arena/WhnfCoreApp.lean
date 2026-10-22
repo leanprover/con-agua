@@ -297,7 +297,7 @@ theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [AREC, ASLOT, ADER, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 /-- **`CoreS` across an `app` interning step.** -/
 theorem CoreS.of_app {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
@@ -593,6 +593,7 @@ theorem spW_setCtl (m : Mem) (c w j : Word) : spW (m.set64 CTL c w) j = spW m j 
 /-- The top put back after a run that kept the stack below the loop's own start. -/
 theorem peel_restore {m₀ m m₃ : Mem} {co cn : Word} (hco : co = spTop m₀)
     (hb : ∀ j : Word, j < co → spW m j = spW m₀ j) (hsz : (m.arr64 SPN).size = (m₀.arr64 SPN).size)
+    (hbk : BKept m₀ m) (hpg : PoolGrew m₀ m)
     (hSt : StackKept m m₃) (htop : spTop m = co + cn) (hcn : co.toNat + cn.toNat < 2 ^ 64)
     (h136 : (136 : Word).toNat < (m₃.arr64 CTL).size) :
     StackKept m₀ (m₃.set64 CTL 136 co) := by
@@ -603,7 +604,8 @@ theorem peel_restore {m₀ m m₃ : Mem} {co cn : Word} (hco : co = spTop m₀)
         rw [htop, UInt64.lt_iff_toNat_lt, addW _ _ hcn]
         have := UInt64.lt_iff_toNat_lt.mp hjc
         omega
-      rw [hSt.2.2 j this, hb j hjc]) (by rw [hSt.2.1, hsz]) h136
+      rw [hSt.below j this, hb j hjc]) (by rw [hSt.size, hsz]) (hbk.trans hSt.bstk)
+      (hpg.trans hSt.pool) h136
   rwa [hr] at this
 
 /-- The state `CoreAfter`-style conclusion of a `beta_peel` run from the loop's memory `m`. -/
@@ -619,15 +621,15 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
     ∀ (k : Nat) (m : Mem) (t i cn : Word) (acc : Array EIdx),
       CoreS dn m a vis fe MM eb → HW t → SpineR m co cn acc → spTop m = co + cn →
       (∀ j : Word, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
-      (136 : Word).toNat < (m.arr64 CTL).size →
+      BKept m₀ m → PoolGrew m₀ m → (136 : Word).toNat < (m.arr64 CTL).size →
       ∀ st r mF, peelFull p n k m t ao an i co cn = some (st, r, mF) →
       (136 : Word).toNat < (mF.arr64 CTL).size →
       PeelPost dn vis fe MM eb m₀ a (betaPeel (decE t) acc args i.toNat) st r mF := by
   intro k
   induction k with
-  | zero => intro m t i cn acc _ _ _ _ _ _ _ st r mF hF; rw [peelFull_zero] at hF; cases hF
+  | zero => intro m t i cn acc _ _ _ _ _ _ _ _ _ st r mF hF; rw [peelFull_zero] at hF; cases hF
   | succ k ih =>
-    intro m t i cn acc hS ht hacc htop hb hsz h136m st r mF hF h136
+    intro m t i cn acc hS ht hacc htop hb hsz hbk hpg h136m st r mF hF h136
     have hspn := hS.spn
     have hco_le : co.toNat + cn.toNat ≤ (m.arr64 SPN).size := hacc.bound
     have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
@@ -683,7 +685,12 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
           omega
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih _ _ (i + 1) (cn + 1)
           (acc.push (decE (spW m (ao + i)))) hS' hbody1 hacc' htop' hb'
-          (by simp only [size_set64]; exact hsz) (by simp only [size_set64]; exact h136m)
+          (by simp only [size_set64]; exact hsz)
+          (hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
+            (by decide) (by decide)))
+          (hpg.trans (PoolGrew.of_frame (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
+            (by decide) (by decide)))
+          (by simp only [size_set64]; exact h136m)
           st r mF hF h136
         have hlam : ((decE t).tag == ETag.lam) = true := by
           rw [decE_tag_lam t ht]; simp [ht5]
@@ -710,8 +717,8 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         have h0 : (0 : Word).toNat = 0 := rfl
         rw [h0] at hok hres hS'
         have hx : SpineR m₁ ao an args :=
-          har₀.keepT co (hSt'.2.1.trans hsz)
-            (fun j hj => (hSt'.2.2 j (by
+          har₀.keepT co (hSt'.size.trans hsz)
+            (fun j hj => (hSt'.below j (by
               rw [htop, UInt64.lt_iff_toNat_lt, hadd]
               have := UInt64.lt_iff_toNat_lt.mp hj; omega)).trans (hb j hj)) hlo (hsz ▸ hspn)
         obtain ⟨hok2, hD2, hres2, hfr2, hhw2⟩ := callW_mkAppNFrom p hp k ⟨m₁, Locals.init []⟩ _
@@ -740,7 +747,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         refine ⟨_, _, hrun, ?_, ⟨by simp [HW], hhw2⟩, M', ?_, hK', ?_⟩
         · simp [decStep]
         · exact hS2.frame_stk (MemFrame.setCtl m₂ 136 co) (by simp) (by simp)
-        · exact peel_restore hco hb hsz hSt2 htop hcn64 h136'
+        · exact peel_restore hco hb hsz hbk hpg hSt2 htop hcn64 h136'
     · rw [peelFull_exit _ _ _ _ _ _ _ _ _ _ hlt] at hF
       unfold peelTail at hF
       cases h1 : callW p n "inst_list" [t, co, cn, 0] m with
@@ -767,7 +774,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
       refine ⟨_, _, hrun, ?_, ⟨by simp [HW], hrw⟩, M', ?_, hK', ?_⟩
       · simp [decStep]
       · exact hS'.frame_stk (MemFrame.setCtl m₃ 136 co) (by simp) (by simp)
-      · exact peel_restore hco hb hsz hSt' htop hcn64 h136'
+      · exact peel_restore hco hb hsz hbk hpg hSt' htop hcn64 h136'
 
 
 /-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
@@ -816,7 +823,10 @@ theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) 
       rw [← h] at this; omega)]
   obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := peelFull_ref p hp.spine hil n ao an args co dn vis
     fe MM eb a₀ s.mem har hco (by rw [hco]; exact hlo) (n + 1) _ t i 1 #[decE a] hS1 ht hacc htop1 hb1
-    (by simp only [size_set64]) (by simp only [size_set64]; exact h136i) _ _ _ hW h136
+    (by simp only [size_set64])
+    (BKept.of_frame (spnCtl_frame s.mem co a (co + 1)) (by decide) (by decide))
+    (PoolGrew.of_frame (spnCtl_frame s.mem co a (co + 1)) (by decide) (by decide))
+    (by simp only [size_set64]; exact h136i) _ _ _ hW h136
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hok, ?_, ?_, ?_⟩
   · rw [hst]; exact ⟨M', hS', hK, hSt⟩

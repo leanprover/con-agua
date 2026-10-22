@@ -477,7 +477,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       (MM : ModeMaps),
       CoreS dn m a vis fe MM eb → HW v → SpineR m vo vn va → spTop m = vo + vn →
       top.toNat ≤ (vo + vn).toNat → (∀ j : Word, j < top → spW m j = spW m₀ j) →
-      (m.arr64 SPN).size = (m₀.arr64 SPN).size →
+      (m.arr64 SPN).size = (m₀.arr64 SPN).size → BKept m₀ m → PoolGrew m₀ m →
       ∀ st r mF, appFull p mode vis d hd vo ao an top k m v vn same i = some (st, r, mF) →
       (136 : Word).toNat < (mF.arr64 CTL).size →
       PeelPost dn vis fe MM eb m₀ a
@@ -485,9 +485,9 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           (same != 0) args nodes i.toNat) st r mF := by
   intro k
   induction k with
-  | zero => intro _ a m v vn same i va MM _ _ _ _ _ _ _ st r mF hF; rw [appFull_zero] at hF; cases hF
+  | zero => intro _ a m v vn same i va MM _ _ _ _ _ _ _ _ _ st r mF hF; rw [appFull_zero] at hF; cases hF
   | succ k ih =>
-    intro hkn a m v vn same i va MM hS hv hva htop htv hb hsz st r mF hF h136
+    intro hkn a m v vn same i va MM hS hv hva htop htv hb hsz hbk hpg st r mF hF h136
     have hspn := hS.spn
     have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; omega
     have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := addW _ _ hvn64
@@ -560,8 +560,8 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         · exact hS'.frame_stk (MemFrame.setCtl m₁ 136 _) (by simp) (by simp)
         · subst htop0
           exact StackKept.restore (fun j hj => by
-              rw [hSt'.2.2 j (hjtop j hj)]; exact hb j hj) (hSt'.2.1.trans hsz)
-            (by rwa [size_set64] at h136)
+              rw [hSt'.below j (hjtop j hj)]; exact hb j hj) (hSt'.size.trans hsz)
+            (hbk.trans hSt'.bstk) (hpg.trans hSt'.pool) (by rwa [size_set64] at h136)
       · -- the push, then the ι step
         have hnodeget : nodes[i.toNat]! = decE (rdW (m.arr64 SPN) (ao + an + i)) := by
           have hi2 : i.toNat < nodes.size := by rw [hno.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
@@ -590,10 +590,10 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         have hbd : vo.toNat + vn.toNat < (m₁.arr64 SPN).size := by
           have h : ¬ UInt64.ofNat (m₁.arr64 SPN).size ≤ vo + vn := hlen
           rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by
-            have := hSt₁.2.1; omega), hadd] at h
+            have := hSt₁.size; omega), hadd] at h
           omega
-        have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hSt₁.2.1 ▸ hspn
-        have hva₁ : SpineR m₁ vo vn va := hva.keep hSt₁.2.1 hSt₁.2.2 (by rw [htop, hadd]; exact Nat.le_refl _) hspn
+        have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hSt₁.size ▸ hspn
+        have hva₁ : SpineR m₁ vo vn va := hva.keep hSt₁.size hSt₁.below (by rw [htop, hadd]; exact Nat.le_refl _) hspn
         have hS₂ := hS₁.frame_stk (spnCtl_frame m₁ (vo + vn) (rdW (m.arr64 SPN) (ao + i))
           (vo + vn + 1)) (by simp) (by simp)
         have hva₂ : SpineR ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
@@ -617,11 +617,19 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           intro j hj
           rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
             have := UInt64.lt_iff_toNat_lt.mp hj
-            rw [← h, hadd] at this; omega), hSt₁.2.2 j (hjtop j hj)]
+            rw [← h, hadd] at this; omega), hSt₁.below j (hjtop j hj)]
           exact hb j hj
         have hsz₂ : (((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
             (vo + vn + 1)).arr64 SPN).size = (m₀.arr64 SPN).size := by
-          simp only [size_set64]; exact hSt₁.2.1.trans hsz
+          simp only [size_set64]; exact hSt₁.size.trans hsz
+        have hbk₂ : BKept m₀ ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+            (vo + vn + 1)) :=
+          hbk.trans (hSt₁.bstk.trans (BKept.of_frame (spnCtl_frame m₁ (vo + vn)
+            (rdW (m.arr64 SPN) (ao + i)) (vo + vn + 1)) (by decide) (by decide)))
+        have hpg₂ : PoolGrew m₀ ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+            (vo + vn + 1)) :=
+          hpg.trans (hSt₁.pool.trans (PoolGrew.of_frame (spnCtl_frame m₁ (vo + vn)
+            (rdW (m.arr64 SPN) (ao + i)) (vo + vn + 1)) (by decide) (by decide)))
         have hnotlam : ((decE v).tag == ETag.lam) = false := by
           rw [decE_tag_lam v hv]; simp [hlam]
         have hunf := whnfApp_nolam (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
@@ -632,7 +640,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         by_cases hconst : hd >>> 28 = 3
         · rw [iotaW_const hconst] at hF
           generalize hm₂ : ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
-            (vo + vn + 1)) = m₂ at hS₂ hva₂ htop₂ hb₂ hsz₂ hF
+            (vo + vn + 1)) = m₂ at hS₂ hva₂ htop₂ hb₂ hsz₂ hbk₂ hpg₂ hF
           cases hcI : callW p k "iota_rec_at" [mode, vis, d, hd, vo, vn + 1] m₂ with
           | none => rw [hcI] at hF; simp at hF
           | some q =>
@@ -647,13 +655,13 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             hva₂ (by rw [htop₂, hadd2]; omega)
           obtain ⟨hokI, ⟨M', hS₃, hK₃, hSt₃⟩, hresI, hrwI⟩ := CoreSpec.of_callW hiota hcI
           have hva₃ : SpineR m₃ vo (vn + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) :=
-            hva₂.keep hSt₃.2.1 hSt₃.2.2 (by rw [htop₂, hadd2]; omega) (hsz₂ ▸ hspn0)
+            hva₂.keep hSt₃.size hSt₃.below (by rw [htop₂, hadd2]; omega) (hsz₂ ▸ hspn0)
           have htop₃ : spTop m₃ = vo + (vn + 1) := hSt₃.1.trans htop₂
           have hb₃ : ∀ j : Word, j < top → spW m₃ j = spW m₀ j := fun j hj => by
-            rw [hSt₃.2.2 j (by rw [htop₂, UInt64.lt_iff_toNat_lt, hadd2]
-                               have := UInt64.lt_iff_toNat_lt.mp hj; omega)]
+            rw [hSt₃.below j (by rw [htop₂, UInt64.lt_iff_toNat_lt, hadd2]
+                                 have := UInt64.lt_iff_toNat_lt.mp hj; omega)]
             exact hb₂ j hj
-          have hsz₃ : (m₃.arr64 SPN).size = (m₀.arr64 SPN).size := hSt₃.2.1.trans hsz₂
+          have hsz₃ : (m₃.arr64 SPN).size = (m₀.arr64 SPN).size := hSt₃.size.trans hsz₂
           have hctag : ((decE hd).tag == ETag.const) = true := by
             rw [decE_tag_const hd hhd]; simp [hconst]
           by_cases hz : rr.headD 0 ≠ 0
@@ -690,16 +698,18 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
               subst htop0
               have hSt4 := StackKept.of_app_frame hfr2
               exact StackKept.restore (fun j hj => by
-                  rw [hSt4.2.2 j (by
+                  rw [hSt4.below j (by
                     rw [htop₃, UInt64.lt_iff_toNat_lt, hadd2]
                     have := UInt64.lt_iff_toNat_lt.mp hj; omega)]
-                  exact hb₃ j hj) (hSt4.2.1.trans hsz₃) (by rwa [size_set64] at h136)
+                  exact hb₃ j hj) (hSt4.size.trans hsz₃)
+                  ((hbk₂.trans hSt₃.bstk).trans hSt4.bstk) ((hpg₂.trans hSt₃.pool).trans hSt4.pool)
+                  (by rwa [size_set64] at h136)
           · rw [if_neg hz] at hF
             simp only at hF
             have hz' : rr.headD 0 = 0 := by simpa using hz
             obtain ⟨x, a', hrun', hx, hrw, M'', hS'', hK, hSt⟩ := ih (by omega) _ m₃ ap (vn + 1) _
               (i + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) M' hS₃ hapW hva₃ htop₃
-              (by rw [hadd2]; omega) hb₃ hsz₃ st r mF hF h136
+              (by rw [hadd2]; omega) hb₃ hsz₃ (hbk₂.trans hSt₃.bstk) (hpg₂.trans hSt₃.pool) st r mF hF h136
             rw [hi1, evalW_eq_ne ap _ hapW hnW] at hrun'
             refine ⟨x, a', ?_, hx, hrw, M'', hS'', hK₃.trans hK, hSt⟩
             rw [hunf]
@@ -711,8 +721,8 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         · rw [iotaW_nonconst hconst] at hF
           simp only at hF
           obtain ⟨x, a', hrun', hx, hrw, M'', hS'', hK, hSt⟩ := ih hkn' a₁ _ ap (vn + 1) _ (i + 1)
-            (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) MM hS₂ hapW hva₂ htop₂ htv₂ hb₂ hsz₂ st r
-            mF hF h136
+            (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) MM hS₂ hapW hva₂ htop₂ htv₂ hb₂ hsz₂ hbk₂ hpg₂
+            st r mF hF h136
           have hctag : ((decE hd).tag == ETag.const) = false := by
             rw [decE_tag_const hd hhd]; simp [hconst]
           rw [hi1, evalW_eq_ne ap _ hapW hnW] at hrun'
@@ -732,7 +742,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       subst htop0
       refine ⟨_, _, hrun, by simp [decStep], ⟨by simp [HW], hv⟩, MM, ?_, KeptAll.refl _ _, ?_⟩
       · exact hS.frame_stk (MemFrame.setCtl m 136 _) (by simp) (by simp)
-      · exact StackKept.restore (fun j hj => hb j hj) hsz (by rwa [size_set64] at h136)
+      · exact StackKept.restore (fun j hj => hb j hj) hsz hbk hpg (by rwa [size_set64] at h136)
 
 include hp in
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
@@ -761,7 +771,8 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
   obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := appFull_ref p hp n hk F hF hn mode vis d hd
     vo ao an (spTop s.mem) args nodes dn fe eb s.mem hs.mode4 hs.eb_mode hhd har hno hlo
     (by rw [htop, hadd]; omega) rfl hS.spn (n + 1) (Nat.le_refl _) a₀ s.mem v vn same i vargs MM hS
-    hv hva htop (by rw [htop]; exact Nat.le_refl _) (fun _ _ => rfl) rfl _ _ _ hW h136
+    hv hva htop (by rw [htop]; exact Nat.le_refl _) (fun _ _ => rfl) rfl (BKept.refl _)
+    (PoolGrew.refl _) _ _ _ hW h136
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hok, ?_, ?_, hrw⟩
   · rw [hst]; exact ⟨M', hS', hK, hSt⟩

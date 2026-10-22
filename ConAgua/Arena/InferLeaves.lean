@@ -332,7 +332,7 @@ theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FADER, FAREC, FASLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _,
-      ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩⟩,
+      StackKept.of_frame hf⟩,
     by rw [hres]; rfl, mkForallW_hw m a hS.arena t b _ m' hI⟩
 
 /-! ## `infer_lam_result` -/

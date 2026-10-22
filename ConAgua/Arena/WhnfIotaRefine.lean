@@ -586,7 +586,13 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
           rw [UInt64.toNat_add]; simp; omega
         omega)
   · exact hf.2.2.1 145 ▸ hS.bstk
-  · refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  · refine StackKept.of_frame_range hf (fun b hb => by
+      simp only [List.mem_singleton] at hb; subst hb; constructor <;> simp only [ArrId] <;> omega)
+      (fun x hx => by
+      simp at hx; subst hx
+      have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      omega)
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
@@ -1045,7 +1051,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb _ (rdW (m.arr64 SPN) (ao + i)) 0 hS (by
         have := (view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
         exact this)) hc
-    have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.2.1 hSt₁.2.2 htop hS.spn
+    have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
     have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
     have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hlt
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1, hL2⟩ :=

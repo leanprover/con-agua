@@ -63,6 +63,8 @@ theorem Keep.set64 {m m' : Mem} (h : Keep m m') (a : ArrId) (i v : Word) : Keep 
     by_cases ha : a < m'.words.size <;> simp [ha]
   · simp [hb]
 
+theorem Keep.setG {m m' : Mem} (h : Keep m m') (g : GVar) (v : Word) : Keep m (m'.setG g v) := h
+
 theorem Prog.noSt8_lookup {p : Prog} (hp : p.noSt8 = true) {f : FnName} {fd : FunDecl}
     (h : p.lookup f = some fd) : fd.body.noSt8 = true := by
   induction p with
@@ -90,6 +92,7 @@ theorem evalE_same (e : Expr) (s₀ : St) : ⦃fun s => s = s₀⦄ evalE e ⦃f
   | len64 a => vcgen [evalE] <;> grind
   | cmpw c a b iha ihb => vcgen [evalE, iha, ihb] <;> grind
   | ldc d i ih => vcgen [evalE, ih, ldc] <;> grind
+  | glob g => vcgen [evalE] <;> grind
 
 theorem evalC_same (c : Cond) (s₀ : St) : ⦃fun s => s = s₀⦄ evalC c ⦃fun _ s => s = s₀; ⊤⦄ := by
   induction c with
@@ -143,6 +146,7 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
   | call xs f args =>
     vcgen [step, setLocs, evalArgs_same args, invoke_keep p hp k hk f m₀] <;> grind [St.setLocs_mem']
   | abort => vcgen [step] <;> grind
+  | gset g e => vcgen [step, setG, evalE_same e] <;> grind [Keep.setG, St.setG_mem]
 
 theorem exec_keep (p : Prog) (hp : p.noSt8 = true) (n : Nat) : KeepK (exec p n) := by
   induction n with
