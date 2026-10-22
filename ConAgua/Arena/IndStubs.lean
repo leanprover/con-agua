@@ -250,6 +250,12 @@ theorem lvlEqStub_spec (u v : Word) (hu : H u) (hv : H v) :
     RelAM "lvl_eq" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
       (KeepPost dn vis fe decLvlEq) := sorry
 
+/-- `intern_nanon()`: `internNNode .anonymous`. No stage-level (`StageR`) model of `intern_nanon` yet
+(added by lane indproofs, helper `recb`). -/
+theorem internNanonStub_spec :
+    RelAM "intern_nanon" [] (StageR dn vis fe) (internNNode .anonymous)
+      (KeepPost dn vis fe decW0N) := sorry
+
 end masterSpecs
 
 end L.Ind

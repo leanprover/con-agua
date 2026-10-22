@@ -578,18 +578,17 @@ def structUsedLaterGoL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r
 }
 
 /-- `struct_used_later_list(cty, nP, n, base)`: `structUsedLater cty nP j` for `j = base, …, base +
-n - 1`, in order, through one shared `hb` memo (no clear: the caller owns it). -/
+n - 1`, in order, through one shared `hb` memo (no clear: the caller owns it). Self-recursive, as the
+twin is (lane `indproofs`: rewritten from a `while` loop for the refinement; the conses copy,
+quadratic in the field count). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:194-203 ConRon.Arena.structUsedLaterList
 @[l_impl ConRon.Arena.structUsedLaterList]
-def structUsedLaterListL : FunDecl := lfn (cty, nP, n, base) locals (res, j, r) {
-  res := call iw_alloc(n);
-  j := 0;
-  while j < n {
-    r := call struct_used_later_go(cty, nP, base + j);
-    IW.u64[res + j] := r;
-    j += 1
-  };
-  return (res, n)
+def structUsedLaterListL : FunDecl := lfn (cty, nP, n, base) locals (res, r, ro, rl, o, l) {
+  if n == 0 { res := call iw_alloc(0); return (res, 0) };
+  r := call struct_used_later_go(cty, nP, base);
+  (ro, rl) := call struct_used_later_list(cty, nP, n - 1, base + 1);
+  (o, l) := call sl_cons(r, ro, rl);
+  return (o, l)
 }
 
 /-- `struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, j, k, acc)`: the twin's `col j
@@ -751,8 +750,8 @@ i, body) → e` (`ConLeche/Kernel/Inductives/Positivity.lean`'s, translated in m
 def indSumForeign : Prog := [("close_telescope", stub 4)]
 
 theorem indSum_wf :
-    L.Compiler.Prog.wf indTab (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) = true := by
-  decide +kernel
+    L.Compiler.Prog.wf indTab (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## A few `#guard`s, where a function is pure enough to run without hitting a stub -/
 

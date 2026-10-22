@@ -700,8 +700,8 @@ def RecClassForeign : Prog :=
 
 theorem recClass_wf :
     L.Compiler.Prog.wf indTab
-      (recClassFns ++ libFns ++ stubFns ++ masterFns ++ RecClassForeign) = true := by
-  decide +kernel
+      (recClassFns ++ libFns ++ stubFns ++ masterFns ++ RecClassForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 -- A small slots list (one motive slot whose class key is `[10, 20, 0, 0]`, one minor slot
 -- `(cls 5, ctor 7)`) at `IW[16‥18)`, and a motive-position list `[3]` at `IW[20]`:

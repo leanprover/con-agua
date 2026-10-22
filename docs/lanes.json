@@ -254,7 +254,7 @@
 {
 "lane": "indproofs",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Prove the phase-8 L code bottom-up; hook inductive lines into the frontend"
 },
 {
@@ -272,7 +272,25 @@
 {
 "lane": "exprops4",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "ExprMk build time; abstract1, instantiateList"
+},
+{
+"lane": "buildstats",
+"model": "sonnet",
+"status": "done",
+"focus": "File size + elaboration time monitor (scripts/buildstats.py)"
+},
+{
+"lane": "perf1",
+"model": "opus",
+"status": "running",
+"focus": "Slow declarations (grind, Prog.wf checks); split Scan/Records"
+},
+{
+"lane": "indproofs2",
+"model": "opus",
+"status": "running",
+"focus": "Phase 8 proofs continued; inductive lines in the frontend"
 }
 ]

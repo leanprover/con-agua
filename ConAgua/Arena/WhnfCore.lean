@@ -236,7 +236,8 @@ def reduceProjCoreL : FunDecl :=
 }
 
 /-- `reduceProjCore` from the scrutinee's head on (`q` the table record): the head must be a
-constant. -/
+constant.
+con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
 def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
@@ -252,7 +253,8 @@ def reduceProjHeadL : FunDecl :=
 }
 
 /-- `reduceProjCore` at a constant head `k.{us}`: the arguments (pushed on the stack), the
-level count, the entry's fire check, the shape conditions. -/
+level count, the entry's fire check, the shape conditions.
+con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
 def reduceProjFireL : FunDecl :=
     lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, fok, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
@@ -268,7 +270,8 @@ def reduceProjFireL : FunDecl :=
 }
 
 /-- `reduceProjCore`'s fire: argument `j` of the slice `(ao, an)` (else `bvar 0`), certified at
-the verified mode. -/
+the verified mode.
+con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
 def reduceProjArgL : FunDecl :=
     lfn (mode, vis, k, ao, an, j) locals (b0, arg, ok) {
   b0 := call intern_bvar(0);

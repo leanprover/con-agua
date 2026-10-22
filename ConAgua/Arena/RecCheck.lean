@@ -280,14 +280,12 @@ def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl,
 /-- Does any of `ctors` carry the constructor name `name`? -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:226-241 ConRon.Arena.targetMajorNfs
 @[l_impl ConRon.Arena.targetMajorNfs]
-def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (j, ce) {
-  j := 0;
-  while j < cl {
-    ce := IW.u64[co + j];
-    if EREC.u64[IW.u64[ce]] == name { return 1 };
-    j += 1
-  };
-  return 0
+def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
+  if cl == 0 { return 0 };
+  ce := IW.u64[co];
+  if EREC.u64[IW.u64[ce]] == name { return 1 };
+  r := call ctors_have_name(co + 1, cl - 1, name);
+  return r
 }
 
 /-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class,
@@ -376,17 +374,15 @@ def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_
 parameters (`ds.allM`, stopping at the first failure). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (j, x, bb, fb) {
-  j := 0;
-  while j < dsl {
-    x := IW.u64[dso + j];
-    bb := call bvar_b(⟪CWF⟫, x);
-    if bb != 0 { return 0 };
-    fb := call fvar_b(⟪CWF⟫, x);
-    if nP < fb { return 0 };
-    j += 1
-  };
-  return 1
+def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb, r) {
+  if dsl == 0 { return 1 };
+  x := IW.u64[dso];
+  bb := call bvar_b(⟪CWF⟫, x);
+  if bb != 0 { return 0 };
+  fb := call fvar_b(⟪CWF⟫, x);
+  if nP < fb { return 0 };
+  r := call target_major_of_outside_closed(dso + 1, dsl - 1, nP);
+  return r
 }
 
 /-- `target_major_of`'s OUTSIDE branch: does any parameter occur as a member or hole
@@ -512,19 +508,26 @@ def blockRecWantAuxNames : FunDecl := lfn (n0, auxl) locals (wo, j, nm) {
   return (wo, auxl)
 }
 
+/-- `ptr_names_copy(d, s, l)`: `IW[d + j] := EREC[IW[IW[s + j]]]` for `j < l`, recursively (the
+constants' names of a slice of pointers whose word `0` is a constant pointer). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
+@[l_impl ConRon.Arena.targetRecPins]
+def ptrNamesCopy : FunDecl := lfn (d, s, l) locals (ptr, cv, u) {
+  if l == 0 { return 0 };
+  ptr := IW.u64[s];
+  cv := IW.u64[ptr];
+  IW.u64[d] := EREC.u64[cv];
+  u := call ptr_names_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
 /-- The constants' names of a slice of pointers whose word `0` is a constant pointer (a
 `RecShape`'s `cvR`, or a `(cv, nF)` constructor entry). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
 @[l_impl ConRon.Arena.targetRecPins]
-def ptrListNames : FunDecl := lfn (o, l) locals (go, j, ptr, nm) {
+def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
   go := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ptr := IW.u64[o + j];
-    nm := EREC.u64[IW.u64[ptr]];
-    IW.u64[go + j] := nm;
-    j += 1
-  };
+  u := call ptr_names_copy(go, o, l);
   return (go, l)
 }
 
@@ -888,7 +891,7 @@ def recCheckFns : Prog :=
    ("target_major_of_outside", targetMajorOfOutside), ("target_major_of", targetMajorOf),
    ("target_pin_tys", targetPinTys), ("target_major_pins", targetMajorPins),
    ("block_rec_split_own_aux", blockRecSplitOwnAux),
-   ("block_rec_want_aux_names", blockRecWantAuxNames), ("ptr_list_names", ptrListNames),
+   ("block_rec_want_aux_names", blockRecWantAuxNames), ("ptr_names_copy", ptrNamesCopy), ("ptr_list_names", ptrListNames),
    ("target_rec_pins_names", targetRecPinsNames), ("target_rec_pins_split", targetRecPinsSplit),
    ("target_rec_pins", targetRecPins), ("target_ctor_at", targetCtorAt),
    ("erase_each", eraseEach), ("target_k53_tele", targetK53Tele),
@@ -924,8 +927,8 @@ def recCheckForeign : Prog :=
 /-- The module closes over the library, the stubs and its foreign callees. -/
 theorem recCheck_wf :
     L.Compiler.Prog.wf indTab
-      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true := by
-  decide +kernel
+      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 -- `abstract_prefix` at `k = 0`: the identity.
 #guard
