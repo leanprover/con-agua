@@ -3558,6 +3558,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
 | 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+| 146‥149 | `PNM`, `PLM`, `PLSM`, `PEM` | `PMemoR` (`LoopR.pmemo`) | the promotion's four memos (names, levels, level lists, expressions; lane `decls2-promote`) |
 | 192 | `LH` | levels' heap (per call, no relation: scratch) | level-algorithm heap, nodes `[tag, a, b]`, bump-allocated below `CTL[192]` (lane `levels`) |
 
 `CTL` words:
@@ -3579,6 +3580,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
+| 140‥147 | `PMemoR` | stamp − 1, live count of `PNM`, `PLM`, `PLSM`, `PEM` (lane `decls2-promote`) |
 | 192 | levels' heap (per call) | the heap top (lane `levels`) |
 
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
@@ -5619,6 +5621,33 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 * The relation behind it all is `StageR` at the callee and `LoopR.of_step` around it: the step's
   callees never see `PEND`/`DECL`/`DLP`, the text says they do not write them.
 
+
+### Promotion in L (`Promote*.lean`, helper `decls2-promote`)
+
+`promoteVG_spec` is **proved**; `promoteN`, `promoteL`, `promoteLs`, `promoteE`, `promoteVG` are
+`@[refines]` with no `sorry` (axioms `propext`, `Classical.choice`, `Quot.sound`). All promotion
+L code is in `Promote.lean` (374 L lines, incl. `promote_ci` and its arms, `erase_installed`,
+`index_promoted`, `promote_new`, with `#guard` runs in `PromoteTest.lean`); ≈ 6.0k proof lines in
+16 files.
+* **`internPersistent` as a flag bracket**: `pi_X` saves `CTL[1]`, clears it, calls the ordinary
+  `intern_*`/`mk_*`, restores it. `ArenaR` reads `CTL[1]` only in each table's flag clause, so the
+  transient state is related; twin side, `internPersistentX v = internX v` at cleared flags (the
+  four stores' flags agree, the children persistent). One interner per kind, no copies.
+* The four `PMemo` maps are memos on arrays 146‥149 (`PNM`, `PLM`, `PLSM`, `PEM`), `CTL` 140‥147,
+  epoch-cleared per declaration; `PMemoR` is the real relation, and `LoopR` carries
+  `pmemo : ∃ pm, PMemoR m pm`. `stepA`/`stepC` exclude them (the step's texts still check).
+* Records are written after their parts (`promote_vg`, `promote_cv`), so later writes sit above
+  every part and the decodings survive (`ErecGrow`/`ArrExt`). `pci_defn`/`pci_ind`/`pci_rec` still
+  allocate first: restructure before proving `promote_ci`.
+* Findings: a word loaded inside a call argument (`call f(A.u64[i])`) makes `finish` fail; load it
+  into a local first. `decide` times out on membership in long write-set lists; `simp` with the
+  ids unfolded works. L copies an inductive's `sortZ` name handles (as the twin does) instead of
+  promoting them: whether they still decode after the drop is the consumers' question.
+* `PromoteProg.lean` 17 s user (lookups over 140 entries), the rest ≤ 8 s.
+
+Census at landing 4: phase 2 **136 proven, 11 sorry, 93 written, 91 todo**; proven Rust lines
+745 of 6512 (was 370 at the lane's start); totals 526 proven of 1352.
+
 ### `sorry`s (lane `decls2`)
 
 * `DeclCvg.lean` `lvlEqCStage_spec`: `lvl_eq_c` under `StageR`. Lane `whnf`'s `lvlEqC_refines`
@@ -5627,6 +5656,8 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 * `DeclStepGo.lean` `checkDecl_loop`: `check_decl` at the loop's relation (the arms' proofs;
   for kind `6` also the front's `DeclAt` for inductive records and lane `induct`'s
   `check_ind_decl`).
+* `Checker.lean` `promoteNew_spec`: `promote_new` (L code written; `promote_ci`'s arms, the erase
+  and re-index loops need specs).
 
 Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
 **130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
