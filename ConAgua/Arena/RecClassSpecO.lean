@@ -345,4 +345,91 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
 
 end sims
 
+/-! ## The calls -/
+
+theorem cgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
+    (recCls : List Nat) (cvGs : List IConstantVal) (hns : G.nP + G.slots.length < 2 ^ 64)
+    (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e : Word) (ws fvs pvars : List EIdx) (RP : Nat)
+    (he : e.toNat = RP + X.nF) (hrl : H rlvls) (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)
+    (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (nn i : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
+    DecB (fun m => decCC m x.toNat) m X →
+    decHL m wso.toNat wsl.toNat = some ws → wso.toNat + wsl.toNat ≤ iwTop m →
+    decHL m fvso.toNat fvsl.toNat = some fvs → fvso.toNat + fvsl.toNat ≤ iwTop m →
+    decHL m pvo.toNat pvl.toNat = some pvars → pvo.toNat + pvl.toNat ≤ iwTop m →
+    DecB (fun m => decNL m rco.toNat rcl.toNat) m recCls →
+    DecB (fun m => decPL m (decCVp m) cgo.toNat cgl.toNat) m cvGs →
+    i.toNat + nn.toNat < 2 ^ 64 →
+    RSim (cgW n m g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i)
+      (classGenRule.callsGo G recCls cvGs (decI rlvls) X RP fvs ws pvars nn.toNat i.toNat) a
+      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o) := by
+  induction n with
+  | zero => intros; intro b hb; simp [cgW] at hb
+  | succ n ih =>
+  intro m a nn i hS hG hX hws hwb hfvs hfb hpv hpb hrc hcg hin
+  have hsz := hS.2.2.2.1
+  by_cases h0 : nn = 0
+  · rw [cgW_end (h := h0)]
+    subst h0
+    rw [show (0 : Word).toNat = 0 from rfl, classGenRule.callsGo.eq_1]
+    exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl, by simp [decHL, hslice?], by simp⟩
+  obtain ⟨k, hk⟩ : ∃ k, nn.toNat = k + 1 :=
+    ⟨nn.toNat - 1, by have : nn.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
+  have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hn1 : (nn - 1).toNat = k := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+  rw [hk, classGenRule.callsGo.eq_2]
+  obtain ⟨hord, hrec⟩ := rec2IsTag (hX.get (decCC_mono _)) hsz (i := i)
+  cases hkd : X.kinds.getD i.toNat .ordinary with
+  | ordinary =>
+    rw [cgW_ord (h := h0) (ht := hord hkd)]
+    have hih := ih m a (nn - 1) (i + 1) hS hG hX hws hwb hfvs hfb hpv hpb hrc hcg (by omega)
+    rw [hi1, hn1] at hih
+    refine RSim.bindPure (K := isK3) rfl hih ?_
+    rintro ⟨r, m'⟩ o a' - ⟨hS', hg', ho⟩
+    refine RSim.pure_some ⟨hS', hg', ?_⟩
+    cases o with
+    | none => exact ho
+    | some ihs => exact ho
+  | recursive t tele =>
+  obtain ⟨ht, et, tlt, ete, telelt⟩ := hrec t tele hkd
+  have tt : (UInt64.ofNat t : Word).toNat = t := UInt64.toNat_ofNat_of_lt' tlt
+  have tte : (UInt64.ofNat tele : Word).toNat = tele := UInt64.toNat_ofNat_of_lt' telelt
+  dsimp only
+  rw [← he, ← tt, ← tte]
+  rw [cgW_rec (h := h0) (ht := ht), et, ete]
+  cases n with
+  | zero => intro b hb; simp [c1W, cgK1] at hb
+  | succ n =>
+  refine c1W_sim n m a g _ _ wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e G ws fvs pvars recCls cvGs
+    hS hG hns hws hwb hfvs hfb hpv hpb hrl hrc hrcb hcg hcgb
+    (cgK1 (n + 1) g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i) (by simp [cgK1]) _ _ ?_ ?_
+  · intro m' a' hS' hg'
+    rw [cgK1_fail (h := rfl)]
+    exact RSim.pure_some ⟨hS', hg', rfl⟩
+  · intro m' a' w hS' hg' hw
+    rw [cgK1_ok (h := by simp)]
+    simp only [List.tail_cons, List.headD_cons]
+    have hih := ih m' a' (nn - 1) (i + 1) hS' (hG.grow (decCG_mono _) hg') (hX.grow (decCC_mono _) hg')
+      (by rw [decHL_grow hg' hwb]; exact hws) (Nat.le_trans hwb hg'.1)
+      (by rw [decHL_grow hg' hfb]; exact hfvs) (Nat.le_trans hfb hg'.1)
+      (by rw [decHL_grow hg' hpb]; exact hpv) (Nat.le_trans hpb hg'.1)
+      (hrc.grow (OMono.decNL _ _) hg') (hcg.grow (OMono.decPL (fun q => OMono.decCVp q) _ _) hg') (by omega)
+    rw [hi1, hn1] at hih
+    refine RSim.bind (K := isK2 (n + 1) w) rfl hih ?_
+    rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho⟩
+    dsimp only at hS2 hg2 ho
+    cases o with
+    | none =>
+      rw [isK2_fail (h := ho)]
+      exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl⟩
+    | some ihs =>
+    obtain ⟨h21, hd2, hb2⟩ := ho
+    rw [isK2_ok (h := by rw [h21]; decide)]
+    refine RSim.lstep (K := isK4) rfl fun ⟨r3, m3⟩ h3 => ?_
+    obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hw hd2
+    rw [isK4_some]
+    exact RSim.pure_some ⟨hS3, hg'.trans (hg2.trans hg3), rfl, by simpa using hd3,
+      by simp only [List.tail_cons, List.headD_cons]; exact Nat.le_of_eq ht3⟩
+
 end L.Ind
