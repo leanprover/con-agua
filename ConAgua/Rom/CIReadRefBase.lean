@@ -66,10 +66,12 @@ structure RInv (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop where
   frame : MemFrame RciA RciC m₀ m
   grow : IWGrow m₀ m
   ok : IWOK m
+  /-- The pool's top is the entry's (no reader below `rci_block` allocates in `IW`). -/
+  top : iwTop m = iwTop m₀
 
 theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR dn vis fe m a) : RInv m a m a :=
-  ⟨hS.1.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.2⟩
+  ⟨hS.1.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.2, rfl⟩
 
 /-- **`StageR` back** from the entry's. -/
 theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m₀ m : Mem}
@@ -99,7 +101,7 @@ theorem RInv.expr (h : RInv m₀ a₀ m a) (hA : ArenaD m' a') (hf : MemFrame Ex
   have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by decide)]
   have h200 : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
   refine ⟨⟨hA, hk.trans h.hcp, h.frame.trans (hf.mono (by intro b hb; simp [RciA, hb])
-    (by intro x hx; simp [RciC, hx])), ?_, ?_⟩, hE, hI, h129, h200⟩
+    (by intro x hx; simp [RciC, hx])), ?_, ?_, h200.trans h.top⟩, hE, hI, h129, h200⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun i hi => by rw [hI]; exact g3 i hi,
       fun i hi => by rw [hE]; exact g4 i hi⟩
@@ -120,7 +122,7 @@ theorem RInv.setER (h : RInv m₀ a₀ m a) (i w : Word) (hi : erTop m₀ ≤ i.
   have h129 : erTop (m.set64 EREC i w) = erTop m := by simp only [erTop, hC]
   have h200 : iwTop (m.set64 EREC i w) = iwTop m := by simp only [iwTop, hC]
   refine ⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_⟩
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
       fun j hj => by rw [hE j (by omega)]; exact g4 j hj⟩
@@ -157,34 +159,12 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ m a) {k o : Word} (hw : erAllocW m k = 
     omega
   have h200 : iwTop (erAllocMem m k) = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by decide)]
   refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp) (by simp [RciC])), ?_, ?_⟩, rfl, htop, hE, hI, h200⟩
+    h.frame.trans (hf.mono (by simp) (by simp [RciC])), ?_, ?_, h200.trans h.top⟩, rfl, htop, hE, hI,
+    h200⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, by rw [htop]; omega, fun j hj => by rw [hI]; exact g3 j hj,
       fun j hj => by rw [hE]; exact g4 j hj⟩
   · exact ⟨by rw [h200, hI]; exact o1, by rw [htop, hE]; simp only [erTop]; omega, by rw [hI]; exact o3,
-      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
-
-/-- `iw_alloc(k)`: the pool's top raised by `k`. -/
-theorem RInv.iwAlloc (h : RInv m₀ a₀ m a) {k o : Word} (hw : allocW m k = some (o, m')) :
-    RInv m₀ a₀ m' a ∧ o.toNat = iwTop m ∧ iwTop m' = iwTop m + k.toNat ∧
-      m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧ erTop m' = erTop m := by
-  obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
-  obtain ⟨hq, rfl, hroom⟩ := allocW_facts hw o3
-  have hf := allocMem_frame m k
-  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
-  have hI : (allocMem m k).arr64 IW = m.arr64 IW := by
-    simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
-    simp only [iwTop, allocMem_top m k o5, ← hq]
-    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
-  have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]
-  refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_⟩, hqi, htop, hE, hI, h129⟩
-  · obtain ⟨g1, g2, g3, g4⟩ := h.grow
-    exact ⟨by rw [htop]; omega, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
-      fun j hj => by rw [hE]; exact g4 j hj⟩
-  · exact ⟨by rw [htop, hI]; omega, by rw [h129, hE]; exact o2, by rw [hI]; exact o3,
       by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
 
 /-- A word written in `IW` at an allocated index above the entry's pool top. -/
@@ -200,7 +180,7 @@ theorem RInv.setIW (h : RInv m₀ a₀ m a) (i w : Word) (hi : iwTop m₀ ≤ i.
   have h129 : erTop (m.set64 IW i w) = erTop m := by simp only [erTop, hC]
   have h200 : iwTop (m.set64 IW i w) = iwTop m := by simp only [iwTop, hC]
   refine ⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
-    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_⟩
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top⟩
   · obtain ⟨g1, g2, g3, g4⟩ := h.grow
     exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI j (by omega)]; exact g3 j hj,
       fun j hj => by rw [hE]; exact g4 j hj⟩
