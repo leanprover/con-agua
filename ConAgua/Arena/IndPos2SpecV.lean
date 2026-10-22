@@ -224,4 +224,161 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
 
 end root
 
+/-! ## The seeds -/
+
+/-- The seeds: word `o + i` points at a `(key, nPc)` record, the key a `NestKey` decoded below the
+tops with its parameter slice below the top. -/
+def SeedsAt (m : Mem) (o : Nat) (seeds : List (NestKey × Nat)) : Prop :=
+  ∀ i (hi : i < seeds.length), ∃ sp key nPc : Word, (m.arr64 IW)[o + i]? = some sp ∧ o + i < iwTop m ∧
+    sp.toNat + 1 < iwTop m ∧ (m.arr64 IW)[sp.toNat]? = some key ∧ (m.arr64 IW)[sp.toNat + 1]? = some nPc ∧
+    DecB (fun m => decNK m key.toNat) m seeds[i].1 ∧ NKSl m key ∧ nPc.toNat = seeds[i].2
+
+theorem pos2_key_rd {m m' : Mem} (hg : IWGrow m m') (htop : iwTop m < 2 ^ 64) {key : Word}
+    (hk : key.toNat + 4 ≤ iwTop m) {j : Nat} (hj : j < 4) : rdW (m'.arr64 IW) (key + UInt64.ofNat j) = rdW (m.arr64 IW) (key + UInt64.ofNat j) := by
+  apply pos2_rd_grow hg
+  have : (UInt64.ofNat j).toNat = j := by simp; omega
+  rw [word_add_toNat (by rw [this]; omega), this]; omega
+
+theorem SeedsAt.grow {m m' : Mem} {o : Nat} {seeds : List (NestKey × Nat)} (h : SeedsAt m o seeds)
+    (hg : IWGrow m m') (htop : iwTop m < 2 ^ 64) : SeedsAt m' o seeds := fun i hi => by
+  obtain ⟨sp, key, nPc, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h i hi
+  have hk4 := (pos2_nk_fields h6 htop).2.2.2.2.2.2
+  refine ⟨sp, key, nPc, by rw [hg.2.2.1 _ h2]; exact h1, by have := hg.1; omega, by have := hg.1; omega,
+    by rw [hg.2.2.1 _ (by omega)]; exact h4, by rw [hg.2.2.1 _ h3]; exact h5, h6.grow (decNK_mono _) hg, ?_, h8⟩
+  have e2 := pos2_key_rd hg htop hk4 (j := 2) (by omega)
+  have e3 := pos2_key_rd hg htop hk4 (j := 3) (by omega)
+  simp only [NKSl] at h7 ⊢
+  have := hg.1
+  rw [show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl, show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl,
+    e2, e3]
+  exact Nat.le_trans h7 hg.1
+
+theorem SeedsAt.tail {m : Mem} {o : Nat} {x : NestKey × Nat} {seeds : List (NestKey × Nat)}
+    (h : SeedsAt m o (x :: seeds)) : SeedsAt m (o + 1) seeds := fun i hi => by
+  obtain ⟨sp, key, nPc, h1, h2, rest⟩ := h (i + 1) (by simp; omega)
+  exact ⟨sp, key, nPc, by rw [show o + 1 + i = o + (i + 1) by omega]; exact h1, by omega, by simpa using rest⟩
+
+section seeds
+variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+  (hcs : CtorSums fe) (ctx : Word) (c : NestCtx)
+
+include hM hcs in
+/-- **`nest_seeds`** simulated by `nestSeeds`. -/
+theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (sO sL ns : Word)
+    (seeds : List (NestKey × Nat)) (NS : NestState) (r : List Word),
+    p2sdW n m vis ctx sO sL ns = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
+    c.hiAt 0 < 2 ^ 64 → sL.toNat = seeds.length → SeedsAt m sO.toNat seeds → NSB m ns NS →
+    ∃ x a', (nestSeeds V fe c seeds NS).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      NSB m' (r.headD 0) x
+  | 0, _, m, m', a, sO, sL, ns, seeds, NS, r, h, _, _, _, _, _, _ => by simp [p2sdW] at h
+  | n + 1, hn, m, m', a, sO, sL, ns, seeds, NS, r, h, hS, hU, hhi, hsl, hsd, hns => by
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    rw [p2sdW_succ] at h
+    by_cases h0 : sL = 0
+    · rw [if_pos h0] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst h0
+      have : seeds = [] := List.eq_nil_of_length_eq_zero (by simpa using hsl.symm)
+      subst this
+      exact ⟨NS, a, by rw [ConRon.Arena.nestSeeds.eq_def]; rfl, hS, IWGrow.refl _, by simpa using hns⟩
+    rw [if_neg h0] at h
+    obtain ⟨⟨kk, nPcN⟩, seeds', rfl⟩ : ∃ x seeds', seeds = x :: seeds' := by
+      cases seeds with
+      | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hsl)) h0
+      | cons x seeds' => exact ⟨x, seeds', rfl⟩
+    simp only [List.length_cons] at hsl
+    obtain ⟨sp, key, nPc, h0w, hsO, hsp1, h1w, h2w, hkd, hksl, hnpc⟩ := hsd 0 (by simp)
+    simp only [Nat.add_zero, List.getElem_cons_zero] at h0w hkd hnpc
+    have rd0 : rdW (m.arr64 IW) sO = sp := by simp [rdW, h0w]
+    have rd1 : rdW (m.arr64 IW) sp = key := by simp [rdW, h1w]
+    have hsp1' : (sp + 1).toNat = sp.toNat + 1 := word_add_toNat (by simp; omega)
+    have rd2 : rdW (m.arr64 IW) (sp + 1) = nPc := by simp [rdW, hsp1', h2w]
+    rw [rd0, rd1, rd2] at h
+    obtain ⟨hnnH, hnnd, husH, husd, hdsd, hdsb, hk4⟩ := pos2_nk_fields hkd htop
+    obtain ⟨hk, hkin⟩ := pos2_nk_in hkd
+    obtain ⟨hdl, hdel⟩ := pos2_hslice_get hdsd
+    -- the fuel
+    cases hf : p2sfW n m (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) 0 SLACK with
+    | none => rw [hf] at h; simp [p2sdK1] at h
+    | some pr =>
+    obtain ⟨rf, m1⟩ := pr
+    rw [hf, p2sdK1_some] at h
+    obtain ⟨a1, hfold, hS1, hg1⟩ := p2sfW_ok dn vis fe hM _ _ kk.ds m hdl hdel hksl n m m1 a 0 SLACK rf hf hS
+      (IWGrow.refl _) (by simp)
+    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+    -- the instance's type
+    cases n with
+    | zero => simp [nitWf, p2sdK2] at h
+    | succ n' =>
+    cases hni : nitW n' m1 vis ctx (nhiW m ctx 0) key with
+    | none => simp only [nitWf] at h; rw [hni] at h; simp [p2sdK2] at h
+    | some pr2 =>
+    obtain ⟨r2, m2⟩ := pr2
+    simp only [nitWf] at h
+    rw [hni, p2sdK2_some] at h
+    have hW : WCtx dn vis fe m ctx 0 0 c [] := ⟨hU, by simp [HSl, HolesAt], by simpa using hhi⟩
+    have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
+    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2 a1 key kk
+      r2 hni hS1 (hU.grow hg1) (hkd.get (decNK_mono _) |>.symm ▸ (hkd.stab (decNK_mono _) m1 hg1))
+      (pos2_nk_in (hkd.grow (decNK_mono _) hg1)).2 ((hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
+        obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'
+        have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.2.2.1 _ (by omega)]; exact h0w
+        simp only [Nat.add_zero] at h0'
+        rw [this] at h0'; cases h0'
+        rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
+        exact hksl') hM.no
+    have hg12 := hg1.trans hg2
+    have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
+      Nat.le_trans hksl hg12.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    -- the container instance
+    have e0 : rdW (m2.arr64 IW) key = rdW (m.arr64 IW) key := pos2_rd_grow hg12 (by omega)
+    have e1 := pos2_key_rd hg12 htop hk4 (j := 1) (by omega)
+    have e2 := pos2_key_rd hg12 htop hk4 (j := 2) (by omega)
+    have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)
+    rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
+      show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
+    have hKey := (nbOK_all dn vis fe hM hcs (n' + 1) (by omega)).2.2.2.2.1
+    cases hk3 : nbKeyW (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
+        (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
+        (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
+    | none => rw [hk3] at h; simp [p2sdK3] at h
+    | some pr3 =>
+    obtain ⟨r3, m3⟩ := pr3
+    rw [hk3, p2sdK3_some] at h
+    obtain ⟨x3, a3, hrun3, hS3, hg3, -, hns3⟩ := hKey m2 m3 a2 ctx (rf.headD 0) 0 0 0 _ _ _ _ nPc _ ns c [] kk.ds NS r3
+      hk3 hS2 (hW.grow hg12) hnnH husH
+      (by show decHL (truncM m2) _ _ = _; rw [decHL_truncM (by simpa using hksl2)]
+          rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by simpa using hdsb j hj)]; simpa using hdsd)
+      (by simpa using hksl2) hctyH (hns.grow hg12 htop)
+    have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+    have hg13 := hg12.trans hg3
+    have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hsL1 : (sL - 1).toNat = seeds'.length := by rw [pos2_word_pred h0]; omega
+    obtain ⟨x, a', hrun, hS', hg', hns'⟩ := p2sdW_ok (n' + 1) (by omega) m3 m' a3 (sO + 1) (sL - 1)
+      (r3.tail.headD 0) seeds' x3.2 r h hS3 (hU.grow hg13) hhi hsL1
+      (by rw [hsO1]; exact (hsd.grow hg13 htop).tail) hns3
+    refine ⟨x, a', ?_, hS', hg13.trans hg', hns'⟩
+    have hfold' : (kk.ds.foldlM (fun a d => do
+        let w ← ConRon.Arena.whnfWalkFuel d
+        pure (max a w)) fuelSlack).run a = .ok ((rf.headD 0).toNat, a1) := by
+      simp only [UInt64.toNat_zero, List.drop_zero] at hfold
+      exact hfold
+    have hrun3' : (nestContKey V fe c (rf.headD 0).toNat [] 0 kk.cname kk.lvls kk.ds nPcN x2.2 NS).run a2 =
+        .ok (x3, a3) := by
+      have e1 : decI (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) = kk.lvls := husd
+      rw [← hnnd, ← e1, ← hctyd, ← hnpc]
+      exact hrun3
+    simp only [ConRon.Arena.nestSeeds, StateT.run_bind]
+    rw [hfold']
+    simp only [except_ok_bind]
+    rw [hrun2]
+    simp only [except_ok_bind]
+    rw [hrun3']
+    simp only [except_ok_bind]
+    exact hrun
+
+end seeds
+
 end L.Ind
