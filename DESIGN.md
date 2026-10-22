@@ -5480,3 +5480,19 @@ said otherwise.
   Of the remaining 4.3 s, about half is `progTree` (mostly the UTF-8 expansion of the literals).
 - Not done: `KnotWF.defeqInferFns_wf` (4.5 s) states `FunDecl.wf`/`Nodup` directly rather than
   `Prog.wf`; `closedA` (write sets) also looks names up by string and could use the same tree.
+
+### `natShr_spec` (`ConAgua/Arena/NatShr.lean:241`): a loose multi-pattern
+
+- **Cause.** Of the 168 goals vcgen leaves, one (`lb = 1`, `w < la`: the quotient) took 52 s and
+  one (`lb = 0`, the same) 5 s; the other 166 together 20 s. Grind diagnostics on the slow goal:
+  600 instances of `shr_val`, 626 of `pv_succ`, 842 case splits. `shr_val`'s pattern
+  `pv P oa la / (S * wt w), pv P o l, R * S` binds `o`, `l`, `R` by any `pv P _ _` and any product,
+  and every instance adds case splits on its hypotheses.
+- **Fix.** `shr_small`, the quotient in the shape the loop's post (`ShrPost`) and the amount give:
+  `pv P oa la / 2 ^ pv Q ob lb = pv R t r` from `pv Q ob lb = k.toNat`, the skip `w = k >> 6 < la`
+  and `pv R t r * sh s + lowb (lv P o l 0) s = pv P o l` (`s = k &&& 63`). Its pattern
+  `pv P oa la / 2 ^ pv Q ob lb, pv R t r * sh (k &&& 63).toNat, lowb (lv P o l 0) (k &&& 63).toNat`
+  binds every variable by a term of the post, so it fires about once; `shr_val` is now only its
+  proof step (no pattern). No statement changed.
+- **Before/after.** `natShr_spec` 60.9 s → no profiler step over 1 s; the slow goal 52 s → < 2 s;
+  module 111 s → 25 s (Lake, contended); grind in the whole file 7.9 s.

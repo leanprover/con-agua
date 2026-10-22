@@ -63,6 +63,9 @@ per-function separation logic.
   byte lists, and `List.Nodup`'s instance is slow even on `Nat`s. Program well-formedness goes through
   `Prog.wf_of_wfFast (by decide +kernel)` (names as `Nat` codes in a search tree; DESIGN.md, "Slow
   declarations").
+- Every variable of a `grind_pattern` is bound by a term specific to the goal. A multi-pattern with a
+  generic piece (`pv P o l`, `R * S`) instantiates once per matching term and splits on each instance's
+  hypotheses (600 instances, 52 s in `natShr_spec`); state the lemma in the shape of the callee's post.
 - Known vcgen gaps: no `eq_def` fallback; `ite` equations are ignored; an over-applied `ite` doesn't split; specs
   aren't found through projections; precondition-only arguments stay metavariables; pattern lambdas from another
   module don't match; equation generation fails for structural recursion that matches under a bind. Kraken's
