@@ -120,3 +120,6 @@ import ConAgua.Arena.RecCheckSpec10
 import ConAgua.Arena.RecCheckSpec11
 import ConAgua.Arena.RecCheckSpec12
 import ConAgua.Arena.RecCheckSpec13
+import ConAgua.Arena.RecCheckSpec14
+import ConAgua.Arena.RecCheckSpec15
+import ConAgua.Arena.RecCheckSpec16

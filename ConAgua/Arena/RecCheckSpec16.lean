@@ -412,6 +412,220 @@ theorem tkaW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc ip usp lao lal
   simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, bne_self_eq_false, Bool.false_eq_true,
     if_false, ConRon.Arena.internConstE, run3, hrun4, run6, if_true]
   exact run8
+theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom : Word}
+    {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor}
+    (h : tkhW n m vis q fto ftl Mc leafW majDom = some (r, m')) (hS : StageR dn vis fe m a)
+    (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
+    (hl : H leafW) (hmj : H majDom) (hP : RcMR m) :
+    ∃ c a', (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)).run a = .ok (c, a') ∧
+      (r.headD 0 != 0) = c ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+  cases n with
+  | zero => simp [tkhW] at h
+  | succ n =>
+  rw [tkhW_succ] at h
+  cases h1 : stubM "get_app_fn_f" m [CWF, leafW] with
+  | none => rw [h1] at h; simp [tkhK1] at h
+  | some x =>
+  obtain ⟨rl, m1⟩ := x
+  rw [h1, tkhK1_some] at h
+  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := getAppFn_spec dn vis fe CWF leafW hl m m1 a rl h1 hS
+  rw [CWF_eq, ← decE_eq] at run1
+  rw [← hlhD, ← decE_eq] at run1
+  have hP1 := hP.stub (by decide) h1
+  cases h2 : stubM "get_app_fn_f" m1 [CWF, majDom] with
+  | none => rw [h2] at h; simp [tkhK2] at h
+  | some x =>
+  obtain ⟨rm, m2⟩ := x
+  rw [h2] at h
+  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := getAppFn_spec dn vis fe CWF majDom hmj m1 m2 a1 rm h2 hS1
+  rw [CWF_eq, ← decE_eq] at run2
+  rw [← hmhD, ← decE_eq] at run2
+  have hP2 := hP1.stub (by decide) h2
+  have hg12 := hg1.trans hg2
+  by_cases t1 : rl.headD 0 >>> 28 ≠ 3
+  · rw [tkhK2_l (h := t1)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    refine ⟨false, a2, ?_, rfl, hS2, hg12, hP2⟩
+    have : ¬ (decE (rl.headD 0)).tag = ETag.const := fun e => t1 ((decE_tag_const _ hlhH).mp e)
+    have hb : ((decE (rl.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
+    simp only [tkHeads, StateT.run_bind, run1, except_ok_bind, run2, hb, Bool.false_and,
+      Bool.false_eq_true, if_false]
+    rfl
+  by_cases t2 : rm.headD 0 >>> 28 ≠ 3
+  · rw [tkhK2_m (h := t1) (h2 := t2)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    refine ⟨false, a2, ?_, rfl, hS2, hg12, hP2⟩
+    have : ¬ (decE (rm.headD 0)).tag = ETag.const := fun e => t2 ((decE_tag_const _ hmhH).mp e)
+    have hb : ((decE (rm.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
+    simp only [tkHeads, StateT.run_bind, run1, except_ok_bind, run2, hb, Bool.and_false,
+      Bool.false_eq_true, if_false]
+    rfl
+  have t1' : rl.headD 0 >>> 28 = 3 := by simpa using t1
+  have t2' : rm.headD 0 >>> 28 = 3 := by simpa using t2
+  by_cases v1 : eViewW m2 (rl.headD 0) = []
+  · rw [tkhK2_v1 (h := t1) (h2 := t2) (h3 := v1)] at h; cases h
+  by_cases v2 : eViewW m2 (rm.headD 0) = []
+  · rw [tkhK2_v2 (h := t1) (h2 := t2) (h3 := v1) (h4 := v2)] at h; cases h
+  rw [tkhK2_ok (h := t1) (h2 := t2) (h3 := v1) (h4 := v2)] at h
+  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.1.arena.1 v1 t1'
+  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.1.arena.1 v2 t2'
+  generalize hip : (eViewW m2 (rl.headD 0)).tail.headD 0 = ip at h vr1 hipH
+  generalize hus : (eViewW m2 (rl.headD 0)).tail.tail.headD 0 = usp at h vr1 husH
+  generalize hii : (eViewW m2 (rm.headD 0)).tail.headD 0 = ii at h vr2 hiiH
+  have c1 : (decE (rl.headD 0)).tag = ETag.const := (decE_tag_const _ hlhH).mpr t1'
+  have c2 : (decE (rm.headD 0)).tag = ETag.const := (decE_tag_const _ hmhH).mpr t2'
+  cases h3 : stubM "get_app_args_f" m2 [CWF, leafW] with
+  | none => rw [h3] at h; simp [tkhK3] at h
+  | some x =>
+  obtain ⟨ra, m3⟩ := x
+  rw [h3, tkhK3_some] at h
+  obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := getAppArgs_spec dn vis fe CWF leafW hl m2 m3 a2 ra h3 hS2
+  rw [CWF_eq, ← decE_eq] at run3
+  have hP3 := hP2.stub (by decide) h3
+  cases h4 : stubM "get_app_args_f" m3 [CWF, majDom] with
+  | none => rw [h4] at h; simp [tkhK4] at h
+  | some x =>
+  obtain ⟨rb, m4⟩ := x
+  rw [h4] at h
+  obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := getAppArgs_spec dn vis fe CWF majDom hmj m3 m4 a3 rb h4 hS3
+  rw [CWF_eq, ← decE_eq] at run4
+  have hP4 := hP3.stub (by decide) h4
+  have hg14 := (hg12.trans hg3).trans hg4
+  simp only [getD_zero, getD_one, Nat.zero_add] at hla hlab hma hmab
+  have hla4 : HSl0 m4 (ra.headD 0) (ra.tail.headD 0) la := (HSl0.of hla hlab).grow hg4
+  have hma4 : HSl0 m4 (rb.headD 0) (rb.tail.headD 0) ma := HSl0.of hma hmab
+  have hpre : (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)).run a =
+      (if !(decI ip == (decI ii : NIdx) && la.length == ma.length) then
+        (pure false : AM Bool) else tkArgs fe bs formerTys TM (decI ip) (decI usp) la ma).run a4 := by
+    have hc1 : ((decE (rl.headD 0)).tag == ETag.const) = true := by rw [beq_iff_eq]; exact c1
+    have hc2 : ((decE (rm.headD 0)).tag == ETag.const) = true := by rw [beq_iff_eq]; exact c2
+    simp only [tkHeads, StateT.run_bind, run1, except_ok_bind, run2, hc1, hc2, Bool.and_self,
+      if_true, vr1, vr2, run3, run4]
+  by_cases hi : ip ≠ ii
+  · rw [tkhK4_i (h := hi)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    refine ⟨false, a4, ?_, rfl, hS4, hg14, hP4⟩
+    have : (decI ip == (decI ii : NIdx)) = false := by
+      simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hi (decI_inj hipH hiiH e)
+    rw [hpre]; simp [this]; rfl
+  have hii' : ip = ii := by simpa using hi
+  subst hii'
+  have hlen1 : la.length = (ra.tail.headD 0).toNat := hla4.len
+  have hlen2 : ma.length = (rb.tail.headD 0).toNat := hma4.len
+  by_cases hl2 : ra.tail.headD 0 ≠ rb.tail.headD 0
+  · rw [tkhK4_l (h := hi) (h2 := hl2)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    refine ⟨false, a4, ?_, rfl, hS4, hg14, hP4⟩
+    have : (la.length == ma.length) = false := by
+      simp only [beq_eq_false_iff_ne, ne_eq, hlen1, hlen2]
+      exact fun e => hl2 (UInt64.toNat_inj.mp e)
+    rw [hpre]; simp [this]; rfl
+  rw [tkhK4_ok (h := hi) (h2 := hl2)] at h
+  have hll : (la.length == ma.length) = true := by
+    simp only [beq_iff_eq, hlen1, hlen2]; exact congrArg UInt64.toNat (by simpa using hl2)
+  cases h5 : tkaW n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0) (rb.tail.headD 0) with
+  | none => rw [h5] at h; simp [tkhK5] at h
+  | some x =>
+  obtain ⟨r5, m5⟩ := x
+  rw [h5, tkhK5_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨c, a5, run5, hc, hS5, hg5, hP5⟩ := tkaW_ok dn fe vis n h5 hS4 (hbs.grow hg14)
+    (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega) (hMc.grow (decTM_mono _) hg14)
+    hipH husH hla4 hma4 hP4
+  refine ⟨c, a5, ?_, by simpa using hc, hS5, hg14.trans hg5, hP5⟩
+  rw [hpre]; simp only [beq_self_eq_true, hll, Bool.and_self, Bool.not_true, Bool.false_eq_true, if_false]
+  exact run5
+
+theorem tkW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc teo tel majDom f : Word}
+    {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {tele : List EIdx}
+    (h : tkW n m vis q fto ftl Mc teo tel majDom f = some (r, m')) (hS : StageR dn vis fe m a)
+    (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
+    (htl : HSl0 m teo tel tele) (hmj : H majDom) (hf : H f) (hP : RcMR m) :
+    ∃ c a', (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)).run a = .ok (c, a') ∧
+      (r.headD 0 != 0) = c ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
+  cases n with
+  | zero => simp [tkW] at h
+  | succ n =>
+  rw [tkW_succ] at h
+  rw [tk53_eq]
+  cases h1 : stubM "strip_pis" m [tel, f] with
+  | none => rw [h1] at h; simp [tkK1] at h
+  | some x =>
+  obtain ⟨rs, m1⟩ := x
+  rw [h1] at h
+  obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripPis_spec dn vis fe tel f hf m m1 a rs h1 hS
+  rw [← decE_eq, ← htl.len] at run1
+  have hP1 := hP.stub (by decide) h1
+  rcases o with _ | ⟨teleW, leafW⟩
+  · have h0 : rs.headD 0 = 0 := hd1
+    rw [tkK1_no (h := h0)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    refine ⟨false, a1, ?_, rfl, hS1, hg1, hP1⟩
+    simp only [StateT.run_bind, run1, except_ok_bind]; rfl
+  obtain ⟨h0, ⟨hdl, hbl⟩, hlwH, hlwD⟩ := hd1
+  rw [tkK1_ok (h := by rw [h0]; decide)] at h
+  simp only [show (1 + 1 : Nat) = 2 from rfl, getD_one, getD_two] at hdl hbl
+  have hl3 : (rs.drop 3).headD 0 = rs.tail.tail.tail.headD 0 := by
+    rcases rs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
+  rw [hl3] at hlwH hlwD
+  cases h2 : tteW n m1 (rs.tail.headD 0) (rs.tail.tail.headD 0) teo tel with
+  | none => rw [h2] at h; simp [tkK2] at h
+  | some x =>
+  obtain ⟨rt, m2⟩ := x
+  rw [h2] at h
+  obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok dn fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
+  have hg12 := hg1.trans hg2
+  by_cases hz : rt.headD 0 = 0
+  · rw [tkK2_no (h := hz)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    have : c1 = false := by rw [← hc1, hz]; rfl
+    subst this
+    refine ⟨false, a2, ?_, rfl, hS2, hg12, hP2⟩
+    simp only [StateT.run_bind, run1, except_ok_bind, run2, Bool.false_eq_true, if_false]; rfl
+  rw [tkK2_ok (h := hz)] at h
+  have : c1 = true := by rw [← hc1]; simpa using hz
+  subst this
+  cases h3 : tkhW n m2 vis q fto ftl Mc (rs.tail.tail.tail.headD 0) majDom with
+  | none => rw [h3] at h; simp [tkK3] at h
+  | some x =>
+  obtain ⟨r3, m3⟩ := x
+  rw [h3, tkK3_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨c, a3, run3, hc, hS3, hg3, hP3⟩ := tkhW_ok dn fe vis n h3 hS2 (hbs.grow hg12)
+    (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.1; omega) (hMc.grow (decTM_mono _) hg12)
+    hlwH hmj hP2
+  refine ⟨c, a3, ?_, by simpa using hc, hS3, hg12.trans hg3, hP3⟩
+  rw [← decE_eq] at hlwD
+  rw [hlwD] at run3
+  simp only [StateT.run_bind, run1, except_ok_bind, run2, if_true]
+  exact run3
+
 end rel2
+
+/-- **`target_k53` (with `target_k53_tele`, `_heads`, `_args`, `erase_each`) refines `targetK53`**
+(through `strip_pis`, `get_app_fn_f`, `get_app_args_f`, `mk_app_n_f`, `target_class_match`'s
+contracts and stubs): the class's shape (`BSOK`), former types, the callee's class record and the
+recorded telescope decoded below the tops, the walk memos well formed; the verdict as `r[0] ≠ 0`. -/
+@[refines ConRon.Arena.targetK53]
+theorem targetK53_refines (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl Mc teo tel majDom f : Word)
+    (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (tele : List EIdx)
+    (hS : StageR dn vis fe s₀.mem a₀) (hbs : BSOK s₀.mem q.toNat bs)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hMc : DecB (fun m => decTM m Mc.toNat) s₀.mem TM) (htl : HSl0 s₀.mem teo tel tele) (hmj : H majDom)
+    (hf : H f) (hP : RcMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_k53" [vis, q, fto, ftl, Mc, teo, tel, majDom, f]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀ ∧
+      (r.headD 0 != 0) = AM.res (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
+  refine triple_post (tk_spec p L n s₀ vis q fto ftl Mc teo tel majDom f) ?_
+  rintro r s' ⟨hl', hm⟩
+  obtain ⟨c, a', run, hc, hS', hg, hP'⟩ := tkW_ok dn fe vis n hm hS hbs hft hftb hMc htl hmj hf hP
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl', hok, by rw [hres]; exact hc, by rw [hst]; exact hS', hg, hP'⟩
 
 end L.Ind
