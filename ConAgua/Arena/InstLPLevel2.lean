@@ -205,6 +205,8 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
                     rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
+    (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll hel hrun).1
+    (lvlCnt_internLsNode hK.1.arena.1 hA₃.1 (hf₃.2.1 1 (by decide)) hrun)
   obtain ⟨hden, hext⟩ := denoteLs_internLsNode hK.1.arena.1 hel hrun
   obtain ⟨-, -, hme⟩ := internLsNode_keep _ _ _ _ hrun
   obtain ⟨hls, -⟩ := internLsNode_ext _ _ _ _ hrun
