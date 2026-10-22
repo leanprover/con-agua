@@ -216,15 +216,17 @@ def blockRawRec : FunDecl := lfn (p) locals (namesO, namesL, b) {
 /-! ## Stage 1: the formers -/
 
 /-- `check_block_tele(vis, nP, ms)`: one member's type former — the constant check, official's
-telescope loop and the result sort. -/
+telescope loop and the result sort (`nP + nIdx` past `2^64` a capacity abort). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:118-131 ConRon.Arena.checkBlockTele
 @[l_impl ConRon.Arena.checkBlockTele]
 def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
-    (cvT, z, cvTa, s, ok, bsOff, bsLen, body, srt) {
+    (cvT, z, cvTa, s, ok, bsOff, bsLen, body, srt, k) {
   cvT := IW.u64[ms];
+  k := nP + IW.u64[ms + 1];
+  if k < nP { abort };
   z := call check_constant_val(vis, cvT);
-  (cvTa, s) := call check_sum_tele(vis, cvT, nP + IW.u64[ms + 1], cvT);
-  (ok, bsOff, bsLen, body) := call strip_pis(nP + IW.u64[ms + 1], EREC.u64[cvTa + 3]);
+  (cvTa, s) := call check_sum_tele(vis, cvT, k, cvT);
+  (ok, bsOff, bsLen, body) := call strip_pis(k, EREC.u64[cvTa + 3]);
   if ok == 0 { abort };
   srt := call intern_sort(s);
   if body == srt { return (cvTa, s) };

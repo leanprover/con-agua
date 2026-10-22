@@ -17,6 +17,7 @@ import ConAgua.Arena.IndInstallSpec4
 import ConAgua.Arena.IndInstallSpec5
 import ConAgua.Arena.IndInstallSpec6
 import ConAgua.Arena.IndInstallSpec7
+import ConAgua.Arena.IndInstallSpec8
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec2
