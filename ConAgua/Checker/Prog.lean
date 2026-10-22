@@ -144,7 +144,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1692 functions, 9 of them stubs.
+1714 functions, 9 of them stubs.
 -/
 
 namespace L.Checker
@@ -463,6 +463,8 @@ def checkerProg : Prog := [
   ("caps_parts", L.Arena.capsParts),
   ("caps_wr", L.Arena.capsWr),
   ("cert_ctx", L.Ind.certCtxL),
+  ("cert_ctx_main", L.Ind.certCtxMainL),
+  ("cert_ctx_pins", L.Ind.certCtxPinsL),
   ("cert_div_mod", L.Ind.certDivModL),
   ("cert_div_mod_eqs", L.Ind.certDivModEqsL),
   ("cert_div_mod_guards", L.Ind.certDivModGuardsL),
@@ -526,6 +528,7 @@ def checkerProg : Prog := [
   ("check_div_mod_pin", L.Ind.checkDivModPinL),
   ("check_div_mod_pin_at", L.Ind.checkDivModPinAtL),
   ("check_div_mod_pin_loop", L.Ind.checkDivModPinLoopL),
+  ("check_field_sort_bound", L.Ind.checkFieldSortBoundL),
   ("check_ind_decl", L.Ind.checkIndDecl),
   ("check_opaque_val", L.Ind.checkOpaqueValL),
   ("check_pending", L.Arena.checkPendingL),
@@ -537,7 +540,6 @@ def checkerProg : Prog := [
   ("check_struct_doms_at", L.Ind.checkStructDomsAtL),
   ("check_struct_field_sorts_i", L.Ind.checkStructFieldSortsIL),
   ("check_struct_field_sorts_i_go", L.Ind.checkStructFieldSortsIGoL),
-  ("check_field_sort_bound", L.Ind.checkFieldSortBoundL),
   ("check_struct_proj_table", L.Ind.checkStructProjTableL),
   ("check_struct_proj_table_scoped", L.Ind.checkStructProjTableScopedL),
   ("check_sum_ctor", L.Ind.checkSumCtorL),
@@ -707,6 +709,7 @@ def checkerProg : Prog := [
   ("defeq_stuck", L.Arena.defeqStuckL),
   ("defeq_tail", L.Arena.defeqTailL),
   ("defn_div_gate", L.Ind.defnDivGate),
+  ("defn_nat_cert", L.Ind.defnNatCert),
   ("defn_nat_gate", L.Ind.defnNatGate),
   ("delta_quick", L.Arena.deltaQuickL),
   ("depth", L.Ind.depth),
@@ -1240,7 +1243,17 @@ def checkerProg : Prog := [
   ("nat_div_lit", L.Arena.natDivLit),
   ("nat_div_mod_names", L.Ind.natDivModNamesL),
   ("nat_divmod", L.Arena.natDivmod),
+  ("nat_eq_be", L.Ind.natEqBe),
+  ("nat_eq_bl", L.Ind.natEqBl),
+  ("nat_eq_ctx", L.Ind.natEqCtx),
+  ("nat_eq_disp", L.Ind.natEqDisp),
   ("nat_eq_list2", L.Ind.natEqList2),
+  ("nat_eq_list3", L.Ind.natEqList3),
+  ("nat_eq_list4", L.Ind.natEqList4),
+  ("nat_eq_mu", L.Ind.natEqMu),
+  ("nat_eq_po", L.Ind.natEqPo),
+  ("nat_eq_pr", L.Ind.natEqPr),
+  ("nat_eq_un", L.Ind.natEqUn),
   ("nat_gcd", L.Arena.natGcd),
   ("nat_gcd_lit", L.Arena.natGcdLit),
   ("nat_ind_ok", L.Arena.natIndOkL),
@@ -1256,6 +1269,7 @@ def checkerProg : Prog := [
   ("nat_mul", L.Arena.natMul),
   ("nat_mul_lit", L.Arena.topLit "nat_mul"),
   ("nat_one", L.Ind.natOneL),
+  ("nat_op_bool_ctors", L.Ind.natOpBoolCtorsL),
   ("nat_op_cod", L.Ind.natOpCodL),
   ("nat_op_deps", L.Ind.natOpDepsL),
   ("nat_op_deps_stored", L.Ind.natOpDepsStoredL),
@@ -1263,6 +1277,10 @@ def checkerProg : Prog := [
   ("nat_op_guard", L.Ind.natOpGuardL),
   ("nat_op_is_wf", L.Arena.natOpIsWfL),
   ("nat_op_names", L.Ind.natOpNamesL),
+  ("nat_op_pins", L.Ind.natOpPinsL),
+  ("nat_op_pins_a", L.Ind.natOpPinsAL),
+  ("nat_op_pins_b", L.Ind.natOpPinsBL),
+  ("nat_op_pins_c", L.Ind.natOpPinsCL),
   ("nat_op_record", L.Checker.natOpRecordL),
   ("nat_op_result", L.Arena.natOpResultL),
   ("nat_op_stored", L.Arena.natOpStoredL),
