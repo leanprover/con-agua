@@ -526,6 +526,23 @@ theorem fvbW_ok (n F : Nat) (hF : n ≤ F + 1) (m m' : Mem) (a : AState) (hA : A
     rw [if_neg (by simp [hs'])]
     exact ⟨a, rfl, hA⟩
 
+/-- **`ab_fvb` refines the arena's `fvarB` under `ArenaA`**, at every arena fuel `F + 1 ≥ n`. -/
+@[refines ConRon.Arena.fvarB]
+theorem abFvb_refines (p : Prog) (hp : AbsProg p) (n F : Nat) (hF : n ≤ F + 1) (s₀ : St)
+    (a₀ : AState) (hA : ArenaA s₀.mem a₀) (h : Word) (hh : h.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "ab_fvb" [h]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fvarB F (decE h)) a₀ ∧
+      ArenaA s'.mem (AM.st (fvarB F (decE h)) a₀) ∧
+      AM.res (fvarB F (decE h)) a₀ = (r.headD 0).toNat; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (abFvb_spec p hp n s₀ h)
+  subst hs
+  obtain ⟨a', ha', hA'⟩ := fvbW_ok n F hF _ _ a₀ hA h _ hh hI
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
+  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+
 /-! ## The arms' probe, rebuild and tail -/
 
 theorem decE_inj (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) (e : decE x = decE y) :

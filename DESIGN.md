@@ -5160,6 +5160,44 @@ fails on all five: depth of the `setLocs` chain); `maxHeartbeats 0` removed. Sta
 Lesson (adds to PLAN.md's proof-style list): a value an L expression computes inline should be
 matched by an equation on its *evaluated* form (`BinOp.*.eval`, `Cmp.*.evalW`), not by unfolding
 the model's arithmetic; the latter costs a case split per comparison, per goal.
+
+### `abstract1Go`/`abstract1Fast` (`Abs1.lean`, `Abs1Spec.lean`, `Abs1Refine.lean`)
+
+`abs_entry(e, d, k)` refines `abstract1Fast F e d k` under `ArenaA` (`absEntry_refines`,
+`absEntry_run`; axioms `propext`, `Classical.choice`, `Quot.sound`, **no `sorry`**), and
+`ab_fvb(h)` refines `fvarB` (`abFvb_refines`). Census: `abstract1Go` and its five arms, `abstract1Fast`,
+`fvarB` proven. `Inst1*.lean` with `d ↦ k`, `v ↦ d`, plus:
+
+* **`ab_fvb`** (`fvarB`): `der_b`'s second result; on `32767` alone, `fr_memo`. Model `fvbW n`
+  (`fvbN n` is `fr_memo` at its own fuel, `none` at `0`, so the spec holds at every fuel).
+* **`ab_node`**: the cut-off has a memory effect (`fr_memo`), so `abs_go` is `x := ab_fvb(h); if x
+  <= d { return h }; return ab_node(h, k, d)` and the dispatch is its own L function, with
+  `absNodeA` naming the twin's `else` branch (`abstract1Go_succ'` by `rfl`). Three specs by fuel
+  (`AbsGoSpec`/`AbsNodeSpec`/`AbsArmSpec`), three refinement statements (`AGoOK`/`ANodeOK`/`AArmOK`).
+* **Rebuild on change** (`internRebuilt*`): L `if x == f && y == a { r := h } else { r := call
+  mk_app(x, y) }`; models `rbAppW` … with guarded `_same`/`_new` equations; `rb_ok` relates both
+  branches. The twin compares `decE x == decE f`: equal words give equal handles, and on the `new`
+  branch `mk_*`'s own guard (`(x ||| y) >>> 32 = 0`, `mkAppW_lt` …) bounds the results, so with the
+  view's bound on the children `decE_inj` gives the converse. No result-bound invariant needed.
+* **The memo tier `ArenaA := ArenaD ∧ AbsR`** (`AbsR := MemoRG abSch lfKey decE m a.memos.abs1C`;
+  `abSch = ⟨49, 48⟩`, array 49 `ABMEMO`, `CTL[48]`/`[49]`), kept out of `MemosR` as the exprops3
+  brief says. It survives: the `mk_*` and `intern_bvar` by their model frames (`mkAppW_frameA` …,
+  `binternW_frameA`: no write to 49 or `CTL[48]`) and by `Keeps (·.memos.abs1C) (internE v)`
+  (`prim_keeps`); `fr_memo` by `frW_frame` (the model writes only `FRMEMO`, `CTL[46‥47]`; an
+  induction with `FrOK` combinators for the continuations — `split at` on `frNodeW`'s `if` chain
+  runs into simp's step limit, hence `by_cases` per tag over `FVarRange.lean`'s guarded equations)
+  and on the twin by `Keeps fsp (fvarRangeMemo F e)` (`fsp a = (a.store, a.memos.abs1C)`, the
+  `keeps_auto` recipe with a `fvarBSet` lemma for `fsp`, which is not `MemoBlind`).
+* Callers that cross `scratch_enter` must re-establish `AbsR` (its memo is not cleared there); all
+  current callers are the walk's own entry, which clears it first.
+* Heartbeats: the five arm steps in `Abs1Spec.lean` need `maxHeartbeats 1000000` (the
+  rebuild's `if`/`else` doubles the tail; `finish (gen := 20)` as `Inst1Spec.lean`).
+
+| `abstract1` | Rust lines | L lines | spec lines | refinement lines | `lean` user |
+|---|---:|---:|---:|---:|---:|
+| `Abs1.lean` (models, L, go/node steps) | | 140 (L code) | 708 (file) | | 2.8 s |
+| `Abs1Spec.lean` (arm steps, entry) | | | 174 | | 57 s |
+| `Abs1Refine.lean` | | | | 1100 | 2.7 s |
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
