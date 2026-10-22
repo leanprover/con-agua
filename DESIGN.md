@@ -7897,6 +7897,16 @@ child dangled when it was interned (no `StoreWF` needed).
   takes `hlsa`/`hlc` and uses `StackKept.of_frameL`; `ls1_call` now needs its element to read back.
 * **Why**: a list stays stored after a run (`lsNodeW_mono`), so `ls_den_later`/`lsNodeW_of_den`
   read it back later — what whnf4's `instLP`/`LvlsEqDen` need for constants' level lists.
+
+### Landing 9 (defeq2): `KnotCallees.lvlsEqDen` gone
+* `LvlsEqDen` (a successful `lvls_eq_c` compares lists that read back) was stronger than needed and
+  not provable on a memo hit. Instead `lvlsEqC_refines` no longer asks its lists to read back: on a
+  hit the twin reads nothing; on a miss `ls_node` read both handles, so they are stored
+  (`lsNodeW_view`, moved to `LevelArena.lean`) and read back by `StoreDen.lsAll`.
+* Model fix: `lvlsEqW` is `none` when a handle's `lsNodeW` is `[]` (`ls_node` aborts there; the
+  model used to compare an empty slice).
+* `LvlsEqDen` and its `hden` threading through `WhnfIotaRecRefine*` are removed; `iotaRecAt_refines`
+  and `LvlsEqCH`'s callers drop the readback hypotheses' use. `KnotCallees` has 3 fields left.
 ### Landing 12 (lane `decls3`): helpers `nat` and `divmod`, the definition arm's gates
 
 * **Structural-`Nat` gate** (helper `decls3-nat`, `DeclNat*.lean`, ~8 h): `natOpNames`,

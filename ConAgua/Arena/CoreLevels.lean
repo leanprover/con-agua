@@ -548,9 +548,7 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
 theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (n : Nat)
-    (us vs : Word) (hu : HW us) (hv : HW vs) (lu lv : List Level)
-    (hdu : denoteLs a.store.lss (decI us) = some lu) (hdv : denoteLs a.store.lss (decI vs) = some lv)
-    (z : Word) (h : lvlsEqCW n m us vs = some (z, m')) :
+    (us vs : Word) (hu : HW us) (hv : HW vs) (z : Word) (h : lvlsEqCW n m us vs = some (z, m')) :
     ∃ a', (lvlsEq? (decI us) (decI vs)).run a = .ok (decO z, a') ∧
       CoreAfter dn m m' a' vis fe M eb ∧ HW z := by
   unfold lvlsEqCW at h
@@ -576,6 +574,13 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   | zero => simp [lvlsEqW] at hl
   | succ n =>
   simp only [lvlsEqW] at hl
+  have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [if_pos c] at hl; cases hl
+  rw [if_neg hn] at hl
+  -- `ls_node` read both handles, so both are stored and read back (`StoreDen.lsAll`)
+  obtain ⟨lu, hdu⟩ := hS.den.lsAll _ (by
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hu (fun e => hn (.inl e)); rw [e]; rfl)
+  obtain ⟨lv, hdv⟩ := hS.den.lsAll _ (by
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hv (fun e => hn (.inr e)); rw [e]; rfl)
   have hwu : (decI us : LsIdx).word.toUInt64 = us := (word_decI _ us hu).mpr rfl
   have hwv : (decI vs : LsIdx).word.toUInt64 = vs := (word_decI _ vs hv).mpr rfl
   obtain ⟨ids₁, hv₁, hd₁⟩ := denoteLs_view a (decI us) lu hdu
@@ -630,16 +635,14 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
 @[refines ConRon.Arena.lvlsEq?]
 theorem lvlsEqC_refines (p : Prog) (hp : LvlCacheProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (us vs : Word) (hu : HW us) (hv : HW vs)
-    (lu lv : List Level) (hdu : denoteLs a₀.store.lss (decI us) = some lu)
-    (hdv : denoteLs a₀.store.lss (decI vs) = some lv) :
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (us vs : Word) (hu : HW us) (hv : HW vs) :
     CoreSpec p (n + 2) "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs))
       (fun r => decO (r.headD 0)) s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (lvlsEqC_spec p hp n s₀ us vs)
   subst hs
-  obtain ⟨a', ha', hA', hz⟩ := lvlsEqCW_ok hS n us vs hu hv lu lv hdu hdv _ hI
+  obtain ⟨a', ha', hA', hz⟩ := lvlsEqCW_ok hS n us vs hu hv _ hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
   exact ⟨hloc, hok, hst ▸ hA', hres, hz⟩
 

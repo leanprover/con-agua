@@ -201,16 +201,6 @@ theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC co
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hf
     rcases hf with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) h
 
-/-- **A level-list comparison that runs compares lists that read back** (new stub assumption):
-`lvls_eq_c`'s refinement (`lvlsEqC_refines`) asks that both handles denote, which `CoreS` does
-not carry (as `CoreS.lvl_den` for single levels); the twin's store is well formed, and a cached
-verdict was stored by a comparison whose readbacks succeeded. -/
-def LvlsEqDen (p : Prog) : Prop :=
-  ∀ (n : Nat) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb u v : Word) (r : List Word) (m' : Mem), CoreS dn m a vis fe M eb →
-    callW p n "lvls_eq_c" [u, v] m = some (r, m') →
-    (∃ lu, denoteLs a.store.lss (decI u) = some lu) ∧ (∃ lv, denoteLs a.store.lss (decI v) = some lv)
-
 /-! ## `erec_push(o, c)` -/
 
 /-- Model of the `erec_push` loop at L fuel `k`. -/
@@ -1112,8 +1102,7 @@ theorem callW_iotaRecCmp_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRe
 
 /-- **`iota_rec_vck` refines the checks past `iotaCase3`.** -/
 theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
-    (hden : LvlsEqDen p) :
+    (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d us recP so usj ctorP rl mo mn cmpL sn : Word) (lps : List NIdx)
@@ -1160,10 +1149,9 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     · rw [lvlsEqC_small p hp.lvl.cs n h] at c1; cases c1
     · exact h
   obtain ⟨N, rfl⟩ : ∃ N, n = N + 2 := ⟨n - 2, by omega⟩
-  obtain ⟨⟨lu, hdu⟩, ⟨lv, hdv⟩⟩ := hden _ dn s.mem a₀ vis fe MM eb usj cmpL rq m1 hS c1
   obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, hr1⟩ := CoreSpec.of_callW
-    (lvlsEqC_refines p hp.lvl N ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS usj cmpL husj hcmpL
-      lu lv hdu hdv) c1
+    (lvlsEqC_refines p hp.lvl N ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS usj cmpL husj
+      hcmpL) c1
   have hrun1 := AM.run_of_ok _ _ ok1
   rw [res1] at hrun1
   simp only at hrun1
