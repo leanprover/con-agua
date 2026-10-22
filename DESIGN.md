@@ -7385,7 +7385,7 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `StoreDen.constLs` at the callers.
 * Clashes fixed for `scripts/checker_prog.py`: `PropReadW`'s `armK` → `propArmK` (vs
   `PromoteCI`), `WhnfProjRefine2`'s `projA` → `projWA` (vs `Promote`). `Checker/Prog.lean`
-  regenerated: 15 stubs (was 18 on master); `coreFns` regenerated (467 functions).
+  regenerated: 13 stubs; `coreFns` regenerated (498 functions).
 * Not in this landing: helper `whnf3-lp`'s `instLP` family (branch `whnf3-lp`, on `whnf3-next`):
   its `lv_lookup`/`lv_spw` bindings (keys on the spine stack, `lvLookupG SPN POOL`,
   `lvSpwG EREC`) clash with lane defeq2's (`lvLookupG EREC POOL`, `lvSpwG LH`): one name, two
