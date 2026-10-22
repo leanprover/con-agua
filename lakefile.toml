@@ -47,7 +47,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.WhnfIota", "ConAgua.Arena.Rom", "ConAgua.Arena.RomPins",
   "ConAgua.Arena.IndGrindAttr", "ConAgua.Arena.IndIface", "ConAgua.Arena.IndStubs", "ConAgua.Arena.IndLibSpec", "ConAgua.Arena.IndView", "ConAgua.Arena.IndCopy",
   "ConAgua.Arena.IndParts", "ConAgua.Arena.IndPartsSpec", "ConAgua.Arena.IndInstall", "ConAgua.Arena.IndInstallSpec", "ConAgua.Arena.IndSum", "ConAgua.Arena.IndSumSpec",
-  "ConAgua.Arena.IndPartsSpec2", "ConAgua.Arena.IndPartsSpec3", "ConAgua.Arena.IndPartsSpec4", "ConAgua.Arena.IndPartsSpec5", "ConAgua.Arena.IndSumSpec2", "ConAgua.Arena.IndMaster",
+  "ConAgua.Arena.IndPartsSpec2", "ConAgua.Arena.IndPartsSpec3", "ConAgua.Arena.IndPartsSpec4", "ConAgua.Arena.IndPartsSpec5", "ConAgua.Arena.IndPartsSpec6", "ConAgua.Arena.IndSumSpec2", "ConAgua.Arena.IndMaster",
   "ConAgua.Arena.IndPos", "ConAgua.Arena.IndPosSpec", "ConAgua.Arena.IndPos2", "ConAgua.Arena.IndPos2Spec", "ConAgua.Arena.RecClass", "ConAgua.Arena.RecClassSpec",
   "ConAgua.Arena.RecGen", "ConAgua.Arena.RecGenSpec", "ConAgua.Arena.RecCheck", "ConAgua.Arena.RecCheckSpec", "ConAgua.Arena.IndProg", "ConAgua.Arena.IndCopy2",
   "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot",

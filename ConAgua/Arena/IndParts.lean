@@ -149,25 +149,39 @@ def blockShapeLps : FunDecl := lfn (p) locals (off, l, m, cv, o, pl) {
   return (o, pl)
 }
 
+/-- `block_shape_ctors_copy(off, q, k)`: copy the ctor slice of the member at `off` to `IW[q + k ..]`;
+returns its length. -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:119-122 ConRon.Arena.BlockShape.allCtors
+@[l_impl ConRon.Arena.BlockShape.allCtors]
+def blockShapeCtorsCopy : FunDecl := lfn (off, q, k) locals (m, co, cl, u) {
+  m := IW.u64[off];
+  co := IW.u64[m + 2];
+  cl := IW.u64[m + 3];
+  u := call iw_copy(q + k, co, cl);
+  return cl
+}
+
+/-- `block_shape_all_ctors_go(off, l, q, k)`: copy the ctor slices of the `l` members at `off` to
+`IW[q + k ..]`, one after the other (recursive on the members). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:119-122 ConRon.Arena.BlockShape.allCtors
+@[l_impl ConRon.Arena.BlockShape.allCtors]
+def blockShapeAllCtorsGo : FunDecl := lfn (off, l, q, k) locals (cl, r) {
+  if l == 0 { return 0 };
+  cl := call block_shape_ctors_copy(off, q, k);
+  r := call block_shape_all_ctors_go(off + 1, l - 1, q, k + cl);
+  return 0
+}
+
 /-- `block_shape_all_ctors(p)`: `BlockShape.allCtors`, every member's `ctors` list concatenated,
 in block order. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:119-122 ConRon.Arena.BlockShape.allCtors
 @[l_impl ConRon.Arena.BlockShape.allCtors]
-def blockShapeAllCtors : FunDecl := lfn (p) locals (off, l, tot, q, j, m, co, cl, i, k) {
+def blockShapeAllCtors : FunDecl := lfn (p) locals (off, l, tot, q, u) {
   off := IW.u64[p];
   l := IW.u64[p + 1];
   tot := call num_ctors_of(off, l);
   q := call iw_alloc(tot);
-  k := 0;
-  j := 0;
-  while j < l {
-    m := IW.u64[off + j];
-    co := IW.u64[m + 2];
-    cl := IW.u64[m + 3];
-    i := 0;
-    while i < cl { IW.u64[q + k] := IW.u64[co + i]; k += 1; i += 1 };
-    j += 1
-  };
+  u := call block_shape_all_ctors_go(off, l, q, 0);
   return (q, tot)
 }
 
@@ -868,7 +882,7 @@ def indPartsFns : Prog :=
    ("block_shape_num_ctors", blockShapeNumCtors), ("block_shape_member_names", blockShapeMemberNames),
    ("member_names_copy", memberNamesCopy),
    ("block_shape_n_idxs", blockShapeNIdxs), ("n_idxs_copy", nIdxsCopy), ("block_shape_lps", blockShapeLps),
-   ("block_shape_all_ctors", blockShapeAllCtors), ("block_shape_rule_prefix_at", blockShapeRulePrefixAt),
+   ("block_shape_ctors_copy", blockShapeCtorsCopy), ("block_shape_all_ctors_go", blockShapeAllCtorsGo), ("block_shape_all_ctors", blockShapeAllCtors), ("block_shape_rule_prefix_at", blockShapeRulePrefixAt),
    ("block_shape_major_idx_at", blockShapeMajorIdxAt), ("block_shape_with_sort", blockShapeWithSort),
    ("block_parts_complete", blockPartsComplete), ("block_split_recs", blockSplitRecs),
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
