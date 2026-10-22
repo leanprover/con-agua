@@ -29,10 +29,9 @@ word with bit 1 set (`toEager`: `0 ↦ 2`, `1 ↦ 3`, eager modes fixed) and mov
 verified mode: `infer_type_core(vis, dep, e)`, `is_def_eq_core(vis, dep, a, b)`,
 `ensure_sort_core(vis, dep, t)`. These replace the stubs of the same names in a whole program.
 
-**Stubs** (`DefeqCallees`): callee specs assumed (`defeqCallees_stub`, a `sorry`). `has_fvar`,
-`abs_entry`, `ar_entry` (and lane whnf's `inst_list`) have L code and refinements under `ArenaA`
-at every twin fuel `F ≥ n` (lane `exprops4`); what is assumed is their `CoreS` form at exactly
-`coreWalkFuel` (L fuel `≤ coreWalkFuel`; `AbsR` re-established across `scratch_enter`).
+**Callees** (`DefeqCallees`): `has_fvar`, `abs_entry`, `ar_entry` are the phase-4 walks under
+`CoreS` at exactly `coreWalkFuel` (`CoreWalks.lean`); `field_sort_zero` is `InferFieldSort.lean`;
+`not_proof_fast`/`is_proof_fast` (`PropRead`) are `KnotCallees` fields until their proofs land.
 -/
 
 open ConRon.Arena
@@ -129,13 +128,13 @@ def defeqInferFns : Prog := defeqFns ++ inferFns ++ knotFns
 
 end L.Arena
 
-/-! ## Stubs: callees with no L code yet
+/-! ## The callees' specs
 
-Each is a named L function with the spec its twin will get (`CoreSpec`, `WhnfBase.lean`);
-`DefeqCallees p` bundles them, and the census-tagged refinements of this lane get it from
-`defeqCallees_stub` (a `sorry`, listed in DESIGN.md) until the callees land. The callees lane
-`whnf` stubs (`inst_list`, `inst_lp`, `str_lit_*`: `WhnfCallees`; `inst1`, `find_proj`:
-`CoreCallees`) are not repeated. -/
+Each is a named L function with the spec of its twin (`CoreSpec`, `WhnfBase.lean`); `DefeqCallees p`
+bundles them. `DefEqKnot.lean` builds it: the walks from `CoreWalks.lean`, `field_sort_zero` from
+`InferFieldSort.lean`, the `PropRead` readers from `KnotCallees`. The callees lane `whnf` specifies
+(`inst_list`, `inst_lp`, `str_lit_*`: `WhnfCallees`; `inst1`, `find_proj`: `CoreCallees`) are not
+repeated. -/
 
 namespace L.Arena
 
@@ -199,7 +198,7 @@ def FieldSortZeroOK (p : Prog) : Prop :=
     CoreSpec p n "field_sort_zero" [po, pl, us, fs] (fieldSortZeroT lps (decI us) (decI fs)) decBool
       s₀ a₀ dn vis fe M eb
 
-/-- **The stub callees of phases 6 and 7.** -/
+/-- **The leaf callees of phases 6 and 7.** -/
 structure DefeqCallees (p : Prog) : Prop where
   hasFvar : HasFvarOK p
   notProofFast : NotProofFastOK p
@@ -207,8 +206,5 @@ structure DefeqCallees (p : Prog) : Prop where
   abstract1 : Abstract1OK p
   abstractRange : AbstractRangeOK p
   fieldSortZero : FieldSortZeroOK p
-
-/-- **The stubs' specs, assumed** until their L code lands (phases 2, 4; levels). -/
-theorem defeqCallees_stub (p : Prog) : DefeqCallees p := sorry
 
 end L.Arena
