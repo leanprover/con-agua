@@ -262,39 +262,55 @@ def boolTrueShortcutL : FunDecl := lfn (mode, vis, d, a) locals (w, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2887-2913 ConRon.Arena.defeqSpine -/
+/-- The constant head of a spine: `(1, n, us)`, or `(0, 0, 0)` when the head is not a constant. -/
+-- con-ron: ConRon/Arena/Core.lean:2887-2913 ConRon.Arena.defeqSpine
 @[l_impl ConRon.Arena.defeqSpine]
-def defeqSpineL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (top, hh, t, i, n, us, n2, us2, ao, an, bo, bn, z, r) {
-  hh := call get_app_fn(a);
-  if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  n := CREC.u64[i * 4 + t * 2];
-  us := CREC.u64[i * 4 + t * 2 + 1];
-  hh := call get_app_fn(b);
-  if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  n2 := CREC.u64[i * 4 + t * 2];
-  us2 := CREC.u64[i * 4 + t * 2 + 1];
+def spineHeadL : FunDecl := lfn (e) locals (hh, g, n, us, x) {
+  hh := call get_app_fn(e);
+  if hh >> 28 != 3 { return (0, 0, 0) };
+  (g, n, us, x) := call e_view(hh);
+  return (1, n, us)
+}
+
+/-- `defeqSpine` past the two heads: the arguments, the names and lengths, the levels, the
+reversed argument lists. -/
+-- con-ron: ConRon/Arena/Core.lean:2887-2913 ConRon.Arena.defeqSpine
+@[l_impl ConRon.Arena.defeqSpine]
+def defeqSpine2L : FunDecl :=
+    lfn (mode, vis, d, a, b, n, us, n2, us2) locals (top, ao, an, bo, bn, r) {
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
   (bo, bn) := call get_app_args(b);
+  r := call spine_cmp(mode, vis, d, n, us, n2, us2, ao, an, bo, bn);
+  CTL.u64[136] := top;
+  return r
+}
+
+/-- `defeqSpine`'s comparison on the argument slices. -/
+-- con-ron: ConRon/Arena/Core.lean:2887-2913 ConRon.Arena.defeqSpine
+@[l_impl ConRon.Arena.defeqSpine]
+def spineCmpL : FunDecl :=
+    lfn (mode, vis, d, n, us, n2, us2, ao, an, bo, bn) locals (z, r) {
   if n == n2 && an == bn {
     z := call lvls_eq_c(us, us2);
     if z == 2 {
       r := call defeq_list_rev(mode, vis, d, ao, an, bo, bn);
-      CTL.u64[136] := top;
       return r
     }
   };
-  CTL.u64[136] := top;
   return 0
+}
+
+/-- con-ron: ConRon/Arena/Core.lean:2887-2913 ConRon.Arena.defeqSpine -/
+@[l_impl ConRon.Arena.defeqSpine]
+def defeqSpineL : FunDecl :=
+    lfn (mode, vis, d, a, b) locals (fa, n, us, fb, n2, us2, r) {
+  (fa, n, us) := call spine_head(a);
+  if fa == 0 { return 0 };
+  (fb, n2, us2) := call spine_head(b);
+  if fb == 0 { return 0 };
+  r := call defeq_spine2(mode, vis, d, a, b, n, us, n2, us2);
+  return r
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2915-2923 ConRon.Arena.defeqNoFvars -/
@@ -479,52 +495,60 @@ def defeqLamsL : FunDecl :=
 
 /-! ## The easy cases, offsets -/
 
+/-- `quickDefEq`'s sort pair: the two levels compared (`lvl_eq_c`; `none` aborts). -/
+-- con-ron: ConRon/Arena/Core.lean:3072-3098 ConRon.Arena.quickDefEq
+@[l_impl ConRon.Arena.quickDefEq]
+def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
+  (g, u, x, y) := call e_view(a);
+  (g, v, x, y) := call e_view(b);
+  z := call lvl_eq_c(u, v);
+  if z == 0 { abort };
+  return z - 1
+}
+
+/-- `quickDefEq`'s `∀` pair: binder congruence (`defeq_binders`). -/
+-- con-ron: ConRon/Arena/Core.lean:3072-3098 ConRon.Arena.quickDefEq
+@[l_impl ConRon.Arena.quickDefEq]
+def quickForallL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2, z, r) {
+  (g, x1, y1, z) := call e_view(a);
+  (g, x2, y2, z) := call e_view(b);
+  r := call defeq_binders(mode, vis, d, x1, y1, x2, y2);
+  return r
+}
+
+/-- `quickDefEq`'s `λ` pair: the telescope (`defeq_lams`). -/
+-- con-ron: ConRon/Arena/Core.lean:3072-3098 ConRon.Arena.quickDefEq
+@[l_impl ConRon.Arena.quickDefEq]
+def quickLamL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2, z, r) {
+  (g, x1, y1, z) := call e_view(a);
+  (g, x2, y2, z) := call e_view(b);
+  r := call defeq_lams(mode, vis, d, x1, y1, x2, y2);
+  return r
+}
+
 /-- con-ron: ConRon/Arena/Core.lean:3072-3098 ConRon.Arena.quickDefEq -/
 @[l_impl ConRon.Arena.quickDefEq]
-def quickDefeqL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (g, t, i, s, x1, y1, x2, y2, z, r) {
+def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
   if a == b { return (1, 1) };
   g := a >> 28;
   if g != b >> 28 { return (0, 0) };
-  if g != 2 && g != 8 && g != 6 && g != 5 { return (0, 0) };
-  t := (a >> 27) & 1;
-  i := a & 134217727;
-  s := (b >> 27) & 1;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if s != 0 && CTL.u64[1] == 0 { abort };
   if g == 2 {
-    if CTL.u64[16 + t] <= i { abort };
-    x1 := SOREC.u64[i * 2 + t];
-    i := b & 134217727;
-    if CTL.u64[16 + s] <= i { abort };
-    z := call lvl_eq_c(x1, SOREC.u64[i * 2 + s]);
-    if z == 0 { abort };
-    return (1, z - 1)
+    r := call quick_sort(a, b);
+    return (1, r)
   };
   if g == 8 {
     r := call lit_eq(a, b);
     return (1, r)
   };
   if g == 6 {
-    if CTL.u64[30 + t] <= i { abort };
-    x1 := FAREC.u64[i * 4 + t * 2];
-    y1 := FAREC.u64[i * 4 + t * 2 + 1];
-    i := b & 134217727;
-    if CTL.u64[30 + s] <= i { abort };
-    x2 := FAREC.u64[i * 4 + s * 2];
-    y2 := FAREC.u64[i * 4 + s * 2 + 1];
-    r := call defeq_binders(mode, vis, d, x1, y1, x2, y2);
+    r := call quick_forall(mode, vis, d, a, b);
     return (1, r)
   };
-  if CTL.u64[28 + t] <= i { abort };
-  x1 := LAREC.u64[i * 4 + t * 2];
-  y1 := LAREC.u64[i * 4 + t * 2 + 1];
-  i := b & 134217727;
-  if CTL.u64[28 + s] <= i { abort };
-  x2 := LAREC.u64[i * 4 + s * 2];
-  y2 := LAREC.u64[i * 4 + s * 2 + 1];
-  r := call defeq_lams(mode, vis, d, x1, y1, x2, y2);
-  return (1, r)
+  if g == 5 {
+    r := call quick_lam(mode, vis, d, a, b);
+    return (1, r)
+  };
+  return (0, 0)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3100-3114 ConRon.Arena.isNatZero -/
@@ -648,11 +672,37 @@ def ldsRightL : FunDecl := lfn (mode, vis, d, a, b) locals (f, b2, b3, k, x, y) 
   return (k, x, y)
 }
 
-/-- The `true, true` arm of `lazyDeltaStep`: the hints, the same-head shortcut, both unfolds. -/
+/-- Both sides unfolded, through the cheap `whnfCore`, then `deltaQuick` (`.unknown` unless both
+unfold). -/
 -- con-ron: ConRon/Arena/Core.lean:3195-3252 ConRon.Arena.lazyDeltaStep
 @[l_impl ConRon.Arena.lazyDeltaStep]
-def ldsBothL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (ka, ha, kb, hb, lt, sch, sp, fa, a2, fb, b2, a3, b3, k, x, y) {
+def ldsUnfold2L : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, a3, b3, k, x, y) {
+  (fa, a2) := call unfold_definition(vis, a);
+  (fb, b2) := call unfold_definition(vis, b);
+  if fa == 0 || fb == 0 { return (3, 0, 0) };
+  a3 := call whnf_core(mode, 1, vis, d, a2);
+  b3 := call whnf_core(mode, 1, vis, d, b2);
+  (k, x, y) := call delta_quick(mode, vis, d, a3, b3);
+  return (k, x, y)
+}
+
+/-- Equal hints: the same-head shortcut at equal regular hints, else both unfolds. -/
+-- con-ron: ConRon/Arena/Core.lean:3195-3252 ConRon.Arena.lazyDeltaStep
+@[l_impl ConRon.Arena.lazyDeltaStep]
+def ldsSameL : FunDecl := lfn (mode, vis, d, a, b, ka, ha, kb, hb) locals (sch, sp, k, x, y) {
+  sch := call same_const_heads(a, b);
+  sp := 0;
+  if ka == 2 && kb == 2 && ha == hb && sch != 0 { sp := call defeq_spine(mode, vis, d, a, b) };
+  if sp != 0 { return (1, 0, 0) };
+  (k, x, y) := call lds_unfold2(mode, vis, d, a, b);
+  return (k, x, y)
+}
+
+/-- The `true, true` arm of `lazyDeltaStep`: the hints, the greater side unfolded, else
+`lds_same`. -/
+-- con-ron: ConRon/Arena/Core.lean:3195-3252 ConRon.Arena.lazyDeltaStep
+@[l_impl ConRon.Arena.lazyDeltaStep]
+def ldsBothL : FunDecl := lfn (mode, vis, d, a, b) locals (ka, ha, kb, hb, lt, k, x, y) {
   (ka, ha) := call head_hint(vis, a);
   (kb, hb) := call head_hint(vis, b);
   lt := call hint_lt(kb, hb, ka, ha);
@@ -665,16 +715,7 @@ def ldsBothL : FunDecl :=
     (k, x, y) := call lds_right(mode, vis, d, a, b);
     return (k, x, y)
   };
-  sch := call same_const_heads(a, b);
-  sp := 0;
-  if ka == 2 && kb == 2 && ha == hb && sch != 0 { sp := call defeq_spine(mode, vis, d, a, b) };
-  if sp != 0 { return (1, 0, 0) };
-  (fa, a2) := call unfold_definition(vis, a);
-  (fb, b2) := call unfold_definition(vis, b);
-  if fa == 0 || fb == 0 { return (3, 0, 0) };
-  a3 := call whnf_core(mode, 1, vis, d, a2);
-  b3 := call whnf_core(mode, 1, vis, d, b2);
-  (k, x, y) := call delta_quick(mode, vis, d, a3, b3);
+  (k, x, y) := call lds_same(mode, vis, d, a, b, ka, ha, kb, hb);
   return (k, x, y)
 }
 
@@ -706,34 +747,58 @@ def lazyDeltaStepL : FunDecl := lfn (mode, vis, d, a, b) locals (ua, ub, f, e2, 
   return (k, x, y)
 }
 
+/-- The literal acceleration of one lazy-delta iteration: `(v, 0, 0)` when either side reduces
+(the comparison restarted on the reduct), `(3, 0, 0)` when neither does. -/
+-- con-ron: ConRon/Arena/Core.lean:3265-3293 ConRon.Arena.lazyDeltaReduction
+@[l_impl ConRon.Arena.lazyDeltaReduction]
+def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
+  (fa, a2) := call reduce_nat(mode, vis, d, a);
+  if fa != 0 {
+    v := call defeq(mode, vis, d, a2, b);
+    return (v, 0, 0)
+  };
+  (fb, b2) := call reduce_nat(mode, vis, d, b);
+  if fb != 0 {
+    v := call defeq(mode, vis, d, a, b2);
+    return (v, 0, 0)
+  };
+  return (3, 0, 0)
+}
+
+/-- One lazy-delta iteration: `(k, x, y)` with `k` = `0` `.verdict false`, `1` `.verdict true`, `2`
+`.unknown a b`, `3` continue with `(x, y)`. -/
+-- con-ron: ConRon/Arena/Core.lean:3265-3293 ConRon.Arena.lazyDeltaReduction
+@[l_impl ConRon.Arena.lazyDeltaReduction]
+def lazyIterL : FunDecl := lfn (mode, vis, d, a, b) locals (of, ov, nf, k, x, y) {
+  (of, ov) := call defeq_offset(mode, vis, d, a, b);
+  if of != 0 { return (ov, 0, 0) };
+  nf := call lazy_fold_ok(mode, a, b);
+  if nf != 0 {
+    (k, x, y) := call lazy_nat(mode, vis, d, a, b);
+    if k != 3 { return (k, 0, 0) }
+  };
+  (k, x, y) := call lazy_delta_step(mode, vis, d, a, b);
+  if k == 1 { return (1, 0, 0) };
+  if k == 2 { return (0, 0, 0) };
+  if k == 3 { return (2, a, b) };
+  return (3, x, y)
+}
+
+/-- `lazy_delta_reduction`'s loop (named, for its spec). -/
+def lazyDeltaLoop : Stmt := lblk (mode, vis, d, a, b, k, x, y) {
+  while 0 == 0 {
+    (k, x, y) := call lazy_iter(mode, vis, d, a, b);
+    if k != 3 { return (k, x, y) };
+    a := x;
+    b := y
+  }
+}
+
 /-- The lazy-delta loop on its uncounted `2^62` budget (`defeqLoopFuel`, ROADMAP §3 (b)). -/
 -- con-ron: ConRon/Arena/Core.lean:3265-3293 ConRon.Arena.lazyDeltaReduction
 @[l_impl ConRon.Arena.lazyDeltaReduction]
-def lazyDeltaReductionL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (of, ov, nf, fa, a2, fb, b2, v, k, x, y) {
-  while 0 == 0 {
-    (of, ov) := call defeq_offset(mode, vis, d, a, b);
-    if of != 0 { return (ov, 0, 0) };
-    nf := call lazy_fold_ok(mode, a, b);
-    if nf != 0 {
-      (fa, a2) := call reduce_nat(mode, vis, d, a);
-      if fa != 0 {
-        v := call defeq(mode, vis, d, a2, b);
-        return (v, 0, 0)
-      };
-      (fb, b2) := call reduce_nat(mode, vis, d, b);
-      if fb != 0 {
-        v := call defeq(mode, vis, d, a, b2);
-        return (v, 0, 0)
-      }
-    };
-    (k, x, y) := call lazy_delta_step(mode, vis, d, a, b);
-    if k == 1 { return (1, 0, 0) };
-    if k == 2 { return (0, 0, 0) };
-    if k == 3 { return (2, a, b) };
-    a := x;
-    b := y
-  };
+def lazyDeltaReductionL : FunDecl := lfn (mode, vis, d, a, b) locals (k, x, y) {
+  ⟪lazyDeltaLoop⟫;
   abort
 }
 
@@ -1152,6 +1217,10 @@ def defeqFns : Prog :=
    ("try_unfold_proj_app", tryUnfoldProjAppL), ("delta_quick", deltaQuickL),
    ("lds_left", ldsLeftL), ("lds_right", ldsRightL), ("lds_both", ldsBothL),
    ("lazy_delta_step", lazyDeltaStepL), ("lazy_delta_reduction", lazyDeltaReductionL),
+   ("quick_sort", quickSortL), ("quick_forall", quickForallL), ("quick_lam", quickLamL),
+   ("spine_head", spineHeadL), ("defeq_spine2", defeqSpine2L), ("spine_cmp", spineCmpL),
+   ("lds_unfold2", ldsUnfold2L), ("lds_same", ldsSameL), ("lazy_nat", lazyNatL),
+   ("lazy_iter", lazyIterL),
    ("lazy_delta_proj_reduction", lazyDeltaProjReductionL), ("defeq_proj_pair", defeqProjPairL),
    ("prop_irrel", propIrrelL), ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
    ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_with", structEtaCertWithL),

@@ -396,11 +396,12 @@ def decLR (r : List Word) : LazyResA :=
 def Res3 (r : List Word) : Prop := HW (r.headD 0) ∧ HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0)
 
 /-- `quick_defeq(mode, vis, d, a, b)` refines `quickDefEq` at the knot (the shape of a slot; a
-hypothesis until `quickDefeq_refines` below). -/
+hypothesis until `quickDefeq_refines`, `DefEqMidQuick.lean`; the depth leaves room for the binder
+descents). -/
 def QuickDefeqSpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-    HW x → HW y →
+    HW x → HW y → d.toNat < 2 ^ 63 →
     CoreSpec p n "quick_defeq" [mode, vis, d, x, y]
       (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) decOB
       s₀ a₀ dn vis fe M eb ResW
@@ -449,7 +450,7 @@ theorem hw3 : HW 3 := by unfold HW; decide
 theorem deltaQuick_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : QuickDefeqSpec p n)
     (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "delta_quick" [mode, vis, d, a, b]
       (deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) decDS
       s₀ a₀ dn vis fe M eb Res3 := by
@@ -464,7 +465,7 @@ theorem deltaQuick_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : Quic
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc] at hW
-  have h₁ := CoreSpec.of_callW (hq F s a₀ dn vis fe M eb mode d a b hF hn hs ha hb) hc
+  have h₁ := CoreSpec.of_callW (hq F s a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd) hc
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
   · rw [dqK_n (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
