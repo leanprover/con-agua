@@ -305,4 +305,57 @@ theorem ptMem_slice (m : Mem) (o : Word) (hno : o.toNat + 9 < 2 ^ 64)
     show o.toNat + 5 < (m.arr64 POOL).size by omega, show o.toNat + 6 < (m.arr64 POOL).size by omega,
     show o.toNat + 7 < (m.arr64 POOL).size by omega, show o.toNat + 8 < (m.arr64 POOL).size by omega]
 
+/-! ## A name handle the L check accepts is in the twin's store -/
+
+theorem view_of_viewN_run {a a' : AState} {h : NIdx} {v : NNodeView}
+    (hr : (viewN h).run a = .ok (v, a')) : a.store.lss.ls.ns.view h = some v := by
+  simp only [viewN, EStore.ns, run_get_bind'] at hr
+  cases e : a.store.lss.ls.ns.view h with
+  | none =>
+    rw [e] at hr
+    simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, bind,
+      Except.bind] at hr
+  | some w =>
+    rw [e] at hr
+    simp only [pure, StateT.pure, StateT.run, Except.pure, Except.ok.injEq, Prod.mk.injEq] at hr
+    rw [hr.1]
+
+/-- **The L validity check of a name handle gives the twin's view.** -/
+theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
+    (ht : ¬ 4294967295 < t) (hg : ¬ (2 : Word) < (t >>> 28))
+    (hv : ¬ (((t >>> 27) &&& 1) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) + ((t >>> (27 : Word)) &&& 1)) ≤
+      (t &&& 134217727)) :
+    (a.store.lss.ls.ns.view (decI t)).isSome = true := by
+  have ht32 : t.toNat < 2 ^ 32 := by
+    have := mt UInt64.lt_iff_toNat_lt.mpr ht; simp at this; omega
+  have hv' : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := hv
+  have hg' : (t >>> 28).toNat ≤ 2 := by
+    have := mt UInt64.lt_iff_toNat_lt.mpr hg; simp at this ⊢; omega
+  have cases3 : t >>> 28 = 0 ∨ t >>> 28 = 1 ∨ t >>> 28 = 2 := by
+    rcases (show (t >>> 28).toNat = 0 ∨ (t >>> 28).toNat = 1 ∨ (t >>> 28).toNat = 2 by omega)
+      with h | h | h
+    · exact .inl (UInt64.toNat_inj.mp (by simpa using h))
+    · exact .inr (.inl (UInt64.toNat_inj.mp (by simpa using h)))
+    · exact .inr (.inr (UInt64.toNat_inj.mp (by simpa using h)))
+  rcases cases3 with g | g | g
+  · have hc' : ¬ rdW (m.arr64 CTL) (34 + tierW t) ≤ idxW t := by
+      simpa [g, tierW, idxW] using hc
+    rw [view_of_viewN_run (viewN_anon hR ht32 hv' g hc')]; rfl
+  · have hc' : ¬ rdW (m.arr64 CTL) (36 + tierW t) ≤ idxW t := by
+      have e : (34 : Word) + (1 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 36 + tierW t := by
+        have k : ∀ x : Word, (34 : Word) + (1 : Word) * (2 : Word) + x = 36 + x := fun x => by
+          rw [show (34 : Word) + (1 : Word) * (2 : Word) = 36 by decide]
+        exact k _
+      rw [g, e] at hc; exact hc
+    obtain ⟨_, hr, -⟩ := viewN_str hR ht32 hv' g hc'
+    rw [view_of_viewN_run hr]; rfl
+  · have hc' : ¬ rdW (m.arr64 CTL) (38 + tierW t) ≤ idxW t := by
+      have e : (34 : Word) + (2 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 38 + tierW t := by
+        have k : ∀ x : Word, (34 : Word) + (2 : Word) * (2 : Word) + x = 38 + x := fun x => by
+          rw [show (34 : Word) + (2 : Word) * (2 : Word) = 38 by decide]
+        exact k _
+      rw [g, e] at hc; exact hc
+    rw [view_of_viewN_run (viewN_num hR ht32 hv' g hc').1]; rfl
+
 end L.Arena
