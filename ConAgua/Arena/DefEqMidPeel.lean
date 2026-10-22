@@ -81,7 +81,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
   have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FVREC, FVSLOT, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact ⟨⟨hok, ⟨M, hS', KeptAll.refl _ _,
-      StackKept.of_frame f⟩,
+      StackKept.of_frame hf⟩,
     by rw [hres]; rfl, fvinternW_hw m a hS.arena.1.fvar u ty _ _ hI⟩, hf⟩
 
 /-! ## Growing runs
@@ -91,11 +91,10 @@ both defined `lsNodeW_viewLen`, so they could not be imported together; DefEqLea
 
 theorem StackGrew.trans' {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
     StackGrew m₁ m₃ :=
-  ⟨UInt64.le_trans h₁.1 h₂.1, h₂.2.1.trans h₁.2.1,
-    fun i hi => (h₂.2.2 i (UInt64.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2 i hi)⟩
+  h₁.trans h₂
 
 theorem StackKept.toGrew' {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
-  ⟨h.1 ▸ UInt64.le_refl _, h.2.1, h.2.2⟩
+  h.toGrew
 
 /-- `CoreRef` with the stack grown (`StackGrew`) instead of kept. -/
 def GrowRefP {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
@@ -178,7 +177,7 @@ theorem FvsR.le_top {m : Mem} {fo k : Word} {fvs : Array EIdx} (h : FvsR m fo k 
 
 theorem FvsR.kept {m m' : Mem} {fo k : Word} {fvs : Array EIdx} (h : FvsR m fo k fvs)
     (hk : StackKept m m') (hspn : (m.arr64 SPN).size < 2 ^ 63) : FvsR m' fo k fvs :=
-  ⟨h.spine.keep hk.2.1 hk.2.2 h.le_top hspn, hk.1.trans h.top, h.fit⟩
+  ⟨h.spine.keep hk.size hk.below h.le_top hspn, hk.1.trans h.top, h.fit⟩
 
 theorem peel_word_add_toNat (d k : Word) (h : d.toNat + k.toNat < 2 ^ 64) : (d + k).toNat = d.toNat + k.toNat := by
   rw [UInt64.toNat_add]; omega
@@ -657,15 +656,16 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       ⟨by rw [← hr]; exact hpush.of_spnP hspn', by rw [htop, UInt64.add_assoc], by rw [hk1']; omega⟩⟩
     -- the stack grew
     have hsz : (s'.mem.arr64 SPN).size = (m.arr64 SPN).size := by
-      rw [hspn', size_set64L]; exact hst₁.2.1
-    refine ⟨?_, hsz, fun i hi => ?_⟩
+      rw [hspn', size_set64L]; exact hst₁.size
+    refine ⟨?_, hsz, fun i hi => ?_, hst₁.bstk.trans (BKept.of_frame hfr (by decide) (by decide)),
+      hst₁.pool.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩
     · rw [htop, hx.top, UInt64.le_iff_toNat_le]
       simp only [UInt64.toNat_add, UInt64.toNat_one]
       have := hx.fit; omega
     · have hi' : i ≠ fo + k := fun h => by rw [h, ← hx.top] at hi; exact absurd hi (by simp)
       unfold spW
       rw [hspn', show (144 : ArrId) = SPN from rfl, rdW_set64L, if_neg (fun h => hi' h.2.1.symm)]
-      exact hst₁.2.2 i hi
+      exact hst₁.below i hi
   · cases hW
 
 /-! ## The twin's descent, one level at a time -/
@@ -991,10 +991,7 @@ theorem GrowRefP.reset {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {d
     (MemFrame.setCtl _ 136 _).mono (by simp) (by simp)
   have hspn : (m₃.set64 1 136 (spTop m₁)).arr64 SPN = m₃.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨hok, ⟨M', hS.frame_stk hfr (by simp) (by simp), hK, ?_, ?_, fun i hi => ?_⟩, hres, hr⟩
-  · unfold spTop; rw [rdW_set64L, if_pos ⟨rfl, rfl, h136⟩]
-  · rw [hspn]; exact hg.2.1
-  · unfold spW; rw [hspn]; exact hg.2.2 i hi
+  exact ⟨hok, ⟨M', hS.frame_stk hfr (by simp) (by simp), hK, StackKept.restoreG hg h136⟩, hres, hr⟩
 
 section bK
 variable (p : Prog) (n : Nat) (mode vis d body1 ty2 body2 : Word)

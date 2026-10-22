@@ -688,14 +688,6 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
 
 /-! ## Runs that leave their pushed slice on the stack -/
 
-theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
-    StackGrew m₁ m₃ :=
-  ⟨UInt64.le_trans h₁.1 h₂.1, h₂.2.1.trans h₁.2.1,
-    fun i hi => (h₂.2.2 i (UInt64.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2 i hi)⟩
-
-theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
-  ⟨h.1 ▸ UInt64.le_refl _, h.2.1, h.2.2⟩
-
 /-- **After a core run that left a slice on the stack**: as `CoreAfter`, the stack below the old top
 kept, the top possibly grown. -/
 def CoreAfterG (dn : NIdx → Option ConLeche.Name) (m₀ m : Mem) (a : AState) (vis : Word)
@@ -1214,7 +1206,8 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
         hK₁.trans (hK₂.trans hK₃), ?_⟩
       have t1 : spTop m₁ = spTop s.mem := hSt₁.1
       have t2 : spTop m₂ = spTop m₁ := hSt₂.1
-      apply StackKept.restore _ (by rw [hSt₃.size, hSt₂.size, hSt₁.size]) h136
+      apply StackKept.restore _ (by rw [hSt₃.size, hSt₂.size, hSt₁.size])
+        (hSt₁.bstk.trans (hSt₂.bstk.trans hSt₃.bstk)) (hSt₁.pool.trans (hSt₂.pool.trans hSt₃.pool)) h136
       intro j hj
       have hj2 : j < spTop m₂ := by rw [t2, t1]; exact hj
       have hj1 : j < spTop m₁ := by rw [t1]; exact hj
