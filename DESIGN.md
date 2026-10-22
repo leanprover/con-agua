@@ -6787,3 +6787,29 @@ introduces it; the coordinator reviews the list at each batch of landings.
   knot's `infer`/`defeq` steps (`WhnfCallees.inferStep` …; lane `defeq`), `erecKept*`, and
   `whnfGrowsUpTo_stub` (`reduce_nat`).
 
+### Open handoffs (lane `whnf2` closing)
+* **`whnfGrowsUpTo_stub`** (the second assumed fact) stays. A `whnf` call must leave the limb pool
+  below its old top alone and the top no lower (`reduce_nat_op` holds the first literal's pool slice
+  across the second `whnf`). Three routes were weighed: (1) a write-set argument (`closedW` with the
+  pool outside the write set) fails because the `Nat` arithmetic does write the pool (above the
+  top), and its frame holds only under argument preconditions a text check cannot see; (2) re-reading
+  the first literal after the second `whnf` needs the twin's store to keep every node's view across
+  `whnf` (a `Keeps`-style induction over the whole knot, ~150 twin definitions); (3) carrying the
+  growth in the core's post: `CoreAfter` (or `StackKept`) gains `PoolGrew m₀ m` (pool below `m₀`'s
+  top unchanged, top no lower, sizes equal), proved at the leaves from frames avoiding `POOL`/
+  `CTL[0]` and from the `Nat` functions' `Grows`, and composed by `CoreAfter.trans`/`comp`. Route
+  (3) is the one; it touches every explicit `StackKept`/`CoreAfter` construction and destructuring
+  (~300 sites, about half in lane `defeq`'s files), so it should be done together with lane
+  `defeq`'s request part 2 (`StackKept` keeps `BSTK`, array 145 / `CTL[137]`), in one sweep when
+  `defeq` is between landings. Suggested shape: `StackKept m m'` becomes a `structure` with named
+  fields (`top`, `size`, `below`, `bstk`, `pool`) so that later additions do not move projections.
+* **`CoreS.lvl_den`** (`proof_irrel`): needs "every stored level handle reads back", a store
+  invariant the twin's WF gives but `CoreS` does not carry; adding it means maintaining it at every
+  level-node and sort-node interning (`CoreS.of_level`, `arena_frame`).
+* Remaining stub fields whose L code does not exist: `instLP` (phase 4 `instLPFast`),
+  `strLitCtor`/`strLitSupported`, `find_proj`/`fire_ok` (+ `ProjFound`, `ProjSmall`),
+  `wscoped_bfast`, `leaf_guard`, `caps_never_zero`, `rec_fire_levels`; `supKeep_twin`,
+  `erecKeptInst_stub` (its `inst_spine` half is provable now from `instEntry_frame`; `inst_lp`'s is
+  not), `erecKeptKnot_stub` and the knot steps (lane `defeq`). The new named hypotheses of the iota
+  proofs (`ErecKeptRec`, `LvlsEqDen`, `RecShape`, `ProofIrrelOKM`) are listed above.
+
