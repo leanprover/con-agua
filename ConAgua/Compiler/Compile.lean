@@ -52,6 +52,11 @@ structure Tab where
   nres : Nat := 1
   /-- The number of global variables: global `g` (with `g.id < ng`) is the word at `globOff g`. -/
   ng : Nat := 0
+  /-- `rom.length`, stored: the offsets past the constant data (`resOff`, `globOff`, `args`) are
+  then arithmetic on the table's fields, and the kernel does not count the bytes of a large ROM
+  each time it evaluates the code generator (DESIGN.md, "Kernel-checked compiler output"). -/
+  romLen : Nat := rom.length
+  romLen_eq : romLen = rom.length := by rfl
   deriving Repr, DecidableEq
 
 def Tab.stackTop : Int := 0
@@ -61,7 +66,10 @@ def Tab.len8 (_ : Tab) (a : ArrId) : Int := 24 + 16 * a
 def Tab.base64 (t : Tab) (a : ArrId) : Int := 16 + 16 * (t.nb + a)
 def Tab.len64 (t : Tab) (a : ArrId) : Int := 24 + 16 * (t.nb + a)
 /-- The words the constant data takes. -/
-def Tab.romWords (t : Tab) : Nat := (t.rom.length + 7) / 8
+def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8
+
+theorem Tab.rom_length_le (t : Tab) : t.rom.length ≤ 8 * t.romWords := by
+  simp only [Tab.romWords, t.romLen_eq]; omega
 def Tab.romBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
 /-- The results past the registers. -/
 def Tab.nxres (t : Tab) : Nat := t.nres - maxRes

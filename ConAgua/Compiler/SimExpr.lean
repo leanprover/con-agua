@@ -326,7 +326,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       have := congrArg List.length hpre; simp at this; omega
     have hidx : romIdx d G.tab.rom + d.length ≤ G.tab.rom.length := by
       have h1 := congrArg List.length hpre; have := romIdx_le d G.tab.rom; simp at h1; omega
-    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
     have htabEnd := hG.tab_end
     simp only [Layout.tabEnd] at htabEnd
     refine ih t k hc.left hwf.2 (by omega) σ s Q hI ?_ ?_
