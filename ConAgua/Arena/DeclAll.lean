@@ -9,3 +9,4 @@ import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Arena.DeclRomStubs
 import ConAgua.Arena.DeclReduceSpec
+import ConAgua.Arena.DeclArmLoop
