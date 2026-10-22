@@ -44,6 +44,19 @@ import ConAgua.Arena.DeclCanonConst
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclApd
+import ConAgua.Arena.DeclDivMod
+import ConAgua.Arena.DeclDivMod2
+import ConAgua.Arena.DeclDivMod3
+import ConAgua.Arena.DeclDivMod4
+import ConAgua.Arena.DeclDivMod5
+import ConAgua.Arena.DeclDivMod6
+import ConAgua.Arena.DeclDivMod7
+import ConAgua.Arena.DeclDivMod8
+import ConAgua.Arena.DeclDivMod9
+import ConAgua.Arena.DeclDivMod10
+-- Every module of the declaration loop's proofs (lane decls3): one build checks them together and
+-- lemma-name clashes between files surface here, as IndAll.lean does for the inductive stage.
+-- Imports only: append new modules at the end.
 import ConAgua.Arena.DeclApdSpec
 import ConAgua.Arena.DeclApdRef
 import ConAgua.Arena.DeclArmDefn
