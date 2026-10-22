@@ -310,8 +310,10 @@ def classGenSlotVar : FunDecl := lfn (g, s) locals (u, z, fv) {
 
 /-- `class_gen_mot_var(g, c)`: class `c`'s motive variable. -/
 @[l_impl ConRon.Arena.ClassGen.motVar]
-def classGenMotVar : FunDecl := lfn (g, c) locals (ok, s, r) {
-  (ok, s) := call class_read_motive_slot(IW.u64[g + 7], IW.u64[g + 8], c);
+def classGenMotVar : FunDecl := lfn (g, c) locals (ok, s, r, so, sl) {
+  so := IW.u64[g + 7];
+  sl := IW.u64[g + 8];
+  (ok, s) := call class_read_motive_slot(so, sl, c);
   if ok == 0 { s := 0 };
   r := call class_gen_slot_var(g, s);
   return r

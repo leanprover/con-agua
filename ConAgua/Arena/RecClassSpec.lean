@@ -1376,4 +1376,46 @@ theorem classGenSlotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pi
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
 
+
+/-! ## `class_gen_mot_var` -/
+
+/-- The returned word. -/
+def mvK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+
+/-- After the motive-slot search. -/
+def mvK (m : Mem) (g : Word) : Option (List Word) → Option (List Word × Mem)
+  | none => none
+  | some r => mvK2 (slotVarW m g (if r.headD 0 = 0 then 0 else r.tail.headD 0))
+
+/-- **The model of `class_gen_mot_var`.** -/
+def motVarW (n : Nat) (m : Mem) (g c : Word) : Option (List Word × Mem) :=
+  mvK m g (msW n m (rdW (m.arr64 IW) (g + 7)) (rdW (m.arr64 IW) (g + 8)) c)
+
+section mvarms
+variable (m : Mem) (g : Word) (r : List Word)
+theorem mvK_some : mvK m g (some r) = mvK2 (slotVarW m g (if r.headD 0 = 0 then 0 else r.tail.headD 0)) := rfl
+theorem mvK2_some (m' : Mem) : mvK2 (some (r, m')) = some ([r.headD 0], m') := rfl
+end mvarms
+
+grind_pattern [ind_grind] mvK_some => mvK m g (some r)
+grind_pattern [ind_grind] mvK2_some => mvK2 (some (r, m'))
+
+theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hsv : p.lookup "class_gen_slot_var" = some classGenSlotVar)
+    (hms : p.lookup "class_read_motive_slot" = some classReadMotiveSlot)
+    (hp : p.lookup "class_gen_mot_var" = some classGenMotVar) (n : Nat) (s₀ : St) (g c : Word) :
+    ⦃fun s_ => s_ = s₀⦄ invoke p (exec p (n + 1)) "class_gen_mot_var" [g, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ motVarW n s₀.mem g c = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, classGenMotVar]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n] <;>
+    finish (gen := 20) [motVarW]
+
 end L.Ind
