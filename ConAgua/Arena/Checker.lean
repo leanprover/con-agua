@@ -62,9 +62,6 @@ def promoteVGL : FunDecl := lfn (g, vis) locals () { abort }
 the memo `promote_vg` left). -/
 -- con-ron: ConRon/Arena/Promote.lean:358-378 ConRon.Arena.promoteNew
 def promoteNewL : FunDecl := lfn (k, vis, fresh) locals () { abort }
-/-- Stub: `checkValueGroup` at view `vis` on the value group record `g`. -/
--- con-ron: ConRon/Arena/CheckerSplit.lean:95-112 ConRon.Arena.checkValueGroup
-def checkValueGroupL : FunDecl := lfn (vis, g) locals () { abort }
 
 theorem installStepGo_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)

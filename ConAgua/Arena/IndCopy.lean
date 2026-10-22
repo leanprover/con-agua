@@ -161,7 +161,7 @@ theorem consPre_ctl (m : Mem) (x l : Word) (i : Word) (hi : i ≠ 200) :
   simp [Ne.symm hi]
 
 /-- **`sl_cons` builds `x :: xs`**, the pool only grown, nothing else written. -/
-theorem slCons_dec {m m' : Mem} {x o l : Word} {n : Nat} {xs : List EIdx}
+theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : List (Idx k)}
     (h : copyW n (consPre m x l) (rdW (m.arr64 CTL) 200 + 1) o l = some m')
     (hne : l + 1 ≠ 0)
     (hroom : (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat ≤ (m.arr64 IW).size)
@@ -217,10 +217,10 @@ theorem slCons_dec {m m' : Mem} {x o l : Word} {n : Nat} {xs : List EIdx}
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
   refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_⟩, htop⟩
   · simp only [decHL, hl1, hslice?_succ]
-    have h0 : (hd? (iwA m') q.toNat : Option EIdx) = some (decI x) := by
+    have h0 : (hd? (iwA m') q.toNat : Option (Idx k)) = some (decI x) := by
       simp [hd?, iwA, hget, hx]
     rw [h0]
-    have : (hslice? (iwA m') (q.toNat + 1) l.toNat : Option (List EIdx)) = some xs := by
+    have : (hslice? (iwA m') (q.toNat + 1) l.toNat : Option (List (Idx k))) = some xs := by
       rw [← hxs]; simp only [decHL]
       apply hslice?_congr
       intro j hj
@@ -305,7 +305,7 @@ theorem slCons_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       finish (gen := 20)
 
 /-- `consW` is the memory `slCons_dec` speaks about. -/
-theorem consW_dec {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
+theorem consW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List (Idx k)}
     (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
     (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :

@@ -600,3 +600,75 @@ theorem findW_ok (n : Nat) : ∀ (m : Mem) (o l x : Word) (r : List Word) (ws : 
             simp [← h]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `sl_get`, `sl_getd`: one word of a slice (lane `indproofs`) -/
+
+/-- The model of `sl_get(o, l, i)`: `none` (abort) past the end. -/
+def getW (m : Mem) (o l i : Word) : Option Word :=
+  if l ≤ i then none else some (rdW (m.arr64 IW) (o + i))
+
+/-- The model of `sl_getd(o, l, i, d)`. -/
+def getDW (m : Mem) (o l i d : Word) : Word :=
+  if l ≤ i then d else rdW (m.arr64 IW) (o + i)
+
+theorem slGet_specW (p : Prog) (hp : p.lookup "sl_get" = some slGet) (n : Nat) (s₀ : St)
+    (o l i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_get" [o, l, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ getW s₀.mem o l i = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, slGet]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [getW]
+
+theorem slGetD_specW (p : Prog) (hp : p.lookup "sl_getd" = some slGetD) (n : Nat) (s₀ : St)
+    (o l i d : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_getd" [o, l, i, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = getDW s₀.mem o l i d; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, slGetD]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [getDW]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## The stage relation across a store writer (lane `indproofs`) -/
+
+/-- **A writer below array 64 and `CTL[64]` (an interning, a `mk_*`, a walk) keeps the stage
+relation**, given its `ArenaD` after and the twin keeping caches and pins; the pool is
+untouched, so it only grew. -/
+theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
+    (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a) :
+    StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (fun h => by have := hA _ h; simp [IW] at this)
+    (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun h => by have := hA _ h; simp [EREC] at this)
+    (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
+    hf.2.1 200 (fun h => by have := hC _ h; simp at this)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
+    hf.2.1 129 (fun h => by have := hC _ h; simp at this)
+  refine ⟨⟨CheckR.of_walk hS.1 hD hf hA hC hk, ?_⟩, ?_⟩
+  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.2.2.1 CTL]; exact hS.2
+  · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+    · simp only [iwTop, h200]; exact Nat.le_refl _
+    · simp only [erTop, h129]; exact Nat.le_refl _
+
+end L.Ind
