@@ -7125,3 +7125,51 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
 * Merging: lemma-name clashes renamed on this side (`hslice?_bound_fsz`, `projBodyW`);
   `scripts/checker_prog.py` dumps modules it does not build: build `ConAgua.Rom.CIRead` first, or
   `rom_ci` comes out as a stub and `checkerProg_wf` fails on `reduce_decl_pin`'s arity.
+## Phase 5 continued: the stacks and the pool in `CoreAfter`, the record pool from the text (2026-10-22, lane `whnf3`)
+
+### Landing 1: `strip_pis`, `strip_lams` (helper `whnf3-walks`)
+* L code only (`StripTele.lean`, lane induct's convention `(ok, off, len, body)`, the domains an
+  `IW` slice), to unblock e2e (`check` stopped at the stub on 630/675 fixtures). Refinements later.
+  New modules must be listed in `lakefile.toml`'s `globs` (the generator dumps built modules only).
+
+### Landing 2: `StackKept` carries the binder stack and the limb pool (with lane `defeq`)
+* **Shape** (agreed with lane `defeq`, its request part 2 and whnf2's open handoff route (3)):
+  `StackKept m m'` and `StackGrew m m'` are structures with fields `top`, `size`, `below` (the old
+  three conjuncts), `bstk : BKept m m'` (binder stack `BSTK` = 145 below `CTL[137]` kept, top and
+  size equal; `bTop`/`BKept` moved from `InferBodyBind.lean` to `WhnfBase.lean`) and
+  `pool : PoolGrew m m'` (pool below `m`'s top `CTL[0]` unchanged, top no lower, size equal). So
+  `CoreAfter` carries both, and they compose with `trans`.
+* **Construction**: `StackKept.of_frame hf` (auto-params `SPN`/`BSTK`/`POOL ∉ A`, `136`/`137`/`0 ∉ C`
+  by `decide`), `.of_frame_range`, `.of_grows`/`.of_frame_grows` (a `Grows` then a frame),
+  `.of_spnFrame`/`StackGrew.of_spnFrame` (pushes on the spine stack), `StackKept.restore`
+  (now also takes the `BKept`/`PoolGrew` of the run) and `.restoreG` (a grew-run, top put back).
+  `CoreS.frame` now avoids arrays `≥ 146`/`CTL ≥ 138` (it posts `StackKept`); the old range is
+  `CoreS.frameS` (CoreS only: the telescopes' `BSTK` pushes).
+* **The telescopes** (`InferBodyBind`, `InferBodyBindPi`, lane `defeq`'s): `TelPost` gains `lo`
+  and "`BSTK` below `lo` kept, size equal, pool grew"; `tPush_step` posts them; `tops_restore`
+  builds the restored `StackKept` (both tops) directly. `BStkCallees`/`BStkCap` stay as lane
+  `defeq`'s hypotheses; both follow from the callees' `CoreAfter` now (`hSt.bstk`, `CoreS.bstk`).
+* **The `Nat` arms keep the pool**: every arm refinement is generic in the relation, so
+  `nat_op_result` refines at `ArenaP m₀ = ArenaR ∧ PoolGrew m₀` (`PinsNatOp.lean`:
+  `natOpResultL_refinesR` over `NatArmsR R`, the tagged `natOpResultL_refines` its `ArenaR`
+  instance; `CoreNatOp.lean`: `natArmsR_pool`, `intern_lit`/`intern_const` from their text write
+  sets). `nat_pred_lit`/`nat_succ_lit` likewise (`callW_natPredLit`/`callW_natSuccLit` post
+  `PoolGrew`).
+* **`whnfGrowsUpTo_stub` is gone**: `reduce_nat_op` reads the first literal's slice across the
+  second `whnf` through that call's `CoreAfter` (`hSt.pool`, `PoolGrew.slice`).
+* About 300 sites, 40 files (whnf and defeq); one-line shapes mostly (`.2.1` → `.size`,
+  `⟨t, s, b⟩` → `of_frame`); loops with an explicit "kept below the start" invariant
+  (`peelFull_ref`, `appFull_ref`, `spioFull_ref`, `spFull_ref`, `lamsFull_ref`, `pisFull_ref`)
+  gained `BKept m₀ m`/`PoolGrew m₀ m` (or the `BSTK`-below-`lo` triple) in their invariant.
+
+### The record pool from the program text (`CoreErec.lean`)
+* `ErecKept`, `ErecKeptInst`, `ErecKeptKnot`, `ErecKeptRec` ("a call of `f` leaves `EREC`") are
+  facts about the text: no function the core reaches stores into `EREC`. `coreFns` (the call
+  closure of `coreRoots` in `checkerProg`, a literal list, 422 functions) and
+  `closedA p coreErecA coreErecC coreFns` (all arrays but `EREC`, every `CTL` word below 256);
+  `callW_erec_closed`; `ErecKept*.of_closed`. At `checkerProg` it is
+  `L.Checker.checkerProg_coreErec` (`decide +kernel`, 74 s). `erecKeptInst_stub` and
+  `erecKeptKnot_stub` deleted; the tagged `instSpinePins_refines`, `recFireArgs_refines`,
+  `majorToCtor_refines`, `prepareMajor_refines`, `iotaRecAt_refines` take `hcl` instead (and
+  `iotaRecAt_refines` no longer takes `ErecKeptRec`). When a stub of the closure gets code that
+  calls new functions, regenerate `coreFns`.
