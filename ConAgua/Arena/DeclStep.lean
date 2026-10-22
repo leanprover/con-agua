@@ -256,6 +256,7 @@ def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
 /-- `check_value_group(vis, g)`: `checkValueGroup` on the value group record `g`: the type's
 sort, for a theorem the proposition test and the value's guards, the value's type against the
 declared one. -/
+-- con-ron: ConRon/Arena/CheckerSplit.lean:95-112 ConRon.Arena.checkValueGroup
 @[l_impl ConRon.Arena.checkValueGroup]
 def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
   z := call iw_reset();
