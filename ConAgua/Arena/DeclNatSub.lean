@@ -112,6 +112,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 structure NatSubProg (p : Prog) : Prop extends NatEqProg p where
   lSubstConst0 : p.lookup "subst_const0" = some substConst0L
+  lSlCons : p.lookup "sl_cons" = some slCons
+  lIwCopy : p.lookup "iw_copy" = some iwCopy
   lSubstConst0Pairs : p.lookup "subst_const0_pairs" = some substConst0PairsL
 
 section scmodel
@@ -294,6 +296,138 @@ theorem substConst0_refines (hN : NatSubProg p) (nm r fuel h : Word) :
       (substConst0 (decI nm) (decE r) fuel.toNat (decE h)) (KeepPost dn vis fe decW0E) :=
   CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hh⟩ hc =>
     sc0_ref hN nm r fuel.toNat fuel rfl h k m a res m' hS hn hr hh hc)
+
+/-! ### `subst_const0_pairs` -/
+
+def pairsW (p : Prog) (n : Nat) (m : Mem) (nm r o l : Word) : Option (List Word × Mem) :=
+  if l = 0 then some ([0, 0], m) else
+  bW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) (rdW (m.arr64 IW) o)] m) fun r1 m1 =>
+  bW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m1.arr64 IW) (rdW (m.arr64 IW) o + 1)] m1) fun r2 m2 =>
+  bW (callW p n "subst_const0_pairs" [nm, r, o + 1, l - 1] m2) fun r3 m3 =>
+  bW (callW p n "rec2" [r1.headD 0, r2.headD 0] m3) fun r4 m4 =>
+  bW (callW p n "sl_cons" [r4.headD 0, r3.headD 0, r3.tail.headD 0] m4) fun r5 m5 =>
+  some ([r5.headD 0, r5.tail.headD 0], m5)
+
+theorem pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substConst0PairsL) (n : Nat)
+    (s₀ : St) (nm r o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "subst_const0_pairs" [nm, r, o, l]
+    ⦃fun res s' => LocEq s' s₀ ∧ pairsW p n s₀.mem nm r o l = some (res, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, substConst0PairsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "subst_const0", callW_spec p n "subst_const0_pairs", callW_spec p n "rec2",
+      callW_spec p n "sl_cons"] <;>
+    finish (gen := 20) (instances := 10000) [pairsW, bW]
+
+theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
+    ∀ (ps : List (EIdx × EIdx)) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word)
+      (m' : Mem), StageR dn vis fe m a → EqL m o.toNat l.toNat ps → o.toNat + l.toNat < 2 ^ 64 →
+      callW p k "subst_const0_pairs" [nm, r, o, l] m = some (res, m') →
+      ∃ x a', (substConst0Pairs (decI nm) (decE r) ps).run a = .ok (x, a') ∧
+        KeepPost dn vis fe decEqRL m m' a' res x := by
+  intro ps
+  induction ps with
+  | nil =>
+    intro o l k m a res m' hS hE hb hc
+    have hl0 : l = 0 := UInt64.toNat_inj.mp (by have := hE.2.1; simpa using this)
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mm => pairsW p k mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs k · nm r o l) hc
+    simp only [pairsW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨[], a, rfl, hS, IWGrow.refl _, by
+      refine ⟨by simp, by simp, fun j hj => by simp at hj⟩⟩
+  | cons e es ih =>
+    intro o l k m a res m' hS hE hb hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
+    have hw := callW_model (M := fun mm => pairsW p k mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs k · nm r o l) hc
+    unfold pairsW at hw
+    rw [if_neg (fun h => hl0 (by simp [h]))] at hw
+    have hpp' : rdW (m.arr64 IW) o = pp := by
+      simp only [iwA] at hpp; simp [rdW, hpp]
+    have hea' : rdW (m.arr64 IW) pp = ea := by
+      obtain ⟨-, h2, -⟩ := hrec; simp only [iwA] at h2; simp [rdW, h2]
+    have hpb : (pp + 1).toNat = pp.toNat + 1 := by
+      obtain ⟨h1, -, -⟩ := hrec
+      have e1 := hS.2.1; have e2 := hS.2.2.2.1; have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
+      rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
+    have heb' : ∀ m1, IWGrow m m1 → rdW (m1.arr64 IW) (pp + 1) = eb := by
+      intro m1 hg
+      obtain ⟨h1, -, h3⟩ := hrec
+      simp only [iwA] at h3; simp only [rdW, hpb]; rw [hg.2.2.1 _ (by omega)]; simp [h3]
+    rw [hpp', hea'] at hw
+    cases h1 : callW p k "subst_const0" [nm, r, 4000000000, ea] m with
+    | none => rw [h1] at hw; simp at hw
+    | some q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, bW_some] at hw
+    obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1
+    obtain ⟨hS1, hg1, hl1, hx1⟩ := hK1
+    rw [heb' m1 hg1] at hw
+    cases h2 : callW p k "subst_const0" [nm, r, 4000000000, eb] m1 with
+    | none => rw [h2] at hw; simp at hw
+    | some q2 =>
+    obtain ⟨r2, m2⟩ := q2
+    rw [h2, bW_some] at hw
+    obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 fuelW eb k m1 a1 r2 m2 hS1 hn hr heb h2
+    obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
+    cases h3 : callW p k "subst_const0_pairs" [nm, r, o + 1, l - 1] m2 with
+    | none => rw [h3] at hw; simp at hw
+    | some q3 =>
+    obtain ⟨r3, m3⟩ := q3
+    rw [h3, bW_some] at hw
+    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hl1' : (l - 1).toNat = l.toNat - 1 := by
+      have : 0 < l.toNat := Nat.pos_of_ne_zero hl0
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    have hrest2 : EqL m2 (o + 1).toNat (l - 1).toNat es := by
+      rw [ho1, hl1']; exact hrest.grow (hg1.trans hg2)
+    obtain ⟨x3, a3, hrun3, hK3⟩ := ih (o + 1) (l - 1) k m2 a2 r3 m3 hS2 hrest2 (by omega) h3
+    obtain ⟨hS3, hg3, hd3⟩ := hK3
+    cases h4 : callW p k "rec2" [r1.headD 0, r2.headD 0] m3 with
+    | none => rw [h4] at hw; simp at hw
+    | some q4 =>
+    obtain ⟨r4, m4⟩ := q4
+    rw [h4, bW_some] at hw
+    have hR4 := rec2_fref p hN.lIwAlloc hN.lRec2 (r1.headD 0) (r2.headD 0) k m3 r4 m4 hS3.2 h4
+    have hK4 := hR4.2.1
+    have hS4 := hK4.stage hS3
+    have rec4 := recAt_of_post hR4 hS3.2
+    cases h5 : callW p k "sl_cons" [r4.headD 0, r3.headD 0, r3.tail.headD 0] m4 with
+    | none => rw [h5] at hw; simp at hw
+    | some q5 =>
+    obtain ⟨r5, m5⟩ := q5
+    rw [h5, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr5, rfl⟩ := hw
+    obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+      (slCons_specW p hN.lIwAlloc hN.lIwCopy hN.lSlCons k _ (r4.headD 0) (r3.headD 0) (r3.tail.headD 0)) h5
+    have hE3 : EqL m4 (r3.headD 0).toNat (r3.tail.headD 0).toNat x3 := by
+      have := hd3; simp only [decEqRL, getD0, getD1] at this; exact this.grow hK4.1
+    have hcons' : consW k m4 (r4.headD 0) (r3.headD 0) (r3.tail.headD 0) = some (r5, m5) := by
+      rw [← hs']; exact hcons
+    obtain ⟨hS5, hg5, hE5⟩ := eqL_cons hcons' hS4 hE3 rec4 hl1 hl2
+    subst hr5 he
+    refine ⟨(decE (r1.headD 0), decE (r2.headD 0)) :: x3, a3, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hK4.1.trans hg5))), ?_⟩
+    · simp only [substConst0Pairs, StateT.run_bind, hrun1, hrun2, hrun3, exc_ok_bind', StateT.run_pure,
+        ← hx1, ← hx2]
+      rfl
+    · simp only [decEqRL, getD0, getD1, List.headD_cons, List.tail_cons]
+      exact hE5
+
+@[refines ConRon.Arena.substConst0Pairs]
+theorem substConst0Pairs_refines (hN : NatSubProg p) (nm r o l : Word) (ps : List (EIdx × EIdx)) :
+    RefAM p "subst_const0_pairs" [nm, r, o, l]
+      (fun m a => StageR dn vis fe m a ∧ H nm ∧ H r ∧ EqL m o.toNat l.toNat ps ∧
+        o.toNat + l.toNat < 2 ^ 64)
+      (substConst0Pairs (decI nm) (decE r) ps) (KeepPost dn vis fe decEqRL) :=
+  CallRef.refAM (fun k m a res m' ⟨hS, hn, hr, hE, hb⟩ hc =>
+    pairs_ref hN nm r hn hr ps o l k m a res m' hS hE hb hc)
 
 end sub
 
