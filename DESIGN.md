@@ -5035,6 +5035,20 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   Every spec file checks in 5–40 s; a `vcgen` spec is usually one `finish (gen := 20)`, the
   relational lemmas are hand-written case splits on the model's continuations.
 
+### Landing 2 (02:20)
+* Census phase 8: **46 proven, 26 sorry (through stubs), 143 written** (landing 1: 34 / 15 / 166).
+* Lead: `struct_proj_guards_col`/`_row` (rewritten recursive; `used` read with the twin's
+  `getD _ false` — the round-1 `sl_get` aborted out of range where the twin does not),
+  `check_sum_tele_slow`, `check_sum_tele` (`IndSumSpec3.lean`), and in `IndMaster`: `erec_alloc`
+  (`erAllocW`), `wrER`, `StageR.erec` (lane `decls`' `EnvR.grow`), `erRec_stage`, `cv_new`
+  (`cvNew_stage`: the copied record decodes as `{cv with type := ty}`, `decCV_copy`); the
+  `viewSort` bridge (`viewSort_of_view`); `struct_ps_at` under `StageR`.
+* `decRL` (every slice-returning stub post) carries the pool-top bound, at helper `rec`'s request:
+  without it a stub-returned slice cannot be kept decoded across a later growing callee, nor
+  passed to `sl_cons`.
+* Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
+  `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
+
 ### `sorry`s
 None new: every `sorry` a refinement inherits is a stub's (`IndStubs.lean`).
 
@@ -5072,3 +5086,4 @@ Files: `ViewL.lean` (`packBF`, `packBF_bvar`, `packBF_fvar`), `ExprMk.lean` (`de
   built, then lost in the machine restart; `Inst1*.lean` with `d ↦ k`, `v ↦ d` is the template.
 * `instantiateListGo`/`instantiateList`: untouched (pool-slice reader; `PoolSlice.lean` already has
   the word-slice lemmas).
+None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).

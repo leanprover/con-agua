@@ -73,6 +73,7 @@ name and level parameters carry over (`{cv with type := ty}`). Returns `(cvTa, s
 def checkSumTeleSlowL : FunDecl := lfn (vis, cv, n, cvTa0) locals (bo, bl, s, sortS, ty, cvTaNew, u) {
   (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC.u64[cvTa0 + 3]);
   sortS := call intern_sort(s);
+  if 4294967296 <= sortS { abort };
   ty := call close_telescope(bo, bl, 0, sortS);
   cvTaNew := call cv_new(EREC.u64[cv], EREC.u64[cv + 1], EREC.u64[cv + 2], ty);
   u := call check_constant_val(vis, cvTaNew);
@@ -590,41 +591,40 @@ def structUsedLaterListL : FunDecl := lfn (cty, nP, n, base) locals (res, j, r) 
   return (res, n)
 }
 
-/-- `struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, i)`: field `i`'s guard level,
-the `col 0 i (sorts.getD i z)` call specialised to its one call site (the fold over the earlier,
-used fields `j < i`). -/
+/-- `struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, j, k, acc)`: the twin's `col j
+k acc` (the join of `acc` with the sorts of the used fields `j, …, j + k - 1`). Self-recursive, as
+the twin is (lane `indproofs`: rewritten from a `while` loop for the refinement; `used` read with
+the twin's `getD _ false`, the joined level guarded below `2^32`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:205-230 ConRon.Arena.structProjGuards.col
 @[l_impl ConRon.Arena.structProjGuards.col]
 def structProjGuardsColL : FunDecl :=
-  lfn (usedOff, usedLen, sortsOff, sortsLen, z, i) locals (acc, j, u, sj, m) {
-  acc := call sl_getd(sortsOff, sortsLen, i, z);
-  j := 0;
-  while j < i {
-    u := call sl_get(usedOff, usedLen, j);
-    if u == 1 {
-      sj := call sl_getd(sortsOff, sortsLen, j, z);
-      m := call intern_max(acc, sj);
-      acc := m
-    };
-    j += 1
+  lfn (usedOff, usedLen, sortsOff, sortsLen, z, j, k, acc) locals (u, sj, m, r) {
+  if k == 0 { return acc };
+  u := call sl_getd(usedOff, usedLen, j, 0);
+  if u != 0 {
+    sj := call sl_getd(sortsOff, sortsLen, j, z);
+    m := call intern_max(acc, sj);
+    if 4294967296 <= m { abort };
+    r := call struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, j + 1, k - 1, m);
+    return r
   };
-  return acc
+  r := call struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, j + 1, k - 1, acc);
+  return r
 }
 
-/-- `struct_proj_guards_row(usedOff, usedLen, sortsOff, sortsLen, z, nF)`: `row 0 nF` specialised
-to its one call site: field `i`'s guard, for every field. -/
+/-- `struct_proj_guards_row(usedOff, usedLen, sortsOff, sortsLen, z, i, k)`: the twin's `row i k`:
+field `i'`s guard for `i' = i, …, i + k - 1`. Self-recursive, as the twin is (lane `indproofs`:
+rewritten from a `while` loop; the conses copy, quadratic in the field count). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:205-230 ConRon.Arena.structProjGuards.row
 @[l_impl ConRon.Arena.structProjGuards.row]
 def structProjGuardsRowL : FunDecl :=
-  lfn (usedOff, usedLen, sortsOff, sortsLen, z, nF) locals (res, i, g) {
-  res := call iw_alloc(nF);
-  i := 0;
-  while i < nF {
-    g := call struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, i);
-    IW.u64[res + i] := g;
-    i += 1
-  };
-  return (res, nF)
+  lfn (usedOff, usedLen, sortsOff, sortsLen, z, i, k) locals (res, acc, g, ro, rl, o, l) {
+  if k == 0 { res := call iw_alloc(0); return (res, 0) };
+  acc := call sl_getd(sortsOff, sortsLen, i, z);
+  g := call struct_proj_guards_col(usedOff, usedLen, sortsOff, sortsLen, z, 0, i, acc);
+  (ro, rl) := call struct_proj_guards_row(usedOff, usedLen, sortsOff, sortsLen, z, i + 1, k - 1);
+  (o, l) := call sl_cons(g, ro, rl);
+  return (o, l)
 }
 
 /-- `struct_proj_guards(cty, nP, nF, sortsOff, sortsLen)`: the projection guard levels, one per
@@ -637,7 +637,7 @@ def structProjGuardsL : FunDecl :=
   z := call pin_word(53);
   u := call hb_clear();
   (usedOff, usedLen) := call struct_used_later_list(cty, nP, nF, 0);
-  (ro, rl) := call struct_proj_guards_row(usedOff, usedLen, sortsOff, sortsLen, z, nF);
+  (ro, rl) := call struct_proj_guards_row(usedOff, usedLen, sortsOff, sortsLen, z, 0, nF);
   return (ro, rl)
 }
 

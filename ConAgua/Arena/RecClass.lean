@@ -375,11 +375,11 @@ walked type is `w`, opened at `d`: its telescope and its index arguments. -/
 @[l_impl ConRon.Arena.ClassGen.ihParts]
 def classGenIhParts : FunDecl := lfn (g, t, tele, w, d) locals
     (ok, xo, xl, leaf, clsLen, ptr, nPc, ao, al, dOff, dLen) {
-  (ok, xo, xl, leaf) := call open_pis_at_fvars_f(tele, w, d);
-  if ok == 0 { return (0, 0, 0, 0, 0) };
   clsLen := IW.u64[g + 4];
   nPc := 0;
-  if t < clsLen { ptr := IW.u64[g + 3 + t]; nPc := IW.u64[ptr + 4] };
+  if t < clsLen { ptr := IW.u64[IW.u64[g + 3] + t]; nPc := IW.u64[ptr + 4] };
+  (ok, xo, xl, leaf) := call open_pis_at_fvars_f(tele, w, d);
+  if ok == 0 { return (0, 0, 0, 0, 0) };
   (ao, al) := call get_app_args(⟪CWF⟫, leaf);
   dOff := ao;
   dLen := al;
