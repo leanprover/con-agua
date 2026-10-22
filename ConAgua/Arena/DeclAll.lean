@@ -14,3 +14,4 @@ import ConAgua.Arena.DeclCheckLoop
 import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.DeclBasisSpec2
