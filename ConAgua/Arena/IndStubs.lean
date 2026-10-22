@@ -49,7 +49,7 @@ theorem stubM_spec (p : Prog) (f : FnName) (n : Nat) (s₀ : St) (args : List Wo
 
 /-- The names `stubM` stands for: the stubs proper and the two master callees without a stage
 model (`lvl_eq`, `intern_nanon`). -/
-def stubNames : List FnName := stubFns.map (·.1) ++ ["lvl_eq", "intern_nanon"]
+def stubNames : List FnName := stubFns.map (·.1) ++ ["lvl_eq", "lvl_eq_c", "lvls_eq_c", "intern_nanon"]
 
 /-- **The write set of every stub** (lane `indproofs2`): a stub leaves the stage's per-call memos
 alone (arrays `MAM`‥`MCM` = 201‥208, their control words `CTL[202]`‥`CTL[219]`), and keeps every
