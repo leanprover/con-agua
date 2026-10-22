@@ -5166,17 +5166,50 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   well-formedness inside `StageR` (helper `pos`'s suggestion); then the remaining parents
   (`checkSumCtor(s)`, `sumRules`, `checkBlock*`, the `nest*` positivity block, `genRecCheck`).
 
-### The frontend's inductive lines: not hooked yet (decision)
-The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
-`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
-out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
-(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
-front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
-(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
-`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
-a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
-with this template under `StateDR` (the front's relation), then hook in one step with the
-refinement.
+### The frontend's inductive lines: hooked (2026-10-22, lane `front`)
+
+The front's proven chain (`frontRun_refines` → `parseBytes`, `frontLine_refines` → `applyLine`,
+`processLineCoreD` by parts) now covers `inductive` lines, without `sorry` and without a spec
+hypothesis. Decisions:
+
+* **The hook reads the block where the line scanner found it.** `decl_val` (`FieldsDecl.lean`)
+  keeps an `inductive` member's value position in the `nm` field (`dnameN`), and `apply_dline`
+  calls `apply_ind(nm)` at `pl = 25` (not `apply_ind_line`, which re-finds the first member: the
+  link would need `next_member` ↔ `scanLineLoop` for the first member). `DeclR`'s `.ind` arm says
+  the block scans there (`scanIndDecl b v = .ok (.ind …) e`), proved in `declLine_link`.
+* **A fuel-indexed model under a fuel-free one: `runF`** (`RunModel.lean`). The apply step's
+  models (`validateW`, `installW`, … ~40 of them) carry the interpreter's fuel; the line's model
+  (`applyDLineW`, `frontLineW`, the driver's `lineKW`) does not. `applyDLineW p` takes
+  `apply_ind`'s *run* in `p` as the model (`runF p "apply_ind" [nm] m`, `Classical.choose` of a
+  successful run). It is well defined because the interpreter is monotone in its fuel
+  (`exec_mono`, via `step_mono`: `step p k` is monotone in the continuation `k`) and a call's run
+  does not depend on the caller's locals (`invoke_loc`); `runF_spec` is the callee spec, and the
+  refinement goes back to the fuel-indexed model through `applyInd_spec` (`runF_some`). So the
+  line models gained a `Prog` parameter.
+* **`DIND` is `DLP`** (array 68), not a new array 69: one pool for the declarations' universe
+  parameters and the blocks' constant records, so `DeclAt`/`decl_push` stay as they are.
+  `DeclAt` is unchanged (lane `decls`' `DeclsR` relies on `indDecl` being `False` there); the
+  front's relation is `DeclsF`/`DeclAtF` (`StateDR.lean`), whose `.indDecl` arm is `IndDeclAt`:
+  the block decodes (`decCIs`, lane `pinsenv`'s `decCI` layout) in the pool truncated at a top
+  `t` (`trunc`, so later appends keep it).
+* **`vi_k_expected` compares with a heap `zero`** (`lh_mk(0,0,0)`, `lv_equiv`), which agrees with
+  the twin's `Level.isEquiv _ .zero` only on a well-formed name store: the apply step needs
+  `StateOK`. The driver's invariant `FrontInv` now carries con-ron's bridge invariant `TwinOK`
+  (`StateOK`, scratch off, `PinsOK`, `PersStateD`, `StateDRel` to con-leche's state), kept per line
+  by `ConRon.Bridge.Frontend.applyLine_run` and established by `StateD_init_run`; so
+  `frontRun_refines`/`frontAll_refines`/`frontAll_run`/`frontAll_x64` take `StateOK a₀`,
+  `a₀.store.scratchOn = false` and `PinsOK a₀`.
+* **Scratch arrays**: `IFR`/`IFL` (70, 71) below `2^62` words (`StateDR.ifs`), the level heap at
+  192: `frontAllProg_wf` is over 193 word arrays, `frontMemOf` has 224.
+* Census: `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines` `@[refines
+  parseBytes]`; `processLineCoreD` is `COMPLETE_BY_PARTS` ("axiom, def, thm, opaque, quot",
+  "inductive"); new `@[refines]`: `validateIndD`, `installIndD`, `parseRuleD`, `piResultD`,
+  `indPiTeleLen`, `piSortTeleLen?`, `storeFuel`; parts: `parseCVD` (`ind_cv`), `viewN`
+  (`name_rec_pre`), `scanIndDecl` (`ind_fields`).
+
+Files: `IndRel`, `IndAlloc`, `IndApplySpec{,2,3}`, `IndApplyRefine{,2‥9}`, `IndValidTwin`,
+`IndInstallRefine{,2‥5}`, `IndApplyTwin`, `IndFields{Spec,Link,Link2,Link3}`, `RunModel`,
+`IndTest` (the `Unit` block through `front_run` of `frontAllProg`).
 
 ### `sorry`s
 None but stubs': `IndStubs.lean`'s stub specs (now incl. `lvl_eq` and `intern_nanon`, master

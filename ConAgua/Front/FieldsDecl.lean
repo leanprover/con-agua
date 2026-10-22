@@ -301,9 +301,9 @@ def declVal : FunDecl :=
     pl := call decl_code(k);
     return (e, pl, nm, lp, ty, vl, hk, hn, fl)
   };
-  if k == 23 {  -- `inductive`: validated by Stage B's `scan_ind_decl`, not read
+  if k == 23 {  -- `inductive`: validated by Stage B's `scan_ind_decl`; its value's position in `nm`
     e := call scan_ind_decl(v);
-    return (e, 25, nm, lp, ty, vl, hk, hn, fl)
+    return (e, 25, v, lp, ty, vl, hk, hn, fl)
   };
   return (0, pl, nm, lp, ty, vl, hk, hn, fl)
 }
@@ -342,9 +342,14 @@ def dplN (k old : Word) : Word := if k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ 
 /-- A field after the member: `x`, the record's, at a declaration key. -/
 def dpickN (k x old : Word) : Word := if k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 then x else old
 
+/-- The name field after the member: the record's at a declaration key, the value's position `v`
+at `inductive` (`apply_ind` reads the block there). -/
+def dnameN (k x v old : Word) : Word :=
+  if k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 then x else if k = 23 then v else old
+
 /-- `decl_val(ks, k, v, …)`: the end and the fields after the member. -/
 def dlvN (b : Array UInt8) (k v : Word) (f : DFld) : Word × DFld :=
-  (dendDN b k v, ⟨dplN k f.pl, dpickN k (dobjEntryN b v).name f.name,
+  (dendDN b k v, ⟨dplN k f.pl, dnameN k (dobjEntryN b v).name v f.name,
     dpickN k (dobjEntryN b v).lps f.lps, dpickN k (dobjEntryN b v).type f.type,
     dpickN k (dobjEntryN b v).value f.value, dpickN k (dobjEntryN b v).hk f.hk,
     dpickN k (dobjEntryN b v).hn f.hn, dpickN k (dobjEntryN b v).flag f.flag⟩)

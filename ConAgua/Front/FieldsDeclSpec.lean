@@ -256,13 +256,13 @@ theorem declCode_spec (n : Nat) (s₀ : St) (k : Word) :
     sym only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs] <;> finish
 
-attribute [local lang_grind] dendDN dplN dpickN in
+attribute [local lang_grind] dendDN dplN dpickN dnameN in
 set_option maxHeartbeats 4000000 in
 theorem declVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (ks k v pl nm lp ty vl hk hn fl : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "decl_val" [ks, k, v, pl, nm, lp, ty, vl, hk, hn, fl]
-    ⦃fun r s' => s' = s₀ ∧ r = [dendDN b k v, dplN k pl, dpickN k (dobjEntryN b v).name nm,
+    ⦃fun r s' => s' = s₀ ∧ r = [dendDN b k v, dplN k pl, dnameN k (dobjEntryN b v).name v nm,
       dpickN k (dobjEntryN b v).lps lp, dpickN k (dobjEntryN b v).type ty,
       dpickN k (dobjEntryN b v).value vl, dpickN k (dobjEntryN b v).hk hk,
       dpickN k (dobjEntryN b v).hn hn, dpickN k (dobjEntryN b v).flag fl]; ⊤⦄ := by
