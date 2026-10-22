@@ -85,7 +85,7 @@ theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf 
   obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
     (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
-    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w m' hI
+    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w _ hI
 
 section progs
 variable (p : Prog)

@@ -259,7 +259,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   exact ⟨_, rfl⟩
 
 /-- The arrays and `CTL` words a level-list promotion writes. -/
-abbrev lsArrs : List ArrId := POOL :: lArrs ++ [LSREC, LSSLOT, PLSM]
+abbrev lsArrs : List ArrId := POOL :: lArrs ++ [LSREC, LSSLOT, PLSM, LSHP]
 abbrev lsCtl : List Word := lCtl ++ [0, 40, 41, 145]
 
 theorem plsSch_wf : plsSch.WF := ⟨by decide, by decide⟩

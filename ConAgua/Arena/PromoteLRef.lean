@@ -141,7 +141,7 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
 /-- The arrays and `CTL` words a level promotion writes (the names' and the level tables'). -/
 abbrev lArrs : List ArrId :=
   [NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT,
-    IREC, ISLOT, PREC, PSLOT, PLM]
+    IREC, ISLOT, PREC, PSLOT, PLM, SHP, MHP, IHP]
 abbrev lCtl : List Word := [1, 34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
 
 /-- **What a successful run of a level promotion gives** (`PNOk` at the level frame). -/

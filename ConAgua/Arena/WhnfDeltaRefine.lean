@@ -217,7 +217,7 @@ theorem ceinternW_hw (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf :
   obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
     (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
-    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w m' hI
+    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w _ hI
 
 section progs
 variable (p : Prog)
@@ -230,13 +230,12 @@ theorem callW_internConst (hpf : p.lookup "const_find" = some constFind)
     AM.ok (internE (.const (decI f) (decI x))) a₀ ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a₀) ∧
     AM.res (internE (.const (decI f) (decI x))) a₀ = decI (r.headD 0) ∧
-    MemFrame [CREC, CSLOT] [18, 19] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [CREC, CSLOT, CLP] [18, 19] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (internConst_spec p hpf hpp hp n s₀ f x) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := internConst_D s₀.mem a₀ hD f x _ hf hx _ hm
   refine ⟨h1, h2, h3, ?_, ceinternW_hw s₀.mem a₀ ?_ f x hf hx _ _ hm⟩
-  · have := internM_frame constSch constSch_wf _ _ _ _ _ _ _ _ (ceinternW_eq _ _ _ ▸ hm)
-    simpa [constSch] using this
+  · exact ceinternW_frame (hI := hm)
   · exact hD.1.const
 
 end progs
@@ -247,9 +246,9 @@ end progs
 /-- The `Nat` arms' program, with `nat_succ_lit`. -/
 def natArmProg' : Prog := natArmProg ++ [("nat_succ_lit", natSuccLitL)]
 def natFns : List FnName := natArmProg'.map (·.1)
-/-- What they write: the pool, the `lit` table (2, 3), the `const` table (18, 19 = `CREC`, `CSLOT`),
-and the counts. -/
-def natA : List ArrId := [POOL, 2, 3, CREC, CSLOT]
+/-- What they write: the pool, the `lit` table (2, 3), the `const` table (18, 19 = `CREC`, `CSLOT`,
+and its `lp` column `CLP`), and the counts. -/
+def natA : List ArrId := [POOL, 2, 3, CREC, CSLOT, CLP]
 def natC : List Word := [0, 2, 3, 18, 19]
 theorem natArmProg'_closed : closedA natArmProg' natA natC natFns = true := by decide +kernel
 
