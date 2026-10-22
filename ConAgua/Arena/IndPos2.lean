@@ -80,19 +80,23 @@ def nestOccAnyL : FunDecl := lfn (namesOff, namesLen, lo, hi, off, l) locals (j,
   return 0
 }
 
+/-- `nest_ds_closed_go(hi0, off, l)`: the loop of `nest_ds_closed`, as a recursion. -/
+-- con-ron: none — the loop of nest_ds_closed as a self-recursive function (proof shape)
+def nestDsClosedGoL : FunDecl := lfn (hi0, off, l) locals (b, r) {
+  if l == 0 { return 1 };
+  b := call fvar_b(⟪CWF⟫, IW.u64[off]);
+  if hi0 < b { return 0 };
+  r := call nest_ds_closed_go(hi0, off + 1, l - 1);
+  return r
+}
+
 /-- `nest_ds_closed(ctx, off, l)`: `ds.allM (fun x => do let b ← fvarB coreWalkFuel x; pure (b ≤
 ctx.hiAt 0))`, short-circuiting. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1038-1097 ConRon.Arena.nestPos
-def nestDsClosedL : FunDecl := lfn (ctx, off, l) locals (hi0, j, x, b) {
+def nestDsClosedL : FunDecl := lfn (ctx, off, l) locals (hi0, r) {
   hi0 := call nest_ctx_hi_at(ctx, 0);
-  j := 0;
-  while j < l {
-    x := IW.u64[off + j];
-    b := call fvar_b(⟪CWF⟫, x);
-    if hi0 < b { return 0 };
-    j += 1
-  };
-  return 1
+  r := call nest_ds_closed_go(hi0, off, l);
+  return r
 }
 
 /-! ## `nestInstType`: the container's former -/
@@ -905,7 +909,8 @@ def nestSeedsL : FunDecl := lfn (vis, ctx, seedsOff, seedsLen, ns) locals
 /-- All of this module's L functions. -/
 def indPos2Fns : Prog :=
   [("nest_key_eq", nestKeyEqL), ("nest_keys_contains", nestKeysContainsL),
-   ("nest_occ_any", nestOccAnyL), ("nest_ds_closed", nestDsClosedL),
+   ("nest_occ_any", nestOccAnyL), ("nest_ds_closed_go", nestDsClosedGoL),
+   ("nest_ds_closed", nestDsClosedL),
    ("nest_inst_type_ty", nestInstTypeTyL), ("nest_inst_type", nestInstTypeL),
    ("nest_res_head", nestResHeadL), ("nest_ctor_nf", nestCtorNfL),
    ("nest_block_of", nestBlockOfL), ("nest_frame_mates_go", nestFrameMatesGoL),
