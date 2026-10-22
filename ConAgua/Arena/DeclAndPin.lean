@@ -71,6 +71,9 @@ def andPinOkL : FunDecl := lfn (i) locals (x, k, bo, bl, nmd, np, o, l, io, il, 
   return 1
 }
 
+/-- This module's functions (the binding `scripts/checker_prog.py` takes for `and_block_named`). -/
+def andPinFns : Prog := [("and_pin_ok", andPinOkL), ("and_block_named", andBlockNamed)]
+
 /-- The low 32 bits of a word: what `decI` reads. -/
 def lo32 (w : Word) : Word := w &&& 4294967295
 
