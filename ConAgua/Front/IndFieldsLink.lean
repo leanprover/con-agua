@@ -628,6 +628,42 @@ decreasing_by
     | (have := usizeStep b i hi; have := usizeInBounds b i hi; omega)
     | (have := USize.lt_iff_toNat_lt.mp hie; have := usizeInBounds b i hi; omega)
 
+/-- **`ind_list(v, sub)` against a con-leche list scanner `W`** (`[` at `v`, then the loop `G`). -/
+theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (List α))
+    (S : USize → ScanRes α) (HG : IListLoop b G S) (W : USize → ScanRes (List α))
+    (hW : ∀ v l e, W v = .ok l e → byteAt b v = 91 ∧ G (v + 1) [] true = .ok l e)
+    (sub : Word) (A : ArrId)
+    (hA : A = IFR ∨ A = IFL) (sz : Nat) (hsz1 : 1 ≤ sz) (hsz : (indSizeN sub).toNat = sz)
+    (hfa : ∀ m n, fldAllocW m sub n = allocW m A n)
+    (Rec : Nat → α → Mem → Prop)
+    (stab : ∀ t x m m' x0 x1, Rec t x m → 1 ≤ t → t + sz ≤ topN m A + 1 → IGrow m m' A x0 x1 →
+      t + sz ≤ x0 → Rec t x m')
+    (item : ∀ i (m m₁ : Mem) (q : Word) x e (e₂ : Word) m₂, i < b.usize → byteAt b i = 123 →
+      S i = .ok x e → Room m → allocW m A (indSizeN sub) = some (q, m₁) →
+      objW b.data (flagsW m₁ sub q) i.toUInt64 sub q = some (e₂, m₂) →
+      e₂ = e.toUInt64 ∧ Rec q.toNat x m₂ ∧ IGrow m₁ m₂ A q.toNat (q.toNat + sz) ∧ Room m₂ ∧
+        topN m₂ A = topN m₁ A)
+    (v : USize) (m : Mem) (l : List α) (e : USize) (r : Word × Word × Word) (m' : Mem)
+    (h : W v = .ok l e) (hR : Room m) (hm : listW b.data m v.toUInt64 sub = some (r, m')) :
+    r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧ RunR Rec A sz m' r.1.toNat l ∧ Grow m m' ∧
+      Room m' ∧ r.1.toNat = topN m A + 1 ∧ r.1.toNat + sz * l.length = topN m' A + 1 := by
+  obtain ⟨h91, hG⟩ := hW v l e h
+  have hv : v < b.usize := lt_of_byteAt_ne b h64 hsize v (by rw [h91]; decide)
+  have hvW := (lt_usize_iff b h64 hsize v).mp hv
+  rw [listW_eq, if_pos hvW, if_neg (by rw [byteW_eq b h64 hsize, h91]; decide), hfa] at hm
+  cases hal : allocW m A 0 with
+  | none => rw [hal, listK0_none] at hm; cases hm
+  | some om =>
+  obtain ⟨o, m₁⟩ := om
+  rw [hal, listK0_some, ← succ_toUInt64 b h64 hsize] at hm
+  obtain ⟨a1, a2, a3, a4, -, -, -⟩ := allocW_facts m m₁ A hA _ o hR hal
+  have a2' : topN m₁ A = topN m A := by rw [a2]; rfl
+  obtain ⟨c1, c2, c3, c4, c5, c6, c7⟩ := ilist_link b h64 hsize G S HG sub A hA sz hsz1 hsz hfa Rec
+    stab item (v + 1) [] true m₁ o 0 l e r m' hG a3 rfl (by simp; omega)
+    ⟨by omega, by simp; omega, fun j hj => by simp at hj⟩ hm
+  subst c1
+  exact ⟨c3, c2, c4, a4.trans c5, c6, a1, c7⟩
+
 end glist
 
 end L.Front.Ind
