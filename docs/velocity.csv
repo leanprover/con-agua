@@ -68,4 +68,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,buildstats,sonnet,60,10,"scripts/buildstats.py: file sizes + per-module and per-step elaboration time (profiler, no cache, nice, PSS memory guard, incremental); first report docs/buildstats.{md,csv,json}; PLAN section"
 2026-10-22,decls2,opus,45,15,"landing 2: check_value_group refines checkValueGroup (through stubs; text frame cvgProg, LoopR.of_step); install_value_guards refines installValueGuards; checkDecl one-constant arms in L (helper: 109 fns, 2.2k lines, ROM stubs); install_value split; census phase 2 written 5->82"
 2026-10-22,indproofs,opus,20,8,"landing 4: struct_proj_bodies(_go) refine; oversized spec files split by pure moves (IndPos2Spec, RecClassSpec, IndSumSpec2)"
+2026-10-22,exprops4,opus,12,3,"abstractRange: ar_entry refines abstractRangeFast (no sorry), generated from the abstract1 files + fvar arm/entry by hand; has_fvar_fast/has_fvar refine hasFvarFast"
 2026-10-22,perf1,opus,15,4,"Prog.wfFast (names as Nat codes in a search tree) + Prog.wf_of_wfFast; all 14 Prog.wf decide +kernel theorems use it: declStepProg_wf 54 s -> 4.3 s, indProg_wf 54 s -> ~4 s, per-module wf checks 5-11 s -> <2 s"
