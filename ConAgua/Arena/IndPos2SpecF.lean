@@ -13,6 +13,62 @@ namespace L.Ind
 
 open L.Arena
 
+/-! ## `cv_lps` under the stage relation, an empty slice at any offset -/
+
+theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
+    (h : cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
+    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
+  obtain ⟨o', ho, l', hl', hs⟩ := hl
+  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have hr2 : rdW (m.arr64 EREC) (q + 2) = UInt64.ofNat l' := by
+    simp only [nat?, erA, Option.map_eq_some_iff] at hl'
+    obtain ⟨w, hw, rfl⟩ := hl'
+    simp [rdW, hq2, hw]
+  rcases Nat.eq_zero_or_pos l' with h0 | hpos
+  · subst h0
+    have : cv.levelParams = [] := by simpa [hslice?] using hs.symm
+    rw [this]
+    simp only [cvLpsW, hr2] at h
+    rw [show (UInt64.ofNat 0 : Word) = 0 from rfl] at h
+    simp only [erToIwW] at h
+    obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+    cases hal : allocW m 0 with
+    | none => rw [hal] at h; simp at h
+    | some qm =>
+    obtain ⟨q0, m1⟩ := qm
+    obtain ⟨hS1, hg1, -, -⟩ := allocW_stage hal hS
+    obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
+    rw [hal] at h
+    simp only at h
+    generalize n - 1 - 1 = k at h
+    cases k with
+    | zero => simp [erCopyW] at h
+    | succ k =>
+    simp only [erCopyW_nil k _ _ _ _ rfl, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨hS1, hg1, ?_, by simp [decHL, hslice?], ?_⟩
+    · exact (allocMem_frame m 0).1 EREC (by decide) (by decide)
+    · have := allocMem_top m 0 hc; simp only [iwTop, this]; simp
+  · have hb := L.Ind.hslice?_bound (erA m) l' o' _ hs hpos
+    have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hr1 : rdW (m.arr64 EREC) (q + 1) = UInt64.ofNat o' := by
+      simp only [nat?, erA, Option.map_eq_some_iff] at ho
+      obtain ⟨w, hw, rfl⟩ := ho
+      simp [rdW, hq1, hw]
+    have hEs := hS.2.2.2.2.1
+    have hob : o' < 2 ^ 64 := by simp [erA] at hb; omega
+    have hlb : l' < 2 ^ 64 := by simp [erA] at hb; omega
+    have hlp : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size := by
+      rw [hr1, hr2, UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; simpa [erA] using hb
+    exact cvLpsW_stage h hS hcv hq hlp
+
+
 /-! ## `nest_holes(_go)` refines `nestHoles(.go)` -/
 
 theorem snocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -433,26 +489,11 @@ theorem ctx_names_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat 
   have r1 : (rdW (m.arr64 IW) (p + 1)).toNat = l := rd_iwN (by simpa using hl) (by simp; omega)
   rw [r0, r1]; exact hsl 0 (by omega) o l (by simpa using ho) hl
 
-/-- A constant record's level-parameter slice ends inside `EREC` (`cv_lps` copies it). -/
-def CVSl (m : Mem) (q : Word) : Prop :=
-  (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ erTop m
-
-theorem CVSl.grow {m m' : Mem} {q : Word} (h : CVSl m q) (hq : q.toNat + 3 < erTop m) (hg : IWGrow m m') :
-    CVSl m' q := by
-  have e1 : (q + 1).toNat = q.toNat + 1 := word_add_toNat (by simp; have := hq; have := (rdW (m.arr64 CTL) 129).toNat_lt; simp [erTop] at *; omega)
-  have e2 : (q + 2).toNat = q.toNat + 2 := word_add_toNat (by simp; have := hq; have := (rdW (m.arr64 CTL) 129).toNat_lt; simp [erTop] at *; omega)
-  unfold CVSl at *
-  have r1 : rdW (m'.arr64 EREC) (q + 1) = rdW (m.arr64 EREC) (q + 1) := by
-    simp only [rdW, e1]; rw [hg.2.2.2 _ (by omega)]
-  have r2 : rdW (m'.arr64 EREC) (q + 2) = rdW (m.arr64 EREC) (q + 2) := by
-    simp only [rdW, e2]; rw [hg.2.2.2 _ (by omega)]
-  rw [r1, r2]; exact Nat.le_trans h hg.2.1
-
 theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word)
     (h : nrcW k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
-    (hcv : decCV (erecP m) cv.toNat = some cvv) (hcvs : CVSl m cv)
+    (hcv : decCV (erecP m) cv.toNat = some cvv)
     (hnn : c.nP + c.names.length < 2 ^ 64)
     (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
     ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
@@ -470,7 +511,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | some pr1 =>
   obtain ⟨r1, m1⟩ := pr1
   rw [hlp, nrcK1_some] at h
-  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := cvLpsW_stage hlp hS ((erecP_ext m).decCV hcv) (by omega) (Nat.le_trans hcvs hEb)
+  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := pos2_cvLpsW_stage hlp hS ((erecP_ext m).decCV hcv) (by omega)
   -- the instantiation's arguments
   obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
   rw [hc] at cin1
@@ -520,11 +561,12 @@ include hl hc he hcv
 
 /-- **`nest_root_canon` refines `nestRootCanon`** (through `inst_lp_fast`'s and `nest_canon_crest`'s
 stubs; the `replace_apps` memo well-formed in every stage state). -/
-@[refines ConRon.Arena.nestRootCanon]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestRootCanon]
 theorem nestRootCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
     (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
-    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv) (hcvs : CVSl s₀.mem cv)
+    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv)
     (hnn : c.nP + c.names.length < 2 ^ 64)
     (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_root_canon" [ctx, cv]
@@ -533,7 +575,7 @@ theorem nestRootCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       decOE s'.mem r (AM.res (ConRon.Arena.nestRootCanon c cvv) a₀); ⊤⦄ := by
   refine triple_post (nestRootCanon_spec p hl hc he hcv k s₀ ctx cv) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := nrcW_ok k dn fe vis _ _ a₀ ctx cv c cvv r hm hS hcx hin hsl hcvv hcvs
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := nrcW_ok k dn fe vis _ _ a₀ ctx cv c cvv r hm hS hcx hin hsl hcvv
     hnn hMstage
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
@@ -598,7 +640,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word)
     (h : nuW k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
-    (hcv : decCV (erecP m) cv.toNat = some cvv) (hcvs : CVSl m cv) (hhi : c.hiAt 0 < 2 ^ 64)
+    (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64)
     (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
     ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
@@ -652,7 +694,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   rw [hc] at cin1
   have hnn : c.nP + c.names.length < 2 ^ 64 := by simpa [NestCtx.hiAt] using hhi
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := nrcW_ok k dn fe vis m1 m2 a1 ctx cv c cvv r2 hrc hS1 cin1 cin1'
-    (hsl.grow hin hg1) hcv1 (hcvs.grow hcv3 hg1) hnn hMra
+    (hsl.grow hin hg1) hcv1 hnn hMra
   cases x2 with
   | none =>
     rw [nuK2_none (h := hx2)] at h
@@ -693,11 +735,12 @@ include hl
 
 /-- **`nest_uniform_ok` refines `nestUniformOk`** (through `nest_root_canon`'s stubs; the
 `replace_apps` and `nest_occ` memos well-formed in every stage state). -/
-@[refines ConRon.Arena.nestUniformOk]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestUniformOk]
 theorem nestUniformOk_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
     (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
-    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv) (hcvs : CVSl s₀.mem cv)
+    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv)
     (hhi : c.hiAt 0 < 2 ^ 64)
     (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
@@ -707,7 +750,7 @@ theorem nestUniformOk_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       r = [if AM.res (ConRon.Arena.nestUniformOk c cvv) a₀ then 1 else 0]; ⊤⦄ := by
   refine triple_post (nestUniformOk_spec p hl k s₀ ctx cv) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := nuW_ok k dn fe vis _ _ a₀ ctx cv c cvv r hm hS hcx hin hsl hcvv hcvs
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := nuW_ok k dn fe vis _ _ a₀ ctx cv c cvv r hm hS hcx hin hsl hcvv
     hhi hMra hMno
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩

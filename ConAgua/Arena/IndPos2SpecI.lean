@@ -18,9 +18,6 @@ open L.Arena
 def NKSl (m : Mem) (key : Word) : Prop :=
   (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m
 
-/-- Every constant record decoded below `EREC`'s top has its level-parameter slice there too. -/
-def CVSlAll (m : Mem) : Prop := ∀ (q : Word) (cv : IConstantVal), decCV (erecP m) q.toNat = some cv → CVSl m q
-
 /-- A decoded `NestKey`'s fields, as the words L reads. -/
 theorem nk_fields {m : Mem} {key : Word} {kk : NestKey} (hk : decNK m key.toNat = some kk)
     (hin : NKIn m key.toNat (· < iwTop m)) (htop : iwTop m < 2 ^ 64) :
@@ -44,7 +41,7 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (a : AState) (key : Word) (kk : NestKey) (r : List Word)
     (h : ntyW k m vis key = some (r, m')) (hS : StageR dn vis fe m a)
     (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m)) (hksl : NKSl m key)
-    (hcvs : CVSlAll m) :
+ :
     ∃ cv caps a3 q a4 tl a5 ty, fe.find? kk.cname = some (.indInfo cv caps) ∧
       a.store.lss.viewLen kk.lvls = some cv.levelParams.length ∧
       (stripPis kk.ds.length cv.type).run a = .ok (some q, a3) ∧
@@ -133,14 +130,12 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   -- `cv_lps`
   have hcv3 : decCVp m3 (q + 1).toNat = some cv := by
     rw [e1]; exact (erecP_ext m3).decCV ((GrowX.of_grow (q := 0) (n := 0) hg3).erecP.decCV hcv)
-  have hcvsl3 : CVSl m3 (q + 1) := (hcvs (q + 1) cv (by rw [e1]; exact hcv)).grow (by rw [e1]; omega) hg3
   cases hlp : cvLpsW k m3 (q + 1) with
   | none => rw [hlp] at h; simp [ntyK4] at h
   | some pr4 =>
   obtain ⟨r4, m4⟩ := pr4
   rw [hlp, ntyK4_some] at h
-  obtain ⟨hS4, hg4, hE4, hdec4, -⟩ := cvLpsW_stage hlp hS3 hcv3 (by rw [e1]; have := hg3.2.1; omega)
-    (Nat.le_trans hcvsl3 hS3.2.2.1)
+  obtain ⟨hS4, hg4, hE4, hdec4, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv3 (by rw [e1]; have := hg3.2.1; omega)
   have hg34 := hg3.trans hg4
   have hlv4 : rdW (m4.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
     have e : (key + 1).toNat = key.toNat + 1 := word_add_toNat (by simp; omega)
@@ -194,7 +189,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (hHI : hi.toNat = HI) (c : NestCtx) (m m' : Mem) (a : AState) (key : Word) (kk : NestKey) (r : List Word)
     (h : nitW k m vis ctx hi key = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m))
-    (hksl : NKSl m key) (hcvs : CVSlAll m)
+    (hksl : NKSl m key)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
     ∃ x a', (ConRon.Arena.nestInstType fe c HI kk).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat = x.1 ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2 := by
@@ -209,7 +204,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   obtain ⟨r1, m1⟩ := pr1
   rw [hty, nitK1_some] at h
   obtain ⟨cv, caps, a3, q, a4, tl, a5, ty, hfind, hvl, hrun3, hrun4, hrun5, hS1, hg1, htyH, htyd⟩ :=
-    ntyW_ok k dn fe vis m m1 a key kk r1 hty hS hk hkin hksl hcvs
+    ntyW_ok k dn fe vis m m1 a key kk r1 hty hS hk hkin hksl
   -- `pi_binders`
   cases hpb : piBW (k + 1) m1 CWF (r1.headD 0) with
   | none => rw [hpb] at h; simp [nitK2] at h
@@ -281,13 +276,13 @@ variable (p : Prog) (hl : NitLook p)
 include hl
 
 /-- **`nest_inst_type` refines `nestInstType`** (through the `strip_pis`/`inst_lp_fast`/
-`instantiate1_fast`/`lvl_eq` stubs; the key's `ds` slice ends below the top, constant records' level
-slices below `EREC`'s top, the `nest_occ` memo well-formed in every stage state). -/
-@[refines ConRon.Arena.nestInstType]
+`instantiate1_fast`/`lvl_eq` stubs; the key's `ds` slice ends below the top, the `nest_occ` memo well-formed in every stage state). -/
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestInstType]
 theorem nestInstType_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx hi key : Word) (c : NestCtx) (kk : NestKey) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hk : decNK s₀.mem key.toNat = some kk)
-    (hkin : NKIn s₀.mem key.toNat (· < iwTop s₀.mem)) (hksl : NKSl s₀.mem key) (hcvs : CVSlAll s₀.mem)
+    (hkin : NKIn s₀.mem key.toNat (· < iwTop s₀.mem)) (hksl : NKSl s₀.mem key)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀ ∧
@@ -299,7 +294,7 @@ theorem nestInstType_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   refine triple_post (nestInstType_spec p hl k s₀ vis ctx hi key) ?_
   rintro r s' ⟨hlc, hm⟩
   obtain ⟨x, a', hrun, hS', hg, h1, h2, h3⟩ := nitW_ok k dn fe vis ctx hi hi.toNat rfl c _ _ a₀ key kk _ hm hS
-    hU hk hkin hksl hcvs hMno
+    hU hk hkin hksl hMno
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by simpa using h2,
     by rw [hres]; simpa using h3⟩
