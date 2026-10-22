@@ -187,6 +187,108 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     simp only [List.headD_cons]
     exact hH.decB (fun i hi => hi.2) (fun _ h => h.elim)
 
+/-- **`rom_cv(id)` refines `romCvT id`.** -/
+theorem romCvRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomCvRef p dn vis fe := by
+  intro id hid n m a r m' hS hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => cvEntryW p n mq id) (cvEntry_specW rom p hL n · id) hc
+  unfold cvEntryW at hw
+  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  cases h1 : callW p n "rci_slot" [18 + id] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  obtain ⟨rfl, rfl⟩ := slotCall hL h1
+  have h18 : (18 + id).toNat = 18 + id.toNat := word_add_toNat 18 id (by omega)
+  obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (18 + id) (by omega)
+  simp only [h18, ciEntries_cv id.toNat hid] at hpos
+  have hI0 := RInv.refl hS
+  cases h2 : callW p n "erec_alloc" [4] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some t2 =>
+  obtain ⟨r2, m2⟩ := t2
+  rw [h2, bW_some] at hw
+  obtain ⟨hI2, ho2, ht2, -, -, -⟩ := hI0.erAlloc (erAllocCall hL h2)
+  cases h3 : callW p n "rci_fresh" [] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some t3 =>
+  obtain ⟨r3, m3⟩ := t3
+  rw [h3, bW_some] at hw
+  obtain ⟨hI3, hM3, hs3, -, -, ht3, -⟩ := freshCall hL hI2 h3
+  cases n with
+  | zero => rw [callW_zero] at hw; simp at hw
+  | succ n =>
+  simp only [List.headD_cons] at hw
+  cases h4 : callW p (n + 1) "rci_cv" [ciOff + u64W rom (ciOff + 8 * (18 + id)), r2.headD 0] m3 with
+  | none => rw [h4] at hw; simp at hw
+  | some t4 =>
+  obtain ⟨r4, m4⟩ := t4
+  rw [h4, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hfit : cvFits (romCvVals[id.toNat]'(by simp [romCvVals]; omega)) = true :=
+    List.all_eq_true.mp romCvVals_fit _ (List.getElem_mem _)
+  replace ht2 : erTop m2 = erTop m1 + 4 := ht2
+  obtain ⟨memo', icv, a', hrun, hI4, -, -, -, -, ht4, -, hH⟩ :=
+    cv_rel hL hr [] ∅ _ hfit n m3 a _ _ rest' r4 m4 hI3 hM3 hs3 hpos (by omega) (by omega) h4
+  refine ⟨icv, a', ?_, hI4.stage hS, hI4.grow, ?_⟩
+  · rw [romCvT_eq id.toNat hid]
+    simp only [ConRon.Arena.internCV]
+    rw [run_bind_of _ _ _ _ _ hrun]; rfl
+  · unfold decRCV
+    simp only [List.headD_cons]
+    exact hH.decB (fun i hi => by omega) (fun _ h => h.elim)
+
+/-- **`rom_expr_pin(id)` refines `romExprT id`.** -/
+theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomExprPinRef p dn vis fe := by
+  intro id hid n m a r m' hS hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => exprPinW p n mq id) (exprPin_specW rom p hL n · id) hc
+  unfold exprPinW at hw
+  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  cases h1 : callW p n "rci_slot" [28 + id] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  obtain ⟨rfl, rfl⟩ := slotCall hL h1
+  have h28 : (28 + id).toNat = 28 + id.toNat := word_add_toNat 28 id (by omega)
+  obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (28 + id) (by omega)
+  simp only [h28, ciEntries_ex id.toNat hid] at hpos
+  have hI0 := RInv.refl hS
+  cases h2 : callW p n "rci_fresh" [] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some t2 =>
+  obtain ⟨r2, m2⟩ := t2
+  rw [h2, bW_some] at hw
+  obtain ⟨hI2, hM2, hs2, -, -, -, -⟩ := freshCall hL hI0 h2
+  simp only [List.headD_cons] at hw
+  cases h3 : callW p n "rom_expr" [ciOff + u64W rom (ciOff + 8 * (28 + id))] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some t3 =>
+  obtain ⟨r3, m3⟩ := t3
+  rw [h3, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hfit : exprFits (romExprVals[id.toNat]'(by simp [romExprVals]; omega)) = true :=
+    List.all_eq_true.mp romExprVals_fit _ (List.getElem_mem _)
+  obtain ⟨memo', a', hrun, hA3, hk3, -, hlt, -, hf3, -⟩ :=
+    exprCall hL hr _ hfit hI2.arena (seen := []) (memo := ∅) hM2 hpos (by rw [hs2]; decide)
+      (by have := hI2.ok.2.2.2.2; omega) h3
+  obtain ⟨hI3, -⟩ := hI2.expr hA3 hf3 hk3
+  refine ⟨decI (r3.headD 0), a', ?_, hI3.stage hS, hI3.grow, ?_⟩
+  · rw [romExprT_eq id.toNat hid]
+    simp only [ConRon.Arena.internExpr, Frontend.internExpr]
+    rw [run_bind_of _ _ _ _ _ hrun]; rfl
+  · exact ⟨by simpa using hlt, by simp⟩
+
 end entries
 
 end L.Rom
