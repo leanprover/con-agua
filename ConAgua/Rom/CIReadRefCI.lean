@@ -425,6 +425,36 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
       ofNat_toNat_lt hmI, ofNat_toNat_lt hrP, ofNat_toNat_lt (show rs.length < 2 ^ 64 by omega)]
     simp at erules; simp [erules]
 
+/-- **`rci_ci` refines `Frontend.internCI`** for the constants `ciFits` admits. -/
+theorem ci_rel {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+    (seen : List ConLeche.Expr) (memo : EMemo) (c : ConLeche.ConstantInfo) (hfit : ciFits c = true)
+    (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
+    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hd : rom.drop q.toNat = (encCI seen c).1 ++ rest)
+    (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
+    CIPost dn m₀ a₀ seen memo c m a q r m' := by
+  cases c with
+  | axiomInfo v =>
+    exact ci_cvOnly hL hr dn seen memo v hfit 0 (.inl rfl) _ rfl k m a q rest r m'
+      (fun memo1 icv a1 h => by
+        simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ h]; rfl) hI hM hst hd hc
+  | thmInfo v =>
+    exact ci_cvOnly hL hr dn seen memo v hfit 2 (.inr rfl) _ rfl k m a q rest r m'
+      (fun memo1 icv a1 h => by
+        simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ h]; rfl) hI hM hst hd hc
+  | indInfo v caps =>
+    simp only [ciFits, Bool.and_eq_true] at hfit
+    exact ci_ind hL hr dn seen memo v hfit.1 caps hfit.2 k m a q rest r m' hI hM hst hd hc
+  | ctorInfo v nP nF =>
+    simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
+    exact ci_ctor hL hr dn seen memo v hfit.1.1 nP nF hfit.1.2 hfit.2 k m a q rest r m' hI hM hst hd hc
+  | recInfo v mI rP rs =>
+    simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
+    exact ci_rec hL hr dn seen memo v hfit.1.1.1.1 mI rP rs hfit.1.1.1.2 hfit.1.1.2 hfit.1.2 hfit.2
+      k m a q rest r m' hI hM hst hd hc
+  | defnInfo v e h => simp [ciFits] at hfit
+  | projInfo t => simp [ciFits] at hfit
+
 end kinds
 
 end L.Rom
