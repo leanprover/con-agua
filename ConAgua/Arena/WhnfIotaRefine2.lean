@@ -1059,6 +1059,7 @@ def ErecKeptInst (p : Prog) : Prop :=
     (f = "inst_lp" ∨ f = "inst_spine") → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
+set_option maxRecDepth 8192 in
 /-- `ErecKeptInst` from the core's write set (`CoreErec.lean`). -/
 theorem ErecKeptInst.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ErecKeptInst p :=

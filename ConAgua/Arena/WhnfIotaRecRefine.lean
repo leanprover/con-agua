@@ -193,6 +193,7 @@ def ErecKeptRec (p : Prog) : Prop :=
       "iota_certs_full"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
+set_option maxRecDepth 8192 in
 /-- `ErecKeptRec` from the core's write set (`CoreErec.lean`). -/
 theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ErecKeptRec p :=

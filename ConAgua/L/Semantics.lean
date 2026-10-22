@@ -22,12 +22,18 @@ It is executable (`#eval`), and it is what `vcgen` steps through in a proof.
 
 namespace L
 
-/-- The memory: a fixed set of byte arrays and word arrays, indexed by `ArrId`. Their lengths are
-fixed for the run (a growable vector is a fixed-capacity array plus a length kept in a word). -/
+/-- The memory: a fixed set of byte arrays and word arrays, indexed by `ArrId`, and the global
+variables. The arrays' lengths are fixed for the run (a growable vector is a fixed-capacity array
+plus a length kept in a word). Every global variable has a value (`0` unless written). -/
 structure Mem where
   bytes : Array (Array UInt8) := #[]
   words : Array (Array Word) := #[]
-  deriving Repr, Inhabited
+  glob : GVar → Word := fun _ => 0
+  deriving Inhabited
+
+/-- The arrays (the global store is a function and is not shown). -/
+instance : Repr Mem where
+  reprPrec m _ := "{ bytes := " ++ repr m.bytes ++ ", words := " ++ repr m.words ++ " }"
 
 /-- The locals of one frame. -/
 abbrev Locals := Var → Word
@@ -113,6 +119,10 @@ def Mem.set8 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
 def Mem.set64 (m : Mem) (a : ArrId) (i v : Word) : Mem :=
   { m with words := m.words.set! a ((m.arr64 a).set! i.toNat v) }
 
+/-- Global `g` set to `v`. -/
+def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
+  { m with glob := fun h => if h = g then v else m.glob h }
+
 /-! ## The interpreter -/
 
 /-- Byte `i` of byte array `a`, zero-extended; `oob` out of bounds. (A `dite` rather than an
@@ -157,6 +167,7 @@ def evalE : Expr → M Word
     let y ← evalE b
     return c.evalW x y
   | .ldc d i => do ldc d (← evalE i)
+  | .glob g => do return (← get).mem.glob g
 
 def evalC : Cond → M Bool
   | .cmp c a b => do
@@ -179,6 +190,11 @@ def St.setLoc (s : St) (x : Var) (v : Word) : St :=
   { s with loc := fun y => if y = x then v else s.loc y }
 
 def setLoc (x : Var) (v : Word) : M Unit := modify (·.setLoc x v)
+
+/-- `g := v` for a global `g`. -/
+def St.setG (s : St) (g : GVar) (v : Word) : St := { s with mem := s.mem.setG g v }
+
+def setG (g : GVar) (v : Word) : M Unit := modify (·.setG g v)
 
 /-- `xᵢ := vs[i]` (`0` past the end of `vs`), in order. -/
 def St.setLocs (s : St) : List Var → List Word → St
@@ -246,6 +262,10 @@ def step (p : Prog) (k : Stmt → M Sig) : Stmt → M Sig
     setLocs xs rs
     return .normal
   | .abort => throw .abort
+  | .gset g e => do
+    let v ← evalE e
+    setG g v
+    return .normal
 
 /-- The interpreter with `n` units of fuel. -/
 def exec (p : Prog) : Nat → Stmt → M Sig

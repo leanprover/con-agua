@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+public import ConAgua.L.WriteSet
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -414,41 +415,58 @@ theorem skipBraced_run (b : Array UInt8) (hb : b.size < 2 ^ 64) (fuel : Nat) (i 
       (skipBraced_spec scanProg rfl rfl b hb fuel _ rfl i d hi hd)
     grind
 
-/-! ## A callee that writes memory: the frame condition `LocEq`
+/-! ## A callee that writes memory: the frame condition `LocEq`; global variables
 
-`bump` stores into a word array, so its spec cannot post `s' = s₀`; it posts `LocEq s' s₀` (the
-locals are the caller's), and the caller still reads its own `i` after the call. -/
+`bump` writes memory (two global variables), so its spec cannot post `s' = s₀`; it posts
+`LocEq s' s₀` (the locals are the caller's), and the caller still reads its own `i` after the
+call. The caller also keeps a global of its own, `MARK`, across the call: that frame comes from
+the program text (`closedG`, `Triple.gframe`), not from `bump`'s spec.
 
-abbrev W : ArrId := 0
+This was the first demonstration of global variables (lane `lfeat`): before, the three words were
+`CTL.u64[0]`, `CTL.u64[1]`, `CTL.u64[2]` of a control array, and the specs needed a size
+precondition, a hand-stated frame over `CTL` indices with `getElem` and `rdW` patterns, and array
+lemmas in `finish` (DESIGN.md, "Global variables and records"). -/
+
+/-- The last argument of `bump`. -/
+abbrev LAST : GVar := ⟨0⟩
+/-- The number of calls of `bump`. -/
+abbrev CALLS : GVar := ⟨1⟩
+/-- A global of `bump_user`'s. -/
+abbrev MARK : GVar := ⟨2⟩
 
 /-- con-ron: none — an example program of L -/
-def bump : FunDecl := lfn (i) { W.u64[0] := i; return 0 }
+def bump : FunDecl := lfn (i) { LAST := i; CALLS += 1; return 0 }
 /-- con-ron: none — an example program of L -/
-def bumpUser : FunDecl := lfn (i) locals (z) { z := call bump(i + 1); return i + z }
+def bumpUser : FunDecl := lfn (i) locals (z) {
+  MARK := i;
+  z := call bump(i + 1);
+  return MARK + LAST + z
+}
 
-section bump
-variable (p : Prog) (hp : p.lookup "bump" = some bump)
-include hp
+def bumpProg : Prog := [("bump", bump), ("bump_user", bumpUser)]
 
-theorem bump_spec (n : Nat) (s₀ : St) (i : Word) :
+/-- `bump`'s global write set, from the text. -/
+theorem bump_closed : closedG bumpProg [LAST, CALLS] ["bump"] = true := by decide
+
+theorem bump_spec (p : Prog) (hp : p.lookup "bump" = some bump) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [0]; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [0] ∧ s'.mem.glob LAST = i ∧
+      s'.mem.glob CALLS = s₀.mem.glob CALLS + 1; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, bump]
   cases n with
   | zero => vcgen [exec] <;> grind
-  | succ n => sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, st64] <;> finish
+  | succ n => sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setG] <;> finish
 
-theorem bumpUser_spec (hp2 : p.lookup "bump_user" = some bumpUser) (n : Nat) (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump_user" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [i]; ⊤⦄ := by
-  rw [invoke_eq _ hp2]
+theorem bumpUser_spec (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke bumpProg (exec bumpProg n) "bump_user" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [i + (i + 1)] ∧ s'.mem.glob CALLS = s₀.mem.glob CALLS + 1; ⊤⦄ := by
+  rw [invoke_eq _ rfl]
   simp only [callFn, bumpUser]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, bump_spec p hp n] <;> finish
-
-end bump
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, setG,
+      Triple.gframe bump_closed (by decide) (bump_spec bumpProg rfl n _ _)] <;> finish
 
 end L.Examples

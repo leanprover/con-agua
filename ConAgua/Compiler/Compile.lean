@@ -39,6 +39,7 @@ def maxRes : Nat := 6
   words;
 * then the result area: results `maxRes, maxRes + 1, …, nres - 1` of a call, one word each (empty
   if `nres ≤ maxRes`);
+* then the global variables `0, …, ng - 1`, one word each;
 * then the arguments of the entry function, one word each.
 
 (`nres` is not part of the table in memory: it says how many results the code passes.) -/
@@ -49,6 +50,8 @@ structure Tab where
   /-- The number of results in use: the most results any `return` gives or any call reads. The
   first `maxRes` go in registers (`resReg 0`, …), the rest in the table's result area. -/
   nres : Nat := 1
+  /-- The number of global variables: global `g` (with `g.id < ng`) is the word at `globOff g`. -/
+  ng : Nat := 0
   deriving Repr, DecidableEq
 
 def Tab.stackTop : Int := 0
@@ -65,7 +68,10 @@ def Tab.nxres (t : Tab) : Nat := t.nres - maxRes
 /-- The result area: result `i ≥ maxRes` is the word at `resOff i`. -/
 def Tab.resBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
 def Tab.resOff (t : Tab) (i : Nat) : Int := t.resBase + 8 * ((i - maxRes : Nat) : Int)
-def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres
+/-- The global variables: global `g` is the word at `globOff g`. -/
+def Tab.globBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres
+def Tab.globOff (t : Tab) (g : GVar) : Int := t.globBase + 8 * (g.id : Int)
+def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres + 8 * t.ng
 
 /-- The first position of `d` in `rom` (`0` if there is none; `WF` checks that it is one). -/
 def romIdx (d : List UInt8) : List UInt8 → Nat
@@ -93,6 +99,7 @@ def Stmt.roms : Stmt → List (List UInt8)
   | .while c s => Cond.roms c ++ Stmt.roms s
   | .ret es => es.flatMap Expr.roms
   | .call _ _ args => args.flatMap Expr.roms
+  | .gset _ e => Expr.roms e
 
 /-- The constant data of a program: its byte strings, each once. -/
 def Prog.rom (p : Prog) : List UInt8 :=
@@ -106,9 +113,32 @@ def Stmt.nres : Stmt → Nat
   | .call xs _ _ => xs.length
   | _ => 0
 
+/-- One more than the largest global variable an expression, a condition, a statement names. -/
+def Expr.nglob : Expr → Nat
+  | .bin _ a b | .cmpw _ a b => max (Expr.nglob a) (Expr.nglob b)
+  | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.nglob i
+  | .glob g => g.id + 1
+  | _ => 0
+
+def Cond.nglob : Cond → Nat
+  | .cmp _ a b => max (Expr.nglob a) (Expr.nglob b)
+  | .and p q | .or p q => max (Cond.nglob p) (Cond.nglob q)
+  | .not p => Cond.nglob p
+
+def Stmt.nglob : Stmt → Nat
+  | .skip | .brk | .abort => 0
+  | .set _ e => Expr.nglob e
+  | .st8 _ i e | .st64 _ i e => max (Expr.nglob i) (Expr.nglob e)
+  | .seq s t => max (Stmt.nglob s) (Stmt.nglob t)
+  | .ite c s t => max (Cond.nglob c) (max (Stmt.nglob s) (Stmt.nglob t))
+  | .while c s => max (Cond.nglob c) (Stmt.nglob s)
+  | .ret es | .call _ _ es => es.foldl (fun acc e => max acc (Expr.nglob e)) 0
+  | .gset g e => max (g.id + 1) (Expr.nglob e)
+
 /-- The table layout of a program with `nb` byte arrays and `nw` word arrays. -/
 def Prog.tab (p : Prog) (nb nw : Nat) : Tab :=
-  { nb, nw, rom := Prog.rom p, nres := (p.map fun (_, fd) => Stmt.nres fd.body).foldl max 1 }
+  { nb, nw, rom := Prog.rom p, nres := (p.map fun (_, fd) => Stmt.nres fd.body).foldl max 1,
+    ng := (p.map fun (_, fd) => Stmt.nglob fd.body).foldl max 0 }
 
 /-! ## Instruction helpers -/
 
@@ -169,6 +199,7 @@ def tempsS : Stmt → Nat
   | .ite c s t => max (tempsC c) (max (tempsS s) (tempsS t))
   | .while c s => max (tempsC c) (tempsS s)
   | .call _ _ args => tempsArgs 0 args
+  | .gset _ e => tempsE e
 
 /-- The number of words in the frame of `fd`. -/
 def frameWords (fd : FunDecl) : Nat := fd.nlocals + tempsS fd.body
@@ -255,6 +286,7 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
       [i64 (.cmp (.reg (rr .rax)) (oI d.length)), jccL .nc errorL,
        i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom))),
        i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))]
+  | .glob g, _ => [movRM .rax (mb .r15 (ctx.tab.globOff g))]
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -334,6 +366,7 @@ def compileS (ctx : Ctx) (path : String) : Stmt → Program
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
        ] ++ storeRes ctx.tab xs 0
   | .abort => [jmpL errorL]
+  | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
 def copyParams : Nat → Nat → Program

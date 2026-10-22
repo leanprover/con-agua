@@ -60,6 +60,43 @@ attribute [lang_grind] Mem.len8 Mem.len64
 @[lang_grind =] theorem Mem.arr64_set8_apply (m : Mem) (a : ArrId) (i v : Word) (x : ArrId) :
     (m.set8 a i v).arr64 x = m.arr64 x := rfl
 
+/-! ### Global variables
+
+A global read after a write is the written word or the old one; writes to arrays and globals do
+not touch each other. With these, `vcgen` + `finish` treat globals as they treat locals. -/
+
+/-- Stated over the numbers: `grind` decides `h.id = g.id` for literal globals. -/
+@[lang_grind =] theorem Mem.setG_glob (m : Mem) (g h : GVar) (v : Word) :
+    (m.setG g v).glob h = if h.id = g.id then v else m.glob h := by
+  simp only [Mem.setG]
+  by_cases e : h = g
+  · subst e; simp
+  · rw [if_neg e, if_neg (fun e' => e (by cases h; cases g; simp_all))]
+
+@[lang_grind =] theorem Mem.setG_arr8 (m : Mem) (g : GVar) (v : Word) (a : ArrId) :
+    (m.setG g v).arr8 a = m.arr8 a := rfl
+
+@[lang_grind =] theorem Mem.setG_arr64 (m : Mem) (g : GVar) (v : Word) (a : ArrId) :
+    (m.setG g v).arr64 a = m.arr64 a := rfl
+
+@[lang_grind =] theorem Mem.setG_bytes (m : Mem) (g : GVar) (v : Word) :
+    (m.setG g v).bytes = m.bytes := rfl
+
+@[lang_grind =] theorem Mem.setG_words (m : Mem) (g : GVar) (v : Word) :
+    (m.setG g v).words = m.words := rfl
+
+@[lang_grind =] theorem Mem.set64_glob (m : Mem) (a : ArrId) (i v : Word) (g : GVar) :
+    (m.set64 a i v).glob g = m.glob g := rfl
+
+@[lang_grind =] theorem Mem.set8_glob (m : Mem) (a : ArrId) (i v : Word) (g : GVar) :
+    (m.set8 a i v).glob g = m.glob g := rfl
+
+@[lang_grind =] theorem St.setG_mem (s : St) (g : GVar) (v : Word) :
+    (s.setG g v).mem = s.mem.setG g v := rfl
+
+@[lang_grind =] theorem St.setG_loc (s : St) (g : GVar) (v : Word) (x : Var) :
+    (s.setG g v).loc x = s.loc x := rfl
+
 /-- Byte reads are compared as words (`c != LITS.c8[k]`); the model compares bytes. -/
 theorem UInt8.toUInt64_eq_iff (a b : UInt8) : (a.toUInt64 = b.toUInt64) = (a = b) := by
   apply propext; constructor
