@@ -5437,6 +5437,34 @@ denser than the Rust).
 * Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
   5.2 s CPU.
 
+### The inference bodies (`InferBody*.lean`, helper `defeq-infer`)
+* **`InferBodySpec p n` and `InferIOBodySpec p n` are theorems** (`inferBody_refines`,
+  `inferBodyIO_refines`, `InferBodyDisp.lean`), hence `inferSlot_step`/`inferIOSlot_step`
+  (`WhnfCallees.inferStep`/`inferIOStep`), from `KnotUpTo p n`, the programs (`InferAllProg`) and
+  `InferCallees`: `inst1`, `inst_list`, `abs_entry`, `ar_entry`, `const_ty_at`, the `infer_lit`
+  callees, `is_eager_reduce`, **`infer_proj` (`InferProjOK`, not proved: the table's `structSort`
+  must denote for `lvl_eq_c`'s refinement, an environment invariant nobody states yet)**, and two
+  binder-stack facts below. Both specs now carry `n ≤ 2^62` (KnotSlot.lean).
+* Every clause is proved: `infer_let`, `infer_lam_io`, `infer_forall_io` (`InferBodyLet`), the
+  spines (`InferBodySpine`, `InferBodySpineF`: loops as named blocks, fuel models, `SpPost`), the
+  telescopes (`InferBodyBind`, `InferBodyBindPi`: `lamsFull_ref`/`pisFull_ref`, `TelPost`), the
+  interning leaves under `CoreS` (`InferBodyIntern`: `CoreS.of_level` for level nodes via
+  `LStore.intern_ext`).
+* **The binder stack is not in `CoreAfter`.** `StackKept` covers `SPN`/`CTL[136]` only, so the
+  telescopes assume `BStkCallees` (`infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort` keep
+  `BSTK` below `CTL[137]` and `CTL[137]`) and `BStkCap` (`BSTK` has fewer than `2^63` words under
+  `CoreS`). To discharge them: a field `bstk` in `CoreS` (as `spn`) and `BKept` in `StackKept`,
+  proved by every core body (lane `whnf`'s files construct both about 15 times).
+* **L changes** (Infer.lean): `infer_lam_io`/`infer_forall_io` abort at `d + 1 = 0`;
+  `infer_lam`/`infer_forall` abort at `d ≥ 2^63` (depth capacities: the twin's depth is a `Nat`);
+  `infer_spine`/`infer_spine_io` abort when `CTL[136]` is past the stack (so the empty accumulator
+  is a slice; `head_and_args` at an `app` handle needs no such bound, `headAndArgs_app`).
+* Proof style: `vcgen` + `simp_all` for the specs (`finish` blew up on `List.cons.injEq` with six
+  calls), `ld64_rdW_spec`/`st64_spec` instead of unfolding `ld64`/`st64` (a read's bound proof as
+  an argument blocks `simp_all`). **Kernel deep recursion**: `simp` (`↓reduceIte`) on a goal holding
+  `inferLams …`/`inferPis …` at the literal `peelFuel` made the kernel unfold the structural
+  recursion; `rw [if_pos rfl]` instead. ~4400 lines, ~29 s CPU.
+
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
 ### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
