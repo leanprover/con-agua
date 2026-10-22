@@ -169,7 +169,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rintro ⟨r, m'⟩ h
       have hgt : g.toNat < iwTop m := by have := (rec2CG_parts hG).2.1; omega
       obtain ⟨x, a', hrun, hS', hg', h1, h2⟩ := slotVarW_ok dn vis fe m m' a g _ G r hS hnP hgt
-        (by rw [hsub]; omega) h
+        (by rw [hsub]; have := i.toNat_lt; have := t0; omega) h
       rw [hsub] at hrun
       exact ⟨x, a', hrun, hS', hg', h1, h2⟩
   refine RSim.bind (K := pvK1 n (fun m1 => pvW n m1 g rP (i + 1))) rfl hy ?_
@@ -186,6 +186,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   refine RSim.lstep (K := fcK) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hyH hd2
   rw [fcK_some]
-  exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), by simpa using hd3, by simp; omega⟩
+  exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), by simpa using hd3,
+    by simp only [List.headD_cons, List.tail_cons]; exact Nat.le_of_eq ht3⟩
 
 end L.Ind
