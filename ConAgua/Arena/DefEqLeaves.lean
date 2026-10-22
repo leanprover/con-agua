@@ -1,6 +1,7 @@
 import ConAgua.Arena.DefEq
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.IndPartsSpec3
+import ConAgua.Arena.DefEqGrindAttr
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves
@@ -36,6 +37,7 @@ structure DefEqLeafProg (p : Prog) : Prop where
   ion : p.lookup "io_neutral" = some ioNeutralL
   eager : p.lookup "is_eager_reduce" = some isEagerReduceL
   natzero : p.lookup "is_nat_zero" = some isNatZeroL
+  hhint : p.lookup "head_hint" = some headHintL
 
 /-! ## Shared lemmas -/
 
@@ -709,5 +711,170 @@ theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
     have hne : w.toNat ≠ 1 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
     rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
     all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
+
+/-! ## `head_hint` -/
+
+/-- After `env_find`: the hint words of a definition, else `(0, 0)` (opaque). -/
+def hhEnv (q : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
+  match q with
+  | none => none
+  | some (r, m) =>
+    if r.headD 0 = 0 then some (0, 0, m)
+    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 1 then some (0, 0, m)
+    else some (rdW (m.arr64 EREC) (r.tail.headD 0 + 6), rdW (m.arr64 EREC) (r.tail.headD 0 + 7), m)
+
+/-- After `get_app_fn`: the head `hh`. -/
+def hhHead (p : Prog) (n : Nat) (m : Mem) (vis hh : Word) : Option (Word × Word × Mem) :=
+  if hh >>> 28 ≠ 3 then some (0, 0, m)
+  else if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
+  else hhEnv (callW p n "env_find" [rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2), vis] m)
+
+/-- The model of `head_hint`. -/
+def headHintW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Word × Mem) :=
+  match callW p n "get_app_fn" [e] m with
+  | none => none
+  | some (r, m₁) => hhHead p n m₁ vis (r.headD 0)
+
+section hhArms
+variable (p : Prog) (n : Nat) (m m₁ : Mem) (vis e hh : Word) (r : List Word)
+  (q : Option (List Word × Mem))
+
+theorem headHintW_eq (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
+    headHintW p n m vis e = hhHead p n m₁ vis (r.headD 0) := by simp only [headHintW, h]
+theorem hhHead_tag (h3 : ¬ hh >>> 28 = 3) : hhHead p n m vis hh = some (0, 0, m) := by
+  simp [hhHead, h3]
+theorem hhHead_go (h3 : hh >>> 28 = 3) (hs : ¬ (tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh) :
+    hhHead p n m vis hh =
+      hhEnv (callW p n "env_find" [rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2), vis] m) := by
+  simp only [hhHead, h3, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
+theorem hhEnv_zero (h : q = some (r, m)) (h0 : r.headD 0 = 0) : hhEnv q = some (0, 0, m) := by
+  subst h; simp only [hhEnv, h0, ↓reduceIte]
+theorem hhEnv_kind (h : q = some (r, m)) (h0 : ¬ r.headD 0 = 0)
+    (h1 : ¬ rdW (m.arr64 EREC) (r.tail.headD 0) = 1) : hhEnv q = some (0, 0, m) := by
+  subst h; simp only [hhEnv, h0, h1, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte]
+theorem hhEnv_defn (h : q = some (r, m)) (h0 : ¬ r.headD 0 = 0)
+    (h1 : rdW (m.arr64 EREC) (r.tail.headD 0) = 1) :
+    hhEnv q = some (rdW (m.arr64 EREC) (r.tail.headD 0 + 6), rdW (m.arr64 EREC) (r.tail.headD 0 + 7),
+      m) := by
+  subst h; simp only [hhEnv, h0, h1, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte]
+
+end hhArms
+
+grind_pattern [defeq_grind] headHintW_eq => headHintW p n m vis e, (r, m₁)
+grind_pattern [defeq_grind] hhHead_tag => hhHead p n m vis hh
+grind_pattern [defeq_grind] hhHead_go => hhHead p n m vis hh
+grind_pattern [defeq_grind] hhEnv_zero => hhEnv q, (r, m)
+grind_pattern [defeq_grind] hhEnv_kind => hhEnv q, (r, m)
+grind_pattern [defeq_grind] hhEnv_defn => hhEnv q, (r, m)
+
+theorem headHint_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (vis e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_hint" [vis, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      headHintW p n s₀.mem vis e = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.hhint]
+  simp only [callFn, headHintL]
+  sym only [lang_grind, arena_grind, defeq_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
+    finish [tierW, idxW]
+
+/-- The hint the twin reads off a lookup. -/
+def hintOf : Option IConstantInfo → ConLeche.ReducibilityHint
+  | some (.defnInfo _ _ hint) => hint
+  | _ => .opaque
+
+theorem hintOf_none (o : Option IConstantInfo) (h : ∀ cv v hint, o ≠ some (.defnInfo cv v hint)) :
+    hintOf o = .opaque := by
+  rcases o with _ | ⟨_ | ⟨cv, v, hint⟩ | _ | _ | _ | _ | _⟩ <;> try rfl
+  exact absurd rfl (h cv v hint)
+
+theorem headHint_run_nonconst (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx)
+    (hgaf : (getAppFn coreWalkFuel e).run a = .ok (hh, a)) (ht : (hh.tag == ETag.const) = false) :
+    (headHint fe e).run a = .ok (.opaque, a) := by
+  simp only [headHint, StateT.run_bind, hgaf, except_ok_bind, ht, Bool.false_eq_true, ↓reduceIte]
+  rfl
+
+theorem headHint_run_const (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) (c : NIdx) (us : LsIdx)
+    (hgaf : (getAppFn coreWalkFuel e).run a = .ok (hh, a)) (ht : (hh.tag == ETag.const) = true)
+    (hv : a.store.view hh = some (.const c us)) :
+    (headHint fe e).run a = .ok (hintOf (fe.find? c), a) := by
+  simp only [headHint, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv]
+  rcases fe.find? c with _ | ⟨_ | ⟨cv, v, hint⟩ | _ | _ | _ | _ | _⟩ <;> rfl
+
+theorem decHintR_zero : decHintR [0, 0] = .opaque := rfl
+
+/-- **`head_hint` refines `headHint`.** -/
+@[refines ConRon.Arena.headHint]
+theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
+    CoreSpec p (n + 1) "head_hint" [vis, e] (headHint fe (decE e)) decHintR s₀ a₀ dn vis fe MM eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (headHint_spec p hp n s₀ vis e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "get_app_fn" [e] s.mem with
+  | none => simp [headHintW, hc] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [headHintW_eq p n _ _ vis e r₁ hc] at hW
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
+  have hR := hS.arena.1
+  generalize r₁.headD 0 = h at hh hgaf hW
+  have hres : ∀ x y : Word, some (x, y, s.mem) = some (r.headD 0, r.tail.headD 0, s'.mem) →
+      HW x → ∀ v, (headHint fe (decE e)).run a₀ = .ok (v, a₀) → v = decHintW x y →
+      CoreRef (headHint fe (decE e)) a₀ decHintR dn s.mem vis fe MM eb r s'.mem := by
+    intro x y hxy hx v hv hvx
+    simp only [Option.some.injEq, Prod.mk.injEq] at hxy
+    obtain ⟨h1, h2, h3⟩ := hxy
+    rw [← h3]
+    refine coreRef_pure hS hv ?_ ?_
+    · rw [hvx, decHintR, ← h1, ← h2]
+    · unfold ResH; rw [← h1]; exact hx
+  rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
+  · rw [hhHead_tag p n _ vis h h3] at hW
+    exact hres 0 0 hW hw0 _
+      (headHint_run_nonconst fe _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
+  by_cases hs : tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [hhHead, h3, hs] at hW
+  by_cases hcc : rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h
+  · simp [hhHead, h3, hs, hcc] at hW
+  rw [hhHead_go p n _ vis h h3 hs hcc] at hW
+  have hvo : viewOK s.mem h 18 := ⟨hs, by simpa using hcc⟩
+  obtain ⟨hv, hnw, -⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
+  have hrun1 := headHint_run_const fe _ a₀ _ _ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3]) hv
+  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW hrun1
+  cases hc2 : callW p n "env_find" [k, vis] s.mem with
+  | none => simp [hhEnv, hc2] at hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
+    (envFind_refines p hp.core.envix hp.core.envrow hp.core.envfind n s vis k hS.env hnw) hc2
+  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
+    (envFind_found p hp.core.envix hp.core.envrow hp.core.envfind n s vis k hnw) hc2
+  rw [ht₂] at hm₂
+  subst hm₂
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [hhEnv_zero (h := hc2) (h0 := h0)] at hW
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+    rw [hnone] at hrun1
+    exact hres 0 0 hW hw0 _ hrun1 rfl
+  obtain ⟨htag, hrow, hq⟩ := hfound h0
+  obtain ⟨ci, hci⟩ := hS.env.found_some k hnw htag hrow
+  have hfind' : fe.find? (decI k) = some ci := by
+    rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
+  rw [← hq] at hci
+  have hdefn := decCI_defn hci (erecP_ext _) hS.erec
+  rw [hfind'] at hrun1
+  by_cases h1 : rdW (s.mem.arr64 EREC) (r₂.tail.headD 0) = 1
+  · rw [hhEnv_defn (h := hc2) (h0 := h0) (h1 := h1)] at hW
+    obtain ⟨cv, v, rfl, -, hk6⟩ := hdefn.1 h1
+    exact hres _ _ hW (by unfold HW; omega) _ hrun1 rfl
+  · rw [hhEnv_kind (h := hc2) (h0 := h0) (h1 := h1)] at hW
+    rw [hintOf_none _ (fun cv v hint e => hdefn.2 h1 cv v hint (Option.some.inj e))] at hrun1
+    exact hres 0 0 hW hw0 _ hrun1 rfl
 
 end L.Arena
