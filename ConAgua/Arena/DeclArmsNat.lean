@@ -634,11 +634,14 @@ def natVarL : FunDecl := lfn (i) locals (nt, c, r) {
 }
 
 /-- `cert_ctx()`: the 21 pinned handles, a fresh `IW` record (the module doc's layout), built in
-the twin's order. -/
+the twin's order. The eleven pin words copied from the `nat_op_pins` record are read into locals
+before the record's writes (lane `decls3-divmod`: the refinement proof then needs no aliasing facts
+between the two records). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:253-280 ConRon.Arena.certCtx
 @[l_impl ConRon.Arena.certCtx]
 def certCtxL : FunDecl :=
-    lfn () locals (pi, nt, natTy, x, y, one, bleN, bn, boolTy, u, bT, bF, z, s, two, q) {
+    lfn () locals (pi, nt, natTy, x, y, one, bleN, bn, boolTy, u, bT, bF, z, s, two, q,
+      w10, w11, w12, w13, w14, w15, w16, w17, w18, w19, w20) {
   pi := call nat_op_pins();
   nt := IW.u64[pi + 15];
   natTy := call const_e(nt);
@@ -656,16 +659,16 @@ def certCtxL : FunDecl :=
   z := call const_e(u);
   s := IW.u64[pi + 17];
   two := call nat_ap1(s, one);
+  w10 := IW.u64[pi + 8]; w11 := IW.u64[pi + 7]; w12 := IW.u64[pi + 1]; w13 := IW.u64[pi + 3];
+  w14 := IW.u64[pi + 2]; w15 := IW.u64[pi + 9]; w16 := IW.u64[pi + 13]; w17 := IW.u64[pi + 14];
+  w18 := IW.u64[pi + 10]; w19 := IW.u64[pi + 11]; w20 := IW.u64[pi + 12];
   q := call iw_alloc(21);
   IW.u64[q] := natTy; IW.u64[q + 1] := x; IW.u64[q + 2] := y; IW.u64[q + 3] := one;
   IW.u64[q + 4] := bleN; IW.u64[q + 5] := boolTy; IW.u64[q + 6] := bT; IW.u64[q + 7] := bF;
   IW.u64[q + 8] := z; IW.u64[q + 9] := two;
-  IW.u64[q + 10] := IW.u64[pi + 8]; IW.u64[q + 11] := IW.u64[pi + 7];
-  IW.u64[q + 12] := IW.u64[pi + 1]; IW.u64[q + 13] := IW.u64[pi + 3];
-  IW.u64[q + 14] := IW.u64[pi + 2]; IW.u64[q + 15] := IW.u64[pi + 9];
-  IW.u64[q + 16] := IW.u64[pi + 13]; IW.u64[q + 17] := IW.u64[pi + 14];
-  IW.u64[q + 18] := IW.u64[pi + 10]; IW.u64[q + 19] := IW.u64[pi + 11];
-  IW.u64[q + 20] := IW.u64[pi + 12];
+  IW.u64[q + 10] := w10; IW.u64[q + 11] := w11; IW.u64[q + 12] := w12; IW.u64[q + 13] := w13;
+  IW.u64[q + 14] := w14; IW.u64[q + 15] := w15; IW.u64[q + 16] := w16; IW.u64[q + 17] := w17;
+  IW.u64[q + 18] := w18; IW.u64[q + 19] := w19; IW.u64[q + 20] := w20;
   return q
 }
 
