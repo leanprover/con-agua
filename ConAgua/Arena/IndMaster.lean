@@ -524,7 +524,9 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (hsl : ∀ lo ll, nat? (erA m) (cq.toNat + 1) = some lo → nat? (erA m) (cq.toNat + 2) = some ll →
       lo + ll ≤ erTop m)
     (hty : ty.toNat < 2 ^ 32) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = erTop m ∧
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = erTop m ∧ erTop m' = erTop m + 4 ∧
+      (∀ lo ll, nat? (erA m') (q.toNat + 1) = some lo → nat? (erA m') (q.toNat + 2) = some ll →
+        lo + ll ≤ erTop m) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
   simp only [cvNewW] at h
   cases h1 : erAllocW m 4 with
@@ -537,7 +539,8 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   rw [cvNewMem_eq]
   obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS [rdW (m.arr64 EREC) cq,
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty] (by simp)
-  refine ⟨hS', hg, hq, ?_⟩
+  refine ⟨hS', hg, hq, htop, ?_, ?_⟩
+  rotate_left
   obtain ⟨-, hE1, -, hEs, -⟩ := hS.2
   have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
     simp only [erTop] at hcq hE1; omega
@@ -557,5 +560,22 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · simp only [erA]; rw [hget 1 (by simp), hw 1 (cq + 1) (by decide) hc1]; simp
   · simp only [erA]; rw [hget 2 (by simp), hw 2 (cq + 2) (by decide) hc2]; simp
   · simp only [erA]; rw [hget 3 (by simp)]; simp
+  · intro lo ll e1 e2
+    obtain ⟨-, hE1, -, hEs, -⟩ := hS.2
+    have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
+      simp only [erTop] at hcq hE1; omega
+    simp only [nat?, erA] at e1 e2
+    rw [hget 1 (by simp)] at e1
+    rw [hget 2 (by simp)] at e2
+    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.map_some, Option.some.injEq] at e1 e2
+    apply hsl
+    · simp only [nat?, erA, rdW]
+      have : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e1]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 1 (by decide)), Option.map_some,
+        Option.getD_some]
+    · simp only [nat?, erA, rdW]
+      have : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e2]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 2 (by decide)), Option.map_some,
+        Option.getD_some]
 
 end L.Ind
