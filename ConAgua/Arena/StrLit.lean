@@ -15,6 +15,7 @@ Twin: `vendor/con-ron/ConRon/Arena/Core.lean` ("String literals"). L names and t
 | `str_lit_supported(vis)`, `str_sup_1` … `str_sup_7` | `strLitSupported` | one function per tested declaration (the suffixes of the twin's chain) |
 | `str_utf8_char(k, n)` | none | `utf8_char` (`Scan/Utf8.lean`) on the pool's byte words: one code point of `s.toList` |
 | `str_cons_spine(cons, ofNat, nilE, k, n)` | `strLitConsSpine` | the bytes `[k, n)` of the pool; recursion over the characters as the twin's |
+| `str_ctor_pre()` | none | the literal-independent prefix of `strLitToConstructor` |
 | `str_lit_ctor(h)` | `strLitToConstructor` | the literal's record gives the byte slice |
 
 A character's `Nat` literal is interned by `rom_lit` (`RomExpr.lean`: its one limb at the pool
@@ -330,21 +331,11 @@ def strConsSpineL : FunDecl := lfn (cons, ofNat, nilE, k, n) locals (c, l, rest,
   return r
 }
 
-/-- `str_lit_ctor(h)`: the constructor form `String.ofList (List.cons.{0} Char (Char.ofNat c₁) …
-(List.nil.{0} Char))` of the string literal `h` (its record gives the bytes' pool slice). -/
--- con-ron: ConRon/Arena/Core.lean:600-619 ConRon.Arena.strLitToConstructor
-@[l_impl ConRon.Arena.strLitToConstructor]
-def strLitCtorL : FunDecl :=
-  lfn (h) locals (t, i, o, cnt, zl, zs, chN, chC, lnN, ln, nilE, lcN, lc, cons, coN, ofNat, spine,
-    slN, sl, r) {
-  if h >> 28 != 8 { abort };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= i { abort };
-  if REC.u64[i * 8 + t * 4] != 1 { abort };
-  o := REC.u64[i * 8 + t * 4 + 1];
-  cnt := REC.u64[i * 8 + t * 4 + 2];
+/-- `str_ctor_pre()`: `(cons, ofNat, nilE)`, the three nodes every string literal's constructor
+form uses (`List.cons.{0} Char`, `Char.ofNat`, `List.nil.{0} Char`), interned in the twin's order. -/
+-- con-ron: none — the literal-independent prefix of `strLitToConstructor` (no twin function)
+def strCtorPreL : FunDecl :=
+  lfn () locals (zl, zs, chN, chC, lnN, ln, nilE, lcN, lc, cons, coN, ofNat) {
   zl := call pin_word(53);
   zs := call str_ls1(zl);
   chN := call pin_at(10);
@@ -357,6 +348,25 @@ def strLitCtorL : FunDecl :=
   cons := call mk_app(lc, chC);
   coN := call pin_at(12);
   ofNat := call const_e(coN);
+  return (cons, ofNat, nilE)
+}
+
+/-- `str_lit_ctor(h)`: the constructor form `String.ofList (List.cons.{0} Char (Char.ofNat c₁) …
+(List.nil.{0} Char))` of the string literal `h`: the prefix, then the literal's record (read
+after the prefix, so at the memory the spine reads) gives the bytes' pool slice. -/
+-- con-ron: ConRon/Arena/Core.lean:600-619 ConRon.Arena.strLitToConstructor
+@[l_impl ConRon.Arena.strLitToConstructor]
+def strLitCtorL : FunDecl :=
+  lfn (h) locals (cons, ofNat, nilE, t, i, o, cnt, spine, slN, sl, r) {
+  (cons, ofNat, nilE) := call str_ctor_pre();
+  if h >> 28 != 8 { abort };
+  t := (h >> 27) & 1;
+  i := h & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CTL.u64[2 + t] <= i { abort };
+  if REC.u64[i * 8 + t * 4] != 1 { abort };
+  o := REC.u64[i * 8 + t * 4 + 1];
+  cnt := REC.u64[i * 8 + t * 4 + 2];
   spine := call str_cons_spine(cons, ofNat, nilE, o, o + cnt);
   slN := call pin_at(6);
   sl := call const_e(slN);
@@ -374,6 +384,6 @@ def strLitProg : Prog :=
    ("str_sup_4", strSup4L), ("str_sup_3", strSup3L), ("str_sup_2", strSup2L),
    ("str_sup_1", strSup1L), ("str_lit_supported", strLitSupportedL),
    ("str_utf8_char", strUtf8CharL), ("str_cons_spine", strConsSpineL),
-   ("str_lit_ctor", strLitCtorL)]
+   ("str_ctor_pre", strCtorPreL), ("str_lit_ctor", strLitCtorL)]
 
 end L.Arena

@@ -119,6 +119,7 @@ structure StrLitProg (p : Prog) : Prop extends WhnfDeltaProg' p where
   strUtf8Char : p.lookup "str_utf8_char" = some strUtf8CharL
   strConsSpine : p.lookup "str_cons_spine" = some strConsSpineL
   strLitCtor : p.lookup "str_lit_ctor" = some strLitCtorL
+  strCtorPre : p.lookup "str_ctor_pre" = some strCtorPreL
   paramFind : p.lookup "param_find" = some paramFind
   paramPush : p.lookup "param_push" = some paramPush
   internParam : p.lookup "intern_param" = some internParam
