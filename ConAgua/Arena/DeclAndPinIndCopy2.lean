@@ -438,4 +438,99 @@ theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat} {dn0 dn : NIdx → Option Co
       simp [hkw5]
     · rw [hkeep _ (by omega) (by omega)]; exact hr3 x hx
 
+/-- **`ind_rec_copy(s)` copies a front constant record**: an `EREC` writer above the old top,
+the copy at `p` decoding (robustly, `RecOK`) to the record's constant. -/
+theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLeche.Name}
+    {s p : Word} {c : IConstantInfo} (h : ircW n m s = some (p, m'))
+    (hc : decCI (trunc (m.arr64 DLP) t) dn0 s.toNat = some c) (hF : FrontCI c)
+    (hP : (m.arr64 DLP).size < 2 ^ 63) (hC : 129 < (m.arr64 CTL).size)
+    (hE64 : (m.arr64 EREC).size < 2 ^ 64) :
+    EW (fun i => erTop m ≤ i) m m' ∧ erTop m ≤ p.toNat ∧
+      RecOK dn (m'.arr64 EREC) (erTop m) (erTop m') p.toNat c := by
+  cases n with
+  | zero => simp [ircW] at h
+  | succ n =>
+  rw [ircW_step] at h
+  obtain ⟨kk, hkk, hk345⟩ := decCI_front_kind hc hF
+  obtain ⟨kw, hTk, rfl⟩ : ∃ kw, (trunc (m.arr64 DLP) t)[s.toNat]? = some kw ∧ kw.toNat = kk := by
+    simpa [nat?] using hkk
+  have hs0n : s.toNat ≠ 0 := fun h0 => by
+    rw [h0] at hTk; have := trunc_get_zero hTk; subst this; simp at hk345
+  have hkw : rdW (m.arr64 DLP) s = kw := rdW_of_trunc hTk hs0n rfl
+  rw [hkw] at h
+  cases ha1 : erAllocW m (rdW (m.arr64 DLP) (s + 3)) with
+  | none => rw [ha1] at h; cases h
+  | some x =>
+  obtain ⟨q, m1⟩ := x
+  rw [ha1, ircK1_some] at h
+  obtain ⟨hq, ht1, hE1, hW1⟩ := erAllocW_facts ha1 hC hE64
+  have hw1 := hW1 (fun i => erTop m ≤ i)
+  have hP1 : m1.arr64 DLP = m.arr64 DLP := hw1.dlp
+  rw [hP1] at h
+  cases hd2 : dindCopyW n m1 q (rdW (m.arr64 DLP) (s + 2)) (rdW (m.arr64 DLP) (s + 3)) with
+  | none => rw [hd2] at h; cases h
+  | some m2 =>
+  rw [hd2, ircK2_some] at h
+  have hs1 : (m1.arr64 EREC).size = (m.arr64 EREC).size := by rw [hE1]
+  have hr1 := hw1.2.2.1
+  obtain ⟨-, hsrc2, hG2⟩ := dindCopyW_get n m1 m2 q _ _ hd2 (by omega) (by rw [hs1]; exact hE64)
+  have hW2 := dindCopyW_EW hd2 (by omega) hr1 (by rw [hs1]; exact hE64)
+  have hw2 : EW (fun i => erTop m ≤ i) m m2 := hw1.trans hW2 (fun i _ hi => by omega)
+  have hP2 : m2.arr64 DLP = m.arr64 DLP := hw2.dlp
+  rw [hP2] at h
+  have hl : ∀ j < (rdW (m.arr64 DLP) (s + 3)).toNat, (m2.arr64 EREC)[q.toNat + j]? =
+      some (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (s + 2) + UInt64.ofNat j)) := by
+    intro j hj; rw [hG2, if_pos (by omega), Nat.add_sub_cancel_left, hP1]
+  have hlr : q.toNat + (rdW (m.arr64 DLP) (s + 3)).toNat ≤ erTop m2 := by have := hW2.2.1; omega
+  have hm2 := hw2.2.1
+  rcases hk345 with h3 | h4 | h5
+  · have e : kw = 3 := UInt64.toNat_inj.mp (by rw [h3]; rfl)
+    subst e
+    rw [if_pos rfl] at h
+    exact irc_fin h hw2 hC hE64 hc hF hP hkk rfl (by rfl) (Or.inl rfl) (by omega) hlr hl hsrc2
+      (fun h5 => by simp at h5)
+  · have e : kw = 4 := UInt64.toNat_inj.mp (by rw [h4]; rfl)
+    subst e
+    rw [if_neg (by decide), if_pos rfl] at h
+    exact irc_fin h hw2 hC hE64 hc hF hP hkk rfl (by rfl) (Or.inr (Or.inl rfl)) (by omega) hlr hl
+      hsrc2 (fun h5 => by simp at h5)
+  · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
+    subst e
+    rw [if_neg (by decide), if_neg (by decide), if_pos rfl] at h
+    by_cases hg : 1152921504606846976 ≤ rdW (m.arr64 DLP) (s + 8)
+    · rw [if_pos hg] at h; cases h
+    rw [if_neg hg] at h
+    have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
+      have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
+    have h11 : (11 * rdW (m.arr64 DLP) (s + 8)).toNat = 11 * (rdW (m.arr64 DLP) (s + 8)).toNat := by
+      rw [UInt64.toNat_mul]; simp; omega
+    have hC2 : 129 < (m2.arr64 CTL).size := by rw [hw2.csize]; exact hC
+    have hE2 : (m2.arr64 EREC).size < 2 ^ 64 := by rw [hw2.esize]; exact hE64
+    cases ha3 : erAllocW m2 (11 * rdW (m.arr64 DLP) (s + 8)) with
+    | none => rw [ha3] at h; cases h
+    | some x =>
+    obtain ⟨r, m3⟩ := x
+    rw [ha3, ircR1_some] at h
+    obtain ⟨hr, ht3, hE3, hW3⟩ := erAllocW_facts ha3 hC2 hE2
+    have hw3 := hW3 (fun i => erTop m ≤ i)
+    have hP3 : m3.arr64 DLP = m.arr64 DLP := by rw [hw3.dlp, hP2]
+    rw [hP3] at h
+    cases hd4 : dindCopyW n m3 r (rdW (m.arr64 DLP) (s + 7)) (11 * rdW (m.arr64 DLP) (s + 8)) with
+    | none => rw [hd4] at h; cases h
+    | some m4 =>
+    rw [hd4, ircR2_some] at h
+    have hs3 : (m3.arr64 EREC).size = (m2.arr64 EREC).size := by rw [hE3]
+    have hr3 := hw3.2.2.1
+    obtain ⟨-, hsrc4, hG4⟩ := dindCopyW_get n m3 m4 r _ _ hd4 (by omega) (by rw [hs3]; exact hE2)
+    have hW4 := dindCopyW_EW hd4 (by omega) hr3 (by rw [hs3]; exact hE2)
+    have hw4 : EW (fun i => erTop m ≤ i) m m4 :=
+      (hw2.trans hw3 (fun i _ hi => hi)).trans hW4 (fun i _ hi => by omega)
+    have hm4 := hW4.2.1
+    refine irc_fin h hw4 hC hE64 hc hF hP hkk rfl (by rfl) (Or.inr (Or.inr rfl)) (by omega)
+      (by omega) (fun j hj => ?_) hsrc2 (fun _ => ⟨by omega, by omega, fun x hx => ?_,
+        fun h8 => hsrc4 (fun h0 => h8 (by
+          apply UInt64.toNat_inj.mp; have := congrArg UInt64.toNat h0; rw [h11] at this; simp at this ⊢; omega)), hb⟩)
+    · rw [hW4.2.2.2 _ (by omega) (by omega), hE3]; exact hl j hj
+    · rw [hG4, if_pos (by omega), Nat.add_sub_cancel_left, hP3]
+
 end L.Arena
