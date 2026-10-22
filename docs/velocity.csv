@@ -47,3 +47,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,decls,opus,20,15,"rom_level refines internLevel; l_impl on a FunDecl (internReservedPinsL); decI_iff rename (census clash); IndPos2Spec adapted to erecP; two machine restarts"
 2026-10-21,whnf,opus,40,6,"whnf_core_step dispatcher, loop, body proved (WhnfCoreLoop); merged sub-lanes: five spine walks proved (3 sorry), whnf slot and loop proved (WhnfDeltaSlot); DESIGN numbers"
 2026-10-22,induct,opus,15,10,"checkBlockDomsAt refined through stub models (sorry via stubs only); IndCopy2 list-building models (snoc, append, er_to_iw, recN) by helpers"
+2026-10-22,censusmem,opus,30,10,"census: one import per child process (link pass grew past 8 GB, now 2.8 GB peak), memory guard in census.py (kill at 6 GB), fingerprints/stale dropped"
