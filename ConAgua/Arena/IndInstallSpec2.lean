@@ -1096,4 +1096,43 @@ theorem pmGoW_get (n : Nat) : ∀ (m m' : Mem) (kd nd s l : Word), pmGoW n m kd 
         have := hP4' i (by omega) (by omega) (by omega)
         rw [this, hget, if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
 
+theorem allocW_size {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1))
+    (hsz : (m.arr64 IW).size < 2 ^ 64) : (m1.arr64 IW).size < 2 ^ 64 := by
+  obtain ⟨-, rfl, -⟩ := allocW_facts h hsz
+  rw [allocMem_IW]; exact hsz
+
+/-- The model of `check_block_positivity_member(o, l)` at the caller's fuel `n`. -/
+def posMemberW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
+  match allocW m l with
+  | none => none
+  | some (kq, m1) =>
+    match allocW m1 l with
+    | none => none
+    | some (nq, m2) =>
+      match pmGoW (n - 1) m2 kq nq o l with
+      | none => none
+      | some m3 => some ([kq, l, nq, l], m3)
+
+theorem checkBlockPositivityMember_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (h2 : p.lookup "rec2" = some rec2)
+    (hg : p.lookup "check_block_positivity_member_go" = some checkBlockPositivityMemberGo)
+    (hp : p.lookup "check_block_positivity_member" = some checkBlockPositivityMember) (n : Nat)
+    (s₀ : St) (o l : Word) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_positivity_member" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ posMemberW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkBlockPositivityMember]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ kq nq m1 m2 m3, allocW s₀.mem l = some (kq, m1) → allocW m1 l = some (nq, m2) →
+        pmGoW n m2 kq nq o l = some m3 →
+        posMemberW (n + 1) s₀.mem o l = some ([kq, l, nq, l], m3) := by
+      intro kq nq m1 m2 m3 h1 h2 h3
+      simp [posMemberW, h1, h2, h3]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, checkBlockPositivityMemberGo_spec p ha h2 hg n] <;>
+      finish (gen := 20) [allocW_size]
+
 end L.Ind
