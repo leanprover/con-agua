@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.FVarStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The `fvar` store refines the arena's `fvar` tables
@@ -174,11 +175,11 @@ theorem fvpushOK_room (m : Mem) (t : Word) (h : fvpushOK m t = true) : PushRoom 
   grind
 
 theorem fvpushMem_eq (m : Mem) (t u ty j c : Word) :
-    fvpushMem m t u ty j c = pushG fvarSch m t [u, ty] j c := by
+    fvpushMem m t u ty j c = (pushG fvarSch m t [u, ty] j c).set64 FVLP (c * 2 + t) (exprLPW m ty) := by
   simp [fvpushMem, pushG, wrRec, Schema.ad, fvarSch]
 
 theorem fvinternW_eq (m : Mem) (u ty : Word) :
-    fvinternW m u ty = internM fvarSch m (fvskipW m ty) (fvpushOK m) [u, ty]
+    fvinternW m u ty = internMD fvarSch FVLP (exprLPW m ty) m (fvskipW m ty) (fvpushOK m) [u, ty]
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
         (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
@@ -187,8 +188,33 @@ theorem fvinternW_eq (m : Mem) (u ty : Word) :
     simp [hdW, fvarSch, fvarP, ETag.fvar]
   have e1 : ∀ x, hdW fvarSch.tag.toUInt64 1 x = fvarS + x := fun x => by
     simp [hdW, fvarSch, fvarS, ETag.fvar]
-  simp only [fvinternW, internM, fvpushMem_eq, e0, e1]
+  simp only [fvinternW, internMD, fvpushMem_eq, e0, e1]
   rfl
+
+/-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/
+theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
+    MemFrame [FVREC, FVSLOT, FVLP] [26, 27] m m' := by
+  rw [fvinternW_eq] at hI
+  exact internMD_frame fvarSch fvarSch_wf FVLP (by decide) _ _ _ _ _ _ _ _ _ hI
+
+/-- `intern_fvar`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
+words. -/
+theorem fvinternW_eqK (m : Mem) (u ty : Word) (hctl : fvarSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    fvinternW m u ty = mkK FVLP fvarSch.ca (cnt2 m fvarSch.ca) (exprLPW m ty)
+      (internM fvarSch m (fvskipW m ty) (fvpushOK m) [u, ty]
+      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
+      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)) := by
+  rw [fvinternW_eq]
+  refine internMD_mkK fvarSch fvarSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+
+theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by
+  intro m m' hra _ _; simp only [fvarSch] at hra
+  exact ⟨fun t i k h => by simpa only [FVRecRel, hra] using h, fun t i => by simp only [fvhash, hra]⟩
 
 /-- The L skip test is the arena's. -/
 theorem fvskipW_eq (m : Mem) (a : AState) (ty : Word) (hty : ty.toNat < 2 ^ 32)
@@ -203,19 +229,53 @@ section intern
 variable (m : Mem) (a : AState) (hR : FVarR m a) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
 
 include hR hty in
-/-- **`intern_fvar`'s model refines the arena's `internE` at an `fvar` node.** -/
-theorem fvintern_correct (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
+/-- The library's half of `intern_fvar` (before the column). -/
+theorem fvintern_core (w : Word) (m₁ : Mem)
+    (hI : internM fvarSch m (fvskipW m ty) (fvpushOK m) [u, ty]
+      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
+      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0) =
+      some (w, m₁)) :
     AM.ok (internE (.fvar u.toNat (decE ty))) a ∧
-    FVarR m' (AM.st (internE (.fvar u.toNat (decE ty))) a) ∧
-    AM.res (internE (.fvar u.toNat (decE ty))) a = decE w := by
-  rw [fvinternW_eq] at hI
-  exact intern_correctG fvarSch FVRecRel fvhash fvarSch_wf fvarFrame fvarLens a m hR _ _ _ _ _
+    FVarR m₁ (AM.st (internE (.fvar u.toNat (decE ty))) a) ∧
+    AM.res (internE (.fvar u.toNat (decE ty))) a = decE w :=
+  intern_correctG fvarSch FVRecRel fvhash fvarSch_wf fvarFrame fvarLens a m hR _ _ _ _ _
     (internE_fvar_run _ _ a) (skFv a (decE ty)) rfl _ (fvskipW_eq m a ty hty hR.2.1)
     (fun h => by simp only [skFv] at h; split at h <;> simp_all [fvarLens]) _ _
     (fvMatchOK m u ty hty) (fvHomeOK m u ty) _ _
     (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
     (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ rfl
-    (fvNewOK m u ty hty) w m' hI
+    (fvNewOK m u ty hty) w m₁ hI
+
+include hR hty in
+/-- **`intern_fvar`'s model refines the arena's `internE` at an `fvar` node.** -/
+theorem fvintern_correct (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
+    AM.ok (internE (.fvar u.toNat (decE ty))) a ∧
+    FVarR m' (AM.st (internE (.fvar u.toNat (decE ty))) a) ∧
+    AM.res (internE (.fvar u.toNat (decE ty))) a = decE w := by
+  rw [fvinternW_eqK m u ty hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := fvintern_core m a hR u ty hty w m₁ h₁
+  exact ⟨hok, storeR_frame fvarSch FVRecRel fvhash fvarSch_wf [] [] fvarLocal [FVLP] []
+    (by simp [Apart, fvarSch, FVREC, FVSLOT, FVLP, SCB, POOL, CTL]) m₁ m'
+    (derPutW_frame FVLP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+
+include hR hty in
+/-- **The column across `intern_fvar`**: the new node's word is its record's bit (`hb`). -/
+theorem fvintern_lp (hC : ColT2 fvarLens FVLP lpW m a)
+    (hb : exprLPW m ty = b2w (ConLeche.lpOfData (a.store.derived (decE ty)))) (w : Word) (m' : Mem)
+    (hI : fvinternW m u ty = some (w, m')) :
+    ColT2 fvarLens FVLP lpW m' (AM.st (internE (.fvar u.toNat (decE ty))) a) := by
+  rw [fvinternW_eqK m u ty hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := fvintern_core m a hR u ty hty w m₁ h₁
+  have hcs := AM.proto_casesG fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
+  have hfr : m₁.arr64 FVLP = m.arr64 FVLP :=
+    (internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ h₁).1 FVLP (by simp [fvarSch, FVREC, FVSLOT, FVLP])
+      (by decide)
+  exact colMk fvarSch fvarSch_wf FVRecRel fvhash fvarLens FVLP lpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
+    hcs hres.symm (by rw [hb]; rw [lpW, lp_derFVar]) hput
 
 end intern
 

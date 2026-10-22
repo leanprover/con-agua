@@ -98,21 +98,12 @@ theorem litLocal : RLocal litSch RecRel litH [POOL] [0] := by
 theorem appLocal : RLocal appSch ARecRel ahash [] [] := by
   intro m m' hra _ _; simp only [appSch] at hra
   exact ⟨fun t i k h => by simpa only [ARecRel, hra] using h, fun t i => by simp only [ahash, hra]⟩
-theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by
-  intro m m' hra _ _; simp only [sortSch] at hra
-  exact ⟨fun t i k h => by simpa only [SoRecRel, hra] using h, fun t i => by simp only [sohash, hra]⟩
-theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by
-  intro m m' hra _ _; simp only [constSch] at hra
-  exact ⟨fun t i k h => by simpa only [CeRecRel, hra] using h, fun t i => by simp only [cehash, hra]⟩
 theorem letELocal : RLocal letSch LeRecRel lehash [] [] := by
   intro m m' hra _ _; simp only [letSch] at hra
   exact ⟨fun t i k h => by simpa only [LeRecRel, hra] using h, fun t i => by simp only [lehash, hra]⟩
 theorem bvarLocal : RLocal bvarSch BRecRel bhash [] [] := by
   intro m m' hra _ _; simp only [bvarSch] at hra
   exact ⟨fun t i k h => by simpa only [BRecRel, hra] using h, fun t i => by simp only [bhash, hra]⟩
-theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by
-  intro m m' hra _ _; simp only [fvarSch] at hra
-  exact ⟨fun t i k h => by simpa only [FVRecRel, hra] using h, fun t i => by simp only [fvhash, hra]⟩
 theorem lamLocal : RLocal lamSch LaRecRel lahash [] [] := by
   intro m m' hra _ _; simp only [lamSch] at hra
   exact ⟨fun t i k h => by simpa only [LaRecRel, hra] using h, fun t i => by simp only [lahash, hra]⟩
@@ -124,25 +115,9 @@ theorem projLocal : RLocal projSch PJRecRel pjhash [] [] := by
   exact ⟨fun t i k h => by simpa only [PJRecRel, hra] using h, fun t i => by simp only [pjhash, hra]⟩
 theorem zeroLocal : RLocal zeroSch ZRecRel zhash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
-theorem succLocal : RLocal succSch SRecRel shash [] [] := by
-  intro m m' hra _ _; simp only [succSch] at hra
-  exact ⟨fun t i k h => by simpa only [SRecRel, hra] using h, fun t i => by simp only [shash, hra]⟩
-theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by
-  intro m m' hra _ _; simp only [maxSch] at hra
-  exact ⟨fun t i k h => by simpa only [MRecRel, hra] using h, fun t i => by simp only [mhash, hra]⟩
-theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by
-  intro m m' hra _ _; simp only [imaxSch] at hra
-  exact ⟨fun t i k h => by simpa only [IRecRel, hra] using h, fun t i => by simp only [imhash, hra]⟩
 theorem paramLocal : RLocal paramSch PRecRel phash [] [] := by
   intro m m' hra _ _; simp only [paramSch] at hra
   exact ⟨fun t i k h => by simpa only [PRecRel, hra] using h, fun t i => by simp only [phash, hra]⟩
-theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL] [0] := by
-  intro m m' hra hb hc
-  have h0 := hc 0 (by simp)
-  have hp := hb POOL (by simp)
-  simp only [lsSch] at hra
-  refine ⟨fun t i k h => ?_, fun t i => by simp only [lshash, hra]⟩
-  simpa only [LsRecRel, lsO, lsL, hra, hp, top_rdW, h0] using h
 
 theorem nanonLocal : RLocal nanonSch NaRecRel nahash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
