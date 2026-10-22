@@ -143,15 +143,13 @@ def targetAbs : FunDecl := lfn (no, nl, lvls, ho, hl, e) locals (z, r) {
 member order. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:119-127 ConRon.Arena.targetHoles
 @[l_impl ConRon.Arena.targetHoles]
-def targetHoles : FunDecl := lfn (tyo, tyl, base) locals (q, j, v) {
-  q := call iw_alloc(tyl);
-  j := 0;
-  while j < tyl {
-    v := call intern_fvar(base + j, IW.u64[tyo + j]);
-    IW.u64[q + j] := v;
-    j += 1
-  };
-  return (q, tyl)
+def targetHoles : FunDecl := lfn (tyo, tyl, base) locals (v, ro, rl, qo, ql) {
+  if tyl == 0 { return (0, 0) };
+  v := call intern_fvar(base, IW.u64[tyo]);
+  if 4294967296 <= v { abort };
+  (ro, rl) := call target_holes(tyo + 1, tyl - 1, base + 1);
+  (qo, ql) := call sl_cons(v, ro, rl);
+  return (qo, ql)
 }
 
 /-! ## The major -/
@@ -456,11 +454,11 @@ def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
 /-- **`target_pin_tys`**: an outside major's parameters, typed at the rule prefix, in order. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:336-343 ConRon.Arena.targetPinTys
 @[l_impl ConRon.Arena.targetPinTys]
-def targetPinTys : FunDecl := lfn (vis, d, xo, xl) locals (j, u) {
-  j := 0;
-  while j < xl {
-    u := call infer_type_core(vis, d, IW.u64[xo + j]);
-    j += 1
+def targetPinTys : FunDecl := lfn (vis, d, xo, xl) locals (u) {
+  if xl == 0 { skip }
+  else {
+    u := call infer_type_core(vis, d, IW.u64[xo]);
+    u := call target_pin_tys(vis, d, xo + 1, xl - 1)
   }
 }
 
@@ -596,11 +594,12 @@ def targetRecPins : FunDecl := lfn (p, blocko, blockl)
 instantiated at the major's levels. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:401-407 ConRon.Arena.targetCtorAt
 @[l_impl ConRon.Arena.targetCtorAt]
-def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll) {
+def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   mem := IW.u64[M + 8];
   if mem != 0 { return EREC.u64[c + 3] };
+  us := IW.u64[M + 1];
   (lo, ll) := call cv_lps(c);
-  r := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[M + 1], EREC.u64[c + 3]);
+  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[c + 3]);
   return r
 }
 
@@ -694,20 +693,17 @@ def targetK53 : FunDecl := lfn (vis, p, fto, ftl, Mc, teo, tel, majDom, f) local
 the earlier `xs`; `(0, 0, 0)` when `e` runs out of binders first. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:450-464 ConRon.Arena.targetPiDomsWith
 @[l_impl ConRon.Arena.targetPiDomsWith]
-def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (q, j, tag, g, d, b, z, xj, cur) {
-  q := call iw_alloc(xl);
-  cur := e;
-  j := 0;
-  while j < xl {
-    tag := cur >> 28;
-    if tag != 6 { return (0, 0, 0) };
-    (g, d, b, z) := call e_view(cur);
-    xj := IW.u64[xo + j];
-    cur := call instantiate1_fast(⟪CWF⟫, b, xj, 0);
-    IW.u64[q + j] := d;
-    j += 1
-  };
-  return (1, q, xl)
+def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (tag, g, d, b, z, xj, cur, ok, ro, rl, qo, ql) {
+  if xl == 0 { return (1, 0, 0) };
+  tag := e >> 28;
+  if tag != 6 { return (0, 0, 0) };
+  (g, d, b, z) := call e_view(e);
+  xj := IW.u64[xo];
+  cur := call instantiate1_fast(⟪CWF⟫, b, xj, 0);
+  (ok, ro, rl) := call target_pi_doms_with(xo + 1, xl - 1, cur);
+  if ok == 0 { return (0, 0, 0) };
+  (qo, ql) := call sl_cons(d, ro, rl);
+  return (1, qo, ql)
 }
 
 /-! ## The stored family -/
@@ -715,30 +711,22 @@ def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (q, j, tag, g, d, b, z,
 /-- **`abstract_prefix`**: the free variables `0 … k-1` closed at cursor `c`, innermost first. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:468-476 ConRon.Arena.abstractPrefix
 @[l_impl ConRon.Arena.abstractPrefix]
-def abstractPrefix : FunDecl := lfn (k, c, e) locals (kk, cc, cur) {
-  kk := k;
-  cc := c;
-  cur := e;
-  while kk != 0 {
-    cur := call abstract1_fast(⟪CWF⟫, cur, kk - 1, cc);
-    cc += 1;
-    kk -= 1
-  };
-  return cur
+def abstractPrefix : FunDecl := lfn (k, c, e) locals (cur, r) {
+  if k == 0 { return e };
+  cur := call abstract1_fast(⟪CWF⟫, e, k - 1, c);
+  r := call abstract_prefix(k - 1, c + 1, cur);
+  return r
 }
 
 /-- **`abstract_prefix_list`**: `ds.map (abstractPrefix rP)`, in order. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:478-486 ConRon.Arena.abstractPrefixList
 @[l_impl ConRon.Arena.abstractPrefixList]
-def abstractPrefixList : FunDecl := lfn (rP, dso, dsl) locals (q, j, x) {
-  q := call iw_alloc(dsl);
-  j := 0;
-  while j < dsl {
-    x := call abstract_prefix(rP, 0, IW.u64[dso + j]);
-    IW.u64[q + j] := x;
-    j += 1
-  };
-  return (q, dsl)
+def abstractPrefixList : FunDecl := lfn (rP, dso, dsl) locals (x, qo, ql, ro, rl) {
+  if dsl == 0 { return (0, 0) };
+  x := call abstract_prefix(rP, 0, IW.u64[dso]);
+  (qo, ql) := call abstract_prefix_list(rP, dso + 1, dsl - 1);
+  (ro, rl) := call sl_cons(x, qo, ql);
+  return (ro, rl)
 }
 
 /-- **`aux_rule_fire`**: the firing mode of a rule at an OUTSIDE major — `.nested` at the class's
@@ -936,8 +924,8 @@ def recCheckForeign : Prog :=
 /-- The module closes over the library, the stubs and its foreign callees. -/
 theorem recCheck_wf :
     L.Compiler.Prog.wf indTab
-      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true := by
-  decide +kernel
+      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 -- `abstract_prefix` at `k = 0`: the identity.
 #guard

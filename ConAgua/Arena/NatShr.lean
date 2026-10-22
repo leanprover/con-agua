@@ -109,7 +109,21 @@ theorem shr_val (P : Array Word) (oa la w o l S R : Nat) (ho : o = oa + w) (hl :
   have m2 : wt w * pv P (oa + w) (la - w) + wt w ≤ wt w * (R * S + S) := by
     rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ h2
   apply Nat.div_eq_of_lt_le <;> grind
-grind_pattern [natop_grind] shr_val => pv P oa la / (S * wt w), pv P o l, R * S
+
+/-- The quotient by an amount `b = k` of at most one limb that skips `w = k >> 6 < la` limbs, in
+the shape the loop's post gives (`ShrPost`). Every variable of the pattern is bound by a term of
+that post, so it fires about once (DESIGN.md, "Slow declarations": `shr_val`'s own pattern
+`pv P oa la / (S * wt w), pv P o l, R * S` matched every `pv` and every product). -/
+theorem shr_small (P Q R : Array Word) (oa la ob lb o l t r : Nat) (k : Word)
+    (hk : pv Q ob lb = k.toNat) (ho : o = oa + (k >>> 6).toNat) (hl : l = la - (k >>> 6).toNat)
+    (hw : (k >>> 6).toNat < la)
+    (h : pv R t r * sh (k &&& 63).toNat + lowb (lv P o l 0) (k &&& 63).toNat = pv P o l) :
+    pv P oa la / 2 ^ pv Q ob lb = pv R t r := by
+  rw [hk, shamt]
+  exact shr_val P oa la _ o l _ _ ho hl hw (by omega)
+    (by have := lowb_lt (lv P o l 0) (k &&& 63).toNat; omega)
+grind_pattern [natop_grind] shr_small => pv P oa la / 2 ^ pv Q ob lb,
+  pv R t r * sh (k &&& 63).toNat, lowb (lv P o l 0) (k &&& 63).toNat
 
 /-- Skipping all of `a`: the quotient is `0`. -/
 theorem shr_big_w (P : Array Word) (oa la w S : Nat) (hw : la ≤ w) (hS : 0 < S) :

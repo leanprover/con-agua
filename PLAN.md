@@ -59,6 +59,13 @@ per-function separation logic.
 - Pass a recursive function to `vcgen` as `f.eq_def`. Keep the case splits that make IHs apply. Prove recursive
   triples by `induction`, not by recursive pattern matching.
 - A raised `finish (gen := N)` sets depth, not search; comment it. Failing runs cost far more than passing ones.
+- Concrete checks by `decide +kernel` never compare `String`s in bulk: each comparison unfolds to UTF-8
+  byte lists, and `List.Nodup`'s instance is slow even on `Nat`s. Program well-formedness goes through
+  `Prog.wf_of_wfFast (by decide +kernel)` (names as `Nat` codes in a search tree; DESIGN.md, "Slow
+  declarations").
+- Every variable of a `grind_pattern` is bound by a term specific to the goal. A multi-pattern with a
+  generic piece (`pv P o l`, `R * S`) instantiates once per matching term and splits on each instance's
+  hypotheses (600 instances, 52 s in `natShr_spec`); state the lemma in the shape of the callee's post.
 - Known vcgen gaps: no `eq_def` fallback; `ite` equations are ignored; an over-applied `ite` doesn't split; specs
   aren't found through projections; precondition-only arguments stay metavariables; pattern lambdas from another
   module don't match; equation generation fails for structural recursion that matches under a bind. Kraken's
@@ -86,6 +93,19 @@ per-function separation logic.
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
   on master after each batch of landings, so the time series has one line per master state and lanes never
   conflict on these files.
+
+## Build statistics (file size, elaboration time)
+- `scripts/buildstats.py` measures lines per `.lean` file under `ConAgua/`, elaboration seconds per module, and
+  every elaboration step above 1 s (Lean profiler, with `file:line`), in its own worktree
+  `_tmp/wt/buildstats-run` built without the shared Lake cache, niced, on 16 cores, killed above 20 GB (PSS).
+  Default is incremental (only modules changed since the last run are re-measured); `--full` re-measures
+  everything (~20 CPU-minutes); `--lines-only` needs no build; `--write` regenerates `docs/buildstats.md`
+  and appends to `docs/buildstats.csv` (measurements live in `docs/buildstats.json`). Thresholds are
+  constants at the top of the script.
+- **Who runs it.** Only the coordinator, a few times a day in the background, on master. Files on the
+  watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.
+  Declarations on it (a step over 20 s) are investigated by a separate lane off the critical path.
+  **No lane adds time gates to merging**; this report is advisory.
 
 ## Bumping the twin (con-ron, and the con-leche it pins)
 - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream

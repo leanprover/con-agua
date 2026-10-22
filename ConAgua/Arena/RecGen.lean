@@ -507,17 +507,14 @@ def classRecsRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvG
 /-- `class_stream_recs(vis, rcs.off, rcs.len)`: the stream's recursor constants, checked. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:622-629 ConRon.Arena.classStreamRecs
 @[l_impl ConRon.Arena.classStreamRecs]
-def classStreamRecsL : FunDecl := lfn (vis, rcsOff, rcsLen) locals (q, j, rc, cv, r) {
-  q := call iw_alloc(rcsLen);
-  j := 0;
-  while j < rcsLen {
-    rc := IW.u64[rcsOff + j];
-    cv := IW.u64[rc];
-    r := call check_constant_val(vis, cv);
-    IW.u64[q + j] := cv;
-    j += 1
-  };
-  return (q, rcsLen)
+def classStreamRecsL : FunDecl := lfn (vis, rcsOff, rcsLen) locals (rc, cv, r, ro, rl, qo, ql) {
+  if rcsLen == 0 { return (0, 0) };
+  rc := IW.u64[rcsOff];
+  cv := IW.u64[rc];
+  r := call check_constant_val(vis, cv);
+  (ro, rl) := call class_stream_recs(vis, rcsOff + 1, rcsLen - 1);
+  (qo, ql) := call sl_cons(cv, ro, rl);
+  return (qo, ql)
 }
 
 /-- `class_key_canon(params.off, params.len, k)`: `k`'s parameters moved to the canonical ones. -/
@@ -887,8 +884,8 @@ def recGenForeign : Prog :=
 foreign callees of other `induct` modules. -/
 theorem recGen_wf :
     L.Compiler.Prog.wf indTab (recGenFns ++ libFns ++ stubFns ++ masterFns ++ recGenForeign)
-      = true := by
-  decide +kernel
+      = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## A pure-enough slice, exercised -/
 

@@ -1,6 +1,7 @@
 import ConAgua.Front.ApplyDecl
 import ConAgua.Compiler.WF
 import ConAgua.Census.Attr
+import ConAgua.Compiler.WFFast
 
 /-!
 # The fields of an `inductive` line (lane `induct`, worker I)
@@ -329,7 +330,7 @@ def indFieldsForeign : Prog :=
 calls), six result words. -/
 def frontIndTab : L.Compiler.Tab := { nb := 1, nw := 224, nres := 6, rom := [] }
 
-theorem indFields_wf : L.Compiler.Prog.wf frontIndTab (indFieldsFns ++ indFieldsForeign) = true := by
-  decide +kernel
+theorem indFields_wf : L.Compiler.Prog.wf frontIndTab (indFieldsFns ++ indFieldsForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Front.Ind

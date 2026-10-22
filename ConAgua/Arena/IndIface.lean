@@ -2,6 +2,7 @@ import ConAgua.Arena.Env
 import ConRon.Arena.CheckDecl
 import ConAgua.Census.Attr
 import ConAgua.Compiler.WF
+import ConAgua.Compiler.WFFast
 
 /-!
 # The inductive stage in L: the interface (lane `induct`)
@@ -337,10 +338,12 @@ def decW0N (_m : Mem) (r : List Word) (e : NIdx) : Prop := (r.headD 0).toNat < 2
 def decW0B (_m : Mem) (r : List Word) (b : Bool) : Prop := (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1
 def decW0Nat (_m : Mem) (r : List Word) (k : Nat) : Prop := (r.headD 0).toNat = k
 def decUnit (_m : Mem) (_r : List Word) (_u : Unit) : Prop := True
-/-- An `IW` list `(r[i], r[i+1])`. -/
+/-- An `IW` list `(r[i], r[i+1])`, below the pool's top (so it stays decoded while the pool grows,
+and can be passed to `sl_cons`; lane `indproofs`, at helper `rec`'s request). -/
 def decRL {α : Type} (g : Mem → Nat → Nat → Option (List α)) (i : Nat) (m : Mem) (r : List Word)
     (l : List α) : Prop :=
-  g m (r.getD i 0).toNat (r.getD (i + 1) 0).toNat = some l
+  g m (r.getD i 0).toNat (r.getD (i + 1) 0).toNat = some l ∧
+    (r.getD i 0).toNat + (r.getD (i + 1) 0).toNat ≤ iwTop m
 /-- `Option (List EIdx × EIdx)` as `(ok, off, len, e)`. -/
 def decOLE (m : Mem) (r : List Word) : Option (List EIdx × EIdx) → Prop
   | none => r.headD 0 = 0
@@ -806,8 +809,8 @@ end L.Ind
 namespace L.Ind
 
 /-- The library closes over itself and the stubs. -/
-theorem libFns_wf : L.Compiler.Prog.wf indTab (libFns ++ stubFns ++ masterFns) = true := by
-  decide +kernel
+theorem libFns_wf : L.Compiler.Prog.wf indTab (libFns ++ stubFns ++ masterFns) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Ind
 
