@@ -235,18 +235,15 @@ per-component parameter defeq over the recursor prefix `pfvs` with the member ho
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:210-224 ConRon.Arena.targetClassMatch
 @[l_impl ConRon.Arena.targetClassMatch]
 def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl)
-    locals (e, mno, mnl, mo, ml, lpso, lpsl, m0, cvt0, blvls, ho, hl, d, r) {
+    locals (e, mno, mnl, lpso, lpsl, blvls, ho, hl, d, r) {
   e := call lvls_eq_c(us, lvls);
   if e != 2 { return 0 };
   (mno, mnl) := call block_shape_member_names(p);
-  mo := IW.u64[p];
-  ml := IW.u64[p + 1];
-  if ml == 0 { lpso := 0; lpsl := 0 }
-  else { m0 := IW.u64[mo]; cvt0 := IW.u64[m0]; (lpso, lpsl) := call cv_lps(cvt0) };
+  (lpso, lpsl) := call block_shape_lps(p);
   blvls := call param_levels(lpso, lpsl);
-  (ho, hl) := call target_holes(fto, ftl, pfl);
   d := pfl + ftl;
   if d < pfl { abort };
+  (ho, hl) := call target_holes(fto, ftl, pfl);
   r := call target_params_def_eq(vis, d, mno, mnl, blvls, ho, hl, pfo, pfl, dso, dsl, edso, edsl);
   return r
 }
@@ -897,7 +894,7 @@ def recCheckForeign : Prog :=
    ("block_rec_lps_ok", stub 1), ("block_rec_names_unreserved", stub 2),
    ("block_rec_name_set_ok", stub 4), ("block_split", stub 2),
    ("block_shape_major_idx_at", stub 2), ("block_shape_rule_prefix_at", stub 2),
-   ("pi_binders", stub 2), ("sum_rules", stub 7)]
+   ("pi_binders", stub 2), ("sum_rules", stub 7), ("block_shape_lps", stub 1)]
 
 /-- The module closes over the library, the stubs and its foreign callees. -/
 theorem recCheck_wf :
