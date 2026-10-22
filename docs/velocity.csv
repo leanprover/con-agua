@@ -45,3 +45,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,induct,opus,25,25,"after the restarts: sl_find model (findW_ok), classOfMotiveVar proved, stale phase-8 flags reviewed (doc-only changes below), gitignore _tmp fix; helpers restarted"
 2026-10-21,decls,opus,25,4,"and_pin_ok refines andPinOk (one-constant records; stub gone); EnvR/PendR decode in EREC below its top (erecP) with ArrExt stability and EnvR.grow (induct request); DeclBase split; DESIGN"
 2026-10-22,decls,opus,20,15,"rom_level refines internLevel; l_impl on a FunDecl (internReservedPinsL); decI_iff rename (census clash); IndPos2Spec adapted to erecP; two machine restarts"
+2026-10-22,decls,opus,35,4,"rom_levels refines internLevels, rom_lvls_go refines internLevelList (RSTK stack 138/CTL[131], stk_pool copy to the pool); frameHi moved to Rom"
