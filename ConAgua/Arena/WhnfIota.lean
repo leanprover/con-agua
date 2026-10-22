@@ -38,7 +38,8 @@ everything it calls that is not already owned by another file (`WhnfSpine.lean`'
   its level-algorithm leaf. `rec_fire_args`/`inst_spine_pins`/`inst_spine` are NOT stubs: they only
   need `inst_lp` (already a `WhnfCallees` stub) and `inst_entry` (real), so they are written out in
   full.
-* `wscoped_bfast(d, e)`, `loose_bvars_bounded_fast(c, e)`, `leaf_guard(fab, major)`: the task's own
+* `wscoped_bfast(d, e)`, `loose_bvars_bounded_fast(f, c, e)` (now real: lane `exprops4`'s, `f` the
+  counter, `CoreWalks.lean`), `leaf_guard(fab, major)`: the task's own
   "phase 4 walks, stubs too".
 * `lit_to_ctor_if_nat(vis, h)`: "written by another agent in `WhnfDelta.lean`" (which does not
   exist yet); called by name.
@@ -292,7 +293,7 @@ phase-4-walk stubs. -/
 def fabScopeOkL : FunDecl := lfn (d, fab, major) locals (ok) {
   ok := call wscoped_bfast(d, fab);
   if ok == 0 { return 0 };
-  ok := call loose_bvars_bounded_fast(0, fab);
+  ok := call loose_bvars_bounded_fast(4000000000, 0, fab);
   if ok == 0 { return 0 };
   ok := call leaf_guard(fab, major);
   return ok
@@ -911,7 +912,7 @@ phase-4 walk stub). -/
 def LooseBVarsBoundedFastOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb c e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
-    CoreSpec p n "loose_bvars_bounded_fast" [c, e]
+    CoreSpec p n "loose_bvars_bounded_fast" [4000000000, c, e]
       (looseBVarsBoundedFast coreWalkFuel c.toNat (decE e)) decBool s₀ a₀ dn vis fe MM eb
 
 /-- `leaf_guard(fab, major)` refines `leafGuard coreWalkFuel fab major` (a phase-4 walk stub). -/

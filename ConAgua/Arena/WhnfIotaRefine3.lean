@@ -518,7 +518,7 @@ def fsW (p : Prog) (k : Nat) (m : Mem) (d fab major : Word) : Option (List Word 
   | none => none
   | some (r₁, m₁) =>
     if r₁.headD 0 = 0 then some ([0], m₁)
-    else match callW p k "loose_bvars_bounded_fast" [0, fab] m₁ with
+    else match callW p k "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with
       | none => none
       | some (r₂, m₂) =>
         if r₂.headD 0 = 0 then some ([0], m₂)
@@ -601,7 +601,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   rw [if_neg h0] at hW
   have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
   rw [hb] at hrun1
-  cases hc2 : callW p n "loose_bvars_bounded_fast" [0, fab] m₁ with
+  cases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with
   | none => rw [hc2] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q

@@ -1,3 +1,4 @@
+import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WhnfDeltaRefine2
 
 /-!
@@ -930,27 +931,14 @@ def NatOpResultOK (p : Prog) : Prop :=
       (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
         (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) decOptR s₀ a₀ dn vis fe MM eb (fun _ => True)
 
-/-- The 32-bit mask keeps a handle word's handle. -/
-theorem decE_mask32 (y : Word) : decE (y &&& 4294967295) = decE y := by
-  have h : (y &&& 4294967295).toUInt32 = y.toUInt32 := by
-    apply UInt32.toNat_inj.mp
-    simp only [UInt64.toNat_toUInt32, UInt64.toNat_and]
-    rw [show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod,
-      Nat.mod_mod]
-  simp only [decE, h]
-
-theorem hw_mask32 (y : Word) : HW (y &&& 4294967295) := by
-  unfold HW
-  rw [UInt64.toNat_and, show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl,
-    Nat.and_two_pow_sub_one_eq_mod]
-  exact Nat.mod_lt _ (by decide)
+theorem hw_mask32 (y : Word) : HW (y &&& 4294967295) := and32_lt y
 
 /-- `reduce_nat_op`'s normalised result reads as `nat_op_result`'s. -/
 theorem decOpt_norm (x y : Word) :
     decOpt (Cmp.evalW .ne x 0) (BinOp.eval .and y 4294967295) = decOpt x y := by
   by_cases hx : x = 0
   · subst hx; simp [decOpt, Cmp.evalW, Cmp.eval]
-  · simp [decOpt, Cmp.evalW, Cmp.eval, hx, BinOp.eval, decE_mask32]
+  · simp [decOpt, Cmp.evalW, Cmp.eval, hx, BinOp.eval, decE_and32]
 
 theorem resW_norm (x y : Word) : ResW [Cmp.evalW .ne x 0, BinOp.eval .and y 4294967295] := by
   refine ⟨?_, hw_mask32 y⟩
