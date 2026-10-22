@@ -19,8 +19,8 @@ slices of the spine stack `SPN` (array 144, top `CTL[136]`). The telescopes' sec
 stack `BSTK`** (array 145, top `CTL[137]`, lane `defeq`; outside every tier of `CoreS`, which
 `CoreS.frame` already allows). Both tops are put back before a function returns.
 
-**Callees not written yet** (stubs, `DefeqCallees` in `Knot.lean`): `abstract1(e, d, k)`
-(`abstract1Fast coreWalkFuel`), `abstract_range(e, d, k, c)` (`abstractRangeFast coreWalkFuel`),
+**Callees not written yet** (stubs, `DefeqCallees` in `Knot.lean`): `abs_entry(e, d, k)`
+(`abstract1Fast coreWalkFuel`), `ar_entry(e, d, k, c)` (`abstractRangeFast coreWalkFuel`),
 `field_sort_zero(po, pl, us, fs)` (`Level.isEquiv (Level.subst ks vs fs) .zero == some true` on
 the readbacks, `inferProj`'s propositional-structure test); from lane `whnf`: `inst_list`,
 `inst1`, `inst_lp`, `find_proj`, `str_lit_supported`.
@@ -50,7 +50,8 @@ def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
 }
 
 /-- The `.const n us` clause of both bodies: the stored constant (not a projection table), the
-level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache). -/
+level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
+(word `p + 1`, the twin's `cv.name`; the cache key). -/
 -- con-ron: ConRon/Arena/Core.lean:2737-2800 ConRon.Arena.inferBody
 -- con-ron: ConRon/Arena/Core.lean:2802-2874 ConRon.Arena.inferBodyIO
 -- con-ron: ConRon/Arena/Core.lean:228-242 ConRon.Arena.unknownConstError
@@ -61,7 +62,7 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
   if EREC.u64[p] == 6 { abort };
   (lo, l) := call ls_node(us);
   if l != EREC.u64[p + 3] { abort };
-  r := call const_ty_at(n, EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
+  r := call const_ty_at(EREC.u64[p + 1], EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4], us);
   return r
 }
 
@@ -92,7 +93,7 @@ def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
 /-- con-ron: ConRon/Arena/Core.lean:2448-2454 ConRon.Arena.inferLamResult -/
 @[l_impl ConRon.Arena.inferLamResult]
 def inferLamResultL : FunDecl := lfn (ty, bt, d) locals (ab, r) {
-  ab := call abstract1(bt, d, 0);
+  ab := call abs_entry(bt, d, 0);
   r := call mk_forall(ty, ab);
   return r
 }
@@ -110,11 +111,11 @@ is the exact counter `peel`. -/
 def inferLamsLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, cur, n, ta) {
   ob := call inst_list(t, fo, k, 0);
   bt := call infer(mode, vis, d + k, ob);
-  cur := call abstract_range(bt, d, k, 0);
+  cur := call ar_entry(bt, d, k, 0);
   n := k;
   while n != 0 {
     n -= 1;
-    ta := call abstract_range(BSTK.u64[lo + n], d, n, 0);
+    ta := call ar_entry(BSTK.u64[lo + n], d, n, 0);
     cur := call mk_forall(ta, cur)
   };
   return cur
