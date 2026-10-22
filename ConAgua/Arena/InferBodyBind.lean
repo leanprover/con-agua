@@ -176,6 +176,11 @@ def lamsLeafK (p : Prog) (n : Nat) (m : Mem) (mode vis d t k fo lo : Word) : Opt
 /-- What the telescope specs need of a program. -/
 structure BindProg (p : Prog) : Prop where
   lamsLeaf : p.lookup "infer_lams_leaf" = some inferLamsLeafL
+  lams : p.lookup "infer_lams" = some inferLamsL
+  lam : p.lookup "infer_lam" = some inferLamL
+  pisLeaf : p.lookup "infer_pis_leaf" = some inferPisLeafL
+  pis : p.lookup "infer_pis" = some inferPisL
+  fa : p.lookup "infer_forall" = some inferForallL
 
 theorem inferLamsLeaf_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St)
     (mode vis d t k fo lo : Word) :
@@ -340,5 +345,188 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
     (by rw [hK₂.2.1, hK₁.2.1]; exact hsz)
   exact (lamsOut_ref p hp hab hbc hcap dn vis fe eb d lo k ws hws (n + 1) m₃ _ M₃ k (r₃.headD 0) hS₃
     h₃.2.2.2 hB₃ (Nat.le_refl _) (by rw [hK₃.1, hK₂.1, hK₁.1]; exact hbtop) _ _ hW).1
+
+/-! ## `infer_lams`: the peel loop as a named block -/
+
+/-- The peel loop of `inferLamsL` (Infer.lean), named for its spec. -/
+def lamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, fv, r) {
+  while peel != 0 && t >> 28 == 5 {
+    s := (t >> 27) & 1;
+    i := t & 134217727;
+    if s != 0 && CTL.u64[1] == 0 { abort };
+    if CTL.u64[28 + s] <= i { abort };
+    ty := LAREC.u64[i * 4 + s * 2];
+    body := LAREC.u64[i * 4 + s * 2 + 1];
+    tyo := call inst_list(ty, fo, k, 0);
+    tty := call infer(mode, vis, d + k, tyo);
+    w := call whnf(mode, vis, d + k, tty);
+    if w >> 28 != 2 { abort };
+    fv := call intern_fvar(d + k, tyo);
+    if len(SPN.u64) <= fo + k { abort };
+    if len(BSTK.u64) <= lo + k { abort };
+    SPN.u64[fo + k] := fv;
+    BSTK.u64[lo + k] := tyo;
+    k += 1;
+    CTL.u64[136] := fo + k;
+    CTL.u64[137] := lo + k;
+    peel -= 1;
+    t := body
+  }
+}
+
+/-- `inferLamsL`, with its loop spliced from `lamsW`. -/
+-- con-ron: none — `inferLamsL` itself (`rfl`), its loop a named block for the proof
+def inferLamsL' : FunDecl :=
+    lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, fv, r) {
+  ⟪lamsW⟫;
+  r := call infer_lams_leaf(mode, vis, d, t, k, fo, lo);
+  return r
+}
+
+theorem inferLamsL_eq : inferLamsL = inferLamsL' := rfl
+
+/-- The two pushes of a telescope step and the two tops. -/
+def tPush (m : Mem) (fo lo k fv x : Word) : Mem :=
+  (((m.set64 SPN (fo + k) fv).set64 BSTK (lo + k) x).set64 CTL 136 (fo + (k + 1))).set64 CTL 137
+    (lo + (k + 1))
+
+/-- The guards of a telescope step's pushes (the length checks, then `st64`'s bounds). -/
+def tPushOK (m : Mem) (fo lo k : Word) : Prop :=
+  ¬ m.len64 SPN ≤ fo + k ∧ ¬ m.len64 BSTK ≤ lo + k ∧ (fo + k).toNat < (m.arr64 SPN).size ∧
+    (lo + k).toNat < (m.arr64 BSTK).size ∧ 137 < (m.arr64 CTL).size
+
+instance (m : Mem) (fo lo k : Word) : Decidable (tPushOK m fo lo k) := by
+  unfold tPushOK; infer_instance
+
+/-- **The model of the λ peel loop** at L fuel `n`: the exit's `(t, k, memory)`. -/
+def lamsLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option (Word × Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _ => none
+  | n + 1, m, mode, vis, d, peel, t, k, fo, lo =>
+    if peel ≠ 0 ∧ t >>> 28 = 5 then
+      if tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+      else if rdW (m.arr64 CTL) (28 + tierW t) ≤ idxW t then none
+      else
+        match callW p n "inst_list" [rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2), fo, k, 0] m with
+        | none => none
+        | some (r₁, m₁) =>
+          match callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
+          | none => none
+          | some (r₂, m₂) =>
+            match callW p n "whnf" [mode, vis, d + k, r₂.headD 0] m₂ with
+            | none => none
+            | some (r₃, m₃) =>
+              if r₃.headD 0 >>> 28 ≠ 2 then none
+              else
+                match callW p n "intern_fvar" [d + k, r₁.headD 0] m₃ with
+                | none => none
+                | some (r₄, m₄) =>
+                  if tPushOK m₄ fo lo k then
+                    lamsLoop p n (tPush m₄ fo lo k (r₄.headD 0) (r₁.headD 0)) mode vis d (peel - 1)
+                      (rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2 + 1)) (k + 1) fo lo
+                  else none
+    else some (t, k, m)
+
+theorem lamsW_spec (p : Prog) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n lamsW
+    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+      s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
+      lamsLoop p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
+        (s₀.loc 6) (s₀.loc 7) = some (s'.loc 4, s'.loc 5, s'.mem); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := lamsW) rfl]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
+      callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
+      callW_spec p n "intern_fvar"] <;>
+    simp_all [lamsLoop, tPush, tPushOK, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
+
+/-- **The model of `infer_lams`.** -/
+def lamsFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d peel t kk fo lo : Word) : Option (Word × Mem) :=
+  match lamsLoop p k m mode vis d peel t kk fo lo with
+  | none => none
+  | some (t', k', m') => call1W p n "infer_lams_leaf" [mode, vis, d, t', k', fo, lo] m'
+
+theorem inferLams_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St)
+    (mode vis d peel t k fo lo : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lams" [mode, vis, d, peel, t, k, fo, lo]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      lamsFull p n (n + 1) s₀.mem mode vis d peel t k fo lo = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hq.lams, inferLamsL_eq]
+  simp only [callFn, inferLamsL']
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      fun s => Triple.step_exec (lamsW_spec p (n + 1) s), callW_spec p n "infer_lams_leaf"] <;>
+  simp_all [lamsFull, call1W, LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
+    Locals.init_cons_succ]
+
+/-- **A telescope step's two pushes**: both slices grow by their word, both tops with them, the
+spine stack below the slice is kept, the relation holds. -/
+theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb fo lo k fv x : Word} {fvs : Array EIdx} {ws : Array Word}
+    (hS : CoreS dn m a vis fe M eb) (hcap : (m.arr64 BSTK).size < 2 ^ 63)
+    (hf : SpineR m fo k fvs) (hB : BStkR m lo k ws)
+    (hb : ∀ j, j < fo → spW m j = spW m₀ j) (hsz : (m.arr64 SPN).size = (m₀.arr64 SPN).size)
+    (hok : tPushOK m fo lo k) (hfv : HW fv) :
+    CoreS dn (tPush m fo lo k fv x) a vis fe M eb ∧
+      SpineR (tPush m fo lo k fv x) fo (k + 1) (fvs.push (decE fv)) ∧
+      spTop (tPush m fo lo k fv x) = fo + (k + 1) ∧
+      BStkR (tPush m fo lo k fv x) lo (k + 1) (ws.push x) ∧
+      bTop (tPush m fo lo k fv x) = lo + (k + 1) ∧
+      (∀ j, j < fo → spW (tPush m fo lo k fv x) j = spW m₀ j) ∧
+      ((tPush m fo lo k fv x).arr64 SPN).size = (m₀.arr64 SPN).size ∧
+      ((tPush m fo lo k fv x).arr64 BSTK).size = (m.arr64 BSTK).size := by
+  obtain ⟨-, -, h1, h2, h3⟩ := hok
+  have hspn := hS.spn
+  have hco := hf.bound
+  have hadd : (fo + k).toNat = fo.toNat + k.toNat := addW _ _ (by omega)
+  obtain ⟨m₁, hm₁⟩ : ∃ m₁, m₁ = m.set64 SPN (fo + k) fv := ⟨_, rfl⟩
+  obtain ⟨m₂, hm₂⟩ : ∃ m₂, m₂ = m₁.set64 BSTK (lo + k) x := ⟨_, rfl⟩
+  obtain ⟨m₃, hm₃⟩ : ∃ m₃, m₃ = m₂.set64 CTL 136 (fo + (k + 1)) := ⟨_, rfl⟩
+  have htp : tPush m fo lo k fv x = m₃.set64 CTL 137 (lo + (k + 1)) := by
+    rw [hm₃, hm₂, hm₁]; rfl
+  have e1 : m₂.arr64 SPN = m₁.arr64 SPN := by rw [hm₂]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have e2 : m₁.arr64 BSTK = m.arr64 BSTK := by rw [hm₁]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have eS : (tPush m fo lo k fv x).arr64 SPN = m₁.arr64 SPN := by
+    rw [htp, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hm₃, Mem.arr64_set64_ne _ _ _ _ _ (by decide), e1]
+  have eB : (tPush m fo lo k fv x).arr64 BSTK = m₂.arr64 BSTK := by
+    rw [htp, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hm₃, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hS₁ : CoreS dn m₁ a vis fe M eb := by
+    rw [hm₁]
+    exact hS.frame_stk (MemFrame.set64 m SPN (by decide) _ fv) (by simp) (by simp)
+  have hS₂ : CoreS dn m₂ a vis fe M eb := by
+    rw [hm₂]; exact (hS₁.frame (MemFrame.set64 m₁ BSTK (by decide) _ x) (by simp [BSTK]) (by simp)).1
+  have hS₃ : CoreS dn m₃ a vis fe M eb := by
+    rw [hm₃]
+    exact hS₂.frame_stk (MemFrame.setCtl m₂ 136 _) (by simp) (by simp)
+  have hS₄ : CoreS dn (tPush m fo lo k fv x) a vis fe M eb := by
+    rw [htp]; exact (hS₃.frame (MemFrame.setCtl m₃ 137 _) (by simp) (by simp)).1
+  have h136 : (136 : Word).toNat < (m.arr64 CTL).size := Nat.lt_trans (by decide) h3
+  have h137 : (137 : Word).toNat < (m.arr64 CTL).size := by simpa using h3
+  have hfv' := (hf.push hspn (by rw [← hadd]; exact h1) fv hfv)
+  rw [← hm₁] at hfv'
+  have hsz1 : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact size_set64 _ _ _ _ _
+  have hctl : ∀ {mm : Mem} (c v : Word), ((mm.set64 CTL c v).arr64 SPN) = mm.arr64 SPN := fun c v =>
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  refine ⟨hS₄, ⟨hfv'.size, by rw [eS]; exact hfv'.bound, fun i hi => by simp only [spW, eS]; exact hfv'.lt i hi,
+    fun i hi => by simp only [spW, eS]; exact hfv'.get i hi⟩, ?_, ?_, ?_, ?_, by rw [eS, hsz1, hsz],
+    by rw [eB, hm₂, size_set64, e2]⟩
+  · simp only [spTop]
+    rw [htp, rdW_set64, if_neg (fun h => absurd h.2.1 (by decide)), hm₃, rdW_set64, if_pos ⟨rfl, rfl, by
+      rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
+  · have hB₁ : BStkR m₁ lo k ws := hB.frame e2
+    have hpush := hB₁.push (by rw [e2]; exact hcap) (by rw [e2]; exact h2) x
+    rw [← hm₂] at hpush
+    exact hpush.frame eB
+  · simp only [bTop]
+    rw [htp, rdW_set64, if_pos ⟨rfl, rfl, by rw [hm₃, hm₂, hm₁, size_set64, size_set64, size_set64]; exact h137⟩]
+  · intro j hj
+    simp only [spW, eS]
+    rw [show rdW (m₁.arr64 SPN) j = spW m₁ j from rfl, hm₁, spW_set64_ne _ _ _ _ (fun h => by
+      have := UInt64.lt_iff_toNat_lt.mp hj; rw [← h, hadd] at this; omega)]
+    exact hb j hj
 
 end L.Arena
