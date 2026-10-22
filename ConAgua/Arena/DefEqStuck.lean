@@ -49,6 +49,10 @@ structure StuckProg (p : Prog) : Prop where
   stuckRest : p.lookup "stuck_rest" = some stuckRestL
   defeqStuck : p.lookup "defeq_stuck" = some defeqStuckL
   eview : p.lookup "e_view" = some L.Ind.eView
+  ldprExit : p.lookup "ldpr_exit" = some ldprExitL
+  ldpr : p.lookup "lazy_delta_proj_reduction" = some lazyDeltaProjReductionL
+  projPair : p.lookup "defeq_proj_pair" = some defeqProjPairL
+  defeqTail : p.lookup "defeq_tail" = some defeqTailL
 
 /-- `defeq_lst(mode, vis, d, ao, an, bo, bn)` refines the twin's `defEqList` on two stack slices
 below the top (helper `defeq-mid` proves it; a hypothesis here). -/
@@ -83,6 +87,37 @@ def LvlsEqCH (p : Prog) : Prop :=
     CoreSpec p n "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs)) (fun r => decO (r.headD 0))
       s₀ a₀ dn vis fe M eb
 
+instance : Inhabited DeltaStepA := ⟨.unknown⟩
+
+/-- A `DeltaStepA` result: `(k, a, b)`, `0` `.cont a b`, `1` `.eq`, `2` `.diff`, else `.unknown`. -/
+def decDS (r : List Word) : DeltaStepA :=
+  if r.headD 0 = 0 then .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0))
+  else if r.headD 0 = 1 then .eq
+  else if r.headD 0 = 2 then .diff
+  else .unknown
+
+/-- The three result words are handle words. -/
+def ResW3 (r : List Word) : Prop := HW (r.headD 0) ∧ HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0)
+
+/-- `lazy_delta_step` refines `lazyDeltaStep` at the knot (helper `defeq-mid`'s; a hypothesis). -/
+def LazyDeltaStepH (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    CoreSpec p (n + 1) "lazy_delta_step" [mode, vis, d, a, b]
+      (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      decDS s₀ a₀ dn vis fe M eb ResW3
+
+/-- `reduce_proj_core` refines `reduceProjCore` (lane `whnf`'s `reduceProjCore_refines'`, over its
+own stub callees; a hypothesis here). -/
+def ReduceProjCoreH (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d sn i c : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW sn → HW c →
+    CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW
+
 /-- The callees the stuck side assumes. -/
 structure StuckCallees (p : Prog) : Prop where
   defeq : DefeqCallees p
@@ -96,6 +131,8 @@ structure StuckCallees (p : Prog) : Prop where
   strLitCtor : StrLitCtorOK p
   /-- `strLitSupported` keeps every stored node's view (`supKeep_twin`, a `sorry` in `WhnfBase`). -/
   supKeep : ∀ fe, SupKeep fe
+  lazyDeltaStep : LazyDeltaStepH p
+  reduceProjCore : ReduceProjCoreH p
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :

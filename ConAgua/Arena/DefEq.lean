@@ -675,36 +675,53 @@ def lazyDeltaReductionL : FunDecl :=
   abort
 }
 
-/-- The projection loop on its uncounted budget. -/
+/-- The projection loop's exit on a verdict `k` (`1` equal, else the projections tried on both
+sides; split off for the proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:3295-3315 ConRon.Arena.lazyDeltaProjReduction
 @[l_impl ConRon.Arena.lazyDeltaProjReduction]
-def lazyDeltaProjReductionL : FunDecl :=
-    lfn (mode, vis, d, sn, i, a, b) locals (k, x, y, fx, px, fy, py, r) {
+def ldprExitL : FunDecl := lfn (mode, vis, d, sn, i, a, b, k) locals (fx, px, fy, py, r) {
+  if k == 1 { return 1 };
+  (fx, px) := call reduce_proj_core(mode, vis, d, sn, i, a);
+  if fx != 0 {
+    (fy, py) := call reduce_proj_core(mode, vis, d, sn, i, b);
+    if fy != 0 {
+      r := call defeq(mode, vis, d, px, py);
+      return r
+    }
+  };
+  r := call defeq(mode, vis, d, a, b);
+  return r
+}
+
+/-- The projection loop, named for its spec. -/
+def ldprLoopB : Stmt := lblk (mode, vis, d, sn, i, a, b, k, x, y, r) {
   while 0 == 0 {
     (k, x, y) := call lazy_delta_step(mode, vis, d, a, b);
     if k != 0 {
-      if k == 1 { return 1 };
-      (fx, px) := call reduce_proj_core(mode, vis, d, sn, i, a);
-      if fx != 0 {
-        (fy, py) := call reduce_proj_core(mode, vis, d, sn, i, b);
-        if fy != 0 {
-          r := call defeq(mode, vis, d, px, py);
-          return r
-        }
-      };
-      r := call defeq(mode, vis, d, a, b);
+      r := call ldpr_exit(mode, vis, d, sn, i, a, b, k);
       return r
     };
     a := x;
     b := y
-  };
+  }
+}
+
+/-- The projection loop on its uncounted budget. -/
+-- con-ron: ConRon/Arena/Core.lean:3295-3315 ConRon.Arena.lazyDeltaProjReduction
+@[l_impl ConRon.Arena.lazyDeltaProjReduction]
+def lazyDeltaProjReductionL : FunDecl :=
+    lfn (mode, vis, d, sn, i, a, b) locals (k, x, y, r) {
+  ⟪ldprLoopB⟫;
   abort
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3317-3330 ConRon.Arena.defeqProjPair -/
+/-- Each test its own `if`, the second record's words loaded before the tests (the proof's
+paths).
+con-ron: ConRon/Arena/Core.lean:3317-3330 ConRon.Arena.defeqProjPair -/
 @[l_impl ConRon.Arena.defeqProjPair]
-def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2, x3, r) {
-  if a >> 28 != 9 || b >> 28 != 9 { return 0 };
+def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2, x3, y1, y2, y3, r) {
+  if a >> 28 != 9 { return 0 };
+  if b >> 28 != 9 { return 0 };
   t := (a >> 27) & 1;
   i := a & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -716,11 +733,13 @@ def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2
   i := b & 134217727;
   if s != 0 && CTL.u64[1] == 0 { abort };
   if CTL.u64[32 + s] <= i { abort };
-  if x1 == PJREC.u64[i * 6 + s * 3] && x2 == PJREC.u64[i * 6 + s * 3 + 1] {
-    r := call lazy_delta_proj_reduction(mode, vis, d, x1, x2, x3, PJREC.u64[i * 6 + s * 3 + 2]);
-    return r
-  };
-  return 0
+  y1 := PJREC.u64[i * 6 + s * 3];
+  y2 := PJREC.u64[i * 6 + s * 3 + 1];
+  y3 := PJREC.u64[i * 6 + s * 3 + 2];
+  if x1 != y1 { return 0 };
+  if x2 != y2 { return 0 };
+  r := call lazy_delta_proj_reduction(mode, vis, d, x1, x2, x3, y3);
+  return r
 }
 
 /-! ## Proof irrelevance, η, the stuck fallbacks -/
@@ -1181,6 +1200,7 @@ def defeqFns : Prog :=
    ("try_unfold_proj_app", tryUnfoldProjAppL), ("delta_quick", deltaQuickL),
    ("lds_left", ldsLeftL), ("lds_right", ldsRightL), ("lds_both", ldsBothL),
    ("lazy_delta_step", lazyDeltaStepL), ("lazy_delta_reduction", lazyDeltaReductionL),
+   ("ldpr_exit", ldprExitL),
    ("lazy_delta_proj_reduction", lazyDeltaProjReductionL), ("defeq_proj_pair", defeqProjPairL),
    ("prop_irrel", propIrrelL), ("eta_cert_ty", etaCertTyL), ("eta_cert_body", etaCertBodyL),
    ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
