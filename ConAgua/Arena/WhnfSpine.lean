@@ -1,5 +1,5 @@
 import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.WhnfSpineRefine
+import ConAgua.Arena.WhnfSpineArgs
 
 /-!
 # Application spines and ∀-telescopes in L, on the spine stack
@@ -39,84 +39,8 @@ namespace L.Arena
 `getAppFnL` (`get_app_fn`) is in `WhnfSpineRefine.lean`, with its loop `getAppFnLoop`, its word
 model `gafLoopW`/`gafW` and the proofs behind `getAppFn_refines` below. -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
-@[l_impl ConRon.Arena.getAppArgs]
-def getAppArgsL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
-  f := 4000000000;
-  h := e;
-  n := 0;
-  while h >> 28 == 4 {
-    if f == 0 { abort };
-    f -= 1;
-    t := (h >> 27) & 1;
-    x := h & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[4 + t] <= x { abort };
-    h := AREC.u64[x * 4 + t * 2];
-    n += 1
-  };
-  if f == 0 { abort };
-  o := CTL.u64[136];
-  if len(SPN.u64) < o { abort };
-  if len(SPN.u64) - o < n { abort };
-  h := e;
-  k := n;
-  while k != 0 {
-    k -= 1;
-    t := (h >> 27) & 1;
-    x := h & 134217727;
-    SPN.u64[o + k] := AREC.u64[x * 4 + t * 2 + 1];
-    h := AREC.u64[x * 4 + t * 2]
-  };
-  CTL.u64[136] := o + n;
-  return (o, n)
-}
 
-/-- con-ron: ConRon/Arena/Core.lean:2125-2128 ConRon.Arena.getAppSpine
-con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
-@[l_impl ConRon.Arena.getAppSpine ConRon.Arena.getAppSpineGo]
-def getAppSpineL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
-  f := 4000000000;
-  h := e;
-  n := 0;
-  while h >> 28 == 4 {
-    if f == 0 { abort };
-    f -= 1;
-    t := (h >> 27) & 1;
-    x := h & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[4 + t] <= x { abort };
-    h := AREC.u64[x * 4 + t * 2];
-    n += 1
-  };
-  if f == 0 { abort };
-  o := CTL.u64[136];
-  if len(SPN.u64) < o { abort };
-  if (len(SPN.u64) - o) >> 1 < n { abort };
-  h := e;
-  k := n;
-  while k != 0 {
-    k -= 1;
-    t := (h >> 27) & 1;
-    x := h & 134217727;
-    SPN.u64[o + k] := AREC.u64[x * 4 + t * 2 + 1];
-    SPN.u64[o + n + k] := h;
-    h := AREC.u64[x * 4 + t * 2]
-  };
-  CTL.u64[136] := o + n + n;
-  return (h, o, n)
-}
 
-/-- con-ron: ConRon/Arena/Core.lean:2130-2138 ConRon.Arena.headAndArgs -/
-@[l_impl ConRon.Arena.headAndArgs]
-def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
-  if v >> 28 == 4 {
-    h := call get_app_fn(v);
-    (o, n) := call get_app_args(v);
-    return (h, o, n)
-  };
-  return (v, CTL.u64[136], 0)
-}
 
 /-- The spine functions. `mkAppNL`/`mkAppNFromL` (`mk_app_n`/`mk_app_n_from`), `piResultL`
 (`pi_result`) and `peelPisL` (`peel_pis`) are in `WhnfSpineRefine.lean`, with their loops, word
@@ -124,7 +48,8 @@ models and the proofs behind the `_refines` theorems below. -/
 def spineProg : Prog :=
   [("get_app_fn", getAppFnL), ("get_app_args", getAppArgsL), ("get_app_spine", getAppSpineL),
    ("head_and_args", headAndArgsL), ("mk_app_n", mkAppNL), ("mk_app_n_from", mkAppNFromL),
-   ("pi_result", piResultL), ("peel_pis", peelPisL)]
+   ("pi_result", piResultL), ("peel_pis", peelPisL), ("app_count", appCountL),
+   ("app_fill", appFillL), ("app_fill_n", appFillNL)]
 
 /-- What the spine specs need of a program. -/
 structure SpineProg (p : Prog) : Prop where
@@ -141,6 +66,9 @@ structure SpineProg (p : Prog) : Prop where
   appp : p.lookup "app_push" = some appPush
   appi : p.lookup "intern_app" = some internApp
   mkapp : p.lookup "mk_app" = some mkApp
+  cnt : p.lookup "app_count" = some appCountL
+  fill : p.lookup "app_fill" = some appFillL
+  filln : p.lookup "app_fill_n" = some appFillNL
 
 /-! ## The specs (the read-only walks: memory unchanged or only the stack above the top) -/
 
@@ -158,23 +86,26 @@ theorem getAppFn_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀
       (getAppFn coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄ :=
   getAppFn_refines' p hp.fn n s₀ a₀ hR e he
 
+include hp in
 /-- **`get_app_args` refines `getAppArgs coreWalkFuel`**: the arguments are a new slice at the
 old top. -/
 @[refines ConRon.Arena.getAppArgs]
 theorem getAppArgs_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀) (e : Word)
-    (he : HW e) :
+    (he : HW e) (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "get_app_args" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
       r.headD 0 = spTop s₀.mem ∧ spTop s'.mem = spTop s₀.mem + r.tail.headD 0 ∧
       ∃ xs, (getAppArgs coreWalkFuel (decE e)).run a₀ = .ok (xs, a₀) ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := sorry
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
+  getAppArgs_refines' p hp.args hp.cnt hp.fill n s₀ a₀ hR e he hspn
 
+include hp in
 /-- **`get_app_spine` refines `getAppSpine coreWalkFuel`**: the head, then the arguments and the
 `app` nodes as two slices of the same length at the old top. -/
 @[refines ConRon.Arena.getAppSpine]
 theorem getAppSpine_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀) (e : Word)
-    (he : HW e) :
+    (he : HW e) (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "get_app_spine" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
@@ -182,19 +113,23 @@ theorem getAppSpine_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s
       spTop s'.mem = spTop s₀.mem + r.tail.tail.headD 0 + r.tail.tail.headD 0 ∧
       ∃ xs ns, (getAppSpine coreWalkFuel (decE e)).run a₀ = .ok ((decE (r.headD 0), xs, ns), a₀) ∧
         SpineR s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) xs ∧
-        SpineR s'.mem (r.tail.headD 0 + r.tail.tail.headD 0) (r.tail.tail.headD 0) ns; ⊤⦄ := sorry
+        SpineR s'.mem (r.tail.headD 0 + r.tail.tail.headD 0) (r.tail.tail.headD 0) ns; ⊤⦄ :=
+  getAppSpine_refines' p hp.spine hp.cnt hp.fill hp.filln n s₀ a₀ hR e he hspn
 
+include hp in
 /-- **`head_and_args` refines `headAndArgs`.** -/
 @[refines ConRon.Arena.headAndArgs]
 theorem headAndArgs_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀) (v : Word)
-    (hv : HW v) :
+    (hv : HW v) (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63)
+    (htop : (spTop s₀.mem).toNat ≤ (s₀.mem.arr64 SPN).size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "head_and_args" [v]
     ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
       HW (r.headD 0) ∧ r.tail.headD 0 = spTop s₀.mem ∧
       spTop s'.mem = spTop s₀.mem + r.tail.tail.headD 0 ∧
       ∃ xs, (headAndArgs (decE v)).run a₀ = .ok ((decE (r.headD 0), xs), a₀) ∧
-        SpineR s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) xs; ⊤⦄ := sorry
+        SpineR s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) xs; ⊤⦄ :=
+  headAndArgs_refines' p hp.hargs hp.fn hp.args hp.cnt hp.fill n s₀ a₀ hR v hv hspn htop
 
 include hp in
 /-- **`mk_app_n` refines `mkAppN`** under `ArenaD`, the list a stack slice.

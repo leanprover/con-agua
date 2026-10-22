@@ -4362,34 +4362,39 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
-* `WhnfSpine.lean`: `getAppArgs_refines`, `getAppSpine_refines`, `headAndArgs_refines` (a loop
-  writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
-  two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
+* `WhnfSpine.lean`: none. The two-loop walks are split into functions (`WhnfSpineArgs.lean`):
+  `app_count` (the `get_app_fn` loop; the count is the fuel spent, and it returns the head),
+  `app_fill`/`app_fill_n` (write the arguments/nodes without checks), and `get_app_args`/
+  `get_app_spine` call them; each spec is `vcgen` + `finish` on a short chain. They need the
+  stack's size below `2^63` (`CoreS.spn`); `head_and_args` also the top within the stack.
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
-  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone). `whnf_app`
+  `iota_rec_at`; `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone; `ProjSmall`: a
+  projection table's counts are below `2^32` (L compares `an == np + nf` in words, the twin in
+  `Nat`); `ProjFound`: a found table record decodes). `whnf_app`
   and `beta_peel` are proved (`WhnfCoreApp.lean`, sub-lanes: the loop as named blocks, one small
   spec each, fuel induction).
 * `WhnfBase.lean` `supKeep_twin`: `strLitSupported` keeps every stored node's view (twin-side
   store monotonicity, true, unproved).
-* `WhnfCoreProj.lean`: `reduceProjCore_refines'` (a sub-lane on it; the L function is split into
-  `reduce_proj_core`/`_head`/`_fire`/`_arg` so that each spec is a short chain);
-  `proj_lit_to_ctor` and `whnf_core_step_proj` are proved from it.
+* `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
+  `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
+  their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
-### Lane `induct`'s stubs of this phase (reconciliation, planned)
+### Lane `induct`'s stubs of this phase (adapters, `WhnfEntry.lean`)
 
 Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
-slice), `mk_app_n(f, off, len)` (an `IW` slice), `pi_result(fuel, e)` with the specs of
-`IndStubs.lean` (`RelAM` over `StageR`). This lane's functions of the same names differ: `whnf`
-takes the mode word first, the spine walks count `coreWalkFuel` internally (no fuel argument; the
-induct call sites pass `⟪CWF⟫` = `coreWalkFuel`), and slices are on the spine stack `SPN`. Plan,
-after the running proof sub-lanes land (they use the names): this lane renames its functions
-(`whnf_m`, `app_fn_c`, `app_args_c`, `mk_app_n_c`, `pi_result_c`; the fuel stays a counter) and
-adds `induct`'s names as adapters with `induct`'s conventions (`whnf` = `whnf_m` at the verified
-mode word; the slice adapters copy between `SPN` and `IW`; the fuel adapters run the counted walk
-when `fuel = coreWalkFuel`, the only fuel `induct` passes, and abort otherwise), with the
-`IndStubs` specs as their refinements at that fuel.
+slice), `mk_app_n(f, off, len)` (an `IW` slice), `pi_result(fuel, e)` (`IndStubs.lean`). This
+lane's functions of those names are used with their own conventions by lane `defeq` too (`whnf`
+takes the mode word, the walks count `coreWalkFuel` themselves, slices are on the stack `SPN`), so
+the names stay, and `WhnfEntry.lean` adds `induct`'s conventions under new names: `whnf_top`
+(`l_impl ConRon.Arena.whnf`, the verified knot entry), `get_app_fn_f`, `pi_result_f` (abort unless
+the fuel is `CWF`, the only fuel `induct` passes), `get_app_args_f` (the stack slice copied to a
+fresh `IW` slice, the top put back), `mk_app_n_f` (the `IW` slice copied to the stack top).
+**Request to lane `induct`**: rename the five call sites and stubs accordingly (`whnf` →
+`whnf_top`, `get_app_fn` → `get_app_fn_f`, `get_app_args` → `get_app_args_f`, `mk_app_n` →
+`mk_app_n_f`, `pi_result` → `pi_result_f`); the adapters' specs against `IndStubs`' `RelAM`
+statements (bridging `StageR` and `CoreS`) are not written yet.
 
 ### Numbers (2026-10-21)
 
@@ -5049,8 +5054,54 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
 * Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
   `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
 
+### Landing 3 (03:10): round-1 helpers done
+* Census phase 8: **55 proven, 30 sorry (through stubs), 130 written** (start of lane: 15 / 1 / 199);
+  totals 362 proven / 81 sorry of 1352.
+* Lead since landing 2: `struct_ctor_resid_ok` (`IndSumSpec4.lean`; `hd` guarded below `2^32`).
+* Helper `parts` (11 functions, ~4.5k proof lines, `IndPartsSpec2‥6`): `BlockShape.nIdxs`,
+  `.memberNames`, `.lps`, `.allCtors`, `BlockParts.complete`, `piBinders`, `blockCounts?`,
+  `recTargetOf`, `blockRecNamesUnreserved`, `blockRecLpsOk` (with an `sl_eq` model),
+  `checkShapelessFormers`, `checkShapeless`, `BlockShape.withSort` (through `lvl_eq`). **Bug:**
+  `member_names_copy` read `EREC[member]` (a member record's word 0 is the `cvT` pointer).
+* Helper `rec` (21 tags, ~4.3k lines): the `RecClass` readers and generators (`classBinder`,
+  `ClassGen.binder`, `exprGetD`, `fvarHead`, `closeLams`, `ClassGen.slotVar`/`.motVar`,
+  `classRecOf`, `ClassRead.motiveSlot`/`.classes`/`.recCls`, `ClassGen.ihParts`), `classMinorSlot`,
+  `classLeafAt`, `classStreamRecs`, `abstractPrefix(List)`, `targetHoles`, `targetPinTys`,
+  `targetPiDomsWith`, `targetCtorAt` (now whole). **Bug:** `class_gen_ih_parts` read
+  `IW[g+3+t]` for the class record pointer instead of `IW[IW[g+3]+t]`.
+* Helper `pos` (~6.2k lines): `nestKindsFlat`, `nestBlockOf`, `nestResHead`, `nestCtorEntry`,
+  `instPisWith`, `closeTelescope`, `nestCanonSub`, `nestFrameMates(.go)`, the memo walks
+  `mentionsAnyGo`/`Const`, `nestOccGo`/`nestOcc`, `replaceAppsGo`/`replaceApps`, `depthGo`/`depth`,
+  `whnfWalkFuel`, `memberIdxAt?`, `phApp`, `appHole`, `nestPhs`, `nestCanonCrest`.
+* **Hypotheses beyond the stage relation** (preconditions a caller must discharge, listed so they
+  are not forgotten): the memo walks take memo well-formedness (`maMR`, `rpMR`, `dpMR`, `noMR`;
+  stubs give no frame, so it cannot be carried across a stub call — helper `pos` suggests putting it
+  into `StageR`); `class_read_rec_cls` takes `hstab` (records stay decodable as the pool grows),
+  `class_stream_recs` `RecsOK`, `class_read_classes` `SlotsExt` (records below the tops); several
+  take slice bounds. A generic "decoders below the tops are stable under `IWGrow`" lemma (one per
+  decoder today: `decHL_grow`, `decBL_grow`, `decCVp_grow`, helper `rec`'s `decCK_grow`,
+  `decNL_grow`) would discharge most.
+* L code: ~20 loops became self-recursion, ~15 handle/overflow guards after master interns
+  (no bound lemma; master has `mkAppW_hw` for `mk_app` only).
+* Cross-helper lemma-name clashes surfaced only when one file imported two helpers' files;
+  `IndAll.lean` (imports every spec file, in the lakefile) now catches them.
+* Round 2 (running): helpers `memo` (`IndSum`'s memo walks), `install` (`IndInstall`), `recb`
+  (rest of `RecGen`/`RecCheck`).
+
+### The frontend's inductive lines: not hooked yet (decision)
+The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
+`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
+out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
+(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
+front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
+(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
+`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
+a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
+with this template under `StateDR` (the front's relation), then hook in one step with the
+refinement.
+
 ### `sorry`s
-None new: every `sorry` a refinement inherits is a stub's (`IndStubs.lean`).
+None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
 
 ## The fvar-range derived column (2026-10-21, lane `exprops3`)
 
@@ -5109,6 +5160,44 @@ fails on all five: depth of the `setLocs` chain); `maxHeartbeats 0` removed. Sta
 Lesson (adds to PLAN.md's proof-style list): a value an L expression computes inline should be
 matched by an equation on its *evaluated* form (`BinOp.*.eval`, `Cmp.*.evalW`), not by unfolding
 the model's arithmetic; the latter costs a case split per comparison, per goal.
+
+### `abstract1Go`/`abstract1Fast` (`Abs1.lean`, `Abs1Spec.lean`, `Abs1Refine.lean`)
+
+`abs_entry(e, d, k)` refines `abstract1Fast F e d k` under `ArenaA` (`absEntry_refines`,
+`absEntry_run`; axioms `propext`, `Classical.choice`, `Quot.sound`, **no `sorry`**), and
+`ab_fvb(h)` refines `fvarB` (`abFvb_refines`). Census: `abstract1Go` and its five arms, `abstract1Fast`,
+`fvarB` proven. `Inst1*.lean` with `d ↦ k`, `v ↦ d`, plus:
+
+* **`ab_fvb`** (`fvarB`): `der_b`'s second result; on `32767` alone, `fr_memo`. Model `fvbW n`
+  (`fvbN n` is `fr_memo` at its own fuel, `none` at `0`, so the spec holds at every fuel).
+* **`ab_node`**: the cut-off has a memory effect (`fr_memo`), so `abs_go` is `x := ab_fvb(h); if x
+  <= d { return h }; return ab_node(h, k, d)` and the dispatch is its own L function, with
+  `absNodeA` naming the twin's `else` branch (`abstract1Go_succ'` by `rfl`). Three specs by fuel
+  (`AbsGoSpec`/`AbsNodeSpec`/`AbsArmSpec`), three refinement statements (`AGoOK`/`ANodeOK`/`AArmOK`).
+* **Rebuild on change** (`internRebuilt*`): L `if x == f && y == a { r := h } else { r := call
+  mk_app(x, y) }`; models `rbAppW` … with guarded `_same`/`_new` equations; `rb_ok` relates both
+  branches. The twin compares `decE x == decE f`: equal words give equal handles, and on the `new`
+  branch `mk_*`'s own guard (`(x ||| y) >>> 32 = 0`, `mkAppW_lt` …) bounds the results, so with the
+  view's bound on the children `decE_inj` gives the converse. No result-bound invariant needed.
+* **The memo tier `ArenaA := ArenaD ∧ AbsR`** (`AbsR := MemoRG abSch lfKey decE m a.memos.abs1C`;
+  `abSch = ⟨49, 48⟩`, array 49 `ABMEMO`, `CTL[48]`/`[49]`), kept out of `MemosR` as the exprops3
+  brief says. It survives: the `mk_*` and `intern_bvar` by their model frames (`mkAppW_frameA` …,
+  `binternW_frameA`: no write to 49 or `CTL[48]`) and by `Keeps (·.memos.abs1C) (internE v)`
+  (`prim_keeps`); `fr_memo` by `frW_frame` (the model writes only `FRMEMO`, `CTL[46‥47]`; an
+  induction with `FrOK` combinators for the continuations — `split at` on `frNodeW`'s `if` chain
+  runs into simp's step limit, hence `by_cases` per tag over `FVarRange.lean`'s guarded equations)
+  and on the twin by `Keeps fsp (fvarRangeMemo F e)` (`fsp a = (a.store, a.memos.abs1C)`, the
+  `keeps_auto` recipe with a `fvarBSet` lemma for `fsp`, which is not `MemoBlind`).
+* Callers that cross `scratch_enter` must re-establish `AbsR` (its memo is not cleared there); all
+  current callers are the walk's own entry, which clears it first.
+* Heartbeats: the five arm steps in `Abs1Spec.lean` need `maxHeartbeats 1000000` (the
+  rebuild's `if`/`else` doubles the tail; `finish (gen := 20)` as `Inst1Spec.lean`).
+
+| `abstract1` | Rust lines | L lines | spec lines | refinement lines | `lean` user |
+|---|---:|---:|---:|---:|---:|
+| `Abs1.lean` (models, L, go/node steps) | | 140 (L code) | 708 (file) | | 2.8 s |
+| `Abs1Spec.lean` (arm steps, entry) | | | 174 | | 57 s |
+| `Abs1Refine.lean` | | | | 1100 | 2.7 s |
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches

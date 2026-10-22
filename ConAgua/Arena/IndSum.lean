@@ -467,6 +467,7 @@ def structCtorResidOkL : FunDecl :=
   locals (us, hd, fn, argsOff, argsLen, psOff, psLen, eq1, eq2, le, eq3) {
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
+  if 4294967296 <= hd { abort };
   fn := call get_app_fn(⟪CWF⟫, cbody);
   (argsOff, argsLen) := call get_app_args(⟪CWF⟫, cbody);
   (psOff, psLen) := call struct_ps_at(o, nP);
