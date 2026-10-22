@@ -326,7 +326,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       have := congrArg List.length hpre; simp at this; omega
     have hidx : romIdx d G.tab.rom + d.length ≤ G.tab.rom.length := by
       have h1 := congrArg List.length hpre; have := romIdx_le d G.tab.rom; simp at h1; omega
-    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
     have htabEnd := hG.tab_end
     simp only [Layout.tabEnd] at htabEnd
     refine ih t k hc.left hwf.2 (by omega) σ s Q hI ?_ ?_
@@ -501,7 +501,7 @@ include hG
 
 theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
-    ∀ (c : Cond) (path : String) (pol : Bool) (l : Label) (t k : Nat),
+    ∀ (c : Cond) (path : Path) (pol : Bool) (l : Label) (t k : Nat),
     Code (compileC ctx path c pol l t) k → Cond.wf ctx.nl G.tab c = true →
     ctx.nl + t + tempsC c ≤ F →
     ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx.nl F σ s →
