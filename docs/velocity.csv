@@ -166,3 +166,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,whnf4,opus,318,30,"landing 7 (helper whnf4-ilp): InstLPOK proved (instLP_refines, walk ilwGo_ok, slMemo_ok, slsMemo_ok); KnotCallees removed, knot_all needs only KnotAllProg; L: keys_ok, lp_let_tail, lp_rb_let"
 2026-10-22,censussorry,sonnet,25,31,"census: proven-locally status (own proof term sorry-free, sorry only via named callees) + sorry-sources work queue; local/lean_local CSV columns; master: 165 of 165 sorry targets proven locally"
 2026-10-22,erecfix,opus,30,25,"CoreErec and IndCore write sets by per-chunk kernel checks (Compiler/WriteSetSplit: names_tree, prog_all, closedW_of_all): CoreErec 20 GB -> 3.0 GB/12 s, IndCore ~22 GB -> 3.2 GB/12 s"
+2026-10-22,knotwire,opus,35,41,"tagged whnf refinements restated over KnotAllProg (KnotTagged), stub bundles and supKeep_twin deleted; entry points under CoreS/StageT (KnotEntry), knot_all @[refines coreKnot]"
