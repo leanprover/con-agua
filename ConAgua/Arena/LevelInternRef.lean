@@ -126,6 +126,23 @@ theorem internLNode_keep (w : LNodeView) (a a' : AState) (i : LIdx)
 
 /-! ## Level pointers keep their views across the store's interning -/
 
+/-- The level store's arrays: every level interning writes only there. -/
+abbrev lvArrs : List ArrId := [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT]
+/-- The level store's counts. -/
+abbrev lvCtl : List Word := [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+section
+set_option maxRecDepth 4000
+theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, zeroSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [succSch.ra, succSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [maxSch.ra, maxSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [imaxSch.ra, imaxSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [paramSch.ra, paramSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, LH]
+end
+
+
 /-- Every level pointer that views keeps its view. -/
 def ViewsKept (m m' : Mem) : Prop := ∀ q, lvNodeW m q ≠ [] → lvNodeW m' q = lvNodeW m q
 
@@ -136,7 +153,7 @@ theorem ViewsKept.trans {m₁ m₂ m₃ : Mem} (h₁ : ViewsKept m₁ m₂) (h�
   rw [h₂ q (by rw [h₁ q hq]; exact hq), h₁ q hq]
 
 theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m' a')
-    (hk : LKeep a a') (hf : MemFrame StoreA StoreC m m') : ViewsKept m m' := by
+    (hk : LKeep a a') (hf : MemFrame lvArrs lvCtl m m') : ViewsKept m m' := by
   intro q hq
   by_cases hb : q >>> 32 = 0
   · have hh : q.toNat < 2 ^ 32 := by
@@ -145,23 +162,21 @@ theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Arena
       have := q.toNat_lt; omega
     obtain ⟨v, hv⟩ := lvNodeW_view hR hh hq
     rw [lvNodeW_store hR hh hv, lvNodeW_store hR' hh (hk.1 _ _ hv)]
-  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [StoreA, LH]) (by decide)
-    have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 :=
-      hf.2.1 192 (by
-        simp only [StoreC, List.mem_map, List.mem_range, not_exists, not_and]
-        intro x hx e; have := congrArg UInt64.toNat e; simp at this; omega)
+  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [lvArrs, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, LH]) (by decide)
+    have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.2.1 192 (by simp [lvCtl])
     rw [lvNodeW_heap m' q hb, lvNodeW_heap m q hb, hLH, h192]
 
 /-! ## The refinement -/
 
+
 /-- One node interned by a store function: the twin's step, the frame, the handle bound. -/
 theorem liNode_ok (op : AM LIdx) (W : Mem → Option (Word × Mem))
     (hop : ∀ m a w m', ArenaD m a → W m = some (w, m') →
-      AM.ok op a ∧ ArenaD m' (AM.st op a) ∧ AM.res op a = decI w ∧ MemFrame StoreA StoreC m m')
+      AM.ok op a ∧ ArenaD m' (AM.st op a) ∧ AM.res op a = decI w ∧ MemFrame lvArrs lvCtl m m')
     (m : Mem) (a : AState) (h : Word) (m' : Mem) (hA : ArenaD m a)
     (hW : liNodeK (W m) = some (h, m')) :
     AM.ok op a ∧ ArenaD m' (AM.st op a) ∧ AM.res op a = decI h ∧ h.toNat < 2 ^ 32 ∧
-      MemFrame StoreA StoreC m m' := by
+      MemFrame lvArrs lvCtl m m' := by
   cases hI : W m with
   | none => rw [hI] at hW; simp [liNodeK] at hW
   | some r =>
@@ -183,7 +198,7 @@ theorem node_run {op : AM LIdx} {a : AState} (ok : AM.ok op a) : op.run a = .ok 
 /-- **What a successful `lv_intern` gives.** -/
 def LIOk (L : Level) (m : Mem) (a : AState) (h : Word) (m' : Mem) : Prop :=
   ∃ a', (internLevel L).run a = .ok (decI h, a') ∧ ArenaD m' a' ∧ h.toNat < 2 ^ 32 ∧
-    MemFrame StoreA StoreC m m' ∧ LKeep a a' ∧ ViewsKept m m'
+    MemFrame lvArrs lvCtl m m' ∧ LKeep a a' ∧ ViewsKept m m'
 
 set_option linter.constructorNameAsVariable false in
 /-- **The model of `lv_intern` refines `internLevel`** of the level the pointer denotes. -/
@@ -202,7 +217,7 @@ theorem lvInternW_ok (L : Level) :
     obtain ⟨ok, hR, res, hlt, hf⟩ := liNode_ok (internLNode .zero) zinternW
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.zero_A m a hA w m' hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch])⟩)
+        exact ⟨ok, hR, res, hf.mono lvSch_sub.1 lvSch_sub.2.1⟩)
       m a h m' hA hW
     have hrun := node_run ok
     rw [res] at hrun
@@ -222,7 +237,7 @@ theorem lvInternW_ok (L : Level) :
     obtain ⟨ok, hR, res, hlt, hf⟩ := liNode_ok (internLNode (.param (decI x))) (fun m => pinternW m x)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.param_A m a hA w m' x hn.1 hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [paramSch, PREC, PSLOT]) (by simp [paramSch])⟩)
+        exact ⟨ok, hR, res, hf.mono lvSch_sub.2.2.2.2.2.2.2.2.1 lvSch_sub.2.2.2.2.2.2.2.2.2⟩)
       m a h m' hA hW
     have hrun := node_run ok
     rw [res] at hrun
@@ -251,7 +266,7 @@ theorem lvInternW_ok (L : Level) :
     obtain ⟨ok, hR, res, hlt, hf⟩ := liNode_ok (internLNode (.succ (decI hu'))) (fun m => sinternW m hu')
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.succ_A m a hA w m' hu' hlt₁ hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [succSch, SREC, SSLOT]) (by simp [succSch])⟩)
+        exact ⟨ok, hR, res, hf.mono lvSch_sub.2.2.1 lvSch_sub.2.2.2.1⟩)
       m₁ a₁ h m' hA₁ hW
     have hrun := node_run ok
     rw [res] at hrun
@@ -290,7 +305,7 @@ theorem lvInternW_ok (L : Level) :
       (fun m => minternW m hu' hv')
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.max_A m a hA w m' hu' hv' hlt₁ hlt₂ hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [maxSch, MREC, MSLOT]) (by simp [maxSch])⟩)
+        exact ⟨ok, hR, res, hf.mono lvSch_sub.2.2.2.2.1 lvSch_sub.2.2.2.2.2.1⟩)
       m₂ a₂ h m' hA₂ hW
     have hrun := node_run ok
     rw [res] at hrun
@@ -331,7 +346,7 @@ theorem lvInternW_ok (L : Level) :
       (fun m => iminternW m hu' hv')
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.imax_A m a hA w m' hu' hv' hlt₁ hlt₂ hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [imaxSch, IREC, ISLOT]) (by simp [imaxSch])⟩)
+        exact ⟨ok, hR, res, hf.mono lvSch_sub.2.2.2.2.2.2.1 lvSch_sub.2.2.2.2.2.2.2.1⟩)
       m₂ a₂ h m' hA₂ hW
     have hrun := node_run ok
     rw [res] at hrun
@@ -452,7 +467,7 @@ theorem lvSubIntW_ok (n : Nat) (m m' : Mem) (a : AState) (u ko kc vo vc h : Word
     (hv : LvsR (nameN a.store.lss.ls.ns) (m.set64 CTL 192 0) vo vc vs)
     (hW : lvSubIntW n m u ko kc vo vc = some (h, m')) :
     ∃ a', (internLevel (Level.subst ks vs L)).run a = .ok (decI h, a') ∧ ArenaD m' a' ∧
-      h.toNat < 2 ^ 32 ∧ MemFrame (LH :: StoreA) (192 :: StoreC) m m' ∧ LKeep a a' := by
+      h.toNat < 2 ^ 32 ∧ MemFrame (LH :: lvArrs) (192 :: lvCtl) m m' ∧ LKeep a a' := by
   cases n with
   | zero => simp [lvSubIntW] at hW
   | succ n =>
