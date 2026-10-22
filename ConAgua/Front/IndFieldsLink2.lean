@@ -250,8 +250,9 @@ macro "rput " s:term "," sz:term "," xw:term "," st':term "," en:term : tactic =
   obtain ⟨p1, -, -, p4, p5⟩ := slot_put IFR (.inl rfl) $sz (by decide) q $s $xw m₁ m hI (by decide)
   have e1 := slot_view IFR (.inl rfl) $sz (by decide) q $s $xw m₁ m hI (by decide)
   have p6 := runR_rule_eq (Mem.arr64_set64_ne m IFR IFL (q + $s) $xw (by decide))
+  have p7 := numsF_eq (Mem.arr64_set64_ne m IFR IFL (q + $s) $xw (by decide))
   refine ⟨$en, _, $st', rfl, hok, p1, by rw [p5, ht], ?_⟩
-  simp (config := {decide := true}) only [e1, p5, p6, ↓reduceIte]
+  simp (config := {decide := true}) only [e1, p5, p6, p7, ↓reduceIte]
   rfields))
 
 set_option hygiene false in
@@ -284,6 +285,11 @@ theorem slot_view (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (hsz : sz �
   split
   · rename_i h; subst h; exact p2
   · exact p3 _ (by omega)
+
+omit h64 hsize in
+theorem numsF_eq {m m' : Mem} (h : m'.arr64 IFL = m.arr64 IFL) (o : Nat) (l : List Nat) :
+    NumsF m' o l = NumsF m o l := by
+  simp only [NumsF, topN, wd, h]
 
 omit h64 hsize in
 theorem runR_rule_eq {m m' : Mem} (h : m'.arr64 IFL = m.arr64 IFL) (o : Nat) (l : List RuleRec) :
@@ -648,6 +654,158 @@ theorem cts_link (v : USize) (m : Mem) (l : List IndCtorRec) (e : USize) (r : Wo
         (by show wd mF IFR (q.toNat + 8) = 0
             rw [g1', if_pos (by decide)])⟩ hob
     exact ⟨t1, t4, f1'.1.trans t2.1, t2.2.1, ⟨by rw [t3, f5', f5], trivial⟩⟩
+
+omit h64 hsize in
+/-- An item of a number list, if not `NONE`, is below `10^18`. -/
+theorem itemsN_lt (a : Array UInt8) (ha : a.size < 2 ^ 63) (i : Word) :
+    ∀ x ∈ itemsN a i, x ≠ NONE → x.toNat < 10 ^ 18 := by
+  fun_induction itemsN a i with
+  | case1 => simp
+  | case2 i h1 h2 h3 h4 ih =>
+    intro x hx hne
+    simp only [List.mem_cons] at hx
+    rcases hx with rfl | hx
+    · have := L.Scan.lt_of_lt_ofNat h1
+      have hle := L.Scan.Values.numEndN_le a i.toNat (by omega)
+      apply rdNatN_lt a _ _ (by omega) _ hne
+      intro j hj1 hj2
+      rw [UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)] at hj2
+      exact numEndN_digits a i.toNat j hj1 hj2
+    · exact ih x hx hne
+  | case3 => simp
+  | case4 i h1 h2 h3 ih => exact ih
+  | case5 => simp
+
+omit h64 hsize in
+theorem itemsR_get : ∀ (ws : List Word) (ns : List Nat), ItemsR ws ns → (∀ x ∈ ws, x ≠ NONE) →
+    ws.length = ns.length ∧ ∀ k (h1 : k < ws.length) (h2 : k < ns.length), ws[k].toNat = ns[k]
+  | [], [], _, _ => ⟨rfl, fun k h1 => by simp at h1⟩
+  | w :: ws, n :: ns, ⟨hw, hws⟩, hne => by
+    obtain ⟨l1, l2⟩ := itemsR_get ws ns hws (fun x hx => hne x (by simp [hx]))
+    refine ⟨by simp [l1], fun k h1 h2 => ?_⟩
+    cases k with
+    | zero => exact hw (hne w (by simp))
+    | succ k => exact l2 k (by simpa using h1) (by simpa using h2)
+  | [], _ :: _, h, _ => h.elim
+  | _ :: _, [], h, _ => h.elim
+
+/-- con-leche's type loop state. -/
+structure TySt where
+  ctors : List Nat
+  isRec : Bool
+  isRefl : Bool
+  isUns : Bool
+  lps : List Nat
+  nm : Nat
+  nIdx : Nat
+  nNest : Nat
+  nP : Nat
+  ty : Nat
+
+/-- The type record read so far. -/
+def TyLR (m₁ : Mem) (q : Word) (seen : UInt32) (st : TySt) (m : Mem) : Prop :=
+  RecInv IFR 11 q m₁ m ∧ topN m IFR = topN m₁ IFR ∧
+    SeenR seen 64 (NumW (wd m IFR (q.toNat + 0)) st.nm) ∧
+    SeenR seen 32 (ItemsR (listN b.data (wd m IFR (q.toNat + 1))) st.lps) ∧
+    SeenR seen 1024 (NumW (wd m IFR (q.toNat + 2)) st.ty) ∧
+    SeenR seen 2 ((wd m IFR (q.toNat + 4)).toNat = st.ctors.length ∧
+      NumsF m (wd m IFR (q.toNat + 3)).toNat st.ctors) ∧
+    SeenR seen 16 (BoolW (wd m IFR (q.toNat + 7)) st.isUns) ∧
+    SeenR seen 256 (NumW (wd m IFR (q.toNat + 9)) st.nNest) ∧
+    SeenR seen 512 (NumW (wd m IFR (q.toNat + 10)) st.nP)
+
+set_option maxHeartbeats 2000000 in
+theorem ty_loop (m₁ : Mem) (q : Word) :
+    IObjLoop b (fun i w seen (st : TySt) => scanIndTypeLoop b i w seen st.ctors st.isRec st.isRefl
+        st.isUns st.lps st.nm st.nIdx st.nNest st.nP st.ty) 0 q (TyLR b m₁ q)
+      (fun d m => (RecInv IFR 11 q m₁ m ∧ topN m IFR = topN m₁ IFR) ∧ TyF b m q.toNat d) := by
+  constructor
+  · dloop_stop scanIndTypeLoop
+  · dloop_ws scanIndTypeLoop
+  · dloop_close scanIndTypeLoop
+    obtain ⟨hI, ht, h1, h2, h3, h4, h5, h6, h7⟩ := hR
+    have c4 := seenR_close h4 hM (by decide) (by decide)
+    exact ⟨⟨hI, ht⟩, ⟨seenR_close h1 hM (by decide) (by decide), seenR_close h2 hM (by decide) (by decide),
+      seenR_close h3 hM (by decide) (by decide)⟩, c4.1, c4.2, seenR_close h5 hM (by decide) (by decide),
+      seenR_close h6 hM (by decide) (by decide), seenR_close h7 hM (by decide) (by decide)⟩
+  · dloop_comma scanIndTypeLoop
+  · dloop_quote scanIndTypeLoop
+  · iloop_key scanIndTypeLoop
+    all_goals obtain ⟨hI, ht, h1, h2, h3, h4, h5, h6, h7⟩ := hR
+    case kName =>
+      rw [show UInt64.ofNat Key.kName.ctorIdx = (34 : Word) from rfl] at hmem
+      rnum_arm 34, 0, 0, 11, { st with nm := readNatAt b v (numEnd b v) }
+    case kType =>
+      rw [show UInt64.ofNat Key.kType.ctorIdx = (61 : Word) from rfl] at hmem
+      rnum_arm 61, 0, 2, 11, { st with ty := readNatAt b v (numEnd b v) }
+    case kNumIndices =>
+      rw [show UInt64.ofNat Key.kNumIndices.ctorIdx = (40 : Word) from rfl] at hmem
+      rnum_arm 40, 0, 8, 11, { st with nIdx := readNatAt b v (numEnd b v) }
+    case kNumNested =>
+      rw [show UInt64.ofNat Key.kNumNested.ctorIdx = (43 : Word) from rfl] at hmem
+      rnum_arm 43, 0, 9, 11, { st with nNest := readNatAt b v (numEnd b v) }
+    case kNumParams =>
+      rw [show UInt64.ofNat Key.kNumParams.ctorIdx = (44 : Word) from rfl] at hmem
+      rnum_arm 44, 0, 10, 11, { st with nP := readNatAt b v (numEnd b v) }
+    case kIsRec =>
+      rw [show UInt64.ofNat Key.kIsRec.ctorIdx = (24 : Word) from rfl] at hmem
+      rbool_arm 24, 0, 5, 11, { st with isRec := xv }
+    case kIsReflexive =>
+      rw [show UInt64.ofNat Key.kIsReflexive.ctorIdx = (25 : Word) from rfl] at hmem
+      rbool_arm 25, 0, 6, 11, { st with isRefl := xv }
+    case kIsUnsafe =>
+      rw [show UInt64.ofNat Key.kIsUnsafe.ctorIdx = (26 : Word) from rfl] at hmem
+      rbool_arm 26, 0, 7, 11, { st with isUns := xv }
+    case kLevelParams =>
+      rw [show UInt64.ofNat Key.kLevelParams.ctorIdx = (31 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨he, rfl, hx⟩ := lps_arm b h64 hsize m m' 0 q _ 31 1 0 v xv ev e' rfl hx hmem
+      subst he
+      rput 1, 11, v.toUInt64, { st with lps := xv }, ev
+    case kAll =>
+      rw [show UInt64.ofNat Key.kAll.ctorIdx = (1 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨he, rfl⟩ := all_arm b h64 hsize m m' 0 q _ 1 0 0 v xv ev e' rfl hx hmem
+      subst he
+      refine ⟨ev, _, st, rfl, hok, hI, ht, ?_⟩
+      rfields
+    case kCtors =>
+      rw [show UInt64.ofNat Key.kCtors.ctorIdx = (11 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨he, mL, hids, rfl, hxs⟩ := ids_arm b h64 hsize m m' 0 q _ 11 3 0 v xv ev e' rfl hx hmem
+      subst he
+      obtain ⟨d1, d2, d3, d4, d5, d6, d7, d8⟩ := idsM_facts b.data m mL v.toUInt64 hI.2.1 hids
+      rw [fldPutW_R _ _ _ _ _ (by decide), fldPutW_R _ _ _ _ _ (by decide),
+        show (3 : Word) + 1 = 4 from rfl]
+      have hI1 := hI.grow d3 d2
+      have hw : ∀ j, wd mL IFR j = wd m IFR j := fun j => by simp only [wd, d4]
+      have ht1 : topN mL IFR = topN m IFR := congrArg UInt64.toNat (hw 0)
+      obtain ⟨p1, -, -, p4, p5⟩ := slot_put IFR (.inl rfl) 11 (by decide) q 3 _ m₁ mL hI1 (by decide)
+      have e1 := slot_view IFR (.inl rfl) 11 (by decide) q 3 (rdW (m.arr64 IFL) 0 + 1) m₁ mL hI1
+        (by decide)
+      obtain ⟨p1', -, -, p4', p5'⟩ :=
+        slot_put IFR (.inl rfl) 11 (by decide) q 4 (lsCntN b.data (v.toUInt64 + 1) 0) m₁ _ p1
+          (by decide)
+      have e1' := slot_view IFR (.inl rfl) 11 (by decide) q 4 (lsCntN b.data (v.toUInt64 + 1) 0) m₁ _
+        p1 (by decide)
+      have p6 := numsF_eq (Mem.arr64_set64_ne (mL.set64 IFR (q + 3) (rdW (m.arr64 IFL) 0 + 1)) IFR
+        IFL (q + 4) (lsCntN b.data (v.toUInt64 + 1) 0) (by decide))
+      have p7 := numsF_eq (Mem.arr64_set64_ne mL IFR IFL (q + 3) (rdW (m.arr64 IFL) 0 + 1)
+        (by decide))
+      refine ⟨ev, _, { st with ctors := xv }, rfl, hok, p1', by rw [p5', p5, ht1, ht], ?_⟩
+      obtain ⟨g1, g2⟩ := itemsR_get _ _ hxs d6
+      have hx : (lsCntN b.data (v.toUInt64 + 1) 0).toNat = xv.length ∧
+          NumsF mL (rdW (m.arr64 IFL) 0 + 1).toNat xv := by
+        refine ⟨by rw [d8, g1], by rw [d7]; omega, by rw [d7, d1, g1]; omega, fun k hk => ?_⟩
+        rw [d7, d5 k (by rw [g1]; exact hk)]
+        have hk' : k < (listN b.data v.toUInt64).length := by rw [g1]; exact hk
+        refine ⟨g2 k hk' hk, ?_⟩
+        rw [← g2 k hk' hk]
+        exact itemsN_lt b.data (by have : b.data.size = b.size := rfl; omega) _ _
+          (List.getElem_mem hk') (d6 _ (List.getElem_mem hk'))
+      simp (config := {decide := true}) only [e1', e1, p6, p7, hw, ↓reduceIte]
+      rfields
+  · dloop_other scanIndTypeLoop
 
 end kinds
 
