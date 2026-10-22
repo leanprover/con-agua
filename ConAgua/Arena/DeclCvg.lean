@@ -34,9 +34,11 @@ open L.Front (DECL DLP)
 def stepA : List ArrId :=
   (List.range 256).filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP ∧ (b < 146 ∨ 149 < b)
 
-/-- The `CTL` words a step may write: all but the pending checks' count. -/
+/-- The `CTL` words a step may write: all but the pending checks' count, the promotion memos'
+words and the pin variant list's header (`CTL[150]`, `CTL[151]`, lane `romload`). -/
 def stepC : List Word :=
-  ((List.range 1024).filter fun x => x ≠ 130 ∧ (x < 140 ∨ 147 < x)).map UInt64.ofNat
+  ((List.range 1024).filter fun x => x ≠ 130 ∧ x ≠ 150 ∧ x ≠ 151 ∧ (x < 140 ∨ 147 < x)).map
+    UInt64.ofNat
 
 /-- `check_value_group`'s text: this lane's functions, lane `induct`'s library and stubs, and the
 real master callees it reaches. -/
