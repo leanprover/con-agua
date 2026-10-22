@@ -99,15 +99,16 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
       rcases hjn with h | h
       · subst h; trivial
       · rw [toNat_sub1 j h, hP1, hEC]; exact hrest
-    obtain ⟨hEf, hfr2⟩ := ih m1 vis (j - 1) (k - 1) _ cs r m' hE1 hszz hlenk hj1 hcon' (by
-      cases hcc : callW p n "erase_installed" [j - 1, k - 1] m1 with
-      | none => rw [hcc] at hW; cases hW
-      | some y =>
-        obtain ⟨z2, m3⟩ := y
-        rw [hcc, memK_some] at hW
-        have : m3 = m' := Option.some.inj hW
-        subst this; exact hcc)
+    cases hcc : callW p n "erase_installed" [j - 1, k - 1] m1 with
+    | none => rw [hcc] at hW; cases hW
+    | some y =>
+    obtain ⟨z2, m3⟩ := y
+    rw [hcc, memK_some] at hW
+    have hm3 : m3 = m' := Option.some.inj hW
+    subst hm3
+    obtain ⟨hEf, hfr2⟩ := ih m1 vis (j - 1) (k - 1) _ cs z2 m3 hE1 hszz hlenk hj1 hcon' hcc
     refine ⟨?_, hfr.trans hfr2⟩
+    simp only [eraseInstalled]
     rw [hname]
     exact hEf
 
