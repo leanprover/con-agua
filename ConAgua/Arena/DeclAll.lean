@@ -20,3 +20,4 @@ import ConAgua.Arena.DeclReducePin
 import ConAgua.Arena.DeclArmOpaque
 import ConAgua.Arena.DeclAxiomSpec
 import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.DeclAxiomSpec2
