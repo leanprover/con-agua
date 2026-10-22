@@ -336,4 +336,86 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
 
 end lev
 
+/-! ## `sl_memo` -/
+
+/-- The walk memos at a state with the same memos and store. -/
+theorem ILWMemo.congr {m : Mem} {a a' : AState} (h : ILWMemo m a) (hme : a'.memos = a.memos)
+    (hst : a'.store = a.store) : ILWMemo m a' :=
+  h.frame (MemFrame.refl [] [] m) (by decide) (by decide) hme (ILWGrow.of_lss (by rw [hst]))
+
+/-- The substitution at a state with the same store. -/
+theorem ILWEnv.congr {m : Mem} {a a' : AState} {ko kc vo vc : Word} {ks : List Name}
+    {us : List LIdx} {vs : List Level} (h : ILWEnv m a ko kc vo vc ks us vs)
+    (hst : a'.store = a.store) : ILWEnv m a' ko kc vo vc ks us vs :=
+  h.keep (StackKept.refl m) (ILWGrow.of_lss (by rw [hst]))
+
+/-- **`sl_memo` refines `substLMemoAt`** under the walk's invariants. -/
+@[refines ConRon.Arena.substLMemoAt]
+theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
+  intro n m m' a dn vis fe M eb u ko kc vo vc ks us vs rs hS hM hE hu hdu' hc
+  obtain ⟨L, hdu⟩ := hdu'
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ k =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slMemo_spec p hp.ilw k _ u ko kc vo vc) hc
+  rw [hs'] at hW
+  change ilwSlW p k m u ko kc vo vc = some (rs.headD 0, m') at hW
+  unfold ilwSlW at hW
+  by_cases hr : mfindG lplSch m u 0 = []
+  · simp [hr] at hW
+  simp only [hr, ↓reduceIte] at hW
+  by_cases hh : (mfindG lplSch m u 0).headD 0 ≠ 0
+  · -- a hit: the memo's value
+    simp only [ne_eq, hh, not_false_eq_true, ↓reduceIte] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hw, rfl⟩ := hW
+    obtain ⟨v, hv, hvv, hvl⟩ := memoRV_hit lplSch ilKey VI m _ hM.lpl u 0 hr hh ⟨hu, rfl⟩
+    have hval : mvG lplSch m ((mfindG lplSch m u 0).tail.headD 0) = rs.headD 0 := hw
+    rw [hval] at hvv hvl
+    have hget : a.memos.instLPLC[(decI u : LIdx)]? = some (decI (rs.headD 0)) := by
+      rw [← hvv]; exact hv
+    refine ⟨a, ?_, ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, hM, ILWGrow.refl a, hvl,
+      hM.lplDen _ _ hget⟩
+    simp only [substLMemoAt, StateT.run_bind, instLPLGet_run, except_ok_bind, hget]; rfl
+  -- a miss: read back, substitute, record
+  simp only [hh, ↓reduceIte] at hW
+  have hmiss : a.memos.instLPLC[(decI u : LIdx)]? = none :=
+    memoRV_miss lplSch ilKey VI m _ hM.lpl u 0 ⟨hu, rfl⟩ hr (by simpa using hh)
+  cases h1 : callW p k "lv_sub_int" [u, ko, kc, vo, vc] m with
+  | none => rw [h1] at hW; simp [ilwSlK] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1, ilwSlK_some] at hW
+  obtain ⟨s₁, hs₁, -, hW₁⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (lvSubInt_spec p hp.ls.toLvSubProg k _ u ko kc vo vc) h1
+  rw [hs₁] at hW₁
+  obtain ⟨X, hrl, hrc⟩ := readLevelM_run' a (decI u) L hdu hS.readL
+  have hSR := hS.withReadLC X hrc
+  obtain ⟨a₁, hrun₁, o⟩ := lvSubIntW_core hSR (hE.congr rfl) hu hdu hW₁
+  by_cases hb : 4294967296 ≤ r₁.headD 0
+  · simp only [hb, ↓reduceIte] at hW; cases hW
+  simp only [hb, ↓reduceIte] at hW
+  cases h2 : msetG lplSch m₁ u 0 (r₁.headD 0) with
+  | none => rw [h2] at hW; cases hW
+  | some m₂ =>
+  rw [h2] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr₁, rfl⟩ := hW
+  rw [← hr₁]
+  have hM₁ : ILWMemo m₁ a₁ := ILWMemo.frame (a := { a with caches := { a.caches with readLC := X } })
+    (hM.congr rfl rfl) o.frame (by decide) (by decide) o.memos o.grow
+  have hM₂ := hM₁.setLPL u (r₁.headD 0) hu o.hw o.den h2
+  have hf₂ := msetG_frame lplSch lplSch_wf m₁ m₂ u 0 _ h2
+  have hf₂' : MemFrame [lplSch.arr] [lplSch.cs, lplSch.cs + 1] m₁ m₂ := hf₂.mono (by simp) (by simp)
+  obtain ⟨hS₂, hk₂⟩ := CoreS.frameLP lplSch (.inr (.inl rfl)) o.core hf₂'
+    (o.core.memos.frame hf₂' (by decide) (by decide) (by decide) (by decide))
+  refine ⟨_, ?_, ⟨M, hS₂.lpMemos a₁.memos.instLPC
+      (a₁.memos.instLPLC.insert (decI u) (decI (r₁.headD 0))) a₁.memos.instLPLsC,
+    KeptAll.refl _ _, o.stack.trans hk₂⟩, hM₂, ?_, o.hw, o.den⟩
+  · simp only [substLMemoAt, StateT.run_bind, instLPLGet_run, except_ok_bind, hmiss, hrl, hrun₁,
+      instLPLSet_run]; rfl
+  · exact ILWGrow.trans (a₂ := a₁) (ILWGrow.trans (a₂ := { a with caches := { a.caches with readLC := X } })
+      (ILWGrow.of_lss rfl) o.grow) (ILWGrow.of_lss rfl)
+
 end L.Arena
