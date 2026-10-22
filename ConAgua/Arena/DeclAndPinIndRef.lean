@@ -378,4 +378,95 @@ theorem apW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLe
     exact hrun4
   · exact ⟨hd4.1, hd4.2⟩
 
+/-- **`and_pin_ok(i)` refines `andPinOk (.indDecl block nP)`** on the front's inductive record
+`i` (`IndDeclAt`, of the front's shape `FrontBlock`), at a well-formed twin state (`StateOK`,
+which gives canon's `LitInj`); `rom_and_pin` by its refinement (`RomAndPinRef`, helper
+`decls4-rom`). -/
+@[refines_part ConRon.Arena.andPinOk "the inductive arm (front blocks, FrontBlock)"]
+theorem andPinOkInd_refines {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} (hR : L.Rom.RomAndPinRef p dn vis fe) (i : Word)
+    (block : List IConstantInfo) (nP : Nat) :
+    L.Ind.RefAM p "and_pin_ok" [i]
+      (fun m a => StageR dn vis fe m a ∧ IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP ∧
+        FrontBlock block ∧ ConRon.Bridge.StateOK a ∧
+        (m.arr64 DECL).size < 2 ^ 63 ∧ (m.arr64 DLP).size < 2 ^ 63)
+      (andPinOk (.indDecl block nP)) (L.Ind.KeepPost dn vis fe decW0B) := by
+  intro n s₀ a₀ ⟨hS, hdecl, hFB, hok, hD, hP⟩
+  refine triple_post (andPinOk_specA p hp.and_pin_ok hp.and_block_named n s₀ i) ?_
+  rintro r s' ⟨hl, hW⟩
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := apW_ind_ok hp hR hW hS hdecl hFB hok hD hP
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok', by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
+
+/-! ## Every record kind the front produces -/
+
+/-- A one-constant record (kind word not `6`): the name test, memory unchanged. -/
+theorem apW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
+    (h : apW p n m i = some (r, m')) (hk : rdW (m.arr64 DECL) (1 + 8 * i) ≠ 6) :
+    rdW (m.arr64 PINS) 0 ≠ 0 ∧ m' = m ∧ r = [andPinW m i] := by
+  cases n with
+  | zero => simp [apW] at h
+  | succ n =>
+  rw [apW_step] at h
+  by_cases hfl : rdW (m.arr64 PINS) 0 = 0
+  · rw [if_pos hfl] at h; cases h
+  rw [if_neg hfl, if_neg hk] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  exact ⟨hfl, h.2.symm, h.1.symm⟩
+
+/-- A one-constant record: `and_pin_ok` is `andPinOk`'s name test, memory and twin state kept. -/
+theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} (i : Word) (d : IDeclaration) :
+    L.Ind.RefAM p "and_pin_ok" [i]
+      (fun m a => StageR dn vis fe m a ∧ L.Front.DeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
+        (m.arr64 DECL).size < 2 ^ 63)
+      (andPinOk d) (L.Ind.KeepPost dn vis fe decW0B) := by
+  intro n s₀ a₀ ⟨hS, hd, hD⟩
+  refine triple_post (andPinOk_specA p hp.and_pin_ok hp.and_block_named n s₀ i) ?_
+  rintro r s' ⟨hl, hW⟩
+  have hk : dw (s₀.mem.arr64 DECL) i.toNat 0 ≠ 0 ∧ dw (s₀.mem.arr64 DECL) i.toNat 0 ≠ 6 := by
+    cases d <;> simp only [L.Front.DeclAt] at hd <;> (try exact hd.elim) <;> rw [hd.1] <;> decide
+  have e1 : rdW (s₀.mem.arr64 DECL) (1 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 0 :=
+    rdW_dwI hD hk.1 rfl (by decide)
+  have e2 : rdW (s₀.mem.arr64 DECL) (2 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 1 :=
+    rdW_dwI hD hk.1 rfl (by decide)
+  obtain ⟨hfl, hm, hr⟩ := apW_one hW (by rw [e1]; exact hk.2)
+  have hF : PinsFull s₀.mem a₀.pins := hS.1.pins.full hfl
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ (andPinOk_run hd hF)
+  refine ⟨hl, hok', ?_⟩
+  rw [hst, hres, hm, hr]
+  refine ⟨hS, IWGrow.refl _, ?_, ?_⟩
+  · have e12 : rdW (s₀.mem.arr64 PINS) 12 = pinW s₀.mem 12 := rfl
+    have e49 : rdW (s₀.mem.arr64 PINS) 49 = pinW s₀.mem 49 := rfl
+    have e50 : rdW (s₀.mem.arr64 PINS) 50 = pinW s₀.mem 50 := rfl
+    simp only [andPinW, e2, e12, e49, e50, List.headD_cons]
+    generalize lo32 (dw (s₀.mem.arr64 DECL) i.toNat 1) = x
+    by_cases h1 : x = pinW s₀.mem 12 <;> by_cases h2 : x = pinW s₀.mem 49 <;>
+      by_cases h3 : x = pinW s₀.mem 50 <;> simp [h1, h2, h3]
+  · simp only [andPinW, List.headD_cons]; split <;> decide
+
+/-- **`and_pin_ok(i)` refines `andPinOk d` for every record the front produces** (`DeclAtF`: the
+one-constant kinds and inductive blocks; `basisDecl` has no front record, `DeclAtF` is `False`
+there). An inductive block of the front's shape (`FrontBlock`, the constants `installIndD`
+pushes); `rom_and_pin` by its refinement. -/
+@[refines_part ConRon.Arena.andPinOk "the front's records (inductive blocks of the front's shape, FrontBlock)"]
+theorem andPinOkF_refines {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} (hR : L.Rom.RomAndPinRef p dn vis fe) (i : Word)
+    (d : IDeclaration) :
+    L.Ind.RefAM p "and_pin_ok" [i]
+      (fun m a => StageR dn vis fe m a ∧ L.Front.DeclAtF (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
+        (∀ b nP, d = .indDecl b nP → FrontBlock b) ∧ ConRon.Bridge.StateOK a ∧
+        (m.arr64 DECL).size < 2 ^ 63 ∧ (m.arr64 DLP).size < 2 ^ 63)
+      (andPinOk d) (L.Ind.KeepPost dn vis fe decW0B) := by
+  intro n s₀ a₀ ⟨hS, hdecl, hFB, hok, hD, hP⟩
+  cases d with
+  | indDecl b nP =>
+    exact andPinOkInd_refines hp hR i b nP n s₀ a₀ ⟨hS, hdecl, hFB _ _ rfl, hok, hD, hP⟩
+  | basisDecl k => exact hdecl.elim
+  | axiomDecl cv => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
+  | defnDecl cv v h => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
+  | thmDecl cv v => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
+  | opaqueDecl cv v => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
+  | quotDecl k cv => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
+
 end L.Arena
