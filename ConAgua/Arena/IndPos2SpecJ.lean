@@ -171,21 +171,20 @@ theorem nestGrowGroup_spec (p : Prog) (hl : NitLook p) (h2 : p.lookup "rec2" = s
 
 theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us dO dL : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0)
     (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx))
       (r : List Word),
     ggW k m vis ctx hi us dO dL cO cL gO gL = some (r, m') → StageR dn vis fe m a →
     UCtx dn vis fe m ctx c → decHL m dO.toNat dL.toNat = some ds → dO.toNat + dL.toNat ≤ iwTop m →
     decHL m cO.toNat cL.toNat = some cs → (∀ j < cL.toNat, cO.toNat + j < iwTop m) →
-    gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
+    gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp → PosMR m →
     ∃ res a', (ConRon.Arena.nestGrowGroup fe c HI (decI us) ds cs grp).run a = .ok (res, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = res.length ∧
-      (r.headD 0).toNat + res.length ≤ iwTop m' ∧ GrpAt m' (r.headD 0).toNat res := by
+      (r.headD 0).toNat + res.length ≤ iwTop m' ∧ GrpAt m' (r.headD 0).toNat res ∧ PosMR m' := by
   induction k with
   | zero => intro m m' a cO cL gO gL cs grp r h; simp [ggW] at h
   | succ k ih =>
-    intro m m' a cO cL gO gL cs grp r h hS hU hds hdb hcs hcb hgl hgb hgrp
+    intro m m' a cO cL gO gL cs grp r h hS hU hds hdb hcs hcb hgl hgb hgrp hP
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hc0 : cL = 0
     · rw [ggW_nil (h := hc0)] at h
@@ -195,7 +194,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
       have : cs = [] := by simpa [decHL, hslice?] using hcs.symm
       subst this
       exact ⟨grp, a, by rw [ConRon.Arena.nestGrowGroup]; rfl, hS, IWGrow.refl _, by simpa using hgl,
-        by simpa using hgb, by simpa using hgrp⟩
+        by simpa using hgb, by simpa using hgrp, hP⟩
     rw [ggW_cons (h := hc0)] at h
     have hlz : cL.toNat ≠ 0 := fun e => hc0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', cL.toNat = l' + 1 := ⟨cL.toNat - 1, by omega⟩
@@ -255,8 +254,8 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     | some pr2 =>
     obtain ⟨r2, m2⟩ := pr2
     rw [hnit, ggK2_some] at h
-    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key _ r2 hnit
-      hS1 (hU.grow hg1) hdk hkin hksl hMno
+    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key _ r2 hnit
+      hS1 (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
     -- the pair record and the snoc
     cases hpr : posRecW m2 [cw, r2.tail.headD 0] with
     | none => rw [hpr] at h; simp [ggK3] at h
@@ -292,14 +291,14 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
         · simp [hcd]
         · rw [hg4.2.2.1 _ (by omega)]; simpa using hget3 1 (by simp)
         · rw [htd]; simp
-    obtain ⟨res, a', hrun, hS', hg', h1, h2, h3⟩ := ih m4 m' a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x.2)]) r h
+    obtain ⟨res, a', hrun, hS', hg', h1, h2, h3, hP'⟩ := ih m4 m' a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x.2)]) r h
       hS4 (hU.grow hg14) (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hds)
       (by have := hg14.1; omega)
       (by rw [hcO1, hcL1, decHL_agree (RdS.of_grow hg14) (fun j hj => by have := hcb (j + 1) (by omega); omega)]
           simpa [decHL] using hcs')
       (fun j hj => by rw [hcO1, hcL1] at *; have := hcb (j + 1) (by omega); have := hg14.1; omega)
-      (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4
-    refine ⟨res, a', ?_, hS', hg14.trans hg', h1, h2, h3⟩
+      (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4 ((hP2.fr (posRecW_mfr hpr)).fr (snocW_mfr hsn))
+    refine ⟨res, a', ?_, hS', hg14.trans hg', h1, h2, h3, hP'⟩
     rw [ConRon.Arena.nestGrowGroup]
     simp only [StateT.run_bind, hrun2, except_ok_bind]
     exact hrun
@@ -311,31 +310,29 @@ variable (p : Prog) (hl : NitLook p) (h2 : p.lookup "rec2" = some rec2)
 include hl h2 h4 hsn hp
 
 /-- **`nest_grow_group` refines `nestGrowGroup`** (through `nest_inst_type`'s stubs; the hypotheses
-of `nestInstType_refines`, every stage state's constant records' level slices below `EREC`'s top). -/
--- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
--- @[refines ConRon.Arena.nestGrowGroup]
+of `nestInstType_refines`; the walk memos well formed in the memory at hand, `PosMR`, and again after). -/
+@[refines ConRon.Arena.nestGrowGroup]
 theorem nestGrowGroup_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx hi us dO dL cO cL gO gL : Word) (c : NestCtx) (ds : List EIdx) (cs : List NIdx)
     (grp : List (NIdx × EIdx)) (hS : StageR dn vis fe s₀.mem a₀) (hU : UCtx dn vis fe s₀.mem ctx c)
     (hus : H us) (hds : decHL s₀.mem dO.toNat dL.toNat = some ds) (hdb : dO.toNat + dL.toNat ≤ iwTop s₀.mem)
     (hcs : decHL s₀.mem cO.toNat cL.toNat = some cs) (hcb : ∀ j < cL.toNat, cO.toNat + j < iwTop s₀.mem)
     (hgl : gL.toNat = grp.length) (hgb : gO.toNat + grp.length ≤ iwTop s₀.mem) (hgrp : GrpAt s₀.mem gO.toNat grp)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0)
- :
+    (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_grow_group" [vis, ctx, hi, us, dO, dL, cO, cL, gO, gL]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀).length ∧
-      GrpAt s'.mem (r.headD 0).toNat (AM.res (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀);
-      ⊤⦄ := by
+      GrpAt s'.mem (r.headD 0).toNat (AM.res (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀) ∧
+      PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestGrowGroup_spec p hl h2 h4 hsn hp k s₀ vis ctx hi us dO dL cO cL gO gL) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, h1, -, h3⟩ := ggW_ok dn fe vis ctx hi us dO dL hi.toNat rfl c ds hus hMno
-    k _ _ a₀ cO cL gO gL cs grp _ hm hS hU hds hdb hcs hcb hgl hgb hgrp
+  obtain ⟨res, a', hrun, hS', hg, h1, -, h3, hP'⟩ := ggW_ok dn fe vis ctx hi us dO dL hi.toNat rfl c ds hus
+    k _ _ a₀ cO cL gO gL cs grp _ hm hS hU hds hdb hcs hcb hgl hgb hgrp hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by rw [hres]; simpa using h3⟩
+  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by rw [hres]; simpa using h3, hP'⟩
 
 end census
 
