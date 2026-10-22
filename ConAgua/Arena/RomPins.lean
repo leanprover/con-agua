@@ -219,8 +219,7 @@ end namesToRef
 
 /-- `intern_reserved_pins()` for the ROM offset `off` of `encNames pinNames ++ encNames
 reservedBasisNameValues`. -/
-@[l_impl ConRon.Arena.internReservedPins]
-def internReservedPinsL (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
+def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
   if len(PINS.u64) < 71 { abort };
   q := call rom_names_to(⟪off⟫, 51, 1);
   q := call rom_names_to(q, 16, 55);
@@ -238,6 +237,10 @@ def internReservedPinsL (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1
   PINS.u64[0] := 1;
   return 0
 }
+
+/-- `intern_reserved_pins()` as the program has it: the ROM starts with the two name lists. -/
+@[l_impl ConRon.Arena.internReservedPins]
+def internReservedPinsL : FunDecl := internReservedPinsAt 0
 
 section irpModel
 variable (rom : List UInt8)
@@ -306,7 +309,7 @@ structure IrpProg (rom : List UInt8) (off : Word) (p : Prog) : Prop extends Name
   sort_find : p.lookup "sort_find" = some sortFind
   sort_push : p.lookup "sort_push" = some sortPush
   intern_sort : p.lookup "intern_sort" = some internSort
-  irp : p.lookup "intern_reserved_pins" = some (internReservedPinsL off)
+  irp : p.lookup "intern_reserved_pins" = some (internReservedPinsAt off)
 
 section irpSpec
 variable (rom : List UInt8) (off : Word) (p : Prog) (hL : IrpProg rom off p)
@@ -317,7 +320,7 @@ theorem internReservedPins_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POO
     invoke p (exec p n) "intern_reserved_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ irpW rom n off s₀.mem = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hL.irp]
-  simp only [callFn, internReservedPinsL]
+  simp only [callFn, internReservedPinsAt]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
