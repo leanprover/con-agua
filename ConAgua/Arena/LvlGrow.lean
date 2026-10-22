@@ -176,4 +176,16 @@ theorem ensureSort_view {r : CoreFnsA} {fe : IFEnv} {d : Nat} {e : EIdx} {a a' :
     · simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, bind,
         Except.bind] at h
 
+/-- A level that reads back is stored, and `lv_node` accepts it. -/
+theorem lvNodeW_of_den {m : Mem} {a : AState} (hR : ArenaR m a) {u : Word} (hu : HW u)
+    (hd : ∃ l, denoteL a.store.ls (decI u) = some l) : lvNodeW m u ≠ [] := by
+  obtain ⟨l, hl'⟩ := hd
+  have hv : ∃ v, a.store.lss.ls.view (decI u) = some v := by
+    unfold denoteL denoteLAux at hl'
+    cases e : a.store.ls.view (decI u) with
+    | none => rw [e] at hl'; simp at hl'
+    | some v => exact ⟨v, e⟩
+  obtain ⟨v, hv⟩ := hv
+  rw [lvNodeW_store hR hu hv]; cases v <;> simp [lvEnc]
+
 end L.Arena
