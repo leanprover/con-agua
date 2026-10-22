@@ -41,7 +41,7 @@ theorem nestCtorNf_spec (p : Prog) (L : RxLook p) (hp : p.lookup "nest_ctor_nf" 
   simp only [callFn, nestCtorNfL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      rec5_specW p L.ha L.h5 k, (rxSpec_all p L k).2.2.2.1, (rxSpec_all p L k).2.2.2.2.2.2.2] <;>
+      posRec5_specW p L.ha L.h5 k, (rxSpec_all p L k).2.2.2.1, (rxSpec_all p L k).2.2.2.2.2.2.2] <;>
     finish (gen := 20) [ncnW, rdW_eq]
 
 section rel

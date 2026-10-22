@@ -322,7 +322,7 @@ theorem nestCrest_spec (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl us
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCanonCrest_spec p R.ha R.hl R.hk L.ng L.np L.ip L.raf L.rap L.rgo L.rnd L.rcl L.ra L.cc k,
-      rec5_specW p R.ha R.h5 (k + 2), (rxSpec_all p R (k + 2)).2.2.2.2.2.2.2] <;>
+      posRec5_specW p R.ha R.h5 (k + 2), (rxSpec_all p R (k + 2)).2.2.2.2.2.2.2] <;>
     finish (gen := 20) [crW]
 
 section rel
