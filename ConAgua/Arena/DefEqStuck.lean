@@ -33,6 +33,7 @@ structure StuckProg (p : Prog) : Prop where
   etaCertBody : p.lookup "eta_cert_body" = some etaCertBodyL
   etaCertTy : p.lookup "eta_cert_ty" = some etaCertTyL
   etaCtorShape : p.lookup "eta_ctor_shape" = some etaCtorShapeL
+  ers : p.lookup "er_slice_eq" = some erSliceEqL
   setTail : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL
   setGo : p.lookup "struct_eta_cert_go" = some structEtaCertGoL
   setWith : p.lookup "struct_eta_cert_with" = some structEtaCertWithL
