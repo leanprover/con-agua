@@ -35,6 +35,10 @@ open ConRon.Arena
 
 namespace L.Arena
 
+/-- **Every valid level handle reads back.** -/
+def LvlAll (a : AState) : Prop :=
+  ∀ u : LIdx, (a.store.ls.view u).isSome → ∃ l, denoteL a.store.ls u = some l
+
 /-- **Stored levels read back** (see the module note). -/
 structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
   sort : ∀ (h : EIdx) (u : LIdx), a.store.view h = some (.sort u) →
@@ -158,6 +162,29 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
   · exact hctl _ (by simp [sortSch])
   · exact hctl _ (by simp [constSch])
   · exact hctl _ (by simp [constSch])
+
+theorem denoteLList_mono {st st' : LStore} (hl : LExt st st') :
+    ∀ (us : List LIdx) (ls : List ConLeche.Level), denoteLList st us = some ls → denoteLList st' us = some ls
+  | [], ls, h => by simpa [denoteLList] using h
+  | u :: us, ls, h => by
+    simp only [denoteLList, opt2] at h ⊢
+    split at h
+    · rename_i x y hx hy
+      cases h
+      rw [hl.lvl _ _ hx, denoteLList_mono hl us y hy]
+    · cases h
+
+/-- **`LsExt` from equal level-list tables and an extended level store.** -/
+theorem lsExt_of_tables {st st' : LsStore} (hp : st'.pers = st.pers) (hs : st'.scr = st.scr)
+    (hon : st'.scratchOn = st.scratchOn) (hl : LExt st.ls st'.ls) : LsExt st st' := by
+  refine ⟨hl, fun i us h => ?_⟩
+  have hv : st'.view i = st.view i := by simp only [LsStore.view, hp, hs, hon]
+  unfold denoteLs at h ⊢
+  rw [hv]
+  revert h
+  cases st.view i with
+  | none => intro h; cases h
+  | some v => exact denoteLList_mono hl _ _
 
 /-- **`StoreDen` across a step** that extends the level stores, keeps the zero pin and `EREC`,
 caches only readbacks of names, and creates no new `sort`/`const` views. -/

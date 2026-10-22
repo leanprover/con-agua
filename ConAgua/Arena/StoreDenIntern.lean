@@ -242,24 +242,24 @@ theorem view_after_noLss {α : Type} {op : AM α} (hk : Keeps noLss op) {a : ASt
 /-! ## Cache-only readers keep the store -/
 
 /-- The store. -/
-def stP (a : AState) : EStore := a.store
+def stDenP (a : AState) : EStore := a.store
 
-theorem keeps_stP_readLevelM (h : LIdx) : Keeps stP (readLevelM h) := by prim_keeps readLevelM
-theorem keeps_stP_readNameM (h : NIdx) : Keeps stP (readNameM h) := by prim_keeps readNameM
-theorem keeps_stP_readLevelsM (h : LsIdx) : Keeps stP (readLevelsM h) := by
+theorem keeps_stP_readLevelM (h : LIdx) : Keeps stDenP (readLevelM h) := by prim_keeps readLevelM
+theorem keeps_stP_readNameM (h : NIdx) : Keeps stDenP (readNameM h) := by prim_keeps readNameM
+theorem keeps_stP_readLevelsM (h : LsIdx) : Keeps stDenP (readLevelsM h) := by
   unfold Keeps; intro a r a' h'
   simp only [readLevelsM, StateT.run_bind, StateT.run_get, pure_bind] at h'
   repeat' split at h'
   all_goals simp only [StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind, failDanglingLs,
     ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h'
   all_goals first | (cases h'; rfl) | (simp [throwThe, throw, Functor.map, Except.map] at h')
-theorem keeps_stP_readNamesM : ∀ l : List NIdx, Keeps stP (readNamesM l)
+theorem keeps_stP_readNamesM : ∀ l : List NIdx, Keeps stDenP (readNamesM l)
   | [] => by rw [readNamesM]; exact Keeps.pure _
   | h :: hs => by
     rw [readNamesM]
     exact Keeps.bind (keeps_stP_readNameM h) fun _ =>
       Keeps.bind (keeps_stP_readNamesM hs) fun _ => Keeps.pure _
-theorem keeps_stP_lvlEq? (u v : LIdx) : Keeps stP (lvlEq? u v) := by
+theorem keeps_stP_lvlEq? (u v : LIdx) : Keeps stDenP (lvlEq? u v) := by
   unfold lvlEq?
   refine Keeps.bind (by unfold Keeps; intro a r a' h; cases h; rfl) fun s => ?_
   split
@@ -270,9 +270,9 @@ theorem keeps_stP_lvlEq? (u v : LIdx) : Keeps stP (lvlEq? u v) := by
       simp only [StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at h
       cases h; rfl
     · exact Keeps.pure _
-theorem keeps_stP_zeroLevel : Keeps stP zeroLevel := by
+theorem keeps_stP_zeroLevel : Keeps stDenP zeroLevel := by
   unfold zeroLevel; prim_keeps pinZeroLevel
-theorem keeps_stP_fireOk (e : IProjEntry) (us : LsIdx) : Keeps stP (e.fireOk us) := by
+theorem keeps_stP_fireOk (e : IProjEntry) (us : LsIdx) : Keeps stDenP (e.fireOk us) := by
   unfold IProjEntry.fireOk
   refine Keeps.bind keeps_stP_zeroLevel fun _ => Keeps.bind (keeps_stP_lvlEq? _ _) fun _ => ?_
   split
@@ -280,7 +280,7 @@ theorem keeps_stP_fireOk (e : IProjEntry) (us : LsIdx) : Keeps stP (e.fireOk us)
   · exact Keeps.bind (keeps_stP_readNamesM _) fun _ => Keeps.bind (keeps_stP_readLevelsM _) fun _ =>
       Keeps.bind (keeps_stP_readLevelM _) fun _ => Keeps.pure _
 
-theorem Keeps.noLss_of_stP {α : Type} {op : AM α} (h : Keeps stP op) : Keeps noLss op :=
+theorem Keeps.noLss_of_stP {α : Type} {op : AM α} (h : Keeps stDenP op) : Keeps noLss op :=
   Keeps.map (fun st => ({ st with lss := LsStore.empty } : EStore)) h
 
 theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) (us : LsIdx) :
