@@ -237,6 +237,55 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name
       (UInt64.ofNat nF) (fun i hi => by omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, ofNat_toNat_lt hnP, ofNat_toNat_lt hnF]
 
+/-- An inductive (its `sortZ` without names). -/
+theorem ci_ind {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+    (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
+    (caps : ConLeche.IndCaps) (hcaps : capsFits caps = true)
+    (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
+    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hd : rom.drop q.toNat = (encCI seen (.indInfo v caps)).1 ++ rest)
+    (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
+    CIPost dn m₀ a₀ seen memo (.indInfo v caps) m a q r m' := by
+  unfold CIPost
+  simp only [encCI] at hd ⊢
+  obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2, hek2, hIW2,
+    hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 3 20 rfl (by decide) (by omega) (encCaps caps)
+      _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hc
+  replace ht2 : erTop m + 20 ≤ erTop m2 := ht2
+  rw [show (20 : Word).toNat = 20 from rfl] at hH2
+  have i1 : (UInt64.ofNat 3 = 1) = False := by decide
+  have i3 : (UInt64.ofNat 3 = 3) = True := by decide
+  simp only [ciTailW, i1, i3, ite_false, ite_true] at hw
+  cases h3 : callW p (k' + 1) "rci_caps" [q2, pp + 5] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some t3 =>
+  obtain ⟨r3, m3⟩ := t3
+  rw [h3, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hlt := hI2.er_lt
+  have hgo := hI.grow.2.1
+  have hp5 : (pp + 5).toNat = pp.toNat + 5 := by
+    rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+  obtain ⟨ic, a3, hrun3, hI3, hM3, hs3, hq3, hek3, ht3, hIW3, hH3⟩ :=
+    caps_rel hL hr dn _ memo1 caps hcaps k' m2 a1 q2 (pp + 5) rest r3 m3 hI2 hM2 hs2 hd2
+      (by omega) (by omega) h3
+  rw [hp5] at hek3 hH3
+  refine ⟨memo1, .indInfo icv ic, a3, ?_, hI3, hM3, hs3, ?_,
+    ⟨by omega, fun i hi _ => ?_⟩, by simp [hpp], by rw [hIW3, hIW2], ?_⟩
+  · simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ hrun2, run_bind_of _ _ _ _ _ hrun3]; rfl
+  · simp only [List.tail_cons, List.headD_cons]; rw [hq3, hq2]; simp [u64B]; omega
+  · rw [hek3.2 i (by omega) (by omega)]; exact hek2.2 i hi id
+  · intro m'' h1 h2
+    simp only [List.headD_cons]
+    have e0 : (erA m'')[pp.toNat]? = some (UInt64.ofNat 3) := by
+      rw [h1 _ ⟨by omega, by omega⟩, hek3.2 _ (by omega) (by omega)]; exact hw0
+    have ecv := (hH2.ekeep hek3 (fun i hi => ⟨by omega, by omega⟩) hIW3) m''
+      (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
+    have ecaps := hH3 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
+    have : pp.toNat + 1 + 4 = pp.toNat + 5 := by omega
+    simp [decCI, nat?_of e0, ecv, ecaps]
+
 end kinds
 
 end L.Rom
