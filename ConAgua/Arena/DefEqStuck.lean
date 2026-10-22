@@ -46,6 +46,9 @@ structure StuckProg (p : Prog) : Prop where
   stuckStr : p.lookup "stuck_str" = some stuckStrL
   stuckAppCong : p.lookup "stuck_app_cong" = some stuckAppCongL
   stuckApp : p.lookup "stuck_app" = some stuckAppL
+  stuckRest : p.lookup "stuck_rest" = some stuckRestL
+  defeqStuck : p.lookup "defeq_stuck" = some defeqStuckL
+  eview : p.lookup "e_view" = some L.Ind.eView
 
 /-- `defeq_lst(mode, vis, d, ao, an, bo, bn)` refines the twin's `defEqList` on two stack slices
 below the top (helper `defeq-mid` proves it; a hypothesis here). -/

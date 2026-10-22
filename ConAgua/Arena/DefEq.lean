@@ -1051,37 +1051,29 @@ def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3332-3401 ConRon.Arena.defeqStuck -/
+/-- `defeqStuck`'s free-variable, constant and λ arms and the fallback, by the two views' words
+(split off for the proofs). -/
+-- con-ron: ConRon/Arena/Core.lean:3332-3401 ConRon.Arena.defeqStuck
 @[l_impl ConRon.Arena.defeqStuck]
-def defeqStuckL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (ga, a1, a2, a3, gb, b1, b2, b3, z, ok, r) {
-  (ga, a1, a2, a3) := call e_view(a);
-  (gb, b1, b2, b3) := call e_view(b);
-  if ga == 8 && gb == 4 {
-    r := call stuck_str(mode, vis, d, a, b, 0, a, b1);
-    return r
+def stuckRestL : FunDecl :=
+    lfn (mode, vis, d, a, b, ga, a1, a2, gb, b1, b2) locals (z, ok, r) {
+  if ga == 1 {
+    if gb == 1 {
+      if a1 == b1 { return 1 };
+      r := call stuck_irrel(mode, vis, d, a, b);
+      return r
+    }
   };
-  if ga == 4 && gb == 8 {
-    r := call stuck_str(mode, vis, d, a, b, 1, b, a1);
-    return r
-  };
-  if ga == 1 && gb == 1 {
-    if a1 == b1 { return 1 };
-    r := call stuck_irrel(mode, vis, d, a, b);
-    return r
-  };
-  if ga == 3 && gb == 3 {
-    if a1 == b1 {
-      z := call lvls_eq_c(a2, b2);
-      if z == 0 { abort };
-      if z == 2 { return 1 }
-    };
-    r := call stuck_irrel(mode, vis, d, a, b);
-    return r
-  };
-  if ga == 4 && gb == 4 {
-    r := call stuck_app(mode, vis, d, a, b);
-    return r
+  if ga == 3 {
+    if gb == 3 {
+      if a1 == b1 {
+        z := call lvls_eq_c(a2, b2);
+        if z == 0 { abort };
+        if z != 1 { return 1 }
+      };
+      r := call stuck_irrel(mode, vis, d, a, b);
+      return r
+    }
   };
   if ga == 5 {
     ok := call eta_cert(mode, vis, d, a1, a2, b);
@@ -1096,6 +1088,34 @@ def defeqStuckL : FunDecl :=
     return r
   };
   r := call stuck_irrel(mode, vis, d, a, b);
+  return r
+}
+
+/-- The tags tested one at a time (no `&&` chains: the proof's paths); the twin's pairs are
+disjoint, so grouping by `a`'s tag keeps its match order.
+con-ron: ConRon/Arena/Core.lean:3332-3401 ConRon.Arena.defeqStuck -/
+@[l_impl ConRon.Arena.defeqStuck]
+def defeqStuckL : FunDecl :=
+    lfn (mode, vis, d, a, b) locals (ga, a1, a2, a3, gb, b1, b2, b3, r) {
+  (ga, a1, a2, a3) := call e_view(a);
+  (gb, b1, b2, b3) := call e_view(b);
+  if ga == 8 {
+    if gb == 4 {
+      r := call stuck_str(mode, vis, d, a, b, 0, a, b1);
+      return r
+    }
+  };
+  if ga == 4 {
+    if gb == 8 {
+      r := call stuck_str(mode, vis, d, a, b, 1, b, a1);
+      return r
+    };
+    if gb == 4 {
+      r := call stuck_app(mode, vis, d, a, b);
+      return r
+    }
+  };
+  r := call stuck_rest(mode, vis, d, a, b, ga, a1, a2, gb, b1, b2);
   return r
 }
 
@@ -1169,6 +1189,6 @@ def defeqFns : Prog :=
    ("struct_eta_cert", structEtaCertL), ("struct_unit_tail", structUnitTailL),
    ("struct_unit_head", structUnitHeadL), ("struct_unit_cert", structUnitCertL),
    ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app_cong", stuckAppCongL), ("stuck_app", stuckAppL),
-   ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]
+   ("stuck_rest", stuckRestL), ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]
 
 end L.Arena
