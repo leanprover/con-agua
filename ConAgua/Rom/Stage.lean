@@ -46,8 +46,8 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
   simp only [iap2K, Option.some.injEq] at hW
   subst hW
   have hd : rom.drop allPinsOff.toNat = encItems [] (itemsAllPins []) ++ rest := by
-    rw [hrom, allPinsOff_toNat, romData, romPins, ← List.append_assoc, List.append_assoc,
-      List.drop_left]
+    rw [hrom, allPinsOff_toNat, romData_split, romPins,
+      List.append_assoc (encNames pinNames ++ encNames reservedBasisNameValues ++ romCIData), List.drop_left]
   have hA' : ArenaD (resetMem mem) a := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, hq, hf, hs, hz⟩ := romItemsW_ok rom hr _ allPins_fits n (resetMem mem) a
     allPinsOff rest [] ∅ q m₁ hA' (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
@@ -135,7 +135,7 @@ theorem internReservedPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : Lis
       pinW s'.mem 0 ≠ 0 ∧ MemFrame PinA StoreC s₀.mem s'.mem; ⊤⦄ := by
   refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_
   refine internReservedPins_refines bs 0 (Prog.subPB bs P) hL hr
-    (encItems [] (itemsAllPins romPins) ++ bs.drop romData.length) ?_ pinNames_fit.1 pinNames_fit.2 n s₀ a₀ hA
+    (romCIData ++ (encItems [] (itemsAllPins romPins) ++ bs.drop romData.length)) ?_ pinNames_fit.1 pinNames_fit.2 n s₀ a₀ hA
   conv => lhs; rw [hpre]
   simp [romData]
 
