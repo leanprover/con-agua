@@ -112,6 +112,11 @@ per-function separation logic.
   watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.
   Declarations on it (a step over 20 s) are investigated by a separate lane off the critical path.
   **No lane adds time gates to merging**; this report is advisory.
+- **It is also the safety net under the shared Lake cache** (DESIGN.md, "Cache incident"): each run records
+  its verdict on master in `_tmp/buildcheck.json`, and `census.py` and `gist_report.py` print "last cache-free
+  build of master: <commit>, OK/FAILED". A FAILED there means some cached build accepted code that does not
+  build: stop landing, find the module, purge the cache (`rm -rf _tmp/lake-cache-v2`, then reseed it from a cache-free build). Run it (at least
+  incrementally) after every few landings; `--full` once a day.
 
 ## Bumping the twin (con-ron, and the con-leche it pins)
 - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
@@ -148,7 +153,7 @@ per-function separation logic.
   plain `lake`**: the wrapper points `LAKE_CACHE_DIR` at the shared cache; plain `lake` falls back to the
   toolchain's own cache directory, a different mount in the sandbox that copies instead of hard-linking. Start
   a fresh worktree with no `.lake/build` and let the cache restore it (seconds, ~0 bytes of disk) — do not copy
-  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. Remove your worktree when done.
+  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. **Do not edit, check out, merge or regenerate `.lean` files in a worktree while a build runs in it** (DESIGN.md, "Cache incident"): Lake hashes a source when the build starts and compiles it later, so the result can be an olean of a different text. The wrapper detects it, publishes nothing, deletes the affected modules' build state and exits non-zero (3 if Lake itself succeeded) — then just rerun. It also serialises builds within one worktree. To keep a build out of the cache use `LAKE_ARTIFACT_CACHE=false scripts/lake`, not plain `lake`. Remove your worktree when done.
 - Every checker run gets a `timeout`. Never use `ulimit -v`. Never wait on or kill processes by name pattern.
 - Never push. Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - This is the full project now, built top-down: `sorry` on master is fine (e.g. stubs for callees not yet
@@ -160,11 +165,20 @@ per-function separation logic.
   whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
   work should become a top-level lane, so the coordinator and the dashboard can see it. Name helper worktrees
   `<lane>-<suffix>`.
+- **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
+- **Landing is sequential: always land with `scripts/land.sh <branch> [targets]`.** It takes a lock, so only one lane merges into master at a time; it merges, builds the given targets, and on conflict or build failure resets master and exits non-zero (then merge master into your branch in your worktree and retry). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
+- **Program well-formedness:** prove every `Prog.wf … = true` with `L.Compiler.Prog.wf_of_wfFast` (Compiler/WFFast.lean), never with `decide +kernel` on `Prog.wf` directly: on a large program the slow check takes tens of GB of memory.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
   merge fallout, cleanup. Measure with `date` timestamps, not guesses. The note says what landed.
 - Parallel lanes each own explicit files. Before adding a lemma, grep for an existing one. A lane that started
   before others landed merges `master` into itself before landing.
+- **Deviations from the twin.** L is a close twin of con-ron. Any place where L does something else
+  than its twin (aborts where the twin continues, other than fuel and fixed capacities; a
+  simplified algorithm; a missing arm; an unmirrored cache; a "for now") gets a row in
+  `docs/deviations.md` (where, what the twin does, what L does, effect, owner, proposed fix) in the
+  commit that introduces it, and leaves the row when it is fixed (move it to "Fixed"). The
+  coordinator reviews the list at each batch of landings and assigns the open rows.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.

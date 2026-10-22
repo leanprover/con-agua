@@ -108,7 +108,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc1, linK1_s] at hW
-  have e₁ := (internFVar_core hp.peel hS d ty₂ h₂ r₁ hc1).1
+  have e₁ := (peel_internFVar_core hp.peel hS d ty₂ h₂ r₁ hc1).1
   refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
   cases hc2 : callW p n "inst1" [body₁, r₁.headD 0, 0] m₁ with
   | none => rw [hc2] at hW; cases hW

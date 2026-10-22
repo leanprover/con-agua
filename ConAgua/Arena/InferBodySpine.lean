@@ -510,7 +510,7 @@ theorem inferSpineIO_any (p : Prog) (hq : SpineInferProg p) (hil : InstListOK p)
       (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) #[]
         args 0) decH s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty, ao, an, args, hs, ht, har, hlo =>
       inferSpineIO_refines p hq hil n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
         eb mode d ty ao an args hs ht har hlo

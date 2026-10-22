@@ -10,7 +10,7 @@ import ConAgua.Census.Attr
 (`pe_app`, `pe_lam`, `pe_forall`, `pe_let`, `pe_proj`) together; `pe_const` (names and level
 lists only) and `pe_lit` (no children) by themselves. The twin side: the arms named
 (`promoteE_succ`), `e_view`'s words denote the twin's view (`IndView.lean`'s `eViewW_ok`), a
-literal's record (`lit_rec`).
+literal's record (`promote_lit_rec`).
 -/
 
 open ConRon.Arena
@@ -96,11 +96,11 @@ theorem promoteE_succ (m : PMemo) (fuel : Nat) (h : EIdx) :
 
 /-! ## The view's words -/
 
-theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
+theorem pmGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
-theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
+theorem pmGetD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
   rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
-theorem getD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
+theorem pmGetD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
   rcases r with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> rfl
 
 /-- `e_view`'s tag `8`: the checks of a literal handle. -/
@@ -152,7 +152,7 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
   simp [g8] at h8
 
 /-- A literal handle's record: kind word, pool slice, the literal it holds. -/
-theorem lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
@@ -206,7 +206,7 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := callW_triple (peLit_spec p hp n ⟨m, Locals.init []⟩ h) hc
   simp only at hW
-  obtain ⟨k, hk, hkr⟩ := lit_rec hD.1 hh hv hg
+  obtain ⟨k, hk, hkr⟩ := promote_lit_rec hD.1 hh hv hg
   rw [hk] at hl
   cases hl
   obtain ⟨⟨N⟩ | ⟨st⟩⟩ := k
@@ -410,7 +410,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
       obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (piBVar_spec p hp n ⟨m, Locals.init []⟩ _) hca
       rw [hs₁, hm] at hW₁
       obtain ⟨a₁, hrun, hD₁, hpw, hcp, hfr⟩ := piBVar_rel p hp n m a hD _ _ _ hW₁
-      rw [← getD1, hi] at hrun
+      rw [← pmGetD1, hi] at hrun
       refine ⟨a₁, pm, ?_, hD₁, hP.frameLo (by simp [BREC, BSLOT]) (by simp) hfr, hr ▸ hpw, hcp,
         hfr.mono (by simp) (by simp)⟩
       rw [run_bind_ok hv0]
@@ -418,8 +418,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | fvar i ty =>
       obtain ⟨hg, hi, hty, hty'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hi
-      rw [getD2] at hty hty'
+      rw [pmGetD1] at hi
+      rw [pmGetD2] at hty hty'
       cases hca : callW p n "promote_e" [f, (eViewW m h).tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
       | some q =>
@@ -451,7 +451,7 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | sort u =>
       obtain ⟨hg, hu, hu'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hu hu'
+      rw [pmGetD1] at hu hu'
       cases hca : callW p n "promote_l" [f, (eViewW m h).tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
       | some q =>
@@ -483,8 +483,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | const x us =>
       obtain ⟨hg, hx, hx', hus, hus'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hx hx'
-      rw [getD2] at hus hus'
+      rw [pmGetD1] at hx hx'
+      rw [pmGetD2] at hus hus'
       cases hca : callW p n "pe_const" [f, (eViewW m h).tail.headD 0, (eViewW m h).tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
       | some q =>
@@ -500,8 +500,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | app u w =>
       obtain ⟨hg, hx, hx', hy, hy'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hx hx'
-      rw [getD2] at hy hy'
+      rw [pmGetD1] at hx hx'
+      rw [pmGetD2] at hy hy'
       cases hca : callW p n "pe_app" [f, (eViewW m h).tail.headD 0, (eViewW m h).tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
       | some q =>
@@ -517,8 +517,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | lam u w =>
       obtain ⟨hg, hx, hx', hy, hy'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hx hx'
-      rw [getD2] at hy hy'
+      rw [pmGetD1] at hx hx'
+      rw [pmGetD2] at hy hy'
       cases hca : callW p n "pe_lam" [f, (eViewW m h).tail.headD 0, (eViewW m h).tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
       | some q =>
@@ -534,8 +534,8 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | forallE u w =>
       obtain ⟨hg, hx, hx', hy, hy'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hx hx'
-      rw [getD2] at hy hy'
+      rw [pmGetD1] at hx hx'
+      rw [pmGetD2] at hy hy'
       cases hca : callW p n "pe_forall" [f, (eViewW m h).tail.headD 0, (eViewW m h).tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
       | some q =>
@@ -551,9 +551,9 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | letE t x b =>
       obtain ⟨hg, ht, ht', hx, hx', hb, hb'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at ht ht'
-      rw [getD2] at hx hx'
-      rw [getD3] at hb hb'
+      rw [pmGetD1] at ht ht'
+      rw [pmGetD2] at hx hx'
+      rw [pmGetD3] at hb hb'
       cases hca : callW p n "pe_let" [f, (eViewW m h).tail.headD 0, (eViewW m h).tail.tail.headD 0,
           (eViewW m h).tail.tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW
@@ -586,9 +586,9 @@ theorem pe_rel : ∀ n : Nat, PESpec p n := by
     | proj x i e =>
       obtain ⟨hg, hx, hx', hi, he, he'⟩ := hvr
       simp (config := { decide := true }) only [peK, hg, ↓reduceIte] at hW
-      rw [getD1] at hx hx'
-      rw [getD2] at hi
-      rw [getD3] at he he'
+      rw [pmGetD1] at hx hx'
+      rw [pmGetD2] at hi
+      rw [pmGetD3] at he he'
       cases hca : callW p n "pe_proj" [f, (eViewW m h).tail.headD 0, (eViewW m h).tail.tail.headD 0,
           (eViewW m h).tail.tail.tail.headD 0] m with
       | none => rw [hca] at hW; cases hW

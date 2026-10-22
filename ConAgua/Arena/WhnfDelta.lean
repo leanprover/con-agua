@@ -344,7 +344,9 @@ def reduceNatSuccL : FunDecl :=
 
 /-- `reduce_nat_op(mode, vis, d, c, a, b)`: the certified binary operation `c a b` on two literals
 (`a`, then `b`, head-normalised; the second only if the first is a literal). (A split of
-`reduce_nat`, whnf-delta2.) -/
+`reduce_nat`, whnf-delta2.) The result is normalised to a flag word `0`/`1` and a 32-bit handle
+word (`decOpt` reads the same value): `nat_op_result`'s refinement says nothing about its words'
+high bits, and the callers compute with them (lane `whnf2`). -/
 -- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatOpL : FunDecl :=
   lfn (mode, vis, d, c, a, b) locals (wa, fl1, o1, cnt1, wb, fl2, o2, cnt2, rf, rh) {
@@ -355,7 +357,7 @@ def reduceNatOpL : FunDecl :=
   (fl2, o2, cnt2) := call raw_nat_lit(wb);
   if fl2 == 0 { return (0, 0) };
   (rf, rh) := call nat_op_result(c, o1, cnt1, o2, cnt2);
-  return (rf, rh)
+  return (u64(rf != 0), rh & 4294967295)
 }
 
 /-- `nat_op_is_wf(c)`: is `c` one of the eight pinned WF-recursive `Nat` operations (`natOpWfNames`:

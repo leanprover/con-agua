@@ -375,8 +375,6 @@ theorem tryUnfoldProjApp_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
 def decOB (r : List Word) : Option Bool :=
   if r.headD 0 = 0 then none else some (r.tail.headD 0 != 0)
 
-instance : Inhabited DeltaStepA := ⟨.unknown⟩
-instance : Inhabited LazyResA := ⟨.verdict false⟩
 
 /-- A `DeltaStepA` result: `(k, a, b)`, `k` = `0` `.cont a b`, `1` `.eq`, `2` `.diff`, `3`
 `.unknown`. -/

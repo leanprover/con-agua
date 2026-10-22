@@ -301,8 +301,8 @@ def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (nm, c, en, ea, e, p) {
 @[l_impl ConRon.Arena.reduceDeclPin]
 def reduceDeclPinL : FunDecl := lfn (c) locals (rn, e) {
   rn := call pin_at(43);
-  if c == rn { e := call rom_expr(0); return e };
-  e := call rom_expr(1);
+  if c == rn { e := call rom_expr_pin(0); return e };
+  e := call rom_expr_pin(1);
   return e
 }
 
@@ -402,10 +402,11 @@ def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
 `k`, up to the canonical form. -/
 -- con-ron: ConRon/Arena/Basis.lean:81-90 ConRon.Arena.quotPinHit
 @[l_impl ConRon.Arena.quotPinHit]
-def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, p, e) {
+def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, c, p, e) {
   (o, l) := call rom_basis_decls(4);
   if l <= k { return 0 };
-  p := call ci_to_cv(IW.u64[o + k]);
+  c := IW.u64[o + k];
+  p := call ci_to_cv(c);
   e := call cv_canon_eq(q, p);
   return e
 }
@@ -418,14 +419,15 @@ the standard two, `Lean.trustCompiler`, the `ofReduce*` pair; `propext`/`choice`
 and every other axiom decline; `sorryAx` is skipped. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
-def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, e, z, w, a, b) {
+def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, a, b) {
   p := call erec_ci(i, 0);
   n := EREC.u64[p + 1];
   s := call pin_at(4);
   if n == s {
     (o, l) := call rom_basis_decls(4);
     if l <= 4 { abort };
-    e := call ci_canon_eq(p, IW.u64[o + 4]);
+    c := IW.u64[o + 4];
+    e := call ci_canon_eq(p, c);
     if e == 0 { abort };
     return vis
   };
@@ -571,8 +573,8 @@ def armsDeclStepFns : Prog :=
   [("erec_ci", stub 2), ("install_value_guards", stub 3), ("install_header", stub 2)]
 
 theorem declArms_wf :
-    L.Compiler.Prog.wf indTab (declArmsAll ++ armsDeclStepFns ++ indProgArms) = true := by
-  decide +kernel
+    L.Compiler.Prog.wf indTab (declArmsAll ++ armsDeclStepFns ++ indProgArms) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## Runs on stub-free paths -/
 

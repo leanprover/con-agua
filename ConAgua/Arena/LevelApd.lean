@@ -60,10 +60,10 @@ def apdW : Nat → Mem → Word → Word → Word → Option Word
     if lvG m l = 0 then some 1
     else if lvG m l = 4 then memW A n m o k (lvA m l)
     else if lvG m l = 1 then apdW n m (lvA m l) o k
-    else apK n m (lvB m l) o k (apdW n m (lvA m l) o k)
+    else apdK n m (lvB m l) o k (apdW n m (lvA m l) o k)
 
 /-- After the first child of a `max`/`imax`. -/
-def apK (n : Nat) (m : Mem) (b o k : Word) : Option Word → Option Word
+def apdK (n : Nat) (m : Mem) (b o k : Word) : Option Word → Option Word
   | none => none
   | some x => if x = 0 then some 0 else apdW n m b o k
 end
@@ -76,10 +76,10 @@ theorem apdW_param (h0 : lvG m l ≠ 0) (h : lvG m l = 4) :
 theorem apdW_succ (h0 : lvG m l ≠ 0) (h4 : lvG m l ≠ 4) (h : lvG m l = 1) :
     apdW A (n + 1) m l o k = apdW A n m (lvA m l) o k := by rw [apdW]; simp [h0, h4, h]
 theorem apdW_bin (h0 : lvG m l ≠ 0) (h4 : lvG m l ≠ 4) (h1 : lvG m l ≠ 1) :
-    apdW A (n + 1) m l o k = apK A n m (lvB m l) o k (apdW A n m (lvA m l) o k) := by
+    apdW A (n + 1) m l o k = apdK A n m (lvB m l) o k (apdW A n m (lvA m l) o k) := by
   rw [apdW]; simp [h0, h4, h1]
-theorem apK_zero : apK A n m b o k (some 0) = some 0 := by rw [apK]; simp
-theorem apK_ne (hx : x ≠ 0) : apK A n m b o k (some x) = apdW A n m b o k := by rw [apK]; simp [hx]
+theorem apK_zero : apdK A n m b o k (some 0) = some 0 := by rw [apdK]; simp
+theorem apK_ne (hx : x ≠ 0) : apdK A n m b o k (some x) = apdW A n m b o k := by rw [apdK]; simp [hx]
 end arms
 
 /-- con-leche: ConLeche/Kernel/Level.lean:44-49 ConLeche.Level.allParamsDefined -/
@@ -104,8 +104,8 @@ grind_pattern [level_grind] apdW_zero => apdW A (n + 1) m l o k
 grind_pattern [level_grind] apdW_param => apdW A (n + 1) m l o k
 grind_pattern [level_grind] apdW_succ => apdW A (n + 1) m l o k
 grind_pattern [level_grind] apdW_bin => apdW A (n + 1) m l o k
-grind_pattern [level_grind] apK_zero => apK A n m b o k (some 0)
-grind_pattern [level_grind] apK_ne => apK A n m b o k (some x)
+grind_pattern [level_grind] apK_zero => apdK A n m b o k (some 0)
+grind_pattern [level_grind] apK_ne => apdK A n m b o k (some x)
 
 section specs
 variable (A : ArrId) (p : Prog) (hpm : p.lookup "lv_mem" = some (lvMemG A))
@@ -196,7 +196,7 @@ theorem apdW_ok (hN : NameRel N) (n : Nat) : ∀ (m : Mem) (l o k x : Word) (L :
       rw [apdW_bin A n m l o k (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
         (lv_fields hv).2.1, (lv_fields hv).2.2] at h
       cases e : apdW A n m a o k with
-      | none => rw [e] at h; simp [apK] at h
+      | none => rw [e] at h; simp [apdK] at h
       | some y =>
         rw [e] at h
         have hy := ih _ _ _ _ _ _ _ ha hps e
@@ -211,7 +211,7 @@ theorem apdW_ok (hN : NameRel N) (n : Nat) : ∀ (m : Mem) (l o k x : Word) (L :
       rw [apdW_bin A n m l o k (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
         (lv_fields hv).2.1, (lv_fields hv).2.2] at h
       cases e : apdW A n m a o k with
-      | none => rw [e] at h; simp [apK] at h
+      | none => rw [e] at h; simp [apdK] at h
       | some y =>
         rw [e] at h
         have hy := ih _ _ _ _ _ _ _ ha hps e

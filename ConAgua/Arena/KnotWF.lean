@@ -5,6 +5,8 @@ import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.ArRangeSpec
 import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.HasFvar
+import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.PropRead
 
 /-!
 # Phases 6–7 close over their callees (lane `defeq`)
@@ -31,14 +33,14 @@ def defeqExtFns : Prog :=
    ("lvl_eq_c", lvlEqCL), ("lvls_eq_c", lvlsEqCL), ("mk_app", mkApp), ("mk_forall", mkForall),
    ("nat_lit_supported", natLitSupportedL), ("nat_pred_lit", natPredLit), ("pin_at", pinAtL),
    ("pin_word", pinWordL), ("proof_irrel", proofIrrelL), ("reduce_nat", reduceNatL),
-   ("reduce_proj_core", reduceProjCoreL), ("reserved_contains", reservedContainsL),
+   ("reduce_proj_core", reduceProjCoreL), ("reserved_contains_w", reservedContainsL),
    ("tower_slots_all", towerSlotsAllL), ("unfold_definition", unfoldDefinitionL),
    ("whnf", whnfL), ("whnf_core", whnfCoreL),
    -- no L code yet
    ("abs_entry", absEntry), ("ar_entry", arEntry), ("inst_list", instListL), ("has_fvar", hasFvarL),
-   ("field_sort_zero", stub 4),
-   ("find_proj", stub 3), ("inst1", stub 3), 
-   ("inst_lp", stub 4), ("is_proof_fast", stub 2), ("not_proof_fast", stub 2),
+   ("field_sort_zero", fieldSortZeroL),
+   ("find_proj", stub 3), ("inst1", instEntry),
+   ("inst_lp", stub 4), ("is_proof_fast", isProofFastL), ("not_proof_fast", notProofFastL),
    ("str_lit_ctor", stub 1), ("str_lit_supported", stub 1)]
 
 /-- Every function of phases 6–7 is well formed in the program of it and its callees: every

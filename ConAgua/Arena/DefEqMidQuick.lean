@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqMidLams
+import ConAgua.Arena.CoreDen
 
 /-!
 # The easy cases: `quick_defeq` (lane `defeq`)
@@ -31,6 +32,10 @@ structure StoreDenotes : Prop where
     (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb → ∀ (h : EIdx) (c : NIdx) (us : LsIdx),
     a.store.view h = some (.const c us) → ∃ ls, denoteLs a.store.lss us = some ls
 
+theorem StoreDenotes.of_den (h : CoreDen) : StoreDenotes :=
+  ⟨fun dn m a vis fe M eb hS => (h dn m a vis fe M eb hS).sort,
+    fun dn m a vis fe M eb hS => (h dn m a vis fe M eb hS).constLs⟩
+
 /-- The lookups of this file. -/
 structure QuickProg (p : Prog) : Prop where
   lams : LamsProg p
@@ -44,7 +49,7 @@ structure QuickProg (p : Prog) : Prop where
 
 /-! ## `e_view` runs -/
 
-theorem eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
+theorem quick_eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
     (L.Ind.eViewW m h).headD 0 = h >>> 28 := by
   unfold L.Ind.eViewW at hne ⊢
   by_cases c1 : (4294967295 : Word) < h
@@ -129,7 +134,7 @@ theorem eView_callW_view {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) 
     (L.Ind.eView_spec p hp n ⟨m, Locals.init []⟩ h) hc
   obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok m a hR h (hr ▸ hne)
   refine ⟨hm.symm, v, hv, hr ▸ hvr, ?_⟩
-  rw [hr]; exact eViewW_head m h (hr ▸ hne)
+  rw [hr]; exact quick_eViewW_head m h (hr ▸ hne)
 
 theorem viewR_sort {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h2 : r.headD 0 = 2) :
     v = .sort (decI (r.tail.headD 0)) ∧ HW (r.tail.headD 0) := by

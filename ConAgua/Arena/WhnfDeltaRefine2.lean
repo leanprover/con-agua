@@ -1018,14 +1018,14 @@ theorem LsStore.viewLen_eq_map (st : LsStore) (i : LsIdx) :
     · split <;> simp [Option.map_map, Function.comp_def]
     · rfl
 
-theorem viewLs_run {a : AState} {h : LsIdx} {l : LsNodeView} (hv : a.store.lss.view h = some l) :
+theorem whnf_viewLs_run {a : AState} {h : LsIdx} {l : LsNodeView} (hv : a.store.lss.view h = some l) :
     (viewLs h).run a = .ok (l, a) := by
   simp [viewLs, StateT.run_bind, StateT.run_get, hv]; rfl
 
 theorem unfoldTail_run_ne {a : AState} {n : NIdx} {us : LsIdx} {cv : IConstantVal} {value e : EIdx}
     {l : LsNodeView} (hv : a.store.lss.view us = some l) (hne : l.length ≠ cv.levelParams.length) :
     (unfoldTailT n us cv value e).run a = .ok (none, a) := by
-  simp only [unfoldTailT, StateT.run_bind, viewLs_run hv, except_ok_bind, hne, ↓reduceIte]; rfl
+  simp only [unfoldTailT, StateT.run_bind, whnf_viewLs_run hv, except_ok_bind, hne, ↓reduceIte]; rfl
 
 theorem unfoldTail_run_ok {a a₁ a₂ : AState} {n : NIdx} {us : LsIdx} {cv : IConstantVal}
     {value e v r : EIdx} {args : List EIdx} {l : LsNodeView} (hv : a.store.lss.view us = some l)
@@ -1034,7 +1034,7 @@ theorem unfoldTail_run_ok {a a₁ a₂ : AState} {n : NIdx} {us : LsIdx} {cv : I
     (hargs : (getAppArgs coreWalkFuel e).run a₁ = .ok (args, a₁))
     (hmk : (mkAppN v args).run a₁ = .ok (r, a₂)) :
     (unfoldTailT n us cv value e).run a = .ok (some r, a₂) := by
-  simp only [unfoldTailT, StateT.run_bind, viewLs_run hv, except_ok_bind, heq, ↓reduceIte, hc,
+  simp only [unfoldTailT, StateT.run_bind, whnf_viewLs_run hv, except_ok_bind, heq, ↓reduceIte, hc,
     hargs, hmk]; rfl
 
 section refs14

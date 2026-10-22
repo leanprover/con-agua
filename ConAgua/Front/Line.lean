@@ -6,6 +6,7 @@ import ConAgua.Front.Unescape
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Census.Attr
+import ConAgua.Front.RunModel
 
 /-!
 # One line of the export, applied: `front_line`
@@ -14,9 +15,9 @@ import ConAgua.Census.Attr
 name or level line, reads its fields (`rec_line_loop`, `ConAgua.Front.Fields`) and applies it to
 the parse state (`apply_nstr`, `apply_nnum`, `apply_level`, `ConAgua.Front.Apply`). It returns
 `(0, 0)` for a line that does not scan, `(1, next)` otherwise (`next` as `scan_line`'s). A blank
-line and the `meta` header change nothing. An expression or declaration line, a number of more
-than 18 digits, a string with an escape, a full pool or table abort: the frontend does not apply
-them yet.
+line and the `meta` header change nothing. Expression, declaration and inductive lines go to
+`apply_any`/`apply_dline` (below). A number of more than 18 digits aborts
+(`docs/deviations.md`, D2), as does a full pool or table.
 
 `frontLine_refines`: when `front_line(i)` returns `(1, next)`, con-leche's `scanLineFwd b i` is
 `.ok r next'` with `next'` the word `next`, and con-ron's `applyLine st r` runs, its state is
@@ -65,11 +66,16 @@ def applyAny : FunDecl := lfn (j) locals (pl, idx, a, c, d, z) {
   return 0
 }
 
-/-- A declaration line: its fields, applied (an inductive block or any other line aborts). -/
+/-- A declaration line: its fields, applied (an inductive block by `apply_ind` at its value's
+position `nm`, `IndApply.lean`; a line that does not read aborts). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
 def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
   (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
   if pl == 0 { abort };
+  if pl == 25 {
+    z := call apply_ind(nm);
+    return 0
+  };
   z := call apply_decl(pl, nm, lps, ty, vl, hk, hn, fl);
   return 0
 }
@@ -137,29 +143,31 @@ def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
   else if pl = 2 then applyNNumW m idx a c
   else applyLevelW m idx (pl - 2) a c
 
-/-- The model of `apply_dline(j)`. -/
-def applyDLineW (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
+/-- The model of `apply_dline(j)`: an inductive block is `apply_ind`'s run in `p` (`runF`: its
+own model carries a fuel index, `IndApplySpec3.lean`). -/
+noncomputable def applyDLineW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
   if (declLineN b j).pl = 0 then none
+  else if (declLineN b j).pl = 25 then runF p "apply_ind" [(declLineN b j).name] m
   else applyDeclW b m (declLineN b j).pl (declLineN b j).name (declLineN b j).lps
     (declLineN b j).type (declLineN b j).value (declLineN b j).hk (declLineN b j).hn
     (declLineN b j).flag
 
 /-- The model of `apply_any(j)`. -/
-def applyAnyW (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
+noncomputable def applyAnyW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
   if (recLineN b j).pl ≠ 0 then
     lineRecW b m (recLineN b j).pl (recLineN b j).idx (recLineN b j).a (recLineN b j).c
       (recLineN b j).d
   else if (exprLineN b j).pl ≠ 0 then
     applyExprW b m (exprLineN b j).pl (exprLineN b j).idx (exprLineN b j).a (exprLineN b j).c
       (exprLineN b j).d
-  else applyDLineW b m j
+  else applyDLineW p b m j
 
 /-- The model of `front_line(i)`. -/
-def frontLineW (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem) :=
+noncomputable def frontLineW (p : Prog) (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem) :=
   if (lineFwdN b i).1 = 0 then some ([0, 0], m)
   else if UInt64.ofNat (skipWsN b i.toNat) < UInt64.ofNat b.size ∧
       byteW b (UInt64.ofNat (skipWsN b i.toNat)) = 123 then
-    (applyAnyW b m (UInt64.ofNat (skipWsN b i.toNat) + 1)).map (okRes (lineFwdN b i).2)
+    (applyAnyW p b m (UInt64.ofNat (skipWsN b i.toNat) + 1)).map (okRes (lineFwdN b i).2)
   else some ([1, (lineFwdN b i).2], m)
 
 theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some ([1, nx], m) := rfl
@@ -293,7 +301,7 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
 theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_dline" [j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ applyDLineW b s₀.mem j = some s'.mem; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ applyDLineW p b s₀.mem j = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hpz]
   simp only [callFn, applyDLine]
   cases n with
@@ -301,13 +309,14 @@ theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : W
   | succ n =>
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        recDeclLine_spec p hF b hb n, applyDecl_spec p hDL b hb n] <;> finish [applyDLineW, DFld.enc]
+        recDeclLine_spec p hF b hb n, applyDecl_spec p hDL b hb n, runF_spec p "apply_ind" _ n] <;>
+        finish [applyDLineW, DFld.enc]
 
 theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_any" [j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ applyAnyW b s₀.mem j = some s'.mem; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ applyAnyW p b s₀.mem j = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hpy]
   simp only [callFn, applyAny]
   cases n with
@@ -327,7 +336,7 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
     (hi : i.toNat ≤ b.size) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_line" [i]
-    ⦃fun r s' => frontLineW b s₀.mem i = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => frontLineW p b s₀.mem i = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hpf]
   simp only [callFn, frontLine]
   cases n with

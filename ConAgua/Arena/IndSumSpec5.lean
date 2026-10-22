@@ -616,18 +616,18 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 refines `bvarB` at every twin fuel `F + 1 ≥ n`; it writes only the `bvarB` memo (array `BMEMO` = 24,
 `CTL[24]`, `CTL[25]`), so the stage relation holds after and the pool did not change. -/
 theorem bvbW_stage {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n F : Nat) (hF : n ≤ F + 1)
-    (h x : Word) (hh : H h) (hb : bvbW n m h = some (x, m')) :
+    (h x : Word) (hh : H h) (hb : bvbW n m h CWF = some (x, m')) :
     ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       BbFrame m m' := by
-  obtain ⟨a', hrun, hD⟩ := bvbW_ok n F hF m m' a hS.1.arena h x hh hb
+  obtain ⟨a', hrun, hD⟩ := bvbW_okF n F m m' a hS.1.arena h CWF x hh (.inr hF) hb
   have hfr : BbFrame m m' := by
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) hs] at hb
+      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := CWF) hs] at hb
         match n, hb with
-        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) hs] at hb
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
         simp only [Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨-, rfl⟩ := hb
         exact MemFrame.refl _ _ _
@@ -663,7 +663,7 @@ def hbInsW (m : Mem) (e i r : Word) : Option (Word × Mem) :=
 mutual
 def hbGoW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, i, h => hbK1 n i h (bvbW n m h)
+  | n + 1, m, i, h => hbK1 n i h (bvbW n m h CWF)
 def hbK1 (n : Nat) (i h : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (x, m1) => if x ≤ i then some (0, m1) else hbK2 n m1 i h (eViewW m1 h)
@@ -699,7 +699,7 @@ end
 
 section hbArms
 variable (n : Nat) (m m1 m2 : Mem) (i i2 h g x y z r r1 r2 w : Word) (v fr rs : List Word)
-theorem hbGoW_succ : hbGoW (n + 1) m i h = hbK1 n i h (bvbW n m h) := by simp [hbGoW]
+theorem hbGoW_succ : hbGoW (n + 1) m i h = hbK1 n i h (bvbW n m h CWF) := by simp [hbGoW]
 theorem hbK1_some_le (hle : w ≤ i) : hbK1 n i h (some (w, m1)) = some (0, m1) := by
   simp only [hbK1]; rw [if_pos hle]
 theorem hbK1_some_gt (hle : ¬ w ≤ i) :
@@ -1142,7 +1142,7 @@ theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   intro m m' a i h r mp F hFn hFc hb hS hh hM
   rw [hbGoW_succ] at hb
   obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  cases hst : bvbW j m h with
+  cases hst : bvbW j m h CWF with
   | none => rw [hst] at hb; simp [hbK1] at hb
   | some pr =>
     obtain ⟨w, m1⟩ := pr

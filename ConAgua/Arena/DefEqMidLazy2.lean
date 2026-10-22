@@ -120,7 +120,7 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc1] at hW
-  have e₁ := CoreSpec.of_callW (hc.reduceNat n F s a₀ dn vis fe M eb mode d a hF hs ha hk) hc1
+  have e₁ := CoreSpec.of_callW (hc.reduceNat n hn F s a₀ dn vis fe M eb mode d a hF hs ha hk) hc1
   refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
   -- a `defeq` run, then `pure (some v)`
   have dq : ∀ (x y : Word) (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
@@ -158,7 +158,7 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
   obtain ⟨r₂, m₂⟩ := q
   rw [hc2] at hW
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hc.reduceNat n F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb hk) hc2
+    (hc.reduceNat n hn F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb hk) hc2
   refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
   by_cases h2 : r₂.headD 0 ≠ 0
   · rw [lnK2_t (h := h2)] at hW
