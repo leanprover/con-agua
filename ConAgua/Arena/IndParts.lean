@@ -502,39 +502,48 @@ def blockRecNamesUnreserved : FunDecl := lfn (ro, rl) locals (rc, cv, nm, b, r) 
 }
 
 /-- `block_member_counts_find(no, nl, ro, rl, m)`: the `rs.findM?` inside `blockMemberCounts?`,
-one `rec_target_of` call per candidate, stopping at the first whose target is `m`. -/
+one `rec_target_of` call per candidate, stopping at the first whose target is `m` (recursive,
+lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:307-325 ConRon.Arena.blockMemberCounts?
 @[l_impl ConRon.Arena.blockMemberCounts?]
-def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (j, e, mI, ty, t) {
-  j := 0;
-  while j < rl {
-    e := IW.u64[ro + j];
-    mI := IW.u64[e + 1];
-    ty := EREC.u64[IW.u64[e] + 3];
-    t := call rec_target_of(no, nl, mI, ty);
-    if t == m { return (1, mI, IW.u64[e + 2]) };
-    j += 1
-  };
-  return (0, 0, 0)
+def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t, a, b, c) {
+  if rl == 0 { return (0, 0, 0) };
+  e := IW.u64[ro];
+  mI := IW.u64[e + 1];
+  t := call rec_target_of(no, nl, mI, EREC.u64[IW.u64[e] + 3]);
+  if t == m { return (1, mI, IW.u64[e + 2]) };
+  (a, b, c) := call block_member_counts_find(no, nl, ro + 1, rl - 1, m);
+  return (a, b, c)
 }
 
-/-- `block_member_counts(nPd, k, nC, no, nl, ro, rl, cto, ctl)`: `blockMemberCounts?`, one
-`block_member_counts_find` and one `block_counts` per type former, in order; a failure stops the
-walk there (no further calls), as the twin's `match … | none => pure none` does. -/
+/-- `block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)`: `blockMemberCounts?` from
+member `idx` on: one `block_member_counts_find` and one `block_counts` for this former, then the
+rest; a failure stops the walk there (no further calls). The record words past `2^32` are a
+capacity abort (`block_counts`' arithmetic). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:307-325 ConRon.Arena.blockMemberCounts?
 @[l_impl ConRon.Arena.blockMemberCounts?]
-def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (outo, idx, cv, rok, rmi, rrp, cok, ca, cb) {
-  outo := call iw_alloc(ctl);
-  idx := 0;
-  while idx < ctl {
-    cv := IW.u64[cto + idx];
-    (rok, rmi, rrp) := call block_member_counts_find(no, nl, ro, rl, idx);
-    (cok, ca, cb) := call block_counts(nPd, k, nC, rl, cv, rok, rmi, rrp);
-    if cok == 0 { return (0, 0, 0) };
-    IW.u64[outo + idx] := cb;
-    idx += 1
-  };
-  return (1, outo, ctl)
+def blockMemberCountsGo : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)
+    locals (cv, rok, rmi, rrp, cok, ca, cb, ok, o, l) {
+  if ctl == 0 { return (1, 0, 0) };
+  cv := IW.u64[cto];
+  (rok, rmi, rrp) := call block_member_counts_find(no, nl, ro, rl, idx);
+  if 4294967296 <= rmi || 4294967296 <= rrp { abort };
+  (cok, ca, cb) := call block_counts(nPd, k, nC, rl, cv, rok, rmi, rrp);
+  if cok == 0 { return (0, 0, 0) };
+  (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto + 1, ctl - 1, idx + 1);
+  if ok == 0 { return (0, 0, 0) };
+  (o, l) := call sl_cons(cb, o, l);
+  return (1, o, l)
+}
+
+/-- `block_member_counts(nPd, k, nC, no, nl, ro, rl, cto, ctl)`: `blockMemberCounts?` from member
+`0` (the counts past `2^32` a capacity abort). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:307-325 ConRon.Arena.blockMemberCounts?
+@[l_impl ConRon.Arena.blockMemberCounts?]
+def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (ok, o, l) {
+  if 4294967296 <= nPd || 4294967296 <= k || 4294967296 <= nC || 4294967296 <= rl { abort };
+  (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, 0);
+  return (ok, o, l)
 }
 
 /-! ### `blockShape?`: one helper per phase -/
@@ -887,7 +896,7 @@ def indPartsFns : Prog :=
    ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne), ("block_groups_go", blockGroupsGo),
    ("block_groups", blockGroups), ("block_rec_lps_one", blockRecLpsOne), ("block_rec_lps_ok_go", blockRecLpsOkGo), ("block_rec_lps_ok", blockRecLpsOk),
    ("block_rec_want", blockRecWant), ("block_rec_got", blockRecGot), ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
-   ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts", blockMemberCounts),
+   ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts_go", blockMemberCountsGo), ("block_member_counts", blockMemberCounts),
    ("block_shape_names_of", blockShapeNamesOf), ("block_shape_pins_formers", blockShapePinsFormers),
    ("block_shape_pins_recs", blockShapePinsRecs), ("block_shape_pins_ctors", blockShapePinsCtors),
    ("block_shape_pins_ok", blockShapePinsOk), ("block_shape_result_sort", blockShapeResultSort),
