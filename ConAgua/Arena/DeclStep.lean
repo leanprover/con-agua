@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclBase
 import ConAgua.Arena.IndProg
+import ConAgua.Arena.DeclArms
 import ConAgua.Front.IndApply
 import ConAgua.Census.Attr
 
@@ -21,8 +22,8 @@ word for the environment, the callee names and argument orders of its `stubFns`)
 * `check_decl(i, vis)` → `vis'`: an inductive block (kind `6`, lane `induct`'s front records in
   `DIND`) is copied into `EREC` (`ind_block_to_erec`: every record, its universe parameters and
   its recursor rules relocated) and checked by lane `induct`'s `check_ind_decl(vis, boff, blen,
-  nP)`; every one-constant record goes to `check_decl_const(i, vis)` (a stub: the axiom, quotient
-  and pinned-value arms of `checkDecl`, lane `decls`' next work).
+  nP)`; every one-constant record goes to its arm (`DeclArms.lean`: `check_decl_axiom`,
+  `check_decl_defn`, `check_decl_thm`, `check_decl_opaque`, `check_decl_quot`, each `(i, vis)`).
 * `install_header(vis, q)`, `install_value_guards(vis, q, v)`: `q` is a constant value in `EREC`
   (`decCV`: name, universe parameters, type). The checks in the twin's order; every `fail` is
   `abort`.
@@ -208,8 +209,12 @@ def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v) {
     v := call check_ind_decl(vis, bo, bl, DECL.u64[5 + 8 * i]);
     return v
   };
-  v := call check_decl_const(i, vis);
-  return v
+  if k == 1 { v := call check_decl_axiom(i, vis); return v };
+  if k == 2 { v := call check_decl_defn(i, vis); return v };
+  if k == 3 { v := call check_decl_thm(i, vis); return v };
+  if k == 4 { v := call check_decl_opaque(i, vis); return v };
+  if k == 5 { v := call check_decl_quot(i, vis); return v };
+  abort
 }
 
 /-- `install_step_go(i, vis)`: `installStepGo` on record `i` → the new view, the value group's
@@ -286,11 +291,10 @@ def declStepFns : Prog :=
    ("ind_block_to_erec", indBlockToErec), ("check_decl", checkDeclL),
    ("install_step_go", installStepGoL), ("check_value_group", checkValueGroupL)]
 
-/-- Stubs of this module's callees not written yet. -/
-def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2)]
-
-/-- The step's program: this module, lane `induct`'s stage (with its stubs), the stubs. -/
-def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.indProg
+/-- The step's program: this module, the arms (`DeclArms*.lean`, with their ROM stubs and the
+master functions lane `induct`'s program lacks), lane `induct`'s stage (with its stubs, but for
+the two the arms provide: `L.Ind.armsReplaced`). -/
+def declStepProg : Prog := declStepFns ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
 
 theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true := by
   decide +kernel
