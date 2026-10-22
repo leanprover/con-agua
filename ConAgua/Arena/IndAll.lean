@@ -23,6 +23,7 @@ import ConAgua.Arena.IndPartsSpec5
 import ConAgua.Arena.IndPartsSpec6
 import ConAgua.Arena.IndPartsSpec7
 import ConAgua.Arena.IndPartsSpec8
+import ConAgua.Arena.IndPartsSpec9
 import ConAgua.Arena.IndPartsSpec
 import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndPosSpec
