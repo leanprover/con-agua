@@ -8480,3 +8480,17 @@ needs many lookups should `have` them once, or take the bundle.
 4. Lane `whnf4` (owner of the `UpTo` families and `internM_hw`): replace `KnotUpTo`/`WhnfStepUpTo`
    with `invoke_fuel_le`, and move `internM_hw`/`hdW_lt`/`hit_idx_lt` to `StoreLib.lean`; then the
    inductive/decl lanes can drop their `2^32` guards with `Sim.withM`.
+
+### Landing 4: `lv_leq_top` under `StageT`; the generator again
+* `lvLeqTop_simT` (`IndTwin.lean`, sorry-free): `lv_leq_top` refines the two readbacks then
+  `Level.leq` under `StageT`, from master's heap relation (`leqTopW_ok`, `denoteL_lvR`) and the twin's
+  `readLevelM_run'` (the caches stay `ReadLCOK`, `CoreS.withReadLC`); `StageT.of_heap` keeps
+  `StageT` across the level heap's writes (`MemFrame [LH] [192]`). Replaces
+  `IndStubs.lvLeqTopStub_spec` for a caller carrying `StageT`.
+* For lanes `decls*`: `StageT.twin.den.dnN` ties the record pool's name decoder `dn` to the name
+  store (`dn k = some x → denoteN … k = some x`), what `romBasisRef_quot`'s level readback needs.
+* **`scripts/checker_prog.py` on master**: it builds the whole library first now (the dump sees
+  only modules with an olean; a partial build made it fail with "`builtin_prelude` calls
+  `pre_front_run`, …"), and it stopped on an import clash `L.Arena.decRule_fire` between
+  `RecFireEnv` (lane `defeq2`) and `PromoteCIRef2`: `RecFireEnv`'s lemma is renamed
+  `decRule_fireW` (two lines). `checker_prog.py --check` passes on this landing.
