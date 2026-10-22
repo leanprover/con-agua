@@ -577,18 +577,16 @@ def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   return r
 }
 
-/-- Erase the free-variable annotations of every element of a slice, in order. -/
+/-- Erase the free-variable annotations of every element of a slice, in order: the twin's `mapM`
+as a self-recursion, each result consed onto the rest's slice (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:409-448 ConRon.Arena.targetK53
 @[l_impl ConRon.Arena.targetK53]
-def eraseEach : FunDecl := lfn (o, l) locals (q, j, v) {
-  q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    v := call erase_fvar_tys(IW.u64[o + j]);
-    IW.u64[q + j] := v;
-    j += 1
-  };
-  return (q, l)
+def eraseEach : FunDecl := lfn (o, l) locals (v, ro, rl, qo, ql) {
+  if l == 0 { return (0, 0) };
+  v := call erase_fvar_tys(IW.u64[o]);
+  (ro, rl) := call erase_each(o + 1, l - 1);
+  (qo, ql) := call sl_cons(v, ro, rl);
+  return (qo, ql)
 }
 
 /-- `target_k53`'s telescope check: the stripped domains and the recorded telescope agree up to
@@ -642,6 +640,7 @@ def targetK53Args : FunDecl := lfn (vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao
   if r == 0 { return 0 };
   if lal < nPc { lpl := lal } else { lpl := nPc };
   hd := call intern_const(ip, usp);
+  if 4294967296 <= hd { abort };
   app := call mk_app_n_f(hd, lao, lpl);
   (mno, mnl) := call block_shape_member_names(p);
   occ := call nest_occ(mno, mnl, 0, 0, app);
