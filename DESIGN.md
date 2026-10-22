@@ -6791,3 +6791,29 @@ buffers). Test: an `#eval` (3 s) decodes every entry to the twin's value, handle
 five `RelAM` specs of `DeclRomStubs.lean` stay `sorry` (now about real code). Small difference:
 the reader interns the `sortZ` names the twin keeps as values (only `Quot`'s `u`, already
 interned as a level parameter).
+
+### Landing 2 also: `ind_params_ok`; e2e results on `checkerProg` (675 fixtures)
+
+* `ind_params_ok(nP, off, len)` (`indParamsOk`) in L (`Checker/Entry.lean`). `basis_pin_hit`
+  reads the block as `check_decl` builds it: an `EREC` slice (`ind_block_to_erec`), not the
+  `IW` slice `IndIface.lean`'s interface note says; copied to `IW` (`er_to_iw`) for
+  `canon_eq_list`. (Lane indproofs2: the note and `IndStubs`' specs say `IW`.)
+* **`check`** (the real pipeline, prelude included): 3 agree-reject, 40 agree-reject (L aborts),
+  630 stop at a stub — all at **`strip_pis`** (lane induct's interface stub, the next blocker;
+  then `all_level_params_defined` on 129 in `check_np`) — and 2 l-error, both `hoist_ok`'s
+  decline (`natop_order`, `natop_before_ble`: deviation D18). No disagreement. Every fixture's
+  prelude now parses, prepares and passes `basis_pin_hit` (the five basis blocks match the ROM's).
+  `rounds_huge_gaps` passes the front (lane twinaudit's id tables).
+* **Three references:** con-ron's Rust binary and `e2e-ref` agree on all 675 fixtures (405
+  accept, 206 reject, 55 decline, 4 error; 2 time out in both; one is a con-ron abort `-6` where
+  `e2e-ref` runs out of memory). `instructions:u` (L vs con-ron) needs fixtures L accepts: none
+  yet (the measurement is in `e2e.py`, `docs/e2e.md` shows it once there are).
+* `e2e-diff` unchanged (stores agree on 22/22; `whnf`/`whnf_core` agree on 4318 of 4408 handles,
+  no disagreement).
+
+### `sorry`s and open obligations (lane `integrate`)
+No new `sorry`. Open: the refinements of `builtin_prelude` (through `preFn`), `prepare_prelude`
+(`frontOf`, `hoist_ok`), `cap_check`'s use in `PipelineRefines` (and its missing size premise for
+arrays of `2^64` words or more), `basis_pin_hit`, `ind_params_ok`, `is_proj_fn_shape` (specs
+already stated with `sorry` in `IndStubs.lean` for the last three), the adapters (from
+`instEntry_refines`/`absEntry_refines`), the ROM readers (`DeclRomStubs.lean`'s five `RelAM`s).
