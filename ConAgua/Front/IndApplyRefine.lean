@@ -348,7 +348,7 @@ theorem sliceL_three (p : Array Word) (o : Nat) :
 
 /-- **`name_rec_pre` refines `viewN`, matched against `.str T "rec"`.** -/
 theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrpW m w = some (f, T)) :
-    ∃ v, (viewN (decI w)).run a = .ok (v, a) ∧ (f ≠ 0 → v = .str (decI T) "rec") ∧
+    ∃ v, (viewN (decI w)).run a = .ok (v, a) ∧ (f ≠ 0 → v = .str (decI T) "rec" ∧ T.toNat < 2 ^ 32) ∧
       (f = 0 → ∀ T', v ≠ .str T' "rec") := by
   unfold nrpW at h
   split at h
@@ -438,6 +438,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
       rw [e0] at r1; rw [e1 hl3] at r2; rw [e2 hl3] at r3
       rw [r1, r2, r3, ← strWords_rec] at hsl
       rw [strWords_inj _ _ hsl.symm, hq, decI_word]
+      exact ⟨rfl, word_lt _⟩
     · cases h; exact absurd rfl hf
   · intro hf T' heq
     simp only [NNodeView.str.injEq] at heq
