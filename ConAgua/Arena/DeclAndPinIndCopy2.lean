@@ -626,4 +626,60 @@ theorem erecP_get_lt {m : Mem} {j : Nat} (h : j < erTop m) : (erecP m)[j]? = (m.
     simp only [erTop, erecTop] at h h' ⊢
     rw [Array.getElem?_eq_none (by omega)]
 
+/-- Word `c + 8 i` of `DECL` is word `c - 1` of record `i` (`dw`), for a record that exists. -/
+theorem rdW_dw {D : Array Word} {i c : Word} {k : Nat} (hD : D.size < 2 ^ 63)
+    (h0 : dw D i.toNat 0 ≠ 0) (hc : c.toNat = k + 1) (hk : k < 8) :
+    rdW D (c + 8 * i) = dw D i.toNat k := by
+  have hi : 1 + 8 * i.toNat < D.size := by
+    refine Decidable.byContradiction fun hn => h0 ?_
+    simp only [dw, Nat.add_zero]
+    rw [Array.getElem?_eq_none (by omega)]; rfl
+  have e : (c + 8 * i).toNat = 1 + 8 * i.toNat + k := by
+    rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+  simp only [rdW, dw, e]
+
+/-- **`ind_block_to_erec(i)` on the front's inductive record `i`** (model level): the stage
+relation kept, the pool grown, and the result an `EREC` slice below the top decoding to the
+block. -/
+theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List IConstantInfo}
+    {nP : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    (h : ibeW n m i = some (r, m')) (hS : L.Ind.StageR dn vis fe m a)
+    (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
+    (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
+    L.Ind.StageR dn vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
+      r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
+      decCIs (erecP m') dn (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨h6, -, t, -, hdec⟩ := hdecl
+  have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide
+  have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dw hD h0 rfl (by decide)
+  have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dw hD h0 rfl (by decide)
+  simp only [ibeW, e3, e4] at h
+  cases ha : erAllocW m (dw (m.arr64 DECL) i.toNat 3) with
+  | none => rw [ha] at h; cases h
+  | some x =>
+  obtain ⟨o, m1⟩ := x
+  rw [ha] at h
+  simp only at h
+  cases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with
+  | none => rw [hg] at h; cases h
+  | some m2 =>
+  rw [hg] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hC : 129 < (m.arr64 CTL).size := by omega
+  obtain ⟨ho, ht1, hE1', hW1⟩ := erAllocW_facts ha hC hEs
+  have hw1 := hW1 (fun j => erTop m ≤ j)
+  obtain ⟨hW2, hB2⟩ := icgW_ok (dn := dn) n m1 m2 o _ _ block hg (by rw [hw1.dlp]; exact hdec) hFB
+    (by rw [hw1.dlp]; exact hP) (by rw [hw1.csize]; exact hC) (by rw [hw1.esize]; exact hEs)
+    hw1.2.2.1 (by omega)
+  have hw : EW (fun j => erTop m ≤ j) m m2 := hw1.trans hW2 (fun j _ hj => by omega)
+  have hlen : block.length = (dw (m.arr64 DECL) i.toNat 3).toNat := by
+    have := L.Ind.mapM_opt_length _ _ _ hdec; simpa using this
+  obtain ⟨hS', hg'⟩ := L.Ind.StageR.erec hS hw.1 (fun j hj => hw.2.2.2 j hj (by omega)) hw.2.1 hw.2.2.1
+  refine ⟨hS', hg', hw.1, rfl, by simp [hlen], ?_, by simp; have := hW2.2.1; omega⟩
+  simp only [List.headD_cons, List.tail_cons]
+  exact hB2 (erecP m2) (fun j _ hj => erecP_get_lt hj)
+
 end L.Arena
