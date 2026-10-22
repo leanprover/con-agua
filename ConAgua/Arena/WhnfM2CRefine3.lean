@@ -94,9 +94,9 @@ theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.view
   rw [viewLsLen_run, hv]
 
 section andarm
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hE : ErecKeptKnot p)
-  (hcc : CoreCallees p)
-include hp hc
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+  (hE : ErecKeptKnot p) (hcc : CoreCallees p)
+include hp hc hpi
 
 /-- **`m2c_and2` refines `m2cAnd2T`** (the slice `(to, tn)` ends at the stack top). -/
 theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
@@ -178,7 +178,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨r6, m6⟩ := q
   rw [c6] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
-  obtain ⟨ok6, ⟨M6, hS6, hK6, hSt6⟩, res6, hr6⟩ := m2cCheck_ok p hp hc N' F (hk.mono (Nat.le_succ _))
+  obtain ⟨ok6, ⟨M6, hS6, hK6, hSt6⟩, res6, hr6⟩ := m2cCheck_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d tmaj (r5.headD 0) major hm4 hebm htm hh5 hmaj m5 _ M
     hS5 r6 m6 c6
   have hrun6 := AM.run_of_ok _ _ ok6
@@ -346,7 +346,7 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
       have hb := hsp3.bound
       rw [htop3', ← htop3, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn3
-  obtain ⟨ok5, hA5, res5, hr5⟩ := m2cAnd2_ok p hp hc N' F (hk.mono (Nat.le_succ _)) (by omega)
+  obtain ⟨ok5, hA5, res5, hr5⟩ := m2cAnd2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
     hS4 hsp4 htop4 r5 m5 c5
   have hrun5 := AM.run_of_ok _ _ ok5

@@ -342,9 +342,20 @@ theorem ret_eq {w : Word} {m₁ m' : Mem} {r : List Word}
 
 /-! ## `m2c_check` -/
 
+/-- `proof_irrel`'s refinement (`WhnfIotaRefine4.lean`'s `proofIrrel_refines`), a hypothesis here:
+that proof rests on the `CoreS.lvl_den` stub, which the census-tagged statements supply. -/
+def ProofIrrelOK (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
+    eb = (mode >>> 1) &&& 1 → HW a → HW b →
+    CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
+      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      vis fe MM eb
+
 section check
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p)
-include hp hc
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+include hp hc hpi
 
 /-- **`m2c_check` refines `m2cCheckT`.** -/
 theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
@@ -428,7 +439,7 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     rw [c4] at hW
     simp only at hW
     obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, -⟩ := CoreSpec.of_callW
-      (proofIrrel_refines p hp.toIotaProg4 N' (hk.mono (Nat.le_succ _)) F (by omega) (by omega)
+      (hpi N' (hk.mono (Nat.le_succ _)) F (by omega) (by omega)
         ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d fab major hS3 hm4 hebm hfab hmaj) c4
     have hrun4 := AM.run_of_ok _ _ ok4
     rw [res4] at hrun4
@@ -496,8 +507,9 @@ theorem PreRun.view {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L :
   exact ⟨l, h1, h2, hvl⟩
 
 section karm
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hE : ErecKeptKnot p)
-include hp hc
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+  (hE : ErecKeptKnot p)
+include hp hc hpi
 
 /-- **`m2c_k2` refines `m2cK2T`** (the arguments are left on the stack). -/
 theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
@@ -569,7 +581,7 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   obtain ⟨r4, m4⟩ := q
   rw [c4] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
-  have hck := m2cCheck_ok p hp hc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
+  have hck := m2cCheck_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
     mode d tmaj (r3.headD 0) major hm4 hebm htm hh3 hmaj m3 _ M hS3 r4 m4 c4
   obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := hck
   have hrun4 := AM.run_of_ok _ _ ok4
@@ -648,7 +660,7 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   obtain ⟨r2, m2⟩ := q
   rw [c2] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
-  obtain ⟨ok2, hA2, res2, hr2⟩ := m2cK2_ok p hp hc N' F (hk.mono (Nat.le_succ _)) (by omega)
+  obtain ⟨ok2, hA2, res2, hr2⟩ := m2cK2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor htm hus hmaj m1 a1 M1 hS1 r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
