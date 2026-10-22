@@ -6,7 +6,7 @@ import ConAgua.Arena.IndPartsSpec3
 # `RecClass`: `classReadMinor` (lane `indproofs2`, helper `rec`)
 
 Word models (one per L function, at the function's own fuel), their `vcgen` specs, and the
-relational lemmas as `Sim` chains (`RecSim.lean`).
+relational lemmas as `RSim` chains (`RecSim.lean`).
 -/
 
 set_option experimental.vcgen true

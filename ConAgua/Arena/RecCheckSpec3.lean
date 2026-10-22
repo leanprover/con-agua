@@ -4,7 +4,7 @@ import ConAgua.Arena.RecSim
 /-!
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`)
 
-Relational lemmas as `Sim` chains (`RecSim.lean`).
+Relational lemmas as `RSim` chains (`RecSim.lean`).
 -/
 
 set_option experimental.vcgen true
@@ -30,10 +30,10 @@ theorem targetMajorDefault_specF (p : Prog) (ha : p.lookup "iw_alloc" = some iwA
 
 theorem tmdW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (hS : StageR dn vis fe m a) :
-    Sim (fuelW n (tmdW m)) ConRon.Arena.targetMajorDefault a
+    RSim (fuelW n (tmdW m)) ConRon.Arena.targetMajorDefault a
       (KP dn vis fe m (fun m' r x => decTM m' (r.headD 0).toNat = some x)) := by
   cases n with
-  | zero => exact Sim.none
+  | zero => exact RSim.none
   | succ n =>
     rintro ⟨r, m'⟩ h
     obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmdW_ok dn vis fe m m' a r h hS
@@ -87,9 +87,9 @@ def decTM0 (m' : Mem) (r : List Word) (x : TargetMajor) : Prop := decTM m' (r.he
 theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR dn vis fe m a)
     (hms : decPL m (decTM m) mo.toNat ml.toNat = some ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
-    Sim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a (KP dn vis fe m decTM0) := by
+    RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a (KP dn vis fe m decTM0) := by
   cases n with
-  | zero => exact Sim.none
+  | zero => exact RSim.none
   | succ n =>
     by_cases hc : c < ml
     · rw [tmaW_hit n m mo ml c hc]
@@ -102,7 +102,7 @@ theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       have hop : ConRon.Arena.targetMajorAt ms c.toNat = pure (ms[c.toNat]'(by omega)) := by
         simp [ConRon.Arena.targetMajorAt, List.getElem?_eq_getElem (by omega : c.toNat < ms.length)]
       rw [hop]
-      refine Sim.pure_some ⟨hS, IWGrow.refl m, ?_⟩
+      refine RSim.pure_some ⟨hS, IWGrow.refl m, ?_⟩
       show decTM m (rdW (m.arr64 IW) (mo + c)).toNat = _
       rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2]; exact hdec
     · rw [tmaW_miss n m mo ml c hc]
@@ -111,7 +111,7 @@ theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       have hop : ConRon.Arena.targetMajorAt ms c.toNat = ConRon.Arena.targetMajorDefault := by
         simp [ConRon.Arena.targetMajorAt, List.getElem?_eq_none (by omega : ms.length ≤ c.toNat)]
       rw [hop]
-      refine Sim.mono (tmdW_sim dn vis fe n m a hS |> fun h => ?_) (fun _ _ _ _ h => h)
+      refine RSim.mono (tmdW_sim dn vis fe n m a hS |> fun h => ?_) (fun _ _ _ _ h => h)
       intro b hb
       cases ho : fuelW n (tmdW m) with
       | none => rw [ho] at hb; cases hb

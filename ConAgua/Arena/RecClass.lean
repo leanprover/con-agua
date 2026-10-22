@@ -174,30 +174,39 @@ def classNPcOf : FunDecl := lfn (p, vis, i) locals (mo, ml, b, found, q, kind) {
   return 0
 }
 
+/-- `class_read_slot_motive(p, vis, dom)`: `classReadSlot`'s motive arm (the telescope ends in a
+sort): the class is its last binder's domain, at the class's parameter count. -/
+-- con-ron: ConRon/Arena/Inductives/ClassRead.lean:158-179 ConRon.Arena.classReadSlot
+@[l_impl ConRon.Arena.classReadSlot]
+def classReadSlotMotive : FunDecl := lfn (p, vis, dom) locals
+    (bo, bl, body, mdom, hd, g, iName, us, z, ao, al, n, cnt, key, slot) {
+  (bo, bl, body) := call pi_binders(⟪CWF⟫, dom);
+  if bl == 0 { return (0, 0) };
+  mdom := IW.u64[bo + bl - 1];
+  hd := call get_app_fn(⟪CWF⟫, mdom);
+  if hd >> 28 != 3 { return (0, 0) };
+  (g, iName, us, z) := call e_view(hd);
+  (ao, al) := call get_app_args(⟪CWF⟫, mdom);
+  n := call class_n_pc_of(p, vis, iName);
+  cnt := al;
+  if n < al { cnt := n };
+  key := call rec4(iName, us, ao, cnt);
+  slot := call rec2(0, key);
+  return (1, slot)
+}
+
 /-- `class_read_slot(p, vis, np, mo, ml, d, dom)`: one prefix binder's domain, read as a motive
 (a telescope ending in a sort) or a minor premise. -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:158-179 ConRon.Arena.classReadSlot
 @[l_impl ConRon.Arena.classReadSlot]
-def classReadSlot : FunDecl := lfn (p, vis, np, mo, ml, d, dom) locals
-    (r, bo, bl, body, mdom, hd, g, iName, us, z, ao, al, n, cnt, key, slot) {
+def classReadSlot : FunDecl := lfn (p, vis, np, mo, ml, d, dom) locals (r, ok, slot) {
   r := call pi_result(⟪CWF⟫, dom);
   if r >> 28 == 2 {
-    (bo, bl, body) := call pi_binders(⟪CWF⟫, dom);
-    if bl == 0 { return (0, 0) };
-    mdom := IW.u64[bo + bl - 1];
-    hd := call get_app_fn(⟪CWF⟫, mdom);
-    if hd >> 28 != 3 { return (0, 0) };
-    (g, iName, us, z) := call e_view(hd);
-    (ao, al) := call get_app_args(⟪CWF⟫, mdom);
-    n := call class_n_pc_of(p, vis, iName);
-    cnt := al;
-    if n < al { cnt := n };
-    key := call rec4(iName, us, ao, cnt);
-    slot := call rec2(0, key);
-    return (1, slot)
+    (ok, slot) := call class_read_slot_motive(p, vis, dom);
+    return (ok, slot)
   };
-  (g, slot) := call class_read_minor(np, mo, ml, d, dom);
-  return (g, slot)
+  (ok, slot) := call class_read_minor(np, mo, ml, d, dom);
+  return (ok, slot)
 }
 
 /-- `class_read_slots(p, vis, np, n, mo, ml, d, e)`: read `n` prefix binders of a recursor type
@@ -682,7 +691,8 @@ def recClassFns : Prog :=
    ("class_read_minor_ih1", classReadMinorIh1), ("class_read_minor_ihs", classReadMinorIhs),
    ("class_read_minor_finish", classReadMinorFinish), ("class_read_minor_tail", classReadMinorTail),
    ("class_read_minor", classReadMinor),
-   ("class_n_pc_of", classNPcOf), ("class_read_slot", classReadSlot),
+   ("class_n_pc_of", classNPcOf), ("class_read_slot_motive", classReadSlotMotive),
+   ("class_read_slot", classReadSlot),
    ("class_read_slots", classReadSlots), ("class_read_rec_cls", classReadRecCls),
    ("class_read_finish", classReadFinish), ("class_read", classRead),
    ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),

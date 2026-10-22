@@ -6,13 +6,13 @@ import ConAgua.Arena.IndCopy2
 # A word model simulates a twin run (lane `indproofs2`, helper `rec`)
 
 The relational half of the phase-8 template (`IndSumSpec.lean`) as a few combinators, so that a
-relational lemma is a chain of `Sim.bind` steps instead of a hand-written case split ending in a
+relational lemma is a chain of `RSim.bind` steps instead of a hand-written case split ending in a
 step-by-step rewrite of the twin's run.
 
-`Sim o op a Q`: whenever the word model `o` returns `b`, the twin's `op` run from `a` succeeds
+`RSim o op a Q`: whenever the word model `o` returns `b`, the twin's `op` run from `a` succeeds
 with some `x`, `a'`, and `Q b a' x`. A model is a chain of continuations `K (callee …)` with
-`K none = none`; `Sim.bind` composes a callee's `Sim` with its continuation's, `Sim.lstep` takes an
-L-only step (a pure model the twin computes inline), `Sim.pure` ends the chain.
+`K none = none`; `RSim.bind` composes a callee's `RSim` with its continuation's, `RSim.lstep` takes an
+L-only step (a pure model the twin computes inline), `RSim.pure` ends the chain.
 
 `fuelW n o`: `none` at fuel `0`, `o` above. A callee whose spec holds at fuel `n + 1` only gets a
 spec at every fuel through it (`invoke_exec_zero`: a call at fuel `0` never returns).
@@ -91,34 +91,34 @@ def fuelW {β : Type} : Nat → Option β → Option β
 /-! ## The simulation -/
 
 /-- **The word model's result `o` simulates the twin's `op` from `a`**, with post `Q`. -/
-def Sim {β α : Type} (o : Option β) (op : AM α) (a : AState) (Q : β → AState → α → Prop) : Prop :=
+def RSim {β α : Type} (o : Option β) (op : AM α) (a : AState) (Q : β → AState → α → Prop) : Prop :=
   ∀ b, o = some b → ∃ x a', op.run a = .ok (x, a') ∧ Q b a' x
 
-namespace Sim
+namespace RSim
 variable {β γ α δ : Type}
 
-theorem none {op : AM α} {a : AState} {Q : β → AState → α → Prop} : Sim none op a Q := by
+theorem none {op : AM α} {a : AState} {Q : β → AState → α → Prop} : RSim none op a Q := by
   intro b h; cases h
 
 theorem fuel0 {op : AM α} {a : AState} {Q : β → AState → α → Prop} {o : Option β} :
-    Sim (fuelW 0 o) op a Q := Sim.none
+    RSim (fuelW 0 o) op a Q := RSim.none
 
 /-- End of the chain: a pure twin result. -/
 theorem pure {o : Option β} {x : α} {a : AState} {Q : β → AState → α → Prop}
-    (h : ∀ b, o = some b → Q b a x) : Sim o (Pure.pure x : AM α) a Q :=
+    (h : ∀ b, o = some b → Q b a x) : RSim o (Pure.pure x : AM α) a Q :=
   fun b hb => ⟨x, a, rfl, h b hb⟩
 
 /-- End of the chain at a model result `some b`. -/
 theorem pure_some {b : β} {x : α} {a : AState} {Q : β → AState → α → Prop}
-    (h : Q b a x) : Sim (some b) (Pure.pure x : AM α) a Q :=
-  Sim.pure fun _ hb => by cases hb; exact h
+    (h : Q b a x) : RSim (some b) (Pure.pure x : AM α) a Q :=
+  RSim.pure fun _ hb => by cases hb; exact h
 
 /-- **A callee step**: the callee's simulation, then its continuation's. -/
 theorem bind {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
     {op : AM α} {f : α → AM δ} {a : AState} {Q1 : β → AState → α → Prop}
-    {Q : γ → AState → δ → Prop} (h1 : Sim o op a Q1)
-    (h2 : ∀ b x a1, o = some b → Q1 b a1 x → Sim (K (some b)) (f x) a1 Q) :
-    Sim (K o) (op >>= f) a Q := by
+    {Q : γ → AState → δ → Prop} (h1 : RSim o op a Q1)
+    (h2 : ∀ b x a1, o = some b → Q1 b a1 x → RSim (K (some b)) (f x) a1 Q) :
+    RSim (K o) (op >>= f) a Q := by
   intro c hc
   cases ho : o with
   | none => rw [ho, hK] at hc; cases hc
@@ -137,15 +137,15 @@ theorem bind {K : Option β → Option γ} (hK : K Option.none = Option.none) {o
 its result. -/
 theorem bindPure {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
     {op : AM α} {a : AState} {Q1 : β → AState → α → Prop} {Q : γ → AState → α → Prop}
-    (h1 : Sim o op a Q1) (h2 : ∀ b x a1, o = some b → Q1 b a1 x → Sim (K (some b)) (Pure.pure x : AM α) a1 Q) :
-    Sim (K o) op a Q := by
-  have h := Sim.bind (f := fun x => (Pure.pure x : AM α)) hK h1 h2
+    (h1 : RSim o op a Q1) (h2 : ∀ b x a1, o = some b → Q1 b a1 x → RSim (K (some b)) (Pure.pure x : AM α) a1 Q) :
+    RSim (K o) op a Q := by
+  have h := RSim.bind (f := fun x => (Pure.pure x : AM α)) hK h1 h2
   rwa [bind_pure] at h
 
 /-- **A twin-only step**: a twin computation the model does not run (a read of the state). -/
 theorem tstep {o : Option β} {op : AM α} {f : α → AM δ} {a a' : AState} {x : α}
-    {Q : β → AState → δ → Prop} (hr : op.run a = .ok (x, a')) (h : Sim o (f x) a' Q) :
-    Sim o (op >>= f) a Q := by
+    {Q : β → AState → δ → Prop} (hr : op.run a = .ok (x, a')) (h : RSim o (f x) a' Q) :
+    RSim o (op >>= f) a Q := by
   intro b hb
   obtain ⟨y, a2, hr2, hq⟩ := h b hb
   refine ⟨y, a2, ?_, hq⟩
@@ -157,55 +157,55 @@ theorem tstep {o : Option β} {op : AM α} {f : α → AM δ} {a a' : AState} {x
 /-- **An L-only step**: the model computes something (a pure word model) the twin does not run. -/
 theorem lstep {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
     {op : AM δ} {a : AState} {Q : γ → AState → δ → Prop}
-    (h : ∀ b, o = some b → Sim (K (some b)) op a Q) : Sim (K o) op a Q := by
+    (h : ∀ b, o = some b → RSim (K (some b)) op a Q) : RSim (K o) op a Q := by
   cases ho : o with
-  | none => rw [hK]; exact Sim.none
+  | none => rw [hK]; exact RSim.none
   | some b => exact h b ho
 
 /-- Rewrite the model. -/
 theorem of_eq {o o' : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
-    (he : o = o') (h : Sim o' op a Q) : Sim o op a Q := he ▸ h
+    (he : o = o') (h : RSim o' op a Q) : RSim o op a Q := he ▸ h
 
 /-- Rewrite the twin. -/
 theorem of_eq_op {o : Option β} {op op' : AM α} {a : AState} {Q : β → AState → α → Prop}
-    (he : op = op') (h : Sim o op' a Q) : Sim o op a Q := he ▸ h
+    (he : op = op') (h : RSim o op' a Q) : RSim o op a Q := he ▸ h
 
 /-- Weaken the post. -/
 theorem mono {o : Option β} {op : AM α} {a : AState} {Q Q' : β → AState → α → Prop}
-    (h : Sim o op a Q) (hq : ∀ b a' x, o = some b → Q b a' x → Q' b a' x) : Sim o op a Q' := by
+    (h : RSim o op a Q) (hq : ∀ b a' x, o = some b → Q b a' x → Q' b a' x) : RSim o op a Q' := by
   intro b hb
   obtain ⟨x, a', hr, hq'⟩ := h b hb
   exact ⟨x, a', hr, hq b a' x hb hq'⟩
 
 /-- A twin that throws is never simulated, unless the model fails. -/
 theorem of_none {o : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
-    (h : o = Option.none) : Sim o op a Q := by rw [h]; exact Sim.none
+    (h : o = Option.none) : RSim o op a Q := by rw [h]; exact RSim.none
 
-/-- The usual way to conclude: a `Sim` of a successful model run gives the twin run. -/
+/-- The usual way to conclude: a `RSim` of a successful model run gives the twin run. -/
 theorem run {o : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop} {b : β}
-    (h : Sim o op a Q) (hb : o = some b) : ∃ x a', op.run a = .ok (x, a') ∧ Q b a' x := h b hb
+    (h : RSim o op a Q) (hb : o = some b) : ∃ x a', op.run a = .ok (x, a') ∧ Q b a' x := h b hb
 
-/-- The census theorem's post from a `Sim` of the model a triple gives. -/
+/-- The census theorem's post from a `RSim` of the model a triple gives. -/
 theorem am {o : Option β} {op : AM α} [Inhabited α] {a : AState} {Q : β → AState → α → Prop}
-    {b : β} (h : Sim o op a Q) (hb : o = some b) : AM.ok op a ∧ Q b (AM.st op a) (AM.res op a) := by
+    {b : β} (h : RSim o op a Q) (hb : o = some b) : AM.ok op a ∧ Q b (AM.st op a) (AM.res op a) := by
   obtain ⟨x, a', hr, hq⟩ := h b hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok op a a' x hr
   exact ⟨hok, by rw [hst, hres]; exact hq⟩
 
-end Sim
+end RSim
 
-/-- A stub's `RelAM` as a `Sim`. -/
+/-- A stub's `RelAM` as a `RSim`. -/
 theorem RelAM.sim {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop} {op : AM α}
     {post : Mem → Mem → AState → List Word → α → Prop} (h : RelAM f args pre op post)
     {m : Mem} {a : AState} (hp : pre m a) :
-    Sim (stubM f m args) op a (fun b a' x => post m b.2 a' b.1 x) := by
+    RSim (stubM f m args) op a (fun b a' x => post m b.2 a' b.1 x) := by
   intro b hb
   obtain ⟨r, m'⟩ := b
   exact h m m' a r hb hp
 
 /-! ## The usual post -/
 
-/-- The usual post as a `Sim` post on `(r, m')`: the stage relation, growth from `m`, the result
+/-- The usual post as a `RSim` post on `(r, m')`: the stage relation, growth from `m`, the result
 decoded by `dec`. -/
 def KP {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (dec : Mem → List Word → α → Prop) (b : List Word × Mem) (a' : AState) (x : α) : Prop :=
