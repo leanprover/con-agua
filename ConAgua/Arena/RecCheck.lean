@@ -672,29 +672,21 @@ def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (q, j, tag, g, d, b, z,
 
 /-- **`abstract_prefix`**: the free variables `0 … k-1` closed at cursor `c`, innermost first. -/
 @[l_impl ConRon.Arena.abstractPrefix]
-def abstractPrefix : FunDecl := lfn (k, c, e) locals (kk, cc, cur) {
-  kk := k;
-  cc := c;
-  cur := e;
-  while kk != 0 {
-    cur := call abstract1_fast(⟪CWF⟫, cur, kk - 1, cc);
-    cc += 1;
-    kk -= 1
-  };
-  return cur
+def abstractPrefix : FunDecl := lfn (k, c, e) locals (cur, r) {
+  if k == 0 { return e };
+  cur := call abstract1_fast(⟪CWF⟫, e, k - 1, c);
+  r := call abstract_prefix(k - 1, c + 1, cur);
+  return r
 }
 
 /-- **`abstract_prefix_list`**: `ds.map (abstractPrefix rP)`, in order. -/
 @[l_impl ConRon.Arena.abstractPrefixList]
-def abstractPrefixList : FunDecl := lfn (rP, dso, dsl) locals (q, j, x) {
-  q := call iw_alloc(dsl);
-  j := 0;
-  while j < dsl {
-    x := call abstract_prefix(rP, 0, IW.u64[dso + j]);
-    IW.u64[q + j] := x;
-    j += 1
-  };
-  return (q, dsl)
+def abstractPrefixList : FunDecl := lfn (rP, dso, dsl) locals (x, qo, ql, ro, rl) {
+  if dsl == 0 { return (0, 0) };
+  x := call abstract_prefix(rP, 0, IW.u64[dso]);
+  (qo, ql) := call abstract_prefix_list(rP, dso + 1, dsl - 1);
+  (ro, rl) := call sl_cons(x, qo, ql);
+  return (ro, rl)
 }
 
 /-- **`aux_rule_fire`**: the firing mode of a rule at an OUTSIDE major — `.nested` at the class's

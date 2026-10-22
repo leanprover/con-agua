@@ -91,7 +91,7 @@ theorem iwH_off {m : Mem} {k' : IdxKind} {p k : Nat} {x : Idx k'} (h : iwH m (p 
   refine ⟨by simp; omega, iwH_rdW h hb⟩
 
 
-theorem decPL_succ {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) :
+theorem decPL_succ_do {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) :
     decPL m f o (l + 1) = (do
       let x ← (do let p ← iwN m o; f p)
       let ys ← decPL m f (o + 1) l
@@ -107,7 +107,7 @@ theorem decPL_succ {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) :
 theorem decPL_cons {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat} {xs : List α}
     (h : decPL m f o (l + 1) = some xs) :
     ∃ p x ys, xs = x :: ys ∧ iwN m o = some p ∧ f p = some x ∧ decPL m f (o + 1) l = some ys := by
-  rw [decPL_succ] at h
+  rw [decPL_succ_do] at h
   cases hp : iwN m o with
   | none => simp [hp] at h
   | some p =>
@@ -1526,7 +1526,7 @@ theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pin
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
 
 
-theorem tag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
+theorem ctag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
     (decE w).tag = UInt32.ofNat k ↔ w >>> 28 = UInt64.ofNat k := by
   rw [decE_tag w hw]
   have h28 : (w >>> 28).toNat < 16 := by
