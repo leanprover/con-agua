@@ -344,6 +344,160 @@ theorem rfOK_step (n : Nat) (hGo : GoOK dn fe vis n) : RfOK dn fe vis (n + 1) :=
   rw [ConRon.Arena.replaceFVars.eq_1, StateT.run_bind, ← CWF_eq, hrun]
   rfl
 
+/-- The walk's post. -/
+def GoPost (m m' : Mem) (a' : AState) (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
+    (mp' : Std.HashMap EIdx EIdx) : Prop :=
+  ∃ M' G', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' gn ∧ Bank M' gn mp' ∧ GKeepX M M' G gn ∧
+    G ≤ G'
+
+theorem GKeepX.trans {M₁ M₂ M₃ : Std.HashMap (EIdx × Word) EIdx} {G G' g : Word} (h₁ : GKeepX M₁ M₂ G g)
+    (h₂ : GKeepX M₂ M₃ G' g) (hG : G ≤ G') : GKeepX M₁ M₃ G g :=
+  fun k gen hg hne => (h₂ k gen (UInt64.le_trans hg hG) hne).trans (h₁ k gen hg hne)
+
+theorem GKeepX.refl (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : GKeepX M M G g := fun _ _ _ _ => rfl
+
+/-- One child walked, then the rest. -/
+theorem goStep {k : Nat} (hGo : GoOK dn fe vis k) {m m1 : Mem} {a : AState} {f f1 x x2 : Word} {fm : FvMap}
+    {mp : Std.HashMap EIdx EIdx} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
+    (h1 : rxGoW k m f f1 x = some (x2, m1)) (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x)
+    (hR : RfInv m M G gn) (hb : Bank M gn mp) :
+    ∃ mp1 a1, (ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE x)).run a = .ok ((decE x2, mp1), a1) ∧
+      GoPost dn fe vis m m1 a1 M G gn mp1 := by
+  obtain ⟨mp1, a1, M1, G1, hr, hS1, hg1, hR1, hb1, hk1, hG1⟩ := hGo m m1 a f f1 x fm mp x2 M G gn h1 hS hfm hx hR hb
+  exact ⟨mp1, a1, hr, M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩
+
+theorem GoPost.then {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
+    {mp1 mp2 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1)
+    (k : ∀ M1 G1, RfInv m1 M1 G1 gn → Bank M1 gn mp1 → G ≤ G1 → StageR dn vis fe m1 a1 →
+      ∃ M2 G2, StageR dn vis fe m2 a2 ∧ IWGrow m1 m2 ∧ RfInv m2 M2 G2 gn ∧ Bank M2 gn mp2 ∧
+        GKeepX M1 M2 G1 gn ∧ G1 ≤ G2) :
+    GoPost dn fe vis m m2 a2 M G gn mp2 := by
+  obtain ⟨M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩ := h
+  obtain ⟨M2, G2, hS2, hg2, hR2, hb2, hk2, hG2⟩ := k M1 G1 hR1 hb1 hG1 hS1
+  exact ⟨M2, G2, hS2, hg1.trans hg2, hR2, hb2, hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
+
+theorem GoPost.mk {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
+    {mp1 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1) (hS : StageR dn vis fe m2 a2)
+    (hg : IWGrow m1 m2) (hf : LowFr m1 m2) : GoPost dn fe vis m m2 a2 M G gn mp1 :=
+  h.then dn fe vis fun M1 G1 hR1 hb1 _ _ =>
+    ⟨M1, G1, hS, hg, hR1.frame (RfFr.of_low hf), hb1, GKeepX.refl _ _ _, UInt64.le_refl _⟩
+
+/-- Two children and an interning: `app`, `lam`, `forallE`. -/
+theorem rxBin_ok (k : Nat) (hGo : GoOK dn fe vis k) (g : Word)
+    (mkW : Mem → Word → Word → Option (Word × Mem)) (iop : EIdx → EIdx → AM EIdx)
+    (hmk : ∀ m a2 x2, rpMkW m g a2 x2 0 0 0 = mkW m a2 x2)
+    (hst : ∀ (m m' : Mem) (a : AState) (u v r : Word), StageR dn vis fe m a → mkW m u v = some (r, m') →
+      ∃ a', (iop (decE u) (decE v)).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m')
+    (hlow : ∀ (m m' : Mem) (u v r : Word), mkW m u v = some (r, m') → LowFr m m')
+    (m m' : Mem) (a : AState) (f f1 x y r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
+    (hn : rxB1 k f f1 g x y (rxGoW k m f f1 x) = some (r, m'))
+    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x) (hy : H y) (hR : RfInv m M G gn)
+    (hb : Bank M gn mp) :
+    ∃ mp' a', (do
+        let (t2, mm) ← ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE x)
+        let (b2, m2) ← ConRon.Arena.replaceFVarsGo fm mm f1.toNat (decE y)
+        let r ← iop t2 b2
+        pure (r, m2) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
+      GoPost dn fe vis m m' a' M G gn mp' := by
+  cases h1 : rxGoW k m f f1 x with
+  | none => rw [h1] at hn; simp [rxB1] at hn
+  | some p1 =>
+  obtain ⟨a2, m1⟩ := p1
+  rw [h1, rxB1_some] at hn
+  cases h2 : rxGoW k m1 f f1 y with
+  | none => rw [h2] at hn; simp [rxB2] at hn
+  | some p2 =>
+  obtain ⟨x2, m2⟩ := p2
+  rw [h2, rxB2_some, hmk] at hn
+  obtain ⟨mp1, a1, hr1, hP1⟩ := goStep dn fe vis hGo h1 hS hfm hx hR hb
+  obtain ⟨M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩ := hP1
+  obtain ⟨mp2, a2', hr2, hP2⟩ := goStep dn fe vis hGo h2 hS1 (hfm.grow hg1) hy hR1 hb1
+  obtain ⟨M2, G2, hS2, hg2, hR2, hb2, hk2, hG2⟩ := hP2
+  obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
+  refine ⟨mp2, a3, ?_, M2, G2, hS3, (hg1.trans hg2).trans hg3, hR2.frame (RfFr.of_low (hlow _ _ _ _ _ hn)), hb2,
+    hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
+  simp only [StateT.run_bind]
+  rw [hr1]
+  simp only [except_ok_bind, StateT.run_bind]
+  rw [hr2]
+  simp only [except_ok_bind, StateT.run_bind]
+  rw [hr3]
+  rfl
+
+theorem rxLet_ok (k : Nat) (hGo : GoOK dn fe vis k)
+    (m m' : Mem) (a : AState) (f f1 x y z r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
+    (hn : rxL1 k f f1 x y z (rxGoW k m f f1 x) = some (r, m'))
+    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hx : H x) (hy : H y) (hz : H z)
+    (hR : RfInv m M G gn) (hb : Bank M gn mp) :
+    ∃ mp' a', (do
+        let (t2, mm) ← ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE x)
+        let (v2, m2) ← ConRon.Arena.replaceFVarsGo fm mm f1.toNat (decE y)
+        let (b2, m3) ← ConRon.Arena.replaceFVarsGo fm m2 f1.toNat (decE z)
+        let r ← internLetEE t2 v2 b2
+        pure (r, m3) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
+      GoPost dn fe vis m m' a' M G gn mp' := by
+  cases h1 : rxGoW k m f f1 x with
+  | none => rw [h1] at hn; simp [rxL1] at hn
+  | some p1 =>
+  obtain ⟨a2, m1⟩ := p1
+  rw [h1, rxL1_some] at hn
+  cases h2 : rxGoW k m1 f f1 y with
+  | none => rw [h2] at hn; simp [rxL2] at hn
+  | some p2 =>
+  obtain ⟨x2, m2⟩ := p2
+  rw [h2, rxL2_some] at hn
+  cases h3 : rxGoW k m2 f f1 z with
+  | none => rw [h3] at hn; simp [rxL3] at hn
+  | some p3 =>
+  obtain ⟨c2, m3⟩ := p3
+  rw [h3, rxL3_some, rpMkW_let] at hn
+  obtain ⟨mp1, a1, hr1, M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩ := goStep dn fe vis hGo h1 hS hfm hx hR hb
+  obtain ⟨mp2, a2', hr2, M2, G2, hS2, hg2, hR2, hb2, hk2, hG2⟩ :=
+    goStep dn fe vis hGo h2 hS1 (hfm.grow hg1) hy hR1 hb1
+  obtain ⟨mp3, a3', hr3, M3, G3, hS3, hg3, hR3, hb3, hk3, hG3⟩ :=
+    goStep dn fe vis hGo h3 hS2 ((hfm.grow hg1).grow hg2) hz hR2 hb2
+  obtain ⟨a4, hr4, hS4, hg4⟩ := mkLet_stage hS3 a2 x2 c2 hn
+  refine ⟨mp3, a4, ?_, M3, G3, hS4, ((hg1.trans hg2).trans hg3).trans hg4,
+    hR3.frame (RfFr.of_low (mkLetW_low hn)), hb3, (hk1.trans hk2 hG1).trans hk3 (UInt64.le_trans hG1 hG2),
+    UInt64.le_trans (UInt64.le_trans hG1 hG2) hG3⟩
+  simp only [StateT.run_bind]
+  rw [hr1]
+  simp only [except_ok_bind, StateT.run_bind]
+  rw [hr2]
+  simp only [except_ok_bind, StateT.run_bind]
+  rw [hr3]
+  simp only [except_ok_bind, StateT.run_bind]
+  have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
+  rw [hr4']
+  rfl
+
+theorem rxProj_ok (k : Nat) (hGo : GoOK dn fe vis k)
+    (m m' : Mem) (a : AState) (f f1 x y z r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
+    (hn : rxP1 x y (rxGoW k m f f1 z) = some (r, m'))
+    (hS : StageR dn vis fe m a) (hfm : FMOk m f.toNat fm) (hz : H z) (hR : RfInv m M G gn) (hb : Bank M gn mp) :
+    ∃ mp' a', (do
+        let (x2, mm) ← ConRon.Arena.replaceFVarsGo fm mp f1.toNat (decE z)
+        let r ← internProjE (decI x) y.toNat x2
+        pure (r, mm) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
+      GoPost dn fe vis m m' a' M G gn mp' := by
+  cases h1 : rxGoW k m f f1 z with
+  | none => rw [h1] at hn; simp [rxP1] at hn
+  | some p1 =>
+  obtain ⟨a2, m1⟩ := p1
+  rw [h1, rxP1_some, rpMkW_proj] at hn
+  obtain ⟨mp1, a1, hr1, hP1⟩ := goStep dn fe vis hGo h1 hS hfm hz hR hb
+  obtain ⟨a3, hr3, hS3, hg3⟩ := mkProj_stage hP1.choose_spec.choose_spec.1 x y a2 hn
+  refine ⟨mp1, a3, ?_, hP1.mk dn fe vis hS3 hg3 (mkProjW_low hn)⟩
+  simp only [StateT.run_bind]
+  rw [hr1]
+  simp only [except_ok_bind, StateT.run_bind]
+  have hr3' : (internProjE (decI x) y.toNat (decE a2)).run a1 = .ok (decE r, a3) := hr3
+  rw [hr3']
+  rfl
+
 end steps
 
 end L.Ind
