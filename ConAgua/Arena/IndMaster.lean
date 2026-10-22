@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndCopy
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.ExprMk
 
@@ -137,5 +137,52 @@ theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m 
   exact stage_of_ok hS hok hD hres hf (by simp [PJDER, PJREC, PJSLOT]) (by simp) (keeps_internE _)
 
 end
+
+/-! ## The pool's `sl_cons` under the stage relation -/
+
+/-- The pool's top after a `sl_cons` stays within the array. -/
+theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
+    (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hx : x.toNat < 2 ^ 32) {xs : List EIdx} (hxs : decHL m o.toNat l.toNat = some xs) :
+    iwTop m' ≤ (m'.arr64 IW).size := by
+  obtain ⟨-, -, -, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
+  rw [← ht, hf.2.2.1 IW]
+  simp only [consW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  simp only [allocW] at h
+  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
+  · simp [h1] at h
+  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
+  · simp [h1, h2] at h
+  have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
+  have : ¬ (m.len64 IW).toNat < (rdW (m.arr64 CTL) 200).toNat := h1
+  have h2' : ¬ (m.len64 IW - rdW (m.arr64 CTL) 200).toNat < (l + 1).toNat := h2
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at h2'
+  omega
+
+/-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
+`x :: xs`. -/
+theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
+    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hsrc : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32)
+    (hxs : decHL m o.toNat l.toNat = some xs) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (decI x :: xs) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
+  have hroom := consW_room h hsz hc hsrc hx hxs
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  subst hr
+  refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
+  · simp only [erTop, h129, hE]; exact hE1
+  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hE]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
 
 end L.Ind
