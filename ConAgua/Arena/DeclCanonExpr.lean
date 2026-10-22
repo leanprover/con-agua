@@ -39,7 +39,7 @@ def ceK0 (n : Nat) (m : Mem) (po pl qo ql co cl fuel a b : Word) (ru rv : List W
     if ru.tail.headD 0 ≠ rv.tail.headD 0 then some (0, m)
     else ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
   else if ru.headD 0 = 2 then
-    ceKL n m (clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
+    ceKL n m (cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
   else if ru.headD 0 = 3 then
     if ru.tail.headD 0 ≠ rv.tail.headD 0 then some (0, m)
     else ceKS (lsEqW n m po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0) (rv.tail.tail.headD 0))
@@ -100,7 +100,7 @@ theorem ceK0_def : ceK0 n m po pl qo ql co cl fuel a b ru rv =
     if ru.tail.headD 0 ≠ rv.tail.headD 0 then some (0, m)
     else ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
   else if ru.headD 0 = 2 then
-    ceKL n m (clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
+    ceKL n m (cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
   else if ru.headD 0 = 3 then
     if ru.tail.headD 0 ≠ rv.tail.headD 0 then some (0, m)
     else ceKS (lsEqW n m po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0) (rv.tail.tail.headD 0))

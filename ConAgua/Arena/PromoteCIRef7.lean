@@ -81,7 +81,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   rw [hs'] at hW
   simp only [ruleW] at hW
   obtain ⟨w0, w1, w2, w8, w9, w10, e0, l0, hctor, e1, hnf, e2, hcpr, e8, l8, hrhs, e9, hk, e10,
-    he⟩ := decRule_words hrl
+    he⟩ := pmDecRule_words hrl
   obtain ⟨-, M0⟩ := preE_get_lt e0
   obtain ⟨-, M1⟩ := preE_get_lt e1
   obtain ⟨-, M2⟩ := preE_get_lt e2

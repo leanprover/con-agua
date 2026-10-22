@@ -27,7 +27,7 @@ theorem decCaps_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
   obtain ⟨w, hw, -⟩ := nat?_get hc1
   exact (Array.getElem?_eq_some_iff.mp hw).1
 
-theorem decTbl_bound {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
+theorem pmDecTbl_bound {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
     q + 13 < a.size := by
   unfold decTbl at h
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h

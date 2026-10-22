@@ -254,7 +254,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
-    have hb := decTbl_bound ht
+    have hb := pmDecTbl_bound ht
     obtain ⟨a', pm1, tbl', hrun, hDf, hPf, hcp', hfr, hg, hts', hptr, hptr14, hker, hdec⟩ :=
       proj_rel p hp n m a pm f q D tbl dl m1 hD hP hsz hts ht hkwm (by omega) hDt hcl
     refine ⟨a', pm1, .projInfo tbl', ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩

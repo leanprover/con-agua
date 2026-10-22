@@ -173,72 +173,72 @@ theorem canonNameMap_refines (p : Prog) (hf : p.lookup "sl_find" = some slFind)
 
 mutual
 /-- **The model of `canon_level_eq`**. -/
-def clW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option Word
+def cnClW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option Word
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, po, pl, qo, ql, co, cl, fuel, u, v =>
     if fuel = 0 then none
-    else clK0 n m po pl qo ql co cl fuel (lvNodeW m u) (lvNodeW m v)
+    else cnClK0 n m po pl qo ql co cl fuel (lvNodeW m u) (lvNodeW m v)
 
 /-- After the two `lv_node` calls. -/
-def clK0 (n : Nat) (m : Mem) (po pl qo ql co cl fuel : Word) (ru rv : List Word) : Option Word :=
+def cnClK0 (n : Nat) (m : Mem) (po pl qo ql co cl fuel : Word) (ru rv : List Word) : Option Word :=
   if ru = [] ∨ rv = [] then none
   else if ru.headD 0 ≠ rv.headD 0 then some 0
   else if ru.headD 0 = 0 then some 1
   else if ru.headD 0 = 1 then
-    clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0)
+    cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0)
   else if ru.headD 0 = 2 ∨ ru.headD 0 = 3 then
-    clK1 n m po pl qo ql co cl fuel (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
-      (clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
+    cnClK1 n m po pl qo ql co cl fuel (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
+      (cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
   else if ru.headD 0 = 4 then
-    clK2 n m qo ql co cl (rv.tail.headD 0) (nmW n m po pl co cl (ru.tail.headD 0))
+    cnClK2 n m qo ql co cl (rv.tail.headD 0) (nmW n m po pl co cl (ru.tail.headD 0))
   else some 0
 
 /-- After the first child of a `max`/`imax`. -/
-def clK1 (n : Nat) (m : Mem) (po pl qo ql co cl fuel a2 b2 : Word) : Option Word → Option Word
+def cnClK1 (n : Nat) (m : Mem) (po pl qo ql co cl fuel a2 b2 : Word) : Option Word → Option Word
   | none => none
-  | some r => if r = 0 then some 0 else clW n m po pl qo ql co cl (fuel - 1) a2 b2
+  | some r => if r = 0 then some 0 else cnClW n m po pl qo ql co cl (fuel - 1) a2 b2
 
 /-- After the first `canon_name_map`. -/
-def clK2 (n : Nat) (m : Mem) (qo ql co cl b1 : Word) : Option Word → Option Word
+def cnClK2 (n : Nat) (m : Mem) (qo ql co cl b1 : Word) : Option Word → Option Word
   | none => none
-  | some x => clK3 x (nmW n m qo ql co cl b1)
+  | some x => cnClK3 x (nmW n m qo ql co cl b1)
 
 /-- After the second. -/
-def clK3 (x : Word) : Option Word → Option Word
+def cnClK3 (x : Word) : Option Word → Option Word
   | none => none
   | some y => some (if x = y then 1 else 0)
 end
 
 section arms
 variable (n : Nat) (m : Mem) (po pl qo ql co cl fuel u v a2 b2 b1 x y r : Word) (ru rv : List Word)
-theorem clW_succ : clW (n + 1) m po pl qo ql co cl fuel u v =
-    (if fuel = 0 then none else clK0 n m po pl qo ql co cl fuel (lvNodeW m u) (lvNodeW m v)) := by
-  rw [clW]
-theorem clK0_def : clK0 n m po pl qo ql co cl fuel ru rv =
+theorem clW_succ : cnClW (n + 1) m po pl qo ql co cl fuel u v =
+    (if fuel = 0 then none else cnClK0 n m po pl qo ql co cl fuel (lvNodeW m u) (lvNodeW m v)) := by
+  rw [cnClW]
+theorem cnClK0_def : cnClK0 n m po pl qo ql co cl fuel ru rv =
     (if ru = [] ∨ rv = [] then none
   else if ru.headD 0 ≠ rv.headD 0 then some 0
   else if ru.headD 0 = 0 then some 1
   else if ru.headD 0 = 1 then
-    clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0)
+    cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0)
   else if ru.headD 0 = 2 ∨ ru.headD 0 = 3 then
-    clK1 n m po pl qo ql co cl fuel (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
-      (clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
+    cnClK1 n m po pl qo ql co cl fuel (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
+      (cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
   else if ru.headD 0 = 4 then
-    clK2 n m qo ql co cl (rv.tail.headD 0) (nmW n m po pl co cl (ru.tail.headD 0))
+    cnClK2 n m qo ql co cl (rv.tail.headD 0) (nmW n m po pl co cl (ru.tail.headD 0))
   else some 0) := by
-  rw [clK0]
-theorem clK1_some : clK1 n m po pl qo ql co cl fuel a2 b2 (some r) =
-    (if r = 0 then some 0 else clW n m po pl qo ql co cl (fuel - 1) a2 b2) := by
-  rw [clK1]
-theorem clK2_some : clK2 n m qo ql co cl b1 (some x) = clK3 x (nmW n m qo ql co cl b1) := rfl
-theorem clK3_some : clK3 x (some y) = some (if x = y then 1 else 0) := rfl
+  rw [cnClK0]
+theorem cnClK1_some : cnClK1 n m po pl qo ql co cl fuel a2 b2 (some r) =
+    (if r = 0 then some 0 else cnClW n m po pl qo ql co cl (fuel - 1) a2 b2) := by
+  rw [cnClK1]
+theorem cnClK2_some : cnClK2 n m qo ql co cl b1 (some x) = cnClK3 x (nmW n m qo ql co cl b1) := rfl
+theorem cnClK3_some : cnClK3 x (some y) = some (if x = y then 1 else 0) := rfl
 end arms
 
-grind_pattern [ind_grind] clW_succ => clW (n + 1) m po pl qo ql co cl fuel u v
-grind_pattern [ind_grind] clK0_def => clK0 n m po pl qo ql co cl fuel ru rv
-grind_pattern [ind_grind] clK1_some => clK1 n m po pl qo ql co cl fuel a2 b2 (some r)
-grind_pattern [ind_grind] clK2_some => clK2 n m qo ql co cl b1 (some x)
-grind_pattern [ind_grind] clK3_some => clK3 x (some y)
+grind_pattern [ind_grind] clW_succ => cnClW (n + 1) m po pl qo ql co cl fuel u v
+grind_pattern [ind_grind] cnClK0_def => cnClK0 n m po pl qo ql co cl fuel ru rv
+grind_pattern [ind_grind] cnClK1_some => cnClK1 n m po pl qo ql co cl fuel a2 b2 (some r)
+grind_pattern [ind_grind] cnClK2_some => cnClK2 n m qo ql co cl b1 (some x)
+grind_pattern [ind_grind] cnClK3_some => cnClK3 x (some y)
 
 
 section specs2
@@ -249,7 +249,7 @@ set_option maxHeartbeats 4000000 in
 theorem canonLevelEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel u v : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_level_eq" [po, pl, qo, ql, co, cl, fuel, u, v]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      clW n s₀.mem po pl qo ql co cl fuel u v = some (r.headD 0); ⊤⦄ := by
+      cnClW n s₀.mem po pl qo ql co cl fuel u v = some (r.headD 0); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ po pl qo ql co cl fuel u v
@@ -292,18 +292,18 @@ theorem andThen_ok {A B : AM Bool} {a : AState} {r r1 : Word} {b1 : Bool}
     simp [StateT.run_bind, hA, exc_ok_bind', hb2]
 
 theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u v r : Word)
-    (ps qs cs : List NIdx), clW n m po pl qo ql co cl fuel u v = some r → ArenaR m a →
+    (ps qs cs : List NIdx), cnClW n m po pl qo ql co cl fuel u v = some r → ArenaR m a →
     CtxR m po pl qo ql co cl ps qs cs → u.toNat < 2 ^ 32 → v.toNat < 2 ^ 32 →
     ∃ b, (ConRon.Arena.canonLevelEq ps qs cs fuel.toNat (decI u) (decI v)).run a = .ok (b, a) ∧
       r = if b then 1 else 0 := by
   induction n with
-  | zero => intro m a po pl qo ql co cl fuel u v r ps qs cs h; simp [clW] at h
+  | zero => intro m a po pl qo ql co cl fuel u v r ps qs cs h; simp [cnClW] at h
   | succ n ih =>
     intro m a po pl qo ql co cl fuel u v r ps qs cs h hR hC hu hv
     rw [clW_succ] at h
     by_cases hf : fuel = 0
     · rw [if_pos hf] at h; simp at h
-    rw [if_neg hf, clK0_def] at h
+    rw [if_neg hf, cnClK0_def] at h
     by_cases hne : lvNodeW m u = [] ∨ lvNodeW m v = []
     · rw [if_pos hne] at h; simp at h
     rw [if_neg hne] at h
@@ -326,11 +326,11 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          rw [decI_word, decI_word] at hb
          exact ⟨b, hb, hr⟩)
       | (-- max.max, imax.imax
-         generalize hx1 : clW n m po pl qo ql co cl (fuel - 1) _ _ = x1 at h
+         generalize hx1 : cnClW n m po pl qo ql co cl (fuel - 1) _ _ = x1 at h
          cases x1 with
-         | none => simp [clK1] at h
+         | none => simp [cnClK1] at h
          | some r1 =>
-         rw [clK1_some] at h
+         rw [cnClK1_some] at h
          obtain ⟨b1, hb1, hr1⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hx1 hR hC
            (word_lt32 _) (word_lt32 _)
          rw [decI_word, decI_word] at hb1
@@ -342,11 +342,11 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
            exact ⟨b2, hb2, hr2⟩
          · rw [if_pos h0] at h; simp at h; simp [← h])
       | (-- param.param
-         unfold clK2 at h
+         unfold cnClK2 at h
          split at h
          · simp at h
          rename_i x hx
-         unfold clK3 at h
+         unfold cnClK3 at h
          split at h
          · simp at h
          rename_i y hy
@@ -426,7 +426,7 @@ def llW : Nat → Mem → Word → Word → Word → Word → Word → Word → 
     if al = 0 ∧ bl = 0 then some 1
     else if al = 0 ∨ bl = 0 then some 0
     else llK1 n m po pl qo ql co cl fuel ao al bo bl
-      (clW n m po pl qo ql co cl fuel (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))
+      (cnClW n m po pl qo ql co cl fuel (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))
 
 /-- After the head comparison. -/
 def llK1 (n : Nat) (m : Mem) (po pl qo ql co cl fuel ao al bo bl : Word) : Option Word → Option Word
@@ -441,7 +441,7 @@ theorem llW_succ : llW (n + 1) m po pl qo ql co cl fuel ao al bo bl =
     (if al = 0 ∧ bl = 0 then some 1
     else if al = 0 ∨ bl = 0 then some 0
     else llK1 n m po pl qo ql co cl fuel ao al bo bl
-      (clW n m po pl qo ql co cl fuel (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))) := by
+      (cnClW n m po pl qo ql co cl fuel (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))) := by
   rw [llW]
 theorem llK1_some : llK1 n m po pl qo ql co cl fuel ao al bo bl (some r) =
     (if r = 0 then some 0 else llW n m po pl qo ql co cl fuel (ao + 1) (al - 1) (bo + 1) (bl - 1)) := by

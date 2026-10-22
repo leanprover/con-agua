@@ -215,7 +215,7 @@ def cwK1 (k : Nat) (p q : Word) : Option (Word × Mem) → Option (Word × Mem)
 def cwK2 (k : Nat) (p q : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (rc, m2) =>
-    crW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
+    cnCrW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
       (rdW (m2.arr64 EREC) (p + 7)) (rdW (m2.arr64 EREC) (p + 8))
       (rdW (m2.arr64 EREC) (q + 7)) (rdW (m2.arr64 EREC) (q + 8))
@@ -230,7 +230,7 @@ theorem cwW_succ : cwW (k + 1) m p q =
 theorem cwK1_some : cwK1 k p q (some (e, m1)) =
     (if e = 0 then some (0, m1) else cwK2 k p q (ctxW k m1 (p + 1) (q + 1))) := by rw [cwK1]
 theorem cwK2_some : cwK2 k p q (some (rc, m2)) =
-    crW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
+    cnCrW k m2 (rc.headD 0) (rc.tail.headD 0) (rc.tail.tail.headD 0) (rc.tail.tail.tail.headD 0)
       (rc.tail.tail.tail.tail.headD 0) (rc.tail.tail.tail.tail.tail.headD 0) 4000000000
       (rdW (m2.arr64 EREC) (p + 7)) (rdW (m2.arr64 EREC) (p + 8))
       (rdW (m2.arr64 EREC) (q + 7)) (rdW (m2.arr64 EREC) (q + 8)) := by rw [cwK2]
@@ -353,7 +353,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
           (ArrExt.nat? (IWGrow.erecExt hgg) hl2)
         simp only [erA] at ea eb ec ed
         rw [ea, eb, ec, ed] at h
-        obtain ⟨b3, hb3, hr3, hS3, hg3, hP3⟩ := crW_ok k m2 m' a2 po pl qo ql co cl 4000000000 wa wb wc wd x
+        obtain ⟨b3, hb3, hr3, hS3, hg3, hP3⟩ := cnCrW_ok k m2 m' a2 po pl qo ql co cl 4000000000 wa wb wc wd x
           cv.levelParams cv'.levelParams cs rules rules' h hS2 hC2 hL2 hP2
           (ArrExt.decRules (IWGrow.erecPExtR hgg) hrs) (ArrExt.decRules (IWGrow.erecPExtR hgg) hrs')
         refine ⟨b3, a2, ?_, hr3, hS3, hgg.trans hg3, hP3, hL2⟩

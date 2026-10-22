@@ -18,7 +18,7 @@ open L.Arena
 
 mutual
 /-- **The model of `canon_rules_eq`**. -/
-def crW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def cnCrW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Word → Option (Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2 =>
@@ -30,38 +30,38 @@ def crW : Nat → Mem → Word → Word → Word → Word → Word → Word → 
 /-- After `rule_eq_but_rhs`. -/
 def crK0 (k : Nat) (m : Mem) (po pl qo ql co cl fuel o1 l1 o2 l2 e : Word) : Option (Word × Mem) :=
   if e = 0 then some (0, m)
-  else crK1 k po pl qo ql co cl fuel o1 l1 o2 l2
+  else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2
     (ceW k m po pl qo ql co cl fuel (rdW (m.arr64 EREC) (o1 + 8)) (rdW (m.arr64 EREC) (o2 + 8)))
 
 /-- After `canon_expr_eq`. -/
-def crK1 (k : Nat) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word) : Option (Word × Mem) →
+def cnCrK1 (k : Nat) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word) : Option (Word × Mem) →
     Option (Word × Mem)
   | none => none
   | some (e, m1) =>
     if e = 0 then some (0, m1)
-    else crW k m1 po pl qo ql co cl fuel (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)
+    else cnCrW k m1 po pl qo ql co cl fuel (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)
 end
 
 section arms
 variable (k : Nat) (m m1 : Mem) (po pl qo ql co cl fuel o1 l1 o2 l2 e : Word)
-theorem crW_succ : crW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2 =
+theorem crW_succ : cnCrW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2 =
     (if l1 = 0 ∧ l2 = 0 then some (1, m)
     else if l1 = 0 ∨ l2 = 0 then some (0, m)
     else crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2
-      (if ruleEqButRhsB (m.arr64 EREC) o1 o2 then 1 else 0)) := by rw [crW]
+      (if ruleEqButRhsB (m.arr64 EREC) o1 o2 then 1 else 0)) := by rw [cnCrW]
 theorem crK0_def : crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2 e =
     (if e = 0 then some (0, m)
-    else crK1 k po pl qo ql co cl fuel o1 l1 o2 l2
+    else cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2
       (ceW k m po pl qo ql co cl fuel (rdW (m.arr64 EREC) (o1 + 8)) (rdW (m.arr64 EREC) (o2 + 8)))) :=
   by rw [crK0]
-theorem crK1_some : crK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1)) =
+theorem crK1_some : cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1)) =
     (if e = 0 then some (0, m1)
-    else crW k m1 po pl qo ql co cl fuel (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)) := by rw [crK1]
+    else cnCrW k m1 po pl qo ql co cl fuel (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)) := by rw [cnCrK1]
 end arms
 
-grind_pattern [ind_grind] crW_succ => crW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2
+grind_pattern [ind_grind] crW_succ => cnCrW (k + 1) m po pl qo ql co cl fuel o1 l1 o2 l2
 grind_pattern [ind_grind] crK0_def => crK0 k m po pl qo ql co cl fuel o1 l1 o2 l2 e
-grind_pattern [ind_grind] crK1_some => crK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1))
+grind_pattern [ind_grind] crK1_some => cnCrK1 k po pl qo ql co cl fuel o1 l1 o2 l2 (some (e, m1))
 
 section specs6
 variable (p : Prog) (hp : CanonProg p)
@@ -71,7 +71,7 @@ set_option maxHeartbeats 4000000 in
 theorem canonRulesEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_rules_eq"
       [po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2]
-    ⦃fun x s' => LocEq s' s₀ ∧ crW n s₀.mem po pl qo ql co cl fuel o1 l1 o2 l2 = some (x.headD 0, s'.mem);
+    ⦃fun x s' => LocEq s' s₀ ∧ cnCrW n s₀.mem po pl qo ql co cl fuel o1 l1 o2 l2 = some (x.headD 0, s'.mem);
       ⊤⦄ := by
   induction n with
   | zero =>
@@ -96,16 +96,16 @@ theorem decRules_length {a : Array Word} {o l : Nat} {xs : List IRecRule}
   have := mapM_opt_length _ _ _ h
   simpa using this
 
-theorem crW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel o1 l1 o2 l2 x : Word) (ps qs cs : List NIdx)
       (xs ys : List IRecRule),
-    crW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR dn vis fe m a →
+    cnCrW k m po pl qo ql co cl fuel o1 l1 o2 l2 = some (x, m') → StageR dn vis fe m a →
     CtxR m po pl qo ql co cl ps qs cs → LitInj a → PoolSmall m →
     decRules (erecP m) o1.toNat l1.toNat = some xs → decRules (erecP m) o2.toNat l2.toNat = some ys →
     ∃ b, (ConRon.Arena.canonRulesEq ps qs cs fuel.toNat xs ys).run a = .ok (b, a) ∧
       x = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
   induction k with
-  | zero => intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h; simp [crW] at h
+  | zero => intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h; simp [cnCrW] at h
   | succ k ih =>
     intro m m' a po pl qo ql co cl fuel o1 l1 o2 l2 x ps qs cs xs ys h hS hC hL hP hxs hys
     rw [crW_succ] at h
@@ -170,7 +170,7 @@ theorem crW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
       simp only [erA] at e8 f8
       rw [e8, f8] at h
       cases hc : ceW k m po pl qo ql co cl fuel w8 v8 with
-      | none => rw [hc] at h; simp [crK1] at h
+      | none => rw [hc] at h; simp [cnCrK1] at h
       | some xx =>
       obtain ⟨e1', m1⟩ := xx
       rw [hc, crK1_some] at h
@@ -220,7 +220,7 @@ theorem canonRulesEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
   intro n s₀ a₀ ⟨hS, hC, hL, hP, hxs, hys⟩
   refine triple_post (canonRulesEq_spec p hp n s₀ po pl qo ql co cl fuel o1 l1 o2 l2) ?_
   rintro x s' ⟨hl, hx⟩
-  obtain ⟨b, hb, hrb, hS', hg, hP'⟩ := crW_ok n _ _ a₀ po pl qo ql co cl fuel o1 l1 o2 l2 _ ps qs cs xs ys
+  obtain ⟨b, hb, hrb, hS', hg, hP'⟩ := cnCrW_ok n _ _ a₀ po pl qo ql co cl fuel o1 l1 o2 l2 _ ps qs cs xs ys
     hx hS hC hL hP hxs hys
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩

@@ -94,7 +94,7 @@ theorem decRule_ext {a b : Array Word} {d T : Nat} {rl : IRecRule}
     (h : ExtP (RuleP d T) a b) (hA : decRule a d = some rl) (hhi : FireHi a d T) :
     decRule b d = some rl := by
   obtain ⟨w0, w1, w2, w8, w9, w10, e0, l0, hctor, e1, hnf, e2, hcpr, e8, l8, hrhs, e9, hk, e10,
-    he⟩ := decRule_words hA
+    he⟩ := pmDecRule_words hA
   have P' : ∀ i, d ≤ i → i < d + 11 → RuleP d T i := fun i h1 h2 => Or.inl ⟨h1, h2⟩
   have b0 := h d w0 (P' _ (by omega) (by omega)) e0
   have b1 := h (d + 1) w1 (P' _ (by omega) (by omega)) e1

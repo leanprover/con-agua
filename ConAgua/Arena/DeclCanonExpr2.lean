@@ -123,7 +123,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       dsimp only
       obtain ⟨e0, hl1, hu1⟩ := hrx
       obtain ⟨f0, hl2, hu2⟩ := hry
-      cases hc : clW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
+      cases hc : cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
       | none => rw [hc] at h; simp [ceKL] at h
       | some r1 =>
       rw [hc, ceKL_some] at h

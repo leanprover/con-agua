@@ -23,7 +23,7 @@ theorem bool?_get {a : Array Word} {i : Nat} {x : Bool} (h : bool? a i = some x)
   obtain ⟨w, hw, rfl⟩ := h; exact ⟨w, hw, rfl⟩
 
 /-- The words a decoded rule record reads. -/
-theorem decRule_words {a : Array Word} {q : Nat} {rl : IRecRule} (h : decRule a q = some rl) :
+theorem pmDecRule_words {a : Array Word} {q : Nat} {rl : IRecRule} (h : decRule a q = some rl) :
     ∃ w0 w1 w2 w8 w9 w10 : Word, a[q]? = some w0 ∧ w0.toNat < 2 ^ 32 ∧ rl.ctor = decI w0 ∧
       a[q + 1]? = some w1 ∧ w1.toNat = rl.nfields ∧ a[q + 2]? = some w2 ∧
       w2.toNat = rl.ctorParams ∧ a[q + 8]? = some w8 ∧ w8.toNat < 2 ^ 32 ∧ rl.rhs = decI w8 ∧
