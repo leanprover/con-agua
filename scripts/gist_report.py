@@ -186,9 +186,9 @@ def dev_rows(section):
     if not devf.exists():
         return []
     txt = devf.read_text()
-    if f"## {section}" not in txt:
+    if f"\n## {section}\n" not in txt:
         return []
-    sec = re.split(r"\n## ", txt.split(f"## {section}", 1)[1], maxsplit=1)[0]
+    sec = re.split(r"\n## ", txt.split(f"\n## {section}\n", 1)[1], maxsplit=1)[0]
     rows = []
     for line in sec.splitlines():
         m = re.match(r"\|\s*(D\d+)\s*\|(.*)\|\s*$", line)
