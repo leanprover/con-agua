@@ -105,4 +105,163 @@ theorem iir_specK (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
       erecAlloc_specW p ha n, callW_spec p n "er_put5"] <;>
     finish (gen := 40) (instances := 20000) [rdW_eq]
 
+theorem wrER_IW (m : Mem) (q : Word) (ws : List Word) : (wrER m q ws).arr64 IW = m.arr64 IW :=
+  (wrER_frame ws m q).1 IW (by simp [EREC, IW]) (by decide)
+
+theorem erAllocW_arr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) :
+    m1.arr64 IW = m.arr64 IW ∧ m1.arr64 EREC = m.arr64 EREC := by
+  simp only [erAllocW] at h; split at h; · cases h
+  split at h; · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  simp only [erAllocMem]
+  exact ⟨Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
+
+/-- `ind_info_rec`'s four writes are the record written at once. -/
+theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m m' : Mem}
+    {cv caps : Word} {r : List Word} (h : iirK p (n + 1) cv caps (erAllocW m 20) = some (r, m')) :
+    ∃ q, r = [q] ∧ iirW m cv caps = some (q, m') := by
+  have put : ∀ (mm : Mem) (d x0 x1 x2 x3 x4 : Word) (rr : List Word) (mm' : Mem),
+      callW p (n + 1) "er_put5" [d, x0, x1, x2, x3, x4] mm = some (rr, mm') →
+      mm' = wrER mm d [x0, x1, x2, x3, x4] := by
+    intro mm d x0 x1 x2 x3 x4 rr mm' hc
+    obtain ⟨s', rfl, -, h2⟩ := triple_of_callW (s₀ := ⟨mm, Locals.init []⟩)
+      (erPut5_spec p hp n _ d x0 x1 x2 x3 x4) hc
+    exact h2
+  unfold iirW
+  cases h1 : erAllocW m 20 with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨q, m1⟩ := x
+  obtain ⟨hI1, hE1⟩ := erAllocW_arr h1
+  rw [h1, iirK_some] at h
+  cases h2 : callW p (n + 1) "er_put5" [q, 3, rdW (m1.arr64 EREC) cv, rdW (m1.arr64 EREC) (cv + 1),
+      rdW (m1.arr64 EREC) (cv + 2), rdW (m1.arr64 EREC) (cv + 3)] m1 with
+  | none => rw [h2] at h; cases h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2, iirK2_some] at h
+  have e2 := put _ _ _ _ _ _ _ _ _ h2
+  have i2 : m2.arr64 IW = m.arr64 IW := by rw [e2, wrER_IW, hI1]
+  rw [i2] at h
+  cases h3 : callW p (n + 1) "er_put5" [q + 5, rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1),
+      rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] m2 with
+  | none => rw [h3] at h; cases h
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3, iirK3_some] at h
+  have e3 := put _ _ _ _ _ _ _ _ _ h3
+  have i3 : m3.arr64 IW = m.arr64 IW := by rw [e3, wrER_IW, i2]
+  rw [i3] at h
+  cases h4 : callW p (n + 1) "er_put5" [q + 10, rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6),
+      rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9)] m3 with
+  | none => rw [h4] at h; cases h
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4, iirK4_some] at h
+  have e4 := put _ _ _ _ _ _ _ _ _ h4
+  have i4 : m4.arr64 IW = m.arr64 IW := by rw [e4, wrER_IW, i3]
+  rw [i4] at h
+  cases h5 : callW p (n + 1) "er_put5" [q + 15, rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11),
+      rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)] m4 with
+  | none => rw [h5] at h; cases h
+  | some x5 =>
+  obtain ⟨r5, m5⟩ := x5
+  rw [h5, iirK5_some] at h
+  have e5 := put _ _ _ _ _ _ _ _ _ h5
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  refine ⟨q, rfl, ?_⟩
+  rw [hE1] at e2
+  subst e2 e3 e4 e5
+  have hw : iirWs m cv caps = [3, rdW (m.arr64 EREC) cv, rdW (m.arr64 EREC) (cv + 1),
+      rdW (m.arr64 EREC) (cv + 2), rdW (m.arr64 EREC) (cv + 3)] ++
+      ([rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2),
+        rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] ++
+      ([rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7),
+        rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9)] ++
+       [rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11), rdW (m.arr64 IW) (caps + 12),
+        rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)])) := rfl
+  dsimp only
+  rw [hw, wrER_append, wrER_append, wrER_append]
+  simp only [List.length_cons, List.length_nil]
+  rw [show q + UInt64.ofNat 5 + UInt64.ofNat 5 = q + 10 by rw [UInt64.add_assoc]; rfl,
+    show q + UInt64.ofNat 5 = q + 5 from rfl,
+    show q + 10 + UInt64.ofNat 5 = q + 15 by rw [UInt64.add_assoc]; rfl]
+
+/-- **`ind_info_rec` under the stage relation**: a fresh `.indInfo` record of the constant at `cv`
+(decoded below the tops) and the capability record at `caps`; its name word a handle. -/
+theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {cv caps q : Word} {cvv : IConstantVal} {c : IIndCaps}
+    (h : iirW m cv caps = some (q, m')) (hS : StageR dn vis fe m a)
+    (hcv : DecB (fun m => decCVp m cv.toNat) m cvv) (hcp : CapsAt dn m caps.toNat c) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decCI (erecP m') dn q.toNat = some (.indInfo cvv c) ∧ H (rdW (m'.arr64 EREC) (q + 1)) := by
+  unfold iirW at h
+  cases h1 : erAllocW m 20 with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨q1, m1⟩ := x
+  rw [h1] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS (iirWs m cv caps) (by simp [iirWs])
+  have hlen : (iirWs m cv caps).length = 20 := by simp [iirWs]
+  rw [hlen] at htop hget
+  generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg htop hget
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop', -, hEsz', -⟩ := hS'.2
+  have hP : ∀ j, j < 20 → (erecP M)[q1.toNat + j]? = (iirWs m cv caps)[j]? := fun j hj => by
+    rw [erecP_getE (by omega)]; exact hget j hj
+  -- the constant's words
+  have hcvE : decCV (erecP m) cv.toNat = some cvv := decCVp_truncM hcv
+  have h3 : (erecP m)[cv.toNat + 3]? ≠ none := by
+    have := decCV_type hcvE; intro e; simp [hd?, e] at this
+  have hcq : cv.toNat + 4 ≤ erTop m := by
+    obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
+  have c1 : (cv + 1).toNat = cv.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have c2 : (cv + 2).toNat = cv.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have c3 : (cv + 3).toNat = cv.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cv.toNat + i]? := by
+    intro i hi
+    rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
+      erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+    have hlt : cv.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
+    rcases i with _ | _ | _ | _ | i
+    all_goals first
+      | omega
+      | (simp only [Nat.add_zero, Nat.zero_add] at hlt ⊢
+         simp only [iirWs, List.getElem?_cons_succ, List.getElem?_cons_zero, rdW, c1, c2, c3,
+          Array.getElem?_eq_getElem hlt, Option.getD_some])
+  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cvv := by
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
+      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+    exact ArrExt.decCV (IWGrow.erecPExtR hg) hcvE
+  -- the capability record's words
+  have hc15 := hcp.1
+  have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hcaps : decCaps (erecP M) dn (q1.toNat + 5) = some c := by
+    refine hcp.2 (erecP M) (q1.toNat + 5) (fun i hi => ?_) (fun i hi => ?_)
+    · rw [show q1.toNat + 5 + i = q1.toNat + (5 + i) by omega, hP (5 + i) (by omega)]
+      have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+      have gen : ∀ w : Word, w.toNat = caps.toNat + i →
+          (iirWs m cv caps)[5 + i]? = some (rdW (m.arr64 IW) w) →
+          (iirWs m cv caps)[5 + i]? = (iwA m)[caps.toNat + i]? := fun w hw h => by
+        rw [h, ← hw]; simp only [iwA, rdW]; rw [Array.getElem?_eq_getElem (by omega)]; simp
+      rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i
+      all_goals first
+        | omega
+        | exact gen _ rfl rfl
+        | exact gen _ (by rw [UInt64.toNat_add]; simp; omega) rfl
+    · rw [erecP_getE (by omega)]; simp only [erA]; exact hg.2.2.2 i hi
+  have n0 : nat? (erecP M) q1.toNat = some 3 := by
+    have := hP 0 (by decide); simp only [Nat.add_zero] at this
+    simp [nat?, this, iirWs]
+  refine ⟨hS', hg, ?_, ?_⟩
+  · simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', hcaps, Option.pure_def]
+  · have hq1 : (q1 + 1).toNat = q1.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have := hget 1 (by decide)
+    rw [rdW_of_get? hq1.symm this]
+    have := (partsCVName (IWGrow.refl m) hcv cv.toNat_lt).1
+    simpa [iirWs] using this
+
 end L.Ind
