@@ -92,7 +92,7 @@ def mpushMem (m : Mem) (h : Word) : Mem := (m.set64 RMEMO (memoCnt m) h).set64 C
 theorem memoPush_spec (p : Prog) (hp : p.lookup "memo_push" = some memoPush) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "memo_push" [h]
-    ⦃fun _ s' => LocEq s' s₀ ∧ (memoCnt s₀.mem).toNat < (s₀.mem.arr64 RMEMO).size ∧
+    ⦃fun _ s' => LocEq s' s₀ ∧ memoCnt s₀.mem < s₀.mem.len64 RMEMO ∧
       s'.mem = mpushMem s₀.mem h; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, memoPush]
@@ -243,7 +243,7 @@ def exNodeK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (h, m') =>
     if 4294967296 ≤ h then none
-    else if (memoCnt m').toNat < (m'.arr64 RMEMO).size then some (h, q, mpushMem m' h) else none
+    else if memoCnt m' < m'.len64 RMEMO then some (h, q, mpushMem m' h) else none
 
 /-- After a sort's level. -/
 def exSortK : Option (Word × Word × Mem) → Option (Word × Word × Mem)
@@ -340,7 +340,7 @@ variable (rom : List UInt8) (n : Nat) (m m₁ m₂ m₃ : Mem) (pos q t a b c k 
 
 theorem exLeafK_some (hh : ¬ 4294967296 ≤ h) : exLeafK q (some (h, m)) = some (h, q, m) := by
   simp [exLeafK, hh]
-theorem exNodeK_some (hh : ¬ 4294967296 ≤ h) (hc : (memoCnt m).toNat < (m.arr64 RMEMO).size) :
+theorem exNodeK_some (hh : ¬ 4294967296 ≤ h) (hc : memoCnt m < m.len64 RMEMO) :
     exNodeK q (some (h, m)) = some (h, q, mpushMem m h) := by simp [exNodeK, hh, hc]
 theorem exSortK_some : exSortK (some (a, q, m)) = exLeafK q (sointernW m a) := rfl
 theorem exConst2K_some : exConst2K a (some (b, q, m)) = exLeafK q (ceinternW m a b) := rfl
