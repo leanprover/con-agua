@@ -20,9 +20,24 @@ open L.Arena L.Ind L.Compiler
 open L.Front (DECL DLP)
 
 /-- The functions the declaration texts reach in the checker's program outside the texts' lists
-and `stageCoreFns`: the callees of the walks, the ROM readers and `is_proj_fn_shape`. -/
+and `stageCoreFns`: the callees of the walks, of the ROM readers and of the `Nat.div`-family gate's
+certificate checks (computed from `checkerProg`'s call graph; the check below fails if one is
+missing). -/
 def declExtFns : List FnName :=
-  DECLEXT
+  ["apd_clear", "alpd_go", "apd_find", "lv_apd", "lv_mem", "alpd_ls", "apd_put", "rci_slot",
+   "rom_u64", "rci_fresh", "rset_clear", "rci_cv", "rom_name", "rom_put", "rci_name_sl",
+   "rci_names_to", "rom_expr", "rom_ex_ref", "memo_get", "rom_ex_leaf", "rom_level", "rom_levels",
+   "rom_lvls_go", "stk_push", "stk_pool", "rom_ex_one", "memo_push", "rset_find", "rset_put",
+   "rom_ex_two", "rci_ci", "rci_caps", "rci_rules_to", "rci_rule", "rci_lvls_to", "rom_exprs_to",
+   "rci_block", "rci_block_to", "div_mod_env_guard", "bool_ctor_typed", "check_div_mod_pin_loop",
+   "div_mod_pin_guard", "div_mod_decl_pin", "div_mod_slot", "div_mod_certs_guard",
+   "div_mod_cert_stmts", "cert_ctx", "nat_var", "nat_one", "cert_ctx_pins", "cert_ctx_main",
+   "div_mod_cert_stmts_at", "cert_gcd", "cert_guard", "eq_at1", "sl_new1", "intern_ls_iw",
+   "cert_two_eqs", "cert_eq", "stmt1", "rec3", "cert_shift_left", "cert_shift_right", "cert_land",
+   "cert_halves", "cert_lor", "cert_lor_rhs", "cert_xor", "cert_xor_rhs", "cert_div_mod",
+   "cert_rec_rhs", "cert_div_mod_guards", "cert_div_mod_eqs", "div_mod_cert_proofs",
+   "div_mod_certs_guard_go", "div_mod_cert_guard", "subst_const_all", "subst_const0_list",
+   "consts_resolve_all", "check_div_mod_pin_at", "check_div_mod_certs", "div_mod_cert_applied"]
 
 /-- The call-closed superset: the texts' lists, their open callees' callees and the core. -/
 def declLoopFns : List FnName :=
@@ -64,18 +79,18 @@ theorem checkerProg_stepIn {fs : List FnName} (h : ∀ f ∈ fs, f ∈ declLoopF
   ⟨_, h, checkerProg_declClosed⟩
 
 theorem checkerProg_cvgIn : StepIn checkerProg cvgFns :=
-  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; tauto
+  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; simp [h]
 
 theorem checkerProg_ivIn : StepIn checkerProg ivFns :=
-  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; tauto
+  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; simp [h]
 
 theorem checkerProg_armIn : StepIn checkerProg armFns :=
-  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; tauto
+  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; simp [h]
 
 theorem checkerProg_natGateIn : StepIn checkerProg natGateFns :=
-  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; tauto
+  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; simp [h]
 
 theorem checkerProg_dgIn : StepIn checkerProg dgFns :=
-  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; tauto
+  checkerProg_stepIn fun _ h => by simp only [declLoopFns, List.mem_append]; simp [h]
 
 end L.Checker
