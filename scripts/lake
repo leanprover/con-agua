@@ -28,4 +28,9 @@
 set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 export LAKE_CACHE_DIR="$root/_tmp/lake-cache"
+# Write to the cache by default (coordinator, 2026-10-22): every build, in every worktree, stores what
+# it elaborated, so a module elaborates once for the whole project instead of once per lane. The cache is
+# content-addressed, so concurrent writers are harmless. Opt out with LAKE_ARTIFACT_CACHE=false.
+export LAKE_ARTIFACT_CACHE="${LAKE_ARTIFACT_CACHE:-true}"
+export LAKE_RESTORE_ARTIFACTS="${LAKE_RESTORE_ARTIFACTS:-true}"
 exec lake "$@"

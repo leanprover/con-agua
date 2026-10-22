@@ -361,11 +361,24 @@ def nestCtxHiAt : FunDecl := lfn (ctx, nf) locals () {
   return IW.u64[ctx + 4] + IW.u64[ctx + 1] + nf
 }
 
+/-- `nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j)`: the holes
+`j ..< namesLen`, written at `q + j` (the loop of `NestCtx.rootHoles`, as a recursion). -/
+-- con-ron: none — the loop of nest_ctx_root_holes as a self-recursive function (proof shape)
+def nestCtxRootHolesGo : FunDecl :=
+    lfn (namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j) locals (key, hole, u) {
+  if j >= namesLen { return 0 };
+  key := call rec4(IW.u64[namesOff + j], lvls, paramsOff, paramsLen);
+  hole := call rec2(key, nP);
+  IW.u64[q + j] := hole;
+  u := call nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j + 1);
+  return 0
+}
+
 /-- `nest_ctx_root_holes(ctx)`: `NestCtx.rootHoles`, one `NestHole` per member, base `ctx.nP`. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:414-418 ConRon.Arena.NestCtx.rootHoles
 @[l_impl ConRon.Arena.NestCtx.rootHoles]
 def nestCtxRootHoles : FunDecl :=
-    lfn (ctx) locals (namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, j, key, hole) {
+    lfn (ctx) locals (namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, u) {
   namesOff := IW.u64[ctx];
   namesLen := IW.u64[ctx + 1];
   lvls := IW.u64[ctx + 10];
@@ -373,13 +386,7 @@ def nestCtxRootHoles : FunDecl :=
   paramsLen := IW.u64[ctx + 8];
   nP := IW.u64[ctx + 4];
   q := call iw_alloc(namesLen);
-  j := 0;
-  while j < namesLen {
-    key := call rec4(IW.u64[namesOff + j], lvls, paramsOff, paramsLen);
-    hole := call rec2(key, nP);
-    IW.u64[q + j] := hole;
-    j += 1
-  };
+  u := call nest_ctx_root_holes_go(namesOff, namesLen, lvls, paramsOff, paramsLen, nP, q, 0);
   return (q, namesLen)
 }
 
@@ -736,7 +743,8 @@ def indPosFns : Prog :=
    ("nest_kinds_flat_mid", nestKindsFlatMid), ("nest_kinds_flat", nestKindsFlat),
    ("nest_ctor_entry_strip", nestCtorEntryStrip), ("nest_ctor_entry", nestCtorEntry),
    ("nest_container_ctors", nestContainerCtors), ("nest_container", nestContainer),
-   ("nest_ctx_hi_at", nestCtxHiAt), ("nest_ctx_root_holes", nestCtxRootHoles),
+   ("nest_ctx_hi_at", nestCtxHiAt), ("nest_ctx_root_holes_go", nestCtxRootHolesGo),
+   ("nest_ctx_root_holes", nestCtxRootHoles),
    ("nest_hole_at", nestHoleAt), ("nest_key_map", nestKeyMap), ("fv_map_at", fvMapAt),
    ("nest_hole_img_root", nestHoleImgRoot), ("nest_hole_img_ds", nestHoleImgDs),
    ("nest_hole_img_frame", nestHoleImgFrame), ("nest_hole_img", nestHoleImg),
