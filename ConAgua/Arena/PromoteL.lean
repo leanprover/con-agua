@@ -57,7 +57,7 @@ def plK (p : Prog) (n : Nat) (m : Mem) (f : Word) (r : List Word) : Option (Word
 
 /-- **The model of `pl_arm(f, h)`.** -/
 def plArmW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
-  if 4294967295 < h then none else plK p n m f (lvNodeW m h)
+  if 4294967295 < h ∨ lvNodeW m h = [] then none else plK p n m f (lvNodeW m h)
 
 section eqs
 variable (p : Prog) (n : Nat) (m m₁ m₂ : Mem) (f h b x : Word) (r q : List Word) (g : FnName)
@@ -82,8 +82,9 @@ theorem plW_miss (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG plSch m h 0 �
     plW p n m f h = memoK plSch h (callW p n "pl_arm" [f - 1, h] m) := by
   unfold plW; rw [if_neg hf, if_neg ht, if_neg h0, if_neg (fun h2 => h2 h1)]
 
-theorem plArmW_eq (hh : ¬ 4294967295 < h) : plArmW p n m f h = plK p n m f (lvNodeW m h) := by
-  unfold plArmW; rw [if_neg hh]
+theorem plArmW_eq (hh : ¬ 4294967295 < h) (hne : lvNodeW m h ≠ []) :
+    plArmW p n m f h = plK p n m f (lvNodeW m h) := by
+  unfold plArmW; rw [if_neg (by simp [hh, hne])]
 
 end eqs
 
