@@ -120,7 +120,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1446 functions, 35 of them stubs.
+1458 functions, 35 of them stubs.
 -/
 
 namespace L.Checker
@@ -394,6 +394,7 @@ def checkerProg : Prog := [
   ("bvar_find", L.Arena.bvarFind),
   ("bvar_push", L.Arena.bvarPush),
   ("byte_in", L.Scan.Str.byteIn),
+  ("canon_ctx", L.Ind.canonCtx),
   ("canon_eq_list", L.Ind.canonEqListL),
   ("canon_expr_eq", L.Ind.canonExprEq),
   ("canon_level_eq", L.Ind.canonLevelEq),
@@ -405,6 +406,9 @@ def checkerProg : Prog := [
   ("canon_rules_eq", L.Ind.canonRulesEq),
   ("cap_check", L.Checker.capCheckL),
   ("caps_eq", L.Ind.capsEq),
+  ("caps_eq_a", L.Ind.capsEqA),
+  ("caps_eq_b", L.Ind.capsEqB),
+  ("caps_eq_c", L.Ind.capsEqC),
   ("cert_ctx", L.Ind.certCtxL),
   ("cert_div_mod", L.Ind.certDivModL),
   ("cert_div_mod_eqs", L.Ind.certDivModEqsL),
@@ -486,8 +490,11 @@ def checkerProg : Prog := [
   ("check_sum_tele_slow", L.Ind.checkSumTeleSlowL),
   ("check_thm_val", L.Ind.checkThmValL),
   ("check_value_group", L.Arena.checkValueGroupL),
+  ("ci_canon_defn", L.Ind.ciCanonDefn),
   ("ci_canon_eq", L.Ind.ciCanonEq),
+  ("ci_canon_rec", L.Ind.ciCanonRec),
   ("ci_eq", L.Ind.ciEq),
+  ("ci_eq_rest", L.Ind.ciEqRest),
   ("ci_to_cv", L.Ind.ciToCv),
   ("class_const_ok", L.Ind.classConstOkL),
   ("class_const_ok_header", L.Ind.classConstOkHeader),
@@ -657,6 +664,7 @@ def checkerProg : Prog := [
   ("eq_at1", L.Ind.eqAt1L),
   ("er_copy", L.Ind.erCopy),
   ("er_from_iw", L.Ind.erFromIw),
+  ("er_sl_at", L.Ind.erSlAt),
   ("er_sl_eq", L.Ind.erSlEq),
   ("er_slice_eq", L.Arena.erSliceEqL),
   ("er_to_iw", L.Ind.erToIw),
@@ -1351,6 +1359,8 @@ def checkerProg : Prog := [
   ("rset_clear", L.Arena.memoClearG L.Rom.rsetSch),
   ("rset_find", L.Arena.memoFindG L.Rom.rsetSch),
   ("rset_put", L.Arena.memoPutG L.Rom.rsetSch),
+  ("rule_eq_a", L.Ind.ruleEqA),
+  ("rule_eq_b", L.Ind.ruleEqB),
   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs),
   ("rule_rhs_at", L.Arena.ruleRhsAtL),
   ("rules_eq", L.Ind.rulesEq),
@@ -1411,6 +1421,7 @@ def checkerProg : Prog := [
   ("spine_head", L.Arena.spineHeadL),
   ("spn_get", L.Arena.spnGetL),
   ("spn_to_iw", L.Arena.spnToIwL),
+  ("std_ax_family", L.Ind.stdAxFamily),
   ("std_axiom_ok", L.Ind.stdAxiomOkL),
   ("stk_pool", L.Rom.stkPool),
   ("stk_push", L.Rom.stkPush),
@@ -1487,6 +1498,7 @@ def checkerProg : Prog := [
   ("target_rec_pins_names", L.Ind.targetRecPinsNames),
   ("target_rec_pins_split", L.Ind.targetRecPinsSplit),
   ("tbl_eq", L.Ind.tblEq),
+  ("tbl_eq_a", L.Ind.tblEqA),
   ("tgt_stored_rules", L.Ind.tgtStoredRules),
   ("tgt_stored_rules_remap", L.Ind.tgtStoredRulesRemap),
   ("tower_slots_all", L.Arena.towerSlotsAllL),
