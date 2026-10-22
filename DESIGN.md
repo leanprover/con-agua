@@ -6603,6 +6603,22 @@ Merge master and adapt new uses:
   on `CoreS.lvl_den`). `major_to_ctor` puts `CTL[136]` back. The tagged `majorToCtor_refines` and
   `prepareMajor_refines` now live in `WhnfM2CRefine5` (import order). ~150 L lines, 2634 proof
   lines; `WhnfM2CRefine` 33 s user, the rest 1–3 s.
+* **`iota_rec_at`** (helper `whnf2-rec`): split into nine L functions (`WhnfIotaRec.lean`:
+  head, constructor/rule lookup, major, the verified-checks block and its comparison, the result),
+  proved (`WhnfIotaRecRefine{,2,3}.lean`, `iotaRecAt_refines'`, three standard axioms). New named
+  hypotheses (not `sorry`): `ErecKeptRec` (the iota callees leave the record pool alone),
+  `LvlsEqDen` (a successful `lvls_eq_c` under `CoreS` reads both lists back), `RecShape` (a stored
+  recursor has `rP ≤ mI + 1` and plain rules `ctorParams ≤ rP`: an environment invariant, like
+  `CoreS.lvl_den`). L fixes against the twin: a nested rule's pins are copied from `EREC` to the
+  stack before `rec_fire_args`; `lvls_eq` → the cached `lvls_eq_c` read as `liftFueled` (`0` aborts);
+  `const_ty_at` keyed on the stored constructor name; `peel_pis` before the level-count test;
+  word-overflow-free arity tests; the spurious `len(SPN) < so + rP` abort removed; the stack top
+  restored. ~116 L lines, ~2940 proof lines, 26 s user.
+* Merging: lane `integrate` renamed `reserved_contains` → `reserved_contains_w` (one body per name),
+  the m2c pieces follow; lemma-name clashes with lane `defeq`'s files renamed on this side
+  (`*_m2c`, `*_rec`, `exec_agreeOn`); `ConAgua/Checker/Prog.lean` regenerated
+  (`scripts/checker_prog.py`, `--check` clean).
 * Census, phase 5: **67 proven / 23 sorry / 28 written / 24 todo** (start: 62 / 26 / 29 / 25);
-  phase 4: 63 proven (+1).
+  phase 4: 63 proven (+1). The `iota` targets stay "sorry": the tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, the knot).
 
