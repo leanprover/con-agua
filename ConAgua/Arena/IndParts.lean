@@ -94,13 +94,14 @@ def blockShapeMemberNames : FunDecl := lfn (p) locals (off, l, q, u) {
   return (q, l)
 }
 
-/-- `member_names_copy(d, s, l)`: `IW[d+j] := EREC[IW[s+j]]` for `j < l` (each member pointer's
-`cvT.name`), recursively. -/
+/-- `member_names_copy(d, s, l)`: `IW[d+j] := EREC[IW[IW[s+j]]]` for `j < l` (each member's
+`cvT.name`: the member record's word `0` is the `cvT` pointer), recursively. -/
 @[l_impl ConRon.Arena.BlockShape.memberNames]
-def memberNamesCopy : FunDecl := lfn (d, s, l) locals (m, u) {
+def memberNamesCopy : FunDecl := lfn (d, s, l) locals (m, cv, u) {
   if l == 0 { return 0 };
   m := IW.u64[s];
-  IW.u64[d] := EREC.u64[m];
+  cv := IW.u64[m];
+  IW.u64[d] := EREC.u64[cv];
   u := call member_names_copy(d + 1, s + 1, l - 1);
   return 0
 }
