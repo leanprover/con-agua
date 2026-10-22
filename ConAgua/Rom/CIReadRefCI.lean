@@ -286,6 +286,145 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
     have : pp.toNat + 1 + 4 = pp.toNat + 5 := by omega
     simp [decCI, nat?_of e0, ecv, ecaps]
 
+set_option maxHeartbeats 4000000 in
+/-- A recursor (plain rules). -/
+theorem ci_rec {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+    (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
+    (mI rP : Nat) (rs : List ConLeche.RecRule) (hmI : mI < 2 ^ 64) (hrP : rP < 2 ^ 64)
+    (hlen : rs.length < 2 ^ 59) (hrs : rs.all ruleFits = true)
+    (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
+    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hd : rom.drop q.toNat = (encCI seen (.recInfo v mI rP rs)).1 ++ rest)
+    (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
+    CIPost dn m₀ a₀ seen memo (.recInfo v mI rP rs) m a q r m' := by
+  unfold CIPost
+  simp only [encCI] at hd ⊢
+  obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2, hek2, hIW2,
+    hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 5 9 rfl (by decide) (by omega)
+      (u64B mI ++ (u64B rP ++ (u64B rs.length ++ (encRules (encCV seen v).2 rs).1)))
+      _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hc
+  replace ht2 : erTop m + 9 ≤ erTop m2 := ht2
+  rw [show (9 : Word).toNat = 9 from rfl] at hH2
+  have i1 : (UInt64.ofNat 5 = 1) = False := by decide
+  have i3 : (UInt64.ofNat 5 = 3) = False := by decide
+  have i4 : (UInt64.ofNat 5 = 4) = False := by decide
+  have i5 : (UInt64.ofNat 5 = 5) = True := by decide
+  simp only [ciTailW, ciRecW, i1, i3, i4, i5, ite_false, ite_true] at hw
+  replace hw := rdU_ntBW hL hw
+  replace hw := rdU_ntBW hL hw
+  replace hw := rdU_ntBW hL hw
+  have e1 := u64_at hr q2 0 [] mI _ (by rw [hd2]; rfl) (by simp) hmI
+  simp only [UInt64.add_zero] at e1
+  have e2 := u64_at hr q2 8 (u64B mI) rP _ (by rw [hd2]; rfl) (by simp [u64B]) hrP
+  have e3 := u64_at hr q2 16 (u64B mI ++ u64B rP) rs.length _
+    (by rw [hd2]; repeat rw [List.append_assoc]) (by simp [u64B]) (by omega)
+  rw [e1, e2, e3] at hw
+  have hlt := hI2.er_lt
+  have hgo := hI.grow.2.1
+  have hrom := hr; simp only [RomOK] at hrom
+  have hpk : ∀ j : Nat, j < 9 → (pp + UInt64.ofNat j).toNat = pp.toNat + j := fun j hj => by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (a := j) (by omega)]
+    exact Nat.mod_eq_of_lt (by omega)
+  have hp5 : (pp + 5).toNat = pp.toNat + 5 := hpk 5 (by omega)
+  have hp6 : (pp + 6).toNat = pp.toNat + 6 := hpk 6 (by omega)
+  have hp7 : (pp + 7).toNat = pp.toNat + 7 := hpk 7 (by omega)
+  have hp8 : (pp + 8).toNat = pp.toNat + 8 := hpk 8 (by omega)
+  obtain ⟨hI3, hM3, hs3, ht3, hIW3⟩ := setER_facts hI2 hM2 (pp + 5) (UInt64.ofNat mI) (by omega)
+  obtain ⟨hI4, hM4, hs4, ht4, hIW4⟩ := setER_facts hI3 hM3 (pp + 6) (UInt64.ofNat rP) (by omega)
+  generalize hm4 : (m2.set64 EREC (pp + 5) (UInt64.ofNat mI)).set64 EREC (pp + 6) (UInt64.ofNat rP) = m4
+    at hw hI4 hM4 hs4 ht4 hIW4
+  have hE24 : ∀ i, i ≠ pp.toNat + 5 → i ≠ pp.toNat + 6 → (erA m4)[i]? = (erA m2)[i]? := by
+    intro i h5 h6; rw [← hm4, er_set_ne _ _ _ _ (by omega), er_set_ne _ _ _ _ (by omega)]
+  have hw5 : (erA m4)[pp.toNat + 5]? = some (UInt64.ofNat mI) := by
+    rw [← hm4, er_set_ne _ _ _ _ (by omega), ← hp5]
+    exact er_set_get _ _ _ (by have := hI2.ok.2.1; omega)
+  have hw6 : (erA m4)[pp.toNat + 6]? = some (UInt64.ofNat rP) := by
+    rw [← hm4, ← hp6]
+    exact er_set_get _ _ _ (by rw [size_set64]; have := hI2.ok.2.1; omega)
+  have h11 : (11 * UInt64.ofNat rs.length).toNat = 11 * rs.length := by
+    rw [UInt64.toNat_mul, ofNat_toNat_lt (by omega)]; simp; omega
+  cases h4 : callW p (k' + 1) "erec_alloc" [11 * UInt64.ofNat rs.length] m4 with
+  | none => rw [h4] at hw; simp at hw
+  | some t4 =>
+  obtain ⟨r4, m5⟩ := t4
+  rw [h4, bW_some] at hw
+  obtain ⟨hI5, ho5, ht5, hE5, hIW5, -⟩ := hI4.erAlloc (erAllocCall hL h4)
+  rw [h11] at ht5
+  have hf5 : MemFrame [] [129] m4 m5 := by
+    have := erAllocCall hL h4; simp only [erAllocW] at this
+    split at this; · cases this
+    split at this; · cases this
+    simp only [Option.some.injEq, Prod.mk.injEq] at this; rw [← this.2]; exact MemFrame.setCtl _ _ _
+  have hM5 := hM4.frameG hf5 (by simp) (by decide)
+  have hs5 : stkTop m5 = stkTop m4 := hf5.2.1 131 (by decide)
+  obtain ⟨hI6, hM6, hs6, ht6, hIW6⟩ := setER_facts hI5 hM5 (pp + 7) (r4.headD 0) (by omega)
+  obtain ⟨hI7, hM7, hs7, ht7, hIW7⟩ := setER_facts hI6 hM6 (pp + 8) (UInt64.ofNat rs.length) (by omega)
+  generalize hm7 : (m5.set64 EREC (pp + 7) (r4.headD 0)).set64 EREC (pp + 8) (UInt64.ofNat rs.length) = m7
+    at hw hI7 hM7 hs7 ht7 hIW7
+  have hE57 : ∀ i, i ≠ pp.toNat + 7 → i ≠ pp.toNat + 8 → (erA m7)[i]? = (erA m5)[i]? := by
+    intro i h7 h8; rw [← hm7, er_set_ne _ _ _ _ (by omega), er_set_ne _ _ _ _ (by omega)]
+  have hE5' : ∀ i : Nat, (erA m5)[i]? = (erA m4)[i]? := fun i => by unfold erA; rw [hE5]
+  have hsz5 : erTop m5 ≤ (m5.arr64 EREC).size := hI5.ok.2.1
+  have hw7 : (erA m7)[pp.toNat + 7]? = some (r4.headD 0) := by
+    rw [← hm7, er_set_ne _ _ _ _ (by omega), ← hp7]
+    exact er_set_get _ _ _ (by omega)
+  have hw8 : (erA m7)[pp.toNat + 8]? = some (UInt64.ofNat rs.length) := by
+    rw [← hm7, ← hp8]
+    exact er_set_get _ _ _ (by rw [size_set64]; omega)
+  cases h5 : callW p (k' + 1) "rci_rules_to" [q2 + 24, r4.headD 0, UInt64.ofNat rs.length] m7 with
+  | none => rw [h5] at hw; simp at hw
+  | some t5 =>
+  obtain ⟨r5, m6⟩ := t5
+  rw [h5, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hlenR := drop_len rom _ (u64B mI ++ u64B rP ++ u64B rs.length) _
+    (by rw [hd2]; repeat rw [List.append_assoc]) (by simp [u64B])
+  simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlenR
+  have hq24 : (q2 + 24).toNat = q2.toNat + 24 := by
+    rw [UInt64.toNat_add, show (24 : Word).toNat = 24 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+  have hd24 : rom.drop (q2 + 24).toNat = (encRules (encCV seen v).2 rs).1 ++ rest := by
+    rw [hq24, ← List.drop_drop, hd2]; simp [u64B]
+  obtain ⟨memo2, irs, a3, hrun3, hlen3, hI8, hM8, hs8, hq8, hek8, ht8, hIW8, hH8⟩ :=
+    rulesTo_rel hL hr rs hrs _ memo1 (k' + 1) m7 a1 _ (r4.headD 0) _ rest r5 m6 hI7 hM7
+      (by rw [hs7, hs6, hs5, hs4, hs3, hs2]) hd24 (ofNat_toNat_lt (by omega)) (by omega) (by omega) h5
+  -- keeping the earlier words through the rules
+  have hk8 : ∀ i, i < erTop m2 → (erA m6)[i]? = (erA m7)[i]? := fun i hi =>
+    hek8.2 i (by omega) (by omega)
+  refine ⟨memo2, .recInfo icv mI rP irs, a3, ?_, hI8, hM8, hs8, ?_,
+    ⟨by omega, fun i hi _ => ?_⟩, by simp [hpp], by rw [hIW8, hIW7, hIW6, hIW5, hIW4, hIW3, hIW2], ?_⟩
+  · simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ hrun2, run_bind_of _ _ _ _ _ hrun3]; rfl
+  · simp only [List.tail_cons, List.headD_cons]; rw [hq8, hq24, hq2]; simp [u64B]; omega
+  · rw [hk8 i (by omega), hE57 i (by omega) (by omega), hE5', hE24 i (by omega) (by omega)]
+    exact hek2.2 i hi id
+  · intro m'' h1 h2
+    simp only [List.headD_cons]
+    have g : ∀ i, pp.toNat ≤ i → i < pp.toNat + 9 → (erA m'')[i]? = (erA m7)[i]? := fun i h h' =>
+      (h1 i ⟨by omega, by omega⟩).trans (hk8 i (by omega))
+    have e0 : (erA m'')[pp.toNat]? = some (UInt64.ofNat 5) := by
+      rw [g _ (by omega) (by omega), hE57 _ (by omega) (by omega), hE5', hE24 _ (by omega) (by omega)]
+      exact hw0
+    have e5 : (erA m'')[pp.toNat + 5]? = some (UInt64.ofNat mI) := by
+      rw [g _ (by omega) (by omega), hE57 _ (by omega) (by omega), hE5']; exact hw5
+    have e6 : (erA m'')[pp.toNat + 6]? = some (UInt64.ofNat rP) := by
+      rw [g _ (by omega) (by omega), hE57 _ (by omega) (by omega), hE5']; exact hw6
+    have e7 := (g _ (by omega) (by omega)).trans hw7
+    have e8 := (g _ (by omega) (by omega)).trans hw8
+    have ecv : decCV (erA m'') (pp.toNat + 1) = some icv := by
+      refine hH2 m'' (fun i hi => ?_) (fun _ h => h.elim)
+      rw [h1 i (by omega), hk8 i (by omega), hE57 i (by omega) (by omega), hE5',
+        hE24 i (by omega) (by omega)]
+    have erules : decRules (erA m'') (r4.headD 0).toNat rs.length = some irs := by
+      rw [← hlen3]
+      exact holds_mapM_range (g := fun m j => decRule (erA m) ((r4.headD 0).toNat + 11 * j))
+        (SE := fun i => (r4.headD 0).toNat ≤ i ∧ i < (r4.headD 0).toNat + 11 * rs.length)
+        (SI := fun _ => False) irs
+        (fun j hj => (hH8 j hj).mono (fun i hi => ⟨by omega, by omega⟩) (fun _ h => h)) m''
+        (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
+    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, nat?_of e7, nat?_of e8,
+      ofNat_toNat_lt hmI, ofNat_toNat_lt hrP, ofNat_toNat_lt (show rs.length < 2 ^ 64 by omega)]
+    simp at erules; simp [erules]
+
 end kinds
 
 end L.Rom
