@@ -122,4 +122,250 @@ theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
 
 end spec
 
+/-! ## The relational lemma -/
+
+theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
+    (m m' : Mem) (a : AState) (o l : Word) (lps : List NIdx) (r : List Word)
+    (h : plW k m o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
+    (ht : o.toNat + l.toNat ≤ iwTop m) :
+    ∃ x a', (paramLevels lps).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      H (r.headD 0) ∧ decI (r.headD 0) = x := by
+  cases k with
+  | zero => cases h
+  | succ k =>
+  rw [plW_succ] at h
+  cases h1 : plgW k m o l with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨r1, m1⟩ := x
+  rw [h1, plK4_some] at h
+  cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  | none => rw [h2] at h; cases h
+  | some y =>
+  obtain ⟨r2, m2⟩ := y
+  rw [h2, plK5_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
+  obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
+    internLsIw_spec dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+  refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hH, by simpa using hx⟩
+  simp only [paramLevels, StateT.run_bind, hrun1]
+  exact hrun2
+
+theorem decHL_take {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
+    (h : decHL m o l = some xs) (j : Nat) (hj : j ≤ l) : decHL m o j = some (xs.take j) := by
+  have hl := decHL_length m h
+  simp only [decHL, hslice?] at h ⊢
+  have hr : List.range l = List.range j ++ (List.range (l - j)).map (j + ·) := by
+    rw [show l = j + (l - j) by omega, List.range_add]; simp
+  rw [hr, List.mapM_append] at h
+  cases e1 : (List.range j).mapM (fun i => (hd? (iwA m) (o + i) : Option (Idx k))) with
+  | none => rw [e1] at h; simp at h
+  | some ys =>
+  cases e2 : ((List.range (l - j)).map (j + ·)).mapM (fun i => (hd? (iwA m) (o + i) : Option (Idx k))) with
+  | none => rw [e1, e2] at h; simp at h
+  | some zs =>
+  rw [e1, e2] at h
+  simp at h
+  have hy := mapM_opt_length _ _ _ e1
+  simp at hy
+  rw [← h]; simp [hy]
+
+theorem map_decI_inj {k : IdxKind} : ∀ (ws vs : List Word), (∀ w ∈ ws, w.toNat < 2 ^ 32) →
+    (∀ w ∈ vs, w.toNat < 2 ^ 32) → (ws.map (decI (k := k)) = vs.map decI ↔ ws = vs)
+  | [], [], _, _ => by simp
+  | [], _ :: _, _, _ => by simp
+  | _ :: _, [], _, _ => by simp
+  | w :: ws, v :: vs, hw, hv => by
+    simp only [List.map_cons, List.cons.injEq]
+    rw [map_decI_inj ws vs (fun x hx => hw x (by simp [hx])) (fun x hx => hv x (by simp [hx]))]
+    constructor
+    · rintro ⟨h1, h2⟩
+      exact ⟨decI_inj (hw w (by simp)) (hv v (by simp)) h1, h2⟩
+    · rintro ⟨rfl, rfl⟩; exact ⟨rfl, rfl⟩
+
+theorem srRes_ok (fn hd al nP nIdx e : Word) (b1 b2 b3 : Bool)
+    (h1 : (fn = hd) ↔ b1 = true) (h2 : (al = nP + nIdx) ↔ b2 = true) (h3 : e = if b3 then 1 else 0) :
+    (srRes fn hd al nP nIdx e != 0) = (b1 && b2 && b3) ∧ (srRes fn hd al nP nIdx e).toNat ≤ 1 := by
+  unfold srRes
+  cases b1 <;> cases b2 <;> cases b3 <;> simp_all <;> decide
+
+theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
+    (m m' : Mem) (a : AState) (T lo ll nP o nIdx cbody : Word) (r : List Word) (lps : List NIdx)
+    (h : srW k m T lo ll nP o nIdx cbody = some (r, m')) (hS : StageR dn vis fe m a)
+    (hT : H T) (hcb : H cbody) (hd : decHL m lo.toNat ll.toNat = some lps)
+    (hb : lo.toNat + ll.toNat < 2 ^ 64) (ht : lo.toNat + ll.toNat ≤ iwTop m)
+    (hon : o.toNat + nP.toNat < 2 ^ 64) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) :
+    ∃ x a', (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)).run a =
+      .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+  cases k with
+  | zero => cases h
+  | succ k =>
+  rw [srW_succ] at h
+  cases h1 : plW k m lo ll with
+  | none => rw [h1] at h; cases h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1, srK1_some] at h
+  obtain ⟨us, a1, hrun1, hS1, hg1, hus, husd⟩ := plW_ok dn vis fe k m m1 a lo ll lps r1 h1 hS hd hb ht
+  cases h2 : ceinternW m1 T (r1.headD 0) with
+  | none => rw [h2] at h; cases h
+  | some x2 =>
+  obtain ⟨hd', m2⟩ := x2
+  rw [h2] at h
+  by_cases hbig : 4294967296 ≤ hd'
+  · rw [srK2_big k m2 nP o nIdx cbody hd' hbig] at h; cases h
+  rw [srK2_ok k m2 nP o nIdx cbody hd' hbig] at h
+  have hd32 : hd'.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ hd'.toNat := hbig; omega
+  obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 T (r1.headD 0) hT hus h2
+  cases h3 : stubM "get_app_fn" m2 [CWF, cbody] with
+  | none => rw [h3] at h; cases h
+  | some x3 =>
+  obtain ⟨rf, m3⟩ := x3
+  rw [h3, srK3_some] at h
+  obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := getAppFn_spec dn vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
+  cases h4 : stubM "get_app_args" m3 [CWF, cbody] with
+  | none => rw [h4] at h; cases h
+  | some x4 =>
+  obtain ⟨ra, m4⟩ := x4
+  rw [h4, srK4_some] at h
+  obtain ⟨args, a4, hrun4, hS4, hg4, hargs, hat⟩ :=
+    getAppArgs_spec dn vis fe CWF cbody hcb m3 m4 a3 ra h4 hS3
+  cases h5 : psAtW k m4 o nP with
+  | none => rw [h5] at h; cases h
+  | some x5 =>
+  obtain ⟨rp, m5⟩ := x5
+  obtain ⟨ps, a5, hrun5, hS5, hg5, hps, hpt⟩ := psAtW_stage dn vis fe k m4 m5 a4 o nP rp h5 hS4 hon
+  have eA0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
+  have eA1 : ra.getD 1 0 = ra.tail.headD 0 := by
+    cases ra with | nil => rfl | cons _ t => cases t <;> rfl
+  simp only [eA0, eA1] at hargs hat
+  have hargs5 := decHL_grow hg5 hat ▸ hargs
+  have hal := decHL_length m5 (by simpa using hargs5)
+  have hpl := decHL_length m5 hps
+  have eP1 : rp[1]?.getD 0 = rp.tail.headD 0 := by
+    cases rp with | nil => rfl | cons _ t => cases t <;> rfl
+  have eR1 : ra[1]?.getD 0 = ra.tail.headD 0 := by
+    cases ra with | nil => rfl | cons _ t => cases t <;> rfl
+  try simp only [eP1] at hpl
+  try simp only [eR1] at hal
+  have hsz5 := hS5.2.2.2.1
+  have hit5 := hS5.2.1
+  -- the twin's run up to the final `pure`
+  have hrun : ∀ v, (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)).run a =
+      .ok (v, a5) ↔ v = (fnv == decI hd' && args.length == nP.toNat + nIdx.toNat &&
+        args.take ps.length == ps) := by
+    intro v
+    rw [husd] at hrun2
+    rw [CWF_eq] at hrun3 hrun4
+    rw [decE_eq] at hrun2
+    simp only [StateT.run] at hrun1 hrun2 hrun3 hrun4 hrun5
+    simp only [structCtorResidOk, StateT.run, bind, StateT.bind, hrun1, hrun2, hrun3, hrun4, hrun5,
+      pure, StateT.pure, Except.pure, Except.bind, Except.ok.injEq, Prod.mk.injEq, and_true]
+    exact eq_comm
+  have hfn : (rf.headD 0 = hd') ↔ (fnv == decI hd') = true := by
+    rw [beq_iff_eq, ← hfd]
+    exact ⟨fun e => by rw [e], fun e => decI_inj hf32 hd32 e⟩
+  have hln : (ra.tail.headD 0 = nP + nIdx) ↔ (args.length == nP.toNat + nIdx.toNat) = true := by
+    have e1' : ra[1]?.getD 0 = ra.tail.headD 0 := by
+      cases ra with | nil => rfl | cons _ t => cases t <;> rfl
+    rw [beq_iff_eq, hal]
+    try rw [e1']
+    constructor
+    · intro e; rw [e, UInt64.toNat_add, Nat.mod_eq_of_lt (by simpa using hni)]
+    · intro e; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by simpa using hni)]
+      exact e
+  rw [h5] at h
+  have hat5 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m5 := by
+    have := hg5.1; omega
+  have hgall := (((hg1.trans hg2).trans hg3).trans hg4).trans hg5
+  by_cases hle : rp.tail.headD 0 ≤ ra.tail.headD 0
+  · rw [srK5_le k m5 nP nIdx hd' (rf.headD 0) (ra.headD 0) (ra.tail.headD 0) rp hle] at h
+    have hle' : (rp.tail.headD 0).toNat ≤ (ra.tail.headD 0).toNat := UInt64.le_iff_toNat_le.mp hle
+    cases he : eqW k m5 (ra.headD 0) (rp.tail.headD 0) (rp.headD 0) (rp.tail.headD 0) with
+    | none => rw [he] at h; cases h
+    | some e =>
+    rw [he] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have htk := decHL_take hargs5 _ hle'
+    obtain ⟨ws1, hs1, hm1, hb1⟩ := slR_of_decHL m5 _ _ _ htk (by omega)
+    obtain ⟨ws2, hs2, hm2, hb2⟩ := slR_of_decHL m5 _ _ _ hps (by omega)
+    simp only [UInt64.ofNat_toNat] at hs1 hs2
+    have heq := eqW_ok k m5 _ _ _ _ e ws1 ws2 hs1 hs2 he
+    have hb3 : e = if (args.take ps.length == ps) then 1 else 0 := by
+      rw [heq, hpl]
+      have := map_decI_inj (k := .expr) ws1 ws2 hb1 hb2
+      by_cases hw : ws1 = ws2
+      · rw [if_pos hw]
+        have ht : args.take (rp.tail.headD 0).toNat = ps := by rw [hm1, hm2, hw]
+        rw [ht]; simp
+      · rw [if_neg hw]
+        have hne : args.take (rp.tail.headD 0).toNat ≠ ps := by
+          rw [hm1, hm2]; exact fun h' => hw (this.mp h')
+        rw [show (args.take (rp.tail.headD 0).toNat == ps) = false from by simpa using hne]
+        rfl
+    refine ⟨_, a5, (hrun _).mpr rfl, hS5, hgall, ?_⟩
+    exact srRes_ok _ _ _ _ _ _ _ _ _ hfn hln hb3
+  · rw [srK5_gt k m5 nP nIdx hd' (rf.headD 0) (ra.headD 0) (ra.tail.headD 0) rp hle] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hgt : (ra.tail.headD 0).toNat < (rp.tail.headD 0).toNat := by
+      have : ¬ (rp.tail.headD 0).toNat ≤ (ra.tail.headD 0).toNat :=
+        fun h' => hle (UInt64.le_iff_toNat_le.mpr h')
+      omega
+    have hb3 : (0 : Word) = if (args.take ps.length == ps) then 1 else 0 := by
+      have hne : args.take ps.length ≠ ps := by
+        intro h'
+        have := congrArg List.length h'
+        rw [List.length_take] at this
+        omega
+      simp [hne]
+    refine ⟨_, a5, (hrun _).mpr rfl, hS5, hgall, ?_⟩
+    exact srRes_ok _ _ _ _ _ _ _ _ _ hfn hln hb3
+
+section census
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hg : p.lookup "sl_get" = some slGet)
+  (hpf : p.lookup "param_find" = some paramFind) (hpp : p.lookup "param_push" = some paramPush)
+  (hip : p.lookup "intern_param" = some internParam)
+  (hplg : p.lookup "param_levels_go" = some paramLevelsGoL)
+  (hpl : p.lookup "param_levels" = some paramLevelsL)
+  (hcf : p.lookup "const_find" = some constFind) (hcp : p.lookup "const_push" = some constPush)
+  (hic : p.lookup "intern_const" = some internConst)
+  (hbf : p.lookup "bvar_find" = some bvarFind) (hbp : p.lookup "bvar_push" = some bvarPush)
+  (hib : p.lookup "intern_bvar" = some internBVar)
+  (hpg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+  (hps : p.lookup "struct_ps_at" = some structPsAtL)
+  (heq : p.lookup "sl_eq" = some slEq)
+  (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL)
+include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp
+
+/-- **`struct_ctor_resid_ok` refines `structCtorResidOk`** (through the stubs `get_app_fn`,
+`get_app_args`, `intern_ls_iw`). -/
+@[refines ConRon.Arena.structCtorResidOk]
+theorem structCtorResidOk_refines (k : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T lo ll nP o nIdx cbody : Word)
+    (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀) (hT : H T) (hcb : H cbody)
+    (hd : decHL s₀.mem lo.toNat ll.toNat = some lps) (hb : lo.toNat + ll.toNat < 2 ^ 64)
+    (ht : lo.toNat + ll.toNat ≤ iwTop s₀.mem) (hon : o.toNat + nP.toNat < 2 ^ 64)
+    (hni : nP.toNat + nIdx.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_ctor_resid_ok" [T, lo, ll, nP, o, nIdx, cbody]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀ ∧
+      KeepPost dn vis fe decW0B s₀.mem s'.mem
+        (AM.st (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀) r
+        (AM.res (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀); ⊤⦄ := by
+  refine triple_post (srW_spec p ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps
+    heq hp k s₀ T lo ll nP o nIdx cbody) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hpost⟩ := srW_ok dn vis fe k _ _ _ _ _ _ _ _ _ _ _ _ hm hS hT hcb hd hb ht hon hni
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
+
+end census
+
 end L.Ind

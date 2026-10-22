@@ -183,6 +183,7 @@ def depthNode : FunDecl := lfn (fuel1, g, x, y, z) locals (d1, d2, d3, m) {
     d1 := call depth_go(fuel1, x);
     d2 := call depth_go(fuel1, y);
     m := d1 + (d2 - d1) * u64(d1 < d2);
+    if m >= 4294967295 { abort };
     return m + 1
   };
   if g == 7 {
@@ -191,10 +192,12 @@ def depthNode : FunDecl := lfn (fuel1, g, x, y, z) locals (d1, d2, d3, m) {
     d3 := call depth_go(fuel1, z);
     m := d1 + (d2 - d1) * u64(d1 < d2);
     m := m + (d3 - m) * u64(m < d3);
+    if m >= 4294967295 { abort };
     return m + 1
   };
   -- g == 9 (proj)
   d1 := call depth_go(fuel1, z);
+  if d1 >= 4294967295 { abort };
   return d1 + 1
 }
 
@@ -232,6 +235,7 @@ def depth : FunDecl := lfn (e) locals (r, u) {
 @[l_impl ConRon.Arena.whnfWalkFuel]
 def whnfWalkFuel : FunDecl := lfn (e) locals (d) {
   d := call depth(e);
+  if d >= 4294967296 { abort };
   return d + 1024
 }
 
@@ -689,19 +693,28 @@ def replaceApps : FunDecl := lfn (namesOff, namesLen, us, b, n, e) locals (r, u)
   return r
 }
 
+/-- `nest_phs_go(q, n, i)`: the variables `fvar i, …, fvar (n - 1)` written at `q + i` (the loop of
+`nestPhs`, as a recursion). -/
+-- con-ron: none — the loop of nest_phs as a self-recursive function (proof shape)
+def nestPhsGo : FunDecl := lfn (q, n, i) locals (z, s, v, u) {
+  if i >= n { return 0 };
+  z := call pin_word(53);
+  if 4294967296 <= z { abort };
+  s := call intern_sort(z);
+  if 4294967296 <= s { abort };
+  v := call intern_fvar(i, s);
+  if 4294967296 <= v { abort };
+  IW.u64[q + i] := v;
+  u := call nest_phs_go(q, n, i + 1);
+  return 0
+}
+
 /-- `nest_phs(n)`: `nestPhs`, the canonical parameter variables `fvar 0, …, fvar (n - 1)`. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:674-680 ConRon.Arena.nestPhs
 @[l_impl ConRon.Arena.nestPhs]
-def nestPhs : FunDecl := lfn (n) locals (q, i, z, s, v) {
+def nestPhs : FunDecl := lfn (n) locals (q, u) {
   q := call iw_alloc(n);
-  i := 0;
-  while i < n {
-    z := call pin_word(53);
-    s := call intern_sort(z);
-    v := call intern_fvar(i, s);
-    IW.u64[q + i] := v;
-    i += 1
-  };
+  u := call nest_phs_go(q, n, 0);
   return (q, n)
 }
 
@@ -713,6 +726,7 @@ def nestCanonCrest : FunDecl := lfn (namesOff, namesLen, us, n, cty) locals (phO
   (ok, t) := call inst_pis_with(phOff, phLen, cty);
   if ok == 0 { return (0, 0) };
   r := call replace_apps(namesOff, namesLen, us, 0, n, t);
+  if 4294967296 <= r { abort };
   return (1, r)
 }
 
@@ -753,7 +767,7 @@ def indPosFns : Prog :=
    ("ph_app", phApp), ("nest_canon_sub", nestCanonSub), ("app_hole", appHole),
    ("replace_apps_node", replaceAppsNode), ("replace_apps_go", replaceAppsGo),
    ("replace_apps", replaceApps),
-   ("nest_phs", nestPhs), ("nest_canon_crest", nestCanonCrest), ("nest_crest", nestCrest)]
+   ("nest_phs_go", nestPhsGo), ("nest_phs", nestPhs), ("nest_canon_crest", nestCanonCrest), ("nest_crest", nestCrest)]
 
 /-- Stubs for the functions of OTHER modules this module calls: none — every callee this module
 needs is already in `libFns`, `stubFns` or `masterFns`. -/
