@@ -297,12 +297,28 @@ def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf) {
   return r
 }
 
+/-! ## The store arithmetic as named functions
+
+The `mk_*` stores compute `maxW`, `satPredW` and `packBF` inline; these equations name the evaluated
+L expressions, so `finish` matches them instead of unfolding the arithmetic (and case-splitting on
+its comparisons) inside every spec (lane `exprops4`: `mkLet_spec` went from > 10 min to seconds). -/
+
+theorem maxW_L (x y : Word) :
+    BinOp.add.eval x (BinOp.mul.eval (BinOp.sub.eval y x) (Cmp.ult.evalW x y)) = maxW x y := by
+  simp [BinOp.eval, Cmp.evalW, Cmp.eval, maxW]
+
+theorem satPredW_L (y : Word) :
+    BinOp.add.eval (BinOp.sub.eval y (Cmp.ult.evalW 0 y)) (Cmp.eq.evalW y 32767) = satPredW y := by
+  simp [BinOp.eval, Cmp.evalW, Cmp.eval, satPredW]
+
+theorem packBF_L (b f : Word) : BinOp.add.eval b (BinOp.mul.eval f 32768) = packBF b f := rfl
+
 /-! ## The specs -/
+
 
 section specs
 variable (p : Prog) (hd : p.lookup "der_b" = some derB)
 
-set_option maxHeartbeats 0 in
 include hd in
 theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hpi : p.lookup "intern_app" = some internApp)
@@ -318,9 +334,9 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
-      finish (gen := 40) [mkAppW, derPutW, cnt2, maxW, packBF, tierW, idxW]
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkAppW, maxW_L, satPredW_L, packBF_L, derPutW, cnt2, tierW, idxW]
 
-set_option maxHeartbeats 0 in
 include hd in
 theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
     (hpp : p.lookup "lam_push" = some lamPush) (hpi : p.lookup "intern_lam" = some internLamL)
@@ -336,9 +352,9 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internLamL_spec p hpf hpp hpi n] <;>
-      finish (gen := 40) [mkLamW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkLamW, maxW_L, satPredW_L, packBF_L, derPutW, cnt2, tierW, idxW]
 
-set_option maxHeartbeats 0 in
 include hd in
 theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
     (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
@@ -354,9 +370,9 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internForallL_spec p hpf hpp hpi n] <;>
-      finish (gen := 40) [mkForallW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkForallW, maxW_L, satPredW_L, packBF_L, derPutW, cnt2, tierW, idxW]
 
-set_option maxHeartbeats 0 in
 include hd in
 theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
     (hpp : p.lookup "letE_push" = some letPush) (hpi : p.lookup "intern_letE" = some internLet)
@@ -372,9 +388,9 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internLet_spec p hpf hpp hpi n] <;>
-      finish (gen := 40) [mkLetW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkLetW, maxW_L, satPredW_L, packBF_L, derPutW, cnt2, tierW, idxW]
 
-set_option maxHeartbeats 0 in
 include hd in
 theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
     (hpp : p.lookup "proj_push" = some projPush) (hpi : p.lookup "intern_proj" = some internProj)
@@ -390,7 +406,8 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
-      finish (gen := 40) [mkProjW, derPutW, cnt2, maxW, packBF, tierW, idxW]
+      -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
+      finish (gen := 20) [mkProjW, maxW_L, satPredW_L, packBF_L, derPutW, cnt2, tierW, idxW]
 
 end specs
 
