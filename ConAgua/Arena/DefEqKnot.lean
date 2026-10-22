@@ -34,6 +34,8 @@ import ConAgua.Arena.WalkCore
    slot step of this file. Lane `whnf`'s two slot steps then come from its primed proofs over these
    bundles: `whnfCoreSlot_step` (`KnotCallees.whnfCoreStep`) and the `whnf` chain over
    `whnfStep_refines'` (`KnotCallees.whnfStep`).
+4. **`fire_ok` from `CoreDen`** (helper `whnf4-leaves`): `KnotCallees.fireOk` is lane `whnf3`'s
+   `fireOk_refines` with `ProjSortDen`/`FireDen` from `StoreDen` (`fireOk_core`).
 -/
 
 open ConRon.Arena
@@ -111,12 +113,16 @@ structure KnotCallees (p : Prog) : Prop where
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
   /-- `caps_never_zero`, `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved them at
-  `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23). -/
+  `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23; the
+  universe arguments must read back at the call, which `CoreAfter` cannot carry from the
+  recursor head's view without the store's growth `Ext`; DESIGN.md, helper `whnf4-leaves`). -/
   capsNeverZero : CapsNeverZeroOK p
   recFireLevels : RecFireLevelsOK p
-  /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`). -/
+  /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`;
+  the second list is `rec_fire_levels`' interned result: `StoreWF` again). -/
   lvlsEqDen : LvlsEqDen p
-  /-- A stored recursor's rule prefix and plain rules fit its major index (`WhnfIotaRecRefine.lean`). -/
+  /-- A stored recursor's rule prefix and plain rules fit its major index (`WhnfIotaRecRefine.lean`;
+  an invariant of the installed environment, not of the store). -/
   recShape : RecShape
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s

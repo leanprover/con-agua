@@ -7478,6 +7478,59 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   module elaborates once); per module: `WhnfDeltaRefine2` 10 s, `WhnfCoreLoop` 8 s,
   `WhnfIotaRefine4` 5 s, `WhnfCoreProj` 4 s, `DefEqKnot` 1.2 s.
 
+### Helper `whnf4-leaves`: `projSmall` and `fireOk` discharged
+* **`projSmall` gone, by an L change with no deviation.** `reduce_proj_fire` tested the twin's
+  `args.length = numParams + numFields` (`Nat`) as `an == np + nf` (`u64`), equal only if the sum
+  does not wrap, hence `ProjSmall` (counts below `2^32`, a loader invariant `CoreS` cannot give: it
+  quantified over every record that decodes). It now tests `nf <= an && an - nf == np`, which is
+  the `Nat` equation for any words; then `np + i < an` (from `i < nf`), so the argument index does
+  not wrap either. `fire_cond_iff`, `rpFire_refines` adjusted; `ProjSmall`, `CoreCallees.projSmall`
+  and the `hps` parameters of the `reduce_proj_*` chain removed. `Checker/Prog.lean`/`coreFns`
+  unchanged (same names; the body is looked up by name).
+* **`fireOk` from `CoreDen`** (`fireOk_core`, `WhnfProjRefine3.lean`; `KnotCallees.fireOk` in
+  `DefEqKnot.lean`; new program field `KnotAllProg.fire : FireProg p`). **`FireOkOK` restated**
+  with two hypotheses its callers can supply, and `FireDen`'s guard clause narrowed to match:
+  - `i.toNat < tbl.numFields`: the twin's `findProj?` only answers an entry below `numFields`
+    (`findProj?_lt`), and both callers (`reduce_proj_core`, `and_rescue_slots`) call `fire_ok` on
+    `find_proj`'s answer. So `FireDen` no longer asks for the guards past `numFields` (the old
+    gap to `StoreDen.proj`): at `i ≥ numFields` the twin would read the `default` level handle,
+    which reads back only under con-ron's `StoreWF` (and a non-empty persistent level tier).
+  - `us` is a stored `const` node's list (`∃ h c, a₀.store.view h = some (.const c (decI us))`),
+    as for `LvlsEqCH`; `StoreDen.constLs` then gives `FireOkOKD`'s readback. `reduce_proj_head`
+    has the node (`view_const_words`); `m2c_and` has it from its prefix (`PreRun.cview`), and
+    `and_rescue_slots`' loop carries it from slot to slot: neither the twin's `findProj?` (it
+    interns names only) nor `fireOk` (it writes the readback and verdict caches only) changes an
+    expression node's view (`ProjView.lean`: `findProj?_eview`, `fireOk_store`, and the readers'
+    `readLevelM_store` … `lvlEq?_store'`, unconditional). `AndRescueSlotsOK` gained the same
+    hypothesis.
+  - `ProjSortDen`/`FireDen` are now theorems over `CoreDen` (`projSortDen_of`, `fireDen_of`).
+  `InferProj2`'s copy of `findProj?_lt` removed (one lemma, in `ProjView.lean`).
+* **Left in `KnotCallees` (6)**: `den`, `instLP` (not this helper's), and:
+  - `capsNeverZero`: the twin reads back the inductive's level parameters and the universe
+    arguments (`capsNeverZero`), so a provable statement needs both readbacks, as
+    `FieldSortZeroOK` has them, plus the `PropWhen` datum's names related by the name store
+    (`PWR (nameN ns)`, what `capsNeverZeroW_run` takes) rather than by `dn` (`decPWw`): nothing in
+    `CoreS` ties `dn` to `denoteN`. The callers cannot supply the `us` readback: in `iota_case3`
+    `us` is the recursor head's list, viewed many core calls earlier, and `CoreAfter` does not
+    say that the twin's store only grew (`Ext`), so no view or readback survives those calls.
+    Needed: `Ext a a'` in `CoreAfter` (or `CoreS.den` plus `StoreWF`), and `dn` agreeing with
+    `denoteN` on the record pool's names.
+  - `recFireLevels`: `recFireLevelsW_ok` needs `StoreWF a.store` (it interns the substituted
+    levels and the list; `slpW_ok`/`sleW_ok`), which `CoreS` does not carry (D23), plus the same
+    readbacks as above.
+  - `lvlsEqDen`: its second list `cmpL` is `rec_fire_levels`' freshly interned result; that it
+    reads back is again `StoreWF` (the interning keeps readbacks), or a `RecFireLevelsOK` whose
+    post says so (a `CoreSpec` post speaks of result words only). The first list `usj` is a
+    stored `const` node's (`StoreDen.constLs`).
+  - `recShape`: an invariant of the installed environment (`rP ≤ mI + 1`, plain rules'
+    `ctorParams ≤ rP`), not of the store: `EnvR` decodes records but bounds nothing. It could
+    go by an L change instead: the twin uses `args.take rP` (`recFireArgs_take`), so L could
+    clamp the prefix to the spine (`min rP sn`) where it now reads `rP` words of the stack;
+    that touches lane `whnf`'s `iota_rec_*` proofs (`WhnfIotaRecRefine2/3`), not done here.
+* Numbers: 12 files, +~400/−~95 lines; new `ProjView.lean` 250 lines (~10 s). Rebuild of the cone
+  up to `DefEqKnot` + `KnotWF` after the `WhnfCore.lean` change: 5.2 min wall, 14.8 CPU-min
+  (everything downstream of `WhnfCore` elaborates once); `WhnfCoreProj` ~5 s.
+
 ### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
 * Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
   (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
