@@ -499,17 +499,20 @@ def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
 /-! ## `iota_index_ok(mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)` -/
 
 /-- con-leche: `Core.lean:280-296` `iotaIndexOk` — the canonical-index comparison of a firing
-ι redex. -/
+ι redex. The stack top is restored after the `get_app_args` slice (the twin's list is a value; the
+refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1348-1358 ConRon.Arena.iotaIndexOk
 @[l_impl ConRon.Arena.iotaIndexOk]
 def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)
-    locals (flag, res, ao2, an2, an3) {
+    locals (flag, res, top, ao2, an2, an3) {
   if mI == rP { return 1 };
   (flag, res) := call pi_residual(tyCtor, mo, mn);
   if flag == 0 { return 0 };
+  top := CTL.u64[136];
   (ao2, an2) := call get_app_args(res);
   an3 := (an2 - cnP) * u64(cnP <= an2);
   res := call defeq_list(mode, vis, d, ao2 + cnP, an3, xo, xn);
+  CTL.u64[136] := top;
   return res
 }
 
