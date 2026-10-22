@@ -60,6 +60,7 @@ structure DefEqMidProg (p : Prog) : Prop where
   leaf : DefEqLeafProg p
   bts : p.lookup "bool_true_shortcut" = some boolTrueShortcutL
   tupa : p.lookup "try_unfold_proj_app" = some tryUnfoldProjAppL
+  dq : p.lookup "delta_quick" = some deltaQuickL
 
 /-- A run that succeeded had fuel. -/
 theorem callW_succ {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem} {r : List Word}
@@ -364,5 +365,127 @@ theorem tryUnfoldProjApp_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
     simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact coreRef_ret hS₂ (by simp only [decOptR, decOpt, ← hr, ← hr2]; rfl)
       (resW_of _ _ r hw1 hw2 hr hr2)
+
+/-! ## Result decodings -/
+
+/-- An `Option Bool` result: `(flag, v)`. -/
+def decOB (r : List Word) : Option Bool :=
+  if r.headD 0 = 0 then none else some (r.tail.headD 0 != 0)
+
+instance : Inhabited DeltaStepA := ⟨.unknown⟩
+instance : Inhabited LazyResA := ⟨.verdict false⟩
+
+/-- A `DeltaStepA` result: `(k, a, b)`, `k` = `0` `.cont a b`, `1` `.eq`, `2` `.diff`, `3`
+`.unknown`. -/
+def decDS (r : List Word) : DeltaStepA :=
+  if r.headD 0 = 0 then .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0))
+  else if r.headD 0 = 1 then .eq
+  else if r.headD 0 = 2 then .diff
+  else .unknown
+
+/-- A `LazyResA` result: `(k, a, b)`, `k` = `0` `.verdict false`, `1` `.verdict true`, `2`
+`.unknown a b`. -/
+def decLR (r : List Word) : LazyResA :=
+  if r.headD 0 = 0 then .verdict false
+  else if r.headD 0 = 1 then .verdict true
+  else .unknown (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0))
+
+/-- Three result words below `2^32`. -/
+def Res3 (r : List Word) : Prop := HW (r.headD 0) ∧ HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0)
+
+/-- `quick_defeq(mode, vis, d, a, b)` refines `quickDefEq` at the knot (the shape of a slot; a
+hypothesis until `quickDefeq_refines` below). -/
+def QuickDefeqSpec (p : Prog) (n : Nat) : Prop :=
+  ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW x → HW y →
+    CoreSpec p n "quick_defeq" [mode, vis, d, x, y]
+      (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) decOB
+      s₀ a₀ dn vis fe M eb ResW
+
+/-! ## `delta_quick` -/
+
+/-- The model of `delta_quick` past `quick_defeq`'s run. -/
+def dqK (a b : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m₁) =>
+    if r.headD 0 = 0 then some (0, a, b, m₁)
+    else if r.tail.headD 0 ≠ 0 then some (1, 0, 0, m₁) else some (2, 0, 0, m₁)
+
+section dqs
+variable (a b : Word) (r : List Word) (m₁ : Mem)
+theorem dqK_n (h : r.headD 0 = 0) : dqK a b (some (r, m₁)) = some (0, a, b, m₁) := by
+  simp only [dqK, h, ↓reduceIte]
+theorem dqK_t (h : r.headD 0 ≠ 0) (h2 : r.tail.headD 0 ≠ 0) :
+    dqK a b (some (r, m₁)) = some (1, 0, 0, m₁) := by
+  simp only [dqK, h, h2, ↓reduceIte, ne_eq, not_false_eq_true]
+theorem dqK_f (h : r.headD 0 ≠ 0) (h2 : r.tail.headD 0 = 0) :
+    dqK a b (some (r, m₁)) = some (2, 0, 0, m₁) := by
+  simp only [dqK, h, h2, ↓reduceIte, ne_eq, not_true_eq_false]
+end dqs
+
+theorem deltaQuick_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "delta_quick" [mode, vis, d, a, b]
+    ⦃fun r s' => LocEq s' s₀ ∧ dqK a b (callW p n "quick_defeq" [mode, vis, d, a, b] s₀.mem) =
+      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.dq]
+  simp only [callFn, deltaQuickL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "quick_defeq"] <;>
+    finish [dqK_n, dqK_t, dqK_f]
+
+theorem res3_of {x y z : Word} {r : List Word} (hx : HW x) (hy : HW y) (hz : HW z)
+    (h1 : x = r.headD 0) (h2 : y = r.tail.headD 0) (h3 : z = r.tail.tail.headD 0) : Res3 r :=
+  ⟨h1 ▸ hx, h2 ▸ hy, h3 ▸ hz⟩
+
+theorem hw2 : HW 2 := by unfold HW; decide
+theorem hw3 : HW 3 := by unfold HW; decide
+
+/-- **`delta_quick` refines `deltaQuick`** at the knot, from `quick_defeq`'s spec. -/
+@[refines ConRon.Arena.deltaQuick]
+theorem deltaQuick_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : QuickDefeqSpec p n)
+    (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    CoreSpec p (n + 1) "delta_quick" [mode, vis, d, a, b]
+      (deltaQuick (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) decDS
+      s₀ a₀ dn vis fe M eb Res3 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (deltaQuick_spec p hp n s₀ mode vis d a b)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "quick_defeq" [mode, vis, d, a, b] s.mem with
+  | none => rw [hc] at hW; simp [dqK] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc] at hW
+  have h₁ := CoreSpec.of_callW (hq F s a₀ dn vis fe M eb mode d a b hF hn hs ha hb) hc
+  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [dqK_n (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hr2, hr3, hm⟩ := hW
+    have hd : decOB r₁ = none := by simp only [decOB, h0, ↓reduceIte]
+    rw [hd, ← hm]
+    exact coreRef_ret hS₁ (by simp only [decDS, ← hr, ← hr2, ← hr3, ↓reduceIte])
+      (res3_of hw0 ha hb hr hr2 hr3)
+  by_cases h2 : r₁.tail.headD 0 ≠ 0
+  · rw [dqK_t (h := h0) (h2 := h2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
+      Prod.mk.injEq] at hW
+    obtain ⟨hr, hr2, hr3, hm⟩ := hW
+    have hd : decOB r₁ = some true := by
+      simp only [decOB, h0, ↓reduceIte, Option.some.injEq]; exact decBool_t (r := r₁.tail) h2
+    rw [hd, ← hm]
+    exact coreRef_ret hS₁ (by simp only [decDS, ← hr]; rfl) (res3_of hw1 hw0 hw0 hr hr2 hr3)
+  · have h2' : r₁.tail.headD 0 = 0 := by simpa using h2
+    rw [dqK_f (h := h0) (h2 := h2'), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
+      Prod.mk.injEq] at hW
+    obtain ⟨hr, hr2, hr3, hm⟩ := hW
+    have hd : decOB r₁ = some false := by
+      simp only [decOB, h0, ↓reduceIte, Option.some.injEq]; exact decBool_f (r := r₁.tail) h2'
+    rw [hd, ← hm]
+    exact coreRef_ret hS₁ (by simp only [decDS, ← hr]; rfl) (res3_of hw2 hw0 hw0 hr hr2 hr3)
 
 end L.Arena
