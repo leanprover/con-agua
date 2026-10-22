@@ -37,6 +37,7 @@ refinements, the L code's comments, `docs/e2e.md`). Fixed rows move to the end.
 | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | – |
 | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | – |
 | D18 | `Arena/IndParts.lean` `block_split*`, `block_groups*`, `block_rec_want`/`_got`, `block_member_counts_go`, `block_shape_names_of`/`_ctors_of`/`_members_of`/`_rhss_of`/`_recs_of` | lists built by `::` (constant time per element) | recursion as the twin's, each element consed onto the rest's `IW` slice with `sl_cons` (a copy): quadratic in the list's length (block members, constructors, recursors, rules) | performance (small lists) | indproofs2 (parts) | an in-place slice writer with a frame lemma, if blocks get large |
+| D21 | `Arena/StrLit.lean` `str_ls1`, `str_cons_spine` (via `rom_lit`) | `internLsNode [u]`, `internE (.lit (.natVal c))` take the key as a value | the one-element list / one-limb literal is pushed at the pool top first and stays there even when the node already exists (one word per call) | performance (memory: two pool words per string-literal unfolding, a few per `List` test) | defeq2 | intern from a scratch word, or pop the top on a hit |
 
 ## Fixed
 
