@@ -7946,6 +7946,13 @@ child dangled when it was interned (no `StoreWF` needed).
   `StackKept.of_lhsFrame`, and the proof. `KnotAllProg` gained `caps : LvSubProg p`;
   `KnotCallees` has 2 fields left (`instLP`, `recFireLevels`, both whnf4's).
 
+### Landing 6: helper `whnf4-ilp`'s level arms (for lane `defeq2`'s `recFireLevels`)
+* `InstLPWalk`, `InstLPWalkBase`, `InstLPWalkGo`, `InstLPWalkArms` (the walk's models and specs,
+  no refinement yet) and `InstLPLevel`, `InstLPLevel2` (under `CoreS`: `lvInternW_core`,
+  `lvSubIntW_core` with `SubOut`/`ILWEnv`, `slsElemW_core`, `spnLs_core`) from the helper's
+  commit `8c21b5d`, adapted to master's `LvlCnt` (list counts) and `CoreS.of_ls`'s `hlsa`/`hlc`.
+  The WIP `InstLPWalkLet` is not landed. No L change. Globals rule: the instLP family uses only
+  existing slots (`CTL[136]` spine top, `CTL[192]` level-heap top, MemoLib schemas `CTL[54‥59]`).
 ## Phase 2, round 5: the twin's well-formedness, the real ROM readers (2026-10-22, lane `decls4`)
 
 ### Landing 1: `StateOK` from the twin's fold; canon in the arms; the ROM readers as callees; `subst_const_all`
