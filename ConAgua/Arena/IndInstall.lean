@@ -282,18 +282,22 @@ def checkBlockAgreeOne : FunDecl := lfn (vis, nP, fvs0O, fvs0L, s0, cvTa, s) loc
 }
 
 /-- `check_block_agree(vis, nP, cvTa0, s0, rest.off, rest.len)`: official's two agreements
-between member 0 and every other member (`rest`, a slice of pointers to `[cvTa, s]`). -/
+between member 0 and every other member (`rest`, a slice of pointers to `[cvTa, s]`). Member 0's
+telescope is opened only when `rest` is non-empty, as the twin does nothing for `[]` (lane
+`indproofs`: round 1 opened it always and aborted on `ok0 = 0` where the twin succeeds). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:160-179 ConRon.Arena.checkBlockAgree
 @[l_impl ConRon.Arena.checkBlockAgree]
 def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
     (ok0, fvs0O, fvs0L, body0, j, rp, u) {
-  (ok0, fvs0O, fvs0L, body0) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa0 + 3], 0);
-  if ok0 == 0 { abort };
-  j := 0;
-  while j < restL {
-    rp := IW.u64[restO + j];
-    u := call check_block_agree_one(vis, nP, fvs0O, fvs0L, s0, IW.u64[rp], IW.u64[rp + 1]);
-    j += 1
+  if restL != 0 {
+    (ok0, fvs0O, fvs0L, body0) := call open_pis_at_fvars_f(nP, EREC.u64[cvTa0 + 3], 0);
+    if ok0 == 0 { abort };
+    j := 0;
+    while j < restL {
+      rp := IW.u64[restO + j];
+      u := call check_block_agree_one(vis, nP, fvs0O, fvs0L, s0, IW.u64[rp], IW.u64[rp + 1]);
+      j += 1
+    }
   }
 }
 
