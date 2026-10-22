@@ -346,7 +346,7 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
   exact rest 0 _ _ _ hS₃ hW2
 
 include hq hc in
-/-- **The knot's `defeq` slot one level up** (`WhnfCallees.defeqStep`), from the body. -/
+/-- **The knot's `defeq` slot one level up**, from the body. -/
 @[refines_part ConRon.Arena.coreKnot "defeq (step)"]
 theorem defeqSlot_step (n : Nat) (hk : KnotUpTo p n) : DefeqSlot p (n + 1) :=
   defeq_refines p hq.knot n hk (defeqBody_refines p hq hc n)
