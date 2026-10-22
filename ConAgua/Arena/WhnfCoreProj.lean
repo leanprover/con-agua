@@ -1,5 +1,4 @@
-import ConAgua.Arena.WhnfCoreLoop
-import ConAgua.Arena.LevelEquiv
+import ConAgua.Arena.WhnfCoreStep
 
 /-!
 # Refinements of `WhnfCore.lean`'s projection functions
@@ -49,14 +48,6 @@ theorem projLitToCtor_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_lit_supported", callW_spec p n "str_lit_ctor", callW_spec p n "whnf"] <;>
     finish [projLitToCtorW, viewOK, tierW, idxW]
-
-/-- **`strLitSupported` keeps every stored node's view** (it only reads the pins and the
-environment and interns the nodes it compares against, which can only add nodes). Not provable
-from `StrLitSupportedOK` (`WhnfBase.lean`), whose statement says nothing about the store; assumed
-here until `strLitSupported`'s store monotonicity is proved. -/
-def SupKeep (fe : IFEnv) : Prop :=
-  ∀ (a : AState) (h : EIdx) (w : ENodeView), a.store.view h = some w →
-    (AM.st (strLitSupported fe) a).store.view h = some w
 
 /-! ## Handle-word lemmas: the `lit` tag, and the kind word says `natVal`/`strVal` -/
 
@@ -268,15 +259,6 @@ theorem stepProj_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
   simp_all [stepProjW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
-
-/-- **`find_proj` and `fire_ok` leave the record pool alone** (they intern into the expression and
-level stores). `FindProjOK`/`FireOkOK` (`WhnfCore.lean`) decode their answers from the record pool
-*before* the call, and `reduce_proj_core` reads the table's words *after* them, so this is the
-one fact about the two stubs that `reduceProjCore_refines'` needs on top of their specs. -/
-def ErecKept (p : Prog) : Prop :=
-  ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
-    (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
-    m'.arr64 EREC = m.arr64 EREC
 
 /-! ## `reduce_proj_core` -/
 
@@ -613,5 +595,53 @@ theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCal
       exact ⟨by rw [h0]; unfold HW; decide, by rw [h1]; exact he⟩
     · obtain ⟨h0, h1⟩ := hA hf
       exact ⟨by rw [h0]; unfold HW; decide, by rw [h1]; exact hrw2.2⟩
+
+/-! ## The refinements at the original statements (the stubs instantiated) -/
+
+section wrap
+variable (p : Prog) (hp : WhnfCoreProg p)
+
+include hp in
+/-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
+@[refines ConRon.Arena.whnfCoreStepProj]
+theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e sn i pe : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) (hsn : HW sn) (hpe : HW pe) :
+    CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
+      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
+  whnfCoreStepProj_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) hp.lsn
+    (coreCallees_stub p).erec n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs he hsn hpe
+    (supKeep_twin fe)
+
+include hp in
+/-- **`reduce_proj_core` refines `reduceProjCore`.** -/
+@[refines ConRon.Arena.reduceProjCore]
+theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d sn i c : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c) :
+    CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW :=
+  reduceProjCore_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) hp.lsn
+    (coreCallees_stub p).erec n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc'
+    (supKeep_twin fe)
+
+include hp in
+/-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
+@[refines ConRon.Arena.projLitToCtor]
+theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hh : HW h) :
+    CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
+      (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
+      MM eb :=
+  projLitToCtor_refines' p hp (whnfCallees_stub p) n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh
+    (supKeep_twin fe)
+
+end wrap
 
 end L.Arena
