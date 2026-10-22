@@ -925,6 +925,13 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     go.run {}
   let calledBy := bodies.map (·.2)
   let bodies := bodies.map (·.1)
+  -- a single member that needs no fuel (no recursion, no fuel-dependent callee, no continuation
+  -- that needs it) gets a model without the fuel argument
+  let noFuel : Bool ← do
+    if fis.size != 1 || st.ks.any (·.fuel) then pure false
+    else
+      let b ← liftTermElabM bodies[0]!.render
+      pure !(idents b.raw).contains `n
   if st.dups > 0 && doTrace then
     logInfo m!"l_model: {st.dups} join point(s) duplicated the code after them"
   -- render
@@ -974,7 +981,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let wbs := #[← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat)), ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
     let body ← liftTermElabM b.render
     let rT ← resT fi.ro
-    let d ← if wf then
+    let mbs := #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
+    let d ← if noFuel then
+      `(command| def $(mkIdent fi.model):ident $mbs* : $rT := $body)
+    else if wf then
       `(command|
         def $(mkIdent fi.model):ident $wbs* : $rT :=
           match $nI:ident with
@@ -1036,8 +1046,12 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let pbs ← ps.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($x : L.Word))
     let wbs := #[← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat)),
       ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
-    let lhs ← `($(mkIdent fi.model) ($nI + 1) $(mkIdent memIdent) $ps*)
-    nEqns := nEqns + (← eqns fi.model wbs lhs b)
+    if noFuel then
+      let lhs ← `($(mkIdent fi.model) $(mkIdent memIdent) $ps*)
+      nEqns := nEqns + (← eqns fi.model (wbs.extract 1 wbs.size) lhs b `eq_1)
+    else
+      let lhs ← `($(mkIdent fi.model) ($nI + 1) $(mkIdent memIdent) $ps*)
+      nEqns := nEqns + (← eqns fi.model wbs lhs b)
   for (kd, binders, _, pat, _, _) in kDefs do
     let resB ← match kd.binder with
       | 0 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Word)),
@@ -1061,11 +1075,12 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let ps : Array Ident := fi.params.map fun x => mkIdent (if userNames.contains x then x.appendAfter "'" else x)
     let pbs ← ps.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($x : L.Word))
     let W := mkIdent fi.model
+    let Wapp ← if noFuel then `($W (L.St.mem $s0) $ps*) else `($W $fuel (L.St.mem $s0) $ps*)
     let post ← if fi.ro then
         `(fun r s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧
-          $W $fuel (L.St.mem $s0) $ps* = Option.some (List.headD r 0))
+          $Wapp = Option.some (List.headD r 0))
       else
-        `(fun r s' => L.LocEq s' $s0 ∧ $W $fuel (L.St.mem $s0) $ps* = Option.some (List.headD r 0, L.St.mem s'))
+        `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = Option.some (List.headD r 0, L.St.mem s'))
     let fstr := Syntax.mkStrLit fi.lname
     `(∀ ($s0 : L.St) $pbs*, Std.WP.Triple (L.invoke $pName (L.exec $pName $fuel) $fstr [$ps,*])
         (fun s => s = $s0) $post Lean.Order.top)
