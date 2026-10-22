@@ -313,30 +313,37 @@ def nestCtorEntry : FunDecl := lfn (C, ciq) locals (ok0, cv, nPc, nF, body, hd, 
   return (1, cv, nPc, nF)
 }
 
+/-- `nest_container_ctors_go(vis, C, ctorsOff, ctorsLen, csOff, outLen, firstNPc)`: the rest of
+`caps.ctors` (an `EREC` slice) looked up and filtered, each accepted `[cv, nF]` record written at
+`csOff + outLen`; returns the final count and the first accepted entry's parameter count (the loop
+of `nest_container_ctors`, as a recursion). -/
+-- con-ron: none — the loop of nest_container_ctors as a self-recursive function (proof shape)
+def nestContainerCtorsGo : FunDecl :=
+    lfn (vis, C, ctorsOff, ctorsLen, csOff, outLen, firstNPc) locals (found, ciq, ok, cv, nPc, nF, r1, r2) {
+  if ctorsLen == 0 { return (outLen, firstNPc) };
+  (found, ciq) := call env_find(EREC.u64[ctorsOff], vis);
+  if found != 0 {
+    (ok, cv, nPc, nF) := call nest_ctor_entry(C, ciq);
+    if ok != 0 {
+      ciq := call rec2(cv, nF);
+      IW.u64[csOff + outLen] := ciq;
+      if outLen == 0 { firstNPc := nPc };
+      outLen += 1
+    }
+  };
+  (r1, r2) := call nest_container_ctors_go(vis, C, ctorsOff + 1, ctorsLen - 1, csOff, outLen, firstNPc);
+  return (r1, r2)
+}
+
 /-- `nest_container_ctors(vis, C, ctorsOff, ctorsLen)`: `caps.ctors.filterMapM (nestCtorEntry C ∘
 fe.find?)`, as the `[cv, nF]` records accepted and the first accepted entry's parameter count
 (`0` if none are accepted). -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:386-402 ConRon.Arena.nestContainer
 @[l_impl ConRon.Arena.nestContainer]
 def nestContainerCtors : FunDecl :=
-    lfn (vis, C, ctorsOff, ctorsLen) locals (csOff, outLen, firstNPc, j, found, ciq, ok, cv, nPc, nF) {
+    lfn (vis, C, ctorsOff, ctorsLen) locals (csOff, outLen, firstNPc) {
   csOff := call iw_alloc(ctorsLen);
-  outLen := 0;
-  firstNPc := 0;
-  j := 0;
-  while j < ctorsLen {
-    (found, ciq) := call env_find(EREC.u64[ctorsOff + j], vis);
-    if found != 0 {
-      (ok, cv, nPc, nF) := call nest_ctor_entry(C, ciq);
-      if ok != 0 {
-        ciq := call rec2(cv, nF);
-        IW.u64[csOff + outLen] := ciq;
-        if outLen == 0 { firstNPc := nPc };
-        outLen += 1
-      }
-    };
-    j += 1
-  };
+  (outLen, firstNPc) := call nest_container_ctors_go(vis, C, ctorsOff, ctorsLen, csOff, 0, 0);
   return (csOff, outLen, firstNPc)
 }
 
@@ -756,7 +763,7 @@ def indPosFns : Prog :=
    ("nest_field_kind_flat", nestFieldKindFlat), ("nest_kinds_flat_inner", nestKindsFlatInner),
    ("nest_kinds_flat_mid", nestKindsFlatMid), ("nest_kinds_flat", nestKindsFlat),
    ("nest_ctor_entry_strip", nestCtorEntryStrip), ("nest_ctor_entry", nestCtorEntry),
-   ("nest_container_ctors", nestContainerCtors), ("nest_container", nestContainer),
+   ("nest_container_ctors_go", nestContainerCtorsGo), ("nest_container_ctors", nestContainerCtors), ("nest_container", nestContainer),
    ("nest_ctx_hi_at", nestCtxHiAt), ("nest_ctx_root_holes_go", nestCtxRootHolesGo),
    ("nest_ctx_root_holes", nestCtxRootHoles),
    ("nest_hole_at", nestHoleAt), ("nest_key_map", nestKeyMap), ("fv_map_at", fvMapAt),

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndInstallSpec2
+import ConAgua.Arena.DeclHeader
 
 /-! # `IndPos`'s remaining functions (lane `indproofs2`, helper `pos`)
 
@@ -958,5 +959,166 @@ theorem nestHoleAt_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
   exact ⟨hl, haW_ok k dn fe vis a₀ _ _ ctx po pl i r c prog hm hS hcx hin hpr⟩
 
 end census
+
+/-! ## `nest_container(_ctors(_go))` refines `nestContainer`: word models -/
+
+mutual
+def ncGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, vis, C, co, cl, cs, ol, fp =>
+    if cl = 0 then some ([ol, fp], m)
+    else ncK1 k vis C co cl cs ol fp (envFindW m (rdW (m.arr64 EREC) co) vis)
+def ncK1 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 = 0 then ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp
+    else ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0))
+def ncK2 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) =>
+    if r2.headD 0 = 0 then ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp
+    else ncK3 k vis C co cl cs ol fp (r2.tail.tail.headD 0)
+      (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0])
+def ncK3 (k : Nat) (vis C co cl cs ol fp nPc : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (q, m3) =>
+    if ol = 0 then ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) nPc
+    else ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp
+end
+
+section arms
+variable (k : Nat) (m m1 m2 m3 : Mem) (vis C co cl cs ol fp nPc q : Word) (r r2 : List Word)
+theorem ncGoW_done (h : cl = 0) : ncGoW (k + 1) m vis C co cl cs ol fp = some ([ol, fp], m) := by
+  simp [ncGoW, h]
+theorem ncGoW_step (h : ¬ cl = 0) : ncGoW (k + 1) m vis C co cl cs ol fp =
+    ncK1 k vis C co cl cs ol fp (envFindW m (rdW (m.arr64 EREC) co) vis) := by simp [ncGoW, h]
+theorem ncK1_miss (h : r.headD 0 = 0) : ncK1 k vis C co cl cs ol fp (some (r, m1)) =
+    ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK1, if_pos h]
+theorem ncK1_hit (h : ¬ r.headD 0 = 0) : ncK1 k vis C co cl cs ol fp (some (r, m1)) =
+    ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0)) := by rw [ncK1, if_neg h]
+theorem ncK2_miss (h : r2.headD 0 = 0) : ncK2 k vis C co cl cs ol fp (some (r2, m2)) =
+    ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK2, if_pos h]
+theorem ncK2_hit (h : ¬ r2.headD 0 = 0) : ncK2 k vis C co cl cs ol fp (some (r2, m2)) =
+    ncK3 k vis C co cl cs ol fp (r2.tail.tail.headD 0)
+      (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0]) := by rw [ncK2, if_neg h]
+theorem ncK3_first (h : ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3)) =
+    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) nPc := by rw [ncK3, if_pos h]
+theorem ncK3_next (h : ¬ ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3)) =
+    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp := by rw [ncK3, if_neg h]
+end arms
+attribute [ind_grind] ncGoW_done ncGoW_step ncK1_miss ncK1_hit ncK2_miss ncK2_hit ncK3_first ncK3_next
+
+def ncB (cs : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => some ([cs, r.headD 0, r.tail.headD 0], m2)
+/-- The model of `nest_container_ctors` at exec fuel `k + 1`. -/
+def ncW (k : Nat) (m : Mem) (vis C co cl : Word) : Option (List Word × Mem) :=
+  match allocW m cl with
+  | none => none
+  | some (cs, m1) => ncB cs (ncGoW k m1 vis C co cl cs 0 0)
+def ncWf : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, vis, C, co, cl => ncW k m vis C co cl
+theorem ncB_some (cs : Word) (r : List Word) (m2 : Mem) :
+    ncB cs (some (r, m2)) = some ([cs, r.headD 0, r.tail.headD 0], m2) := rfl
+attribute [ind_grind] ncB_some
+
+def ntK2 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) =>
+    if r2.tail.headD 0 = 0 then some ([1, rdW (m2.arr64 EREC) (q + 5 + 12), r2.headD 0, 0], m2)
+    else some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2)
+def ntK1 (k : Nat) (vis C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 = 0 then some ([0, 0, 0, 0], m1)
+    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0, 0, 0, 0], m1)
+    else ntK2 (r.tail.headD 0) (ncWf k m1 vis C (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 13))
+      (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 14)))
+/-- The model of `nest_container(vis, C)` at exec fuel `k + 1`. -/
+def ntW (k : Nat) (m : Mem) (vis C : Word) : Option (List Word × Mem) := ntK1 k vis C (envFindW m C vis)
+
+section arms
+variable (k : Nat) (m1 m2 : Mem) (vis C q : Word) (r r2 : List Word)
+theorem ntK2_empty (h : r2.tail.headD 0 = 0) :
+    ntK2 q (some (r2, m2)) = some ([1, rdW (m2.arr64 EREC) (q + 5 + 12), r2.headD 0, 0], m2) := by
+  rw [ntK2, if_pos h]
+theorem ntK2_cons (h : ¬ r2.tail.headD 0 = 0) :
+    ntK2 q (some (r2, m2)) = some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2) := by
+  rw [ntK2, if_neg h]
+theorem ntK1_miss (h : r.headD 0 = 0) : ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
+  rw [ntK1, if_pos h]
+theorem ntK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
+    ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by rw [ntK1, if_neg h, if_pos h3]
+theorem ntK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
+    ntK1 k vis C (some (r, m1)) = ntK2 (r.tail.headD 0) (ncWf k m1 vis C
+      (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 13)) (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 14))) := by
+  rw [ntK1, if_neg h, if_neg h3]
+end arms
+attribute [ind_grind] ntK2_empty ntK2_cons ntK1_miss ntK1_noind ntK1_ind
+
+/-- The lookups of `nest_container`. -/
+structure NtLook (p : Prog) : Prop where
+  ha : p.lookup "iw_alloc" = some iwAlloc
+  h2 : p.lookup "rec2" = some rec2
+  hx : p.lookup "env_ix" = some envIxL
+  hg : p.lookup "env_row_get" = some envRowGetL
+  hf : p.lookup "env_find" = some envFindL
+  hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip
+  hv : p.lookup "e_view" = some eView
+  he : p.lookup "nest_ctor_entry" = some nestCtorEntry
+  hgo : p.lookup "nest_container_ctors_go" = some nestContainerCtorsGo
+  hcc : p.lookup "nest_container_ctors" = some nestContainerCtors
+  hnt : p.lookup "nest_container" = some nestContainer
+
+section spec
+variable (p : Prog) (hl : NtLook p)
+
+set_option maxHeartbeats 1000000 in
+include hl in
+theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors_go" [vis, C, co, cl, cs, ol, fp]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      ncGoW k s₀.mem vis C co cl cs ol fp = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
+  induction k with
+  | zero =>
+    intro s₀ vis C co cl cs ol fp
+    rw [invoke_eq _ hl.hgo]; simp only [callFn, nestContainerCtorsGo]; vcgen [exec] <;> grind
+  | succ k ih =>
+    intro s₀ vis C co cl cs ol fp
+    rw [invoke_eq _ hl.hgo]
+    simp only [callFn, nestContainerCtorsGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he k,
+        rec2_specW p hl.ha hl.h2 k, ih] <;>
+      finish (gen := 20) [rdW_eq, St.setLocs_mem']
+
+include hl in
+theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors" [vis, C, co, cl]
+    ⦃fun r s' => LocEq s' s₀ ∧ ncWf k s₀.mem vis C co cl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hl.hcc]
+  simp only [callFn, nestContainerCtors]
+  cases k with
+  | zero => vcgen [exec] <;> grind
+  | succ k =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        iwAlloc_specW p hl.ha k, ncGo_spec p hl k] <;>
+      finish (gen := 20) [ncWf, ncW]
+
+include hl in
+theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
+    ⦃fun r s' => LocEq s' s₀ ∧ ntW k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hl.hnt]
+  simp only [callFn, nestContainer]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      envFind_specW p hl.hx hl.hg hl.hf k, nc_spec p hl k] <;>
+    finish (gen := 20) [ntW, rdW_eq]
+
+end spec
 
 end L.Ind
