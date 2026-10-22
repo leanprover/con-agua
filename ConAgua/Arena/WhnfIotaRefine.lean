@@ -587,7 +587,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         omega)
   · exact hf.2.2.1 145 ▸ hS.bstk
   · refine StackKept.of_frame_range hf (fun b hb => by
-      simp at hb; subst hb; rw [← har]; exact ⟨by omega, by omega⟩) (fun x hx => by
+      simp only [List.mem_singleton] at hb; rw [hb]; exact ⟨by omega, by omega⟩) (fun x hx => by
       simp at hx; subst hx
       have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega

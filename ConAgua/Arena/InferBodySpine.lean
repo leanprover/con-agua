@@ -186,18 +186,22 @@ stack below the accumulator is kept. -/
 theorem spPush_step {m m₀ : Mem} {co cn v : Word} {acc : Array EIdx}
     (hspn : (m.arr64 SPN).size < 2 ^ 63) (hacc : SpineR m co cn acc)
     (hb : ∀ j, j < co → spW m j = spW m₀ j) (hsz : (m.arr64 SPN).size = (m₀.arr64 SPN).size)
+    (hbk : BKept m₀ m) (hpg : PoolGrew m₀ m)
     (h136 : (136 : Word).toNat < (m.arr64 CTL).size)
     (hbd : (co + cn).toNat < (m.arr64 SPN).size) (hv : HW v) :
     SpineR (spPush m co cn v) co (cn + 1) (acc.push (decE v)) ∧
       spTop (spPush m co cn v) = co + (cn + 1) ∧
       (∀ j, j < co → spW (spPush m co cn v) j = spW m₀ j) ∧
       ((spPush m co cn v).arr64 SPN).size = (m₀.arr64 SPN).size ∧
-      (136 : Word).toNat < ((spPush m co cn v).arr64 CTL).size := by
+      (136 : Word).toNat < ((spPush m co cn v).arr64 CTL).size ∧
+      BKept m₀ (spPush m co cn v) ∧ PoolGrew m₀ (spPush m co cn v) := by
   have hco_le := hacc.bound
   have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
   have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
   refine ⟨(hacc.push hspn (by rw [← hadd]; exact hbd) v hv).setCtl 136 (co + (cn + 1)), ?_, ?_,
-    by simp only [spPush, size_set64]; exact hsz, by simp only [spPush, size_set64]; exact h136⟩
+    by simp only [spPush, size_set64]; exact hsz, by simp only [spPush, size_set64]; exact h136,
+    hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide)),
+    hpg.trans (PoolGrew.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide))⟩
   · unfold spTop spPush
     rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136⟩]
   · intro j hj
@@ -235,9 +239,9 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) (n : Nat) (dn : NIdx → Opti
     ∀ (m : Mem) (a : AState) (M : ModeMaps) (ty cn : Word) (acc : Array EIdx),
       CoreS dn m a vis fe M eb → HW ty → SpineR m co cn acc → spTop m = co + cn →
       (∀ j, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
-      ∀ w mF, spTail p n m ty co cn = some (w, mF) →
+      BKept m₀ m → PoolGrew m₀ m → ∀ w mF, spTail p n m ty co cn = some (w, mF) →
       SpPost dn vis fe M eb m₀ a (instantiateListFast coreWalkFuel (decE ty) acc 0) w mF := by
-  intro m a M ty cn acc hS ht hacc htop hb hsz w mF hF
+  intro m a M ty cn acc hS ht hacc htop hb hsz hbk hpg w mF hF
   have hco_le := hacc.bound
   have hspn := hS.spn
   have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
@@ -259,7 +263,7 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) (n : Nat) (dn : NIdx → Opti
     rw [h0] at hok hres hS'
     refine ⟨_, _, AM.run_of_ok _ _ hok, hres, hrw, M', ?_, hK', ?_⟩
     · exact hS'.frame_stk (MemFrame.setCtl m₁ 136 co) (by simp) (by simp)
-    · exact peel_restore hco hb hsz hSt' htop hcn64 h136
+    · exact peel_restore hco hb hsz hbk hpg hSt' htop hcn64 h136
   · rw [if_neg h136] at hF; cases hF
 
 theorem spioFull_zero (p : Prog) (n : Nat) (m : Mem) (mode vis d ty ao an i co cn : Word) :
@@ -278,16 +282,16 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
     ∀ k, k ≤ N + 1 → ∀ (m : Mem) (a : AState) (M : ModeMaps) (ty i cn : Word) (acc : Array EIdx),
       CoreS dn m a vis fe M eb → HW ty → SpineR m co cn acc → spTop m = co + cn →
       (∀ j, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
-      (136 : Word).toNat < (m.arr64 CTL).size →
+      BKept m₀ m → PoolGrew m₀ m → (136 : Word).toNat < (m.arr64 CTL).size →
       ∀ w mF, spioFull p n k m mode vis d ty ao an i co cn = some (w, mF) →
       SpPost dn vis fe M eb m₀ a
         (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) acc
           args i.toNat) w mF := by
   intro k
   induction k with
-  | zero => intro _ m a M ty i cn acc _ _ _ _ _ _ _ w mF hF; rw [spioFull_zero] at hF; cases hF
+  | zero => intro _ m a M ty i cn acc _ _ _ _ _ _ _ _ _ w mF hF; rw [spioFull_zero] at hF; cases hF
   | succ k ih =>
-    intro hkN m a M ty i cn acc hS ht hacc htop hb hsz h136m w mF hF
+    intro hkN m a M ty i cn acc hS ht hacc htop hb hsz hbk hpg h136m w mF hF
     have hspn := hS.spn
     have hco_le : co.toNat + cn.toNat ≤ (m.arr64 SPN).size := hacc.bound
     have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
@@ -323,12 +327,12 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         have hv : viewOK m ty 30 := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
-        obtain ⟨hacc', htop', hb', hsz', h136'⟩ := spPush_step hspn hacc hb hsz h136m
+        obtain ⟨hacc', htop', hb', hsz', h136', hbk', hpg'⟩ := spPush_step hspn hacc hb hsz hbk hpg h136m
           (by simpa using c4) hvv
         have hS' := hS.frame_stk (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + (cn + 1)))
           (by simp) (by simp)
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih (by omega) _ a M _ (i + 1) (cn + 1)
-          _ hS' hbody hacc' htop' hb' hsz' h136' w mF hF
+          _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' h136' w mF hF
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK, hSt⟩
         rw [← hrun', inferSpineIO]
         simp only [hlt', dite_true, tag_fa_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
@@ -379,12 +383,12 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hacc0 := SpineR.empty m₂ co (by omega)
-        obtain ⟨hacc', htop', hb', hsz', h136'⟩ := spPush_step (cn := 0) hS₂.spn hacc0 hb₂ hsz₂ g6
+        obtain ⟨hacc', htop', hb', hsz', h136', hbk', hpg'⟩ := spPush_step (cn := 0) hS₂.spn hacc0 hb₂ hsz₂ (hbk.trans hSt12.bstk) (hpg.trans hSt12.pool) g6
           (by simpa using g5) hvv
         have hS' := hS₂.frame_stk (spnCtl_frame m₂ (co + 0) (spW m (ao + i)) (co + (0 + 1)))
           (by simp) (by simp)
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih (by omega) _ _ M₂ _ (i + 1) 1
-          _ hS' hbody hacc' htop' hb' hsz' h136' w mF hF'
+          _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' h136' w mF hF'
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans hK), hSt⟩
         rw [← hrun', inferSpineIO]
         have hnfa : ((decE ty).tag == ETag.forallE) = false := by rw [tag_fa_beq ty ht]; simp [ht6]
@@ -400,7 +404,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         rfl
     · rw [spioFull_exit _ _ _ _ _ _ _ _ _ _ _ _ _ hlt] at hF
       obtain ⟨x, a', hrun, hx, hrw, M', hS', hK, hSt⟩ :=
-        spTail_ref p hil n dn vis fe eb co m₀ hco m a M ty cn acc hS ht hacc htop hb hsz w mF hF
+        spTail_ref p hil n dn vis fe eb co m₀ hco m a M ty cn acc hS ht hacc htop hb hsz hbk hpg w mF hF
       have hnlt : ¬ i.toNat < args.size := by
         rw [har₀.size]; exact fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
       refine ⟨x, a', ?_, hx, hrw, M', hS', hK, hSt⟩
@@ -440,7 +444,7 @@ theorem inferSpineIO_refines (p : Prog) (hq : SpineInferProg p) (hil : InstListO
   have hcle := len64_not_lt hS.spn hc
   obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := spioFull_ref p hil n hk F hF hn n dn vis fe
     mode d ao an args eb _ hs.mode4 hs.eb_mode s.mem har rfl hlo (n + 1) (Nat.le_refl _) s.mem a₀ M
-    ty 0 0 #[] hS ht (SpineR.empty _ _ hcle) (by simp [spTop]) (fun _ _ => rfl) rfl h136 _ _ hW
+    ty 0 0 #[] hS ht (SpineR.empty _ _ hcle) (by simp [spTop]) (fun _ _ => rfl) rfl (BKept.refl _) (PoolGrew.refl _) h136 _ _ hW
   have h0 : (0 : Word).toNat = 0 := rfl
   rw [h0] at hrun'
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'

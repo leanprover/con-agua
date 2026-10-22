@@ -453,8 +453,8 @@ theorem natPredLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
   intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
   apply L.M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn)
-  obtain ⟨hfr, -⟩ := L.M.of_run hs hrun
+  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn)
+  obtain ⟨hfr, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame hp.litClosed n (f := "intern_lit") (by decide) [o, l] s₀)
   subst hs
   exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres⟩
