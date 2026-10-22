@@ -73,6 +73,10 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp),
           fun h => absurd (hA _ h) (by simp)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp),
+          fun h => absurd (hA _ h) (by simp)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk,
       hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
