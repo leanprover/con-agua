@@ -619,10 +619,15 @@ theorem bvarBCwf_spec (F : Nat) (hF : 2 ^ 31 ≤ F) (hF2 : F ≤ coreWalkFuel) (
       (bvarB F (decI e)) (KeepPost dn vis fe decW0Nat) := sorry
 
 /-- The stubs that run inside the `hb`-memo walks (`bvar_b`, `strip_pis`) leave the `hb` memo (array
-`HBM`, epoch word `CTL[214]`) alone. -/
+`HBM`, epoch word `CTL[214]`) alone: an instance of the stubs' write set `stubM_memoFrame`. -/
 theorem stubHbFrame (f : FnName) (hf : f = "bvar_b" ∨ f = "strip_pis") (m m' : Mem) (args r : List Word)
     (h : stubM f m args = some (r, m')) :
-    ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m' := sorry
+    ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m' := by
+  have hn : f ∈ stubNames := by rcases hf with rfl | rfl <;> decide
+  obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hn m m' args r h
+  refine ⟨A, C, fun hm => ?_, fun hm => ?_, hfr⟩
+  · have := hA _ hm; simp [HBM] at this
+  · have := hC _ hm; simp at this
 
 end hbStubs
 
