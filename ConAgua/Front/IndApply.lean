@@ -42,11 +42,16 @@ their `IFR` records. `kExpected?` is one word: `0` none, `1` `some false`, `2` `
 
 ## The functions
 
+Every loop of the twin (a `List` recursion, `mapM`, `for`) is a self-recursive L function over an
+index `j` (`…_go`), so that its refinement is one induction mirroring the list.
+
 `store_fuel()`, `pi_result_d(f, e)`, `ind_pi_tele_len(f, e)`, `pi_sort_tele_len(f, e)`,
 `name_rec_pre(n)` (`viewN n` matched against `.str T "rec"`), `ifl_contains`, `ifl_nodup`,
-`ifl_find_last`, `vi_unsafe`, `vi_nparams`, `vi_map`, `vi_listed`, `vi_ctor`, `vi_order`,
-`vi_k_expected`, `vi_rec_idx`, `vi_rec`, `vi_recs`, `validate_ind_d`; `dind_alloc`,
-`ind_cv`, `ind_caps`, `parse_rule_d`, `ind_rules`, `install_ind_d`; `apply_ind(v)`,
+`ifl_find_last`; `vi_unsafe`, `vi_np_go`/`vi_nparams`, `vi_map_go`/`vi_map`,
+`vi_ids_go`/`vi_listed_go`/`vi_listed`, `vi_ctor`, `vi_order_in`/`vi_order_go`/`vi_order`,
+`vi_k_expected`, `vi_rec_idx`, `vi_rec`, `vi_nested`/`vi_recs_go`/`vi_recs`, `validate_ind_d`;
+`dind_alloc`, `ind_cv`, `ind_caps`, `parse_rule_d`, `ind_rules_go`/`ind_rules`, `ind_type`,
+`ind_ctor`, `ind_rec`, `inst_types`/`inst_ctors`/`inst_recs`, `install_ind_d`; `apply_ind(v)`,
 `apply_ind_line(j)`.
 -/
 
@@ -142,49 +147,56 @@ def nameRecPre : FunDecl := lfn (h) locals (g, t, i, k, o) {
 
 /-! ## `IFL` slices -/
 
-/-- `ifl_contains(o, n, x)`: `x` among `IFL[o‥o + n)`. -/
+/-- `ifl_contains(o, n, x, j)`: `x` among `IFL[o + j‥o + n)`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iflContains : FunDecl := lfn (o, n, x) locals (j) {
-  while j < n {
-    if IFL.u64[o + j] == x { return 1 };
-    j += 1
-  };
-  return 0
+def iflContains : FunDecl := lfn (o, n, x, j) locals (r) {
+  if n <= j { return 0 };
+  if IFL.u64[o + j] == x { return 1 };
+  r := call ifl_contains(o, n, x, j + 1);
+  return r
 }
 
-/-- `ifl_nodup(o, n)`: `List.Nodup` of `IFL[o‥o + n)` (word equality). -/
+/-- `ifl_nodup(o, n, j)`: `List.Nodup` of `IFL[o + j‥o + n)` (word equality). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iflNodup : FunDecl := lfn (o, n) locals (j, b) {
-  while j < n {
-    b := call ifl_contains(o + j + 1, n - j - 1, IFL.u64[o + j]);
-    if b != 0 { return 0 };
-    j += 1
-  };
-  return 1
+def iflNodup : FunDecl := lfn (o, n, j) locals (b, r) {
+  if n <= j { return 1 };
+  b := call ifl_contains(o, n, IFL.u64[o + j], j + 1);
+  if b != 0 { return 0 };
+  r := call ifl_nodup(o, n, j + 1);
+  return r
 }
 
-/-- `ifl_find_last(o, n, x)`: the last index of `x` in `IFL[o‥o + n)` as `(ok, k)` (a
+/-- `ifl_find_last(o, x, j)`: the last index of `x` in `IFL[o‥o + j)` as `(ok, k)` (a
 `HashMap.insert` fold's lookup: the last insert of a key wins). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iflFindLast : FunDecl := lfn (o, n, x) locals (j) {
-  j := n;
-  while 0 < j {
-    j -= 1;
-    if IFL.u64[o + j] == x { return (1, j) }
-  };
-  return (0, 0)
+def iflFindLast : FunDecl := lfn (o, x, j) locals (f, k) {
+  if j == 0 { return (0, 0) };
+  if IFL.u64[o + j - 1] == x { return (1, j - 1) };
+  (f, k) := call ifl_find_last(o, x, j - 1);
+  return (f, k)
 }
 
 /-! ## `validateIndD` -/
 
-/-- `vi_unsafe(to, tn)`: no type record is `isUnsafe` (else the block is declined: abort). -/
+/-- `vi_unsafe(to, tn, j)`: no type record from the `j`-th on is `isUnsafe` (else the block is
+declined: abort). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viUnsafe : FunDecl := lfn (to, tn) locals (j) {
-  while j < tn {
-    if IFR.u64[to + 11 * j + 7] != 0 { abort };
-    j += 1
-  };
+def viUnsafe : FunDecl := lfn (to, tn, j) locals (u) {
+  if tn <= j { return 0 };
+  if IFR.u64[to + 11 * j + 7] != 0 { abort };
+  u := call vi_unsafe(to, tn, j + 1);
+  return 0
+}
+
+/-- `vi_np_go(to, tn, d, j)`: every type record from the `j`-th on has `numParams = d` (else
+declined: abort). -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viNpGo : FunDecl := lfn (to, tn, d, j) locals (u) {
+  if tn <= j { return 0 };
+  if IFR.u64[to + 11 * j + 10] != d { abort };
+  u := call vi_np_go(to, tn, d, j + 1);
   return 0
 }
 
@@ -192,49 +204,67 @@ def viUnsafe : FunDecl := lfn (to, tn) locals (j) {
 agrees (else declined: abort). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viNparams : FunDecl := lfn (to, tn) locals (d, j) {
+def viNparams : FunDecl := lfn (to, tn) locals (d, u) {
   if tn == 0 { return 0 };
   d := IFR.u64[to + 10];
-  while j < tn {
-    if IFR.u64[to + 11 * j + 10] != d { abort };
-    j += 1
-  };
+  u := call vi_np_go(to, tn, d, 0);
   return d
 }
 
-/-- `vi_map(o, n, sz, s, f)`: for the `n` records of size `sz` at `o`, the id in word `s` looked
-up (`f = 0`: `name_get`, else `expr_get`), in order, into a fresh `IFL` slice `(off, n)`. -/
+/-- `vi_map_go(o, n, sz, s, f, j)`: for the records of size `sz` at `o` from the `j`-th to the
+`n`-th, the id in word `s` looked up (`f = 0`: `name_get`, else `expr_get`) and pushed to `IFL`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viMap : FunDecl := lfn (o, n, sz, s, f) locals (lo, j, h) {
+def viMapGo : FunDecl := lfn (o, n, sz, s, f, j) locals (h, u) {
+  if n <= j { return 0 };
+  if f == 0 { h := call name_get(IFR.u64[o + sz * j + s]) }
+  else { h := call expr_get(IFR.u64[o + sz * j + s]) };
+  h := call ifl_push(h);
+  u := call vi_map_go(o, n, sz, s, f, j + 1);
+  return 0
+}
+
+/-- `vi_map(o, n, sz, s, f)`: `vi_map_go` from the first record, into a fresh `IFL` slice
+`(off, n)`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viMap : FunDecl := lfn (o, n, sz, s, f) locals (lo, u) {
   lo := call ifl_alloc(0);
-  while j < n {
-    if f == 0 { h := call name_get(IFR.u64[o + sz * j + s]) }
-    else { h := call expr_get(IFR.u64[o + sz * j + s]) };
-    h := call ifl_push(h);
-    j += 1
-  };
+  u := call vi_map_go(o, n, sz, s, f, 0);
   return (lo, n)
+}
+
+/-- `vi_ids_go(o, n, k)`: the name ids `IFL[o + k‥o + n)` looked up and pushed to `IFL`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viIdsGo : FunDecl := lfn (o, n, k) locals (h, u) {
+  if n <= k { return 0 };
+  h := call name_get(IFL.u64[o + k]);
+  h := call ifl_push(h);
+  u := call vi_ids_go(o, n, k + 1);
+  return 0
+}
+
+/-- `vi_listed_go(to, tn, j)`: `vi_ids_go` on the constructor list of every type record from the
+`j`-th on. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viListedGo : FunDecl := lfn (to, tn, j) locals (t, u) {
+  if tn <= j { return 0 };
+  t := to + 11 * j;
+  u := call vi_ids_go(IFR.u64[t + 3], IFR.u64[t + 4], 0);
+  u := call vi_listed_go(to, tn, j + 1);
+  return 0
 }
 
 /-- `vi_listed(to, tn)`: `(listed).flatten`, every type's constructor name ids looked up, type by
 type, into a fresh `IFL` slice `(off, cnt)`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viListed : FunDecl := lfn (to, tn) locals (lo, cnt, j, t, k, h) {
+def viListed : FunDecl := lfn (to, tn) locals (lo, u) {
   lo := call ifl_alloc(0);
-  while j < tn {
-    t := to + 11 * j;
-    k := 0;
-    while k < IFR.u64[t + 4] {
-      h := call name_get(IFL.u64[IFR.u64[t + 3] + k]);
-      h := call ifl_push(h);
-      cnt += 1;
-      k += 1
-    };
-    j += 1
-  };
-  return (lo, cnt)
+  u := call vi_listed_go(to, tn, 0);
+  return (lo, IFL.u64[0] + 1 - lo)
 }
 
 /-- `vi_ctor(n, j, T, nP, fuel, cno, cn, co)`: constructor `n`, number `j` of type `T`: its
@@ -243,7 +273,7 @@ record (the last of the constructor records named `n`, `ctorIx`), checked (`cidx
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def viCtor : FunDecl := lfn (n, j, tt, np, fuel, cno, cn, co) locals (f, k, c, x, t) {
-  (f, k) := call ifl_find_last(cno, cn, n);
+  (f, k) := call ifl_find_last(cno, n, cn);
   if f == 0 { abort };
   c := co + 10 * k;
   if IFR.u64[c + 6] != 0 { if IFR.u64[c + 7] != j { abort } };
@@ -257,25 +287,38 @@ def viCtor : FunDecl := lfn (n, j, tt, np, fuel, cno, cn, co) locals (f, k, c, x
   return c
 }
 
+/-- `vi_order_in(fo, cno, co, cn, fuel, nP, oo, t, T, jj, pos)`: the constructors of the type
+record at `IFR[t]` (named `T`) from its `jj`-th on, the `pos`-th of the block's own order first:
+each checked by `vi_ctor`, its record pointer written to `IFL[oo + pos]`; the position after. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viOrderIn : FunDecl := lfn (fo, cno, co, cn, fuel, np, oo, t, tt, jj, pos) locals (c, r) {
+  if IFR.u64[t + 4] <= jj { return pos };
+  c := call vi_ctor(IFL.u64[fo + pos], jj, tt, np, fuel, cno, cn, co);
+  IFL.u64[oo + pos] := c;
+  r := call vi_order_in(fo, cno, co, cn, fuel, np, oo, t, tt, jj + 1, pos + 1);
+  return r
+}
+
+/-- `vi_order_go(to, tn, tyN, fo, cno, co, cn, fuel, nP, oo, ti, pos)`: `vi_order_in` for every
+type record from the `ti`-th on. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viOrderGo : FunDecl := lfn (to, tn, tyn, fo, cno, co, cn, fuel, np, oo, ti, pos) locals (p, u) {
+  if tn <= ti { return 0 };
+  p := call vi_order_in(fo, cno, co, cn, fuel, np, oo, to + 11 * ti, IFL.u64[tyn + ti], 0, pos);
+  u := call vi_order_go(to, tn, tyn, fo, cno, co, cn, fuel, np, oo, ti + 1, p);
+  return 0
+}
+
 /-- `vi_order(to, tn, tyN, fo, cno, co, cn, fuel, nP)`: the constructors in the block's own order
 (`types[].ctors`, type by type), each checked by `vi_ctor`; an `IFL` slice of `cn` record pointers
 (`cn` is the flattened list's length, checked before). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viOrder : FunDecl := lfn (to, tn, tyn, fo, cno, co, cn, fuel, np)
-    locals (oo, ti, pos, t, jj, c) {
+def viOrder : FunDecl := lfn (to, tn, tyn, fo, cno, co, cn, fuel, np) locals (oo, u) {
   oo := call ifl_alloc(cn);
-  while ti < tn {
-    t := to + 11 * ti;
-    jj := 0;
-    while jj < IFR.u64[t + 4] {
-      c := call vi_ctor(IFL.u64[fo + pos], jj, IFL.u64[tyn + ti], np, fuel, cno, cn, co);
-      IFL.u64[oo + pos] := c;
-      pos += 1;
-      jj += 1
-    };
-    ti += 1
-  };
+  u := call vi_order_go(to, tn, tyn, fo, cno, co, cn, fuel, np, oo, 0, 0);
   return oo
 }
 
@@ -298,18 +341,17 @@ def viKExpected : FunDecl := lfn (to, tn, tyt, oo, fuel) locals (r, g, s, y, z, 
   return 1
 }
 
-/-- `vi_rec_idx(T, nI, nP, tn, tyN, tyT, fuel)`: for every type named `T` (in order), its
-telescope to a sort, if any, has `nP + nI` binders (else invalid: abort). -/
+/-- `vi_rec_idx(T, nI, nP, tn, tyN, tyT, fuel, j)`: for every type from the `j`-th on named `T`
+(in order), its telescope to a sort, if any, has `nP + nI` binders (else invalid: abort). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viRecIdx : FunDecl := lfn (tt, ni, np, tn, tyn, tyt, fuel) locals (j, ok, n) {
-  while j < tn {
-    if IFL.u64[tyn + j] == tt {
-      (ok, n) := call pi_sort_tele_len(fuel, IFL.u64[tyt + j]);
-      if ok != 0 { if np + ni != n { abort } }
-    };
-    j += 1
+def viRecIdx : FunDecl := lfn (tt, ni, np, tn, tyn, tyt, fuel, j) locals (ok, n, u) {
+  if tn <= j { return 0 };
+  if IFL.u64[tyn + j] == tt {
+    (ok, n) := call pi_sort_tele_len(fuel, IFL.u64[tyt + j]);
+    if ok != 0 { if np + ni != n { abort } }
   };
+  u := call vi_rec_idx(tt, ni, np, tn, tyn, tyt, fuel, j + 1);
   return 0
 }
 
@@ -323,7 +365,29 @@ def viRec : FunDecl := lfn (r, np, tn, cn, ke, tyn, tyt, fuel) locals (rn, f, tt
   if IFR.u64[r + 6] != cn { abort };
   if ke != 0 { if IFR.u64[r + 4] != ke - 1 { abort } };
   (f, tt) := call name_rec_pre(rn);
-  if f != 0 { u := call vi_rec_idx(tt, IFR.u64[r + 5], np, tn, tyn, tyt, fuel) };
+  if f != 0 { u := call vi_rec_idx(tt, IFR.u64[r + 5], np, tn, tyn, tyt, fuel, 0) };
+  return 0
+}
+
+/-- `vi_nested(to, tn, j)`: some type record from the `j`-th on has `numNested ≠ 0` (`1`), else
+`0`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viNested : FunDecl := lfn (to, tn, j) locals (r) {
+  if tn <= j { return 0 };
+  if IFR.u64[to + 11 * j + 9] != 0 { return 1 };
+  r := call vi_nested(to, tn, j + 1);
+  return r
+}
+
+/-- `vi_recs_go(ro, rn, nP, tn, cn, kE, tyN, tyT, fuel, j)`: the recursor records from the `j`-th
+on checked. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viRecsGo : FunDecl := lfn (ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j) locals (u) {
+  if rn <= j { return 0 };
+  u := call vi_rec(ro + 11 * j, np, tn, cn, ke, tyn, tyt, fuel);
+  u := call vi_recs_go(ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j + 1);
   return 0
 }
 
@@ -331,16 +395,10 @@ def viRec : FunDecl := lfn (r, np, tn, cn, ke, tyn, tyt, fuel) locals (rn, f, tt
 the block is nested (some type has `numNested ≠ 0`). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
-def viRecs : FunDecl := lfn (to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel) locals (j, u) {
-  while j < tn {
-    if IFR.u64[to + 11 * j + 9] != 0 { return 0 };
-    j += 1
-  };
-  j := 0;
-  while j < rn {
-    u := call vi_rec(ro + 11 * j, np, tn, cn, ke, tyn, tyt, fuel);
-    j += 1
-  };
+def viRecs : FunDecl := lfn (to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel) locals (u) {
+  u := call vi_nested(to, tn, 0);
+  if u != 0 { return 0 };
+  u := call vi_recs_go(ro, rn, np, tn, cn, ke, tyn, tyt, fuel, 0);
   return 0
 }
 
@@ -350,13 +408,13 @@ records); `(ordered.off, nPd)` (the ordered constructors are `cn` record pointer
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def validateIndD : FunDecl := lfn (to, tn, co, cn, ro, rn)
     locals (np, tyn, tyt, fo, cno, x, u, fuel, oo, ke) {
-  u := call vi_unsafe(to, tn);
+  u := call vi_unsafe(to, tn, 0);
   np := call vi_nparams(to, tn);
   (tyn, x) := call vi_map(to, tn, 11, 0, 0);
   (tyt, x) := call vi_map(to, tn, 11, 2, 1);
   (fo, x) := call vi_listed(to, tn);
   (cno, u) := call vi_map(co, cn, 10, 0, 0);
-  u := call ifl_nodup(fo, x);
+  u := call ifl_nodup(fo, x, 0);
   if u == 0 { abort };
   if x != cn { abort };
   fuel := call store_fuel();
@@ -400,12 +458,11 @@ def indCv : FunDecl := lfn (q, nm, lps, ty) locals (n, t, o, l) {
 is `ifAllZero []`, kind `1` at `q + 7`). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
 @[l_impl ConRon.Arena.Frontend.installIndD]
-def indCaps : FunDecl := lfn (q) locals (j) {
-  while j < 15 {
-    DIND.u64[q + j] := 0;
-    j += 1
-  };
-  DIND.u64[q + 7] := 1;
+def indCaps : FunDecl := lfn (q) {
+  DIND.u64[q] := 0; DIND.u64[q + 1] := 0; DIND.u64[q + 2] := 0; DIND.u64[q + 3] := 0;
+  DIND.u64[q + 4] := 0; DIND.u64[q + 5] := 0; DIND.u64[q + 6] := 0; DIND.u64[q + 7] := 1;
+  DIND.u64[q + 8] := 0; DIND.u64[q + 9] := 0; DIND.u64[q + 10] := 0; DIND.u64[q + 11] := 0;
+  DIND.u64[q + 12] := 0; DIND.u64[q + 13] := 0; DIND.u64[q + 14] := 0;
   return 0
 }
 
@@ -413,16 +470,23 @@ def indCaps : FunDecl := lfn (q) locals (j) {
 11-word `IRecRule` at `DIND[q]` (`decRule`). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:259-264 ConRon.Arena.Frontend.parseRuleD
 @[l_impl ConRon.Arena.Frontend.parseRuleD]
-def parseRuleD : FunDecl := lfn (q, rp) locals (n, e, j) {
+def parseRuleD : FunDecl := lfn (q, rp) locals (n, e) {
   n := call name_get(IFL.u64[rp]);
   e := call expr_get(IFL.u64[rp + 2]);
-  while j < 11 {
-    DIND.u64[q + j] := 0;
-    j += 1
-  };
-  DIND.u64[q] := n;
-  DIND.u64[q + 1] := IFL.u64[rp + 1];
-  DIND.u64[q + 8] := e;
+  DIND.u64[q] := n; DIND.u64[q + 1] := IFL.u64[rp + 1]; DIND.u64[q + 2] := 0;
+  DIND.u64[q + 3] := 0; DIND.u64[q + 4] := 0; DIND.u64[q + 5] := 0; DIND.u64[q + 6] := 0;
+  DIND.u64[q + 7] := 0; DIND.u64[q + 8] := e; DIND.u64[q + 9] := 0; DIND.u64[q + 10] := 0;
+  return 0
+}
+
+/-- `ind_rules_go(lo, o, n, j)`: the rule records at `IFL[o]` from the `j`-th to the `n`-th,
+written as 11-word rules at `DIND[lo]`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
+@[l_impl ConRon.Arena.Frontend.installIndD]
+def indRulesGo : FunDecl := lfn (lo, o, n, j) locals (u) {
+  if n <= j { return 0 };
+  u := call parse_rule_d(lo + 11 * j, o + 3 * j);
+  u := call ind_rules_go(lo, o, n, j + 1);
   return 0
 }
 
@@ -430,13 +494,10 @@ def parseRuleD : FunDecl := lfn (q, rp) locals (n, e, j) {
 11-word rules; `(off, n)`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
 @[l_impl ConRon.Arena.Frontend.installIndD]
-def indRules : FunDecl := lfn (o, n) locals (lo, j, u) {
+def indRules : FunDecl := lfn (o, n) locals (lo, u) {
   if 4294967296 <= n { abort };
   lo := call dind_alloc(11 * n);
-  while j < n {
-    u := call parse_rule_d(lo + 11 * j, o + 3 * j);
-    j += 1
-  };
+  u := call ind_rules_go(lo, o, n, 0);
   return (lo, n)
 }
 
@@ -480,30 +541,52 @@ def indRec : FunDecl := lfn (r) locals (q, u, lo, ln, a) {
   return q
 }
 
+/-- `inst_types(bo, to, tn, j)`: the `indInfo` records of the type records from the `j`-th on,
+their pointers at `DIND[bo + j]`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
+@[l_impl ConRon.Arena.Frontend.installIndD]
+def instTypes : FunDecl := lfn (bo, to, tn, j) locals (q, u) {
+  if tn <= j { return 0 };
+  q := call ind_type(to + 11 * j);
+  DIND.u64[bo + j] := q;
+  u := call inst_types(bo, to, tn, j + 1);
+  return 0
+}
+
+/-- `inst_ctors(bo, oo, on, j)`: the `ctorInfo` records of the ordered constructors (record
+pointers `IFL[oo + j]`) from the `j`-th on, their pointers at `DIND[bo + j]`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
+@[l_impl ConRon.Arena.Frontend.installIndD]
+def instCtors : FunDecl := lfn (bo, oo, on, j) locals (q, u) {
+  if on <= j { return 0 };
+  q := call ind_ctor(IFL.u64[oo + j]);
+  DIND.u64[bo + j] := q;
+  u := call inst_ctors(bo, oo, on, j + 1);
+  return 0
+}
+
+/-- `inst_recs(bo, ro, rn, j)`: the `recInfo` records of the recursor records from the `j`-th on,
+their pointers at `DIND[bo + j]`. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
+@[l_impl ConRon.Arena.Frontend.installIndD]
+def instRecs : FunDecl := lfn (bo, ro, rn, j) locals (q, u) {
+  if rn <= j { return 0 };
+  q := call ind_rec(ro + 11 * j);
+  DIND.u64[bo + j] := q;
+  u := call inst_recs(bo, ro, rn, j + 1);
+  return 0
+}
+
 /-- `install_ind_d(to, tn, oo, on, ro, rn, nP)`: `installIndD`: the block (types, the ordered
 constructors, recursors) as `DIND` constant records, pushed as one `DECL` record of kind `6`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:378-403 ConRon.Arena.Frontend.installIndD
 @[l_impl ConRon.Arena.Frontend.installIndD]
-def installIndD : FunDecl := lfn (to, tn, oo, on, ro, rn, np) locals (bo, j, q, u) {
+def installIndD : FunDecl := lfn (to, tn, oo, on, ro, rn, np) locals (bo, u) {
   if 4294967296 <= tn || 4294967296 <= on || 4294967296 <= rn { abort };
   bo := call dind_alloc(tn + on + rn);
-  while j < tn {
-    q := call ind_type(to + 11 * j);
-    DIND.u64[bo + j] := q;
-    j += 1
-  };
-  j := 0;
-  while j < on {
-    q := call ind_ctor(IFL.u64[oo + j]);
-    DIND.u64[bo + tn + j] := q;
-    j += 1
-  };
-  j := 0;
-  while j < rn {
-    q := call ind_rec(ro + 11 * j);
-    DIND.u64[bo + tn + on + j] := q;
-    j += 1
-  };
+  u := call inst_types(bo, to, tn, 0);
+  u := call inst_ctors(bo + tn, oo, on, 0);
+  u := call inst_recs(bo + tn + on, ro, rn, 0);
   u := call decl_push(6, 0, bo, tn + on + rn, np, 0, 0, 0);
   return 0
 }
@@ -537,13 +620,18 @@ def indApplyFns : Prog :=
   [("store_fuel", storeFuel), ("pi_result_d", piResultD), ("ind_pi_tele_len", indPiTeleLen),
    ("pi_sort_tele_len", piSortTeleLen), ("name_rec_pre", nameRecPre),
    ("ifl_contains", iflContains), ("ifl_nodup", iflNodup), ("ifl_find_last", iflFindLast),
-   ("vi_unsafe", viUnsafe), ("vi_nparams", viNparams), ("vi_map", viMap),
-   ("vi_listed", viListed), ("vi_ctor", viCtor), ("vi_order", viOrder),
+   ("vi_unsafe", viUnsafe), ("vi_np_go", viNpGo), ("vi_nparams", viNparams),
+   ("vi_map_go", viMapGo), ("vi_map", viMap), ("vi_ids_go", viIdsGo),
+   ("vi_listed_go", viListedGo), ("vi_listed", viListed), ("vi_ctor", viCtor),
+   ("vi_order_in", viOrderIn), ("vi_order_go", viOrderGo), ("vi_order", viOrder),
    ("vi_k_expected", viKExpected), ("vi_rec_idx", viRecIdx), ("vi_rec", viRec),
-   ("vi_recs", viRecs), ("validate_ind_d", validateIndD),
+   ("vi_nested", viNested), ("vi_recs_go", viRecsGo), ("vi_recs", viRecs),
+   ("validate_ind_d", validateIndD),
    ("dind_alloc", dindAlloc), ("ind_cv", indCv), ("ind_caps", indCaps),
-   ("parse_rule_d", parseRuleD), ("ind_rules", indRules), ("ind_type", indType),
-   ("ind_ctor", indCtor), ("ind_rec", indRec), ("install_ind_d", installIndD),
+   ("parse_rule_d", parseRuleD), ("ind_rules_go", indRulesGo), ("ind_rules", indRules),
+   ("ind_type", indType), ("ind_ctor", indCtor), ("ind_rec", indRec),
+   ("inst_types", instTypes), ("inst_ctors", instCtors), ("inst_recs", instRecs),
+   ("install_ind_d", installIndD),
    ("apply_ind", applyInd), ("apply_ind_line", applyIndLine)]
 
 /-- The callees of other files: the id tables (`Apply.lean`, `ApplyExpr.lean`), `decl_push`,
