@@ -526,4 +526,244 @@ theorem fvbW_ok (n F : Nat) (hF : n ≤ F + 1) (m m' : Mem) (a : AState) (hA : A
     rw [if_neg (by simp [hs'])]
     exact ⟨a, rfl, hA⟩
 
+/-! ## The arms' probe, rebuild and tail -/
+
+theorem decE_inj (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) (e : decE x = decE y) :
+    x = y := by
+  rw [← word_decE x hx, ← word_decE y hy, e]
+
+theorem atail_ok (op : AM EIdx) (mkr : Option (Word × Mem)) (a₂ : AState) (h c r : Word) (m' : Mem)
+    (hh : h.toNat < 2 ^ 32)
+    (hmk : ∀ r₃ m₃, mkr = some (r₃, m₃) →
+      AM.ok op a₂ ∧ ArenaA m₃ (AM.st op a₂) ∧ AM.res op a₂ = decE r₃)
+    (hb : asetK h c mkr = some (r, m')) :
+    ∃ a', (do let r ← op; abs1Set (decE h, c.toNat) r; pure r : AM EIdx).run a₂ =
+      .ok (decE r, a') ∧ ArenaA m' a' := by
+  cases h3 : mkr with
+  | none => simp [h3, asetK] at hb
+  | some q =>
+    obtain ⟨r₃, m₃⟩ := q
+    rw [h3] at hb
+    simp only [asetK] at hb
+    cases h4 : msetG abSch m₃ h c r₃ with
+    | none => simp [h4] at hb
+    | some m₄ =>
+      simp only [h4, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨hok, hA₃, hres⟩ := hmk r₃ m₃ h3
+      refine ⟨_, ?_, ArenaA.amemo_set m₃ m₄ _ hA₃ h c r₃ hh h4⟩
+      simp only [StateT.run_bind, AM.run_of_ok _ _ hok, hres, except_ok_bind, abs1Set_run]; rfl
+
+theorem aprobe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a : AState)
+    (hA : ArenaA m a) (h c r : Word) (hh : h.toNat < 2 ^ 32)
+    (hhit : mfindG abSch m h c ≠ [] → (mfindG abSch m h c).headD 0 ≠ 0 →
+      armW = some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m))
+    (hnone : mfindG abSch m h c = [] → armW = none)
+    (hmiss : mfindG abSch m h c ≠ [] → (mfindG abSch m h c).headD 0 = 0 → armW = some (r, m') →
+      ∃ a', miss.run a = .ok (decE r, a') ∧ ArenaA m' a')
+    (hb : armW = some (r, m')) :
+    ∃ a', (do
+        match ← abs1Get (decE h, c.toNat) with
+        | some r => pure r
+        | none => miss : AM EIdx).run a = .ok (decE r, a') ∧ ArenaA m' a' := by
+  rw [StateT.run_bind, abs1Get_run, except_ok_bind]
+  by_cases hr : mfindG abSch m h c = []
+  · rw [hnone hr] at hb; cases hb
+  by_cases hh0 : (mfindG abSch m h c).headD 0 ≠ 0
+  · rw [hhit hr hh0] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [show a.memos.abs1C[(decE h, c.toNat)]? = _ from
+      memoRG_hit abSch lfKey decE m _ hA.2 h c hr hh0 hh]
+    exact ⟨a, rfl, hA⟩
+  · simp only [ne_eq, Decidable.not_not] at hh0
+    rw [show a.memos.abs1C[(decE h, c.toNat)]? = none from
+      memoRG_miss abSch lfKey decE m _ hA.2 h c hh hr hh0]
+    exact hmiss hr hh0 hb
+
+/-- **A rebuild on change**: `h` itself when the model's words came back equal (then so did the
+twin's handles), else the model's interning, which the twin's `op` refines. -/
+theorem rb_ok (op : AM EIdx) (same : Bool) (P : Prop) [Decidable P] (mkr : Option (Word × Mem))
+    (m : Mem) (a : AState) (hA : ArenaA m a) (h r : Word) (m' : Mem)
+    (hsame : P → same = true)
+    (hnew : ¬ P → mkr = some (r, m') →
+      same = false ∧ AM.ok op a ∧ ArenaA m' (AM.st op a) ∧ AM.res op a = decE r)
+    (hb : (if P then some (h, m) else mkr) = some (r, m')) :
+    AM.ok (if same then pure (decE h) else op) a ∧
+      ArenaA m' (AM.st (if same then pure (decE h) else op) a) ∧
+      AM.res (if same then pure (decE h) else op) a = decE r := by
+  by_cases hP : P
+  · rw [if_pos hP] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [hsame hP]
+    exact ⟨trivial, hA, rfl⟩
+  · rw [if_neg hP] at hb
+    obtain ⟨hs, hok, hA', hres⟩ := hnew hP hb
+    rw [hs]
+    exact ⟨hok, hA', hres⟩
+
+theorem mkAppW_lt (m : Mem) (x y r : Word) (m' : Mem) (hI : mkAppW m x y = some (r, m')) :
+    x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 := by
+  unfold mkAppW at hI; split at hI
+  · cases hI
+  · rename_i hg; exact or_shr32 x y (by simpa using hg)
+theorem mkLamW_lt (m : Mem) (x y r : Word) (m' : Mem) (hI : mkLamW m x y = some (r, m')) :
+    x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 := by
+  unfold mkLamW at hI; split at hI
+  · cases hI
+  · rename_i hg; exact or_shr32 x y (by simpa using hg)
+theorem mkForallW_lt (m : Mem) (x y r : Word) (m' : Mem) (hI : mkForallW m x y = some (r, m')) :
+    x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 := by
+  unfold mkForallW at hI; split at hI
+  · cases hI
+  · rename_i hg; exact or_shr32 x y (by simpa using hg)
+theorem mkLetW_lt (m : Mem) (x y z r : Word) (m' : Mem) (hI : mkLetW m x y z = some (r, m')) :
+    x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 ∧ z.toNat < 2 ^ 32 := by
+  unfold mkLetW at hI; split at hI
+  · cases hI
+  · rename_i hg
+    obtain ⟨hxy, hz⟩ := or_shr32 (x ||| y) z (by simpa using hg)
+    obtain ⟨hx, hy⟩ := or_lt32 x y hxy
+    exact ⟨hx, hy, hz⟩
+theorem mkProjW_lt (m : Mem) (n i x r : Word) (m' : Mem) (hI : mkProjW m n i x = some (r, m')) :
+    x.toNat < 2 ^ 32 := by
+  unfold mkProjW at hI; split at hI
+  · cases hI
+  · rename_i hg; exact (or_shr32 n x (by simpa using hg)).2
+
+/-! ## The twin's dispatcher, named -/
+
+/-- The part of `abstract1Go` after the cut-off: the dispatch on the tag. -/
+def absNodeA (d F : Nat) (h : EIdx) (k : Nat) : AM EIdx :=
+  let tg := h.tag
+  if tg == ETag.app then abstract1ArmApp d F h k
+  else if ETag.isBind tg then abstract1ArmBind d F h k
+  else if tg == ETag.fvar then abstract1ArmFVar d h k
+  else if tg == ETag.letE then abstract1ArmLet d F h k
+  else if tg == ETag.proj then abstract1ArmProj d F h k
+  else pure h
+
+theorem abstract1Go_succ' (d F : Nat) (h : EIdx) (k : Nat) :
+    abstract1Go d (F + 1) h k = (do
+      let fb ← fvarB F h
+      if fb ≤ d then pure h else absNodeA d F h k) := by
+  rw [abstract1Go_succ]; rfl
+
+theorem viewFVarIdx_run (h : EIdx) (a : AState) :
+    (viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
+
+/-! ## The statements, by fuel -/
+
+/-- What `abs_go`'s model at fuel `n` says about the arena walk at any fuel `F ≥ n`. -/
+def AGoOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h k d r : Word), n ≤ F → ArenaA m a →
+    h.toNat < 2 ^ 32 → absW n m h k d = some (r, m') →
+    ∃ a', (abstract1Go d.toNat F (decE h) k.toNat).run a = .ok (decE r, a') ∧ ArenaA m' a'
+
+/-- The same for `ab_node` and the dispatch. -/
+def ANodeOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h k d r : Word), n ≤ F + 1 → ArenaA m a →
+    h.toNat < 2 ^ 32 → absNodeW n m h k d = some (r, m') →
+    ∃ a', (absNodeA d.toNat F (decE h) k.toNat).run a = .ok (decE r, a') ∧ ArenaA m' a'
+
+/-- The arena arm `arm` refines the L arm `armW` at `h`, under `ArenaA`. -/
+def AArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Option (Word × Mem))
+    (arm : AM EIdx) (m m' : Mem) (a : AState) (h k d r : Word) : Prop :=
+  armW n m h k d = some (r, m') → ∃ a', arm.run a = .ok (decE r, a') ∧ ArenaA m' a'
+
+/-- The five arms, each at its tag. -/
+def AArmOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h k d r : Word), n ≤ F + 1 → ArenaA m a →
+    h.toNat < 2 ^ 32 →
+    (h >>> 28 = 4 → AArmRef n absAppW (abstract1ArmApp d.toNat F (decE h) k.toNat) m m' a h k d r) ∧
+    (h >>> 28 = 5 → AArmRef n absLamW (abstract1ArmBind d.toNat F (decE h) k.toNat) m m' a h k d r) ∧
+    (h >>> 28 = 6 →
+      AArmRef n absForallW (abstract1ArmBind d.toNat F (decE h) k.toNat) m m' a h k d r) ∧
+    (h >>> 28 = 7 → AArmRef n absLetW (abstract1ArmLet d.toNat F (decE h) k.toNat) m m' a h k d r) ∧
+    (h >>> 28 = 9 → AArmRef n absProjW (abstract1ArmProj d.toNat F (decE h) k.toNat) m m' a h k d r)
+
+theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
+  intro F m m' a h k d r hF hA hh hb
+  obtain ⟨F, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+  rw [absW_eq] at hb
+  cases hf : fvbW n m h with
+  | none => simp [hf, acutK] at hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  rw [hf, acutK_some] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := fvbW_ok n F (by omega) m m₁ a hA h x hh hf
+  rw [abstract1Go_succ', StateT.run_bind, ha₁, except_ok_bind]
+  by_cases hc : x ≤ d
+  · rw [if_pos hc] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [if_pos (UInt64.le_iff_toNat_le.mp hc)]
+    exact ⟨a₁, rfl, hA₁⟩
+  · rw [if_neg hc] at hb
+    rw [if_neg (fun e => hc (UInt64.le_iff_toNat_le.mpr e))]
+    exact ih F m₁ m' a₁ h k d r (by omega) hA₁ hh hb
+
+theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
+  intro F m m' a h k d r hF hA hh hb
+  have arm := ih F m m' a h k d r (by omega) hA hh
+  have t4 : h >>> 28 = 4 ↔ (h >>> 28).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
+  have t5 : h >>> 28 = 5 ↔ (h >>> 28).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
+  have t6 : h >>> 28 = 6 ↔ (h >>> 28).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
+  have t1 : h >>> 28 = 1 ↔ (h >>> 28).toUInt32 = 1 := by simpa using tag_iff h 1 hh (by decide)
+  have t7 : h >>> 28 = 7 ↔ (h >>> 28).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
+  have t9 : h >>> 28 = 9 ↔ (h >>> 28).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
+  simp only [absNodeA, decE_tag h hh]
+  simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.fvar, ETag.letE, ETag.proj,
+    beq_iff_eq, Bool.or_eq_true] at *
+  by_cases g4 : h >>> 28 = 4
+  · rw [absNodeW_app n m h k d g4] at hb
+    simp only [show (h >>> 28).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
+    exact arm.1 g4 hb
+  have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
+  by_cases g5 : h >>> 28 = 5
+  · rw [absNodeW_lam n m h k d g5] at hb
+    simp only [g4', show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    exact arm.2.1 g5 hb
+  have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
+  by_cases g6 : h >>> 28 = 6
+  · rw [absNodeW_forall n m h k d g6] at hb
+    simp only [g4', g5', show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    exact arm.2.2.1 g6 hb
+  have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
+  simp only [g4', g5', g6', or_self, ↓reduceIte]
+  by_cases g1 : h >>> 28 = 1
+  · simp only [show (h >>> 28).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
+    by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+    · rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs] at hb
+    by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
+    · rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs, hc] at hb
+    have hv : viewOK m h 26 := ⟨hs, UInt64.not_le.mp hc⟩
+    rw [abstract1ArmFVar, StateT.run_bind, viewFVarIdx_run, viewFVarIdx_ok m a hA.1.1 h hh hv]
+    simp only [except_ok_bind]
+    by_cases he : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) = d
+    · rw [absNodeW_fvar_eq n m h k d hv g1 he] at hb
+      obtain ⟨hok, hA', hres⟩ := internBVar_A m a hA _ r m' hb
+      simp only [he, ↓reduceIte, internBVarE]
+      rw [AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
+    · rw [absNodeW_fvar_ne n m h k d hv g1 he] at hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+      have he' : ¬ (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat = d.toNat :=
+        fun e => he (UInt64.toNat_inj.mp e)
+      simp only [he', ↓reduceIte]; exact ⟨a, rfl, hA⟩
+  have g1' : ¬ (h >>> 28).toUInt32 = 1 := fun e => g1 (t1.mpr e)
+  simp only [g1', ↓reduceIte]
+  by_cases g7 : h >>> 28 = 7
+  · rw [absNodeW_let n m h k d g7] at hb
+    simp only [show (h >>> 28).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
+    exact arm.2.2.2.1 g7 hb
+  have g7' : ¬ (h >>> 28).toUInt32 = 7 := fun e => g7 (t7.mpr e)
+  simp only [g7', ↓reduceIte]
+  by_cases g9 : h >>> 28 = 9
+  · rw [absNodeW_proj n m h k d g9] at hb
+    simp only [show (h >>> 28).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
+    exact arm.2.2.2.2 g9 hb
+  have g9' : ¬ (h >>> 28).toUInt32 = 9 := fun e => g9 (t9.mpr e)
+  simp only [g9', ↓reduceIte]
+  rw [absNodeW_leaf n m h k d g1 g4 g5 g6 g7 g9] at hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  exact ⟨a, rfl, hA⟩
+
 end L.Arena
