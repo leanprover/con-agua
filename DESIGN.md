@@ -5049,8 +5049,20 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
 * Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
   `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
 
+### The frontend's inductive lines: not hooked yet (decision)
+The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
+`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
+out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
+(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
+front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
+(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
+`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
+a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
+with this template under `StateDR` (the front's relation), then hook in one step with the
+refinement.
+
 ### `sorry`s
-None new: every `sorry` a refinement inherits is a stub's (`IndStubs.lean`).
+None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
 
 ## The fvar-range derived column (2026-10-21, lane `exprops3`)
 
@@ -5086,4 +5098,3 @@ Files: `ViewL.lean` (`packBF`, `packBF_bvar`, `packBF_fvar`), `ExprMk.lean` (`de
   built, then lost in the machine restart; `Inst1*.lean` with `d ↦ k`, `v ↦ d` is the template.
 * `instantiateListGo`/`instantiateList`: untouched (pool-slice reader; `PoolSlice.lean` already has
   the word-slice lemmas).
-None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
