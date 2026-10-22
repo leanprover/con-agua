@@ -106,7 +106,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (hebm : eb = (mode >>> 1) &&& 1) (hctor : HW ctor) (hT : HW T) (htm : HW tmaj) (hus : HW ust)
     (hmaj : HW major) (targs : List EIdx) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hsp : SpineR m to tn targs.toArray) (htop : to + tn = spTop m)
-    (r : List Word) (m' : Mem)
+    (r : List Word) (m' : Mem) (hvus : ∃ x c, a.store.view x = some (.const c (decI ust)))
     (h : callW p (N + 1) "m2c_and2" [mode, vis, d, ctor, T, tmaj, to, tn, ust, major] m =
       some (r, m')) :
     GrowRef (m2cAnd2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
@@ -160,7 +160,13 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     hp.internConst' (N' + 1) m3 _ hS3.arena ctor ust hctor hus r4 m4 c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
-  have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4
+  have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4 hrun4 (by
+    obtain ⟨x, c, hx⟩ := hvus
+    have hx1 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun1) x _
+      (.inr ⟨_, _, rfl⟩) hx
+    have hx2 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun2) x _
+      (.inr ⟨_, _, rfl⟩) hx1
+    exact hS3.den.constLs _ _ _ hx2)
   have hsp4 := hsp3.of_spn_core (const_spn hfr4)
   cases c5 : callW p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with
   | none => rw [c5] at hW; cases hW
@@ -349,7 +355,9 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
       exact Nat.le_refl _) hspn3
   obtain ⟨ok5, hA5, res5, hr5⟩ := m2cAnd2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
-    hS4 hsp4 htop4 r5 m5 c5
+    hS4 hsp4 htop4 r5 m5
+    (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
+        exact ⟨_, _, view_after_noLss (keeps_noLss_andRescueSlots _ _ _ _) (hp5 g0).2.2.1⟩) c5
   have hrun5 := AM.run_of_ok _ _ ok5
   rw [res5] at hrun5
   refine GrowRef.of_run (v := decH r5) ?_ (CoreAfterG.compK (hK2.trans hK4)
