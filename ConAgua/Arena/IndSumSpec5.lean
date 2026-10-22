@@ -1293,6 +1293,26 @@ theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih] <;>
     finish
 
+theorem hbFastW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
+    (m m' : Mem) (a : AState) (i e r : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
+    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hh : H e) (hS : StageR dn vis fe m a) (hM : hbMR m mp0)
+    (hm : hbFastW n m i e = some (r, m')) :
+    ∃ b a', (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)).run a = .ok (b, a') ∧
+      r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
+  · simp [hbFastW, h0] at hm
+  rw [hbFastW_eq n _ i e h0] at hm
+  have hf0 := mclearG_frame hbSch m
+  have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp0 hM h0
+  have key := StageR.frame_hi hS hf0 (by simp) (by
+      intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
+  obtain ⟨b, mp1, a', hrun, hb, hM1, hS1, hg⟩ :=
+    hbGoOK n _ _ a i e _ ∅ coreWalkFuel hn (Nat.le_refl _) hm key.1 hh hM0
+  refine ⟨b, a', ?_, hb, ⟨mp1, hM1⟩, hS1, key.2.trans hg⟩
+  simp only [ConRon.Arena.hasLooseBVarBFast, StateT.run_bind]
+  rw [hrun]
+  rfl
+
 section hbCensus2
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
@@ -1317,21 +1337,8 @@ theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NI
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (hbFast_spec p hv hf hput hins hgo hcl hp n s₀ i e) ?_
   rintro r s' ⟨hl, hm⟩
-  by_cases h0 : rdW (s₀.mem.arr64 CTL) hbSch.cs + 2 = 0
-  · simp [hbFastW, h0] at hm
-  rw [hbFastW_eq n _ i e h0] at hm
-  have hf0 := mclearG_frame hbSch s₀.mem
-  have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR s₀.mem mp0 hM h0
-  have key := StageR.frame_hi hS hf0 (by simp) (by
-      intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
-  have hS0 := key.1
-  obtain ⟨b, mp1, a', hrun, hb, hM1, hS1, hg⟩ := hbGoOK n _ _ a₀ i e _ ∅ coreWalkFuel hn (Nat.le_refl _) hm hS0 hh hM0
-  have hrun' : (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)).run a₀ = .ok (b, a') := by
-    simp only [ConRon.Arena.hasLooseBVarBFast, StateT.run_bind]
-    rw [hrun]
-    rfl
+  obtain ⟨b, a', hrun', hb, hM1, hS1, hg⟩ := hbFastW_ok n _ _ a₀ i e _ mp0 hn hh hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  have hg0 := key.2
-  exact ⟨hl, hok, by rw [hres]; exact hb, ⟨mp1, hM1⟩, by rw [hst]; exact hS1, hg0.trans hg⟩
+  exact ⟨hl, hok, by rw [hres]; exact hb, hM1, by rw [hst]; exact hS1, hg⟩
 
 end hbCensus2
