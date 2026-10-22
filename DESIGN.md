@@ -5520,3 +5520,10 @@ said otherwise.
   proof step (no pattern). No statement changed.
 - **Before/after.** `natShr_spec` 60.9 s → no profiler step over 1 s; the slow goal 52 s → < 2 s;
   module 111 s → 25 s (Lake, contended); grind in the whole file 7.9 s.
+
+### `Scan/Records.lean` split (2270 lines)
+
+Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
+lines), `RecordsSpec.lean` the `specs` section (941 lines, same namespace, names and statements;
+it repeats the local `attribute [local lang_grind] boolEndN`). `Scan/Line.lean` and the root
+import `RecordsSpec`.
