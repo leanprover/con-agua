@@ -360,6 +360,7 @@ leading `∀`s off `c.type`, then `member_idx_at` the head of what remains. -/
 @[l_impl ConRon.Arena.ctorMember?]
 def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl, body, hd, rok, ri) {
   nF := IW.u64[c + 1];
+  if nP + nF < nP { abort };
   ty := EREC.u64[IW.u64[c] + 3];
   (ok, bo, bl, body) := call strip_pis(nP + nF, ty);
   if ok == 0 { return (0, 0) };
@@ -369,42 +370,44 @@ def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl
 }
 
 /-- `block_groups_one(no, nl, lvls, nP, co, cl, m)`: one group of `blockGroups`'s general case,
-member `m`'s constructors (`ctor_member` called once per candidate, in list order). -/
+member `m`'s constructors: `cs.filterM` (`ctor_member` called once per candidate, in list order,
+then the rest; recursive, lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:261-275 ConRon.Arena.blockGroups
 @[l_impl ConRon.Arena.blockGroups]
-def blockGroupsOne : FunDecl := lfn (no, nl, lvls, nP, co, cl, m) locals (go, gj, j, c, ok, t) {
-  go := call iw_alloc(cl);
-  gj := 0;
-  j := 0;
-  while j < cl {
-    c := IW.u64[co + j];
-    (ok, t) := call ctor_member(no, nl, lvls, nP, c);
-    if ok != 0 && t == m { IW.u64[go + gj] := c; gj += 1 };
-    j += 1
-  };
-  return (go, gj)
+def blockGroupsOne : FunDecl := lfn (no, nl, lvls, nP, co, cl, m) locals (c, ok, t, go, gl) {
+  if cl == 0 { return (0, 0) };
+  c := IW.u64[co];
+  (ok, t) := call ctor_member(no, nl, lvls, nP, c);
+  (go, gl) := call block_groups_one(no, nl, lvls, nP, co + 1, cl - 1, m);
+  if ok != 0 && t == m { (go, gl) := call sl_cons(c, go, gl) };
+  return (go, gl)
+}
+
+/-- `block_groups_go(no, nl, lvls, nP, co, cl, m, k)`: the groups of members `m, …, k - 1`
+(`(List.range' m (k - m)).mapM`, in order: this member's group, then the rest). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:261-275 ConRon.Arena.blockGroups
+@[l_impl ConRon.Arena.blockGroups]
+def blockGroupsGo : FunDecl := lfn (no, nl, lvls, nP, co, cl, m, k) locals (go, gl, h0, ho, hl) {
+  if k <= m { return (0, 0) };
+  (go, gl) := call block_groups_one(no, nl, lvls, nP, co, cl, m);
+  h0 := call rec2(go, gl);
+  (ho, hl) := call block_groups_go(no, nl, lvls, nP, co, cl, m + 1, k);
+  (ho, hl) := call sl_cons(h0, ho, hl);
+  return (ho, hl)
 }
 
 /-- `block_groups(no, nl, lvls, nP, k, co, cl)`: `blockGroups`: at one member, `[cs]` with no
 calls at all (the twin's short circuit); else one `block_groups_one` per member `0, …, k - 1`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:261-275 ConRon.Arena.blockGroups
 @[l_impl ConRon.Arena.blockGroups]
-def blockGroups : FunDecl := lfn (no, nl, lvls, nP, k, co, cl) locals (hdrs, h0, m, go, gj) {
+def blockGroups : FunDecl := lfn (no, nl, lvls, nP, k, co, cl) locals (h0, hdrs, hl) {
   if k == 1 {
-    hdrs := call iw_alloc(1);
     h0 := call rec2(co, cl);
-    IW.u64[hdrs] := h0;
-    return (hdrs, 1)
+    (hdrs, hl) := call sl_cons(h0, 0, 0);
+    return (hdrs, hl)
   };
-  hdrs := call iw_alloc(k);
-  m := 0;
-  while m < k {
-    (go, gj) := call block_groups_one(no, nl, lvls, nP, co, cl, m);
-    h0 := call rec2(go, gj);
-    IW.u64[hdrs + m] := h0;
-    m += 1
-  };
-  return (hdrs, k)
+  (hdrs, hl) := call block_groups_go(no, nl, lvls, nP, co, cl, 0, k);
+  return (hdrs, hl)
 }
 
 /-- `block_rec_lps_one(rc, wo, wl)`: whether recursor record `rc`'s `cvR.levelParams` equal the
@@ -870,7 +873,7 @@ def indPartsFns : Prog :=
    ("block_shape_major_idx_at", blockShapeMajorIdxAt), ("block_shape_with_sort", blockShapeWithSort),
    ("block_parts_complete", blockPartsComplete), ("block_split_recs", blockSplitRecs),
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
-   ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne),
+   ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne), ("block_groups_go", blockGroupsGo),
    ("block_groups", blockGroups), ("block_rec_lps_one", blockRecLpsOne), ("block_rec_lps_ok_go", blockRecLpsOkGo), ("block_rec_lps_ok", blockRecLpsOk),
    ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
    ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts", blockMemberCounts),
