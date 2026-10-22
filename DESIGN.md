@@ -7401,7 +7401,7 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `lvLookupG EREC POOL` (keys an `EREC` name slice, values a `POOL` level slice: `field_sort_zero`,
   `PropRead`) and `lv_spw` to `PropRead`'s heap variant; one name, one body project-wide, so a
   different instance needs its own name.
-* `KnotCallees` left (9): `whnfCoreStep`, `whnfStep`, `proofIrrel`, `towerSlots`,
+* `KnotCallees` left (8, after lane `whnf3` landing 4 gave `towerSlots`): `whnfCoreStep`, `whnfStep`, `proofIrrel`,
   `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
 
 ### Landing 4: `tower_slots_all` on the real `find_proj`; the plan for `CoreS.den`
