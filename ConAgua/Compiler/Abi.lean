@@ -34,6 +34,9 @@ def abiStack : Nat := 2 ^ 30
 /-- The fuel the stub passes to the trampoline. -/
 def abiFuel : Nat := 2 ^ 62 - 1
 
+/-- Every word array gets its whole slot. -/
+def abiWords : Nat := 2 ^ 32
+
 /-- The slot of byte array `a ≥ 2`. -/
 def abiSlot8 (a : Nat) : Nat := a
 /-- The slot of word array `a`. -/
@@ -73,9 +76,6 @@ def abiStub (tab : Tab) : Program :=
   ((romWordList tab.rom).zipIdx.flatMap fun (w, i) => abiStoreW (tab.romBase.toNat + 8 * i) w) ++
   [movRR .rdi .r8, movRI .rsi abiFuel.toUInt64, jmpL enterL,
    .label abiDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
-
-/-- Every word array gets its whole slot. -/
-def abiWords : Nat := 2 ^ 32
 
 /-- The stub's symbols for the harness: `ca_region_size` (the least `base_len`), `ca_slot` and
 `ca_w0` (the offset of word array `0`; for diagnostics). -/
