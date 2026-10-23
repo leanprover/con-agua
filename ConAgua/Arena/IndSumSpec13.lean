@@ -387,8 +387,8 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 /-- **`check_sum_ctors` refines `checkSumCtors .verified`** (through `check_sum_ctor`'s stubs), the
 pre-block environment the restriction of `fe` to `vis0`: from the stage relation and the
 constructor list decoded below the tops, the new constructor list and the sorts lists as fresh
-pointer slices decoded below the tops. -/
-@[refines ConRon.Arena.checkSumCtors]
+pointer slices decoded below the tops. Under `StageR`; the census link is `checkSumCtors_refinesC`
+(`IndT/Sum5.lean`). -/
 theorem checkSumCtors_refines (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL : Word) (lps : List NIdx) (cvTa : IConstantVal)
