@@ -339,7 +339,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   rw [c3, icpK3_some] at h
   obtain ⟨s3, hs3, -, hok3, hS3, hg3, hca3, hss3, hcb3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (checkBlockCtors_refines p hP.ctors (n + 2) _ a2 dn (r1.headD 0) fe1 _ _ _ _ _ bs1 bs1.members cvTas
-      hS2 hbs2 hsrc2 hmss hcv2) c3
+      hS2 hbs2 hsrc2 hmss hcv2 hA2) c3
   simp only at hs3 hS3 hg3 hca3 hss3 hcb3
   subst hs3
   have hrun3 := AM.run_of_ok _ a2 hok3

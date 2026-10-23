@@ -27,7 +27,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## `class_rule_ok_domains`: `rbs.allM (constsResolveFFast fe₀)`, the model of `idx_args_resolve` -/
 
 theorem classRuleOkDomains_spec (p : Prog)
-    (hp : p.lookup "class_rule_ok_domains" = some classRuleOkDomains) (n : Nat) :
+    (hp : p.lookup "class_rule_ok_domains" = some classRuleOkDomains) (hcr : CrfF p) (n : Nat) :
     ∀ (s₀ : St) (v o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rule_ok_domains" [v, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ iarW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
@@ -41,7 +41,7 @@ theorem classRuleOkDomains_spec (p : Prog)
     simp only [callFn, classRuleOkDomains]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "consts_resolve_ffast" n, ih] <;>
+        crfF_spec p hcr n, ih] <;>
       finish (gen := 20)
 
 /-- The twin's `allM` is `idxArgsResolve`. -/
@@ -52,24 +52,6 @@ theorem allM_resolve_eq (fe : IFEnv) : ∀ xs : List EIdx,
   | nil => rfl
   | cons x xs ih =>
     simp only [List.allM_cons, idxArgsResolve, ih]
-
-/-- **`class_rule_ok_domains`** is `rbs.allM (constsResolveFFast fe₀)` (`fe₀ = feR.restrictTo visT`, the
-view `visT`), through the stub `consts_resolve_ffast`. A piece of `classRuleOk`. -/
-theorem classRuleOkDomains_refines (p : Prog)
-    (hp : p.lookup "class_rule_ok_domains" = some classRuleOkDomains) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (visT o l : Word) (xs : List EIdx)
-    (hS : StageR dn visT fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
-    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rule_ok_domains" [visT, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (fun b => constsResolveFFast fe₀ b)) a₀ ∧
-      KeepPost dn visT fe₀ decW0B s₀.mem s'.mem (AM.st (xs.allM (fun b => constsResolveFFast fe₀ b)) a₀) r
-        (AM.res (xs.allM (fun b => constsResolveFFast fe₀ b)) a₀); ⊤⦄ := by
-  rw [allM_resolve_eq]
-  refine triple_post (classRuleOkDomains_spec p hp n s₀ visT o l) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost⟩ := iarW_ok dn fe₀ n _ _ a₀ visT o l xs r hm hS hd hb ht
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
 
 /-! ## `class_key_of_closed`: `ds.allM` of the `bvarB`/`fvarB` closedness test -/
 
