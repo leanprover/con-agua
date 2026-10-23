@@ -17,7 +17,7 @@ L run's memory facts (array sizes kept, `CoreMemos` after, the pin flag kept).
 set_option linter.deprecated false
 
 open ConRon.Arena
-open ConRon.Bridge.Inductives (PStep PSpec PSpecP PSpecL)
+open ConRon.Bridge.Inductives (PStep PSpec PSpecP PSpecL CSpec)
 
 namespace L.Ind
 
@@ -95,6 +95,20 @@ theorem RSim.liftPL {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Me
   obtain ⟨x, a', hr, hS, hq⟩ := h b hb
   obtain ⟨hs, hR⟩ := hsp a a' x hC.check.state hC.check.caches.readL hP hr
   exact ⟨x, a', hr, hC.of_pstep hS (hk b hb) hs, hq, hR, hs⟩
+
+/-- **A `StageT` `RSim` of a core-calling callee is a `StageC` `RSim`**, by con-ron's `CSpec` of
+the twin (`CheckOK` after, from its `CoreStep`). -/
+theorem RSim.liftC {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
+    {Q : β × Mem → AState → α → Prop} {P : EStore → Prop} {R : EStore → α → Prop}
+    (hC : StageC dn vis fe env m a)
+    (h : RSim o op a (fun b a' x => StageT dn vis fe b.2 a' ∧ Q b a' x))
+    (hsp : CSpec V env fe P op R) (hP : P a.store) :
+    RSim o op a (fun b a' x => StageC dn vis fe env b.2 a' ∧ Q b a' x ∧ R a'.store x ∧
+      ConRon.Bridge.CoreStep V env fe a a') := by
+  intro b hb
+  obtain ⟨x, a', hr, hT, hq⟩ := h b hb
+  obtain ⟨hs, hR⟩ := hsp a a' x hC.check hP hr
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hq, hR, hs⟩
 
 end lift
 
