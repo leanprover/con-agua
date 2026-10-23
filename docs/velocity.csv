@@ -198,4 +198,6 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,front4,opus,30,10,"l_model: callees with several results (effL), models with Lean parameters; hoist_targets_go/hoist_nat_op_ground/nat_op_record/slice_has models"
 2026-10-23,pipeline,opus,8,3,"landing 1: check_of_stages / pipelineRefines_of_stages / pipelineRefines_checkerProg (the 8 stage specs as named hypotheses over relations PipeRels)"
 2026-10-23,front4,opus,85,15,"hoist refinement: hoist_nat_op_ground refines_part hoistNatOpGround (closure key lemma, walk/index/order/nat via 4 helpers); phase 1c 53/18/2 (was 35/36/2)"
+2026-10-23,front4,opus,70,20,"prepare_prelude as self-recursions (models generated); refines preparePrelude (frontOf/pick/rest/rewrite; 3 helpers); phase 1c 62/10/1 (was 53/18/2)"
 2026-10-23,pipeline,opus,40,15,"landing 2: builtin_prelude on the shared parse state (input-only renaming, PDECL, front_reset, prelude_join; fixes PNID/MCM clash at 208); preSim stated"
+2026-10-23,front4,opus,25,25,"prelude_join merged as self-recursions + pPJoin_ok; preparePrelude_refines from PDECL+DECL; lane close (open list in journal)"
