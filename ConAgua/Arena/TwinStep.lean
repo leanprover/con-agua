@@ -28,6 +28,199 @@ open ConRon.Arena
 
 namespace L.Arena
 
+/-! ## The twin's half of `TwinOK` from the fold's invariant
+
+Every part of `TwinOK` that speaks of the twin state alone follows from con-ron's fold invariant
+(`FoldOK`, which `TwinFold` carries at every loop head): the readback caches from `CacheOK`, the name
+store's well-formedness from `StateOK`, the stored levels' readbacks from the store's
+well-formedness (a handle with a view denotes: con-ron's `denoteL_of_view`), the pins' from
+`PinsOK`, the environment's level parameters and recursor levels from `IFEnvOK.hit`. What is left
+is the memory's half (`TwinMem`: three sizes, the core's memos) and the record decoder's agreement
+with the name store (`dnN`). The projection tables' readbacks are the environment's tables'
+(`StoreDen.proj`, lane `loopt2`), from `IFEnvOK.hit` and `IFEnvOK.proj`. -/
+
+/-- **The memory's half of `TwinOK`**, and the name decoder's agreement with the store. -/
+structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : Prop where
+  erec : (m.arr64 EREC).size < 2 ^ 63
+  spn : (m.arr64 SPN).size < 2 ^ 63
+  bstk : (m.arr64 145).size < 2 ^ 63
+  memos : CoreMemos m
+  dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
+
+/-- The memory's half of a `TwinOK`. -/
+theorem TwinOK.mem {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
+    (h : TwinOK dn m a fe) : TwinMem dn m a :=
+  ⟨h.erec, h.spn, h.bstk, h.memos, h.den.dnN⟩
+
+/-- **The memory's half across a step** that grows the name store (every old name keeps its
+readback), keeps the arrays' sizes and the core memos. -/
+theorem TwinMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+    (h : TwinMem dn m a)
+    (hN : ∀ (k : NIdx) (x : ConLeche.Name), denoteN a.store.ns k = some x →
+      denoteN a'.store.ns k = some x)
+    (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hmem : CoreMemos m') :
+    TwinMem dn m' a' :=
+  ⟨by rw [hsz]; exact h.erec, by rw [hsz]; exact h.spn, by rw [hsz]; exact h.bstk, hmem,
+    fun k x e => hN k x (h.dnN k x e)⟩
+
+theorem denoteNList_mapM {st : NStore} :
+    ∀ {l : List NIdx} {xs : List ConLeche.Name}, ConRon.Arena.Frontend.denoteNList st l = some xs →
+      l.mapM (denoteN st) = some xs
+  | [], xs, h => by simp [ConRon.Arena.Frontend.denoteNList] at h; subst h; rfl
+  | c :: cs, xs, h => by
+    simp only [ConRon.Arena.Frontend.denoteNList] at h
+    cases h1 : denoteN st c with
+    | none => rw [h1] at h; simp at h
+    | some x =>
+      cases h2 : ConRon.Arena.Frontend.denoteNList st cs with
+      | none => rw [h1, h2] at h; simp at h
+      | some ys =>
+        rw [h1, h2] at h
+        simp only [Option.some.injEq] at h
+        subst h
+        simp [List.mapM_cons, h1, denoteNList_mapM h2]
+
+theorem denoteCV_lps {st : EStore} {cv : IConstantVal} {c : ConLeche.ConstantVal}
+    (h : ConRon.Arena.Frontend.denoteCV st cv = some c) :
+    ∃ ks, cv.levelParams.mapM (denoteN st.ns) = some ks := by
+  simp only [ConRon.Arena.Frontend.denoteCV] at h
+  cases h2 : ConRon.Arena.Frontend.denoteNList st.ns cv.levelParams with
+  | none => rw [h2] at h; split at h <;> simp_all
+  | some ks => exact ⟨ks, denoteNList_mapM h2⟩
+
+theorem denoteLList_mem {ls : LStore} :
+    ∀ {us : List LIdx} {xs : List ConLeche.Level}, denoteLList ls us = some xs →
+      ∀ u ∈ us, ∃ L, denoteL ls u = some L
+  | [], _, _, u, hu => absurd hu (by simp)
+  | v :: vs, xs, h, u, hu => by
+    simp only [denoteLList, opt2_eq_some_iff] at h
+    obtain ⟨a, b, ha, hb, -⟩ := h
+    rcases List.mem_cons.mp hu with rfl | hu
+    · exact ⟨a, ha⟩
+    · exact denoteLList_mem hb u hu
+
+theorem denoteRules_mem {st : EStore} :
+    ∀ {rs : List IRecRule} {xs : List ConLeche.RecRule},
+      ConRon.Arena.Frontend.denoteRules st rs = some xs →
+      ∀ r ∈ rs, ∀ lvls pins, r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL st.ls u = some L
+  | [], _, _, r, hr, _, _, _, _, _ => absurd hr (by simp)
+  | q :: qs, xs, h, r, hr, lvls, pins, hf, u, hu => by
+    simp only [ConRon.Arena.Frontend.denoteRules] at h
+    cases h1 : ConRon.Arena.Frontend.denoteRule st q with
+    | none => rw [h1] at h; simp at h
+    | some y =>
+      cases h2 : ConRon.Arena.Frontend.denoteRules st qs with
+      | none => rw [h1, h2] at h; simp at h
+      | some ys =>
+        rcases List.mem_cons.mp hr with rfl | hr
+        · simp only [ConRon.Arena.Frontend.denoteRule, hf, ConRon.Arena.Frontend.denoteFire] at h1
+          cases h3 : denoteLList st.ls lvls with
+          | none => rw [h3] at h1; split at h1 <;> simp_all
+          | some ls => exact denoteLList_mem h3 u hu
+        · exact denoteRules_mem h2 r hr lvls pins hf u hu
+
+/-- A denoting projection table's structure sort, guards and level parameters read back. -/
+theorem denoteProjTable_parts {st : EStore} {t : IProjTable} {pt : ConLeche.ProjTable}
+    (h : ConRon.Arena.Frontend.denoteProjTable st t = some pt) :
+    (∃ l, denoteL st.ls t.structSort = some l) ∧
+    (∃ gs, denoteLList st.ls t.guards = some gs) ∧
+    (∃ ks, ConRon.Arena.Frontend.denoteNList st.ns t.levelParams = some ks) := by
+  unfold ConRon.Arena.Frontend.denoteProjTable at h
+  cases h1 : denoteN st.ns t.structName <;>
+    cases h2 : ConRon.Arena.Frontend.denoteNList st.ns t.levelParams <;>
+    cases h3 : denoteN st.ns t.ctor <;> simp only [h1, h2, h3] at h <;> try cases h
+  cases h4 : denoteL st.ls t.structSort <;>
+    cases h5 : ConRon.Arena.Frontend.denoteEArray st t.bodies <;>
+    cases h6 : denoteLList st.ls t.guards <;> simp only [h4, h5, h6] at h <;> try cases h
+  exact ⟨⟨_, rfl⟩, ⟨_, rfl⟩, ⟨_, rfl⟩⟩
+
+theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInfo}
+    {cv : IConstantVal} {a : AState} (ht : ci.isTowerEntry = false)
+    (hd : ConRon.Arena.Frontend.denoteCI st ci = some d)
+    (hcv : ci.toConstantVal.run a = .ok (cv, a)) :
+    ∃ y, ConRon.Arena.Frontend.denoteCV st cv = some y := by
+  have key : ∀ v : IConstantVal, ci.toConstantVal.run a = .ok (v, a) → cv = v := fun v e => by
+    rw [hcv] at e; cases e; rfl
+  cases ci with
+  | projInfo t => simp [IConstantInfo.isTowerEntry] at ht
+  | axiomInfo v =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+  | thmInfo v =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+  | ctorInfo v _ _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+  | defnInfo v _ _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
+  | indInfo v _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
+  | recInfo v _ _ _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
+
+/-- **`TwinOK` from con-ron's check invariant** (`CheckOK`: the store's well-formedness, the
+caches, the pins, the environment index) and the memory's half. Every point of a step where
+con-ron's bridge lemmas give `CheckOK` (they carry it across the twin's operations) has `TwinOK`
+once the memory's half is kept. -/
+theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
+    {env : ConLeche.Env} (hok : ConRon.Bridge.CheckOK .verified env fe a) (hm : TwinMem dn m a) :
+    TwinOK dn m a fe := by
+  have hwf := hok.state.wf
+  obtain ⟨rk, hw⟩ := hwf
+  have hw' : StoreWF' a.store := StoreWF'.of_wf ⟨rk, hw⟩
+  obtain ⟨rk', hw''⟩ := hw'
+  have hLs : LsStoreWF' a.store.lss := hw''.lss
+  have hL : LStoreWF' a.store.ls := hLs.ls
+  have hc := hok.caches
+  have hp := hok.pins
+  have hi := hok.ienv
+  refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
+  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
+    fun c ci cv hf ht hcv => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
+    fun us hus => ?_, hm.dnN, fun c cv mI rP rules hf r hr lvls pins hfi u hu => ?_⟩
+  · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
+  · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
+    obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
+    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
+    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
+  · obtain ⟨-, d, -, hd, -⟩ := hi.hit c ci hf
+    obtain ⟨y, hy⟩ := denoteCI_cv ht hd (hcv a)
+    exact denoteCV_lps hy
+  · obtain ⟨-, d, -, hd, -⟩ := hi.hit c _ hf
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨pt, hpt, -⟩ := hd
+    obtain ⟨hss, ⟨gs, hgs⟩, ⟨ks, hks⟩⟩ := denoteProjTable_parts hpt
+    have hlen := (hi.proj c tbl hf).guards
+    refine ⟨hss, fun i hi' => denoteLList_mem hgs _ ?_, ⟨ks, denoteNList_mapM hks⟩⟩
+    have hlt : i < tbl.guards.length := by omega
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hlt, Option.getD_some]
+    exact List.getElem_mem hlt
+  · obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hus
+    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
+    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
+  · obtain ⟨-, d, -, hd, -⟩ := hi.hit c _ hf
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    cases h2 : ConRon.Arena.Frontend.denoteRules a.store rules with
+    | none => rw [h2] at hd; split at hd <;> simp_all
+    | some ys => exact denoteRules_mem h2 r hr lvls pins hfi u hu
+
+
 /-- **`TwinOK` across a twin step that grows the store**: the new store well formed, the old one
 extended (`Ext`), the caches and the pins unchanged; the memory's sizes and core memos given. -/
 theorem TwinOK.of_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
@@ -162,5 +355,21 @@ theorem StageS.of_istep {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
   ⟨⟨hS, h.stageT.twin.of_istep hs (by rw [hsz]; exact h.stageT.twin.erec)
       (by rw [hsz]; exact h.stageT.twin.spn) (by rw [hsz]; exact h.stageT.twin.bstk) hM,
     by rw [hP]; exact h.stageT.flag⟩, hs.ok⟩
+
+/-- **The stage relation with con-ron's check invariant** (`CheckOK` at the denoted environment
+`env`) and the memory's half of `TwinOK`: what carries the twin's invariants across operations
+whose `TwinOK` the L side cannot track (store growth after a core call); `TwinOK` from it by
+`TwinOK.of_check` (`StageC.stageT`). -/
+structure StageC (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m : Mem) (a : AState) : Prop where
+  stage : StageR dn vis fe m a
+  check : ConRon.Bridge.CheckOK .verified env fe a
+  mem : TwinMem dn m a
+  flag : pinW m 0 ≠ 0
+
+theorem StageC.stageT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {env : ConLeche.Env} {m : Mem} {a : AState} (h : StageC dn vis fe env m a) :
+    StageT dn vis fe m a :=
+  ⟨h.stage, TwinOK.of_check h.check h.mem, h.flag⟩
 
 end L.Ind
