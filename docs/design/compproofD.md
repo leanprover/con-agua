@@ -73,3 +73,30 @@ and fallback returns now).
 * Step lemmas: `OpReads` gets a register case; `ev_cmpRO`, `ev_aluRI`, `ev_movMW`.
 * `compile_correct`: same statement; the trampoline part splits its code at the argument loads
   (`sim_loadArgs`). `propext`, `Classical.choice`, `Quot.sound`.
+
+Kernel note: `leafAlloc` first ranked the locals with `List.mergeSort` (well-founded recursion):
+the compiled code computed the allocation, but the kernel could not reduce it, so the `asm_lit`
+batch checks of `checkerAsm` failed ("declaration type mismatch"). It now uses a structural
+insertion sort (`rankInsSort`), same order.
+
+## Derived output and checks (after merging master b8d79ab8: slotgrow, abi)
+
+* `checkerAsm` is rebuilt by `asm_lit` itself; `scripts/checker_prog.py --check`: up to date (no
+  template change: the trampoline's argument count is `entryNp p entry` inside the `asm_lit` term).
+  `harness/check-asm.sh`: OK (checker 195 781 instructions match; scan, store, walk OK).
+* `compile_correct`, `checker_x64_accepts`, `checkerAsm_accepts`, `checkerAsm_eq`: `propext`,
+  `Classical.choice`, `Quot.sound`.
+* `Compiler/Tests.lean`: frames are smaller (`sum_to`: 2 words instead of 3), so the small-stack
+  test now has 128 bytes hold five calls, not three.
+* Verdicts: `bench.py --set all --reps 0`, the current checker program compiled by master's and by
+  this compiler: **675 fixtures, 0 disagreements**. `scripts/e2e.py` (before the last merge):
+  407/3/262 (`check`), 391/3/278 (`check_np`) as master; `whnf_core_loop` reports `error` instead
+  of `timeout` (its 2^25 retry ends with a capacity error in under a second with master's compiler too;
+  the same program with both compilers times out at the default capacity).
+
+## Performance (final)
+
+`bench.py --set full --reps 3 --no-conron --no-ref`, the current checker program, master's compiler
+(base) vs this one (load ~22): **0.864× instructions, 0.912× wall** (geometric mean, 18
+fixtures). Init (v4.35.0 export): 422.1 G → 363.0 G instructions (0.86×), 39.2 → 34.4 s.
+c04a 28.3 → 24.5 G, app-lam 66.3 → 58.7 G / 12.8 → 11.7 s, c05b 22.5 → 19.6 G.
