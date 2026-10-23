@@ -159,13 +159,6 @@ theorem nameRecI_spec (n i : Word) (hn : H n) :
     RelAM "name_rec_i" [n, i] (StageR dn vis fe)
       (internNNode (.str (decI n) s!"rec_{i.toNat}")) (KeepPost dn vis fe decW0N) := sorry
 
-/-- `ind_params_ok(nP, off, len)` (the block's constant records, an `IW` list of `EREC`
-pointers). -/
-theorem indParamsOk_spec (nP o l : Word) (blk : List IConstantInfo) :
-    RelAM "ind_params_ok" [nP, o, l]
-      (fun m a => StageR dn vis fe m a ∧ decPL m (fun q => decCI (erA m) dn q) o.toNat l.toNat = some blk)
-      (indParamsOk nP.toNat blk) (KeepPost dn vis fe decW0B) := sorry
-
 /-- A `PropWhen` from its three words (`decPW`'s layout: `0` `never`, `1` `ifAllZero` with the
 names the handle slice `(o, l)` of `a`). -/
 def pwWords (a : Array Word) (t o l : Word) : Option ConLeche.PropWhen :=
