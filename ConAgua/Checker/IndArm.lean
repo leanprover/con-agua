@@ -1,0 +1,78 @@
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.IndArmClosed
+
+/-!
+# The inductive arm's contract at the checker's program (lane `indproofs4`)
+
+`indArmSpec_of` (`Arena/IndArm.lean`) at `checkerProg.subPB bs`: the lookups by `prog_bundle`,
+the write sets from `Checker/IndArmClosed.lean` (carried to the substituted program by
+`closedW_subPB`), the `AbsKeep` facts of the callees that reach no walk from their write set
+(`absKeep_of_closed`). The callees whose closure writes the walk memos (`armAbsWalk`: they reach
+the core or the `instantiate`/`abstract` walks) keep `AbsKeep` as a hypothesis.
+-/
+
+namespace L.Checker
+
+open L L.Rom L.Arena L.Ind L.Compiler
+
+/-- The arm's `AbsKeep` callees whose call closure in `checkerProg` writes the walk memos (arrays
+49‥54, 151‥153, 155; through `ab_put`, `ilm_put`, `ilp_put`, `ilpl_put`, `ilpls_put`, `ws_put`,
+`fl_put`, `lsb_put`, `crm_put`, `apd_put` and their `_clear`s). -/
+def armAbsWalk : List FnName :=
+  ["check_block_ctors", "block_nest_ctx", "check_block_classes", "check_block_agree",
+    "nest_uniform", "check_abs_ctor_sorts_all", "class_read", "check_block_idx_sorts",
+    "class_stream_recs", "classes_nfs", "classes_ctors", "gen_rec_check_former_tys_c",
+    "check_constant_val"]
+
+theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCallees ++ ["block_raw_rec"],
+    f ∈ armAbsFns ∨ f ∈ armAbsWalk := by decide +kernel
+
+/-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
+callees that reach the walks. -/
+theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
+    (hpre : bs = romData ++ bs.drop romData.length)
+    (hK : ∀ f ∈ armAbsWalk, AbsKeep (Prog.subPB bs checkerProg) f) :
+    ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
+  have hrom := checkerProg_romRefsPB bs hr hpre
+  have hkp : KnotStageProg (Prog.subPB bs checkerProg) := by
+    prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
+      checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
+      (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
+      closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
+      hrom]
+  have hV : ValProg (Prog.subPB bs checkerProg) := by
+    prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
+      checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
+      (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
+      closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
+      hrom]
+  have P : CidProg (Prog.subPB bs checkerProg) := by prog_bundle [hrom]
+  have hk : ∀ f ∈ passKeepCalleesC ++ tailKeepCallees ++ ["block_raw_rec"],
+      AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
+    (armAbs_split f hf).elim
+      (absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free)
+      (hK f)
+  exact indArmSpec_of hkp hV (hK _ (by decide)) P
+    (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armRc) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armTa) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armCid) (by decide +kernel)
+    (fun f hf => hk f (by simp [hf]))
+    (fun f hf => hk f (by simp [hf]))
+    (hk _ (by simp))
+    (by decide +kernel) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armRcHb) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armMa) (by decide +kernel)
+    (closedW_subPB bs checkerProg_armMc) (by decide +kernel)
+
+/-- **The declaration loop is the pipeline's last stage**, from `AbsKeep` of the arm's callees
+that reach the walks (`loopStage_of_rom`, `indArmSpec_checker`). -/
+theorem loopStage_of_walkKeep
+    (hK : ∀ bs, RomOK bs → bs = romData ++ bs.drop romData.length →
+      ∀ f ∈ armAbsWalk, AbsKeep (Prog.subPB bs checkerProg) f) :
+    LoopStage checkerProg checkerRels :=
+  loopStage_of_rom fun bs hr hpre => indArmSpec_checker bs hr hpre (hK bs hr hpre)
+
+end L.Checker
