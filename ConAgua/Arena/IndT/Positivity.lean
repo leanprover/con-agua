@@ -32,8 +32,10 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `block_nest_ctx` with the real `open_pis_at_fvars_f` -/
 
-theorem opfA_stage : ∀ b ∈ opfA, b < 201 ∨ 208 < b := by decide +kernel
-theorem opfC_stage : ∀ x ∈ opfC, x.toNat < 202 ∨ 219 < x.toNat := by decide +kernel
+theorem opfA_stage : ∀ b ∈ opfA, b < 201 ∨ 208 < b := by
+  simp [opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP]
+theorem opfC_stage : ∀ x ∈ opfC, x.toNat < 202 ∨ 219 < x.toNat := by
+  simp [opfC, instListC, mkC, instC, liftC]
 
 /-- **The model of `block_nest_ctx`, its `open_pis_at_fvars_f` call read through `cR`**
 (`bncW` is the stubs' reading) (at exec fuel `n + 2`). -/
