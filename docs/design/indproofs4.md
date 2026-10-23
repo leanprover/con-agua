@@ -97,3 +97,31 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
 * Census: phase 8 95 proven / 110 sorry (from 90 / 115): `targetMajorAt`, `targetMajorDefault`,
   `BlockShape.nestCtx`, `paramLevels`, `blockRecNameSetOk` proven; phase 2 `NIdx.isProjFnShape` proven
   (`isProjFnShape_refines`).
+
+
+## Helper `abs`: `abstract1_fast` (the `AbsOK` memo predicate)
+
+* **Model** `abF := callF abProg "abstract1_fast"` (`Arena/IndRealAbs.lean`; `abProg` = the adapter
+  `abstract1FastA`, the `abstract1` walk, `abs_entry`; write set `absA`/`absC`), `abF_spec`,
+  `abF_frame`, and **`abF_ok`**: `RelW abF [CWF, e, d, k] (StageR ∧ AbsOK) (abstract1Fast …)
+  (KeepPost … ∧ AbsOK)`. The twin's run from `a` is definitionally the run from `a` with any
+  `abs1C` (the entry clear), so `absEntry_refines` applies at `a` with `abs1C := mp` (`ArenaD.memo_irrel`).
+  Contract `abstract1Fast_spec` deleted; bundle `AbF` (`Checker/IndRealAbs.lean`: `checkerProg_ab`).
+* **`AbsOK m := ∃ mp, MemoRG ⟨49, 48⟩ lfKey decE m mp`** (`IndStubs.lean`, with the new sorry contract
+  `stubM_absOK`: every stub keeps it; true of the real functions — the core keeps `CoreMemos`).
+  `TwinOK.absOK`/`StageT.absOK` (`Arena/IndRealAbsT.lean`): `CoreMemos` contains it, so the `StageT`
+  migration gets it for free.
+* **Threading.** `AbsOK` as a hypothesis and a post through every theorem whose proof reaches an
+  `abstract1_fast` call (≈80, from `abstractPrefix`/`closeTelescope`/`closeLams` up to
+  `checkBlockTeles`/`Inds`/`Tail`/`Pass`/`Positivity` and the nest-positivity block `NbOK`, whose eleven
+  statements now carry `PosMR m → AbsOK m → … ∧ PosMR m' ∧ AbsOK m'`). Across a callee: `AFr m m'`
+  (`AbsOK m → AbsOK m'`) from the model, by `afr_auto h [callee lemmas]` (mirror of `mfr_auto`) and
+  `afr_set` (chains of `set64` apart from array 49/`CTL[48]`); positivity models' `AFr` lemmas in
+  `Arena/IndRealAbsPos.lean` (generated from their `MFr` frames, plus the walks `noGoW`/`dpGoW`, …).
+  `RSim.withF`/`Sim.withFr` add the fact to a chain's post (`IndRealAbsSim.lean`; kept out of
+  `IndRealAbs.lean`: `RecSim`/`IndRealNames` make `fuelW`/`inferTypeCore_spec` ambiguous in the
+  declaration files).
+* **Program facts** at the install layers: `AbsKeep p f` (every run of `f` in `p` keeps `AbsOK`)
+  for the `callW` callees outside the cascade (`indsKeepCallees`, `posKeepCallees`,
+  `tailKeepCallees`, `passKeepCallees`), taken as hypotheses like `closedA … hbFreeA …`; true of
+  `checkerProg` (from the callees' refinements once they carry `AbsOK`, or from `StageT`).

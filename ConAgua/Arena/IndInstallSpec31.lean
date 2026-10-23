@@ -94,7 +94,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
     {m : Mem} {a : AState} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : BPassR vis fe m q bp)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hM : HbMemo m) (hA : AbsOK m)
-    (hk : ∀ f ∈ tailKeepCallees, AbsKeep p f) :
+    (hkeep : ∀ f ∈ tailKeepCallees, AbsKeep p f) :
     Sim (ictlW p n m bO bL q) (ConRon.Arena.checkBlockTail V block bp) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
   obtain ⟨hdq, hB, hw0, hsrc⟩ := hq
@@ -149,7 +149,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
       obtain ⟨s1, rfl, -, hok, hS1, hg1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
         (checkBlockIdxSorts_refines p hP.idx n _ a dn vis fe _ _ _ _ _ bs bs.members cvTas hS hbsD hsrc hmss hcvs) e1
       exact ⟨_, _, partsRunOfOk hok, hS1, hg1, HbMemo.ofClosed hcl (hfs _ (by decide)) e1 hM,
-        hk _ (by simp [tailKeepCallees]) _ _ _ _ _ e1 hA⟩) ?_
+        hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ e1 hA⟩) ?_
   rintro r1 - m1 a1 ⟨hS1, hg1, hM1, hA1⟩
   rw [ictlK1_some]
   -- `cons_block_ctors` (the twin's `fe₂`, a pure function)
@@ -162,15 +162,15 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   obtain ⟨s2, rfl, -, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 dn fe _ _ _ vis ctorsAs hS1 hca1) h2
   have hM2 : HbMemo s2.mem := HbMemo.ofClosed hcl (hfs _ (by decide)) h2 hM1
-  have hA2 : AbsOK s2.mem := hk _ (by simp [tailKeepCallees]) _ _ _ _ _ h2 hA1
+  have hA2 : AbsOK s2.mem := hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ h2 hA1
   rw [UInt64.toNat_ofNat_of_lt' (partsShapeWords (IWGrow.refl m) hbsD hq9).2.1] at hS2
   rw [ictlK2_some]
   -- the flush
   dsimp only
   refine Sim.bindK (K := ictlK3 p n bO bL q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl)
-    (Sim.withFr (tailSimFlush hP.flush n hS2 hM2) (fun _ _ e => by
+    (Sim.withFr (F := AbsOK) (tailSimFlush hP.flush n hS2 hM2) (fun _ _ e => by
       obtain ⟨s', rfl, -, -, hmem⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩) (flushCaches_spec p hP.flush n _) e
-      rw [hmem]; exact AFr.of_frame (flushMem_frame _) hA2)) ?_
+      rw [hmem]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA2)) ?_
   rintro - - m3 a3 ⟨⟨hS3, hg3, hM3⟩, hA3⟩
   rw [ictlK3_some]
   have hg03 := (hg1.trans hg2).trans hg3
@@ -230,7 +230,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
         cls cvTas block hS3 hpre) (fun r s' h => by obtain ⟨-, hok, hS', hg, hd⟩ := h; rw [hnb] at hok hS' hd; exact ⟨hok, hS', hg, hd⟩)) k)
       (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)
   refine Sim.bindK (K := ictrK5 p k q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl)
-    (Sim.withFr hrec (fun _ _ e5 => hk _ (by simp [tailKeepCallees]) _ _ _ _ _ e5 hA3)) ?_
+    (Sim.withFr hrec (fun _ _ e5 => hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ e5 hA3)) ?_
   rintro r5 ⟨fe2b, outs⟩ m5 a5 ⟨⟨⟨hS5, hg5, hd5⟩, hM5⟩, hA5⟩
   dsimp only
   rw [ictrK5_some, hS2.1.env.vis]
@@ -252,7 +252,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m6 m' ∧ HbMemo m' ∧ AbsOK m')
     (fun r m' e7 => by
-      have hA7 := hk _ (by simp [tailKeepCallees]) _ _ _ _ _ e7 hA6
+      have hA7 := hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ e7 hA6
       obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨m6, Locals.init []⟩)
         (ctb_spec p hP.tabs.tabs k _ _ _ _ _ _ _ _ _) e7
       obtain ⟨x, a', h1, h2, h3, h4⟩ := ctbW_sim hP.tabs dn (UInt64.ofNat pw) bs k m6 a6 (r6.headD 0) fe3 _ _ _ _ _

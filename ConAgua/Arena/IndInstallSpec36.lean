@@ -315,7 +315,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   have hP2 : PosMR s2.mem := by
     rw [hfm]; exact hP1.fr (MFr.of_frame (flushMem_frame s1.mem) (by simp) (by
       intro x hx; left; have := flushCtl_lt x hx; omega))
-  have hA2 : AbsOK s2.mem := by rw [hfm]; exact AFr.of_frame (flushMem_frame s1.mem) hA1
+  have hA2 : AbsOK s2.mem := by rw [hfm]; exact AFr.of_frame (flushMem_frame s1.mem) (by decide) (by decide) hA1
   generalize ha2 : ({ a1 with caches := Caches.empty } : AState) = a2 at hS2
   have hg12 := hg2
   -- the constructors

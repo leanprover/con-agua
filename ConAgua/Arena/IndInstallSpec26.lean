@@ -24,7 +24,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- Add a fact about the memory after, known from the model's run. -/
 /-! ## `check_struct_proj_table`, keeping the memos -/
 
 /-- **`tblW_ok` with the memo frame**: the install writes outside the memo region. -/

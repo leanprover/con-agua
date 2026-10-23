@@ -256,8 +256,8 @@ abbrev decEL : Mem → List Word → List EIdx → Prop := decRL (fun m => decHL
 
 theorem pinternW_afr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : AFr m m' := by
   rw [pinternW_eq] at h
-  exact AFr.of_frame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h) (by simp [paramSch, PREC, PSLOT]; decide)
-    (by simp [paramSch]; decide)
+  exact AFr.of_frame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h) (by simp [paramSch, PREC, PSLOT])
+    (by simp [paramSch])
 
 theorem plgW_afr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, h => by simp [plgW] at h
@@ -288,7 +288,7 @@ theorem crgW_afr {N : Nat} {m m' : Mem} {visR cvR gen : Word} {r : List Word}
   cases N with
   | zero => simp [crgW] at h
   | succ N =>
-  simp only [crgW, crgK0.eq_def, crgK1.eq_def, crgK2.eq_def, crgK3.eq_def] at h
+  simp only [crgW, crgK0.eq_def, crgK1.eq_def, crgK2.eq_def, crgK3.eq_def, crgK4.eq_def] at h
   afr_auto h [lbbF_afr, hffF_afr, cvLpsA_afr, stub_afr]
 
 theorem cruleW_afr {N : Nat} {m m' : Mem} {visT visR cvR n gen : Word} {r : List Word}
