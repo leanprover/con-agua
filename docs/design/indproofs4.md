@@ -128,3 +128,24 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
   (`IndPosSpec2`: every stored `ctorInfo` has `nPc + nF < 2^64`). If `FoldOK` implies them, a
   pointer to the lemma suffices; otherwise please add them (`CtorSums` could later go away with an
   L wrap guard in `nest_ctor_entry_strip`).
+* Landed as `234f3294` (checkBlock; helper `cls`'s class group, proven locally).
+
+## `IndArmSpec`'s post `CoreMemos m'` (analysis, 2026-10-23 ~10:00)
+The stage's refinements are `StageR`-level; nothing in them carries `CoreMemos` (the core walks'
+memos, arrays 49/50/52‥54/151‥153). A `StageR` proof of `check_ind_decl` therefore cannot give
+`CoreMemos m'` without one of:
+1. **The `StageT` migration** (the plan's step 3): `StageT` contains `TwinOK.memos : CoreMemos`, the
+   core entry points' `StageT` sims return it, `IndStubsT` contracts return it — but every
+   refinement on the path from `check_ind_decl` down must then be restated under `StageT`.
+2. **An invariant-closure lemma** (generic, L level, as `run_frame`): if every function of a
+   call-closed set `fs` other than a set `E` writes outside `P`'s footprint, `P` is stable under such
+   frames, and every returning call of an `E` function from a `P` memory ends in a `P` memory, then
+   every returning call of an `fs` function keeps `P`. With `P := CoreMemos` and `E` := the core
+   entry points and the memo walks that write the core arrays (`abs_entry`, the `instLP` walk …),
+   `CoreMemos m'` follows from a write-set fact of `check_ind_decl`'s closure plus `CoreMemos`
+   preservation by `E`. The catch: `E`'s preservation must hold from any `CoreMemos` memory (the
+   walks clear by epoch and keep `MemoRG`; for `whnf_top` & co. it needs to be extracted from the
+   knot's proofs, which run under `CoreS`).
+Proposal: (2) for the memo predicates (`CoreMemos`, `StageMemos`, `CrOK`, `I1R`), which also removes
+the stage-memo threading; I can write the generic lemma. Until then the arm theorem will be stated
+with `CoreMemos` as a hypothesis-preserved-by-stubs contract (`sorry`, like `stubM_memoFrame`).
