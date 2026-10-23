@@ -199,7 +199,10 @@ def decZC (m : Mem) (r : List Word) (lv : ConLeche.Level) : Prop :=
     pwWords dn a (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) = some (ConLeche.Level.zeronessOf lv)
 
 /-- `lv_zero_caps(l)` (lane `indproofs2`, stub contract): the level read back, its zero-ness as
-three words. -/
+three words. Real refinement: `IndRealLvlZT.lzcF_simT` (`StageT`) and `IndRealLvlC.lzcF_simC`
+(`StageC`), at the model `lzcF`; they need the handle's readback and decode the names by the name
+store (`decZC_mono` for `dn`), which `StageR` does not give, so this contract stays `sorry` until
+its users move to `StageT`/`StageC`. -/
 theorem lvZeroCaps_spec (l : Word) (hl : H l) :
     RelAM "lv_zero_caps" [l] (StageR dn vis fe) (readLevelM (decI l))
       (KeepPost dn vis fe (decZC dn)) := sorry
@@ -218,7 +221,8 @@ def decLvlEq (_m : Mem) (r : List Word) (x : Option Bool) : Prop :=
 /-- `lvl_eq_c(u, v)`: `lvlEq?` on two level handles, through the verdict cache `lvlEqC` as the
 twin's `lvlEq?` (lane `whnf`'s `lvl_eq_c`; the uncached `lvl_eq` leaves the cache behind the
 twin's). No stage-level (`StageR`) model yet: lane `whnf`'s `lvlEqC_refines` holds under `CoreS`,
-which carries invariants `StageR` lacks (DESIGN.md, lane `decls3`). -/
+which carries invariants `StageR` lacks (DESIGN.md, lane `decls3`). Real refinement with this
+`decLvlEq`: `IndRealLvlT.lvlEqC_simTE` (`StageT`), `IndRealLvlC.lvlEqC_simC` (`StageC`). -/
 theorem lvlEqStub_spec (u v : Word) (hu : H u) (hv : H v) :
     RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
       (KeepPost dn vis fe decLvlEq) := sorry
@@ -226,7 +230,8 @@ theorem lvlEqStub_spec (u v : Word) (hu : H u) (hv : H v) :
 /-- `lv_leq_top(u, v)`: `Level.leq` on the two level handles' readbacks (`readLevelM`), as `0`
 (none), `1` (false), `2` (true). Master's `leqTopW_ok` (`LevelEquivRel.lean`) relates it to `leq`
 for level pointers under `LvR`; no stage-level (`StageR`) model yet: the handles' readbacks need
-the `CoreS` bridge, as `lvl_eq_c`'s (lane `indproofs2`, for `check_struct_field_sorts_i`). -/
+the `CoreS` bridge, as `lvl_eq_c`'s (lane `indproofs2`, for `check_struct_field_sorts_i`).
+Real refinement under `StageT`: `IndTwin.lvLeqTop_simT`. -/
 theorem lvLeqTopStub_spec (u v : Word) (hu : H u) (hv : H v) :
     RelAM "lv_leq_top" [u, v] (StageR dn vis fe)
       (do let lu ← readLevelM (decI u); let lv ← readLevelM (decI v); pure (ConLeche.Level.leq lu lv))
