@@ -237,48 +237,48 @@ structure IhProg (p : Prog) : Prop where
 
 mutual
 /-- **The model of `install_header`** (the name `x` and the type `t` read from `EREC` first). -/
-def ihW : Nat → Mem → Word → Word → Option (List Word × Mem)
+def ihW (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, vis, q =>
-    ihK1 n vis q (rdW (m.arr64 EREC) q) (rdW (m.arr64 EREC) (q + 3))
+    ihK1 cR n vis q (rdW (m.arr64 EREC) q) (rdW (m.arr64 EREC) (q + 3))
       (envFindW m (rdW (m.arr64 EREC) q) vis)
 
-def ihK1 (n : Nat) (vis q x t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ihK1 (cR : CallM) (n : Nat) (vis q x t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => if r1.headD 0 ≠ 0 then none else ihK2 n vis q x t m1 (resContW n m1 x)
+  | some (r1, m1) => if r1.headD 0 ≠ 0 then none else ihK2 cR n vis q x t m1 (resContW n m1 x)
 
-def ihK2 (n : Nat) (vis q x t : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
+def ihK2 (cR : CallM) (n : Nat) (vis q x t : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
   | none => none
-  | some c => if c ≠ 0 then none else ihK3 n vis q t (ipfF m1 [x])
+  | some c => if c ≠ 0 then none else ihK3 cR n vis q t (ipfF m1 [x])
 
-def ihK3 (n : Nat) (vis q t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ihK3 (cR : CallM) (n : Nat) (vis q t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => if r3.headD 0 ≠ 0 then none else ihK4 n vis t (cvLpsW n m3 q)
+  | some (r3, m3) => if r3.headD 0 ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m3 q)
 
-def ihK4 (n : Nat) (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ihK4 (cR : CallM) (n : Nat) (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => ihK5 vis t r4 m4 (nodupW n m4 (r4.headD 0) (r4.tail.headD 0))
+  | some (r4, m4) => ihK5 cR n vis t r4 m4 (nodupW n m4 (r4.headD 0) (r4.tail.headD 0))
 
-def ihK5 (vis t : Word) (r4 : List Word) (m4 : Mem) : Option Word → Option (List Word × Mem)
+def ihK5 (cR : CallM) (n : Nat) (vis t : Word) (r4 : List Word) (m4 : Mem) : Option Word → Option (List Word × Mem)
   | none => none
   | some d =>
-    if d = 0 then none else ihK6 vis t r4 (lbbF m4 [4000000000, 0, t])
+    if d = 0 then none else ihK6 cR n vis t r4 (lbbF m4 [4000000000, 0, t])
 
-def ihK6 (vis t : Word) (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ihK6 (cR : CallM) (n : Nat) (vis t : Word) (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r6, m6) =>
-    if r6.headD 0 = 0 then none else ihK7 vis t r4 (hffF m6 [4000000000, t])
+    if r6.headD 0 = 0 then none else ihK7 cR n vis t r4 (hffF m6 [4000000000, t])
 
-def ihK7 (vis t : Word) (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ihK7 (cR : CallM) (n : Nat) (vis t : Word) (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r7, m7) =>
     if r7.headD 0 ≠ 0 then none
-    else ihK8 vis t (stubM "all_level_params_defined" m7 [r4.headD 0, r4.tail.headD 0, t])
+    else ihK8 cR n vis t (cR n "all_level_params_defined" [r4.headD 0, r4.tail.headD 0, t] m7)
 
-def ihK8 (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ihK8 (cR : CallM) (n : Nat) (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r8, m8) =>
-    if r8.headD 0 = 0 then none else ihK9 (stubM "consts_resolve_ffast" m8 [vis, t])
+    if r8.headD 0 = 0 then none else ihK9 (cR n "consts_resolve_ffast" [vis, t] m8)
 
 def ihK9 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -286,47 +286,48 @@ def ihK9 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m1 m3 m4 m6 m7 m8 m9 : Mem) (vis q x t : Word) (c d : Word)
+variable (cR : CallM) (n : Nat) (m m1 m3 m4 m6 m7 m8 m9 : Mem) (vis q x t : Word) (c d : Word)
   (r1 r3 r4 r6 r7 r8 r9 : List Word)
-theorem ihW_step : ihW (n + 1) m vis q =
-    ihK1 n vis q (rdW (m.arr64 EREC) q) (rdW (m.arr64 EREC) (q + 3))
+theorem ihW_step : ihW cR (n + 1) m vis q =
+    ihK1 cR n vis q (rdW (m.arr64 EREC) q) (rdW (m.arr64 EREC) (q + 3))
       (envFindW m (rdW (m.arr64 EREC) q) vis) := rfl
-theorem ihK1_some : ihK1 n vis q x t (some (r1, m1)) =
-    if r1.headD 0 ≠ 0 then none else ihK2 n vis q x t m1 (resContW n m1 x) := rfl
-theorem ihK2_some : ihK2 n vis q x t m1 (some c) =
-    if c ≠ 0 then none else ihK3 n vis q t (ipfF m1 [x]) := rfl
-theorem ihK3_some : ihK3 n vis q t (some (r3, m3)) =
-    if r3.headD 0 ≠ 0 then none else ihK4 n vis t (cvLpsW n m3 q) := rfl
-theorem ihK4_some : ihK4 n vis t (some (r4, m4)) =
-    ihK5 vis t r4 m4 (nodupW n m4 (r4.headD 0) (r4.tail.headD 0)) := rfl
-theorem ihK5_some : ihK5 vis t r4 m4 (some d) =
+theorem ihK1_some : ihK1 cR n vis q x t (some (r1, m1)) =
+    if r1.headD 0 ≠ 0 then none else ihK2 cR n vis q x t m1 (resContW n m1 x) := rfl
+theorem ihK2_some : ihK2 cR n vis q x t m1 (some c) =
+    if c ≠ 0 then none else ihK3 cR n vis q t (ipfF m1 [x]) := rfl
+theorem ihK3_some : ihK3 cR n vis q t (some (r3, m3)) =
+    if r3.headD 0 ≠ 0 then none else ihK4 cR n vis t (cvLpsW n m3 q) := rfl
+theorem ihK4_some : ihK4 cR n vis t (some (r4, m4)) =
+    ihK5 cR n vis t r4 m4 (nodupW n m4 (r4.headD 0) (r4.tail.headD 0)) := rfl
+theorem ihK5_some : ihK5 cR n vis t r4 m4 (some d) =
     if d = 0 then none
-    else ihK6 vis t r4 (lbbF m4 [4000000000, 0, t]) := rfl
-theorem ihK6_some : ihK6 vis t r4 (some (r6, m6)) =
-    if r6.headD 0 = 0 then none else ihK7 vis t r4 (hffF m6 [4000000000, t]) :=
+    else ihK6 cR n vis t r4 (lbbF m4 [4000000000, 0, t]) := rfl
+theorem ihK6_some : ihK6 cR n vis t r4 (some (r6, m6)) =
+    if r6.headD 0 = 0 then none else ihK7 cR n vis t r4 (hffF m6 [4000000000, t]) :=
   rfl
-theorem ihK7_some : ihK7 vis t r4 (some (r7, m7)) =
+theorem ihK7_some : ihK7 cR n vis t r4 (some (r7, m7)) =
     if r7.headD 0 ≠ 0 then none
-    else ihK8 vis t (stubM "all_level_params_defined" m7 [r4.headD 0, r4.tail.headD 0, t]) := rfl
-theorem ihK8_some : ihK8 vis t (some (r8, m8)) =
-    if r8.headD 0 = 0 then none else ihK9 (stubM "consts_resolve_ffast" m8 [vis, t]) := rfl
+    else ihK8 cR n vis t (cR n "all_level_params_defined" [r4.headD 0, r4.tail.headD 0, t] m7) := rfl
+theorem ihK8_some : ihK8 cR n vis t (some (r8, m8)) =
+    if r8.headD 0 = 0 then none else ihK9 (cR n "consts_resolve_ffast" [vis, t] m8) := rfl
 theorem ihK9_some : ihK9 (some (r9, m9)) = if r9.headD 0 = 0 then none else some ([0], m9) := rfl
 end arms
 
-grind_pattern [ind_grind] ihW_step => ihW (n + 1) m vis q
-grind_pattern [ind_grind] ihK1_some => ihK1 n vis q x t (some (r1, m1))
-grind_pattern [ind_grind] ihK2_some => ihK2 n vis q x t m1 (some c)
-grind_pattern [ind_grind] ihK3_some => ihK3 n vis q t (some (r3, m3))
-grind_pattern [ind_grind] ihK4_some => ihK4 n vis t (some (r4, m4))
-grind_pattern [ind_grind] ihK5_some => ihK5 vis t r4 m4 (some d)
-grind_pattern [ind_grind] ihK6_some => ihK6 vis t r4 (some (r6, m6))
-grind_pattern [ind_grind] ihK7_some => ihK7 vis t r4 (some (r7, m7))
-grind_pattern [ind_grind] ihK8_some => ihK8 vis t (some (r8, m8))
+grind_pattern [ind_grind] ihW_step => ihW cR (n + 1) m vis q
+grind_pattern [ind_grind] ihK1_some => ihK1 cR n vis q x t (some (r1, m1))
+grind_pattern [ind_grind] ihK2_some => ihK2 cR n vis q x t m1 (some c)
+grind_pattern [ind_grind] ihK3_some => ihK3 cR n vis q t (some (r3, m3))
+grind_pattern [ind_grind] ihK4_some => ihK4 cR n vis t (some (r4, m4))
+grind_pattern [ind_grind] ihK5_some => ihK5 cR n vis t r4 m4 (some d)
+grind_pattern [ind_grind] ihK6_some => ihK6 cR n vis t r4 (some (r6, m6))
+grind_pattern [ind_grind] ihK7_some => ihK7 cR n vis t r4 (some (r7, m7))
+grind_pattern [ind_grind] ihK8_some => ihK8 cR n vis t (some (r8, m8))
 grind_pattern [ind_grind] ihK9_some => ihK9 (some (r9, m9))
 
-theorem ih_specW (p : Prog) (h : IhProg p) (n : Nat) (s₀ : St) (vis q : Word) :
+theorem ih_specW (p : Prog) (h : IhProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
+    (vis q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_header" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ ihW n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ihW cR n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.ih]
   simp only [callFn, installHeaderL]
   cases n with
@@ -338,7 +339,7 @@ theorem ih_specW (p : Prog) (h : IhProg p) (n : Nat) (s₀ : St) (vis q : Word) 
         cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
         ipfF_spec p h.ipf n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-        stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
+        hcR n "all_level_params_defined", hcR n "consts_resolve_ffast"] <;>
       finish (gen := 20)
 
 /-! ## The relational lemma -/
@@ -347,7 +348,7 @@ theorem ih_specW (p : Prog) (h : IhProg p) (n : Nat) (s₀ : St) (vis q : Word) 
 record pool's top (`erecP`), so it survives the stub calls before `cv_lps`. -/
 theorem ihW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : ihW n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ihW stubCall n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
     ∃ a', (installHeader fe cv).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
@@ -455,11 +456,12 @@ theorem ihW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
   by_cases hb7 : r7.headD 0 ≠ 0
   · rw [if_pos hb7] at h; simp at h
   rw [if_neg hb7, hr4t] at h
-  cases h8 : stubM "all_level_params_defined" m7 [r4.headD 0, w2, wt] with
+  cases h8 : stubCall (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] m7 with
   | none => rw [h8] at h; simp [ihK8] at h
   | some rm8 =>
   obtain ⟨r8, m8⟩ := rm8
   rw [h8, ihK8_some] at h
+  replace h8 : stubM "all_level_params_defined" m7 [r4.headD 0, w2, wt] = some (r8, m8) := h8
   have hdec7 : decHL m7 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [decHL_grow (hg6.trans hg7) (by omega), hdecL]
   obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
@@ -468,11 +470,12 @@ theorem ihW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
   by_cases hb8 : r8.headD 0 = 0
   · rw [if_pos hb8] at h; simp at h
   rw [if_neg hb8] at h
-  cases h9 : stubM "consts_resolve_ffast" m8 [vis, wt] with
+  cases h9 : stubCall (n + 1) "consts_resolve_ffast" [vis, wt] m8 with
   | none => rw [h9] at h; simp [ihK9] at h
   | some rm9 =>
   obtain ⟨r9, m9⟩ := rm9
   rw [h9, ihK9_some] at h
+  replace h9 : stubM "consts_resolve_ffast" m8 [vis, wt] = some (r9, m9) := h9
   obtain ⟨x9, a9, hrun9, hS9, hg9, hx9, -⟩ :=
     constsResolveFFast_spec dn vis fe wt hwtl m8 m9 a8 r9 h9 hS8
   by_cases hb9 : r9.headD 0 = 0
@@ -506,7 +509,7 @@ theorem installHeader_refines (p : Prog) (hp : IhProg p) (n : Nat) (s₀ : St) (
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_header" [vis, q]
     ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (installHeader fe cv) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (installHeader fe cv) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (ih_specW p hp n s₀ vis q) ?_
+  refine triple_post (ih_specW p hp stubCall (stubCall_spec p) n s₀ vis q) ?_
   rintro _r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hStage', hg⟩ := ihW_ok hm hStage hq hqb
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun

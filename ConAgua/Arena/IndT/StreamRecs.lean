@@ -29,8 +29,9 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
 variable {p : Prog} (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) (hV : ValProg p)
   (hkc : AbsKeep p "check_constant_val")
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hkc in
+include hq henv hV hkc hApd hCrk in
 /-- **`class_stream_recs` under `StageC`** (`csrW_ok`'s; twin side con-ron's `classStreamRecs_spec`). -/
 theorem csrW_okC (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m m' : Mem) (a : AState) (vis rcso rcsl : Word) (r : List Word) (recs : List RecShape)
@@ -85,9 +86,10 @@ theorem csrW_okC (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
         rw [hs, csK1_some] at h
         have hqb3 : (UInt64.ofNat q : Word).toNat + 3 < 2 ^ 64 := by
           rw [hqt]; exact rec3CVExt_lt hS hext
-        obtain ⟨s1, hs1, -, hok1, hT1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-          (checkConstantVal_refinesT p hV hq n (by omega) _ a dn fe vis (UInt64.ofNat q) rc.cvR hC.stageT
-            (by rw [hqt]; exact rec2DecCV_erecP hcv hext) hqb3) hs
+        obtain ⟨s1, hs1, -, hok1, hT1, hg1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+          (checkConstantVal_refinesT p hV hq hApd hCrk n (by omega) _ a dn fe vis (UInt64.ofNat q) rc.cvR
+            hC.stageT (by rw [hqt]; exact rec2DecCV_erecP hcv hext) hqb3 (denoteCV_lps hcvR)
+            hA.crMemo.crOK) hs
         simp only at hs1 hT1 hg1
         subst hs1
         have hrun1 := AM.run_of_ok _ a hok1
@@ -149,7 +151,7 @@ theorem csrW_okC (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
                 · exact hextm3
                 · exact CVExt_grow hg3 (hext2 q' hq'')
 
-include hq henv hV hkc in
+include hq henv hV hkc hApd hCrk in
 /-- **`class_stream_recs` refines `classStreamRecs .verified`** under `StageC` (the program's own
 `check_constant_val`): the result slice holds the recursors' constant pointers, in order. -/
 @[refines ConRon.Arena.classStreamRecs]
@@ -169,7 +171,7 @@ theorem classStreamRecs_refinesC (hc : p.lookup "iw_copy" = some iwCopy)
     rcsl) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨cvs, a', hrun, -, hC', hg, hres, hA', -⟩ :=
-    csrW_okC hq henv hV hkc fe n hn _ _ a₀ vis rcso rcsl r recs recsP hm hC hA hOK hrecsP
+    csrW_okC hq henv hV hkc hApd hCrk fe n hn _ _ a₀ vis rcso rcsl r recs recsP hm hC hA hOK hrecsP
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.classStreamRecs V fe recs) a₀ a' cvs hrun
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hrs]; exact hres, hA'⟩
 

@@ -420,7 +420,7 @@ runs from `StageC` at the pre-insertion view (con-ron's `CheckOK`, restricted, a
 half: the call's frame by `LoopClosed`, the core memos by `dvW_okT`). Post: the stage relation at
 the pushed environment and the core's memos. -/
 theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
-    (hcl : LeafClosed p) (hlc : LoopClosed p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62)
     {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
     {cv : IConstantVal} {v : EIdx} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
@@ -463,9 +463,9 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdoK2_some] at h
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refinesT p hV hq n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
-      (by rw [hq1]; exact hcv1) (by omega)) h2
+  obtain ⟨s2, hs2, -, hok2, hS2, hg2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (checkConstantVal_refinesT p hV hq hap hkp n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
+      (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2
   obtain ⟨hstep1, F1, hpure1⟩ :=
