@@ -178,3 +178,37 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
 * `ConAgua/Arena/IndStubsT.lean` (for lane `loopt2`'s `install_value_guards`): `StageT` versions
   of four stub contracts, `sorry` like the originals — `constsResolveFFastT_spec`,
   `hasFvarFastT_spec`, `looseBVarsBoundedFastT_spec`, `allLevelParamsDefinedT_spec`.
+
+### Landing 7 (being integrated): helpers `pos`/`pos-cls`, `stubs`, `rec2`
+* Helper `pos` (+ sub-helper `pos-cls`, ~70 min + 5 h 15 min): **`checkBlockPositivity_refines`**
+  (posts chain into `nestSeeds_refines`: `StageR`, `IWGrow`, `PosMR` after, kinds/normal forms as
+  `PSlR`, walk state `NSB`), **`nestHolesGo_refines`** (hypotheses discharged by its one caller),
+  and from `pos-cls` `targetCanonParams`, `classKeyCanon`, `classKeyOf`, `classSeeds`,
+  `targetMajorOf`, `classMajors` (`RecGenSpec13‥20`), all through stubs. Preconditions for the
+  stage entry: `PosMR` (lane `loopt`'s `StageMemos`), `CtorSums fe` (`nPc + nF < 2^64` per stored
+  constructor; nothing in the stage establishes it — the fix is an L wrap guard in
+  `nest_ctor_entry_strip` and dropping `hcs` at ~70 sites; not done), the fuel bound
+  `2^31 + (n+2) ≤ coreWalkFuel`. `checkBlockCtors_refines` gained the member slices' bounds
+  (`PSlR decCNSB`) in its post (needed by `CssAt`). L: capacity guard in `block_nest_ctx`; the
+  positivity split replaced by `check_block_positivity_nfs(_member)` (D18); five loops to recursion
+  in the class group. Open: `checkBlockClasses` (pieces proved untagged; `class_read`'s `RecsDec`
+  needs `R.mI + 1 < 2^64`), `classCtorOf(s)`, `classesCtors`, `classesNfs`, `classFieldsAgree`,
+  `classNodesAgree`. Files `IndInstallSpec32‥34` (renamed from 24‥26 at the merge: helper `tail`
+  had used the same numbers).
+* Helper `stubs` (2 h 15 min): **`strip_pis`, `strip_lams` refine `stripPis`/`stripLams`**
+  (`StripTeleSpec.lean`, sorry-free) and **`instantiate1_fast`** is a real fact under `StageR`
+  (`StageInst1.lean`, from lane `exprops4`'s `inst_entry`); every use of the three stub contracts
+  switched and the contracts deleted. Newly sorry-free: `structUsedLater(Go, List)`, `instPisWith`,
+  `targetPiDomsWith`. Models call fuel-free `stripF`/`i1F := callF i1Prog …` (`CallF.lean`: a
+  program agreeing with a call-closed list runs those functions identically; runs are monotone in
+  fuel), so swaps were textual; 121 spec files got `noncomputable section`. Not done:
+  `abstract1_fast` (its `AbsR` memo invariant is in neither `StageR` nor the stubs' write set),
+  `instantiate1_lift_fast` (no refinement exists). The 17 GB build was an inline
+  `decide +kernel` over the write-set lists (now separate lemmas).
+* Helper `rec2` (2 h 35 min): **`hlpb` removed** from `blockRecLpsOk_refines`/`blockShapeLps_refines`
+  (an empty level-parameter slice may sit anywhere: the bound comes from the decoded slice),
+  **`blockShapeAllCtors_refines`** takes only `StageR` + the shape `DecB` (a capacity guard in
+  `num_ctors_of` replaces `hnum`; `hoff`/`hbd`/`hbd2` derived), `blockRecNameSetOk_refines`
+  (members slice bound only when non-empty), **`targetRecPins_refines`** (`RecCheckSpec21‥24`, only
+  decodings the caller holds). Reported, not fixed (same empty-slice kind): `targetCtorAt_refines`,
+  `IndSumSpec3`'s `hsl`/`hslTa`, `blockShapeMemberNames_refines`' `hsrc`, `BSOK` component 2.
