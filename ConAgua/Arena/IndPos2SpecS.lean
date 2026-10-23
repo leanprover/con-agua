@@ -1052,12 +1052,12 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
   rw [CWF_eq] at hrun1
   have e0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
   rw [e0, getD1_eq] at hargs hargsb
-  cases hgf : stubM "get_app_fn_f" m1 [CWF, w] with
+  cases hgf : gafF m1 [CWF, w] with
   | none => rw [hgf] at h; simp [nbAppK2] at h
   | some pr2 =>
   obtain ⟨rh, m2⟩ := pr2
   rw [hgf, nbAppK2_some] at h
-  obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := getAppFn_spec dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
+  obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := gafF_ok dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
   rw [CWF_eq] at hrun2
   have hg12 := hg1.trans hg2
   have hP2 : PosMR m2 := (hP.stub (by decide) hga).stub (by decide) hgf

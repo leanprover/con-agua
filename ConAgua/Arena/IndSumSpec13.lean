@@ -59,7 +59,7 @@ theorem ctorX_spec (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stubM_spec p "check_constant_val" 0, stripPis_specF p hP.strip 0,
         srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
-          hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr 0,
+          hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.gaf 0,
         callW_spec p 0 "open_pis_at_fvars_f", callW_spec p 0 "fvar_type_ds",
         callW_spec p 0 "check_struct_doms_at", callW_spec p 0 "check_sum_ctor_tail"] <;>
       finish (gen := 30) (instances := 5000) [srW]
@@ -69,7 +69,7 @@ theorem ctorX_spec (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stubM_spec p "check_constant_val" 1, stripPis_specF p hP.strip 1,
         srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
-          hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr 1,
+          hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.gaf 1,
         callW_spec p 1 "open_pis_at_fvars_f", callW_spec p 1 "fvar_type_ds",
         callW_spec p 1 "check_struct_doms_at", callW_spec p 1 "check_sum_ctor_tail"] <;>
       finish (gen := 30) (instances := 5000) [srW, srK1, plW]

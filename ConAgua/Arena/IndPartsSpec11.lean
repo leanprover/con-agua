@@ -193,7 +193,7 @@ theorem bmf_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) : ∀ (s₀ : St) (
     simp only [callFn, blockMemberCountsFind]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        recTargetOf_spec p hP.view hP.find hP.target hP.strip n, ih] <;>
+        recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.gaf n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 theorem decSR_fields {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {rules : List IRecRule}

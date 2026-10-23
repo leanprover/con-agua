@@ -424,21 +424,21 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
   | zero => simp [tkhW] at h
   | succ n =>
   rw [tkhW_succ] at h
-  cases h1 : stubM "get_app_fn_f" m [CWF, leafW] with
+  cases h1 : gafF m [CWF, leafW] with
   | none => rw [h1] at h; simp [tkhK1] at h
   | some x =>
   obtain ⟨rl, m1⟩ := x
   rw [h1, tkhK1_some] at h
-  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := getAppFn_spec dn vis fe CWF leafW hl m m1 a rl h1 hS
+  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m m1 a rl h1 hS
   rw [CWF_eq, ← decE_eq] at run1
   rw [← hlhD, ← decE_eq] at run1
   have hP1 := hP.stub (by decide) h1
-  cases h2 : stubM "get_app_fn_f" m1 [CWF, majDom] with
+  cases h2 : gafF m1 [CWF, majDom] with
   | none => rw [h2] at h; simp [tkhK2] at h
   | some x =>
   obtain ⟨rm, m2⟩ := x
   rw [h2] at h
-  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := getAppFn_spec dn vis fe CWF majDom hmj m1 m2 a1 rm h2 hS1
+  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := gafF_ok dn vis fe CWF majDom hmj m1 m2 a1 rm h2 hS1
   rw [CWF_eq, ← decE_eq] at run2
   rw [← hmhD, ← decE_eq] at run2
   have hP2 := hP1.stub (by decide) h2

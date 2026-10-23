@@ -132,7 +132,7 @@ def nbAppK1 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ra, m1) => nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
-      (stubM "get_app_fn_f" m1 [CWF, w])
+      (gafF m1 [CWF, w])
 
 def nbContK4 (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -486,7 +486,7 @@ theorem nbAppK2_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL :
     else none := rfl
 theorem nbAppK1_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) (ra : List Word) (m1 : Mem) :
     nbAppK1 n contF vis ctx fu po pl kb hi w ns (some (ra, m1)) = nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
-      (stubM "get_app_fn_f" m1 [CWF, w]) := rfl
+      (gafF m1 [CWF, w]) := rfl
 theorem nbContK4_some (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) (r4 : List Word) (m4 : Mem) :
     nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (some (r4, m4)) =
     if aL ≠ nPc + r4.headD 0 then none

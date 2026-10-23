@@ -226,7 +226,7 @@ theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv
   simp only [callFn, nestCtorsOneL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestCtorsCrest_spec p L.ct n, hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
-      nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.hro n, nestCtorNf_spec' p L n,
+      nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.nt.gaf L.hro n, nestCtorNf_spec' p L n,
       slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, rec6_specW p R.ha L.h6 n] <;>
     simp_all [nbOneW_succ, nbOneK1_some, nbOneK2_some, nbOneK3_some, nbOneK4_some, nbOneK5_some,
       nbOneK6_some, nbOneK7_some,
@@ -325,7 +325,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
   rw [invoke_eq _ L.papp]
   simp only [callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      stubM_spec p "get_app_args_f" n, stubM_spec p "get_app_fn_f" n, eView_spec p R.hl.hv n,
+      stubM_spec p "get_app_args_f" n, gafF_spec p L.nt.gaf n, eView_spec p R.hl.hv n,
       nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
     simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, nbAppK4_some, nbAppK5_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,

@@ -67,6 +67,7 @@ attribute [ind_grind] eeW_nil eeW_cons eeK0_some eeK1_some eeK2_some
 structure K53Look (p : Prog) : Prop where
   tmn : TmnLook p
   hv : p.lookup "e_view" = some eView
+  gaf : GafF p
   sc : p.lookup "sl_contains" = some slContains
   nf : p.lookup "no_find" = some (memoFindG noSch)
   np : p.lookup "no_put" = some (memoPutG noSch)

@@ -52,20 +52,20 @@ def tkhK2 (n : Nat) (vis q fto ftl Mc leafW majDom lh : Word) :
 def tkhK1 (n : Nat) (vis q fto ftl Mc leafW majDom : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rl, m) => tkhK2 n vis q fto ftl Mc leafW majDom (rl.headD 0) (stubM "get_app_fn_f" m [CWF, majDom])
+  | some (rl, m) => tkhK2 n vis q fto ftl Mc leafW majDom (rl.headD 0) (gafF m [CWF, majDom])
 
 /-- **The model of `target_k53_heads`** (exec fuel). -/
 def tkhW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, q, fto, ftl, Mc, leafW, majDom =>
-    tkhK1 n vis q fto ftl Mc leafW majDom (stubM "get_app_fn_f" m [CWF, leafW])
+    tkhK1 n vis q fto ftl Mc leafW majDom (gafF m [CWF, leafW])
 
 section arms
 variable (n : Nat) (m : Mem) (vis q fto ftl Mc leafW majDom lh ip usp ii : Word) (r rl rm ra rb : List Word)
 theorem tkhW_succ : tkhW (n + 1) m vis q fto ftl Mc leafW majDom =
-    tkhK1 n vis q fto ftl Mc leafW majDom (stubM "get_app_fn_f" m [CWF, leafW]) := rfl
+    tkhK1 n vis q fto ftl Mc leafW majDom (gafF m [CWF, leafW]) := rfl
 theorem tkhK1_some : tkhK1 n vis q fto ftl Mc leafW majDom (some (rl, m)) =
-    tkhK2 n vis q fto ftl Mc leafW majDom (rl.headD 0) (stubM "get_app_fn_f" m [CWF, majDom]) := rfl
+    tkhK2 n vis q fto ftl Mc leafW majDom (rl.headD 0) (gafF m [CWF, majDom]) := rfl
 theorem tkhK2_l (h : lh >>> 28 ≠ 3) : tkhK2 n vis q fto ftl Mc leafW majDom lh (some (rm, m)) = some ([0], m) := by
   simp only [tkhK2]; rw [if_pos h]
 theorem tkhK2_m (h : ¬ lh >>> 28 ≠ 3) (h2 : rm.headD 0 >>> 28 ≠ 3) :
@@ -109,7 +109,7 @@ theorem tkh_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (vis q fto ftl
     rw [invoke_eq _ L.tkh]
     simp only [callFn, targetK53Heads]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, stubM_spec p "get_app_fn_f" n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, gafF_spec p L.gaf n,
         stubM_spec p "get_app_args_f" n, eView_spec p L.hv n, tka_spec p L n] <;>
       finish (gen := 40) (instances := 20000) [loc_init4, loc_init5, loc_init6]
 

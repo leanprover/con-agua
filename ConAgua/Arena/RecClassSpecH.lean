@@ -185,7 +185,7 @@ theorem classReadFinish_spec (p : Prog) (hP : ReadProg p) (N : Nat) (s₀ : St) 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classReadMotPos_spec p hP N,
-        classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl N,
+        classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.gaf N,
         rec4_specW p hP.a N hP.r4] <;>
       finish (gen := 20) [rdW_eq]
 
