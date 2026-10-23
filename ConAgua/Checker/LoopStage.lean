@@ -5,6 +5,7 @@ import ConAgua.Checker.TwinShapeFront
 import ConAgua.Checker.TwinShapeQuot
 import ConAgua.Checker.TwinCaches
 import ConAgua.Arena.InitLink
+import ConAgua.Checker.LoopProg
 
 /-!
 # The declaration loop as lane `pipeline`'s last stage (lane `loopt3`)
@@ -118,16 +119,17 @@ theorem core_of_R7 {b pb : ByteArray} {s8 s64 : List Nat} {sA : AState} {pre : P
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
 
-/-- **The declaration loop is lane `pipeline`'s last stage**, from: the loop's program hypotheses
-at the checker's program with the ROM substituted (`checkerProg.subPB bs`: the ROM readers read the
-pin-data buffer `PB`, whose bytes `R7` fixes; `triple_subPB` transfers the run back) —
-`LoopCallees` (which contains the inductive arm's contract `IndArmSpec`, lane `indproofs4`) and
-`LoopTopProg`. -/
+/-- **The declaration loop is lane `pipeline`'s last stage**, from the inductive arm's contract
+(`IndArmSpec`, lane `indproofs4`) at the checker's program with the ROM substituted
+(`checkerProg.subPB bs`: the ROM readers read the pin-data buffer `PB`, whose bytes `R7` fixes;
+`triple_subPB` transfers the run back; the loop's program hypotheses there are helper
+`loopt3-prog`'s `checkerProg_loopCalleesPB`, `checkerProg_loopTopPB`). -/
 theorem loopStage_of
-    (hLC : ∀ bs dn, L.Ind.DnInj dn → QuotDn dn → LoopCallees dn (checkerProg.subPB bs))
-    (hTop : ∀ bs, LoopTopProg (checkerProg.subPB bs))
-    : LoopStage checkerProg checkerRels := by
-  intro b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE _ hpx n hn s₀ h7
+    (hIA : ∀ bs dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn) :
+    LoopStage checkerProg checkerRels := by
+  intro b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE hin hpx n hn s₀ h7
+  have hLC := fun dn hdn hq => checkerProg_loopCalleesPB pb.data.toList
+    (by simpa [RomOK] using hin.2.2.1) h7.since.pbpre dn hdn (hIA _ dn hdn) hq
   have hT := twinFold_of_prefix hpx
   have hcore := core_of_R7 hpx h7
   have hcaps := CapsOK.keep h7.since.keep h7.since.caps
@@ -138,7 +140,7 @@ theorem loopStage_of
   have hpb : s₀.mem.arr8 PB = pb.data.toList.toArray := by
     rw [h7.since.keep.arr8]; exact loadMem_pb b pb s8 s64
   refine triple_subPB (bs := pb.data.toList) checkerProg_noSt8PB (fun s hs => hs ▸ hpb) ?_
-  refine triple_post (installThenCheck_start (hTop _) (hLC _ _ hdn hQd) (frontDecls_of_prefix hpx)
+  refine triple_post (installThenCheck_start (checkerProg_loopTopPB _) (hLC _ hdn hQd) (frontDecls_of_prefix hpx)
     n hn s₀ hT h7.arena hcore h7.pinsFull h7.decls h7.pinSets h7.iw (loopZero_of_since h7.since)
     h7.pin0 (by have := hcaps.1 EREC (by decide); omega) (by have := hcaps.1 SPN (by decide); omega)
     (by have := hcaps.1 145 (by decide); omega)) ?_
