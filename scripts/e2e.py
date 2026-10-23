@@ -805,14 +805,23 @@ def main():
                     help="assemble from the lanes' modules through text (the fallback; default: checkerProg)")
     ap.add_argument("--no-conron", action="store_true", help="skip the con-ron binary reference")
     ap.add_argument("--no-perf", action="store_true", help="skip instructions:u on fixtures both accept")
+    ap.add_argument("--perf-only", action="store_true",
+                    help="cheap perf rerun: no tracing, interpreter or differential checks (implies the perf runs); "
+                    "(the verdict columns still come from the caches)")
+    ap.add_argument("--latest", default=os.path.join(ROOT, "_tmp", "e2e", "latest", "results.json"),
+                    help="machine-readable per-fixture perf table for scripts/gist_report.py (written after every "
+                    "full run that measured perf; '' to skip)")
     ap.add_argument("--write", action="store_true", help="write docs/e2e.md")
     ap.add_argument("--csv", action="store_true", help="append to docs/e2e.csv")
     args = ap.parse_args()
     t0 = time.time()
+    if args.perf_only:
+        args.no_diff = args.no_interp = True
+        args.trace = "none"
     os.makedirs(WORK, exist_ok=True)
     if not args.no_build:
         log("building")
-        lake("build")
+        # only what e2e needs (not the whole proof tree)
         lake("build", "ConAgua.E2E.Check", "ConRon.Dump.Pins", "e2e-l", "e2e-ref", "e2e-diff")
     prog = os.path.join(WORK, "checker.prog")
     if args.text_dump:
@@ -947,7 +956,8 @@ def main():
             r["conron"] = cr
             if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
                 r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path], env),
-                             "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path])}
+                             "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path]),
+                             "e2e-ref": perf_instr(guard, [os.path.join(BIN, "e2e-ref"), path, f"--pins={npins}"])}
         if not args.no_diff and fid in diff_set:
             st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
                                  str(min(max_id(path) + 2, DIFF_BIG_WORDS))], T_DIFF, env=env)
@@ -977,6 +987,16 @@ def main():
         os.replace(path_ + ".tmp", path_)
     with open(os.path.join(WORK, "results.json"), "w") as fh:
         json.dump({"results": res, "stubs": {g: v[0] for g, v in asm["stubs"].items()}}, fh, indent=1)
+    if args.latest and not args.no_perf and not args.only and args.rerun_failing is None and not args.no_conron:
+        rows = [{"id": r["id"], "size": r["size"], "class": r["check"]["class"], "perf": r["perf"]}
+                for r in res if r.get("perf") and r["perf"].get("L") and r["perf"].get("con-ron")]
+        os.makedirs(os.path.dirname(args.latest), exist_ok=True)
+        rev = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+        with open(args.latest + ".tmp", "w") as fh:
+            json.dump({"date": time.strftime("%Y-%m-%d %H:%M", time.gmtime()) + " UTC", "rev": rev,
+                       "fixtures": len(res), "seconds": round(time.time() - t0), "rows": rows}, fh, indent=1)
+        os.replace(args.latest + ".tmp", args.latest)
+        log(f"wrote {args.latest} ({len(rows)} perf rows)")
     md = report(res, asm, compiled, clashes, args, t0)
     out_md = os.path.join(ROOT, "docs", "e2e.md") if args.write else os.path.join(WORK, "e2e.md")
     with open(out_md, "w") as fh:
