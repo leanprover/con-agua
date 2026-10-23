@@ -74,6 +74,8 @@ structure HEnv (m : Mem) (a : AState) (ds : Array IDeclaration) (idx : Std.HashM
   rg2 : tg.toNat + c ≤ ws.toNat
   rg3 : ws.toNat + c ≤ (m.arr64 IW).size
   isz : (m.arr64 IW).size < 2 ^ 64
+  top : ws.toNat + c ≤ iwTop m
+  iwok : IWOK m
 
 theorem addW_toNat (x : Word) (k : Nat) (h : x.toNat + k < 2 ^ 64) :
     (x + UInt64.ofNat k).toNat = x.toNat + k := by
@@ -92,6 +94,8 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
+  have htop : iwTop m' = iwTop m := by
+    simp only [iwTop]; rw [hf.1.2.1 200 (by decide)]
   have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b := by
     intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
     rcases hb with rfl | rfl <;> decide
@@ -100,7 +104,7 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
     rcases hx with rfl | rfl <;> decide
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
     ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
-    by rw [hsz]; exact hE.isz⟩
+    by rw [hsz]; exact hE.isz, by rw [htop]; exact hE.top, ?_⟩
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
     have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k :=
@@ -111,6 +115,48 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
     rw [hr, hDECL, hDLP]
     exact hE.ordR k hk
   · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW, HSEEN] [73, 74] (by decide) (by decide) m m' hf.1
+      (fun _ _ h => h) idx hE.nix
+  · obtain ⟨h1, h2, h3, h4, h5⟩ := hE.iwok
+    have hER : m'.arr64 EREC = m.arr64 EREC := hD EREC (by decide) (by decide)
+    have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.1.2.1 129 (by decide)]
+    refine ⟨by rw [htop, hsz]; exact h1, by rw [h129, hER]; exact h2, by rw [hsz]; exact h3,
+      by rw [hER]; exact h4, by rw [hf.1.2.2.1 CTL]; exact h5⟩
+
+/-- **What an allocation keeps**: `IW` and `CTL[200]` only, the pool grown. -/
+def AFr (m m' : Mem) : Prop := MemFrame [IW] [200] m m' ∧ IWGrow m m' ∧ IWOK m'
+
+theorem AFr.refl (m : Mem) (h : IWOK m) : AFr m m := ⟨MemFrame.refl _ _ _, IWGrow.refl m, h⟩
+
+theorem AFr.trans {m₁ m₂ m₃ : Mem} (h₁ : AFr m₁ m₂) (h₂ : AFr m₂ m₃) : AFr m₁ m₃ :=
+  ⟨h₁.1.trans h₂.1, h₁.2.1.trans h₂.2.1, h₂.2.2⟩
+
+/-- **The setting survives an allocation.** -/
+theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
+    {ord tg ws : Word} {c : Nat} (hE : HEnv m a ds idx ord tg ws c) (hf : AFr m m') :
+    HEnv m' a ds idx ord tg ws c := by
+  have hD : ∀ b, b ∉ [IW] → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
+  have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
+  have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
+  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
+  have hA : ∀ b ∈ [IW], 64 ≤ b := by
+    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide
+  have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by
+    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide
+  obtain ⟨s, hs⟩ := hE.seen
+  refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,
+    ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.1 _ hs⟩,
+    ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
+    by rw [hsz]; exact hE.isz, Nat.le_trans hE.top hf.2.1.1, hf.2.2⟩
+  · intro k hk
+    have hk' : k < c := hE.size ▸ hk
+    have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k :=
+      addW_toNat ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
+    have hr : rdW (m'.arr64 IW) (ord + UInt64.ofNat k) = rdW (m.arr64 IW) (ord + UInt64.ofNat k) := by
+      simp only [rdW, hn]
+      rw [hf.2.1.2.2.1 _ (by have := hE.rg1; have := hE.rg2; have := hE.top; omega)]
+    rw [hr, hDECL, hDLP]
+    exact hE.ordR k hk
+  · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m m' hf.1
       (fun _ _ h => h) idx hE.nix
 
 /-! ## One note -/
@@ -713,7 +759,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     {ord tg ws : Word} {c : Nat} {i : Nat} (hi : i < c) (o l : Word) :
     ∀ (gs : List NIdx) (n : Nat) (m m' : Mem) (T : Std.HashMap Nat Nat) (q r : Word),
     HEnv m a ds idx ord tg ws c → TgtR m tg c T → TgtV T c → (∀ (k t : Nat), T[k]? = some t → t ≤ i) →
-    GrR m o q gs → q.toNat + gs.length = l.toNat → ws.toNat + c ≤ o.toNat →
+    GrR m o q gs → q.toNat + gs.length = l.toNat → (gs ≠ [] → ws.toNat + c ≤ o.toNat) →
     o.toNat + l.toNat < 2 ^ 64 →
     hDepsW n m (UInt64.ofNat i) o l q ord tg ws = some (r, m') →
     ∃ T'', (hoistTargetsGo.hoistDeps ds idx T i gs).run a = .ok (T'', a) ∧
@@ -730,7 +776,8 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     cases h
     exact ⟨T, rfl, hE, hT, hTv, hTi, HFr.refl _ _ _ _⟩
   | cons g gs ih =>
-    intro n m m' T q r hE hT hTv hTi hG hl ho hol h
+    intro n m m' T q r hE hT hTv hTi hG hl ho' hol h
+    have ho := ho' (by simp)
     have hc := hE.c60
     cases n with
     | zero => rw [hDepsW.eq_1] at h; cases h
@@ -769,7 +816,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     | none =>
       rw [hgi] at hr; simp only [tgW] at hr; subst hr
       rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (by simp), hDepsW.k1.arm1] at h
-      exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 ho hol h
+      exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
     | some jj =>
       rw [hgi] at hr; simp only [tgW] at hr; subst hr
       have hjc : jj < c := hE.nixlt g jj hgi
@@ -796,13 +843,13 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -⟩ :=
           closure_ok hi hjc n m m₁ T z hE hT hTv hTi hcl
         obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr'⟩ :=
-          ih n m₁ m' T₁ (q + 1) r hE₁ hT₁ hTv₁ hTi₁ (hG1 m₁ hfr₁) hl1 ho hol h
+          ih n m₁ m' T₁ (q + 1) r hE₁ hT₁ hTv₁ hTi₁ (hG1 m₁ hfr₁) hl1 (fun _ => ho) hol h
         refine ⟨T'', ?_, hE', hT', hTv', hTi', hfr₁.trans hfr'⟩
         rw [HoistTwin.run_bind, hrun]
         exact hrun'
       · dsimp only
         rw [if_neg (by omega)]
         rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (fun ⟨_, h2⟩ => hij (hci.mp h2)), hDepsW.k1.arm1] at h
-        exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 ho hol h
+        exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
 
 end L.Checker
