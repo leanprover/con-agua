@@ -147,7 +147,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1739 functions, 0 of them stubs.
+1745 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -508,6 +508,7 @@ def checkerProg : Prog := [
   ("check_block_inds_cv_tas", L.Ind.checkBlockIndsCvTas),
   ("check_block_inds_cv_tas_go", L.Ind.checkBlockIndsCvTasGo),
   ("check_block_pass", L.Ind.checkBlockPass),
+  ("check_block_pass_rec", L.Ind.checkBlockPassRec),
   ("check_block_positivity", L.Ind.checkBlockPositivity),
   ("check_block_positivity_init", L.Ind.checkBlockPositivityInit),
   ("check_block_positivity_member", L.Ind.checkBlockPositivityMember),
@@ -518,6 +519,7 @@ def checkerProg : Prog := [
   ("check_block_tables", L.Ind.checkBlockTables),
   ("check_block_tables_one", L.Ind.checkBlockTablesOne),
   ("check_block_tail", L.Ind.checkBlockTail),
+  ("check_block_tail_rec", L.Ind.checkBlockTailRec),
   ("check_block_tele", L.Ind.checkBlockTele),
   ("check_block_teles", L.Ind.checkBlockTeles),
   ("check_constant_val", L.Ind.checkConstantValL),
@@ -1588,6 +1590,7 @@ def checkerProg : Prog := [
   ("rec_expr_loop", L.Front.Fields.recExprLoop),
   ("rec_fire_args", L.Arena.recFireArgsL),
   ("rec_fire_levels", L.Arena.recFireLevelsL),
+  ("rec_info_rec", L.Ind.recInfoRec),
   ("rec_line_loop", L.Front.Fields.recLineLoop),
   ("rec_nat_list", L.Front.Fields.recNatList),
   ("rec_num_name", L.Front.Fields.recNumName),
@@ -1661,6 +1664,7 @@ def checkerProg : Prog := [
   ("rset_clear", L.Arena.memoClearG L.Rom.rsetSch),
   ("rset_find", L.Arena.memoFindG L.Rom.rsetSch),
   ("rset_put", L.Arena.memoPutG L.Rom.rsetSch),
+  ("rule_copy", L.Ind.ruleCopy),
   ("rule_eq_a", L.Ind.ruleEqA),
   ("rule_eq_b", L.Ind.ruleEqB),
   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs),
@@ -1668,6 +1672,7 @@ def checkerProg : Prog := [
   ("rule_wr", L.Arena.ruleWr),
   ("rules_eq", L.Ind.rulesEq),
   ("rules_to_erec", L.Ind.rulesToErec),
+  ("rules_to_erec_go", L.Ind.rulesToErecGo),
   ("same_const_heads", L.Arena.sameConstHeadsL),
   ("scan_app", L.Scan.Records.scanApp),
   ("scan_axiom", L.Scan.Records.scanAxiomD),
@@ -1833,6 +1838,7 @@ def checkerProg : Prog := [
   ("target_rec_pins_split", L.Ind.targetRecPinsSplit),
   ("tbl_eq", L.Ind.tblEq),
   ("tbl_eq_a", L.Ind.tblEqA),
+  ("tgt_rule_nested", L.Ind.tgtRuleNested),
   ("tgt_stored_rules", L.Ind.tgtStoredRules),
   ("tgt_stored_rules_remap", L.Ind.tgtStoredRulesRemap),
   ("tower_slots_all", L.Arena.towerSlotsAllL),
