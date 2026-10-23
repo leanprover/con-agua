@@ -366,3 +366,16 @@ kept for its other users): `constsResolveFFast_spec`.
   (`inst_entry`), and `spn_to_iw` for the result slice; then the same threading as `crf` for its
   eleven users (`IndInstallSpec3/7/10/18/20`, `RecClassSpec(B,D)`, `RecGenSpec26`, `IndSumSpec12`),
   where `opf`'s `AFr` is again only relational. `IlMemo` is in `AbsOK` already.
+
+### IndArmSpec plan (coordinator, 2026-10-23)
+
+* indstaget moves the stage to **StageC** (StageR + con-ron CheckOK + TwinMem + flag). Its top is checkBlock under StageC.
+* IndArmSpec gets **no new premises**. Its target is con-ron's `Bridge/Inductives/Decl.lean` `checkIndRoute_bridge`. Its inputs come from:
+  * `CoreSpec.of_core rfl`,
+  * `FoldOK` (which gives CheckOK, EnvWF, IFEnvCoh and denoteFEnv),
+  * `denoteCIList` (from the denoteDecl premise via Readback's .indDecl arm),
+  * `basisPinHit b = none` (on the route),
+  * and dParts, which come from `blockParts?_spec`.
+* IndArmSpec's `StateOK a` premise is redundant (`FoldOK.check.state`).
+* So cidW_ok → IndArmSpec is built around checkIndRoute_bridge, with indstaget's StageC checkBlock theorem under it.
+* The fuel bound goes away with helper hbf (the L hb walk takes the twin's fuel word).
