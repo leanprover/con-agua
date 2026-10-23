@@ -271,13 +271,6 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
   push_np := by decide
   arrs := by decide
 
-theorem dec_le_not_lt (x y : Word) : decide (x ≤ y) = !decide (y < x) := by
-  by_cases h : y < x
-  · have : ¬ x ≤ y := fun h' => absurd h (UInt64.not_lt.mpr h')
-    simp [h, this]
-  · have : x ≤ y := UInt64.not_lt.mp h
-    simp [h, this]
-
 theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
   rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 6) (m.len64 LSREC),
     dec_lt_not_le' (lscnt m t) (m.len64 LSHP >>> (1 : Word))]

@@ -486,6 +486,13 @@ def litProgStr : Prog :=
 theorem ite_bne (b : Bool) : ((if b = true then (1 : Word) else 0) != 0) = b := by
   cases b <;> rfl
 
+theorem dec_le_not_lt (x y : Word) : decide (x ≤ y) = !decide (y < x) := by
+  by_cases h : y < x
+  · have : ¬ x ≤ y := fun h' => absurd h (UInt64.not_lt.mpr h')
+    simp [h, this]
+  · have : x ≤ y := UInt64.not_lt.mp h
+    simp [h, this]
+
 theorem dec_lt_not_le' (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x
   · have : ¬ x < y := fun h' => absurd h (UInt64.not_le.mpr h')
