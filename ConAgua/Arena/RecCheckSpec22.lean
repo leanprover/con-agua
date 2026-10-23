@@ -8,6 +8,8 @@ offset is whatever its record holds), and `target_rec_pins_names`: the auxiliary
 (`n₀.rec_1 …`) against the ones the stream has, as sets, and no two recursors sharing a name.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
@@ -31,6 +33,7 @@ structure RpLook (p : Prog) : Prop extends IndPartsProg3 p where
   lps : p.lookup "block_shape_lps" = some blockShapeLps
   lpsOk : p.lookup "block_rec_lps_ok" = some blockRecLpsOk
   unres : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved
+  rrn : RrnF p
   soa : p.lookup "block_rec_split_own_aux" = some blockRecSplitOwnAux
   wan : p.lookup "block_rec_want_aux_names" = some blockRecWantAuxNames
   pnc : p.lookup "ptr_names_copy" = some ptrNamesCopy

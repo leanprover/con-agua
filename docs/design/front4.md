@@ -34,3 +34,47 @@ Census after the landing (worktree, master `109fa860` merged): phase 0 185 prove
 38 open targets, 27 are the hoist and the prelude driver (`frontOf`, `pick`, `prepareD`,
 `preparePrelude`, `preludeKey`, `declares`, `builtinPreludeE`), the rest the ROM interns
 (`internCI`, `internCaps`, `internRules`, …, partial) and `internProjTable`/`movedNames` (todo).
+
+## Landing 2: the ground hoist refines `hoistNatOpGround`
+
+`hoistNatOpGround_refines` (`Checker/HoistRef.lean`, `@[refines_part hoistNatOpGround]`: the first
+component; `movedNames` is not computed, D30): when `hoist_nat_op_ground(ord, c)` returns `r`, the
+twin's `hoistNatOpGround ds` succeeds in the same state, and `IW[r ‥ r + c)` is its records' order
+(`OrdR`); the store relation, the pins and `IWOK` survive and the pool only grew. The pieces, each
+stated over the generated models (L = model by the generated specs, model ⊑ twin here):
+
+| file | lines | what | by |
+|---|---:|---|---|
+| `HoistRefBase.lean` | ~100 | `SeenR`, `NixR` (memo ↔ `HashSet`/`HashMap`), `TgtR`, `OrdR`, `RecOK`, `notesW` | lane |
+| `HoistWalkRef.lean` + `HoistDecode.lean` | 834 + 188 | walk ⊑ `usedConsts*`: the twin's names, L's notes of them in order | helper `front4-walk` |
+| `HoistIndexRef.lean` | 321 | `hoist_index_go` ⊑ `nameIndex`, `hoist_ix` = lookup | helper `front4-index` |
+| `HoistOrderRef{,2,3}.lean` | 226 + 358 + 487 | buckets/emit = `mergeSort` by `hoistLt` (unique sorted permutation), `hoist_any` = `isEmpty` | helper `front4-order` |
+| `HoistNatRef.lean` | 679 | `nat_op_record` ⊑ `isNatOpRecord`'s test, `nat_op_deps` call ⊑ `natOpDeps` under `IWOK` + `PinsFull` | helper `front4-nat` |
+| `HoistClosureTwin.lean` | ~350 | the twin's worklist on a closed set; exactness given reachability | lane |
+| `HoistClosureL.lean` | ~830 | L's mark-at-push invariant; `closure_ok`, `deps_ok` | lane |
+| `HoistTargetsRef.lean`, `HoistRef.lean` | ~230 + ~280 | the outer loop, the assembly | lane |
+
+**The key lemma, as proved.** The twin's `hoistClosure` is characterised on any set `N` that is
+closed (every successor of a member is a member or marked in `T₀`) and whose members' constants it
+computes: it succeeds, marks only members, marks the stack, and the result is closed
+(`closure_twin`); if moreover every member is reachable from `j` through members, the result is
+exactly `T₀ + (N ↦ i)` (`closure_exact`). L's run produces such an `N`: the invariant
+(`CloseInv`) is "marked and off the stack ⇒ walked and all successors marked", "marked ⇒
+reachable from `j` through marked", "the stack holds distinct marked records" (so it never
+overflows its `c` words). `N` = the records L marked; the twin's result equals L's targets
+extensionally. The twin's fuel `ds.size` is the count of unmarked members (`pend`).
+
+**Statement fixes found by the helpers** (trunc clears pool word 0): an inductive record's member
+pointers must not start at offset 0 nor be 0 (`RecOK`'s kind-6 clause, `BlockAt`); a stored target
+`t + 1` must not wrap (`hoist_any` needs `TLt`); `HoistExt` must include `nat_op_pins{,_a,_b,_c}`.
+
+**Preconditions a caller (`prepare_prelude`'s refinement) must establish**: `ArenaR`, some
+visited set and some name index represented (all-zero memory does it: `memoRG_zero`), `OrdR` of
+the prepared stream (with `RecOK`: handle words `< 2^32`, block offsets and pointers nonzero), no
+projection table in a parsed block (`WalkableDecl`), `IWOK`, `ord`'s slice below the pool top,
+fewer than `2^60` records, `PinsR`.
+
+Census (worktree): phase 1c 53 proven / 18 written / 2 todo (507 / 609 / 625 Lean lines), was
+35 / 36 / 2 (380 / 609 / 625); phase 0 unchanged 185 / 5 / 106 (991 / 1003 / 1305). The hoist's
+targets are all proven except `hoistNatOpGround`, `applyHoist` (parts: `movedNames` not computed)
+and `movedNames` (todo, D30).
