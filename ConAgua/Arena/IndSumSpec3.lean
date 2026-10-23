@@ -285,8 +285,7 @@ include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn 
 
 /-- **`check_sum_tele_slow` refines `checkSumTele.checkSumTeleSlow .verified`** (through the stubs
 `whnf`, `instantiate1_fast`, `abstract1_fast`, `check_constant_val`): the new constant value is a
-record in `EREC`. -/
-@[refines ConRon.Arena.checkSumTele.checkSumTeleSlow]
+record in `EREC`. Under `StageR`; the census link is `checkSumTeleSlow_refinesC` (`IndT/Sum2.lean`). -/
 theorem checkSumTeleSlow_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (cv n cvTa0 : Word) (cvv cvTa : IConstantVal)
     (hS : StageR dn vis fe s₀.mem a₀)
@@ -572,8 +571,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hi1 hab
 
 /-- **`check_sum_tele` refines `checkSumTele .verified`** (through the stubs `strip_pis`, `whnf`,
-`instantiate1_fast`, `abstract1_fast`, `check_constant_val`). -/
-@[refines ConRon.Arena.checkSumTele]
+`instantiate1_fast`, `abstract1_fast`, `check_constant_val`). Under `StageR`; the census link is
+`checkSumTele_refinesC` (`IndT/Sum2.lean`). -/
 theorem checkSumTele_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (cv n cvTa0 : Word) (cvv cvTa : IConstantVal)
     (hS : StageR dn vis fe s₀.mem a₀)
