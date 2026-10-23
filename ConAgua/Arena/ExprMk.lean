@@ -285,22 +285,33 @@ theorem hw_fields (G c : Word) (hc : c < 134217728) :
       show 2 ^ (27 % 64) = 134217728 from rfl]
     omega
 
+/-- `der_b`'s three reads do not look at the binary tables' slot arrays (a growth changes only
+those, lane slotgrow). -/
+theorem der_congr {S : ArrId} (hS : S = ASLOT ∨ S = LASLOT ∨ S = FASLOT) {m₂ m₃ : Mem}
+    (hf : ∀ b, b ≠ S → m₂.arr64 b = m₃.arr64 b) (h : Word) :
+    derBW m₂ h = derBW m₃ h ∧ derFW m₂ h = derFW m₃ h ∧ exprLPW m₂ h = exprLPW m₃ h := by
+  rcases hS with rfl | rfl | rfl <;>
+  simp only [derBW, derFW, exprLPW, hf CTL (by decide), hf BREC (by decide), hf ADER (by decide),
+    hf LADER (by decide), hf FADER (by decide), hf LEDER (by decide), hf PJDER (by decide),
+    hf FVREC (by decide), hf FVLP (by decide), hf SOLP (by decide), hf CLP (by decide), and_self]
+
 theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 4 ≠ cnt2 m 4) :
-    ∃ t j, t ≤ 1 ∧ acnt m t < 134217728 ∧ m₁ = apushMem m t f a j (acnt m t) ∧
+    ∃ t j, t ≤ 1 ∧ acnt m t < 134217728 ∧
+      growIf ASLOT 4 ahash m (apushMem m t f a j (acnt m t)) (acnt m t) = some m₁ ∧
       idxW r = acnt m t ∧ tierW r = t := by
   simp only [ainternW] at hI
   have ok : ∀ t, apushOK m t = true → acnt m t < 134217728 := by
-    intro t h; simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+    intro t h; simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
   repeat' split at hI
   all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
   all_goals obtain ⟨hr, hm⟩ := hI
   all_goals subst hr hm
   all_goals first
     | (have h := ok 1 ‹apushOK m 1 = true›
-       exact ⟨1, _, by decide, h, rfl, by rw [show appS = 9 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+       exact ⟨1, _, by decide, h, ‹_›, by rw [show appS = 9 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
     | (have h := ok 0 ‹apushOK m 0 = true›
-       exact ⟨0, _, by decide, h, rfl, by rw [show appP = 8 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+       exact ⟨0, _, by decide, h, ‹_›, by rw [show appP = 8 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
     | exact absurd rfl hc
 
 /-- After a miss of `intern_app` (the counts changed), the zeroed slot hides the append from
@@ -310,30 +321,33 @@ theorem ainternW_der {m m₁ : Mem} {f a r q : Word} (hI : ainternW m f a = some
     (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
     derBW (m₁.set64 ADER q 0) x = derBW m x ∧ derFW (m₁.set64 ADER q 0) x = derFW m x ∧
       exprLPW (m₁.set64 ADER q 0) x = exprLPW m x := by
-  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := ainternW_grow hI hc
+  obtain ⟨t, j, ht, hc', hg, hi, htr⟩ := ainternW_grow hI hc
   simp only [idxW, tierW] at hi htr
   rw [hq, hi, htr]
-  exact der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a j
+  obtain ⟨e1, e2, e3⟩ := der_congr (.inl rfl) (growIf_set64_out hg ADER _ 0) x
+  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a j
     (.inl ⟨rfl, rfl, rfl, rfl⟩) ht hc' x
+  exact ⟨e1.trans f1, e2.trans f2, e3.trans f3⟩
 
 grind_pattern [arena_grind] ainternW_der => ainternW m f a, (r, m₁), derBW (Mem.set64 m₁ ADER q 0) x
 
 theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 28 ≠ cnt2 m 28) :
-    ∃ t j, t ≤ 1 ∧ lacnt m t < 134217728 ∧ m₁ = lapushMem m t f a j (lacnt m t) ∧
+    ∃ t j, t ≤ 1 ∧ lacnt m t < 134217728 ∧
+      growIf LASLOT 28 lahash m (lapushMem m t f a j (lacnt m t)) (lacnt m t) = some m₁ ∧
       idxW r = lacnt m t ∧ tierW r = t := by
   simp only [lainternW] at hI
   have ok : ∀ t, lapushOK m t = true → lacnt m t < 134217728 := by
-    intro t h; simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+    intro t h; simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
   repeat' split at hI
   all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
   all_goals obtain ⟨hr, hm⟩ := hI
   all_goals subst hr hm
   all_goals first
     | (have h := ok 1 ‹lapushOK m 1 = true›
-       exact ⟨1, _, by decide, h, rfl, by rw [show lamS = 11 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+       exact ⟨1, _, by decide, h, ‹_›, by rw [show lamS = 11 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
     | (have h := ok 0 ‹lapushOK m 0 = true›
-       exact ⟨0, _, by decide, h, rfl, by rw [show lamP = 10 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+       exact ⟨0, _, by decide, h, ‹_›, by rw [show lamP = 10 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
     | exact absurd rfl hc
 
 /-- After a miss of `intern_lam` (the counts changed), the zeroed slot hides the append from
@@ -343,30 +357,33 @@ theorem lainternW_der {m m₁ : Mem} {f a r q : Word} (hI : lainternW m f a = so
     (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
     derBW (m₁.set64 LADER q 0) x = derBW m x ∧ derFW (m₁.set64 LADER q 0) x = derFW m x ∧
       exprLPW (m₁.set64 LADER q 0) x = exprLPW m x := by
-  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := lainternW_grow hI hc
+  obtain ⟨t, j, ht, hc', hg, hi, htr⟩ := lainternW_grow hI hc
   simp only [idxW, tierW] at hi htr
   rw [hq, hi, htr]
-  exact der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a j
+  obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inl rfl)) (growIf_set64_out hg LADER _ 0) x
+  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a j
     (.inr (.inl ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
+  exact ⟨e1.trans f1, e2.trans f2, e3.trans f3⟩
 
 grind_pattern [arena_grind] lainternW_der => lainternW m f a, (r, m₁), derBW (Mem.set64 m₁ LADER q 0) x
 
 theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 30 ≠ cnt2 m 30) :
-    ∃ t j, t ≤ 1 ∧ facnt m t < 134217728 ∧ m₁ = fapushMem m t f a j (facnt m t) ∧
+    ∃ t j, t ≤ 1 ∧ facnt m t < 134217728 ∧
+      growIf FASLOT 30 fahash m (fapushMem m t f a j (facnt m t)) (facnt m t) = some m₁ ∧
       idxW r = facnt m t ∧ tierW r = t := by
   simp only [fainternW] at hI
   have ok : ∀ t, fapushOK m t = true → facnt m t < 134217728 := by
-    intro t h; simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+    intro t h; simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
   repeat' split at hI
   all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
   all_goals obtain ⟨hr, hm⟩ := hI
   all_goals subst hr hm
   all_goals first
     | (have h := ok 1 ‹fapushOK m 1 = true›
-       exact ⟨1, _, by decide, h, rfl, by rw [show forallS = 13 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+       exact ⟨1, _, by decide, h, ‹_›, by rw [show forallS = 13 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
     | (have h := ok 0 ‹fapushOK m 0 = true›
-       exact ⟨0, _, by decide, h, rfl, by rw [show forallP = 12 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+       exact ⟨0, _, by decide, h, ‹_›, by rw [show forallP = 12 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
     | exact absurd rfl hc
 
 /-- After a miss of `intern_forall` (the counts changed), the zeroed slot hides the append from
@@ -376,11 +393,13 @@ theorem fainternW_der {m m₁ : Mem} {f a r q : Word} (hI : fainternW m f a = so
     (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
     derBW (m₁.set64 FADER q 0) x = derBW m x ∧ derFW (m₁.set64 FADER q 0) x = derFW m x ∧
       exprLPW (m₁.set64 FADER q 0) x = exprLPW m x := by
-  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := fainternW_grow hI hc
+  obtain ⟨t, j, ht, hc', hg, hi, htr⟩ := fainternW_grow hI hc
   simp only [idxW, tierW] at hi htr
   rw [hq, hi, htr]
-  exact der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a j
+  obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inr rfl)) (growIf_set64_out hg FADER _ 0) x
+  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a j
     (.inr (.inr ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
+  exact ⟨e1.trans f1, e2.trans f2, e3.trans f3⟩
 
 grind_pattern [arena_grind] fainternW_der => fainternW m f a, (r, m₁), derBW (Mem.set64 m₁ FADER q 0) x
 

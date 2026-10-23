@@ -256,6 +256,29 @@ theorem growIf_set64 (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Wor
         gtiersW_set64 sa A k x hA hAc ca H hH]
   · rfl
 
+/-- A word array after a store, for any array. -/
+theorem arr64_set64_any (m : Mem) (a a' : ArrId) (i v : Word) :
+    (m.set64 a i v).arr64 a' = if a = a' then (m.arr64 a).set! i.toNat v else m.arr64 a' := by
+  simp only [Mem.set64, Mem.arr64]
+  by_cases h : a = a'
+  · subst h; simp [Array.getD]
+    intro h1 h2; omega
+  · simp [h, Array.getD]
+    split
+    · rw [Array.getElem_setIfInBounds_ne]; omega
+    · rfl
+/-- After a growth and a write to another array, the memory agrees with the write alone outside
+the slot array. -/
+theorem growIf_set64_out {S : ArrId} {ca : Word} {H : Mem → Word → Word → Word} {m₀ m m₁ : Mem}
+    {c : Word} (hg : growIf S ca H m₀ m c = some m₁) (D : ArrId) (q v : Word) :
+    ∀ b, b ≠ S → (m₁.set64 D q v).arr64 b = (m.set64 D q v).arr64 b := by
+  obtain ⟨g1, -, -⟩ := growIf_frame _ _ _ _ _ _ _ hg
+  intro b hb
+  rw [arr64_set64_any, arr64_set64_any]
+  split
+  · rename_i h; subst h; rw [g1 _ hb]
+  · exact g1 b hb
+
 /-- The schema's `hash` block, spliced at `o`, sets `h` (`o + 5`) to `H m t i` (`t` at `o + 2`,
 `i` at `o + 3`) and changes nothing else. -/
 def HashOK (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word) : Prop :=
