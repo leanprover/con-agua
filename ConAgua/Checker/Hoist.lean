@@ -2,7 +2,11 @@ import ConAgua.Front.IndApply
 import ConAgua.Arena.MemoLib
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.ViewL
 import ConAgua.Census.Attr
+import ConAgua.L.ModelGen
+import ConAgua.L.ProgHas
+import ConAgua.Arena.IndCopy
 
 /-!
 # The ground hoist: `hoistNatOpGround` in L (lane `front3`)
@@ -18,7 +22,7 @@ The stream is `DECL` in the order `ord` (an `IW` slice of record indices, `prepa
 axiom, `2` def, `3` thm, `4` opaque, `5` quot, `6` inductive block of `DIND` constant records).
 
 * **The name index** (`nameIndex`, `insertNames`): the memo `HNIX` (array 76, `CTL[75‥76]`),
-  name handle ↦ the first position declaring it.
+  name handle ↦ the first position declaring it, plus one.
 * **The targets** (`hoistTargetsGo`, `hoistDeps`, `hoistClosure`): `IW[tg + k] = t + 1` when
   position `k` must precede the operation at position `t`, `0` otherwise (the twin's
   `Std.HashMap Nat Nat`).
@@ -42,8 +46,19 @@ axiom, `2` def, `3` thm, `4` opaque, `5` quot, `6` inductive block of `DIND` con
   the sorted order is: for each position `p`, the records moved to `p` in position order, then
   `p` itself unless it moved. L builds that order directly (a bucket list per target).
 * `movedNames` (the second component of `applyHoist`, the `hoisted` receipt) is not computed:
-  `preparePrelude` drops it.
+  `preparePrelude` drops it (docs/deviations.md D30).
+* Every loop is a self-recursion (the twin's own shape), so that `l_model` (`L/ModelGen.lean`)
+  generates each function's word model and spec (`hoistIns_spec` … `hoistApply_spec`, at the end
+  of this file); the recursions over the stream run `c` deep (the harness's stack is 1 GiB).
+  `hoist_targets_go` and `hoist_nat_op_ground` call two-result callees (`nat_op_deps`), which
+  `l_model` does not take yet: no model. The refinement of the models against the twin is open
+  (docs/design/front3.md).
 -/
+
+set_option experimental.vcgen true
+
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Checker
 
@@ -63,7 +78,7 @@ abbrev hnSch : MemoSch := ⟨HNIX, 75⟩
 @[l_impl ConRon.Arena.Frontend.insertNames]
 def hoistInsL : FunDecl := lfn (n, k) locals (fd, j, e0, z) {
   (fd, j, e0) := call hn_find(n, 0);
-  if fd == 0 { z := call hn_put(n, 0, k, fd, j) };
+  if fd == 0 { z := call hn_put(n, 0, k + 1, fd, j) };
   return 0
 }
 
@@ -99,12 +114,12 @@ def hoistIndexGoL : FunDecl := lfn (ord, c, k) locals (z, r) {
   return r
 }
 
-/-- `hoist_ix(n)`: `(1, m)` when the name index maps `n` to `m`, `(0, 0)` when it has no entry. -/
+/-- `hoist_ix(n)`: `m + 1` when the name index maps `n` to `m`, `0` when it has no entry. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:129-138 ConRon.Arena.Frontend.nameIndex
 def hoistIxL : FunDecl := lfn (n) locals (fd, j, e0) {
   (fd, j, e0) := call hn_find(n, 0);
-  if fd == 0 { return (0, 0) };
-  return (1, HNIX.u64[j * 4 + 3])
+  if fd == 0 { return 0 };
+  return HNIX.u64[j * 4 + 3]
 }
 
 /-! ## The closure -/
@@ -114,21 +129,22 @@ references the name `n`: the position `m` first declaring it, if it lies after `
 has no target yet, gets target `i` and is pushed (`ws[sp] := m`); the new stack size. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:155-197 ConRon.Arena.Frontend.hoistClosure.pushOne
 @[l_impl ConRon.Arena.Frontend.hoistClosure.pushOne]
-def hoistNoteL : FunDecl := lfn (n, i, k, tg, ws, sp) locals (f, m) {
-  (f, m) := call hoist_ix(n);
-  if f != 0 && i < m && m != k && IW.u64[tg + m] == 0 {
-    IW.u64[tg + m] := i + 1;
-    IW.u64[ws + sp] := m;
+def hoistNoteL : FunDecl := lfn (n, i, k, tg, ws, sp) locals (m) {
+  m := call hoist_ix(n);
+  if m != 0 && i + 1 < m && m != k + 1 && IW.u64[tg + m - 1] == 0 {
+    IW.u64[tg + m - 1] := i + 1;
+    IW.u64[ws + sp] := m - 1;
     return sp + 1
   };
   return sp
 }
 
 /-- `hoist_walk(e, i, k, tg, ws, sp, fu)`: the constants of the expression `e` (each node once,
-the visited set `HSEEN`), each handed to `hoist_note`; the new stack size. -/
+the visited set `HSEEN`), each handed to `hoist_note`; the new stack size. The compound nodes go
+to their arm (`hoist_app`, …) at fuel `fu - 1`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 @[l_impl ConRon.Arena.Frontend.usedConstsGo]
-def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, g, t, x) {
+def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, g, t, x, r) {
   if fu == 0 { abort };
   (fd, j, e0) := call hs_find(e, 0);
   if fd != 0 { return sp };
@@ -139,49 +155,85 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 3 {
     if CTL.u64[18 + t] <= x { abort };
-    sp := call hoist_note(CREC.u64[x * 4 + t * 2], i, k, tg, ws, sp);
-    return sp
+    r := call hoist_note(CREC.u64[x * 4 + t * 2], i, k, tg, ws, sp);
+    return r
   };
-  if g == 4 {
-    if CTL.u64[4 + t] <= x { abort };
-    sp := call hoist_walk(AREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu - 1);
-    sp := call hoist_walk(AREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu - 1);
-    return sp
-  };
-  if g == 5 {
-    if CTL.u64[28 + t] <= x { abort };
-    sp := call hoist_walk(LAREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu - 1);
-    sp := call hoist_walk(LAREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu - 1);
-    return sp
-  };
-  if g == 6 {
-    if CTL.u64[30 + t] <= x { abort };
-    sp := call hoist_walk(FAREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu - 1);
-    sp := call hoist_walk(FAREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu - 1);
-    return sp
-  };
-  if g == 7 {
-    if CTL.u64[20 + t] <= x { abort };
-    sp := call hoist_walk(LEREC.u64[x * 6 + t * 3], i, k, tg, ws, sp, fu - 1);
-    sp := call hoist_walk(LEREC.u64[x * 6 + t * 3 + 1], i, k, tg, ws, sp, fu - 1);
-    sp := call hoist_walk(LEREC.u64[x * 6 + t * 3 + 2], i, k, tg, ws, sp, fu - 1);
-    return sp
-  };
-  if g == 9 {
-    if CTL.u64[32 + t] <= x { abort };
-    sp := call hoist_note(PJREC.u64[x * 6 + t * 3], i, k, tg, ws, sp);
-    sp := call hoist_walk(PJREC.u64[x * 6 + t * 3 + 2], i, k, tg, ws, sp, fu - 1);
-    return sp
-  };
-  if g == 1 {
-    if CTL.u64[26 + t] <= x { abort };
-    sp := call hoist_walk(FVREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu - 1);
-    return sp
-  };
+  if g == 4 { if CTL.u64[4 + t] <= x { abort }; r := call hoist_app(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 5 { if CTL.u64[28 + t] <= x { abort }; r := call hoist_lam(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 6 { if CTL.u64[30 + t] <= x { abort }; r := call hoist_forall(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 7 { if CTL.u64[20 + t] <= x { abort }; r := call hoist_let(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 9 { if CTL.u64[32 + t] <= x { abort }; r := call hoist_proj(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 1 { if CTL.u64[26 + t] <= x { abort }; r := call hoist_fvar(e, i, k, tg, ws, sp, fu - 1); return r };
   if g == 0 { if CTL.u64[22 + t] <= x { abort }; return sp };
   if g == 2 { if CTL.u64[16 + t] <= x { abort }; return sp };
   if g == 8 { if CTL.u64[2 + t] <= x { abort }; return sp };
   abort
+}
+
+/-- `hoist_app(e, i, k, tg, ws, sp, fu)`: `usedConstsGo`'s arm for a `app` node (the children at
+fuel `fu`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
+def hoistAppL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
+  t := (e >> 27) & 1;
+  x := e & 134217727;
+  sp := call hoist_walk(AREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(AREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  return sp
+}
+
+/-- `hoist_lam(e, i, k, tg, ws, sp, fu)`: `usedConstsGo`'s arm for a `lam` node (the children at
+fuel `fu`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
+def hoistLamL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
+  t := (e >> 27) & 1;
+  x := e & 134217727;
+  sp := call hoist_walk(LAREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LAREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  return sp
+}
+
+/-- `hoist_forall(e, i, k, tg, ws, sp, fu)`: `usedConstsGo`'s arm for a `forallE` node (the children at
+fuel `fu`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
+def hoistForallL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
+  t := (e >> 27) & 1;
+  x := e & 134217727;
+  sp := call hoist_walk(FAREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(FAREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  return sp
+}
+
+/-- `hoist_let(e, i, k, tg, ws, sp, fu)`: `usedConstsGo`'s arm for a `letE` node (the children at
+fuel `fu`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
+def hoistLetL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
+  t := (e >> 27) & 1;
+  x := e & 134217727;
+  sp := call hoist_walk(LEREC.u64[x * 6 + t * 3], i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LEREC.u64[x * 6 + t * 3 + 1], i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LEREC.u64[x * 6 + t * 3 + 2], i, k, tg, ws, sp, fu);
+  return sp
+}
+
+/-- `hoist_proj(e, i, k, tg, ws, sp, fu)`: `usedConstsGo`'s arm for a `proj` node (the children at
+fuel `fu`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
+def hoistProjL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
+  t := (e >> 27) & 1;
+  x := e & 134217727;
+  sp := call hoist_note(PJREC.u64[x * 6 + t * 3], i, k, tg, ws, sp);
+  sp := call hoist_walk(PJREC.u64[x * 6 + t * 3 + 2], i, k, tg, ws, sp, fu);
+  return sp
+}
+
+/-- `hoist_fvar(e, i, k, tg, ws, sp, fu)`: `usedConstsGo`'s arm for a `fvar` node (the children at
+fuel `fu`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
+def hoistFvarL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
+  t := (e >> 27) & 1;
+  x := e & 134217727;
+  sp := call hoist_walk(FVREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  return sp
 }
 
 /-- `hoist_rules_go(k, i, tg, ws, sp, ro, rc, r)`: the right-hand sides of the recursor rules
@@ -265,10 +317,10 @@ def hoistClosureL : FunDecl := lfn (i, j, ord, tg, ws) locals (r) {
 `i`: each first declared after `i` pulls its closure ahead of `i`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:283-311 ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps
 @[l_impl ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps]
-def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (f, m, z, r) {
+def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (m, z, r) {
   if l <= q { return 0 };
-  (f, m) := call hoist_ix(IW.u64[o + q]);
-  if f != 0 && i < m { z := call hoist_closure(i, m, ord, tg, ws) };
+  m := call hoist_ix(IW.u64[o + q]);
+  if m != 0 && i + 1 < m { z := call hoist_closure(i, m - 1, ord, tg, ws) };
   r := call hoist_deps(i, o, l, q + 1, ord, tg, ws);
   return r
 }
@@ -396,7 +448,9 @@ def hoistNatOpGroundL : FunDecl := lfn (ord, c) locals (z, tg, ws, a, r) {
 def hoistProg : Prog :=
   [("hoist_ins", hoistInsL), ("hoist_names_go", hoistNamesGoL), ("hoist_names", hoistNamesL),
    ("hoist_index_go", hoistIndexGoL), ("hoist_ix", hoistIxL), ("hoist_note", hoistNoteL),
-   ("hoist_walk", hoistWalkL), ("hoist_rules_go", hoistRulesGoL), ("hoist_block_go", hoistBlockGoL),
+   ("hoist_walk", hoistWalkL), ("hoist_app", hoistAppL), ("hoist_lam", hoistLamL),
+   ("hoist_forall", hoistForallL), ("hoist_let", hoistLetL), ("hoist_proj", hoistProjL),
+   ("hoist_fvar", hoistFvarL), ("hoist_rules_go", hoistRulesGoL), ("hoist_block_go", hoistBlockGoL),
    ("hoist_deps_of", hoistDepsOfL), ("hoist_close_go", hoistCloseGoL),
    ("hoist_closure", hoistClosureL), ("hoist_deps", hoistDepsL),
    ("hoist_targets_go", hoistTargetsGoL), ("hoist_zero", hoistZeroL), ("hoist_any", hoistAnyL),
@@ -404,5 +458,135 @@ def hoistProg : Prog :=
    ("hoist_apply", hoistApplyL), ("hoist_nat_op_ground", hoistNatOpGroundL),
    ("hs_find", memoFindG hsSch), ("hs_put", memoPutG hsSch), ("hs_clear", memoClearG hsSch),
    ("hn_find", memoFindG hnSch), ("hn_put", memoPutG hnSch), ("hn_clear", memoClearG hnSch)]
+
+/-- The hoist's functions in a program. -/
+abbrev HoistProg (p : Prog) : Prop := ProgHas p hoistProg
+
+/-! ## The name index -/
+
+/-- **`hoist_ins` is its model `hInsW`** (generated). -/
+l_model hoistIns_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_ins" ↦ hInsW]
+  specs [memoFindG_spec hnSch p _ (hp.get "hn_find") n,
+    memoPutG_spec hnSch p _ (hp.get "hn_put") n]
+  grind [arena_grind]
+
+/-- **`hoist_names_go` is its model `hNamesGoW`** (generated). -/
+l_model hoistNamesGo_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_names_go" ↦ hNamesGoW]
+  specs [hoistIns_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_names` is its model `hNamesW`** (generated). -/
+l_model hoistNames_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_names" ↦ hNamesW]
+  specs [hoistIns_spec p hp n, hoistNamesGo_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_index_go` is its model `hIndexGoW`** (generated). -/
+l_model hoistIndexGo_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_index_go" ↦ hIndexGoW]
+  specs [hoistNames_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_ix` is its model `hIxW`** (generated; reads only). -/
+l_model hoistIx_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_ix" ↦ hIxW]
+  specs [memoFindG_spec hnSch p _ (hp.get "hn_find") n]
+  grind [arena_grind]
+
+/-! ## The closure -/
+
+/-- **`hoist_note` is its model `hNoteW`** (generated). -/
+l_model hoistNote_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_note" ↦ hNoteW]
+  specs [hoistIx_spec p hp n]
+  grind [arena_grind] extra [L.st64]
+
+/-- **`hoist_walk` and its arms are their models** (generated). -/
+l_model hoistWalk_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_walk" ↦ hWalkW, hp.get "hoist_app" ↦ hAppW, hp.get "hoist_lam" ↦ hLamW,
+    hp.get "hoist_forall" ↦ hForallW, hp.get "hoist_let" ↦ hLetW, hp.get "hoist_proj" ↦ hProjW,
+    hp.get "hoist_fvar" ↦ hFvarW]
+  specs [memoFindG_spec hsSch p _ (hp.get "hs_find") n,
+    memoPutG_spec hsSch p _ (hp.get "hs_put") n, hoistNote_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+
+/-- **`hoist_rules_go` is its model `hRulesGoW`** (generated). -/
+l_model hoistRulesGo_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_rules_go" ↦ hRulesGoW]
+  specs [(hoistWalk_spec p hp n).1]
+  grind [arena_grind]
+
+/-- **`hoist_block_go` is its model `hBlockGoW`** (generated). -/
+l_model hoistBlockGo_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_block_go" ↦ hBlockGoW]
+  specs [(hoistWalk_spec p hp n).1, hoistRulesGo_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_deps_of` is its model `hDepsOfW`** (generated). -/
+l_model hoistDepsOf_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_deps_of" ↦ hDepsOfW]
+  specs [memoClearG_spec hsSch p _ (hp.get "hs_clear") n, (hoistWalk_spec p hp n).1,
+    hoistBlockGo_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_close_go` is its model `hCloseGoW`** (generated). -/
+l_model hoistCloseGo_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_close_go" ↦ hCloseGoW]
+  specs [hoistDepsOf_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_closure` is its model `hClosureW`** (generated). -/
+l_model hoistClosure_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_closure" ↦ hClosureW]
+  specs [hoistCloseGo_spec p hp n]
+  grind [arena_grind] extra [L.st64]
+
+/-- **`hoist_deps` is its model `hDepsW`** (generated). -/
+l_model hoistDeps_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_deps" ↦ hDepsW]
+  specs [hoistIx_spec p hp n, hoistClosure_spec p hp n]
+  grind [arena_grind]
+
+/-! ## The reorder -/
+
+/-- **`hoist_zero` is its model `hZeroW`** (generated). -/
+l_model hoistZero_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_zero" ↦ hZeroW]
+  specs []
+  grind [arena_grind] extra [L.st64]
+
+/-- **`hoist_any` is its model `hAnyW`** (generated). -/
+l_model hoistAny_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_any" ↦ hAnyW]
+  specs []
+  grind [arena_grind]
+
+/-- **`hoist_bucket` is its model `hBucketW`** (generated). -/
+l_model hoistBucket_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_bucket" ↦ hBucketW]
+  specs []
+  grind [arena_grind] extra [L.st64]
+
+/-- **`hoist_chain` is its model `hChainW`** (generated). -/
+l_model hoistChain_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_chain" ↦ hChainW]
+  specs []
+  grind [arena_grind] extra [L.st64]
+
+/-- **`hoist_emit` is its model `hEmitW`** (generated). -/
+l_model hoistEmit_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_emit" ↦ hEmitW]
+  specs [hoistChain_spec p hp n]
+  grind [arena_grind] extra [L.st64]
+
+/-- **`hoist_apply` is its model `hApplyW`** (generated). -/
+l_model hoistApply_spec (p : Prog) (hp : HoistProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  fns [hp.get "hoist_apply" ↦ hApplyW]
+  specs [iwAlloc_specW p ha n, hoistZero_spec p hp n, hoistBucket_spec p hp n,
+    hoistEmit_spec p hp n]
+  grind [arena_grind] gen 20 heartbeats 1000000
+
 
 end L.Checker
