@@ -89,6 +89,36 @@ structure TwinFold (pins : List INatOpPinSet) (ds : Array IDeclaration) (fe : IF
   pd : ∀ x ∈ ds.toList, PersDecl x
   den : ∃ dsP, denoteDecls a.store ds.toList = some dsP
   pend : ∀ pc ∈ pend.toList, PersVG pc.vg
+  /-- The scratch tier is off (every step ends in `dropScratch`): the bracket's `enterScratch`
+  then changes no denotation (`TwinOK.enter`). -/
+  off : a.store.scratchOn = false
+
+/-- **A step ends with the scratch tier off** (`dropScratch` last on both arms). -/
+theorem installStep_off {mode : CheckMode} {pins : List INatOpPinSet} {i : Nat} {fe : IFEnv}
+    {pend : Array PendingCheck} {pd : IDeclaration} {s s' : AState}
+    {x : IFEnv × Array PendingCheck} (h : installStep mode pins i fe pend pd s = .ok (x, s')) :
+    s'.store.scratchOn = false := by
+  have hd : ∀ {t t' : AState} {u : Unit}, dropScratch t = .ok (u, t') → t'.store.scratchOn = false :=
+    fun h => by
+      simp only [dropScratch, flushCaches, bind, StateT.bind, get, getThe, MonadStateOf.get,
+        StateT.get, set, MonadStateOf.set, StateT.set, pure, Except.pure, Except.bind] at h
+      cases h; rfl
+  simp only [installStep] at h
+  obtain ⟨_, s1, -, h⟩ := AM.bind_ok h
+  obtain ⟨_, s2, -, h⟩ := AM.bind_ok h
+  obtain ⟨⟨fe', vg⟩, s3, -, h⟩ := AM.bind_ok h
+  cases vg with
+  | none =>
+    obtain ⟨⟨_, _⟩, s4, -, h⟩ := AM.bind_ok h
+    obtain ⟨_, s5, h5, h⟩ := AM.bind_ok h
+    obtain ⟨-, rfl⟩ := AM.pure_ok h
+    exact hd h5
+  | some vg =>
+    obtain ⟨⟨_, _⟩, s4, -, h⟩ := AM.bind_ok h
+    obtain ⟨⟨_, _⟩, s5, -, h⟩ := AM.bind_ok h
+    obtain ⟨_, s6, h6, h⟩ := AM.bind_ok h
+    obtain ⟨-, rfl⟩ := AM.pure_ok h
+    exact hd h6
 
 namespace TwinFold
 
@@ -163,7 +193,7 @@ theorem step_pext (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) 
     · exact checkDecl_nodup hF hnd
     · exact hsplit.nodup hnd
   exact ⟨⟨⟨env₁, hok₁, hnd₁⟩, ⟨pinsP, PinsDenote.pmono hx₁ _ _ h.pp hpins⟩, h.pp, h.pd,
-    ⟨dsP, denoteDecls_pext hx₁ _ _ h.pd hden⟩, hpend₁⟩, hx₁⟩
+    ⟨dsP, denoteDecls_pext hx₁ _ _ h.pd hden⟩, hpend₁, installStep_off hA⟩, hx₁⟩
 
 /-- **The fold's step**: an accepting `installDeclStep` on record `i` keeps the invariant. -/
 theorem step (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}

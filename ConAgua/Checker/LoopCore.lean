@@ -24,13 +24,13 @@ names_tree loopCoreTree : stageCoreFns
 /-- The arrays of `coreLoopA`, as a test. -/
 def coreLoopPa (a : ArrId) : Bool :=
   decide (a < 256) && a != PEND && a != DECL && a != DLP && (decide (a < 146) || decide (149 < a)) &&
-    a != EREC && a != IW && a != PINS && (decide (a < 201) || decide (208 < a))
+    a != EREC && a != IW && a != PINS && (decide (a < 201) || decide (208 < a)) && a != L.Stubs.CRM
 
 /-- The `CTL` words of `coreLoopC`, as a test. -/
 def coreLoopPc (w : Word) : Bool :=
   decide (w.toNat < 1024) && w.toNat != 130 && w.toNat != 150 && w.toNat != 151 &&
     (decide (w.toNat < 140) || decide (147 < w.toNat)) && w.toNat != 129 && w.toNat != 200 &&
-    (decide (w.toNat < 202) || decide (219 < w.toNat))
+    (decide (w.toNat < 202) || decide (219 < w.toNat)) && w.toNat != 158
 
 theorem coreLoopPa_mem (a : ArrId) (h : coreLoopPa a = true) : a ∈ coreLoopA := by
   simp only [coreLoopPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
@@ -41,11 +41,12 @@ theorem coreLoopPc_mem (w : Word) (h : coreLoopPc w = true) : w ∈ coreLoopC :=
   simp only [coreLoopPc, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne,
     ne_eq] at h
   simp only [coreLoopC, stepC, List.mem_filter, List.mem_map, List.mem_range]
-  refine ⟨⟨w.toNat, ⟨h.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩, ?_⟩
+  refine ⟨⟨w.toNat, ⟨h.1.1.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩, ?_⟩
   · simp only [decide_eq_true_eq]
-    exact ⟨h.1.1.1.1.1.1.2, h.1.1.1.1.1.2, h.1.1.1.1.2, h.1.1.1.2⟩
+    exact ⟨h.1.1.1.1.1.1.1.2, h.1.1.1.1.1.1.2, h.1.1.1.1.1.2, h.1.1.1.1.2⟩
   · simp only [decide_eq_true_eq]
-    refine ⟨fun e => h.1.1.2 (by rw [e]; rfl), fun e => h.1.2 (by rw [e]; rfl), h.2⟩
+    refine ⟨fun e => h.1.1.1.2 (by rw [e]; rfl), fun e => h.1.1.2 (by rw [e]; rfl), h.1.2,
+      fun e => h.2 (by rw [e]; rfl)⟩
 
 /-- Every function of the checker passes the loop core's per-function check. -/
 prog_all checkerProg_loopChk : checkerProg (wsChk CTL coreLoopPa coreLoopPc loopCoreTree)

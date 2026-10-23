@@ -28,6 +28,44 @@ open ConRon.Arena
 
 namespace L.Arena
 
+/-! ## `TwinOK` across memory writers -/
+
+section frames
+variable {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
+
+/-- **`TwinOK` across a writer** that leaves the core memos (arrays 49, 50, 52‥54, 151‥153, `CTL`
+48, 50, 54, 56, 58, 152, 154, 156) alone, `EREC` writers included (no part of `TwinOK` reads the
+records: `StoreDen.mem`); the twin state and the environment unchanged. -/
+theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A)
+    (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
+    (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
+    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
+    (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
+  ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,
+    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk, h.den.mem m'⟩
+
+/-- `TwinOK` across a writer of `CTL` words below 48 or in 60‥127 only (the bracket's). -/
+theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame [] C m m')
+    (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
+    (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
+  have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
+    have := hC k hk; omega
+  exact h.frame hf ⟨by simp, by simp⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
+    ⟨by simp, by simp, by simp⟩
+    ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
+    ⟨by simp, by simp, by simp⟩
+    ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
+
+end frames
+
+theorem pinW_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hP : PINS ∉ A) : pinW m' 0 = pinW m 0 := by
+  simp only [pinW, hf.1 PINS hP (by decide)]
+
+
 /-! ## The twin's half of `TwinOK` from the fold's invariant
 
 Every part of `TwinOK` that speaks of the twin state alone follows from con-ron's fold invariant
