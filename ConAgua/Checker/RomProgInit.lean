@@ -1,0 +1,131 @@
+import ConAgua.Final.Statement
+import ConAgua.Front.StateDR
+import ConAgua.Rom.Stage
+import ConAgua.Checker.CapCheck
+
+/-!
+# The loaded memory at the start of `check` (lane `pipeline`)
+
+`ConAgua.Final.loadMem b pb s8 s64` has the word arrays of `initMem s64` (all zero) and the byte
+arrays `b`, `pb`, then zeroed ones. Under `CapsOK` (`cap_check`, `CapCheck.lean`) the arena
+relation holds at the twin's initial state (`arenaD_loadMem`), `RSET` is empty (`rsetR_loadMem`)
+and the ROM stack is at `0` (`stkTop_loadMem`). The parse state relation at `StateD.blank`
+(`stateDR_loadMem`) needs more than `CapsOK`: `DECL` and `DLP` must have a word (their counts),
+and `IFR`, `IFL` must be below `2^62` words; `cap_check` does not check these.
+-/
+
+namespace L.Checker
+
+open L L.Arena L.Front L.Rom ConAgua.Final
+open ConRon.Arena ConRon.Arena.Frontend
+
+section
+variable (b pb : ByteArray) (s8 s64 : List Nat)
+
+theorem loadMem_arr (a : ArrId) :
+    (loadMem b pb s8 s64).arr64 a = Array.replicate (s64[a]?.getD 0) 0 := by
+  simp only [Mem.arr64, loadMem, Array.getD_eq_getD_getElem?]
+  cases h : s64[a]? <;> simp [h]
+
+theorem loadMem_rd (a : ArrId) (x : Word) : rdW ((loadMem b pb s8 s64).arr64 a) x = 0 := by
+  rw [loadMem_arr]; simp only [rdW, Array.getElem?_replicate]; split <;> rfl
+
+theorem loadMem_words_size : (loadMem b pb s8 s64).words.size = s64.length := by
+  simp [loadMem]
+
+/-- The pin-data buffer is byte array `PB`. -/
+theorem loadMem_pb : (loadMem b pb s8 s64).arr8 PB = pb.data.toList.toArray := by
+  simp [Mem.arr8, loadMem, PB]
+
+/-- `CTL` exists: it has at least `ctlMin` words. -/
+theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : CTL < (loadMem b pb s8 s64).words.size := by
+  have h := hc.2
+  rw [loadMem_arr] at h
+  rw [loadMem_words_size]
+  simp only [Array.size_replicate] at h
+  cases hs : s64[CTL]? with
+  | none => rw [hs] at h; simp [ctlMin] at h
+  | some _ => exact (List.getElem?_eq_some_iff.1 hs).1
+
+/-- **`ArenaR` at the start**, on the loaded memory (`arenaR_init`'s proof over `loadMem`). -/
+theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
+    ArenaR (loadMem b pb s8 s64) (AState.init EStore.empty) := by
+  have hz := loadMem_rd b pb s8 s64
+  have hc' : 64 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by have := hc.2; simp [ctlMin] at this; omega
+  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 63 := hc.1 POOL (by simp [POOL, wordArrays])
+  have hw := loadMem_ctl_lt b pb s8 s64 hc
+  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by simp [litSch]; omega)⟩,
+    storeR_init _ _ _ _ hz (by simp [appSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [sortSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [constSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [letSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [bvarSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [fvarSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [lamSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [forallSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [projSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [zeroSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [succSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [maxSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [imaxSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [paramSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [lsSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [nanonSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [nstrSch]; omega),
+    storeR_init _ _ _ _ hz (by simp [nnumSch]; omega), ?_,
+    ⟨constT_empty _, constT_empty _⟩, ⟨constT_empty _, constT_empty _⟩,
+    ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
+    ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
+    ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
+    ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
+  · refine ⟨hw, by omega, hp, ?_⟩
+    simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
+  · exact ⟨memoRG_zero bmSch bmKey _ _ hz (by simp; omega),
+      memoRG_zero lfSch lfKey _ _ hz (by simp; omega),
+      memoRG_zero imSch lfKey _ _ hz (by simp; omega),
+      memoRG_zero frSch bmKey _ _ hz (by simp; omega)⟩
+
+/-- **`ArenaD` at the start**, on the loaded memory. -/
+theorem arenaD_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
+    ArenaD (loadMem b pb s8 s64) (AState.init EStore.empty) :=
+  ⟨arenaR_loadMem b pb s8 s64 hc, derR_init _⟩
+
+/-- **`RSET` is empty at the start.** -/
+theorem rsetR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) : RsetR (loadMem b pb s8 s64) :=
+  RsetR_zero _ (loadMem_rd b pb s8 s64) (by have := hc.2; simp [ctlMin] at this; omega)
+
+/-- **The ROM stack is at `0` at the start.** -/
+theorem stkTop_loadMem : stkTop (loadMem b pb s8 s64) = 0 := loadMem_rd b pb s8 s64 CTL 131
+
+theorem stkTop_loadMem_lt : (stkTop (loadMem b pb s8 s64)).toNat < 2 ^ 61 := by
+  rw [stkTop_loadMem]; decide
+
+/-- **The parse state relation at the start**, at the blank parse state (`stateDR_initMem`'s
+proof over `loadMem`). Besides `CapsOK` it needs a word in `DECL` and in `DLP` (their counts) and
+`IFR`, `IFL` below `2^62` words, which `cap_check` does not check. -/
+theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64))
+    (hd : 1 ≤ ((loadMem b pb s8 s64).arr64 DECL).size) (hq : 1 ≤ ((loadMem b pb s8 s64).arr64 DLP).size)
+    (hf : ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
+      ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFL).size < 2 ^ 62) :
+    StateDR (loadMem b pb s8 s64) StateD.blank := by
+  have hctl : 73 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by
+    have := hc.2; simp [ctlMin] at this; omega
+  have hT : ∀ (a : ArrId) {k : IdxKind}, TblIx a → a < wordArrays →
+      TblR (loadMem b pb s8 s64) a ({} : ConLeche.Frontend.IdTable (Idx k)) := fun a _ ha hs =>
+    TblR.zero _ a ha (loadMem_rd b pb s8 s64) (hc.1 a hs) hctl
+  refine ⟨hT NID (.inl rfl) (by decide), hT LID (.inr (.inl rfl)) (by decide),
+    hT EID (.inr (.inr rfl)) (by decide), ?_, hf⟩
+  have hd2 := hc.1 DECL (by decide)
+  have hq2 := hc.1 DLP (by decide)
+  rw [loadMem_arr] at hd hq hd2 hq2 ⊢
+  rw [loadMem_arr]
+  simp only [Array.size_replicate] at hd hq hd2 hq2
+  refine ⟨by simpa using hd2, by simpa using hq2, ?_, ?_, ?_, fun i h => by
+    simp [StateD.blank] at h⟩
+  · rw [Array.getElem?_replicate]; split <;> simp [StateD.blank]
+  · simpa [StateD.blank] using hd
+  · rw [Array.getElem?_replicate]; split <;> simp <;> omega
+
+end
+
+end L.Checker
