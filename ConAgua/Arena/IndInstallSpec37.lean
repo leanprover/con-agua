@@ -442,7 +442,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
-    (checkBlockTail_refines hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hS8 hBP8
+    (checkBlockTail_refines hP.tail hP.cbr hfs2 hcl2 (n + 3) hclR hfR _ _ hS8 hBP8
       (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8) c9
   simp only at hs9 hS9 hg9 hM9 hA9
   subst hs9

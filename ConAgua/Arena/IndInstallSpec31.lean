@@ -17,7 +17,6 @@ lands (then it is that theorem). `check_block_rec` enters through `checkBlockRec
 * `HbMemo m` (for the projection tables' `struct_proj_guards`), returned for the memory after;
 * `closedA p hbFreeA hbFreeC fs` with the six callees in `fs` (a program fact: `decide +kernel` at
   `checkerProg`), so that the callees with no memo lemma keep the `hb` memo;
-* the fuel bound `2 ^ 31 + n ≤ coreWalkFuel` (the tables');
 * for `check_block_rec` (`genRecCheck_refines`' own): the recursor check's walk memos well formed
   (`RcMR m`, carried to the call by the write set `closedA p rcFreeA rcFreeC fsR` of the callees
   before it, `tailRcCallees`), the shape's recursor slice below the top (`RecsB`), the classes'
@@ -102,7 +101,7 @@ def tailKeepCallees : List FnName :=
 /-- **`check_block_tail`'s model refines `checkBlockTail`.** -/
 theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName}
     (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
+    {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m : Mem} {a : AState} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : BPassR vis fe m q bp)
@@ -294,7 +293,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
         (ctb_spec p hP.tabs.tabs k _ _ _ _ _ _ _ _ _) e7
       obtain ⟨x, a', h1, h2, h3, h4⟩ := ctbW_sim hP.tabs dn (UInt64.ofNat pw) bs k m6 a6 (r6.headD 0) fe3 _ _ _ _ _
         _ bs.members ctorsAs sss
-        (by omega) hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
+        hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
         (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 r s7.mem hW7
       exact ⟨x, a', h1, h2, h3, h4, hA7⟩)
     (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
