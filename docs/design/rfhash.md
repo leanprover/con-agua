@@ -32,7 +32,7 @@ fresh map per `replaceFVars`).
 
 ## Measurements (`perf stat -e instructions:u`, compiled `check`, CA_WORDS 2^25, 1 pin variant)
 
-| fixture | before (master `e9a3b3d1`) | after | con-ron `--jobs=1` |
+| fixture | before (compopt `base.bin`, master `efb16f47`) | after | con-ron `--jobs=1` |
 |---|---:|---:|---:|
 | c05b_nest30_pi1000 | 1 470 824 M (67 s) | 33 103 M (3.4 s) | 9 519 M |
 
