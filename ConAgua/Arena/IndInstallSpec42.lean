@@ -215,7 +215,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
-    {n : Nat} (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
+    {n : Nat}
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {o l w : Word} {r : List Word} {block : List IConstantInfo}
     {pins : List INatOpPinSet}
@@ -321,7 +321,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n (by omega) ⟨s4.mem, Locals.init []⟩
+    (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n ⟨s4.mem, Locals.init []⟩
       a4 hS4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hv hP4 hma4 hA4
       hkp hkt hkr hta4 hsl4.2) (callW_mono c5 (by omega))
   subst hs5

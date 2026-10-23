@@ -774,8 +774,7 @@ def pcF (hp : Nat) (x : EIdx) : AM Bool := do
     pure (decide (fb ≤ hp))
 
 /-- **`nest_cont_params_closed`** is `ds.allM (pcF hp)`. -/
-theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word) (n : Nat)
-    (hn : n ≤ coreWalkFuel) :
+theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (dO dL : Word) (ds : List EIdx) (r : List Word),
     cpW n m hp dO dL = some (r, m') → StageR dn vis fe m a →
     decHL m dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m) →
@@ -812,7 +811,7 @@ theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word)
     | some pr =>
     obtain ⟨bb, m1⟩ := pr
     rw [hb] at h
-    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stage dn vis fe hS n coreWalkFuel (by omega) _ bb hxH hb
+    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
     rw [decE_eq, hxd] at hrun1
     by_cases hbb : bb ≠ 0
     · rw [cpK1_b (h := hbb)] at h
@@ -850,7 +849,7 @@ theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word)
       have : ¬ hp.toNat < (r2.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
       omega
     have hg12 := hg1.trans hg2
-    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih (by omega) m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
+    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
       (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
             have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
       (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.1; omega)
@@ -1031,7 +1030,7 @@ theorem ustW_mfr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP
 
 /-- **`nest_cont_checks`**: the twin's three checks of `nestCont` pass. -/
 theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    {k : Nat} (hk : k ≤ coreWalkFuel) {m m' : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
+    {k : Nat} {m m' : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
     {c : NestCtx} {ds idx : List EIdx} {r : List Word}
     (h : p2ccW k m ctx hp nn dO dL iO iL = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hds : decHL m dO.toNat dL.toNat = some ds)
@@ -1076,7 +1075,7 @@ theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | some pr3 =>
   obtain ⟨r3, m3⟩ := pr3
   rw [hcp] at h
-  obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_ok dn fe vis hp k (by omega) m1 m3 a dO dL ds r3 hcp hS1
+  obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_ok dn fe vis hp k m1 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
     (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
   cases b3 with
