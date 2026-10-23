@@ -296,7 +296,7 @@ def passKeepCallees : List FnName :=
 /-- **`check_block_pass`' model refines `checkBlockPass`.** -/
 theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs) (n : Nat)
-    (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
     (hcx : ShapeCV m p0) (hb : (isRec != 0) = b) (hv : AllVis fe) (hPm : PosMR m) (hA : AbsOK m) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
@@ -484,7 +484,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   rw [c6, icpK6_some] at h
   obtain ⟨s6, hs6, -, hok6, hS6, hg6, hP6, hA6, hks6, hnf6, hns6⟩ := triple_of_callW
     (s₀ := ⟨s5.mem, Locals.init []⟩)
-    (checkBlockPositivity_refines p hP.pos n (by omega) _ a5 dn (r1.headD 0) fe1 _ _ _ _ _ ⟨bs1⟩
+    (checkBlockPositivity_refines p hP.pos n _ a5 dn (r1.headD 0) fe1 _ _ _ _ _ ⟨bs1⟩
       cvTas ctorsAs hS5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hk' f (by simp [passKeepCallees, hf]))) c6
   simp only at hs6 hS6 hg6 hP6 hA6 hks6 hnf6 hns6
   subst hs6
@@ -531,7 +531,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   obtain ⟨r8, m8⟩ := q8
   rw [c8, icpK8_some] at h
   obtain ⟨s8, hs8, -, ns, a8, hrun8, hS8, hg8, hns8, hP8, hA8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (nestSeeds_refines hP.rs (n + 3) dn (r1.headD 0) fe1 (by omega) _ a7 _ _ _ _ c seeds NS hS7 hU7
+    (nestSeeds_refines hP.rs (n + 3) dn (r1.headD 0) fe1 _ a7 _ _ _ _ c seeds NS hS7 hU7
       hhi4 hsd7.2.1 hsd7.2.2.2 hns7 hP7 hA7) c8
   simp only at hs8 hS8 hg8 hns8 hP8 hA8
   subst hs8
@@ -624,7 +624,7 @@ constructors' level-parameter slices in `EREC` (`ClassesLp`). Program facts: the
 @[refines ConRon.Arena.checkBlockPass]
 theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs) (n : Nat)
-    (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name}
+    (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0) (hb : (isRec != 0) = b) (hv : AllVis fe)
@@ -636,6 +636,6 @@ theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
       (RecsB s₀.mem p0 → RecsB s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 3))) ∧
       ClassesLp s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 15)) (rdW (s'.mem.arr64 IW) (r.headD 0 + 16)); ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
-    ⟨hl, icpW_sim hP hcl hfs n hn hS hq hsrc hcx hb hv hPm hA hk r s'.mem hm⟩
+    ⟨hl, icpW_sim hP hcl hfs n hS hq hsrc hcx hb hv hPm hA hk r s'.mem hm⟩
 
 end L.Ind

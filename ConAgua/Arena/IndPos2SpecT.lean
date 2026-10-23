@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndPos2SpecS
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the census theorems — each
-function of the block, run by `exec` at a fuel `n` with `2^31 + n ≤ coreWalkFuel`, refines its twin
+function of the block, run by `exec` at any fuel `n`, refines its twin
 (`nbSpec_all`: L ⊑ the word models; `nbOK_all`: the models ⊑ the twin). -/
 
 
@@ -23,7 +23,7 @@ variable {p : Prog} (L : NbLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name
 include L
 
 /-- Under `StageR`; the census link is `nestPos_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
+theorem nestPos_refines (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -36,11 +36,11 @@ theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : A
       decI (r.tail.headD 0) = x.2.1 ∧ NSB s'.mem (r.tail.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).1 s₀ vis ctx fu po pl dep kb e ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).1 s₀.mem s'.mem a₀ ctx fu po pl dep kb e ns c prog NS _ hm h0 h1 h2 h3 hP hA
+  have := (nbOK_all dn vis fe n).1 s₀.mem s'.mem a₀ ctx fu po pl dep kb e ns c prog NS _ hm h0 h1 h2 h3 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestPosBind_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word)
+theorem nestPosBind_refines (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -54,11 +54,11 @@ theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
       decI (r.tail.headD 0) = x.2.1 ∧ NSB s'.mem (r.tail.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.1 s₀ vis ctx fu po pl dep kb w ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.1 s₀.mem s'.mem a₀ ctx fu po pl dep kb w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
+  have := (nbOK_all dn vis fe n).2.1 s₀.mem s'.mem a₀ ctx fu po pl dep kb w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestPosApp_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word)
+theorem nestPosApp_refines (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -72,11 +72,11 @@ theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ 
       NSB s'.mem (r.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.1 s₀ vis ctx fu po pl kb hi w ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb hi w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
+  have := (nbOK_all dn vis fe n).2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb hi w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestCont_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word)
+theorem nestCont_refines (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word)
     (c : NestCtx) (prog : List NestHole) (args : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -92,11 +92,11 @@ theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.1 s₀ vis ctx fu po pl kb nn us aO aL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ hm h0 h1 h2 h3 h4 h5 h6 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ hm h0 h1 h2 h3 h4 h5 h6 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestContKey_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
+theorem nestContKey_refines (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -113,11 +113,11 @@ theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.1 s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestContNew_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
+theorem nestContNew_refines (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -134,11 +134,11 @@ theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.1 s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestFrame_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word)
+theorem nestFrame_refines (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (grp : List (NIdx × EIdx)) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -156,11 +156,11 @@ theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.1 s₀ vis ctx fu po pl hi us dO dL nPc gO gL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestCtors_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word)
+theorem nestCtors_refines (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cs : List (IConstantVal × Nat)) (NS : NestState) (outs : List (List NestFieldKind × EIdx))
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -179,11 +179,11 @@ theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestCtorsOne_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word)
+theorem nestCtorsOne_refines (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cvv : IConstantVal) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -200,11 +200,11 @@ theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
       decI (r.tail.tail.headD 0) = closed ∧ NSB s'.mem (r.tail.tail.tail.headD 0) NS3 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ hm h0 h1 h2 h3 h4 h5 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ hm h0 h1 h2 h3 h4 h5 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestCtorsWalk_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word)
+theorem nestCtorsWalk_refines (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -220,11 +220,11 @@ theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
       decI (r.tail.tail.tail.headD 0) = closed ∧ NSB s'.mem (r.tail.tail.tail.tail.headD 0) ns2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi nF crest ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ hm h0 h1 h2 h3 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ hm h0 h1 h2 h3 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestFields_refinesC` (`IndT/PosCensus.lean`). -/
-theorem nestFields_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word)
+theorem nestFields_refines (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState) (ks : List NestFieldKind) (nds : List EIdx)
     (h0 : StageR dn vis fe s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
@@ -247,7 +247,7 @@ theorem nestFields_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ 
       x.2.1.length = nds.length + nF.toNat ∧ (nF.toNat = 0 ∨ base.toNat + j.toNat + nF.toNat < 2 ^ 64) ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.2.2.2 s₀ vis ctx fu po pl base nF j cur ns kO kL dO dL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.2.2 s₀.mem s'.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
+  have := (nbOK_all dn vis fe n).2.2.2.2.2.2.2.2.2.2 s₀.mem s'.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 end census
