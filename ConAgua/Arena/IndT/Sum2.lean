@@ -33,10 +33,10 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_sum_tele_slow` under `StageC`** (twin side: the `slow` arm of con-ron's
 `checkSumTele_spec`). -/
 theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -156,7 +156,8 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     at hrun5 hT5
   obtain ⟨c5, -⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
     hC4.check henv hcvT hrun5
-  have hA5 := hkc k _ m4 r5 _ h5 hA4
+  have hA5 := checkConstantVal_absOK p hV hq hApd hCrk (n := k) (by omega) hC4.stageT
+    (rec2DecCV_erecP hdq hqx) (rec3CVExt_lt hS4 hqx) (denoteCV_lps hcvT) hA4.crMemo.crOK h5 hA4
   have hg15 := (hg13.trans hg4).trans hg5
   refine ⟨({ cvv with type := ty }, s), a5, ?_, StageC.of_T hT5 c5.ok, hg15, ?_, ?_, ?_,
     by simpa using hs32, by simpa using hs, hA5⟩
@@ -181,7 +182,7 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
     have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.2.1; omega
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_sum_tele` under `StageC`** (twin side: con-ron's `checkSumTele_spec`'s proof:
 `stripPis` leaves the twin's state, the syntactic sort is a read, the slow arm `ctsW_okC`). -/
 theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -280,7 +281,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     rw [h2, ctK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hkc hApd hCrk k (by omega)
+    obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hApd hCrk k (by omega)
       m1 m2 a cv n cvTa0 r2 cvv cvTa h2 hC1 hcv1 (by have := hg1.2.1; omega)
       (fun lo ll e1 e2 => by
         rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
@@ -323,7 +324,7 @@ variable (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_sum_tele_slow` refines `checkSumTele.checkSumTeleSlow .verified`** under `StageC`
 (the knot's `whnf`; the inputs' denotations as con-ron's `checkSumTele_spec` asks): the new
 constant value is a record in `EREC`. -/
@@ -351,11 +352,11 @@ theorem checkSumTeleSlow_refinesC (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a�
     hea hcn hsl hi1 hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hC', hg, hdec, -, -, hs32, hs, hA'⟩ :=
-    ctsW_okC hq henv hV hkc hApd hCrk k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hA hcvP hcvTaP hws hfe
+    ctsW_okC hq henv hV hApd hCrk k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hA hcvP hcvTaP hws hfe
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs, hA'⟩
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_sum_tele` refines `checkSumTele .verified`** under `StageC` (the inputs' denotations
 as con-ron's `checkSumTele_spec` asks). -/
 @[refines ConRon.Arena.checkSumTele]
@@ -387,7 +388,7 @@ theorem checkSumTele_refinesC (hp : p.lookup "check_sum_tele" = some checkSumTel
     hea hcn hsl hp hst hi1 hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hC', hg, hdec, hb, hslr, hs32, hs, hA'⟩ :=
-    ctW_okC hq henv hV hkc hApd hCrk k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hslTa hA hcvP hcvTaP hws hfe
+    ctW_okC hq henv hV hApd hCrk k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hslTa hA hcvP hcvTaP hws hfe
   obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst']; exact hC', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs,
     hb, hslr, hA'⟩

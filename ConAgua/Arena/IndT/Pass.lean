@@ -49,11 +49,11 @@ def PassTwin (a a' : AState) (x : BlockPass) (env₁ : ConLeche.Env) : Prop :=
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hkp henv hV hkc hOpf hLC hLT hApd hCrk in
+include hkp henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_pass`' model under `StageC`** (`icpW_sim`'s; twin side con-ron's
 `checkBlockPass_of`). -/
 theorem icpW_simC (hP : PassProg p) {fs : List FnName}
@@ -88,7 +88,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨r1, m1⟩ := q1
   rw [c1, icpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hout, hA1, hrb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (checkBlockInds_refinesC hkp henv hV hkc hOpf hLC hApd hCrk hP.inds (n + 2) (by omega) _ a p0 isRec bs b hC hq hsrc hcx hb hA
+    (checkBlockInds_refinesC hkp henv hV hOpf hLC hApd hCrk hP.inds (n + 2) (by omega) _ a p0 isRec bs b hC hq hsrc hcx hb hA
       (fun f hf => hkP f (by simp [passKeepCallees, hf])) hshP hden hcoh) c1
   simp only at hs1 hout
   subst hs1
@@ -160,7 +160,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨r3, m3⟩ := q3
   rw [c3, icpK3_some] at h
   obtain ⟨s3, hs3, -, hok3, hC3, hg3, hca3, hss3, hcb3, hA3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (checkBlockCtors_refinesC hkp henv₁ hV hkc hOpf hLC hLT hApd hCrk hP.ctors (n + 2) (by omega) _ a2 _ _ _ _ _ bs1 bs1.members cvTas
+    (checkBlockCtors_refinesC hkp henv₁ hV hOpf hLC hLT hApd hCrk hP.ctors (n + 2) (by omega) _ a2 _ _ _ _ _ bs1 bs1.members cvTas
       hC2 hbs2 hsrc2 hmss hcv2 hA2 hsh2 hms2 hcvs2 hT c2'.ienv.toS hden₂) c3
   simp only at hs3 hC3 hg3 hca3 hss3 hcb3 hA3
   subst hs3
@@ -188,16 +188,12 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4, icpK4_some] at h
-  obtain ⟨s4, hs4, -, hok4, hctx4, hho4, hhob4, hS4, hg4, hin4, hsl4, hhi4, hpn4⟩ :=
-    triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (blockNestCtx_refines p hP.nck hP.nhl hP.bnc (n + 1) _ a3 dn (r1.headD 0) fe1 _ _ _ bs1 cvTas
-      hS3 hbs3 hsrc3 hcv3) c4
-  simp only at hs4 hctx4 hho4 hhob4 hS4 hg4 hin4 hsl4 hhi4 hpn4
-  subst hs4
-  have hrun4 := AM.run_of_ok _ a3 hok4
-  generalize AM.res (ConRon.Arena.blockNestCtx fe1 bs1 cvTas) a3 = x4 at hrun4 hctx4 hho4 hhi4 hpn4
-  generalize AM.st (ConRon.Arena.blockNestCtx fe1 bs1 cvTas) a3 = a4 at hrun4 hS4
-  obtain ⟨c, holes⟩ := x4
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (bnc_specC p hP.nck hP.nhl hP.bnc (realCall p) (realCall_spec p) (n + 1) _ _ _ _ _) c4
+  obtain ⟨⟨c, holes⟩, a4, hrun4, hctx4, hho4, hhob4, hS4, hg4, hin4, hsl4, hhi4, hpn4, hA4⟩ :=
+    bncC_simA (realCall p) (n + 1) hS3 hbs3 hsrc3 hcv3
+      (fun _ he => Sim.mono (opfSimRA (n := n + 2) hOpf he hS3 hA3) fun _ _ _ _ h => ⟨h.1.1, h.2⟩)
+      r4 s4.mem hW4
   have x13 : ConRon.Arena.Ext a1.store a3.store := x12.trans x23
   obtain ⟨k4, ⟨ctxP, holesP⟩, ⟨hctx, hholes, hctxOk, hhw, hpar, hlen, hnh, hnP⟩, hF4⟩ :=
     ConRon.Bridge.Inductives.blockNestCtx_spec (μ := V) fe1 henv₁ bs1 p₁P cvTas cvTasP hT a3 a4 _ k3.ok
@@ -211,7 +207,6 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨namesP, lpsP, paramsP, sortP, hctxEq, -, -, hparams, -, -⟩ :=
     ConRon.Bridge.Inductives.dCtx_inv hctx
   have hP4 := PosMR.ofClosed hcl (hfs _ (by decide)) c4 hP3
-  have hA4 : AbsOK s4.mem := hkP _ (by simp [passKeepCallees]) _ _ _ _ _ c4 hA3
   have hC4 := StageC.of_parts hS4 k4.ok hA4 (dnE (x01.trans x14))
   have hg14 := hg13.trans hg4
   -- the classes
@@ -476,7 +471,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   · simp only [List.headD_cons]; rw [hw0]
     exact StageC.of_parts hS9 ck9 hA9 (dnE i9.ext)
 
-include hkp henv hV hkc hOpf hLC hLT hApd hCrk in
+include hkp henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_pass(vis, p0, isRec)` refines `checkBlockPass` under `StageC`**
 (`checkBlockPass_refines`'s, from `StageC` at the entry index and con-ron's `checkBlockPass_of`
 preconditions): besides `checkBlockPass_refines`' post, `StageC` at the formers' index and
@@ -500,7 +495,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
       ∃ env₁, StageC dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 env₁ s'.mem a' ∧ PassTwin a₀ a' x env₁;
       ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
-    ⟨hl, icpW_simC hkp henv hV hkc hOpf hLC hLT hApd hCrk hP hcl hfs n hn hC hq hsrc hcx hb hPm hA hk hcoh hden hshP r s'.mem hm⟩
+    ⟨hl, icpW_simC hkp henv hV hOpf hLC hLT hApd hCrk hP hcl hfs n hn hC hq hsrc hcx hb hPm hA hk hcoh hden hshP r s'.mem hm⟩
 
 end sims
 
