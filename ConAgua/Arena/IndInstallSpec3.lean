@@ -73,25 +73,25 @@ theorem lveW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
 mutual
 /-- **The model of `check_block_agree_one`**: the opened telescope, the member 0 domains, the
 doms comparison, the universe comparison. -/
-def agW (n : Nat) (m : Mem) (vis nP fvs0O fvs0L s0 cvTa s : Word) : Option (List Word × Mem) :=
-  agK1 (n - 1) vis nP fvs0O fvs0L s0 s
+def agW (cR : CallM) (n : Nat) (m : Mem) (vis nP fvs0O fvs0L s0 cvTa s : Word) : Option (List Word × Mem) :=
+  agK1 cR (n - 1) vis nP fvs0O fvs0L s0 s
     (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0])
 
 /-- After `open_pis_at_fvars_f`: `ok = 0` and a length mismatch abort, then `fvar_type_ds`. -/
-def agK1 (n : Nat) (vis nP fvs0O fvs0L s0 s : Word) :
+def agK1 (cR : CallM) (n : Nat) (vis nP fvs0O fvs0L s0 s : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then none
     else if r.tail.tail.headD 0 ≠ fvs0L then none
-    else agK2 n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L])
+    else agK2 cR n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L])
 
 /-- After `fvar_type_ds`: the doms comparison. -/
-def agK2 (n : Nat) (vis nP fvs0L s0 s : Word) (r : List Word) :
+def agK2 (cR : CallM) (n : Nat) (vis nP fvs0L s0 s : Word) (r : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rd, m2) =>
-    agK3 s0 s (domsW n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP)
+    agK3 s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP)
 
 /-- After `check_block_doms_at`: `lvl_eq_fueled`. -/
 def agK3 (s0 s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -105,18 +105,18 @@ def agK4 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (vis nP fvs0O fvs0L s0 s : Word) (r rd re : List Word)
-theorem agK1_abort0 (h : r.headD 0 = 0) : agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1)) = none := by
+variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis nP fvs0O fvs0L s0 s : Word) (r rd re : List Word)
+theorem agK1_abort0 (h : r.headD 0 = 0) : agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1)) = none := by
   rw [agK1, if_pos h]
 theorem agK1_abortL (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 ≠ fvs0L) :
-    agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1)) = none := by
+    agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1)) = none := by
   rw [agK1, if_neg h0, if_pos h]
 theorem agK1_ok (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 = fvs0L) :
-    agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1)) =
-      agK2 n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L]) := by
+    agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1)) =
+      agK2 cR n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L]) := by
   rw [agK1, if_neg h0, if_neg (by simpa using h)]
-theorem agK2_some : agK2 n vis nP fvs0L s0 s r (some (rd, m2)) =
-    agK3 s0 s (domsW n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
+theorem agK2_some : agK2 cR n vis nP fvs0L s0 s r (some (rd, m2)) =
+    agK3 s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
 theorem agK3_some (r' : List Word) : agK3 s0 s (some (r', m3)) = agK4 (lveW m3 s s0) := rfl
 theorem agK4_ok (h : re.headD 0 ≠ 0) : agK4 (some (re, m1)) = some ([], m1) := by
   rw [agK4, if_neg h]
@@ -124,10 +124,10 @@ theorem agK4_abort (h : re.headD 0 = 0) : agK4 (some (re, m1)) = none := by
   rw [agK4, if_pos h]
 end arms
 
-grind_pattern [ind_grind] agK1_abort0 => agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1))
-grind_pattern [ind_grind] agK1_abortL => agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1))
-grind_pattern [ind_grind] agK1_ok => agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1))
-grind_pattern [ind_grind] agK2_some => agK2 n vis nP fvs0L s0 s r (some (rd, m2))
+grind_pattern [ind_grind] agK1_abort0 => agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1))
+grind_pattern [ind_grind] agK1_abortL => agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1))
+grind_pattern [ind_grind] agK1_ok => agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1))
+grind_pattern [ind_grind] agK2_some => agK2 cR n vis nP fvs0L s0 s r (some (rd, m2))
 grind_pattern [ind_grind] agK3_some => agK3 s0 s (some (r', m3))
 grind_pattern [ind_grind] agK4_ok => agK4 (some (re, m1))
 grind_pattern [ind_grind] agK4_abort => agK4 (some (re, m1))
@@ -135,11 +135,11 @@ grind_pattern [ind_grind] agK4_abort => agK4 (some (re, m1))
 theorem checkBlockAgreeOne_spec (p : Prog)
     (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
     (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
-    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
     (vis nP fvs0O fvs0L s0 cvTa s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_agree_one"
       [vis, nP, fvs0O, fvs0L, s0, cvTa, s]
-    ⦃fun r s' => LocEq s' s₀ ∧ agW n s₀.mem vis nP fvs0O fvs0L s0 cvTa s = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ agW cR n s₀.mem vis nP fvs0O fvs0L s0 cvTa s = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkBlockAgreeOne]
   cases n with
@@ -148,12 +148,12 @@ theorem checkBlockAgreeOne_spec (p : Prog)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         stubM_spec p "open_pis_at_fvars_f" n, ftdsF_spec p had n,
-        domsW_spec p hd had.ftd n, lvlEqFueled_spec p hl n] <;>
+        domsW_spec p hd had.ftd cR hcR n, lvlEqFueled_spec p hl n] <;>
       finish (gen := 20) [agW, lveW]
 
-/-- A successful `domsW` has `j` within both lists. -/
-theorem domsW_le {n : Nat} {m : Mem} {vis off fo fl dO dl j : Word} {r : List Word} {m' : Mem}
-    (h : domsW n m vis off fo fl dO dl j = some (r, m')) :
+/-- A successful `domsW cR` has `j` within both lists. -/
+theorem domsW_le {cR : CallM} {n : Nat} {m : Mem} {vis off fo fl dO dl j : Word} {r : List Word} {m' : Mem}
+    (h : domsW cR n m vis off fo fl dO dl j = some (r, m')) :
     j.toNat ≤ fl.toNat ∧ j.toNat ≤ dl.toNat := by
   cases n with
   | zero => simp [domsW] at h
@@ -168,9 +168,9 @@ theorem domsW_le {n : Nat} {m : Mem} {vis off fo fl dO dl j : Word} {r : List Wo
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
         simp
       by_cases hfl : fl ≤ j - 1
-      · rw [domsW_abortF n m vis off fo fl dO dl j hj hfl] at h; simp at h
+      · rw [domsW_abortF cR n m vis off fo fl dO dl j hj hfl] at h; simp at h
       by_cases hdl : dl ≤ j - 1
-      · rw [domsW_abortD n m vis off fo fl dO dl j hj hfl hdl] at h; simp at h
+      · rw [domsW_abortD cR n m vis off fo fl dO dl j hj hfl hdl] at h; simp at h
       have h1 : ¬ fl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hfl
       have h2 : ¬ dl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hdl
       omega
@@ -200,7 +200,7 @@ theorem exc_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) : (Exce
 theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m' : Mem)
     (a : AState) (vis nP fvs0O fvs0L s0 cvTa s : Word) (r : List Word) (cv : IConstantVal)
     (fvs0 : List EIdx)
-    (h : agW (n + 1) m vis nP fvs0O fvs0L s0 cvTa s = some (r, m'))
+    (h : agW stubCall (n + 1) m vis nP fvs0O fvs0L s0 cvTa s = some (r, m'))
     (hStage : StageR dn vis fe m a)
     (hty : (rdW (m.arr64 EREC) (cvTa + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (cvTa + 3)) = cv.type)
     (hfvs0 : decHL m fvs0O.toNat fvs0L.toNat = some fvs0)
@@ -214,10 +214,10 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
   obtain ⟨ra, m1⟩ := ram1
   rw [hra] at h
   by_cases h0 : ra.headD 0 = 0
-  · rw [agK1_abort0 n m1 _ _ _ _ _ _ ra h0] at h; simp at h
+  · rw [agK1_abort0 stubCall n m1 _ _ _ _ _ _ ra h0] at h; simp at h
   by_cases hL : ra.tail.tail.headD 0 = fvs0L
-  case neg => rw [agK1_abortL n m1 _ _ _ _ _ _ ra h0 hL] at h; simp at h
-  rw [agK1_ok n m1 _ _ _ _ _ _ ra h0 hL] at h
+  case neg => rw [agK1_abortL stubCall n m1 _ _ _ _ _ _ ra h0 hL] at h; simp at h
+  rw [agK1_ok stubCall n m1 _ _ _ _ _ _ ra h0 hL] at h
   obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1⟩ :=
     openPisAtFvarsF_spec dn vis fe nP (rdW (m.arr64 EREC) (cvTa + 3)) 0 hty.1 m m1 a ra hra hStage
   cases x1 with
@@ -241,7 +241,7 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
       ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0, fun _ => hbound1⟩
   simp only [decRL, show (0:Nat) + 1 = 1 from rfl, agGetD0, agGetD1] at hdec2
   obtain ⟨hdm2, hdb2⟩ := hdec2
-  cases hw : domsW n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP with
+  cases hw : domsW stubCall n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP with
   | none => rw [hw] at h; simp [agK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
@@ -305,7 +305,7 @@ theorem checkBlockAgreeOne_refines (p : Prog)
       AM.ok (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (checkBlockAgreeOne_spec p hd hl hp had (n + 1) s₀ vis nP fvs0O fvs0L s0 cvTa s) ?_
+  refine triple_post (checkBlockAgreeOne_spec p hd hl hp had stubCall (stubCall_spec p) (n + 1) s₀ vis nP fvs0O fvs0L s0 cvTa s) ?_
   rintro r s' ⟨hlq, hm⟩
   obtain ⟨a', hrun, hSt', hg⟩ := agW_ok n dn fe s₀.mem s'.mem a₀ vis nP fvs0O fvs0L s0 cvTa s r cv
     fvs0 hm hStage hty hfvs0 hfot hs hs0

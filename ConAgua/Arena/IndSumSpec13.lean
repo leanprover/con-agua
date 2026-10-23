@@ -36,21 +36,21 @@ theorem sumAddNoOv {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b
 /-! ## `check_sum_ctor` at every fuel -/
 
 /-- `check_sum_ctor`'s model at exec fuel `k`. -/
-def ctorX : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def ctorX (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Word → Word → Option (List Word × Mem)
   | n + 3, m, vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa =>
-    ctorW n m vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa
+    ctorW cR n m vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa
   | _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
 
 set_option maxHeartbeats 4000000 in
-theorem ctorX_spec (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St)
+theorem ctorX_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
     (vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_ctor"
       [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa]
     ⦃fun r s' => LocEq s' s₀ ∧
-      ctorX k s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa = some (r, s'.mem); ⊤⦄ := by
+      ctorX cR k s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa = some (r, s'.mem); ⊤⦄ := by
   match k with
-  | n + 3 => exact ctorW_spec p hP n s₀ vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa
+  | n + 3 => exact ctorW_spec p hP cR hcR n s₀ vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa
   | 0 =>
     rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
     vcgen [exec] <;> grind
@@ -107,37 +107,37 @@ def sctsK1 (rest : Mem → Option (List Word × Mem)) (n : Nat) (nF : Word) :
 
 /-- **The model of `check_sum_ctors(vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, cO, cL)`** at
 exec fuel `k`. -/
-def sctsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def sctsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, cO, cL =>
     if cL = 0 then some ([0, 0, 0, 0], m)
     else if nP + nIdx < nP then none
     else if nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP then none
-    else sctsK1 (fun m' => sctsW k m' vis0 vis T lo ll nP nIdx rs isP lg cvTa (cO + 1) (cL - 1)) k
+    else sctsK1 (fun m' => sctsW cR k m' vis0 vis T lo ll nP nIdx rs isP lg cvTa (cO + 1) (cL - 1)) k
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1))
-      (ctorX k m vis0 vis T lo ll nP nIdx rs isP lg (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
+      (ctorX cR k m vis0 vis T lo ll nP nIdx rs isP lg (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) cvTa)
 
 section arms
-variable (rest : Mem → Option (List Word × Mem)) (k : Nat) (m : Mem)
+variable (cR : CallM) (rest : Mem → Option (List Word × Mem)) (k : Nat) (m : Mem)
   (vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL nF nC sH : Word) (r rr r1 : List Word)
 theorem sctsW_nil (h : cL = 0) :
-    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = some ([0, 0, 0, 0], m) := by
+    sctsW cR (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = some ([0, 0, 0, 0], m) := by
   simp [sctsW, h]
 theorem sctsW_ov1 (h : cL ≠ 0) (h1 : nP + nIdx < nP) :
-    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = none := by
+    sctsW cR (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = none := by
   simp [sctsW, h, h1]
 theorem sctsW_ov2 (h : cL ≠ 0) (h1 : ¬ nP + nIdx < nP)
     (h2 : nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP) :
-    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = none := by
+    sctsW cR (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = none := by
   simp [sctsW, h, h1, h2]
 theorem sctsW_cons (h : cL ≠ 0) (h1 : ¬ nP + nIdx < nP)
     (h2 : ¬ nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP) :
-    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL =
-    sctsK1 (fun m' => sctsW k m' vis0 vis T lo ll nP nIdx rs isP lg cvTa (cO + 1) (cL - 1)) k
+    sctsW cR (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL =
+    sctsK1 (fun m' => sctsW cR k m' vis0 vis T lo ll nP nIdx rs isP lg cvTa (cO + 1) (cL - 1)) k
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1))
-      (ctorX k m vis0 vis T lo ll nP nIdx rs isP lg (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
+      (ctorX cR k m vis0 vis T lo ll nP nIdx rs isP lg (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) cvTa) := by
   simp [sctsW, h, h1, h2]
 theorem sctsK6_some : sctsK6 r1 (some (r, m)) =
@@ -154,12 +154,12 @@ end arms
 attribute [ind_grind] sctsW_nil sctsW_ov1 sctsW_ov2 sctsW_cons sctsK6_some sctsK5_some sctsK4_some sctsK3_some sctsK2_some sctsK1_some
 
 set_option maxHeartbeats 4000000 in
-theorem sctsW_spec (p : Prog) (hP : SumProg p) (k : Nat) : ∀ (s₀ : St)
+theorem sctsW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) : ∀ (s₀ : St)
     (vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_ctors"
       [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, cO, cL]
     ⦃fun r s' => LocEq s' s₀ ∧
-      sctsW k s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = some (r, s'.mem); ⊤⦄ := by
+      sctsW cR k s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = some (r, s'.mem); ⊤⦄ := by
   induction k with
   | zero =>
     intro s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL
@@ -171,7 +171,7 @@ theorem sctsW_spec (p : Prog) (hP : SumProg p) (k : Nat) : ∀ (s₀ : St)
     simp only [callFn, checkSumCtorsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ctorX_spec p hP k, rec2_specW p hP.ha k hP.hrec2, slCons_specW p hP.ha hP.hc hP.hsc k, ih] <;>
+        ctorX_spec p hP cR hcR k, rec2_specW p hP.ha k hP.hrec2, slCons_specW p hP.ha hP.hc hP.hsc k, ih] <;>
       finish (gen := 30) (instances := 5000) [rdW_eq]
 
 /-! ## The relation to the twin -/
@@ -249,7 +249,7 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     StageR dn vis fe m a → decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     DecB (fun m => decCVp m cvTaw.toNat) m cvTa →
     DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs → AbsOK m →
-    Sim (sctsW k m vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
+    Sim (sctsW stubCall k m vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
       (checkSumCtors V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvTa cs) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
@@ -303,7 +303,7 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     rcases Nat.lt_or_ge k 3 with h | h
     · exact .inl h
     · exact .inr ⟨k - 3, by omega⟩
-  · have : ctorX k m vis0 vis T lo ll nP nIdx rs isP lg w2 w3 cvTaw = none := by
+  · have : ctorX stubCall k m vis0 vis T lo ll nP nIdx rs isP lg w2 w3 cvTaw = none := by
       match k, hk with
       | 0, _ => rfl
       | 1, _ => rfl
@@ -410,7 +410,7 @@ theorem checkSumCtors_refines (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St) 
       DecB (fun m => decPL m (sortsDec m) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat)
         s'.mem (AM.res (checkSumCtors V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat
           nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvTa cs) a₀).2; ⊤⦄ := by
-  refine triple_post (sctsW_spec p hP k s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL) ?_
+  refine triple_post (sctsW_spec p hP stubCall (stubCall_spec p) k s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd1, -, hd2, -⟩ := (sctsW_ok vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs
     k _ a₀ cO cL cs hS hlps hlb hta hcs hA).run hm

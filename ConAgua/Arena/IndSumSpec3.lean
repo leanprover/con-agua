@@ -80,14 +80,14 @@ def ctsK1 (k : Nat) (vis cv : Word) : Option (List Word × Mem) → Option (List
   | some (r1, m1) => ctsK2 k vis cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)
       (sointernW m1 (r1.tail.tail.headD 0))
 /-- **The model of `check_sum_tele_slow`.** -/
-def ctsW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+def ctsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, cv, n, cvTa0 => ctsK1 k vis cv (wtW k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3)))
+  | k + 1, m, vis, cv, n, cvTa0 => ctsK1 k vis cv (wtW cR k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3)))
 
 section arms
-variable (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis cv n cvTa0 bo bl s ss q : Word) (r1 rt r5 : List Word)
-theorem ctsW_succ : ctsW (k + 1) m vis cv n cvTa0 =
-    ctsK1 k vis cv (wtW k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3))) := rfl
+variable (cR : CallM) (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis cv n cvTa0 bo bl s ss q : Word) (r1 rt r5 : List Word)
+theorem ctsW_succ : ctsW cR (k + 1) m vis cv n cvTa0 =
+    ctsK1 k vis cv (wtW cR k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3))) := rfl
 theorem ctsK1_some : ctsK1 k vis cv (some (r1, m1)) = ctsK2 k vis cv (r1.headD 0) (r1.tail.headD 0)
     (r1.tail.tail.headD 0) (sointernW m1 (r1.tail.tail.headD 0)) := rfl
 theorem ctsK2_big (h : 4294967296 ≤ ss) : ctsK2 k vis cv bo bl s (some (ss, m2)) = none := by
@@ -100,7 +100,7 @@ theorem ctsK4_some : ctsK4 vis s (some (q, m4)) = ctsK5 q s (stubM "check_consta
 theorem ctsK5_some : ctsK5 q s (some (r5, m5)) = some ([q, s], m5) := rfl
 end arms
 
-grind_pattern [ind_grind] ctsW_succ => ctsW (k + 1) m vis cv n cvTa0
+grind_pattern [ind_grind] ctsW_succ => ctsW cR (k + 1) m vis cv n cvTa0
 grind_pattern [ind_grind] ctsK1_some => ctsK1 k vis cv (some (r1, m1))
 grind_pattern [ind_grind] ctsK2_big => ctsK2 k vis cv bo bl s (some (ss, m2))
 grind_pattern [ind_grind] ctsK2_ok => ctsK2 k vis cv bo bl s (some (ss, m2))
@@ -126,9 +126,9 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hp : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hp hi1 hab
 
-theorem ctsW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
+theorem ctsW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele_slow" [vis, cv, n, cvTa0]
-    ⦃fun r s' => LocEq s' s₀ ∧ ctsW k s₀.mem vis cv n cvTa0 = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ctsW cR k s₀.mem vis cv n cvTa0 = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkSumTeleSlowL]
   cases k with
@@ -136,7 +136,7 @@ theorem ctsW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        wtW_spec p ha hc hsc hv hff hfp hif hwt hi1 k, internSort_spec p hsf hsp his k,
+        wtW_spec p ha hc hsc hv hff hfp hif hwt hi1 cR hcR k, internSort_spec p hsf hsp his k,
         closeTelescope_spec p hd hpf hpp hpi hmk hct hab k, cvNew_specW p hea hcn k,
         stubM_spec p "check_constant_val" k] <;>
       finish (gen := 20)
@@ -159,15 +159,15 @@ theorem hd?_rdW {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a 
 
 /-- `whnf_telescope` keeps the `abstract1` memo. -/
 theorem wtW_afr : ∀ (k : Nat) (m m' : Mem) (vis i n e : Word) (r : List Word),
-    wtW k m vis i n e = some (r, m') → AFr m m'
+    wtW stubCall k m vis i n e = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, h => by simp [wtW] at h
   | k + 1, m, m', vis, i, n, e, r, h => by
-    simp only [wtW, wtK1.eq_def, wtK2, wtK3.eq_def, wtK4.eq_def, wtK5.eq_def, wtK6.eq_def] at h
+    simp only [wtW, stubCall, wtK1.eq_def, wtK2, wtK3.eq_def, wtK4.eq_def, wtK5.eq_def, wtK6.eq_def] at h
     afr_auto h [stub_afr, fvinternW_afr, i1F_afr, wtW_afr k _ _ _ _ _ _ _, consW_afr]
 
 theorem ctsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (cv n cvTa0 : Word) (r : List Word) (cvv cvTa : IConstantVal)
-    (h : ctsW k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ctsW stubCall k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
     (hcv : decCVp m cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop m)
     (hsl : ∀ lo ll, nat? (erA m) (cv.toNat + 1) = some lo → nat? (erA m) (cv.toNat + 2) = some ll →
       lo + ll ≤ erTop m ∨ ll = 0)
@@ -182,12 +182,12 @@ theorem ctsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   cases k with
   | zero => cases h
   | succ k =>
-  rw [ctsW_succ] at h
+  rw [ctsW_succ stubCall] at h
   obtain ⟨w, hw, hw32, hwd⟩ := hd?_rdW (decCV_type hta) (by omega)
   have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
     rw [← hw]; congr 1
   rw [hw'] at h
-  cases h1 : wtW k m vis 0 n w with
+  cases h1 : wtW stubCall k m vis 0 n w with
   | none => rw [h1] at h; cases h
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
@@ -305,7 +305,7 @@ theorem checkSumTeleSlow_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NId
       decI (r.tail.headD 0) = (AM.res (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀).2 ∧
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hp hi1 hab k s₀ vis cv n cvTa0) ?_
+    hea hcn hp hi1 hab stubCall (stubCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hdec, -, -, hs32, hs, hA'⟩ :=
     ctsW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl hta hta4 hA
@@ -355,40 +355,40 @@ def ctK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) => some ([r.headD 0, r.tail.headD 0], m2)
 /-- After `strip_pis`: the syntactic sort, or the slow arm. -/
-def ctK1 (k : Nat) (vis cv n cvTa0 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ctK1 (cR : CallM) (k : Nat) (vis cv n cvTa0 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2 then
       if eViewW m1 (r1.tail.tail.tail.headD 0) = [] then none
       else some ([cvTa0, (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0], m1)
-    else ctK2 (ctsW k m1 vis cv n cvTa0)
+    else ctK2 (ctsW cR k m1 vis cv n cvTa0)
 /-- **The model of `check_sum_tele`.** -/
-def ctW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+def ctW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | k + 1, m, vis, cv, n, cvTa0 =>
-    ctK1 k vis cv n cvTa0 (stripF 6 m [n, rdW (m.arr64 EREC) (cvTa0 + 3)])
+    ctK1 cR k vis cv n cvTa0 (stripF 6 m [n, rdW (m.arr64 EREC) (cvTa0 + 3)])
 
 section arms
-variable (k : Nat) (m m1 m2 : Mem) (vis cv n cvTa0 : Word) (r r1 : List Word)
-theorem ctW_succ : ctW (k + 1) m vis cv n cvTa0 =
-    ctK1 k vis cv n cvTa0 (stripF 6 m [n, rdW (m.arr64 EREC) (cvTa0 + 3)]) := rfl
+variable (cR : CallM) (k : Nat) (m m1 m2 : Mem) (vis cv n cvTa0 : Word) (r r1 : List Word)
+theorem ctW_succ : ctW cR (k + 1) m vis cv n cvTa0 =
+    ctK1 cR k vis cv n cvTa0 (stripF 6 m [n, rdW (m.arr64 EREC) (cvTa0 + 3)]) := rfl
 theorem ctK1_fast (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
-    (hne : eViewW m1 (r1.tail.tail.tail.headD 0) ≠ []) : ctK1 k vis cv n cvTa0 (some (r1, m1)) =
+    (hne : eViewW m1 (r1.tail.tail.tail.headD 0) ≠ []) : ctK1 cR k vis cv n cvTa0 (some (r1, m1)) =
       some ([cvTa0, (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0], m1) := by
   simp only [ctK1, if_pos h, if_neg hne]
 theorem ctK1_fast0 (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
-    (hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []) : ctK1 k vis cv n cvTa0 (some (r1, m1)) = none := by
+    (hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []) : ctK1 cR k vis cv n cvTa0 (some (r1, m1)) = none := by
   simp only [ctK1, if_pos h, if_pos hne]
 theorem ctK1_slow (h : ¬ (r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)) :
-    ctK1 k vis cv n cvTa0 (some (r1, m1)) = ctK2 (ctsW k m1 vis cv n cvTa0) := by
+    ctK1 cR k vis cv n cvTa0 (some (r1, m1)) = ctK2 (ctsW cR k m1 vis cv n cvTa0) := by
   simp only [ctK1, if_neg h]
 theorem ctK2_some : ctK2 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := rfl
 end arms
 
-grind_pattern [ind_grind] ctW_succ => ctW (k + 1) m vis cv n cvTa0
-grind_pattern [ind_grind] ctK1_fast => ctK1 k vis cv n cvTa0 (some (r1, m1))
-grind_pattern [ind_grind] ctK1_fast0 => ctK1 k vis cv n cvTa0 (some (r1, m1))
-grind_pattern [ind_grind] ctK1_slow => ctK1 k vis cv n cvTa0 (some (r1, m1))
+grind_pattern [ind_grind] ctW_succ => ctW cR (k + 1) m vis cv n cvTa0
+grind_pattern [ind_grind] ctK1_fast => ctK1 cR k vis cv n cvTa0 (some (r1, m1))
+grind_pattern [ind_grind] ctK1_fast0 => ctK1 cR k vis cv n cvTa0 (some (r1, m1))
+grind_pattern [ind_grind] ctK1_slow => ctK1 cR k vis cv n cvTa0 (some (r1, m1))
 grind_pattern [ind_grind] ctK2_some => ctK2 (some (r, m2))
 
 section spec
@@ -410,9 +410,9 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hi1 hab
 
-theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
+theorem ctW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
-    ⦃fun r s' => LocEq s' s₀ ∧ ctW k s₀.mem vis cv n cvTa0 = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ctW cR k s₀.mem vis cv n cvTa0 = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkSumTeleL]
   cases k with
@@ -421,7 +421,7 @@ theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst k, eView_spec p hv k,
-        ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab k] <;>
+        ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab cR hcR k] <;>
       finish (gen := 20)
 
 end spec
@@ -442,7 +442,7 @@ theorem tag_sort_iff (b : Word) (hb : b.toNat < 2 ^ 32) :
 
 theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (cv n cvTa0 : Word) (r : List Word) (cvv cvTa : IConstantVal)
-    (h : ctW k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ctW stubCall k m vis cv n cvTa0 = some (r, m')) (hS : StageR dn vis fe m a)
     (hcv : decCVp m cv.toNat = some cvv) (hcvb : cv.toNat + 4 ≤ erTop m)
     (hsl : ∀ lo ll, nat? (erA m) (cv.toNat + 1) = some lo → nat? (erA m) (cv.toNat + 2) = some ll →
       lo + ll ≤ erTop m ∨ ll = 0)
@@ -459,7 +459,7 @@ theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   cases k with
   | zero => cases h
   | succ k =>
-  rw [ctW_succ] at h
+  rw [ctW_succ stubCall] at h
   obtain ⟨w, hw, hw32, hwd⟩ := hd?_rdW (decCV_type hta) (by omega)
   have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
     rw [← hw]; congr 1
@@ -488,8 +488,8 @@ theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     obtain ⟨-, -, hb32, hbe⟩ := hdec
     rw [drop3_eq] at hb32 hbe
     by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
-    · rw [ctK1_fast0 k m1 vis cv n cvTa0 r1 hf hne] at h; cases h
-    rw [ctK1_fast k m1 vis cv n cvTa0 r1 hf hne] at h
+    · rw [ctK1_fast0 stubCall k m1 vis cv n cvTa0 r1 hf hne] at h; cases h
+    rw [ctK1_fast stubCall k m1 vis cv n cvTa0 r1 hf hne] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 _ hne
@@ -519,8 +519,8 @@ theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
       rw [viewSort_run hvs]
       rfl
     | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
-  · rw [ctK1_slow k m1 vis cv n cvTa0 r1 hf] at h
-    cases h2 : ctsW k m1 vis cv n cvTa0 with
+  · rw [ctK1_slow stubCall k m1 vis cv n cvTa0 r1 hf] at h
+    cases h2 : ctsW stubCall k m1 vis cv n cvTa0 with
     | none => rw [h2] at h; cases h
     | some x2 =>
     obtain ⟨r2, m2⟩ := x2
@@ -596,7 +596,7 @@ theorem checkSumTele_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
         nat? (erA s'.mem) ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop s'.mem ∨ ll = 0) ∧
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (ctW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hsl hp hst hi1 hab k s₀ vis cv n cvTa0) ?_
+    hea hcn hsl hp hst hi1 hab stubCall (stubCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hdec, hb, hslr, hs32, hs, hA'⟩ :=
     ctW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl' hta hta4 hslTa hA

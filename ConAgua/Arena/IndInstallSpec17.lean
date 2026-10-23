@@ -45,7 +45,7 @@ theorem installSimFsorts {p : Prog} (hP : SumProg p) (n : Nat) {dn : NIdx → Op
   · intro r m' e; rw [callW_zero] at e; cases e
   intro r m' e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd k _ vis isP large s nP
+    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd stubCall (stubCall_spec p) k _ vis isP large s nP
       fo fl io il j) e
   obtain ⟨hS, hfd, hfb, hid, hib⟩ := hpre
   obtain ⟨x, a', h1, hS', hg', hd, hb⟩ :=

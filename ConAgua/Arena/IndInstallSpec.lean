@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndRealFvtD
+import ConAgua.Arena.IndCallM
 
 /-!
 # Refinements of `IndInstall` (lane `induct`)
@@ -33,7 +34,7 @@ mutual
 /-- **The model of `check_block_doms_at`.** `j = 0`: `return 0`, no callee touched. Otherwise:
 abort if either index is out of the (logical) list length, else call `fvar_type_d` then
 `is_def_eq_core`, then recurse at `j - 1`. -/
-def domsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
+def domsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, off, fo, fl, dO, dl, j =>
@@ -41,23 +42,23 @@ def domsW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     else if fl ≤ j - 1 then none
     else if dl ≤ j - 1 then none
     else
-      domsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
+      domsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
         (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
 
 /-- After `fvar_type_d`: call `is_def_eq_core`. -/
-def domsK1 (n : Nat) (vis off fo fl dO dl j b : Word) :
+def domsK1 (cR : CallM) (n : Nat) (vis off fo fl dO dl j b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ra, m1) =>
-    domsK2 n vis off fo fl dO dl j
-      (stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, b])
+    domsK2 cR n vis off fo fl dO dl j
+      (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1)
 
 /-- After `is_def_eq_core`: `unless ok do abort`, then the recursive call. -/
-def domsK2 (n : Nat) (vis off fo fl dO dl j : Word) :
+def domsK2 (cR : CallM) (n : Nat) (vis off fo fl dO dl j : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m2) =>
-    if rb.headD 0 = 0 then none else domsK3 (domsW n m2 vis off fo fl dO dl (j - 1))
+    if rb.headD 0 = 0 then none else domsK3 (domsW cR n m2 vis off fo fl dO dl (j - 1))
 
 /-- After the recursive call: `u := call …; return u` returns the callee's first word. -/
 def domsK3 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -66,40 +67,40 @@ def domsK3 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
+variable (cR : CallM) (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
 
-theorem domsW_zero (hj : j = 0) : domsW (n + 1) m vis off fo fl dO dl j = some ([0], m) := by
+theorem domsW_zero (hj : j = 0) : domsW cR (n + 1) m vis off fo fl dO dl j = some ([0], m) := by
   simp [domsW, hj]
 theorem domsW_abortF (hj : j ≠ 0) (hfl : fl ≤ j - 1) :
-    domsW (n + 1) m vis off fo fl dO dl j = none := by simp [domsW, hj, hfl]
+    domsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [domsW, hj, hfl]
 theorem domsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1) :
-    domsW (n + 1) m vis off fo fl dO dl j = none := by simp [domsW, hj, hfl, hdl]
+    domsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [domsW, hj, hfl, hdl]
 theorem domsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
-    domsW (n + 1) m vis off fo fl dO dl j =
-      domsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
+    domsW cR (n + 1) m vis off fo fl dO dl j =
+      domsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
         (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
   simp [domsW, hj, hfl, hdl]
 theorem domsK1_some :
-    domsK1 n vis off fo fl dO dl j b (some (ra, m1)) =
-      domsK2 n vis off fo fl dO dl j
-        (stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, b]) := by
+    domsK1 cR n vis off fo fl dO dl j b (some (ra, m1)) =
+      domsK2 cR n vis off fo fl dO dl j
+        (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1) := by
   rw [domsK1]
-theorem domsK2_abort (heq : rb.headD 0 = 0) : domsK2 n vis off fo fl dO dl j (some (rb, m2)) = none := by
+theorem domsK2_abort (heq : rb.headD 0 = 0) : domsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = none := by
   rw [domsK2, if_pos heq]
 theorem domsK2_ok (heq : rb.headD 0 ≠ 0) :
-    domsK2 n vis off fo fl dO dl j (some (rb, m2)) = domsK3 (domsW n m2 vis off fo fl dO dl (j - 1)) := by
+    domsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = domsK3 (domsW cR n m2 vis off fo fl dO dl (j - 1)) := by
   rw [domsK2, if_neg heq]
 theorem domsK3_some (r : List Word) (m : Mem) : domsK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 
-grind_pattern [ind_grind] domsW_zero => domsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsW_abortF => domsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsW_abortD => domsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsW_cons => domsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] domsK1_some => domsK1 n vis off fo fl dO dl j b (some (ra, m1))
-grind_pattern [ind_grind] domsK2_abort => domsK2 n vis off fo fl dO dl j (some (rb, m2))
+grind_pattern [ind_grind] domsW_zero => domsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] domsW_abortF => domsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] domsW_abortD => domsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] domsW_cons => domsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] domsK1_some => domsK1 cR n vis off fo fl dO dl j b (some (ra, m1))
+grind_pattern [ind_grind] domsK2_abort => domsK2 cR n vis off fo fl dO dl j (some (rb, m2))
 grind_pattern [ind_grind] domsK3_some => domsK3 (some (r, m))
-grind_pattern [ind_grind] domsK2_ok => domsK2 n vis off fo fl dO dl j (some (rb, m2))
+grind_pattern [ind_grind] domsK2_ok => domsK2 cR n vis off fo fl dO dl j (some (rb, m2))
 
 /-! ## `domsW_spec`: the `vcgen` proof against the L code (no twin values) -/
 
@@ -107,9 +108,9 @@ section spec
 variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt) (hftd : FtdF p)
 include hp hftd
 
-theorem domsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
+theorem domsW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_doms_at" [vis, off, fo, fl, dO, dl, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ domsW n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ domsW cR n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis off fo fl dO dl j
@@ -121,7 +122,7 @@ theorem domsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     simp only [callFn, checkBlockDomsAt]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ftdF_spec0 p hftd n, stubM_spec p "is_def_eq_core" n, ih] <;>
+        ftdF_spec0 p hftd n, hcR n "is_def_eq_core", ih] <;>
       finish (gen := 20)
 
 end spec
@@ -161,7 +162,7 @@ theorem decHL_get' {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
 
 theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m' : Mem)
     (a : AState) (vis off fo fl dO dl j : Word) (fvs doms : List EIdx) (r : List Word),
-    domsW n m vis off fo fl dO dl j = some (r, m') →
+    domsW stubCall n m vis off fo fl dO dl j = some (r, m') →
     StageR dn vis fe m a → decHL m fo.toNat fl.toNat = some fvs → decHL m dO.toNat dl.toNat = some doms →
     fo.toNat + fl.toNat < 2 ^ 64 → dO.toNat + dl.toNat < 2 ^ 64 → fo.toNat + fl.toNat ≤ iwTop m → dO.toNat + dl.toNat ≤ iwTop m → off.toNat + fl.toNat < 2 ^ 64 →
     j.toNat ≤ fl.toNat → j.toNat ≤ dl.toNat →
@@ -175,7 +176,7 @@ theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     have hdol := decHL_length m hdoms
     by_cases hj : j = 0
     · subst hj
-      rw [domsW_zero n m vis off fo fl dO dl 0 rfl] at h
+      rw [domsW_zero stubCall n m vis off fo fl dO dl 0 rfl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, hm⟩ := h
       subst hm
@@ -191,10 +192,10 @@ theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hjpos))]
         simp
       by_cases hfl : fl ≤ j - 1
-      · rw [domsW_abortF n m vis off fo fl dO dl j hj hfl] at h; simp at h
+      · rw [domsW_abortF stubCall n m vis off fo fl dO dl j hj hfl] at h; simp at h
       by_cases hdl : dl ≤ j - 1
-      · rw [domsW_abortD n m vis off fo fl dO dl j hj hfl hdl] at h; simp at h
-      rw [domsW_cons n m vis off fo fl dO dl j hj hfl hdl] at h
+      · rw [domsW_abortD stubCall n m vis off fo fl dO dl j hj hfl hdl] at h; simp at h
+      rw [domsW_cons stubCall n m vis off fo fl dO dl j hj hfl hdl] at h
       have hjm1f : j.toNat - 1 < fl.toNat := by
         have : ¬ fl.toNat ≤ (j - 1).toNat := by rw [← UInt64.le_iff_toNat_le]; exact hfl
         omega
@@ -218,7 +219,7 @@ theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [hra, domsK1_some] at h
         obtain ⟨x1, a1, hrun1, hStage1, hg1, hw1lt, hw1eq⟩ :=
           ftdF_ok dn vis fe wa hwa_lt m m1 a ra hra hStage
-        cases hrb : stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, wb] with
+        cases hrb : stubCall n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, wb] m1 with
         | none => rw [hrb] at h; simp [domsK2] at h
         | some rbm2 =>
           obtain ⟨rb, m2⟩ := rbm2
@@ -238,7 +239,7 @@ theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             have hdomsij : doms[j.toNat - 1]? = some (decI wb) := by
               rw [List.getElem?_eq_getElem (by omega : j.toNat - 1 < doms.length)]
               exact congrArg some hwb_dec
-            cases hw : domsW n m2 vis off fo fl dO dl (j - 1) with
+            cases hw : domsW stubCall n m2 vis off fo fl dO dl (j - 1) with
             | none => rw [hw] at h; simp [domsK3] at h
             | some rm3 =>
             obtain ⟨r3, m3⟩ := rm3
@@ -286,7 +287,7 @@ theorem checkBlockDomsAt_refines (n : Nat) (s₀ : St) (a₀ : AState)
       AM.ok (ConRon.Arena.checkBlockDomsAt V fe off.toNat fvs doms j.toNat) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkBlockDomsAt V fe off.toNat fvs doms j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (domsW_spec p hp hftd n s₀ vis off fo fl dO dl j) ?_
+  refine triple_post (domsW_spec p hp hftd stubCall (stubCall_spec p) n s₀ vis off fo fl dO dl j) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hStage', hg⟩ := domsW_ok n dn fe s₀.mem s'.mem a₀ vis off fo fl dO dl j fvs doms r hm
     hStage hfvs hdoms hfob hdob hfot hdot hoob hjf hjd

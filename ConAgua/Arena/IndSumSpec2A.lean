@@ -33,7 +33,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 mutual
 /-- **The model of `check_struct_doms_at`**: `domsW` returning no words. -/
-def sdomsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
+def sdomsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, off, fo, fl, dO, dl, j =>
@@ -41,23 +41,23 @@ def sdomsW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     else if fl ≤ j - 1 then none
     else if dl ≤ j - 1 then none
     else
-      sdomsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
+      sdomsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
         (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
 
 /-- After `fvar_type_d`. -/
-def sdomsK1 (n : Nat) (vis off fo fl dO dl j b : Word) :
+def sdomsK1 (cR : CallM) (n : Nat) (vis off fo fl dO dl j b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ra, m1) =>
-    sdomsK2 n vis off fo fl dO dl j
-      (stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, b])
+    sdomsK2 cR n vis off fo fl dO dl j
+      (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1)
 
 /-- After `is_def_eq_core`. -/
-def sdomsK2 (n : Nat) (vis off fo fl dO dl j : Word) :
+def sdomsK2 (cR : CallM) (n : Nat) (vis off fo fl dO dl j : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m2) =>
-    if rb.headD 0 = 0 then none else sdomsK3 (sdomsW n m2 vis off fo fl dO dl (j - 1))
+    if rb.headD 0 = 0 then none else sdomsK3 (sdomsW cR n m2 vis off fo fl dO dl (j - 1))
 
 /-- After the recursive call (its result discarded). -/
 def sdomsK3 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -66,41 +66,41 @@ def sdomsK3 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
+variable (cR : CallM) (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
 
-theorem sdomsW_zero (hj : j = 0) : sdomsW (n + 1) m vis off fo fl dO dl j = some ([], m) := by
+theorem sdomsW_zero (hj : j = 0) : sdomsW cR (n + 1) m vis off fo fl dO dl j = some ([], m) := by
   simp [sdomsW, hj]
 theorem sdomsW_abortF (hj : j ≠ 0) (hfl : fl ≤ j - 1) :
-    sdomsW (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl]
+    sdomsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl]
 theorem sdomsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1) :
-    sdomsW (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl, hdl]
+    sdomsW cR (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl, hdl]
 theorem sdomsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
-    sdomsW (n + 1) m vis off fo fl dO dl j =
-      sdomsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
+    sdomsW cR (n + 1) m vis off fo fl dO dl j =
+      sdomsK1 cR n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
         (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
   simp [sdomsW, hj, hfl, hdl]
 theorem sdomsK1_some :
-    sdomsK1 n vis off fo fl dO dl j b (some (ra, m1)) =
-      sdomsK2 n vis off fo fl dO dl j
-        (stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, b]) := by
+    sdomsK1 cR n vis off fo fl dO dl j b (some (ra, m1)) =
+      sdomsK2 cR n vis off fo fl dO dl j
+        (cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, b] m1) := by
   rw [sdomsK1]
 theorem sdomsK2_abort (heq : rb.headD 0 = 0) :
-    sdomsK2 n vis off fo fl dO dl j (some (rb, m2)) = none := by
+    sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2)) = none := by
   rw [sdomsK2, if_pos heq]
 theorem sdomsK2_ok (heq : rb.headD 0 ≠ 0) :
-    sdomsK2 n vis off fo fl dO dl j (some (rb, m2)) =
-      sdomsK3 (sdomsW n m2 vis off fo fl dO dl (j - 1)) := by
+    sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2)) =
+      sdomsK3 (sdomsW cR n m2 vis off fo fl dO dl (j - 1)) := by
   rw [sdomsK2, if_neg heq]
 theorem sdomsK3_some (r : List Word) (m : Mem) : sdomsK3 (some (r, m)) = some ([], m) := rfl
 end arms
 
-grind_pattern [ind_grind] sdomsW_zero => sdomsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsW_abortF => sdomsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsW_abortD => sdomsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsW_cons => sdomsW (n + 1) m vis off fo fl dO dl j
-grind_pattern [ind_grind] sdomsK1_some => sdomsK1 n vis off fo fl dO dl j b (some (ra, m1))
-grind_pattern [ind_grind] sdomsK2_abort => sdomsK2 n vis off fo fl dO dl j (some (rb, m2))
-grind_pattern [ind_grind] sdomsK2_ok => sdomsK2 n vis off fo fl dO dl j (some (rb, m2))
+grind_pattern [ind_grind] sdomsW_zero => sdomsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsW_abortF => sdomsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsW_abortD => sdomsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsW_cons => sdomsW cR (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsK1_some => sdomsK1 cR n vis off fo fl dO dl j b (some (ra, m1))
+grind_pattern [ind_grind] sdomsK2_abort => sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2))
+grind_pattern [ind_grind] sdomsK2_ok => sdomsK2 cR n vis off fo fl dO dl j (some (rb, m2))
 grind_pattern [ind_grind] sdomsK3_some => sdomsK3 (some (r, m))
 
 section spec
@@ -108,9 +108,9 @@ variable (p : Prog) (hg : p.lookup "sl_get" = some slGet)
   (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (hftd : FtdF p)
 include hg hp hftd
 
-theorem sdomsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
+theorem sdomsW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ sdomsW n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ sdomsW cR n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis off fo fl dO dl j
@@ -122,15 +122,15 @@ theorem sdomsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     simp only [callFn, checkStructDomsAtL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slGet_specW p hg n, ftdF_spec0 p hftd n, stubM_spec p "is_def_eq_core" n, ih] <;>
+        slGet_specW p hg n, ftdF_spec0 p hftd n, hcR n "is_def_eq_core", ih] <;>
       finish (gen := 20) [getW]
 
 end spec
 
 /-- `sdomsW` is `domsW` with the result words dropped. -/
-theorem sdomsW_eq (n : Nat) : ∀ (m : Mem) (vis off fo fl dO dl j : Word),
-    sdomsW n m vis off fo fl dO dl j =
-      (domsW n m vis off fo fl dO dl j).map (fun r => ([], r.2)) := by
+theorem sdomsW_eq (cR : CallM) (n : Nat) : ∀ (m : Mem) (vis off fo fl dO dl j : Word),
+    sdomsW cR n m vis off fo fl dO dl j =
+      (domsW cR n m vis off fo fl dO dl j).map (fun r => ([], r.2)) := by
   induction n with
   | zero => intro m vis off fo fl dO dl j; simp [sdomsW, domsW]
   | succ n ih =>
@@ -144,14 +144,14 @@ theorem sdomsW_eq (n : Nat) : ∀ (m : Mem) (vis off fo fl dO dl j : Word),
     | some x =>
       obtain ⟨ra, m1⟩ := x
       simp only [sdomsK1, domsK1]
-      cases stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, rdW (m.arr64 IW) (dO + (j - 1))] with
+      cases cR n "is_def_eq_core" [vis, off + (j - 1), ra.headD 0, rdW (m.arr64 IW) (dO + (j - 1))] m1 with
       | none => simp [sdomsK2, domsK2]
       | some y =>
         obtain ⟨rb, m2⟩ := y
         simp only [sdomsK2, domsK2]
         split <;> try rfl
         rw [ih]
-        cases domsW n m2 vis off fo fl dO dl (j - 1) with
+        cases domsW cR n m2 vis off fo fl dO dl (j - 1) with
         | none => simp [sdomsK3, domsK3]
         | some z => rfl
 
@@ -205,10 +205,10 @@ theorem checkStructDomsAt_refines (p : Prog) (hg : p.lookup "sl_get" = some slGe
       AM.ok (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (sdomsW_spec p hg hp hftd n s₀ vis off fo fl dO dl j) ?_
+  refine triple_post (sdomsW_spec p hg hp hftd stubCall (stubCall_spec p) n s₀ vis off fo fl dO dl j) ?_
   rintro r s' ⟨hl, hm⟩
   rw [sdomsW_eq] at hm
-  cases hd : domsW n s₀.mem vis off fo fl dO dl j with
+  cases hd : domsW stubCall n s₀.mem vis off fo fl dO dl j with
   | none => rw [hd] at hm; cases hm
   | some x =>
   obtain ⟨r0, m0⟩ := x
@@ -624,29 +624,29 @@ def wtK6 (s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
 
 mutual
 /-- **The model of `whnf_telescope`.** -/
-def wtW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+def wtW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, i, n, e => wtK1 k vis i n (stubM "whnf_top" m [vis, i, e])
+  | k + 1, m, vis, i, n, e => wtK1 cR k vis i n (cR k "whnf_top" [vis, i, e] m)
 /-- After `whnf`: the view. -/
-def wtK1 (k : Nat) (vis i n : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def wtK1 (cR : CallM) (k : Nat) (vis i n : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => wtK2 k vis i n m1 (eViewW m1 (r1.headD 0))
+  | some (r1, m1) => wtK2 cR k vis i n m1 (eViewW m1 (r1.headD 0))
 /-- The view's arms. -/
-def wtK2 (k : Nat) (vis i n : Word) (m1 : Mem) (v : List Word) : Option (List Word × Mem) :=
+def wtK2 (cR : CallM) (k : Nat) (vis i n : Word) (m1 : Mem) (v : List Word) : Option (List Word × Mem) :=
   if v.headD 0 = 2 ∧ n = 0 then some ([0, 0, v.tail.headD 0], m1)
   else if v.headD 0 = 6 ∧ n ≠ 0 then
-    wtK3 k vis i n (v.tail.headD 0) (v.tail.tail.headD 0) (fvinternW m1 i (v.tail.headD 0))
+    wtK3 cR k vis i n (v.tail.headD 0) (v.tail.tail.headD 0) (fvinternW m1 i (v.tail.headD 0))
   else none
 /-- After `intern_fvar`. -/
-def wtK3 (k : Nat) (vis i n x y : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def wtK3 (cR : CallM) (k : Nat) (vis i n x y : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (fv, m2) =>
     if 4294967296 ≤ fv then none
-    else wtK4 k vis i n x (i1F m2 [CWF, y, fv, 0])
+    else wtK4 cR k vis i n x (i1F m2 [CWF, y, fv, 0])
 /-- After `instantiate1_fast`: the recursion. -/
-def wtK4 (k : Nat) (vis i n x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def wtK4 (cR : CallM) (k : Nat) (vis i n x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rb, m3) => wtK5 k x (wtW k m3 vis (i + 1) (n - 1) (rb.headD 0))
+  | some (rb, m3) => wtK5 k x (wtW cR k m3 vis (i + 1) (n - 1) (rb.headD 0))
 /-- After the recursion: the cons. -/
 def wtK5 (k : Nat) (x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -654,40 +654,40 @@ def wtK5 (k : Nat) (x : Word) : Option (List Word × Mem) → Option (List Word 
 end
 
 section arms
-variable (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis i n e x y s fv : Word) (v r1 rb rr ro : List Word)
-theorem wtW_succ : wtW (k + 1) m vis i n e = wtK1 k vis i n (stubM "whnf_top" m [vis, i, e]) := by
+variable (cR : CallM) (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis i n e x y s fv : Word) (v r1 rb rr ro : List Word)
+theorem wtW_succ : wtW cR (k + 1) m vis i n e = wtK1 cR k vis i n (cR k "whnf_top" [vis, i, e] m) := by
   simp [wtW]
-theorem wtK1_some : wtK1 k vis i n (some (r1, m1)) = wtK2 k vis i n m1 (eViewW m1 (r1.headD 0)) := by
+theorem wtK1_some : wtK1 cR k vis i n (some (r1, m1)) = wtK2 cR k vis i n m1 (eViewW m1 (r1.headD 0)) := by
   rw [wtK1]
 theorem wtK2_sort (h : v.headD 0 = 2) (hn : n = 0) :
-    wtK2 k vis i n m1 v = some ([0, 0, v.tail.headD 0], m1) := by
+    wtK2 cR k vis i n m1 v = some ([0, 0, v.tail.headD 0], m1) := by
   rw [wtK2, if_pos ⟨h, hn⟩]
 theorem wtK2_pi (h : v.headD 0 = 6) (hn : n ≠ 0) :
-    wtK2 k vis i n m1 v =
-      wtK3 k vis i n (v.tail.headD 0) (v.tail.tail.headD 0) (fvinternW m1 i (v.tail.headD 0)) := by
+    wtK2 cR k vis i n m1 v =
+      wtK3 cR k vis i n (v.tail.headD 0) (v.tail.tail.headD 0) (fvinternW m1 i (v.tail.headD 0)) := by
   rw [wtK2, if_neg (fun h' => by rw [h] at h'; exact absurd h'.1 (by decide)), if_pos ⟨h, hn⟩]
 theorem wtK2_none (h1 : ¬ (v.headD 0 = 2 ∧ n = 0)) (h2 : ¬ (v.headD 0 = 6 ∧ n ≠ 0)) :
-    wtK2 k vis i n m1 v = none := by simp only [wtK2, if_neg h1, if_neg h2]
-theorem wtK3_big (h : 4294967296 ≤ fv) : wtK3 k vis i n x y (some (fv, m2)) = none := by
+    wtK2 cR k vis i n m1 v = none := by simp only [wtK2, if_neg h1, if_neg h2]
+theorem wtK3_big (h : 4294967296 ≤ fv) : wtK3 cR k vis i n x y (some (fv, m2)) = none := by
   simp [wtK3, h]
-theorem wtK3_ok (h : ¬ 4294967296 ≤ fv) : wtK3 k vis i n x y (some (fv, m2)) =
-    wtK4 k vis i n x (i1F m2 [CWF, y, fv, 0]) := by
+theorem wtK3_ok (h : ¬ 4294967296 ≤ fv) : wtK3 cR k vis i n x y (some (fv, m2)) =
+    wtK4 cR k vis i n x (i1F m2 [CWF, y, fv, 0]) := by
   simp only [wtK3, if_neg h]
-theorem wtK4_some : wtK4 k vis i n x (some (rb, m3)) =
-    wtK5 k x (wtW k m3 vis (i + 1) (n - 1) (rb.headD 0)) := by rw [wtK4]
+theorem wtK4_some : wtK4 cR k vis i n x (some (rb, m3)) =
+    wtK5 k x (wtW cR k m3 vis (i + 1) (n - 1) (rb.headD 0)) := by rw [wtK4]
 theorem wtK5_some : wtK5 k x (some (rr, m4)) =
     wtK6 (rr.tail.tail.headD 0) (consW k m4 x (rr.headD 0) (rr.tail.headD 0)) := by rw [wtK5]
 theorem wtK6_some : wtK6 s (some (ro, m5)) = some ([ro.headD 0, ro.tail.headD 0, s], m5) := rfl
 end arms
 
-grind_pattern [ind_grind] wtW_succ => wtW (k + 1) m vis i n e
-grind_pattern [ind_grind] wtK1_some => wtK1 k vis i n (some (r1, m1))
-grind_pattern [ind_grind] wtK2_sort => wtK2 k vis i n m1 v
-grind_pattern [ind_grind] wtK2_pi => wtK2 k vis i n m1 v
-grind_pattern [ind_grind] wtK2_none => wtK2 k vis i n m1 v
-grind_pattern [ind_grind] wtK3_big => wtK3 k vis i n x y (some (fv, m2))
-grind_pattern [ind_grind] wtK3_ok => wtK3 k vis i n x y (some (fv, m2))
-grind_pattern [ind_grind] wtK4_some => wtK4 k vis i n x (some (rb, m3))
+grind_pattern [ind_grind] wtW_succ => wtW cR (k + 1) m vis i n e
+grind_pattern [ind_grind] wtK1_some => wtK1 cR k vis i n (some (r1, m1))
+grind_pattern [ind_grind] wtK2_sort => wtK2 cR k vis i n m1 v
+grind_pattern [ind_grind] wtK2_pi => wtK2 cR k vis i n m1 v
+grind_pattern [ind_grind] wtK2_none => wtK2 cR k vis i n m1 v
+grind_pattern [ind_grind] wtK3_big => wtK3 cR k vis i n x y (some (fv, m2))
+grind_pattern [ind_grind] wtK3_ok => wtK3 cR k vis i n x y (some (fv, m2))
+grind_pattern [ind_grind] wtK4_some => wtK4 cR k vis i n x (some (rb, m3))
 grind_pattern [ind_grind] wtK5_some => wtK5 k x (some (rr, m4))
 grind_pattern [ind_grind] wtK6_some => wtK6 s (some (ro, m5))
 
@@ -700,9 +700,9 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hp : p.lookup "whnf_telescope" = some whnfTelescopeL) (hi1 : I1Prog p)
 include ha hc hsc hv hff hfp hif hp hi1
 
-theorem wtW_spec (k : Nat) : ∀ (s₀ : St) (vis i n e : Word),
+theorem wtW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) : ∀ (s₀ : St) (vis i n e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "whnf_telescope" [vis, i, n, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ wtW k s₀.mem vis i n e = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ wtW cR k s₀.mem vis i n e = some (r, s'.mem); ⊤⦄ := by
   induction k with
   | zero =>
     intro s₀ vis i n e; rw [invoke_eq _ hp]; simp only [callFn, whnfTelescopeL]
@@ -713,7 +713,7 @@ theorem wtW_spec (k : Nat) : ∀ (s₀ : St) (vis i n e : Word),
     simp only [callFn, whnfTelescopeL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        stubM_spec p "whnf_top" k, eView_spec p hv k, internFVar_spec p hff hfp hif k,
+        hcR k "whnf_top", eView_spec p hv k, internFVar_spec p hff hfp hif k,
         i1F_spec p hi1 k, slCons_specW p ha hc hsc k, ih] <;>
       finish (gen := 20)
 
@@ -757,7 +757,7 @@ theorem whnfTelescope_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (i n : Nat) (e
 /-- **The model of `whnf_telescope` refines `whnfTelescope`.** -/
 theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis i n e : Word) (r : List Word),
-    wtW k m vis i n e = some (r, m') → StageR dn vis fe m a → H e →
+    wtW stubCall k m vis i n e = some (r, m') → StageR dn vis fe m a → H e →
     i.toNat + n.toNat < 2 ^ 64 →
     ∃ bs s a', (whnfTelescope V fe i.toNat n.toNat (decI e)).run a = .ok ((bs, s), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧
@@ -768,8 +768,8 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
   | zero => intro m m' a vis i n e r h; simp [wtW] at h
   | succ k ih =>
     intro m m' a vis i n e r h hS he hin
-    rw [wtW_succ] at h
-    cases h1 : stubM "whnf_top" m [vis, i, e] with
+    rw [wtW_succ stubCall] at h
+    cases h1 : stubCall k "whnf_top" [vis, i, e] m with
     | none => rw [h1] at h; simp [wtK1] at h
     | some x1 =>
     obtain ⟨r1, m1⟩ := x1
@@ -781,7 +781,7 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
     generalize hw : r1.headD 0 = w at h he'32
     generalize hv : eViewW m1 w = v at h
     by_cases hs : v.headD 0 = 2 ∧ n = 0
-    · rw [wtK2_sort k m1 vis i n v hs.1 hs.2] at h
+    · rw [wtK2_sort stubCall k m1 vis i n v hs.1 hs.2] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hne : v ≠ [] := fun h0 => by rw [h0] at hs; simp at hs
@@ -802,7 +802,7 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
         · simpa [List.getD] using hu
       | _ => simp [ViewR] at hVR <;> (try omega) <;> (have := hs.1; simp_all)
     by_cases hp : v.headD 0 = 6 ∧ n ≠ 0
-    · rw [wtK2_pi k m1 vis i n v hp.1 hp.2] at h
+    · rw [wtK2_pi stubCall k m1 vis i n v hp.1 hp.2] at h
       have hne : v ≠ [] := fun h0 => by rw [h0] at hp; simp at hp
       obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w (hv ▸ hne)
       rw [hv] at hVR
@@ -838,8 +838,8 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
         obtain ⟨fv, m2⟩ := x2
         rw [h2] at h
         by_cases hfv : 4294967296 ≤ fv
-        · rw [wtK3_big k m2 vis i n x y fv hfv] at h; cases h
-        rw [wtK3_ok k m2 vis i n x y fv hfv] at h
+        · rw [wtK3_big stubCall k m2 vis i n x y fv hfv] at h; cases h
+        rw [wtK3_ok stubCall k m2 vis i n x y fv hfv] at h
         have hfv32 : fv.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ fv.toNat := hfv; omega
         obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 i x hx32 h2
         cases h3 : i1F m2 [CWF, y, fv, 0] with
@@ -849,7 +849,7 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
         rw [h3, wtK4_some] at h
         obtain ⟨b', a3, hrun3, hS3, hg3, hb32, hbeq⟩ :=
           i1F_ok dn vis fe y fv 0 hy32 m2 m3 a2 rb h3 hS2
-        cases h4 : wtW k m3 vis (i + 1) (n - 1) (rb.headD 0) with
+        cases h4 : wtW stubCall k m3 vis (i + 1) (n - 1) (rb.headD 0) with
         | none => rw [h4] at h; simp [wtK5] at h
         | some x4 =>
         obtain ⟨rr, m4⟩ := x4
@@ -878,7 +878,7 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
         rw [hrun4]
         rfl
       | _ => simp [ViewR] at hVR <;> (try omega) <;> (have := hp.1; simp_all)
-    · rw [wtK2_none k m1 vis i n v hs hp] at h; cases h
+    · rw [wtK2_none stubCall k m1 vis i n v hs hp] at h; cases h
 
 /-- **`whnf_telescope` refines `whnfTelescope .verified`** (through the stub `whnf`): the binders' domains as an `IW` slice, the sort as a word. -/
 @[refines ConRon.Arena.whnfTelescope]
@@ -900,7 +900,7 @@ theorem whnfTelescope_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
       (r.tail.tail.headD 0).toNat < 2 ^ 32 ∧
       decI (r.tail.tail.headD 0) = (AM.res (whnfTelescope V fe i.toNat n.toNat (decI e)) a₀).2; ⊤⦄ := by
-  refine triple_post (wtW_spec p ha hc hsc hv hff hfp hif hp hi1 k s₀ vis i n e) ?_
+  refine triple_post (wtW_spec p ha hc hsc hv hff hfp hif hp hi1 stubCall (stubCall_spec p) k s₀ vis i n e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨bs, s, a', hrun, hS', hg, hd, ht, hs32, hs⟩ := wtW_ok dn fe k _ _ _ _ _ _ _ _ hm hS he hin
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
