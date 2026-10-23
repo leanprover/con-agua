@@ -41,7 +41,6 @@ shape's recursor slice below the top, its classes' constructors' level-parameter
 the stage relation at the returned
 view of the twin's environment, the pools grown, the `hb` memo kept. Program facts: the lookups
 (`TailProg`, `CbrLook`) and the write sets of the callees without a memo lemma (`hcl`, `hclR`). -/
-@[refines ConRon.Arena.checkBlockTail]
 theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
     {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)

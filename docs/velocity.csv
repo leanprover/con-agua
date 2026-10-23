@@ -244,3 +244,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,abi,claude-opus-5-5,105,35,entry stub ca_start(in/pins buffers + one MAP_NORESERVE region): static 2^35-byte slot partition; harness/main.c (+compopt2 THP); e2e.py/bench.py; prototype unproved
 2026-10-23,indstaget,claude-opus-5-5,60,40,(helpers sum+pos) IndSum/IndInstall 15 targets + positivity walk 9 targets under StageC
 2026-10-23,compopt2,claude-opus-5-5,420,40,tooling: compopt2 profiling tools + clang oracle + slot-table prototype generators; journal
+2026-10-23,indstaget,claude-opus-5-5,90,30,"checkBlockTail/Pass/Block under StageC (+helpers grc, cbpos); all 59 targets core-contract free"
