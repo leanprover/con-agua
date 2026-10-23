@@ -291,3 +291,11 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
   * `BphOK p`: basis_pin_hit refines basisPinHit. Helper `bph` is proving it.
   * `PartsOK p`: block_parts' record has ShapeLp, an nP word below 2^63 and IW size below 2^63. grc has been asked whether L guards can drop the 2^63 bounds. ShapeLp could follow from DecB decBS if CtorLp were weakened to `… ∨ len = 0`, as CVExt is.
 * Fuel: checkBlock_refines needs `2^31 + (n+4) ≤ coreWalkFuel` (4e9). **IndArmSpec quantifies `n ≤ 2^62`, so its fuel bound must be tightened (or check_block's lifted)** before cidW_ok can discharge it.
+
+### Landing (2026-10-23, check_ind_decl)
+
+* `cidW_ok` (IndInstallSpec42) is proven. It carries `@[refines_part checkDecl "the inductive arm (check_ind_decl), under StageR"]`. Its pending program facts are `PassGrcOK` and `PartsOK` (ShapeLp only); helper grc is now deriving ShapeLp from decBS so that `PartsOK` can be dropped. The `AbsKeep` facts and the closedA write sets still have to be decided for checkerProg.
+* `basisPinHit_ok` (IndRealBph2, helper bph) is proven, with no L change and no extra premise.
+* grc: `gen_rec_check_prep` has three capacity guards, so the `hsz`/`hnP` 2^63 bounds are gone everywhere. `PassGrcOK` lost its nP conjunct.
+* slow helper: IndSumSpec12 498→45 s, IndInstallSpec17 152→9, IndSumSpec5 138→53, RecClassSpecN 134→44, K 120→27, B 62→10.
+* Build note: the RSS-sum guard double-counts the mmapped oleans that lean processes share, and it killed a full rebuild at 20–26 GB "RSS" while the real (PSS) peak was 12 GB. Use `_tmp/indproofs4/pssguard.sh`.
