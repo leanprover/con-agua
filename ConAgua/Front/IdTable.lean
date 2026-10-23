@@ -312,11 +312,7 @@ theorem TblSame.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrI
 
 theorem spF_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) (i : Word) :
     spF m' b i = spF m b i := by
-  have he := h.e
-  have hs := h.s
-  simp only [spS] at he hs
-  simp only [spF, mfindG, epG, nG, len64_eq, spS]
-  rw [hs, he]
+  exact mfindG_eq_of (spS b) h.s h.e i 0
 
 theorem szW_congr {m m' : Mem} {b : ArrId} (h : TblSame m m' b) : szW m' b = szW m b := by
   simp only [szW, h.z]
