@@ -18,7 +18,10 @@ nrt` (`nrt_lit`, `WFSplit.lean`): the result counts of the functions, which ever
 * **Per function** `name.f<i> : Program` (the code of the `i`-th function, a balanced `++` of
   list literals of at most 64 directives, so that the term stays shallow) and
   `name.f<i>_eq : compileFn tab nrt f fd = name.f<i>`, by `Eq.refl`: the kernel evaluates
-  `compileFn` on that one function and compares. The trampoline: `name.tramp`, `name.tramp_eq`.
+  `compileFn` on that function and compares. The equations of `asmLitBatch` consecutive
+  functions are one kernel check (`name.f<j>_batch`, their conjunction; each `_eq` a projection
+  of it), so that what they share is evaluated once: a long `ldc` string's `romIdx` (the 110
+  prelude copies read a 15 700-byte string: ~5 s per check). The trampoline: `name.tramp`, `name.tramp_eq`.
 * **The whole program**: `name := name.tramp ++ (name.f0 ++ (name.f1 ++ … ++ []))`, and
   `name_eq` from the per-function equations by `List.flatMap_cons` and congruence, without
   evaluation, and `nrt_eq`.
@@ -103,13 +106,48 @@ partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
   else if e.isAppOfArity ``List.nil 1 then return acc
   else throwError "asm_lit: the program does not reduce to a list literal: {e}"
 
+/-- Declare `n : Program := lit` (compiled, so that the printer can run it); the equation
+`lhs = n` is left to the caller. -/
+def declLitDef (n : Name) (f : String) (v : Program) : MetaM Unit := do
+  let lit := programExpr (v.toArray.map (directiveExpr f))
+  addAndCompile (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
+
 /-- Declare `n : Program := lit` (compiled, so that the printer can run it) and
 `n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
 def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
-  let lit := programExpr (v.toArray.map (directiveExpr f))
-  addAndCompile (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
+  declLitDef n f v
   addDecl (.thmDecl { name := n.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
                       value := mkApp2 (mkConst ``Eq.refl [1]) progTy lhs })
+
+register_option asmLitBatch : Nat := {
+  defValue := 16
+  descr := "asm_lit: functions per kernel check (one conjunction; the kernel evaluates what the \
+    functions share, such as a long `ldc` string's `romIdx`, once per check)"
+}
+
+/-- Declare the equations `lhsᵢ = nᵢ` (`nᵢ_eq`) of a batch by one kernel check: `name` proves
+their conjunction by `Eq.refl`s, and each `nᵢ_eq` is a projection of it (no evaluation). -/
+def declEqBatch (name : Name) (eqs : Array (Name × Lean.Expr)) : MetaM Unit := do
+  if eqs.isEmpty then return
+  let tys := eqs.map fun (n, lhs) => mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
+  let pfs := eqs.map fun (_, lhs) => mkApp2 (mkConst ``Eq.refl [1]) progTy lhs
+  -- `T₀ ∧ (T₁ ∧ … ∧ Tₖ)` and its proof
+  let k := eqs.size - 1
+  let mut conj := tys[k]!
+  let mut pf := pfs[k]!
+  let mut tails : Array Lean.Expr := #[conj]  -- tails[j] = Tₖ₋ⱼ ∧ … ∧ Tₖ
+  for j in (List.range k).reverse do
+    pf := mkApp4 (mkConst ``And.intro) tys[j]! conj pfs[j]! pf
+    conj := mkApp2 (mkConst ``And) tys[j]! conj
+    tails := tails.push conj
+  addDecl (.thmDecl { name, levelParams := [], type := conj, value := pf })
+  -- `tail j` = `Tⱼ ∧ … ∧ Tₖ`
+  let tail (j : Nat) : Lean.Expr := tails[k - j]!
+  let mut h := mkConst name  -- : tail 0
+  for j in List.range (k + 1) do
+    let pj := if j == k then h else mkApp3 (mkConst ``And.left) tys[j]! (tail (j + 1)) h
+    addDecl (.thmDecl { name := eqs[j]!.1.appendAfter "_eq", levelParams := [], type := tys[j]!, value := pj })
+    if j < k then h := mkApp3 (mkConst ``And.right) tys[j]! (tail (j + 1)) h
 
 /-- The element `x` of a program literal: its name (a string literal) and its pair. -/
 def progElem (i : Nat) (x : Lean.Expr) : MetaM (String × Lean.Expr × Lean.Expr) := do
@@ -134,9 +172,17 @@ def declFns (name : Name) (tabE nrtE pE : Lean.Expr) (elems : Array Lean.Expr) (
       (mkRawNatLit (hi - i0)) (mkApp3 (mkConst ``List.drop [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String)
         (mkConst ``FunDecl)) (mkRawNatLit i0) pE)
     codes := (← evalPrograms (mkApp3 (mkConst ``progCode) tabE nrtE slice)).toArray
+    let b := max 1 (asmLitBatch.get (← getOptions))
+    let mut batch : Array (Name × Lean.Expr) := #[]
     for i in todo do
       let (f, fE, fdE) ← progElem i elems[i]!
-      declLit (name ++ Name.mkSimple s!"f{i}") (mkApp4 (mkConst ``compileFn) tabE nrtE fE fdE) f codes[i - i0]!
+      let n := name ++ Name.mkSimple s!"f{i}"
+      declLitDef n f codes[i - i0]!
+      batch := batch.push (n, mkApp4 (mkConst ``compileFn) tabE nrtE fE fdE)
+      if batch.size ≥ b then
+        declEqBatch (n.appendAfter "_batch") batch
+        batch := #[]
+    if let some (n, _) := batch.back? then declEqBatch (n.appendAfter "_batch") batch
   return (List.range (hi - lo)).toArray.map fun i => name ++ Name.mkSimple s!"f{i + lo}"
 
 /-- `asm_lit_fns name : tab nrt p lo hi`: the per-function literals and equations of `asm_lit name`

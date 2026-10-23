@@ -102,11 +102,13 @@ theorem iis_spec (p : Prog) (hp : p.lookup "check_block_idx_sorts_one" = some ch
     ⦃fun r s' => LocEq s' s₀ ∧ iisW p n s₀.mem vis pp ms cv = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkBlockIdxSortsOne]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "open_pis_at_fvars_f", callW_spec p n "check_struct_field_sorts_i",
-      callW_spec p n "rec2"] <;>
-    finish (gen := 40) (instances := 20000) [iisW, idxTail, rdW_eq]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    callW_spec p n "open_pis_at_fvars_f", callW_spec p n "check_struct_field_sorts_i",
+    callW_spec p n "rec2"]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, iisW, idxTail, rdW_eq]
 
 /-! ## `check_block_idx_sorts` -/
 

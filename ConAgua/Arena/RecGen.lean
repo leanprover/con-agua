@@ -790,7 +790,7 @@ def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2
 }
 
 /-- `genRecCheck` helper: `(rd.slots.filter ClassSlot.isMinor).length == (ctors.map
-List.length).sum`. -/
+List.length).sum` (a sum past `2^64` is above every slot count: `0`). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:705-758 ConRon.Arena.genRecCheck
 @[l_impl ConRon.Arena.genRecCheck]
 def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
@@ -806,6 +806,7 @@ def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
   j := 0;
   while j < ctorsLen {
     hdr := IW.u64[ctorsOff + j];
+    if ctorSum + IW.u64[hdr + 1] < ctorSum { return 0 };
     ctorSum := ctorSum + IW.u64[hdr + 1];
     j += 1
   };
@@ -827,7 +828,8 @@ def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
 }
 
 /-- `genRecCheck` helper: the pins, the stream's types, the elim guard, the classes' table entries
-and constructors, and the generator up to `cvGs` (checked, generated types). -/
+and constructors, and the generator up to `cvGs` (checked, generated types). Capacity guards first:
+the pool's size `+ 5`, the parameter count plus the member count and plus the slot count are words. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:705-758 ConRon.Arena.genRecCheck
 @[l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPrep : FunDecl := lfn
@@ -836,10 +838,13 @@ def genRecCheckPrep : FunDecl := lfn
     locals
     (r, cvRisOff, cvRisLen, nb, allowed, ftOff, ftLen, ms2Off, ms2Len, ctorsOff, ctorsLen, minorOk,
      ftcOff, ftcLen, elim, g, preOk, preOff, preLen, cvGsOff, cvGsLen) {
+  if len(IW.u64) + 5 < 5 { abort };
+  if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
+  if IW.u64[p + 4] + IW.u64[rd + 1] < IW.u64[p + 4] { abort };
   r := call target_rec_pins(p, blockOff, blockLen);
   (cvRisOff, cvRisLen) := call class_stream_recs(vis, IW.u64[p + 2], IW.u64[p + 3]);
   if IW.u64[p + 1] == 0 { abort };
-  if IW.u64[p + 7] == 1 {
+  if IW.u64[p + 7] != 0 {
     nb := nestedBit;
     if nb == 0 { nb := call gen_rec_check_any_no_member(msOff, msLen) };
     allowed := call block_large_elim_allowed(p, nb);

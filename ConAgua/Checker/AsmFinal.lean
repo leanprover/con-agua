@@ -1,4 +1,5 @@
 import ConAgua.Checker.Asm
+import ConAgua.Checker.ProgWf
 import ConAgua.Final.Statement
 
 /-!
