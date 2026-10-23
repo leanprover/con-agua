@@ -3,6 +3,7 @@ import ConAgua.Arena.StageC
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclCrpT
 import ConAgua.Arena.DeclAndPinIndRef
+import ConAgua.Arena.AndPinScratch
 
 /-!
 # Phase A under `StageT` (lane `loopt2`)
@@ -826,12 +827,6 @@ theorem andPinOk_st_one {pd : IDeclaration} {a : AState} (hp : ConRon.Bridge.Pin
     exact (ConRon.Bridge.AM.pure_ok hrun).2
   | _ => exact ConRon.Bridge.andPinNameFree_run hp hrun
 
-/-- **`andPinOk` keeps the scratch tier's flag** (its only writes are interning: the pinned `And`
-block's `internCIList` and canon's comparisons). -/
-theorem andPinOk_scratch {pd : IDeclaration} {s s' : AState} {b : Bool}
-    (h : andPinOk pd s = .ok (b, s')) : s'.store.scratchOn = s.store.scratchOn := by
-  sorry
-
 /-- **`and_pin_ok` keeps `TwinOK`** (a leaf), the pin flag, the scratch tier's flag and the
 twin's fold invariant: on a one-constant record the twin state is unchanged; on an inductive block
 (`andPinOkInd_refines`) the store grows (con-ron's `andPinOk_run`: `StateOK`, `Ext`, caches and
@@ -875,7 +870,7 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
       hTw.of_grow hok'.wf hext hc hpins (by rw [hf.2.2.1]; exact hTw.erec)
         (by rw [hf.2.2.1]; exact hTw.spn) (by rw [hf.2.2.1]; exact hTw.bstk)
         (hTw.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp), ?_,
-      by rw [andPinOk_scratch hrun]; exact hoff,
+      by rw [andPinOk_scratch hok hpk hrun]; exact hoff,
       ⟨env, hFo.step (hFo.check.mono hok' hext hc hpins) hext hpins⟩,
       ⟨x, ConRon.Bridge.denoteDecl_pext (PExt.of_ext hext) hpd hx⟩⟩
     simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact hfl
