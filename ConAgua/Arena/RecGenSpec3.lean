@@ -291,20 +291,4 @@ theorem ccoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨x, a', hr', hQ⟩ := hr b hb
   exact ⟨x, a', by rw [hrun]; exact hr', hQ⟩
 
-/-- **`class_const_ok` refines `classConstOk`** (the guards are `install_header`'s, through its
-stubs; then the stubs `infer_type_core`, `ensure_sort_core`). -/
-@[refines ConRon.Arena.classConstOk]
-theorem classConstOk_refines (p : Prog) (h : IhProg p)
-    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
-    (hc : p.lookup "class_const_ok" = some classConstOkL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal)
-    (hS : StageR dn vis fe s₀.mem a₀) (hq : decCV (erecP s₀.mem) q.toNat = some cv)
-    (hqb : q.toNat + 3 < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk .verified fe cv) a₀ ∧
-      KP dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk .verified fe cv) a₀)
-        (AM.res (ConRon.Arena.classConstOk .verified fe cv) a₀); ⊤⦄ :=
-  triple_post (classConstOk_spec p h hh hc stubCall (stubCall_spec p) n s₀ vis q) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (ccoW_sim dn vis fe n _ a₀ q cv hS hq hqb).am hw⟩
-
 end L.Ind
