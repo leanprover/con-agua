@@ -206,3 +206,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indproofs4,opus,150,90,"checkBlockClasses, checkBlockTail refined; stable class readings DecB; class_read_rec_cls guard; helper walks: bvar_b/fvar_b/has_fvar_fast/loose_bvars_bounded_fast contracts discharged"
 2026-10-23,indproofs4,opus,120,60,"checkBlockPass refined (IndInstallSpec36); helpers spine (get_app_fn_f, pi_result_f, mk_app_n_f) and names (intern_nanon, intern_ls_iw, name_rec, proj_table_name, is_proj_fn_shape) merged; phase 8 120/89"
 2026-10-23,pipeline,opus,170,40,"landing 4: PipelineRefines checkerProg from LoopStage alone (pipelineRefines_checker, sorry-free): relations R1-R7, the seven stages before the loop at checkerProg; front keeps RecOK/walkability; PrepRef carries expression tiers; per-stage write sets"
+2026-10-23,pipeline,opus,15,30,"landing 5: StageSpec/RelSpec at fuels n ≤ 2^62 (LoopStage provable from the core sims)"
