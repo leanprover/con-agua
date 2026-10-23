@@ -1,6 +1,7 @@
 import ConAgua.Compiler.WFSplit
 import ConAgua.Checker.Entry
 import ConAgua.Checker.Prelude
+import ConAgua.Checker.Hoist
 import ConAgua.Arena.Abs1
 import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.AppStore
@@ -112,7 +113,6 @@ import ConAgua.Arena.WhnfProj
 import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.ZeroStore
-import ConAgua.Checker.Hoist
 import ConAgua.Front.Apply
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.ApplyExpr
@@ -148,7 +148,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1770 functions, 0 of them stubs.
+1745 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -509,6 +509,7 @@ def checkerProg : Prog := [
   ("check_block_inds_cv_tas", L.Ind.checkBlockIndsCvTas),
   ("check_block_inds_cv_tas_go", L.Ind.checkBlockIndsCvTasGo),
   ("check_block_pass", L.Ind.checkBlockPass),
+  ("check_block_pass_rec", L.Ind.checkBlockPassRec),
   ("check_block_positivity", L.Ind.checkBlockPositivity),
   ("check_block_positivity_init", L.Ind.checkBlockPositivityInit),
   ("check_block_positivity_member", L.Ind.checkBlockPositivityMember),
@@ -519,6 +520,7 @@ def checkerProg : Prog := [
   ("check_block_tables", L.Ind.checkBlockTables),
   ("check_block_tables_one", L.Ind.checkBlockTablesOne),
   ("check_block_tail", L.Ind.checkBlockTail),
+  ("check_block_tail_rec", L.Ind.checkBlockTailRec),
   ("check_block_tele", L.Ind.checkBlockTele),
   ("check_block_teles", L.Ind.checkBlockTeles),
   ("check_constant_val", L.Ind.checkConstantValL),
@@ -881,39 +883,6 @@ def checkerProg : Prog := [
   ("hints_num", L.Scan.Values.hintsNum),
   ("hints_obj", L.Scan.Values.hintsObj),
   ("hints_val", L.Front.Fields.hintsVal),
-  ("hn_clear", L.Arena.memoClearG L.Checker.hnSch),
-  ("hn_find", L.Arena.memoFindG L.Checker.hnSch),
-  ("hn_put", L.Arena.memoPutG L.Checker.hnSch),
-  ("hoist_any", L.Checker.hoistAnyL),
-  ("hoist_app", L.Checker.hoistAppL),
-  ("hoist_apply", L.Checker.hoistApplyL),
-  ("hoist_block_go", L.Checker.hoistBlockGoL),
-  ("hoist_bucket", L.Checker.hoistBucketL),
-  ("hoist_chain", L.Checker.hoistChainL),
-  ("hoist_close_go", L.Checker.hoistCloseGoL),
-  ("hoist_closure", L.Checker.hoistClosureL),
-  ("hoist_deps", L.Checker.hoistDepsL),
-  ("hoist_deps_of", L.Checker.hoistDepsOfL),
-  ("hoist_emit", L.Checker.hoistEmitL),
-  ("hoist_forall", L.Checker.hoistForallL),
-  ("hoist_fvar", L.Checker.hoistFvarL),
-  ("hoist_index_go", L.Checker.hoistIndexGoL),
-  ("hoist_ins", L.Checker.hoistInsL),
-  ("hoist_ix", L.Checker.hoistIxL),
-  ("hoist_lam", L.Checker.hoistLamL),
-  ("hoist_let", L.Checker.hoistLetL),
-  ("hoist_names", L.Checker.hoistNamesL),
-  ("hoist_names_go", L.Checker.hoistNamesGoL),
-  ("hoist_nat_op_ground", L.Checker.hoistNatOpGroundL),
-  ("hoist_note", L.Checker.hoistNoteL),
-  ("hoist_proj", L.Checker.hoistProjL),
-  ("hoist_rules_go", L.Checker.hoistRulesGoL),
-  ("hoist_targets_go", L.Checker.hoistTargetsGoL),
-  ("hoist_walk", L.Checker.hoistWalkL),
-  ("hoist_zero", L.Checker.hoistZeroL),
-  ("hs_clear", L.Arena.memoClearG L.Checker.hsSch),
-  ("hs_find", L.Arena.memoFindG L.Checker.hsSch),
-  ("hs_put", L.Arena.memoPutG L.Checker.hsSch),
   ("i1l_app", L.Arena.i1lApp),
   ("i1l_clear", L.Arena.memoClearG L.Arena.i1lSch),
   ("i1l_find", L.Arena.memoFindG L.Arena.i1lSch),
@@ -1620,6 +1589,7 @@ def checkerProg : Prog := [
   ("rec_expr_loop", L.Front.Fields.recExprLoop),
   ("rec_fire_args", L.Arena.recFireArgsL),
   ("rec_fire_levels", L.Arena.recFireLevelsL),
+  ("rec_info_rec", L.Ind.recInfoRec),
   ("rec_line_loop", L.Front.Fields.recLineLoop),
   ("rec_nat_list", L.Front.Fields.recNatList),
   ("rec_num_name", L.Front.Fields.recNumName),
@@ -1693,6 +1663,7 @@ def checkerProg : Prog := [
   ("rset_clear", L.Arena.memoClearG L.Rom.rsetSch),
   ("rset_find", L.Arena.memoFindG L.Rom.rsetSch),
   ("rset_put", L.Arena.memoPutG L.Rom.rsetSch),
+  ("rule_copy", L.Ind.ruleCopy),
   ("rule_eq_a", L.Ind.ruleEqA),
   ("rule_eq_b", L.Ind.ruleEqB),
   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs),
@@ -1700,6 +1671,7 @@ def checkerProg : Prog := [
   ("rule_wr", L.Arena.ruleWr),
   ("rules_eq", L.Ind.rulesEq),
   ("rules_to_erec", L.Ind.rulesToErec),
+  ("rules_to_erec_go", L.Ind.rulesToErecGo),
   ("same_const_heads", L.Arena.sameConstHeadsL),
   ("scan_app", L.Scan.Records.scanApp),
   ("scan_axiom", L.Scan.Records.scanAxiomD),
@@ -1750,6 +1722,39 @@ def checkerProg : Prog := [
   ("sl_set_eq", L.Ind.slSetEq),
   ("sl_snoc", L.Ind.slSnoc),
   ("sle_go", L.Arena.sleGo),
+  ("hoist_ins", L.Checker.hoistInsL),
+  ("hoist_names_go", L.Checker.hoistNamesGoL),
+  ("hoist_names", L.Checker.hoistNamesL),
+  ("hoist_index_go", L.Checker.hoistIndexGoL),
+  ("hoist_ix", L.Checker.hoistIxL),
+  ("hoist_note", L.Checker.hoistNoteL),
+  ("hoist_walk", L.Checker.hoistWalkL),
+  ("hoist_app", L.Checker.hoistAppL),
+  ("hoist_lam", L.Checker.hoistLamL),
+  ("hoist_forall", L.Checker.hoistForallL),
+  ("hoist_let", L.Checker.hoistLetL),
+  ("hoist_proj", L.Checker.hoistProjL),
+  ("hoist_fvar", L.Checker.hoistFvarL),
+  ("hoist_rules_go", L.Checker.hoistRulesGoL),
+  ("hoist_block_go", L.Checker.hoistBlockGoL),
+  ("hoist_deps_of", L.Checker.hoistDepsOfL),
+  ("hoist_close_go", L.Checker.hoistCloseGoL),
+  ("hoist_closure", L.Checker.hoistClosureL),
+  ("hoist_deps", L.Checker.hoistDepsL),
+  ("hoist_targets_go", L.Checker.hoistTargetsGoL),
+  ("hoist_zero", L.Checker.hoistZeroL),
+  ("hoist_any", L.Checker.hoistAnyL),
+  ("hoist_bucket", L.Checker.hoistBucketL),
+  ("hoist_chain", L.Checker.hoistChainL),
+  ("hoist_emit", L.Checker.hoistEmitL),
+  ("hoist_apply", L.Checker.hoistApplyL),
+  ("hoist_nat_op_ground", L.Checker.hoistNatOpGroundL),
+  ("hs_find", L.Arena.memoFindG L.Checker.hsSch),
+  ("hs_put", L.Arena.memoPutG L.Checker.hsSch),
+  ("hs_clear", L.Arena.memoClearG L.Checker.hsSch),
+  ("hn_find", L.Arena.memoFindG L.Checker.hnSch),
+  ("hn_put", L.Arena.memoPutG L.Checker.hnSch),
+  ("hn_clear", L.Arena.memoClearG L.Checker.hnSch),
   ("slice_has", L.Checker.sliceHasL),
   ("slot_nat", L.Scan.Values.slotNat),
   ("slp_go", L.Arena.slpGo),
@@ -1865,6 +1870,7 @@ def checkerProg : Prog := [
   ("target_rec_pins_split", L.Ind.targetRecPinsSplit),
   ("tbl_eq", L.Ind.tblEq),
   ("tbl_eq_a", L.Ind.tblEqA),
+  ("tgt_rule_nested", L.Ind.tgtRuleNested),
   ("tgt_stored_rules", L.Ind.tgtStoredRules),
   ("tgt_stored_rules_remap", L.Ind.tgtStoredRulesRemap),
   ("tower_slots_all", L.Arena.towerSlotsAllL),
