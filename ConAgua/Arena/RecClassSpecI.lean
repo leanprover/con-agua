@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec6
+import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.RecCheckSpec3
 import ConAgua.Arena.StageInst1
 

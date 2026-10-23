@@ -1,10 +1,8 @@
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.RecSim
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndRealSpine
-import ConAgua.Arena.IndRealNames
 
 /-!
 # `abstract1_fast` under the stage relation and the `abstract1` memo (lane `indproofs4`, helper `abs`)
@@ -218,16 +216,6 @@ theorem ceinternW_afr {m m' : Mem} {f a r : Word} (h : ceinternW m f a = some (r
   AFr.of_frame (ceinternW_frame m f a r m' h)
 theorem mknF_afr {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (mknF_frame h)
-theorem naF_afr {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (naF_frame h)
-
-/-- An `AFr` fact added to a model chain's post. -/
-theorem RSim.withF {β α : Type} {o : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
-    {F : β → Prop} (h : RSim o op a Q) (hf : ∀ b, o = some b → F b) :
-    RSim o op a (fun b a' x => Q b a' x ∧ F b) := fun b hb =>
-  let ⟨x, a', h1, h2⟩ := h b hb
-  ⟨x, a', h1, h2, hf b hb⟩
-
 theorem snocW_afr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : snocW n m o l x = some (r, m')) :
     AFr m m' := by
   unfold snocW at h
@@ -343,13 +331,5 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   have hcp := (keepsW_abs1Fast coreWalkFuel (decE e) d.toNat k.toNat).cp_of_cpl.run hrun'
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl) hcp
   exact ⟨_, _, by rw [CWF_eq]; exact hrun', ⟨hS', hg, hlt, hres.symm⟩, _, hA'.2⟩
-
-/-- `abstract1_fast` as a step of a model chain: from the stage relation and the memo. -/
-theorem abF_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (e d k : Word) (he : H e) (hS : StageR dn vis fe m a) (hA : AbsOK m) :
-    RSim (abF m [CWF, e, d, k]) (abstract1Fast CWF.toNat (decI e) d.toNat k.toNat) a
-      (fun b a' x => KeepPost dn vis fe decW0E m b.2 a' b.1 x ∧ AbsOK b.2) := by
-  rintro ⟨r, m'⟩ hb
-  exact abF_ok dn vis fe e d k he m m' a r hb ⟨hS, hA⟩
 
 end L.Ind

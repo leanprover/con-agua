@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndPos2SpecN
-import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndRealAbsSim
 
 /-!
 # The `abstract1` memo across the positivity check's models (lane `indproofs4`, helper `abs`)
@@ -28,6 +28,19 @@ theorem bvbF_afr {m m' : Mem} {args r : List Word} (h : bvbF m args = some (r, m
 
 theorem envFindW_afr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     AFr m m' := by rw [envFindW_mem h]; exact AFr.refl _
+
+theorem ipfF_afr {m m' : Mem} {args r : List Word} (h : ipfF m args = some (r, m')) : AFr m m' :=
+  AFr.of_frame (ipfF_frame h)
+theorem lbbF_afr {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r, m')) : AFr m m' :=
+  AFr.of_frame (lbbF_frame h)
+theorem hffF_afr {m m' : Mem} {args r : List Word} (h : hffF m args = some (r, m')) : AFr m m' :=
+  AFr.of_frame (hffF_frame h)
+theorem cvLpsA_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : L.Arena.cvLpsW n m q = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [L.Arena.cvLpsW] at h
+  | succ n => exact erToIwW_afr h
+
 
 -- from IndPosSpec5
 theorem posRecW_afr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) :
