@@ -16,6 +16,8 @@ compare before/after of the same module, not single digits.
 | `ConAgua.Arena.RecGenSpec16` (helper c) | 241 s, 3.6 GB | 11 s, 2.8 GB | `tmm_spec`: `vcgen` with `L.evalE_spec`, `all_goals simp_all [...]`, no `grind` |
 | `ConAgua.Arena.IndInstallSpec28` (helper c) | 209 s, 4.1 GB | 6 s, 2.9 GB | `icp_spec`, same |
 | `ConAgua.Arena.IndInstallSpec12` (helper c) | 106 s, 3.1 GB | 6 s, 2.8 GB | `icf_spec`, `ica_spec`, same |
+| `ConAgua.Arena.DeclDivMod2` (helper a) | 275 s, 3.1 GB | 14 s, 2.9 GB | `certCtx_specW` (straight-line code): plain `vcgen`, `rename_i`, split the callees' posts, `subst` the locals, one `simp (decide := true)`; depends on `vcgen`'s order of inaccessible names |
+| `ConAgua.Arena.RecCheckSpec14` (helper a) | 297 s, 3.5 GB | 78 s, 3.0 GB | recipe on `ee_spec`/`tte_spec`/`tka_spec`, `ld64_rdW_spec` in `tka_spec`; `tka_spec`'s 11 goals still ~75 s |
 
 ## Findings
 
