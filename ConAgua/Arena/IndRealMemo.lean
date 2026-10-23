@@ -103,7 +103,7 @@ theorem i1lF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     RelW i1lF [f, e, v, d] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
       (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat)
       (fun m m' a r x => KeepPost dn vis fe decW0E m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, hAb, ⟨mp, hmp⟩, hCr, hIl⟩
+  intro m m' a r h ⟨hS, hAb, ⟨mp, hmp⟩, hCr, hIl, hWk⟩
   have hfr := i1lF_frame h
   obtain ⟨n, hc⟩ := callF_run h
   match n, hc with
@@ -121,6 +121,7 @@ theorem i1lF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl)
     ((keeps_i1lFast _ _ _ _).run hrun')
   exact ⟨_, _, hrun', ⟨hS', hg, hlt, hres.symm⟩, hAb.frame hfr (by decide) (by decide), ⟨_, hA'.2⟩,
-    hCr.frame hfr (by decide) (by decide), hIl.frame hfr (by decide) (by decide)⟩
+    hCr.frame hfr (by decide) (by decide), hIl.frame hfr (by decide) (by decide),
+    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 end L.Ind
