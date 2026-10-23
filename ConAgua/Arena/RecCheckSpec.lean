@@ -559,16 +559,16 @@ theorem targetHoles_refines (p : Prog) (hff : p.lookup "fvar_find" = some fvarFi
 
 mutual
 /-- **The model of `target_pin_tys`.** -/
-def tptW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+def tptW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, vis, d, xo, xl =>
     if xl = 0 then some ([], m)
-    else tptK n vis d xo xl (stubM "infer_type_core" m [vis, d, rdW (m.arr64 IW) xo])
+    else tptK cR n vis d xo xl (cR n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m)
 
 /-- After `infer_type_core`. -/
-def tptK (n : Nat) (vis d xo xl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def tptK (cR : CallM) (n : Nat) (vis d xo xl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m1) => tptK2 (tptW n m1 vis d (xo + 1) (xl - 1))
+  | some (_, m1) => tptK2 (tptW cR n m1 vis d (xo + 1) (xl - 1))
 
 /-- After the recursive call: the function falls off its end. -/
 def tptK2 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -577,24 +577,24 @@ def tptK2 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m1 : Mem) (vis d xo xl : Word) (r : List Word)
-theorem tptW_nil (h : xl = 0) : tptW (n + 1) m vis d xo xl = some ([], m) := by simp [tptW, h]
+variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis d xo xl : Word) (r : List Word)
+theorem tptW_nil (h : xl = 0) : tptW cR (n + 1) m vis d xo xl = some ([], m) := by simp [tptW, h]
 theorem tptW_cons (h : xl ≠ 0) :
-    tptW (n + 1) m vis d xo xl = tptK n vis d xo xl (stubM "infer_type_core" m [vis, d, rdW (m.arr64 IW) xo]) := by
+    tptW cR (n + 1) m vis d xo xl = tptK cR n vis d xo xl (cR n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m) := by
   simp [tptW, h]
-theorem tptK_some : tptK n vis d xo xl (some (r, m1)) = tptK2 (tptW n m1 vis d (xo + 1) (xl - 1)) := by rw [tptK]
+theorem tptK_some : tptK cR n vis d xo xl (some (r, m1)) = tptK2 (tptW cR n m1 vis d (xo + 1) (xl - 1)) := by rw [tptK]
 theorem tptK2_some : tptK2 (some (r, m1)) = some ([], m1) := by rw [tptK2]
 end arms
 
-grind_pattern [ind_grind] tptW_nil => tptW (n + 1) m vis d xo xl
-grind_pattern [ind_grind] tptW_cons => tptW (n + 1) m vis d xo xl
-grind_pattern [ind_grind] tptK_some => tptK n vis d xo xl (some (r, m1))
+grind_pattern [ind_grind] tptW_nil => tptW cR (n + 1) m vis d xo xl
+grind_pattern [ind_grind] tptW_cons => tptW cR (n + 1) m vis d xo xl
+grind_pattern [ind_grind] tptK_some => tptK cR n vis d xo xl (some (r, m1))
 grind_pattern [ind_grind] tptK2_some => tptK2 (some (r, m1))
 
-theorem targetPinTys_spec (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat) :
+theorem targetPinTys_spec (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (vis d xo xl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tptW n s₀.mem vis d xo xl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ tptW cR n s₀.mem vis d xo xl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis d xo xl; rw [invoke_eq _ hp]; simp only [callFn, targetPinTys]
@@ -605,7 +605,7 @@ theorem targetPinTys_spec (p : Prog) (hp : p.lookup "target_pin_tys" = some targ
     simp only [callFn, targetPinTys]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "infer_type_core" n, ih] <;>
+        hcR n "infer_type_core", ih] <;>
       finish (gen := 20)
 
 
@@ -613,7 +613,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis d xo xl : Word) (r : List Word) (xs : List EIdx),
-    tptW n m vis d xo xl = some (r, m') → StageR dn vis fe m a →
+    tptW stubCall n m vis d xo xl = some (r, m') → StageR dn vis fe m a →
     decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
     xo.toNat + xl.toNat ≤ iwTop m →
     ∃ a', (ConRon.Arena.targetPinTys V fe d.toNat xs).run a = .ok ((), a') ∧
@@ -623,7 +623,7 @@ theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
   | succ n ih =>
     intro m m' a vis d xo xl r xs h hS hxs hb hbt
     by_cases hxl : xl = 0
-    · rw [tptW_nil n m vis d xo xl hxl] at h
+    · rw [tptW_nil stubCall n m vis d xo xl hxl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, rfl⟩ := h
       have hz : xl.toNat = 0 := by rw [hxl]; rfl
@@ -631,7 +631,7 @@ theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       simp [decHL, hslice?] at hxs
       subst hxs
       exact ⟨a, rfl, hS, IWGrow.refl m⟩
-    · rw [tptW_cons n m vis d xo xl hxl] at h
+    · rw [tptW_cons stubCall n m vis d xo xl hxl] at h
       have hpos : 1 ≤ xl.toNat := by
         rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
         · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
@@ -645,13 +645,13 @@ theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
       have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [hw1] at h
-      cases hi : stubM "infer_type_core" m [vis, d, w] with
+      cases hi : stubCall n "infer_type_core" [vis, d, w] m with
       | none => rw [hi] at h; simp [tptK] at h
       | some rm =>
         obtain ⟨ri, m1⟩ := rm
-        rw [hi, tptK_some] at h
+        rw [hi, tptK_some stubCall] at h
         obtain ⟨t1, a1, hrun1, hS1, hg1, -⟩ := inferTypeCore_spec dn vis fe d w hw2 m m1 a ri hi hS
-        cases hr : tptW n m1 vis d (xo + 1) (xl - 1) with
+        cases hr : tptW stubCall n m1 vis d (xo + 1) (xl - 1) with
         | none => rw [hr] at h; simp [tptK2] at h
         | some rm2 =>
           obtain ⟨r2, m2⟩ := rm2
@@ -682,7 +682,7 @@ theorem targetPinTys_refines (p : Prog) (hp : p.lookup "target_pin_tys" = some t
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (targetPinTys_spec p hp n s₀ vis d xo xl) ?_
+  refine triple_post (targetPinTys_spec p hp stubCall (stubCall_spec p) n s₀ vis d xo xl) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hS', hg⟩ := tptW_ok dn fe n _ _ a₀ vis d xo xl r xs hm hS hxs hb hbt
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ a₀ a' () hrun
