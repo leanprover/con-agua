@@ -63,3 +63,29 @@ via the coordinator: the fuel premise `n ≤ 2^62` in `LoopStage`'s `RelSpec`; i
 a.caches`, `PinsR`, `IWOK`, the untouched index rows/pending count/promotion memo; from the twin's
 prefix `FrontDecls ds` and `u`'s persistent handle); `StepIn checkerProg indFns` and the other
 new `LoopCallees` fields at `checkerProg`.
+
+## Landing 2: the loop's start and `LoopStage` modulo named facts
+
+* **`Arena/LoopStart.lean`**: `LoopZero m` (the arrays/`CTL` words the loop needs zero: the core's,
+  the inductive stage's and `consts_resolve_ffast`'s memos, the index rows 132‥134, the pending
+  count `CTL[130]`, the number of constants `CTL[128]`, the promotion memo 146‥149 / `CTL[140‥147]`)
+  gives `CoreMemos`, `StageMemos`, `CrOK`, `PMemoR m PMemo.empty`, `PendR m #[]`,
+  `EnvR dn m 0 (mkIFEnv IEnv.empty)`. **`dnOf st`**: the name decoder at the loop's start, the start
+  store's persistent `denoteN` (`dnOf_inj` by con-ron's `denoteN_inj`); `loop_start`: `LoopR`,
+  `LoopMem`, `CoreMemos` at the start from `ArenaD`, `CoreR m a.caches`, `PinsFull`, `DeclsF`,
+  `PinSetsR`, `IWOK`, `LoopZero`, the pin flag and three sizes; `installThenCheck_start`.
+* **`Checker/LoopStage.lean`**: `twinFold_of_prefix` (`TwinFold` from `TwinPrefix` by
+  `stages_frame`), `loopZero_of_since` (`Since`'s frame over `preLoopA`/`preLoopC`, decided over
+  `Nat` lists, and `loadMem_rd`), **`loopStage_of`**: `LoopStage checkerProg checkerRels` from the
+  loop's program hypotheses (`LoopCallees` for every injective `dn` with `QuotDn dn`,
+  `LoopTopProg`), the R7 facts lane `pipeline` is adding (`CoreR m sE.caches`: the prefix leaves the
+  caches as `AState.init`'s, `PinsFull`, `IWOK`) and two facts of the twin's prefix (`FrontDecls ds`,
+  `u`'s persistent handle).
+* Lesson: `omega` does not see through `abbrev ArrId := Nat` (a goal or hypothesis over `ArrId`
+  gives "no usable constraints"); state such predicates over `Nat`.
+* **The ROM.** Helper `loopt3-prog` found `L.Rom.RomRefs checkerProg` unprovable (the readers read
+  `PB`; `romRefs_of` is for `checkerProg.subPB bs`) and `CoreWalkProg.i1` asking `instEntry` where
+  `checkerProg` binds `inst1` to the wrapper `inst1A`. So `loopStage_of` takes the loop's program
+  hypotheses at `checkerProg.subPB bs` and transfers the run with `triple_subPB` (R7 fixes `PB`).
+* **`Final/Remaining.lean`**: `checkerAsm_accepts_remaining`, `checkerAsm_accepts` from exactly
+  the hypotheses still open (`#print axioms` in the module: the stub contracts' `sorryAx`).
