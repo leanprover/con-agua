@@ -26,7 +26,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 section sims
-variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
+variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
 
 /-- The class's constructors denote (con-ron's `classRecsRulesOk_spec`, its first step). -/
 theorem ctorsAt_denote {st : EStore} {G : ClassGen} {gP : ConLeche.ClassGen}
@@ -45,7 +45,7 @@ theorem ctorsAt_denote {st : EStore} {G : ClassGen} {gP : ConLeche.ClassGen}
     obtain ⟨xsP, hxsP, hd⟩ := hcj
     rw [hxsP]; exact hd
 
-include hq in
+include hq hApd in
 /-- **`class_recs_rules_ok` under `StageC`** (`crrW_sim`'s; twin side con-ron's
 `classRecsRulesOk_spec`). -/
 theorem crrW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
@@ -119,7 +119,7 @@ theorem crrW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
   refine RSim.bind (K := crrK1 (realCall p) n visT visR g rco rcl cgo cgl vo vl co cl
     (UInt64.ofNat pp) (UInt64.ofNat c0)) (by rw [crrK1])
     (by
-      have := crsW_simC hq henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
+      have := crsW_simC hq hApd henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl (UInt64.ofNat pp)
         (UInt64.ofNat c0) G recCls cvGs cv hns hrcb hcgb gP cvGsP cvP n (by omega) m a _ _ _
         (gP.ctors.getD c0 []) hC hG hrc (rec3SPL_decB hcg) (by rw [tp]; exact hcvp)
         (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie
@@ -196,7 +196,7 @@ theorem crrW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv)
     by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hA5,
     c12.trans c4⟩
 
-include hq in
+include hq hApd in
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`** under `StageC` (the inputs' denotations as
 con-ron's `classRecsRulesOk_spec` asks). -/
 @[refines ConRon.Arena.classRecsRulesOk]
@@ -225,7 +225,7 @@ theorem classRecsRulesOk_refinesC (hp : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
   | zero => simp [crraW] at hw
   | succ n =>
   rw [crraW_eq] at hw
-  have h := RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_simC hq henv visT visR feR (env₂ := env₂)
+  have h := RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_simC hq hApd henv visT visR feR (env₂ := env₂)
     g rco rcl cgo cgl G recCls cvGs hns hrcb hcgb gP cvGsP n (by omega) s₀.mem a₀ cgo cgl rco rcl
     cvGs recCls cvGsP hC hG hrc hcg hcg hrc hA hgP hcvGsP hcvGsP hie) (Q := fun b a' x =>
       (StageC dn visR feR env b.2 a' ∧ IWGrow s₀.mem b.2 ∧ decRRS b.2 b.1 x) ∧ AbsOK b.2) ?_) hw
