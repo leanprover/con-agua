@@ -206,6 +206,7 @@ decomposition): from the stage relation at the pushed view `vis2`, con-ron's `Ch
 pre-insertion view `vis` of the index (at `env`, the environment before the push), the pushed
 index's `StepOK` (at `env2`), the memory's half of `TwinOK`, the pin flag, the name's and the
 value's denotations; the gate at `vis`, the stage relation at `vis2` and `StageC` at `vis` after. -/
+@[refines ConRon.Arena.checkReducePin]
 theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
     {env env2 : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c v : Word}

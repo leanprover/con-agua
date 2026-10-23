@@ -307,8 +307,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
     exact this
 
 /-- **`check_reduce_pin(vis, vis2, c, v)` refines `checkReducePin`** (through the core's, the
-walks' and the ROM stubs). -/
-@[refines ConRon.Arena.checkReducePin]
+walks' and the ROM stubs; the census link is `crpW_okT`, `DeclCrpT.lean`). -/
 theorem checkReducePin_refines (p : Prog) (h : CrpProg p) (dn : NIdx → Option ConLeche.Name)
     (hdn : DnInj dn) (vis vis2 : Word) (fe2 : IFEnv) (c v : Word) (hc : c.toNat < 2 ^ 32)
     (hv : v.toNat < 2 ^ 32) :

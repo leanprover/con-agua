@@ -1026,7 +1026,7 @@ theorem certify_ref (hN : NatEqProg p) (o l : Word) (ps : List (EIdx × EIdx)) :
       simp only [certifyNatEqs, StateT.run_bind, hrun1', exc_ok_bind', hx, if_true]
       exact hrun2
 
-@[refines ConRon.Arena.certifyNatEqs]
+/-- Under `StageR` (the core through its stub); the census link is `certW_okT`. -/
 theorem certifyNatEqs_refines (hN : NatEqProg p) (o l : Word) (ps : List (EIdx × EIdx)) :
     RefAM p "certify_nat_eqs" [vis, o, l]
       (fun m a => StageR dn vis fe m a ∧ EqL m o.toNat l.toNat ps ∧ o.toNat + l.toNat < 2 ^ 64)
