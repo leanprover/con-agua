@@ -612,8 +612,8 @@ end rel2
 /-- **`target_k53` (with `target_k53_tele`, `_heads`, `_args`, `erase_each`) refines `targetK53`**
 (through `strip_pis`, `get_app_fn_f`, `get_app_args_f`, `mk_app_n_f`, `target_class_match`'s
 contracts and stubs): the class's shape (`BSOK`), former types, the callee's class record and the
-recorded telescope decoded below the tops, the walk memos well formed; the verdict as `r[0] ≠ 0`. -/
-@[refines ConRon.Arena.targetK53]
+recorded telescope decoded below the tops, the walk memos well formed; the verdict as `r[0] ≠ 0`.
+Under `StageR`; the census link is `targetK53_refinesC` (`IndT/RecCheckK53`). -/
 theorem targetK53_refines (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl Mc teo tel majDom f : Word)
     (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (tele : List EIdx)
