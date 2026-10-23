@@ -52,7 +52,7 @@ def sK1 : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r1, m1) =>
     if r1.tail.headD 0 = 0 then some ([0, 0], m1)
     else sK2 n p vis (rdW (m1.arr64 IW) (r1.headD 0 + r1.tail.headD 0 - 1))
-      (stubM "get_app_fn_f" m1 [CWF, rdW (m1.arr64 IW) (r1.headD 0 + r1.tail.headD 0 - 1)])
+      (gafF m1 [CWF, rdW (m1.arr64 IW) (r1.headD 0 + r1.tail.headD 0 - 1)])
 
 end models
 
@@ -74,7 +74,7 @@ def slK1 (n : Nat) (p vis np mo ml d dom : Word) : Option (List Word × Mem) →
 /-- **The model of `class_read_slot`.** -/
 def slotW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, p, vis, np, mo, ml, d, dom => slK1 n p vis np mo ml d dom (stubM "pi_result_f" m [CWF, dom])
+  | n + 1, m, p, vis, np, mo, ml, d, dom => slK1 n p vis np mo ml d dom (pirF m [CWF, dom])
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np mo ml d dom mdom iName us ao al : Word)
@@ -84,7 +84,7 @@ theorem sK1_nil (h : r1.tail.headD 0 = 0) : sK1 n p vis (some (r1, m1)) = some (
   rw [sK1, if_pos h]
 theorem sK1_ok (h : r1.tail.headD 0 ≠ 0) : sK1 n p vis (some (r1, m1)) =
     sK2 n p vis (rdW (m1.arr64 IW) (r1.headD 0 + r1.tail.headD 0 - 1))
-      (stubM "get_app_fn_f" m1 [CWF, rdW (m1.arr64 IW) (r1.headD 0 + r1.tail.headD 0 - 1)]) := by
+      (gafF m1 [CWF, rdW (m1.arr64 IW) (r1.headD 0 + r1.tail.headD 0 - 1)]) := by
   rw [sK1, if_neg h]
 theorem sK2_tag (h : r2.headD 0 >>> 28 ≠ 3) : sK2 n p vis mdom (some (r2, m2)) = some ([0, 0], m2) := by
   rw [sK2, if_pos h]
@@ -101,7 +101,7 @@ theorem sK4_some : sK4 iName us ao al (some (r4, m4)) =
 theorem sK5_some : sK5 (some (r5, m5)) = sK6 (recW m5 2 [0, r5.headD 0]) := rfl
 theorem sK6_some : sK6 (some (r6, m6)) = some ([1, r6.headD 0], m6) := rfl
 theorem slotW_eq : slotW (n + 1) m p vis np mo ml d dom =
-    slK1 n p vis np mo ml d dom (stubM "pi_result_f" m [CWF, dom]) := rfl
+    slK1 n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
 theorem slK1_mot (h : r1.headD 0 >>> 28 = 2) : slK1 n p vis np mo ml d dom (some (r1, m1)) =
     slK2 (slotMotW n m1 p vis dom) := by rw [slK1, if_pos h]
 theorem slK1_min (h : ¬ r1.headD 0 >>> 28 = 2) : slK1 n p vis np mo ml d dom (some (r1, m1)) =
@@ -127,6 +127,7 @@ grind_pattern [ind_grind] slK2_some => slK2 (some (r, m))
 /-- The lookups `class_read_slot` needs. -/
 structure SlotProg (p : Prog) : Prop where
   fh : p.lookup "fvar_head" = some fvarHead
+  ad : AdF p
   v : p.lookup "e_view" = some eView
   f : p.lookup "sl_find" = some slFind
   cm : p.lookup "class_of_motive_var" = some classOfMotiveVar
@@ -161,7 +162,7 @@ theorem classReadSlotMotive_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        piBinders_spec' p hP.a hP.c hP.v hP.sc hP.pb n, stubM_spec p "get_app_fn_f" n,
+        piBinders_spec' p hP.a hP.c hP.v hP.sc hP.pb n, gafF_spec p hP.ad n,
         stubM_spec p "get_app_args_f" n, eView_spec p hP.v n,
         classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
         rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2] <;>
@@ -177,9 +178,9 @@ theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : St)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "pi_result_f" n, classReadSlotMotive_spec p hP n,
+        pirF_spec p hP.ad n, classReadSlotMotive_spec p hP n,
         classReadMinor_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.r2 hP.r5 hP.i1 hP.is hP.fin
-          hP.pb hP.min hP.tl n] <;>
+          hP.pb hP.min hP.tl hP.ad n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
 /-! ## Relational lemmas -/

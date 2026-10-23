@@ -60,21 +60,117 @@ Now (`Checker/Prelude.lean`):
   (master's last report: 405 and two `hoist_ok` l-errors, which master had already fixed).
   `nb 2` (no `PRE` byte array any more).
 
+## Prelude records stay in `DECL` (landing 3)
+
+Landing 2's `PDECL` (records moved out after the prelude's parse) left one gap: `front_run`
+appends to the pool `DLP`, which the prelude's records in `PDECL` point into, and nothing in the
+frontend's refinement says it keeps `DLP` below the old top. So, second version:
+
+* `builtin_prelude`: `pre_front_run`; `CTL[240] := DECL[0]` (the prelude's count, as before
+  landing 2); `front_reset` resets only the id tables. `DECL[0‥P)` keeps the prelude's records,
+  the stream's parse appends after them. `PDECL`, `prelude_join` (and front4's recursive
+  `prep_shift`/`prep_join`, `PrepJoinRef.lean`) are gone; `prepare_prelude` reads
+  `np := CTL[240]`. Deviation D31 rewritten. Memory map: `CTL[240]` row instead of `PDECL`.
+* Twin side, `Front/DeclsPre.lean`: con-ron's parse only pushes to `decls`, so
+  `applyLine (st.pre D) r = preL D <$> applyLine st r` (`applyLine_pre`; by `rfl` for the readers,
+  `simp` for the arms; `StateD.pre D st` prefixes `decls` by `D`).
+* `Front/FrontPre.lean`: `frontAll_refines_pre` / `frontAll_refines_chunks_pre`: `front_run` from
+  `StateDR m (StateD.blank.pre D)` ends in `StateDR m' (st'.pre D)` with the twin's
+  `parseChunks [b]` from its own blank state. The driver framework (`runI_refines`) is generic in
+  its invariant; the invariant is `FrontInv` with `StateDR` on the prefixed state and `TwinOK` on
+  the twin's own; `front_init`'s refinement repeated with `decls := D`.
+* front4's `preparePrelude_refines` (`PrepRef.lean`) adapted: its core (`pPrepCore_ok`) already
+  worked on `DECL` = prelude ++ stream; it now reads `np` from `CTL[240]` (hypotheses: `DECL`
+  holds `pre.decls ++ ds`, `CTL[240] = pre.decls.size`).
+
+Helpers (merged): `preSim` proved (`PreludeSim.lean`; `PreSimProg` gained a `defined` field: a
+copy's original must be bound) and `checkerProg_preSim` (`PreludeSimProg.lean`, per-function
+`simChk` over `prog_all`, copy bindings found by evaluation and checked by one `rfl` each, 18 s,
+3 GB). `front_run` at `checkerProg`: the bundles do not hold at `checkerProg` (it binds no
+`validate`, `str_put`, `apply_ind_line`: unreachable), so instead `checkerProg` agrees with
+`frontAllProg` on the 267 functions reachable from `front_run` (`FrontProgAgree.lean`, 23 chunks
+of 12 `rfl` lookups, `Elab.async false`: 264 s, 4.2 GB; in parallel it passed 7.8 GB) and they are
+call-closed, so `invoke checkerProg … "front_run" = invoke frontAllProg …`
+(`checkerProg_front_run`, `FrontProg.lean`). ROM side (`RomProg*.lean`): `checkerProg_irp`,
+`checkerProg_pinProg` (∀ buffers), `noSt8`, `noSt8PB`, the stage theorems at `checkerProg`;
+loaded memory (`RomProgInit.lean`): `arenaD_loadMem`, `stateDR_loadMem`, `rsetR_loadMem`;
+`capCheck_spec` (`CapCheck.lean`, by induction over the `foldr`).
+
+`cap_check` now bounds every word array by `2^62` (the inductive lines' scratch arrays need it)
+and requires `DECL`, `DLP` non-empty (`StateDR`'s count words). `len64` is the size mod `2^64`,
+so `PipelineRefines` gained the premise `∀ n ∈ s64, n < 2 ^ 64`; `checker_x64_accepts` derives it
+from `Layout.Ok.end64` and `MemRel` (its own statement is unchanged).
+
+`LoopStage` now also gets the twin's prefix (`TwinPrefix`), so `stages_frame` gives the fold's
+start invariant there.
+
+## The stages assembled (landing 4)
+
+`pipelineRefines_checker (h8 : LoopStage checkerProg checkerRels) : PipelineRefines checkerProg`
+(`Checker/PipeFinal.lean`). The seven stages before the loop are proved at `checkerProg`
+(`PipeStages.lean`: cap/pb/irp; `PipePrelude.lean`: `builtin_prelude`; `PipeRest.lean`:
+prelude, front, prepare, pins), **sorry-free** (`#print axioms pipelineRefines_checker`: propext,
+Classical.choice, Quot.sound). `front_run` also keeps `RecOK` of every record and
+`WalkableDecl` of every parsed record, which `prepare_prelude`'s refinement needs
+(`L.Front.frontRunOK_checker`, `Front/FrontPreOK*.lean`, helper `pipeline-recok`: the invariant
+`FrontInvOK`; one line changes `DECL`/`DLP` only above the old count/top (`DGrow`), its handle
+words are table reads below `2^32`, a block's pointers decode to non-axioms so are nonzero;
+walkability is twin-only, `applyLine_decls`).
+
+The relations (`checkerRels`), all over `l = loadMem b pb s8 s64`:
+
+* `Since l m pb`: `Keep l m` (bytes and sizes; the program has no byte store), `CapsOK l`,
+  `PbPre pb`, `MemFrame preLoopA preLoopC l m` (everything else is still `l`'s zeros: what
+  loopt2 needs for the loop's zero memos).
+* `R1`/`R2`: `m = l` and the capacities / pin-data prefix.
+* `R3` (after irp): `Since`, `ArenaD`, `StateDR m blank`, `RsetR`, `stkTop = 0`, `PinsFull`,
+  `pinW m 0 ≠ 0`, `TwinFacts` (StateOK, scratch off, PinsOK, PersPins, PinsReadyP), caches
+  empty, `HZ` (the hoist's memos and `CTL[129]`, `CTL[200]` still zero).
+* `R4` (after builtin_prelude): `StateDR m (StateD.blank.pre pre.decls)`, `CTL[240]` =
+  `pre.decls.size`, `PinFacts` (rset, stk, PinsFull, pin0 together), `TwinFacts`, `HZ`,
+  `RecsOK m pre.decls`.
+* `R5` (after front_run): `DeclsF DECL DLP (pre.decls ++ rc.decls)`, the rest as `R4`.
+* `R6` (after prepare_prelude): `ArenaD`, `DeclsF … ds`, `PinFacts`.
+* `R7` (after intern_all_pins): `Since`, `ArenaD`, `DeclsF … ds`, `PinSetsR m ipins`, `RsetR`,
+  `pinW m 0 ≠ 0`. `LoopStage` and `PinsStage` also get the twin's prefix (`TwinPrefix`,
+  `TwinPrefix4`): the twin's own facts at the state they start from come from con-ron's run lemmas
+  (`prefix4_facts`, `stages_frame`), not through the relations.
+
+Pieces:
+
+* `builtin_of_parts`: `builtin_prelude` = `pre_front_run`; `CTL[240] := DECL[0]`; `front_reset`,
+  by one `vcgen` over implications between memory predicates (`BP0`‥`BP3`), as `check_of_stages`.
+* `frontReset_spec`/`frontReset_stateDR` (`FrontReset.lean`): `StateDR m st` → `StateDR (resetM m)
+  (StateD.blank.pre st.decls)` (the sparse memos by `memoRV_clear`, framed through the other
+  clears).
+* Per-stage write sets (`PreLoopWSStages.lean`, generated by `scripts/preloop_ws.py`; `--check`
+  after changing the program): the pin table, `RSET`'s memo, `CTL[131]`, `CTL[240]`, the hoist's
+  memos ride along the stages that do not write them.
+* `PrepRef.lean` (front4's) now also concludes that the twin's expression tiers and pins are
+  unchanged (only the name store changes: `preludeKey` interns the anonymous name) and
+  `ds'.size ≤ (pre.decls ++ ds).size` (the room for `DeclsF`), so `DerR` and `DeclsF` hold after.
+* `PrepProgChecker.lean`: `PrepProg`/`PrepExt`/`HoistProg`/`HoistExt checkerProg` by `ProgHas.cons rfl`,
+  one lookup at a time (`Elab.async false`, 40 s, 4.5 GB).
+* Note: `scripts/lake env lean F.lean` does not apply the lakefile's options (`autoImplicit` is
+  on there): a file that elaborates that way can still fail `lake build`. Check with
+  `lake build`.
+
 ## Obligations
 
 | # | Stage / obligation | Status |
 |---|---|---|
 | 1 | composition | **done** (landing 1), modulo the stages below |
-| — | `CapStage` | open |
-| — | `PbStage` | open (`L.Rom.pbCheck_PB`) |
-| 2 | `IrpStage` | open (`L.Rom.internReservedPins_PB`) |
-| 3 | `PreludeStage` | open: L code reworked (landing 2); `preSim` stated (`sorry`) |
-| 4 | `FrontStage` | open (`frontAll_refines_chunks`, over `frontAllProg`, empty `DECL`) |
-| 5 | `PrepareStage` | open (no theorem; hoist's refinement as a hypothesis) |
-| 6 | `PinsStage` | open (`L.Rom.internAllPins_PB`) |
+| — | `CapStage` | pieces proved (`capCheck_spec`, `CapCheck.lean`) |
+| — | `PbStage` | pieces proved (`checkerProg_pbCheck_PB`) |
+| 2 | `IrpStage` | pieces proved (`checkerProg_internReservedPins_PB`, `arenaD_loadMem`) |
+| 3 | `PreludeStage` | pieces proved (`preSim`, `checkerProg_preSim`, `frontRun_checker`); `front_reset` open |
+| 4 | `FrontStage` | pieces proved (`frontAll_refines_chunks_pre`, `checkerProg_front_run`) |
+| 5 | `PrepareStage` | pieces proved (front4's `preparePrelude_refines`, adapted) |
+| 6 | `PinsStage` | pieces proved (`checkerProg_internAllPins_PB`) |
 | — | `LoopStage` | loopt2's (`installThenCheck_refines` + 12a) |
-| 13 | program hypotheses at `checkerProg` | open |
+| 13 | program hypotheses at `checkerProg` | ROM, front, prelude copies, write set before the loop done; loop's are loopt2's |
+| — | relations `ρ` and the stage assembly | **done** (landing 4): `pipelineRefines_checker`, modulo `LoopStage` (loopt2) only |
 
 ## `sorry`s
 
-* `L.Checker.preSim` (`Checker/PreludeSim.lean`): the input-renaming simulation (in progress).
+None of this lane's.

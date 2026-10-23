@@ -13,10 +13,12 @@ namespace L.Checker
 open L.Arena L.Ind
 
 set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
 theorem checkerProg_rrn : RrnF checkerProg :=
   .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl .nil
 
 set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
 theorem checkerProg_rrb : RrbF checkerProg :=
   .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <|
   .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl .nil

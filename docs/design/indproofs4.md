@@ -24,7 +24,7 @@ bundle) replaces the contract like this (`Arena/IndReal.lean`, precedent `StageI
 Files whose models now contain a `noncomputable` `callF` need `noncomputable section`
 (`RecCheckSpec17‥24` got it).
 
-## Landing 1 (in progress)
+## Landing 1
 * `reserved_rec_name` (`rrnF`, from lane `tails`' `reservedRecName_refines`) and `rec_rule_bits`
   (`rrbF`, from `recRuleBits_refines`): both write nothing (`closedA … [] []`). Uses switched in
   `IndPartsSpec4` (`block_rec_names_unreserved`) and `IndSumSpec10` (`sum_rules`); bundles `RpLook.rrn`,
@@ -32,3 +32,68 @@ Files whose models now contain a `noncomputable` `callF` need `noncomputable sec
   `blockRecNamesUnreserved`, `sumRules` (phase 8: 90 / 115).
 * Found on master: `lakefile.toml` lost the globs `ConAgua.Arena.DeclArmT`, `ConAgua.Arena.LeafFns`,
   `ConAgua.Arena.StageC`, `ConAgua.Checker.LeafAll` at `059f3aec` (merge of `tails`); restored here.
+* Landed as `7d763a9a` (phase 8: 90 proven / 115 sorry).
+
+## Landing 2 (landed as `9a3cbebf`, phase 8: 91 / 116)
+* **`checkBlockTail_refines`** (`IndInstallSpec35`): `ConsRecsTFSim p` discharged from helper
+  `rec`'s `consBlockRecsTF_refines` (`consRecsTFSim_of`; the `hb` memo after from the write set).
+  Census: written → sorry (proven locally; the sorry comes through `genRecCheck_pending` and stubs).
+* **`checkBlockClasses_refines`** (`RecGenSpec21`): `class_read`, `class_read_classes`, the keys,
+  the majors, one class per member. Glue: `slots_ok` (stable slots → decoding + `SlotsExt`),
+  `ccRes_pslR` (keys below the tops, `decCK_truncM`); the walk memos across `class_read` /
+  `class_read_classes` by `PosMR.ofClosed` (program fact `closedA p posFreeA posFreeC fs`: checked
+  by `#eval` for `checkerProg`'s closures of both, 103 functions; the decided theorem for
+  `checkerProg` is not written yet — chunked, as `IndCore.lean`).
+* **Stable decodings lie below the top** (`RecGenSpec22`, finishing helper `pos-cls`'s
+  `RecGenSpec20`): generic `word_lt_of_stab`/`iwN_lt_of_stab` (a word every growth keeps is below
+  the top — perturb it, `perturb`), `ptr_lt_of_stab` (a pointer whose perturbation to `2^64-1`
+  breaks the decoding), then `stab_decCS_decB` and `stab_decCR_decB`: a stably decoded class
+  reading (`class_read`'s `decRead`) is `DecB`, as the pass's record wants.
+* **Capacity guard** in `class_read_rec_cls` (`if mI + 1 == 0 { abort }`): `RecsDec` no longer
+  needs `R.mI + 1 < 2^64` (no deviation row: a capacity). Model `crW` got the arm `crW_big`.
+* Helper `walks` (126 min, ~50 work): `bvar_b`, `fvar_b`, `has_fvar_fast`,
+  `loose_bvars_bounded_fast` contracts (and the two `StageT` ones) discharged
+  (`IndRealWalk(T).lean`, `Checker/IndRealWalk.lean`); `fvar_b`/`has_fvar_fast` via `fvbW_okD`
+  under `ArenaD` (the `ArenaA` refinements need `AbsR`, not in `StageR`). Touched lane
+  `loopt2`'s decl bundles (`CvgProg`, `IvProg`, … got `bvb`/`hf` fields). Newly proven:
+  `nestWalkStack`.
+* Memo invariants outside `StageR` (decision pending): `consts_resolve_ffast` needs `CrOK`
+  (array 155), `instantiate1_lift_fast` needs `I1R` (array 51, `CTL[52]`), `abstract1_fast` needs
+  `AbsR` (array 49, `CTL[48]` = `CoreMemos`' `coreAbSch`, so `StageT` has it). Plan: take them as
+  memory-only hypotheses (like `StageMemos`) where the switched callee is used, or switch those
+  callers to `StageT` (its `TwinOK.memos` holds `CoreMemos`); `CrOK`/`I1R` would go into the
+  memo clause lane `loopt2` carries.
+
+## Helper `indproofs4-names`: the name and level-list interning stubs
+
+Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `nameRec_spec`,
+`projTableName_spec`, `isProjFnShape_spec`, `isProjFnShapeT_spec`. Models and facts:
+
+* `Arena/IndRealNames.lean`: `naF` (`intern_nanon`, master's `nainternW` and `internNAnon_stage`),
+  `nrF` (`name_rec`: `pool_room`, the bytes `rec`, master's `intern_nstr`), `ilF` (`intern_ls_iw`:
+  `pool_room`, `iw_pool`, master's `intern_ls`), `ptF` (`proj_table_name` under `StageR`; lane
+  `whnf`'s `projTableName_refines` is under `CoreS`, the proof is the same minus `nwf`). Each body
+  is a model over its callees' runs (`callW`), related through the callees' word models; the
+  pool scratch is a growth (`grows_top`, `grows_set_above`, `iwpW_ok`), so `ArenaD.grow` and
+  `StageR.of_walk`/`stage_of_name` give `StageR` after. Handle bounds: an `intern_*` model's
+  handle is below `2^32` by the store relation alone (`internM_lt`: a hit is a node below the
+  count, an append the count, both below `2^27`); `intern_nanon` and `intern_nnum` need it (no
+  abort in the L code).
+* `Arena/IndRealIpf.lean`: `ipfF` (`is_proj_fn_shape`) and `ipfW_run` (the `num`/`str` views and
+  the string bytes against `"proj"`/`"projTable"`), `isProjFnShape_refines` (census). Kept apart
+  from `IndRealNames.lean`: importing that into `DeclHeader.lean` brought `L.Ind.fuelW` (`RecSim`)
+  and `L.Arena.inferTypeCore_spec` (`KnotSlot`) into the declaration files and made their names
+  ambiguous. Its `vcgen` spec needs `L.evalC_spec` (the `||` chains; plain `evalC` timed out).
+  `ipfF_okT` (`StageT`) is in `IndStubsT.lean`: nothing changes, no `lift_keep` needed.
+* Bundles: `NaF`/`NrF`/`IlF`/`PtF`/`IpfF` fields added to `MjProg`, `CrrProg`, `IndPartsProg`
+  (`nr`), `IndPartsProg5` (`na`, `il`), `NbLook`, `RpLook` (`rna`), the `param_levels` bundles
+  (`il`/`hil`), `TblProg` (`hpt`), `DmProg2` (`lIl`), `IhProg` and `IvProg` (`ipf`);
+  `Checker/IndRealNames.lean` proves them for `checkerProg`. `IndStubs.stubNames` no longer lists
+  `intern_nanon`.
+* Not done: `name_rec_i` (needs the decimal digits of `i` from the `mulhi` loop and `dec_len`
+  against `Nat.repr`, two inline `while` loops; `targetRecPins` has other stubs too, so it would
+  not turn a target proven); `lv_zero_caps` (its op is `readLevelM`: the level's readback needs the
+  twin's `readL` facts, which `TwinOK`/`StageT` carries and `StageR` does not).
+* Census: phase 8 95 proven / 110 sorry (from 90 / 115): `targetMajorAt`, `targetMajorDefault`,
+  `BlockShape.nestCtx`, `paramLevels`, `blockRecNameSetOk` proven; phase 2 `NIdx.isProjFnShape` proven
+  (`isProjFnShape_refines`).

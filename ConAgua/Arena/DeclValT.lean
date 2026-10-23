@@ -98,13 +98,13 @@ theorem ihW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   subst hc0
   obtain ⟨rl, hrunR, hrl⟩ := resContW_miss hwxl h2 hS.stage.1.pins
   -- `is_proj_fn_shape(x)`
-  cases h3 : stubM "is_proj_fn_shape" m1 [wx] with
+  cases h3 : ipfF m1 [wx] with
   | none => rw [h3] at h; simp [ihK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, ihK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    isProjFnShapeT_spec dn vis fe wx hwxl m1 m3 a r3 h3 hS
+    ipfF_okT dn vis fe wx hwxl m1 m3 a r3 h3 hS
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h; simp at h
   rw [if_neg hb3] at h

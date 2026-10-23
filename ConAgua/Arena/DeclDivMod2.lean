@@ -2,6 +2,10 @@ import ConAgua.Arena.DeclDivMod
 import ConAgua.Arena.Keeps
 import ConAgua.Arena.RomCI
 import ConAgua.Arena.IndStubs
+import ConAgua.Arena.IndRealNames
+
+
+noncomputable section
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the statement builders (lane `decls3`, `decls3-divmod`)
@@ -71,12 +75,27 @@ theorem RelAM.bind_ {α β : Type} {f : FnName} {args : List Word} {pre : Mem �
     obtain ⟨x, a1, hr, hp⟩ := h m m1 a r1 hc hpre
     exact ⟨r1, m1, x, a1, hr, hp, hw⟩
 
+theorem RelW.bind_ {α β : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : RelW W args pre op post) {m : Mem} {a : AState} (hpre : pre m a)
+    {K : List Word → Mem → Option β} {res : β}
+    (hw : ntBW (W m args) K = some res) :
+    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res := by
+  cases hc : W m args with
+  | none => rw [hc] at hw; simp at hw
+  | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hc, bW_some] at hw
+    obtain ⟨x, a1, hr, hp⟩ := h m m1 a r1 hc hpre
+    exact ⟨r1, m1, x, a1, hr, hp, hw⟩
+
 /-! ## The lookups -/
 
 structure DmProg2 (p : Prog) : Prop extends DmProg1 p where
   lNatVar : p.lookup "nat_var" = some natVarL
   lNatOne : p.lookup "nat_one" = some natOneL
   lEqAt1 : p.lookup "eq_at1" = some eqAt1L
+  lIl : IlF p
   lCertCtxPins : p.lookup "cert_ctx_pins" = some certCtxPinsL
   lCertCtxMain : p.lookup "cert_ctx_main" = some certCtxMainL
   lCertCtx : p.lookup "cert_ctx" = some certCtxL
@@ -193,14 +212,14 @@ def eqAt1W (p : Prog) (n : Nat) (m : Mem) (ty a b : Word) : Option (List Word ×
   ntBW (callW p n "pin_word" [53] m) fun r1 m1 =>
   ntBW (callW p n "intern_succ" [r1.headD 0] m1) fun r2 m2 =>
   ntBW (callW p n "sl_new1" [r2.headD 0] m2) fun r3 m3 =>
-  ntBW (stubM "intern_ls_iw" m3 [r3.headD 0, r3.tail.headD 0]) fun r4 m4 =>
+  ntBW (ilF m3 [r3.headD 0, r3.tail.headD 0]) fun r4 m4 =>
   ntBW (callW p n "pin_at" [0] m4) fun r5 m5 =>
   ntBW (callW p n "intern_const" [r5.headD 0, r4.headD 0] m5) fun r6 m6 =>
   ntBW (callW p n "mk_app" [r6.headD 0, ty] m6) fun r7 m7 =>
   ntBW (callW p n "mk_app" [r7.headD 0, a] m7) fun r8 m8 =>
   ntBW (callW p n "mk_app" [r8.headD 0, b] m8) fun r9 m9 => some ([r9.headD 0], m9)
 
-theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (n : Nat) (s₀ : St)
+theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (hil : IlF p) (n : Nat) (s₀ : St)
     (ty a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "eq_at1" [ty, a, b]
     ⦃fun r s' => LocEq s' s₀ ∧ eqAt1W p n s₀.mem ty a b = some (r, s'.mem); ⊤⦄ := by
@@ -209,7 +228,7 @@ theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (n : Nat) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word", callW_spec p n "intern_succ", callW_spec p n "sl_new1",
-      stubM_spec p "intern_ls_iw" n, callW_spec p n "pin_at", callW_spec p n "intern_const",
+      ilF_spec p hil n, callW_spec p n "pin_at", callW_spec p n "intern_const",
       callW_spec p n "mk_app"] <;>
     finish (gen := 20) (instances := 10000) [eqAt1W, ntBW]
 
@@ -217,7 +236,7 @@ theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
     CallRef p "eq_at1" [ty, a, b] (StageR dn vis fe)
       (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost dn vis fe decW0E) := by
   refine CallRef.of_succ fun k m s r m' hS hc => ?_
-  have hw := callW_model (M := fun mm => eqAt1W p k mm ty a b) (eqAt1_specW p hD.lEqAt1 k · ty a b) hc
+  have hw := callW_model (M := fun mm => eqAt1W p k mm ty a b) (eqAt1_specW p hD.lEqAt1 hD.lIl k · ty a b) hc
   unfold eqAt1W at hw
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, rfl⟩, hw⟩ :=
     (pinWord53_ref p hD.lPinWord).bind_ hS hw
@@ -228,7 +247,7 @@ theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
   have hS3 := hrec.2.1.stage hS2
   have hg3 := hrec.2.1.1
   obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, hx4⟩, hw⟩ :=
-    (internLsIw_spec dn vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).bind_
+    (ilF_ok dn vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).bind_
       ⟨hS3, slNew1_dec hrec hl2 hr3⟩ hw
   obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
     (pinSlot_ref p hD.lPinAt 0 pinEq rfl).bind_ hS4 hw

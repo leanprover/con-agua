@@ -171,8 +171,16 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
 /-- **`intern_all_pins` over the pin-data buffer refines `internAllPins P`**, `P` the pin list the
 buffer decodes to (any buffer that starts with `romData`, `pb_check`); the variant records hold
 `P` interned (`PinSetsR`). The program's substituted functions must be the ROM version's
-(`PinProg bs (P.subPB bs)`). -/
-@[refines_part ConRon.Arena.internAllPins "over the pin-data buffer, at the decoded pin list"]
+(`PinProg bs (P.subPB bs)`).
+
+A full refinement in the decoder direction: the pin list is the twin's input, the buffer is L's,
+and `TwinAccepts` takes the pin list existentially, so every L run that returns is a twin run at
+the decoded list. The startup half (`internAllPins []`) is the ROM's fixed data, which holds no
+projection table (D29). What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
+completeness gap of the format, as `read_nat`'s 18 digits are for `parseChunks` (D2). Through it
+the ROM interns it alone reaches (`internPinSet(s)`, `internExpr`, `internExprList`, and below
+`BasisKind.decls`/`declsA` the `Frontend.internCI` family) count as covered. -/
+@[refines ConRon.Arena.internAllPins]
 theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UInt8)
     (hL : PinProg bs (Prog.subPB bs P)) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
     (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀)
