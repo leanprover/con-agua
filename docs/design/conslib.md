@@ -224,3 +224,6 @@ old per-table probe-loop proofs took up to 9 s each. `ConsLibSpec` 13 s.
 Library wishes from the helpers (step 3b): a generic `consInternM = internM` bridge (the same 7
 lines in every `XRefine`), a shared room-test lemma (`pushOKC` against the old `XpushOK`), the
 no-skip intern without the `sk` local.
+
+Verdicts: `bench.py --set all --reps 0`, the branch's binary against master's (pre-pilot
+program, plus one later unrelated master function): 675 fixtures, 0 disagreements.

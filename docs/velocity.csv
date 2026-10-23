@@ -250,3 +250,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,conslib,claude-opus-5-5,50,35,"ConsLib pilot: generic cons-table templates + specs (ConsLib, ConsLibSpec), app table on it; program file byte-identical to master"
 2026-10-23,indstaget,claude-opus-5-5,45,15,"real check_constant_val in the StageC block chain; cidW_okC"
 2026-10-23,indstaget,claude-opus-5-5,70,20,"cidW_okC: IndMemos premise, CoreMemos/IndMemos post (memo threading, frames); StageMemos ep dropped"
+2026-10-23,conslib,claude-opus-5-5,150,60,"all 19 cons tables on ConsLib (helpers a/b/c + lit/ls/nstr); library: derived columns, key preconditions; 675 fixtures agree"
