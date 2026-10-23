@@ -6,112 +6,179 @@ import ConAgua.Checker.IndCore
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.LeafAll
 import ConAgua.Checker.LoopAll
-import ConAgua.Checker.IndRealNames
+import ConAgua.Checker.RomProgB
+import ConAgua.Rom.CIReadRefs
+import ConAgua.Arena.LoopStart
 
 /-!
-# The declaration loop's program hypotheses at the checker's program (lane `loopt3`)
+# The declaration loop's program hypotheses at the substituted checker program (lane `loopt3`)
 
-`installThenCheck_refines`' program hypotheses (`Arena/CheckerT.lean`) for `checkerProg`:
-`LoopCallees dn checkerProg` (`checkerProg_loopCallees`), `BracketProg checkerProg`
-(`checkerProg_bracket`) and the loop's own lookups. The bundles' lookups by `prog_bundle`
-(`LoopProgTac.lean`: one indexed lookup per distinct function, ~800); the write sets and text
-agreements from `LoopDecl.lean`, `LoopDeclAgree.lean`, `LoopDeclArm.lean`, `IndCore.lean`,
-`CoreErec.lean`, `LeafAll.lean`, `LoopAll.lean`, `LoopProgInd.lean`; the two agreements
-`KnotStageProg` asks beyond lookups (`natAgree`, `lvlText`) here.
+The ROM readers' refinements (`RomRefs`) hold of a program whose readers read the ROM as constant
+data (`romRefs_of`), not of `checkerProg`, whose readers read the buffer `PB`. As for the ROM
+stages (`Rom/Stage.lean`), the loop is proved at `checkerProg.subPB bs` (`bs` the buffer
+`pb_check` accepted) and carried to `checkerProg` by `triple_subPB`. Here its program hypotheses
+at the substituted program: `LoopCallees` (`checkerProg_loopCalleesPB`) and `LoopTopProg`
+(`checkerProg_loopTopPB`).
 
-Two facts are hypotheses, because they do not hold of `checkerProg` as the bundles state them:
-
-* `RomRefs checkerProg` (the ROM readers refine the twin; `QuotProg.rom`, `RedProg.rom`,
-  `DmProg7.lRom`): `checkerProg`'s readers read the buffer `PB` (`romU64PB`, …), and `StageR`
-  says nothing of `PB`. `romRefs_of` proves it for a program whose readers read the constant ROM
-  (`RomReady`), as `checkerProg.subPB bs` does for `bs` the buffer `pb_check` accepted (the ROM
-  stages' route, `Rom/Stage.lean`, `triple_subPB`).
-* `checkerProg.lookup "inst1" = some instEntry` (`CoreWalkProg.i1`, `Arena/CoreWalks.lean`):
-  `checkerProg` binds `inst1` to `inst1A` (`Checker/Entry.lean`, a call of `inst_entry`), not to
-  `inst_entry`'s body. False as stated: `CoreWalkProg.i1` should name `inst1A` (and
-  `CoreWalkProg.inst1OK` go through the call).
+* Lookups: `prog_bundle` (`LoopProgTac.lean`): a function that reads no pin data is unchanged
+  (`lkN`), the seven readers (`pbReadFns`) are their `subPB` (`lkR`).
+* Write sets: `subPB` changes no store and no call (`Stmt.okW_subPB`), so `closedW` carries over
+  (`closedW_subPB`, `StepIn.subPB`).
+* Text agreements: on a name that is not a reader, the two programs agree
+  (`checkerProg_subPB_lookup`, from the per-chunk check `checkerProg_pbFree`).
+* `RomRefs`: `romRefs_of` from `RomCIProg bs` (`checkerProg_itemsProg` and the readers' lookups),
+  for a buffer `bs` with `RomOK bs` starting with `romData` (what `pb_check` establishes).
 -/
 
 namespace L.Checker
 
-open L L.Arena L.Compiler
+open L L.Rom L.Arena L.Compiler
 
 set_option maxRecDepth 100000
 
-theorem checkerProg_natArm : ProgHas checkerProg natArmProg' := by prog_bundle []
+/-! ## Write sets under the substitution -/
 
-/-- `WhnfDeltaProg'.natAgree` at `checkerProg`. -/
-theorem checkerProg_natAgree : ∀ f ∈ natFns, checkerProg.lookup f = natArmProg'.lookup f :=
-  ProgHas.agreeNames checkerProg_natArm
+theorem _root_.L.ctlIdx_subPB (bs : List UInt8) {e : Expr} {ws : List Word} (h : ctlIdx e = some ws) :
+    ctlIdx (e.subPB bs) = some ws := by
+  unfold ctlIdx at h
+  split at h
+  · cases h; rfl
+  · cases h; rfl
+  · cases h
+
+theorem _root_.L.Stmt.okW_subPB (bs : List UInt8) {ctl : ArrId} {A : List ArrId} {C : List Word}
+    {fs : List FnName} : ∀ {s : Stmt}, s.okW ctl A C fs = true → (s.subPB bs).okW ctl A C fs = true
+  | .st64 a i e, h => by
+    simp only [Stmt.okW, Stmt.subPB] at h ⊢
+    split at h
+    · rename_i hc
+      simp only [hc, ite_true] at h ⊢
+      split at h
+      · rename_i ws hw; rw [ctlIdx_subPB bs hw]; exact h
+      · cases h
+    · rename_i hc; simp only [hc, ite_false] at h ⊢; exact h
+  | .seq s t, h | .ite _ s t, h => by
+    simp only [Stmt.okW, Stmt.subPB, Bool.and_eq_true] at h ⊢
+    exact ⟨Stmt.okW_subPB bs h.1, Stmt.okW_subPB bs h.2⟩
+  | .while _ s, h => by
+    simp only [Stmt.okW, Stmt.subPB] at h ⊢; exact Stmt.okW_subPB bs h
+  | .st8 .., h => by simp [Stmt.okW] at h
+  | .call .., h => by simpa [Stmt.okW, Stmt.subPB] using h
+  | .skip, _ | .set .., _ | .brk, _ | .ret _, _ | .abort, _ | .gset .., _ => rfl
+
+theorem closedW_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
+    {fs : List FnName} (h : closedW ctl p A C fs = true) :
+    closedW ctl (Prog.subPB bs p) A C fs = true := by
+  simp only [closedW, List.all_eq_true] at h ⊢
+  intro f hf
+  have := h f hf
+  rw [lookup_subPB]
+  cases e : p.lookup f with
+  | none => rfl
+  | some fd =>
+    simp only [e] at this
+    exact Stmt.okW_subPB bs this
+
+theorem _root_.L.Arena.StepIn.subPB (bs : List UInt8) {p : Prog} {fs : List FnName} (h : StepIn p fs) :
+    StepIn (Prog.subPB bs p) fs :=
+  let ⟨F, hF, hc⟩ := h; ⟨F, hF, closedW_subPB bs hc⟩
+
+/-! ## The functions that read no pin data -/
+
+/-- The functions of `checkerProg` that read the pin-data buffer. -/
+def pbReadFns : List FnName :=
+  ["pb_check", "rom_expr", "rom_items", "rom_level", "rom_name", "rom_put", "rom_u64"]
+
+names_tree pbReadTree : pbReadFns
+
+/-- Every function of `checkerProg` but the readers reads no pin data. -/
+prog_all checkerProg_pbFree : checkerProg
+  (fun x => (pbReadTree.find (nameCode x.1)).isSome || x.2.body.noPB)
+
+/-- **Off the readers the substituted program is `checkerProg`.** -/
+theorem checkerProg_subPB_lookup (bs : List UInt8) {f : FnName}
+    (hf : (pbReadTree.find (nameCode f)).isSome = false) :
+    (Prog.subPB bs checkerProg).lookup f = checkerProg.lookup f := by
+  cases e : checkerProg.lookup f with
+  | none => rw [lookup_subPB, e]; rfl
+  | some fd =>
+    have h := checkerProg_pbFree _ (mem_of_lookup e)
+    simp only [hf, Bool.false_or] at h
+    exact lookup_subPB_noPB bs e h
+
+/-- Agreement of the substituted program with a text, off the readers. -/
+theorem agree_subPB (bs : List UInt8) {q : Prog} {fs : List FnName}
+    (hn : fs.all (fun f => !(pbReadTree.find (nameCode f)).isSome) = true)
+    (h : ∀ f ∈ fs, f ∉ openFns → checkerProg.lookup f = q.lookup f) :
+    ∀ f ∈ fs, f ∉ openFns → (Prog.subPB bs checkerProg).lookup f = q.lookup f := by
+  intro f hf ho
+  have := List.all_eq_true.mp hn f hf
+  rw [checkerProg_subPB_lookup bs (by simpa using this)]
+  exact h f hf ho
+
+theorem cvgFns_noPB : cvgFns.all (fun f => !(pbReadTree.find (nameCode f)).isSome) = true := by
+  decide +kernel
+theorem ivFns_noPB : ivFns.all (fun f => !(pbReadTree.find (nameCode f)).isSome) = true := by
+  decide +kernel
+theorem armFns_noPB : armFns.all (fun f => !(pbReadTree.find (nameCode f)).isSome) = true := by
+  decide +kernel
+
+theorem checkerProg_cvgAgreePB (bs : List UInt8) :
+    ∀ f ∈ cvgFns, f ∉ openFns → (Prog.subPB bs checkerProg).lookup f = cvgProg.lookup f :=
+  agree_subPB bs cvgFns_noPB checkerProg_cvgAgree
+
+theorem checkerProg_ivAgreePB (bs : List UInt8) :
+    ∀ f ∈ ivFns, f ∉ openFns → (Prog.subPB bs checkerProg).lookup f = ivProg.lookup f :=
+  agree_subPB bs ivFns_noPB checkerProg_ivAgree
+
+theorem checkerProg_armAgreePB (bs : List UInt8) :
+    ∀ f ∈ armFns, f ∉ openFns → (Prog.subPB bs checkerProg).lookup f = armText.lookup f :=
+  agree_subPB bs armFns_noPB checkerProg_armAgree
 
 theorem lvlFns_cvg : ∀ f ∈ lvlFns, f ∈ cvgFns ∧ f ∉ openFns := by decide +kernel
 
-/-- `StrLitProg`'s `lvlText` at `checkerProg`. -/
-theorem checkerProg_lvlText : ∀ f ∈ lvlFns, checkerProg.lookup f = cvgProg.lookup f :=
-  fun f hf => checkerProg_cvgAgree f (lvlFns_cvg f hf).1 (lvlFns_cvg f hf).2
+theorem checkerProg_lvlTextPB (bs : List UInt8) :
+    ∀ f ∈ lvlFns, (Prog.subPB bs checkerProg).lookup f = cvgProg.lookup f :=
+  fun f hf => checkerProg_cvgAgreePB bs f (lvlFns_cvg f hf).1 (lvlFns_cvg f hf).2
 
-/-- **The declaration loop's callees at the checker's program**, given the ROM readers'
-refinement and `CoreWalkProg`'s `inst1` binding (see the module doc: neither holds of
-`checkerProg` as stated). -/
-theorem checkerProg_loopCallees (hrom : L.Rom.RomRefs checkerProg)
-    (hi1 : checkerProg.lookup "inst1" = some instEntry) :
-    ∀ dn, L.Ind.DnInj dn → IndArmSpec checkerProg dn → QuotDn dn → LoopCallees dn checkerProg := by
+theorem checkerProg_natArmPB (bs : List UInt8) :
+    ProgHas (Prog.subPB bs checkerProg) natArmProg' := by prog_bundle []
+
+theorem checkerProg_natAgreePB (bs : List UInt8) :
+    ∀ f ∈ natFns, (Prog.subPB bs checkerProg).lookup f = natArmProg'.lookup f :=
+  ProgHas.agreeNames (checkerProg_natArmPB bs)
+
+/-! ## The ROM readers -/
+
+theorem checkerProg_romCIProg (bs : List UInt8) : RomCIProg bs (Prog.subPB bs checkerProg) := by
+  prog_bundle [checkerProg_itemsProg bs]
+
+/-- **The ROM readers of the substituted program refine the twin**, for a buffer that
+`pb_check` accepts. -/
+theorem checkerProg_romRefsPB (bs : List UInt8) (hr : RomOK bs)
+    (hpre : bs = romData ++ bs.drop romData.length) : RomRefs (Prog.subPB bs checkerProg) :=
+  romRefs_of _ ⟨bs, _, hr, hpre, checkerProg_romCIProg bs⟩
+
+/-! ## The loop's program hypotheses -/
+
+/-- **The declaration loop's callees at the substituted checker program.** -/
+theorem checkerProg_loopCalleesPB (bs : List UInt8) (hr : RomOK bs)
+    (hpre : bs = romData ++ bs.drop romData.length) :
+    ∀ dn, L.Ind.DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn → QuotDn dn →
+      LoopCallees dn (Prog.subPB bs checkerProg) := by
   intro dn hdn harm hq
-  prog_bundle [checkerProg_cvg, checkerProg_iv, checkerProg_arm, checkerProg_natGateIn,
-    checkerProg_dgIn, checkerProg_leafClosed, checkerProg_loopClosed, checkerProg_coreStage,
-    checkerProg_coreErec, checkerProg_indIn, checkerProg_natAgree, checkerProg_lvlText,
-    checkerProg_na, checkerProg_nr, checkerProg_il, checkerProg_pt, checkerProg_ipf, hdn, harm,
-    hq, hi1, hrom]
+  have hrom := checkerProg_romRefsPB bs hr hpre
+  prog_bundle [checkerProg_cvgAgreePB bs, checkerProg_ivAgreePB bs, checkerProg_armAgreePB bs,
+    checkerProg_cvgIn.subPB bs, checkerProg_ivIn.subPB bs, checkerProg_armIn.subPB bs,
+    checkerProg_natGateIn.subPB bs, checkerProg_dgIn.subPB bs, checkerProg_indIn.subPB bs,
+    (closedW_subPB bs checkerProg_leafClosed : LeafClosed (Prog.subPB bs checkerProg)),
+    (closedW_subPB bs checkerProg_loopClosed : LoopClosed (Prog.subPB bs checkerProg)),
+    (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
+    closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
+    hdn, harm, hq, hrom]
 
-theorem checkerProg_bracket : BracketProg checkerProg := by prog_bundle []
-
-/-! The loop's own lookups. -/
-
-theorem checkerProg_pendPush : checkerProg.lookup "pend_push" = some pendPushL := by chk_lk
-theorem checkerProg_isNone : checkerProg.lookup "is_none" = some isNoneL := by chk_lk
-theorem checkerProg_isSome : checkerProg.lookup "is_some" = some isSomeL := by chk_lk
-theorem checkerProg_installStep : checkerProg.lookup "install_step" = some installStepL := by
-  chk_lk
-theorem checkerProg_installDeclStep :
-    checkerProg.lookup "install_decl_step" = some installDeclStepL := by chk_lk
-theorem checkerProg_installFoldGo :
-    checkerProg.lookup "install_fold_go" = some installFoldGoL := by chk_lk
-theorem checkerProg_installFoldNext :
-    checkerProg.lookup "install_fold_next" = some installFoldNextL := by chk_lk
-theorem checkerProg_checkPending : checkerProg.lookup "check_pending" = some checkPendingL := by
-  chk_lk
-theorem checkerProg_checkPendingGo :
-    checkerProg.lookup "check_pending_go" = some checkPendingGoL := by chk_lk
-theorem checkerProg_checkPendingNext :
-    checkerProg.lookup "check_pending_next" = some checkPendingNextL := by chk_lk
-theorem checkerProg_installThenCheck :
-    checkerProg.lookup "install_then_check" = some installThenCheckL := by chk_lk
-
-open Std.WP in
-open scoped Lean.Order in
-/-- **`installThenCheck_refines` at the checker's program**: what remains are the loop's start
-facts, the inductive arm's contract, `Quot`'s handle and the two hypotheses of
-`checkerProg_loopCallees`. -/
-theorem checkerProg_installThenCheck_refines (hrom : L.Rom.RomRefs checkerProg)
-    (hi1 : checkerProg.lookup "inst1" = some instEntry) (mode : ConLeche.CheckMode)
-    (pins : List ConRon.Arena.INatOpPinSet) (dn : ConRon.Arena.NIdx → Option ConLeche.Name)
-    (ds : Array ConRon.Arena.IDeclaration) (hm : mode = .verified) (hdn : L.Ind.DnInj dn)
-    (harm : IndArmSpec checkerProg dn) (hq : QuotDn dn) (hFD : FrontDecls ds) (n : Nat)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : ConRon.Arena.AState)
-    (hT : TwinFold pins ds (ConRon.Arena.mkIFEnv ConRon.Arena.IEnv.empty) #[] a₀)
-    (hR : LoopR pins dn s₀.mem a₀ 0 (ConRon.Arena.mkIFEnv ConRon.Arena.IEnv.empty) #[] ds)
-    (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "install_then_check" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (k : Nat) (fe : ConRon.Arena.IFEnv)
-      (pend : Array ConRon.Arena.PendingCheck) (a' s'' : ConRon.Arena.AState),
-      ConRon.Arena.installFold mode pins (0, ConRon.Arena.mkIFEnv ConRon.Arena.IEnv.empty, #[])
-        ds.toList a₀ = .ok (.ok (k, fe, pend), a') ∧
-      ConRon.Arena.checkPendingList mode fe pend.toList a'.worker = .ok (.ok (), s''); ⊤⦄ :=
-  installThenCheck_refines mode pins dn ds checkerProg hm checkerProg_bracket
-    (checkerProg_loopCallees hrom hi1 dn hdn harm hq) hFD checkerProg_pendPush checkerProg_isNone
-    checkerProg_isSome checkerProg_installStep checkerProg_installDeclStep
-    checkerProg_installFoldGo checkerProg_installFoldNext checkerProg_checkPending
-    checkerProg_checkPendingGo checkerProg_checkPendingNext checkerProg_installThenCheck n hn s₀
-    a₀ hT hR hM hc
+/-- **The loop's own program hypotheses at the substituted checker program.** -/
+theorem checkerProg_loopTopPB (bs : List UInt8) : LoopTopProg (Prog.subPB bs checkerProg) := by
+  prog_bundle []
 
 end L.Checker
