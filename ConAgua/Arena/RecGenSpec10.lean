@@ -536,8 +536,8 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     by simp only [List.headD_cons, List.tail_cons]; omega⟩, consW_afr h5 hA4⟩
 
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`** (through `class_rules_ok`'s stubs): the
-recursors with their majors and rules, a slice of `rec4` records decoded below the tops. -/
-@[refines ConRon.Arena.classRecsRulesOk]
+recursors with their majors and rules, a slice of `rec4` records decoded below the tops. Under `StageR`;
+the census link is `classRecsRulesOk_refinesC` (`IndT/RecGen10.lean`). -/
 theorem classRecsRulesOk_refines (p : Prog) (hp : CrrProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : IFEnv) (g rco rcl cgo cgl : Word)
     (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
