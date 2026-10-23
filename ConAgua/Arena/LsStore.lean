@@ -225,7 +225,7 @@ def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
     |>.set64 LSHP (c * 2 + t) (lsOrW m o l.toNat)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y, gr) {
+def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   x := 0;
   q := 0;
   ⟪hpLoopLs⟫;
@@ -239,7 +239,7 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y,
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LSSLOT.u64[len(LSSLOT.u64) - 1]) < (c + 1) * 2 { gr := call ls_grow() };
+  if (⟪SN0⟫ << LSSLOT.u64[len(LSSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG lsGS 14⟫ };
   LSHP.u64[c * 2 + t] := x;
   return c
 }
@@ -306,7 +306,7 @@ def internLs : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
 /-- The level-list store functions, as one `#eval`-able program. -/
 def lsProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("ls_match", lsMatch), ("ls_find", lsFind),
-   ("ls_push", lsPush), ("ls_grow", slotGrowG lsGS), ("intern_ls", internLs)]
+   ("ls_push", lsPush), ("intern_ls", internLs)]
 
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 16 slots per tier, the scratch tier closed or open. -/

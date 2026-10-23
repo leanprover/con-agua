@@ -177,14 +177,14 @@ def bpushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 BREC (c * 2 + t) u).set64 BSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (22 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def bvarPush : FunDecl := lfn (t, u, j) locals (c, gr) {
+def bvarPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[22 + t];
   if c >= 134217728 { abort };
   if len(BREC.u64) >> 1 <= c { abort };
   BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[22 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << BSLOT.u64[len(BSLOT.u64) - 1]) < (c + 1) * 2 { gr := call bvar_grow() };
+  if (⟪SN0⟫ << BSLOT.u64[len(BSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
   return c
 }
 
@@ -247,7 +247,7 @@ def internBVar : FunDecl := lfn (u) locals (h, fd, i, j, d) {
 
 /-- The `bvar` store functions, as one `#eval`-able program. -/
 def bvarProg : Prog :=
-  [("bvar_find", bvarFind), ("bvar_push", bvarPush), ("bvar_grow", slotGrowG bvarGS), ("intern_bvar", internBVar)]
+  [("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar)]
 
 /-- A memory with 8 `bvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥21 (the other tables') are unused here and left empty. -/

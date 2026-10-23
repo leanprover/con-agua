@@ -188,7 +188,7 @@ def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gr) {
+def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[20 + t];
   if c >= 134217728 { abort };
   if len(LEREC.u64) < (c + 1) * 6 { abort };
@@ -198,7 +198,7 @@ def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gr) {
   LEREC.u64[k + 2] := body;
   LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LESLOT.u64[len(LESLOT.u64) - 1]) < (c + 1) * 2 { gr := call letE_grow() };
+  if (⟪SN0⟫ << LESLOT.u64[len(LESLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG letGS 7⟫ };
   return c
 }
 
@@ -270,7 +270,7 @@ def internLet : FunDecl := lfn (ty, val, body) locals (h, sk, fd, i, j, d) {
 
 /-- The `letE` store functions, as one `#eval`-able program. -/
 def letProg : Prog :=
-  [("letE_find", letFind), ("letE_push", letPush), ("letE_grow", slotGrowG letGS), ("intern_letE", internLet)]
+  [("letE_find", letFind), ("letE_push", letPush), ("intern_letE", internLet)]
 
 /-- A memory with 8 `letE` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥19 (the other tables') are unused here and left empty. -/

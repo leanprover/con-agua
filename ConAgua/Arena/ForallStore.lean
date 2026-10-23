@@ -191,7 +191,7 @@ def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
+def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[30 + t];
   if c >= 134217728 { abort };
   if len(FAREC.u64) >> 2 <= c { abort };
@@ -200,7 +200,7 @@ def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
   FAREC.u64[k + 1] := body;
   FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[30 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << FASLOT.u64[len(FASLOT.u64) - 1]) < (c + 1) * 2 { gr := call forall_grow() };
+  if (⟪SN0⟫ << FASLOT.u64[len(FASLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG forallGS 6⟫ };
   return c
 }
 
@@ -278,7 +278,7 @@ def internForallL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
 
 /-- The `forallE` store functions, as one `#eval`-able program. -/
 def forallProg : Prog :=
-  [("forall_find", forallFind), ("forall_push", forallPush), ("forall_grow", slotGrowG forallGS), ("intern_forall", internForallL)]
+  [("forall_find", forallFind), ("forall_push", forallPush), ("intern_forall", internForallL)]
 
 /-- A memory with 8 `forallE` nodes and 16 slots per tier, the scratch tier closed or open.
 Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty; `CTL` reaches

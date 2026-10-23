@@ -226,7 +226,7 @@ def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (36 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gr) {
+def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[36 + t];
   if c >= 134217728 { abort };
   if len(NSREC.u64) < (c + 1) * 8 { abort };
@@ -237,7 +237,7 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gr) {
   NSREC.u64[k + 3] := h;
   NSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[36 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << NSSLOT.u64[len(NSSLOT.u64) - 1]) < (c + 1) * 2 { gr := call nstr_grow() };
+  if (⟪SN0⟫ << NSSLOT.u64[len(NSSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG nstrGS 8⟫ };
   return c
 }
 
@@ -307,7 +307,7 @@ def internNStr : FunDecl := lfn (q, o, l) locals (h, f, i, j, d, sc) {
 /-- The name `str` store functions, as one `#eval`-able program. -/
 def nstrProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("nstr_match", nsMatch), ("nstr_find", nsFind),
-   ("nstr_push", nsPush), ("nstr_grow", slotGrowG nstrGS), ("intern_nstr", internNStr)]
+   ("nstr_push", nsPush), ("intern_nstr", internNStr)]
 
 /-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and 16
 slots per tier, the scratch tier closed or open. -/

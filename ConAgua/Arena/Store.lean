@@ -447,7 +447,7 @@ def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
     CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
+def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
@@ -458,7 +458,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1]) < (c + 1) * 2 { gr := call lit_grow() };
+  if (⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
   return c
 }
 
@@ -527,7 +527,7 @@ def internLit : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
 /-- The store functions, as one `#eval`-able program. -/
 def litProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("lit_match", litMatch), ("lit_find", litFind),
-   ("lit_push", litPush), ("lit_grow", slotGrowG litGS), ("intern_lit", internLit)]
+   ("lit_push", litPush), ("intern_lit", internLit)]
 
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and 16 slots per
 tier, the scratch tier closed or open. -/
@@ -756,7 +756,7 @@ def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
     CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
+def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
@@ -767,7 +767,7 @@ def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1]) < (c + 1) * 2 { gr := call lit_grow() };
+  if (⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
   return c
 }
 

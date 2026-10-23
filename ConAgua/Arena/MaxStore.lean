@@ -184,7 +184,7 @@ def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
     (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
+def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -197,7 +197,7 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << MSLOT.u64[len(MSLOT.u64) - 1]) < (c + 1) * 2 { gr := call max_grow() };
+  if (⟪SN0⟫ << MSLOT.u64[len(MSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG maxGS 11⟫ };
   MHP.u64[c * 2 + t] := x;
   return c
 }
@@ -260,7 +260,7 @@ def internMax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
 
 /-- The `max` store functions, as one `#eval`-able program. -/
 def maxProg : Prog :=
-  [("max_find", maxFind), ("max_push", maxPush), ("max_grow", slotGrowG maxGS), ("intern_max", internMax)]
+  [("max_find", maxFind), ("max_push", maxPush), ("intern_max", internMax)]
 
 /-- A memory with 8 `max` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=

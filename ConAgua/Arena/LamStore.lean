@@ -191,7 +191,7 @@ def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
+def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[28 + t];
   if c >= 134217728 { abort };
   if len(LAREC.u64) >> 2 <= c { abort };
@@ -200,7 +200,7 @@ def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
   LAREC.u64[k + 1] := body;
   LASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[28 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LASLOT.u64[len(LASLOT.u64) - 1]) < (c + 1) * 2 { gr := call lam_grow() };
+  if (⟪SN0⟫ << LASLOT.u64[len(LASLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG lamGS 6⟫ };
   return c
 }
 
@@ -276,7 +276,7 @@ def internLamL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
 
 /-- The `lam` store functions, as one `#eval`-able program. -/
 def lamProg : Prog :=
-  [("lam_find", lamFind), ("lam_push", lamPush), ("lam_grow", slotGrowG lamGS), ("intern_lam", internLamL)]
+  [("lam_find", lamFind), ("lam_push", lamPush), ("intern_lam", internLamL)]
 
 /-- A memory with 8 `lam` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 other than `CTL`/`LAREC`/`LASLOT` are unused here and left empty; `CTL` reaches `28 + 2 = 30`

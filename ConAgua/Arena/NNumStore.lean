@@ -183,7 +183,7 @@ def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gr) {
+def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[38 + t];
   if c >= 134217728 { abort };
   if len(NNREC.u64) >> 2 <= c { abort };
@@ -192,7 +192,7 @@ def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gr) {
   NNREC.u64[k + 1] := u;
   NNSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[38 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << NNSLOT.u64[len(NNSLOT.u64) - 1]) < (c + 1) * 2 { gr := call nnum_grow() };
+  if (⟪SN0⟫ << NNSLOT.u64[len(NNSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG nnumGS 6⟫ };
   return c
 }
 
@@ -254,7 +254,7 @@ def internNNum : FunDecl := lfn (pre, u) locals (h, fd, i, j, d) {
 
 /-- The `num` store functions, as one `#eval`-able program. -/
 def nnumProg : Prog :=
-  [("nnum_find", nnumFind), ("nnum_push", nnumPush), ("nnum_grow", slotGrowG nnumGS), ("intern_nnum", internNNum)]
+  [("nnum_find", nnumFind), ("nnum_push", nnumPush), ("intern_nnum", internNNum)]
 
 /-- A memory with 8 `num` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥36 (the other tables') are unused here and left empty. -/

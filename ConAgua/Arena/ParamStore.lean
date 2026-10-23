@@ -176,14 +176,14 @@ def ppushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def paramPush : FunDecl := lfn (t, u, j) locals (c, gr) {
+def paramPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[14 + t];
   if c >= 134217728 { abort };
   if len(PREC.u64) >> 1 <= c { abort };
   PREC.u64[c * 2 + t] := u;
   PSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[14 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << PSLOT.u64[len(PSLOT.u64) - 1]) < (c + 1) * 2 { gr := call param_grow() };
+  if (⟪SN0⟫ << PSLOT.u64[len(PSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG paramGS 4⟫ };
   return c
 }
 
@@ -245,7 +245,7 @@ def internParam : FunDecl := lfn (u) locals (h, fd, i, j, d) {
 
 /-- The `param` store functions, as one `#eval`-able program. -/
 def paramProg : Prog :=
-  [("param_find", paramFind), ("param_push", paramPush), ("param_grow", slotGrowG paramGS), ("intern_param", internParam)]
+  [("param_find", paramFind), ("param_push", paramPush), ("intern_param", internParam)]
 
 /-- A memory with 8 `param` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥13 (the other tables' `REC`/`SLOT` arrays) are unused here and left empty. -/

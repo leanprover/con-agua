@@ -190,7 +190,7 @@ def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
     (exprLPW m ty)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gr) {
+def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪lpBlkF⟫;
   c := CTL.u64[26 + t];
   if c >= 134217728 { abort };
@@ -201,7 +201,7 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gr) {
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1]) < (c + 1) * 2 { gr := call fvar_grow() };
+  if (⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG fvarGS 10⟫ };
   FVLP.u64[c * 2 + t] := x;
   return c
 }
@@ -275,7 +275,7 @@ def internFVar : FunDecl := lfn (u, ty) locals (h, sk, fd, i, j, d) {
 
 /-- The `fvar` store functions, as one `#eval`-able program. -/
 def fvarProg : Prog :=
-  [("fvar_find", fvarFind), ("fvar_push", fvarPush), ("fvar_grow", slotGrowG fvarGS), ("intern_fvar", internFVar)]
+  [("fvar_find", fvarFind), ("fvar_push", fvarPush), ("intern_fvar", internFVar)]
 
 /-- A memory with 8 `fvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥24 (the other tables') are unused here and left empty. -/

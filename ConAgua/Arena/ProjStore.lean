@@ -192,7 +192,7 @@ def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gr) {
+def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[32 + t];
   if c >= 134217728 { abort };
   if len(PJREC.u64) < (c + 1) * 6 { abort };
@@ -202,7 +202,7 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gr) {
   PJREC.u64[k + 2] := e;
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << PJSLOT.u64[len(PJSLOT.u64) - 1]) < (c + 1) * 2 { gr := call proj_grow() };
+  if (⟪SN0⟫ << PJSLOT.u64[len(PJSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };
   return c
 }
 
@@ -275,7 +275,7 @@ def internProj : FunDecl := lfn (n, u, e) locals (h, sk, fd, i, j, d) {
 
 /-- The `proj` store functions, as one `#eval`-able program. -/
 def projProg : Prog :=
-  [("proj_find", projFind), ("proj_push", projPush), ("proj_grow", slotGrowG projGS), ("intern_proj", internProj)]
+  [("proj_find", projFind), ("proj_push", projPush), ("intern_proj", internProj)]
 
 /-- A memory with 8 `proj` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/

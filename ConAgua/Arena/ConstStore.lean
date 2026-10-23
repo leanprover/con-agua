@@ -189,7 +189,7 @@ def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1)).set64 CLP (c * 2 + t) (lsHPW m a)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gr) {
+def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪lsBlkC⟫;
   c := CTL.u64[18 + t];
   if c >= 134217728 { abort };
@@ -200,7 +200,7 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gr) {
   CREC.u64[k + 1] := a;
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << CSLOT.u64[len(CSLOT.u64) - 1]) < (c + 1) * 2 { gr := call const_grow() };
+  if (⟪SN0⟫ << CSLOT.u64[len(CSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG constGS 10⟫ };
   CLP.u64[c * 2 + t] := x;
   return c
 }
@@ -273,7 +273,7 @@ def internConst : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
 
 /-- The `const` store functions, as one `#eval`-able program. -/
 def constProg : Prog :=
-  [("const_find", constFind), ("const_push", constPush), ("const_grow", slotGrowG constGS), ("intern_const", internConst)]
+  [("const_find", constFind), ("const_push", constPush), ("intern_const", internConst)]
 
 /-- A memory with 8 `const` nodes and 16 slots per tier, the scratch tier closed or open.
 Arrays 0‥17 (the other tables') are unused here and left empty. -/

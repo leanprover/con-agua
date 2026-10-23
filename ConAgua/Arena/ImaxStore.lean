@@ -184,7 +184,7 @@ def impushMem (m : Mem) (t u v j c : Word) : Mem :=
     (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
+def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -197,7 +197,7 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
   IREC.u64[k + 1] := v;
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << ISLOT.u64[len(ISLOT.u64) - 1]) < (c + 1) * 2 { gr := call imax_grow() };
+  if (⟪SN0⟫ << ISLOT.u64[len(ISLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG imaxGS 11⟫ };
   IHP.u64[c * 2 + t] := x;
   return c
 }
@@ -260,7 +260,7 @@ def internImax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
 
 /-- The `imax` store functions, as one `#eval`-able program. -/
 def imaxProg : Prog :=
-  [("imax_find", imaxFind), ("imax_push", imaxPush), ("imax_grow", slotGrowG imaxGS), ("intern_imax", internImax)]
+  [("imax_find", imaxFind), ("imax_push", imaxPush), ("intern_imax", internImax)]
 
 /-- A memory with 8 `imax` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=

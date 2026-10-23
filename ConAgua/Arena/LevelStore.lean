@@ -180,7 +180,7 @@ def spushMem (m : Mem) (t u j c : Word) : Mem :=
     SHP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gr) {
+def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪hpBlkS⟫;
   c := CTL.u64[6 + t];
   if c >= 134217728 { abort };
@@ -189,7 +189,7 @@ def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gr) {
   SREC.u64[c * 2 + t] := u;
   SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SSLOT.u64[len(SSLOT.u64) - 1]) < (c + 1) * 2 { gr := call succ_grow() };
+  if (⟪SN0⟫ << SSLOT.u64[len(SSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
   SHP.u64[c * 2 + t] := x;
   return c
 }
@@ -252,7 +252,7 @@ def internSucc : FunDecl := lfn (u) locals (h, fd, i, j, d) {
 
 /-- The `succ` store functions, as one `#eval`-able program. -/
 def succProg : Prog :=
-  [("succ_find", succFind), ("succ_push", succPush), ("succ_grow", slotGrowG succGS), ("intern_succ", internSucc)]
+  [("succ_find", succFind), ("succ_push", succPush), ("intern_succ", internSucc)]
 
 /-- A memory with 8 `succ` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
