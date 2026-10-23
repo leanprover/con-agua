@@ -756,7 +756,8 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
     (hW : internPinSetsW rom n mem q = some (q', mem')) :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internPinSets pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧ StateOK a' ∧
-      RsetR mem' ∧ (stkTop mem').toNat < 2 ^ 61 ∧ ErecGrow mem mem' ∧ MemFrame PinsA PinsC mem mem' := by
+      RsetR mem' ∧ (stkTop mem').toNat < 2 ^ 61 ∧ ErecGrow mem mem' ∧ MemFrame PinsA PinsC mem mem' ∧
+      erecTop mem' ≤ (mem'.arr64 EREC).size := by
   cases n with
   | zero => simp [internPinSetsW] at hW
   | succ n =>
@@ -796,7 +797,7 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
   refine ⟨pins, ips, a', hrun, inv'.arena, ⟨by rw [ew.c151, h151, hlen], by
     rw [ew.c150, h150]; have := ew.top; omega, fun k hk => by rw [ew.c150, h150]; exact (hall k hk).1⟩,
     inv'.ok, inv'.rset, inv'.stk, ⟨by have := ew.top; omega, fun i hi => ?_, by rw [ew.size, hE₂]⟩,
-    (hf₂.mono (by simp [PinsA]) (by simp [PinsC])).trans fr⟩
+    (hf₂.mono (by simp [PinsA]) (by simp [PinsC])).trans fr, inv'.top⟩
   rw [ew.low i (by omega) (by omega), hE₂]
 
 end L.Rom

@@ -80,14 +80,20 @@ def loc_series(commits):
     return [cache.get(c, [0, 0]) for c in commits]
 
 
+def den(p):
+    """Denominator of the shares: the twin's Lean lines minus the not-needed (n/a) ones. Census rows
+    before the n/a status (2026-10-23) have no `lean_na` column: nothing was n/a then."""
+    return int(p["lean_all"]) - int(p.get("lean_na") or 0)
+
+
 def trend_svg(pts):
     """Proven shares (left axis, %) and lines of L code / proofs (right axis, thousands) per census run."""
     W, H, ml, mr, mt, mb = 900, 360, 50, 70, 20, 70
     n = len(pts)
     xs = [ml + (W - ml - mr) * (i / max(1, n - 1)) for i in range(n)]
-    lean = [100 * int(p["lean_proven"]) / int(p["lean_all"]) for p in pts]
-    cnt = [100 * (int(p["lean_proven"]) + int(p.get("lean_local") or p.get("lean_sorry") or 0)) / int(p["lean_all"]) for p in pts]
-    wr = [100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / int(p["lean_all"]) for p in pts]
+    lean = [100 * int(p["lean_proven"]) / den(p) for p in pts]
+    cnt = [100 * (int(p["lean_proven"]) + int(p.get("lean_local") or p.get("lean_sorry") or 0)) / den(p) for p in pts]
+    wr = [100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / den(p) for p in pts]
     loc = loc_series([p["commit"] for p in pts])
     lk = [a / 1000 for a, _ in loc]; pk = [b / 1000 for _, b in loc]
     ytop = 100
@@ -230,7 +236,7 @@ def eta():
     """Least-squares rate of Lean lines proven per day over the census runs of the last 3 days,
     and the date the rest would be done at that rate (as on the dashboard)."""
     pts = [(datetime.datetime.fromisoformat(r["date"].replace(" ", "T") + ":00+00:00").timestamp() / 86400,
-            int(r["lean_proven"]), int(r["lean_all"])) for r in progress]
+            int(r["lean_proven"]), den(r)) for r in progress]
     last = pts[-1]
     win = [q for q in pts if q[0] >= last[0] - 3]
     if len(win) < 2:
@@ -252,6 +258,57 @@ if devf.exists():
         if re.match(r"\|\s*D\d+", line) and "fixed" not in line.lower():
             dev_open += 1  # superseded by the per-section counts below
 
+def _shorten(t, n=110):
+    t = re.sub(r"\s+", " ", t)
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
+
+def assumptions_section(w):
+    """"What the end-to-end theorem still assumes": from _tmp/dash/assumptions.json (census.py's
+    section of progress.md, extracted by dashboard_data.py) and docs/assumption-owners.json."""
+    f = dash / "assumptions.json"
+    if not f.exists():
+        return
+    try:
+        d = json.loads(f.read_text())
+        of = root / "docs" / "assumption-owners.json"
+        own = json.loads(of.read_text()) if of.exists() else {}
+    except (ValueError, OSError):
+        return
+    hyps, srcs = d.get("hyps", []), d.get("sorry_sources", [])
+    owners = own.get("hyps", {})
+    named = [h for h in hyps if h["name"] in owners]
+    other = [h["name"] for h in hyps if h["prop"] and h["name"] not in owners]
+    w("## What the end-to-end theorem still assumes\n")
+    w(f"`{d['theorem'].rsplit('.', 1)[-1]}` is the x64 theorem \"the machine code accepts only what the twin accepts\" "
+      f"from exactly {len(named)} open hypotheses; each landing discharges one. Owning lane in brackets "
+      "(`docs/assumption-owners.json`).\n")
+    for h in named:
+        lane, note = owners[h["name"]]
+        w(f"- **`{h['name']}`** [{lane}]: {note}. `{_shorten(h['type'])}`")
+    w("")
+    if other:
+        w(f"_Plus {len(other)} harness and statement premises, not proof obligations of the pipeline: "
+          + ", ".join(f"`{n}`" for n in other) + "._\n")
+    ax = d.get("axioms", [])
+    std = {"propext", "Classical.choice", "Quot.sound"}
+    extra = [a for a in ax if a not in std and a != "sorryAx"]
+    if extra:
+        w(f"**Axioms beyond the standard ones: {', '.join(f'`{a}`' for a in extra)}.**\n")
+    elif "sorryAx" in ax:
+        w("**Axioms:** only `propext`, `Classical.choice`, `Quot.sound`, plus `sorryAx` from the stub contracts below.\n")
+    else:
+        w("**Axioms:** only `propext`, `Classical.choice`, `Quot.sound`; no `sorry` left.\n")
+    if srcs:
+        w("**Sorry sources** (declarations that use `sorryAx` directly; blocks = census targets proven locally that get their `sorry` through it):\n")
+        w("| Source | Blocks | Lane |")
+        w("|---|---:|---|")
+        for x in srcs[:8]:
+            lane = next((v[0] for k, v in own.get("sources", {}).items() if x["name"].startswith(k)), "")
+            w(f"| `{x['name']}` | {x['blocks']} | {lane} |")
+        w("")
+
+
 now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 head = git("rev-parse", "--short", "HEAD")
 L = []
@@ -267,19 +324,25 @@ eta_s = eta_when.strftime("%b %-d") if eta_when else "—"
 # older census rows lack the column, then all `sorry` targets count (they were all local when measured)
 _last = progress[-1] if progress else {}
 _loc = _last.get("lean_local") or _last.get("lean_sorry")
-sorry_share = int(_loc) / int(_last["lean_all"]) if _loc else None
+sorry_share = int(_loc) / den(_last) if _loc else None
+na_n, na_lines = int(_last.get("na") or 0), int(_last.get("lean_na") or 0)
 w(f"| **{pct(lean_share)}** | {pct(lean_share + sorry_share) if sorry_share is not None else '—'} | {pct(lean_l)} | **{eta_s}** | {len(running)} | {pct(over / max(1, work + over))} |\n")
+w(f"_Not counted: {na_n} \"not needed\" functions ({na_lines} Lean lines; `docs/not-needed.md`, each with a reason), "
+  "which L deliberately does not implement. From the census of 2026-10-23 on, every percentage is over the twin's Lean lines minus these, "
+  f"so 100% is reachable; the trend curves use that denominator throughout (earlier points were not rescaled, there was nothing n/a then)._\n")
 w("_The three shares are cumulative: proven ⊆ proven locally (own proof complete; `sorry` only in callees' stub specs) ⊆ L code written._\n")
 if eta_rate:
     w(f"_Projected completion: at the least-squares rate of the last 3 days of census runs, {eta_rate:,.0f} Lean lines proven per day; "
       "a straight-line extrapolation, so treat it as a trend, not a promise._\n")
 
+assumptions_section(w)
+
 # trend chart
 pts = progress[-30:]
 labels = [p["date"][5:16].replace(" ", " ") for p in pts]
-lean = [round(100 * int(p["lean_proven"]) / int(p["lean_all"]), 1) for p in pts]
+lean = [round(100 * int(p["lean_proven"]) / den(p), 1) for p in pts]
 cnt = [round(100 * int(p["proven"]) / int(p["targets"]), 1) for p in pts]
-wr = [round(100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / int(p["lean_all"]), 1) for p in pts]
+wr = [round(100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / den(p), 1) for p in pts]
 top = max(wr + lean + cnt + [10])
 w("## Proven over time\n")
 w("Left axis: share of the twin's Lean lines proven, proven locally (own proof complete, `sorry` only in callees' stubs), and with L code written. "

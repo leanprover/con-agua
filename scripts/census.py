@@ -28,7 +28,14 @@ STATUS of a target, best first:
   sorry       `sorryAx` occurs directly in T's own `@[refines T]` proof term (or its auxiliaries);
               covers nothing
   written     an `@[l_impl T]` L function exists
-  todo        nothing yet
+  n/a         "not needed": the L checker deliberately implements nothing for T (a Deliberate row of
+              docs/deviations.md, an error text, an unused mode). Listed with a reason in
+              docs/not-needed.md; census.py fails if a listed target does not exist or has an L
+              function or refinement of its own (stale entry). Excluded from the denominators of
+              every share, so 100% is reachable.
+  todo        nothing yet. Informational: "pending" = todo targets every path to which from the entry
+              passes through a target that has its own link (an L function or theorem), so that they
+              become covered when those callers are proven (accessors, tags, hash cluster)
 Partial refinements (`@[refines_part T "label"]`) are listed separately; they never make T
 proven, except through COMPLETE_BY_PARTS.
 
@@ -77,6 +84,26 @@ ROM_MODULES = re.compile(r"^(ConLeche\.Kernel\.(Basis|BasisA|StdAxioms|TrustAxio
                          r"|ConRon\.Arena\.Frontend\.PreludeText$)")
 
 STATUS_ORDER = ["proven", "local", "sorry", "written", "todo"]
+NOT_NEEDED = os.path.join(ROOT, "docs", "not-needed.md")
+
+
+def read_not_needed():
+    """{target: (reason, deviation ids)} from the table in docs/not-needed.md:
+    `| `Target` | reason | D29 |` (the deviation cell may be `-`)."""
+    out = {}
+    if not os.path.exists(NOT_NEEDED):
+        return out
+    for line in open(NOT_NEEDED, encoding="utf-8"):
+        m = re.match(r"\|\s*`([^`]+)`\s*\|(.*)\|\s*$", line)
+        if not m:
+            continue
+        cells = [c.strip() for c in m.group(2).split("|")]
+        if len(cells) != 2 or not cells[0]:
+            sys.exit(f"{NOT_NEEDED}: row of {m.group(1)} needs exactly: target | reason | deviation")
+        if m.group(1) in out:
+            sys.exit(f"{NOT_NEEDED}: {m.group(1)} listed twice")
+        out[m.group(1)] = (cells[0], cells[1])
+    return out
 
 PHASES = [
     ("0", "stores, handles, monad"),
@@ -390,6 +417,52 @@ def run_census(build):
     return out
 
 
+ASM = {}  # the end-to-end theorem's `A` lines (ConAgua/Census/Main.lean `asmLines`), by kind
+
+
+def asm_data(targets):
+    """The end-to-end theorem's remaining assumptions: hypotheses, axioms, sorry sources (ranked by
+    the proven-locally targets they block), or None when the census exe printed none."""
+    if not ASM.get("hyp"):
+        return None
+    blocked = dict(sorry_sources(targets))
+    srcs = [dict(name=a["name"], blocks=len(blocked.get(a["name"], ())))
+            for a in ASM.get("src", [])]
+    srcs.sort(key=lambda x: (-x["blocks"], x["name"]))
+    return dict(theorem="ConAgua.Final.checkerAsm_accepts_remaining",
+                hyps=[dict(name=h["name"], type=h["type"], prop=h["kind"] == "prop")
+                      for h in ASM["hyp"] if not h["name"].startswith("inst")],
+                axioms=[a["name"] for a in ASM.get("axiom", [])], sorry_sources=srcs)
+
+
+def write_asm(targets, md=None):
+    """The progress.md section (with `md`); its machine-readable twin is the JSON comment in it,
+which scripts/dashboard_data.py extracts (the census watcher copies only progress.md/csv)."""
+    d = asm_data(targets)
+    if d is None:
+        return
+    if md is not None:
+        std = {"propext", "Classical.choice", "Quot.sound"}
+        md.append("## What the end-to-end theorem still assumes\n")
+        md.append(f"`{d['theorem']}`. Axioms: "
+                  + ", ".join(f"`{a}`" for a in d["axioms"])
+                  + (" (only the standard ones)" if set(d["axioms"]) <= std else
+                     " (besides the standard ones: sorry from the sources below)") + "\n")
+        md.append("| hypothesis | statement |")
+        md.append("|---|---|")
+        for h in d["hyps"]:
+            if h["prop"]:
+                t = re.sub(r"\s+", " ", h["type"]).replace("|", "\\|")
+                md.append(f"| `{h['name']}` | `{t[:200]}{'...' if len(t) > 200 else ''}` |")
+        md.append("")
+        md.append("| sorry source | blocks |")
+        md.append("|---|---:|")
+        for x in d["sorry_sources"]:
+            md.append(f"| `{x['name']}` | {x['blocks']} |")
+        md.append("")
+        md.append("<!-- assumptions-json " + json.dumps(d).replace("--", "- -") + " -->\n")
+
+
 def analyse(out):
     targets, edges, roots, links = {}, collections.defaultdict(set), [], []
     for line in out.splitlines():
@@ -403,6 +476,8 @@ def analyse(out):
             edges[f[1]].add(f[2])
         elif f[0] == "R":
             roots.append(f[1])
+        elif f[0] == "A" and len(f) >= 6:
+            ASM.setdefault(f[1], []).append(dict(name=f[2], type=f[3], kind=f[4]))
         elif f[0] == "L":
             links.append(dict(kind=f[1], decl=f[2], target=f[3], label=f[4], module=f[5], status=f[6]))
     lean_weights(targets)
@@ -479,7 +554,30 @@ def analyse(out):
                 covered.add(n)
     for n in targets:
         status.setdefault(n, "todo")
+
+    # pending: todo targets that every path to which passes through a linked target
+    linked = {n for n in targets if own[n] != "todo"} | {n for n in targets if status[n] == "proven"}
+    r = reach_cut(linked)
+    pending = {n for n in targets if status[n] == "todo" and n not in r}
+
+    # not needed: a reviewed list; stale entries are errors
+    nn = read_not_needed()
+    problems = []
+    for n, (reason, dev) in nn.items():
+        if n not in targets:
+            problems.append(f"{n}: not a target (typo, or no longer reached)")
+        elif own[n] != "todo" or impl[n] or refs[n] or parts[n]:
+            problems.append(f"{n}: has an L function or refinement of its own ({own[n]}); remove it from the list")
+        elif not reason or (not dev.startswith("D") and dev != "-"):
+            problems.append(f"{n}: needs a reason and a deviation id (D<n>) or -")
+    if problems:
+        sys.exit("docs/not-needed.md is stale:\n  " + "\n  ".join(problems))
+    for n in nn:
+        status[n] = "n/a"
+        pending.discard(n)
     for n, t in targets.items():
+        t["pending"] = n in pending
+        t["na"] = nn.get(n)
         t["status"] = status[n]
         t["own"] = own[n]
         t["covered"] = n in covered
@@ -495,6 +593,10 @@ def totals(ts):
     for t in ts:
         # "sorry" = everything depending on `sorryAx`, own or through callees; "local" = the subset
         # proven locally (its own term is sorry-free)
+        if t.get("pending"):
+            c[("pending", "n")] += 1
+            c[("pending", "lean")] += t["lean"]
+            c[("pending", "rust")] += t["rust"]
         for k in ([t["status"], "sorry"] if t["status"] == "local" else [t["status"]]):
             c[(k, "n")] += 1
             c[(k, "lean")] += t["lean"]
@@ -521,18 +623,23 @@ def summary_rows(targets):
 
 
 def fmt_table(rows):
-    hdr = ("phase", "targets", "proven", "sorry", "of which proven locally", "written", "todo", "Lean lines: proven / with L / all",
-           "Rust lines: proven / with L / all")
+    """Shares are over the targets minus n/a ("needed")."""
+    hdr = ("phase", "targets", "proven", "sorry", "of which proven locally", "written", "todo",
+           "of which pending", "n/a", "n/a Lean lines", "Lean lines: proven / with L / needed",
+           "Rust lines: proven / with L / needed")
     out = ["| " + " | ".join(hdr) + " |", "|" + "---|" * len(hdr)]
     for ph, title, c in rows:
         wl = sum(c[(k, "lean")] for k in ("proven", "sorry", "written"))
         wr = sum(c[(k, "rust")] for k in ("proven", "sorry", "written"))
+        nl = c[("all", "lean")] - c[("n/a", "lean")]
+        nr = c[("all", "rust")] - c[("n/a", "rust")]
         out.append("| " + " | ".join([
             f"{ph} {title}" if ph != "all" else "**total**",
             str(c[("all", "n")]),
             str(c[("proven", "n")]), str(c[("sorry", "n")]), str(c[("local", "n")]), str(c[("written", "n")]), str(c[("todo", "n")]),
-            f"{c[('proven', 'lean')]} / {wl} / {c[('all', 'lean')]} ({pct(c[('proven', 'lean')], c[('all', 'lean')])})",
-            f"{c[('proven', 'rust')]} / {wr} / {c[('all', 'rust')]} ({pct(c[('proven', 'rust')], c[('all', 'rust')])})",
+            str(c[("pending", "n")]), str(c[("n/a", "n")]), str(c[("n/a", "lean")]),
+            f"{c[('proven', 'lean')]} / {wl} / {nl} ({pct(c[('proven', 'lean')], nl)})",
+            f"{c[('proven', 'rust')]} / {wr} / {nr} ({pct(c[('proven', 'rust')], nr)})",
         ]) + " |")
     return "\n".join(out)
 
@@ -543,6 +650,10 @@ def git(*a):
 
 def describe(t):
     bits = []
+    if t["na"]:
+        bits.append(f"not needed: {t['na'][0]} ({t['na'][1]})")
+    if t["pending"]:
+        bits.append("pending")
     if t["covered"]:
         bits.append("covered")
     for l in t["refs"]:
@@ -583,7 +694,9 @@ def write_md(targets, links, dangling, rows, path):
              "data). **proven**: refinement proved without `sorry` (or every path to it goes through "
              "a proven target); **sorry**: proved modulo `sorry`, of which **proven locally** are those whose own "
              "proof term has no `sorry` (only constants it uses do); **written**: L code exists; "
-             "**todo**: nothing. Weights: Lean code lines of the twin definition, and con-ron Rust "
+             "**todo**: nothing (**pending**: becomes covered when its linked callers are proven); "
+             "**n/a**: not needed, deliberately not implemented, listed with reasons in `docs/not-needed.md` and "
+             "left out of every share (the \"needed\" column). Weights: Lean code lines of the twin definition, and con-ron Rust "
              "lines citing it.\n")
     o.append("## Summary\n")
     o.append(fmt_table(rows) + "\n")
@@ -604,6 +717,7 @@ def write_md(targets, links, dangling, rows, path):
         if t["impl"] or t["refs"] or t["parts"]:
             o.append(f"| `{t['name']}` | {t['phase']} | {t['lean']} | {t['rust']} | {t['status']} | {describe(t)} |")
     o.append("")
+    write_asm(targets, o)
     srcs = sorry_sources(targets)
     if srcs:
         o.append("## Sorry sources\n")
@@ -616,6 +730,15 @@ def write_md(targets, links, dangling, rows, path):
             st = targets[src]["status"] if src in targets else "-"
             names = ", ".join(f"`{x}`" for x in sorted(ts)[:6]) + (", ..." if len(ts) > 6 else "")
             o.append(f"| `{src}` | {len(ts)} | {st} | {names} |")
+        o.append("")
+    nal = [t for t in targets.values() if t["na"]]
+    if nal:
+        o.append("## Not needed (n/a)\n")
+        o.append("Source: `docs/not-needed.md`. Excluded from the denominators.\n")
+        o.append("| target | phase | lean | reason | deviation |")
+        o.append("|---|---|---:|---|---|")
+        for t in sorted(nal, key=lambda t: (phase_key(t["phase"]), t["name"])):
+            o.append(f"| `{t['name']}` | {t['phase']} | {t['lean']} | {t['na'][0]} | {t['na'][1]} |")
         o.append("")
     cov = [t for t in targets.values() if t["covered"]]
     if cov:
@@ -631,15 +754,15 @@ def write_md(targets, links, dangling, rows, path):
                      + (f" ({l['status']})" if l["status"].startswith("error") else ""))
         o.append("")
     o.append("## Per file\n")
-    o.append("| module | targets | proven | sorry | of which proven locally | written | todo | lean lines | rust lines |")
-    o.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    o.append("| module | targets | proven | sorry | of which proven locally | written | todo | pending | n/a | lean lines | rust lines |")
+    o.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     by_mod = collections.defaultdict(list)
     for t in targets.values():
         by_mod[t["module"]].append(t)
     for m in sorted(by_mod):
         c = totals(by_mod[m])
         o.append(f"| `{m}` | {c[('all', 'n')]} | {c[('proven', 'n')]} | {c[('sorry', 'n')]} | {c[('local', 'n')]} | "
-                 f"{c[('written', 'n')]} | {c[('todo', 'n')]} | {c[('all', 'lean')]} | {c[('all', 'rust')]} |")
+                 f"{c[('written', 'n')]} | {c[('todo', 'n')]} | {c[('pending', 'n')]} | {c[('n/a', 'n')]} | {c[('all', 'lean')]} | {c[('all', 'rust')]} |")
     o.append("")
     open(path, "w").write("\n".join(o))
 
@@ -647,7 +770,7 @@ def write_md(targets, links, dangling, rows, path):
 CSV_FIELDS = ["date", "commit", "targets", "proven", "sorry", "written", "todo",
               "lean_all", "lean_proven", "lean_sorry", "lean_written",
               "rust_all", "rust_proven", "rust_sorry", "rust_written", "parts_proven",
-              "local", "lean_local"]  # appended at the end: older rows lack them
+              "local", "lean_local", "na", "lean_na", "rust_na", "pending", "lean_pending"]  # appended at the end: older rows lack them
 
 
 def append_csv(targets, path):
@@ -659,11 +782,13 @@ def append_csv(targets, path):
                lean_written=c[("written", "lean")], rust_all=c[("all", "rust")], rust_proven=c[("proven", "rust")],
                rust_sorry=c[("sorry", "rust")], rust_written=c[("written", "rust")],
                parts_proven=sum(1 for t in targets.values() for l in t["parts"] if l["status"] == "ok"),
-               local=c[("local", "n")], lean_local=c[("local", "lean")])
+               local=c[("local", "n")], lean_local=c[("local", "lean")],
+               na=c[("n/a", "n")], lean_na=c[("n/a", "lean")], rust_na=c[("n/a", "rust")],
+               pending=c[("pending", "n")], lean_pending=c[("pending", "lean")])
     new = not os.path.exists(path)
     if not new:  # an older file lacks the newest columns: extend the header, keep the old rows as they are
         lines = open(path, newline="").read().split("\n", 1)
-        if lines[0].split(",") != CSV_FIELDS:
+        if lines[0].split(",") != CSV_FIELDS:  # (shares: lean_all minus lean_na is the denominator from the `na` columns on)
             open(path, "w", newline="").write(",".join(CSV_FIELDS) + "\n" + (lines[1] if len(lines) > 1 else ""))
     with open(path, "a", newline="") as fh:
         w = csv.DictWriter(fh, CSV_FIELDS)
@@ -677,13 +802,14 @@ def main():
     ap.add_argument("--write", action="store_true", help="write docs/progress.md, append docs/progress.csv")
     ap.add_argument("--list", nargs="?", const=".", metavar="REGEX", help="list targets")
     ap.add_argument("--no-build", action="store_true", help="do not build the census exe and modules first")
+    ap.add_argument("--from-output", metavar="FILE", help="analyse the census exe's saved output instead of running it")
     ap.add_argument("--rust", metavar="DIR", help="regenerate scripts/census-rust.tsv from a con-ron checkout")
     a = ap.parse_args()
     if a.rust:
         regen_rust(a.rust)
         return
     import time
-    out = run_census(not a.no_build)
+    out = open(a.from_output).read() if a.from_output else run_census(not a.no_build)
     t0 = time.time()
     targets, links, dangling, rust_unmatched, edges = analyse(out)
     stage_done("analyse (weights, statuses, coverage)", t0)

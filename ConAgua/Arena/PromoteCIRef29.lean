@@ -14,7 +14,7 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 
 /-- **The loop's relation across a promotion-like step**: the writes land in the arrays below 50,
 `132‥136` and `146‥149` and in the `CTL` words below 64, `129`, `140‥147`; the arena side is

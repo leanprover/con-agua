@@ -29,7 +29,7 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 /-- `and_block_named(bo, bl)`: some member of the inductive block at `DLP[bo ‥ bo + bl)` (record
 pointers into `DLP` (`DIND`), a record's name at `+ 1`) declares one of the three pinned `And` names. -/
@@ -174,19 +174,20 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
 theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
     (hp : p.lookup "and_pin_ok" = some andPinOkL) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (hi : i.toNat < ds.size), LoopR pins dn s₀.mem a₀ vis fe pend ds →
+      (i : Word) (hi : i.toNat < ds.size), (∀ b k, dsAt ds i ≠ .indDecl b k) →
+      LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
       AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i hi hR
+  intro n s₀ a₀ vis fe pend i hi hone hR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hk⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)
   subst hs
   have hdecl : DeclAt (s.mem.arr64 DECL) (s.mem.arr64 DLP) i.toNat (dsAt ds i) := by
     have := hR.decls.recs i.toNat hi
-    simpa [dsAt, Array.getD, hi] using this
+    exact declAt_of_F (by simpa [dsAt, Array.getD, hi] using this) hone
   have hk6 : rdW (s.mem.arr64 DECL) (1 + 8 * i) ≠ 6 := by
     have h1 := hR.decls.room
     have h2 := hR.decls.dsize
