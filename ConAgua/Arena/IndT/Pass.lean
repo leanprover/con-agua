@@ -35,7 +35,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The pass's `AbsKeep` callees under `StageC`: `passKeepCallees` and the classes' callees
 (`checkBlockClasses_refinesC` keeps the walk memos through them). -/
 def passKeepCalleesC : List FnName :=
-  passKeepCallees ++ ["class_read", "class_read_classes", "check_block_classes_keys"]
+  passKeepCallees ++ ["class_read_classes", "check_block_classes_keys"]
 
 /-- What `checkBlockPass` hands the tail, con-ron's side (`checkBlockPass_of`'s post at the
 formers' environment `env₁`). -/
@@ -275,7 +275,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨s5, hs5, -, hok5, hC5, hg5, hrd5, hms5, hP5, hA5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlockClasses_refinesC hkp henv₁ hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide))
       (n + 2) (by omega) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hC4 hBS hsrc4 hRD hca4 hpfD hpfb hP4 hA4
-      (hk' _ (by simp [passKeepCalleesC])) (hk' _ (by simp [passKeepCalleesC]))
+      hOpf (hk' _ (by simp [passKeepCalleesC]))
       (hk' _ (by simp [passKeepCalleesC])) hpl4 hparN hsh4 hpfP hca4P) c5
   simp only at hs5 hC5 hg5 hrd5 hms5 hP5 hA5
   subst hs5
