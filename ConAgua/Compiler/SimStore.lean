@@ -339,7 +339,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
     · omega
 
 theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i e) := by
-  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
@@ -467,7 +467,7 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
     · omega
 
 theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e) := by
-  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
@@ -536,7 +536,7 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
     rw [step_st8_run]; simp only [hx]
 
 theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) := by
-  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   simp only [compileS] at hc hK
   simp only [tempsS] at htmp

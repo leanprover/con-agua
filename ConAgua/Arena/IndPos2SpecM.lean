@@ -717,16 +717,16 @@ theorem decNFK_ordinary {w : Word} {x : NestFieldKind} (h : decNFK w = some x) :
 theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {m0 : Mem} (ko nF cl : Word) (ks : List NestFieldKind) (hcl : H cl)
     (hks : decKL (truncM m0) ko.toNat nF.toNat = some ks) :
-    ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word), 2 ^ 31 + n ≤ coreWalkFuel →
+    ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word),
     u4W n m ko nF cl i = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
     ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   intro n
   obtain ⟨hkl, hkw⟩ := decKL_get hks
   induction n with
-  | zero => intro m m' a i r _ h; simp [u4W] at h
+  | zero => intro m m' a i r h; simp [u4W] at h
   | succ n ih =>
-    intro m m' a i r hn h hS hg0 hi hP
+    intro m m' a i r h hS hg0 hi hP
     by_cases hd : nF ≤ i
     · rw [u4W_done (h := hd)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -765,7 +765,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       obtain ⟨su, m1⟩ := pr
       simp only [ustWf] at h; rw [hu] at h
       obtain ⟨mp, hmp⟩ := hP.hb
-      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp (by omega)
+      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp
         (by have := nF.toNat_lt; simp; omega) hcl hS hmp hu
       have hP1 := hP.setHb (ustW_mfr hu) hM1
       by_cases hs : su ≠ 0
@@ -781,7 +781,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       · rw [u4K_miss (h := hs)] at h
         have hb1 : b1 = false := by cases b1 <;> simp_all
         subst hb1
-        obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m1 m' a1 (i + 1) r (by omega) h hS1 (hg0.trans hg1)
+        obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m1 m' a1 (i + 1) r h hS1 (hg0.trans hg1)
           (by rw [hi1]; omega) hP1
         refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP'⟩
         simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
@@ -789,7 +789,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
         rw [hrun1, except_ok_bind]; simpa using hrun
     · rw [u4W_ord (h := hd) (hk := hk)] at h
       have hw0 : (w == 0) = true := by rw [← hrd]; simpa using hk
-      obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m m' a (i + 1) r (by omega) h hS hg0 (by rw [hi1]; omega) hP
+      obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m m' a (i + 1) r h hS hg0 (by rw [hi1]; omega) hP
       refine ⟨b, a', ?_, hS', hg', hr, hP'⟩
       simp only [u4F, hord, hw0, ite_true, StateT.run_bind]
       simpa using hrun
