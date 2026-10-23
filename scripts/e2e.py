@@ -69,7 +69,7 @@ TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to t
 TRACE_WORDS = 1 << 18
 DEFAULT_JOBS = 8           # shared machine: at most ~8 runs at a time (each well under PER_RUN_GB)
 # classes that count as passing for `--rerun-failing`
-PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)", "agree-timeout")
+PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)", "agree-timeout", "agree-memout")
 
 # the real con-ron binary (the Rust checker, built from the vendored revision: DESIGN.md, lane
 # `integrate`, "A second reference"); `$CON_RON` overrides
@@ -547,6 +547,10 @@ def classify(lo, ref, where=""):
         return "missing"
     if lo == "timeout" and ref == "timeout":
         return "agree-timeout"
+    if lo == "memout" and ref == "memout":
+        # both run into PER_RUN_GB (e.g. `stack_fuel_offset`: with 2^32-word arrays L stops only at
+        # its own record limits, lane abi; con-ron aborts on it, con-leche expects an abort)
+        return "agree-memout"
     if lo in ("timeout", "memout", "exhausted", "crash"):
         return "l-" + lo
     racc = ref == "accept"

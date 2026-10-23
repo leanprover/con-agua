@@ -98,3 +98,10 @@ file (278 363 instructions match).
 tables at 2^25); with slotgrow it is clean. So: land after slotgrow, deleting `halfLen`,
 `abiSlotTableWords` and `CA_ABI_SLOT_WORDS` in the same step (with growable tables every array
 gets `2^32` words).
+
+**Coordinator's decisions (2026-10-23).** Land right after slotgrow, deleting the hash-table
+workaround in the same step. `stack_fuel_offset` running into the memory guard instead of an
+early `error` is accepted (nobody accepts it); `scripts/e2e.py` classifies L memout against a
+reference memout as `agree-memout` (passing, like `agree-timeout`). Proof after compproofD (its
+trampoline loads ≤ 6 entry arguments into `rdi r8 r9 r10 r11 rsi`; the stub relies on no register
+across the call).
