@@ -495,14 +495,17 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
       tblW p n s₀.mem T C lo ll nP nF rs go gl off cvCa vis = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.htbl]
   simp only [callFn, checkStructProjTableL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
-        hP.hpg hP.hgo hP.hps hP.hpj hP.hspb (n + 1),
-      sctW_spec p hP.hbb hP.hhf hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
-      envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
-      erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"] <;>
-    finish (gen := 30) (instances := 5000) [tblW, tblMem, rdW_eq]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
+      hP.hpg hP.hgo hP.hps hP.hpj hP.hspb (n + 1),
+    sctW_spec p hP.hbb hP.hhf hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
+    envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
+    erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, tblW, tblMem, rdW_eq]
 
 /-! ## `check_struct_proj_table`: the relation to the twin -/
 
