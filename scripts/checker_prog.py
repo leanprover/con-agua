@@ -32,7 +32,7 @@ OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
 ASM_OUT = os.path.join(ROOT, "ConAgua", "Checker", "Asm.lean")
 # `checkerAsm`'s per-function kernel checks, spread over this many modules (built in parallel;
 # each loads `Checker/Prog.lean`, about 3 GB)
-ASM_PARTS = 4
+ASM_PARTS = 6
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
 # the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)

@@ -526,4 +526,106 @@ theorem neg_interp (cc : CondCode) (st : StatusFlags) : (CondCode.neg cc).interp
   obtain ⟨cf, pf, af, zf, sf, of⟩ := st
   cases cc <;> cases cf <;> cases pf <;> cases zf <;> cases sf <;> cases of <;> rfl
 
+/-- Operand `o` reads the word `v` in `s`: an immediate `v`, or a mapped `[b + off]` holding `v`. -/
+def OpReads (s : MachineData) (o : Operand .W64) (v : Word) : Prop :=
+  o = .imm (.int64 v.toInt64) ∨
+  ∃ b off, o = oM (mb b off) ∧ SmallOff off ∧ rdW s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) = some v
+
+/-! ## Simple operands: memory and immediate operands, immediate shift counts -/
+
+section
+variable {k : Nat} {s : MachineData} {Q : MachineState → Prop}
+
+local macro "run_instr" : tactic =>
+  `(tactic| (refine ev_instr (by assumption) (by rintro ⟨⟩) ?_;
+             simp only [Instr.interp, Operation.interp, Operand.interp, RegOrMem.interp,
+               RelRegOrMem.interp, ConstExpr.interp, MachineData.load, MachineData.store,
+               MachineData.set, MachineData.setReg, Reg64s.set_low_W64, Reg64s.get_low_W64,
+               AddrExpr.zeroExtend_interp_base_disp, Width.bytes, Effects.All]))
+
+omit [Host] in
+theorem imm_bits (v : Word) : BitVec.truncate Width.W64.bits (v.toInt64.toBitVec) = v.toBitVec := by
+  simp [Width.bits]
+
+theorem ev_movRO {r : Reg64} {o : Operand .W64} {v : Word}
+    (hk : Host.prog[k]? = some (i64 (.mov (.reg (rr r)) o))) (hr : OpReads s o v)
+    (h : Ev Q { s with regs := s.regs.set64 r v.toBitVec } (at_ (k + 1))) : Ev Q s (at_ k) := by
+  rcases hr with rfl | ⟨b, off, rfl, hoff, hv⟩
+  · exact ev_movRI hk h
+  · exact ev_movRM hk hoff hv h
+
+/-- `op rax, o` for the forms of `binDirect`. -/
+theorem ev_binO {op : BinOp} {o : Operand .W64} {d : Directive} {v : Word}
+    (hd : binDirect op o = some d) (hk : Host.prog[k]? = some d) (hr : OpReads s o v)
+    (h : ∀ st, Ev Q { s with regs := s.regs.set64 .rax (op.eval s.regs.rax v).toBitVec, status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  rcases hr with rfl | ⟨b, off, rfl, hoff, hv⟩
+  · cases op <;> simp only [binDirect, aluDirect, Option.some.injEq, reduceCtorEq] at hd <;> subst hd <;> run_instr <;>
+      (intros; refine ev_flags h ?_; simp [BinOp.eval, BitVec.add_comm])
+  · simp only [rdW, Option.map_eq_some_iff] at hv
+    obtain ⟨i, hi, rfl⟩ := hv
+    cases op <;> simp only [binDirect, aluDirect, Option.some.injEq, reduceCtorEq] at hd <;> subst hd <;> run_instr <;>
+      (rw [addr_disp _ _ hoff.1 (by omega)]; simp only [hi, Effects.All]
+       intros; refine ev_flags h ?_; simp [BinOp.eval, BitVec.add_comm])
+
+theorem ev_cmpO {o : Operand .W64} {v : Word}
+    (hk : Host.prog[k]? = some (i64 (.cmp (.reg (rr .rax)) o))) (hr : OpReads s o v)
+    (h : Ev Q { s with status := cmpFlags s.regs.rax.toBitVec v.toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  rcases hr with rfl | ⟨b, off, rfl, hoff, hv⟩
+  · run_instr
+    simp only [Width.bits, BitVec.truncate_eq_setWidth, BitVec.setWidth_eq]
+    exact h
+  · simp only [rdW, Option.map_eq_some_iff] at hv
+    obtain ⟨i, hi, rfl⟩ := hv
+    run_instr
+    rw [addr_disp _ _ hoff.1 (by omega)]
+    simp only [hi, Effects.All]
+    exact h
+
+theorem ev_flags_mem {z : RegZmms} {d d' : DataMem} {pc : Int64} {R : Reg64s}
+    {S : StatusFlags} (h : ∀ st, Ev Q ⟨R, z, st, d⟩ pc) (hd : d = d') : Ev Q ⟨R, z, S, d'⟩ pc :=
+  hd ▸ h S
+
+/-- `op [b + off], w` (read-modify-write) for the forms of `aluDirect`. -/
+theorem ev_aluMI {op : BinOp} {b : Reg64} {off : Int} {w v : Word} {d : Directive}
+    (hd : aluDirect op (.mem (mb b off)) (.imm (.int64 w.toInt64)) = some d) (hk : Host.prog[k]? = some d)
+    (hoff : SmallOff off) (hv : rdW s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) = some v)
+    (h : ∀ st, Ev Q { s with dmem := wrW s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) (op.eval v w).toBitVec, status := st }
+        (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  cases op <;> simp only [aluDirect, Option.some.injEq, reduceCtorEq] at hd <;> subst hd <;> run_instr <;>
+    (rw [addr_disp _ _ hoff.1 (by omega)]; simp only [hi, Effects.All]
+     intros; refine ev_flags_mem h ?_; simp [wrW, BinOp.eval, BitVec.add_comm])
+
+omit [Host] in
+theorem imm8_count [Labels] {n : Nat} (hn : n < 64) (s : MachineData) (p : Std.Rco Int64) :
+    (ShiftCountExpr.imm8 (.int64 (Int64.ofInt n))).interpMasked s p .W64 = n := by
+  simp only [ShiftCountExpr.interpMasked, ShiftCountExpr.interp, ConstExpr.interp]
+  rw [show (0x3f : Nat) = 2 ^ 6 - 1 by rfl, Nat.and_two_pow_sub_one_eq_mod]
+  simp [BitVec.take, Int64.toBitVec_ofInt]
+  omega
+
+/-- `shl rax, n` / `shr rax, n` with an immediate count. -/
+theorem ev_shiftI {n : Nat} (hn : n < 64) {op : BinOp} (hop : op = .shl ∨ op = .shr)
+    (hk : Host.prog[k]? = some (match op with
+      | .shl => i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt n))))
+      | _ => i64 (.shr (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt n))))))
+    (h : ∀ st, Ev Q { s with regs := s.regs.set64 .rax (op.eval s.regs.rax (UInt64.ofNat n)).toBitVec, status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  rcases hop with rfl | rfl <;> simp only at hk <;> run_instr <;> rw [imm8_count hn] <;>
+  · split
+    · simp only [Effects.All]
+      refine ev_flags h ?_
+      simp_all [BinOp.eval, UInt64.toBitVec_shiftLeft, UInt64.toBitVec_shiftRight, Nat.mod_eq_of_lt hn]
+    · simp only [Effects.All]
+      intro af
+      (try split) <;> (try split) <;> simp only [Effects.All] <;> intros <;>
+        (refine ev_flags h ?_
+         simp_all [BinOp.eval, UInt64.toBitVec_shiftLeft, UInt64.toBitVec_shiftRight, Nat.mod_eq_of_lt hn])
+
+end
+
 end L.Compiler
