@@ -423,7 +423,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   rw [c5', grpB5_some] at h
   have hms3P := ConRon.Bridge.Inductives.dMajor_ext.list c5.ext _ _ hms2P
   have hcv3P := ConRon.Bridge.Inductives.dExt_denoteCV.list (c4.trans c5).ext _ _ hcvTP
-  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hftc5, hftcb5, -⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hftc5, hftcb5, hJ5⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (genRecCheckFormerTysC_refinesJ P.cft P.gftc n ⟨s3.mem, Locals.init []⟩ a3 dn vis fe cO cL _ _ cvTas ms2 hS3
       (hcv.grow (fun q => OMono.decCVp q) hg13) (hms2.grow (fun q => decTM_mono q) hg3)
       (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a3.store a'.store)
@@ -441,7 +441,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
         have hA1 := hAF hAm
         exact ⟨x, a1, hrun, hS1, hg1, hd, hCm.of_cstep hS1 hA1 c, hA1, hxm.trans c.ext⟩)
       ⟨hC3, hA3, ConRon.Arena.Ext.refl _⟩) c5'
-  simp only at hs5 hS5 hg5 hftc5 hftcb5; subst hs5
+  simp only at hs5 hS5 hg5 hftc5 hftcb5 hJ5; subst hs5
   have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) c5' hP3
   have hrun5 := AM.run_of_ok _ a3 hok5
   have c45 := c4.trans c5
@@ -455,9 +455,9 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     ⟨ConRon.Bridge.Inductives.dExt_denoteCV.list c45.ext _ _ hcvTP,
       ConRon.Bridge.Inductives.dMajor_ext.list c5.ext _ _ hms2P⟩ hrun5
   generalize AM.res (ms2.mapM (ConRon.Arena.classFormerTy fe cvTas)) a3 = ftc at hrun5 hftc5 hfTC
-  generalize AM.st (ms2.mapM (ConRon.Arena.classFormerTy fe cvTas)) a3 = a5 at hrun5 hS5 hfTC c6
+  generalize AM.st (ms2.mapM (ConRon.Arena.classFormerTy fe cvTas)) a3 = a5 at hrun5 hS5 hfTC c6 hJ5
   have hg15 := hg13.trans hg5
-  have hA5 := hkeep _ (by simp [grcKeepCallees]) _ _ _ _ _ c5' (by rw [hm4] at c4'; exact hA3)
+  have hA5 := hJ5.2.1
   have hC5 : StageC dn vis fe env s5.mem a5 := hC3.of_check hS5 hA5 c6.ok c6.ext
   have c46 := c45.trans c6
   -- the elimination level
