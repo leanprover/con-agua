@@ -371,4 +371,65 @@ theorem structCtorResidOk_refines (k : Nat) (s₀ : St) (a₀ : AState)
 
 end census
 
+/-! ## The walk memos across the sum-check pieces (lane `indproofs4`, helper `memo`) -/
+
+theorem pinternW_afr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : AFr m m' := by
+  rw [pinternW_eq] at h
+  exact AFr.of_frame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h) (by simp [paramSch, PREC, PSLOT, memoFreeA])
+    (by simp [paramSch, memoFreeC])
+
+theorem plgW_afr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, h => by simp [plgW] at h
+  | k + 1, m, m', o, l, r, h => by
+    simp only [plgW, plK0.eq_def, plK1.eq_def, plK2.eq_def, plK3.eq_def] at h
+    afr_auto h [allocW_afr, pinternW_afr, plgW_afr k _ _ _ _ _, consW_afr]
+
+theorem ilF_afr {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m')) : AFr m m' :=
+  AFr.of_frame (ilF_frame h)
+
+theorem plW_afr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
+    AFr m m' := by
+  cases k with
+  | zero => simp [plW] at h
+  | succ k =>
+  simp only [plW, plW.plK4.eq_def, plW.plK5.eq_def] at h
+  afr_auto h [plgW_afr _ _ _ _ _ _, ilF_afr]
+
+theorem psGoW_afr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word),
+    psGoW n m o nP N k = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h
+  | n + 1, m, m', o, nP, N, k, r, h => by
+    simp only [psGoW, psK0.eq_def, psK1.eq_def, psK2.eq_def, psK3.eq_def] at h
+    afr_auto h [psGoW_afr n _ _ _ _ _ _ _, binternW_afr, allocW_afr, consW_afr]
+
+theorem psAtW_afr {n : Nat} {m m' : Mem} {o nP : Word} {r : List Word} (h : psAtW n m o nP = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [psAtW] at h
+  | succ n =>
+    simp only [psAtW, psK3.eq_def] at h
+    afr_auto h [psGoW_afr _ _ _ _ _ _ _ _]
+
+theorem srW_afr : ∀ (k : Nat) (m m' : Mem) (T lo ll nP o nIdx cbody : Word) (r : List Word),
+    srW k m T lo ll nP o nIdx cbody = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [srW] at h
+  | k + 1, m, m', T, lo, ll, nP, o, nIdx, cbody, r, h => by
+    simp only [srW, srK1.eq_def, srK2.eq_def, srK3.eq_def, srK4.eq_def, srK5.eq_def] at h
+    afr_auto h [plW_afr, ceinternW_afr, (fun h => AFr.of_frame (gafF_frame h)), gaaF_afr, psAtW_afr]
+
+theorem domsW_afr : ∀ (n : Nat) (m m' : Mem) (vis off fo fl dO dl j : Word) (r : List Word),
+    domsW n m vis off fo fl dO dl j = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [domsW] at h
+  | n + 1, m, m', vis, off, fo, fl, dO, dl, j, r, h => by
+    simp only [domsW, domsK1.eq_def, domsK2.eq_def, domsK3.eq_def] at h
+    afr_auto h [ftdF_afr, stub_afr, domsW_afr n _ _ _ _ _ _ _ _ _ _]
+
+theorem sdomsW_afr {n : Nat} {m m' : Mem} {vis off fo fl dO dl j : Word} {r : List Word}
+    (h : sdomsW n m vis off fo fl dO dl j = some (r, m')) : AFr m m' := by
+  rw [sdomsW_eq] at h
+  obtain ⟨⟨r0, m0⟩, h0, he⟩ := Option.map_eq_some_iff.mp h
+  simp only [Prod.mk.injEq] at he
+  rw [← he.2]
+  exact domsW_afr _ _ _ _ _ _ _ _ _ _ _ h0
+
 end L.Ind
