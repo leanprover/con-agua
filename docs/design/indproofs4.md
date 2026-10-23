@@ -115,3 +115,16 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
   `memberNamesW_room`, `slNodup_refines` twice), flush, `blockRawRec_refines` (the
   `mentions_any` memo across the IW writers and the flush by `maMR_mfr`), pass, tail.
   `ShapeCV.grow`.
+
+## Reply to the coordinator / lane loopt3: `IndArmSpec` premises (2026-10-23 ~09:30)
+(SendMessage cannot reach the coordinator from this lane; answering here.)
+* **Yes**, the stage needs `StageMemos m` and `CrOK m` as premises, and should return both in the
+  post (only the stage writes arrays 201‥208; `consts_resolve_ffast` keeps `CrOK`).
+* Also needed: **`∃ mp, MemoRG i1lSch lfKey decE m mp`** (`instantiate1_lift_fast`'s memo, array
+  51 / `CTL[52]`; not in `CoreMemos`, whose `coreIlSch` is 50/50) — premise and post.
+  `abstract1_fast`'s memo (49/48) is `CoreMemos`' `coreAbSch`: covered.
+* Two environment facts at the arm: **`AllVis fe`** (`∀ n e, fe.idx[n]? = some e → e.1 <
+  fe.visibleBelow`, an unrestricted environment; `IndInstallSpec36`) and **`CtorSums fe`**
+  (`IndPosSpec2`: every stored `ctorInfo` has `nPc + nF < 2^64`). If `FoldOK` implies them, a
+  pointer to the lemma suffices; otherwise please add them (`CtorSums` could later go away with an
+  L wrap guard in `nest_ctor_entry_strip`).
