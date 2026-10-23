@@ -491,6 +491,7 @@ structure TblProg (p : Prog) : Prop where
   htbl : p.lookup "check_struct_proj_table" = some checkStructProjTableL
   hrec : RecProg p
   hi1 : I1lF p
+  hipal : IpalF p
   hcr : CrfF p
 
 set_option maxHeartbeats 4000000 in
@@ -504,7 +505,7 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
   simp only [callFn, checkStructProjTableL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
-      hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 (n + 1),
+      hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal (n + 1),
     sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
     envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
     erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"]
