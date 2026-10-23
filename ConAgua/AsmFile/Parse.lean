@@ -30,7 +30,7 @@ Instructions (operation size 64 bits, except the byte source of `movzbq`; 64-bit
 Operands: `%R` (the sixteen 64-bit registers), `$INT`, `NAME` (branch targets only), and memory
 `INT(%B)`, `(%B)`, `INT(%B,%I,S)`, `(%B,%I,S)` with `S ∈ {1, 2, 4, 8}`. `INT` is decimal with an
 optional `-` and no leading zero (`as` reads `010` as octal), and must fit in 64 bits as a
-signed number. `CC` is one of `as`'s spellings of the sixteen condition codes.
+signed number. `CC` is one of the sixteen condition codes, as Kraken's printer spells them.
 
 What the forms mean is Kraken's syntax as Kraken's own parser (`Kraken.X64.Parser.parse`) reads
 them; in particular a branch to `NAME` is relative (`.rel (.sub (.label NAME)
@@ -112,16 +112,13 @@ def count (s : String) : P ShiftCountExpr :=
   else if s.startsWith "$" then return .imm8 (← int64 (s.drop 1).toString)
   else throw s!"bad shift count '{s}'"
 
-/-- `as`'s spellings of the condition codes (the `CC` of `jCC`, `cmovCC`). -/
+/-- The condition codes, spelled as Kraken's printer spells them (`as` reads each with this meaning;
+it also has other spellings, which are rejected here). -/
 def cc : String → Option CondCode
-  | "o" => some .o | "no" => some .no
-  | "b" | "c" | "nae" => some .c | "ae" | "nc" | "nb" => some .nc
-  | "e" | "z" => some .z | "ne" | "nz" => some .nz
-  | "be" | "na" => some .be | "a" | "nbe" => some .a
-  | "s" => some .s | "ns" => some .ns
-  | "p" | "pe" => some .p | "np" | "po" => some .np
-  | "l" | "nge" => some .l | "ge" | "nl" => some .ge
-  | "le" | "ng" => some .le | "g" | "nle" => some .g
+  | "o" => some .o | "no" => some .no | "b" => some .c | "ae" => some .nc
+  | "e" => some .z | "ne" => some .nz | "be" => some .be | "a" => some .a
+  | "s" => some .s | "ns" => some .ns | "p" => some .p | "np" => some .np
+  | "l" => some .l | "ge" => some .ge | "le" => some .le | "g" => some .g
   | _ => none
 
 /-- A branch target: a direct, relative branch to a symbol. -/
