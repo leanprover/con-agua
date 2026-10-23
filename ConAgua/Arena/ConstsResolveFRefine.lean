@@ -53,16 +53,6 @@ structure CrfProg (p : Prog) : Prop where
 
 /-! ## The models over the calls, and their specs -/
 
-/-- `1` if no word of the list is `0`, else `0`: an `&&` chain of `≠ 0` tests, as nested
-tests (the short-circuit paths of the L condition). -/
-def allNZ : List Word → Word
-  | [] => 1
-  | w :: ws => if w = 0 then 0 else allNZ ws
-
-@[lang_grind =] theorem allNZ_nil : allNZ [] = 1 := rfl
-@[lang_grind =] theorem allNZ_cons (w : Word) (ws : List Word) :
-    allNZ (w :: ws) = if w = 0 then 0 else allNZ ws := rfl
-
 section models
 variable (p : Prog) (k : Nat)
 
@@ -211,7 +201,7 @@ theorem clp_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis s : Word
   all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.and_eq_true, bne_iff_ne, ne_eq,
     decide_eq_true_eq, beq_iff_eq] at *)
   all_goals grind (gen := 20) (instances := 10000) [lang_grind, arena_grind, clpW, clpL_none,
-    clpL_nil, clpL_cons, allNZ_cons, allNZ_nil]
+    clpL_nil, clpL_cons]
 
 theorem cl_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis g x h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "cr_leaf" [vis, g, x, h]
