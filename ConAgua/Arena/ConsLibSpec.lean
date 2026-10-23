@@ -11,9 +11,9 @@ meta import ConAgua.Arena.SlotGrow
 # The cons-table library: the specs of the templates, proved once (lane conslib)
 
 A table instance supplies, besides its `ConsSch`, one obligation per fragment (`ConsOK`): the
-match prelude and condition compute `mtM` (`MatchOK`), the growth's hash block computes `hsM`
+match prelude and condition compute `mtM` (`CMatchOK`), the growth's hash block computes `hsM`
 (`HashOK`), `ihash` computes `qhM` (`IHashOK`), the record words are `vsM` of the push's inputs
-and read no memory (`RecOK`), the room test is `roomM` (`RoomOK`), the skip word is `skM`
+and read no memory (`CRecOK`), the room test is `roomM` (`RoomOK`), the skip word is `skM`
 (`SkipOK`). From them:
 
 * `consFindG_spec`: `X_find(t, k, h)` returns `cprobeW` (the probe model, generic in the match);
@@ -68,7 +68,7 @@ theorem zero_ne_add (a nk : Nat) (h : 0 < a) : (0 = a + nk) = False := by
 theorem self_ne_add (a nk : Nat) (h : 0 < a) : (nk = a + nk) = False := by
   simp only [eq_iff_iff, iff_false]; omega
 
-theorem rd64_rdW (m : Mem) (a : ArrId) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
+theorem rd64_rdWC (m : Mem) (a : ArrId) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
   simp [rd64, rdW, Array.getD_eq_getD_getElem?]
 
 /-! ## The probe model -/
@@ -133,7 +133,7 @@ abbrev fkeys (s : St) : List Word := argsOf 1 C.nk s
 
 /-- **The match**: the prelude (if any) writes at most the match's own variable `7 + nk` and no
 memory; then the condition is `mtM` of node `v - 1` (`v` at `5 + nk`) of tier `t`. -/
-def MatchOK : Prop :=
+def CMatchOK : Prop :=
   match C.mpre with
   | none => ∀ s : St, Cond.pval s C.mc = C.mtM s.mem (fkeys C s) (s.loc 0) (s.loc (5 + C.nk) - 1)
   | some b => ∀ (k : Stmt → M Sig) (s₀ : St),
@@ -147,7 +147,7 @@ def LocOnly (e : Expr) : Prop := ∀ s s' : St, s.loc = s'.loc → Expr.pval s e
 
 /-- **The record words** read only the push's variables, and are `vsM` of its inputs
 (variables `1 ‥ np`). -/
-def RecOK : Prop :=
+def CRecOK : Prop :=
   (∀ e ∈ C.recW, LocOnly e) ∧ ∀ s : St, C.recW.map (Expr.pval s) = C.vsM (argsOf 1 C.np s)
 
 /-- **The room test** is `roomM` of the memory, the tier and the count (`c` at `np + 2`). -/
@@ -167,10 +167,10 @@ def SkipOK : Prop :=
 
 /-- **An instance's obligations.** -/
 structure ConsOK : Prop where
-  match_ : MatchOK p C
+  match_ : CMatchOK p C
   ghash : HashOK p C.GS (4 + C.np) C.hsM
   ihash : IHashOK p C
-  recs : RecOK C
+  recs : CRecOK C
   room : RoomOK C
   skips : SkipOK C
   push_np : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk
@@ -183,7 +183,7 @@ theorem ConsOK.room_eq {p : Prog} {C : ConsSch} (hO : ConsOK p C) (s : St) :
 
 /-! ## `X_find`: the probe -/
 
-theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C) (n : Nat) (s₀ : St) :
+theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (cfLoop C)
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
@@ -195,7 +195,7 @@ theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C) (n : Nat) (s₀ 
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := cfLoop C) rfl]
-    unfold MatchOK at hM
+    unfold CMatchOK at hM
     cases hm : C.mpre with
     | none =>
       simp only [hm] at hM
@@ -204,7 +204,7 @@ theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C) (n : Nat) (s₀ 
       vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, hM,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdW, zero_ne_add, argsOf_setLoc_add 1 C.nk 3 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add 1 C.nk 3 (by decide),
         argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add 1 C.nk 5 (by decide),
         ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
       all_goals grind [lang_grind, arena_grind]
@@ -215,12 +215,12 @@ theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C) (n : Nat) (s₀ 
       vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hM (exec p n), ih]
       all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdW, zero_ne_add, argsOf_setLoc_add 1 C.nk 3 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add 1 C.nk 3 (by decide),
         argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add 1 C.nk 5 (by decide),
         ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
       all_goals grind [lang_grind, arena_grind]
 
-theorem cfLoop_step_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C) (n : Nat) (s₀ : St) :
+theorem cfLoop_step_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (cfLoop C)
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
@@ -287,7 +287,7 @@ theorem argsL_eq (pre ks rest : List Word) (k : Nat) (hk : ks.length = k) :
 /-- **`X_find(t, k, h)`** returns the probe of tier `t` from the home slot of `h` (for any
 argument list: `t`, the key, `h` and the initial step count are its words `0`, `1 ‥ nk`,
 `nk + 1`, `nk + 4`). -/
-theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : MatchOK p C)
+theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     (hp : p.lookup C.fname = some (consFindG C)) (n : Nat) (s₀ : St) (vs : List Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) C.fname vs
@@ -303,7 +303,7 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : MatchOK p C)
     vcgen [exec, step, evalE_spec, evalArgs, setLoc, cfLoop_step_spec p C hM n]
     all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdW, argsOf_setLoc_add 1 C.nk 2 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.nk 2 (by decide),
         argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add 1 C.nk 6 (by decide),
         zero_ne_add 2 C.nk (by decide), zero_ne_add 3 C.nk (by decide),
         zero_ne_add 4 C.nk (by decide), zero_ne_add 6 C.nk (by decide), argsOf_mk,
@@ -311,7 +311,7 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : MatchOK p C)
     all_goals grind [lang_grind, arena_grind, gnW, gexpW, homeW, baseW]
 
 /-- `X_find(t, k, h)` at a key of `nk` words. -/
-theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C)
+theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     (hp : p.lookup C.fname = some (consFindG C)) (n : Nat) (s₀ : St) (t : Word) (ks : List Word)
     (hks : ks.length = C.nk) (h : Word) :
     ⦃fun s => s = s₀⦄
@@ -366,7 +366,7 @@ theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ :
   vcgen [step, evalE_spec, evalC_spec, evalArgs, st64,
     growBlkG_spec p C.GS C.sa C.ca rfl rfl (4 + C.np) C.hsM hO.ghash n]
   all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, ↓reduceIte, Nat.add_eq_zero_iff,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, ↓reduceIte, Nat.add_eq_zero_iff,
         false_and, and_false, Sig.retVal] at *)
   all_goals grind [lang_grind, arena_grind, growK, tailM, baseW]
 
@@ -426,7 +426,7 @@ theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
       cpWr_spec p C hO n C.recW hO.recs.1 0]
     all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdW, argsOf_setLoc_add 1 C.np 2 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
         argsOf_setLoc_add 1 C.np 3 (by decide), argsOf_setLoc_add 1 C.np 5 (by decide),
         zero_ne_add 1 C.np (by decide), zero_ne_add 2 C.np (by decide),
         zero_ne_add 3 C.np (by decide), zero_ne_add 5 C.np (by decide), argsOf_mk,
@@ -563,7 +563,7 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         consFindG_specV p C hO.match_ hpf n, consPushG_specV p C hO hpp n]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
         List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, List.map_cons, map_keyArgs,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, List.map_cons, map_keyArgs,
         List.map_append, map_hOpt] at *)
       all_goals subst_vars
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, hO.skips e hsk,
@@ -587,7 +587,7 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         consFindG_specV p C hO.match_ hpf n, consPushG_specV p C hO hpp n]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
         List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
-        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, List.map_cons, map_keyArgs,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, List.map_cons, map_keyArgs,
         List.map_append, map_hOpt] at *)
       all_goals subst_vars
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem,

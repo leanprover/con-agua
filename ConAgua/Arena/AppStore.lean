@@ -181,7 +181,7 @@ theorem appHash_ok : HashOK p appGS 6 ahash := by
 theorem appOK : ConsOK p appCS where
   match_ := by
     intro s
-    simp [appCS, condOf, Cond.pval, Expr.pval, amatchW, argsOf, rd64_rdW, L.Notation.blk,
+    simp [appCS, condOf, Cond.pval, Expr.pval, amatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := appHash_ok p
   ihash := by
@@ -219,6 +219,9 @@ theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   · have : x < y := UInt64.not_le.mp h
     simp [h, this]
 
+theorem apushOK_eqC (m : Mem) (t : Word) : apushOK m t = pushOKC appCS m t := by
+  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 AREC >>> 2)]; rfl
+
 theorem apushMem_eqC (m : Mem) (t f a j c : Word) :
     apushMem m t f a j c = pushMC appCS m t [f, a] j c := by
   simp [apushMem, pushMC, tailM, wrRecK, appCS, baseW,
@@ -230,9 +233,7 @@ theorem appPush_spec (hp : p.lookup "app_push" = some appPush) (n : Nat) (s₀ :
     ⦃fun r s' => LocEq s' s₀ ∧ apushOK s₀.mem t = true ∧ r = [acnt s₀.mem t] ∧
       growIf ASLOT 4 ahash s₀.mem (apushMem s₀.mem t f a j (acnt s₀.mem t)) (acnt s₀.mem t) = some s'.mem;
       ⊤⦄ := by
-  have e1 : apushOK s₀.mem t = pushOKC appCS s₀.mem t := by
-    rw [apushOK, pushOKC, dec_lt_not_le (acnt s₀.mem t) (s₀.mem.len64 AREC >>> 2)]; rfl
-  rw [e1]
+  rw [apushOK_eqC]
   simp only [apushMem_eqC]
   exact consPushG_spec p appCS (appOK p) hp n s₀ t [f, a] rfl j
 
