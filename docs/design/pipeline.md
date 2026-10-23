@@ -204,3 +204,23 @@ loopt3's list, answered:
 ## `sorry`s
 
 None of this lane's.
+
+## Lane close (landing 7)
+
+* Census: `builtinPreludeE` (phase 1c) is proven (`@[refines]` on `builtinPrelude_checker`).
+* State: `pipelineRefines_checker (h8 : LoopStage checkerProg checkerRels) : PipelineRefines
+  checkerProg`, sorry-free; with it `checker_x64_accepts` holds for the real checker once the
+  loop is proved. Items 1–6 and this lane's part of 13 are closed.
+
+### Open list (for whoever picks this up)
+
+* `LoopStage checkerProg checkerRels` (loopt3): `install_then_check` from `R7` and `TwinPrefix` to
+  `SeqAccepts`; needs `CoreR m sE.caches` from `prefix_caches` + zero memos (loopt3's side).
+* If loopt3 needs more in `R7`: add the field in `PipeRest.lean` and prove it in
+  `pinsStage_checker` (per-stage frames: `PreLoopWSStages.lean`; regenerate with
+  `scripts/preloop_ws.py` after any program change, `--check` before landing).
+* `TwinPins.lean` copies con-ron's `internAllPins_run` walk for the pins conjunct; if con-ron ever
+  exports `s'.pins = s.pins`, use that.
+* `PrepRef.lean` (front4's, now this lane's): its statement carries the twin's expression tiers and
+  the size bound; keep them when it changes.
+* e2e: `complete_c05b_nest30_pi1000` timed out once (rf memo hash bug, lane rfhash).
