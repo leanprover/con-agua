@@ -318,11 +318,12 @@ structure Ctx where
   deriving Repr
 
 /-- The registers a leaf keeps locals in: neither the scratch registers `rax`/`rcx`/`rdx`, nor
-`rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table). The trampoline saves `rbx`,
-`r12`, `r13` for the harness. -/
-def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+`rsp`, `rbp` (the trampoline's), `r14` (fuel), `r15` (the table), nor the registers the harness
+expects preserved (`rbx`, `r12`, `r13`; with them, 9 registers instead of 6 measured no faster:
+docs/design/compproofD.md). -/
+def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi]
 
-/-- The argument registers: a call with at most 9 arguments passes argument `i` in
+/-- The argument registers: a call with at most 6 arguments passes argument `i` in
 `argRegs[i]`; more go through memory at `rsi`. -/
 def argRegs : List Reg64 := allocRegs
 
@@ -734,7 +735,7 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .gset _ e => Expr.uses w acc e
   | _ => acc
 
-/-- The most used locals of a leaf function with at most 9 parameters, in registers: a parameter
+/-- The most used locals of a leaf function with at most 6 parameters, in registers: a parameter
 keeps its argument register, the other locals take the remaining registers (those that are not
 result registers first: fewer conflicts at a `return`). -/
 def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
@@ -746,7 +747,7 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
     (fun x y => u[x]! > u[y]! || (u[x]! == u[y]! && x ≤ y))
   let chosen := ranked.take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
-  let free := [Reg64.rbx, .r12, .r13, .rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
+  let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
     allocRegs.contains r && !ps.any (·.2 == r)
   ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
 
@@ -762,7 +763,7 @@ def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
   nodupB (al.map (·.2)) && nodupB (al.map (·.1)) && (al.isEmpty || decide (np ≤ argRegs.length))
 
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
-return address, and the arguments are in `argRegs` (at most 9) or at `rsi`. It sets its first
+return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It sets its first
 `Stmt.nret fd.body` results; `t` holds every function's count (`Prog.nrt`), for the call sites.
 A leaf that keeps every local in a register and needs no temporaries has no frame (and no stack
 check). -/
@@ -798,7 +799,6 @@ def loadArgs (tab : Tab) : Nat → List Reg64 → Program
 def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
   [.label enterL,
    i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)),
-   i64 (.push (oR .rbx)), i64 (.push (oR .r12)), i64 (.push (oR .r13)),
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
    i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
@@ -808,7 +808,6 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
    .label errorL, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
-   i64 (.pop (.reg (rr .r13))), i64 (.pop (.reg (rr .r12))), i64 (.pop (.reg (rr .rbx))),
    i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
    i64 .ret,
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++

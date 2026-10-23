@@ -126,7 +126,7 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
 theorem allocRegs_ne {r : Reg64} (h : r ∈ allocRegs) :
     r ≠ .rax ∧ r ≠ .rcx ∧ r ≠ .rdx ∧ r ≠ .rsp ∧ r ≠ .rbp ∧ r ≠ .r14 ∧ r ≠ .r15 := by
   simp only [allocRegs, List.mem_cons, List.not_mem_nil, or_false] at h
-  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> simp
 
 /-- The allocation of `ctx` is one the proof can use (`allocOk`, checked by `compileFn`). -/
 structure AllocOk (ctx : Ctx) : Prop where

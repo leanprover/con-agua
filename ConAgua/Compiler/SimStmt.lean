@@ -195,7 +195,7 @@ theorem set64_alloc_fields {R : Reg64s} {r : Reg64} (hr : r ∈ allocRegs) (v : 
     (R.set64 r v).rsp = R.rsp ∧ (R.set64 r v).rbp = R.rbp ∧ (R.set64 r v).r14 = R.r14 ∧
     (R.set64 r v).r15 = R.r15 := by
   simp only [allocRegs, List.mem_cons, List.not_mem_nil, or_false] at hr
-  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
+  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
 omit hG in
 /-- A write of a local kept in a register. -/
