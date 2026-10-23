@@ -55,12 +55,12 @@ theorem hoistRulesGo_ok (n : Nat) :
   sorry
 
 /-- The block members `cs` are the constant records the pointers `DIND[o + q ‥ o + c)` point to
-(`decCIs` below some `t` at most the pool's top, as `IndDeclAt`), none of them a projection table
-(a parsed block has none). -/
+(`decCIs` below some `t` at most the pool's top, as `IndDeclAt`; the offset not `0`, the pool's
+top, which `trunc` clears), none of them a projection table (a parsed block has none). -/
 def BlockAt (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
   (∃ t, t ≤ ((m.arr64 DLP)[0]?.getD 0).toNat ∧
     decCIs (trunc (m.arr64 DLP) t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
-  o.toNat + c.toNat < 2 ^ 63 ∧ q ≤ c ∧ ∀ ci ∈ cs, ci.isTowerEntry = false
+  o.toNat + c.toNat < 2 ^ 63 ∧ o.toNat ≠ 0 ∧ q ≤ c ∧ ∀ ci ∈ cs, ci.isTowerEntry = false
 
 /-- **`hoist_block_go` refines `usedConstsBlock`.** -/
 theorem hoistBlockGo_ok (n : Nat) :
