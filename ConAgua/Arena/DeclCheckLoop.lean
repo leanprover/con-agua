@@ -83,11 +83,12 @@ def ArmSpec (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
     LoopR pins dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
       (AM.res (checkDecl V pins fe d) a₀) pend ds; ⊤⦄
 
-/-- `check_decl_axiom` (`DeclArmAxiom.lean`). -/
+/-- `check_decl_axiom` (`DeclArmAxiom.lean`). Open: `dn` reading `Quot`'s `u` back from the twin's
+store (`NamesDn dn a₀ quotNames`, for the quotient block's reader; lane `loopt2`'s `TwinOK`). -/
 theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) :
     ArmSpec pins dn ds p "check_decl_axiom" (.axiomDecl cv) :=
   fun n s₀ a₀ vis fe pend i hi hd hok hR =>
-    checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hok hR
+    checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hok sorry hR
 
 /-- `check_decl_defn` (`DeclArmDefn.lean`; through the gates' specs, `DefnProg`, a field of
 `CheckDeclProg`). -/
@@ -106,11 +107,12 @@ theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : ICons
   fun n s₀ a₀ vis fe pend i hi hd _ hR =>
     checkDeclOpaque_loop' hP.arm hP.val hP.crp hP.op pins dn hdn ds n s₀ a₀ vis fe pend i cv v hi hd hR
 
-/-- `check_decl_quot` (`DeclArmQuot.lean`). -/
+/-- `check_decl_quot` (`DeclArmQuot.lean`). Open: `NamesDn dn a₀ quotNames` (as
+`checkDeclAxiom_loop`) and the declaration's constant value denoting in the twin's store. -/
 theorem checkDeclQuot_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (k : ConLeche.QuotKind)
     (cv : IConstantVal) : ArmSpec pins dn ds p "check_decl_quot" (.quotDecl k cv) :=
   fun n s₀ a₀ vis fe pend i hi hd hok hR =>
-    checkDeclQuot_loop' hP.arm hP.val.rcp hP.quot pins dn hdn ds n s₀ a₀ vis fe pend i k cv hi hd hok hR
+    checkDeclQuot_loop' hP.arm hP.val.rcp hP.quot pins dn hdn ds n s₀ a₀ vis fe pend i k cv hi hd hok sorry sorry hR
 
 end pending
 
