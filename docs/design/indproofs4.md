@@ -128,3 +128,34 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
   (`IndPosSpec2`: every stored `ctorInfo` has `nPc + nF < 2^64`). If `FoldOK` implies them, a
   pointer to the lemma suffices; otherwise please add them (`CtorSums` could later go away with an
   L wrap guard in `nest_ctor_entry_strip`).
+
+## Helper `indproofs4-grc`: `genRecCheck`
+
+`genRecCheck_refines` (`IndInstallSpec41`, census: proven locally) replaces the pending contract
+`genRecCheck_pending` (deleted); `checkBlockRec_refines` now goes through it (moved from
+`IndInstallSpec21` to `IndInstallSpec41`; `IndInstallSpec31` imports it).
+
+* **L fixes in `RecGen.lean`** (no deviation rows: the twin's behaviour): `gen_rec_check_prep`
+  tested the large flag with `== 1`, the twin (and `decBS`) with `!= 0`; `gen_rec_check_minor_ok`
+  summed the constructor counts mod `2^64` (now `return 0` past `2^64`, above every slot count).
+* Files: `IndInstallSpec38` (the loops `gen_rec_check_former_tys`, `_former_tys_c`, `_minor_ok`;
+  helper fork), `39` (`gen_rec_check_pop_all`, `struct_elim_level` under `StageR` with the handle
+  bound, and the **stub contract `blockLargeElimAllowed_spec`** (`sorry`: true of the real function,
+  which stores nothing — its closure is checked to have an empty write set; the twin reads the level
+  back, `StageT`)), `40` (`gen_rec_check_prep`'s model: right-nested suffix blocks `grpB`, `grpC`,
+  `grpS2`, `grpS2b`, `grpS3`, `grpD`, one `vcgen` each; the flat 25-call body timed out at 4M
+  heartbeats; middle blocks change the `seq` association, suffixes do not), `41` (the twin cut into
+  continuation-passing parts `grcTwinA…R`, `genRecCheck_split` by `rfl`; the sims; the glue).
+* `RecGenSpec28`'s `CnsRec` carries its source class pointer (`CnsSrc`), so that `ClassesLp`
+  passes through `classes_nfs` (`classesNfs_refinesLp`).
+* New hypotheses: `genRecCheck_refines`/`checkBlockRec_refines`: `RecsB` (the shape's recursor
+  slice below the top, also when empty), `ClassesLp` (`classes_ctors`' own), `bs.nP < 2^63`, IW
+  size `< 2^63`, `RcMR`, `GrcProg p`, `closedA p rcFreeA rcFreeC fsR` (`target_rec_pins`,
+  `class_stream_recs`). `checkBlockTail_refines`: the same on the pass record (`RecsB`/`ClassesLp`
+  at its words 3, 15/16, the shape's nP word), `RcMR`, the size, `closedA … rcFree` with
+  `tailRcCallees`. `checkBlock_refines`: `∃ taMR`, `RecsB`, `ShapeLp` (the members' constructors'
+  level-parameter slices in `EREC`), `bs.nP < 2^63`, the size, `closedA p taFreeA taFreeC fsT`
+  (`block_raw_rec`, `check_block_pass`), `closedA … rcFree`, and the **pending program fact
+  `PassGrcOK p`** (the pass's record satisfies the tail's three record conditions given the input's:
+  to be discharged from the pass's refinement). The `closedA` facts were checked by `#eval` on
+  `checkerProg` (empty violation lists); the decided theorems are not written.
