@@ -55,8 +55,8 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (s8 s64 : List Nat) (a : AState) :
     RelSpec checkerProg "builtin_prelude" (fun m => R3 (loadMem b pb s8 s64) m pb a) fun _ m =>
       ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ R4 (loadMem b pb s8 s64) m pb pre a' := by
-  intro n s₀ h3
-  refine triple_post (triple_and (triple_and (builtinPrelude_checker h64 a n s₀)
+  intro n _hn s₀ h3
+  refine triple_post (triple_and (triple_and (builtinPrelude_checker h64 a n _hn s₀)
     (stage_since n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀))
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
@@ -98,7 +98,7 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
     RelSpec checkerProg "front_run" (fun m => R4 (loadMem b pb s8 s64) m pb pre a) fun r m =>
       r.headD 0 = 0 → ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧
         R5 (loadMem b pb s8 s64) m pb pre rc a' := by
-  intro n s₀ h4
+  intro n _hn s₀ h4
   have hc := CapsOK.keep h4.since.keep h4.since.caps
   have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb s8 s64
   refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm hc.pool
@@ -155,7 +155,7 @@ theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : Prelu
     (rc : ParseResultD) (a : AState) :
     RelSpec checkerProg "prepare_prelude" (fun m => R5 (loadMem b pb s8 s64) m pb pre rc a) fun _ m =>
       ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ R6 (loadMem b pb s8 s64) m pb ds a' := by
-  intro n s₀ h5
+  intro n _hn s₀ h5
   have hc := CapsOK.keep h5.since.keep h5.since.caps
   have hctl : 256 ≤ (s₀.mem.arr64 CTL).size := hc.2.1
   have hI : L.Ind.IWOK s₀.mem := by
@@ -232,7 +232,7 @@ theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size 
     RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb s8 s64) m pb ds a) fun _ m =>
       ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧
         R7 (loadMem b pb s8 s64) m pb ds ipins a' := by
-  intro n s₀ h6
+  intro n _hn s₀ h6
   have hc := CapsOK.keep h6.since.keep h6.since.caps
   obtain ⟨hok, hoff, hpins, hpp⟩ := prefix4_facts hpx
   have hbs : s₀.mem.arr8 PB = pb.data.toList.toArray := by

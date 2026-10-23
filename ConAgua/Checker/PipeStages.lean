@@ -109,7 +109,7 @@ theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : Keep
 theorem capStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hs : ∀ n ∈ s64, n < 2 ^ 64) :
     RelSpec checkerProg "cap_check" (· = loadMem b pb s8 s64)
       fun _ m => R1 (loadMem b pb s8 s64) m := by
-  intro n s₀ hm
+  intro n _hn s₀ hm
   refine triple_post (capCheck_spec checkerProg checkerProg_capCheck n s₀
     (hm ▸ loadMem_wordsFit b pb s8 s64 hs)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, ?_⟩
   · rw [h2, hm]
@@ -118,7 +118,7 @@ theorem capStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hs : ∀ n ∈ 
 theorem pbStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63) :
     RelSpec checkerProg "pb_check" (R1 (loadMem b pb s8 s64))
       fun _ m => R2 (loadMem b pb s8 s64) m pb := by
-  intro n s₀ ⟨hm, hc⟩
+  intro n _hn s₀ ⟨hm, hc⟩
   refine triple_post (checkerProg_pbCheck_PB pb.data.toList (by simpa [RomOK] using hpb) n s₀
     (by rw [hm]; exact loadMem_pb b pb s8 s64)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
   rw [h2, hm]
@@ -147,7 +147,7 @@ theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size <
     RelSpec checkerProg "intern_reserved_pins" (fun m => R2 (loadMem b pb s8 s64) m pb)
       fun _ m => ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧
         R3 (loadMem b pb s8 s64) m pb a' := by
-  intro n s₀ ⟨hm, hc, hpre⟩
+  intro n _hn s₀ ⟨hm, hc, hpre⟩
   have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
     s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb s8 s64)
     (by rw [hm]; exact arenaD_loadMem b pb s8 s64 hc)
