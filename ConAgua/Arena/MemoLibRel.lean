@@ -4,16 +4,20 @@ import ConAgua.Arena.MemoLib
 /-!
 # The memo library's relation: an L memo represents a `Std.HashMap κ ν`
 
-`MemoRG S K dv m mp`: the live slots of memo `S` (stamp `=` the live stamp) hold distinct keys,
-each a valid key (`K.ok`) whose decoding `K.dk` is mapped by `mp` to the slot's value decoded by
-`dv`, and every entry of `mp` sits in a live slot on the run from its encoded key's home slot,
-after live slots (linear probing; a stale stamp is free space). Generic in the schema, the key
-codec `K` (two words per key) and the value decoder `dv`.
+The live slots of memo `S` lie in its **region** (`mbG`, `nG`: named by the header slot `0`, or the
+default region after `clear`). `MemoAt S K VR e b n m f`: the live slots (stamp `e`) of the region
+from slot `b` of `n` slots hold distinct keys, each a valid key (`K.ok`) whose decoding `K.dk` is
+mapped by `f` to a value the slot's word denotes (`VR`), and every entry of `f` sits in a live slot
+on the run from its encoded key's home, after live slots (linear probing; a stale stamp is free
+space). `MemoRV S K VR m mp` is `MemoAt` of the memo's own region and stamp at `mp`'s lookup, plus
+`RegOK`: the region lies in the array, no stamp is above the live one, and no slot above the region
+is live. Generic in the schema, the key codec `K` (two words per key) and the value relation.
 
 The lemmas: a probe hit is `mp`'s entry (`memoRG_hit`), a miss is its absence (`memoRG_miss`),
-`put` after a probe is `insert` (`memoRG_set`), `clear` is `∅` (`memoRG_clear`), other writers leave
-it alone (`memoRG_frame`), and all-zero memory is the empty map (`memoRG_zero`). An instance
-supplies the codec and its one law `ek_dk`; nothing else.
+`put` after a probe is `insert` (`memoRV_set`; a `put` that grows the table moves the live slots into
+a fresh region of twice the size and keeps the map, `memoRV_grow`), `clear` is `∅`
+(`memoRG_clear`), other writers leave it alone (`memoRG_frame`), and all-zero memory is the empty
+map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; nothing else.
 -/
 
 open ConRon.Arena
@@ -895,6 +899,7 @@ variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ
 variable (S : MemoSch) (hS : S.WF) (K : MemoKey κ) (VR : Mem → Word → ν → Prop)
 
 include hS in
+omit [LawfulHashable κ] in
 theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
     (hR : MemoRV S K VR m₀ mp) (hn0 : 0 < nG S m₀) (nb nn : Word)
     (hnb : nb.toNat = (mbG S m₀).toNat + (nG S m₀).toNat) (hnn : nn.toNat = 2 * (nG S m₀).toNat)
@@ -967,9 +972,9 @@ theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
         have hW := memoAt_write S K VR (epG S m₀) nb nn hnbov m _ _ hIA hV₁ (mk1G S m i)
           (mk2G S m i) (mvG S m i) (by rw [o2, o3]; exact hk) v (by rw [o4]; exact hV₀ _ _ hvr)
           rs hsl.1 hok
-          (fun j hj => by rw [(rd j (hsl' j hj)).1]; simp [hsl.2])
-          (fun j hj => by rw [(rd j (hsl' j hj)).2.1]; simp [hsl.2])
-          (fun j hj => by rw [(rd j (hsl' j hj)).2.2.1]; simp [hsl.2])
+          (fun j hj => by rw [(rd j (hsl' j hj)).1]; simp only [hsl.2, and_true])
+          (fun j hj => by rw [(rd j (hsl' j hj)).2.1]; simp only [hsl.2, and_true])
+          (fun j hj => by rw [(rd j (hsl' j hj)).2.2.1]; simp only [hsl.2, and_true])
           (fun j hj => by rw [(rd j (hsl' j hj)).2.2.2])
         refine ih (i + 1) (c + 1) _ m' c' (by omega) (by omega) (by omega) ⟨hIf.trans hf4,
           fun j hj ho => ?_, fun j hj => ?_, ?_⟩ h
@@ -994,8 +999,8 @@ theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
               have hp : RPres S K m₀ (epG S m₀) (mbG S m₀) (i + 1) z :=
                 ⟨i, hbi, by omega, hlv.1, hlv.2, by rw [← o2, ← o3]; exact hz'⟩
               simp only [hz, ↓reduceIte, hp]
-              rw [← hz', ← o2, ← o3] at hv ⊢
-              rw [hv]
+              simp only at hv
+              rw [← hz', o2, o3]; exact hv.symm
             · simp only [hz, Bool.false_eq_true, ↓reduceIte]
               have : RPres S K m₀ (epG S m₀) (mbG S m₀) (i + 1) z ↔
                   RPres S K m₀ (epG S m₀) (mbG S m₀) i z := by
@@ -1007,7 +1012,11 @@ theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
                   · have : j = i := UInt64.toNat_inj.mp h2
                     subst this; rw [o2, o3] at hz; exact absurd (beq_iff_eq.mpr h5) hz
                 · rintro ⟨j, h1, h2, h3, h4, h5⟩; exact ⟨j, h1, by omega, h3, h4, h5⟩
-              simp only [this]
+              by_cases hp : RPres S K m₀ (epG S m₀) (mbG S m₀) i z
+              · have hp' := this.mpr hp
+                simp only [hp, hp', ↓reduceIte]
+              · have hp' : ¬ RPres S K m₀ (epG S m₀) (mbG S m₀) (i + 1) z := fun h => hp (this.mp h)
+                simp only [hp, hp', ↓reduceIte]
           rw [← hfe]; exact hW
       · simp at h
     · rename_i hlv
@@ -1025,7 +1034,11 @@ theorem mrehash_inv (hVS : VStable S VR) (m₀ : Mem) (mp : Std.HashMap κ ν)
             · have : j = i := UInt64.toNat_inj.mp h2
               subst this; exact absurd ⟨h3, h4⟩ hlv
           · rintro ⟨j, h1, h2, h3, h4, h5⟩; exact ⟨j, h1, by omega, h3, h4, h5⟩
-        simp only [this]
+        by_cases hp : RPres S K m₀ (epG S m₀) (mbG S m₀) i z
+        · have hp' := this.mpr hp
+          simp only [hp, hp', ↓reduceIte]
+        · have hp' : ¬ RPres S K m₀ (epG S m₀) (mbG S m₀) (i + 1) z := fun h => hp (this.mp h)
+          simp only [hp, hp', ↓reduceIte]
       refine ih (i + 1) c m m' c' (by omega) (by omega) (by omega) ⟨hIf, hIo, hIs, ?_⟩ h
       rw [← hfe]; exact hIA
 
@@ -1105,18 +1118,18 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
   have hm's : slotsG S m' = slotsG S m := slotsG_frame S hIf
   have hz0 : 0 < (m'.arr64 S.arr).size := by
     have : 1 ≤ slotsG S m' := by rw [hm's]; omega
-    simp only [slotsG, len64_eq] at this; have := (m'.arr64 S.arr).size.mod_le (2 ^ 64); omega
+    rw [slotsG_toNat] at this; have := (m'.arr64 S.arr).size.mod_le (2 ^ 64); omega
   have hz2 : 2 < (m'.arr64 S.arr).size := by
     have : 1 ≤ slotsG S m' := by rw [hm's]; omega
-    simp only [slotsG, len64_eq] at this; have := (m'.arr64 S.arr).size.mod_le (2 ^ 64); omega
+    rw [slotsG_toNat] at this; have := (m'.arr64 S.arr).size.mod_le (2 ^ 64); omega
   have hctl' : S.cs.toNat + 2 ≤ (m'.arr64 CTL).size := by rw [hIf.2.2.1]; exact hctl
   have hcs1 : (S.cs + 1).toNat < (m'.arr64 CTL).size := by
     have := hS.cs; rw [UInt64.toNat_add]; simp; omega
   have hcs : S.cs ≠ S.cs + 1 := by intro h; have := hS.cs; grind
   generalize hM : (((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)).set64 S.arr 2
-    (nG S m * 2)).set64 CTL (S.cs + 1) c' = m₁
-  have harr : m₁.arr64 S.arr = ((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)).set64
-      S.arr 2 (nG S m * 2) |>.arr64 S.arr := by rw [← hM, Mem.arr64_set64_ne _ _ _ _ _ hac]
+    (nG S m * 2)).set64 CTL (S.cs + 1) c' = m₁ at hf₁ ⊢
+  have harr : m₁.arr64 S.arr = (((m'.set64 S.arr 0 (epG S m)).set64 S.arr 1 (mbG S m + nG S m)).set64
+      S.arr 2 (nG S m * 2)).arr64 S.arr := by rw [← hM, Mem.arr64_set64_ne _ _ _ _ _ hac]
   have hh : ∀ f : Word, rdW (m₁.arr64 S.arr) f =
       if f = 2 then nG S m * 2 else if f = 1 then mbG S m + nG S m else if f = 0 then epG S m
       else rdW (m'.arr64 S.arr) f := by
@@ -1126,7 +1139,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     by_cases f2 : f = 2
     · subst f2; simp [hz2]
     by_cases f1 : f = 1
-    · subst f1; simp [show (1 : Word).toNat < (m'.arr64 S.arr).size by simp; omega]
+    · subst f1; simp [show 1 < (m'.arr64 S.arr).size by omega]
     by_cases f0 : f = 0
     · subst f0; simp [hz0]
     simp [Ne.symm f2, Ne.symm f1, Ne.symm f0, f2, f1, f0]
@@ -1140,7 +1153,9 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
   have hs₁ : slotsG S m₁ = slotsG S m := by
     rw [← hm's, ← hM]; simp only [slotsG_set64]
   have hc₁ : cntG S m₁ = c' := by
-    simp only [cntG]; rw [← hM, rdW_set64]; simp [hcs1]
+    simp only [cntG]; rw [← hM, rdW_set64]
+    simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hac), size_set64]; simp
+    intro h; have := hS.cs; omega
   -- slots `j ≥ 1` of `m₁` are those of `m'`
   have hsj : ∀ j : Word, j.toNat < slotsG S m → 1 ≤ j.toNat →
       mstG S m₁ j = mstG S m' j ∧ mk1G S m₁ j = mk1G S m' j ∧ mk2G S m₁ j = mk2G S m' j ∧
@@ -1182,9 +1197,10 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     exact hreg.2.2.1 j (by omega) hj2
   · rw [hh]; simp [hep₁]
   · rw [hep₁, hb₁, hn₁]
-    exact memoAt_congr S K VR _ _ _ (UInt64.lt_iff_toNat_lt.mpr (by rw [hnn]; simp; omega))
+    have := UInt64.lt_iff_toNat_lt.mp hn0
+    exact memoAt_congr S K VR _ _ _ (UInt64.lt_iff_toNat_lt.mpr (by rw [hnn]; simp at this ⊢; omega))
       (by rw [hnb, hnn]; omega) m' m₁ _ hIA hV' (fun j hj =>
-        hsj j (by have := hj.2; rw [hnb, hnn] at this; omega) (by have := hj.1; rw [hnb] at this; omega))
+        hsj j (by have := hj.2; omega) (by have := hj.1; omega))
 
 include hS in
 /-- **`find; put` is `insert`**, of a value the written word denotes. -/
@@ -1220,6 +1236,7 @@ theorem memoRV_set (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν) (hR :
     exact memoRV_putNG S hS K VR hVS m mp hR k1 k2 w hk x hx hne
 
 include hS in
+omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **`clear` is `∅`.** -/
 theorem memoRV_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp)
     (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRV S K VR (mclearG S m) ∅ := by
@@ -1284,6 +1301,8 @@ theorem memoRV_zero (m : Mem) (hz : ∀ b x, rdW (m.arr64 b) x = 0)
 
 /-! ### Erase -/
 
+include hS in
+omit [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ] in
 theorem meraseG_frame (m : Mem) (s : Word) : MemFrame [S.arr] [] m (meraseG S m s) :=
   MemFrame.set64 m S.arr hS.arr_ctl _ _
 
@@ -1311,7 +1330,7 @@ theorem memoRV_erase (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     (by simp only [meraseG, size_set64])
   have rd := fun j (hj : j.toNat < slotsG S m) => slot_set S m s 1 TOMB hsn (by decide) j hj
   have r3 : ∀ j, j.toNat < slotsG S m → mstG S (meraseG S m s) j = mstG S m j := fun j hj => by
-    simpa using (rd j hj).1
+    simpa [meraseG] using (rd j hj).1
   have r4 : ∀ j, j.toNat < slotsG S m → mk1G S (meraseG S m s) j =
       if j = s then TOMB else mk1G S m j := fun j hj => by
     have := (rd j hj).2.1; simp only [meraseG, and_true] at this ⊢; rw [this]
@@ -1319,9 +1338,9 @@ theorem memoRV_erase (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     · subst h; simp
     · simp [h, Ne.symm h]
   have r4' : ∀ j, j.toNat < slotsG S m → mk2G S (meraseG S m s) j = mk2G S m j := fun j hj => by
-    simpa using (rd j hj).2.2.1
+    simpa [meraseG] using (rd j hj).2.2.1
   have r5 : ∀ j, j.toNat < slotsG S m → mvG S (meraseG S m s) j = mvG S m j := fun j hj => by
-    simpa using (rd j hj).2.2.2
+    simpa [meraseG] using (rd j hj).2.2.2
   have hsl : ∀ j, InReg (mbG S m) (nG S m) j → j.toNat < slotsG S m := fun j hj => by
     have := hj.2; omega
   have hdk := K.ek_dk k1 k2 hk
@@ -1366,6 +1385,7 @@ theorem memoRV_erase (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     simp only [hjs', ↓reduceIte] at hkk
     exact huniq j j' hj hj' hl hl' ht hkk hkk'
   · intro x v hx
+    simp only at hx
     rw [Std.HashMap.getElem?_erase] at hx
     by_cases hxk : (K.dk k1 k2 == x) = true
     · simp [hxk] at hx
@@ -1397,6 +1417,7 @@ theorem memoRG_set (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp) 
   memoRV_set S hS K _ (vstable_eq S dv) m mp hR k1 k2 v hk _ rfl m' h
 
 include hS in
+omit [LawfulBEq κ] [LawfulHashable κ] in
 theorem memoRG_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp)
     (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRG S K dv (mclearG S m) ∅ :=
   memoRV_clear S hS K _ m mp hR hw
