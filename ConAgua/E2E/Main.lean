@@ -49,9 +49,7 @@ def asmMain (prog entry out : String) : IO UInt32 := do
   unless Prog.wf tab p do
     IO.eprintln "Prog.wf fails"
     return 1
-  -- experiments: `CA_ABI_SLOT_WORDS` overrides the slot tables' length (`abiSlotTableWords`)
-  let sw := ((← IO.getEnv "CA_ABI_SLOT_WORDS").bind String.toNat?).getD abiSlotTableWords
-  let txt := asmTextAbi tab (abiWords p sw) (compileProg tab p entry) ++
+  let txt := asmTextAbi tab (compileProg tab p entry) ++
     s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_diag\nca_nw: .quad {nw + 1}\nca_nb: .quad {nb}\nca_diag: .quad {diag}\n"
   IO.FS.writeFile out txt
   IO.println s!"nw {nw + 1} nb {nb} diag {diag} fns {p.length}"

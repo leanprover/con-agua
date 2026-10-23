@@ -12,6 +12,6 @@ open L.Compiler L.Checker
 
 def main (args : List String) : IO Unit := do
   let out := args.headD "checker.s"
-  IO.FS.writeFile out (asmTextAbi checkerTab (abiWords checkerProg) checkerAsm ++
+  IO.FS.writeFile out (asmTextAbi checkerTab checkerAsm ++
     s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_diag\nca_nw: .quad {checkerTab.nw}\nca_nb: .quad {checkerTab.nb}\nca_diag: .quad -1\n")
   IO.println s!"wrote {out}: {checkerAsm.length} directives, nb {checkerTab.nb}, nw {checkerTab.nw}"

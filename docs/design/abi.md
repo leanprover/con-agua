@@ -105,3 +105,7 @@ early `error` is accepted (nobody accepts it); `scripts/e2e.py` classifies L mem
 reference memout as `agree-memout` (passing, like `agree-timeout`). Proof after compproofD (its
 trampoline loads ≤ 6 entry arguments into `rdi r8 r9 r10 r11 rsi`; the stub relies on no register
 across the call).
+
+**Landed with slotgrow (2026-10-23).** slotgrow is on master (7d42fede); the hash-table
+workaround (`halfLen`, `abiSlotTableWords`, `CA_ABI_SLOT_WORDS`) is deleted: every word array gets
+`abiWords = 2^32` words.
