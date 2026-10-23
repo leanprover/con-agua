@@ -556,18 +556,6 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
 theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
     (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
 
-theorem eViewW_head1 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 1) :
-    (eViewW m w).headD 0 = 1 := by
-  unfold eViewW at hne ⊢
-  simp (config := {decide := true}) only [hg, ite_true, ite_false] at hne ⊢
-  by_cases c1 : 4294967295 < w
-  · simp [c1] at hne
-  by_cases c2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [c1, c2] at hne
-  by_cases c3 : rdW (m.arr64 CTL) (26 + tierW w) ≤ idxW w
-  · simp [c1, c2, c3] at hne
-  simp [c1, c2, c3]
-
 theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (e : Word) (he : H e) (r : List Word) (h : fvarHeadW m e = some (r, m'))
     (hS : StageR dn vis fe m a) :

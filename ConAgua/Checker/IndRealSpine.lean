@@ -1,5 +1,6 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.IndRealSpine
+import ConAgua.Checker.IndRealFvt
 
 /-!
 # The spine adapters' program bundle for the checker's program (lane `indproofs4`, helper `spine`)
@@ -16,6 +17,6 @@ set_option maxRecDepth 100000 in
 theorem checkerProg_ad : AdF checkerProg :=
   ⟨.cons rfl <| .cons rfl .nil, .cons rfl <| .cons rfl .nil,
     .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <|
-    .cons rfl .nil⟩
+    .cons rfl .nil, checkerProg_gaa, checkerProg_ftd, checkerProg_ftds⟩
 
 end L.Checker
