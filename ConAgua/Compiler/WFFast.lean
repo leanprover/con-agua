@@ -21,12 +21,8 @@ literals with GMP. `Prog.wf_of_wfFast` turns the check into `Prog.wf`:
 
 namespace L.Compiler
 
-/-! ## Names as numbers -/
+/-! ## Names as numbers (`nameCode`, in `Compile.lean`) -/
 
-/-- Bijective base-257 numeration of a byte list (digits `1..256`, least significant first). -/
-def bytesCode : List UInt8 → Nat
-  | [] => 0
-  | b :: l => (b.toNat + 1) + 257 * bytesCode l
 
 theorem bytesCode_inj : ∀ {a b : List UInt8}, bytesCode a = bytesCode b → a = b
   | [], [], _ => rfl
@@ -39,8 +35,6 @@ theorem bytesCode_inj : ∀ {a b : List UInt8}, bytesCode a = bytesCode b → a 
     have h2 : bytesCode l = bytesCode l' := by omega
     rw [UInt8.toNat_inj.mp h1, bytesCode_inj h2]
 
-/-- A function name as a number. -/
-def nameCode (s : String) : Nat := bytesCode s.toByteArray.data.toList
 
 theorem nameCode_inj {a b : String} (h : nameCode a = nameCode b) : a = b := by
   have h := bytesCode_inj h
@@ -49,24 +43,8 @@ theorem nameCode_inj {a b : String} (h : nameCode a = nameCode b) : a = b := by
   rw [ha, hb] at h
   simp_all [Array.toList_inj]
 
-/-! ## A search tree of names -/
+/-! ## A search tree of names (`NTree`, in `Compile.lean`) -/
 
-/-- Binary search tree: name code ↦ parameter count. -/
-inductive NTree where
-  | leaf
-  | node (l : NTree) (k v : Nat) (r : NTree)
-
-def NTree.find (k : Nat) : NTree → Option Nat
-  | .leaf => none
-  | .node l k' v r => if k < k' then find k l else if k = k' then some v else find k r
-
-/-- Insert `k ↦ v`; `none` if `k` is there already. -/
-def NTree.insert (k v : Nat) : NTree → Option NTree
-  | .leaf => some (.node .leaf k v .leaf)
-  | .node l k' v' r =>
-    if k < k' then (insert k v l).map (.node · k' v' r)
-    else if k = k' then none
-    else (insert k v r).map (.node l k' v' ·)
 
 theorem NTree.find_insert {k v : Nat} : ∀ {t t' : NTree}, t.insert k v = some t' →
     t.find k = none ∧ ∀ k', t'.find k' = if k' = k then some v else t.find k'
