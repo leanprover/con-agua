@@ -143,16 +143,14 @@ theorem ShapeLp.grow {m m' : Mem} {p0 : Word} {bs : BlockShape} (h : ShapeLp m p
 `ConsRecsTFSim` was: to be discharged from the pass's refinement, whose shape copies the input's
 recursor slice and parameter count, and whose classes' constructor records are the input members').
 From an input shape whose recursor slice lies below the top (`RecsB`), whose members' constructors'
-level-parameter slices lie in `EREC` (`ShapeLp`) and whose parameter count is below `2^63`, the
-record's shape's recursor slice lies below the top, its classes' constructors' level-parameter
-slices lie in `EREC`, and its shape's parameter count is below `2^63`. -/
+level-parameter slices lie in `EREC` (`ShapeLp`), the record's shape's recursor slice lies below the top, its classes' constructors' level-parameter
+slices lie in `EREC`. -/
 def PassGrcOK (p : Prog) : Prop :=
   ∀ (n : Nat) (vis p0 isRec : Word) (m m' : Mem) (r : List Word),
     callW p n "check_block_pass" [vis, p0, isRec] m = some (r, m') →
-    RecsB m p0 → ShapeLp m p0 → (∀ v, iwN m (p0.toNat + 4) = some v → v < 2 ^ 63) →
+    RecsB m p0 → ShapeLp m p0 →
     RecsB m' (rdW (m'.arr64 IW) (r.headD 0 + 3)) ∧
-    ClassesLp m' (rdW (m'.arr64 IW) (r.headD 0 + 15)) (rdW (m'.arr64 IW) (r.headD 0 + 16)) ∧
-    (∀ v, iwN m' ((rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat + 4) = some v → v < 2 ^ 63)
+    ClassesLp m' (rdW (m'.arr64 IW) (r.headD 0 + 15)) (rdW (m'.arr64 IW) (r.headD 0 + 16))
 
 /-- The callees of `check_block` before the tail that keep `target_abs`' memo by their text. -/
 def blockTaCallees : List FnName := ["block_raw_rec", "check_block_pass"]
@@ -172,8 +170,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hv : AllVis fe) (hcs : CtorSums fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp) (hA : AbsOK m)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
-    (hta : ∃ mp, taMR m mp) (hrb : RecsB m p0) (hlp : ShapeLp m p0) (hnP : bs.nP < 2 ^ 63)
-    (hsz : (m.arr64 IW).size < 2 ^ 63) :
+    (hta : ∃ mp, taMR m mp) (hrb : RecsB m p0) (hlp : ShapeLp m p0) :
     Sim (icbW p (n + 4) m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
   intro r m' h
@@ -373,13 +370,8 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   subst hs8
   have hg18 := hg17.trans hg8
   have hta8 := taMR.ofClosed hclT (hfT _ (by decide)) c8 hta7
-  have hk8 := hk7.trans (callW_keepW c8)
-  have hq0 : decBS (truncM m) p0.toNat = some bs := hq
-  obtain ⟨-, -, hnpw, -⟩ := decBS_some hq0
-  obtain ⟨hnpt, hnpm⟩ := rec2IwN_trunc hnpw
-  obtain ⟨hrb8, hlp8, hnP8⟩ := hgp (n + 4) vis p0 _ s7.mem s8.mem r8 c8 (hrb.grow hg17 (by omega))
-    (hlp.grow hq hsrc hg17 hk7 (by omega))
-    (fun v hv => by rw [iwN_grow hg17 hnpt, hnpm] at hv; cases hv; omega)
+  obtain ⟨hrb8, hlp8⟩ := hgp (n + 4) vis p0 _ s7.mem s8.mem r8 c8 (hrb.grow hg17 (by omega))
+    (hlp.grow hq hsrc hg17 hk7 hS.2.2.2.1)
   -- the tail
   cases c9 : callW p (n + 4) "check_block_tail" [bO, bL, r8.headD 0] s8.mem with
   | none => rw [c9] at h; cases h
@@ -390,8 +382,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
     (checkBlockTail_refines hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hS8 hBP8
-      (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8 hnP8
-      (by rw [hk8 IW]; exact hsz)) c9
+      (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8) c9
   simp only at hs9 hS9 hg9 hM9 hA9
   subst hs9
   have hrun9 := AM.run_of_ok _ _ hok9
@@ -405,8 +396,7 @@ the block's shape decoded below the tops (`ShapeSrc`, `ShapeCV`), the raw block 
 unrestricted environment whose stored constructors' sums are words, and the walk memos
 (`PosMR`, the `mentions_any` memo, `target_abs`' memo) well formed, and what the recursor stage
 needs of the input shape (its recursor slice below the top, its members' constructors'
-level-parameter slices in `EREC`: `ShapeLp`, its parameter count and the pool's size below
-`2^63`): the stage relation at the returned view of the twin's environment, the pools grown, the
+level-parameter slices in `EREC`: `ShapeLp`): the stage relation at the returned view of the twin's environment, the pools grown, the
 `hb` memo kept. Program facts: the lookups (`CbProg`), the write sets (`hcl`, `hcl2`, `hclR`,
 `hclT`) and the pending fact `PassGrcOK p` (what the recursor stage needs of the pass's record). -/
 @[refines ConRon.Arena.checkBlock]
@@ -425,8 +415,7 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) (hA : AbsOK s₀.mem)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec") (hta : ∃ mp, taMR s₀.mem mp)
-    (hrb : RecsB s₀.mem p0) (hlp : ShapeLp s₀.mem p0) (hnP : bs.nP < 2 ^ 63)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 63) :
+    (hrb : RecsB s₀.mem p0) (hlp : ShapeLp s₀.mem p0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "check_block" [vis, bO, bL, p0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
@@ -434,7 +423,7 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hgp n hn hS hq hsrc hcx hblk hv
-      hcs hPm hma hA hkp hkt hkr hta hrb hlp hnP hsz) hm
+      hcs hPm hma hA hkp hkt hkr hta hrb hlp) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind

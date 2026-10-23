@@ -126,6 +126,9 @@ def genRecCheckPrep' : FunDecl := lfn
     locals
     (r, cvRisOff, cvRisLen, nb, allowed, ftOff, ftLen, ms2Off, ms2Len, ctorsOff, ctorsLen, minorOk,
      ftcOff, ftcLen, elim, g, preOk, preOff, preLen, cvGsOff, cvGsLen) {
+  if len(IW.u64) + 5 < 5 { abort };
+  if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
+  if IW.u64[p + 4] + IW.u64[rd + 1] < IW.u64[p + 4] { abort };
   r := call target_rec_pins(p, blockOff, blockLen);
   (cvRisOff, cvRisLen) := call class_stream_recs(vis, IW.u64[p + 2], IW.u64[p + 3]);
   if IW.u64[p + 1] == 0 { abort };
@@ -175,9 +178,13 @@ def grpK1 (vis pp nested mO mL : Word) : Option (List Word × Mem) → Option (L
   | some (_, m) => grpK2 p n pp nested mO mL
       (callW p n "class_stream_recs" [vis, rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] m)
 
-/-- **The model of `grpA`**: `cvRis.off, cvRis.len`. -/
-def grpAW (m : Mem) (vis pp nested mO mL bO bL : Word) : Option (List Word × Mem) :=
-  grpK1 p n vis pp nested mO mL (callW p n "target_rec_pins" [pp, bO, bL] m)
+/-- **The model of the capacity guards, the pins, the stream and the guards**: `cvRis.off,
+cvRis.len`. -/
+def grpAW (m : Mem) (vis pp nested rd mO mL bO bL : Word) : Option (List Word × Mem) :=
+  if m.len64 IW + 5 < 5 then none
+  else if rdW (m.arr64 IW) (pp + 4) + rdW (m.arr64 IW) (pp + 1) < rdW (m.arr64 IW) (pp + 4) then none
+  else if rdW (m.arr64 IW) (pp + 4) + rdW (m.arr64 IW) (rd + 1) < rdW (m.arr64 IW) (pp + 4) then none
+  else grpK1 p n vis pp nested mO mL (callW p n "target_rec_pins" [pp, bO, bL] m)
 
 /-- After `class_rec_tys_ok`. -/
 def grpC4 (g : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -282,7 +289,7 @@ def grpKA (vis pp pO pL tO tL rd mO mL cO cL : Word) : Option (List Word × Mem)
 
 /-- **The model of `gen_rec_check_prep`** (body fuel `n`). -/
 def grpW (m : Mem) (vis pp nested pO pL tO tL rd mO mL cO cL bO bL : Word) : Option (List Word × Mem) :=
-  grpKA p n vis pp pO pL tO tL rd mO mL cO cL (grpAW p n m vis pp nested mO mL bO bL)
+  grpKA p n vis pp pO pL tO tL rd mO mL cO cL (grpAW p n m vis pp nested rd mO mL bO bL)
 
 end model
 
