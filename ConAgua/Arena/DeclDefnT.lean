@@ -104,9 +104,9 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdfK2_some] at h
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refinesT p hV hq n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
-      (by rw [hq1]; exact hcv1) (by omega)) h2
+  obtain ⟨s2, hs2, -, hok2, hS2, hg2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (checkConstantVal_refinesT p hV hq hap hkp n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
+      (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) (hkp.call (im_mem _ rfl) h1 hCr)) h2
   subst hs2
   have hPS2 := PinSetsR.step hPS1 hg2 (hfr (by decide) h2)
   have hrun2 := AM.run_of_ok _ _ hok2

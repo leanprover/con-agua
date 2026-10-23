@@ -9,7 +9,7 @@ leaves the state as it was: `constsResolveFFast_keepsSt`, lane `tails`' proof wi
 and the L side writes its memo table only (`crfF_frame`: array 155, `CTL[158]`, `CTL[159]`), away
 from the core's memos and the pins, so `TwinOK` and the pin flag are framed. The walk's own memo
 (`CrMemo`, `AbsOK`'s part) is not in `StageT` and is threaded: the caller supplies it, it holds
-after. Meant to replace `IndStubsT.constsResolveFFastT_spec` once the callers' models call `crfF`
+after. Replaced the stub contract `IndStubsT.constsResolveFFastT_spec` (deleted): the callers' models call `crfF`
 and carry `CrMemo` (see the note there).
 -/
 

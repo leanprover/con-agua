@@ -92,24 +92,24 @@ def crgK3 (visR gen : Word) : Option (List Word × Mem) → Option (List Word ×
   | none => none
   | some (r3, m3) => if r3.headD 0 = 0 then none else crgK4 (crfF m3 [visR, gen])
 
-def crgK2 (visR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crgK2 (cR : CallM) (N : Nat) (visR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    crgK3 visR gen (stubM "all_level_params_defined" m2 [r2.headD 0, r2.tail.headD 0, gen])
+    crgK3 visR gen (cR N "all_level_params_defined" [r2.headD 0, r2.tail.headD 0, gen] m2)
 
-def crgK1 (N : Nat) (visR cvR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crgK1 (cR : CallM) (N : Nat) (visR cvR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => if r1.headD 0 ≠ 0 then none else crgK2 visR gen (L.Arena.cvLpsW N m1 cvR)
+  | some (r1, m1) => if r1.headD 0 ≠ 0 then none else crgK2 cR N visR gen (L.Arena.cvLpsW N m1 cvR)
 
-def crgK0 (N : Nat) (visR cvR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crgK0 (cR : CallM) (N : Nat) (visR cvR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r0, m0) =>
-    if r0.headD 0 = 0 then none else crgK1 N visR cvR gen (hffF m0 [CWF, gen])
+    if r0.headD 0 = 0 then none else crgK1 cR N visR cvR gen (hffF m0 [CWF, gen])
 
-/-- **The model of `class_rule_ok_guards`.** -/
-def crgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+/-- **The model of `class_rule_ok_guards`** (`all_level_params_defined` read through `cR`). -/
+def crgW (cR : CallM) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
-  | N + 1, m, visR, cvR, gen => crgK0 N visR cvR gen (lbbF m [CWF, 0, gen])
+  | N + 1, m, visR, cvR, gen => crgK0 cR N visR cvR gen (lbbF m [CWF, 0, gen])
 
 def cruK4 (gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -134,23 +134,23 @@ noncomputable def cruK1 (cR : CallM) (N : Nat) (visT visR n gen : Word) : Option
 /-- **The model of `class_rule_ok`.** -/
 noncomputable def cruleW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | N + 1, m, visT, visR, cvR, n, gen => cruK1 cR N visT visR n gen (crgW N m visR cvR gen)
+  | N + 1, m, visT, visR, cvR, n, gen => cruK1 cR N visT visR n gen (crgW cR N m visR cvR gen)
 
 section arms
 variable (cR : CallM) (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
-theorem crgW_eq : crgW (N + 1) m visR cvR gen =
-    crgK0 N visR cvR gen (lbbF m [CWF, 0, gen]) := rfl
-theorem crgK0_some : crgK0 N visR cvR gen (some (r0, m0)) =
-    if r0.headD 0 = 0 then none else crgK1 N visR cvR gen (hffF m0 [CWF, gen]) := rfl
-theorem crgK1_some : crgK1 N visR cvR gen (some (r1, m1)) =
-    if r1.headD 0 ≠ 0 then none else crgK2 visR gen (L.Arena.cvLpsW N m1 cvR) := rfl
-theorem crgK2_some : crgK2 visR gen (some (r2, m2)) =
-    crgK3 visR gen (stubM "all_level_params_defined" m2 [r2.headD 0, r2.tail.headD 0, gen]) := rfl
+theorem crgW_eq : crgW cR (N + 1) m visR cvR gen =
+    crgK0 cR N visR cvR gen (lbbF m [CWF, 0, gen]) := rfl
+theorem crgK0_some : crgK0 cR N visR cvR gen (some (r0, m0)) =
+    if r0.headD 0 = 0 then none else crgK1 cR N visR cvR gen (hffF m0 [CWF, gen]) := rfl
+theorem crgK1_some : crgK1 cR N visR cvR gen (some (r1, m1)) =
+    if r1.headD 0 ≠ 0 then none else crgK2 cR N visR gen (L.Arena.cvLpsW N m1 cvR) := rfl
+theorem crgK2_some : crgK2 cR N visR gen (some (r2, m2)) =
+    crgK3 visR gen (cR N "all_level_params_defined" [r2.headD 0, r2.tail.headD 0, gen] m2) := rfl
 theorem crgK3_some : crgK3 visR gen (some (r3, m3)) =
     if r3.headD 0 = 0 then none else crgK4 (crfF m3 [visR, gen]) := rfl
 theorem crgK4_some : crgK4 (some (r4, m4)) = if r4.headD 0 = 0 then none else some ([0], m4) := rfl
 theorem cruleW_eq : cruleW cR (N + 1) m visT visR cvR n gen =
-    cruK1 cR N visT visR n gen (crgW N m visR cvR gen) := rfl
+    cruK1 cR N visT visR n gen (crgW cR N m visR cvR gen) := rfl
 theorem cruK1_some : cruK1 cR N visT visR n gen (some (r1, m1)) =
     cruK2 N visT n gen (cR N "infer_type_core" [visR, 0, gen] m1) := rfl
 theorem cruK2_some (h : FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) =
@@ -163,10 +163,10 @@ theorem cruK3_some : cruK3 N visT gen (some (r3, m3)) =
 theorem cruK4_some : cruK4 gen (some (r4, m4)) = if r4.headD 0 = 0 then none else some ([gen], m4) := rfl
 end arms
 
-grind_pattern [ind_grind] crgW_eq => crgW (N + 1) m visR cvR gen
-grind_pattern [ind_grind] crgK0_some => crgK0 N visR cvR gen (some (r0, m0))
-grind_pattern [ind_grind] crgK1_some => crgK1 N visR cvR gen (some (r1, m1))
-grind_pattern [ind_grind] crgK2_some => crgK2 visR gen (some (r2, m2))
+grind_pattern [ind_grind] crgW_eq => crgW cR (N + 1) m visR cvR gen
+grind_pattern [ind_grind] crgK0_some => crgK0 cR N visR cvR gen (some (r0, m0))
+grind_pattern [ind_grind] crgK1_some => crgK1 cR N visR cvR gen (some (r1, m1))
+grind_pattern [ind_grind] crgK2_some => crgK2 cR N visR gen (some (r2, m2))
 grind_pattern [ind_grind] crgK3_some => crgK3 visR gen (some (r3, m3))
 grind_pattern [ind_grind] crgK4_some => crgK4 (some (r4, m4))
 grind_pattern [ind_grind] cruleW_eq => cruleW cR (N + 1) m visT visR cvR n gen
@@ -190,9 +190,10 @@ structure CruleProg (p : Prog) extends FlushProg p : Prop where
   hf : HfF p
   hcr : CrfF p
 
-theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St) (visR cvR gen : Word) :
+theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat)
+    (s₀ : St) (visR cvR gen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok_guards" [visR, cvR, gen]
-    ⦃fun r s' => LocEq s' s₀ ∧ crgW N s₀.mem visR cvR gen = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ crgW cR N s₀.mem visR cvR gen = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.guards]
   simp only [callFn, classRuleOkGuards]
   cases N with
@@ -202,7 +203,7 @@ theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lbbF_spec p h.bvb N, hffF_spec p h.hf N,
         L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps N,
-        stubM_spec p "all_level_params_defined" N, crfF_spec p h.hcr N] <;>
+        hcR N "all_level_params_defined", crfF_spec p h.hcr N] <;>
       finish (gen := 20)
 
 theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St) (visT visR cvR n gen : Word) :
@@ -215,7 +216,7 @@ theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSp
   | succ N =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRuleOkGuards_spec p h N, hcR N "infer_type_core",
+        classRuleOkGuards_spec p h cR hcR N, hcR N "infer_type_core",
         flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
         classRuleOkDomains_spec p h.dom h.hcr N] <;>
       finish (gen := 20) [loc_init4]
@@ -230,7 +231,7 @@ open L.Arena
 
 theorem crgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {cvR gen : Word} {r : List Word} {cv : IConstantVal}
-    (h : crgW N m vis cvR gen = some (r, m')) (hS : StageR dn vis fe m a) (hgen : H gen)
+    (h : crgW stubCall N m vis cvR gen = some (r, m')) (hS : StageR dn vis fe m a) (hgen : H gen)
     (hq : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64) (hA : AbsOK m) :
     ∃ a1 a2 a4 a5, (looseBVarsBoundedFast coreWalkFuel 0 (decI gen)).run a = .ok (true, a1) ∧
       (hasFvarFast coreWalkFuel (decI gen)).run a1 = .ok (false, a2) ∧
@@ -273,11 +274,12 @@ theorem crgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     cases N with
     | zero => simp [L.Arena.cvLpsW] at h3
     | succ N => exact erToIwW_afr h3 hA2
-  cases h4 : stubM "all_level_params_defined" m3 [r3.headD 0, r3.tail.headD 0, gen] with
+  cases h4 : stubCall N "all_level_params_defined" [r3.headD 0, r3.tail.headD 0, gen] m3 with
   | none => rw [h4] at h; simp [crgK3] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, crgK3_some] at h
+  replace h4 : stubM "all_level_params_defined" m3 [r3.headD 0, r3.tail.headD 0, gen] = some (r4, m4) := h4
   have hA4 : AbsOK m4 := AbsOK.stub (by decide) hA3 h4
   obtain ⟨x4, a4, hrun4, hS4, hg4, hx4, -⟩ :=
     allLevelParamsDefined_spec dn vis fe _ _ gen hgen cv.levelParams m3 m4 a2 r4 h4 ⟨hS3, hd3⟩
@@ -315,7 +317,7 @@ theorem cruleW_ok {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR :
   | zero => simp [cruleW] at h
   | succ N =>
   rw [cruleW_eq] at h
-  cases h1 : crgW N m visR cvR gen with
+  cases h1 : crgW stubCall N m visR cvR gen with
   | none => rw [h1] at h; simp [cruK1] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1

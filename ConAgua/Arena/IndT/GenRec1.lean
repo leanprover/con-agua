@@ -103,8 +103,9 @@ theorem classesNfs_refinesLpC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
 section partA
 variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hkc in
+include hq henv hV hkc hApd hCrk in
 /-- **`gen_rec_check_prep`'s first part under `StageC`** (`grpAW_ok`'s): the capacity guards, the
 pins, the stream's recursor types (checked), the family and elimination guards; twin side
 con-ron's `genRecCheck_spec`'s first steps. -/
@@ -204,7 +205,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   obtain ⟨r2, m2⟩ := q2
   rw [c2] at h
   obtain ⟨s2, hs2, -, hok2, hC2, hg2, hcs2, hA2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (classStreamRecs_refinesC hq henv hV hkc P.cpy P.ia P.slc P.csr n hn _ a1 fe vis _ _ bs.recs pP.recs hC1
+    (classStreamRecs_refinesC hq henv hV hkc hApd hCrk P.cpy P.ia P.slc P.csr n hn _ a1 fe vis _ _ bs.recs pP.recs hC1
       hA1 (rec3RecsOK_of_decB hrecs1.1 hrecs1.2) hrecs1P) c2
   simp only at hs2 hC2 hg2 hcs2 hA2; subst hs2
   have hrun2 := AM.run_of_ok _ a1 hok2

@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecCheckSpec20
 import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.IndRealIlpN
 
 /-!
 # `RecCheck`: `targetRecPins`' callees (lane `indproofs3`, helper `rec2`)
@@ -192,7 +193,7 @@ mutual
 def wanW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, n0, j, auxl =>
-    if auxl = 0 then some ([0, 0], m) else wanK1 n n0 j auxl (stubM "name_rec_i" m [n0, j + 1])
+    if auxl = 0 then some ([0, 0], m) else wanK1 n n0 j auxl (nriF m [n0, j + 1])
 /-- After `name_rec_i`. -/
 def wanK1 (n : Nat) (n0 j auxl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -203,13 +204,13 @@ section arms
 variable (n : Nat) (m m1 : Mem) (n0 j auxl : Word) (r1 : List Word)
 theorem wanW_nil (h : auxl = 0) : wanW (n + 1) m n0 j auxl = some ([0, 0], m) := by simp [wanW, h]
 theorem wanW_cons (h : ¬ auxl = 0) : wanW (n + 1) m n0 j auxl =
-    wanK1 n n0 j auxl (stubM "name_rec_i" m [n0, j + 1]) := by simp [wanW, h]
+    wanK1 n n0 j auxl (nriF m [n0, j + 1]) := by simp [wanW, h]
 theorem wanK1_some : wanK1 n n0 j auxl (some (r1, m1)) = bggK3 n (r1.headD 0) (wanW n m1 n0 (j + 1) (auxl - 1)) := by
   simp [wanK1]
 end arms
 attribute [ind_grind] wanW_nil wanW_cons wanK1_some
 
-theorem wan_spec (p : Prog) (hP : IndPartsProg p)
+theorem wan_spec (p : Prog) (hP : IndPartsProg p) (hNri : NriF p)
     (hp : p.lookup "block_rec_want_aux_names" = some blockRecWantAuxNames) (n : Nat) :
     ∀ (s₀ : St) (n0 j auxl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_want_aux_names" [n0, j, auxl]
@@ -222,7 +223,7 @@ theorem wan_spec (p : Prog) (hP : IndPartsProg p)
     rw [invoke_eq _ hp]
     simp only [callFn, blockRecWantAuxNames]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stubM_spec p "name_rec_i" n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nriF_spec p hNri n,
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20)
 
@@ -245,8 +246,8 @@ theorem wantAuxFrom_succ (n0 : NIdx) (j k : Nat) :
   simp only [Function.comp, Nat.succ_eq_add_one]
   rw [show j + (i + 1) + 1 = j + 1 + i + 1 by omega]
 
-/-- **`block_rec_want_aux_names`' model refines the twin's `mapM` of `name_rec_i`** (through the
-stub). -/
+/-- **`block_rec_want_aux_names`' model refines the twin's `mapM` of `name_rec_i`** (the real
+`name_rec_i`, `nriF_ok`). -/
 theorem wanW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m : Mem) (a : AState) (n0 j auxl : Word), H n0 → StageR dn vis fe m a →
     j.toNat + auxl.toNat < 2 ^ 64 →
@@ -268,7 +269,7 @@ theorem wanW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     obtain ⟨k, hk⟩ : ∃ k, auxl.toNat = k + 1 := ⟨auxl.toNat - 1, by omega⟩
     rw [hk, wantAuxFrom_succ]
-    have h1 := partsSimStub (nameRecI_spec dn vis fe n0 (j + 1) hn0) hS
+    have h1 := partsSimW (nriF_ok dn vis fe n0 (j + 1) hn0) hS
     rw [hj1] at h1
     refine Sim.bindK (K := wanK1 n n0 j auxl) (body := fun r1 m1 => bggK3 n (r1.headD 0) (wanW n m1 n0 (j + 1) (auxl - 1)))
       (by simp [wanK1]) (fun _ _ => wanK1_some ..) h1 ?_

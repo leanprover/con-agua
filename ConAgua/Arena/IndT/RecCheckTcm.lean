@@ -2,13 +2,14 @@ import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.RecCheckSpec12
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.IndRealLvlC
 
 /-!
 # `targetClassMatch` under `StageC` (lane `indstaget`, helper `pds`)
 
 `target_class_match`'s model at `realCall p`, from `StageC` and the inputs' denotations con-ron's
 `targetClassMatch_spec` asks; its twin side transcribed from that spec's proof: `lvlsEq?`
-(`RC.lvlsEq?_run`; the L side still through `lvls_eq_c`'s stub contract), the shape's member names
+(`lvlsEqC_simC`, the real `lvls_eq_c` under `StageC`), the shape's member names
 and parameters (L only), `paramLevels` (`paramLevels_spec`), `targetHoles` (`targetHoles_spec`), then
 `pdeW_okC`.
 -/
@@ -90,16 +91,15 @@ theorem tcmW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       AbsOK m' := by
   have hS := hC.stage
   unfold tcmW at h
-  cases h1 : stubM "lvls_eq_c" m [us, lvls] with
+  cases h1 : realCall p n "lvls_eq_c" [us, lvls] m with
   | none => rw [h1] at h; simp [tcmK1] at h
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [h1] at h
-  obtain ⟨o1, a1, run1, hS1, hg1, hd1⟩ := lvlsEqStub_spec dn vis fe us lvls hus hlv m m1 a r1 h1 hS
-  have hP1 := hP.stub (by decide) h1
-  have hA1 := stub_afr h1 (by decide) hA
-  obtain ⟨c1, ho1⟩ := ConRon.Bridge.Inductives.RC.lvlsEq?_run hC.check husP hlvP run1
-  have hC1 := hC.of_cstep hS1 hA1 c1
+  obtain ⟨o1, a1, run1, hC1, hg1, hd1, hA1, c1, -⟩ :=
+    lvlsEqC_simC p hq.closed hq.knot.lvc n hC hA us lvls hus hlv husP hlvP r1 m1 h1
+  have hS1 := hC1.stage
+  have hP1 := hP.fr (MFr.ofCore hq.closed (by decide) h1)
   by_cases hne : r1.headD 0 ≠ 2
   · rw [tcmK1_no (h := hne)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
@@ -213,8 +213,7 @@ theorem tcmW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
 
 include hq henv in
 /-- **`target_class_match` refines `targetClassMatch`** under `StageC` (the knot's core calls; the
-inputs' denotations as con-ron's `targetClassMatch_spec` asks; `lvls_eq_c` still through its stub
-contract). -/
+inputs' denotations as con-ron's `targetClassMatch_spec` asks; `lvls_eq_c` by `lvlsEqC_simC`). -/
 @[refines ConRon.Arena.targetClassMatch]
 theorem targetClassMatch_refinesC (L : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (q fto ftl pfo pfl us dso dsl lvls edso edsl : Word)

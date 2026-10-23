@@ -74,7 +74,7 @@ theorem ccvW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | zero => simp [ccvW] at h
   | succ n =>
   rw [ccvW_step, et] at h
-  cases h1 : ihW n m vis q with
+  cases h1 : ihW stubCall n m vis q with
   | none => rw [h1] at h; simp [ccvK1] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1

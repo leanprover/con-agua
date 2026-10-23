@@ -38,6 +38,7 @@ structure RpLook (p : Prog) : Prop extends IndPartsProg3 p where
   rrn : RrnF p
   soa : p.lookup "block_rec_split_own_aux" = some blockRecSplitOwnAux
   wan : p.lookup "block_rec_want_aux_names" = some blockRecWantAuxNames
+  nri : NriF p
   pnc : p.lookup "ptr_names_copy" = some ptrNamesCopy
   pln : p.lookup "ptr_list_names" = some ptrListNames
   nodup : p.lookup "sl_nodup" = some slNodup
@@ -286,7 +287,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
     intro r m' e
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (wan_spec p L.toIndPartsProg L.wan (n + 1) _ n0 0 auxl) e
+      (wan_spec p L.toIndPartsProg L.nri L.wan (n + 1) _ n0 0 auxl) e
     have h := wanW_sim (dn := dn) (vis := vis) (fe := fe) (n + 1) m a n0 0 auxl hn0 hS
       (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact auxl.toNat_lt) r s'.mem hW
     have heq : wantAuxFrom (decI n0) (0 : Word).toNat auxl.toNat =

@@ -67,12 +67,13 @@ relation after it (at the pushed environment, or unchanged for `Quot.sound` and 
 the core's memos. -/
 @[refines_part ConRon.Arena.checkDecl "the axiom arm, under StageT"]
 theorem cdaW_okT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) (hQd : QuotDn dn) {vis : Word}
+    (hap : ApdF p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) (hQd : QuotDn dn) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {i : Word}
     {r : List Word} {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
     (h : cdaW p n m i vis = some (r, m')) (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a) :
+    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a) {c : ConLeche.ConstantVal}
+    (hcvd : Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     ∃ fe' a', (checkDecl V pins fe (.axiomDecl cv)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
   obtain ⟨fe', a', h1, h2, h3, h4⟩ := cdaW_gen (pins := pins) hX hdn CoreMemos
@@ -87,12 +88,12 @@ theorem cdaW_okT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafCl
           ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
           ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
           by simp only [pinW, hf.1 PINS (by decide) (by decide)]; exact hS.flag⟩
-      obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-        (checkConstantVal_refinesT p hX.val hq k (by omega) ⟨m1, Locals.init []⟩ a dn fe vis
+      obtain ⟨s3, hs3, -, hok3, hS3, hg3, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+        (checkConstantVal_refinesT p hX.val hq hap hkp k (by omega) ⟨m1, Locals.init []⟩ a dn fe vis
           (r1.headD 0 + 1) cv hT1 hcv1 (by
             have : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 :=
               toNat_add_small _ 1 (by omega)
-            omega)) e3
+            omega) (denoteCV_lps hcvd) (CrOK.frame hCr hf (by decide) (by decide))) e3
       subst hs3
       exact ⟨hok3, hS3.stage, hg3, hS3.twin.memos⟩)
     h hS.stage hS.twin.memos hD hi hd hok (hQd.namesDn hS.twin.mem)
