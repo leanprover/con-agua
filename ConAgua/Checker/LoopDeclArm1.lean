@@ -22,13 +22,13 @@ theorem checkerProg_armOwn0 : ∀ f ∈ armOwn0, checkerProg.lookup f = armText.
 
 /-- `armFns` but `openFns`, part 1. -/
 def armOwn1 : List FnName :=
-  ["er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "consts_resolve_ffast",
-   "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c", "lq_find", "lvl_eq_rec"]
+  ["er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "check_thm_val", "pin_word",
+   "lvl_eq_fueled", "lvl_eq_c", "lq_find", "lvl_eq_rec"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn1 : ∀ f ∈ armOwn1, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 2. -/
 def armOwn2 : List FnName :=

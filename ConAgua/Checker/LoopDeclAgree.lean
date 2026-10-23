@@ -40,13 +40,12 @@ theorem checkerProg_cvgOwn1 : ∀ f ∈ cvgOwn1, checkerProg.lookup f = cvgProg.
 
 /-- `cvgFns` but `openFns`, part 2. -/
 def cvgOwn2 : List FnName :=
-  ["lq_put", "install_value_guards", "cv_lps", "er_to_iw", "iw_alloc", "er_copy",
-   "consts_resolve_ffast"]
+  ["lq_put", "install_value_guards", "cv_lps", "er_to_iw", "iw_alloc", "er_copy"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkerProg_cvgOwn2 : ∀ f ∈ cvgOwn2, checkerProg.lookup f = cvgProg.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩
 
 set_option maxRecDepth 100000 in
 theorem cvgOwn_of : ∀ f ∈ cvgFns, f ∉ openFns →
@@ -74,13 +73,13 @@ theorem checkerProg_ivOwn0 : ∀ f ∈ ivOwn0, checkerProg.lookup f = ivProg.loo
 
 /-- `ivFns` but `openFns`, part 1. -/
 def ivOwn1 : List FnName :=
-  ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "consts_resolve_ffast",
-   "install_value_guards", "env_push", "env_row_set", "erec_vg"]
+  ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "install_value_guards", "env_push",
+   "env_row_set", "erec_vg"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkerProg_ivOwn1 : ∀ f ∈ ivOwn1, checkerProg.lookup f = ivProg.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩
 
 set_option maxRecDepth 100000 in
 theorem ivOwn_of : ∀ f ∈ ivFns, f ∉ openFns →
