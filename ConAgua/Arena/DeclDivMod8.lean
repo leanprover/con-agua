@@ -32,7 +32,7 @@ structure DmProg8 (p : Prog) : Prop extends DmProg7 p where
 section certs
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
-def cmW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
+def cmW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
   if sl = 0 ∧ pl = 0 then some ([1], m) else
   if sl = 0 ∨ pl = 0 then some ([0], m) else
   ntBW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
@@ -43,27 +43,27 @@ def cmW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option
   ntBW (callW p n "subst_const0_list" [c, annVal, rdW (m2.arr64 IW) (rdW (m.arr64 IW) so),
     rdW (m2.arr64 IW) (rdW (m.arr64 IW) so + 1)] m2) fun r3 m3 =>
   ntBW (callW p n "div_mod_cert_applied" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3) fun r4 m4 =>
-  ntBW (stubM "infer_type_core" m4 [vs, 4, r4.headD 0]) fun r5 m5 =>
+  ntBW (cl n "infer_type_core" [vs, 4, r4.headD 0] m4) fun r5 m5 =>
   ntBW (callW p n "subst_const0" [c, annVal, 4000000000,
     rdW (m5.arr64 IW) (rdW (m.arr64 IW) so + 2)] m5) fun r6 m6 =>
-  ntBW (stubM "is_def_eq_core" m6 [vs, 4, r5.headD 0, r6.headD 0]) fun r7 m7 =>
+  ntBW (cl n "is_def_eq_core" [vs, 4, r5.headD 0, r6.headD 0] m6) fun r7 m7 =>
   if r7.headD 0 = 0 then some ([0], m7) else
   ntBW (callW p n "check_div_mod_certs" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m7) fun r8 m8 =>
     some ([r8.headD 0], m8)
 
 set_option maxHeartbeats 3200000 in
 theorem cm_specW (p : Prog) (hp : p.lookup "check_div_mod_certs" = some checkDivModCertsL)
-    (n : Nat) (s₀ : St) (vs c annVal so sl po pl : Word) :
+    (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vs c annVal so sl po pl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_certs" [vs, c, annVal, so, sl, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cmW p n s₀.mem vs c annVal so sl po pl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cmW p cl n s₀.mem vs c annVal so sl po pl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkDivModCertsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_cert_guard", callW_spec p n "subst_const_all",
       callW_spec p n "subst_const0_list", callW_spec p n "div_mod_cert_applied",
-      stubM_spec p "infer_type_core" n, callW_spec p n "subst_const0",
-      stubM_spec p "is_def_eq_core" n, callW_spec p n "check_div_mod_certs"] <;>
+      hc n "infer_type_core", callW_spec p n "subst_const0",
+      hc n "is_def_eq_core", callW_spec p n "check_div_mod_certs"] <;>
     finish (gen := 30) (instances := 10000) [cmW, ntBW, rdW_eq]
 
 theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
@@ -83,8 +83,8 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
-    have hw := callW_model (M := fun mq => cmW p k mq vis c annVal so sl po pl)
-      (cm_specW p hD.lCheckDivModCerts k · vis c annVal so sl po pl) hc'
+    have hw := callW_model (M := fun mq => cmW p stubCall k mq vis c annVal so sl po pl)
+      (cm_specW p hD.lCheckDivModCerts stubCall (stubCall_spec p) k · vis c annVal so sl po pl) hc'
     unfold cmW at hw
     cases proofs with
     | nil =>
@@ -105,8 +105,8 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
-    have hw := callW_model (M := fun mq => cmW p k mq vis c annVal so sl po pl)
-      (cm_specW p hD.lCheckDivModCerts k · vis c annVal so sl po pl) hc'
+    have hw := callW_model (M := fun mq => cmW p stubCall k mq vis c annVal so sl po pl)
+      (cm_specW p hD.lCheckDivModCerts stubCall (stubCall_spec p) k · vis c annVal so sl po pl) hc'
     unfold cmW at hw
     obtain ⟨hsl0, q, hq, hstm, hrest⟩ := StmtL.cons hS.2 hs
     cases proofs with
@@ -190,7 +190,7 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
         (r3.tail.headD 0) x3).bind_ ⟨hS3, hl2, hd3.1, hd3.2⟩ hw
     have hG4 : IWGrow m m4 := hG3.trans hg4
     -- the type
-    cases h5 : stubM "infer_type_core" m4 [vis, 4, r4.headD 0] with
+    cases h5 : stubCall k "infer_type_core" [vis, 4, r4.headD 0] m4 with
     | none => rw [h5] at hw; simp at hw
     | some q5 =>
     obtain ⟨r5, m5⟩ := q5
@@ -210,7 +210,7 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
     obtain ⟨x6, a6, hrun6, hS6, hg6, hl6, hx6⟩ := hs0 c annVal e hc hann he k m5 a5 r6 m6 hS5 h6
     subst hx6
     have hG6 : IWGrow m m6 := hG5.trans hg6
-    cases h7 : stubM "is_def_eq_core" m6 [vis, 4, r5.headD 0, r6.headD 0] with
+    cases h7 : stubCall k "is_def_eq_core" [vis, 4, r5.headD 0, r6.headD 0] m6 with
     | none => rw [h7] at hw; simp at hw
     | some q7 =>
     obtain ⟨r7, m7⟩ := q7
@@ -261,9 +261,9 @@ theorem checkDivModCerts_refines (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe)
 
 /-! ## `check_div_mod_pin_at` -/
 
-def cpaW (p : Prog) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Word × Mem) :=
+def cpaW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
-  ntBW (stubM "is_def_eq_core" m1 [vs, 0, value, r1.headD 0]) fun r2 m2 =>
+  ntBW (cl n "is_def_eq_core" [vs, 0, value, r1.headD 0] m1) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
   ntBW (callW p n "div_mod_cert_stmts" [c] m2) fun r3 m3 =>
   ntBW (callW p n "div_mod_cert_proofs" [ps, c] m3) fun r4 m4 =>
@@ -272,14 +272,14 @@ def cpaW (p : Prog) (n : Nat) (m : Mem) (vs c value ps : Word) : Option (List Wo
 
 set_option maxHeartbeats 3200000 in
 theorem cpa_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_at" = some checkDivModPinAtL)
-    (n : Nat) (s₀ : St) (vs c value ps : Word) :
+    (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vs c value ps : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin_at" [vs, c, value, ps]
-    ⦃fun r s' => LocEq s' s₀ ∧ cpaW p n s₀.mem vs c value ps = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cpaW p cl n s₀.mem vs c value ps = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkDivModPinAtL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_decl_pin", stubM_spec p "is_def_eq_core" n,
+      callW_spec p n "div_mod_decl_pin", hc n "is_def_eq_core",
       callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
       callW_spec p n "check_div_mod_certs"] <;>
     finish (gen := 30) (instances := 10000) [cpaW, ntBW]
@@ -290,14 +290,14 @@ theorem cpa_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p 
       (fun m s => StageR dn vis fe m s ∧ H c ∧ H value ∧ PinSetR m ps ip)
       (checkDivModPinAt V fe (decI c) (decE value) ip) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hval, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => cpaW p k mq vis c value ps)
-    (cpa_specW p hD.lCheckDivModPinAt k · vis c value ps) hcall
+  have hw := callW_model (M := fun mq => cpaW p stubCall k mq vis c value ps)
+    (cpa_specW p hD.lCheckDivModPinAt stubCall (stubCall_spec p) k · vis c value ps) hcall
   unfold cpaW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   have hD5 := hD.toDmProg7.toDmProg6.toDmProg5
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hw⟩ :=
     (divModDeclPin_ref hD5.toDmProg2.toDmProg1 ps c ip).bind_ ⟨hS, hc, hP⟩ hw
-  cases h2 : stubM "is_def_eq_core" m1 [vis, 0, value, r1.headD 0] with
+  cases h2 : stubCall k "is_def_eq_core" [vis, 0, value, r1.headD 0] m1 with
   | none => rw [h2] at hw; simp at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
