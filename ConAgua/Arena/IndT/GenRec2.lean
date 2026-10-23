@@ -37,8 +37,9 @@ def grcRcCallees : List FnName :=
 
 section parts
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hkp henv in
+include hkp henv hApd hCrk in
 /-- **`gen_rec_check_prep`'s third part under `StageC`** (`grpCW_ok`'s): the generator record,
 its prefix, the recursor types. Besides the twin's facts the post has the rule-less recursors'
 environment well formed (con-ron's `genRecCheck_spec`, from `classRecTysOk`'s run). -/
@@ -234,7 +235,7 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   obtain ⟨rfl, rfl⟩ := h
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hPP
   obtain ⟨s3, hs3, -, hok3, ⟨hC3, hg3, hd3⟩, hA3⟩ := triple_of_callW (s₀ := ⟨grpPMem s2.mem g o l, Locals.init []⟩)
-    (classRecTysOk_refinesC hkp henv P.rts n hn _ a2 g (UInt64.ofNat bs.k) _ _ cRo cRl _ _ _ bs.recs cvRis
+    (classRecTysOk_refinesC hkp hApd hCrk henv P.rts n hn _ a2 g (UInt64.ofNat bs.k) _ _ cRo cRl _ _ _ bs.recs cvRis
       rdv.recCls hCP hG hns hrcs (rec3RecsOK_of_decB hrcs (Nat.le_trans hrecsP.2 hgP.1)) (hcv.grow (OMono.decPL
         (fun q => OMono.decCVp q) _ _) hgP) (hrcD.grow (OMono.decNL _ _) hgP) hAP hgPd hrecs2 hcv2 hwRis) c3
   simp only at hs3 hC3 hg3 hd3 hA3; subst hs3
@@ -266,7 +267,7 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   · simp only [grcTwinC, StateT.run_bind, hrun2, except_ok_bind, hrun3]
   · simpa [decCVS] using hd3
 
-include hkp henv in
+include hkp henv hApd hCrk in
 /-- **`gen_rec_check_prep`'s second part under `StageC`** (`grpBW_ok`'s): the classes' entries
 and constructors, the count, the formers, the level, then the third part (`grpCW_okC`). -/
 theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name}
@@ -472,7 +473,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     simp only [dClassGen, e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def]
   -- part C
-  obtain ⟨G, cvGs, a', hrunC, hC', hg', hG', hns', hsl', hcg', hA', hR', cC, hrest⟩ := grpCW_okC hkp henv P n hn h
+  obtain ⟨G, cvGs, a', hrunC, hC', hg', hG', hns', hsl', hcg', hA', hR', cC, hrest⟩ := grpCW_okC hkp henv hApd hCrk P n hn h
     hC6 (hbs.grow hg16)
     (hrb.grow hg16 (by omega)) (decHL_grow' hg16 hparb hpar) (Nat.le_trans hparb hg16.1)
     (hrd.grow (decCR_mono _) hg16) (hms2.grow (fun q => decTM_mono q) (hg3.trans (hg5.trans hg6)))
