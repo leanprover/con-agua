@@ -67,7 +67,7 @@ attribute [ind_grind] eeW_nil eeW_cons eeK0_some eeK1_some eeK2_some
 structure K53Look (p : Prog) : Prop where
   tmn : TmnLook p
   hv : p.lookup "e_view" = some eView
-  gaf : GafF p
+  ad : AdF p
   sc : p.lookup "sl_contains" = some slContains
   nf : p.lookup "no_find" = some (memoFindG noSch)
   np : p.lookup "no_put" = some (memoPutG noSch)
@@ -181,7 +181,7 @@ def tkaK4 (vis q fto ftl Mc usp lao lpl : Word) (n : Nat) : Option (Word × Mem)
   | none => none
   | some (hd, m) =>
     if 4294967296 ≤ hd then none
-    else tkaK5 n vis q fto ftl Mc usp lao lpl (stubM "mk_app_n_f" m [hd, lao, lpl])
+    else tkaK5 n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl])
 
 def tkaK3 (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
@@ -231,7 +231,7 @@ theorem tkaK3_yes (h : ¬ e = 0) : tkaK3 n vis q fto ftl Mc ip usp lao lal K m (
 theorem tkaK4_big (h : 4294967296 ≤ hd) : tkaK4 vis q fto ftl Mc usp lao lpl n (some (hd, m)) = none := by
   simp only [tkaK4]; rw [if_pos h]
 theorem tkaK4_ok (h : ¬ 4294967296 ≤ hd) : tkaK4 vis q fto ftl Mc usp lao lpl n (some (hd, m)) =
-    tkaK5 n vis q fto ftl Mc usp lao lpl (stubM "mk_app_n_f" m [hd, lao, lpl]) := by
+    tkaK5 n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl]) := by
   simp only [tkaK4]; rw [if_neg h]
 theorem tkaK5_some : tkaK5 n vis q fto ftl Mc usp lao lpl (some (ra, m)) =
     tkaK6 n vis q fto ftl Mc usp lao lpl (ra.headD 0) (memberNamesW n m q) := rfl
@@ -260,7 +260,7 @@ theorem tka_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St)
     simp only [callFn, targetK53Args]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ee_spec p L n, slEq_spec p L.eq n,
-        internConst_spec p L.cf L.cp L.ic n, stubM_spec p "mk_app_n_f" n,
+        internConst_spec p L.cf L.cp L.ic n, mknF_spec p L.ad n,
         blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc L.tmn.tcm.mn n, noF_spec p L n,
         tcmF_spec p L.tmn.tcm n] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,

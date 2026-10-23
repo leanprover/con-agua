@@ -562,12 +562,12 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
     simp only [H]; simpa using this
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 (rn.headD 0) us hrnH hus hic
   have hg12 := hg1.trans hg2
-  cases hma : stubM "mk_app_n_f" m2 [hc, dO, dL] with
+  cases hma : mknF m2 [hc, dO, dL] with
   | none => rw [hma] at h; simp [nbFrameK3] at h
   | some pr3 =>
   obtain ⟨ra, m3⟩ := pr3
   rw [hma, nbFrameK3_some] at h
-  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mkAppN_spec dn vis fe hc dO dL hcH ds m2 m3 a2 ra hma
+  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mknF_ok dn vis fe hc dO dL hcH ds m2 m3 a2 ra hma
     ⟨hS2, (hds.grow (OMono.decHL _ _) hg12).get (OMono.decHL _ _)⟩
   cases hit : stubM "infer_type_core" m3 [vis, hi, ra.headD 0] with
   | none => rw [hit] at h; simp [nbFrameK4] at h
@@ -635,7 +635,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
       by have := (hg6.trans hg7).1; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
       hH7, hHb7⟩
     hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
-    ((((((hP.fr hf1).fr (ceinternW_mfr hic)).stub (by decide) hma).stub (by decide) hit).fr
+    ((((((hP.fr hf1).fr (ceinternW_mfr hic)).fr (MFr.ofMknF hma)).stub (by decide) hit).fr
       (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr (gcW_mfr _ _ _ _ _ _ _ _ _ _ hgc) |>.fr
       (fhW_mfr _ _ _ _ _ _ _ _ _ hfh))
   refine ⟨x.2, a8, ?_, hS8, hg17.trans hg8, by simpa using hns8, hPm8⟩

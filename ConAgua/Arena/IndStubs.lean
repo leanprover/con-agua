@@ -115,11 +115,6 @@ theorem getAppArgs_spec (f e : Word) (he : H e) :
     RelAM "get_app_args_f" [f, e] (StageR dn vis fe)
       (getAppArgs f.toNat (decI e)) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
 
-/-- `mk_app_n(f, off, len)`. -/
-theorem mkAppN_spec (f o l : Word) (hf : H f) (xs : List EIdx) :
-    RelAM "mk_app_n_f" [f, o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
-      (mkAppN (decI f) xs) (KeepPost dn vis fe decW0E) := sorry
-
 /-- `fvar_type_d(e)`. -/
 theorem fvarTypeD_spec (e : Word) (he : H e) :
     RelAM "fvar_type_d" [e] (StageR dn vis fe)
@@ -129,11 +124,6 @@ theorem fvarTypeD_spec (e : Word) (he : H e) :
 theorem fvarTypeDs_spec (o l : Word) (xs : List EIdx) :
     RelAM "fvar_type_ds" [o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (fvarTypeDs xs) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
-
-/-- `pi_result(fuel, e)`. -/
-theorem piResult_spec (f e : Word) (he : H e) :
-    RelAM "pi_result_f" [f, e] (StageR dn vis fe)
-      (piResult f.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `inst_lp_fast(fuel, ks.off, ks.len, us, e)`. -/
 theorem instLPFast_spec (f o l us e : Word) (hu : H us) (he : H e) (ks : List NIdx) :

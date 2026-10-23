@@ -90,7 +90,7 @@ attribute [ind_grind] ctmK1_none ctmK1_some ctmK2_some ctmK3_some
 
 theorem ctorMember_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
-    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (hgaf : GafF p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St)
     (no nl lvls nP c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctor_member" [no, nl, lvls, nP, c]
     ⦃fun r s' => LocEq s' s₀ ∧ ctmW n s₀.mem no nl lvls nP c = some (r, s'.mem); ⊤⦄ := by
@@ -98,7 +98,7 @@ theorem ctorMember_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   simp only [callFn, ctorMember]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stripPis_specF p hst n, gafF_spec p hgaf n,
+      stripPis_specF p hst n, gafF_spec p had n,
       memberIdxAt_specK p hv hf hm n] <;>
     finish (gen := 20) [ctmW]
 
@@ -109,13 +109,13 @@ def ctmWk : Nat → Mem → Word → Word → Word → Word → Word → Option 
 
 theorem ctorMember_specK (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
-    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (hgaf : GafF p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St)
     (no nl lvls nP c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ctor_member" [no, nl, lvls, nP, c]
     ⦃fun r s' => LocEq s' s₀ ∧ ctmWk n s₀.mem no nl lvls nP c = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ hp]; simp only [callFn, ctorMember]; vcgen [exec] <;> grind
-  | succ n => exact ctorMember_spec p hv hf hm hp hst hgaf n s₀ no nl lvls nP c
+  | succ n => exact ctorMember_spec p hv hf hm hp hst had n s₀ no nl lvls nP c
 
 /-! ## Reading decoded records' words -/
 
@@ -340,7 +340,7 @@ theorem bgo_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some
     simp only [callFn, blockGroupsOne]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ctorMember_specK p hv hf hm hc hP.strip hP.gaf n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+        ctorMember_specK p hv hf hm hc hP.strip hP.ad n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- `blockGroups`' filter predicate for member `mm`. -/
@@ -671,7 +671,7 @@ theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : S
       MemIdxOut r (AM.res (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (ctorMember_spec p hP.view hP.find hP.midx hP.cmem hP.strip hP.gaf n s₀ no nl lvls nP c)
+  triple_post (ctorMember_spec p hP.view hP.find hP.midx hP.cmem hP.strip hP.ad n s₀ no nl lvls nP c)
     fun _ _ ⟨hl, hm⟩ =>
       let ⟨hok, hQ⟩ := Sim.run (ctmW_sim n hS hc hnm hnb hlv) hm
       ⟨hl, hok, hQ.1, hQ.2.2.1, hQ.2.2.2⟩

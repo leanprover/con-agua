@@ -432,8 +432,8 @@ grind_pattern [ind_grind] recTK5_hit => recTK5 nl m3 (some rf)
 
 section spec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
-  (hp : p.lookup "rec_target_of" = some recTargetOf) (hst : StripProg p) (hgaf : GafF p)
-include hv hf hp hst hgaf
+  (hp : p.lookup "rec_target_of" = some recTargetOf) (hst : StripProg p) (had : AdF p)
+include hv hf hp hst had
 
 theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_target_of" [no, nl, mI, ty]
@@ -445,7 +445,7 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stripPis_specF p hst n, gafF_spec p hgaf n, eViewSpec4 p hv n,
+        stripPis_specF p hst n, gafF_spec p had n, eViewSpec4 p hv n,
         slFind_spec p hf n] <;>
       finish (gen := 20)
 
@@ -649,7 +649,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
 @[refines ConRon.Arena.recTargetOf]
 theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hp : p.lookup "rec_target_of" = some recTargetOf)
-    (hst : StripProg p) (hgaf : GafF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis no nl mI ty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hty : ty.toNat < 2 ^ 32) (hnames : decHL s₀.mem no.toNat nl.toNat = some names)
     (hb : no.toNat + nl.toNat < 2 ^ 64) (hbt : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
@@ -659,7 +659,7 @@ theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
       r = [UInt64.ofNat (AM.res (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀)] ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.recTargetOf names mI.toNat (decI ty)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (recTargetOf_spec p hv hf hp hst hgaf n s₀ no nl mI ty) ?_
+  refine triple_post (recTargetOf_spec p hv hf hp hst had n s₀ no nl mI ty) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨t, a', hrun, hr, hS', hg⟩ := recTW_ok n dn fe vis s₀.mem s'.mem a₀ no nl mI ty r names hm
     hS hty hnames hb hbt

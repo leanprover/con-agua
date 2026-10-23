@@ -121,7 +121,7 @@ structure NtLook (p : Prog) : Prop where
   hf : p.lookup "env_find" = some envFindL
   hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip
   hst : StripProg p
-  gaf : GafF p
+  ad : AdF p
   hv : p.lookup "e_view" = some eView
   he : p.lookup "nest_ctor_entry" = some nestCtorEntry
   hgo : p.lookup "nest_container_ctors_go" = some nestContainerCtorsGo
@@ -147,7 +147,7 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
     simp only [callFn, nestContainerCtorsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.gaf k,
+        envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
         posRec2_specW p hl.ha hl.h2 k, ih] <;>
       finish (gen := 20) [rdW_eq, St.setLocs_mem']
 

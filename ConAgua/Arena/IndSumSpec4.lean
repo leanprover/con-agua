@@ -105,8 +105,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hpg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (heq : p.lookup "sl_eq" = some slEq)
-  (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL) (hgaf : GafF p)
-include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp hgaf
+  (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL) (had : AdF p)
+include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp had
 
 theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_ctor_resid_ok" [T, lo, ll, nP, o, nIdx, cbody]
@@ -119,7 +119,7 @@ theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         plW_spec p ha hc hsc hg hpf hpp hip hplg hpl k, internConst_spec p hcf hcp hic k,
-        gafF_spec p hgaf k, stubM_spec p "get_app_args_f" k,
+        gafF_spec p had k, stubM_spec p "get_app_args_f" k,
         psAtW_spec p ha hc hsc hbf hbp hib hpg hps k, slEq_spec p heq k] <;>
       finish (gen := 20) [srRes]
 
@@ -344,8 +344,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hpg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (heq : p.lookup "sl_eq" = some slEq)
-  (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL) (hgaf : GafF p)
-include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp hgaf
+  (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL) (had : AdF p)
+include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp had
 
 /-- **`struct_ctor_resid_ok` refines `structCtorResidOk`** (through the stubs `get_app_fn`,
 `get_app_args`, `intern_ls_iw`). -/
@@ -363,7 +363,7 @@ theorem structCtorResidOk_refines (k : Nat) (s₀ : St) (a₀ : AState)
         (AM.st (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀) r
         (AM.res (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀); ⊤⦄ := by
   refine triple_post (srW_spec p ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps
-    heq hp hgaf k s₀ T lo ll nP o nIdx cbody) ?_
+    heq hp had k s₀ T lo ll nP o nIdx cbody) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hpost⟩ := srW_ok dn vis fe k _ _ _ _ _ _ _ _ _ _ _ _ hm hS hT hcb hd hb ht hon hni
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

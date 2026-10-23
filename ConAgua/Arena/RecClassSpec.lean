@@ -296,7 +296,7 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
     (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (hgaf : GafF p) (n : Nat) :
+    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (had : AdF p) (n : Nat) :
     ∀ (s₀ : St) (nP mo ml ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_rec_cls" [nP, mo, ml, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ crW n s₀.mem nP mo ml ro rl = some (r, s'.mem); ⊤⦄ := by
@@ -310,7 +310,7 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
     simp only [callFn, classReadRecCls]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "open_pis_at_fvars_f" n, fvarHead_spec p hfh hv hgaf n,
+        stubM_spec p "open_pis_at_fvars_f" n, fvarHead_spec p hfh hv had n,
         classOfMotiveVar_spec p hf hcm n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -607,7 +607,7 @@ theorem classReadRecCls_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fv
     (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (hgaf : GafF p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP mo ml ro rl : Word)
     (recs : List RecShape) (motPos : List Nat) (hS : StageR dn vis fe s₀.mem a₀)
     (hrecs : decPL s₀.mem (decRS s₀.mem) ro.toNat rl.toNat = some recs)
@@ -620,7 +620,7 @@ theorem classReadRecCls_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fv
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       CrRes s'.mem r (AM.res (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀); ⊤⦄ := by
-  refine triple_post (classReadRecCls_spec p hfh hv hf hcm hc ha hsc hp hgaf n s₀ nP mo ml ro rl) ?_
+  refine triple_post (classReadRecCls_spec p hfh hv hf hcm hc ha hsc hp had n s₀ nP mo ml ro rl) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hres⟩ := crW_ok dn vis fe n _ _ a₀ nP mo ml ro rl r recs motPos hm hS
     hrecs hstab hmot hmt hb hmI

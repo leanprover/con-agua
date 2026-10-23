@@ -348,14 +348,14 @@ theorem tkaW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc ip usp lao lal
   have hlp := (hla.grow hg03).take (k := K)
   rw [hnP] at hlp
   generalize hL : (if lal < K then lal else K) = lpl at h hlp
-  cases h5 : stubM "mk_app_n_f" m3 [hd, lao, lpl] with
+  cases h5 : mknF m3 [hd, lao, lpl] with
   | none => rw [h5] at h; simp [tkaK5] at h
   | some x =>
   obtain ⟨ra, m4⟩ := x
   rw [h5, tkaK5_some] at h
-  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mkAppN_spec dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
+  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
     ⟨hS3, hlp.1⟩
-  have hP4 : RcMR m4 := hP3.stub (by decide) h5
+  have hP4 : RcMR m4 := hP3.fr (MFr.ofMknF h5)
   have hg04 := hg03.trans hg4
   cases h6 : memberNamesW n m4 q with
   | none => rw [h6] at h; simp [tkaK6] at h

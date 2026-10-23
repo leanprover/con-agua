@@ -541,7 +541,7 @@ def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
     else some ([0, 0], m1)
 
 theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
-    (hv : p.lookup "e_view" = some eView) (hgaf : GafF p) (n : Nat) (s₀ : St) (e : Word) :
+    (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ fvarHeadW s₀.mem e = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, fvarHead]
@@ -550,7 +550,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        gafF_spec p hgaf n, eView_spec p hv n] <;>
+        gafF_spec p had n, eView_spec p hv n] <;>
       finish [fvarHeadW]
 
 theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
@@ -655,7 +655,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
 /-- **`fvar_head` refines `fvarHead`** (through the `get_app_fn` stub and `e_view`). -/
 @[refines ConRon.Arena.fvarHead]
 theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
-    (hv : p.lookup "e_view" = some eView) (hgaf : GafF p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e)
     (hS : StageR dn vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_head" [e]
@@ -664,7 +664,7 @@ theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
       IWGrow s₀.mem s'.mem ∧
       r = (match AM.res (ConRon.Arena.fvarHead (decI e)) a₀ with
         | some i => [1, UInt64.ofNat i] | none => [0, 0]); ⊤⦄ := by
-  refine triple_post (fvarHead_spec p hp hv hgaf n s₀ e) ?_
+  refine triple_post (fvarHead_spec p hp hv had n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hr, -⟩ := fvarHeadW_ok dn vis fe _ _ a₀ e he r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.fvarHead (decI e)) a₀ a' x hrun

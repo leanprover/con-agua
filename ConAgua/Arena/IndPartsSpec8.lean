@@ -630,7 +630,7 @@ structure IndPartsProg (p : Prog) : Prop where
   ctors : p.lookup "block_split_ctors" = some blockSplitCtors
   split : p.lookup "block_split" = some blockSplit
   strip : StripProg p
-  gaf : GafF p
+  ad : AdF p
 
 /-- **`block_split_recs` refines `blockSplitRecs`**: the block an `EREC` slice of constant records
 decoded below the tops; the result `(ok, off, len)` is the twin's `Option`, the slice of fresh

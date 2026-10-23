@@ -109,7 +109,7 @@ theorem tkh_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (vis q fto ftl
     rw [invoke_eq _ L.tkh]
     simp only [callFn, targetK53Heads]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, gafF_spec p L.gaf n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, gafF_spec p L.ad n,
         stubM_spec p "get_app_args_f" n, eView_spec p L.hv n, tka_spec p L n] <;>
       finish (gen := 40) (instances := 20000) [loc_init4, loc_init5, loc_init6]
 

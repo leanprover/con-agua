@@ -258,7 +258,7 @@ def nbFrameK2 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL 
   | none => none
   | some (hc, m2) =>
     if 4294967296 ≤ hc then none
-    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (stubM "mk_app_n_f" m2 [hc, dO, dL])
+    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL])
 def nbFrameK1 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -566,7 +566,7 @@ theorem nbFrameK3_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL n
 theorem nbFrameK2_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (hc : Word) (m2 : Mem) :
     nbFrameK2 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (hc, m2)) =
     if 4294967296 ≤ hc then none
-    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (stubM "mk_app_n_f" m2 [hc, dO, dL]) := rfl
+    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL]) := rfl
 theorem nbFrameK1_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (rn : List Word) (m1 : Mem) :
     nbFrameK1 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (rn, m1)) =
     if 4294967296 ≤ rn.headD 0 then none
