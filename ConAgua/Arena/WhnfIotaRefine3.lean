@@ -306,7 +306,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, by simp [HW]⟩
       · rw [hstF]; exact hS₁
       · rw [hresF]; simp [decBool]
-    obtain ⟨tbl, htbl⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
+    obtain ⟨tbl, htbl, hfe⟩ := hcc.projFound k m a dn vis fe M eb anW j r₁ m₁ hS hc1 h0
     have hEr1 : m₁.arr64 EREC = m.arr64 EREC := hcc.erec k "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
     have hsome : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat =
         some (tbl.entry j.toNat) := by
@@ -318,7 +318,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     obtain ⟨r₂, m₂⟩ := q
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
       (hcc.fireOk k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb (r₁.tail.headD 0) j us tbl hS₁ hus
-        (by rw [hEr1]; exact htbl) (by simpa [IProjTable.entry] using findProj?_lt hrunF)
+        (by rw [hEr1]; exact htbl) hfe (by simpa [IProjTable.entry] using findProj?_lt hrunF)
         (by obtain ⟨h, c, hv⟩ := hV; exact ⟨h, c, by rw [findProj?_eview hrunF]; exact hv⟩)) hc2
     have hSt₂ : StackKept m₁ m₂ := hSt₂
     have hEr2 : m₂.arr64 EREC = m₁.arr64 EREC := hcc.erec k "fire_ok" _ m₁ r₂ m₂ (Or.inr rfl) hc2

@@ -679,23 +679,16 @@ theorem projInfo_lps {tbl : IProjTable} {a a' : AState} {cv : IConstantVal}
 table's from `StoreDen.proj`, any other constant's from `StoreDen.constLps`. -/
 theorem cv_lps {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
     {m m₁ : Mem} {a a₁ : AState} {M₁ : ModeMaps} (hS₁ : CoreS dn m₁ a₁ vis fe M₁ eb)
-    (he : m₁.arr64 EREC = m.arr64 EREC) {q : Word} {ci : IConstantInfo}
-    (hci : decCI (erecP m) dn q.toNat = some ci) (hfe : ∃ c, fe.find? c = some ci)
+    (_he : m₁.arr64 EREC = m.arr64 EREC) {q : Word} {ci : IConstantInfo}
+    (_hci : decCI (erecP m) dn q.toNat = some ci) (hfe : ∃ c, fe.find? c = some ci)
     {cv : IConstantVal} (hrun : ci.toConstantVal.run a = .ok (cv, a₁)) :
     ∃ ks, cv.levelParams.mapM (denoteN a₁.store.ns) = some ks := by
   obtain ⟨c, hc⟩ := hfe
   by_cases ht : ci.isTowerEntry = true
   · cases ci with
     | projInfo tbl =>
-      obtain ⟨wk, -, hk⟩ := strCiD hci
-      have htb : decTbl (erecP m) q.toNat = some tbl := by
-        rcases hk with ⟨-, _, -, h⟩ | ⟨-, _, _, _, -, -, -, h⟩ | ⟨-, _, -, h⟩ | ⟨-, _, _, -, -, h⟩ |
-          ⟨-, _, _, _, -, -, -, h⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h⟩ | ⟨-, tbl', ht', h⟩
-        all_goals first | (cases h; exact ht') | cases h
-      have htb' := (erecP_ext m).decTbl htb
-      rw [← he] at htb'
       rw [projInfo_lps hrun]
-      exact (hS₁.den.proj _ _ htb').2.2
+      exact (hS₁.den.proj c tbl hc).2.2
     | _ => simp [IConstantInfo.isTowerEntry] at ht
   · have hf : ci.isTowerEntry = false := by simpa using ht
     have hp : ∀ s, ci.toConstantVal.run s = .ok (cv, s) := by

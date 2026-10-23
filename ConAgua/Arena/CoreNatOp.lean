@@ -309,7 +309,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide),
     hf.2.2.1 145 ▸ hS.bstk,
     hS.den.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp])
-      (fun _ _ hk => .inl (hc ▸ hk)) (hf.1 EREC (by decide) (by decide))
+      (fun _ _ hk => .inl (hc ▸ hk))
       (fun x u hv => (hview x _ (.inl ⟨_, rfl⟩) hv).resolve_right (by rintro ⟨_, h⟩; cases h))
       (fun x c us hv => (hview x _ (.inr ⟨_, _, rfl⟩) hv).imp id (by
         rintro ⟨c', h⟩; cases h; exact hS.den.emptyLs))
