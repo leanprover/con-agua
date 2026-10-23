@@ -92,7 +92,7 @@ structure TextProg (p q : Prog) (fs : List FnName) : Prop where
 /-- A program with `check_value_group`'s text. -/
 structure CvgProg (p : Prog) : Prop extends TextProg p cvgProg cvgFns where
   bvb : BvbProg p
-  hf : HfF p
+  hf : L.Ind.HfF p
 
 section lookups
 variable {p : Prog} (h : CvgProg p)
@@ -258,7 +258,6 @@ theorem ivg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis q v : Wo
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         cvLps_specW p h.alloc h.copy h.eti h.lps n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
 

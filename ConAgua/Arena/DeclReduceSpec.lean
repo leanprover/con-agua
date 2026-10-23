@@ -540,7 +540,6 @@ theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL
       KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (reducePinGuard fe (decI c)) a₀) r
         (AM.res (reducePinGuard fe (decI c)) a₀); ⊤⦄ := by
   refine triple_post (rpg_specW p hb hf hp n s₀ vis c) ?_
-
   rintro r s' ⟨hl, h⟩
   refine ⟨hl, ?_⟩
   suffices ∃ x a', (reducePinGuard fe (decI c)).run a₀ = .ok (x, a') ∧

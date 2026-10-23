@@ -345,8 +345,7 @@ theorem tpdStep_spec (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St) (vis d no n
   simp only [callFn, targetParamsDefEqStep]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bvarBL_spec p L.bvb n, fvbF_spec p L.hf n, tcp_specF
- p L.rc n, ta_specF p L.ta n,
+      bvarBL_spec p L.bvb n, fvbF_spec p L.hf n, tcp_specF p L.rc n, ta_specF p L.ta n,
       stubM_spec p "infer_type_core" n, stubM_spec p "is_def_eq_core" n] <;>
     finish (gen := 40) (instances := 20000) [pdsW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11]
 

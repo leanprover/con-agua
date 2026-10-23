@@ -199,7 +199,6 @@ theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lbbF_spec p h.bvb N, hffF_spec p h.hf N,
-
         L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps N,
         stubM_spec p "all_level_params_defined" N, stubM_spec p "consts_resolve_ffast" N] <;>
       finish (gen := 20)

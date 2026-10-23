@@ -321,7 +321,6 @@ theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some n
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCtxHiAt_specE p hh n, dcGo_spec p hf hg n] <;>
-
     finish (gen := 20) [dcW]
 
 theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Word) (HI : Nat)
@@ -448,7 +447,6 @@ theorem nestWalkStack_spec (p : Prog) (hl : DcLook p)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       dc_spec' p hl.hf hl.hh hl.hg hl.hp n] <;>
-
     finish (gen := 20) [nwsW]
 
 theorem nestWalkStack_eq (ctx : NestCtx) (prog : List NestHole) (ds : List EIdx) :

@@ -301,8 +301,7 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have h4 := lbbF_ok dn vis fe CWF (nP + 1) w hwl
   rw [hcwf, sumToNat_succ (by omega)] at h4
   refine Sim.bindK (K := sctK4 _ (r1.headD 0) (r2.headD 0) (r3.headD 0)) rfl (fun _ _ => rfl)
-    (sumSim_of_relW h4 hS3)
- fun r4 a4 m4 s4 hQ => ?_
+    (sumSim_of_relW h4 hS3) fun r4 a4 m4 s4 hQ => ?_
   obtain ⟨hS4, hg4, hb4, hl4⟩ := hQ
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
   obtain ⟨-, e1⟩ := sumB01 hb1 hl1

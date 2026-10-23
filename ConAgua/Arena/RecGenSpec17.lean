@@ -507,8 +507,7 @@ theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Nam
     (Q := fun r b m' a' => (r.headD 0 != 0) = b ∧ StageR dn vis fe m' a' ∧ IWGrow m2 m' ∧ PosMR m') ?_ ?_
   · intro r3 m3 e3
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (tmoc_spec p hP.bvb hP.hf hP.tmoc
- n _ ao (r2.tail.headD 0) (rdW (m2.arr64 IW) (pp + 4))) e3
+      (tmoc_spec p hP.bvb hP.hf hP.tmoc n _ ao (r2.tail.headD 0) (rdW (m2.arr64 IW) (pp + 4))) e3
     obtain ⟨b, a', hrun, hS3, hg3, hb3, -⟩ := ckc2W_ok dn fe vis n m2 s3.mem a2 _ ao _ _ r3 hn hW3 hS2 htake2
       (by have := hg2.1; omega) (by have := hg2.1; omega)
     rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb] at hrun

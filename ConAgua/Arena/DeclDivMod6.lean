@@ -146,8 +146,7 @@ theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
       (divModPinGuard ip fe (decI c)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hP⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmPgW p k mq ps vis c)
-    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard
- k · ps vis c) hcall
+    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard k · ps vis c) hcall
   unfold dmPgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hw⟩ :=

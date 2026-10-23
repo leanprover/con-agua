@@ -213,7 +213,6 @@ theorem ckc2_spec (k : Nat) : ∀ (s₀ : St) (nP o l : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         bvarBL_spec p L.bvb k, fvbF_spec p L.hf k, ih] <;>
-
       finish (gen := 20)
 
 theorem kof_spec (k : Nat) (s₀ : St) (nP po pl key : Word) :

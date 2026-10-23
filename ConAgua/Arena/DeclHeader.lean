@@ -336,7 +336,6 @@ theorem ih_specW (p : Prog) (h : IhProg p) (n : Nat) (s₀ : St) (vis q : Word) 
         cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
         stubM_spec p "is_proj_fn_shape" n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
 

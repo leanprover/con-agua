@@ -480,8 +480,7 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hann, heq, hpr, hd, hb⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmCgW p k mq vis c annVal ho hl eqE proof)
-    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard
- k · vis c annVal ho hl eqE proof) hcall
+    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
   unfold dmCgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- subst_const_all

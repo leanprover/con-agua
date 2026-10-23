@@ -952,7 +952,6 @@ theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestOccAny_spec p hl hoa n, pos2Pin_spec p hpa n, nestContParamsClosed_spec p hb hf hpc n] <;>
-
       finish (gen := 20) [p2ccW, p2ccK1, rdW_eq]
 
 end L.Ind

@@ -248,8 +248,7 @@ theorem classKeyOfClosed_refines (p : Prog) (hb' : BvbProg p) (hf : HfF p)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (keyClosedTest nP.toNat)) a₀ ∧
       KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (xs.allM (keyClosedTest nP.toNat)) a₀) r
         (AM.res (xs.allM (keyClosedTest nP.toNat)) a₀); ⊤⦄ := by
-  refine triple_post (classKeyOfClosed_spec p hb' hf hp n
- s₀ nP o l) ?_
+  refine triple_post (classKeyOfClosed_spec p hb' hf hp n s₀ nP o l) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun, hpost⟩ := ckcW_ok dn fe n _ _ a₀ vis nP o l xs r hm hS hd hb ht
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

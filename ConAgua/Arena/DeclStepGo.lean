@@ -606,7 +606,6 @@ theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
 theorem IvProg.ih : IhProg p := by
   constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
-
 end ivLookups
 
 /-! ## The callees' specs at the loop's relation -/

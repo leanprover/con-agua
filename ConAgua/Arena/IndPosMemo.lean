@@ -261,7 +261,6 @@ theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word)
     unfold dcGoW dcK at h
     mfr_auto h [MFr.ofFvbF, dcGoW_mfr n _ _ _ _ _ _]
 
-
 theorem dcWf_mfr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
     MFr [] [] m m' := by
   cases n with
