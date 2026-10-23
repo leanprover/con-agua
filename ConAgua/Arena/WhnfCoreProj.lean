@@ -374,7 +374,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   · have hsc' : rdW (m.arr64 CTL) 1 ≠ 0 := fun e => hsc ⟨by rw [h1]; decide, e⟩
     have hon : a.store.lss.scratchOn = true := by
       rw [← hfl]; simpa using hsc'
-    have hT := hR.ls.2.2.2
+    have hT := hR.ls.2.2.2.1
     have hlt : (idxW h).toNat < a.store.lss.scr.lists.nodes.size := by
       rw [← hT.1]
       have : ¬ rdW (m.arr64 CTL) (40 + 1) ≤ idxW h := by rw [h1] at hbd; exact hbd

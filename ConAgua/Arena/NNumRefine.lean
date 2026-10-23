@@ -92,10 +92,6 @@ def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
   rdW (m.arr64 NNREC) (i * 4 + t * 2) = k.pre.word.toUInt64 ∧
   (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n
 
-/-- The hash of node `i` of tier `t`. -/
-def nnhash (m : Mem) (t i : Word) : Word :=
-  nnumHashW (rdW (m.arr64 NNREC) (i * 4 + t * 2)) (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `num` store: the library's relation for the name store's two
 `num` tables. -/
 def NNumR (m : Mem) (a : AState) : Prop :=
@@ -180,12 +176,13 @@ theorem nninternW_eq (m : Mem) (pre u : Word) :
       (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (baseW m 0) (nSlotsNN m)
         (homeW (nnumHashW pre u) (nSlotsNN m)) 0)
       (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (baseW m 1) (nSlotsNN m)
-        (homeW (nnumHashW pre u) (nSlotsNN m)) 0) := by
+        (homeW (nnumHashW pre u) (nSlotsNN m)) 0)
+      nnhash := by
   have e0 : ∀ x, hdW nnumSch.tag.toUInt64 0 x = nnP + x := fun x => by
     simp [hdW, nnumSch, nnP, NTag.num]
   have e1 : ∀ x, hdW nnumSch.tag.toUInt64 1 x = nnS + x := fun x => by
     simp [hdW, nnumSch, nnS, NTag.num]
-  simp only [nninternW, internM, nnpushMem_eq, e0, e1, true_and]
+  simp only [nninternW, internM, pushM, nnpushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_nnum` refines `internNNode (.num _ _)` -/

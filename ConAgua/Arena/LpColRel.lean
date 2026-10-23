@@ -32,7 +32,7 @@ theorem cnt_tier {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema
     (cntW S m t).toNat = (if t = 0 then P else Q).nodes.size := by
   rcases word_le_one t ht with rfl | rfl
   · simpa using hR.2.2.1.1
-  · simpa using hR.2.2.2.1
+  · simpa using hR.2.2.2.1.1
 
 theorem idxW_hdW (g t n : Word) (_hg : g.toNat < 16) (ht : t ≤ 1) (hn : n.toNat < 2 ^ 27) :
     idxW (hdW g t n) = n ∧ tierW (hdW g t n) = t := by
@@ -458,8 +458,8 @@ theorem mkK_split (A : ArrId) (c s x : Word) (r : Option (Word × Mem)) (w : Wor
 
 /-- **The frame of an interning with a column**: the table's arrays, the column, the counts. -/
 theorem mkK_internM_frame (S : Schema) (hS : S.WF) (A : ArrId) (hA : A ≠ CTL) (s x : Word) (m : Mem)
-    (sk : Word) (pk : Word → Bool) (vs rs₀ rs₁ : List Word) (w : Word) (m' : Mem)
-    (h : mkK A S.ca s x (internM S m sk pk vs rs₀ rs₁) = some (w, m')) :
+    (sk : Word) (pk : Word → Bool) (vs rs₀ rs₁ : List Word) {H : Mem → Word → Word → Word}
+    (w : Word) (m' : Mem) (h : mkK A S.ca s x (internM S m sk pk vs rs₀ rs₁ H) = some (w, m')) :
     MemFrame [S.ra, S.sa, A] [S.ca, S.ca + 1] m m' := by
   obtain ⟨m₁, h₁, hp⟩ := mkK_split A S.ca s x _ w m' h
   exact (MemFrame.mono (internM_frame S hS m sk pk vs rs₀ rs₁ w m₁ h₁) (by simp) (fun _ h => h)).trans
@@ -469,42 +469,54 @@ theorem mkK_internM_frame (S : Schema) (hS : S.WF) (A : ArrId) (hA : A ≠ CTL) 
 /-- **The L model of an `intern_*` with a column**: `internM`, with the bit `x` written at the new
 node's position `A[2 c + t]` after an append (`*_push` writes it last). -/
 def internMD (S : Schema) (A : ArrId) (x : Word) (m : Mem) (sk : Word) (pk : Word → Bool)
-    (vs rs₀ rs₁ : List Word) : Option (Word × Mem) :=
+    (vs rs₀ rs₁ : List Word) (H : Mem → Word → Word → Word) : Option (Word × Mem) :=
   if sk = 0 ∧ rs₀ = [] then none
   else if sk = 0 ∧ rs₀.headD 0 ≠ 0 then some (hdW S.tag.toUInt64 0 (rs₀.tail.headD 0), m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (hdW S.tag.toUInt64 1 (rs₁.tail.headD 0), m)
     else if pk 1 then
-      some (hdW S.tag.toUInt64 1 (cntW S m 1),
-        (pushG S m 1 vs (rs₁.tail.tail.headD 0) (cntW S m 1)).set64 A (cntW S m 1 * 2 + 1) x)
+      match growIf S.sa S.ca H m ((pushG S m 1 vs (rs₁.tail.tail.headD 0) (cntW S m 1)).set64 A
+          (cntW S m 1 * 2 + 1) x) (cntW S m 1) with
+      | some m' => some (hdW S.tag.toUInt64 1 (cntW S m 1), m')
+      | none => none
     else none
   else if pk 0 then
-    some (hdW S.tag.toUInt64 0 (cntW S m 0),
-      (pushG S m 0 vs (rs₀.tail.tail.headD 0) (cntW S m 0)).set64 A (cntW S m 0 * 2 + 0) x)
+    match growIf S.sa S.ca H m ((pushG S m 0 vs (rs₀.tail.tail.headD 0) (cntW S m 0)).set64 A
+        (cntW S m 0 * 2 + 0) x) (cntW S m 0) with
+    | some m' => some (hdW S.tag.toUInt64 0 (cntW S m 0), m')
+    | none => none
   else none
+
+theorem optMatch_some {o : Option Mem} {a w : Word} {m' : Mem}
+    (h : (match o with | some m₁ => some (a, m₁) | none => none) = some (w, m')) : o = some m' := by
+  cases o <;> simp_all
 
 /-- **What an `intern_*` with a column changes**: the table's two arrays, the column, the counts. -/
 theorem internMD_frame (S : Schema) (hS : S.WF) (A : ArrId) (hA : A ≠ CTL) (x : Word) (m : Mem)
-    (sk : Word) (pk : Word → Bool) (vs rs₀ rs₁ : List Word) (w : Word) (m' : Mem)
-    (h : internMD S A x m sk pk vs rs₀ rs₁ = some (w, m')) :
+    (sk : Word) (pk : Word → Bool) (vs rs₀ rs₁ : List Word) {H : Mem → Word → Word → Word}
+    (w : Word) (m' : Mem) (h : internMD S A x m sk pk vs rs₀ rs₁ H = some (w, m')) :
     MemFrame [S.ra, S.sa, A] [S.ca, S.ca + 1] m m' := by
-  have h0 := fun j c => (MemFrame.mono (A' := [S.ra, S.sa, A]) (C' := [S.ca, S.ca + 1])
-    (pushG_frame S hS m 0 (by decide) vs j c) (by simp) (fun _ h => h)).trans
-    (MemFrame.mono (A' := [S.ra, S.sa, A]) (C' := [S.ca, S.ca + 1])
-      (MemFrame.set64 (pushG S m 0 vs j c) A hA (c * 2 + 0) x) (by simp) (by simp))
-  have h1 := fun j c => (MemFrame.mono (A' := [S.ra, S.sa, A]) (C' := [S.ca, S.ca + 1])
-    (pushG_frame S hS m 1 (by decide) vs j c) (by simp) (fun _ h => h)).trans
-    (MemFrame.mono (A' := [S.ra, S.sa, A]) (C' := [S.ca, S.ca + 1])
-      (MemFrame.set64 (pushG S m 1 vs j c) A hA (c * 2 + 1) x) (by simp) (by simp))
+  have hp : ∀ t, t ≤ 1 → ∀ j m₂, growIf S.sa S.ca H m ((pushG S m t vs j (cntW S m t)).set64 A
+      (cntW S m t * 2 + t) x) (cntW S m t) = some m₂ → MemFrame [S.ra, S.sa, A] [S.ca, S.ca + 1] m m₂ := by
+    intro t ht j m₂ hg
+    obtain ⟨g1, g2, g3⟩ := growIf_frame _ _ _ _ _ _ _ hg
+    have hq := (MemFrame.mono (A' := [S.ra, S.sa, A]) (C' := [S.ca, S.ca + 1])
+      (pushG_frame S hS m t ht vs j (cntW S m t)) (by simp) (fun _ h => h)).trans
+      (MemFrame.mono (A' := [S.ra, S.sa, A]) (C' := [S.ca, S.ca + 1])
+        (MemFrame.set64 (pushG S m t vs j (cntW S m t)) A hA (cntW S m t * 2 + t) x) (by simp) (by simp))
+    refine ⟨fun b hb hc => ?_, fun y hy => ?_, fun b => (g2 b).trans (hq.2.2.1 b), g3.trans hq.2.2.2⟩
+    · have : b ≠ S.sa := fun e => hb (by simp [e])
+      rw [g1 b this]; exact hq.1 b hb hc
+    · rw [g1 CTL hS.sa_ctl.symm]; exact hq.2.1 y hy
   simp only [internMD] at h
-  split at h <;> try split at h <;> try split at h <;> try split at h <;> try split at h <;>
-    try split at h
+  repeat' split at h
   all_goals first
-    | (simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-       first | with_reducible exact MemFrame.refl _ _ _ | with_reducible exact h0 _ _ |
-         with_reducible exact h1 _ _)
-    | simp at h
+    | simp at h; done
+    | (try simp only [Option.some.injEq, Prod.mk.injEq] at h
+       obtain ⟨-, rfl⟩ := h
+       first | exact MemFrame.refl _ _ _ | exact hp 0 (by decide) _ _ ‹_› |
+         exact hp 1 (by decide) _ _ ‹_›)
 
 theorem word_succ_ne (a : Word) : a + 1 ≠ a := by grind
 
@@ -529,25 +541,41 @@ theorem cnt2_pushG (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) 
     grind
 
 /-- **`internMD` is the library's interning followed by the `mk_*` tail** (`mkK`), given the
-count words in `CTL` (`StoreR`) and the append's room for the handle and the column. -/
+count words in `CTL` (`StoreR`), the append's room for the handle and the column, and a column
+apart from the slots and the hash (the growth commutes with the column write). -/
 theorem internMD_mkK (S : Schema) (hS : S.WF) (A : ArrId) (x : Word) (m : Mem) (sk : Word)
-    (pk : Word → Bool) (vs rs₀ rs₁ : List Word) (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size)
+    (pk : Word → Bool) (vs rs₀ rs₁ : List Word) (H : Mem → Word → Word → Word)
+    (hA : A ≠ S.sa) (hAc : A ≠ CTL) (hH : ∀ (m : Mem) (k x : Word) (t i : Word),
+      H (m.set64 A k x) t i = H m t i)
+    (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size)
     (hpk : ∀ t, t ≤ 1 → pk t = true →
       (cntW S m t).toNat < 2 ^ 27 ∧ cntW S m t * 2 + t < m.len64 A) :
-    internMD S A x m sk pk vs rs₀ rs₁ = mkK A S.ca (cnt2 m S.ca) x (internM S m sk pk vs rs₀ rs₁) := by
+    internMD S A x m sk pk vs rs₀ rs₁ H =
+      mkK A S.ca (cnt2 m S.ca) x (internM S m sk pk vs rs₀ rs₁ H) := by
   have htag : S.tag.toUInt64.toNat < 16 := by have := hS.tag; simpa using this
   have hit : ∀ w, mkK A S.ca (cnt2 m S.ca) x (some (w, m)) = some (w, m) := fun w => by
     simp [mkK, derPutW]
   have push : ∀ t, t ≤ 1 → pk t = true → ∀ j,
-      mkK A S.ca (cnt2 m S.ca) x (some (hdW S.tag.toUInt64 t (cntW S m t), pushG S m t vs j (cntW S m t))) =
-      some (hdW S.tag.toUInt64 t (cntW S m t),
-        (pushG S m t vs j (cntW S m t)).set64 A (cntW S m t * 2 + t) x) := by
+      mkK A S.ca (cnt2 m S.ca) x (pushM S H m t vs j) =
+      match growIf S.sa S.ca H m ((pushG S m t vs j (cntW S m t)).set64 A
+          (cntW S m t * 2 + t) x) (cntW S m t) with
+      | some m' => some (hdW S.tag.toUInt64 t (cntW S m t), m')
+      | none => none := by
     intro t ht hp j
     obtain ⟨hc, hl⟩ := hpk t ht hp
     obtain ⟨hi, hti⟩ := idxW_hdW S.tag.toUInt64 t (cntW S m t) htag ht hc
-    have hl' : ¬ (pushG S m t vs j (cntW S m t)).len64 A ≤ cntW S m t * 2 + t := by
-      rw [len64_eq, pushG_size, ← len64_eq]; exact UInt64.not_le.mpr hl
-    simp only [mkK, derPutW, cnt2_pushG S hS m t ht vs j hctl, ite_false, hi, hti, hl']
+    rw [growIf_set64 _ _ _ _ _ _ A _ x hA hAc (hH · _ x)]
+    simp only [pushM]
+    cases hg : growIf S.sa S.ca H m (pushG S m t vs j (cntW S m t)) (cntW S m t) with
+    | none => rfl
+    | some m₂ =>
+      obtain ⟨g1, g2, -⟩ := growIf_frame _ _ _ _ _ _ _ hg
+      have hcnt : cnt2 m₂ S.ca = cnt2 (pushG S m t vs j (cntW S m t)) S.ca := by
+        simp only [cnt2, g1 CTL hS.sa_ctl.symm]
+      have hl' : ¬ m₂.len64 A ≤ cntW S m t * 2 + t := by
+        rw [len64_eq, g2, pushG_size, ← len64_eq]; exact UInt64.not_le.mpr hl
+      simp only [Option.map, mkK, derPutW, hcnt, cnt2_pushG S hS m t ht vs j hctl, ite_false, hi,
+        hti, hl']
   simp only [internMD, internM]
   split
   · rfl
@@ -596,7 +624,7 @@ theorem colMk (A : ArrId) (f : δ → Word) (m m₁ m' : Mem) (a a' : AState) (k
   have d1 := cnt_tier S R hsh m₁ _ _ _ hT₁ 1 (by decide)
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1
   have b0 := hT.2.2.1.2.1
-  have b1 := hT.2.2.2.2.1
+  have b1 := hT.2.2.2.1.2.1
   have htag := hS.tag
   rcases hst with rfl | ⟨hoff, hsz, hy, rfl⟩ | ⟨hon', hsz, hy, rfl⟩
   · have e : cnt2 m₁ S.ca = cnt2 m S.ca := by

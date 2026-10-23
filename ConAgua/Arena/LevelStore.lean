@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -35,6 +36,12 @@ namespace L.Arena
 abbrev SREC : ArrId := 6
 /-- The `succ` cons-table slots, both tiers interleaved. -/
 abbrev SSLOT : ArrId := 7
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def succGS : GrowSch :=
+  ⟨SSLOT, SREC, 1, 6, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ SREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `succ` record (FNV-1a over its word). -/
 def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
@@ -100,7 +107,7 @@ def sfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def succFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := len(SSLOT.u64) >> 1;
+  n := SSLOT.u64[len(SSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪sfindLoop⟫;
@@ -136,7 +143,7 @@ theorem sfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (sfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `succ` table. -/
-def nSlotsS (m : Mem) : Word := m.len64 SSLOT >>> 1
+def nSlotsS (m : Mem) : Word := rdW (m.arr64 SSLOT) (m.len64 SSLOT - 1) + SN0
 
 include hp in
 theorem succFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -161,11 +168,10 @@ end find
 /-- The node count of tier `t` of the `succ` table, `CTL[6 + t]`. -/
 def scnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (6 + t)
 
-/-- `succ_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `succ_push`'s room checks: the handle index, the record array. -/
 def spushOK (m : Mem) (t : Word) : Bool :=
   decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 SREC >>> (1 : Word)) &&
-    decide (scnt m t < m.len64 SHP >>> (1 : Word)) &&
-    decide (scnt m t + 1 ≤ (nSlotsS m >>> (2 : Word)) * 3)
+    decide (scnt m t < m.len64 SHP >>> (1 : Word))
 
 /-- The memory after `succ_push(t, u, j)` appended node `c`. -/
 def spushMem (m : Mem) (t u j c : Word) : Mem :=
@@ -173,37 +179,50 @@ def spushMem (m : Mem) (t u j c : Word) : Mem :=
     SHP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix) {
+def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪hpBlkS⟫;
   c := CTL.u64[6 + t];
   if c >= 134217728 { abort };
   if len(SREC.u64) >> 1 <= c { abort };
   if len(SHP.u64) >> 1 <= c { abort };
-  if ((len(SSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
+  gk := SSLOT.u64[len(SSLOT.u64) - 1];
   SREC.u64[c * 2 + t] := u;
   SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
   SHP.u64[c * 2 + t] := x;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
+
 section push
 variable (p : Prog) (hp : p.lookup "succ_push" = some succPush)
+
+/-- The growth's hash block computes `shash`. -/
+theorem shash_ok : HashOK p succGS 8 shash := by
+  intro k s₀
+  simp only [succGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [shash, succHashW, LocEq, St.setLoc]
 
 include hp in
 theorem succPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "succ_push" [t, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ spushOK s₀.mem t = true ∧ r = [scnt s₀.mem t] ∧
-      s'.mem = spushMem s₀.mem t u j (scnt s₀.mem t); ⊤⦄ := by
+      growIf SSLOT 6 shash s₀.mem (spushMem s₀.mem t u j (scnt s₀.mem t))
+        (scnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, succPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n)] <;>
-      finish [scnt, spushOK, spushMem, nSlotsS, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
+        growBlkG_spec p succGS SSLOT 6 rfl rfl 8 shash (shash_ok p) n] <;>
+      finish [spushMem, scnt, spushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -228,10 +247,14 @@ def sinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (succS + rs₁.tail.headD 0, m)
     else if spushOK m 1 then
-      some (succS + scnt m 1, spushMem m 1 u (rs₁.tail.tail.headD 0) (scnt m 1))
+      match growIf SSLOT 6 shash m (spushMem m 1 u (rs₁.tail.tail.headD 0) (scnt m 1)) (scnt m 1) with
+      | some m' => some (succS + scnt m 1, m')
+      | none => none
     else none
   else if spushOK m 0 then
-    some (succP + scnt m 0, spushMem m 0 u (rs₀.tail.tail.headD 0) (scnt m 0))
+    match growIf SSLOT 6 shash m (spushMem m 0 u (rs₀.tail.tail.headD 0) (scnt m 0)) (scnt m 0) with
+    | some m' => some (succP + scnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/

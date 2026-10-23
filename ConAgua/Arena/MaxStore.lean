@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -35,6 +36,12 @@ namespace L.Arena
 abbrev MREC : ArrId := 10
 /-- The `max` cons-table slots, both tiers interleaved. -/
 abbrev MSLOT : ArrId := 11
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def maxGS : GrowSch :=
+  ⟨MSLOT, MREC, 2, 10, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ MREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ MREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `max` record (FNV-1a over its two words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
@@ -103,7 +110,7 @@ def mfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def maxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
-  n := len(MSLOT.u64) >> 1;
+  n := MSLOT.u64[len(MSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪mfindLoop⟫;
@@ -139,7 +146,7 @@ theorem mfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (mfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `max` table. -/
-def nSlotsM (m : Mem) : Word := m.len64 MSLOT >>> 1
+def nSlotsM (m : Mem) : Word := rdW (m.arr64 MSLOT) (m.len64 MSLOT - 1) + SN0
 
 include hp in
 theorem maxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
@@ -164,11 +171,10 @@ end find
 /-- The node count of tier `t` of the `max` table, `CTL[10 + t]`. -/
 def mcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (10 + t)
 
-/-- `max_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `max_push`'s room checks: the handle index, the record array. -/
 def mpushOK (m : Mem) (t : Word) : Bool :=
   decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 MREC >>> (2 : Word)) &&
-    decide (mcnt m t < m.len64 MHP >>> (1 : Word)) &&
-    decide (mcnt m t + 1 ≤ (nSlotsM m >>> (2 : Word)) * 3)
+    decide (mcnt m t < m.len64 MHP >>> (1 : Word))
 
 /-- The memory after `max_push(t, u, v, j)` appended node `c`. -/
 def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
@@ -177,7 +183,7 @@ def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
     (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
+def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -185,25 +191,38 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
   if c >= 134217728 { abort };
   if len(MREC.u64) >> 2 <= c { abort };
   if len(MHP.u64) >> 1 <= c { abort };
-  if ((len(MSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
+  gk := MSLOT.u64[len(MSLOT.u64) - 1];
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
   MHP.u64[c * 2 + t] := x;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG maxGS 11⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def mhash (m : Mem) (t i : Word) : Word :=
+  maxHashW (rdW (m.arr64 MREC) (i * 4 + t * 2)) (rdW (m.arr64 MREC) (i * 4 + t * 2 + 1))
+
 section push
 variable (p : Prog) (hp : p.lookup "max_push" = some maxPush)
+
+/-- The growth's hash block computes `mhash`. -/
+theorem mhash_ok : HashOK p maxGS 11 mhash := by
+  intro k s₀
+  simp only [maxGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [mhash, maxHashW, LocEq, St.setLoc]
 
 include hp in
 theorem maxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "max_push" [t, u, v, j]
     ⦃fun r s' => LocEq s' s₀ ∧ mpushOK s₀.mem t = true ∧ r = [mcnt s₀.mem t] ∧
-      s'.mem = mpushMem s₀.mem t u v j (mcnt s₀.mem t); ⊤⦄ := by
+      growIf MSLOT 10 mhash s₀.mem (mpushMem s₀.mem t u v j (mcnt s₀.mem t))
+        (mcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, maxPush]
   cases n with
@@ -211,8 +230,9 @@ theorem maxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
-        hpBlkM2_spec p (exec p n)] <;>
-      finish [mcnt, mpushOK, mpushMem, nSlotsM, baseW]
+        hpBlkM2_spec p (exec p n),
+        growBlkG_spec p maxGS MSLOT 10 rfl rfl 11 mhash (mhash_ok p) n] <;>
+      finish [mpushMem, mcnt, mpushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -237,10 +257,14 @@ def minternW (m : Mem) (u v : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (maxS + rs₁.tail.headD 0, m)
     else if mpushOK m 1 then
-      some (maxS + mcnt m 1, mpushMem m 1 u v (rs₁.tail.tail.headD 0) (mcnt m 1))
+      match growIf MSLOT 10 mhash m (mpushMem m 1 u v (rs₁.tail.tail.headD 0) (mcnt m 1)) (mcnt m 1) with
+      | some m' => some (maxS + mcnt m 1, m')
+      | none => none
     else none
   else if mpushOK m 0 then
-    some (maxP + mcnt m 0, mpushMem m 0 u v (rs₀.tail.tail.headD 0) (mcnt m 0))
+    match growIf MSLOT 10 mhash m (mpushMem m 0 u v (rs₀.tail.tail.headD 0) (mcnt m 0)) (mcnt m 0) with
+    | some m' => some (maxP + mcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
