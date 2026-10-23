@@ -113,6 +113,8 @@ import ConAgua.Arena.IndInstallSpec36
 import ConAgua.Arena.IndInstallSpec37
 import ConAgua.Arena.IndRealIpo
 import ConAgua.Arena.IndRealBph2
+import ConAgua.Arena.IndRealOpf3
+import ConAgua.Arena.IndRealOpfC
 import ConAgua.Arena.IndInstallSpec41
 import ConAgua.Arena.IndInstallSpec42
 import ConAgua.Arena.IndArmBridge

@@ -175,6 +175,7 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 /-- **`opf_go` refines `openPisAtFvarsFGo`** under the stage relation and `AbsOK`, the twin's
 `acc` the stack slice `(co, cn)` below the top. -/
+@[refines ConRon.Arena.openPisAtFvarsFGo]
 theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) (acc : Array EIdx)
     (r : List Word), callW opfP k "opf_go" [n, e, i, co, cn] m = some (r, m') →
     StageR dn vis fe m a → AbsOK m → e.toNat < 2 ^ 32 → SpineR m co cn acc →
@@ -270,6 +271,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
 
 /-- **`opa_go` refines `openPisAtFvars`** under the stage relation and `AbsOK`, from the stack
 top `t`. -/
+@[refines ConRon.Arena.openPisAtFvars]
 theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : List Word),
     callW opfP k "opa_go" [n, e, i] m = some (r, m') →
     StageR dn vis fe m a → AbsOK m → e.toNat < 2 ^ 32 →
@@ -435,6 +437,7 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
 /-- **`open_pis_at_fvars_f` refines `openPisAtFvarsF`** under the stage relation and the walk
 memos (replaces `IndStubs.openPisAtFvarsF_spec`, with the fvar indices below `2^63`: they do not
 wrap); the memos are well formed after. -/
+@[refines ConRon.Arena.openPisAtFvarsF]
 theorem opfF_ok (k e i : Word) (he : H e) (hi : i.toNat < 2 ^ 63) :
     RelW opfF [k, e, i] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
       (openPisAtFvarsF k.toNat (decI e) i.toNat)
@@ -513,6 +516,12 @@ theorem opfF_ok (k e i : Word) (he : H e) (hi : i.toNat < 2 ^ 63) :
       obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS2 hAb2 hsl hb c'
       rw [hdb] at hdec
       exact ⟨_, _, hrun, ⟨hS', hg1.trans (hg1'.trans (hg2.trans hg')), hdec⟩, hAb'⟩
+
+/-- A returning call of `open_pis_at_fvars_f` in a program binding `opfP` is the model's run. -/
+theorem opf_callW {p : Prog} (hp : OpfF p) {n : Nat} {m m' : Mem} {args r : List Word}
+    (h : callW p n "open_pis_at_fvars_f" args m = some (r, m')) : opfF m args = some (r, m') := by
+  obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (opfF_spec p hp n _ args) h
+  exact hs
 
 end
 
