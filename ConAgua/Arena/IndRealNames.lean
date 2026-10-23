@@ -6,6 +6,7 @@ import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.PromoteLsRef
+import ConAgua.Arena.InstLPRef
 
 /-!
 # Name and level-list interning stubs discharged (lane `indproofs4`, helper `indproofs4-names`)
@@ -453,5 +454,171 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   have := mt UInt64.le_iff_toNat_le.mpr c
   have e : (4294967296 : Word).toNat = 4294967296 := rfl
   rw [e] at this; omega
+
+/-! ## `intern_ls_iw(o, l)` (the `IW` slice to the pool, master's `intern_ls`) -/
+
+/-- `intern_ls_iw` and its callees. -/
+def ilProg : Prog :=
+  [("intern_ls_iw", L.Stubs.internLsIwL), ("pool_room", L.Stubs.poolRoom),
+   ("iw_pool", L.Stubs.iwPool), ("intern_ls", internLs), ("lit_hash", litHash),
+   ("limbs_eq", limbsEq), ("ls_match", lsMatch), ("ls_find", lsFind), ("ls_push", lsPush)]
+
+def ilFns : List FnName := ilProg.map (·.1)
+
+/-- `intern_ls_iw` writes the pool (and its top) and the list table with its column. -/
+theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] ilFns = true := by
+  decide +kernel
+
+abbrev IlF (p : Prog) : Prop := ProgHas p ilProg
+
+/-- **The model of `intern_ls_iw`.** -/
+noncomputable def ilF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
+  callF ilProg "intern_ls_iw" m args
+
+theorem ilF_spec (p : Prog) (hp : IlF p) (n : Nat) (s₀ : St) (args : List Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "intern_ls_iw" args
+    ⦃fun r s' => LocEq s' s₀ ∧ ilF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
+  callF_spec ilProg_closed (hp.agree ilFns) (by decide) n s₀ args
+
+theorem ilF_frame {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m')) :
+    MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' := by
+  obtain ⟨n, hc⟩ := callF_run h
+  exact (run_memFrame ilProg_closed (by decide) (run_of_callW hc)).1
+
+/-- `intern_ls_iw`'s body over its callees' runs. -/
+def ilwW (p : Prog) (n : Nat) (m : Mem) (o l : Word) : Option (Word × Mem) :=
+  match callW p n "pool_room" [l] m with
+  | none => none
+  | some (r₁, m₁) =>
+    match callW p n "iw_pool" [o, r₁.headD 0, l] m₁ with
+    | none => none
+    | some (_, m₂) =>
+      match callW p n "intern_ls" [r₁.headD 0, l] m₂ with
+      | none => none
+      | some (r₃, m₃) => if 4294967296 ≤ r₃.headD 0 then none else some (r₃.headD 0, m₃)
+
+theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs.internLsIwL)
+    (n : Nat) (s₀ : St) (o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "intern_ls_iw" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilwW p n s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, L.Stubs.internLsIwL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "pool_room", callW_spec p n "iw_pool", callW_spec p n "intern_ls"] <;>
+    finish [ilwW]
+
+/-- A decoded handle slice is the words of its list, inside the array. -/
+theorem hslice_sliceL {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? a o l = some us →
+    sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size)
+  | 0, o, us, h => by
+    simp [hslice?] at h; subst h; simp [sliceL, lsWords]
+  | l + 1, o, us, h => by
+    rw [hslice?_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨x, hx, ys, hys, rfl⟩ := h
+    obtain ⟨ih, hb⟩ := hslice_sliceL l (o + 1) ys hys
+    cases hw : a[o]? with
+    | none => simp [hd?, hw] at hx
+    | some w =>
+    simp only [hd?, hw, bind, Option.bind_some] at hx
+    by_cases hw32 : w.toNat < 2 ^ 32
+    · rw [if_pos hw32] at hx
+      cases hx
+      have ho : o < a.size := (Array.getElem?_eq_some_iff.mp hw).1
+      refine ⟨?_, fun _ => ?_⟩
+      · rw [sliceL_succ, ih, hw]
+        simp only [Option.getD_some, lsWords, List.map_cons, List.cons.injEq, and_true]
+        exact ((word_decI _ w hw32).mpr rfl).symm
+      · rcases Nat.eq_zero_or_pos l with h0 | h0
+        · subst h0; omega
+        · have := hb h0; omega
+    · rw [if_neg hw32] at hx; cases hx
+
+/-- **`intern_ls_iw`'s model refines `internLsNode us`** at the `IW` slice decoding to `us`
+(replaces `IndStubs.internLsIw_spec`). -/
+theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
+    (us : List LIdx) :
+    RelW ilF [o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some us)
+      (internLsNode us) (KeepPost dn vis fe (fun _ r (x : LsIdx) => H (r.headD 0) ∧ decI (r.headD 0) = x)) := by
+  rintro m m' a r hc ⟨hS, hd⟩
+  obtain ⟨n', hc'⟩ := callF_run hc
+  cases n' with
+  | zero => exact (callW_zero hc').elim
+  | succ n =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (internLsIw_specW ilProg rfl n _ o l) hc'
+  simp only at hs' hW
+  rw [hs'] at hW
+  unfold ilwW at hW
+  cases h1 : callW ilProg n "pool_room" [l] m with
+  | none => rw [h1] at hW; cases hW
+  | some q1 =>
+  obtain ⟨r₁, m₁⟩ := q1
+  rw [h1] at hW
+  simp only at hW
+  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1)
+  rw [ho] at hW
+  cases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with
+  | none => rw [h2] at hW; cases hW
+  | some q2 =>
+  obtain ⟨r₂, m₂⟩ := q2
+  rw [h2] at hW
+  simp only at hW
+  cases h3 : callW ilProg n "intern_ls" [m.top, l] m₂ with
+  | none => rw [h3] at hW; cases hW
+  | some q3 =>
+  obtain ⟨r₃, m₃⟩ := q3
+  rw [h3] at hW
+  simp only at hW
+  by_cases c : 4294967296 ≤ r₃.headD 0
+  · rw [if_pos c] at hW; cases hW
+  rw [if_neg c] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  have hpool : PoolOK m := hS.1.arena.1.lit.1
+  have hc0 := hpool.2.1
+  have hps : (m.arr64 POOL).size < 2 ^ 63 := hpool.2.2.1
+  have htl : (m.top + l).toNat = m.top.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have g0 : Grows m m₁ := by rw [hm₁]; exact grows_top m _ hc0 (by omega) (by omega)
+  have hpsz₁ : (m₁.arr64 POOL).size = (m.arr64 POOL).size := by rw [hm₁, size_set64]
+  have hiw₁ : m₁.arr64 IW = m.arr64 IW := by rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  obtain ⟨hsl, hb⟩ := hslice_sliceL l.toNat o.toNat us hd
+  have hIW := hS.2.2.2.1
+  have hol : o.toNat + l.toNat < 2 ^ 64 := by
+    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
+    · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)
+    · have := hb h0; simp only [iwA] at this; omega
+  obtain ⟨hg, hf₂, -, hsl₂⟩ := ipW_ok n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _)
+    (by rw [hpsz₁]; exact hroom) (by rw [hpsz₁]; exact hps) hol
+  rw [hiw₁] at hsl₂
+  have hpsz₂ : (m₂.arr64 POOL).size = (m.arr64 POOL).size := by rw [hf₂.2.2.1 POOL, hpsz₁]
+  have htop₂ : m₂.top = m.top + l := by
+    have e := hf₂.2.1 0 (by simp)
+    simp only [top_rdW] at e ⊢
+    rw [e, hm₁]; exact Mem.top_set64 _ _ hc0
+  have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hS.1.arena
+  obtain ⟨s₃, hs₃, -, hI⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (internLs_spec ilProg rfl rfl rfl rfl rfl rfl n _ m.top l (by simp only; omega)
+      (by simp only; omega)) h3
+  simp only at hs₃ hI
+  rw [hs₃] at hI
+  obtain ⟨ok, hA₃, res, hf₃⟩ := L.Front.internLs_D m₂ a hA₂ (r₃.headD 0) m₃ m.top l
+    (by show m.top.toNat + l.toNat ≤ m₂.top.toNat; rw [htop₂, htl]; exact Nat.le_refl _)
+    us (by rw [hsl₂]; simpa [iwA] using hsl) hI
+  have hrun := AM.run_of_ok _ _ ok
+  rw [res] at hrun
+  obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun
+  have hfr : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m₃ :=
+    ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
+      (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
+  obtain ⟨hS', hg'⟩ := StageR.of_walk hS hA₃ hfr (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
+    (by simp only [cp, hca, hpi])
+  rw [hr] at hrun c
+  refine ⟨_, _, hrun, hS', hg', ?_, rfl⟩
+  have := mt UInt64.le_iff_toNat_le.mpr c
+  have e : (4294967296 : Word).toNat = 4294967296 := rfl
+  rw [e] at this; show (r.headD 0).toNat < 2 ^ 32; omega
 
 end L.Ind
