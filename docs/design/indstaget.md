@@ -164,3 +164,44 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
 * Census (worktree, after merging master f38d6f00): phase 8 141 proven / 76 sorry; all 59
   targets of `docs/stagec-targets.txt` free of the four core contracts. `checkBlockPass`/
   `checkBlock` still depend on `L.Ind.checkConstantVal_spec` (not one of the four).
+
+## Landing 9: the real constant check in the block chain; the arm under `StageC`
+
+* `check_constant_val` in the `StageC` chain is the program's own call:
+  - `ctsW`'s and `ctorW`'s calls now go through `cR` (IndSumSpec3: `ctsK1‥4` take `cR k`; IndSumSpec12: `ctorW`'s first call is `cR (n + 2)`).
+  - `IndT/Sum2`, `IndT/Sum4` and `IndT/Install3` use `checkConstantVal_refinesT` (`StageT`) with con-ron's `checkConstantVal_bridge` for `CheckOK` (`StageC.of_T`); the walk memos are kept by `AbsKeep p "check_constant_val"`.
+  - Every `StageC` theorem above them takes `hV : ValProg p` and `hkc` (threaded through Install3/4/7, Sum2/4/5, Pass, Block).
+  - The `StageR` proofs read `stubCall`, which unfolds to the old stub.
+* `IndT/CheckIndDecl`: `cidW_okC` (`refines_part` of `checkDecl`, replacing `cidW_ok`'s tag).
+  - Premises: `cidW_ok`'s, with `StageT` + `FoldOK V env fe a` in place of `StageR` + `StateOK`, and the record's denotation (`∃ x, denoteDecl …`) in place of `AllVis`, plus `n ≤ 2^62`.
+  - `check_block` runs at the call's own fuel `j + 5`, lifted by `callW_mono` only when the fuel is below 5 (from indproofs4's suggestion).
+  - `CheckOK` before `check_block` comes from con-ron's `basisPinHit_run` (`PStep.of_caches`), `indParamsOk_spec` and `blockParts?_spec`.
+  - The post is `cidW_ok`'s.
+* Census (worktree): phase 8 is 141 proven / 76 sorry. `checkConstantVal_spec` is no longer a sorry source of the block chain's targets.
+
+## Landing 10: the arm's memos (`cidW_okC`'s post as `IndArmSpec` takes it)
+
+* `cidW_okC`'s premise is now `hM : IndMemos m`. CidMemos is derived inside:
+  - PosMR/maMR/taMR come from `IndMemos.stage`;
+  - `AbsOK` comes from `StageT.absOK` with `I1Memo` and `CrOK`;
+  - `CoreMemos m` comes from `TwinOK.memos`.
+* The post is `… StageR … ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m'`.
+* Write sets measured on `checkerProg` (`check_ind_decl`'s closure):
+  - every memo array or epoch word of `IndMemos`/`CoreMemos` is written only by its own `…_put`/`…_clear`;
+  - `mcMR` (array 208, `CTL[216‥217]`) is written by nothing;
+  - `maMR` is written only by `block_raw_rec`;
+  - in the tail, the recursor memos are written by `check_block_rec` (through the prep's classes walks) and `hb` by `check_block_tables`.
+* How each part of the post is obtained:
+  - `RcMR` is threaded through `grpCW`/`grpBW`/`grpW`/`gckW` and genRecCheck/checkBlockRec (C).
+  - The calls after the classes' walks keep it by `RcMR.ofClosed`. Their names are in `grcRcCallees`, a program fact `hfRc`.
+  - The tail returns `RcMR` (`cons_block_recs_tf` by `RcMR.ofClosed`; `check_block_tables` by `RcMR.ofClosedHb`, a frame outside the recursor memos but `hb`'s, with `hb` from its post).
+  - Block returns `RcMR` and `maMR` (`block_raw_rec`'s post, then a `maFree` frame across pass and tail).
+  - The arm frames `mcMR` across `check_block` (`mcFree`). The basis branch and the frame callees go by `armMemos_call` (`cidFree`).
+  - `CoreMemos`, `I1Memo` and `CrOK` after `check_block` come from `AbsOK`.
+* `StageMemos` lost its `ep` clause (epochs + 2 ≠ 0): a clear (which aborts at the last epoch) does not keep it, and nothing used it. This was approved by the coordinator; indproofs4 owns LoopT.lean.
+* New program facts on `cidW_okC`. All are `closedA` frames or memberships, to be decided for `checkerProg`:
+  - `hfB : "check_basis_decl" ∈ fsC`;
+  - `hfRc`;
+  - `hclH`/`hfH` (`rcHbFree`, `check_block_tables`);
+  - `hclM`/`hfM` (`maFree`, pass and tail);
+  - `hclMc`/`hfMc` (`mcFree`, `check_block`).

@@ -300,19 +300,16 @@ theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some 
     ∃ t j, t ≤ 1 ∧ acnt m t < 134217728 ∧
       growIf ASLOT 4 ahash m (apushMem m t f a j (acnt m t)) (acnt m t) = some m₁ ∧
       idxW r = acnt m t ∧ tierW r = t := by
-  simp only [ainternW] at hI
-  have ok : ∀ t, apushOK m t = true → acnt m t < 134217728 := by
-    intro t h; simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
-  repeat' split at hI
-  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
-  all_goals obtain ⟨hr, hm⟩ := hI
-  all_goals subst hr hm
-  all_goals first
-    | (have h := ok 1 ‹apushOK m 1 = true›
-       exact ⟨1, _, by decide, h, ‹_›, by rw [show appS = 9 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
-    | (have h := ok 0 ‹apushOK m 0 = true›
-       exact ⟨0, _, by decide, h, ‹_›, by rw [show appP = 8 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
-    | exact absurd rfl hc
+  rcases consInternM_cases (C := appCS) hI with rfl | ⟨t, j, ht, hok, hg, rfl⟩
+  · exact absurd rfl hc
+  have h : acnt m t < 134217728 := by
+    rw [← apushOK_eqC] at hok
+    simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
+  refine ⟨t, j, ht, h, ?_, ?_⟩
+  · rw [apushMem_eqC]; exact hg
+  · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
+    · rw [show appCS.P = 8 * 134217728 from rfl]; exact hw_fields _ _ h
+    · rw [show appCS.S = 9 * 134217728 from rfl]; exact hw_fields _ _ h
 
 /-- After a miss of `intern_app` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/

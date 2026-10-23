@@ -13,9 +13,9 @@ for the environment guard. It runs here from the real program (`realCall p`) und
   `div_mod_decl_pin`, `div_mod_cert_stmts`, `div_mod_cert_proofs`, the substitution walks,
   `consts_resolve_all`, `div_mod_cert_applied`) by `StageC.of_leaf`: their `StageR` refinements, the
   leaves' write set (`LeafClosed`), con-ron's `IStepS`;
-* the walks the stubs stand for (`loose_bvars_bounded_fast`, `has_fvar_fast`,
-  `all_level_params_defined`, `consts_resolve_ffast`) by their `StageT` contracts (`IndStubsT.lean`)
-  and `CheckOK` after from con-ron's `RunsC` lemmas;
+* the walks (`loose_bvars_bounded_fast`, `has_fvar_fast`, `all_level_params_defined`,
+  `consts_resolve_ffast`) by their `StageT` refinements (`consts_resolve_ffast`'s memo `CrOK`
+  threaded from the arm: `CrKeep`) and `CheckOK` after from con-ron's `RunsC` lemmas;
 * the core calls (`infer_type_core`, `is_def_eq_core`) by the knot's `StageT` sims, `CheckOK` after
   from con-ron's `KnotSpec` (`StageC.of_T`).
 
@@ -43,7 +43,7 @@ local notation "V" => ConLeche.CheckMode.verified
 `checkDivModPin_bridge`): the environment guard at the extended view `vis2` (`StepOK`), the stored
 value's lookup, the variant loop at the pre-insertion view `vis` (`loopC`). -/
 theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
+    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
     {env env2 : ConLeche.Env}
     (hs0 : SubstC0 p dn vis (fe2.restrictTo vis.toNat))
     (hsA : SubstCAll p dn vis (fe2.restrictTo vis.toNat)) (henv : ConLeche.EnvWF env)
@@ -52,7 +52,8 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
     (hcall : callW p k "check_div_mod_pin" [po, pl, vis, vis2, c] m = some (r, m'))
     (hS : StageR dn vis2 fe2 m a) (hC : StageC dn vis (fe2.restrictTo vis.toNat) env m a)
     (hok2 : StepOK env2 fe2 a) (hc : H c) (hI : PinsIW m po.toNat pl.toNat ips)
-    (hpd : PinsDenote a.store ips psPs) (hn : denoteN a.store.ns (decI c) = some nm) :
+    (hpd : PinsDenote a.store ips psPs) (hn : denoteN a.store.ns (decI c) = some nm)
+    (hCr : L.Stubs.CrOK m) :
     ∃ a', (checkDivModPin V ips (fe2.restrictTo vis.toNat) fe2 (decI c)).run a = .ok ((), a') ∧
       StageR dn vis2 fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
       CoreStep V env (fe2.restrictTo vis.toNat) a a' ∧ IWGrow m m' := by
@@ -66,8 +67,8 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   have hD8 := hD.toDmProg8
   have hD7 := hD8.toDmProg7
   -- the environment guard, at the extended view
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hf1, hw⟩ :=
-    (eg_ref hD7 hdn c).bindL hcl (leaf_mem _ (by decide)) ⟨hS, hc⟩ hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hf1, hCr1, hw⟩ :=
+    (eg_ref hD7 hdn c).bindLC hcl (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hS, hc⟩ hCr hw
   obtain ⟨hst1, hx1, hc1, hp1, hgv⟩ :=
     ConRon.Bridge.divModEnvGuard_run hC.check.state hC.check.pins hok2.ienv hn hrun1
   have c1 : CoreStep V env (fe2.restrictTo vis.toNat) a a1 :=
@@ -146,8 +147,8 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   have hv1 : denoteE a1.store (decE wv) = some v' := by
     have h := ConRon.Bridge.denote_ext hvv hx1
     rw [hvw] at h; exact h
-  obtain ⟨x3, a3, hrun3, hC3, c3, hg3⟩ := loopC hD hq hcl hs0 hsA henv c wv hc hwlt hwsv ips psPs
-    po pl [] k hk' m2 a1 r3 m3 hC1 (hI.grow hg1) (ConRon.Bridge.PinsDenote.mono hx1 _ _ hpd)
+  obtain ⟨x3, a3, hrun3, hC3, c3, hg3⟩ := loopC hD hq hcl hkp hs0 hsA henv c wv hc hwlt hwsv ips
+    psPs po pl [] k hk' m2 a1 r3 m3 hC1 hCr1 (hI.grow hg1) (ConRon.Bridge.PinsDenote.mono hx1 _ _ hpd)
     (ConRon.Bridge.denoteN_ext hn hx1) hv1 h3
   have hS3' := StageR.restrict hC3.stage vis2
   rw [IFEnv.restrictTo_restrictTo, ← hS.1.env.vis, IFEnv.restrictTo_self] at hS3'
@@ -172,7 +173,7 @@ def DivGateSpecC (p : Prog) (pins : List INatOpPinSet) : Prop :=
     StageR dn w fe2 m a → StageC dn vis (fe2.restrictTo vis.toNat) env m a →
     ConLeche.EnvWF env → StepOK env2 fe2 a → PinSetsR m pins →
     (∃ pinsP, PinsDenote a.store pins pinsP) →
-    denoteN a.store.ns (decI n) = some nm →
+    denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
     ∃ a', (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
       StageR dn w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
       Ext a.store a'.store ∧ IWGrow m m' ∧ PinSetsR m' pins ∧ MemFrame stepA stepC m m'
@@ -182,9 +183,9 @@ def DivGateSpecC (p : Prog) (pins : List INatOpPinSet) : Prop :=
 substitution walks' refinements (`substC0_of`, `substCAll_of`). -/
 theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hCl : StepIn p dgFns) (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe)
-    (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (pins : List INatOpPinSet) :
+    (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (hkp : CrKeep p) (pins : List INatOpPinSet) :
     DivGateSpecC p pins := by
-  intro dn hdn vis w fe2 env env2 n nm k hk m m' a r hn hcall hS hC henv hok2 hP hpd hnm
+  intro dn hdn vis w fe2 env env2 n nm k hk m m' a r hn hcall hS hC henv hok2 hP hpd hnm hCr
   obtain ⟨psPs, hpd⟩ := hpd
   cases k with
   | zero => rw [callW_zero] at hcall; exact absurd hcall (by simp)
@@ -227,6 +228,7 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
+  have hCr2 := hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr)
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hN.lSlContains (vis := w) (fe := fe2)
     (dn := dn) (r1.headD 0) (r1.tail.headD 0) n x1 (by exact_mod_cast hn) k m1 a r2 m2 ⟨hS1, hd1.1⟩ h2
   have hP2 := PinSetsR.step hP1 hg2 (hfrOf (by simp [dgFns]) h2)
@@ -258,8 +260,9 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
     rw [h4, bW_some] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨a4, hrun4, hS4, hC4, c4, hg4⟩ := cpC hD.toDmProg9 hq hcl hdn (hs0 dn vis _)
+    obtain ⟨a4, hrun4, hS4, hC4, c4, hg4⟩ := cpC hD.toDmProg9 hq hcl hkp hdn (hs0 dn vis _)
       (hsA dn vis _) henv hk' h4 hS3 hC3 hok2 (by exact_mod_cast hn) hI3 hpd hnm
+      (hkp.call (im_mem _ rfl) h3 hCr2)
     refine ⟨a4, ?_, hS4, hC4, c4.ext, hG2.trans (hg3.trans hg4)⟩
     simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', if_true]
     exact hrun4

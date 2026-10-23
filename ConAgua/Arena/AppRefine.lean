@@ -154,7 +154,7 @@ end query
 theorem aprobeW_arm (m : Mem) (f a t : Word) :
     ∀ j d, aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (baseW m t) (nSlotsA m) j d =
       probeArm appSch m t (aMt m f a t) (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (baseW m t) (nSlotsA m)) j d := by
-  intro j d; rw [aprobeW]; rfl
+  intro j d; rw [aprobeW, cprobeW]; rfl
 
 theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
   simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -175,7 +175,13 @@ theorem ainternW_eq (m : Mem) (f a : Word) :
     simp [hdW, appSch, appP, ETag.app]
   have e1 : ∀ x, hdW appSch.tag.toUInt64 1 x = appS + x := fun x => by
     simp [hdW, appSch, appS, ETag.app]
-  simp only [ainternW, internM, pushM, apushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC appCS m t = apushOK m t := fun t => (apushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC appCS m t (appCS.vsM (pushArgs appCS [f, a] (appHashW f a))) j c =
+      pushG appSch m t [f, a] j c := by
+    intro t j c; rw [← apushMem_eq, apushMem_eqC]; rfl
+  have ec : ∀ t, cntC appCS m t = cntW appSch m t := fun t => rfl
+  have eh : appCS.qhM m [f, a] = appHashW f a := rfl
+  simp only [ainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's. -/
