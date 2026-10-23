@@ -393,14 +393,14 @@ def dcWf : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, ctx, off, l => dcW n m ctx off l
 
-theorem dc_spec' (p : Prog) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
+theorem dc_spec' (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
     (hg : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL)
     (hp : p.lookup "nest_ds_closed" = some nestDsClosedL) (n : Nat) (s₀ : St) (ctx off l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ds_closed" [ctx, off, l]
     ⦃fun r s' => LocEq s' s₀ ∧ dcWf n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ hp]; simp only [callFn, nestDsClosedL]; vcgen [exec] <;> grind
-  | succ n => exact dc_spec p hh hg hp n s₀ ctx off l
+  | succ n => exact dc_spec p hf hh hg hp n s₀ ctx off l
 
 /-- `nest_ds_closed` from the stage relation: `ds.allM (fvarB · ≤ ctx.hiAt 0)`. -/
 theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) (m m' : Mem)
@@ -434,6 +434,7 @@ attribute [ind_grind] nwsK_closed nwsK_open
 
 /-- The lookups of `nest_ds_closed`. -/
 structure DcLook (p : Prog) : Prop where
+  hf : HfF p
   hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt
   hg : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL
   hp : p.lookup "nest_ds_closed" = some nestDsClosedL
@@ -446,7 +447,8 @@ theorem nestWalkStack_spec (p : Prog) (hl : DcLook p)
   simp only [callFn, nestWalkStackL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      dc_spec' p hl.hh hl.hg hl.hp n] <;>
+      dc_spec' p hl.hf hl.hh hl.hg hl.hp n] <;>
+
     finish (gen := 20) [nwsW]
 
 theorem nestWalkStack_eq (ctx : NestCtx) (prog : List NestHole) (ds : List EIdx) :

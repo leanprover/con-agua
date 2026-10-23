@@ -456,7 +456,7 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     | some p2 =>
     obtain ⟨rf, m2⟩ := p2
     rw [h2] at h
-    refine (MFr.ofStub h2).trans ?_
+    refine (MFr.ofFvbF h2).trans ?_
     by_cases hf : nP < rf.headD 0
     · rw [ckc2K2_open (h := hf)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _

@@ -129,7 +129,7 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
   rw [h3] at h
   obtain ⟨k3, a3, run3, hS3, hg3, hd3⟩ := fvbF_ok dn vis fe CWF x hx m2 m3 a2 r3 h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
-  have hP3 := hP2.stub (by decide) h3
+  have hP3 := hP2.fr (MFr.ofFvbF h3)
   by_cases hc3 : pfl < r3.headD 0
   · rw [pdsK3_out (h := hc3)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
@@ -146,7 +146,7 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
   rw [h4] at h
   obtain ⟨k4, a4, run4, hS4, hg4, hd4⟩ := fvbF_ok dn vis fe CWF y hy m3 m4 a3 r4 h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
-  have hP4 := hP3.stub (by decide) h4
+  have hP4 := hP3.fr (MFr.ofFvbF h4)
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
   by_cases hc4 : pfl < r4.headD 0
   · rw [pdsK4_out (h := hc4)] at h
