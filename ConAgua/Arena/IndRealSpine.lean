@@ -6,7 +6,6 @@ import ConAgua.Arena.IndStubs
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.StageInst1
-import ConAgua.Arena.RecSim
 
 /-!
 # The spine adapters' stub contracts discharged (lane `indproofs4`, helper `spine`)
@@ -31,15 +30,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-- A real callee's `RelW` as a `RSim` (`RelAM.sim` for a model). -/
-theorem RelW.sim {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
-    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
-    (h : RelW W args pre op post) {m : Mem} {a : AState} (hp : pre m a) :
-    RSim (W m args) op a (fun b a' x => post m b.2 a' b.1 x) := by
-  intro b hb
-  obtain ⟨r, m'⟩ := b
-  exact h m m' a r hb hp
 
 /-! ## `get_app_fn_f` -/
 

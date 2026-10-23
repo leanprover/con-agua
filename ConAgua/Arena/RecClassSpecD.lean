@@ -22,6 +22,15 @@ open L.Arena
 
 /-! ## Callee simulations -/
 
+/-- A real callee's `RelW` as a `RSim` (`RelAM.sim` for a model). -/
+theorem RelW.sim {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : RelW W args pre op post) {m : Mem} {a : AState} (hp : pre m a) :
+    RSim (W m args) op a (fun b a' x => post m b.2 a' b.1 x) := by
+  intro b hb
+  obtain ⟨r, m'⟩ := b
+  exact h m m' a r hb hp
+
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 

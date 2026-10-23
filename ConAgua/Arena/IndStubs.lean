@@ -110,11 +110,6 @@ theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
     RelAM "open_pis_at_fvars_f" [k, e, i] (StageR dn vis fe)
       (openPisAtFvarsF k.toNat (decI e) i.toNat) (KeepPost dn vis fe decOLE) := sorry
 
-/-- `get_app_fn(fuel, e)`. -/
-theorem getAppFn_spec (f e : Word) (he : H e) :
-    RelAM "get_app_fn_f" [f, e] (StageR dn vis fe)
-      (getAppFn f.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
-
 /-- `get_app_args(fuel, e)`. -/
 theorem getAppArgs_spec (f e : Word) (he : H e) :
     RelAM "get_app_args_f" [f, e] (StageR dn vis fe)
