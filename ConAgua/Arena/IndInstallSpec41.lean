@@ -24,14 +24,14 @@ contract `genRecCheck_pending`).
 * Glue: stable slices decoded below the tops (`spl_decB`, `csRes_decB`), the class reading's words
   (`crWords`), a fresh `ClassGen` record (`cgRec_decB`), the classes' constructor level-parameter
   slices through `classes_nfs` (`classesNfs_refinesLp`, from `CnsRec`'s source pointer), the
-  prefix's slice fresh (`gpbW_simF`), the stage memos across `target_rec_pins` and
-  `class_stream_recs` by their program text (`RcMR.ofMfr`).
+  prefix's slice fresh (`gpbW_simF`), the walk memos across `target_rec_pins` and
+  `class_stream_recs` by their program text (`RcMR.ofClosed`).
 * `block_large_elim_allowed` enters through its stub contract (`IndInstallSpec39`).
 
 Hypotheses beyond the stage relation and the decodings: `RecsB` (the shape's recursor slice below
 the top, also when empty), `ClassesLp` (the classes' constructors' level-parameter slices in
 `EREC`, `classes_ctors`' own hypothesis), `bs.nP < 2^63`, the pool's size below `2^63` (they bound
-`nP + k` and `nP + slots`), `RcMR`, and the program facts `GrcProg p`, `closedA p mfrA mfrC fsR`.
+`nP + k` and `nP + slots`), `RcMR`, and the program facts `GrcProg p`, `closedA p rcFreeA rcFreeC fsR`.
 -/
 
 noncomputable section
@@ -242,26 +242,6 @@ theorem classesNfs_refinesLp {p : Prog} (P : CnsProg p) (n : Nat) (s₀ : St) (a
 
 /-! ## Memo frames from the program text -/
 
-/-- Every word array below 256 but the stage's per-call memos (201‥208). -/
-def mfrA : List ArrId := (List.range 256).filter (fun b => b < 201 ∨ 208 < b)
-/-- Every `CTL` word below 256 but the stage memos' control words (202‥219). -/
-def mfrC : List Word := ((List.range 256).filter (fun c => c < 202 ∨ 219 < c)).map Nat.toUInt64
-
-theorem mfr_of_mfrFrame {m m' : Mem} (h : MemFrame mfrA mfrC m m') : MFr [] [] m m' := by
-  refine MFr.of_frame h (fun b hb => ?_) (fun x hx => ?_)
-  · simp only [mfrA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
-    exact hb.2
-  · simp only [mfrC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
-    obtain ⟨c, ⟨hc, h2⟩, rfl⟩ := hx
-    have : (Nat.toUInt64 c).toNat = c := by simp; omega
-    rw [this]; exact h2
-
-/-- A callee of a program whose text writes outside the stage memos keeps `RcMR`. -/
-theorem RcMR.ofMfr {p : Prog} {fs : List FnName} (hcl : closedA p mfrA mfrC fs = true)
-    {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
-    (h : callW p n f vs m = some (r, m')) (hM : RcMR m) : RcMR m' :=
-  hM.fr (mfr_of_mfrFrame (run_memFrame hcl hf (run_of_callW h)).1)
-
 /-- Every word array below 256 but the recursor check's walk memos. -/
 def rcFreeA : List ArrId := (List.range 256).filter (fun b => b ∉ [NOM, DPM, RAM, HBM, RFM, TAM])
 /-- Every `CTL` word below 256 but those memos' control words. -/
@@ -331,7 +311,8 @@ structure GrcProg (p : Prog) : Prop where
   prep : p.lookup "gen_rec_check_prep" = some genRecCheckPrep
   grc : p.lookup "gen_rec_check" = some genRecCheckL
 
-/-- The callees of `gen_rec_check_prep` that keep the stage memos by their program text. -/
+/-- The callees of `gen_rec_check_prep` that keep the recursor check's walk memos by their program
+text. -/
 def grcMemoCallees : List FnName := ["target_rec_pins", "class_stream_recs"]
 
 /-- The recursor shapes' slice of the shape at `pp` lies below the top. -/
@@ -347,7 +328,7 @@ theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') 
 
 /-! ## Part A: the pins, the stream, the guards -/
 
-theorem grpAW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+theorem grpAW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} {pp nested mO mL bO bL : Word} {bs : BlockShape}
     {ms : List TargetMajor} {block : List IConstantInfo} {r : List Word} {m' : Mem}
@@ -376,7 +357,7 @@ theorem grpAW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA 
   simp only at hs1 hS1 hg1; subst hs1
   have hrun1 := AM.run_of_ok _ a hok1
   generalize AM.st (ConRon.Arena.targetRecPins bs block) a = a1 at hrun1 hS1
-  have hP1 := RcMR.ofMfr hclR (hfR _ (by decide)) c1 hP
+  have hP1 := RcMR.ofClosed hclR (hfR _ (by decide)) c1 hP
   have hk1 := callW_keepW c1
   -- `class_stream_recs`
   have hrecsP : PSlR decRS bs.recs (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) m :=
@@ -398,7 +379,7 @@ theorem grpAW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA 
   have hrun2 := AM.run_of_ok _ a1 hok2
   generalize AM.res (ConRon.Arena.classStreamRecs V fe bs.recs) a1 = cvRis at hrun2 hcs2
   generalize AM.st (ConRon.Arena.classStreamRecs V fe bs.recs) a1 = a2 at hrun2 hS2
-  have hP2 := RcMR.ofMfr hclR (hfR _ (by decide)) c2 hP1
+  have hP2 := RcMR.ofClosed hclR (hfR _ (by decide)) c2 hP1
   have hk2 := callW_keepW c2
   have hg12 := hg1.trans hg2
   -- the family guard
@@ -1090,7 +1071,7 @@ theorem decPL_trunc_len {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat
 
 /-- **`gen_rec_check_prep`'s model refines the twin's `genRecCheck` up to the checked recursor
 types.** -/
-theorem grpW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+theorem grpW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} {pp nested pO pL tO tL rd mO mL cO cL bO bL : Word}
     {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
@@ -1226,7 +1207,7 @@ theorem decRRS.grow {m m' : Mem} {r : List Word} {xs : List (IConstantVal × Tar
   ⟨h.1.grow (OMono.decPL decRR_mono _ _) hg, Nat.le_trans h.2 hg.1⟩
 
 /-- **`gen_rec_check`'s model refines `genRecCheck`.** -/
-theorem gckW_sim {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+theorem gckW_sim {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} {pp nested pO pL tO tL rd mO mL cO cL bO bL : Word}
     {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
@@ -1353,11 +1334,11 @@ positivity table, the class reading, the classes (their constructors' level-para
 and the pool's size below `2^63`, and the recursor check's walk memos well formed (`RcMR`): the
 environment with the generated recursors at the returned view, the recursors' records `r.tail`
 decoded below the tops. Program facts: the lookups (`GrcProg`) and the write set of the callees
-that keep the stage memos by their text (`hclR`). Through `block_large_elim_allowed`'s contract
+that keep the walk memos by their text (`hclR`). Through `block_large_elim_allowed`'s contract
 (`IndInstallSpec39`). -/
 @[refines ConRon.Arena.genRecCheck]
 theorem genRecCheck_refines {p : Prog} (P : GrcProg p) {fsR : List FnName}
-    (hclR : closedA p mfrA mfrC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (s₀ : St)
+    (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (s₀ : St)
     (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {pp nested pO pL tO tL rd mO mL cO cL bO bL : Word} {bs : BlockShape} {params : List EIdx}
     {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead} {ms : List TargetMajor}
@@ -1391,7 +1372,7 @@ theorem genRecCheck_refines {p : Prog} (P : GrcProg p) {fsR : List FnName}
 /-- **`check_block_rec` refines `checkBlockRec`** (through `genRecCheck_refines`). -/
 @[refines ConRon.Arena.checkBlockRec]
 theorem checkBlockRec_refines (p : Prog) (hp : p.lookup "check_block_rec" = some checkBlockRec)
-    (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+    (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (pp nested pO pL tO tL rd mO mL bO bL cO cL : Word) (bs : BlockShape) (params : List EIdx)
