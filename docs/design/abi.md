@@ -47,3 +47,34 @@ calls once, prints the verdict as `harness/e2e.c` did (`missing CODE` reads the 
 argument, and drops the capacity retries (2^22 → 2^25 → 2^27). `scripts/bench.py`: `--bin/--asm`
 use the new harness, `--bin-old/--asm-old` the old one with its `CA_WORDS` ladder (for A/B).
 The emitters `e2e-l asm`, `compopt-asm` and `Checker/AsmEmit.lean` print the stub first.
+
+**Results, master + abi (slot tables at 2^25).** `scripts/e2e.py` (675 fixtures): the same classes
+as the compproofB baseline except `arena/good/perf/app-lam` (accept → error, both entries): it
+needs slot tables of 2^27 words (old harness: `CA_WORDS` 2^27 on the retry). At 2^27 it accepts
+(13.1 s, 3.96 GB; old harness at `CA_WORDS=2^27`: 13.5 s, 3.96 GB). A fixed 2^27 would cost every
+small fixture the page faults of eight times larger tables (irrel_commit at 2^25: 91 MB vs 55 MB
+at 2^22, 14 MB at 2^16), so the interim fix is not worth tuning: slotgrow removes the issue.
+
+**Results, master + abi + slotgrow (test merge, worktree `abi-sg`, every word array 2^32 words,
+`CA_ABI_SLOT_WORDS=2^32`).** e2e: 407 agree-accept (= baseline, app-lam included, no capacity
+retries), the same rejects/timeouts. One change: `e2e/stack_fuel_offset` (con-leche expects an
+abort, con-ron aborts with SIGABRT, `e2e-ref` memouts) was an L `error` at the old capacities and
+is now an L memout under e2e.py's 6 GB guard: the input interns millions of application nodes
+(arrays 4/5, `AREC`/`ASLOT`, full at 2^25 words), and with 2^32-word arrays L only stops at
+`app_push`'s own limit of 2^27 records (~4 GB of records plus the slots). Neither accepts; but
+with this layout the program's own record limits, not the harness, bound memory.
+
+## Later: a parallel mode (user's design input, 2026-10-23; not built)
+
+Entry 1 (the current arguments) runs the stages and the install fold (phase A) and returns the
+number of declaration groups and a pointer to the installed, frozen tier-1 environment; entry 2
+takes that pointer, a group index and its own region, and checks one group (phase B, as con-ron's
+Pooled/Phased); a small trusted harness runs entry 2 in parallel. The partition does not preclude
+it: every array has its own descriptor and its own slot at a fixed offset, so an entry-2 stub
+writes, for each array phase B only reads (the tier-1 environment), `env_base + offset`, and for
+every other array (scratch, memo tables, the work stacks) `own_base + offset`; its table (globals,
+results) and its L stack live in its own region. The intended split: slots ordered as [table,
+stack | tier-1 environment arrays | scratch arrays], so that the environment section is one
+contiguous range (one `mprotect` read-only after phase A, one disjointness premise per worker).
+Which arrays are tier 1 is the phase-B lane's classification; the stub then takes it as a
+parameter (`ArrId → section`). Until then all arrays are in one section.
