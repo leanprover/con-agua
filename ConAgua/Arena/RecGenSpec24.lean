@@ -464,10 +464,10 @@ theorem cfaW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (j i : Word),
   obtain ⟨r1, m1⟩ := x1
   rw [c1, cfaK2_some] at h
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
-    (stubM_spec p "fvar_type_d" k _ [r0.headD 0]) c1
+    (ftdF_spec p P.ad k _ [r0.headD 0]) c1
   simp only at hs1 hw1; subst hs1
-  obtain ⟨fty, a1, run1, hS1, hg1, hH1, hD1⟩ := fvarTypeD_spec dn vis fe (r0.headD 0) hH0 _ _ a0 r1 hw1 hS0
-  have hP1 := hP0.fr (MFr.ofStub hw1)
+  obtain ⟨fty, a1, run1, hS1, hg1, hH1, hD1⟩ := ftdF_ok dn vis fe (r0.headD 0) hH0 _ _ a0 r1 hw1 hS0
+  have hP1 := hP0.fr (MFr.of_frame (ftdF_frame hw1) (by simp) (by simp))
   -- `strip_pis`
   cases c2 : callW p k "strip_pis" [UInt64.ofNat tl, r1.headD 0] s1.mem with
   | none => rw [c2] at h; simp [cfaK3] at h

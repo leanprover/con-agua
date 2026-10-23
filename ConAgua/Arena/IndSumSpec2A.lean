@@ -41,7 +41,7 @@ def sdomsW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     else if dl ≤ j - 1 then none
     else
       sdomsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))])
+        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
 
 /-- After `fvar_type_d`. -/
 def sdomsK1 (n : Nat) (vis off fo fl dO dl j b : Word) :
@@ -76,7 +76,7 @@ theorem sdomsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1
 theorem sdomsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
     sdomsW (n + 1) m vis off fo fl dO dl j =
       sdomsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
+        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
   simp [sdomsW, hj, hfl, hdl]
 theorem sdomsK1_some :
     sdomsK1 n vis off fo fl dO dl j b (some (ra, m1)) =
@@ -104,8 +104,8 @@ grind_pattern [ind_grind] sdomsK3_some => sdomsK3 (some (r, m))
 
 section spec
 variable (p : Prog) (hg : p.lookup "sl_get" = some slGet)
-  (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL)
-include hg hp
+  (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (hftd : FtdF p)
+include hg hp hftd
 
 theorem sdomsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j]
@@ -121,7 +121,7 @@ theorem sdomsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     simp only [callFn, checkStructDomsAtL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slGet_specW p hg n, stubM_spec p "fvar_type_d" n, stubM_spec p "is_def_eq_core" n, ih] <;>
+        slGet_specW p hg n, ftdF_spec0 p hftd n, stubM_spec p "is_def_eq_core" n, ih] <;>
       finish (gen := 20) [getW]
 
 end spec
@@ -138,7 +138,7 @@ theorem sdomsW_eq (n : Nat) : ∀ (m : Mem) (vis off fo fl dO dl j : Word),
     split <;> try rfl
     split <;> try rfl
     split <;> try rfl
-    cases stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))] with
+    cases ftdF m [rdW (m.arr64 IW) (fo + (j - 1))] with
     | none => simp [sdomsK1, domsK1]
     | some x =>
       obtain ⟨ra, m1⟩ := x
@@ -191,7 +191,7 @@ theorem checkStructDomsAt_of_block (fe : IFEnv) (off : Nat) (fvs doms : List EId
 `fvar_type_d`, `is_def_eq_core`). -/
 @[refines ConRon.Arena.checkStructDomsAt]
 theorem checkStructDomsAt_refines (p : Prog) (hg : p.lookup "sl_get" = some slGet)
-    (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (n : Nat) (s₀ : St)
+    (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (hftd : FtdF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis off fo fl dO dl j : Word)
     (fvs doms : List EIdx) (hStage : StageR dn vis fe s₀.mem a₀)
     (hfvs : decHL s₀.mem fo.toNat fl.toNat = some fvs)
@@ -204,7 +204,7 @@ theorem checkStructDomsAt_refines (p : Prog) (hg : p.lookup "sl_get" = some slGe
       AM.ok (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (sdomsW_spec p hg hp n s₀ vis off fo fl dO dl j) ?_
+  refine triple_post (sdomsW_spec p hg hp hftd n s₀ vis off fo fl dO dl j) ?_
   rintro r s' ⟨hl, hm⟩
   rw [sdomsW_eq] at hm
   cases hd : domsW n s₀.mem vis off fo fl dO dl j with
@@ -264,7 +264,7 @@ def fdrW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, v, o, l =>
     if l = 0 then some ([1], m)
-    else fdrK1 n v o l (stubM "fvar_type_d" m [rdW (m.arr64 IW) o])
+    else fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o])
 /-- After `fvar_type_d`. -/
 def fdrK1 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -300,7 +300,7 @@ section arms
 variable (n : Nat) (m m1 m2 : Mem) (v o l : Word) (ra rb r : List Word)
 theorem fdrW_nil (hl : l = 0) : fdrW (n + 1) m v o l = some ([1], m) := by simp [fdrW, hl]
 theorem fdrW_cons (hl : l ≠ 0) :
-    fdrW (n + 1) m v o l = fdrK1 n v o l (stubM "fvar_type_d" m [rdW (m.arr64 IW) o]) := by
+    fdrW (n + 1) m v o l = fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o]) := by
   simp [fdrW, hl]
 theorem fdrK1_some : fdrK1 n v o l (some (ra, m1)) =
     fdrK2 n v o l (stubM "consts_resolve_ffast" m1 [v, ra.headD 0]) := by rw [fdrK1]
@@ -335,7 +335,7 @@ grind_pattern [ind_grind] resK'_some => resK' (some (r, m))
 section spec
 variable (p : Prog)
 
-theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (n : Nat) :
+theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (n : Nat) :
     ∀ (s₀ : St) (v o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [v, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ fdrW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
@@ -349,7 +349,7 @@ theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) 
     simp only [callFn, fieldDomsResolveL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_d" n, stubM_spec p "consts_resolve_ffast" n, ih] <;>
+        ftdF_spec0 p hftd n, stubM_spec p "consts_resolve_ffast" n, ih] <;>
       finish (gen := 20)
 
 theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (n : Nat) :
@@ -404,12 +404,12 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [fdrW_cons n m v o l hl, hw] at h
-      cases h1 : stubM "fvar_type_d" m [w] with
+      cases h1 : ftdF m [w] with
       | none => rw [h1] at h; simp [fdrK1] at h
       | some x1 =>
       obtain ⟨ra, m1⟩ := x1
       rw [h1, fdrK1_some] at h
-      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := fvarTypeD_spec dn v fe w hw32 m m1 a ra h1 hS
+      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok dn v fe w hw32 m m1 a ra h1 hS
       cases h2 : stubM "consts_resolve_ffast" m1 [v, ra.headD 0] with
       | none => rw [h2] at h; simp [fdrK2] at h
       | some x2 =>
@@ -518,7 +518,7 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
 `consts_resolve_ffast`), at the view `vis0` of the pre-block environment `fe₀`. -/
 @[refines ConRon.Arena.fieldDomsResolve]
 theorem fieldDomsResolve_refines (p : Prog)
-    (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
     (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
     (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
@@ -526,7 +526,7 @@ theorem fieldDomsResolve_refines (p : Prog)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fieldDomsResolve fe₀ xs) a₀ ∧
       KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
         (AM.res (fieldDomsResolve fe₀ xs) a₀); ⊤⦄ := by
-  refine triple_post (fdrW_spec p hp n s₀ vis0 o l) ?_
+  refine triple_post (fdrW_spec p hp hftd n s₀ vis0 o l) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun, hpost⟩ := fdrW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
