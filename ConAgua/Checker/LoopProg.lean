@@ -9,6 +9,8 @@ import ConAgua.Checker.LoopAll
 import ConAgua.Checker.RomProgB
 import ConAgua.Rom.CIReadRefs
 import ConAgua.Arena.LoopStart
+import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.IndRealMemo
 
 /-!
 # The declaration loop's program hypotheses at the substituted checker program (lane `loopt3`)
@@ -70,6 +72,19 @@ theorem closedW_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId
     {fs : List FnName} (h : closedW ctl p A C fs = true) :
     closedW ctl (Prog.subPB bs p) A C fs = true := by
   simp only [closedW, List.all_eq_true] at h ⊢
+  intro f hf
+  have := h f hf
+  rw [lookup_subPB]
+  cases e : p.lookup f with
+  | none => rfl
+  | some fd =>
+    simp only [e] at this
+    exact Stmt.okW_subPB bs this
+
+theorem closedWL_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}
+    {fs L : List FnName} (h : closedWL ctl p A C fs L = true) :
+    closedWL ctl (Prog.subPB bs p) A C fs L = true := by
+  simp only [closedWL, List.all_eq_true] at h ⊢
   intro f hf
   have := h f hf
   rw [lookup_subPB]
@@ -175,6 +190,8 @@ theorem checkerProg_loopCalleesPB (bs : List UInt8) (hr : RomOK bs)
     (closedW_subPB bs checkerProg_loopClosed : LoopClosed (Prog.subPB bs checkerProg)),
     (closedW_subPB bs checkerProg_coreStage : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg)),
     closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
+    (closedWL_subPB bs checkerProg_indMemo : IndMemoClosed (Prog.subPB bs checkerProg)),
+    (by prog_bundle [] : L.Ind.CrfF (Prog.subPB bs checkerProg)),
     hdn, harm, hq, hrom]
 
 /-- **The loop's own program hypotheses at the substituted checker program.** -/

@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.IndRealApdT
 
 /-!
 # `check_reduce_pin(vis, vis2, c, v)` refines `checkReducePin` (lane `decls3`)
@@ -138,6 +139,8 @@ structure CrpProg (p : Prog) : Prop where
   ma : p.lookup "mk_app" = some mkApp
   bvb : BvbProg p
   hf : HfF p
+  /-- `all_level_params_defined`'s program (`reduce_pin_guard` under `StageT`, `DeclCrpT.lean`). -/
+  apd : L.Ind.ApdF p
 
 set_option maxHeartbeats 1600000 in
 theorem crp_specW (h : CrpProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis vis2 c v : Word) :
@@ -243,7 +246,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r5, m5⟩ := rm5
   rw [h5, crpK5_some] at hW
   obtain ⟨x5, a5, hrun5, hS5, hg5, hx5, -⟩ :=
-    isDefEqCore_spec dn vis fe 0 v (r4.headD 0) hv hpl s4.mem m5 a4 r5 h5 hS4
+    L.Ind.isDefEqCore_spec dn vis fe 0 v (r4.headD 0) hv hpl s4.mem m5 a4 r5 h5 hS4
   by_cases e5 : r5.headD 0 = 0
   · rw [if_pos e5] at hW; cases hW
   rw [if_neg e5] at hW
@@ -280,7 +283,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r8, m8⟩ := rm8
   rw [h8, crpK8_some] at hW
   obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
-    isDefEqCore_spec dn vis fe 1 ax (r6.headD 0) haxl hxl m7 m8 a7 r8 h8 hS7
+    L.Ind.isDefEqCore_spec dn vis fe 1 ax (r6.headD 0) haxl hxl m7 m8 a7 r8 h8 hS7
   by_cases e8 : r8.headD 0 = 0
   · rw [if_pos e8] at hW; cases hW
   rw [if_neg e8] at hW

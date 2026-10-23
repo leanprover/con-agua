@@ -70,6 +70,25 @@ namespace L.Ind
 
 open L.Arena
 
+/-! ## `CrMemo` is lane `tails`' `CrOK` -/
+
+/-- `AbsOK`'s part `CrMemo` is lane `tails`' `CrOK` (`LoopT`'s memo clause): the same memo relation
+(`CrV` is the value relation `CrMemo` spells out). -/
+theorem crMemo_iff_crOK {m : Mem} : CrMemo m ↔ L.Stubs.CrOK m := Iff.rfl
+
+theorem CrMemo.crOK {m : Mem} (h : CrMemo m) : L.Stubs.CrOK m := h
+
+theorem _root_.L.Stubs.CrOK.crMemo {m : Mem} (h : L.Stubs.CrOK m) : CrMemo m := h
+
+/-- `AbsOK` holds `CrMemo`. -/
+theorem AbsOK.crMemo {m : Mem} (h : AbsOK m) : CrMemo m := h.2.2.1
+
+/-- **A program's call of `consts_resolve_ffast` is the model's** (`realCall p`'s reading). -/
+theorem crfF_of_callW {p : Prog} (hp : CrfF p) {n : Nat} {args r : List Word} {m m' : Mem}
+    (h : callW p n "consts_resolve_ffast" args m = some (r, m')) :
+    crfF m args = some (r, m') :=
+  callF_of_callW (by rw [← callW_agree crfP_closed (hp.agree crfPFns) n (by decide)]; exact h)
+
 /-- **`consts_resolve_ffast` under `StageT`**, the walk's memo threaded (`crfF_ok` lifted). -/
 theorem crfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW crfF [vis, e] (fun m a => StageT dn vis fe m a ∧ CrMemo m) (constsResolveFFast fe (decI e))
