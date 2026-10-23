@@ -156,10 +156,10 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   obtain ⟨r6, m6⟩ := x6
   rw [h6, cbpK6_some] at h
   obtain ⟨s6, rfl, -, he6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (eqTrue_specW p hP.eqt (n + 2) _ _ _) h6
+    (eqTrue_specC p hP.eqt (realCall p) (realCall_spec p) (n + 2) _ _ _) h6
   simp only at he6
-  unfold eqTrueW at he6
-  cases hs6 : stubM "lvl_eq_c" s4.mem [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] with
+  rw [eqTrueC_succ] at he6
+  cases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with
   | none => rw [hs6] at he6; simp [eqTrueK] at he6
   | some y6 =>
   obtain ⟨r6', m6'⟩ := y6
@@ -167,17 +167,19 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   simp only [Option.some.injEq, Prod.mk.injEq] at he6
   obtain ⟨hr6, hm6⟩ := he6
   subst hm6
-  obtain ⟨y, a6, hrun6, hS6, hg6, hy6⟩ := lvlEqStub_spec dn vis fe _ _ huH hzH s4.mem s6.mem a4 r6' hs6 hS4
-  have hP6 : PosMR s6.mem := hP4.fr (MFr.ofStub hs6)
-  have hA6 : AbsOK s6.mem := stub_afr hs6 (by decide) hA4
   obtain ⟨namesP, lpsP, paramsP, sortP, hceq, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
   have hfind : ctxP.find? = env.find? := by rw [hceq]
   have hx14 := c2.ext.trans c3.ext
   have hsort' : ConRon.Arena.denoteL a4.store.ls (decI (rdW (s4.mem.arr64 IW) (r1.headD 0 + 9))) =
       some ctxP.sort := by
     rw [hue, hceq]; exact ConRon.Bridge.denoteL_ext hsort hx14
+  obtain ⟨y, a6, hrun6, hC6, hg6, hy6, hA6, -⟩ :=
+    lvlEqC_simC p hq.closed hLC (n + 1) hC4 hA4 _ _ huH hzH _ _ hsort' hz r6' s6.mem hs6
+  have hS6 := hC6.stage
+  have hP6 : PosMR s6.mem :=
+    hP4.fr (MFr.of_frame (run_memFrame hq.closed (by decide) (run_of_callW hs6)).1 coreStageA_stage
+      coreStageC_stage)
   obtain ⟨c5, -⟩ := ConRon.Bridge.Inductives.lvlEq?_crun hC4.check hsort' hz hrun6
-  have hC6 := hC4.of_check hS6 hA6 c5.ok c5.ext
   have hb6 : (r6.headD 0 != 0) = (y == some true) := by
     rw [← hr6]
     simp only [decLvlEq] at hy6
