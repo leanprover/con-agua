@@ -518,4 +518,240 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   rw [hblk]
   exact famBlk_ind fe _ cvj a _ _ hpr hga _ _ hvw htag cvT caps hfi5
 
+/-! ## The two bits and the rule's bits -/
+
+theorem erSlEq_spec' (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (n : Nat) :
+    ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      r.headD 0 = if erSlEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp]; simp only [callFn, L.Ind.erSlEq]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o1 l1 o2 l2
+    rw [invoke_eq _ hp]
+    simp only [callFn, L.Ind.erSlEq]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+section bits
+variable {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+include hp
+
+theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR dn vis fe m a) (c : Word) (hc : H c)
+    (rf : List Word) (h : callW p k "ctor_family" [vis, c] m = some (rf, m1)) :
+    m1 = m ∧ CFOut dn fe a m c rf := by
+  cases k with
+  | zero => rw [callW_zero] at h; cases h
+  | succ k =>
+  have hcf := callW_model (M := fun mm => cfW p k mm vis c) (fun s => cf_spec p hp.cf k s vis c) h
+  exact cfW_ok hp k dn vis fe m m1 a hS c hc rf hcf
+
+/-- **`rec_rule_k_of(vis, c)` refines `recRuleKOf fe c`** (the K bit). -/
+theorem recRuleKOf_ref (c : Word) (hc : H c) :
+    CallRef p "rec_rule_k_of" [vis, c] (StageR dn vis fe) (recRuleKOf fe (decI c))
+      (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m a r m' hS hcall => ?_
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hw := callW_model (M := fun mm => kofW p k mm vis c) (fun s => kof_spec p hp.kof k s vis c) hcall
+  unfold kofW at hw
+  cases hc1 : callW p k "ctor_family" [vis, c] m with
+  | none => rw [hc1] at hw; simp at hw
+  | some q =>
+  obtain ⟨rf, m1⟩ := q
+  rw [hc1, bW_some] at hw
+  obtain ⟨e1, hout⟩ := cf_call hp dn vis fe k m m1 a hS c hc rf hc1
+  subst m1
+  have hK : recRuleKOf fe (decI c) =
+      famT fe (fun _ nF _ caps => caps.ruleK && nF == 0) (decI c) := by
+    rw [recRuleKOf_blk]; rfl
+  obtain ⟨h0, h1⟩ := hout (fun _ nF _ caps => caps.ruleK && nF == 0)
+  by_cases hz : rf.tail.tail.headD 0 = 0
+  · rw [if_pos hz] at hw
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+    exact ⟨false, a, by rw [hK]; exact h0 hz, hS, IWGrow.refl _, by simp [decW0B]⟩
+  rw [if_neg hz] at hw
+  obtain ⟨cvj, np, nF, cvT, caps, hcj, hcT, hrun⟩ := h1 hz
+  obtain ⟨-, -, hnf⟩ := decCI_ctorW hcj
+  obtain ⟨-, -, hcaps⟩ := decCI_indW hcT
+  obtain ⟨-, -, hrk⟩ := decCaps_w hcaps
+  obtain ⟨wk, hwk, hwk'⟩ := bool?_w hrk
+  obtain ⟨wn, hwn, hwn'⟩ := nat?_w hnf
+  have e11 : rdW (m.arr64 EREC) (rf.tail.headD 0 + 11) = wk :=
+    rdW_off (k := 11) hsz (by decide)
+      (by rw [show (rf.tail.headD 0).toNat + 11 = (rf.tail.headD 0).toNat + 5 + 6 by omega]; exact hwk)
+  have e6 : rdW (m.arr64 EREC) (rf.headD 0 + 6) = wn := rdW_off (k := 6) hsz (by decide) hwn
+  rw [e11, e6] at hw
+  have hn0 : (nF == 0) = (wn == 0) := by
+    rw [← hwn']; cases h : wn == 0
+    · have : wn ≠ 0 := by simpa using h
+      have : wn.toNat ≠ 0 := fun e => this (UInt64.toNat_inj.mp (by rw [e]; rfl))
+      simp [this]
+    · have : wn = 0 := by simpa using h
+      simp [this]
+  by_cases hc2 : wk ≠ 0 ∧ wn = 0
+  · rw [if_pos hc2] at hw
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+    refine ⟨_, a, by rw [hK]; exact hrun, hS, IWGrow.refl _, ?_⟩
+    simp only [decW0B, ← hwk', hn0, hc2.2]
+    simp [hc2.1]
+  · rw [if_neg hc2] at hw
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+    refine ⟨_, a, by rw [hK]; exact hrun, hS, IWGrow.refl _, ?_⟩
+    simp only [decW0B, ← hwk', hn0]
+    by_cases hk0 : wk = 0
+    · simp [hk0]
+    · have : wn ≠ 0 := fun e => hc2 ⟨hk0, e⟩
+      simp [hk0, this]
+
+/-- **`rec_rule_eta_of(vis, c)` refines `recRuleEtaOf fe c`** (the η-rescue bit). -/
+theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
+    CallRef p "rec_rule_eta_of" [vis, c] (StageR dn vis fe) (recRuleEtaOf fe (decI c))
+      (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m a r m' hS hcall => ?_
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hw := callW_model (M := fun mm => eofW p k mm vis c) (fun s => eof_spec p hp.eof k s vis c) hcall
+  unfold eofW at hw
+  cases hc1 : callW p k "ctor_family" [vis, c] m with
+  | none => rw [hc1] at hw; simp at hw
+  | some q =>
+  obtain ⟨rf, m1⟩ := q
+  rw [hc1, bW_some] at hw
+  obtain ⟨e1, hout⟩ := cf_call hp dn vis fe k m m1 a hS c hc rf hc1
+  subst m1
+  have hE : recRuleEtaOf fe (decI c) = famT fe (fun cvj _ cvT caps =>
+      caps.eta && caps.etaCtor == decI c && cvj.levelParams == cvT.levelParams) (decI c) := by
+    rw [recRuleEtaOf_blk]; rfl
+  obtain ⟨h0, h1⟩ := hout (fun cvj _ cvT caps =>
+      caps.eta && caps.etaCtor == decI c && cvj.levelParams == cvT.levelParams)
+  have hret0 : ∀ (hw : some ([(0 : Word)], m) = some (r, m')) (hb : rf.tail.tail.headD 0 ≠ 0 →
+      ∀ cvj np nF cvT caps,
+      decCI (m.arr64 EREC) dn (rf.headD 0).toNat = some (.ctorInfo cvj np nF) →
+      decCI (m.arr64 EREC) dn (rf.tail.headD 0).toNat = some (.indInfo cvT caps) →
+      (caps.eta && caps.etaCtor == decI c && cvj.levelParams == cvT.levelParams) = false),
+      ∃ x a', (recRuleEtaOf fe (decI c)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+    intro hw hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+    by_cases hz : rf.tail.tail.headD 0 = 0
+    · exact ⟨false, a, by rw [hE]; exact h0 hz, hS, IWGrow.refl _, by simp [decW0B]⟩
+    · obtain ⟨cvj, np, nF, cvT, caps, hcj, hcT, hrun⟩ := h1 hz
+      exact ⟨false, a, by rw [hE, hrun, hb hz _ _ _ _ _ hcj hcT], hS, IWGrow.refl _, by simp [decW0B]⟩
+  by_cases hz : rf.tail.tail.headD 0 = 0
+  · rw [if_pos hz] at hw
+    exact hret0 hw (fun h => absurd hz h)
+  rw [if_neg hz] at hw
+  obtain ⟨cvj, np, nF, cvT, caps, hcj, hcT, hrun⟩ := h1 hz
+  obtain ⟨-, hcv, -⟩ := decCI_ctorW hcj
+  obtain ⟨-, hcvT, hcaps⟩ := decCI_indW hcT
+  obtain ⟨heta, hctor, -⟩ := decCaps_w hcaps
+  obtain ⟨we, hwe, hwe'⟩ := bool?_w heta
+  obtain ⟨wc, hwc, hwc32, hwc'⟩ := hd?_w hctor
+  have e5 : rdW (m.arr64 EREC) (rf.tail.headD 0 + 5) = we := rdW_off (k := 5) hsz (by decide) hwe
+  have e6 : rdW (m.arr64 EREC) (rf.tail.headD 0 + 6) = wc :=
+    rdW_off (k := 6) hsz (by decide)
+      (by rw [show (rf.tail.headD 0).toNat + 6 = (rf.tail.headD 0).toNat + 5 + 1 by omega]; exact hwc)
+  rw [e5, e6] at hw
+  by_cases hwe0 : we = 0
+  · rw [if_pos hwe0] at hw
+    exact hret0 hw (fun _ cvj' np' nF' cvT' caps' h1' h2' => by
+      rw [hcj] at h1'; rw [hcT] at h2'
+      cases Option.some.inj h1'; cases Option.some.inj h2'
+      rw [← hwe', hwe0]; rfl)
+  rw [if_neg hwe0] at hw
+  by_cases hwcc : wc ≠ c
+  · rw [if_pos hwcc] at hw
+    exact hret0 hw (fun _ cvj' np' nF' cvT' caps' h1' h2' => by
+      rw [hcj] at h1'; rw [hcT] at h2'
+      cases Option.some.inj h1'; cases Option.some.inj h2'
+      have : (caps.etaCtor == decI c) = false := by
+        rw [hwc']; simp only [beq_eq_false_iff_ne, ne_eq]
+        exact fun e => hwcc ((decI_inj_iff hwc32 hc).mp e)
+      simp [this])
+  rw [if_neg hwcc] at hw
+  have hwc_eq : wc = c := by simpa using hwcc
+  -- the level-parameter slices
+  obtain ⟨o1, l1, ho1, hl1, hs1⟩ := L.Ind.hlistW_ (kk := .name) (q := rf.headD 0) (k := 2) (k1 := 3)
+    (kn := 2) hsz rfl rfl (by simpa using decCV_lp hcv)
+  obtain ⟨o2, l2, ho2, hl2, hs2⟩ := L.Ind.hlistW_ (kk := .name) (q := rf.tail.headD 0) (k := 2) (k1 := 3)
+    (kn := 2) hsz rfl rfl (by simpa using decCV_lp hcvT)
+  rw [ho1, hl1, ho2, hl2] at hw
+  cases hc2 : callW p k "er_sl_eq" [o1, l1, o2, l2] m with
+  | none => rw [hc2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨rq, mq⟩ := q2
+  rw [hc2, bW_some] at hw
+  obtain ⟨tq, htq, -, hmq, hres⟩ := triple_of_callW
+    (erSlEq_spec' p hp.ersl k ⟨m, Locals.init []⟩ o1 l1 o2 l2) hc2
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+  have e_mq : m = mq := by rw [← htq, hmq]
+  subst e_mq
+  refine ⟨_, a, by rw [hE]; exact hrun, hS, IWGrow.refl _, ?_⟩
+  simp only at hres
+  rw [erSlEqB_ok hsz hs1 hs2] at hres
+  have heta' : caps.eta = true := by rw [← hwe']; simpa using hwe0
+  have hct : (caps.etaCtor == decI c) = true := by rw [hwc', hwc_eq]; simp
+  simp only [decW0B, List.headD_cons, hres, heta', hct, Bool.true_and]
+  by_cases hl : cvj.levelParams = cvT.levelParams
+  · simp [hl]
+  · simp [hl]
+
+/-- **`rec_rule_bits(vis, c)` refines `recRuleBits fe rl`** for a rule with constructor `c`: the
+two words are the rule's new bits. -/
+theorem recRuleBits_ref (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
+    CallRef p "rec_rule_bits" [vis, c] (StageR dn vis fe) (recRuleBits fe rl)
+      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
+        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) := by
+  refine CallRef.of_succ fun k m a r m' hS hcall => ?_
+  have hw := callW_model (M := fun mm => rrbW p k mm vis c) (fun s => rrb_spec p hp.bits k s vis c) hcall
+  unfold rrbW at hw
+  cases h1 : callW p k "rec_rule_k_of" [vis, c] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q =>
+  obtain ⟨rk, m1⟩ := q
+  rw [h1, bW_some] at hw
+  obtain ⟨xk, a1, hrk, hS1, hg1, hdk, -⟩ := recRuleKOf_ref hp dn vis fe c hc k m a rk m1 hS h1
+  cases h2 : callW p k "rec_rule_eta_of" [vis, c] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q =>
+  obtain ⟨re, m2⟩ := q
+  rw [h2, bW_some] at hw
+  obtain ⟨xe, a2, hre, hS2, hg2, hde, -⟩ := recRuleEtaOf_ref hp dn vis fe c hc k m1 a1 re m2 hS1 h2
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+  refine ⟨{ rl with k := xk, eta := xe }, a2, ?_, hS2, hg1.trans hg2, ?_⟩
+  · simp only [recRuleBits, StateT.run_bind, hrl, hrk, except_ok_bind, hre]; rfl
+  · simp only [List.headD_cons, List.tail_cons, hdk, hde]
+
+end bits
+
+/-! ## The census theorems (`RefAM`, the shape of `IndStubs.lean`'s contracts) -/
+
+/-- **`rec_rule_k_of` refines `recRuleKOf`** under `StageR`. -/
+@[refines ConRon.Arena.recRuleKOf]
+theorem recRuleKOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (c : Word) (hc : H c) :
+    RefAM p "rec_rule_k_of" [vis, c] (StageR dn vis fe) (recRuleKOf fe (decI c))
+      (KeepPost dn vis fe decW0B) :=
+  (recRuleKOf_ref hp dn vis fe c hc).refAM
+
+/-- **`rec_rule_eta_of` refines `recRuleEtaOf`** under `StageR`. -/
+@[refines ConRon.Arena.recRuleEtaOf]
+theorem recRuleEtaOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (c : Word) (hc : H c) :
+    RefAM p "rec_rule_eta_of" [vis, c] (StageR dn vis fe) (recRuleEtaOf fe (decI c))
+      (KeepPost dn vis fe decW0B) :=
+  (recRuleEtaOf_ref hp dn vis fe c hc).refAM
+
+/-- **`rec_rule_bits` refines `recRuleBits`** under `StageR`: the shape of
+`IndStubs.recRuleBits_spec`. -/
+@[refines ConRon.Arena.recRuleBits]
+theorem recRuleBits_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
+    RefAM p "rec_rule_bits" [vis, c] (StageR dn vis fe) (recRuleBits fe rl)
+      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
+        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
+  (recRuleBits_ref hp dn vis fe c hc rl hrl).refAM
+
 end L.Stubs
