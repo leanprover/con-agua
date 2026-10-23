@@ -89,6 +89,12 @@ theorem add_eq_lit_false (a b x : Nat) (h : a < b) : (b + x = a) = False := by
 theorem rd64_rdWC (m : Mem) (a : ArrId) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
   simp [rd64, rdW, Array.getD_eq_getD_getElem?]
 
+/-- A triple whose precondition adds a pure fact `K` follows from one that may assume `K` (for an
+obligation whose fragment needs the key precondition). -/
+theorem triple_pre_and {α : Type} {x : M α} {s₀ : St} {K : Prop} {Q : α → St → Prop}
+    (h : K → ⦃fun s => s = s₀⦄ x ⦃Q; ⊤⦄) : ⦃fun s => s = s₀ ∧ K⦄ x ⦃Q; ⊤⦄ :=
+  ⟨fun s ⟨hs, hk⟩ => (h hk).le_wp s hs⟩
+
 /-! ## The probe model -/
 
 /-- The probe of tier `t` (slot base `b`, `n` slots) from slot `j` after `d` steps, for a node
