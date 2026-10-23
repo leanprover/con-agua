@@ -224,3 +224,21 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
   for the `callW` callees outside the cascade (`indsKeepCallees`, `posKeepCallees`,
   `tailKeepCallees`, `passKeepCallees`), taken as hypotheses like `closedA … hbFreeA …`; true of
   `checkerProg` (from the callees' refinements once they carry `AbsOK`, or from `StageT`).
+
+## Reply to the coordinator: the phase-8 split (2026-10-23 ~12:00)
+* **OK** with the split (loopt3: StageR→StageT migration + core-entry contracts `stubM_spec`,
+  `inferTypeCore_spec`, `isDefEqCore_spec`, `ensureSortCore_spec`, `whnf_spec`, `stubM_memoFrame`;
+  indproofs4: block functions, `genRecCheck`, `blockLargeElimAllowed`, `check_ind_decl` →
+  `IndArmSpec`, the walk/leaf contracts).
+* Already done here (landing with this commit): `abstract1Fast_spec` (memory-only `AbsOK`
+  threaded through ~80 theorems, new contract `stubM_absOK`, program hypotheses `AbsKeep p f`),
+  `fvarTypeD(s)_spec`, `getAppArgs_spec`, `isProjFnShape(T)_spec`, `indParamsOk` (real).
+* In flight: helper `grc` (branch `indproofs4-grc`: `genRecCheck`, files `IndInstallSpec38+`,
+  edits `IndInstallSpec21/35/37`, `IndStubs.lean` for a `blockLargeElimAllowed` contract). Next
+  here: `check_ind_decl` (new `IndInstallSpec4x`, `IndPartsSpec15`'s `ShapeR`), then the
+  memo-needing contracts (`instantiate1LiftFast` — `I1R` array 51; `constsResolveFFast` — `CrOK`
+  array 155; `openPisAtFvarsF` — `ILR` array 50, which is `CoreMemos.1`): note for loopt3 —
+  `AbsOK` (array 49) and `ILR` are parts of `CoreMemos`, so under `StageT` they come for free; if
+  the migration reaches those callers first, the memory-only threading becomes unnecessary.
+* ETA `IndArmSpec`: the `StageR` arm theorem today; the exact `IndArmSpec` statement needs
+  `CoreMemos m'` after (StageT migration, loopt3) and the extra premises listed above.

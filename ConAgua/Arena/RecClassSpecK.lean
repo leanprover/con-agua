@@ -604,7 +604,7 @@ theorem rec2IhF_afr {n : Nat} {m m' : Mem} {g t tele w d : Word} {r : List Word}
   | zero => simp [rec2IhF, fuelW] at h
   | succ n =>
   simp only [rec2IhF, fuelW, L.Ind.ihW, L.Ind.ihK1.eq_def, L.Ind.ihK2.eq_def] at h
-  afr_auto h [stub_afr]
+  afr_auto h [stub_afr, gaaF_afr, ftdF_afr, ftdsF_afr]
 
 theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso wsl fvso fvsl i e : Word)
     (G : ClassGen) (ws fvs : List EIdx) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)

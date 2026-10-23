@@ -1041,7 +1041,7 @@ theorem roW_afr {k : Nat} {m m' : Mem} {ctx hi cur : Word} {r : List Word} (h : 
   | zero => simp [roW] at h
   | succ k =>
   simp only [roW, roK0.eq_def, roK1.eq_def, roK2.eq_def] at h
-  afr_auto h [resHeadW_afr, stub_afr, noaW_afr _ _ _ _ _ _ _ _ _ _]
+  afr_auto h [resHeadW_afr, stub_afr, gaaF_afr, ftdF_afr, ftdsF_afr, noaW_afr _ _ _ _ _ _ _ _ _ _]
 
 theorem pos2PinW_afr {m m' : Mem} {i : Word} {r : List Word} (h : pos2PinW m i = some (r, m')) : AFr m m' := by
   simp only [pos2PinW] at h
