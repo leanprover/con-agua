@@ -28,9 +28,9 @@ index, as `bvar`'s word is) rather than a handle:
   no division (`PLAN.md`, "the language L").
 
 The functions `proj_find(t, n, u, e, h)` (the probe, the match inline: two handle-word
-comparisons and a word comparison), `proj_push(t, n, u, e, j)` and `intern_proj(n, u, e)` are the cons-table library's templates
-(`ConsLib.lean`) at the schema `projCS`; their specs are the library's (`ConsLibSpec.lean`) from
-this table's obligations (`projOK`).
+comparisons and a word comparison), `proj_push(t, n, u, e, j)` and `intern_proj(n, u, e)` are
+the cons-table library's templates (`ConsLib.lean`) at the schema `projCS`; their specs are the
+library's (`ConsLibSpec.lean`) from this table's obligations (`projOK`).
 -/
 
 set_option experimental.vcgen true

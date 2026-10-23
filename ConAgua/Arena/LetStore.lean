@@ -23,10 +23,10 @@ tier (`Arena/Store.lean:294`, `ETables.lets`). Its L representation is `app`'s/`
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `ty | val | body`.
 
-The functions `letE_find(t, ty, val, body, h)`, `letE_push(t, ty, val, body, j)` and
-`intern_letE(ty, val, body)` are the cons-table library's templates
-(`ConsLib.lean`) at the schema `letCS`; their specs are the library's (`ConsLibSpec.lean`) from
-this table's obligations (`letOK`).
+The functions `letE_find(t, ty, val, body, h)` (the probe, the match inline: three word
+comparisons), `letE_push(t, ty, val, body, j)` and `intern_letE(ty, val, body)` are the cons-table
+library's templates (`ConsLib.lean`) at the schema `letCS`; their specs are the library's
+(`ConsLibSpec.lean`) from this table's obligations (`letOK`).
 -/
 
 set_option experimental.vcgen true

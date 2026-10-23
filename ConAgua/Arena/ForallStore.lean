@@ -252,7 +252,8 @@ theorem forallPush_spec (hp : p.lookup "forall_push" = some forallPush) (n : Nat
   exact consPushG_spec p forallCS (forallOK p) hp n s₀ t [ty, body] rfl j
 
 theorem internForallL_spec (hpf : p.lookup "forall_find" = some forallFind)
-    (hpp : p.lookup "forall_push" = some forallPush) (hp : p.lookup "intern_forall" = some internForallL)
+    (hpp : p.lookup "forall_push" = some forallPush)
+    (hp : p.lookup "intern_forall" = some internForallL)
     (n : Nat) (s₀ : St) (ty body : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_forall" [ty, body]
