@@ -425,7 +425,7 @@ structure TmoOProg (p : Prog) : Prop where
 
 /-- **`target_major_of_outside`'s model simulates `targetMajorOf`'s outside branch.** -/
 theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
+    (n : Nat) {m : Mem} {a : AState}
     {pp pfo pfl I us ao al mno mnl : Word} {bs : BlockShape} {pfvs args : List EIdx} {ws : List Word}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
     (hws : SlR m mno mnl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
@@ -508,7 +508,7 @@ theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Nam
   · intro r3 m3 e3
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmoc_spec p hP.bvb hP.hf hP.tmoc n _ ao (r2.tail.headD 0) (rdW (m2.arr64 IW) (pp + 4))) e3
-    obtain ⟨b, a', hrun, hS3, hg3, hb3, -⟩ := ckc2W_ok dn fe vis n m2 s3.mem a2 _ ao _ _ r3 hn hW3 hS2 htake2
+    obtain ⟨b, a', hrun, hS3, hg3, hb3, -⟩ := ckc2W_ok dn fe vis n m2 s3.mem a2 _ ao _ _ r3 hW3 hS2 htake2
       (by have := hg2.1; omega) (by have := hg2.1; omega)
     rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb] at hrun
     exact ⟨b, a', hrun, hb3, hS3, hg3, hP2.fr (ckc2W_mfr _ _ _ _ _ _ _ hW3)⟩
