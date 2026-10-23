@@ -362,8 +362,8 @@ end rel
 stubs under `target_params_def_eq`): the shape record as `BSOK` (decoded below the tops, its member
 slice and records below the top), the former types decoded below the top, the other three slices decoded (below the top
 unless empty), the walk memos well
-formed; the verdict as `r[0] ≠ 0`. -/
-@[refines ConRon.Arena.targetClassMatch]
+formed; the verdict as `r[0] ≠ 0`. Under `StageR`; the census link is `targetClassMatch_refinesC`
+(`IndT/RecCheckTcm`). -/
 theorem targetClassMatch_refines (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl pfo pfl us dso dsl lvls edso edsl : Word)
     (bs : BlockShape) (formerTys pfvs ds eds : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
