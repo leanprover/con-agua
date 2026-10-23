@@ -98,10 +98,9 @@ theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
 
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  (hcs : CtorSums fe)
 
-theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
-    FieldsOK dn vis fe (n + 1) := by
+theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+    FieldsOK dn vis fe stubCall (n + 1) := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
   intro m m' a ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds r h hS hW hcur hns hks hkb hnd hndb hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -135,7 +134,7 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
   obtain ⟨nF', hnF'⟩ : ∃ nF', nF.toNat = nF' + 1 := ⟨nF.toNat - 1, by
     have : nF.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   -- the field's domain walked
-  cases hp : nbPosW n m vis ctx fu po pl (base + j) 0 d ns with
+  cases hp : nbPosW stubCall n m vis ctx fu po pl (base + j) 0 d ns with
   | none => rw [hp] at h; simp [nbFieldsK1] at h
   | some pr =>
   obtain ⟨rp, m1⟩ := pr
@@ -215,14 +214,14 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
     · rw [hnF1] at h'; subst h'; have := (base + j + 1).toNat_lt; omega
     · rw [hj1, hnF1] at h'; omega
 
-theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
-    WalkOK dn vis fe (n + 1) := by
+theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+    WalkOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
   intro m m' a ctx root fu po pl hi nF crest ns c prog NS r h hS hW hcr hns hP hA
   rw [nbWalkW_succ] at h
   -- the fields walked, at the input-derived fuel or the given one
   have hF : ∀ (fu' : Word) (m1 : Mem) (a1 : AState), StageR dn vis fe m1 a1 → IWGrow m m1 → PosMR m1 → AbsOK m1 →
-      nbWalkK2 n hi (nbFieldsW n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0) = some (r, m') →
+      nbWalkK2 n hi (nbFieldsW stubCall n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0) = some (r, m') →
       ∃ ks nds cur ns2 closed a',
         (∀ {β : Type} (K : List NestFieldKind → List EIdx → EIdx → NestState → EIdx → AM β),
           (do let (ks, nds, cur, ns2) ← nestFields V fe c fu'.toNat prog hi.toNat nF.toNat 0 (decI crest) NS [] []
@@ -235,7 +234,7 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
         NSB m' (r.tail.tail.tail.tail.headD 0) ns2 ∧ PosMR m' ∧ AbsOK m' := by
     intro fu' m1 a1 hS1 hg1 hP1 hA1 h
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
-    cases hf : nbFieldsW n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0 with
+    cases hf : nbFieldsW stubCall n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0 with
     | none => rw [hf] at h; simp [nbWalkK2] at h
     | some pr =>
     obtain ⟨rf, m2⟩ := pr
@@ -299,15 +298,15 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     simp only [walkK, hdec]
     rfl
 
-theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
-    OneOK dn vis fe (n + 1) := by
+theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+    OneOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, hWalk, -⟩ := ih
   intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS r h hS hW hC hcv
     hcv3 hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbOneW_succ] at h
   -- the crest, typed
-  cases hct : p2ctW n m vis no nl us dO dL hO hL cv hi with
+  cases hct : p2ctW stubCall n m vis no nl us dO dL hO hL cv hi with
   | none => rw [hct] at h; simp [nbOneK1] at h
   | some pr =>
   obtain ⟨rc, m1⟩ := pr
@@ -317,7 +316,7 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
       hC.hholes hC.hholesb ((erecP_ext m).decCV hcv) hcv3 hP
   have hA1 := p2ctW_afr hct hA
   -- the walk
-  cases hwk : nbWalkW n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with
+  cases hwk : nbWalkW stubCall n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with
   | none => rw [hwk] at h; simp [nbOneK2] at h
   | some pr2 =>
   obtain ⟨rw, m2⟩ := pr2
@@ -434,7 +433,7 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
     have e : (ns2.ctorNfs.toList ++ [x]).toArray = ns2.ctorNfs.push x := Array.ext' (by simp)
     simpa [e] using hNS3
 
-theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 1) := by
+theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : CtorsOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, hCtors, hOne, -, -⟩ := ih
   intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs r h hS hW hC
     hcl hcb hcs hns hout houtb hP hA
@@ -468,7 +467,7 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
   have hq3 : q + 3 < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_lt m; omega
   -- one constructor
-  cases ho : nbOneW n m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) w)
+  cases ho : nbOneW stubCall n m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) w)
       (rdW (m.arr64 IW) (w + 1)) ns with
   | none => rw [ho] at h; simp [nbCtorsK1] at h
   | some pr =>
@@ -515,8 +514,7 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
   rw [nestCtors_cons, hK1]
   exact hrun
 
-include hcs in
-theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 1) := by
+theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : FrameOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, hCtors, -, -, -⟩ := ih
   intro m m' a ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS r h hS hW hhi hus hds hdsb hgl hgb hgrp hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -579,7 +577,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
   rw [hma, nbFrameK3_some] at h
   obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mknF_ok dn vis fe hc dO dL hcH ds m2 m3 a2 ra hma
     ⟨hS2, (hds.grow (OMono.decHL _ _) hg12).get (OMono.decHL _ _)⟩
-  cases hit : stubM "infer_type_core" m3 [vis, hi, ra.headD 0] with
+  cases hit : stubCall n "infer_type_core" [vis, hi, ra.headD 0] m3 with
   | none => rw [hit] at h; simp [nbFrameK4] at h
   | some pr4 =>
   obtain ⟨rt, m4⟩ := pr4
@@ -602,7 +600,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
   | some pr6 =>
   obtain ⟨rc, m6⟩ := pr6
   rw [hgc, nbFrameK6_some] at h
-  obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc hcs n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
+  obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
     rc hgc hS5 hN5 (fun j hj => by omega) (by simp) (by simp) (fun i hi => by simp at hi)
   -- the holes
   have hg46 := hg5.trans hg6
@@ -625,7 +623,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
   have hg47 := (hg5.trans hg6).trans hg7
   have hg17 := (hg14.trans hg47)
   have htop7 : iwTop m7 < 2 ^ 64 := Nat.lt_of_le_of_lt hS7.2.1 hS7.2.2.2.1
-  cases hct : nbCtorsW n m7 vis ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us dO dL (rp.tail.tail.headD 0)
+  cases hct : nbCtorsW stubCall n m7 vis ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us dO dL (rp.tail.tail.headD 0)
       (rp.tail.tail.tail.headD 0) (rh.headD 0) (rh.tail.headD 0) (rc.headD 0) (rc.tail.headD 0) ns 0 0 with
   | none => rw [hct] at h; simp [nbFrameK8] at h
   | some pr8 =>
@@ -673,7 +671,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
 
 
 
-theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) := by
+theorem newOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : NewOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, hFrame, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r h hS hW hnn hus hds hdsb hcty hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -795,7 +793,7 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) :
     (hact7.grow hg8) (by have := hg8.1; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.1; omega)
   simp only [Array.toArray_toList] at hns1
   -- the frame
-  cases hfr : nbFrameW (n' + 1) m8 vis ctx fu (rw.headD 0) (rw.tail.headD 0) (nhiW m2 ctx (rw.tail.headD 0)) us dO dL
+  cases hfr : nbFrameW stubCall (n' + 1) m8 vis ctx fu (rw.headD 0) (rw.tail.headD 0) (nhiW m2 ctx (rw.tail.headD 0)) us dO dL
       nPc (rg.headD 0) (rg.tail.headD 0) ns1 with
   | none => rw [hfr] at h; simp [nbNewK9] at h
   | some pr9 =>
@@ -828,7 +826,7 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) :
   simp only [StateT.run_bind, hrun1, except_ok_bind, hrun5, hrun9]
   exact hrun10
 
-theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) := by
+theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : KeyOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, hNew, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r h hS hW hnn hus hds hdsb hcty hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -877,12 +875,12 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
   have hA2 : AbsOK m2 := dcWf_afr hdc (posRecW_afr hk hA)
   -- the frame, when not cached
   have hnew : ∀ (rr : List Word) (mm : Mem),
-      nbAppK6 (nbNewW (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns) = some (rr, mm) →
+      nbAppK6 (nbNewW stubCall (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns) = some (rr, mm) →
       ∃ x a', (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a2 =
           .ok (x, a') ∧ StageR dn vis fe mm a' ∧ IWGrow m2 mm ∧ decNFK (rr.headD 0) = some x.1 ∧
         NSB mm (rr.tail.headD 0) x.2 ∧ PosMR mm ∧ AbsOK mm := by
     intro rr mm hh
-    cases hn : nbNewW (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns with
+    cases hn : nbNewW stubCall (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns with
     | none => rw [hn] at hh; simp [nbAppK6] at hh
     | some pr3 =>
     obtain ⟨r3, m3⟩ := pr3
@@ -938,9 +936,8 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
     obtain ⟨x, a', hrun, rest⟩ := hnew r m' h
     exact ⟨x, a', by rw [htwin]; simpa using hrun, rest.1, hg12.trans rest.2.1, rest.2.2⟩
 
-include hcs in
-theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
-    ContOK dn vis fe (n + 1) := by
+theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+    ContOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r h hS hW hnn hus hargs hab hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -954,7 +951,7 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   | some pr =>
   obtain ⟨r1, m1⟩ := pr
   rw [hnt, nbContK1_some] at h
-  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn hcs n' m m1 a r1 hnt hS
+  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn n' m m1 a r1 hnt hS
   cases xc with
   | none => simp only [NcOut] at hnc; rw [if_pos hnc] at h; cases h
   | some pc =>
@@ -1029,7 +1026,7 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     have := (pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)).mp (by simpa using hne)
     omega
   -- the instantiation met
-  cases hky : nbKeyW (n' + 1) m4 vis ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns with
+  cases hky : nbKeyW stubCall (n' + 1) m4 vis ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns with
   | none => rw [hky] at h; simp [nbAppK6] at h
   | some pr5 =>
   obtain ⟨r5, m5⟩ := pr5
@@ -1057,7 +1054,7 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   simp only [heq, bne_self_eq_false, Bool.false_eq_true, ite_false]
   exact hrun5
 
-theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) := by
+theorem appOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : AppOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, hCont, -, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb hi w ns c prog NS r h hS hW hhi hw hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -1141,7 +1138,7 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
     cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with
     | false => rfl
     | true => rw [e] at ho; simp at hon; rw [hon] at ho; exact absurd ho (by decide)
-  cases hct : nbContW n m2 vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
+  cases hct : nbContW stubCall n m2 vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
       ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns with
   | none => rw [hct] at h; simp [nbAppK6] at h
   | some pr4 =>
@@ -1157,7 +1154,7 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
     hrun4]
   rfl
 
-theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1) := by
+theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : BindOK dn vis fe stubCall (n + 1) := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl dep kb w ns c prog NS r h hS hW hw h6 hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -1218,7 +1215,7 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
   rw [CWF_eq] at hrun3
   have hg13 := (hg1.trans hg2).trans hg3
   -- the codomain walked
-  cases hp : nbPosW n m3 vis ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns with
+  cases hp : nbPosW stubCall n m3 vis ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns with
   | none => rw [hp] at h; simp [nbBindK4] at h
   | some pr4 =>
   obtain ⟨rp, m4⟩ := pr4
@@ -1263,7 +1260,7 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
     e5, e6]
   rfl
 
-theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) := by
+theorem posOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : PosOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, hBind, hApp, -, -, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl dep kb e ns c prog NS r h hS hW he hns hP hA
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
@@ -1276,7 +1273,7 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     rw [pos2_word_pred hf0]; omega
   have hhi := hW.hi htop
   -- the reduct
-  cases hwt : stubM "whnf_top" m [vis, dep, e] with
+  cases hwt : stubCall n "whnf_top" [vis, dep, e] m with
   | none => rw [hwt] at h; simp [nbPosK1] at h
   | some pr =>
   obtain ⟨rw, m1⟩ := pr
@@ -1354,7 +1351,7 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
   by_cases h6 : rw.headD 0 >>> 28 = 6
   · -- a binder
     rw [if_pos h6] at h
-    cases hb : nbBindW n m2 vis ctx (fu - 1) po pl dep kb (rw.headD 0) ns with
+    cases hb : nbBindW stubCall n m2 vis ctx (fu - 1) po pl dep kb (rw.headD 0) ns with
     | none => rw [hb] at h; simp [nbPosK4] at h
     | some pr4 =>
     obtain ⟨rb, m4⟩ := pr4
@@ -1372,7 +1369,7 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     simpa using hrun4
   · -- an application
     rw [if_neg h6] at h
-    cases hp : nbAppW n m2 vis ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns with
+    cases hp : nbAppW stubCall n m2 vis ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns with
     | none => rw [hp] at h; simp [nbPosK5] at h
     | some pr4 =>
     obtain ⟨rp, m4⟩ := pr4
@@ -1390,20 +1387,19 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     simpa using hrun4
 
 
-theorem nbOK_zero : NbOK dn vis fe 0 := by
+theorem nbOK_zero : NbOK dn vis fe stubCall 0 := by
   simp only [NbOK, PosOK, BindOK, AppOK, ContOK, KeyOK, NewOK, FrameOK, CtorsOK, OneOK, WalkOK, FieldsOK]
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
     simp_all [nbPosW, nbBindW, nbAppW, nbContW, nbKeyW, nbNewW, nbFrameW, nbCtorsW, nbOneW, nbWalkW, nbFieldsW]
 
-include hcs in
 /-- The block's relational content at every fuel up to the walk fuel. -/
-theorem nbOK_all : ∀ n, 2 ^ 31 + n ≤ coreWalkFuel → NbOK dn vis fe n
+theorem nbOK_all : ∀ n, 2 ^ 31 + n ≤ coreWalkFuel → NbOK dn vis fe stubCall n
   | 0, _ => nbOK_zero dn vis fe
   | n + 1, hk => by
     have ih := nbOK_all n (by omega)
     exact ⟨posOK_step dn vis fe n ih, bindOK_step dn vis fe n ih, appOK_step dn vis fe n ih,
-      contOK_step dn vis fe hcs n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
-      frameOK_step dn vis fe hcs n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n hk ih,
+      contOK_step dn vis fe n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
+      frameOK_step dn vis fe n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n hk ih,
       walkOK_step dn vis fe n hk ih, fieldsOK_step dn vis fe n hk ih⟩
 
 end steps

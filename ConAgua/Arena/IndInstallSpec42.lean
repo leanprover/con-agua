@@ -222,7 +222,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (h : cidW p n m vis o l w = some (r, m')) (hS : StageR dn vis fe m a)
     (hok : ConRon.Bridge.StateOK a)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
-    (hv : AllVis fe) (hcs : CtorSums fe) (hM : CidMemos m) :
+    (hv : AllVis fe) (hM : CidMemos m) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   cases n with
@@ -322,7 +322,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n (by omega) ⟨s4.mem, Locals.init []⟩
-      a4 hS4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hv hcs hP4 hma4 hA4
+      a4 hS4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hv hP4 hma4 hA4
       hkp hkt hkr hta4 hsl4.2) (callW_mono c5 (by omega))
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5

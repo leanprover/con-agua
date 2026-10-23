@@ -945,47 +945,47 @@ theorem nestCrest_spec' (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl u
 
 /-! ## `nest_ctors_crest`: the group abstracted, typed at the frame's context -/
 
-def p2ctK4 (vis hi : Word) (crest : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def p2ctK4 (cR : CallM) (k : Nat) (vis hi : Word) (crest : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m4) => match stubM "ensure_sort_core" m4 [vis, hi, r.headD 0] with
+  | some (r, m4) => match cR k "ensure_sort_core" [vis, hi, r.headD 0] m4 with
     | none => none
     | some (_, m5) => some ([crest], m5)
-def p2ctK3 (vis hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def p2ctK3 (cR : CallM) (k : Nat) (vis hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m3) =>
     if r.headD 0 = 0 then none
-    else p2ctK4 vis hi (r.tail.headD 0) (stubM "infer_type_core" m3 [vis, hi, r.tail.headD 0])
-def p2ctK2 (k : Nat) (vis no nl us dO dL hO hL hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+    else p2ctK4 cR k vis hi (r.tail.headD 0) (cR k "infer_type_core" [vis, hi, r.tail.headD 0] m3)
+def p2ctK2 (cR : CallM) (k : Nat) (vis no nl us dO dL hO hL hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m2) => p2ctK3 vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0))
-def p2ctK1 (k : Nat) (vis no nl us dO dL hO hL cv hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (r, m2) => p2ctK3 cR k vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0))
+def p2ctK1 (cR : CallM) (k : Nat) (vis no nl us dO dL hO hL cv hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
     | none => none
     | some b => if b = 0 then none
-      else p2ctK2 k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
+      else p2ctK2 cR k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
         rdW (m1.arr64 EREC) (cv + 3)])
 /-- The model of `nest_ctors_crest(vis, namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cv, hi)`. -/
-def p2ctW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def p2ctW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, no, nl, us, dO, dL, hO, hL, cv, hi => p2ctK1 k vis no nl us dO dL hO hL cv hi (cvLpsW k m cv)
+  | k + 1, m, vis, no, nl, us, dO, dL, hO, hL, cv, hi => p2ctK1 cR k vis no nl us dO dL hO hL cv hi (cvLpsW k m cv)
 
 section arms
-variable (k : Nat) (m1 m2 m3 m4 : Mem) (vis no nl us dO dL hO hL cv hi crest : Word) (r : List Word)
-theorem p2ctK4_eq : p2ctK4 vis hi crest (some (r, m4)) = match stubM "ensure_sort_core" m4 [vis, hi, r.headD 0] with
+variable (cR : CallM) (k : Nat) (m1 m2 m3 m4 : Mem) (vis no nl us dO dL hO hL cv hi crest : Word) (r : List Word)
+theorem p2ctK4_eq : p2ctK4 cR k vis hi crest (some (r, m4)) = match cR k "ensure_sort_core" [vis, hi, r.headD 0] m4 with
     | none => none
     | some (_, m5) => some ([crest], m5) := rfl
-theorem p2ctK3_eq : p2ctK3 vis hi (some (r, m3)) = if r.headD 0 = 0 then none
-    else p2ctK4 vis hi (r.tail.headD 0) (stubM "infer_type_core" m3 [vis, hi, r.tail.headD 0]) := rfl
-theorem p2ctK2_some : p2ctK2 k vis no nl us dO dL hO hL hi (some (r, m2)) =
-    p2ctK3 vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0)) := rfl
-theorem p2ctK1_eq : p2ctK1 k vis no nl us dO dL hO hL cv hi (some (r, m1)) =
+theorem p2ctK3_eq : p2ctK3 cR k vis hi (some (r, m3)) = if r.headD 0 = 0 then none
+    else p2ctK4 cR k vis hi (r.tail.headD 0) (cR k "infer_type_core" [vis, hi, r.tail.headD 0] m3) := rfl
+theorem p2ctK2_some : p2ctK2 cR k vis no nl us dO dL hO hL hi (some (r, m2)) =
+    p2ctK3 cR k vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0)) := rfl
+theorem p2ctK1_eq : p2ctK1 cR k vis no nl us dO dL hO hL cv hi (some (r, m1)) =
     match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
     | none => none
     | some b => if b = 0 then none
-      else p2ctK2 k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
+      else p2ctK2 cR k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
         rdW (m1.arr64 EREC) (cv + 3)]) := rfl
 end arms
 attribute [ind_grind] p2ctK2_some
@@ -1001,9 +1001,9 @@ structure CtLook (p : Prog) : Prop where
   hnd : p.lookup "sl_nodup" = some slNodup
   hp : p.lookup "nest_ctors_crest" = some nestCtorsCrestL
 
-theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (n : Nat) (s₀ : St) (vis no nl us dO dL hO hL cv hi : Word) :
+theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis no nl us dO dL hO hL cv hi : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi]
-    ⦃fun r s' => LocEq s' s₀ ∧ p2ctW n s₀.mem vis no nl us dO dL hO hL cv hi = some ([r.headD 0], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ p2ctW cR n s₀.mem vis no nl us dO dL hO hL cv hi = some ([r.headD 0], s'.mem); ⊤⦄ := by
   rw [invoke_eq _ L.hp]
   simp only [callFn, nestCtorsCrestL]
   cases n with
@@ -1012,7 +1012,7 @@ theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (n : Nat) (s₀ : St) (vis
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         cvLps_spec p L.ha L.hc L.he L.hcv n, slNodup_spec p L.hsc L.hnd n, stubM_spec p "inst_lp_fast" n,
-        nestCrest_spec' p L.cr n, stubM_spec p "infer_type_core" n, stubM_spec p "ensure_sort_core" n] <;>
+        nestCrest_spec' p L.cr n, hcR n "infer_type_core", hcR n "ensure_sort_core"] <;>
       finish (gen := 20) (instances := 5000) [p2ctW, p2ctK1_eq, p2ctK3_eq, p2ctK4_eq, rdW_eq]
 
 end L.Ind
@@ -1024,7 +1024,7 @@ open L.Arena
 theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m m' : Mem} {a : AState} {no nl us dO dL hO hL cv hi : Word} {names : List NIdx}
     {ds holes : List EIdx} {cvv : IConstantVal} {r : List Word}
-    (h : p2ctW k m vis no nl us dO dL hO hL cv hi = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : p2ctW stubCall k m vis no nl us dO dL hO hL cv hi = some (r, m')) (hS : StageR dn vis fe m a)
     (hus : H us) (hdec : decHL m no.toNat nl.toNat = some names) (hit : no.toNat + nl.toNat ≤ iwTop m)
     (hnn : dL.toNat + names.length < 2 ^ 64)
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
@@ -1112,14 +1112,14 @@ theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | some crest =>
   obtain ⟨hx1, hxH, hxd⟩ := hx
   rw [if_neg (by rw [hx1]; decide)] at h
-  cases hit2 : stubM "infer_type_core" m3 [vis, hi, r3.tail.headD 0] with
+  cases hit2 : stubCall (k + 1 + 1 + 1) "infer_type_core" [vis, hi, r3.tail.headD 0] m3 with
   | none => rw [hit2] at h; simp [p2ctK4] at h
   | some pr4 =>
   obtain ⟨r4, m4⟩ := pr4
   rw [hit2, p2ctK4_eq] at h
   have hxH' : H (r3.tail.headD 0) := by simpa using hxH
   obtain ⟨ty, a3, hrun3, hS4, hg4, htyH, htyd⟩ := inferTypeCore_spec dn vis fe hi _ hxH' m3 m4 a2 r4 hit2 hS3
-  cases hes : stubM "ensure_sort_core" m4 [vis, hi, r4.headD 0] with
+  cases hes : stubCall (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with
   | none => rw [hes] at h; cases h
   | some pr5 =>
   obtain ⟨r5, m5⟩ := pr5

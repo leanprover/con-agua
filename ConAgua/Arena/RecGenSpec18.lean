@@ -126,7 +126,7 @@ structure TmfProg (p : Prog) : Prop where
 
 /-- **`target_major_of_const`'s model simulates `targetMajorOf` after the head's view.** -/
 theorem tmcW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
+    (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
     {pp cao cal pfo pfl fvo fvl ao al x y : Word} {bs : BlockShape}
     {css : List (List (IConstantVal × Nat))} {pfvs fvs args : List EIdx}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
@@ -211,7 +211,7 @@ theorem tmcW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
       | succ k =>
       obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
         (tmo_spec p hP.tmo.out k _ vis pp pfo pfl x y ao al _ _) e6
-      exact tmoW_sim hP.tmo hcs k (by omega) hS4 (hq.grow (decBS_mono _) hg4) (by have := hg4.1; omega) hsl hwlt
+      exact tmoW_sim hP.tmo k (by omega) hS4 (hq.grow (decBS_mono _) hg4) (by have := hg4.1; omega) hsl hwlt
         (fun j hj => by rw [UInt64.toNat_ofNat_of_lt' hkb] at hj; omega) hws.symm
         (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.1) (hpf.grow (OMono.decHL _ _) hg4) hx hy hP4
         r6 s6.mem hW6
@@ -220,7 +220,7 @@ theorem tmcW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
 
 /-- **`target_major_of`'s model simulates `targetMajorOf`.** -/
 theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
+    (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
     {pp cao cal pfo pfl fvo fvl mty : Word} {bs : BlockShape}
     {css : List (List (IConstantVal × Nat))} {pfvs fvs : List EIdx}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
@@ -282,7 +282,7 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
     | succ k =>
     obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmc_spec p hP.tmc k _ vis pp cao cal pfo pfl fvo fvl _ _ _ _) e6
-    exact tmcW_sim hP hcs k (by omega) hS2 (hq.grow (decBS_mono _) hg12)
+    exact tmcW_sim hP k (by omega) hS2 (hq.grow (decBS_mono _) hg12)
       (partsHsrc_grow hg12 (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg12)
       (hpf.grow (OMono.decHL _ _) hg12) (hfv.grow (OMono.decHL _ _) hg12) (Nat.le_trans hfvb hg12.1)
       (decHL_decB (by rw [decHL_grow hg2 hb1]; exact hd1) (Nat.le_trans hb1 hg2.1))
@@ -293,12 +293,11 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
 /-- **`target_major_of` refines `targetMajorOf`** (through the `get_app_fn`/`get_app_args`,
 `mk_app_n`, `lvl_eq_c`, `inst_lp_fast`, `fvar_b` stubs; `bvar_b` the master's walk): the block's shape
 decoded below the tops with its members' slice below the top, the members' constructors as `checkBlockCtors`
-returns them, the parameter slices decoded below the tops; the walk memos well formed (`PosMR`), the
-environment's constructor records' counts word-sized (`CtorSums`, as for `nestContainer`), the exec fuel
-below `coreWalkFuel`. -/
+returns them, the parameter slices decoded below the tops; the walk memos well formed (`PosMR`), the exec
+fuel below `coreWalkFuel`. -/
 @[refines ConRon.Arena.targetMajorOf]
 theorem targetMajorOf_refines {p : Prog} (hP : TmfProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+    (fe : IFEnv) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
     (pp cao cal pfo pfl fvo fvl mty : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs fvs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem pp) (hcss : PSlR decCNS css cao cal s₀.mem)
@@ -312,7 +311,7 @@ theorem targetMajorOf_refines {p : Prog} (hP : TmfProg p) (dn : NIdx → Option 
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetMajorOf fe bs css pfvs fvs (decI mty)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ :=
   triple_post (tmf_spec p hP.tmf n s₀ vis pp cao cal pfo pfl fvo fvl mty) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (tmfW_sim hP hcs n hn hS hq hsrc hcss hpf hfv hfvb hmty hPm) hm
+    let ⟨hok, hQ⟩ := Sim.run (tmfW_sim hP n hn hS hq hsrc hcss hpf hfv hfvb hmty hPm) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind

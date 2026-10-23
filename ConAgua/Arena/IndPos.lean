@@ -287,7 +287,8 @@ def nestKindsFlat : FunDecl := lfn (off, cnt) locals (ok, r) {
 /-! ## Containers -/
 
 /-- `nest_ctor_entry_strip(ciq)`: the constructor's fields and its stripped body, `ok0 = 0` when
-`ciq` is no constructor record or its type does not bind its parameters and fields. -/
+`ciq` is no constructor record or its type does not bind its parameters and fields. Aborts when
+`nPc + nF` wraps (a capacity guard: the twin adds them as `Nat`s; docs/deviations.md). -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:368-384 ConRon.Arena.nestCtorEntry
 @[l_impl ConRon.Arena.nestCtorEntry]
 def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bsLen, body) {
@@ -295,6 +296,7 @@ def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bs
   cv := ciq + 1;
   nPc := EREC.u64[ciq + 5];
   nF := EREC.u64[ciq + 6];
+  if nPc + nF < nPc { abort };
   (ok, bsOff, bsLen, body) := call strip_pis(nPc + nF, EREC.u64[cv + 3]);
   if ok == 0 { return (0, 0, 0, 0, 0) };
   return (1, cv, nPc, nF, body)

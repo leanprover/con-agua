@@ -425,7 +425,7 @@ structure TmoOProg (p : Prog) : Prop where
 
 /-- **`target_major_of_outside`'s model simulates `targetMajorOf`'s outside branch.** -/
 theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
+    (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
     {pp pfo pfl I us ao al mno mnl : Word} {bs : BlockShape} {pfvs args : List EIdx} {ws : List Word}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
     (hws : SlR m mno mnl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
@@ -471,7 +471,7 @@ theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Nam
     rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
     simp only [Option.some.injEq, Prod.mk.injEq] at hW2
     obtain ⟨rfl, hm'⟩ := hW2
-    obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok dn fe vis I hI hcs k' m m' a r hnt hS
+    obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok dn fe vis I hI k' m m' a r hnt hS
     have hf : MFr [] [] m m' := ntWf_mfr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt)
     rw [← hm']
     refine ⟨x, a', hrun, ?_, hS2, hg2, hPm.fr hf⟩

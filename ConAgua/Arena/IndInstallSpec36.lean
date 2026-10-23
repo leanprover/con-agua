@@ -265,42 +265,6 @@ theorem find?_push_allVis {fe : IFEnv} {ci : IConstantInfo} (hv : AllVis fe) (n 
       have := hv n r e
       simp only [show r.1 < fe.visibleBelow + 1 by omega, this, ite_true]
 
-theorem CtorSums.push_ind {fe : IFEnv} (hv : AllVis fe) (hcs : CtorSums fe) (cv : IConstantVal)
-    (caps : IIndCaps) : CtorSums (fe.push (.indInfo cv caps)) := by
-  intro n cv' nPc nF h
-  rw [find?_push_allVis hv] at h
-  split at h
-  · cases h
-  · exact hcs n cv' nPc nF h
-
-theorem consBlockInds_ctorSums (p₁ : BlockShape) (isRec : Bool) :
-    ∀ (cvs : List IConstantVal) (i : Nat) (fe : IFEnv) (a a' : AState) (fe' : IFEnv),
-    (ConRon.Arena.consBlockInds p₁ isRec cvs i fe).run a = .ok (fe', a') → AllVis fe → CtorSums fe →
-    AllVis fe' ∧ CtorSums fe'
-  | [], i, fe, a, a', fe', h, hv, hcs => by
-    simp only [ConRon.Arena.consBlockInds] at h
-    cases h; exact ⟨hv, hcs⟩
-  | cv :: cvs, i, fe, a, a', fe', h, hv, hcs => by
-    simp only [ConRon.Arena.consBlockInds] at h
-    obtain ⟨caps, a₁, -, h2⟩ := am_bind_ok h
-    exact consBlockInds_ctorSums p₁ isRec cvs (i + 1) _ a₁ a' fe' h2 (hv.push _) (hcs.push_ind hv cv caps)
-
-/-- **`checkBlockInds` keeps the constructors' sums** (it pushes formers only). -/
-theorem checkBlockInds_ctorSums {fe : IFEnv} {P : BlockParts} {b : Bool} {a a' : AState}
-    {x : IFEnv × List IConstantVal × BlockShape} (h : (ConRon.Arena.checkBlockInds V fe P b).run a = .ok (x, a'))
-    (hv : AllVis fe) (hcs : CtorSums fe) : AllVis x.1 ∧ CtorSums x.1 := by
-  unfold ConRon.Arena.checkBlockInds at h
-  split at h
-  · cases h
-  · simp only [StateT.run_bind] at h
-    obtain ⟨v1, -, h⟩ := exc_bind_ok h
-    obtain ⟨v2, -, h⟩ := exc_bind_ok h
-    obtain ⟨v3, -, h⟩ := exc_bind_ok h
-    obtain ⟨v4, -, h⟩ := exc_bind_ok h
-    obtain ⟨v5, hv5, h⟩ := exc_bind_ok h
-    cases h
-    exact consBlockInds_ctorSums _ _ _ 0 fe _ _ _ hv5 hv hcs
-
 /-! ## `check_block_pass` -/
 
 /-- The lookups of `check_block_pass`. -/
@@ -335,8 +299,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
-    (hcx : ShapeCV m p0) (hb : (isRec != 0) = b) (hv : AllVis fe) (hcs : CtorSums fe)
-    (hPm : PosMR m) (hA : AbsOK m) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
+    (hcx : ShapeCV m p0) (hb : (isRec != 0) = b) (hv : AllVis fe) (hPm : PosMR m) (hA : AbsOK m) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
     Sim (icpW p (n + 3) m vis p0 isRec) (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b) a
       (fun r x m' a' => StageR dn (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' a' ∧ IWGrow m m' ∧
         BPassR (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m' ∧
@@ -362,8 +325,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   obtain ⟨fe1, cvTas, bs1⟩ := x1
   obtain ⟨hS1, hg1, hcv1, hbs1, hsrc1⟩ := hout
   have hP1 := PosMR.ofClosed hcl (hfs _ (by decide)) c1 hPm
-  obtain ⟨-, hcs1⟩ := checkBlockInds_ctorSums hrun1 hv hcs
-  simp only at hcs1 hS1 hcv1 hbs1
+  simp only at hS1 hcv1 hbs1
   have hT1 : iwTop s1.mem < 2 ^ 64 := (rdW (s1.mem.arr64 CTL) 200).toNat_lt
   obtain ⟨-, hq9, hmemv⟩ := partsShapeFacts hbs1 hsrc1
   -- the flush
@@ -500,7 +462,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   rw [c5, icpK5_some] at h
   have hA5 : AbsOK m5 := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c5 hA4
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hrd5, hms5, hP5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (checkBlockClasses_refines hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide)) dn (r1.headD 0) fe1 hcs1
+    (checkBlockClasses_refines hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide)) dn (r1.headD 0) fe1
       (n + 2) (by omega) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hS4 hBS hsrc4 hRD hca4 hpfD hpfb hP4) c5
   simp only at hs5 hS5 hg5 hrd5 hms5 hP5
   subst hs5
@@ -522,7 +484,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   rw [c6, icpK6_some] at h
   obtain ⟨s6, hs6, -, hok6, hS6, hg6, hP6, hA6, hks6, hnf6, hns6⟩ := triple_of_callW
     (s₀ := ⟨s5.mem, Locals.init []⟩)
-    (checkBlockPositivity_refines p hP.pos n (by omega) _ a5 dn (r1.headD 0) fe1 hcs1 _ _ _ _ _ ⟨bs1⟩
+    (checkBlockPositivity_refines p hP.pos n (by omega) _ a5 dn (r1.headD 0) fe1 _ _ _ _ _ ⟨bs1⟩
       cvTas ctorsAs hS5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hk' f (by simp [passKeepCallees, hf]))) c6
   simp only at hs6 hS6 hg6 hP6 hA6 hks6 hnf6 hns6
   subst hs6
@@ -569,7 +531,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   obtain ⟨r8, m8⟩ := q8
   rw [c8, icpK8_some] at h
   obtain ⟨s8, hs8, -, ns, a8, hrun8, hS8, hg8, hns8, hP8, hA8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (nestSeeds_refines hP.rs (n + 3) dn (r1.headD 0) fe1 hcs1 (by omega) _ a7 _ _ _ _ c seeds NS hS7 hU7
+    (nestSeeds_refines hP.rs (n + 3) dn (r1.headD 0) fe1 (by omega) _ a7 _ _ _ _ c seeds NS hS7 hU7
       hhi4 hsd7.2.1 hsd7.2.2.2 hns7 hP7 hA7) c8
   simp only at hs8 hS8 hg8 hns8 hP8 hA8
   subst hs8
@@ -653,7 +615,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
 
 /-- **`check_block_pass(vis, p0, isRec)` refines `checkBlockPass`**: from the stage relation, the
 block's shape decoded below the tops (with its member slice's bound and constant records), an
-unrestricted environment whose stored constructors' sums are words (`AllVis`, `CtorSums`) and the walk
+unrestricted environment (`AllVis`) and the walk
 memos well formed, the pass's record at `r[0]` decoded below the tops (`BPassR`, at its word 0, the
 formers' view), the stage relation at that view of the formers' environment, the memos kept, the
 record's shape's recursor slice below the top if the input's is (`RecsB`), its classes'
@@ -666,7 +628,7 @@ theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
     {vis : Word} {fe : IFEnv} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0) (hb : (isRec != 0) = b) (hv : AllVis fe)
-    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hA : AbsOK s₀.mem) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
+    (hPm : PosMR s₀.mem) (hA : AbsOK s₀.mem) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 4)) "check_block_pass" [vis, p0, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b).run a₀ = .ok (x, a') ∧
       StageR dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
@@ -674,6 +636,6 @@ theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
       (RecsB s₀.mem p0 → RecsB s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 3))) ∧
       ClassesLp s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 15)) (rdW (s'.mem.arr64 IW) (r.headD 0 + 16)); ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
-    ⟨hl, icpW_sim hP hcl hfs n hn hS hq hsrc hcx hb hv hcs hPm hA hk r s'.mem hm⟩
+    ⟨hl, icpW_sim hP hcl hfs n hn hS hq hsrc hcx hb hv hPm hA hk r s'.mem hm⟩
 
 end L.Ind
