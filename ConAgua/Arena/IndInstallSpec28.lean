@@ -195,12 +195,14 @@ theorem icp_spec (p : Prog) (hp : p.lookup "check_block_pass" = some checkBlockP
     ⦃fun r s' => LocEq s' s₀ ∧ icpW p n s₀.mem vis p0 isRec = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkBlockPass]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "check_block_inds", callW_spec p n "flush_caches", callW_spec p n "check_block_ctors",
-      callW_spec p n "block_nest_ctx", callW_spec p n "check_block_classes",
-      callW_spec p n "check_block_positivity", callW_spec p n "class_seeds", callW_spec p n "nest_seeds",
-      callW_spec p n "check_block_pass_rec"] <;>
-    finish (gen := 40) (instances := 20000) [icpW, rdW_eq]
+  vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
+    callW_spec p n "check_block_inds", callW_spec p n "flush_caches", callW_spec p n "check_block_ctors",
+    callW_spec p n "block_nest_ctx", callW_spec p n "check_block_classes",
+    callW_spec p n "check_block_positivity", callW_spec p n "class_seeds", callW_spec p n "nest_seeds",
+    callW_spec p n "check_block_pass_rec"]
+  all_goals simp_all [LocEq, Expr.pval, ipf_rd64, BinOp.eval, St.setLocs_cons, St.setLoc_loc,
+    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr,
+    icpW, icprK_some, icpK8_some, icpK7_some, icpK6_some, icpK5_some, icpK4_some, icpK3_some,
+    icpK2_some, icpK1_some]
 
 end L.Ind

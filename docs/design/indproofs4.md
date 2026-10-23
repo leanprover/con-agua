@@ -128,3 +128,117 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
   (`IndPosSpec2`: every stored `ctorInfo` has `nPc + nF < 2^64`). If `FoldOK` implies them, a
   pointer to the lemma suffices; otherwise please add them (`CtorSums` could later go away with an
   L wrap guard in `nest_ctor_entry_strip`).
+* Landed as `234f3294` (checkBlock; helper `cls`'s class group, proven locally).
+
+## `IndArmSpec`'s post `CoreMemos m'` (analysis, 2026-10-23 ~10:00)
+The stage's refinements are `StageR`-level; nothing in them carries `CoreMemos` (the core walks'
+memos, arrays 49/50/52‥54/151‥153). A `StageR` proof of `check_ind_decl` therefore cannot give
+`CoreMemos m'` without one of:
+1. **The `StageT` migration** (the plan's step 3): `StageT` contains `TwinOK.memos : CoreMemos`, the
+   core entry points' `StageT` sims return it, `IndStubsT` contracts return it — but every
+   refinement on the path from `check_ind_decl` down must then be restated under `StageT`.
+2. **An invariant-closure lemma** (generic, L level, as `run_frame`): if every function of a
+   call-closed set `fs` other than a set `E` writes outside `P`'s footprint, `P` is stable under such
+   frames, and every returning call of an `E` function from a `P` memory ends in a `P` memory, then
+   every returning call of an `fs` function keeps `P`. With `P := CoreMemos` and `E` := the core
+   entry points and the memo walks that write the core arrays (`abs_entry`, the `instLP` walk …),
+   `CoreMemos m'` follows from a write-set fact of `check_ind_decl`'s closure plus `CoreMemos`
+   preservation by `E`. The catch: `E`'s preservation must hold from any `CoreMemos` memory (the
+   walks clear by epoch and keep `MemoRG`; for `whnf_top` & co. it needs to be extracted from the
+   knot's proofs, which run under `CoreS`).
+Proposal: (2) for the memo predicates (`CoreMemos`, `StageMemos`, `CrOK`, `I1R`), which also removes
+the stage-memo threading; I can write the generic lemma. Until then the arm theorem will be stated
+with `CoreMemos` as a hypothesis-preserved-by-stubs contract (`sorry`, like `stubM_memoFrame`).
+## Helper `indproofs4-fvt`: `fvar_type_d`, `fvar_type_ds`, `get_app_args_f`
+
+Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs_spec`.
+
+* `Arena/IndRealFvtD.lean`: `ftdF` (`fvar_type_d`: the tag test, `e_view`'s third word against
+  `viewFVarTy`; writes nothing, twin state unchanged). Its own file with imports below
+  `IndInstallSpec` (which calls `fvar_type_d` in `check_block_doms_at`): `IndRealFvt.lean` needs
+  `DeclNatBase`, which sits above `IndInstallSpec`. `eViewW_head1` moved here from `RecClassSpecA`.
+* `Arena/IndRealFvt.lean`: `ftdsF` (`fvar_type_ds`; its loop named `ftdsLoop`, `fvarTypeDsL_eq`
+  by `rfl`; the memory after is `wrIW (allocMem m l) q ws`, `recPost_wr` + `slice_keep`) and
+  `gaaF` (`get_app_args_f`: `getAppArgs_refinesR`, `get_app_args` without the whnf lane's bound
+  `|SPN| < 2^63` (the room checks give `top + n ≤ len64 SPN < 2^64`; `fillW_okR` likewise); the
+  stack slice into a fresh pool slice by `spn_to_iw` (`s2iW_wr`); the top put back). The whnf
+  lane's lemmas are untouched (changing them would rebuild most of the tree). `stageR_hi`,
+  `decHL_word` moved here from `IndRealSpine.lean`.
+* **`fvarTypeDs`' pre strengthened** by `0 < l → o + l ≤ iwTop m`: a slice straddling the pool's
+  top overlaps the fresh output slice and the loop would read a word it wrote; the contract as
+  stated was false there. All callers had the bound (from `decRL`, or `DecB` in `RecClassSpecM`).
+* Bundles: `GaaF`/`FtdF`/`FtdsF` are fields of `AdF` (`gaaF_spec`, `ftdF_spec`, `ftdsF_spec` in
+  `IndRealSpine.lean`); files below `IndRealSpine` take `FtdF p` (`IndInstallSpec`, `IndSumSpec2A`,
+  `IndSumSpec11`, `CfoProg.ftd`); `AgreeProg.ad`, and `had : AdF p` on `classBinder`,
+  `classGenBinder`, `classGenIhParts`, `checkBlockAgreeOne`. `Checker/IndRealFvt.lean` proves the
+  three for `checkerProg`. Frames: `MFr.ofFtdF`/`ofFtdsF`/`ofGaaF` (`IndPosMemo`), `rec2NoMR_ftd`.
+* **Not done: `open_pis_at_fvars_f`.** `opf_go` calls `inst_list` (`instantiateListFast`), whose
+  refinement needs `ArenaL = ArenaD ∧ ILR`: the memo relation of array 50 / `CTL[50]` (`coreIlSch`),
+  in particular every slot stamp `≤` the epoch, so that `ilm_clear`'s epoch bump empties it.
+  `StageR` does not constrain array 50; with a stale slot stamped at the new epoch `inst_list`
+  returns a wrong hit. `StageT` carries it (`CoreMemos.1`). Needs the pending decision (memory-only
+  hypothesis `∃ mp, MemoRG ilSch lfKey decE m mp` in the contract's pre and post, or `StageT`).
+
+## Status for the coordinator: `check_ind_decl` / `IndArmSpec` (2026-10-23 ~11:00)
+* Done (StageR, generic `p` + bundles): `checkBlock`, `checkBlockPass`, `checkBlockClasses`,
+  `checkBlockTail`, `indParamsOk` (real), `blockParts?`, `checkShapeless`, `checkBasisDecl` (lane
+  decls3). In flight: helper `grc` (`genRecCheck`, replacing `genRecCheck_pending`), helper `abs`
+  (`abstract1_fast` etc. with memory-only memo predicates).
+* Next (me): `check_ind_decl` at `StageR` (model + `Sim`): needs `basisPinHit` — no refinement
+  exists (phase 2, `written`; ROM-based like `checkBasisDecl`): a stub contract first; and
+  `ShapeSrc` for `block_parts`' shape (strengthening `ShapeR` in `IndPartsSpec15`). ETA for the
+  `StageR` arm theorem: a few hours.
+* **Blockers for `IndArmSpec` exactly as stated**: (1) the post's `CoreMemos m'` — the stage is
+  `StageR`-level and nothing carries `CoreMemos` (see "IndArmSpec's post CoreMemos m'" above):
+  needs either the `StageT` migration or an invariant-closure lemma plus `CoreMemos`-preservation
+  of the core entry points (from the knot's proofs). (2) Premises the stage needs that the spec
+  lacks: `StageMemos m`, `CrOK m`, the `i1lSch` memo (array 51), and the instantiateList memo
+  (`ilSch`, array 50 — in `CoreMemos.1`, so derivable from `StageT`), `AllVis fe`, `CtorSums fe`
+  (see "Reply … IndArmSpec premises" above). Proposal: I deliver `IndArmSpec`'s shape with these
+  as extra premises and `CoreMemos m'` from a documented `sorry`'d contract ("every stage
+  function keeps `CoreMemos`", true of the real code) until (1) is done.
+
+## Helper `abs`: `abstract1_fast` (the `AbsOK` memo predicate)
+
+* **Model** `abF := callF abProg "abstract1_fast"` (`Arena/IndRealAbs.lean`; `abProg` = the adapter
+  `abstract1FastA`, the `abstract1` walk, `abs_entry`; write set `absA`/`absC`), `abF_spec`,
+  `abF_frame`, and **`abF_ok`**: `RelW abF [CWF, e, d, k] (StageR ∧ AbsOK) (abstract1Fast …)
+  (KeepPost … ∧ AbsOK)`. The twin's run from `a` is definitionally the run from `a` with any
+  `abs1C` (the entry clear), so `absEntry_refines` applies at `a` with `abs1C := mp` (`ArenaD.memo_irrel`).
+  Contract `abstract1Fast_spec` deleted; bundle `AbF` (`Checker/IndRealAbs.lean`: `checkerProg_ab`).
+* **`AbsOK m := ∃ mp, MemoRG ⟨49, 48⟩ lfKey decE m mp`** (`IndStubs.lean`, with the new sorry contract
+  `stubM_absOK`: every stub keeps it; true of the real functions — the core keeps `CoreMemos`).
+  `TwinOK.absOK`/`StageT.absOK` (`Arena/IndRealAbsT.lean`): `CoreMemos` contains it, so the `StageT`
+  migration gets it for free.
+* **Threading.** `AbsOK` as a hypothesis and a post through every theorem whose proof reaches an
+  `abstract1_fast` call (≈80, from `abstractPrefix`/`closeTelescope`/`closeLams` up to
+  `checkBlockTeles`/`Inds`/`Tail`/`Pass`/`Positivity` and the nest-positivity block `NbOK`, whose eleven
+  statements now carry `PosMR m → AbsOK m → … ∧ PosMR m' ∧ AbsOK m'`). Across a callee: `AFr m m'`
+  (`AbsOK m → AbsOK m'`) from the model, by `afr_auto h [callee lemmas]` (mirror of `mfr_auto`) and
+  `afr_set` (chains of `set64` apart from array 49/`CTL[48]`); positivity models' `AFr` lemmas in
+  `Arena/IndRealAbsPos.lean` (generated from their `MFr` frames, plus the walks `noGoW`/`dpGoW`, …).
+  `RSim.withF`/`Sim.withFr` add the fact to a chain's post (`IndRealAbsSim.lean`; kept out of
+  `IndRealAbs.lean`: `RecSim`/`IndRealNames` make `fuelW`/`inferTypeCore_spec` ambiguous in the
+  declaration files).
+* **Program facts** at the install layers: `AbsKeep p f` (every run of `f` in `p` keeps `AbsOK`)
+  for the `callW` callees outside the cascade (`indsKeepCallees`, `posKeepCallees`,
+  `tailKeepCallees`, `passKeepCallees`), taken as hypotheses like `closedA … hbFreeA …`; true of
+  `checkerProg` (from the callees' refinements once they carry `AbsOK`, or from `StageT`).
+
+## Reply to the coordinator: the phase-8 split (2026-10-23 ~12:00)
+* **OK** with the split (loopt3: StageR→StageT migration + core-entry contracts `stubM_spec`,
+  `inferTypeCore_spec`, `isDefEqCore_spec`, `ensureSortCore_spec`, `whnf_spec`, `stubM_memoFrame`;
+  indproofs4: block functions, `genRecCheck`, `blockLargeElimAllowed`, `check_ind_decl` →
+  `IndArmSpec`, the walk/leaf contracts).
+* Already done here (landing with this commit): `abstract1Fast_spec` (memory-only `AbsOK`
+  threaded through ~80 theorems, new contract `stubM_absOK`, program hypotheses `AbsKeep p f`),
+  `fvarTypeD(s)_spec`, `getAppArgs_spec`, `isProjFnShape(T)_spec`, `indParamsOk` (real).
+* In flight: helper `grc` (branch `indproofs4-grc`: `genRecCheck`, files `IndInstallSpec38+`,
+  edits `IndInstallSpec21/35/37`, `IndStubs.lean` for a `blockLargeElimAllowed` contract). Next
+  here: `check_ind_decl` (new `IndInstallSpec4x`, `IndPartsSpec15`'s `ShapeR`), then the
+  memo-needing contracts (`instantiate1LiftFast` — `I1R` array 51; `constsResolveFFast` — `CrOK`
+  array 155; `openPisAtFvarsF` — `ILR` array 50, which is `CoreMemos.1`): note for loopt3 —
+  `AbsOK` (array 49) and `ILR` are parts of `CoreMemos`, so under `StageT` they come for free; if
+  the migration reaches those callers first, the memory-only threading becomes unnecessary.
+* ETA `IndArmSpec`: the `StageR` arm theorem today; the exact `IndArmSpec` statement needs
+  `CoreMemos m'` after (StageT migration, loopt3) and the extra premises listed above.
