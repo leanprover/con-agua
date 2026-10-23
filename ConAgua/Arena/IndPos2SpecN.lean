@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndPos2SpecM
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndRealAbs
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the word models of the
 mutual block (`nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, `nest_cont_key`,
@@ -63,7 +64,7 @@ def nbBindK5 (a k ns2 : Word) : Option (List Word × Mem) → Option (List Word 
 def nbBindK4 (dep a : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m4) => nbBindK5 a (r.headD 0) (r.tail.tail.headD 0)
-      (stubM "abstract1_fast" m4 [CWF, r.tail.headD 0, dep, 0])
+      (abF m4 [CWF, r.tail.headD 0, dep, 0])
 def nbBindK3 (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -440,7 +441,7 @@ theorem nbBindK5_some (a k ns2 : Word) (r : List Word) (m5 : Mem) :
     nbBindK5 a k ns2 (some (r, m5)) = nbBindK6 k ns2 (mkForallW m5 a (r.headD 0)) := rfl
 theorem nbBindK4_some (dep a : Word) (r : List Word) (m4 : Mem) :
     nbBindK4 dep a (some (r, m4)) = nbBindK5 a (r.headD 0) (r.tail.tail.headD 0)
-      (stubM "abstract1_fast" m4 [CWF, r.tail.headD 0, dep, 0]) := rfl
+      (abF m4 [CWF, r.tail.headD 0, dep, 0]) := rfl
 theorem nbBindK3_some (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns : Word) (r : List Word) (m3 : Mem) :
     nbBindK3 posF vis ctx fu po pl dep kb v ns (some (r, m3)) = nbBindK4 dep (v.tail.headD 0) (posF m3 vis ctx fu po pl (dep + 1) (kb + 1) (r.headD 0) ns) := rfl
 theorem nbBindK2_some (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns : Word) (fv : Word) (m2 : Mem) :

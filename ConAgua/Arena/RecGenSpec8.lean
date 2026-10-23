@@ -130,13 +130,13 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) m rcs →
     RecsOK m ro.toNat rl.toNat (rcs.map (·.cvR)) →
     DecB (fun m => decPL m (decCVp m) vo.toNat vl.toNat) m cvs →
-    DecB (fun m => decNL m co.toNat cl.toNat) m cs →
+    DecB (fun m => decNL m co.toNat cl.toNat) m cs → AbsOK m →
     RSim (rtsW n m vis g k ro rl vo vl co cl) (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a
-      (KP dn vis fe m decCVS) := by
+      (fun b a' x => KP dn vis fe m decCVS b a' x ∧ AbsOK b.2) := by
   induction n with
   | zero => intros; intro b hb; simp [rtsW] at hb
   | succ n ih =>
-  intro m a ro rl vo vl co cl rcs cvs cs hS hG hrcs hok hcvs hcs
+  intro m a ro rl vo vl co cl rcs cvs cs hS hG hrcs hok hcvs hcs hA
   have hsz := hS.2.2.2.1
   have htop := hS.2.1
   by_cases hrl : rl = 0
@@ -146,7 +146,8 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       rw [hrl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
     subst this
     unfold ConRon.Arena.classRecTysOk
-    exact RSim.pure_some ⟨hS, IWGrow.refl m, by simpa [decCVS] using SPL.nil (dec := decCVX) (m := m) 0 (by omega)⟩
+    exact RSim.pure_some ⟨⟨hS, IWGrow.refl m, by simpa [decCVS] using SPL.nil (dec := decCVX) (m := m) 0 (by omega)⟩,
+      hA⟩
   by_cases hsh : vl = 0 ∨ cl = 0
   · rw [rtsW_short (h := hrl) (h2 := hsh)]; exact RSim.none
   rw [rtsW_cons (h := hrl) (h2 := hsh)]
@@ -185,10 +186,10 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hcl1 := rec2ToNat_pred hcl
   unfold ConRon.Arena.classRecTysOk
   have hr := rtoW_sim (dn := dn) (vis := vis) (fe := fe) n m a g k (UInt64.ofNat p) (UInt64.ofNat pv)
-    (UInt64.ofNat c0) G RS CV hS hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR) (by rw [tv]; exact hCV)
+    (UInt64.ofNat c0) G RS CV hS hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR) (by rw [tv]; exact hCV) hA
   rw [tc] at hr
   refine RSim.bind (K := rtsK1 n vis g k ro rl vo vl co cl) (by simp [rtsK1]) hr ?_
-  rintro ⟨r1, m1⟩ x a1 - ⟨hS1, hg1, hx⟩
+  rintro ⟨r1, m1⟩ x a1 - ⟨⟨hS1, hg1, hx⟩, hA1⟩
   dsimp only at hS1 hg1 hx
   rw [rtsK1_some]
   have hok' := RecsOK_tail (by rw [← hjr]; simpa using hok)
@@ -200,15 +201,15 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (by rw [hvo1, hvl1, hjv]; exact (show DecB (fun m => decPL m (decCVp m) (vo.toNat + 1) jv) m cvs' from
       hcvsT).grow (OMono.decPL (fun q => OMono.decCVp q) _ _) hg1)
     (by rw [hco1, hcl1, hjc]; exact (show DecB (fun m => decNL m (co.toNat + 1) jc) m cs' from
-      hcsT).grow (OMono.decNL _ _) hg1)) ?_
-  rintro ⟨r2, m2⟩ xs a2 - ⟨hS2, hg2, hxs⟩
+      hcsT).grow (OMono.decNL _ _) hg1) hA1) ?_
+  rintro ⟨r2, m2⟩ xs a2 - ⟨⟨hS2, hg2, hxs⟩, hA2⟩
   dsimp only at hS2 hg2 hxs
   rw [rtsK2_some]
   refine RSim.lstep (K := rtsK3) rfl fun ⟨r3, m3⟩ h3 => ?_
   have hy : StabD (fun m => decCVX m (r1.headD 0).toNat) m1 x := decCVX_stab hx.1 hx.2
   obtain ⟨hS3, hg3, hsp3⟩ := SPL.cons h3 hS2 hxs (hy.grow hg2)
   rw [rtsK3_some]
-  exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), by simpa [decCVS] using hsp3⟩
+  exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), by simpa [decCVS] using hsp3⟩, consW_afr h3 hA2⟩
 
 /-- **`class_rec_tys_ok` refines `classRecTysOk`** (through `class_rec_ty_ok`'s stubs): the
 generated constants, a stable slice of records below the record top. -/
@@ -221,13 +222,14 @@ theorem classRecTysOk_refines (p : Prog) (hp : RtsProg p) (n : Nat) (s₀ : St) 
     (hrcs : DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) s₀.mem rcs)
     (hok : RecsOK s₀.mem ro.toNat rl.toNat (rcs.map (·.cvR)))
     (hcvs : DecB (fun m => decPL m (decCVp m) vo.toNat vl.toNat) s₀.mem cvs)
-    (hcs : DecB (fun m => decNL m co.toNat cl.toNat) s₀.mem cs) :
+    (hcs : DecB (fun m => decNL m co.toNat cl.toNat) s₀.mem cs) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_tys_ok" [vis, g, k, ro, rl, vo, vl, co, cl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀ ∧
       KP dn vis fe s₀.mem decCVS (r, s'.mem)
         (AM.st (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀)
-        (AM.res (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀); ⊤⦄ :=
+        (AM.res (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classRecTysOk_spec p hp n s₀ vis g k ro rl vo vl co cl) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (rtsW_sim dn vis fe g k G hns n _ a₀ ro rl vo vl co cl rcs cvs cs hS hG hrcs hok hcvs hcs).am hw⟩
+    let h := (rtsW_sim dn vis fe g k G hns n _ a₀ ro rl vo vl co cl rcs cvs cs hS hG hrcs hok hcvs hcs hA).am hw
+    ⟨hl, h.1, h.2.1, h.2.2⟩
 
 end L.Ind
