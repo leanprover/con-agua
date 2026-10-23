@@ -112,6 +112,7 @@ import ConAgua.Arena.WhnfProj
 import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.ZeroStore
+import ConAgua.Checker.Hoist
 import ConAgua.Front.Apply
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.ApplyExpr
@@ -147,7 +148,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1745 functions, 0 of them stubs.
+1776 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -817,7 +818,6 @@ def checkerProg : Prog := [
   ("find_proj", L.Arena.findProjL),
   ("find_rule", L.Arena.findRuleL),
   ("fire_ok", L.Arena.fireOkL),
-  ("first_declaring", L.Checker.firstDeclaringL),
   ("fl_clear", L.Arena.memoClearG L.Arena.flSch),
   ("fl_find", L.Arena.memoFindG L.Arena.flSch),
   ("fl_go", L.Arena.flGo),
@@ -883,7 +883,39 @@ def checkerProg : Prog := [
   ("hints_num", L.Scan.Values.hintsNum),
   ("hints_obj", L.Scan.Values.hintsObj),
   ("hints_val", L.Front.Fields.hintsVal),
-  ("hoist_ok", L.Checker.hoistOkL),
+  ("hn_clear", L.Arena.memoClearG L.Checker.hnSch),
+  ("hn_find", L.Arena.memoFindG L.Checker.hnSch),
+  ("hn_put", L.Arena.memoPutG L.Checker.hnSch),
+  ("hoist_any", L.Checker.hoistAnyL),
+  ("hoist_app", L.Checker.hoistAppL),
+  ("hoist_apply", L.Checker.hoistApplyL),
+  ("hoist_block_go", L.Checker.hoistBlockGoL),
+  ("hoist_bucket", L.Checker.hoistBucketL),
+  ("hoist_chain", L.Checker.hoistChainL),
+  ("hoist_close_go", L.Checker.hoistCloseGoL),
+  ("hoist_closure", L.Checker.hoistClosureL),
+  ("hoist_deps", L.Checker.hoistDepsL),
+  ("hoist_deps_of", L.Checker.hoistDepsOfL),
+  ("hoist_emit", L.Checker.hoistEmitL),
+  ("hoist_forall", L.Checker.hoistForallL),
+  ("hoist_fvar", L.Checker.hoistFvarL),
+  ("hoist_index_go", L.Checker.hoistIndexGoL),
+  ("hoist_ins", L.Checker.hoistInsL),
+  ("hoist_ix", L.Checker.hoistIxL),
+  ("hoist_lam", L.Checker.hoistLamL),
+  ("hoist_let", L.Checker.hoistLetL),
+  ("hoist_names", L.Checker.hoistNamesL),
+  ("hoist_names_go", L.Checker.hoistNamesGoL),
+  ("hoist_nat_op_ground", L.Checker.hoistNatOpGroundL),
+  ("hoist_note", L.Checker.hoistNoteL),
+  ("hoist_proj", L.Checker.hoistProjL),
+  ("hoist_rules_go", L.Checker.hoistRulesGoL),
+  ("hoist_targets_go", L.Checker.hoistTargetsGoL),
+  ("hoist_walk", L.Checker.hoistWalkL),
+  ("hoist_zero", L.Checker.hoistZeroL),
+  ("hs_clear", L.Arena.memoClearG L.Checker.hsSch),
+  ("hs_find", L.Arena.memoFindG L.Checker.hsSch),
+  ("hs_put", L.Arena.memoPutG L.Checker.hsSch),
   ("i1l_app", L.Arena.i1lApp),
   ("i1l_clear", L.Arena.memoClearG L.Arena.i1lSch),
   ("i1l_find", L.Arena.memoFindG L.Arena.i1lSch),
