@@ -333,19 +333,16 @@ theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = som
     ∃ t j, t ≤ 1 ∧ lacnt m t < 134217728 ∧
       growIf LASLOT 28 lahash m (lapushMem m t f a j (lacnt m t)) (lacnt m t) = some m₁ ∧
       idxW r = lacnt m t ∧ tierW r = t := by
-  simp only [lainternW] at hI
-  have ok : ∀ t, lapushOK m t = true → lacnt m t < 134217728 := by
-    intro t h; simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
-  repeat' split at hI
-  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
-  all_goals obtain ⟨hr, hm⟩ := hI
-  all_goals subst hr hm
-  all_goals first
-    | (have h := ok 1 ‹lapushOK m 1 = true›
-       exact ⟨1, _, by decide, h, ‹_›, by rw [show lamS = 11 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
-    | (have h := ok 0 ‹lapushOK m 0 = true›
-       exact ⟨0, _, by decide, h, ‹_›, by rw [show lamP = 10 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
-    | exact absurd rfl hc
+  rcases consInternM_cases (C := lamCS) hI with rfl | ⟨t, j, ht, hok, hg, rfl⟩
+  · exact absurd rfl hc
+  have h : lacnt m t < 134217728 := by
+    rw [← lapushOK_eqC] at hok
+    simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
+  refine ⟨t, j, ht, h, ?_, ?_⟩
+  · rw [lapushMem_eqC]; exact hg
+  · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
+    · rw [show lamCS.P = 10 * 134217728 from rfl]; exact hw_fields _ _ h
+    · rw [show lamCS.S = 11 * 134217728 from rfl]; exact hw_fields _ _ h
 
 /-- After a miss of `intern_lam` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
@@ -369,19 +366,16 @@ theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = som
     ∃ t j, t ≤ 1 ∧ facnt m t < 134217728 ∧
       growIf FASLOT 30 fahash m (fapushMem m t f a j (facnt m t)) (facnt m t) = some m₁ ∧
       idxW r = facnt m t ∧ tierW r = t := by
-  simp only [fainternW] at hI
-  have ok : ∀ t, fapushOK m t = true → facnt m t < 134217728 := by
-    intro t h; simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
-  repeat' split at hI
-  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
-  all_goals obtain ⟨hr, hm⟩ := hI
-  all_goals subst hr hm
-  all_goals first
-    | (have h := ok 1 ‹fapushOK m 1 = true›
-       exact ⟨1, _, by decide, h, ‹_›, by rw [show forallS = 13 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
-    | (have h := ok 0 ‹fapushOK m 0 = true›
-       exact ⟨0, _, by decide, h, ‹_›, by rw [show forallP = 12 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
-    | exact absurd rfl hc
+  rcases consInternM_cases (C := forallCS) hI with rfl | ⟨t, j, ht, hok, hg, rfl⟩
+  · exact absurd rfl hc
+  have h : facnt m t < 134217728 := by
+    rw [← fapushOK_eqC] at hok
+    simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
+  refine ⟨t, j, ht, h, ?_, ?_⟩
+  · rw [fapushMem_eqC]; exact hg
+  · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
+    · rw [show forallCS.P = 12 * 134217728 from rfl]; exact hw_fields _ _ h
+    · rw [show forallCS.S = 13 * 134217728 from rfl]; exact hw_fields _ _ h
 
 /-- After a miss of `intern_forall` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
