@@ -1,0 +1,240 @@
+import ConAgua.Checker.Entry
+import ConAgua.Front.RunModel
+
+/-!
+# `check`'s stages composed (lane `pipeline`)
+
+`check()` (`Checker/Entry.lean` `checkL`) calls its eight stages in order. Each stage's
+refinement is stated here as a **stage spec** (`StageSpec`): a returning call keeps the caller's
+locals, and if the memory before it satisfies the stage's precondition, the memory after it
+satisfies its postcondition. The conditions are predicates on the memory only; the twin's
+states and values live inside them, existentially (`Checker/PipelineProg.lean` picks them). So
+the composition (`check_of_stages`) is a chain of implications between named predicates, and
+`pipelineRefines_of_stages` turns it into `PipelineRefines`.
+-/
+
+namespace L.Checker
+
+open L L.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option experimental.vcgen true
+
+/-- **A stage spec**: every returning call of `f` (no arguments) keeps the caller's locals and
+takes memory satisfying `Pre` to memory satisfying `Post r` (`r` the results). -/
+def StageSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
+  ∀ (n : Nat) (s₀ : St), ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+    ⦃fun r s' => LocEq s' s₀ ∧ (Pre s₀.mem → Post r s'.mem); ⊤⦄
+
+/-- **The composition**: from the eight stage specs, a run of `check` from memory satisfying `Q0`
+that returns `ACCEPT` first gives `T` (the last stage's conclusion). `front_run`'s post holds
+only on its result `0` (all lines applied); `check` returns `1` otherwise. -/
+theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
+    {Q0 Q1 Q2 Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {T : Prop}
+    (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
+    (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
+    (h3 : StageSpec p "intern_reserved_pins" Q2 fun _ => Q3)
+    (h4 : StageSpec p "builtin_prelude" Q3 fun _ => Q4)
+    (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
+    (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
+    (h7 : StageSpec p "intern_all_pins" Q6 fun _ => Q7)
+    (h8 : StageSpec p "install_then_check" Q7 fun _ _ => T)
+    (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check" []
+    ⦃fun r _ => Q0 s₀.mem → r.headD 0 = ConAgua.Final.ACCEPT → T; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      (h1 n ·), (h2 n ·), (h3 n ·), (h4 n ·), (h5 n ·), (h6 n ·), (h7 n ·), (h8 n ·)]
+    all_goals first
+      | (simp only [Sig.retVal, Sig.retOr] at *; simp [ConAgua.Final.ACCEPT] at *; done)
+      | grind [lang_grind]
+
+/-! ## The stages' relations and the twin's prefix
+
+The stage specs are stated relationally (`RelSpec`, a precondition on the memory before the call,
+a postcondition with the twin's step after it), over five relations between the L memory and the
+twin's state (`PipeRels`), picked when the stages are discharged. `Q3`‥`Q7` are the memory
+predicates of `check_of_stages`: the twin's stages so far ran from `AState.init EStore.empty`, and
+the last relation holds. -/
+
+open ConRon.Arena ConRon.Arena.Frontend ConAgua.Final
+
+/-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
+caller's locals and ends in memory satisfying `Post r`. -/
+def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
+  ∀ (n : Nat) (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+    ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
+
+/-- **The relations between `check`'s stages**, for the input bytes `b`, the pin-data bytes `pb`
+and the capacities `s8`, `s64`: after `cap_check` (`R1`), after `pb_check` (`R2`), and after
+each twin stage, with the twin's state and the values the later stages read. -/
+structure PipeRels (b pb : ByteArray) (s8 s64 : List Nat) where
+  /-- After `cap_check`. -/
+  R1 : Mem → Prop
+  /-- After `pb_check`. -/
+  R2 : Mem → Prop
+  /-- After `intern_reserved_pins`. -/
+  R3 : Mem → AState → Prop
+  /-- After `builtin_prelude`: the prelude's index. -/
+  R4 : Mem → PreludeIx → AState → Prop
+  /-- After `front_run`: the prelude's index, the stream's parse. -/
+  R5 : Mem → PreludeIx → ParseResultD → AState → Prop
+  /-- After `prepare_prelude`: the prepared records. -/
+  R6 : Mem → Array IDeclaration → AState → Prop
+  /-- After `intern_all_pins`: the prepared records, the interned pin list. -/
+  R7 : Mem → Array IDeclaration → List INatOpPinSet → AState → Prop
+
+/-- What every stage may assume of the inputs (`PipelineRefines`' premises). -/
+def InputsOK (b pb : ByteArray) : Prop :=
+  System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63
+
+section stages
+variable (p : Prog) (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
+
+/-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
+def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb →
+  RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
+
+/-- **Stage `pb_check`**: `R1` to `R2`. -/
+def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb →
+  RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
+
+/-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
+def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb →
+  RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
+    ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
+
+/-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
+def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb →
+  RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
+    ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
+
+/-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
+def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb →
+  RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
+    ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
+
+/-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
+def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb →
+  RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
+    ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
+
+/-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
+to). -/
+def PinsStage : Prop := ∀ b pb s8 s64 ds a, InputsOK b pb →
+  RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
+    ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
+
+/-- **Stage `install_then_check`**: a returning call is the twin's accepting fold
+(`SeqAccepts`: phase A, then phase B on the phase-A state's worker). -/
+def LoopStage : Prop := ∀ b pb s8 s64 ds ipins a, InputsOK b pb →
+  RelSpec p "install_then_check" ((ρ b pb s8 s64).R7 · ds ipins a) fun _ _ =>
+    ∃ fe a', SeqAccepts .verified ipins ds a fe a'
+
+end stages
+
+section twinPrefix
+variable (b : ByteArray) {pb : ByteArray} {s8 s64 : List Nat} (ρ : PipeRels b pb s8 s64)
+
+/-- After `intern_reserved_pins`. -/
+def Q3 (m : Mem) : Prop :=
+  ∃ sA, internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧ ρ.R3 m sA
+
+/-- After `builtin_prelude`. -/
+def Q4 (m : Mem) : Prop :=
+  ∃ sA pre sB, internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ ρ.R4 m pre sB
+
+/-- After `front_run`. -/
+def Q5 (m : Mem) : Prop :=
+  ∃ sA pre sB rc sC, internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
+    ρ.R5 m pre rc sC
+
+/-- After `prepare_prelude`. -/
+def Q6 (m : Mem) : Prop :=
+  ∃ sA pre sB rc sC ds sD, internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
+    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ ρ.R6 m ds sD
+
+/-- After `intern_all_pins`. -/
+def Q7 (m : Mem) : Prop :=
+  ∃ sA pre sB rc sC ds sD pins ipins sE, internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
+    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins sD = .ok (ipins, sE) ∧
+    ρ.R7 m ds ipins sE
+
+end twinPrefix
+
+/-- A relational spec is a stage spec once its precondition is unpacked: `hpre` turns `Pre` into
+some `x`'s precondition, `hpost` the `x`-spec's post (with the unpacked fact) into `Post`. -/
+theorem StageSpec.of_rel {p : Prog} {f : FnName} {X : Type} {Pre : Mem → Prop}
+    {Post : List Word → Mem → Prop} (P : X → Mem → Prop) (PostX : X → List Word → Mem → Prop)
+    (h : ∀ x, RelSpec p f (P x) (PostX x)) (hpre : ∀ m, Pre m → ∃ x, P x m ∧
+      ∀ r m', PostX x r m' → Post r m') : StageSpec p f Pre Post := by
+  intro n s₀
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun hP => ?_⟩
+  obtain ⟨x, hx, hpost⟩ := hpre _ hP
+  exact hpost _ _ (M.of_run (P := fun s => s = s₀) hs hrun (h x n s₀ hx)).2
+
+/-- **`PipelineRefines` from the eight stages**, at any choice of the relations between them. -/
+theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
+    (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
+    (h1 : CapStage p ρ) (h2 : PbStage p ρ) (h3 : IrpStage p ρ) (h4 : PreludeStage p ρ)
+    (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ) (h8 : LoopStage p ρ) :
+    PipelineRefines p := by
+  intro b pb s8 s64 N rs m' h64 hb hpb _ hrun hacc
+  have hin : InputsOK b pb := ⟨h64, hb, hpb⟩
+  let r := ρ b pb s8 s64
+  have H := check_of_stages hp (Q0 := (· = loadMem b pb s8 s64)) (Q1 := r.R1) (Q2 := r.R2)
+    (Q3 := Q3 b r) (Q4 := Q4 b r) (Q5 := Q5 b r) (Q6 := Q6 b r) (Q7 := Q7 b r) (T := TwinAccepts [b])
+    (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h1 b pb s8 s64 hin)
+      fun m hm => ⟨(), hm, fun _ _ h => h⟩)
+    (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h2 b pb s8 s64 hin)
+      fun m hm => ⟨(), hm, fun _ _ h => h⟩)
+    (StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _) (fun _ => h3 b pb s8 s64 hin)
+      fun m hm => ⟨(), hm, fun _ _ h => h⟩)
+    (StageSpec.of_rel (fun x : AState => (r.R3 · x)) _ (fun x => h4 b pb s8 s64 x hin)
+      fun m ⟨sA, hA, hR⟩ => ⟨sA, hR, fun _ _ ⟨pre, sB, hB, hR'⟩ => ⟨sA, pre, sB, hA, hB, hR'⟩⟩)
+    (StageSpec.of_rel (fun x : AState × PreludeIx × AState => (r.R4 · x.2.1 x.2.2)) _
+      (fun x => h5 b pb s8 s64 x.2.1 x.2.2 hin)
+      fun m ⟨sA, pre, sB, hA, hB, hR⟩ => ⟨(sA, pre, sB), hR, fun _ _ h h0 => by
+        obtain ⟨rc, sC, hC, hR'⟩ := h h0
+        exact ⟨sA, pre, sB, rc, sC, hA, hB, hC, hR'⟩⟩)
+    (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState =>
+        (r.R5 · x.2.1 x.2.2.2.1 x.2.2.2.2)) _
+      (fun x => h6 b pb s8 s64 x.2.1 x.2.2.2.1 x.2.2.2.2 hin)
+      fun m ⟨sA, pre, sB, rc, sC, hA, hB, hC, hR⟩ => ⟨(sA, pre, sB, rc, sC), hR,
+        fun _ _ ⟨ds, sD, hD, hR'⟩ => ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR'⟩⟩)
+    (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
+          Array IDeclaration × AState => (r.R6 · x.2.2.2.2.2.1 x.2.2.2.2.2.2)) _
+      (fun x => h7 b pb s8 s64 x.2.2.2.2.2.1 x.2.2.2.2.2.2 hin)
+      fun m ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR⟩ => ⟨(sA, pre, sB, rc, sC, ds, sD), hR,
+        fun _ _ ⟨pins, ipins, sE, hE, hR'⟩ =>
+          ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR'⟩⟩)
+    (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
+          Array IDeclaration × AState × List ConLeche.NatOpPinSet × List INatOpPinSet × AState =>
+          (r.R7 · x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2)) _
+      (fun x => h8 b pb s8 s64 x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2 hin)
+      fun m ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR⟩ =>
+        ⟨(sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE), hR, fun _ _ ⟨fe, sF, hF⟩ =>
+          ⟨pins, sA, sB, sC, sD, sE, sF, pre, rc, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩⟩)
+    N { mem := loadMem b pb s8 s64, loc := Locals.init [] }
+  simp only [L.run] at hrun
+  cases hr : (invoke p (exec p N) "check" []).run { mem := loadMem b pb s8 s64, loc := Locals.init [] } with
+  | error e => rw [hr] at hrun; cases hrun
+  | ok v =>
+    rw [hr] at hrun
+    obtain ⟨rs', s'⟩ := v
+    simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at hrun
+    obtain ⟨rfl, -⟩ := hrun
+    exact M.of_run (P := fun s => s = _) rfl hr H rfl hacc
+
+end L.Checker
