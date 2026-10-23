@@ -121,14 +121,37 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
   /-- The global variables. -/
   glob : ∀ g : GVar, g.id < G.tab.ng → rdW d (A (G.globAddr g)) = some (m.glob g)
 
-/-- The machine runs a body of a function with `nl` locals and an `F`-word frame, in L state `σ`. -/
-structure Inv (G : Layout) (nl F : Nat) (σ : St) (s : MachineData) : Prop where
+/-- The registers of `allocRegs` are none of `rax`, `rcx`, `rdx` (scratch), `rsp`, `rbp`, `r14`,
+`r15`. -/
+theorem allocRegs_ne {r : Reg64} (h : r ∈ allocRegs) :
+    r ≠ .rax ∧ r ≠ .rcx ∧ r ≠ .rdx ∧ r ≠ .rsp ∧ r ≠ .rbp ∧ r ≠ .r14 ∧ r ≠ .r15 := by
+  simp only [allocRegs, List.mem_cons, List.not_mem_nil, or_false] at h
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp
+
+/-- The allocation of `ctx` is one the proof can use (`allocOk`, checked by `compileFn`). -/
+structure AllocOk (ctx : Ctx) : Prop where
+  reg : ∀ x r, ctx.alloc.lookup x = some r → r ∈ allocRegs
+  inj : ∀ x y r, ctx.alloc.lookup x = some r → ctx.alloc.lookup y = some r → x = y
+  leaf : ctx.leaf = false → ctx.alloc = []
+
+theorem AllocOk.ne {ctx : Ctx} (h : AllocOk ctx) {x : Var} {r : Reg64} (hx : ctx.alloc.lookup x = some r) :
+    r ≠ .rax ∧ r ≠ .rcx ∧ r ≠ .rdx ∧ r ≠ .rsp ∧ r ≠ .rbp ∧ r ≠ .r14 ∧ r ≠ .r15 :=
+  allocRegs_ne (h.reg x r hx)
+
+/-- The machine runs a body of a function with context `ctx` (its locals: `ctx.nl`, those in
+registers: `ctx.alloc`) and an `F`-word frame, in L state `σ`. A local in a register is there;
+the others are in their frame slots. -/
+structure Inv (G : Layout) (ctx : Ctx) (F : Nat) (σ : St) (s : MachineData) : Prop where
   r15 : s.regs.r15.toNat = G.T
-  /-- The next call's return address fits below the frame. -/
-  lo8 : G.lo + 8 ≤ s.regs.rsp.toNat
+  lo : G.lo ≤ s.regs.rsp.toNat
+  /-- The next call's return address fits below the frame (a leaf has no calls, and maybe no
+  frame). -/
+  lo8 : ctx.leaf = false → G.lo + 8 ≤ s.regs.rsp.toNat
   hi : s.regs.rsp.toNat + 8 * F + 8 ≤ G.hi
-  nlF : nl ≤ F
-  frame : ∀ x < nl, rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
+  slot : ∀ x < ctx.nl, ctx.alloc.lookup x = none → x < F
+  al : AllocOk ctx
+  reg : ∀ x < ctx.nl, ∀ r, ctx.alloc.lookup x = some r → s.regs.get64 r = (σ.loc x).toBitVec
+  frame : ∀ x < ctx.nl, ctx.alloc.lookup x = none → rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
   mem : MemRel G σ.mem s.dmem
 
 /-- Result register `i`. -/
@@ -179,8 +202,35 @@ theorem ResRel.congr {n : Nat} {vs : List Word} {R R' : Reg64s} (h : ResRel n vs
   | 4 => exact h4
   | _ + 5 => exact h5
 
-theorem Inv.lo {G : Layout} {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) :
-    G.lo ≤ s.regs.rsp.toNat := by have := hI.lo8; omega
+/-- `Inv` for a new L state with the same locals, from the same registers and frame slots. -/
+theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
+    (hloc : σ'.loc = σ.loc) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
+    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r)
+    (hfr : ∀ x < ctx.nl, ctx.alloc.lookup x = none →
+      rdW s'.dmem (A (s.regs.rsp.toNat + 8 * x)) = rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)))
+    (hm : MemRel G σ'.mem s'.dmem) : Inv G ctx F σ' s' where
+  r15 := h15 ▸ hI.r15
+  lo := hsp ▸ hI.lo
+  lo8 := hsp ▸ hI.lo8
+  hi := hsp ▸ hI.hi
+  slot := hI.slot
+  al := hI.al
+  reg := fun x hx r hr => by
+    have ⟨h1, h2, h3, _⟩ := hI.al.ne hr
+    rw [hR r h1 h2 h3, hloc]; exact hI.reg x hx r hr
+  frame := fun x hx hn => by rw [hsp, hfr x hx hn, hloc]; exact hI.frame x hx hn
+  mem := hm
+
+/-- `Inv` after a change of the scratch registers and the flags. -/
+theorem Inv.of_regs {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
+    (hd : s'.dmem = s.dmem) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
+    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
+  hI.congr rfl hsp h15 hR (fun x _ _ => by rw [hd]) (hd ▸ hI.mem)
+
+/-- The registers but `rax`, `rcx`, `rdx` after a write of one of them. -/
+theorem get64_set64_scratch {R : Reg64s} {r : Reg64} (hr : r = .rax ∨ r = .rcx ∨ r = .rdx) (v : BitVec 64)
+    (r' : Reg64) (h1 : r' ≠ .rax) (h2 : r' ≠ .rcx) (h3 : r' ≠ .rdx) : (R.set64 r v).get64 r' = R.get64 r' := by
+  rcases hr with rfl | rfl | rfl <;> cases r' <;> simp_all [Reg64s.set64, Reg64s.get64]
 
 /-- `d'` differs from `d` at most in the bytes `[a, b)`, and has every byte `d` has. -/
 structure Only (a b : Nat) (d d' : DataMem) : Prop where
@@ -385,35 +435,28 @@ theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (
     fun ha => hG.notStack_of_arr ha (hab x h1 h2)⟩
 
 /-- A change among the temporaries keeps `Inv`. -/
-theorem Inv.only {nl F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G nl F σ s)
-    (h : Only (s.regs.rsp.toNat + 8 * nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem)
-    (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15) : Inv G nl F σ s' where
-  r15 := h15 ▸ hI.r15
-  lo8 := hsp ▸ hI.lo8
-  hi := hsp ▸ hI.hi
-  nlF := hI.nlF
-  frame := fun x hx => by
-    have := hI.hi; have := hG.hi_le; have := hI.nlF
-    rw [hsp, h.rdW_eq (by omega) (by omega)]; exact hI.frame x hx
-  mem := hI.mem.only hG h fun x h1 h2 => ⟨by have := hI.lo; omega, by have := hI.hi; omega⟩
+theorem Inv.only {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
+    (h : Only (s.regs.rsp.toNat + 8 * ctx.nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem)
+    (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
+    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
+  hI.congr rfl hsp h15 hR (fun x hx hn => by
+      have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn
+      exact h.rdW_eq (by omega) (by omega))
+    (hI.mem.only hG h fun x h1 h2 => ⟨by have := hI.lo; omega, by have := hI.hi; omega⟩)
 
 /-- A change inside the result area keeps `Inv`. -/
-theorem Inv.only_res {nl F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G nl F σ s) {a b : Nat}
+theorem Inv.only_res {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s) {a b : Nat}
     (h : Only a b s.dmem s'.dmem) (hab : ∀ x, a ≤ x → x < b → G.InRes x)
-    (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15) : Inv G nl F σ s' where
-  r15 := h15 ▸ hI.r15
-  lo8 := hsp ▸ hI.lo8
-  hi := hsp ▸ hI.hi
-  nlF := hI.nlF
-  frame := fun x hx => by
-    have := hI.hi; have := hG.hi_le; have := hI.nlF; have := hI.lo
-    rw [hsp, ← hI.frame x hx]
-    refine rdW_congr fun j hj => ?_
-    rw [A_add]
-    refine h.same _ (by omega) (Classical.byContradiction fun hc => ?_)
-    simp only [not_or, Nat.not_lt, Nat.not_le] at hc
-    exact hG.notStack_of_res (hab _ hc.1 hc.2) ⟨by omega, by omega⟩
-  mem := hI.mem.only_res hG h hab
+    (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
+    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
+  hI.congr rfl hsp h15 hR (fun x hx hn => by
+      have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.lo
+      refine rdW_congr fun j hj => ?_
+      rw [A_add]
+      refine h.same _ (by omega) (Classical.byContradiction fun hc => ?_)
+      simp only [not_or, Nat.not_lt, Nat.not_le] at hc
+      exact hG.notStack_of_res (hab _ hc.1 hc.2) ⟨by omega, by omega⟩)
+    (hI.mem.only_res hG h hab)
 
 end
 end L.Compiler
