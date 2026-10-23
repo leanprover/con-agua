@@ -897,9 +897,12 @@ def main():
             if ck in cache:
                 ref, where = cache[ck]
             else:
-                st, out = guard.run([os.path.join(BIN, "e2e-ref"), path] + (["--no-prelude"] if entry == "check_np" else []) + [f"--pins={npins}"], T_REF)
-                ref, where = ref_verdict(out, st)
-                if st == "ok":
+                st, out, rc = guard.run3([os.path.join(BIN, "e2e-ref"), path] + (["--no-prelude"] if entry == "check_np" else []) + [f"--pins={npins}"], T_REF, stderr=True)
+                ref, where = ref_verdict(next((l for l in out.splitlines() if l.startswith("verdict ")), ""), st)
+                if ref == "crash":
+                    # never cached: a transient failure must not outlive the binary that caused it
+                    log(f"e2e-ref crashed on {fid} (exit {rc}): {out[-300:]!r}")
+                elif st == "ok":
                     cache[ck] = [ref, where]
             exe = compiled[entry][0]
             cap = None
