@@ -276,6 +276,85 @@ theorem cbp_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (vis cv mI rP 
         callW_spec p n "env_push"] <;>
       finish (gen := 20) [loc_init4, loc_init5]
 
+/-! ## The `abstract1` memo across `cons_block_recs_push` -/
+
+theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word),
+    rteGoW n m b ro rl = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, h => by simp [rteGoW] at h
+  | n + 1, m, m', b, ro, rl, r, h => by
+    by_cases h0 : rl = 0
+    · rw [rteGoW_nil (h := h0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    rw [rteGoW_cons (h := h0)] at h
+    cases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with
+    | none => rw [h2] at h; cases h
+    | some x =>
+    obtain ⟨r2, m2⟩ := x
+    rw [h2, rteK1_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    exact (show AFr m (cpMem m b (rdW (m.arr64 IW) ro)) by simp only [cpMem]; afr_set).trans
+      (rteGoW_afr n _ _ _ _ _ _ h2)
+
+theorem rteW_afr {n : Nat} {m m' : Mem} {ro rl : Word} {r : List Word}
+    (h : rteW n m ro rl = some (r, m')) : AFr m m' := by
+  cases n with
+  | zero => simp [rteW] at h
+  | succ n =>
+  by_cases hb : 4294967296 ≤ rl
+  · rw [rteW_big (h := hb)] at h; cases h
+  rw [rteW_ok' (h := hb)] at h
+  cases h1 : erAllocW m (rl * 11) with
+  | none => rw [h1] at h; simp [rteK2] at h
+  | some x =>
+  obtain ⟨b, m1⟩ := x
+  rw [h1, rteK2_some] at h
+  cases h2 : rteGoW n m1 b ro rl with
+  | none => rw [h2] at h; simp [rteK3] at h
+  | some y =>
+  obtain ⟨r2, m2⟩ := y
+  rw [h2, rteK3_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  exact (erAllocW_afr h1).trans (rteGoW_afr n _ _ _ _ _ _ h2)
+
+theorem riW_afr {m m' : Mem} {cv mi rp3 reo rel : Word} {r : List Word}
+    (h : riW m cv mi rp3 reo rel = some (r, m')) : AFr m m' := by
+  simp only [riW] at h
+  split at h; · cases h
+  rename_i q m1 h1
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  exact (erAllocW_afr h1).trans (by simp only [riMem]; afr_set)
+
+theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
+    AFr m m' := by
+  simp only [envPushW] at h
+  split at h; · cases h
+  split at h; · cases h
+  split at h
+  rotate_left
+  · cases h
+  rename_i hc
+  obtain ⟨ht, -⟩ := hc
+  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON] := by
+    simp only [rowArr, List.mem_cons]
+    have : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
+        rowTag (rdW (m.arr64 EREC) (q + 1)) = 2 := by omega
+    rcases this with h0 | h0 | h0 <;> simp [h0]
+  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  have h49 : (rowArr (rdW (m.arr64 EREC) (q + 1)) != 49) = true := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
+    rcases hrow with h | h | h | h <;> rw [h] <;> decide
+  have hf1 : AFr m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
+    unfold rowSet
+    exact (AFr.set64 m _ hne h49 _ _).trans (AFr.set64 _ _ hne h49 _ _)
+  simp only [envPushK] at h
+  split at h; · cases h
+  split at h
+  rotate_left
+  · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact hf1.trans ((AFr.set64 _ ECON (by decide) (by decide) _ _).trans (AFr.setCtl _ 128 (by decide) _))
+
 section rel2
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
@@ -285,7 +364,8 @@ theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {
     (h : cbpW p n m vis cv mI rP ro rl = some (r, m')) (hS : StageR dn vis fe m a)
     (hcv : decCV (erecP m) cv.toNat = some cvv)
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (hb : ro.toNat + rl.toNat ≤ iwTop m) :
-    StageR dn (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' := by
+    StageR dn (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' ∧
+      AFr m m' := by
   cases n with
   | zero => simp [cbpW] at h
   | succ n =>
@@ -324,7 +404,8 @@ theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {
     (envPush_specW p L.rp n ⟨m2, Locals.init []⟩ vis (rq.headD 0) hwn') h3
   subst hs4
   obtain ⟨hS3, hg3⟩ := envPushW_ok hW4 hS2 hci
-  exact ⟨by simpa using hS3, (hg1.trans hg2).trans hg3⟩
+  exact ⟨by simpa using hS3, (hg1.trans hg2).trans hg3,
+    (rteW_afr h1).trans ((riW_afr h2).trans (envPushW_afr hW4))⟩
 
 end rel2
 

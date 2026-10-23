@@ -170,12 +170,13 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
     {vis2 pp mm lo ll : Word} {r : List Word} {bs : BlockShape} {xs : List (IConstantVal × TargetMajor × List EIdx)},
     cbrW p n m vis2 pp mm lo ll vis = some (r, m') → StageR dn vis fe m a →
     DecB (fun m => decBS m pp.toNat) m bs → PSlR decRR xs lo ll m → mm.toNat + ll.toNat < 2 ^ 64 →
+    AbsOK m →
     ∃ fe' a', (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
   induction n with
   | zero => intro m m' a vis fe vis2 pp mm lo ll r bs xs h; simp [cbrW] at h
   | succ n ih =>
-  intro m m' a vis fe vis2 pp mm lo ll r bs xs h hS hbs hxs hml
+  intro m m' a vis fe vis2 pp mm lo ll r bs xs h hS hbs hxs hml hA
   by_cases hl : ll = 0
   · rw [cbrW_nil (h := hl)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
@@ -183,7 +184,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
     have : xs = [] := by
       have := decPL_length _ (hxs.1.get (OMono.decPL decRR_mono _ _)); simpa using this
     subst this
-    exact ⟨fe, a, rfl, hS, IWGrow.refl _⟩
+    exact ⟨fe, a, rfl, hS, IWGrow.refl _, hA⟩
   rw [cbrW_cons (h := hl)] at h
   have hsz := hS.2.2.2.1
   obtain ⟨x, ys, rfl, hx, hys⟩ := hxs.uncons hl hsz
@@ -219,8 +220,8 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   | some y =>
   obtain ⟨rr, m1⟩ := y
   rw [h1, cbrK1_some] at h
-  obtain ⟨rules, a1, run1, hd1, hb1, hS1, hg1⟩ := tsrW_ok dn (fe.restrictTo vis2.toNat) vis2 n h1 (hS.restrict vis2)
-    hM hrh (cvv := cvv)
+  obtain ⟨rules, a1, run1, hd1, hb1, hS1, hg1, hA1⟩ := tsrW_ok dn (fe.restrictTo vis2.toNat) vis2 n h1
+    (hS.restrict vis2) hM hrh hA (cvv := cvv)
   have hS1' : StageR dn vis fe m1 a1 := hS1.unrestrict hS.1.env.vis
   rw [hrp] at run1
   cases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with
@@ -228,7 +229,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   | some y =>
   obtain ⟨rv, m2⟩ := y
   rw [h2, cbrK2_some] at h
-  obtain ⟨hS2, hg2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1
+  obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1
   rw [hmj, hrp] at hS2
   cases h3 : cbrW p n m2 vis2 pp (mm + 1) (lo + 1) (ll - 1) (rv.headD 0) with
   | none => simp only [h3] at h; simp [cbrK3] at h
@@ -241,9 +242,9 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   have hmm1 : (mm + 1).toNat = mm.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hll1 : (ll - 1).toNat = ll.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-  obtain ⟨fe', a3, run3, hS3, hg3⟩ := ih h3 hS2 (hbs.grow (decBS_mono _) hg12)
-    (hys.grow (fun q => decRR_mono q) hg12) (by rw [hmm1, hll1]; omega)
-  refine ⟨fe', a3, ?_, by simpa using hS3, hg12.trans hg3⟩
+  obtain ⟨fe', a3, run3, hS3, hg3, hA3⟩ := ih h3 hS2 (hbs.grow (decBS_mono _) hg12)
+    (hys.grow (fun q => decRR_mono q) hg12) (by rw [hmm1, hll1]; omega) (hf2 hA1)
+  refine ⟨fe', a3, ?_, by simpa using hS3, hg12.trans hg3, hA3⟩
   rw [hmm1] at run3
   simp only [ConRon.Arena.consBlockRecsTF, StateT.run_bind, run1, except_ok_bind]
   exact run3
@@ -259,16 +260,16 @@ theorem consBlockRecsTF_refines (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis2 pp mm lo ll vis : Word) (bs : BlockShape)
     (xs : List (IConstantVal × TargetMajor × List EIdx)) (hS : StageR dn vis fe s₀.mem a₀)
     (hbs : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hxs : PSlR decRR xs lo ll s₀.mem)
-    (hml : mm.toNat + ll.toNat < 2 ^ 64) :
+    (hml : mm.toNat + ll.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) s'.mem
         (AM.st (ConRon.Arena.consBlockRecsTF vis2.toNat bs mm.toNat xs fe) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (cbr_spec p L n s₀ vis2 pp mm lo ll vis) ?_
   rintro r s' ⟨hl', hm⟩
-  obtain ⟨fe', a', run, hS', hg⟩ := cbrW_ok dn p L n hm hS hbs hxs hml
+  obtain ⟨fe', a', run, hS', hg, hA'⟩ := cbrW_ok dn p L n hm hS hbs hxs hml hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl', hok, by rw [hres, hst]; exact hS', hg⟩
+  exact ⟨hl', hok, by rw [hres, hst]; exact hS', hg, hA'⟩
 
 end L.Ind
