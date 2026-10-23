@@ -227,3 +227,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,slowmods,opus-5.5,5,15,helper b: IndSumSpec14 DefEqLeaves ConstsResolveFRefine
 2026-10-23,slowmods,opus-5.5,20,20,helpers: RecCheckSpec18 (9.8->3.5 GB) InstLPWalkGo Scan.Line
 2026-10-23,slowmods,opus-5.5,20,40,helpers: DeclNatDeps 43 s, IndRealIpf, Scan.Line, RecCheckSpec14, NatShl, FieldsDeclSpec, WalkLeaves
+2026-10-23,slowmods,opus-5.5,70,25,asm parts: prelude copies batched (asmLitBatch) in own parts; ProgWf split from Prog
