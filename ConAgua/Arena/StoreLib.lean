@@ -1015,50 +1015,59 @@ theorem foundW_congr (sl sl' : Array Word) (n t x v : Word) (hx : x < n)
   exact ⟨d, by rw [h (walkW n x d) (walkW_lt _ _ _ hx)]; exact h1,
     fun e he => by rw [h (walkW n x e) (walkW_lt _ _ _ hx)]; exact h2 e he⟩
 
-/-- What the growth's size check gives: room for the doubled table and a small exponent. -/
-theorem grow_check (m : Mem) (hG : GrowR S m)
-    (hc : ¬ (m.len64 S.sa - 1) >>> 1 < gnW S.sa m * 2) :
-    4 * (nSl S m).toNat + 1 ≤ (m.arr64 S.sa).size ∧ (gexpW S.sa m).toNat < 58 ∧
-      (gnW S.sa m * 2).toNat = 2 * (nSl S m).toNat ∧
-      (m.len64 S.sa - 1).toNat = (m.arr64 S.sa).size - 1 := by
+/-- The last word's index and the doubled old count, as numbers. -/
+theorem grow_sizes (m : Mem) (hG : GrowR S m) :
+    (m.len64 S.sa - 1).toNat = (m.arr64 S.sa).size - 1 ∧
+      (gnW S.sa m * 2).toNat = 2 * (nSl S m).toNat := by
   have hn := nSl_toNat S m hG
-  obtain ⟨g1, g2, g3, -⟩ := hG
-  have hp : 2 ^ (gexpW S.sa m).toNat ≤ 2 ^ 58 := Nat.pow_le_pow_right (by omega) (by omega)
+  obtain ⟨g1, -, g2, g3, -⟩ := hG
   have hsz : (m.arr64 S.sa).size < UInt64.size := by simp only [UInt64.size]; omega
-  have hL : (m.len64 S.sa - 1).toNat = (m.arr64 S.sa).size - 1 := by
-    rw [len64_eq, UInt64.toNat_sub_of_le]
+  refine ⟨?_, ?_⟩
+  · rw [len64_eq, UInt64.toNat_sub_of_le]
     · rw [UInt64.toNat_ofNat_of_lt' hsz]; rfl
     · rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz]; simp; omega
-  have h2 : (gnW S.sa m * 2).toNat = 2 * (nSl S m).toNat := by
-    rw [UInt64.toNat_mul]; simp only [nSl] at hn ⊢; simp; omega
-  have hc' := mt UInt64.lt_iff_toNat_lt.mpr hc
-  rw [UInt64.toNat_shiftRight, hL, h2] at hc'
-  simp only [show (1 : Word).toNat % 64 = 1 from rfl, Nat.shiftRight_eq_div_pow, Nat.pow_one] at hc'
-  have h4 : 4 * (nSl S m).toNat + 1 ≤ (m.arr64 S.sa).size := by omega
-  refine ⟨h4, ?_, h2, hL⟩
-  apply Nat.lt_of_not_le
-  intro hge
-  have : 2 ^ 58 ≤ 2 ^ (gexpW S.sa m).toNat := Nat.pow_le_pow_right (by omega) hge
-  omega
+  · rw [UInt64.toNat_mul]; simp only [nSl] at hn ⊢; simp; omega
 
-/-- After the exponent write and the zero loop: every slot word reads `0`, the last word is the
-new exponent, nothing else changed. -/
-theorem grow_zero (m : Mem) (hG : GrowR S m)
-    (hc : ¬ (m.len64 S.sa - 1) >>> 1 < gnW S.sa m * 2) (m2 : Mem)
-    (hm2 : gzeroW S.sa (gnW S.sa m * 2) 0
-      (m.set64 S.sa (m.len64 S.sa - 1) (gexpW S.sa m + 1)) = m2) :
+/-- What the growth's test gives: the new count `n'` (the doubled count, capped at the array) is a
+multiple of 8 above the old one, and its two tiers leave the last word clear. -/
+theorem grow_check (m : Mem) (hG : GrowR S m) (n' : Word)
+    (hn' : (if gcapW S.sa m < gnW S.sa m * 2 then gcapW S.sa m else gnW S.sa m * 2) = n')
+    (hc : ¬ n' ≤ gnW S.sa m) :
+    2 * n'.toNat + 1 ≤ (m.arr64 S.sa).size ∧ n'.toNat % 8 = 0 ∧
+      (nSl S m).toNat < n'.toNat := by
+  obtain ⟨hL, h2⟩ := grow_sizes S m hG
+  obtain ⟨-, g8, g2, g3, -⟩ := hG
+  have hcap : (gcapW S.sa m).toNat = ((m.arr64 S.sa).size - 1) / 16 * 8 := by
+    simp only [gcapW, UInt64.toNat_shiftLeft, UInt64.toNat_shiftRight, hL]
+    simp only [show (4 : Word).toNat % 64 = 4 from rfl, show (3 : Word).toNat % 64 = 3 from rfl,
+      Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq]
+    omega
+  have hc' : (nSl S m).toNat < n'.toNat := by
+    have := mt UInt64.le_iff_toNat_le.mpr hc; simp only [nSl]; omega
+  by_cases hlt : gcapW S.sa m < gnW S.sa m * 2
+  · simp only [hlt, ↓reduceIte] at hn'
+    subst hn'
+    rw [hcap] at hc' ⊢; omega
+  · simp only [hlt, ↓reduceIte] at hn'
+    subst hn'
+    have := mt UInt64.lt_iff_toNat_lt.mpr hlt
+    rw [h2] at hc' ⊢; rw [hcap, h2] at this; omega
+
+/-- After the count write (`v`) and the zero loop: every slot word reads `0`, the last word is
+`v`, nothing else changed. -/
+theorem grow_zero (m : Mem) (hG : GrowR S m) (v : Word) (m2 : Mem)
+    (hm2 : gzeroW S.sa (gnW S.sa m * 2) 0 (m.set64 S.sa (m.len64 S.sa - 1) v) = m2) :
     (∀ a, a ≠ S.sa → m2.arr64 a = m.arr64 a) ∧ (m2.arr64 S.sa).size = (m.arr64 S.sa).size ∧
       (∀ x : Word, x.toNat + 1 < (m.arr64 S.sa).size → rdW (m2.arr64 S.sa) x = 0) ∧
-      rdW (m2.arr64 S.sa) (m.len64 S.sa - 1) = gexpW S.sa m + 1 := by
+      rdW (m2.arr64 S.sa) (m.len64 S.sa - 1) = v := by
   subst hm2
-  obtain ⟨h4, hg, h2, hL⟩ := grow_check S m hG hc
+  obtain ⟨hL, h2⟩ := grow_sizes S m hG
   have hn := nSl_toNat S m hG
-  have hp : 2 ^ (gexpW S.sa m).toNat ≤ 2 ^ 57 := Nat.pow_le_pow_right (by omega) (by omega)
-  obtain ⟨z1, z2, z3⟩ := gzeroW_spec S.sa (gnW S.sa m * 2) (by rw [h2, hn]; omega)
-    (by rw [h2, hn]; omega) _ 0 (m.set64 S.sa (m.len64 S.sa - 1) (gexpW S.sa m + 1))
-    (Nat.le_refl _) (by simp)
+  obtain ⟨g1, g8, g2, g3, g4⟩ := hG
+  obtain ⟨z1, z2, z3⟩ := gzeroW_spec S.sa (gnW S.sa m * 2) (by rw [h2]; omega)
+    (by rw [h2]; omega) _ 0 (m.set64 S.sa (m.len64 S.sa - 1) v) (Nat.le_refl _) (by simp)
   have hLin : (m.len64 S.sa - 1).toNat < (m.arr64 S.sa).size := by omega
-  have r1 := rdW_set64_in m S.sa (m.len64 S.sa - 1) (gexpW S.sa m + 1)
+  have r1 := rdW_set64_in m S.sa (m.len64 S.sa - 1) v
   refine ⟨fun a ha => by rw [z1 a ha, Mem.arr64_set64_ne _ _ _ _ _ ha], by rw [z2, size_set64],
     fun x hx => ?_, ?_⟩
   · rw [z3, r1 _ hLin]
@@ -1066,7 +1075,7 @@ theorem grow_zero (m : Mem) (hG : GrowR S m)
     · simp [h2, hx2]
     · have hne : m.len64 S.sa - 1 ≠ x := fun e => by rw [e] at hL; omega
       simp only [h2, hx2, and_false, ↓reduceIte, hne]
-      exact hG.2.2.2 x (by omega) hx
+      exact g4 x (by omega) hx
   · rw [z3, r1 _ hLin]
     simp [h2, hL]
     omega
@@ -1160,17 +1169,18 @@ theorem storeR_growM (hS : S.WF) (hfr : RFrame S R hs) (m m' : Mem) (on : Bool)
     (h : growM S.sa S.ca hs m = some m') : StoreR S R hs m' on tbP tbS := by
   obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := hR
   rw [growM] at h
+  generalize hn' : (if gcapW S.sa m < gnW S.sa m * 2 then gcapW S.sa m else gnW S.sa m * 2) = n'
+    at h
   split at h
   · cases h
   rename_i hc
-  obtain ⟨h4, hg, h2, hL⟩ := grow_check S m hG hc
+  obtain ⟨h4, h8, hlt⟩ := grow_check S m hG n' hn' hc
+  obtain ⟨hL, -⟩ := grow_sizes S m hG
   have hn := nSl_toNat S m hG
-  have hp : 2 ^ (gexpW S.sa m).toNat ≤ 2 ^ 57 := Nat.pow_le_pow_right (by omega) (by omega)
+  have hsz := hG.2.2.2.1
   generalize hm2 : gzeroW S.sa (gnW S.sa m * 2) 0
-    (m.set64 S.sa (m.len64 S.sa - 1) (gexpW S.sa m + 1)) = m2 at h
-  obtain ⟨z1, z2, z3, z4⟩ := grow_zero S m hG hc m2 hm2
-  generalize hn' : gnW S.sa m * 2 = n' at h h2
-  have hpos : 0 < 2 ^ (gexpW S.sa m).toNat := Nat.two_pow_pos _
+    (m.set64 S.sa (m.len64 S.sa - 1) (n' - SN0)) = m2 at h
+  obtain ⟨z1, z2, z3, z4⟩ := grow_zero S m hG _ m2 hm2
   have hn0 : 0 < n' := UInt64.lt_iff_toNat_lt.mpr (by rw [UInt64.toNat_zero]; omega)
   have hn62 : n'.toNat < 2 ^ 62 := by omega
   rw [gtiersW] at h
@@ -1224,16 +1234,14 @@ theorem storeR_growM (hS : S.WF) (hfr : RFrame S R hs) (m m' : Mem) (on : Bool)
       rdW (m4.arr64 S.sa) x = rdW (m2.arr64 S.sa) x := fun x hx => by
     rw [b3 x (notSlot_hi n' 1 x hn62 (by decide) hx), a3 x (notSlot_hi n' 0 x hn62 (by decide) hx)]
   have hlen : m4.len64 S.sa = m.len64 S.sa := by simp only [len64_eq, hsz4]
-  have hexp : gexpW S.sa m4 = gexpW S.sa m + 1 := by
+  have hexp : gexpW S.sa m4 = n' - SN0 := by
     show rdW (m4.arr64 S.sa) (m4.len64 S.sa - 1) = _
     rw [hlen, hhi _ (by rw [hL]; omega), z4]
-  have hgt : (gexpW S.sa m + 1).toNat = (gexpW S.sa m).toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
+  have hgt : (n' - SN0).toNat = n'.toNat - 8 :=
+    UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp only [SN0]; simp; omega))
   have hnS : nSl S m4 = n' := by
-    apply UInt64.toNat_inj.mp
-    rw [show nSl S m4 = SN0 <<< gexpW S.sa m4 from rfl, hexp, shl_SN0_toNat _ (by omega), hgt,
-      h2, hn, Nat.pow_succ]
-    omega
+    show gexpW S.sa m4 + SN0 = n'
+    rw [hexp, UInt64.sub_add_cancel]
   have h0eq : ∀ j, j < n' → rdW (m4.arr64 S.sa) (j * 2 + 0) = rdW (m3.arr64 S.sa) (j * 2 + 0) :=
     fun j hj => b3 _ (notSlot_par n' j 0 1 hn62 (by decide) (by decide) (by decide) hj)
   have hS0 := slotsOKG_of S hs m4 0 n' (rdW (m.arr64 CTL) SCB * 0) (rdW (m.arr64 CTL) (S.ca + 0))
@@ -1250,8 +1258,8 @@ theorem storeR_growM (hS : S.WF) (hfr : RFrame S R hs) (m m' : Mem) (on : Bool)
   refine ⟨⟨by rw [hC]; exact hctl, by rw [hC]; exact hb⟩, by rw [hC]; exact hfl,
     tierR_sa S R hs hS hfr m m4 0 tbP hT0 hm4 (by rw [← hT0.1]; exact hS0),
     tierR_sa S R hs hS hfr m m4 1 tbS hT1 hm4 (by rw [← hT1.1]; exact hS1),
-    by rw [hexp, hgt]; omega, by rw [hnS, hsz4]; omega, by rw [hsz4]; exact hG.2.2.1,
-    fun x hx1 hx2 => ?_⟩
+    by rw [hexp, hgt]; omega, by rw [hnS]; exact h8, by rw [hnS, hsz4]; omega,
+    by rw [hsz4]; exact hsz, fun x hx1 hx2 => ?_⟩
   rw [hnS] at hx1; rw [hsz4] at hx2
   rw [hhi x hx1]; exact z3 x hx2
 
