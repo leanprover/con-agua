@@ -1,5 +1,6 @@
 import Lean
 import ConAgua.Compiler.Compile
+import ConAgua.AsmFile.Term
 
 /-!
 # The compiler's output as a kernel-checked literal
@@ -39,65 +40,12 @@ unsafe def evalProgramU (e : Lean.Expr) : MetaM Program :=
   evalExpr Program (mkApp (mkConst ``List [0]) (mkConst ``Directive)) e
 @[implemented_by evalProgramU] opaque evalProgram (e : Lean.Expr) : MetaM Program
 
-/-- The term for a label of function `f`'s code. -/
-def labelExpr (f : String) (s : String) : Lean.Expr := Id.run do
-  if s == errorL then return mkConst ``errorL
-  if s == exhaustedL then return mkConst ``exhaustedL
-  if s == finishL then return mkConst ``finishL
-  if s == okL then return mkConst ``okL
-  if s == enterL then return mkConst ``enterL
-  if s.startsWith "ca_f_" then return mkApp (mkConst ``fnL) (mkStrLit (s.drop 5).toString)
-  let pre := ".Lca_" ++ f ++ "_"
-  if s.startsWith pre then
-    let rest := (s.drop pre.length).toString
-    let ds := (rest.takeWhile Char.isDigit).toString
-    let m := (rest.drop ds.length).toString
-    if ds != "" && m != "" && m.all Char.isUpper then
-      return mkApp3 (mkConst ``lbl) (mkStrLit f) (mkRawNatLit ds.toNat!) (mkStrLit m)
-  return mkStrLit s
-
-/-- `n : Int64` as an `OfNat` literal (what `toExpr` gives), its value. -/
-def int64Lit? (e : Lean.Expr) : Option Nat :=
-  if e.isAppOfArity ``OfNat.ofNat 3 && e.appFn!.appFn!.appArg! == mkConst ``Int64 then
-    match e.appFn!.appArg! with
-    | .lit (.natVal n) => some n
-    | _ => none
-  else none
-
-/-- A directive as a term: its labels as `labelExpr`, its 64-bit integers as `Int64.ofInt i`
-(the form the code generator writes, so that the kernel compares the `Int`s). -/
-def directiveExpr (f : String) (d : Directive) : Lean.Expr :=
-  (toExpr d).replace fun e =>
-    match e with
-    | .lit (.strVal s) => some (labelExpr f s)
-    | _ =>
-      if let some n := int64Lit? e then some (mkApp (mkConst ``Int64.ofInt) (toExpr (n : Int)))
-      else if e.isAppOfArity ``Neg.neg 3 && e.appFn!.appFn!.appArg! == mkConst ``Int64 then
-        (int64Lit? e.appArg!).map fun n => mkApp (mkConst ``Int64.ofInt) (toExpr (-(n : Int)))
-      else none
-
 /-- The code of every function of `p`. -/
 def progCode (tab : Tab) (t : NTree) (p : Prog) : List Program := p.map fun x => compileFn tab t x.1 x.2
 
 unsafe def evalProgramsU (e : Lean.Expr) : MetaM (List Program) :=
   evalExpr (List Program) (mkApp (mkConst ``List [0]) (mkApp (mkConst ``List [0]) (mkConst ``Directive))) e
 @[implemented_by evalProgramsU] opaque evalPrograms (e : Lean.Expr) : MetaM (List Program)
-
-def dirTy : Lean.Expr := mkConst ``Directive
-def progTy : Lean.Expr := mkApp (mkConst ``List [0]) dirTy
-
-def appendE (a b : Lean.Expr) : Lean.Expr :=
-  mkApp6 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
-    (mkApp2 (mkConst ``instHAppendOfAppend [0]) progTy (mkApp (mkConst ``List.instAppend [0]) dirTy)) a b
-
-/-- A list literal as a balanced tree of `++` over chunks of at most 64 elements (a long list
-literal is a term of linear depth). -/
-partial def programExpr (xs : Array Lean.Expr) : Lean.Expr :=
-  if xs.size ≤ 64 then
-    xs.foldr (fun d acc => mkApp3 (mkConst ``List.cons [0]) dirTy d acc) (mkApp (mkConst ``List.nil [0]) dirTy)
-  else
-    let h := (xs.size / 64 + 1) / 2 * 64
-    appendE (programExpr (xs.extract 0 h)) (programExpr (xs.extract h xs.size))
 
 /-- The elements of a list expression, by `whnf`. -/
 partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
@@ -106,14 +54,13 @@ partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
   else if e.isAppOfArity ``List.nil 1 then return acc
   else throwError "asm_lit: the program does not reduce to a list literal: {e}"
 
-/-- Declare `n : Program := lit` (compiled, so that the printer can run it); the equation
-`lhs = n` is left to the caller. -/
+/-- Declare `n : Program := lit` (not compiled: nothing runs it); the equation `lhs = n` is left to
+the caller. -/
 def declLitDef (n : Name) (f : String) (v : Program) : MetaM Unit := do
   let lit := programExpr (v.toArray.map (directiveExpr f))
-  addAndCompile (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
+  addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
 
-/-- Declare `n : Program := lit` (compiled, so that the printer can run it) and
-`n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
+/-- Declare `n : Program := lit` and `n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
 def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
   declLitDef n f v
   addDecl (.thmDecl { name := n.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
@@ -261,7 +208,7 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident term
       rhs := appE appC fi rhs
       tl := consTl
     let whole := appendE (mkConst trampN) rhs
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
+    addDecl (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
     addDocString' name .missing doc?
     -- `compileProgT tab nrt p entry = name`: `p` unfolds to the literal `tl`
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy

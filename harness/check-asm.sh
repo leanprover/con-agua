@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Assemble and disassemble every program the compiler proof covers (the scanner, the `lit` store,
-# the arena walk, and the whole checker as printed from its kernel-checked literal `checkerAsm`,
-# DESIGN.md "Kernel-checked compiler output") and check, instruction by instruction, that what `as`/`objdump` actually encode
+# the arena walk, and the whole checker: the committed file `asm/checker.s`, whose code the final
+# theorems are about, docs/design/asmfile.md) and check, instruction by instruction, that what `as`/`objdump` actually encode
 # agrees with what `asmText` (Kraken's AT&T printer) printed. This is the trusted-base check: the
 # printer and the assembler are *not* proved, so
 # `compile_correct` only holds of the real machine if their printed/assembled text means what
@@ -19,20 +19,23 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 echo "+ lake build (the Emit* drivers)"
-"$root/scripts/lake" build ConAgua.Compiler.EmitScan ConAgua.Arena.EmitStore ConAgua.Arena.WalkEmit ConAgua.Checker.AsmEmit
+"$root/scripts/lake" build ConAgua.Compiler.EmitScan ConAgua.Arena.EmitStore ConAgua.Arena.WalkEmit
 
 declare -A progs=(
   [scan]="ConAgua/Compiler/EmitScan.lean"
   [store]="ConAgua/Arena/EmitStore.lean"
   [walk]="ConAgua/Arena/WalkEmit.lean"
-  [checker]="ConAgua/Checker/AsmEmit.lean"
 )
 
 status=0
 for name in scan store walk checker; do
-  s="$work/$name.s"
-  echo "+ lake env lean --run ${progs[$name]} $s"
-  "$root/scripts/lake" env lean --run "${progs[$name]}" "$s"
+  if [ "$name" = checker ]; then
+    s="$root/asm/checker.s"
+  else
+    s="$work/$name.s"
+    echo "+ lake env lean --run ${progs[$name]} $s"
+    "$root/scripts/lake" env lean --run "${progs[$name]}" "$s"
+  fi
   if ! python3 "$root/harness/check_asm.py" "$s" "$name"; then
     status=1
   fi

@@ -44,6 +44,36 @@ theorem lvlEqFueled_spec (p : Prog) (hp : p.lookup "lvl_eq_fueled" = some lvlEqF
         stubM_spec p "lvl_eq_c" n] <;>
       finish (gen := 20) [lveW]
 
+/-- The model of `lvl_eq_fueled(u, v)` at L fuel `k`, its call of `lvl_eq_c` read through `cR`
+(`lveW` is the stubs' reading, `lveC_stub`). -/
+def lveC (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | k + 1, m, u, v =>
+    match cR k "lvl_eq_c" [u, v] m with
+    | none => none
+    | some (r, m1) => if r.headD 0 = 0 then none else some ([if r.headD 0 = 2 then 1 else 0], m1)
+
+theorem lveC_stub (k : Nat) (m : Mem) (u v : Word) : lveC stubCall (k + 1) m u v = lveW m u v := rfl
+
+theorem lveC_stub_some {k : Nat} {m m' : Mem} {u v : Word} {r : List Word}
+    (h : lveC stubCall k m u v = some (r, m')) : lveW m u v = some (r, m') := by
+  cases k with
+  | zero => simp [lveC] at h
+  | succ k => exact h
+
+theorem lvlEqFueled_specC (p : Prog) (hp : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (cR : CallM)
+    (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (u v : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "lvl_eq_fueled" [u, v]
+    ⦃fun r s' => LocEq s' s₀ ∧ lveC cR n s₀.mem u v = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lvlEqFueled]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hcR n "lvl_eq_c"] <;>
+      finish (gen := 20) [lveC]
+
 /-- **`lvl_eq_fueled` is `liftFueled (← lvlEq? u v)`**, through the `lvl_eq` stub. -/
 theorem lveW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (u v : Word) (hu : H u) (hv : H v) (r : List Word)
@@ -75,7 +105,7 @@ mutual
 doms comparison, the universe comparison. -/
 def agW (cR : CallM) (n : Nat) (m : Mem) (vis nP fvs0O fvs0L s0 cvTa s : Word) : Option (List Word × Mem) :=
   agK1 cR (n - 1) vis nP fvs0O fvs0L s0 s
-    (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0])
+    (cR (n - 1) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m)
 
 /-- After `open_pis_at_fvars_f`: `ok = 0` and a length mismatch abort, then `fvar_type_ds`. -/
 def agK1 (cR : CallM) (n : Nat) (vis nP fvs0O fvs0L s0 s : Word) :
@@ -91,12 +121,12 @@ def agK2 (cR : CallM) (n : Nat) (vis nP fvs0L s0 s : Word) (r : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rd, m2) =>
-    agK3 s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP)
+    agK3 cR n s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP)
 
 /-- After `check_block_doms_at`: `lvl_eq_fueled`. -/
-def agK3 (s0 s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def agK3 (cR : CallM) (n : Nat) (s0 s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m3) => agK4 (lveW m3 s s0)
+  | some (_, m3) => agK4 (lveC cR n m3 s s0)
 
 /-- After `lvl_eq_fueled`: `eq = 0` aborts. -/
 def agK4 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -116,8 +146,8 @@ theorem agK1_ok (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 = fvs0L) :
       agK2 cR n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L]) := by
   rw [agK1, if_neg h0, if_neg (by simpa using h)]
 theorem agK2_some : agK2 cR n vis nP fvs0L s0 s r (some (rd, m2)) =
-    agK3 s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
-theorem agK3_some (r' : List Word) : agK3 s0 s (some (r', m3)) = agK4 (lveW m3 s s0) := rfl
+    agK3 cR n s0 s (domsW cR n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
+theorem agK3_some (r' : List Word) : agK3 cR n s0 s (some (r', m3)) = agK4 (lveC cR n m3 s s0) := rfl
 theorem agK4_ok (h : re.headD 0 ≠ 0) : agK4 (some (re, m1)) = some ([], m1) := by
   rw [agK4, if_neg h]
 theorem agK4_abort (h : re.headD 0 = 0) : agK4 (some (re, m1)) = none := by
@@ -128,7 +158,7 @@ grind_pattern [ind_grind] agK1_abort0 => agK1 cR n vis nP fvs0O fvs0L s0 s (some
 grind_pattern [ind_grind] agK1_abortL => agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1))
 grind_pattern [ind_grind] agK1_ok => agK1 cR n vis nP fvs0O fvs0L s0 s (some (r, m1))
 grind_pattern [ind_grind] agK2_some => agK2 cR n vis nP fvs0L s0 s r (some (rd, m2))
-grind_pattern [ind_grind] agK3_some => agK3 s0 s (some (r', m3))
+grind_pattern [ind_grind] agK3_some => agK3 cR n s0 s (some (r', m3))
 grind_pattern [ind_grind] agK4_ok => agK4 (some (re, m1))
 grind_pattern [ind_grind] agK4_abort => agK4 (some (re, m1))
 
@@ -147,9 +177,9 @@ theorem checkBlockAgreeOne_spec (p : Prog)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "open_pis_at_fvars_f" n, ftdsF_spec p had n,
-        domsW_spec p hd had.ftd cR hcR n, lvlEqFueled_spec p hl n] <;>
-      finish (gen := 20) [agW, lveW]
+        hcR n "open_pis_at_fvars_f", ftdsF_spec p had n,
+        domsW_spec p hd had.ftd cR hcR n, lvlEqFueled_specC p hl cR hcR n] <;>
+      finish (gen := 20) [agW]
 
 /-- A successful `domsW cR` has `j` within both lists. -/
 theorem domsW_le {cR : CallM} {n : Nat} {m : Mem} {vis off fo fl dO dl j : Word} {r : List Word} {m' : Mem}
@@ -208,7 +238,7 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
     ∃ a', (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)).run a = .ok ((), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   simp only [agW, Nat.add_sub_cancel] at h
-  cases hra : stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] with
+  cases hra : stubCall n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with
   | none => rw [hra] at h; simp [agK1] at h
   | some ram1 =>
   obtain ⟨ra, m1⟩ := ram1
@@ -257,7 +287,7 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
     (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP fvs x2 r3 hw hSt2
     (by rw [decHL_grow hg2 hfvb1]; exact hfv1) hdm2 (by omega) (by omega)
     (by have := hg2.1; omega) (by omega) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hlt2) hjf hjd
-  cases hl : lveW m3 s s0 with
+  cases hl : lveC stubCall n m3 s s0 with
   | none => rw [hl] at h; simp [agK4] at h
   | some rem4 =>
   obtain ⟨re, m4⟩ := rem4
@@ -267,7 +297,7 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
   rw [agK4_ok (m1 := m4) (re := re) hre] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  obtain ⟨b, a4, hrun4, hSt4, hg4, hbre⟩ := lveW_ok dn vis fe m3 m4 a3 s s0 hs hs0 re hl hSt3
+  obtain ⟨b, a4, hrun4, hSt4, hg4, hbre⟩ := lveW_ok dn vis fe m3 m4 a3 s s0 hs hs0 re (lveC_stub_some hl) hSt3
   have hb : b = true := by
     cases b
     · exact absurd (by rw [hbre]; rfl) hre

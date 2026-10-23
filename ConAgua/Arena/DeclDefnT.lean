@@ -55,7 +55,7 @@ environment, the core's memos, and the variant records. -/
 @[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
 theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOpPinSet}
     (hG : DefnProgT p pins) (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p)
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
+    (hap : ApdF p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {i : Word}
     {r : List Word} {ds : Array IDeclaration} {cv : IConstantVal} {v : EIdx}
     {hh : ConLeche.ReducibilityHint} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
@@ -63,7 +63,7 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .defnDecl cv v hh) (hfold : FoldOK V env fe a)
     (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) :
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hCr : L.Stubs.CrOK m) :
     ∃ fe' a', (checkDecl V pins fe (.defnDecl cv v hh)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ PinSetsR m' pins := by
   have hfr : ∀ {k : Nat} {f : FnName} {args : List Word} {mx my : Mem} {rx : List Word},
@@ -104,9 +104,9 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdfK2_some] at h
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refinesT p hV hq n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
-      (by rw [hq1]; exact hcv1) (by omega)) h2
+  obtain ⟨s2, hs2, -, hok2, hS2, hg2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (checkConstantVal_refinesT p hV hq hap hkp n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
+      (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) (hkp.call (im_mem _ rfl) h1 hCr)) h2
   subst hs2
   have hPS2 := PinSetsR.step hPS1 hg2 (hfr (by decide) h2)
   have hrun2 := AM.run_of_ok _ _ hok2
@@ -128,9 +128,10 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (dv_specW p hV (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis q) h3
   subst hs3
-  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hn' "type mismatch in definition" hW3 hS2
-    (ArrExt.decCI hx2 hci1)
-    (ArrExt.decCV hx2 hcv1) (ArrExt.hd? hx2 hval1)
+  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hap hkp hn' "type mismatch in definition"
+    hW3 hS2 (ArrExt.decCI hx2 hci1)
+    (ArrExt.decCV hx2 hcv1) (ArrExt.hd? hx2 hval1) (denoteCV_lps hcA)
+    (hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr))
   have hPS3 := PinSetsR.step hPS2 hg3 (hfr (by decide) h3)
   rw [← checkDefnVal_dvT] at hrun3
   -- the twin's definition check: `CheckOK` at the old index, `StepOK` at the pushed one
@@ -185,6 +186,8 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   obtain ⟨a5, hrun5, hS5, hC5, -, hg5, hPS5, -⟩ := hG.div dn hdn vis w fe2 env env2 wn c.name n hn'
     m4 m5 a4 r5 hwnl h5 hS4 hC4 hok3.envWF (hstepOK2.mono hx4) hPS4 hPD4
     (ConRon.Bridge.denoteN_ext hnm3 hx4)
+    (hkp.call (im_mem _ rfl) h4 (hkp.call (im_mem _ rfl) h3 (hkp.call (im_mem _ rfl) h2
+      (hkp.call (im_mem _ rfl) h1 hCr))))
   refine ⟨fe2, a5, ?_, by simpa using hS5, hC5.mem.memos,
     hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hPS5⟩
   rw [checkDecl_defn_eq, ← hfe2]

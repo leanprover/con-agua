@@ -85,11 +85,110 @@ theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : 
           | exact absurd z6 (fun h => AM.fail_ok h)
           | (obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h))
 
+/-- **`check_field_sort_bound`'s model, its `lv_leq_top` and `lvl_eq_c` the real calls, under
+`StageC`** (`cfbW_ok`'s statement; `lvLeqTop_simC`, `lvlEqC_simC` for the stub contracts). -/
+theorem cfbW_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
+    (hLT : p.lookup "lv_leq_top" = some lvLeqTop) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {env : ConLeche.Env} (n : Nat) (m : Mem)
+    (a : AState) (isProp large s io il fv u : Word) (idxArgs : List EIdx)
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hu : H u) (hs : H s) (hfv : H fv) (hidx : decHL m io.toNat il.toNat = some idxArgs)
+    (hib : io.toNat + il.toNat ≤ iwTop m) {lu sP : ConLeche.Level}
+    (hdu : denoteL a.store.ls (decI u) = some lu) (hsP : denoteL a.store.ls (decI s) = some sP) :
+    Sim (cfbW (realCall p) n m isProp large s io il fv u)
+      (sfbT (isProp != 0) (large != 0) (decI s) idxArgs (decI fv) (decI u)) a
+      (fun _ _ m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m') ∧ AbsOK m') := by
+  have hS := hC.stage
+  cases n with
+  | zero => exact Sim.of_none
+  | succ n =>
+  by_cases hp : isProp = 0
+  · rw [cfbW_leq (realCall p) n m isProp large s io il fv u hp]
+    simp only [sfbT, hp, bne_self_eq_false, Bool.not_false, ite_true]
+    rw [sfb_leq_eq]
+    refine Sim.bindK (K := cfbK1) rfl (fun _ _ => rfl)
+      (lvLeqTop_simC p hLC.lev hLT n hC hA u s hu hs lu sP hdu hsP) fun r x m1 a1 hQ => ?_
+    obtain ⟨hC1, hg1, hx, hA1, -, -⟩ := hQ
+    by_cases h2 : r.headD 0 = 2
+    · rw [cfbK1_ok m1 r h2]
+      have : x = some true := by
+        simp only [decLvlEq] at hx; rw [h2] at hx
+        rcases x with _ | _ | _
+        · exact absurd hx (by decide)
+        · exact absurd hx (by decide)
+        · rfl
+      subst this
+      exact Sim.congr (Sim.ret (x := ()) ⟨⟨hC1.stage, hg1⟩, hA1⟩) rfl
+    · rw [cfbK1_fail m1 r h2]; exact Sim.of_none
+  have hp' : (isProp != 0) = true := by simpa using hp
+  by_cases hl : large = 0
+  · rw [cfbW_none (realCall p) n m isProp large s io il fv u hp hl]
+    simp only [sfbT, hp', hl, bne_self_eq_false, Bool.not_true, Bool.false_eq_true, ite_false]
+    exact Sim.congr (Sim.ret (x := ()) ⟨⟨hS, IWGrow.refl _⟩, hA⟩) rfl
+  have hl' : (large != 0) = true := by simpa using hl
+  rw [cfbW_large (realCall p) n m isProp large s io il fv u hp hl]
+  simp only [sfbT, hp', hl', Bool.not_true, Bool.false_eq_true, ite_false, ite_true]
+  cases hz' : pinWordV m 53 with
+  | none => exact Sim.of_none
+  | some z =>
+  obtain ⟨hrun0, hz⟩ := pinZero_stage hS hz'
+  have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
+    intro h0; simp [pinWordV, h0] at hz'
+  have hzp : z = pinW m 53 := by
+    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hz'
+    rw [← hz']; rfl
+  have hF := hS.1.pins.full hpne
+  obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
+  rw [hF.zeroLevel, ← hzp] at hdz
+  refine Sim.bind_twin hrun0 ?_
+  rw [cfbK2_some]
+  rcases n with _ | n'
+  · exact Sim.of_none
+  rw [eqTrueC_succ]
+  cases he : realCall p n' "lvl_eq_c" [u, z] m with
+  | none => exact Sim.of_none
+  | some y =>
+  obtain ⟨r1, m1⟩ := y
+  obtain ⟨x, a1, hrun1, hC1, hg1, hx, hA1, -⟩ :=
+    lvlEqC_simC p hcl hLC n' hC hA u z hu hz lu lz hdu hdz r1 m1 he
+  have hS1 := hC1.stage
+  refine Sim.bind_twin hrun1 ?_
+  rw [eqTrueK_some, cfbK3_some]
+  have hidx1 : decHL m1 io.toNat il.toNat = some idxArgs := by
+    rw [decHL_grow hg1 hib]; exact hidx
+  cases hc : containsW (n' + 1) m1 io il fv with
+  | none => exact Sim.of_none
+  | some ct =>
+  obtain ⟨ws, hws, hwsd, hwlt⟩ := slR_of_decHL m1 _ _ idxArgs hidx1 (hS1.lt64 (by have := hg1.1; omega))
+  simp only [UInt64.ofNat_toNat] at hws
+  have hct := containsW_ok (n' + 1) _ _ _ _ _ _ hws hc
+  by_cases hf : (if r1.headD 0 = 2 then (1 : Word) else 0) = 0 ∧ ct = 0
+  · rw [cfbK4_fail _ _ _ hf]; exact Sim.of_none
+  rw [cfbK4_ok _ _ _ hf]
+  have hcond : (x == some true || idxArgs.contains (decI fv)) = true := by
+    by_cases h2 : r1.headD 0 = 2
+    · have : x = some true := by
+        simp only [decLvlEq] at hx; rw [h2] at hx
+        rcases x with _ | _ | _
+        · exact absurd hx (by decide)
+        · exact absurd hx (by decide)
+        · rfl
+      rw [this]; rfl
+    · have hct1 : ct ≠ 0 := fun e => hf ⟨by rw [if_neg h2], e⟩
+      have hin : ws.contains fv = true := by
+        rw [hct] at hct1
+        cases hcw : ws.contains fv
+        · rw [hcw] at hct1; exact absurd rfl hct1
+        · rfl
+      rw [hwsd, sumContains_decI fv hfv ws hwlt, hin, Bool.or_true]
+  exact Sim.congr (Sim.ret (x := ()) ⟨⟨hS1, hg1⟩, hA1⟩) (by simp only [hcond]; rfl)
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-include hq henv in
+include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i_go` under `StageC`** (twin side: con-ron's
 `checkStructFieldSortsI_spec`'s proof). -/
 theorem csfW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
@@ -100,7 +199,7 @@ theorem csfW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
     decHL m (res.toNat + j.toNat) k = some acc →
     decHL m0 fo.toNat fl.toNat = some fvs → fo.toNat + fl.toNat ≤ iwTop m0 →
     decHL m0 io.toNat il.toNat = some idxArgs → io.toNat + il.toNat ≤ iwTop m0 →
-    H s → nP.toNat + j.toNat < 2 ^ 64 →
+    H s → (∃ sP, denoteL a.store.ls (decI s) = some sP) → nP.toNat + j.toNat < 2 ^ 64 →
     Frontend.denoteEList a.store fvs = some fvsP →
     (∀ i, i < j.toNat → ∀ x, fvsP[i]? = some x →
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) →
@@ -113,7 +212,7 @@ theorem csfW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
   | zero => intros; exact Sim.of_none
   | succ n ih =>
   intro m a isProp large s nP fo fl io il res j m0 k acc fvs idxArgs fvsP hC hA hg0 hr0 hroom hacc
-    hfvs hfb hidx hib hs hnj hfP hws
+    hfvs hfb hidx hib hs hsP hnj hfP hws
   have hS := hC.stage
   by_cases hj : j = 0
   · subst hj
@@ -165,20 +264,21 @@ theorem csfW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
   have h3 := ensureSortC_rsim hq henv n (by omega) hC2 hA2 (nP + (j - 1)) (ry.headD 0) hy1
     (by rw [hy]; exact htyP) (by rw [hdep]; exact hwty)
   rw [hdep, hy] at h3
-  refine Sim.bindK (K := csfK3 _ n isProp large s io il w res j) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := csfK3 _ (realCall p) n isProp large s io il w res j) rfl (fun _ _ => rfl)
     (RSim.toSim h3) fun ru u m3 a3 hQ => ?_
-  obtain ⟨hC3, hg3, ⟨hu1, hu⟩, hA3, c3, -⟩ := hQ
+  obtain ⟨hC3, hg3, ⟨hu1, hu⟩, hA3, c3, lu, hdu⟩ := hQ
   dsimp only at hC3 hg3 hu1 hu hA3
   rw [csfK3_some]
   have hg03 := ((hg0.trans hg1).trans hg2).trans hg3
   have hidx3 : decHL m3 io.toNat il.toNat = some idxArgs := by rw [decHL_grow hg03 hib]; exact hidx
-  have h4 := cfbW_ok n m3 a3 isProp large s io il w (ru.headD 0) idxArgs hC3.stage hu1 hs hwl hidx3
-    (by have := hg03.1; omega)
+  obtain ⟨sP, hsP0⟩ := hsP
+  rw [← hu] at hdu
+  have h4 := cfbW_okC hq.closed hLC hLT n m3 a3 isProp large s io il w (ru.headD 0) idxArgs hC3 hA3 hu1 hs
+    hwl hidx3 (by have := hg03.1; omega) hdu (ConRon.Bridge.denoteL_ext hsP0 (c2.ext.trans c3.ext))
   rw [hu] at h4
   refine Sim.bindK (K := csfK4 _ res j (ru.headD 0)) rfl (fun _ _ => rfl)
-    (Sim.withFr (F := AbsOK) (Sim.withRunC h4) (fun _ _ e => cfbW_afr _ _ _ _ _ _ _ _ _ _ _ e hA3))
-    fun _ _ m4 a4 hQ => ?_
-  obtain ⟨⟨⟨hS4, hg4⟩, hrun4⟩, hA4⟩ := hQ
+    (Sim.withRunC h4) fun _ _ m4 a4 hQ => ?_
+  obtain ⟨⟨⟨hS4, hg4⟩, hA4⟩, hrun4⟩ := hQ
   have c4 := sfbT_cstep hC3.check hrun4
   have hC4 : StageC dn vis fe env m4 a4 := hC3.of_check hS4 hA4 c4.ok c4.ext
   rw [csfK4_some]
@@ -200,7 +300,7 @@ theorem csfW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
   have h5 := ih (by omega) (m4.set64 IW (res + (j - 1)) (ru.headD 0)) a4 isProp large s nP fo fl io il
     res (j - 1) m0 (k + 1) (u :: acc) fvs idxArgs fvsP hCw hAw
     ((hg03.trans hg4).set_iw _ _ (by omega)) hr0 (by rw [htop', hJ]; have := hg14.1; omega)
-    (by rw [hJ]; exact hacc') hfvs hfb hidx hib hs (by omega)
+    (by rw [hJ]; exact hacc') hfvs hfb hidx hib hs ⟨sP, ConRon.Bridge.denoteL_ext hsP0 hx14⟩ (by omega)
     (ConRon.Bridge.denoteEList_ext hx14 _ _ hfP) (fun i hi => hws i (by omega))
   rw [hJ] at h5
   refine Sim.bindK (K := csfK5) rfl (fun _ _ => rfl) h5 fun _ xs m5 a5 hQ => ?_
@@ -208,13 +308,14 @@ theorem csfW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
   refine Sim.ret ⟨hC5, hg5, ?_, by omega, hA5⟩
   rw [show J + 1 + k = J + (k + 1) by omega, hd5]; simp
 
-include hq henv in
+include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i` under `StageC`**: the allocation (L only), then `csfW_okC`. -/
 theorem fsortsW_okC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem)
     (a : AState) (isProp large s nP fo fl io il nW : Word) (fvs idxArgs : List EIdx)
     (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
     (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hidx : decHL m io.toNat il.toNat = some idxArgs)
-    (hib : io.toNat + il.toNat ≤ iwTop m) (hs : H s) (hnj : nP.toNat + nW.toNat < 2 ^ 64)
+    (hib : io.toNat + il.toNat ≤ iwTop m) (hs : H s) {sP : ConLeche.Level}
+    (hsP : denoteL a.store.ls (decI s) = some sP) (hnj : nP.toNat + nW.toNat < 2 ^ 64)
     {fvsP : List ConLeche.Expr} (hfP : Frontend.denoteEList a.store fvs = some fvsP)
     (hws : ∀ i, i < nW.toNat → ∀ x, fvsP[i]? = some x →
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) :
@@ -233,13 +334,13 @@ theorem fsortsW_okC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem)
   have hA1 := allocW_afr hal hA
   have hC1 : StageC dn vis fe env m1 a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
   refine sumSim_map (K := fsortsK2 res nW) rfl (fun _ _ => rfl)
-    (csfW_okC hq henv n hn m1 a isProp large s nP fo fl io il res nW m 0 [] fvs idxArgs fvsP hC1 hA1 hg1
-      (by omega) (by omega) (by simp [decHL, hslice?]) hfvs hfb hidx hib hs hnj hfP hws)
+    (csfW_okC hq henv hLC hLT n hn m1 a isProp large s nP fo fl io il res nW m 0 [] fvs idxArgs fvsP hC1 hA1 hg1
+      (by omega) (by omega) (by simp [decHL, hslice?]) hfvs hfb hidx hib hs ⟨sP, hsP⟩ hnj hfP hws)
     fun _ xs m' a' hQ => ?_
   obtain ⟨hC', hg', hd', ht', hA'⟩ := hQ
   exact ⟨hC', hg', by simpa using hd', by simpa using ht', hA'⟩
 
-include hq henv in
+include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** under `StageC` (the
 knot's `infer_type_core`, `ensure_sort_core`; the fields' denotations and scoping as con-ron's
 `checkStructFieldSortsI_spec` asks): the sorts in a fresh `IW` slice. -/
@@ -256,7 +357,8 @@ theorem checkStructFieldSortsI_refinesC (hg : p.lookup "sl_get" = some slGet)
     (fvs idxArgs : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hfvs : decHL s₀.mem fo.toNat fl.toNat = some fvs) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)
     (hidx : decHL s₀.mem io.toNat il.toNat = some idxArgs) (hib : io.toNat + il.toNat ≤ iwTop s₀.mem)
-    (hs : H s) (hnj : nP.toNat + nW.toNat < 2 ^ 64) {fvsP : List ConLeche.Expr}
+    (hs : H s) {sP : ConLeche.Level} (hsP : denoteL a₀.store.ls (decI s) = some sP)
+    (hnj : nP.toNat + nW.toNat < 2 ^ 64) {fvsP : List ConLeche.Expr}
     (hfP : Frontend.denoteEList a₀.store fvs = some fvsP)
     (hws : ∀ i, i < nW.toNat → ∀ x, fvsP[i]? = some x →
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) :
@@ -275,8 +377,8 @@ theorem checkStructFieldSortsI_refinesC (hg : p.lookup "sl_get" = some slGet)
     s₀ vis isProp large s nP fo fl io il nW) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hC', hg', hd, -, hA'⟩ :=
-    (fsortsW_okC hq henv n hn _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA hfvs hfb hidx hib
-      hs hnj hfP hws).run hm
+    (fsortsW_okC hq henv hLC hLT n hn _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA hfvs hfb hidx
+      hib hs hsP hnj hfP hws).run hm
   exact ⟨hl, hok, hC', hg', hd, hA'⟩
 
 end sims

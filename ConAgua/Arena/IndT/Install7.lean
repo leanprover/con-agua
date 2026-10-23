@@ -30,9 +30,11 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val") (hOpf : OpfF p) (hLC : LvlCacheProg p)
+  (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hLT hApd hCrk in
 /-- `check_sum_ctors` under `StageC` as a `Sim` of its call, at one environment. -/
 theorem installSimSumCtorsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     (T lo ll nP nIdx rs isP lg cvTa co cl : Word) (hT : H T) (hrs : H rs) (lps : List NIdx)
@@ -59,14 +61,14 @@ theorem installSimSumCtorsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : 
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (sctsW_spec p hP (realCall p) (realCall_spec p) n _ vis vis T lo ll nP nIdx rs isP lg cvTa co cl) e
   have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.1.env.vis]; rfl
-  have h := sctsW_okC (dn := dn) (vis := vis) (fe := fe) hq henv hV hkc vis T lo ll nP nIdx rs isP lg cvTa lps cvv
+  have h := sctsW_okC (dn := dn) (vis := vis) (fe := fe) hq henv hV hkc hOpf hLC hLT hApd hCrk vis T lo ll nP nIdx rs isP lg cvTa lps cvv
     hT hrs hws n hn m a co cl cs csP hC hl hlb hcv hcs hA hTP hlpsP hrsP hcvTaP hcsP
     (by rw [hfev]; exact hok₀) hfe r s'.mem hW
   rw [hfev] at h
   obtain ⟨x, a', h1, hC', hg', hd1, hb1, hd2, hb2, hA', hc⟩ := h
   exact ⟨x, a', h1, hC', hg', ⟨hd1, hb1⟩, ⟨hd2, hb2⟩, hA', hc⟩
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors_one` under `StageC`** (twin side: one member of con-ron's
 `checkBlockCtors_specF`'s proof). -/
 theorem icboW_simC (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
@@ -121,7 +123,7 @@ theorem icboW_simC (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a
   refine Sim.tail (K := icboK1 p n) (body := fun r1 m1 => icboK2 p n r1 (callW p n "rec2"
       [r1.headD 0, r1.tail.headD 0] m1)) rfl (fun _ _ => rfl)
     (by
-      have h := installSimSumCtorsC (dn := dn) (fe := fe) hq henv hV hkc hP.sum n hn
+      have h := installSimSumCtorsC (dn := dn) (fe := fe) hq henv hV hkc hOpf hLC hLT hApd hCrk hP.sum n hn
         (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) lo ll (UInt64.ofNat bs.nP) (UInt64.ofNat msh.nIdx)
         (rdW (m.arr64 IW) (pp + 6)) (rdW (m.arr64 IW) (pp + 8)) (rdW (m.arr64 IW) (pp + 7)) cv co cl
         hn32 hrs32 bs.lps cvv msh.ctors hC hlps hlb hcv hcd hA hTP hlpsP
@@ -155,7 +157,7 @@ theorem icboW_simC (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a
   exact ⟨hC1.of_pstep hS3 hA3 (PStep.refl hC1.check.state), (hg1.trans hg2).trans hg3,
     hd2.grow (decCNS_mono _) hg3, hd3, hd2b.grow (decCNSB_mono _) hg3, hA3, c1⟩
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors_go` under `StageC`** (twin side: con-ron's `checkBlockCtors_specF`'s
 proof). -/
 theorem icbgW_simC (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP : ConLeche.BlockShape}
@@ -218,7 +220,7 @@ theorem icbgW_simC (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP :
     (fun r m' e => by
       obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
         (icbo_spec p hP.one k _ vis vis pp lo ll (UInt64.ofNat q) (UInt64.ofNat c)) e
-      exact icboW_simC hq henv hV hkc hP k (by omega) hC hqd hsrc hlps hlb (by rw [hq']; exact hdm)
+      exact icboW_simC hq henv hV hkc hOpf hLC hLT hApd hCrk hP k (by omega) hC hqd hsrc hlps hlb (by rw [hq']; exact hdm)
         (by rw [hc']; exact hdc) hA hbsP hmP hcvP (hws _ List.mem_cons_self) hok₀ hfe r s'.mem hW) ?_
   rintro r1 ⟨cs, ss⟩ m1 a1 ⟨hC1, hg1, hd1, he1, hb1, hA1, c1⟩
   dsimp only
@@ -250,7 +252,7 @@ theorem icbgW_simC (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP :
   exact Sim.ret ⟨hC2.of_pstep hS4 hA4 (PStep.refl hC2.check.state), ((hg1.trans hg2).trans hg3).trans hg4,
     by simpa using hd3.grow decCNS_mono hg4, by simpa using hd4, by simpa using hb3.grow decCNSB_mono hg4, hA4⟩
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors` refines `checkBlockCtors`** under `StageC` (at one environment,
 `vis0 = vis`, as `check_block_pass` calls it; the denotations as con-ron's `checkBlockCtors_specF`
 asks): the stored constructors and their fields' sorts, per member, two slices of `[off, len]`
@@ -294,7 +296,7 @@ theorem checkBlockCtors_refinesC (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62
     have hA1 : AbsOK s1.mem := lpsW_afr hW1 hA
     have hC1 : StageC dn vis fe env s1.mem a₀ := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
     obtain ⟨-, hq9, -⟩ := partsShapeFacts hqd hsrc
-    refine Sim.post (K := ictK2) rfl (fun _ _ => rfl) (fun r2 m2 e => icbgW_simC hq henv hV hkc hP pp _ _ bs n hn s1.mem a₀
+    refine Sim.post (K := ictK2) rfl (fun _ _ => rfl) (fun r2 m2 e => icbgW_simC hq henv hV hkc hOpf hLC hLT hApd hCrk hP pp _ _ bs n hn s1.mem a₀
       mo ml co cl mss cvs mssP cvsP hC1 (hqd.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) hd1 hb1
       (hmss.grow decMS_mono hg1) (hcvs.grow (fun q => OMono.decCVp q) hg1) hA1 hbsP hmssP hcvsP hws hok₀ hfe
       r2 m2 (by

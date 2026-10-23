@@ -35,12 +35,13 @@ theorem installCons_afr {p : Prog} (hP : CstProg p) {n : Nat} {x o l : Word} {r 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-include hq henv in
+include hq henv hLC hLT in
 /-- `check_struct_field_sorts_i` under `StageC` as a `Sim` of its call. -/
 theorem installSimFsortsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    (isP large s nP fo fl io il j : Word) (hs : H s) (fvs idx : List EIdx)
-    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (isP large s nP fo fl io il j : Word) (hs : H s) (fvs idx : List EIdx) {sP : ConLeche.Level}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hsP : denoteL a.store.ls (decI s) = some sP)
     (hfd : decHL m fo.toNat fl.toNat = some fvs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
     (hid : decHL m io.toNat il.toNat = some idx) (hib : io.toNat + il.toNat ≤ iwTop m)
     (hnj : nP.toNat + j.toNat < 2 ^ 64) {fvsP : List ConLeche.Expr}
@@ -58,10 +59,10 @@ theorem installSimFsortsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Me
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd (realCall p)
       (realCall_spec p) k _ vis isP large s nP fo fl io il j) e
-  exact fsortsW_okC hq henv k (by omega) m a isP large s nP fo fl io il j fvs idx hC hA hfd hfb hid hib
-    hs hnj hfP hws r s'.mem hW
+  exact fsortsW_okC hq henv hLC hLT k (by omega) m a isP large s nP fo fl io il j fvs idx hC hA hfd hfb hid
+    hib hs hsP hnj hfP hws r s'.mem hW
 
-include hq henv in
+include hq henv hOpf hLC hLT in
 /-- **`check_block_idx_sorts_one` under `StageC`** (twin side: one member of con-ron's
 `checkBlockIdxSorts_specF`'s proof). -/
 theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
@@ -106,10 +107,9 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
       · rw [iisK1_none p n m₁ _ _ _ _ r h, if_pos h]
       · rw [iisK1_some p n m₁ _ _ _ _ r h, if_neg h])
     (by
-      have h := installSimKeep (p := p) (n := n) (openPisAtFvarsF_spec dn vis fe
-        (UInt64.ofNat bs.nP + UInt64.ofNat msh.nIdx) _ 0 htyl) hS
+      have h := opfSimRA (n := n) (k := UInt64.ofNat bs.nP + UInt64.ofNat msh.nIdx) (i := 0) hOpf htyl hS hA
       rw [hk, htye] at h
-      exact Sim.withFr (Sim.withRunC h) (fun _ _ e => callW_stub_afr e (by decide) hA)) ?_
+      exact h) ?_
   rintro r1 x1 m1 a1 ⟨⟨⟨hS1, hg1, hd1⟩, hr1⟩, hA1⟩
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state
     (ConRon.Bridge.denoteCV_type hcvP) hr1
@@ -143,9 +143,9 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   refine Sim.tail (K := iisK2 p n) (body := fun r2 m2 => iisK3 (callW p n "rec2"
       [r2.headD 0, r2.tail.headD 0] m2)) rfl (fun _ _ => rfl)
     (by
-      have h := installSimFsortsC (dn := dn) (fe := fe) hq henv hP.sum n hn 1 0
+      have h := installSimFsortsC (dn := dn) (fe := fe) hq henv hLC hLT hP.sum n hn 1 0
         (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) hrs32
-        (fvs.drop bs.nP) [] hC1 hA1 hdT hbT (by simp [decHL, hslice?]) (by simp)
+        (fvs.drop bs.nP) [] hC1 hA1 (by rw [hrse]; exact ConRon.Bridge.denoteL_ext hsP p1.ext) hdT hbT (by simp [decHL, hslice?]) (by simp)
         (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxsd hxPos
       rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
         show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at h
@@ -188,7 +188,7 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   simp only [decIS, decAt, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hdB
 
-include hq henv in
+include hq henv hOpf hLC hLT in
 /-- **`check_block_idx_sorts` under `StageC`** (twin side: con-ron's `checkBlockIdxSorts_specF`'s
 proof). -/
 theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.BlockShape}
@@ -242,7 +242,7 @@ theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLech
     (fun r m' e => by
       obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
         (iis_spec p hP.one k _ vis pp _ _) e
-      exact iisW_simC hq henv hP k (by omega) hC hA hqd hsrc (by rw [hq']; exact hdm) (by rw [hc']; exact hdc)
+      exact iisW_simC hq henv hOpf hLC hLT hP k (by omega) hC hA hqd hsrc (by rw [hq']; exact hdm) (by rw [hc']; exact hdc)
         hbsP hcvP (hws _ List.mem_cons_self) hfe r s'.mem hW) ?_
   rintro r1 is m1 a1 ⟨hC1, hg1, hd1, hA1, c1⟩
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hqd hsrc
@@ -262,7 +262,7 @@ theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLech
   exact Sim.ret ⟨hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state), (hg1.trans hg2).trans hg3,
     by simpa using hd3, hA3, c1.trans c2⟩
 
-include hq henv in
+include hq henv hOpf hLC hLT in
 /-- **`check_block_idx_sorts` refines `checkBlockIdxSorts`** under `StageC` (the knot's core
 calls; the denotations as con-ron's `checkBlockIdxSorts_specF` asks): every member's index sorts a
 slice of `[off, len]` pointers below the tops. -/
@@ -285,7 +285,7 @@ theorem checkBlockIdxSorts_refinesC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 6
       PSlR decIS (AM.res (ConRon.Arena.checkBlockIdxSorts V fe bs mss cvs) a₀) (r.headD 0)
         (r.tail.headD 0) s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (iisr_spec p hP.idx n s₀ vis pp mo ml co cl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hC', hg, hd, hA', _⟩ := Sim.run (iisrW_simC hq henv hP pp bs n hn _ a₀ mo ml co cl mss cvs cvsP
+    let ⟨hok, hC', hg, hd, hA', _⟩ := Sim.run (iisrW_simC hq henv hOpf hLC hLT hP pp bs n hn _ a₀ mo ml co cl mss cvs cvsP
       hC hA hqd hsrc hmss hcvs hbsP hcvsP hws hfe) hm
     ⟨hl, hok, hC', hg, hd, hA'⟩
 

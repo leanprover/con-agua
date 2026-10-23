@@ -15,8 +15,8 @@ Lane `decls3`'s `allLevelParamsDefined_refines` (`DeclApdRef.lean`) under `Stage
 with the core's `wscopedBFast` memo (`coreWsSch`), which `TwinOK` carries well formed, so the
 entry's clear starts the walk from the empty memo, and the walk's memo after it is the core's
 memo under its own key codec (`memoRV_rekey`): `TwinOK` holds after. The parameters' names read
-back is the caller's (`lps = []`: trivially). Meant to replace
-`IndStubsT.allLevelParamsDefinedT_spec` once the callers' models call `apdF` (see the note there).
+back is the caller's (`lps = []`: trivially). Replaced
+`IndStubsT.allLevelParamsDefinedT_spec` (deleted): the callers' models call `apdF` (see the note there).
 -/
 
 set_option linter.deprecated false

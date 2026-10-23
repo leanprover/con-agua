@@ -123,13 +123,16 @@ theorem core_of_R7 {b pb : ByteArray} {s8 s64 : List Nat} {sA : AState} {pre : P
 (`IndArmSpec`, lane `indproofs4`) at the checker's program with the ROM substituted
 (`checkerProg.subPB bs`: the ROM readers read the pin-data buffer `PB`, whose bytes `R7` fixes;
 `triple_subPB` transfers the run back; the loop's program hypotheses there are helper
-`loopt3-prog`'s `checkerProg_loopCalleesPB`, `checkerProg_loopTopPB`). -/
-theorem loopStage_of
-    (hIA : ∀ bs dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn) :
+`loopt3-prog`'s `checkerProg_loopCalleesPB`, `checkerProg_loopTopPB`); the contract is needed only
+for buffers `pb_check` accepts (`RomOK`, starting with `romData`). -/
+theorem loopStage_of_rom
+    (hIA : ∀ bs, RomOK bs → bs = romData ++ bs.drop romData.length →
+      ∀ dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn) :
     LoopStage checkerProg checkerRels := by
   intro b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE hin hpx n hn s₀ h7
+  have hr : RomOK pb.data.toList := by simpa [RomOK] using hin.2.2.1
   have hLC := fun dn hdn hq => checkerProg_loopCalleesPB pb.data.toList
-    (by simpa [RomOK] using hin.2.2.1) h7.since.pbpre dn hdn (hIA _ dn hdn) hq
+    hr h7.since.pbpre dn hdn (hIA _ hr h7.since.pbpre dn hdn) hq
   have hT := twinFold_of_prefix hpx
   have hcore := core_of_R7 hpx h7
   have hcaps := CapsOK.keep h7.since.keep h7.since.caps
@@ -146,5 +149,11 @@ theorem loopStage_of
     (by have := hcaps.1 145 (by decide); omega)) ?_
   rintro r s' ⟨hl, k, fe, pend, a', s'', h1, h2⟩
   exact ⟨hl, fe, a', k, pend, s'', h1, h2⟩
+
+/-- `loopStage_of_rom` with the arm's contract at every substituted program. -/
+theorem loopStage_of
+    (hIA : ∀ bs dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn) :
+    LoopStage checkerProg checkerRels :=
+  loopStage_of_rom fun bs _ _ => hIA bs
 
 end L.Checker

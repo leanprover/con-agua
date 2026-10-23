@@ -38,12 +38,64 @@ theorem Sim.callW_posB {α : Type} {p : Prog} {f : FnName} {args : List Word} {m
   | zero => rw [callW_zero]; exact Sim.of_none
   | succ k => exact h k hn
 
+/-- `block_shape_with_sort` as a `Sim` under `StageC`, its `lvl_eq_c` the real call
+(`installWithSortSim`'s statement; `lvlEqC_simC` for the stub contract). -/
+theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
+    (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hpw : p.lookup "pin_word" = some pinWordL)
+    (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort) (n : Nat)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {m : Mem}
+    {a : AState} {pp s : Word} {bs : BlockShape} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp) (hs : H s)
+    {sP : ConLeche.Level} (hsP : denoteL a.store.ls (decI s) = some sP) :
+    Sim (callW p n "block_shape_with_sort" [pp, s] m) (bs.withSort (decI s)) a
+      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+        DecB (fun m => decBS m (r.headD 0).toNat) m' x ∧ ShapeSrc m' (r.headD 0) ∧
+        (RecsB m pp → RecsB m' (r.headD 0))) := by
+  intro r m' e
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (blockShapeWithSort_specC p ha hpw hp (realCall p) (realCall_spec p) n _ pp s) e
+  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
+  have hS := hC.stage
+  obtain ⟨bs', a', q, hrun, rfl, -, hS', hg, htopq, hcell, hD⟩ :=
+    wsC_ok (realCall p) n dn fe vis m s'.mem a pp s r bs hW hS hs
+      (fun m'' hg => hq.stab (decBS_mono _) m'' hg) hq9 (fun k r2 m2 h0 e2 => by
+        have hF := hS.1.pins.full h0
+        obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
+        rw [hF.zeroLevel] at hdz
+        obtain ⟨x, a2, hrun2, hC2, hg2, hd2, -, -⟩ :=
+          lvlEqC_simC p hcl hLC k hC hA s (pinW m 53) hs hF.lv_lt.2.1 sP lz hsP hdz r2 m2 e2
+        exact ⟨x, a2, hrun2, hC2.stage, hg2, hd2⟩)
+  refine ⟨bs', a', hrun, hS', hg, by simpa using hD hq, ?_, fun hrb o l h1 h2 => ?_⟩
+  rotate_left
+  · simp only [List.headD_cons] at h1 h2
+    have e2 := hcell 2 (by decide) (by decide) (by decide)
+    have e3 := hcell 3 (by decide) (by decide) (by decide)
+    have hp2 : iwN s'.mem (pp.toNat + 2) = iwN m (pp.toNat + 2) := iwN_grow hg (by omega)
+    have hp3 : iwN s'.mem (pp.toNat + 3) = iwN m (pp.toNat + 3) := iwN_grow hg (by omega)
+    have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, e2]
+    have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, e3]
+    rw [g2, hp2] at h1; rw [g3, hp3] at h2
+    exact Nat.le_trans (hrb o l h1 h2) hg.1
+  intro o l h1 h2
+  simp only [List.headD_cons] at h1 h2
+  have e0 := hcell 0 (by decide) (by decide) (by decide)
+  have e1 := hcell 1 (by decide) (by decide) (by decide)
+  simp only [Nat.add_zero] at e0
+  have hp0 : iwN s'.mem pp.toNat = iwN m pp.toNat := iwN_grow hg (by omega)
+  have hp1 : iwN s'.mem (pp.toNat + 1) = iwN m (pp.toNat + 1) := iwN_grow hg (by omega)
+  have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, e0]
+  have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, e1]
+  rw [g0, hp0] at h1; rw [g1, hp1] at h2
+  exact Nat.le_trans (hsrc o l h1 h2) hg.1
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val") (hOpf : OpfF p) (hLC : LvlCacheProg p)
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hApd hCrk in
 /-- **`check_block_inds` under `StageC`** (twin side: con-ron's `checkBlockInds_spec`'s proof). -/
 theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {pp isRec : Word} {bs : BlockShape} {b : Bool}
@@ -96,7 +148,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
         (Q := fun r x m' a' => TeleOutC dn vis fe env m r x m' a' ∧ AbsOK m' ∧
           ConRon.Bridge.CoreStep V env fe a a')
-        (checkBlockTele_refinesC hq henv hV hkc hP.toCstProg hP.bTele k (by omega) ⟨m, Locals.init []⟩ a
+        (checkBlockTele_refinesC hq henv hV hkc hApd hCrk hP.toCstProg hP.bTele k (by omega) ⟨m, Locals.init []⟩ a
           (UInt64.ofNat bs.nP) _ ms0 hC hmok hA hm0 hfe)
         fun _ _ ⟨_, hok, hQ, hA', hc⟩ => ⟨hok, hQ, hA', hc⟩) n hn
       rw [UInt64.toNat_ofNat_of_lt' hnpb] at h; exact Sim.withRunC h) ?_
@@ -116,7 +168,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
         (Q := fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m1 m' ∧
           PSlR decTele x (r.headD 0) (r.tail.headD 0) m' ∧ AbsOK m')
-        (checkBlockTeles_refinesC hq henv hV hkc hP.toInstProg (k + 1) hk ⟨m1, Locals.init []⟩ a1
+        (checkBlockTeles_refinesC hq henv hV hkc hApd hCrk hP.toInstProg (k + 1) hk ⟨m1, Locals.init []⟩ a1
         (UInt64.ofNat bs.nP) (o + 1) (l - 1) rest hC1 (hrest.grow hg1) hA1
         (ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP) hfe1)
         fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2⟩) n hn
@@ -136,7 +188,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (by
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
         (Q := fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m2 m' ∧ AbsOK m')
-        (checkBlockAgree_refinesC hq henv hP.agreeP (k + 1) hk ⟨m2, Locals.init []⟩ a2
+        (checkBlockAgree_refinesC hq henv hOpf hLC hP.agreeP (k + 1) hk ⟨m2, Locals.init []⟩ a2
           (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) cvTa0 cvs hC2
           hA2 (hc0.grow (OMono.decCVp _) hg2) hs32 hcvs (ConRon.Bridge.denoteCV_ext h1a c2.ext) hw1
           (ConRon.Bridge.denoteL_ext h1b c2.ext) h2 hw2)
@@ -154,8 +206,9 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   refine Sim.bindK (K := ibiK4 p n vis isRec r1 r2)
     (body := fun r4 m4 => ibiK5 p n vis isRec r4 (callW p n "check_block_inds_cv_tas"
       [r1.headD 0, r2.headD 0, r2.tail.headD 0] m4)) rfl (fun _ _ => rfl)
-    (Sim.withRunC (Sim.withFr (installWithSortSim hP.alloc hP.pinWord hP.withSort n hS3
-      (hqd.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc) hs32)
+    (Sim.withRunC (Sim.withFr (installWithSortSimC hq.closed hLC hP.alloc hP.pinWord hP.withSort n hC3 hA3
+      (hqd.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc) hs32
+      (ConRon.Bridge.denoteL_ext h1b (c2.ext.trans c3.ext)))
       (fun _ _ e => hk _ (by simp [indsKeepCallees]) _ _ _ _ _ e hA3))) ?_
   rintro r4 p1 m4 a4 ⟨⟨⟨hS4, hg4, hp1, hsrc4, hrb4⟩, hA4⟩, hr4⟩
   obtain ⟨c4, hp1P⟩ := ConRon.Bridge.Inductives.BlockShape.withSort_spec fe bs bsP
@@ -209,7 +262,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     ((hrb4 ((hrb.grow (hg1.trans hg2) (by omega)).grow hg3 (by have := hg1.trans hg2; have := this.1; omega))).grow
       (hg5.trans hg6) (by omega)), c14.trans c5⟩
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hApd hCrk in
 /-- **`check_block_inds` refines `checkBlockInds`** under `StageC` (stage 1; the shape's and the
 environment's denotations as con-ron's `checkBlockInds_spec` asks): the environment with the
 formers pushed at the returned view, the formers' constants and the shape with its sort below the
@@ -230,7 +283,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀); ⊤⦄ :=
   triple_post (ibi_spec p hP.inds n s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ, hA', hR', hc⟩ :=
-      Sim.run (ibiW_simC hq henv hV hkc hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh) hm
+      Sim.run (ibiW_simC hq henv hV hkc hOpf hLC hApd hCrk hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh) hm
     ⟨hl, hok, hQ, hA', hR', hc⟩
 
 end sims

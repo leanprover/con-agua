@@ -76,11 +76,12 @@ theorem rpg_fin {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 `reducePinGuard_run`. -/
 theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
     (hpd : p.lookup "reduce_decl_pin" = some reduceDeclPinL) (hR : L.Rom.RomRefs p)
-    (hcl : LeafClosed p) (hap : ApdF p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hcl : LeafClosed p) (hap : ApdF p) (hck : CrKeep p) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {cn : ConLeche.Name}
     (h : rpgW p (realCall p) n m vis c = some (r, m')) (hS : StageC dn vis fe env m a) (hc : c.toNat < 2 ^ 32)
-    (hd : denoteN a.store.ns (decI c) = some cn) :
+    (hd : denoteN a.store.ns (decI c) = some cn) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (reducePinGuard fe (decI c)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
       Ext a.store a'.store ∧ x = ConLeche.reducePinGuard env cn ∧
       IWGrow m m' ∧ decW0B m' r x := by
@@ -93,6 +94,7 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, rpgK1_some] at h
+  have hCr1 := hck.call (im_mem _ rfl) h1 hCr
   obtain ⟨s1, hs1, -, hok1, hS1, hg1, he1l, he1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reduceDeclPin_refines p hpa n ⟨m, Locals.init []⟩ a dn fe vis c hS.stage hc hR hpd) h1
   subst hs1
@@ -111,6 +113,7 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, rpgK2_some] at h
+  have hCr2 := CrOK.frame hCr1 (lbbF_frame h2) (by decide) (by decide)
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
     lbbF_okT dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hT1
   rw [hF, h00] at hrun2
@@ -133,6 +136,7 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, rpgK3_some] at h
+  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
     hffF_okT dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
   rw [hF] at hrun3
@@ -155,6 +159,7 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, rpgK4_some] at h
+  have hCr4 := CrOK.frame hCr3 (apdF_frame (apdF_of_callW hap h4)) (by decide) (by decide)
   obtain ⟨x4, a4, hrun4, hS4, hg4, hx4, -⟩ :=
     apdF_okT dn vis fe 0 0 e he1l [] m3 m4 a3 r4 (apdF_of_callW hap h4)
       ⟨hS3, by simp [decHL, hslice?], [], rfl⟩
@@ -173,13 +178,13 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   rw [if_neg hb4] at h
   have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
   -- `consts_resolve_ffast`
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, e] with
+  cases h5 : realCall p n "consts_resolve_ffast" [vis, e] m4 with
   | none => rw [h5] at h; simp [rpgK5] at h
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5
   rw [h5, rpgK5_some] at h
-  obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ :=
-    constsResolveFFastT_spec dn vis fe e he1l m4 m5 a4 r5 h5 hS4
+  obtain ⟨x5, a5, hrun5, ⟨hS5, hg5, hx5⟩, -⟩ :=
+    crfF_okT dn vis fe e he1l m4 m5 a4 r5 (crfF_of_callW hck.crf h5) ⟨hS4, hCr4.crMemo⟩
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hrun : (reducePinGuard fe (decI c)).run a = .ok (x5, a5) := by
@@ -208,14 +213,15 @@ index's `StepOK` (at `env2`), the memory's half of `TwinOK`, the pin flag, the n
 value's denotations; the gate at `vis`, the stage relation at `vis2` and `StageC` at `vis` after. -/
 @[refines ConRon.Arena.checkReducePin]
 theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
+    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
     {env env2 : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c v : Word}
     {r : List Word} {nm : ConLeche.Name} {x : ConLeche.Expr}
     (hW : crpW p (realCall p) n m vis vis2 c v = some (r, m')) (hS : StageR dn vis2 fe2 m a)
     (hck : CheckOK V env (fe2.restrictTo vis.toNat) a) (henv : ConLeche.EnvWF env)
     (hok2 : StepOK env2 fe2 a) (hmem : TwinMem dn m a) (hflag : pinW m 0 ≠ 0)
     (hnm : denoteN a.store.ns (decI c) = some nm) (hvx : denoteE a.store (decI v) = some x)
-    (hws : ConLeche.Expr.WScoped 0 x) (hc : c.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
+    (hws : ConLeche.Expr.WScoped 0 x) (hc : c.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
+    (hCr : L.Stubs.CrOK m) :
     ∃ a', (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v)).run a = .ok ((), a') ∧
       StageR dn vis2 fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
       IWGrow m m' := by
@@ -233,6 +239,7 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, crpK1_some] at hW
+  have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
   obtain ⟨s1, hs1, -, hok1, hS1, hg1, hb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reduceStoredOk_refines p hC.red dn vis2 fe2 c hc n ⟨m, Locals.init []⟩ a hS) h1
   subst hs1
@@ -255,6 +262,7 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, crpK2_some] at hW
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   obtain ⟨s2, hs2, -, hok2', hS2, hg2, hb2, -⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (reduceElemOk_refines p hC.red dn hdn vis fe c hc n ⟨s1.mem, Locals.init []⟩ a1 hC1.stage) h2
   subst hs2
@@ -281,7 +289,7 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
     h3
   subst hs3
   obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
-    rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hC.apd hW3 hC2 hc hnm2
+    rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hC.apd hkp hW3 hC2 hc hnm2 hCr2
   by_cases e3 : r3.headD 0 = 0
   · rw [if_pos e3] at hW; cases hW
   rw [if_neg e3] at hW
@@ -412,14 +420,15 @@ runs from `StageC` at the pre-insertion view (con-ron's `CheckOK`, restricted, a
 half: the call's frame by `LoopClosed`, the core memos by `dvW_okT`). Post: the stage relation at
 the pushed environment and the core's memos. -/
 theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
-    (hcl : LeafClosed p) (hlc : LoopClosed p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62)
     {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
     {cv : IConstantVal} {v : EIdx} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
     (h : cdoW p n m i vis = some (r, m')) (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .opaqueDecl cv v) (hfold : FoldOK V env fe a)
-    (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x) :
+    (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x)
+    (hCr : L.Stubs.CrOK m) :
     ∃ fe' a', (checkDecl V pins fe (.opaqueDecl cv v)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
   cases n with
@@ -432,6 +441,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, cdoK1_some] at h
+  have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ :=
     erecCiW_okT (ci := .axiomInfo cv) h1 hS hD hi (by rw [hd]; rfl)
   rw [hd] at hcv1 hval1
@@ -452,9 +462,10 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdoK2_some] at h
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refinesT p hV hq n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
-      (by rw [hq1]; exact hcv1) (by omega)) h2
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
+  obtain ⟨s2, hs2, -, hok2, hS2, hg2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (checkConstantVal_refinesT p hV hq hap hkp n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
+      (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2
   obtain ⟨hstep1, F1, hpure1⟩ :=
@@ -469,13 +480,15 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, cdoK3_some] at h
+  have hCr3 := hkp.call (im_mem _ rfl) h3 hCr2
   have hx2 : ArrExt (erecP m1) (erecP s2.mem) := IWGrow.erecPExt hg2
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (ov_specW p hV (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis q) h3
   subst hs3
-  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hn' "type mismatch in opaque" hW3 hS2
-    (ArrExt.decCI hx2 hci1)
+  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hC.apd hkp hn' "type mismatch in opaque"
+    hW3 hS2 (ArrExt.decCI hx2 hci1)
     (by have := ArrExt.decCV hx2 (decCI_cv hci1 (.inr rfl)); exact this) (ArrExt.hd? hx2 hval1)
+    (denoteCV_lps hcA) hCr2
   rw [← checkOpaqueVal_dvT] at hrun3
   -- the twin's value check: `CheckOK` at the old index, `StepOK` at the pushed one
   obtain ⟨hstep2, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkOpaqueVal_bridge rfl
@@ -543,8 +556,8 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
       (crp_specW p hC (realCall p) (realCall_spec p) n ⟨s3.mem, Locals.init []⟩ vis (r3.headD 0)
         wn wv) h6
     subst hs6
-    obtain ⟨a6, hrun6, hS6, hC6, hg6⟩ := crpW_okT hC hq hcl hdn hn' hW6 hS3 hck3 hok3.envWF
-      hstepOK2 hmem3 hflag3 hnm3 hv3 hws hwnl hwvl
+    obtain ⟨a6, hrun6, hS6, hC6, hg6⟩ := crpW_okT hC hq hcl hkp hdn hn' hW6 hS3 hck3 hok3.envWF
+      hstepOK2 hmem3 hflag3 hnm3 hv3 hws hwnl hwvl hCr3
     refine ⟨fe2, a6, ?_, by simpa using hS6, hC6.mem.memos,
       hg1.trans (hg2.trans (hg3.trans hg6))⟩
     show (do checkConstantVal V fe cv

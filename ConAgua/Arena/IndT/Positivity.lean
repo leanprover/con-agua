@@ -41,12 +41,200 @@ private theorem pos_mapM_mem {α β : Type} {f : α → Option β} :
     rcases List.mem_cons.mp hx with rfl | hx
     · exact ⟨y, hy⟩
     · exact pos_mapM_mem hys x hx
+/-! ## `block_nest_ctx` with the real `open_pis_at_fvars_f` -/
+
+theorem opfA_stage : ∀ b ∈ opfA, b < 201 ∨ 208 < b := by
+  simp [opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP]
+theorem opfC_stage : ∀ x ∈ opfC, x.toNat < 202 ∨ 219 < x.toNat := by
+  simp [opfC, instListC, mkC, instC, liftC]
+
+/-- **The model of `block_nest_ctx`, its `open_pis_at_fvars_f` call read through `cR`**
+(`bncW` is the stubs' reading) (at exec fuel `n + 2`). -/
+noncomputable def bncC (cR : CallM) (n : Nat) (m : Mem) (vis p cvO cvL : Word) : Option (List Word × Mem) :=
+  if cvL = 0 then none
+  else if rdW (m.arr64 IW) (p + 4) + rdW (m.arr64 IW) (p + 1) < rdW (m.arr64 IW) (p + 4) then none
+  else bncK1 n vis p (cR (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (p + 4),
+    rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0] m)
+
+set_option experimental.vcgen true in
+theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
+    (hp : p.lookup "block_nest_ctx" = some blockNestCtx) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis q cvO cvL : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 2)) "block_nest_ctx" [vis, q, cvO, cvL]
+    ⦃fun r s' => LocEq s' s₀ ∧ bncC cR n s₀.mem vis q cvO cvL = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockNestCtx]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      hcR (n + 1) "open_pis_at_fvars_f", nck_spec p hP n, nestHoles_spec p hl n] <;>
+    finish (gen := 20) [bncC, rdW_eq]
+
+/-- **`block_nest_ctx`'s model refines `blockNestCtx`**, from a contract of its `open_pis_at_fvars_f`
+call (`bncW_sim`'s statement). -/
+theorem bncC_sim (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+    {q cvO cvL : Word} {bs : BlockShape} {cvTas : List IConstantVal} (hS : StageR dn vis fe m a)
+    (hq : DecB (fun m => decBS m q.toNat) m bs)
+    (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m)
+    (hcv : PSlR decCVp cvTas cvO cvL m)
+    (hopf : ∀ e : Word, H e → Sim (cR (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (q + 4), e, 0] m)
+      (openPisAtFvarsF (rdW (m.arr64 IW) (q + 4)).toNat (decI e) (0 : Word).toNat) a
+      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x)) :
+    Sim (bncC cR n m vis q cvO cvL) (ConRon.Arena.blockNestCtx fe bs cvTas) a
+      (fun r x m' a' => DecB (fun m => decCtx m (r.headD 0).toNat) m' x.1 ∧
+        decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2 ∧
+        (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m' ∧
+        StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+        CtxIn m' (r.headD 0).toNat (· < iwTop m') ∧ CtxSl m' (r.headD 0).toNat ∧ x.1.hiAt 0 < 2 ^ 64 ∧
+        x.1.params.length + x.1.names.length < 2 ^ 64) := by
+  intro r m' e
+  unfold bncC at e
+  split at e
+  · cases e
+  rename_i hl
+  split at e
+  · cases e
+  rename_i hov
+  obtain ⟨pc, cv0, cvs, rfl, hw, hpb, hcv0, -⟩ := partsPSl_cons hcv hl
+  obtain ⟨htyl, htye⟩ := partsCVType hcv0 (UInt64.toNat_ofNat_of_lt' hpb)
+  obtain ⟨hq', hq9, -⟩ := partsShapeFacts hq hsrc
+  obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords (IWGrow.refl m) hq hq9
+  have hkw := partsShapeK hq' hq9
+  have hkb : bs.k < 2 ^ 64 := by
+    obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hq').1
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have := iwN_rdW hl' (by omega); rw [BlockShape.k, decPL_length _ hg']; exact this.2
+  have hhi : bs.nP + bs.k < 2 ^ 64 := by
+    have := partsAddNoOv hov
+    rw [hnpw, hkw, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hkb] at this
+    have := (rdW (m.arr64 IW) (q + 4) + rdW (m.arr64 IW) (q + 1)).toNat_lt
+    rw [hnpw, hkw] at this; omega
+  rw [hw] at e
+  revert r m' e
+  unfold ConRon.Arena.blockNestCtx
+  dsimp only
+  have h1 := hopf (rdW (m.arr64 EREC) (UInt64.ofNat pc + 3)) htyl
+  rw [show (rdW (m.arr64 IW) (q + 4)).toNat = bs.nP from by rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb],
+    show decI (rdW (m.arr64 EREC) (UInt64.ofNat pc + 3)) = cv0.type from htye,
+    show (0 : Word).toNat = 0 from rfl] at h1
+  refine Sim.bindK (K := bncK1 n vis q) (body := fun r1 m1 => if r1.headD 0 = 0 then none
+      else if r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0 then none
+      else bncK2 n vis (nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0))) rfl (fun _ _ => rfl) h1 ?_
+  rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
+  cases x1 with
+  | none =>
+    have h0 : r1.headD 0 = 0 := hd1
+    simp only [h0, if_true]
+    exact Sim.of_none
+  | some pq =>
+  obtain ⟨fvs, body⟩ := pq
+  obtain ⟨h1', hfv, -⟩ := hd1
+  obtain ⟨hfd, hfb⟩ := hfv
+  simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
+  have g1 : r1.getD 1 0 = r1.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
+  have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
+  rw [g1, g2] at hfd hfb
+  by_cases hov2 : r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0
+  · simp only [hov2, if_true]; exact Sim.of_none
+  simp only [hov2, if_false]
+  have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hk1 : rdW (m1.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
+    rw [← hkw]; simp only [rdW]
+    rw [show (q + 1 : Word).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]
+  have hpk : fvs.length + bs.k < 2 ^ 64 := by
+    have := partsAddNoOv hov2
+    rw [hk1, UInt64.toNat_ofNat_of_lt' hkb] at this
+    have := (r1.tail.tail.headD 0 + UInt64.ofNat bs.k).toNat_lt
+    rw [decHL_length _ hfd]; omega
+  intro r m' e
+  cases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with
+  | none => rw [h2] at e; cases e
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2, bncK2_some] at e
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨hok2, hd2, hS2, hg2, hin2, hsl2⟩ := nckW_ok n ⟨m1, Locals.init []⟩ ⟨m2, Locals.init []⟩ a1 dn vis fe q
+    (r1.tail.headD 0) (r1.tail.tail.headD 0) bs fvs hS1 (hq.grow (decBS_mono _) hg1)
+    (partsHsrc_grow hg1 hq9 hsrc) hfd hfb r2 h2
+  have hrun2 := partsRunOfOk hok2
+  generalize hc : AM.res (bs.nestCtx fvs) a1 = c at hrun2 hd2
+  generalize ha2 : AM.st (bs.nestCtx fvs) a1 = a2 at hrun2 hS2
+  have hnc : c = ⟨bs.memberNames, bs.lps, bs.nP, bs.nIdxs, fvs, bs.resSort, c.lvls⟩ := by
+    have h' := hrun2
+    unfold ConRon.Arena.BlockShape.nestCtx at h'
+    obtain ⟨lv, a', -, h'⟩ := partsBindOk h'
+    simp [StateT.run, pure, StateT.pure, Except.pure] at h'
+    rw [← h'.1]
+  have hhi' : c.hiAt 0 < 2 ^ 64 := by
+    rw [hnc]; simp only [NestCtx.hiAt, BlockShape.memberNames, List.length_map]
+    have : bs.k = bs.members.length := rfl
+    omega
+  cases h3 : nhW n m2 vis (r2.headD 0) with
+  | none => rw [h3] at e; simp [bncK3] at e
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3] at e
+  obtain ⟨holes, a3, hrun3, hR3, hS3, hg3⟩ := nhW_sim n hS2 (hd2.get (decCtx_mono _)) hin2 hsl2 hhi' r3 m3 h3
+  cases holes with
+  | none =>
+    have h0 : r3.headD 0 = 0 := hR3
+    rw [bncK3_none (h := h0)] at e; cases e
+  | some hs =>
+  obtain ⟨h31, hd3, hb3⟩ := hR3
+  rw [bncK3_some (h := by rw [h31]; decide)] at e
+  simp only [Option.some.injEq, Prod.mk.injEq] at e
+  obtain ⟨rfl, rfl⟩ := e
+  refine ⟨(c, hs), a3, ?_, ?_, hd3, hb3, hS3, (hg1.trans hg2).trans hg3, (CtxIn.grow hin2 hg3).2,
+    hsl2.grow hin2 hg3, hhi', ?_⟩
+  · simp only [unwrapOr, StateT.run_bind, pure_bind]
+    simp only [StateT.run_pure, except_ok_bind, hrun2, hrun3]
+    rfl
+  · exact hd2.grow (decCtx_mono _) hg3
+  · rw [hnc]; simp only [BlockShape.memberNames, List.length_map]
+    have : bs.k = bs.members.length := rfl
+    omega
+
+/-- **`block_nest_ctx`'s model, its `open_pis_at_fvars_f` the real call, leaves the walk memos
+alone** (`bncW_mfr`'s). -/
+theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cvL : Word} {r : List Word}
+    (h : bncC (realCall p) n m vis q cvO cvL = some (r, m')) : MFr [] [] m m' := by
+  unfold bncC at h
+  split at h; · cases h
+  split at h; · cases h
+  cases h1 : realCall p (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (q + 4),
+      rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0] m with
+  | none => rw [h1] at h; simp [bncK1] at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at h
+  have f1 := MFr.of_frame (opfF_frame (callW_opfF hOpf h1)) opfA_stage opfC_stage
+  by_cases h0 : r1.headD 0 = 0
+  · rw [bncK1_none n m1 vis q r1 h0] at h; cases h
+  by_cases hov : r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0
+  · rw [bncK1_ov n m1 vis q r1 h0 hov] at h; cases h
+  rw [bncK1_some n m1 vis q r1 h0 hov] at h
+  cases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with
+  | none => rw [h2] at h; simp [bncK2] at h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2, bncK2_some] at h
+  have f2 := f1.trans (pos3_nckW_mfr h2)
+  cases h3 : nhW n m2 vis (r2.headD 0) with
+  | none => rw [h3] at h; simp [bncK3] at h
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3] at h
+  by_cases h30 : r3.headD 0 = 0
+  · rw [bncK3_none m3 (r2.headD 0) r3 h30] at h; cases h
+  rw [bncK3_some m3 (r2.headD 0) r3 h30] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  rw [← h.2]
+  exact f2.trans (pos3_nhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ h3)
 
 section sim
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-include hq hIlpf henv in
+include hq hIlpf henv hOpf hLC hLT in
 /-- **`check_block_positivity`'s model refines `checkBlockPositivity` under `StageC`** (con-ron's
 `checkBlockPositivity_spec`'s preconditions). -/
 theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' : Mem} {a : AState}
@@ -82,14 +270,15 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   obtain ⟨r1, m1⟩ := x1
   rw [h1, cbposK1_some] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (bnc_spec p hP.nck hP.nh hP.bnc n _ vis q cvO cvL) h1
+    (bnc_specC p hP.nck hP.nh hP.bnc (realCall p) (realCall_spec p) n _ vis q cvO cvL) h1
   obtain ⟨⟨c, holes⟩, a1, hrun1, hc1, hho1, hhob1, hS1, hg1, hin1, hsl1, hhi1, hpn1⟩ :=
-    bncW_sim n hS hqd hsrc hcv r1 s1.mem hW1
+    bncC_sim (realCall p) n hS hqd hsrc hcv
+      (fun _ he => Sim.mono (opfSimRA (n := n + 1) hOpf he hS hA) fun _ _ _ _ h => h.1.1) r1 s1.mem hW1
   obtain ⟨c1, ⟨ctxP, holesP⟩, ⟨hctx, hholes, hctxOk, hhw, hpar, -, hnh, -⟩, -⟩ :=
     ConRon.Bridge.Inductives.blockNestCtx_spec fe henv P.shape qP cvTas cvsP hT a a1 (c, holes)
       hC.check ⟨hqP, hcvP⟩ hrun1
   dsimp only at hctx hholes hhw hpar hnh
-  have hP1 : PosMR s1.mem := hPM.fr (bncW_mfr hW1)
+  have hP1 : PosMR s1.mem := hPM.fr (bncC_mfr hOpf hW1)
   have hA1 : AbsOK s1.mem := hk _ (by simp [posKeepCallees]) _ _ _ _ _ h1 hA
   have hC1 : StageC dn vis fe env s1.mem a1 := hC.of_cstep hS1 hA1 c1
   have hU1 : UCtx dn vis fe s1.mem (r1.headD 0) c := ⟨hc1.get (decCtx_mono _), hin1, hsl1⟩
@@ -194,10 +383,10 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   obtain ⟨r6, m6⟩ := x6
   rw [h6, cbpK6_some] at h
   obtain ⟨s6, rfl, -, he6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (eqTrue_specW p hP.eqt (n + 2) _ _ _) h6
+    (eqTrue_specC p hP.eqt (realCall p) (realCall_spec p) (n + 2) _ _ _) h6
   simp only at he6
-  unfold eqTrueW at he6
-  cases hs6 : stubM "lvl_eq_c" s4.mem [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] with
+  rw [eqTrueC_succ] at he6
+  cases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with
   | none => rw [hs6] at he6; simp [eqTrueK] at he6
   | some y6 =>
   obtain ⟨r6', m6'⟩ := y6
@@ -205,17 +394,19 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   simp only [Option.some.injEq, Prod.mk.injEq] at he6
   obtain ⟨hr6, hm6⟩ := he6
   subst hm6
-  obtain ⟨y, a6, hrun6, hS6, hg6, hy6⟩ := lvlEqStub_spec dn vis fe _ _ huH hzH s4.mem s6.mem a4 r6' hs6 hS4
-  have hP6 : PosMR s6.mem := hP4.fr (MFr.ofStub hs6)
-  have hA6 : AbsOK s6.mem := stub_afr hs6 (by decide) hA4
   obtain ⟨namesP, lpsP, paramsP, sortP, hceq, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
   have hfind : ctxP.find? = env.find? := by rw [hceq]
   have hx14 := c2.ext.trans c3.ext
   have hsort' : ConRon.Arena.denoteL a4.store.ls (decI (rdW (s4.mem.arr64 IW) (r1.headD 0 + 9))) =
       some ctxP.sort := by
     rw [hue, hceq]; exact ConRon.Bridge.denoteL_ext hsort hx14
+  obtain ⟨y, a6, hrun6, hC6, hg6, hy6, hA6, -⟩ :=
+    lvlEqC_simC p hq.closed hLC (n + 1) hC4 hA4 _ _ huH hzH _ _ hsort' hz r6' s6.mem hs6
+  have hS6 := hC6.stage
+  have hP6 : PosMR s6.mem :=
+    hP4.fr (MFr.of_frame (run_memFrame hq.closed (by decide) (run_of_callW hs6)).1 coreStageA_stage
+      coreStageC_stage)
   obtain ⟨c5, -⟩ := ConRon.Bridge.Inductives.lvlEq?_crun hC4.check hsort' hz hrun6
-  have hC6 := hC4.of_check hS6 hA6 c5.ok c5.ext
   have hb6 : (r6.headD 0 != 0) = (y == some true) := by
     rw [← hr6]
     simp only [decLvlEq] at hy6
@@ -233,7 +424,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   have hP7 : PosMR s7.mem := hP6.fr (iaaW_mfr hP.abs _ hW7)
   have hOb6 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s6.mem := Nat.le_trans hOb4 hg6.1
   have hx16 := hx14.trans c5.ext
-  obtain ⟨u7, a7, hrun7, hC7, hg7, hA7⟩ := iaaW_simC hq henv hP.abs (r1.headD 0) (r6.headD 0) c
+  obtain ⟨u7, a7, hrun7, hC7, hg7, hA7⟩ := iaaW_simC hq henv hOpf hLC hLT hP.abs (r1.headD 0) (r6.headD 0) c
     (y == some true) hb6 hhi1 (n + 2) hn s6.mem a6 caO caL (r4.headD 0) (r4.tail.headD 0) css outs cssP outsP
     hC6 hA6 (hc1.grow (decCtx_mono _) hg16) ((pos3_cns hcss).grow decCNS_mono (hg1.trans hg16))
     ⟨hO4.grow hg6, Or.inr hOb6⟩ (by rw [hfind]; exact ConRon.Bridge.Inductives.dCtx_ext _ hx16 _ _ hctx)
@@ -280,8 +471,9 @@ end sim
 section census
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-include hq hIlpf henv in
+include hq hIlpf henv hOpf hLC hLT in
 /-- **`check_block_positivity` refines `checkBlockPositivity`** under `StageC` (the knot's core
 calls; con-ron's `checkBlockPositivity_spec`'s preconditions: the parts, the formers and the
 members' constructors denoted, their stored types closed, the index denoting `env`). The shape
@@ -317,7 +509,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 
       ⊤⦄ := by
   refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hP n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
+  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hP n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
     hT hct
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩

@@ -540,6 +540,28 @@ grind_pattern [ind_grind] wsW_step => wsW (n + 1) m p s
 grind_pattern [ind_grind] wsK1_some => wsK1 p s m (some z)
 grind_pattern [ind_grind] wsK2_some => wsK2 p s (some (r2, m2))
 
+/-- **`block_shape_with_sort`'s model, its `lvl_eq_c` call read through `cR`** (`wsW` is the
+stubs' reading, `wsC_stub`). -/
+def wsK1C (cR : CallM) (n : Nat) (p s : Word) (m : Mem) : Option Word → Option (List Word × Mem)
+  | none => none
+  | some z => wsK2 p s (cR n "lvl_eq_c" [s, z] m)
+
+def wsC (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, p, s => wsK1C cR n p s m (pinWordV m 53)
+
+theorem wsC_step (cR : CallM) (n : Nat) (m : Mem) (p s : Word) :
+    wsC cR (n + 1) m p s = wsK1C cR n p s m (pinWordV m 53) := rfl
+theorem wsK1C_some (cR : CallM) (n : Nat) (m : Mem) (p s z : Word) :
+    wsK1C cR n p s m (some z) = wsK2 p s (cR n "lvl_eq_c" [s, z] m) := rfl
+grind_pattern [ind_grind] wsC_step => wsC cR (n + 1) m p s
+grind_pattern [ind_grind] wsK1C_some => wsK1C cR n p s m (some z)
+
+theorem wsC_stub (n : Nat) (m : Mem) (p s : Word) : wsC stubCall n m p s = wsW n m p s := by
+  cases n with
+  | zero => rfl
+  | succ n => rw [wsC_step, wsW_step]; cases pinWordV m 53 <;> rfl
+
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hpw : p.lookup "pin_word" = some pinWordL)
@@ -558,6 +580,21 @@ theorem blockShapeWithSort_spec (n : Nat) (s₀ : St) (q s : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         pinWord_specV p hpw n, stubM_spec p "lvl_eq_c" n, iwAlloc_specW p ha n] <;>
+      finish (gen := 20) [wsWrites, cpyIW]
+
+
+set_option maxHeartbeats 1600000 in
+theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (q s : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_sort" [q, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ wsC cR n s₀.mem q s = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeWithSort]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        pinWord_specV p hpw n, hcR n "lvl_eq_c", iwAlloc_specW p ha n] <;>
       finish (gen := 20) [wsWrites, cpyIW]
 
 end spec
@@ -723,23 +760,27 @@ theorem lvlEq_prop {m : Mem} {r2 : List Word} {f : Word} {x2 : Option Bool}
   | none => intro hf h; simp only at h; rw [← hf, h]; decide
   | some b => cases b <;> (intro hf h; simp only at h; rw [← hf, h]; decide)
 
-theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
-    (h : wsW n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
-    (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m) :
+    (h : wsC cR n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
+    (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m)
+    (hlvl : ∀ (k : Nat) (r2 : List Word) (m2 : Mem), pinW m 0 ≠ 0 →
+      cR k "lvl_eq_c" [s, pinW m 53] m = some (r2, m2) →
+      ∃ x2 a2, (lvlEq? (decI s) (decI (pinW m 53))).run a = .ok (x2, a2) ∧
+        StageR dn vis fe m2 a2 ∧ IWGrow m m2 ∧ decLvlEq m2 r2 x2) :
     ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
       decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       q.toNat + 9 ≤ iwTop m' ∧
       (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
       (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by
   cases n with
-  | zero => simp [wsW] at h
+  | zero => simp [wsC] at h
   | succ n =>
-  rw [wsW_step] at h
+  rw [wsC_step] at h
   cases hpz : pinWordV m 53 with
-  | none => rw [hpz] at h; simp [wsK1] at h
+  | none => rw [hpz] at h; simp [wsK1C] at h
   | some z =>
-  rw [hpz, wsK1_some] at h
+  rw [hpz, wsK1C_some] at h
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hpz
   have hz : z = pinW m 53 := by
@@ -749,13 +790,14 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hfull := hS.1.pins.full hpin0
   have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
   have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
-  cases hrb : stubM "lvl_eq_c" m [s, z] with
+  cases hrb : cR n "lvl_eq_c" [s, z] m with
   | none => rw [hrb] at h; simp [wsK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [hrb, wsK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hdec2⟩ :=
-    lvlEqStub_spec dn vis fe s z hs hzlt m m2 a r2 hrb hS
+    hlvl n r2 m2 hpin0 (by rw [← hz]; exact hrb)
+  rw [← hz] at hrun2
   cases hal : allocW m2 9 with
   | none => rw [hal] at h; simp at h
   | some qm =>
@@ -853,6 +895,19 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   simp only [hrun2, except_ok_bind]
   rw [hprop]
   rfl
+
+theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
+    (h : wsW n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
+    (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m) :
+    ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
+      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      q.toNat + 9 ≤ iwTop m' ∧
+      (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
+      (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by
+  rw [← wsC_stub] at h
+  exact wsC_ok stubCall n dn fe vis m m' a p s r bs h hS hs hstab hp
+    (fun _ r2 m2 h0 e => lvlEqStub_spec dn vis fe s _ hs (hS.1.pins.full h0).lv_lt.2.1 m m2 a r2 e hS)
 
 
 /-- **`block_shape_with_sort` refines `BlockShape.withSort`** (through the master callees
