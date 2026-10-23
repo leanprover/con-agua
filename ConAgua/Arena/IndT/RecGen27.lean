@@ -765,4 +765,266 @@ theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
 
+section ccs
+variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (P : CcsProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+  (vis q fto ftl rd mo ml qo : Word) (bs : BlockShape) (formerTys : List EIdx) (R : ClassRead)
+  (ms : List TargetMajor) (m0 : Mem)
+  {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+  {rdP : ConLeche.ClassRead}
+include hkp henv P
+
+/-- **`classes_ctors`' loop under `StageC`** (twin side: con-ron's `classesCtors_spec`'s list
+induction, the extension after one class from con-ron's `classCtorsOf_spec` on its run). -/
+theorem ccsW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m0) (hR : DecB (fun m => decCR m rd.toNat) m0 R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m0 ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hlp : ClassesLp m0 mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m0.arr64 IW).size + 5 < 2 ^ 64)
+    (hq : qo.toNat = iwTop m0) (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (k : Nat) (hk' : k ≤ 2 ^ 62) :
+    ∀ (m m' : Mem) (a : AState) (c : Word) (acc : List (List ClassCtor)) (ps : List Nat)
+      (lP : List ConLeche.TargetMajor),
+    ccsW p k m vis q fto ftl rd mo ml qo c = some m' → StageC dn vis fe env m a → AbsOK m → IWGrow m0 m →
+    KeepW m0 m → iwTop m0 + ml.toNat ≤ iwTop m → c ≤ ml → decNL m qo.toNat c.toNat = some ps →
+    FA2 (fun p x => StabA (iwTop m0 + ml.toNat) (fun m => decLH m (decPL m (decCC m)) p) m x) ps acc →
+    RcMR m →
+    dShape a.store bs = some pP → Frontend.denoteEList a.store formerTys = some formerTysP →
+    ConRon.Bridge.Inductives.dClassRead a.store R = some rdP → ms.mapM (dMajor a.store) = some MsP →
+    (ms.drop c.toNat).mapM (dMajor a.store) = some lP →
+    ∃ xss a', (ConRon.Arena.classesCtors V fe bs formerTys R ms c.toNat (ms.drop c.toNat)).run a =
+        .ok (xss, a') ∧
+      StageC dn vis fe env m' a' ∧ IWGrow m0 m' ∧ KeepW m0 m' ∧ iwTop m0 + ml.toNat ≤ iwTop m' ∧ RcMR m' ∧
+      AbsOK m' ∧
+      ∃ ps', decNL m' qo.toNat ml.toNat = some ps' ∧
+        FA2 (fun p x => StabA (iwTop m0 + ml.toNat) (fun m => decLH m (decPL m (decCC m)) p) m' x) ps'
+          (acc ++ xss) := by
+  have hms0 : decPL (truncM m0) (decTM (truncM m0)) mo.toNat ml.toNat = some ms := hms
+  have hlen := decPL_length _ hms0
+  have hsz0 : (m0.arr64 IW).size < 2 ^ 64 := by omega
+  induction k with
+  | zero => intro m m' a c acc ps lP h; simp [ccsW] at h
+  | succ k ih =>
+  intro m m' a c acc ps lP h hC hA hg hk htop hcm hps hfa hP hsh hftP hrdP hmsP hlP
+  have hS := hC.stage
+  have hck : c.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hcm
+  by_cases hc : c < ml
+  rotate_left
+  · rw [ccsW_exit (h := hc)] at h
+    simp only [Option.some.injEq] at h; subst h
+    have h1 : ml.toNat ≤ c.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hc
+    have hce : c.toNat = ml.toNat := by omega
+    rw [List.drop_eq_nil_of_le (by omega)]
+    refine ⟨[], a, ?_, hC, hg, hk, htop, hP, hA, ps, by rw [← hce]; exact hps, by simpa using hfa⟩
+    simp only [ConRon.Arena.classesCtors]; rfl
+  have hcl : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hc
+  have := ml.toNat_lt
+  have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+  rw [ccsW_step (h := hc)] at h
+  -- the class record and its constructors
+  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hms0 c.toNat hcl
+  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
+  have hrd0 := iwN_rdW_at (w := mo) (k := c.toNat) hv0 hsz0
+  have hnc : mo + UInt64.ofNat c.toNat = mo + c := by simp
+  rw [hnc] at hrd0
+  have hmc : (mo + c).toNat < iwTop m0 := by rw [UInt64.toNat_add]; simp; omega
+  have hrd : rdW (m.arr64 IW) (mo + c) = UInt64.ofNat v := by rw [rdW_grow hg hmc, hrd0.1]
+  have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd0.2
+  have hTM0 : DecB (fun m => decTM m v) m0 ms[c.toNat] := by rw [← hlen] at hcl; exact hdv
+  obtain ⟨o, l, ho, hl, hv7, hcts⟩ := decTM_ctors hTM0
+  have r6 := iwN_rdW_at (w := UInt64.ofNat v) (k := 6) (by rw [hvT]; exact ho) hsz0
+  have r7 := iwN_rdW_at (w := UInt64.ofNat v) (k := 7) (by rw [hvT]; exact hl) hsz0
+  simp only [show UInt64.ofNat 6 = (6 : Word) from rfl, show UInt64.ofNat 7 = (7 : Word) from rfl] at r6 r7
+  have hv6t : (UInt64.ofNat v + 6 : Word).toNat < iwTop m0 := by rw [UInt64.toNat_add, hvT]; simp; omega
+  have hv7t : (UInt64.ofNat v + 7 : Word).toNat < iwTop m0 := by rw [UInt64.toNat_add, hvT]; simp; omega
+  rw [hrd, rdW_grow hg hv6t, rdW_grow hg hv7t, r6.1, r7.1] at h
+  have hoT : (UInt64.ofNat o : Word).toNat = o := UInt64.toNat_ofNat_of_lt' r6.2
+  have hlT : (UInt64.ofNat l : Word).toNat = l := UInt64.toNat_ofNat_of_lt' r7.2
+  have hcts' : DecB (fun m => decPL m (decCN m) (UInt64.ofNat o : Word).toNat (UInt64.ofNat l : Word).toNat) m0
+      ms[c.toNat].ctors := by rw [hoT, hlT]; exact hcts
+  have hlp0 := hlp c.toNat hcl v o l hv0 ho hl
+  have hol : (UInt64.ofNat o : Word).toNat + (UInt64.ofNat l : Word).toNat < 2 ^ 64 := by
+    rcases decB_decPL_bound hcts with h0 | h0
+    · rw [hoT, hlT, h0]; omega
+    · rw [hoT, hlT]; have := (rdW (m0.arr64 CTL) 200).toNat_lt; simp only [iwTop] at h0; omega
+  rw [List.drop_eq_getElem_cons (by rw [hlen]; omega)] at hlP
+  obtain ⟨mP, lP', rfl, hmP, hlP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hlP
+  have hmc := (ConRon.Bridge.Inductives.dMajor_inv hmP).2.2.2.2.2.1
+  -- `class_ctors_of`
+  cases c1 : callW p k "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat o, UInt64.ofNat l] m with
+  | none => rw [c1] at h; simp [ccsK1] at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [c1, ccsK1_some] at h
+  cases k with
+  | zero =>
+    obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_exec_zero p _ _ _) c1
+    exact hf.elim
+  | succ k' =>
+  obtain ⟨s1, hs1, -, hok1, hC1, hg1, hd1, hP1, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (classCtorsOf_refinesC hkp henv P.toCosProg (k' + 1) (by omega) _ a dn fe vis q fto ftl rd mo ml c
+      (UInt64.ofNat o) (UInt64.ofNat l) bs formerTys R ms ms[c.toNat].ctors hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft)
+      (Nat.le_trans hftb hg.1) (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg)
+      hmsb (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) (hlp0.grow hcts' hsz0 hg hk) hnpk
+      (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs) c1
+  simp only at hs1 hC1 hg1 hd1 hP1 hA1; subst hs1
+  have run1 := AM.run_of_ok _ a hok1
+  obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorsOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
+    bs pP formerTys formerTysP R rdP ms MsP c.toNat hformer hMs ms[c.toNat].ctors mP.ctors a _ _ hC.check
+    ⟨hsh, hftP, hrdP, hmsP, hmc⟩ run1
+  generalize hx1 : AM.res (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat ms[c.toNat].ctors) a = x1 at run1 hd1
+  generalize ha1 : AM.st (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat ms[c.toNat].ctors) a = a1 at run1 hC1 cs1
+  have hS1 := hC1.stage
+  have hk1 := callW_keepW c1
+  -- `rec2`
+  cases c2 : callW p (k' + 1) "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with
+  | none => rw [c2] at h; simp [ccsK2] at h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [c2] at h
+  obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (rec2_specW p P.ha (k' + 1) P.r2 _ (r1.headD 0) (r1.tail.headD 0)) c2
+  simp only at hs2 hw2; subst hs2
+  have hsz1 := hS1.2.2.2.1
+  obtain ⟨hr2, hget2, hg2, hf2, ht2, hroom2⟩ := recW_post hw2 hS1.2.2.2.2.2 hsz1 rfl
+  have hS2 := stage_frame_iw hS1 hf2 (by simp at ht2 hroom2; omega)
+  have hk2 : KeepW s1.mem s2.mem := KeepW.of_mfr (MFr.of_iw hf2)
+  have hP2 := hP1.fr (MFr.of_iw hf2)
+  have hAb2 := AFr.iw hf2 hA1
+  have hC2 := hC1.of_pstep hS2 hAb2 (PStep.refl hC1.check.state)
+  have hb0 : iwTop m0 + ml.toNat ≤ iwTop m := htop
+  have hhdr : StabA (iwTop m0 + ml.toNat) (fun m => decLH m (decPL m (decCC m)) (r2.headD 0).toNat) s2.mem x1 := by
+    rw [hr2]
+    have hw0 : iwN s2.mem (rdW (s1.mem.arr64 CTL) 200).toNat = some (r1.headD 0).toNat := by
+      have e0 := hget2 0 (by simp); rw [Nat.add_zero] at e0
+      simp only [iwN, nat?, iwA, e0]; rfl
+    have hw1 : iwN s2.mem ((rdW (s1.mem.arr64 CTL) 200).toNat + 1) = some (r1.tail.headD 0).toNat := by
+      have e1 := hget2 1 (by simp)
+      simp only [iwN, nat?, iwA, e1]; rfl
+    have ht2' : iwTop s2.mem = iwTop s1.mem + 2 := by simpa using ht2
+    exact stabA_decLH hw0 hw1 (Nat.le_trans hb0 hg1.1) (by rw [ht2']; exact Nat.le_refl _)
+      ((hd1.mono (by omega)).grow (AgreeA.of_grow hg2))
+  -- the slot write
+  have hTm := hS.lt64 (Nat.le_refl (iwTop m))
+  have hqc : (qo + c).toNat = qo.toNat + c.toNat := by rw [UInt64.toNat_add]; simp <;> omega
+  have hqb : (qo + c).toNat < (s2.mem.arr64 IW).size := by
+    have := hS2.2.1; have := hg1.1; have := hg2.1; omega
+  rw [ccsK2_ok (h := hqb)] at h
+  have hg12 := hg1.trans hg2
+  have hS3 := hS2.set_iw (qo + c) (r2.headD 0)
+  have hAb3 := set64IW_afr s2.mem (qo + c) (r2.headD 0) hAb2
+  have hC3 := hC2.of_pstep hS3 hAb3 (PStep.refl hC2.check.state)
+  have hg3 : IWGrow m0 (s2.mem.set64 IW (qo + c) (r2.headD 0)) := ((hg.trans hg12)).set_iw _ _ (by omega)
+  have hk3 : KeepW m0 (s2.mem.set64 IW (qo + c) (r2.headD 0)) := (hk.trans (hk1.trans hk2)).set64 _ _ _
+  have hA3 : AgreeA (iwTop m0 + ml.toNat) s2.mem (s2.mem.set64 IW (qo + c) (r2.headD 0)) :=
+    AgreeA.set_iw _ _ (by omega)
+  have hps2 : decNL s2.mem qo.toNat c.toNat = some ps := by rw [decNL_grow hg12 (by omega)]; exact hps
+  have hps3 := decNL_write s2.mem qo.toNat c.toNat (qo + c) (r2.headD 0) ps hqc (by omega) hps2
+  have hfa3 : FA2 (fun p x => StabA (iwTop m0 + ml.toNat) (fun m => decLH m (decPL m (decCC m)) p)
+      (s2.mem.set64 IW (qo + c) (r2.headD 0)) x) (ps ++ [(r2.headD 0).toNat]) (acc ++ [x1]) :=
+    FA2.snoc (FA2.imp (fun _ _ hq => (hq.grow (AgreeA.of_grow hg12)).grow hA3) hfa) (hhdr.grow hA3)
+  obtain ⟨xss, a', run2, hC', hg', hk', ht', hP', hA', ps', hps', hfa'⟩ := ih (by omega) _ m' a1 (c + 1)
+    (acc ++ [x1]) (ps ++ [(r2.headD 0).toNat]) lP' h hC3 hAb3 hg3 hk3
+    (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg12.1)
+    (UInt64.le_iff_toNat_le.mpr (by omega)) (by rw [hc1]; exact hps3) hfa3 (hP2.fr (MFr.set_iw _ _ _))
+    (ConRon.Bridge.Inductives.dShape_ext cs1.ext _ _ hsh) (denoteEList_ext cs1.ext _ _ hftP)
+    (ConRon.Bridge.Inductives.dClassRead_ext cs1.ext _ _ hrdP)
+    (ConRon.Bridge.Inductives.dMajor_ext.list cs1.ext _ _ hmsP)
+    (by rw [hc1]; exact ConRon.Bridge.Inductives.dMajor_ext.list cs1.ext _ _ hlP')
+  refine ⟨x1 :: xss, a', ?_, hC', hg', hk', ht', hP', hA', ps', hps', by simpa using hfa'⟩
+  rw [List.drop_eq_getElem_cons (by omega), ConRon.Arena.classesCtors]
+  rw [hc1] at run2
+  simp only [StateT.run_bind, run1, except_ok_bind, run2]
+  rfl
+
+end ccs
+
+section ccsf
+variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (P : CcsProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+include hkp henv P
+
+/-- `ccsW_okC` from the fresh result slice. -/
+theorem ccsF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml : Word} {r : List Word}
+    {bs : BlockShape} {formerTys : List EIdx} {R : ClassRead} {ms : List TargetMajor}
+    (h : ccsF p n m vis q fto ftl rd mo ml = some (r, m')) (hC : StageC dn vis fe env m a)
+    (hA : AbsOK m)
+    (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hR : DecB (fun m => decCR m rd.toNat) m R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hlp : ClassesLp m mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64)
+    (hP : RcMR m)
+    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+    {rdP : ConLeche.ClassRead}
+    (hsh : dShape a.store bs = some pP)
+    (hftP : Frontend.denoteEList a.store formerTys = some formerTysP)
+    (hrdP : ConRon.Bridge.Inductives.dClassRead a.store R = some rdP)
+    (hmsP : ms.mapM (dMajor a.store) = some MsP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
+    ∃ xss a', (ConRon.Arena.classesCtors V fe bs formerTys R ms 0 ms).run a = .ok (xss, a') ∧
+      StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
+      SPLA (iwTop m) (fun m p => decLH m (decPL m (decCC m)) p) m' (r.headD 0).toNat (r.tail.headD 0).toNat xss ∧
+      RcMR m' ∧ AbsOK m' := by
+  rw [ccsF_eq] at h
+  cases hal : allocW m ml with
+  | none => rw [hal] at h; cases h
+  | some x =>
+  obtain ⟨qo, m1⟩ := x
+  rw [hal, ccsK3_some] at h
+  cases hl : ccsW p (n + 1) m1 vis q fto ftl rd mo ml qo 0 with
+  | none => rw [hl] at h; cases h
+  | some m2 =>
+  rw [hl, ccsK4_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hC.stage
+  have hf1 := allocW_mfr hal
+  have hA1 := allocW_afr hal hA
+  obtain ⟨xss, a', run, hC', hg', -, ht', hP', hA', ps', hps', hfa'⟩ := ccsW_okC hkp henv P dn fe vis q fto ftl rd
+    mo ml qo bs formerTys R ms m hbs hft hftb hR hms hmsb hlp hnpk hsz5 hq hformer hMs (n + 1) hn m1 m2 a 0
+    [] [] MsP hl (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1
+    (KeepW.of_mfr hf1) (by omega) UInt64.zero_le (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP
+    (by simpa using hmsP)
+  simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hfa'
+  refine ⟨xss, a', run, hC', hg', ⟨.inr (by simp; omega), by simp; omega, ps', hps',
+    FA2.imp (fun _ _ hq => hq.mono (by omega)) hfa'⟩, hP', hA'⟩
+
+end ccsf
+
+/-- **`classes_ctors` refines `classesCtors`** under `StageC` (the knot's core calls; the inputs'
+denotations and scoping as con-ron's `classesCtors_spec` asks). -/
+@[refines ConRon.Arena.classesCtors]
+theorem classesCtors_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
+    (henv : ConLeche.EnvWF env) (P : CcsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml : Word) (bs : BlockShape)
+    (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
+    (hbs : BSOK s₀.mem q.toNat bs) (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem) (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hlp : ClassesLp s₀.mem mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
+    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+    {rdP : ConLeche.ClassRead}
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hrdP : ConRon.Bridge.Inductives.dClassRead a₀.store R = some rdP)
+    (hmsP : ms.mapM (dMajor a₀.store) = some MsP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "classes_ctors" [vis, q, fto, ftl, rd, mo, ml]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classesCtors V fe bs formerTys R ms 0 ms) a₀ ∧
+      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classesCtors V fe bs formerTys R ms 0 ms) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      SPLA (iwTop s₀.mem) (fun m p => decLH m (decPL m (decCC m)) p) s'.mem (r.headD 0).toNat
+        (r.tail.headD 0).toNat (AM.res (ConRon.Arena.classesCtors V fe bs formerTys R ms 0 ms) a₀) ∧
+      RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
+  cases n with
+  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  | succ n =>
+  refine triple_post (ccs_spec p P.ha P.ccs n s₀ vis q fto ftl rd mo ml) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨xss, a', run, hC', hg, hd, hP', hA'⟩ := ccsF_okC hkp henv P dn fe n (by omega) hm hC hA hbs hft
+    hftb hR hms hmsb hlp hnpk hsz5 hP hsh hftP hrdP hmsP hformer hMs
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
+
 end L.Ind
