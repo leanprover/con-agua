@@ -35,6 +35,17 @@ def grcRcCallees : List FnName :=
   ["class_gen_prefix_binders", "class_rec_tys_ok", "gen_rec_check_former_tys_c", "struct_elim_level",
     "class_fe_r", "flush_caches", "class_recs_rules_ok", "gen_rec_check_pop_all"]
 
+private theorem grc_mapM_mem {α β : Type} {f : α → Option β} :
+    ∀ {l : List α} {l' : List β}, l.mapM f = some l' → ∀ x ∈ l, ∃ y, f x = some y
+  | [], _, _, _, hx => absurd hx List.not_mem_nil
+  | a :: l, _, h, x, hx => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨y, hy, ys, hys, -⟩ := h
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact ⟨y, hy⟩
+    · exact grc_mapM_mem hys x hx
+
 section parts
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (hIlpf : IlpfF p)
 
@@ -409,9 +420,26 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [c5', grpB5_some] at h
-  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hftc5, hftcb5⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (genRecCheckFormerTysC_refines P.cft P.gftc n _ a3 dn vis fe cO cL _ _ cvTas ms2 hS3
-      (hcv.grow (fun q => OMono.decCVp q) hg13) (hms2.grow (fun q => decTM_mono q) hg3)) c5'
+  have hms3P := ConRon.Bridge.Inductives.dMajor_ext.list c5.ext _ _ hms2P
+  have hcv3P := ConRon.Bridge.Inductives.dExt_denoteCV.list (c4.trans c5).ext _ _ hcvTP
+  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hftc5, hftcb5, -⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (genRecCheckFormerTysC_refinesJ P.cft P.gftc n ⟨s3.mem, Locals.init []⟩ a3 dn vis fe cO cL _ _ cvTas ms2 hS3
+      (hcv.grow (fun q => OMono.decCVp q) hg13) (hms2.grow (fun q => decTM_mono q) hg3)
+      (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a3.store a'.store)
+      (fun _ _ _ hJ hf hS' => ⟨hJ.1.of_pstep hS' (hJ.2.1.iw hf) (PStep.refl hJ.1.check.state), hJ.2.1.iw hf,
+        hJ.2.2⟩)
+      (fun k m0 m1 a' mp M _ hJ hS' hM' hM hdcv hol c1 => by
+        obtain ⟨hCm, hAm, hxm⟩ := hJ
+        obtain ⟨s1, rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
+          (classFormerTy_spec p P.cft (realCall p) (realCall_spec p) k _ vis cO cL mp) c1
+        obtain ⟨x, a1, hrun, hS1, hg1, hd, hAF⟩ := cftW_ok (realCall p) (IlpRd.realC hIlpf hCm) hW hS' hM hdcv hol
+        obtain ⟨MP, hMP⟩ := grc_mapM_mem hms3P M hM'
+        obtain ⟨c, -⟩ := ConRon.Bridge.Inductives.classFormerTy_spec fe cvTas cvTasP M MP a' a1 x hCm.check
+          ⟨ConRon.Bridge.Inductives.dExt_denoteCV.list hxm _ _ hcv3P,
+            ConRon.Bridge.Inductives.dMajor_ext hxm _ _ hMP⟩ hrun
+        have hA1 := hAF hAm
+        exact ⟨x, a1, hrun, hS1, hg1, hd, hCm.of_cstep hS1 hA1 c, hA1, hxm.trans c.ext⟩)
+      ⟨hC3, hA3, ConRon.Arena.Ext.refl _⟩) c5'
   simp only at hs5 hS5 hg5 hftc5 hftcb5; subst hs5
   have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) c5' hP3
   have hrun5 := AM.run_of_ok _ a3 hok5
