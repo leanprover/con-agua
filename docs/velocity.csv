@@ -237,3 +237,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,120,25,classRecTyOk/classRecTysOk under StageC; core write set; StageC core entries
 2026-10-23,indstaget,claude-opus-5-5,60,20,decl-side census links moved to StageT/C (8 targets); tpt/tmp over CallM; stagec-targets.txt
 2026-10-23,indstaget,claude-opus-5-5,150,30,classRuleOk/classRulesOk/classRecsRulesOk + (helper tpt) targetPinTys/targetMajorPins/classMajors under StageC
+2026-10-23,compproofD,claude-opus-5-5,210,45,compopt D (+C parts): leaf locals/args in 6 registers, frameless leaves, direct returns; proved (Inv location map, ghost-state returns); Init 418->358G instr
