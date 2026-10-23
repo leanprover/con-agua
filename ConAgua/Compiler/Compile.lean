@@ -297,7 +297,15 @@ structure Ctx where
   sites: a call sets only the callee's results, and the caller zeroes the locals it reads past
   them. -/
   nrt : NTree := .leaf
+  /-- Locals kept in registers (leaf functions only). -/
+  alloc : List (Var × Reg64) := []
   deriving Repr
+
+/-- Where local `x` lives: its register, or its frame slot. -/
+def Ctx.loc (ctx : Ctx) (x : Var) : RegOrMem .W64 :=
+  match ctx.alloc.lookup x with
+  | some r => .reg (.low r .W64)
+  | none => .mem (mb .rsp (8 * x))
 
 /-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
 `1 … 9`) of `path` is `Path.ch path d = 10 * path + d`, so a position prints as its sequence of
@@ -361,7 +369,7 @@ def fitsImm32 (w : Word) : Bool := -2147483648 ≤ w.toInt64.toInt && w.toInt64.
 
 /-- The operand that reads `e` without code, if there is one. -/
 def simpleOp (ctx : Ctx) : Expr → Option (Operand .W64)
-  | .var x => some (oM (mb .rsp (8 * x)))
+  | .var x => some (.regOrMem (ctx.loc x))
   | .glob g => some (oM (mb .r15 (ctx.tab.globOff g)))
   | .len8 a => some (oM (mb .r15 (ctx.tab.len8 a)))
   | .len64 a => some (oM (mb .r15 (ctx.tab.len64 a)))
@@ -409,10 +417,19 @@ def cmpSimple (ctx : Ctx) (b : Expr) : Option Program :=
   | some o => some [i64 (.cmp (.reg (rr .rax)) o)]
   | none => (loadInto ctx .rcx b).map (· ++ [i64 (.cmp (.reg (rr .rax)) (oR .rcx))])
 
+/-- `cmp r, b` for a register local `a` and a simple `b`: no move into `rax`. -/
+def cmpReg (ctx : Ctx) (a b : Expr) : Option Program :=
+  match a with
+  | .var x =>
+    match ctx.loc x, simpleOp ctx b with
+    | .reg r, some o => some [i64 (.cmp (.reg r) o)]
+    | _, _ => none
+  | _ => none
+
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
   | .const w, _ => [movRI .rax w]
-  | .var x, _ => [movRM .rax (mb .rsp (8 * x))]
+  | .var x, _ => [i64 (.mov (.reg (rr .rax)) (.regOrMem (ctx.loc x)))]
   | .bin op a b, t =>
     match binSimple ctx op b with
     | some code => compileE ctx a t ++ code
@@ -432,6 +449,10 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
   | .cmpw op a b, t =>
+    match cmpReg ctx a b with
+    | some code => code ++
+      [movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+    | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
       [movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
@@ -454,6 +475,9 @@ def CondCode.neg : CondCode → CondCode
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
 def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
+    match cmpReg ctx a b with
+    | some code => code ++ [jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
+    | none =>
     match cmpSimple ctx b with
     | some code => compileE ctx a t ++ code ++
       [jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
@@ -474,7 +498,35 @@ def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Pro
 /-- Evaluate the arguments into temporaries `i, i+1, …`. -/
 def compileArgs (ctx : Ctx) : Nat → List Expr → Program
   | _, [] => []
-  | i, e :: es => compileE ctx e i ++ [movMR (ctx.tmp i) .rax] ++ compileArgs ctx (i + 1) es
+  | i, e :: es =>
+    (match simpleOp ctx e with
+     | some (.imm k) => [i64 (.mov (.mem (ctx.tmp i)) (.imm k))]
+     | some (.regOrMem (.reg r)) => [i64 (.mov (.mem (ctx.tmp i)) (.regOrMem (.reg r)))]
+     | _ => compileE ctx e i ++ [movMR (ctx.tmp i) .rax]) ++ compileArgs ctx (i + 1) es
+
+/-- Does `e` read register `r` (a local kept there)? -/
+def Expr.readsReg (ctx : Ctx) (r : Reg64) : Expr → Bool
+  | .var x => ctx.alloc.lookup x == some r
+  | .bin _ a b | .cmpw _ a b => Expr.readsReg ctx r a || Expr.readsReg ctx r b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.readsReg ctx r i
+  | _ => false
+
+/-- `return es` with each value computed straight into its result register (no temporaries), when
+no value reads a result register written before it; then zeroes up to `n`. -/
+def retDirect (ctx : Ctx) (es : List Expr) (n : Nat) : Option Program :=
+  if n ≤ maxRes ∧ es.length ≤ n then
+    -- result 0 is `rax`, which computing any value clobbers: it goes last
+    let order := (List.range es.length).drop 1 ++ (List.range es.length).take 1
+    let hazard := (List.range order.length).any fun a => (List.range order.length).any fun b =>
+      a < b && Expr.readsReg ctx (resReg order[a]!) (es[order[b]!]!)
+    if hazard then none else
+    some (order.flatMap (fun i =>
+        let e := es[i]!
+        match loadInto ctx (resReg i) e with
+        | some code => code
+        | none => compileE ctx e 0 ++ (if i == 0 then [] else [movRR (resReg i) .rax])) ++
+      ((List.range n).drop es.length).map fun i => movRI (resReg i) 0)
+  else none
 
 /-- Decrement the fuel counter; leave through `ca_exhausted` if it was zero. -/
 def burnFuel : Program :=
@@ -504,18 +556,34 @@ def storeRes (tab : Tab) : List Var → Nat → Program
 
 /-- `x := x op k` as one read-modify-write instruction on the frame slot (`op` add, sub, and, or,
 xor; `k` an imm32 constant). -/
-def setInPlace (x : Var) : Expr → Option Directive
+def setInPlace (ctx : Ctx) (x : Var) : Expr → Option Directive
   | .bin op (.var y) (.const k) =>
-    if y == x && fitsImm32 k then aluDirect op (.mem (mb .rsp (8 * x))) (.imm (.int64 k.toInt64))
+    if y == x && fitsImm32 k then aluDirect op (ctx.loc x) (.imm (.int64 k.toInt64))
     else none
   | _ => none
+
+/-- The argument registers: a call with at most 9 arguments passes argument `i` in `argRegs[i]`
+(more: in the caller's temporaries, through `rsi`). A caller is never a leaf, so it keeps no locals
+in registers, and `compileE` touches only `rax`/`rcx`/`rdx`: the registers already loaded survive
+the later arguments. -/
+def argRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+
+def compileRegArgs (ctx : Ctx) : List Reg64 → List Expr → Program
+  | r :: rs, e :: es =>
+    (match loadInto ctx r e with
+     | some code => code
+     | none => compileE ctx e 0 ++ [movRR r .rax]) ++ compileRegArgs ctx rs es
+  | _, _ => []
 
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e =>
-    match setInPlace x e with
-    | some d => [d]
-    | none => compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]
+    match setInPlace ctx x e, ctx.loc x, simpleOp ctx e, e with
+    | some d, _, _, _ => [d]
+    | none, .reg r, some o, _ => [i64 (.mov (.reg r) o)]
+    | none, .reg r, none, .const w => [i64 (.mov (.reg r) (.imm (.int64 w.toInt64)))]
+    | none, .mem m, some (.imm k), _ => [i64 (.mov (.mem m) (.imm k))]
+    | none, l, _, _ => compileE ctx e 0 ++ [i64 (.mov l (oR .rax))]
   | .st8 a i e =>
     (match loadInto ctx .rdx e with
      | some code => compileE ctx i 0 ++ code
@@ -544,54 +612,131 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
       compileS { ctx with brk := ctx.lbl path "X" } (path.ch 6) s ++ burnFuel ++
       [jmpL (ctx.lbl path "H"), .label (ctx.lbl path "X")]
   | .brk => [jmpL ctx.brk]
-  | .ret es => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.nr ++ [jmpL ctx.retL]
+  | .ret es =>
+    match retDirect ctx es ctx.nr with
+    | some code => code ++ [jmpL ctx.retL]
+    | none => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.nr ++ [jmpL ctx.retL]
   | .call xs f args =>
-    compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))] ++ burnFuel ++
+    (if args.length ≤ argRegs.length then compileRegArgs ctx argRegs args
+     else compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))]) ++ burnFuel ++
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
        ] ++ storeRes ctx.tab (xs.take (nrOf ctx.nrt ctx.tab f)) 0 ++ zeroVars (xs.drop (nrOf ctx.nrt ctx.tab f))
   | .abort => [jmpL errorL]
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
 
-/-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
-def copyParams : Nat → Nat → Program
-  | _, 0 => []
-  | i, n + 1 => [movRM .rax (mb .rsi (8 * i)), movMR (mb .rsp (8 * i)) .rax] ++ copyParams (i + 1) n
+/-- Copy parameter `i` from `[rsi + 8i]` to its local (a register local straight from memory). -/
+def copyParam (ctx : Ctx) (i : Nat) : Program :=
+  match ctx.loc i with
+  | .reg r => [i64 (.mov (.reg r) (oM (mb .rsi (8 * i))))]
+  | l => [movRM .rax (mb .rsi (8 * i)), i64 (.mov l (oR .rax))]
 
-/-- Zero `n` frame slots from `j` on. -/
-def zeroLocals : Nat → Nat → Program
-  | _, 0 => []
-  | j, n + 1 => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0)) :: zeroLocals (j + 1) n
+/-- Copy the `n` parameters; the one kept in `rsi` (the pointer) last. -/
+def copyParams (ctx : Ctx) (n : Nat) : Program :=
+  let ps := List.range n
+  let inRsi := fun i => ctx.alloc.lookup i == some .rsi
+  (ps.filter (!inRsi ·) ++ ps.filter inRsi).flatMap (copyParam ctx)
 
-/-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
-return address and `rsi` at the arguments. It sets its first `Stmt.nret fd.body` results; `t`
-holds every function's count (`Prog.nrt`), for the call sites. -/
+/-- Register convention (`nparams ≤ 9`): a parameter kept in a register is already in its argument
+register (`leafAlloc`); the others are stored to their frame slots. -/
+def copyRegParams (ctx : Ctx) (n : Nat) : Program :=
+  ((List.range n).zip argRegs).flatMap fun (i, r) =>
+    match ctx.loc i with
+    | .reg r' => if r' == rr r then [] else [i64 (.mov (.reg r') (oR r))]
+    | l => [i64 (.mov l (oR r))]
+
+/-- Zero `n` locals from `j` on. -/
+def zeroLocals (ctx : Ctx) : Nat → Nat → Program
+  | _, 0 => []
+  | j, n + 1 => i64 (.mov (ctx.loc j) (oI 0)) :: zeroLocals ctx (j + 1) n
+
+/-! ### Register allocation for leaf functions -/
+
+/-- Does the statement call? -/
+def Stmt.calls : Stmt → Bool
+  | .seq s t | .ite _ s t => Stmt.calls s || Stmt.calls t
+  | .while _ s => Stmt.calls s
+  | .call .. => true
+  | _ => false
+
+def Expr.uses (w : Nat) (acc : Array Nat) : Expr → Array Nat
+  | .var x => acc.modify x (· + w)
+  | .bin _ a b | .cmpw _ a b => Expr.uses w (Expr.uses w acc a) b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.uses w acc i
+  | _ => acc
+
+def Cond.uses (w : Nat) (acc : Array Nat) : Cond → Array Nat
+  | .cmp _ a b => Expr.uses w (Expr.uses w acc a) b
+  | .and p q | .or p q => Cond.uses w (Cond.uses w acc p) q
+  | .not p => Cond.uses w acc p
+
+/-- Uses of each local, a use inside `k` loops weighing `8^k`. -/
+def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
+  | .set x e => Expr.uses w (acc.modify x (· + w)) e
+  | .st8 _ i e | .st64 _ i e => Expr.uses w (Expr.uses w acc i) e
+  | .seq s t => Stmt.uses w (Stmt.uses w acc s) t
+  | .ite c s t => Stmt.uses w (Stmt.uses w (Cond.uses w acc c) s) t
+  | .while c s => Stmt.uses (8 * w) (Cond.uses (8 * w) acc c) s
+  | .ret es | .call _ _ es => es.foldl (Expr.uses w) acc
+  | .gset _ e => Expr.uses w acc e
+  | _ => acc
+
+def allocRegs : List Reg64 := [.rbx, .r12, .r13, .rdi, .r8, .r9, .r10, .r11, .rsi]
+
+/-- The most used locals of a leaf function, in registers. -/
+def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
+  if Stmt.calls fd.body then [] else
+  let u := Stmt.uses 1 (Array.replicate fd.nlocals 0) fd.body
+  let u := (List.range fd.nparams).foldl (fun a i => a.modify i (· + 1)) u
+  let ranked := ((List.range fd.nlocals).filter (fun x => u[x]! > 0)).mergeSort
+    (fun x y => u[x]! > u[y]! || (u[x]! == u[y]! && x ≤ y))
+  let chosen := ranked.take allocRegs.length
+  if fd.nparams ≤ argRegs.length then
+    let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
+    let free := [Reg64.rbx, .r12, .r13, .rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r => !ps.any (·.2 == r)
+    ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
+  else chosen.zip allocRegs
+
+def usesFrame (code : Program) : Bool :=
+  code.any fun d => ((reprStr d).splitOn "rsp").length > 1
+
+/-- A function: stack check, frame, parameters, body, epilogue. -/
 def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
   let F := frameWords fd
-  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t }
+  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
+                     alloc := leafAlloc fd }
+  let params := if fd.nparams ≤ argRegs.length then copyRegParams ctx fd.nparams
+    else copyParams ctx fd.nparams
+  let body := params ++ zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
+    compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
+  if !Stmt.calls fd.body && !usesFrame body then
+    [.label (fnL f)] ++ body ++ [i64 .ret]
+  else
   [.label (fnL f),
    movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
-   i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++
-  copyParams 0 fd.nparams ++ zeroLocals fd.nparams (fd.nlocals - fd.nparams) ++
-  compileS ctx 0 fd.body ++
-  [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL,
-   i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+   i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ body ++
+  [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
 /-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves
 `rbp`, `r14`, `r15`, switches to the L stack `[T]`, and calls `entry` with the arguments at
 `T + Tab.args`; `entry` sets `c` results, the trampoline zeroes the others up to `tab.nres`
 (`ca_ok`). -/
-def trampoline (tab : Tab) (entry : FnName) (c : Nat) : Program :=
+def trampoline (tab : Tab) (entry : FnName) (c : Nat) (np : Nat := 0) : Program :=
   [.label enterL,
    i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)),
+   i64 (.push (oR .rbx)), i64 (.push (oR .r12)), i64 (.push (oR .r13)),
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
-   i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++ burnFuel ++
+   i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  (if np ≤ argRegs.length then
+    ((List.range np).zip argRegs).reverse.map fun (i, r) => movRM r (mb .r15 (tab.args + 8 * i))
+   else []) ++ burnFuel ++
   [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
    jmpL okL,
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
    .label errorL, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
+   i64 (.pop (.reg (rr .r13))), i64 (.pop (.reg (rr .r12))), i64 (.pop (.reg (rr .rbx))),
    i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
    i64 .ret,
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
@@ -603,7 +748,7 @@ def compileFns (tab : Tab) (t : NTree) (p : Prog) : Program :=
 
 /-- The whole program, with the result counts `t`: the trampoline, then every function. -/
 def compileProgT (tab : Tab) (t : NTree) (p : Prog) (entry : FnName) : Program :=
-  trampoline tab entry (nrOf t tab entry) ++ compileFns tab t p
+  trampoline tab entry (nrOf t tab entry) (((p.lookup entry).map (·.nparams)).getD 0) ++ compileFns tab t p
 
 /-- The whole program: the trampoline, then every function. -/
 def compileProg (tab : Tab) (p : Prog) (entry : FnName) : Program :=
