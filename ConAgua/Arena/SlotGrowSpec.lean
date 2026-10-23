@@ -180,6 +180,7 @@ theorem growIf_frame (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Wor
   unfold growIf at h
   split at h
   · unfold growM at h
+    generalize (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) = N at h
     split at h
     · simp at h
     · exact ((GFr.set64 _ _ _ _).trans (gzeroW_fr _ _ _ _)).trans (gtiersW_fr _ _ _ _ _ _ _ h)
@@ -249,15 +250,17 @@ theorem growIf_set64 (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Wor
     (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) :
     growIf sa ca H m₀ (m.set64 A k x) c = (growIf sa ca H m₀ m c).map (fun m' => m'.set64 A k x) := by
   have ea : (m.set64 A k x).arr64 sa = m.arr64 sa := Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hA)
+  have el : (m.set64 A k x).len64 sa = m.len64 sa := by simp only [Mem.len64, ea]
+  have en : gnW sa (m.set64 A k x) = gnW sa m := by simp only [gnW, gexpW, el, ea]
+  have ec : gcapW sa (m.set64 A k x) = gcapW sa m := by simp only [gcapW, el]
   unfold growIf
   split
   · unfold growM
-    simp only [gnW, gexpW, Mem.len64, ea]
+    simp only [en, ec, el]
+    generalize (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) = N
     split
-    · next h => simp only [h, ↓reduceIte, Option.map_none]
-    · next h =>
-      simp only [h, ↓reduceIte]
-      rw [Mem.set64_comm _ A sa _ _ _ _ hA, gzeroW_set64 sa A k x hA,
+    · rfl
+    · rw [Mem.set64_comm _ A sa _ _ _ _ hA, gzeroW_set64 sa A k x hA,
         gtiersW_set64 sa A k x hA hAc ca H hH]
   · rfl
 
@@ -446,13 +449,13 @@ variable (sa : ArrId) (n k : Word) (m : Mem)
 theorem gzeroW_done (h : ¬ k < n) : gzeroW sa n k m = m := by
   rw [gzeroW]; simp [h]
 
-theorem gzeroW_step (h : k < n) (hn : n < 9223372036854775808) :
+theorem gzeroW_step (h : k < n) (hn : n < 18446744073709551608) :
     gzeroW sa n k m = gzeroW sa n (k + 8) ((((((((m.set64 sa k 0).set64 sa (k + 1) 0).set64 sa
       (k + 2) 0).set64 sa (k + 3) 0).set64 sa (k + 4) 0).set64 sa (k + 5) 0).set64 sa (k + 6) 0).set64
       sa (k + 7) 0) := by
   have : k.toNat + 8 < 2 ^ 64 := by
     have := UInt64.lt_iff_toNat_lt.mp h; have := UInt64.lt_iff_toNat_lt.mp hn
-    have e : (9223372036854775808 : Word).toNat = 9223372036854775808 := rfl
+    have e : (18446744073709551608 : Word).toNat = 18446744073709551608 := rfl
     omega
   rw [gzeroW]; simp only [h, this, and_self, ↓reduceIte, zero8]
 
@@ -462,41 +465,60 @@ grind_pattern [arena_grind] gzeroW_done => gzeroW sa n k m
 grind_pattern [arena_grind] gzeroW_step => gzeroW sa n k m
 
 theorem gzeroLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
-    (hn : s₀.loc o < 9223372036854775808) :
+    (hc : s₀.loc (o + 4) < 18446744073709551608) :
     ⦃fun s => s = s₀⦄
     exec p n (shiftS o (zeroLoopB S))
     ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
-      s'.mem = gzeroW S.sa (s₀.loc o) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ := by
+      s'.mem = gzeroW S.sa (s₀.loc (o + 4)) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
   rw [exec, step_while (w := shiftS o (zeroLoopB S)) rfl]
   simp only [shiftS, shiftC, shiftE]
-  simp only [Nat.add_comm _ o, Nat.add_zero]
+  simp only [Nat.add_comm _ o]
   vcgen [step, evalE, evalC, setLoc, ld64, st64, ih]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
     Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
   all_goals grind [lang_grind, arena_grind, KeepLo]
 
 theorem gzeroLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
-    (hn : s₀.loc o < 9223372036854775808) :
+    (hc : s₀.loc (o + 4) < 18446744073709551608) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (shiftS o (zeroLoopB S))
     ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
-      s'.mem = gzeroW S.sa (s₀.loc o) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ :=
-  Triple.step_exec (gzeroLoop_spec p S o (n + 1) s₀ hn)
+      s'.mem = gzeroW S.sa (s₀.loc (o + 4)) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ :=
+  Triple.step_exec (gzeroLoop_spec p S o (n + 1) s₀ hc)
 
-/-- A halved word is below `2^63` (the zero loop's bound). -/
-theorem shr1_lt (x : Word) : x >>> 1 < 9223372036854775808 := by
-  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_shiftRight]
-  have := x.toNat_lt
-  have e : (9223372036854775808 : Word).toNat = 9223372036854775808 := rfl
+/-- The new slot count `n` when it is the cap: the old count `k` is below it, so `c = 2 k` (the
+zero loop's bound) stays below `2^64 - 8`. -/
+theorem gdbl_lt_cap (x k : Word) (h : ¬ (x >>> 4) <<< 3 ≤ k) : k * 2 < 18446744073709551608 := by
+  have hc : ((x >>> 4) <<< 3).toNat ≤ 9223372036854775800 := by
+    rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftRight]
+    have := x.toNat_lt
+    simp; omega
+  rw [UInt64.le_iff_toNat_le] at h
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul]
+  have e : (18446744073709551608 : Word).toNat = 18446744073709551608 := rfl
   simp only [e]; simp; omega
 
+/-- The new slot count `n` when it is `2 k` (as a word): at most the cap. -/
+theorem gdbl_lt_dbl (x k : Word) (h : ¬ (x >>> 4) <<< 3 < k * 2) :
+    k * 2 < 18446744073709551608 := by
+  have hc : ((x >>> 4) <<< 3).toNat ≤ 9223372036854775800 := by
+    rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftRight]
+    have := x.toNat_lt
+    simp; omega
+  generalize (x >>> 4) <<< 3 = cap at h hc
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul] at h
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul]
+  have e : (18446744073709551608 : Word).toNat = 18446744073709551608 := rfl
+  simp only [e]; simp at h ⊢; omega
+
 theorem growM_ok (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m : Mem)
-    (h : ¬ (m.len64 sa - 1) >>> 1 < gnW sa m * 2) :
-    growM sa ca H m = gtiersW sa ca H (gnW sa m * 2) 0
-      (gzeroW sa (gnW sa m * 2) 0 (m.set64 sa (m.len64 sa - 1) (gexpW sa m + 1))) := by
+    (h : ¬ (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) ≤ gnW sa m) :
+    growM sa ca H m = gtiersW sa ca H (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) 0
+      (gzeroW sa (gnW sa m * 2) 0 (m.set64 sa (m.len64 sa - 1)
+        ((if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) - SN0))) := by
   rw [growM]; simp only [h, ↓reduceIte]
 
 grind_pattern [arena_grind] growM_ok => growM sa ca H m
@@ -516,7 +538,7 @@ theorem growBlkG_spec (p : Prog) (S : GrowSch) (sa : ArrId) (ca : Word) (hsa : S
   vcgen [step, evalE, evalC, setLoc, ld64, st64, gzeroLoop_step_spec p S o n,
     gtierLoop_step_spec p S o H hH n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
-    Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
-  all_goals grind [lang_grind, arena_grind, KeepLo, gnW, gexpW, shr1_lt]
+    Nat.left_eq_add, Nat.add_eq_left, Nat.reduceEqDiff, ite_true, ite_false] at *)
+  all_goals grind [lang_grind, arena_grind, KeepLo, gnW, gexpW, gcapW, gdbl_lt_cap, gdbl_lt_dbl]
 
 end L.Arena
