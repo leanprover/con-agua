@@ -603,7 +603,7 @@ theorem rec2IhF_afr {n : Nat} {m m' : Mem} {g t tele w d : Word} {r : List Word}
   cases n with
   | zero => simp [rec2IhF, fuelW] at h
   | succ n =>
-  simp only [rec2IhF, fuelW, ihW, ihK1.eq_def, ihK2.eq_def] at h
+  simp only [rec2IhF, fuelW, L.Ind.ihW, L.Ind.ihK1.eq_def, L.Ind.ihK2.eq_def] at h
   afr_auto h [stub_afr]
 
 theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso wsl fvso fvsl i e : Word)

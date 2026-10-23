@@ -282,7 +282,7 @@ theorem ibtsW_sim (p : Prog) (hP : InstProg p) (dn : NIdx → Option ConLeche.Na
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
   obtain ⟨hS4, hg4, hd4, htop4⟩ := partsConsPL decTele_mono hW hS3 hxs.2 hxs.1 (hd2.grow (decTele_mono _) hg3)
-  exact Sim.ret ⟨hS4, (hg2.trans hg3).trans hg4, hd4, Nat.le_of_eq htop4, consW_afr hW hA3⟩
+  exact Sim.ret ⟨hS4, (hg2.trans hg3).trans hg4, ⟨hd4, Nat.le_of_eq htop4⟩, consW_afr hW hA3⟩
 
 /-- **`check_block_teles` refines `checkBlockTeles`** (through `check_block_tele`'s stubs): the
 member slice decoded below the tops with its formers' constant records below the tops; the

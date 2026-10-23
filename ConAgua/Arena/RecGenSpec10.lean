@@ -422,17 +422,18 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     ∀ (m : Mem) (a : AState) (vo vl co cl : Word) (cvs : List IConstantVal) (cs : List Nat),
     StageR dn visR feR m a → DecB (fun m => decCG m g.toNat) m G →
     DecB (fun m => decNL m rco.toNat rcl.toNat) m recCls → SPL decCVX m cgo.toNat cgl.toNat cvGs →
-    SPL decCVX m vo.toNat vl.toNat cvs → DecB (fun m => decNL m co.toNat cl.toNat) m cs →
+    SPL decCVX m vo.toNat vl.toNat cvs → DecB (fun m => decNL m co.toNat cl.toNat) m cs → AbsOK m →
     RSim (crrW n m visT visR g rco rcl cgo cgl vo vl co cl)
-      (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvs cs) a (KP dn visR feR m decRRS) := by
+      (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvs cs) a
+      (fun b a' x => KP dn visR feR m decRRS b a' x ∧ AbsOK b.2) := by
   induction n with
   | zero => intros; intro b hb; simp [crrW] at hb
   | succ n ih =>
-  intro m a vo vl co cl cvs cs hS hG hrc hcg hcvs hcs
+  intro m a vo vl co cl cvs cs hS hG hrc hcg hcvs hcs hA
   have hsz := hS.2.2.2.1
   have hnil : RSim (some ([0, 0], m)) (Pure.pure [] : AM (List (IConstantVal × TargetMajor × List EIdx))) a
-      (KP dn visR feR m decRRS) :=
-    RSim.pure_some ⟨hS, IWGrow.refl m, by show decPL (truncM m) _ _ _ = some []; simp [decPL], by simp⟩
+      (fun b a' x => KP dn visR feR m decRRS b a' x ∧ AbsOK b.2) :=
+    RSim.pure_some ⟨⟨hS, IWGrow.refl m, by show decPL (truncM m) _ _ _ = some []; simp [decPL], by simp⟩, hA⟩
   by_cases hvl : vl = 0
   · rw [crrW_nil1 (h := hvl)]
     have : cvs = [] := by
@@ -474,10 +475,10 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     (by
       have := crsW_sim dn visT visR feR g rco rcl cgo cgl (UInt64.ofNat p) (UInt64.ofNat c0) G recCls cvGs cv
         hns hrcb hcgb n m a _ _ _ hS hG hrc (rec3SPL_decB hcg) (by rw [tp]; exact hcvp) (by rw [tp]; exact hcvx)
-        hxs
+        hxs hA
       rw [tc] at this
       exact this) ?_
-  rintro ⟨r1, m1⟩ rhss a1 - ⟨hS1, hg1, hr1⟩
+  rintro ⟨r1, m1⟩ rhss a1 - ⟨⟨hS1, hg1, hr1⟩, hA1⟩
   dsimp only at hS1 hg1 hr1
   rw [crrK1_some]
   -- `target_major_at`
@@ -496,14 +497,15 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     (by rw [t3, t4]; exact hb3)
   rw [tc] at hM
   refine RSim.bind (K := crrK2 n visT visR g rco rcl cgo cgl vo vl co cl (UInt64.ofNat p) (r1.headD 0)
-    (r1.tail.headD 0)) (by rw [crrK2]) hM ?_
-  rintro ⟨r2, m2⟩ M a2 - ⟨hS2, hg2, hMd⟩
+    (r1.tail.headD 0)) (by rw [crrK2]) (RSim.withF hM (fun _ hb => tmaW_afr hb)) ?_
+  rintro ⟨r2, m2⟩ M a2 - ⟨⟨hS2, hg2, hMd⟩, hf2⟩
   dsimp only at hS2 hg2 hMd
   rw [crrK2_some]
   -- `rec4`: L only
   refine RSim.lstep (K := crrK3 n visT visR g rco rcl cgo cgl vo vl co cl) (by rw [crrK3])
     fun ⟨r3, m3⟩ h3' => ?_
   obtain ⟨hS3, hg3, hr3, hget3, htop3⟩ := recW_stage h3' hS2 rfl
+  have hA3 := recW_afr h3' (hf2 hA1)
   rw [crrK3_some]
   have hg13 := hg2.trans hg3
   have hrec : DecB (fun m => decRR m (r3.headD 0).toNat) m3 (cv, M, rhss) := by
@@ -523,15 +525,15 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
       (hrc.grow (OMono.decNL _ _) hg03) (hcg.grow hg03)
       (by rw [hvo1, hvl1, hjv]; exact hcvsT.grow hg03)
       (by rw [hco1, hcl1, hjc]; exact (show DecB (fun m => decNL m (co.toNat + 1) jc) m cs' from
-        hcsT).grow (OMono.decNL _ _) hg03)) ?_
-  rintro ⟨r4, m4⟩ rest a4 - ⟨hS4, hg4, hrs, hrsb⟩
+        hcsT).grow (OMono.decNL _ _) hg03) hA3) ?_
+  rintro ⟨r4, m4⟩ rest a4 - ⟨⟨hS4, hg4, hrs, hrsb⟩, hA4⟩
   dsimp only at hS4 hg4 hrs hrsb
   rw [crrK4_some]
   refine RSim.lstep (K := crrK5) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hS5, hg5, hd5, ht5⟩ := partsConsPL decRR_mono h5 hS4 hrsb hrs (hrec.grow (decRR_mono _) hg4)
   rw [crrK5_some]
-  exact RSim.pure_some ⟨hS5, hg03.trans (hg4.trans hg5), by simpa using hd5,
-    by simp only [List.headD_cons, List.tail_cons]; omega⟩
+  exact RSim.pure_some ⟨⟨hS5, hg03.trans (hg4.trans hg5), by simpa using hd5,
+    by simp only [List.headD_cons, List.tail_cons]; omega⟩, consW_afr h5 hA4⟩
 
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`** (through `class_rules_ok`'s stubs): the
 recursors with their majors and rules, a slice of `rec4` records decoded below the tops. -/
@@ -542,22 +544,26 @@ theorem classRecsRulesOk_refines (p : Prog) (hp : CrrProg p) (n : Nat) (s₀ : S
     (hS : StageR dn visR feR s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
     (hns : G.nP + G.slots.length < 2 ^ 64)
     (hrc : DecB (fun m => decNL m rco.toNat rcl.toNat) s₀.mem recCls) (hrcb : rco.toNat + rcl.toNat < 2 ^ 64)
-    (hcg : SPL decCVX s₀.mem cgo.toNat cgl.toNat cvGs) (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64) :
+    (hcg : SPL decCVX s₀.mem cgo.toNat cgl.toNat cvGs) (hcgb : cgo.toNat + cgl.toNat < 2 ^ 64)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_recs_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀ ∧
       KP dn visR feR s₀.mem decRRS (r, s'.mem)
         (AM.st (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀)
-        (AM.res (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀); ⊤⦄ := by
-  refine triple_post (classRecsRulesOk_spec p hp n s₀ visT visR g rco rcl cgo cgl) fun _ _ ⟨hl, hw⟩ => ⟨hl, ?_⟩
+        (AM.res (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀) ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (classRecsRulesOk_spec p hp n s₀ visT visR g rco rcl cgo cgl) fun _ _ ⟨hl, hw⟩ => ?_
   cases n with
   | zero => simp [crraW] at hw
   | succ n =>
   rw [crraW_eq] at hw
-  refine RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_sim dn visT visR feR g rco rcl cgo cgl G recCls cvGs hns hrcb
-    hcgb n s₀.mem a₀ cgo cgl rco rcl cvGs recCls hS hG hrc hcg hcg hrc) ?_) hw
-  rintro ⟨r1, m1⟩ x a1 - ⟨hS1, hg1, hd1, hb1⟩
+  have h := RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_sim dn visT visR feR g rco rcl cgo cgl G recCls cvGs hns hrcb
+    hcgb n s₀.mem a₀ cgo cgl rco rcl cvGs recCls hS hG hrc hcg hcg hrc hA) (Q := fun b a' x =>
+      KP dn visR feR s₀.mem decRRS b a' x ∧ AbsOK b.2) ?_) hw
+  · exact ⟨hl, h.1, h.2.1, h.2.2⟩
+  rintro ⟨r1, m1⟩ x a1 - ⟨⟨hS1, hg1, hd1, hb1⟩, hA1⟩
   rw [crrK5_some]
-  exact RSim.pure_some ⟨hS1, hg1, by simpa using hd1, by simpa using hb1⟩
+  exact RSim.pure_some ⟨⟨hS1, hg1, by simpa using hd1, by simpa using hb1⟩, hA1⟩
 
 end L.Ind

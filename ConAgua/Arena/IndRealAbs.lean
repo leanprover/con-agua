@@ -246,6 +246,15 @@ theorem erToIwW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erT
   unfold erToIwW at h
   afr_auto h [allocW_afr, erCopyW_afr _ _ _ _ _ _]
 
+/-- **A function of `p` keeps the `abstract1` memo well formed**: every returning run from a
+memory with `AbsOK` ends in one. A program fact the install layers take as a hypothesis for their
+callees outside the `abstract1` cascade (like the write sets `closedA … hbFreeA …`); true of the
+checker's program: such a function either leaves array 49 and `CTL[48]` alone or reaches them only
+through the core and `abs_entry`, both of which keep the memo well formed. -/
+def AbsKeep (p : Prog) (f : FnName) : Prop :=
+  ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem), callW p n f vs m = some (r, m') →
+    AFr m m'
+
 /-- Across a stub. -/
 theorem AbsOK.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word} (hA : AbsOK m)
     (h : stubM f m args = some (r, m')) : AbsOK m' := stubM_absOK f hf m m' args r h hA
