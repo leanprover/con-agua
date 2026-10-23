@@ -1,5 +1,7 @@
 import ConAgua.Arena.Frame
 import ConAgua.Arena.Tiers
+import ConAgua.Arena.WhnfBase
+import ConRon.Bridge.Promote.Pers
 
 /-!
 # The declaration loop's call closure and its write set (lane `loopt2`)
@@ -11,6 +13,8 @@ fails if a callee is missing, then recompute it). No function of it writes the p
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
 -/
+
+open ConRon.Arena
 
 namespace L.Arena
 
@@ -283,5 +287,26 @@ def loopFns : List FnName :=
 
 /-- **The loop's write set**: no function it reaches writes the pin table or bytes. -/
 def LoopClosed (p : Prog) : Prop := closedA p loopA loopC loopFns = true
+
+/-- **What the loop carries beside `LoopR` and the twin's fold invariant** toward `TwinOK` at a
+step's core calls (`TwinMem` without the core memos): the sizes `TwinOK` bounds, the pin flag,
+and the record decoder's names: every name `dn` decodes is a persistent handle the store reads
+back the same (at the start `dn` is the startup store's `denoteN`, all of it persistent). -/
+structure LoopMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : Prop where
+  erec : (m.arr64 EREC).size < 2 ^ 63
+  spn : (m.arr64 SPN).size < 2 ^ 63
+  bstk : (m.arr64 145).size < 2 ^ 63
+  flag : pinW m 0 ≠ 0
+  dnP : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x →
+    k.isPersistent = true ∧ denoteN a.store.ns k = some x
+
+/-- **`LoopMem` across a step of the loop**: the step's write set (`LoopClosed`: the pin table and
+every size kept) and the twin's persistent tier only growing (`PExt`, `TwinFold.step_pext`). -/
+theorem LoopMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+    (h : LoopMem dn m a) (hf : MemFrame loopA loopC m m')
+    (hx : ConRon.Bridge.PExt a.store a'.store) : LoopMem dn m' a' :=
+  ⟨by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn, by rw [hf.2.2.1]; exact h.bstk,
+    by simp only [pinW, hf.1 PINS loopA_pins (by decide)]; exact h.flag,
+    fun k x e => ⟨(h.dnP k x e).1, hx.lss.ls.ns k x (h.dnP k x e).1 (h.dnP k x e).2⟩⟩
 
 end L.Arena
