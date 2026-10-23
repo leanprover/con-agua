@@ -1,4 +1,5 @@
 import ConAgua.Checker.FrontProgAgree
+import ConAgua.Checker.RomProg0
 import ConAgua.Front.ChunkBridge
 import ConAgua.Compiler.WriteSetSplit
 
@@ -23,13 +24,7 @@ namespace L.Checker
 
 open L L.Compiler
 
-/-! ## No byte stores -/
-
-/-- Every body of `checkerProg` has no byte store, per chunk of functions. -/
-prog_all checkerProg_noSt8All : checkerProg (fun x => x.2.body.noSt8)
-
-/-- **`checkerProg` stores no bytes.** -/
-theorem checkerProg_noSt8 : checkerProg.noSt8 = true := List.all_eq_true.2 checkerProg_noSt8All
+/-! `checkerProg_noSt8`: `Checker/RomProg0.lean`. -/
 
 /-! ## Runs read only the lookups of a call-closed set -/
 
