@@ -251,3 +251,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,45,15,"real check_constant_val in the StageC block chain; cidW_okC"
 2026-10-23,indstaget,claude-opus-5-5,70,20,"cidW_okC: IndMemos premise, CoreMemos/IndMemos post (memo threading, frames); StageMemos ep dropped"
 2026-10-23,compproofT,claude-opus-5.5,25,35,P: if c abort as one jcc to ca_error (proved; sim_ifAbort)
+2026-10-23,indstaget,claude-opus-5-5,20,15,"(helper rcA) real open_pis_at_fvars_f/lvl_eq_c/lv_leq_top in the StageC chain"
