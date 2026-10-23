@@ -132,3 +132,49 @@ Init ~0.95×, small fixtures unchanged). Harness-only, no proof impact.
   `rdi = base`, `rsi = 2^62 - 1` and memory satisfying `Layout.Ok`/`MemRel` for the partition
   layout; then `compile_correct`. New premises: the buffers hold `b`/`pb`; `[base, base + base_len)`
   is mapped, zero, disjoint from both buffers and from the machine stack; the return address.
+
+## Proof (2026-10-23, after compproofD and asmfile)
+
+**Stub reshaped for the proof** (asm file regenerated; same layout, same behaviour): the stub's
+body is one run of 8-byte stores `[r8 + 8i] := vᵢ` (`storesCode 0 (abiVals tab)`, `SVal` = a
+register, an immediate through `rax`, or `r8 + off` through `rax`), in the table's own order: stack
+top, stack limit, the byte arrays' base/length pairs (the caller's `rdi, rsi, rdx, rcx`), the word
+arrays' pairs, the ROM words. So word `i` of the table is store `i`, and every memory fact is "word
+`i` after the stores" or "untouched outside `[T, T + 8n)`" (`stores_rdW`, `stores_byte`,
+`stores_only`). The ROM words are `romVals` (structural, eight bytes per step) of `romWord` =
+`UInt64.ofBytes` (padded): byte `j` of word `i/8` is `rom[i]` by Kraken's `UInt64.toBytes_ofBytes`.
+
+**Modules.**
+* `ConAgua/Compiler/AbiSim.lean` (machine level, ~0.6 GB, 2 s): `sim_stores` (induction over the
+  stores, one `ev_movMR` / `ev_movRI` / `ev_binO` per form), `sim_abiStub` (the size check: decline
+  returns `rdx = 1`; otherwise the stores, then `rdi := r8`, `rsi := 2^62 - 1`, `jmp ca_enter`),
+  `abiLayout` (the partition as a `Layout`), `abiLayout_ok` (`Layout.Ok` from `AbiGeom`: region
+  big enough and in the address space, buffers in the address space and apart from it and from
+  each other), the position lemmas of `abiVals`.
+* `ConAgua/Final/Abi.lean` (~2.3 GB, imports `Final.Statement`): `AbiCall` (the harness's premises
+  on `ca_start`), `abi_memRel` (`MemRel` for `loadMem b pb [] (replicate nw 2^32)` after the
+  stores: descriptors and ROM from the stores, input/pins from the caller's buffers, arrays,
+  globals, stack and result area from the zero region), and `checker_x64_accepts_abi`: from
+  `ca_start`, through `sim_abiStub`, then `checker_x64_accepts` (the old theorem from `ca_enter`,
+  kept as the lemma) at the trampoline with `HarnessCall` discharged (machine stack untouched by
+  the stores, apart from the region).
+* `ConAgua/Checker/AsmStubEq.lean` + `ConAgua/AsmFile/ListEq.lean`: `checkerStub_eq :
+  checkerStub = abiStub checkerTab` by `list_eq` (lane asmfile's chunked `take/drop` proof made
+  a command; pieces of ≤ 8192 directives, the top split as separate theorems). With the
+  structural ROM words: ~10 s, peak 4.0 GB (import base 2.3 GB). Measured alternatives: leaf 2048
+  inline 4.3 GB / 8 s; wf-recursive `romWordList` 4.8 GB / 13 s; more separate pieces lower the
+  peak by < 0.3 GB and cost up to 45 s.
+* `Checker/AsmFinal.lean`: the final theorems `checkerFile_accepts`, `checkerFile_model_exists`,
+  `checkerFile_no_False` now start at `label abiStartL` with premises `PipelineRefines`,
+  `Code checkerFile k0`, `b`/`pb` sizes, `numBits`, and `AbiCall`; the `ca_enter` version stays
+  as `checkerFile_accepts_enter`. `Final/Remaining.lean`'s `checkerFile_accepts_remaining` (the
+  census theorem) restated the same way.
+* Trusted base: `Final/Statement.lean` "What is trusted" and `docs/ROADMAP.md` §3: the layout is
+  no longer trusted; the harness is `AbiCall` + the verdict read.
+
+Axioms of the final theorems unchanged (`propext`, `Classical.choice`, `Quot.sound`).
+
+Checks before landing: `ConAgua` builds; `harness/check-asm.sh` (190 509 instructions match);
+`scripts/asm_file.py` (file unchanged after the merge, both parsers agree); e2e (`--latest ''`)
+`check` 407 agree-accept / 262 / 3 / 2 / 1 agree-memout, `check_np` 391 / 278 / 3 / 2 / 1, as
+before; `cc harness/main.c asm/checker.s` accepts `irrel_commit`.
