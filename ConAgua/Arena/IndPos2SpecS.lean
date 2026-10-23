@@ -98,7 +98,6 @@ theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
 
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  (hcs : CtorSums fe)
 
 theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
     FieldsOK dn vis fe stubCall (n + 1) := by
@@ -515,7 +514,6 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : CtorsOK dn vis
   rw [nestCtors_cons, hK1]
   exact hrun
 
-include hcs in
 theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : FrameOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, hCtors, -, -, -⟩ := ih
   intro m m' a ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS r h hS hW hhi hus hds hdsb hgl hgb hgrp hns hP hA
@@ -602,7 +600,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : FrameOK dn vis
   | some pr6 =>
   obtain ⟨rc, m6⟩ := pr6
   rw [hgc, nbFrameK6_some] at h
-  obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc hcs n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
+  obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
     rc hgc hS5 hN5 (fun j hj => by omega) (by simp) (by simp) (fun i hi => by simp at hi)
   -- the holes
   have hg46 := hg5.trans hg6
@@ -938,7 +936,6 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : KeyOK dn vis fe 
     obtain ⟨x, a', hrun, rest⟩ := hnew r m' h
     exact ⟨x, a', by rw [htwin]; simpa using hrun, rest.1, hg12.trans rest.2.1, rest.2.2⟩
 
-include hcs in
 theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
     ContOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
@@ -954,7 +951,7 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   | some pr =>
   obtain ⟨r1, m1⟩ := pr
   rw [hnt, nbContK1_some] at h
-  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn hcs n' m m1 a r1 hnt hS
+  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn n' m m1 a r1 hnt hS
   cases xc with
   | none => simp only [NcOut] at hnc; rw [if_pos hnc] at h; cases h
   | some pc =>
@@ -1395,15 +1392,14 @@ theorem nbOK_zero : NbOK dn vis fe stubCall 0 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
     simp_all [nbPosW, nbBindW, nbAppW, nbContW, nbKeyW, nbNewW, nbFrameW, nbCtorsW, nbOneW, nbWalkW, nbFieldsW]
 
-include hcs in
 /-- The block's relational content at every fuel up to the walk fuel. -/
 theorem nbOK_all : ∀ n, 2 ^ 31 + n ≤ coreWalkFuel → NbOK dn vis fe stubCall n
   | 0, _ => nbOK_zero dn vis fe
   | n + 1, hk => by
     have ih := nbOK_all n (by omega)
     exact ⟨posOK_step dn vis fe n ih, bindOK_step dn vis fe n ih, appOK_step dn vis fe n ih,
-      contOK_step dn vis fe hcs n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
-      frameOK_step dn vis fe hcs n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n hk ih,
+      contOK_step dn vis fe n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
+      frameOK_step dn vis fe n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n hk ih,
       walkOK_step dn vis fe n hk ih, fieldsOK_step dn vis fe n hk ih⟩
 
 end steps

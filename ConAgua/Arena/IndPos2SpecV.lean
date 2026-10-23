@@ -132,9 +132,8 @@ theorem pos2_outs_rec {m' : Mem} {q o l : Word} {xs : List (List NestFieldKind �
 
 section root
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  (hcs : CtorSums fe) (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx)
+  (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx)
 
-include hcs in
 /-- **`nest_root`** simulated by `nestRoot`. -/
 theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (cO cL ns oO oL : Word)
     (css : List (List (IConstantVal × Nat))) (NS : NestState) (outss : List (List (List NestFieldKind × EIdx)))
@@ -188,7 +187,7 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
         (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) hO hL c.params c.names holes :=
       ⟨hus0, by show decHL (truncM m) _ _ = _; rw [decHL_truncM hpe0]; exact hpa0, hpe0, hn0, hne0,
         by rw [hpl]; exact hpn, hho, hhob⟩
-    have hCt := (nbOK_all dn vis fe hcs n (by omega)).2.2.2.2.2.2.2.1
+    have hCt := (nbOK_all dn vis fe n (by omega)).2.2.2.2.2.2.2.1
     cases hc : nbCtorsW stubCall n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
         (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx)
         (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with
@@ -277,9 +276,8 @@ theorem SeedsAt.tail {m : Mem} {o : Nat} {x : NestKey × Nat} {seeds : List (Nes
 
 section seeds
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  (hcs : CtorSums fe) (ctx : Word) (c : NestCtx)
+  (ctx : Word) (c : NestCtx)
 
-include hcs in
 /-- **`nest_seeds`** simulated by `nestSeeds`. -/
 theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState) (r : List Word),
@@ -358,7 +356,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
-    have hKey := (nbOK_all dn vis fe hcs (n' + 1) (by omega)).2.2.2.2.1
+    have hKey := (nbOK_all dn vis fe (n' + 1) (by omega)).2.2.2.2.1
     cases hk3 : nbKeyW stubCall (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
@@ -419,8 +417,7 @@ theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds
   have := p2sfW_ok dn vis fe dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk hP
   exact ⟨hlc, by simpa using this⟩
 
-variable (hcs : CtorSums fe)
-include L hcs
+include L
 
 @[refines ConRon.Arena.nestRoot]
 theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
@@ -439,7 +436,7 @@ theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
       PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (nestRoot_spec L stubCall (stubCall_spec p) n s₀ vis ctx hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2rtW_ok dn vis fe hcs ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
+  have := p2rtW_ok dn vis fe ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
     hhi hpn hho hhob hcl hcb hcss hns hout houtb hP hA
   exact ⟨hlc, by simpa using this⟩
 
@@ -454,7 +451,7 @@ theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
       IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (nestSeeds_spec L stubCall (stubCall_spec p) n s₀ vis ctx sO sL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2sdW_ok dn vis fe hcs ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns hP hA
+  have := p2sdW_ok dn vis fe ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns hP hA
   exact ⟨hlc, by simpa using this⟩
 
 end census

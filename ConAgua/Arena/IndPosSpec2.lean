@@ -396,7 +396,7 @@ theorem NcOut.grow {m m' : Mem} {r : List Word} {x : Option (Nat × List (IConst
     exact ⟨h1, h2, h3, Nat.le_trans h4 hg.1, h5.grow h4 hg⟩
 
 theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : Word) (N : Nat)
-    (hC : H C) (hcs : CtorSums fe) (k : Nat) :
+    (hC : H C) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (co cl ol fp : Word) (ns : List NIdx)
       (acc : List (IConstantVal × Nat × Nat)) (r : List Word),
     ncGoW k m vis C co cl cs ol fp = some (r, m') → StageR dn vis fe m a →
@@ -460,14 +460,12 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hwH hf0
     rw [hci] at hfind
     generalize r1.tail.headD 0 = ciq at h hfind hci
-    have hsum : ∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64 := fun cv nPc nF e =>
-      hcs _ cv nPc nF (by rw [hfind, e])
     cases hent : entryW m C ciq with
     | none => rw [hent] at h; simp [ncK2] at h
     | some pr2 =>
     obtain ⟨r2, m2⟩ := pr2
     rw [hent] at h
-    obtain ⟨x, a1, hrun1, hS2, hg2, hout⟩ := entryW_ok hC hent hS hci hsum
+    obtain ⟨x, a1, hrun1, hS2, hg2, hout⟩ := entryW_ok hC hent hS hci
     have hE2 : ArrExt (erecP m) (erecP m2) := (GrowX.of_grow (q := 0) (n := 0) hg2).erecP
     have hstep : ncF fe (decI C) (decI w) = ConRon.Arena.nestCtorEntry (decI C) ci := by
       simp only [ncF, hfind]
@@ -490,7 +488,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       exact hrun
     | some c =>
       obtain ⟨cv, nPc, nF⟩ := c
-      obtain ⟨hr2, -⟩ := hout
+      obtain ⟨hr2, -, hs⟩ := hout
       subst hr2
       rw [ncK2_hit (h := by simp)] at h
       simp only [List.tail_cons, List.headD_cons] at h
@@ -502,7 +500,6 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
           obtain ⟨rfl, rfl, rfl⟩ := this; rfl
         | _ => exact absurd hrun1 (by simp [ConRon.Arena.nestCtorEntry, StateT.run, StateT.pure, pure, Except.pure])
       subst hci'
-      have hs := hsum cv nPc nF rfl
       have hcvE : decCV (erecP m) (ciq.toNat + 1) = some cv := decCI_ctor_cv hci
       have hciqb : ciq.toNat < erTop m := by
         have := decCI_idx hci; have := erecP_size_le m; omega
@@ -597,7 +594,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       simp only [StateT.run_bind, hrun1, except_ok_bind, hrun, StateT.run_pure]
       rfl
 
-theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C) (hcs : CtorSums fe)
+theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (co cl : Word) (ns : List NIdx) (r : List Word)
     (h : ncW k m vis C co cl = some (r, m')) (hS : StageR dn vis fe m a)
     (hns : hslice? (erecP m) co.toNat cl.toNat = some ns) :
@@ -622,7 +619,7 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hE1 : ArrExt (erecP m) (erecP m1) := (GrowX.of_grow (q := 0) (n := 0) hg1).erecP
-  obtain ⟨ys, a', hrun, hS2, hGX, h1, h2, h3, h4⟩ := ncGoW_ok dn fe vis C cs cl.toNat hC hcs k m1 m2 a co cl 0 0 ns []
+  obtain ⟨ys, a', hrun, hS2, hGX, h1, h2, h3, h4⟩ := ncGoW_ok dn fe vis C cs cl.toNat hC k m1 m2 a co cl 0 0 ns []
     r1 hgo hS1 (hE1.hslice? hns) (by omega) (by simp) (by simp) (fun i hi => by simp at hi) (by simp)
   have hgr : IWGrow m m2 := hGX.grow' hg1 (by omega)
   have hle : ys.length ≤ cl.toNat := by
@@ -662,7 +659,7 @@ theorem nestContainer_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C 
     ConRon.Arena.nestContainer fe C = pure none := by
   simp only [ConRon.Arena.nestContainer]
 
-theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C) (hcs : CtorSums fe)
+theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (r : List Word)
     (h : ntW k m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
@@ -732,7 +729,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   | some pr =>
   obtain ⟨r2, m2⟩ := pr
   rw [hnc] at h
-  obtain ⟨ys, a', hrun, hS2, hg2, h1, h2, h3', h4⟩ := ncW_ok dn fe vis C hC hcs k m m2 a co cl caps.ctors r2 hnc hS
+  obtain ⟨ys, a', hrun, hS2, hg2, h1, h2, h3', h4⟩ := ncW_ok dn fe vis C hC k m m2 a co cl caps.ctors r2 hnc hS
     (by rw [ro, rl]; exact hns)
   have hrun' : (do
       let cs ← List.filterMapM (ncF fe (decI C)) caps.ctors
@@ -769,18 +766,17 @@ variable (p : Prog) (hl : NtLook p)
 include hl
 
 /-- **`nest_container` refines `nestContainer`** (through the `strip_pis`/`get_app_fn` stubs of
-`nest_ctor_entry`; the environment's constructor records have parameter and field counts summing
-below `2^64`). -/
+`nest_ctor_entry`; L aborts where a constructor's parameter and field counts' sum wraps). -/
 @[refines ConRon.Arena.nestContainer]
 theorem nestContainer_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis C : Word) (hC : H C) (hcs : CtorSums fe) (hS : StageR dn vis fe s₀.mem a₀) :
+    (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR dn vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestContainer fe (decI C)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestContainer fe (decI C)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.nestContainer fe (decI C)) a₀); ⊤⦄ := by
   refine triple_post (nt_spec p hl k s₀ vis C) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis C hC hcs k _ _ a₀ r hm hS
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis C hC k _ _ a₀ r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 

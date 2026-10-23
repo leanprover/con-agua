@@ -357,6 +357,7 @@ def stripK (ciq nPc nF : Word) : Option (List Word × Mem) → Option (List Word
 
 def stripW (m : Mem) (ciq : Word) : Option (List Word × Mem) :=
   if rdW (m.arr64 EREC) ciq ≠ 4 then some ([0, 0, 0, 0, 0], m)
+  else if rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6) < rdW (m.arr64 EREC) (ciq + 5) then none
   else stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
     (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
       rdW (m.arr64 EREC) (ciq + 1 + 3)])
@@ -365,7 +366,13 @@ section arms
 variable (m m1 : Mem) (ciq nPc nF : Word) (r : List Word)
 theorem stripW_notctor (h : rdW (m.arr64 EREC) ciq ≠ 4) : stripW m ciq = some ([0, 0, 0, 0, 0], m) := by
   simp [stripW, h]
-theorem stripW_ctor (h : rdW (m.arr64 EREC) ciq = 4) : stripW m ciq =
+theorem stripW_wrap (h : rdW (m.arr64 EREC) ciq = 4)
+    (h2 : rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6) < rdW (m.arr64 EREC) (ciq + 5)) :
+    stripW m ciq = none := by
+  simp [stripW, h, h2]
+theorem stripW_ctor (h : rdW (m.arr64 EREC) ciq = 4)
+    (h2 : ¬ rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6) < rdW (m.arr64 EREC) (ciq + 5)) :
+    stripW m ciq =
     stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
     (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
       rdW (m.arr64 EREC) (ciq + 1 + 3)]) := by
@@ -377,6 +384,7 @@ theorem stripK_ok (h : r.headD 0 ≠ 0) :
   simp only [stripK]; rw [if_neg h]
 end arms
 grind_pattern [ind_grind] stripW_notctor => stripW m ciq
+grind_pattern [ind_grind] stripW_wrap => stripW m ciq
 grind_pattern [ind_grind] stripW_ctor => stripW m ciq
 grind_pattern [ind_grind] stripK_fail => stripK ciq nPc nF (some (r, m1))
 grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
@@ -470,7 +478,7 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     {a : AState} {ciq : Word} {r : List Word} {ci : IConstantInfo}
     (h : stripW m ciq = some (r, m')) (hS : StageR dn vis fe m a)
     (hci : decCI (erecP m) dn ciq.toNat = some ci) :
-    (∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64 →
+    (∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64 ∧
       ∃ x a', (stripPis (nPc + nF) cv.type).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
         IWGrow m m' ∧ StripOut m r ciq cv nPc nF x) ∧
     ((∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF) → r = [0, 0, 0, 0, 0] ∧ m' = m) := by
@@ -480,20 +488,29 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
   rw [e0, UInt64.add_zero] at hk0
   rcases hcases with ⟨rfl, cv, nPc, nF, rfl, hcv, hnP, hnF⟩ | ⟨hne, hnc⟩
   · have hker : rdW (m.arr64 EREC) ciq = 4 := by rw [hk0.1]; rfl
-    rw [stripW_ctor m ciq hker] at h
     have hP := erec_nat (m := m) (w := ciq) (c := 5) hnP (by decide)
     have hF := erec_nat (m := m) (w := ciq) (c := 6) hnF (by decide)
+    have hP' : rdW (m.arr64 EREC) (ciq + 5) = UInt64.ofNat nPc := hP.1
+    have hF' : rdW (m.arr64 EREC) (ciq + 6) = UInt64.ofNat nF := hF.1
+    by_cases hw : rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6) < rdW (m.arr64 EREC) (ciq + 5)
+    · rw [stripW_wrap m ciq hker hw] at h; cases h
+    have hsum : nPc + nF < 2 ^ 64 := by
+      rw [hP', hF', UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2,
+        UInt64.toNat_ofNat_of_lt' hF.2] at hw
+      have := hP.2; have := hF.2
+      simp only [UInt64.size] at hw ⊢
+      omega
+    rw [stripW_ctor m ciq hker hw] at h
     have hty := decCV_type hcv
     rw [Nat.add_assoc] at hty
     obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erec_hd (m := m) (w := ciq) (c := 1 + 3) hty (by decide)
     have e13 : ciq + 1 + 3 = ciq + UInt64.ofNat (1 + 3) := by rw [UInt64.add_assoc]; rfl
-    have hP' : rdW (m.arr64 EREC) (ciq + 5) = UInt64.ofNat nPc := hP.1
-    have hF' : rdW (m.arr64 EREC) (ciq + 6) = UInt64.ofNat nF := hF.1
     rw [e13, hwt, hP', hF'] at h
     refine ⟨?_, fun hh => absurd rfl (hh cv nPc nF)⟩
-    intro cv' nPc' nF' hc hsum
+    intro cv' nPc' nF' hc
     obtain ⟨rfl, rfl, rfl⟩ : cv = cv' ∧ nPc = nPc' ∧ nF = nF' := by
       simp only [IConstantInfo.ctorInfo.injEq] at hc; exact ⟨hc.1, hc.2.1, hc.2.2⟩
+    refine ⟨hsum, ?_⟩
     cases hs : stripF 6 m [UInt64.ofNat nPc + UInt64.ofNat nF, wt] with
     | none => rw [hs] at h; simp [stripK] at h
     | some rm =>
@@ -632,7 +649,7 @@ theorem viewConst_run (h : EIdx) (a : AState) :
 def EntryOut (m' : Mem) (r : List Word) (ciq : Word) : Option (IConstantVal × Nat × Nat) → Prop
   | none => r = [0, 0, 0, 0]
   | some (cv, nPc, nF) => r = [1, ciq + 1, UInt64.ofNat nPc, UInt64.ofNat nF] ∧
-      decCVp m' (ciq.toNat + 1) = some cv
+      decCVp m' (ciq.toNat + 1) = some cv ∧ nPc + nF < 2 ^ 64
 
 theorem tag_const_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
     ((decI w : EIdx).tag == ETag.const) = decide (w >>> 28 = 3) := by
@@ -672,8 +689,7 @@ theorem decI_beq' {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toN
 theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {C ciq : Word} {r : List Word} {ci : IConstantInfo} (hC : H C)
     (h : entryW m C ciq = some (r, m')) (hS : StageR dn vis fe m a)
-    (hci : decCI (erecP m) dn ciq.toNat = some ci)
-    (hsum : ∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64) :
+    (hci : decCI (erecP m) dn ciq.toNat = some ci) :
     ∃ x a', (ConRon.Arena.nestCtorEntry (decI C) ci).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ EntryOut m' r ciq x := by
   unfold entryW at h
@@ -685,7 +701,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     obtain ⟨hctor, hnon⟩ := stripW_ok h0 hS hci
     by_cases hc : ∃ cv nPc nF, ci = .ctorInfo cv nPc nF
     · obtain ⟨cv, nPc, nF, rfl⟩ := hc
-      obtain ⟨x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF rfl (hsum cv nPc nF rfl)
+      obtain ⟨hsum, x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF rfl
       cases x with
       | none =>
         simp only [StripOut] at hout
@@ -764,8 +780,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
                 obtain ⟨rfl, rfl⟩ := h
                 refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
                 simp only [hcn, if_true, EntryOut]
-                refine ⟨rfl, ?_⟩
-                exact (erecP_ext_grow (hg1.trans hg2)).decCV hcvm0
+                exact ⟨rfl, (erecP_ext_grow (hg1.trans hg2)).decCV hcvm0, hsum⟩
               · rw [entryK3_miss _ _ _ _ (by simp) (by simpa using hcn)] at h
                 simp only [Option.some.injEq, Prod.mk.injEq] at h
                 obtain ⟨rfl, rfl⟩ := h
@@ -787,13 +802,12 @@ variable (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryS
     (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p) (had : AdF p)
 include hs hv hp hst had
 
-/-- **`nest_ctor_entry` refines `nestCtorEntry`** (through the `get_app_fn` stub; the
-parameter and field counts sum without overflow). -/
+/-- **`nest_ctor_entry` refines `nestCtorEntry`** (through the `get_app_fn` stub; L aborts where the
+parameter and field counts' sum wraps, a capacity guard). -/
 @[refines ConRon.Arena.nestCtorEntry]
 theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis C ciq : Word) (ci : IConstantInfo) (hC : H C)
-    (hS : StageR dn vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) dn ciq.toNat = some ci)
-    (hsum : ∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64) :
+    (hS : StageR dn vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) dn ciq.toNat = some ci) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry" [C, ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestCtorEntry (decI C) ci) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
@@ -801,7 +815,7 @@ theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       EntryOut s'.mem r ciq (AM.res (ConRon.Arena.nestCtorEntry (decI C) ci) a₀); ⊤⦄ := by
   refine triple_post (nestCtorEntry_spec p hs hv hp hst had n s₀ C ciq) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := entryW_ok hC hm hS hci hsum
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := entryW_ok hC hm hS hci
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 
