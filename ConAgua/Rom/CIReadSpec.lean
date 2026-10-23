@@ -62,6 +62,14 @@ store decode to it. For a `sortZ`'s names (`Quot`'s `u`), the reader interns the
 def NamesDn (dn : NIdx → Option ConLeche.Name) (a : AState) (ns : List ConLeche.Name) : Prop :=
   ∀ x ∈ ns, ∃ k, dn k = some x ∧ denoteN a.store.ns k = some x
 
+theorem NamesDn.ext {dn : NIdx → Option ConLeche.Name} {a a' : AState} {ns : List ConLeche.Name}
+    (h : NamesDn dn a ns) (hx : Ext a.store a'.store) : NamesDn dn a' ns := fun x hx' => by
+  obtain ⟨k, h1, h2⟩ := h x hx'
+  exact ⟨k, h1, ConRon.Bridge.denoteN_ext h2 hx⟩
+
+theorem NamesDn.mono {dn : NIdx → Option ConLeche.Name} {a : AState} {ns ns' : List ConLeche.Name}
+    (h : NamesDn dn a ns) (hs : ∀ x ∈ ns', x ∈ ns) : NamesDn dn a ns' := fun x hx => h x (hs x hx)
+
 /-- The `sortZ` names of the quotient blocks (`Quot`'s level parameter `u`; `quotNames_eq`). -/
 def quotNames : List ConLeche.Name := [.str .anonymous "u"]
 

@@ -97,14 +97,6 @@ def pwNames : ConLeche.PropWhen → List ConLeche.Name
   | .never => []
   | .ifAllZero ns => ns
 
-theorem NamesDn.ext {dn : NIdx → Option ConLeche.Name} {a a' : AState} {ns : List ConLeche.Name}
-    (h : NamesDn dn a ns) (hx : Ext a.store a'.store) : NamesDn dn a' ns := fun x hx' => by
-  obtain ⟨k, h1, h2⟩ := h x hx'
-  exact ⟨k, h1, ConRon.Bridge.denoteN_ext h2 hx⟩
-
-theorem NamesDn.mono {dn : NIdx → Option ConLeche.Name} {a : AState} {ns ns' : List ConLeche.Name}
-    (h : NamesDn dn a ns) (hs : ∀ x ∈ ns', x ∈ ns) : NamesDn dn a ns' := fun x hx => h x (hs x hx)
-
 /-- **What re-interning the names `zs` needs**: none, or a well-formed state naming them through
 `dn` (`NamesDn`). -/
 def ZOK (dn : NIdx → Option ConLeche.Name) (zs : List ConLeche.Name) (a : AState) : Prop :=
