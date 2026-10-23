@@ -792,8 +792,8 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 `strip_pis`, `open_pis_at_fvars_f`, `fvar_type_ds`, `get_app_fn_f`, `get_app_args_f`, and the proved
 callees' stubs), the pre-block environment being the restriction of `fe` to the view `vis0`; the
 constructor (`cvC`) and the type former (`cvTa`) decoded below the record pool's top. Returns `cvC`
-itself and the field sorts as a fresh `IW` slice. -/
-@[refines ConRon.Arena.checkSumCtor]
+itself and the field sorts as a fresh `IW` slice. Under `StageR`; the census link is
+`checkSumCtor_refinesC` (`IndT/Sum4.lean`). -/
 theorem checkSumCtor_refines (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
