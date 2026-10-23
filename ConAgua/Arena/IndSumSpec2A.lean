@@ -880,8 +880,7 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
       | _ => simp [ViewR] at hVR <;> (try omega) <;> (have := hp.1; simp_all)
     · rw [wtK2_none stubCall k m1 vis i n v hs hp] at h; cases h
 
-/-- **`whnf_telescope` refines `whnfTelescope .verified`** (through the stub `whnf`): the binders' domains as an `IW` slice, the sort as a word. -/
-@[refines ConRon.Arena.whnfTelescope]
+/-- **`whnf_telescope` refines `whnfTelescope .verified`** (through the stub `whnf`): the binders' domains as an `IW` slice, the sort as a word. Under `StageR`; the census link is `whnfTelescope_refinesC` (`IndT/Sum1.lean`). -/
 theorem whnfTelescope_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
     (hv : p.lookup "e_view" = some eView)
