@@ -637,4 +637,129 @@ theorem ctoW_simR {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) {dn : NId
       exact h r s3.mem hW3)
     fun r x m3 a3 h => ⟨h.1, hg12.trans h.2.1, hM2.fr h.2.2.1, h.2.2.2.1, ps1.trans h.2.2.2.2⟩
 
+/-- **`check_block_tables`' model refines `checkBlockTables`** (`ctbW_sim`, the tables through the
+real `all_level_params_defined`: `ctoW_simR`), from the twin's `StateOK`, `PinsOK` and the shape's,
+the members', the constructors' and their sorts' readings (each member's install a `PStep`, so they
+hold at the next); the twin's run is a `PStep`. -/
+theorem ctbW_simR {p : Prog} (hP : TabsProg p) (hp : ApdF p) (dn : NIdx → Option ConLeche.Name) (pp : Word) (bs : BlockShape)
+    (n : Nat) :
+    ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (mo ml co cl so sl : Word) (mss : List MemberShape)
+      (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))),
+    StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs →
+    ShapeSrc m pp → PSlR decMS mss mo ml m → PSlR decCNS css co cl m → PSlR decISS sss so sl m → HbMemo m →
+    AbsOK m → (∀ f ∈ tablesKeepCallees, AbsKeep p f) →
+    ConRon.Bridge.StateOK a → ConRon.Bridge.PinsOK a →
+    (∃ pP, ConRon.Bridge.Inductives.dShape a.store bs = some pP) →
+    (∃ msP, mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some msP) →
+    (∃ cssP, css.mapM (ConRon.Bridge.Inductives.dCtors a.store) = some cssP) →
+    (∃ sssP, sss.mapM (ConRon.Bridge.Inductives.denoteLLists a.store) = some sssP) →
+    Sim (ctbW p n m pp mo ml co cl so sl vis) (ConRon.Arena.checkBlockTables bs mss css sss fe) a
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m' ∧
+        ConRon.Bridge.Inductives.PStep a a') := by
+  induction n with
+  | zero => intros; rw [ctbW_zero]; exact Sim.of_none
+  | succ n ih =>
+  intro m a vis fe mo ml co cl so sl mss css sss hS hq hsrc hmss hcss hsss hM hA hkeep hok hpins
+    ⟨pP, hsh⟩ ⟨msP, hmsP⟩ ⟨cssP, hcsP⟩ ⟨sssP, hssP⟩
+  by_cases hml : ml = 0
+  · subst hml
+    rw [ctbW_nil1 p n m pp mo 0 co cl so sl vis rfl, cbt_nil bs mss css sss fe (.inl (partsPSl_nil hmss))]
+    exact Sim.ret ⟨hS, IWGrow.refl m, hM, hA, ConRon.Bridge.Inductives.PStep.refl hok⟩
+  by_cases hcl : cl = 0
+  · subst hcl
+    rw [ctbW_nil2 p n m pp mo ml co 0 so sl vis hml rfl,
+      cbt_nil bs mss css sss fe (.inr (.inl (partsPSl_nil hcss)))]
+    exact Sim.ret ⟨hS, IWGrow.refl m, hM, hA, ConRon.Bridge.Inductives.PStep.refl hok⟩
+  by_cases hsl : sl = 0
+  · subst hsl
+    rw [ctbW_nil3 p n m pp mo ml co cl so 0 vis hml hcl rfl,
+      cbt_nil bs mss css sss fe (.inr (.inr (partsPSl_nil hsss)))]
+    exact Sim.ret ⟨hS, IWGrow.refl m, hM, hA, ConRon.Bridge.Inductives.PStep.refl hok⟩
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
+  obtain ⟨msp, msh, rest, rfl, hwm, hmsb, hdm, hrest⟩ := partsPSl_cons hmss hml
+  obtain ⟨csp, cs, css', rfl, hwc, hcsb, hdc, hcss'⟩ := partsPSl_cons hcss hcl
+  obtain ⟨ssp, ss, sss', rfl, hws, hssb, hds, hsss'⟩ := partsPSl_cons hsss hsl
+  obtain ⟨mP, msP', -, hmP, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmsP
+  obtain ⟨csP, cssP', -, hcsy, hcssP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsP
+  obtain ⟨ssP, sssP', -, hssy, hsssP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hssP
+  have hmsp' : (UInt64.ofNat msp : Word).toNat = msp := UInt64.toNat_ofNat_of_lt' hmsb
+  have hcsp' : (UInt64.ofNat csp : Word).toNat = csp := UInt64.toNat_ofNat_of_lt' hcsb
+  have hssp' : (UInt64.ofNat ssp : Word).toNat = ssp := UInt64.toNat_ofNat_of_lt' hssb
+  -- the member's constructors `[off, len]`
+  obtain ⟨o1, l1, ho1, hl1, hd1, hb1⟩ := partsAt decCN_mono
+    (show decAt (truncM m) (decPL (truncM m) (decCN (truncM m))) csp = some cs from hdc)
+  have hlt1 := partsIwLt hl1
+  obtain ⟨hwo1, -, -⟩ := partsIwRd ho1 hcsp'
+  obtain ⟨hwl1, -, -⟩ := partsIwRd hl1 (w := UInt64.ofNat csp + 1)
+    (by rw [UInt64.toNat_add, hcsp']; simp; omega)
+  rw [ofNat_toNat_word] at hwo1 hwl1
+  have hlen1 : cs.length = l1.toNat := decPL_length _ hd1
+  -- the member's sorts `[off, len]`
+  obtain ⟨o2, l2, ho2, hl2, hd2, hb2⟩ := partsAt decIS_mono
+    (show decAt (truncM m) (fun o l => decPL (truncM m) (decIS (truncM m)) o l) ssp = some ss from hds)
+  have hlt2 := partsIwLt hl2
+  obtain ⟨hwo2, -, -⟩ := partsIwRd ho2 hssp'
+  obtain ⟨hwl2, -, -⟩ := partsIwRd hl2 (w := UInt64.ofNat ssp + 1)
+    (by rw [UInt64.toNat_add, hssp']; simp; omega)
+  rw [ofNat_toNat_word] at hwo2 hwl2
+  have hlen2 : ss.length = l2.toNat := decPL_length _ hd2
+  -- the member's index count
+  obtain ⟨-, hni, -⟩ := decMS_some (show decMS (truncM m) msp = some msh from hdm)
+  have hlt3 := partsIwLt hni
+  obtain ⟨hwn, hnib, -⟩ := partsIwRd hni (w := UInt64.ofNat msp + 1)
+    (by rw [UInt64.toNat_add, hmsp']; simp; omega)
+  have hni0 : (UInt64.ofNat msh.nIdx : Word) = 0 ↔ msh.nIdx = 0 := by
+    constructor
+    · intro e; have := congrArg UInt64.toNat e; rwa [UInt64.toNat_ofNat_of_lt' hnib] at this
+    · intro e; rw [e]; rfl
+  have hw1 : ∀ w : Word, w = 1 ↔ w.toNat = 1 := fun w =>
+    ⟨fun e => by rw [e]; rfl, fun e => UInt64.toNat_inj.mp (by rw [e]; rfl)⟩
+  by_cases hc : l1 = 1 ∧ l2 = 1 ∧ msh.nIdx = 0
+  · obtain ⟨e1, e2, e3⟩ := hc
+    subst e1 e2
+    obtain ⟨⟨cA, nF⟩, rfl⟩ := List.length_eq_one_iff.mp (show cs.length = 1 by rw [hlen1]; rfl)
+    obtain ⟨sorts, rfl⟩ := List.length_eq_one_iff.mp (show ss.length = 1 by rw [hlen2]; rfl)
+    obtain ⟨cAP', -, -, hcA1, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsy
+    obtain ⟨cAP, hcAP, -⟩ := Option.map_eq_some_iff.mp hcA1
+    obtain ⟨sortsP, -, -, hsP, -⟩ := ConRon.Bridge.Inductives.BT.denoteLLists_cons_inv hssy
+    rw [ctbW_one p n m pp mo ml co cl so sl vis hml hcl hsl (by rw [hwc, hwl1]) (by rw [hws, hwl2])
+      (by rw [hwm, hwn, (hni0).mpr e3]), cbt_one bs msh rest css' sss' fe cA nF sorts e3, hwm, hwc, hws, hwo1, hwo2]
+    have hcall : Sim (callW p n "check_block_tables_one" [pp, UInt64.ofNat msp, o1, o2, vis] m)
+        (tabOne fe bs msh cA nF sorts) a
+        (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m' ∧
+          ConRon.Bridge.Inductives.PStep a a') := by
+      cases n with
+      | zero => rw [callW_zero]; exact Sim.of_none
+      | succ k =>
+        intro r m' e
+        obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+          (cto_spec p hP.one k _ pp (UInt64.ofNat msp) o1 o2 vis) e
+        exact ctoW_simR hP hp k hS hq hsrc (by rw [hmsp']; exact hdm)
+          ⟨hd1, hb1.resolve_left (by decide)⟩ ⟨hd2, hb2.resolve_left (by decide)⟩ hM hA hkeep hok hpins
+          hsh hmP hcAP hsP r s'.mem hW
+    refine Sim.bindK (K := ctbK1 p n pp mo ml co cl so sl) (by simp [ctbK1.eq_def])
+      (fun r m1 => ctbK1_some p n m1 pp mo ml co cl so sl r) hcall ?_
+    rintro r fe₂ m1 a1 ⟨hS1, hg1, hM1, hA1, ps1⟩
+    exact Sim.post (K := ctbK2) rfl (fun _ _ => rfl)
+      (ih m1 a1 (r.headD 0) fe₂ (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest css' sss'
+        hS1 (hq.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) (hrest.grow decMS_mono hg1)
+        (hcss'.grow decCNS_mono hg1) (hsss'.grow decISS_mono hg1) hM1 hA1 hkeep ps1.ok
+        (hpins.mono ps1.ext ps1.pins) ⟨pP, ConRon.Bridge.Inductives.dShape_ext ps1.ext _ _ hsh⟩
+        ⟨msP', ConRon.Bridge.Inductives.dMember_ext.list ps1.ext _ _ hrestP⟩
+        ⟨cssP', ConRon.Bridge.Inductives.dCtors_ext.list ps1.ext _ _ hcssP'⟩
+        ⟨sssP', ConRon.Bridge.Inductives.DExt.list
+          (d := ConRon.Bridge.Inductives.denoteLLists)
+          (fun hx x y h => ConRon.Bridge.Inductives.BI.denoteLLists_ext hx x y h) ps1.ext _ _ hsssP'⟩)
+      (fun r x m a ⟨h1, h2, h3, h4, h5⟩ => ⟨h1, hg1.trans h2, h3, h4, ps1.trans h5⟩)
+  · rw [ctbW_skip p n m pp mo ml co cl so sl vis hml hcl hsl (by
+        rw [hwc, hwl1, hws, hwl2, hwm, hwn, hni0]; exact hc),
+      cbt_skip bs msh rest cs css' ss sss' fe (by
+        rw [hlen1, hlen2, ← hw1, ← hw1]; exact hc)]
+    exact Sim.post (K := ctbK2) rfl (fun _ _ => rfl)
+      (ih m a vis fe (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest css' sss'
+        hS hq hsrc hrest hcss' hsss' hM hA hkeep hok hpins ⟨pP, hsh⟩ ⟨msP', hrestP⟩ ⟨cssP', hcssP'⟩
+        ⟨sssP', hsssP'⟩)
+      (fun r x m a ⟨h1, h2, h3, h4, h5⟩ => ⟨h1, h2, h3, h4, h5⟩)
+
 end L.Ind
