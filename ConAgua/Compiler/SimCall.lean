@@ -50,16 +50,22 @@ theorem evalArgsP_length {σ : St} {es : List Expr} {vs : List Word} (h : evalAr
       · cases h
       · rename_i hes; cases h; simp [ih hes]
 
+/-- The arguments `vs` of a call, where the callee finds them: at most 9 in the argument
+registers, more in memory at `rsi`, outside the callee's frame. -/
+def ArgsIn (G : Layout) (d : MachineData) (vs : List Word) : Prop :=
+  (vs.length ≤ argRegs.length → ∀ i (h : i < vs.length), d.regs.get64 (argRegs.getD i .rax) = vs[i].toBitVec) ∧
+  (argRegs.length < vs.length →
+    (∀ i (h : i < vs.length), rdW d.dmem (A (d.regs.rsi.toNat + 8 * i)) = some vs[i]) ∧
+    (d.regs.rsp.toNat + 8 ≤ d.regs.rsi.toNat ∨ d.regs.rsi.toNat + 8 * vs.length ≤ G.lo) ∧
+    d.regs.rsi.toNat + 8 * vs.length < 2 ^ 64)
+
 /-- The simulation of every call of a function of `p` under `exec p n`, with fewer than `n` units
 of machine fuel. -/
 def FunSim [Host] (p : Prog) (G : Layout) (t : NTree) (n : Nat) : Prop :=
   ∀ (f : FnName) (fd : FunDecl) (kf : Nat), p.lookup f = some fd → Code (compileFn G.tab t f fd) kf →
   ∀ (vs : List Word) (σ : St) (d : MachineData) (ra : Word) (Q : MachineState → Prop),
     vs.length = fd.nparams →
-    rdW d.dmem (A d.regs.rsp.toNat) = some ra →
-    (∀ i (h : i < vs.length), rdW d.dmem (A (d.regs.rsi.toNat + 8 * i)) = some vs[i]) →
-    (vs.length = 0 ∨ d.regs.rsp.toNat + 8 ≤ d.regs.rsi.toNat ∨ d.regs.rsi.toNat + 8 * vs.length ≤ G.lo) →
-    d.regs.rsi.toNat + 8 * vs.length < 2 ^ 64 →
+    rdW d.dmem (A d.regs.rsp.toNat) = some ra → ArgsIn G d vs →
     G.lo ≤ d.regs.rsp.toNat → d.regs.rsp.toNat + 8 ≤ G.hi →
     d.regs.r15.toNat = G.T → MemRel G σ.mem d.dmem → d.regs.r14.toNat < n →
     (∀ r σ' d', (invoke p (exec p n) f vs).run σ = .ok (r, σ') → MemRel G σ'.mem d'.dmem →
@@ -70,6 +76,95 @@ def FunSim [Host] (p : Prog) (G : Layout) (t : NTree) (n : Nat) : Prop :=
       GPost G d.regs.rsp.toNat d d' → Ev Q d' (label errorL)) →
     (∀ d', GPost G d.regs.rsp.toNat d d' → Ev Q d' (label exhaustedL)) →
     Ev Q d (at_ kf)
+
+/-! ## Values straight into registers -/
+
+/-- What computing values into the registers `W` may change: `rax`, `rcx`, `rdx`, the flags, the
+registers `W` and the temporaries. -/
+structure RPost (nl F : Nat) (W : Reg64 → Prop) (s s' : MachineData) : Prop where
+  rsp : s'.regs.rsp = s.regs.rsp
+  rbp : s'.regs.rbp = s.regs.rbp
+  r14 : s'.regs.r14 = s.regs.r14
+  r15 : s'.regs.r15 = s.regs.r15
+  keep : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → ¬ W r → s'.regs.get64 r = s.regs.get64 r
+  mem : Only (s.regs.rsp.toNat + 8 * nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem
+
+theorem RPost.refl (nl F : Nat) (W : Reg64 → Prop) (s : MachineData) : RPost nl F W s s :=
+  ⟨rfl, rfl, rfl, rfl, fun _ _ _ _ _ => rfl, Only.refl _ _ _⟩
+
+theorem RPost.trans {nl F : Nat} {W W' : Reg64 → Prop} {s s' s'' : MachineData} (h : RPost nl F W s s')
+    (h' : RPost nl F W' s' s'') : RPost nl F (fun r => W r ∨ W' r) s s'' := by
+  have hm := h'.mem
+  rw [h.rsp] at hm
+  exact ⟨h'.rsp.trans h.rsp, h'.rbp.trans h.rbp, h'.r14.trans h.r14, h'.r15.trans h.r15,
+    fun r a b c hw => (h'.keep r a b c (fun x => hw (.inr x))).trans (h.keep r a b c (fun x => hw (.inl x))),
+    h.mem.trans hm (Nat.le_refl _) (Nat.le_refl _)⟩
+
+theorem RPost.mono {nl F : Nat} {W W' : Reg64 → Prop} {s s' : MachineData} (h : RPost nl F W s s')
+    (hW : ∀ r, W r → W' r) : RPost nl F W' s s' :=
+  ⟨h.rsp, h.rbp, h.r14, h.r15, fun r a b c hw => h.keep r a b c (fun x => hw (hW r x)), h.mem⟩
+
+theorem EPost.rpost {nl F t : Nat} {s s' : MachineData} (h : EPost nl F t s s') (W : Reg64 → Prop) :
+    RPost nl F W s s' :=
+  ⟨h.rsp, h.rbp, h.r14, h.r15, fun r a b c _ => h.keep r a b c, h.mem.mono (by omega) (Nat.le_refl _)⟩
+
+/-- A write of a register of `allocRegs`. -/
+theorem RPost.set {nl F : Nat} {s : MachineData} {r : Reg64} (hr : r ∈ allocRegs) (v : BitVec 64) :
+    RPost nl F (· = r) s { s with regs := s.regs.set64 r v } := by
+  obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs) hr v
+  exact ⟨h1, h2, h3, h4, fun r' _ _ _ hw => by rw [rget_set, if_neg hw], Only.refl _ _ _⟩
+
+theorem RPost.spost {G : Layout} {nl F : Nat} {W : Reg64 → Prop} {d d' : MachineData}
+    (h : RPost nl F W d d') (hlo : G.lo ≤ d.regs.rsp.toNat) : SPost G F d d' :=
+  ⟨h.rsp, h.rbp, h.r15, by rw [h.r14]; exact Nat.le_refl _, Pres.of_only h.mem (by omega) (Nat.le_refl _)⟩
+
+/-- The L state with the locals kept in register `r` set to `v`: a ghost state, for the result
+registers a `return` writes (the locals there are dead after it). -/
+def _root_.L.St.setReg (al : List (Var × Reg64)) (r : Reg64) (v : Word) (σ : St) : St :=
+  { σ with loc := fun y => if al.lookup y = some r then v else σ.loc y }
+
+theorem St.setReg_nil (r : Reg64) (v : Word) (σ : St) : σ.setReg [] r v = σ := by
+  cases σ; simp [St.setReg]
+
+theorem evalP_setReg {al : List (Var × Reg64)} {r : Reg64} {v : Word} {σ : St} :
+    ∀ e, Expr.readsReg al r e = false → evalP (σ.setReg al r v) e = evalP σ e := by
+  intro e
+  induction e with
+  | var x =>
+    intro h
+    simp only [Expr.readsReg] at h
+    have h' : al.lookup x ≠ some r := by intro e; rw [e] at h; exact absurd h (by cases r <;> decide)
+    simp [evalP, St.setReg, h']
+  | bin op a b iha ihb =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iha h.1, ihb h.2]
+  | cmpw op a b iha ihb =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iha h.1, ihb h.2]
+  | ld8 a i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ld64 a i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ldc d i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]
+  | _ => intro _; rfl
+
+/-- `Inv` after a write of a register of `allocRegs`, with the ghost state. -/
+theorem Inv.setReg {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
+    {r : Reg64} (hr : r ∈ allocRegs) (v : Word) :
+    Inv G ctx F (σ.setReg ctx.alloc r v) { s with regs := s.regs.set64 r v.toBitVec } := by
+  obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs) hr v.toBitVec
+  exact {
+    r15 := by simp only [h4]; exact hI.r15
+    lo := by simp only [h1]; exact hI.lo
+    lo8 := by simp only [h1]; exact hI.lo8
+    hi := by simp only [h1]; exact hI.hi
+    slot := hI.slot
+    al := hI.al
+    reg := fun y hy r' hr' => by
+      simp only [rget_set, St.setReg, hr']
+      by_cases he : r' = r
+      · subst he; simp
+      · simp only [he, ite_false, Option.some.injEq]; exact hI.reg y hy r' hr'
+    frame := fun y hy hyn => by simp only [h1, St.setReg, hyn, reduceCtorEq, ite_false]; exact hI.frame y hy hyn
+    mem := hI.mem }
 
 theorem bv_sub8 (x : UInt64) (h : 8 ≤ x.toNat) : x.toBitVec - 8 = A (x.toNat - 8) := by
   apply BitVec.eq_of_toNat_eq
@@ -246,13 +341,13 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
           hc.tail (by simp [loadRes, him, hi]; omega) rfl rfl rfl rfl rfl (fun _ => rfl)
 
 /-- Storing results `i, i + 1, …` into the locals `xs`. -/
-theorem sim_storeRes {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState → Prop)
+theorem sim_storeRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (F : Nat) (Q : MachineState → Prop)
     (hres : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
     ∀ (xs : List Var) (i k : Nat) (σ : St) (rs : List Word) (s : MachineData),
-    Code (storeRes G.tab xs i) k → xs.all (· < nl) = true → i + xs.length ≤ G.tab.nres → 8 * nl < 2 ^ 31 →
-    Inv G nl F σ s → (∀ j < xs.length, i + j < maxRes → rres s.regs (i + j) = rs.getD j 0) →
+    Code (storeRes G.tab xs i) k → xs.all (· < ctx.nl) = true → i + xs.length ≤ G.tab.nres → 8 * ctx.nl < 2 ^ 31 →
+    Inv G ctx F σ s → (∀ j < xs.length, i + j < maxRes → rres s.regs (i + j) = rs.getD j 0) →
     (∀ j < xs.length, maxRes ≤ i + j → rdW s.dmem (A (G.resAddr (i + j))) = some (rs.getD j 0)) →
-    (∀ s', Inv G nl F (σ.setLocs xs rs) s' → s'.regs.rsp = s.regs.rsp → s'.regs.rbp = s.regs.rbp →
+    (∀ s', Inv G ctx F (σ.setLocs xs rs) s' → s'.regs.rsp = s.regs.rsp → s'.regs.rbp = s.regs.rbp →
       s'.regs.r14 = s.regs.r14 → s'.regs.r15 = s.regs.r15 →
       Pres G (top s F) s.dmem s'.dmem → Ev Q s' (at_ (k + (storeRes G.tab xs i).length))) →
     Ev Q s (at_ k) := by
@@ -266,7 +361,7 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState →
     simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at hxs
     simp only [storeRes] at hc
     have hx := hxs.1
-    have := hI.nlF
+    have := hI.slot x hx (by simp [hal])
     have hhi := hI.hi
     have hhi2 := hG.hi_le
     have hlo := hI.lo
@@ -278,8 +373,8 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState →
         s1.regs.r15 = s.regs.r15 → (∀ j, rres s1.regs j = rres s.regs j) → s1.dmem = s.dmem →
         Ev Q { s1 with dmem := wrW s1.dmem (A (s1.regs.rsp.toNat + 8 * x)) v.toBitVec } (at_ (k + m)) := by
       intro m s1 v hv hc2 hlen r1 r2 r3 r4 hr hd
-      have hI1 : Inv G nl F σ s1 := hI.of_regs hd r1 r4
-      have hI2 := hI1.setLoc hG hx v
+      have hI1 : Inv G ctx F σ s1 := hI.of_regs0 hal hd r1 r4
+      have hI2 := hI1.setLoc hG hx (by simp [hal]) v
       have hsp := congrArg UInt64.toNat r1
       refine ih (i + 1) (k + m) _ rs.tail _ hc2 hxs.2 (by simp at hn; omega) hoff hI2 ?_ ?_ ?_
       · intro j hj hjm
@@ -328,10 +423,10 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState →
         hc.tail.tail (by simp [storeRes, him]; omega) rfl rfl rfl rfl (fun j => rres_set64_rcx _ _ j) rfl) rfl
 
 /-- Zeroing the locals `xs`. -/
-theorem sim_zeroVars {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState → Prop) :
+theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (F : Nat) (Q : MachineState → Prop) :
     ∀ (xs : List Var) (k : Nat) (σ : St) (s : MachineData),
-    Code (zeroVars xs) k → xs.all (· < nl) = true → 8 * nl < 2 ^ 31 → Inv G nl F σ s →
-    (∀ s', Inv G nl F (σ.setLocs xs []) s' → s'.regs = s.regs →
+    Code (zeroVars xs) k → xs.all (· < ctx.nl) = true → 8 * ctx.nl < 2 ^ 31 → Inv G ctx F σ s →
+    (∀ s', Inv G ctx F (σ.setLocs xs []) s' → s'.regs = s.regs →
       Pres G (top s F) s.dmem s'.dmem → Ev Q s' (at_ (k + xs.length))) →
     Ev Q s (at_ k) := by
   intro xs
@@ -344,14 +439,14 @@ theorem sim_zeroVars {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState →
     simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at hxs
     simp only [zeroVars] at hc
     have hx := hxs.1
-    have := hI.nlF
+    have := hI.slot x hx (by simp [hal])
     have hhi := hI.hi
     have hhi2 := hG.hi_le
     have hlo := hI.lo
     refine ev_movMI hc.head ⟨by lomega, by lomega⟩ ?_ ?_
     · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
     rw [slot_addr _ x _ (by omega)]
-    have hI2 := hI.setLoc hG hx 0
+    have hI2 := hI.setLoc hG hx (by simp [hal]) 0
     have h0 : (Int64.ofInt 0).toBitVec = (0 : Word).toBitVec := rfl
     rw [h0]
     refine ih (k + 1) _ _ hc.tail hxs.2 hoff hI2 ?_
@@ -381,14 +476,209 @@ theorem St.setLocs_take_drop (xs : List Var) (σ : St) (r : List Word) (c : Nat)
       exact ih _ _ _ (by simp; omega)
 
 end
+theorem resReg_alloc {j : Nat} (h1 : 1 ≤ j) (h2 : j < maxRes) : resReg j ∈ allocRegs := by
+  simp only [maxRes] at h2
+  have : j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
+  rcases this with rfl | rfl | rfl | rfl | rfl <;> simp [resReg, allocRegs]
+
+theorem resReg_inj {i j : Nat} (hi : i < maxRes) (hj : j < maxRes) (h : resReg i = resReg j) : i = j := by
+  simp only [maxRes] at hi hj
+  have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 := by omega
+  have hj' : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
+  rcases hi' with rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases hj' with rfl | rfl | rfl | rfl | rfl | rfl <;> simp_all [resReg]
+
+theorem zeroRes_length (i n : Nat) : (zeroRes i n).length = n := by
+  induction n generalizing i with
+  | zero => rfl
+  | succ n ih => simp [zeroRes, ih]
+
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
+omit hG hTab in
+/-- Results `i, …, i + n - 1` (registers) set to `0`. -/
+theorem sim_zeroRes (Q : MachineState → Prop) :
+    ∀ (n i k : Nat) (s : MachineData), Code (zeroRes i n) k → i + n ≤ maxRes →
+    (∀ s', s'.dmem = s.dmem → s'.regs.rsp = s.regs.rsp → s'.regs.rbp = s.regs.rbp →
+      s'.regs.r14 = s.regs.r14 → s'.regs.r15 = s.regs.r15 →
+      (∀ j, i ≤ j → j < i + n → rres s'.regs j = 0) →
+      (∀ j < maxRes, (j < i ∨ i + n ≤ j) → rres s'.regs j = rres s.regs j) →
+      Ev Q s' (at_ (k + n))) → Ev Q s (at_ k) := by
+  intro n
+  induction n with
+  | zero =>
+    intro i k s _ _ h
+    exact h s rfl rfl rfl rfl rfl (fun j h1 h2 => absurd h2 (by omega)) (fun _ _ _ => rfl)
+  | succ n ih =>
+    intro i k s hc hn h
+    simp only [zeroRes] at hc
+    refine ev_movRI hc.head ?_
+    obtain ⟨h1, h2, h3, h4⟩ := resReg_keeps s.regs i (0 : Word).toBitVec
+    refine ih (i + 1) (k + 1) _ hc.tail (by omega) ?_
+    intro s' hd q1 q2 q3 q4 hz hk
+    refine ev_congr (h s' hd (q1.trans h1) (q2.trans h2) (q3.trans h3) (q4.trans h4) ?_ ?_) (by omega)
+    · intro j hj1 hj2
+      by_cases hji : j = i
+      · subst hji
+        rw [hk j (by omega) (.inl (by omega)), rres_set64_resReg _ (by omega) (by omega), if_pos rfl]
+      · exact hz j (by omega) (by omega)
+    · intro j hj hor
+      rw [hk j hj (by omega), rres_set64_resReg _ (by omega) hj, if_neg (by omega)]
+
+
+/-- `r := e` (`valInto`), with the ghost state of the write. -/
+theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)
+    {r : Reg64} (hr : r ∈ allocRegs) (e : Expr) (k : Nat) (hc : Code (valInto ctx r e) k)
+    (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : TmpFit ctx.nl F 0 (tempsE e))
+    (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s)
+    (hok : ∀ v s', evalP σ e = .ok v → s'.regs.get64 r = v.toBitVec → RPost ctx.nl F (· = r) s s' →
+      Inv G ctx F (σ.setReg ctx.alloc r v) s' → Ev Q s' (at_ (k + (valInto ctx r e).length)))
+    (herr : ∀ s', (∃ x, evalP σ e = .error x) → EPost ctx.nl F 0 s s' → Ev Q s' (label errorL)) :
+    Ev Q s (at_ k) := by
+  unfold valInto at hc hok
+  cases hl : loadInto ctx r e with
+  | some code =>
+    simp only [hl] at hc hok
+    obtain ⟨v, hv, hlen, hsim⟩ := sim_loadInto hT hTab hF hI hwf hl hc
+    refine hsim Q (ev_congr (hok v _ hv (by rw [rget_set, if_pos rfl]) (RPost.set hr _) (hI.setReg hr v)) ?_)
+    rw [hlen]
+  | none =>
+    simp only [hl] at hc hok
+    refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf htmp σ s Q hI ?_ herr
+    intro v s1 hv hrax hE1
+    have hI1 := hI.ofE hG hE1
+    refine ev_movRR hc.right.head ?_
+    have hv' : s1.regs.get64 .rax = v.toBitVec := by simp [hrax]
+    rw [hv']
+    refine ev_congr (hok v _ hv (by rw [rget_set, if_pos rfl])
+      (((hE1.rpost (· = r)).trans (RPost.set hr _)).mono fun _ h => h.elim id id) (hI1.setReg hr v)) ?_
+    simp only [List.length_append, List.length_cons, List.length_nil]; omega
+
+/-- Arguments into the registers `rs`, in a function that keeps no locals in registers. -/
+theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)
+    (hal : ctx.alloc = []) :
+    ∀ (args : List Expr) (rs : List Reg64) (k : Nat), args.length ≤ rs.length → (∀ r ∈ rs, r ∈ allocRegs) →
+    rs.Nodup → Code (compileRegArgs ctx rs args) k → args.all (Expr.wf ctx.nl G.tab) = true →
+    TmpFit ctx.nl F 0 (tempsEs args) →
+    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
+    (∀ vs s', evalArgsP σ args = .ok vs → RPost ctx.nl F (· ∈ rs) s s' → Inv G ctx F σ s' →
+      (∀ i (h : i < vs.length), s'.regs.get64 (rs.getD i .rax) = vs[i].toBitVec) →
+      Ev Q s' (at_ (k + (compileRegArgs ctx rs args).length))) →
+    (∀ s', (∃ x, evalArgsP σ args = .error x) → RPost ctx.nl F (· ∈ rs) s s' → Ev Q s' (label errorL)) →
+    Ev Q s (at_ k) := by
+  intro args
+  induction args with
+  | nil =>
+    intro rs k _ _ _ _ _ _ σ s Q hI hok _
+    exact ev_congr (hok [] s rfl (RPost.refl _ _ _ _) hI (fun i h => absurd h (by simp)))
+      (by cases rs <;> simp [compileRegArgs])
+  | cons e es ih =>
+    intro rs k hlen hrs hnd hc hwf htmp σ s Q hI hok herr
+    cases rs with
+    | nil => simp at hlen
+    | cons r rs =>
+    simp only [List.all_cons, Bool.and_eq_true] at hwf
+    simp only [tempsEs] at htmp
+    simp only [compileRegArgs] at hc hok
+    have hr := hrs r List.mem_cons_self
+    have hne := allocRegs_ne hr
+    have hnr : r ∉ rs := (List.nodup_cons.mp hnd).1
+    refine sim_valInto hG hTab ctx hT F hF hr e k hc.left hwf.1 (htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
+      (fun s' he hE => herr s' (by obtain ⟨x, hx⟩ := he; exact ⟨x, by simp [evalArgsP, hx]; rfl⟩)
+        (hE.rpost _))
+    intro v s1 hv hr1 hR1 hI1
+    rw [hal, St.setReg_nil] at hI1
+    refine ih rs _ (by simp at hlen; omega) (fun r' h => hrs r' (List.mem_cons_of_mem _ h))
+      (List.nodup_cons.mp hnd).2 hc.right hwf.2 (htmp.mono (Nat.le_max_right _ _)) σ s1 Q hI1 ?_ ?_
+    · intro vs s2 hvs hR2 hI2 hregs
+      refine ev_congr (hok (v :: vs) s2 (by simp [evalArgsP, hv, hvs]; rfl)
+        ((hR1.trans hR2).mono fun r' h => h.elim (fun h => h ▸ List.mem_cons_self)
+          (fun h => List.mem_cons_of_mem _ h)) hI2 ?_) ?_
+      · intro i hi
+        cases i with
+        | zero =>
+          simp only [List.getD_cons_zero, List.getElem_cons_zero]
+          rw [hR2.keep r hne.1 hne.2.1 hne.2.2.1 hnr]; exact hr1
+        | succ i => simpa using hregs i (by simpa using hi)
+      · simp only [List.length_append]; omega
+    · intro s2 he hR2
+      obtain ⟨x, hx⟩ := he
+      exact herr s2 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩
+        ((hR1.trans hR2).mono fun r' h => h.elim (fun h => h ▸ List.mem_cons_self)
+          (fun h => List.mem_cons_of_mem _ h))
+
+/-- Results `i, i + 1, …` of a `return` straight into their registers (`retRegs`), with ghost
+states: the values do not read the registers written before them (`retSafe`). -/
+theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)
+    (σ0 : St) (e0 : Expr) (Q : MachineState → Prop) :
+    ∀ (rest : List Expr) (i k : Nat) (σ : St) (s : MachineData),
+    Code (retRegs ctx i rest) k → rest.all (Expr.wf ctx.nl G.tab) = true → TmpFit ctx.nl F 0 (tempsEs rest) →
+    1 ≤ i → i + rest.length ≤ maxRes → retSafe ctx.alloc e0 i rest = true →
+    Inv G ctx F σ s → σ.mem = σ0.mem → evalP σ e0 = evalP σ0 e0 → (∀ e ∈ rest, evalP σ e = evalP σ0 e) →
+    (∀ vs σ' s', evalArgsP σ0 rest = .ok vs → Inv G ctx F σ' s' → σ'.mem = σ0.mem →
+      evalP σ' e0 = evalP σ0 e0 →
+      RPost ctx.nl F (fun r => ∃ j, i ≤ j ∧ j < i + rest.length ∧ r = resReg j) s s' →
+      (∀ j (h : j < vs.length), s'.regs.get64 (resReg (i + j)) = vs[j].toBitVec) →
+      Ev Q s' (at_ (k + (retRegs ctx i rest).length))) →
+    (∀ s', (∃ x, evalArgsP σ0 rest = .error x) →
+      RPost ctx.nl F (fun r => ∃ j, i ≤ j ∧ j < i + rest.length ∧ r = resReg j) s s' →
+      Ev Q s' (label errorL)) →
+    Ev Q s (at_ k) := by
+  intro rest
+  induction rest with
+  | nil =>
+    intro i k σ s _ _ _ _ _ _ hI hm he0 _ hok _
+    exact ev_congr (hok [] σ s rfl hI hm he0 (RPost.refl _ _ _ _) (fun j h => absurd h (by simp)))
+      (by simp [retRegs])
+  | cons e rest ih =>
+    intro i k σ s hc hwf htmp hi1 hin hsafe hI hm he0 hes hok herr
+    simp only [List.all_cons, Bool.and_eq_true] at hwf
+    simp only [tempsEs] at htmp
+    simp only [retRegs] at hc hok
+    simp only [retSafe, Bool.and_eq_true, Bool.not_eq_true', List.any_eq_false] at hsafe
+    simp only [List.length_cons] at hin
+    have hr := resReg_alloc (j := i) hi1 (by omega)
+    have hne := allocRegs_ne hr
+    have hev : evalP σ e = evalP σ0 e := hes e List.mem_cons_self
+    refine sim_valInto hG hTab ctx hT F hF hr e k hc.left hwf.1 (htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
+      (fun s' he hE => herr s' (by obtain ⟨x, hx⟩ := he; rw [hev] at hx; exact ⟨x, by simp [evalArgsP, hx]; rfl⟩)
+        (hE.rpost _))
+    intro v s1 hv hr1 hR1 hI1
+    have hnr : ∀ e' ∈ e0 :: rest, Expr.readsReg ctx.alloc (resReg i) e' = false := fun e' h => by
+      have := hsafe.1 e' h; simpa using this
+    have hv0 : evalP σ0 e = .ok v := hev ▸ hv
+    refine ih (i + 1) _ (σ.setReg ctx.alloc (resReg i) v) s1 hc.right hwf.2 (htmp.mono (Nat.le_max_right _ _))
+      (by omega) (by omega) hsafe.2 hI1 hm
+      (by rw [evalP_setReg _ (hnr e0 List.mem_cons_self), he0])
+      (fun e' h => by rw [evalP_setReg _ (hnr e' (List.mem_cons_of_mem _ h)), hes e' (List.mem_cons_of_mem _ h)])
+      ?_ ?_
+    · intro vs σ' s2 hvs hI2 hm2 he2 hR2 hregs
+      refine ev_congr (hok (v :: vs) σ' s2 (by simp [evalArgsP, hv0, hvs]; rfl) hI2 hm2 he2
+        ((hR1.trans hR2).mono fun r' h => h.elim (fun h => ⟨i, Nat.le_refl _, by simp only [List.length_cons]; omega, h⟩)
+          (fun ⟨j, h1, h2, h3⟩ => ⟨j, by omega, by simp only [List.length_cons]; omega, h3⟩)) ?_) ?_
+      · intro j hj
+        cases j with
+        | zero =>
+          simp only [Nat.add_zero, List.getElem_cons_zero]
+          rw [hR2.keep _ hne.1 hne.2.1 hne.2.2.1 fun ⟨j', h1, h2, h3⟩ => by
+            have := resReg_inj (by omega) (by omega) h3; omega]
+          exact hr1
+        | succ j =>
+          have := hregs j (by simpa using hj)
+          simpa [show i + 1 + j = i + (j + 1) by omega] using this
+      · simp only [List.length_append]; omega
+    · intro s2 he hR2
+      obtain ⟨x, hx⟩ := he
+      exact herr s2 ⟨x, by simp [evalArgsP, hv0, hx]; rfl⟩
+        ((hR1.trans hR2).mono fun r' h => h.elim (fun h => ⟨i, Nat.le_refl _, by simp only [List.length_cons]; omega, h⟩)
+          (fun ⟨j, h1, h2, h3⟩ => ⟨j, by omega, by simp only [List.length_cons]; omega, h3⟩))
+
 theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (args : List Expr) (i k : Nat), Code (compileArgs ctx i args) k →
     args.all (Expr.wf ctx.nl G.tab) = true → ctx.nl + tempsArgs i args ≤ F →
-    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx.nl F σ s →
+    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
     (∀ vs s', evalArgsP σ args = .ok vs → EPost ctx.nl F i s s' →
       (∀ j (h : j < vs.length), rdW s'.dmem (A (s.regs.rsp.toNat + 8 * (ctx.nl + i + j))) = some vs[j]) →
       Ev Q s' (at_ (k + (compileArgs ctx i args).length))) →
@@ -407,17 +697,17 @@ theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < 
     have hF' := hF; simp only [maxOff] at hF'
     have hsp := hI.hi
     have hhi := hG.hi_le
-    refine sim_expr hG ctx hT hTab F hF e i k hc.left hwf.1 (by omega) σ s Q hI ?_ ?_
+    refine sim_expr hG ctx hT hTab F hF e i k hc.left hwf.1 (.inr (by omega)) σ s Q hI ?_ ?_
     · intro v s1 hv hrax1 hE1
-      have hI1 : Inv G ctx.nl F σ s1 :=
-        hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+      have hI1 : Inv G ctx F σ s1 :=
+        hI.ofE hG hE1
       have hoff : SmallOff (8 * ((ctx.nl : Int) + (i : Int))) := ⟨by omega, by omega⟩
       refine ev_movMR hc.right.head hoff ?_ ?_
       · rw [slot_addr _ (ctx.nl + i) _ (by omega)]; exact hI1.mapped (by omega)
       rw [slot_addr _ (ctx.nl + i) _ (by omega)]
       have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + i) (s := s1)
         (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-      have hI2 := hI.only hG (hE2.mem.mono (by omega) (Nat.le_refl _)) hE2.rsp hE2.r15
+      have hI2 := hI.ofE hG hE2
       refine ih (i + 1) _ hc.right.tail hwf.2 (by omega) σ _ Q hI2 ?_ ?_
       · intro vs s3 hvs hE3 hslots
         have h1rsp := congrArg UInt64.toNat hE1.rsp
@@ -457,35 +747,110 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨hargs, hlen⟩ := hwf
-  simp only [compileS, List.append_assoc] at hc hK
+  simp only [compileS] at hc hK
   simp only [tempsS] at htmp
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
-  have hlenT := tempsArgs_ge 0 es
-  refine sim_args hG hTab ctx hT F hF es 0 k hc.left hargs htmp σ d Q hI ?_ ?_
-  · intro vs s1 hvs hE1 hslots
-    have hvl := evalArgsP_length hvs
-    have hI1 := hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
-    have hc2 := hc.right
-    rw [← hvl] at hc2
-    have h1sp := congrArg UInt64.toNat hE1.rsp
-    have hnr := hN.le
-    have hnret : es.length ≤ ctx.nr := hN.ret
-    refine sim_loadRes hG ctx hT vs vs Q (by omega) ctx.nr 0 _ s1 hc2.left (by omega)
-      (by rw [hvl]; omega) hI1.r15 hI1.lo (by rw [h1sp, hvl]; have := hI.hi; omega)
-      (fun x hx => hI1.mem.res x hx) (fun j hj => by rw [h1sp]; simpa [h1sp] using hslots j hj)
-      (fun j hj => absurd hj (Nat.not_lt_zero _)) (fun j _ hj => absurd hj (Nat.not_lt_zero _))
-      (fun _ _ => rfl) ?_
-    intro s2 h1 h2 h3 h4 hO hR hM
-    have hj := hc2.right
-    refine ev_jmp hj.head (hK.ret vs σ s2 (by simp [step_ret_run, hvs]; rfl)
-      (hI1.only_res hG hO (fun x a b => Layout.inRes_of a b) h1 h4) ((hE1.spost hI.lo).trans ?_)
-      ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), by omega⟩)
-    exact ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩
-  · intro s1 herr hE1
-    obtain ⟨y, hy⟩ := herr
-    refine hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
-      (hE1.spost hI.lo).gpost
+  have hnr := hN.le
+  have hnret : es.length ≤ ctx.nr := hN.ret
+  by_cases hok : retOk ctx.alloc es ctx.nr = true
+  · simp only [hok, ite_true] at htmp
+    cases es with
+    | nil =>
+      simp only [retDirect, hok, ite_true, List.append_assoc] at hc hK
+      have hn6 : ctx.nr ≤ maxRes := by simpa [retOk] using hok
+      refine sim_zeroRes Q ctx.nr 0 k d hc.left (by omega) ?_
+      intro s' hd h1 h2 h3 h4 hz _
+      have hc2 := hc.right
+      rw [zeroRes_length] at hc2
+      refine ev_jmp hc2.head (hK.ret [] σ s' (by simp [step_ret_run, evalArgsP]; rfl) (hd ▸ hI.mem)
+        ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, by rw [hd]; exact Pres.refl _ _⟩
+        ⟨fun j hj hm => by rw [hz j (Nat.zero_le _) (by omega)]; simp, fun j h1 h2 => absurd h2 (by omega),
+          by simp⟩)
+    | cons e0 rest =>
+      simp only [retDirect, hok, ite_true, List.append_assoc] at hc hK
+      have hok' := hok
+      simp only [retOk, Bool.and_eq_true, decide_eq_true_eq, List.length_cons] at hok'
+      obtain ⟨⟨hn6, hl⟩, hsafe⟩ := hok'
+      simp only [List.all_cons, Bool.and_eq_true] at hargs
+      simp only [tempsEs] at htmp
+      refine sim_retRegs hG hTab ctx hT F hF σ e0 Q rest 1 k σ d hc.left hargs.2
+        (htmp.mono (Nat.le_max_right _ _)) (Nat.le_refl _) (by omega) hsafe hI rfl rfl (fun _ _ => rfl) ?_ ?_
+      · intro vs σ' s1 hvs hI1 hm1 he1 hR1 hregs
+        have hvl := evalArgsP_length hvs
+        have hc2 := hc.right
+        refine sim_expr hG ctx hT hTab F hF e0 0 _ hc2.left hargs.1 (htmp.mono (Nat.le_max_left _ _)) σ' s1 Q
+          hI1 ?_ ?_
+        · intro v0 s2 hv0 hrax hE2
+          rw [he1] at hv0
+          have hc3 := hc2.right
+          refine sim_zeroRes Q _ _ _ s2 hc3.left (by omega) ?_
+          intro s3 hd q1 q2 q3 q4 hz hkeep
+          have hc4 := hc3.right
+          rw [zeroRes_length] at hc4
+          have hI2 := hI1.ofE hG hE2
+          refine ev_jmp hc4.head (hK.ret (v0 :: vs) σ s3 (by simp [step_ret_run, evalArgsP, hv0, hvs]; rfl)
+            (by rw [hd, ← hm1]; exact hI2.mem) ?_ ⟨?_, fun j h1 h2 => absurd h2 (by omega), by simp only [List.length_cons] at hl ⊢; omega⟩)
+          · refine (hR1.spost hI.lo).trans ((hE2.spost hI1.lo).trans ?_)
+            exact ⟨q1, q2, q4, by rw [q3]; exact Nat.le_refl _, by rw [hd]; exact Pres.refl _ _⟩
+          · intro j hj hjm
+            by_cases hjl : j < rest.length + 1
+            · rw [hkeep j hjm (.inl hjl)]
+              cases j with
+              | zero => simp [rres, hrax]
+              | succ j =>
+                have hr := resReg_alloc (j := j + 1) (by omega) hjm
+                have hne := allocRegs_ne hr
+                apply UInt64.toBitVec_inj.mp
+                rw [rres_eq_get64 _ hjm, hE2.keep _ hne.1 hne.2.1 hne.2.2.1]
+                have := hregs j (by omega)
+                rw [Nat.add_comm] at this
+                rw [List.getD_cons_succ, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]
+                simpa using this
+            · have hl' := hl
+              rw [hz j (by simp only [List.length_cons]; omega) (by simp only [List.length_cons]; omega)]
+              rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp; omega)]; rfl
+        · intro s2 he hE2
+          obtain ⟨x, hx⟩ := he
+          rw [he1] at hx
+          refine hK.err s2 ⟨x, by simp [step_ret_run, evalArgsP, hx]; rfl, by rw [evalP_error hx]; simp⟩
+            ((hR1.spost hI.lo).trans_g (hE2.spost hI1.lo).gpost)
+      · intro s1 he hR1
+        obtain ⟨x, hx⟩ := he
+        cases hv0 : evalP σ e0 with
+        | error y =>
+          exact hK.err s1 ⟨y, by simp [step_ret_run, evalArgsP, hv0]; rfl, by rw [evalP_error hv0]; simp⟩
+            (hR1.spost hI.lo).gpost
+        | ok v0 =>
+          exact hK.err s1 ⟨x, by simp [step_ret_run, evalArgsP, hv0, hx]; rfl, by rw [evalArgsP_error hx]; simp⟩
+            (hR1.spost hI.lo).gpost
+  · have hrd : retDirect ctx es ctx.nr = none := by simp [retDirect, hok]
+    simp only [hrd, List.append_assoc] at hc hK
+    simp only [hok, Bool.false_eq_true, ite_false] at htmp
+    replace htmp := htmp.le (by omega)
+    have hlenT := tempsArgs_ge 0 es
+    refine sim_args hG hTab ctx hT F hF es 0 k hc.left hargs (by omega) σ d Q hI ?_ ?_
+    · intro vs s1 hvs hE1 hslots
+      have hvl := evalArgsP_length hvs
+      have hI1 := hI.ofE hG hE1
+      have hc2 := hc.right
+      rw [← hvl] at hc2
+      have h1sp := congrArg UInt64.toNat hE1.rsp
+      refine sim_loadRes hG ctx hT vs vs Q (by omega) ctx.nr 0 _ s1 hc2.left (by omega)
+        (by rw [hvl]; omega) hI1.r15 hI1.lo (by rw [h1sp, hvl]; have := hI.hi; omega)
+        (fun x hx => hI1.mem.res x hx) (fun j hj => by rw [h1sp]; simpa [h1sp] using hslots j hj)
+        (fun j hj => absurd hj (Nat.not_lt_zero _)) (fun j _ hj => absurd hj (Nat.not_lt_zero _))
+        (fun _ _ => rfl) ?_
+      intro s2 h1 h2 h3 h4 hO hR hM
+      have hj := hc2.right
+      refine ev_jmp hj.head (hK.ret vs σ s2 (by simp [step_ret_run, hvs]; rfl)
+        (hI1.mem.only_res hG hO (fun x a b => Layout.inRes_of a b)) ((hE1.spost hI.lo).trans ?_)
+        ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), by omega⟩)
+      exact ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩
+    · intro s1 herr hE1
+      obtain ⟨y, hy⟩ := herr
+      refine hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
+        (hE1.spost hI.lo).gpost
 
 theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
     (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t f fd) kf)
@@ -514,7 +879,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
   · intro vs s1 hvs hE1 hslots
     have hvl := evalArgsP_length hvs
     have h1rsp := congrArg UInt64.toNat hE1.rsp
-    have hI1 := hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+    have hI1 := hI.ofE hG hE1
     refine ev_lea hcR.head ⟨by omega, by omega⟩ ?_
     refine ev_sub1 hcR.tail.head fun st hst => ?_
     refine ev_jcc hcR.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)

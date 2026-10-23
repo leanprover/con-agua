@@ -216,9 +216,9 @@ theorem Inv.ctx {G : Layout} {ctx ctx' : Ctx} {F : Nat} {σ : St} {s : MachineDa
   mem := hI.mem
 
 /-- `Inv` for a new L state with the same locals, from the same registers and frame slots. -/
-theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
+theorem Inv.congr' {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
     (hloc : σ'.loc = σ.loc) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
-    (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
+    (hR : ∀ x r, ctx.alloc.lookup x = some r → s'.regs.get64 r = s.regs.get64 r)
     (hfr : ∀ x < ctx.nl, ctx.alloc.lookup x = none →
       rdW s'.dmem (A (s.regs.rsp.toNat + 8 * x)) = rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)))
     (hm : MemRel G σ'.mem s'.dmem) : Inv G ctx F σ' s' where
@@ -228,10 +228,17 @@ theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : Machi
   hi := hsp ▸ hI.hi
   slot := hI.slot
   al := hI.al
-  reg := fun x hx r hr => by
-    rw [hR r (hI.al.reg x r hr), hloc]; exact hI.reg x hx r hr
+  reg := fun x hx r hr => by rw [hR x r hr, hloc]; exact hI.reg x hx r hr
   frame := fun x hx hn => by rw [hsp, hfr x hx hn, hloc]; exact hI.frame x hx hn
   mem := hm
+
+theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
+    (hloc : σ'.loc = σ.loc) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
+    (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
+    (hfr : ∀ x < ctx.nl, ctx.alloc.lookup x = none →
+      rdW s'.dmem (A (s.regs.rsp.toNat + 8 * x)) = rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)))
+    (hm : MemRel G σ'.mem s'.dmem) : Inv G ctx F σ' s' :=
+  hI.congr' hloc hsp h15 (fun x r h => hR r (hI.al.reg x r h)) hfr hm
 
 /-- `Inv` after a change of the scratch registers and the flags. -/
 theorem Inv.of_regs {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
@@ -247,6 +254,12 @@ macro "alloc_keep" : tactic => `(tactic| (intro r hr; have hne := allocRegs_ne h
 theorem rget_set (R : Reg64s) (r r' : Reg64) (v : BitVec 64) :
     (R.set64 r v).get64 r' = if r' = r then v else R.get64 r' := by
   cases r <;> cases r' <;> simp [Reg64s.set64, Reg64s.get64]
+
+/-- `Inv` of a function that keeps no locals in registers, after a change of registers. -/
+theorem Inv.of_regs0 {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
+    (hal : ctx.alloc = []) (hd : s'.dmem = s.dmem) (hsp : s'.regs.rsp = s.regs.rsp)
+    (h15 : s'.regs.r15 = s.regs.r15) : Inv G ctx F σ s' :=
+  hI.congr' rfl hsp h15 (fun x r h => by simp [hal] at h) (fun x _ _ => by rw [hd]) (hd ▸ hI.mem)
 
 /-- The registers but `rax`, `rcx`, `rdx` after a write of one of them. -/
 theorem get64_set64_scratch {R : Reg64s} {r : Reg64} (hr : r = .rax ∨ r = .rcx ∨ r = .rdx) (v : BitVec 64)

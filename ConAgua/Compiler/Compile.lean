@@ -282,7 +282,7 @@ compiled without temporaries). -/
 def tempsSB : Stmt → Nat
   | .skip | .brk | .abort => 0
   | .set _ e => tempsE e
-  | .ret es => tempsArgs 0 es
+  | .ret es => max 1 (tempsArgs 0 es)
   | .st8 _ i e | .st64 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .seq s t => max (tempsSB s) (tempsSB t)
   | .ite c s t => max (tempsC c) (max (tempsSB s) (tempsSB t))
@@ -673,7 +673,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
   | .skip | .brk | .abort => 0
   | .set _ e => tempsE e
-  | .ret es => if retOk al es nr then tempsEs es else tempsArgs 0 es
+  | .ret es => if retOk al es nr then tempsEs es else max 1 (tempsArgs 0 es)
   | .st8 _ i e | .st64 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .seq s t => max (tempsS al nr s) (tempsS al nr t)
   | .ite c s t => max (tempsC c) (max (tempsS al nr s) (tempsS al nr t))
