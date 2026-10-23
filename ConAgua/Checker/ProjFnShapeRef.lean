@@ -19,7 +19,7 @@ open Std.WP
 open scoped Lean.Order
 open L L.Arena
 open ConRon.Arena
-open L.Front.Ind (nview_tier viewN_run decN_tag decN_idx rdW_add shr28_lt run_bind)
+open L.Front.Ind (nview_tier viewN_run decN_tag decN_idx rdW_add run_bind)
 
 namespace L.Checker
 
@@ -162,7 +162,7 @@ theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
 theorem tag_eq_iff (w : Word) (hw : w.toNat < 2 ^ 32) (c : UInt32) (hc : c.toNat < 16) :
     (decI w : NIdx).tag = c ↔ w >>> 28 = c.toUInt64 := by
   rw [decN_tag w hw]
-  have h16 := shr28_lt w hw
+  have h16 := L.Front.Ind.shr28_lt w hw
   constructor
   · intro e
     apply UInt64.toNat_inj.mp
