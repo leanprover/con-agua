@@ -97,3 +97,29 @@ Census (worktree): phase 5 136 → **139/142** (left: `constsResolve` (helper `t
   are read on `m.arr64 EREC` (`ArrExt.decCI (erecP_ext m)`), with the size bound `IWOK` gives
   (`< 2^64`, not `decCI_ctor`'s `< 2^63`). `erSlEq_spec'` is `erSlEq_spec` (`DeclCanonSpec.lean`)
   with only the one lookup.
+
+## Landing 4: `constsResolveFFast`/`constsResolveFGo`, so `constsResolve` (phase 5, 2)
+
+Helper `tails-crf` (79 min). Census (worktree, after merging master): phase 5 139 → **140/142**
+(`constsResolve` covered through `constsResolveFGo`), phase 2 241 → 243 (`constsResolveFGo`,
+`constsResolveFFast`). Left in phase 5: `liftFueled`, `reservedBasisNames` (no L code of their
+own; reached from the phase-2/8 declaration checks, they become covered when those are proven).
+
+* `ConstsResolveFRefine.lean` (models over `callW`, specs `pf_spec`, `clp_spec`, `cl_spec`,
+  `crf_spec`, `crff_spec`, bundle `CrfProg`) and `ConstsResolveFRefine2.lean` (`cr_leaf` is
+  `constsResolve` at a leaf, the memo tier, the walk by fuel).
+* `L.Stubs.crf_refines : CrfOK p dn vis fe n` (`@[refines constsResolveFGo]`): from `StageR` and
+  `CrR m memo` (`MemoRV crSch bmKey CrV`: table `CRM` = 155 against the twin's threaded
+  `Std.HashMap EIdx Bool`), a returning `crf_go` is the twin's walk with the state unchanged, the
+  memo related after, frame `[CRM] [158, 159]`.
+* `L.Stubs.constsResolveFFast_refines` (`@[refines constsResolveFFast]`): `RefAM p
+  "consts_resolve_ffast" [vis, e] (StageR ∧ CrOK) (constsResolveFFast fe (decI e))
+  (KeepPost decW0B ∧ CrOK)`. **For lane `indproofs3`**: one hypothesis more than
+  `IndStubs.constsResolveFFast_spec`: `CrOK m` (some memo is related to `CRM`; `crm_clear` yields
+  the fresh memo only if no slot stamp is ahead of the epoch, and `StageR` says nothing about
+  array 155). It holds of zeroed memory (`memoRV_zero`) and every run keeps it, so it belongs in
+  the stage relation or is discharged at the call sites.
+* Finding (helper): vcgen + grind over `&&`/`||` chains on locals set from call results converges
+  with `callW` models and first-order named continuations, the chain carried as a `Bool`
+  accumulator, and `finish (gen := 20) (instances := 20000)` (the stall was the e-matching
+  instance limit).
