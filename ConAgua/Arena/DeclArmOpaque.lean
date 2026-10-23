@@ -173,7 +173,7 @@ theorem cdoW_ok {p : Prog} (hV : ValProg p) (hC : CrpProg p) {dn : NIdx → Opti
     obtain ⟨a', hr, -, -⟩ := dvW_ok (p := p) hV.rcp "type mismatch in opaque"
       (by
         obtain ⟨s', hs', -, hW'⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-          (ov_specW p hV n ⟨s2.mem, Locals.init []⟩ vis q) h3
+          (ov_specW p hV stubCall (stubCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis q) h3
         rw [hs'] at hW'; exact hW') hS2 (ArrExt.decCI hx2 hci1)
         (by have := ArrExt.decCV hx2 (decCI_cv hci1 (.inr rfl)); exact this)
         (ArrExt.hd? hx2 hval1)

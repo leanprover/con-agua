@@ -99,7 +99,7 @@ theorem checkValueGroup_spec (hm : mode = .verified) (hP : CvgProg p) :
   subst hm
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cvg_specW p hP n s₀ vis g)
+  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cvg_specW p hP stubCall (stubCall_spec p) n s₀ vis g)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (hP.closed.memFrame n (f := "check_value_group") (by decide) [vis, g] s₀)
   subst hs

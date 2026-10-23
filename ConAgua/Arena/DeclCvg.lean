@@ -258,46 +258,76 @@ theorem ivg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis q v : Wo
 
 /-! ### `check_value_group(vis, g)` -/
 
-mutual
-/-- **The model of `check_value_group`** (after `iw_reset`, the type `t` and value `v` read). -/
-def cvgW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, vis, g => cvgK0 n vis g (iwResetW m)
+/-- **How a model reads a call** of the core's entry points (`infer_type_core`,
+`ensure_sort_core`, `is_def_eq_core`) and `lvl_eq_c`, at an L fuel: `stubCall` (the stubs' opaque
+`stubM`, under the stage relation) or `realCall p` (the program's own `callW`, under `StageT`). -/
+abbrev CallM := Nat → FnName → List Word → Mem → Option (List Word × Mem)
 
-def cvgK0 (n : Nat) (vis g : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+/-- The stubs' reading of a call. -/
+def stubCall : CallM := fun _ f args m => stubM f m args
+
+/-- The program's own reading of a call. -/
+def realCall (p : Prog) : CallM := fun n f args m => callW p n f args m
+
+/-- A call reading is **the L side of every call** of `p`. -/
+def CallSpec (p : Prog) (c : CallM) : Prop :=
+  ∀ (n : Nat) (f : FnName) (args : List Word) (s₀ : St),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+    ⦃fun r s' => LocEq s' s₀ ∧ c n f args s₀.mem = some (r, s'.mem); ⊤⦄
+
+theorem stubCall_spec (p : Prog) : CallSpec p stubCall :=
+  fun n f args s₀ => stubM_spec p f n s₀ args
+
+theorem realCall_spec (p : Prog) : CallSpec p (realCall p) :=
+  fun n f args s₀ => callW_spec p n f args s₀
+
+mutual
+/-- **The model of `check_value_group`** (after `iw_reset`, the type `t` and value `v` read), the
+core's entry points read through `c`. -/
+def cvgW (c : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, vis, g => cvgK0 c n vis g (iwResetW m)
+
+def cvgK0 (c : CallM) (n : Nat) (vis g : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m0) =>
-    cvgK1 n vis g (rdW (m0.arr64 EREC) (g + 4)) (rdW (m0.arr64 EREC) (g + 5))
-      (stubM "infer_type_core" m0 [vis, 0, rdW (m0.arr64 EREC) (g + 4)])
+    cvgK1 c n vis g (rdW (m0.arr64 EREC) (g + 4)) (rdW (m0.arr64 EREC) (g + 5))
+      (c n "infer_type_core" [vis, 0, rdW (m0.arr64 EREC) (g + 4)] m0)
 
-def cvgK1 (n : Nat) (vis g t v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cvgK1 (c : CallM) (n : Nat) (vis g t v : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => cvgK2 n vis g t v (stubM "ensure_sort_core" m1 [vis, 0, r1.headD 0])
+  | some (r1, m1) => cvgK2 c n vis g t v (c n "ensure_sort_core" [vis, 0, r1.headD 0] m1)
 
-def cvgK2 (n : Nat) (vis g t v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cvgK2 (c : CallM) (n : Nat) (vis g t v : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    if rdW (m2.arr64 EREC) g = 1 then cvgK3 n vis g t v (r2.headD 0) (pinWordW m2 53)
-    else cvgK6 vis t v m2
+    if rdW (m2.arr64 EREC) g = 1 then cvgK3 c n vis g t v (r2.headD 0) (pinWordW m2 53)
+    else cvgK6 c n vis t v m2
 
-def cvgK3 (n : Nat) (vis g t v u : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cvgK3 (c : CallM) (n : Nat) (vis g t v u : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => cvgK4 n vis g t v (stubM "lvl_eq_c" m3 [u, r3.headD 0])
+  | some (r3, m3) => cvgK4 c n vis g t v (c n "lvl_eq_c" [u, r3.headD 0] m3)
 
-def cvgK4 (n : Nat) (vis g t v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cvgK4 (c : CallM) (n : Nat) (vis g t v : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => if r4.headD 0 ≠ 2 then none else cvgK5 vis t v (ivgW n m4 vis (g + 1) v)
+  | some (r4, m4) => if r4.headD 0 ≠ 2 then none else cvgK5 c n vis t v (ivgW n m4 vis (g + 1) v)
 
-def cvgK5 (vis t v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cvgK5 (c : CallM) (n : Nat) (vis t v : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m5) => cvgK6 vis t v m5
+  | some (_, m5) => cvgK6 c n vis t v m5
 
-def cvgK6 (vis t v : Word) (m : Mem) : Option (List Word × Mem) :=
-  cvgK7 vis t (stubM "infer_type_core" m [vis, 0, v])
+def cvgK6 (c : CallM) (n : Nat) (vis t v : Word) (m : Mem) : Option (List Word × Mem) :=
+  cvgK7 c n vis t (c n "infer_type_core" [vis, 0, v] m)
 
-def cvgK7 (vis t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def cvgK7 (c : CallM) (n : Nat) (vis t : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r7, m7) => cvgK8 (stubM "is_def_eq_core" m7 [vis, 0, r7.headD 0, t])
+  | some (r7, m7) => cvgK8 (c n "is_def_eq_core" [vis, 0, r7.headD 0, t] m7)
 
 def cvgK8 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -305,44 +335,45 @@ def cvgK8 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m0 m1 m2 m3 m4 m5 m7 m8 : Mem) (vis g t v u : Word)
+variable (c : CallM) (n : Nat) (m m0 m1 m2 m3 m4 m5 m7 m8 : Mem) (vis g t v u : Word)
   (r0 r1 r2 r3 r4 r5 r7 r8 : List Word)
-theorem cvgW_step : cvgW (n + 1) m vis g = cvgK0 n vis g (iwResetW m) := rfl
-theorem cvgK0_some : cvgK0 n vis g (some (r0, m0)) =
-    cvgK1 n vis g (rdW (m0.arr64 EREC) (g + 4)) (rdW (m0.arr64 EREC) (g + 5))
-      (stubM "infer_type_core" m0 [vis, 0, rdW (m0.arr64 EREC) (g + 4)]) := rfl
-theorem cvgK1_some : cvgK1 n vis g t v (some (r1, m1)) =
-    cvgK2 n vis g t v (stubM "ensure_sort_core" m1 [vis, 0, r1.headD 0]) := rfl
-theorem cvgK2_some : cvgK2 n vis g t v (some (r2, m2)) =
-    if rdW (m2.arr64 EREC) g = 1 then cvgK3 n vis g t v (r2.headD 0) (pinWordW m2 53)
-    else cvgK6 vis t v m2 := rfl
-theorem cvgK3_some : cvgK3 n vis g t v u (some (r3, m3)) =
-    cvgK4 n vis g t v (stubM "lvl_eq_c" m3 [u, r3.headD 0]) := rfl
-theorem cvgK4_some : cvgK4 n vis g t v (some (r4, m4)) =
-    if r4.headD 0 ≠ 2 then none else cvgK5 vis t v (ivgW n m4 vis (g + 1) v) := rfl
-theorem cvgK5_some : cvgK5 vis t v (some (r5, m5)) = cvgK6 vis t v m5 := rfl
-theorem cvgK6_eq : cvgK6 vis t v m = cvgK7 vis t (stubM "infer_type_core" m [vis, 0, v]) := rfl
-theorem cvgK7_some : cvgK7 vis t (some (r7, m7)) =
-    cvgK8 (stubM "is_def_eq_core" m7 [vis, 0, r7.headD 0, t]) := rfl
+theorem cvgW_step : cvgW c (n + 1) m vis g = cvgK0 c n vis g (iwResetW m) := rfl
+theorem cvgK0_some : cvgK0 c n vis g (some (r0, m0)) =
+    cvgK1 c n vis g (rdW (m0.arr64 EREC) (g + 4)) (rdW (m0.arr64 EREC) (g + 5))
+      (c n "infer_type_core" [vis, 0, rdW (m0.arr64 EREC) (g + 4)] m0) := rfl
+theorem cvgK1_some : cvgK1 c n vis g t v (some (r1, m1)) =
+    cvgK2 c n vis g t v (c n "ensure_sort_core" [vis, 0, r1.headD 0] m1) := rfl
+theorem cvgK2_some : cvgK2 c n vis g t v (some (r2, m2)) =
+    if rdW (m2.arr64 EREC) g = 1 then cvgK3 c n vis g t v (r2.headD 0) (pinWordW m2 53)
+    else cvgK6 c n vis t v m2 := rfl
+theorem cvgK3_some : cvgK3 c n vis g t v u (some (r3, m3)) =
+    cvgK4 c n vis g t v (c n "lvl_eq_c" [u, r3.headD 0] m3) := rfl
+theorem cvgK4_some : cvgK4 c n vis g t v (some (r4, m4)) =
+    if r4.headD 0 ≠ 2 then none else cvgK5 c n vis t v (ivgW n m4 vis (g + 1) v) := rfl
+theorem cvgK5_some : cvgK5 c n vis t v (some (r5, m5)) = cvgK6 c n vis t v m5 := rfl
+theorem cvgK6_eq : cvgK6 c n vis t v m = cvgK7 c n vis t (c n "infer_type_core" [vis, 0, v] m) := rfl
+theorem cvgK7_some : cvgK7 c n vis t (some (r7, m7)) =
+    cvgK8 (c n "is_def_eq_core" [vis, 0, r7.headD 0, t] m7) := rfl
 theorem cvgK8_some : cvgK8 (some (r8, m8)) = if r8.headD 0 = 0 then none else some ([0], m8) :=
   rfl
 end arms
 
-grind_pattern [ind_grind] cvgW_step => cvgW (n + 1) m vis g
-grind_pattern [ind_grind] cvgK0_some => cvgK0 n vis g (some (r0, m0))
-grind_pattern [ind_grind] cvgK1_some => cvgK1 n vis g t v (some (r1, m1))
-grind_pattern [ind_grind] cvgK2_some => cvgK2 n vis g t v (some (r2, m2))
-grind_pattern [ind_grind] cvgK3_some => cvgK3 n vis g t v u (some (r3, m3))
-grind_pattern [ind_grind] cvgK4_some => cvgK4 n vis g t v (some (r4, m4))
-grind_pattern [ind_grind] cvgK5_some => cvgK5 vis t v (some (r5, m5))
-grind_pattern [ind_grind] cvgK6_eq => cvgK6 vis t v m
-grind_pattern [ind_grind] cvgK7_some => cvgK7 vis t (some (r7, m7))
+grind_pattern [ind_grind] cvgW_step => cvgW c (n + 1) m vis g
+grind_pattern [ind_grind] cvgK0_some => cvgK0 c n vis g (some (r0, m0))
+grind_pattern [ind_grind] cvgK1_some => cvgK1 c n vis g t v (some (r1, m1))
+grind_pattern [ind_grind] cvgK2_some => cvgK2 c n vis g t v (some (r2, m2))
+grind_pattern [ind_grind] cvgK3_some => cvgK3 c n vis g t v u (some (r3, m3))
+grind_pattern [ind_grind] cvgK4_some => cvgK4 c n vis g t v (some (r4, m4))
+grind_pattern [ind_grind] cvgK5_some => cvgK5 c n vis t v (some (r5, m5))
+grind_pattern [ind_grind] cvgK6_eq => cvgK6 c n vis t v m
+grind_pattern [ind_grind] cvgK7_some => cvgK7 c n vis t (some (r7, m7))
 grind_pattern [ind_grind] cvgK8_some => cvgK8 (some (r8, m8))
 
 set_option maxHeartbeats 1600000 in
-theorem cvg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis g : Word) :
+theorem cvg_specW (p : Prog) (h : CvgProg p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St)
+    (vis g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_value_group" [vis, g]
-    ⦃fun r s' => LocEq s' s₀ ∧ cvgW n s₀.mem vis g = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cvgW c n s₀.mem vis g = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.cvg]
   simp only [callFn, checkValueGroupL]
   cases n with
@@ -351,8 +382,7 @@ theorem cvg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis g : Word
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         iwReset_specW p h.reset n, pinWord_specW p h.pin n, ivg_specW p h n,
-        stubM_spec p "infer_type_core" n, stubM_spec p "ensure_sort_core" n,
-        stubM_spec p "lvl_eq_c" n, stubM_spec p "is_def_eq_core" n] <;>
+        hc n "infer_type_core", hc n "ensure_sort_core", hc n "lvl_eq_c", hc n "is_def_eq_core"] <;>
       finish (gen := 20)
 
 end L.Arena
@@ -430,6 +460,34 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     · rw [hfr.2.2.1 IW]; exact hsz
     · rw [hEeq]; exact hEs
     · rw [hfr.2.2.1 CTL]; exact hc
+
+/-- **`er_to_iw` writes only the pool and its top** (`IW`, `CTL[200]`). -/
+theorem erToIwW_frame {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
+    (hS : StageR dn vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    MemFrame [IW] [200] m m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  rcases hsrc with hl0 | hsrc
+  · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
+    subst hl
+    simp only [erToIwW] at h
+    cases hal : allocW m 0 with
+    | none => simp [hal] at h
+    | some qm =>
+    obtain ⟨q, m1⟩ := qm
+    obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
+    simp only [hal] at h
+    cases n with
+    | zero => simp [erCopyW] at h
+    | succ n =>
+    cases n with
+    | zero => simp [erCopyW] at h
+    | succ n =>
+    simp only [Nat.add_sub_cancel, erCopyW_nil n _ _ _ _ rfl, Option.some.injEq,
+      Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact allocMem_frame m 0
+  · exact (erToIwW_dec (k := IdxKind.name) h hsz hc hEs hsrc).2.2.2.1
 
 /-- Destructuring a constant value: its name, its universe-parameter slice, its type. -/
 theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
@@ -613,7 +671,7 @@ theorem word_add_toNat (g : Word) (k : Nat) (h : g.toNat + k < 2 ^ 64) :
 memory after `iw_reset`. -/
 theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {g : Word} {r : List Word} {vg : ValueGroup}
-    (h : cvgW n m vis g = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cvgW stubCall n m vis g = some (r, m')) (hS : StageR dn vis fe m a)
     (hg : decVG (erecP m) g.toNat = some vg) :
     ∃ a', (checkValueGroup V fe vg).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
       IWGrow (m.set64 CTL 200 0) m' := by
@@ -638,7 +696,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rdW_of_get? (k := g.toNat + 5) (by rw [UInt64.toNat_add]; simp; omega) (erecP_get hwj)
   rw [et, ev] at h
   -- `infer_type_core(vis, 0, t)`
-  cases h1 : stubM "infer_type_core" m0 [vis, 0, wt] with
+  cases h1 : stubCall n "infer_type_core" [vis, 0, wt] m0 with
   | none => rw [h1] at h; simp [cvgK1] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
@@ -646,7 +704,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ :=
     inferTypeCore_spec dn vis fe 0 wt hwtl m0 m1 a r1 h1 hS0
   -- `ensure_sort_core(vis, 0, st)`
-  cases h2 : stubM "ensure_sort_core" m1 [vis, 0, r1.headD 0] with
+  cases h2 : stubCall n "ensure_sort_core" [vis, 0, r1.headD 0] m1 with
   | none => rw [h2] at h; simp [cvgK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
@@ -662,7 +720,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [hx1] at hrun2
   -- the tail: `infer_type_core(vis, 0, v)`, `is_def_eq_core(vis, 0, vt, t)`
   have tail : ∀ (m5 : Mem) (a5 : AState), StageR dn vis fe m5 a5 → IWGrow m0 m5 →
-      cvgK6 vis wt wj m5 = some (r, m') →
+      cvgK6 stubCall n vis wt wj m5 = some (r, m') →
       ∃ a', (do
           let vtype ← inferTypeCore V fe checkFuel 0 vg.jv
           unless ← isDefEqCore V fe checkFuel 0 vtype vg.cv.type do
@@ -670,14 +728,14 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
         StageR dn vis fe m' a' ∧ IWGrow m0 m' := by
     intro m5 a5 hS5 hg5 h
     rw [cvgK6_eq] at h
-    cases h7 : stubM "infer_type_core" m5 [vis, 0, wj] with
+    cases h7 : stubCall n "infer_type_core" [vis, 0, wj] m5 with
     | none => rw [h7] at h; simp [cvgK7] at h
     | some rm7 =>
     obtain ⟨r7, m7⟩ := rm7
     rw [h7, cvgK7_some] at h
     obtain ⟨x7, a7, hrun7, hS7, hg7, hx7l, hx7⟩ :=
       inferTypeCore_spec dn vis fe 0 wj hwjl m5 m7 a5 r7 h7 hS5
-    cases h8 : stubM "is_def_eq_core" m7 [vis, 0, r7.headD 0, wt] with
+    cases h8 : stubCall n "is_def_eq_core" [vis, 0, r7.headD 0, wt] m7 with
     | none => rw [h8] at h; simp [cvgK8] at h
     | some rm8 =>
     obtain ⟨r8, m8⟩ := rm8
@@ -712,7 +770,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have hF := hS2.1.pins.full hflag
     have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
     simp only [List.headD_cons, hz] at h
-    cases h4 : stubM "lvl_eq_c" m2 [r2.headD 0, pinW m2 53] with
+    cases h4 : stubCall n "lvl_eq_c" [r2.headD 0, pinW m2 53] m2 with
     | none => rw [h4] at h; simp [cvgK4] at h
     | some rm4 =>
     obtain ⟨r4, m4⟩ := rm4
