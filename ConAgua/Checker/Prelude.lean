@@ -16,17 +16,16 @@ are copied with `preFn` (`pre_<name>`; `scripts/checker_prog.py` lists them in
 (`ld8 0 i` becomes `ldc preludeBytes i`, `len8 0` the constant `preludeLenW`). Everything else is
 shared, the parse state included: `builtin_prelude` runs `pre_front_run` on the stream's own id
 tables and declaration arrays (empty at that point), aborts if a line did not apply (the twin's
-`.error`), moves the prelude's records out of `DECL` into `PDECL` (word `0` their number, record
-`i` at `1 + 8 i`, as `DECL`), and resets the parse state (`front_reset`: `DECL`'s count and the
-three id tables' dense sizes to `0`, their sparse maps cleared). So `front_run` then starts from
-the empty parse state, as the twin's second `parseBytes` does, and the prelude's records keep
-their pointers into the shared pool `DLP`. Proofs: the input renaming is a simulation (a copied
+`.error`), records the number of prelude records in `CTL[240]`, and resets the id tables
+(`front_reset`: the three dense sizes to `0`, the sparse maps cleared). The prelude's records stay
+in `DECL[0‥P)`: `front_run` then runs from the parse state with empty id tables and the prelude's
+records, and appends the stream's after them (the twin's second `parseBytes` starts from an empty
+`decls` and only ever pushes to it, so its records are `DECL[P‥)`). Proofs: the input renaming is a simulation (a copied
 function on memory `m` runs as the original on `m` with the input replaced by `preludeBytes`);
 the frontend's refinement then gives `parseBytes preludeText`.
 
-**`prepare_prelude()`** is `preparePrelude pre r.decls`: first the prelude's records are put in
-front of the stream's in `DECL` (the stream's shifted up, `PDECL`'s copied below them), then
-`frontOf` (each prelude record, in order, replaced by the first stream record that declares its
+**`prepare_prelude()`** is `preparePrelude pre r.decls` on `DECL` = the prelude's `P = CTL[240]`
+records, then the stream's: `frontOf` (each prelude record, in order, replaced by the first stream record that declares its
 key, which leaves the stream), then the ground hoist `hoistNatOpGround` (`hoist_nat_op_ground`,
 `ConAgua/Checker/Hoist.lean`), which reorders the stream when a pinned `Nat` operation precedes
 its ground. Then `DECL` is rewritten in the prepared order.
@@ -81,9 +80,6 @@ theorem preludeBytes_eq : preludeBytes = ConRon.Arena.Frontend.preludeText.data.
   decide +kernel
 
 /-! ## The frontend, reading the prelude's bytes -/
-
-/-- The prelude's records, moved out of `DECL` after their parse (word `0` their number). -/
-abbrev PDECL : ArrId := 209
 
 /-- The prelude's length, as a word. -/
 def preludeLenW : Word := UInt64.ofNat preludeBytes.length
@@ -140,11 +136,10 @@ def lidSpClear : FunDecl := memoClearG (L.Front.spS L.Front.LID)
 -- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
 def eidSpClear : FunDecl := memoClearG (L.Front.spS L.Front.EID)
 
-/-- `front_reset()`: the empty parse state on the frontend's arrays (`StateD.blank`): no
-declaration records, the id tables' dense sizes `0`, their sparse maps cleared. -/
+/-- `front_reset()`: the id tables emptied (their dense sizes `0`, their sparse maps cleared);
+the declaration records stay. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init
 def frontResetL : FunDecl := lfn () locals (z) {
-  DECL.u64[0] := 0;
   CTL.u64[70] := 0;
   CTL.u64[71] := 0;
   CTL.u64[72] := 0;
@@ -154,20 +149,14 @@ def frontResetL : FunDecl := lfn () locals (z) {
   return 0
 }
 
-/-- `builtin_prelude()`: `builtinPreludeE` — the frontend on the prelude's bytes, its records
-moved to `PDECL`, the parse state reset. -/
+/-- `builtin_prelude()`: `builtinPreludeE` — the frontend on the prelude's bytes; the number of
+prelude records into `CTL[240]`; the id tables emptied. -/
 -- con-ron: ConRon/Arena/Frontend/Prelude.lean:39-52 ConRon.Arena.Frontend.builtinPreludeE
 @[l_impl ConRon.Arena.Frontend.builtinPreludeE]
-def builtinPreludeL : FunDecl := lfn () locals (r, n, i, z) {
+def builtinPreludeL : FunDecl := lfn () locals (r, z) {
   r := call pre_front_run();
   if r != 0 { abort };
-  n := 1 + 8 * DECL.u64[0];
-  if len(PDECL.u64) < n { abort };
-  i := 0;
-  while i < n {
-    PDECL.u64[i] := DECL.u64[i];
-    i += 1
-  };
+  CTL.u64[240] := DECL.u64[0];
   z := call front_reset();
   return 0
 }
@@ -207,31 +196,8 @@ def declKeyL : FunDecl := lfn (i) locals (x, r) {
   return r
 }
 
-/-- `prelude_join()`: `DECL` := the prelude's records (`PDECL`), then the stream's (`DECL`'s).
-Returns the prelude's number. -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
-def preludeJoinL : FunDecl := lfn () locals (np, ns, i) {
-  np := PDECL.u64[0];
-  ns := DECL.u64[0];
-  if 1152921504606846976 <= np { abort };
-  if 1152921504606846976 <= ns { abort };
-  if len(DECL.u64) < 1 + 8 * (np + ns) { abort };
-  i := 8 * ns;
-  while 0 < i {
-    i -= 1;
-    DECL.u64[1 + 8 * np + i] := DECL.u64[1 + i]
-  };
-  i := 0;
-  while i < 8 * np {
-    DECL.u64[1 + i] := PDECL.u64[1 + i];
-    i += 1
-  };
-  DECL.u64[0] := np + ns;
-  return np
-}
-
-/-- `prepare_prelude()`: `preparePrelude pre ds`, the prelude's `P` records (`PDECL`) and the
-stream's (`DECL`) joined in `DECL` first. -/
+/-- `prepare_prelude()`: `preparePrelude pre ds` on `DECL` = the prelude's `P = CTL[240]`
+records, then the stream's. -/
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:77-90 ConRon.Arena.Frontend.pick
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:133-140 ConRon.Arena.Frontend.preparePrelude
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
@@ -240,7 +206,7 @@ stream's (`DECL`) joined in `DECL` first. -/
   ConRon.Arena.Frontend.frontOf ConRon.Arena.Frontend.pick]
 def preparePreludeL : FunDecl :=
     lfn () locals (np, n, ord, mk, a, key, j, f, d, c, t, i, q, k) {
-  np := call prelude_join();
+  np := CTL.u64[240];
   n := DECL.u64[0];
   if n < np { abort };
   if 1152921504606846976 <= n { abort };
@@ -293,7 +259,7 @@ def preparePreludeL : FunDecl :=
 def preludeProg : Prog :=
   [("builtin_prelude", builtinPreludeL), ("front_reset", frontResetL),
    ("nid_sp_clear", nidSpClear), ("lid_sp_clear", lidSpClear), ("eid_sp_clear", eidSpClear),
-   ("prepare_prelude", preparePreludeL), ("prelude_join", preludeJoinL),
+   ("prepare_prelude", preparePreludeL),
    ("decl_declares", declDeclaresL), ("decl_key", declKeyL)] ++ hoistProg
 
 end L.Checker

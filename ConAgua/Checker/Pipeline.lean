@@ -90,49 +90,49 @@ structure PipeRels (b pb : ByteArray) (s8 s64 : List Nat) where
   R7 : Mem → Array IDeclaration → List INatOpPinSet → AState → Prop
 
 /-- What every stage may assume of the inputs (`PipelineRefines`' premises). -/
-def InputsOK (b pb : ByteArray) : Prop :=
-  System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63
+def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
+  System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
 section stages
 variable (p : Prog) (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
 
 /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/
-def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb →
+def CapStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
   RelSpec p "cap_check" (· = loadMem b pb s8 s64) fun _ => (ρ b pb s8 s64).R1
 
 /-- **Stage `pb_check`**: `R1` to `R2`. -/
-def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb →
+def PbStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
   RelSpec p "pb_check" (ρ b pb s8 s64).R1 fun _ => (ρ b pb s8 s64).R2
 
 /-- **Stage `intern_reserved_pins`** refines `internReservedPins` from the twin's start state. -/
-def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb →
+def IrpStage : Prop := ∀ b pb s8 s64, InputsOK b pb s64 →
   RelSpec p "intern_reserved_pins" (ρ b pb s8 s64).R2 fun _ m =>
     ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧ (ρ b pb s8 s64).R3 m a'
 
 /-- **Stage `builtin_prelude`** refines `builtinPreludeE`. -/
-def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb →
+def PreludeStage : Prop := ∀ b pb s8 s64 a, InputsOK b pb s64 →
   RelSpec p "builtin_prelude" ((ρ b pb s8 s64).R3 · a) fun _ m =>
     ∃ pre a', builtinPreludeE a = .ok (.ok pre, a') ∧ (ρ b pb s8 s64).R4 m pre a'
 
 /-- **Stage `front_run`** refines `parseChunks [b]` (on its result `0`). -/
-def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb →
+def FrontStage : Prop := ∀ b pb s8 s64 pre a, InputsOK b pb s64 →
   RelSpec p "front_run" ((ρ b pb s8 s64).R4 · pre a) fun r m => r.headD 0 = 0 →
     ∃ rc a', parseChunks [b] a = .ok (.ok rc, a') ∧ (ρ b pb s8 s64).R5 m pre rc a'
 
 /-- **Stage `prepare_prelude`** refines `preparePrelude`. -/
-def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb →
+def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
   RelSpec p "prepare_prelude" ((ρ b pb s8 s64).R5 · pre rc a) fun _ m =>
     ∃ ds a', preparePrelude pre rc.decls a = .ok (ds, a') ∧ (ρ b pb s8 s64).R6 m ds a'
 
 /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
 to). -/
-def PinsStage : Prop := ∀ b pb s8 s64 ds a, InputsOK b pb →
+def PinsStage : Prop := ∀ b pb s8 s64 ds a, InputsOK b pb s64 →
   RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
     ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
 
 /-- **Stage `install_then_check`**: a returning call is the twin's accepting fold
 (`SeqAccepts`: phase A, then phase B on the phase-A state's worker). -/
-def LoopStage : Prop := ∀ b pb s8 s64 ds ipins a, InputsOK b pb →
+def LoopStage : Prop := ∀ b pb s8 s64 ds ipins a, InputsOK b pb s64 →
   RelSpec p "install_then_check" ((ρ b pb s8 s64).R7 · ds ipins a) fun _ _ =>
     ∃ fe a', SeqAccepts .verified ipins ds a fe a'
 
@@ -190,8 +190,8 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
     (h1 : CapStage p ρ) (h2 : PbStage p ρ) (h3 : IrpStage p ρ) (h4 : PreludeStage p ρ)
     (h5 : FrontStage p ρ) (h6 : PrepareStage p ρ) (h7 : PinsStage p ρ) (h8 : LoopStage p ρ) :
     PipelineRefines p := by
-  intro b pb s8 s64 N rs m' h64 hb hpb _ hrun hacc
-  have hin : InputsOK b pb := ⟨h64, hb, hpb⟩
+  intro b pb s8 s64 N rs m' h64 hb hpb hs64 _ hrun hacc
+  have hin : InputsOK b pb s64 := ⟨h64, hb, hpb, hs64⟩
   let r := ρ b pb s8 s64
   have H := check_of_stages hp (Q0 := (· = loadMem b pb s8 s64)) (Q1 := r.R1) (Q2 := r.R2)
     (Q3 := Q3 b r) (Q4 := Q4 b r) (Q5 := Q5 b r) (Q6 := Q6 b r) (Q7 := Q7 b r) (T := TwinAccepts [b])
