@@ -216,8 +216,7 @@ def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
 /-- `nstr_push`'s room checks: the handle index, the record array (by multiplication, as
 `letE`'s), the load limit. -/
 def nspushOK (m : Mem) (t : Word) : Bool :=
-  decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 8 ≤ m.len64 NSREC) &&
-    decide (nscnt m t + 1 ≤ (nSlotsNs m >>> (2 : Word)) * 3)
+  decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 8 ≤ m.len64 NSREC)
 
 /-- The memory after `nstr_push(t, q, o, l, h, j)` appended node `c`. -/
 def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
@@ -242,16 +241,35 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc,
   return c
 }
 
+/-- The hash of node `i` of tier `t`: its word 3. -/
+def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3)
+
 section push
 variable (p : Prog) (hp : p.lookup "nstr_push" = some nsPush)
+
+/-- The growth's hash block computes `nshash`. -/
+theorem nshash_ok : HashOK p nstrGS 8 nshash := by
+  intro k s₀
+  simp only [nstrGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nshash, LocEq, St.setLoc]
 
 include hp in
 theorem nsPush_spec (n : Nat) (s₀ : St) (t q o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nstr_push" [t, q, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ nspushOK s₀.mem t = true ∧ r = [nscnt s₀.mem t] ∧
-      s'.mem = nspushMem s₀.mem t q o l h j (nscnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf NSSLOT 36 nshash s₀.mem (nspushMem s₀.mem t q o l h j (nscnt s₀.mem t))
+        (nscnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nsPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p nstrGS NSSLOT 36 rfl rfl 8 nshash (nshash_ok p) n] <;>
+      finish [nscnt, nspushOK, nspushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
 
 end push
 
@@ -281,10 +299,14 @@ def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (nsS + rs₁.tail.headD 0, m)
     else if nspushOK m 1 then
-      some (nsS + nscnt m 1, nspushMem m 1 q o l h (rs₁.tail.tail.headD 0) (nscnt m 1))
+      match growIf NSSLOT 36 nshash m (nspushMem m 1 q o l h (rs₁.tail.tail.headD 0) (nscnt m 1)) (nscnt m 1) with
+      | some m' => some (nsS + nscnt m 1, m')
+      | none => none
     else none
   else if nspushOK m 0 then
-    some (nsP + nscnt m 0, nspushMem m 0 q o l h (rs₀.tail.tail.headD 0) (nscnt m 0))
+    match growIf NSSLOT 36 nshash m (nspushMem m 0 q o l h (rs₀.tail.tail.headD 0) (nscnt m 0)) (nscnt m 0) with
+    | some m' => some (nsP + nscnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/

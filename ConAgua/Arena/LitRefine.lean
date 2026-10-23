@@ -334,9 +334,6 @@ def RecRel (m : Mem) (t i : Word) : LitNode → Prop
 @[store_grind =] theorem RecRel_strVal (m : Mem) (t i : Word) (s : String) :
     RecRel m t i ⟨.strVal s⟩ = StrRec m t i s := rfl
 
-/-- The hash of node `i` of tier `t`: its word 3. -/
-def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
-
 /-- **The state relation.** The pool is well formed, and the library's relation holds for the
 two `lit` tables. -/
 def LitR (m : Mem) (a : AState) : Prop :=
@@ -522,12 +519,13 @@ theorem internW_eq (m : Mem) (o l : Word) :
         (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
       (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l
         (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlots m)
-        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0) := by
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
+      litH := by
   have e0 : ∀ x, hdW litSch.tag.toUInt64 0 x = litP + x := fun x => by
     simp [hdW, litSch, litP, ETag.lit]
   have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
     simp [hdW, litSch, litS, ETag.lit]
-  simp only [internW, internM, pushMem_eq, e0, e1, true_and]
+  simp only [internW, internM, pushM, pushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_lit` refines `internE (.lit (.natVal _))` -/
@@ -585,7 +583,7 @@ theorem internWStr_eq (m : Mem) (o l : Word) :
     simp [hdW, litSch, litP, ETag.lit]
   have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
     simp [hdW, litSch, litS, ETag.lit]
-  simp only [internWStr, internM, pushMemStr_eq, e0, e1, true_and]
+  simp only [internWStr, internM, pushM, pushMemStr_eq, e0, e1, true_and]
   rfl
 
 section internStr

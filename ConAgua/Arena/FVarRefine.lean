@@ -97,10 +97,6 @@ def FVRecRel (m : Mem) (t i : Word) (k : FVarNode) : Prop :=
   (rdW (m.arr64 FVREC) (i * 4 + t * 2)).toNat = k.idx ∧
   rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def fvhash (m : Mem) (t i : Word) : Word :=
-  fvarHashW (rdW (m.arr64 FVREC) (i * 4 + t * 2)) (rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `fvar` store: the library's relation for the two `fvar`
 tables. -/
 def FVarR (m : Mem) (a : AState) : Prop :=

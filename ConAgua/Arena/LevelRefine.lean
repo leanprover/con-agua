@@ -80,9 +80,6 @@ theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SR
 def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
   rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
-
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/
 def SuccR (m : Mem) (a : AState) : Prop :=

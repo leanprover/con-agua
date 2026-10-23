@@ -96,10 +96,6 @@ def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
   rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
   rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def cehash (m : Mem) (t i : Word) : Word :=
-  constHashW (rdW (m.arr64 CREC) (i * 4 + t * 2)) (rdW (m.arr64 CREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
 def ConstR (m : Mem) (a : AState) : Prop :=
   StoreR constSch CeRecRel cehash m a.store.scratchOn a.store.pers.consts a.store.scr.consts

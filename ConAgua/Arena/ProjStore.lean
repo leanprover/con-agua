@@ -183,8 +183,7 @@ width (3) is not a power of two, so (as for `letE`) the record-room check is sta
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (`L` has no
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
-  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC) &&
-    decide (pjcnt m t + 1 ≤ (nSlotsPj m >>> (2 : Word)) * 3)
+  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC)
 
 /-- The memory after `proj_push(t, n, u, e, j)` appended node `c`. -/
 def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
@@ -207,8 +206,20 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, 
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def pjhash (m : Mem) (t i : Word) : Word :=
+  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
+    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
+
 section push
 variable (p : Prog) (hp : p.lookup "proj_push" = some projPush)
+
+/-- The growth's hash block computes `pjhash`. -/
+theorem pjhash_ok : HashOK p projGS 7 pjhash := by
+  intro k s₀
+  simp only [projGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [pjhash, projHashW, LocEq, St.setLoc]
 
 include hp in
 theorem projPush_spec (nn : Nat) (s₀ : St) (t n u e j : Word) :
@@ -247,10 +258,14 @@ def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (projS + rs₁.tail.headD 0, m)
     else if pjpushOK m 1 then
-      some (projS + pjcnt m 1, pjpushMem m 1 n u e (rs₁.tail.tail.headD 0) (pjcnt m 1))
+      match growIf PJSLOT 32 pjhash m (pjpushMem m 1 n u e (rs₁.tail.tail.headD 0) (pjcnt m 1)) (pjcnt m 1) with
+      | some m' => some (projS + pjcnt m 1, m')
+      | none => none
     else none
   else if pjpushOK m 0 then
-    some (projP + pjcnt m 0, pjpushMem m 0 n u e (rs₀.tail.tail.headD 0) (pjcnt m 0))
+    match growIf PJSLOT 32 pjhash m (pjpushMem m 0 n u e (rs₀.tail.tail.headD 0) (pjcnt m 0)) (pjcnt m 0) with
+    | some m' => some (projP + pjcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

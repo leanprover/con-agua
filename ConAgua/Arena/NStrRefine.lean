@@ -100,9 +100,6 @@ def NsRecRel (m : Mem) (t i : Word) (k : StrNode) : Prop :=
   rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3) =
     nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat)
 
-/-- The hash of node `i` of tier `t`: its word 3. -/
-def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3)
-
 /-- **The state relation** of the name `str` table: the library's relation for its two tables. -/
 def NStrR (m : Mem) (a : AState) : Prop :=
   StoreR nstrSch NsRecRel nshash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.strs
@@ -226,12 +223,13 @@ theorem nsinternW_eq (m : Mem) (q o l : Word) :
         (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0)
       (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 1 q o l
         (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (baseW m 1) (nSlotsNs m)
-        (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0) := by
+        (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0)
+      nshash := by
   have e0 : ∀ x, hdW nstrSch.tag.toUInt64 0 x = nsP + x := fun x => by
     simp [hdW, nstrSch, nsP, NTag.str]
   have e1 : ∀ x, hdW nstrSch.tag.toUInt64 1 x = nsS + x := fun x => by
     simp [hdW, nstrSch, nsS, NTag.str]
-  simp only [nsinternW, internM, nspushMem_eq, e0, e1, true_and]
+  simp only [nsinternW, internM, pushM, nspushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_nstr` refines `internNNode (.str _ _)` -/

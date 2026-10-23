@@ -85,10 +85,6 @@ def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
   rdW (m.arr64 MREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
   rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def mhash (m : Mem) (t i : Word) : Word :=
-  maxHashW (rdW (m.arr64 MREC) (i * 4 + t * 2)) (rdW (m.arr64 MREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
 def MaxR (m : Mem) (a : AState) : Prop :=
   StoreR maxSch MRecRel mhash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.maxs

@@ -397,10 +397,9 @@ load limit of `3/4` (a defined "exhausted": the arena does not fail there, the L
 /-- The node count of tier `t`, `CTL[2 + t]`. -/
 def cnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (2 + t)
 
-/-- `lit_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `lit_push`'s room checks: the handle index, the record array. -/
 def pushOK (m : Mem) (t : Word) : Bool :=
-  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 REC >>> (3 : Word)) &&
-    decide (cnt m t + 1 ≤ (nSlots m >>> (2 : Word)) * 3)
+  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 REC >>> (3 : Word))
 
 /-- The memory after `lit_push(t, o, l, h, j)` appended node `c`. -/
 def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
@@ -426,16 +425,35 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, g
   return c
 }
 
+/-- The hash of node `i` of tier `t`: its word 3. -/
+def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
+
 section push
 variable (p : Prog) (hp : p.lookup "lit_push" = some litPush)
+
+/-- The growth's hash block computes `litH`. -/
+theorem litH_ok : HashOK p litGS 7 litH := by
+  intro k s₀
+  simp only [litGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [litH, LocEq, St.setLoc]
 
 include hp in
 theorem litPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_push" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
-      s'.mem = pushMem s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf SLOT 2 litH s₀.mem (pushMem s₀.mem t o l h j (cnt s₀.mem t))
+        (cnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n] <;>
+      finish [cnt, pushOK, pushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
 
 end push
 
@@ -464,10 +482,14 @@ def internW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
     else if pushOK m 1 then
-      some (litS + cnt m 1, pushMem m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1))
+      match growIf SLOT 2 litH m (pushMem m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1)) (cnt m 1) with
+      | some m' => some (litS + cnt m 1, m')
+      | none => none
     else none
   else if pushOK m 0 then
-    some (litP + cnt m 0, pushMem m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
+    match growIf SLOT 2 litH m (pushMem m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0)) (cnt m 0) with
+    | some m' => some (litP + cnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
@@ -744,8 +766,17 @@ theorem litPushStr_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_push_str" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
-      s'.mem = pushMemStr s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf SLOT 2 litH s₀.mem (pushMemStr s₀.mem t o l h j (cnt s₀.mem t))
+        (cnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litPushStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n] <;>
+      finish [cnt, pushOK, pushMemStr, baseW, growIf_grow, growIf_keep, gnW, gexpW]
 
 end pushStr
 
@@ -764,10 +795,14 @@ def internWStr (m : Mem) (o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
     else if pushOK m 1 then
-      some (litS + cnt m 1, pushMemStr m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1))
+      match growIf SLOT 2 litH m (pushMemStr m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1)) (cnt m 1) with
+      | some m' => some (litS + cnt m 1, m')
+      | none => none
     else none
   else if pushOK m 0 then
-    some (litP + cnt m 0, pushMemStr m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
+    match growIf SLOT 2 litH m (pushMemStr m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0)) (cnt m 0) with
+    | some m' => some (litP + cnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

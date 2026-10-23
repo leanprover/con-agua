@@ -180,10 +180,9 @@ end find
 /-- The node count of tier `t` of the `lam` table, `CTL[28 + t]`. -/
 def lacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (28 + t)
 
-/-- `lam_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `lam_push`'s room checks: the handle index, the record array. -/
 def lapushOK (m : Mem) (t : Word) : Bool :=
-  decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 LAREC >>> (2 : Word)) &&
-    decide (lacnt m t + 1 ≤ (nSlotsLa m >>> (2 : Word)) * 3)
+  decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 LAREC >>> (2 : Word))
 
 /-- The memory after `lam_push(t, ty, body, j)` appended node `c`. -/
 def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
@@ -205,16 +204,36 @@ def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, 
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def lahash (m : Mem) (t i : Word) : Word :=
+  lamHashW (rdW (m.arr64 LAREC) (i * 4 + t * 2)) (rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1))
+
 section push
 variable (p : Prog) (hp : p.lookup "lam_push" = some lamPush)
+
+/-- The growth's hash block computes `lahash`. -/
+theorem lahash_ok : HashOK p lamGS 6 lahash := by
+  intro k s₀
+  simp only [lamGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lahash, lamHashW, LocEq, St.setLoc]
 
 include hp in
 theorem lamPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lam_push" [t, ty, body, j]
     ⦃fun r s' => LocEq s' s₀ ∧ lapushOK s₀.mem t = true ∧ r = [lacnt s₀.mem t] ∧
-      s'.mem = lapushMem s₀.mem t ty body j (lacnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf LASLOT 28 lahash s₀.mem (lapushMem s₀.mem t ty body j (lacnt s₀.mem t))
+        (lacnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lamPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p lamGS LASLOT 28 rfl rfl 6 lahash (lahash_ok p) n] <;>
+      finish [lacnt, lapushOK, lapushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
 
 end push
 
@@ -245,10 +264,14 @@ def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (lamS + rs₁.tail.headD 0, m)
     else if lapushOK m 1 then
-      some (lamS + lacnt m 1, lapushMem m 1 ty body (rs₁.tail.tail.headD 0) (lacnt m 1))
+      match growIf LASLOT 28 lahash m (lapushMem m 1 ty body (rs₁.tail.tail.headD 0) (lacnt m 1)) (lacnt m 1) with
+      | some m' => some (lamS + lacnt m 1, m')
+      | none => none
     else none
   else if lapushOK m 0 then
-    some (lamP + lacnt m 0, lapushMem m 0 ty body (rs₀.tail.tail.headD 0) (lacnt m 0))
+    match growIf LASLOT 28 lahash m (lapushMem m 0 ty body (rs₀.tail.tail.headD 0) (lacnt m 0)) (lacnt m 0) with
+    | some m' => some (lamP + lacnt m 0, m')
+    | none => none
   else none
 
 /-- The L FunDecl for `intern_lam`. Named `internLamL`, not `internLam`: con-ron's

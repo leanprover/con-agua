@@ -85,10 +85,6 @@ def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
   rdW (m.arr64 IREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
   rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def imhash (m : Mem) (t i : Word) : Word :=
-  imaxHashW (rdW (m.arr64 IREC) (i * 4 + t * 2)) (rdW (m.arr64 IREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
 def ImaxR (m : Mem) (a : AState) : Prop :=
   StoreR imaxSch IRecRel imhash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.imaxs

@@ -215,8 +215,7 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
   decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 6 ≤ m.len64 LSREC) &&
-    decide (lscnt m t < m.len64 LSHP >>> (1 : Word)) &&
-    decide (lscnt m t + 1 ≤ (nSlotsLs m >>> (2 : Word)) * 3)
+    decide (lscnt m t < m.len64 LSHP >>> (1 : Word))
 
 /-- The memory after `ls_push(t, o, l, h, j)` appended node `c`. -/
 def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
@@ -245,16 +244,35 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y,
   return c
 }
 
+/-- The hash of node `i` of tier `t`: its word 2. -/
+def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
+
 section push
 variable (p : Prog) (hp : p.lookup "ls_push" = some lsPush)
+
+/-- The growth's hash block computes `lshash`. -/
+theorem lshash_ok : HashOK p lsGS 14 lshash := by
+  intro k s₀
+  simp only [lsGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lshash, LocEq, St.setLoc]
 
 include hp in
 theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_push" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ lspushOK s₀.mem t = true ∧ r = [lscnt s₀.mem t] ∧
-      s'.mem = lspushMem s₀.mem t o l h j (lscnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf LSSLOT 40 lshash s₀.mem (lspushMem s₀.mem t o l h j (lscnt s₀.mem t))
+        (lscnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lsPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n,
+        growBlkG_spec p lsGS LSSLOT 40 rfl rfl 14 lshash (lshash_ok p) n] <;>
+      finish [lscnt, lspushOK, lspushMem, baseW, lsOrW_zero, growIf_grow, growIf_keep, gnW, gexpW]
 
 end push
 
@@ -281,10 +299,14 @@ def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (lsS + rs₁.tail.headD 0, m)
     else if lspushOK m 1 then
-      some (lsS + lscnt m 1, lspushMem m 1 o l h (rs₁.tail.tail.headD 0) (lscnt m 1))
+      match growIf LSSLOT 40 lshash m (lspushMem m 1 o l h (rs₁.tail.tail.headD 0) (lscnt m 1)) (lscnt m 1) with
+      | some m' => some (lsS + lscnt m 1, m')
+      | none => none
     else none
   else if lspushOK m 0 then
-    some (lsP + lscnt m 0, lspushMem m 0 o l h (rs₀.tail.tail.headD 0) (lscnt m 0))
+    match growIf LSSLOT 40 lshash m (lspushMem m 0 o l h (rs₀.tail.tail.headD 0) (lscnt m 0)) (lscnt m 0) with
+    | some m' => some (lsP + lscnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode -/

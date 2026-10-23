@@ -172,10 +172,9 @@ end find
 /-- The node count of tier `t` of the `num` table, `CTL[38 + t]`. -/
 def nncnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (38 + t)
 
-/-- `nnum_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `nnum_push`'s room checks: the handle index, the record array. -/
 def nnpushOK (m : Mem) (t : Word) : Bool :=
-  decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 NNREC >>> (2 : Word)) &&
-    decide (nncnt m t + 1 ≤ (nSlotsNN m >>> (2 : Word)) * 3)
+  decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 NNREC >>> (2 : Word))
 
 /-- The memory after `nnum_push(t, pre, u, j)` appended node `c`. -/
 def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
@@ -197,16 +196,36 @@ def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gn, gk, gt, gi, gc, g
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def nnhash (m : Mem) (t i : Word) : Word :=
+  nnumHashW (rdW (m.arr64 NNREC) (i * 4 + t * 2)) (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1))
+
 section push
 variable (p : Prog) (hp : p.lookup "nnum_push" = some nnumPush)
+
+/-- The growth's hash block computes `nnhash`. -/
+theorem nnhash_ok : HashOK p nnumGS 6 nnhash := by
+  intro k s₀
+  simp only [nnumGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nnhash, nnumHashW, LocEq, St.setLoc]
 
 include hp in
 theorem nnumPush_spec (n : Nat) (s₀ : St) (t pre u j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nnum_push" [t, pre, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ nnpushOK s₀.mem t = true ∧ r = [nncnt s₀.mem t] ∧
-      s'.mem = nnpushMem s₀.mem t pre u j (nncnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf NNSLOT 38 nnhash s₀.mem (nnpushMem s₀.mem t pre u j (nncnt s₀.mem t))
+        (nncnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nnumPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p nnumGS NNSLOT 38 rfl rfl 6 nnhash (nnhash_ok p) n] <;>
+      finish [nncnt, nnpushOK, nnpushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
 
 end push
 
@@ -231,10 +250,14 @@ def nninternW (m : Mem) (pre u : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (nnS + rs₁.tail.headD 0, m)
     else if nnpushOK m 1 then
-      some (nnS + nncnt m 1, nnpushMem m 1 pre u (rs₁.tail.tail.headD 0) (nncnt m 1))
+      match growIf NNSLOT 38 nnhash m (nnpushMem m 1 pre u (rs₁.tail.tail.headD 0) (nncnt m 1)) (nncnt m 1) with
+      | some m' => some (nnS + nncnt m 1, m')
+      | none => none
     else none
   else if nnpushOK m 0 then
-    some (nnP + nncnt m 0, nnpushMem m 0 pre u (rs₀.tail.tail.headD 0) (nncnt m 0))
+    match growIf NNSLOT 38 nnhash m (nnpushMem m 0 pre u (rs₀.tail.tail.headD 0) (nncnt m 0)) (nncnt m 0) with
+    | some m' => some (nnP + nncnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/

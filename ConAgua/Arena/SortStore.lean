@@ -168,11 +168,10 @@ end find
 /-- The node count of tier `t` of the `sort` table, `CTL[16 + t]`. -/
 def socnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (16 + t)
 
-/-- `sort_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `sort_push`'s room checks: the handle index, the record array. -/
 def sopushOK (m : Mem) (t : Word) : Bool :=
   decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 SOREC >>> (1 : Word)) &&
-    decide (socnt m t < m.len64 SOLP >>> (1 : Word)) &&
-    decide (socnt m t + 1 ≤ (nSlotsSo m >>> (2 : Word)) * 3)
+    decide (socnt m t < m.len64 SOLP >>> (1 : Word))
 
 /-- The memory after `sort_push(t, u, j)` appended node `c`. -/
 def sopushMem (m : Mem) (t u j c : Word) : Mem :=
@@ -195,16 +194,35 @@ def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi,
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 SOREC) (i * 2 + t))
+
 section push
 variable (p : Prog) (hp : p.lookup "sort_push" = some sortPush)
+
+/-- The growth's hash block computes `sohash`. -/
+theorem sohash_ok : HashOK p sortGS 8 sohash := by
+  intro k s₀
+  simp only [sortGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [sohash, sortHashW, LocEq, St.setLoc]
 
 include hp in
 theorem sortPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "sort_push" [t, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ sopushOK s₀.mem t = true ∧ r = [socnt s₀.mem t] ∧
-      s'.mem = sopushMem s₀.mem t u j (socnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf SOSLOT 16 sohash s₀.mem (sopushMem s₀.mem t u j (socnt s₀.mem t))
+        (socnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, sortPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
+        growBlkG_spec p sortGS SOSLOT 16 rfl rfl 8 sohash (sohash_ok p) n] <;>
+      finish [socnt, sopushOK, sopushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
 
 end push
 
@@ -234,10 +252,14 @@ def sointernW (m : Mem) (u : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (sortS + rs₁.tail.headD 0, m)
     else if sopushOK m 1 then
-      some (sortS + socnt m 1, sopushMem m 1 u (rs₁.tail.tail.headD 0) (socnt m 1))
+      match growIf SOSLOT 16 sohash m (sopushMem m 1 u (rs₁.tail.tail.headD 0) (socnt m 1)) (socnt m 1) with
+      | some m' => some (sortS + socnt m 1, m')
+      | none => none
     else none
   else if sopushOK m 0 then
-    some (sortP + socnt m 0, sopushMem m 0 u (rs₀.tail.tail.headD 0) (socnt m 0))
+    match growIf SOSLOT 16 sohash m (sopushMem m 0 u (rs₀.tail.tail.headD 0) (socnt m 0)) (socnt m 0) with
+    | some m' => some (sortP + socnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

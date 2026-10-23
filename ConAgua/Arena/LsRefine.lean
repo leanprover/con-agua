@@ -100,9 +100,6 @@ def LsRecRel (m : Mem) (t i : Word) (k : ListNode) : Prop :=
   sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
   rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
 
-/-- The hash of node `i` of tier `t`: its word 2. -/
-def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
-
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
 def LsR (m : Mem) (a : AState) : Prop :=
   StoreR lsSch LsRecRel lshash m a.store.lss.scratchOn a.store.lss.pers.lists a.store.lss.scr.lists

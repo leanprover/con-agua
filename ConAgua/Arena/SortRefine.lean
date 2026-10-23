@@ -90,9 +90,6 @@ theorem fld_sort0 (m : Mem) (t i : Word) :
 def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
   rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 SOREC) (i * 2 + t))
-
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
 tables. -/
 def SortR (m : Mem) (a : AState) : Prop :=
