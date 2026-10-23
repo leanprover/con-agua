@@ -50,7 +50,8 @@ theorem ibiW_sim {p : Prog} (hP : IndsProg p) (n : Nat) {dn : NIdx → Option Co
     (hcx : ShapeCV m pp) (hb : (isRec != 0) = b) (hA : AbsOK m)
     (hk : ∀ f ∈ indsKeepCallees, AbsKeep p f) :
     Sim (ibiW p n m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
-      (fun r x m' a' => IndsOut dn m r x m' a' ∧ AbsOK m') := by
+      (fun r x m' a' => IndsOut dn m r x m' a' ∧ AbsOK m' ∧
+        (RecsB m pp → RecsB m' (r.tail.tail.tail.headD 0))) := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, -⟩ := partsShapeFacts hq hsrc
   have hkw := partsShapeK hq' hq9
@@ -128,7 +129,7 @@ theorem ibiW_sim {p : Prog} (hP : IndsProg p) (n : Nat) {dn : NIdx → Option Co
     (Sim.withFr (installWithSortSim hP.alloc hP.pinWord hP.withSort n hS3 (hq.grow (decBS_mono _) hg03)
       (partsHsrc_grow hg03 hq9 hsrc) hs32)
       (fun _ _ e => hk _ (by simp [indsKeepCallees]) _ _ _ _ _ e hA3)) ?_
-  rintro r4 p1 m4 a4 ⟨⟨hS4, hg4, hp1, hsrc4⟩, hA4⟩
+  rintro r4 p1 m4 a4 ⟨⟨hS4, hg4, hp1, hsrc4, hrb4⟩, hA4⟩
   -- the formers' constants
   refine Sim.mstep (K := ibiK5 p n vis isRec r4) rfl (fun _ _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨hS5, hg5, hcvT⟩ := installCvTasRun hP.toCstProg hP.cvTas hP.cvTasGo h5 hS4
@@ -150,14 +151,16 @@ theorem ibiW_sim {p : Prog} (hP : IndsProg p) (n : Nat) {dn : NIdx → Option Co
   rintro r6 fe1 m6 a6 ⟨⟨hS6, hg6⟩, hA6⟩
   obtain ⟨-, hp9', -⟩ := partsShapeFacts hp1' hsrc5
   refine Sim.ret ⟨⟨hS6, (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hcvT.grow (fun q => OMono.decCVp q) hg6,
-    hp1'.grow (decBS_mono _) hg6, partsHsrc_grow hg6 hp9' hsrc5⟩, hA6⟩
+    hp1'.grow (decBS_mono _) hg6, partsHsrc_grow hg6 hp9' hsrc5⟩, hA6, fun hrb =>
+    ((hrb4 ((hrb.grow (hg1.trans hg2) (by omega)).grow hg3 (by have := hg1.trans hg2; have := this.1; omega))).grow
+      (hg5.trans hg6) (by omega))⟩
 
 /-- **`check_block_inds` refines `checkBlockInds`** (stage 1, through the stubs of its callees:
 `check_constant_val`, `strip_pis`, `open_pis_at_fvars_f`, `fvar_type_d(s)`, `is_def_eq_core`,
 `lvl_eq_c`, `lv_zero_caps`): the shape record decoded below the tops, its members' slice below the
 top and their formers' constant records below the tops (`ShapeCV`); the environment with the
 formers pushed at the returned view, the formers' constants and the shape with its sort below the
-tops. -/
+tops, the latter's recursor slice below the top if the input's is (`RecsB`: a copy). -/
 @[refines ConRon.Arena.checkBlockInds]
 theorem checkBlockInds_refines (p : Prog) (hP : IndsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp isRec : Word) (bs : BlockShape)
@@ -167,9 +170,10 @@ theorem checkBlockInds_refines (p : Prog) (hP : IndsProg p) (n : Nat) (s₀ : St
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds" [vis, pp, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀ ∧
       IndsOut dn s₀.mem r (AM.res (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) s'.mem
-        (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
+        (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) ∧ AbsOK s'.mem ∧
+      (RecsB s₀.mem pp → RecsB s'.mem (r.tail.tail.tail.headD 0)); ⊤⦄ :=
   triple_post (ibi_spec p hP.inds n s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ, hA'⟩ := Sim.run (ibiW_sim hP n hS hq hsrc hcx hb hA hk) hm
-    ⟨hl, hok, hQ, hA'⟩
+    let ⟨hok, hQ, hA', hR'⟩ := Sim.run (ibiW_sim hP n hS hq hsrc hcx hb hA hk) hm
+    ⟨hl, hok, hQ, hA', hR'⟩
 
 end L.Ind
