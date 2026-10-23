@@ -188,6 +188,30 @@ theorem ov_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s�
 
 /-! ## `check_thm_val(vis, c)` -/
 
+/-- The model of `lvl_eq_fueled(u, v)` at L fuel `n`, its call of `lvl_eq_c` read through `cl`
+(`IndInstallSpec3`'s `lveW` is the stubs' reading, `lfW_stub`). -/
+def lfW (cl : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, u, v =>
+    match cl n "lvl_eq_c" [u, v] m with
+    | none => none
+    | some (r, m1) => if r.headD 0 = 0 then none else some ([if r.headD 0 = 2 then 1 else 0], m1)
+
+theorem lfW_stub (n : Nat) (m : Mem) (u v : Word) : lfW stubCall (n + 1) m u v = lveW m u v := rfl
+
+theorem lvlEqFueled_specc (hp : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (cl : CallM)
+    (hc : CallSpec p cl) (n : Nat) (s₀ : St) (u v : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "lvl_eq_fueled" [u, v]
+    ⦃fun r s' => LocEq s' s₀ ∧ lfW cl n s₀.mem u v = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lvlEqFueled]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hc n "lvl_eq_c"] <;>
+      finish (gen := 20) [lfW]
+
 /-- After `lvl_eq_fueled`: abort on `false`, then `check_defn_val`'s tail. -/
 def tvK4 (cl : CallM) (n : Nat) (vis c v t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -197,7 +221,7 @@ def tvK4 (cl : CallM) (n : Nat) (vis c v t : Word) : Option (List Word × Mem) �
 /-- After the zero level. -/
 def tvK3 (cl : CallM) (n : Nat) (vis c v t u : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => tvK4 p cl n vis c v t (lveW m3 u (r3.headD 0))
+  | some (r3, m3) => tvK4 p cl n vis c v t (lfW cl n m3 u (r3.headD 0))
 
 /-- After `ensure_sort_core`. -/
 def tvK2 (cl : CallM) (n : Nat) (vis c v t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -226,7 +250,7 @@ theorem tvK1_some : tvK1 p cl n vis c v t (some (r1, m1)) =
 theorem tvK2_some : tvK2 p cl n vis c v t (some (r2, m2)) =
     tvK3 p cl n vis c v t (r2.headD 0) (pinWordW m2 53) := rfl
 theorem tvK3_some : tvK3 p cl n vis c v t u (some (r3, m3)) =
-    tvK4 p cl n vis c v t (lveW m3 u (r3.headD 0)) := rfl
+    tvK4 p cl n vis c v t (lfW cl n m3 u (r3.headD 0)) := rfl
 theorem tvK4_some : tvK4 p cl n vis c v t (some (r4, m4)) =
     if r4.headD 0 = 0 then none else dvK1 p cl n vis c v t (ivgW n m4 vis (c + 1) v) := rfl
 end arms
@@ -248,7 +272,7 @@ theorem tv_specW (h : ValProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s�
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        pinWord_specW p h.cvg.pin n, lvlEqFueled_spec p h.lef n,
+        pinWord_specW p h.cvg.pin n, lvlEqFueled_specc p h.lef cl hc n,
         ivg_specW p h.cvg n, hc n "infer_type_core", hc n "ensure_sort_core",
         hc n "is_def_eq_core", callW_spec p n "env_push"] <;>
       finish (gen := 20) [rdW_eq]

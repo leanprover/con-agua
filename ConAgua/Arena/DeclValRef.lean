@@ -262,13 +262,17 @@ theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
   simp only [List.headD_cons, hz] at h
   -- the comparison
-  cases h4 : lveW m2 (r2.headD 0) (pinW m2 53) with
+  cases h4 : lfW stubCall n m2 (r2.headD 0) (pinW m2 53) with
   | none => rw [h4] at h; simp [tvK4] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, tvK4_some] at h
+  have h4' : lveW m2 (r2.headD 0) (pinW m2 53) = some (r4, m4) := by
+    cases n with
+    | zero => simp [lfW] at h4
+    | succ k => exact h4
   obtain ⟨b, a4, hrun4, hS4, hg4, hr4⟩ :=
-    lveW_ok dn vis fe m2 m4 a2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 r4 h4 hS2
+    lveW_ok dn vis fe m2 m4 a2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 r4 h4' hS2
   by_cases hb4 : r4.headD 0 = 0
   · rw [if_pos hb4] at h; simp at h
   rw [if_neg hb4] at h
