@@ -48,20 +48,17 @@ The stage's walks clear their memos on entry by an epoch bump (`mclearG`), whose
 (`memoRV_clear`) needs *some* well-formed memo beforehand and the epoch word below `2^64 − 2`.
 `StageMemos m` says that of the eight stage memos (arrays 201‥208, `CTL` 202‥219): `nest_occ`,
 `depth`, `replace_apps`, `has_loose_bvar_b`, the banked `replace_fvars` (`PosMR`), `mentions_any`
-(`maMR`), `mentions_const` (`mcMR`), `target_abs` (`taMR`), and the epoch bound. Only the stage
+(`maMR`), `mentions_const` (`mcMR`), `target_abs` (`taMR`). Only the stage
 writes these words (request of lane `indproofs3`), so across the loop it is a frame fact
 (`StageMemos.frame`), and it holds of the zeroed memory (`StageMemos.zero`). -/
 
-/-- The stage memos' epoch words. -/
-def stageEpochs : List Word := [202, 204, 206, 208, 210, 212, 214, 216]
-
-/-- **The inductive stage's per-call memos are well formed**, their epochs bounded. -/
+/-- **The inductive stage's per-call memos are well formed.** (No epoch bound: a memo clear
+aborts at the last epoch, so its post would not keep one; lane `indstaget`.) -/
 structure StageMemos (m : Mem) : Prop where
   pos : PosMR m
   ma : ∃ mp, maMR m mp
   mc : ∃ mp, mcMR m mp
   ta : ∃ mp, taMR m mp
-  ep : ∀ x ∈ stageEpochs, rdW (m.arr64 CTL) x + 2 ≠ 0
 
 theorem memoRG_mfr0 {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} (hS : S.WF) {K : MemoKey κ}
     {dv : Word → ν} {m m' : Mem} (hf : MFr [] [] m m') (hb : 201 ≤ S.arr ∧ S.arr ≤ 208)
@@ -75,14 +72,10 @@ theorem StageMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : Stag
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 201 ∨ 208 < b)
     (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) : StageMemos m' := by
   have hM : MFr [] [] m m' := MFr.of_frame hf hA hC
-  obtain ⟨hp, ⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩, he⟩ := h
-  refine ⟨hp.fr hM, ⟨a, memoRG_mfr0 maSch_wf hM (by decide) (by decide) ha⟩,
+  obtain ⟨hp, ⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩⟩ := h
+  exact ⟨hp.fr hM, ⟨a, memoRG_mfr0 maSch_wf hM (by decide) (by decide) ha⟩,
     ⟨b, memoRG_mfr0 mcSch_wf hM (by decide) (by decide) hb⟩,
-    ⟨c, memoRG_mfr0 taSch_wf hM (by decide) (by decide) hc⟩, fun x hx => ?_⟩
-  have hx' : x ∉ C := fun h' => by
-    have := hC x h'; simp [stageEpochs] at hx; rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;>
-      simp at this
-  rw [hf.2.1 x hx']; exact he x hx
+    ⟨c, memoRG_mfr0 taSch_wf hM (by decide) (by decide) hc⟩⟩
 
 /-- A memo whose stamps are all `0` at epoch word `0` is the empty memo. -/
 theorem memoRV_zeroAt {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
@@ -111,11 +104,7 @@ theorem StageMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
           by simp; omega⟩, fun _ _ _ h => by simp at h⟩⟩,
     ⟨_, z maSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
     ⟨_, z mcSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
-    ⟨_, z taSch (by decide) (by decide) (by decide) (by decide) _ _⟩, fun x hx => ?_⟩
-  have : rdW (m.arr64 CTL) x = 0 := by
-    simp [stageEpochs] at hx; rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;>
-      exact hC _ (by decide) (by decide)
-  rw [this]; decide
+    ⟨_, z taSch (by decide) (by decide) (by decide) (by decide) _ _⟩⟩
 
 /-! ## `consts_resolve_ffast`'s walk memo (a memory-only clause)
 

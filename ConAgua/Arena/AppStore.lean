@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -23,8 +24,10 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
   `eViewHasScratchChild`): bit 27 of `f | a`.
 
-The functions: `app_find(t, f, a, h)` (the probe, the match inline: two word comparisons),
-`app_push(t, f, a, j)` and `intern_app(f, a)`.
+The functions `app_find(t, f, a, h)` (the probe, the match inline: two word comparisons),
+`app_push(t, f, a, j)` and `intern_app(f, a)` are the cons-table library's templates
+(`ConsLib.lean`) at the schema `appCS`; their specs are the library's (`ConsLibSpec.lean`) from
+this table's obligations (`appOK`).
 -/
 
 set_option experimental.vcgen true
@@ -56,121 +59,51 @@ def ahash (m : Mem) (t i : Word) : Word :=
 def amatchW (r : Array Word) (t i f a : Word) : Bool :=
   rdW r (i * 4 + t * 2) == f && rdW r (i * 4 + t * 2 + 1) == a
 
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `app` tier (tag `4`). -/
+def appP : Word := 0x40000000
+def appS : Word := 0x48000000
+
+/-- The `app` table as a cons schema: two key words `f a`, stored as the record; the match is
+two word comparisons; the scratch skip is bit 27 of `f | a`. -/
+def appCS : ConsSch where
+  ra := AREC
+  sa := ASLOT
+  w := 2
+  st := 4
+  ca := 4
+  P := appP
+  S := appS
+  fname := "app_find"
+  pname := "app_push"
+  nk := 2
+  mc := condOf (lblk (t, f, a, h, n, j, d, v, b) {
+    if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a { skip } })
+  np := 2
+  room := condOf (lblk (t, f, a, j, c) { if len(AREC.u64) >> 2 <= c { skip } })
+  recW := [.var 1, .var 2]
+  ghash := appGS.hash
+  ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
+  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
+  mtM m ks t i := amatchW (m.arr64 AREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)
+  hsM := ahash
+  vsM as := as
+  roomM m _ c := decide (m.len64 AREC >>> (2 : Word) ≤ c)
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `amatchW`). -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def aprobeW (sl r : Array Word) (t f a b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if amatchW r t (slotV sl b (j * 2 + t) - 1) f a then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else aprobeW sl r t f a b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t f a b n j d : Word)
-
-theorem aprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : aprobeW sl r t f a b n j d = [0, 0, j, d] := by
-  rw [aprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem aprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : amatchW r t (sl[k] - b - 1) f a = true) :
-    aprobeW sl r t f a b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [aprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem aprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : amatchW r t (sl[k] - b - 1) f a = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    aprobeW sl r t f a b n j d = aprobeW sl r t f a b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [aprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] aprobeW_free => aprobeW sl r t f a b n j d, sl[k]
-grind_pattern [arena_grind] aprobeW_hit => aprobeW sl r t f a b n j d, sl[k]
-grind_pattern [arena_grind] aprobeW_next =>
-  aprobeW sl r t f a b n j d, sl[k], aprobeW sl r t f a b n j' d'
-
-def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
-  while d < n {
-    v := ASLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a {
-      return (1, v - 1, j, d)
-    };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => amatchW r t i f a) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def appFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
-  n := ASLOT.u64[len(ASLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪afindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "app_find" = some appFind)
-
-theorem afindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n afindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := afindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [amatchW, baseW]
-
-theorem afindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) afindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
-  Triple.step_exec (afindLoop_spec p (n + 1) s₀)
+def appFind : FunDecl := consFindG appCS
 
 /-- The slot count of a tier of the `app` table. -/
 def nSlotsA (m : Mem) : Word := rdW (m.arr64 ASLOT) (m.len64 ASLOT - 1) + SN0
-
-include hp in
-theorem appFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "app_find" [t, f, a, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) t f a
-        (baseW s₀.mem t) (nSlotsA s₀.mem) (homeW h (nSlotsA s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, appFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, afindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsA, homeW, baseW]
-
-end find
 
 /-! ## `app_push(t, f, a, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -187,48 +120,7 @@ def apushMem (m : Mem) (t f a j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  c := CTL.u64[4 + t];
-  if c >= 134217728 { abort };
-  if len(AREC.u64) >> 2 <= c { abort };
-  k := c * 4 + t * 2;
-  gk := ASLOT.u64[len(ASLOT.u64) - 1];
-  AREC.u64[k] := f;
-  AREC.u64[k + 1] := a;
-  ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[4 + (t & 1)] := c + 1;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG appGS 6⟫ };
-  return c
-}
-
-section push
-variable (p : Prog) (hp : p.lookup "app_push" = some appPush)
-
-/-- The growth's hash block computes `ahash`. -/
-theorem appHash_ok : HashOK p appGS 6 ahash := by
-  intro k s₀
-  simp only [appGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [ahash, appHashW, LocEq, St.setLoc]
-
-include hp in
-theorem appPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "app_push" [t, f, a, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ apushOK s₀.mem t = true ∧ r = [acnt s₀.mem t] ∧
-      growIf ASLOT 4 ahash s₀.mem (apushMem s₀.mem t f a j (acnt s₀.mem t)) (acnt s₀.mem t) = some s'.mem;
-      ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, appPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p appGS ASLOT 4 rfl rfl 6 ahash (appHash_ok p) n] <;>
-      finish [acnt, apushOK, apushMem, growIf_grow, growIf_keep, gnW, gexpW, baseW]
-
-end push
+def appPush : FunDecl := consPushG appCS
 
 /-! ## `intern_app(f, a)`: hash-cons the `app` node with children `f` and `a`
 
@@ -236,56 +128,18 @@ con-ron's `EStore::intern` at `app` and the arena's `internE (.app f a)`: the pe
 unless the scratch tier is open and a child is a scratch handle, the scratch probe if the
 scratch tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `app` tier (tag `4`). -/
-def appP : Word := 0x40000000
-def appS : Word := 0x48000000
-
 /-- The scratch skip: the scratch tier is open and `f` or `a` is a scratch handle. -/
 def askipW (m : Mem) (f a : Word) : Word :=
   if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 27) &&& 1 else 0
 
 /-- The model of `intern_app`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
-  let h := appHashW f a
-  let rs₀ := aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (baseW m 0) (nSlotsA m) (homeW h (nSlotsA m)) 0
-  let rs₁ := aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (baseW m 1) (nSlotsA m) (homeW h (nSlotsA m)) 0
-  if askipW m f a = 0 ∧ rs₀ = [] then none
-  else if askipW m f a = 0 ∧ rs₀.headD 0 ≠ 0 then some (appP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (appS + rs₁.tail.headD 0, m)
-    else if apushOK m 1 then
-      match growIf ASLOT 4 ahash m (apushMem m 1 f a (rs₁.tail.tail.headD 0) (acnt m 1)) (acnt m 1) with
-      | some m' => some (appS + acnt m 1, m')
-      | none => none
-    else none
-  else if apushOK m 0 then
-    match growIf ASLOT 4 ahash m (apushMem m 0 f a (rs₀.tail.tail.headD 0) (acnt m 0)) (acnt m 0) with
-    | some m' => some (appP + acnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM appCS m [f, a]
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
-def internApp : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
-  h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫;
-  sk := 0;
-  if CTL.u64[1] != 0 { sk := ((f | a) >> 27) & 1 };
-  if sk == 0 {
-    (fd, i, j, d) := call app_find(0, f, a, h);
-    if fd != 0 { return ⟪appP⟫ + i }
-  };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call app_find(1, f, a, h);
-    if fd != 0 { return ⟪appS⟫ + i };
-    i := call app_push(1, f, a, j);
-    return ⟪appS⟫ + i
-  };
-  i := call app_push(0, f, a, j);
-  return ⟪appP⟫ + i
-}
+def internApp : FunDecl := consInternG appCS
 
 /-- The `app` store functions, as one `#eval`-able program. -/
 def appProg : Prog :=
@@ -311,25 +165,86 @@ the scratch tier; a scratch child (`0x48000000`) skips the persistent probe. -/
 #guard internApps (appMem 1) [(1, 2), (0x48000000, 1), (1, 2), (0x48000000, 1)] ==
   some [0x48000000, 0x48000001, 0x48000000, 0x48000001]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "app_find" = some appFind)
-  (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internApp_spec (n : Nat) (s₀ : St) (f a : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `ahash`. -/
+theorem appHash_ok : HashOK p appGS 6 ahash := by
+  intro k s₀
+  simp only [appGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [ahash, appHashW, LocEq, St.setLoc]
+
+/-- **The `app` table's obligations.** -/
+theorem appOK : ConsOK p appCS where
+  match_ := by
+    intro s
+    simp [appCS, condOf, Cond.pval, Expr.pval, amatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ghash := appHash_ok p
+  ihash := by
+    intro k s₀
+    simp only [appCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [appCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [appCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [appCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [appCS, Option.some.injEq] at he
+    subst he
+    simp [appCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+
+theorem appFind_spec (hp : p.lookup "app_find" = some appFind) (n : Nat) (s₀ : St) (t f a h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "app_find" [t, f, a, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) t f a
+        (baseW s₀.mem t) (nSlotsA s₀.mem) (homeW h (nSlotsA s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p appCS ((appOK p).match_) hp n s₀ t [f, a] rfl h
+
+theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
+  by_cases h : y ≤ x
+  · have : ¬ x < y := fun h' => absurd h (UInt64.not_le.mpr h')
+    simp [h, this]
+  · have : x < y := UInt64.not_le.mp h
+    simp [h, this]
+
+theorem apushOK_eqC (m : Mem) (t : Word) : apushOK m t = pushOKC appCS m t := by
+  rw [apushOK, pushOKC, dec_lt_not_le (acnt m t) (m.len64 AREC >>> 2)]; rfl
+
+theorem apushMem_eqC (m : Mem) (t f a j c : Word) :
+    apushMem m t f a j c = pushMC appCS m t [f, a] j c := by
+  simp [apushMem, pushMC, tailM, wrRecK, appCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ AREC by decide)]
+
+theorem appPush_spec (hp : p.lookup "app_push" = some appPush) (n : Nat) (s₀ : St) (t f a j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "app_push" [t, f, a, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ apushOK s₀.mem t = true ∧ r = [acnt s₀.mem t] ∧
+      growIf ASLOT 4 ahash s₀.mem (apushMem s₀.mem t f a j (acnt s₀.mem t)) (acnt s₀.mem t) = some s'.mem;
+      ⊤⦄ := by
+  rw [apushOK_eqC]
+  simp only [apushMem_eqC]
+  exact consPushG_spec p appCS (appOK p) hp n s₀ t [f, a] rfl j
+
+theorem internApp_spec (hpf : p.lookup "app_find" = some appFind)
+    (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)
+    (n : Nat) (s₀ : St) (f a : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_app" [f, a]
-    ⦃fun r s' => LocEq s' s₀ ∧ ainternW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internApp]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        appFind_spec p hpf n, appPush_spec p hpp n] <;>
-      finish [ainternW, askipW, appHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ ainternW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p appCS (appOK p) hpf hpp "intern_app" hp n s₀ [f, a] rfl
 
-end intern
+end specs
 
 end L.Arena
