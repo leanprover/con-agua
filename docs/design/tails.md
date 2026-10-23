@@ -123,3 +123,26 @@ own; reached from the phase-2/8 declaration checks, they become covered when tho
   with `callW` models and first-order named continuations, the chain carried as a `Bool`
   accumulator, and `finish (gen := 20) (instances := 20000)` (the stall was the e-matching
   instance limit).
+
+## Landing 5 and close (2026-10-23)
+
+`FuelConsts.lean`: `reservedBasisNames_words` (`@[refines reservedBasisNames]`: under a filled pin
+table the twin's list is the decoding of `PINS[55‥70]`, the words `reserved_contains` and
+`reserved_contains_w` read) and `liftFueled_some` (`@[refines liftFueled]`: at a returned
+comparison, `liftFueled` is that value with the state unchanged; at `none` the twin declines and
+L aborts). Both tagged with the coordinator's agreement, as the fuel constants.
+
+**Final census** (worktree on master `65ed37ed` + this landing): phase 4 **111/113**, phase 5
+**142/142**, phase 7 **27/27**, phase 10 0/1 proven, 1 sorry (proven locally); total proven
+978/1352. Lane start (`94aae9fb`): phase 4 102, phase 5 133, phase 7 26, phase 10 todo; total 944.
+
+**Open** (for other lanes):
+* Phase 4 `stripPis`, `stripLams`, `fvarTypeD`, `instPisAtLift` (whichever remain): lane
+  `indproofs4` (under `StageR`); `instantiate1LiftFast` is proved under `ArenaI`
+  (`i1lFast_refines`) for `instPisAtLift`'s proof.
+* Phase 10 `AState.worker` (`checkPendingGo_worker`): inherits phase B's stub `sorry`s, and needs
+  `a₀.caches = Caches.empty` after `installFold` (lane `loopt2`'s `PipelineRefines` list).
+* For `indproofs4`: the `IndStubs` contracts can be discharged from `reservedRecName_refines`,
+  `recRuleKOf/EtaOf/Bits_refines`, `constsResolveFFast_refines` (needs `CrOK`), `i1lFast_refines`
+  (needs `ArenaI`); the program bundles (`RrnProg`, `RrbProg`, `CrfProg`, `I1lProg`) are not
+  proved for `checkerProg`.
