@@ -80,14 +80,14 @@ theorem word_lt_iff {a b : Word} : a < b ↔ a.toNat < b.toNat := UInt64.lt_iff_
 
 /-- The model's closedness prefix simulates `tpClosed`: a `false` answers `[0]` at once, a `true`
 goes on with the canon forms. -/
-theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl x y : Word}
-    {r : List Word} {pfvs : List EIdx} (h : pdsW stubCall n m vis d no nl lvls ho hl pfo pfl x y = some (r, m'))
+theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl x y : Word}
+    {r : List Word} {pfvs : List EIdx} (h : pdsW cR n m vis d no nl lvls ho hl pfo pfl x y = some (r, m'))
     (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hlen : pfvs.length = pfl.toNat) (hP : RcMR m) :
     (∃ a', (tpClosed pfvs (decE x) (decE y)).run a = .ok (false, a') ∧ r = [0] ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m') ∨
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AFr m m') ∨
     (∃ m4 a4, (tpClosed pfvs (decE x) (decE y)).run a = .ok (true, a4) ∧
-      pdsK5 stubCall n vis d no nl lvls ho hl pfo pfl y (tcpF n m4 pfo pfl x) = some (r, m') ∧
-      StageR dn vis fe m4 a4 ∧ IWGrow m m4 ∧ RcMR m4) := by
+      pdsK5 cR n vis d no nl lvls ho hl pfo pfl y (tcpF n m4 pfo pfl x) = some (r, m') ∧
+      StageR dn vis fe m4 a4 ∧ IWGrow m m4 ∧ RcMR m4 ∧ AFr m m4) := by
   unfold pdsW at h
   cases h1 : bvbW n m x CWF with
   | none => rw [h1] at h; cases h
@@ -101,7 +101,7 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e1 : (b1.toNat != 0) = true := by
       simp only [bne_iff_ne, ne_eq]; intro h0; exact hb1 (UInt64.toNat_inj.mp (by simpa using h0))
-    refine .inl ⟨a1, ?_, rfl, hS1, hg1, hP1⟩
+    refine .inl ⟨a1, ?_, rfl, hS1, hg1, hP1, bvbW_afr h1⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, if_true]; rfl
   rw [pdsK1_ok (h := hb1)] at h
   have e1 : (b1.toNat != 0) = false := by simp at hb1; simp [hb1]
@@ -117,7 +117,7 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e2 : (b2.toNat != 0) = true := by
       simp only [bne_iff_ne, ne_eq]; intro h0; exact hb2 (UInt64.toNat_inj.mp (by simpa using h0))
-    refine .inl ⟨a2, ?_, rfl, hS2, hg1.trans hg2, hP2⟩
+    refine .inl ⟨a2, ?_, rfl, hS2, hg1.trans hg2, hP2, (bvbW_afr h1).trans (bvbW_afr h2)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, if_true, Bool.false_eq_true,
       if_false]; rfl
   rw [pdsK2_ok (h := hb2)] at h
@@ -134,7 +134,8 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
   · rw [pdsK3_out (h := hc3)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e3 : k3 > pfvs.length := by rw [word_lt_iff] at hc3; simp only [decW0Nat] at hd3; omega
-    refine .inl ⟨a3, ?_, rfl, hS3, (hg1.trans hg2).trans hg3, hP3⟩
+    refine .inl ⟨a3, ?_, rfl, hS3, (hg1.trans hg2).trans hg3, hP3,
+      ((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, if_true,
       Bool.false_eq_true, if_false]; rfl
   rw [pdsK3_ok (h := hc3)] at h
@@ -153,13 +154,15 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e4 : decide (k4 ≤ pfvs.length) = false := by
       rw [word_lt_iff] at hc4; simp only [decW0Nat] at hd4; simp; omega
-    refine .inl ⟨a4, ?_, rfl, hS4, hg14, hP4⟩
+    refine .inl ⟨a4, ?_, rfl, hS4, hg14, hP4,
+      (((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)).trans (fvbF_afr h4)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, run4, e4,
       Bool.false_eq_true, if_false]; rfl
   rw [pdsK4_ok (h := hc4)] at h
   have e4 : decide (k4 ≤ pfvs.length) = true := by
     rw [word_lt_iff] at hc4; simp only [decW0Nat] at hd4; simp; omega
-  refine .inr ⟨m4, a4, ?_, h, hS4, hg14, hP4⟩
+  refine .inr ⟨m4, a4, ?_, h, hS4, hg14, hP4,
+    (((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)).trans (fvbF_afr h4)⟩
   simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, run4, e4,
     Bool.false_eq_true, if_false]; rfl
 
@@ -257,7 +260,7 @@ theorem pdsW_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     ∃ c a', (tpStep fe d.toNat names (decI lvls) holes pfvs (decE x) (decE y)).run a = .ok (c, a') ∧
       (r.headD 0 != 0) = c ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   rcases pdsC_ok dn fe vis n h hS hx hy hpf.len hP with
-    ⟨a', run, rfl, hS', hg, hP'⟩ | ⟨m4, a4, run, h4, hS4, hg4, hP4⟩
+    ⟨a', run, rfl, hS', hg, hP', -⟩ | ⟨m4, a4, run, h4, hS4, hg4, hP4, -⟩
   · refine ⟨false, a', ?_, rfl, hS', hg, hP'⟩
     simp only [tpStep, StateT.run_bind, run, except_ok_bind, Bool.not_false, if_true]; rfl
   · obtain ⟨c, a', run', hc, hS', hg, hP'⟩ := pdsR_ok dn fe vis n h4 hS4 hx hy hlv
