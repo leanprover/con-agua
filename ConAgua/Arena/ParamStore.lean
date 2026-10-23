@@ -37,7 +37,7 @@ abbrev PSLOT : ArrId := 15
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def paramGS : GrowSch :=
-  ⟨PSLOT, PREC, 1, 14, PSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨PSLOT, PREC, 1, 14, lblk (n, k, t, i, c, h) {
     h := (⟪fnvBasis⟫ ^ PREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
   }⟩
 
@@ -105,7 +105,7 @@ def pfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def paramFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << PSLOT_G;
+  n := ⟪SN0⟫ << PSLOT.u64[len(PSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪pfindLoop⟫;
@@ -141,7 +141,7 @@ theorem pfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (pfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `param` table. -/
-def nSlotsP (m : Mem) : Word := SN0 <<< m.glob PSLOT_G
+def nSlotsP (m : Mem) : Word := SN0 <<< rdW (m.arr64 PSLOT) (m.len64 PSLOT - 1)
 
 include hp in
 theorem paramFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -183,7 +183,7 @@ def paramPush : FunDecl := lfn (t, u, j) locals (c, gr) {
   PREC.u64[c * 2 + t] := u;
   PSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[14 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << PSLOT_G) < (c + 1) * 2 { gr := call param_grow() };
+  if (⟪SN0⟫ << PSLOT.u64[len(PSLOT.u64) - 1]) < (c + 1) * 2 { gr := call param_grow() };
   return c
 }
 

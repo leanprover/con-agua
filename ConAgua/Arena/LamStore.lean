@@ -48,7 +48,7 @@ abbrev LASLOT : ArrId := 28
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def lamGS : GrowSch :=
-  ⟨LASLOT, LAREC, 2, 28, LASLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨LASLOT, LAREC, 2, 28, lblk (n, k, t, i, c, h) {
     h := ((⟪fnvBasis⟫ ^ LAREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ LAREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
   }⟩
 
@@ -119,7 +119,7 @@ def lafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lamFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << LASLOT_G;
+  n := ⟪SN0⟫ << LASLOT.u64[len(LASLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lafindLoop⟫;
@@ -155,7 +155,7 @@ theorem lafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `lam` table. -/
-def nSlotsLa (m : Mem) : Word := SN0 <<< m.glob LASLOT_G
+def nSlotsLa (m : Mem) : Word := SN0 <<< rdW (m.arr64 LASLOT) (m.len64 LASLOT - 1)
 
 include hp in
 theorem lamFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
@@ -200,7 +200,7 @@ def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
   LAREC.u64[k + 1] := body;
   LASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[28 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LASLOT_G) < (c + 1) * 2 { gr := call lam_grow() };
+  if (⟪SN0⟫ << LASLOT.u64[len(LASLOT.u64) - 1]) < (c + 1) * 2 { gr := call lam_grow() };
   return c
 }
 

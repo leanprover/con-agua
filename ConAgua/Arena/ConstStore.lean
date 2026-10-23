@@ -45,7 +45,7 @@ abbrev CSLOT : ArrId := 19
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def constGS : GrowSch :=
-  ⟨CSLOT, CREC, 2, 18, CSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨CSLOT, CREC, 2, 18, lblk (n, k, t, i, c, h) {
     h := ((⟪fnvBasis⟫ ^ CREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ CREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
   }⟩
 
@@ -116,7 +116,7 @@ def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def constFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << CSLOT_G;
+  n := ⟪SN0⟫ << CSLOT.u64[len(CSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪cefindLoop⟫;
@@ -152,7 +152,7 @@ theorem cefindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (cefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `const` table. -/
-def nSlotsCe (m : Mem) : Word := SN0 <<< m.glob CSLOT_G
+def nSlotsCe (m : Mem) : Word := SN0 <<< rdW (m.arr64 CSLOT) (m.len64 CSLOT - 1)
 
 include hp in
 theorem constFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
@@ -200,7 +200,7 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gr) {
   CREC.u64[k + 1] := a;
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << CSLOT_G) < (c + 1) * 2 { gr := call const_grow() };
+  if (⟪SN0⟫ << CSLOT.u64[len(CSLOT.u64) - 1]) < (c + 1) * 2 { gr := call const_grow() };
   CLP.u64[c * 2 + t] := x;
   return c
 }

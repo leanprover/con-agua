@@ -44,7 +44,7 @@ abbrev FVSLOT : ArrId := 26
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def fvarGS : GrowSch :=
-  ⟨FVSLOT, FVREC, 2, 26, FVSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨FVSLOT, FVREC, 2, 26, lblk (n, k, t, i, c, h) {
     h := ((⟪fnvBasis⟫ ^ FVREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FVREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
   }⟩
 
@@ -116,7 +116,7 @@ def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << FVSLOT_G;
+  n := ⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fvfindLoop⟫;
@@ -152,7 +152,7 @@ theorem fvfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fvfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `fvar` table. -/
-def nSlotsFv (m : Mem) : Word := SN0 <<< m.glob FVSLOT_G
+def nSlotsFv (m : Mem) : Word := SN0 <<< rdW (m.arr64 FVSLOT) (m.len64 FVSLOT - 1)
 
 include hp in
 theorem fvarFind_spec (n : Nat) (s₀ : St) (t u ty h : Word) :
@@ -201,7 +201,7 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gr) {
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << FVSLOT_G) < (c + 1) * 2 { gr := call fvar_grow() };
+  if (⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1]) < (c + 1) * 2 { gr := call fvar_grow() };
   FVLP.u64[c * 2 + t] := x;
   return c
 }

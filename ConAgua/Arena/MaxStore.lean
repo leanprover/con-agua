@@ -39,7 +39,7 @@ abbrev MSLOT : ArrId := 11
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def maxGS : GrowSch :=
-  ⟨MSLOT, MREC, 2, 10, MSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨MSLOT, MREC, 2, 10, lblk (n, k, t, i, c, h) {
     h := ((⟪fnvBasis⟫ ^ MREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ MREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
   }⟩
 
@@ -110,7 +110,7 @@ def mfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def maxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
-  n := ⟪SN0⟫ << MSLOT_G;
+  n := ⟪SN0⟫ << MSLOT.u64[len(MSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪mfindLoop⟫;
@@ -146,7 +146,7 @@ theorem mfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (mfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `max` table. -/
-def nSlotsM (m : Mem) : Word := SN0 <<< m.glob MSLOT_G
+def nSlotsM (m : Mem) : Word := SN0 <<< rdW (m.arr64 MSLOT) (m.len64 MSLOT - 1)
 
 include hp in
 theorem maxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
@@ -197,7 +197,7 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << MSLOT_G) < (c + 1) * 2 { gr := call max_grow() };
+  if (⟪SN0⟫ << MSLOT.u64[len(MSLOT.u64) - 1]) < (c + 1) * 2 { gr := call max_grow() };
   MHP.u64[c * 2 + t] := x;
   return c
 }

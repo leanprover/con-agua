@@ -46,7 +46,7 @@ abbrev NSSLOT : ArrId := 36
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def nstrGS : GrowSch :=
-  ⟨NSSLOT, NSREC, 4, 36, NSSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨NSSLOT, NSREC, 4, 36, lblk (n, k, t, i, c, h) {
     h := NSREC.u64[i * 8 + t * 4 + 3]
   }⟩
 
@@ -148,7 +148,7 @@ def nsfindLoop : Stmt := lblk (t, q, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nsFind : FunDecl := lfn (t, q, o, l, h) locals (n, j, d, v, m, b) {
-  n := ⟪SN0⟫ << NSSLOT_G;
+  n := ⟪SN0⟫ << NSSLOT.u64[len(NSSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nsfindLoop⟫;
@@ -188,7 +188,7 @@ theorem nsfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (nsfindLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier of the name `str` table. -/
-def nSlotsNs (m : Mem) : Word := SN0 <<< m.glob NSSLOT_G
+def nSlotsNs (m : Mem) : Word := SN0 <<< rdW (m.arr64 NSSLOT) (m.len64 NSSLOT - 1)
 
 include hpe hpm hp in
 theorem nsFind_spec (n : Nat) (s₀ : St) (t q o l h : Word) :
@@ -237,7 +237,7 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gr) {
   NSREC.u64[k + 3] := h;
   NSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[36 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << NSSLOT_G) < (c + 1) * 2 { gr := call nstr_grow() };
+  if (⟪SN0⟫ << NSSLOT.u64[len(NSSLOT.u64) - 1]) < (c + 1) * 2 { gr := call nstr_grow() };
   return c
 }
 

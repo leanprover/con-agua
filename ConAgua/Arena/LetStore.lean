@@ -40,7 +40,7 @@ abbrev LESLOT : ArrId := 21
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def letGS : GrowSch :=
-  ⟨LESLOT, LEREC, 3, 20, LESLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨LESLOT, LEREC, 3, 20, lblk (n, k, t, i, c, h) {
     h := (((⟪fnvBasis⟫ ^ LEREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
   }⟩
 
@@ -113,7 +113,7 @@ def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w, b) {
-  n := ⟪SN0⟫ << LESLOT_G;
+  n := ⟪SN0⟫ << LESLOT.u64[len(LESLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lefindLoop⟫;
@@ -149,7 +149,7 @@ theorem lefindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `letE` table. -/
-def nSlotsLe (m : Mem) : Word := SN0 <<< m.glob LESLOT_G
+def nSlotsLe (m : Mem) : Word := SN0 <<< rdW (m.arr64 LESLOT) (m.len64 LESLOT - 1)
 
 include hp in
 theorem letFind_spec (n : Nat) (s₀ : St) (t ty val body h : Word) :
@@ -198,7 +198,7 @@ def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gr) {
   LEREC.u64[k + 2] := body;
   LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LESLOT_G) < (c + 1) * 2 { gr := call letE_grow() };
+  if (⟪SN0⟫ << LESLOT.u64[len(LESLOT.u64) - 1]) < (c + 1) * 2 { gr := call letE_grow() };
   return c
 }
 

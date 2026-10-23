@@ -41,7 +41,7 @@ abbrev ASLOT : ArrId := 5
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def appGS : GrowSch :=
-  ⟨ASLOT, AREC, 2, 4, ASLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨ASLOT, AREC, 2, 4, lblk (n, k, t, i, c, h) {
     h := ((⟪fnvBasis⟫ ^ AREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ AREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
   }⟩
 
@@ -112,7 +112,7 @@ def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def appFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << ASLOT_G;
+  n := ⟪SN0⟫ << ASLOT.u64[len(ASLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪afindLoop⟫;
@@ -148,7 +148,7 @@ theorem afindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (afindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `app` table. -/
-def nSlotsA (m : Mem) : Word := SN0 <<< m.glob ASLOT_G
+def nSlotsA (m : Mem) : Word := SN0 <<< rdW (m.arr64 ASLOT) (m.len64 ASLOT - 1)
 
 include hp in
 theorem appFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
@@ -193,7 +193,7 @@ def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gr) {
   AREC.u64[k + 1] := a;
   ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[4 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << ASLOT_G) < (c + 1) * 2 { gr := call app_grow() };
+  if (⟪SN0⟫ << ASLOT.u64[len(ASLOT.u64) - 1]) < (c + 1) * 2 { gr := call app_grow() };
   return c
 }
 

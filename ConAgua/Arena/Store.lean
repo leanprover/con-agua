@@ -54,7 +54,7 @@ abbrev SLOT : ArrId := 3
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def litGS : GrowSch :=
-  ⟨SLOT, REC, 4, 2, SLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨SLOT, REC, 4, 2, lblk (n, k, t, i, c, h) {
     h := REC.u64[i * 8 + t * 4 + 3]
   }⟩
 
@@ -365,7 +365,7 @@ def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := ⟪SN0⟫ << SLOT_G;
+  n := ⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoop⟫;
@@ -405,7 +405,7 @@ theorem findLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (findLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier. -/
-def nSlots (m : Mem) : Word := SN0 <<< m.glob SLOT_G
+def nSlots (m : Mem) : Word := SN0 <<< rdW (m.arr64 SLOT) (m.len64 SLOT - 1)
 
 include hpe hpm hp in
 theorem litFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -458,7 +458,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SLOT_G) < (c + 1) * 2 { gr := call lit_grow() };
+  if (⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1]) < (c + 1) * 2 { gr := call lit_grow() };
   return c
 }
 
@@ -549,14 +549,15 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
-/- Growth: 16 slots per tier at the start; the ninth node doubles them, which a 32-word slot array
-cannot hold (abort) and a 64-word one can (then all 13 nodes are found again). -/
+/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a 32-word slot array
+cannot hold with its last word (abort); a 128-word one holds two doublings (then all 13 nodes are
+found again). -/
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 9).map fun i => (UInt64.ofNat i, 1))).isNone
+    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 8).map fun i => (UInt64.ofNat i, 1))).isSome
+    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
 #guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 64 0] }
+    Array.replicate 256 0, Array.replicate 128 0] }
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
   some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
 
@@ -689,7 +690,7 @@ def findLoopStr : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := ⟪SN0⟫ << SLOT_G;
+  n := ⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoopStr⟫;
@@ -766,7 +767,7 @@ def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SLOT_G) < (c + 1) * 2 { gr := call lit_grow() };
+  if (⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1]) < (c + 1) * 2 { gr := call lit_grow() };
   return c
 }
 

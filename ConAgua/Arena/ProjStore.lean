@@ -44,7 +44,7 @@ abbrev PJSLOT : ArrId := 32
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def projGS : GrowSch :=
-  ⟨PJSLOT, PJREC, 3, 32, PJSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨PJSLOT, PJREC, 3, 32, lblk (n, k, t, i, c, h) {
     h := (((⟪fnvBasis⟫ ^ PJREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
   }⟩
 
@@ -117,7 +117,7 @@ def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
-  nn := ⟪SN0⟫ << PJSLOT_G;
+  nn := ⟪SN0⟫ << PJSLOT.u64[len(PJSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), nn);
   ⟪pjfindLoop⟫;
@@ -153,7 +153,7 @@ theorem pjfindLoop_step_spec (nn : Nat) (s₀ : St) :
   Triple.step_exec (pjfindLoop_spec p (nn + 1) s₀)
 
 /-- The slot count of a tier of the `proj` table. -/
-def nSlotsPj (m : Mem) : Word := SN0 <<< m.glob PJSLOT_G
+def nSlotsPj (m : Mem) : Word := SN0 <<< rdW (m.arr64 PJSLOT) (m.len64 PJSLOT - 1)
 
 include hp in
 theorem projFind_spec (nn : Nat) (s₀ : St) (t n u e h : Word) :
@@ -202,7 +202,7 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gr) {
   PJREC.u64[k + 2] := e;
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << PJSLOT_G) < (c + 1) * 2 { gr := call proj_grow() };
+  if (⟪SN0⟫ << PJSLOT.u64[len(PJSLOT.u64) - 1]) < (c + 1) * 2 { gr := call proj_grow() };
   return c
 }
 

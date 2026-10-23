@@ -39,7 +39,7 @@ abbrev SOSLOT : ArrId := 17
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def sortGS : GrowSch :=
-  ⟨SOSLOT, SOREC, 1, 16, SOSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨SOSLOT, SOREC, 1, 16, lblk (n, k, t, i, c, h) {
     h := (⟪fnvBasis⟫ ^ SOREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
   }⟩
 
@@ -107,7 +107,7 @@ def sofindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def sortFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << SOSLOT_G;
+  n := ⟪SN0⟫ << SOSLOT.u64[len(SOSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪sofindLoop⟫;
@@ -143,7 +143,7 @@ theorem sofindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (sofindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `sort` table. -/
-def nSlotsSo (m : Mem) : Word := SN0 <<< m.glob SOSLOT_G
+def nSlotsSo (m : Mem) : Word := SN0 <<< rdW (m.arr64 SOSLOT) (m.len64 SOSLOT - 1)
 
 include hp in
 theorem sortFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -189,7 +189,7 @@ def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gr) {
   SOREC.u64[c * 2 + t] := u;
   SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SOSLOT_G) < (c + 1) * 2 { gr := call sort_grow() };
+  if (⟪SN0⟫ << SOSLOT.u64[len(SOSLOT.u64) - 1]) < (c + 1) * 2 { gr := call sort_grow() };
   SOLP.u64[c * 2 + t] := x;
   return c
 }

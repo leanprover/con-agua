@@ -45,7 +45,7 @@ abbrev LSSLOT : ArrId := 40
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
 def lsGS : GrowSch :=
-  ⟨LSSLOT, LSREC, 3, 40, LSSLOT_G, lblk (n, k, t, i, c, h) {
+  ⟨LSSLOT, LSREC, 3, 40, lblk (n, k, t, i, c, h) {
     h := LSREC.u64[i * 6 + t * 3 + 2]
   }⟩
 
@@ -146,7 +146,7 @@ def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lsFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := ⟪SN0⟫ << LSSLOT_G;
+  n := ⟪SN0⟫ << LSSLOT.u64[len(LSSLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lsfindLoop⟫;
@@ -186,7 +186,7 @@ theorem lsfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lsfindLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier of the level-list table. -/
-def nSlotsLs (m : Mem) : Word := SN0 <<< m.glob LSSLOT_G
+def nSlotsLs (m : Mem) : Word := SN0 <<< rdW (m.arr64 LSSLOT) (m.len64 LSSLOT - 1)
 
 include hpe hpm hp in
 theorem lsFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -239,7 +239,7 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y,
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LSSLOT_G) < (c + 1) * 2 { gr := call ls_grow() };
+  if (⟪SN0⟫ << LSSLOT.u64[len(LSSLOT.u64) - 1]) < (c + 1) * 2 { gr := call ls_grow() };
   LSHP.u64[c * 2 + t] := x;
   return c
 }
