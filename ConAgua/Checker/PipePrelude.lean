@@ -5,7 +5,7 @@ import ConAgua.Checker.PreludeSimProg
 import ConAgua.Checker.FrontProg
 import ConAgua.Checker.PreLoopWSStages
 import ConAgua.Front.FrontPre
-import ConAgua.Checker.FrontOKPending
+import ConAgua.Front.FrontPreOK
 
 /-!
 # The stage `builtin_prelude` at `checkerProg` (lane `pipeline`)
@@ -127,7 +127,7 @@ theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
   intro s r s' hs hrun
   refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, h0⟩ hr0 => ?_⟩
   subst hs
-  have hQ := frontRunOK_checker #[] preludeText h64 preludeText_size n (s.setIn preIn)
+  have hQ := L.Front.frontRunOK_checker #[] preludeText h64 preludeText_size n (s.setIn preIn)
     (by show (s.mem.setIn preIn).arr8 0 = _; rw [setIn_arr8_zero _ _ h0, preIn_eq]) hpool a
     (ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA)
     (by rw [blank_pre_empty]; exact hD.frame (setIn_frame _ _) (by simp) (by simp)) ht.ok ht.off

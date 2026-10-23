@@ -109,9 +109,13 @@ start invariant there.
 `pipelineRefines_checker (h8 : LoopStage checkerProg checkerRels) : PipelineRefines checkerProg`
 (`Checker/PipeFinal.lean`). The seven stages before the loop are proved at `checkerProg`
 (`PipeStages.lean`: cap/pb/irp; `PipePrelude.lean`: `builtin_prelude`; `PipeRest.lean`:
-prelude, front, prepare, pins), modulo one pending lemma, `frontRunOK_checker`
-(`FrontOKPending.lean`, `sorry`; a helper is proving it): `front_run` also keeps `RecOK` of every
-record and `WalkableDecl` of every parsed record, which `prepare_prelude`'s refinement needs.
+prelude, front, prepare, pins), **sorry-free** (`#print axioms pipelineRefines_checker`: propext,
+Classical.choice, Quot.sound). `front_run` also keeps `RecOK` of every record and
+`WalkableDecl` of every parsed record, which `prepare_prelude`'s refinement needs
+(`L.Front.frontRunOK_checker`, `Front/FrontPreOK*.lean`, helper `pipeline-recok`: the invariant
+`FrontInvOK`; one line changes `DECL`/`DLP` only above the old count/top (`DGrow`), its handle
+words are table reads below `2^32`, a block's pointers decode to non-axioms so are nonzero;
+walkability is twin-only, `applyLine_decls`).
 
 The relations (`checkerRels`), all over `l = loadMem b pb s8 s64`:
 
@@ -165,9 +169,8 @@ Pieces:
 | 6 | `PinsStage` | pieces proved (`checkerProg_internAllPins_PB`) |
 | — | `LoopStage` | loopt2's (`installThenCheck_refines` + 12a) |
 | 13 | program hypotheses at `checkerProg` | ROM, front, prelude copies, write set before the loop done; loop's are loopt2's |
-| — | relations `ρ` and the stage assembly | **done** (landing 4): `pipelineRefines_checker`, modulo `LoopStage` (loopt2) and `frontRunOK_checker` (pending) |
+| — | relations `ρ` and the stage assembly | **done** (landing 4): `pipelineRefines_checker`, modulo `LoopStage` (loopt2) only |
 
 ## `sorry`s
 
-* `L.Checker.frontRunOK_checker` (`Checker/FrontOKPending.lean`): `RecOK`/`WalkableDecl` kept by
-  `front_run` (helper `pipeline-recok` working on it).
+None of this lane's.

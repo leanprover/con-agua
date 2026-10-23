@@ -439,7 +439,7 @@ theorem frontAll_refines_chunks_pre_ok (b : ByteArray) (h64 : System.Platform.nu
 
 /-- **The same at the checker's program** (`checkerProg_front_run`). The walkability of `D` is not
 used (the twin's records are walkable on their own). -/
-theorem frontRunOK_checker' (b : ByteArray) (h64 : System.Platform.numBits = 64)
+theorem frontRunOK_checker (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
     (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)

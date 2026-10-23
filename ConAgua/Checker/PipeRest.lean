@@ -101,7 +101,7 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
   intro n s₀ h4
   have hc := CapsOK.keep h4.since.keep h4.since.caps
   have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb s8 s64
-  refine triple_post (triple_and (triple_and (frontRunOK_checker pre.decls b h64 hb n s₀ hm hc.pool
+  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm hc.pool
     a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok.1 h4.rok.2)
     (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
     (stageFrame_front_run n s₀)) fun r s' ⟨⟨hpost, hl, hk, hpf⟩, hsf⟩ => ⟨hl, fun h0 => ?_⟩
