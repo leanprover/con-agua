@@ -213,7 +213,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   by_cases g4 : r₄.headD 0 = 0
   · rw [if_pos g4] at hW; cases hW
   rw [if_neg g4] at hW
-  obtain ⟨tbl, hdt⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
+  obtain ⟨tbl, hdt, hfe⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
   have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
     unfold decEntry; rw [if_neg g4, hdt]; rfl
@@ -226,7 +226,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   | zero => simp [call1W, callW_zero] at hW
   | succ N =>
   have h₅ := CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩) (inferProjAt_refines p hp hc N
-    ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb sn i pe (r₂.headD 0) wT wu (r₄.tail.headD 0) tbl hS₄ hq₄
+    ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb sn i pe (r₂.headD 0) wT wu (r₄.tail.headD 0) tbl hS₄ hq₄ hfe
     hi hcuw hrw2 hpe ⟨lsu, hdu₄⟩) (fun r r' h => by simp only [decH, h]) hW
   refine ipRef_trans ?_ h₅ (hK₁.trans (hK₂.trans hK₄)) (hSt₁.trans (hSt₂.trans hSt₄))
   exact inferProj_hit R fe d.toNat (decI sn) i.toNat (decE pe) a₀ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf

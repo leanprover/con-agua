@@ -513,6 +513,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb sn i pe te T us q : Word) (tbl : IProjTable)
     (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hfe : ∃ c, fe.find? c = some (.projInfo tbl))
     (hi : i.toNat < tbl.numFields) (hus : HW us) (hte : HW te) (hpe : HW pe)
     (hden : ∃ ls, denoteLs a₀.store.lss (decI us) = some ls) :
     CoreSpec p (n + 1) "infer_proj_at" [vis, sn, i, pe, te, T, us, q]
@@ -524,6 +525,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     (inferProjAt_spec p hp n s₀ vis sn i pe te T us q)
   subst hs0
   refine ⟨hloc, ?_⟩
+  obtain ⟨cT, hfeT⟩ := hfe
   unfold ipaW at hW
   -- `get_app_args`
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
@@ -577,7 +579,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
   have hD := hc.den dn m₂ a₀ vis fe M eb hS₁
   obtain ⟨lz, hdz⟩ := hD.zero
   rw [hP.zeroLevel, hzw] at hdz
-  obtain ⟨⟨lss, hdss⟩, -, -⟩ := hD.proj q.toNat tbl hq₁
+  obtain ⟨⟨lss, hdss⟩, -, -⟩ := hD.proj cT tbl hfeT
   rw [hssd] at hdss
   -- `lvl_eq_c`
   rcases Nat.lt_or_ge n 2 with hsm | hbig
@@ -611,7 +613,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     obtain ⟨hlps₃, -, -, -, hgd₃⟩ := decTbl_fields hq₃ hS₃.erec
     obtain ⟨hfw, hfdec⟩ := sliceAt_dec (k := .level) hS₃.erec hgd₃ i
     have hD₃ := hc.den dn m₃ _ vis fe M₃ eb hS₃
-    obtain ⟨-, hgds, hks⟩ := hD₃.proj q.toNat tbl hq₃
+    obtain ⟨-, hgds, hks⟩ := hD₃.proj cT tbl hfeT
     obtain ⟨lf, hdf⟩ := hgds i.toNat hi
     rw [← hfdec] at hdf
     have hdus : ∃ ls, denoteLs (AM.st (lvlEq? (decI (rdW (m₂.arr64 EREC) (q + 8)))
