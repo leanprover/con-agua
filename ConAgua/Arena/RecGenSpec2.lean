@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGen
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.RecGenSpec
 import ConAgua.Arena.IndSumSpec2
 
@@ -78,12 +79,12 @@ def ckcW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, nP, o, l =>
     if l = 0 then some ([1], m)
-    else ckcK1 n nP o l (rdW (m.arr64 IW) o) (stubM "bvar_b" m [CWF, rdW (m.arr64 IW) o])
+    else ckcK1 n nP o l (rdW (m.arr64 IW) o) (bvbF m [CWF, rdW (m.arr64 IW) o])
 /-- After `bvar_b`. -/
 def ckcK1 (n : Nat) (nP o l e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m1) =>
-    if rb.headD 0 ≠ 0 then some ([0], m1) else ckcK2 n nP o l (stubM "fvar_b" m1 [CWF, e])
+    if rb.headD 0 ≠ 0 then some ([0], m1) else ckcK2 n nP o l (fvbF m1 [CWF, e])
 /-- After `fvar_b`. -/
 def ckcK2 (n : Nat) (nP o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -100,12 +101,12 @@ variable (n : Nat) (m m1 m2 : Mem) (nP o l e : Word) (rb rf r : List Word)
 theorem ckcW_nil (hl : l = 0) : ckcW (n + 1) m nP o l = some ([1], m) := by simp [ckcW, hl]
 theorem ckcW_cons (hl : l ≠ 0) :
     ckcW (n + 1) m nP o l =
-      ckcK1 n nP o l (rdW (m.arr64 IW) o) (stubM "bvar_b" m [CWF, rdW (m.arr64 IW) o]) := by
+      ckcK1 n nP o l (rdW (m.arr64 IW) o) (bvbF m [CWF, rdW (m.arr64 IW) o]) := by
   simp [ckcW, hl]
 theorem ckcK1_open (h : rb.headD 0 ≠ 0) : ckcK1 n nP o l e (some (rb, m1)) = some ([0], m1) := by
   rw [ckcK1, if_pos h]
 theorem ckcK1_closed (h : ¬ rb.headD 0 ≠ 0) :
-    ckcK1 n nP o l e (some (rb, m1)) = ckcK2 n nP o l (stubM "fvar_b" m1 [CWF, e]) := by
+    ckcK1 n nP o l e (some (rb, m1)) = ckcK2 n nP o l (fvbF m1 [CWF, e]) := by
   rw [ckcK1, if_neg h]
 theorem ckcK2_open (h : nP < rf.headD 0) : ckcK2 n nP o l (some (rf, m2)) = some ([0], m2) := by
   rw [ckcK2, if_pos h]
@@ -123,7 +124,7 @@ grind_pattern [ind_grind] ckcK2_open => ckcK2 n nP o l (some (rf, m2))
 grind_pattern [ind_grind] ckcK2_closed => ckcK2 n nP o l (some (rf, m2))
 grind_pattern [ind_grind] ckcK3_some => ckcK3 (some (r, m))
 
-theorem classKeyOfClosed_spec (p : Prog)
+theorem classKeyOfClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
     (hp : p.lookup "class_key_of_closed" = some classKeyOfClosed) (n : Nat) :
     ∀ (s₀ : St) (nP o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_key_of_closed" [nP, o, l]
@@ -138,7 +139,7 @@ theorem classKeyOfClosed_spec (p : Prog)
     simp only [callFn, classKeyOfClosed]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "bvar_b" n, stubM_spec p "fvar_b" n, ih] <;>
+        bvbF_spec p hb n, fvbF_spec p hf n, ih] <;>
       finish (gen := 20)
 
 /-- The twin's per-parameter closedness test. -/
@@ -167,12 +168,12 @@ theorem ckcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [ckcW_cons n m nP o l hl, hw] at h
-      cases h2 : stubM "bvar_b" m [CWF, w] with
+      cases h2 : bvbF m [CWF, w] with
       | none => rw [h2] at h; simp [ckcK1] at h
       | some x2 =>
       obtain ⟨rb, m1⟩ := x2
       rw [h2] at h
-      obtain ⟨kb, a1, hrun1, hS1, hg1, hkb⟩ := bvarB_spec dn v fe CWF w hw32 m m1 a rb h2 hS
+      obtain ⟨kb, a1, hrun1, hS1, hg1, hkb⟩ := bvbF_ok dn v fe CWF w hw32 m m1 a rb h2 hS
       rw [CWF_eq] at hrun1
       by_cases hz : rb.headD 0 ≠ 0
       · rw [ckcK1_open n m1 nP o l w rb hz] at h
@@ -191,12 +192,12 @@ theorem ckcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         have hk : kb = 0 := by
           have hz' : rb.headD 0 = 0 := by simpa using hz
           rw [← hkb, hz']; rfl
-        cases h3 : stubM "fvar_b" m1 [CWF, w] with
+        cases h3 : fvbF m1 [CWF, w] with
         | none => rw [h3] at h; simp [ckcK2] at h
         | some x3 =>
         obtain ⟨rf, m2⟩ := x3
         rw [h3] at h
-        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvarB_spec dn v fe CWF w hw32 m1 m2 a1 rf h3 hS1
+        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok dn v fe CWF w hw32 m1 m2 a1 rf h3 hS1
         rw [CWF_eq] at hrun2
         have hg12 := hg1.trans hg2
         have hlt : (nP < rf.headD 0) ↔ ¬ kf ≤ nP.toNat := by
@@ -238,7 +239,7 @@ theorem ckcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
 
 /-- **`class_key_of_closed` refines the `allM` closedness test of `classKeyOf`** (through the stubs
 `bvar_b`, `fvar_b`). A piece of `classKeyOf`. -/
-theorem classKeyOfClosed_refines (p : Prog)
+theorem classKeyOfClosed_refines (p : Prog) (hb' : BvbProg p) (hf : HfF p)
     (hp : p.lookup "class_key_of_closed" = some classKeyOfClosed) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nP o l : Word) (xs : List EIdx)
     (hS : StageR dn vis fe s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
@@ -247,7 +248,8 @@ theorem classKeyOfClosed_refines (p : Prog)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (xs.allM (keyClosedTest nP.toNat)) a₀ ∧
       KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (xs.allM (keyClosedTest nP.toNat)) a₀) r
         (AM.res (xs.allM (keyClosedTest nP.toNat)) a₀); ⊤⦄ := by
-  refine triple_post (classKeyOfClosed_spec p hp n s₀ nP o l) ?_
+  refine triple_post (classKeyOfClosed_spec p hb' hf hp n
+ s₀ nP o l) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun, hpost⟩ := ckcW_ok dn fe n _ _ a₀ vis nP o l xs r hm hS hd hb ht
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

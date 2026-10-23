@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec16
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.RecCheckSpec6
 import ConAgua.Arena.RecCheckSpec5
 import ConAgua.Arena.DeclBasisSpec
@@ -24,7 +25,7 @@ open L.Arena
 
 /-! ## `target_major_of_outside_closed` -/
 
-theorem tmoc_spec (p : Prog) (hb : BvbProg p)
+theorem tmoc_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
     (hp : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed) (k : Nat) :
     ∀ (s₀ : St) (o l nP : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "target_major_of_outside_closed" [o, l, nP]
@@ -39,7 +40,7 @@ theorem tmoc_spec (p : Prog) (hb : BvbProg p)
     simp only [callFn, targetMajorOfOutsideClosed]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bvarBL_spec p hb k, stubM_spec p "fvar_b" k, ih] <;>
+        bvarBL_spec p hb k, fvbF_spec p hf k, ih] <;>
       finish (gen := 20)
 
 /-! ## `target_major_of_outside_occ` -/
@@ -416,6 +417,7 @@ structure TmoOProg (p : Prog) : Prop where
   tco : p.lookup "target_ctors_of" = some targetCtorsOf
   pin : p.lookup "pin_at" = some pinAtL
   bvb : BvbProg p
+  hf : HfF p
   tmoc : p.lookup "target_major_of_outside_closed" = some targetMajorOfOutsideClosed
   no : NoProg p
   occ : p.lookup "target_major_of_outside_occ" = some targetMajorOfOutsideOcc
@@ -505,7 +507,8 @@ theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Nam
     (Q := fun r b m' a' => (r.headD 0 != 0) = b ∧ StageR dn vis fe m' a' ∧ IWGrow m2 m' ∧ PosMR m') ?_ ?_
   · intro r3 m3 e3
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (tmoc_spec p hP.bvb hP.tmoc n _ ao (r2.tail.headD 0) (rdW (m2.arr64 IW) (pp + 4))) e3
+      (tmoc_spec p hP.bvb hP.hf hP.tmoc
+ n _ ao (r2.tail.headD 0) (rdW (m2.arr64 IW) (pp + 4))) e3
     obtain ⟨b, a', hrun, hS3, hg3, hb3, -⟩ := ckc2W_ok dn fe vis n m2 s3.mem a2 _ ao _ _ r3 hn hW3 hS2 htake2
       (by have := hg2.1; omega) (by have := hg2.1; omega)
     rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb] at hrun

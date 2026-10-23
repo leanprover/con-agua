@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecK
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndSumSpec7
 import ConAgua.Arena.IndPosSpec7
 
@@ -725,7 +726,7 @@ def cpW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 def cpK1 (n : Nat) (hp dO dL : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (bb, m1) =>
-    if bb ≠ 0 then some ([0], m1) else cpK2 n hp dO dL (stubM "fvar_b" m1 [CWF, rdW (m1.arr64 IW) dO])
+    if bb ≠ 0 then some ([0], m1) else cpK2 n hp dO dL (fvbF m1 [CWF, rdW (m1.arr64 IW) dO])
 def cpK2 (n : Nat) (hp dO dL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) => if hp < r.headD 0 then some ([0], m2) else cpW n m2 hp (dO + 1) (dL - 1)
@@ -738,7 +739,7 @@ theorem cpW_cons (h : ¬ dL = 0) : cpW (n + 1) m hp dO dL = cpK1 n hp dO dL (bvb
   simp [cpW, h]
 theorem cpK1_b (h : bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) = some ([0], m1) := by simp [cpK1, h]
 theorem cpK1_ok (h : ¬ bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) =
-    cpK2 n hp dO dL (stubM "fvar_b" m1 [CWF, rdW (m1.arr64 IW) dO]) := by simp [cpK1, h]
+    cpK2 n hp dO dL (fvbF m1 [CWF, rdW (m1.arr64 IW) dO]) := by simp [cpK1, h]
 theorem cpK2_out (h : hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = some ([0], m1) := by
   rw [cpK2, if_pos h]
 theorem cpK2_in (h : ¬ hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = cpW n m1 hp (dO + 1) (dL - 1) := by
@@ -746,7 +747,7 @@ theorem cpK2_in (h : ¬ hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = cpW n
 end arms
 attribute [ind_grind] cpW_nil cpW_cons cpK1_b cpK1_ok cpK2_out cpK2_in
 
-theorem nestContParamsClosed_spec (p : Prog) (hb : BvbProg p)
+theorem nestContParamsClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
     (hp : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL) (n : Nat) :
     ∀ (s₀ : St) (hpw dO dL : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_params_closed" [hpw, dO, dL]
@@ -761,7 +762,7 @@ theorem nestContParamsClosed_spec (p : Prog) (hb : BvbProg p)
     simp only [callFn, nestContParamsClosedL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bvarBL_spec p hb n, stubM_spec p "fvar_b" n, ih] <;>
+        bvarBL_spec p hb n, fvbF_spec p hf n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The twin's per-parameter test of `nestCont`. -/
@@ -827,12 +828,12 @@ theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word)
     have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
       simp only [rdW]; rw [hg1.2.2.1 _ (by simpa using hin 0 (by omega))]
     rw [hrd1] at h
-    cases hst : stubM "fvar_b" m1 [CWF, rdW (m.arr64 IW) dO] with
+    cases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with
     | none => rw [hst] at h; simp [cpK2] at h
     | some pr2 =>
     obtain ⟨r2, m2⟩ := pr2
     rw [hst] at h
-    obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvarB_spec dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
+    obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
     rw [CWF_eq, hxd] at hrun2
     simp only [decW0Nat] at hk
     by_cases hc : hp < r2.headD 0
@@ -937,7 +938,7 @@ end arms
 attribute [ind_grind] p2ccK2_z p2ccK2_nz
 
 theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ_any" = some nestOccAnyL)
-    (hpa : p.lookup "pin_at" = some pinAtL) (hb : BvbProg p)
+    (hpa : p.lookup "pin_at" = some pinAtL) (hb : BvbProg p) (hf : HfF p)
     (hpc : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL)
     (hp : p.lookup "nest_cont_checks" = some nestContChecksL) (n : Nat) (s₀ : St)
     (ctx hpw nn dO dL iO iL : Word) :
@@ -950,7 +951,8 @@ theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestOccAny_spec p hl hoa n, pos2Pin_spec p hpa n, nestContParamsClosed_spec p hb hpc n] <;>
+        nestOccAny_spec p hl hoa n, pos2Pin_spec p hpa n, nestContParamsClosed_spec p hb hf hpc n] <;>
+
       finish (gen := 20) [p2ccW, p2ccK1, rdW_eq]
 
 end L.Ind

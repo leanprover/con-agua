@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec2
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndPosSpec7
 import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.IndPos2SpecO
@@ -11,6 +12,8 @@ walk), `class_key_canon` (its loop `class_key_canon_go`, a recursion writing int
 `nest_seed_of_go`), `class_key_of` (the canonical key, then `class_key_of_closed`'s `allM`).
 Every theorem takes the walk memos well formed in the memory at hand (`PosMR`) and returns them so.
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -83,7 +86,7 @@ def ckc2W : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 def ckc2K1 (n : Nat) (nP o l e : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m1) =>
-    if rb ≠ 0 then some ([0], m1) else ckc2K2 n nP o l (stubM "fvar_b" m1 [CWF, e])
+    if rb ≠ 0 then some ([0], m1) else ckc2K2 n nP o l (fvbF m1 [CWF, e])
 /-- After `fvar_b`. -/
 def ckc2K2 (n : Nat) (nP o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -99,7 +102,7 @@ theorem ckc2W_cons (hl : l ≠ 0) : ckc2W (n + 1) m nP o l =
 theorem ckc2K1_open (h : rb ≠ 0) : ckc2K1 n nP o l e (some (rb, m1)) = some ([0], m1) := by
   rw [ckc2K1, if_pos h]
 theorem ckc2K1_closed (h : ¬ rb ≠ 0) :
-    ckc2K1 n nP o l e (some (rb, m1)) = ckc2K2 n nP o l (stubM "fvar_b" m1 [CWF, e]) := by
+    ckc2K1 n nP o l e (some (rb, m1)) = ckc2K2 n nP o l (fvbF m1 [CWF, e]) := by
   rw [ckc2K1, if_neg h]
 theorem ckc2K2_open (h : nP < rf.headD 0) : ckc2K2 n nP o l (some (rf, m2)) = some ([0], m2) := by
   rw [ckc2K2, if_pos h]
@@ -144,6 +147,7 @@ structure KofProg (p : Prog) : Prop where
   kcl : p.lookup "class_key_of_closed" = some classKeyOfClosed
   kof : p.lookup "class_key_of" = some classKeyOfL
   bvb : BvbProg p
+  hf : HfF p
 
 /-! ## The `vcgen` specs -/
 
@@ -208,7 +212,8 @@ theorem ckc2_spec (k : Nat) : ∀ (s₀ : St) (nP o l : Word),
     simp only [callFn, classKeyOfClosed]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bvarBL_spec p L.bvb k, stubM_spec p "fvar_b" k, ih] <;>
+        bvarBL_spec p L.bvb k, fvbF_spec p L.hf k, ih] <;>
+
       finish (gen := 20)
 
 theorem kof_spec (k : Nat) (s₀ : St) (nP po pl key : Word) :
@@ -446,7 +451,7 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2K1_open (h := hb)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2K1_closed (h := hb)] at h
-    cases h2 : stubM "fvar_b" m1 [CWF, rdW (m.arr64 IW) o] with
+    cases h2 : fvbF m1 [CWF, rdW (m.arr64 IW) o] with
     | none => rw [h2] at h; simp [ckc2K2] at h
     | some p2 =>
     obtain ⟨rf, m2⟩ := p2
@@ -505,12 +510,12 @@ theorem ckc2W_ok (n : Nat) :
       · rw [ckc2K1_closed n m1 nP o l w rb hz] at h
         have hk : rb.toNat = 0 := by have hz' : rb = 0 := by simpa using hz
                                      rw [hz']; rfl
-        cases h3 : stubM "fvar_b" m1 [CWF, w] with
+        cases h3 : fvbF m1 [CWF, w] with
         | none => rw [h3] at h; simp [ckc2K2] at h
         | some x3 =>
         obtain ⟨rf, m2⟩ := x3
         rw [h3] at h
-        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvarB_spec dn vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
+        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok dn vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
         rw [CWF_eq] at hrun2
         have hg12 := hg1.trans hg2
         have hlt : (nP < rf.headD 0) ↔ ¬ kf ≤ nP.toNat := by
