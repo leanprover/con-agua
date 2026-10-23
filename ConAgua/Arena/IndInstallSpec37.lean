@@ -105,7 +105,6 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) {fsR fsT : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
     (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (n : Nat)
-    (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
@@ -308,7 +307,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   rw [c8, icbK8_some] at h
   obtain ⟨s8, hs8, -, x8, a8, hrun8, hS8, hg8, hBP8, hP8, hA8, hrb8, hlp8⟩ :=
     triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (checkBlockPass_refines hP.pass hcl hfs n hn _ _ hS7 hq7 hsrc7 hcx7 (b := raw) (by cases raw <;> rfl)
+    (checkBlockPass_refines hP.pass hcl hfs n _ _ hS7 hq7 hsrc7 hcx7 (b := raw) (by cases raw <;> rfl)
       hv hP7 hA7 hkp) c8
   simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8
   subst hs8
@@ -347,7 +346,6 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) {fsR fsT : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
     (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (n : Nat)
-    (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
     (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
@@ -363,7 +361,7 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hS hq hsrc hcx hblk hv
+    let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hS hq hsrc hcx hblk hv
       hPm hma hA hkp hkt hkr hta hrb) hm
     ⟨hl, hok, hQ⟩
 
