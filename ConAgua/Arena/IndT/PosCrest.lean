@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.PosWalk
+import ConAgua.Arena.IlpRdReal
 
 /-!
 # `nest_ctors_crest` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
@@ -27,10 +28,10 @@ theorem coreF_mfr {p : Prog} (hq : KnotStageProg p) {f : FnName} (hf : f ∈ sta
   MFr.of_frame (run_memFrame hq.closed hf (run_of_callW h)).1 coreStageA_stage coreStageC_stage
 
 section crest
-variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+  (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq henv in
+include hq hIlpf henv in
 /-- **`nest_ctors_crest` under `StageC`**: `p2ctW_ok` with `StageC`, con-ron's preconditions of the
 constructor's head (`nestCtors_spec`'s), and after: `StageC`, the `CoreStep`, the crest denoting a
 term well scoped at the frame's depth. -/
@@ -94,15 +95,15 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
     rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
   rw [hrdt] at h
-  cases hil : stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0, us, wt] with
+  cases hil : realCall p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with
   | none => rw [hil] at h; simp [p2ctK2] at h
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2
   rw [hil, p2ctK2_some] at h
-  obtain ⟨cty, a1, hrun1, hS2, hg2, hcH, hcd⟩ :=
-    instLPFast_spec dn vis fe CWF _ _ _ _ hus hwtH cvv.levelParams m1 m2 a r2 hil ⟨hS1, hdec1⟩
+  obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
+    IlpRd.realC hIlpf hC k CWF _ _ _ _ cvv.levelParams m1 m2 a r2 hus hwtH ⟨rfl, erToIwW_iwFr hlp⟩ hS1 hdec1 hil
   rw [CWF_eq, ← hwtd] at hrun1
-  have hA2 : AbsOK m2 := stub_afr hil (by decide) hA1
+  have hA2 : AbsOK m2 := hAF2 hA1
   obtain ⟨c1, hctyP⟩ := ConRon.Bridge.Inductives.instLPFast_cstep hC.check hcvl hpre.hus hcvt hrun1
   have hC2 : StageC dn vis fe env m2 a1 := hC.of_cstep hS2 hA2 c1
   -- the crest
@@ -122,7 +123,7 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   | some pr3 =>
   obtain ⟨r3, m3⟩ := pr3
   rw [hpc, p2ctK3_eq] at h
-  have hP2 : PosMR m2 := (hP.fr (posmemo_cvLpsW_mfr hlp)).stub (by decide) hil
+  have hP2 : PosMR m2 := (hP.fr (posmemo_cvLpsW_mfr hlp)).fr (MFr.of_frame hfr2 hA2s hC2s)
   obtain ⟨M, G, g, hR⟩ := hP2.rf
   obtain ⟨mp2, hM2⟩ := hP2.rp
   obtain ⟨x, a2, hrun2, hx, ⟨M', G', hS3, hg3, hR3, -⟩, hM3⟩ := pcrW_ok dn fe vis k m2 m3 a1 no nl us dO dL hO hL

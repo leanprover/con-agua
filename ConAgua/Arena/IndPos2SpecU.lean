@@ -62,7 +62,7 @@ def p2sdW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wor
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) sO) + 3)) 0 SLACK)
 def p2sdK1 (cR : CallM) (n : Nat) (vis ctx sO sL hi key nPc ns : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m1) => p2sdK2 cR n vis ctx sO sL key nPc ns (r.headD 0) (nitWf n m1 vis ctx hi key)
+  | some (r, m1) => p2sdK2 cR n vis ctx sO sL key nPc ns (r.headD 0) (nitWf cR n m1 vis ctx hi key)
 def p2sdK2 (cR : CallM) (n : Nat) (vis ctx sO sL key nPc ns f : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) => p2sdK3 cR n vis ctx sO sL
@@ -103,7 +103,7 @@ theorem p2sdW_succ : p2sdW cR (n + 1) m vis ctx sO sL ns =
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) sO) + 3)) 0 SLACK) := by
   rw [p2sdW]
 theorem p2sdK1_some : p2sdK1 cR n vis ctx sO sL hi key nPc ns (some (r, m1)) =
-    p2sdK2 cR n vis ctx sO sL key nPc ns (r.headD 0) (nitWf n m1 vis ctx hi key) := by rw [p2sdK1]
+    p2sdK2 cR n vis ctx sO sL key nPc ns (r.headD 0) (nitWf cR n m1 vis ctx hi key) := by rw [p2sdK1]
 theorem p2sdK2_some : p2sdK2 cR n vis ctx sO sL key nPc ns f (some (r, m1)) =
     p2sdK3 cR n vis ctx sO sL
       (nbKeyW cR n m1 vis ctx f 0 0 0 (rdW (m1.arr64 IW) key) (rdW (m1.arr64 IW) (key + 1))
@@ -179,7 +179,7 @@ theorem nestSeeds_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ 
     rw [invoke_eq _ L.pseeds]
     simp only [callFn, nestSeedsL]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        nestCtxHiAt_specE p R.hi n, nestSeedsFuel_spec L n, nestInstType_spec' p L.nb.nit n, hKey, ih] <;>
+        nestCtxHiAt_specE p R.hi n, nestSeedsFuel_spec L n, nestInstType_spec' p L.nb.nit cR hcR n, hKey, ih] <;>
       simp_all [p2sdW_succ, p2sdK1_some, p2sdK2_some, p2sdK3_some, SLACK,
         LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
         St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]

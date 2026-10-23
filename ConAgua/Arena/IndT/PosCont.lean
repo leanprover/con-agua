@@ -170,7 +170,7 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-theorem contOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : ContOKC p dn vis fe env (n + 1) := by
+theorem contOKC_step (hIlpf : IlpfF p) (n : Nat) (ih : NbOKC p dn vis fe env n) : ContOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r ctxP progP nP usP argsP nsP dep h hC hW hnn hus
     hargs hab hns hP hA hc hctx hprog hnP husP hargsP hnsP hwargs
@@ -258,7 +258,7 @@ theorem contOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : ContOKC p dn vis
     pos2_key_rec hnn hus (by omega) hget3 hdsB
   obtain ⟨hKd, hKin⟩ := pos2_nk_in hK
   simp only [nitWf] at h
-  cases hni : nitW n' m3 vis ctx (nhiW m1 ctx pl) key with
+  cases hni : nitW (realCall p) n' m3 vis ctx (nhiW m1 ctx pl) key with
   | none => rw [hni] at h; simp [nbContK4] at h
   | some pr4 =>
   obtain ⟨r4, m4⟩ := pr4
@@ -268,10 +268,12 @@ theorem contOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : ContOKC p dn vis
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
       pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
     have := (hg2.trans hg3).1; omega
-  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
+  have hA3 : AbsOK m3 := posRecW_afr hk4 hA2
+  have hC3 : StageC dn vis fe env m3 a2 := hC.of_pstep hS3 hA3 p12
+  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, hAty⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 (realCall p) (IlpRd.realC hIlpf hC3) (IlpFr.real hIlpf) hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
     (hP2.fr (posRecW_mfr hk4))
-  have hA4 : AbsOK m4 := nitW_afr hni (posRecW_afr hk4 hA2)
+  have hA4 : AbsOK m4 := nitW_afr hAty hni hA3
   have hx02 := p12.ext
   obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt prog.length)
     ⟨decI nn, decI us, args.take nPcW.toNat⟩ ⟨nP, usP, argsP.take nPcW.toNat⟩ a2 a4 xi c2.ok
