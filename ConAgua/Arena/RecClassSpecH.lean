@@ -4,6 +4,9 @@ import ConAgua.Arena.RecClassSpecG
 # `RecClass`: `classRead` (lane `indproofs2`, helper `rec`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -324,7 +327,9 @@ def readFinTw (nP : Nat) (slots : List ClassSlot) (recs : List RecShape) : AM (O
 /-- `class_read`'s result: `none`, or a stably decoding `ClassRead` record. -/
 def decRead (m' : Mem) (r : List Word) : Option ClassRead → Prop
   | none => r.headD 0 = 0
-  | some cr => r.headD 0 = 1 ∧ StabD (fun m => decCR m (r.tail.headD 0).toNat) m' cr
+  | some cr => r.headD 0 = 1 ∧ StabD (fun m => decCR m (r.tail.headD 0).toNat) m' cr ∧
+      ∃ so sl, iwN m' (r.tail.headD 0).toNat = some so ∧ iwN m' ((r.tail.headD 0).toNat + 1) = some sl ∧
+        SPL decCS m' so sl cr.slots
 
 /-- The recursors decoded below the tops, each with a word-sized major index. -/
 def RecsDec (m : Mem) (ro rl : Word) (recs : List RecShape) : Prop :=
@@ -382,8 +387,6 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rintro ⟨r3, m3⟩ h3
   obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage h3 hS2 rfl
   rw [frK3_some, hr3]
-  refine RSim.pure_some ⟨hS3, hg12.trans hg3, rfl, ?_⟩
-  simp only [List.headD_cons, List.tail_cons]
   have hq : rdW (m2.arr64 CTL) 200 = rdW (m2.arr64 CTL) 200 := rfl
   have k0 := rec_iwN_stab hq hget htop 0 (by simp)
   have k1 := rec_iwN_stab hq hget htop 1 (by simp)
@@ -391,16 +394,21 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   have k3 := rec_iwN_stab hq hget htop 3 (by simp)
   simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero] at k0 k1 k2 k3
   have hsp3 := hsp.grow (hg12.trans hg3)
-  intro m' hg
-  have e1 : iwN m' ((rdW (m2.arr64 CTL) 200).toNat + 0 + 1) = some sl.toNat := by simpa using k1 m' hg
-  have e3 : iwN m' ((rdW (m2.arr64 CTL) 200).toNat + 2 + 1) = some (r2.tail.tail.headD 0).toNat :=
-    k3 m' hg
-  have hdn' : decNL m' (r2.tail.headD 0).toNat (r2.tail.tail.headD 0).toNat = some cs := by
-    rw [decNL_grow (hg3.trans hg) ht2]; exact hdn2
-  simp only [decCR, decAt, Nat.add_zero] at e1 ⊢
-  simp only [k0 m' hg, e1, k2 m' hg, e3, (hsp3.grow hg).decPL, hdn', Option.bind_eq_bind,
-    Option.bind_some]
-  rfl
+  refine RSim.pure_some ⟨hS3, hg12.trans hg3, rfl, ?_, so.toNat, sl.toNat, ?_, ?_, ?_⟩
+  all_goals simp only [List.headD_cons, List.tail_cons]
+  · intro m' hg
+    have e1 : iwN m' ((rdW (m2.arr64 CTL) 200).toNat + 0 + 1) = some sl.toNat := by simpa using k1 m' hg
+    have e3 : iwN m' ((rdW (m2.arr64 CTL) 200).toNat + 2 + 1) = some (r2.tail.tail.headD 0).toNat :=
+      k3 m' hg
+    have hdn' : decNL m' (r2.tail.headD 0).toNat (r2.tail.tail.headD 0).toNat = some cs := by
+      rw [decNL_grow (hg3.trans hg) ht2]; exact hdn2
+    simp only [decCR, decAt, Nat.add_zero] at e1 ⊢
+    simp only [k0 m' hg, e1, k2 m' hg, e3, (hsp3.grow hg).decPL, hdn', Option.bind_eq_bind,
+      Option.bind_some]
+    rfl
+  · simpa using k0 _ (IWGrow.refl _)
+  · simpa using k1 _ (IWGrow.refl _)
+  · exact hsp3
 
 theorem decRS_rP {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R) :
     ∃ q, iwN m p = some q ∧ decCVp m q = some R.cvR ∧ iwN m (p + 1) = some R.rP := by

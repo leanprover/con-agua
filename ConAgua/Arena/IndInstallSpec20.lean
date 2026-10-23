@@ -10,6 +10,9 @@ Per constructor: the level parameters' check (`all_level_params_defined`'s stub)
 stub) and their sorts (`check_struct_field_sorts_i`, `installSimFsorts`).
 -/
 
+
+noncomputable section
+
 set_option linter.deprecated false
 
 open ConRon.Arena

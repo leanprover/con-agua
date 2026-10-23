@@ -40,3 +40,60 @@ lane `indproofs3`'s). Total proven 944 → 954.
   is not proved here.
 * Finding: two L twins of `reservedBasisNames.contains` exist, `reserved_contains` (`IndIface.lean`,
   recursive) and `reserved_contains_w` (`WhnfIota.lean`, a loop).
+
+## Landing 2: `reservedRecName`, the fuel constants, `AState.worker`
+
+Census after (worktree, before landing): phase 5 133 → 136/142 (`reservedRecName`,
+`litGuardNames` covered, `coreWalkFuel`), phase 7 26 → **27/27** (`checkFuel`), phase 10 todo →
+sorry, proven locally (`AState.worker`). Total proven 954 → 958.
+
+* **`reserved_rec_name` refines `reservedRecName`** (`StubNamesRefine.lean`, helper `tails-p5`):
+  `L.Stubs.reservedRecName_refines : RefAM p "reserved_rec_name" [x] (StageR dn vis fe)
+  (reservedRecName (decI x)) (KeepPost dn vis fe decW0B)` (bundle `RrnProg p`, `H x`), the shape
+  of `IndStubs.reservedRecName_spec` (for lane `indproofs3`). Models `prhW` (`pin_range_has`),
+  `lghW` (`lit_guard_has`), `rrnW`, and both directions of `reserved_contains`
+  (`resContW_iff`). Finding: `lit_guard_has`'s ten `pin_at` calls and ten-way `||` did not go
+  through `vcgen`/`finish` with `pinAt_pure` (post `LocEq` and equal memory: grind lost the
+  locals across ten `setLocs`); with `pinAt_eq` (the callee returns the caller's state exactly,
+  `s' = s₀`) it does, ~25 s at `maxHeartbeats 2000000`. `triple_eq_of_mem` derives such a spec
+  from any pure-read spec.
+* **The fuel constants** (`FuelConsts.lean`): `coreWalkFuel_word` (the counter literal
+  `4000000000` is `coreWalkFuel`) and `checkFuel_ge` (every L fuel below `2^62` is at most
+  `checkFuel`, so the knot's refinements, stated for every twin fuel at least the L fuel, apply
+  at `checkFuel`; as `IndTwin.lean`'s `stage_fuel`). Each is the whole of what L has for the
+  constant; tagged `@[refines]`. The coordinator may prefer them untagged (then they stay
+  covered-only).
+* **`AState.worker`** (`PhaseWorker.lean`): L has no worker step: `install_then_check` runs phase B
+  on the memory phase A left, the twin's pipeline (`SeqAccepts`, con-ron's phased driver) on
+  `s.worker`. `checkPendingList_worker_ok`: with empty caches the verdicts agree (con-ron's
+  `checkPending_worker`: the first `enterScratch` overwrites what `worker` changes; an empty list
+  accepts on both). `checkPendingGo_worker` (`@[refines AState.worker]`): a returning
+  `check_pending_go(0, cnt, vis)` from `LoopR` at `a₀` with `a₀.caches = Caches.empty` means
+  phase B on `a₀.worker` accepts. It inherits phase B's stub `sorry`s. Open for the final
+  glue: `a₀.caches = Caches.empty` after `installFold` (every step ends with `dropScratch`, which
+  flushes; the start state's caches are empty) is not proved here.
+
+## Landing 3: `recRuleKOf`, `recRuleEtaOf`, `recRuleBits` (phase 5)
+
+Census (worktree): phase 5 136 → **139/142** (left: `constsResolve` (helper `tails-crf` on
+`crf_go`), `liftFueled`, `reservedBasisNames`); total proven 958 → 961.
+
+* **Bug fixed in `ctor_family`** (`StubInd.lean`, lane `stubs`' code): it signalled "no
+  constructor / no inductive" by a record offset `0`, and `rec_rule_k_of`/`rec_rule_eta_of`
+  returned `0` at `tq = 0`. A record can sit at `EREC` offset `0` (the first record pushed), so an
+  inductive there would have read as absent and the K/η bits as `false` where the twin says
+  `true`. `ctor_family` now returns `(cq, tq, ok)` with an explicit flag; the bits test `ok`.
+* **The refinements** (`StubIndRefine.lean`, sorry-free, `RefAM` under `StageR` with
+  `KeepPost`, bundle `RrbProg`), for lane `indproofs3`:
+  `L.Stubs.recRuleKOf_refines`, `L.Stubs.recRuleEtaOf_refines` (`decW0B`, hypothesis `H c`) and
+  `L.Stubs.recRuleBits_refines` (`H c`, `rl.ctor = decI c`; post `x = { rl with k := r[0] != 0,
+  eta := r[1] != 0 }`), the shape of `IndStubs.recRuleBits_spec`.
+* Shape: models through `callW` (`cfW`, `kofW`, `eofW`, `rrbW`, the fuel adapters `pirfW`,
+  `gaffW`), each spec by `sym`/`vcgen`/`finish [model, ntBW, CWF]` (a plain `simp_all` on loads
+  with bound proofs did not close: the index normalises to `(x.toNat + k) % 2^64`); the shared
+  prefix `ctor_family` against the twin once (`cfW_ok`, the pattern of `iotaCtorNeverProp_refines`),
+  its words' meaning as `CFOut`: for every test `G`, the twin's lookup-and-block `famT fe G c`
+  answers `false` at flag `0` and `G` at the two decoded records otherwise. The records' fields
+  are read on `m.arr64 EREC` (`ArrExt.decCI (erecP_ext m)`), with the size bound `IWOK` gives
+  (`< 2^64`, not `decCI_ctor`'s `< 2^63`). `erSlEq_spec'` is `erSlEq_spec` (`DeclCanonSpec.lean`)
+  with only the one lookup.

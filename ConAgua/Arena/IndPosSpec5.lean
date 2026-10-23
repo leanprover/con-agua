@@ -5,6 +5,9 @@ import ConAgua.Arena.IndPosSpec4
 The banked `replaceFVars` memo across `nest_canon_crest`: its pieces leave the memo alone
 (`RfFr`): `nest_phs`, `inst_pis_with` (a stub), `replace_apps` (its own memo, `RAM`). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP
@@ -168,7 +171,7 @@ theorem instW_mfr (n : Nat) : ∀ (m m' : Mem) (ao al e : Word) (r : List Word),
     by_cases hv : eViewW m e = []
     · rw [instK1_abort (h := hv)] at h; simp at h
     rw [instK1_ok (h := hv)] at h
-    cases hst : stubM "instantiate1_fast" m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) ao, 0] with
+    cases hst : i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) ao, 0] with
     | none => rw [hst] at h; simp [instK2] at h
     | some p1 =>
     obtain ⟨rb, m1⟩ := p1
@@ -180,7 +183,7 @@ theorem instW_mfr (n : Nat) : ∀ (m m' : Mem) (ao al e : Word) (r : List Word),
     rw [hi, instK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨-, rfl⟩ := h
-    exact (MFr.stub (by decide) hst).trans (ih _ _ _ _ _ _ hi)
+    exact (MFr.ofI1F hst).trans (ih _ _ _ _ _ _ hi)
 
 theorem rpMkW_mfr {m m' : Mem} {g a2 x2 c2 y x r : Word} (h : rpMkW m g a2 x2 c2 y x = some (r, m')) : MFr [] [] m m' := by
   unfold rpMkW at h

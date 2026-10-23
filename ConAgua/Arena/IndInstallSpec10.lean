@@ -8,6 +8,9 @@ Recursion on the other members, member 0's telescope opened per member as the tw
 `agreeBodyAM`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

@@ -12,6 +12,9 @@ precondition) with `posRecW_stage` (the stage relation kept, the words readable,
 `RdS` (two memories agree on a set of `IW` indices) and the decoders' agreement lemmas
 (`decNK_agree`, `decNH_agree`): a decoding whose reads all lie in the set survives. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

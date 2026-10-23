@@ -4,6 +4,9 @@ import ConAgua.Arena.RecClassSpecK
 # `RecClass`: `ClassGen.minorTy` — the conclusion and the composition (lane `indproofs2`, helper `rec2`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

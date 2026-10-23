@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecQ
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the relational side's
 statements — each function of the block, its model at exec fuel `n`, simulated by the twin. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

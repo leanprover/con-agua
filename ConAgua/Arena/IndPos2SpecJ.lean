@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecI
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helpers `pos` (fork E) and `pos2`): `nestGrowGroup`;
 `sl_snoc` over words. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

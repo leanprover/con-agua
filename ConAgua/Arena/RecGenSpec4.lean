@@ -6,6 +6,9 @@ import ConAgua.Arena.ScratchRefine
 # `RecGen`: `classRuleOk` (lane `indproofs2`, helper `rec`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -120,7 +123,7 @@ open Classical in
 noncomputable def cruK2 (N : Nat) (visT n gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m2) =>
-    if FlushOK m2 then cruK3 N visT gen (stubM "strip_lams" (flushMem m2) [n, gen]) else none
+    if FlushOK m2 then cruK3 N visT gen (stripF 5 (flushMem m2) [n, gen]) else none
 
 noncomputable def cruK1 (N : Nat) (visT visR n gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -149,7 +152,7 @@ theorem cruleW_eq : cruleW (N + 1) m visT visR cvR n gen =
 theorem cruK1_some : cruK1 N visT visR n gen (some (r1, m1)) =
     cruK2 N visT n gen (stubM "infer_type_core" m1 [visR, 0, gen]) := rfl
 theorem cruK2_some (h : FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) =
-    cruK3 N visT gen (stubM "strip_lams" (flushMem m2) [n, gen]) := by simp [cruK2, h]
+    cruK3 N visT gen (stripF 5 (flushMem m2) [n, gen]) := by simp [cruK2, h]
 theorem cruK2_bad (h : ¬ FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) = none := by
   simp [cruK2, h]
 theorem cruK3_some : cruK3 N visT gen (some (r3, m3)) =
@@ -180,6 +183,7 @@ structure CruleProg (p : Prog) extends FlushProg p : Prop where
   dom : p.lookup "class_rule_ok_domains" = some classRuleOkDomains
   guards : p.lookup "class_rule_ok_guards" = some classRuleOkGuards
   rule : p.lookup "class_rule_ok" = some classRuleOkL
+  strip : StripProg p
 
 theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St) (visR cvR gen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok_guards" [visR, cvR, gen]
@@ -207,7 +211,7 @@ theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St) (vis
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classRuleOkGuards_spec p h N, stubM_spec p "infer_type_core" N,
-        flushCaches_spec p h.toFlushProg N, stubM_spec p "strip_lams" N,
+        flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
         classRuleOkDomains_spec p h.dom N] <;>
       finish (gen := 20) [loc_init4]
 
@@ -317,12 +321,12 @@ theorem cruleW_ok {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR :
     rw [cruK2_bad (h := hn)] at h; cases h
   rw [cruK2_some (h := hok)] at h
   obtain ⟨hS3, hg3⟩ := flush_stage hS2 hok
-  cases h4 : stubM "strip_lams" (flushMem m2) [n, gen] with
+  cases h4 : stripF 5 (flushMem m2) [n, gen] with
   | none => rw [h4] at h; simp [cruK3] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4] at h
-  obtain ⟨x7, a7, hs, hS4, hg4, hd4⟩ := stripLams_spec dn visR feR n gen hgen _ m4 _ r4 h4 hS3
+  obtain ⟨x7, a7, hs, hS4, hg4, hd4⟩ := stripF_lams_ok dn visR feR n gen hgen _ m4 _ r4 h4 hS3
   cases x7 with
   | none =>
     have h0 : r4.headD 0 = 0 := hd4

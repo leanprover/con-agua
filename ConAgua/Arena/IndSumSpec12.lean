@@ -21,6 +21,9 @@ the restriction of the one at `vis`: `fe₀ = fe.restrictTo vis0`), `check_struc
 landing 2: a bundle per module instead of 20 hypotheses per statement).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -67,6 +70,7 @@ structure SumProg (p : Prog) : Prop where
   hctor : p.lookup "check_sum_ctor" = some checkSumCtorL
   hrec2 : p.lookup "rec2" = some rec2
   hcs : p.lookup "check_sum_ctors" = some checkSumCtorsL
+  strip : StripProg p
 
 /-! ## `check_sum_ctor_tail`: the word model -/
 
@@ -460,7 +464,7 @@ def ctorK2 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m) => ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-      (stubM "strip_pis" m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)])
+      (stripF 6 m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)])
 
 /-- **The model of `check_sum_ctor(vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa)`**
 (its callees at exec fuel `n + 2`). -/
@@ -512,7 +516,7 @@ theorem ctorK3_yes (h : r.headD 0 ≠ 0) :
   simp only [ctorK3]; rw [if_neg h]
 theorem ctorK2_some : ctorK2 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
     ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-      (stubM "strip_pis" m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)]) := rfl
+      (stripF 6 m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)]) := rfl
 end arms
 attribute [ind_grind] ctorK9_some ctorK8_some ctorK7_some ctorK6_no ctorK6_yes ctorK5_no ctorK5_yes
   ctorK4_no ctorK4_yes ctorK3_no ctorK3_yes ctorK2_some
@@ -528,7 +532,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
   simp only [callFn, checkSumCtorL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "check_constant_val" (n + 2), stubM_spec p "strip_pis" (n + 2),
+      stubM_spec p "check_constant_val" (n + 2), stripPis_specF p hP.strip (n + 2),
       srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
         hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr (n + 2),
       stubM_spec p "open_pis_at_fvars_f" (n + 2), stubM_spec p "fvar_type_ds" (n + 2),
@@ -631,10 +635,10 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   -- `strip_pis`
   obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.2.2.2.2.1
   rw [hw1]
-  have h2 := stripPis_spec dn vis fe (nP + nF) w1 hw1l
+  have h2 := stripF_pis_ok dn vis fe (nP + nF) w1 hw1l
   rw [sum_toNat_add hnf, hw1d] at h2
   refine Sim.bindK (K := ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM h2 hS1) fun r2 o2 m2 a2 hQ => ?_
+    (fun _ _ => rfl) (fun r m' e => h2 _ _ _ r e hS1) fun r2 o2 m2 a2 hQ => ?_
   obtain ⟨hS2, hg2, hdec2⟩ := hQ
   by_cases h20 : r2.headD 0 = 0
   · rw [ctorK3_no (h := h20)]; exact Sim.of_none

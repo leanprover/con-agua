@@ -5,6 +5,9 @@ import ConAgua.Arena.IndSumSpec4
 # `RecClass`: `classReadSlot`, `classReadSlots` (lane `indproofs2`, helper `rec`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

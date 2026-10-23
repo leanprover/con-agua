@@ -126,7 +126,7 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
       | none => rfl
       | some y =>
         obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-          (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc
+          (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc
             hP.hul hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg 0 _ a1 a2 a3 a4 a5) h
         rw [spgW_zero] at hW; cases hW
     simp only [ctoW, hz0] at e
@@ -163,7 +163,7 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
   obtain ⟨s2, rfl, -, hW2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (blockShapeLps_spec2 p hP.tbl.ha hP.erCopy hP.erToIw hP.lps (j + 2) _ pp) h2
   obtain ⟨hS2, hg2, hl2, hlb2⟩ := lpsW_ok' hW2 hS1 (hq.grow (decBS_mono _) hg1)
-  have hM2 : HbMemo s2.mem := hM1.fr (lpsW_mfr hW2)
+  have hM2 : HbMemo s2.mem := hM1.fr (lpsW_mfrT hW2)
   have hg12 := hg1.trans hg2
   -- `check_struct_proj_table`
   rw [ctoK2_some]

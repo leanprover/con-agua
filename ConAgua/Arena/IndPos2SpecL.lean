@@ -7,6 +7,9 @@ specs of the block's non-recursive helpers (`nest_frame_mates` with the stage re
 `sl_new1`, `nest_frame_grp`, `nest_frame_holes`, `nest_cont_new_active`, `nest_cont_params_closed`,
 …). Every model takes the exec fuel first and is `none` at `0`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP
@@ -1019,11 +1022,11 @@ theorem cpW_mfr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
   | 0, _, _, _, _, _, _, h => by simp [cpW] at h
   | n + 1, m, m', hp, dO, dL, r, h => by
     unfold cpW cpK1 cpK2 at h
-    mfr_auto h [bvbW_mfr, MFr.ofStub, cpW_mfr n _ _ _ _ _ _]
+    mfr_auto h [bvbW_mfr, MFr.ofStub, MFr.ofI1F, cpW_mfr n _ _ _ _ _ _]
 
 theorem ustW_mfr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : HbFr m m' := by
   unfold ustW ustK1 at h
-  mfr_auto h [MFr.ofStub, hbFastW_mfr]
+  mfr_auto h [MFr.ofStripF, hbFastW_mfr]
 
 /-- **`nest_cont_checks`**: the twin's three checks of `nestCont` pass. -/
 theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

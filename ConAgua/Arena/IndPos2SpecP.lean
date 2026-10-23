@@ -4,6 +4,9 @@ import ConAgua.Arena.IndPos2SpecO
 one per L function, each taking the rest of the twin's code as a continuation (so that every
 piece is the twin's text, and the twin's functions are their pieces by `rfl`). -/
 
+
+noncomputable section
+
 open ConRon.Arena
 open ConLeche (CheckMode)
 

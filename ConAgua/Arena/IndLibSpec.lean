@@ -11,6 +11,9 @@ finding). `slR_of_dec`: an `IW` slice that decodes (`decHL`, `Option`-valued ove
 offsets) is an `SlR` slice of the handles' words.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

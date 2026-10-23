@@ -9,6 +9,9 @@ Word models (one per L function, at the function's own fuel), their `vcgen` spec
 relational lemmas as `RSim` chains (`RecSim.lean`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

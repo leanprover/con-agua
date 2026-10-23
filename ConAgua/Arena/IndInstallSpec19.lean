@@ -5,6 +5,9 @@ import ConAgua.Arena.IndInstallSpec18
 `checkAbsCtorSortsAll`, the word models
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

@@ -7,6 +7,9 @@ The members' constructors pushed member by member (`cons_sum_ctors`, lead's), by
 twin's.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

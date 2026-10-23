@@ -16,6 +16,9 @@ import ConAgua.Arena.IndGrindAttr
 for the two that allocate), the result decoding the twin's value.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
