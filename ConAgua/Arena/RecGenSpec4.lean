@@ -375,8 +375,8 @@ theorem cruleW_ok {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR :
   rfl
 
 /-- **`class_rule_ok` refines `classRuleOk`** (through the stubs of its guards, `infer_type_core`,
-`strip_lams`, and `class_rule_ok_domains`'s `consts_resolve_ffast`): the rule is returned as built. -/
-@[refines ConRon.Arena.classRuleOk]
+`strip_lams`, and `class_rule_ok_domains`'s `consts_resolve_ffast`): the rule is returned as built.
+Under `StageR`; the census link is `classRuleOk_refinesC` (`IndT/RecGen4.lean`). -/
 theorem classRuleOk_refines (p : Prog) (hp : CruleProg p) (N : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : IFEnv) (cvR n gen : Word)
     (cv : IConstantVal) (hS : StageR dn visR feR s₀.mem a₀) (hgen : H gen)
