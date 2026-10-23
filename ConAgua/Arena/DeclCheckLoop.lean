@@ -7,19 +7,11 @@ import ConAgua.Arena.DeclNatSubAll
 /-!
 # `check_decl`'s arms at the loop's relation (lane `decls3`)
 
-`check_decl(i, vis)` reads the record's kind word and calls one arm (`DeclStep.lean`). Under the
-front's records (`DeclsR`: every record is an axiom, definition, theorem, opaque or quotient,
-`DeclAt`) the kind is `1`‥`5`, so the inductive branch (kind `6`, lane `induct`'s
-`check_ind_decl`) is never taken here; it becomes reachable with the front's inductive records
-(lane `indproofs2`).
-
-Each arm's spec at the loop's relation is a theorem, all five proved: the theorem arm
-(`DeclArmLoop.lean`), the opaque arm (`DeclArmOpaque.lean`), the quotient and axiom arms (the
-canonical comparisons, which need the twin state well formed: `StateOK`, a hypothesis of
-`ArmSpec`, from the fold's `TwinFold`, lane `decls4`), and the definition arm through the gates'
-specs (`DefnProg`: `NatGateSpec`, `DivGateSpec`). The callees' own stub specs (the ROM readers,
-`lvl_eq_c`) are `sorry`. The dispatcher's refinement is `CheckerT.lean`'s `checkDecl_loopT` (under
-`StageT`, lane `loopt2`).
+`check_decl(i, vis)` reads the record's kind word and calls one arm (`DeclStep.lean`). This file
+has the program bundle `CheckDeclProg` the arms' proofs take and `substC0_of`. The arms' specs at
+the loop's relation are the `StageT` ones in `CheckerT.lean` (`checkDecl_loopT`, lanes `loopt2`,
+`loopt3`); their `StageR` versions (`ArmSpec`, with the quotient readers' preconditions open) are
+gone with the interim contract.
 -/
 
 open ConRon.Arena
@@ -33,7 +25,7 @@ set_option linter.unusedSimpArgs false
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -68,54 +60,6 @@ theorem substC0_of {p : Prog} (hN : NatSubProg p) :
   fun _ _ _ nm r h hn hr hh k m a res m' hS hc =>
     sc0_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc
 
-/-! ## The arms not proved yet -/
-
-section pending
-variable {p : Prog} (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration)
-
-/-- The shape of an arm's spec at the loop's relation, for the record `d` at `i`. -/
-def ArmSpec (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-    (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d → ConRon.Bridge.StateOK a₀ →
-    LoopR pins dn s₀.mem a₀ vis fe pend ds →
-  ⦃fun s => s = s₀⦄ invoke p (exec p n) f [i, vis]
-  ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe d) a₀ ∧
-    LoopR pins dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
-      (AM.res (checkDecl V pins fe d) a₀) pend ds; ⊤⦄
-
-/-- `check_decl_axiom` (`DeclArmAxiom.lean`). Open: `dn` reading `Quot`'s `u` back from the twin's
-store (`NamesDn dn a₀ quotNames`, for the quotient block's reader; lane `loopt2`'s `TwinOK`). -/
-theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) :
-    ArmSpec pins dn ds p "check_decl_axiom" (.axiomDecl cv) :=
-  fun n s₀ a₀ vis fe pend i hi hd hok hR =>
-    checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hok sorry hR
-
-/-- `check_decl_defn` (`DeclArmDefn.lean`; through the gates' specs, `DefnProg`, a field of
-`CheckDeclProg`). -/
-theorem checkDeclDefn_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx)
-    (h : ConLeche.ReducibilityHint) :
-    ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) :=
-  fun n s₀ a₀ vis fe pend i hi hd _ hR =>
-    checkDeclDefn_loop' hP.arm hP.val pins
-      ⟨hP.df, natGateSpec hP.natSub hP.natGate hP.natCert hP.natText pins,
-        divGateSpecD hP.dm pins (substC0_of hP.natSub.toNatSubProg) (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) hP.dgClosed⟩
-      dn hdn ds n s₀ a₀ vis fe pend i cv v h hi hd hR
-
-/-- `check_decl_opaque` (`DeclArmOpaque.lean`). -/
-theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal)
-    (v : EIdx) : ArmSpec pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) :=
-  fun n s₀ a₀ vis fe pend i hi hd _ hR =>
-    checkDeclOpaque_loop' hP.arm hP.val hP.crp hP.op pins dn hdn ds n s₀ a₀ vis fe pend i cv v hi hd hR
-
-/-- `check_decl_quot` (`DeclArmQuot.lean`). Open: `NamesDn dn a₀ quotNames` (as
-`checkDeclAxiom_loop`) and the declaration's constant value denoting in the twin's store. -/
-theorem checkDeclQuot_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (k : ConLeche.QuotKind)
-    (cv : IConstantVal) : ArmSpec pins dn ds p "check_decl_quot" (.quotDecl k cv) :=
-  fun n s₀ a₀ vis fe pend i hi hd hok hR =>
-    checkDeclQuot_loop' hP.arm hP.val.rcp hP.quot pins dn hdn ds n s₀ a₀ vis fe pend i k cv hi hd hok sorry sorry hR
-
-end pending
 
 /-! ## The dispatcher -/
 

@@ -30,7 +30,7 @@ open scoped Lean.Order
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 /-! ## `pin_in(x, k, hi)` -/
 
@@ -437,7 +437,7 @@ theorem ivW_gen {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
     {ds : Array IDeclaration} {ci : IConstantInfo} {k : ValueKind}
     (h : ivW p n m i vis ck vk = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) (hk : decVK vk.toNat = some k) :
     ∃ a2 a3, (installHeader fe (stepCV ds[i.toNat])).run a = .ok ((), a2) ∧
       (vk ≠ 1 → (installValueGuards fe (stepCV ds[i.toNat]) (stepVal ds[i.toNat])).run a2 =
@@ -533,7 +533,7 @@ def IvArgs (ck vk : Word) : IDeclaration → Prop
 theorem ivW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
     {ds : Array IDeclaration} (h : ivW p n m i vis ck vk = some (r, m'))
-    (hS : StageR dn vis fe m a) (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds)
+    (hS : StageR dn vis fe m a) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
     (hi : i.toNat < ds.size) (hk : IvArgs ck vk (dsAt ds i)) :
     ∃ x a', (ivT fe (dsAt ds i)).run a = .ok (x, a') ∧ StageR dn (r.headD 0) x.1 m' a' ∧
       IWGrow m m' ∧ x.2 = decVG (erecP m') (r.tail.headD 0).toNat ∧ x.2 ≠ none := by
