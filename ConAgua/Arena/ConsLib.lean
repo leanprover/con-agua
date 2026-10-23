@@ -1,0 +1,252 @@
+module
+
+public import ConAgua.Arena.Store
+meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
+import ConAgua.Census.Attr
+
+@[expose] public section
+
+/-!
+# The cons-table library: one L code for every intern (hash-cons) table (lane conslib)
+
+con-ron's arena keeps each node constructor in a `Tbl α ι δ` per tier: an array of records and a
+cons `Std.HashMap` (con-ron's Rust: `HashMap2`, open addressing). Its L twin is the same for every
+constructor up to a **cons schema** `ConsSch`: the record array (`w` words per node and tier, the
+tiers interleaved: node `i` of tier `t` at `ra[i * st + t * w ..]`), the slot array (slot `j` of tier
+`t` at `sa[2 j + t]`, `0` free, `B t + i + 1` node `i`, linear probing from `homeW`, grown by
+`growBlkG`), the node counts at `CTL[ca + t]`, the handle bases, and the table's own pieces as L
+fragments: the match of a node against the key, the room test of the push, the record words, the
+key hash and the scratch skip of `intern_X`.
+
+The L code is **generic in the schema**: `consFindG C`, `consPushG C`, `consInternG C` are Lean
+functions producing the table's `X_find`, `X_push`, `intern_X` (as `MemoLib`'s templates: L names
+its arrays statically, so the code cannot take the table as an argument). The table's functions
+are instances (`appFind := consFindG appCS`, …) and keep their names and program entries. Their
+specs are proved once, for a variable schema, from one obligation per fragment
+(`ConsLibSpec.lean`).
+
+Variables. `X_find(t, k₁ … k_nk, h)`: the template's own variables `n j d v b` follow the keys
+(`lvF`), then the match's own (`mloc` of them). `X_push(t, k₁ … k_np, j)`: `c k` follow, then the
+growth block's nine. `intern_X(k₁ … k_nk)`: `h sk fd i j d` follow the keys. A fragment is written
+with these numbers (concretely, for its table).
+-/
+
+set_option experimental.vcgen true
+
+namespace L.Arena
+
+/-! ## Renaming variables -/
+
+/-- Expression `e` with every variable `x` renamed to `f x`. -/
+def mapE (f : Var → Var) : Expr → Expr
+  | .var x => .var (f x)
+  | .bin op a b => .bin op (mapE f a) (mapE f b)
+  | .ld8 a i => .ld8 a (mapE f i)
+  | .ld64 a i => .ld64 a (mapE f i)
+  | .cmpw c a b => .cmpw c (mapE f a) (mapE f b)
+  | .ldc d i => .ldc d (mapE f i)
+  | e => e
+
+/-- Condition `c` with every variable renamed by `f`. -/
+def mapC (f : Var → Var) : Cond → Cond
+  | .cmp c a b => .cmp c (mapE f a) (mapE f b)
+  | .and p q => .and (mapC f p) (mapC f q)
+  | .or p q => .or (mapC f p) (mapC f q)
+  | .not p => .not (mapC f p)
+
+/-- Statement `s` with every variable renamed by `f`. -/
+def mapS (f : Var → Var) : Stmt → Stmt
+  | .set x e => .set (f x) (mapE f e)
+  | .st8 a i e => .st8 a (mapE f i) (mapE f e)
+  | .st64 a i e => .st64 a (mapE f i) (mapE f e)
+  | .seq s t => .seq (mapS f s) (mapS f t)
+  | .ite c s t => .ite (mapC f c) (mapS f s) (mapS f t)
+  | .while c s => .while (mapC f c) (mapS f s)
+  | .ret es => .ret (es.map (mapE f))
+  | .call xs g args => .call (xs.map f) g (args.map (mapE f))
+  | .gset g e => .gset g (mapE f e)
+  | s => s
+
+/-- The template's variable `x` in a function whose first parameter is the tier and whose next
+`nk` are the key: variable `0` stays, the others move past the key. -/
+def lvF (nk : Nat) (x : Var) : Var := if x = 0 then 0 else x + nk
+
+/-- `s₁; s₂; …; t`, nested to the right as `lfn` writes a block. -/
+def seqs : List Stmt → Stmt → Stmt
+  | [], t => t
+  | s :: ss, t => .seq s (seqs ss t)
+
+/-- `s; t`, or `t` when there is no `s`. -/
+def seqO : Option Stmt → Stmt → Stmt
+  | none, t => t
+  | some s, t => .seq s t
+
+/-- The condition of an `if` (to write a fragment's condition with `lblk`). -/
+def condOf : Stmt → Cond
+  | .ite c _ _ => c
+  | _ => .cmp .eq (.const 0) (.const 0)
+
+/-- The right-hand side of an assignment (to write a fragment's expression with `lblk`). -/
+def rhsOf : Stmt → Expr
+  | .set _ e => e
+  | _ => .const 0
+
+/-! ## The schema -/
+
+/-- A cons table. Arrays and words: record array `ra`, slot array `sa`, `w` words per record and
+tier (stride `st = 2 w`), node counts at `CTL[ca + t]`, handle words `P + i` (persistent tier) and
+`S + i` (scratch tier). Functions: `fname`, `pname` (the find and the push `intern_X` calls).
+Fragments (in the variables of the module doc):
+* `nk` key words; the find's match: `mpre` (a prelude, e.g. `m := call X_match(…)`, with `mloc`
+  locals of its own after `b`) and the condition `mc` on node `v - 1`;
+* `np` record inputs of the push (the key, and for some tables the hash), the room test `room`
+  (the push aborts if it holds), the record words `rec`;
+* `ghash`: the growth's hash block (`GrowSch.hash`);
+* `ihash`: `h :=` the key's hash, in `intern_X`; `skip`: the scratch-skip word (`some`: the
+  persistent probe is skipped when the scratch tier is open and the word is not `0`). -/
+structure ConsSch where
+  ra : ArrId
+  sa : ArrId
+  w : Word
+  st : Word
+  ca : Word
+  P : Word
+  S : Word
+  fname : String
+  pname : String
+  nk : Nat
+  mloc : Nat := 0
+  mpre : Option Stmt := none
+  mc : Cond
+  np : Nat
+  room : Cond
+  recW : List Expr
+  ghash : Stmt
+  ihash : Stmt
+  skipW : Option Expr
+  /-- Models (`ConsLibSpec.lean` states each fragment's obligation against them): the match of
+  node `i` of tier `t` against the key, the key's hash, a node's hash (the growth's), the record
+  words from the push's inputs, the room test from the count, the skip word from the key. -/
+  mtM : Mem → List Word → Word → Word → Bool
+  qhM : Mem → List Word → Word
+  hsM : Mem → Word → Word → Word
+  vsM : List Word → List Word
+  roomM : Mem → Word → Word → Bool
+  skM : List Word → Word := fun _ => 0
+
+/-- The growth schema of a cons table (`SlotGrow.lean`). -/
+def ConsSch.GS (C : ConsSch) : GrowSch := ⟨C.sa, C.ra, C.w, C.ca, C.ghash⟩
+
+/-! ## `X_find(t, k₁ … k_nk, h)`: the probe -/
+
+/-- The template's find variables: `t h n j d v b`. -/
+def cfHead (sa : ArrId) : List Stmt :=
+  [lblk (t, h, n, j, d, v, b) { n := sa.u64[len(sa.u64) - 1] + ⟪SN0⟫ },
+   lblk (t, h, n, j, d, v, b) { b := CTL.u64[62] * t },
+   lblk (t, h, n, j, d, v, b) { j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n) }]
+def cfLoad (sa : ArrId) : List Stmt :=
+  [lblk (t, h, n, j, d, v, b) { v := sa.u64[j * 2 + t] },
+   lblk (t, h, n, j, d, v, b) { if v <= b { return (0, 0, j, d) } },
+   lblk (t, h, n, j, d, v, b) { v := v - b }]
+def cfHit : Stmt := lblk (t, h, n, j, d, v, b) { return (1, v - 1, j, d) }
+def cfAdv : Stmt := lblk (t, h, n, j, d, v, b) {
+  j := (j + 1) * u64(j + 1 < n);
+  d += 1
+}
+
+/-- The probe loop. -/
+def cfLoop (C : ConsSch) : Stmt :=
+  .while (.cmp .ult (.var (4 + C.nk)) (.var (2 + C.nk)))
+    (seqs ((cfLoad C.sa).map (mapS (lvF C.nk)))
+      (seqO C.mpre (.seq (.ite C.mc (mapS (lvF C.nk) cfHit) .skip) (mapS (lvF C.nk) cfAdv))))
+
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+def consFindG (C : ConsSch) : FunDecl :=
+  { nparams := C.nk + 2, nlocals := C.nk + 7 + C.mloc,
+    body := seqs ((cfHead C.sa).map (mapS (lvF C.nk))) (.seq (cfLoop C) .abort) }
+
+/-! ## `X_push(t, k₁ … k_np, j)`: append a node to tier `t`, register it at slot `j` -/
+
+/-- The template's push variables `t j c k`, then the growth block's (`gn` = 4, `gk` = 5). -/
+def cpHead (C : ConsSch) : List Stmt :=
+  [lblk (t, j, c, k, gn, gk) { c := CTL.u64[⟪C.ca⟫ + t] },
+   lblk (t, j, c, k, gn, gk) { if c >= 134217728 { abort } }]
+def cpMid (C : ConsSch) : List Stmt :=
+  [lblk (t, j, c, k, gn, gk) { k := c * ⟪C.st⟫ + t * ⟪C.w⟫ },
+   lblk (t, j, c, k, gn, gk) { gk := C.sa.u64[len(C.sa.u64) - 1] }]
+
+/-- The record words: word `f` of the new record is `e` (`k` = `np + 3`). -/
+def cpWr (C : ConsSch) : Nat → List Expr → Stmt → Stmt
+  | _, [], t => t
+  | f, e :: es, t =>
+    .seq (.st64 C.ra (if f = 0 then .var (C.np + 3) else .bin .add (.var (C.np + 3)) (.const (UInt64.ofNat f))) e)
+      (cpWr C (f + 1) es t)
+
+def cpTail (C : ConsSch) : List Stmt :=
+  [lblk (t, j, c, k, gn, gk) { C.sa.u64[j * 2 + t] := CTL.u64[62] * t + c + 1 },
+   lblk (t, j, c, k, gn, gk) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 }]
+def cpGrowIf (C : ConsSch) : Stmt :=
+  .ite (.cmp .ult (.bin .add (.var (C.np + 5)) (.const SN0))
+      (.bin .mul (.bin .add (.var (C.np + 2)) (.const 1)) (.const 2)))
+    (growBlkG C.GS (C.np + 4)) .skip
+
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+def consPushG (C : ConsSch) : FunDecl :=
+  { nparams := C.np + 2, nlocals := C.np + 13,
+    body := seqs ((cpHead C).map (mapS (lvF C.np)))
+      (.seq (.ite C.room .abort .skip)
+        (seqs ((cpMid C).map (mapS (lvF C.np)))
+          (cpWr C 0 C.recW
+            (seqs ((cpTail C).map (mapS (lvF C.np)))
+              (.seq (cpGrowIf C) (.ret [.var (C.np + 2)])))))) }
+
+/-! ## `intern_X(k₁ … k_nk)`: hash-cons the node with key `k`
+
+con-ron's `EStore::intern` (the arena's `internE`/`internNodeE`): the persistent probe unless the
+scratch tier is open and the skip word is not `0`, the scratch probe if the scratch tier is open,
+the append to the tier the store is in. -/
+
+/-- The key's variables, then `extra`. -/
+def keyArgs (nk : Nat) (extra : List Expr) : List Expr := (List.range nk).map .var ++ extra
+
+/-- `(fd, i, j, d) := call X_find(t, k…, h)`. -/
+def ciFind (C : ConsSch) (t : Word) : Stmt :=
+  .call [C.nk + 2, C.nk + 3, C.nk + 4, C.nk + 5] C.fname (.const t :: keyArgs C.nk [.var C.nk])
+
+/-- `i := call X_push(t, k…, j)` (the push's record inputs: the key, then `h` if `np > nk`). -/
+def ciPush (C : ConsSch) (t : Word) : Stmt :=
+  .call [C.nk + 3] C.pname
+    (.const t :: keyArgs C.nk ((if C.nk < C.np then [.var C.nk] else []) ++ [.var (C.nk + 4)]))
+
+/-- `if fd != 0 { return B + i }`. -/
+def ciHit (C : ConsSch) (B : Word) : Stmt :=
+  .ite (.cmp .ne (.var (C.nk + 2)) (.const 0)) (.ret [.bin .add (.const B) (.var (C.nk + 3))]) .skip
+
+/-- `CTL.u64[1] != 0`: the scratch tier is open. -/
+def ciOpen : Cond := .cmp .ne (.ld64 CTL (.const 1)) (.const 0)
+
+/-- The scratch branch: probe tier 1, else append to it. -/
+def ciScr (C : ConsSch) : Stmt :=
+  .ite ciOpen
+    (seqs [ciFind C 1, ciHit C C.S, ciPush C 1] (.ret [.bin .add (.const C.S) (.var (C.nk + 3))]))
+    .skip
+
+/-- The persistent branch's end: append to tier 0. -/
+def ciEnd (C : ConsSch) : Stmt :=
+  .seq (ciPush C 0) (.ret [.bin .add (.const C.P) (.var (C.nk + 3))])
+
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+def consInternG (C : ConsSch) : FunDecl :=
+  match C.skipW with
+  | some sk =>
+    { nparams := C.nk, nlocals := C.nk + 6,
+      body := seqs [C.ihash, .set (C.nk + 1) (.const 0), .ite ciOpen (.set (C.nk + 1) sk) .skip,
+        .ite (.cmp .eq (.var (C.nk + 1)) (.const 0)) (.seq (ciFind C 0) (ciHit C C.P)) .skip,
+        ciScr C] (ciEnd C) }
+  | none =>
+    { nparams := C.nk, nlocals := C.nk + 6,
+      body := seqs [C.ihash, ciFind C 0, ciHit C C.P, ciScr C] (ciEnd C) }
+
+end L.Arena
