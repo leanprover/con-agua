@@ -44,7 +44,7 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
     (hty : (rdW (m.arr64 EREC) (cvTa + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (cvTa + 3)) = cv.type)
     (hfvs0 : decHL m fvs0O.toNat fvs0L.toNat = some fvs0)
     (hfot : fvs0O.toNat + fvs0L.toNat ≤ iwTop m) (hs : H s) (hs0 : H s0)
-    {sP s0P : ConLeche.Level}
+    {tyP : ConLeche.Expr} {xs0 : List ConLeche.Expr} {sP s0P : ConLeche.Level}
     (htyP : denoteE a.store cv.type = some tyP) (hwx : ConLeche.Expr.WScoped 0 tyP)
     (hxs0 : Frontend.denoteEList a.store fvs0 = some xs0)
     (hsc0 : ∀ (i : Nat) (x : ConLeche.Expr), xs0[i]? = some x →
