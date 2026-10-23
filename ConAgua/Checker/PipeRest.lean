@@ -242,7 +242,7 @@ theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size 
     hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)
     (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
     (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
-  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR⟩ := hpost
+  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop⟩ := hpost
   refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_⟩
   · rw [hsf.1 DECL (by decide +kernel) (by decide), hsf.1 DLP (by decide +kernel) (by decide)]
     exact h6.decls
