@@ -56,20 +56,301 @@ theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v :
     DK m (m.set64 b i v) :=
   ⟨Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hd), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hq)⟩
 
+theorem DK.ofAbove {m m' : Mem} (h : Above64 m m') : DK m m' :=
+  DK.ofFrame h (by simp [DECL]) (by simp [DLP])
+
+theorem DK.putK {b : ArrId} (hb : TblIx b) {i : Word} {x : Option (Word × Mem)} {m m' : Mem}
+    (hx : ∀ w m₁, x = some (w, m₁) → DK m m₁) (h : putK b i x = some m') : DK m m' := by
+  obtain ⟨w, m₁, h1, -, hp⟩ := putK_eq h
+  refine (hx w m₁ h1).trans (DK.ofFrame (tblPutW_frame hb hp) ?_ ?_) <;>
+    rcases hb with rfl | rfl | rfl <;> decide
+
+section loops
+variable (b : Array UInt8)
+
+theorem wrs_dk : ∀ (m : Mem) (q : Word) (xs : List Word), DK m (L.Front.Unescape.wrs m q xs)
+  | m, q, [] => DK.refl m
+  | m, q, x :: xs => (DK.set64 m POOL (by decide) (by decide) q x).trans (wrs_dk _ (q + 1) xs)
+
+theorem u8PutW_dk {m m' : Mem} {top k cp k' : Word}
+    (h : L.Front.Unescape.u8PutW m top k cp = some (k', m')) : DK m m' := by
+  unfold L.Front.Unescape.u8PutW at h
+  repeat' split at h
+  all_goals (cases h; try exact wrs_dk _ _ _)
+
+theorem escLoopW_dk (top e : Word) : ∀ (m : Mem) (j k k' : Word) (m' : Mem),
+    L.Front.Unescape.escLoopW b m top e j k = some (k', m') → DK m m' := by
+  intro m j k
+  fun_induction L.Front.Unescape.escLoopW b m top e j k
+  all_goals intro k' m' h
+  all_goals first
+    | (cases h; done)
+    | (cases h; exact DK.refl _)
+    | (rename_i ih; exact (DK.set64 _ POOL (by decide) (by decide) _ _).trans (ih _ _ h))
+    | (rename_i hu _ ih; exact (u8PutW_dk hu).trans (ih _ _ h))
+
+end loops
+
+theorem strPutEscW_dk {b : Array UInt8} {m m' : Mem} {vs ve l : Word}
+    (h : L.Front.Unescape.strPutEscW b m vs ve = some (l, m')) : DK m m' := by
+  unfold L.Front.Unescape.strPutEscW at h
+  split at h
+  · cases h
+  cases hL : L.Front.Unescape.escLoopW b m m.top ve vs 0 with
+  | none => rw [hL] at h; cases h
+  | some q =>
+    obtain ⟨k, m₁⟩ := q
+    rw [hL, L.Front.Unescape.finK_some] at h
+    cases h
+    exact (escLoopW_dk b _ _ _ _ _ _ _ hL).trans (DK.set64 _ CTL (by decide) (by decide) _ _)
+
+theorem applyNStrW_dk {m m' : Mem} {i pre o l : Word} (h : applyNStrW m i pre o l = some m') :
+    DK m m' := by
+  unfold applyNStrW at h
+  split at h
+  · refine DK.putK (.inl rfl) (fun w m₁ hI => ?_) h
+    rw [nsinternW_eq] at hI
+    exact DK.ofFrame (internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI)
+  · cases h
+
+theorem applyNNumW_dk {m m' : Mem} {i pre x : Word} (h : applyNNumW m i pre x = some m') :
+    DK m m' := by
+  unfold applyNNumW at h
+  split at h
+  · refine DK.putK (.inl rfl) (fun w m₁ hI => ?_) h
+    rw [nninternW_eq] at hI
+    exact DK.ofFrame (internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI)
+  · cases h
+
+theorem levelW_dk {m m₁ : Mem} {k a c w : Word} (h : levelW m k a c = some (w, m₁)) : DK m m₁ := by
+  unfold levelW at h
+  repeat' split at h
+  all_goals first
+    | exact DK.ofFrame (sinternW_frame _ _ _ _ h)
+    | exact DK.ofFrame (minternW_frame _ _ _ _ _ h)
+    | exact DK.ofFrame (iminternW_frame _ _ _ _ _ h)
+    | (rw [pinternW_eq] at h; exact DK.ofFrame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h))
+    | cases h
+
+theorem applyLevelW_dk {m m' : Mem} {i k a c : Word} (h : applyLevelW m i k a c = some m') :
+    DK m m' := by
+  unfold applyLevelW at h
+  split at h
+  · exact DK.putK (.inr (.inl rfl)) (fun w m₁ hI => levelW_dk hI) h
+  · cases h
+
 /-- **A name or level line leaves `DECL`, `DLP` alone.** -/
 theorem lineRecW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
     (h : lineRecW b m pl idx a c d = some m') : DK m m' := by
-  sorry
+  unfold lineRecW at h
+  split at h
+  · cases h
+  split at h
+  · cases h; exact DK.refl _
+  split at h
+  · cases h
+  split at h
+  · unfold applyStrW at h
+    split at h
+    · cases h
+    cases hP : L.Front.Unescape.strPutEscW b m c d with
+    | none => rw [hP, strK_none] at h; cases h
+    | some q =>
+      obtain ⟨l, m₁⟩ := q
+      rw [hP, strK_some] at h
+      split at h
+      · cases h
+      split at h
+      · cases h
+      exact (strPutEscW_dk hP).trans (applyNStrW_dk h)
+  split at h
+  · cases h
+  split at h
+  · exact applyNNumW_dk h
+  · exact applyLevelW_dk h
+
+theorem madW_dk : ∀ (m : Mem) (o n w y i : Word), DK m (madW m o n w y i).1 := by
+  intro m o n w y i
+  fun_induction madW m o n w y i
+  all_goals first
+    | exact DK.refl _
+    | (rename_i ih; exact (DK.set64 _ POOL (by decide) (by decide) _ _).trans ih)
+
+theorem decW_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (n i d : Word) (m' : Mem) (n' : Word),
+    decW b m top n i d = some (m', n') → DK m m' := by
+  intro m n i d
+  fun_induction decW b m top n i d
+  all_goals intro m' n' h
+  all_goals first
+    | (cases h; done)
+    | (cases h; exact DK.refl _)
+    | (rename_i ih; exact ((madW_dk _ _ _ _ _ _).trans
+        (DK.set64 _ POOL (by decide) (by decide) _ _)).trans (ih _ _ h))
+    | (rename_i ih; exact (madW_dk _ _ _ _ _ _).trans (ih _ _ h))
+
+theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
+    (h : natDecW b m c d = some (r, m')) : DK m m' := by
+  unfold natDecW at h
+  split at h
+  · cases h
+  cases hL : decW b m (rdW (m.arr64 CTL) 0) 0 c d with
+  | none => rw [hL, finK_none] at h; cases h
+  | some q =>
+    obtain ⟨m₁, k⟩ := q
+    rw [hL, finK_some] at h
+    cases h
+    exact (decW_dk b _ _ _ _ _ _ _ hL).trans (DK.set64 _ CTL (by decide) (by decide) _ _)
+
+theorem lsLoopM_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
+    lsLoopM b m top i cnt = some m' → DK m m' := by
+  intro m i cnt
+  fun_induction lsLoopM b m top i cnt
+  all_goals intro m' h
+  all_goals first
+    | (cases h; done)
+    | (cases h; exact DK.set64 _ CTL (by decide) (by decide) _ _)
+    | (rename_i ih; exact (DK.set64 _ POOL (by decide) (by decide) _ _).trans (ih _ h))
+    | (rename_i ih; exact ih _ h)
+
+theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
+    (h : nodeW b m pl a c d = some (w, m₁)) : DK m m₁ := by
+  unfold nodeW at h
+  repeat' split at h
+  all_goals try (cases h; done)
+  · rw [binternW_eq] at h
+    exact DK.ofFrame (internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ h)
+  · exact DK.ofFrame (sointernW_frame _ _ _ _ h)
+  · unfold binW at h
+    repeat' split at h
+    all_goals try (cases h; done)
+    · exact DK.ofAbove (mkAppW_above h)
+    · exact DK.ofAbove (mkLamW_above h)
+    · exact DK.ofAbove (mkForallW_above h)
+  · unfold letW at h
+    split at h
+    · exact DK.ofAbove (mkLetW_above h)
+    · cases h
+  · unfold projW at h
+    split at h
+    · exact DK.ofAbove (mkProjW_above h)
+    · cases h
+  · unfold constW at h
+    split at h
+    · cases hP : lsPutW b m c with
+      | none => rw [hP, constK_none] at h; cases h
+      | some m₂ =>
+        rw [hP, constK_some] at h
+        have hk2 : DK m m₂ := by
+          unfold lsPutW at hP
+          split at hP
+          · cases hP
+          · exact lsLoopM_dk b _ _ _ _ _ hP
+        cases hL : lsinternW m₂ m.top (lsPutL b c) with
+        | none => rw [hL, constK2_none] at h; cases h
+        | some p =>
+          obtain ⟨g, m₃⟩ := p
+          rw [hL, constK2_some] at h
+          split at h
+          · exact (hk2.trans (DK.ofFrame (lsinternW_frame _ _ _ _ _ hL))).trans
+              (DK.ofFrame (ceinternW_frame _ _ _ _ _ h))
+          · cases h
+    · cases h
+  · unfold litW at h
+    cases hN : natDecW b m c d with
+    | none => rw [hN, litK_none] at h; cases h
+    | some q =>
+      obtain ⟨r, m₂⟩ := q
+      rw [hN, litK_some] at h
+      split at h
+      · cases h
+      split at h
+      · cases h
+      rw [internW_eq] at h
+      exact (natDecW_dk hN).trans (DK.ofFrame (internM_frame _ litS_wf _ _ _ _ _ _ _ _ h))
+  · unfold litStrW at h
+    split at h
+    · cases h
+    cases hP : L.Front.Unescape.strPutEscW b m c d with
+    | none => rw [hP, litStrK_none] at h; cases h
+    | some q =>
+      obtain ⟨l, m₂⟩ := q
+      rw [hP, litStrK_some] at h
+      split at h
+      · cases h
+      split at h
+      · cases h
+      rw [internWStr_eq] at h
+      exact (strPutEscW_dk hP).trans (DK.ofFrame (internM_frame _ litS_wf _ _ _ _ _ _ _ _ h))
 
 /-- **An expression line leaves `DECL`, `DLP` alone.** -/
 theorem applyExprW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
     (h : applyExprW b m pl idx a c d = some m') : DK m m' := by
-  sorry
+  unfold applyExprW at h
+  split at h
+  · exact DK.putK (.inr (.inr rfl)) (fun w m₁ hI => nodeW_dk hI) h
+  · cases h
 
 /-- **A declaration line appends one record of table handles.** -/
 theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR m st)
     (pl name lps type value hk hn flag : Word)
     (h : applyDeclW b m pl name lps type value hk hn flag = some m') : DGrow m m' := by
-  sorry
+  unfold applyDeclW at h
+  cases hK : declKindW pl hk hn flag with
+  | none => rw [hK, declK0_none] at h; cases h
+  | some kq =>
+  obtain ⟨k, q⟩ := kq
+  rw [hK, declK0_some] at h
+  have hk5 : k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 := by
+    rcases declKindW_some _ _ _ _ _ _ hK with ⟨-, -, h⟩ | ⟨-, -, h, -⟩ | ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, h, -⟩ <;>
+      simp [h]
+  have hk6 : k ≠ 6 := by rcases hk5 with rfl | rfl | rfl | rfl | rfl <;> decide
+  unfold declCvW at h
+  have hok : tblOK m NID name = true ∧ tblOK m EID type = true :=
+    Classical.byContradiction fun hok => by simp [hok] at h
+  simp only [hok, and_self, ↓reduceIte] at h
+  have hwn := (hD.names.read _ _ _ _ hok.1).2
+  have hwt := (hD.exprs.read _ _ _ _ hok.2).2
+  cases hP : lpPutW b m lps with
+  | none => rw [hP, declK1_none] at h; cases h
+  | some m₁ =>
+  rw [hP, declK1_some] at h
+  have hDR := hD.decls
+  unfold lpPutW at hP
+  split at hP
+  · cases hP
+  have hps := hDR.psize
+  have hptop := hDR.ptop
+  have hrd : rdW (m.arr64 DLP) 0 = (m.arr64 DLP)[0]?.getD 0 := rfl
+  obtain ⟨-, F2, -, F4, -, -, -⟩ := lpLoopM_facts b (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
+    hP (by rw [hrd]; simp; omega) hps
+  have hm'D : m₁.arr64 DECL = m.arr64 DECL := F2.1 DECL (by decide) (by decide)
+  have hE₁ : TblR m₁ EID st.exprs :=
+    hD.exprs.frame F2 (.inr (.inr rfl)) (by simp [DLP, idArrs]) (by simp)
+  -- the push, with its value word
+  have hpush : ∃ v, pushW m₁ k (tblW m NID name) (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0)
+      (tblW m EID type) v q hn = some m' ∧ v.toNat < 2 ^ 32 := by
+    split at h
+    · split at h
+      · rename_i hv
+        exact ⟨_, h, (hE₁.read _ _ _ _ hv).2⟩
+      · cases h
+    · exact ⟨0, h, by decide⟩
+  obtain ⟨v, hpu, hv⟩ := hpush
+  have hds : (m₁.arr64 DECL).size < 2 ^ 63 := by rw [hm'D]; exact hDR.dsize
+  obtain ⟨G1, G2, -, G4, G5, w0, w1, -, -, w4, w5, -, -⟩ :=
+    pushW_facts m₁ m' _ _ _ _ _ _ _ _ _ rfl hpu hds
+  have hc1 : (rdW (m₁.arr64 DECL) 0 + 1).toNat = (rdW (m₁.arr64 DECL) 0).toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hcnt : dcnt m = (rdW (m₁.arr64 DECL) 0).toNat := by rw [hm'D]; rfl
+  have hcnt' : dcnt m' = dcnt m + 1 := by
+    rw [show dcnt m' = (rdW (m₁.arr64 DECL) 0 + 1).toNat by unfold dcnt; rw [G4]; rfl, hc1, hcnt]
+  have hm'P : m'.arr64 DLP = m₁.arr64 DLP := G1.1 DLP (by decide) (by decide)
+  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => ?_⟩
+  · rw [G5 j h1 (by omega), hm'D]
+  · rw [hm'P]; exact F4 j h1 (by simp only [dtop] at h2; rw [hrd]; omega)
+  · have hx : x = (rdW (m₁.arr64 DECL) 0).toNat := by omega
+    subst hx
+    refine ⟨fun _ => ⟨by rw [w1]; exact hwn, by rw [w4]; exact hwt, by rw [w5]; exact hv⟩,
+      fun h6 => absurd (w0.symm.trans h6) hk6⟩
 
 end L.Front
