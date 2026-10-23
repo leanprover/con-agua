@@ -219,3 +219,98 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
   same names (`cbpos*`, `lpsW_mfrT`, `…P`). Left as is: `targetCanonParams` has two `@[refines]`
   theorems (helper `rec`'s under `RcMR`, `pos-cls`'s `targetCanonParams_refinesP` under `PosMR`);
   `lpsW_mfr` exists in three copies.
+
+### The lane's close: the open list for a successor (start here)
+All files `ConAgua/Arena/`. "Through stubs" = census `sorry` only via `IndStubs.lean` contracts.
+
+**Open phase-8 targets, bottom up.**
+* `classCtorOf`, `classCtorsOf`, `classesCtors`, `classesNfs`, `classFieldsAgree`,
+  `classNodesAgree` (L: `RecGen.lean`). No theorem yet. Were blocked on `targetK53` and
+  `targetMajorNfs`, which helper `rec` has since proved (`RecCheckSpec13‥16`): unblocked. Template:
+  helper `pos-cls`'s `RecGenSpec13‥20` (memo relation `RcMR`/`PosMR` threaded pre→post).
+* `checkBlockClasses` (`RecGen.lean`, `check_block_classes`): the keys and one-per-member pieces are
+  proved but untagged (`RecGenSpec*`, helper `pos-cls`). Missing: memo-frame lemmas (`MFr`) for
+  ~15 models inside `class_read`; `class_read`'s `RecsDec` needs `R.mI + 1 < 2^64` — add an L
+  capacity guard (no deviation row) rather than a hypothesis.
+* `blockLargeElimAllowed` (`IndParts.lean`, `block_large_elim_allowed`: `lv_nz` on the shape's
+  `resSort`). The twin reads the level back (`readLevelM`), so the proof needs `ReadLCOK` and the
+  readback of `resSort`: not available under `StageR`. Do it under `StageT` with
+  `lvLeqTop_simT`'s pattern (`IndTwin.lean`: `denoteL_lvR`, master's `nzW_ok` in
+  `LevelSimpRel.lean`, `readLevelM_run'`, `CoreS.withReadLC`, `StageT.of_heap`); the readback of
+  `resSort` from `StoreDen.lvlAll` once the shape's result sort is known to be a level the store
+  holds (record it in `blockShape?`'s refinement: it comes from a `sort` view). Its caller is
+  `genRecCheck`, so either `genRecCheck` moves to `StageT` or this needs a `StageR` stub contract
+  (true of the real function; not preferred).
+* `genRecCheck` (`RecGen.lean`, 7 `l_impl` pieces; `genRecCheckAnyNoMember_refines` in
+  `RecGenSpec2` is a part): needs `classesNfs`, `classesCtors`, `blockLargeElimAllowed`. When done,
+  replace `genRecCheck_pending` (`IndInstallSpec21.lean`, `sorry`) by it at `checkBlockRec`.
+* `checkBlockTail` (`IndInstall.lean`): `ictlW_sim` (`IndInstallSpec31`) is the proof given
+  `ConsRecsTFSim p` (a `Sim` for `cons_block_recs_tf`); helper `rec` proved `consBlockRecsTF`
+  (`RecCheckSpec18‥20`): derive `ConsRecsTFSim p` from it and tag. Hypotheses: `HbMemo m` (lane
+  `loopt`'s `StageMemos`), the pass record (`BPassR`) and block (`decEBlk`) decoded, and a write-set
+  fact `closedA p hbFreeA hbFreeC fs` (checked by `#eval` on `checkerProg`, 801 functions; the
+  decided theorem is not written — use lane `erecfix`'s chunked `WriteSetSplit`, never one inline
+  `decide`).
+* `checkBlockPass` (`IndInstall.lean`; models/specs `IndInstallSpec28‥29`, record `decBPass`):
+  needs `checkBlockClasses`; the rest is proved (`checkBlockInds`, `checkBlockCtors`,
+  `blockNestCtx`, `checkBlockPositivity`, `classSeeds`, `nestSeeds`). Carry `PosMR` in and out.
+* `checkBlock` (`IndInstall.lean`, model/spec `IndInstallSpec29`): needs pass and tail;
+  `blockRawRec` needs `maMR` (in `StageMemos`); `blockShapeAllCtors_refines` is fixed (helper
+  `rec2`); `blockShapeMemberNames_refines`' `hsrc` must come from the shape's builder.
+* `checkDecl`'s `.indDecl` arm (`check_ind_decl`, `IndParts.lean`; today `@[refines_part checkDecl]`
+  pieces): above `checkBlock`. **Target shape** (lane `loopt2`'s ind arm calls it):
+  `∀ n m a …, (ind_block_to_erec's post) → StageT dn vis fe m a → callW p n "check_ind_decl" [vis,
+  o, l, w] m = some (r, m') → ∃ fe' a', (checkIndDecl …).run a = .ok (fe', a') ∧ StageR dn (r.headD
+  0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m'`.
+* Hypotheses still to remove or discharge at the stage entry: `CtorSums fe` (`nPc + nF < 2^64`
+  per stored constructor; used by `nestRoot`, `classMajors`, `targetMajorOf`, `targetCtorsOf`;
+  fix: an L wrap guard in `nest_ctor_entry_strip`, then drop `hcs` at ~70 sites in
+  `IndPos2Spec*`); the memo predicates `PosMR`, `maMR`, `HbMemo`, `RcMR` (lane `loopt`'s
+  `StageMemos` supplies them); the fuel bound `2^31 + n ≤ coreWalkFuel`; the empty-slice-offset
+  kind reported by helper `rec2` (`targetCtorAt_refines`, `IndSumSpec3`'s `hsl`/`hslTa`, `BSOK`
+  component 2). Duplicates to clean: `targetCanonParams` has two `@[refines]` theorems
+  (`RecCheckSpec9` under `RcMR`, `RecGenSpec13`'s `…_refinesP` under `PosMR`); `lpsW_mfr` in three
+  copies.
+
+**Stub contracts still in use** (`IndStubs.lean`, all `sorry`; plus `lvlsEqStub_spec` in
+`RecCheckSpec12`, `genRecCheck_pending` above): `stubM_spec`, `stubM_memoFrame`, the core entry
+points (`whnf_spec`, `inferTypeCore_spec`, `ensureSortCore_spec`, `isDefEqCore_spec` — real only
+under `StageT`: `KnotEntry.lean`'s `KnotStageProg` sims), `lvlEqStub_spec`, `lvLeqTopStub_spec`
+(real under `StageT`: `lvlEqC_simT`, `lvLeqTop_simT`), `checkConstantVal_spec`,
+`constsResolveFFast_spec` (lane `tails` helper coming), `openPisAtFvarsF_spec`, `getAppFn_spec`,
+`getAppArgs_spec`, `mkAppN_spec`, `piResult_spec` (adapters in `WhnfEntry.lean`, no refinement yet),
+`fvarTypeD(s)_spec`, `instLPFast_spec`, `instPisAtLift_spec`, `instantiate1LiftFast_spec`
+(dischargeable now from `i1lFast_refines`, `WalkLiftRefine.lean`, pre `ArenaI = ArenaD ∧ I1R`),
+`abstract1Fast_spec` (`abs_entry` needs its `AbsR` memo in the relation), `bvarB_spec` (real
+`bvbW_stage` exists; remaining uses in `RecGenSpec2`/`RecCheckSpec2`), `fvarB_spec`,
+`hasFvarFast_spec`, `looseBVarsBoundedFast_spec`, `allLevelParamsDefined_spec` (lane `decls3`'s real
+one needs `ApdEnv`: `TwinOK` facts), `internLsIw_spec`, `nameRec(I)_spec`, `projTableName_spec`,
+`isProjFnShape_spec`, `reservedRecName_spec` (dischargeable now from lane `tails`'
+`L.Stubs.reservedRecName_refines`, `StubNamesRefine.lean`), `recRuleBits_spec` (dischargeable now from lane `tails`' `L.Stubs.recRuleBits_refines`, `StubIndRefine.lean`, bundle `RrbProg`), `indParamsOk_spec`,
+`lvZeroCaps_spec`, `internNanonStub_spec`. Since the abort-stub lane, every one of these functions
+has L code in `checkerProg` (0 `abortStub`s).
+
+**The `StageR` → `StageT` migration** (the way to make the core callees real; the target shape
+above needs it). Tools on master: `StageT`, `StageT.of_core`, `StageT.sim_core`, the entry sims
+(`IndTwin.lean`, `KnotEntry.lean`), `StageT.of_iw`/`of_coreRef`/`of_heap`, `StageT.lift_keep` and
+`KeepPostT` (`StageTLift.lean`), `IndStubsT.lean` (StageT stub contracts), lane `loopt2`'s
+`TwinOK.of_grow`/`of_istep`, `StageS`, `StageC` (`StageR` + con-ron's `CheckOK` + `TwinMem` + flag,
+`StageC.of_leaf`, `StageC.of_T`, `callW_leafFrame`: `TwinStep.lean`, `StageC.lean`) and the
+`CallM`/`stubCall`/`realCall p` model pattern (`DeclCvg.lean`: one model for the `StageR` (stub)
+and the `StageT` (real) proof). Plan: (1) callees whose twin op keeps store and caches: wrap their
+`StageR` theorems with `lift_keep` (one line each); (2) interning chains: restate bottom-up, the
+growers through `StageC`'s `CheckOK` route where a core call precedes the interning (lane `loopt2`
+does the same in the arms — do not invent a third route), the interns through `of_coreRef`/
+`TwinStep`; (3) the remaining true stubs through `StageT` versions of their contracts
+(`IndStubsT.lean`) until their real refinements land; (4) models via `CallM` so the `StageR` proofs
+keep working during the migration. Top: `check_ind_decl` in the shape above.
+
+**Numbers at the close** (`scripts/census.py --no-build`, this branch at master `b382c51e`):
+phase 8 **88 proven, 117 sorry (all proven locally, i.e. only through stub contracts), 12 written,
+6 todo** of 223 (lane start: 79 / 108 / 30 / 6); totals 972 proven / 158 sorry of 1352. Lane:
+~7 landings, five helpers (tail, rec, pos with pos-cls, stubs, rec2) plus an integration helper,
+at most three at a time; ~15k proof lines added by the helpers. Lessons: helpers numbering spec
+files in parallel collide (`IndInstallSpec24‥26` twice) — give each helper a number range; three
+helpers each turned the same `while` loop into recursion — assign L functions, not just targets;
+generated files (`Prog.lean`, `AsmPart*`, `loopFns`, `leafFns`, `coreFns`) conflict on every merge:
+take master's and regenerate.
