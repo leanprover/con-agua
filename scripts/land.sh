@@ -33,8 +33,8 @@ if ! git merge --no-ff --no-edit "$branch"; then
   git merge --abort || true
   echo "land.sh: merge conflict; merge master into $branch in your worktree, then retry" >&2; exit 1
 fi
-if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check; then
+if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check; then
   git reset --hard "$before"
-  echo "land.sh: build or generated-file check (core_fns.py / loop_fns.py --check) failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
+  echo "land.sh: build or generated-file check (core_fns.py / loop_fns.py / leaf_fns.py --check) failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
 fi
 echo "land.sh: landed $branch as $(git rev-parse --short HEAD)" >&2
