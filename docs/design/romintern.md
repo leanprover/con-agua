@@ -46,7 +46,7 @@ way; the twin never calls it on ROM data (D29 stays Deliberate).
   store operation; the old `ArenaD.reset` keeps only the `enableScratch` part tag. Its three callees
   (`NStore`/`LStore`/`LsStore.dropScratch`) are covered through it.
 * Census (worktree, master `c921d648` merged): phase 0 185 / 5 written / 106 todo → 215 / 1 / 80
-  (1104 → 1118 of 1305 Lean lines proven; the one written left is `viewN`, see below); phase 1c
+  (991 → 1118 of 1305 Lean lines proven; the one written left is `viewN`, see below); phase 1c
   62 / 10 / 1 → 72 / 1 / 0 (the one left is `builtinPreludeE`, lane `pipeline`); phase 2
   245 → 250 proven (`BasisKind.decls`/`declsA`, `internAllPins`, `internPinSet(s)`).
 * No statement changed (lane `pipeline`'s `checkerProg_internReservedPins_PB` /
