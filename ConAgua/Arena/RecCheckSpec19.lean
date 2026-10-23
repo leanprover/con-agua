@@ -340,7 +340,7 @@ theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
         rowTag (rdW (m.arr64 EREC) (q + 1)) = 2 := by omega
     rcases this with h0 | h0 | h0 <;> simp [h0]
   have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
-  have h49 : (rowArr (rdW (m.arr64 EREC) (q + 1)) != 49) = true := by
+  have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
     rcases hrow with h | h | h | h <;> rw [h] <;> decide
   have hf1 : AFr m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
