@@ -24,11 +24,12 @@ cd "$main"
 [ "$(git rev-parse --abbrev-ref HEAD)" = master ] || { echo "main checkout not on master" >&2; exit 2; }
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then echo "main checkout not clean" >&2; git status --short >&2; exit 2; fi
 before="$(git rev-parse HEAD)"
-# The branch must already contain master: the lane merges master and builds in its own worktree
-# (in parallel, outside the lock); then the build below is a cache hit and the lock is held briefly.
+# Lanes should merge master and build in their own worktree first (then the build below is a cache
+# hit and the lock is held briefly). A branch that is behind master is still landed if it merges
+# cleanly: the build and generated-file checks below are the safety net (a failure resets master),
+# so busy hours do not send lanes into merge/retry loops.
 if ! git merge-base --is-ancestor HEAD "$branch"; then
-  echo "land.sh: $branch does not contain current master ($(git rev-parse --short HEAD)); merge master into it, build in your worktree, then retry" >&2
-  exit 4
+  echo "land.sh: note: $branch does not contain current master ($(git rev-parse --short HEAD)); merging anyway, the build below decides" >&2
 fi
 if ! git merge --no-ff --no-edit "$branch"; then
   git merge --abort || true

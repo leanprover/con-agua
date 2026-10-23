@@ -26,28 +26,26 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 /-! The two contracts left. Their proven replacements exist: `crfF_okT` (`IndRealMemoCrT.lean`,
 pre `StageT ∧ CrMemo`, post `KeepPostT ∧ CrMemo`) and `apdF_okT` (`IndRealApdT.lean`, pre `StageT`
-with the slice and the parameters' names read back). Users switched (helper `indproofs4-t2`): the
-`all_level_params_defined` call of `reduce_pin_guard` (`rpgW`, `DeclCrpT`) and of the `Nat.div`
-gates' guards (`dmPgW`, `dmCgW`, `DeclDivGateT1`), read through their `CallM` (`stubCall` for the
-`StageR` proofs, `realCall p` with `ApdF p` in `CrpProg`/`DmProg5` under `StageT`; `lps = []`).
-Users left:
+with the slice and the parameters' names read back). Users switched (helpers `indproofs4-t2`,
+`indproofs4-sw2`), each reading the two walks through its model's `CallM` (`stubCall` for the
+`StageR` proofs, `realCall p` under `StageT`):
 
-* `install_header` (`ihW_okT`, `DeclValT`; both calls): `ihW` (`DeclHeader.lean`) is lane
-  `indstaget`'s (its second reading parameter, `class_const_ok`'s `RecGen3`).
-* `install_value_guards` (`ivgW_okT`, `DeclCvgT`; both calls): `apdF_okT` needs
-  `cv.levelParams`' names read back, which none of `ivgW_okT`'s callers has (`ivW_genT`,
-  `dvW_okT`, `tvW_okT`, `cvgW_okT`: the record's denotation is not threaded to them; phase B's
-  could take it from `StoreDen.constLps`, the constant being in `fe`).
-* every `consts_resolve_ffast` call (`ivgW`, `rpgW`, `dmPgW`, `dmCgW`): `crfF_okT` needs `CrMemo`
-  (array 155, `CTL[158]`; `= CrOK`, `crMemo_iff_crOK`), which no caller has. `StageT`, `StageC`,
-  `TwinMem`, `CoreMemos` say nothing of array 155 and phase A/B's loops run on
-  `LoopR ∧ LoopMem ∧ CoreMemos` (not `LoopT`, whose `cr` has it), so it must be threaded as a pre
-  and a post from the loop's start (`LoopStart.crOK`) through both loops, every arm (`ArmSpecT`,
-  `IndArmSpec`: a hypothesis of `Final/Remaining.lean`), the value checks and gates. The core's
-  calls keep it by frame (`coreStageA` excludes 155), but a leaf's frame does not (`leafA` has
-  array 155: `consts_resolve_ffast` and `consts_resolve_all` are leaves), so the leaf calls on the
-  way need a narrower leaf write set without the walk's functions, and `consts_resolve_all` (the
-  `Nat.div` gate's, through its `StageR` stub contract) a refinement that keeps it. -/
+* `reduce_pin_guard` (`rpgW`, `DeclCrpT`) and the `Nat.div` gates' guards (`dmPgW`, `dmCgW`,
+  `DeclDivGateT1`): `lps = []`; `consts_resolve_ffast`'s memo `CrOK` taken at the arm's entry
+  (`ArmSpecT`; the loop's `IndMemos.cr`) and carried across the program's calls (`CrKeep`,
+  `CrOKFrame.lean`: `IndMemoClosed`'s write set) and the walks' frames;
+* `install_value_guards` (`ivgW`, `DeclCvgT`), from `install_value` (`ivW_genT`), the value checks
+  (`dvW_okT`, `tvW_okT`) and phase B (`cvgW_okT`): the parameters' names read back at the guards
+  from the constant's denotation and the twin's store growing up to them (`installHeader_bridge`,
+  `checkConstantVal_bridge_of_fold`, the theorem test's prefix `thmPrefix_ext`), `CrOK` as above
+  (phase B carries it beside `CoreMemos`).
+
+User left: `install_header` (`ihW_okT`, `DeclValT`; both calls): `ihW` (`DeclHeader.lean`) is lane
+`indstaget`'s (its second reading parameter, `class_const_ok`'s `RecGen3`). The same switch applies
+there: `ihW` reading the two walks through a `CallM`, `CrOK` threaded to `ihW_okT` (its callers
+`ivW_genT` and `RecGen3` both run under `CrKeep`), the names read back from the constant's
+denotation at the entry and the store's growth across the guards before the walk (con-ron's
+`installHeader_bridge` route: `reservedBasisNames_run`'s `Ext`, the walks keeping the store). -/
 
 /-- `consts_resolve_ffast(vis, e)` under `StageT`. -/
 theorem constsResolveFFastT_spec (e : Word) (he : H e) :

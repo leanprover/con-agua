@@ -361,20 +361,22 @@ section ivModel
 variable (p : Prog)
 
 mutual
-/-- **The model of `install_value`** (`env_push` through `callW`: its spec needs the name word's
-bound, which only the relational lemma knows). -/
+/-- **The model of `install_value`** (`install_header` and `env_push` through `callW`: the
+header's run is a call of the program, so the callers keep what its write set keeps; the push's
+spec needs the name word's bound, which only the relational lemma knows), the value's guards
+reading the program's own walks (`realCall p`). -/
 def ivW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, i, vis, ck, vk => ivK1 n vis vk (erecCiW n m i ck)
 
 def ivK1 (n : Nat) (vis vk : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => ivK2 n vis vk (r1.headD 0) (ihW n m1 vis (r1.headD 0 + 1))
+  | some (r1, m1) => ivK2 n vis vk (r1.headD 0) (callW p n "install_header" [vis, r1.headD 0 + 1] m1)
 
 def ivK2 (n : Nat) (vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m2) =>
-    if vk ≠ 1 then ivK3 n vis vk q (ivgW n m2 vis (q + 1) (rdW (m2.arr64 EREC) (q + 5)))
+    if vk ≠ 1 then ivK3 n vis vk q (ivgW (realCall p) n m2 vis (q + 1) (rdW (m2.arr64 EREC) (q + 5)))
     else ivK4 vis vk q (callW p n "env_push" [vis, q] m2)
 
 def ivK3 (n : Nat) (vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -394,9 +396,9 @@ section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (i vis ck vk q v : Word) (r1 r2 r3 r4 r5 : List Word)
 theorem ivW_step : ivW p (n + 1) m i vis ck vk = ivK1 p n vis vk (erecCiW n m i ck) := rfl
 theorem ivK1_some : ivK1 p n vis vk (some (r1, m1)) =
-    ivK2 p n vis vk (r1.headD 0) (ihW n m1 vis (r1.headD 0 + 1)) := rfl
+    ivK2 p n vis vk (r1.headD 0) (callW p n "install_header" [vis, r1.headD 0 + 1] m1) := rfl
 theorem ivK2_some : ivK2 p n vis vk q (some (r2, m2)) =
-    if vk ≠ 1 then ivK3 p n vis vk q (ivgW n m2 vis (q + 1) (rdW (m2.arr64 EREC) (q + 5)))
+    if vk ≠ 1 then ivK3 p n vis vk q (ivgW (realCall p) n m2 vis (q + 1) (rdW (m2.arr64 EREC) (q + 5)))
     else ivK4 p vis vk q (callW p n "env_push" [vis, q] m2) := rfl
 theorem ivK3_some : ivK3 p n vis vk q (some (r3, m3)) =
     ivK4 p vis vk q (callW p n "env_push" [vis, q] m3) := rfl
@@ -413,7 +415,7 @@ grind_pattern [ind_grind] ivK5_some => ivK5 p v (some (r5, m5))
 
 set_option maxHeartbeats 1600000 in
 theorem iv_specW (hv : p.lookup "install_value" = some installValueL) (hR : RecProg p)
-    (hI : IhProg p) (hC : CvgProg p) (n : Nat) (s₀ : St) (i vis ck vk : Word) :
+    (hC : CvgProg p) (n : Nat) (s₀ : St) (i vis ck vk : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_value" [i, vis, ck, vk]
     ⦃fun r s' => LocEq s' s₀ ∧ ivW p n s₀.mem i vis ck vk = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hv]
@@ -423,104 +425,12 @@ theorem iv_specW (hv : p.lookup "install_value" = some installValueL) (hR : RecP
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erecCi_specW p hR n, ih_specW p hI n, ivg_specW p hC n, callW_spec p n "env_push",
+        erecCi_specW p hR n, callW_spec p n "install_header",
+        ivg_specW p hC (realCall p) (realCall_spec p) n, callW_spec p n "env_push",
         erecVg_specW p hR n] <;>
       finish (gen := 20) [rdW_eq]
 
 end ivModel
-
-/-! ## `install_value`'s relational lemma -/
-
-/-- **The generic part**: a model run of `install_value` from the stage relation is the header's
-and (for `vk ≠ 1`) the value's guards, then the push and the value group. -/
-theorem ivW_gen {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
-    {ds : Array IDeclaration} {ci : IConstantInfo} {k : ValueKind}
-    (h : ivW p n m i vis ck vk = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hci : stepCI ck.toNat ds[i.toNat] = some ci) (hk : decVK vk.toNat = some k) :
-    ∃ a2 a3, (installHeader fe (stepCV ds[i.toNat])).run a = .ok ((), a2) ∧
-      (vk ≠ 1 → (installValueGuards fe (stepCV ds[i.toNat]) (stepVal ds[i.toNat])).run a2 =
-        .ok ((), a3)) ∧ (vk = 1 → a3 = a2) ∧
-      StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ IWGrow m m' ∧
-      decVG (erecP m') (r.tail.headD 0).toNat = some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩ := by
-  cases n with
-  | zero => simp [ivW] at h
-  | succ n =>
-  rw [ivW_step] at h
-  cases h1 : erecCiW n m i ck with
-  | none => rw [h1] at h; simp [ivK1] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, ivK1_some] at h
-  obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ := erecCiW_ok h1 hS hD hi hci
-  generalize hq : r1.headD 0 = q at h hci1 hcv1 hval1 htop1
-  have hb : q.toNat + 8 < 2 ^ 64 := by
-    have h1 := hS1.2.2.1; have h2 := hS1.2.2.2.2.1; omega
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  -- the header
-  cases h2 : ihW n m1 vis (q + 1) with
-  | none => rw [h2] at h; simp [ivK2] at h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, ivK2_some] at h
-  obtain ⟨a2, hrun2, hS2, hg2⟩ :=
-    ihW_ok h2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
-  -- the push and the value group, after the optional value guards
-  have tail : ∀ (m3 : Mem) (a3 : AState), StageR dn vis fe m3 a3 → IWGrow m1 m3 →
-      ivK4 p vis vk q (callW p n "env_push" [vis, q] m3) = some (r, m') →
-      StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ IWGrow m1 m' ∧
-      decVG (erecP m') (r.tail.headD 0).toNat = some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩ := by
-    intro m3 a3 hS3 hg3 h
-    have hx3 : ArrExt (erecP m1) (erecP m3) := IWGrow.erecPExt hg3
-    have hci3 := ArrExt.decCI hx3 hci1
-    obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci3
-    have hw : (rdW (m3.arr64 EREC) (q + 1)).toNat < 2 ^ 32 := by
-      rw [rdW_of_get? hq1.symm (erecP_get hw1)]; exact hwl
-    cases h4 : callW p n "env_push" [vis, q] m3 with
-    | none => rw [h4] at h; simp [ivK4] at h
-    | some rm4 =>
-    obtain ⟨r4, m4⟩ := rm4
-    rw [h4, ivK4_some] at h
-    obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (envPush_specW p hRp n ⟨m3, Locals.init []⟩ vis q hw) h4
-    subst hs4
-    obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3 hci3
-    cases h5 : erecVgW s4.mem q vk with
-    | none => rw [h5] at h; simp [ivK5] at h
-    | some rm5 =>
-    obtain ⟨r5, m5⟩ := rm5
-    rw [h5, ivK5_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
-    have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
-      have := (hg3.trans hg4).2.1; omega
-    obtain ⟨hS5, hg5, hvg⟩ := erecVgW_ok h5 hS4 (ArrExt.decCV hx4 hcv1) (ArrExt.hd? hx4 hval1)
-      htop4 hk
-    exact ⟨by simpa using hS5, hg3.trans (hg4.trans hg5), by simpa using hvg⟩
-  by_cases hv1 : vk ≠ 1
-  · rw [if_pos hv1] at h
-    have hval2 : hd? (erecP m2) (q.toNat + 5) = some (stepVal ds[i.toNat]) :=
-      ArrExt.hd? (IWGrow.erecPExt hg2) hval1
-    obtain ⟨wv, hwv, hwvl, hwvd⟩ := hd?_some hval2
-    have hq5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-    have ev : rdW (m2.arr64 EREC) (q + 5) = wv := rdW_of_get? hq5.symm (erecP_get hwv)
-    rw [ev] at h
-    cases h3 : ivgW n m2 vis (q + 1) wv with
-    | none => rw [h3] at h; simp [ivK3] at h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
-    rw [h3, ivK3_some] at h
-    have hcv2 : decCV (erA m2) (q + 1).toNat = some (stepCV ds[i.toNat]) := by
-      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt (hg2)) hcv1
-    obtain ⟨a3, hrun3, hS3, hg3⟩ := ivgW_ok h3 hS2 hcv2 (by rw [hq1]; omega) hwvl
-    obtain ⟨hS', hg', hvg'⟩ := tail m3 a3 hS3 (hg2.trans hg3) h
-    refine ⟨a2, a3, hrun2, fun _ => by rw [hwvd]; exact hrun3, fun h' => absurd h' hv1, hS',
-      hg1.trans hg', hvg'⟩
-  · rw [if_neg hv1] at h
-    obtain ⟨hS', hg', hvg'⟩ := tail m2 a2 hS2 hg2 h
-    exact ⟨a2, a2, hrun2, fun h' => absurd h' hv1, fun _ => rfl, hS', hg1.trans hg', hvg'⟩
 
 /-- The constant-record and value-group kinds of `install_value`'s call for a record. -/
 def IvArgs (ck vk : Word) : IDeclaration → Prop
@@ -528,59 +438,6 @@ def IvArgs (ck vk : Word) : IDeclaration → Prop
   | .thmDecl .. => ck = 2 ∧ vk = 1
   | .opaqueDecl .. => ck = 0 ∧ vk = 2
   | _ => False
-
-/-- **`install_value` refines `ivT`** at the model level. -/
-theorem ivW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
-    {ds : Array IDeclaration} (h : ivW p n m i vis ck vk = some (r, m'))
-    (hS : StageR dn vis fe m a) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
-    (hi : i.toNat < ds.size) (hk : IvArgs ck vk (dsAt ds i)) :
-    ∃ x a', (ivT fe (dsAt ds i)).run a = .ok (x, a') ∧ StageR dn (r.headD 0) x.1 m' a' ∧
-      IWGrow m m' ∧ x.2 = decVG (erecP m') (r.tail.headD 0).toNat ∧ x.2 ≠ none := by
-  have hd : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
-  rw [hd] at hk ⊢
-  cases hdi : ds[i.toNat] with
-  | defnDecl cv v hint =>
-    rw [hdi] at hk
-    obtain ⟨rfl, rfl⟩ := hk
-    obtain ⟨a2, a3, hrun2, hg3, -, hS', hg', hvg⟩ :=
-      ivW_gen (ci := .defnInfo cv v hint) (k := .defn) hRp h hS hD hi (by rw [hdi]; rfl) rfl
-    rw [hdi] at hrun2 hg3 hvg
-    have hrun3 := hg3 (by decide)
-    simp only [stepCV, stepVal] at hrun2 hrun3
-    refine ⟨(fe.push (.defnInfo cv v hint), some ⟨.defn, cv, v⟩), a3, ?_, hS', hg',
-      by simpa [stepCV, stepVal] using hvg.symm, by simp⟩
-    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', hrun3, stepCV, stepVal]
-    rfl
-  | thmDecl cv v =>
-    rw [hdi] at hk
-    obtain ⟨rfl, rfl⟩ := hk
-    obtain ⟨a2, a3, hrun2, -, ha3, hS', hg', hvg⟩ :=
-      ivW_gen (ci := .thmInfo cv) (k := .thm) hRp h hS hD hi (by rw [hdi]; rfl) rfl
-    rw [hdi] at hrun2 hvg
-    have := ha3 rfl
-    subst this
-    simp only [stepCV, stepVal] at hrun2
-    refine ⟨(fe.push (.thmInfo cv), some ⟨.thm, cv, v⟩), a3, ?_, hS', hg',
-      by simpa [stepCV, stepVal] using hvg.symm, by simp⟩
-    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', stepCV, stepVal]
-    rfl
-  | opaqueDecl cv v =>
-    rw [hdi] at hk
-    obtain ⟨rfl, rfl⟩ := hk
-    obtain ⟨a2, a3, hrun2, hg3, -, hS', hg', hvg⟩ :=
-      ivW_gen (ci := .axiomInfo cv) (k := .opaque) hRp h hS hD hi (by rw [hdi]; rfl) rfl
-    rw [hdi] at hrun2 hg3 hvg
-    have hrun3 := hg3 (by decide)
-    simp only [stepCV, stepVal] at hrun2 hrun3
-    refine ⟨(fe.push (.axiomInfo cv), some ⟨.opaque, cv, v⟩), a3, ?_, hS', hg',
-      by simpa [stepCV, stepVal] using hvg.symm, by simp⟩
-    simp only [ivT, StateT.run_bind, hrun2, exc_ok_bind', hrun3, stepCV, stepVal]
-    rfl
-  | axiomDecl _ => rw [hdi] at hk; exact hk.elim
-  | quotDecl _ _ => rw [hdi] at hk; exact hk.elim
-  | indDecl _ _ => rw [hdi] at hk; exact hk.elim
-  | basisDecl _ => rw [hdi] at hk; exact hk.elim
 
 /-! ## `install_value`'s text -/
 
