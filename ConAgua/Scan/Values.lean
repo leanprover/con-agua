@@ -228,7 +228,8 @@ def natListLoop : Stmt := lblk (i, cnt, w, c, e) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:697-699 ConLeche.Frontend.scanNatList -/
-@[l_impl ConLeche.Frontend.scanNatList]
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:667-695 ConLeche.Frontend.scanNatListLoop
+@[l_impl ConLeche.Frontend.scanNatList ConLeche.Frontend.scanNatListLoop]
 def scanNatList : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;

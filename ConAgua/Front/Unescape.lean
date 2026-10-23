@@ -65,6 +65,8 @@ def escSur : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:559-561 ConLeche.Frontend.replacementChar
+@[l_impl ConLeche.Frontend.replacementChar]
 def escOne : FunDecl := lfn (j, e) locals (d, ok, v, cp, jn) {
   d := call byte_in(j + 1, e);
   if d == 34 || d == 92 || d == 47 { return (1, d, j + 2) };
@@ -113,6 +115,8 @@ def escOneN (b : Array UInt8) (e j : Word) : Word × Word × Word :=
 /-! ## `utf8_put` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:556-557 ConLeche.Frontend.utf8Of
+@[l_impl ConLeche.Frontend.utf8Of]
 def utf8Put : FunDecl := lfn (top, k, cp) locals (q) {
   q := top + k;
   if cp < 128 {

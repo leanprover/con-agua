@@ -49,7 +49,10 @@ def runLoop : Stmt := lblk (i, ok, nx, ln) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:561-574 ConRon.Arena.Frontend.parseBytes -/
-@[l_impl ConRon.Arena.Frontend.parseBytes]
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:520-549 ConRon.Arena.Frontend.feedChunk
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:506-518 ConRon.Arena.Frontend.applyFinalLine
+@[l_impl ConRon.Arena.Frontend.parseBytes ConRon.Arena.Frontend.feedChunk
+  ConRon.Arena.Frontend.applyFinalLine]
 def frontRun : FunDecl := lfn () locals (i, ok, nx, ln) {
   ok := call front_init();
   ⟪runLoop⟫;

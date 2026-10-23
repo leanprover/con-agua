@@ -40,7 +40,8 @@ def skipWsLoop : Stmt := lblk (i) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:84-91 ConLeche.Frontend.skipWs -/
-@[l_impl ConLeche.Frontend.skipWs]
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:78-80 ConLeche.Frontend.isWs
+@[l_impl ConLeche.Frontend.skipWs ConLeche.Frontend.isWs]
 def skipWs : FunDecl := lfn (i) { ⟪skipWsLoop⟫; return i }
 
 /-- The model: the first position `≥ i` whose byte is not JSON whitespace, or `b.size`. -/
@@ -111,7 +112,8 @@ def skipDigitsLoop : Stmt := lblk (i) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:93-101 ConLeche.Frontend.skipDigits -/
-@[l_impl ConLeche.Frontend.skipDigits]
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:82-82 ConLeche.Frontend.isDigit
+@[l_impl ConLeche.Frontend.skipDigits ConLeche.Frontend.isDigit]
 def skipDigits : FunDecl := lfn (i) { ⟪skipDigitsLoop⟫; return i }
 
 /-- The model: the position after the decimal digit run at `i`. -/
