@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.Store
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -89,126 +90,72 @@ theorem nsMatch_spec (n : Nat) (s₀ : St) (t i q o l h : Word) :
 
 end match_
 
-/-! ## `nstr_find(t, q, o, l, h)`: the probe -/
+/-! ## The name `str` table as a cons schema (`ConsLib.lean`)
 
-/-- The model of the probe loop, from slot `j` after `d` steps. -/
-def nsprobeW (sl r p : Array Word) (t q o l h b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if nsmatchW r p t (slotV sl b (j * 2 + t) - 1) q o l h then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else nsprobeW sl r p t q o l h b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
+The key is the prefix handle `q` and the string's slice `(o, l)`; the record stores them and the
+hash (`lit_hash`'s of the slice, then one FNV step with `q`; it reads the pool: `nsKeyOK`); the
+match is a call of `nstr_match`. No scratch skip. Handle tag `1` (`NTag.str`). -/
 
-section probeArms
-variable (sl r p : Array Word) (t q o l h b n j d : Word)
+/-- The handle word of node `0` of the persistent / scratch name `str` tier. -/
+def nsP : Word := 0x10000000
+def nsS : Word := 0x18000000
 
-theorem nsprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : nsprobeW sl r p t q o l h b n j d = [0, 0, j, d] := by
-  rw [nsprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem nsprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : nsmatchW r p t (sl[k] - b - 1) q o l h = true) :
-    nsprobeW sl r p t q o l h b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [nsprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem nsprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : nsmatchW r p t (sl[k] - b - 1) q o l h = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    nsprobeW sl r p t q o l h b n j d = nsprobeW sl r p t q o l h b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [nsprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] nsprobeW_free => nsprobeW sl r p t q o l h b n j d, sl[k]
-grind_pattern [arena_grind] nsprobeW_hit => nsprobeW sl r p t q o l h b n j d, sl[k]
-grind_pattern [arena_grind] nsprobeW_next =>
-  nsprobeW sl r p t q o l h b n j d, sl[k], nsprobeW sl r p t q o l h b n j' d'
-
-def nsfindLoop : Stmt := lblk (t, q, o, l, h, n, j, d, v, m, b) {
-  while d < n {
-    v := NSSLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    m := call nstr_match(t, v - 1, q, o, l, h);
-    if m != 0 { return (1, v - 1, j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
-
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def nsFind : FunDecl := lfn (t, q, o, l, h) locals (n, j, d, v, m, b) {
-  n := NSSLOT.u64[len(NSSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪nsfindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hpe : p.lookup "limbs_eq" = some limbsEq)
-  (hpm : p.lookup "nstr_match" = some nsMatch) (hp : p.lookup "nstr_find" = some nsFind)
-
-include hpe hpm in
-theorem nsfindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n nsfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (nsprobeW (s₀.mem.arr64 NSSLOT) (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 10) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
-      nsprobeW (s₀.mem.arr64 NSSLOT) (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 10) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := nsfindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        nsMatch_spec p hpe hpm n] <;> finish
-
-include hpe hpm in
-theorem nsfindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) nsfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (nsprobeW (s₀.mem.arr64 NSSLOT) (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 10) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
-      nsprobeW (s₀.mem.arr64 NSSLOT) (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 10) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ :=
-  Triple.step_exec (nsfindLoop_spec p hpe hpm (n + 1) s₀)
+/-- The hash of a name `str` record: the slice's, then one FNV step with the prefix. -/
+def nstrHashW (q hs : Word) : Word := (hs ^^^ q) * fnvPrime
 
 /-- The slot count of a tier of the name `str` table. -/
 def nSlotsNs (m : Mem) : Word := rdW (m.arr64 NSSLOT) (m.len64 NSSLOT - 1) + SN0
 
-include hpe hpm hp in
-theorem nsFind_spec (n : Nat) (s₀ : St) (t q o l h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nstr_find" [t, q, o, l, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = nsprobeW (s₀.mem.arr64 NSSLOT) (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) t q o l h
-        (baseW s₀.mem t) (nSlotsNs s₀.mem) (homeW h (nSlotsNs s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nsFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, nsfindLoop_step_spec p hpe hpm n, ld64] <;>
-      finish [nSlotsNs, homeW, baseW]
+/-- The hash of node `i` of tier `t`: its word 3. -/
+def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3)
 
-end find
+/-- The slice of a key `[q, o, l]` is in bounds (what `lit_hash`'s spec needs). -/
+def nsKeyOK (m : Mem) (ks : List Word) : Prop :=
+  (m.arr64 POOL).size < 2 ^ 64 ∧ (ks.getD 1 0).toNat + (ks.getD 2 0).toNat ≤ (m.arr64 POOL).size
 
-/-! ## `nstr_push(t, q, o, l, h, j)`: append a node to tier `t`, register it at slot `j` -/
+def nstrCS : ConsSch where
+  ra := NSREC
+  sa := NSSLOT
+  w := 4
+  st := 8
+  ca := 36
+  P := nsP
+  S := nsS
+  fname := "nstr_find"
+  pname := "nstr_push"
+  nk := 3
+  mloc := 1
+  mpre := some (.call [10] "nstr_match"
+    [.var 0, .bin .sub (.var 8) (.const 1), .var 1, .var 2, .var 3, .var 4])
+  mc := .cmp .ne (.var 10) (.const 0)
+  np := 4
+  room := condOf (lblk (t, q, o, l, h, j, c) { if len(NSREC.u64) < (c + 1) * 8 { skip } })
+  recW := [.var 1, .var 2, .var 3, .var 4]
+  ghash := nstrGS.hash
+  ihash := lblk (q, o, l, h) {
+    h := call lit_hash(o, l);
+    h := (h ^ q) * ⟪fnvPrime⟫
+  }
+  skipW := none
+  mtM m ks t i := nsmatchW (m.arr64 NSREC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0)
+    (ks.getD 2 0) (ks.getD 3 0)
+  qhM m ks := nstrHashW (ks.getD 0 0) (hashN (m.arr64 POOL) (ks.getD 1 0).toNat (ks.getD 2 0).toNat)
+  hsM := nshash
+  vsM as := as
+  roomM m _ c := decide (m.len64 NSREC < (c + 1) * 8)
+  keyOK := nsKeyOK
+
+/-! ## `nstr_find(t, q, o, l, h)`, `nstr_push(t, q, o, l, h, j)`, `intern_nstr(q, o, l)`
+
+The arena's `internNNode (.str pre s)`: the persistent probe, the scratch probe if the scratch
+tier is open, the append to the tier the store is in. -/
+
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
+def nsprobeW (sl r p : Array Word) (t q o l h b n j d : Word) : List Word :=
+  cprobeW sl (fun i => nsmatchW r p t i q o l h) t b n j d
+
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+def nsFind : FunDecl := consFindG nstrCS
 
 /-- The node count of tier `t` of the name `str` table, `CTL[36 + t]`. -/
 def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
@@ -225,107 +172,15 @@ def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (36 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  c := CTL.u64[36 + t];
-  if c >= 134217728 { abort };
-  if len(NSREC.u64) < (c + 1) * 8 { abort };
-  k := c * 8 + t * 4;
-  gk := NSSLOT.u64[len(NSSLOT.u64) - 1];
-  NSREC.u64[k] := q;
-  NSREC.u64[k + 1] := o;
-  NSREC.u64[k + 2] := l;
-  NSREC.u64[k + 3] := h;
-  NSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[36 + (t & 1)] := c + 1;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG nstrGS 8⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`: its word 3. -/
-def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3)
-
-section push
-variable (p : Prog) (hp : p.lookup "nstr_push" = some nsPush)
-
-/-- The growth's hash block computes `nshash`. -/
-theorem nshash_ok : HashOK p nstrGS 8 nshash := by
-  intro k s₀
-  simp only [nstrGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nshash, LocEq, St.setLoc]
-
-include hp in
-theorem nsPush_spec (n : Nat) (s₀ : St) (t q o l h j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nstr_push" [t, q, o, l, h, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ nspushOK s₀.mem t = true ∧ r = [nscnt s₀.mem t] ∧
-      growIf NSSLOT 36 nshash s₀.mem (nspushMem s₀.mem t q o l h j (nscnt s₀.mem t))
-        (nscnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nsPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p nstrGS NSSLOT 36 rfl rfl 8 nshash (nshash_ok p) n] <;>
-      finish [nspushMem, nscnt, nspushOK, baseW, growIf_grow', growIf_keep']
-
-end push
-
-/-! ## `intern_nstr(q, o, l)`: hash-cons the name `str q s`, `s` the string the slice holds
-
-The arena's `internNNode (.str pre s)`: the persistent probe, the scratch probe if the scratch
-tier is open, the append to the tier the store is in. Handle tag `1` (`NTag.str`). -/
-
-/-- The handle word of node `0` of the persistent / scratch name `str` tier. -/
-def nsP : Word := 0x10000000
-def nsS : Word := 0x18000000
-
-/-- The hash of a name `str` record: the slice's, then one FNV step with the prefix. -/
-def nstrHashW (q hs : Word) : Word := (hs ^^^ q) * fnvPrime
+def nsPush : FunDecl := consPushG nstrCS
 
 /-- The model of `intern_nstr`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) :=
-  let h := nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)
-  let rs₀ := nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 0 q o l h (baseW m 0) (nSlotsNs m)
-    (homeW h (nSlotsNs m)) 0
-  let rs₁ := nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 1 q o l h (baseW m 1) (nSlotsNs m)
-    (homeW h (nSlotsNs m)) 0
-  if rs₀ = [] then none
-  else if rs₀.headD 0 ≠ 0 then some (nsP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (nsS + rs₁.tail.headD 0, m)
-    else if nspushOK m 1 then
-      match growIf NSSLOT 36 nshash m (nspushMem m 1 q o l h (rs₁.tail.tail.headD 0) (nscnt m 1)) (nscnt m 1) with
-      | some m' => some (nsS + nscnt m 1, m')
-      | none => none
-    else none
-  else if nspushOK m 0 then
-    match growIf NSSLOT 36 nshash m (nspushMem m 0 q o l h (rs₀.tail.tail.headD 0) (nscnt m 0)) (nscnt m 0) with
-    | some m' => some (nsP + nscnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) := consInternM nstrCS m [q, o, l]
 
 /-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
 @[l_impl ConRon.Arena.internNNode]
-def internNStr : FunDecl := lfn (q, o, l) locals (h, f, i, j, d, sc) {
-  h := call lit_hash(o, l);
-  h := (h ^ q) * ⟪fnvPrime⟫;
-  (f, i, j, d) := call nstr_find(0, q, o, l, h);
-  if f != 0 { return ⟪nsP⟫ + i };
-  sc := CTL.u64[1];
-  if sc != 0 {
-    (f, i, j, d) := call nstr_find(1, q, o, l, h);
-    if f != 0 { return ⟪nsS⟫ + i };
-    i := call nstr_push(1, q, o, l, h, j);
-    return ⟪nsS⟫ + i
-  };
-  i := call nstr_push(0, q, o, l, h, j);
-  return ⟪nsP⟫ + i
-}
+def internNStr : FunDecl := consInternG nstrCS
 
 /-- The name `str` store functions, as one `#eval`-able program. -/
 def nstrProg : Prog :=
@@ -353,28 +208,77 @@ def internNStrs (m : Mem) : List (Word × Word × Word) → Option (List Word)
 #guard internNStrs (nstrMem 1) [(0, 0, 1), (0, 1, 1), (0, 2, 1)] ==
   some [0x18000000, 0x18000001, 0x18000000]
 
-section intern
-variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
-  (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "nstr_match" = some nsMatch)
-  (hpf : p.lookup "nstr_find" = some nsFind) (hpp : p.lookup "nstr_push" = some nsPush)
-  (hp : p.lookup "intern_nstr" = some internNStr)
+/-! ## The specs: the library's, from the table's obligations -/
 
-include hph hpe hpm hpf hpp hp in
-theorem internNStr_spec (n : Nat) (s₀ : St) (q o l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+section specs
+variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+  (hpe : p.lookup "limbs_eq" = some limbsEq)
+
+/-- The growth's hash block computes `nshash`. -/
+theorem nshash_ok : HashOK p nstrGS 8 nshash := by
+  intro k s₀
+  simp only [nstrGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nshash, LocEq, St.setLoc]
+
+theorem setLoc_twice (s : St) (x : Var) (a b : Word) : (s.setLoc x a).setLoc x b = s.setLoc x b := by
+  cases s; simp only [St.setLoc, St.mk.injEq, true_and]; funext y; split <;> rfl
+
+include hph hpe in
+theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS where
+  match_ := by
+    intro n s₀
+    simp only [nstrCS]
+    vcgen [step, evalArgs, evalE, setLocs, nsMatch_spec p hpe hpm n]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+    all_goals first
+      | (intro z hz; simp [St.setLoc_loc, hz])
+      | exact ite_bne _
+  ghash := nshash_ok p
+  ihash := by
+    intro n s₀
+    apply triple_pre_and
+    rintro ⟨hs, hb⟩
+    simp only [nstrCS, argsOf, List.range_succ, List.range_zero, List.map, List.nil_append,
+      List.cons_append, List.getD_cons_zero, List.getD_cons_succ, L.Notation.blk] at hs hb ⊢
+    vcgen [step, evalArgs, evalE, setLoc, setLocs,
+      litHash_spec p hph n s₀ (s₀.loc (1 + 0)) (s₀.loc (2 + 0)) hs hb]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, setLoc_twice, BinOp.eval,
+      nstrHashW]
+  pre := rfl
+  colA := by simp [nstrCS]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [nstrCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [nstrCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [nstrCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [nstrCS] at he
+  push_np := by decide
+  arrs := by decide
+
+theorem nspushOK_eqC (m : Mem) (t : Word) : nspushOK m t = pushOKC nstrCS m t := by
+  rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 8) (m.len64 NSREC)]
+  rfl
+
+theorem nspushMem_eqC (m : Mem) (t q o l h j c : Word) :
+    nspushMem m t q o l h j c = pushMC nstrCS m t [q, o, l, h] j c := by
+  simp [nspushMem, pushMC, tailM, wrRecK, nstrCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ NSREC by decide)]
+
+include hph hpe in
+theorem internNStr_spec (hpm : p.lookup "nstr_match" = some nsMatch)
+    (hpf : p.lookup "nstr_find" = some nsFind) (hpp : p.lookup "nstr_push" = some nsPush)
+    (hp : p.lookup "intern_nstr" = some internNStr) (n : Nat) (s₀ : St) (q o l : Word)
+    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nstr" [q, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ nsinternW s₀.mem q o l = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internNStr]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, litHash_spec p hph n,
-        nsFind_spec p hpe hpm hpf n, nsPush_spec p hpp n] <;>
-      finish [nsinternW, nstrHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ nsinternW s₀.mem q o l = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p nstrCS (nstrOK p hph hpe hpm) hpf hpp "intern_nstr" hp n s₀ [q, o, l] rfl
+    ⟨hs, hb⟩
 
-end intern
+end specs
 
 end L.Arena

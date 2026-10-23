@@ -193,30 +193,34 @@ theorem cvLps_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 /-! ### `install_value_guards(vis, q, v)` -/
 
 mutual
-/-- **The model of `install_value_guards`.** -/
-def ivgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+/-- **The model of `install_value_guards`**, `all_level_params_defined` and `consts_resolve_ffast`
+read through `cl` (`stubCall`
+for the `StageR` proofs, `realCall p` under `StageT`). -/
+def ivgW (cl : CallM) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
-  | n + 1, m, vis, q, v => ivgK1 vis v (cvLpsW n m q)
+  | n + 1, m, vis, q, v => ivgK1 cl n vis v (cvLpsW n m q)
 
-def ivgK1 (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ivgK1 (cl : CallM) (n : Nat) (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => ivgK2 vis v r1 (lbbF m1 [4000000000, 0, v])
+  | some (r1, m1) => ivgK2 cl n vis v r1 (lbbF m1 [4000000000, 0, v])
 
-def ivgK2 (vis v : Word) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ivgK2 (cl : CallM) (n : Nat) (vis v : Word) (r1 : List Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    if r2.headD 0 = 0 then none else ivgK3 vis v r1 (hffF m2 [4000000000, v])
+    if r2.headD 0 = 0 then none else ivgK3 cl n vis v r1 (hffF m2 [4000000000, v])
 
-def ivgK3 (vis v : Word) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ivgK3 (cl : CallM) (n : Nat) (vis v : Word) (r1 : List Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 ≠ 0 then none
-    else ivgK4 vis v (stubM "all_level_params_defined" m3 [r1.headD 0, r1.tail.headD 0, v])
+    else ivgK4 cl n vis v (cl n "all_level_params_defined" [r1.headD 0, r1.tail.headD 0, v] m3)
 
-def ivgK4 (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ivgK4 (cl : CallM) (n : Nat) (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) =>
-    if r4.headD 0 = 0 then none else ivgK5 (stubM "consts_resolve_ffast" m4 [vis, v])
+    if r4.headD 0 = 0 then none else ivgK5 (cl n "consts_resolve_ffast" [vis, v] m4)
 
 def ivgK5 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -224,32 +228,34 @@ def ivgK5 : Option (List Word × Mem) → Option (List Word × Mem)
 end
 
 section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis q v : Word) (r1 r2 r3 r4 r5 : List Word)
-theorem ivgW_step : ivgW (n + 1) m vis q v = ivgK1 vis v (cvLpsW n m q) := rfl
-theorem ivgK1_some : ivgK1 vis v (some (r1, m1)) =
-    ivgK2 vis v r1 (lbbF m1 [4000000000, 0, v]) := rfl
-theorem ivgK2_some : ivgK2 vis v r1 (some (r2, m2)) =
-    if r2.headD 0 = 0 then none else ivgK3 vis v r1 (hffF m2 [4000000000, v]) :=
+variable (cl : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis q v : Word) (r1 r2 r3 r4 r5 : List Word)
+theorem ivgW_step : ivgW cl (n + 1) m vis q v = ivgK1 cl n vis v (cvLpsW n m q) := rfl
+theorem ivgK1_some : ivgK1 cl n vis v (some (r1, m1)) =
+    ivgK2 cl n vis v r1 (lbbF m1 [4000000000, 0, v]) := rfl
+theorem ivgK2_some : ivgK2 cl n vis v r1 (some (r2, m2)) =
+    if r2.headD 0 = 0 then none else ivgK3 cl n vis v r1 (hffF m2 [4000000000, v]) :=
   rfl
-theorem ivgK3_some : ivgK3 vis v r1 (some (r3, m3)) =
+theorem ivgK3_some : ivgK3 cl n vis v r1 (some (r3, m3)) =
     if r3.headD 0 ≠ 0 then none
-    else ivgK4 vis v (stubM "all_level_params_defined" m3 [r1.headD 0, r1.tail.headD 0, v]) := rfl
-theorem ivgK4_some : ivgK4 vis v (some (r4, m4)) =
-    if r4.headD 0 = 0 then none else ivgK5 (stubM "consts_resolve_ffast" m4 [vis, v]) := rfl
+    else ivgK4 cl n vis v (cl n "all_level_params_defined" [r1.headD 0, r1.tail.headD 0, v] m3) :=
+  rfl
+theorem ivgK4_some : ivgK4 cl n vis v (some (r4, m4)) =
+    if r4.headD 0 = 0 then none else ivgK5 (cl n "consts_resolve_ffast" [vis, v] m4) := rfl
 theorem ivgK5_some : ivgK5 (some (r5, m5)) = if r5.headD 0 = 0 then none else some ([0], m5) :=
   rfl
 end arms
 
-grind_pattern [ind_grind] ivgW_step => ivgW (n + 1) m vis q v
-grind_pattern [ind_grind] ivgK1_some => ivgK1 vis v (some (r1, m1))
-grind_pattern [ind_grind] ivgK2_some => ivgK2 vis v r1 (some (r2, m2))
-grind_pattern [ind_grind] ivgK3_some => ivgK3 vis v r1 (some (r3, m3))
-grind_pattern [ind_grind] ivgK4_some => ivgK4 vis v (some (r4, m4))
+grind_pattern [ind_grind] ivgW_step => ivgW cl (n + 1) m vis q v
+grind_pattern [ind_grind] ivgK1_some => ivgK1 cl n vis v (some (r1, m1))
+grind_pattern [ind_grind] ivgK2_some => ivgK2 cl n vis v r1 (some (r2, m2))
+grind_pattern [ind_grind] ivgK3_some => ivgK3 cl n vis v r1 (some (r3, m3))
+grind_pattern [ind_grind] ivgK4_some => ivgK4 cl n vis v (some (r4, m4))
 grind_pattern [ind_grind] ivgK5_some => ivgK5 (some (r5, m5))
 
-theorem ivg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis q v : Word) :
+theorem ivg_specW (p : Prog) (h : CvgProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St)
+    (vis q v : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_value_guards" [vis, q, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ ivgW n s₀.mem vis q v = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ivgW cl n s₀.mem vis q v = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.ivg]
   simp only [callFn, installValueGuardsL]
   cases n with
@@ -259,7 +265,7 @@ theorem ivg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis q v : Wo
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         cvLps_specW p h.alloc h.copy h.eti h.lps n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-        stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
+        hc n "all_level_params_defined", hc n "consts_resolve_ffast"] <;>
       finish (gen := 20)
 
 /-! ### `check_value_group(vis, g)` -/
@@ -299,7 +305,7 @@ def cvgK3 (c : CallM) (n : Nat) (vis g t v u : Word) :
 def cvgK4 (c : CallM) (n : Nat) (vis g t v : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => if r4.headD 0 ≠ 2 then none else cvgK5 c n vis t v (ivgW n m4 vis (g + 1) v)
+  | some (r4, m4) => if r4.headD 0 ≠ 2 then none else cvgK5 c n vis t v (ivgW c n m4 vis (g + 1) v)
 
 def cvgK5 (c : CallM) (n : Nat) (vis t v : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -334,7 +340,7 @@ theorem cvgK2_some : cvgK2 c n vis g t v (some (r2, m2)) =
 theorem cvgK3_some : cvgK3 c n vis g t v u (some (r3, m3)) =
     cvgK4 c n vis g t v (c n "lvl_eq_c" [u, r3.headD 0] m3) := rfl
 theorem cvgK4_some : cvgK4 c n vis g t v (some (r4, m4)) =
-    if r4.headD 0 ≠ 2 then none else cvgK5 c n vis t v (ivgW n m4 vis (g + 1) v) := rfl
+    if r4.headD 0 ≠ 2 then none else cvgK5 c n vis t v (ivgW c n m4 vis (g + 1) v) := rfl
 theorem cvgK5_some : cvgK5 c n vis t v (some (r5, m5)) = cvgK6 c n vis t v m5 := rfl
 theorem cvgK6_eq : cvgK6 c n vis t v m = cvgK7 c n vis t (c n "infer_type_core" [vis, 0, v] m) := rfl
 theorem cvgK7_some : cvgK7 c n vis t (some (r7, m7)) =
@@ -366,7 +372,7 @@ theorem cvg_specW (p : Prog) (h : CvgProg p) (c : CallM) (hc : CallSpec p c) (n 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        iwReset_specW p h.reset n, pinWord_specW p h.pin n, ivg_specW p h n,
+        iwReset_specW p h.reset n, pinWord_specW p h.pin n, ivg_specW p h c hc n,
         hc n "infer_type_core", hc n "ensure_sort_core", hc n "lvl_eq_c", hc n "is_def_eq_core"] <;>
       finish (gen := 20)
 
@@ -499,7 +505,7 @@ theorem fuelW : (4000000000 : Word).toNat = coreWalkFuel := rfl
 /-- **`install_value_guards` refines `installValueGuards`** at the model level. -/
 theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q v : Word} {r : List Word} {cv : IConstantVal}
-    (h : ivgW n m vis q v = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ivgW stubCall n m vis q v = some (r, m')) (hS : StageR dn vis fe m a)
     (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) (hv : v.toNat < 2 ^ 32) :
     ∃ a', (installValueGuards fe cv (decI v)).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
@@ -546,7 +552,7 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   · rw [if_pos hb3] at h; simp at h
   rw [if_neg hb3] at h
   rw [hr1t] at h
-  cases h4 : stubM "all_level_params_defined" m3 [r1.headD 0, w2, v] with
+  cases h4 : stubCall (n + 1) "all_level_params_defined" [r1.headD 0, w2, v] m3 with
   | none => rw [h4] at h; simp [ivgK4] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
@@ -559,7 +565,7 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   by_cases hb4 : r4.headD 0 = 0
   · rw [if_pos hb4] at h; simp at h
   rw [if_neg hb4] at h
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, v] with
+  cases h5 : stubCall (n + 1) "consts_resolve_ffast" [vis, v] m4 with
   | none => rw [h5] at h; simp [ivgK5] at h
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5
@@ -592,7 +598,7 @@ theorem installValueGuards_refines (p : Prog) (hC : CvgProg p) (n : Nat) (s₀ :
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installValueGuards fe cv (decI v)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (installValueGuards fe cv (decI v)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (ivg_specW p hC n s₀ vis q v) ?_
+  refine triple_post (ivg_specW p hC stubCall (stubCall_spec p) n s₀ vis q v) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hS', hg⟩ := ivgW_ok hm hS hq hqb hv
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
@@ -775,7 +781,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
         cases b with
         | false => simp at hx4
         | true => rfl
-    cases h5 : ivgW n m4 vis (g + 1) wj with
+    cases h5 : ivgW stubCall n m4 vis (g + 1) wj with
     | none => rw [h5] at h; simp [cvgK5] at h
     | some rm5 =>
     obtain ⟨r5, m5⟩ := rm5

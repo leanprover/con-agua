@@ -6,6 +6,7 @@ meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.Store
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -87,126 +88,73 @@ theorem lsMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
 
 end match_
 
-/-! ## `ls_find(t, o, l, h)`: the probe -/
+/-! ## The level-list table as a cons schema (`ConsLib.lean`)
 
-/-- The model of the probe loop, from slot `j` after `d` steps. -/
-def lsprobeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if lsmatchW r p t (slotV sl b (j * 2 + t) - 1) o l h then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else lsprobeW sl r p t o l h b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
+The key is the slice `(o, l)` of level handle words; the record stores the slice and its hash
+(`lit_hash`'s: it reads the pool, `litKeyOK`); the match is a call of `ls_match`; the push
+writes the derived column `LSHP` (the list's has-param word, `lsOrW`, computed by the prelude
+`hpLoopLs`). No scratch skip. -/
 
-section probeArms
-variable (sl r p : Array Word) (t o l h b n j d : Word)
-
-theorem lsprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : lsprobeW sl r p t o l h b n j d = [0, 0, j, d] := by
-  rw [lsprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem lsprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : lsmatchW r p t (sl[k] - b - 1) o l h = true) :
-    lsprobeW sl r p t o l h b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [lsprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem lsprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : lsmatchW r p t (sl[k] - b - 1) o l h = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    lsprobeW sl r p t o l h b n j d = lsprobeW sl r p t o l h b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [lsprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] lsprobeW_free => lsprobeW sl r p t o l h b n j d, sl[k]
-grind_pattern [arena_grind] lsprobeW_hit => lsprobeW sl r p t o l h b n j d, sl[k]
-grind_pattern [arena_grind] lsprobeW_next =>
-  lsprobeW sl r p t o l h b n j d, sl[k], lsprobeW sl r p t o l h b n j' d'
-
-def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
-  while d < n {
-    v := LSSLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    m := call ls_match(t, v - 1, o, l, h);
-    if m != 0 { return (1, v - 1, j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
-
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def lsFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := LSSLOT.u64[len(LSSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪lsfindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hpe : p.lookup "limbs_eq" = some limbsEq)
-  (hpm : p.lookup "ls_match" = some lsMatch) (hp : p.lookup "ls_find" = some lsFind)
-
-include hpe hpm in
-theorem lsfindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n lsfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := lsfindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        lsMatch_spec p hpe hpm n] <;> finish
-
-include hpe hpm in
-theorem lsfindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) lsfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
-  Triple.step_exec (lsfindLoop_spec p hpe hpm (n + 1) s₀)
+/-- The handle word of node `0` of the persistent / scratch level-list tier. -/
+def lsP : Word := 0x00000000
+def lsS : Word := 0x08000000
 
 /-- The slot count of a tier of the level-list table. -/
 def nSlotsLs (m : Mem) : Word := rdW (m.arr64 LSSLOT) (m.len64 LSSLOT - 1) + SN0
 
-include hpe hpm hp in
-theorem lsFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ls_find" [t, o, l, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) t o l h
-        (baseW s₀.mem t) (nSlotsLs s₀.mem) (homeW h (nSlotsLs s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lsFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, lsfindLoop_step_spec p hpe hpm n, ld64] <;>
-      finish [nSlotsLs, homeW, baseW]
+/-- The hash of node `i` of tier `t`: its word 2. -/
+def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
 
-end find
+/-- The push's prelude: the has-param word of the list (`x`, variable 7). -/
+def lsPre : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
+  x := 0;
+  q := 0;
+  ⟪hpLoopLs⟫
+}
 
-/-! ## `ls_push(t, o, l, h, j)`: append a node to tier `t`, register it at slot `j` -/
+def lsCS : ConsSch where
+  ra := LSREC
+  sa := LSSLOT
+  w := 3
+  st := 6
+  ca := 40
+  P := lsP
+  S := lsS
+  fname := "ls_find"
+  pname := "ls_push"
+  nk := 2
+  mloc := 1
+  mpre := some (.call [9] "ls_match" [.var 0, .bin .sub (.var 7) (.const 1), .var 1, .var 2, .var 3])
+  mc := .cmp .ne (.var 9) (.const 0)
+  np := 3
+  room := condOf (lblk (t, o, l, h, j, c) {
+    if len(LSREC.u64) < (c + 1) * 6 || len(LSHP.u64) >> 1 <= c { skip } })
+  recW := [.var 1, .var 2, .var 3]
+  ghash := lsGS.hash
+  ihash := .call [2] "lit_hash" [.var 0, .var 1]
+  skipW := none
+  xloc := 7
+  pre := some lsPre
+  col := some LSHP
+  mtM m ks t i := lsmatchW (m.arr64 LSREC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  qhM m ks := hashN (m.arr64 POOL) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
+  hsM := lshash
+  vsM as := as
+  roomM m _ c := decide (m.len64 LSREC < (c + 1) * 6) || decide (m.len64 LSHP >>> (1 : Word) ≤ c)
+  colM m as := lsOrW m (as.getD 0 0) (as.getD 1 0).toNat
+  keyOK := litKeyOK
+
+/-! ## `ls_find(t, o, l, h)`, `ls_push(t, o, l, h, j)`, `intern_ls(o, l)`
+
+The arena's `internLsNode us`: the persistent probe, the scratch probe if the scratch tier is
+open, the append to the tier the store is in. Handle tag `0` (`LsTag.list`). -/
+
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
+def lsprobeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
+  cprobeW sl (fun i => lsmatchW r p t i o l h) t b n j d
+
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+def lsFind : FunDecl := consFindG lsCS
 
 /-- The node count of tier `t` of the level-list table, `CTL[40 + t]`. -/
 def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
@@ -224,107 +172,15 @@ def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
     |>.set64 LSHP (c * 2 + t) (lsOrW m o l.toNat)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  x := 0;
-  q := 0;
-  ⟪hpLoopLs⟫;
-  c := CTL.u64[40 + t];
-  if c >= 134217728 { abort };
-  if len(LSREC.u64) < (c + 1) * 6 { abort };
-  if len(LSHP.u64) >> 1 <= c { abort };
-  k := c * 6 + t * 3;
-  gk := LSSLOT.u64[len(LSSLOT.u64) - 1];
-  LSREC.u64[k] := o;
-  LSREC.u64[k + 1] := l;
-  LSREC.u64[k + 2] := h;
-  LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[40 + (t & 1)] := c + 1;
-  LSHP.u64[c * 2 + t] := x;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG lsGS 14⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`: its word 2. -/
-def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
-
-section push
-variable (p : Prog) (hp : p.lookup "ls_push" = some lsPush)
-
-/-- The growth's hash block computes `lshash`. -/
-theorem lshash_ok : HashOK p lsGS 14 lshash := by
-  intro k s₀
-  simp only [lsGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lshash, LocEq, St.setLoc]
-
-include hp in
-theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "ls_push" [t, o, l, h, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ lspushOK s₀.mem t = true ∧ r = [lscnt s₀.mem t] ∧
-      growIf LSSLOT 40 lshash s₀.mem (lspushMem s₀.mem t o l h j (lscnt s₀.mem t))
-        (lscnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lsPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n,
-        growBlkG_spec p lsGS LSSLOT 40 rfl rfl 14 lshash (lshash_ok p) n] <;>
-      finish [lspushMem, lscnt, lspushOK, baseW, lsOrW_zero, growIf_grow', growIf_keep']
-
-end push
-
-/-! ## `intern_ls(o, l)`: hash-cons the level list whose handle words are the slice `(o, l)`
-
-The arena's `internLsNode us`: the persistent probe, the scratch probe if the scratch tier is
-open, the append to the tier the store is in. Handle tag `0` (`LsTag.list`). -/
-
-/-- The handle word of node `0` of the persistent / scratch level-list tier. -/
-def lsP : Word := 0x00000000
-def lsS : Word := 0x08000000
+def lsPush : FunDecl := consPushG lsCS
 
 /-- The model of `intern_ls`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) :=
-  let h := hashN (m.arr64 POOL) o.toNat l.toNat
-  let rs₀ := lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l h (baseW m 0) (nSlotsLs m)
-    (homeW h (nSlotsLs m)) 0
-  let rs₁ := lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l h (baseW m 1) (nSlotsLs m)
-    (homeW h (nSlotsLs m)) 0
-  if rs₀ = [] then none
-  else if rs₀.headD 0 ≠ 0 then some (lsP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (lsS + rs₁.tail.headD 0, m)
-    else if lspushOK m 1 then
-      match growIf LSSLOT 40 lshash m (lspushMem m 1 o l h (rs₁.tail.tail.headD 0) (lscnt m 1)) (lscnt m 1) with
-      | some m' => some (lsS + lscnt m 1, m')
-      | none => none
-    else none
-  else if lspushOK m 0 then
-    match growIf LSSLOT 40 lshash m (lspushMem m 0 o l h (rs₀.tail.tail.headD 0) (lscnt m 0)) (lscnt m 0) with
-    | some m' => some (lsP + lscnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM lsCS m [o, l]
 
 /-- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode -/
 @[l_impl ConRon.Arena.internLsNode]
-def internLs : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
-  h := call lit_hash(o, l);
-  (f, i, j, d) := call ls_find(0, o, l, h);
-  if f != 0 { return ⟪lsP⟫ + i };
-  sc := CTL.u64[1];
-  if sc != 0 {
-    (f, i, j, d) := call ls_find(1, o, l, h);
-    if f != 0 { return ⟪lsS⟫ + i };
-    i := call ls_push(1, o, l, h, j);
-    return ⟪lsS⟫ + i
-  };
-  i := call ls_push(0, o, l, h, j);
-  return ⟪lsP⟫ + i
-}
+def internLs : FunDecl := consInternG lsCS
 
 /-- The level-list store functions, as one `#eval`-able program. -/
 def lsProg : Prog :=
@@ -352,28 +208,90 @@ def internLss (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there. -/
 #guard internLss (lsMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x08000000, 0x08000001, 0x08000000]
 
-section intern
-variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
-  (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "ls_match" = some lsMatch)
-  (hpf : p.lookup "ls_find" = some lsFind) (hpp : p.lookup "ls_push" = some lsPush)
-  (hp : p.lookup "intern_ls" = some internLs)
+/-! ## The specs: the library's, from the table's obligations -/
 
-include hph hpe hpm hpf hpp hp in
-theorem internLs_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+section specs
+variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+  (hpe : p.lookup "limbs_eq" = some limbsEq)
+
+/-- The growth's hash block computes `lshash`. -/
+theorem lshash_ok : HashOK p lsGS 14 lshash := by
+  intro k s₀
+  simp only [lsGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lshash, LocEq, St.setLoc]
+
+include hph hpe in
+theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
+  match_ := by
+    intro n s₀
+    simp only [lsCS]
+    vcgen [step, evalArgs, evalE, setLocs, lsMatch_spec p hpe hpm n]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+    all_goals first
+      | (intro z hz; simp [St.setLoc_loc, hz])
+      | exact ite_bne _
+  ghash := lshash_ok p
+  ihash := by
+    intro n s₀
+    apply triple_pre_and
+    rintro ⟨hs, hb⟩
+    simp only [lsCS, argsOf, List.range_succ, List.range_zero, List.map, List.nil_append,
+      List.cons_append, List.getD_cons_zero, List.getD_cons_succ] at hs hb ⊢
+    vcgen [step, evalArgs, evalE, setLocs,
+      litHash_spec p hph n s₀ (s₀.loc (0 + 0)) (s₀.loc (1 + 0)) hs hb]
+    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Nat.zero_add]
+  pre := by
+    unfold PreOK
+    simp only [lsCS]
+    intro n s₀
+    have hL : ∀ s₁ : St, ⦃fun s => s = s₁ ∧ (s₁.loc 12 ≤ s₁.loc 2 ∧
+        s₁.loc 7 = lsOrW s₁.mem (s₁.loc 1) (s₁.loc 12).toNat)⦄
+        step p (exec p n) hpLoopLs
+        ⦃fun r s' => s'.mem = s₁.mem ∧ r = .normal ∧ s'.loc 0 = s₁.loc 0 ∧ s'.loc 1 = s₁.loc 1 ∧
+          s'.loc 2 = s₁.loc 2 ∧ s'.loc 3 = s₁.loc 3 ∧ s'.loc 4 = s₁.loc 4 ∧ s'.loc 5 = s₁.loc 5 ∧
+          s'.loc 6 = s₁.loc 6 ∧ s'.loc 7 = lsOrW s₁.mem (s₁.loc 1) (s₁.loc 2).toNat; ⊤⦄ :=
+      fun s₁ => triple_pre_and fun ⟨hq, hx⟩ => hpLoopLs_step_spec p n s₁ hq hx
+    simp only [lsPre, L.Notation.blk]
+    vcgen [step, evalE, setLoc, hL]
+    all_goals simp_all [St.setLoc_loc, St.setLoc_mem, KeepLo, argsOf, List.range_succ, lsOrW_zero]
+    all_goals (intro x hx; obtain ⟨e0, e1, e2, e3, e4, -⟩ := ‹_ ∧ _›
+               rcases (show x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3 ∨ x = 4 by omega) with
+                 rfl | rfl | rfl | rfl | rfl <;> assumption)
+  colA := by simp only [lsCS, Option.some.injEq]; rintro A rfl; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [lsCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [lsCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [lsCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [lsCS] at he
+  push_np := by decide
+  arrs := by decide
+
+theorem lspushOK_eqC (m : Mem) (t : Word) : lspushOK m t = pushOKC lsCS m t := by
+  rw [lspushOK, pushOKC, dec_le_not_lt ((lscnt m t + 1) * 6) (m.len64 LSREC),
+    dec_lt_not_le' (lscnt m t) (m.len64 LSHP >>> (1 : Word))]
+  simp only [lsCS, Bool.not_or, Bool.and_assoc]
+  rfl
+
+theorem lspushMem_eqC (m : Mem) (t o l h j c : Word) :
+    lspushMem m t o l h j c = pushMX lsCS m t [o, l, h] (lsOrW m o l.toNat) j c := by
+  simp [lspushMem, pushMX, colW, pushMC, tailM, wrRecK, lsCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ LSREC by decide)]
+
+include hph hpe in
+theorem internLs_spec (hpm : p.lookup "ls_match" = some lsMatch)
+    (hpf : p.lookup "ls_find" = some lsFind) (hpp : p.lookup "ls_push" = some lsPush)
+    (hp : p.lookup "intern_ls" = some internLs) (n : Nat) (s₀ : St) (o l : Word)
+    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_ls" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ lsinternW s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internLs]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, litHash_spec p hph n,
-        lsFind_spec p hpe hpm hpf n, lsPush_spec p hpp n] <;>
-      finish [lsinternW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ lsinternW s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p lsCS (lsOK p hph hpe hpm) hpf hpp "intern_ls" hp n s₀ [o, l] rfl ⟨hs, hb⟩
 
-end intern
+end specs
 
 end L.Arena

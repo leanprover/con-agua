@@ -66,6 +66,10 @@ theorem argsOf_keepLo (base nk o : Nat) (h : base + nk ≤ o) (s s' : St) (hk : 
 
 grind_pattern [lang_grind] argsOf_keepLo => KeepLo o s s', argsOf base nk s'
 
+theorem argsOf_setLoc_add1 (base nk a : Nat) (ha : base + 1 ≤ a) (s : St) (v : Word) :
+    argsOf base (nk + 1) (s.setLoc (a + nk) v) = argsOf base (nk + 1) s :=
+  argsOf_setLoc base (nk + 1) _ (by omega) s v
+
 theorem argsOf_setLoc_add (base nk a : Nat) (ha : base ≤ a) (s : St) (v : Word) :
     argsOf base nk (s.setLoc (a + nk) v) = argsOf base nk s :=
   argsOf_setLoc base nk _ (by omega) s v
@@ -84,6 +88,12 @@ theorem add_eq_lit_false (a b x : Nat) (h : a < b) : (b + x = a) = False := by
 
 theorem rd64_rdWC (m : Mem) (a : ArrId) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
   simp [rd64, rdW, Array.getD_eq_getD_getElem?]
+
+/-- A triple whose precondition adds a pure fact `K` follows from one that may assume `K` (for an
+obligation whose fragment needs the key precondition). -/
+theorem triple_pre_and {α : Type} {x : M α} {s₀ : St} {K : Prop} {Q : α → St → Prop}
+    (h : K → ⦃fun s => s = s₀⦄ x ⦃Q; ⊤⦄) : ⦃fun s => s = s₀ ∧ K⦄ x ⦃Q; ⊤⦄ :=
+  ⟨fun s ⟨hs, hk⟩ => (h hk).le_wp s hs⟩
 
 /-! ## The probe model -/
 
@@ -142,8 +152,8 @@ grind_pattern [arena_grind] cprobeW_end => cprobeW sl mt t b n j d
 section obligations
 variable (p : Prog) (C : ConsSch)
 
-/-- The key of a find state: variables `1 ‥ nk`. -/
-abbrev fkeys (s : St) : List Word := argsOf 1 C.nk s
+/-- The key of a find state and its hash: variables `1 ‥ nk + 1`. -/
+abbrev fkeys (s : St) : List Word := argsOf 1 (C.nk + 1) s
 
 /-- **The match**: the prelude (if any) writes at most the match's own variable `7 + nk` and no
 memory; then the condition is `mtM` of node `v - 1` (`v` at `5 + nk`) of tier `t`. -/
@@ -151,7 +161,7 @@ def CMatchOK : Prop :=
   match C.mpre with
   | none => ∀ s : St, Cond.pval s C.mc = C.mtM s.mem (fkeys C s) (s.loc 0) (s.loc (5 + C.nk) - 1)
   | some b => ∀ (n : Nat) (s₀ : St),
-    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (fkeys C s₀)⦄
+    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsOf 1 C.nk s₀)⦄
     step p (exec p n) b
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep1 (7 + C.nk) s₀ s' ∧
       Cond.pval s' C.mc = C.mtM s₀.mem (fkeys C s₀) (s₀.loc 0) (s₀.loc (5 + C.nk) - 1); ⊤⦄
@@ -211,7 +221,7 @@ theorem ConsOK.room_eq {p : Prog} {C : ConsSch} (hO : ConsOK p C) (s : St) :
 /-! ## `X_find`: the probe -/
 
 theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (fkeys C s₀)⦄
+    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsOf 1 C.nk s₀)⦄
     exec p n (cfLoop C)
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (fkeys C s₀) (s₀.loc 0)) (s₀.loc 0)
@@ -231,8 +241,8 @@ theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat) (s₀
       vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, hM,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add 1 C.nk 3 (by decide),
-        argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add 1 C.nk 5 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide), argsOf_setLoc_add 1 C.nk 3 (by decide),
+        argsOf_setLoc_add1 1 C.nk 4 (by decide), argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide), argsOf_setLoc_add 1 C.nk 5 (by decide),
         ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
       all_goals grind [lang_grind, arena_grind]
     | some b =>
@@ -242,13 +252,13 @@ theorem cfLoop_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat) (s₀
       vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hM n, ih]
       all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add 1 C.nk 3 (by decide),
-        argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add 1 C.nk 5 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide), argsOf_setLoc_add 1 C.nk 3 (by decide),
+        argsOf_setLoc_add1 1 C.nk 4 (by decide), argsOf_setLoc_add 1 C.nk 4 (by decide), argsOf_setLoc_add1 1 C.nk 5 (by decide), argsOf_setLoc_add 1 C.nk 5 (by decide),
         ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
       all_goals grind [lang_grind, arena_grind]
 
 theorem cfLoop_step_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (fkeys C s₀)⦄
+    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsOf 1 C.nk s₀)⦄
     step p (exec p n) (cfLoop C)
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (fkeys C s₀) (s₀.loc 0)) (s₀.loc 0)
@@ -311,6 +321,15 @@ theorem argsL_eq (pre ks rest : List Word) (k : Nat) (hk : ks.length = k) :
     argsL pre.length k (pre ++ (ks ++ rest)) = ks := by
   subst hk; exact argsOf_init pre ks rest default
 
+theorem argsL_app (t : Word) (ks rest : List Word) (k : Nat) (h : ks.length = k) :
+    argsL 1 k (t :: (ks ++ rest)) = ks := by
+  subst h; simpa using argsL_eq [t] ks rest ks.length rfl
+
+theorem argsL_key (t h : Word) (ks : List Word) (k : Nat) (hks : ks.length = k) :
+    argsL 1 (k + 1) (t :: (ks ++ [h])) = ks ++ [h] := by
+  have := argsL_eq [t] (ks ++ [h]) [] (k + 1) (by simp [hks])
+  simpa using this
+
 /-- **`X_find(t, k, h)`** returns the probe of tier `t` from the home slot of `h` (for any
 argument list: `t`, the key, `h` and the initial step count are its words `0`, `1 ‥ nk`,
 `nk + 1`, `nk + 4`). -/
@@ -319,7 +338,7 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsL 1 C.nk vs)⦄
     invoke p (exec p n) C.fname vs
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (argsL 1 C.nk vs) (Locals.init vs 0))
+      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (argsL 1 (C.nk + 1) vs) (Locals.init vs 0))
         (Locals.init vs 0) (baseW s₀.mem (Locals.init vs 0)) (gnW C.sa s₀.mem)
         (homeW (Locals.init vs (1 + C.nk)) (gnW C.sa s₀.mem)) (Locals.init vs (4 + C.nk)); ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -330,8 +349,8 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     vcgen [exec, step, evalE_spec, evalArgs, setLoc, cfLoop_step_spec p C hM n]
     all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
         Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
-        Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.nk 2 (by decide),
-        argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add 1 C.nk 6 (by decide),
+        Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add1 1 C.nk 2 (by decide), argsOf_setLoc_add 1 C.nk 2 (by decide),
+        argsOf_setLoc_add1 1 C.nk 3 (by decide), argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 6 (by decide), argsOf_setLoc_add 1 C.nk 6 (by decide),
         zero_ne_add 2 C.nk (by decide), zero_ne_add 3 C.nk (by decide),
         zero_ne_add 4 C.nk (by decide), zero_ne_add 6 C.nk (by decide), argsOf_mk,
         ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
@@ -344,12 +363,12 @@ theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) C.fname (t :: (ks ++ [h]))
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem ks t) t (baseW s₀.mem t) (gnW C.sa s₀.mem)
+      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (ks ++ [h]) t) t (baseW s₀.mem t) (gnW C.sa s₀.mem)
         (homeW h (gnW C.sa s₀.mem)) 0; ⊤⦄ := by
-  have ek := argsL_eq [t] ks [h] C.nk hks
+  have ek := argsL_key t h ks C.nk hks
+  have ek' := argsL_app t ks [h] C.nk hks
   have eh := init_last t ks h C.nk hks
   have ez := init_past2 t ks h C.nk 4 hks (by decide)
-  simp only [List.length_singleton, List.singleton_append] at ek
   vcgen [consFindG_specV p C hM hp n s₀]
   all_goals simp_all [Locals.init_cons_zero]
 
@@ -573,7 +592,7 @@ def pushC (C : ConsSch) (m : Mem) (t B : Word) (ks : List Word) (h j : Word) : O
 
 /-- The probe of tier `t` for key `ks` (hash `h`). -/
 def probeC (C : ConsSch) (m : Mem) (ks : List Word) (h t : Word) : List Word :=
-  cprobeW (m.arr64 C.sa) (C.mtM m ks t) t (baseW m t) (gnW C.sa m) (homeW h (gnW C.sa m)) 0
+  cprobeW (m.arr64 C.sa) (C.mtM m (ks ++ [h]) t) t (baseW m t) (gnW C.sa m) (homeW h (gnW C.sa m)) 0
 
 /-- **The L model of `intern_X(k)`**: the handle and the memory after, `none` where the L code
 aborts. The persistent probe unless skipped, the scratch probe if the scratch tier is open, the
@@ -610,10 +629,6 @@ theorem argsOf_self (m : Mem) (ks : List Word) (k : Nat) (h : ks.length = k) :
     argsOf 0 k { mem := m, loc := Locals.init ks } = ks := by
   subst h; simpa using argsOf_init [] ks [] m
 
-theorem argsL_app (t : Word) (ks rest : List Word) (k : Nat) (h : ks.length = k) :
-    argsL 1 k (t :: (ks ++ rest)) = ks := by
-  subst h; simpa using argsL_eq [t] ks rest ks.length rfl
-
 theorem init_app_past (t : Word) (ks rest : List Word) (k a : Nat) (h : ks.length = k) :
     Locals.init (t :: (ks ++ rest)) (a + 1 + k) = Locals.init rest a := by
   subst h; simpa [Nat.add_assoc, Nat.add_comm] using init_past [t] ks rest a
@@ -640,6 +655,8 @@ theorem init_push_j (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (t 
   apply init_last
   split <;> simp <;> omega
 
+-- the no-skip arm's normalising `simp` needs more than the default (heartbeats, not search)
+set_option maxHeartbeats 800000 in
 /-- **`intern_X(k)`** returns the handle and the memory of `consInternM`. -/
 theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
@@ -671,7 +688,8 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
         argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
         argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
-        argsOf_self _ ks C.nk hks, argsL_app _ ks _ C.nk hks, Locals.init_cons_zero,
+        argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+        Locals.init_cons_zero,
         init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
         argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
         self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
@@ -695,7 +713,8 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
         argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
         argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
-        argsOf_self _ ks C.nk hks, argsL_app _ ks _ C.nk hks, Locals.init_cons_zero,
+        argsOf_self _ ks C.nk hks, argsL_key _ _ ks C.nk hks, argsL_app _ ks _ C.nk hks,
+        Locals.init_cons_zero,
         init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
         argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
         self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)

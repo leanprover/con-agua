@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.SlotGrowSpec
+public import ConAgua.Arena.Pool
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
