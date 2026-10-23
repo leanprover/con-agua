@@ -517,7 +517,7 @@ theorem mrehashLoopG_step_spec (n : Nat) (s₀ : St) :
 
 end put
 
-theorem mgrowBlkG_step_spec (n : Nat) (s₀ : St) :
+theorem mgrowBlkG_step_spec (S : MemoSch) (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mgrowBlkG S)
     ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
@@ -547,7 +547,7 @@ theorem memoPutG_spec (S : MemoSch) (p : Prog) (f : FnName) (hp : p.lookup f = s
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        mgrowBlkG_step_spec (S := S) (p := p) n] <;>
+        mgrowBlkG_step_spec S p n] <;>
       finish [mputG, mputMem, mputMemE, nG, mbG, hdG, epG, cntG, dfltN]
 
 /-! ## `X_clear()` -/
