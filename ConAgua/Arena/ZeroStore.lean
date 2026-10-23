@@ -171,7 +171,7 @@ theorem zeroOK : ConsOK p zeroCS where
     simp [zeroCS, condOf, Cond.pval, Expr.pval, zmatchW, Cmp.eval, L.Notation.blk]
   ghash := zhash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [zeroCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, zeroHashW]
@@ -183,6 +183,8 @@ theorem zeroOK : ConsOK p zeroCS where
   room := fun s => by
     simp only [zeroCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [zeroCS] at he
+  pre := rfl
+  colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
 
@@ -192,7 +194,7 @@ theorem zeroFind_spec (hp : p.lookup "zero_find" = some zeroFind) (n : Nat) (s�
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) t
         (baseW s₀.mem t) (nSlotsZ s₀.mem) (homeW h (nSlotsZ s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p zeroCS (((zeroOK p).match_)) hp n s₀ t [] rfl h
+  consFindG_spec p zeroCS (((zeroOK p).match_)) hp n s₀ t [] rfl h trivial
 
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl
@@ -218,7 +220,7 @@ theorem internZero_spec (hpf : p.lookup "zero_find" = some zeroFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_zero" []
     ⦃fun r s' => LocEq s' s₀ ∧ zinternW s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p zeroCS (zeroOK p) hpf hpp "intern_zero" hp n s₀ [] rfl
+  consInternG_spec p zeroCS (zeroOK p) hpf hpp "intern_zero" hp n s₀ [] rfl trivial
 
 end specs
 

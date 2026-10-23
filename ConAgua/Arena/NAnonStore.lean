@@ -172,7 +172,7 @@ theorem nanonOK : ConsOK p nanonCS where
     simp [nanonCS, condOf, Cond.pval, Expr.pval, namatchW, Cmp.eval, L.Notation.blk]
   ghash := nahash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [nanonCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, nahashW]
@@ -184,6 +184,8 @@ theorem nanonOK : ConsOK p nanonCS where
   room := fun s => by
     simp only [nanonCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [nanonCS] at he
+  pre := rfl
+  colA := by simp [nanonCS]
   push_np := by decide
   arrs := by decide
 
@@ -193,7 +195,7 @@ theorem nanonFind_spec (hp : p.lookup "nanon_find" = some nanonFind) (n : Nat) (
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) t
         (baseW s₀.mem t) (nSlotsNA s₀.mem) (homeW h (nSlotsNA s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p nanonCS (((nanonOK p).match_)) hp n s₀ t [] rfl h
+  consFindG_spec p nanonCS (((nanonOK p).match_)) hp n s₀ t [] rfl h trivial
 
 theorem napushOK_eqC (m : Mem) (t : Word) : napushOK m t = pushOKC nanonCS m t := by
   simp only [napushOK, pushOKC, nacnt, cntC, nanonCS, ← decide_not, UInt64.not_le]; rfl
@@ -219,7 +221,7 @@ theorem internNAnon_spec (hpf : p.lookup "nanon_find" = some nanonFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nanon" []
     ⦃fun r s' => LocEq s' s₀ ∧ nainternW s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p nanonCS (nanonOK p) hpf hpp "intern_nanon" hp n s₀ [] rfl
+  consInternG_spec p nanonCS (nanonOK p) hpf hpp "intern_nanon" hp n s₀ [] rfl trivial
 
 end specs
 

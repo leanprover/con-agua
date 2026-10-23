@@ -140,7 +140,8 @@ theorem zinternW_eq (m : Mem) :
   have ec : ∀ t, cntC zeroCS m t = cntW zeroSch m t := fun t => rfl
   have eh : zeroCS.qhM m [] = zeroHashW := rfl
   have es : skipC zeroCS m [] = 0 := rfl
-  simp only [zinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
+  simp only [zinternW, consInternM, internM, pushM, pushC, pushMX_none (C := zeroCS) rfl,
+    ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_zero` refines `internLNode .zero` -/

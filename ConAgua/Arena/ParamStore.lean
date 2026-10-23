@@ -169,7 +169,7 @@ theorem paramOK : ConsOK p paramCS where
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := phash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [paramCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, paramHashW, argsOf, BinOp.eval]
@@ -181,6 +181,8 @@ theorem paramOK : ConsOK p paramCS where
   room := fun s => by
     simp only [paramCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [paramCS] at he
+  pre := rfl
+  colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
 
@@ -190,7 +192,7 @@ theorem paramFind_spec (hp : p.lookup "param_find" = some paramFind) (n : Nat) (
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) t u
         (baseW s₀.mem t) (nSlotsP s₀.mem) (homeW h (nSlotsP s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p paramCS (((paramOK p).match_)) hp n s₀ t [u] rfl h
+  consFindG_spec p paramCS (((paramOK p).match_)) hp n s₀ t [u] rfl h trivial
 
 theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
   simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl
@@ -216,7 +218,7 @@ theorem internParam_spec (hpf : p.lookup "param_find" = some paramFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_param" [u]
     ⦃fun r s' => LocEq s' s₀ ∧ pinternW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p paramCS (paramOK p) hpf hpp "intern_param" hp n s₀ [u] rfl
+  consInternG_spec p paramCS (paramOK p) hpf hpp "intern_param" hp n s₀ [u] rfl trivial
 
 end specs
 

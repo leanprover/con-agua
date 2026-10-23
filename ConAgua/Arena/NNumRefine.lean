@@ -189,7 +189,8 @@ theorem nninternW_eq (m : Mem) (pre u : Word) :
   have ec : ∀ t, cntC nnumCS m t = cntW nnumSch m t := fun t => rfl
   have eh : nnumCS.qhM m [pre, u] = nnumHashW pre u := rfl
   have es : skipC nnumCS m [pre, u] = 0 := rfl
-  simp only [nninternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
+  simp only [nninternW, consInternM, internM, pushM, pushC, pushMX_none (C := nnumCS) rfl,
+    ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_nnum` refines `internNNode (.num _ _)` -/

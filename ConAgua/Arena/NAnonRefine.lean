@@ -143,7 +143,8 @@ theorem nainternW_eq (m : Mem) :
   have ec : ∀ t, cntC nanonCS m t = cntW nanonSch m t := fun t => rfl
   have eh : nanonCS.qhM m [] = nahashW := rfl
   have es : skipC nanonCS m [] = 0 := rfl
-  simp only [nainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
+  simp only [nainternW, consInternM, internM, pushM, pushC, pushMX_none (C := nanonCS) rfl,
+    ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_nanon` refines `internNNode .anonymous` -/

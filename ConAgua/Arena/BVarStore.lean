@@ -171,7 +171,7 @@ theorem bvarOK : ConsOK p bvarCS where
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := bhash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [bvarCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, bvarHashW, argsOf, BinOp.eval]
@@ -183,6 +183,8 @@ theorem bvarOK : ConsOK p bvarCS where
   room := fun s => by
     simp only [bvarCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [bvarCS] at he
+  pre := rfl
+  colA := by simp [bvarCS]
   push_np := by decide
   arrs := by decide
 
@@ -192,7 +194,7 @@ theorem bvarFind_spec (hp : p.lookup "bvar_find" = some bvarFind) (n : Nat) (s�
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = bprobeW (s₀.mem.arr64 BSLOT) (s₀.mem.arr64 BREC) t u
         (baseW s₀.mem t) (nSlotsB s₀.mem) (homeW h (nSlotsB s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p bvarCS ((bvarOK p).match_) hp n s₀ t [u] rfl h
+  consFindG_spec p bvarCS ((bvarOK p).match_) hp n s₀ t [u] rfl h trivial
 
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl
@@ -218,7 +220,7 @@ theorem internBVar_spec (hpf : p.lookup "bvar_find" = some bvarFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_bvar" [u]
     ⦃fun r s' => LocEq s' s₀ ∧ binternW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p bvarCS (bvarOK p) hpf hpp "intern_bvar" hp n s₀ [u] rfl
+  consInternG_spec p bvarCS (bvarOK p) hpf hpp "intern_bvar" hp n s₀ [u] rfl trivial
 
 end specs
 

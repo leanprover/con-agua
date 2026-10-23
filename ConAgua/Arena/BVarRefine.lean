@@ -159,7 +159,8 @@ theorem binternW_eq (m : Mem) (u : Word) :
   have ec : ∀ t, cntC bvarCS m t = cntW bvarSch m t := fun t => rfl
   have eh : bvarCS.qhM m [u] = bvarHashW u := rfl
   have es : skipC bvarCS m [u] = 0 := rfl
-  simp only [binternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
+  simp only [binternW, consInternM, internM, pushM, pushC, pushMX_none (C := bvarCS) rfl,
+    ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_bvar` refines `internE (.bvar _)` -/

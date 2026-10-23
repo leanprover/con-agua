@@ -176,7 +176,7 @@ theorem nnumOK : ConsOK p nnumCS where
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := nnhash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [nnumCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, nnumHashW, argsOf, BinOp.eval]
@@ -188,6 +188,8 @@ theorem nnumOK : ConsOK p nnumCS where
   room := fun s => by
     simp only [nnumCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
   skips := by intro e he; simp [nnumCS] at he
+  pre := rfl
+  colA := by simp [nnumCS]
   push_np := by decide
   arrs := by decide
 
@@ -197,7 +199,7 @@ theorem nnumFind_spec (hp : p.lookup "nnum_find" = some nnumFind) (n : Nat) (s�
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) t pre u
         (baseW s₀.mem t) (nSlotsNN s₀.mem) (homeW h (nSlotsNN s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p nnumCS (((nnumOK p).match_)) hp n s₀ t [pre, u] rfl h
+  consFindG_spec p nnumCS (((nnumOK p).match_)) hp n s₀ t [pre, u] rfl h trivial
 
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl
@@ -223,7 +225,7 @@ theorem internNNum_spec (hpf : p.lookup "nnum_find" = some nnumFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nnum" [pre, u]
     ⦃fun r s' => LocEq s' s₀ ∧ nninternW s₀.mem pre u = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p nnumCS (nnumOK p) hpf hpp "intern_nnum" hp n s₀ [pre, u] rfl
+  consInternG_spec p nnumCS (nnumOK p) hpf hpp "intern_nnum" hp n s₀ [pre, u] rfl trivial
 
 end specs
 

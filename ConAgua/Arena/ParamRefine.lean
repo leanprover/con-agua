@@ -168,7 +168,8 @@ theorem pinternW_eq (m : Mem) (u : Word) :
   have ec : ∀ t, cntC paramCS m t = cntW paramSch m t := fun t => rfl
   have eh : paramCS.qhM m [u] = paramHashW u := rfl
   have es : skipC paramCS m [u] = 0 := rfl
-  simp only [pinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
+  simp only [pinternW, consInternM, internM, pushM, pushC, pushMX_none (C := paramCS) rfl,
+    ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_param` refines `internLNode (.param _)` -/
