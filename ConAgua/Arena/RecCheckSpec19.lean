@@ -7,6 +7,8 @@ import ConAgua.Arena.RecCheckSpec18
 `.recInfo` record), `cons_block_recs_push` (with lane `decls2`'s `env_push`), and the recursion.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
