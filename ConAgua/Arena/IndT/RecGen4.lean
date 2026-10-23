@@ -43,7 +43,7 @@ theorem cruleW_okC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
     (hie : ConRon.Bridge.Inductives.IFEnvOKS env₂ (feR.restrictTo visT.toNat) a.store) :
     ∃ a', (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)).run a =
       .ok (decI gen, a') ∧ StageC dn visR feR envR m' a' ∧ IWGrow m m' ∧ r = [gen] ∧
-      AbsOK m' := by
+      AbsOK m' ∧ ConRon.Bridge.CoreStep V envR feR a a' := by
   cases N with
   | zero => simp [cruleW] at h
   | succ N =>
@@ -145,7 +145,7 @@ theorem cruleW_okC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
   have eb : b = true := by rw [← hb5.1]; simpa using hb
   subst eb
   refine ⟨a8, ?_, hC4.of_check (hS5.unrestrict hC.stage.1.env.vis) hA5 c18.ok (p8.ext),
-    (((hg1.trans hg2).trans hg3).trans hg4).trans hg5, rfl, hA5⟩
+    (((hg1.trans hg2).trans hg3).trans hg4).trans hg5, rfl, hA5, c18⟩
   simp only [ConRon.Arena.classRuleOk, StateT.run_bind, hl, exc_ok_bind', hf, ha, hc, hi,
     flushCaches_run, hs, hdom', if_true, if_false, Bool.false_eq_true, ite_true, ite_false,
     Bool.not_true, Bool.not_false]
@@ -174,7 +174,7 @@ theorem classRuleOk_refinesC (hp : CruleProg p) (N : Nat) (hN : N ≤ 2 ^ 62) (s
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (classRuleOk_spec p hp (realCall p) (realCall_spec p) N s₀ visT visR cvR n gen) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hC', hg, rfl, hA'⟩ :=
+  obtain ⟨a', hrun, hC', hg, rfl, hA', -⟩ :=
     cruleW_okC hq henvR hN hm hC hgen hqd hqb hA hcvP hgP hie
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact ⟨hgen, rfl⟩, hA'⟩

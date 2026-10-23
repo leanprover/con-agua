@@ -357,8 +357,8 @@ theorem crsW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
   · exact Nat.le_of_eq ht6
 
 /-- **`class_rules_ok` refines `classRulesOk`** (through `class_gen_rule`'s and `class_rule_ok`'s
-stubs): the rules, a handle slice below the top. -/
-@[refines ConRon.Arena.classRulesOk]
+stubs): the rules, a handle slice below the top. Under `StageR`; the census link is
+`classRulesOk_refinesC` (`IndT/RecGen9.lean`). -/
 theorem classRulesOk_refines (p : Prog) (hp : CrsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : IFEnv) (g rco rcl cgo cgl cvR c xo xl : Word)
     (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal) (cv : IConstantVal) (Xs : List ClassCtor)
