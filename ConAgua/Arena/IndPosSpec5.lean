@@ -521,7 +521,7 @@ theorem posmemo_rx_mfr (n : Nat) :
     by_cases hb : 4294967296 ≤ hd
     · simp [frK4, hb] at hh
     rw [frK4_ok (hb := hb)] at hh
-    cases h4 : stubM "mk_app_n_f" m3 [hd, q, l] with
+    cases h4 : mknF m3 [hd, q, l] with
     | none => rw [h4] at hh; simp [frK5] at hh
     | some p4 =>
     obtain ⟨rr, m4⟩ := p4
@@ -529,7 +529,7 @@ theorem posmemo_rx_mfr (n : Nat) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hh
     obtain ⟨-, -, rfl⟩ := hh
     exact ((((posRecW_mfr h1).up.trans (iDs _ _ _ _ _ _ _ h2)).trans (MFr.of_low (ceinternW_low h3)).up).trans
-      (MFr.stub (by decide) h4).up)
+      (MFr.ofMknF h4).up)
   have hMap : ∀ (m m' : Mem) (f i a b : Word), rxMapW (n + 1) m f i = some (a, b, m') → RxFr m m' := by
     intro m m' f i a b hh
     by_cases h0 : rdW (m.arr64 IW) f = 0
@@ -622,14 +622,14 @@ theorem posmemo_rx_mfr (n : Nat) :
         by_cases hb : 4294967296 ≤ hd
         · simp [rtK1, hb] at hh
         rw [rtK1_ok (h := hb)] at hh
-        cases hst : stubM "mk_app_n_f" m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)] with
+        cases hst : mknF m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)] with
         | none => rw [hst] at hh; simp [rtK2] at hh
         | some p2 =>
         obtain ⟨rr, m2⟩ := p2
         rw [hst, rtK2_some] at hh
         simp only [Option.some.injEq, Prod.mk.injEq] at hh
         obtain ⟨-, -, rfl⟩ := hh
-        exact ((MFr.of_low (ceinternW_low hc)).trans (MFr.stub (by decide) hst)).up
+        exact ((MFr.of_low (ceinternW_low hc)).trans (MFr.ofMknF hst)).up
       · rw [rxRootW_out (h := hin)] at hh
         simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2.2]; exact MFr.refl _ _ _
     by_cases hh2 : i = hiW m ctx (nn - 1)

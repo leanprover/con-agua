@@ -3,6 +3,7 @@ import ConAgua.Arena.RecClass
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndView
 import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndRealSpine
 
 /-!
 # Refinements of `RecClass` (lane `induct`)
@@ -531,7 +532,7 @@ theorem EStore.viewFVarIdx_of_view (st : EStore) (i : EIdx) (k : Nat) (ty : EIdx
 
 /-- The word model of `fvar_head`. -/
 def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
-  match stubM "get_app_fn_f" m [CWF, e] with
+  match gafF m [CWF, e] with
   | none => none
   | some (r, m1) =>
     if r.headD 0 >>> 28 = 1 then
@@ -540,7 +541,7 @@ def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
     else some ([0, 0], m1)
 
 theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
-    (hv : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (e : Word) :
+    (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ fvarHeadW s₀.mem e = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, fvarHead]
@@ -549,7 +550,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
+        gafF_spec p had n, eView_spec p hv n] <;>
       finish [fvarHeadW]
 
 theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
@@ -574,13 +575,13 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       IWGrow m m' ∧ r = (match x with | some i => [1, UInt64.ofNat i] | none => [0, 0]) ∧
       (∀ i, x = some i → i < 2 ^ 64) := by
   simp only [fvarHeadW] at h
-  cases hs : stubM "get_app_fn_f" m [CWF, e] with
+  cases hs : gafF m [CWF, e] with
   | none => rw [hs] at h; simp at h
   | some rm =>
     obtain ⟨r1, m1⟩ := rm
     rw [hs] at h
     simp only at h
-    obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := getAppFn_spec dn vis fe CWF e he m m1 a r1 hs hS
+    obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
     rw [CWF_eq] at hrun1
     generalize r1.headD 0 = w at hd1 hd2 h
     by_cases hf : w >>> 28 = 1
@@ -654,7 +655,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
 /-- **`fvar_head` refines `fvarHead`** (through the `get_app_fn` stub and `e_view`). -/
 @[refines ConRon.Arena.fvarHead]
 theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
-    (hv : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e)
     (hS : StageR dn vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_head" [e]
@@ -663,7 +664,7 @@ theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
       IWGrow s₀.mem s'.mem ∧
       r = (match AM.res (ConRon.Arena.fvarHead (decI e)) a₀ with
         | some i => [1, UInt64.ofNat i] | none => [0, 0]); ⊤⦄ := by
-  refine triple_post (fvarHead_spec p hp hv n s₀ e) ?_
+  refine triple_post (fvarHead_spec p hp hv had n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hr, -⟩ := fvarHeadW_ok dn vis fe _ _ a₀ e he r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.fvarHead (decI e)) a₀ a' x hrun

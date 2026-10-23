@@ -60,7 +60,7 @@ def mitK4b (n : Nat) (xso xsl e : Word) : Option (List Word × Mem) → Option (
 
 def mitK4 (n : Nat) (xso xsl e mt : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => mitK4b n xso xsl e (stubM "mk_app_n_f" m4 [mt, r4.headD 0, r4.tail.headD 0])
+  | some (r4, m4) => mitK4b n xso xsl e (mknF m4 [mt, r4.headD 0, r4.tail.headD 0])
 
 def mitK3 (n : Nat) (xso xsl idxo idxl e fx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -72,7 +72,7 @@ def mitK2 (n : Nat) (g t xso xsl idxo idxl e : Word) : Option (List Word × Mem)
 
 def mitK1 (n : Nat) (g t xso xsl idxo idxl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => mitK2 n g t xso xsl idxo idxl e (stubM "mk_app_n_f" m1 [r1.headD 0, xso, xsl])
+  | some (r1, m1) => mitK2 n g t xso xsl idxo idxl e (mknF m1 [r1.headD 0, xso, xsl])
 
 /-- **The model of `class_gen_minor_ty_ih1_tail`.** -/
 def itW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
@@ -181,7 +181,7 @@ def c2K2b (n : Nat) (d fo fl ihso ihsl : Word) : Option (List Word × Mem) → O
 
 def c2K2 (n : Nat) (d fo fl ihso ihsl mc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => c2K2b n d fo fl ihso ihsl (stubM "mk_app_n_f" m2 [mc, r2.headD 0, r2.tail.headD 0])
+  | some (r2, m2) => c2K2b n d fo fl ihso ihsl (mknF m2 [mc, r2.headD 0, r2.tail.headD 0])
 
 def c2K1 (n : Nat) (d nPc fo fl ihso ihsl rao ral capp : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -210,7 +210,7 @@ def cK2b (n : Nat) (g c d nPc fo fl ihso ihsl rao ral cc : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
-    cK3 n g c d nPc fo fl ihso ihsl rao ral (stubM "mk_app_n_f" m3 [cc, r3.headD 0, r3.tail.headD 0])
+    cK3 n g c d nPc fo fl ihso ihsl rao ral (mknF m3 [cc, r3.headD 0, r3.tail.headD 0])
 
 def cK2 (n : Nat) (g c d ds0 dl0 nPc fo fl ihso ihsl rao ral : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
@@ -283,13 +283,13 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem)
 theorem itW_eq : itW (n + 1) m g t xso xsl idxo idxl fvso fvsl i e =
     mitK1 n g t xso xsl idxo idxl e (fuelW n (exprGetDW m fvso fvsl i)) := rfl
 theorem mitK1_some : mitK1 n g t xso xsl idxo idxl e (some (r1, m1)) =
-    mitK2 n g t xso xsl idxo idxl e (stubM "mk_app_n_f" m1 [r1.headD 0, xso, xsl]) := rfl
+    mitK2 n g t xso xsl idxo idxl e (mknF m1 [r1.headD 0, xso, xsl]) := rfl
 theorem mitK2_some : mitK2 n g t xso xsl idxo idxl e (some (r2, m2)) =
     mitK3 n xso xsl idxo idxl e (r2.headD 0) (rec2MotVarF n m2 g t) := rfl
 theorem mitK3_some : mitK3 n xso xsl idxo idxl e fx (some (r3, m3)) =
     mitK4 n xso xsl e (r3.headD 0) (snocW n m3 idxo idxl fx) := rfl
 theorem mitK4_some : mitK4 n xso xsl e mt (some (r4, m4)) =
-    mitK4b n xso xsl e (stubM "mk_app_n_f" m4 [mt, r4.headD 0, r4.tail.headD 0]) := rfl
+    mitK4b n xso xsl e (mknF m4 [mt, r4.headD 0, r4.tail.headD 0]) := rfl
 theorem mitK4b_some : mitK4b n xso xsl e (some (r5, m5)) = mitK5 (iclW n m5 xso xsl e (r5.headD 0)) := rfl
 theorem mitK5_some : mitK5 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem iclW_eq : iclW (n + 1) m xso xsl e body = iclK1 n e body (stubM "fvar_type_ds" m [xso, xsl]) := rfl
@@ -340,7 +340,7 @@ theorem c2K1_some : c2K1 n d nPc fo fl ihso ihsl rao ral capp (some (r1, m1)) =
     c2K2 n d fo fl ihso ihsl (r1.headD 0)
       (snocW n m1 (if nPc < ral then rao + nPc else rao) (if nPc < ral then ral - nPc else 0) capp) := rfl
 theorem c2K2_some : c2K2 n d fo fl ihso ihsl mc (some (r2, m2)) =
-    c2K2b n d fo fl ihso ihsl (stubM "mk_app_n_f" m2 [mc, r2.headD 0, r2.tail.headD 0]) := rfl
+    c2K2b n d fo fl ihso ihsl (mknF m2 [mc, r2.headD 0, r2.tail.headD 0]) := rfl
 theorem c2K2b_some : c2K2b n d fo fl ihso ihsl (some (r3, m3)) = c2K3 (mcW n m3 fo fl ihso ihsl d (r3.headD 0)) := rfl
 theorem c2K3_some : c2K3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem mcW_eq : mcW (n + 1) m fo fl ihso ihsl d res = mcK1 n d ihso ihsl res (stubM "fvar_type_ds" m [fo, fl]) := rfl
@@ -361,7 +361,7 @@ theorem cK2_ok (h : ¬ 4294967296 ≤ cc) : cK2 n g c d ds0 dl0 nPc fo fl ihso i
     cK2b n g c d nPc fo fl ihso ihsl rao ral cc (appendW n m2 ds0 dl0 fo fl) := by
   rw [cK2, if_neg h]
 theorem cK2b_some : cK2b n g c d nPc fo fl ihso ihsl rao ral cc (some (r3, m3)) =
-    cK3 n g c d nPc fo fl ihso ihsl rao ral (stubM "mk_app_n_f" m3 [cc, r3.headD 0, r3.tail.headD 0]) := rfl
+    cK3 n g c d nPc fo fl ihso ihsl rao ral (mknF m3 [cc, r3.headD 0, r3.tail.headD 0]) := rfl
 theorem cK3_some : cK3 n g c d nPc fo fl ihso ihsl rao ral (some (r3, m3)) =
     cK4 (c2W n m3 g c d nPc fo fl ihso ihsl rao ral (r3.headD 0)) := rfl
 theorem cK4_some : cK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
@@ -443,7 +443,7 @@ theorem classGenMinorTyIh1Tail_spec (n : Nat) (s₀ : St) (g t xso xsl idxo idxl
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, stubM_spec p "mk_app_n_f" n,
+        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
         rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
         slSnoc_specW p h.alloc h.copy h.snoc n, classGenMinorTyIh1Close_spec p h n] <;>
       finish (gen := 20) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
@@ -502,7 +502,7 @@ theorem classGenMinorTyConcl2_spec (n : Nat) (s₀ : St) (g c d nPc fo fl ihso i
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-        slSnoc_specW p h.alloc h.copy h.snoc n, stubM_spec p "mk_app_n_f" n,
+        slSnoc_specW p h.alloc h.copy h.snoc n, mknF_spec p h.ad n,
         classGenMinorTyClose_spec p h n] <;>
       finish (gen := 20) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10]
 
@@ -518,7 +518,7 @@ theorem classGenMinorTyConcl_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nP
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stubM_spec p "get_app_args_f" n, internConst_spec p h.cf h.cp h.ic n,
-        slAppend_specW p h.alloc h.copy h.app n, stubM_spec p "mk_app_n_f" n,
+        slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n,
         classGenMinorTyConcl2_spec p h n] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
         loc_init10, loc_init11, loc_init12]
@@ -561,7 +561,7 @@ theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma n, classGenMinorCi_spec p h n,
+        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
         classGenMinorTyBody_spec p h n] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -644,7 +644,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   subst hfd
   rw [mitK1_some]
   refine RSim.bind (K := fun o => K (i1K3 (mitK2 n g t _ _ _ _ e o))) hK
-    ((mkAppN_spec dn vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩) ?_
   rintro ⟨r4, m4⟩ fx a4 - ⟨hS4, hg4, hfxH, hfxd⟩
   dsimp only at hS4 hg4 hfxH hfxd
   subst hfxd
@@ -664,7 +664,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   rw [mitK4_some, hr6]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := fun o => K (i1K3 (mitK4b n _ _ e o))) hK
-    ((mkAppN_spec dn vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩) ?_
   rintro ⟨r7, m7⟩ body a7 - ⟨hS7, hg7, hbH, hbd⟩
   dsimp only at hS7 hg7 hbH hbd
   subst hbd

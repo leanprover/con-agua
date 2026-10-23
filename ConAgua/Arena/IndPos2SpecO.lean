@@ -18,6 +18,7 @@ open L.Arena
 /-- The lookups of the `nestPos` block (and its leaves). -/
 structure NbLook (p : Prog) : Prop where
   hi1 : I1Prog p
+  na : NaF p
   ct : CtLook p
   nit : NitLook p
   nag : NagLook p
@@ -226,7 +227,7 @@ theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv
   simp only [callFn, nestCtorsOneL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestCtorsCrest_spec p L.ct n, hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
-      nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.hro n, nestCtorNf_spec' p L n,
+      nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.nt.ad L.hro n, nestCtorNf_spec' p L n,
       slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, rec6_specW p R.ha L.h6 n] <;>
     simp_all [nbOneW_succ, nbOneK1_some, nbOneK2_some, nbOneK3_some, nbOneK4_some, nbOneK5_some,
       nbOneK6_some, nbOneK7_some,
@@ -255,8 +256,8 @@ theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Wo
   rw [invoke_eq _ L.pframe]
   simp only [callFn, nestFrameL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      stubM_spec p "intern_nanon" n, internConst_spec p R.cf R.cp R.ci n,
-      stubM_spec p "mk_app_n_f" n, stubM_spec p "infer_type_core" n,
+      naF_spec p L.na n, internConst_spec p R.cf R.cp R.ci n,
+      mknF_spec p L.nt.ad n, stubM_spec p "infer_type_core" n,
       nestFrameGrp_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hfg n,
       nestGroupCtors_spec p L.nt L.nit.hc2 L.hap L.hgc n,
       nestFrameHoles_spec p R.ha L.nit.hc2 L.nag.hsn R.hl.hff R.hl.hfp R.hl.hif L.hfh n, hCtors] <;>
@@ -325,7 +326,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
   rw [invoke_eq _ L.papp]
   simp only [callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      stubM_spec p "get_app_args_f" n, stubM_spec p "get_app_fn_f" n, eView_spec p R.hl.hv n,
+      stubM_spec p "get_app_args_f" n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
       nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
     simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, nbAppK4_some, nbAppK5_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,

@@ -68,12 +68,12 @@ theorem tmpW_mfr {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word} (h : t
   by_cases hb : 4294967296 ≤ hd
   · rw [if_pos hb] at h; cases h
   rw [if_neg hb] at h
-  cases h3 : stubM "mk_app_n_f" m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)] with
+  cases h3 : mknF m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)] with
   | none => rw [h3] at h; simp [tmpK3] at h
   | some z =>
   obtain ⟨r3, m3⟩ := z
   rw [h3, tmpK3_some] at h
-  refine (MFr.ofStub h3).trans ?_
+  refine (MFr.ofMknF h3).trans ?_
   cases h4 : stubM "infer_type_core" m3 [vis, rP, r3.headD 0] with
   | none => rw [h4] at h; simp [tmpK4] at h
   | some w =>
@@ -227,9 +227,9 @@ theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name
     (Q := fun r x m' a' => decW0E m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m1 m' ∧ PosMR m') ?_ ?_
   · intro r2 m2 e2
     obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-      (stubM_spec p "mk_app_n_f" n _ [r1.headD 0, _, _]) e2
-    obtain ⟨x, a', hrun, hS2, hg2, hx⟩ := mkAppN_spec dn vis fe _ _ _ hr1H nk.ds m1 s2.mem a1 r2 hs2 ⟨hS1, hds1⟩
-    exact ⟨x, a', hrun, hx, hS2, hg2, hP1.fr (MFr.ofStub hs2)⟩
+      (mknF_spec p hP.tmp.ad n _ [r1.headD 0, _, _]) e2
+    obtain ⟨x, a', hrun, hS2, hg2, hx⟩ := mknF_ok dn vis fe _ _ _ hr1H nk.ds m1 s2.mem a1 r2 hs2 ⟨hS1, hds1⟩
+    exact ⟨x, a', hrun, hx, hS2, hg2, hP1.fr (MFr.ofMknF hs2)⟩
   rintro r2 mty m2 a2 ⟨⟨hmH, hmd⟩, hS2, hg2, hP2⟩
   have hg02 := hg1.trans hg2
   -- the major
