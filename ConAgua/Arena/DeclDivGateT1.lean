@@ -9,7 +9,8 @@ import ConRon.Bridge.Checker.DivMod
 
 `div_mod_pin_guard` (`pgC`) and `div_mod_cert_guard` (`cgC`) under `StageC`: their leaves by their
 `StageR` refinements (`DeclDivMod*.lean`), the leaves' write set and con-ron's step lemmas
-(`StageC.of_core`), the walks the stubs stand for by their `StageT` contracts (`IndRealWalkT.lean`, `IndStubsT.lean`)
+(`StageC.of_core`), the walks the stubs stand for by their `StageT` refinements (`IndRealWalkT.lean`, `apdF_okT`,
+`crfF_okT` with `consts_resolve_ffast`'s memo threaded: `CrKeep`, `CrOKFrame.lean`)
 and con-ron's `RunsC` lemmas (`lbbF_runsC`, `hasFvarF_runsC`, `alpd0_runsC`, `crF_runsC`). The twin
 side follows con-ron's `divModPinGuard_run` and `divModCertGuard_run` (`Bridge/Checker/DivMod.lean`).
 -/
@@ -60,6 +61,22 @@ theorem CallRef.bindL {α β : Type} {p : Prog} {f : FnName} {args : List Word}
     obtain ⟨x, a1, hr, hp⟩ := h n m a r1 m1 hpre hc
     exact ⟨r1, m1, x, a1, hr, hp, callW_leafFrame hcl hf hc, hw⟩
 
+/-- `CallRef.bindL` with `consts_resolve_ffast`'s memo carried across the leaf (`CrKeep.call`). -/
+theorem CallRef.bindLC {α β : Type} {p : Prog} {f : FnName} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : CallRef p f args pre op post) (hcl : LeafClosed p) (hf : f ∈ leafFns) (hkp : CrKeep p)
+    (hfi : f ∈ imFns) {n : Nat} {m : Mem} {a : AState} (hpre : pre m a) (hCr : L.Stubs.CrOK m)
+    {K : List Word → Mem → Option β} {res : β} (hw : ntBW (callW p n f args m) K = some res) :
+    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ MemFrame leafA leafC m m1 ∧
+      L.Stubs.CrOK m1 ∧ K r1 m1 = some res := by
+  cases hc : callW p n f args m with
+  | none => rw [hc] at hw; simp at hw
+  | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hc, bW_some] at hw
+    obtain ⟨x, a1, hr, hp⟩ := h n m a r1 m1 hpre hc
+    exact ⟨r1, m1, x, a1, hr, hp, callW_leafFrame hcl hf hc, hkp.call hfi hc hCr, hw⟩
+
 /-- A twin op running as a `CoreStep`, from a `RunsC` fact. -/
 theorem runsC_step {m : AM Bool} {a a' : AState} {b x : Bool}
     (h : ConRon.Bridge.RunsC V env fe m a b) (hr : m.run a = .ok (x, a')) :
@@ -76,11 +93,12 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 
 /-- **`div_mod_pin_guard` under `StageC`** (`pg_ref`'s; con-ron's `divModPinGuard_run`): the pin by
 `StageC.of_core`, the four walks by their `StageT` contracts and con-ron's `RunsC` lemmas. -/
-theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinSet}
+theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {ps c : Word} {ip : INatOpPinSet}
     {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name} {k : Nat} {m m' : Mem} {a : AState}
     {r : List Word} (hcall : callW p k "div_mod_pin_guard" [ps, vis, c] m = some (r, m'))
     (hC : StageC dn vis fe env m a) (hc : H c) (hP : PinSetR m ps ip)
-    (hps : PinSetDenote a.store ip psP) (hn : denoteN a.store.ns (decI c) = some nm) :
+    (hps : PinSetDenote a.store ip psP) (hn : denoteN a.store.ns (decI c) = some nm)
+    (hCr : L.Stubs.CrOK m) :
     ∃ x a', (divModPinGuard ip fe (decI c)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
       CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x ∧
       x = ConLeche.divModPinGuard psP env nm := by
@@ -96,9 +114,9 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
       CoreStep V env fe a a' ∧ x = ConLeche.divModPinGuard psP env nm := fun x a' hr => by
     obtain ⟨h1, h2, h3, h4⟩ := ConRon.Bridge.divModPinGuard_run hC.check hps hn hr
     exact ⟨⟨h1, h2, h3⟩, h4⟩
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hf1, hw⟩ :=
-    (divModDeclPin_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bindL hcl
-      (leaf_mem _ (by decide)) ⟨hC.stage, hc, hP⟩ hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hf1, hCr1, hw⟩ :=
+    (divModDeclPin_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bindLC hcl
+      (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hC.stage, hc, hP⟩ hCr hw
   obtain ⟨e1, hpd⟩ := ConRon.Bridge.divModDeclPin_run hC.check.state hC.check.pins hps hn hrun1
   rw [e1] at hrun1 hS1
   have hC1 := StageC.of_core hC hS1 hf1 (CoreStep.refl hC.check)
@@ -109,6 +127,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
+  have hCr2 := CrOK.frame hCr1 (lbbF_frame h2) (by decide) (by decide)
   obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
     lbbF_okT dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a r2 h2 hC1.stageT
   rw [fuelW_eq, h0w] at hrun2
@@ -135,6 +154,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, bW_some] at hw
+  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
   obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
     hffF_okT dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq] at hrun3
@@ -161,6 +181,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, bW_some] at hw
+  have hCr4 := CrOK.frame hCr3 (apdF_frame (apdF_of_callW hD.apd h4)) (by decide) (by decide)
   obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 (r1.headD 0)
     hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
@@ -180,13 +201,13 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   have hx4 := decW0B_true hd4 z4
   have hpd4 := ConRon.Bridge.denote_ext hpd3 c4.ext
   -- consts resolve
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, r1.headD 0] with
+  cases h5 : realCall p k "consts_resolve_ffast" [vis, r1.headD 0] m4 with
   | none => rw [h5] at hw; simp at hw
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, bW_some] at hw
-  obtain ⟨x5, a5, hrun5, hT5, hg5, hd5⟩ :=
-    constsResolveFFastT_spec dn vis fe (r1.headD 0) hl1 m4 m5 a4 r5 h5 hC4.stageT
+  obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hd5⟩, -⟩ :=
+    crfF_okT dn vis fe (r1.headD 0) hl1 m4 m5 a4 r5 (crfF_of_callW hkp.crf h5) ⟨hC4.stageT, hCr4.crMemo⟩
   obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC4.check hpd4) hrun5
   have hC5 := StageC.of_T hT5 c5.ok
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -208,7 +229,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 
 /-- **`div_mod_cert_guard` under `StageC`** (`cg_ref`'s; con-ron's `divModCertGuard_run`): the
 substitutions and `consts_resolve_all` by `StageC.of_core`, the walks by their `StageT` contracts. -/
-theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
+theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) {c annVal ho hl eqE proof : Word} {hyps : List EIdx}
     {nm : ConLeche.Name} {v ex px : ConLeche.Expr} {hx : List ConLeche.Expr} {k : Nat} {m m' : Mem}
     {a : AState} {r : List Word}
@@ -217,7 +238,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
     (hd : decHL m ho.toNat hl.toNat = some hyps) (hb : ho.toNat + hl.toNat ≤ iwTop m)
     (hn : denoteN a.store.ns (decI c) = some nm) (hv : denoteE a.store (decE annVal) = some v)
     (hh : Frontend.denoteEList a.store hyps = some hx) (he : denoteE a.store (decE eqE) = some ex)
-    (hpf : denoteE a.store (decE proof) = some px) :
+    (hpf : denoteE a.store (decE proof) = some px) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
         .ok (x, a') ∧ StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧
       decW0B m' r x ∧ x = ConLeche.divModCertGuard env nm v hx ex px := by
@@ -233,8 +254,9 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
       .ok (x, a') → CoreStep V env fe a a' ∧ x = ConLeche.divModCertGuard env nm v hx ex px :=
     fun x a' hr => ConRon.Bridge.divModCertGuard_run hC.check hn hv hh he hpf x a' hr
   -- subst_const_all
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hf1, hw⟩ :=
-    (hsA c annVal proof hc hann hpr).bindL hcl (leaf_mem _ (by decide)) hC.stage hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hf1, hCr1, hw⟩ :=
+    (hsA c annVal proof hc hann hpr).bindLC hcl (leaf_mem _ (by decide)) hkp (im_mem _ rfl)
+      hC.stage hCr hw
   obtain ⟨hi1, hpd⟩ := ConRon.Bridge.substConstAll_run coreWalkFuel hC.check.state hC.check.pins
     hn hv hpf hrun1
   have c1 := ConRon.Bridge.CoreStep.of_istep hC.check hi1
@@ -245,6 +267,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
+  have hCr2 := CrOK.frame hCr1 (lbbF_frame h2) (by decide) (by decide)
   obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
     lbbF_okT dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hC1.stageT
   rw [fuelW_eq, h0w, hx1] at hrun2
@@ -271,6 +294,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, bW_some] at hw
+  have hCr3 := CrOK.frame hCr2 (hffF_frame h3) (by decide) (by decide)
   obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
     hffF_okT dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq, hx1] at hrun3
@@ -298,6 +322,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, bW_some] at hw
+  have hCr4 := CrOK.frame hCr3 (apdF_frame (apdF_of_callW hD.apd h4)) (by decide) (by decide)
   obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 (r1.headD 0)
     hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
   rw [hx1] at hrun4
@@ -320,13 +345,13 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   have hx4 := decW0B_true hd4 z4
   have hpd4 := ConRon.Bridge.denote_ext hpd3 c4.ext
   -- consts resolve of the proof
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, r1.headD 0] with
+  cases h5 : realCall p k "consts_resolve_ffast" [vis, r1.headD 0] m4 with
   | none => rw [h5] at hw; simp at hw
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [h5, bW_some] at hw
-  obtain ⟨x5, a5, hrun5, hT5, hg5, hd5⟩ :=
-    constsResolveFFastT_spec dn vis fe (r1.headD 0) hl1 m4 m5 a4 r5 h5 hC4.stageT
+  obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hd5⟩, hCr5⟩ :=
+    crfF_okT dn vis fe (r1.headD 0) hl1 m4 m5 a4 r5 (crfF_of_callW hkp.crf h5) ⟨hC4.stageT, hCr4.crMemo⟩
   rw [hx1] at hrun5
   obtain ⟨c5, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC4.check hpd4) hrun5
   have hC5 := StageC.of_T hT5 c5.ok
@@ -356,6 +381,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   have hd5' : decHL m5 ho.toNat hl.toNat = some hyps := by
     rw [decHL_grow hG5 hb]; exact hd
   have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.1
+  have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5.crOK
   obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ :=
     sc0List_ref hD hs0 c annVal hc hann hyps ho hl k m5 a5 r6 m6 hC5.stage hd5' hb5 h6
   simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd6
@@ -370,6 +396,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   | some q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [h7, bW_some] at hw
+  have hCr7 := hkp.call (im_mem _ rfl) h7 hCr6
   obtain ⟨x7, a7, hrun7, hS7, hg7, hd7⟩ := cra_ref hD vis rfl x6 (r6.headD 0) (r6.tail.headD 0) k m6
     a6 r7 m7 hC6.stage hd6.1 hd6.2 h7
   obtain ⟨c7, -⟩ := runsC_step (ConRon.Bridge.constsResolveAll_runsC _ _ hC6.check hhs) hrun7
@@ -397,19 +424,20 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   | some q8 =>
   obtain ⟨r8, m8⟩ := q8
   rw [h8, bW_some] at hw
+  have hCr8 := hkp.call (im_mem _ rfl) h8 hCr7
   obtain ⟨x8, a8, hrun8, hS8, hg8, hl8, hx8⟩ := hs0 c annVal eqE hc hann heq k m7 a7 r8 m8 hC7.stage h8
   obtain ⟨hi8, he8⟩ := ConRon.Bridge.substConst0_run coreWalkFuel hC7.check.state hC7.check.pins
     (ConRon.Bridge.denoteN_ext hn c17.ext) (ConRon.Bridge.denote_ext hv c17.ext)
     (ConRon.Bridge.denote_ext he c17.ext) hrun8
   have c8 := ConRon.Bridge.CoreStep.of_istep hC7.check hi8
   have hC8 := StageC.of_core hC7 hS8 (callW_leafFrame hcl (leaf_mem _ (by decide)) h8) c8
-  cases h9 : stubM "consts_resolve_ffast" m8 [vis, r8.headD 0] with
+  cases h9 : realCall p k "consts_resolve_ffast" [vis, r8.headD 0] m8 with
   | none => rw [h9] at hw; simp at hw
   | some q9 =>
   obtain ⟨r9, m9⟩ := q9
   rw [h9, bW_some] at hw
-  obtain ⟨x9, a9, hrun9, hT9, hg9, hd9⟩ :=
-    constsResolveFFastT_spec dn vis fe (r8.headD 0) hl8 m8 m9 a8 r9 h9 hC8.stageT
+  obtain ⟨x9, a9, hrun9, ⟨hT9, hg9, hd9⟩, -⟩ :=
+    crfF_okT dn vis fe (r8.headD 0) hl8 m8 m9 a8 r9 (crfF_of_callW hkp.crf h9) ⟨hC8.stageT, hCr8.crMemo⟩
   rw [hx8] at hrun9
   obtain ⟨c9, -⟩ := runsC_step (ConRon.Bridge.crF_runsC hC8.check he8) hrun9
   have hC9 := StageC.of_T hT9 c9.ok
@@ -432,12 +460,12 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
   {p : Prog}
 
 /-- **`div_mod_certs_guard_go` under `StageC`** (`cggo_ref`'s; con-ron's `divModCertsGuardGo_run`). -/
-theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
+theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) (c annVal : Word) (hc : H c) (hann : H annVal)
     {nm : ConLeche.Name} {v : ConLeche.Expr} :
     ∀ (ss : List (List EIdx × EIdx)) (xs : List (List ConLeche.Expr × ConLeche.Expr))
       (proofs : List EIdx) (ps : List ConLeche.Expr) (so sl po pl : Word) (k : Nat) (m : Mem)
-      (a : AState) (res : List Word) (m' : Mem), StageC dn vis fe env m a →
+      (a : AState) (res : List Word) (m' : Mem), StageC dn vis fe env m a → L.Stubs.CrOK m →
       StmtL m so.toNat sl.toNat ss → decHL m po.toNat pl.toNat = some proofs →
       po.toNat + pl.toNat ≤ iwTop m → denoteN a.store.ns (decI c) = some nm →
       denoteE a.store (decE annVal) = some v → ConRon.Bridge.StmtsDenote a.store ss xs →
@@ -448,7 +476,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   intro ss
   induction ss with
   | nil =>
-    intro xs proofs ps so sl po pl k m a res m' hC hs hd hb hn hv hsd hpr hc'
+    intro xs proofs ps so sl po pl k m a res m' hC _ hs hd hb hn hv hsd hpr hc'
     have hsl : sl = 0 := UInt64.toNat_inj.mp (by have := hs.2.1; simpa using this)
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
@@ -461,7 +489,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
       by simp [decW0B]⟩
   | cons st ss ih =>
     rcases st with ⟨hy, eqq⟩
-    intro xs proofs ps so sl po pl k m a res m' hC hs hd hb hn hv hsd hpr hc'
+    intro xs proofs ps so sl po pl k m a res m' hC hCr hs hd hb hn hv hsd hpr hc'
     cases xs with
     | nil => exact hsd.elim
     | cons xq xrest =>
@@ -505,7 +533,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
     obtain ⟨r1, m1⟩ := q1
     rw [h1', bW_some] at hw
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, -⟩ :=
-      cgC hD.toDmProg5 hcl hs0 hsA h1' hC hc hann he hpwlt hdh hbd hn hv hsd1 hsd2 hpx
+      cgC hD.toDmProg5 hcl hkp hs0 hsA h1' hC hc hann he hpwlt hdh hbd hn hv hsd1 hsd2 hpx hCr
     have hrun1' : (divModCertGuard fe (decI c) (decE annVal) hy (decE e)
         (decI (rdW (m.arr64 IW) po))).run a = .ok (x1, a1) := hrun1
     have hlpos : 0 < pl.toNat :=
@@ -535,7 +563,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
     have hdr1 : decHL m1 (po + 1).toNat (pl - 1).toNat = some pfs := by
       rw [decHL_grow hg1 (by rw [hpo1, hpl1]; omega)]; exact hdrest
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2⟩ := ih xrest pfs pxs (so + 1) (sl - 1) (po + 1) (pl - 1)
-      k m1 a1 r2 m2 hC1 (hrest.grow hg1) hdr1 (by rw [hpo1, hpl1]; have := hg1.1; omega)
+      k m1 a1 r2 m2 hC1 (hkp.call (im_mem _ rfl) h1' hCr) (hrest.grow hg1) hdr1 (by rw [hpo1, hpl1]; have := hg1.1; omega)
       (ConRon.Bridge.denoteN_ext hn c1.ext) (ConRon.Bridge.denote_ext hv c1.ext)
       (ConRon.Bridge.StmtsDenote.mono c1.ext _ _ hsd3)
       (ConRon.Bridge.denoteEList_ext c1.ext _ _ hpxs) h2
@@ -544,14 +572,14 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
     exact hrun2
 
 /-- **`div_mod_certs_guard` under `StageC`** (`cgs_ref`'s; con-ron's `divModCertsGuard_run`). -/
-theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
+theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) {ps c annVal : Word} {ip : INatOpPinSet}
     {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name} {v : ConLeche.Expr} {k : Nat} {m m' : Mem}
     {a : AState} {r : List Word}
     (hcall : callW p k "div_mod_certs_guard" [ps, vis, c, annVal] m = some (r, m'))
     (hC : StageC dn vis fe env m a) (hc : H c) (hann : H annVal) (hP : PinSetR m ps ip)
     (hps : PinSetDenote a.store ip psP) (hn : denoteN a.store.ns (decI c) = some nm)
-    (hv : denoteE a.store (decE annVal) = some v) :
+    (hv : denoteE a.store (decE annVal) = some v) (hCr : L.Stubs.CrOK m) :
     ∃ x a', (divModCertsGuard ip fe (decI c) (decE annVal)).run a = .ok (x, a') ∧
       StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' r x := by
   cases k with
@@ -560,15 +588,15 @@ theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   have hw := callW_model (M := fun mq => cgsW p k mq ps vis c annVal)
     (cgs_specW p hD.lCertsGuard k · ps vis c annVal) hcall
   unfold cgsW at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hf1, hw⟩ :=
-    (divModCertStmts_ref hD.toDmProg5.toDmProg2 c).bindL hcl (leaf_mem _ (by decide))
-      ⟨hC.stage, hc⟩ hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hf1, hCr1, hw⟩ :=
+    (divModCertStmts_ref hD.toDmProg5.toDmProg2 c).bindLC hcl (leaf_mem _ (by decide)) hkp
+      (im_mem _ rfl) ⟨hC.stage, hc⟩ hCr hw
   obtain ⟨hi1, hsd⟩ := ConRon.Bridge.divModCertStmts_run hC.check.state hC.check.pins hn hrun1
   have c1 := ConRon.Bridge.CoreStep.of_istep hC.check hi1
   have hC1 := StageC.of_core hC hS1 hf1 c1
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hd2⟩, hf2, hw⟩ :=
-    (divModCertProofs_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bindL hcl
-      (leaf_mem _ (by decide)) ⟨hS1, hc, PinSetR.grow hP hg1⟩ hw
+  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hd2⟩, hf2, hCr2, hw⟩ :=
+    (divModCertProofs_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bindLC hcl
+      (leaf_mem _ (by decide)) hkp (im_mem _ rfl) ⟨hS1, hc, PinSetR.grow hP hg1⟩ hCr1 hw
   have hps1 := (ConRon.Bridge.PinsDenote.mono c1.ext [ip] [psP] ⟨hps, trivial⟩).1
   have hn1 := ConRon.Bridge.denoteN_ext hn c1.ext
   obtain ⟨e2, hpr⟩ := ConRon.Bridge.divModCertProofs_run hC1.check.state hC1.check.pins hps1 hn1 hrun2
@@ -585,8 +613,8 @@ theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   simp only [decStmtL, ntGetD0, ntGetD1] at hd1
   unfold decRL at hd2
   simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd2
-  obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3⟩ := cggoC hD hcl hs0 hsA c annVal hc hann x1 _ x2 _
-    (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) k m2 a1 r3 m3 hC2
+  obtain ⟨x3, a3, hrun3, hC3, c3, hg3, hd3⟩ := cggoC hD hcl hkp hs0 hsA c annVal hc hann x1 _ x2 _
+    (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) k m2 a1 r3 m3 hC2 hCr2
     (hd1.grow hg2) hd2.1 hd2.2 hn1 (ConRon.Bridge.denote_ext hv c1.ext) hsd hpr h3
   refine ⟨x3, a3, ?_, hC3, c1.trans c3, hg1.trans (hg2.trans hg3), hd3⟩
   simp only [divModCertsGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2]
