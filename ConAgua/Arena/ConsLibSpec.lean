@@ -149,7 +149,7 @@ def RecOK : Prop :=
 
 /-- **The room test** is `roomM` of the memory, the tier and the count (`c` at `np + 2`). -/
 def RoomOK : Prop :=
-  ∀ s : St, Cond.pval s C.room = C.roomM s.mem (s.loc 0) (s.loc (C.np + 2))
+  ∀ s : St, Cond.pval s C.room = C.roomM s.mem (s.loc 0) (s.loc (2 + C.np))
 
 /-- **The key's hash**: `ihash` sets `h` (`nk`) to `qhM` of the key and changes nothing else. -/
 def IHashOK : Prop :=
@@ -166,14 +166,18 @@ def SkipOK : Prop :=
 /-- **An instance's obligations.** -/
 structure ConsOK : Prop where
   match_ : MatchOK p C
-  ghash : HashOK p C.GS (C.np + 4) C.hsM
+  ghash : HashOK p C.GS (4 + C.np) C.hsM
   ihash : IHashOK p C
   recs : RecOK C
   room : RoomOK C
   skips : SkipOK C
-  push_np : C.nk ≤ C.np ∧ C.np ≤ C.nk + 1
+  push_np : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk
+  arrs : C.ra ≠ CTL ∧ C.sa ≠ CTL ∧ C.ra ≠ C.sa
 
 end obligations
+
+theorem ConsOK.room_eq {p : Prog} {C : ConsSch} (hO : ConsOK p C) (s : St) :
+    Cond.pval s C.room = C.roomM s.mem (s.loc 0) (s.loc (2 + C.np)) := hO.room s
 
 /-! ## `X_find`: the probe -/
 
@@ -242,6 +246,18 @@ theorem init_past (pre ks rest : List Word) (a : Nat) :
 theorem init_oob (vs : List Word) (x : Nat) (h : vs.length ≤ x) : Locals.init vs x = 0 := by
   simp [Locals.init, List.getD_eq_getElem?_getD, List.getElem?_eq_none h]
 
+theorem ofNat_zero' : UInt64.ofNat 0 = 0 := rfl
+
+theorem init_last (t : Word) (as : List Word) (j : Word) (k : Nat) (h : as.length = k) :
+    Locals.init (t :: (as ++ [j])) (1 + k) = j := by
+  subst h; simpa [Locals.init] using init_past [t] as [j] 0
+
+theorem init_past2 (t : Word) (as : List Word) (j : Word) (k a : Nat) (h : as.length = k)
+    (ha : 2 ≤ a) : Locals.init (t :: (as ++ [j])) (a + k) = 0 := by
+  apply init_oob
+  simp only [List.length_cons, List.length_append, List.length_nil]
+  omega
+
 theorem argsOf_init (pre ks rest : List Word) (m : Mem) :
     argsOf pre.length ks.length { mem := m, loc := Locals.init (pre ++ (ks ++ rest)) } = ks := by
   unfold argsOf
@@ -249,6 +265,11 @@ theorem argsOf_init (pre ks rest : List Word) (m : Mem) :
   intro i h1 h2
   simp only [List.getElem_map, List.getElem_range]
   exact init_key pre ks rest i (by simpa using h2)
+
+theorem argsOf_init1 (t : Word) (as : List Word) (j : Word) (k : Nat) (h : as.length = k)
+    (m : Mem) : argsOf 1 k { mem := m, loc := Locals.init (t :: (as ++ [j])) } = as := by
+  subst h; exact argsOf_init [t] as [j] m
+
 
 /-- **`X_find(t, k, h)`** returns the probe of tier `t` from the home slot of `h`. -/
 theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C)
@@ -282,5 +303,115 @@ theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C)
         zero_ne_add 4 C.nk (by decide), zero_ne_add 6 C.nk (by decide), ek, e0, eh,
         ez 4 (by decide), ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
     all_goals grind [lang_grind, arena_grind, gnW, gexpW, homeW, baseW]
+
+/-! ## `X_push`: the append -/
+
+/-- The node count of tier `t`. -/
+def cntC (C : ConsSch) (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (C.ca + t)
+
+/-- The push's room checks: the handle index, the table's own test. -/
+def pushOKC (C : ConsSch) (m : Mem) (t : Word) : Bool :=
+  decide (cntC C m t < (134217728 : Word)) && !C.roomM m t (cntC C m t)
+
+/-- Write the words `vs` into array `ra` from word `k + f`. -/
+def wrRecK (ra : ArrId) (k : Word) : Mem → Word → List Word → Mem
+  | m, _, [] => m
+  | m, f, v :: vs => wrRecK ra k (m.set64 ra (k + f) v) (f + 1) vs
+
+/-- After the record: register node `c` of tier `t` at slot `j`, count it. -/
+def tailM (C : ConsSch) (t j c : Word) (m : Mem) : Mem :=
+  (m.set64 C.sa (j * 2 + t) (rdW (m.arr64 CTL) SCB * t + c + 1)).set64 CTL (C.ca + (t &&& 1)) (c + 1)
+
+/-- **The memory after the append** of node `c` (record `vs`) to tier `t`, registered at `j`. -/
+def pushMC (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (j c : Word) : Mem :=
+  tailM C t j c (wrRecK C.ra (c * C.st + t * C.w) m 0 vs)
+
+/-- The growth if node count `c + 1` passes half of the slot count `g + SN0` read before. -/
+def growK (C : ConsSch) (g c : Word) (m : Mem) : Option Mem :=
+  if g + SN0 < (c + 1) * 2 then growM C.sa C.ca C.hsM m else some m
+
+theorem growIf_growK (C : ConsSch) (m₀ M : Mem) (c : Word) :
+    growIf C.sa C.ca C.hsM m₀ M c = growK C (gexpW C.sa m₀) c M := rfl
+
+theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁⦄
+    step p (exec p n) (cpRest C)
+    ⦃fun r s' => r = .ret [s₁.loc (2 + C.np)] ∧
+      growK C (s₁.loc (5 + C.np)) (s₁.loc (2 + C.np))
+        (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np)) s₁.mem) = some s'.mem; ⊤⦄ := by
+  have hsa := hO.arrs.2.1
+  simp only [cpRest, cpTail, cpGrowIf, seqs, List.map, mapS, mapE, lvF, L.Notation.blk]
+  vcgen [step, evalE_spec, evalC_spec, evalArgs, st64,
+    growBlkG_spec p C.GS C.sa C.ca rfl rfl (4 + C.np) C.hsM hO.ghash n]
+  all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, ↓reduceIte, Nat.add_eq_zero_iff,
+        false_and, and_false, Sig.retVal] at *)
+  all_goals grind [lang_grind, arena_grind, growK, tailM, Mem.arr64_set64_ne, baseW]
+
+theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
+    ∀ (es : List Expr), (∀ e ∈ es, LocOnly e) → ∀ (f : Nat) (s₁ : St),
+    ⦃fun s => s = s₁⦄
+    step p (exec p n) (cpWr C f es (cpRest C))
+    ⦃fun r s' => r = .ret [s₁.loc (2 + C.np)] ∧
+      growK C (s₁.loc (5 + C.np)) (s₁.loc (2 + C.np))
+        (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np))
+          (wrRecK C.ra (s₁.loc (3 + C.np)) s₁.mem (UInt64.ofNat f) (es.map (Expr.pval s₁)))) =
+        some s'.mem; ⊤⦄ := by
+  intro es
+  induction es with
+  | nil => intro _ f s₁; simp only [cpWr, List.map_nil, wrRecK]; exact cpRest_spec p C hO n s₁
+  | cons e es ih =>
+    intro hl f s₁
+    have hes : ∀ e' ∈ es, LocOnly e' := fun e' h => hl e' (List.mem_cons_of_mem _ h)
+    have hmap : ∀ s : St, s.loc = s₁.loc → es.map (Expr.pval s) = es.map (Expr.pval s₁) :=
+      fun s h => List.map_congr_left (fun e' he' => hes e' he' s s₁ h)
+    have ef : UInt64.ofNat (f + 1) = UInt64.ofNat f + 1 := by simp [UInt64.ofNat_add]
+    have e0 : UInt64.ofNat 0 = 0 := rfl
+    simp only [cpWr]
+    by_cases hf0 : f = 0
+    · subst hf0
+      simp only [↓reduceIte]
+      vcgen [step, evalE_spec, st64, ih hes (0 + 1)]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, List.map_cons, wrRecK, ef, e0,
+        UInt64.add_zero, Nat.zero_add] at *)
+      all_goals (try simp only [hmap _ rfl] at *)
+      all_goals grind
+    · simp only [hf0, ↓reduceIte]
+      vcgen [step, evalE_spec, st64, ih hes (f + 1)]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Expr.pval, List.map_cons,
+        wrRecK, ef] at *)
+      all_goals (try simp only [hmap _ rfl] at *)
+      all_goals grind
+
+/-- **`X_push(t, args, j)`** appends node `cntC` to tier `t` (record `vsM args`) at slot `j`,
+then grows if the tier passed half load. -/
+theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (t : Word)
+    (as : List Word) (has : as.length = C.np) (j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) C.pname (t :: (as ++ [j]))
+    ⦃fun r s' => LocEq s' s₀ ∧ pushOKC C s₀.mem t = true ∧ r = [cntC C s₀.mem t] ∧
+      growIf C.sa C.ca C.hsM s₀.mem (pushMC C s₀.mem t (C.vsM as) j (cntC C s₀.mem t))
+        (cntC C s₀.mem t) = some s'.mem; ⊤⦄ := by
+  have hV := hO.recs.2
+  rw [invoke_eq _ hp]
+  simp only [callFn, consPushG, cpHead, cpMid, seqs, List.map, mapS, mapE, mapC, lvF, L.Notation.blk]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64,
+      cpWr_spec p C hO n C.recW hO.recs.1 0]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+        Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
+        Nat.reduceEqDiff, rd64_rdW, argsOf_setLoc_add 1 C.np 2 (by decide),
+        argsOf_setLoc_add 1 C.np 3 (by decide), argsOf_setLoc_add 1 C.np 5 (by decide),
+        zero_ne_add 1 C.np (by decide), zero_ne_add 2 C.np (by decide),
+        zero_ne_add 3 C.np (by decide), zero_ne_add 5 C.np (by decide),
+        argsOf_init1 t as j C.np has, init_last t as j C.np has, Locals.init_cons_zero,
+        init_past2 t as j C.np 2 has (by decide), init_past2 t as j C.np 3 has (by decide),
+        init_past2 t as j C.np 5 has (by decide), hO.room_eq, hO.recs.2, mapC, ofNat_zero',
+        ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, growIf_growK, pushMC, pushOKC,
+        cntC] at *)
+    all_goals grind [lang_grind, arena_grind, gexpW]
 
 end L.Arena

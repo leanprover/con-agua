@@ -163,7 +163,7 @@ def cfLoop (C : ConsSch) : Stmt :=
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def consFindG (C : ConsSch) : FunDecl :=
-  { nparams := C.nk + 2, nlocals := C.nk + 7 + C.mloc,
+  { nparams := 2 + C.nk, nlocals := 7 + C.nk + C.mloc,
     body := seqs ((cfHead C.sa).map (mapS (lvF C.nk))) (.seq (cfLoop C) .abort) }
 
 /-! ## `X_push(t, k₁ … k_np, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -180,26 +180,28 @@ def cpMid (C : ConsSch) : List Stmt :=
 def cpWr (C : ConsSch) : Nat → List Expr → Stmt → Stmt
   | _, [], t => t
   | f, e :: es, t =>
-    .seq (.st64 C.ra (if f = 0 then .var (C.np + 3) else .bin .add (.var (C.np + 3)) (.const (UInt64.ofNat f))) e)
+    .seq (.st64 C.ra (if f = 0 then .var (3 + C.np) else .bin .add (.var (3 + C.np)) (.const (UInt64.ofNat f))) e)
       (cpWr C (f + 1) es t)
 
 def cpTail (C : ConsSch) : List Stmt :=
   [lblk (t, j, c, k, gn, gk) { C.sa.u64[j * 2 + t] := CTL.u64[62] * t + c + 1 },
    lblk (t, j, c, k, gn, gk) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 }]
 def cpGrowIf (C : ConsSch) : Stmt :=
-  .ite (.cmp .ult (.bin .add (.var (C.np + 5)) (.const SN0))
-      (.bin .mul (.bin .add (.var (C.np + 2)) (.const 1)) (.const 2)))
-    (growBlkG C.GS (C.np + 4)) .skip
+  .ite (.cmp .ult (.bin .add (.var (5 + C.np)) (.const SN0))
+      (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 2)))
+    (growBlkG C.GS (4 + C.np)) .skip
+
+/-- The push's tail: the slot, the count, the growth, the return. -/
+def cpRest (C : ConsSch) : Stmt :=
+  seqs ((cpTail C).map (mapS (lvF C.np))) (.seq (cpGrowIf C) (.ret [.var (2 + C.np)]))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def consPushG (C : ConsSch) : FunDecl :=
-  { nparams := C.np + 2, nlocals := C.np + 13,
+  { nparams := 2 + C.np, nlocals := 13 + C.np,
     body := seqs ((cpHead C).map (mapS (lvF C.np)))
       (.seq (.ite C.room .abort .skip)
         (seqs ((cpMid C).map (mapS (lvF C.np)))
-          (cpWr C 0 C.recW
-            (seqs ((cpTail C).map (mapS (lvF C.np)))
-              (.seq (cpGrowIf C) (.ret [.var (C.np + 2)])))))) }
+          (cpWr C 0 C.recW (cpRest C)))) }
 
 /-! ## `intern_X(k₁ … k_nk)`: hash-cons the node with key `k`
 
@@ -212,16 +214,16 @@ def keyArgs (nk : Nat) (extra : List Expr) : List Expr := (List.range nk).map .v
 
 /-- `(fd, i, j, d) := call X_find(t, k…, h)`. -/
 def ciFind (C : ConsSch) (t : Word) : Stmt :=
-  .call [C.nk + 2, C.nk + 3, C.nk + 4, C.nk + 5] C.fname (.const t :: keyArgs C.nk [.var C.nk])
+  .call [2 + C.nk, 3 + C.nk, 4 + C.nk, 5 + C.nk] C.fname (.const t :: keyArgs C.nk [.var C.nk])
 
 /-- `i := call X_push(t, k…, j)` (the push's record inputs: the key, then `h` if `np > nk`). -/
 def ciPush (C : ConsSch) (t : Word) : Stmt :=
-  .call [C.nk + 3] C.pname
-    (.const t :: keyArgs C.nk ((if C.nk < C.np then [.var C.nk] else []) ++ [.var (C.nk + 4)]))
+  .call [3 + C.nk] C.pname
+    (.const t :: keyArgs C.nk ((if C.nk < C.np then [.var C.nk] else []) ++ [.var (4 + C.nk)]))
 
 /-- `if fd != 0 { return B + i }`. -/
 def ciHit (C : ConsSch) (B : Word) : Stmt :=
-  .ite (.cmp .ne (.var (C.nk + 2)) (.const 0)) (.ret [.bin .add (.const B) (.var (C.nk + 3))]) .skip
+  .ite (.cmp .ne (.var (2 + C.nk)) (.const 0)) (.ret [.bin .add (.const B) (.var (3 + C.nk))]) .skip
 
 /-- `CTL.u64[1] != 0`: the scratch tier is open. -/
 def ciOpen : Cond := .cmp .ne (.ld64 CTL (.const 1)) (.const 0)
@@ -229,24 +231,24 @@ def ciOpen : Cond := .cmp .ne (.ld64 CTL (.const 1)) (.const 0)
 /-- The scratch branch: probe tier 1, else append to it. -/
 def ciScr (C : ConsSch) : Stmt :=
   .ite ciOpen
-    (seqs [ciFind C 1, ciHit C C.S, ciPush C 1] (.ret [.bin .add (.const C.S) (.var (C.nk + 3))]))
+    (seqs [ciFind C 1, ciHit C C.S, ciPush C 1] (.ret [.bin .add (.const C.S) (.var (3 + C.nk))]))
     .skip
 
 /-- The persistent branch's end: append to tier 0. -/
 def ciEnd (C : ConsSch) : Stmt :=
-  .seq (ciPush C 0) (.ret [.bin .add (.const C.P) (.var (C.nk + 3))])
+  .seq (ciPush C 0) (.ret [.bin .add (.const C.P) (.var (3 + C.nk))])
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def consInternG (C : ConsSch) : FunDecl :=
   match C.skipW with
   | some sk =>
-    { nparams := C.nk, nlocals := C.nk + 6,
-      body := seqs [C.ihash, .set (C.nk + 1) (.const 0), .ite ciOpen (.set (C.nk + 1) sk) .skip,
-        .ite (.cmp .eq (.var (C.nk + 1)) (.const 0)) (.seq (ciFind C 0) (ciHit C C.P)) .skip,
+    { nparams := C.nk, nlocals := 6 + C.nk,
+      body := seqs [C.ihash, .set (1 + C.nk) (.const 0), .ite ciOpen (.set (1 + C.nk) sk) .skip,
+        .ite (.cmp .eq (.var (1 + C.nk)) (.const 0)) (.seq (ciFind C 0) (ciHit C C.P)) .skip,
         ciScr C] (ciEnd C) }
   | none =>
-    { nparams := C.nk, nlocals := C.nk + 6,
+    { nparams := C.nk, nlocals := 6 + C.nk,
       body := seqs [C.ihash, ciFind C 0, ciHit C C.P, ciScr C] (ciEnd C) }
 
 end L.Arena
