@@ -120,7 +120,70 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
     (hi : i.toNat < 2 ^ 59) (hA : ArenaR m a) (h : pKeyW m i = some (r, m')) :
     ∃ a', (preludeKey d).run a = .ok (decI r, a') ∧ r.toNat < 2 ^ 32 ∧ ArenaR m' a' ∧
       HighFr m m' ∧ a'.pins = a.pins := by
-  sorry
+  have e0 := hix_rd_dw0 (m.arr64 DECL) i hi
+  have e1 := hix_rd_dw (m.arr64 DECL) i 1 hi (by decide)
+  have e2 := hix_rd_dw (m.arr64 DECL) i 2 hi (by decide)
+  have e3 := hix_rd_dw (m.arr64 DECL) i 3 hi (by decide)
+  simp only [UInt64.reduceToNat] at e1 e2 e3
+  have hHF : HighFr m m := ⟨fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  by_cases hind : ∃ b nP, d = .indDecl b nP
+  · obtain ⟨b, nP, rfl⟩ := hind
+    obtain ⟨h6, -, t, ht, hb⟩ := hD
+    have hne6 : ¬rdW (m.arr64 DECL) (1 + 8 * i) ≠ 6 := by rw [e0, h6]; simp
+    by_cases hc : dw (m.arr64 DECL) i.toNat 3 = 0
+    · rw [pKeyW.arm3 m i hne6 (by rw [e3]; simpa using hc)] at h
+      rw [hc] at hb
+      simp [decCIs] at hb; subst hb
+      obtain ⟨hok', hX, hres⟩ := naintern_correct m a hA.nanon r m' h
+      have hI := h
+      rw [nainternW_eq] at hI
+      have hF := internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI
+      have hst := AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok'
+      refine ⟨AM.st (internNNode .anonymous) a, ?_, ?_, hA.lift_nanon _ _ _ _ hX hF hst, ?_, ?_⟩
+      · have := AM.run_of_ok _ a hok'
+        rw [hres] at this
+        simpa [preludeKey, pl_names_ind] using this
+      · exact internM_hw nanonSch NaRecRel nahash nanonSch_wf m _ _ _ hA.nanon _ _ _ _ _
+          (probe_homeG nanonSch m 0 _ _ (naprobeW_arm m 0) _)
+          (probe_homeG nanonSch m 1 _ _ (naprobeW_arm m 1) _) _ (napushOK_room m) _ _ r m' hI
+      · refine ⟨fun b hb => hF.1 b ?_ ?_, fun x hx => hF.2.1 x ?_, hF.2.2.1, hF.2.2.2⟩
+        · simp only [nanonSch, List.mem_cons, List.not_mem_nil, or_false, not_or]
+          constructor <;> (intro e; subst e; revert hb; decide)
+        · intro e; subst e; revert hb; decide
+        · simp only [nanonSch, List.mem_cons, List.not_mem_nil, or_false, not_or]
+          constructor <;> (intro e; subst e; revert hx; decide)
+      · rcases hst with e | ⟨_, e⟩ | ⟨_, e⟩ <;> rw [e] <;> rfl
+    · rw [pKeyW.arm2 m i hne6 (by rw [e3]; intro e; exact hc (by simpa using e)), e2] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have ho := (hok.2 h6).1
+      rw [show (dw (m.arr64 DECL) i.toNat 3).toNat = ((dw (m.arr64 DECL) i.toNat 3).toNat - 1) + 1 by
+        have : (dw (m.arr64 DECL) i.toNat 3).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
+        omega, hix_decCIs_succ] at hb
+      simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+        Option.some.injEq] at hb
+      obtain ⟨ci, ⟨p, hp, hci⟩, cs', -, rfl⟩ := hb
+      simp only [nat?, Option.map_eq_some_iff] at hp
+      obtain ⟨pw, hpw, rfl⟩ := hp
+      obtain ⟨hPq, hqt⟩ := hix_trunc_get hpw ho
+      obtain ⟨w', hw', hw32, hname⟩ := hix_decCI_name hci
+      obtain ⟨hPw, hpt⟩ := hix_trunc_get hw' (by omega)
+      have hP0 : ((m.arr64 DLP)[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
+      have e1' : rdW (m.arr64 DIND) (dw (m.arr64 DECL) i.toNat 2) = pw := hix_rdW hPq rfl
+      have e2' : rdW (m.arr64 DIND) (pw + 1) = w' :=
+        hix_rdW hPw (by rw [UInt64.toNat_add]; simp; omega)
+      rw [e1', e2']
+      refine ⟨a, ?_, hw32, hA, hHF, rfl⟩
+      simp [preludeKey, pl_names_ind, hname]
+      rfl
+  · have hD' := hix_declAtF (fun b nP e => hind ⟨b, nP, e⟩) hD
+    obtain ⟨h6, hn⟩ := hix_declAt_names hD'
+    rw [pKeyW.arm1 m i (by rw [e0]; exact h6), e1] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨a, ?_, (hok.1 h6).1, hA, hHF, rfl⟩
+    simp [preludeKey, hn]
+    rfl
 
 /-- **`prep_find(mk, n, w, j)`** is the first record `x ∈ [j, n)` with `IW[mk + x] = 0` that
 declares `decI w`, plus one; `0` when there is none. -/
