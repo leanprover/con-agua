@@ -174,7 +174,7 @@ theorem pjprobeW_arm (m : Mem) (n u e t : Word) :
     ∀ j d, pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m) j d =
       probeArm projSch m t (pjMt m n u e t)
         (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m)) j d := by
-  intro j d; rw [pjprobeW]; rfl
+  intro j d; rw [pjprobeW, cprobeW]; rfl
 
 theorem pjpushOK_room (m : Mem) (t : Word) (h : pjpushOK m t = true) : PushRoom projSch m t := by
   simp only [pjpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -196,7 +196,13 @@ theorem pjinternW_eq (m : Mem) (n u e : Word) :
     simp [hdW, projSch, projP, ETag.proj]
   have e1 : ∀ x, hdW projSch.tag.toUInt64 1 x = projS + x := fun x => by
     simp [hdW, projSch, projS, ETag.proj]
-  simp only [pjinternW, internM, pushM, pjpushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC projCS m t = pjpushOK m t := fun t => (pjpushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC projCS m t (projCS.vsM (pushArgs projCS [n, u, e] (projHashW n u e))) j c =
+      pushG projSch m t [n, u, e] j c := by
+    intro t j c; rw [← pjpushMem_eq, pjpushMem_eqC]; rfl
+  have ec : ∀ t, cntC projCS m t = cntW projSch m t := fun t => rfl
+  have eh : projCS.qhM m [n, u, e] = projHashW n u e := rfl
+  simp only [pjinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/

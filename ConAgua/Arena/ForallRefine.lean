@@ -179,7 +179,7 @@ theorem faprobeW_arm (m : Mem) (ty body t : Word) :
     ∀ j d, faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty body (baseW m t) (nSlotsFa m) j d =
       probeArm forallSch m t (faMt m ty body t) (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty
         body (baseW m t) (nSlotsFa m)) j d := by
-  intro j d; rw [faprobeW]; rfl
+  intro j d; rw [faprobeW, cprobeW]; rfl
 
 theorem fapushOK_room (m : Mem) (t : Word) (h : fapushOK m t = true) : PushRoom forallSch m t := by
   simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -202,7 +202,13 @@ theorem fainternW_eq (m : Mem) (ty body : Word) :
     simp [hdW, forallSch, forallP, ETag.forallE]
   have e1 : ∀ x, hdW forallSch.tag.toUInt64 1 x = forallS + x := fun x => by
     simp [hdW, forallSch, forallS, ETag.forallE]
-  simp only [fainternW, internM, pushM, fapushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC forallCS m t = fapushOK m t := fun t => (fapushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC forallCS m t (forallCS.vsM (pushArgs forallCS [ty, body] (forallHashW ty body))) j c =
+      pushG forallSch m t [ty, body] j c := by
+    intro t j c; rw [← fapushMem_eq, fapushMem_eqC]; rfl
+  have ec : ∀ t, cntC forallCS m t = cntW forallSch m t := fun t => rfl
+  have eh : forallCS.qhM m [ty, body] = forallHashW ty body := rfl
+  simp only [fainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's. -/

@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -30,8 +31,10 @@ ETag.forallE`, which re-probes and pushes via `ETables.pushBind`. The L side (th
 unaffected: it is still one probe-loop, one push, one dispatcher, as `app`'s/`lam`'s.
 `ForallRefine.lean` carries the different unfolding to `protoRun`.
 
-The functions: `forall_find(t, ty, body, h)` (the probe, the match inline: two word comparisons),
-`forall_push(t, ty, body, j)` and `intern_forall(ty, body)`.
+The functions `forall_find(t, ty, body, h)` (the probe, the match inline: two word comparisons),
+`forall_push(t, ty, body, j)` and `intern_forall(ty, body)` are the cons-table library's templates
+(`ConsLib.lean`) at the schema `forallCS`; their specs are the library's (`ConsLibSpec.lean`) from
+this table's obligations (`forallOK`).
 -/
 
 set_option experimental.vcgen true
@@ -59,121 +62,55 @@ def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ bod
 def famatchW (r : Array Word) (t i ty body : Word) : Bool :=
   rdW r (i * 4 + t * 2) == ty && rdW r (i * 4 + t * 2 + 1) == body
 
+/-- The hash of node `i` of tier `t`. -/
+def fahash (m : Mem) (t i : Word) : Word :=
+  forallHashW (rdW (m.arr64 FAREC) (i * 4 + t * 2)) (rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1))
+
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `forallE` tier (tag `6`). -/
+def forallP : Word := 0x60000000
+def forallS : Word := 0x68000000
+
+/-- The `forallE` table as a cons schema: two key words `ty body`, stored as the record; the match
+is two word comparisons; the scratch skip is bit 27 of `ty | body`. -/
+def forallCS : ConsSch where
+  ra := FAREC
+  sa := FASLOT
+  w := 2
+  st := 4
+  ca := 30
+  P := forallP
+  S := forallS
+  fname := "forall_find"
+  pname := "forall_push"
+  nk := 2
+  mc := condOf (lblk (t, ty, body, h, n, j, d, v, b) {
+    if FAREC.u64[(v - 1) * 4 + t * 2] == ty && FAREC.u64[(v - 1) * 4 + t * 2 + 1] == body { skip } })
+  np := 2
+  room := condOf (lblk (t, ty, body, j, c) { if len(FAREC.u64) >> 2 <= c { skip } })
+  recW := [.var 1, .var 2]
+  ghash := forallGS.hash
+  ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
+  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
+  mtM m ks t i := famatchW (m.arr64 FAREC) t i (ks.getD 0 0) (ks.getD 1 0)
+  qhM _ ks := forallHashW (ks.getD 0 0) (ks.getD 1 0)
+  hsM := fahash
+  vsM as := as
+  roomM m _ c := decide (m.len64 FAREC >>> (2 : Word) ≤ c)
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `famatchW`). -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def faprobeW (sl r : Array Word) (t ty body b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if famatchW r t (slotV sl b (j * 2 + t) - 1) ty body then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else faprobeW sl r t ty body b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t ty body b n j d : Word)
-
-theorem faprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : faprobeW sl r t ty body b n j d = [0, 0, j, d] := by
-  rw [faprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem faprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : famatchW r t (sl[k] - b - 1) ty body = true) :
-    faprobeW sl r t ty body b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [faprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem faprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : famatchW r t (sl[k] - b - 1) ty body = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    faprobeW sl r t ty body b n j d = faprobeW sl r t ty body b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [faprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] faprobeW_free => faprobeW sl r t ty body b n j d, sl[k]
-grind_pattern [arena_grind] faprobeW_hit => faprobeW sl r t ty body b n j d, sl[k]
-grind_pattern [arena_grind] faprobeW_next =>
-  faprobeW sl r t ty body b n j d, sl[k], faprobeW sl r t ty body b n j' d'
-
-def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
-  while d < n {
-    v := FASLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if FAREC.u64[(v - 1) * 4 + t * 2] == ty && FAREC.u64[(v - 1) * 4 + t * 2 + 1] == body {
-      return (1, v - 1, j, d)
-    };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => famatchW r t i ty body) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
-  n := FASLOT.u64[len(FASLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪fafindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "forall_find" = some forallFind)
-
-theorem fafindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n fafindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := fafindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [famatchW, baseW]
-
-theorem fafindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) fafindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
-      faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
-  Triple.step_exec (fafindLoop_spec p (n + 1) s₀)
+def forallFind : FunDecl := consFindG forallCS
 
 /-- The slot count of a tier of the `forallE` table. -/
 def nSlotsFa (m : Mem) : Word := rdW (m.arr64 FASLOT) (m.len64 FASLOT - 1) + SN0
-
-include hp in
-theorem forallFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "forall_find" [t, ty, body, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) t ty body
-        (baseW s₀.mem t) (nSlotsFa s₀.mem) (homeW h (nSlotsFa s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, forallFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, fafindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsFa, homeW, baseW]
-
-end find
 
 /-! ## `forall_push(t, ty, body, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -190,52 +127,7 @@ def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  c := CTL.u64[30 + t];
-  if c >= 134217728 { abort };
-  if len(FAREC.u64) >> 2 <= c { abort };
-  k := c * 4 + t * 2;
-  gk := FASLOT.u64[len(FASLOT.u64) - 1];
-  FAREC.u64[k] := ty;
-  FAREC.u64[k + 1] := body;
-  FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[30 + (t & 1)] := c + 1;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG forallGS 6⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`. -/
-def fahash (m : Mem) (t i : Word) : Word :=
-  forallHashW (rdW (m.arr64 FAREC) (i * 4 + t * 2)) (rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1))
-
-section push
-variable (p : Prog) (hp : p.lookup "forall_push" = some forallPush)
-
-/-- The growth's hash block computes `fahash`. -/
-theorem fahash_ok : HashOK p forallGS 6 fahash := by
-  intro k s₀
-  simp only [forallGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [fahash, forallHashW, LocEq, St.setLoc]
-
-include hp in
-theorem forallPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "forall_push" [t, ty, body, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ fapushOK s₀.mem t = true ∧ r = [facnt s₀.mem t] ∧
-      growIf FASLOT 30 fahash s₀.mem (fapushMem s₀.mem t ty body j (facnt s₀.mem t))
-        (facnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, forallPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p forallGS FASLOT 30 rfl rfl 6 fahash (fahash_ok p) n] <;>
-      finish [fapushMem, facnt, fapushOK, baseW, growIf_grow', growIf_keep']
-
-end push
+def forallPush : FunDecl := consPushG forallCS
 
 /-! ## `intern_forall(ty, body)`: hash-cons the `forallE` binder with binder type `ty` and body
 `body`
@@ -246,35 +138,13 @@ probe if the scratch tier is open, the append to the tier the store is in. Same 
 `app`'s/`lam`'s; `ForallRefine.lean` carries the different unfolding of `internForallEE` to
 `protoRun`. -/
 
-/-- The handle word of node `0` of the persistent / scratch `forallE` tier (tag `6`). -/
-def forallP : Word := 0x60000000
-def forallS : Word := 0x68000000
-
 /-- The scratch skip: the scratch tier is open and `ty` or `body` is a scratch handle. -/
 def faskipW (m : Mem) (ty body : Word) : Word :=
   if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 27) &&& 1 else 0
 
 /-- The model of `intern_forall`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
-  let h := forallHashW ty body
-  let rs₀ := faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (baseW m 0) (nSlotsFa m) (homeW h (nSlotsFa m)) 0
-  let rs₁ := faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (baseW m 1) (nSlotsFa m) (homeW h (nSlotsFa m)) 0
-  if faskipW m ty body = 0 ∧ rs₀ = [] then none
-  else if faskipW m ty body = 0 ∧ rs₀.headD 0 ≠ 0 then some (forallP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (forallS + rs₁.tail.headD 0, m)
-    else if fapushOK m 1 then
-      match growIf FASLOT 30 fahash m (fapushMem m 1 ty body (rs₁.tail.tail.headD 0) (facnt m 1)) (facnt m 1) with
-      | some m' => some (forallS + facnt m 1, m')
-      | none => none
-    else none
-  else if fapushOK m 0 then
-    match growIf FASLOT 30 fahash m (fapushMem m 0 ty body (rs₀.tail.tail.headD 0) (facnt m 0)) (facnt m 0) with
-    | some m' => some (forallP + facnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) := consInternM forallCS m [ty, body]
 
 /-- The L FunDecl for `intern_forall`. Named `internForallL`, not `internForallE`: con-ron's
 `ConRon.Arena.internForallEE`/`EStore.internForallE` are sibling names in a different namespace,
@@ -282,23 +152,7 @@ but the `L`-suffix keeps the two visually apart in this file, which `open`s `Con
 -- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
 -- con-ron: ConRon/Arena/Monad.lean:199-216 ConRon.Arena.internForallEE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internForallEE]
-def internForallL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
-  h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;
-  sk := 0;
-  if CTL.u64[1] != 0 { sk := ((ty | body) >> 27) & 1 };
-  if sk == 0 {
-    (fd, i, j, d) := call forall_find(0, ty, body, h);
-    if fd != 0 { return ⟪forallP⟫ + i }
-  };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call forall_find(1, ty, body, h);
-    if fd != 0 { return ⟪forallS⟫ + i };
-    i := call forall_push(1, ty, body, j);
-    return ⟪forallS⟫ + i
-  };
-  i := call forall_push(0, ty, body, j);
-  return ⟪forallP⟫ + i
-}
+def internForallL : FunDecl := consInternG forallCS
 
 /-- The `forallE` store functions, as one `#eval`-able program. -/
 def forallProg : Prog :=
@@ -330,26 +184,81 @@ the scratch tier; a scratch child (`0x68000000`) skips the persistent probe. -/
 #guard internForalls (forallMem 1) [(1, 2), (0x68000000, 1), (1, 2), (0x68000000, 1)] ==
   some [0x68000000, 0x68000001, 0x68000000, 0x68000001]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "forall_find" = some forallFind)
-  (hpp : p.lookup "forall_push" = some forallPush)
-  (hp : p.lookup "intern_forall" = some internForallL)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internForallL_spec (n : Nat) (s₀ : St) (ty body : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `fahash`. -/
+theorem fahash_ok : HashOK p forallGS 6 fahash := by
+  intro k s₀
+  simp only [forallGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [fahash, forallHashW, LocEq, St.setLoc]
+
+/-- **The `forallE` table's obligations.** -/
+theorem forallOK : ConsOK p forallCS where
+  match_ := by
+    intro s
+    simp [forallCS, condOf, Cond.pval, Expr.pval, famatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ghash := fahash_ok p
+  ihash := by
+    intro k s₀
+    simp only [forallCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, forallHashW, argsOf, BinOp.eval]
+  recs := ⟨by
+      intro e he s s' h
+      simp only [forallCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp [Expr.pval, h],
+    fun s => by simp [forallCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [forallCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he s
+    simp only [forallCS, Option.some.injEq] at he
+    subst he
+    simp [forallCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  push_np := by decide
+  arrs := by decide
+
+theorem forallFind_spec (hp : p.lookup "forall_find" = some forallFind) (n : Nat) (s₀ : St)
+    (t ty body h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "forall_find" [t, ty, body, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) t ty body
+        (baseW s₀.mem t) (nSlotsFa s₀.mem) (homeW h (nSlotsFa s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p forallCS ((forallOK p).match_) hp n s₀ t [ty, body] rfl h
+
+theorem fapushOK_eqC (m : Mem) (t : Word) : fapushOK m t = pushOKC forallCS m t := by
+  simp only [fapushOK, pushOKC, forallCS, facnt, cntC, ← decide_not, UInt64.not_le]; rfl
+
+theorem fapushMem_eqC (m : Mem) (t ty body j c : Word) :
+    fapushMem m t ty body j c = pushMC forallCS m t [ty, body] j c := by
+  simp [fapushMem, pushMC, tailM, wrRecK, forallCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ FAREC by decide)]
+
+theorem forallPush_spec (hp : p.lookup "forall_push" = some forallPush) (n : Nat) (s₀ : St)
+    (t ty body j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "forall_push" [t, ty, body, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ fapushOK s₀.mem t = true ∧ r = [facnt s₀.mem t] ∧
+      growIf FASLOT 30 fahash s₀.mem (fapushMem s₀.mem t ty body j (facnt s₀.mem t))
+        (facnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [fapushOK_eqC]
+  simp only [fapushMem_eqC]
+  exact consPushG_spec p forallCS (forallOK p) hp n s₀ t [ty, body] rfl j
+
+theorem internForallL_spec (hpf : p.lookup "forall_find" = some forallFind)
+    (hpp : p.lookup "forall_push" = some forallPush) (hp : p.lookup "intern_forall" = some internForallL)
+    (n : Nat) (s₀ : St) (ty body : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_forall" [ty, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ fainternW s₀.mem ty body = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internForallL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        forallFind_spec p hpf n, forallPush_spec p hpp n] <;>
-      finish [fainternW, faskipW, forallHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ fainternW s₀.mem ty body = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p forallCS (forallOK p) hpf hpp "intern_forall" hp n s₀ [ty, body] rfl
 
-end intern
+end specs
 
 end L.Arena

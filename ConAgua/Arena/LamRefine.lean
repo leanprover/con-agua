@@ -178,7 +178,7 @@ theorem laprobeW_arm (m : Mem) (ty body t : Word) :
     ∀ j d, laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body (baseW m t) (nSlotsLa m) j d =
       probeArm lamSch m t (laMt m ty body t) (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body
         (baseW m t) (nSlotsLa m)) j d := by
-  intro j d; rw [laprobeW]; rfl
+  intro j d; rw [laprobeW, cprobeW]; rfl
 
 theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom lamSch m t := by
   simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -201,7 +201,13 @@ theorem lainternW_eq (m : Mem) (ty body : Word) :
     simp [hdW, lamSch, lamP, ETag.lam]
   have e1 : ∀ x, hdW lamSch.tag.toUInt64 1 x = lamS + x := fun x => by
     simp [hdW, lamSch, lamS, ETag.lam]
-  simp only [lainternW, internM, pushM, lapushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC lamCS m t = lapushOK m t := fun t => (lapushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC lamCS m t (lamCS.vsM (pushArgs lamCS [ty, body] (lamHashW ty body))) j c =
+      pushG lamSch m t [ty, body] j c := by
+    intro t j c; rw [← lapushMem_eq, lapushMem_eqC]; rfl
+  have ec : ∀ t, cntC lamCS m t = cntW lamSch m t := fun t => rfl
+  have eh : lamCS.qhM m [ty, body] = lamHashW ty body := rfl
+  simp only [lainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's. -/
