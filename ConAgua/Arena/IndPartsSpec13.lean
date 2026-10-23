@@ -10,6 +10,9 @@ level parameters copied by `er_to_iw` (`partsLpsCopy`), `reserved_contains` agai
 `reservedBasisNames` (`partsResCont`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

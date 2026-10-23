@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecH
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`'s
 relational side, `nestGrowGroup`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP
@@ -115,12 +118,12 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [hl'eq] at hvl
   rw [hrdt] at h
   -- `strip_pis`
-  cases hst : stubM "strip_pis" m [rdW (m.arr64 IW) (key + 3), wt] with
+  cases hst : stripF 6 m [rdW (m.arr64 IW) (key + 3), wt] with
   | none => rw [hst] at h; simp [ntyK3] at h
   | some pr3 =>
   obtain ⟨r3, m3⟩ := pr3
   rw [hst] at h
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := stripPis_spec dn vis fe _ wt hwtH m m3 a r3 hst hS
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := stripF_pis_ok dn vis fe _ wt hwtH m m3 a r3 hst hS
   have hdsl := decHL_length m hds
   rw [← hdsl, ← hwtd] at hrun3
   cases x3 with
@@ -206,7 +209,7 @@ theorem ntyW_mfr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : nt
   split at h; · simp at h
   split at h; · simp at h
   split at h; · simp at h
-  cases h1 : stubM "strip_pis" m0 [rdW (m0.arr64 IW) (key + 3), rdW (m0.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
+  cases h1 : stripF 6 m0 [rdW (m0.arr64 IW) (key + 3), rdW (m0.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
   | none => rw [h1] at h; simp [ntyK3] at h
   | some p1 =>
   obtain ⟨r1, m1⟩ := p1
@@ -235,7 +238,7 @@ theorem ntyW_mfr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : nt
   split at h; · simp at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  exact (((MFr.stub (by decide) h1).trans (posmemo_cvLpsW_mfr h2)).trans (MFr.stub (by decide) h3)).trans
+  exact (((MFr.of_iw (stripF_frame h1)).trans (posmemo_cvLpsW_mfr h2)).trans (MFr.stub (by decide) h3)).trans
     (instW_mfr _ _ _ _ _ _ _ h4)
 
 /-! ## `nest_inst_type` refines `nestInstType` -/

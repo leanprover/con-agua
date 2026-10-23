@@ -9,6 +9,9 @@ contract, the two `EREC` name slices), then the 15-word record is written in `IW
 the record pool below its top: `cons_block_inds` copies the words into the former's `EREC` record.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

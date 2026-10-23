@@ -4,6 +4,9 @@ import ConAgua.Arena.IndPos2SpecF
 /-! # `nestSeedOf` (lane `indproofs2`, helper `pos`): a resolved class's parameters, each through
 `replaceApps` then `replaceFVars (.keyMap params holes)`, written into a fresh slice. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

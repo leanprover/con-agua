@@ -1,8 +1,12 @@
 import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.RecCheckSpec
+import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestHoles`,
 `nestRootCanon`, … -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 open ConRon.Arena
@@ -150,6 +154,7 @@ attribute [ind_grind] nhGoW_nil nhGoW_cons nhK1_miss nhK1_noind nhK1_ind nhK2_no
 
 /-- The lookups of `nest_holes`. -/
 structure NhLook (p : Prog) : Prop where
+  hi1 : I1Prog p
   ha : p.lookup "iw_alloc" = some iwAlloc
   hc : p.lookup "iw_copy" = some iwCopy
   hsn : p.lookup "sl_snoc" = some slSnoc
@@ -179,7 +184,7 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
     simp only [callFn, nestHolesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip k,
+        envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
         internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -420,6 +425,33 @@ theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   cases x with
   | none => exact hout
   | some l => obtain ⟨h1, h2, h3⟩ := hout; exact ⟨h1, h2, h3⟩
+
+/-- **`nest_holes_go` refines `nestHoles.go`**: from member `mm` on, the names `ns` (a slice of the
+context's names below the top) appended to the holes so far (`out`, below the top). Its one caller,
+`nestHoles` (`nestHoles_refines` above), discharges every hypothesis from its own pre: the context
+decoded with its words and slices below the top, `nP + |names| < 2^64`. -/
+@[refines ConRon.Arena.nestHoles.go]
+theorem nestHolesGo_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis ctx mm off l oo ol : Word) (c : NestCtx) (ns : List NIdx) (out : List EIdx)
+    (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
+    (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hsl : CtxSl s₀.mem ctx.toNat)
+    (hns : decHL s₀.mem off.toNat l.toNat = some ns) (hnb : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem)
+    (hout : decHL s₀.mem oo.toNat ol.toNat = some out) (hob : oo.toNat + ol.toNat ≤ iwTop s₀.mem)
+    (hmm : c.nP + mm.toNat + l.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_holes_go" [vis, ctx, mm, off, l, oo, ol]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ NhOut s'.mem r (AM.res (ConRon.Arena.nestHoles.go fe c mm.toNat ns out) a₀); ⊤⦄ := by
+  refine triple_post (nhGo_spec p hl k s₀ vis ctx mm off l oo ol) ?_
+  rintro r s' ⟨hlc, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hNh⟩ := nhGoW_ok dn fe vis ctx c k _ _ a₀ mm off l oo ol ns out _ hm hS hc hin
+    hsl hns hnb hout hob hmm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hlc, hok, by rw [hst]; exact hS', hg, ?_⟩
+  rw [hres]
+  cases x with
+  | none => exact hNh
+  | some l => obtain ⟨h1, h2, h3⟩ := hNh; exact ⟨h1, h2, h3⟩
 
 end census
 

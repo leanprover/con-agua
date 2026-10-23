@@ -12,6 +12,9 @@ Shared pieces (prefixed `sum`): `sumSim_of_relAM` (a stub's `RelAM` as a `Sim`),
 (a pointer written at the end of a decoded prefix).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

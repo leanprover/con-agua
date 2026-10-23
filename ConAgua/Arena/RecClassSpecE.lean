@@ -7,6 +7,9 @@ import ConAgua.Arena.DeclHeader
 # `RecClass`: `classNPcOf`, `classReadSlot`, `classReadSlots` (lane `indproofs2`, helper `rec`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

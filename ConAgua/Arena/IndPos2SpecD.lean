@@ -1,6 +1,10 @@
 import ConAgua.Arena.IndPos2SpecC
+import ConAgua.Arena.StageInst1
 
 /-! Continued from `IndPos2SpecC.lean` (split by size; lane `indproofs`). -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 open ConRon.Arena
@@ -284,6 +288,7 @@ structure MkLook (p : Prog) : Prop where
   prjM : p.lookup "mk_proj" = some mkProj
 
 structure AhLook (p : Prog) : Prop where
+  hi1 : I1Prog p
   hv : p.lookup "e_view" = some eView
   hph : p.lookup "ph_app" = some phApp
   hf : p.lookup "sl_find" = some slFind

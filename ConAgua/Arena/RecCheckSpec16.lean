@@ -550,14 +550,14 @@ theorem tkW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc teo tel majDom 
   | succ n =>
   rw [tkW_succ] at h
   rw [tk53_eq]
-  cases h1 : stubM "strip_pis" m [tel, f] with
+  cases h1 : stripF 6 m [tel, f] with
   | none => rw [h1] at h; simp [tkK1] at h
   | some x =>
   obtain ⟨rs, m1⟩ := x
   rw [h1] at h
-  obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripPis_spec dn vis fe tel f hf m m1 a rs h1 hS
+  obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripF_pis_ok dn vis fe tel f hf m m1 a rs h1 hS
   rw [← decE_eq, ← htl.len] at run1
-  have hP1 := hP.stub (by decide) h1
+  have hP1 := hP.fr (MFr.ofStripF h1)
   rcases o with _ | ⟨teleW, leafW⟩
   · have h0 : rs.headD 0 = 0 := hd1
     rw [tkK1_no (h := h0)] at h

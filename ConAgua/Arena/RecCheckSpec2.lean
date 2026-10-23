@@ -10,6 +10,9 @@ import ConAgua.Arena.IndPartsSpec4
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

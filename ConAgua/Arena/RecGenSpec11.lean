@@ -9,6 +9,9 @@ a caller has: `rec3RecsOK_of_decB`, `rec3SlotsExt_of_decB`. (`CVExt`, `CKExt` al
 any offset, which is all a decoding below the tops can say about it.)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

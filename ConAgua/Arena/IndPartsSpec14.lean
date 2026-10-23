@@ -9,6 +9,9 @@ abort), the record (`block_shape_pack`), `block_shape_build` composing every pie
 `block_parts`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
@@ -42,19 +45,19 @@ def bsoK1 : Option (List Word × Mem) → Option (List Word × Mem)
 /-- **The model of `block_shape_result_sort`.** -/
 def bsoW (m : Mem) (nP io il ty : Word) : Option (List Word × Mem) :=
   if nP + getDW m io il 0 0 < nP then none
-  else bsoK1 (stubM "strip_pis" m [nP + getDW m io il 0 0, ty])
+  else bsoK1 (stripF 6 m [nP + getDW m io il 0 0, ty])
 
 theorem bso_spec (p : Prog) (hv : p.lookup "e_view" = some eView) (hpw : p.lookup "pin_word" = some pinWordL)
     (hg : p.lookup "sl_getd" = some slGetD)
-    (hp : p.lookup "block_shape_result_sort" = some blockShapeResultSort) (n : Nat) (s₀ : St)
-    (nP io il ty : Word) :
+    (hp : p.lookup "block_shape_result_sort" = some blockShapeResultSort) (hst : StripProg p)
+    (n : Nat) (s₀ : St) (nP io il ty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_result_sort" [nP, io, il, ty]
     ⦃fun r s' => LocEq s' s₀ ∧ bsoW s₀.mem nP io il ty = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, blockShapeResultSort]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slGetD_specW p hg n,
-      stubM_spec p "strip_pis" n, eViewSpec4 p hv n, pinWord_specV p hpw n] <;>
+      stripPis_specF p hst n, eViewSpec4 p hv n, pinWord_specV p hpw n] <;>
     finish (gen := 20) [bsoW, bsoK1, bsoK2]
 
 /-- The twin's result sort (`blockShape?`'s first `let s`). -/
@@ -92,7 +95,7 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hk : (nP + getDW m io il 0 0).toNat = nP.toNat + ns.headD 0 := by
     rw [partsAddNoOv hov, getDW_head hns hb]
   revert r m' e
-  have h1 := partsSimStub (stripPis_spec dn vis fe (nP + getDW m io il 0 0) ty hty) hS
+  have h1 := partsSimW (stripF_pis_ok dn vis fe (nP + getDW m io il 0 0) ty hty) hS
   rw [hk] at h1
   unfold bsoTwin
   refine Sim.bindK (K := bsoK1) (body := fun r1 m1 => if r1.headD 0 = 0 then (match pinWordV m1 53 with
@@ -419,7 +422,7 @@ theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
   simp only [callFn, blockShapeTail]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort (n + 1), pinWord_specV p hP.pinWord (n + 2),
+      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 1), pinWord_specV p hP.pinWord (n + 2),
       stubM_spec p "lvl_eq_c" (n + 2), bf_spec p hP n] <;>
     finish (gen := 20) [btW, rdW_eq, btK1_some, btK2_some, btK3_some, bgoK3_some]
 

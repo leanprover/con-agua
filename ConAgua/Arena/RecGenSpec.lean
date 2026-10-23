@@ -14,6 +14,9 @@ parameters, just shifted" argument `sl_contains`/`sl_nodup` need for their `whil
 varying state happens to be their own parameters).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

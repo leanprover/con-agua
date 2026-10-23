@@ -18,6 +18,9 @@ empty slice ignores its offset, so `DecB` alone does not give it); `check_sum_te
 for its result.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
@@ -123,6 +126,8 @@ structure CstProg (p : Prog) : Prop where
   cvNew : p.lookup "cv_new" = some cvNew
   slow : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL
   tele : p.lookup "check_sum_tele" = some checkSumTeleL
+  strip : StripProg p
+  i1 : I1Prog p
 
 /-- `check_sum_tele` as a `Sim`: the constant and the start record below the tops. -/
 theorem installCstSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
@@ -134,7 +139,7 @@ theorem installCstSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Optio
         H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2) :=
   installSimCall (checkSumTele_refines p hP.alloc hP.copy hP.cons hP.view hP.fvarFind hP.fvarPush
     hP.internFVar hP.wt hP.sortFind hP.sortPush hP.internSort hP.derB hP.forallFind hP.forallPush
-    hP.internForall hP.mkForall hP.closeTele hP.erAlloc hP.cvNew hP.slow hP.tele n _ a dn vis fe cv k cv
+    hP.internForall hP.mkForall hP.closeTele hP.erAlloc hP.cvNew hP.slow hP.tele hP.strip hP.i1 n _ a dn vis fe cv k cv
     cvv cvv hS hcv hx.1 hx.2 hcv hx.1 hx.2)
     fun _ _ ⟨_, hok, hS', hg, hd, h32, hs, hb, hsl⟩ => ⟨hok, hS', hg, hd, ⟨hb, hsl⟩, h32, hs⟩
 
@@ -266,7 +271,9 @@ theorem ibtW_sim (p : Prog) (hP : CstProg p) (n : Nat) {dn : NIdx → Option Con
       else ibtK4 (r2.headD 0) (r2.tail.headD 0) (r3.tail.tail.tail.headD 0)
         (callW p n "intern_sort" [r2.tail.headD 0] m3)) rfl (fun _ _ => rfl)
     (by
-      have h := installSimKeep (p := p) (n := n) (stripPis_spec dn vis fe (nP + UInt64.ofNat msh.nIdx) _ htyl) hS2
+      have h : Sim (callW p n "strip_pis" [nP + UInt64.ofNat msh.nIdx, rdW (m2.arr64 EREC) (r2.headD 0 + 3)] m2)
+          _ a2 _ := fun r m' e =>
+        stripF_pis_ok dn vis fe (nP + UInt64.ofNat msh.nIdx) _ htyl m2 m' a2 r (stripF_of_callW hP.strip e) hS2
       rw [hk, htye] at h; exact h) ?_
   rintro r3 x3 m3 a3 ⟨hS3, hg3, hd3⟩
   cases x3 with

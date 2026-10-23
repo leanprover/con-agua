@@ -9,6 +9,9 @@ on the map's rank); in L, eight functions, the memo banked (`rf_bank_enter`/`rf_
 `MemoBank.lean`). Word models by exec fuel (`rx*W`), the L specs by `vcgen`, then the relational
 lemma by strong induction on the exec fuel. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

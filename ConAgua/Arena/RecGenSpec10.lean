@@ -8,6 +8,9 @@ The result list `(cvG, M, rhss)` is a pointer slice of `rec4` records decoded be
 or the fresh default record, whose slices are empty).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

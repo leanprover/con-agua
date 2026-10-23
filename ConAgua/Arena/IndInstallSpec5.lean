@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndPartsSpec15
-import ConAgua.Arena.IndInstallSpec4
+import ConAgua.Arena.IndInstallSpec3
 
 /-!
 # Refinements of `IndInstall`, part 5 (lane `indproofs2`, helper `parts`)
@@ -7,6 +7,9 @@ import ConAgua.Arena.IndInstallSpec4
 `piDomsMentionAny` (through `mentions_any_const`, lane `indproofs`' memo walk) and `blockRawRec`
 (the two `anyM`s recursive).
 -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 set_option linter.deprecated false

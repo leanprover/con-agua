@@ -1,6 +1,10 @@
 import ConAgua.Arena.IndPos2SpecD
+import ConAgua.Arena.StripTeleSpec
 
 /-! Continued from `IndPos2SpecD.lean` (split by size; lane `indproofs`). -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 open ConRon.Arena
@@ -828,21 +832,6 @@ theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
   rw [h1, h2]; simp
 
 
-theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) (p x : Word) : StageR dn vis fe (m.set64 IW p x) a := by
-  have hf := set64IW_frame m p x
-  have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨CheckR.frame_iw hf hS.1, ?_⟩
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
-  have hI := hf.2.2.1 IW
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · simp only [iwTop, hC, hI]; exact h1
-  · simp only [erTop, hC, hE]; exact h2
-  · rw [hI]; exact h3
-  · rw [hE]; exact h4
-  · rw [hC]; exact h5
-
 /-- The pool outside `[q, q + n)`, its top and size, the constant records: unchanged. -/
 def KeepIW (q n : Word) (m m' : Mem) : Prop :=
   (∀ idx, (idx < q.toNat ∨ q.toNat + n.toNat ≤ idx) → (m'.arr64 IW)[idx]? = (m.arr64 IW)[idx]?) ∧
@@ -1127,7 +1116,7 @@ theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,
-      instPisWith_spec p hl.hv hip (n + 1),
+      instPisWith_spec p hl.hv hip hl.hi1 (n + 1),
       replaceApps_spec p hl hk hf hput hgo hnode hcl hra n] <;>
     finish (gen := 20) [pccW, St.setLocs_mem']
 

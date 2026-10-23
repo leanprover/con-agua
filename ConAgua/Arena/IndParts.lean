@@ -59,7 +59,8 @@ def piBinders : FunDecl := lfn (fuel, h) locals (g, ty, b, z, bo, bl, be, o, l) 
 /-! ## `BlockParts`: the record's pure projections -/
 
 /-- `num_ctors_of(off, l)`: `numCtorsOf` of the `IW` slice of `MemberShape` pointers (sum of each
-member's `ctors.len`, at offset `+3`), recursively on the slice (as the twin's recursion is). -/
+member's `ctors.len`, at offset `+3`), recursively on the slice (as the twin's recursion is). Aborts
+when the sum wraps (a capacity: the twin's `Nat` does not). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:90-94 ConRon.Arena.numCtorsOf
 @[l_impl ConRon.Arena.numCtorsOf]
 def numCtorsOf : FunDecl := lfn (off, l) locals (r, m, s) {
@@ -67,6 +68,7 @@ def numCtorsOf : FunDecl := lfn (off, l) locals (r, m, s) {
   r := call num_ctors_of(off + 1, l - 1);
   m := IW.u64[off];
   s := IW.u64[m + 3] + r;
+  if s < r { abort };
   return s
 }
 

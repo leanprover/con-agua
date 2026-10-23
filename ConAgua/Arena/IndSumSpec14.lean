@@ -12,6 +12,9 @@ reserved name (`proj_table_name`, a stub), its absence (`env_find`), the three l
 record (`decTbl`), and the push (`env_push`, lane `decls2`'s).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
