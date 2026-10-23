@@ -120,7 +120,7 @@ def assemble(dumps):
         if len(want[g]) != 1:
             problems.append(f"stub `{g}` called with {sorted(want[g])} arguments")
         stubs[g] = min(want[g])
-    return sorted(reach), src_of, stubs, sorted(pre), problems, errs
+    return sorted(reach), src_of, stubs, sorted(pre), sorted(fr - pre), problems, errs
 
 
 def sources(src_of):
@@ -178,6 +178,11 @@ def preNames : List String := [
   {pre_names}]
 
 def preTree : NTree := nameTree preNames
+
+/-- The functions reachable from `front_run` that are not copied ({nshared}): the copies call them
+unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
+def preShared : List String := [
+  {shared_names}]
 
 /-- **The checker.** -/
 def checkerProg : Prog := [
@@ -270,7 +275,7 @@ def main():
         for bad, other, decl in clashes:
             e2e.log(f"CLASH: {bad} vs {other}: {decl}")
         sys.exit("modules clash on import (fix them first)")
-    reach, src_of, stubs, pre, problems, derrs = assemble(dumps)
+    reach, src_of, stubs, pre, shared, problems, derrs = assemble(dumps)
     if problems:
         for p in problems:
             e2e.log("PROBLEM: " + p)
@@ -289,6 +294,7 @@ def main():
     txt = HEADER.format(imports="\n".join(f"import {m}" for m in imports), nfun=len(entries),
                         nstub=len(stubs), stub_names=", ".join(lean_str(g) for g in sorted(stubs)),
                         pre_names=",\n  ".join(lean_str(f) for f in pre), npre=len(pre),
+                        shared_names=",\n  ".join(lean_str(f) for f in shared), nshared=len(shared),
                         entries=",\n".join(entries))
     n = len(entries)
     bounds = [n * k // ASM_PARTS for k in range(ASM_PARTS + 1)]
