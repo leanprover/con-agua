@@ -177,7 +177,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
 
 /-! ## The quotient arm `check_decl_quot(i, vis)` -/
 
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw quotW)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw quotW)
 
 /-- The slot word `check_decl_quot` computes from the record's kind word. -/
 def slotOfW (kw : Word) : Word := if kw = 1 then 0 else if kw = 2 then 1 else if kw = 3 then 2 else 3
@@ -258,17 +258,23 @@ structure QuotProg (p : Prog) : Prop where
   pa : p.lookup "pin_at" = some pinAtL
   cdq : p.lookup "check_decl_quot" = some checkDeclQuot
 
-/-- **The quotient arm at the stage relation.** -/
-theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+/-- **The quotient arm at the stage relation, with a memory invariant `J`** kept by `erec_ci`,
+`quot_pin_hit` and `check_basis_decl` (`cdqW_ok`: `J` trivial; `cdqW_okT`: the core's memos,
+kept by the leaves' frame). -/
+theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
-    {cv : IConstantVal} (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    {cv : IConstantVal} (J : Mem → Prop)
+    (hJe : ∀ {k : Nat} {x y : Mem} {rx : List Word}, erecCiW k x i 0 = some (rx, y) → J x → J y)
+    (hJ : ∀ {f : FnName} {k : Nat} {args : List Word} {x y : Mem} {rx : List Word},
+      f ∈ ["quot_pin_hit", "check_basis_decl"] → callW p k f args x = some (rx, y) → J x → J y)
+    (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a) (hJ0 : J m)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
     (hN : L.Rom.NamesDn dn a L.Rom.quotNames)
     (hcvD : ∃ c, ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
     ∃ fe' a', (checkDecl V pins fe (.quotDecl k cv)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ J m' := by
   have hdecl := hD.recs i.toNat hi
   rw [hd] at hdecl
   obtain ⟨-, hcvAt, hk⟩ := hdecl
@@ -286,6 +292,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, cdqK1_some] at h
   obtain ⟨hS1, hg1, -, hcv1, htop1⟩ := erecCiW_okA h1 hS hD hi hcvAt
+  have hJ1 : J m1 := hJe h1 hJ0
   have hqb : (r1.headD 0).toNat + 8 < 2 ^ 64 := by
     have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
   have hq1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := toNat_add_small _ 1 (by omega)
@@ -295,6 +302,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdqK2_some] at h
+  have hJ2 : J m2 := hJ (by simp) h2 hJ1
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (qph_specW p hQ.qph n ⟨m1, Locals.init []⟩ _ _) h2
   rw [hs2] at hW2
@@ -325,7 +333,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
         vis 4 (by decide) hS2 (fun _ => ⟨hok2, L.Rom.NamesDn.ext hN hx2⟩)) h3
     subst hs3
     have hrun3 := AM.run_of_ok _ _ hok3
-    refine ⟨_, _, ?_, by simpa using hS3, hg1.trans (hg2.trans hg3)⟩
+    refine ⟨_, _, ?_, by simpa using hS3, hg1.trans (hg2.trans hg3), hJ (by simp) h3 hJ2⟩
     show (do if ← quotPinHit .type cv then checkBasisDecl fe .quotK
              else fail (.notImplemented "quotient declaration mismatch")).run a = _
     simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]
@@ -333,7 +341,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
   · rw [if_neg ht] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨fe, a2, ?_, by simpa using hS2, hg1.trans hg2⟩
+    refine ⟨fe, a2, ?_, by simpa using hS2, hg1.trans hg2, hJ2⟩
     cases k with
     | type => exact absurd rfl ht
     | ctor =>
@@ -352,6 +360,21 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
       show (do if ← quotPinHit .sound cv then pure fe
                else fail (.notImplemented "quotient soundness axiom mismatch")).run a = _
       simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
+
+/-- **The quotient arm at the stage relation.** -/
+theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
+    {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
+    {cv : IConstantVal} (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
+    (hN : L.Rom.NamesDn dn a L.Rom.quotNames)
+    (hcvD : ∃ c, ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
+    ∃ fe' a', (checkDecl V pins fe (.quotDecl k cv)).run a = .ok (fe', a') ∧
+      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+  obtain ⟨fe', a', h1, h2, h3, -⟩ := cdqW_gen (pins := pins) hQ hdn (fun _ => True)
+    (fun _ _ => trivial) (fun _ _ _ => trivial) h hS trivial hD hi hd hok hN hcvD
+  exact ⟨fe', a', h1, h2, h3⟩
 
 /-- **`check_decl_quot` refines `checkDecl`'s `.quotDecl` arm** at the loop's relation (through the
 ROM stubs; `StateOK` of the twin state for the canonical comparison). -/

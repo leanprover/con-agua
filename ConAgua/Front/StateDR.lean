@@ -11,7 +11,7 @@ import ConAgua.Census.Attr
 `StateDR m st`: the name, level and expression id tables of con-ron's `StateD`
 (`vendor/con-ron/ConRon/Arena/Frontend/ExportC.lean:99`) are the L tables `NID`, `LID`, `EID`
 (`IdTable.lean`'s `TblR`: a dense array plus a sparse overflow, every handle word below `2^32`, as
-the stores' refinements require); the declarations are `DECL`/`DLP` (`DeclsR`).
+the stores' refinements require); the declarations are `DECL`/`DLP` (`DeclsF`).
 
 The theorems (`frontInit_refines`, `applyNStr_refines`, `applyNNum_refines`, `applyLevel_refines`)
 are triples of the shape of `internNStr_refinesA` (`ArenaRel.lean`): from `ArenaR` and `StateDR`,
@@ -100,19 +100,8 @@ def DeclAt (D P : Array Word) (i : Nat) : IDeclaration → Prop
   | .quotDecl k cv => dw D i 0 = 5 ∧ CVAt D P i cv ∧ quotW (dw D i 6) = k
   | _ => False
 
-/-- **The declarations** `ds` are the records of `D` (word `0` their number), their universe
-parameters slices of `P` (word `0` its top). -/
-structure DeclsR (D P : Array Word) (ds : Array IDeclaration) : Prop where
-  dsize : D.size < 2 ^ 63
-  psize : P.size < 2 ^ 63
-  count : (D[0]?.getD 0).toNat = ds.size
-  room : 1 + 8 * ds.size ≤ D.size
-  ptop : (P[0]?.getD 0).toNat + 1 ≤ P.size
-  recs : ∀ i (h : i < ds.size), DeclAt D P i ds[i]
-
 /-- Record `i` represents the declaration, inductive blocks included (`IndDeclAt`): the
-front's records. (`DeclAt` is the one-constant kinds, the records lane `decls`' loop reads so far,
-`DeclsR`.) -/
+front's records. (`DeclAt` is the one-constant kinds.) -/
 def DeclAtF (D P : Array Word) (i : Nat) : IDeclaration → Prop
   | .indDecl b nP => IndDeclAt D P i b nP
   | d => DeclAt D P i d

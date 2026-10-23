@@ -24,7 +24,7 @@ set_option experimental.vcgen true
 /-- **A stage spec**: every returning call of `f` (no arguments) keeps the caller's locals and
 takes memory satisfying `Pre` to memory satisfying `Post r` (`r` the results). -/
 def StageSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
-  ∀ (n : Nat) (s₀ : St), ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
     ⦃fun r s' => LocEq s' s₀ ∧ (Pre s₀.mem → Post r s'.mem); ⊤⦄
 
 /-- **The composition**: from the eight stage specs, a run of `check` from memory satisfying `Q0`
@@ -40,7 +40,7 @@ theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
     (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
     (h7 : StageSpec p "intern_all_pins" Q6 fun _ => Q7)
     (h8 : StageSpec p "install_then_check" Q7 fun _ _ => T)
-    (n : Nat) (s₀ : St) :
+    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check" []
     ⦃fun r _ => Q0 s₀.mem → r.headD 0 = ConAgua.Final.ACCEPT → T; ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -48,8 +48,10 @@ theorem check_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
+    have hn' : n ≤ 2 ^ 62 := by omega
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      (h1 n ·), (h2 n ·), (h3 n ·), (h4 n ·), (h5 n ·), (h6 n ·), (h7 n ·), (h8 n ·)]
+      (h1 n hn' ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
+      (h7 n hn' ·), (h8 n hn' ·)]
     all_goals first
       | (simp only [Sig.retVal, Sig.retOr] at *; simp [ConAgua.Final.ACCEPT] at *; done)
       | grind [lang_grind]
@@ -67,7 +69,7 @@ open ConRon.Arena ConRon.Arena.Frontend ConAgua.Final
 /-- **A relational stage spec**: from memory satisfying `Pre`, a returning call of `f` keeps the
 caller's locals and ends in memory satisfying `Post r`. -/
 def RelSpec (p : Prog) (f : FnName) (Pre : Mem → Prop) (Post : List Word → Mem → Prop) : Prop :=
-  ∀ (n : Nat) (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
     ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
 /-- **The relations between `check`'s stages**, for the input bytes `b`, the pin-data bytes `pb`
@@ -196,12 +198,12 @@ theorem StageSpec.of_rel {p : Prog} {f : FnName} {X : Type} {Pre : Mem → Prop}
     {Post : List Word → Mem → Prop} (P : X → Mem → Prop) (PostX : X → List Word → Mem → Prop)
     (h : ∀ x, RelSpec p f (P x) (PostX x)) (hpre : ∀ m, Pre m → ∃ x, P x m ∧
       ∀ r m', PostX x r m' → Post r m') : StageSpec p f Pre Post := by
-  intro n s₀
+  intro n hn s₀
   apply M.triple_of_run
   intro s r s' hs hrun
   refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun hP => ?_⟩
   obtain ⟨x, hx, hpost⟩ := hpre _ hP
-  exact hpost _ _ (M.of_run (P := fun s => s = s₀) hs hrun (h x n s₀ hx)).2
+  exact hpost _ _ (M.of_run (P := fun s => s = s₀) hs hrun (h x n hn s₀ hx)).2
 
 /-- **`PipelineRefines` from the eight stages**, at any choice of the relations between them. -/
 theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some checkL)
@@ -238,7 +240,7 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
             r.R6 m x.2.2.2.2.2.1 x.2.2.2.2.2.2)
       (fun x _ m => ∃ pins ipins a', internAllPins pins x.2.2.2.2.2.2 = .ok (ipins, a') ∧
         r.R7 m x.2.2.2.2.2.1 ipins a')
-      (fun x n s₀ hP => h7 b pb s8 s64 _ _ _ _ _ _ _ hin hP.1 n s₀ hP.2)
+      (fun x n hn s₀ hP => h7 b pb s8 s64 _ _ _ _ _ _ _ hin hP.1 n hn s₀ hP.2)
       fun m ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR⟩ => ⟨(sA, pre, sB, rc, sC, ds, sD),
         ⟨⟨hA, hB, hC, hD⟩, hR⟩,
         fun _ _ ⟨pins, ipins, sE, hE, hR'⟩ =>
@@ -250,11 +252,11 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
           r.R7 m x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2)
       (fun x _ _ => ∃ fe a', SeqAccepts .verified x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.1
         x.2.2.2.2.2.2.2.2.2 fe a')
-      (fun x n s₀ hP => h8 b pb s8 s64 _ _ _ _ _ _ _ _ _ _ hin hP.1 n s₀ hP.2)
+      (fun x n hn s₀ hP => h8 b pb s8 s64 _ _ _ _ _ _ _ _ _ _ hin hP.1 n hn s₀ hP.2)
       fun m ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR⟩ =>
         ⟨(sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE), ⟨⟨hA, hB, hC, hD, hE⟩, hR⟩, fun _ _ ⟨fe, sF, hF⟩ =>
           ⟨pins, sA, sB, sC, sD, sE, sF, pre, rc, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩⟩)
-    N { mem := loadMem b pb s8 s64, loc := Locals.init [] }
+    N (by omega) { mem := loadMem b pb s8 s64, loc := Locals.init [] }
   simp only [L.run] at hrun
   cases hr : (invoke p (exec p N) "check" []).run { mem := loadMem b pb s8 s64, loc := Locals.init [] } with
   | error e => rw [hr] at hrun; cases hrun
