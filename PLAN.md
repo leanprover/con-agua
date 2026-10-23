@@ -100,6 +100,15 @@ per-function separation logic.
   whose own proof term (and generated `proof_N`/`match_N`/`eq_N` auxiliaries) has no `sorryAx`: it comes
   only through other constants. The report lists the nearest such constants ("sorry sources", by number
   of targets blocked) as a work queue. Locally proven targets still cover none of their callees.
+- **Not needed (`n/a`).** A target the L checker deliberately never implements (a deliberate deviation, error
+  text, an unused mode, a pure-proof helper) is listed with its reason and deviation id in
+  `docs/not-needed.md`, a reviewed table `census.py` reads; it fails if a listed target does not exist or has
+  an L function or refinement of its own. n/a targets have their own column and are left out of the
+  denominator of every share (proven / locally / L written), so 100% is reachable. Strict: a target that
+  is merely covered once its callers are proven stays `todo` and shows in the informational "pending"
+  column. CSV: new columns `na, lean_na, rust_na, pending, lean_pending` at the end; `lean_all` stays the
+  total, the shares use `lean_all - lean_na` (gist trend included; older rows have no n/a). Add a row to
+  `docs/not-needed.md` in the commit that makes the decision; when L later gets code for it, delete the row.
 - **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
   on master after each batch of landings, so the time series has one line per master state and lanes never
