@@ -146,10 +146,11 @@ end rel
 section frames
 variable {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
 
-/-- **`TwinOK` across a writer** that leaves `EREC` and the core memos (arrays 49, 50, 52‥54,
-151‥153, `CTL` 48, 50, 54, 56, 58, 152, 154, 156) alone; the twin state unchanged. -/
+/-- **`TwinOK` across a writer** that leaves the core memos (arrays 49, 50, 52‥54, 151‥153, `CTL`
+48, 50, 54, 56, 58, 152, 154, 156) alone, `EREC` writers included (no part of `TwinOK` reads the
+records: `StoreDen.mem`); the twin state and the environment unchanged. -/
 theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hE : EREC ∉ A) (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A)
+    (hf : MemFrame A C m m') (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A)
     (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
     (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
@@ -157,8 +158,7 @@ theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
   ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,
-    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk,
-    h.den.frameE (hf.1 EREC hE (by decide))⟩
+    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk, h.den.mem m'⟩
 
 /-- `TwinOK` across a writer of `CTL` words below 48 or in 60‥127 only (the bracket's). -/
 theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame [] C m m')
@@ -166,7 +166,7 @@ theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame 
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
   have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
     have := hC k hk; omega
-  exact h.frame hf (by simp) ⟨by simp, by simp⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
+  exact h.frame hf ⟨by simp, by simp⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
     ⟨by simp, by simp, by simp⟩
     ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
     ⟨by simp, by simp, by simp⟩
@@ -192,7 +192,7 @@ theorem TwinOK.flush {m : Mem} {a : AState} (h : TwinOK dn m a fe) :
   refine ⟨fun k l hk => ?_, fun k l hk => ?_, h.nwf, h.erec, h.spn, h.memos, h.bstk, ?_⟩
   · simp [Caches.empty] at hk
   · simp [Caches.empty] at hk
-  · exact h.den.mono (LsExt.refl _) rfl rfl (fun k x hk => by simp [Caches.empty] at hk) rfl
+  · exact h.den.mono (LsExt.refl _) rfl rfl (fun k x hk => by simp [Caches.empty] at hk)
       (fun _ _ hv => hv) (fun _ _ _ hv => .inl hv) h.den.lvlAll h.den.lsAll
 
 /-! ### Opening the scratch tier when it is off
@@ -297,7 +297,7 @@ theorem TwinOK.enter {m : Mem} {a : AState} (h : TwinOK dn m a fe) (hwf : StoreW
     rw [hLs]; exact h.readLs k l hk
   · obtain ⟨rk, hn⟩ := h.nwf
     exact ⟨rk, NStore.enableScratch_wfAt hn⟩
-  · refine h.den.mono hx rfl rfl (fun k x hk => .inl hk) rfl
+  · refine h.den.mono hx rfl rfl (fun k x hk => .inl hk)
       (fun x u hv => by rw [← hvE x]; exact hv) (fun x c us hv => .inl (by rw [← hvE x]; exact hv))
       (fun u hu => ?_) (fun u hu => ?_)
     · have hu' : (a.store.ls.view u).isSome := by
@@ -318,8 +318,9 @@ Every part of `TwinOK` that speaks of the twin state alone follows from con-ron'
 store's well-formedness from `StateOK`, the stored levels' readbacks from the store's
 well-formedness (a handle with a view denotes: con-ron's `denoteL_of_view`), the pins' from
 `PinsOK`, the environment's level parameters and recursor levels from `IFEnvOK.hit`. What is left
-is the memory's half (`TwinMem`: three sizes, the core's memos, the projection-table clause of
-`StoreDen`, which reads `EREC`) and the record decoder's agreement with the name store (`dnN`). -/
+is the memory's half (`TwinMem`: three sizes, the core's memos) and the record decoder's agreement
+with the name store (`dnN`). The projection tables' readbacks are the environment's tables'
+(`StoreDen.proj`, lane `loopt2`), from `IFEnvOK.hit` and `IFEnvOK.proj`. -/
 
 /-- **The memory's half of `TwinOK`**, and the name decoder's agreement with the store. -/
 structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : Prop where
@@ -327,10 +328,6 @@ structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : 
   spn : (m.arr64 SPN).size < 2 ^ 63
   bstk : (m.arr64 145).size < 2 ^ 63
   memos : CoreMemos m
-  proj : ∀ (q : Nat) (tbl : IProjTable), decTbl (m.arr64 EREC) q = some tbl →
-    (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
-    (∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l) ∧
-    (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
   dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
 
 theorem denoteNList_mapM {st : NStore} :
@@ -389,6 +386,21 @@ theorem denoteRules_mem {st : EStore} :
           | some ls => exact denoteLList_mem h3 u hu
         · exact denoteRules_mem h2 r hr lvls pins hf u hu
 
+/-- A denoting projection table's structure sort, guards and level parameters read back. -/
+theorem denoteProjTable_parts {st : EStore} {t : IProjTable} {pt : ConLeche.ProjTable}
+    (h : ConRon.Arena.Frontend.denoteProjTable st t = some pt) :
+    (∃ l, denoteL st.ls t.structSort = some l) ∧
+    (∃ gs, denoteLList st.ls t.guards = some gs) ∧
+    (∃ ks, ConRon.Arena.Frontend.denoteNList st.ns t.levelParams = some ks) := by
+  unfold ConRon.Arena.Frontend.denoteProjTable at h
+  cases h1 : denoteN st.ns t.structName <;>
+    cases h2 : ConRon.Arena.Frontend.denoteNList st.ns t.levelParams <;>
+    cases h3 : denoteN st.ns t.ctor <;> simp only [h1, h2, h3] at h <;> try cases h
+  cases h4 : denoteL st.ls t.structSort <;>
+    cases h5 : ConRon.Arena.Frontend.denoteEArray st t.bodies <;>
+    cases h6 : denoteLList st.ls t.guards <;> simp only [h4, h5, h6] at h <;> try cases h
+  exact ⟨⟨_, rfl⟩, ⟨_, rfl⟩, ⟨_, rfl⟩⟩
+
 theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInfo}
     {cv : IConstantVal} {a : AState} (ht : ci.isTowerEntry = false)
     (hd : ConRon.Arena.Frontend.denoteCI st ci = some d)
@@ -444,7 +456,7 @@ theorem TwinOK.of_fold {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
   have hi := hok.check.ienv
   refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
-    fun c ci cv hf ht hcv => ?_, hm.proj, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
+    fun c ci cv hf ht hcv => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
     fun us hus => ?_, hm.dnN, fun c cv mI rP rules hf r hr lvls pins hfi u hu => ?_⟩
   · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
   · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
@@ -454,6 +466,15 @@ theorem TwinOK.of_fold {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
   · obtain ⟨-, d, -, hd, -⟩ := hi.hit c ci hf
     obtain ⟨y, hy⟩ := denoteCI_cv ht hd (hcv a)
     exact denoteCV_lps hy
+  · obtain ⟨-, d, -, hd, -⟩ := hi.hit c _ hf
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨pt, hpt, -⟩ := hd
+    obtain ⟨hss, ⟨gs, hgs⟩, ⟨ks, hks⟩⟩ := denoteProjTable_parts hpt
+    have hlen := (hi.proj c tbl hf).guards
+    refine ⟨hss, fun i hi' => denoteLList_mem hgs _ ?_, ⟨ks, denoteNList_mapM hks⟩⟩
+    have hlt : i < tbl.guards.length := by omega
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hlt, Option.getD_some]
+    exact List.getElem_mem hlt
   · obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hus
     obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
@@ -540,7 +561,7 @@ theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     LoopT pins dn (pendPushMem m g i v) a vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds := by
   have hf := pendPushMem_frame m g i v
   exact ⟨h.loop.pendPush g i v vg hg hb hc h1,
-    h.twin.frame hf (by decide) ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
+    h.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
     by rw [pinW_frame hf (by decide)]; exact h.flag,
@@ -553,6 +574,7 @@ theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
   ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
     { h.den with
       constLps := fun c ci cv hf => h.den.constLps c ci cv (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
+      proj := fun c tbl hf => h.den.proj c tbl (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
       recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
         (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
 

@@ -114,7 +114,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     simp only [hpProjT, StateT.run_bind, hrun₁, decEntry, h0, ↓reduceIte, except_ok_bind]
     rfl
   simp only [h0, ↓reduceIte] at hW
-  obtain ⟨tbl, htbl⟩ := hpf n m a dn vis fe M eb sn i r₁ m₁ hS hc1 h0
+  obtain ⟨tbl, htbl, -⟩ := hpf n m a dn vis fe M eb sn i r₁ m₁ hS hc1 h0
   have hE : m₁.arr64 EREC = m.arr64 EREC := hek n "find_proj" _ m r₁ m₁ (Or.inl rfl) hc1
   obtain ⟨hbw, hbe⟩ := decTbl_body htbl hS.erec i
   simp only [hppB, hE] at hW

@@ -110,7 +110,6 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       hf.2.2.1 145 ▸ hS.bstk,
       hS.den.mono (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext) (by rw [hL.pins])
         (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
-        (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)) hlv
         (hS.den.lsAll.of_ext (fun u hu => by

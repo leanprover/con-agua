@@ -305,11 +305,11 @@ theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) (us : LsId
 no new `sort`/`const` view (`hv`). -/
 theorem StoreDen.of_views {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen dn m a fe)
     (hc : a'.caches = a.caches) (hp : a'.pins = a.pins) (hl : a'.store.lss = a.store.lss)
-    (he : m'.arr64 EREC = m.arr64 EREC)
+    (_he : m'.arr64 EREC = m.arr64 EREC)
     (hv : ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w) :
     StoreDen dn m' a' fe :=
   h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
-    he (fun x u hx => hv x _ (.inl ⟨_, rfl⟩) hx) (fun x c us hx => .inl (hv x _ (.inr ⟨_, _, rfl⟩) hx))
+    (fun x u hx => hv x _ (.inl ⟨_, rfl⟩) hx) (fun x c us hx => .inl (hv x _ (.inr ⟨_, _, rfl⟩) hx))
     (h.lvlAll.congr (by simp only [EStore.ls, hl])) (h.lsAll.congr hl)
 
 /-- Interning a node that is neither a `sort` nor a `const` creates no such view. -/
@@ -342,7 +342,7 @@ theorem internE_pure_views {β : Type} {v : ENodeView} (hv : ¬ IsSC v)
 /-- **`StoreDen` across interning `sort u`**, `u` reading back. -/
 theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} {u : LIdx} {r : EIdx}
     (h : StoreDen dn m a fe) (hu : ∃ l, denoteL a.store.ls u = some l)
-    (hrun : (internE (.sort u)).run a = .ok (r, a')) (he : m'.arr64 EREC = m.arr64 EREC) :
+    (hrun : (internE (.sort u)).run a = .ok (r, a')) (_he : m'.arr64 EREC = m.arr64 EREC) :
     StoreDen dn m' a' fe := by
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .sort u) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
@@ -362,13 +362,13 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
   · intro c ci cv hf ht hcv; have := h.constLps c ci cv hf ht hcv
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
-  · intro q tbl ht; rw [he] at ht; have := h.proj q tbl ht
+  · intro q tbl ht; have := h.proj q tbl ht
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
 
 /-- **`StoreDen` across interning `const c us`**, `us` reading back. -/
 theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} {c : NIdx} {us : LsIdx}
     {r : EIdx} (h : StoreDen dn m a fe) (hus : ∃ ls, denoteLs a.store.lss us = some ls)
-    (hrun : (internE (.const c us)).run a = .ok (r, a')) (he : m'.arr64 EREC = m.arr64 EREC) :
+    (hrun : (internE (.const c us)).run a = .ok (r, a')) (_he : m'.arr64 EREC = m.arr64 EREC) :
     StoreDen dn m' a' fe := by
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .const c us) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
@@ -388,7 +388,7 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
   · intro c ci cv hf ht hcv; have := h.constLps c ci cv hf ht hcv
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
-  · intro q tbl ht; rw [he] at ht; have := h.proj q tbl ht
+  · intro q tbl ht; have := h.proj q tbl ht
     simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
 
 end L.Arena

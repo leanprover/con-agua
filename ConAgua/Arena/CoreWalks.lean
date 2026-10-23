@@ -211,7 +211,7 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
   refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
-    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf (fun h => absurd (hA _ h) (by decide)) hscA hscC⟩,
+    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv⟩
