@@ -116,9 +116,9 @@ theorem hsSch_wf : hsSch.WF := ⟨by decide, by decide⟩
 theorem memoRG_congr {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey κ} {dv : Word → ν}
     {m : Mem} {mp mp' : Std.HashMap κ ν} (h : ∀ x : κ, mp'[x]? = mp[x]?) (hR : MemoRG S K dv m mp) :
     MemoRG S K dv m mp' := by
-  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hR
-  refine ⟨h1, h2, h3, fun j hj hs ht => ?_, h5, fun x v hx => h6 x v (by rw [← h x]; exact hx)⟩
-  rw [h]; exact h4 j hj hs ht
+  have e : (fun x => mp'[x]?) = (fun x => mp[x]?) := funext h
+  unfold MemoRG MemoRV at hR ⊢
+  rw [e]; exact hR
 
 theorem hashSet_insert_get (seen : Std.HashSet EIdx) (e x : EIdx) :
     (seen.insert e).inner[x]? = (seen.inner.insert e ())[x]? := by
