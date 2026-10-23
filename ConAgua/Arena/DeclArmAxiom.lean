@@ -212,16 +212,34 @@ structure AxProg (p : Prog) : Prop where
   ora : OraProg p
   cda : p.lookup "check_decl_axiom" = some checkDeclAxiom
 
-/-- **The axiom arm at the stage relation.** -/
-theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+/-- The calls of the axiom arm other than `erec_ci` and `check_constant_val` (all leaves of the
+declaration loop: `cdaW_okT` carries the core's memos across them by their frame). -/
+def cdaLeaves : List FnName :=
+  ["rom_basis_decls", "ci_canon_eq", "std_axiom_ok", "env_push", "trust_compiler_ok",
+    "of_reduce_ax_ok"]
+
+/-- **The axiom arm at the stage relation, over the constant check's spec and a memory invariant
+`J`** (kept by `erec_ci` and the calls of `cdaLeaves`, given by the constant check). `cdaW_ok`
+(through the `StageR` spec of `check_constant_val`, `J` trivial) and `cdaW_okT` (through its
+`StageT` spec, `J` the core's memos) instantiate it. -/
+theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
-    {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
-    (h : cdaW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
+    {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal} (J : Mem → Prop)
+    (hJe : ∀ {k : Nat} {x y : Mem} {rx : List Word}, erecCiW k x i 0 = some (rx, y) → J x → J y)
+    (hJ : ∀ {f : FnName} {k : Nat} {args : List Word} {x y : Mem} {rx : List Word}, f ∈ cdaLeaves →
+      callW p k f args x = some (rx, y) → J x → J y)
+    (hccv : ∀ {k : Nat} {r1 r3 : List Word} {m1 m3 : Mem}, k < n →
+      erecCiW k m i 0 = some (r1, m1) → StageR dn vis fe m1 a →
+      decCV (erecP m1) (r1.headD 0 + 1).toNat = some cv → (r1.headD 0).toNat + 8 < 2 ^ 64 →
+      callW p k "check_constant_val" [vis, r1.headD 0 + 1] m1 = some (r3, m3) →
+      AM.ok (checkConstantVal V fe cv) a ∧
+        StageR dn vis fe m3 (AM.st (checkConstantVal V fe cv) a) ∧ IWGrow m1 m3 ∧ J m3)
+    (h : cdaW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a) (hJ0 : J m)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a)
     (hN : L.Rom.NamesDn dn a L.Rom.quotNames) :
     ∃ fe' a', (checkDecl V pins fe (.axiomDecl cv)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ J m' := by
   have hdecl := hD.recs i.toNat hi
   rw [hd] at hdecl
   obtain ⟨-, hcvAt⟩ := hdecl
@@ -235,7 +253,9 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, cdaK1_some] at h
   obtain ⟨hS1, hg1, hci1, hcv1, htop1⟩ := erecCiW_okA h1 hS hD hi hcvAt
-  generalize hq : r1.headD 0 = q at h hci1 hcv1 htop1
+  have hJ1 : J m1 := hJe h1 hJ0
+  have hccv1 := @hccv n r1
+  generalize hq : r1.headD 0 = q at h hci1 hcv1 htop1 hccv1
   have hqb : q.toNat + 8 < 2 ^ 64 := by
     have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
@@ -267,6 +287,7 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     rw [e3, cdaQ1_some] at h
     obtain ⟨blk, a3, hrun3, hS3, hg3, hD3, -⟩ :=
       hX.quot.rom.quot dn vis fe n m1 a r3 m3 ⟨hS1, hok, hN⟩ e3
+    have hJ3 : J m3 := hJ (by simp [cdaLeaves]) e3 hJ1
     have hrun3' : (BasisKind.decls .quotK).run a = .ok (blk, a3) := hrun3
     have hok3 := (ConRon.Bridge.BasisKind.decls_run hok hrun3').1
     generalize r3.headD 0 = o3 at h hD3
@@ -306,7 +327,8 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     have hb : AM.res ((IConstantInfo.axiomInfo cv).canonEq ci) a3 = true := by
       rw [← hb4]; simpa using z4
     rw [hb] at hrun4
-    refine ⟨fe, _, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4)⟩
+    refine ⟨fe, _, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4),
+      hJ (by simp [cdaLeaves]) e4 hJ3⟩
     rw [StateT.run_bind, hrun3', exc_ok_bind']
     simp only [hget, StateT.run_bind, hrun4, exc_ok_bind', if_true]
     rfl
@@ -320,33 +342,31 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [e3, cdaK3_some] at h
-  obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refines p hX.val n ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1 hcv1'
-      (by omega)) e3
-  subst hs3
+  obtain ⟨hok3, hS3, hg3, hJ3⟩ := hccv1 (by omega) h1 hS1 hcv1' hqb e3
   have hrun3 := AM.run_of_ok _ _ hok3
   generalize AM.st (checkConstantVal V fe cv) a = a3 at hrun3 hS3
-  have hP3 : ArrExt (erecP m1) (erecP s3.mem) := IWGrow.erecPExt hg3
+  have hP3 : ArrExt (erecP m1) (erecP m3) := IWGrow.erecPExt hg3
   -- the standard axioms
-  cases e4 : callW p n "std_axiom_ok" [vis, q + 1] s3.mem with
+  cases e4 : callW p n "std_axiom_ok" [vis, q + 1] m3 with
   | none => rw [e4] at h; cases h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [e4, cdaK4_some] at h
-  obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (stdAxiomOk_refines p hX.std dn hdn vis fe (q + 1) cv n ⟨s3.mem, Locals.init []⟩ a3
+  obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (stdAxiomOk_refines p hX.std dn hdn vis fe (q + 1) cv n ⟨m3, Locals.init []⟩ a3
       ⟨hS3, ArrExt.decCV hP3 hcv1'⟩) e4
   subst hs4
+  have hJ4 : J s4.mem := hJ (by simp [cdaLeaves]) e4 hJ3
   have hrun4 := AM.run_of_ok _ _ hok4
   generalize AM.res (stdAxiomOk fe cv) a3 = b4 at hrun4 hb4
   generalize AM.st (stdAxiomOk fe cv) a3 = a4 at hrun4 hS4
   have hP4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
   -- a push of the axiom, after a passed test
   have push : ∀ {mx : Mem} {ax : AState} {rx : List Word} {mf : Mem},
-      StageR dn vis fe mx ax → IWGrow m1 mx →
+      StageR dn vis fe mx ax → IWGrow m1 mx → J mx →
       cdaRet (callW p n "env_push" [vis, q] mx) = some (r, m') →
-      StageR dn (r.headD 0) (fe.push (.axiomInfo cv)) m' ax ∧ IWGrow mx m' := by
-    intro mx ax rx mf hSx hgx hx
+      StageR dn (r.headD 0) (fe.push (.axiomInfo cv)) m' ax ∧ IWGrow mx m' ∧ J m' := by
+    intro mx ax rx mf hSx hgx hJx hx
     cases e : callW p n "env_push" [vis, q] mx with
     | none => rw [e] at hx; cases hx
     | some rmx =>
@@ -355,12 +375,12 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     simp only [Option.some.injEq, Prod.mk.injEq] at hx
     obtain ⟨rfl, rfl⟩ := hx
     obtain ⟨hSy, hgy⟩ := push_call hX.val.rcp e hSx (ArrExt.decCI (IWGrow.erecPExt hgx) hci1)
-    exact ⟨by simpa using hSy, hgy⟩
+    exact ⟨by simpa using hSy, hgy, hJ (by simp [cdaLeaves]) e hJx⟩
   by_cases z4 : r4.headD 0 ≠ 0
   · rw [if_pos z4] at h
     have hb : b4 = true := by rw [← hb4]; simpa using z4
-    obtain ⟨hS', hg'⟩ := push (rx := []) (mf := m) hS4 (hg3.trans hg4) h
-    refine ⟨_, a4, ?_, hS', hg1.trans (hg3.trans (hg4.trans hg'))⟩
+    obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS4 (hg3.trans hg4) hJ4 h
+    refine ⟨_, a4, ?_, hS', hg1.trans (hg3.trans (hg4.trans hg')), hJ'⟩
     simp only [StateT.run_bind, hrun3, exc_ok_bind', hrun4, hb, if_true]
     rfl
   rw [if_neg z4] at h
@@ -397,8 +417,9 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     rw [if_neg z6] at h
     have ht6 : AM.res (trustCompilerOk fe cv) a4 = true := by rw [← hb6]; simpa using z6
     rw [ht6] at hrun6
-    obtain ⟨hS', hg'⟩ := push (rx := []) (mf := m) hS6 (hg3.trans (hg4.trans hg6)) h
-    refine ⟨_, _, ?_, hS', hg1.trans (hg3.trans (hg4.trans (hg6.trans hg')))⟩
+    obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS6 (hg3.trans (hg4.trans hg6))
+      (hJ (by simp [cdaLeaves]) e6 hJ4) h
+    refine ⟨_, _, ?_, hS', hg1.trans (hg3.trans (hg4.trans (hg6.trans hg'))), hJ'⟩
     simp only [StateT.run_bind, hrun6, exc_ok_bind', if_true]
     rfl
   rw [if_neg eq5] at h
@@ -448,8 +469,9 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     rw [if_neg z9] at h
     have ht9 : AM.res (ofReduceAxOk fe cv) a4 = true := by rw [← hb9]; simpa using z9
     rw [ht9] at hrun9
-    obtain ⟨hS', hg'⟩ := push (rx := []) (mf := m) hS9 (hg3.trans (hg4.trans hg9)) h
-    refine ⟨_, _, ?_, hS', hg1.trans (hg3.trans (hg4.trans (hg9.trans hg')))⟩
+    obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS9 (hg3.trans (hg4.trans hg9))
+      (hJ (by simp [cdaLeaves]) e9 hJ4) h
+    refine ⟨_, _, ?_, hS', hg1.trans (hg3.trans (hg4.trans (hg9.trans hg'))), hJ'⟩
     simp only [StateT.run_bind, hrun9, exc_ok_bind', if_true]
     rfl
   rw [if_neg eq8] at h
@@ -502,11 +524,32 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     obtain ⟨rfl, rfl⟩ := h
     rw [ep12] at eq12
     have hb12 := decI_beq (k := .name) wn _ hwnl hl12
-    refine ⟨fe, a4, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4)⟩
+    refine ⟨fe, a4, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4), hJ4⟩
     simp only [pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl, StateT.run_bind, hrun12,
       exc_ok_bind', hb12, eq12, decide_true, if_true, beq_self_eq_true]
     rfl
   · rw [if_neg eq12] at h; cases h
+
+/-- **The axiom arm at the stage relation.** -/
+theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
+    {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
+    (h : cdaW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a)
+    (hN : L.Rom.NamesDn dn a L.Rom.quotNames) :
+    ∃ fe' a', (checkDecl V pins fe (.axiomDecl cv)).run a = .ok (fe', a') ∧
+      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+  obtain ⟨fe', a', h1, h2, h3, -⟩ := cdaW_gen (pins := pins) hX hdn (fun _ => True)
+    (fun _ _ => trivial) (fun _ _ _ => trivial)
+    (fun {k} {r1} {r3} {m1} {m3} _ _ hS1 hcv1 hqb e3 => by
+      obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+        (checkConstantVal_refines p hX.val k ⟨m1, Locals.init []⟩ a dn fe vis (r1.headD 0 + 1) cv
+          hS1 hcv1 (by have : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := toNat_add_small _ 1 (by omega); omega)) e3
+      subst hs3
+      exact ⟨hok3, hS3, hg3, trivial⟩)
+    h hS trivial hD hi hd hok hN
+  exact ⟨fe', a', h1, h2, h3⟩
 
 /-- **`check_decl_axiom` refines `checkDecl`'s `.axiomDecl` arm** at the loop's relation (through
 the ROM stubs and the core's; `StateOK` of the twin state for the canonical comparison). -/
