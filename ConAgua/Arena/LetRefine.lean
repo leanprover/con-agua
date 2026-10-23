@@ -202,7 +202,7 @@ theorem leinternW_eq (m : Mem) (ty val body : Word) :
     intro t j c; rw [← lepushMem_eq, lepushMem_eqC]; rfl
   have ec : ∀ t, cntC letCS m t = cntW letSch m t := fun t => rfl
   have eh : letCS.qhM m [ty, val, body] = letHashW ty val body := rfl
-  simp only [leinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
+  simp only [leinternW, consInternM, internM, pushM, pushC, pushMX_none (C := letCS) rfl, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left

@@ -204,7 +204,7 @@ theorem forallOK : ConsOK p forallCS where
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := fahash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [forallCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, forallHashW, argsOf, BinOp.eval]
@@ -220,6 +220,8 @@ theorem forallOK : ConsOK p forallCS where
     simp only [forallCS, Option.some.injEq] at he
     subst he
     simp [forallCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [forallCS]
   push_np := by decide
   arrs := by decide
 
@@ -230,7 +232,7 @@ theorem forallFind_spec (hp : p.lookup "forall_find" = some forallFind) (n : Nat
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) t ty body
         (baseW s₀.mem t) (nSlotsFa s₀.mem) (homeW h (nSlotsFa s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p forallCS ((forallOK p).match_) hp n s₀ t [ty, body] rfl h
+  consFindG_spec p forallCS ((forallOK p).match_) hp n s₀ t [ty, body] rfl h trivial
 
 theorem fapushOK_eqC (m : Mem) (t : Word) : fapushOK m t = pushOKC forallCS m t := by
   simp only [fapushOK, pushOKC, forallCS, facnt, cntC, ← decide_not, UInt64.not_le]; rfl
@@ -259,6 +261,7 @@ theorem internForallL_spec (hpf : p.lookup "forall_find" = some forallFind)
     invoke p (exec p n) "intern_forall" [ty, body]
     ⦃fun r s' => LocEq s' s₀ ∧ fainternW s₀.mem ty body = some (r.headD 0, s'.mem); ⊤⦄ :=
   consInternG_spec p forallCS (forallOK p) hpf hpp "intern_forall" hp n s₀ [ty, body] rfl
+    trivial
 
 end specs
 

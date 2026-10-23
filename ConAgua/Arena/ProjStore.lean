@@ -199,7 +199,7 @@ theorem projOK : ConsOK p projCS where
       Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
   ghash := pjhash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [projCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, projHashW, argsOf, BinOp.eval]
@@ -215,6 +215,8 @@ theorem projOK : ConsOK p projCS where
     simp only [projCS, Option.some.injEq] at he
     subst he
     simp [projCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [projCS]
   push_np := by decide
   arrs := by decide
 
@@ -225,7 +227,7 @@ theorem projFind_spec (hp : p.lookup "proj_find" = some projFind) (nn : Nat) (s�
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) t n u e
         (baseW s₀.mem t) (nSlotsPj s₀.mem) (homeW h (nSlotsPj s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p projCS ((projOK p).match_) hp nn s₀ t [n, u, e] rfl h
+  consFindG_spec p projCS ((projOK p).match_) hp nn s₀ t [n, u, e] rfl h trivial
 
 theorem pjpushOK_eqC (m : Mem) (t : Word) : pjpushOK m t = pushOKC projCS m t := by
   simp only [pjpushOK, pushOKC, projCS, pjcnt, cntC, ← decide_not, UInt64.not_lt]; rfl
@@ -252,7 +254,7 @@ theorem internProj_spec (hpf : p.lookup "proj_find" = some projFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p nn) "intern_proj" [n, u, e]
     ⦃fun r s' => LocEq s' s₀ ∧ pjinternW s₀.mem n u e = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p projCS (projOK p) hpf hpp "intern_proj" hp nn s₀ [n, u, e] rfl
+  consInternG_spec p projCS (projOK p) hpf hpp "intern_proj" hp nn s₀ [n, u, e] rfl trivial
 
 end specs
 

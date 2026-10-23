@@ -193,7 +193,7 @@ theorem letOK : ConsOK p letCS where
       Cmp.eval, BinOp.eval, List.range_succ, Bool.and_assoc]
   ghash := lehash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [letCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, letHashW, argsOf, BinOp.eval]
@@ -209,6 +209,8 @@ theorem letOK : ConsOK p letCS where
     simp only [letCS, Option.some.injEq] at he
     subst he
     simp [letCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [letCS]
   push_np := by decide
   arrs := by decide
 
@@ -219,7 +221,7 @@ theorem letFind_spec (hp : p.lookup "letE_find" = some letFind) (n : Nat) (s₀ 
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) t ty val body
         (baseW s₀.mem t) (nSlotsLe s₀.mem) (homeW h (nSlotsLe s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p letCS ((letOK p).match_) hp n s₀ t [ty, val, body] rfl h
+  consFindG_spec p letCS ((letOK p).match_) hp n s₀ t [ty, val, body] rfl h trivial
 
 theorem lepushOK_eqC (m : Mem) (t : Word) : lepushOK m t = pushOKC letCS m t := by
   simp only [lepushOK, pushOKC, letCS, lecnt, cntC, ← decide_not, UInt64.not_lt]; rfl
@@ -246,7 +248,7 @@ theorem internLet_spec (hpf : p.lookup "letE_find" = some letFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_letE" [ty, val, body]
     ⦃fun r s' => LocEq s' s₀ ∧ leinternW s₀.mem ty val body = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p letCS (letOK p) hpf hpp "intern_letE" hp n s₀ [ty, val, body] rfl
+  consInternG_spec p letCS (letOK p) hpf hpp "intern_letE" hp n s₀ [ty, val, body] rfl trivial
 
 end specs
 

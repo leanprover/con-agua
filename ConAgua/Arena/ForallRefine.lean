@@ -208,7 +208,7 @@ theorem fainternW_eq (m : Mem) (ty body : Word) :
     intro t j c; rw [← fapushMem_eq, fapushMem_eqC]; rfl
   have ec : ∀ t, cntC forallCS m t = cntW forallSch m t := fun t => rfl
   have eh : forallCS.qhM m [ty, body] = forallHashW ty body := rfl
-  simp only [fainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
+  simp only [fainternW, consInternM, internM, pushM, pushC, pushMX_none (C := forallCS) rfl, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's. -/

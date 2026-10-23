@@ -202,7 +202,7 @@ theorem pjinternW_eq (m : Mem) (n u e : Word) :
     intro t j c; rw [← pjpushMem_eq, pjpushMem_eqC]; rfl
   have ec : ∀ t, cntC projCS m t = cntW projSch m t := fun t => rfl
   have eh : projCS.qhM m [n, u, e] = projHashW n u e := rfl
-  simp only [pjinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
+  simp only [pjinternW, consInternM, internM, pushM, pushC, pushMX_none (C := projCS) rfl, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/

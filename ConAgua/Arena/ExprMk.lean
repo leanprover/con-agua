@@ -339,7 +339,7 @@ theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = som
     rw [← lapushOK_eqC] at hok
     simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   refine ⟨t, j, ht, h, ?_, ?_⟩
-  · rw [lapushMem_eqC]; exact hg
+  · rw [lapushMem_eqC]; rw [pushMX_none (C := lamCS) rfl] at hg; exact hg
   · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
     · rw [show lamCS.P = 10 * 134217728 from rfl]; exact hw_fields _ _ h
     · rw [show lamCS.S = 11 * 134217728 from rfl]; exact hw_fields _ _ h
@@ -372,7 +372,7 @@ theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = som
     rw [← fapushOK_eqC] at hok
     simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   refine ⟨t, j, ht, h, ?_, ?_⟩
-  · rw [fapushMem_eqC]; exact hg
+  · rw [fapushMem_eqC]; rw [pushMX_none (C := forallCS) rfl] at hg; exact hg
   · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
     · rw [show forallCS.P = 12 * 134217728 from rfl]; exact hw_fields _ _ h
     · rw [show forallCS.S = 13 * 134217728 from rfl]; exact hw_fields _ _ h

@@ -201,7 +201,7 @@ theorem lamOK : ConsOK p lamCS where
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := lahash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [lamCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, lamHashW, argsOf, BinOp.eval]
@@ -217,6 +217,8 @@ theorem lamOK : ConsOK p lamCS where
     simp only [lamCS, Option.some.injEq] at he
     subst he
     simp [lamCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [lamCS]
   push_np := by decide
   arrs := by decide
 
@@ -227,7 +229,7 @@ theorem lamFind_spec (hp : p.lookup "lam_find" = some lamFind) (n : Nat) (s₀ :
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) t ty body
         (baseW s₀.mem t) (nSlotsLa s₀.mem) (homeW h (nSlotsLa s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p lamCS ((lamOK p).match_) hp n s₀ t [ty, body] rfl h
+  consFindG_spec p lamCS ((lamOK p).match_) hp n s₀ t [ty, body] rfl h trivial
 
 theorem lapushOK_eqC (m : Mem) (t : Word) : lapushOK m t = pushOKC lamCS m t := by
   simp only [lapushOK, pushOKC, lamCS, lacnt, cntC, ← decide_not, UInt64.not_le]; rfl
@@ -254,7 +256,7 @@ theorem internLamL_spec (hpf : p.lookup "lam_find" = some lamFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lam" [ty, body]
     ⦃fun r s' => LocEq s' s₀ ∧ lainternW s₀.mem ty body = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p lamCS (lamOK p) hpf hpp "intern_lam" hp n s₀ [ty, body] rfl
+  consInternG_spec p lamCS (lamOK p) hpf hpp "intern_lam" hp n s₀ [ty, body] rfl trivial
 
 end specs
 

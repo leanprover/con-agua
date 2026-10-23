@@ -207,7 +207,7 @@ theorem lainternW_eq (m : Mem) (ty body : Word) :
     intro t j c; rw [← lapushMem_eq, lapushMem_eqC]; rfl
   have ec : ∀ t, cntC lamCS m t = cntW lamSch m t := fun t => rfl
   have eh : lamCS.qhM m [ty, body] = lamHashW ty body := rfl
-  simp only [lainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
+  simp only [lainternW, consInternM, internM, pushM, pushC, pushMX_none (C := lamCS) rfl, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's. -/
