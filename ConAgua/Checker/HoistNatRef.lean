@@ -200,6 +200,11 @@ theorem PinsFull.frameA {m m' : Mem} {ps : Pins} (h : PinsFull m ps) (hf : AFr m
     PinsFull m' ps :=
   h.congr hf.pins
 
+theorem pin_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (i : Nat) (h1 : 1 ≤ i) (h2 : i ≤ 51) :
+    (pinW m i).toNat < 2 ^ 32 := by
+  have := hF.names_lt (i - 1) (by omega)
+  rwa [show 1 + (i - 1) = i by omega] at this
+
 /-- **`nat_op_record(w)`** is "the name `w` is in `natDivModNames` or `natOpNames`". -/
 theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : AState) (w op : Word)
     (hI : IWOK m) (hP : pinW m 0 ≠ 0 → PinsFull m a.pins) (hw : w.toNat < 2 ^ 32)
@@ -207,7 +212,57 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
     PinsFull m a.pins ∧ ∃ L₁ L₂ : List NIdx, natDivModNames.run a = .ok (L₁, a) ∧
       natOpNames.run a = .ok (L₂, a) ∧
       (op ≠ 0 ↔ (L₁.contains (decI w) || L₂.contains (decI w)) = true) ∧ AFr m m₁ := by
-  sorry
+  cases n with
+  | zero => rw [hNatOpRecW.eq_1] at h; cases h
+  | succ k =>
+  rw [hNatOpRecW.arm1] at h
+  cases h1 : callW p k "nat_div_mod_names" [] m with
+  | none => rw [h1] at h; simp [hNatOpRecW.k4] at h
+  | some q1 =>
+  obtain ⟨r1, ma⟩ := q1
+  rw [h1, hNatOpRecW.k4.arm1] at h
+  obtain ⟨h0, hS1⟩ := natDivModNames_call hx k m r1 ma hI h1
+  have hF := hP h0
+  cases h2 : callW p k "nat_op_names" [] ma with
+  | none => rw [h2] at h; simp [hNatOpRecW.k3] at h
+  | some q2 =>
+  obtain ⟨r2, mb⟩ := q2
+  rw [h2, hNatOpRecW.k3.arm1] at h
+  obtain ⟨_, hS2⟩ := natOpNames_call hx k ma r2 mb hS1.1.2.2 h2
+  cases ha : hSliceHasW k mb (r1.headD 0) (r1.tail.headD 0) w 0 with
+  | none => rw [ha] at h; simp [hNatOpRecW.k2] at h
+  | some av =>
+  rw [ha, hNatOpRecW.k2.arm1] at h
+  cases hb : hSliceHasW k mb (r2.headD 0) (r2.tail.headD 0) w 0 with
+  | none => rw [hb] at h; simp [hNatOpRecW.k1] at h
+  | some bv =>
+  rw [hb] at h
+  have ha' := hS1.has hS2.1.2.1 ha
+  have hb' := hS2.has (IWGrow.refl mb) hb
+  simp only [hS1.1.pinW_eq] at hb'
+  have hc1 := contains_decI hw [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
+    pinW m 28, pinW m 29] (by
+      simp only [List.forall_mem_cons]
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, by simp⟩ <;>
+        exact pin_lt hF _ (by decide) (by decide))
+  have hc2 := contains_decI hw [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
+    pinW m 21] (by
+      simp only [List.forall_mem_cons]
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, by simp⟩ <;>
+        exact pin_lt hF _ (by decide) (by decide))
+  simp only [List.map_cons, List.map_nil] at hc1 hc2
+  have hop : op ≠ 0 ↔ (av ≠ 0 ∨ bv ≠ 0) := by
+    by_cases hc : av ≠ 0 ∨ bv ≠ 0
+    · rw [hNatOpRecW.k1.arm1 _ _ _ _ hc] at h; cases h; simp only [hc, iff_true]; decide
+    · rw [hNatOpRecW.k1.arm2 _ _ _ _ hc] at h; cases h; simp only [hc, iff_false]; decide
+  refine ⟨hF, _, _, natDivModNames_run hF, natOpNames_run hF, ?_, ?_⟩
+  · rw [hop, Bool.or_eq_true, hc1, hc2, ha', hb']
+  · have hm : m₁ = mb := by
+      by_cases hc : av ≠ 0 ∨ bv ≠ 0
+      · rw [hNatOpRecW.k1.arm1 _ _ _ _ hc] at h; cases h; rfl
+      · rw [hNatOpRecW.k1.arm2 _ _ _ _ hc] at h; cases h; rfl
+    subst hm
+    exact hS1.1.trans hS2.1
 
 /-- **The call of `nat_op_deps(w)`** is `natOpDeps (decI w)`: its result `(o, l)` is a slice of
 the grounds, above the old pool top unless empty. -/
