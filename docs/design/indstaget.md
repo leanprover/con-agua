@@ -21,11 +21,44 @@ Models with a core call through `stubM` live in 15 files (IndInstallSpec, IndIns
 IndPos2SpecM/N/S, IndSumSpec2A/11, RecCheckSpec/5/10/11, RecGenSpec3/4/7/19); models above them
 call their callees through triples, so a `CallM` parameter (lane `loopt2`'s pattern) stays local.
 
-## Route: `StageT`, not `StageC`
+## Route (approved): `StageC` with con-ron's per-twin specs
 
-con-ron's `KnotSpec` (the twin-side `CheckOK` after a core call) needs the input's denotation and
-`Expr.WScoped` at every core call: the `StageC` route would replay con-ron's inductive bridge in
-every theorem. The `StageT` route needs no con-ron fact: keep-ops by `StageT.lift_keep`, the
-interns through master's `CoreS` refinements (`StageT.of_coreRef`, `internSort_stageT`), the pool
-writers by `StageT.of_iw`, the core calls by the knot's sims. Only the level/level-list interns
-need validity side conditions (`internSort_core`'s readback of the level).
+First plan was pure `StageT` (keep-ops by `StageT.lift_keep`, interns through master's `CoreS`
+refinements, core calls by the knot's sims). **Wrong for the growers**: under `StageT` an intern of
+a `sort`/`const`/`param`/level list needs its children to denote (`internSort_core`'s `hdu`,
+`internParam_core`'s `hdn`; `StoreDen`'s `sort`/`constLs`/`lvlAll` clauses), and the stage interns
+those at ~17 twin sites and inside its growers; that route would need a level-validity invariant
+for every stage record and relational re-proofs of every grower.
+
+**Route C** (coordinator's go, 2026-10-23): carry `StageC` (`StageR` + con-ron's `CheckOK` +
+`TwinMem` + pin flag) plus con-ron's spec preconditions (the con-leche denotations of the inputs).
+con-ron's `Bridge/Inductives/*` has a `PSpec`/`PSpecP`/`PSpecL`/`CSpec(F)` for each of the ~110
+inductive twins (pre: `StateOK`/`CheckOK` and the inputs' denotations; post: `PStep`/`CoreStep`
+and the answer's denotation). So:
+
+* a **core-free grower or leaf** lifts in one line: our `StageR` `RSim` + con-ron's `PSpec`
+  (`PStep`: `StateOK`, `Ext`, `CacheFrame`, pins) + the L frame ⇒ `StageC` after
+  (`StageC.of_leaf` pattern);
+* a **core-calling** theorem (~60 outside thin wrappers) is re-proved relationally, its twin side
+  transcribed from con-ron's own spec proof of the same op; at a core call `StageC.stageT` → the
+  knot's sim (`StageT` after), `CheckOK` after from con-ron's `KnotSpec` (`CoreSpec.of_core`);
+* **top**: con-ron's `checkIndRoute_bridge` (`Bridge/Inductives/Decl.lean`: `indParamsOk`,
+  `blockParts?`, `checkBlock_bridge`), preconditions `CoreSpec` (closed), `FoldOK`, the block's
+  `denoteCIList` (from `denoteDecl`), `basisPinHit b = none` — all from `IndArmSpec`'s premises
+  (gap list sent to the coordinator: none).
+
+Models: the core's calls read through `cR : CallM` (`IndCallM.lean`, moved from `DeclCvg.lean`);
+the `StageR` proofs instantiate `stubCall` (statements unchanged), the new ones `realCall p`.
+The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW → rtoW, …).
+
+## Landing 1 (pilot)
+
+* `IndCallM.lean`; `ccoW`, `rtoW`, `rtsW` over `cR`.
+* `IndT/Base.lean`: `KPT`, `Sim.rsim`, the four entry points as `RSim`s of `realCall p`.
+* `IndT/RecGen3.lean`: `classConstOk_of_ih` (twin: on success `installHeader`'s guards leave the
+  state `classConstOk`'s own guards leave; they differ in messages only), `ccoW_simT`,
+  **`classConstOk_refinesT`** (`StageT`; the census link; the `StageR` theorem is deleted). Its
+  remaining sorry comes through `IndStubsT` (`constsResolveFFastT_spec`,
+  `allLevelParamsDefinedT_spec`) in `ihW_okT`.
+* `lake`'s `.+` glob is not understood by `scripts/modules_check.py`: the `IndT` modules are
+  listed one by one in `lakefile.toml`.
