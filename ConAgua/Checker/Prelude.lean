@@ -298,7 +298,7 @@ def preparePreludeL : FunDecl := lfn () locals (np, n, ord, mk, z, c, t) {
   np := CTL.u64[240];
   n := DECL.u64[0];
   if n < np { abort };
-  if 1152921504606846976 <= n { abort };
+  if 576460752303423488 <= n { abort };
   ord := call iw_alloc(n);
   mk := call iw_alloc(n);
   z := call hoist_zero(mk, n, 0);
