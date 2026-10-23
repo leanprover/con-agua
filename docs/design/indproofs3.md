@@ -168,3 +168,13 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
   `KnotStageProg` sims (lane `knotwire`), the remaining true stubs through `StageT` versions of their
   contracts (same `sorry` status; to be added with (1)).
 * At the stage's entry `StageT` comes from lane `loopt`'s `LoopT.stageT`.
+
+### Landing 6: `StageT.lift_keep`; stub contracts under `StageT`
+* `ConAgua/Arena/StageTLift.lean`: `KeepPostT` (`KeepPost` with `StageT` after),
+  `TwinOK.withMemos` (`TwinOK` does not read the per-call memos `a.memos`), and
+  **`StageT.lift_keep`**: a `StageR` `Sim` whose twin op changes at most `a.memos` and whose L run
+  leaves the core memos and the pins alone (lane `loopt`'s `TwinOK.frame`, which after lane
+  `loopt2`'s `StoreDen.proj` fix allows `EREC` writers) is a `StageT` `Sim`.
+* `ConAgua/Arena/IndStubsT.lean` (for lane `loopt2`'s `install_value_guards`): `StageT` versions
+  of four stub contracts, `sorry` like the originals — `constsResolveFFastT_spec`,
+  `hasFvarFastT_spec`, `looseBVarsBoundedFastT_spec`, `allLevelParamsDefinedT_spec`.

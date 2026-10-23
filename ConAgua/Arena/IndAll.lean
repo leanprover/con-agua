@@ -121,6 +121,7 @@ import ConAgua.Arena.IndPos2SpecT
 import ConAgua.Arena.IndPos2SpecU
 import ConAgua.Arena.IndPos2SpecV
 import ConAgua.Arena.IndTwin
+import ConAgua.Arena.IndStubsT
 
 import ConAgua.Arena.RecCheckSpec9
 import ConAgua.Arena.RecCheckSpec10
