@@ -232,7 +232,7 @@ theorem crf_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis f h : Wo
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p k "e_view", callW_spec p k "cr_leaf", callW_spec p k "crm_find",
       callW_spec p k "crm_put", callW_spec p k "crf_go", callW_spec p k "env_find"] <;>
-    finish (gen := 20) [crfW, crfV, crfLf, crfM, crfN, crfP1, crfP2, crfL1, crfL2, crfL3,
+    finish (gen := 20) (instances := 20000) [crfW, crfV, crfLf, crfM, crfN, crfP1, crfP2, crfL1, crfL2, crfL3,
       crfB1, crfB2, crfFv, crfT, crfT1, crfT2]
 
 theorem crff_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis e : Word) :
