@@ -25,14 +25,14 @@ callees no coverage (scripts/census.py), so the targets below `installFold` keep
 census target (`TwinAccepts` runs `installFold` and `checkPendingList` itself);
 `install_then_check` is the loop's top for the driver.
 
-* The declarations are the front's records (`DECL`/`DLP`, `DeclsR`, `Front/StateDR.lean`); record
+* The declarations are the front's records (`DECL`/`DLP`, `DeclsF`, `Front/StateDR.lean`); record
   `i` is the fold position `i`.
 * The pending checks are `PEND` (137), three words each (the value group's record pointer in
   `EREC`, `pos`, `vis`), `CTL[130]` of them: `PendR`.
 * Errors: the twin's error results (`.error (e, i)`) are `abort` (ROADMAP §3 (c), "L recovers
   nowhere"); a returning run is an accepting one.
 * The relation the loop keeps, `LoopR`: `CheckR` (arena, caches, pins, the environment at a view),
-  `PendR` and `DeclsR`.
+  `PendR` and `DeclsF`.
 * The bracket (`flush_caches`, `scratch_enter`, `scratch_drop`) is lane `whnf`'s real code,
   lifted to `LoopR` here (`flush_loop`, `enter_loop`, `drop_loop`).
 -/
@@ -46,7 +46,7 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 
 /-- The translated callees of the loop (`Decl*.lean`), as program lookups. -/
 structure DeclCallees (dn : NIdx → Option ConLeche.Name) (p : Prog) : Prop where

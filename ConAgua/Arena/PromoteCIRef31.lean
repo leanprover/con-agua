@@ -12,7 +12,7 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)

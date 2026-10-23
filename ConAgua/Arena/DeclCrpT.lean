@@ -36,7 +36,7 @@ set_option linter.deprecated false
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 open ConRon.Bridge (CheckOK StepOK FoldOK CoreSpec)
 
 local notation "V" => ConLeche.CheckMode.verified
@@ -415,7 +415,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
     {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
     {cv : IConstantVal} {v : EIdx} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
     (h : cdoW p n m i vis = some (r, m')) (hS : StageT dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .opaqueDecl cv v) (hfold : FoldOK V env fe a)
     (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x) :
     ∃ fe' a', (checkDecl V pins fe (.opaqueDecl cv v)).run a = .ok (fe', a') ∧

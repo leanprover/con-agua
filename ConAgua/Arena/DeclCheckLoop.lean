@@ -8,7 +8,7 @@ import ConAgua.Arena.DeclNatSubAll
 # `check_decl`'s arms at the loop's relation (lane `decls3`)
 
 `check_decl(i, vis)` reads the record's kind word and calls one arm (`DeclStep.lean`). Under the
-front's records (`DeclsR`: every record is an axiom, definition, theorem, opaque or quotient,
+front's records (`DeclsF`: every record is an axiom, definition, theorem, opaque or quotient,
 `DeclAt`) the kind is `1`‥`5`, so the inductive branch (kind `6`, lane `induct`'s
 `check_ind_decl`) is never taken here; it becomes reachable with the front's inductive records
 (lane `indproofs2`).
@@ -33,7 +33,7 @@ set_option linter.unusedSimpArgs false
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 local notation "V" => ConLeche.CheckMode.verified
 

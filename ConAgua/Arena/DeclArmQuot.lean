@@ -177,7 +177,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
 
 /-! ## The quotient arm `check_decl_quot(i, vis)` -/
 
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw quotW)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw quotW)
 
 /-- The slot word `check_decl_quot` computes from the record's kind word. -/
 def slotOfW (kw : Word) : Word := if kw = 1 then 0 else if kw = 2 then 1 else if kw = 3 then 2 else 3
@@ -263,7 +263,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
     {cv : IConstantVal} (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
     (hN : L.Rom.NamesDn dn a L.Rom.quotNames)
     (hcvD : ∃ c, ConRon.Arena.Frontend.denoteCV a.store cv = some c) :

@@ -18,7 +18,7 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 
 /-! ## The loop's relation across a step's callee -/
 

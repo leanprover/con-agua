@@ -32,7 +32,7 @@ open scoped Lean.Order
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -278,7 +278,7 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
 theorem ivW_okT {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
     {ds : Array IDeclaration} (h : ivW p n m i vis ck vk = some (r, m'))
-    (hS : StageT dn vis fe m a) (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds)
+    (hS : StageT dn vis fe m a) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
     (hi : i.toNat < ds.size) (hk : IvArgs ck vk (dsAt ds i)) :
     ∃ x a', (ivT fe (dsAt ds i)).run a = .ok (x, a') ∧ StageR dn (r.headD 0) x.1 m' a' ∧
       CoreMemos m' ∧ IWGrow m m' ∧ x.2 = decVG (erecP m') (r.tail.headD 0).toNat ∧ x.2 ≠ none := by
