@@ -247,8 +247,7 @@ theorem Inv.of_regs {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : Machine
   hI.congr rfl hsp h15 hR (fun x _ _ => by rw [hd]) (hd ▸ hI.mem)
 
 /-- The registers of `allocRegs` agree, for states built by writes of other registers. -/
-macro "alloc_keep" : tactic => `(tactic| (intro r hr; have hne := allocRegs_ne hr; cases r <;>
-  first | exact absurd rfl hne.1 | exact absurd rfl hne.2.1 | exact absurd rfl hne.2.2.1 | rfl))
+macro "alloc_keep" : tactic => `(tactic| (intro r hr; have hne := allocRegs_ne hr; first | (simp only [rget_set, hne.1, hne.2.1, hne.2.2.1, hne.2.2.2.1, hne.2.2.2.2.1, hne.2.2.2.2.2.1, hne.2.2.2.2.2.2, ite_false, if_false]; done) | (cases r <;> first | exact absurd rfl hne.1 | exact absurd rfl hne.2.1 | exact absurd rfl hne.2.2.1 | rfl)))
 
 /-- Reading a register after a write. -/
 theorem rget_set (R : Reg64s) (r r' : Reg64) (v : BitVec 64) :
