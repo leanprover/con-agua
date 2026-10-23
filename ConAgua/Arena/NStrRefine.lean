@@ -271,7 +271,7 @@ theorem NsRecRel_grow (t i : Word) (k : StrNode) (h : NsRecRel m t i k) : NsRecR
 include hg in
 /-- **Appending to the pool preserves the relation.** -/
 theorem NStrR.grow (a : AState) (hR : NStrR m a) : NStrR m' a := by
-  obtain ⟨hctl, hfl, hT0, hT1⟩ := hR
+  obtain ⟨hctl, hfl, hT0, hT1, hG⟩ := hR
   have hf := grow_ctl m m' hg 1 (by decide)
   have := Frame.size _ _ _ hg.1
   have := Frame.arr64 POOL CTL _ _ hg.1 (by decide)
@@ -283,7 +283,8 @@ theorem NStrR.grow (a : AState) (hR : NStrR m a) : NStrR m' a := by
       (grow_ctl m m' hg (36 + t) (by grind))
       (by simp only [baseW, grow_ctl m m' hg SCB (by decide)]) (fun i k => NsRecRel_grow m m' hg t i k)
       (fun i => by simp only [nshash, hr]) hT
-  refine ⟨?_, by grind, hT 0 (by decide) _ hT0, hT 1 (by decide) _ hT1⟩
+  refine ⟨?_, by grind, hT 0 (by decide) _ hT0, hT 1 (by decide) _ hT1,
+    growR_of_sa nstrSch m m' (grow_arr m m' hg NSSLOT (by decide) (by decide)) hG⟩
   exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩
 
 end grow

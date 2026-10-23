@@ -180,7 +180,8 @@ theorem fvinternW_eq (m : Mem) (u ty : Word) :
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
         (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0) := by
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
+      fvhash := by
   have e0 : ∀ x, hdW fvarSch.tag.toUInt64 0 x = fvarP + x := fun x => by
     simp [hdW, fvarSch, fvarP, ETag.fvar]
   have e1 : ∀ x, hdW fvarSch.tag.toUInt64 1 x = fvarS + x := fun x => by
@@ -202,11 +203,13 @@ theorem fvinternW_eqK (m : Mem) (u ty : Word) (hctl : fvarSch.ca.toNat + 2 ≤ (
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
         (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)) := by
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0) fvhash) := by
   rw [fvinternW_eq]
-  refine internMD_mkK fvarSch fvarSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  refine internMD_mkK fvarSch fvarSch_wf _ _ _ _ _ _ _ _ fvhash (by decide) (by decide)
+    (fun m k x t i => by simp only [fvhash, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)])
+    hctl (fun t ht hp => ?_)
   simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  obtain ⟨⟨h1, -⟩, h2⟩ := hp
   exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by
@@ -232,7 +235,7 @@ theorem fvintern_core (w : Word) (m₁ : Mem)
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
         (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
       (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0) =
+        (homeW (fvarHashW u ty) (nSlotsFv m)) 0) fvhash =
       some (w, m₁)) :
     AM.ok (internE (.fvar u.toNat (decE ty))) a ∧
     FVarR m₁ (AM.st (internE (.fvar u.toNat (decE ty))) a) ∧

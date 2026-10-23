@@ -164,7 +164,8 @@ theorem mpushMem_eq (m : Mem) (t u v j c : Word) :
 theorem minternW_eq (m : Mem) (u v : Word) :
     minternW m u v = internMD maxSch MHP (lvlHPW m u ||| lvlHPW m v) m 0 (mpushOK m) [u, v]
       (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) := by
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
+      mhash := by
   have e0 : ∀ x, hdW maxSch.tag.toUInt64 0 x = maxP + x := fun x => by
     simp [hdW, maxSch, maxP, LTag.max]
   have e1 : ∀ x, hdW maxSch.tag.toUInt64 1 x = maxS + x := fun x => by
@@ -184,11 +185,13 @@ theorem minternW_eqK (m : Mem) (u v : Word) (hctl : maxSch.ca.toNat + 2 ≤ (m.a
     minternW m u v = mkK MHP maxSch.ca (cnt2 m maxSch.ca) (lvlHPW m u ||| lvlHPW m v)
       (internM maxSch m 0 (mpushOK m) [u, v]
       (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)) := by
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) mhash) := by
   rw [minternW_eq]
-  refine internMD_mkK maxSch maxSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  refine internMD_mkK maxSch maxSch_wf _ _ _ _ _ _ _ _ mhash (by decide) (by decide)
+    (fun m k x t i => by simp only [mhash, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)])
+    hctl (fun t ht hp => ?_)
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  obtain ⟨⟨h1, -⟩, h2⟩ := hp
   exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by
@@ -206,7 +209,7 @@ include hR hu hv in
 theorem mintern_core (w : Word) (m₁ : Mem)
     (hI : internM maxSch m 0 (mpushOK m) [u, v]
       (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) =
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) mhash =
       some (w, m₁)) :
     AM.ok (internLNode (.max (decI u) (decI v))) a ∧
     MaxR m₁ (AM.st (internLNode (.max (decI u) (decI v))) a) ∧

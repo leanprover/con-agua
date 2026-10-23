@@ -174,7 +174,8 @@ theorem cepushMem_eq (m : Mem) (t f a j c : Word) :
 theorem ceinternW_eq (m : Mem) (f a : Word) :
     ceinternW m f a = internMD constSch CLP (lsHPW m a) m (ceskipW m f a) (cepushOK m) [f, a]
       (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0) := by
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
+      cehash := by
   have e0 : ∀ x, hdW constSch.tag.toUInt64 0 x = constP + x := fun x => by
     simp [hdW, constSch, constP, ETag.const]
   have e1 : ∀ x, hdW constSch.tag.toUInt64 1 x = constS + x := fun x => by
@@ -194,11 +195,13 @@ theorem ceinternW_eqK (m : Mem) (f a : Word) (hctl : constSch.ca.toNat + 2 ≤ (
     ceinternW m f a = mkK CLP constSch.ca (cnt2 m constSch.ca) (lsHPW m a)
       (internM constSch m (ceskipW m f a) (cepushOK m) [f, a]
       (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)) := by
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0) cehash) := by
   rw [ceinternW_eq]
-  refine internMD_mkK constSch constSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  refine internMD_mkK constSch constSch_wf _ _ _ _ _ _ _ _ cehash (by decide) (by decide)
+    (fun m k x t i => by simp only [cehash, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)])
+    hctl (fun t ht hp => ?_)
   simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  obtain ⟨⟨h1, -⟩, h2⟩ := hp
   exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by
@@ -224,7 +227,7 @@ include hR hf hx in
 theorem ceintern_core (w : Word) (m₁ : Mem)
     (hI : internM constSch m (ceskipW m f x) (cepushOK m) [f, x]
       (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f x (baseW m 0) (nSlotsCe m) (homeW (constHashW f x) (nSlotsCe m)) 0)
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f x (baseW m 1) (nSlotsCe m) (homeW (constHashW f x) (nSlotsCe m)) 0) =
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f x (baseW m 1) (nSlotsCe m) (homeW (constHashW f x) (nSlotsCe m)) 0) cehash =
       some (w, m₁)) :
     AM.ok (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a ∧
     ConstR m₁ (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a) ∧

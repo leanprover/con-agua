@@ -164,7 +164,8 @@ theorem iimpushMem_eq (m : Mem) (t u v j c : Word) :
 theorem iiminternW_eq (m : Mem) (u v : Word) :
     iminternW m u v = internMD imaxSch IHP (lvlHPW m u ||| lvlHPW m v) m 0 (impushOK m) [u, v]
       (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) := by
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
+      imhash := by
   have e0 : ∀ x, hdW imaxSch.tag.toUInt64 0 x = imaxP + x := fun x => by
     simp [hdW, imaxSch, imaxP, LTag.imax]
   have e1 : ∀ x, hdW imaxSch.tag.toUInt64 1 x = imaxS + x := fun x => by
@@ -184,11 +185,13 @@ theorem iminternW_eqK (m : Mem) (u v : Word) (hctl : imaxSch.ca.toNat + 2 ≤ (m
     iminternW m u v = mkK IHP imaxSch.ca (cnt2 m imaxSch.ca) (lvlHPW m u ||| lvlHPW m v)
       (internM imaxSch m 0 (impushOK m) [u, v]
       (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)) := by
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) imhash) := by
   rw [iiminternW_eq]
-  refine internMD_mkK imaxSch iimaxSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  refine internMD_mkK imaxSch iimaxSch_wf _ _ _ _ _ _ _ _ imhash (by decide) (by decide)
+    (fun m k x t i => by simp only [imhash, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)])
+    hctl (fun t ht hp => ?_)
   simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  obtain ⟨⟨h1, -⟩, h2⟩ := hp
   exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by
@@ -206,7 +209,7 @@ include hR hu hv in
 theorem imintern_core (w : Word) (m₁ : Mem)
     (hI : internM imaxSch m 0 (impushOK m) [u, v]
       (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) =
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) imhash =
       some (w, m₁)) :
     AM.ok (internLNode (.imax (decI u) (decI v))) a ∧
     ImaxR m₁ (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
