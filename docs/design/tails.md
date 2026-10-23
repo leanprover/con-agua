@@ -72,3 +72,28 @@ sorry, proven locally (`AState.worker`). Total proven 954 → 958.
   phase B on `a₀.worker` accepts. It inherits phase B's stub `sorry`s. Open for the final
   glue: `a₀.caches = Caches.empty` after `installFold` (every step ends with `dropScratch`, which
   flushes; the start state's caches are empty) is not proved here.
+
+## Landing 3: `recRuleKOf`, `recRuleEtaOf`, `recRuleBits` (phase 5)
+
+Census (worktree): phase 5 136 → **139/142** (left: `constsResolve` (helper `tails-crf` on
+`crf_go`), `liftFueled`, `reservedBasisNames`); total proven 958 → 961.
+
+* **Bug fixed in `ctor_family`** (`StubInd.lean`, lane `stubs`' code): it signalled "no
+  constructor / no inductive" by a record offset `0`, and `rec_rule_k_of`/`rec_rule_eta_of`
+  returned `0` at `tq = 0`. A record can sit at `EREC` offset `0` (the first record pushed), so an
+  inductive there would have read as absent and the K/η bits as `false` where the twin says
+  `true`. `ctor_family` now returns `(cq, tq, ok)` with an explicit flag; the bits test `ok`.
+* **The refinements** (`StubIndRefine.lean`, sorry-free, `RefAM` under `StageR` with
+  `KeepPost`, bundle `RrbProg`), for lane `indproofs3`:
+  `L.Stubs.recRuleKOf_refines`, `L.Stubs.recRuleEtaOf_refines` (`decW0B`, hypothesis `H c`) and
+  `L.Stubs.recRuleBits_refines` (`H c`, `rl.ctor = decI c`; post `x = { rl with k := r[0] != 0,
+  eta := r[1] != 0 }`), the shape of `IndStubs.recRuleBits_spec`.
+* Shape: models through `callW` (`cfW`, `kofW`, `eofW`, `rrbW`, the fuel adapters `pirfW`,
+  `gaffW`), each spec by `sym`/`vcgen`/`finish [model, ntBW, CWF]` (a plain `simp_all` on loads
+  with bound proofs did not close: the index normalises to `(x.toNat + k) % 2^64`); the shared
+  prefix `ctor_family` against the twin once (`cfW_ok`, the pattern of `iotaCtorNeverProp_refines`),
+  its words' meaning as `CFOut`: for every test `G`, the twin's lookup-and-block `famT fe G c`
+  answers `false` at flag `0` and `G` at the two decoded records otherwise. The records' fields
+  are read on `m.arr64 EREC` (`ArrExt.decCI (erecP_ext m)`), with the size bound `IWOK` gives
+  (`< 2^64`, not `decCI_ctor`'s `< 2^63`). `erSlEq_spec'` is `erSlEq_spec` (`DeclCanonSpec.lean`)
+  with only the one lookup.
