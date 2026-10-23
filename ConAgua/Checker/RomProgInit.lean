@@ -9,9 +9,9 @@ import ConAgua.Checker.CapCheck
 `ConAgua.Final.loadMem b pb s8 s64` has the word arrays of `initMem s64` (all zero) and the byte
 arrays `b`, `pb`, then zeroed ones. Under `CapsOK` (`cap_check`, `CapCheck.lean`) the arena
 relation holds at the twin's initial state (`arenaD_loadMem`), `RSET` is empty (`rsetR_loadMem`)
-and the ROM stack is at `0` (`stkTop_loadMem`). The parse state relation at `StateD.blank`
-(`stateDR_loadMem`) needs more than `CapsOK`: `DECL` and `DLP` must have a word (their counts),
-and `IFR`, `IFL` must be below `2^62` words; `cap_check` does not check these.
+and the ROM stack is at `0` (`stkTop_loadMem`). The parse state relation holds at
+`StateD.blank` (`stateDR_loadMem`: `DECL`, `DLP` have a word, `IFR`, `IFL` are below `2^62`
+words). `CapsOK` survives runs that keep the sizes (`CapsOK.keep`).
 -/
 
 namespace L.Checker
@@ -39,7 +39,7 @@ theorem loadMem_pb : (loadMem b pb s8 s64).arr8 PB = pb.data.toList.toArray := b
 
 /-- `CTL` exists: it has at least `ctlMin` words. -/
 theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : CTL < (loadMem b pb s8 s64).words.size := by
-  have h := hc.2
+  have h := hc.2.1
   rw [loadMem_arr] at h
   rw [loadMem_words_size]
   simp only [Array.size_replicate] at h
@@ -51,8 +51,9 @@ theorem loadMem_ctl_lt (hc : CapsOK (loadMem b pb s8 s64)) : CTL < (loadMem b pb
 theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     ArenaR (loadMem b pb s8 s64) (AState.init EStore.empty) := by
   have hz := loadMem_rd b pb s8 s64
-  have hc' : 64 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by have := hc.2; simp [ctlMin] at this; omega
-  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 63 := hc.1 POOL (by simp [POOL, wordArrays])
+  have hc' : 64 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by have := hc.2.1; simp [ctlMin] at this; omega
+  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 63 := by
+    have := hc.1 POOL (by simp [POOL, wordArrays]); omega
   have hw := loadMem_ctl_lt b pb s8 s64 hc
   refine ⟨⟨?_, storeR_init _ _ _ _ hz (by simp [litSch]; omega)⟩,
     storeR_init _ _ _ _ hz (by simp [appSch]; omega),
@@ -92,7 +93,7 @@ theorem arenaD_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
 
 /-- **`RSET` is empty at the start.** -/
 theorem rsetR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) : RsetR (loadMem b pb s8 s64) :=
-  RsetR_zero _ (loadMem_rd b pb s8 s64) (by have := hc.2; simp [ctlMin] at this; omega)
+  RsetR_zero _ (loadMem_rd b pb s8 s64) (by have := hc.2.1; simp [ctlMin] at this; omega)
 
 /-- **The ROM stack is at `0` at the start.** -/
 theorem stkTop_loadMem : stkTop (loadMem b pb s8 s64) = 0 := loadMem_rd b pb s8 s64 CTL 131
@@ -101,22 +102,25 @@ theorem stkTop_loadMem_lt : (stkTop (loadMem b pb s8 s64)).toNat < 2 ^ 61 := by
   rw [stkTop_loadMem]; decide
 
 /-- **The parse state relation at the start**, at the blank parse state (`stateDR_initMem`'s
-proof over `loadMem`). Besides `CapsOK` it needs a word in `DECL` and in `DLP` (their counts) and
-`IFR`, `IFL` below `2^62` words, which `cap_check` does not check. -/
-theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64))
-    (hd : 1 ≤ ((loadMem b pb s8 s64).arr64 DECL).size) (hq : 1 ≤ ((loadMem b pb s8 s64).arr64 DLP).size)
-    (hf : ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
-      ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFL).size < 2 ^ 62) :
+proof over `loadMem`). -/
+theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     StateDR (loadMem b pb s8 s64) StateD.blank := by
   have hctl : 73 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by
-    have := hc.2; simp [ctlMin] at this; omega
+    have := hc.2.1; simp [ctlMin] at this; omega
+  have h63 : ∀ a < wordArrays, ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 63 := fun a ha => by
+    have := hc.1 a ha; omega
   have hT : ∀ (a : ArrId) {k : IdxKind}, TblIx a → a < wordArrays →
       TblR (loadMem b pb s8 s64) a ({} : ConLeche.Frontend.IdTable (Idx k)) := fun a _ ha hs =>
-    TblR.zero _ a ha (loadMem_rd b pb s8 s64) (hc.1 a hs) hctl
+    TblR.zero _ a ha (loadMem_rd b pb s8 s64) (h63 a hs) hctl
+  have hf : ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
+      ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFL).size < 2 ^ 62 :=
+    ⟨hc.1 70 (by decide), hc.1 71 (by decide)⟩
   refine ⟨hT NID (.inl rfl) (by decide), hT LID (.inr (.inl rfl)) (by decide),
     hT EID (.inr (.inr rfl)) (by decide), ?_, hf⟩
-  have hd2 := hc.1 DECL (by decide)
-  have hq2 := hc.1 DLP (by decide)
+  have hd : 1 ≤ ((loadMem b pb s8 s64).arr64 DECL).size := hc.2.2.1
+  have hq : 1 ≤ ((loadMem b pb s8 s64).arr64 DLP).size := hc.2.2.2
+  have hd2 := h63 DECL (by decide)
+  have hq2 := h63 DLP (by decide)
   rw [loadMem_arr] at hd hq hd2 hq2 ⊢
   rw [loadMem_arr]
   simp only [Array.size_replicate] at hd hq hd2 hq2
@@ -126,6 +130,29 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64))
   · simpa [StateD.blank] using hd
   · rw [Array.getElem?_replicate]; split <;> simp <;> omega
 
+/-- The loaded word arrays' sizes are words when the harness's sizes are (`PipelineRefines`'
+premise, `InputsOK`). -/
+theorem loadMem_wordsFit (hs : ∀ n ∈ s64, n < 2 ^ 64) : WordsFit (loadMem b pb s8 s64) := by
+  intro a _
+  rw [loadMem_arr, Array.size_replicate]
+  cases h : s64[a]? with
+  | none => simp
+  | some n => exact hs n (List.mem_of_getElem? h)
+
 end
+
+/-! ## Carried through runs (`Keep`: same byte arrays, same word-array sizes) -/
+
+theorem CapsOK.keep {m m' : Mem} (hk : Keep m m') (h : CapsOK m) : CapsOK m' := by
+  simp only [CapsOK, hk.size]; exact h
+
+theorem WordsFit.keep {m m' : Mem} (hk : Keep m m') (h : WordsFit m) : WordsFit m' := by
+  intro a ha; rw [hk.size]; exact h a ha
+
+theorem CapsOK.ctl {m : Mem} (h : CapsOK m) : 151 < (m.arr64 CTL).size := by
+  have := h.2.1; simp [ctlMin] at this; omega
+
+theorem CapsOK.pool {m : Mem} (h : CapsOK m) : (m.arr64 POOL).size < 2 ^ 63 := by
+  have := h.1 POOL (by simp [POOL, wordArrays]); omega
 
 end L.Checker
