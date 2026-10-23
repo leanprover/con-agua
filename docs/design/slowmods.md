@@ -126,3 +126,16 @@ split by cost, not by count).
   55 kernel chunks). It is now its own generated module `Checker/ProgWf.lean` (imported by
   `PreludeSimProg` and `AsmFinal`, its only users), so the 30 modules importing the program no
   longer wait for it: `Prog` 24 s / 4.5 GB, `ProgWf` 57 s / 6.1 GB (chunk size 16 or 64: same).
+- **ROM literals and `pb_check`** (after compproofA): measured in the kernel, `romIdx romData rom`
+  14 s and `romData`-literal length 4 s with `bytesToExpr`'s balanced `++` tree of 64-byte chunks
+  (each element passes ~10 appends); as `List.flatten [256-byte chunks]` 5 s and 1.4 s
+  (`romIdx preludeBytes rom` 5 s -> 2 s). `bytesToExpr` (WFSplit.lean, used by `tab_lit%`) now
+  writes that. `pb_check` also made the kernel compute `romData` from its encoders (6 s, 1.5 GB per
+  check): it now reads `romDataLit` (`Rom/DataLit.lean`, `bytes_lit% romData`, with
+  `romDataLit_eq : romDataLit = romData` by `decide +kernel` once, 12 s / 3.7 GB);
+  `pbCheck_subPB` rewrites with it. Results: `pb_check` alone 6.1 -> 4.0 GB (11 s; one other
+  function: 2.8 GB); `AsmPart4` 6.2 -> 4.1 GB, 27 s; `ProgWf` 6.1 -> 4.1 GB, 48 s; `Prog` 4.5 -> 3.4
+  GB; the copies' parts 4.3-5.0 -> ~3.7 GB, 13 -> 9 s. What is left in `pb_check` is `romIdx`
+  scanning 15 800 ROM positions before the pin data; an offset table in `Tab` (lookup instead of
+  scan; touches `Compile.lean`, `WF.lean`/`WFFast.lean`'s `ldc` check and `SimExpr.lean`'s `ldc` case)
+  would remove it.
