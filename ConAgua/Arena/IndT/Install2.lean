@@ -29,11 +29,45 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-- **`lvl_eq_fueled`, its `lvl_eq_c` the real call, under `StageC`** (`lveW_ok`'s statement with
+`lvlEqC_simC` for the stub contract): an answer other than `0` is the twin's verdict. -/
+theorem lveC_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {n : Nat}
+    {m m' : Mem} {a : AState} {u v : Word} {r : List Word}
+    (h : lveC (realCall p) n m u v = some (r, m')) (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hu : H u) (hv : H v) {lu lv : ConLeche.Level} (hdu : denoteL a.store.ls (decI u) = some lu)
+    (hdv : denoteL a.store.ls (decI v) = some lv) :
+    ∃ b a', (lvlEq? (decI u) (decI v)).run a = .ok (some b, a') ∧ StageC dn vis fe env m' a' ∧
+      IWGrow m m' ∧ AbsOK m' ∧ PStep a a' ∧ r.headD 0 = (if b then 1 else 0) := by
+  cases n with
+  | zero => simp [lveC] at h
+  | succ n =>
+  simp only [lveC] at h
+  cases hs : realCall p n "lvl_eq_c" [u, v] m with
+  | none => simp [hs] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  simp only [hs] at h
+  by_cases h0 : r1.headD 0 = 0
+  · rw [if_pos h0] at h; exact absurd h (by simp)
+  rw [if_neg h0] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨x, a1, hrun, hC1, hg, hdec, hA1, hp⟩ :=
+    lvlEqC_simC p hcl hLC n hC hA u v hu hv lu lv hdu hdv r1 m1 hs
+  simp only [decLvlEq] at hdec
+  cases x with
+  | none => exact absurd hdec h0
+  | some b =>
+    refine ⟨b, a1, hrun, hC1, hg, hA1, hp, ?_⟩
+    cases b <;> simp at hdec ⊢ <;> simp [hdec]
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p)
 
-include hq henv in
+include hq henv hOpf hLC in
 /-- **`check_block_agree_one` under `StageC`** (twin side: one member of con-ron's
 `checkBlockAgree_specF`'s proof). -/
 theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
@@ -55,7 +89,7 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   have hStage := hC.stage
   have hz : UInt64.toNat 0 = 0 := rfl
   simp only [agW, Nat.add_sub_cancel] at h
-  cases hra : stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] with
+  cases hra : realCall p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with
   | none => rw [hra] at h; simp [agK1] at h
   | some ram1 =>
   obtain ⟨ra, m1⟩ := ram1
@@ -65,12 +99,10 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   by_cases hL : ra.tail.tail.headD 0 = fvs0L
   case neg => rw [agK1_abortL (realCall p) n m1 _ _ _ _ _ _ ra h0 hL] at h; simp at h
   rw [agK1_ok (realCall p) n m1 _ _ _ _ _ _ ra h0 hL] at h
-  obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1⟩ :=
-    openPisAtFvarsF_spec dn vis fe nP (rdW (m.arr64 EREC) (cvTa + 3)) 0 hty.1 m m1 a ra hra hStage
+  obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1, hA1⟩ := opfF_okRA hty.1 (callW_opfF hOpf hra) hStage hA
   have hdty : denoteE a.store (decI (rdW (m.arr64 EREC) (cvTa + 3))) = some tyP := by
     rw [hty.2]; exact htyP
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hdty hrun1
-  have hA1 := stub_afr hra (by decide) hA
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hSt1 hA1 p1
   cases x1 with
   | none => exact absurd hdec1 h0
@@ -131,7 +163,7 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockDomsAt_specF fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD) hc ht
     nP.toNat a2 a3 u3 hC2.check ⟨hxs1', hdoms⟩ hrun3
-  cases hl : lveW m3 s s0 with
+  cases hl : lveC (realCall p) n m3 s s0 with
   | none => rw [hl] at h; simp [agK4] at h
   | some rem4 =>
   obtain ⟨re, m4⟩ := rem4
@@ -141,17 +173,17 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   rw [agK4_ok (m1 := m4) (re := re) hre] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  obtain ⟨b, a4, hrun4, hSt4, hg4, hbre⟩ := lveW_ok dn vis fe m3 _ a3 s s0 hs hs0 re hl hC3.stage
   have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
+  obtain ⟨b, a4, hrun4, hC4, hg4, hA4, -, hbre⟩ := lveC_okC hq.closed hLC hl hC3 hA3 hs hs0
+    (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03)
   obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.lvlEq?_crun hC3.check
     (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03) hrun4
-  have hA4 := lveW_afr hl hA3
   have hb : b = true := by
     cases b
     · exact absurd (by rw [hbre]; rfl) hre
     · rfl
   subst hb
-  refine ⟨a4, ?_, hC3.of_check hSt4 hA4 c4.ok c4.ext, (hg1.trans hg2).trans (hg3.trans hg4), hA4,
+  refine ⟨a4, ?_, hC4, (hg1.trans hg2).trans (hg3.trans hg4), hA4,
     ((p1.trans p2).toCore hC.check).trans (c3.trans c4)⟩
   have hty' : cv.type = decI (rdW (m.arr64 EREC) (cvTa + 3)) := hty.2.symm
   simp only [agreeBodyAM, unwrapOr, hty', StateT.run_bind, pure_bind]
@@ -162,7 +194,7 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   simp [StateT.run_bind, hrun1, hrun2, hrun3, hrun4, heq, hlenE, liftFueled, exc_ok_bind]
   rfl
 
-include hq henv in
+include hq henv hOpf hLC in
 /-- **`check_block_agree_one` is one step of `checkBlockAgree`** under `StageC` (member 0's
 telescope opened by the caller; the denotations as con-ron's `checkBlockAgree_specF`'s proof has
 them at a member). -/
@@ -194,12 +226,12 @@ theorem checkBlockAgreeOne_refinesC
   refine triple_post (checkBlockAgreeOne_spec p hd hl hp had (realCall p) (realCall_spec p) (n + 1) s₀
     vis nP fvs0O fvs0L s0 cvTa s) ?_
   rintro r s' ⟨hlq, hm⟩
-  obtain ⟨a', hrun, hC', hg, hA', hcs⟩ := agW_okC hq henv n hn s₀.mem s'.mem a₀ nP fvs0O fvs0L s0 cvTa
+  obtain ⟨a', hrun, hC', hg, hA', hcs⟩ := agW_okC hq henv hOpf hLC n hn s₀.mem s'.mem a₀ nP fvs0O fvs0L s0 cvTa
     s r cv fvs0 hm hC hA hty hfvs0 hfot hs hs0 htyP hwx hxs0 hsc0 hsP hs0P
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlq, hok, by rw [hst]; exact hC', hg, hA', by rw [hst]; exact hcs⟩
 
-include hq henv in
+include hq henv hOpf hLC in
 /-- **`check_block_agree` under `StageC`** (twin side: con-ron's `checkBlockAgree_specF`'s proof;
 member 0's telescope opened per member, as the twin does). -/
 theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P : ConLeche.ConstantVal}
@@ -243,9 +275,9 @@ theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0
         by_cases h : r.headD 0 = 0
         · rw [iagK1_none p n m₁ vis nP c0 s0 o l r h, if_pos h]
         · rw [iagK1_some p n m₁ vis nP c0 s0 o l r h, if_neg h])
-    (Sim.withFr (F := AbsOK) (Sim.withRunC (by
-      have h := installSimKeep (p := p) (n := n) (openPisAtFvarsF_spec dn vis fe nP _ 0 hty0) hS
-      rw [htye0] at h; exact h)) (fun _ _ e => callW_stub_afr e (by decide) hA)) ?_
+    (by
+      have h := opfSimRA (n := n) (k := nP) (i := 0) hOpf hty0 hS hA
+      rw [htye0] at h; exact h) ?_
   rintro r1 x1 m1 a1 ⟨⟨⟨hS1, hg1, hd1⟩, hrun1⟩, hA1⟩
   rw [← htye0] at hrun1
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hd0 hrun1
@@ -302,7 +334,7 @@ theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0
     (installSimCall
       (Q := fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m1 m' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a1 a')
-      (checkBlockAgreeOne_refinesC hq henv hP.doms hP.lvl hP.one hP.ad k (by omega)
+      (checkBlockAgreeOne_refinesC hq henv hOpf hLC hP.doms hP.lvl hP.one hP.ad k (by omega)
         ⟨m1, Locals.init []⟩ a1 nP _ _ s0 _ v cvv fvs0 hC1 hA1 hty hfd hfb hv32 hs0
         (ConRon.Bridge.denoteCV_type hxcv1) hwx hxs0
         (ConRon.Bridge.Inductives.openers_typeD_WScoped hq0 h0)
@@ -319,7 +351,7 @@ theorem iagW_simC (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0
   rintro _ _ _ _ ⟨hC3, hg3, hA3, c3⟩
   exact ⟨hC3, (hg1.trans hg2).trans hg3, hA3, c02.trans c3⟩
 
-include hq henv in
+include hq henv hOpf hLC in
 /-- **`check_block_agree` refines `checkBlockAgree`** under `StageC` (the knot's
 `is_def_eq_core`; the denotations as con-ron's `checkBlockAgree_specF` asks): member 0's constant
 decoded below the tops, its sort a handle, the other members a slice of checked formers. -/
@@ -341,7 +373,7 @@ theorem checkBlockAgree_refinesC (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62
         (AM.st (ConRon.Arena.checkBlockAgree V fe nP.toNat cv0 (decI s0) rest) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (iag_spec p hP.agree n s₀ vis nP c0 s0 o l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (iagW_simC hq henv hP nP c0 s0 cv0 h0 n hn _ a₀ o l rest cvsP hC hA hc0 hs0
+    let ⟨hok, hQ⟩ := Sim.run (iagW_simC hq henv hOpf hLC hP nP c0 s0 cv0 h0 n hn _ a₀ o l rest cvsP hC hA hc0 hs0
       hrest hc0P hs0P hcvs hws) hm
     ⟨hl, hok, hQ.1, hQ.2.1, hQ.2.2.1⟩
 

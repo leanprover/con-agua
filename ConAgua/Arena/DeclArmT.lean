@@ -85,19 +85,34 @@ theorem _root_.L.Ind.KnotStageProg.lvlEqC {p : Prog} (hq : KnotStageProg p) :
 /-- **`check_constant_val` refines `checkConstantVal .verified`** under `StageT`, at the call (the
 census link since lane `indstaget`). -/
 @[refines ConRon.Arena.checkConstantVal]
-theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
+theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
+    (hkp : CrKeep p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis q : Word) (cv : IConstantVal) (hS : StageT dn vis fe s₀.mem a₀)
-    (hqd : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
+    (hqd : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_constant_val" [vis, q]
     ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (checkConstantVal V fe cv) a₀ ∧
-      StageT dn vis fe s'.mem (AM.st (checkConstantVal V fe cv) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageT dn vis fe s'.mem (AM.st (checkConstantVal V fe cv) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      L.Stubs.CrOK s'.mem; ⊤⦄ := by
   refine triple_post (ccv_specW p hp (realCall p) (realCall_spec p) n s₀ vis q) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := ccvW_okT hq hn hm hS hqd hqb
+  obtain ⟨a', hrun, hS', hg, hCr'⟩ := ccvW_okT hq hap hkp hn hm hS hqd hqb hlps hCr
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, hCr'⟩
 
+
+/-- **`check_constant_val` keeps the walk memos** (`AbsOK`), under `checkConstantVal_refinesT`'s
+preconditions (lane `indstaget`: replaces the `AbsKeep` premise of the inductive stage). -/
+theorem checkConstantVal_absOK (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
+    (hkp : CrKeep p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {r : List Word} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis q : Word} {cv : IConstantVal}
+    (hS : StageT dn vis fe m a₀) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) (hCr : L.Stubs.CrOK m)
+    (h : callW p n "check_constant_val" [vis, q] m = some (r, m')) (hA : AbsOK m) : AbsOK m' := by
+  obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (ccv_specW p hp (realCall p) (realCall_spec p) n _ vis q) h
+  exact ccvW_okTA hq hap hkp hn hm hS hqd hqb hlps hCr hA
 /-- **`check_thm_val` refines `checkThmVal .verified`** under `StageT`, at the call: the stage
 relation at the extended environment and the core's memos after it (the census link since lane
 `indstaget`). -/
@@ -207,9 +222,9 @@ theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF 
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdtK2_some] at h
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refinesT p hV hq n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
-      (by rw [hq1]; exact hcv1) (by omega)) h2
+  obtain ⟨s2, hs2, -, hok2, hS2, hg2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (checkConstantVal_refinesT p hV hq hap hkp n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
+      (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2
   -- the twin's constant check: `FoldOK` and the constant's denotation after it
@@ -295,10 +310,10 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hk
   rw [h2, ivK2_some] at h
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (ih_specW p hI n ⟨m1, Locals.init []⟩ vis (q + 1)) h2
+    (ih_specW p hI (realCall p) (realCall_spec p) n ⟨m1, Locals.init []⟩ vis (q + 1)) h2
   rw [hs2] at hW2
-  obtain ⟨a2, hrun2, hS2, hg2⟩ :=
-    ihW_okT hW2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
+  obtain ⟨a2, hrun2, hS2, hg2, -, -⟩ :=
+    ihW_okT hap hkp.crf hW2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega) (denoteCV_lps hcvd) hCr1
   -- the parameters' names read back after the header: con-ron's `installHeader_bridge`
   have hlps2 : ∃ ks, (stepCV ds[i.toNat]).levelParams.mapM (denoteN a2.store.ns) = some ks := by
     obtain ⟨hstep, -⟩ := ConRon.Bridge.installHeader_bridge hfold hcvd hrun2

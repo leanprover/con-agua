@@ -26,9 +26,9 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 section sims
-variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
+variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name} {env : ConLeche.Env}
 
-include hq in
+include hq hApd in
 /-- `class_rules_ok_one` under `StageC` (`cr1W_rel`'s, `cruleW_okC`). -/
 theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
     (henvR : ConLeche.EnvWF envR) {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem}
@@ -68,7 +68,7 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
   rw [h1, cr1K_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq henvR (by omega) h1 hC hgen
+  obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hApd henvR (by omega) h1 hC hgen
     (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP hie
   have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =
       G.nP + G.slots.length + X.nF := by
@@ -77,7 +77,7 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
   rw [hn] at hrun
   exact ⟨a', hrun, hC', hg, rfl, hA', hc'⟩
 
-include hq in
+include hq hApd in
 /-- **`class_rules_ok` under `StageC`** (`crsW_sim`'s; twin side con-ron's `classRulesOk_spec`). -/
 theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {env₂ : ConLeche.Env}
     (g rco rcl cgo cgl cvR c : Word) (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
@@ -177,7 +177,7 @@ theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {
       b.1 = [r3.tail.headD 0] ∧ y = decI (r3.tail.headD 0) ∧ AbsOK b.2 ∧
       ConRon.Bridge.CoreStep V env feR a3 a')
     (fun ⟨r4, m4⟩ h4 => by
-      obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq henv (by omega) h4 hC3 hgH
+      obtain ⟨a', hrun, hC', hg, hr, hA4, hc4⟩ := cr1W_relC hq hApd henv (by omega) h4 hC3 hgH
         (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
         (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
         (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext)
@@ -214,7 +214,7 @@ theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {
   · exact hd6
   · exact Nat.le_of_eq ht6
 
-include hq in
+include hq hApd in
 /-- **`class_rules_ok` refines `classRulesOk`** under `StageC` (the inputs' denotations as con-ron's
 `classRulesOk_spec` asks): the rules, a handle slice below the top. -/
 @[refines ConRon.Arena.classRulesOk]
@@ -246,7 +246,7 @@ theorem classRulesOk_refinesC (hp : CrsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s�
       AbsOK s'.mem; ⊤⦄ :=
   triple_post (classRulesOk_spec p hp (realCall p) (realCall_spec p) n s₀ visT visR g rco rcl cgo cgl
     cvR c xo xl) fun _ _ ⟨hl, hw⟩ =>
-    let h := (crsW_simC hq henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl cvR c G recCls cvGs cv
+    let h := (crsW_simC hq hApd henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl cvR c G recCls cvGs cv
       hns hrcb hcgb gP cvGsP cvRP n hn _ a₀ xo xl Xs XsP hC hG hrc hcg hcv hext hXs hA hgP hcvsP
       hcvP hXsP hie).am hw
     ⟨hl, h.1, h.2.1, h.2.2.1⟩

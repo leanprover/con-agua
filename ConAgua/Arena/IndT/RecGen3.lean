@@ -106,18 +106,19 @@ theorem classConstOk_of_ih (mode : ConLeche.CheckMode) {fe : IFEnv} {cv : IConst
   rfl
 
 section sims
-variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv}
 
 local notation "V" => ConLeche.CheckMode.verified
 
-include hq in
+include hq hApd hCrk in
 /-- **`class_const_ok` under `StageT`**: `install_header`'s guards (`ihW_okT`, the same guards as
 `classConstOk`'s, `classConstOk_of_ih`), then the knot's `infer_type_core` and
 `ensure_sort_core`. -/
 theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word)
     (cv : IConstantVal) (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv)
-    (hqb : q.toNat + 3 < 2 ^ 64) (hA : AbsOK m) :
+    (hqb : q.toNat + 3 < 2 ^ 64) (hA : AbsOK m)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) :
     RSim (ccoW (realCall p) n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun b a' x => KPT dn vis fe m decUnit b a' x ∧ AbsOK b.2) := by
   cases n with
@@ -125,17 +126,17 @@ theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word
   | succ n =>
   rw [ccoW_eq]
   rintro b hb
-  cases h1 : L.Arena.ihW n m vis q with
+  cases h1 : L.Arena.ihW (realCall p) n m vis q with
   | none => rw [h1] at hb; cases hb
   | some rm =>
   obtain ⟨r1, m1⟩ := rm
   rw [h1] at hb
-  obtain ⟨a1, hrun, hS1, hg1⟩ := ihW_okT h1 hS hq' hqb
+  obtain ⟨a1, hrun, hS1, hg1, -, hA1⟩ := ihW_okT hApd hCrk.crf h1 hS hq' hqb hlps hA.crMemo.crOK
   have hq1 : decCV (erA m1) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg1) hq'
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1
   have et : rdW (m1.arr64 EREC) (q + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
-  have hA1 : AbsOK m1 := ihHdrW_afr h1 hA
+  have hA1 : AbsOK m1 := hA1 hA
   have hr : RSim (ccoK1 (realCall p) n vis q (some (r1, m1)))
       (do let stype ← inferTypeCore V fe checkFuel 0 cv.type
           let _u ← ensureSortCore V fe checkFuel 0 stype) a1
@@ -157,7 +158,7 @@ theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word
   obtain ⟨x, a', hr', hQ⟩ := hr b hb
   exact ⟨x, a', by rw [classConstOk_of_ih V hrun]; exact hr', hQ⟩
 
-include hq in
+include hq hApd hCrk in
 /-- **`class_const_ok` refines `classConstOk`** under `StageT` (the guards are `install_header`'s,
 then the knot's `infer_type_core` and `ensure_sort_core`). -/
 @[refines ConRon.Arena.classConstOk]
@@ -166,14 +167,14 @@ theorem classConstOk_refinesT (h : IhProg p)
     (hc : p.lookup "class_const_ok" = some classConstOkL) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (q : Word) (cv : IConstantVal) (hS : StageT dn vis fe s₀.mem a₀)
     (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hA : AbsOK s₀.mem) :
+    (hA : AbsOK s₀.mem) (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk V fe cv) a₀ ∧
       KPT dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk V fe cv) a₀)
         (AM.res (ConRon.Arena.classConstOk V fe cv) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classConstOk_spec p h hh hc (realCall p) (realCall_spec p) n s₀ vis q)
     fun _ _ ⟨hl, hw⟩ =>
-      let h := (ccoW_simT hq n hn _ a₀ q cv hS hq' hqb hA).am hw
+      let h := (ccoW_simT hq hApd hCrk n hn _ a₀ q cv hS hq' hqb hA hlps).am hw
       ⟨hl, h.1, h.2.1, h.2.2⟩
 
 end sims

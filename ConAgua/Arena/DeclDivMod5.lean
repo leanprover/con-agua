@@ -318,22 +318,22 @@ theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm
 
 /-! ## `consts_resolve_all` -/
 
-def craW (p : Prog) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=
+def craW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([1], m) else
-  ntBW (stubM "consts_resolve_ffast" m [vs, rdW (m.arr64 IW) o]) fun r1 m1 =>
+  ntBW (cl n "consts_resolve_ffast" [vs, rdW (m.arr64 IW) o] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1) else
   ntBW (callW p n "consts_resolve_all" [vs, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 set_option maxHeartbeats 1600000 in
 theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsResolveAllL)
-    (n : Nat) (s₀ : St) (vs o l : Word) :
+    (cl : CallM) (hcl : CallSpec p cl) (n : Nat) (s₀ : St) (vs o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "consts_resolve_all" [vs, o, l]
-    ⦃fun res s' => LocEq s' s₀ ∧ craW p n s₀.mem vs o l = some (res, s'.mem); ⊤⦄ := by
+    ⦃fun res s' => LocEq s' s₀ ∧ craW p cl n s₀.mem vs o l = some (res, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, constsResolveAllL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "consts_resolve_ffast" n, callW_spec p n "consts_resolve_all"] <;>
+      hcl n "consts_resolve_ffast", callW_spec p n "consts_resolve_all"] <;>
     finish (gen := 30) (instances := 10000) [craW, ntBW, rdW_eq]
 
 theorem cra_ref (hD : DmProg5 p) (vs : Word) (hvs : vs = vis) :
@@ -353,8 +353,8 @@ theorem cra_ref (hD : DmProg5 p) (vs : Word) (hvs : vs = vis) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => craW p k mm vs o l)
-      (cra_specW p hD.lConstsResolveAll k · vs o l) hc
+    have hw := callW_model (M := fun mm => craW p stubCall k mm vs o l)
+      (cra_specW p hD.lConstsResolveAll stubCall (stubCall_spec p) k · vs o l) hc
     simp only [craW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
@@ -365,11 +365,11 @@ theorem cra_ref (hD : DmProg5 p) (vs : Word) (hvs : vs = vis) :
     | succ k =>
     obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
     subst hh
-    have hw := callW_model (M := fun mm => craW p k mm vs o l)
-      (cra_specW p hD.lConstsResolveAll k · vs o l) hc
+    have hw := callW_model (M := fun mm => craW p stubCall k mm vs o l)
+      (cra_specW p hD.lConstsResolveAll stubCall (stubCall_spec p) k · vs o l) hc
     unfold craW at hw
     rw [if_neg hl0] at hw
-    cases h1 : stubM "consts_resolve_ffast" m [vs, rdW (m.arr64 IW) o] with
+    cases h1 : stubCall k "consts_resolve_ffast" [vs, rdW (m.arr64 IW) o] m with
     | none => rw [h1] at hw; simp at hw
     | some q1 =>
     obtain ⟨r1, m1⟩ := q1

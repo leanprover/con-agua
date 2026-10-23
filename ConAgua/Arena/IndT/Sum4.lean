@@ -35,9 +35,11 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p) (hOpf : OpfF p) (hLC : LvlCacheProg p)
+  (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv in
+include hq henv hOpf hLC hLT in
 /-- **`check_sum_ctor_tail` under `StageC`** (twin side: the tail of con-ron's
 `checkSumCtor_spec`'s proof). -/
 theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
@@ -67,9 +69,7 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
   unfold ctlW cscTailT
   refine Sim.bindK (K := ctlK1 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL) rfl
     (fun _ _ => rfl)
-    (Sim.withFr (F := AbsOK) (Sim.withRunC
-      (sumSim_of_relAM (openPisAtFvarsF_spec dn vis fe nF cqB nP hcqB) hS))
-      fun _ _ e => AbsOK.stub (by decide) hA e) fun rx ox m1 a1 hQ => ?_
+    (opfSimRA (n := n + 1) hOpf hcqB hS hA) fun rx ox m1 a1 hQ => ?_
   obtain ⟨⟨⟨hS1, hg1, hdec1⟩, hr1⟩, hA1⟩ := hQ
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hcqBP hr1
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
@@ -244,9 +244,9 @@ theorem ctlW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m : Mem)
       ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD :=
     fun i _ x hx => ConRon.Bridge.Inductives.openers_typeD_WScoped hxq hwsc i x hx
   refine Sim.bindK (K := ctlK9) rfl (fun _ _ => rfl)
-    (Sim.withRunC (fsortsW_okC hq henv n (by omega) m7 a7 isP lg rs nP xo xlw (ao + nP) (al - nP) nF xl1
+    (Sim.withRunC (fsortsW_okC hq henv hLC hLT n (by omega) m7 a7 isP lg rs nP xo xlw (ao + nP) (al - nP) nF xl1
       (args.drop nP.toNat) hC7 hA7 (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
-      (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hrs hnf hxfvs7 hxpos))
+      (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hrs (ConRon.Bridge.denoteL_ext hrsP hx07) hnf hxfvs7 hxpos))
     fun r9 sorts m8 a8 hQ => ?_
   obtain ⟨⟨hC8, hg8, hd8, hb8, hA8⟩, hr8⟩ := hQ
   obtain ⟨c8, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
@@ -282,7 +282,7 @@ theorem sdSimC (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo fl d
   exact sdomsW_simC hq henv k hk m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms
     (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hjf hjd hfP hdP hws (r, m') e
 
-include hq henv hV hkc in
+include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` under `StageC`** (twin side: con-ron's `checkSumCtor_spec`'s proof). -/
 theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     (a : AState) (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
@@ -315,10 +315,13 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
   refine Sim.bindK (K := ctorK2 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
     (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (Sim.withRunC
       (installSimCall (Q := fun _ _ m' a' => StageT dn vis fe m' a' ∧ IWGrow m m')
-        (checkConstantVal_refinesT p hV hq (n + 2) hn _ a dn fe vis cvCw cvC hC.stageT
-          (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hS hcvx))
-        fun _ _ h => ⟨h.2.1, h.2.2⟩))
-      fun _ _ e => hkc _ _ _ _ _ e hA) fun _ _ m1 a1 hQ => ?_
+        (checkConstantVal_refinesT p hV hq hApd hCrk (n + 2) hn _ a dn fe vis cvCw cvC hC.stageT
+          (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hS hcvx)
+          (denoteCV_lps hcvCP) hA.crMemo.crOK)
+        fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1⟩))
+      fun _ _ e => checkConstantVal_absOK p hV hq hApd hCrk hn hC.stageT
+        (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hS hcvx)
+        (denoteCV_lps hcvCP) hA.crMemo.crOK e hA) fun _ _ m1 a1 hQ => ?_
   obtain ⟨⟨⟨hT1, hg1⟩, hr1⟩, hA1⟩ := hQ
   have hS1 := hT1.stage
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
@@ -377,11 +380,10 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
   -- the constructor's opened telescope
   obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m3 hg03) hS3.2.2.2.2.1
   rw [hw3]
-  have h4 := openPisAtFvarsF_spec dn vis fe nP w3 0 hw3l
+  have h4 := opfSimRA (n := n + 2) (k := nP) (i := 0) hOpf hw3l hS3 hA3
   rw [hw3d, show (0 : Word).toNat = 0 from rfl] at h4
   refine Sim.bindK (K := ctorK5 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
-    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (Sim.withRunC (sumSim_of_relAM h4 hS3))
-      fun _ _ e => AbsOK.stub (by decide) hA3 e) fun r4 o4 m4 a4 hQ => ?_
+    (fun _ _ => rfl) h4 fun r4 o4 m4 a4 hQ => ?_
   obtain ⟨⟨⟨hS4, hg4, hdec4⟩, hr4⟩, hA4⟩ := hQ
   obtain ⟨p4, ho4⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC3.check.state
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcA) p3.ext) hr4
@@ -403,12 +405,11 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
   -- the type former's opened telescope
   obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.2.2.2.2.1
   rw [hw5]
-  have h5 := openPisAtFvarsF_spec dn vis fe nP w5 0 hw5l
+  have h5 := opfSimRA (n := n + 2) (k := nP) (i := 0) hOpf hw5l hS4 hA4
   rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5
   have hx04 := hx01.trans (p3.ext.trans p4.ext)
   refine Sim.bindK (K := ctorK6 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (Sim.withRunC (sumSim_of_relW h5 hS4))
-      fun _ _ e => AbsOK.stub (by decide) hA4 e) fun r5 o5 m5 a5 hQ => ?_
+    (fun _ _ => rfl) h5 fun r5 o5 m5 a5 hQ => ?_
   obtain ⟨⟨⟨hS5, hg5, hdec5⟩, hr5⟩, hA5⟩ := hQ
   obtain ⟨p5, ho5⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC4.check.state
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcvTaP) hx04) hr5
@@ -472,7 +473,7 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     have := (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
     simpa using this
   refine sumSim_map (K := ctorK9 cvCw) rfl (fun _ _ => rfl)
-    (ctlW_okC hq henv n (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hC7 hT
+    (ctlW_okC hq henv hOpf hLC hLT n (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hC7 hT
       (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
       (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf hA7
       (ConRon.Bridge.denoteN_ext hTP hx07) (ConRon.Bridge.denoteNListE_ext hx07 _ _ hlpsP)
@@ -485,7 +486,7 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
   exact ⟨hC8, ((hg06.trans hg7).trans hg8), rfl, hx1, by simpa using hd8, by simpa using hb8, hA8,
     ((c1.trans (hp16.toCore c1.ok)).trans c7).trans c8⟩
 
-include hq henv hV hkc in
+include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** under `StageC` (the knot's core calls;
 the inputs' denotations as con-ron's `checkSumCtor_spec` asks), the pre-block environment the
 restriction of `fe` to the view `vis0`. Returns `cvC` itself and the field sorts as a fresh `IW`
@@ -524,7 +525,7 @@ theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62)
   refine triple_post (ctorW_spec p hP (realCall p) (realCall_spec p) n s₀ vis0 vis T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hkc n hn _ a₀ vis0 T lo ll nP nIdx rs
+  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk n hn _ a₀ vis0 T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw lps cvC cvTa hC hT hlps hlb hcv hta hrs hni hnf hA hTP hlpsP hrsP hcvCP hcvTaP
     hws hok₀ hfe).run hm
   exact ⟨hl, hok, hC', hg', h0, h1, hd, hA'⟩

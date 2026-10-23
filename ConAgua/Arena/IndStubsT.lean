@@ -21,45 +21,15 @@ namespace L.Ind
 
 open L.Arena
 
-section specs
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-
-/-! The two contracts left. Their proven replacements exist: `crfF_okT` (`IndRealMemoCrT.lean`,
-pre `StageT ∧ CrMemo`, post `KeepPostT ∧ CrMemo`) and `apdF_okT` (`IndRealApdT.lean`, pre `StageT`
-with the slice and the parameters' names read back). Users switched (helpers `indproofs4-t2`,
-`indproofs4-sw2`), each reading the two walks through its model's `CallM` (`stubCall` for the
-`StageR` proofs, `realCall p` under `StageT`):
-
-* `reduce_pin_guard` (`rpgW`, `DeclCrpT`) and the `Nat.div` gates' guards (`dmPgW`, `dmCgW`,
-  `DeclDivGateT1`): `lps = []`; `consts_resolve_ffast`'s memo `CrOK` taken at the arm's entry
-  (`ArmSpecT`; the loop's `IndMemos.cr`) and carried across the program's calls (`CrKeep`,
-  `CrOKFrame.lean`: `IndMemoClosed`'s write set) and the walks' frames;
-* `install_value_guards` (`ivgW`, `DeclCvgT`), from `install_value` (`ivW_genT`), the value checks
-  (`dvW_okT`, `tvW_okT`) and phase B (`cvgW_okT`): the parameters' names read back at the guards
-  from the constant's denotation and the twin's store growing up to them (`installHeader_bridge`,
-  `checkConstantVal_bridge_of_fold`, the theorem test's prefix `thmPrefix_ext`), `CrOK` as above
-  (phase B carries it beside `CoreMemos`).
-
-User left: `install_header` (`ihW_okT`, `DeclValT`; both calls): `ihW` (`DeclHeader.lean`) is lane
-`indstaget`'s (its second reading parameter, `class_const_ok`'s `RecGen3`). The same switch applies
-there: `ihW` reading the two walks through a `CallM`, `CrOK` threaded to `ihW_okT` (its callers
-`ivW_genT` and `RecGen3` both run under `CrKeep`), the names read back from the constant's
-denotation at the entry and the store's growth across the guards before the walk (con-ron's
-`installHeader_bridge` route: `reservedBasisNames_run`'s `Ext`, the walks keeping the store). -/
-
-/-- `consts_resolve_ffast(vis, e)` under `StageT`. -/
-theorem constsResolveFFastT_spec (e : Word) (he : H e) :
-    RelAM "consts_resolve_ffast" [vis, e] (StageT dn vis fe)
-      (constsResolveFFast fe (decI e)) (KeepPostT dn vis fe decW0B) := sorry
-
-
-/-- `all_level_params_defined(lps.off, lps.len, e)` under `StageT`. -/
-theorem allLevelParamsDefinedT_spec (o l e : Word) (he : H e) (lps : List NIdx) :
-    RelAM "all_level_params_defined" [o, l, e]
-      (fun m a => StageT dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps)
-      (allLevelParamsDefined lps (decI e)) (KeepPostT dn vis fe decW0B) := sorry
-
-end specs
+/-! The two walk contracts that were here (`constsResolveFFastT_spec`, `allLevelParamsDefinedT_spec`)
+are gone: every caller reads `consts_resolve_ffast` and `all_level_params_defined` through its
+model's `CallM` and, under `StageT`, uses the real refinements `crfF_okT` (`IndRealMemoCrT.lean`,
+pre `StageT ∧ CrMemo`) and `apdF_okT` (`IndRealApdT.lean`, the parameters' names read back).
+`reduce_pin_guard` and the `Nat.div` gates (helper `indproofs4-t2`), `install_value_guards`
+(helper `indproofs4-sw2`), and `install_header` (`ihW_okT`, `DeclValT`; lane `indstaget`, helper
+`rcB`: `CrOK` threaded to it from `check_constant_val`, `install_value` and `class_const_ok`, the
+names read back from the constant's denotation at the entry, the guards before the walk keeping the
+twin's store). -/
 
 
 open Std.WP in

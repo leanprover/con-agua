@@ -227,6 +227,87 @@ section cg
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
   {p : Prog}
 
+/-- **`consts_resolve_all` under `StageT`** (`cra_ref`'s, `consts_resolve_ffast` by `crfF_okT`
+with its memo `CrOK` threaded). -/
+theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
+    ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
+      StageT dn vis fe m a → L.Stubs.CrOK m → decHL m o.toNat l.toNat = some hyps →
+      o.toNat + l.toNat ≤ iwTop m →
+      callW p k "consts_resolve_all" [vis, o, l] m = some (res, m') →
+      ∃ x a', (constsResolveAll fe hyps).run a = .ok (x, a') ∧
+        KeepPostT dn vis fe decW0B m m' a' res x ∧ L.Stubs.CrOK m' := by
+  intro hyps
+  induction hyps with
+  | nil =>
+    intro o l k m a res m' hT hCr hd hb hc
+    have hl0 : l = 0 := by
+      have := decHL_length m hd
+      exact UInt64.toNat_inj.mp (by simp at this ⊢; omega)
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
+      (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
+    simp only [craW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨true, a, rfl, ⟨hT, IWGrow.refl _, by simp [decW0B]⟩, hCr⟩
+  | cons h hs ih =>
+    intro o l k m a res m' hT hCr hd hb hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hT.stage.2.2.2.1 hd
+    subst hh
+    have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
+      (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
+    unfold craW at hw
+    rw [if_neg hl0] at hw
+    cases h1 : realCall p k "consts_resolve_ffast" [vis, rdW (m.arr64 IW) o] m with
+    | none => rw [h1] at hw; simp at hw
+    | some q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, bW_some] at hw
+    obtain ⟨x1, a1, hrun1, ⟨hT1, hg1, hd1⟩, hCr1⟩ :=
+      crfF_okT dn vis fe _ hwlt m m1 a r1 (crfF_of_callW hkp.crf h1) ⟨hT, hCr.crMemo⟩
+    by_cases hz : r1.headD 0 = 0
+    · rw [if_pos hz] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hx1 : x1 = false := by
+        have := hd1.1; rw [hz] at this; simpa using this.symm
+      refine ⟨false, a1, ?_, ⟨hT1, hg1, by simp [decW0B]⟩, hCr1.crOK⟩
+      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.false_eq_true,
+        if_false, StateT.run_pure]
+      rfl
+    · rw [if_neg hz] at hw
+      have hx1 : x1 = true := by
+        have := hd1.1
+        have e : (r1.headD 0 != 0) = true := by simpa using hz
+        rw [e] at this; exact this.symm
+      cases h2 : callW p k "consts_resolve_all" [vis, o + 1, l - 1] m1 with
+      | none => rw [h2] at hw; simp at hw
+      | some q2 =>
+      obtain ⟨r2, m2⟩ := q2
+      rw [h2, bW_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hsz := hT.stage.2.2.2.1
+      have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
+      have ho1 : (o + 1).toNat = o.toNat + 1 := by
+        have hb := decHL_bnd m o l hd hsz
+        rw [UInt64.toNat_add]; simp; omega
+      have hl1' : (l - 1).toNat = l.toNat - 1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+      have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some hs := by
+        rw [ho1, hl1']
+        rw [ho1, hl1'] at hrest
+        rw [decHL_grow hg1 (by omega)]; exact hrest
+      obtain ⟨x2, a2, hrun2, ⟨hT2, hg2, hd2⟩, hCr2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hT1 hCr1.crOK
+        hrest1 (by rw [ho1, hl1']; have := hg1.1; omega) h2
+      refine ⟨x2, a2, ?_, ⟨hT2, hg1.trans hg2, hd2⟩, hCr2⟩
+      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, if_true]
+      exact hrun2
+
 /-- **`div_mod_cert_guard` under `StageC`** (`cg_ref`'s; con-ron's `divModCertGuard_run`): the
 substitutions and `consts_resolve_all` by `StageC.of_core`, the walks by their `StageT` contracts. -/
 theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC0 p dn vis fe)
@@ -396,11 +477,10 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   | some q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [h7, bW_some] at hw
-  have hCr7 := hkp.call (im_mem _ rfl) h7 hCr6
-  obtain ⟨x7, a7, hrun7, hS7, hg7, hd7⟩ := cra_ref hD vis rfl x6 (r6.headD 0) (r6.tail.headD 0) k m6
-    a6 r7 m7 hC6.stage hd6.1 hd6.2 h7
+  obtain ⟨x7, a7, hrun7, ⟨hT7, hg7, hd7⟩, hCr7⟩ := cra_refT hD hkp x6 (r6.headD 0) (r6.tail.headD 0)
+    k m6 a6 r7 m7 hC6.stageT hCr6 hd6.1 hd6.2 h7
   obtain ⟨c7, -⟩ := runsC_step (ConRon.Bridge.constsResolveAll_runsC _ _ hC6.check hhs) hrun7
-  have hC7 := StageC.of_core hC6 hS7 (callW_leafFrame hcl (leaf_mem _ (by decide)) h7) c7
+  have hC7 := StageC.of_T hT7 c7.ok
   have hG7 : IWGrow m m7 := hG5.trans (hg6.trans hg7)
   by_cases z7 : r7.headD 0 = 0
   · rw [if_pos z7] at hw

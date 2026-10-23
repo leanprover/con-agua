@@ -26,7 +26,7 @@ open L.Arena
 
 theorem ccoGuards (mode : ConLeche.CheckMode) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : L.Arena.ihW n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : L.Arena.ihW stubCall n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
     ∃ a', (ConRon.Arena.classConstOk mode fe cv).run a = (do
         let stype ← inferTypeCore mode fe checkFuel 0 cv.type
@@ -136,11 +136,12 @@ theorem ccoGuards (mode : ConLeche.CheckMode) {dn : NIdx → Option ConLeche.Nam
   by_cases hb7 : r7.headD 0 ≠ 0
   · rw [if_pos hb7] at h; simp at h
   rw [if_neg hb7, hr4t] at h
-  cases h8 : stubM "all_level_params_defined" m7 [r4.headD 0, w2, wt] with
+  cases h8 : stubCall (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] m7 with
   | none => rw [h8] at h; simp [L.Arena.ihK8] at h
   | some rm8 =>
   obtain ⟨r8, m8⟩ := rm8
   rw [h8, L.Arena.ihK8_some] at h
+  replace h8 : stubM "all_level_params_defined" m7 [r4.headD 0, w2, wt] = some (r8, m8) := h8
   have hdec7 : decHL m7 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [decHL_grow (hg6.trans hg7) (by omega), hdecL]
   obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
@@ -149,11 +150,12 @@ theorem ccoGuards (mode : ConLeche.CheckMode) {dn : NIdx → Option ConLeche.Nam
   by_cases hb8 : r8.headD 0 = 0
   · rw [if_pos hb8] at h; simp at h
   rw [if_neg hb8] at h
-  cases h9 : stubM "consts_resolve_ffast" m8 [vis, wt] with
+  cases h9 : stubCall (n + 1) "consts_resolve_ffast" [vis, wt] m8 with
   | none => rw [h9] at h; simp [L.Arena.ihK9] at h
   | some rm9 =>
   obtain ⟨r9, m9⟩ := rm9
   rw [h9, L.Arena.ihK9_some] at h
+  replace h9 : stubM "consts_resolve_ffast" m8 [vis, wt] = some (r9, m9) := h9
   obtain ⟨x9, a9, hrun9, hS9, hg9, hx9, -⟩ :=
     constsResolveFFast_spec dn vis fe wt hwtl m8 m9 a8 r9 h9 hS8
   by_cases hb9 : r9.headD 0 = 0
@@ -200,11 +202,11 @@ def ccoK1 (cR : CallM) (n : Nat) (vis q : Word) : Option (List Word × Mem) → 
 read through `c`: `IndCallM.lean`). -/
 def ccoW (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, vis, q => ccoK1 cR n vis q (L.Arena.ihW n m vis q)
+  | n + 1, m, vis, q => ccoK1 cR n vis q (L.Arena.ihW cR n m vis q)
 
 section arms
 variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis q : Word) (r1 r2 r3 : List Word)
-theorem ccoW_eq : ccoW cR (n + 1) m vis q = ccoK1 cR n vis q (L.Arena.ihW n m vis q) := rfl
+theorem ccoW_eq : ccoW cR (n + 1) m vis q = ccoK1 cR n vis q (L.Arena.ihW cR n m vis q) := rfl
 theorem ccoK1_some : ccoK1 cR n vis q (some (r1, m1)) =
     ccoK2 cR n vis (cR n "infer_type_core" [vis, 0, rdW (m1.arr64 EREC) (q + 3)] m1) := rfl
 theorem ccoK2_some : ccoK2 cR n vis (some (r2, m2)) =
@@ -219,9 +221,10 @@ grind_pattern [ind_grind] ccoK3_some => ccoK3 (some (r3, m3))
 
 /-- `class_const_ok_header`'s spec: `install_header`'s (`ih_specW`), the same body. -/
 theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
-    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader) (n : Nat) (s₀ : St) (vis q : Word) :
+    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader) (cR : CallM) (hcR : CallSpec p cR)
+    (n : Nat) (s₀ : St) (vis q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok_header" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ L.Arena.ihW n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ L.Arena.ihW cR n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hh]
   simp only [callFn, classConstOkHeader]
   cases n with
@@ -233,7 +236,7 @@ theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
         L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
         ipfF_spec p h.ipf n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
-        stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
+        hcR n "all_level_params_defined", hcR n "consts_resolve_ffast"] <;>
       finish (gen := 20)
 
 theorem classConstOk_spec (p : Prog) (h : IhProg p)
@@ -249,7 +252,7 @@ theorem classConstOk_spec (p : Prog) (h : IhProg p)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classConstOkHeader_spec p h hh n,
+        classConstOkHeader_spec p h hh cR hcR n,
         hcR n "infer_type_core", hcR n "ensure_sort_core"] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -262,7 +265,7 @@ theorem ccoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | succ n =>
   rw [ccoW_eq]
   rintro b hb
-  cases h1 : L.Arena.ihW n m vis q with
+  cases h1 : L.Arena.ihW stubCall n m vis q with
   | none => rw [h1] at hb; cases hb
   | some rm =>
   obtain ⟨r1, m1⟩ := rm

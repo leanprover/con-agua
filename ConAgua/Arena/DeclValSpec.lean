@@ -82,11 +82,11 @@ def ccvK1 (c : CallM) (n : Nat) (vis t : Word) : Option (List Word × Mem) → O
 /-- **The model of `check_constant_val`.** -/
 def ccvW (c : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, vis, q => ccvK1 c n vis (rdW (m.arr64 EREC) (q + 3)) (ihW n m vis q)
+  | n + 1, m, vis, q => ccvK1 c n vis (rdW (m.arr64 EREC) (q + 3)) (ihW c n m vis q)
 
 section arms
 variable (c : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis q t : Word) (r1 r2 r3 : List Word)
-theorem ccvW_step : ccvW c (n + 1) m vis q = ccvK1 c n vis (rdW (m.arr64 EREC) (q + 3)) (ihW n m vis q) :=
+theorem ccvW_step : ccvW c (n + 1) m vis q = ccvK1 c n vis (rdW (m.arr64 EREC) (q + 3)) (ihW c n m vis q) :=
   rfl
 theorem ccvK1_some : ccvK1 c n vis t (some (r1, m1)) =
     ccvK2 c n vis (c n "infer_type_core" [vis, 0, t] m1) := rfl
@@ -110,7 +110,7 @@ theorem ccv_specW (h : ValProg p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s�
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ih_specW p h.ih n, hc n "infer_type_core", hc n "ensure_sort_core"] <;>
+        ih_specW p h.ih c hc n, hc n "infer_type_core", hc n "ensure_sort_core"] <;>
       finish (gen := 20)
 
 /-! ## `check_defn_val(vis, c)` and `check_opaque_val(vis, c)`: one text -/

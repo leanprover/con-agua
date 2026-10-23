@@ -182,7 +182,7 @@ def tcmK1 (cR : CallM) (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word
 /-- **The model of `target_class_match`** (body fuel `n`). -/
 def tcmW (cR : CallM) (n : Nat) (m : Mem) (vis p fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
     Option (List Word × Mem) :=
-  tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (stubM "lvls_eq_c" m [us, lvls])
+  tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (cR n "lvls_eq_c" [us, lvls] m)
 
 section arms
 variable (cR : CallM) (n : Nat) (m : Mem) (vis p fto ftl pfo pfl dso dsl edso edsl d : Word) (r rn rb rh rl : List Word)
@@ -241,7 +241,7 @@ theorem targetClassMatch_spec (p : Prog) (L : TcmLook p) (cR : CallM) (hcR : Cal
   simp only [callFn, targetClassMatch]
   sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "lvls_eq_c" n, blockShapeMemberNames_spec p L.ha L.mnc L.mn n,
+      hcR n "lvls_eq_c", blockShapeMemberNames_spec p L.ha L.mnc L.mn n,
       blockShapeLps_spec p L.ha L.erc L.eri L.lps n,
       plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl L.il n,
       targetHoles_spec p L.ff L.fp L.iff L.ic L.ha L.sc L.th n, tpd_spec p L.tp cR hcR n] <;>
@@ -270,11 +270,12 @@ theorem tcmW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso ds
     ∃ c a', (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds).run a =
       .ok (c, a') ∧ (r.headD 0 != 0) = c ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   unfold tcmW at h
-  cases h1 : stubM "lvls_eq_c" m [us, lvls] with
+  cases h1 : stubCall n "lvls_eq_c" [us, lvls] m with
   | none => rw [h1] at h; simp [tcmK1] at h
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [h1] at h
+  replace h1 : stubM "lvls_eq_c" m [us, lvls] = some (r1, m1) := h1
   obtain ⟨o1, a1, run1, hS1, hg1, hd1⟩ := lvlsEqStub_spec dn vis fe us lvls hus hlv m m1 a r1 h1 hS
   have hP1 := hP.stub (by decide) h1
   by_cases hne : r1.headD 0 ≠ 2

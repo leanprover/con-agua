@@ -261,13 +261,13 @@ theorem bncW_mfr {n : Nat} {m m' : Mem} {vis q cvO cvL : Word} {r : List Word}
 /-! ## `check_abs_ctor_sorts_all` -/
 
 theorem pos3_cfbW_mfr {n : Nat} {m m' : Mem} {isProp large s io il fv u : Word} {r : List Word}
-    (h : cfbW n m isProp large s io il fv u = some (r, m')) : MFr [] [] m m' := by
+    (h : cfbW stubCall n m isProp large s io il fv u = some (r, m')) : MFr [] [] m m' := by
   cases n with
   | zero => simp [cfbW] at h
   | succ n =>
   by_cases hp : isProp = 0
-  · rw [cfbW_leq n m isProp large s io il fv u hp] at h
-    cases h1 : stubM "lv_leq_top" m [u, s] with
+  · rw [cfbW_leq stubCall n m isProp large s io il fv u hp] at h
+    cases h1 : stubCall n "lv_leq_top" [u, s] m with
     | none => rw [h1] at h; simp [cfbK1] at h
     | some x =>
       obtain ⟨r1, m1⟩ := x
@@ -277,21 +277,23 @@ theorem pos3_cfbW_mfr {n : Nat} {m m' : Mem} {isProp large s io il fv u : Word} 
       · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.ofStub h1
       · cases h
   by_cases hl : large = 0
-  · rw [cfbW_none n m isProp large s io il fv u hp hl] at h
+  · rw [cfbW_none stubCall n m isProp large s io il fv u hp hl] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  rw [cfbW_large n m isProp large s io il fv u hp hl] at h
+  rw [cfbW_large stubCall n m isProp large s io il fv u hp hl] at h
   cases hz : pinWordV m 53 with
   | none => rw [hz] at h; simp [cfbK2] at h
   | some z =>
   rw [hz, cfbK2_some] at h
-  cases he : eqTrueW m u z with
+  cases he : eqTrueC stubCall n m u z with
   | none => rw [he] at h; simp [cfbK3] at h
   | some y =>
   obtain ⟨eq, m1⟩ := y
   rw [he, cfbK3_some] at h
   have f1 : MFr [] [] m m1 := by
-    unfold eqTrueW at he
-    cases hs : stubM "lvl_eq_c" m [u, z] with
+    rcases n with _ | n
+    · simp [eqTrueC] at he
+    rw [eqTrueC_succ] at he
+    cases hs : stubCall n "lvl_eq_c" [u, z] m with
     | none => rw [hs] at he; simp [eqTrueK] at he
     | some w =>
       obtain ⟨r2, m2⟩ := w
@@ -332,7 +334,7 @@ theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl 
     | some x3 =>
     obtain ⟨r3, m3⟩ := x3
     rw [h3, csfK3_some] at h
-    cases h4 : cfbW n m3 isProp large s io il (rdW (m.arr64 IW) (fo + (j - 1))) (r3.headD 0) with
+    cases h4 : cfbW stubCall n m3 isProp large s io il (rdW (m.arr64 IW) (fo + (j - 1))) (r3.headD 0) with
     | none => rw [h4] at h; simp [csfK4] at h
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4

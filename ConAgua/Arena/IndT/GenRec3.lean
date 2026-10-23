@@ -34,9 +34,10 @@ theorem feq_find {x y : IFEnv} (h : ConRon.Bridge.Inductives.GR.FEq x y) : x.fin
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p)
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hkp henv hV hkc in
+include hkp henv hV hApd hCrk in
 /-- **`gen_rec_check_prep`'s model under `StageC`** (`grpW_ok`'s). -/
 theorem grpW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name}
@@ -79,9 +80,9 @@ theorem grpW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA r
   obtain ⟨rA, mA⟩ := qA
   rw [cA, grpKA_some] at h
   obtain ⟨⟨hsz5, hnpk, hns⟩, cvRis, aA, hrunA, hCA, hgA, hPA, hkA, hcsA, hAA, cA', cvRisP, hcvRP, hwRis⟩ :=
-    grpAW_okC hkp henv hV hkc P hclR hfR n hn cA hC hbs hrb hrd hms hblk hP hA hkeep hsh hblkP
+    grpAW_okC hkp henv hV hApd hCrk P hclR hfR n hn cA hC hbs hrb hrd hms hblk hP hA hkeep hsh hblkP
   have hszA : (mA.arr64 IW).size = (m.arr64 IW).size := hkA IW
-  obtain ⟨G, cvGs, a', hrunB, hC', hg', hG', hns', hsl', hcg', hA', hR', cB, hrest⟩ := grpBW_okC hkp henv P n hn h
+  obtain ⟨G, cvGs, a', hrunB, hC', hg', hG', hns', hsl', hcg', hA', hR', cB, hrest⟩ := grpBW_okC hkp henv hApd hCrk P n hn h
     hCA (hbs.grow hgA)
     (hrb.grow hgA (by have := hbs.ptop; omega)) (decHL_grow' hgA hparb hpar) (Nat.le_trans hparb hgA.1)
     (htbl.grow (fun q => decNCN_mono q) hgA) (hrd.grow (decCR_mono _) hgA) (hms.grow (fun q => decTM_mono q) hgA)
@@ -95,7 +96,7 @@ theorem grpW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA r
   exact ⟨G, cvGs, a', fun {β} k => by rw [hrunA]; exact hrunB k, hC', hgA.trans hg', hG', hns', hsl', hcg', hA',
     hR', cA'.trans cB, hrest⟩
 
-include hkp henv hV hkc in
+include hkp henv hV hApd hCrk in
 /-- **`gen_rec_check`'s model refines `genRecCheck` under `StageC`** (`gckW_sim`'s): the view and
 index handed back with con-ron's `CheckOK` at the entry environment, the twin's run a `CoreStep`. -/
 theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
@@ -142,7 +143,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     (grp_spec p P.prep n _ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) c1
   simp only at hs1 hw1; subst hs1
   obtain ⟨G, cvGs, a1, hrunP, hC1, hg1, hG1, hns1, -, hcg1, hA1, hP1, c1', gP, cvGsP, hgP, hcvGs, hfrG, henvR⟩ :=
-    grpW_okC hkp henv hV hkc P hclR hfR n (by omega) hw1 hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA
+    grpW_okC hkp henv hV hApd hCrk P hclR hfR n (by omega) hw1 hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA
       hkeep hsh hparP htblP hrdP hmsP hcvTP hblkP hT hMsT hfRc
   have hS1 := hC1.stage
   have e2 : rdW (s1.mem.arr64 IW) (rd + 2) = rdW (m.arr64 IW) (rd + 2) :=
@@ -223,7 +224,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   obtain ⟨r4, m4⟩ := q4
   rw [c4, gckK4_some] at h
   obtain ⟨s4, hs4, -, hok4, ⟨hC4, hg4, hd4⟩, hA4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (classRecsRulesOk_refinesC hkp P.crr (n + 1) (by omega) _ _ henvR' vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G
+    (classRecsRulesOk_refinesC hkp hApd P.crr (n + 1) (by omega) _ _ henvR' vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G
       rdv.recCls cvGs hC3 (hG1.grow (decCG_mono _) hg23) hns1 (hrcD.grow (OMono.decNL _ _) hg13) hrcb hcg3
       (hS3.lt64 hcg3.1) hA3 hgP hcvGs hie) c4
   simp only at hs4 hC4 hg4 hd4 hA4; subst hs4
@@ -280,7 +281,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   simp only [grcTwinR, hfrr, StateT.run_bind, flushCaches_run, except_ok_bind, hvis, hrun4]
   rfl
 
-include hkp henv hV hkc in
+include hkp henv hV hApd hCrk in
 /-- **`gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,
 cvTas.off, cvTas.len, block.off, block.len)` refines `genRecCheck` under `StageC`**
 (`genRecCheck_refines`' statement, `StageR` replaced by `StageC`): besides `genRecCheck_refines`'
@@ -331,12 +332,12 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
   | succ n =>
   refine triple_post (gck_spec p P.grc n s₀ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hQ⟩ := Sim.run (gckW_simC hkp henv hV hkc P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl
+  obtain ⟨hok, hQ⟩ := Sim.run (gckW_simC hkp henv hV hApd hCrk P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl
     hrd hms hcv hblk hlp hP hA hkeep hcoh hsh hparP htblP hrdP hmsP hcvTP hblkP hT
     (fun M hM => (hMs M hM).1) hfRc) hm
   exact ⟨hl, hok, hQ⟩
 
-include hkp henv hV hkc in
+include hkp henv hV hApd hCrk in
 /-- **`check_block_rec` refines `checkBlockRec` under `StageC`** (through `genRecCheck_refinesC`;
 `checkBlockRec_refines`' statement, `StageR` replaced by `StageC`, the twin's run a `CoreStep`). -/
 @[refines ConRon.Arena.checkBlockRec]
@@ -389,7 +390,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
     refine Sim.post (K := icrK) rfl (fun _ _ => rfl)
       (installSimCall (Q := fun r x m' a' => StageC dn (r.headD 0) x.1 env m' a' ∧ IWGrow s₀.mem m' ∧
         decRRS m' r.tail x.2 ∧ AbsOK m' ∧ RcMR m' ∧ ConRon.Bridge.CoreStep V env fe a₀ a')
-        (genRecCheck_refinesC hkp henv hV hkc P hclR hfR n hn ⟨s₀.mem, Locals.init []⟩ a₀ hC hbs hrb hpar hparb
+        (genRecCheck_refinesC hkp henv hV hApd hCrk P hclR hfR n hn ⟨s₀.mem, Locals.init []⟩ a₀ hC hbs hrb hpar hparb
           htbl hrd hms hcv hblk hlp hP hA hkeep hcoh hsh hparP htblP hrdP hmsP hcvTP hblkP hMs hT hfRc)
         (fun r s' h => by obtain ⟨-, hok, hQ⟩ := h; exact ⟨hok, hQ⟩)) ?_
     rintro r x m a ⟨h1, h2, h3, h4, h6, h5⟩

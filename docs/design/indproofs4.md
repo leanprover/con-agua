@@ -379,3 +379,9 @@ kept for its other users): `constsResolveFFast_spec`.
 * IndArmSpec's `StateOK a` premise is redundant (`FoldOK.check.state`).
 * So cidW_ok → IndArmSpec is built around checkIndRoute_bridge, with indstaget's StageC checkBlock theorem under it.
 * The fuel bound goes away with helper hbf (the L hb walk takes the twin's fuel word).
+
+### IndArmSpec discharged (2026-10-23)
+
+* `L.Ind.indArmSpec_of` (Arena/IndArm.lean) composes indstaget's `cidW_okC`. `L.Checker.indArmSpec_checker` (Checker/IndArm.lean) instantiates it at `checkerProg.subPB bs`. It uses the lookups by prog_bundle and 8+1 write-set facts decided chunked (Checker/IndArmClosed.lean: 147 s, 1.8 GB; function lists in Checker/IndArmFns.lean).
+* `loopStage_of_walkKeep`. `Final/Remaining.lean`'s `checkerFile_accepts_remaining` no longer takes `hIA`. Its one named hypothesis is now `hK : ∀ bs, RomOK bs → bs = romData ++ … → ∀ f ∈ armAbsWalk, AbsKeep (checkerProg.subPB bs) f`. These are the 13 arm callees whose call closures write the walk memos: block_nest_ctx, class_read, nest_uniform, gen_rec_check_former_tys_c, check_block_ctors, check_block_classes, check_block_agree, check_abs_ctor_sorts_all, check_block_idx_sorts, class_stream_recs, classes_nfs, classes_ctors, check_constant_val.
+* `AbsKeep` is unconditional, so these need an AbsOK-preservation proof for the walks' and the core's memo writes from a bare AbsOK memory, or AbsKeep weakened to the stage relation. That is the next item.
