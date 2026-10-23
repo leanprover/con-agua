@@ -183,3 +183,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,loopt2,opus,90,30,"DeclValT (check_defn/opaque/thm_val StageT), TwinStep (TwinOK.of_grow/of_istep, StageS), LoopFns/LoopAll (loop write set, LoopMem), TwinFold.step_pext"
 2026-10-23,loopt2,opus,70,40,"quot ROM readers proved (helper loopt2-quot: StageR+StateOK+NamesDn); ivgW_okT via IndStubsT; CallM for crp/cert/cm/cpa; TwinOK.push, CoreMemos.zero"
 2026-10-23,loopt2,opus,50,20,"install_header, check_constant_val, theorem arm under StageT (DeclValT, DeclArmT); design note: arms past core calls carry con-ron CheckOK"
+2026-10-23,tails,opus,50,30,"reservedRecName under StageR (helper tails-p5), coreWalkFuel/checkFuel, AState.worker via checkPendingGo_worker"

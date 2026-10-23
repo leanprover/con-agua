@@ -40,3 +40,35 @@ lane `indproofs3`'s). Total proven 944 → 954.
   is not proved here.
 * Finding: two L twins of `reservedBasisNames.contains` exist, `reserved_contains` (`IndIface.lean`,
   recursive) and `reserved_contains_w` (`WhnfIota.lean`, a loop).
+
+## Landing 2: `reservedRecName`, the fuel constants, `AState.worker`
+
+Census after (worktree, before landing): phase 5 133 → 136/142 (`reservedRecName`,
+`litGuardNames` covered, `coreWalkFuel`), phase 7 26 → **27/27** (`checkFuel`), phase 10 todo →
+sorry, proven locally (`AState.worker`). Total proven 954 → 958.
+
+* **`reserved_rec_name` refines `reservedRecName`** (`StubNamesRefine.lean`, helper `tails-p5`):
+  `L.Stubs.reservedRecName_refines : RefAM p "reserved_rec_name" [x] (StageR dn vis fe)
+  (reservedRecName (decI x)) (KeepPost dn vis fe decW0B)` (bundle `RrnProg p`, `H x`), the shape
+  of `IndStubs.reservedRecName_spec` (for lane `indproofs3`). Models `prhW` (`pin_range_has`),
+  `lghW` (`lit_guard_has`), `rrnW`, and both directions of `reserved_contains`
+  (`resContW_iff`). Finding: `lit_guard_has`'s ten `pin_at` calls and ten-way `||` did not go
+  through `vcgen`/`finish` with `pinAt_pure` (post `LocEq` and equal memory: grind lost the
+  locals across ten `setLocs`); with `pinAt_eq` (the callee returns the caller's state exactly,
+  `s' = s₀`) it does, ~25 s at `maxHeartbeats 2000000`. `triple_eq_of_mem` derives such a spec
+  from any pure-read spec.
+* **The fuel constants** (`FuelConsts.lean`): `coreWalkFuel_word` (the counter literal
+  `4000000000` is `coreWalkFuel`) and `checkFuel_ge` (every L fuel below `2^62` is at most
+  `checkFuel`, so the knot's refinements, stated for every twin fuel at least the L fuel, apply
+  at `checkFuel`; as `IndTwin.lean`'s `stage_fuel`). Each is the whole of what L has for the
+  constant; tagged `@[refines]`. The coordinator may prefer them untagged (then they stay
+  covered-only).
+* **`AState.worker`** (`PhaseWorker.lean`): L has no worker step: `install_then_check` runs phase B
+  on the memory phase A left, the twin's pipeline (`SeqAccepts`, con-ron's phased driver) on
+  `s.worker`. `checkPendingList_worker_ok`: with empty caches the verdicts agree (con-ron's
+  `checkPending_worker`: the first `enterScratch` overwrites what `worker` changes; an empty list
+  accepts on both). `checkPendingGo_worker` (`@[refines AState.worker]`): a returning
+  `check_pending_go(0, cnt, vis)` from `LoopR` at `a₀` with `a₀.caches = Caches.empty` means
+  phase B on `a₀.worker` accepts. It inherits phase B's stub `sorry`s. Open for the final
+  glue: `a₀.caches = Caches.empty` after `installFold` (every step ends with `dropScratch`, which
+  flushes; the start state's caches are empty) is not proved here.
