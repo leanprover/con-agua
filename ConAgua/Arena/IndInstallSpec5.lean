@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndPartsSpec15
-import ConAgua.Arena.IndInstallSpec4
+import ConAgua.Arena.IndInstallSpec3
 
 /-!
 # Refinements of `IndInstall`, part 5 (lane `indproofs2`, helper `parts`)

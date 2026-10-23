@@ -18,7 +18,6 @@ import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndInstallSpec2
 import ConAgua.Arena.IndInstallSpec3
-import ConAgua.Arena.IndInstallSpec4
 import ConAgua.Arena.IndInstallSpec5
 import ConAgua.Arena.IndInstallSpec6
 import ConAgua.Arena.IndInstallSpec7
@@ -46,6 +45,9 @@ import ConAgua.Arena.IndInstallSpec28
 import ConAgua.Arena.IndInstallSpec29
 import ConAgua.Arena.IndInstallSpec30
 import ConAgua.Arena.IndInstallSpec31
+import ConAgua.Arena.IndInstallSpec32
+import ConAgua.Arena.IndInstallSpec33
+import ConAgua.Arena.IndInstallSpec34
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec2
@@ -97,6 +99,11 @@ import ConAgua.Arena.RecGenSpec9
 import ConAgua.Arena.RecGenSpec10
 import ConAgua.Arena.RecCheckSpec7
 import ConAgua.Arena.RecGenSpec11
+import ConAgua.Arena.RecGenSpec13
+import ConAgua.Arena.RecGenSpec14
+import ConAgua.Arena.RecGenSpec15
+import ConAgua.Arena.RecGenSpec18
+import ConAgua.Arena.RecGenSpec19
 import ConAgua.Arena.RecCheckSpec8
 import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.IndPosSpec2
