@@ -249,7 +249,7 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
     obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (gafF_spec p hP.gaf n _ [CWF, mty]) e2
     obtain ⟨x, a', hrun, hS2, hg2, hd2⟩ := gafF_ok dn vis fe CWF mty hmty m1 s2.mem a1 r2 hs2 hS1
     rw [CWF_eq] at hrun
-    exact ⟨x, a', hrun, hd2, hS2, hg2, hP1.fr (MFr.ofStub hs2)⟩
+    exact ⟨x, a', hrun, hd2, hS2, hg2, hP1.fr (MFr.ofGafF hs2)⟩
   rintro r2 hd m2 a2 ⟨⟨hw32, hwd⟩, hS2, hg2, hP2⟩
   rw [tmfK2_some]
   generalize hw : r2.headD 0 = w at hw32 hwd ⊢
