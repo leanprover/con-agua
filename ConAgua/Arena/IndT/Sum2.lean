@@ -1,3 +1,5 @@
+import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.RecGenSpec9
 import ConAgua.Arena.IndT.Sum1
 import ConAgua.Arena.IndSumSpec3
 import ConRon.Bridge.Inductives.SumInstall
@@ -31,8 +33,9 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
 
-include hq henv in
+include hq henv hV hkc in
 /-- **`check_sum_tele_slow` under `StageC`** (twin side: the `slow` arm of con-ron's
 `checkSumTele_spec`). -/
 theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -83,8 +86,8 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   obtain ⟨ss, m2⟩ := x2
   rw [h2] at h
   by_cases hss : 4294967296 ≤ ss
-  · rw [ctsK2_big k m2 vis cv _ _ _ ss hss] at h; cases h
-  rw [ctsK2_ok k m2 vis cv _ _ _ ss hss] at h
+  · rw [ctsK2_big _ k m2 vis cv _ _ _ ss hss] at h; cases h
+  rw [ctsK2_ok _ k m2 vis cv _ _ _ ss hss] at h
   have hss32 : ss.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ ss.toNat := hss; omega
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internSort_stage hS1 _ hs32 h2
   rw [hs] at hrun2
@@ -114,7 +117,7 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   rw [h4, ctsK4_some] at h
   have hnat : ∀ j, j < 4 → nat? (erA m3) (cv.toNat + j) = nat? (erA m) (cv.toNat + j) := fun j hj => by
     simp only [nat?, erA]; rw [hg13.2.2.2 _ (by omega)]
-  obtain ⟨hS4, hg4, hq, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
+  obtain ⟨hS4, hg4, hqe, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
     (by have := hg13.2.1; omega)
     (fun lo ll e1 e2 => by
       rw [show cv.toNat + 1 = cv.toNat + 1 from rfl, hnat 1 (by decide)] at e1
@@ -129,20 +132,32 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     obtain ⟨hn, hl, -⟩ := ConRon.Bridge.denoteCV_inv hcvP
     simp only [Frontend.denoteCV, ConRon.Bridge.denoteN_ext hn c3.ext,
       ConRon.Bridge.denoteNListE_ext c3.ext _ _ hl, htyd, hty]
-  cases h5 : stubM "check_constant_val" m4 [vis, q] with
+  cases h5 : realCall p k "check_constant_val" [vis, q] m4 with
   | none => rw [h5] at h; cases h
   | some x5 =>
   obtain ⟨r5, m5⟩ := x5
   rw [h5, ctsK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨u, a5, hrun5, hS5, hg5, -⟩ :=
-    checkConstantVal_spec dn vis fe q { cvv with type := decI (rt.headD 0) } m4 m5 a3 r5 h5 ⟨hS4, hdq⟩
+  have hqx : CVExt m4 q.toNat := ⟨by omega, fun lo ll e1 e2 => by
+    rcases hsl4 lo ll e1 e2 with h' | h'
+    · left; omega
+    · right; exact h'⟩
+  obtain ⟨s5, hs5, -, hok5, hT5, hg5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (checkConstantVal_refinesT p hV hq k (by omega) _ a3 dn fe vis q _ hC4.stageT
+      (rec2DecCV_erecP hdq hqx) (rec3CVExt_lt hS4 hqx)) h5
+  simp only at hs5 hT5 hg5
+  subst hs5
+  have hrun5 := AM.run_of_ok _ a3 hok5
+  generalize AM.res (ConRon.Arena.checkConstantVal V fe { cvv with type := decI (rt.headD 0) }) a3 = u
+    at hrun5
+  generalize AM.st (ConRon.Arena.checkConstantVal V fe { cvv with type := decI (rt.headD 0) }) a3 = a5
+    at hrun5 hT5
   obtain ⟨c5, -⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
     hC4.check henv hcvT hrun5
-  have hA5 := stub_afr h5 (by decide) hA4
+  have hA5 := hkc k _ m4 r5 _ h5 hA4
   have hg15 := (hg13.trans hg4).trans hg5
-  refine ⟨({ cvv with type := ty }, s), a5, ?_, hC4.of_check hS5 hA5 c5.ok c5.ext, hg15, ?_, ?_, ?_,
+  refine ⟨({ cvv with type := ty }, s), a5, ?_, StageC.of_T hT5 c5.ok, hg15, ?_, ?_, ?_,
     by simpa using hs32, by simpa using hs, hA5⟩
   · simp only [checkSumTele.checkSumTeleSlow, StateT.run_bind]
     rw [← hwd, hrun1]
@@ -160,12 +175,12 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   · simp only [List.headD]; have := hg5.2.1; omega
   · intro lo ll e1 e2
     simp only [List.headD] at e1 e2
-    have hn : ∀ j, j < 4 → nat? (erA m5) (q.toNat + j) = nat? (erA m4) (q.toNat + j) := fun j hj => by
+    have hn : ∀ j, j < 4 → nat? (erA s5.mem) (q.toNat + j) = nat? (erA m4) (q.toNat + j) := fun j hj => by
       simp only [nat?, erA]; rw [hg5.2.2.2 _ (by omega)]
     rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
     have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.2.1; omega
 
-include hq henv in
+include hq henv hV hkc in
 /-- **`check_sum_tele` under `StageC`** (twin side: con-ron's `checkSumTele_spec`'s proof:
 `stripPis` leaves the twin's state, the syntactic sort is a read, the slow arm `ctsW_okC`). -/
 theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -264,7 +279,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     rw [h2, ctK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv k (by omega)
+    obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hkc k (by omega)
       m1 m2 a cv n cvTa0 r2 cvv cvTa h2 hC1 hcv1 (by have := hg1.2.1; omega)
       (fun lo ll e1 e2 => by
         rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
@@ -307,7 +322,7 @@ variable (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p) (hab : AbF p)
 include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 hab
 
-include hq henv in
+include hq henv hV hkc in
 /-- **`check_sum_tele_slow` refines `checkSumTele.checkSumTeleSlow .verified`** under `StageC`
 (the knot's `whnf`; the inputs' denotations as con-ron's `checkSumTele_spec` asks): the new
 constant value is a record in `EREC`. -/
@@ -335,11 +350,11 @@ theorem checkSumTeleSlow_refinesC (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a�
     hea hcn hsl hi1 hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hC', hg, hdec, -, -, hs32, hs, hA'⟩ :=
-    ctsW_okC hq henv k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hA hcvP hcvTaP hws hfe
+    ctsW_okC hq henv hV hkc k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hA hcvP hcvTaP hws hfe
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs, hA'⟩
 
-include hq henv in
+include hq henv hV hkc in
 /-- **`check_sum_tele` refines `checkSumTele .verified`** under `StageC` (the inputs' denotations
 as con-ron's `checkSumTele_spec` asks). -/
 @[refines ConRon.Arena.checkSumTele]
@@ -371,7 +386,7 @@ theorem checkSumTele_refinesC (hp : p.lookup "check_sum_tele" = some checkSumTel
     hea hcn hsl hp hst hi1 hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hC', hg, hdec, hb, hslr, hs32, hs, hA'⟩ :=
-    ctW_okC hq henv k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hslTa hA hcvP hcvTaP hws hfe
+    ctW_okC hq henv hV hkc k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hslTa hA hcvP hcvTaP hws hfe
   obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst']; exact hC', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs,
     hb, hslr, hA'⟩
