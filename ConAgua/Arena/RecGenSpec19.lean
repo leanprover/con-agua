@@ -276,8 +276,7 @@ theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name
 
 /-- **`class_majors` refines `classMajors`** (through `target_major_of`'s and `target_major_pins`'
 stubs): the keys a slice of `ClassKey` records decoded below the tops; the classes a slice of fresh
-`TargetMajor` records. -/
-@[refines ConRon.Arena.classMajors]
+`TargetMajor` records. Under `StageR`; the census link is `classMajors_refinesC`. -/
 theorem classMajors_refines {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
     (pp cao cal pfo pfl ko kl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
