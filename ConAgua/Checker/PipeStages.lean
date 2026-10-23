@@ -48,6 +48,24 @@ def R1 (l m : Mem) : Prop := m = l ∧ CapsOK l
 /-- After `pb_check`. -/
 def R2 (l m : Mem) (pb : ByteArray) : Prop := m = l ∧ CapsOK l ∧ PbPre pb
 
+/-- The words the ground hoist (`prepare_prelude`) and the pool `IW`/`EREC` start from: still the
+loaded memory's zeros. -/
+structure HZ (m : Mem) : Prop where
+  c73 : rdW (m.arr64 CTL) 73 = 0
+  c75 : rdW (m.arr64 CTL) 75 = 0
+  c129 : rdW (m.arr64 CTL) 129 = 0
+  c200 : rdW (m.arr64 CTL) 200 = 0
+  seen : ∀ j, rdW (m.arr64 75) j = 0
+  nix : ∀ j, rdW (m.arr64 76) j = 0
+
+theorem HZ.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : HZ m) (hf : MemFrame A C m m')
+    (h75 : 75 ∉ A) (h76 : 76 ∉ A) (c73 : (73 : Word) ∉ C) (c75 : (75 : Word) ∉ C)
+    (c129 : (129 : Word) ∉ C) (c200 : (200 : Word) ∉ C) : HZ m' :=
+  ⟨by rw [hf.2.1 _ c73]; exact h.c73, by rw [hf.2.1 _ c75]; exact h.c75,
+    by rw [hf.2.1 _ c129]; exact h.c129, by rw [hf.2.1 _ c200]; exact h.c200,
+    fun j => by rw [hf.1 75 h75 (by decide)]; exact h.seen j,
+    fun j => by rw [hf.1 76 h76 (by decide)]; exact h.nix j⟩
+
 /-- **After `intern_reserved_pins`**. -/
 structure R3 (l m : Mem) (pb : ByteArray) (a : AState) : Prop where
   since : Since l m pb
@@ -59,6 +77,7 @@ structure R3 (l m : Mem) (pb : ByteArray) (a : AState) : Prop where
   pin0 : pinW m 0 ≠ 0
   twin : TwinFacts a
   caches : a.caches = Caches.empty
+  hz : HZ m
 
 /-! ## Combining several specs of one call -/
 
@@ -142,7 +161,7 @@ theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size <
   refine ⟨_, hrun', ?_⟩
   rw [hm] at hk hpf hfr
   refine ⟨⟨hk, hc, by simpa [PbPre] using hpre, hpf⟩, hA, ?_, ?_, ?_, hfull, hp0,
-    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA⟩
+    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_⟩
   · exact (stateDR_loadMem b pb s8 s64 hc).frame hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
@@ -151,5 +170,9 @@ theorem irpStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size <
   · have := hfr.2.1 131 (not_mem_storeC _ (by decide))
     simp only [stkTop] at this ⊢
     rw [this]; exact stkTop_loadMem b pb s8 s64
+  · have z := loadMem_rd b pb s8 s64
+    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr (pinA_not (by decide) (by decide))
+      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
 
 end L.Checker

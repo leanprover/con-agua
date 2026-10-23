@@ -41,6 +41,8 @@ structure R4 (l m : Mem) (pb : ByteArray) (pre : PreludeIx) (a : AState) : Prop 
   np : (rdW (m.arr64 CTL) 240).toNat = pre.decls.size
   pf : PinFacts m a.pins
   twin : TwinFacts a
+  hz : HZ m
+  rok : RecsOK m pre.decls
 
 theorem bytes_pos {l m : Mem} {pb : ByteArray} (h : Since l m pb) (hl : 0 < l.bytes.size) :
     0 < m.bytes.size := by rw [h.keep.1]; exact hl
@@ -57,12 +59,18 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (stage_since n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀))
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
-  obtain ⟨st, a', hb, hA, hD, ht, h240⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, hc.pool,
+  obtain ⟨st, a', hb, hA, hD, ht, h240, hrk⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, hc.pool,
     bytes_pos h3.since (loadMem_bytes b pb s8 s64)⟩
   obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
     h3.twin.pins hb
   have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩
-  refine ⟨_, a', hb, h3.since.step hk hpf, hA, hD, h240, ?_, ht⟩
+  refine ⟨_, a', hb, h3.since.step hk hpf, hA, hD, h240, ?_, ht, ?_, hrk⟩
+  rotate_left
+  · exact h3.hz.frame hsf (by decide +kernel) (by decide +kernel)
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
+      (not_mem_of_toNat (Z := [73, 75, 129, 200]) (by decide +kernel) _ (by decide))
   rw [hstep.pins]
   exact hpf0.frame hsf stageA_builtin_prelude_pins (by decide +kernel) (by decide +kernel)
     (stageC_builtin_prelude_off _ (by decide)) (stageC_builtin_prelude_off _ (by decide))
