@@ -40,9 +40,12 @@ stored. `der_b(h)` returns the range field of `derived h` as the arena computes 
 `0` for a handle that does not view (scratch tier closed, index past the count, unknown tag).
 
 **Writers.** `mk_app(f, a)`, `mk_lam`, `mk_forall`, `mk_let`, `mk_proj` are the expression
-constructors walks call: the ranges of the children first (`der_b`, on the memory before), then
-`intern_*`, then, **if the table grew** (its two counts changed), the new node's range at
-`idx * 2 + tier` of the result. A hit writes nothing (the node's range is already there). The
+constructors walks call: `intern_*` first, then, **if the table grew** (its two counts changed),
+the new node's range at `idx * 2 + tier` of the result. A hit writes nothing (the node's range is
+already there). `mk_app`, `mk_lam` and `mk_forall` read the children's ranges (`der_b`) only on
+that miss, as the twin's `EStore.intern` computes `derOfView` only on a miss (lane `derb`); they
+read them after the append, with the new node's slot zeroed first, which reads the same as the
+memory before (`der_pushZ`). `mk_let`/`mk_proj` (rare) still read them before `intern_*`. The
 compound tables' `intern_*` are internal from now on: a node interned by them directly would have
 no range (`DerRel.lean`'s relation would fail for it).
 -/
@@ -109,29 +112,31 @@ def derFW (m : Mem) (h : Word) : Word :=
 
 /-- con-ron: none — reads L's derived-range array (the twin's `bvarOfData (derived h)`); returns the
 bvar range and, as a second result, the fvar range (`derFW`; lane `exprops3`), as a third the
-level-parameter bit (`exprLPW`, the twin's `lpOfData (derived h)`; helper `whnf4-d23`) -/
+level-parameter bit (`exprLPW`, the twin's `lpOfData (derived h)`; helper `whnf4-d23`). The tags
+are tested in order of frequency on Init (`app` 4, `bvar` 0, `const` 3, `lam` 5, `fvar` 1, `forallE` 6,
+`sort` 2, `proj` 9, `letE` 7; lane `derb`); the tests are disjoint, so the order changes no result. -/
 def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
   t := (h >> 27) & 1;
   i := h & 134217727;
   if t != 0 && CTL.u64[1] == 0 { return (0, 0, 0) };
+  if g == 4 { if CTL.u64[4 + t] <= i { return (0, 0, 0) }; x := ADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 0 {
     if CTL.u64[22 + t] <= i { return (0, 0, 0) };
     x := BREC.u64[i * 2 + t];
     return ((x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), 0, 0)
   };
+  if g == 3 { if CTL.u64[18 + t] <= i { return (0, 0, 0) }; return (0, 0, CLP.u64[i * 2 + t]) };
+  if g == 5 { if CTL.u64[28 + t] <= i { return (0, 0, 0) }; x := LADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 1 {
     if CTL.u64[26 + t] <= i { return (0, 0, 0) };
     x := FVREC.u64[i * 4 + t * 2];
     return (0, (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), FVLP.u64[i * 2 + t])
   };
-  if g == 2 { if CTL.u64[16 + t] <= i { return (0, 0, 0) }; return (0, 0, SOLP.u64[i * 2 + t]) };
-  if g == 3 { if CTL.u64[18 + t] <= i { return (0, 0, 0) }; return (0, 0, CLP.u64[i * 2 + t]) };
-  if g == 4 { if CTL.u64[4 + t] <= i { return (0, 0, 0) }; x := ADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
-  if g == 5 { if CTL.u64[28 + t] <= i { return (0, 0, 0) }; x := LADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 6 { if CTL.u64[30 + t] <= i { return (0, 0, 0) }; x := FADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
-  if g == 7 { if CTL.u64[20 + t] <= i { return (0, 0, 0) }; x := LEDER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 2 { if CTL.u64[16 + t] <= i { return (0, 0, 0) }; return (0, 0, SOLP.u64[i * 2 + t]) };
   if g == 9 { if CTL.u64[32 + t] <= i { return (0, 0, 0) }; x := PJDER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 7 { if CTL.u64[20 + t] <= i { return (0, 0, 0) }; x := LEDER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   return (0, 0, 0)
 }
 
@@ -152,6 +157,233 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
 
 attribute [arena_grind =] mkK_some
 
+/-! ## The memory after an append, as `der_b` reads it
+
+`mk_app`/`mk_lam`/`mk_forall` read the children's ranges only after `intern_*` appended a node
+(as the twin's `EStore.intern` computes `derOfView` only on a miss), so they read the memory
+AFTER the append. Before reading, they zero the new node's range slot: then every handle reads
+the same range, fvar range and level-parameter bit as before the append, the new node itself
+included (before: past the count, `0`; after: the zeroed slot, `0`). -/
+
+theorem rdW_set64E (m : Mem) (a b : ArrId) (k v x : Word) :
+    rdW ((m.set64 a k v).arr64 b) x =
+      if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
+  by_cases h : b = a
+  · subst h; rw [Mem.arr64_set64_same]
+    simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; grind
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
+
+theorem Mem.set64_set64_same (m : Mem) (a : ArrId) (i v w : Word) :
+    (m.set64 a i v).set64 a i w = m.set64 a i w := by
+  have := Mem.arr64_set64_same m a i v
+  simp only [Mem.set64] at this ⊢
+  rw [this]
+  simp only [Array.set!_eq_setIfInBounds, Array.setIfInBounds_setIfInBounds]
+
+theorem slot_eq_iff {i c t u : Word} (hi : i < 134217728) (hc : c < 134217728) (ht : t ≤ 1)
+    (hu : u ≤ 1) : i * 2 + t = c * 2 + u ↔ i = c ∧ t = u := by
+  constructor
+  · intro h
+    simp only [UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.toNat_mul, show (2 : Word).toNat = 2 from rfl, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  · rintro ⟨rfl, rfl⟩; rfl
+
+theorem h01 (x : Word) (hx : x ≤ 1) : x = 0 ∨ x = 1 := by
+  simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj] at *
+  have : (1 : Word).toNat = 1 := rfl; have : (0 : Word).toNat = 0 := rfl; omega
+
+theorem idxW_lt (h : Word) : idxW h < 134217728 := by
+  simp only [idxW, UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+
+/-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, slots `S`,
+range words `D`; `apushMem`, `lapushMem`, `fapushMem`), with the new node's range slot zeroed. -/
+def pushZ (R S D : ArrId) (k : Word) (m : Mem) (t f a j : Word) : Mem :=
+  let c := rdW (m.arr64 CTL) (k + t)
+  (((((m.set64 R (c * 4 + t * 2) f).set64 R (c * 4 + t * 2 + 1) a).set64 S (j * 2 + t)
+    (baseW m t + c + 1)).set64 CTL (k + (t &&& 1)) (c + 1)).set64 D (c * 2 + t) 0)
+
+/-- The three binary tables `mk_*` read lazily. -/
+def BinTbl (R S D : ArrId) (k : Word) : Prop :=
+  (R = AREC ∧ S = ASLOT ∧ D = ADER ∧ k = 4) ∨ (R = LAREC ∧ S = LASLOT ∧ D = LADER ∧ k = 28) ∨
+    (R = FAREC ∧ S = FASLOT ∧ D = FADER ∧ k = 30)
+
+section pushZ
+variable {R S D : ArrId} {k : Word} (m : Mem) (t f a j : Word)
+
+theorem pushZ_arr (b : ArrId) (h1 : b ≠ CTL) (h2 : b ≠ R) (h3 : b ≠ S) (h4 : b ≠ D) :
+    (pushZ R S D k m t f a j).arr64 b = m.arr64 b := by
+  simp [pushZ, Mem.arr64_set64_ne, *]
+
+theorem pushZ_ctl (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
+    rdW ((pushZ R S D k m t f a j).arr64 CTL) x =
+      if k + t = x ∧ (k + t).toNat < (m.arr64 CTL).size then rdW (m.arr64 CTL) (k + t) + 1
+      else rdW (m.arr64 CTL) x := by
+  rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
+  rcases h01 t ht with rfl | rfl <;>
+  simp [pushZ, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, ASLOT, LADER, LAREC, LASLOT,
+    FADER, FAREC, FASLOT]
+
+theorem pushZ_der (hT : BinTbl R S D k) (x : Word) :
+    rdW ((pushZ R S D k m t f a j).arr64 D) x =
+      if rdW (m.arr64 CTL) (k + t) * 2 + t = x ∧
+          (rdW (m.arr64 CTL) (k + t) * 2 + t).toNat < (m.arr64 D).size then 0
+      else rdW (m.arr64 D) x := by
+  rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
+  simp [pushZ, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, ASLOT, LADER, LAREC, LASLOT,
+    FADER, FAREC, FASLOT]
+
+set_option linter.unusedSimpArgs false in
+/-- **The append, with the new slot zeroed, changes none of `der_b`'s three reads**, for every
+handle: a handle other than the new node reads what it read before (its slot is another one), and
+the new node reads `0` (before: its index was past the count). -/
+theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728)
+    (h : Word) :
+    derBW (pushZ R S D k m t f a j) h = derBW m h ∧ derFW (pushZ R S D k m t f a j) h = derFW m h ∧
+      exprLPW (pushZ R S D k m t f a j) h = exprLPW m h := by
+  have hs := slot_eq_iff hc (idxW_lt h) ht (tierW_le h)
+  have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
+      idxW h = rdW (m.arr64 CTL) (k + t) := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat + 1 ≤ (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind
+  have hd := pushZ_der m t f a j hT
+  have hctl := pushZ_ctl m t f a j hT ht
+  refine ⟨?_, ?_, ?_⟩ <;> (try unfold derBW) <;> (try unfold derFW) <;> (try unfold exprLPW) <;> simp only [hctl] <;>
+  rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
+  simp (config := {decide := true}) only [hd, pushZ_arr, BREC, FVREC, FVLP, SOLP, CLP, ADER, LADER,
+    FADER, LEDER, PJDER, CTL, AREC, ASLOT, LAREC, LASLOT, FAREC, FASLOT, ne_eq] <;>
+  rcases h01 t ht with rfl | rfl <;> rcases h01 _ (tierW_le h) with e | e <;> rw [e] at hs ⊢ <;>
+    simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, UInt64.add_zero,
+      show (4 : Word) + 1 = 5 from rfl, show (28 : Word) + 1 = 29 from rfl,
+      show (30 : Word) + 1 = 31 from rfl, ite_false, true_and, false_and, and_false, and_true] at * <;>
+    simp only [hs, false_and, and_false, ite_false] <;>
+    grind (splits := 24)
+
+end pushZ
+
+/-- The index and tier fields of the handle word `G * 2^27 + c` (`G` = tag * 2 + tier). -/
+theorem hw_fields (G c : Word) (hc : c < 134217728) :
+    idxW (G * 134217728 + c) = c ∧ tierW (G * 134217728 + c) = G % 2 := by
+  simp only [UInt64.lt_iff_toNat_lt, show (134217728 : Word).toNat = 134217728 from rfl] at hc
+  constructor
+  · apply UInt64.toNat_inj.mp
+    simp only [idxW, UInt64.toNat_and]
+    rw [show (134217727 : Word).toNat = 2 ^ 27 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+    simp only [UInt64.toNat_add, UInt64.toNat_mul, show (134217728 : Word).toNat = 134217728 from rfl]
+    omega
+  · apply UInt64.toNat_inj.mp
+    simp only [tierW, UInt64.toNat_and, UInt64.toNat_shiftRight, UInt64.toNat_add, UInt64.toNat_mul,
+      UInt64.toNat_mod, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod,
+      show (134217728 : Word).toNat = 134217728 from rfl, show (2 : Word).toNat = 2 from rfl,
+      show (27 : Word).toNat = 27 from rfl, show (1 : Word).toNat = 1 from rfl,
+      show 2 ^ (27 % 64) = 134217728 from rfl]
+    omega
+
+theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 4 ≠ cnt2 m 4) :
+    ∃ t j, t ≤ 1 ∧ acnt m t < 134217728 ∧ m₁ = apushMem m t f a j (acnt m t) ∧
+      idxW r = acnt m t ∧ tierW r = t := by
+  simp only [ainternW] at hI
+  have ok : ∀ t, apushOK m t = true → acnt m t < 134217728 := by
+    intro t h; simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+  repeat' split at hI
+  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
+  all_goals obtain ⟨hr, hm⟩ := hI
+  all_goals subst hr hm
+  all_goals first
+    | (have h := ok 1 ‹apushOK m 1 = true›
+       exact ⟨1, _, by decide, h, rfl, by rw [show appS = 9 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | (have h := ok 0 ‹apushOK m 0 = true›
+       exact ⟨0, _, by decide, h, rfl, by rw [show appP = 8 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | exact absurd rfl hc
+
+/-- After a miss of `intern_app` (the counts changed), the zeroed slot hides the append from
+`der_b`'s three reads. -/
+theorem ainternW_der {m m₁ : Mem} {f a r q : Word} (hI : ainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 4 ≠ cnt2 m 4)
+    (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
+    derBW (m₁.set64 ADER q 0) x = derBW m x ∧ derFW (m₁.set64 ADER q 0) x = derFW m x ∧
+      exprLPW (m₁.set64 ADER q 0) x = exprLPW m x := by
+  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := ainternW_grow hI hc
+  simp only [idxW, tierW] at hi htr
+  rw [hq, hi, htr]
+  exact der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a j
+    (.inl ⟨rfl, rfl, rfl, rfl⟩) ht hc' x
+
+grind_pattern [arena_grind] ainternW_der => ainternW m f a, (r, m₁), derBW (Mem.set64 m₁ ADER q 0) x
+
+theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 28 ≠ cnt2 m 28) :
+    ∃ t j, t ≤ 1 ∧ lacnt m t < 134217728 ∧ m₁ = lapushMem m t f a j (lacnt m t) ∧
+      idxW r = lacnt m t ∧ tierW r = t := by
+  simp only [lainternW] at hI
+  have ok : ∀ t, lapushOK m t = true → lacnt m t < 134217728 := by
+    intro t h; simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+  repeat' split at hI
+  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
+  all_goals obtain ⟨hr, hm⟩ := hI
+  all_goals subst hr hm
+  all_goals first
+    | (have h := ok 1 ‹lapushOK m 1 = true›
+       exact ⟨1, _, by decide, h, rfl, by rw [show lamS = 11 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | (have h := ok 0 ‹lapushOK m 0 = true›
+       exact ⟨0, _, by decide, h, rfl, by rw [show lamP = 10 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | exact absurd rfl hc
+
+/-- After a miss of `intern_lam` (the counts changed), the zeroed slot hides the append from
+`der_b`'s three reads. -/
+theorem lainternW_der {m m₁ : Mem} {f a r q : Word} (hI : lainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 28 ≠ cnt2 m 28)
+    (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
+    derBW (m₁.set64 LADER q 0) x = derBW m x ∧ derFW (m₁.set64 LADER q 0) x = derFW m x ∧
+      exprLPW (m₁.set64 LADER q 0) x = exprLPW m x := by
+  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := lainternW_grow hI hc
+  simp only [idxW, tierW] at hi htr
+  rw [hq, hi, htr]
+  exact der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a j
+    (.inr (.inl ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
+
+grind_pattern [arena_grind] lainternW_der => lainternW m f a, (r, m₁), derBW (Mem.set64 m₁ LADER q 0) x
+
+theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 30 ≠ cnt2 m 30) :
+    ∃ t j, t ≤ 1 ∧ facnt m t < 134217728 ∧ m₁ = fapushMem m t f a j (facnt m t) ∧
+      idxW r = facnt m t ∧ tierW r = t := by
+  simp only [fainternW] at hI
+  have ok : ∀ t, fapushOK m t = true → facnt m t < 134217728 := by
+    intro t h; simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+  repeat' split at hI
+  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
+  all_goals obtain ⟨hr, hm⟩ := hI
+  all_goals subst hr hm
+  all_goals first
+    | (have h := ok 1 ‹fapushOK m 1 = true›
+       exact ⟨1, _, by decide, h, rfl, by rw [show forallS = 13 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | (have h := ok 0 ‹fapushOK m 0 = true›
+       exact ⟨0, _, by decide, h, rfl, by rw [show forallP = 12 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | exact absurd rfl hc
+
+/-- After a miss of `intern_forall` (the counts changed), the zeroed slot hides the append from
+`der_b`'s three reads. -/
+theorem fainternW_der {m m₁ : Mem} {f a r q : Word} (hI : fainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 30 ≠ cnt2 m 30)
+    (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
+    derBW (m₁.set64 FADER q 0) x = derBW m x ∧ derFW (m₁.set64 FADER q 0) x = derFW m x ∧
+      exprLPW (m₁.set64 FADER q 0) x = exprLPW m x := by
+  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := fainternW_grow hI hc
+  simp only [idxW, tierW] at hi htr
+  rw [hq, hi, htr]
+  exact der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a j
+    (.inr (.inr ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
+
+grind_pattern [arena_grind] fainternW_der => fainternW m f a, (r, m₁), derBW (Mem.set64 m₁ FADER q 0) x
+
 /-! ## `mk_app(f, a)` -/
 
 /-- **The model of `mk_app`.** The written word packs both ranges (`packBF`): `der_b` reads it
@@ -165,13 +397,14 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl) {
   if (f | a) >> 32 != 0 { abort };
-  (x, xf, xl) := call der_b(f);
-  (y, yf, yl) := call der_b(a);
   s := CTL.u64[4] + CTL.u64[5];
   r := call intern_app(f, a);
   if CTL.u64[4] + CTL.u64[5] != s {
     q := (r & 134217727) * 2 + ((r >> 27) & 1);
     if len(ADER.u64) <= q { abort };
+    ADER.u64[q] := 0;
+    (x, xf, xl) := call der_b(f);
+    (y, yf, yl) := call der_b(a);
     ADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
@@ -191,14 +424,15 @@ def mkLamW (m : Mem) (t b : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl) {
   if (t | b) >> 32 != 0 { abort };
-  (x, xf, xl) := call der_b(t);
-  (y, yf, yl) := call der_b(b);
-  y := y - u64(0 < y) + u64(y == 32767);
   s := CTL.u64[28] + CTL.u64[29];
   r := call intern_lam(t, b);
   if CTL.u64[28] + CTL.u64[29] != s {
     q := (r & 134217727) * 2 + ((r >> 27) & 1);
     if len(LADER.u64) <= q { abort };
+    LADER.u64[q] := 0;
+    (x, xf, xl) := call der_b(t);
+    (y, yf, yl) := call der_b(b);
+    y := y - u64(0 < y) + u64(y == 32767);
     LADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
@@ -215,14 +449,15 @@ def mkForallW (m : Mem) (t b : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl) {
   if (t | b) >> 32 != 0 { abort };
-  (x, xf, xl) := call der_b(t);
-  (y, yf, yl) := call der_b(b);
-  y := y - u64(0 < y) + u64(y == 32767);
   s := CTL.u64[30] + CTL.u64[31];
   r := call intern_forall(t, b);
   if CTL.u64[30] + CTL.u64[31] != s {
     q := (r & 134217727) * 2 + ((r >> 27) & 1);
     if len(FADER.u64) <= q { abort };
+    FADER.u64[q] := 0;
+    (x, xf, xl) := call der_b(t);
+    (y, yf, yl) := call der_b(b);
+    y := y - u64(0 < y) + u64(y == 32767);
     FADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
@@ -320,7 +555,7 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
@@ -338,7 +573,7 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internLamL_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [mkLamW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, mkLamW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
@@ -356,7 +591,7 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internForallL_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [mkForallW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, mkForallW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
