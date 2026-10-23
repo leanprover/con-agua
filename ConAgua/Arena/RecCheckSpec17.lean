@@ -11,6 +11,8 @@ records held the fire's `IW` offsets, but a rule record's fire slices are read f
 (`decRule`, and every reader of an installed `.recInfo`).
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -202,6 +204,7 @@ structure TsrLook (p : Prog) : Prop where
   ea : p.lookup "erec_alloc" = some erecAlloc
   srg : p.lookup "sum_rules_go" = some sumRulesGoL
   sr : p.lookup "sum_rules" = some sumRulesL
+  rrb : RrbF p
   efg : p.lookup "er_from_iw_go" = some erFromIwGo
   ef : p.lookup "er_from_iw" = some erFromIw
   ic : p.lookup "iw_copy" = some iwCopy
@@ -510,7 +513,7 @@ theorem rulesF_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (vis recNam
     ⦃fun r s' => LocEq s' s₀ ∧ rulesF n s₀.mem vis nP cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact rulesW_spec p L.ea L.srg L.rc.rx.ha L.sr n s₀ vis recName nP cO cL rO rL
+  | succ n => exact rulesW_spec p L.ea L.srg L.rc.rx.ha L.sr L.rrb n s₀ vis recName nP cO cL rO rL
 
 theorem efF_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw" [o, l]

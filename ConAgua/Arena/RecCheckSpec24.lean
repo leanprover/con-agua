@@ -243,7 +243,7 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   obtain ⟨r2, m2⟩ := x2
   rw [h2] at e
   obtain ⟨s2, rfl, -, hok2, hr2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (blockRecNamesUnreserved_refines p L.unres (n + 2) _ a dn fe vis ro rl bs.recs hS1
+    (blockRecNamesUnreserved_refines p L.unres L.rrn (n + 2) _ a dn fe vis ro rl bs.recs hS1
       ((hrsB.grow (OMono.decPL (fun q => decRS_mono q) _ _) hg1).stab (OMono.decPL (fun q => decRS_mono q) _ _))
       (by
         rcases hrb with h0 | h0

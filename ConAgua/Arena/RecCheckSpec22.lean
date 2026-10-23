@@ -31,6 +31,7 @@ structure RpLook (p : Prog) : Prop extends IndPartsProg3 p where
   lps : p.lookup "block_shape_lps" = some blockShapeLps
   lpsOk : p.lookup "block_rec_lps_ok" = some blockRecLpsOk
   unres : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved
+  rrn : RrnF p
   soa : p.lookup "block_rec_split_own_aux" = some blockRecSplitOwnAux
   wan : p.lookup "block_rec_want_aux_names" = some blockRecWantAuxNames
   pnc : p.lookup "ptr_names_copy" = some ptrNamesCopy
