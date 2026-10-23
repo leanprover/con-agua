@@ -5,6 +5,9 @@ import ConAgua.Arena.IndPosSpec4
 The banked `replaceFVars` memo across `nest_canon_crest`: its pieces leave the memo alone
 (`RfFr`): `nest_phs`, `inst_pis_with` (a stub), `replace_apps` (its own memo, `RAM`). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

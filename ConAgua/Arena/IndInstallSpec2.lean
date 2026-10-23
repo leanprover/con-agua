@@ -10,6 +10,9 @@ The leaves of `BlockInstall.lean`'s L translation: `check_block_positivity_init`
 `check_block_positivity_member`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

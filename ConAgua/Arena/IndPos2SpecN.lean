@@ -5,6 +5,9 @@ mutual block (`nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, `nest_co
 `nest_cont_new`, `nest_frame`, `nest_ctors`, `nest_ctors_one`, `nest_ctors_walk`, `nest_fields`),
 each at exec fuel `n + 1` over its callees at `n`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

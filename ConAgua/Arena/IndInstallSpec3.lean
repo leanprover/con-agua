@@ -6,6 +6,9 @@ import ConAgua.Arena.IndInstallSpec2
 `lvl_eq_fueled` (through the `lvl_eq` stub) and `check_block_agree_one`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

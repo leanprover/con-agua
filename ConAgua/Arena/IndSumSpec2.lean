@@ -2,6 +2,9 @@ import ConAgua.Arena.IndSumSpec2A
 
 /-! Continued from `IndSumSpec2A.lean` (split by size; lane `indproofs`). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

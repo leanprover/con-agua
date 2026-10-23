@@ -26,6 +26,9 @@ callee on the branch this round leaves unproven (`target_major_default`'s intern
 spec.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

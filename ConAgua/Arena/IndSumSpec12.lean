@@ -21,6 +21,9 @@ the restriction of the one at `vis`: `fe₀ = fe.restrictTo vis0`), `check_struc
 landing 2: a bundle per module instead of 20 hypotheses per statement).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

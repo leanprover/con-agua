@@ -11,6 +11,9 @@ import ConAgua.Arena.PinsNatOp
 `piBinders` and what is built on it.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

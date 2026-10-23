@@ -8,6 +8,9 @@ import ConAgua.Arena.IndInstallSpec3
 `check_block_positivity_member` and `rec2`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

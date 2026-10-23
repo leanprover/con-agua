@@ -4,6 +4,9 @@ import ConAgua.Arena.RecCheckSpec
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestHoles`,
 `nestRootCanon`, … -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

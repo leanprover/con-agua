@@ -6,6 +6,9 @@ import ConAgua.Arena.IndDecStab
 
 `nestArity`, … — the template of `IndPosSpec2.lean`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

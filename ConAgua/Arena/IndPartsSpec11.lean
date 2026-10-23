@@ -9,6 +9,9 @@ stays below its top across `block_counts` (`PTop`, so the stage relation is kept
 `indproofs`' `blockCounts_refines` gives only the frame).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

@@ -16,6 +16,9 @@ walk's own post (its memo) plus its frame (the others), `PosMR.setNo` etc.
 This replaces helper `pos2`'s `PosMemo` (memos well formed in *every* stage state, which is false:
 `StageR` does not constrain arrays 201‥208). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

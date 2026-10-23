@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecR
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the relational steps,
 `nest_fields` and `nest_ctors_walk`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

@@ -7,6 +7,9 @@ import ConAgua.Arena.IndPartsSpec15
 # `RecGen`: `classRulesOk` (lane `indproofs2`, helper `rec3`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

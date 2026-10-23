@@ -28,6 +28,9 @@ in `IndLibSpec.lean`, and — for `nestWalkStack` — on `nest_ctx_hi_at`'s refi
 by module `IndPos`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

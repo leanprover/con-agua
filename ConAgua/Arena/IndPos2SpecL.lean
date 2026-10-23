@@ -7,6 +7,9 @@ specs of the block's non-recursive helpers (`nest_frame_mates` with the stage re
 `sl_new1`, `nest_frame_grp`, `nest_frame_holes`, `nest_cont_new_active`, `nest_cont_params_closed`,
 …). Every model takes the exec fuel first and is `none` at `0`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

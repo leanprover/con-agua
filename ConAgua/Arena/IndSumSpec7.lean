@@ -8,6 +8,9 @@ import ConAgua.Arena.RecClassSpec
 `IndSumSpec5.lean` behind `strip_pis`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

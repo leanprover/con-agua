@@ -10,6 +10,9 @@ the twin's `zip`s), the rules' right-hand sides (`block_shape_rhss_of`) and the 
 rest first, then `sl_cons`; `recs_of` calls `rec_target_of` on this element first).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

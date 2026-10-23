@@ -8,6 +8,9 @@ The pilot of `IndSim.lean`'s `Sim.bindK`: the relational lemma is one `Sim.bindK
 (`pin_word(53)`, `hb_clear`, `struct_used_later_list`, `struct_proj_guards_row`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

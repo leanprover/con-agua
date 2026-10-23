@@ -18,6 +18,9 @@ empty slice ignores its offset, so `DecB` alone does not give it); `check_sum_te
 for its result.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
@@ -124,6 +127,7 @@ structure CstProg (p : Prog) : Prop where
   slow : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL
   tele : p.lookup "check_sum_tele" = some checkSumTeleL
   strip : StripProg p
+  i1 : I1Prog p
 
 /-- `check_sum_tele` as a `Sim`: the constant and the start record below the tops. -/
 theorem installCstSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
@@ -135,7 +139,7 @@ theorem installCstSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Optio
         H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2) :=
   installSimCall (checkSumTele_refines p hP.alloc hP.copy hP.cons hP.view hP.fvarFind hP.fvarPush
     hP.internFVar hP.wt hP.sortFind hP.sortPush hP.internSort hP.derB hP.forallFind hP.forallPush
-    hP.internForall hP.mkForall hP.closeTele hP.erAlloc hP.cvNew hP.slow hP.tele hP.strip n _ a dn vis fe cv k cv
+    hP.internForall hP.mkForall hP.closeTele hP.erAlloc hP.cvNew hP.slow hP.tele hP.strip hP.i1 n _ a dn vis fe cv k cv
     cvv cvv hS hcv hx.1 hx.2 hcv hx.1 hx.2)
     fun _ _ ⟨_, hok, hS', hg, hd, h32, hs, hb, hsl⟩ => ⟨hok, hS', hg, hd, ⟨hb, hsl⟩, h32, hs⟩
 

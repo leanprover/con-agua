@@ -6,6 +6,9 @@ import ConAgua.Arena.IndPos2SpecE
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `targetOutsideInst`
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -9,6 +9,9 @@ record's decoding `CapsAt`: in every array that holds the 15 words and agrees wi
 below its top, `decCaps` reads the twin's `IIndCaps`.
 -/
 
+
+noncomputable section
+
 set_option linter.deprecated false
 
 open ConRon.Arena

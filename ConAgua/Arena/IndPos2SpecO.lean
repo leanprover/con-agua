@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecN
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the L side — every
 function of the block refines its word model, by one induction on the exec fuel. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

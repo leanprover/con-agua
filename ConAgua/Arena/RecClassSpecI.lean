@@ -10,6 +10,9 @@ empty at an offset above the top; `rec2InstW_ok` and `rec2AppendW_norm` handle t
 slice's offset is never read).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

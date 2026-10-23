@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecH
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`'s
 relational side, `nestGrowGroup`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

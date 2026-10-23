@@ -10,6 +10,9 @@ The memoised walks of `IndSum.lean`: `mentions_const_go` / `mentions_const` (twi
 `mentions_any_go` (`e_view`, a memo of `Bool`s keyed by the node).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

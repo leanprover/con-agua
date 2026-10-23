@@ -7,6 +7,9 @@ The callee simulations (`sim*`: a stub's `RelAM`, a translated callee's relation
 `RSim` form with the twin's own spelling, `coreWalkFuel` for `CWF`), then `RSim` chains.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

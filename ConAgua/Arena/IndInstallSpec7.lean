@@ -8,6 +8,9 @@ The direct-recursion context: member 0's former telescope opened at the paramete
 (`nest_holes`, helper `pos`'s). `nP + k` past `2^64` is a capacity abort.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

@@ -11,6 +11,9 @@ so every word written lies above the old pool top and the results are carried as
 `struct_ctor_resid_ok` call has no fuel left for `param_levels`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

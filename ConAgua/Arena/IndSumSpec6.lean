@@ -6,6 +6,9 @@ import ConAgua.Arena.IndSumSpec4
 `struct_proj_bodies_go` (through the stub `instantiate1_lift_fast`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

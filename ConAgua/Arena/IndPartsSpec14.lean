@@ -9,6 +9,9 @@ abort), the record (`block_shape_pack`), `block_shape_build` composing every pie
 `block_parts`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

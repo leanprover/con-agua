@@ -9,6 +9,9 @@ import ConAgua.Arena.IndPos2SpecC
 (`IndSim.lean`); a stub's `RelAM` fact is a `Sim` (`partsSimStub`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

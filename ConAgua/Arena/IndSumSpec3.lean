@@ -8,6 +8,9 @@ Functions of `IndSum.lean` that call into `IndPos` (`close_telescope`, helper `p
 `IndPos2Spec.lean`): `check_sum_tele_slow`, `check_sum_tele`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -120,8 +123,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hmk : p.lookup "mk_forall" = some mkForall)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
-  (hp : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hp
+  (hp : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hp hi1
 
 theorem ctsW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele_slow" [vis, cv, n, cvTa0]
@@ -133,7 +136,7 @@ theorem ctsW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        wtW_spec p ha hc hsc hv hff hfp hif hwt k, internSort_spec p hsf hsp his k,
+        wtW_spec p ha hc hsc hv hff hfp hif hwt hi1 k, internSort_spec p hsf hsp his k,
         closeTelescope_spec p hd hpf hpp hpi hmk hct k, cvNew_specW p hea hcn k,
         stubM_spec p "check_constant_val" k] <;>
       finish (gen := 20)
@@ -268,8 +271,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hmk : p.lookup "mk_forall" = some mkForall)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
-  (hp : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hp
+  (hp : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL) (hi1 : I1Prog p)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hp hi1
 
 /-- **`check_sum_tele_slow` refines `checkSumTele.checkSumTeleSlow .verified`** (through the stubs
 `whnf`, `instantiate1_fast`, `abstract1_fast`, `check_constant_val`): the new constant value is a
@@ -291,7 +294,7 @@ theorem checkSumTeleSlow_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NId
       (r.tail.headD 0).toNat < 2 ^ 32 ∧
       decI (r.tail.headD 0) = (AM.res (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀).2; ⊤⦄ := by
   refine triple_post (ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hp k s₀ vis cv n cvTa0) ?_
+    hea hcn hp hi1 k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hdec, -, -, hs32, hs⟩ :=
     ctsW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl hta hta4
@@ -393,8 +396,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p) (hi1 : I1Prog p)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hi1
 
 theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
@@ -407,7 +410,7 @@ theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst k, eView_spec p hv k,
-        ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl k] <;>
+        ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hi1 k] <;>
       finish (gen := 20)
 
 end spec
@@ -553,8 +556,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p) (hi1 : I1Prog p)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst hi1
 
 /-- **`check_sum_tele` refines `checkSumTele .verified`** (through the stubs `strip_pis`, `whnf`,
 `instantiate1_fast`, `abstract1_fast`, `check_constant_val`). -/
@@ -579,7 +582,7 @@ theorem checkSumTele_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       (∀ lo ll, nat? (erA s'.mem) ((r.headD 0).toNat + 1) = some lo →
         nat? (erA s'.mem) ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop s'.mem ∨ ll = 0); ⊤⦄ := by
   refine triple_post (ctW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hsl hp hst k s₀ vis cv n cvTa0) ?_
+    hea hcn hsl hp hst hi1 k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hdec, hb, hslr, hs32, hs⟩ :=
     ctW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl' hta hta4 hslTa

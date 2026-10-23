@@ -2,6 +2,9 @@ import ConAgua.Arena.IndPos2SpecB
 
 /-! Continued from `IndPos2SpecB.lean` (split by size; lane `indproofs`). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

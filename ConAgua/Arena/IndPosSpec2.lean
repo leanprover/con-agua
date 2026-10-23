@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPosSpec2A
 /-! # `IndPos`'s remaining functions, continued (lane `indproofs2`, helper `pos`): `nestContainer`.
 Split from `IndPosSpec2A.lean` by size. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

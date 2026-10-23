@@ -4,6 +4,9 @@ import ConAgua.Arena.RecClassSpecM
 # `RecClass`: `classGenRule` — models and specs (lane `indproofs2`, helper `rec2`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
