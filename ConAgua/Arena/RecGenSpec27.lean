@@ -60,7 +60,7 @@ theorem CtorLp.grow {m m' : Mem} {cA : Word} {x : IConstantVal × Nat} (h : Ctor
   simp only [CtorLp] at h ⊢
   rw [ha] at h
   rw [rdW_grow hg (by omega), ha]
-  rw [rdW_er_grow hg (by rw [e1]; omega), rdW_er_grow hg (by rw [e2]; omega), hk EREC]
+  rw [rdW_er_grow hg (by rw [e2]; omega), rdW_er_grow hg (by rw [e1]; omega), hk EREC]
   exact h
 
 theorem FA2.snoc {α β : Type} {R : α → β → Prop} :

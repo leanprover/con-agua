@@ -198,6 +198,35 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
   simp only [compileS] at hc hK
   simp only [tempsS] at htmp
   have hF' := hF; simp only [maxOff] at hF'
+  cases hsp : setInPlace x e
+  case some dir =>
+    simp only [hsp] at hc hK
+    obtain ⟨op, w, rfl, hd⟩ : ∃ op w, e = .bin op (.var x) (.const w) ∧
+        aluDirect op (.mem (mb .rsp (8 * x))) (.imm (.int64 w.toInt64)) = some dir := by
+      unfold setInPlace at hsp
+      split at hsp
+      · rename_i op y w
+        split at hsp
+        · rename_i hy
+          simp only [Bool.and_eq_true, beq_iff_eq] at hy
+          exact ⟨op, w, by rw [hy.1], hsp⟩
+        · cases hsp
+      · cases hsp
+    have hx := hwf.1
+    have := hI.nlF
+    refine ev_aluMI hd hc.head ⟨by lomega, by lomega⟩ (v := σ.loc x) ?_ fun st => ?_
+    · rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]; exact hI.frame x hx
+    rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]
+    have hI0 : Inv G ctx.nl F σ { d with status := st } := ⟨hI.r15, hI.lo8, hI.hi, hI.nlF, hI.frame, hI.mem⟩
+    have hev : evalP σ (.bin op (.var x) (.const w)) = .ok (op.eval (σ.loc x) w) := rfl
+    refine ev_congr (hK.normal (σ.setLoc x (op.eval (σ.loc x) w)) _ ?_ (hI0.setLoc hG hx _) ?_) ?_
+    · simp [step_set_run, hev]; rfl
+    · refine ⟨rfl, rfl, rfl, Nat.le_refl _, (SPost.store (d := d) ?_ ?_ ?_).mem⟩
+      · have := hI.lo; omega
+      · have := hI.hi; simp only [top]; lomega
+      · have := hI.hi; have := hG.hi_le; simp only [top]; omega
+    · simp
+  simp only [hsp] at hc hK
   refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf.2 (by omega) σ d Q hI ?_ ?_
   · intro v s1 hv hrax hE1
     have hI1 := hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15

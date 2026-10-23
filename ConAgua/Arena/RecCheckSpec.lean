@@ -954,12 +954,35 @@ theorem targetPiDomsWith_refines (p : Prog) (hv : p.lookup "e_view" = some eView
 theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {k : IdxKind}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR dn vis fe m a)
-    (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
+    (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       (decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat : Option (List (Idx k))) =
         hslice? (erA m) o.toNat l.toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ m'.arr64 EREC = m.arr64 EREC := by
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  rcases hsrc with hl0 | hsrc
+  · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
+    subst hl
+    simp only [erToIwW] at h
+    cases hal : allocW m 0 with
+    | none => simp [hal] at h
+    | some qm =>
+    obtain ⟨q, m1⟩ := qm
+    obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
+    obtain ⟨-, hm1, -⟩ := allocW_facts hal hsz
+    simp only [hal] at h
+    cases n with
+    | zero => simp [erCopyW] at h
+    | succ n =>
+    cases n with
+    | zero => simp [erCopyW] at h
+    | succ n =>
+    simp only [Nat.add_sub_cancel, erCopyW_nil n _ _ _ _ rfl, Option.some.injEq,
+      Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨hS1, hg1, by simp [decHL, hslice?], ?_, ?_⟩
+    · simp only [List.headD_cons, List.tail_cons]; rw [hq, ht1]
+    · rw [hm1]; simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec (k := k) h hsz hc hEs hsrc
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
     rw [← ht, hf.2.2.1 IW]
@@ -1008,7 +1031,8 @@ theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : cvLpsW n m q = some (r, m')) (hS : StageR dn vis fe m a)
     (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size) :
+    (hlpb : (rdW (m.arr64 EREC) (q + 2)).toNat = 0 ∨
+      (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
@@ -1080,7 +1104,8 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word)
     (hS : StageR dn vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
     (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (m.arr64 EREC) (c + 1)).toNat + (rdW (m.arr64 EREC) (c + 2)).toNat ≤ (m.arr64 EREC).size)
+    (hlpb : (rdW (m.arr64 EREC) (c + 2)).toNat = 0 ∨
+      (rdW (m.arr64 EREC) (c + 1)).toNat + (rdW (m.arr64 EREC) (c + 2)).toNat ≤ (m.arr64 EREC).size)
     (h : tcW n m Mp c = some (r, m')) :
     ∃ x a', (ConRon.Arena.targetCtorAt bigM cv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x := by
@@ -1155,7 +1180,8 @@ theorem targetCtorAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
     (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
     (hM : decTM s₀.mem Mp.toNat = some bigM) (hcv : decCVp s₀.mem c.toNat = some cv)
     (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (s₀.mem.arr64 EREC) (c + 1)).toNat + (rdW (s₀.mem.arr64 EREC) (c + 2)).toNat ≤
+    (hlpb : (rdW (s₀.mem.arr64 EREC) (c + 2)).toNat = 0 ∨
+      (rdW (s₀.mem.arr64 EREC) (c + 1)).toNat + (rdW (s₀.mem.arr64 EREC) (c + 2)).toNat ≤
       (s₀.mem.arr64 EREC).size) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_ctor_at" [Mp, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCtorAt bigM cv) a₀ ∧

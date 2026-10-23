@@ -289,11 +289,73 @@ result area (`Tab.resOff`). -/
 def resReg : Nat → Reg64
   | 0 => .rax | 1 => .rdi | 2 => .r8 | 3 => .r9 | 4 => .r10 | _ => .r11
 
+/-! ### Simple operands (lane `compopt`, prototype A)
+
+A right operand that is a variable, a global, an array length or a constant is not evaluated into
+`rax` and spilled: it is used in place, as a memory operand or an immediate (`simpleOp`), or loaded
+straight into `rcx`/`rdx` (`loadInto`). -/
+
+/-- A constant that fits a sign-extended 32-bit immediate. -/
+def fitsImm32 (w : Word) : Bool := -2147483648 ≤ w.toInt64.toInt && w.toInt64.toInt < 2147483648
+
+/-- The operand that reads `e` without code, if there is one. -/
+def simpleOp (ctx : Ctx) : Expr → Option (Operand .W64)
+  | .var x => some (oM (mb .rsp (8 * x)))
+  | .glob g => some (oM (mb .r15 (ctx.tab.globOff g)))
+  | .len8 a => some (oM (mb .r15 (ctx.tab.len8 a)))
+  | .len64 a => some (oM (mb .r15 (ctx.tab.len64 a)))
+  | .const w => if fitsImm32 w then some (.imm (.int64 w.toInt64)) else none
+  | _ => none
+
+/-- `r := e` in one instruction, for a simple `e` (any constant). -/
+def loadInto (ctx : Ctx) (r : Reg64) : Expr → Option Program
+  | .const w => some [movRI r w]
+  | e => (simpleOp ctx e).map fun o => [i64 (.mov (.reg (rr r)) o)]
+
+/-- `dst := dst op o` in one instruction, for the operations x64 has in the two-operand form
+`op r/m, r/m/imm` (add, sub, and, or, xor). -/
+def aluDirect : BinOp → RegOrMem .W64 → Operand .W64 → Option Directive
+  | .add, m, o => some (i64 (.add m o))
+  | .sub, m, o => some (i64 (.sub m o))
+  | .and, m, o => some (i64 (.and m o))
+  | .or, m, o => some (i64 (.or m o))
+  | .xor, m, o => some (i64 (.xor m o))
+  | _, _, _ => none
+
+/-- `rax := rax op o` in one instruction, where x64 has the form. -/
+def binDirect : BinOp → Operand .W64 → Option Directive
+  | .mul, .regOrMem m => some (i64 (.imul none (.reg (rr .rax)) (.regOrMem m)))
+  | op, o => aluDirect op (.reg (rr .rax)) o
+
+/-- `rax := rax op b` for a simple `b`, without temporaries. -/
+def binSimple (ctx : Ctx) (op : BinOp) (b : Expr) : Option Program :=
+  match op, b with
+  | .shl, .const k => some [i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt (k.toNat % 64)))))]
+  | .shr, .const k => some [i64 (.shr (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt (k.toNat % 64)))))]
+  | .mul, .const k =>
+    -- strength reduction: a power of two is a shift
+    if k.toNat == 2 ^ Nat.log2 k.toNat then
+      some [i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt (Nat.log2 k.toNat)))))]
+    else (loadInto ctx .rcx (.const k)).map (· ++ binCode .mul)
+  | _, _ =>
+    match (simpleOp ctx b).bind (binDirect op) with
+    | some d => some [d]
+    | none => (loadInto ctx .rcx b).map (· ++ binCode op)
+
+/-- `cmp rax, b` for a simple `b`. -/
+def cmpSimple (ctx : Ctx) (b : Expr) : Option Program :=
+  match simpleOp ctx b with
+  | some o => some [i64 (.cmp (.reg (rr .rax)) o)]
+  | none => (loadInto ctx .rcx b).map (· ++ [i64 (.cmp (.reg (rr .rax)) (oR .rcx))])
+
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
   | .const w, _ => [movRI .rax w]
   | .var x, _ => [movRM .rax (mb .rsp (8 * x))]
   | .bin op a b, t =>
+    match binSimple ctx op b with
+    | some code => compileE ctx a t ++ code
+    | none =>
     compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
       ([movRR .rcx .rax, movRM .rax (ctx.tmp t)] ++ binCode op)
   | .ld8 a i, t =>
@@ -309,6 +371,10 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
   | .cmpw op a b, t =>
+    match cmpSimple ctx b with
+    | some code => compileE ctx a t ++ code ++
+      [movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+    | none =>
     compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
       [movRR .rcx .rax, movRM .rax (ctx.tmp t), i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
        movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
@@ -327,6 +393,10 @@ def CondCode.neg : CondCode → CondCode
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
 def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
+    match cmpSimple ctx b with
+    | some code => compileE ctx a t ++ code ++
+      [jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
+    | none =>
     compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
       [movRR .rcx .rax, movRM .rax (ctx.tmp t), i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
        jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
@@ -366,18 +436,35 @@ def storeRes (tab : Tab) : List Var → Nat → Program
     (if i < maxRes then [movMR (mb .rsp (8 * x)) (resReg i)]
      else [movRM .rcx (mb .r15 (tab.resOff i)), movMR (mb .rsp (8 * x)) .rcx]) ++ storeRes tab xs (i + 1)
 
+/-- `x := x op k` as one read-modify-write instruction on the frame slot (`op` add, sub, and, or,
+xor; `k` an imm32 constant). -/
+def setInPlace (x : Var) : Expr → Option Directive
+  | .bin op (.var y) (.const k) =>
+    if y == x && fitsImm32 k then aluDirect op (.mem (mb .rsp (8 * x))) (.imm (.int64 k.toInt64))
+    else none
+  | _ => none
+
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
-  | .set x e => compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]
+  | .set x e =>
+    match setInPlace x e with
+    | some d => [d]
+    | none => compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]
   | .st8 a i e =>
-    compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
-      [movRR .rdx .rax, movRM .rax (ctx.tmp 0),
+    (match loadInto ctx .rdx e with
+     | some code => compileE ctx i 0 ++ code
+     | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
+      [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
+      [
        i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len8 a)))), jccL .nc errorL,
        movRM .rcx (mb .r15 (ctx.tab.base8 a)),
        i8 (.mov (.mem (mbi .rcx .rax .W8)) (.regOrMem (.reg (.low .rdx .W8))))]
   | .st64 a i e =>
-    compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
-      [movRR .rdx .rax, movRM .rax (ctx.tmp 0),
+    (match loadInto ctx .rdx e with
+     | some code => compileE ctx i 0 ++ code
+     | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
+      [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
+      [
        i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (mb .r15 (ctx.tab.base64 a)),
        movMR (mbi .rcx .rax .W64) .rdx]
