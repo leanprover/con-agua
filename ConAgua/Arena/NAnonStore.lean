@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -35,9 +36,16 @@ abbrev NAREC : ArrId := 33
 /-- The name store's `anonymous` cons-table slots, both tiers interleaved. -/
 abbrev NASLOT : ArrId := 34
 
+
 /-- The (constant) hash of the `anonymous` record: there is only one key, so the home slot of
 every probe is the same, fixed slot. -/
 def nahashW : Word := fnvBasis
+
+/-- The growth schema of this table (`SlotGrow.lean`; one node per tier, so it never grows). -/
+def nanonGS : GrowSch :=
+  ⟨NASLOT, NAREC, 1, 34, lblk (n, k, t, i, c, h) {
+    h := ⟪nahashW⟫
+  }⟩
 
 /-- The model of the match: **every** node of this table is the `anonymous` node. -/
 def namatchW (_r : Array Word) (_t _i : Word) : Bool := true
@@ -100,7 +108,7 @@ def nafindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nanonFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
-  n := len(NASLOT.u64) >> 1;
+  n := ⟪SN0⟫ << NASLOT.u64[len(NASLOT.u64) - 1];
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nafindLoop⟫;
@@ -136,7 +144,7 @@ theorem nafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (nafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `anonymous` table. -/
-def nSlotsNA (m : Mem) : Word := m.len64 NASLOT >>> 1
+def nSlotsNA (m : Mem) : Word := SN0 <<< rdW (m.arr64 NASLOT) (m.len64 NASLOT - 1)
 
 include hp in
 theorem nanonFind_spec (n : Nat) (s₀ : St) (t h : Word) :
@@ -161,44 +169,56 @@ end find
 /-- The node count of tier `t` of the `anonymous` table, `CTL[34 + t]`. -/
 def nacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (34 + t)
 
-/-- `nanon_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `nanon_push`'s room checks: the handle index, the record array. -/
 def napushOK (m : Mem) (t : Word) : Bool :=
-  decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 NAREC >>> (1 : Word)) &&
-    decide (nacnt m t + 1 ≤ (nSlotsNA m >>> (2 : Word)) * 3)
+  decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 NAREC >>> (1 : Word))
 
 /-- The memory after `nanon_push(t, j)` appended node `c`. -/
 def napushMem (m : Mem) (t j c : Word) : Mem :=
   (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nanonPush : FunDecl := lfn (t, j) locals (c) {
+def nanonPush : FunDecl := lfn (t, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[34 + t];
   if c >= 134217728 { abort };
   if len(NAREC.u64) >> 1 <= c { abort };
-  if ((len(NASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
+  gk := NASLOT.u64[len(NASLOT.u64) - 1];
   NAREC.u64[c * 2 + t] := 0;
   NASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[34 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nanonGS 3⟫ };
   return c
 }
 
+/-- The (constant) hash of node `i` of tier `t`. -/
+def nahash (_m : Mem) (_t _i : Word) : Word := nahashW
+
 section push
 variable (p : Prog) (hp : p.lookup "nanon_push" = some nanonPush)
+
+/-- The growth's hash block computes `nahash`. -/
+theorem nahash_ok : HashOK p nanonGS 3 nahash := by
+  intro k s₀
+  simp only [nanonGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nahash, nahashW, LocEq, St.setLoc]
 
 include hp in
 theorem nanonPush_spec (n : Nat) (s₀ : St) (t j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nanon_push" [t, j]
     ⦃fun r s' => LocEq s' s₀ ∧ napushOK s₀.mem t = true ∧ r = [nacnt s₀.mem t] ∧
-      s'.mem = napushMem s₀.mem t j (nacnt s₀.mem t); ⊤⦄ := by
+      growIf NASLOT 34 nahash s₀.mem (napushMem s₀.mem t j (nacnt s₀.mem t))
+        (nacnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, nanonPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [nacnt, napushOK, napushMem, nSlotsNA, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p nanonGS NASLOT 34 rfl rfl 3 nahash (nahash_ok p) n] <;>
+      finish [nacnt, napushOK, napushMem, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -223,10 +243,14 @@ def nainternW (m : Mem) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (naS + rs₁.tail.headD 0, m)
     else if napushOK m 1 then
-      some (naS + nacnt m 1, napushMem m 1 (rs₁.tail.tail.headD 0) (nacnt m 1))
+      match growIf NASLOT 34 nahash m (napushMem m 1 (rs₁.tail.tail.headD 0) (nacnt m 1)) (nacnt m 1) with
+      | some m' => some (naS + nacnt m 1, m')
+      | none => none
     else none
   else if napushOK m 0 then
-    some (naP + nacnt m 0, napushMem m 0 (rs₀.tail.tail.headD 0) (nacnt m 0))
+    match growIf NASLOT 34 nahash m (napushMem m 0 (rs₀.tail.tail.headD 0) (nacnt m 0)) (nacnt m 0) with
+    | some m' => some (naP + nacnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/

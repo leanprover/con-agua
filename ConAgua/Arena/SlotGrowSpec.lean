@@ -297,7 +297,7 @@ theorem gprobeW_next (sl : Array Word) (t n j d : Word) (k : Nat) (hk : k = (j *
 grind_pattern [arena_grind] gprobeW_free => gprobeW sl t n j d, sl[k]
 grind_pattern [arena_grind] gprobeW_next => gprobeW sl t n j d, sl[k]
 
-theorem probeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) :
+theorem gprobeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (shiftS o (probeLoopB S))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (o + 6) (o + 8) s₀ s' ∧
@@ -312,13 +312,13 @@ theorem probeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) 
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, setLoc, ld64, ih] <;> finish [Keep2]
 
-theorem probeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) :
+theorem gprobeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (shiftS o (probeLoopB S))
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (o + 6) (o + 8) s₀ s' ∧
       gprobeW (s₀.mem.arr64 S.sa) (s₀.loc (o + 2)) (s₀.loc o) (s₀.loc (o + 6)) (s₀.loc (o + 8)) =
         some (s'.loc (o + 6)); ⊤⦄ :=
-  Triple.step_exec (probeLoop_spec p S o (n + 1) s₀)
+  Triple.step_exec (gprobeLoop_spec p S o (n + 1) s₀)
 
 section nodes
 variable (sa : ArrId) (H : Mem → Word → Word → Word) (n t b c i : Word) (m : Mem)
@@ -340,7 +340,7 @@ end nodes
 grind_pattern [arena_grind] gnodesW_done => gnodesW sa H n t b c i m
 grind_pattern [arena_grind] gnodesW_step => gnodesW sa H n t b c i m, gprobeW sl t n j₀ d
 
-theorem nodeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+theorem gnodeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
     (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (shiftS o (nodeLoopB S))
@@ -354,12 +354,12 @@ theorem nodeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → W
   rw [exec, step_while (w := shiftS o (nodeLoopB S)) rfl]
   simp only [shiftS, shiftC, shiftE]
   simp only [Nat.add_comm _ o, Nat.add_zero]
-  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih, hH (exec p n), probeLoop_step_spec p S o n]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih, hH (exec p n), gprobeLoop_step_spec p S o n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
     Nat.add_left_cancel_iff, Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
   all_goals grind [lang_grind, arena_grind, KeepLo, Keep2]
 
-theorem nodeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+theorem gnodeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
     (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (shiftS o (nodeLoopB S))
@@ -367,7 +367,7 @@ theorem nodeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word 
       s'.loc (o + 2) = s₀.loc (o + 2) ∧
       gnodesW S.sa H (s₀.loc o) (s₀.loc (o + 2)) (s₀.loc (o + 7)) (s₀.loc (o + 4)) (s₀.loc (o + 3))
         s₀.mem = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (nodeLoop_spec p S o H hH (n + 1) s₀)
+  Triple.step_exec (gnodeLoop_spec p S o H hH (n + 1) s₀)
 
 section tiers
 variable (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (n t : Word) (m : Mem)
@@ -387,7 +387,7 @@ end tiers
 grind_pattern [arena_grind] gtiersW_done => gtiersW sa ca H n t m
 grind_pattern [arena_grind] gtiersW_step => gtiersW sa ca H n t m, gnodesW sa H n t b c i m
 
-theorem tierLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+theorem gtierLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
     (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (shiftS o (tierLoopB S))
@@ -399,18 +399,18 @@ theorem tierLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → W
   rw [exec, step_while (w := shiftS o (tierLoopB S)) rfl]
   simp only [shiftS, shiftC, shiftE]
   simp only [Nat.add_comm _ o]
-  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih, nodeLoop_step_spec p S o H hH n]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih, gnodeLoop_step_spec p S o H hH n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
     Nat.add_left_cancel_iff, Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
   all_goals grind [lang_grind, arena_grind, KeepLo]
 
-theorem tierLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+theorem gtierLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
     (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (shiftS o (tierLoopB S))
     ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧
       gtiersW S.sa S.ca H (s₀.loc o) (s₀.loc (o + 2)) s₀.mem = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (tierLoop_spec p S o H hH (n + 1) s₀)
+  Triple.step_exec (gtierLoop_spec p S o H hH (n + 1) s₀)
 
 section zero
 variable (sa : ArrId) (n k : Word) (m : Mem)
@@ -433,7 +433,7 @@ end zero
 grind_pattern [arena_grind] gzeroW_done => gzeroW sa n k m
 grind_pattern [arena_grind] gzeroW_step => gzeroW sa n k m
 
-theorem zeroLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
+theorem gzeroLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
     (hn : s₀.loc o < 9223372036854775808) :
     ⦃fun s => s = s₀⦄
     exec p n (shiftS o (zeroLoopB S))
@@ -450,13 +450,13 @@ theorem zeroLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
     Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
   all_goals grind [lang_grind, arena_grind, KeepLo]
 
-theorem zeroLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
+theorem gzeroLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
     (hn : s₀.loc o < 9223372036854775808) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (shiftS o (zeroLoopB S))
     ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
       s'.mem = gzeroW S.sa (s₀.loc o) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ :=
-  Triple.step_exec (zeroLoop_spec p S o (n + 1) s₀ hn)
+  Triple.step_exec (gzeroLoop_spec p S o (n + 1) s₀ hn)
 
 /-- A halved word is below `2^63` (the zero loop's bound). -/
 theorem shr1_lt (x : Word) : x >>> 1 < 9223372036854775808 := by
@@ -485,8 +485,8 @@ theorem growBlkG_spec (p : Prog) (S : GrowSch) (sa : ArrId) (ca : Word) (hsa : S
   unfold growBlkG
   simp only [growB, L.Notation.blk, shiftS, shiftC, shiftE]
   simp only [Nat.add_comm _ o, Nat.add_zero]
-  vcgen [step, evalE, evalC, setLoc, ld64, st64, zeroLoop_step_spec p S o n,
-    tierLoop_step_spec p S o H hH n]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, gzeroLoop_step_spec p S o n,
+    gtierLoop_step_spec p S o H hH n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
     Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
   all_goals grind [lang_grind, arena_grind, KeepLo, gnW, gexpW, shr1_lt]
