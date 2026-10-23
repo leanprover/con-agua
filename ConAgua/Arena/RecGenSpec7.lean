@@ -86,57 +86,57 @@ def rtoK5 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) => if r5.headD 0 = 0 then none else some ([q], m5)
 
-def rtoK4 (vis cvRi gty q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def rtoK4 (cR : CallM) (n : Nat) (vis cvRi gty q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m4) => rtoK5 q (stubM "is_def_eq_core" m4 [vis, 0, rdW (m4.arr64 EREC) (cvRi + 3), gty])
+  | some (_, m4) => rtoK5 q (cR n "is_def_eq_core" [vis, 0, rdW (m4.arr64 EREC) (cvRi + 3), gty] m4)
 
-def rtoK3 (n : Nat) (vis cvRi gty : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def rtoK3 (cR : CallM) (n : Nat) (vis cvRi gty : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (q, m3) => rtoK4 vis cvRi gty q (ccoW n m3 vis q)
+  | some (q, m3) => rtoK4 cR n vis cvRi gty q (ccoW cR n m3 vis q)
 
-def rtoK2 (n : Nat) (vis rc cvRi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def rtoK2 (cR : CallM) (n : Nat) (vis rc cvRi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then none
-    else rtoK3 n vis cvRi (r2.tail.headD 0)
+    else rtoK3 cR n vis cvRi (r2.tail.headD 0)
       (cvNewW m2 (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc))
         (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 1)) (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 2))
         (r2.tail.headD 0))
 
-def rtoK1 (n : Nat) (vis g rc cvRi c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def rtoK1 (cR : CallM) (n : Nat) (vis g rc cvRi c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m1) => rtoK2 n vis rc cvRi (gtW n m1 g c)
+  | some (_, m1) => rtoK2 cR n vis rc cvRi (gtW n m1 g c)
 
 /-- **The model of `class_rec_ty_ok`.** -/
-def rtoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def rtoW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, g, k, rc, cvRi, c => rtoK1 n vis g rc cvRi c (rgW n m g k rc c)
+  | n + 1, m, vis, g, k, rc, cvRi, c => rtoK1 cR n vis g rc cvRi c (rgW n m g k rc c)
 
 section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis g k rc cvRi c gty q : Word) (r1 r2 r4 r5 : List Word)
-theorem rtoW_eq : rtoW (n + 1) m vis g k rc cvRi c = rtoK1 n vis g rc cvRi c (rgW n m g k rc c) := rfl
-theorem rtoK1_some : rtoK1 n vis g rc cvRi c (some (r1, m1)) = rtoK2 n vis rc cvRi (gtW n m1 g c) := rfl
-theorem rtoK2_fail (h : r2.headD 0 = 0) : rtoK2 n vis rc cvRi (some (r2, m2)) = none := by
+variable (cR : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis g k rc cvRi c gty q : Word) (r1 r2 r4 r5 : List Word)
+theorem rtoW_eq : rtoW cR (n + 1) m vis g k rc cvRi c = rtoK1 cR n vis g rc cvRi c (rgW n m g k rc c) := rfl
+theorem rtoK1_some : rtoK1 cR n vis g rc cvRi c (some (r1, m1)) = rtoK2 cR n vis rc cvRi (gtW n m1 g c) := rfl
+theorem rtoK2_fail (h : r2.headD 0 = 0) : rtoK2 cR n vis rc cvRi (some (r2, m2)) = none := by
   rw [rtoK2, if_pos h]
-theorem rtoK2_ok (h : r2.headD 0 ≠ 0) : rtoK2 n vis rc cvRi (some (r2, m2)) =
-    rtoK3 n vis cvRi (r2.tail.headD 0)
+theorem rtoK2_ok (h : r2.headD 0 ≠ 0) : rtoK2 cR n vis rc cvRi (some (r2, m2)) =
+    rtoK3 cR n vis cvRi (r2.tail.headD 0)
       (cvNewW m2 (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc))
         (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 1)) (rdW (m2.arr64 EREC) (rdW (m2.arr64 IW) rc + 2))
         (r2.tail.headD 0)) := by
   rw [rtoK2, if_neg h]
-theorem rtoK3_some : rtoK3 n vis cvRi gty (some (q, m3)) = rtoK4 vis cvRi gty q (ccoW n m3 vis q) := rfl
-theorem rtoK4_some : rtoK4 vis cvRi gty q (some (r4, m4)) =
-    rtoK5 q (stubM "is_def_eq_core" m4 [vis, 0, rdW (m4.arr64 EREC) (cvRi + 3), gty]) := rfl
+theorem rtoK3_some : rtoK3 cR n vis cvRi gty (some (q, m3)) = rtoK4 cR n vis cvRi gty q (ccoW cR n m3 vis q) := rfl
+theorem rtoK4_some : rtoK4 cR n vis cvRi gty q (some (r4, m4)) =
+    rtoK5 q (cR n "is_def_eq_core" [vis, 0, rdW (m4.arr64 EREC) (cvRi + 3), gty] m4) := rfl
 theorem rtoK5_fail (h : r5.headD 0 = 0) : rtoK5 q (some (r5, m5)) = none := by rw [rtoK5, if_pos h]
 theorem rtoK5_ok (h : r5.headD 0 ≠ 0) : rtoK5 q (some (r5, m5)) = some ([q], m5) := by rw [rtoK5, if_neg h]
 end arms
 
-grind_pattern [ind_grind] rtoW_eq => rtoW (n + 1) m vis g k rc cvRi c
-grind_pattern [ind_grind] rtoK1_some => rtoK1 n vis g rc cvRi c (some (r1, m1))
-grind_pattern [ind_grind] rtoK2_fail => rtoK2 n vis rc cvRi (some (r2, m2))
-grind_pattern [ind_grind] rtoK2_ok => rtoK2 n vis rc cvRi (some (r2, m2))
-grind_pattern [ind_grind] rtoK3_some => rtoK3 n vis cvRi gty (some (q, m3))
-grind_pattern [ind_grind] rtoK4_some => rtoK4 vis cvRi gty q (some (r4, m4))
+grind_pattern [ind_grind] rtoW_eq => rtoW cR (n + 1) m vis g k rc cvRi c
+grind_pattern [ind_grind] rtoK1_some => rtoK1 cR n vis g rc cvRi c (some (r1, m1))
+grind_pattern [ind_grind] rtoK2_fail => rtoK2 cR n vis rc cvRi (some (r2, m2))
+grind_pattern [ind_grind] rtoK2_ok => rtoK2 cR n vis rc cvRi (some (r2, m2))
+grind_pattern [ind_grind] rtoK3_some => rtoK3 cR n vis cvRi gty (some (q, m3))
+grind_pattern [ind_grind] rtoK4_some => rtoK4 cR n vis cvRi gty q (some (r4, m4))
 grind_pattern [ind_grind] rtoK5_fail => rtoK5 q (some (r5, m5))
 grind_pattern [ind_grind] rtoK5_ok => rtoK5 q (some (r5, m5))
 
@@ -163,9 +163,9 @@ theorem classRecTyOkGuards_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St)
         targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n] <;>
       finish (gen := 20) [rdW_eq, rgK]
 
-theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St) (vis g k rc cvRi c : Word) :
+theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis g k rc cvRi c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_ty_ok" [vis, g, k, rc, cvRi, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ rtoW n s₀.mem vis g k rc cvRi c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ rtoW cR n s₀.mem vis g k rc cvRi c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rto]
   simp only [callFn, classRecTyOkL]
   cases n with
@@ -174,7 +174,7 @@ theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St) (vis 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classRecTyOkGuards_spec p h n, classGenRecTy_spec p h.toGtProg n, cvNew_specW p h.era h.cvn n,
-        classConstOk_spec p h.ih h.ccoh h.cco n, stubM_spec p "is_def_eq_core" n] <;>
+        classConstOk_spec p h.ih h.ccoh h.cco cR hcR n, hcR n "is_def_eq_core"] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 
 /-! ## Relational lemmas -/
@@ -210,12 +210,12 @@ theorem ihHdrW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word}
     L.Arena.ihK5.eq_def, L.Arena.ihK6.eq_def, L.Arena.ihK7.eq_def, L.Arena.ihK8.eq_def, L.Arena.ihK9.eq_def] at h
   afr_auto h [envFindW_afr, ipfF_afr, cvLpsA_afr, lbbF_afr, hffF_afr, stub_afr]
 
-theorem ccoW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word} (h : ccoW n m vis q = some (r, m')) :
+theorem ccoW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word} (h : ccoW stubCall n m vis q = some (r, m')) :
     AFr m m' := by
   cases n with
   | zero => simp [ccoW] at h
   | succ n =>
-  simp only [ccoW, ccoK1.eq_def, ccoK2.eq_def, ccoK3.eq_def] at h
+  simp only [ccoW, ccoK1.eq_def, ccoK2.eq_def, ccoK3.eq_def, stubCall] at h
   afr_auto h [ihHdrW_afr, stub_afr]
 
 theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen)
@@ -346,7 +346,7 @@ theorem rtoW_sim (n : Nat) (m : Mem) (a : AState) (g k rc cvRi c : Word) (G : Cl
     (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS)
     (hcvR : ∀ q, iwN m rc.toNat = some q → CVExt m q)
     (hcvRi : DecB (fun m => decCVp m cvRi.toNat) m CVRi) (hA : AbsOK m) :
-    RSim (rtoW n m vis g k rc cvRi c) (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a
+    RSim (rtoW stubCall n m vis g k rc cvRi c) (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a
       (fun b a' x => KP dn vis fe m decCVR b a' x ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
@@ -356,10 +356,10 @@ theorem rtoW_sim (n : Nat) (m : Mem) (a : AState) (g k rc cvRi c : Word) (G : Cl
   cases n with
   | zero => exact RSim.none
   | succ n =>
-  refine rgW_sim n m a g k rc c G RS hS hG hns hrc hA (rtoK1 (n + 1) vis g rc cvRi c) rfl _ _ ?_
+  refine rgW_sim n m a g k rc c G RS hS hG hns hrc hA (rtoK1 stubCall (n + 1) vis g rc cvRi c) rfl _ _ ?_
   intro m1 a1 hS1 hg1 hA1
   rw [rtoK1_some]
-  refine RSim.bind (K := rtoK2 (n + 1) vis rc cvRi) rfl
+  refine RSim.bind (K := rtoK2 stubCall (n + 1) vis rc cvRi) rfl
     (gtW_sim dn vis fe (n + 1) m1 a1 g c G hS1 (hG.grow (decCG_mono _) hg1) hns hA1) ?_
   rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
   dsimp only at hS2 hg2 ho
@@ -379,7 +379,7 @@ theorem rtoW_sim (n : Nat) (m : Mem) (a : AState) (g k rc cvRi c : Word) (G : Cl
   obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.2.2.2.1
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at erc
   rw [erc]
-  refine RSim.lstep (K := rtoK3 (n + 1) vis cvRi (r2.tail.headD 0)) rfl fun ⟨q, m3⟩ h3 => ?_
+  refine RSim.lstep (K := rtoK3 stubCall (n + 1) vis cvRi (r2.tail.headD 0)) rfl fun ⟨q, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hq, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
     (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
   rw [rtoK3_some]
@@ -388,7 +388,7 @@ theorem rtoW_sim (n : Nat) (m : Mem) (a : AState) (g k rc cvRi c : Word) (G : Cl
     obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
     omega
   have hA3 := cvNewW_afr h3 hA2
-  refine RSim.bind (K := rtoK4 vis cvRi (r2.tail.headD 0) q) rfl
+  refine RSim.bind (K := rtoK4 stubCall (n + 1) vis cvRi (r2.tail.headD 0) q) rfl
     (RSim.withF (ccoW_sim dn vis fe (n + 1) m3 a2 q _ hS3 (rec2DecCV_erecP hdec3 hext3) hqb)
       (fun _ hb => ccoW_afr hb)) ?_
   rintro ⟨r4, m4⟩ u a4 - ⟨⟨hS4, hg4, -⟩, hf4⟩
@@ -434,7 +434,7 @@ theorem classRecTyOk_refines (p : Prog) (hp : RtoProg p) (n : Nat) (s₀ : St) (
       KP dn vis fe s₀.mem decCVR (r, s'.mem)
         (AM.st (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀)
         (AM.res (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (classRecTyOk_spec p hp n s₀ vis g k rc cvRi c) fun _ _ ⟨hl, hw⟩ =>
+  triple_post (classRecTyOk_spec p hp stubCall (stubCall_spec p) n s₀ vis g k rc cvRi c) fun _ _ ⟨hl, hw⟩ =>
     let h := (rtoW_sim (dn := dn) (vis := vis) (fe := fe) n _ a₀ g k rc cvRi c G RS CVRi hS hG hns hrc
       hcvR hcvRi hA).am hw
     ⟨hl, h.1, h.2.1, h.2.2⟩
