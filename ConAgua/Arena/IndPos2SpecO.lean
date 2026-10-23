@@ -326,7 +326,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
   rw [invoke_eq _ L.papp]
   simp only [callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      stubM_spec p "get_app_args_f" n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
+      gaaF_spec p L.nt.ad n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
       nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
     simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, nbAppK4_some, nbAppK5_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,

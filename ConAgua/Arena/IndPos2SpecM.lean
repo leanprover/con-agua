@@ -811,7 +811,7 @@ def roK1 (k : Nat) (ctx hi : Word) : Option (List Word × Mem) → Option (List 
       (rdW (m2.arr64 IW) (ctx + 4)) hi (r.headD 0) (r.tail.headD 0))
 def roK0 (k : Nat) (ctx hi cur : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m1) => if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (stubM "get_app_args_f" m1 [CWF, cur])
+  | some (r, m1) => if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (gaaF m1 [CWF, cur])
 /-- The model of `nest_ctors_res_ok(ctx, hi, cur)`. -/
 def roW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
@@ -823,7 +823,7 @@ theorem roK2_some : roK2 (some (r, m3)) = some ([if r.headD 0 = 0 then 1 else 0]
 theorem roK1_some : roK1 k ctx hi (some (r, m2)) = roK2 (noaW k m2 (rdW (m2.arr64 IW) ctx)
     (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi (r.headD 0) (r.tail.headD 0)) := rfl
 theorem roK0_eq : roK0 k ctx hi cur (some (r, m1)) =
-    if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (stubM "get_app_args_f" m1 [CWF, cur]) := rfl
+    if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (gaaF m1 [CWF, cur]) := rfl
 end arms
 attribute [ind_grind] roK2_some roK1_some
 
@@ -839,7 +839,7 @@ theorem nestCtorsResOk_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestResHead_spec p hrh had n, stubM_spec p "get_app_args_f" n, nestOccAny_spec p hl hoa n] <;>
+        nestResHead_spec p hrh had n, gaaF_spec p had n, nestOccAny_spec p hl hoa n] <;>
       finish (gen := 20) [roW, roK0_eq, rdW_eq]
 
 /-- The twin's result check of `nestCtors`, the rest to `K` (the twin's text). -/
@@ -877,12 +877,12 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rfl
   rw [if_neg h0] at h
   have hne : (r1.headD 0 != 0) = true := by simpa using h0
-  cases hga : stubM "get_app_args_f" m1 [CWF, cur] with
+  cases hga : gaaF m1 [CWF, cur] with
   | none => rw [hga] at h; simp [roK1] at h
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2
   rw [hga, roK1_some] at h
-  obtain ⟨args, a2, hrun2, hS2, hg2, hargs⟩ := getAppArgs_spec dn vis fe CWF cur hcur m1 m2 a1 r2 hga hS1
+  obtain ⟨args, a2, hrun2, hS2, hg2, hargs⟩ := gaaF_ok dn vis fe CWF cur hcur m1 m2 a1 r2 hga hS1
   rw [CWF_eq] at hrun2
   have hU2 := (hU.grow hg1).grow hg2
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1

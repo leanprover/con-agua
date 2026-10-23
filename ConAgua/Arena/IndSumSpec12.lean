@@ -104,7 +104,7 @@ def ctlK5 (n : Nat) (vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl hd xfn : Word) 
 def ctlK4 (n : Nat) (vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rf, m) => ctlK5 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl hd (rf.headD 0)
-      (stubM "get_app_args_f" m [CWF, xb])
+      (gaaF m [CWF, xb])
 /-- After `intern_const`: the guard, `get_app_fn_f`. -/
 def ctlK3 (n : Nat) (vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -152,7 +152,7 @@ theorem ctlK5_some : ctlK5 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl hd xfn 
       (if nP ≤ r.tail.headD 0 then eqW (n + 1) m (r.headD 0) nP cqO cqL else some 0) := rfl
 theorem ctlK4_some : ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd (some (r, m)) =
     ctlK5 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl hd (r.headD 0)
-      (stubM "get_app_args_f" m [CWF, xb]) := rfl
+      (gaaF m [CWF, xb]) := rfl
 theorem ctlK3_big (h : 4294967296 ≤ hd) :
     ctlK3 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) = none := by simp only [ctlK3]; rw [if_pos h]
 theorem ctlK3_ok (h : ¬ 4294967296 ≤ hd) :
@@ -185,9 +185,9 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
       stubM_spec p "open_pis_at_fvars_f" (n + 1),
       plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil (n + 1),
       internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
-      gafF_spec p hP.ad (n + 1), stubM_spec p "get_app_args_f" (n + 1),
-      slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr (n + 1), iarW_spec p hP.hiar (n + 1),
-      fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs n] <;>
+      gafF_spec p hP.ad (n + 1), gaaF_spec p hP.ad (n + 1),
+      slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd (n + 1), iarW_spec p hP.hiar (n + 1),
+      fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd n] <;>
     finish (gen := 30) (instances := 5000) [ctlW]
 
 /-! ## The relation to the twin: pieces -/
@@ -324,7 +324,7 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨hS4, hg4, hf32, hfd⟩ := hQ
   rw [ctlK4_some]
   -- `get_app_args_f`
-  have h5 := getAppArgs_spec dn vis fe CWF xbw hxb
+  have h5 := gaaF_ok dn vis fe CWF xbw hxb
   rw [CWF_eq, hxbd] at h5
   refine Sim.bindK (K := ctlK5 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw hd (rf.headD 0)) rfl
     (fun _ _ => rfl) (sumSim_of_relAM h5 hS4) fun ra args m5 a5 hQ => ?_
@@ -439,7 +439,7 @@ def ctorK6 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB : Wo
   | none => none
   | some (rq, m) => if rq.headD 0 = 0 then none
     else ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
-      (stubM "fvar_type_ds" m [rq.tail.headD 0, rq.tail.tail.headD 0])
+      (ftdsF m [rq.tail.headD 0, rq.tail.tail.headD 0])
 /-- After the constructor's opened telescope. -/
 def ctorK5 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -489,7 +489,7 @@ theorem ctorK6_no (h : r.headD 0 = 0) :
 theorem ctorK6_yes (h : r.headD 0 ≠ 0) :
     ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
       ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
-        (stubM "fvar_type_ds" m [r.tail.headD 0, r.tail.tail.headD 0]) := by
+        (ftdsF m [r.tail.headD 0, r.tail.tail.headD 0]) := by
   simp only [ctorK6]; rw [if_neg h]
 theorem ctorK5_no (h : r.headD 0 = 0) :
     ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
@@ -537,8 +537,8 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
       stubM_spec p "check_constant_val" (n + 2), stripPis_specF p hP.strip (n + 2),
       srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
         hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
-      stubM_spec p "open_pis_at_fvars_f" (n + 2), stubM_spec p "fvar_type_ds" (n + 2),
-      sdomsW_spec p hP.hg hP.hsd (n + 2), ctlW_spec p hP n] <;>
+      stubM_spec p "open_pis_at_fvars_f" (n + 2), ftdsF_spec p hP.ad (n + 2),
+      sdomsW_spec p hP.hg hP.hsd hP.ad.ftd (n + 2), ctlW_spec p hP n] <;>
     finish (gen := 30) (instances := 5000) [ctorW, rdW_eq]
 
 /-! ## `check_sum_ctor`: the relation to the twin -/
@@ -710,7 +710,7 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine Sim.bind_twin (x := (tl, tb)) (a₁ := a5) rfl ?_
   -- `fvar_type_ds`
   refine Sim.bindK (K := ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM (fvarTypeDs_spec dn vis fe _ _ tl) ⟨hS5, htl⟩)
+    (fun _ _ => rfl) (sumSim_of_relAM (ftdsF_ok dn vis fe _ _ tl) ⟨hS5, htl⟩)
     fun r6 tdoms m6 a6 hQ => ?_
   obtain ⟨hS6, hg6, htd, htdb⟩ := hQ
   rw [sumGetD0, sumGetD1] at htd htdb

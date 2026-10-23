@@ -1043,12 +1043,12 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
   intro m m' a ctx fu po pl kb hi w ns c prog NS r h hS hW hhi hw hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbAppW_succ] at h
-  cases hga : stubM "get_app_args_f" m [CWF, w] with
+  cases hga : gaaF m [CWF, w] with
   | none => rw [hga] at h; simp [nbAppK1] at h
   | some pr =>
   obtain ⟨ra, m1⟩ := pr
   rw [hga, nbAppK1_some] at h
-  obtain ⟨args, a1, hrun1, hS1, hg1, hargs, hargsb⟩ := getAppArgs_spec dn vis fe CWF w hw m m1 a ra hga hS
+  obtain ⟨args, a1, hrun1, hS1, hg1, hargs, hargsb⟩ := gaaF_ok dn vis fe CWF w hw m m1 a ra hga hS
   rw [CWF_eq] at hrun1
   have e0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
   rw [e0, getD1_eq] at hargs hargsb

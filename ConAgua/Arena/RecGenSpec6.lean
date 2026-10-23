@@ -89,7 +89,7 @@ def cfgW : Nat → Mem → Word → Word → Word → Word → Word → Word →
   | n + 1, m, mo, ml, io, il, i, fo, fl =>
     if fl = 0 then some ([0, 0], m)
     else cfgK1 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) mo ml io il i
-      (stubM "fvar_type_d" m [rdW (m.arr64 IW) fo])
+      (ftdF m [rdW (m.arr64 IW) fo])
 
 section arms
 variable (n : Nat) (m m1 m2 m4 m5 : Mem) (rest : Mem → Option (List Word × Mem))
@@ -98,7 +98,7 @@ theorem cfgW_nil (h : fl = 0) : cfgW (n + 1) m mo ml io il i fo fl = some ([0, 0
   simp [cfgW, h]
 theorem cfgW_cons (h : ¬ fl = 0) : cfgW (n + 1) m mo ml io il i fo fl =
     cfgK1 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) mo ml io il i
-      (stubM "fvar_type_d" m [rdW (m.arr64 IW) fo]) := by
+      (ftdF m [rdW (m.arr64 IW) fo]) := by
   simp [cfgW, h]
 theorem cfgK1_some : cfgK1 n rest mo ml io il i (some (r1, m1)) =
     cfgK2 n rest io il i (r1.headD 0) (noConstWf n m1 mo ml 0 0 (r1.headD 0)) := rfl
@@ -145,6 +145,7 @@ structure CfoProg (p : Prog) : Prop where
   mn : p.lookup "block_shape_member_names" = some blockShapeMemberNames
   go : p.lookup "class_fields_of_go" = some classFieldsOfGo
   cfo : p.lookup "class_fields_of" = some classFieldsOfL
+  ftd : FtdF p
 
 theorem classFieldsOfGo_spec (p : Prog) (h : CfoProg p) (n : Nat) :
     ∀ (s₀ : St) (mo ml io il i fo fl : Word),
@@ -160,7 +161,7 @@ theorem classFieldsOfGo_spec (p : Prog) (h : CfoProg p) (n : Nat) :
     simp only [callFn, classFieldsOfGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "fvar_type_d" n, nestOcc_spec' p h.no n, classFieldsOfHits_spec p h.hits n,
+        ftdF_spec0 p h.ftd n, nestOcc_spec' p h.no n, classFieldsOfHits_spec p h.hits n,
         iwAlloc_specW p h.alloc n, piBinders_spec' p h.alloc h.copy h.no.hv h.cons h.pb n,
         rec3_specW p h.alloc n h.r3, slCons_specW p h.alloc h.copy h.cons n, ih] <;>
       finish (gen := 20) [recW, wrIW]

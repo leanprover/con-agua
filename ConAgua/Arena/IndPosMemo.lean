@@ -200,6 +200,17 @@ theorem MFr.ofLbbF {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r,
 /-- Across `get_app_fn_f` (writes nothing). -/
 theorem MFr.ofGafF {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (gafF_frame h) (by simp) (by simp)
+/-- Across `fvar_type_d` (writes nothing). -/
+theorem MFr.ofFtdF {m m' : Mem} {args r : List Word} (h : ftdF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (ftdF_frame h) (by simp) (by simp)
+/-- Across `fvar_type_ds` (the pool and its top). -/
+theorem MFr.ofFtdsF {m m' : Mem} {args r : List Word} (h : ftdsF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_iw (ftdsF_frame h)
+/-- Across `get_app_args_f` (the stack, the pool, their tops). -/
+theorem MFr.ofGaaF {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (gaaF_frame h)
+    (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; rcases hb with rfl | rfl <;> decide))
+    (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 /-- Across `strip_pis`/`strip_lams` (their write set, `stripF_frame`). -/
 theorem MFr.ofStripF {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg m args = some (r, m')) :
     MFr [] [] m m' := MFr.of_iw (stripF_frame h)

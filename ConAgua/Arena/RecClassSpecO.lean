@@ -322,7 +322,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   | succ n =>
   rw [c1cW_eq]
   refine RSim.bind (K := fun o => K (fcK (fcK (c1cK1 n e (r9.headD 0) o)))) hK
-    ((fvarTypeDs_spec dn vis fe _ _ xs).sim ⟨hS9, by rw [decHL_grow hg29 hxb]; exact hxs⟩) ?_
+    ((ftdsF_ok dn vis fe _ _ xs).sim ⟨hS9, by rw [decHL_grow hg29 hxb]; exact hxs⟩) ?_
   rintro ⟨r10, m10⟩ bs a10 - ⟨hS10, hg10, hbs, hbb⟩
   dsimp only at hS10 hg10 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
@@ -473,7 +473,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
   subst hbd
   rw [grcK3_some, rec2MapM_genBinder]
   have hg13 := hg1.trans (hg2.trans hg3)
-  refine RSim.bind (K := grcK4 n g (r3.headD 0)) rfl ((fvarTypeDs_spec dn vis fe _ _ fvs).sim
+  refine RSim.bind (K := grcK4 n g (r3.headD 0)) rfl ((ftdsF_ok dn vis fe _ _ fvs).sim
     ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs⟩) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨hS4, hg4, hfbs, hfbb⟩
   dsimp only at hS4 hg4 hfbs hfbb

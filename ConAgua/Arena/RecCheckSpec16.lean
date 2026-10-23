@@ -480,20 +480,20 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
   generalize hii : (eViewW m2 (rm.headD 0)).tail.headD 0 = ii at h vr2 hiiH
   have c1 : (decE (rl.headD 0)).tag = ETag.const := (decE_tag_const _ hlhH).mpr t1'
   have c2 : (decE (rm.headD 0)).tag = ETag.const := (decE_tag_const _ hmhH).mpr t2'
-  cases h3 : stubM "get_app_args_f" m2 [CWF, leafW] with
+  cases h3 : gaaF m2 [CWF, leafW] with
   | none => rw [h3] at h; simp [tkhK3] at h
   | some x =>
   obtain ⟨ra, m3⟩ := x
   rw [h3, tkhK3_some] at h
-  obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := getAppArgs_spec dn vis fe CWF leafW hl m2 m3 a2 ra h3 hS2
+  obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := gaaF_ok dn vis fe CWF leafW hl m2 m3 a2 ra h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
   have hP3 := hP2.stub (by decide) h3
-  cases h4 : stubM "get_app_args_f" m3 [CWF, majDom] with
+  cases h4 : gaaF m3 [CWF, majDom] with
   | none => rw [h4] at h; simp [tkhK4] at h
   | some x =>
   obtain ⟨rb, m4⟩ := x
   rw [h4] at h
-  obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := getAppArgs_spec dn vis fe CWF majDom hmj m3 m4 a3 rb h4 hS3
+  obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := gaaF_ok dn vis fe CWF majDom hmj m3 m4 a3 rb h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
   have hP4 := hP3.stub (by decide) h4
   have hg14 := (hg12.trans hg3).trans hg4

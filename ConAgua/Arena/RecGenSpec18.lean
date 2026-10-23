@@ -236,8 +236,8 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
     (Q := fun r x m' a' => decRL (fun m => decHL m) 0 m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m')
     ?_ ?_
   · intro r1 m1 e1
-    obtain ⟨s1, rfl, -, hs1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (stubM_spec p "get_app_args_f" n _ [CWF, mty]) e1
-    obtain ⟨x, a', hrun, hS1, hg1, hd1⟩ := getAppArgs_spec dn vis fe CWF mty hmty m s1.mem a r1 hs1 hS
+    obtain ⟨s1, rfl, -, hs1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (gaaF_spec p hP.ad n _ [CWF, mty]) e1
+    obtain ⟨x, a', hrun, hS1, hg1, hd1⟩ := gaaF_ok dn vis fe CWF mty hmty m s1.mem a r1 hs1 hS
     rw [CWF_eq] at hrun
     exact ⟨x, a', hrun, hd1, hS1, hg1, hPm.fr (MFr.ofStub hs1)⟩
   rintro r1 args m1 a1 ⟨⟨hd1, hb1⟩, hS1, hg1, hP1⟩
