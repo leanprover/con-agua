@@ -153,10 +153,12 @@ def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
 }
 
 /-- `open_pis_at_fvars_f(n, e, i)`: `(1, off, n, body)` (the free variables an `IW` slice, in
-binder order) or `(0, 0, 0, 0)`. -/
+binder order) or `(0, 0, 0, 0)`. A first fvar index `i ≥ 2^63` aborts (a capacity guard, deviation
+D33: the indices `i, i + 1, …` must not wrap). -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:404-411 ConRon.Arena.openPisAtFvarsF
 @[l_impl ConRon.Arena.openPisAtFvarsF]
 def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
+  if i >> 63 != 0 { abort };
   co := CTL.u64[136];
   if len(SPN.u64) < co { abort };
   (ok, b) := call opf_go(n, e, i, co, 0);

@@ -258,9 +258,8 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   subst hwd
   rw [c1K1_some]
   refine RSim.bind (K := fun o => K (c1K2 n t fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e o)) hK
-    (RSim.withF (rec2SimIh n hS1 (hG.grow (decCG_mono _) hg1) t tele hwH e) (fun _ hb => rec2IhF_afr hb)) ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hf2⟩
-  have hA2 := hf2 hA1
+    (rec2SimIh n hS1 (hG.grow (decCG_mono _) hg1) t tele hwH e hA1) ?_
+  rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
   dsimp only at hS2 hg2 ho
   have hg12 := hg1.trans hg2
   cases o with
@@ -599,12 +598,11 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have nFlt := (iwN_rdW_at (w := x) (k := 1) hnF hsz).2
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at enF evD
   rw [enF, evD]
-  have ho := simOpenPis (k := UInt64.ofNat X.nF) (i := UInt64.ofNat l12) hS hvD
+  have ho := simOpenPisF (k := UInt64.ofNat X.nF) (i := UInt64.ofNat l12) hS hA hvD
   rw [tnF, dvD, hrP] at ho
   refine RSim.bind (K := ruK2 (n + 1) g rco rcl cgo cgl rlvls x (UInt64.ofNat l12) (UInt64.ofNat s0)) rfl
-    (RSim.withF ho (fun _ hb => stub_afr hb)) ?_
-  rintro ⟨r2, m2⟩ o2 a2 - ⟨⟨hS2, hg2, ho2⟩, hf2⟩
-  have hA2 := hf2 hA
+    ho ?_
+  rintro ⟨r2, m2⟩ o2 a2 - ⟨⟨hS2, hg2, ho2⟩, hA2⟩
   dsimp only at hS2 hg2 ho2
   cases o2 with
   | none =>
@@ -697,7 +695,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | none => exact ho6
   | some e => obtain ⟨h1, h2⟩ := ho6; exact ⟨by simpa using h1, by simpa [decW0E] using h2⟩
 
-/-- **`class_gen_rule` refines `classGenRule`** (through the stubs of `open_pis_at_fvars_f`,
+/-- **`class_gen_rule` refines `classGenRule`** (through `open_pis_at_fvars_f`'s real refinement and the stubs of
 `mk_app_n_f`, `fvar_type_ds`, `close_lams`'s `abstract1_fast`; the generator, the constructor record,
 the classes of the recursors and the generated constants decoded below the tops). -/
 @[refines ConRon.Arena.classGenRule]
