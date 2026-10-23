@@ -54,14 +54,13 @@ partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
   else if e.isAppOfArity ``List.nil 1 then return acc
   else throwError "asm_lit: the program does not reduce to a list literal: {e}"
 
-/-- Declare `n : Program := lit` (compiled, so that the printer can run it); the equation
-`lhs = n` is left to the caller. -/
+/-- Declare `n : Program := lit` (not compiled: nothing runs it); the equation `lhs = n` is left to
+the caller. -/
 def declLitDef (n : Name) (f : String) (v : Program) : MetaM Unit := do
   let lit := programExpr (v.toArray.map (directiveExpr f))
-  addAndCompile (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
+  addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
 
-/-- Declare `n : Program := lit` (compiled, so that the printer can run it) and
-`n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
+/-- Declare `n : Program := lit` and `n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
 def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
   declLitDef n f v
   addDecl (.thmDecl { name := n.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
@@ -208,7 +207,7 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident term
       rhs := appE appC fi rhs
       tl := consTl
     let whole := appendE (mkConst trampN) rhs
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
+    addDecl (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
     addDocString' name .missing doc?
     -- `compileProgT tab nrt p entry = name`: `p` unfolds to the literal `tl`
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
