@@ -903,6 +903,7 @@ def main():
                     cache[ck] = [ref, where]
             exe = compiled[entry][0]
             cap = None
+            words = None   # CA_WORDS of the run whose outcome is reported (None: the default capacity)
             if exe:
                 st, out = guard.run([exe, path], T_COMPILED, env=env)
                 lo = l_outcome(out, st, stubs_by_code)
@@ -911,17 +912,19 @@ def main():
                     st, out = guard.run([exe, path], T_COMPILED, env=dict(env, CA_WORDS=str(BIG_WORDS)))
                     lo2 = l_outcome(out, st, stubs_by_code)
                     if lo2 != lo:
-                        cap, lo = lo, lo2
+                        cap, lo, words = lo, lo2, BIG_WORDS
                     elif ref == ACCEPT:
                         # still an error where the reference accepts: once more at HUGE_WORDS (the
                         # big perf fixtures intern ~10M application nodes; ~5.4 GB, under PER_RUN_GB)
                         st, out = guard.run([exe, path], T_COMPILED, env=dict(env, CA_WORDS=str(HUGE_WORDS)))
                         lo2 = l_outcome(out, st, stubs_by_code)
                         if lo2 != lo:
-                            cap, lo = lo, lo2
+                            cap, lo, words = lo, lo2, HUGE_WORDS
             else:
                 lo = "crash"
             d = {"ref": ref + (f" ({where})" if where else ""), "l": lo, "class": classify(lo, ref, where)}
+            if words:
+                d["words"] = words
             if cap:
                 d["small"] = cap
             want = (args.trace == "all" or
@@ -955,7 +958,8 @@ def main():
                     cache[ck] = cr
             r["conron"] = cr
             if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
-                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path], env),
+                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path],
+                                            dict(env, CA_WORDS=str(r["check"]["words"])) if r["check"].get("words") else env),
                              "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path]),
                              "e2e-ref": perf_instr(guard, [os.path.join(BIN, "e2e-ref"), path, f"--pins={npins}"])}
         if not args.no_diff and fid in diff_set:
@@ -988,7 +992,7 @@ def main():
     with open(os.path.join(WORK, "results.json"), "w") as fh:
         json.dump({"results": res, "stubs": {g: v[0] for g, v in asm["stubs"].items()}}, fh, indent=1)
     if args.latest and not args.no_perf and not args.only and args.rerun_failing is None and not args.no_conron:
-        rows = [{"id": r["id"], "size": r["size"], "class": r["check"]["class"], "perf": r["perf"]}
+        rows = [{"id": r["id"], "size": r["size"], "class": r["check"]["class"], "words": r["check"].get("words"), "perf": r["perf"]}
                 for r in res if r.get("perf") and r["perf"].get("L") and r["perf"].get("con-ron")]
         os.makedirs(os.path.dirname(args.latest), exist_ok=True)
         rev = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
