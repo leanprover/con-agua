@@ -551,34 +551,4 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     h hS trivial hD hi hd hok hN
   exact ⟨fe', a', h1, h2, h3⟩
 
-/-- **`check_decl_axiom` refines `checkDecl`'s `.axiomDecl` arm** at the loop's relation (through
-the ROM stubs and the core's; `StateOK` of the twin state for the canonical comparison). -/
-theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
-    (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn)
-    (ds : Array IDeclaration) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (cv : IConstantVal), i.toNat < ds.size →
-      ds[i.toNat]? = some (.axiomDecl cv) → ConRon.Bridge.StateOK a₀ →
-      L.Rom.NamesDn dn a₀ L.Rom.quotNames → LoopR pins dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_axiom" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.axiomDecl cv)) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.axiomDecl cv)) a₀) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.axiomDecl cv)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv hi hd hok0 hN hLR
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (cda_specW p hX.cda hX.val.rcp hX.quot.pa n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_axiom") (by decide) [i, vis] s₀)
-  subst hs
-  have hd' : ds[i.toNat] = .axiomDecl cv := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdaW_ok (pins := pins) hX hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok0 hN
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_⟩
-  rw [hst, hres]
-  exact hLR.of_step hS' hf (IWGrow.erecPExt hg')
-
 end L.Arena

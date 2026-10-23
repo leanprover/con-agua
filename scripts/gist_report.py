@@ -7,6 +7,7 @@ publish it to the project's gist.
                                       when that file is missing)
 
 Reads the files scripts/dashboard_data.py writes (run that first) and docs/deviations.md."""
+import datetime
 import csv, json, pathlib, re, subprocess, sys, datetime
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -90,7 +91,10 @@ def trend_svg(pts):
     """Proven shares (left axis, %) and lines of L code / proofs (right axis, thousands) per census run."""
     W, H, ml, mr, mt, mb = 900, 360, 50, 70, 20, 70
     n = len(pts)
-    xs = [ml + (W - ml - mr) * (i / max(1, n - 1)) for i in range(n)]
+    # x is time (not run index), so the whole history keeps its real proportions
+    ts = [datetime.datetime.strptime(p["date"][:16], "%Y-%m-%d %H:%M").timestamp() for p in pts]
+    t0, t1 = ts[0], max(ts[-1], ts[0] + 1)
+    xs = [ml + (W - ml - mr) * (t - t0) / (t1 - t0) for t in ts]
     lean = [100 * int(p["lean_proven"]) / den(p) for p in pts]
     cnt = [100 * (int(p["lean_proven"]) + int(p.get("lean_local") or p.get("lean_sorry") or 0)) / den(p) for p in pts]
     wr = [100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / den(p) for p in pts]
@@ -109,9 +113,15 @@ def trend_svg(pts):
         o.append(f'<text x="{ml - 6}" y="{yl(t) + 4:.1f}" text-anchor="end" fill="#666">{t}%</text>')
     for t in range(0, ktop + 1, step):
         o.append(f'<text x="{W - mr + 6}" y="{yr(t) + 4:.1f}" fill="#666">{t}k</text>')
-    for i, p in enumerate(pts):
-        if n <= 12 or i % max(1, n // 10) == 0 or i == n - 1:
-            o.append(f'<text x="{xs[i]:.1f}" y="{H - mb + 16}" text-anchor="end" fill="#666" transform="rotate(-35 {xs[i]:.1f} {H - mb + 16})">{p["date"][5:16]}</text>')
+    span_h = (t1 - t0) / 3600
+    every = next(h for h in (1, 2, 3, 6, 12, 24, 48, 168, 10**6) if span_h / h <= 12)
+    tick = datetime.datetime.fromtimestamp(t0).replace(minute=0, second=0, microsecond=0)
+    while tick.timestamp() <= t1:
+        if tick.timestamp() >= t0 and tick.hour % min(every, 24) == 0:
+            x = ml + (W - ml - mr) * (tick.timestamp() - t0) / (t1 - t0)
+            o.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{mt}" y2="{H - mb}" stroke="#f3f3f3"/>')
+            o.append(f'<text x="{x:.1f}" y="{H - mb + 16}" text-anchor="end" fill="#666" transform="rotate(-35 {x:.1f} {H - mb + 16})">{tick.strftime("%m-%d %H:%M")}</text>')
+        tick += datetime.timedelta(hours=1)
     def line(vals, y, color, dash=""):
         d = " ".join(f"{'M' if i == 0 else 'L'}{xs[i]:.1f},{y(v):.1f}" for i, v in enumerate(vals))
         o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
@@ -125,6 +135,79 @@ def trend_svg(pts):
         o.append(f'<line x1="{lx}" x2="{lx + 22}" y1="{H - 12}" y2="{H - 12}" stroke="{c}" stroke-width="2" {dash}/>'
                  f'<text x="{lx + 27}" y="{H - 8}" fill="#333">{name}</text>')
         lx += 170
+    o.append("</svg>")
+    return "\n".join(o) + "\n"
+
+
+def perf_data():
+    """The per-fixture instruction counts scripts/e2e.py writes (_tmp/e2e/latest/results.json), or None."""
+    try:
+        d = json.loads((root / "_tmp" / "e2e" / "latest" / "results.json").read_text())
+        d["rows"] = [r for r in d["rows"] if r["perf"].get("L") and r["perf"].get("con-ron")]
+        return d if d["rows"] else None
+    except Exception:
+        return None
+
+
+def perf_svg(rows):
+    """Left: L vs con-ron instructions per fixture (log-log, guides y=x and y=10x). Right: ratio vs input size."""
+    import math
+    W, H, mt, mb = 940, 440, 24, 64
+    pw = 380
+    panels = [(80, 80 + pw), (545, 545 + pw)]
+    xs = [r["perf"]["con-ron"] for r in rows]; ys = [r["perf"]["L"] for r in rows]
+    lo = 10 ** math.floor(math.log10(min(xs + ys))); hi = 10 ** math.ceil(math.log10(max(xs + ys)))
+    sz = [max(1, r["size"]) for r in rows]; rt = [r["perf"]["L"] / r["perf"]["con-ron"] for r in rows]
+    slo = 10 ** math.floor(math.log10(min(sz))); shi = 10 ** math.ceil(math.log10(max(sz)))
+    rlo = 10 ** math.floor(math.log10(min(rt + [1]))); rhi = 10 ** math.ceil(math.log10(max(rt + [10])))
+    def sc(v, a, b, p0, p1):
+        return p0 + (p1 - p0) * (math.log10(v) - math.log10(a)) / (math.log10(b) - math.log10(a))
+    def si(v):
+        e = round(math.log10(v))
+        return f"1e{e}" if e >= 4 else f"{v:g}"
+    o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="Helvetica, Arial, sans-serif" font-size="12">',
+         f'<rect width="{W}" height="{H}" fill="#ffffff"/>']
+    def frame(x0, x1, ax, ay, xlab, ylab, title):
+        y0, y1 = mt + 10, H - mb
+        o.append(f'<text x="{(x0 + x1) / 2}" y="{mt - 6}" text-anchor="middle" fill="#222" font-size="13" font-weight="bold">{title}</text>')
+        for (a, b, horiz) in ((ax[0], ax[1], False), (ay[0], ay[1], True)):
+            e = round(math.log10(a))
+            while 10 ** e <= b * 1.0001:
+                v = 10.0 ** e
+                if horiz:
+                    y = sc(v, ay[0], ay[1], y1, y0)
+                    o.append(f'<line x1="{x0}" x2="{x1}" y1="{y:.1f}" y2="{y:.1f}" stroke="#eeeeee"/>'
+                             f'<text x="{x0 - 6}" y="{y + 4:.1f}" text-anchor="end" fill="#666">{si(v)}</text>')
+                else:
+                    x = sc(v, ax[0], ax[1], x0, x1)
+                    o.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{y0}" y2="{y1}" stroke="#eeeeee"/>'
+                             f'<text x="{x:.1f}" y="{y1 + 16}" text-anchor="middle" fill="#666">{si(v)}</text>')
+                e += 1
+        o.append(f'<rect x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" fill="none" stroke="#999"/>')
+        o.append(f'<text x="{(x0 + x1) / 2}" y="{H - 28}" text-anchor="middle" fill="#333">{xlab}</text>')
+        o.append(f'<text transform="translate({x0 - 52} {(y0 + y1) / 2}) rotate(-90)" text-anchor="middle" fill="#333">{ylab}</text>')
+        return y0, y1
+    (a0, a1), (b0, b1) = panels
+    y0, y1 = frame(a0, a1, (lo, hi), (lo, hi), "con-ron instructions (user)", "L instructions (user)", "Instructions per fixture")
+    for k, c, name in ((1, "#999999", "y = x"), (10, "#c0504d", "y = 10x")):
+        pts = [(v, v * k) for v in (lo, hi)]
+        # clip the guide to the plot box
+        t0, t1 = max(lo, lo / k), min(hi, hi / k)
+        if t0 < t1:
+            o.append(f'<line x1="{sc(t0, lo, hi, a0, a1):.1f}" y1="{sc(t0 * k, lo, hi, y1, y0):.1f}" x2="{sc(t1, lo, hi, a0, a1):.1f}" '
+                     f'y2="{sc(t1 * k, lo, hi, y1, y0):.1f}" stroke="{c}" stroke-dasharray="5 4"/>'
+                     f'<text x="{sc(t1, lo, hi, a0, a1) - 4:.1f}" y="{sc(t1 * k, lo, hi, y1, y0) + 14:.1f}" text-anchor="end" fill="{c}">{name}</text>')
+    for x, y in zip(xs, ys):
+        o.append(f'<circle cx="{sc(x, lo, hi, a0, a1):.1f}" cy="{sc(y, lo, hi, y1, y0):.1f}" r="2.6" fill="#2e6fb5" fill-opacity="0.55"/>')
+    y0, y1 = frame(b0, b1, (slo, shi), (rlo, rhi), "input size (bytes)", "L / con-ron instructions", "Ratio by input size")
+    gm = math.exp(sum(math.log(v) for v in rt) / len(rt))
+    for k, c, dsh in ((1, "#999999", "5 4"), (gm, "#2e7d5b", "2 3")):
+        if rlo <= k <= rhi:
+            y = sc(k, rlo, rhi, y1, y0)
+            o.append(f'<line x1="{b0}" x2="{b1}" y1="{y:.1f}" y2="{y:.1f}" stroke="{c}" stroke-dasharray="{dsh}"/>'
+                     f'<text x="{b1 - 4}" y="{y - 4:.1f}" text-anchor="end" fill="{c}">{"parity" if k == 1 else f"geometric mean {gm:.2f}"}</text>')
+    for x, y in zip(sz, rt):
+        o.append(f'<circle cx="{sc(x, slo, shi, b0, b1):.1f}" cy="{sc(y, rlo, rhi, y1, y0):.1f}" r="2.6" fill="#8a5cb8" fill-opacity="0.55"/>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
 
@@ -145,7 +228,10 @@ landings = json.loads((dash / "landings.json").read_text())
 velocity = list(csv.DictReader(open(dash / "velocity.csv")))
 # the images first: the report links them by a hash of their content
 (dash / "phases.svg").write_text(phases_svg())
-(dash / "trend.svg").write_text(trend_svg(progress[-40:]))
+(dash / "trend.svg").write_text(trend_svg(progress))
+perf = perf_data()
+if perf:
+    (dash / "perf.svg").write_text(perf_svg(perf["rows"]))
 
 S = lambda k: sum(p[k] for p in phases)
 targets, proven, sorry, written = S("targets"), S("proven"), S("sorry"), S("written")
@@ -278,6 +364,23 @@ w("## By phase\n")
 w("Lean lines of con-ron's arena twin per phase.\n")
 w(f"![Lean lines per phase: proven, proven with sorry, L written, not started]({raw_url('phases.svg')})\n")
 
+# performance
+if perf:
+    import math
+    rows = sorted(perf["rows"], key=lambda r: r["perf"]["L"] / r["perf"]["con-ron"])
+    ratios = [r["perf"]["L"] / r["perf"]["con-ron"] for r in rows]
+    gm = math.exp(sum(math.log(v) for v in ratios) / len(ratios))
+    med = (ratios[len(ratios) // 2] + ratios[(len(ratios) - 1) // 2]) / 2
+    tl = sum(r["perf"]["L"] for r in rows); tc = sum(r["perf"]["con-ron"] for r in rows)
+    w("## Performance\n")
+    w(f"CPU instructions (`perf stat -e instructions:u`, one run each) of the compiled L `check` against `con-ron --jobs=1` on the "
+      f"**{len(rows)}** end-to-end fixtures both accept (of {perf['fixtures']}). Measured {perf['date']} on master `{perf['rev']}` by `scripts/e2e.py`.\n")
+    w("| Fixtures | Geometric mean L / con-ron | Median | Fastest relative | Slowest relative | Total L | Total con-ron | Total ratio |")
+    w("|---:|---:|---:|---|---|---:|---:|---:|")
+    w(f"| {len(rows)} | **{gm:.2f}** | {med:.2f} | {ratios[0]:.2f} (`{rows[0]['id']}`) | {ratios[-1]:.2f} (`{rows[-1]['id']}`) | "
+      f"{tl / 1e9:.2f} G | {tc / 1e9:.2f} G | {tl / tc:.2f} |\n")
+    w(f"![L against con-ron instructions per fixture, and ratio by input size]({raw_url('perf.svg')})\n")
+
 # lanes
 w(f"## Lanes ({len(running)} running, {len(done)} finished)\n")
 w("| Lane | Model | Helpers | Last commit | Focus |")
@@ -353,7 +456,7 @@ if "--publish" in sys.argv:
     if gf.exists():
         gid = gf.read_text().strip()
         subprocess.run(["gh", "gist", "edit", gid, "-f", out.name, str(out)], check=True)
-        for extra in ("phases.svg", "trend.svg", "progress.csv", "lanes.json"):  # the chart, and the census history (durable copy)
+        for extra in ("phases.svg", "trend.svg", "perf.svg", "progress.csv", "lanes.json"):  # the chart, and the census history (durable copy)
             r = subprocess.run(["gh", "gist", "edit", gid, "-f", extra, str(dash / extra)])
             if r.returncode != 0:  # first time: add the file
                 subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / extra)], check=True)
