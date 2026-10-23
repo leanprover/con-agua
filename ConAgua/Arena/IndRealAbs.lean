@@ -36,8 +36,6 @@ open L.Arena
 
 /-! ## The memo predicate -/
 
-theorem absOK_iff (m : Mem) : AbsOK m ↔ ∃ mp, MemoRG abSch lfKey decE m mp := Iff.rfl
-
 /-- **`AbsOK` across a writer apart from array 49 and `CTL[48]`.** -/
 theorem AbsOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbsOK m)
     (hf : MemFrame A C m m') (hA : ABMEMO ∉ A) (hC : (48 : Word) ∉ C) : AbsOK m' :=

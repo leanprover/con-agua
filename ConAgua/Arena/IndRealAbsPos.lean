@@ -23,8 +23,6 @@ theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m
   AFr.of_frame (gafF_frame h)
 theorem fvbF_afr {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (fvbF_frame h)
-theorem bvbF_afr {m m' : Mem} {args r : List Word} (h : bvbF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (bvbF_frame h)
 
 theorem envFindW_afr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     AFr m m' := by rw [envFindW_mem h]; exact AFr.refl _
@@ -931,11 +929,6 @@ theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
   split at h
   · simp at h
   exact AFr.trans (AFr.of_frame (mclearG_frame hbSch m)) (hbGoW_afr _ _ _ _ _ _ h)
-
--- from IndPos2SpecL
-theorem ustW_afr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : AFr m m' := by
-  unfold ustW ustK1 at h
-  afr_auto h [stripF_afr, hbFastW_afr]
 
 -- from IndPosMemo
 theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}

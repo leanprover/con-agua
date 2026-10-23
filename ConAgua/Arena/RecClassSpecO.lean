@@ -119,7 +119,15 @@ theorem pvW_afr : ∀ (n : Nat) (m m' : Mem) (g rP i : Word) (r : List Word), pv
   | 0, _, _, _, _, _, _, h => by simp [pvW] at h
   | n + 1, m, m', g, rP, i, r, h => by
     simp only [pvW, pvK1.eq_def, pvK2.eq_def, fcK.eq_def] at h
-    afr_auto h [exprGetDF_afr, slotVarW_afr, pvW_afr n _ _ _ _ _ _, consW_afr]
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    split at h; · simp at h
+    rename_i m1 hx
+    refine AFr.trans (m₂ := m1) ?_ ?_
+    · split at hx
+      · exact exprGetDF_afr hx
+      · exact slotVarW_afr hx
+    afr_auto h [pvW_afr n _ _ _ _ _ _, consW_afr]
 
 theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (g rP : Word)
     (hns : G.nP + G.slots.length < 2 ^ 64) (f : Nat → AM EIdx)

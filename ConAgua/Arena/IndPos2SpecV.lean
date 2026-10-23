@@ -38,14 +38,17 @@ def pos2FuelF (acc : Nat) (d : EIdx) : AM Nat := do
   let w ← ConRon.Arena.whnfWalkFuel d
   pure (max acc w)
 
+theorem wfWf_afr {n : Nat} {m m' : Mem} {e : Word} {r : List Word} (h : wfWf n m e = some (r, m')) :
+    AFr m m' := by
+  obtain ⟨n', w, -, hw, -⟩ := pos2_wfWf_some h
+  exact wfW_afr hw
+
 theorem p2sfW_afr : ∀ (n : Nat) (m m' : Mem) (dO dL k f : Word) (r : List Word),
     p2sfW n m dO dL k f = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, h => by simp [p2sfW] at h
   | n + 1, m, m', dO, dL, k, f, r, h => by
     simp only [p2sfW, p2sfK.eq_def] at h
-    afr_auto h [(fun h => by
-        obtain ⟨n', w, -, hw, -⟩ := pos2_wfWf_some h
-        exact wfW_afr hw), p2sfW_afr n _ _ _ _ _ _ _]
+    afr_auto h [wfWf_afr, p2sfW_afr n _ _ _ _ _ _ _]
 
 theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (dO dL : Word) (ds : List EIdx) (m0 : Mem) (hlen : ds.length = dL.toNat)

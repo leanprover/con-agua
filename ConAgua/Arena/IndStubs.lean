@@ -156,11 +156,6 @@ theorem instantiate1LiftFast_spec (f e v d : Word) (he : H e) (hv : H v) :
     RelAM "instantiate1_lift_fast" [f, e, v, d] (StageR dn vis fe)
       (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat) (KeepPost dn vis fe decW0E) := sorry
 
-/-- `abstract1_fast(fuel, e, d, k)`. -/
-theorem abstract1Fast_spec (f e d k : Word) (he : H e) :
-    RelAM "abstract1_fast" [f, e, d, k] (StageR dn vis fe)
-      (abstract1Fast f.toNat (decI e) d.toNat k.toNat) (KeepPost dn vis fe decW0E) := sorry
-
 
 /-- `all_level_params_defined(lps.off, lps.len, e)`. -/
 theorem allLevelParamsDefined_spec (o l e : Word) (he : H e) (lps : List NIdx) :

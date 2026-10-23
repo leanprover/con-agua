@@ -9,6 +9,8 @@ The core's walk memos (`CoreMemos`, `WhnfBase.lean`) contain the `abstract1` mem
 the later `StageT` migration of the `abstract1_fast` users needs (`abF_ok` takes `AbsOK`).
 -/
 
+open ConRon.Arena
+
 namespace L.Ind
 
 open L.Arena
