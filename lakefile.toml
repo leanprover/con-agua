@@ -134,6 +134,22 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndT.PosCensus",
   "ConAgua.Arena.IndT.PosRoot"]
 
+# The committed assembler file of the checker (lane asmfile): `ConAguaAsm.Checker` reads it at
+# elaboration time (`include_asm`), so its library `needs` it: the file's content hash is part of
+# the input hash of every module of `ConAguaAsm` (rebuilds, and the shared artifact cache's key).
+# Only the modules that read the file belong to this library (a `needs` invalidates the whole
+# library when the file changes).
+[[input_file]]
+name = "checker_s"
+path = "asm/checker.s"
+text = true
+
+[[lean_lib]]
+name = "ConAguaAsm"
+roots = []
+globs = ["ConAguaAsm.+"]
+needs = ["checker_s"]
+
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
 [[lean_lib]]
