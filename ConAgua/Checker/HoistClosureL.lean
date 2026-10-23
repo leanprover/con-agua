@@ -701,4 +701,108 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     rw [hmono' k h1, Std.HashMap.getElem?_insert, if_neg]
     intro e'; simp at e'; subst e'; rw [hTj] at hk; cases hk
 
+/-! ## The grounds of one operation -/
+
+/-- The grounds `gs` are the name words `IW[o + q ‥]`. -/
+def GrR (m : Mem) (o q : Word) (gs : List NIdx) : Prop :=
+  ∀ p (h : p < gs.length), (rdW (m.arr64 IW) (o + UInt64.ofNat (q.toNat + p))).toNat < 2 ^ 32 ∧
+    (decI (rdW (m.arr64 IW) (o + UInt64.ofNat (q.toNat + p))) : NIdx) = gs[p]
+
+/-- **`hoist_deps` is the twin's `hoistDeps`** over the grounds `gs` (a slice above the stack). -/
+theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
+    {ord tg ws : Word} {c : Nat} {i : Nat} (hi : i < c) (o l : Word) :
+    ∀ (gs : List NIdx) (n : Nat) (m m' : Mem) (T : Std.HashMap Nat Nat) (q r : Word),
+    HEnv m a ds idx ord tg ws c → TgtR m tg c T → TgtV T c → (∀ (k t : Nat), T[k]? = some t → t ≤ i) →
+    GrR m o q gs → q.toNat + gs.length = l.toNat → ws.toNat + c ≤ o.toNat →
+    o.toNat + l.toNat < 2 ^ 64 →
+    hDepsW n m (UInt64.ofNat i) o l q ord tg ws = some (r, m') →
+    ∃ T'', (hoistTargetsGo.hoistDeps ds idx T i gs).run a = .ok (T'', a) ∧
+      HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧
+      (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ HFr tg ws c m m' := by
+  intro gs
+  induction gs with
+  | nil =>
+    intro n m m' T q r hE hT hTv hTi _ hl _ _ h
+    cases n with
+    | zero => rw [hDepsW.eq_1] at h; cases h
+    | succ n =>
+    rw [hDepsW.arm1 _ _ _ _ _ _ _ _ _ (by rw [UInt64.le_iff_toNat_le]; simp at hl; omega)] at h
+    cases h
+    exact ⟨T, rfl, hE, hT, hTv, hTi, HFr.refl _ _ _ _⟩
+  | cons g gs ih =>
+    intro n m m' T q r hE hT hTv hTi hG hl ho hol h
+    have hc := hE.c60
+    cases n with
+    | zero => rw [hDepsW.eq_1] at h; cases h
+    | succ n =>
+    have hq : q.toNat < l.toNat := by simp at hl; omega
+    rw [hDepsW.arm2 _ _ _ _ _ _ _ _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at h
+    obtain ⟨hw, hg⟩ := hG 0 (by simp)
+    simp only [Nat.add_zero, UInt64.ofNat_toNat, List.getElem_cons_zero] at hw hg
+    -- the next grounds, from `q + 1`
+    have hq1 : (q + 1).toNat = q.toNat + 1 := by
+      rw [UInt64.toNat_add, UInt64.toNat_one]; have := l.toNat_lt; omega
+    have hG1 : ∀ m₁ : Mem, HFr tg ws c m m₁ → GrR m₁ o (q + 1) gs := by
+      intro m₁ hf p hp
+      have hp' := hG (p + 1) (by simp; omega)
+      have hadr : (o + UInt64.ofNat (q.toNat + (p + 1))).toNat = o.toNat + (q.toNat + (p + 1)) :=
+        addW_toNat _ _ (by simp at hl; omega)
+      have hrd : rdW (m₁.arr64 IW) (o + UInt64.ofNat ((q + 1).toNat + p)) =
+          rdW (m.arr64 IW) (o + UInt64.ofNat (q.toNat + (p + 1))) := by
+        rw [hq1, show q.toNat + 1 + p = q.toNat + (p + 1) by omega]
+        simp only [rdW, hadr]
+        rw [hf.2 _ (Or.inr (by omega))]
+      rw [hrd]
+      simpa using hp'
+    have hl1 : (q + 1).toNat + gs.length = l.toNat := by rw [hq1]; simp at hl; omega
+    cases hx : hIxW m (rdW (m.arr64 IW) (o + q)) with
+    | none => rw [hx] at h; simp [hDepsW.k3.eq_1] at h
+    | some rr =>
+    obtain ⟨rw', m₁⟩ := rr
+    rw [hx] at h
+    obtain ⟨hm1, hr⟩ := hoistIx_ok m m₁ _ rw' idx hE.nix hw hx
+    subst m₁
+    rw [hg] at hr
+    -- the twin's step
+    simp only [hoistTargetsGo.hoistDeps]
+    cases hgi : idx[g]? with
+    | none =>
+      rw [hgi] at hr; simp only [tgW] at hr; subst hr
+      rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (by simp), hDepsW.k1.arm1] at h
+      exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 ho hol h
+    | some jj =>
+      rw [hgi] at hr; simp only [tgW] at hr; subst hr
+      have hjc : jj < c := hE.nixlt g jj hgi
+      have hci : (UInt64.ofNat i + 1 < UInt64.ofNat (jj + 1)) ↔ i < jj := by
+        rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
+        simp only [UInt64.toNat_one]
+        rw [Nat.mod_eq_of_lt (by omega : i < 2 ^ 64), Nat.mod_eq_of_lt (by omega : i + 1 < 2 ^ 64),
+          Nat.mod_eq_of_lt (by omega : jj + 1 < 2 ^ 64)]
+        omega
+      by_cases hij : i < jj
+      · dsimp only
+        rw [if_pos (by omega : jj > i)]
+        have hne : UInt64.ofNat (jj + 1) ≠ 0 := by
+          intro e; have := congrArg UInt64.toNat e
+          rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at this; simp at this
+        rw [hDepsW.k3.arm1 _ _ _ _ _ _ _ _ _ _ ⟨hne, hci.mpr hij⟩] at h
+        have hj1 : UInt64.ofNat (jj + 1) - 1 = UInt64.ofNat jj := by rw [UInt64.ofNat_add]; simp
+        rw [hj1] at h
+        cases hcl : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat jj) ord tg ws with
+        | none => rw [hcl] at h; simp [hDepsW.k2.eq_1] at h
+        | some rr =>
+        obtain ⟨z, m₁⟩ := rr
+        rw [hcl, hDepsW.k2.arm1, hDepsW.k1.arm1] at h
+        obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -⟩ :=
+          closure_ok hi hjc n m m₁ T z hE hT hTv hTi hcl
+        obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr'⟩ :=
+          ih n m₁ m' T₁ (q + 1) r hE₁ hT₁ hTv₁ hTi₁ (hG1 m₁ hfr₁) hl1 ho hol h
+        refine ⟨T'', ?_, hE', hT', hTv', hTi', hfr₁.trans hfr'⟩
+        rw [HoistTwin.run_bind, hrun]
+        exact hrun'
+      · dsimp only
+        rw [if_neg (by omega)]
+        rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (fun ⟨_, h2⟩ => hij (hci.mp h2)), hDepsW.k1.arm1] at h
+        exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 ho hol h
+
 end L.Checker
