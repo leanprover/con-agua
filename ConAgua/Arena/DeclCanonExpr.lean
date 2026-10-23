@@ -156,11 +156,13 @@ theorem canonExprEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel a b
     intro s₀ po pl qo ql co cl fuel a b
     rw [invoke_eq _ hp.canon_expr_eq]
     simp only [callFn, canonExprEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        eView_spec p hp.e_view n, canonLevelEq_spec p hp n, canonLevelsEq_spec p hp n, ih] <;>
-      finish (gen := 20) [init9_0, init9_1, init9_2, init9_3, init9_4, init9_5, init9_6, init9_7,
-        init9_8]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      eView_spec p hp.e_view n, canonLevelEq_spec p hp n, canonLevelsEq_spec p hp n, ih]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, init9_0, init9_1, init9_2,
+      init9_3, init9_4, init9_5, init9_6, init9_7, init9_8, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 end specs4
 
