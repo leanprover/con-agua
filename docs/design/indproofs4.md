@@ -97,3 +97,33 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
 * Census: phase 8 95 proven / 110 sorry (from 90 / 115): `targetMajorAt`, `targetMajorDefault`,
   `BlockShape.nestCtx`, `paramLevels`, `blockRecNameSetOk` proven; phase 2 `NIdx.isProjFnShape` proven
   (`isProjFnShape_refines`).
+
+## Helper `indproofs4-fvt`: `fvar_type_d`, `fvar_type_ds`, `get_app_args_f`
+
+Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs_spec`.
+
+* `Arena/IndRealFvtD.lean`: `ftdF` (`fvar_type_d`: the tag test, `e_view`'s third word against
+  `viewFVarTy`; writes nothing, twin state unchanged). Its own file with imports below
+  `IndInstallSpec` (which calls `fvar_type_d` in `check_block_doms_at`): `IndRealFvt.lean` needs
+  `DeclNatBase`, which sits above `IndInstallSpec`. `eViewW_head1` moved here from `RecClassSpecA`.
+* `Arena/IndRealFvt.lean`: `ftdsF` (`fvar_type_ds`; its loop named `ftdsLoop`, `fvarTypeDsL_eq`
+  by `rfl`; the memory after is `wrIW (allocMem m l) q ws`, `recPost_wr` + `slice_keep`) and
+  `gaaF` (`get_app_args_f`: `getAppArgs_refinesR`, `get_app_args` without the whnf lane's bound
+  `|SPN| < 2^63` (the room checks give `top + n ≤ len64 SPN < 2^64`; `fillW_okR` likewise); the
+  stack slice into a fresh pool slice by `spn_to_iw` (`s2iW_wr`); the top put back). The whnf
+  lane's lemmas are untouched (changing them would rebuild most of the tree). `stageR_hi`,
+  `decHL_word` moved here from `IndRealSpine.lean`.
+* **`fvarTypeDs`' pre strengthened** by `0 < l → o + l ≤ iwTop m`: a slice straddling the pool's
+  top overlaps the fresh output slice and the loop would read a word it wrote; the contract as
+  stated was false there. All callers had the bound (from `decRL`, or `DecB` in `RecClassSpecM`).
+* Bundles: `GaaF`/`FtdF`/`FtdsF` are fields of `AdF` (`gaaF_spec`, `ftdF_spec`, `ftdsF_spec` in
+  `IndRealSpine.lean`); files below `IndRealSpine` take `FtdF p` (`IndInstallSpec`, `IndSumSpec2A`,
+  `IndSumSpec11`, `CfoProg.ftd`); `AgreeProg.ad`, and `had : AdF p` on `classBinder`,
+  `classGenBinder`, `classGenIhParts`, `checkBlockAgreeOne`. `Checker/IndRealFvt.lean` proves the
+  three for `checkerProg`. Frames: `MFr.ofFtdF`/`ofFtdsF`/`ofGaaF` (`IndPosMemo`), `rec2NoMR_ftd`.
+* **Not done: `open_pis_at_fvars_f`.** `opf_go` calls `inst_list` (`instantiateListFast`), whose
+  refinement needs `ArenaL = ArenaD ∧ ILR`: the memo relation of array 50 / `CTL[50]` (`coreIlSch`),
+  in particular every slot stamp `≤` the epoch, so that `ilm_clear`'s epoch bump empties it.
+  `StageR` does not constrain array 50; with a stale slot stamped at the new epoch `inst_list`
+  returns a wrong hit. `StageT` carries it (`CoreMemos.1`). Needs the pending decision (memory-only
+  hypothesis `∃ mp, MemoRG ilSch lfKey decE m mp` in the contract's pre and post, or `StageT`).
