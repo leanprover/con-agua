@@ -6,16 +6,16 @@ ca_start:
 movq $7421703487488, %rax
 cmpq %rax, %r9
 jb ca_abi_decline
-movq %rdi, 16(%r8)
-movq %rsi, 24(%r8)
-movq %rdx, 32(%r8)
-movq %rcx, 40(%r8)
 movq $35433480192, %rax
 addq %r8, %rax
 movq %rax, (%r8)
 movq $34359738368, %rax
 addq %r8, %rax
 movq %rax, 8(%r8)
+movq %rdi, 16(%r8)
+movq %rsi, 24(%r8)
+movq %rdx, 32(%r8)
+movq %rcx, 40(%r8)
 movq $68719476736, %rax
 addq %r8, %rax
 movq %rax, 48(%r8)
