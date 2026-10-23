@@ -33,6 +33,26 @@ theorem tgtR_frameA {m m' : Mem} {tg : Word} {c : Nat} {T : Std.HashMap Nat Nat}
   simp only [rdW, hn]
   rw [hf.2.1.2.2.1 _ (by omega)]
 
+/-- **What the targets pass keeps**: everything but `IW`, `HSEEN`, `CTL[73‥74, 200]`; the `IW`
+words below the targets; the pool only grows. -/
+def LowFr (tg : Word) (m m' : Mem) : Prop :=
+  MemFrame [IW, HSEEN] [73, 74, 200] m m' ∧
+    (∀ x : Nat, x < tg.toNat → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?) ∧ iwTop m ≤ iwTop m'
+
+theorem LowFr.refl (tg : Word) (m : Mem) : LowFr tg m m :=
+  ⟨MemFrame.refl _ _ _, fun _ _ => rfl, Nat.le_refl _⟩
+
+theorem LowFr.trans {tg : Word} {m₁ m₂ m₃ : Mem} (h₁ : LowFr tg m₁ m₂) (h₂ : LowFr tg m₂ m₃) :
+    LowFr tg m₁ m₃ :=
+  ⟨h₁.1.trans h₂.1, fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx), Nat.le_trans h₁.2.2 h₂.2.2⟩
+
+theorem LowFr.ofHFr {tg ws : Word} {c : Nat} {m m' : Mem} (h : HFr tg ws c m m') : LowFr tg m m' :=
+  ⟨h.1.mono (by simp) (by simp), fun x hx => h.2 x (Or.inl hx),
+    by simp only [iwTop]; rw [h.1.2.1 200 (by decide)]; exact Nat.le_refl _⟩
+
+theorem LowFr.ofAFr {tg : Word} {m m' : Mem} (h : AFr m m') (ht : tg.toNat ≤ iwTop m) : LowFr tg m m' :=
+  ⟨h.1.mono (by simp) (by simp), fun x hx => h.2.1.2.2.1 x (by omega), h.2.1.1⟩
+
 /-- The kind of a record decides whether it is a definition. -/
 theorem defn_of_kind {D P : Array Word} {r : Nat} {d : IDeclaration} (hD : DeclAtF D P r d) :
     (dw D r 0 = 2 → ∃ cv v h, d = .defnDecl cv v h ∧ decI (dw D r 1) = cv.name) ∧
@@ -62,7 +82,8 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     (∀ (k t : Nat), T[k]? = some t → t < iw.toNat) → TLt T → iw.toNat ≤ c → PinsR m a.pins →
     hTargetsGoW p n m ord cw tg ws iw = some (r, m') →
     ∃ T'', (hoistTargetsGo ds idx T iw.toNat).run a = .ok (T'', a) ∧
-      HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ TLt T'' ∧ PinsR m' a.pins := by
+      HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ TLt T'' ∧ PinsR m' a.pins ∧
+      LowFr tg m m' := by
   intro n
   induction n with
   | zero => intro m m' T iw r _ _ _ _ _ _ _ h; rw [hTargetsGoW.eq_1] at h; cases h
@@ -76,7 +97,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     cases h
     have : ¬ iw.toNat < ds.size := by rw [hE.size]; rw [UInt64.le_iff_toNat_le] at hend; omega
     rw [dif_neg this]
-    exact ⟨T, rfl, hE, hT, hTv, hlt, hP⟩
+    exact ⟨T, rfl, hE, hT, hTv, hlt, hP, LowFr.refl _ _⟩
   have hi : iw.toNat < c := by rw [UInt64.le_iff_toNat_le] at hend; omega
   have hids : iw.toNat < ds.size := hE.size ▸ hi
   rw [dif_pos hids]
@@ -95,7 +116,8 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
       TgtR m₁ tg c T₁ → TgtV T₁ c → (∀ (k t : Nat), T₁[k]? = some t → t < iw.toNat + 1) → TLt T₁ →
       PinsR m₁ a.pins → hTargetsGoW p n m₁ ord cw tg ws (iw + 1) = some (r, m') →
       ∃ T'', (hoistTargetsGo ds idx T₁ (iw.toNat + 1)).run a = .ok (T'', a) ∧
-        HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ TLt T'' ∧ PinsR m' a.pins := by
+        HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ TLt T'' ∧ PinsR m' a.pins ∧
+        LowFr tg m₁ m' := by
     intro m₁ T₁ hE₁ hT₁ hTv₁ hTi₁ hlt₁ hP₁ h₁
     have := ih m₁ m' T₁ (iw + 1) r hE₁ hT₁ hTv₁ (by rw [hiw1]; exact hTi₁) hlt₁ (by omega) hP₁ h₁
     rwa [hiw1] at this
@@ -165,11 +187,15 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
       simp only
       have hP₃ : PinsR m₃ a.pins :=
         (hP₁.congr (hf₂.1.1 PINS (by decide) (by decide))).congr (hfr₃.1.1 PINS (by decide) (by decide))
-      exact hnext m₃ T₃ hE₃ hT₃ hTv₃ (fun k t h => Nat.lt_succ_of_le (hTi₃ k t h)) hlt₃ hP₃ h
+      obtain ⟨T'', h1, h2, h3, h4, h5, h6, h7⟩ :=
+        hnext m₃ T₃ hE₃ hT₃ hTv₃ (fun k t h => Nat.lt_succ_of_le (hTi₃ k t h)) hlt₃ hP₃ h
+      exact ⟨T'', h1, h2, h3, h4, h5, h6, ((LowFr.ofAFr hf₁ (by omega)).trans
+        ((LowFr.ofAFr hf₂ (by have := hE₁.top; omega)).trans (LowFr.ofHFr hfr₃))).trans h7⟩
     · rw [if_neg (fun hh => hop0 (hop.mpr hh))]
       simp only
       rw [hTargetsGoW.k4.arm2 _ _ _ _ _ _ _ _ _ _ hop0, hTargetsGoW.k1.arm1] at h
-      exact hnext m₁ T hE₁ hT₁ hTv hTi1 hlt hP₁ h
+      obtain ⟨T'', h1, h2, h3, h4, h5, h6, h7⟩ := hnext m₁ T hE₁ hT₁ hTv hTi1 hlt hP₁ h
+      exact ⟨T'', h1, h2, h3, h4, h5, h6, (LowFr.ofAFr hf₁ (by omega)).trans h7⟩
   · rw [hTargetsGoW.arm3 _ _ _ _ _ _ _ _ hend (by rw [hrw]; exact hk2), hTargetsGoW.k1.arm1] at h
     rw [hnot (by rw [← hkind]; exact hk2)]
     simp only [HoistTwin.run_bind]
