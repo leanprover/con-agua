@@ -218,3 +218,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,loopt3,opus-5.5,35,20,landing 3: core_of_R7, prefix facts wired; end-to-end theorem now assumes only the loop's program hypotheses (LoopCallees incl. IndArmSpec, LoopTopProg) at checkerProg.subPB; dead StageR arm specs removed
 2026-10-23,pipeline,opus,15,15,"landing 7: builtinPreludeE census tag; lane close, open list"
 2026-10-23,loopt3,opus-5.5,30,35,landing 4: LoopCallees/LoopTopProg at checkerProg.subPB (helper loopt3-prog, StepIn indFns kernel-checked, CoreWalkProg.i1 fix); end-to-end theorem assumes only IndArmSpec
+2026-10-23,compopt,opus-5.5,100,20,"tooling: bench.py (interleaved benchmark, init set), asmprof.py (exact instruction profile), compopt-asm, harness CA_SIZES/CA_SMALL, scripts/compopt (sizing experiments, L-source prototypes); journal: Init fixture, compiler prototypes A-E3, memory study"
