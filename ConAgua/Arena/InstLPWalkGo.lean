@@ -1,4 +1,5 @@
 import ConAgua.Arena.InstLPWalk
+import ConAgua.L.PureEval
 
 /-!
 # The `instLP` walk: the spec of `lp_go`
@@ -15,6 +16,12 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
+private theorem getElem_toNat_rdW {a : Array Word} {x : Word} (h : x.toNat < a.size) :
+    a[x.toNat] = rdW a x := (rdW_eq a x _ rfl h).symm
+
+private theorem rd64_rdW (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
+  simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
+
 section specs
 variable (p : Prog) (hp : ILWProg p)
 include hp
@@ -25,15 +32,19 @@ theorem lpGo_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ ilwGoW p n s₀.mem h ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.go]
   simp only [callFn, lpGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "der_b", callW_spec p n "sl_memo", callW_spec p n "sls_memo",
-      callW_spec p n "intern_sort", callW_spec p n "intern_const", callW_spec p n "lp_fvar",
-      callW_spec p n "lp_app", callW_spec p n "lp_lam", callW_spec p n "lp_forall",
-      callW_spec p n "lp_let", callW_spec p n "lp_proj"] <;>
-    finish (gen := 20) [ilwGoW, ilwDispW_sc, ilwDispW_bvar, ilwDispW_lit, ilwDispW_sort, ilwDispW_const,
-      ilwDispW_fvar, ilwDispW_app, ilwDispW_lam, ilwDispW_forall, ilwDispW_let, ilwDispW_proj,
-      ilwDispW_other, tierW, idxW]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
+    callW_spec p n "der_b", callW_spec p n "sl_memo", callW_spec p n "sls_memo",
+    callW_spec p n "intern_sort", callW_spec p n "intern_const", callW_spec p n "lp_fvar",
+    callW_spec p n "lp_app", callW_spec p n "lp_lam", callW_spec p n "lp_forall",
+    callW_spec p n "lp_let", callW_spec p n "lp_proj"]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
+    Bool.and_eq_true, getElem_toNat_rdW, rd64_rdW] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ilwGoW, ilwDispW_sc, ilwDispW_bvar, ilwDispW_lit,
+    ilwDispW_sort, ilwDispW_const, ilwDispW_fvar, ilwDispW_app, ilwDispW_lam, ilwDispW_forall, ilwDispW_let,
+    ilwDispW_proj, ilwDispW_other, tierW, idxW]
 end specs
 
 end L.Arena

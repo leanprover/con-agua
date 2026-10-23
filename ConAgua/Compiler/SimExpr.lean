@@ -159,6 +159,186 @@ macro "lomega" : tactic => `(tactic| (try simp only [L.Var, L.ArrId] at *) <;> o
 attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s.set64_rsi
   Reg64s.set64_rsp Reg64s.set64_r14
 
+/-! ## Simple operands -/
+
+section
+variable [Host] {G : Layout}
+
+/-- A simple operand reads the value of its expression. -/
+theorem simpleOp_reads {ctx : Ctx} (hT : ctx.tab = G.tab)
+    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx.nl F σ s)
+    {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {o : Operand .W64} (h : simpleOp ctx b = some o) :
+    ∃ v, evalP σ b = .ok v ∧ OpReads s o v := by
+  simp only [maxOff] at hF hTab
+  cases b with
+  | const w =>
+    simp only [simpleOp] at h
+    split at h
+    · cases h; exact ⟨w, rfl, .inl rfl⟩
+    · cases h
+  | var x =>
+    simp only [simpleOp, Option.some.injEq] at h; subst h
+    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    have := hI.nlF
+    refine ⟨σ.loc x, rfl, .inr ⟨_, _, rfl, ⟨by lomega, by lomega⟩, ?_⟩⟩
+    rw [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]; exact hI.frame x hwf
+  | len8 a =>
+    simp only [simpleOp, Option.some.injEq] at h; subst h
+    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    refine ⟨UInt64.ofNat (G.s8 a), by simp [evalP, Mem.len8, hI.mem.size8 a hwf],
+      .inr ⟨_, _, rfl, ⟨by simp [Tab.len8]; lomega, by simp [hT, Tab.len8]; lomega⟩, ?_⟩⟩
+    rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.len8 a hwf
+  | len64 a =>
+    simp only [simpleOp, Option.some.injEq] at h; subst h
+    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    refine ⟨UInt64.ofNat (G.s64 a), by simp [evalP, Mem.len64, hI.mem.size64 a hwf],
+      .inr ⟨_, _, rfl, ⟨by simp [Tab.len64]; lomega, by simp [hT, Tab.len64]; lomega⟩, ?_⟩⟩
+    rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.len64 a hwf
+  | glob g =>
+    simp only [simpleOp, Option.some.injEq] at h; subst h
+    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    refine ⟨σ.mem.glob g, rfl, .inr ⟨_, _, rfl, ⟨by simp [Tab.globOff, Tab.globBase]; lomega,
+        by simp [hT, Tab.globOff, Tab.globBase]; lomega⟩, ?_⟩⟩
+    rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, Layout.globAddr_toNat]
+    exact hI.mem.glob g hwf
+  | _ => simp [simpleOp] at h
+
+/-- `r := b` in one instruction, for a simple `b`. -/
+theorem sim_loadInto {ctx : Ctx} (hT : ctx.tab = G.tab)
+    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx.nl F σ s)
+    {r : Reg64} {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {code : Program} {k : Nat}
+    (h : loadInto ctx r b = some code) (hc : Code code k) :
+    ∃ v, evalP σ b = .ok v ∧ code.length = 1 ∧ ∀ Q,
+      Ev Q { s with regs := s.regs.set64 r v.toBitVec } (at_ (k + 1)) → Ev Q s (at_ k) := by
+  unfold loadInto at h
+  split at h
+  · cases h; exact ⟨_, rfl, rfl, fun Q hq => ev_movRI hc.head hq⟩
+  · obtain ⟨o, ho, rfl⟩ := Option.map_eq_some_iff.mp h
+    obtain ⟨v, hv, hr⟩ := simpleOp_reads hT hTab hF hI hwf ho
+    exact ⟨v, hv, rfl, fun Q hq => ev_movRO hc.head hr hq⟩
+
+omit [Host] in
+theorem shl_mod64 (x k : UInt64) : x <<< UInt64.ofNat (k.toNat % 64) = x <<< k := by
+  apply UInt64.toBitVec_inj.mp
+  simp [UInt64.toBitVec_shiftLeft]
+
+omit [Host] in
+theorem shr_mod64 (x k : UInt64) : x >>> UInt64.ofNat (k.toNat % 64) = x >>> k := by
+  apply UInt64.toBitVec_inj.mp
+  simp [UInt64.toBitVec_shiftRight]
+
+omit [Host] in
+theorem log2_lt64 (k : UInt64) (h : k.toNat = 2 ^ Nat.log2 k.toNat) : Nat.log2 k.toNat < 64 := by
+  rw [Nat.log2_lt (by intro h0; rw [h0] at h; simp at h)]; exact k.toNat_lt
+
+omit [Host] in
+/-- Multiplying by a power of two is a shift. -/
+theorem shl_log2 (x k : UInt64) (h : k.toNat = 2 ^ Nat.log2 k.toNat) :
+    x <<< UInt64.ofNat (Nat.log2 k.toNat) = x * k := by
+  have hl := log2_lt64 k h
+  apply UInt64.toBitVec_inj.mp
+  rw [UInt64.toBitVec_shiftLeft, UInt64.toBitVec_mul, BitVec.shiftLeft_eq', BitVec.shiftLeft_eq_mul_twoPow]
+  congr 1
+  apply BitVec.eq_of_toNat_eq
+  have : (2:Nat) ^ Nat.log2 k.toNat < 2 ^ 64 := Nat.pow_lt_pow_right (by omega) hl
+  simp [BitVec.toNat_twoPow, Nat.mod_eq_of_lt hl]
+  omega
+
+/-- `rax := rax op rcx` (`binCode`), as a continuation. -/
+theorem sim_binCode {op : BinOp} {k : Nat} (hc : Code (binCode op) k) {nl F t : Nat} {s : MachineData}
+    {Q : MachineState → Prop}
+    (hq : ∀ s', s'.regs.rax = op.eval s.regs.rax s.regs.rcx → EPost nl F t s s' →
+      Ev Q s' (at_ (k + (binCode op).length))) : Ev Q s (at_ k) := by
+  by_cases hop : op = .mulhi
+  · subst hop
+    simp only [binCode] at hc hq
+    refine ev_mul hc.head fun st => ?_
+    refine ev_movRR hc.tail.head ?_
+    refine ev_congr (hq _ (by simp) ?_) rfl
+    exact EPost.of_eq (s' := s) (EPost.refl _ _ _ _) rfl (by simp) (by simp) (by simp) (by simp) (by simp)
+  · have hb : binCode op = [binInstr op] := by cases op <;> simp_all [binCode]
+    rw [hb] at hc hq
+    refine ev_bin hop hc.head fun st => ?_
+    refine ev_congr (hq _ (by simp) ?_) rfl
+    exact EPost.of_eq (s' := s) (EPost.refl _ _ _ _) rfl (by simp) (by simp) (by simp) (by simp) (by simp)
+
+/-- `rax := rax op b` for a simple `b` (`binSimple`). -/
+theorem sim_binSimple {ctx : Ctx} (hT : ctx.tab = G.tab)
+    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx.nl F σ s)
+    {op : BinOp} {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {code : Program} {k : Nat}
+    (h : binSimple ctx op b = some code) (hc : Code code k) :
+    ∃ vb, evalP σ b = .ok vb ∧ ∀ t Q,
+      (∀ s', s'.regs.rax = op.eval s.regs.rax vb → EPost ctx.nl F t s s' →
+        Ev Q s' (at_ (k + code.length))) → Ev Q s (at_ k) := by
+  unfold binSimple at h
+  split at h
+  · cases h
+    refine ⟨_, rfl, fun t Q hq => ?_⟩
+    refine ev_shiftI (op := .shl) (Nat.mod_lt _ (by decide)) (Or.inl rfl) hc.head fun st => ?_
+    exact hq _ (by simp [BinOp.eval, shl_mod64]) (EPost.regs (by simp) _ _)
+  · cases h
+    refine ⟨_, rfl, fun t Q hq => ?_⟩
+    refine ev_shiftI (op := .shr) (Nat.mod_lt _ (by decide)) (Or.inr rfl) hc.head fun st => ?_
+    exact hq _ (by simp [BinOp.eval, shr_mod64]) (EPost.regs (by simp) _ _)
+  · rename_i kk
+    split at h
+    · rename_i hp
+      cases h
+      have hp' : kk.toNat = 2 ^ Nat.log2 kk.toNat := by simpa using hp
+      refine ⟨_, rfl, fun t Q hq => ?_⟩
+      refine ev_shiftI (op := .shl) (log2_lt64 kk hp') (Or.inl rfl) hc.head fun st => ?_
+      exact hq _ (by simp [BinOp.eval, shl_log2 _ _ hp']) (EPost.regs (by simp) _ _)
+    · simp only [loadInto, Option.map_some, Option.some.injEq] at h
+      subst h
+      refine ⟨_, rfl, fun t Q hq => ?_⟩
+      refine ev_movRI hc.head ?_
+      refine sim_binCode (op := .mul) (nl := ctx.nl) (F := F) (t := t) hc.tail fun s' hr hE => ?_
+      refine ev_congr (hq s' (by simpa using hr) ((EPost.regs' (by simp) _).trans hE (Nat.le_refl _))) ?_
+      simp [binCode]
+  · split at h
+    · rename_i d hd
+      cases h
+      obtain ⟨o, ho, hdo⟩ := Option.bind_eq_some_iff.mp hd
+      obtain ⟨v, hv, hr⟩ := simpleOp_reads hT hTab hF hI hwf ho
+      refine ⟨v, hv, fun t Q hq => ?_⟩
+      exact ev_binO hdo hc.head hr fun st => hq _ (by simp) (EPost.regs (by simp) _ _)
+    · obtain ⟨lc, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨v, hv, hlen, hld⟩ := sim_loadInto (r := .rcx) hT hTab hF hI hwf hl hc.left
+      refine ⟨v, hv, fun t Q hq => hld Q ?_⟩
+      rw [← hlen]
+      refine sim_binCode (nl := ctx.nl) (F := F) (t := t) hc.right fun s' hr hE => ?_
+      refine ev_congr (hq s' (by simpa using hr) ((EPost.regs' (by simp) _).trans hE (Nat.le_refl _))) ?_
+      simp only [List.length_append]; omega
+
+/-- `cmp rax, b` for a simple `b` (`cmpSimple`). -/
+theorem sim_cmpSimple {ctx : Ctx} (hT : ctx.tab = G.tab)
+    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx.nl F σ s)
+    {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {code : Program} {k : Nat}
+    (h : cmpSimple ctx b = some code) (hc : Code code k) :
+    ∃ vb, evalP σ b = .ok vb ∧ ∀ t Q,
+      (∀ s', s'.status = cmpFlags s.regs.rax.toBitVec vb.toBitVec → EPost ctx.nl F t s s' →
+        Ev Q s' (at_ (k + code.length))) → Ev Q s (at_ k) := by
+  unfold cmpSimple at h
+  split at h
+  · rename_i o ho
+    cases h
+    obtain ⟨v, hv, hr⟩ := simpleOp_reads hT hTab hF hI hwf ho
+    exact ⟨v, hv, fun t Q hq => ev_cmpO hc.head hr (hq _ rfl (EPost.flags _))⟩
+  · obtain ⟨lc, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    obtain ⟨v, hv, hlen, hld⟩ := sim_loadInto (r := .rcx) hT hTab hF hI hwf hl hc.left
+    refine ⟨v, hv, fun t Q hq => hld Q ?_⟩
+    have hcR := hc.right
+    rw [hlen] at hcR
+    refine ev_cmpRR hcR.head ?_
+    refine ev_congr (hq _ rfl ((EPost.regs' (by simp) _).trans (EPost.flags _) (Nat.le_refl _))) ?_
+    simp [hlen]
+
+end
+
 section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
@@ -172,6 +352,8 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       Ev Q s' (at_ (k + (compileE ctx e t).length))) →
     (∀ s', (∃ x, evalP σ e = .error x) → EPost ctx.nl F t s s' → Ev Q s' (label errorL)) →
     Ev Q s (at_ k) := by
+  have hF0 := hF
+  have hTab0 := hTab
   simp only [maxOff] at hF hTab
   intro e
   induction e with
@@ -214,6 +396,23 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     simp only [Expr.wf, Bool.and_eq_true] at hwf
     simp only [tempsE] at htmp
     simp only [compileE, List.append_assoc, List.singleton_append] at hc hok
+    cases hbs : binSimple ctx op b
+    case some code =>
+      simp only [hbs] at hc hok
+      refine iha t k hc.left hwf.1 (by omega) σ s Q hI ?_ ?_
+      · intro va s1 hva hrax1 hE1
+        have hI1 : Inv G ctx.nl F σ s1 :=
+          hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+        obtain ⟨vb, hvb, hsim⟩ := sim_binSimple hT hTab0 hF0 hI1 hwf.2 hbs hc.right
+        refine hsim t Q fun s' hr hE' => ?_
+        have hev : evalP σ (.bin op a b) = .ok (op.eval va vb) := by simp [evalP, hva, hvb]; rfl
+        refine ev_congr (hok _ s' hev (by rw [hr, hrax1]) (hE1.trans hE' (Nat.le_refl _))) ?_
+        simp only [List.length_append]; omega
+      · intro s1 herra hE1
+        refine herr s1 ?_ hE1
+        obtain ⟨x, hx⟩ := herra
+        exact ⟨x, by simp [evalP, hx]; rfl⟩
+    simp only [hbs] at hc hok
     have hc1 := hc.right
     have hsp := hI.hi
     have hhi := hG.hi_le
@@ -270,6 +469,32 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     simp only [Expr.wf, Bool.and_eq_true] at hwf
     simp only [tempsE] at htmp
     simp only [compileE, List.append_assoc, List.singleton_append] at hc hok
+    cases hcs : cmpSimple ctx b
+    case some code =>
+      simp only [hcs] at hc hok
+      refine iha t k hc.left hwf.1 (by omega) σ s Q hI ?_ ?_
+      · intro va s1 hva hrax1 hE1
+        have hI1 : Inv G ctx.nl F σ s1 :=
+          hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+        have hcR := hc.right
+        obtain ⟨vb, hvb, hsim⟩ := sim_cmpSimple hT hTab0 hF0 hI1 hwf.2 hcs hcR.left
+        refine hsim t Q fun s2 hst hE2 => ?_
+        have hcT := hcR.right
+        refine ev_movRI hcT.head ?_
+        refine ev_movRI hcT.tail.head ?_
+        refine ev_cmov hcT.tail.tail.head ?_
+        have hev : evalP σ (.cmpw op a b) = .ok (op.evalW va vb) := by simp [evalP, hva, hvb]; rfl
+        rw [hrax1] at hst
+        refine ev_congr (hok (op.evalW va vb) _ hev ?_ ?_) ?_
+        · simp only [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.get64_rax, hst,
+            UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, cmpCC_interp, Cmp.evalW]
+        · exact (hE1.trans hE2 (Nat.le_refl _)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)
+        · simp only [List.length_append, List.length_cons, List.length_nil]; omega
+      · intro s1 herra hE1
+        refine herr s1 ?_ hE1
+        obtain ⟨x, hx⟩ := herra
+        exact ⟨x, by simp [evalP, hx]; rfl⟩
+    simp only [hcs] at hc hok
     have hc1 := hc.right
     have hsp := hI.hi
     have hhi := hG.hi_le
@@ -519,6 +744,34 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     simp only [Cond.wf, Bool.and_eq_true] at hwf
     simp only [tempsC] at htmp
     simp only [compileC, List.append_assoc, List.singleton_append] at hc hfall
+    cases hcs : cmpSimple ctx b
+    case some code =>
+      simp only [hcs] at hc hfall
+      refine sim_expr hG ctx hT hTab F hF a t k hc.left hwf.1 (by omega) σ s Q hI ?_ ?_
+      · intro va s1 hva hrax1 hE1
+        have hI1 : Inv G ctx.nl F σ s1 :=
+          hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+        have hcR := hc.right
+        obtain ⟨vb, hvb, hsim⟩ := sim_cmpSimple hT hTab hF hI1 hwf.2 hcs hcR.left
+        refine hsim t Q fun s2 hst hE2 => ?_
+        have hE4 := hE1.trans hE2 (Nat.le_refl _)
+        have hev : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by simp [evalCP, hva, hvb]; rfl
+        rw [hrax1] at hst
+        refine ev_jcc hcR.right.head (fun hcc => ?_) (fun hcc => ?_)
+        · rw [hst] at hcc
+          have : op.eval va vb = pol := by
+            cases pol <;> simp_all [neg_interp, cmpCC_interp]
+          exact hjmp _ (hev.trans (by rw [this])) hE4
+        · rw [hst] at hcc
+          have : op.eval va vb = !pol := by
+            cases pol <;> simp_all [neg_interp, cmpCC_interp]
+          refine ev_congr (hfall _ (hev.trans (by rw [this])) hE4) ?_
+          simp only [List.length_append, List.length_cons, List.length_nil]; omega
+      · intro s1 herra hE1
+        refine herr s1 ?_ hE1
+        obtain ⟨x, hx⟩ := herra
+        exact ⟨x, by simp [evalCP, hx]; rfl⟩
+    simp only [hcs] at hc hfall
     have hc1 := hc.right
     have hsp := hI.hi
     have hhi := hG.hi_le

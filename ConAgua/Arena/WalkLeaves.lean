@@ -4,6 +4,7 @@ public import ConAgua.Arena.WalkScope
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
+import ConAgua.L.PureEval
 
 @[expose] public section
 
@@ -304,6 +305,12 @@ def flNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
   abort
 }
 
+private theorem wl_getElem_rdW {a : Array Word} {x : Word} (h : x.toNat < a.size) :
+    a[x.toNat] = rdW a x := (rdW_eq a x _ rfl h).symm
+
+private theorem wl_rd64_rdW (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
+  simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
+
 section flgo
 variable (p : Prog) (hpd : p.lookup "der_b" = some derB)
   (hpf : p.lookup "fl_find" = some (memoFindG flSch))
@@ -339,9 +346,13 @@ theorem flNode_step (n : Nat) (ih : FlGoSpec p n) : FlNodeSpec p (n + 1) := by
   intro s₀ h k c
   rw [invoke_eq _ hpn]
   simp only [callFn, flNode]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-    finish [viewOK, tierW, idxW, lvsPush]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, st64, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
+    Bool.and_eq_true, wl_getElem_rdW, wl_rd64_rdW] at *)
+  all_goals grind [lang_grind, arena_grind, viewOK, tierW, idxW, lvsPush]
 
 include hpd hpf hps hp hpn in
 theorem flGo_spec (n : Nat) : FlGoSpec p n ∧ FlNodeSpec p n := by
@@ -753,9 +764,13 @@ theorem lsbNode_step (n : Nat) (ih : LsbGoSpec p n) : LsbNodeSpec p (n + 1) := b
   intro s₀ h k c
   rw [invoke_eq _ hpn]
   simp only [callFn, lsbNode]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, leafMem_spec p hpm n, ih] <;>
-    finish [viewOK, tierW, idxW]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, leafMem_spec p hpm n, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval, Bool.or_eq_true,
+    Bool.and_eq_true, wl_getElem_rdW, wl_rd64_rdW] at *)
+  all_goals grind [lang_grind, arena_grind, viewOK, tierW, idxW]
 
 include hpd hpf hps hp hpn hpm in
 theorem lsbGo_spec (n : Nat) : LsbGoSpec p n ∧ LsbNodeSpec p n := by
