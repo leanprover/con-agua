@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
+import ConAgua.Arena.IndT.Base
 
 /-!
 # The value checks under `StageT` (lane `loopt2`)
@@ -311,6 +312,48 @@ theorem ccvW_okT {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hkp : CrKeep
   rw [checkConstantVal_eq]
   simp only [StateT.run_bind, hrun1, exc_ok_bind', hrun2, hrun3, StateT.run_pure]
   rfl
+
+/-- `ccvW_okT`'s walk memos: `AbsOK` across `check_constant_val` (`ihW`'s frame, the core calls'
+`absOK_core`). -/
+theorem ccvW_okTA {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {q : Word} {r : List Word}
+    {cv : IConstantVal}
+    (h : ccvW (realCall p) n m vis q = some (r, m')) (hS : StageT dn vis fe m a)
+    (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m)
+    (hA : AbsOK m) : AbsOK m' := by
+  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hqd
+  have et : rdW (m.arr64 EREC) (q + 3) = wt :=
+    rdW_of_get? (k := q.toNat + 3) (toNat_add_small q 3 hqb).symm (erecP_get hwt)
+  cases n with
+  | zero => simp [ccvW] at h
+  | succ n =>
+  have hn' : n ≤ 2 ^ 62 := by omega
+  rw [ccvW_step, et] at h
+  cases h1 : ihW (realCall p) n m vis q with
+  | none => rw [h1] at h; simp [ccvK1] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, ccvK1_some] at h
+  obtain ⟨a1, hrun1, hS1, hg1, hCr1, hf1⟩ := ihW_okT hApd hkp.crf h1 hS hqd hqb hlps hCr
+  cases h2 : realCall p n "infer_type_core" [vis, 0, wt] m1 with
+  | none => rw [h2] at h; simp [ccvK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, ccvK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := hq.inferTypeCore_sim n hn' hS1 0 wt hwtl r2 m2 h2
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
+  have hA2 := absOK_core hq.closed (by decide) h2 (hf1 hA) hS2
+  cases h3 : realCall p n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with
+  | none => rw [h3] at h; simp [ccvK3] at h
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, ccvK3_some] at h
+  obtain ⟨x3, a3, hrun3, hS3, hg3, -⟩ := hq.ensureSortCore_sim n hn' hS2 0 (r2.headD 0) hx2l r3 m3 h3
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact absOK_core hq.closed (by decide) h3 hA2 hS3
 
 /-- **`lvl_eq_fueled` under `StageT`**: `lvl_eq_c` through `lvlEqC_simT`; an answer other than
 `0` is the twin's `some true` (the callers abort on `0`). -/
