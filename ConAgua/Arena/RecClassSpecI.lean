@@ -264,7 +264,7 @@ def mjtK3 (fo fl : Word) : Option (List Word × Mem) → Option (List Word × Me
 
 def mjtK2 (hd fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => mjtK3 fo fl (stubM "mk_app_n_f" m2 [hd, r2.headD 0, r2.tail.headD 0])
+  | some (r2, m2) => mjtK3 fo fl (mknF m2 [hd, r2.headD 0, r2.tail.headD 0])
 
 def mjtK1 (n : Nat) (ds0 dl0 fo fl : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -324,7 +324,7 @@ theorem mjtK1_ok (h : ¬ 4294967296 ≤ hd) : mjtK1 n ds0 dl0 fo fl (some (hd, m
     mjtK2 hd fo fl (appendW n m1 ds0 dl0 fo fl) := by
   rw [mjtK1, if_neg h]
 theorem mjtK2_some : mjtK2 hd fo fl (some (r2, m2)) =
-    mjtK3 fo fl (stubM "mk_app_n_f" m2 [hd, r2.headD 0, r2.tail.headD 0]) := rfl
+    mjtK3 fo fl (mknF m2 [hd, r2.headD 0, r2.tail.headD 0]) := rfl
 theorem mjtK3_some : mjtK3 fo fl (some (r3, m3)) = some ([1, fo, fl, r3.headD 0], m3) := rfl
 theorem mjW_eq : mjW (n + 1) m g c d =
     mjK1 n g c d (tmaW n m (rdW (m.arr64 IW) (g + 3)) (rdW (m.arr64 IW) (g + 4)) c) := rfl
@@ -368,6 +368,7 @@ grind_pattern [ind_grind] mjoK1_some => mjoK1 (some (r5, m5))
 
 /-- The lookups `class_gen_major` needs. -/
 structure MjProg (p : Prog) : Prop where
+  ad : AdF p
   hi1 : I1Prog p
   alloc : p.lookup "iw_alloc" = some iwAlloc
   copy : p.lookup "iw_copy" = some iwCopy
@@ -401,7 +402,7 @@ theorem classGenMajorTail_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n,
-        stubM_spec p "mk_app_n_f" n] <;>
+        mknF_spec p h.ad n] <;>
       finish (gen := 20)
 
 theorem classGenMajorOpen_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (ind lvls ds0 dl0 nIdx ty d : Word) :
@@ -500,7 +501,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.1)
   rw [mjtK2_some]
   refine RSim.bind (K := mjtK3 fo fl) rfl
-    ((mkAppN_spec dn vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
+    ((mknF_ok dn vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
   rintro ⟨r3, m3⟩ maj a3 - ⟨hS3, hg3, hmaj⟩
   rw [mjtK3_some]
   have hg := hg1.trans (hg2.trans hg3)

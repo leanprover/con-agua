@@ -44,6 +44,7 @@ structure SumProg (p : Prog) : Prop where
   hg : p.lookup "sl_get" = some slGet
   hpf : p.lookup "param_find" = some paramFind
   hpp : p.lookup "param_push" = some paramPush
+  ad : AdF p
   hip : p.lookup "intern_param" = some internParam
   hplg : p.lookup "param_levels_go" = some paramLevelsGoL
   hpl : p.lookup "param_levels" = some paramLevelsL
@@ -107,7 +108,7 @@ def ctlK4 (n : Nat) (vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd : Word) :
 def ctlK3 (n : Nat) (vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hd, m) => if 4294967296 ≤ hd then none
-    else ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd (stubM "get_app_fn_f" m [CWF, xb])
+    else ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd (gafF m [CWF, xb])
 /-- After `param_levels`: the family's head. -/
 def ctlK2 (n : Nat) (vis0 vis T nP nIdx rs isP lg nF cqO cqL xo xl xb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -155,7 +156,7 @@ theorem ctlK3_big (h : 4294967296 ≤ hd) :
     ctlK3 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) = none := by simp only [ctlK3]; rw [if_pos h]
 theorem ctlK3_ok (h : ¬ 4294967296 ≤ hd) :
     ctlK3 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) =
-      ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd (stubM "get_app_fn_f" m [CWF, xb]) := by
+      ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb hd (gafF m [CWF, xb]) := by
   simp only [ctlK3]; rw [if_neg h]
 theorem ctlK2_some : ctlK2 n vis0 vis T nP nIdx rs isP lg nF cqO cqL xo xl xb (some (r, m)) =
     ctlK3 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (ceinternW m T (r.headD 0)) := rfl
@@ -183,7 +184,7 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
       stubM_spec p "open_pis_at_fvars_f" (n + 1),
       plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl (n + 1),
       internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
-      stubM_spec p "get_app_fn_f" (n + 1), stubM_spec p "get_app_args_f" (n + 1),
+      gafF_spec p hP.ad (n + 1), stubM_spec p "get_app_args_f" (n + 1),
       slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr (n + 1), iarW_spec p hP.hiar (n + 1),
       fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs n] <;>
     finish (gen := 30) (instances := 5000) [ctlW]
@@ -315,10 +316,10 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [ctlK3_ok n m3 vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw hd hbig]
   have hd32 : H hd := by have : ¬ (4294967296 : Nat) ≤ hd.toNat := hbig; show hd.toNat < 2 ^ 32; omega
   -- `get_app_fn_f`
-  have h4 := getAppFn_spec dn vis fe CWF xbw hxb
+  have h4 := gafF_ok dn vis fe CWF xbw hxb
   rw [CWF_eq, hxbd] at h4
   refine Sim.bindK (K := ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw hd) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM h4 hS3) fun rf xfn m4 a4 hQ => ?_
+    (fun _ _ => rfl) (sumSim_of_relW h4 hS3) fun rf xfn m4 a4 hQ => ?_
   obtain ⟨hS4, hg4, hf32, hfd⟩ := hQ
   rw [ctlK4_some]
   -- `get_app_args_f`
@@ -534,7 +535,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       stubM_spec p "check_constant_val" (n + 2), stripPis_specF p hP.strip (n + 2),
       srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
-        hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr (n + 2),
+        hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
       stubM_spec p "open_pis_at_fvars_f" (n + 2), stubM_spec p "fvar_type_ds" (n + 2),
       sdomsW_spec p hP.hg hP.hsd (n + 2), ctlW_spec p hP n] <;>
     finish (gen := 30) (instances := 5000) [ctorW, rdW_eq]

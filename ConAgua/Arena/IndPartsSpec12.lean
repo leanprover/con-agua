@@ -536,7 +536,7 @@ theorem brs_spec (p : Prog) (hP : IndPartsProg4 p) (h6 : p.lookup "rec6" = some 
     simp only [callFn, blockShapeRecsOf]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        recTargetOf_spec p hP.view hP.find hP.target hP.strip n, brh_spec p hP hr n, rec6_specW p hP.alloc h6 n,
+        recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, brh_spec p hP hr n, rec6_specW p hP.alloc h6 n,
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 

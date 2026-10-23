@@ -115,6 +115,7 @@ theorem tmf_spec (p : Prog) (hp : p.lookup "target_major_of" = some targetMajorO
 /-- The lookups of `target_major_of`. -/
 structure TmfProg (p : Prog) : Prop where
   tmm : TmmProg p
+  ad : AdF p
   tmo : TmoOProg p
   mnc : p.lookup "member_names_copy" = some memberNamesCopy
   bsmn : p.lookup "block_shape_member_names" = some blockShapeMemberNames
@@ -245,10 +246,10 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
   refine Sim.bindK (K := tmfK2 p n vis pp cao cal pfo pfl fvo fvl r1) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => decW0E m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m1 m' ∧ PosMR m') ?_ ?_
   · intro r2 m2 e2
-    obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (stubM_spec p "get_app_fn_f" n _ [CWF, mty]) e2
-    obtain ⟨x, a', hrun, hS2, hg2, hd2⟩ := getAppFn_spec dn vis fe CWF mty hmty m1 s2.mem a1 r2 hs2 hS1
+    obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (gafF_spec p hP.ad n _ [CWF, mty]) e2
+    obtain ⟨x, a', hrun, hS2, hg2, hd2⟩ := gafF_ok dn vis fe CWF mty hmty m1 s2.mem a1 r2 hs2 hS1
     rw [CWF_eq] at hrun
-    exact ⟨x, a', hrun, hd2, hS2, hg2, hP1.fr (MFr.ofStub hs2)⟩
+    exact ⟨x, a', hrun, hd2, hS2, hg2, hP1.fr (MFr.ofGafF hs2)⟩
   rintro r2 hd m2 a2 ⟨⟨hw32, hwd⟩, hS2, hg2, hP2⟩
   rw [tmfK2_some]
   generalize hw : r2.headD 0 = w at hw32 hwd ⊢

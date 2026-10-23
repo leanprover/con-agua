@@ -577,7 +577,7 @@ def entryK1 (C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then some ([0, 0, 0, 0], m1)
-    else entryK2 C r (stubM "get_app_fn_f" m1 [CWF, r.tail.tail.tail.tail.headD 0])
+    else entryK2 C r (gafF m1 [CWF, r.tail.tail.tail.tail.headD 0])
 
 def entryW (m : Mem) (C ciq : Word) : Option (List Word × Mem) := entryK1 C (stripW m ciq)
 
@@ -597,7 +597,7 @@ theorem entryK2_const (h : ¬ r2.headD 0 >>> 28 ≠ 3) :
 theorem entryK1_fail (h : r.headD 0 = 0) : entryK1 C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
   simp only [entryK1]; rw [if_pos h]
 theorem entryK1_ok (h : ¬ r.headD 0 = 0) :
-    entryK1 C (some (r, m1)) = entryK2 C r (stubM "get_app_fn_f" m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
+    entryK1 C (some (r, m1)) = entryK2 C r (gafF m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
   simp only [entryK1]; rw [if_neg h]
 end arms
 grind_pattern [ind_grind] entryK3_abort => entryK3 C r m2 v
@@ -610,7 +610,7 @@ grind_pattern [ind_grind] entryK1_ok => entryK1 C (some (r, m1))
 
 theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
     (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St)
     (C ciq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry" [C, ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ entryW s₀.mem C ciq = some (r, s'.mem); ⊤⦄ := by
@@ -621,7 +621,7 @@ theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestCtorEntryStrip_spec p hs hst n, stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
+        nestCtorEntryStrip_spec p hs hst n, gafF_spec p had n, eView_spec p hv n] <;>
       finish (gen := 20) [entryW]
 
 
@@ -700,13 +700,13 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         obtain ⟨w, rfl, hwlt, hwd, hcvm0⟩ := hout
         rw [entryK1_ok _ _ _ (by simp)] at h
         simp only [List.tail_cons, List.headD_cons] at h
-        cases hg : stubM "get_app_fn_f" m0 [CWF, w] with
+        cases hg : gafF m0 [CWF, w] with
         | none => rw [hg] at h; simp [entryK2] at h
         | some rm2 =>
           obtain ⟨r2, m2⟩ := rm2
           rw [hg] at h
           obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
-            getAppFn_spec dn vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
+            gafF_ok dn vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
           rw [CWF_eq, hwd] at hrun2
           have htagiff := tag_const_iff (r2.headD 0) hlt2
           rw [hdec2] at htagiff
@@ -783,8 +783,8 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
 section census
 variable (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
     (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p)
-include hs hv hp hst
+    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p) (had : AdF p)
+include hs hv hp hst had
 
 /-- **`nest_ctor_entry` refines `nestCtorEntry`** (through the `get_app_fn` stub; the
 parameter and field counts sum without overflow). -/
@@ -798,7 +798,7 @@ theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       EntryOut s'.mem r ciq (AM.res (ConRon.Arena.nestCtorEntry (decI C) ci) a₀); ⊤⦄ := by
-  refine triple_post (nestCtorEntry_spec p hs hv hp hst n s₀ C ciq) ?_
+  refine triple_post (nestCtorEntry_spec p hs hv hp hst had n s₀ C ciq) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := entryW_ok hC hm hS hci hsum
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
@@ -813,13 +813,13 @@ def resHeadK : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m1) => some ([if r.headD 0 >>> 28 = 1 then 1 else 0], m1)
 
 def resHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
-  resHeadK (stubM "get_app_fn_f" m [CWF, e])
+  resHeadK (gafF m [CWF, e])
 
 theorem resHeadK_some (r : List Word) (m1 : Mem) :
     resHeadK (some (r, m1)) = some ([if r.headD 0 >>> 28 = 1 then 1 else 0], m1) := rfl
 grind_pattern [ind_grind] resHeadK_some => resHeadK (some (r, m1))
 
-theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (n : Nat) (s₀ : St) (e : Word) :
+theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p) (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_res_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ resHeadW s₀.mem e = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hg]
@@ -829,21 +829,21 @@ theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestRe
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_fn_f" n] <;> finish [resHeadW]
+        gafF_spec p had n] <;> finish [resHeadW]
 
 theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem) (a : AState)
     (e : Word) (r : List Word) (he : H e) (h : resHeadW m e = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ a', (ConRon.Arena.nestResHead (decI e)).run a = .ok (r.headD 0 != 0, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   unfold resHeadW at h
-  cases hs : stubM "get_app_fn_f" m [CWF, e] with
+  cases hs : gafF m [CWF, e] with
   | none => rw [hs] at h; simp [resHeadK] at h
   | some rm =>
     obtain ⟨r1, m1⟩ := rm
     rw [hs] at h
     simp only [resHeadK, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := getAppFn_spec dn vis fe CWF e he m m1 a r1 hs hS
+    obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
     refine ⟨a1, ?_, hS1, hg⟩
     rw [CWF_eq] at hrun
     have htag : (x.tag == ETag.fvar) = decide (r1.headD 0 >>> 28 = 1) := by
@@ -862,14 +862,14 @@ theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wor
 
 /-- **`nest_res_head` refines `nestResHead`** (through the `get_app_fn` stub). -/
 @[refines ConRon.Arena.nestResHead]
-theorem nestResHead_refines (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (n : Nat)
+theorem nestResHead_refines (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis e : Word)
     (he : H e) (hS : StageR dn vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_res_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestResHead (decI e)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestResHead (decI e)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0 != 0) = AM.res (ConRon.Arena.nestResHead (decI e)) a₀; ⊤⦄ := by
-  refine triple_post (nestResHead_spec p hg n s₀ e) ?_
+  refine triple_post (nestResHead_spec p hg had n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hS', hgr⟩ := resHeadW_ok dn fe vis _ _ a₀ e r he hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

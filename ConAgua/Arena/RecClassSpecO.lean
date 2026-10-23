@@ -278,7 +278,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   subst hfd
   rw [c1tK1_some]
   refine RSim.bind (K := fun o => K (fcK (c1tK2 n pvo pvl rlvls _ _ _ _ _ e o))) hK
-    ((mkAppN_spec dn vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩) ?_
   rintro ⟨r5, m5⟩ fx a5 - ⟨hS5, hg5, hfxH, hfxd⟩
   dsimp only at hS5 hg5 hfxH hfxd
   subst hfxd
@@ -310,7 +310,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rw [c1tK5_some, hr8]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := fun o => K (fcK (c1tK6 n _ _ e o))) hK
-    ((mkAppN_spec dn vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩) ?_
   rintro ⟨r9, m9⟩ app a9 - ⟨hS9, hg9, happH, happd⟩
   dsimp only at hS9 hg9 happH happd
   subst happd
@@ -467,7 +467,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (decHL_decB (by rw [decHL_grow hg1 hfb]; exact hfvs)
     (Nat.le_trans hfb hg1.1)) (by rw [decHL_grow hg1 hib]; exact hihs) (Nat.le_trans hib hg1.1)
   rw [grcK2_some]
-  refine RSim.bind (K := grcK3 n g fo fl) rfl ((mkAppN_spec dn vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) ?_
+  refine RSim.bind (K := grcK3 n g fo fl) rfl ((mknF_ok dn vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨hS3, hg3, hbH, hbd⟩
   dsimp only at hS3 hg3 hbH hbd
   subst hbd

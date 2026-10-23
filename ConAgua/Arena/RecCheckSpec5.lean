@@ -34,7 +34,7 @@ def tmpK2 (vis rP M : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hd, m2) =>
     if 4294967296 ≤ hd then none
-    else tmpK3 vis rP (stubM "mk_app_n_f" m2
+    else tmpK3 vis rP (mknF m2
       [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)])
 
 def tmpK1 (vis rP M : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -59,7 +59,7 @@ theorem tmpK1_some : tmpK1 vis rP M (some (r1, m1)) =
     tmpK2 vis rP M (ceinternW m1 (rdW (m1.arr64 IW) M) (rdW (m1.arr64 IW) (M + 1))) := rfl
 theorem tmpK2_some : tmpK2 vis rP M (some (hd, m2)) =
     if 4294967296 ≤ hd then none
-    else tmpK3 vis rP (stubM "mk_app_n_f" m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)]) := rfl
+    else tmpK3 vis rP (mknF m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)]) := rfl
 theorem tmpK3_some : tmpK3 vis rP (some (r3, m3)) =
     tmpK4 (stubM "infer_type_core" m3 [vis, rP, r3.headD 0]) := rfl
 theorem tmpK4_some : tmpK4 (some (r4, m4)) = some ([], m4) := rfl
@@ -74,6 +74,7 @@ grind_pattern [ind_grind] tmpK4_some => tmpK4 (some (r4, m4))
 
 /-- The lookups `target_major_pins` needs. -/
 structure TmpProg (p : Prog) : Prop where
+  ad : AdF p
   tpt : p.lookup "target_pin_tys" = some targetPinTys
   cf : p.lookup "const_find" = some constFind
   cp : p.lookup "const_push" = some constPush
@@ -91,7 +92,7 @@ theorem targetMajorPins_spec (p : Prog) (h : TmpProg p) (N : Nat) (s₀ : St) (v
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         targetPinTys_spec p h.tpt N, internConst_spec p h.cf h.cp h.ic N,
-        stubM_spec p "mk_app_n_f" N, stubM_spec p "infer_type_core" N] <;>
+        mknF_spec p h.ad N, stubM_spec p "infer_type_core" N] <;>
       finish (gen := 20) [rdW_eq]
 
 
@@ -203,14 +204,14 @@ theorem tmpW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [← rl.1]; simp only [rdW]
     rw [show (Mp + 3).toNat = Mp.toNat + 3 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hli]
   rw [e2, e3] at h
-  cases h3 : stubM "mk_app_n_f" m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with
+  cases h3 : mknF m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with
   | none => rw [h3] at h; simp [tmpK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, tmpK3_some] at h
   have hds2 : decHL m2 (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some M.ds := by
     rw [hoo, hll]; exact (OMono.decHL o l).mono _ _ _ hg12.truncExt hdT
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := mkAppN_spec dn vis fe hd _ _ hdH M.ds m2 m3 a2 r3 h3 ⟨hS2, hds2⟩
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := mknF_ok dn vis fe hd _ _ hdH M.ds m2 m3 a2 r3 h3 ⟨hS2, hds2⟩
   cases h4 : stubM "infer_type_core" m3 [vis, rP, r3.headD 0] with
   | none => rw [h4] at h; simp [tmpK4] at h
   | some rm4 =>

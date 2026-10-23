@@ -22,6 +22,15 @@ open L.Arena
 
 /-! ## Callee simulations -/
 
+/-- A real callee's `RelW` as a `RSim` (`RelAM.sim` for a model). -/
+theorem RelW.sim {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : RelW W args pre op post) {m : Mem} {a : AState} (hp : pre m a) :
+    RSim (W m args) op a (fun b a' x => post m b.2 a' b.1 x) := by
+  intro b hb
+  obtain ⟨r, m'⟩ := b
+  exact h m m' a r hb hp
+
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
@@ -30,12 +39,12 @@ theorem simFvarTypeD (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
   (fvarTypeD_spec dn vis fe e he).sim hS
 
 theorem simPiResult (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "pi_result_f" m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
-  have h := (piResult_spec dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+    RSim (pirF m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
+  have h := (pirF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simGetAppFn (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "get_app_fn_f" m [CWF, e]) (getAppFn coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
-  have h := (getAppFn_spec dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+    RSim (gafF m [CWF, e]) (getAppFn coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
+  have h := (gafF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simGetAppArgs (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
     RSim (stubM "get_app_args_f" m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
@@ -622,7 +631,7 @@ theorem classReadMinor_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fva
     (hfin : p.lookup "class_read_minor_finish" = some classReadMinorFinish)
     (hpb : p.lookup "pi_binders" = some piBinders)
     (hmin : p.lookup "class_read_minor" = some classReadMinor)
-    (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail)
+    (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (nP mo ml d dom : Word) (motPos : List Nat) (hS : StageR dn vis fe s₀.mem a₀) (hH : H dom)
     (hmot : decNL s₀.mem mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop s₀.mem) :
@@ -632,7 +641,7 @@ theorem classReadMinor_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fva
       KP dn vis fe s₀.mem decSlot (r, s'.mem)
         (AM.st (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a₀)
         (AM.res (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a₀); ⊤⦄ :=
-  triple_post (classReadMinor_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin hpb hmin htl n s₀
+  triple_post (classReadMinor_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin hpb hmin htl had n s₀
     nP mo ml d dom) fun _ _ ⟨hl, hw⟩ =>
     ⟨hl, (minorW_sim dn vis fe n _ a₀ nP mo ml d dom motPos hS hH hmot hmt).am hw⟩
 
