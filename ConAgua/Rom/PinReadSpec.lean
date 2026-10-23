@@ -46,7 +46,8 @@ def pbCheckG (bs d : List UInt8) : FunDecl := lfn () locals (i) {
   return 0
 }
 
-theorem pbCheck_subPB (bs : List UInt8) : pbCheck.subPB bs = pbCheckG bs romData := rfl
+theorem pbCheck_subPB (bs : List UInt8) : pbCheck.subPB bs = pbCheckG bs romData := by
+  rw [← romDataLit_eq]; rfl
 
 section eqW
 variable (bs d : List UInt8)
