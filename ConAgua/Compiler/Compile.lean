@@ -329,7 +329,7 @@ def binSimple (ctx : Ctx) (op : BinOp) (b : Expr) : Option Program :=
   | .shr, .const k => some [i64 (.shr (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt (k.toNat % 64)))))]
   | .mul, .const k =>
     -- strength reduction: a power of two is a shift
-    if k != 0 && k &&& (k - 1) == 0 then
+    if k.toNat == 2 ^ Nat.log2 k.toNat then
       some [i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt (Nat.log2 k.toNat)))))]
     else (loadInto ctx .rcx (.const k)).map (· ++ binCode .mul)
   | _, _ =>
