@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.RecCheckSpec12
+import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndInstallSpec23
 
 /-!
@@ -26,20 +27,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-section lift
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
-
-/-- **`StageC` across a twin step con-ron calls a `CoreStep`** (`StageC.of_pstep` at the core
-grade). -/
-theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hs : CoreStep V env fe a a') :
-    StageC dn vis fe env m' a' :=
-  ⟨hS, hs.ok,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
-      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
-
-end lift
 
 theorem thW_afr : ∀ (n : Nat) {m m' : Mem} {tyo tyl base : Word} {r : List Word},
     thW n m tyo tyl base = some (r, m') → AFr m m'
