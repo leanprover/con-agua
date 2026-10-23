@@ -376,7 +376,7 @@ theorem stripW_ctor (h : rdW (m.arr64 EREC) ciq = 4)
     stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
     (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
       rdW (m.arr64 EREC) (ciq + 1 + 3)]) := by
-  simp [stripW, h]
+  unfold stripW; rw [if_neg (by simp [h]), if_neg h2]
 theorem stripK_fail (h : r.headD 0 = 0) : stripK ciq nPc nF (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
   simp only [stripK]; rw [if_pos h]
 theorem stripK_ok (h : r.headD 0 ≠ 0) :
@@ -498,7 +498,6 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       rw [hP', hF', UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2,
         UInt64.toNat_ofNat_of_lt' hF.2] at hw
       have := hP.2; have := hF.2
-      simp only [UInt64.size] at hw ⊢
       omega
     rw [stripW_ctor m ciq hker hw] at h
     have hty := decCV_type hcv

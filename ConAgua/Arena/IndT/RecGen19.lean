@@ -411,7 +411,7 @@ variable {p : Prog} (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
 
 include hq henv in
 /-- **`class_majors` under `StageC`** (twin side: con-ron's `classMajors_spec`'s proof). -/
-theorem clmW_simC (hP : ClmProg p) (hcs : CtorSums fe) (pp cao cal pfo pfl : Word) (bs : BlockShape)
+theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     (css : List (List (IConstantVal × Nat))) (pfvs : List EIdx) (pP : ConLeche.BlockShape)
     (cssP : List (List (ConLeche.ConstantVal × Nat))) (pfvsP : List ConLeche.Expr)
     (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pP.nP x) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) :
@@ -515,7 +515,7 @@ theorem clmW_simC (hP : ClmProg p) (hcs : CtorSums fe) (pp cao cal pfo pfl : Wor
     | zero => rw [callW_zero] at e3; cases e3
     | succ k =>
     obtain ⟨s3, hs3, -, hok, hd3, hS3, hg3, hP3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (targetMajorOf_refines hP.tmf dn vis fe hcs k (by omega) _ a2 pp cao cal pfo pfl pfo pfl
+      (targetMajorOf_refines hP.tmf dn vis fe k (by omega) _ a2 pp cao cal pfo pfl pfo pfl
         (r2.headD 0) bs css pfvs pfvs hC2.stage (hq'.grow (decBS_mono _) hg02)
         (partsHsrc_grow hg02 (partsShapeFacts hq' hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg02)
         (hpf.grow (OMono.decHL _ _) hg02) (hpf.grow (OMono.decHL _ _) hg02)
@@ -594,7 +594,7 @@ include hq henv in
 `target_major_pins`; the inputs' denotations as con-ron's `classMajors_spec` asks): the keys a slice
 of `ClassKey` records decoded below the tops; the classes a slice of fresh `TargetMajor` records. -/
 @[refines ConRon.Arena.classMajors]
-theorem classMajors_refinesC (hP : ClmProg p) (hcs : CtorSums fe) (n : Nat)
+theorem classMajors_refinesC (hP : ClmProg p) (n : Nat)
     (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (pp cao cal pfo pfl ko kl : Word)
     (bs : BlockShape) (css : List (List (IConstantVal × Nat))) (pfvs : List EIdx)
     (ks : List ClassKey) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
@@ -617,7 +617,7 @@ theorem classMajors_refinesC (hP : ClmProg p) (hcs : CtorSums fe) (n : Nat)
       PSlR decTM (AM.res (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) (r.headD 0)
         (r.tail.headD 0) s'.mem ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (clm_spec p hP.cm n s₀ vis pp cao cal pfo pfl ko kl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (clmW_simC hq henv hP hcs pp cao cal pfo pfl bs css pfvs pP cssP pfvsP
+    let ⟨hok, hQ⟩ := Sim.run (clmW_simC hq henv hP pp cao cal pfo pfl bs css pfvs pP cssP pfvsP
       hpw n hn _ a₀ ko kl ks ksP hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP) hm
     ⟨hl, hok, hQ⟩
 

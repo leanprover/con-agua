@@ -73,6 +73,7 @@ D18, D21).
 | D28 | `Front/Driver.lean` `frontRun` (`front_run`); bridge `Front/ChunkBridge.lean` `parseChunks_single` | `parseChunks` streams the input in chunks (`chunkStep` carries an incomplete tail into the next chunk, `chunkFinish` reads it as the last line) | parses the one input buffer at once (the twin's `parseBytes`); `parseChunks [b] = parseBytes b` for `b.size < USize.size` (`parseChunks_single`), so `front_run` refines the statement's `parseChunks [b]` (`frontAll_refines_chunks`) | none | front3 | by design: the harness hands L the whole input in memory; one chunk is the wholesale parse (proved) |
 | D29 | `Rom/CIRead.lean` `rci_ci` | `internCI` interns a projection table (`internProjTable`) | refuses kind `6` (aborts) | none (the ROM's constants are basis blocks, axioms and pins; none is a projection table) | front3 | by design: the ROM generator emits no projection table |
 | D30 | `Checker/Hoist.lean` `hoist_nat_op_ground` | `applyHoist` also returns the moved records' names (`movedNames`, the `hoisted` receipt of `prepareD`) | not computed | none (`preparePrelude` drops the receipt) | front3 | by design: the result is never read |
+| D32 | `Arena/IndPos.lean` `nest_ctor_entry_strip` | `nestCtorEntry` passes `nPc + nF` (a `Nat` sum) to `stripPis` | aborts when the word sum `nPc + nF` wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both counts are word-sized field counts) | indstaget | by design: removes the environment-wide premise `CtorSums` from the positivity and recursor proofs |
 
 ## Fixed
 

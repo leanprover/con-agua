@@ -291,11 +291,6 @@ theorem CsAt.decPL {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} {P : Na
     obtain ⟨w, hw, hc⟩ := h j hj
     exact ⟨w.toNat, by simp [iwN, nat?, iwA, hw], hc.dec⟩
 
-/-- The constructor records of the environment have parameter and field counts that sum below
-`2^64` (`nest_ctor_entry` adds them as words). -/
-def CtorSums (fe : IFEnv) : Prop :=
-  ∀ n cv nPc nF, fe.find? n = some (.ctorInfo cv nPc nF) → nPc + nF < 2 ^ 64
-
 /-- The twin's per-name step of `nestContainer`'s `filterMapM`. -/
 def ncF (fe : IFEnv) (C : NIdx) (n : NIdx) : AM (Option (IConstantVal × Nat × Nat)) :=
   match fe.find? n with
