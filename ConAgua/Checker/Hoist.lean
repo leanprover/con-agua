@@ -485,10 +485,13 @@ def hoistProg : Prog :=
 /-- The hoist's functions in a program. -/
 abbrev HoistProg (p : Prog) : Prop := ProgHas p hoistProg
 
-/-- The functions outside the hoist it calls (the `Nat` operations' pins, `iw_alloc`). -/
+/-- The functions outside the hoist it calls (the `Nat` operations' names, grounds and pins,
+`iw_alloc`). -/
 def hoistExtProg : Prog :=
   [("nat_op_names", natOpNamesL), ("nat_div_mod_names", natDivModNamesL),
-   ("nat_op_deps", natOpDepsL), ("pin_at", pinAtL), ("iw_alloc", iwAlloc)]
+   ("nat_op_deps", natOpDepsL), ("pin_at", pinAtL), ("iw_alloc", iwAlloc),
+   ("nat_op_pins", natOpPinsL), ("nat_op_pins_a", natOpPinsAL), ("nat_op_pins_b", natOpPinsBL),
+   ("nat_op_pins_c", natOpPinsCL)]
 
 /-- The functions outside the hoist in a program. -/
 abbrev HoistExt (p : Prog) : Prop := ProgHas p hoistExtProg
