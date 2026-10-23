@@ -324,8 +324,7 @@ theorem decCI_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
   all_goals (try simp only [Option.bind_eq_some_iff, Option.some.injEq] at h)
   all_goals grind
 
-/-- **`check_constant_val` refines `checkConstantVal .verified`** (through the core's stubs). -/
-@[refines ConRon.Arena.checkConstantVal]
+/-- **`check_constant_val` refines `checkConstantVal .verified`** (through the core's stubs; the census link is `checkConstantVal_refinesT`, `DeclArmT.lean`). -/
 theorem checkConstantVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q : Word) (cv : IConstantVal)
     (hS : StageR dn vis fe s₀.mem a₀) (hq : decCV (erecP s₀.mem) q.toNat = some cv)
@@ -341,7 +340,6 @@ theorem checkConstantVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : S
 
 /-- **`check_defn_val` refines `checkDefnVal .verified`** at the arm's record (through the core's
 stubs). -/
-@[refines ConRon.Arena.checkDefnVal]
 theorem checkDefnVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word) (cv : IConstantVal) (v : EIdx)
     (hh : ConLeche.ReducibilityHint) (hS : StageR dn vis fe s₀.mem a₀)
@@ -360,7 +358,6 @@ theorem checkDefnVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (
 
 /-- **`check_opaque_val` refines `checkOpaqueVal .verified`** at the arm's record (an `axiomInfo`,
 its value word at `c + 5`; through the core's stubs). -/
-@[refines ConRon.Arena.checkOpaqueVal]
 theorem checkOpaqueVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word) (cv : IConstantVal) (v : EIdx)
     (hS : StageR dn vis fe s₀.mem a₀)
@@ -380,7 +377,6 @@ theorem checkOpaqueVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St)
 
 /-- **`check_thm_val` refines `checkThmVal .verified`** at the arm's record (a `thmInfo`, its value
 word at `c + 5`; through the core's stubs and `lvl_eq_c`'s). -/
-@[refines ConRon.Arena.checkThmVal]
 theorem checkThmVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word) (cv : IConstantVal) (v : EIdx)
     (hS : StageR dn vis fe s₀.mem a₀)
