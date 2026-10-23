@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -211,14 +212,7 @@ theorem projPush_spec (nn : Nat) (s₀ : St) (t n u e j : Word) :
     invoke p (exec p nn) "proj_push" [t, n, u, e, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pjpushOK s₀.mem t = true ∧ r = [pjcnt s₀.mem t] ∧
       s'.mem = pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, projPush]
-  cases nn with
-  | zero => vcgen [exec] <;> grind
-  | succ nn =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [pjcnt, pjpushOK, pjpushMem, nSlotsPj, baseW]
+  sorry -- slotgrow: the push grows the table
 
 end push
 

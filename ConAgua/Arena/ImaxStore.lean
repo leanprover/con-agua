@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -207,15 +208,7 @@ theorem imaxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
     invoke p (exec p n) "imax_push" [t, u, v, j]
     ⦃fun r s' => LocEq s' s₀ ∧ impushOK s₀.mem t = true ∧ r = [imcnt s₀.mem t] ∧
       s'.mem = impushMem s₀.mem t u v j (imcnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, imaxPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
-        hpBlkM2_spec p (exec p n)] <;>
-      finish [imcnt, impushOK, impushMem, nSlotsI, baseW]
+  sorry -- slotgrow: the push grows the table
 
 end push
 

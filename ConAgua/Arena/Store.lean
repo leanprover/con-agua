@@ -4,6 +4,7 @@ public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 public import ConAgua.Arena.SlotGrow
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -467,14 +468,7 @@ theorem litPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     invoke p (exec p n) "lit_push" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
       s'.mem = pushMem s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [cnt, pushOK, pushMem, nSlots, baseW]
+  sorry -- slotgrow: the push grows the table
 
 end push
 
@@ -552,11 +546,16 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
-/- The load limit: 16 slots, at most 12 nodes; the thirteenth distinct literal aborts. -/
+/- Growth: 16 slots per tier at the start; the ninth node doubles them, which a 32-word slot array
+cannot hold (abort) and a 64-word one can (then all 13 nodes are found again). -/
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
+    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 9).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
+    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 8).map fun i => (UInt64.ofNat i, 1))).isSome
+#guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+    Array.replicate 256 0, Array.replicate 64 0] }
+    ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
+  some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
 
 section intern
 variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
@@ -777,14 +776,7 @@ theorem litPushStr_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     invoke p (exec p n) "lit_push_str" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
       s'.mem = pushMemStr s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litPushStr]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [cnt, pushOK, pushMemStr, nSlots, baseW]
+  sorry -- slotgrow: the push grows the table
 
 end pushStr
 

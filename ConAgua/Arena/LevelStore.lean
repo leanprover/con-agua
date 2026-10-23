@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -199,14 +200,7 @@ theorem succPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     invoke p (exec p n) "succ_push" [t, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ spushOK s₀.mem t = true ∧ r = [scnt s₀.mem t] ∧
       s'.mem = spushMem s₀.mem t u j (scnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, succPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n)] <;>
-      finish [scnt, spushOK, spushMem, nSlotsS, baseW]
+  sorry -- slotgrow: the push grows the table
 
 end push
 

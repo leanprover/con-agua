@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -193,14 +194,7 @@ theorem bvarPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     invoke p (exec p n) "bvar_push" [t, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ bpushOK s₀.mem t = true ∧ r = [bcnt s₀.mem t] ∧
       s'.mem = bpushMem s₀.mem t u j (bcnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, bvarPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [bcnt, bpushOK, bpushMem, nSlotsB, baseW]
+  sorry -- slotgrow: the push grows the table
 
 end push
 

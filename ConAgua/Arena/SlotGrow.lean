@@ -45,7 +45,7 @@ slot count doubles and every record of both tiers is re-registered, as con-ron's
 `try_resize` does ("Double the slot count and rehash"). -/
 
 /-- The initial slot count of a tier. -/
-def SN0 : Word := 1024
+def SN0 : Word := 16
 
 /-- The growth globals of the 17 growable cons tables (`zero` and `anonymous` hold one node per
 tier and keep their whole array). -/

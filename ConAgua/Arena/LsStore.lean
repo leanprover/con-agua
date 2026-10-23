@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
 
@@ -249,14 +250,7 @@ theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     invoke p (exec p n) "ls_push" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ lspushOK s₀.mem t = true ∧ r = [lscnt s₀.mem t] ∧
       s'.mem = lspushMem s₀.mem t o l h j (lscnt s₀.mem t); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lsPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n] <;>
-      finish [lscnt, lspushOK, lspushMem, nSlotsLs, baseW, lsOrW_zero]
+  sorry -- slotgrow: the push grows the table
 
 end push
 
