@@ -180,13 +180,81 @@ theorem growIf_frame (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Wor
     · exact ((GFr.set64 _ _ _ _).trans (gzeroW_fr _ _ _ _)).trans (gtiersW_fr _ _ _ _ _ _ _ h)
   · simp at h; subst h; exact GFr.refl _ _
 
+/-- Word stores to two different arrays commute. -/
+theorem Mem.set64_comm (m : Mem) (a b : ArrId) (i j v w : Word) (h : a ≠ b) :
+    (m.set64 a i v).set64 b j w = (m.set64 b j w).set64 a i v := by
+  have e1 : (m.set64 a i v).arr64 b = m.arr64 b := Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)
+  have e2 : (m.set64 b j w).arr64 a = m.arr64 a := Mem.arr64_set64_ne _ _ _ _ _ h
+  simp only [Mem.set64] at *
+  rw [e1, e2]
+  congr 1
+  apply Array.ext_getElem?
+  intro n
+  simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  grind
+
+/-! ### The growth commutes with a write to another array -/
+
+section
+variable (sa A : ArrId) (k x : Word) (hA : A ≠ sa)
+include hA
+
+theorem zero8_set64 (i : Word) (m : Mem) :
+    zero8 sa i (m.set64 A k x) = (zero8 sa i m).set64 A k x := by
+  simp only [zero8, Mem.set64_comm _ A sa _ _ _ _ hA]
+
+theorem gzeroW_set64 (n i : Word) (m : Mem) :
+    gzeroW sa n i (m.set64 A k x) = (gzeroW sa n i m).set64 A k x := by
+  fun_induction gzeroW sa n i m with
+  | case1 i m h ih =>
+    rw [gzeroW]; simp only [h, and_self, ↓reduceIte]; rw [zero8_set64 sa A k x hA, ih]
+  | case2 i m h => rw [gzeroW]; simp only [h, ↓reduceIte]
+
+theorem gnodesW_set64 (H : Mem → Word → Word → Word)
+    (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) (n t b c i : Word) (m : Mem) :
+    gnodesW sa H n t b c i (m.set64 A k x) = (gnodesW sa H n t b c i m).map (·.set64 A k x) := by
+  have ea : ∀ m : Mem, (m.set64 A k x).arr64 sa = m.arr64 sa :=
+    fun m => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hA)
+  fun_induction gnodesW sa H n t b c i m with
+  | case1 i m hi hp => rw [gnodesW]; simp [hi, ea, hH, hp]
+  | case2 i m hi j hp ih =>
+    rw [gnodesW]; simp only [hi, ↓reduceIte, ea, hH, hp]
+    rw [← ih, Mem.set64_comm _ A sa _ _ _ _ hA]
+  | case3 i m hi => rw [gnodesW]; simp [hi]
+
+theorem gtiersW_set64 (hAc : A ≠ CTL) (ca : Word) (H : Mem → Word → Word → Word)
+    (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) (n t : Word) (m : Mem) :
+    gtiersW sa ca H n t (m.set64 A k x) = (gtiersW sa ca H n t m).map (·.set64 A k x) := by
+  have ec : (m : Mem) → (m.set64 A k x).arr64 CTL = m.arr64 CTL :=
+    fun m => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hAc)
+  fun_induction gtiersW sa ca H n t m with
+  | case1 t m ht hn =>
+    rw [gtiersW]; simp [ht, ec, gnodesW_set64 sa A k x hA H hH, hn]
+  | case2 t m ht m' hn ih =>
+    rw [gtiersW]; simp only [ht, ↓reduceIte, ec, gnodesW_set64 sa A k x hA H hH, hn, Option.map_some]
+    exact ih
+  | case3 t m ht => rw [gtiersW]; simp [ht]
+
+end
+
 /-- **The growth commutes with a write to another array** that the hash does not read (a push's
 column write before its growth). -/
 theorem growIf_set64 (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
     (A : ArrId) (k x : Word) (hA : A ≠ sa) (hAc : A ≠ CTL)
     (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) :
     growIf sa ca H m₀ (m.set64 A k x) c = (growIf sa ca H m₀ m c).map (fun m' => m'.set64 A k x) := by
-  sorry
+  have ea : (m.set64 A k x).arr64 sa = m.arr64 sa := Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hA)
+  unfold growIf
+  split
+  · unfold growM
+    simp only [gnW, gexpW, Mem.len64, ea]
+    split
+    · next h => simp only [h, ↓reduceIte, Option.map_none]
+    · next h =>
+      simp only [h, ↓reduceIte]
+      rw [Mem.set64_comm _ A sa _ _ _ _ hA, gzeroW_set64 sa A k x hA,
+        gtiersW_set64 sa A k x hA hAc ca H hH]
+  · rfl
 
 /-- The schema's `hash` block, spliced at `o`, sets `h` (`o + 5`) to `H m t i` (`t` at `o + 2`,
 `i` at `o + 3`) and changes nothing else. -/
