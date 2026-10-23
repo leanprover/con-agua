@@ -42,6 +42,87 @@ theorem cvLpsA_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : L.Aren
   | succ n => exact erToIwW_afr h
 
 
+theorem bvbW_afr {n : Nat} {m m' : Mem} {h x : Word} (hb : bvbW n m h CWF = some (x, m')) : AFr m m' := by
+  have hfr : BbFrame m m' := by
+    match n, hb with
+    | n + 1, hb =>
+      by_cases hs : derBW m h = 32767
+      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+        match n, hb with
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+        simp only [Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨-, rfl⟩ := hb
+        exact MemFrame.refl _ _ _
+  exact AFr.of_frame hfr
+
+theorem canonW_afr (n : Nat) {m m' : Mem} {no nl us nn c v : Word} {r : List Word}
+    (h : canonW n m no nl us nn c v = some (r, m')) : AFr m m' := by
+  cases n with
+  | zero => simp [canonW] at h
+  | succ n =>
+  by_cases hvu : v ≠ us
+  · rw [canonW_ne n m no nl us nn c v hvu] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h; exact AFr.refl _
+  · rw [canonW_eq n m no nl us nn c v hvu] at h
+    cases hfw : findW n m no nl c with
+    | none => rw [hfw] at h; simp [canonK0] at h
+    | some fr =>
+      rw [hfw] at h
+      by_cases hz : fr.headD 0 = 0
+      · rw [canonK0_miss _ _ _ hz] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl⟩ := h; exact AFr.refl _
+      · rw [canonK0_hit _ _ _ hz] at h
+        cases hpw : pinWordV m 53 with
+        | none => rw [hpw] at h; simp [canonK1] at h
+        | some z =>
+          rw [hpw] at h
+          by_cases hzb : 4294967296 ≤ z
+          · rw [canonK1_big _ _ _ _ hzb] at h; simp at h
+          rw [canonK1_ok _ _ _ _ hzb] at h
+          cases hso : sointernW m z with
+          | none => rw [hso] at h; simp [canonK2] at h
+          | some p1 =>
+            obtain ⟨s1, m1⟩ := p1
+            rw [hso] at h
+            by_cases hsb : 4294967296 ≤ s1
+            · rw [canonK2_big _ _ _ _ hsb] at h; simp at h
+            rw [canonK2_ok _ _ _ _ hsb] at h
+            cases hfv : fvinternW m1 (nn + (fr.tail.headD 0)) s1 with
+            | none => rw [hfv] at h; simp [canonK3] at h
+            | some p2 =>
+              obtain ⟨rr, m2⟩ := p2
+              rw [hfv] at h
+              by_cases hrb : 4294967296 ≤ rr
+              · rw [canonK3_big _ _ hrb] at h; simp at h
+              rw [canonK3_ok _ _ hrb] at h
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨-, rfl⟩ := h
+              exact (sointernW_afr hso).trans (fvinternW_afr hfv)
+
+theorem ahW_afr {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
+    (h : ahW n m no nl us b nn e = some (r, m')) : AFr m m' := by
+  unfold ahW at h
+  cases hph : phW n m b e nn with
+  | none => rw [hph] at h; simp [ahK] at h
+  | some r0 =>
+    rw [hph] at h
+    by_cases hz : r0.headD 0 = 0
+    · rw [ahK_none n m no nl us nn r0 hz] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h; exact AFr.refl _
+    · rw [ahK_some n m no nl us nn r0 hz] at h
+      cases hc : canonW n m no nl us nn (r0.tail.headD 0) (r0.tail.tail.headD 0) with
+      | none => rw [hc] at h; simp [ahC] at h
+      | some pc =>
+        obtain ⟨rc, m1⟩ := pc
+        rw [hc, ahC_some] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl⟩ := h
+        exact canonW_afr n hc
+
 -- from IndPosSpec5
 theorem posRecW_afr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) :
     AFr m m' := by
@@ -174,7 +255,7 @@ theorem rpGoW_afr (n : Nat) :
         | zero => simp [rpNodeW] at hn
         | succ i =>
           exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
-            ⟨_, _, msetG_frame raSch raSch_wf m1 m2 h 0 rn hs, by simp [raSch, RAM], by simp [raSch]⟩
+            (AFr.of_frame (msetG_frame raSch raSch_wf m1 m2 h 0 rn hs))
   · intro m m' no nl us b nn f1 h g x y z r hn
     have bin : ∀ {m m' : Mem} {g x y r : Word},
         rpB1 j no nl us b nn f1 g x y (rpGoW j m no nl us b nn f1 x) = some (r, m') → AFr m m' := by
@@ -244,8 +325,8 @@ theorem rpConstW_afr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
     rw [rpClrK_some r1 m1 h1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]
-    exact (AFr.trans ⟨_, _, mclearG_frame raSch m, by simp, by simp [raSch]⟩
-      ((rpGoW_afr n).1 _ _ _ _ _ _ _ _ _ _ hg)).trans ⟨_, _, mclearG_frame raSch m1, by simp, by simp [raSch]⟩
+    exact (AFr.trans (AFr.of_frame (mclearG_frame raSch m))
+      ((rpGoW_afr n).1 _ _ _ _ _ _ _ _ _ _ hg)).trans (AFr.of_frame (mclearG_frame raSch m1))
 
 -- from IndPosSpec5
 theorem pccW_afr {k : Nat} {m m' : Mem} {no nl us nn cty : Word} {r : List Word}
@@ -265,7 +346,7 @@ theorem pccW_afr {k : Nat} {m m' : Mem} {no nl us nn cty : Word} {r : List Word}
   by_cases hz : r2.headD 0 = 0
   · rw [pccB_zero k no nl us nn r2 m2 hz] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
-    exact ((phsW_afr hp).trans (instW_afr _ _ _ _ _ _ _ hi)))
+    exact ((phsW_afr hp).trans (instW_afr _ _ _ _ _ _ _ hi))
   rw [pccB_ok k no nl us nn r2 m2 hz] at h
   cases hr : rpConstW k m2 no nl us 0 nn (r2.tail.headD 0) with
   | none => rw [hr] at h; simp [pccC] at h
@@ -276,7 +357,7 @@ theorem pccW_afr {k : Nat} {m m' : Mem} {no nl us nn cty : Word} {r : List Word}
   · rw [pccC_big 0 r3 m3 hb] at h; simp at h
   rw [pccC_some 0 r3 m3 hb] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
-  exact ((phsW_afr hp).trans (instW_afr _ _ _ _ _ _ _ hi))).trans (rpConstW_afr hr)
+  exact ((phsW_afr hp).trans (instW_afr _ _ _ _ _ _ _ hi)).trans (rpConstW_afr hr)
 
 -- from IndPosSpec5
 theorem posmemo_rx_afr (n : Nat) :
@@ -356,7 +437,7 @@ theorem posmemo_rx_afr (n : Nat) :
       rw [hv, erK3_some] at hh
       simp only [Option.some.injEq, Prod.mk.injEq] at hh
       obtain ⟨-, -, rfl⟩ := hh
-      exact (((sointernW_afr hs).trans (fvinternW_afr hv))))
+      exact (((sointernW_afr hs).trans (fvinternW_afr hv)))
     by_cases hi : i < rdW (m.arr64 IW) (f + 2)
     · rw [rxMapW_cin (h0 := h0) (h1 := h1) (h2 := h2) (hi := hi)] at hh
       simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2.2]; exact AFr.refl _
@@ -403,7 +484,7 @@ theorem posmemo_rx_afr (n : Nat) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hh
     obtain ⟨-, rfl⟩ := hh
     exact (iNode _ _ _ _ _ _ _ _ _ hn).trans
-      ⟨_, _, msetG_frame rfSch rfSch_wf m1 m2 _ _ _ hs, by simp [rfSch, RFM], by simp [rfSch]⟩
+      (AFr.of_frame (msetG_frame rfSch rfSch_wf m1 m2 _ _ _ hs))
   refine ⟨hMap, ?_, ?_, ?_, ?_, ?_, hGo, ?_⟩
   · -- rxImgW
     intro m m' ctx po pl nn i a b hh
@@ -427,7 +508,7 @@ theorem posmemo_rx_afr (n : Nat) :
         rw [hst, rtK2_some] at hh
         simp only [Option.some.injEq, Prod.mk.injEq] at hh
         obtain ⟨-, -, rfl⟩ := hh
-        exact ((ceinternW_afr hc).trans (mknF_afr hst)))
+        exact ((ceinternW_afr hc).trans (mknF_afr hst))
       · rw [rxRootW_out (h := hin)] at hh
         simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2.2]; exact AFr.refl _
     by_cases hh2 : i = hiW m ctx (nn - 1)
@@ -448,7 +529,7 @@ theorem posmemo_rx_afr (n : Nat) :
     | some p2 =>
     obtain ⟨hk, m2⟩ := p2
     rw [h2] at hh
-    exact ((posRecW_afr h1).trans (posRecW_afr h2))).trans (pfr _ _ _ _ _ _ _ _ _ hh)
+    exact ((posRecW_afr h1).trans (posRecW_afr h2)).trans (pfr _ _ _ _ _ _ _ _ _ hh)
   · -- rxDsW
     intro m m' f o l a b hh
     rw [rxDsW_succ] at hh
@@ -490,8 +571,8 @@ theorem posmemo_rx_afr (n : Nat) :
     rw [rxK1_ok (hb := hb1)] at hh
     simp only [Option.some.injEq, Prod.mk.injEq] at hh
     obtain ⟨-, rfl⟩ := hh
-    exact (AFr.trans ⟨_, _, benterG_frame 218 m, by simp, by simp⟩ (iGo _ _ _ _ _ _ h1)).trans
-      ⟨_, _, MemFrame.setCtl m1 219 _, by simp, by simp⟩
+    exact (AFr.trans (AFr.of_frame (benterG_frame 218 m)) (iGo _ _ _ _ _ _ h1)).trans
+      (AFr.of_frame (MemFrame.setCtl m1 219 _))
   · -- rxNodeW
     intro m m' f f1 g x y z r hh
     by_cases hg : g = 4 ∨ g = 5 ∨ g = 6
@@ -506,7 +587,7 @@ theorem posmemo_rx_afr (n : Nat) :
       | some p2 =>
       obtain ⟨x2, m2⟩ := p2
       rw [h2, rxB2_some] at hh
-      exact ((iGo _ _ _ _ _ _ h1).trans (iGo _ _ _ _ _ _ h2)).trans (posmemo_rpMk_rx hh)
+      exact ((iGo _ _ _ _ _ _ h1).trans (iGo _ _ _ _ _ _ h2)).trans (rpMkW_afr hh)
     by_cases h7 : g = 7
     · rw [rxNodeW_let (hg := hg) (h7 := h7)] at hh
       cases h1 : rxGoW n m f f1 x with
@@ -525,14 +606,14 @@ theorem posmemo_rx_afr (n : Nat) :
       obtain ⟨c2, m3⟩ := p3
       rw [h3, rxL3_some] at hh
       exact (((iGo _ _ _ _ _ _ h1).trans (iGo _ _ _ _ _ _ h2)).trans (iGo _ _ _ _ _ _ h3)).trans
-        (posmemo_rpMk_rx hh)
+        (rpMkW_afr hh)
     rw [rxNodeW_proj (hg := hg) (h7 := h7)] at hh
     cases h1 : rxGoW n m f f1 z with
     | none => rw [h1] at hh; simp [rxP1] at hh
     | some p1 =>
     obtain ⟨a2, m1⟩ := p1
     rw [h1, rxP1_some] at hh
-    exact (iGo _ _ _ _ _ _ h1).trans (posmemo_rpMk_rx hh)
+    exact (iGo _ _ _ _ _ _ h1).trans (rpMkW_afr hh)
 
 -- from IndPosSpec5
 theorem rxW_afr {n : Nat} {m m' : Mem} {f e r : Word} (h : rxW n m f e = some (r, m')) : AFr m m' :=
@@ -596,7 +677,7 @@ theorem ntyW_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : nt
   split at h; · simp at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  exact (((AFr.iw (stripF_frame h1)).trans (posmemo_cvLpsW_afr h2)).trans (stub_afr h3)).trans
+  exact (((AFr.iw (stripF_frame h1)).trans (erToIwW_afr h2)).trans (stub_afr h3)).trans
     (instW_afr _ _ _ _ _ _ _ h4)
 
 -- from IndPos2SpecL
@@ -670,32 +751,6 @@ theorem cpW_afr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
   | n + 1, m, m', hp, dO, dL, r, h => by
     unfold cpW cpK1 cpK2 at h
     afr_auto h [bvbW_afr, fvbF_afr, cpW_afr n _ _ _ _ _ _]
-
--- from IndPos2SpecL
-theorem ustW_afr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : AFr m m' := by
-  unfold ustW ustK1 at h
-  afr_auto h [stripF_afr, hbFastW_afr]
-
--- from IndPos2SpecM
-theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
-    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [cfW] at h
-  | succ k =>
-  simp only [cfW] at h
-  cases h1 : dcWf k m ctx dO dL with
-  | none => rw [h1] at h; simp [cfK1] at h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [h1] at h
-  refine (dcWf_afr h1).trans ?_
-  simp only [cfK1] at h
-  split at h
-  · unfold cfK2 cfK3 at h
-    afr_auto h [nagW_afr _ _ _ _ _ _ _ _ _ _ _, posRecW_afr]
-  · simp only [cfK2] at h
-    unfold cfK3 at h
-    afr_auto h [posRecW_afr]
 
 -- from IndPosMemo
 theorem piBW_afr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), piBW n m fuel h = some (r, m') →
@@ -780,6 +835,27 @@ theorem dcWf_afr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : 
   | zero => simp [dcWf] at h
   | succ n => exact dcGoW_afr _ _ _ _ _ _ _ h
 
+-- from IndPos2SpecM
+theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
+    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : AFr m m' := by
+  cases k with
+  | zero => simp [cfW] at h
+  | succ k =>
+  simp only [cfW] at h
+  cases h1 : dcWf k m ctx dO dL with
+  | none => rw [h1] at h; simp [cfK1] at h
+  | some p1 =>
+  obtain ⟨r1, m1⟩ := p1
+  rw [h1] at h
+  refine (dcWf_afr h1).trans ?_
+  simp only [cfK1] at h
+  split at h
+  · unfold cfK2 cfK3 at h
+    afr_auto h [nagW_afr _ _ _ _ _ _ _ _ _ _ _, posRecW_afr]
+  · simp only [cfK2] at h
+    unfold cfK3 at h
+    afr_auto h [posRecW_afr]
+
 -- from IndPosMemo
 theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
     (h : nwsW n m ctx off l po pl = some (r, m')) : AFr m m' := by
@@ -836,7 +912,7 @@ theorem hbInsW_afr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, 
   rw [hs] at h
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  exact ⟨_, _, msetG_frame hbSch hbSch_wf m m2 e i r hs, by simp [hbSch], by simp [hbSch]⟩
+  exact AFr.of_frame (msetG_frame hbSch hbSch_wf m m2 e i r hs)
 
 -- from IndPosMemo
 theorem hbGoW_afr : ∀ (n : Nat) (m m' : Mem) (i h r : Word), hbGoW n m i h = some (r, m') → AFr m m'
@@ -855,6 +931,11 @@ theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
   split at h
   · simp at h
   exact AFr.trans (AFr.of_frame (mclearG_frame hbSch m)) (hbGoW_afr _ _ _ _ _ _ h)
+
+-- from IndPos2SpecL
+theorem ustW_afr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : AFr m m' := by
+  unfold ustW ustK1 at h
+  afr_auto h [stripF_afr, hbFastW_afr]
 
 -- from IndPosMemo
 theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
@@ -919,7 +1000,7 @@ theorem dpW_afr (n : Nat) :
     refine ⟨fun m m' f h r hh => ?_, fun m m' f1 g x y z r hh => ?_⟩
     · simp only [dpGoW, dpG1, dpG3, dpG4.eq_def, dpG5.eq_def] at hh
       afr_auto hh [ih.2 _ _ _ _ _ _ _ _, msetG_afrS dpSch_wf rfl rfl]
-    · simp only [dpNodeW, dpB1.eq_def, dpL1.eq_def, dpL2.eq_def, dpFin] at hh
+    · simp only [dpNodeW, dpB1.eq_def, dpB2.eq_def, dpL1.eq_def, dpL2.eq_def, dpL3.eq_def, dpP1.eq_def, dpFin] at hh
       afr_auto hh [ih.1 _ _ _ _ _]
 
 theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m')) : AFr m m' := by
@@ -979,7 +1060,7 @@ theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : Lis
   | zero => simp [p2ccW] at h
   | succ k =>
   simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
-  afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr]
+  afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
 
 theorem ntyWf_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : ntyWf k m vis key = some (r, m')) :
     AFr m m' := by
@@ -1006,13 +1087,18 @@ theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r :
   simp only [pfW, p2pfK1.eq_def, p2pfK2.eq_def, p2pfK3.eq_def, haWf, naWf] at h
   cases k <;> simp only at h <;> afr_auto h [haW_afr, noaW_afr _ _ _ _ _ _ _ _ _ _, naW_afr]
 
+theorem pcrWf_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}
+    (h : pcrWf k m no nl us dO dL hO hL cty = some (r, m')) : AFr m m' := by
+  match k, h with
+  | k + 3, h => exact pcrW_afr h
+
 theorem p2ctW_afr {k : Nat} {m m' : Mem} {vis no nl us dO dL hO hL cv hi : Word} {r : List Word}
     (h : p2ctW k m vis no nl us dO dL hO hL cv hi = some (r, m')) : AFr m m' := by
   cases k with
   | zero => simp [p2ctW] at h
   | succ k =>
-  simp only [p2ctW, p2ctK1.eq_def, p2ctK2.eq_def, p2ctK3.eq_def, p2ctK4.eq_def, cvLpsW, pcrWf] at h
-  afr_auto h [erToIwW_afr, stub_afr, pcrW_afr]
+  simp only [p2ctW, p2ctK1.eq_def, p2ctK2.eq_def, p2ctK3.eq_def, p2ctK4.eq_def, cvLpsW] at h
+  afr_auto h [erToIwW_afr, stub_afr, pcrWf_afr]
 
 theorem ggW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx hi us dO dL cO cL gO gL : Word) (r : List Word),
     ggW k m vis ctx hi us dO dL cO cL gO gL = some (r, m') → AFr m m'

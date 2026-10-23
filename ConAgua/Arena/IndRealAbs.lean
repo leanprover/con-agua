@@ -91,7 +91,8 @@ macro_rules
   | `(tactic| afr_auto $h [$ts,*]) => `(tactic|
     repeat' (first
       | with_reducible exact AFr.refl _
-      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; afr_set; done)
+      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]
+         first | with_reducible exact AFr.refl _ | (afr_set; done))
       | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact AFr.refl _)
       | (simp only [reduceCtorEq] at $h:ident; done)
       | (first $[| refine AFr.trans ($ts (by with_reducible assumption)) ?_]*)
@@ -193,14 +194,6 @@ theorem stripF_afr {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg 
 theorem i1F_afr {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m')) : AFr m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact AFr.of_frame (run_memFrame i1Prog_closed (List.mem_cons_self ..) (run_of_callW hc)).1
-
-theorem recW_afr {m m' : Mem} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m')) :
-    AFr m m' := by
-  simp only [recW] at h
-  split at h; · cases h
-  rename_i q m1 h1
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (allocW_afr h1).trans (AFr.of_frame (wrIW_frame _ _ _))
 
 theorem copyW_afr {n : Nat} {m m' : Mem} {d s l : Word} (h : copyW n m d s l = some m') : AFr m m' :=
   AFr.iw (copyW_iwFrame _ _ _ _ _ _ h)

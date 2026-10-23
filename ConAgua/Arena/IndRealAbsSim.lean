@@ -19,6 +19,14 @@ namespace L.Ind
 
 open L.Arena
 
+theorem recW_afr {m m' : Mem} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m')) :
+    AFr m m' := by
+  simp only [recW] at h
+  split at h; · cases h
+  rename_i q m1 h1
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  exact (allocW_afr h1).trans (AFr.of_frame (wrIW_frame _ _ _))
+
 theorem naF_afr {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (naF_frame h)
 
