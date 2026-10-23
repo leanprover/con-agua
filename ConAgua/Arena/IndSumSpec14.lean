@@ -288,7 +288,7 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have h1 := hffF_ok dn vis fe CWF w hwl
   rw [hcwf] at h1
   refine Sim.bindK (K := sctK1 _ vis nP lo ll w) rfl (fun _ _ => rfl)
-    (Sim.withFr (F := AbsOK) (sumSim_of_relW h1 hS) fun _ _ e => AFr.of_frame (hffF_frame e) hA)
+    (Sim.withFr (F := AbsOK) (sumSim_of_relW h1 hS) fun _ _ e => (show AFr _ _ from AFr.of_frame (hffF_frame e)) hA)
     fun r1 a1 m1 s1 hQ => ?_
   obtain ⟨⟨hS1, hg1, hb1, hl1⟩, hA1⟩ := hQ
   rw [sctK1_some]
@@ -305,7 +305,7 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have h4 := lbbF_ok dn vis fe CWF (nP + 1) w hwl
   rw [hcwf, sumToNat_succ (by omega)] at h4
   refine Sim.bindK (K := sctK4 _ (r1.headD 0) (r2.headD 0) (r3.headD 0)) rfl (fun _ _ => rfl)
-    (Sim.withFr (F := AbsOK) (sumSim_of_relW h4 hS3) fun _ _ e => AFr.of_frame (lbbF_frame e) hA3)
+    (Sim.withFr (F := AbsOK) (sumSim_of_relW h4 hS3) fun _ _ e => (show AFr _ _ from AFr.of_frame (lbbF_frame e)) hA3)
     fun r4 a4 m4 s4 hQ => ?_
   obtain ⟨⟨hS4, hg4, hb4, hl4⟩, hA4⟩ := hQ
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4

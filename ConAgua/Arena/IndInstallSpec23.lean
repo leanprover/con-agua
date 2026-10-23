@@ -243,7 +243,7 @@ theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option 
   simp only [Option.some.injEq, Prod.mk.injEq] at e
   obtain ⟨rfl, rfl⟩ := e
   obtain ⟨hS3, hg3, hd3⟩ := installRec2PSl hP decIS_mono h3 hS2 (hss1.grow decIS_mono hg2)
-  have hA3 : AbsOK m' := by
+  have hA3 : AbsOK m3 := by
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (rec2_specW p hP.alloc n hP.rec2 _ _ _) h3
     exact recW_afr hW hA2

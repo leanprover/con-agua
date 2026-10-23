@@ -268,12 +268,20 @@ theorem sumKeep_restrict {dn : NIdx → Option ConLeche.Name} {vis vis0 : Word} 
 theorem sumUnless_true {α : Type} {c : Bool} (hc : c = true) (e : CheckError) (k : AM α) :
     ((unless c do fail e) >>= fun _ => k) = k := by subst hc; rfl
 
+theorem eqTrueW_afr {m m' : Mem} {u v e : Word} (h : eqTrueW m u v = some (e, m')) : AFr m m' := by
+  simp only [eqTrueW, eqTrueK.eq_def] at h
+  split at h
+  · cases h
+  · rename_i r m1 h1
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    rw [← h.2]; exact stub_afr h1
+
 theorem cfbW_afr : ∀ (n : Nat) (m m' : Mem) (isProp large s io il fv u : Word) (r : List Word),
     cfbW n m isProp large s io il fv u = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [cfbW] at h
   | n + 1, m, m', isProp, large, s, io, il, fv, u, r, h => by
-    simp only [cfbW, cfbK1.eq_def, cfbK2.eq_def, cfbK3.eq_def, cfbK4.eq_def, eqTrueW, eqTrueK.eq_def] at h
-    afr_auto h [stub_afr]
+    simp only [cfbW, cfbK1.eq_def, cfbK2.eq_def, cfbK3.eq_def, cfbK4.eq_def] at h
+    afr_auto h [stub_afr, eqTrueW_afr]
 
 theorem csfW_afr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl io il res j : Word) (r : List Word),
     csfW n m vis isProp large s nP fo fl io il res j = some (r, m') → AFr m m'
@@ -346,7 +354,7 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [CWF_eq, hxbd] at h4
   refine Sim.bindK (K := ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw hd) rfl
     (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relW h4 hS3)
-      fun _ _ e => AFr.of_frame (gafF_frame e) hA3) fun rf xfn m4 a4 hQ => ?_
+      fun _ _ e => (show AFr _ _ from AFr.of_frame (gafF_frame e)) hA3) fun rf xfn m4 a4 hQ => ?_
   obtain ⟨⟨hS4, hg4, hf32, hfd⟩, hA4⟩ := hQ
   rw [ctlK4_some]
   -- `get_app_args_f`
