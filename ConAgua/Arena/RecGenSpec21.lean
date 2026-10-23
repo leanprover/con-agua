@@ -1,4 +1,4 @@
-import ConAgua.Arena.RecGenSpec20
+import ConAgua.Arena.RecGenSpec22
 import ConAgua.Arena.RecGenSpec11
 import ConAgua.Arena.IndInstallSpec30
 
@@ -47,26 +47,6 @@ theorem slots_ok {m : Mem} {so sl : Nat} {slots : List ClassSlot} (h : SPL decCS
   cases hat
   have hl2 := FA2.length_eq hfa
   exact stab_decCS_ext (FA2.get hfa j (by omega) (by omega)) hsz
-
-theorem decCK_truncM {m : Mem} {k : Nat} (hk : CKExt m k) : decCK (truncM m) k = decCK m k := by
-  obtain ⟨h1, h2⟩ := hk
-  simp only [decCK]
-  rw [iwH_truncM (by omega), iwH_truncM (by omega)]
-  have hat : decAt (truncM m) (decHL (k := IdxKind.expr) (truncM m)) (k + 2) =
-      decAt m (decHL (k := IdxKind.expr) m) (k + 2) := by
-    simp only [decAt]
-    rw [iwN_truncM (by omega), iwN_truncM (by omega)]
-    cases ho : iwN m (k + 2) with
-    | none => simp
-    | some o =>
-      cases hl : iwN m (k + 2 + 1) with
-      | none => simp
-      | some l =>
-        show decHL (truncM m) o l = decHL m o l
-        rcases h2 o l ho (by simpa using hl) with hb | rfl
-        · exact decHL_truncM hb
-        · simp [decHL, hslice?]
-  rw [hat]
 
 /-- **`class_read_classes`' keys are decoded below the tops.** -/
 theorem ccRes_pslR {m : Mem} {r : List Word} {keys : List ClassKey} (h : CcRes m r keys) :
@@ -190,7 +170,7 @@ theorem cbcW_sim {p : Prog} (hP : CbcProg p) {fs : List FnName}
     (hpfb : po.toNat + pl.toNat ≤ iwTop m) (hPm : PosMR m) :
     Sim (cbcW p n m vis pp po pl co cl) (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-        StabD (fun m => decCR m (r.headD 0).toNat) m' x.1 ∧
+        DecB (fun m => decCR m (r.headD 0).toNat) m' x.1 ∧
         PSlR decTM x.2 (r.tail.headD 0) (r.tail.tail.headD 0) m' ∧ PosMR m') := by
   intro r m' h
   have hbsD : DecB (fun m => decBS m pp.toNat) m bs := hb.1
@@ -317,12 +297,12 @@ theorem cbcW_sim {p : Prog} (hP : CbcProg p) {fs : List FnName}
   · simp only [ConRon.Arena.checkBlockClasses, StateT.run_bind, hrun1, except_ok_bind]
     simp only [hrun3, except_ok_bind, hrun4, hall, if_true]
     rfl
-  · simpa using hrdS.grow (hg2.trans (hg3.trans hg4))
+  · exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.2.2.2.1
 
 /-- **`check_block_classes` refines `checkBlockClasses`**: from the stage relation, the shape
 (`BSOK`, its slice bound `ShapeSrc`, its recursors decoded with word-sized major indices), the
 constructors and parameters decoded below the tops and the walk memos well formed, the class
-reading at `r[0]` (decoded stably) and the classes' majors at `(r[1], r[2])` (below the tops), the
+reading at `r[0]` and the classes' majors at `(r[1], r[2])` (below the tops), the
 memos kept. Program facts: the lookups (`CbcProg`) and the write set of `class_read`,
 `class_read_classes` (`hcl`, as `check_block_tail`'s). -/
 @[refines ConRon.Arena.checkBlockClasses]
@@ -340,7 +320,7 @@ theorem checkBlockClasses_refines {p : Prog} (hP : CbcProg p) {fs : List FnName}
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      StabD (fun m => decCR m (r.headD 0).toNat) s'.mem
+      DecB (fun m => decCR m (r.headD 0).toNat) s'.mem
         (AM.res (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀).1 ∧
       PSlR decTM (AM.res (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀).2
         (r.tail.headD 0) (r.tail.tail.headD 0) s'.mem ∧ PosMR s'.mem; ⊤⦄ :=
