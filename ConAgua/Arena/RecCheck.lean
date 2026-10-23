@@ -178,11 +178,14 @@ def eraseFVarTys : FunDecl := lfn (e) locals (f, r) {
   return r
 }
 
-/-- **`target_canon_params`**: `replaceFVars (.canon pfvs) e`, `f = [3, pfvs.off, pfvs.len]`. -/
+/-- **`target_canon_params`**: `replaceFVars (.canon pfvs) e`, `f = [3, pfvs.off, pfvs.len]` (an
+empty `pfvs` recorded at offset `0`: its offset is whatever the caller's record holds). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:175-179 ConRon.Arena.targetCanonParams
 @[l_impl ConRon.Arena.targetCanonParams]
-def targetCanonParams : FunDecl := lfn (pfo, pfl, e) locals (f, r) {
-  f := call rec3(3, pfo, pfl);
+def targetCanonParams : FunDecl := lfn (pfo, pfl, e) locals (po, f, r) {
+  po := pfo;
+  if pfl == 0 { po := 0 };
+  f := call rec3(3, po, pfl);
   r := call replace_fvars(f, e);
   return r
 }
@@ -204,8 +207,10 @@ def targetParamsDefEqStep : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, p
   if pfl < fb { return 0 };
   ac := call target_canon_params(pfo, pfl, a);
   av := call target_abs(no, nl, lvls, ho, hl, ac);
+  if 4294967296 <= av { abort };
   bc := call target_canon_params(pfo, pfl, b);
   bv := call target_abs(no, nl, lvls, ho, hl, bc);
+  if 4294967296 <= bv { abort };
   if av == bv { return 1 };
   u := call infer_type_core(vis, d, av);
   u := call infer_type_core(vis, d, bv);
@@ -213,21 +218,19 @@ def targetParamsDefEqStep : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, p
   return deq
 }
 
-/-- **`target_params_def_eq`**: per-component parameter defeq, stopping at the first mismatch. -/
+/-- **`target_params_def_eq`**: per-component parameter defeq, stopping at the first mismatch; a
+self-recursion on both slices, as the twin's list recursion (lists of different lengths are
+compared up to the shorter one's end, then `false`). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:181-208 ConRon.Arena.targetParamsDefEq
 @[l_impl ConRon.Arena.targetParamsDefEq]
 def targetParamsDefEq : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao, al, bo, bl)
-    locals (i, a, b, r) {
-  if al != bl { return 0 };
-  i := 0;
-  while i < al {
-    a := IW.u64[ao + i];
-    b := IW.u64[bo + i];
-    r := call target_params_def_eq_step(vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b);
-    if r == 0 { return 0 };
-    i += 1
-  };
-  return 1
+    locals (r) {
+  if al == 0 { return u64(bl == 0) };
+  if bl == 0 { return 0 };
+  r := call target_params_def_eq_step(vis, d, no, nl, lvls, ho, hl, pfo, pfl, IW.u64[ao], IW.u64[bo]);
+  if r == 0 { return 0 };
+  r := call target_params_def_eq(vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao + 1, al - 1, bo + 1, bl - 1);
+  return r
 }
 
 /-- **`target_class_match`**: levels up to `lvls_eq_c` (the cached `lvlsEq?`, as the twin), then
@@ -235,17 +238,15 @@ per-component parameter defeq over the recursor prefix `pfvs` with the member ho
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:210-224 ConRon.Arena.targetClassMatch
 @[l_impl ConRon.Arena.targetClassMatch]
 def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl)
-    locals (e, mno, mnl, mo, ml, lpso, lpsl, m0, cvt0, blvls, ho, hl, d, r) {
+    locals (e, mno, mnl, lpso, lpsl, blvls, ho, hl, d, r) {
   e := call lvls_eq_c(us, lvls);
   if e != 2 { return 0 };
   (mno, mnl) := call block_shape_member_names(p);
-  mo := IW.u64[p];
-  ml := IW.u64[p + 1];
-  if ml == 0 { lpso := 0; lpsl := 0 }
-  else { m0 := IW.u64[mo]; cvt0 := IW.u64[m0]; (lpso, lpsl) := call cv_lps(cvt0) };
+  (lpso, lpsl) := call block_shape_lps(p);
   blvls := call param_levels(lpso, lpsl);
-  (ho, hl) := call target_holes(fto, ftl, pfl);
   d := pfl + ftl;
+  if d < pfl { abort };
+  (ho, hl) := call target_holes(fto, ftl, pfl);
   r := call target_params_def_eq(vis, d, mno, mnl, blvls, ho, hl, pfo, pfl, dso, dsl, edso, edsl);
   return r
 }
@@ -261,27 +262,23 @@ def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
   return r
 }
 
-/-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class,
-examined from the LAST entry to the first (so the class-match calls fire in that order), kept
-in their original relative order. -/
+/-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class, as the
+twin's recursion: the tail first (so the class-match calls fire from the last entry to the first),
+each kept entry consed onto the kept tail (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:226-241 ConRon.Arena.targetMajorNfs
 @[l_impl ConRon.Arena.targetMajorNfs]
 def targetMajorNfs : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo, nfl)
-    locals (buf, wc, j, eptr, has, keep) {
-  buf := call iw_alloc(nfl);
-  wc := nfl;
-  j := nfl;
-  while j != 0 {
-    j := j - 1;
-    eptr := IW.u64[nfo + j];
-    has := call ctors_have_name(cto, ctl, IW.u64[eptr]);
-    if has != 0 {
-      keep := call target_class_match(vis, p, fto, ftl, pfo, pfl, us, dso, dsl, IW.u64[eptr + 1],
-        IW.u64[eptr + 2], IW.u64[eptr + 3]);
-      if keep != 0 { wc := wc - 1; IW.u64[buf + wc] := eptr }
-    }
-  };
-  return (buf + wc, nfl - wc)
+    locals (ro, rl, eptr, has, keep, qo, ql) {
+  if nfl == 0 { return (0, 0) };
+  (ro, rl) := call target_major_nfs(vis, p, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo + 1, nfl - 1);
+  eptr := IW.u64[nfo];
+  has := call ctors_have_name(cto, ctl, IW.u64[eptr]);
+  if has == 0 { return (ro, rl) };
+  keep := call target_class_match(vis, p, fto, ftl, pfo, pfl, us, dso, dsl, IW.u64[eptr + 1],
+    IW.u64[eptr + 2], IW.u64[eptr + 3]);
+  if keep == 0 { return (ro, rl) };
+  (qo, ql) := call sl_cons(eptr, ro, rl);
+  return (qo, ql)
 }
 
 /-- **`target_ctors_of`**: a stored inductive's constructors and parameter count. -/
@@ -316,8 +313,7 @@ def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, I, us, t)
-    locals (mo, ml, ms, nidx, ch, ctor_o, ctor_l, nP, lpso, lpsl, m0, cvt0, blvls, al2, fl2, eq1,
-      eq2, r) {
+    locals (mo, ml, ms, nidx, ch, ctor_o, ctor_l, nP, lpso, lpsl, blvls, al2, fl2, eq1, eq2, r) {
   mo := IW.u64[p];
   ml := IW.u64[p + 1];
   if ml <= t { abort };
@@ -328,8 +324,7 @@ def targetMajorOfMember : FunDecl := lfn (p, cao, cal, pfo, pfl, fvo, fvl, args_
   ctor_o := IW.u64[ch];
   ctor_l := IW.u64[ch + 1];
   nP := IW.u64[p + 4];
-  if ml == 0 { lpso := 0; lpsl := 0 }
-  else { m0 := IW.u64[mo]; cvt0 := IW.u64[m0]; (lpso, lpsl) := call cv_lps(cvt0) };
+  (lpso, lpsl) := call block_shape_lps(p);
   blvls := call param_levels(lpso, lpsl);
   al2 := args_l;
   if nP < args_l { al2 := nP };
@@ -359,18 +354,15 @@ def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb
 }
 
 /-- `target_major_of`'s OUTSIDE branch: does any parameter occur as a member or hole
-(`ds.anyM`, stopping at the first hit). -/
+(`ds.anyM`, stopping at the first hit; a self-recursion). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (j, x, b) {
-  j := 0;
-  while j < dsl {
-    x := IW.u64[dso + j];
-    b := call nest_occ(mno, mnl, 0, 0, x);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (b, r) {
+  if dsl == 0 { return 0 };
+  b := call nest_occ(mno, mnl, 0, 0, IW.u64[dso]);
+  if b != 0 { return 1 };
+  r := call target_major_of_outside_occ(mno, mnl, dso + 1, dsl - 1);
+  return r
 }
 
 /-- `target_major_of`'s OUTSIDE branch: not `Quot`, a stored inductive, parameters closed and
@@ -449,37 +441,32 @@ def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, hd, app, u) {
 
 /-! ## The recursor records' pins -/
 
-/-- Split the block's recursors into its own (`tgt < k`) and the auxiliary ones. -/
+/-- Split the block's recursors into its own (`tgt < k`) and the auxiliary ones: the twin's two
+`filter`s, a self-recursion consing each recursor onto its side's slice (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
 @[l_impl ConRon.Arena.targetRecPins]
-def blockRecSplitOwnAux : FunDecl := lfn (reco, recl, k) locals (owno, ownl, auxo, auxl, j, rc, tgt) {
-  owno := call iw_alloc(recl);
-  auxo := call iw_alloc(recl);
-  ownl := 0;
-  auxl := 0;
-  j := 0;
-  while j < recl {
-    rc := IW.u64[reco + j];
-    tgt := IW.u64[rc + 3];
-    if tgt < k { IW.u64[owno + ownl] := rc; ownl += 1 }
-    else { IW.u64[auxo + auxl] := rc; auxl += 1 };
-    j += 1
+def blockRecSplitOwnAux : FunDecl := lfn (reco, recl, k) locals (oo, ol, ao, al, rc, qo, ql) {
+  if recl == 0 { return (0, 0, 0, 0) };
+  (oo, ol, ao, al) := call block_rec_split_own_aux(reco + 1, recl - 1, k);
+  rc := IW.u64[reco];
+  if IW.u64[rc + 3] < k {
+    (qo, ql) := call sl_cons(rc, oo, ol);
+    return (qo, ql, ao, al)
   };
-  return (owno, ownl, auxo, auxl)
+  (qo, ql) := call sl_cons(rc, ao, al);
+  return (oo, ol, qo, ql)
 }
 
-/-- The wanted auxiliary names `n₀.rec_1 … n₀.rec_n`. -/
+/-- The wanted auxiliary names `n₀.rec_{j+1} … n₀.rec_{j+auxl}`, interned in order (the twin's
+`mapM` over `List.range`), a self-recursion consing each name (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
 @[l_impl ConRon.Arena.targetRecPins]
-def blockRecWantAuxNames : FunDecl := lfn (n0, auxl) locals (wo, j, nm) {
-  wo := call iw_alloc(auxl);
-  j := 0;
-  while j < auxl {
-    nm := call name_rec_i(n0, j + 1);
-    IW.u64[wo + j] := nm;
-    j += 1
-  };
-  return (wo, auxl)
+def blockRecWantAuxNames : FunDecl := lfn (n0, j, auxl) locals (nm, ro, rl, qo, ql) {
+  if auxl == 0 { return (0, 0) };
+  nm := call name_rec_i(n0, j + 1);
+  (ro, rl) := call block_rec_want_aux_names(n0, j + 1, auxl - 1);
+  (qo, ql) := call sl_cons(nm, ro, rl);
+  return (qo, ql)
 }
 
 /-- `ptr_names_copy(d, s, l)`: `IW[d + j] := EREC[IW[IW[s + j]]]` for `j < l`, recursively (the
@@ -512,7 +499,7 @@ def targetRecPinsNames : FunDecl := lfn (mo, k, reco, recl, auxo, auxl)
     locals (n0, ms0, cvt0, wo, wl, go, gl, ok, nodupo, nodupl) {
   if k == 0 { n0 := call intern_nanon() }
   else { ms0 := IW.u64[mo]; cvt0 := IW.u64[ms0]; n0 := EREC.u64[cvt0] };
-  (wo, wl) := call block_rec_want_aux_names(n0, auxl);
+  (wo, wl) := call block_rec_want_aux_names(n0, 0, auxl);
   (go, gl) := call ptr_list_names(auxo, auxl);
   ok := call sl_set_eq(wo, wl, go, gl);
   if ok == 0 { return 0 };
@@ -580,18 +567,16 @@ def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   return r
 }
 
-/-- Erase the free-variable annotations of every element of a slice, in order. -/
+/-- Erase the free-variable annotations of every element of a slice, in order: the twin's `mapM`
+as a self-recursion, each result consed onto the rest's slice (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:409-448 ConRon.Arena.targetK53
 @[l_impl ConRon.Arena.targetK53]
-def eraseEach : FunDecl := lfn (o, l) locals (q, j, v) {
-  q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    v := call erase_fvar_tys(IW.u64[o + j]);
-    IW.u64[q + j] := v;
-    j += 1
-  };
-  return (q, l)
+def eraseEach : FunDecl := lfn (o, l) locals (v, ro, rl, qo, ql) {
+  if l == 0 { return (0, 0) };
+  v := call erase_fvar_tys(IW.u64[o]);
+  (ro, rl) := call erase_each(o + 1, l - 1);
+  (qo, ql) := call sl_cons(v, ro, rl);
+  return (qo, ql)
 }
 
 /-- `target_k53`'s telescope check: the stripped domains and the recorded telescope agree up to
@@ -645,6 +630,7 @@ def targetK53Args : FunDecl := lfn (vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao
   if r == 0 { return 0 };
   if lal < nPc { lpl := lal } else { lpl := nPc };
   hd := call intern_const(ip, usp);
+  if 4294967296 <= hd { abort };
   app := call mk_app_n_f(hd, lao, lpl);
   (mno, mnl) := call block_shape_member_names(p);
   occ := call nest_occ(mno, mnl, 0, 0, app);
@@ -717,43 +703,54 @@ def auxRuleFire : FunDecl := lfn (M, rP) locals (lo, ll, po, pl) {
   return (1, lo, ll, po, pl)
 }
 
-/-- Rebuild each rule record of `(ro, rl)` with the given NESTED fire, as fresh `EREC` records. -/
+/-- `tgt_rule_nested(old, flo, fll, fpo, fpl)`: a fresh 11-word rule record, `old`'s fields with the
+NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:498-509 ConRon.Arena.tgtStoredRules
 @[l_impl ConRon.Arena.tgtStoredRules]
-def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (qo, j, old, newp) {
-  qo := call iw_alloc(rl);
-  j := 0;
-  while j < rl {
-    old := IW.u64[ro + j];
-    newp := call erec_alloc(11);
-    EREC.u64[newp] := EREC.u64[old];
-    EREC.u64[newp + 1] := EREC.u64[old + 1];
-    EREC.u64[newp + 2] := EREC.u64[old + 2];
-    EREC.u64[newp + 3] := 1;
-    EREC.u64[newp + 4] := flo;
-    EREC.u64[newp + 5] := fll;
-    EREC.u64[newp + 6] := fpo;
-    EREC.u64[newp + 7] := fpl;
-    EREC.u64[newp + 8] := EREC.u64[old + 8];
-    EREC.u64[newp + 9] := EREC.u64[old + 9];
-    EREC.u64[newp + 10] := EREC.u64[old + 10];
-    IW.u64[qo + j] := newp;
-    j += 1
-  };
-  return (qo, rl)
+def tgtRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp) {
+  newp := call erec_alloc(11);
+  EREC.u64[newp] := EREC.u64[old];
+  EREC.u64[newp + 1] := EREC.u64[old + 1];
+  EREC.u64[newp + 2] := EREC.u64[old + 2];
+  EREC.u64[newp + 3] := 1;
+  EREC.u64[newp + 4] := flo;
+  EREC.u64[newp + 5] := fll;
+  EREC.u64[newp + 6] := fpo;
+  EREC.u64[newp + 7] := fpl;
+  EREC.u64[newp + 8] := EREC.u64[old + 8];
+  EREC.u64[newp + 9] := EREC.u64[old + 9];
+  EREC.u64[newp + 10] := EREC.u64[old + 10];
+  return newp
+}
+
+/-- Rebuild each rule record of `(ro, rl)` with the given NESTED fire (its level and pin slices in
+`EREC`), as fresh `EREC` records; the twin's `rules.map`, a self-recursion consing each new record
+pointer onto the rest's slice (`sl_cons`, D18). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:498-509 ConRon.Arena.tgtStoredRules
+@[l_impl ConRon.Arena.tgtStoredRules]
+def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (newp, to, tl, qo, ql) {
+  if rl == 0 { return (0, 0) };
+  newp := call tgt_rule_nested(IW.u64[ro], flo, fll, fpo, fpl);
+  (to, tl) := call tgt_stored_rules_remap(ro + 1, rl - 1, flo, fll, fpo, fpl);
+  (qo, ql) := call sl_cons(newp, to, tl);
+  return (qo, ql)
 }
 
 /-- **`tgt_stored_rules`**: `sum_rules` at the major's parameters and constructors; at an OUTSIDE
-major every rule's fire is recomputed once (`aux_rule_fire`) and rebuilt. -/
+major every rule's fire is recomputed once (`aux_rule_fire`, its slices in `IW`), its slices copied
+to `EREC` (`er_from_iw`: a rule record's fire slices are read from the record pool, `decRule`), and
+the rules rebuilt. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:498-509 ConRon.Arena.tgtStoredRules
 @[l_impl ConRon.Arena.tgtStoredRules]
 def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
-    locals (ro, rl, fk, flo, fll, fpo, fpl, no, nl) {
+    locals (ro, rl, fk, flo, fll, fpo, fpl, elo, ell, epo, epl, no, nl) {
   (ro, rl) := call sum_rules(vis, EREC.u64[cv], IW.u64[M + 4], IW.u64[M + 6], IW.u64[M + 7],
     rhso, rhsl);
   if IW.u64[M + 8] != 0 { return (ro, rl) };
   (fk, flo, fll, fpo, fpl) := call aux_rule_fire(M, rP);
-  (no, nl) := call tgt_stored_rules_remap(ro, rl, flo, fll, fpo, fpl);
+  (elo, ell) := call er_from_iw(flo, fll);
+  (epo, epl) := call er_from_iw(fpo, fpl);
+  (no, nl) := call tgt_stored_rules_remap(ro, rl, elo, ell, epo, epl);
   return (no, nl)
 }
 
@@ -779,36 +776,51 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   return r
 }
 
-/-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run. -/
+/-- `rule_copy(b, old)`: the 11 words of the rule record at `old` copied to `EREC[b ‥ b + 11)`. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
 @[l_impl ConRon.Arena.consBlockRecsTF]
-def rulesToErec : FunDecl := lfn (ro, rl) locals (base, j, old) {
+def ruleCopy : FunDecl := lfn (b, old) locals () {
+  EREC.u64[b] := EREC.u64[old];
+  EREC.u64[b + 1] := EREC.u64[old + 1];
+  EREC.u64[b + 2] := EREC.u64[old + 2];
+  EREC.u64[b + 3] := EREC.u64[old + 3];
+  EREC.u64[b + 4] := EREC.u64[old + 4];
+  EREC.u64[b + 5] := EREC.u64[old + 5];
+  EREC.u64[b + 6] := EREC.u64[old + 6];
+  EREC.u64[b + 7] := EREC.u64[old + 7];
+  EREC.u64[b + 8] := EREC.u64[old + 8];
+  EREC.u64[b + 9] := EREC.u64[old + 9];
+  EREC.u64[b + 10] := EREC.u64[old + 10];
+  return 0
+}
+
+/-- `rules_to_erec_go(base, ro, rl)`: copy the 11-word rule records `IW[ro ‥ ro + rl)` point to into
+the `EREC` run at `base`, first to last; a self-recursion. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
+@[l_impl ConRon.Arena.consBlockRecsTF]
+def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
+  if rl == 0 { return 0 };
+  u := call rule_copy(base, IW.u64[ro]);
+  u := call rules_to_erec_go(base + 11, ro + 1, rl - 1);
+  return 0
+}
+
+/-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run (a
+capacity abort above `2^32` rules). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
+@[l_impl ConRon.Arena.consBlockRecsTF]
+def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
+  if 4294967296 <= rl { abort };
   base := call erec_alloc(rl * 11);
-  j := 0;
-  while j < rl {
-    old := IW.u64[ro + j];
-    EREC.u64[base + j * 11] := EREC.u64[old];
-    EREC.u64[base + j * 11 + 1] := EREC.u64[old + 1];
-    EREC.u64[base + j * 11 + 2] := EREC.u64[old + 2];
-    EREC.u64[base + j * 11 + 3] := EREC.u64[old + 3];
-    EREC.u64[base + j * 11 + 4] := EREC.u64[old + 4];
-    EREC.u64[base + j * 11 + 5] := EREC.u64[old + 5];
-    EREC.u64[base + j * 11 + 6] := EREC.u64[old + 6];
-    EREC.u64[base + j * 11 + 7] := EREC.u64[old + 7];
-    EREC.u64[base + j * 11 + 8] := EREC.u64[old + 8];
-    EREC.u64[base + j * 11 + 9] := EREC.u64[old + 9];
-    EREC.u64[base + j * 11 + 10] := EREC.u64[old + 10];
-    j += 1
-  };
+  u := call rules_to_erec_go(base, ro, rl);
   return (base, rl)
 }
 
-/-- Build the `recInfo` record (kind `5`: `cv`'s 4 words inline, `major`, `pre`, the rules copied
-to one fresh `EREC` run) and `env_push` it. -/
+/-- `rec_info_rec(cv, mI, rP, reo, rel)`: a fresh 9-word `.recInfo` record (kind `5`, `cv`'s 4 words
+inline, `major`, `pre`, the rules' run). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
 @[l_impl ConRon.Arena.consBlockRecsTF]
-def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, rel, q, nvis) {
-  (reo, rel) := call rules_to_erec(ro, rl);
+def recInfoRec : FunDecl := lfn (cv, mI, rP, reo, rel) locals (q) {
   q := call erec_alloc(9);
   EREC.u64[q] := 5;
   EREC.u64[q + 1] := EREC.u64[cv];
@@ -819,31 +831,39 @@ def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, re
   EREC.u64[q + 6] := rP;
   EREC.u64[q + 7] := reo;
   EREC.u64[q + 8] := rel;
+  return q
+}
+
+/-- Build the `recInfo` record (kind `5`: `cv`'s 4 words inline, `major`, `pre`, the rules copied
+to one fresh `EREC` run) and `env_push` it. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
+@[l_impl ConRon.Arena.consBlockRecsTF]
+def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, rel, q, nvis) {
+  (reo, rel) := call rules_to_erec(ro, rl);
+  q := call rec_info_rec(cv, mI, rP, reo, rel);
   nvis := call env_push(vis, q);
   return nvis
 }
 
 /-- **`cons_block_recs_tf`**: the checked family consed through the index, at its majors; the
 rules' lookups at the constructors' visibility bound `vis₂` (fixed), the recursors pushed above
-the growing `vis`. -/
+the growing `vis`; the twin's list recursion. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
 @[l_impl ConRon.Arena.consBlockRecsTF]
 def consBlockRecsTF : FunDecl := lfn (vis2, p, m, lo, ll, vis)
-    locals (j, trip, cv, M, rhso, rhsl, mI, rP, ro, rl, q) {
-  j := 0;
-  while j < ll {
-    trip := IW.u64[lo + j];
-    cv := IW.u64[trip];
-    M := IW.u64[trip + 1];
-    rhso := IW.u64[trip + 2];
-    rhsl := IW.u64[trip + 3];
-    mI := call block_shape_major_idx_at(p, m + j);
-    rP := call block_shape_rule_prefix_at(p, m + j);
-    (ro, rl) := call tgt_stored_rules(vis2, cv, rP, M, rhso, rhsl);
-    vis := call cons_block_recs_push(vis, cv, mI, rP, ro, rl);
-    j += 1
-  };
-  return vis
+    locals (trip, cv, M, rhso, rhsl, mI, rP, ro, rl, nvis, r) {
+  if ll == 0 { return vis };
+  trip := IW.u64[lo];
+  cv := IW.u64[trip];
+  M := IW.u64[trip + 1];
+  rhso := IW.u64[trip + 2];
+  rhsl := IW.u64[trip + 3];
+  mI := call block_shape_major_idx_at(p, m);
+  rP := call block_shape_rule_prefix_at(p, m);
+  (ro, rl) := call tgt_stored_rules(vis2, cv, rP, M, rhso, rhsl);
+  nvis := call cons_block_recs_push(vis, cv, mI, rP, ro, rl);
+  r := call cons_block_recs_tf(vis2, p, m + 1, lo + 1, ll - 1, nvis);
+  return r
 }
 
 /-! ## The program -/
@@ -872,9 +892,9 @@ def recCheckFns : Prog :=
    ("target_k53_heads", targetK53Heads), ("target_k53_args", targetK53Args),
    ("target_k53", targetK53), ("target_pi_doms_with", targetPiDomsWith),
    ("abstract_prefix", abstractPrefix), ("abstract_prefix_list", abstractPrefixList),
-   ("aux_rule_fire", auxRuleFire), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
+   ("aux_rule_fire", auxRuleFire), ("tgt_rule_nested", tgtRuleNested), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
    ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit_go", blockNestedBitGo), ("block_nested_bit", blockNestedBit),
-   ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
+   ("rule_copy", ruleCopy), ("rules_to_erec_go", rulesToErecGo), ("rec_info_rec", recInfoRec), ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
    ("cons_block_recs_tf", consBlockRecsTF)]
 
 /-- Stubs for the functions of OTHER modules this module calls.
@@ -896,7 +916,8 @@ def recCheckForeign : Prog :=
    ("block_rec_lps_ok", stub 1), ("block_rec_names_unreserved", stub 2),
    ("block_rec_name_set_ok", stub 4), ("block_split", stub 2),
    ("block_shape_major_idx_at", stub 2), ("block_shape_rule_prefix_at", stub 2),
-   ("pi_binders", stub 2), ("sum_rules", stub 7)]
+   ("pi_binders", stub 2), ("sum_rules", stub 7), ("block_shape_lps", stub 1),
+   ("er_from_iw", stub 2)]
 
 /-- The module closes over the library, the stubs and its foreign callees. -/
 theorem recCheck_wf :
