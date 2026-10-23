@@ -473,8 +473,8 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   simp only [List.headD_cons] at hw
   have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
   have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) hw hS (by
-    have := hsl.1; omega)
+  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) hw hS (Or.inr (by
+    have := hsl.1; omega))
   have hd2 : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat =
       some ((certsOf ip).getD (dmSlotW m c).toNat []) := by
     rw [hdec]; exact sliceR_hslice hsl hsz

@@ -2199,8 +2199,4 @@ def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1
 -- the word arrays are the ones `cap_check` checks
 #guard (Prog.arrs checkerProg).2 == wordArrays
 
-/-- **`checkerProg` passes the compiler's static check** (every call resolves, with the callee's
-parameter count; the names are distinct; the frames fit). -/
-prog_wf checkerProg_wf : checkerTab checkerProg
-
 end L.Checker

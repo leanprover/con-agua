@@ -139,11 +139,17 @@ theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 
 /-! ## `block_shape_seal` -/
 
+/-- The shape record's two slices (members at words `0, 1`, recursors at `2, 3`) lie below the
+top (lane `indproofs4`: `ShapeSrc` and `RecsB` for `check_block`). -/
+def ShapeSl (m : Mem) (q : Word) : Prop :=
+  (∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) ∧
+  (∀ o l, iwN m (q.toNat + 2) = some o → iwN m (q.toNat + 3) = some l → o + l ≤ iwTop m)
+
 /-- `block_shape`'s result `(ok, q)` against the twin's `Option BlockShape`. -/
 def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=
   match x with
   | none => r.headD 0 = 0
-  | some bs => r.headD 0 = 1 ∧ DecB (fun m => decBS m (r.tail.headD 0).toNat) m bs
+  | some bs => r.headD 0 = 1 ∧ DecB (fun m => decBS m (r.tail.headD 0).toNat) m bs ∧ ShapeSl m (r.tail.headD 0)
 
 /-- A fresh record's words, in the cut pool. -/
 theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -162,9 +168,22 @@ theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (h : posRecW m [mo, ml, ro, rl, nP, elim, s, lg, ip] = some (q, m')) (hS : StageR dn vis fe m a)
     (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro rl m) (he : H elim) (hs : H s) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
-      DecB (fun m => decBS m q.toNat) m' ⟨ms, recs, nP.toNat, decI elim, decI s, lg != 0, ip != 0⟩ := by
-  obtain ⟨hS', hg, -, hget⟩ := partsFreshGet h hS (by simp)
-  refine ⟨hS', hg, ?_⟩
+      DecB (fun m => decBS m q.toNat) m' ⟨ms, recs, nP.toNat, decI elim, decI s, lg != 0, ip != 0⟩ ∧
+      ShapeSl m' q := by
+  obtain ⟨hS', hg, htq, hget⟩ := partsFreshGet h hS (by simp)
+  refine ⟨hS', hg, ?_, ?_⟩
+  rotate_left
+  · have gm : ∀ j (hj : j < 9), iwN m' (q.toNat + j) =
+        some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)).toNat := fun j hj => by
+      have := hget j (by simpa using hj)
+      rw [← iwN_truncM (show q.toNat + j < iwTop m' by simp at htq; omega)]
+      simp only [iwN, nat?, this]; rfl
+    have m0 := gm 0 (by omega); have m1 := gm 1 (by omega); have m2 := gm 2 (by omega)
+    have m3 := gm 3 (by omega)
+    simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at m0 m1 m2 m3
+    refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_⟩
+    · rw [m0] at ho; rw [m1] at hl; cases ho; cases hl; exact Nat.le_trans hms.2 hg.1
+    · rw [m2] at ho; rw [m3] at hl; cases ho; cases hl; exact Nat.le_trans hrs.2 hg.1
   have g : ∀ j (hj : j < 9), (iwA (truncM m'))[q.toNat + j]? = some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)) :=
     fun j hj => hget j (by simpa using hj)
   have g0 := g 0 (by omega); have g1 := g 1 (by omega); have g2 := g 2 (by omega); have g3 := g 3 (by omega)
@@ -210,8 +229,8 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [h2, bbPack_some] at e
     simp only [Option.some.injEq, Prod.mk.injEq] at e
     obtain ⟨rfl, rfl⟩ := e
-    obtain ⟨hS2, hg2, hd2⟩ := partsPack h2 hS hms hrs he hs
-    refine ⟨_, a, rfl, ⟨rfl, ?_⟩, hS2, hg2⟩
+    obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS hms hrs he hs
+    refine ⟨_, a, rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg2⟩
     rw [← hee, ← hsv, ← hip]; exact hd2
   | none =>
     have h1 : lgw = 0 := hlg
@@ -229,9 +248,9 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     rw [h2, bbPack_some] at e
     simp only [Option.some.injEq, Prod.mk.injEq] at e
     obtain ⟨rfl, rfl⟩ := e
-    obtain ⟨hS2, hg2, hd2⟩ := partsPack h2 hS3 (hms.grow decMS_mono hg3) (hrs.grow decRS_mono hg3) hal hs
+    obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS3 (hms.grow decMS_mono hg3) (hrs.grow decRS_mono hg3) hal hs
     refine ⟨some ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
-      by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_⟩, hS2, hg3.trans hg2⟩
+      by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg3.trans hg2⟩
     rw [← hae, ← hsv, ← hip]; exact hd2
 
 /-! ## `block_shape_fin` -/
@@ -730,7 +749,8 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 def PartsR (x : Option BlockParts) (r : List Word) (m : Mem) : Prop :=
   match x with
   | none => r.headD 0 = 0
-  | some bp => r.headD 0 = 1 ∧ DecB (fun m => decBP m (r.tail.headD 0).toNat) m bp
+  | some bp => r.headD 0 = 1 ∧ DecB (fun m => decBP m (r.tail.headD 0).toNat) m bp ∧
+      ShapeSl m (r.tail.headD 0)
 
 theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (nPd off l : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
@@ -788,8 +808,8 @@ theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : S
     | none =>
       exact ⟨none, a', by simp only [StateT.run_bind, hrun]; rfl, hR, hS', hg'⟩
     | some bs =>
-      obtain ⟨h1', hd⟩ := hR
-      refine ⟨some ⟨bs⟩, a', by simp only [StateT.run_bind, hrun]; rfl, ⟨h1', ?_⟩, hS', hg'⟩
+      obtain ⟨h1', hd, hsl⟩ := hR
+      refine ⟨some ⟨bs⟩, a', by simp only [StateT.run_bind, hrun]; rfl, ⟨h1', ?_, hsl⟩, hS', hg'⟩
       show decBP (truncM m1) _ = _
       simp only [decBP, show decBS (truncM m1) (r1.tail.headD 0).toNat = some bs from hd, bind, pure,
         Option.bind_some, List.headD_cons, List.tail_cons]
