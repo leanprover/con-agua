@@ -7,6 +7,7 @@ import ConAgua.Arena.IndPos2SpecB
 import ConAgua.Arena.RecCheckSpec7
 import ConAgua.Arena.ConstsResolveFRefine2
 import ConAgua.Arena.IndMemoFns
+import ConAgua.Arena.IndRealCrFKeep
 
 /-!
 # The declaration loop with the core's invariants: `LoopT` (lane `loopt`)
@@ -144,7 +145,7 @@ beforehand: the stage memos (`StageMemos`), `instantiate1Lift`'s (`I1Memo`, arra
 and `consts_resolve_ffast`'s (`CrOK`, array 155, `CTL[158]`). The loop carries them beside
 `CoreMemos`: the inductive arm's contract (`IndArmSpec`) takes and gives them back, and the loop's
 other callees keep them (`IndMemoClosed`: they write none of these words but through
-`consts_resolve_ffast`, which keeps its memo, `crfF_keepsCrOK`). -/
+`consts_resolve_ffast`, which keeps its memo, `crfF_keepsCrOK`, `IndRealCrFKeep.lean`). -/
 
 /-- **The memos the inductive arm needs well formed at its entry.** -/
 structure IndMemos (m : Mem) : Prop where
@@ -195,21 +196,12 @@ theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → In
   setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
     ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩ (by simp) (by simp)
 
-/-- **`consts_resolve_ffast` keeps its memo well formed** from any memory (its model `crfF`).
-Pending: lane `tails`' `constsResolveFFast_ref` proves it from the stage relation (`StageR`, the
-handle below `2^32`); the loop reaches the function only inside the declaration arms, through
-the stub contract `constsResolveFFastT_spec` (`IndStubsT.lean`), which says nothing of the
-memory. `sorry` like `stubM_absOK` (`IndStubs.lean`, the same fact for every stub's walk memos)
-until the arms thread `CrOK` (`IndStubsT.lean`'s note). -/
-theorem crfF_keepsCrOK {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
-    (hc : L.Stubs.CrOK m) : L.Stubs.CrOK m' := sorry
-
 /-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
 theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
     (hI : IndMemos m) : IndMemos m' :=
   have hf := L.Ind.crfF_frame h
   ⟨hI.stage.frame hf (by simp) (by simp), I1Memo.frame hI.i1 hf (by simp) (by simp),
-    crfF_keepsCrOK h hI.cr⟩
+    L.Ind.crfF_keepsCrOK h hI.cr⟩
 
 /-- Every call of a leaf of `imFns` keeps `IndMemos`. -/
 theorem indMemos_leaf {p : Prog} (hp : L.Ind.CrfF p) :
