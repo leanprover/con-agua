@@ -632,8 +632,8 @@ theorem lveW_afr {m m' : Mem} {u v : Word} {r : List Word} (h : lveW m u v = som
   exact stub_afr hs
 
 -- from IndPos2SpecI
-theorem ntyW_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : ntyW k m vis key = some (r, m')) :
-    AFr m m' := by
+theorem ntyW_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
+    (h : ntyW stubCall k m vis key = some (r, m')) : AFr m m' := by
   unfold ntyW at h
   cases he : envFindW m (rdW (m.arr64 IW) key) vis with
   | none => rw [he] at h; simp [ntyK1] at h
@@ -659,8 +659,8 @@ theorem ntyW_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : nt
   obtain ⟨r2, m2⟩ := p2
   rw [h2] at h
   simp only [ntyK4] at h
-  cases h3 : stubM "inst_lp_fast" m2 [CWF, r2.headD 0, r2.tail.headD 0, rdW (m2.arr64 IW) (key + 1),
-      rdW (m2.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
+  cases h3 : stubCall k "inst_lp_fast" [CWF, r2.headD 0, r2.tail.headD 0, rdW (m2.arr64 IW) (key + 1),
+      rdW (m2.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] m2 with
   | none => rw [h3] at h; simp [ntyK5] at h
   | some p3 =>
   obtain ⟨r3, m3⟩ := p3
@@ -984,6 +984,18 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact ((noW_afr n).1 _ _ _ _ _ _ _ _ _ hg).trans (mclearG_afrS noSch rfl m1)
 
+/-- `pi_doms_occ` keeps `AbsOK`. -/
+theorem pdoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi n e : Word) (r : List Word),
+    pdoW k m no nl lo hi n e = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [pdoW] at h
+  | k + 1, m, m', no, nl, lo, hi, n, e, r, h => by
+    simp only [pdoW, pdoK1.eq_def] at h
+    afr_auto h [noConstWf_afr, pdoW_afr k _ _ _ _ _ _ _ _ _]
+
+/-- **`AbsOK` across `nest_uniform_ok`'s callees** (`nuW_ok`'s last conclusion). -/
+theorem nuAfr : NuAfr :=
+  ⟨fun _ _ _ _ _ _ _ _ _ h => pccW_afr h, pdoW_afr, fun _ _ _ _ _ _ _ _ _ h => noConstWf_afr h⟩
+
 theorem dpW_afr (n : Nat) :
     (∀ (m m' : Mem) (f h r : Word), dpGoW n m f h = some (r, m') → AFr m m') ∧
     (∀ (m m' : Mem) (f1 g x y z r : Word), dpNodeW n m f1 g x y z = some (r, m') → AFr m m') := by
@@ -1055,22 +1067,25 @@ theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : Lis
   simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
   afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
 
-theorem ntyWf_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : ntyWf k m vis key = some (r, m')) :
-    AFr m m' := by
+theorem ntyWf_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
+    (h : ntyWf stubCall k m vis key = some (r, m')) : AFr m m' := by
   cases k with
   | zero => simp [ntyWf] at h
   | succ k => exact ntyW_afr h
 
-theorem nitW_afr {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
-    (h : nitW k m vis ctx hi key = some (r, m')) : AFr m m' := by
+/-- `nest_inst_type` keeps `AbsOK` if its `nest_inst_type_ty` part does (`ntyWf_afr` for the stubs,
+`nitW_ok`'s last conclusion for any reading). -/
+theorem nitW_afr {cR : CallM} {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
+    (hty : ∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1)
+    (h : nitW cR k m vis ctx hi key = some (r, m')) : AFr m m' := by
   simp only [nitW, nitK1.eq_def, nitK2.eq_def, nitK4.eq_def, nitK5.eq_def] at h
-  afr_auto h [ntyWf_afr, piBW_afr _ _ _ _ _ _, noaW_afr _ _ _ _ _ _ _ _ _ _, lveW_afr]
+  afr_auto h [hty _ _, piBW_afr _ _ _ _ _ _, noaW_afr _ _ _ _ _ _ _ _ _ _, lveW_afr]
 
 theorem nitWf_afr {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
-    (h : nitWf k m vis ctx hi key = some (r, m')) : AFr m m' := by
+    (h : nitWf stubCall k m vis ctx hi key = some (r, m')) : AFr m m' := by
   cases k with
   | zero => simp [nitWf] at h
-  | succ k => exact nitW_afr h
+  | succ k => exact nitW_afr (fun _ _ e => ntyWf_afr e) h
 
 theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r : List Word}
     (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) : AFr m m' := by
@@ -1094,7 +1109,7 @@ theorem p2ctW_afr {k : Nat} {m m' : Mem} {vis no nl us dO dL hO hL cv hi : Word}
   afr_auto h [erToIwW_afr, stub_afr, pcrWf_afr]
 
 theorem ggW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx hi us dO dL cO cL gO gL : Word) (r : List Word),
-    ggW k m vis ctx hi us dO dL cO cL gO gL = some (r, m') → AFr m m'
+    ggW stubCall k m vis ctx hi us dO dL cO cL gO gL = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [ggW] at h
   | k + 1, m, m', vis, ctx, hi, us, dO, dL, cO, cL, gO, gL, r, h => by
     simp only [ggW, ggK1.eq_def, ggK2.eq_def, ggK3.eq_def, ggK4.eq_def] at h

@@ -7,6 +7,7 @@ import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.IndPartsSpec2
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IlpRd
 
 /-!
 # Refinements of `RecCheck` (lane `induct`, round 2)
@@ -1077,38 +1078,38 @@ def tcK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m2) => some ([r.headD 0], m2)
 
 /-- After `cv_lps`. -/
-def tcK1 (us c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def tcK1 (cR : CallM) (n : Nat) (us c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
-    tcK2 (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us, rdW (m1.arr64 EREC) (c + 3)])
+    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, rdW (m1.arr64 EREC) (c + 3)] m1)
 
-/-- **The model of `target_ctor_at`.** -/
-def tcW (n : Nat) (m : Mem) (M c : Word) : Option (List Word × Mem) :=
+/-- **The model of `target_ctor_at`** (its `inst_lp_fast` read through `cR`). -/
+def tcW (cR : CallM) (n : Nat) (m : Mem) (M c : Word) : Option (List Word × Mem) :=
   if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([rdW (m.arr64 EREC) (c + 3)], m)
-  else tcK1 (rdW (m.arr64 IW) (M + 1)) c (cvLpsW n m c)
+  else tcK1 cR n (rdW (m.arr64 IW) (M + 1)) c (cvLpsW n m c)
 
 theorem targetCtorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
     (hcv : p.lookup "cv_lps" = some cvLps) (hp : p.lookup "target_ctor_at" = some targetCtorAt)
-    (n : Nat) (s₀ : St) (M c : Word) :
+    (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (M c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_ctor_at" [M, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ tcW n s₀.mem M c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ tcW cR n s₀.mem M c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, targetCtorAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      cvLps_spec p ha hc he hcv n, stubM_spec p "inst_lp_fast" n] <;>
+      cvLps_spec p ha hc he hcv n, hcR n "inst_lp_fast"] <;>
     finish (gen := 20) [tcW, tcK1, tcK2]
 
 
 theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m m' : Mem)
-    (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word)
-    (hS : StageR dn vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
+    (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word) (cR : CallM)
+    (hI : IlpRd cR dn vis fe (IlpBase m a)) (hS : StageR dn vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
     (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
     (hlpb : (rdW (m.arr64 EREC) (c + 2)).toNat = 0 ∨
       (rdW (m.arr64 EREC) (c + 1)).toNat + (rdW (m.arr64 EREC) (c + 2)).toNat ≤ (m.arr64 EREC).size)
-    (h : tcW n m Mp c = some (r, m')) :
+    (h : tcW cR n m Mp c = some (r, m')) :
     ∃ x a', (ConRon.Arena.targetCtorAt bigM cv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x := by
+      IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧ AFr m m' := by
   obtain ⟨hlv, w8, h8, hmem⟩ := decTM_fields hM
   obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := c.toNat) hcv
   obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erH_rdW htyp (by omega)
@@ -1145,17 +1146,18 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb hlpb
       simp only [tcK1] at h
       rw [hE, hwt] at h
-      cases hi : stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] with
+      cases hi : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] m1 with
       | none => rw [hi] at h; simp [tcK2] at h
       | some r2m =>
         obtain ⟨r2, m2⟩ := r2m
         rw [hi] at h
         simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨x, a2, hrun, hS2, hg2, hd1, hd2⟩ :=
-          instLPFast_spec dn vis fe CWF (r1.headD 0) (r1.tail.headD 0) wl wt hwl2 hwtlt cv.levelParams
-            m1 m2 a r2 hi ⟨hS1, hdec1⟩
-        refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hd1, by simpa using hd2⟩
+        obtain ⟨x, a2, hrun, ⟨hS2, hg2, hd1, hd2⟩, -, hA2⟩ :=
+          hI n CWF (r1.headD 0) (r1.tail.headD 0) wl wt cv.levelParams m1 m2 a r2 hwl2 hwtlt
+            ⟨rfl, erToIwW_iwFr hcl⟩ hS1 hdec1 hi
+        refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hd1, by simpa using hd2,
+          (erToIwW_afr hcl).trans hA2⟩
         simp only [ConRon.Arena.targetCtorAt, hnone]
         rw [CWF_eq] at hrun
         rw [← hwl3, ← hwtd]
@@ -1165,7 +1167,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     simp only [hz, ne_eq, not_false_eq_true, if_true, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rw [hwt]
-    refine ⟨cv.type, a, ?_, hS, IWGrow.refl m, by simpa using hwtlt, by simpa using hwtd⟩
+    refine ⟨cv.type, a, ?_, hS, IWGrow.refl m, by simpa using hwtlt, by simpa using hwtd, AFr.refl _⟩
     simp [ConRon.Arena.targetCtorAt, ht0]; rfl
 
 
@@ -1188,9 +1190,10 @@ theorem targetCtorAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCtorAt bigM cv) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       decI (r.headD 0) = AM.res (ConRon.Arena.targetCtorAt bigM cv) a₀; ⊤⦄ := by
-  refine triple_post (targetCtorAt_spec p ha hc he hcv' hp n s₀ Mp c) ?_
+  refine triple_post (targetCtorAt_spec p ha hc he hcv' hp stubCall (stubCall_spec p) n s₀ Mp c) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := tcW_ok dn vis fe n _ _ a₀ Mp c bigM cv r hS hM hcv hMb hcb hlpb hm
+  obtain ⟨x, a', hrun, hS', hg, h1, h2, -⟩ := tcW_ok dn vis fe n _ _ a₀ Mp c bigM cv r stubCall IlpRd.stub
+    hS hM hcv hMb hcb hlpb hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.targetCtorAt bigM cv) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
 
