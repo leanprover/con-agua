@@ -191,3 +191,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,appcap,claude-opus-5-5,25,10,"app node counts: twin = L exactly on eager_open_nat_control (10.20 M scratch apps) and app-lam (32.00 M); no L excess; capacity is AREC's tier interleaving + uniform CA_WORDS (proposals in journal)"
 2026-10-23,tails,opus,70,15,"recRuleKOf/EtaOf/Bits under StageR (StubIndRefine); ctor_family found flag (offset-0 bug)"
 2026-10-23,tails,opus,85,20,"constsResolveFFast/FGo under StageR (helper tails-crf); constsResolve covered"
+2026-10-23,indproofs3,opus,30,20,"close: open list for a successor (targets, blockers, stub contracts, StageR->StageT migration plan with check_ind_decl target shape); phase 8 88 proven / 117 sorry / 12 written / 6 todo (lane start 79/108/30/6)"
