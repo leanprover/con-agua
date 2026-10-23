@@ -5,11 +5,19 @@ import ConAgua.Final.Twin
 # The final theorem: the x64 checker's accept means consistency
 
 `checker_x64_accepts`: run the compiled checker from `ca_enter` on a machine whose input region
-holds the bytes `b` (and whose pin-data region holds any bytes `pb`); if it returns `rdx = 0` and `rax = ACCEPT`, the twin (con-ron's arena checker)
-accepts `[b]` (`TwinAccepts`). The corollaries `x64_model_exists` and `x64_no_False` put that in
-con-leche's terms: con-leche's own parser reads `b`, con-leche's pure fold accepts the parsed
-records (prepared with some prelude, at some pin list), the accepted environment has a model in
-every set theory; and a file declaring a theorem of type `False` is never accepted.
+holds the bytes `b` (and whose pin-data region holds any bytes `pb`); if it returns `rdx = 0` and
+`rax = ACCEPT`, the twin (con-ron's arena checker) accepts `[b]` (`TwinAccepts`). The corollaries
+`x64_model_exists` and `x64_no_False` put that in con-leche's terms: con-leche's own parser reads
+`b`, con-leche's pure fold accepts the parsed records (prepared with some prelude, at some pin
+list), the accepted environment has a model in every set theory; and a file declaring a theorem of
+type `False` is never accepted.
+
+These start at the trampoline `ca_enter(T, fuel)`, with the layout (`G`, `MemRel`, `HarnessCall`)
+as premises. The final theorems start one step earlier, at the entry stub `ca_start(in, in_len,
+pins, pins_len, base, base_len)` (lane `abi`): the stub sets the layout up itself in a zero region
+the caller passes (`checker_x64_accepts_abi`, `ConAgua/Final/Abi.lean`, built on
+`checker_x64_accepts`), and `ConAgua/Checker/AsmFinal.lean` states them for the committed file
+(`checkerFile_accepts`, `checkerFile_model_exists`, `checkerFile_no_False`).
 
 The chain is `compile_correct` (x64 ⊑ L), then `PipelineRefines` (L ⊑ twin, the one named
 hypothesis: the per-function refinements the lanes are building, composed), then Theorem 1 and
@@ -25,20 +33,26 @@ that has it.
   `hcode : Code checkerFile k0`, where `checkerFile` is the code of `asm/checker.s` as the trusted
   parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`, `Include.lean`, `Term.lean`) and
   the kernel checked `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab
-  checkerProg "check"`; so neither the Lean compiler and runtime that computed the code nor the
+  checkerProg "check"` and `checkerStub_eq : checkerStub = abiStub checkerTab`; so neither the Lean compiler and runtime that computed the code nor the
   printer that wrote the file is trusted, only the parser. Independent cross-checks on the file:
   Kraken's own parser reads it the same way (`ConAgua/AsmFile/CrossCheck.lean`, in
   `scripts/asm_file.py`), and the assembler encodes what it says (`harness/check-asm.sh`)
   (DESIGN.md, "Kernel-checked compiler output"; docs/design/asmfile.md);
-* the loader's layout: the input bytes, the pin-data bytes, every other array zero, the table and
-  the stack, as `G` says (`hG`, `hmem`, `HarnessCall`);
-* the harness: it calls `ca_enter` as `HarnessCall` states and reads the verdict as `rdx = 0 ∧ rax =
-  ACCEPT`, nothing else;
+* the harness (`harness/main.c`, ~50 lines): it reads the input and the pin-data files into two
+  buffers, maps one zero region (`MAP_NORESERVE`) of `ca_region_size` bytes, calls `ca_start` once as
+  `AbiCall` states (`ConAgua/Final/Abi.lean`: the buffers hold `b` and `pb`; the region is zero,
+  mapped, in the address space, apart from both buffers and from the machine stack; the buffers are
+  apart from each other; the return address is on the machine stack), and reads the verdict as
+  `rdx = 0 ∧ rax = ACCEPT`, nothing else. The layout (the table, the L stack, the arrays, the
+  constant data) is not trusted: the stub builds it and the proof checks it (`abi_memRel`,
+  `abiLayout_ok`). For the theorems here, from `ca_enter`, the layout is a premise (`hG`, `hmem`,
+  `HarnessCall`);
 * buffer to stream: the file's bytes are `b`, read whole (the analogue of con-ron's `hreads`);
 * `System.Platform.numBits = 64`.
 
-Not trusted: the capacities `s8`, `s64` the harness picks (any sizes, `PipelineRefines` holds at
-all of them: `check` aborts on sizes it cannot work with), the fuel `N` (any `N < 2^62`), **the
+Not trusted: the capacities (here any `s8`, `s64`; from the stub, `2^32` words per word array:
+`PipelineRefines` holds at all of them, `check` aborts on sizes it cannot work with), the fuel
+(here any `N < 2^62`; from the stub, `2^62 - 1`), **the
 pin-data bytes `pb`** the harness loads into byte array `1` (con-leche's `Nat`-operation pin
 variants, serialised by `lake exe romgen`, DESIGN.md "The pin data as an input"): `PipelineRefines`
 holds at every `pb`; `check` decodes them at run time, interns the pin list they decode to, and

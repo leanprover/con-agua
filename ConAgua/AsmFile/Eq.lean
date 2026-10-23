@@ -19,9 +19,8 @@ Before handing the terms to the kernel, the segments are compared here, so that 
 the compiler's output (stale, or printed wrongly) fails with the first differing function named,
 not with a long kernel computation.
 
-What the stub is (lane `abi`'s `abiStub checkerTab`) is not checked here: the kernel evaluates
-`abiStub checkerTab` in about 20 s and 4.5 GB (the ROM's 4646 words), and the final theorems do not
-use it yet. docs/design/asmfile.md.
+What the stub is (lane `abi`'s `abiStub checkerTab`) is checked separately, in pieces
+(`checkerStub_eq`, `ConAgua/Checker/AsmStubEq.lean`, by `list_eq`). docs/design/asmfile.md.
 -/
 
 namespace L.Compiler

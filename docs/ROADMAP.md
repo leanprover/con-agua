@@ -251,13 +251,12 @@ taken as any `F ≥ n` (`GoOK` shape), each counted fuel as an L counter (§3 (b
 
 Kraken's x64 semantics (`Ev`, fuzzed against hardware); the assembler, the printer and the loader
 (the printed `compileProg G.tab p "check"` is at `k0`: `hcode`; `harness/check-asm.sh` audits the
-printing); the layout (`hG`, `hmem`: the loader put the file's bytes at byte array 0 and zeroed the
-other arrays, the table and descriptors as `G` says); the harness (`HarnessCall`: how `ca_enter` is
-called; and it prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`, `rdx = 1` as "resources
-exhausted", anything else as "reject"); buffer to stream (the buffer holds the whole file, read
-once: con-ron's `hreads`); `numBits = 64`. Requirement on the harness (not yet written): the
-checker's `run.c` must compare `rax` with `ACCEPT` itself, not print `rax` (today's generic
-`ConAgua/Compiler/harness/run.c` prints `ok <rax>`).
+printing; since lane asmfile: the parser of the committed `asm/checker.s`); the harness (since
+lane `abi`, `AbiCall`, `ConAgua/Final/Abi.lean`: `harness/main.c` puts the file's bytes and the pin
+data in two buffers, maps one zero region apart from them and from the machine stack, calls
+`ca_start` once, and prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`; the layout — table,
+descriptors, stack, arrays — is built by the entry stub and proved, `abi_memRel`); buffer to stream
+(the buffer holds the whole file, read once: con-ron's `hreads`); `numBits = 64`.
 
 ### How it composes
 

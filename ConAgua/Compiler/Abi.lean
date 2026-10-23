@@ -5,7 +5,7 @@ public import ConAgua.Compiler.Run
 @[expose] public section
 
 /-!
-# The entry stub: `ca_start(in, in_len, pins, pins_len, base, base_len)` (lane `abi`, prototype)
+# The entry stub: `ca_start(in, in_len, pins, pins_len, base, base_len)` (lane `abi`)
 
 The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call once.
 The stub, emitted before the trampoline, sets up inside the region everything the harness used to
@@ -23,7 +23,10 @@ lay out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fue
   area and the global variables are the region's zeros.
 * The fuel is `2^62 - 1` (`checker_x64_accepts` takes any `N < 2^62`).
 
-Nothing here is trusted: the stub's job is to establish `Layout.Ok`/`MemRel` (the proof, later). -/
+Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
+machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
+`Layout.Ok`/`MemRel` for the partition, and `checker_x64_accepts_abi` continues with
+`checker_x64_accepts` at the trampoline. -/
 
 namespace L.Compiler
 
