@@ -193,3 +193,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,tails,opus,85,20,"constsResolveFFast/FGo under StageR (helper tails-crf); constsResolve covered"
 2026-10-23,indproofs3,opus,30,20,"close: open list for a successor (targets, blockers, stub contracts, StageR->StageT migration plan with check_ind_decl target shape); phase 8 88 proven / 117 sorry / 12 written / 6 todo (lane start 79/108/30/6)"
 2026-10-23,tails,opus,10,15,"reservedBasisNames_words, liftFueled_some; lane close (phase 5 142/142)"
+2026-10-23,indproofs4,opus,60,45,"reserved_rec_name + rec_rule_bits contracts discharged via callF models (IndReal); blockRecNamesUnreserved, sumRules proven; lakefile globs restored; RecGenSpec20 imported"
