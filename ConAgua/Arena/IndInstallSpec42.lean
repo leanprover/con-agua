@@ -122,13 +122,15 @@ end model
 /-! ## The write set of `basis_pin_hit` and `block_parts` -/
 
 /-- The arrays they may write: all below 256 but the stage memos' (`201..208`) and `abstract1`'s
-memo (`49`). -/
-def cidFreeA : List ArrId := (List.range 256).filter (fun b => (b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155)
+memo (`49`), and since lane `indstaget` the pins and the core's walk memos. -/
+def cidFreeA : List ArrId := (List.range 256).filter (fun b => (b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧
+  b ≠ PINS ∧ b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153 ∧ b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54)
 
 /-- The `CTL` words they may write: all below 256 but the stage memos' (`202..219`) and
 the walk memos' epoch words (`48`, `50`, `52`, `158`). -/
 def cidFreeC : List Word :=
-  ((List.range 256).filter (fun c => (c < 202 ∨ 219 < c) ∧ c ≠ 48 ∧ c ≠ 50 ∧ c ≠ 52 ∧ c ≠ 158)).map Nat.toUInt64
+  ((List.range 256).filter (fun c => (c < 202 ∨ 219 < c) ∧ c ≠ 48 ∧ c ≠ 50 ∧ c ≠ 52 ∧ c ≠ 158 ∧
+    c ≠ 152 ∧ c ≠ 154 ∧ c ≠ 156 ∧ c ≠ 54 ∧ c ≠ 56 ∧ c ≠ 58)).map Nat.toUInt64
 
 /-- The callees of `check_ind_decl` that cross the walk memos by their write set. -/
 def cidFrameCallees : List FnName := ["basis_pin_hit", "block_parts"]

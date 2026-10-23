@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.WhnfBase
 
 /-!
 # The stubs' specs (lane `induct`)
@@ -88,6 +89,14 @@ with epoch word `CTL[50]` (`InstList.lean`'s `ilSch`, the core's `coreIlSch`), w
 def IlMemo (m : Mem) : Prop :=
   ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨50, 50⟩ : MemoSch) lfKey decE m mp
 
+/-- **The rest of the memory's half of `TwinOK`** (lane `indstaget`): the core's other walk memos
+(`WalkMemos`: arrays 151‥153, 52‥54), the three arrays whose sizes `TwinOK` bounds, the pin flag.
+Carried in `AbsOK` so that every model frame (`AFr`) carries it too: what lifts a stage theorem
+to `StageC` (`IndT/Lift.lean`). -/
+def WkOK (m : Mem) : Prop :=
+  WalkMemos m ∧ (m.arr64 EREC).size < 2 ^ 63 ∧ (m.arr64 SPN).size < 2 ^ 63 ∧
+    (m.arr64 145).size < 2 ^ 63 ∧ pinW m 0 ≠ 0
+
 /-- **The walk memos outside the stage relation are well formed** (lane `indproofs4`, helpers
 `abs`, `memo`): the memos of `abstract1` (array 49), `instantiate1Lift` (51), `constsResolveF`
 (155) and `instantiateList` (50). Each walk clears its memo on entry and exit, so it needs the
@@ -95,7 +104,7 @@ memo well formed in the memory it starts from and leaves it so; `StageR` says no
 arrays, so the stage's theorems thread it as a hypothesis and a post. (The name is helper `abs`'s,
 from when it held the `abstract1` memo only.) The core's `CoreMemos` holds the first and the last
 (`IndRealAbsT.lean`). -/
-def AbsOK (m : Mem) : Prop := AbMemo m ∧ I1Memo m ∧ CrMemo m ∧ IlMemo m
+def AbsOK (m : Mem) : Prop := AbMemo m ∧ I1Memo m ∧ CrMemo m ∧ IlMemo m ∧ WkOK m
 
 /-- **Every stub keeps the walk memos well formed** (lane `indproofs4`, helpers `abs`, `memo`).
 `sorry` until the owning lanes land the functions, like `stubM_memoFrame`; true of the real
