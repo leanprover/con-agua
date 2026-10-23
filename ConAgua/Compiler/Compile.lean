@@ -827,9 +827,12 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
 def compileFns (tab : Tab) (t : NTree) (p : Prog) : Program :=
   p.flatMap fun (f, fd) => compileFn tab t f fd
 
+/-- The number of parameters of the entry function. -/
+def entryNp (p : Prog) (entry : FnName) : Nat := ((p.lookup entry).map (·.nparams)).getD 0
+
 /-- The whole program, with the result counts `t`: the trampoline, then every function. -/
 def compileProgT (tab : Tab) (t : NTree) (p : Prog) (entry : FnName) : Program :=
-  trampoline tab entry (nrOf t tab entry) (((p.lookup entry).map (·.nparams)).getD 0) ++ compileFns tab t p
+  trampoline tab entry (nrOf t tab entry) (entryNp p entry) ++ compileFns tab t p
 
 /-- The whole program: the trampoline, then every function. -/
 def compileProg (tab : Tab) (p : Prog) (entry : FnName) : Program :=
