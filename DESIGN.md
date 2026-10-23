@@ -3820,7 +3820,9 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables, dense part (lane `twinaudit`) |
 | 67‥71 | `DECL`, `DLP`, `DIND`, `IFR`, `IFL` | `StateDR` (front) | declaration records, inductive lines |
 | 72, 73, 74 | – | `StateDR` (`TblR`) | the id tables' sparse overflow (memo-library tables, `IdTable.lean`) |
-| 75‥95 | – | reserved (front) | |
+| 75 | `HSEEN` | – (per call: `prepare_prelude`'s ground hoist; lane `front3`) | the hoist's expression visited set (memo library, `CTL[73‥74]`) |
+| 76 | `HNIX` | – (per call, as `HSEEN`) | the hoist's name index, name handle ↦ first position (memo library, `CTL[75‥76]`) |
+| 77‥95 | – | reserved (front) | |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
@@ -3845,7 +3847,9 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 63 | reserved | |
 | 64‥69 | `StateDR` (`TblR`) | stamp − 1, live count of the id tables' sparse maps (`NID`, `LID`, `EID`) |
 | 70, 71, 72 | `StateDR` (`TblR`) | dense size of `NID`, `LID`, `EID` |
-| 73‥95 | reserved (front) | |
+| 73, 74 | the ground hoist (lane `front3`) | `HSEEN`: stamp − 1, live count |
+| 75, 76 | the ground hoist (lane `front3`) | `HNIX`: stamp − 1, live count |
+| 77‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
