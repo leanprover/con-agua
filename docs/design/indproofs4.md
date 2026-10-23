@@ -178,3 +178,22 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
   `StageR` does not constrain array 50; with a stale slot stamped at the new epoch `inst_list`
   returns a wrong hit. `StageT` carries it (`CoreMemos.1`). Needs the pending decision (memory-only
   hypothesis `∃ mp, MemoRG ilSch lfKey decE m mp` in the contract's pre and post, or `StageT`).
+
+## Status for the coordinator: `check_ind_decl` / `IndArmSpec` (2026-10-23 ~11:00)
+* Done (StageR, generic `p` + bundles): `checkBlock`, `checkBlockPass`, `checkBlockClasses`,
+  `checkBlockTail`, `indParamsOk` (real), `blockParts?`, `checkShapeless`, `checkBasisDecl` (lane
+  decls3). In flight: helper `grc` (`genRecCheck`, replacing `genRecCheck_pending`), helper `abs`
+  (`abstract1_fast` etc. with memory-only memo predicates).
+* Next (me): `check_ind_decl` at `StageR` (model + `Sim`): needs `basisPinHit` — no refinement
+  exists (phase 2, `written`; ROM-based like `checkBasisDecl`): a stub contract first; and
+  `ShapeSrc` for `block_parts`' shape (strengthening `ShapeR` in `IndPartsSpec15`). ETA for the
+  `StageR` arm theorem: a few hours.
+* **Blockers for `IndArmSpec` exactly as stated**: (1) the post's `CoreMemos m'` — the stage is
+  `StageR`-level and nothing carries `CoreMemos` (see "IndArmSpec's post CoreMemos m'" above):
+  needs either the `StageT` migration or an invariant-closure lemma plus `CoreMemos`-preservation
+  of the core entry points (from the knot's proofs). (2) Premises the stage needs that the spec
+  lacks: `StageMemos m`, `CrOK m`, the `i1lSch` memo (array 51), and the instantiateList memo
+  (`ilSch`, array 50 — in `CoreMemos.1`, so derivable from `StageT`), `AllVis fe`, `CtorSums fe`
+  (see "Reply … IndArmSpec premises" above). Proposal: I deliver `IndArmSpec`'s shape with these
+  as extra premises and `CoreMemos m'` from a documented `sorry`'d contract ("every stage
+  function keeps `CoreMemos`", true of the real code) until (1) is done.

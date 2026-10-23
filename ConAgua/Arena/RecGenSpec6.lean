@@ -437,7 +437,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rintro ⟨occ, m2⟩ b a2 - ⟨ha2, hob, hM2, hS2, hg2, hf2⟩
   subst a2
   dsimp only at hob hM2 hS2 hg2 hf2
-  have hf12 : MFr [NOM] [204, 205] m m2 := (MFr.stub (by decide) h1).up.trans hf2
+  have hf12 : MFr [NOM] [204, 205] m m2 := (MFr.of_frame (ftdF_frame h1) (by simp) (by simp)).up.trans hf2
   rw [cfgK2_some]
   have hg12 := hg1.trans hg2
   refine RSim.lstep (K := cfgK3 n _ (r1.headD 0) occ m2) rfl fun ⟨hc, cls⟩ h3 => ?_
