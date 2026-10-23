@@ -32,7 +32,7 @@ include hq henv in
 theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
     (hfc : "class_read_classes" ∈ fs) (n : Nat)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (m : Mem) (a : AState)
+    (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState)
     (pp po pl co cl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (hC : StageC dn vis fe env m a) (hb : BSOK m pp.toNat bs)
     (hsrc : ShapeSrc m pp)
@@ -134,7 +134,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   simp only at hs3 hW3
   subst hs3
   obtain ⟨keys, a3, hrun3, hS3, hg3, hks, hP3⟩ :=
-    ckkW_sim hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n hn s2.mem a1 _ _ _ hS2
+    ckkW_sim hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
       (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2 r3 s3.mem hW3
   rw [hnpT] at hrun3
   have hA3 := hk3 n _ s2.mem r3 s3.mem c3 hA2
@@ -217,7 +217,7 @@ as con-ron's `checkBlockClasses_spec` asks; the walk memos across the callees by
 theorem checkBlockClasses_refinesC (hP : CbcProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
     (hfc : "class_read_classes" ∈ fs) (n : Nat)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (pp po pl co cl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀) (hb : BSOK s₀.mem pp.toNat bs)
     (hsrc : ShapeSrc s₀.mem pp)

@@ -162,7 +162,7 @@ structure CbcProg (p : Prog) : Prop where
 theorem cbcW_sim {p : Prog} (hP : CbcProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
     (hfc : "class_read_classes" ∈ fs) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (m : Mem) (a : AState)
+    (n : Nat) (m : Mem) (a : AState)
     (pp po pl co cl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (hS : StageR dn vis fe m a) (hb : BSOK m pp.toNat bs) (hsrc : ShapeSrc m pp)
     (hrecs : RecsDec m (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) bs.recs)
@@ -239,7 +239,7 @@ theorem cbcW_sim {p : Prog} (hP : CbcProg p) {fs : List FnName}
   simp only at hs3 hW3
   subst hs3
   obtain ⟨keys, a3, hrun3, hS3, hg3, hks, hP3⟩ :=
-    ckkW_sim hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n hn s2.mem a1 _ _ _ hS2
+    ckkW_sim hP.clm.keys dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
       (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2 r3 s3.mem hW3
   rw [hnpT] at hrun3
   have hg03 := hg02.trans hg3
@@ -254,7 +254,7 @@ theorem cbcW_sim {p : Prog} (hP : CbcProg p) {fs : List FnName}
   simp only at hs4 hW4
   subst hs4
   obtain ⟨ms, a4, hrun4, hS4, hg4, hms, hP4⟩ :=
-    clmW_sim hP.clm dn vis fe pp co cl po pl bs css pfvs n hn s3.mem a3 _ _ keys hS3
+    clmW_sim hP.clm dn vis fe pp co cl po pl bs css pfvs n s3.mem a3 _ _ keys hS3
       (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc) (hcss.grow decCNS_mono hg03)
       (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.1) hks hP3 r4 s4.mem hW4
   have hg04 := hg03.trans hg4
@@ -309,7 +309,7 @@ memos kept. Program facts: the lookups (`CbcProg`) and the write set of `class_r
 theorem checkBlockClasses_refines {p : Prog} (hP : CbcProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
     (hfc : "class_read_classes" ∈ fs) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+    (n : Nat) (s₀ : St) (a₀ : AState)
     (pp po pl co cl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hb : BSOK s₀.mem pp.toNat bs)
     (hsrc : ShapeSrc s₀.mem pp)
@@ -325,7 +325,7 @@ theorem checkBlockClasses_refines {p : Prog} (hP : CbcProg p) {fs : List FnName}
       PSlR decTM (AM.res (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀).2
         (r.tail.headD 0) (r.tail.tail.headD 0) s'.mem ∧ PosMR s'.mem; ⊤⦄ :=
   triple_post (cbc_spec p hP.cbc n s₀ vis pp po pl co cl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (cbcW_sim hP hcl hfr hfc dn vis fe n hn _ a₀ pp po pl co cl bs css pfvs
+    let ⟨hok, hQ⟩ := Sim.run (cbcW_sim hP hcl hfr hfc dn vis fe n _ a₀ pp po pl co cl bs css pfvs
       hS hb hsrc hrecs hcss hpf hpfb hPm) hm
     ⟨hl, hok, hQ⟩
 

@@ -160,8 +160,8 @@ theorem ibiW_sim {p : Prog} (hP : IndsProg p) (n : Nat) {dn : NIdx → Option Co
 `lvl_eq_c`, `lv_zero_caps`): the shape record decoded below the tops, its members' slice below the
 top and their formers' constant records below the tops (`ShapeCV`); the environment with the
 formers pushed at the returned view, the formers' constants and the shape with its sort below the
-tops, the latter's recursor slice below the top if the input's is (`RecsB`: a copy). -/
-@[refines ConRon.Arena.checkBlockInds]
+tops, the latter's recursor slice below the top if the input's is (`RecsB`: a copy). Under `StageR`;
+the census link is `checkBlockInds_refinesC` (`IndT/Install4.lean`). -/
 theorem checkBlockInds_refines (p : Prog) (hP : IndsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp isRec : Word) (bs : BlockShape)
     (b : Bool) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)

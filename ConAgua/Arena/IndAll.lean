@@ -113,6 +113,8 @@ import ConAgua.Arena.IndInstallSpec36
 import ConAgua.Arena.IndInstallSpec37
 import ConAgua.Arena.IndRealIpo
 import ConAgua.Arena.IndRealBph2
+import ConAgua.Arena.IndRealOpf3
+import ConAgua.Arena.IndRealOpfC
 import ConAgua.Arena.IndInstallSpec41
 import ConAgua.Arena.IndInstallSpec42
 import ConAgua.Arena.IndArmBridge
@@ -160,6 +162,10 @@ import ConAgua.Arena.RecCheckSpec22
 import ConAgua.Arena.RecCheckSpec23
 import ConAgua.Arena.RecCheckSpec24
 import ConAgua.Arena.RecGenSpec28
+import ConAgua.Arena.IndRealIlpP
+import ConAgua.Arena.IndRealIlpN
+import ConAgua.Arena.IndRealIlpL
+import ConAgua.Arena.IndRealLvlC
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/
