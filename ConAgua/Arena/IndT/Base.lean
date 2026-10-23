@@ -37,6 +37,30 @@ theorem Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : ASta
   intro ⟨r, m'⟩ e
   exact h r m' e
 
+/-- **The walk memos `AbsOK` holds across a core call**: the core keeps `CoreMemos` (in `StageT`
+after), writes neither array 51 nor 155 nor their epochs (`CoreStageClosed`), keeps the sizes and
+the pin flag. -/
+theorem absOK_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈ stageCoreFns)
+    {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word} {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} {a' : AState} (h : callW p n f vs m = some (r, m'))
+    (hA : AbsOK m) (hT : StageT dn vis fe m' a') : AbsOK m' := by
+  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
+  exact ⟨hT.twin.memos.2.1, hA.2.1.frame hfr coreStageA_51 coreStageC_52,
+    hA.2.2.1.frame hfr coreStageA_155 coreStageC_158, hT.twin.memos.1,
+    hT.twin.memos.2.2, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
+
+/-- A core call's `RSim` with `AbsOK` added to its post. -/
+theorem RSim.coreAbs {α : Type} {p : Prog} (hcl : CoreStageClosed p) {f : FnName}
+    (hf : f ∈ stageCoreFns) {n : Nat} {vs : List Word} {m : Mem} {op : AM α} {a : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {Q : List Word × Mem → AState → α → Prop} (hA : AbsOK m)
+    (h : RSim (callW p n f vs m) op a (fun b a' x => StageT dn vis fe b.2 a' ∧ Q b a' x)) :
+    RSim (callW p n f vs m) op a
+      (fun b a' x => (StageT dn vis fe b.2 a' ∧ Q b a' x) ∧ AbsOK b.2) := by
+  intro b hb
+  obtain ⟨x, a', hr, hT, hq⟩ := h b hb
+  exact ⟨x, a', hr, ⟨hT, hq⟩, absOK_core hcl hf (r := b.1) (m' := b.2) hb hA hT⟩
+
 section entries
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv}

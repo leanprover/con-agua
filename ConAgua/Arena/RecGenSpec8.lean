@@ -212,8 +212,8 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), by simpa [decCVS] using hsp3⟩, consW_afr h3 hA2⟩
 
 /-- **`class_rec_tys_ok` refines `classRecTysOk`** (through `class_rec_ty_ok`'s stubs): the
-generated constants, a stable slice of records below the record top. -/
-@[refines ConRon.Arena.classRecTysOk]
+generated constants, a stable slice of records below the record top. Under `StageR`, for the
+callers not yet under `StageC`; the census link is `classRecTysOk_refinesC` (`IndT/RecGen7.lean`). -/
 theorem classRecTysOk_refines (p : Prog) (hp : RtsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g k ro rl vo vl co cl : Word)
     (G : ClassGen) (rcs : List RecShape) (cvs : List IConstantVal) (cs : List Nat)

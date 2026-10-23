@@ -66,11 +66,15 @@ theorem StageT.core {m : Mem} {a : AState} (h : StageT dn vis fe m a) : ∃ M, C
 
 /-! ## The core's write set -/
 
-/-- The arrays a core function may write: every array but the pools and the pins. -/
-def coreStageA : List ArrId := (List.range 256).filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS
+/-- The arrays a core function may write: every array but the pools, the pins, the walk memos `AbsOK`
+holds beyond `CoreMemos` (51, 155) and the stage memos (201‥208). -/
+def coreStageA : List ArrId := (List.range 256).filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS ∧
+  b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b)
 
-/-- The `CTL` words a core function may write: all but the pools' tops. -/
-def coreStageC : List Word := ((List.range 256).filter fun x => x ≠ 129 ∧ x ≠ 200).map Nat.toUInt64
+/-- The `CTL` words a core function may write: all but the pools' tops, the epochs of the walk memos
+`AbsOK` holds beyond `CoreMemos` (52, 158) and the stage memos' control words (202‥219). -/
+def coreStageC : List Word := ((List.range 256).filter fun x => x ≠ 129 ∧ x ≠ 200 ∧ x ≠ 52 ∧
+  x ≠ 158 ∧ (x < 202 ∨ 219 < x)).map Nat.toUInt64
 
 /-- The entry points the stage calls, and everything the core reaches. -/
 def stageCoreFns : List FnName :=
@@ -83,6 +87,21 @@ def CoreStageClosed (p : Prog) : Prop := closedA p coreStageA coreStageC stageCo
 theorem coreStageA_iw : IW ∉ coreStageA := by simp [coreStageA]
 theorem coreStageA_erec : EREC ∉ coreStageA := by simp [coreStageA]
 theorem coreStageA_pins : PINS ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_51 : (51 : ArrId) ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_155 : (155 : ArrId) ∉ coreStageA := by simp [coreStageA]
+/-- The core leaves the stage memos alone. -/
+theorem coreStageA_stage : ∀ b ∈ coreStageA, b < 201 ∨ 208 < b := by
+  intro b hb; simp only [coreStageA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
+  exact hb.2.2.2.2.2.2
+theorem coreStageC_52 : (52 : Word) ∉ coreStageC := by decide
+theorem coreStageC_158 : (158 : Word) ∉ coreStageC := by decide
+/-- The core leaves the stage memos' control words alone. -/
+theorem coreStageC_stage : ∀ x ∈ coreStageC, x.toNat < 202 ∨ 219 < x.toNat := by
+  intro x hx
+  simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
+  obtain ⟨c, ⟨hc, -, -, -, -, h⟩, rfl⟩ := hx
+  have : (Nat.toUInt64 c).toNat = c := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+  rw [this]; exact h
 theorem coreStageC_not {w : Word} (hw : w.toNat < 256) (h1 : w = 129 ∨ w = 200) : w ∉ coreStageC := by
   simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range, not_exists, not_and]
   intro x hx heq
