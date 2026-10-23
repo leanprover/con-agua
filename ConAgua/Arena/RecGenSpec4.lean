@@ -127,17 +127,17 @@ noncomputable def cruK2 (N : Nat) (visT n gen : Word) : Option (List Word × Mem
   | some (_, m2) =>
     if FlushOK m2 then cruK3 N visT gen (stripF 5 (flushMem m2) [n, gen]) else none
 
-noncomputable def cruK1 (N : Nat) (visT visR n gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+noncomputable def cruK1 (cR : CallM) (N : Nat) (visT visR n gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m1) => cruK2 N visT n gen (stubM "infer_type_core" m1 [visR, 0, gen])
+  | some (_, m1) => cruK2 N visT n gen (cR N "infer_type_core" [visR, 0, gen] m1)
 
 /-- **The model of `class_rule_ok`.** -/
-noncomputable def cruleW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
+noncomputable def cruleW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | N + 1, m, visT, visR, cvR, n, gen => cruK1 N visT visR n gen (crgW N m visR cvR gen)
+  | N + 1, m, visT, visR, cvR, n, gen => cruK1 cR N visT visR n gen (crgW N m visR cvR gen)
 
 section arms
-variable (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
+variable (cR : CallM) (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
 theorem crgW_eq : crgW (N + 1) m visR cvR gen =
     crgK0 N visR cvR gen (lbbF m [CWF, 0, gen]) := rfl
 theorem crgK0_some : crgK0 N visR cvR gen (some (r0, m0)) =
@@ -149,10 +149,10 @@ theorem crgK2_some : crgK2 visR gen (some (r2, m2)) =
 theorem crgK3_some : crgK3 visR gen (some (r3, m3)) =
     if r3.headD 0 = 0 then none else crgK4 (crfF m3 [visR, gen]) := rfl
 theorem crgK4_some : crgK4 (some (r4, m4)) = if r4.headD 0 = 0 then none else some ([0], m4) := rfl
-theorem cruleW_eq : cruleW (N + 1) m visT visR cvR n gen =
-    cruK1 N visT visR n gen (crgW N m visR cvR gen) := rfl
-theorem cruK1_some : cruK1 N visT visR n gen (some (r1, m1)) =
-    cruK2 N visT n gen (stubM "infer_type_core" m1 [visR, 0, gen]) := rfl
+theorem cruleW_eq : cruleW cR (N + 1) m visT visR cvR n gen =
+    cruK1 cR N visT visR n gen (crgW N m visR cvR gen) := rfl
+theorem cruK1_some : cruK1 cR N visT visR n gen (some (r1, m1)) =
+    cruK2 N visT n gen (cR N "infer_type_core" [visR, 0, gen] m1) := rfl
 theorem cruK2_some (h : FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) =
     cruK3 N visT gen (stripF 5 (flushMem m2) [n, gen]) := by simp [cruK2, h]
 theorem cruK2_bad (h : ¬ FlushOK m2) : cruK2 N visT n gen (some (r2, m2)) = none := by
@@ -169,8 +169,8 @@ grind_pattern [ind_grind] crgK1_some => crgK1 N visR cvR gen (some (r1, m1))
 grind_pattern [ind_grind] crgK2_some => crgK2 visR gen (some (r2, m2))
 grind_pattern [ind_grind] crgK3_some => crgK3 visR gen (some (r3, m3))
 grind_pattern [ind_grind] crgK4_some => crgK4 (some (r4, m4))
-grind_pattern [ind_grind] cruleW_eq => cruleW (N + 1) m visT visR cvR n gen
-grind_pattern [ind_grind] cruK1_some => cruK1 N visT visR n gen (some (r1, m1))
+grind_pattern [ind_grind] cruleW_eq => cruleW cR (N + 1) m visT visR cvR n gen
+grind_pattern [ind_grind] cruK1_some => cruK1 cR N visT visR n gen (some (r1, m1))
 grind_pattern [ind_grind] cruK2_some => cruK2 N visT n gen (some (r2, m2))
 grind_pattern [ind_grind] cruK2_bad => cruK2 N visT n gen (some (r2, m2))
 grind_pattern [ind_grind] cruK3_some => cruK3 N visT gen (some (r3, m3))
@@ -205,9 +205,9 @@ theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St
         stubM_spec p "all_level_params_defined" N, crfF_spec p h.hcr N] <;>
       finish (gen := 20)
 
-theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St) (visT visR cvR n gen : Word) :
+theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St) (visT visR cvR n gen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok" [visT, visR, cvR, n, gen]
-    ⦃fun r s' => LocEq s' s₀ ∧ cruleW N s₀.mem visT visR cvR n gen = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cruleW cR N s₀.mem visT visR cvR n gen = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rule]
   simp only [callFn, classRuleOkL]
   cases N with
@@ -215,7 +215,7 @@ theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St) (vis
   | succ N =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRuleOkGuards_spec p h N, stubM_spec p "infer_type_core" N,
+        classRuleOkGuards_spec p h N, hcR N "infer_type_core",
         flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
         classRuleOkDomains_spec p h.dom h.hcr N] <;>
       finish (gen := 20) [loc_init4]
@@ -307,7 +307,7 @@ theorem crgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 
 theorem cruleW_ok {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {cvR n gen : Word} {r : List Word} {cv : IConstantVal}
-    (h : cruleW N m visT visR cvR n gen = some (r, m')) (hS : StageR dn visR feR m a) (hgen : H gen)
+    (h : cruleW stubCall N m visT visR cvR n gen = some (r, m')) (hS : StageR dn visR feR m a) (hgen : H gen)
     (hq : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64) (hA : AbsOK m) :
     ∃ a', (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)).run a =
       .ok (decI gen, a') ∧ StageR dn visR feR m' a' ∧ IWGrow m m' ∧ r = [gen] ∧ AbsOK m' := by
@@ -321,7 +321,7 @@ theorem cruleW_ok {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR :
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, cruK1_some] at h
   obtain ⟨a1, a2, a4, a5, hl, hf, ha, hc, hS1, hg1, hA1⟩ := crgW_ok h1 hS hgen hq hqb hA
-  cases h2 : stubM "infer_type_core" m1 [visR, 0, gen] with
+  cases h2 : stubCall N "infer_type_core" [visR, 0, gen] m1 with
   | none => rw [h2] at h; simp [cruK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
@@ -388,7 +388,7 @@ theorem classRuleOk_refines (p : Prog) (hp : CruleProg p) (N : Nat) (s₀ : St) 
         (AM.st (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)) a₀)
         (AM.res (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (classRuleOk_spec p hp N s₀ visT visR cvR n gen) ?_
+  refine triple_post (classRuleOk_spec p hp stubCall (stubCall_spec p) N s₀ visT visR cvR n gen) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hS', hg, rfl, hA'⟩ := cruleW_ok hm hS hgen hq hqb hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
