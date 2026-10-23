@@ -23,17 +23,18 @@ open L.Front (DECL DLP DeclsF)
 
 /-- The arrays the loop needs zero at its start: the core's memos (49, 50, 52‥54, 151‥153), the
 environment's index rows (132‥134), the promotion memo (146‥149), `consts_resolve_ffast`'s memo
-(155), the inductive stage's memos (201‥208). -/
+(155), the inductive stage's memos (201‥208), `instantiate1Lift`'s memo (51). -/
 def loopZeroArr (b : Nat) : Prop :=
   b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 ∨
-    (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208)
+    (132 ≤ b ∧ b ≤ 134) ∨ (146 ≤ b ∧ b ≤ 149) ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) ∨ b = 51
 
 /-- The `CTL` words the loop needs zero at its start: the core's memo stamps, the number of
 constants (128), of pending checks (130), the promotion memo's words (140‥147),
-`consts_resolve_ffast`'s stamp (158), the inductive stage's memo words (202‥219). -/
+`consts_resolve_ffast`'s stamp (158), the inductive stage's memo words (202‥219),
+`instantiate1Lift`'s stamp (52). -/
 def loopZeroCtl (x : Nat) : Prop :=
   x = 48 ∨ x = 50 ∨ x = 54 ∨ x = 56 ∨ x = 58 ∨ x = 152 ∨ x = 154 ∨ x = 156 ∨ x = 158 ∨
-    x = 128 ∨ x = 130 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219)
+    x = 128 ∨ x = 130 ∨ (140 ≤ x ∧ x ≤ 147) ∨ (202 ≤ x ∧ x ≤ 219) ∨ x = 52
 
 /-- **The zeros the loop starts from.** -/
 structure LoopZero (m : Mem) : Prop where
@@ -44,11 +45,11 @@ structure LoopZero (m : Mem) : Prop where
 theorem lz_row {b : ArrId} (h1 : 132 ≤ b) (h2 : b ≤ 134) : loopZeroArr b :=
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr ⟨h1, h2⟩
+  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 theorem lzc_stage {x : Nat} (h1 : 202 ≤ x) (h2 : x ≤ 219) : loopZeroCtl x :=
-  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr ⟨h1, h2⟩
+  .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 
 namespace LoopZero
 variable {m : Mem} (h : LoopZero m)
@@ -69,6 +70,14 @@ theorem stageMemos : StageMemos m :=
 theorem crOK : L.Stubs.CrOK m :=
   CrOK.zero (by have := h.ctl; omega) (fun j => h.arr _ (by unfold loopZeroArr; decide) j)
     (h.word 158 (by unfold loopZeroCtl; decide))
+
+theorem indMemos : IndMemos m :=
+  IndMemos.zero h.ctl (fun b hb j => h.arr b (by
+      rcases hb with rfl | rfl | ⟨h1, h2⟩
+      · unfold loopZeroArr; decide
+      · unfold loopZeroArr; decide
+      · exact lz_stage h1 h2) j)
+    (fun x hx => h.word x (by unfold loopZeroCtl; omega))
 
 theorem pmemo : PMemoR m PMemo.empty := by
   have hc : ∀ x : Word, 140 ≤ x.toNat → x.toNat ≤ 147 → rdW (m.arr64 CTL) x = 0 :=
@@ -126,13 +135,13 @@ theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem
     (hE : (m.arr64 EREC).size < 2 ^ 63) (hS : (m.arr64 SPN).size < 2 ^ 63)
     (hB : (m.arr64 145).size < 2 ^ 63) :
     LoopR pins (dnOf a.store) m a 0 (mkIFEnv IEnv.empty) #[] ds ∧
-      LoopMem (dnOf a.store) m a ∧ CoreMemos m :=
+      LoopMem (dnOf a.store) m a ∧ CoreMemos m ∧ IndMemos m :=
   ⟨⟨⟨hA, hcore, ⟨fun _ => hpf⟩, hz.envR _⟩, hz.pendR, hD, hiw, ⟨_, hz.pmemo⟩, hPS⟩,
     ⟨hE, hS, hB, hpin, fun k x h => by
       simp only [dnOf] at h
       split at h
       · exact ⟨by assumption, h⟩
-      · cases h⟩, hz.coreMemos⟩
+      · cases h⟩, hz.coreMemos, hz.indMemos⟩
 
 
 /-- The lookups `installThenCheck_refines` takes beyond `LoopCallees`, and the bracket. -/
@@ -166,8 +175,8 @@ theorem installThenCheck_start {p : Prog} {pins : List INatOpPinSet} {ds : Array
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (k : Nat) (fe : IFEnv) (pend : Array PendingCheck) (a' s'' : AState),
       installFold .verified pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a = .ok (.ok (k, fe, pend), a') ∧
       checkPendingList .verified fe pend.toList a'.worker = .ok (.ok (), s''); ⊤⦄ := by
-  obtain ⟨hR, hM, hc⟩ := loop_start (pins := pins) hA hcore hpf hD hPS hiw hz hpin hE hS hB
+  obtain ⟨hR, hM, hc, hIM⟩ := loop_start (pins := pins) hA hcore hpf hD hPS hiw hz hpin hE hS hB
   exact installThenCheck_refines .verified pins (dnOf a.store) ds p rfl hP.bracket hdc hFD hP.pp
-    hP.pn hP.ps hP.pi hP.pd hP.pg hP.px hP.pc hP.pcg hP.pcx hP.itc n hn s₀ a hT hR hM hc
+    hP.pn hP.ps hP.pi hP.pd hP.pg hP.px hP.pc hP.pcg hP.pcx hP.itc n hn s₀ a hT hR hM hc hIM
 
 end L.Arena

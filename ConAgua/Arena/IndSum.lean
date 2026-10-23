@@ -727,32 +727,34 @@ def structProjBodiesL : FunDecl :=
 
 /-! ## `StructParts.lean`: `mentionsConst` (one twin for the pure walk and the memo) -/
 
-/-- `mentions_const_go(T, h)`: does the constant `T` occur in `h`? A syntactic walk (`fvar`
-annotations included; a `.proj` node names its structure), through the `mc` memo for every kind
-but `bvar`/`sort`/`lit`/`const` (unlike `hasLooseBVarBGo`, `fvar` is memoized: it recurses into the
-annotation). Not short-circuiting (`||` here combines two/three already-computed results). The
-twin's `fuel`/`memo` are both dropped, as in `hasLooseBVarBGo`. -/
+/-- `mentions_const_go(f, T, h)`: does the constant `T` occur in `h`? The twin's fuel `f` (abort at
+`0`, the children at `f - 1`), then a syntactic walk (`fvar` annotations included; a `.proj` node
+names its structure), through the `mc` memo for every kind but `bvar`/`sort`/`lit`/`const` (unlike
+`hasLooseBVarBGo`, `fvar` is memoized: it recurses into the annotation). Not short-circuiting (`||`
+here combines two/three already-computed results). The twin's `memo` is dropped (the memo is the
+`mc` array, as in `hasLooseBVarBGo`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:263-304 ConRon.Arena.mentionsConstGo
 @[l_impl ConRon.Arena.mentionsConstGo]
 def mentionsConstGoL : FunDecl :=
-  lfn (T, h) locals (g, x, y, z, fd, j, d, r, b1, b2, b3, fd2, j2, d2, u2) {
+  lfn (f, T, h) locals (g, x, y, z, fd, j, d, r, b1, b2, b3, fd2, j2, d2, u2) {
+  if f == 0 { abort };
   (g, x, y, z) := call e_view(h);
   if g == 0 || g == 2 || g == 8 { return 0 };
   if g == 3 { return u64(x == T) };
   (fd, j, d) := call mc_find(h, 0);
   if fd != 0 { return MCM.u64[j * 4 + 3] };
-  if g == 1 { r := call mentions_const_go(T, y) }
+  if g == 1 { r := call mentions_const_go(f - 1, T, y) }
   else if g == 4 || g == 5 || g == 6 {
-    b1 := call mentions_const_go(T, x);
-    b2 := call mentions_const_go(T, y);
+    b1 := call mentions_const_go(f - 1, T, x);
+    b2 := call mentions_const_go(f - 1, T, y);
     r := b1 | b2
   } else if g == 7 {
-    b1 := call mentions_const_go(T, x);
-    b2 := call mentions_const_go(T, y);
-    b3 := call mentions_const_go(T, z);
+    b1 := call mentions_const_go(f - 1, T, x);
+    b2 := call mentions_const_go(f - 1, T, y);
+    b3 := call mentions_const_go(f - 1, T, z);
     r := b1 | b2 | b3
   } else {
-    b1 := call mentions_const_go(T, z);
+    b1 := call mentions_const_go(f - 1, T, z);
     r := u64(x == T) | b1
   };
   (fd2, j2, d2) := call mc_find(h, 0);
@@ -765,7 +767,7 @@ def mentionsConstGoL : FunDecl :=
 @[l_impl ConRon.Arena.mentionsConst]
 def mentionsConstL : FunDecl := lfn (T, e) locals (u, r) {
   u := call mc_clear();
-  r := call mentions_const_go(T, e);
+  r := call mentions_const_go(⟪CWF⟫, T, e);
   return r
 }
 
