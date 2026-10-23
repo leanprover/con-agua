@@ -107,6 +107,7 @@ structure AgreeProg (p : Prog) : Prop where
   lvl : p.lookup "lvl_eq_fueled" = some lvlEqFueled
   one : p.lookup "check_block_agree_one" = some checkBlockAgreeOne
   agree : p.lookup "check_block_agree" = some checkBlockAgree
+  ad : AdF p
 
 /-- **`check_block_agree`'s model refines `checkBlockAgree`.** -/
 theorem iagW_sim (p : Prog) (hP : AgreeProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -185,7 +186,7 @@ theorem iagW_sim (p : Prog) (hP : AgreeProg p) (dn : NIdx → Option ConLeche.Na
   refine Sim.bindK (K := iagK2 p n vis nP c0 s0 o l) (body := fun _ m2 =>
       iagK3 (iagW p n m2 vis nP c0 s0 (o + 1) (l - 1))) (by simp [iagK2]) (fun _ _ => by simp [iagK2])
     (Sim.callW_pos (fun k => installSimCall
-      (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m1 m') (checkBlockAgreeOne_refines p hP.doms hP.lvl hP.one k
+      (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m1 m') (checkBlockAgreeOne_refines p hP.doms hP.lvl hP.one hP.ad k
       ⟨m1, Locals.init []⟩ a1 dn fe vis nP _ _ s0 _ v cvv fvs0 hS1 hty hfd hfb hv32 hs0)
       fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2⟩) n) ?_
   rintro - - m2 a2 ⟨hS2, hg2⟩

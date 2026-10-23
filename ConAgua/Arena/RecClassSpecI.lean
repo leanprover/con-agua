@@ -677,7 +677,7 @@ def motK4 (n : Nat) (d b : Word) : Option (List Word × Mem) → Option (List Wo
 
 def motK3 (n : Nat) (d fo fl : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (b, m3) => if 4294967296 ≤ b then none else motK4 n d b (stubM "fvar_type_ds" m3 [fo, fl])
+  | some (b, m3) => if 4294967296 ≤ b then none else motK4 n d b (ftdsF m3 [fo, fl])
 
 def motK2 (n : Nat) (d fo fl maj : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -712,7 +712,7 @@ theorem motK2_ok (h : ¬ 4294967296 ≤ srt) : motK2 n d fo fl maj (some (srt, m
 theorem motK3_big (h : 4294967296 ≤ b) : motK3 n d fo fl (some (b, m3)) = none := by
   rw [motK3, if_pos h]
 theorem motK3_ok (h : ¬ 4294967296 ≤ b) : motK3 n d fo fl (some (b, m3)) =
-    motK4 n d b (stubM "fvar_type_ds" m3 [fo, fl]) := by
+    motK4 n d b (ftdsF m3 [fo, fl]) := by
   rw [motK3, if_neg h]
 theorem motK4_big (h : d + r4.tail.headD 0 < d) : motK4 n d b (some (r4, m4)) = none := by
   rw [motK4, if_pos h]
@@ -757,7 +757,7 @@ theorem classGenMotiveTy_spec (p : Prog) (h : MtProg p) (n : Nat) (s₀ : St) (g
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
-        mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, stubM_spec p "fvar_type_ds" n,
+        mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
         closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct n] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -812,8 +812,8 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     simp at this; exact this
   have hg13 := hg1.trans (hg2.trans hg3)
   rw [rec2MapM_classBinder]
-  refine RSim.bind (K := motK4 n d b) rfl ((fvarTypeDs_spec dn vis fe _ _ ifs).sim
-    ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs⟩) ?_
+  refine RSim.bind (K := motK4 n d b) rfl ((ftdsF_ok dn vis fe _ _ ifs).sim
+    ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).1⟩) ?_
   rintro ⟨r4, m4⟩ bs a4 - ⟨hS4, hg4, hbs, hbb⟩
   dsimp only at hS4 hg4 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb

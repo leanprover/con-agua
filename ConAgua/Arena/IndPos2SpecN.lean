@@ -375,7 +375,7 @@ def nbBindW : Nat → MW9
 def nbAppW : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, kb, hi, w, ns =>
-    nbAppK1 n (nbContW n) vis ctx fu po pl kb hi w ns (stubM "get_app_args_f" m [CWF, w])
+    nbAppK1 n (nbContW n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
 /-- `nest_cont(vis, ctx, fuel, progOff, progLen, kb, n, us, argsOff, argsLen, ns)`. -/
 def nbContW : Nat → MW11
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -640,7 +640,7 @@ theorem nbBindW_succ (n : Nat) (m : Mem) (vis ctx fu po pl dep kb w ns : Word) :
           (nhiW m ctx pl) ((eViewW m w).tail.headD 0)) := by
   rw [nbBindW]
 theorem nbAppW_succ (n : Nat) (m : Mem) (vis ctx fu po pl kb hi w ns : Word) :
-    nbAppW (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW n) vis ctx fu po pl kb hi w ns (stubM "get_app_args_f" m [CWF, w]) := by
+    nbAppW (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
   rw [nbAppW]
 theorem nbContW_succ (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us aO aL ns : Word) :
     nbContW (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 k (nbKeyW k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by

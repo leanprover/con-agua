@@ -91,7 +91,7 @@ def grtK1 (n : Nat) (g c rP fo fl maj t : Word) : Option (List Word × Mem) → 
 /-- **The model of `class_gen_rec_ty_tail`.** -/
 def grtW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, g, c, rP, fo, fl, maj, t => grtK1 n g c rP fo fl maj t (stubM "fvar_type_ds" m [fo, fl])
+  | n + 1, m, g, c, rP, fo, fl, maj, t => grtK1 n g c rP fo fl maj t (ftdsF m [fo, fl])
 
 def gtK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -117,7 +117,7 @@ def gtW : Nat → Mem → Word → Word → Option (List Word × Mem)
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (g c rP fo fl maj t b2o b2l mv : Word)
   (r r1 r2 r3 r4 r5 r6 r7 : List Word)
-theorem grtW_eq : grtW (n + 1) m g c rP fo fl maj t = grtK1 n g c rP fo fl maj t (stubM "fvar_type_ds" m [fo, fl]) := rfl
+theorem grtW_eq : grtW (n + 1) m g c rP fo fl maj t = grtK1 n g c rP fo fl maj t (ftdsF m [fo, fl]) := rfl
 theorem grtK1_some : grtK1 n g c rP fo fl maj t (some (r1, m1)) =
     grtK2 n g c fo fl maj t (appendW n m1 (rdW (m1.arr64 IW) (g + 12)) rP (r1.headD 0) (r1.tail.headD 0)) := rfl
 theorem grtK2_some : grtK2 n g c fo fl maj t (some (r2, m2)) =
@@ -185,7 +185,7 @@ theorem classGenRecTyTail_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_ds" n, slAppend_specW p h.alloc h.copy h.app n,
+        ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
         slSnoc_specW p h.alloc h.copy h.snoc n,
         rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
         mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct n] <;>
@@ -241,7 +241,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   unfold rec2RecTyTail
   rw [rec2MapM_genBinder]
   obtain ⟨-, hgt, -⟩ := rec2CG_parts hG
-  refine RSim.bind (K := grtK1 n g c rP fo fl maj t) rfl ((fvarTypeDs_spec dn vis fe fo fl ifs).sim ⟨hS, hifs⟩) ?_
+  refine RSim.bind (K := grtK1 n g c rP fo fl maj t) rfl ((ftdsF_ok dn vis fe fo fl ifs).sim ⟨hS, hifs, fun _ => hfb⟩) ?_
   rintro ⟨r1, m1⟩ ibs a1 - ⟨hS1, hg1, hibs, hib⟩
   dsimp only at hS1 hg1 hibs hib
   simp only [getD_zero, Nat.zero_add, getD_one] at hibs hib

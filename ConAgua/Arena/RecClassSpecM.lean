@@ -105,7 +105,7 @@ def gpbK1 (n : Nat) (g : Word) : Option (List Word × Mem) → Option (List Word
 /-- **The model of `class_gen_prefix_binders`.** -/
 def gpbW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, g => gpbK1 n g (stubM "fvar_type_ds" m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)])
+  | n + 1, m, g => gpbK1 n g (ftdsF m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)])
 
 /-! ## Arms -/
 
@@ -158,7 +158,7 @@ theorem snW_eq (ctor : Word) : snW (n + 1) m g s mc d cls ctor =
     pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g cls d (fcW n m g cls ctor) := by
   simp only [snW]
 theorem gpbW_eq : gpbW (n + 1) m g =
-    gpbK1 n g (stubM "fvar_type_ds" m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)]) := rfl
+    gpbK1 n g (ftdsF m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)]) := rfl
 theorem gpbK1_some : gpbK1 n g (some (r1, m1)) = gpbK2 n (r1.headD 0) (r1.tail.headD 0) (psW n m1 g 0 0) := rfl
 theorem gpbK2_fail (h : r2.headD 0 = 0) : gpbK2 n pbo pbl (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [gpbK2, if_pos h]
@@ -264,7 +264,7 @@ theorem prefixBinders_spec (n : Nat) (s₀ : St) (g : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_ds" n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
+        ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
       finish (gen := 20) [rdW_eq]
 
 end specs
@@ -611,8 +611,20 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [e1, e2]
   have hpar : decHL m o1 l1 = some G.params := by
     rw [← hGe]; exact (show DecB (fun m => (decHL m o1 l1 : Option (List EIdx))) m ps from hpd).get (OMono.decHL _ _)
-  refine RSim.bind (K := gpbK1 n g) rfl ((fvarTypeDs_spec dn vis fe _ _ G.params).sim
-    ⟨hS, by rw [t1, t2]; exact hpar⟩) ?_
+  have hpb : 0 < l1 → o1 + l1 ≤ iwTop m := by
+    intro hl
+    have hpd' : decHL (truncM m) o1 l1 = some ps := hpd
+    have hs : (iwA (truncM m)).size ≤ iwTop m := by
+      apply Nat.le_of_not_lt
+      intro h
+      have := truncM_iw_get? m (iwTop m)
+      rw [if_neg (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      cases this
+    rcases decHL_le hpd' with h0 | h0
+    · omega
+    · exact Nat.le_trans h0 hs
+  refine RSim.bind (K := gpbK1 n g) rfl ((ftdsF_ok dn vis fe _ _ G.params).sim
+    ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) ?_
   rintro ⟨r1, m1⟩ pbs a1 - ⟨hS1, hg1, hpbs, hpbb⟩
   dsimp only at hS1 hg1 hpbs hpbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb

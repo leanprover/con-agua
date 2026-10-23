@@ -110,21 +110,6 @@ theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
     RelAM "open_pis_at_fvars_f" [k, e, i] (StageR dn vis fe)
       (openPisAtFvarsF k.toNat (decI e) i.toNat) (KeepPost dn vis fe decOLE) := sorry
 
-/-- `get_app_args(fuel, e)`. -/
-theorem getAppArgs_spec (f e : Word) (he : H e) :
-    RelAM "get_app_args_f" [f, e] (StageR dn vis fe)
-      (getAppArgs f.toNat (decI e)) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
-
-/-- `fvar_type_d(e)`. -/
-theorem fvarTypeD_spec (e : Word) (he : H e) :
-    RelAM "fvar_type_d" [e] (StageR dn vis fe)
-      (fvarTypeD (decI e)) (KeepPost dn vis fe decW0E) := sorry
-
-/-- `fvar_type_ds(off, len)`. -/
-theorem fvarTypeDs_spec (o l : Word) (xs : List EIdx) :
-    RelAM "fvar_type_ds" [o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
-      (fvarTypeDs xs) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
-
 /-- `inst_lp_fast(fuel, ks.off, ks.len, us, e)`. -/
 theorem instLPFast_spec (f o l us e : Word) (hu : H us) (he : H e) (ks : List NIdx) :
     RelAM "inst_lp_fast" [f, o, l, us, e]

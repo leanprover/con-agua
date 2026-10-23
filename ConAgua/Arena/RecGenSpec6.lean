@@ -35,6 +35,10 @@ theorem rec2NoMR_stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r :
   exact memoRG_frame noSch noSch_wf bmKey _ A C (fun hm => by have := hA _ hm; simp [noSch, NOM] at this)
     (fun hm => by have := hC _ hm; simp [noSch] at this) m m' hfr mp hM
 
+theorem rec2NoMR_ftd {m m' : Mem} {args r : List Word} {mp : Std.HashMap EIdx Bool}
+    (h : ftdF m args = some (r, m')) (hM : noMR m mp) : noMR m' mp :=
+  memoRG_frame noSch noSch_wf bmKey _ [] [] (by simp) (by simp) m m' (ftdF_frame h) mp hM
+
 theorem rec2NoMR_iw {m m' : Mem} {mp : Std.HashMap EIdx Bool} (hf : MemFrame [IW] [200] m m')
     (hM : noMR m mp) : noMR m' mp :=
   memoRG_frame noSch noSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf mp hM
@@ -89,7 +93,7 @@ def cfgW : Nat → Mem → Word → Word → Word → Word → Word → Word →
   | n + 1, m, mo, ml, io, il, i, fo, fl =>
     if fl = 0 then some ([0, 0], m)
     else cfgK1 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) mo ml io il i
-      (stubM "fvar_type_d" m [rdW (m.arr64 IW) fo])
+      (ftdF m [rdW (m.arr64 IW) fo])
 
 section arms
 variable (n : Nat) (m m1 m2 m4 m5 : Mem) (rest : Mem → Option (List Word × Mem))
@@ -98,7 +102,7 @@ theorem cfgW_nil (h : fl = 0) : cfgW (n + 1) m mo ml io il i fo fl = some ([0, 0
   simp [cfgW, h]
 theorem cfgW_cons (h : ¬ fl = 0) : cfgW (n + 1) m mo ml io il i fo fl =
     cfgK1 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) mo ml io il i
-      (stubM "fvar_type_d" m [rdW (m.arr64 IW) fo]) := by
+      (ftdF m [rdW (m.arr64 IW) fo]) := by
   simp [cfgW, h]
 theorem cfgK1_some : cfgK1 n rest mo ml io il i (some (r1, m1)) =
     cfgK2 n rest io il i (r1.headD 0) (noConstWf n m1 mo ml 0 0 (r1.headD 0)) := rfl
@@ -145,6 +149,7 @@ structure CfoProg (p : Prog) : Prop where
   mn : p.lookup "block_shape_member_names" = some blockShapeMemberNames
   go : p.lookup "class_fields_of_go" = some classFieldsOfGo
   cfo : p.lookup "class_fields_of" = some classFieldsOfL
+  ftd : FtdF p
 
 theorem classFieldsOfGo_spec (p : Prog) (h : CfoProg p) (n : Nat) :
     ∀ (s₀ : St) (mo ml io il i fo fl : Word),
@@ -160,7 +165,7 @@ theorem classFieldsOfGo_spec (p : Prog) (h : CfoProg p) (n : Nat) :
     simp only [callFn, classFieldsOfGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "fvar_type_d" n, nestOcc_spec' p h.no n, classFieldsOfHits_spec p h.hits n,
+        ftdF_spec0 p h.ftd n, nestOcc_spec' p h.no n, classFieldsOfHits_spec p h.hits n,
         iwAlloc_specW p h.alloc n, piBinders_spec' p h.alloc h.copy h.no.hv h.cons h.pb n,
         rec3_specW p h.alloc n h.r3, slCons_specW p h.alloc h.copy h.cons n, ih] <;>
       finish (gen := 20) [recW, wrIW]
@@ -426,7 +431,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   dsimp only at hS1 hg1 hwH hwd
   subst hwd
   rw [cfgK1_some]
-  have hM1 := rec2NoMR_stub (by decide) h1 hM
+  have hM1 := rec2NoMR_ftd h1 hM
   refine RSim.bind (K := cfgK2 n _ io il i (r1.headD 0)) rfl
     (rec2SimNestOcc hS1 hwH (by rw [decHL_grow hg1 hmb]; exact hmn) (by omega) hM1 n) ?_
   rintro ⟨occ, m2⟩ b a2 - ⟨ha2, hob, hM2, hS2, hg2, hf2⟩
