@@ -64,7 +64,7 @@ def ih1K2 : Option (List Word × Mem) → Option (List Word × Mem)
 /-- After `fvar_type_d`. -/
 def ih1K1 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => ih1K2 n nP mo ml d (stubM "pi_result_f" m1 [CWF, r1.headD 0])
+  | some (r1, m1) => ih1K2 n nP mo ml d (pirF m1 [CWF, r1.headD 0])
 
 end models
 
@@ -137,7 +137,7 @@ def tK1 (fo fl c : Word) : Option (List Word × Mem) → Option (List Word × Me
   | some (r5, m5) =>
     if r5.tail.headD 0 = 0 then some ([0, 0], m5)
     else tK2 n nP mo ml d fo fl c
-      (stubM "get_app_fn_f" m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)])
+      (gafF m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)])
 
 end models2
 
@@ -192,7 +192,7 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (nP mo ml d x fo fl hd c cn t 
 
 theorem ih1W_eq : ih1W (n + 1) m nP mo ml d x = ih1K1 n nP mo ml d (stubM "fvar_type_d" m [x]) := rfl
 theorem ih1K1_some : ih1K1 n nP mo ml d (some (r1, m1)) =
-    ih1K2 n nP mo ml d (stubM "pi_result_f" m1 [CWF, r1.headD 0]) := rfl
+    ih1K2 n nP mo ml d (pirF m1 [CWF, r1.headD 0]) := rfl
 theorem ih1K2_some : ih1K2 n nP mo ml d (some (r2, m2)) =
     ih1K3 n nP mo ml d (r2.headD 0) (fvarHeadW m2 (r2.headD 0)) := rfl
 theorem ih1K3_fail (h : r3.headD 0 = 0) : ih1K3 n nP mo ml d rr (some (r3, m3)) = some ([0, 0, 0], m3) := by
@@ -261,7 +261,7 @@ theorem tailW_eq : tailW (n + 1) m nP mo ml d fo fl concl c =
 theorem tK1_fail (h : r5.tail.headD 0 = 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) = some ([0, 0], m5) := by
   rw [tK1, if_pos h]
 theorem tK1_ok (h : r5.tail.headD 0 ≠ 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) =
-    tK2 n nP mo ml d fo fl c (stubM "get_app_fn_f" m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)]) := by
+    tK2 n nP mo ml d fo fl c (gafF m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)]) := by
   rw [tK1, if_neg h]
 theorem tK2_some : tK2 n nP mo ml d fo fl c (some (r6, m6)) =
     tK3 (finW n m6 nP mo ml d fo fl (r6.headD 0) c) := rfl
@@ -320,9 +320,9 @@ variable (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead) (hv : p.lookup 
   (hfin : p.lookup "class_read_minor_finish" = some classReadMinorFinish)
   (hpb : p.lookup "pi_binders" = some piBinders)
   (hmin : p.lookup "class_read_minor" = some classReadMinor)
-  (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail)
+  (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
 
-include hfh hv hf hcm hi1 in
+include hfh hv hf hcm hi1 had in
 theorem classReadMinorIh1_spec (n : Nat) (s₀ : St) (nP mo ml d x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_ih1" [nP, mo, ml, d, x]
     ⦃fun r s' => LocEq s' s₀ ∧ ih1W n s₀.mem nP mo ml d x = some (r, s'.mem); ⊤⦄ := by
@@ -332,11 +332,11 @@ theorem classReadMinorIh1_spec (n : Nat) (s₀ : St) (nP mo ml d x : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_d" n, stubM_spec p "pi_result_f" n, stubM_spec p "get_app_args_f" n,
-        fvarHead_spec p hfh hv n, classOfMotiveVar_spec p hf hcm n] <;>
+        stubM_spec p "fvar_type_d" n, pirF_spec p had n, stubM_spec p "get_app_args_f" n,
+        fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n] <;>
       finish (gen := 20) [rdW_eq, getD_one, getD_two, getD_three]
 
-include hfh hv hf hcm hi1 hc ha hsc h2 his in
+include hfh hv hf hcm hi1 hc ha hsc h2 his had in
 theorem classReadMinorIhs_spec (n : Nat) : ∀ (s₀ : St) (nP mo ml d fo fl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_ihs" [nP, mo, ml, d, fo, fl]
     ⦃fun r s' => LocEq s' s₀ ∧ ihsW n s₀.mem nP mo ml d fo fl = some (r, s'.mem); ⊤⦄ := by
@@ -349,11 +349,11 @@ theorem classReadMinorIhs_spec (n : Nat) : ∀ (s₀ : St) (nP mo ml d fo fl : W
     rw [invoke_eq _ his]; simp only [callFn, classReadMinorIhs]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classReadMinorIh1_spec p hfh hv hf hcm hi1 n, rec2_specW p ha n h2,
+        classReadMinorIh1_spec p hfh hv hf hcm hi1 had n, rec2_specW p ha n h2,
         slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 
-include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin in
+include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin had in
 theorem classReadMinorFinish_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl hd c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_finish" [nP, mo, ml, d, fo, fl, hd, c]
     ⦃fun r s' => LocEq s' s₀ ∧ finW n s₀.mem nP mo ml d fo fl hd c = some (r, s'.mem); ⊤⦄ := by
@@ -363,11 +363,11 @@ theorem classReadMinorFinish_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl hd c :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        eView_spec p hv n, classReadMinorIhs_spec p hfh hv hf hcm hc ha hsc h2 hi1 his n,
+        eView_spec p hv n, classReadMinorIhs_spec p hfh hv hf hcm hc ha hsc h2 hi1 his had n,
         rec5_specW p ha n h5] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
-include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl in
+include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl had in
 theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_tail" [nP, mo, ml, d, fo, fl, concl, c]
     ⦃fun r s' => LocEq s' s₀ ∧ tailW n s₀.mem nP mo ml d fo fl concl c = some (r, s'.mem); ⊤⦄ := by
@@ -377,11 +377,11 @@ theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_args_f" n, stubM_spec p "get_app_fn_f" n,
-        classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin n] <;>
+        stubM_spec p "get_app_args_f" n, gafF_spec p had n,
+        classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
-include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl hpb hmin in
+include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl hpb hmin had in
 theorem classReadMinor_spec (n : Nat) (s₀ : St) (nP mo ml d dom : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor" [nP, mo, ml, d, dom]
     ⦃fun r s' => LocEq s' s₀ ∧ minorW n s₀.mem nP mo ml d dom = some (r, s'.mem); ⊤⦄ := by
@@ -392,8 +392,8 @@ theorem classReadMinor_spec (n : Nat) (s₀ : St) (nP mo ml d dom : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         piBinders_spec' p ha hc hv hsc hpb n, stubM_spec p "open_pis_at_fvars_f" n,
-        fvarHead_spec p hfh hv n, classOfMotiveVar_spec p hf hcm n,
-        classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl n] <;>
+        fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
+        classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n] <;>
       finish (gen := 20) [rdW_eq, loc_init4]
 
 end specs

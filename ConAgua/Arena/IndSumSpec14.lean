@@ -2,6 +2,7 @@ import ConAgua.Arena.IndSumSpec12
 import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.DeclHeader
+import ConAgua.Arena.IndRealNames
 
 /-!
 # `check_struct_proj_table` refines `checkStructProjTable` (lane `indproofs2`)
@@ -393,7 +394,7 @@ def tblK2 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl bO bL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rs', m) => if bL ≠ nF then none else if rs'.headD 0 ≠ 1 then none
-    else tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (stubM "proj_table_name" m [T])
+    else tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (ptF m [T])
 /-- After `struct_proj_bodies`. -/
 def tblK1 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -438,7 +439,7 @@ theorem tblK2_bad (h : bL = nF) (h1 : r.headD 0 ≠ 1) :
   simp only [tblK2]; rw [if_neg ((fun e => e h)), if_pos h1]
 theorem tblK2_ok (h : bL = nF) (h1 : r.headD 0 = 1) :
     tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
-      tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (stubM "proj_table_name" m [T]) := by
+      tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (ptF m [T]) := by
   simp only [tblK2]; rw [if_neg ((fun e => e h)), if_neg ((fun e => e h1))]
 theorem tblK1_no (h : r.headD 0 = 0) :
     tblK1 p n vis T lo ll nP C nF rs off go gl (some (r, m)) = none := by
@@ -455,6 +456,7 @@ attribute [ind_grind] tblK9_some tblK8_some tblK7_some tblK6_some tblK5_some tbl
 /-- The program lookups of `check_struct_proj_table`. -/
 structure TblProg (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
+  hpt : PtF p
   hc : p.lookup "iw_copy" = some iwCopy
   hsc : p.lookup "sl_cons" = some slCons
   hv : p.lookup "e_view" = some eView
@@ -497,7 +499,7 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
         hP.hpg hP.hgo hP.hps hP.hpj hP.hspb (n + 1),
-      sctW_spec p hP.hbb hP.hhf hP.hsct (n + 1), stubM_spec p "proj_table_name" (n + 1),
+      sctW_spec p hP.hbb hP.hhf hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
       envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
       erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"] <;>
     finish (gen := 30) (instances := 5000) [tblW, tblMem, rdW_eq]
@@ -580,7 +582,7 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   simp only [hsz, and_self, ite_true]
   -- `proj_table_name`
   refine Sim.bindK (K := tblK3 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
-    (sumSim_of_relAM (projTableName_spec dn vis fe T hT) hS2) fun rt tn m3 a3 hQ => ?_
+    (sumSim_of_relW (ptF_ok dn vis fe T hT) hS2) fun rt tn m3 a3 hQ => ?_
   obtain ⟨hS3, hg3, htnl, htn⟩ := hQ
   subst htn
   rw [tblK3_some]

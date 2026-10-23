@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPos2SpecM
 import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndRealNames
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the word models of the
 mutual block (`nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, `nest_cont_key`,
@@ -132,7 +133,7 @@ def nbAppK1 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ra, m1) => nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
-      (stubM "get_app_fn_f" m1 [CWF, w])
+      (gafF m1 [CWF, w])
 
 def nbContK4 (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -258,7 +259,7 @@ def nbFrameK2 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL 
   | none => none
   | some (hc, m2) =>
     if 4294967296 ≤ hc then none
-    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (stubM "mk_app_n_f" m2 [hc, dO, dL])
+    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL])
 def nbFrameK1 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -395,7 +396,7 @@ def nbFrameW : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, hi, us, dO, dL, nPc, gO, gL, ns =>
     nbFrameK1 k (nbCtorsW k) vis ctx fu po pl hi us dO dL nPc gO gL ns
-      (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m))
+      (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m))
 /-- `nest_ctors(vis, ctx, root, fuel, progOff, progLen, hi, us, dsOff, dsLen, namesOff, namesLen,
 holesOff, holesLen, csOff, csLen, ns, outsOff, outsLen)`. -/
 def nbCtorsW : Nat → MW19
@@ -486,7 +487,7 @@ theorem nbAppK2_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL :
     else none := rfl
 theorem nbAppK1_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) (ra : List Word) (m1 : Mem) :
     nbAppK1 n contF vis ctx fu po pl kb hi w ns (some (ra, m1)) = nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
-      (stubM "get_app_fn_f" m1 [CWF, w]) := rfl
+      (gafF m1 [CWF, w]) := rfl
 theorem nbContK4_some (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) (r4 : List Word) (m4 : Mem) :
     nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (some (r4, m4)) =
     if aL ≠ nPc + r4.headD 0 then none
@@ -566,7 +567,7 @@ theorem nbFrameK3_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL n
 theorem nbFrameK2_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (hc : Word) (m2 : Mem) :
     nbFrameK2 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (hc, m2)) =
     if 4294967296 ≤ hc then none
-    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (stubM "mk_app_n_f" m2 [hc, dO, dL]) := rfl
+    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL]) := rfl
 theorem nbFrameK1_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (rn : List Word) (m1 : Mem) :
     nbFrameK1 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (rn, m1)) =
     if 4294967296 ≤ rn.headD 0 then none
@@ -653,7 +654,7 @@ theorem nbNewW_succ (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty
 theorem nbFrameW_succ (k : Nat) (m : Mem) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     nbFrameW (k + 1) m vis ctx fu po pl hi us dO dL nPc gO gL ns =
 nbFrameK1 k (nbCtorsW k) vis ctx fu po pl hi us dO dL nPc gO gL ns
-        (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) := by
+        (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) := by
   rw [nbFrameW]
 theorem nbCtorsW_succ (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) :
     nbCtorsW (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =

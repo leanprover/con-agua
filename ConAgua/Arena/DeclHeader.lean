@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndRealWalk
+import ConAgua.Arena.IndRealIpf
 
 /-!
 # `install_header` refines `installHeader` (lane `decls2`, helper `decls2-header`)
@@ -232,6 +233,7 @@ structure IhProg (p : Prog) : Prop where
   nodup : p.lookup "sl_nodup" = some slNodup
   bvb : BvbProg p
   hf : HfF p
+  ipf : IpfF p
 
 mutual
 /-- **The model of `install_header`** (the name `x` and the type `t` read from `EREC` first). -/
@@ -247,7 +249,7 @@ def ihK1 (n : Nat) (vis q x t : Word) : Option (List Word × Mem) → Option (Li
 
 def ihK2 (n : Nat) (vis q x t : Word) (m1 : Mem) : Option Word → Option (List Word × Mem)
   | none => none
-  | some c => if c ≠ 0 then none else ihK3 n vis q t (stubM "is_proj_fn_shape" m1 [x])
+  | some c => if c ≠ 0 then none else ihK3 n vis q t (ipfF m1 [x])
 
 def ihK3 (n : Nat) (vis q t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -292,7 +294,7 @@ theorem ihW_step : ihW (n + 1) m vis q =
 theorem ihK1_some : ihK1 n vis q x t (some (r1, m1)) =
     if r1.headD 0 ≠ 0 then none else ihK2 n vis q x t m1 (resContW n m1 x) := rfl
 theorem ihK2_some : ihK2 n vis q x t m1 (some c) =
-    if c ≠ 0 then none else ihK3 n vis q t (stubM "is_proj_fn_shape" m1 [x]) := rfl
+    if c ≠ 0 then none else ihK3 n vis q t (ipfF m1 [x]) := rfl
 theorem ihK3_some : ihK3 n vis q t (some (r3, m3)) =
     if r3.headD 0 ≠ 0 then none else ihK4 n vis t (cvLpsW n m3 q) := rfl
 theorem ihK4_some : ihK4 n vis t (some (r4, m4)) =
@@ -334,7 +336,7 @@ theorem ih_specW (p : Prog) (h : IhProg p) (n : Nat) (s₀ : St) (vis q : Word) 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
         cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
-        stubM_spec p "is_proj_fn_shape" n,
+        ipfF_spec p h.ipf n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
@@ -381,13 +383,13 @@ theorem ihW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
   subst hc0
   obtain ⟨rl, hrunR, hrl⟩ := resContW_miss hwxl h2 hS.1.pins
   -- `is_proj_fn_shape(x)`
-  cases h3 : stubM "is_proj_fn_shape" m1 [wx] with
+  cases h3 : ipfF m1 [wx] with
   | none => rw [h3] at h; simp [ihK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, ihK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    isProjFnShape_spec dn vis fe wx hwxl m1 m3 a r3 h3 hS
+    ipfF_ok dn vis fe wx hwxl m1 m3 a r3 h3 hS
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h; simp at h
   rw [if_neg hb3] at h

@@ -159,7 +159,7 @@ theorem classRecTyOkGuards_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma n] <;>
+        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n] <;>
       finish (gen := 20) [rdW_eq, rgK]
 
 theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St) (vis g k rc cvRi c : Word) :

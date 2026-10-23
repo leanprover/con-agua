@@ -514,9 +514,9 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbFrameW_succ] at h
   -- the group's head name
-  have hhn : (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
+  have hhn : (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
-      (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
+      (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ H (rn.headD 0) ∧
       (match grp with
         | [] => internNNode .anonymous
@@ -525,12 +525,12 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
     · rw [if_pos h0]
       have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
       subst this
-      cases hst : stubM "intern_nanon" m [] with
+      cases hst : naF m [] with
       | none => exact Or.inl rfl
       | some pr =>
       obtain ⟨rn, m1⟩ := pr
-      obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := internNanonStub_spec dn vis fe m m1 a rn hst hS
-      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.stub (by decide) hst, hxH, by rw [hxd]; exact hrun⟩
+      obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
+      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [NAREC, NASLOT]) (by simp), hxH, by rw [hxd]; exact hrun⟩
     · rw [if_neg h0]
       obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
         cases grp with
@@ -562,12 +562,12 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
     simp only [H]; simpa using this
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 (rn.headD 0) us hrnH hus hic
   have hg12 := hg1.trans hg2
-  cases hma : stubM "mk_app_n_f" m2 [hc, dO, dL] with
+  cases hma : mknF m2 [hc, dO, dL] with
   | none => rw [hma] at h; simp [nbFrameK3] at h
   | some pr3 =>
   obtain ⟨ra, m3⟩ := pr3
   rw [hma, nbFrameK3_some] at h
-  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mkAppN_spec dn vis fe hc dO dL hcH ds m2 m3 a2 ra hma
+  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mknF_ok dn vis fe hc dO dL hcH ds m2 m3 a2 ra hma
     ⟨hS2, (hds.grow (OMono.decHL _ _) hg12).get (OMono.decHL _ _)⟩
   cases hit : stubM "infer_type_core" m3 [vis, hi, ra.headD 0] with
   | none => rw [hit] at h; simp [nbFrameK4] at h
@@ -635,7 +635,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
       by have := (hg6.trans hg7).1; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
       hH7, hHb7⟩
     hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
-    ((((((hP.fr hf1).fr (ceinternW_mfr hic)).stub (by decide) hma).stub (by decide) hit).fr
+    ((((((hP.fr hf1).fr (ceinternW_mfr hic)).fr (MFr.ofMknF hma)).stub (by decide) hit).fr
       (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr (gcW_mfr _ _ _ _ _ _ _ _ _ _ hgc) |>.fr
       (fhW_mfr _ _ _ _ _ _ _ _ _ hfh))
   refine ⟨x.2, a8, ?_, hS8, hg17.trans hg8, by simpa using hns8, hPm8⟩
@@ -1052,15 +1052,15 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
   rw [CWF_eq] at hrun1
   have e0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
   rw [e0, getD1_eq] at hargs hargsb
-  cases hgf : stubM "get_app_fn_f" m1 [CWF, w] with
+  cases hgf : gafF m1 [CWF, w] with
   | none => rw [hgf] at h; simp [nbAppK2] at h
   | some pr2 =>
   obtain ⟨rh, m2⟩ := pr2
   rw [hgf, nbAppK2_some] at h
-  obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := getAppFn_spec dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
+  obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := gafF_ok dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
   rw [CWF_eq] at hrun2
   have hg12 := hg1.trans hg2
-  have hP2 : PosMR m2 := (hP.stub (by decide) hga).stub (by decide) hgf
+  have hP2 : PosMR m2 := (hP.stub (by decide) hga).fr (MFr.ofGafF hgf)
   by_cases hev : eViewW m2 (rh.headD 0) = []
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h

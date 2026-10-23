@@ -64,13 +64,13 @@ theorem ccoGuards (mode : ConLeche.CheckMode) {dn : NIdx → Option ConLeche.Nam
   subst hc0
   obtain ⟨rl, hrunR, hrl⟩ := resContW_miss hwxl h2 hS.1.pins
   -- `is_proj_fn_shape(x)`
-  cases h3 : stubM "is_proj_fn_shape" m1 [wx] with
+  cases h3 : ipfF m1 [wx] with
   | none => rw [h3] at h; simp [L.Arena.ihK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, L.Arena.ihK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    isProjFnShape_spec dn vis fe wx hwxl m1 m3 a r3 h3 hS
+    ipfF_ok dn vis fe wx hwxl m1 m3 a r3 h3 hS
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h; simp at h
   rw [if_neg hb3] at h
@@ -229,7 +229,7 @@ theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
         L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
-        stubM_spec p "is_proj_fn_shape" n,
+        ipfF_spec p h.ipf n,
         lbbF_spec p h.bvb n, hffF_spec p h.hf n,
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
