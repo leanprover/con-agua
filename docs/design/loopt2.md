@@ -131,3 +131,31 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
   write set and `PExt`; `TwinFold.step_pext` exposes the `PExt` of decls4's step). Not yet wired
   into the fold: that is the final switch, with `CoreMemos`.
 * Helper `loopt2-quot` works on open end 3 (quot readers under `StageR ∧ StateOK ∧ QuotDn`).
+
+## Landing 5: the quotient readers (open end 3), `install_value_guards` under `StageT`
+
+* **Open end 3, by helper `loopt2-quot`.** `romBasisRef_quot`/`romBasisARef_quot` are proved,
+  under `StageR ∧ StateOK a ∧ NamesDn dn a quotNames` (`RomQuotRef`, `RomQuotARef`;
+  `NamesDn dn a ns`: every name has a handle `k` with `dn k = some x` and `denoteN` of it `x`;
+  `quotNames = [u]`, tied to the blocks by `basisDeclsQ_fit`/`basisDeclsAQ_fit`). `caps_rel`
+  admits named `sortZ` lists (`ZOK dn zs a := zs = [] ∨ (StateOK a ∧ NamesDn dn a zs)`): L's extra
+  intern of the names hits (`internNameList_dn`, by `internName_denote_run`), and `ZOK` is carried
+  from the block's start by con-ron's `internCI_sstep`/`internCV_sstep` (`ZOKM` adds the
+  `EMemoOK` they need). `RomBasisRef`/`RomBasisARef` cover `k < 4`; `RomRefs.quot`/`quotA` the
+  kind 4. Consumers: `cbdK4_ok`/`checkBasisDecl_refines` take `StateOK ∧ NamesDn` at `k = 4`
+  (carried across `eqA` by con-ron's `internCI_fresh`); `qphW_ok`, `cdqW_ok`,
+  `checkDeclQuot_loop'` take `NamesDn` and `∃ c, denoteCV a.store cv = some c` (to carry
+  `StateOK`/`NamesDn` across `quotPinHit`, `ConRon.Bridge.quotPinHit_run`); `cdaW_ok`,
+  `checkDeclAxiom_loop'` take `NamesDn`. **Open**: `DeclCheckLoop.lean`'s `checkDeclAxiom_loop`
+  and `checkDeclQuot_loop` pass `sorry` for these (they replace the two reader `sorry`s): at
+  `ArmSpec`'s state `NamesDn dn a₀ quotNames` (from a loop-start fact `∃ k, dn k = some u` and
+  `TwinOK.den.dnN`, i.e. once the arms run under `StageT`) and, for the quotient arm, the
+  declaration's `denoteCV` (from `TwinFold.den`). Peak RSS of the changed Rom modules ≤ 2.4 GB.
+* **`ivgW_okT`** (`DeclCvgT.lean`): `install_value_guards` from `StageT`, the copy by
+  `erToIwW_frame` + `StageT.of_iw`, the walks by `IndStubsT`'s contracts. `cvgW_okT`, `dvW_okT`,
+  `tvW_okT` no longer take the hypothesis.
+* All the declaration texts' models that call the core read it through a `CallM` now
+  (`crpW`, `certW`, `cmW`, `cpaW` too).
+* `TwinOK.push` (`TwinStep.lean`): across a push of a constant whose readbacks hold (`CIDen`),
+  onto an index whose rows are all visible; the definition arm's gates run after the push, at the
+  extended environment. `CoreMemos.zero` (`LoopT.lean`): the zeroed memory's core memos.
