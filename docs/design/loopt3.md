@@ -83,3 +83,9 @@ new `LoopCallees` fields at `checkerProg`.
   `u`'s persistent handle).
 * Lesson: `omega` does not see through `abbrev ArrId := Nat` (a goal or hypothesis over `ArrId`
   gives "no usable constraints"); state such predicates over `Nat`.
+* **The ROM.** Helper `loopt3-prog` found `L.Rom.RomRefs checkerProg` unprovable (the readers read
+  `PB`; `romRefs_of` is for `checkerProg.subPB bs`) and `CoreWalkProg.i1` asking `instEntry` where
+  `checkerProg` binds `inst1` to the wrapper `inst1A`. So `loopStage_of` takes the loop's program
+  hypotheses at `checkerProg.subPB bs` and transfers the run with `triple_subPB` (R7 fixes `PB`).
+* **`Final/Remaining.lean`**: `checkerAsm_accepts_remaining`, `checkerAsm_accepts` from exactly
+  the hypotheses still open (`#print axioms` in the module: the stub contracts' `sorryAx`).
