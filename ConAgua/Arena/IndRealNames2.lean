@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.StageTLift
 
 /-!
 # `is_proj_fn_shape` discharged (lane `indproofs4`, helper `indproofs4-names`)
@@ -230,21 +229,5 @@ theorem ipfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   subst hs'
   rw [hm]
   exact ⟨_, a, hrun, hS, IWGrow.refl _, rfl, hle⟩
-
-/-- **The same under `StageT`** (replaces `IndStubsT.isProjFnShapeT_spec`): nothing changes. -/
-theorem ipfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (_hx : H x) :
-    RelW ipfF [x] (StageT dn vis fe) (NIdx.isProjFnShape (decI x)) (KeepPostT dn vis fe decW0B) := by
-  intro m m' a r hc hT
-  obtain ⟨n', hc'⟩ := callF_run hc
-  cases n' with
-  | zero => exact (callW_zero_false hc').elim
-  | succ n =>
-  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (isProjFnShape_specW ipfProg rfl n _ x) hc'
-  simp only at hm hW
-  obtain ⟨hrun, hle⟩ := ipfW_run hT.stage.1.arena.1 hW
-  subst hs'
-  rw [hm]
-  exact ⟨_, a, hrun, hT, IWGrow.refl _, rfl, hle⟩
 
 end L.Ind

@@ -4,6 +4,9 @@ import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfBase
 
+
+noncomputable section
+
 /-!
 # Phase A's step body, `install_step_go`, refines `installStepGo` (lane `decls2`)
 
@@ -591,7 +594,8 @@ def ivFns : List FnName :=
    "env_push", "env_row_set", "erec_vg"]
 
 /-- A program with `install_value`'s text. -/
-structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns
+structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
+  ipf : IpfF p
 
 section ivLookups
 variable {p : Prog} (h : IvProg p)
@@ -601,7 +605,7 @@ theorem IvProg.iv : p.lookup "install_value" = some installValueL :=
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
 theorem IvProg.ih : IhProg p := by
-  constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
+  constructor <;> first | exact h.ipf | exact (h.agree _ (by decide) (by decide)).trans rfl
 end ivLookups
 
 /-! ## The callees' specs at the loop's relation -/
