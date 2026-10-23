@@ -1,5 +1,5 @@
 import ConAgua.Arena.StageTLift
-import ConAgua.Arena.IndRealNames2
+import ConAgua.Arena.IndRealIpf
 
 /-!
 # Stub contracts under `StageT` (lane `indproofs3`)
@@ -53,7 +53,7 @@ theorem ipfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   intro m m' a r hc hT
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
-  | zero => exact (callW_zero_false hc').elim
+  | zero => rw [callW_zero] at hc'; cases hc'
   | succ n =>
   obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (isProjFnShape_specW ipfProg rfl n _ x) hc'

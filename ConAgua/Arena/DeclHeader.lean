@@ -1,5 +1,5 @@
 import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.IndRealNames2
+import ConAgua.Arena.IndRealIpf
 
 
 noncomputable section

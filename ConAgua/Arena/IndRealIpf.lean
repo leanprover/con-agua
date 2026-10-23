@@ -1,7 +1,18 @@
-import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.CallF
+import ConAgua.Arena.StripTeleSpec
+import ConAgua.Arena.PromoteNRef
+import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndStubs
 
 /-!
 # `is_proj_fn_shape` discharged (lane `indproofs4`, helper `indproofs4-names`)
+
+The recipe of `IndReal.lean` for a read of the name store: the model `ipfF := callF ipfProg
+"is_proj_fn_shape"`, its word body `ipfW` (`isProjFnShape_specW`), and `ipfW_run`: on the store
+`ArenaR` relates, the body is the twin's `NIdx.isProjFnShape` (the `num`/`str` views,
+`viewN_num`/`viewN_str`, and the bytes of the string against `"proj"`/`"projTable"`). Kept apart
+from `IndRealNames.lean` so the declaration texts (`DeclHeader.lean`) can import it without the
+inductive stage's names.
 -/
 
 set_option linter.deprecated false
@@ -93,6 +104,9 @@ theorem str_beq (s t : String) : (s == t) = decide (strWords s = strWords t) := 
   · have : strWords s ≠ strWords t := fun e => h (strWords_inj _ _ e)
     simp [h, this]
 
+theorem strWords_projTableI : strWords "projTable" = [112, 114, 111, 106, 84, 97, 98, 108, 101] := by
+  decide
+
 theorem strWords_proj : strWords "proj" = [112, 114, 111, 106] := by decide
 
 theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).size < 2 ^ 63)
@@ -100,7 +114,7 @@ theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).siz
     (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) :
     (ipfStrW m o l != 0) = (s == "proj" || s == "projTable") ∧ (ipfStrW m o l).toNat ≤ 1 := by
   have hlen : (strWords s).length = l.toNat := by rw [← hk, sliceL_length]
-  rw [str_beq, str_beq, strWords_proj, strWords_projTable, ← hk]
+  rw [str_beq, str_beq, strWords_proj, strWords_projTableI, ← hk]
   have ho : o.toNat < 2 ^ 63 := by omega
   have e1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (o + 2).toNat = o.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -220,7 +234,7 @@ theorem ipfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   intro m m' a r hc hS
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
-  | zero => exact (callW_zero_false hc').elim
+  | zero => rw [callW_zero] at hc'; cases hc'
   | succ n =>
   obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (isProjFnShape_specW ipfProg rfl n _ x) hc'
