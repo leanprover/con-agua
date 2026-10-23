@@ -110,3 +110,24 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
 * `LoopDecl.lean`'s agreement proofs are split into `LoopDeclAgree.lean` (cvg, iv),
   `LoopDeclArm1.lean`, `LoopDeclArm.lean` (arms): 7.4 GB in one module, under 5 GB each now
   (RSS of `lake env lean`, `scripts`-less measurement with `resource.getrusage`).
+
+## Landing 4: value checks under `StageT`, `TwinOK` across store growth, the loop's write set
+
+* **`DeclValT.lean`**: `check_defn_val`/`check_opaque_val` (`dvW_okT`) and `check_thm_val`
+  (`tvW_okT`) from `StageT`; after the final `env_push` the stage relation at the extended
+  environment and `CoreMemos` (`envPushW_frame`: index rows 132‥134, `ECON`, `CTL[128]`), which is
+  what the loop needs after an arm (the arms' posts need not give `TwinOK`: no core call follows
+  the push). `lvl_eq_fueled`'s model is `lfW cl n` (over a call reading; `lfW_stub` is lane
+  `induct`'s `lveW`), `lfW_okT` through `lvlEqC_simT`. `install_value_guards` under `StageT` is
+  still the hypothesis `IvgT`.
+* **`TwinStep.lean`**: `TwinOK.of_grow`/`TwinOK.of_istep`, and `StageS` (`StageT` ∧ `StateOK`, for stretches without a core call; shared with lane `indproofs3`), `StageS.of_istep`: `TwinOK` across any twin step that
+  grows a well-formed store and keeps the caches and pins (con-ron's `IStepS`, which every
+  interning operation's `*_sstep` lemma gives from `StateOK`): the parts reading the old store by
+  `Ext`, the parts over every node from the new store's well-formedness. The memory's half is the
+  caller's.
+* **`LoopFns.lean`, `Checker/LoopAll.lean`**: `loopFns` (the 1392 functions `install_then_check`
+  reaches), `LoopClosed p` (none of them writes `PINS` or bytes; decided for `checkerProg` per
+  chunk, 4.1 GB, 16 s), `LoopMem` (sizes, pin flag, persistent `dnN`) and `LoopMem.step` (by the
+  write set and `PExt`; `TwinFold.step_pext` exposes the `PExt` of decls4's step). Not yet wired
+  into the fold: that is the final switch, with `CoreMemos`.
+* Helper `loopt2-quot` works on open end 3 (quot readers under `StageR ∧ StateOK ∧ QuotDn`).

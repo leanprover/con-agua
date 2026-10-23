@@ -120,11 +120,12 @@ theorem enter {a a' : AState} (h : StateOK a) (hs : a'.store = a.store.enableScr
     StateOK a' :=
   ⟨hs ▸ EStore.enableScratch_wf h.wf⟩
 
-/-- **The fold's step**: an accepting `installDeclStep` on record `i` keeps the invariant. -/
-theorem step (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}
+/-- **The fold's step**: an accepting `installDeclStep` on record `i` keeps the invariant, and the
+store only grows on its persistent tier (`PExt`). -/
+theorem step_pext (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}
     {fe' : IFEnv} {pend' : Array PendingCheck} {a' : AState}
     (hrun : installDeclStep .verified pins (i, fe, pend) ds[i] a = .ok (.ok (k, fe', pend'), a')) :
-    TwinFold pins ds fe' pend' a' := by
+    TwinFold pins ds fe' pend' a' ∧ PExt a.store a'.store := by
   have hk : CoreSpec .verified ConRon.Arena.checkFuel := CoreSpec.of_core rfl
   have hind : IndSpec .verified := ConRon.Bridge.Inductives.indSpec_of_bridge rfl hk
   obtain ⟨env, hok, hnd⟩ := h.fold
@@ -161,8 +162,15 @@ theorem step (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : 
     rcases hcase with ⟨-, F, hF⟩ | ⟨pc, gP, F, -, -, -, hsplit, -⟩
     · exact checkDecl_nodup hF hnd
     · exact hsplit.nodup hnd
-  exact ⟨⟨env₁, hok₁, hnd₁⟩, ⟨pinsP, PinsDenote.pmono hx₁ _ _ h.pp hpins⟩, h.pp, h.pd,
-    ⟨dsP, denoteDecls_pext hx₁ _ _ h.pd hden⟩, hpend₁⟩
+  exact ⟨⟨⟨env₁, hok₁, hnd₁⟩, ⟨pinsP, PinsDenote.pmono hx₁ _ _ h.pp hpins⟩, h.pp, h.pd,
+    ⟨dsP, denoteDecls_pext hx₁ _ _ h.pd hden⟩, hpend₁⟩, hx₁⟩
+
+/-- **The fold's step**: an accepting `installDeclStep` on record `i` keeps the invariant. -/
+theorem step (h : TwinFold pins ds fe pend a) {i : Nat} (hi : i < ds.size) {k : Nat}
+    {fe' : IFEnv} {pend' : Array PendingCheck} {a' : AState}
+    (hrun : installDeclStep .verified pins (i, fe, pend) ds[i] a = .ok (.ok (k, fe', pend'), a')) :
+    TwinFold pins ds fe' pend' a' :=
+  (h.step_pext hi hrun).1
 
 /-! ## In the `AM.ok`/`AM.st` form the loop's theorems use -/
 
