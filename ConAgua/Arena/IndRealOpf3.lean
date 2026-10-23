@@ -353,6 +353,167 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
       rw [hsp4, if_neg (fun h => by subst h; omega)]
       simp only [spW, hs3])
 
+/-! ## `open_pis_at_fvars_f` -/
+
+theorem opfF_run (n : Nat) (e : EIdx) (i : Nat) (a a1 : AState) (x1 : Option (List EIdx × EIdx))
+    (h1 : (openPisAtFvarsFGo #[] n e i).run a = .ok (x1, a1)) :
+    (openPisAtFvarsF n e i).run a =
+      match x1 with
+      | some r => .ok (some r, a1)
+      | none => (openPisAtFvars n e i).run a1 := by
+  cases x1 <;> simp [openPisAtFvarsF, StateT.run_bind, h1, except_ok_bind] <;> rfl
+
+/-- **The tail**: the stack slice `(co, n)` copied to a fresh pool slice, the top put back. -/
+theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : List EIdx}
+    {r : List Word} (hS : StageR dn vis fe m2 a2) (hAb : AbsOK m2) (hsl : SpineR m2 co n fvs.toArray)
+    (hb : b.toNat < 2 ^ 32) (h : opfTail k n co b (allocW m2 n) = some (r, m')) :
+    KeepPost dn vis fe decOLE m2 m' a2 r (some (fvs, decE b)) ∧ AbsOK m' := by
+  cases ha : allocW m2 n with
+  | none => rw [ha] at h; cases h
+  | some p2 =>
+  obtain ⟨q, m3⟩ := p2
+  rw [ha, opfTail_some] at h
+  cases c3 : s2iW k m3 q co n with
+  | none => rw [c3] at h; cases h
+  | some p3 =>
+  obtain ⟨r3, m4⟩ := p3
+  rw [c3, bW_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
+  have hm4 := s2iW_wr k _ _ _ _ _ _ c3
+  generalize hws : spnWs (allocMem m2 n) co n.toNat = ws at hm4
+  have hspn2 : (allocMem m2 n).arr64 SPN = m2.arr64 SPN :=
+    (allocMem_frame m2 n).1 SPN (by simp [SPN, IW]) (by decide)
+  have hlen : n.toNat = ws.length := by rw [← hws, spnWs_length]
+  have hrec := recPost_wr m2 ws n hlen hS.2 (by
+    have : q.toNat = iwTop m2 := by rw [hq]; rfl
+    rw [← hlen, ← this]; exact hroom)
+  rw [← hq, ← hm4] at hrec
+  have hget : ∀ i, i < n.toNat → ws[i]? = some (spW m2 (co + i.toUInt64)) := by
+    intro i hi; rw [← hws, spnWs_get _ _ _ _ hi]; simp only [spW, hspn2]
+  have hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32 := by
+    intro w hw
+    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hw
+    have hi' : i < n.toNat := by rw [hlen]; exact hi
+    have := hget i hi'
+    rw [List.getElem?_eq_getElem hi] at this
+    rw [Option.some.inj this]; exact hsl.lt i hi'
+  have hxs : ws.map (decI : Word → EIdx) = fvs := by
+    apply List.ext_getElem
+    · simp only [List.length_map]; rw [← hlen]; simpa using hsl.size.symm
+    · intro i h1 h2
+      simp only [List.getElem_map]
+      have hi1 : i < ws.length := by simpa using h1
+      have hi' : i < n.toNat := by rw [hlen]; exact hi1
+      have := hget i hi'
+      rw [List.getElem?_eq_getElem hi1] at this
+      rw [Option.some.inj this]
+      have hg := hsl.get i (by simpa using h2)
+      simp only [List.getElem_toArray] at hg
+      rw [hg]; rfl
+  have hK := slice_keep (κ := .expr) hS hrec hlt hlen
+  rw [hxs] at hK
+  obtain ⟨hS3, hg3, hdec⟩ := hK
+  obtain ⟨hS4, hg4⟩ := stageR_hi hS3 (MemFrame.setCtl m4 136 co) (by simp) (by simp) (by decide)
+    (by decide)
+  have hI4 : (m4.set64 CTL 136 co).arr64 IW = m4.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have ht4 : iwTop (m4.set64 CTL 136 co) = iwTop m4 := by
+    simp only [iwTop, rdW_set64]; simp
+  have hfr : MemFrame [IW] [200, 136] m2 (m4.set64 CTL 136 co) := by
+    rw [hm4]
+    exact (((allocMem_frame m2 n).trans (wrIW_frame ws _ q)).mono (fun b hb => hb)
+      (by simp)).trans ((MemFrame.setCtl _ 136 co).mono (by simp) (by simp))
+  refine ⟨⟨hS4, hg3.trans hg4, rfl, ?_, ⟨hb, rfl⟩⟩, hAb.frameD hfr (by decide) (by decide)⟩
+  obtain ⟨hd1, hd2⟩ := hdec
+  refine ⟨?_, ?_⟩
+  · simp only [List.getD_eq_getElem?_getD] at hd1 ⊢
+    simpa [decHL, iwA, hI4] using hd1
+  · simp only [List.getD_cons_succ, List.getD_cons_zero] at hd2 ⊢
+    rw [ht4]; exact hd2
+
+/-- **`open_pis_at_fvars_f` refines `openPisAtFvarsF`** under the stage relation and the walk
+memos (replaces `IndStubs.openPisAtFvarsF_spec`, with the fvar indices below `2^63`: they do not
+wrap); the memos are well formed after. -/
+theorem opfF_ok (k e i : Word) (he : H e) (hi : i.toNat < 2 ^ 63) :
+    RelW opfF [k, e, i] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
+      (openPisAtFvarsF k.toNat (decI e) i.toNat)
+      (fun m m' a r x => KeepPost dn vis fe decOLE m m' a r x ∧ AbsOK m') := by
+  intro m m' a r h ⟨hS, hAb⟩
+  obtain ⟨N, hc⟩ := callF_run h
+  cases N with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ K =>
+  have c' := callW_model (M := fun mm => opfTopK opfP K mm k e i)
+    (fun s => opfTopK_spec opfP rfl rfl rfl K s k e i) hc
+  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
+  have hctl : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
+  simp only [opfTopK] at c'
+  generalize hco : rdW (m.arr64 CTL) 136 = co at c'
+  by_cases hlen : m.len64 SPN < co
+  · rw [if_pos hlen] at c'; cases c'
+  rw [if_neg hlen] at c'
+  have hcob : co.toNat ≤ (m.arr64 SPN).size := by
+    have : ¬ (((m.arr64 SPN).size : Nat).toUInt64 < co) := hlen
+    rw [UInt64.lt_iff_toNat_lt] at this
+    have h2 : (((m.arr64 SPN).size : Nat).toUInt64).toNat = (m.arr64 SPN).size := by
+      simp [Nat.toUInt64]; omega
+    omega
+  cases h1 : callW opfP K "opf_go" [k, e, i, co, 0] m with
+  | none => rw [h1] at c'; cases c'
+  | some p1 =>
+  obtain ⟨r1, m1⟩ := p1
+  rw [h1, bW_some] at c'
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1⟩ := opfGo_ok dn vis fe K m m1 a k e i co 0 #[] r1
+    h1 hS hAb he (by simpa using SpineR.empty' (m := m) hcob) (by rw [hco]; simp) (by simp; omega)
+  have hrun := opfF_run k.toNat (decE e) i.toNat a a1 x1 hrun1
+  simp only [opfK2] at c'
+  rw [show co + 0 = co by simp] at hO1
+  cases x1 with
+  | some p =>
+    obtain ⟨fvs, b⟩ := p
+    obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO1
+    rw [if_neg (by rw [h0]; decide)] at c'
+    obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS1 hAb1 hsl hb c'
+    rw [hdb] at hdec
+    exact ⟨_, _, hrun, ⟨hS', hg1.trans hg', hdec⟩, hAb'⟩
+  | none =>
+    rw [if_pos (show r1.headD 0 = 0 from hO1)] at c'
+    obtain ⟨hS1', hg1'⟩ := stageR_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
+      (by decide)
+    have hAb1' := hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)
+    have hctl1 : 200 < (m1.arr64 CTL).size := hS1.2.2.2.2.2
+    have htop1 : rdW ((m1.set64 CTL 136 co).arr64 CTL) 136 = co := by
+      rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
+    have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz1]
+    cases h2 : callW opfP K "opa_go" [k, e, i] (m1.set64 CTL 136 co) with
+    | none => rw [h2] at c'; cases c'
+    | some p2 =>
+    obtain ⟨r2, m2⟩ := p2
+    rw [h2, bW_some] at c'
+    simp only [opfK3] at c'
+    obtain ⟨x2, a2, hrun2, hS2, hg2, hAb2, -, hO2⟩ := opaGo_ok dn vis fe K _ m2 a1 k e i r2 h2
+      hS1' hAb1' he (by rw [htop1, hsz1']; exact hcob) (by rw [htop1, hsz1']; omega)
+    rw [htop1] at hO2
+    simp only at hrun
+    rw [hrun2] at hrun
+    cases x2 with
+    | none =>
+      rw [if_pos (show r2.headD 0 = 0 from hO2)] at c'
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+      obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
+        (by decide)
+      exact ⟨_, _, hrun, ⟨hS3, hg1.trans (hg1'.trans (hg2.trans hg3)), rfl⟩,
+        hAb2.frameD (MemFrame.setCtl m2 136 co) (by decide) (by decide)⟩
+    | some p =>
+      obtain ⟨fvs, b⟩ := p
+      obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO2
+      rw [if_neg (by rw [h0]; decide)] at c'
+      obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok dn vis fe hS2 hAb2 hsl hb c'
+      rw [hdb] at hdec
+      exact ⟨_, _, hrun, ⟨hS', hg1.trans (hg1'.trans (hg2.trans hg')), hdec⟩, hAb'⟩
+
 end
 
 end L.Ind
