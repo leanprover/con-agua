@@ -675,4 +675,94 @@ theorem cosW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
 
 end cos
 
+section cosf
+variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (P : CosProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+include hkp henv P
+
+/-- `cosW_okC` from the fresh result slice. -/
+theorem cosF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c ao al : Word} {r : List Word}
+    {bs : BlockShape} {formerTys : List EIdx} {R : ClassRead} {ms : List TargetMajor}
+    {cAs : List (IConstantVal × Nat)}
+    (h : cosF p n m vis q fto ftl rd mo ml c ao al = some (r, m')) (hC : StageC dn vis fe env m a)
+    (hA : AbsOK m)
+    (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hR : DecB (fun m => decCR m rd.toNat) m R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m cAs) (hlp : CtorsLp m ao al)
+    (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m)
+    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+    {rdP : ConLeche.ClassRead} {csP : List (ConLeche.ConstantVal × Nat)}
+    (hsh : dShape a.store bs = some pP)
+    (hftP : Frontend.denoteEList a.store formerTys = some formerTysP)
+    (hrdP : ConRon.Bridge.Inductives.dClassRead a.store R = some rdP)
+    (hmsP : ms.mapM (dMajor a.store) = some MsP) (hcsP : dCtors a.store cAs = some csP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
+    ∃ xs a', (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat cAs).run a = .ok (xs, a') ∧
+      StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
+      SPLA (iwTop m) decCC m' (r.headD 0).toNat (r.tail.headD 0).toNat xs ∧ RcMR m' ∧ AbsOK m' := by
+  rw [cosF_eq] at h
+  cases hal : allocW m al with
+  | none => rw [hal] at h; cases h
+  | some x =>
+  obtain ⟨qo, m1⟩ := x
+  rw [hal, cosK1_some] at h
+  cases hl : cosW p (n + 1) m1 vis q fto ftl rd mo ml c ao al qo 0 with
+  | none => rw [hl] at h; cases h
+  | some m2 =>
+  rw [hl, cosK2_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hC.stage
+  have hf1 := allocW_mfr hal
+  have hA1 := allocW_afr hal hA
+  obtain ⟨xs, a', run, hC', hg', -, ht', hP', hA', ps', hps', hfa'⟩ := cosW_okC hkp henv P dn fe vis q fto ftl rd
+    mo ml c ao al qo bs formerTys R ms cAs m hbs hft hftb hR hms hmsb hcAs hlp hnpk hsz5 hq hformer hMs
+    (n + 1) (by omega) m1 m2 a 0 [] [] csP hl (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1
+    (KeepW.of_mfr hf1) (by omega) UInt64.zero_le (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP
+    (by simpa using hcsP)
+  simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hfa'
+  refine ⟨xs, a', run, hC', hg', ⟨.inr (by simp; omega), by simp; omega, ps', hps',
+    FA2.imp (fun _ _ hq => hq.mono (by omega)) hfa'⟩, hP', hA'⟩
+
+end cosf
+
+/-- **`class_ctors_of` refines `classCtorsOf`** under `StageC` (the knot's core calls; the inputs'
+denotations and scoping as con-ron's `classCtorsOf_spec` asks). -/
+@[refines ConRon.Arena.classCtorsOf]
+theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
+    (henv : ConLeche.EnvWF env) (P : CosProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c ao al : Word) (bs : BlockShape)
+    (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cAs : List (IConstantVal × Nat))
+    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) s₀.mem cAs) (hlp : CtorsLp s₀.mem ao al)
+    (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
+    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+    {rdP : ConLeche.ClassRead} {csP : List (ConLeche.ConstantVal × Nat)}
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hrdP : ConRon.Bridge.Inductives.dClassRead a₀.store R = some rdP)
+    (hmsP : ms.mapM (dMajor a₀.store) = some MsP) (hcsP : dCtors a₀.store cAs = some csP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c, ao, al]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat cAs) a₀ ∧
+      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat cAs) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      SPLA (iwTop s₀.mem) decCC s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat
+        (AM.res (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat cAs) a₀) ∧ RcMR s'.mem ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  cases n with
+  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  | succ n =>
+  refine triple_post (cos_spec p P.ha P.cos n s₀ vis q fto ftl rd mo ml c ao al) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨xs, a', run, hC', hg, hd, hP', hA'⟩ := cosF_okC hkp henv P dn fe n (by omega) hm hC hA hbs hft hftb
+    hR hms hmsb hcAs hlp hnpk hsz5 hP hsh hftP hrdP hmsP hcsP hformer hMs
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
+
 end L.Ind

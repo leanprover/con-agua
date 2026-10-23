@@ -351,8 +351,8 @@ end cosf
 
 /-- **`class_ctors_of` refines `classCtorsOf`** (through `class_ctor_of`'s stubs and contracts):
 `class_ctor_of`'s hypotheses, the constructors a pointer slice decoded below the tops with
-`CtorLp` at each; the records a slice stable above the entry's top (`SPLA`). -/
-@[refines ConRon.Arena.classCtorsOf]
+`CtorLp` at each; the records a slice stable above the entry's top (`SPLA`). Under `StageR`; the
+census link is `classCtorsOf_refinesC` (`IndT/RecGen27`). -/
 theorem classCtorsOf_refines {p : Prog} (P : CosProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c ao al : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cAs : List (IConstantVal × Nat))
