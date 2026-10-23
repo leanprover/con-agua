@@ -238,7 +238,7 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
   have hbound1 : fvs0O.toNat + fvs0L.toNat ≤ iwTop m1 := by have := hg1.1; omega
   obtain ⟨x2, a2, hrun2, hSt2, hg2, hdec2⟩ :=
     ftdsF_ok dn vis fe fvs0O fvs0L fvs0 m1 m2 a1 rd hrb
-      ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0⟩
+      ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0, fun _ => hbound1⟩
   simp only [decRL, show (0:Nat) + 1 = 1 from rfl, agGetD0, agGetD1] at hdec2
   obtain ⟨hdm2, hdb2⟩ := hdec2
   cases hw : domsW n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP with

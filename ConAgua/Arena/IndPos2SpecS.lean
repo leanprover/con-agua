@@ -1060,7 +1060,7 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
   obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := gafF_ok dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
   rw [CWF_eq] at hrun2
   have hg12 := hg1.trans hg2
-  have hP2 : PosMR m2 := (hP.stub (by decide) hga).fr (MFr.ofGafF hgf)
+  have hP2 : PosMR m2 := (hP.fr (MFr.ofGaaF hga)).fr (MFr.ofGafF hgf)
   by_cases hev : eViewW m2 (rh.headD 0) = []
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h

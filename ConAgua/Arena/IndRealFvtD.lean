@@ -103,9 +103,6 @@ theorem EStore.viewFVarTy_of_view (st : EStore) (i : EIdx) (k : Nat) (ty : EIdx)
     · simp only [*, ite_true]; split <;> simp_all [ETables.getFVarTy_of_get _ _ _ _ h]
     · simp at h
 
-theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
-    (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
-
 theorem eViewW_head1 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 1) :
     (eViewW m w).headD 0 = 1 := by
   unfold eViewW at hne ⊢

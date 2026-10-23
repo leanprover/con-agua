@@ -78,7 +78,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   | succ n =>
   rw [mcW_eq]
   refine RSim.bind (K := fun o => c2K3 (mcK1 n d ihso ihsl (r3.headD 0) o)) rfl
-    ((ftdsF_ok dn vis fe _ _ fvs).sim ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs⟩) ?_
+    ((ftdsF_ok dn vis fe _ _ fvs).sim ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs, fun _ => Nat.le_trans hfb hg13.1⟩) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨hS4, hg4, hfbs, hfbb⟩
   dsimp only at hS4 hg4 hfbs hfbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hfbs hfbb

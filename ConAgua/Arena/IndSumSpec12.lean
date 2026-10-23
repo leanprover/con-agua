@@ -327,7 +327,7 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have h5 := gaaF_ok dn vis fe CWF xbw hxb
   rw [CWF_eq, hxbd] at h5
   refine Sim.bindK (K := ctlK5 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw hd (rf.headD 0)) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM h5 hS4) fun ra args m5 a5 hQ => ?_
+    (fun _ _ => rfl) (sumSim_of_relW h5 hS4) fun ra args m5 a5 hQ => ?_
   obtain ⟨hS5, hg5, hargs, hab⟩ := hQ
   rw [sumGetD0, sumGetD1] at hargs hab
   rw [ctlK5_some]
@@ -696,7 +696,7 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have h5 := openPisAtFvarsF_spec dn vis fe nP w5 0 hw5l
   rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5
   refine Sim.bindK (K := ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM h5 hS4) fun r5 o5 m5 a5 hQ => ?_
+    (fun _ _ => rfl) (sumSim_of_relW h5 hS4) fun r5 o5 m5 a5 hQ => ?_
   obtain ⟨hS5, hg5, hdec5⟩ := hQ
   by_cases h50 : r5.headD 0 = 0
   · rw [ctorK6_no (h := h50)]; exact Sim.of_none
@@ -710,7 +710,7 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine Sim.bind_twin (x := (tl, tb)) (a₁ := a5) rfl ?_
   -- `fvar_type_ds`
   refine Sim.bindK (K := ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM (ftdsF_ok dn vis fe _ _ tl) ⟨hS5, htl⟩)
+    (fun _ _ => rfl) (sumSim_of_relW (ftdsF_ok dn vis fe _ _ tl) ⟨hS5, htl, fun _ => htlb⟩)
     fun r6 tdoms m6 a6 hQ => ?_
   obtain ⟨hS6, hg6, htd, htdb⟩ := hQ
   rw [sumGetD0, sumGetD1] at htd htdb

@@ -611,8 +611,20 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [e1, e2]
   have hpar : decHL m o1 l1 = some G.params := by
     rw [← hGe]; exact (show DecB (fun m => (decHL m o1 l1 : Option (List EIdx))) m ps from hpd).get (OMono.decHL _ _)
+  have hpb : 0 < l1 → o1 + l1 ≤ iwTop m := by
+    intro hl
+    have hpd' : decHL (truncM m) o1 l1 = some ps := hpd
+    have hs : (iwA (truncM m)).size ≤ iwTop m := by
+      apply Nat.le_of_not_lt
+      intro h
+      have := truncM_iw_get? m (iwTop m)
+      rw [if_neg (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      cases this
+    rcases decHL_le hpd' with h0 | h0
+    · omega
+    · exact Nat.le_trans h0 hs
   refine RSim.bind (K := gpbK1 n g) rfl ((ftdsF_ok dn vis fe _ _ G.params).sim
-    ⟨hS, by rw [t1, t2]; exact hpar⟩) ?_
+    ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) ?_
   rintro ⟨r1, m1⟩ pbs a1 - ⟨hS1, hg1, hpbs, hpbb⟩
   dsimp only at hS1 hg1 hpbs hpbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb

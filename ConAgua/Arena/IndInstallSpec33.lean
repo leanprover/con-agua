@@ -344,7 +344,7 @@ theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl 
     rw [h5, csfK5_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]
-    exact ((((MFr.ofStub h1).trans (MFr.ofStub h2)).trans (MFr.ofStub h3)).trans (pos3_cfbW_mfr h4)).trans
+    exact ((((MFr.ofFtdF h1).trans (MFr.ofStub h2)).trans (MFr.ofStub h3)).trans (pos3_cfbW_mfr h4)).trans
       ((MFr.set_iw _ _ _).trans (pos3_csfW_mfr n _ _ _ _ _ _ _ _ _ _ _ _ _ _ h5))
 
 theorem pos3_fsortsW_mfr {n : Nat} {m m' : Mem} {vis isProp large s nP fo fl io il nW : Word} {r : List Word}

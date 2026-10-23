@@ -679,7 +679,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   | succ n =>
   rw [iclW_eq]
   refine RSim.bind (K := fun o => K (i1K3 (mitK5 (iclK1 n e (r7.headD 0) o)))) hK
-    ((ftdsF_ok dn vis fe _ _ xs).sim ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs⟩) ?_
+    ((ftdsF_ok dn vis fe _ _ xs).sim ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg27.1⟩) ?_
   rintro ⟨r8, m8⟩ bs a8 - ⟨hS8, hg8, hbs, hbb⟩
   dsimp only at hS8 hg8 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb

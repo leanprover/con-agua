@@ -35,6 +35,10 @@ theorem rec2NoMR_stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r :
   exact memoRG_frame noSch noSch_wf bmKey _ A C (fun hm => by have := hA _ hm; simp [noSch, NOM] at this)
     (fun hm => by have := hC _ hm; simp [noSch] at this) m m' hfr mp hM
 
+theorem rec2NoMR_ftd {m m' : Mem} {args r : List Word} {mp : Std.HashMap EIdx Bool}
+    (h : ftdF m args = some (r, m')) (hM : noMR m mp) : noMR m' mp :=
+  memoRG_frame noSch noSch_wf bmKey _ [] [] (by simp) (by simp) m m' (ftdF_frame h) mp hM
+
 theorem rec2NoMR_iw {m m' : Mem} {mp : Std.HashMap EIdx Bool} (hf : MemFrame [IW] [200] m m')
     (hM : noMR m mp) : noMR m' mp :=
   memoRG_frame noSch noSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf mp hM
@@ -282,7 +286,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   dsimp only at hS1 hg1 hwH hwd
   subst hwd
   rw [cfgK1_some]
-  have hM1 := rec2NoMR_stub (by decide) h1 hM
+  have hM1 := rec2NoMR_ftd h1 hM
   refine RSim.bind (K := cfgK2 n _ io il i (r1.headD 0)) rfl
     (rec2SimNestOcc hS1 hwH (by rw [decHL_grow hg1 hmb]; exact hmn) (by omega) hM1 n) ?_
   rintro ⟨occ, m2⟩ b a2 - ⟨ha2, hob, hM2, hS2, hg2⟩

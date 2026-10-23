@@ -901,7 +901,7 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2 m3 a2 _ _ args r3 hoa hS2
-    hn2 hne2 hdA (fun j hj => by omega) ((hP.fr (resHeadW_mfr hrh)).stub (by decide) hga)
+    hn2 hne2 hdA (fun j hj => by omega) ((hP.fr (resHeadW_mfr hrh)).fr (MFr.ofGaaF hga))
   rw [hnP2] at hrunoa
   refine ⟨!b, a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_, hP3⟩
   · intro β K; simp only [roK, StateT.run_bind, hrun1, except_ok_bind, hne, ite_true, hrun2, hrunoa]; rfl

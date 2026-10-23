@@ -487,7 +487,7 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
   rw [h3, tkhK3_some] at h
   obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := gaaF_ok dn vis fe CWF leafW hl m2 m3 a2 ra h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
-  have hP3 := hP2.stub (by decide) h3
+  have hP3 := hP2.fr (MFr.ofGaaF h3)
   cases h4 : gaaF m3 [CWF, majDom] with
   | none => rw [h4] at h; simp [tkhK4] at h
   | some x =>
@@ -495,7 +495,7 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
   rw [h4] at h
   obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := gaaF_ok dn vis fe CWF majDom hmj m3 m4 a3 rb h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
-  have hP4 := hP3.stub (by decide) h4
+  have hP4 := hP3.fr (MFr.ofGaaF h4)
   have hg14 := (hg12.trans hg3).trans hg4
   simp only [getD_zero, getD_one, Nat.zero_add] at hla hlab hma hmab
   have hla4 : HSl0 m4 (ra.headD 0) (ra.tail.headD 0) la := (HSl0.of hla hlab).grow hg4

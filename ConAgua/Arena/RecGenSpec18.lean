@@ -239,7 +239,7 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
     obtain ⟨s1, rfl, -, hs1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (gaaF_spec p hP.ad n _ [CWF, mty]) e1
     obtain ⟨x, a', hrun, hS1, hg1, hd1⟩ := gaaF_ok dn vis fe CWF mty hmty m s1.mem a r1 hs1 hS
     rw [CWF_eq] at hrun
-    exact ⟨x, a', hrun, hd1, hS1, hg1, hPm.fr (MFr.ofStub hs1)⟩
+    exact ⟨x, a', hrun, hd1, hS1, hg1, hPm.fr (MFr.ofGaaF hs1)⟩
   rintro r1 args m1 a1 ⟨⟨hd1, hb1⟩, hS1, hg1, hP1⟩
   rw [getD_zero, getD_one] at hd1 hb1
   rw [tmfK1_some]

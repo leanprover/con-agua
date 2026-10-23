@@ -241,7 +241,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   unfold rec2RecTyTail
   rw [rec2MapM_genBinder]
   obtain ⟨-, hgt, -⟩ := rec2CG_parts hG
-  refine RSim.bind (K := grtK1 n g c rP fo fl maj t) rfl ((ftdsF_ok dn vis fe fo fl ifs).sim ⟨hS, hifs⟩) ?_
+  refine RSim.bind (K := grtK1 n g c rP fo fl maj t) rfl ((ftdsF_ok dn vis fe fo fl ifs).sim ⟨hS, hifs, fun _ => hfb⟩) ?_
   rintro ⟨r1, m1⟩ ibs a1 - ⟨hS1, hg1, hibs, hib⟩
   dsimp only at hS1 hg1 hibs hib
   simp only [getD_zero, Nat.zero_add, getD_one] at hibs hib

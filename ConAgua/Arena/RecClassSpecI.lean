@@ -813,7 +813,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hg13 := hg1.trans (hg2.trans hg3)
   rw [rec2MapM_classBinder]
   refine RSim.bind (K := motK4 n d b) rfl ((ftdsF_ok dn vis fe _ _ ifs).sim
-    ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs⟩) ?_
+    ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).1⟩) ?_
   rintro ⟨r4, m4⟩ bs a4 - ⟨hS4, hg4, hbs, hbb⟩
   dsimp only at hS4 hg4 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
