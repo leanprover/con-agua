@@ -62,14 +62,13 @@ def dfltN (l : Word) : Word :=
 /-- The header (slot 0) names the region: its first word is the live stamp. -/
 def hdG (S : MemoSch) (m : Mem) : Prop := rdW (m.arr64 S.arr) 0 = epG S m
 
-instance (S : MemoSch) (m : Mem) : Decidable (hdG S m) := by unfold hdG; infer_instance
-
 /-- The region's first slot: the header's word 1, or slot `1`. -/
-def mbG (S : MemoSch) (m : Mem) : Word := if hdG S m then rdW (m.arr64 S.arr) 1 else 1
+def mbG (S : MemoSch) (m : Mem) : Word :=
+  if rdW (m.arr64 S.arr) 0 = epG S m then rdW (m.arr64 S.arr) 1 else 1
 
 /-- The region's slot count: the header's word 2, or the default. -/
 def nG (S : MemoSch) (m : Mem) : Word :=
-  if hdG S m then rdW (m.arr64 S.arr) 2 else dfltN (m.len64 S.arr)
+  if rdW (m.arr64 S.arr) 0 = epG S m then rdW (m.arr64 S.arr) 2 else dfltN (m.len64 S.arr)
 
 /-- The live count, `CTL[cs + 1]` (only the load limit reads it). -/
 def cntG (S : MemoSch) (m : Mem) : Word := rdW (m.arr64 CTL) (S.cs + 1)
@@ -197,6 +196,14 @@ theorem mfindLoopG_step_spec (n : Nat) (s₀ : St) :
 /-- The probe of the memo for key `(k1, k2)`. -/
 def mfindG (m : Mem) (k1 k2 : Word) : List Word :=
   mprobeG (m.arr64 S.arr) k1 k2 (epG S m) (mbG S m) (nG S m) (homeW (kh k1 k2) (nG S m)) 0
+
+/-- The probe reads the memo's array and its stamp only. -/
+theorem mfindG_eq_of {m₁ m₂ : Mem} (ha : m₂.arr64 S.arr = m₁.arr64 S.arr)
+    (hc : rdW (m₂.arr64 CTL) S.cs = rdW (m₁.arr64 CTL) S.cs) (k1 k2 : Word) :
+    mfindG S m₂ k1 k2 = mfindG S m₁ k1 k2 := by
+  have he : epG S m₂ = epG S m₁ := by simp only [epG, hc]
+  simp only [mfindG, nG, mbG, Mem.len64]
+  rw [ha, he]
 
 theorem memoFindG_spec (f : FnName) (hp : p.lookup f = some (memoFindG S)) (n : Nat) (s₀ : St)
     (k1 k2 : Word) :

@@ -38,8 +38,8 @@ theorem _root_.L.Arena.MemFrame.set64_bothH {A : List ArrId} {C : List Word} {m�
 
 theorem mfindG_congr (S : MemoSch) {m₁ m₂ : Mem} (ha : m₂.arr64 S.arr = m₁.arr64 S.arr)
     (hc : rdW (m₂.arr64 CTL) S.cs = rdW (m₁.arr64 CTL) S.cs) (k1 k2 : Word) :
-    mfindG S m₂ k1 k2 = mfindG S m₁ k1 k2 := by
-  simp only [mfindG, epG, nG, len64_eq, ha, hc]
+    mfindG S m₂ k1 k2 = mfindG S m₁ k1 k2 :=
+  mfindG_eq_of S ha hc k1 k2
 
 /-- `hoist_note` writes `IW` only. -/
 theorem hNoteW_iw {m x : Mem} {w i k tg ws sp sp' : Word} (h : hNoteW m w i k tg ws sp = some (sp', x)) :

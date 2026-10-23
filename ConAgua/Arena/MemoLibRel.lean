@@ -381,10 +381,8 @@ theorem reg_congr (S : MemoSch) (m m' : Mem)
     simp only [hdG, he, hh 0 (by decide)]
   have hl : m'.len64 S.arr = m.len64 S.arr := by simp only [len64_eq, hz]
   refine ⟨he, ?_, ?_, by simp only [slotsG, hl], hd⟩
-  · simp only [mbG, hh 1 (by decide)]
-    by_cases h : hdG S m <;> simp [h, hd]
-  · simp only [nG, hh 2 (by decide), hl]
-    by_cases h : hdG S m <;> simp [h, hd]
+  · simp only [mbG, hh 0 (by decide), hh 1 (by decide), he]
+  · simp only [nG, hh 0 (by decide), hh 2 (by decide), hl, he]
 
 /-! ## Writes: reads after `put`, the growth's header, frames -/
 
@@ -744,8 +742,8 @@ theorem memoRV_fresh (m : Mem) (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (h
     (h0 : (rdW (m.arr64 S.arr) 0).toNat < (epG S m).toNat)
     (hst : ∀ j : Word, j.toNat < slotsG S m → (mstG S m j).toNat < (epG S m).toNat) :
     MemoRV S K VR m ∅ := by
-  have hd : ¬ hdG S m := fun h => by
-    simp only [hdG] at h; rw [h] at h0; omega
+  have hd : ¬ rdW (m.arr64 S.arr) 0 = epG S m := fun h => by
+    rw [h] at h0; omega
   have hb : mbG S m = 1 := by simp [mbG, hd]
   have hn : nG S m = dfltN (m.len64 S.arr) := by simp [nG, hd]
   have hne : ∀ j : Word, j.toNat < slotsG S m → mstG S m j ≠ epG S m := fun j hj h => by
@@ -1147,7 +1145,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     simp only [epG]; rw [← hM, rdW_set64]; simp only [Ne.symm hcs, false_and, and_false, ↓reduceIte]
     simp only [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hac)]
     rw [hIf.2.1 S.cs (by simp)]
-  have hd₁ : hdG S m₁ := by simp only [hdG, hep₁, hh]; simp
+  have hd₁ : rdW (m₁.arr64 S.arr) 0 = epG S m₁ := by simp only [hep₁, hh]; simp
   have hb₁ : mbG S m₁ = mbG S m + nG S m := by simp only [mbG, hd₁, ↓reduceIte, hh]; simp
   have hn₁ : nG S m₁ = nG S m * 2 := by simp only [nG, hd₁, ↓reduceIte, hh]
   have hs₁ : slotsG S m₁ = slotsG S m := by
