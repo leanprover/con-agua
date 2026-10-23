@@ -301,3 +301,36 @@ Findings:
   114 todo (976 / 988 / 1305 Lean lines); phase 1 (1a+1b+1c) 128 / 18 / 20 (2662 / 2774 / 2907).
   Before (master `f960919b`, docs/progress.md): phase 0 173 / 3 / 120 (972 / 981 / 1305), phase 1
   53 / 47 / 66 (696 / 1164 / 2907).
+
+## Landing 2: the ground hoist in L (`ConAgua/Checker/Hoist.lean`)
+
+* `hoist_nat_op_ground(ord, c)` replaces `hoist_ok` (which aborted where the twin reorders,
+  D18/D24, now Fixed): the name index (`HNIX`, a memo-library table, name ↦ first position + 1),
+  the targets (`IW[tg + k] = t + 1`), the closure, the reorder. `prepare_prelude` permutes `DECL`
+  by the order it returns. Arrays 75/76 and `CTL[73‥76]` (memory map, own landing).
+* **Closure by marking at push.** The twin pops a position, skips it when it already has a
+  target, marks it and pushes its constants' positions after `i`. Every target is the current
+  `i` and `i` only grows, so "done" = "has a target", and a closure marks exactly the positions
+  reachable from `j` through unmarked positions after `i`, in any order. L marks a position when
+  it pushes it: each position is pushed at most once in the whole pass, so one `c`-word stack
+  suffices (the twin's fuel `ds.size` is the same bound). `usedConsts` is fused with `pushOne`:
+  every `const`/`proj` name goes to `hoist_note` as the walk finds it (same marked set).
+* **The sort** by `hoistKey` (distinct keys `(t, 0, k)` / `(k, 1, k)`) is built directly: per
+  position `p`, the positions moved to `p` in order (a bucket list), then `p` unless it moved.
+* `movedNames` is not computed (its result is dropped by `preparePrelude`; D30 Deliberate).
+* Every loop is a self-recursion, as the twin's, so `l_model` generates all models and specs
+  except `hoist_targets_go` and `hoist_nat_op_ground` (they call the two-result `nat_op_deps`,
+  which `l_model` does not take). The whole set elaborates in under 30 s. `hoist_walk` has one
+  arm function per compound tag (as `lift_go`); stores need `extra [L.st64]`; `fold [tierW, idxW]`
+  avoids `Nat`/`Word` literal confusion in the generated model; `hoist_apply` needs `gen 20`.
+* e2e (`scripts/e2e.py --only natop`, after lane stubs' landing): `natop_order` and
+  `natop_before_ble` **agree-accept** (were `l-error` at `hoist_ok`); `natop_arg_order`,
+  `natop_before_eq` agree-accept, `natop_booltrue_alias` agree-reject (L aborts in
+  `defn_nat_gate`, the reference declines).
+
+### Open (front3)
+
+* Refinement of the hoist's models against `hoistNatOpGround` (not started; the marking-at-push
+  argument above is the key lemma), models for `hoist_targets_go`/`hoist_nat_op_ground`.
+* `nameIndex` in the twin is a `HashMap` keyed by `NIdx`; L uses the memo library (a full table
+  aborts: the capacity rule).
