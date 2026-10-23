@@ -47,7 +47,7 @@ def i1lGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if g == 0 {
     if CTL.u64[22 + t] <= i { abort };
     x := BREC.u64[i * 2 + t];
-    if x == d { r := call lift_entry(v, d, 0); return r };
+    if x == d { r := call lift_entry(v, d, 0, fu - 1); return r };
     if d < x { r := call intern_bvar(x - 1); return r };
     return h
   };
