@@ -189,4 +189,216 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   obtain ⟨hC, hx, hr⟩ := rpg_fin hS.check hd hrun hS5
   exact ⟨x5, a5, hrun, hC, hx, hr, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hx5⟩
 
+/-- **`is_def_eq_core`'s twin side**: con-ron's `KnotSpec.defeq` at `checkFuel` (`CoreSpec.of_core`)
+gives `CheckOK` and `Ext` after a run from `CheckOK` and the two sides' denotations. -/
+theorem defeq_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} {i j : EIdx}
+    {x y : ConLeche.Expr} {b : Bool} (henv : ConLeche.EnvWF env) (hck : CheckOK V env fe a)
+    (hi : denoteE a.store i = some x) (hj : denoteE a.store j = some y)
+    (hwx : ConLeche.Expr.WScoped d x) (hwy : ConLeche.Expr.WScoped d y)
+    (hrun : (isDefEqCore V fe checkFuel d i j).run a = .ok (b, a')) :
+    CheckOK V env fe a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧
+      ConRon.Bridge.Core.SimV (ConLeche.isDefEqCore V env) d x y b :=
+  ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun
+    (((CoreSpec.of_core rfl).knot env fe henv).defeq a d i j x y hck hi hj hwx hwy)
+
+/-- **`check_reduce_pin` under `StageC`** (`crpW_ok`'s, con-ron's `checkReducePin_bridge`'s
+decomposition): from the stage relation at the pushed view `vis2`, con-ron's `CheckOK` at the
+pre-insertion view `vis` of the index (at `env`, the environment before the push), the pushed
+index's `StepOK` (at `env2`), the memory's half of `TwinOK`, the pin flag, the name's and the
+value's denotations; the gate at `vis`, the stage relation at `vis2` and `StageC` at `vis` after. -/
+theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
+    {env env2 : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c v : Word}
+    {r : List Word} {nm : ConLeche.Name} {x : ConLeche.Expr}
+    (hW : crpW p (realCall p) n m vis vis2 c v = some (r, m')) (hS : StageR dn vis2 fe2 m a)
+    (hck : CheckOK V env (fe2.restrictTo vis.toNat) a) (henv : ConLeche.EnvWF env)
+    (hok2 : StepOK env2 fe2 a) (hmem : TwinMem dn m a) (hflag : pinW m 0 ≠ 0)
+    (hnm : denoteN a.store.ns (decI c) = some nm) (hvx : denoteE a.store (decI v) = some x)
+    (hws : ConLeche.Expr.WScoped 0 x) (hc : c.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
+    ∃ a', (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v)).run a = .ok ((), a') ∧
+      StageR dn vis2 fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
+      IWGrow m m' := by
+  cases n with
+  | zero => simp [crpW] at hW
+  | succ n =>
+  have hn' : n ≤ 2 ^ 62 := by omega
+  rw [crpW_step] at hW
+  have hvb : fe2.visibleBelow = vis2.toNat := hS.1.env.vis
+  have hC0 : StageC dn vis (fe2.restrictTo vis.toNat) env m a := ⟨hS.restrict vis, hck, hmem, hflag⟩
+  generalize hfe : fe2.restrictTo vis.toNat = fe at hC0 hck ⊢
+  -- the stored constant, at `vis2`
+  cases h1 : callW p n "reduce_stored_ok" [vis2, c] m with
+  | none => rw [h1] at hW; cases hW
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, crpK1_some] at hW
+  obtain ⟨s1, hs1, -, hok1, hS1, hg1, hb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (reduceStoredOk_refines p hC.red dn vis2 fe2 c hc n ⟨m, Locals.init []⟩ a hS) h1
+  subst hs1
+  have hrun1 := AM.run_of_ok _ _ hok1
+  by_cases e1 : r1.headD 0 = 0
+  · rw [if_pos e1] at hW; cases hW
+  rw [if_neg e1] at hW
+  have t1 : AM.res (reduceStoredOk fe2 (decI c)) a = true := by rw [← hb1]; simpa using e1
+  rw [t1] at hrun1
+  obtain ⟨hi1, -⟩ := ConRon.Bridge.reduceStoredOk_run hck.state hck.pins hok2.ienv hnm _ _ hrun1
+  generalize AM.st (reduceStoredOk fe2 (decI c)) a = a1 at hrun1 hS1 hi1
+  have hC1 : StageC dn vis fe env s1.mem a1 :=
+    StageC.of_leaf hC0 (by rw [← hfe]; exact hS1.restrict vis)
+      (callW_leafFrame hcl (leaf_mem _ (by decide)) h1) hi1
+  have hnm1 := ConRon.Bridge.denoteN_ext hnm hi1.ext
+  have hv1 := ConRon.Bridge.denote_ext hvx hi1.ext
+  -- the element inductive
+  cases h2 : callW p n "reduce_elem_ok" [vis, c] s1.mem with
+  | none => rw [h2] at hW; cases hW
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, crpK2_some] at hW
+  obtain ⟨s2, hs2, -, hok2', hS2, hg2, hb2, -⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (reduceElemOk_refines p hC.red dn hdn vis fe c hc n ⟨s1.mem, Locals.init []⟩ a1 hC1.stage) h2
+  subst hs2
+  have hrun2 := AM.run_of_ok _ _ hok2'
+  by_cases e2 : r2.headD 0 = 0
+  · rw [if_pos e2] at hW; cases hW
+  rw [if_neg e2] at hW
+  have t2 : AM.res (reduceElemOk fe (decI c)) a1 = true := by rw [← hb2]; simpa using e2
+  rw [t2] at hrun2
+  obtain ⟨hi2, -⟩ := ConRon.Bridge.reduceElemOk_run hC1.check.state hC1.check.pins
+    hC1.check.ienv hnm1 _ _ hrun2
+  generalize AM.st (reduceElemOk fe (decI c)) a1 = a2 at hrun2 hS2 hi2
+  have hC2 := StageC.of_leaf hC1 hS2 (callW_leafFrame hcl (leaf_mem _ (by decide)) h2) hi2
+  have hnm2 := ConRon.Bridge.denoteN_ext hnm1 hi2.ext
+  have hv2 := ConRon.Bridge.denote_ext hv1 hi2.ext
+  -- the pin's guards
+  cases h3 : callW p n "reduce_pin_guard" [vis, c] s2.mem with
+  | none => rw [h3] at hW; cases hW
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, crpK3_some] at hW
+  obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (rpg_specW p hC.rpg n ⟨s2.mem, Locals.init []⟩ vis c) h3
+  subst hs3
+  obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
+    rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hW3 hC2 hc hnm2
+  by_cases e3 : r3.headD 0 = 0
+  · rw [if_pos e3] at hW; cases hW
+  rw [if_neg e3] at hW
+  have t3 : x3 = true := by rw [← hb3.1]; simpa using e3
+  rw [t3] at hrun3
+  have hc2 : ConLeche.reducePinGuard env nm = true := by rw [← hr3, t3]
+  have hwsP : ConLeche.Expr.WScoped 0 (ConLeche.reduceDeclPin nm) := by
+    refine ConLeche.Expr.WScoped.of_not_hasFvar ?_
+    simp only [ConLeche.reducePinGuard, Bool.and_eq_true, Bool.not_eq_true'] at hc2
+    exact hc2.1.1.2
+  have hnm3 := ConRon.Bridge.denoteN_ext hnm2 hx3
+  have hv3 := ConRon.Bridge.denote_ext hv2 hx3
+  -- the pin
+  cases h4 : callW p n "reduce_decl_pin" [c] s3.mem with
+  | none => rw [h4] at hW; cases hW
+  | some rm4 =>
+  obtain ⟨r4, m4⟩ := rm4
+  rw [h4, crpK4_some] at hW
+  obtain ⟨s4, hs4, -, hok4, hS4, hg4, hpl, hpe⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (reduceDeclPin_refines p hC.red.pa n ⟨s3.mem, Locals.init []⟩ a3 dn fe vis c hC3.stage hc
+      hC.red.rom hC.rdp) h4
+  subst hs4
+  have hrun4 := AM.run_of_ok _ _ hok4
+  rw [← hpe] at hrun4
+  obtain ⟨hi4, hpd⟩ := ConRon.Bridge.reduceDeclPin_run hC3.check.state hC3.check.pins hnm3 hrun4
+  generalize AM.st (reduceDeclPin (decI c)) a3 = a4 at hrun4 hS4 hi4 hpd
+  have hC4 := StageC.of_leaf hC3 hS4 (callW_leafFrame hcl (leaf_mem _ (by decide)) h4) hi4
+  have hnm4 := ConRon.Bridge.denoteN_ext hnm3 hi4.ext
+  have hv4 := ConRon.Bridge.denote_ext hv3 hi4.ext
+  -- the value against the pin
+  cases h5 : realCall p n "is_def_eq_core" [vis, 0, v, r4.headD 0] s4.mem with
+  | none => rw [h5] at hW; simp [crpK5] at hW
+  | some rm5 =>
+  obtain ⟨r5, m5⟩ := rm5
+  rw [h5, crpK5_some] at hW
+  obtain ⟨x5, a5, hrun5, hT5, hg5, hx5⟩ :=
+    hq.isDefEqCore_sim n hn' hC4.stageT 0 v (r4.headD 0) hv hpl r5 m5 h5
+  have h00 : (0 : Word).toNat = 0 := rfl
+  have h01 : (1 : Word).toNat = 1 := rfl
+  rw [h00] at hrun5
+  obtain ⟨hck5, hx5', -, -⟩ := defeq_check henv hC4.check hv4 hpd hws hwsP hrun5
+  have hC5 := StageC.of_T hT5 hck5
+  by_cases e5 : r5.headD 0 = 0
+  · rw [if_pos e5] at hW; cases hW
+  rw [if_neg e5] at hW
+  have t5 : x5 = true := by rw [← hx5]; simpa [decBool] using e5
+  have hnm5 := ConRon.Bridge.denoteN_ext hnm4 hx5'
+  have hv5 := ConRon.Bridge.denote_ext hv4 hx5'
+  -- the certificate's variable
+  cases h6 : callW p n "reduce_cert_var" [c] m5 with
+  | none => rw [h6] at hW; simp [crpK6] at hW
+  | some rm6 =>
+  obtain ⟨r6, m6⟩ := rm6
+  rw [h6, crpK6_some] at hW
+  obtain ⟨s6, hs6, -, hok6, hS6, hg6, hx6⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
+    (reduceCertVar_refines p hC.rcv n ⟨m5, Locals.init []⟩ a5 dn fe vis c hC5.stage hc) h6
+  subst hs6
+  have hrun6 := AM.run_of_ok _ _ hok6
+  rw [hx6] at hrun6
+  obtain ⟨hi6, hxv⟩ := ConRon.Bridge.reduceCertVar_run hck5.state hck5.pins hnm5 hrun6
+  generalize AM.st (reduceCertVar (decI c)) a5 = a6 at hrun6 hS6 hi6 hxv
+  have hC6 := StageC.of_leaf hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) hi6
+  have hv6 : denoteE a6.store (decE v) = some x := ConRon.Bridge.denote_ext hv5 hi6.ext
+  by_cases e6 : 4294967296 ≤ r6.headD 0
+  · rw [if_pos e6] at hW; cases hW
+  rw [if_neg e6] at hW
+  have hxl : (r6.headD 0).toNat < 2 ^ 32 := by
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp e6); simpa using this
+  -- the application
+  cases h7 : mkAppW s6.mem v (r6.headD 0) with
+  | none => rw [h7] at hW; cases hW
+  | some rm7 =>
+  obtain ⟨ax, m7⟩ := rm7
+  rw [h7, crpK7_some] at hW
+  obtain ⟨a7, hrun7, hS7, hg7⟩ := mkApp_stage hC6.stage v (r6.headD 0) h7
+  have haxl := mkAppW_hw s6.mem a6 hC6.stage.1.arena v (r6.headD 0) ax m7 h7
+  obtain ⟨hi7, hax⟩ := ConRon.Bridge.Frontend.internE_sstep hC6.check.state
+    (ConRon.Bridge.viewOK_app (by rw [hv6]; rfl) (by rw [hxv]; rfl)) hrun7
+  have hax' : denoteE a7.store (decE ax) = some (.app x (ConLeche.reduceCertVar nm)) := by
+    rw [hax]
+    simp only [denoteEView, ConRon.Bridge.denote_ext hv6 hi7.ext,
+      ConRon.Bridge.denote_ext hxv hi7.ext, opt2]
+  have hC7 := StageC.of_leaf hC6 hS7 (mkAppW_leafFrame h7) hi7
+  have hwsC : ConLeche.Expr.WScoped 1 (ConLeche.reduceCertVar nm) := by
+    unfold ConLeche.reduceCertVar ConLeche.reduceElemTy
+    split <;> simp [ConLeche.Expr.WScoped]
+  have hwsA : ConLeche.Expr.WScoped 1 (.app x (ConLeche.reduceCertVar nm)) := by
+    unfold ConLeche.Expr.WScoped
+    exact ⟨ConLeche.Expr.WScoped.mono (by omega) hws, hwsC⟩
+  -- the identity certificate
+  cases h8 : realCall p n "is_def_eq_core" [vis, 1, ax, r6.headD 0] m7 with
+  | none => rw [h8] at hW; simp [crpK8] at hW
+  | some rm8 =>
+  obtain ⟨r8, m8⟩ := rm8
+  rw [h8, crpK8_some] at hW
+  obtain ⟨x8, a8, hrun8, hT8, hg8, hx8⟩ :=
+    hq.isDefEqCore_sim n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl r8 m8 h8
+  rw [h01] at hrun8
+  obtain ⟨hck8, -, -, -⟩ := defeq_check henv hC7.check hax'
+    (ConRon.Bridge.denote_ext hxv hi7.ext) hwsA hwsC hrun8
+  have hC8 := StageC.of_T hT8 hck8
+  by_cases e8 : r8.headD 0 = 0
+  · rw [if_pos e8] at hW; cases hW
+  rw [if_neg e8] at hW
+  have t8 : x8 = true := by rw [← hx8]; simpa [decBool] using e8
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl⟩ := hW
+  refine ⟨a8, ?_, ?_, hC8, hg1.trans (hg2.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans
+    (hg7.trans hg8))))))⟩
+  · simp only [checkReducePin, StateT.run_bind, hrun1, exc_ok_bind', if_true]
+    simp only [hrun2, exc_ok_bind', if_true, StateT.run_bind, hrun3, hrun4, hrun5, t5, hrun6]
+    have e7 : (internE (.app (decI v) (decE (r6.headD 0)))).run a6 = .ok (decE ax, a7) := hrun7
+    simp only [e7, exc_ok_bind']
+    have e8 : (isDefEqCore V fe checkFuel 1 (decE ax) (decE (r6.headD 0))).run a7 =
+        .ok (x8, a8) := hrun8
+    simp only [e8, t8]
+    rfl
+  · have := StageR.restrict hC8.stage vis2
+    rw [← hfe, IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
+    exact this
+
 end L.Arena
