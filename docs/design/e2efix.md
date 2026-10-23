@@ -5,6 +5,10 @@ file. Starting point: lane `stubs`' e2e run (`docs/design/stubs.md`, "e2e with n
 
 ## B1: `lv_node` abort #2 in ι-reduction of a nested inductive's recursor
 
+(Found and fixed here; lane indproofs3-rec found the same bug at the same time and landed the same
+fix first, `5093af56`, with the copies in fresh locals `elo, ell, epo, epl`. The merge takes
+master's version; the analysis below stands, and the e2e numbers below are on master's fix.)
+
 **Cause: an `IW` slice stored in an `EREC` record.** The twin's `tgtStoredRules`
 (`Inductives/RecCheck.lean:498-509`) gives every rule of a recursor at an OUTSIDE major the fire
 `auxRuleFire M rP = .nested lvls pins`. In L, `aux_rule_fire` returns the two lists as `IW`
@@ -82,3 +86,68 @@ and D18 (`class_fields_of_go`, performance). The reference's stage agrees as wel
 checked one by one. So these aborts are agreements,
 not uncovered error handling. (The error design itself, aborting instead of returning the twin's
 error kind, is unchanged; reject vs decline is not distinguished by `check`'s result.)
+
+## B3: the untraced errors and the timeouts: capacity and harness, no L bug
+
+After B1, `check` had 4 `l-error`s and 2 `l-timeout`s (`check_np` 2 and 2), and 1 `ref-memout`:
+
+| fixture | entries | class before | what it is |
+|---|---|---|---|
+| `natop_order`, `natop_before_ble` | `check` | l-error, `hoist_ok` #0 | B2, lane front3 (the ground hoist), not touched here |
+| `eager_open_nat_control` (67 KB) | both | l-error, untraced (tracer > 400 s) | **capacity**: `AREC` (array 4, the application records) full; accepts at `CA_WORDS = 2^27` (5.8 s, 5.3 GB), not at `2^25`; ~10.2 M application nodes (40.8 M words); con-ron accepts in 2 s |
+| `arena/good/perf/app-lam` (1.2 MB) | both | l-error, untraced (> `TRACE_MAX_BYTES`) | **capacity**, the same: `AREC` full at `2^26`, accepts at `2^27` (18.6 s, 5.4 GB) |
+| `whnf_core_loop`, `whnf_delta_loop` | both | l-timeout | **harness**: con-leche expects these to time out (expected exit 124); `e2e-ref` and con-ron time out too. Now `agree-timeout` |
+| `stack_fuel_offset` | both | ref-memout | **harness, reference side**: con-leche expects exit 134 (the ~3M-deep recursion, PLAN "Things to settle early"); L errors, the reference runs out of memory |
+
+Found with a new opt-in diagnostic of `harness/e2e.c`: `CA_HWM=N` prints, per word array, the
+highest touched page and the number of touched words (`mincore`) for arrays above `N` words. A
+bump-allocated array whose touched words equal its capacity is the one that ran out (hash-slot
+arrays such as `ASLOT`, `LASLOT`, `ILMEMO` are touched all over at any load and say nothing).
+
+`scripts/e2e.py` now retries once more at `HUGE_WORDS = 2^27` words per array when the `2^25` retry
+still errors **and the reference accepts** (two fixtures today; each such run ~5.4 GB, under
+`PER_RUN_GB`), so the capacity cases show as `agree-accept` with the capacity note, not as
+`l-error`. Whether 10 M application nodes for a 67 KB file is the twin's own count (the twin
+interns the same nodes, no GC; con-ron's run is 2 s) or an L-only excess was not measured: an
+item for whoever owns the store capacities (a node count from `e2e-ref` would settle it).
+
+## A fast `scripts/e2e.py`
+
+Lane `stubs`' full run took 9756 s (162 min, `--jobs 12`): the tracing interpreter (`e2e-l trace`,
+the L interpreter with a call stack, timeout 400 s) ran on every L error, ~270 of them, nearly all
+the agreeing aborts. Changes:
+
+* **Trace only disagreements** (`--trace disagree`, the default): L errors where the reference
+  accepts (`l-error`) and `DISAGREE-*`; `--trace-sample N` adds N evenly spread agreeing aborts,
+  `--trace all` the old behaviour (the "Where L aborts" table then lists every abort; by default it
+  says how many of them are traced).
+* **Trace cache** `tracecache.json` keyed by (sha of `checker.prog`, fixture sha, entry, words): a
+  second run on the same program traces nothing again; an untraced result (timeout) is cached and
+  reported as `untraced (timeout)` instead of `–`.
+* **`--rerun-failing [RESULTS]`**: only the fixtures not passing (`agree-accept`, `agree-reject*`,
+  `agree-timeout`) in either entry of a previous `results.json` (default: this checkout's), merged
+  back into it, so the report stays whole. 3 fixtures, 99 s.
+* **8 jobs** by default (was `cpu_count // 4`, capped at 16), and fixtures **started largest first**
+  (`as_completed`, results put back in fixture order), so the big runs do not form the tail.
+* `agree-timeout`: L and the reference both time out (the two `whnf_*_loop` fixtures, which
+  con-leche expects to time out); and the second capacity retry (B3).
+
+**Full run now: 8 min 46 s** (`--no-diff --no-perf --no-interp`, 8 jobs, reference cache warm;
+2 traces, both `hoist_ok`). With a cold reference cache (a new `e2e-ref`/vendor revision) the
+references run once more per fixture: they were ~4 min of the 13.6 min first run here.
+
+## e2e after this lane (`2b7c8bfa`: master with B1 fixed, before front3's hoist)
+
+| class | `check` | `check_np` |
+|---|---:|---:|
+| agree-accept | **405** | **391** |
+| agree-reject | 3 | 3 |
+| agree-reject (L aborts) | 262 | 278 |
+| agree-timeout | 2 | 2 |
+| l-error | 2 (`natop_order`, `natop_before_ble`: B2, front3) | 0 |
+| ref-memout | 1 (`stack_fuel_offset`) | 1 |
+
+Against both references (`check`): 405 accept/accept/accept, 206 reject, 55 decline, 4 error, 2
+accept/accept/no (B2), 2 timeout, 1 exit -6/memout; con-ron and `e2e-ref` disagree on none, L
+accepts nowhere a reference does not. 9 fixtures need the larger capacities (7 at `2^25`, 2 at
+`2^27`). Before (lane `stubs`): 399 / 385 agree-accept, 7 / 6 l-error, 3 / 2 l-timeout.
