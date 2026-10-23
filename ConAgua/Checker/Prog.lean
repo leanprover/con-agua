@@ -144,7 +144,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1720 functions, 9 of them stubs.
+1724 functions, 9 of them stubs.
 -/
 
 namespace L.Checker
@@ -493,6 +493,7 @@ def checkerProg : Prog := [
   ("check_block_agree", L.Ind.checkBlockAgree),
   ("check_block_agree_one", L.Ind.checkBlockAgreeOne),
   ("check_block_classes", L.Ind.checkBlockClassesL),
+  ("check_block_classes_count", L.Ind.checkBlockClassesCount),
   ("check_block_classes_keys", L.Ind.checkBlockClassesKeys),
   ("check_block_classes_one_per_member", L.Ind.checkBlockClassesOnePerMember),
   ("check_block_ctors", L.Ind.checkBlockCtors),
@@ -606,6 +607,7 @@ def checkerProg : Prog := [
   ("class_gen_rule_pvars_go", L.Ind.classGenRulePvarsGo),
   ("class_gen_slot_var", L.Ind.classGenSlotVar),
   ("class_key_canon", L.Ind.classKeyCanonL),
+  ("class_key_canon_go", L.Ind.classKeyCanonGo),
   ("class_key_of", L.Ind.classKeyOfL),
   ("class_key_of_closed", L.Ind.classKeyOfClosed),
   ("class_leaf_at", L.Ind.classLeafAtL),
@@ -1787,10 +1789,12 @@ def checkerProg : Prog := [
   ("target_major_default", L.Ind.targetMajorDefault),
   ("target_major_nfs", L.Ind.targetMajorNfs),
   ("target_major_of", L.Ind.targetMajorOf),
+  ("target_major_of_const", L.Ind.targetMajorOfConst),
   ("target_major_of_member", L.Ind.targetMajorOfMember),
   ("target_major_of_outside", L.Ind.targetMajorOfOutside),
   ("target_major_of_outside_closed", L.Ind.targetMajorOfOutsideClosed),
   ("target_major_of_outside_occ", L.Ind.targetMajorOfOutsideOcc),
+  ("target_major_of_outside_tail", L.Ind.targetMajorOfOutsideTail),
   ("target_major_pins", L.Ind.targetMajorPins),
   ("target_outside_inst", L.Ind.targetOutsideInst),
   ("target_params_def_eq", L.Ind.targetParamsDefEq),

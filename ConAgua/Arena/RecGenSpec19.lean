@@ -86,63 +86,63 @@ theorem tmpW_mfr {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word} (h : t
 
 mutual
 /-- **The model of `class_majors(vis, pp, cao, cal, pfo, pfl, ko, kl)`** at exec fuel `n`. -/
-def cmW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
+def clmW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, pp, cao, cal, pfo, pfl, ko, kl =>
     if kl = 0 then some ([0, 0], m)
-    else cmK1 p n vis pp cao cal pfo pfl ko kl (rdW (m.arr64 IW) ko)
+    else clmK1 p n vis pp cao cal pfo pfl ko kl (rdW (m.arr64 IW) ko)
       (callW p n "intern_const" [rdW (m.arr64 IW) (rdW (m.arr64 IW) ko),
         rdW (m.arr64 IW) (rdW (m.arr64 IW) ko + 1)] m)
-def cmK1 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl key : Word) :
+def clmK1 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl key : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => if 4294967296 ≤ r.headD 0 then none
-      else cmK2 p n vis pp cao cal pfo pfl ko kl (callW p n "mk_app_n_f"
+      else clmK2 p n vis pp cao cal pfo pfl ko kl (callW p n "mk_app_n_f"
         [r.headD 0, rdW (m.arr64 IW) (key + 2), rdW (m.arr64 IW) (key + 3)] m)
-def cmK2 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl : Word) :
+def clmK2 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => cmK3 p n vis pp cao cal pfo pfl ko kl
+  | some (r, m) => clmK3 p n vis pp cao cal pfo pfl ko kl
       (callW p n "target_major_of" [vis, pp, cao, cal, pfo, pfl, pfo, pfl, r.headD 0] m)
-def cmK3 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl : Word) :
+def clmK3 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => cmK4 p n vis pp cao cal pfo pfl ko kl r
+  | some (r, m) => clmK4 p n vis pp cao cal pfo pfl ko kl r
       (callW p n "target_major_pins" [vis, rdW (m.arr64 IW) (pp + 4), r.headD 0] m)
-def cmK4 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl : Word) (r3 : List Word) :
+def clmK4 (p : Prog) (n : Nat) (vis pp cao cal pfo pfl ko kl : Word) (r3 : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => ckkK2 p n r3 (cmW p n m vis pp cao cal pfo pfl (ko + 1) (kl - 1))
+  | some (_, m) => ckkK2 p n r3 (clmW p n m vis pp cao cal pfo pfl (ko + 1) (kl - 1))
 end
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (vis pp cao cal pfo pfl ko kl key : Word) (r r3 : List Word)
-theorem cmW_zero : cmW p 0 m vis pp cao cal pfo pfl ko kl = none := by simp [cmW]
-theorem cmW_nil (h : kl = 0) : cmW p (n + 1) m vis pp cao cal pfo pfl ko kl = some ([0, 0], m) := by
-  simp [cmW, h]
-theorem cmW_cons (h : kl ≠ 0) : cmW p (n + 1) m vis pp cao cal pfo pfl ko kl =
-    cmK1 p n vis pp cao cal pfo pfl ko kl (rdW (m.arr64 IW) ko)
+theorem clmW_zero : clmW p 0 m vis pp cao cal pfo pfl ko kl = none := by simp [clmW]
+theorem clmW_nil (h : kl = 0) : clmW p (n + 1) m vis pp cao cal pfo pfl ko kl = some ([0, 0], m) := by
+  simp [clmW, h]
+theorem clmW_cons (h : kl ≠ 0) : clmW p (n + 1) m vis pp cao cal pfo pfl ko kl =
+    clmK1 p n vis pp cao cal pfo pfl ko kl (rdW (m.arr64 IW) ko)
       (callW p n "intern_const" [rdW (m.arr64 IW) (rdW (m.arr64 IW) ko),
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) ko + 1)] m) := by simp [cmW, h]
-theorem cmK1_some : cmK1 p n vis pp cao cal pfo pfl ko kl key (some (r, m)) =
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) ko + 1)] m) := by simp [clmW, h]
+theorem clmK1_some : clmK1 p n vis pp cao cal pfo pfl ko kl key (some (r, m)) =
     if 4294967296 ≤ r.headD 0 then none
-      else cmK2 p n vis pp cao cal pfo pfl ko kl (callW p n "mk_app_n_f"
-        [r.headD 0, rdW (m.arr64 IW) (key + 2), rdW (m.arr64 IW) (key + 3)] m) := by simp [cmK1]
-theorem cmK2_some : cmK2 p n vis pp cao cal pfo pfl ko kl (some (r, m)) = cmK3 p n vis pp cao cal pfo pfl ko kl
-      (callW p n "target_major_of" [vis, pp, cao, cal, pfo, pfl, pfo, pfl, r.headD 0] m) := by simp [cmK2]
-theorem cmK3_some : cmK3 p n vis pp cao cal pfo pfl ko kl (some (r, m)) = cmK4 p n vis pp cao cal pfo pfl ko kl r
-      (callW p n "target_major_pins" [vis, rdW (m.arr64 IW) (pp + 4), r.headD 0] m) := by simp [cmK3]
-theorem cmK4_some : cmK4 p n vis pp cao cal pfo pfl ko kl r3 (some (r, m)) =
-    ckkK2 p n r3 (cmW p n m vis pp cao cal pfo pfl (ko + 1) (kl - 1)) := by simp [cmK4]
+      else clmK2 p n vis pp cao cal pfo pfl ko kl (callW p n "mk_app_n_f"
+        [r.headD 0, rdW (m.arr64 IW) (key + 2), rdW (m.arr64 IW) (key + 3)] m) := by simp [clmK1]
+theorem clmK2_some : clmK2 p n vis pp cao cal pfo pfl ko kl (some (r, m)) = clmK3 p n vis pp cao cal pfo pfl ko kl
+      (callW p n "target_major_of" [vis, pp, cao, cal, pfo, pfl, pfo, pfl, r.headD 0] m) := by simp [clmK2]
+theorem clmK3_some : clmK3 p n vis pp cao cal pfo pfl ko kl (some (r, m)) = clmK4 p n vis pp cao cal pfo pfl ko kl r
+      (callW p n "target_major_pins" [vis, rdW (m.arr64 IW) (pp + 4), r.headD 0] m) := by simp [clmK3]
+theorem clmK4_some : clmK4 p n vis pp cao cal pfo pfl ko kl r3 (some (r, m)) =
+    ckkK2 p n r3 (clmW p n m vis pp cao cal pfo pfl (ko + 1) (kl - 1)) := by simp [clmK4]
 end arms
-attribute [ind_grind] cmW_nil cmW_cons cmK1_some cmK2_some cmK3_some cmK4_some
+attribute [ind_grind] clmW_nil clmW_cons clmK1_some clmK2_some clmK3_some clmK4_some
 
 set_option maxHeartbeats 1600000 in
-theorem cm_spec (p : Prog) (hp : p.lookup "class_majors" = some classMajorsL) (n : Nat) :
+theorem clm_spec (p : Prog) (hp : p.lookup "class_majors" = some classMajorsL) (n : Nat) :
     ∀ (s₀ : St) (vis pp cao cal pfo pfl ko kl : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_majors" [vis, pp, cao, cal, pfo, pfl, ko, kl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cmW p n s₀.mem vis pp cao cal pfo pfl ko kl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ clmW p n s₀.mem vis pp cao cal pfo pfl ko kl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis pp cao cal pfo pfl ko kl; rw [invoke_eq _ hp]; simp only [callFn, classMajorsL]
@@ -158,30 +158,30 @@ theorem cm_spec (p : Prog) (hp : p.lookup "class_majors" = some classMajorsL) (n
       finish (gen := 40) (instances := 20000) [rdW_eq]
 
 /-- The lookups of `class_majors`. -/
-structure CmProg (p : Prog) : Prop where
+structure ClmProg (p : Prog) : Prop where
   tmf : TmfProg p
   tmp : TmpProg p
   keys : KeysProg p
   cm : p.lookup "class_majors" = some classMajorsL
 
 /-- **`class_majors`' model simulates `classMajors`.** -/
-theorem cmW_sim {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hcs : CtorSums fe) (pp cao cal pfo pfl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) :
     ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey),
     StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → ShapeSrc m pp →
     PSlR decCNS css cao cal m → DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs →
     pfo.toNat + pfl.toNat ≤ iwTop m → PSlR decCK ks ko kl m → PosMR m →
-    Sim (cmW p n m vis pp cao cal pfo pfl ko kl) (ConRon.Arena.classMajors V fe bs css pfvs ks) a
+    Sim (clmW p n m vis pp cao cal pfo pfl ko kl) (ConRon.Arena.classMajors V fe bs css pfvs ks) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PSlR decTM x (r.headD 0) (r.tail.headD 0) m' ∧
         PosMR m') := by
   induction n with
-  | zero => intro m a ko kl ks _ _ _ _ _ _ _ _; rw [cmW_zero]; exact Sim.of_none
+  | zero => intro m a ko kl ks _ _ _ _ _ _ _ _; rw [clmW_zero]; exact Sim.of_none
   | succ n ih =>
   intro m a ko kl ks hS hq hsrc hcss hpf hpfb hks hPm
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   by_cases hkl : kl = 0
-  · rw [cmW_nil p n m vis pp cao cal pfo pfl ko kl hkl]
+  · rw [clmW_nil p n m vis pp cao cal pfo pfl ko kl hkl]
     have : ks = [] := by
       have h := hks.1; simp only [DecB, hkl] at h
       simpa [decPL] using h.symm
@@ -189,14 +189,14 @@ theorem cmW_sim {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) 
     exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decTM m, hPm⟩
   obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  rw [cmW_cons p n m vis pp cao cal pfo pfl ko kl hkl, hw]
+  rw [clmW_cons p n m vis pp cao cal pfo pfl ko kl hkl, hw]
   rw [← hq'] at hdk
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hdk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk hT
   simp only [ConRon.Arena.classMajors, ckOfNk]
   -- the head
-  refine Sim.bindK (K := cmK1 p n vis pp cao cal pfo pfl ko kl (UInt64.ofNat q)) (by simp [cmK1])
-    (fun r m₁ => cmK1_some p n m₁ vis pp cao cal pfo pfl ko kl _ r)
+  refine Sim.bindK (K := clmK1 p n vis pp cao cal pfo pfl ko kl (UInt64.ofNat q)) (by simp [clmK1])
+    (fun r m₁ => clmK1_some p n m₁ vis pp cao cal pfo pfl ko kl _ r)
     (Q := fun r x m' a' => decE (r.headD 0) = x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
   · intro r1 m1 e1
     obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -222,8 +222,8 @@ theorem cmW_sim {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) 
   have hds1 : decHL m1 (rdW (m.arr64 IW) (UInt64.ofNat q + 2)).toNat (rdW (m.arr64 IW) (UInt64.ofNat q + 3)).toNat =
       some nk.ds := by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds
   -- the application
-  refine Sim.bindK (K := cmK2 p n vis pp cao cal pfo pfl ko kl) (by simp [cmK2])
-    (fun r m₁ => cmK2_some p n m₁ vis pp cao cal pfo pfl ko kl r)
+  refine Sim.bindK (K := clmK2 p n vis pp cao cal pfo pfl ko kl) (by simp [clmK2])
+    (fun r m₁ => clmK2_some p n m₁ vis pp cao cal pfo pfl ko kl r)
     (Q := fun r x m' a' => decW0E m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m1 m' ∧ PosMR m') ?_ ?_
   · intro r2 m2 e2
     obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
@@ -233,8 +233,8 @@ theorem cmW_sim {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) 
   rintro r2 mty m2 a2 ⟨⟨hmH, hmd⟩, hS2, hg2, hP2⟩
   have hg02 := hg1.trans hg2
   -- the major
-  refine Sim.bindK (K := cmK3 p n vis pp cao cal pfo pfl ko kl) (by simp [cmK3])
-    (fun r m₁ => cmK3_some p n m₁ vis pp cao cal pfo pfl ko kl r)
+  refine Sim.bindK (K := clmK3 p n vis pp cao cal pfo pfl ko kl) (by simp [clmK3])
+    (fun r m₁ => clmK3_some p n m₁ vis pp cao cal pfo pfl ko kl r)
     (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
       IWGrow m2 m' ∧ PosMR m') ?_ ?_
   · cases n with
@@ -250,8 +250,8 @@ theorem cmW_sim {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) 
   have hg03 := hg02.trans hg3
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg03 hq (partsShapeFacts hq hsrc).2.1
   -- the pins
-  refine Sim.bindK (K := cmK4 p n vis pp cao cal pfo pfl ko kl r3) (by simp [cmK4])
-    (fun r m₁ => cmK4_some p n m₁ vis pp cao cal pfo pfl ko kl r r3)
+  refine Sim.bindK (K := clmK4 p n vis pp cao cal pfo pfl ko kl r3) (by simp [clmK4])
+    (fun r m₁ => clmK4_some p n m₁ vis pp cao cal pfo pfl ko kl r r3)
     (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m3 m' ∧ PosMR m') ?_ ?_
   · intro r4 m4 e4
     obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
@@ -278,7 +278,7 @@ theorem cmW_sim {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) 
 stubs): the keys a slice of `ClassKey` records decoded below the tops; the classes a slice of fresh
 `TargetMajor` records. -/
 @[refines ConRon.Arena.classMajors]
-theorem classMajors_refines {p : Prog} (hP : CmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+theorem classMajors_refines {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
     (pp cao cal pfo pfl ko kl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (ks : List ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
@@ -290,8 +290,8 @@ theorem classMajors_refines {p : Prog} (hP : CmProg p) (dn : NIdx → Option Con
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       PSlR decTM (AM.res (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) (r.headD 0) (r.tail.headD 0) s'.mem ∧
       PosMR s'.mem; ⊤⦄ :=
-  triple_post (cm_spec p hP.cm n s₀ vis pp cao cal pfo pfl ko kl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (cmW_sim hP dn vis fe hcs pp cao cal pfo pfl bs css pfvs n hn _ a₀ ko kl ks hS hq hsrc
+  triple_post (clm_spec p hP.cm n s₀ vis pp cao cal pfo pfl ko kl) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (clmW_sim hP dn vis fe hcs pp cao cal pfo pfl bs css pfvs n hn _ a₀ ko kl ks hS hq hsrc
       hcss hpf hpfb hks hPm) hm
     ⟨hl, hok, hQ⟩
 
