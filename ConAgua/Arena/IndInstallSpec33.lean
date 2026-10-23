@@ -308,26 +308,26 @@ theorem pos3_cfbW_mfr {n : Nat} {m m' : Mem} {isProp large s io il fv u : Word} 
   · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact f1
 
 theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl io il res j : Word) (r : List Word),
-    csfW n m vis isProp large s nP fo fl io il res j = some (r, m') → MFr [] [] m m'
+    csfW stubCall n m vis isProp large s nP fo fl io il res j = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [csfW] at h
   | n + 1, m, m', vis, isProp, large, s, nP, fo, fl, io, il, res, j, r, h => by
     by_cases hj : j = 0
-    · rw [csfW_zero n m vis isProp large s nP fo fl io il res j hj] at h
+    · rw [csfW_zero stubCall n m vis isProp large s nP fo fl io il res j hj] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     by_cases hf : fl ≤ j - 1
-    · rw [csfW_oob n m vis isProp large s nP fo fl io il res j hj hf] at h; cases h
-    rw [csfW_step n m vis isProp large s nP fo fl io il res j hj hf] at h
+    · rw [csfW_oob stubCall n m vis isProp large s nP fo fl io il res j hj hf] at h; cases h
+    rw [csfW_step stubCall n m vis isProp large s nP fo fl io il res j hj hf] at h
     cases h1 : ftdF m [rdW (m.arr64 IW) (fo + (j - 1))] with
     | none => rw [h1] at h; simp [csfK1] at h
     | some x1 =>
     obtain ⟨r1, m1⟩ := x1
     rw [h1, csfK1_some] at h
-    cases h2 : stubM "infer_type_core" m1 [vis, nP + (j - 1), r1.headD 0] with
+    cases h2 : stubCall n "infer_type_core" [vis, nP + (j - 1), r1.headD 0] m1 with
     | none => rw [h2] at h; simp [csfK2] at h
     | some x2 =>
     obtain ⟨r2, m2⟩ := x2
     rw [h2, csfK2_some] at h
-    cases h3 : stubM "ensure_sort_core" m2 [vis, nP + (j - 1), r2.headD 0] with
+    cases h3 : stubCall n "ensure_sort_core" [vis, nP + (j - 1), r2.headD 0] m2 with
     | none => rw [h3] at h; simp [csfK3] at h
     | some x3 =>
     obtain ⟨r3, m3⟩ := x3
@@ -337,7 +337,7 @@ theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl 
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
     rw [h4, csfK4_some] at h
-    cases h5 : csfW n (m4.set64 IW (res + (j - 1)) (r3.headD 0)) vis isProp large s nP fo fl io il res (j - 1) with
+    cases h5 : csfW stubCall n (m4.set64 IW (res + (j - 1)) (r3.headD 0)) vis isProp large s nP fo fl io il res (j - 1) with
     | none => rw [h5] at h; simp [csfK5] at h
     | some x5 =>
     obtain ⟨r5, m5⟩ := x5
@@ -348,14 +348,14 @@ theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl 
       ((MFr.set_iw _ _ _).trans (pos3_csfW_mfr n _ _ _ _ _ _ _ _ _ _ _ _ _ _ h5))
 
 theorem pos3_fsortsW_mfr {n : Nat} {m m' : Mem} {vis isProp large s nP fo fl io il nW : Word} {r : List Word}
-    (h : fsortsW n m vis isProp large s nP fo fl io il nW = some (r, m')) : MFr [] [] m m' := by
+    (h : fsortsW stubCall n m vis isProp large s nP fo fl io il nW = some (r, m')) : MFr [] [] m m' := by
   unfold fsortsW at h
   cases ha : allocW m nW with
   | none => rw [ha] at h; simp [fsortsK1] at h
   | some x =>
     obtain ⟨q, m1⟩ := x
     rw [ha, fsortsK1_some] at h
-    cases hc : csfW n m1 vis isProp large s nP fo fl io il q nW with
+    cases hc : csfW stubCall n m1 vis isProp large s nP fo fl io il q nW with
     | none => rw [hc] at h; simp [fsortsK2] at h
     | some y =>
       obtain ⟨r2, m2⟩ := y
@@ -371,7 +371,7 @@ theorem pos3_callW_fsorts_mfr {p : Prog} (hP : SumProg p) {n : Nat} {vis isP lar
   rcases n with _ | k
   · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd k _ vis isP large s nP
+    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd stubCall (stubCall_spec p) k _ vis isP large s nP
       fo fl io il j) h
   exact pos3_fsortsW_mfr hW
 
