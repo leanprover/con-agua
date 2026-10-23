@@ -127,7 +127,7 @@ def ctlK1 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL 
 cqB)`** (its callees at exec fuel `n + 1`). -/
 def ctlW (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB : Word) :
     Option (List Word × Mem) :=
-  ctlK1 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL (stubM "open_pis_at_fvars_f" m [nF, cqB, nP])
+  ctlK1 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL (cR (n + 1) "open_pis_at_fvars_f" [nF, cqB, nP] m)
 
 section arms
 variable (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL xo xl xb hd xfn ao al e : Word)
@@ -183,7 +183,7 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR)
   rw [invoke_eq _ hP.htail]
   simp only [callFn, checkSumCtorTailL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-    stubM_spec p "open_pis_at_fvars_f" (n + 1),
+    hcR (n + 1) "open_pis_at_fvars_f",
     plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil (n + 1),
     internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
     gafF_spec p hP.ad (n + 1), gaaF_spec p hP.ad (n + 1),
@@ -279,12 +279,18 @@ theorem eqTrueW_afr {m m' : Mem} {u v e : Word} (h : eqTrueW m u v = some (e, m'
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact stub_afr h1
 
+theorem eqTrueCs_afr {k : Nat} {m m' : Mem} {u v e : Word} (h : eqTrueC stubCall k m u v = some (e, m')) :
+    AFr m m' := by
+  cases k with
+  | zero => simp [eqTrueC] at h
+  | succ k => exact eqTrueW_afr h
+
 theorem cfbW_afr : ∀ (n : Nat) (m m' : Mem) (isProp large s io il fv u : Word) (r : List Word),
-    cfbW n m isProp large s io il fv u = some (r, m') → AFr m m'
+    cfbW stubCall n m isProp large s io il fv u = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [cfbW] at h
   | n + 1, m, m', isProp, large, s, io, il, fv, u, r, h => by
-    simp only [cfbW, cfbK1.eq_def, cfbK2.eq_def, cfbK3.eq_def, cfbK4.eq_def] at h
-    afr_auto h [stub_afr, eqTrueW_afr]
+    simp only [cfbW, stubCall, cfbK1.eq_def, cfbK2.eq_def, cfbK3.eq_def, cfbK4.eq_def] at h
+    afr_auto h [stub_afr, eqTrueCs_afr]
 
 theorem csfW_afr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl io il res j : Word) (r : List Word),
     csfW stubCall n m vis isProp large s nP fo fl io il res j = some (r, m') → AFr m m'
@@ -487,14 +493,14 @@ def ctorK5 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvT
   | none => none
   | some (rc, m) => if rc.headD 0 = 0 then none
     else ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC (rc.tail.headD 0) (rc.tail.tail.headD 0)
-      (rc.tail.tail.tail.headD 0) (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0])
+      (rc.tail.tail.tail.headD 0) (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m)
 /-- After `struct_ctor_resid_ok`. -/
 def ctorK4 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rr, m) => if rr.headD 0 = 0 then none
     else ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-      (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvC + 3), 0])
+      (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvC + 3), 0] m)
 /-- After `strip_pis`. -/
 def ctorK3 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -539,7 +545,7 @@ theorem ctorK5_yes (h : r.headD 0 ≠ 0) :
     ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
       ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC (r.tail.headD 0) (r.tail.tail.headD 0)
         (r.tail.tail.tail.headD 0)
-        (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0]) := by
+        (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m) := by
   simp only [ctorK5]; rw [if_neg h]
 theorem ctorK4_no (h : r.headD 0 = 0) :
     ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
@@ -547,7 +553,7 @@ theorem ctorK4_no (h : r.headD 0 = 0) :
 theorem ctorK4_yes (h : r.headD 0 ≠ 0) :
     ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
       ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-        (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvC + 3), 0]) := by
+        (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvC + 3), 0] m) := by
   simp only [ctorK4]; rw [if_neg h]
 theorem ctorK3_no (h : r.headD 0 = 0) :
     ctorK3 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
@@ -577,7 +583,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
     hcR (n + 2) "check_constant_val", stripPis_specF p hP.strip (n + 2),
     srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
       hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
-    stubM_spec p "open_pis_at_fvars_f" (n + 2), ftdsF_spec p hP.ad (n + 2),
+    hcR (n + 2) "open_pis_at_fvars_f", ftdsF_spec p hP.ad (n + 2),
     sdomsW_spec p hP.hg hP.hsd hP.ad.ftd cR hcR (n + 2), ctlW_spec p hP cR hcR n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
     List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,

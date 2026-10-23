@@ -1,5 +1,7 @@
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndSumSpec2A
+import ConAgua.Arena.IndRealOpfC
+import ConAgua.Arena.IndRealLvlC
 
 /-!
 # `checkBlockDomsAt`, `checkStructDomsAt` under `StageC` (lane `indstaget`)
@@ -25,6 +27,36 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
+
+/-! ## `open_pis_at_fvars_f`, the real call (replacing the stub contract) -/
+
+/-- A call of `open_pis_at_fvars_f` in a program with `opfP` is its model `opfF`. -/
+theorem callW_opfF {p : Prog} (hOpf : OpfF p) {n : Nat} {args r : List Word} {m m' : Mem}
+    (h : callW p n "open_pis_at_fvars_f" args m = some (r, m')) : opfF m args = some (r, m') := by
+  obtain ⟨s', hs, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (opfF_spec p hOpf n _ args) h
+  rw [← hs]; exact hW
+
+/-- **`open_pis_at_fvars_f`, the real call, as a `Sim`** (the stub contract's `KeepPost`, the
+twin's run, and `AbsOK` after: `opfF_ok`). -/
+theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {k e i : Word} (he : H e) {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
+    (hA : AbsOK m) :
+    Sim (callW p n "open_pis_at_fvars_f" [k, e, i] m) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
+      (fun r x m' a' => ((StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x) ∧
+        (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a')) ∧ AbsOK m') := by
+  intro r m' h
+  obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ :=
+    opfF_ok dn vis fe k e i he m m' a r (callW_opfF hOpf h) ⟨hS, hA⟩
+  exact ⟨x, a', hrun, ⟨⟨hS', hg, hd⟩, hrun⟩, hA'⟩
+
+/-- The same, from the model's run. -/
+theorem opfF_okRA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {k e i : Word}
+    (he : H e) {m m' : Mem} {a : AState} {r : List Word} (h : opfF m [k, e, i] = some (r, m'))
+    (hS : StageR dn vis fe m a) (hA : AbsOK m) :
+    ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOLE m' r x ∧ AbsOK m' := by
+  obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ := opfF_ok dn vis fe k e i he m m' a r h ⟨hS, hA⟩
+  exact ⟨x, a', hrun, hS', hg, hd, hA'⟩
 
 /-- A `RSim` of a word model is a `Sim` of it. -/
 theorem RSim.toSim {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AState}
