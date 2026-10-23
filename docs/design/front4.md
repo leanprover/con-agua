@@ -78,3 +78,33 @@ Census (worktree): phase 1c 53 proven / 18 written / 2 todo (507 / 609 / 625 Lea
 35 / 36 / 2 (380 / 609 / 625); phase 0 unchanged 185 / 5 / 106 (991 / 1003 / 1305). The hoist's
 targets are all proven except `hoistNatOpGround`, `applyHoist` (parts: `movedNames` not computed)
 and `movedNames` (todo, D30).
+
+## Landing 3: `prepare_prelude` refines `preparePrelude`
+
+* **L rewritten as self-recursions** (`Checker/Prelude.lean`; the `while` loops gave no model):
+  `decl_declares_go`, `prep_find` (`pick`'s `findIdx` over the unmarked stream), `prep_front`
+  (`frontOf`), `prep_rest`, `prep_copy{,_rec}`, `prep_back{,_rec}` (the record rewrite, depth `c`,
+  not `8 c`); all models generated (`l_model`, in the file, ~20 s). The record bound is now
+  `n < 2^59` (was `2^60`; the hoist's `OrdR` needs records below `2^59`, `1 + 8 r` fits a word).
+  `Prog.lean`/`AsmPart*` regenerated; e2e (all 675 fixtures, `--jobs 8`): 671 agree (master's
+  `docs/e2e.md`: 670), no new disagreement; `natop` 5/5.
+* **The twin's array after `pick`'s erasures** is the list of unmarked stream positions mapped
+  through the records (`unm`, `recsAt`); marking is erasing (`unm_mark`), `findIdx` on the mapped
+  list is the first unmarked declaring position (`findIdx_hit`).
+* `preparePrelude_refines` (`Checker/PrepRef.lean`, `@[refines preparePrelude]`): from `DECL`
+  holding `pre.decls ++ ds` (count in `DECL[0]`, the prelude's in `CTL[240]`), each record with
+  `DeclAtF` + `RecOK` and walkable, `ArenaR`, the hoist's memos represented, `IWOK`, `PinsR`: when
+  L returns, `preparePrelude pre ds` succeeds and `DECL` represents its result with the same
+  per-record facts; `ArenaR`, `IWOK`, `PinsR` at the twin's state after. `movedNames` is covered
+  through it (dropped by `preparePrelude`). Pieces: `PrepLeafRef` (`decl_declares`, `decl_key`
+  incl. the anonymous name's interning, `prep_find`; helper `front4-pleaf`), `PrepLoopRef`
+  (`prep_front` = `frontOf`, `prep_rest`; helper `front4-ploop`), `PrepCopyRef` (the rewrite;
+  helper `front4-pcopy`), `PrepRef` (the assembly, lane).
+* For the pipeline lane (`PrepareStage`): the preconditions above are what `R5` must give
+  (beyond `StateDR`'s `DeclsF`: `RecOK` and `WalkableDecl` of the parsed records, the hoist's
+  two memos represented, e.g. by all-zero arrays 75/76 and `CTL[73‥76]`).
+
+Census (worktree): phase 1c 62 proven / 10 written / 1 todo (545 / 616 / 625 Lean lines); phase 0
+185 / 5 / 106 (991 / 1003 / 1305). Left in 1c: `builtinPreludeE`, the ROM interns (`internCI`,
+`internCaps`, `internRules`, `internRule`, `internFire`, `internCV`, `internCIList`,
+`internExprList`, `internExpr`: parts only), `internProjTable` (todo).
