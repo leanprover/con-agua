@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndSumSpec9
+import ConAgua.Arena.IndReal
 
 /-!
 # `sum_rules` refines `sumRules` (lane `indproofs2`)
@@ -32,6 +33,13 @@ theorem sumSim_of_relAM {α : Type} {f : FnName} {args : List Word} {pre : Mem �
     {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop} {m : Mem} {a : AState}
     (h : RelAM f args pre op post) (hp : pre m a) :
     Sim (stubM f m args) op a (fun r x m' a' => post m m' a' r x) :=
+  fun r m' e => h m m' a r e hp
+
+/-- **A real callee's `RelW` fact as a `Sim`** of its model run. -/
+theorem sumSim_of_relW {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    {m : Mem} {a : AState} (h : RelW W args pre op post) (hp : pre m a) :
+    Sim (W m args) op a (fun r x m' a' => post m m' a' r x) :=
   fun r m' e => h m m' a r e hp
 
 /-- **A pointer written right after a decoded prefix** extends it by the pointer's record. -/
@@ -151,7 +159,7 @@ def rgoW : Nat → Mem → Word → Word → Word → Word → Word → Word →
       rgoK1 (fun m' => rgoW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
         (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
-        (stubM "rec_rule_bits" m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))])
+        (rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))])
 
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (vis nP cO cL rO rL o ctorN nF rhs k eta q : Word)
@@ -162,7 +170,7 @@ theorem rgoW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : rgoW (n + 1) m vis nP cO cL rO 
     rgoK1 (fun m' => rgoW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
       (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
-      (stubM "rec_rule_bits" m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))]) := by
+      (rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))]) := by
   rw [rgoW, if_neg h]
 theorem rgoK1_some : rgoK1 rest nP o ctorN nF rhs (some (kr, m1)) =
     rgoK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11) := rfl
@@ -174,8 +182,8 @@ attribute [ind_grind] rgoW_nil rgoW_cons rgoK1_some rgoK2_some rgoK3_some
 
 section spec
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-  (hp : p.lookup "sum_rules_go" = some sumRulesGoL)
-include ha hp
+  (hp : p.lookup "sum_rules_go" = some sumRulesGoL) (hrrb : RrbF p)
+include ha hp hrrb
 
 theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules_go" [vis, nP, cO, cL, rO, rL, o]
@@ -190,7 +198,7 @@ theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
     simp only [callFn, sumRulesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "rec_rule_bits" n, erecAlloc_specW p ha n, ih] <;>
+        rrbF_spec p hrrb n, erecAlloc_specW p ha n, ih] <;>
       finish (gen := 20) [ruleMem, rdW_eq]
 
 end spec
@@ -219,8 +227,8 @@ attribute [ind_grind] rulesK1_some rulesK2_some
 section spec2
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hg : p.lookup "sum_rules_go" = some sumRulesGoL) (hia : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "sum_rules" = some sumRulesL)
-include ha hg hia hp
+  (hp : p.lookup "sum_rules" = some sumRulesL) (hrrb : RrbF p)
+include ha hg hia hp hrrb
 
 theorem rulesW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [vis, recName, nP, cO, cL, rO, rL]
@@ -229,7 +237,7 @@ theorem rulesW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
   simp only [callFn, sumRulesL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      iwAlloc_specW p hia n, rgoW_spec p ha hg n] <;>
+      iwAlloc_specW p hia n, rgoW_spec p ha hg hrrb n] <;>
     finish (gen := 20) [rulesW]
 
 end spec2
@@ -334,7 +342,7 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
                    rhs := rhs } : IRecRule).ctor = decI wn := hname
   simp only [sumRules]
   refine Sim.bindK (K := rgoK1 _ nP o wn w3 wr) rfl (fun _ _ => rfl)
-    (sumSim_of_relAM (recRuleBits_spec dn vis fe wn hwnl _ hrule) hS) fun kr x m1 a1 hQ => ?_
+    (sumSim_of_relW (rrbF_ok dn vis fe wn hwnl _ hrule) hS) fun kr x m1 a1 hQ => ?_
   obtain ⟨hS1, hg1, hx⟩ := hQ
   subst hx
   rw [rgoK1_some]
@@ -424,10 +432,10 @@ theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 section census
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hg : p.lookup "sum_rules_go" = some sumRulesGoL) (hia : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "sum_rules" = some sumRulesL)
-include ha hg hia hp
+  (hp : p.lookup "sum_rules" = some sumRulesL) (hrrb : RrbF p)
+include ha hg hia hp hrrb
 
-/-- **`sum_rules` refines `sumRules`** (through the stub `rec_rule_bits`): from the stage relation and
+/-- **`sum_rules` refines `sumRules`** (through `rec_rule_bits`' refinement, `rrbF_ok`): from the stage relation and
 the constructor and right-hand-side lists decoded below the tops, the rules in a fresh `IW` slice of
 pointers to `EREC` rule records (`decRule`, below the record pool's top). -/
 @[refines ConRon.Arena.sumRules]
@@ -442,7 +450,7 @@ theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
       IWGrow s₀.mem s'.mem ∧
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (sumRules fe (decI recName) nP.toNat cs rhss) a₀); ⊤⦄ := by
-  refine triple_post (rulesW_spec p ha hg hia hp n s₀ vis recName nP cO cL rO rL) ?_
+  refine triple_post (rulesW_spec p ha hg hia hp hrrb n s₀ vis recName nP cO cL rO rL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd, -⟩ := (rulesW_ok (decI recName) n _ a₀ nP cO cL rO rL cs rhss hS hcs hrh).run hm
   exact ⟨hl, hok, hS', hg', hd⟩

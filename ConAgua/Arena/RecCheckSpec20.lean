@@ -7,6 +7,8 @@ import ConAgua.Arena.RecCheckSpec19
 `parts`' refinements state them by triples only), the recursion over the family's `rec4` records.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

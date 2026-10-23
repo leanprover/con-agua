@@ -10,6 +10,8 @@ the rules copied into one consecutive run (`rules_to_erec`), a fresh `.recInfo` 
 constructors' view `vis₂` (the twin's `fe.restrictTo vis₂`: `StageR.restrict`/`unrestrict`).
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
