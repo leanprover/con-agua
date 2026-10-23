@@ -86,8 +86,8 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   simp only [hsz, and_self, ite_true]
   -- `proj_table_name`
   refine Sim.bindK (K := tblK3 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
-    (Sim.withFr (F := fun m3 => MFr [] [] m2 m3) (sumSim_of_relAM (projTableName_spec dn vis fe T hT) hS2)
-      (fun _ _ e => MFr.ofStub e)) fun rt tn m3 a3 hQ => ?_
+    (Sim.withFr (F := fun m3 => MFr [] [] m2 m3) (sumSim_of_relW (ptF_ok dn vis fe T hT) hS2)
+      (fun _ _ e => MFr.of_frame (ptF_frame e) (by simp [POOL, NSREC, NSSLOT, NNREC, NNSLOT]) (by simp))) fun rt tn m3 a3 hQ => ?_
   obtain ⟨⟨hS3, hg3, htnl, htn⟩, hf3⟩ := hQ
   subst htn
   rw [tblK3_some]

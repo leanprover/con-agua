@@ -48,9 +48,9 @@ theorem stubM_spec (p : Prog) (f : FnName) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun r s' => LocEq s' s₀ ∧ stubM f s₀.mem args = some (r, s'.mem); ⊤⦄ := sorry
 
 /-- The names `stubM` stands for: the stubs proper and the master callees without a stage model
-(`lvl_eq`, `lvl_eq_c`, `lvls_eq_c`, `intern_nanon`, `lv_leq_top`). -/
+(`lvl_eq`, `lvl_eq_c`, `lvls_eq_c`, `lv_leq_top`). -/
 def stubNames : List FnName :=
-  stubFns.map (·.1) ++ ["lvl_eq", "lvl_eq_c", "lvls_eq_c", "intern_nanon", "lv_leq_top"]
+  stubFns.map (·.1) ++ ["lvl_eq", "lvl_eq_c", "lvls_eq_c", "lv_leq_top"]
 
 /-- **The write set of every stub** (lane `indproofs2`): a stub leaves the stage's per-call memos
 alone (arrays `MAM`‥`MCM` = 201‥208, their control words `CTL[202]`‥`CTL[219]`), and keeps every
@@ -154,31 +154,10 @@ theorem allLevelParamsDefined_spec (o l e : Word) (he : H e) (lps : List NIdx) :
       (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps)
       (allLevelParamsDefined lps (decI e)) (KeepPost dn vis fe decW0B) := sorry
 
-/-- `intern_ls_iw(off, len)`. -/
-theorem internLsIw_spec (o l : Word) (us : List LIdx) :
-    RelAM "intern_ls_iw" [o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some us)
-      (internLsNode us) (KeepPost dn vis fe (fun _ r (x : LsIdx) => H (r.headD 0) ∧ decI (r.headD 0) = x)) :=
-  sorry
-
-/-- `name_rec(n)`. -/
-theorem nameRec_spec (n : Word) (hn : H n) :
-    RelAM "name_rec" [n] (StageR dn vis fe)
-      (internNNode (.str (decI n) "rec")) (KeepPost dn vis fe decW0N) := sorry
-
 /-- `name_rec_i(n, i)`. -/
 theorem nameRecI_spec (n i : Word) (hn : H n) :
     RelAM "name_rec_i" [n, i] (StageR dn vis fe)
       (internNNode (.str (decI n) s!"rec_{i.toNat}")) (KeepPost dn vis fe decW0N) := sorry
-
-/-- `proj_table_name(T)`. -/
-theorem projTableName_spec (t : Word) (ht : H t) :
-    RelAM "proj_table_name" [t] (StageR dn vis fe)
-      (projTableName (decI t)) (KeepPost dn vis fe decW0N) := sorry
-
-/-- `is_proj_fn_shape(n)`. -/
-theorem isProjFnShape_spec (n : Word) (hn : H n) :
-    RelAM "is_proj_fn_shape" [n] (StageR dn vis fe)
-      (NIdx.isProjFnShape (decI n)) (KeepPost dn vis fe decW0B) := sorry
 
 /-- `ind_params_ok(nP, off, len)` (the block's constant records, an `IW` list of `EREC`
 pointers). -/
@@ -236,12 +215,6 @@ theorem lvLeqTopStub_spec (u v : Word) (hu : H u) (hv : H v) :
     RelAM "lv_leq_top" [u, v] (StageR dn vis fe)
       (do let lu ← readLevelM (decI u); let lv ← readLevelM (decI v); pure (ConLeche.Level.leq lu lv))
       (KeepPost dn vis fe decLvlEq) := sorry
-
-/-- `intern_nanon()`: `internNNode .anonymous`. No stage-level (`StageR`) model of `intern_nanon` yet
-(added by lane indproofs, helper `recb`). -/
-theorem internNanonStub_spec :
-    RelAM "intern_nanon" [] (StageR dn vis fe) (internNNode .anonymous)
-      (KeepPost dn vis fe decW0N) := sorry
 
 end masterSpecs
 

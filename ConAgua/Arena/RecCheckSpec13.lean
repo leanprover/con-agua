@@ -1,6 +1,9 @@
 import ConAgua.Arena.RecCheckSpec12
 import ConAgua.Arena.IndSumSpec13
 
+
+noncomputable section
+
 /-!
 # `RecCheck`: `targetMajorNfs` (lane `indproofs3`, helper `rec`)
 

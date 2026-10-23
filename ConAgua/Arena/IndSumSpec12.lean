@@ -48,6 +48,7 @@ structure SumProg (p : Prog) : Prop where
   hip : p.lookup "intern_param" = some internParam
   hplg : p.lookup "param_levels_go" = some paramLevelsGoL
   hpl : p.lookup "param_levels" = some paramLevelsL
+  hil : IlF p
   hcf : p.lookup "const_find" = some constFind
   hcp : p.lookup "const_push" = some constPush
   hic : p.lookup "intern_const" = some internConst
@@ -182,7 +183,7 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       stubM_spec p "open_pis_at_fvars_f" (n + 1),
-      plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl (n + 1),
+      plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil (n + 1),
       internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
       gafF_spec p hP.ad (n + 1), stubM_spec p "get_app_args_f" (n + 1),
       slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr (n + 1), iarW_spec p hP.hiar (n + 1),
@@ -534,7 +535,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       stubM_spec p "check_constant_val" (n + 2), stripPis_specF p hP.strip (n + 2),
-      srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
+      srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
         hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
       stubM_spec p "open_pis_at_fvars_f" (n + 2), stubM_spec p "fvar_type_ds" (n + 2),
       sdomsW_spec p hP.hg hP.hsd (n + 2), ctlW_spec p hP n] <;>

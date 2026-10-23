@@ -1,5 +1,8 @@
 import ConAgua.Arena.RecCheckSpec15
 
+
+noncomputable section
+
 /-!
 # `RecCheck`: `targetK53`, the relational side (lane `indproofs3`, helper `rec`)
 

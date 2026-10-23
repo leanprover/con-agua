@@ -24,12 +24,12 @@ open L.Arena
 
 theorem targetMajorDefault_specF (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
-    (hp : p.lookup "target_major_default" = some targetMajorDefault) (n : Nat) (s₀ : St) :
+    (hp : p.lookup "target_major_default" = some targetMajorDefault) (hna : NaF p) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_default" []
     ⦃fun r s' => LocEq s' s₀ ∧ fuelW n (tmdW s₀.mem) = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact targetMajorDefault_spec p ha hpw hm hp n s₀
+  | succ n => exact targetMajorDefault_spec p ha hpw hm hp hna n s₀
 
 theorem tmdW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (hS : StageR dn vis fe m a) :
@@ -71,7 +71,7 @@ grind_pattern [ind_grind] tmaK_some => tmaK (some (r, m'))
 theorem targetMajorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
     (hd : p.lookup "target_major_default" = some targetMajorDefault)
-    (hp : p.lookup "target_major_at" = some targetMajorAt) (n : Nat) (s₀ : St) (mo ml c : Word) :
+    (hp : p.lookup "target_major_at" = some targetMajorAt) (hna : NaF p) (n : Nat) (s₀ : St) (mo ml c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_at" [mo, ml, c]
     ⦃fun r s' => LocEq s' s₀ ∧ tmaW n s₀.mem mo ml c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -81,7 +81,7 @@ theorem targetMajorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorDefault_specF p ha hpw hm hd n] <;>
+        targetMajorDefault_specF p ha hpw hm hd hna n] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The decoded result of `target_major_at`. -/
@@ -130,7 +130,7 @@ theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 theorem targetMajorAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
     (hd : p.lookup "target_major_default" = some targetMajorDefault)
-    (hp : p.lookup "target_major_at" = some targetMajorAt) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "target_major_at" = some targetMajorAt) (hna : NaF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mo ml c : Word)
     (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
     (hms : decPL s₀.mem (decTM s₀.mem) mo.toNat ml.toNat = some ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
@@ -138,7 +138,7 @@ theorem targetMajorAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetMajorAt ms c.toNat) a₀ ∧
       KP dn vis fe s₀.mem decTM0 (r, s'.mem) (AM.st (ConRon.Arena.targetMajorAt ms c.toNat) a₀)
         (AM.res (ConRon.Arena.targetMajorAt ms c.toNat) a₀); ⊤⦄ :=
-  triple_post (targetMajorAt_spec p ha hpw hm hd hp n s₀ mo ml c) fun _ _ ⟨hl, hw⟩ =>
+  triple_post (targetMajorAt_spec p ha hpw hm hd hp hna n s₀ mo ml c) fun _ _ ⟨hl, hw⟩ =>
     ⟨hl, (tmaW_sim dn vis fe n _ a₀ mo ml c ms hS hms hb).am hw⟩
 
 end L.Ind

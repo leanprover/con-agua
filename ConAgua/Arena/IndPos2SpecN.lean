@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPos2SpecM
 import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndRealNames
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the word models of the
 mutual block (`nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, `nest_cont_key`,
@@ -395,7 +396,7 @@ def nbFrameW : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, hi, us, dO, dL, nPc, gO, gL, ns =>
     nbFrameK1 k (nbCtorsW k) vis ctx fu po pl hi us dO dL nPc gO gL ns
-      (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m))
+      (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m))
 /-- `nest_ctors(vis, ctx, root, fuel, progOff, progLen, hi, us, dsOff, dsLen, namesOff, namesLen,
 holesOff, holesLen, csOff, csLen, ns, outsOff, outsLen)`. -/
 def nbCtorsW : Nat → MW19
@@ -653,7 +654,7 @@ theorem nbNewW_succ (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty
 theorem nbFrameW_succ (k : Nat) (m : Mem) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     nbFrameW (k + 1) m vis ctx fu po pl hi us dO dL nPc gO gL ns =
 nbFrameK1 k (nbCtorsW k) vis ctx fu po pl hi us dO dL nPc gO gL ns
-        (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) := by
+        (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) := by
   rw [nbFrameW]
 theorem nbCtorsW_succ (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) :
     nbCtorsW (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPartsSpec7
 import ConAgua.Arena.RecClassSpec
+import ConAgua.Arena.IndRealNames
 
 /-!
 # Refinements of `IndParts`, part 8 (lane `indproofs2`, helper `parts`): the block split, relations
@@ -621,6 +622,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
 /-- **The program bundle of the split** (one field per lookup). -/
 structure IndPartsProg (p : Prog) : Prop where
   alloc : p.lookup "iw_alloc" = some iwAlloc
+  nr : NrF p
   copy : p.lookup "iw_copy" = some iwCopy
   cons : p.lookup "sl_cons" = some slCons
   rec3 : p.lookup "rec3" = some rec3

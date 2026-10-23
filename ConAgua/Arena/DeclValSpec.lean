@@ -3,6 +3,9 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.IndInstallSpec3
 
+
+noncomputable section
+
 /-!
 # `checkDecl`'s value checks under the stage relation (lane `decls3`)
 
