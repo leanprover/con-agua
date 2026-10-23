@@ -117,9 +117,9 @@ include hq in
 `ensure_sort_core`. -/
 theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word)
     (cv : IConstantVal) (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv)
-    (hqb : q.toNat + 3 < 2 ^ 64) :
+    (hqb : q.toNat + 3 < 2 ^ 64) (hA : AbsOK m) :
     RSim (ccoW (realCall p) n m vis q) (ConRon.Arena.classConstOk V fe cv) a
-      (KPT dn vis fe m decUnit) := by
+      (fun b a' x => KPT dn vis fe m decUnit b a' x ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
@@ -135,22 +135,25 @@ theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1
   have et : rdW (m1.arr64 EREC) (q + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
+  have hA1 : AbsOK m1 := ihHdrW_afr h1 hA
   have hr : RSim (ccoK1 (realCall p) n vis q (some (r1, m1)))
       (do let stype ← inferTypeCore V fe checkFuel 0 cv.type
-          let _u ← ensureSortCore V fe checkFuel 0 stype) a1 (KPT dn vis fe m decUnit) := by
+          let _u ← ensureSortCore V fe checkFuel 0 stype) a1
+      (fun b a' x => KPT dn vis fe m decUnit b a' x ∧ AbsOK b.2) := by
     rw [ccoK1_some, et, hty]
-    have hi := inferT_rsim hq n (by omega) hS1 0 wt hwtl
+    have hi := RSim.coreAbs hq.closed (by decide) hA1 (inferT_rsim hq n (by omega) hS1 0 wt hwtl)
     rw [show (0 : Word).toNat = 0 from rfl] at hi
     refine RSim.bind (K := ccoK2 (realCall p) n vis) rfl hi ?_
-    rintro ⟨r2, m2⟩ st a2 - ⟨hS2, hg2, hb2, rfl⟩
-    dsimp only at hS2 hg2 hb2
+    rintro ⟨r2, m2⟩ st a2 - ⟨⟨hS2, hg2, hb2, rfl⟩, hA2⟩
+    dsimp only at hS2 hg2 hb2 hA2
     rw [ccoK2_some]
-    have he := ensureSortT_rsim hq n (by omega) hS2 0 (r2.headD 0) hb2
+    have he := RSim.coreAbs hq.closed (by decide) hA2
+      (ensureSortT_rsim hq n (by omega) hS2 0 (r2.headD 0) hb2)
     rw [show (0 : Word).toNat = 0 from rfl] at he
     refine RSim.bind (K := ccoK3) rfl he ?_
-    rintro ⟨r3, m3⟩ u a3 - ⟨hS3, hg3, -⟩
+    rintro ⟨r3, m3⟩ u a3 - ⟨⟨hS3, hg3, -⟩, hA3⟩
     rw [ccoK3_some]
-    exact RSim.pure_some ⟨hS3, (hg1.trans hg2).trans hg3, trivial⟩
+    exact RSim.pure_some ⟨⟨hS3, (hg1.trans hg2).trans hg3, trivial⟩, hA3⟩
   obtain ⟨x, a', hr', hQ⟩ := hr b hb
   exact ⟨x, a', by rw [classConstOk_of_ih V hrun]; exact hr', hQ⟩
 
@@ -162,13 +165,16 @@ theorem classConstOk_refinesT (h : IhProg p)
     (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
     (hc : p.lookup "class_const_ok" = some classConstOkL) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (q : Word) (cv : IConstantVal) (hS : StageT dn vis fe s₀.mem a₀)
-    (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
+    (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk V fe cv) a₀ ∧
       KPT dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk V fe cv) a₀)
-        (AM.res (ConRon.Arena.classConstOk V fe cv) a₀); ⊤⦄ :=
+        (AM.res (ConRon.Arena.classConstOk V fe cv) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classConstOk_spec p h hh hc (realCall p) (realCall_spec p) n s₀ vis q)
-    fun _ _ ⟨hl, hw⟩ => ⟨hl, (ccoW_simT hq n hn _ a₀ q cv hS hq' hqb).am hw⟩
+    fun _ _ ⟨hl, hw⟩ =>
+      let h := (ccoW_simT hq n hn _ a₀ q cv hS hq' hqb hA).am hw
+      ⟨hl, h.1, h.2.1, h.2.2⟩
 
 end sims
 

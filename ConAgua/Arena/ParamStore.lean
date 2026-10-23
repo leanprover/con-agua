@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -33,6 +34,12 @@ namespace L.Arena
 abbrev PREC : ArrId := 14
 /-- The `param` cons-table slots, both tiers interleaved. -/
 abbrev PSLOT : ArrId := 15
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def paramGS : GrowSch :=
+  ⟨PSLOT, PREC, 1, 14, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ PREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `param` record (FNV-1a over its word). -/
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
@@ -98,7 +105,7 @@ def pfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def paramFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := len(PSLOT.u64) >> 1;
+  n := PSLOT.u64[len(PSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪pfindLoop⟫;
@@ -134,7 +141,7 @@ theorem pfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (pfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `param` table. -/
-def nSlotsP (m : Mem) : Word := m.len64 PSLOT >>> 1
+def nSlotsP (m : Mem) : Word := rdW (m.arr64 PSLOT) (m.len64 PSLOT - 1) + SN0
 
 include hp in
 theorem paramFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -159,44 +166,56 @@ end find
 /-- The node count of tier `t` of the `param` table, `CTL[14 + t]`. -/
 def pcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (14 + t)
 
-/-- `param_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `param_push`'s room checks: the handle index, the record array. -/
 def ppushOK (m : Mem) (t : Word) : Bool :=
-  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 PREC >>> (1 : Word)) &&
-    decide (pcnt m t + 1 ≤ (nSlotsP m >>> (2 : Word)) * 3)
+  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 PREC >>> (1 : Word))
 
 /-- The memory after `param_push(t, u, j)` appended node `c`. -/
 def ppushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def paramPush : FunDecl := lfn (t, u, j) locals (c) {
+def paramPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[14 + t];
   if c >= 134217728 { abort };
   if len(PREC.u64) >> 1 <= c { abort };
-  if ((len(PSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
+  gk := PSLOT.u64[len(PSLOT.u64) - 1];
   PREC.u64[c * 2 + t] := u;
   PSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[14 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG paramGS 4⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 PREC) (i * 2 + t))
+
 section push
 variable (p : Prog) (hp : p.lookup "param_push" = some paramPush)
+
+/-- The growth's hash block computes `phash`. -/
+theorem phash_ok : HashOK p paramGS 4 phash := by
+  intro k s₀
+  simp only [paramGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [phash, paramHashW, LocEq, St.setLoc]
 
 include hp in
 theorem paramPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "param_push" [t, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ ppushOK s₀.mem t = true ∧ r = [pcnt s₀.mem t] ∧
-      s'.mem = ppushMem s₀.mem t u j (pcnt s₀.mem t); ⊤⦄ := by
+      growIf PSLOT 14 phash s₀.mem (ppushMem s₀.mem t u j (pcnt s₀.mem t))
+        (pcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, paramPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [pcnt, ppushOK, ppushMem, nSlotsP, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p paramGS PSLOT 14 rfl rfl 4 phash (phash_ok p) n] <;>
+      finish [ppushMem, pcnt, ppushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -221,10 +240,14 @@ def pinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (paramS + rs₁.tail.headD 0, m)
     else if ppushOK m 1 then
-      some (paramS + pcnt m 1, ppushMem m 1 u (rs₁.tail.tail.headD 0) (pcnt m 1))
+      match growIf PSLOT 14 phash m (ppushMem m 1 u (rs₁.tail.tail.headD 0) (pcnt m 1)) (pcnt m 1) with
+      | some m' => some (paramS + pcnt m 1, m')
+      | none => none
     else none
   else if ppushOK m 0 then
-    some (paramP + pcnt m 0, ppushMem m 0 u (rs₀.tail.tail.headD 0) (pcnt m 0))
+    match growIf PSLOT 14 phash m (ppushMem m 0 u (rs₀.tail.tail.headD 0) (pcnt m 0)) (pcnt m 0) with
+    | some m' => some (paramP + pcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/

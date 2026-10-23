@@ -23,6 +23,10 @@ core memo); the whole step writes the loop's write set (`LoopClosed`), so `LoopM
 `…Quot…`), the inductive one through its contract `IndArmSpec` (lane `indproofs4`'s eventual top
 theorem, a field of `LoopCallees`).
 
+Beside `CoreMemos` the fold carries the inductive arm's memos `IndMemos` (`LoopT.lean`): the arm's
+contract takes and gives them back; every other callee keeps them by the write set of `imFns`
+with `consts_resolve_ffast` a trusted leaf (`IndMemoClosed`, `invoke_indMemos`).
+
 Moved here from `Checker.lean` and `DeclStepGo.lean`: `install_step_go`, `install_step`,
 `install_decl_step`, the fold and `install_then_check` (their `StageR`-only versions are gone).
 -/
@@ -60,7 +64,9 @@ def FrontDecls (ds : Array IDeclaration) : Prop :=
 /-- **The inductive arm's contract**: `check_ind_decl(vis, o, l, w)` on an inductive block copied
 into `EREC` (`ind_block_to_erec`'s post: the slice `o`, `l` decoding to `block`, below the top),
 from `StageT` and the twin's fold invariant, refines `checkDecl`'s `.indDecl` case, back to the
-stage relation at the returned view, the core's memos well formed, the pools grown. This is lane
+stage relation at the returned view, the core's memos well formed, the pools grown; the
+inductive stage's memos (`IndMemos`: the stage memos, `instantiate1Lift`'s and
+`consts_resolve_ffast`'s) well formed before and after. This is lane
 `indproofs4`'s top theorem for phase 8 in the shape `docs/design/indproofs3.md` records ("Target
 shape"), with the twin facts the loop has at the arm (`StateOK`, `FoldOK`, the record's
 denotation, the block's front shape) added as premises; it is a field of `LoopCallees` until
@@ -71,10 +77,10 @@ def IndArmSpec (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
     (r : List Word), l.toNat = block.length → w.toNat = nP →
     decCIs (erecP m) dn o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
     FrontBlock block → StageT dn vis fe m a → ConRon.Bridge.StateOK a → FoldOK V env fe a →
-    (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) →
+    (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → IndMemos m →
     callW p n "check_ind_decl" [vis, o, l, w] m = some (r, m') →
     ∃ fe' a', (checkDecl V pins fe (.indDecl block nP)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m'
+      StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m'
 
 /-- The program hypotheses phase A under `StageT` takes beyond `DeclCallees`: the core's entry
 points (`KnotStageProg`), the leaves' and the loop's write sets, and for the inductive records the
@@ -87,6 +93,10 @@ structure LoopCallees (dn : NIdx → Option ConLeche.Name) (p : Prog) : Prop
   andInd : AndPinIndProg p
   indIn : StepIn p indFns
   indArm : IndArmSpec p dn
+  /-- The loop's callees outside the inductive arm keep the inductive memos (`IndMemoClosed`,
+  with `consts_resolve_ffast` a leaf: its model `crfF`). -/
+  indMemo : IndMemoClosed p
+  crf : L.Ind.CrfF p
   /-- `Quot`'s `sortZ` name has a handle under `dn` (the quotient readers' precondition). -/
   quotDn : QuotDn dn
 
@@ -268,11 +278,12 @@ def CheckDeclSpecT : Prop :=
       (pend : Array PendingCheck) (i : Word), i.toNat < ds.size → ConRon.Bridge.StateOK a₀ →
       LoopR pins dn s₀.mem a₀ vis fe pend ds → StageT dn vis fe s₀.mem a₀ →
       (∃ env, FoldOK V env fe a₀) → (∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) →
-      (∃ pinsP, PinsDenote a₀.store pins pinsP) →
+      (∃ pinsP, PinsDenote a₀.store pins pinsP) → IndMemos s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl mode pins fe (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (checkDecl mode pins fe (dsAt ds i)) a₀) (r.headD 0)
-        (AM.res (checkDecl mode pins fe (dsAt ds i)) a₀) pend ds ∧ CoreMemos s'.mem; ⊤⦄
+        (AM.res (checkDecl mode pins fe (dsAt ds i)) a₀) pend ds ∧ CoreMemos s'.mem ∧
+      IndMemos s'.mem; ⊤⦄
 
 end cd
 
@@ -284,11 +295,12 @@ theorem arm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option C
     (hd : ds[i.toNat]? = some d) (hok : ConRon.Bridge.StateOK a)
     (hR : LoopR pins dn m a vis fe pend ds) (hS : StageT dn vis fe m a)
     (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store d = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP)
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    (hf : f ∈ imFns) (hIM : IndMemos m)
     (h : cdRet (callW p n f [i, vis] m) = some (r, m')) :
     AM.ok (checkDecl V pins fe d) a ∧
       LoopR pins dn m' (AM.st (checkDecl V pins fe d) a) (r.headD 0) (AM.res (checkDecl V pins fe d) a)
-        pend ds ∧ CoreMemos m' := by
+        pend ds ∧ CoreMemos m' ∧ IndMemos m' := by
   cases h1 : callW p n f [i, vis] m with
   | none => rw [h1] at h; cases h
   | some rm1 =>
@@ -296,10 +308,11 @@ theorem arm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option C
   rw [h1, cdRet_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
+  have hIM' := callW_indMemos hcl hcrf hf h1 hIM
   obtain ⟨s', hs', -, hok, hL, hc⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hA n hn ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR hS hF hden hPD) h1
   subst hs'
-  exact ⟨hok, by simpa using hL, hc⟩
+  exact ⟨hok, by simpa using hL, hc, hIM'⟩
 
 /-- A call of a function with a step's write set (`StepIn`) keeps the memory outside it. -/
 theorem stepIn_callW {p : Prog} {fs : List FnName} (h : StepIn p fs) {f : FnName} (hf : f ∈ fs)
@@ -319,11 +332,12 @@ theorem indArm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Optio
     (hi : i.toNat < ds.size) (hd : ds[i.toNat] = .indDecl block nP) (hFB : FrontBlock block)
     (hok : ConRon.Bridge.StateOK a) (hR : LoopR pins dn m a vis fe pend ds)
     (hS : StageT dn vis fe m a) (hF : ∃ env, FoldOK V env fe a)
-    (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x)
+    (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) (hIM : IndMemos m)
     (h : cdInd p n i vis (callW p n "ind_block_to_erec" [i] m) = some (r, m')) :
     AM.ok (checkDecl V pins fe (.indDecl block nP)) a ∧
       LoopR pins dn m' (AM.st (checkDecl V pins fe (.indDecl block nP)) a) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.indDecl block nP)) a) pend ds ∧ CoreMemos m' := by
+        (AM.res (checkDecl V pins fe (.indDecl block nP)) a) pend ds ∧ CoreMemos m' ∧
+      IndMemos m' := by
   have hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP := by
     have := hR.decls.recs i.toNat hi
     rw [hd] at this; exact this
@@ -339,6 +353,8 @@ theorem indArm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Optio
     ⟨hS1, hS.twin.frame hf1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
       by rw [pinW_frame hf1 (by decide)]; exact hS.flag⟩
   have hfs1 := stepIn_callW hin (by decide) h1
+  have hIM1 : IndMemos m1 :=
+    hIM.frame hf1 (fun b hb => by simp at hb; subst hb; decide) (fun x hx => by simp at hx; subst hx; decide)
   have hw : (rdW (m1.arr64 DECL) (5 + 8 * i)).toNat = nP := by
     rw [hf1.1 DECL (by decide) (by decide)]
     have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [hdecl.1]; decide
@@ -353,11 +369,11 @@ theorem indArm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Optio
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨env, hFo⟩ := hF
-  obtain ⟨fe', a', hrun, hS2, hcm, hg2⟩ := hia pins n hn m1 m2 a vis fe env block nP _ _ _ r2 hl1 hw
-    hdec1 htop1 hFB hT1 hok hFo hden h2
+  obtain ⟨fe', a', hrun, hS2, hcm, hg2, hIM2⟩ := hia pins n hn m1 m2 a vis fe env block nP _ _ _ r2 hl1
+    hw hdec1 htop1 hFB hT1 hok hFo hden hIM1 h2
   have hfs2 := stepIn_callW hin (by decide) h2
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hok', ?_, hcm⟩
+  refine ⟨hok', ?_, hcm, hIM2⟩
   rw [hst, hres]
   simpa using hR.of_step hS2 (hfs1.trans hfs2) (IWGrow.erecPExt (hg1.trans hg2))
 
@@ -367,9 +383,10 @@ its `StageT` theorem, the inductive one by its contract `IndArmSpec`. -/
 theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hlc : LoopClosed p) (hib : IbeProg p) (hin : StepIn p indFns)
     (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn)
-    (hQd : QuotDn dn) (hia : IndArmSpec p dn) (ds : Array IDeclaration) (hFD : FrontDecls ds) :
+    (hQd : QuotDn dn) (hia : IndArmSpec p dn) (hicl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    (ds : Array IDeclaration) (hFD : FrontDecls ds) :
     CheckDeclSpecT V pins dn ds p := by
-  intro n hn s₀ a₀ vis fe pend i hi hok hR hS hF hden hPD
+  intro n hn s₀ a₀ vis fe pend i hi hok hR hS hF hden hPD hIM
   refine triple_post (cd_specW p hP.cd n s₀ i vis) ?_
   rintro r s' ⟨hl, h⟩
   refine ⟨hl, ?_⟩
@@ -392,7 +409,7 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     rw [hdecl.1] at h
     simp only [cdSel, show (1 : Word) ≠ 6 by decide, if_false, if_true] at h
     exact arm_callWT (checkDeclAxiom_loopT pins dn ds hP.arm hP.axp hq hcl hdn hQd cv)
-      hn' hi hd hok hR hS hF hden hPD h
+      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | defnDecl cv v hh =>
     rw [hdecl.1] at h
     simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
@@ -402,30 +419,30 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
           divGateSpecC hP.dm hq hcl hP.dgClosed (substC0_of hP.natSub.toNatSubProg)
             (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) pins⟩
         hq hcl hlc hin hdn cv v hh)
-      hn' hi hd hok hR hS hF hden hPD h
+      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | thmDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,
       show (3 : Word) ≠ 2 by decide, if_false, if_true] at h
     exact arm_callWT (checkDeclThm_loopT pins dn ds hP.arm hP.val hq hP.th cv v)
-      hn' hi hd hok hR hS hF hden hPD h
+      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | opaqueDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
       show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at h
     exact arm_callWT (checkDeclOpaque_loopT pins dn ds hP.arm hP.val hP.crp hq hcl hlc hdn hP.op cv v)
-      hn' hi hd hok hR hS hF hden hPD h
+      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | quotDecl k cv =>
     rw [hdecl.1] at h
     simp only [cdSel, show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
       show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide, show (5 : Word) ≠ 4 by decide,
       if_false, if_true] at h
     exact arm_callWT (checkDeclQuot_loopT pins dn ds hP.arm hP.quot hP.val.rcp hcl hdn hQd k cv)
-      hn' hi hd hok hR hS hF hden hPD h
+      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | indDecl b nP =>
     rw [hdecl.1] at h
     simp only [cdSel, if_true] at h
-    exact indArm_callWT hib hin hia hn' hi hdi (hFD _ hi _ _ hdi) hok hR hS hF hden h
+    exact indArm_callWT hib hin hia hn' hi hdi (hFD _ hi _ _ hdi) hok hR hS hF hden hIM h
   | basisDecl _ => exact hdecl.elim
 
 /-! ## `install_value` and `install_step_go` under `StageT` -/
@@ -527,52 +544,55 @@ def IstgPost (pend : Array PendingCheck) (T : AM (IFEnv × Option ValueGroup)) (
     (m' : Mem) (r : List Word) : Prop :=
   ∃ x a', T.run a = .ok (x, a') ∧ LoopR pins dn m' a' (r.headD 0) x.1 pend ds ∧
     x.2 = vgOut m' (r.tail.headD 0) (r.tail.tail.headD 0) ∧ (r.tail.headD 0 ≠ 0 → x.2 ≠ none) ∧
-    CoreMemos m'
+    CoreMemos m' ∧ IndMemos m'
 
 theorem istg_cd (hCD : CheckDeclSpecT mode pins dn ds p) {n : Nat} (hn : n ≤ 2 ^ 62) {m0 m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {rc r : List Word}
     {T : AM (IFEnv × Option ValueGroup)} (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a)
     (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a)
     (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP)
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m0)
     (hc : callW p n "check_decl" [i, vis] m0 = some (rc, m'))
     (hr : istgCD (some (rc, m')) = some (r, m'))
     (hT : T.run a = (cdT mode pins fe (dsAt ds i)).run a) :
     IstgPost pins dn ds pend T a m' r := by
   simp only [istgCD, Option.some.injEq, Prod.mk.injEq] at hr
   obtain ⟨rfl, -⟩ := hr
-  obtain ⟨s', hs', -, hok, hL, hcm⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
-    (hCD n hn ⟨m0, Locals.init []⟩ a vis fe pend i hi hok0 hR hS hF hden hPD) hc
+  obtain ⟨s', hs', -, hok, hL, hcm, hIM'⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
+    (hCD n hn ⟨m0, Locals.init []⟩ a vis fe pend i hi hok0 hR hS hF hden hPD hIM) hc
   have hrun := AM.run_of_ok _ _ hok
-  refine ⟨_, _, hT.trans (cdT_run hrun), ?_, ?_, ?_, hs' ▸ hcm⟩
+  refine ⟨_, _, hT.trans (cdT_run hrun), ?_, ?_, ?_, hs' ▸ hcm, hs' ▸ hIM'⟩
   · simpa [hs'] using hL
   · simp [vgOut]
   · simp
 
-theorem istg_iv (hP : IvProg p) (hC : CvgProg p) {n : Nat} {m0 m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    {n : Nat} {m0 m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     {pend : Array PendingCheck} {i ck vk : Word} {rv r : List Word}
     {T : AM (IFEnv × Option ValueGroup)} (hi : i.toNat < ds.size) (hk : IvArgs ck vk (dsAt ds i))
-    (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a)
+    (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a) (hIM : IndMemos m0)
     (hc : callW p n "install_value" [i, vis, ck, vk] m0 = some (rv, m'))
     (hr : istgIV (some (rv, m')) = some (r, m')) (hT : T.run a = (ivT fe (dsAt ds i)).run a) :
     IstgPost pins dn ds pend T a m' r := by
   simp only [istgIV, Option.some.injEq, Prod.mk.injEq] at hr
   obtain ⟨rfl, -⟩ := hr
+  have hIM' := callW_indMemos hcl hcrf (im_mem _ rfl) hc hIM
   obtain ⟨s', hs', -, hok, hL, hvg, hne, hcm⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
     (installValue_loopT pins dn ds p hP hC n ⟨m0, Locals.init []⟩ a vis fe pend i ck vk hi hk hR hS) hc
   have hrun := AM.run_of_ok _ _ hok
   subst hs'
-  refine ⟨_, _, hT.trans hrun, by simpa using hL, ?_, fun _ => hne, hcm⟩
+  refine ⟨_, _, hT.trans hrun, by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
   simp only [List.headD_cons, List.tail_cons, vgOut, show (1 : Word) ≠ 0 by decide, if_false]
   exact hvg
 
-theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word}
+theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p)
+    (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {r : List Word}
     (h : istgW p n m i vis = some (r, m')) (hR : LoopR pins dn m a vis fe pend ds)
     (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0) (hFo : ∃ env, FoldOK V env fe a)
     (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
     (hPD : ∃ pinsP, PinsDenote a.store pins pinsP)
-    (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) :
+    (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) (hIM : IndMemos m) :
     IstgPost pins dn ds pend (installStepGo mode pins fe (dsAt ds i)) a m' r := by
   cases n with
   | zero => simp [istgW] at h
@@ -586,7 +606,8 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
         ⟨by simp, by simp, by simp⟩ ⟨by decide, by decide, by decide⟩ ⟨by simp, by simp, by simp⟩
         ⟨by decide, by decide, by decide⟩,
       by rw [pinW_frame (MemFrame.setCtl m 200 0) (by simp)]; exact hfl⟩
-  generalize m.set64 CTL 200 0 = m0 at h hR0 hS0
+  have hIM0 := hIM.setCtl 200 0 (by decide)
+  generalize m.set64 CTL 200 0 = m0 at h hR0 hS0 hIM0
   have hdecl : DeclAtF (m0.arr64 DECL) (m0.arr64 DLP) i.toNat (dsAt ds i) := by
     have := hR0.decls.recs i.toNat hi
     simpa [dsAt, Array.getD, hi] using this
@@ -626,7 +647,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
     subst hm1
     rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hc h (by rw [hd]; rfl)
+    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
   | quotDecl k cv =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
@@ -640,7 +661,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
     subst hm1
     rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hc h (by rw [hd]; rfl)
+    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
   | thmDecl cv v =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
@@ -653,7 +674,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
     subst hm1
     rw [← hd]
-    exact istg_iv pins dn ds p hP hC hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hc h (by rw [hd]; rfl)
+    exact istg_iv pins dn ds p hP hC hcl hcrf hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hc h (by rw [hd]; rfl)
   | defnDecl cv v hint =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [hk] at h
@@ -678,7 +699,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
       subst hm1
       rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hc h (by rw [hd]; exact hT)
+      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
     · rw [if_neg hc0] at h
       have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := fun h' => hc0 (hiff.mpr h')
@@ -691,7 +712,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
       subst hm1
       rw [← hd]
-      exact istg_iv pins dn ds p hP hC hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hc h (by rw [hd]; exact hT)
+      exact istg_iv pins dn ds p hP hC hcl hcrf hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hc h (by rw [hd]; exact hT)
   | opaqueDecl cv v =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [hk] at h
@@ -716,7 +737,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
       subst hm1
       rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hc h (by rw [hd]; exact hT)
+      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
     · rw [if_neg hc0] at h
       have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := fun h' => hc0 (hiff.mpr h')
@@ -729,7 +750,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
       subst hm1
       rw [← hd]
-      exact istg_iv pins dn ds p hP hC hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hc h (by rw [hd]; exact hT)
+      exact istg_iv pins dn ds p hP hC hcl hcrf hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hc h (by rw [hd]; exact hT)
   | indDecl b nP =>
     have hk : dw (m0.arr64 DECL) i.toNat 0 = 6 := hdecl.1
     rw [hk] at h
@@ -743,7 +764,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
     subst hm1
     rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hc h (by rw [hd]; rfl)
+    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
   | basisDecl _ => exact absurd hdecl id
 
 end istgOk
@@ -759,13 +780,14 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 value group out of the flag and record, the core's memos well formed. -/
 @[refines ConRon.Arena.installStepGo]
 theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p)
-    (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) :
+    (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p)
+    (hcrf : L.Ind.CrfF p) :
     ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (pend : Array PendingCheck) (i : Word) (hi : i.toNat < ds.size), ConRon.Bridge.StateOK a₀ →
       (∃ env, FoldOK V env fe a₀) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds → TwinOK dn s₀.mem a₀ fe → pinW s₀.mem 0 ≠ 0 →
       (∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) →
-      (∃ pinsP, PinsDenote a₀.store pins pinsP) →
+      (∃ pinsP, PinsDenote a₀.store pins pinsP) → IndMemos s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step_go" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (installStepGo mode pins fe (dsAt ds i)) a₀) (r.headD 0)
@@ -773,15 +795,15 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
       (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 =
         vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
       (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none) ∧
-      CoreMemos s'.mem; ⊤⦄ := by
-  intro n hn s₀ a₀ vis fe pend i hi hok0 hF hR hTw hfl hden hPD
+      CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄ := by
+  intro n hn s₀ a₀ vis fe pend i hi hok0 hF hR hTw hfl hden hPD hIM
   refine triple_post (istg_specW p hG n s₀ i vis) ?_
   rintro r s' ⟨hloc, hW⟩
-  obtain ⟨x, a', hrun, hL, hvg, hne, hcm⟩ :=
-    istgW_ok mode pins dn ds p hm hCD hP hC hn hW hR hTw hfl hF hden hPD hi hok0
+  obtain ⟨x, a', hrun, hL, hvg, hne, hcm, hIM'⟩ :=
+    istgW_ok mode pins dn ds p hm hCD hP hC hcl hcrf hn hW hR hTw hfl hF hden hPD hi hok0 hIM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hloc, hok, by rw [hst, hres]; exact hL, by rw [hres]; exact hvg,
-    fun h => by rw [hres]; exact hne h, hcm⟩
+    fun h => by rw [hres]; exact hne h, hcm, hIM'⟩
 
 end spec
 
@@ -796,11 +818,11 @@ include hb
 /-- **`flush_caches` keeps `TwinOK`** (and the loop's relation, the pin flag). -/
 theorem flush_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word)
     (fe : IFEnv) (pend : Array PendingCheck) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
-    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) :
+    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "flush_caches" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
       LoopR pins dn s'.mem (AM.st flushCaches a₀) vis fe pend ds ∧
-      TwinOK dn s'.mem (AM.st flushCaches a₀) fe ∧ pinW s'.mem 0 ≠ 0; ⊤⦄ := by
+      TwinOK dn s'.mem (AM.st flushCaches a₀) fe ∧ pinW s'.mem 0 ≠ 0 ∧ IndMemos s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -808,7 +830,8 @@ theorem flush_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
   obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
   subst hs
   have hf : MemFrame [] flushCtl s.mem s'.mem := by rw [hm]; exact flushMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl⟩
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl, hIM.frame hf (by simp)
+    (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)⟩
   rw [flushCaches_st]
   exact (hTw.frameLo hf (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)).flush
 
@@ -817,11 +840,11 @@ off). -/
 theorem enter_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word)
     (fe : IFEnv) (pend : Array PendingCheck) (hwf : StoreWF a₀.store)
     (hoff : a₀.store.scratchOn = false) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
-    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) :
+    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "scratch_enter" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
       LoopR pins dn s'.mem (AM.st enterScratch a₀) vis fe pend ds ∧
-      TwinOK dn s'.mem (AM.st enterScratch a₀) fe ∧ pinW s'.mem 0 ≠ 0; ⊤⦄ := by
+      TwinOK dn s'.mem (AM.st enterScratch a₀) fe ∧ pinW s'.mem 0 ≠ 0 ∧ IndMemos s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -830,7 +853,11 @@ theorem enter_loopW {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
     (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
   subst hs
   have hf : MemFrame [] (resetCtl ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
-  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl⟩
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl, hIM.frame hf (by simp)
+    (fun x h => by
+      simp [resetCtl, scratchCnts, memoCtl, SCB] at h
+      rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+        <;> decide)⟩
   rw [enterScratch_st]
   exact (hTw.frameLo hf (fun x h => by
     simp [resetCtl, scratchCnts, memoCtl, SCB] at h
@@ -844,34 +871,41 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
   (p : Prog)
 
 /-- `is_none` keeps the core's memos (a leaf). -/
-theorem isNone_refinesC (hlc : LeafClosed p) (hb : BracketProg p)
+theorem isNone_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    (hb : BracketProg p)
     (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ : St) (a₀ : AState)
     (vis v2 : Word) (fe' : IFEnv) (pend : Array PendingCheck)
-    (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) (hc : CoreMemos s₀.mem) :
+    (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) (hc : CoreMemos s₀.mem)
+    (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_none" [vis, v2]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isNoneT vis.toNat fe' pend) a₀ ∧
       LoopR pins dn s'.mem (AM.st (isNoneT vis.toNat fe' pend) a₀) v2
         (AM.res (isNoneT vis.toNat fe' pend) a₀).1 (AM.res (isNoneT vis.toNat fe' pend) a₀).2 ds ∧
-      CoreMemos s'.mem; ⊤⦄ :=
-  triple_post (triple_leafMemos hlc (leaf_mem _ rfl)
+      CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄ :=
+  triple_post (triple_and (triple_leafMemos hlc (leaf_mem _ rfl)
       (isNone_refines pins dn ds p hb hp n s₀ a₀ vis v2 fe' pend hR) hc)
-    fun _ _ ⟨⟨h1, h2, h3⟩, h4⟩ => ⟨h1, h2, h3, h4⟩
+      (invoke_indMemos hcl hcrf n (im_mem _ rfl) _ s₀))
+    fun _ _ ⟨⟨⟨h1, h2, h3⟩, h4⟩, h5⟩ => ⟨h1, h2, h3, h4, h5 hIM⟩
 
 /-- `is_some` keeps the core's memos (a leaf). -/
-theorem isSome_refinesC (hlc : LeafClosed p) (hb : BracketProg p)
+theorem isSome_refinesC (hlc : LeafClosed p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    (hb : BracketProg p)
     (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis v2 g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
     (hg : decVG (erecP s₀.mem) g.toNat = some vg)
-    (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) (hc : CoreMemos s₀.mem) :
+    (hR : LoopR pins dn s₀.mem a₀ v2 fe' pend ds) (hc : CoreMemos s₀.mem)
+    (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_some" [i, vis, v2, g]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isSomeT i.toNat vis.toNat fe' pend vg) a₀ ∧
       LoopR pins dn s'.mem (AM.st (isSomeT i.toNat vis.toNat fe' pend vg) a₀) v2
         (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).1
-        (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).2 ds ∧ CoreMemos s'.mem; ⊤⦄ :=
-  triple_post (triple_leafMemos hlc (leaf_mem _ rfl)
+        (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).2 ds ∧ CoreMemos s'.mem ∧
+      IndMemos s'.mem; ⊤⦄ :=
+  triple_post (triple_and (triple_leafMemos hlc (leaf_mem _ rfl)
       (isSome_refines pins dn ds p hb hpp hp n s₀ a₀ i vis v2 g fe' pend vg hg hR) hc)
-    fun _ _ ⟨⟨h1, h2, h3⟩, h4⟩ => ⟨h1, h2, h3, h4⟩
+      (invoke_indMemos hcl hcrf n (im_mem _ rfl) _ s₀))
+    fun _ _ ⟨⟨⟨h1, h2, h3⟩, h4⟩, h5⟩ => ⟨h1, h2, h3, h4, h5 hIM⟩
 
 /-- `andPinOk` on a one-constant record (or a basis record) leaves the twin state alone. -/
 theorem andPinOk_st_one {pd : IDeclaration} {a : AState} (hp : ConRon.Bridge.PinsOK a)
@@ -899,7 +933,8 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
     (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
     (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0)
     (hden : ∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) (hpd : PersDecl (dsAt ds i))
-    (hPD : ∃ pinsP, PinsDenote a₀.store pins pinsP) (hpps : PersPinSets pins) :
+    (hPD : ∃ pinsP, PinsDenote a₀.store pins pinsP) (hpps : PersPinSets pins)
+    (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
@@ -908,7 +943,9 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
       (AM.st (andPinOk (dsAt ds i)) a₀).store.scratchOn = false ∧
       (∃ env, FoldOK V env fe (AM.st (andPinOk (dsAt ds i)) a₀)) ∧
       (∃ x, Frontend.denoteDecl (AM.st (andPinOk (dsAt ds i)) a₀).store (dsAt ds i) = some x) ∧
-      (∃ pinsP, PinsDenote (AM.st (andPinOk (dsAt ds i)) a₀).store pins pinsP); ⊤⦄ := by
+      (∃ pinsP, PinsDenote (AM.st (andPinOk (dsAt ds i)) a₀).store pins pinsP) ∧
+      IndMemos s'.mem; ⊤⦄ := by
+  have hI := invoke_indMemos hcl hcrf n (f := "and_pin_ok") (im_mem _ rfl) [i] s₀
   by_cases hind : ∃ b k, dsAt ds i = .indDecl b k
   · obtain ⟨b, k, e⟩ := hind
     have e' : ds[i.toNat] = .indDecl b k := by
@@ -921,8 +958,8 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
     refine triple_post (triple_and (triple_and
       (andPinOkInd_refines hai (hrom.andPin dn vis fe) i b k n s₀ a₀
         ⟨⟨hR.check, hR.iw⟩, hdecl, hFD _ hi _ _ e', hok, hR.decls.dsize, hR.decls.psize⟩)
-      (invoke_memFrame hlc n (leaf_mem _ rfl) [i] s₀)) (hin.memFrame n (by decide) [i] s₀))
-      fun r s' ⟨⟨⟨h1, h2, hS', hg, hdec⟩, hf, _⟩, hfs, _⟩ => ?_
+      (invoke_memFrame hlc n (leaf_mem _ rfl) [i] s₀)) (triple_and (hin.memFrame n (by decide) [i] s₀) hI))
+      fun r s' ⟨⟨⟨h1, h2, hS', hg, hdec⟩, hf, _⟩, ⟨hfs, _⟩, hIMf⟩ => ?_
     have hrun := AM.run_of_ok _ _ h2
     obtain ⟨x, hx⟩ := hden
     obtain ⟨hok', hext, hc, hpins⟩ := ConRon.Bridge.andPinOk_run hok hpk hx hrun
@@ -934,14 +971,14 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
       by rw [andPinOk_scratch hok hpk hrun]; exact hoff,
       ⟨env, hFo.step (hFo.check.mono hok' hext hc hpins) hext hpins⟩,
       ⟨x, ConRon.Bridge.denoteDecl_pext (PExt.of_ext hext) hpd hx⟩,
-      hPD.imp fun q h => PinsDenote.pmono (PExt.of_ext hext) _ _ hpps h⟩
+      hPD.imp fun q h => PinsDenote.pmono (PExt.of_ext hext) _ _ hpps h, hIMf hIM⟩
     simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact hfl
   have hpd' : ∀ b k, dsAt ds i ≠ .indDecl b k := fun b k e => hind ⟨b, k, e⟩
   refine triple_post (triple_and (andPinOk_refines (pins := pins) dn ds p hp n s₀ a₀ vis fe pend i hi hpd' hR)
-    (invoke_memFrame hlc n (leaf_mem _ rfl) [i] s₀)) fun r s' ⟨⟨h1, h2, h3, h4⟩, hf, _⟩ => ?_
+    (triple_and (invoke_memFrame hlc n (leaf_mem _ rfl) [i] s₀) hI)) fun r s' ⟨⟨h1, h2, h3, h4⟩, ⟨hf, _⟩, hIMf⟩ => ?_
   have e := andPinOk_st_one hpk hpd' h2
   refine ⟨h1, h2, h3, h4, by rw [e]; exact hTw.leaf hf, ?_, by rw [e]; exact hoff,
-    by rw [e]; exact hF, by rw [e]; exact hden, by rw [e]; exact hPD⟩
+    by rw [e]; exact hF, by rw [e]; exact hden, by rw [e]; exact hPD, hIMf hIM⟩
   simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact hfl
 
 end leaves
@@ -961,9 +998,10 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : LoopCallees dn p) (hFD
     (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) (hTw : TwinOK dn s₀.mem a₀ fe)
     (hfl : pinW s₀.mem 0 ≠ 0) (hF : ∃ env, FoldOK V env fe a₀)
     (hden : ∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) (hpd : PersDecl (dsAt ds i))
-    (hPD : ∃ pinsP, PinsDenote a₀.store pins pinsP) (hpps : PersPinSets pins) :
+    (hPD : ∃ pinsP, PinsDenote a₀.store pins pinsP) (hpps : PersPinSets pins)
+    (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ CoreMemos s'.mem ∧ AM.ok flushCaches a₀ ∧ AM.ok enterScratch (AM.st flushCaches a₀) ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)) ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ CoreMemos s'.mem ∧ IndMemos s'.mem ∧ AM.ok flushCaches a₀ ∧ AM.ok enterScratch (AM.st flushCaches a₀) ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)) ∧
       AM.ok (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) ∧ LoopR pins dn s'.mem (AM.st (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (r.headD 0) (AM.res (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))).1
         (AM.res (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))).2 ds; ⊤⦄ := by
   have hK0 : (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2 = none → (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) = isNoneT vis.toNat (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend :=
@@ -1003,9 +1041,9 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : LoopCallees dn p) (hFD
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (flush_loopW (pins := pins) dn ds p hb n · a₀ vis fe pend),
         (enter_loopW (pins := pins) dn ds p hb n · (AM.st flushCaches a₀) vis fe pend hwf' hoff'),
-        (installStepGo_specT mode pins dn ds p hm (hm ▸ checkDecl_loopT hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn pins dn hdc.dninj hdc.quotDn hdc.indArm ds hFD) hdc.istg hdc.iv hdc.cvg n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
-        (isNone_refinesC pins dn ds p hdc.leaf hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
-        (isSome_refinesC pins dn ds p hdc.leaf hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
+        (installStepGo_specT mode pins dn ds p hm (hm ▸ checkDecl_loopT hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn pins dn hdc.dninj hdc.quotDn hdc.indArm hdc.indMemo hdc.crf ds hFD) hdc.istg hdc.iv hdc.cvg hdc.indMemo hdc.crf n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
+        (isNone_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
+        (isSome_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
       finish (gen := 20) [vgOut]
 
@@ -1019,16 +1057,17 @@ theorem installStep_refines (hm : mode = .verified) (hdc : LoopCallees dn p) (hF
     (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) (hTw : TwinOK dn s₀.mem a₀ fe)
     (hfl : pinW s₀.mem 0 ≠ 0) (hF : ∃ env, FoldOK V env fe a₀)
     (hden : ∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) (hpd : PersDecl (dsAt ds i))
-    (hPD : ∃ pinsP, PinsDenote a₀.store pins pinsP) (hpps : PersPinSets pins) :
+    (hPD : ∃ pinsP, PinsDenote a₀.store pins pinsP) (hpps : PersPinSets pins)
+    (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ CoreMemos s'.mem ∧ AM.ok (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀ ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ CoreMemos s'.mem ∧ IndMemos s'.mem ∧ AM.ok (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
-  refine triple_post (installStep_pieces mode pins dn ds p hm hdc hFD hb hpp hpn hps hp n hn s₀ a₀ i vis fe pend hi hok hoff hR hTw hfl hF hden hpd hPD hpps)
-    fun r s' ⟨hl, hcm, h1, h2, h3, h4, h5⟩ => ?_
+  refine triple_post (installStep_pieces mode pins dn ds p hm hdc hFD hb hpp hpn hps hp n hn s₀ a₀ i vis fe pend hi hok hoff hR hTw hfl hF hden hpd hPD hpps hIM)
+    fun r s' ⟨hl, hcm, him, h1, h2, h3, h4, h5⟩ => ?_
   rw [← hv] at h4 h5
   obtain ⟨o, st, rs⟩ := installStep_ok mode pins i.toNat fe pend (dsAt ds i) a₀ h1 h2 h3 h4
-  exact ⟨hl, hcm, o, by rw [st, rs]; exact h5⟩
+  exact ⟨hl, hcm, him, o, by rw [st, rs]; exact h5⟩
 
 /-- **`install_decl_step` refines `installDeclStep`**: a returning run is the twin's `.ok` with
 the position advanced. -/
@@ -1042,9 +1081,9 @@ theorem installDeclStep_core (hm : mode = .verified) (hb : BracketProg p) (hdc :
     (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
     (hT : TwinFold pins ds fe pend a₀) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
-    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) :
+    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_decl_step" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ CoreMemos s'.mem ∧ AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ CoreMemos s'.mem ∧ IndMemos s'.mem ∧ AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ ∧
       AM.res (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ = .ok (i.toNat + 1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2) ∧
       LoopR pins dn s'.mem (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2 ds; ⊤⦄ := by
   have hok := installDeclStep_ok mode pins (i.toNat, fe, pend) (dsAt ds i) a₀
@@ -1067,7 +1106,7 @@ theorem installDeclStep_core (hm : mode = .verified) (hb : BracketProg p) (hdc :
     have hn' : n ≤ 2 ^ 62 := by omega
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (andPinOk_refinesT pins dn ds p hdc.leaf hdc.and_pin_ok hdc.andInd hdc.cd.crp.red.rom hdc.indIn hFD n · a₀ vis fe pend · · hT.stateOK hpk hT.off hF0),
+        (andPinOk_refinesT pins dn ds p hdc.leaf hdc.and_pin_ok hdc.andInd hdc.cd.crp.red.rom hdc.indIn hFD n · a₀ vis fe pend · · hT.stateOK hpk hT.off hF0 · · · · · · · hdc.indMemo hdc.crf),
         (installStep_refines mode pins dn ds p hm hdc hFD hb hpp hpn hps hpi n hn' · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
       finish
 
@@ -1087,21 +1126,21 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
     (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
     (hT : TwinFold pins ds fe pend a₀) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
-    (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) :
+    (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_decl_step" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ ∧
       AM.res (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ = .ok (i.toNat + 1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2) ∧
       LoopR pins dn s'.mem (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2 ds ∧
       LoopMem dn s'.mem (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) ∧
-      CoreMemos s'.mem; ⊤⦄ := by
+      CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄ := by
   have hTw : TwinOK dn s₀.mem a₀ fe := by
     obtain ⟨_, hF, _⟩ := hT.fold
     exact TwinOK.of_check hF.check ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2⟩
   refine triple_post (triple_and
       (installDeclStep_core mode pins dn ds p hm hb hdc hFD hpp hpn hps hpi hp n hn s₀ a₀ i vis fe pend hi
-        hT hR hTw hM.flag)
+        hT hR hTw hM.flag hIM)
       (invoke_memFrame hdc.loop n installDeclStep_loop [i, vis] s₀))
-    fun r s' ⟨⟨hl, hcm, ho, hres, hL⟩, hf, _⟩ => ?_
+    fun r s' ⟨⟨hl, hcm, him, ho, hres, hL⟩, hf, _⟩ => ?_
   have e : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
   have hx : ConRon.Bridge.PExt a₀.store
       (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀).store := by
@@ -1110,7 +1149,7 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
     subst hm
     rw [e] at hrun ⊢
     exact (hT.step_pext hi hrun).2
-  exact ⟨hl, ho, hres, hL, hM.step hf hx, hcm⟩
+  exact ⟨hl, ho, hres, hL, hM.step hf hx, hcm, him⟩
 
 theorem drop_cons_dsAt (ds : Array IDeclaration) (i : Word) (hi : i.toNat < ds.size)
     (h1 : (i + 1).toNat = i.toNat + 1) :
@@ -1126,13 +1165,15 @@ def FoldPost (m : Mem) (a : AState) (v : Word) (k : Nat) (fe : IFEnv) (pend : Ar
   AM.ok (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a ∧
     FoldOut pins dn m (AM.st (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a) v ds
       (AM.res (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a) ∧
-    LoopMem dn m (AM.st (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a) ∧ CoreMemos m
+    LoopMem dn m (AM.st (installFold mode pins (k, fe, pend) (ds.toList.drop k)) a) ∧ CoreMemos m ∧
+    IndMemos m
 
 /-- `install_fold_go`'s spec at fuel `n`. -/
 def FoldGoSpec (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (i cnt vis : Word) (fe : IFEnv) (pend : Array PendingCheck),
     i.toNat ≤ ds.size → cnt.toNat = ds.size → TwinFold pins ds fe pend a₀ →
     LoopR pins dn s₀.mem a₀ vis fe pend ds → LoopMem dn s₀.mem a₀ → CoreMemos s₀.mem →
+    IndMemos s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_go" [i, cnt, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ FoldPost mode pins dn ds s'.mem a₀ (r.headD 0) i.toNat fe pend; ⊤⦄
 
@@ -1141,6 +1182,7 @@ def FoldNextSpec (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (i cnt vis : Word) (fe : IFEnv) (pend : Array PendingCheck),
     i.toNat < ds.size → cnt.toNat = ds.size → TwinFold pins ds fe pend a₀ →
     LoopR pins dn s₀.mem a₀ vis fe pend ds → LoopMem dn s₀.mem a₀ → CoreMemos s₀.mem →
+    IndMemos s₀.mem →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_next" [i, cnt, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ FoldPost mode pins dn ds s'.mem a₀ (r.headD 0) i.toNat fe pend; ⊤⦄
 
@@ -1157,7 +1199,7 @@ include hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD
 theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
     FoldGoSpec mode pins dn ds p (n + 1) := by
   unfold FoldNextSpec at ih
-  intro s₀ a₀ i cnt vis fe pend hi hc hT hR hM hcm
+  intro s₀ a₀ i cnt vis fe pend hi hc hT hR hM hcm him
   have hlt : i ≠ cnt → i.toNat < ds.size := fun h => by
     have : i.toNat ≠ cnt.toNat := fun e => h (UInt64.toNat_inj.mp e)
     omega
@@ -1165,7 +1207,7 @@ theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
     have e : ds.toList.drop i.toNat = [] := by simp [h, hc]
     have := installFold_nil_ok mode pins (i.toNat, fe, pend) a₀
     simp only [FoldPost, e]
-    refine ⟨this.1, ?_, ?_, hcm⟩
+    refine ⟨this.1, ?_, ?_, hcm, him⟩
     · rw [this.2.1, this.2.2]; exact ⟨by rw [h, hc], hR⟩
     · rw [this.2.1]; exact hM
   have hmem : ∀ m : Mem, m = s₀.mem → FoldPost mode pins dn ds s₀.mem a₀ vis i.toNat fe pend →
@@ -1180,7 +1222,7 @@ theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
 theorem foldNext_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : FoldGoSpec mode pins dn ds p n) :
     FoldNextSpec mode pins dn ds p (n + 1) := by
   unfold FoldGoSpec at ih
-  intro s₀ a₀ i cnt vis fe pend hi hc hT hR hM hcm
+  intro s₀ a₀ i cnt vis fe pend hi hc hT hR hM hcm him
   have hn' : n ≤ 2 ^ 62 := by omega
   have h1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hstep : AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ →
@@ -1198,12 +1240,12 @@ theorem foldNext_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : FoldGoSpec mode pi
       FoldPost mode pins dn ds m a₀ v i.toNat fe pend := by
     intro m v j hj hok hres hp
     rw [hj, h1] at hp
-    obtain ⟨hp1, hp2, hp3, hp4⟩ := hp
+    obtain ⟨hp1, hp2, hp3, hp4, hp5⟩ := hp
     have e := drop_cons_dsAt ds i hi h1
     rw [h1] at e
     have := installFold_cons_ok mode pins (i.toNat, fe, pend) (i.toNat + 1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2) (dsAt ds i)
       (ds.toList.drop (i.toNat + 1)) a₀ hok hres hp1
-    refine ⟨?_, ?_, ?_, hp4⟩
+    refine ⟨?_, ?_, ?_, hp4, hp5⟩
     · rw [e]; exact this.1
     · rw [e, this.2.1, this.2.2]; exact hp2
     · rw [e, this.2.1]; exact hp3
@@ -1242,9 +1284,9 @@ theorem installFoldGo_refines (n : Nat) (hn : n ≤ 2 ^ 62) :
   induction n with
   | zero =>
     constructor
-    · intro s₀ a₀ i cnt vis fe pend _ _ _ _ _ _; rw [invoke_eq _ hpg]; simp only [callFn]
+    · intro s₀ a₀ i cnt vis fe pend _ _ _ _ _ _ _; rw [invoke_eq _ hpg]; simp only [callFn]
       vcgen [exec] <;> grind
-    · intro s₀ a₀ i cnt vis fe pend _ _ _ _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
+    · intro s₀ a₀ i cnt vis fe pend _ _ _ _ _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
       vcgen [exec] <;> grind
   | succ n ih =>
     have ih := ih (by omega)
@@ -1274,7 +1316,7 @@ theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (h
     (s₀ : St) (a₀ : AState)
     (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀)
     (hR : LoopR pins dn s₀.mem a₀ 0 (mkIFEnv IEnv.empty) #[] ds)
-    (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) :
+    (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) (hIM : IndMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (k : Nat) (fe : IFEnv) (pend : Array PendingCheck) (a' s'' : AState),
       installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a₀ = .ok (.ok (k, fe, pend), a') ∧
@@ -1298,7 +1340,7 @@ theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (h
       TwinPend (foldFe X) (foldPend X).toList A := by
     intro m v h
     simp only [FoldPost, UInt64.toNat_zero, List.drop_zero, hX, hA] at h
-    obtain ⟨h1, h2, h3, h4⟩ := h
+    obtain ⟨h1, h2, h3, h4, -⟩ := h
     obtain ⟨e, hL⟩ := FoldOut.eq h2
     refine ⟨h1, e, hL, h3, h4, ?_⟩
     subst hm

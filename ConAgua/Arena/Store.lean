@@ -2,7 +2,9 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
+public import ConAgua.Arena.SlotGrowSpec
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -50,11 +52,12 @@ abbrev REC : ArrId := 2
 /-- The `lit` cons-table slots, both tiers interleaved. -/
 abbrev SLOT : ArrId := 3
 
-/-- FNV-1a offset basis and prime (con-ron's `nat::hash64`). -/
-def fnvBasis : Word := 0xcbf29ce484222325
-def fnvPrime : Word := 0x100000001b3
-/-- The multiply-xor finaliser of con-ron's `home_index` (`ron/hashmap2.rs`). -/
-def golden : Word := 0x9e3779b97f4a7c15
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def litGS : GrowSch :=
+  ⟨SLOT, REC, 4, 2, lblk (n, k, t, i, c, h) {
+    h := REC.u64[i * 8 + t * 4 + 3]
+  }⟩
+
 
 /-! ## `lit_hash(o, l)`: FNV-1a over the limbs of a slice -/
 
@@ -226,13 +229,6 @@ end eq
 
 A `natVal` node (kind `0`) with hash `h`, length `l` and the same limbs. -/
 
-/-- A word of `a`, `0` past its end. -/
-def rdW (a : Array Word) (x : Word) : Word := a[x.toNat]?.getD 0
-
-theorem rdW_eq (a : Array Word) (x : Word) (k : Nat) (hk : k = x.toNat) (h : k < a.size) :
-    rdW a x = a[k] := by subst hk; simp [rdW, h]
-grind_pattern [arena_grind] rdW_eq => rdW a x, a[k]
-
 /-- The model of `lit_match`. -/
 def matchW (r p : Array Word) (t i o l h : Word) : Bool :=
   rdW r (i * 8 + t * 4) == 0 && rdW r (i * 8 + t * 4 + 3) == h &&
@@ -274,36 +270,6 @@ end match_
 Returns `(1, i, j, d)` if node `i` of tier `t` holds the slice (found at slot `j` after `d`
 steps), `(0, 0, j, d)` if slot `j` is free (the run from the home slot holds no such node), and
 aborts after `n` steps (a full table; unreachable while the load limit of `lit_push` holds). -/
-
-/-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
-of the product with `n` (Lemire's range reduction) in place of the power-of-two mask. -/
-def homeW (h n : Word) : Word :=
-  UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)
-
-/-- The `CTL` word of the scratch tier's **slot base** `B` (`scratch_reset` adds `2^32`). A slot of
-tier `t` holds `B t + i + 1` for node `i`, with `B 0 = 0` and `B 1 = CTL[62]`; a slot word at or
-below the base is free. So the scratch tier is emptied by raising its base: every old slot falls
-at or below the new base, and no slot is zeroed. -/
-abbrev SCB : Word := 62
-
-/-- The slot base of tier `t` (`t ≤ 1`): `CTL[62] * t`. -/
-def baseW (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) SCB * t
-
-/-- A slot word `v` against the base `b`: `0` (free) at or below `b`, else `i + 1`. -/
-def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
-
-/-- Slot word `k` of `sl` against the base `b`. -/
-def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
-
-theorem slotV_free (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
-    (hv : sl[k] ≤ b) : slotV sl b x = 0 := by
-  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte]
-
-theorem slotV_used (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) : slotV sl b x = sl[k] - b ∧ sl[k] - b ≠ 0 := by
-  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte, true_and]
-  intro h0
-  exact hv (by grind)
 
 /-- The model of the probe loop, from slot `j` after `d` steps. -/
 def probeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
@@ -362,7 +328,7 @@ def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(SLOT.u64) >> 1;
+  n := SLOT.u64[len(SLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoop⟫;
@@ -402,7 +368,7 @@ theorem findLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (findLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier. -/
-def nSlots (m : Mem) : Word := m.len64 SLOT >>> 1
+def nSlots (m : Mem) : Word := rdW (m.arr64 SLOT) (m.len64 SLOT - 1) + SN0
 
 include hpe hpm hp in
 theorem litFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -431,10 +397,9 @@ load limit of `3/4` (a defined "exhausted": the arena does not fail there, the L
 /-- The node count of tier `t`, `CTL[2 + t]`. -/
 def cnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (2 + t)
 
-/-- `lit_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `lit_push`'s room checks: the handle index, the record array. -/
 def pushOK (m : Mem) (t : Word) : Bool :=
-  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 REC >>> (3 : Word)) &&
-    decide (cnt m t + 1 ≤ (nSlots m >>> (2 : Word)) * 3)
+  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 REC >>> (3 : Word))
 
 /-- The memory after `lit_push(t, o, l, h, j)` appended node `c`. -/
 def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
@@ -444,38 +409,51 @@ def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
     CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
+def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
-  if ((len(SLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 8 + t * 4;
+  gk := SLOT.u64[len(SLOT.u64) - 1];
   REC.u64[k] := 0;
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`: its word 3. -/
+def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
+
 section push
 variable (p : Prog) (hp : p.lookup "lit_push" = some litPush)
+
+/-- The growth's hash block computes `litH`. -/
+theorem litH_ok : HashOK p litGS 7 litH := by
+  intro k s₀
+  simp only [litGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [litH, LocEq, St.setLoc]
 
 include hp in
 theorem litPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_push" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
-      s'.mem = pushMem s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
+      growIf SLOT 2 litH s₀.mem (pushMem s₀.mem t o l h j (cnt s₀.mem t))
+        (cnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [cnt, pushOK, pushMem, nSlots, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n] <;>
+      finish [pushMem, cnt, pushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -504,10 +482,14 @@ def internW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
     else if pushOK m 1 then
-      some (litS + cnt m 1, pushMem m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1))
+      match growIf SLOT 2 litH m (pushMem m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1)) (cnt m 1) with
+      | some m' => some (litS + cnt m 1, m')
+      | none => none
     else none
   else if pushOK m 0 then
-    some (litP + cnt m 0, pushMem m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
+    match growIf SLOT 2 litH m (pushMem m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0)) (cnt m 0) with
+    | some m' => some (litP + cnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
@@ -553,11 +535,17 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
-/- The load limit: 16 slots, at most 12 nodes; the thirteenth distinct literal aborts. -/
+/- Growth: 8 slots per tier at the start; the fifth node doubles them, which a 32-word slot array
+cannot hold with its last word (abort); a 128-word one holds two doublings (then all 13 nodes are
+found again). -/
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
+    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 5).map fun i => (UInt64.ofNat i, 1))).isNone
 #guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
-    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
+    Array.replicate 256 0, Array.replicate 32 0] } ((List.range 4).map fun i => (UInt64.ofNat i, 1))).isSome
+#guard internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
+    Array.replicate 256 0, Array.replicate 128 0] }
+    ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
+  some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
 
 section intern
 variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
@@ -688,7 +676,7 @@ def findLoopStr : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(SLOT.u64) >> 1;
+  n := SLOT.u64[len(SLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoopStr⟫;
@@ -754,18 +742,19 @@ def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
     CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
+def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
-  if ((len(SLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 8 + t * 4;
+  gk := SLOT.u64[len(SLOT.u64) - 1];
   REC.u64[k] := 1;
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
   return c
 }
 
@@ -777,15 +766,17 @@ theorem litPushStr_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_push_str" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
-      s'.mem = pushMemStr s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
+      growIf SLOT 2 litH s₀.mem (pushMemStr s₀.mem t o l h j (cnt s₀.mem t))
+        (cnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litPushStr]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [cnt, pushOK, pushMemStr, nSlots, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n] <;>
+      finish [pushMemStr, cnt, pushOK, baseW, growIf_grow', growIf_keep']
 
 end pushStr
 
@@ -804,10 +795,14 @@ def internWStr (m : Mem) (o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
     else if pushOK m 1 then
-      some (litS + cnt m 1, pushMemStr m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1))
+      match growIf SLOT 2 litH m (pushMemStr m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1)) (cnt m 1) with
+      | some m' => some (litS + cnt m 1, m')
+      | none => none
     else none
   else if pushOK m 0 then
-    some (litP + cnt m 0, pushMemStr m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
+    match growIf SLOT 2 litH m (pushMemStr m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0)) (cnt m 0) with
+    | some m' => some (litP + cnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

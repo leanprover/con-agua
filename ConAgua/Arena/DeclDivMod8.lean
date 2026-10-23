@@ -248,7 +248,7 @@ theorem cm_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
       hrun6', hrun7, hx7, if_true]
     exact hrun8
 
-@[refines ConRon.Arena.checkDivModCerts]
+/-- Under `StageR` (the core through its stub); the census link is `cmC` (`DeclDivGateT2.lean`). -/
 theorem checkDivModCerts_refines (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) (c annVal : Word) (hc : H c) (hann : H annVal)
     (so sl po pl : Word) (ss : List (List EIdx × EIdx)) (proofs : List EIdx) :
@@ -341,7 +341,7 @@ theorem cpa_ref (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p 
     hrun4]
   exact hrun5
 
-@[refines ConRon.Arena.checkDivModPinAt]
+/-- Under `StageR` (the core through its stub); the census link is `cpaC` (`DeclDivGateT2.lean`). -/
 theorem checkDivModPinAt_refines (hD : DmProg8 p) (hs0 : SubstC0 p dn vis fe)
     (hsA : SubstCAll p dn vis fe) (c value ps : Word) (ip : INatOpPinSet) :
     RefAM p "check_div_mod_pin_at" [vis, c, value, ps]

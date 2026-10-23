@@ -256,7 +256,7 @@ theorem storeR_cnt {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {S : Sche
     {P Q : Tbl α (Idx k) δ} (hT : StoreR S R hs m on P Q) :
     (rdW (m.arr64 CTL) (S.ca + 0)).toNat = P.size ∧ P.size ≤ 134217728 ∧
       (rdW (m.arr64 CTL) (S.ca + 1)).toNat = Q.size ∧ Q.size ≤ 134217728 :=
-  ⟨hT.2.2.1.1, hT.2.2.1.2.1, hT.2.2.2.1, hT.2.2.2.2.1⟩
+  ⟨hT.2.2.1.1, hT.2.2.1.2.1, hT.2.2.2.1.1, hT.2.2.2.1.2.1⟩
 
 /-- **`store_fuel` is the twin's `storeFuel`**: the store's node count `+ 1`. -/
 @[refines ConRon.Arena.Frontend.storeFuel]

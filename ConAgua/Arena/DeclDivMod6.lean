@@ -116,27 +116,28 @@ theorem boolCtorTyped_refines (hD : DmProg6 p) (nm : Word) :
 
 /-! ## `div_mod_pin_guard` -/
 
-def dmPgW (p : Prog) (n : Nat) (m : Mem) (ps vs c : Word) : Option (List Word × Mem) :=
+def dmPgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (ps vs c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
   ntBW (lbbF m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
   ntBW (hffF m2 [4000000000, r1.headD 0]) fun r3 m3 =>
   if r3.headD 0 ≠ 0 then some ([0], m3) else
-  ntBW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
+  ntBW (cl n "all_level_params_defined" [0, 0, r1.headD 0] m3) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
   ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 => some ([r5.headD 0], m5)
 
 set_option maxHeartbeats 1600000 in
-theorem pg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_pin_guard" = some divModPinGuardL) (n : Nat)
+theorem pg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_pin_guard" = some divModPinGuardL)
+    (cl : CallM) (hcl : CallSpec p cl) (n : Nat)
     (s₀ : St) (ps vs c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_pin_guard" [ps, vs, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ dmPgW p n s₀.mem ps vs c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ dmPgW p cl n s₀.mem ps vs c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divModPinGuardL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_decl_pin", lbbF_spec p hb n,
-      hffF_spec p hf n, stubM_spec p "all_level_params_defined" n,
+      hffF_spec p hf n, hcl n "all_level_params_defined",
       stubM_spec p "consts_resolve_ffast" n] <;>
     finish (gen := 30) (instances := 10000) [dmPgW, ntBW]
 
@@ -145,8 +146,8 @@ theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
       (fun m s => StageR dn vis fe m s ∧ H c ∧ PinSetR m ps ip)
       (divModPinGuard ip fe (decI c)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hP⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => dmPgW p k mq ps vis c)
-    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard k · ps vis c) hcall
+  have hw := callW_model (M := fun mq => dmPgW p stubCall k mq ps vis c)
+    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard stubCall (stubCall_spec p) k · ps vis c) hcall
   unfold dmPgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hw⟩ :=
@@ -188,7 +189,7 @@ theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
   rw [if_neg z3] at hw
   have z3' : r3.headD 0 = 0 := by simpa using z3
   have hx3 := decW0B_false hd3 z3'
-  cases h4 : stubM "all_level_params_defined" m3 [0, 0, r1.headD 0] with
+  cases h4 : stubCall k "all_level_params_defined" [0, 0, r1.headD 0] m3 with
   | none => rw [h4] at hw; simp at hw
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4

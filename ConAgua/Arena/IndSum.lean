@@ -560,17 +560,18 @@ def hasLooseBVarBInsL : FunDecl := lfn (e, i, r) locals (fd, j, d, u) {
   return r
 }
 
-/-- `has_loose_b_var_b_go(i, h)`: does `bvar i` occur loose in `h`? The `bvarB` cutoff first (no
-memo touch below it), then the tag: `bvar`/`fvar`/`sort`/`const`/`lit` direct answers, the rest
-(`app`, `lam`, `forallE`, `letE`, `proj`) through the `hb` memo, short-circuiting at the first
-`true` child (as the twin's `match` does for `app`/`lam`/`forallE`/`letE`). The twin's `fuel` and
-`memo` are both dropped (the walk recurses directly; the memo is the `hb` array, per `IndIface`'s
-per-call-memo convention). -/
+/-- `has_loose_b_var_b_go(f, i, h)`: does `bvar i` occur loose in `h`? The twin's fuel `f` (abort at
+`0`, the children and `bvar_b` at `f - 1`), then the `bvarB` cutoff (no memo touch below it), then
+the tag: `bvar`/`fvar`/`sort`/`const`/`lit` direct answers, the rest (`app`, `lam`, `forallE`,
+`letE`, `proj`) through the `hb` memo, short-circuiting at the first `true` child (as the twin's
+`match` does for `app`/`lam`/`forallE`/`letE`). The twin's `memo` is dropped (the memo is the `hb`
+array, per `IndIface`'s per-call-memo convention). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:125-171 ConRon.Arena.hasLooseBVarBGo
 @[l_impl ConRon.Arena.hasLooseBVarBGo]
 def hasLooseBVarBGoL : FunDecl :=
-  lfn (i, h) locals (bb, g, x, y, z, fd, j, d, r1, r) {
-  bb := call bvar_b(⟪CWF⟫, h);
+  lfn (f, i, h) locals (bb, g, x, y, z, fd, j, d, r1, r) {
+  if f == 0 { abort };
+  bb := call bvar_b(f - 1, h);
   if bb <= i { return 0 };
   (g, x, y, z) := call e_view(h);
   if g == 0 { return u64(i == x) };
@@ -579,19 +580,19 @@ def hasLooseBVarBGoL : FunDecl :=
   (fd, j, d) := call hb_find(h, i);
   if fd != 0 { return HBM.u64[j * 4 + 3] };
   if g == 4 {
-    r1 := call has_loose_b_var_b_go(i, x);
-    if r1 == 1 { r := 1 } else { r := call has_loose_b_var_b_go(i, y) }
+    r1 := call has_loose_b_var_b_go(f - 1, i, x);
+    if r1 == 1 { r := 1 } else { r := call has_loose_b_var_b_go(f - 1, i, y) }
   } else if g == 5 || g == 6 {
-    r1 := call has_loose_b_var_b_go(i, x);
-    if r1 == 1 { r := 1 } else { r := call has_loose_b_var_b_go(i + 1, y) }
+    r1 := call has_loose_b_var_b_go(f - 1, i, x);
+    if r1 == 1 { r := 1 } else { r := call has_loose_b_var_b_go(f - 1, i + 1, y) }
   } else if g == 7 {
-    r1 := call has_loose_b_var_b_go(i, x);
+    r1 := call has_loose_b_var_b_go(f - 1, i, x);
     if r1 == 1 { r := 1 }
     else {
-      r1 := call has_loose_b_var_b_go(i, y);
-      if r1 == 1 { r := 1 } else { r := call has_loose_b_var_b_go(i + 1, z) }
+      r1 := call has_loose_b_var_b_go(f - 1, i, y);
+      if r1 == 1 { r := 1 } else { r := call has_loose_b_var_b_go(f - 1, i + 1, z) }
     }
-  } else { r := call has_loose_b_var_b_go(i, z) };
+  } else { r := call has_loose_b_var_b_go(f - 1, i, z) };
   r := call has_loose_b_var_b_ins(h, i, r);
   return r
 }
@@ -601,7 +602,7 @@ def hasLooseBVarBGoL : FunDecl :=
 @[l_impl ConRon.Arena.hasLooseBVarBFast]
 def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
   u := call hb_clear();
-  r := call has_loose_b_var_b_go(i, e);
+  r := call has_loose_b_var_b_go(⟪CWF⟫, i, e);
   return r
 }
 
@@ -623,7 +624,7 @@ memo (no clear). -/
 def structUsedLaterGoL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) {
   (ok, bo, bl, body) := call strip_pis(nP + j + 1, cty);
   if ok == 0 { return 0 };
-  r := call has_loose_b_var_b_go(0, body);
+  r := call has_loose_b_var_b_go(⟪CWF⟫, 0, body);
   return r
 }
 
@@ -726,32 +727,34 @@ def structProjBodiesL : FunDecl :=
 
 /-! ## `StructParts.lean`: `mentionsConst` (one twin for the pure walk and the memo) -/
 
-/-- `mentions_const_go(T, h)`: does the constant `T` occur in `h`? A syntactic walk (`fvar`
-annotations included; a `.proj` node names its structure), through the `mc` memo for every kind
-but `bvar`/`sort`/`lit`/`const` (unlike `hasLooseBVarBGo`, `fvar` is memoized: it recurses into the
-annotation). Not short-circuiting (`||` here combines two/three already-computed results). The
-twin's `fuel`/`memo` are both dropped, as in `hasLooseBVarBGo`. -/
+/-- `mentions_const_go(f, T, h)`: does the constant `T` occur in `h`? The twin's fuel `f` (abort at
+`0`, the children at `f - 1`), then a syntactic walk (`fvar` annotations included; a `.proj` node
+names its structure), through the `mc` memo for every kind but `bvar`/`sort`/`lit`/`const` (unlike
+`hasLooseBVarBGo`, `fvar` is memoized: it recurses into the annotation). Not short-circuiting (`||`
+here combines two/three already-computed results). The twin's `memo` is dropped (the memo is the
+`mc` array, as in `hasLooseBVarBGo`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:263-304 ConRon.Arena.mentionsConstGo
 @[l_impl ConRon.Arena.mentionsConstGo]
 def mentionsConstGoL : FunDecl :=
-  lfn (T, h) locals (g, x, y, z, fd, j, d, r, b1, b2, b3, fd2, j2, d2, u2) {
+  lfn (f, T, h) locals (g, x, y, z, fd, j, d, r, b1, b2, b3, fd2, j2, d2, u2) {
+  if f == 0 { abort };
   (g, x, y, z) := call e_view(h);
   if g == 0 || g == 2 || g == 8 { return 0 };
   if g == 3 { return u64(x == T) };
   (fd, j, d) := call mc_find(h, 0);
   if fd != 0 { return MCM.u64[j * 4 + 3] };
-  if g == 1 { r := call mentions_const_go(T, y) }
+  if g == 1 { r := call mentions_const_go(f - 1, T, y) }
   else if g == 4 || g == 5 || g == 6 {
-    b1 := call mentions_const_go(T, x);
-    b2 := call mentions_const_go(T, y);
+    b1 := call mentions_const_go(f - 1, T, x);
+    b2 := call mentions_const_go(f - 1, T, y);
     r := b1 | b2
   } else if g == 7 {
-    b1 := call mentions_const_go(T, x);
-    b2 := call mentions_const_go(T, y);
-    b3 := call mentions_const_go(T, z);
+    b1 := call mentions_const_go(f - 1, T, x);
+    b2 := call mentions_const_go(f - 1, T, y);
+    b3 := call mentions_const_go(f - 1, T, z);
     r := b1 | b2 | b3
   } else {
-    b1 := call mentions_const_go(T, z);
+    b1 := call mentions_const_go(f - 1, T, z);
     r := u64(x == T) | b1
   };
   (fd2, j2, d2) := call mc_find(h, 0);
@@ -764,7 +767,7 @@ def mentionsConstGoL : FunDecl :=
 @[l_impl ConRon.Arena.mentionsConst]
 def mentionsConstL : FunDecl := lfn (T, e) locals (u, r) {
   u := call mc_clear();
-  r := call mentions_const_go(T, e);
+  r := call mentions_const_go(⟪CWF⟫, T, e);
   return r
 }
 

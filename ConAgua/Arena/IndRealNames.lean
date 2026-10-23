@@ -64,8 +64,9 @@ theorem internM_lt (hS : S.WF) {m : Mem} {on : Bool} {tbP tbS : Tbl α (Idx k) �
     (hR : StoreR S R hs m on tbP tbS) {sk : Word} {pk : Word → Bool} {vs rs₀ rs₁ : List Word}
     {mt₀ mt₁ : Word → Bool} {x₀ x₁ : Word} (hP0 : ProbeOKG S m 0 mt₀ x₀ rs₀)
     (hP1 : ProbeOKG S m 1 mt₁ x₁ rs₁) (hpk : ∀ t, pk t = true → PushRoom S m t) {w : Word}
-    {m' : Mem} (hI : internM S m sk pk vs rs₀ rs₁ = some (w, m')) : w.toNat < 2 ^ 32 := by
-  obtain ⟨-, -, hT0, hT1⟩ := hR
+    {m' : Mem} {H : Mem → Word → Word → Word} (hI : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) :
+    w.toNat < 2 ^ 32 := by
+  obtain ⟨-, -, hT0, hT1, -⟩ := hR
   have htag := hS.tag
   simp only [internM] at hI
   split at hI
@@ -86,14 +87,12 @@ theorem internM_lt (hS : S.WF) {m : Mem} {on : Bool} {tbP tbS : Tbl α (Idx k) �
       exact hdW_lt32 _ htag _ _ (by decide) (probe_hit_lt S R hs hT1 hP1 ‹_› h1)
     split at hI
     · rename_i h
-      simp only [Option.some.injEq, Prod.mk.injEq] at hI
-      rw [← hI.1]
+      rw [(pushM_some S H m 1 vs _ w m' hI).1]
       exact hdW_lt32 _ htag _ _ (by decide) (hpk 1 h).1
     · simp at hI
   split at hI
   · rename_i h
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    rw [← hI.1]
+    rw [(pushM_some S H m 0 vs _ w m' hI).1]
     exact hdW_lt32 _ htag _ _ (by decide) (hpk 0 h).1
   · simp at hI
 

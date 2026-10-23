@@ -304,8 +304,8 @@ theorem cbcW_sim {p : Prog} (hP : CbcProg p) {fs : List FnName}
 constructors and parameters decoded below the tops and the walk memos well formed, the class
 reading at `r[0]` and the classes' majors at `(r[1], r[2])` (below the tops), the
 memos kept. Program facts: the lookups (`CbcProg`) and the write set of `class_read`,
-`class_read_classes` (`hcl`, as `check_block_tail`'s). -/
-@[refines ConRon.Arena.checkBlockClasses]
+`class_read_classes` (`hcl`, as `check_block_tail`'s). Under `StageR`; the census link is
+`checkBlockClasses_refinesC` (`IndT/RecGen21.lean`). -/
 theorem checkBlockClasses_refines {p : Prog} (hP : CbcProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
     (hfc : "class_read_classes" ∈ fs) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
