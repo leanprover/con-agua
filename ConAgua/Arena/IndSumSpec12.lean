@@ -534,7 +534,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       stubM_spec p "check_constant_val" (n + 2), stripPis_specF p hP.strip (n + 2),
-      srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
+      srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
         hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr (n + 2),
       stubM_spec p "open_pis_at_fvars_f" (n + 2), stubM_spec p "fvar_type_ds" (n + 2),
       sdomsW_spec p hP.hg hP.hsd (n + 2), ctlW_spec p hP n] <;>

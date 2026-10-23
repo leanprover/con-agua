@@ -35,7 +35,7 @@ open L.Arena
 
 /-! ## A handle an `intern_*` model returns is below `2^32` -/
 
-theorem hdW_lt (tag : UInt32) (htag : tag.toNat < 16) (t i : Word) (ht : t ≤ 1)
+theorem hdW_lt32 (tag : UInt32) (htag : tag.toNat < 16) (t i : Word) (ht : t ≤ 1)
     (hi : i.toNat < 2 ^ 27) : (hdW tag.toUInt64 t i).toNat < 2 ^ 32 := by
   have ht' : t.toNat ≤ 1 := UInt64.le_iff_toNat_le.mp ht
   have htg : tag.toUInt64.toNat = tag.toNat := UInt32.toNat_toUInt64 tag
@@ -74,7 +74,7 @@ theorem internM_lt (hS : S.WF) {m : Mem} {on : Bool} {tbP tbS : Tbl α (Idx k) �
   · rename_i _ h
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     rw [← hI.1]
-    exact hdW_lt _ htag _ _ (by decide)
+    exact hdW_lt32 _ htag _ _ (by decide)
       (probe_hit_lt S R hs hT0 hP0 (by grind) h.2)
   split at hI
   · split at hI
@@ -83,18 +83,18 @@ theorem internM_lt (hS : S.WF) {m : Mem} {on : Bool} {tbP tbS : Tbl α (Idx k) �
     · rename_i _ _ h1
       simp only [Option.some.injEq, Prod.mk.injEq] at hI
       rw [← hI.1]
-      exact hdW_lt _ htag _ _ (by decide) (probe_hit_lt S R hs hT1 hP1 ‹_› h1)
+      exact hdW_lt32 _ htag _ _ (by decide) (probe_hit_lt S R hs hT1 hP1 ‹_› h1)
     split at hI
     · rename_i h
       simp only [Option.some.injEq, Prod.mk.injEq] at hI
       rw [← hI.1]
-      exact hdW_lt _ htag _ _ (by decide) (hpk 1 h).1
+      exact hdW_lt32 _ htag _ _ (by decide) (hpk 1 h).1
     · simp at hI
   split at hI
   · rename_i h
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     rw [← hI.1]
-    exact hdW_lt _ htag _ _ (by decide) (hpk 0 h).1
+    exact hdW_lt32 _ htag _ _ (by decide) (hpk 0 h).1
   · simp at hI
 
 end lt
@@ -172,7 +172,7 @@ theorem poolRoom_specW (p : Prog) (hp : p.lookup "pool_room" = some L.Stubs.pool
     finish [prW]
 
 /-- No call returns at fuel `0`. -/
-theorem callW_zero {p : Prog} {f : FnName} {vs : List Word} {m m' : Mem} {r : List Word}
+theorem callW_zero_false {p : Prog} {f : FnName} {vs : List Word} {m m' : Mem} {r : List Word}
     (h : callW p 0 f vs m = some (r, m')) : False := by
   obtain ⟨_, _, h'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (invoke_exec_zero p f vs (fun s => s = ⟨m, Locals.init []⟩)) h
@@ -182,7 +182,7 @@ theorem callW_pr {p : Prog} (hp : p.lookup "pool_room" = some L.Stubs.poolRoom) 
     {m m' : Mem} {k : Word} {r : List Word} (h : callW p n "pool_room" [k] m = some (r, m')) :
     prW m k = some (r.headD 0, m') := by
   cases n with
-  | zero => exact (callW_zero h).elim
+  | zero => exact (callW_zero_false h).elim
   | succ n =>
     obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (poolRoom_specW p hp n _ k) h
     rw [← hs']; exact hW
@@ -229,24 +229,24 @@ theorem grows_set_above {m m' : Mem} (hg : Grows m m') {q x : Word} (hq : m.top.
     exact hag j hj
 
 /-- **The model of `iw_pool(s, d, l)`**: `POOL[d + j] := IW[s + j]`. -/
-def ipW : Nat → Mem → Word → Word → Word → Option Mem
+def iwpW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, s, d, l =>
     if l = 0 then some m
-    else ipW n (m.set64 POOL d (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1)
+    else iwpW n (m.set64 POOL d (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1)
 
-theorem ipW_nil (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
-    ipW (n + 1) m s d l = some m := by simp [ipW, h]
-theorem ipW_cons (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
-    ipW (n + 1) m s d l = ipW n (m.set64 POOL d (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1) := by
-  simp [ipW, h]
-grind_pattern [arena_grind] ipW_nil => ipW (n + 1) m s d l
-grind_pattern [arena_grind] ipW_cons => ipW (n + 1) m s d l
+theorem iwpW_nil (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
+    iwpW (n + 1) m s d l = some m := by simp [iwpW, h]
+theorem iwpW_cons (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
+    iwpW (n + 1) m s d l = iwpW n (m.set64 POOL d (rdW (m.arr64 IW) s)) (s + 1) (d + 1) (l - 1) := by
+  simp [iwpW, h]
+grind_pattern [arena_grind] iwpW_nil => iwpW (n + 1) m s d l
+grind_pattern [arena_grind] iwpW_cons => iwpW (n + 1) m s d l
 
 theorem iwPool_specW (p : Prog) (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) (n : Nat) :
     ∀ (s₀ : St) (s d l : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "iw_pool" [s, d, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ ipW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ iwpW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ s d l; rw [invoke_eq _ hp]; simp only [callFn, L.Stubs.iwPool]; vcgen [exec] <;> grind
@@ -260,13 +260,13 @@ theorem iwPool_specW (p : Prog) (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) 
 
 theorem callW_ip {p : Prog} (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) {n : Nat}
     {m m' : Mem} {s d l : Word} {r : List Word} (h : callW p n "iw_pool" [s, d, l] m = some (r, m')) :
-    ipW n m s d l = some m' := by
+    iwpW n m s d l = some m' := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwPool_specW p hp n _ s d l) h
   rw [← hs']; exact hW
 
 /-- **`iw_pool` copies the `IW` slice to the pool** above the top: a growth (given one), the
 slice, nothing written below `d`, and nothing else written. -/
-theorem ipW_ok {m₀ : Mem} : ∀ (n : Nat) (m m' : Mem) (s d l : Word), ipW n m s d l = some m' →
+theorem iwpW_ok {m₀ : Mem} : ∀ (n : Nat) (m m' : Mem) (s d l : Word), iwpW n m s d l = some m' →
     Grows m₀ m → m₀.top.toNat ≤ d.toNat → d.toNat + l.toNat ≤ (m.arr64 POOL).size →
     (m.arr64 POOL).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 →
     Grows m₀ m' ∧ MemFrame [POOL] [] m m' ∧
@@ -274,13 +274,13 @@ theorem ipW_ok {m₀ : Mem} : ∀ (n : Nat) (m m' : Mem) (s d l : Word), ipW n m
       sliceL (m'.arr64 POOL) d.toNat l.toNat = sliceL (m.arr64 IW) s.toNat l.toNat := by
   intro n
   induction n with
-  | zero => intro m m' s d l h; simp [ipW] at h
+  | zero => intro m m' s d l h; simp [iwpW] at h
   | succ n ih =>
     intro m m' s d l h hg hd hdl hsz hs
     by_cases hl : l = 0
-    · rw [ipW_nil n m s d l hl] at h; cases h; subst hl
+    · rw [iwpW_nil n m s d l hl] at h; cases h; subst hl
       exact ⟨hg, MemFrame.refl _ _ _, fun _ _ => rfl, by simp [sliceL]⟩
-    rw [ipW_cons n m s d l hl] at h
+    rw [iwpW_cons n m s d l hl] at h
     have hl1 : 1 ≤ l.toNat := by
       rcases Nat.eq_zero_or_pos l.toNat with h | h
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hl
@@ -366,7 +366,7 @@ theorem nameRec_specW (p : Prog) (hp : p.lookup "name_rec" = some L.Stubs.nameRe
       callW_spec p n "pool_room", callW_spec p n "intern_nstr"] <;>
     finish [nrW, recBytes]
 
-theorem strWords_rec : strWords "rec" = [114, 101, 99] := by decide
+theorem strWords_recB : strWords "rec" = [114, 101, 99] := by decide
 
 /-- **The bytes after the reserved room grow the pool and hold `rec`.** -/
 theorem recBytes_ok (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 3 < 2 ^ 64)
@@ -389,7 +389,7 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 3 < 2 ^ 64
   have hsz : ((recBytes (m.set64 CTL 0 (m.top + 3)) m.top).arr64 POOL).size = (m.arr64 POOL).size := by
     simp only [recBytes, size_set64]
   refine ⟨g3, by simp only [SliceOK, htop, e3]; simp, ?_, hsz⟩
-  rw [strWords_rec]
+  rw [strWords_recB]
   simp only [sliceL, recBytes, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide),
     Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2,
     List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
@@ -403,7 +403,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   intro m m' a r hc hS
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
-  | zero => exact (callW_zero hc').elim
+  | zero => exact (callW_zero_false hc').elim
   | succ n =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (nameRec_specW nrProg rfl n _ x) hc'
@@ -510,7 +510,7 @@ theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs
     finish [ilwW]
 
 /-- A decoded handle slice is the words of its list, inside the array. -/
-theorem hslice_sliceL {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? a o l = some us →
+theorem hslice_lsWords {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslice? a o l = some us →
     sliceL a o l = lsWords us ∧ (0 < l → o + l ≤ a.size)
   | 0, o, us, h => by
     simp [hslice?] at h; subst h; simp [sliceL, lsWords]
@@ -518,7 +518,7 @@ theorem hslice_sliceL {a : Array Word} : ∀ (l o : Nat) (us : List LIdx), hslic
     rw [hslice?_succ] at h
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨x, hx, ys, hys, rfl⟩ := h
-    obtain ⟨ih, hb⟩ := hslice_sliceL l (o + 1) ys hys
+    obtain ⟨ih, hb⟩ := hslice_lsWords l (o + 1) ys hys
     cases hw : a[o]? with
     | none => simp [hd?, hw] at hx
     | some w =>
@@ -545,7 +545,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   rintro m m' a r hc ⟨hS, hd⟩
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
-  | zero => exact (callW_zero hc').elim
+  | zero => exact (callW_zero_false hc').elim
   | succ n =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internLsIw_specW ilProg rfl n _ o l) hc'
@@ -585,13 +585,13 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have g0 : Grows m m₁ := by rw [hm₁]; exact grows_top m _ hc0 (by omega) (by omega)
   have hpsz₁ : (m₁.arr64 POOL).size = (m.arr64 POOL).size := by rw [hm₁, size_set64]
   have hiw₁ : m₁.arr64 IW = m.arr64 IW := by rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hsl, hb⟩ := hslice_sliceL l.toNat o.toNat us hd
+  obtain ⟨hsl, hb⟩ := hslice_lsWords l.toNat o.toNat us hd
   have hIW := hS.2.2.2.1
   have hol : o.toNat + l.toNat < 2 ^ 64 := by
     rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
     · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)
     · have := hb h0; simp only [iwA] at this; omega
-  obtain ⟨hg, hf₂, -, hsl₂⟩ := ipW_ok n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _)
+  obtain ⟨hg, hf₂, -, hsl₂⟩ := iwpW_ok n m₁ m₂ o m.top l (callW_ip rfl h2) g0 (Nat.le_refl _)
     (by rw [hpsz₁]; exact hroom) (by rw [hpsz₁]; exact hps) hol
   rw [hiw₁] at hsl₂
   have hpsz₂ : (m₂.arr64 POOL).size = (m.arr64 POOL).size := by rw [hf₂.2.2.1 POOL, hpsz₁]
@@ -680,7 +680,7 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   intro m m' a r hc hS
   obtain ⟨n', hc'⟩ := callF_run hc
   cases n' with
-  | zero => exact (callW_zero hc').elim
+  | zero => exact (callW_zero_false hc').elim
   | succ n =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (ptnW_spec' ptProg rfl n _ t) hc'

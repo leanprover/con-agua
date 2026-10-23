@@ -336,7 +336,7 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hpf : p.lookup "param_find" = some paramFind) (hpp : p.lookup "param_push" = some paramPush)
   (hip : p.lookup "intern_param" = some internParam)
   (hplg : p.lookup "param_levels_go" = some paramLevelsGoL)
-  (hpl : p.lookup "param_levels" = some paramLevelsL)
+  (hpl : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p)
   (hcf : p.lookup "const_find" = some constFind) (hcp : p.lookup "const_push" = some constPush)
   (hic : p.lookup "intern_const" = some internConst)
   (hbf : p.lookup "bvar_find" = some bvarFind) (hbp : p.lookup "bvar_push" = some bvarPush)
@@ -345,7 +345,7 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (heq : p.lookup "sl_eq" = some slEq)
   (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL)
-include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp
+include ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps heq hp
 
 /-- **`struct_ctor_resid_ok` refines `structCtorResidOk`** (through the stubs `get_app_fn`,
 `get_app_args`, `intern_ls_iw`). -/
@@ -362,7 +362,7 @@ theorem structCtorResidOk_refines (k : Nat) (s₀ : St) (a₀ : AState)
       KeepPost dn vis fe decW0B s₀.mem s'.mem
         (AM.st (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀) r
         (AM.res (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)) a₀); ⊤⦄ := by
-  refine triple_post (srW_spec p ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps
+  refine triple_post (srW_spec p ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps
     heq hp k s₀ T lo ll nP o nIdx cbody) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hpost⟩ := srW_ok dn vis fe k _ _ _ _ _ _ _ _ _ _ _ _ hm hS hT hcb hd hb ht hon hni
