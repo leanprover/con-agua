@@ -371,7 +371,11 @@ def locate(tree, name):
     for k in range(len(parts), 0, -1):
         hits = idx.get(".".join(parts[:k]))
         if hits:
-            p, i = hits[0]
+            # a `private` declaration is not the one a qualified name means (CoreTest.lean's
+            # private `internExprList` beside Intern.lean's): prefer a public hit
+            pub = [(p, i) for p, i in hits
+                   if not re.match(r"^(?:@\[[^\]]*\]\s*)*private\b", tree.read(p)[i])]
+            p, i = (pub or hits)[0]
             a, b = extend_block(tree.read(p), i)
             return p, a, b, ".".join(parts[:k])
     return None
