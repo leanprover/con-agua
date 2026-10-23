@@ -234,7 +234,7 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
       BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
-      | exact ite_bne _
+      | exact ite_bneC _
   ghash := nshash_ok p
   ihash := by
     intro n s₀

@@ -231,7 +231,7 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
       BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
-      | exact ite_bne _
+      | exact ite_bneC _
   ghash := lshash_ok p
   ihash := by
     intro n s₀
