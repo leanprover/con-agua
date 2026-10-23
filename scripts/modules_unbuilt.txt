@@ -6,4 +6,3 @@ ConAgua.Spike.ScaleBase        # early scaling spike (lane scale), kept for refe
 ConAgua.Spike.ScaleFlat
 ConAgua.Spike.ScaleGrind
 ConAgua.Spike.ScaleNested
-ConAgua.Arena.RecGenSpec20     # TEMPORARY: lane indproofs4 decides (add to globs or delete)

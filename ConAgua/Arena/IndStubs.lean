@@ -162,25 +162,6 @@ theorem abstract1Fast_spec (f e d k : Word) (he : H e) :
     RelAM "abstract1_fast" [f, e, d, k] (StageR dn vis fe)
       (abstract1Fast f.toNat (decI e) d.toNat k.toNat) (KeepPost dn vis fe decW0E) := sorry
 
-/-- `bvar_b(fuel, e)`. -/
-theorem bvarB_spec (f e : Word) (he : H e) :
-    RelAM "bvar_b" [f, e] (StageR dn vis fe)
-      (bvarB f.toNat (decI e)) (KeepPost dn vis fe decW0Nat) := sorry
-
-/-- `fvar_b(fuel, e)`. -/
-theorem fvarB_spec (f e : Word) (he : H e) :
-    RelAM "fvar_b" [f, e] (StageR dn vis fe)
-      (fvarB f.toNat (decI e)) (KeepPost dn vis fe decW0Nat) := sorry
-
-/-- `has_fvar_fast(fuel, e)`. -/
-theorem hasFvarFast_spec (f e : Word) (he : H e) :
-    RelAM "has_fvar_fast" [f, e] (StageR dn vis fe)
-      (hasFvarFast f.toNat (decI e)) (KeepPost dn vis fe decW0B) := sorry
-
-/-- `loose_bvars_bounded_fast(fuel, k, e)`. -/
-theorem looseBVarsBoundedFast_spec (f k e : Word) (he : H e) :
-    RelAM "loose_bvars_bounded_fast" [f, k, e] (StageR dn vis fe)
-      (looseBVarsBoundedFast f.toNat k.toNat (decI e)) (KeepPost dn vis fe decW0B) := sorry
 
 /-- `all_level_params_defined(lps.off, lps.len, e)`. -/
 theorem allLevelParamsDefined_spec (o l e : Word) (he : H e) (lps : List NIdx) :

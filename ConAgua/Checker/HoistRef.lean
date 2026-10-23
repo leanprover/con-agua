@@ -64,7 +64,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     (hord : ord.toNat + cw.toNat ≤ iwTop m) (hP : PinsR m a.pins)
     (h : hNatOpGroundW p n m ord cw = some (r, m')) :
     ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧ OrdR m' r res.1 ∧
-      ArenaR m' a ∧ IWOK m' ∧ IWGrow m m' ∧ r.toNat + cw.toNat ≤ iwTop m' ∧ PinsR m' a.pins := by
+      ArenaR m' a ∧ IWOK m' ∧ IWGrow m m' ∧ r.toNat + cw.toNat ≤ iwTop m' ∧ PinsR m' a.pins ∧
+      MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m' := by
   have hsz := hI.2.2.1
   have htsz : iwTop m ≤ (m.arr64 IW).size := hI.1
   cases n with
@@ -179,6 +180,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   obtain ⟨hm6, hav⟩ := hoistAny_ok n m₅ m₆ tg cw 0 av T hT₅ (by have := hE₅.rg3; omega) hlt₅ hy
   subst m₆
   simp only [UInt64.toNat_zero] at hav
+  have hfrm₅ : MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m₅ :=
+    (hfA.mono (by simp) (by simp)).trans (hlow₅.1.mono (by simp) (by simp))
   -- the pool only grew up to here
   have hgrow₅ : IWGrow m m₅ := by
     have hER : m₅.arr64 EREC = m.arr64 EREC := by
@@ -198,7 +201,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have hempty : T.isEmpty = true :=
       tgt_isEmpty T _ hT₅.2 (fun j _ hj => (hav.mp hav0) j (Nat.zero_le _) hj)
     refine ⟨(ds, #[]), by rw [hrun0, hempty]; rfl, hc, hE₅.ordR, hE₅.arena, hE₅.iwok,
-      hgrow₅, by have := hgrow₅.1; omega, hP₅⟩
+      hgrow₅, by have := hgrow₅.1; omega, hP₅, hfrm₅⟩
   · rw [hNatOpGroundW.k1.arm2 _ _ _ _ _ _ _ hav0] at h
     have hne : T.isEmpty = false := by
       cases e : T.isEmpty with
@@ -225,7 +228,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have hD' : m'.arr64 DECL = m₅.arr64 DECL := hf'.1 DECL (by decide) (by decide)
     have hP' : m'.arr64 DLP = m₅.arr64 DLP := hf'.1 DLP (by decide) (by decide)
     refine ⟨applyHoist ds T, by rw [hrun0, hne]; rfl, by rw [hres1]; simp [hlen],
-      ?_, ?_, hI', hgrow₅.trans hgrow', hout', hP₅.congr (hf'.1 PINS (by decide) (by decide))⟩
+      ?_, ?_, hI', hgrow₅.trans hgrow', hout', hP₅.congr (hf'.1 PINS (by decide) (by decide)),
+      hfrm₅.trans (hf'.mono (by simp) (by simp))⟩
     · intro k hk
       have hk' : k < cw.toNat := by rw [hres1] at hk; simpa [hlen] using hk
       have hkk := hget k hk'
@@ -256,7 +260,8 @@ theorem hoistNatOpGround_refines (p : Prog) (hp : HoistProg p) (hx : HoistExt p)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "hoist_nat_op_ground" [ord, cw]
     ⦃fun r s' => ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧
       OrdR s'.mem (r.headD 0) res.1 ∧ ArenaR s'.mem a ∧ IWOK s'.mem ∧ IWGrow s₀.mem s'.mem ∧
-      (r.headD 0).toNat + cw.toNat ≤ iwTop s'.mem ∧ PinsR s'.mem a.pins; ⊤⦄ :=
+      (r.headD 0).toNat + cw.toNat ≤ iwTop s'.mem ∧ PinsR s'.mem a.pins ∧
+      MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] s₀.mem s'.mem; ⊤⦄ :=
   triple_post (hoistNatOpGround_spec p hp hx n s₀ ord cw) (fun r s' h =>
     hNatOpGround_ok p hx n s₀.mem s'.mem a ds ord cw (r.headD 0) hA hseen hnix hO hc hc60 hW hI hord hP h.2)
 

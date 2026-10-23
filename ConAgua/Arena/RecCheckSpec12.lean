@@ -13,6 +13,8 @@ abort; the twin's `Nat` sum cannot wrap). Write sets of the callees (`MFr`), so 
 (`RcMR`) are carried.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

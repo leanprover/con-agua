@@ -331,10 +331,10 @@ def decRead (m' : Mem) (r : List Word) : Option ClassRead → Prop
       ∃ so sl, iwN m' (r.tail.headD 0).toNat = some so ∧ iwN m' ((r.tail.headD 0).toNat + 1) = some sl ∧
         SPL decCS m' so sl cr.slots
 
-/-- The recursors decoded below the tops, each with a word-sized major index. -/
+/-- The recursors decoded below the tops, their slice word-addressable (a major index past
+`2^64 - 2` is `class_read_rec_cls`' capacity abort, lane `indproofs4`). -/
 def RecsDec (m : Mem) (ro rl : Word) (recs : List RecShape) : Prop :=
-  DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) m recs ∧ ro.toNat + rl.toNat < 2 ^ 64 ∧
-    ∀ R ∈ recs, R.mI + 1 < 2 ^ 64
+  DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) m recs ∧ ro.toNat + rl.toNat < 2 ^ 64
 
 theorem RecsDec.dec {m m' : Mem} {ro rl : Word} {recs : List RecShape} (h : RecsDec m ro rl recs)
     (hg : IWGrow m m') : decPL m' (decRS m') ro.toNat rl.toNat = some recs :=
@@ -371,7 +371,7 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ CrRes b.2 b.1 x) := by
     rintro ⟨r, m'⟩ h
     exact crW_ok dn vis fe N m1 m' a nP _ _ ro rl r recs _ h hS1 (hrecs.dec hg1)
-      (fun m3 hg3 => hrecs.dec (hg1.trans hg3)) hd1 ht1 hrecs.2.1 hrecs.2.2
+      (fun m3 hg3 => hrecs.dec (hg1.trans hg3)) hd1 ht1 hrecs.2
   refine RSim.bind (K := frK2 so sl) rfl hcr ?_
   rintro ⟨r2, m2⟩ x a2 - ⟨hS2, hg2, hc2⟩
   dsimp only at hS2 hg2 hc2

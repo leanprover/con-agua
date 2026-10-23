@@ -148,7 +148,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1744 functions, 0 of them stubs.
+1751 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -824,6 +824,7 @@ def checkerProg : Prog := [
   ("decl_code", L.Front.Fields.declCodeF),
   ("decl_cv", L.Front.declCv),
   ("decl_declares", L.Checker.declDeclaresL),
+  ("decl_declares_go", L.Checker.declDeclaresGoL),
   ("decl_key", L.Checker.declKeyL),
   ("decl_kind", L.Front.declKind),
   ("decl_push", L.Front.declPush),
@@ -1676,7 +1677,13 @@ def checkerProg : Prog := [
   ("pn_put", L.Arena.memoPutG L.Arena.pnSch),
   ("pool_copy", L.Ind.poolCopy),
   ("pool_room", L.Stubs.poolRoom),
-  ("prelude_join", L.Checker.preludeJoinL),
+  ("prep_back", L.Checker.prepBackL),
+  ("prep_back_rec", L.Checker.prepBackRecL),
+  ("prep_copy", L.Checker.prepCopyL),
+  ("prep_copy_rec", L.Checker.prepCopyRecL),
+  ("prep_find", L.Checker.prepFindL),
+  ("prep_front", L.Checker.prepFrontL),
+  ("prep_rest", L.Checker.prepRestL),
   ("prepare_major", L.Arena.prepareMajorL),
   ("prepare_prelude", L.Checker.preparePreludeL),
   ("proj_a", L.Arena.projA),

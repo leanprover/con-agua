@@ -36,13 +36,17 @@ def wordArrays : Nat := 214
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
 def ctlMin : Nat := 256
 
-/-- The body of `cap_check()`: every word array shorter than `2^63` words (handles, offsets and
-counts are words; `arenaR_init`'s pool bound), and `CTL` at least `ctlMin` words. -/
+/-- The body of `cap_check()`: every word array shorter than `2^62` words (handles, offsets and
+counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays), `CTL` at
+least `ctlMin` words, and the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
+`0` is a count, `StateDR`). -/
 def capCheckBody : Stmt :=
   (List.range wordArrays).foldr
-    (fun b s => .seq (.ite (.cmp .ule (.const 9223372036854775808) (.len64 b)) .abort .skip) s)
+    (fun b s => .seq (.ite (.cmp .ule (.const 4611686018427387904) (.len64 b)) .abort .skip) s)
     (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
-      (.ret [.const 0]))
+      (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
+        (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
+          (.ret [.const 0]))))
 
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
 the checker cannot work with declines; any larger one is fine). -/

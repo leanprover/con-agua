@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclDivMod4
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndCopy
 
@@ -12,6 +13,8 @@ The substitution functions `subst_const0`, `subst_const_all` belong to helper `d
 hypotheses `SubstC0`, `SubstCAll` (`CallRef`s at the stage relation, universally quantified over
 the handles), to be discharged by `substConst0_refines` and its `substConstAll` sibling.
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 set_option linter.deprecated false
@@ -49,6 +52,8 @@ structure DmProg5 (p : Prog) : Prop extends DmProg2 p where
   lSubstConst0List : p.lookup "subst_const0_list" = some substConst0ListL
   lConstsResolveAll : p.lookup "consts_resolve_all" = some constsResolveAllL
   lDivModCertGuard : p.lookup "div_mod_cert_guard" = some divModCertGuardL
+  bvb : BvbProg p
+  hf : HfF p
 
 section applied
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -422,9 +427,9 @@ theorem constsResolveAll_refines (hD : DmProg5 p) (o l : Word) (hyps : List EIdx
 def dmCgW (p : Prog) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
     Option (List Word × Mem) :=
   ntBW (callW p n "subst_const_all" [c, annVal, 4000000000, proof] m) fun r1 m1 =>
-  ntBW (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
+  ntBW (lbbF m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
-  ntBW (stubM "has_fvar_fast" m2 [4000000000, r1.headD 0]) fun r3 m3 =>
+  ntBW (hffF m2 [4000000000, r1.headD 0]) fun r3 m3 =>
   if r3.headD 0 ≠ 0 then some ([0], m3) else
   ntBW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
@@ -437,7 +442,7 @@ def dmCgW (p : Prog) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
   ntBW (stubM "consts_resolve_ffast" m8 [vs, r8.headD 0]) fun r9 m9 => some ([r9.headD 0], m9)
 
 set_option maxHeartbeats 3200000 in
-theorem cg_specW (p : Prog) (hp : p.lookup "div_mod_cert_guard" = some divModCertGuardL)
+theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_cert_guard" = some divModCertGuardL)
     (n : Nat) (s₀ : St) (vs c annVal ho hl eqE proof : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_guard" [vs, c, annVal, ho, hl, eqE, proof]
     ⦃fun res s' => LocEq s' s₀ ∧ dmCgW p n s₀.mem vs c annVal ho hl eqE proof = some (res, s'.mem); ⊤⦄ := by
@@ -445,7 +450,7 @@ theorem cg_specW (p : Prog) (hp : p.lookup "div_mod_cert_guard" = some divModCer
   simp only [callFn, divModCertGuardL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "loose_bvars_bounded_fast" n, stubM_spec p "has_fvar_fast" n,
+      lbbF_spec p hb n, hffF_spec p hf n,
       stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n,
       callW_spec p n "subst_const_all", callW_spec p n "subst_const0_list",
       callW_spec p n "consts_resolve_all", callW_spec p n "subst_const0"] <;>
@@ -475,7 +480,7 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hann, heq, hpr, hd, hb⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmCgW p k mq vis c annVal ho hl eqE proof)
-    (cg_specW p hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
+    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
   unfold dmCgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- subst_const_all
@@ -486,13 +491,13 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
   rw [h1, bW_some] at hw
   obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hsA c annVal proof hc hann hpr k m s r1 m1 hS h1
   -- loose bvars
-  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0] with
+  cases h2 : lbbF m1 [4000000000, 0, r1.headD 0] with
   | none => rw [h2] at hw; simp at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hS1
+    lbbF_ok dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hS1
   rw [fuelW_eq, h0w, hx1] at hrun2
   by_cases z2 : r2.headD 0 = 0
   · rw [if_pos z2] at hw
@@ -505,12 +510,12 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
   rw [if_neg z2] at hw
   have hx2 := decW0B_true hd2 z2
   -- has fvar
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, r1.headD 0] with
+  cases h3 : hffF m2 [4000000000, r1.headD 0] with
   | none => rw [h3] at hw; simp at hw
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, bW_some] at hw
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := hasFvarFast_spec dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hS2
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := hffF_ok dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hS2
   rw [fuelW_eq, hx1] at hrun3
   by_cases z3 : r3.headD 0 ≠ 0
   · rw [if_pos z3] at hw

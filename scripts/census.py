@@ -65,6 +65,8 @@ COMPLETE_BY_PARTS = {
     "ConRon.Arena.internLNode": ("ConRon.Arena.internLNode", ["zero", "succ", "max", "imax", "param"]),
     "ConRon.Arena.internNNode": ("ConRon.Arena.internNNode", ["anon", "str", "num"]),
     "ConRon.Arena.Frontend.parseNameEntryD": ("ConRon.Arena.Frontend.parseNameEntryD", ["str", "num"]),
+    "ConRon.Arena.BasisKind.decls": ("ConRon.Arena.BasisKind.decls", ["the four kinds basisPinHit tries", "the quotient block"]),
+    "ConRon.Arena.BasisKind.declsA": ("ConRon.Arena.BasisKind.declsA", ["the four kinds basisPinHit tries", "the quotient block"]),
     "ConRon.Arena.Frontend.processLineCoreD": ("ConRon.Arena.Frontend.processLineCoreD",
                                                ["axiom, def, thm, opaque, quot", "inductive"]),
 }

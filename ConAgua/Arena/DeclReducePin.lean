@@ -136,6 +136,8 @@ structure CrpProg (p : Prog) : Prop where
   ap : p.lookup "app_push" = some appPush
   ia : p.lookup "intern_app" = some internApp
   ma : p.lookup "mk_app" = some mkApp
+  bvb : BvbProg p
+  hf : HfF p
 
 set_option maxHeartbeats 1600000 in
 theorem crp_specW (h : CrpProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis vis2 c v : Word) :
@@ -212,7 +214,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, crpK3_some] at hW
   obtain ⟨s3, hs3, -, hok3, hS3, hg3, hb3, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (reducePinGuard_refines p h.red.pa h.rdp h.rpg n ⟨s2.mem, Locals.init []⟩ a2 dn fe vis c hS2 hc h.red.rom)
+    (reducePinGuard_refines p h.red.pa h.bvb h.hf h.rdp h.rpg n ⟨s2.mem, Locals.init []⟩ a2 dn fe vis c hS2 hc h.red.rom)
     h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
