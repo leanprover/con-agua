@@ -223,7 +223,7 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
     rw [partsDrop3] at hbl hbe
     simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
-    have h2 := partsSimStub (gafF_ok dn vis fe CWF _ hbl) hS1
+    have h2 := partsSimW (gafF_ok dn vis fe CWF _ hbl) hS1
     rw [CWF_eq, hbe] at h2
     show Sim (ctmK2 n no nl lvls _) (getAppFn coreWalkFuel e1 >>= fun hd =>
       ConRon.Arena.memberIdxAt? names (decI lvls) hd) a1 _

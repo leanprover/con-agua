@@ -177,6 +177,9 @@ macro_rules
 
 theorem MFr.ofStub {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
     (hf : f ∈ stubNames := by decide) : MFr [] [] m m' := MFr.stub hf h
+/-- Across `get_app_fn_f` (writes nothing). -/
+theorem MFr.ofGafF {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (gafF_frame h) (by simp) (by simp)
 /-- Across `strip_pis`/`strip_lams` (their write set, `stripF_frame`). -/
 theorem MFr.ofStripF {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg m args = some (r, m')) :
     MFr [] [] m m' := MFr.of_iw (stripF_frame h)
@@ -206,7 +209,7 @@ theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq =
 theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     MFr [] [] m m' := by
   unfold entryW entryK1 entryK2 entryK3 at h
-  mfr_auto h [stripW_mfr, MFr.ofStub, MFr.ofI1F]
+  mfr_auto h [stripW_mfr, MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
 theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
     ncGoW k m vis C co cl cs ol fp = some (r, m') → MFr [] [] m m'
@@ -286,7 +289,7 @@ theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
   unfold resHeadW resHeadK at h
-  mfr_auto h [MFr.ofStub, MFr.ofI1F]
+  mfr_auto h [MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
 theorem bvbW_mfr {n : Nat} {m m' : Mem} {h x : Word} (hb : bvbW n m h CWF = some (x, m')) : MFr [] [] m m' := by
   have hfr : BbFrame m m' := by

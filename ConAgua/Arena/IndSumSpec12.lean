@@ -319,7 +319,7 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have h4 := gafF_ok dn vis fe CWF xbw hxb
   rw [CWF_eq, hxbd] at h4
   refine Sim.bindK (K := ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw hd) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM h4 hS3) fun rf xfn m4 a4 hQ => ?_
+    (fun _ _ => rfl) (sumSim_of_relW h4 hS3) fun rf xfn m4 a4 hQ => ?_
   obtain ⟨hS4, hg4, hf32, hfd⟩ := hQ
   rw [ctlK4_some]
   -- `get_app_args_f`
