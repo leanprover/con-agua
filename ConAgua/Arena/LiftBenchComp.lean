@@ -29,7 +29,7 @@ def liftBench : FunDecl := lfn (n, k, shift, cutoff) locals (b, x, i, r) {
     i += 1
   };
   if k >> 63 != 0 { return x };
-  r := call lift_entry(x, shift, cutoff);
+  r := call lift_entry(x, shift, cutoff, 4000000000);
   return r
 }
 

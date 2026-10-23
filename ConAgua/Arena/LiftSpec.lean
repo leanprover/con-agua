@@ -22,13 +22,16 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-! ## `lift_entry(h, k, c)`: `liftLooseBVarsFast`, between two clears -/
+/-! ## `lift_entry(h, k, c, f)`: `liftLooseBVarsFast f k c h`, between two clears
+
+The walk's counter is the twin's fuel `f` (the entry's callers pass theirs: `coreWalkFuel`, or
+`instantiate1LiftGo`'s remaining fuel at a `bvar` leaf). -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:789-795 ConRon.Arena.liftLooseBVarsFast -/
 @[l_impl ConRon.Arena.liftLooseBVarsFast]
-def liftEntry : FunDecl := lfn (h, k, c) locals (r, u) {
+def liftEntry : FunDecl := lfn (h, k, c, f) locals (r, u) {
   u := call lf_clear();
-  r := call lift_go(h, c, k);
+  r := call lift_go(h, c, k, f);
   u := call lf_clear();
   return r
 }
