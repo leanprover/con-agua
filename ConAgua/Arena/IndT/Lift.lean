@@ -94,4 +94,85 @@ theorem RSim.liftC {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem
 
 end lift
 
+/-! ## The core's entry points under `StageC`
+
+The knot's `StageT` sims (`Base.lean`) with con-ron's `*_crun` (`Bridge/Inductives/Rel.lean`: from
+`CheckOK`, the input's denotation and scoping, the twin's run is a `CoreStep` and its answer
+denotes) and `AbsOK` across the call (`absOK_core`). -/
+
+section entriesC
+variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+  {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+
+open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
+include hq henv in
+/-- `infer_type_core` read through `realCall p` under `StageC`. -/
+theorem inferC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (dep e : Word) (he : H e) {eP : ConLeche.Expr}
+    (hd : denoteE a.store (decI e) = some eP) (hw : ConLeche.Expr.WScoped dep.toNat eP) :
+    RSim (realCall p n "infer_type_core" [vis, dep, e] m)
+      (inferTypeCore V fe checkFuel dep.toNat (decI e)) a
+      (fun b a' x => StageC dn vis fe env b.2 a' ∧ IWGrow m b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2 ∧
+        ConRon.Bridge.CoreStep V env fe a a' ∧ ∃ w, denoteE a'.store x = some w ∧
+          ConLeche.Expr.WScoped dep.toNat w) := by
+  intro b hb
+  obtain ⟨x, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
+    RSim.coreAbs hq.closed (by decide) hA (inferT_rsim hq n hn hC.stageT dep e he) b hb
+  obtain ⟨hs, w, hw', hsc, -⟩ := infer_crun (ConRon.Bridge.CoreSpec.of_core rfl) henv hC.check hd hw hr
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs, w, hw', hsc⟩
+
+open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
+include hq henv in
+/-- `whnf_top` read through `realCall p` under `StageC`. -/
+theorem whnfC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (dep e : Word) (he : H e) {eP : ConLeche.Expr}
+    (hd : denoteE a.store (decI e) = some eP) (hw : ConLeche.Expr.WScoped dep.toNat eP) :
+    RSim (realCall p n "whnf_top" [vis, dep, e] m)
+      (whnf V fe checkFuel dep.toNat (decI e)) a
+      (fun b a' x => StageC dn vis fe env b.2 a' ∧ IWGrow m b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2 ∧
+        ConRon.Bridge.CoreStep V env fe a a' ∧ ∃ w, denoteE a'.store x = some w ∧
+          ConLeche.Expr.WScoped dep.toNat w) := by
+  intro b hb
+  obtain ⟨x, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
+    RSim.coreAbs hq.closed (by decide) hA (whnfT_rsim hq n hn hC.stageT dep e he) b hb
+  obtain ⟨hs, w, hw', hsc, -⟩ := whnf_crun (ConRon.Bridge.CoreSpec.of_core rfl) henv hC.check hd hw hr
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs, w, hw', hsc⟩
+
+open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
+include hq henv in
+/-- `ensure_sort_core` read through `realCall p` under `StageC`. -/
+theorem ensureSortC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (dep t : Word) (ht : H t) {tP : ConLeche.Expr}
+    (hd : denoteE a.store (decI t) = some tP) (hw : ConLeche.Expr.WScoped dep.toNat tP) :
+    RSim (realCall p n "ensure_sort_core" [vis, dep, t] m)
+      (ensureSortCore V fe checkFuel dep.toNat (decI t)) a
+      (fun b a' x => StageC dn vis fe env b.2 a' ∧ IWGrow m b.2 ∧ decW0L b.2 b.1 x ∧ AbsOK b.2 ∧
+        ConRon.Bridge.CoreStep V env fe a a' ∧ ∃ u, denoteL a'.store.ls x = some u) := by
+  intro b hb
+  obtain ⟨x, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
+    RSim.coreAbs hq.closed (by decide) hA (ensureSortT_rsim hq n hn hC.stageT dep t ht) b hb
+  obtain ⟨hs, u, hu, -⟩ := ensureSort_crun (ConRon.Bridge.CoreSpec.of_core rfl) henv hC.check hd hw hr
+  exact ⟨x, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs, u, hu⟩
+
+open ConRon.Bridge.Inductives (infer_crun ensureSort_crun whnf_crun defeq_crun) in
+include hq henv in
+/-- `is_def_eq_core` read through `realCall p` under `StageC`. -/
+theorem isDefEqC_rsim (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (dep x y : Word) (hx : H x) (hy : H y)
+    {xP yP : ConLeche.Expr} (hdx : denoteE a.store (decI x) = some xP)
+    (hdy : denoteE a.store (decI y) = some yP) (hwx : ConLeche.Expr.WScoped dep.toNat xP)
+    (hwy : ConLeche.Expr.WScoped dep.toNat yP) :
+    RSim (realCall p n "is_def_eq_core" [vis, dep, x, y] m)
+      (isDefEqCore V fe checkFuel dep.toNat (decI x) (decI y)) a
+      (fun b a' c => StageC dn vis fe env b.2 a' ∧ IWGrow m b.2 ∧ decBool b.1 = c ∧ AbsOK b.2 ∧
+        ConRon.Bridge.CoreStep V env fe a a') := by
+  intro b hb
+  obtain ⟨c, a', hr, ⟨hT, hg, hdec⟩, hA'⟩ :=
+    RSim.coreAbs hq.closed (by decide) hA (isDefEqT_rsim hq n hn hC.stageT dep x y hx hy) b hb
+  obtain ⟨hs, -⟩ := defeq_crun ((ConRon.Bridge.CoreSpec.of_core rfl).knot env fe henv) hC.check hdx hdy
+    hwx hwy hr
+  exact ⟨c, a', hr, StageC.of_T hT hs.ok, hg, hdec, hA', hs⟩
+
+end entriesC
+
 end L.Ind
