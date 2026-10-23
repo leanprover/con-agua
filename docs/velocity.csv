@@ -187,3 +187,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,loopt2,opus,50,20,"install_header, check_constant_val, theorem arm under StageT (DeclValT, DeclArmT); design note: arms past core calls carry con-ron CheckOK"
 2026-10-23,tails,opus,50,30,"reservedRecName under StageR (helper tails-p5), coreWalkFuel/checkFuel, AState.worker via checkPendingGo_worker"
 2026-10-23,loopt2,opus,60,30,"StageC (StageR+CheckOK+TwinMem), LeafFns/LeafClosed checkerProg (scripts/leaf_fns.py), StageC.of_leaf/of_T; TwinMem/of_check moved to TwinStep"
+2026-10-23,appcap,claude-opus-5-5,25,10,"app node counts: twin = L exactly on eager_open_nat_control (10.20 M scratch apps) and app-lam (32.00 M); no L excess; capacity is AREC's tier interleaving + uniform CA_WORDS (proposals in journal)"
