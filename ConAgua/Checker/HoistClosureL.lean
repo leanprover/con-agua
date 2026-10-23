@@ -397,4 +397,163 @@ theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx 
           exact absurd ⟨x, h2.1, h2.2.1, h2.2.2, hx⟩ hno
         · exact hall x hx ⟨n, hn, h2⟩
 
+/-! ## The worklist -/
+
+theorem stk_pop (m : Mem) (ws sp : Word) (h : sp ≠ 0) :
+    stk m ws sp = stk m ws (sp - 1) ++ [(rdW (m.arr64 IW) (ws + sp - 1)).toNat] := by
+  have h1 : sp.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
+  have h2 : (sp - 1).toNat = sp.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+  unfold stk
+  rw [h2]
+  obtain ⟨q, hq⟩ : ∃ q, sp.toNat = q + 1 := ⟨sp.toNat - 1, by omega⟩
+  have : ws + UInt64.ofNat q = ws + sp - 1 := by
+    have e : sp = UInt64.ofNat q + 1 := by
+      apply UInt64.toNat_inj.mp
+      rw [hq, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_one]
+      have := sp.toNat_lt; omega
+    rw [e, ← UInt64.add_assoc, UInt64.add_sub_cancel]
+  rw [hq, List.range_succ, List.map_append, Nat.add_sub_cancel]
+  simp only [List.map_cons, List.map_nil, this]
+
+theorem HoistTwin.ReachIn.mono {idx : Std.HashMap NIdx Nat} {i : Nat} {D : Nat → List NIdx}
+    {N N' : Nat → Prop} {j k : Nat} (h : ReachIn idx i D N j k) (hN : ∀ x, N x → N' x) :
+    ReachIn idx i D N' j k := by
+  induction h with
+  | base h => exact .base (hN _ h)
+  | step _ hs hm ih => exact .step ih hs (hN _ hm)
+
+/-- The closure's invariant at the targets `T`, the stack `S` (relative to the targets `T₀`
+before it, the operation `i` and the start `j`). -/
+structure CloseInv (ds : Array IDeclaration) (a : AState) (idx : Std.HashMap NIdx Nat) (i j : Nat)
+    (T₀ T : Std.HashMap Nat Nat) (S : List Nat) : Prop where
+  ext : ∀ x : Nat, T[x]? = T₀[x]? ∨ (T₀[x]? = none ∧ T[x]? = some i)
+  stkNew : ∀ x ∈ S, T₀[x]? = none
+  done : ∀ x : Nat, T₀[x]? = none → (T[x]?).isSome → x ∉ S →
+    Good ds a x ∧ ∀ y, Succ idx i (depsOf ds a) x y → (T[y]?).isSome
+  reach : ∀ x : Nat, T₀[x]? = none → (T[x]?).isSome →
+    ReachIn idx i (depsOf ds a) (fun y => T₀[y]? = none ∧ (T[y]?).isSome) j x
+
+/-- **The worklist keeps the invariant**, and ends with an empty stack. -/
+theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
+    {ord tg ws : Word} {c : Nat} {i j : Nat} (hi : i < c) (T₀ : Std.HashMap Nat Nat) :
+    ∀ (n : Nat) (m m' : Mem) (T : Std.HashMap Nat Nat) (sp r : Word),
+    HEnv m a ds idx ord tg ws c → TgtR m tg c T → TgtV T c → StkOK m ws sp c T →
+    CloseInv ds a idx i j T₀ T (stk m ws sp) →
+    hCloseGoW n m (UInt64.ofNat i) ord tg ws sp = some (r, m') →
+    ∃ T', HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T' ∧ TgtV T' c ∧ HFr tg ws c m m' ∧
+      CloseInv ds a idx i j T₀ T' [] ∧ (∀ x : Nat, (T[x]?).isSome → T'[x]? = T[x]?) := by
+  intro n
+  induction n with
+  | zero => intro m m' T sp r _ _ _ _ _ h; rw [hCloseGoW.eq_1] at h; cases h
+  | succ n ih =>
+  intro m m' T sp r hE hT hTv hS hI h
+  by_cases h0 : sp = 0
+  · rw [hCloseGoW.arm1 _ _ _ _ _ _ _ h0] at h
+    cases h
+    have hnil : stk m ws sp = [] := by subst h0; rfl
+    rw [hnil] at hI
+    exact ⟨T, hE, hT, hTv, HFr.refl _ _ _ _, hI, fun _ _ => rfl⟩
+  rw [hCloseGoW.arm2 _ _ _ _ _ _ _ h0] at h
+  have hc := hE.c60
+  have r1 := hE.rg1; have r2 := hE.rg2; have r3 := hE.rg3; have r4 := hE.isz
+  -- the top of the stack
+  have hpop := stk_pop m ws sp h0
+  generalize hkw : rdW (m.arr64 IW) (ws + sp - 1) = kw at hpop h
+  have hkS : kw.toNat ∈ stk m ws sp := by rw [hpop]; simp
+  have hkc : kw.toNat < c := (hS.2 _ hkS).1
+  have hkw' : kw = UInt64.ofNat kw.toNat := by simp
+  have hks : kw.toNat < ds.size := hE.size ▸ hkc
+  obtain ⟨hr59, hD, hok⟩ := hE.ordR kw.toNat hks
+  rw [← hkw'] at hr59 hD hok
+  cases hd : hDepsOfW n m kw (UInt64.ofNat i) (1 + 8 * rdW (m.arr64 IW) (ord + kw)) tg ws (sp - 1) with
+  | none => rw [hd] at h; simp [hCloseGoW.k1.eq_1] at h
+  | some rr =>
+  obtain ⟨sp₁, m₁⟩ := rr
+  rw [hd, hCloseGoW.k1.arm1] at h
+  obtain ⟨ns, hrun, hns, hseen₁, mn, hnotes, hfr₁⟩ :=
+    hoistDepsOf_ok n m m₁ a kw (UInt64.ofNat i) _ tg ws (sp - 1) sp₁ ds[kw.toNat] hE.arena hE.seen
+      hr59 hD hok (hE.walk _ hks) hd
+  obtain ⟨hgood, hdeps⟩ := good_of_run hks hrun
+  -- the stack below the top
+  have hS₀ : StkOK m ws (sp - 1) c T := by
+    rw [StkOK, hpop] at hS
+    exact ⟨(List.nodup_append.mp hS.1).1, fun x hx => hS.2 x (List.mem_append_left _ hx)⟩
+  rw [hkw'] at hnotes
+  obtain ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, hnew, hall⟩ :=
+    notes_ok hi hkc ns m mn T (sp - 1) sp₁ hE hT hTv hS₀ hns hnotes
+  -- from `mn` to `m₁`: only the visited set differs
+  have hIW : m₁.arr64 IW = mn.arr64 IW := hfr₁.1 IW (by decide) (by decide)
+  have hfr : HFr tg ws c m m₁ := hfr'.trans
+    ⟨hfr₁.mono (by simp) (by simp), fun x _ => by rw [hIW]⟩
+  have hE₁ := hE.frame hfr hseen₁
+  have hT₁ : TgtR m₁ tg c T' := ⟨fun x hx => by rw [hIW]; exact hT'.1 x hx, hT'.2⟩
+  have hstk₁ : stk m₁ ws sp₁ = stk mn ws sp₁ := by simp only [stk, hIW]
+  have hS₁ : StkOK m₁ ws sp₁ c T' := by rw [StkOK, hstk₁]; exact hS'
+  have hT'x : ∀ x : Nat, (T[x]?).isSome → T'[x]? = T[x]? := by
+    intro x hx
+    rw [hget x]
+    split
+    · rename_i hxn; have := (hnew x hxn).1; rw [this] at hx; cases hx
+    · rfl
+  have hnew0 : ∀ x ∈ new, T₀[x]? = none := by
+    intro x hx
+    rcases hI.ext x with e | ⟨e, -⟩
+    · rw [← e]; exact (hnew x hx).1
+    · exact e
+  have hSucc : ∀ y, Succ idx i (depsOf ds a) kw.toNat y → (T'[y]?).isSome := by
+    intro y hy
+    have hy' : Succ idx i (fun _ => ns.map decI) kw.toNat y := by
+      obtain ⟨n', hn', h1⟩ := hy
+      rw [hdeps] at hn'
+      exact ⟨n', by simpa using hn', h1⟩
+    cases hTy : T[y]? with
+    | none => rw [hget y, if_pos (hall y hTy hy')]; rfl
+    | some t => rw [hT'x y (by rw [hTy]; rfl), hTy]; rfl
+  have hI₁ : CloseInv ds a idx i j T₀ T' (stk m₁ ws sp₁) := by
+    rw [hstk₁, hstk']
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro x
+      rw [hget x]
+      split
+      · rename_i hx; exact Or.inr ⟨hnew0 x hx, rfl⟩
+      · exact hI.ext x
+    · intro x hx
+      rcases List.mem_append.mp hx with hx | hx
+      · exact hI.stkNew x (by rw [hpop]; exact List.mem_append_left _ hx)
+      · exact hnew0 x hx
+    · intro x hx0 hxs hxS
+      have hxn : x ∉ new := fun h => hxS (List.mem_append_right _ h)
+      have hxT : T'[x]? = T[x]? := by rw [hget x, if_neg hxn]
+      rw [hxT] at hxs
+      by_cases e : x = kw.toNat
+      · subst e; exact ⟨hgood, hSucc⟩
+      · have hxS' : x ∉ stk m ws sp := by
+          rw [hpop]; intro h
+          rcases List.mem_append.mp h with h | h
+          · exact hxS (List.mem_append_left _ h)
+          · simp at h; exact e h
+        obtain ⟨hg, hs⟩ := hI.done x hx0 hxs hxS'
+        exact ⟨hg, fun y hy => by
+          have := hs y hy; rw [hT'x y this]; exact this⟩
+    · have hmono : ∀ y : Nat, (T₀[y]? = none ∧ (T[y]?).isSome) → (T₀[y]? = none ∧ (T'[y]?).isSome) :=
+        fun y ⟨h1, h2⟩ => ⟨h1, by rw [hT'x y h2]; exact h2⟩
+      intro x hx0 hxs
+      by_cases hxn : x ∈ new
+      · obtain ⟨-, hsx⟩ := hnew x hxn
+        have hkT : (T[kw.toNat]?).isSome := (hS.2 _ hkS).2
+        have hk0 : T₀[kw.toNat]? = none := hI.stkNew _ hkS
+        refine .step ((hI.reach _ hk0 hkT).mono hmono) ?_ ⟨hx0, hxs⟩
+        obtain ⟨n', hn', h1⟩ := hsx
+        refine ⟨n', ?_, h1⟩
+        rw [hdeps]; simpa using hn'
+      · have hxT : T'[x]? = T[x]? := by rw [hget x, if_neg hxn]
+        rw [hxT] at hxs
+        exact (hI.reach x hx0 hxs).mono hmono
+  obtain ⟨T'', hE'', hT'', hTv'', hfr'', hI'', hmono''⟩ :=
+    ih m₁ m' T' sp₁ r hE₁ hT₁ hTv' hS₁ hI₁ h
+  exact ⟨T'', hE'', hT'', hTv'', hfr.trans hfr'', hI'', fun x hx => by
+    rw [hmono'' x (by rw [hT'x x hx]; exact hx), hT'x x hx]⟩
+
 end L.Checker
