@@ -2,6 +2,7 @@ import ConRon.Bridge.Checker.Split
 import ConAgua.Arena.Refine
 import ConRon.Bridge.Inductives.Decl
 import ConRon.Bridge.Frontend.Shared
+import ConRon.Bridge.Frontend.Capstone
 
 /-!
 # The twin's fold invariant, step by step (lane `decls4`)
@@ -119,6 +120,24 @@ theorem installStep_off {mode : CheckMode} {pins : List INatOpPinSet} {i : Nat} 
     obtain ⟨_, s6, h6, h⟩ := AM.bind_ok h
     obtain ⟨-, rfl⟩ := AM.pure_ok h
     exact hd h6
+
+/-- **The fold's start, con-ron's `FoldOK` at the empty environment** (`FoldOK_of_start`), from the
+twin facts the pipeline has before `install_then_check`: `StateOK`, `PinsOK`, `PersPins` and the
+per-declaration caches empty. -/
+theorem foldOK_start {s : AState} (hok : StateOK s) (hpins : PinsOK s) (hpp : PersPins s)
+    (hc : s.caches = Caches.empty) :
+    FoldOK .verified Env.empty (mkIFEnv IEnv.empty) s :=
+  Frontend.FoldOK_of_start hok hpins hpp (CacheOK.of_empty hc)
+
+/-- **`TwinFold` at the loop's start** (lane `loopt2`, for lane `pipeline`'s R7 → start lemma):
+`foldOK_start`, the pins' and records' denotations and persistence, the scratch tier off. -/
+theorem TwinFold.start {pins : List INatOpPinSet} {ds : Array IDeclaration} {s : AState}
+    (hok : StateOK s) (hpins : PinsOK s) (hpp : PersPins s) (hc : s.caches = Caches.empty)
+    (hpd : ∃ pinsP, PinsDenote s.store pins pinsP) (hps : PersPinSets pins)
+    (hdp : ∀ x ∈ ds.toList, PersDecl x) (hden : ∃ dsP, denoteDecls s.store ds.toList = some dsP)
+    (hoff : s.store.scratchOn = false) : TwinFold pins ds (mkIFEnv IEnv.empty) #[] s :=
+  ⟨⟨Env.empty, foldOK_start hok hpins hpp hc, by simp [NodupNames, Env.empty]⟩, hpd, hps, hdp, hden,
+    by simp, hoff⟩
 
 namespace TwinFold
 

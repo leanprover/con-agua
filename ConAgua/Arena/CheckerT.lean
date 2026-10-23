@@ -861,9 +861,8 @@ theorem installDeclStep_core (hm : mode = .verified) (hb : BracketProg p) (hdc :
         (installStep_refines mode pins dn ds p hm hdc hb hpp hpn hps hpi n hn' · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
       finish
 
-set_option maxRecDepth 8000 in
 /-- `install_decl_step` is one of the loop's functions. -/
-theorem installDeclStep_loop : "install_decl_step" ∈ loopFns := List.mem_of_getElem? (i := 615) rfl
+theorem installDeclStep_loop : "install_decl_step" ∈ loopFns := loop_mem _ rfl
 
 /-- **`install_decl_step` refines `installDeclStep`** under `StageT`: a returning run is the
 twin's `.ok` with the position advanced; the memory's half of the twin's invariants (`LoopMem`,
