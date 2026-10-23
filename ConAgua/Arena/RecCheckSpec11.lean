@@ -357,8 +357,7 @@ end rel
 `fvar_b`, `infer_type_core`, `is_def_eq_core`, and `replace_fvars`'): from both slices, the member
 names and the holes decoded below the top, the openers and both slices decoded (below the top unless
 empty), the walk memos well formed; the verdict as
-`r[0] ≠ 0`. -/
-@[refines ConRon.Arena.targetParamsDefEq]
+`r[0] ≠ 0`. Under `StageR`; the census link is `targetParamsDefEq_refinesC` (`IndT/RecCheckTpd`). -/
 theorem targetParamsDefEq_refines (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word)
     (names : List NIdx) (holes pfvs as bs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hlv : H lvls)
