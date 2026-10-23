@@ -173,4 +173,87 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (b pb : ByteArray) (d
     refine rdW_of_zero (by omega) fun j hj => hz _ ?_ (by omega)
     rw [hL]; simp only [hnb]; omega
 
+theorem abiCall_geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Word}
+    (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
+    AbiGeom tab dm.regs.r8.toNat dm.regs.r9.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size :=
+  ⟨hneed, hc.hfits, hc.hinEnd, hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj⟩
+
+/-- **The final theorem, from the entry stub.** A Kraken host holds the stub and the compiled
+checker `p` (any program with `PipelineRefines`, for a table `tab` the stub supports); the harness
+calls `ca_start` as `AbiCall` says. Then the machine returns to the caller, and if it reports
+`rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
+theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
+    (tab : Tab) (hok : abiTabOk tab = true) (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres)
+    (k0 : Nat) (hcode : Code (abiStub tab ++ compileProg tab p "check") k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+      dm (label abiStartL) := by
+  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
+  have hL := abiVals_length tab hnb
+  have hfits := hc.hfits
+  refine sim_abiStub tab hok k0 hcode.left _ dm ra ?_ ?_ ?_ ?_ ?_
+  · intro hneed j hj
+    simp only [abiNeed, hnb, abiSlot] at hneed
+    rw [hc.hzero _ (by omega) (by rw [hL] at hj; omega)]; rfl
+  · intro hneed
+    simp only [abiNeed, hnb, abiSlot] at hneed
+    rw [hL]; omega
+  · rw [toBitVec_eq_A]; exact hc.hra
+  · intro st hpc hrdx
+    exact ⟨hpc, fun h0 => absurd (hrdx ▸ h0) (by decide)⟩
+  intro hneed s1 hs1 hrdi hrsi hregs
+  have hneed' := hneed
+  simp only [abiNeed, hnb, abiSlot] at hneed'
+  have hend : dm.regs.r8.toNat + 8 * (abiVals tab).length ≤ 2 ^ 64 := by rw [hL]; omega
+  have honly := stores_only dm.regs dm.regs.r8.toNat (abiVals tab) dm.dmem 0 (by simpa using hend)
+  simp only [Nat.add_zero] at honly
+  have hsp : s1.regs.rsp = dm.regs.rsp := by
+    have := hregs .rsp (by decide) (by decide) (by decide)
+    exact UInt64.toBitVec_inj.mp (by simpa using this)
+  have hcs := hc.hcs
+  have hmem := abi_memRel tab hok b pb dm ra hc hneed
+  rw [← hs1] at hmem honly
+  refine checker_x64_accepts p hP _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf hnres
+    (k0 + (abiStub tab).length) hcode.right fd hentry hnp rfl b pb h64 hb hpb [] _ abiFuel
+    (by simp [abiFuel]) s1 ra hmem ?_
+  constructor
+  · rw [hrdi]; rfl
+  · exact hrsi
+  · simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack]; omega
+  · have := stores_rdW? dm.regs dm.regs.r8.toNat (abiVals tab) dm.dmem 0 _ (abiVals_getElem? tab hnb).1 hend
+    rw [addr_val _ _ (by simp only [abiSlot, abiStack]; omega)] at this
+    rw [← hs1] at this
+    simp only [abiLayout_T, abiLayout_hi]
+    simpa only [Nat.mul_zero, Nat.add_zero, Nat.add_assoc] using this
+  · rw [hsp, ← hc.hra]
+    refine rdW_congr fun j hj => ?_
+    rw [A_add, honly.same _ (by have := hc.hcs8; omega) ?_]
+    rcases (hcs (dm.regs.rsp.toNat + j) (by omega) (by have := hc.hcs8; omega)).2.1 with h | h
+    · omega
+    · rw [hL] at *; omega
+  · intro x h1 h2
+    rw [hsp] at h1 h2
+    obtain ⟨hm, hreg, hin, hpins⟩ := hcs x h1 h2
+    refine ⟨honly.grows _ hm, ?_, ?_, ?_⟩
+    · intro ⟨h3, h4⟩
+      simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
+    · rintro (⟨a, ha, h3, h4⟩ | ⟨a, ha, h3, h4⟩)
+      · simp only [abiLayout_tab, hnb] at ha
+        have : a = 0 ∨ a = 1 := by omega
+        rcases this with rfl | rfl
+        · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hin ⟨h3, h4⟩
+        · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
+      · simp only [abiLayout_tab] at ha
+        simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4
+        have hle : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + tab.nw) :=
+          by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+        omega
+    · intro ⟨h3, h4⟩
+      simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4; omega
+  · rw [hsp]; exact hc.hcs24
+  · rw [hsp]; exact hc.hcs8
+
 end ConAgua.Final
