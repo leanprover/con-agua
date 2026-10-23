@@ -21,8 +21,7 @@ lands (then it is that theorem). `check_block_rec` enters through `checkBlockRec
 * for `check_block_rec` (`genRecCheck_refines`' own): the recursor check's walk memos well formed
   (`RcMR m`, carried to the call by the write set `closedA p rcFreeA rcFreeC fsR` of the callees
   before it, `tailRcCallees`), the shape's recursor slice below the top (`RecsB`), the classes'
-  constructors' level-parameter slices in `EREC` (`ClassesLp`), the shape's parameter count (its
-  word, at the shape's `+ 4`) and the pool's size below `2^63`.
+  constructors' level-parameter slices in `EREC` (`ClassesLp`).
 -/
 
 set_option linter.deprecated false
@@ -111,8 +110,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
     (hkeep : ∀ f ∈ tailKeepCallees, AbsKeep p f) (hR : RcMR m)
     (hrb : RecsB m (rdW (m.arr64 IW) (q + 3)))
     (hlp : ClassesLp m (rdW (m.arr64 IW) (q + 15)) (rdW (m.arr64 IW) (q + 16)))
-    (hnP : ∀ v, iwN m ((rdW (m.arr64 IW) (q + 3)).toNat + 4) = some v → v < 2 ^ 63)
-    (hsz : (m.arr64 IW).size < 2 ^ 63) :
+ :
     Sim (ictlW p n m bO bL q) (ConRon.Arena.checkBlockTail V block bp) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
   obtain ⟨hdq, hB, hw0, hsrc⟩ := hq
@@ -126,12 +124,9 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
     hrdp, rd, hrd, cls, hcls, tbl, htbl, rfl⟩ := hdq'
   obtain ⟨hw3, hpwb⟩ := bpWord hpw (hk 3 (by decide))
   rw [show (q + UInt64.ofNat 3 : Word) = q + 3 from rfl] at hw3
-  rw [hw3] at hsrc hrb hnP
+  rw [hw3] at hsrc hrb
   have hpw' : (UInt64.ofNat pw : Word).toNat = pw := UInt64.toNat_ofNat_of_lt' hpwb
   have hbsD : DecB (fun m => decBS m (UInt64.ofNat pw : Word).toNat) m bs := by rw [hpw']; exact hbs
-  have hnPb : bs.nP < 2 ^ 63 := by
-    obtain ⟨-, -, hnp, -⟩ := decBS_some hbs
-    exact hnP bs.nP (by rw [hpw']; exact (rec2IwN_trunc hnp).2)
   obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some hbs
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hbsD hsrc
   have hpw9 : pw + 9 ≤ iwTop m := by rw [← hpw']; exact hq9
@@ -224,8 +219,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   have r16 : rdW (m3.arr64 IW) (q + 16) = rdW (m.arr64 IW) (q + 16) :=
     partsRdIW_grow hg03 (by rw [e 16 (by decide) (q + 16) rfl]; omega)
   have hlp3 : ClassesLp m3 (rdW (m3.arr64 IW) (q + 15)) (rdW (m3.arr64 IW) (q + 16)) := by
-    rw [r15, r16]; exact hlp.grow hcls' hg03 hk3 (by omega)
-  have hsz3 : (m3.arr64 IW).size < 2 ^ 63 := by rw [hk3 IW]; exact hsz
+    rw [r15, r16]; exact hlp.grow hcls' hg03 hk3 hS.2.2.2.1
   have hpre : BSOK m3 (UInt64.ofNat pw : Word).toNat bs ∧
       decHL m3 (rdW (m3.arr64 IW) (q + 12)).toNat (rdW (m3.arr64 IW) (q + 13)).toNat = some params ∧
       (rdW (m3.arr64 IW) (q + 12)).toNat + (rdW (m3.arr64 IW) (q + 13)).toNat ≤ iwTop m3 ∧
@@ -268,7 +262,7 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
       (checkBlockRec_refines p hP.crec hP.grc hclR (fun f hf => hfR f (by
           simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
           rcases hf with rfl | rfl <;> decide)) j ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs
-        params tbl rd cls cvTas block hS3 hpre hrb3 hlp3 hnPb hsz3 hR3 hA3
+        params tbl rd cls cvTas block hS3 hpre hrb3 hlp3 hR3 hA3
         (fun f hf => hkeep f (List.mem_append_right _ hf))) (fun r s' h => by
           obtain ⟨-, hok, hS', hg, hd, hA'⟩ := h; rw [hnb] at hok hS' hd; exact ⟨hok, hS', hg, hd, hA'⟩)) k)
       (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)

@@ -37,8 +37,8 @@ theorem consRecsTFSim_of {p : Prog} (L : CbrLook p) {fs : List FnName}
 /-- **`check_block_tail(bO, bL, q)` refines `checkBlockTail`**: from the pass's record (`BPassR`),
 the stage relation at its environment, the raw block decoded, the `hb` memo and the recursor
 check's walk memos (`RcMR`) well formed, and what `genRecCheck_refines` needs of the record (its
-shape's recursor slice below the top, its classes' constructors' level-parameter slices in `EREC`,
-the shape's parameter count and the pool's size below `2^63`): the stage relation at the returned
+shape's recursor slice below the top, its classes' constructors' level-parameter slices in `EREC`):
+the stage relation at the returned
 view of the twin's environment, the pools grown, the `hb` memo kept. Program facts: the lookups
 (`TailProg`, `CbrLook`) and the write sets of the callees without a memo lemma (`hcl`, `hclR`). -/
 @[refines ConRon.Arena.checkBlockTail]
@@ -52,8 +52,7 @@ theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs 
     (hA : AbsOK s₀.mem) (hk : ∀ f ∈ tailKeepCallees, AbsKeep p f)
     (hR : RcMR s₀.mem) (hrb : RecsB s₀.mem (rdW (s₀.mem.arr64 IW) (q + 3)))
     (hlp : ClassesLp s₀.mem (rdW (s₀.mem.arr64 IW) (q + 15)) (rdW (s₀.mem.arr64 IW) (q + 16)))
-    (hnP : ∀ v, iwN s₀.mem ((rdW (s₀.mem.arr64 IW) (q + 3)).toNat + 4) = some v → v < 2 ^ 63)
-    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 63) :
+ :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_tail" [bO, bL, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTail V block bp) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockTail V block bp) a₀) s'.mem
@@ -62,8 +61,8 @@ theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs 
   refine triple_post (ictl_spec p hP.tail n s₀ bO bL q) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hM', hA'⟩ :=
-    ictlW_sim hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hn hclR hfR hS hq hblk hM hA hk hR hrb hlp hnP
-      hsz r s'.mem hm
+    ictlW_sim hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hn hclR hfR hS hq hblk hM hA hk hR hrb hlp
+      r s'.mem hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres, hst]; exact hS', hg, hM', hA'⟩
 
