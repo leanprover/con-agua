@@ -2,11 +2,14 @@ import ConAgua.Checker.Entry
 import ConAgua.Front.IndApplyRefine
 import ConAgua.Arena.DeclCanonLvl
 import ConAgua.Census.Attr
+import ConAgua.Arena.IndRealIpf
 
 /-!
 # `is_proj_fn_shape` against the twin
 
-The word model `pfsW` of `is_proj_fn_shape` (`isProjFnShapeL`), its spec (`vcgen`), and the
+The word model `pfsW` of `is_proj_fn_shape` (`isProjFnShapeL`), its spec (from
+`L.Ind.isProjFnShape_specW`, `IndRealIpf.lean`, through `pfsW = ipfW`; a `vcgen` of its own over
+`evalC` took ~5 min and 790 paths), and the
 refinement of `NIdx.isProjFnShape`: two `viewN`s (a `num` node, then its `str` prefix) and the
 prefix's string compared to `"proj"` / `"projTable"` as a `POOL` slice. The L code aborts exactly
 where a twin `viewN` fails (a handle past its tier's count, or in the scratch tier while it is off).
@@ -57,20 +60,35 @@ def pfsW (m : Mem) (n : Word) : Option Word :=
 
 /-! ## The spec -/
 
--- ~790 paths (each `&&`/`||` exit duplicates the rest); ~5 min.
-set_option maxHeartbeats 16000000 in
+theorem pfsStr_eq (m : Mem) (k : Word) :
+    pfsStr m k = some (L.Ind.ipfStrW m (rdW (m.arr64 NSREC) (k + 1)) (rdW (m.arr64 NSREC) (k + 2))) := by
+  unfold pfsStr L.Ind.ipfStrW
+  simp only [Classical.not_and_iff_not_or_not, Classical.not_not]
+  repeat' split
+  all_goals first | rfl | simp_all
+
+/-- The model is `IndRealIpf.lean`'s word body `ipfW`. -/
+theorem pfsW_eq (m : Mem) (n : Word) : pfsW m n = L.Ind.ipfW m n := by
+  simp only [pfsW, pfsPre, pfsStr_eq, L.Ind.ipfW, L.Ind.ipfS, nnQ, nsO, nsL]
+
+/-- The spec, from `L.Ind.isProjFnShape_specW` (`vcgen` with `L.evalC_spec`). -/
 theorem pfs_spec (p : Prog) (hp : p.lookup "is_proj_fn_shape" = some isProjFnShapeL) (n : Nat)
     (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_proj_fn_shape" [h]
     ⦃fun r s' => s' = s₀ ∧ pfsW s₀.mem h = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, isProjFnShapeL]
   cases n with
-  | zero => vcgen [exec] <;> grind
+  | zero =>
+    rw [invoke_eq _ hp]
+    simp only [callFn, isProjFnShapeL]
+    vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;>
-        finish [pfsW, pfsPre, pfsStr, tierW, idxW]
+    refine triple_post (L.Ind.isProjFnShape_specW p hp n s₀ h) ?_
+    rintro r ⟨mem, loc⟩ ⟨hl, hm, hw⟩
+    obtain ⟨mem₀, loc₀⟩ := s₀
+    simp only [LocEq] at hl
+    simp only at hm hw
+    subst hl hm
+    exact ⟨rfl, by rw [pfsW_eq]; exact hw⟩
 
 /-! ## Against the twin -/
 
