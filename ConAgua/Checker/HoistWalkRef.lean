@@ -514,7 +514,198 @@ theorem hoistRulesGo_ok (n : Nat) :
       (usedConstsRules seen acc rules).run a = .ok ((seen', acc ++ (ns.map decI).toArray), a) ∧
       (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ SeenR m' seen' ∧
       ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
-  sorry
+  intro m m' a k i tg ws sp ro rc r sp' seen acc rules hA hs hlen hR hb
+  induction n generalizing m sp r seen acc rules with
+  | zero => rw [hRulesGoW.eq_def] at hb; cases hb
+  | succ n ih =>
+    by_cases hc : rc ≤ r
+    · rw [hRulesGoW.arm1 n m k i tg ws sp ro rc r hc] at hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+      have : rules = [] := List.eq_nil_of_length_eq_zero (by
+        have := UInt64.le_iff_toNat_le.mp hc; omega)
+      subst this
+      exact wres_pure hs
+    rw [hRulesGoW.arm2 n m k i tg ws sp ro rc r hc, hRulesGoW.k1.eq_def] at hb
+    obtain _ | ⟨rule, rs⟩ := rules
+    · exfalso; apply hc; rw [UInt64.le_iff_toNat_le]; simp at hlen; omega
+    obtain ⟨hw0, hr0⟩ := hR 0 (by simp)
+    have h0 : r + UInt64.ofNat 0 = r := by simp
+    rw [h0] at hw0 hr0
+    simp only [List.getElem_cons_zero] at hr0
+    cases h1 : hWalkW n m (rdW (m.arr64 DIND) (ro + 11 * r + 8)) i k tg ws sp 4000000000 with
+    | none => rw [h1] at hb; cases hb
+    | some p =>
+      obtain ⟨sp₁, m₁⟩ := p
+      rw [h1] at hb
+      simp only at hb
+      have W1 := walkOK n m m₁ a _ i k tg ws sp 4000000000 sp₁ seen acc hA hw0 hs h1
+      rw [usedConstsRules.eq_2, hr0]
+      refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
+      have hr1 : (r + 1).toNat = r.toNat + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hc)
+        have := rc.toNat_lt
+        rw [UInt64.toNat_add]; simp; omega
+      have hD := W1.arr DIND (by decide) (by decide) (by decide)
+      refine ih m₁ sp₁ (r + 1) seen₁ _ rs (W1.arena hA) hs1 (by simp at hlen; omega) ?_ hb
+      intro q hq
+      have hq' : r + UInt64.ofNat (q + 1) = r + 1 + UInt64.ofNat q := by
+        apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add]; omega
+      obtain ⟨h1', h2'⟩ := hR (q + 1) (by simp; omega)
+      rw [hD, ← hq']
+      exact ⟨h1', by simpa using h2'⟩
+
+/-! ## Block decoding -/
+
+theorem trunc_get {P : Array Word} {t j : Nat} {w : Word} (h : (trunc P t)[j]? = some w) (hj : 0 < j) :
+    P[j]? = some w ∧ j ≤ t := by
+  simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.getElem?_extract,
+    Array.size_extract, Nat.sub_zero, Nat.zero_add] at h
+  have hj' : ¬ (0 = j) := by omega
+  simp only [hj', false_and, if_false] at h
+  split at h
+  · exact ⟨h, by omega⟩
+  · cases h
+
+theorem rdW_of {P : Array Word} {x : Word} {j : Nat} {w : Word} (hx : x.toNat = j)
+    (h : P[j]? = some w) : rdW P x = w := by
+  simp [rdW, hx, h]
+
+theorem mapM_range_succ {β : Type} {F : Nat → Option β} {k : Nat} {cs : List β}
+    (h : (List.range (k + 1)).mapM F = some cs) :
+    ∃ x xs, F 0 = some x ∧ (List.range k).mapM (fun j => F (j + 1)) = some xs ∧ cs = x :: xs := by
+  rw [List.range_succ_eq_map, List.mapM_cons, List.mapM_map] at h
+  cases h1 : F 0 with
+  | none => simp [h1] at h
+  | some x =>
+    cases h2 : (List.range k).mapM (fun j => F (j + 1)) with
+    | none =>
+      have : List.mapM (F ∘ Nat.succ) (List.range k) = none := h2
+      simp [h1, this] at h
+    | some xs =>
+      have : List.mapM (F ∘ Nat.succ) (List.range k) = some xs := h2
+      simp [h1, this] at h
+      exact ⟨x, xs, rfl, rfl, h.symm⟩
+
+theorem decCIs_succ {a : Array Word} {dn : NIdx → Option ConLeche.Name} {off k : Nat}
+    {cs : List IConstantInfo} (h : decCIs a dn off (k + 1) = some cs) :
+    ∃ p ci cs', nat? a off = some p ∧ decCI a dn p = some ci ∧ decCIs a dn (off + 1) k = some cs' ∧
+      cs = ci :: cs' := by
+  obtain ⟨ci, cs', h0, hs, rfl⟩ := mapM_range_succ h
+  simp only [Nat.add_zero] at h0
+  cases h1 : nat? a off with
+  | none => simp [h1] at h0
+  | some p =>
+    simp only [h1, Option.bind_eq_bind, Option.bind_some] at h0
+    refine ⟨p, ci, cs', rfl, h0, ?_, rfl⟩
+    simp only [decCIs]
+    rw [← hs]
+    congr 1; funext j; rw [Nat.add_right_comm, Nat.add_assoc]
+
+theorem decCIs_zero {a : Array Word} {dn : NIdx → Option ConLeche.Name} {off : Nat}
+    {cs : List IConstantInfo} (h : decCIs a dn off 0 = some cs) : cs = [] := by
+  simp [decCIs] at h; exact h
+
+theorem hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
+    ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
+  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨w, hw, h⟩ := h
+  by_cases hl : w.toNat < 2 ^ 32
+  · simp [hl] at h; exact ⟨w, hw, hl, h.symm⟩
+  · simp [hl] at h
+
+theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decE w := by
+  simp only [decCV, Option.pure_def, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨x, -, y, -, z, hz, he⟩ := h
+  cases Option.some.inj he
+  obtain ⟨w, hw, hl, rfl⟩ := hd?_some hz
+  exact ⟨w, hw, hl, rfl⟩
+
+theorem decCI_walk {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {ci : IConstantInfo}
+    (h : decCI a dn p = some ci) (ht : ci.isTowerEntry = false) :
+    ∃ cv kw w, ci.toConstantVal = pure cv ∧ a[p]? = some kw ∧ a[p + 4]? = some w ∧
+      w.toNat < 2 ^ 32 ∧ cv.type = decE w ∧
+      ((kw = 5 ∧ ∃ mi rp ow cw rules, ci = .recInfo cv mi rp rules ∧ a[p + 7]? = some ow ∧
+          a[p + 8]? = some cw ∧ decRules a ow.toNat cw.toNat = some rules) ∨
+        (kw ≠ 5 ∧ ∀ v mi rp rules, ci ≠ .recInfo v mi rp rules)) := by
+  simp only [decCI] at h
+  cases hk : a[p]? with
+  | none => simp [nat?, hk] at h
+  | some kw =>
+  simp only [nat?, hk, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  have hne : ∀ n, kw.toNat = n → n ≠ 5 → kw ≠ 5 := by
+    intro n hn h5 e; subst e; exact h5 hn.symm
+  generalize hn : kw.toNat = n at h
+  rcases n with _ | _ | _ | _ | _ | _ | _ | n
+  all_goals
+    simp only [Option.pure_def, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, _, _, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ e => by cases e⟩⟩
+  · obtain ⟨cv, hcv, mi, _, rp, _, off, ho, cnt, hc, rules, hr, he⟩ := h; cases Option.some.inj he
+    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
+    have h5 : kw = 5 := UInt64.toNat_inj.mp (by rw [hn]; rfl)
+    cases h7 : a[p + 7]? with
+    | none => rw [h7] at ho; cases ho
+    | some ow =>
+    cases h8 : a[p + 8]? with
+    | none => rw [h8] at hc; cases hc
+    | some cw =>
+    rw [h7] at ho; rw [h8] at hc
+    cases Option.some.inj ho; cases Option.some.inj hc
+    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inl ⟨h5, mi, rp, ow, cw, rules, rfl, rfl, rfl, hr⟩⟩
+  · obtain ⟨_, _, he⟩ := h; cases Option.some.inj he; cases ht
+  · cases h
+
+theorem decRule_rhs {a : Array Word} {q : Nat} {r : IRecRule} (h : decRule a q = some r) :
+    ∃ w, a[q + 8]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by
+  unfold decRule at h
+  simp only [Option.pure_def, Option.bind_eq_bind] at h
+  rw [Option.bind_eq_some_iff] at h; obtain ⟨n0, -, h⟩ := h
+  rcases n0 with _ | _ | n0
+  · simp only [Option.bind_eq_some_iff] at h
+    obtain ⟨_, _, _, _, _, _, _, _, z, hz, _, _, _, _, he⟩ := h
+    cases Option.some.inj he
+    obtain ⟨w, hw, hl, rfl⟩ := hd?_some hz
+    exact ⟨w, hw, hl, rfl⟩
+  · simp only [Option.bind_eq_some_iff] at h
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, z, hz, _, _, _, _, he⟩ := h
+    cases Option.some.inj he
+    obtain ⟨w, hw, hl, rfl⟩ := hd?_some hz
+    exact ⟨w, hw, hl, rfl⟩
+  · simp at h
+
+theorem decRules_facts {a : Array Word} {off cnt : Nat} {rules : List IRecRule}
+    (h : decRules a off cnt = some rules) :
+    rules.length = cnt ∧ ∀ q (hq : q < rules.length), ∃ w, a[off + 11 * q + 8]? = some w ∧
+      w.toNat < 2 ^ 32 ∧ rules[q].rhs = decE w := by
+  have hl := mapM_opt_length _ _ _ h
+  simp only [List.length_range] at hl
+  refine ⟨hl, fun q hq => ?_⟩
+  have := mapM_opt_get _ _ _ h q (by simp; omega)
+  simp only [List.getElem_range] at this
+  exact decRule_rhs this
+
+theorem idx11 (ow : Word) (q : Nat) (h : ow.toNat + 11 * q + 8 < 2 ^ 64) :
+    (ow + 11 * (0 + UInt64.ofNat q) + 8).toNat = ow.toNat + 11 * q + 8 := by
+  have hq : (UInt64.ofNat q).toNat = q := by simp; omega
+  rw [UInt64.zero_add, UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, hq]
+  have : (11 : UInt64).toNat = 11 := rfl
+  have : (8 : UInt64).toNat = 8 := rfl
+  simp only [*]
+  rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
 
 /-- The block members `cs` are the constant records the pointers `DIND[o + q ‥ o + c)` point to
 (`decCIs` below some `t` at most the pool's top, as `IndDeclAt`; the offset not `0`, the pool's
@@ -536,7 +727,101 @@ theorem hoistBlockGo_ok (n : Nat) :
       (usedConstsBlock seen acc cs).run a = .ok ((seen', acc ++ (ns.map decI).toArray), a) ∧
       (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ SeenR m' seen' ∧
       ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
-  sorry
+  intro m m' a k i tg ws sp o c q sp' seen acc cs hA hs hB hb
+  induction n generalizing m sp q seen acc cs with
+  | zero => rw [hBlockGoW.eq_def] at hb; cases hb
+  | succ n ih =>
+    obtain ⟨⟨t, ht, hdec⟩, hoc, ho0, hptr, hqc, htow⟩ := hB
+    by_cases hc : c ≤ q
+    · rw [hBlockGoW.arm1 n m k i tg ws sp o c q hc] at hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+      have : c.toNat - q.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hc; omega
+      rw [this] at hdec
+      cases decCIs_zero hdec
+      exact wres_pure hs
+    have hqc' : q.toNat < c.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hc)
+    have hk : c.toNat - q.toNat = (c.toNat - q.toNat - 1) + 1 := by omega
+    rw [hk] at hdec
+    obtain ⟨pN, ci, cs', hp, hci, hdec', rfl⟩ := decCIs_succ hdec
+    have ht64 : t < 2 ^ 64 := Nat.lt_of_le_of_lt ht (UInt64.toNat_lt _)
+    have hpi : (o + q).toNat = o.toNat + q.toNat := by
+      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+    obtain ⟨pw, hpw, rfl⟩ : ∃ pw, (trunc (m.arr64 DLP) t)[o.toNat + q.toNat]? = some pw ∧
+        pN = pw.toNat := by
+      simp only [nat?] at hp
+      cases h : (trunc (m.arr64 DLP) t)[o.toNat + q.toNat]? with
+      | none => rw [h] at hp; cases hp
+      | some pw => rw [h] at hp; exact ⟨pw, rfl, (Option.some.inj hp).symm⟩
+    obtain ⟨hPp, -⟩ := trunc_get hpw (by omega)
+    have hpd : rdW (m.arr64 DIND) (o + q) = pw := rdW_of hpi hPp
+    have hpN : 0 < pw.toNat := by
+      have := hptr q.toNat (Nat.le_refl _) hqc'
+      rw [hPp] at this
+      have h0 : pw ≠ 0 := by simpa using this
+      exact Nat.pos_of_ne_zero fun h => h0 (UInt64.toNat_inj.mp (by simpa using h))
+    obtain ⟨cv, kw, w, htc, hkw, hw4, hwl, hty, hrec⟩ := decCI_walk hci (htow ci (by simp))
+    obtain ⟨hPk, -⟩ := trunc_get hkw hpN
+    obtain ⟨hP4, h4t⟩ := trunc_get hw4 (by omega)
+    have hp4 : (pw + 4).toNat = pw.toNat + 4 := by
+      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by simp; omega)
+    rw [hBlockGoW.arm2 n m k i tg ws sp o c q hc, hpd, rdW_of hp4 hP4, hBlockGoW.k3.eq_def] at hb
+    cases h1 : hWalkW n m w i k tg ws sp 4000000000 with
+    | none => rw [h1] at hb; cases hb
+    | some pr =>
+    obtain ⟨sp₁, m₁⟩ := pr
+    rw [h1] at hb
+    simp only at hb
+    have W1 := walkOK n m m₁ a w i k tg ws sp 4000000000 sp₁ seen acc hA hwl hs h1
+    have hD1 := W1.arr DIND (by decide) (by decide) (by decide)
+    rw [hD1, rdW_of rfl hPk] at hb
+    rw [usedConstsBlock.eq_2, htc, pure_bind]
+    simp only [hty]
+    refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
+    have next : ∀ m₂ sp₂ seen₂ acc₂, ArenaR m₂ a → SeenR m₂ seen₂ → m₂.arr64 DLP = m.arr64 DLP →
+        hBlockGoW n m₂ k i tg ws sp₂ o c (q + 1) = some (sp', m') →
+        WRes m₂ m' i k tg ws sp₂ sp' acc₂ (usedConstsBlock seen₂ acc₂ cs') a := by
+      intro m₂ sp₂ seen₂ acc₂ hA2 hs2 hP hb2
+      have hq1 : (q + 1).toNat = q.toNat + 1 := by
+        have := c.toNat_lt
+        rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by simp; omega)
+      refine ih m₂ sp₂ (q + 1) seen₂ acc₂ cs' hA2 hs2 ⟨⟨t, by rw [hP]; exact ht, ?_⟩, hoc, ho0,
+        fun j h1 h2 => by rw [hP]; exact hptr j (by omega) h2,
+        UInt64.le_iff_toNat_le.mpr (by omega), fun ci h => htow ci (by simp [h])⟩ hb2
+      rw [hP, hq1, show c.toNat - (q.toNat + 1) = c.toNat - q.toNat - 1 by omega, ← Nat.add_assoc]
+      exact hdec'
+    rcases hrec with ⟨h5, mi, rp, ow, cw, rules, rfl, h7, h8, hr⟩ | ⟨h5, hn⟩
+    · rw [if_pos h5] at hb
+      obtain ⟨hP7, h7t⟩ := trunc_get h7 (by omega)
+      obtain ⟨hP8, h8t⟩ := trunc_get h8 (by omega)
+      have hp7 : (pw + 7).toNat = pw.toNat + 7 := by
+        rw [UInt64.toNat_add, show (7 : Word).toNat = 7 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+      have hp8 : (pw + 8).toNat = pw.toNat + 8 := by
+        rw [UInt64.toNat_add, show (8 : Word).toNat = 8 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+      rw [rdW_of hp7 hP7, rdW_of hp8 hP8, hBlockGoW.k2.eq_def] at hb
+      obtain ⟨hlen, hrr⟩ := decRules_facts hr
+      have hRA : RulesAt m₁ ow 0 rules := by
+        intro q hq
+        obtain ⟨w', hw', hl', hr'⟩ := hrr q hq
+        obtain ⟨hPw, hwt⟩ := trunc_get hw' (by omega)
+        rw [hD1, rdW_of (idx11 ow q (by omega)) hPw]
+        exact ⟨hl', hr'⟩
+      cases h2 : hRulesGoW n m₁ k i tg ws sp₁ ow cw 0 with
+      | none => rw [h2] at hb; cases hb
+      | some pr =>
+      obtain ⟨sp₂, m₂⟩ := pr
+      rw [h2] at hb
+      simp only [hBlockGoW.k1.eq_def] at hb
+      have W2 : WRes m₁ m₂ i k tg ws sp₁ sp₂ (acc ++ (List.map decI ns₁).toArray)
+          (usedConstsRules seen₁ (acc ++ (List.map decI ns₁).toArray) rules) a := hoistRulesGo_ok n m₁ m₂ a k i tg ws sp₁ ow cw 0 sp₂ seen₁
+        (acc ++ (List.map decI ns₁).toArray) rules (W1.arena hA) hs1 (by simp; omega) hRA h2
+      refine wres_bind W2 fun seen₂ ns₂ hs2 _ => ?_
+      exact next m₂ sp₂ seen₂ _ (W2.arena (W1.arena hA)) hs2
+        (by rw [W2.arr DLP (by decide) (by decide) (by decide), W1.arr DLP (by decide) (by decide) (by decide)]) hb
+    · rw [if_neg h5, hBlockGoW.k1.eq_def] at hb
+      have N := next m₁ sp₁ seen₁ (acc ++ (List.map decI ns₁).toArray) (W1.arena hA) hs1 hD1 hb
+      cases ci with
+      | recInfo v mi rp rules => exact absurd rfl (hn v mi rp rules)
+      | _ => simp only [pure_bind]; exact N
 
 /-- A record the hoist can walk: an inductive block has no projection table. -/
 def WalkableDecl : IDeclaration → Prop
