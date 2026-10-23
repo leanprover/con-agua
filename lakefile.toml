@@ -102,7 +102,9 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndT.RecGen23",
   "ConAgua.Arena.IndT.RecGen24",
   "ConAgua.Arena.IndT.RecGen28",
-  "ConAgua.Arena.IndT.RecGen27"]
+  "ConAgua.Arena.IndT.RecGen27",
+  "ConAgua.Arena.IndT.GenRec1",
+  "ConAgua.Arena.IndT.GenRec2"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
