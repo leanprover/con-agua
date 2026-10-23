@@ -145,4 +145,52 @@ theorem lgh_spec (p : Prog) (hp : p.lookup "lit_guard_has" = some litGuardHas)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_eq p hpin n] <;>
       finish (gen := 20) [lghW]
 
+/-! ## `reserved_rec_name(x)` -/
+
+/-- A pure read's spec, with the caller's exact state back. -/
+theorem triple_eq_of_mem {prog : M (List Word)} {s₀ : St} {Q : List Word → Prop}
+    (h : ⦃fun s => s = s₀⦄ prog ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ Q r; ⊤⦄) :
+    ⦃fun s => s = s₀⦄ prog ⦃fun r s' => s' = s₀ ∧ Q r; ⊤⦄ := by
+  refine triple_post h ?_
+  rintro r ⟨m', l'⟩ ⟨hl, hm, hq⟩
+  obtain ⟨m, l⟩ := s₀
+  simp only [LocEq] at hl
+  simp only at hm hl
+  subst hm hl
+  exact ⟨rfl, hq⟩
+
+/-- After `pin_range_has(x, 14, 21)`. -/
+def rrnK3 (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
+  | none => none
+  | some r => if r ≠ 0 then some 1 else prhW n m x 21 29
+
+/-- After `lit_guard_has`. -/
+def rrnK2 (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
+  | none => none
+  | some r => if r ≠ 0 then some 1 else rrnK3 n m x (prhW n m x 14 21)
+/-- After `reserved_contains`. -/
+def rrnK1 (n : Nat) (m : Mem) (x : Word) : Option Word → Option Word
+  | none => none
+  | some r => if r ≠ 0 then some 1 else rrnK2 n m x (lghW m x)
+/-- The model of `reserved_rec_name(x)` (the memory is unchanged). -/
+def rrnW (n : Nat) (m : Mem) (x : Word) : Option Word := rrnK1 n m x (resContW n m x)
+
+set_option maxHeartbeats 2000000 in
+theorem rrn_spec (p : Prog) (hp : p.lookup "reserved_rec_name" = some reservedRecNameL)
+    (hrc : p.lookup "reserved_contains" = some reservedContains)
+    (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hlg : p.lookup "lit_guard_has" = some litGuardHas)
+    (hpr : p.lookup "pin_range_has" = some pinRangeHas)
+    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reserved_rec_name" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ rrnW n s₀.mem x = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, reservedRecNameL]
+  have h1 := fun s₀ x => triple_eq_of_mem (resCont_spec p hrf hrc n s₀ x)
+  have h2 := fun s₀ x => triple_eq_of_mem (lgh_spec p hlg hpin n s₀ x)
+  have h3 := fun s₀ x k hi => triple_eq_of_mem (prh_spec p hpr hpin n s₀ x k hi)
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, h1, h2, h3] <;>
+    finish (gen := 20) [rrnW, rrnK1, rrnK2, rrnK3]
+
 end L.Stubs
