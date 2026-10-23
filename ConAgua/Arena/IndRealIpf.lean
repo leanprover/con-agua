@@ -3,6 +3,7 @@ import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.PromoteNRef
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndStubs
+import ConAgua.Census.Attr
 
 /-!
 # `is_proj_fn_shape` discharged (lane `indproofs4`, helper `indproofs4-names`)
@@ -243,5 +244,28 @@ theorem ipfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   subst hs'
   rw [hm]
   exact ⟨_, a, hrun, hS, IWGrow.refl _, rfl, hle⟩
+
+/-- **`is_proj_fn_shape(x)` refines `NIdx.isProjFnShape`** under the stage relation, in any
+program binding it (its census entry; `ipfF_ok` is the same fact about the model). -/
+@[refines ConRon.Arena.NIdx.isProjFnShape]
+theorem isProjFnShape_refines {p : Prog}
+    (hp : p.lookup "is_proj_fn_shape" = some L.Checker.isProjFnShapeL)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (_hx : H x) :
+    RefAM p "is_proj_fn_shape" [x] (StageR dn vis fe) (NIdx.isProjFnShape (decI x))
+      (KeepPost dn vis fe decW0B) := by
+  intro n s₀ a₀ hS
+  refine triple_post (callW_spec p n "is_proj_fn_shape" [x] s₀) ?_
+  rintro r s' ⟨hl, hc⟩
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ k =>
+  obtain ⟨s'', hs'', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (isProjFnShape_specW p hp k _ x) hc
+  simp only at hm hW
+  obtain ⟨hrun, hle⟩ := ipfW_run hS.1.arena.1 hW
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres, ← hs'', hm]
+  exact ⟨hS, IWGrow.refl _, rfl, hle⟩
 
 end L.Ind
