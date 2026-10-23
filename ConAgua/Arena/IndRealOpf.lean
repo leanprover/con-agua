@@ -146,6 +146,7 @@ def opfK2 (p : Prog) (k : Nat) (n e i co : Word) (r1 : List Word) (m1 : Mem) :
 
 /-- `open_pis_at_fvars_f(n, e, i)`'s body over its callees' runs. -/
 def opfTopK (p : Prog) (k : Nat) (m : Mem) (n e i : Word) : Option (List Word × Mem) :=
+  if i >>> 63 ≠ 0 then none else
   if m.len64 SPN < rdW (m.arr64 CTL) 136 then none else
   ntBW (callW p k "opf_go" [n, e, i, rdW (m.arr64 CTL) 136, 0] m)
     (opfK2 p k n e i (rdW (m.arr64 CTL) 136))

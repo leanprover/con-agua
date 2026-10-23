@@ -74,6 +74,7 @@ D18, D21).
 | D29 | `Rom/CIRead.lean` `rci_ci` | `internCI` interns a projection table (`internProjTable`) | refuses kind `6` (aborts) | none (the ROM's constants are basis blocks, axioms and pins; none is a projection table) | front3 | by design: the ROM generator emits no projection table |
 | D30 | `Checker/Hoist.lean` `hoist_nat_op_ground` | `applyHoist` also returns the moved records' names (`movedNames`, the `hoisted` receipt of `prepareD`) | not computed | none (`preparePrelude` drops the receipt) | front3 | by design: the result is never read |
 | D32 | `Arena/IndPos.lean` `nest_ctor_entry_strip` | `nestCtorEntry` passes `nPc + nF` (a `Nat` sum) to `stripPis` | aborts when the word sum `nPc + nF` wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both counts are word-sized field counts) | indstaget | by design: removes the environment-wide premise `CtorSums` from the positivity and recursor proofs |
+| D33 | `Arena/StubInd.lean` `open_pis_at_fvars_f` | `openPisAtFvarsF n e i` names its free variables `i, i + 1, …` (`Nat`s) | aborts when the first index `i` is `≥ 2^63` (a capacity guard: with at most the spine stack's `< 2^63` binders opened, the word indices `i + j` cannot wrap) | none: never accepts more; cannot trigger on real inputs (`i` is a binder depth) | indproofs4 | by design: discharges `opfF_ok`'s premise `i < 2^63` inside, so no depth bound reaches its callers |
 
 ## Fixed
 
