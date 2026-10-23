@@ -268,6 +268,91 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
       rw [hsp4, if_neg (fun h => by subst h; omega)]
       simp only [spW, hs3])
 
+/-- **`opa_go` refines `openPisAtFvars`** under the stage relation and `AbsOK`, from the stack
+top `t`. -/
+theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : List Word),
+    callW opfP k "opa_go" [n, e, i] m = some (r, m') →
+    StageR dn vis fe m a → AbsOK m → e.toNat < 2 ^ 32 →
+    (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size →
+    i.toNat + ((m.arr64 SPN).size - (rdW (m.arr64 CTL) 136).toNat) < 2 ^ 64 →
+    ∃ x a', (openPisAtFvars n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
+      OGo (rdW (m.arr64 CTL) 136) n m m' r x := by
+  intro k
+  induction k with
+  | zero => intro m m' a n e i r hc; rw [callW_zero] at hc; cases hc
+  | succ k ih =>
+  intro m m' a n e i r hc hS hAb he htb hib
+  have c' := callW_model (M := fun mm => opaGoK opfP k mm n e i)
+    (fun s => opaGoK_spec opfP rfl k s n e i) hc
+  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
+  simp only [opaGoK] at c'
+  by_cases hn : n = 0
+  · rw [if_pos hn] at c'
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+    subst hn
+    refine ⟨_, _, opa_run_zero (decE e) i.toNat a, hS, IWGrow.refl _, hAb, rfl, ?_⟩
+    exact ⟨rfl, he, rfl, by simp, SpineR.empty' htb, fun w _ => rfl⟩
+  rw [if_neg hn] at c'
+  have hn1 := wsub1 hn
+  by_cases hg : e >>> 28 ≠ 6
+  · rw [if_pos hg] at c'
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+    refine ⟨none, a, by rw [← hn1]; exact opa_run_nf _ _ _ a (by rw [decE_tag_fa e he]; simpa using hg),
+      hS, IWGrow.refl _, hAb, rfl, rfl⟩
+  rw [if_neg hg] at c'
+  have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
+  cases h1 : callW opfP k "e_view" [e] m with
+  | none => rw [h1] at c'; cases c'
+  | some p1 =>
+  obtain ⟨rv, m1⟩ := p1
+  rw [h1, bW_some] at c'
+  obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
+  subst m1
+  cases h2 : callW opfP k "intern_fvar" [i, rv.tail.headD 0] m with
+  | none => rw [h2] at c'; cases c'
+  | some p2 =>
+  obtain ⟨rf, m2⟩ := p2
+  rw [h2, bW_some] at c'
+  obtain ⟨a2, hrun2, hS2, hg2, hAb2, hspn2, htop2, hlt2⟩ := opfFv_ok hS hAb hx h2
+  cases h3 : callW opfP k "inst_entry" [rv.tail.tail.headD 0, rf.headD 0, 0] m2 with
+  | none => rw [h3] at c'; cases c'
+  | some p3 =>
+  obtain ⟨rb, m3⟩ := p3
+  rw [h3, bW_some] at c'
+  obtain ⟨a3, hrun3, hS3, hg3, hAb3, hspn3, htop3, hlt3⟩ := opfI1_ok hS2 hAb2 hy h3
+  cases h4 : callW opfP k "spn_push" [rf.headD 0] m3 with
+  | none => rw [h4] at c'; cases c'
+  | some p4 =>
+  obtain ⟨ru, m4⟩ := p4
+  rw [h4, bW_some] at c'
+  obtain ⟨hS4, hg4, hAb4, hroom, htop4, hsp4, hsz4⟩ := spnPushW_ok hS3 hAb3 (push_of_callW h4)
+  cases h5 : callW opfP k "opa_go" [n - 1, rb.headD 0, i + 1] m4 with
+  | none => rw [h5] at c'; cases c'
+  | some p5 =>
+  obtain ⟨ro, m5⟩ := p5
+  rw [h5, bW_some] at c'
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+  generalize ht : rdW (m.arr64 CTL) 136 = t at htb hib ⊢
+  have ht3 : rdW (m3.arr64 CTL) 136 = t := htop3.trans (htop2.trans ht)
+  have hs3 : m3.arr64 SPN = m.arr64 SPN := hspn3.trans hspn2
+  rw [ht3] at hroom htop4 hsp4
+  rw [hs3] at hroom
+  have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have ht1 : (t + 1).toNat = t.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hAb5, hsz5, hO⟩ := ih m4 m5 a3 (n - 1) _ (i + 1) ro h5
+    hS4 hAb4 hlt3 (by rw [htop4, hsz4, hs3, ht1]; omega) (by rw [htop4, hsz4, hs3, hi1, ht1]; omega)
+  have hrun := opa_run_step (n - 1).toNat (decE e) i.toNat a a2 a3 a5 _ _ _ _ x5
+    (by rw [decE_tag_fa e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
+  rw [hn1] at hrun
+  have hsz : (m5.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz5, hsz4, hs3]
+  refine ⟨_, _, hrun, hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hAb5, hsz, ?_⟩
+  rw [htop4] at hO
+  exact OGo.step hn hO (by rw [hsp4]; simp) hlt2 (by rw [hsz]; omega) (by rw [hsz]; omega)
+    (fun w hw => by
+      rw [hsp4, if_neg (fun h => by subst h; omega)]
+      simp only [spW, hs3])
+
 end
 
 end L.Ind
