@@ -17,7 +17,9 @@
    file CA_PINS (empty if unset).
 
    env: CA_FUEL (default 2^62), CA_STACK (bytes, default 1 GiB), CA_WORDS (words per array),
-        CA_PINS (the pin-data file) */
+        CA_PINS (the pin-data file), CA_HWM (if set: print to stderr, per word array, the words up to
+        its highest touched page and the words on touched pages, `hwm ARRAY HIGH TOUCHED`, for arrays above CA_HWM words; by mincore, a
+        diagnostic for capacity errors, lane e2efix) */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,5 +87,18 @@ int main(int argc, char **argv) {
   else if (ca_diag < ca_nw && arr[ca_diag][0] != 0) printf("missing %llu\n", (unsigned long long)arr[ca_diag][0]);
   else printf("error\n");
   fflush(stdout);
+  if ((e = getenv("CA_HWM"))) {
+    uint64_t min = strtoull(e, 0, 0), pw = 4096 / 8, np_ = (words + pw - 1) / pw;
+    unsigned char *v = malloc(np_ ? np_ : 1);
+    for (uint64_t a = 0; a < ca_nw && v; a++) {
+      if (mincore(arr[a], 8 * words, v) != 0) continue;
+      uint64_t hi = np_, res = 0;
+      while (hi > 0 && !(v[hi - 1] & 1)) hi--;
+      for (uint64_t i = 0; i < hi; i++) res += v[i] & 1;
+      if (hi * pw > min)
+        fprintf(stderr, "hwm %llu %llu %llu\n", (unsigned long long)a, (unsigned long long)(hi * pw),
+                (unsigned long long)(res * pw));
+    }
+  }
   return 0;
 }
