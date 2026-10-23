@@ -294,7 +294,7 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
 
 ### Landing (2026-10-23, check_ind_decl)
 
-* `cidW_ok` (IndInstallSpec42) is proven. It carries `@[refines_part checkDecl "the inductive arm (check_ind_decl), under StageR"]`. Its pending program facts are `PassGrcOK` and `PartsOK` (ShapeLp only); helper grc is now deriving ShapeLp from decBS so that `PartsOK` can be dropped. The `AbsKeep` facts and the closedA write sets still have to be decided for checkerProg.
+* `cidW_ok` (IndInstallSpec42) is proven. It carries `@[refines_part checkDecl "the inductive arm (check_ind_decl), under StageR"]`. Its only pending program fact is `PassGrcOK`: helper grc removed `PartsOK` by weakening CtorLp to allow an empty slice at any offset (`shapeLp_of_decB`). The `AbsKeep` facts and the closedA write sets still have to be decided for checkerProg.
 * `basisPinHit_ok` (IndRealBph2, helper bph) is proven, with no L change and no extra premise.
 * grc: `gen_rec_check_prep` has three capacity guards, so the `hsz`/`hnP` 2^63 bounds are gone everywhere. `PassGrcOK` lost its nP conjunct.
 * slow helper: IndSumSpec12 498→45 s, IndInstallSpec17 152→9, IndSumSpec5 138→53, RecClassSpecN 134→44, K 120→27, B 62→10.
