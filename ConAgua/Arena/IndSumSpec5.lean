@@ -131,10 +131,13 @@ theorem mcGo_step (n : Nat) (ih : McGoSpec p n) : McGoSpec p (n + 1) := by
   intro s₀ T h
   rw [invoke_eq _ hgo]
   simp only [callFn, mentionsConstGoL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      eView_spec p hv n, memoFindG_spec mcSch p _ hf n,
-      memoPutG_spec mcSch p _ hput n, ih] <;> finish (gen := 20)
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    eView_spec p hv n, memoFindG_spec mcSch p _ hf n,
+    memoPutG_spec mcSch p _ hput n, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 include hv hf hput hgo in
 theorem mcGo_spec (n : Nat) : McGoSpec p n := by
@@ -556,9 +559,11 @@ theorem mentionsConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold McGoSpec at ih
   rw [invoke_eq _ hp]
   simp only [callFn, mentionsConstL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec mcSch p _ hcl n, ih] <;>
-    finish
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec mcSch p _ hcl n, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+  all_goals grind [lang_grind, arena_grind, ind_grind]
 
 section mcCensus2
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -763,9 +768,12 @@ theorem hbIns_spec_raw (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVa
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoFindG_spec hbSch p _ hf n,
-        memoPutG_spec hbSch p _ hput n] <;> finish [msetG]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoFindG_spec hbSch p _ hf n,
+      memoPutG_spec hbSch p _ hput n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+    all_goals grind [lang_grind, arena_grind, ind_grind, msetG]
 
 include hf hput in
 theorem hbIns_spec (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL) (n : Nat) (s₀ : St)
@@ -788,10 +796,13 @@ theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
   intro s₀ i h
   rw [invoke_eq _ hgo]
   simp only [callFn, hasLooseBVarBGoL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bvarBL_spec p hbp n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
-      hbIns_spec p hf hput hins n, ih] <;> finish (gen := 20)
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    bvarBL_spec p hbp n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
+    hbIns_spec p hf hput hins n, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 include hv hf hput hins hgo hbp in
 theorem hbGo_spec (n : Nat) : HbGoSpec p n := by
@@ -1307,9 +1318,11 @@ theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold HbGoSpec at ih
   rw [invoke_eq _ hp]
   simp only [callFn, hasLooseBVarBFastL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih] <;>
-    finish
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
+  all_goals grind [lang_grind, arena_grind, ind_grind]
 
 theorem hbFastW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (i e r : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
