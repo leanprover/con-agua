@@ -12,14 +12,21 @@ import ConAgua.Arena.IndPartsSpec2
 /-!
 # The spine adapters' stub contracts discharged (lane `indproofs4`, helper `spine`)
 
-`get_app_fn_f`, `pi_result_f` (and below `get_app_args_f`, `mk_app_n_f`), lane `induct`'s fuel
-adapters over the whnf lane's spine walks (`WhnfEntry.lean`), as program- and fuel-free models
-`callF P f` (`CallF.lean`, the recipe of `IndReal.lean`) with the relational facts of the
-`IndStubs` contracts. This file sits below the stage's spec files (`IndPartsSpec3`, …), so it
-does not import `IndReal`/`StubIndRefine`: the adapter specs are restated here.
+`get_app_fn_f`, `pi_result_f` and `mk_app_n_f`, lane `induct`'s adapters over the whnf lane's
+spine walks (`WhnfEntry.lean`), as program- and fuel-free models `callF P f` (`CallF.lean`, the
+recipe of `IndReal.lean`) with the relational facts of the `IndStubs` contracts (`gafF_ok`,
+`pirF_ok`, `mknF_ok`), and one program bundle `AdF` for the three. This file sits below the
+stage's spec files (`IndPartsSpec3`, …), so it does not import `IndReal`/`StubIndRefine`: the
+adapter specs are restated here.
 
-The adapters abort at any fuel word other than `CWF`, so the contracts hold at every fuel word: a
-returning run has `f = CWF`, and `CWF.toNat = coreWalkFuel` (`CWF_eq`) is the walks' fuel.
+* `get_app_fn_f`, `pi_result_f` abort at any fuel word other than `CWF`, so the contracts hold at
+  every fuel word: a returning run has `f = CWF`, and `CWF.toNat = coreWalkFuel` (`CWF_eq`) is the
+  walks' fuel. They write nothing.
+* `mk_app_n_f` copies the `IW` slice to the stack top (`iw_to_spn`, `i2sW_ok`), runs `mk_app_n`
+  (`mkAppNFromW_ok` under `ArenaD`) and puts the top back. The room check `len(SPN) - top ≥ cnt`
+  bounds the copy without a bound on `|SPN|` (which `StageR` does not carry).
+* `get_app_args_f` is not here: `getAppArgs_refines'` (`WhnfSpineArgs.lean`) assumes
+  `|SPN| < 2^63`, which `StageR` does not carry.
 -/
 
 set_option experimental.vcgen true

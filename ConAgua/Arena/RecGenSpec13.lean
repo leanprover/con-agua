@@ -12,6 +12,8 @@ walk), `class_key_canon` (its loop `class_key_canon_go`, a recursion writing int
 Every theorem takes the walk memos well formed in the memory at hand (`PosMR`) and returns them so.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

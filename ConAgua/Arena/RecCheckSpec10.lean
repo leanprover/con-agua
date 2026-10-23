@@ -14,6 +14,8 @@ with its write set `taAW_mfr`, new here). L: handle guards after both `target_ab
 model carries no `< 2^32` bound on the result; the twin compares `EIdx`s).
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
