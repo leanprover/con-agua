@@ -3,10 +3,11 @@ import ConAgua.Arena.DeclNatSpec
 /-!
 # `nat_op_deps` refines `natOpDeps` (lane `decls3`, helper `decls3-nat`)
 
-Split from `DeclNatSpec.lean` for its `vcgen` spec's cost (fifteen branches). The spec's goals are
-closed by `grind` after the locals and the bounds-checked reads are normalized (`simp only`,
-`nd_getElem`), with one guarded equation per arm of the dispatch (`depsArmW_k`); ten minutes with
-`sym … <;> finish`, about two now.
+Split from `DeclNatSpec.lean` for its `vcgen` spec's cost (fifteen branches). The loads go through
+`nd_ld64_spec` (reads as `rdW`, no bound proofs inside terms), the state equations are substituted,
+the locals normalized (`simp only`, `decide` for the `Var` literals), and `grind` closes the goals
+with one guarded equation per arm of the dispatch (`depsArmW_k`); ten minutes with
+`sym … <;> finish`, about 30 s now.
 -/
 
 set_option experimental.vcgen true
@@ -140,6 +141,24 @@ theorem depsArmW_15 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw
 theorem nd_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
   simp [rdW, h]
 
+/-- `ld64` answering `rdW` (a copy of `L.Arena.ld64_rdW_spec`, `InferBodyIntern.lean`, which this
+module does not import): the read carries no bound proof, so the fifteen loads leave no dependent
+hypotheses behind. -/
+private theorem nd_ld64_spec (a : ArrId) (i : Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ ld64 a i
+    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size; ⊤⦄ := by
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  subst hs
+  simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
+  split at hrun
+  · rename_i h
+    simp only [pure] at hrun
+    obtain ⟨rfl, rfl⟩ := hrun
+    exact ⟨rfl, by simp [rdW, h], h⟩
+  · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
+    cases hrun
+
 set_option maxHeartbeats 8000000 in
 theorem natOpDeps_specW (p : Prog) (hp : p.lookup "nat_op_deps" = some natOpDepsL) (n : Nat)
     (s₀ : St) (c : Word) :
@@ -147,10 +166,12 @@ theorem natOpDeps_specW (p : Prog) (hp : p.lookup "nat_op_deps" = some natOpDeps
     ⦃fun r s' => LocEq s' s₀ ∧ natOpDepsW p n s₀.mem c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, natOpDepsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nd_ld64_spec, st64,
     callW_spec p n "nat_op_pins", callW_spec p n "iw_alloc"]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+  all_goals (try exact LocEq.restore _ _)
+  all_goals subst_vars
+  all_goals (try simp (config := {decide := true}) only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
     beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, nd_getElem] at *)
   all_goals grind -lia -ring -linarith (gen := 20) [lang_grind, arena_grind, natOpDepsW_eq, ntBW, pw, depsArmW_0, depsArmW_1, depsArmW_2, depsArmW_3, depsArmW_4, depsArmW_5, depsArmW_6, depsArmW_7, depsArmW_8, depsArmW_9, depsArmW_10, depsArmW_11, depsArmW_12, depsArmW_13, depsArmW_14, depsArmW_15]
