@@ -341,7 +341,6 @@ unrestricted environment whose stored constructors' sums are words, and the walk
 slice below the top (`RecsB`, which the pass's shape copies): the stage relation at the returned
 view of the twin's environment, the pools grown, the `hb` memo kept. Program facts: the lookups
 (`CbProg`) and the write sets (`hcl`, `hcl2`, `hclR`, `hclT`). -/
-@[refines ConRon.Arena.checkBlock]
 theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)

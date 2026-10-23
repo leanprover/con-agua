@@ -108,6 +108,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndT.GenRec3",
   "ConAgua.Arena.IndT.Tail",
   "ConAgua.Arena.IndT.Pass",
+  "ConAgua.Arena.IndT.Block",
   "ConAgua.Arena.IndT.Install1",
   "ConAgua.Arena.IndT.Sum1",
   "ConAgua.Arena.IndT.Sum2",
