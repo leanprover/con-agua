@@ -36,3 +36,13 @@ Journal of lane `knotwire` (decisions, measurements, findings, open ends). Only 
   The L side: `callW_spec p n f` in `vcgen` in place of `stubM_spec p f n`.
 * Census before (master `e5b38274`): phase 5 109 proven / 17 sorry / 6 written / 10 todo;
   phase 6 22/0/6/3; phase 7 21/0/5/1; total 816 proven / 165 sorry.
+* Census after (master `d5532d09`, `--no-build`): phase 5 **133 proven / 0 sorry / 0 written / 9 todo**
+  (+24 proven: the 17 sorry and 6 written targets, plus one covered); phase 6 **31/0/0/0** (+9: the
+  `*Set` setters, `enter/leaveEager` and `coreKnot`, covered through `knot_all`); phase 7
+  **26/0/0/1** (+5: `whnf`, `inferTypeCore`, `isDefEqCore`, `ensureSortCore`, `pureFnsA`). Phases
+  5–7: +38 proven, −17 sorry. Total 865 proven / 148 sorry (other lanes' landings included).
+  The phase-2 and phase-8 `sorry`s go through `IndStubs` (`stubM_spec`, `inferTypeCore_spec`, …);
+  they go when the callers switch to `KnotStageProg.*_sim` (with `StageT`).
+* **Memory note** (coordinator's question): this lane's first full build ran `Checker.CoreErec` and
+  `Checker.IndCore` at ~22 GB each because the branch had merged master before lane `erecfix`
+  landed; the files were untouched here. Merging master again brought `WriteSetSplit` in (3 GB).
