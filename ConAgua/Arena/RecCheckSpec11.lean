@@ -80,14 +80,14 @@ theorem word_lt_iff {a b : Word} : a < b ↔ a.toNat < b.toNat := UInt64.lt_iff_
 
 /-- The model's closedness prefix simulates `tpClosed`: a `false` answers `[0]` at once, a `true`
 goes on with the canon forms. -/
-theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl x y : Word}
-    {r : List Word} {pfvs : List EIdx} (h : pdsW n m vis d no nl lvls ho hl pfo pfl x y = some (r, m'))
+theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl x y : Word}
+    {r : List Word} {pfvs : List EIdx} (h : pdsW cR n m vis d no nl lvls ho hl pfo pfl x y = some (r, m'))
     (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hlen : pfvs.length = pfl.toNat) (hP : RcMR m) :
     (∃ a', (tpClosed pfvs (decE x) (decE y)).run a = .ok (false, a') ∧ r = [0] ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m') ∨
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AFr m m') ∨
     (∃ m4 a4, (tpClosed pfvs (decE x) (decE y)).run a = .ok (true, a4) ∧
-      pdsK5 n vis d no nl lvls ho hl pfo pfl y (tcpF n m4 pfo pfl x) = some (r, m') ∧
-      StageR dn vis fe m4 a4 ∧ IWGrow m m4 ∧ RcMR m4) := by
+      pdsK5 cR n vis d no nl lvls ho hl pfo pfl y (tcpF n m4 pfo pfl x) = some (r, m') ∧
+      StageR dn vis fe m4 a4 ∧ IWGrow m m4 ∧ RcMR m4 ∧ AFr m m4) := by
   unfold pdsW at h
   cases h1 : bvbW n m x CWF with
   | none => rw [h1] at h; cases h
@@ -101,7 +101,7 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e1 : (b1.toNat != 0) = true := by
       simp only [bne_iff_ne, ne_eq]; intro h0; exact hb1 (UInt64.toNat_inj.mp (by simpa using h0))
-    refine .inl ⟨a1, ?_, rfl, hS1, hg1, hP1⟩
+    refine .inl ⟨a1, ?_, rfl, hS1, hg1, hP1, bvbW_afr h1⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, if_true]; rfl
   rw [pdsK1_ok (h := hb1)] at h
   have e1 : (b1.toNat != 0) = false := by simp at hb1; simp [hb1]
@@ -117,7 +117,7 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e2 : (b2.toNat != 0) = true := by
       simp only [bne_iff_ne, ne_eq]; intro h0; exact hb2 (UInt64.toNat_inj.mp (by simpa using h0))
-    refine .inl ⟨a2, ?_, rfl, hS2, hg1.trans hg2, hP2⟩
+    refine .inl ⟨a2, ?_, rfl, hS2, hg1.trans hg2, hP2, (bvbW_afr h1).trans (bvbW_afr h2)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, if_true, Bool.false_eq_true,
       if_false]; rfl
   rw [pdsK2_ok (h := hb2)] at h
@@ -134,7 +134,8 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
   · rw [pdsK3_out (h := hc3)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e3 : k3 > pfvs.length := by rw [word_lt_iff] at hc3; simp only [decW0Nat] at hd3; omega
-    refine .inl ⟨a3, ?_, rfl, hS3, (hg1.trans hg2).trans hg3, hP3⟩
+    refine .inl ⟨a3, ?_, rfl, hS3, (hg1.trans hg2).trans hg3, hP3,
+      ((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, if_true,
       Bool.false_eq_true, if_false]; rfl
   rw [pdsK3_ok (h := hc3)] at h
@@ -153,20 +154,22 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have e4 : decide (k4 ≤ pfvs.length) = false := by
       rw [word_lt_iff] at hc4; simp only [decW0Nat] at hd4; simp; omega
-    refine .inl ⟨a4, ?_, rfl, hS4, hg14, hP4⟩
+    refine .inl ⟨a4, ?_, rfl, hS4, hg14, hP4,
+      (((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)).trans (fvbF_afr h4)⟩
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, run4, e4,
       Bool.false_eq_true, if_false]; rfl
   rw [pdsK4_ok (h := hc4)] at h
   have e4 : decide (k4 ≤ pfvs.length) = true := by
     rw [word_lt_iff] at hc4; simp only [decW0Nat] at hd4; simp; omega
-  refine .inr ⟨m4, a4, ?_, h, hS4, hg14, hP4⟩
+  refine .inr ⟨m4, a4, ?_, h, hS4, hg14, hP4,
+    (((bvbW_afr h1).trans (bvbW_afr h2)).trans (fvbF_afr h3)).trans (fvbF_afr h4)⟩
   simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, r2, e2, run3, e3, run4, e4,
     Bool.false_eq_true, if_false]; rfl
 
 /-- The model's rest simulates `tpRest`. -/
 theorem pdsR_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl x y : Word}
     {r : List Word} {names : List NIdx} {holes pfvs : List EIdx}
-    (h : pdsK5 n vis d no nl lvls ho hl pfo pfl y (tcpF n m pfo pfl x) = some (r, m'))
+    (h : pdsK5 stubCall n vis d no nl lvls ho hl pfo pfl y (tcpF n m pfo pfl x) = some (r, m'))
     (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hlv : H lvls)
     (hno : decHL m no.toNat nl.toNat = some names) (hnob : no.toNat + nl.toNat ≤ iwTop m)
     (hho : decHL m ho.toNat hl.toNat = some holes) (hhob : ho.toNat + hl.toNat ≤ iwTop m)
@@ -221,19 +224,19 @@ theorem pdsR_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
   rw [pdsK8_ne (h := hb8) (he := he)] at h
   have hne : (decE av == decE bv) = false := by
     simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decE_inj av bv hav hbv e)
-  cases h9 : stubM "infer_type_core" m8 [vis, d, av] with
+  cases h9 : stubCall n "infer_type_core" [vis, d, av] m8 with
   | none => rw [h9] at h; cases h
   | some p9 =>
   obtain ⟨r9, m9⟩ := p9
   rw [h9, pdsK9_some] at h
   obtain ⟨t9, a9, run9, hS9, hg9, -⟩ := inferTypeCore_spec dn vis fe d av hav m8 m9 a8 r9 h9 hS8
-  cases h10 : stubM "infer_type_core" m9 [vis, d, bv] with
+  cases h10 : stubCall n "infer_type_core" [vis, d, bv] m9 with
   | none => rw [h10] at h; cases h
   | some p10 =>
   obtain ⟨r10, m10⟩ := p10
   rw [h10, pdsK10_some] at h
   obtain ⟨t10, a10, run10, hS10, hg10, -⟩ := inferTypeCore_spec dn vis fe d bv hbv m9 m10 a9 r10 h10 hS9
-  cases h11 : stubM "is_def_eq_core" m10 [vis, d, av, bv] with
+  cases h11 : stubCall n "is_def_eq_core" [vis, d, av, bv] m10 with
   | none => rw [h11] at h; cases h
   | some p11 =>
   obtain ⟨r11, m11⟩ := p11
@@ -249,7 +252,7 @@ theorem pdsR_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
 /-- The model's step simulates `tpStep`. -/
 theorem pdsW_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl x y : Word}
     {r : List Word} {names : List NIdx} {holes pfvs : List EIdx}
-    (h : pdsW n m vis d no nl lvls ho hl pfo pfl x y = some (r, m'))
+    (h : pdsW stubCall n m vis d no nl lvls ho hl pfo pfl x y = some (r, m'))
     (hS : StageR dn vis fe m a) (hx : H x) (hy : H y) (hlv : H lvls)
     (hno : decHL m no.toNat nl.toNat = some names) (hnob : no.toNat + nl.toNat ≤ iwTop m)
     (hho : decHL m ho.toNat hl.toNat = some holes) (hhob : ho.toNat + hl.toNat ≤ iwTop m)
@@ -257,7 +260,7 @@ theorem pdsW_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
     ∃ c a', (tpStep fe d.toNat names (decI lvls) holes pfvs (decE x) (decE y)).run a = .ok (c, a') ∧
       (r.headD 0 != 0) = c ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   rcases pdsC_ok dn fe vis n h hS hx hy hpf.len hP with
-    ⟨a', run, rfl, hS', hg, hP'⟩ | ⟨m4, a4, run, h4, hS4, hg4, hP4⟩
+    ⟨a', run, rfl, hS', hg, hP', -⟩ | ⟨m4, a4, run, h4, hS4, hg4, hP4, -⟩
   · refine ⟨false, a', ?_, rfl, hS', hg, hP'⟩
     simp only [tpStep, StateT.run_bind, run, except_ok_bind, Bool.not_false, if_true]; rfl
   · obtain ⟨c, a', run', hc, hS', hg, hP'⟩ := pdsR_ok dn fe vis n h4 hS4 hx hy hlv
@@ -270,7 +273,7 @@ theorem pdsW_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
 
 theorem pdeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl ao al bo bl : Word}
     {r : List Word} {names : List NIdx} {holes pfvs as bs : List EIdx},
-    pdeW n m vis d no nl lvls ho hl pfo pfl ao al bo bl = some (r, m') → StageR dn vis fe m a → H lvls →
+    pdeW stubCall n m vis d no nl lvls ho hl pfo pfl ao al bo bl = some (r, m') → StageR dn vis fe m a → H lvls →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat ≤ iwTop m →
     decHL m ho.toNat hl.toNat = some holes → ho.toNat + hl.toNat ≤ iwTop m →
     HSl0 m pfo pfl pfvs → HSl0 m ao al as → HSl0 m bo bl bs → RcMR m →
@@ -315,7 +318,7 @@ theorem pdeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {d no nl lvls ho hl pf
   cases n with
   | zero => simp [pdsF, pdeK1] at h
   | succ k =>
-  cases h1 : pdsW k m vis d no nl lvls ho hl pfo pfl x y with
+  cases h1 : pdsW stubCall k m vis d no nl lvls ho hl pfo pfl x y with
   | none => simp only [pdsF] at h; rw [h1] at h; simp [pdeK1] at h
   | some p1 =>
   obtain ⟨r1, m1⟩ := p1
@@ -332,7 +335,7 @@ theorem pdeW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {d no nl lvls ho hl pf
   rw [pdeK1_go (h := hr1)] at h
   have : c = true := by rw [← hc]; simpa using hr1
   subst this
-  cases h2 : pdeW (k + 1) m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1) with
+  cases h2 : pdeW stubCall (k + 1) m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1) with
   | none => rw [h2] at h; cases h
   | some p2 =>
   obtain ⟨r2, m2⟩ := p2
@@ -354,8 +357,7 @@ end rel
 `fvar_b`, `infer_type_core`, `is_def_eq_core`, and `replace_fvars`'): from both slices, the member
 names and the holes decoded below the top, the openers and both slices decoded (below the top unless
 empty), the walk memos well formed; the verdict as
-`r[0] ≠ 0`. -/
-@[refines ConRon.Arena.targetParamsDefEq]
+`r[0] ≠ 0`. Under `StageR`; the census link is `targetParamsDefEq_refinesC` (`IndT/RecCheckTpd`). -/
 theorem targetParamsDefEq_refines (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word)
     (names : List NIdx) (holes pfvs as bs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hlv : H lvls)
@@ -370,7 +372,7 @@ theorem targetParamsDefEq_refines (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St
       (r.headD 0 != 0) = AM.res (ConRon.Arena.targetParamsDefEq V fe d.toNat names (decI lvls) holes pfvs as bs) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetParamsDefEq V fe d.toNat names (decI lvls) holes pfvs as bs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
-  refine triple_post (tpd_spec p L n s₀ vis d no nl lvls ho hl pfo pfl ao al bo bl) ?_
+  refine triple_post (tpd_spec p L stubCall (stubCall_spec p) n s₀ vis d no nl lvls ho hl pfo pfl ao al bo bl) ?_
   rintro r s' ⟨hl', hm⟩
   obtain ⟨c, a', run, hc, hS', hg, hP'⟩ := pdeW_ok dn fe vis n hm hS hlv hno hnob hho hhob hpf has hbs hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run

@@ -351,8 +351,8 @@ end cosf
 
 /-- **`class_ctors_of` refines `classCtorsOf`** (through `class_ctor_of`'s stubs and contracts):
 `class_ctor_of`'s hypotheses, the constructors a pointer slice decoded below the tops with
-`CtorLp` at each; the records a slice stable above the entry's top (`SPLA`). -/
-@[refines ConRon.Arena.classCtorsOf]
+`CtorLp` at each; the records a slice stable above the entry's top (`SPLA`). Under `StageR`; the
+census link is `classCtorsOf_refinesC` (`IndT/RecGen27`). -/
 theorem classCtorsOf_refines {p : Prog} (P : CosProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c ao al : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cAs : List (IConstantVal × Nat))
@@ -735,8 +735,8 @@ end ccsf
 class's shape (`BSOK`, parameter count plus member count word-sized), former types, the class
 reading and the classes decoded below the tops, `CtorLp` at every class's every constructor
 (`ClassesLp`), the pool's size `+ 5` word-sized, the walk memos well formed; each class's
-constructors under a `[off, len]` header, the headers a slice stable above the entry's top. -/
-@[refines ConRon.Arena.classesCtors]
+constructors under a `[off, len]` header, the headers a slice stable above the entry's top. Under
+`StageR`; the census link is `classesCtors_refinesC` (`IndT/RecGen27`). -/
 theorem classesCtors_refines {p : Prog} (P : CcsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (hS : StageR dn vis fe s₀.mem a₀)
