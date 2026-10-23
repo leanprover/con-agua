@@ -144,4 +144,83 @@ theorem rrb_spec (p : Prog) (hp : p.lookup "rec_rule_bits" = some recRuleBitsL) 
     callW_spec p n "rec_rule_eta_of"] <;>
     finish (gen := 20) [rrbW, ntBW, CWF]
 
+/-! ## The records' fields (decoded on the record pool itself) -/
+
+section fields
+variable {b : Array Word} {dn : NIdx → Option ConLeche.Name}
+
+theorem rdW_off {q : Word} {k : Nat} {w : Word} (hsz : b.size < 2 ^ 64) (hk : k < 64)
+    (h : b[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
+  have hlt : q.toNat + k < b.size := (Array.getElem?_eq_some_iff.mp h).1
+  have e : (q + UInt64.ofNat k).toNat = q.toNat + k := by
+    rw [UInt64.toNat_add]
+    have : (UInt64.ofNat k).toNat = k := by simp; omega
+    rw [this]; omega
+  simp [rdW, e, h]
+
+theorem rdW_at {q : Word} {w : Word} (h : b[q.toNat]? = some w) : rdW b q = w := by
+  simp [rdW, h]
+
+theorem nat?_w {i k : Nat} (h : nat? b i = some k) : ∃ w, b[i]? = some w ∧ w.toNat = k := by
+  simp only [nat?, Option.map_eq_some_iff] at h; exact h
+
+theorem bool?_w {i : Nat} {x : Bool} (h : bool? b i = some x) : ∃ w, b[i]? = some w ∧ (w != 0) = x := by
+  simp only [bool?, Option.map_eq_some_iff] at h; exact h
+
+theorem hd?_w {k : IdxKind} {i : Nat} {x : Idx k} (h : hd? b i = some x) :
+    ∃ w, b[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
+  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨w, hw, h⟩ := h
+  split at h
+  · exact ⟨w, hw, by assumption, (Option.some.inj h).symm⟩
+  · cases h
+
+theorem decCV_lp {q : Nat} {cv : IConstantVal} (h : decCV b q = some cv) :
+    hlist? b (q + 1) = some cv.levelParams := by
+  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨_, _, ls, hls, _, _, hq⟩ := h
+  rw [← Option.some.inj hq]; exact hls
+
+theorem decCV_ty {q : Nat} {cv : IConstantVal} (h : decCV b q = some cv) :
+    hd? b (q + 3) = some cv.type := by
+  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨_, _, _, _, _, hd, hq⟩ := h
+  rw [← Option.some.inj hq]; exact hd
+
+/-- A constructor record's words. -/
+theorem decCI_ctorW {q : Nat} {cv : IConstantVal} {np nf : Nat}
+    (h : decCI b dn q = some (.ctorInfo cv np nf)) :
+    nat? b q = some 4 ∧ decCV b (q + 1) = some cv ∧ nat? b (q + 6) = some nf := by
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, hk, h⟩ := h
+  rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, exists_false, and_false,
+      false_and, exists_const] at h
+  obtain ⟨cv', hcv, np', -, nf', hnf, hc⟩ := h
+  simp only [IConstantInfo.ctorInfo.injEq] at hc
+  obtain ⟨rfl, rfl, rfl⟩ := hc
+  exact ⟨hk, hcv, hnf⟩
+
+/-- An inductive record's words. -/
+theorem decCI_indW {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
+    (h : decCI b dn q = some (.indInfo cv caps)) :
+    nat? b q = some 3 ∧ decCV b (q + 1) = some cv ∧ decCaps b dn (q + 5) = some caps := by
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, hk, h⟩ := h
+  rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, exists_false, and_false,
+      false_and, exists_const] at h
+  obtain ⟨cv', hcv, caps', hcaps, hc⟩ := h
+  simp only [IConstantInfo.indInfo.injEq] at hc
+  obtain ⟨rfl, rfl⟩ := hc
+  exact ⟨hk, hcv, hcaps⟩
+
+theorem decCaps_w {q : Nat} {caps : IIndCaps} (h : decCaps b dn q = some caps) :
+    bool? b q = some caps.eta ∧ hd? b (q + 1) = some caps.etaCtor ∧ bool? b (q + 6) = some caps.ruleK := by
+  simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨e1, h1, e2, h2, _, _, _, _, _, _, _, _, e7, h7, _, _, _, _, _, _, _, _, e⟩ := h
+  cases Option.some.inj e; exact ⟨h1, h2, h7⟩
+
+end fields
+
 end L.Stubs
