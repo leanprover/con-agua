@@ -417,6 +417,52 @@ def run_census(build):
     return out
 
 
+ASM = {}  # the end-to-end theorem's `A` lines (ConAgua/Census/Main.lean `asmLines`), by kind
+
+
+def asm_data(targets):
+    """The end-to-end theorem's remaining assumptions: hypotheses, axioms, sorry sources (ranked by
+    the proven-locally targets they block), or None when the census exe printed none."""
+    if not ASM.get("hyp"):
+        return None
+    blocked = dict(sorry_sources(targets))
+    srcs = [dict(name=a["name"], blocks=len(blocked.get(a["name"], ())))
+            for a in ASM.get("src", [])]
+    srcs.sort(key=lambda x: (-x["blocks"], x["name"]))
+    return dict(theorem="ConAgua.Final.checkerAsm_accepts_remaining",
+                hyps=[dict(name=h["name"], type=h["type"], prop=h["kind"] == "prop")
+                      for h in ASM["hyp"] if not h["name"].startswith("inst")],
+                axioms=[a["name"] for a in ASM.get("axiom", [])], sorry_sources=srcs)
+
+
+def write_asm(targets, md=None):
+    """The progress.md section (with `md`); its machine-readable twin is the JSON comment in it,
+which scripts/dashboard_data.py extracts (the census watcher copies only progress.md/csv)."""
+    d = asm_data(targets)
+    if d is None:
+        return
+    if md is not None:
+        std = {"propext", "Classical.choice", "Quot.sound"}
+        md.append("## What the end-to-end theorem still assumes\n")
+        md.append(f"`{d['theorem']}`. Axioms: "
+                  + ", ".join(f"`{a}`" for a in d["axioms"])
+                  + (" (only the standard ones)" if set(d["axioms"]) <= std else
+                     " (besides the standard ones: sorry from the sources below)") + "\n")
+        md.append("| hypothesis | statement |")
+        md.append("|---|---|")
+        for h in d["hyps"]:
+            if h["prop"]:
+                t = re.sub(r"\s+", " ", h["type"]).replace("|", "\\|")
+                md.append(f"| `{h['name']}` | `{t[:200]}{'...' if len(t) > 200 else ''}` |")
+        md.append("")
+        md.append("| sorry source | blocks |")
+        md.append("|---|---:|")
+        for x in d["sorry_sources"]:
+            md.append(f"| `{x['name']}` | {x['blocks']} |")
+        md.append("")
+        md.append("<!-- assumptions-json " + json.dumps(d).replace("--", "- -") + " -->\n")
+
+
 def analyse(out):
     targets, edges, roots, links = {}, collections.defaultdict(set), [], []
     for line in out.splitlines():
@@ -430,6 +476,8 @@ def analyse(out):
             edges[f[1]].add(f[2])
         elif f[0] == "R":
             roots.append(f[1])
+        elif f[0] == "A" and len(f) >= 6:
+            ASM.setdefault(f[1], []).append(dict(name=f[2], type=f[3], kind=f[4]))
         elif f[0] == "L":
             links.append(dict(kind=f[1], decl=f[2], target=f[3], label=f[4], module=f[5], status=f[6]))
     lean_weights(targets)
@@ -669,6 +717,7 @@ def write_md(targets, links, dangling, rows, path):
         if t["impl"] or t["refs"] or t["parts"]:
             o.append(f"| `{t['name']}` | {t['phase']} | {t['lean']} | {t['rust']} | {t['status']} | {describe(t)} |")
     o.append("")
+    write_asm(targets, o)
     srcs = sorry_sources(targets)
     if srcs:
         o.append("## Sorry sources\n")

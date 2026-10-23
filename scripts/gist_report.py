@@ -182,6 +182,57 @@ if devf.exists():
         if re.match(r"\|\s*D\d+", line) and "fixed" not in line.lower():
             dev_open += 1  # superseded by the per-section counts below
 
+def _shorten(t, n=110):
+    t = re.sub(r"\s+", " ", t)
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
+
+def assumptions_section(w):
+    """"What the end-to-end theorem still assumes": from _tmp/dash/assumptions.json (census.py's
+    section of progress.md, extracted by dashboard_data.py) and docs/assumption-owners.json."""
+    f = dash / "assumptions.json"
+    if not f.exists():
+        return
+    try:
+        d = json.loads(f.read_text())
+        of = root / "docs" / "assumption-owners.json"
+        own = json.loads(of.read_text()) if of.exists() else {}
+    except (ValueError, OSError):
+        return
+    hyps, srcs = d.get("hyps", []), d.get("sorry_sources", [])
+    owners = own.get("hyps", {})
+    named = [h for h in hyps if h["name"] in owners]
+    other = [h["name"] for h in hyps if h["prop"] and h["name"] not in owners]
+    w("## What the end-to-end theorem still assumes\n")
+    w(f"`{d['theorem'].rsplit('.', 1)[-1]}` is the x64 theorem \"the machine code accepts only what the twin accepts\" "
+      f"from exactly {len(named)} open hypotheses; each landing discharges one. Owning lane in brackets "
+      "(`docs/assumption-owners.json`).\n")
+    for h in named:
+        lane, note = owners[h["name"]]
+        w(f"- **`{h['name']}`** [{lane}]: {note}. `{_shorten(h['type'])}`")
+    w("")
+    if other:
+        w(f"_Plus {len(other)} harness and statement premises, not proof obligations of the pipeline: "
+          + ", ".join(f"`{n}`" for n in other) + "._\n")
+    ax = d.get("axioms", [])
+    std = {"propext", "Classical.choice", "Quot.sound"}
+    extra = [a for a in ax if a not in std and a != "sorryAx"]
+    if extra:
+        w(f"**Axioms beyond the standard ones: {', '.join(f'`{a}`' for a in extra)}.**\n")
+    elif "sorryAx" in ax:
+        w("**Axioms:** only `propext`, `Classical.choice`, `Quot.sound`, plus `sorryAx` from the stub contracts below.\n")
+    else:
+        w("**Axioms:** only `propext`, `Classical.choice`, `Quot.sound`; no `sorry` left.\n")
+    if srcs:
+        w("**Sorry sources** (declarations that use `sorryAx` directly; blocks = census targets proven locally that get their `sorry` through it):\n")
+        w("| Source | Blocks | Lane |")
+        w("|---|---:|---|")
+        for x in srcs[:8]:
+            lane = next((v[0] for k, v in own.get("sources", {}).items() if x["name"].startswith(k)), "")
+            w(f"| `{x['name']}` | {x['blocks']} | {lane} |")
+        w("")
+
+
 now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 head = git("rev-parse", "--short", "HEAD")
 L = []
@@ -207,6 +258,8 @@ w("_The three shares are cumulative: proven ⊆ proven locally (own proof comple
 if eta_rate:
     w(f"_Projected completion: at the least-squares rate of the last 3 days of census runs, {eta_rate:,.0f} Lean lines proven per day; "
       "a straight-line extrapolation, so treat it as a trend, not a promise._\n")
+
+assumptions_section(w)
 
 # trend chart
 pts = progress[-30:]
