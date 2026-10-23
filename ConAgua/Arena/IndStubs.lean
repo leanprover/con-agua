@@ -62,6 +62,20 @@ theorem stubM_memoFrame (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r
     ∃ (A : List ArrId) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
       (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m' := sorry
 
+/-- **The `abstract1` walk's memo is well formed** (lane `indproofs4`, helper `abs`): array 49
+(`ABMEMO`) with epoch word `CTL[48]` (`Abs1.lean`'s `abSch`, the core's `coreAbSch`) at some map.
+`abstract1_fast` clears it on entry and exit, so it needs this of the memory it starts from and
+leaves it so (`IndRealAbs.lean`); `StageR` says nothing about array 49, so callers thread it. -/
+def AbsOK (m : Mem) : Prop :=
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨49, 48⟩ : MemoSch) lfKey decE m mp
+
+/-- **Every stub keeps the `abstract1` memo well formed** (lane `indproofs4`, helper `abs`).
+`sorry` until the owning lanes land the functions, like `stubM_memoFrame`; true of the real
+functions: those that do not reach the `abstract1` walk leave array 49 and `CTL[48]` alone, and
+the core's (`whnf`, `infer_type`, …) keep `CoreMemos`, which contains `AbsOK`. -/
+theorem stubM_absOK (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r : List Word)
+    (h : stubM f m args = some (r, m')) (hA : AbsOK m) : AbsOK m' := sorry
+
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
 def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → Prop) (op : AM α)
