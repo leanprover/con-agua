@@ -163,7 +163,7 @@ theorem fvprobeW_arm (m : Mem) (u ty t : Word) :
     ∀ j d, fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (baseW m t) (nSlotsFv m) j d =
       probeArm fvarSch m t (fvMt m u ty t)
         (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (baseW m t) (nSlotsFv m)) j d := by
-  intro j d; rw [fvprobeW]; rfl
+  intro j d; rw [fvprobeW, cprobeW]; rfl
 
 theorem fvpushOK_room (m : Mem) (t : Word) (h : fvpushOK m t = true) : PushRoom fvarSch m t := by
   simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -186,7 +186,14 @@ theorem fvinternW_eq (m : Mem) (u ty : Word) :
     simp [hdW, fvarSch, fvarP, ETag.fvar]
   have e1 : ∀ x, hdW fvarSch.tag.toUInt64 1 x = fvarS + x := fun x => by
     simp [hdW, fvarSch, fvarS, ETag.fvar]
-  simp only [fvinternW, internMD, fvpushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC fvarCS m t = fvpushOK m t := fun t => (fvpushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX fvarCS m t (fvarCS.vsM (pushArgs fvarCS [u, ty] (fvarHashW u ty)))
+      (fvarCS.colM m (pushArgs fvarCS [u, ty] (fvarHashW u ty))) j c =
+      (pushG fvarSch m t [u, ty] j c).set64 FVLP (c * 2 + t) (exprLPW m ty) := by
+    intro t j c; rw [← fvpushMem_eq, fvpushMem_eqC]; rfl
+  have ec : ∀ t, cntC fvarCS m t = cntW fvarSch m t := fun t => rfl
+  have eh : fvarCS.qhM m [u, ty] = fvarHashW u ty := rfl
+  simp only [fvinternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/

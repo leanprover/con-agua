@@ -2,9 +2,11 @@ module
 
 public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -22,7 +24,9 @@ persistent tier unconditionally):
   `CTL[6 + t]`.
 * **Cons table.** Word array `SSLOT`, the same open addressing as `SLOT`.
 
-The functions: `succ_find(t, u, h)`, `succ_push(t, u, j)` and `intern_succ(u)`.
+The functions: `succ_find(t, u, h)`, `succ_push(t, u, j)` and `intern_succ(u)`. They are the cons-table library's templates
+(`ConsLib.lean`) at the schema `succCS`, the derived column written by the template's prelude;
+their specs are the library's (`ConsLibSpec.lean`) from this table's obligations.
 -/
 
 set_option experimental.vcgen true
@@ -49,119 +53,62 @@ def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 /-- The model of the match: node `i` of tier `t` is `succ u`. -/
 def smatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
 
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `succ` tier (tag `1`). -/
+def succP : Word := 0x10000000
+def succS : Word := 0x18000000
+
+/-- The hash of node `i` of tier `t`. -/
+def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
+
+/-- The column's prelude in the template's layout (`hpBlkS` with the push's `k` inserted before
+`x`): `x := lvlHP(u)`. -/
+def sPre : Stmt := mapS (fun v => if v < 4 then v else v + 1) hpBlkS
+
+/-- The `succ` table as a cons schema (`ConsLib.lean`); the derived column `SHP`
+(the child's `hasParam` bit, `hpBlkS`). -/
+def succCS : ConsSch where
+  ra := SREC
+  sa := SSLOT
+  w := 1
+  st := 2
+  ca := 6
+  P := succP
+  S := succS
+  fname := "succ_find"
+  pname := "succ_push"
+  nk := 1
+  mc := condOf (lblk (t, u, h, n, j, d, v, b) {
+    if SREC.u64[(v - 1) * 2 + t] == u { skip } })
+  np := 1
+  room := condOf (lblk (t, u, j, c) {
+    if len(SREC.u64) >> 1 <= c || len(SHP.u64) >> 1 <= c { skip } })
+  recW := [.var 1]
+  ghash := succGS.hash
+  ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
+  skipW := none
+  xloc := 4
+  pre := some sPre
+  col := some SHP
+  colM m as := lvlHPW m (as.getD 0 0)
+  mtM m ks t i := smatchW (m.arr64 SREC) t i (ks.getD 0 0)
+  qhM _ ks := succHashW (ks.getD 0 0)
+  hsM := shash
+  vsM as := as
+  roomM m _ c := decide (m.len64 SREC >>> (1 : Word) ≤ c) || decide (m.len64 SHP >>> (1 : Word) ≤ c)
+
 /-! ## `succ_find(t, u, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps. -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def sprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if smatchW r t (slotV sl b (j * 2 + t) - 1) u then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else sprobeW sl r t u b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t u b n j d : Word)
-
-theorem sprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : sprobeW sl r t u b n j d = [0, 0, j, d] := by
-  rw [sprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem sprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : smatchW r t (sl[k] - b - 1) u = true) :
-    sprobeW sl r t u b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [sprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem sprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : smatchW r t (sl[k] - b - 1) u = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    sprobeW sl r t u b n j d = sprobeW sl r t u b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [sprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] sprobeW_free => sprobeW sl r t u b n j d, sl[k]
-grind_pattern [arena_grind] sprobeW_hit => sprobeW sl r t u b n j d, sl[k]
-grind_pattern [arena_grind] sprobeW_next =>
-  sprobeW sl r t u b n j d, sl[k], sprobeW sl r t u b n j' d'
-
-def sfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
-  while d < n {
-    v := SSLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if SREC.u64[(v - 1) * 2 + t] == u { return (1, v - 1, j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => smatchW r t i u) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def succFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := SSLOT.u64[len(SSLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪sfindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "succ_find" = some succFind)
-
-theorem sfindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n sfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
-      sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := sfindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [smatchW, baseW]
-
-theorem sfindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) sfindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
-      sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
-  Triple.step_exec (sfindLoop_spec p (n + 1) s₀)
+def succFind : FunDecl := consFindG succCS
 
 /-- The slot count of a tier of the `succ` table. -/
 def nSlotsS (m : Mem) : Word := rdW (m.arr64 SSLOT) (m.len64 SSLOT - 1) + SN0
-
-include hp in
-theorem succFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "succ_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) t u
-        (baseW s₀.mem t) (nSlotsS s₀.mem) (homeW h (nSlotsS s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, succFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, sfindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsS, homeW, baseW]
-
-end find
 
 /-! ## `succ_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -179,99 +126,20 @@ def spushMem (m : Mem) (t u j c : Word) : Mem :=
     SHP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  ⟪hpBlkS⟫;
-  c := CTL.u64[6 + t];
-  if c >= 134217728 { abort };
-  if len(SREC.u64) >> 1 <= c { abort };
-  if len(SHP.u64) >> 1 <= c { abort };
-  gk := SSLOT.u64[len(SSLOT.u64) - 1];
-  SREC.u64[c * 2 + t] := u;
-  SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[6 + (t & 1)] := c + 1;
-  SHP.u64[c * 2 + t] := x;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
-  return c
-}
-
-/-- The hash of node `i` of tier `t`. -/
-def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
-
-section push
-variable (p : Prog) (hp : p.lookup "succ_push" = some succPush)
-
-/-- The growth's hash block computes `shash`. -/
-theorem shash_ok : HashOK p succGS 8 shash := by
-  intro k s₀
-  simp only [succGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [shash, succHashW, LocEq, St.setLoc]
-
-include hp in
-theorem succPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "succ_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ spushOK s₀.mem t = true ∧ r = [scnt s₀.mem t] ∧
-      growIf SSLOT 6 shash s₀.mem (spushMem s₀.mem t u j (scnt s₀.mem t))
-        (scnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, succPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
-        growBlkG_spec p succGS SSLOT 6 rfl rfl 8 shash (shash_ok p) n] <;>
-      finish [spushMem, scnt, spushOK, baseW, growIf_grow', growIf_keep']
-
-end push
+def succPush : FunDecl := consPushG succCS
 
 /-! ## `intern_succ(u)`: hash-cons the level `succ u`
 
 con-ron's `LStore::intern` at `succ` and the arena's `internLNode (.succ u)`: the persistent
 probe, the scratch probe if the scratch tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `succ` tier (tag `1`). -/
-def succP : Word := 0x10000000
-def succS : Word := 0x18000000
-
 /-- The model of `intern_succ`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def sinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
-  let h := succHashW u
-  let rs₀ := sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW h (nSlotsS m)) 0
-  let rs₁ := sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW h (nSlotsS m)) 0
-  if rs₀ = [] then none
-  else if rs₀.headD 0 ≠ 0 then some (succP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (succS + rs₁.tail.headD 0, m)
-    else if spushOK m 1 then
-      match growIf SSLOT 6 shash m (spushMem m 1 u (rs₁.tail.tail.headD 0) (scnt m 1)) (scnt m 1) with
-      | some m' => some (succS + scnt m 1, m')
-      | none => none
-    else none
-  else if spushOK m 0 then
-    match growIf SSLOT 6 shash m (spushMem m 0 u (rs₀.tail.tail.headD 0) (scnt m 0)) (scnt m 0) with
-    | some m' => some (succP + scnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def sinternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM succCS m [u]
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
-def internSucc : FunDecl := lfn (u) locals (h, fd, i, j, d) {
-  h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
-  (fd, i, j, d) := call succ_find(0, u, h);
-  if fd != 0 { return ⟪succP⟫ + i };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call succ_find(1, u, h);
-    if fd != 0 { return ⟪succS⟫ + i };
-    i := call succ_push(1, u, j);
-    return ⟪succS⟫ + i
-  };
-  i := call succ_push(0, u, j);
-  return ⟪succP⟫ + i
-}
+def internSucc : FunDecl := consInternG succCS
 
 /-- The `succ` store functions, as one `#eval`-able program. -/
 def succProg : Prog :=
@@ -296,25 +164,104 @@ def internSuccs (m : Mem) : List Word → Option (List Word)
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
 #guard internSuccs (succMem 1) [0, 1, 0] == some [0x18000000, 0x18000001, 0x18000000]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "succ_find" = some succFind)
-  (hpp : p.lookup "succ_push" = some succPush) (hp : p.lookup "intern_succ" = some internSucc)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internSucc_spec (n : Nat) (s₀ : St) (u : Word) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `shash`. -/
+theorem shash_ok : HashOK p succGS 9 shash := by
+  intro k s₀
+  simp only [succGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [shash, succHashW, LocEq, St.setLoc]
+
+theorem sPre_spec (k : Stmt → M Sig) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p k sPre
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
+      s'.loc 2 = s₀.loc 2 ∧ s'.loc 5 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
+  simp only [sPre, hpBlkS, mapS, mapE, mapC, L.Notation.blk]
+  simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;>
+    finish [lvlHPW, tierW, idxW]
+
+/-- **The `succ` table's obligations.** -/
+theorem succOK : ConsOK p succCS where
+  match_ := by
+    intro s
+    simp [succCS, condOf, Cond.pval, Expr.pval, smatchW, argsOf, rd64_rdWC, L.Notation.blk,
+      Cmp.eval, BinOp.eval, List.range_succ]
+  ghash := shash_ok p
+  ihash := by
+    intro n s₀
+    simp only [succCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
+  pre := by
+    intro n s₀
+    vcgen [sPre_spec p (exec p n) s₀]
+    all_goals obtain ⟨h0, h1, h2, hx⟩ := ‹_ ∧ _›
+    · assumption
+    · intro x hx'
+      simp only [succCS] at hx'
+      rcases (by omega : x = 0 ∨ x = 1 ∨ x = 2) with rfl | rfl | rfl <;> assumption
+    · simp [succCS, argsOf, List.range_succ, hx]
+  colA := by
+    intro A h
+    simp only [succCS, Option.some.injEq] at h
+    subst h; decide
+  recs := ⟨by
+      intro e he s s' h
+      simp only [succCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval, h],
+    fun s => by simp [succCS, argsOf, Expr.pval, List.range_succ]⟩
+  room := fun s => by
+    simp only [succCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by
+    intro e he
+    simp [succCS] at he
+  push_np := by decide
+  arrs := by decide
+
+theorem succFind_spec (hp : p.lookup "succ_find" = some succFind) (n : Nat) (s₀ : St)
+    (t u h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "succ_find" [t, u, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) t u
+        (baseW s₀.mem t) (nSlotsS s₀.mem) (homeW h (nSlotsS s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p succCS ((succOK p).match_) hp n s₀ t [u] rfl h trivial
+
+theorem spushOK_eqC (m : Mem) (t : Word) : spushOK m t = pushOKC succCS m t := by
+  simp only [spushOK, pushOKC, succCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
+  rfl
+
+theorem spushMem_eqC (m : Mem) (t u j c : Word) :
+    spushMem m t u j c = pushMX succCS m t [u] (lvlHPW m u) j c := by
+  simp [spushMem, pushMX, colW, pushMC, tailM, wrRecK, succCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SREC by decide)]
+
+theorem succPush_spec (hp : p.lookup "succ_push" = some succPush) (n : Nat) (s₀ : St)
+    (t u j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "succ_push" [t, u, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ spushOK s₀.mem t = true ∧ r = [scnt s₀.mem t] ∧
+      growIf SSLOT 6 shash s₀.mem (spushMem s₀.mem t u j (scnt s₀.mem t))
+        (scnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [spushOK_eqC]
+  simp only [spushMem_eqC]
+  exact consPushG_spec p succCS (succOK p) hp n s₀ t [u] rfl j
+
+theorem internSucc_spec (hpf : p.lookup "succ_find" = some succFind)
+    (hpp : p.lookup "succ_push" = some succPush) (hp : p.lookup "intern_succ" = some internSucc)
+    (n : Nat) (s₀ : St) (u : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_succ" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ sinternW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internSucc]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        succFind_spec p hpf n, succPush_spec p hpp n] <;>
-      finish [sinternW, succHashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ sinternW s₀.mem u = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p succCS (succOK p) hpf hpp "intern_succ" hp n s₀ [u] rfl trivial
 
-end intern
+end specs
 
 end L.Arena
