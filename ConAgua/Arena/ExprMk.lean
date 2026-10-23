@@ -152,6 +152,218 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
 
 attribute [arena_grind =] mkK_some
 
+/-! ## The memory after an append, as `der_b` reads it
+
+`mk_app`/`mk_lam`/`mk_forall` read the children's ranges only after `intern_*` appended a node
+(as the twin's `EStore.intern` computes `derOfView` only on a miss), so they read the memory
+AFTER the append. Before reading, they zero the new node's range slot: then every handle reads
+the same range, fvar range and level-parameter bit as before the append, the new node itself
+included (before: past the count, `0`; after: the zeroed slot, `0`). -/
+
+theorem rdW_set64E (m : Mem) (a b : ArrId) (k v x : Word) :
+    rdW ((m.set64 a k v).arr64 b) x =
+      if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
+  by_cases h : b = a
+  · subst h; rw [Mem.arr64_set64_same]
+    simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; grind
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
+
+theorem Mem.set64_set64_same (m : Mem) (a : ArrId) (i v w : Word) :
+    (m.set64 a i v).set64 a i w = m.set64 a i w := by
+  have := Mem.arr64_set64_same m a i v
+  simp only [Mem.set64] at this ⊢
+  rw [this]
+  simp only [Array.set!_eq_setIfInBounds, Array.setIfInBounds_setIfInBounds]
+
+theorem slot_eq_iff {i c t u : Word} (hi : i < 134217728) (hc : c < 134217728) (ht : t ≤ 1)
+    (hu : u ≤ 1) : i * 2 + t = c * 2 + u ↔ i = c ∧ t = u := by
+  constructor
+  · intro h
+    simp only [UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.toNat_mul, show (2 : Word).toNat = 2 from rfl, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  · rintro ⟨rfl, rfl⟩; rfl
+
+theorem h01 (x : Word) (hx : x ≤ 1) : x = 0 ∨ x = 1 := by
+  simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj] at *
+  have : (1 : Word).toNat = 1 := rfl; have : (0 : Word).toNat = 0 := rfl; omega
+
+theorem idxW_lt (h : Word) : idxW h < 134217728 := by
+  simp only [idxW, UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+
+/-- The memory `mk_app` reads the children's ranges from after a miss: the append, then the new
+node's range slot zeroed. -/
+abbrev apushZ (m : Mem) (t f a j : Word) : Mem :=
+  (apushMem m t f a j (acnt m t)).set64 ADER (acnt m t * 2 + t) 0
+
+theorem apushZ_arr (m : Mem) (t f a j : Word) (b : ArrId) (h1 : b ≠ CTL) (h2 : b ≠ AREC)
+    (h3 : b ≠ ASLOT) (h4 : b ≠ ADER) : (apushZ m t f a j).arr64 b = m.arr64 b := by
+  simp [apushZ, apushMem, Mem.arr64_set64_ne, *]
+
+theorem apushZ_ctl (m : Mem) (t f a j k : Word) (ht : t ≤ 1) :
+    rdW ((apushZ m t f a j).arr64 CTL) k =
+      if 4 + t = k ∧ (4 + t).toNat < (m.arr64 CTL).size then acnt m t + 1 else rdW (m.arr64 CTL) k := by
+  rcases h01 t ht with rfl | rfl <;>
+  simp [apushZ, apushMem, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, ASLOT]
+
+theorem apushZ_der (m : Mem) (t f a j x : Word) :
+    rdW ((apushZ m t f a j).arr64 ADER) x =
+      if acnt m t * 2 + t = x ∧ (acnt m t * 2 + t).toNat < (m.arr64 ADER).size then 0
+      else rdW (m.arr64 ADER) x := by
+  simp [apushZ, apushMem, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, ASLOT]
+
+theorem derBW_apush (m : Mem) (t f a j h : Word) (ht : t ≤ 1) (hc : acnt m t < 134217728) :
+    derBW (apushZ m t f a j) h = derBW m h := by
+  have hs := slot_eq_iff hc (idxW_lt h) ht (tierW_le h)
+  have key : acnt m t ≤ idxW h → ¬acnt m t + 1 ≤ idxW h → idxW h = acnt m t := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat + 1 ≤ (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind (splits := 24)
+  unfold derBW
+  simp only [apushZ_ctl _ _ _ _ _ _ ht, apushZ_der,
+    apushZ_arr m t f a j BREC (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FVREC (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FVLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j SOLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j CLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j LADER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FADER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j LEDER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j PJDER (by decide) (by decide) (by decide) (by decide)]
+  rcases h01 t ht with rfl | rfl <;> rcases h01 _ (tierW_le h) with e | e <;> rw [e] at hs ⊢ <;>
+    simp (config := {decide := true}) only [acnt, CTL, ADER, UInt64.add_zero, show (4 : Word) + 1 = 5 from rfl, ite_false, true_and,
+      false_and, and_false, and_true] at * <;>
+    simp only [hs, false_and, and_false, ite_false] <;>
+    grind (splits := 24)
+
+theorem derFW_apush (m : Mem) (t f a j h : Word) (ht : t ≤ 1) (hc : acnt m t < 134217728) :
+    derFW (apushZ m t f a j) h = derFW m h := by
+  have hs := slot_eq_iff hc (idxW_lt h) ht (tierW_le h)
+  have key : acnt m t ≤ idxW h → ¬acnt m t + 1 ≤ idxW h → idxW h = acnt m t := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat + 1 ≤ (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind (splits := 24)
+  unfold derFW
+  simp only [apushZ_ctl _ _ _ _ _ _ ht, apushZ_der,
+    apushZ_arr m t f a j BREC (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FVREC (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FVLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j SOLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j CLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j LADER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FADER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j LEDER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j PJDER (by decide) (by decide) (by decide) (by decide)]
+  rcases h01 t ht with rfl | rfl <;> rcases h01 _ (tierW_le h) with e | e <;> rw [e] at hs ⊢ <;>
+    simp (config := {decide := true}) only [acnt, CTL, ADER, UInt64.add_zero, show (4 : Word) + 1 = 5 from rfl, ite_false, true_and,
+      false_and, and_false, and_true] at * <;>
+    simp only [hs, false_and, and_false, ite_false] <;>
+    grind (splits := 24)
+
+theorem exprLPW_apush (m : Mem) (t f a j h : Word) (ht : t ≤ 1) (hc : acnt m t < 134217728) :
+    exprLPW (apushZ m t f a j) h = exprLPW m h := by
+  have hs := slot_eq_iff hc (idxW_lt h) ht (tierW_le h)
+  have key : acnt m t ≤ idxW h → ¬acnt m t + 1 ≤ idxW h → idxW h = acnt m t := by
+    simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
+      UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
+      show (134217728 : Word).toNat = 134217728 from rfl] at *
+    omega
+  have oob : ∀ (b : ArrId) x, ¬x.toNat + 1 ≤ (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
+    intro b x hx; simp only [rdW]; grind (splits := 24)
+  unfold exprLPW
+  simp only [apushZ_ctl _ _ _ _ _ _ ht, apushZ_der,
+    apushZ_arr m t f a j BREC (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FVREC (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FVLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j SOLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j CLP (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j LADER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j FADER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j LEDER (by decide) (by decide) (by decide) (by decide),
+    apushZ_arr m t f a j PJDER (by decide) (by decide) (by decide) (by decide)]
+  rcases h01 t ht with rfl | rfl <;> rcases h01 _ (tierW_le h) with e | e <;> rw [e] at hs ⊢ <;>
+    simp (config := {decide := true}) only [acnt, CTL, ADER, UInt64.add_zero, show (4 : Word) + 1 = 5 from rfl, ite_false, true_and,
+      false_and, and_false, and_true] at * <;>
+    simp only [hs, false_and, and_false, ite_false] <;>
+    grind (splits := 24)
+
+
+/-- The index and tier fields of the handle word `G * 2^27 + c` (`G` = tag * 2 + tier). -/
+theorem hw_fields (G c : Word) (hc : c < 134217728) :
+    idxW (G * 134217728 + c) = c ∧ tierW (G * 134217728 + c) = G % 2 := by
+  simp only [UInt64.lt_iff_toNat_lt, show (134217728 : Word).toNat = 134217728 from rfl] at hc
+  constructor
+  · apply UInt64.toNat_inj.mp
+    simp only [idxW, UInt64.toNat_and]
+    rw [show (134217727 : Word).toNat = 2 ^ 27 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+    simp only [UInt64.toNat_add, UInt64.toNat_mul, show (134217728 : Word).toNat = 134217728 from rfl]
+    omega
+  · apply UInt64.toNat_inj.mp
+    simp only [tierW, UInt64.toNat_and, UInt64.toNat_shiftRight, UInt64.toNat_add, UInt64.toNat_mul,
+      UInt64.toNat_mod, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod,
+      show (134217728 : Word).toNat = 134217728 from rfl, show (2 : Word).toNat = 2 from rfl,
+      show (27 : Word).toNat = 27 from rfl, show (1 : Word).toNat = 1 from rfl,
+      show 2 ^ (27 % 64) = 134217728 from rfl]
+    omega
+
+theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some (r, m₁))
+    (hc : cnt2 m₁ 4 ≠ cnt2 m 4) :
+    ∃ t j, t ≤ 1 ∧ acnt m t < 134217728 ∧ m₁ = apushMem m t f a j (acnt m t) ∧
+      idxW r = acnt m t ∧ tierW r = t := by
+  simp only [ainternW] at hI
+  have ok : ∀ t, apushOK m t = true → acnt m t < 134217728 := by
+    intro t h; simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1.1
+  repeat' split at hI
+  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
+  all_goals obtain ⟨hr, hm⟩ := hI
+  all_goals subst hr hm
+  all_goals first
+    | (have h := ok 1 ‹apushOK m 1 = true›
+       exact ⟨1, _, by decide, h, rfl, by rw [show appS = 9 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | (have h := ok 0 ‹apushOK m 0 = true›
+       exact ⟨0, _, by decide, h, rfl, by rw [show appP = 8 * 134217728 from rfl]; exact hw_fields _ _ h⟩)
+    | exact absurd rfl hc
+
+section grow
+variable {m m₁ : Mem} {f a r q : Word}
+
+/-- After a miss of `intern_app` (the counts changed), the zeroed slot hides the append from
+`der_b`'s three reads. -/
+theorem ainternW_derB (hI : ainternW m f a = some (r, m₁)) (hc : cnt2 m₁ 4 ≠ cnt2 m 4)
+    (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
+    derBW (m₁.set64 ADER q 0) x = derBW m x := by
+  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := ainternW_grow hI hc
+  simp only [idxW, tierW] at hi htr
+  rw [hq, hi, htr]; exact derBW_apush m t f a j x ht hc'
+
+theorem ainternW_derF (hI : ainternW m f a = some (r, m₁)) (hc : cnt2 m₁ 4 ≠ cnt2 m 4)
+    (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
+    derFW (m₁.set64 ADER q 0) x = derFW m x := by
+  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := ainternW_grow hI hc
+  simp only [idxW, tierW] at hi htr
+  rw [hq, hi, htr]; exact derFW_apush m t f a j x ht hc'
+
+theorem ainternW_derL (hI : ainternW m f a = some (r, m₁)) (hc : cnt2 m₁ 4 ≠ cnt2 m 4)
+    (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
+    exprLPW (m₁.set64 ADER q 0) x = exprLPW m x := by
+  obtain ⟨t, j, ht, hc', rfl, hi, htr⟩ := ainternW_grow hI hc
+  simp only [idxW, tierW] at hi htr
+  rw [hq, hi, htr]; exact exprLPW_apush m t f a j x ht hc'
+
+end grow
+
+grind_pattern [arena_grind] ainternW_derB => ainternW m f a, (r, m₁), derBW (Mem.set64 m₁ ADER q 0) x
+grind_pattern [arena_grind] ainternW_derF => ainternW m f a, (r, m₁), derFW (Mem.set64 m₁ ADER q 0) x
+grind_pattern [arena_grind] ainternW_derL => ainternW m f a, (r, m₁), exprLPW (Mem.set64 m₁ ADER q 0) x
+
 /-! ## `mk_app(f, a)` -/
 
 /-- **The model of `mk_app`.** The written word packs both ranges (`packBF`): `der_b` reads it
@@ -165,13 +377,14 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl) {
   if (f | a) >> 32 != 0 { abort };
-  (x, xf, xl) := call der_b(f);
-  (y, yf, yl) := call der_b(a);
   s := CTL.u64[4] + CTL.u64[5];
   r := call intern_app(f, a);
   if CTL.u64[4] + CTL.u64[5] != s {
     q := (r & 134217727) * 2 + ((r >> 27) & 1);
     if len(ADER.u64) <= q { abort };
+    ADER.u64[q] := 0;
+    (x, xf, xl) := call der_b(f);
+    (y, yf, yl) := call der_b(a);
     ADER.u64[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
   };
   return r
@@ -320,7 +533,7 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
