@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndSumSpec12
+import ConAgua.Arena.IndRealAbsSim
 
 /-!
 # `check_sum_ctors` refines `checkSumCtors` (lane `indproofs2`)
@@ -247,7 +248,7 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     ∀ (m : Mem) (a : AState) (cO cL : Word) (cs : List (IConstantVal × Nat)),
     StageR dn vis fe m a → decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     DecB (fun m => decCVp m cvTaw.toNat) m cvTa →
-    DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs →
+    DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs → AbsOK m →
     Sim (sctsW k m vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
       (checkSumCtors V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvTa cs) a
@@ -256,18 +257,18 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
         DecB (fun m => decPL m (sortsDec m) (r.tail.tail.headD 0).toNat
           (r.tail.tail.tail.headD 0).toNat) m' x.2 ∧
-        (r.tail.tail.headD 0).toNat + (r.tail.tail.tail.headD 0).toNat ≤ iwTop m') := by
+        (r.tail.tail.headD 0).toNat + (r.tail.tail.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m') := by
   induction k with
-  | zero => intro m a cO cL cs _ _ _ _ _; exact Sim.of_none
+  | zero => intro m a cO cL cs _ _ _ _ _ _; exact Sim.of_none
   | succ k ih =>
-  intro m a cO cL cs hS hlps hlb hta hcs
+  intro m a cO cL cs hS hlps hlb hta hcs hA
   have hcl := decPL_length (m := truncM m) hcs
   by_cases hl : cL = 0
   · rw [sctsW_nil (h := hl)]
     have : cs = [] := by subst hl; cases cs with | nil => rfl | cons _ _ => simp at hcl
     subst this
     simp only [checkSumCtors]
-    exact Sim.ret ⟨hS, IWGrow.refl _, by simp [DecB, decPL], by simp, by simp [DecB, decPL], by simp⟩
+    exact Sim.ret ⟨hS, IWGrow.refl _, by simp [DecB, decPL], by simp, by simp [DecB, decPL], by simp, hA⟩
   by_cases hov1 : nP + nIdx < nP
   · rw [sctsW_ov1 (h := hl) (h1 := hov1)]; exact Sim.of_none
   have hni : nP.toNat + nIdx.toNat < 2 ^ 64 := by rw [← sumAddNoOv hov1]; exact UInt64.toNat_lt _
@@ -312,8 +313,8 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   simp only [checkSumCtors]
   refine Sim.bindK (K := sctsK1 _ (j + 3) w3) rfl (fun _ _ => rfl)
     (ctorW_ok j m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa hS hT hlps hlb hcvB hta hrs
-      hni hnf) fun r x m1 a1 hQ => ?_
-  obtain ⟨hS1, hg1, hr0, hx1, hsorts, hsb⟩ := hQ
+      hni hnf hA) fun r x m1 a1 hQ => ?_
+  obtain ⟨hS1, hg1, hr0, hx1, hsorts, hsb, hA1⟩ := hQ
   obtain ⟨cvCa, sorts⟩ := x
   simp only at hx1 hsorts
   subst hx1
@@ -324,20 +325,23 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   obtain ⟨rn, m2⟩ := y
   rw [sctsK2_some]
   obtain ⟨hS2, hg2, hn0, hn1⟩ := sumRec2 hn hS1
+  have hA2 : AbsOK m2 := recW_afr hn hA1
   cases hh : recW m2 2 [r.tail.headD 0, r.tail.tail.headD 0] with
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨rh, m3⟩ := y
   rw [sctsK3_some]
   obtain ⟨hS3, hg3, hh0, hh1⟩ := sumRec2 hh hS2
+  have hA3 : AbsOK m3 := recW_afr hh hA2
   have hg03 := (hg1.trans hg2).trans hg3
   have hcO1 : (cO + 1).toNat = cO.toNat + 1 := sumToNat_succ (by omega)
   have hcL1 : (cL - 1).toNat = L := by rw [sumToNat_pred hl]; omega
   refine Sim.bindK (K := sctsK4 (j + 3) (rn.headD 0) (rh.headD 0)) rfl (fun _ _ => rfl)
     (ih m3 a1 (cO + 1) (cL - 1) cs hS3 (by rw [decHL_grow hg03 hlb]; exact hlps)
       (by have := hg03.1; omega) (DecB.grow (OMono.decCVp _) hg03 hta)
-      (by rw [hcO1, hcL1]; exact DecB.grow (OMono.decPL decCN_mono _ _) hg03 htail)) fun rr y m4 a4 hQ => ?_
-  obtain ⟨hS4, hg4, hD1, hb1, hD2, hb2⟩ := hQ
+      (by rw [hcO1, hcL1]; exact DecB.grow (OMono.decPL decCN_mono _ _) hg03 htail) hA3)
+    fun rr y m4 a4 hQ => ?_
+  obtain ⟨hS4, hg4, hD1, hb1, hD2, hb2, hA4⟩ := hQ
   obtain ⟨rest, srest⟩ := y
   simp only at hD1 hD2
   rw [sctsK4_some]
@@ -370,7 +374,7 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
         (by have := (hg2.trans hg3).1; omega)
     exact DecB.grow (sortsDec_mono _) ((hg4.trans hg5).trans hg6) h0
   have hg46 := hg5.trans hg6
-  refine Sim.ret ⟨hS6, (hg03.trans hg4).trans hg46, ?_, ?_, ?_, ?_⟩
+  refine Sim.ret ⟨hS6, (hg03.trans hg4).trans hg46, ?_, ?_, ?_, ?_, consW_afr hc2 (consW_afr hc1 hA4)⟩
   · simp only [List.headD_cons, List.tail_cons]
     exact DecB.grow (OMono.decPL decCN_mono _ _) hg6
       (sumDecB_cons decCN_mono hmap1 hd5 (by omega) hg5 hy1)
@@ -391,7 +395,7 @@ theorem checkSumCtors_refines (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St) 
     (cs : List (IConstantVal × Nat)) (hS : StageR dn vis fe s₀.mem a₀) (hT : H T) (hrs : H rs)
     (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
     (hta : DecB (fun m => decCVp m cvTaw.toNat) s₀.mem cvTa)
-    (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) s₀.mem cs) :
+    (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) s₀.mem cs) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_ctors"
       [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTaw, cO, cL]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -409,7 +413,7 @@ theorem checkSumCtors_refines (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St) 
   refine triple_post (sctsW_spec p hP k s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd1, -, hd2, -⟩ := (sctsW_ok vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs
-    k _ a₀ cO cL cs hS hlps hlb hta hcs).run hm
+    k _ a₀ cO cL cs hS hlps hlb hta hcs hA).run hm
   exact ⟨hl, hok, hS', hg', hd1, hd2⟩
 
 end L.Ind

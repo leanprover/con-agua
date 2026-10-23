@@ -153,37 +153,6 @@ theorem spaW_afr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
   simp only [spaW, spaK.eq_def, spaK2.eq_def] at h
   afr_auto h [binternW_afr, mkProjW_afr]
 
-theorem psGoW_afr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word),
-    psGoW n m o nP N k = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h
-  | n + 1, m, m', o, nP, N, k, r, h => by
-    simp only [psGoW, psK0.eq_def, psK1.eq_def, psK2.eq_def, psK3.eq_def] at h
-    afr_auto h [psGoW_afr n _ _ _ _ _ _ _, binternW_afr, allocW_afr, consW_afr]
-
-theorem psAtW_afr {n : Nat} {m m' : Mem} {o nP : Word} {r : List Word} (h : psAtW n m o nP = some (r, m')) :
-    AFr m m' := by
-  cases n with
-  | zero => simp [psAtW] at h
-  | succ n =>
-    simp only [psAtW, psK3.eq_def] at h
-    afr_auto h [psGoW_afr _ _ _ _ _ _ _ _]
-
-theorem projPsW_afr {n : Nat} {m m' : Mem} {nP : Word} {r : List Word} (h : projPsW n m nP = some (r, m')) :
-    AFr m m' := by
-  cases n with
-  | zero => simp [projPsW] at h
-  | succ n =>
-    cases n with
-    | zero => simp [projPsW, psAtW, psK3] at h
-    | succ n =>
-      simp only [projPsW, psAtW, psK3.eq_def] at h
-      cases h1 : psGoW n m 1 nP nP 0 with
-      | none => simp [h1] at h
-      | some x =>
-        obtain ⟨r1, m1⟩ := x
-        simp only [h1, Option.some.injEq, Prod.mk.injEq] at h
-        rw [← h.2]; exact psGoW_afr _ _ _ _ _ _ _ _ h1
-
 theorem tag_iff (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
     (decE b).tag = t.toUInt32 ↔ b >>> 28 = t := by
   rw [decE_tag b hb]

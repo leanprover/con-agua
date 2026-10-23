@@ -48,13 +48,6 @@ theorem installSimCall {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnNa
   obtain ⟨hok, hq⟩ := hP r s' hp
   exact ⟨_, _, partsRunOfOk hok, hq⟩
 
-/-- A memory fact of the model's result, added to a `Sim`'s post. -/
-theorem Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {F : Mem → Prop}
-    (h : Sim mo op a Q) (hf : ∀ r m', mo = some (r, m') → F m') :
-    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ F m') := by
-  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, hf r m' e⟩
-
 /-- A stub's run keeps the `abstract1` memo (`stubM_absOK`). -/
 theorem callW_stub_afr {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m m' : Mem}
     {r : List Word} (h : callW p n f args m = some (r, m')) (hf : f ∈ stubNames := by decide) :

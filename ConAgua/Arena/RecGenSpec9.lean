@@ -213,9 +213,9 @@ theorem cr1W_rel {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR : 
     {X : ClassCtor} (h : cr1W N m visT visR g cvR x gen = some (r, m')) (hS : StageR dn visR feR m a)
     (hgen : H gen) (hcv : decCVp m cvR.toNat = some cv) (hext : CVExt m cvR.toNat)
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
-    (hX : DecB (fun m => decCC m x.toNat) m X) :
+    (hX : DecB (fun m => decCC m x.toNat) m X) (hA : AbsOK m) :
     ∃ a', (ConRon.Arena.classRuleOk V visT.toNat feR cv (G.nP + G.slots.length + X.nF) (decI gen)).run a =
-      .ok (decI gen, a') ∧ StageR dn visR feR m' a' ∧ IWGrow m m' ∧ r = [gen] := by
+      .ok (decI gen, a') ∧ StageR dn visR feR m' a' ∧ IWGrow m m' ∧ r = [gen] ∧ AbsOK m' := by
   cases N with
   | zero => simp [cr1W] at h
   | succ N =>
@@ -239,13 +239,13 @@ theorem cr1W_rel {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR : 
   rw [h1, cr1K_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨a', hrun, hS', hg, rfl⟩ := cruleW_ok h1 hS hgen (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hS hext)
+  obtain ⟨a', hrun, hS', hg, rfl, hA'⟩ := cruleW_ok h1 hS hgen (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hS hext) hA
   have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =
       G.nP + G.slots.length + X.nF := by
     rw [rec3Add_toNat hb, e0, e8, e1, t1]
     rw [UInt64.toNat_add, t0, t8]; exact congrArg (· + X.nF) (Nat.mod_eq_of_lt hns)
   rw [hn] at hrun
-  exact ⟨a', hrun, hS', hg, rfl⟩
+  exact ⟨a', hrun, hS', hg, rfl, hA'⟩
 
 /-! ## `class_rules_ok` -/
 
@@ -254,59 +254,6 @@ abbrev decEL : Mem → List Word → List EIdx → Prop := decRL (fun m => decHL
 
 /-! ## The `abstract1` memo across a rule's check -/
 
-theorem pinternW_afr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : AFr m m' := by
-  rw [pinternW_eq] at h
-  exact AFr.of_frame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h) (by simp [paramSch, PREC, PSLOT, memoFreeA])
-    (by simp [paramSch, memoFreeC])
-
-theorem plgW_afr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, h => by simp [plgW] at h
-  | k + 1, m, m', o, l, r, h => by
-    simp only [plgW, plK0.eq_def, plK1.eq_def, plK2.eq_def, plK3.eq_def] at h
-    afr_auto h [allocW_afr, pinternW_afr, plgW_afr k _ _ _ _ _, consW_afr]
-
-theorem ilF_afr {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (ilF_frame h)
-
-theorem plW_afr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
-    AFr m m' := by
-  cases k with
-  | zero => simp [plW] at h
-  | succ k =>
-  simp only [plW, plW.plK4.eq_def, plW.plK5.eq_def] at h
-  afr_auto h [plgW_afr _ _ _ _ _ _, ilF_afr]
-
-theorem iarW_afr : ∀ (n : Nat) (m m' : Mem) (v o l : Word) (r : List Word), iarW n m v o l = some (r, m') →
-    AFr m m'
-  | 0, _, _, _, _, _, _, h => by simp [iarW] at h
-  | n + 1, m, m', v, o, l, r, h => by
-    simp only [iarW, iarK.eq_def, resK'.eq_def] at h
-    afr_auto h [stub_afr, iarW_afr n _ _ _ _ _ _]
-
-theorem crgW_afr {N : Nat} {m m' : Mem} {visR cvR gen : Word} {r : List Word}
-    (h : crgW N m visR cvR gen = some (r, m')) : AFr m m' := by
-  cases N with
-  | zero => simp [crgW] at h
-  | succ N =>
-  simp only [crgW, crgK0.eq_def, crgK1.eq_def, crgK2.eq_def, crgK3.eq_def, crgK4.eq_def] at h
-  afr_auto h [lbbF_afr, hffF_afr, cvLpsA_afr, stub_afr]
-
-theorem cruleW_afr {N : Nat} {m m' : Mem} {visT visR cvR n gen : Word} {r : List Word}
-    (h : cruleW N m visT visR cvR n gen = some (r, m')) : AFr m m' := by
-  cases N with
-  | zero => simp [cruleW] at h
-  | succ N =>
-  simp only [cruleW, cruK1.eq_def, cruK2.eq_def, cruK3.eq_def, cruK4.eq_def] at h
-  afr_auto h [crgW_afr, stub_afr, (fun h => (AFr.of_frame (flushMem_frame _)).trans (stripF_afr h)),
-    iarW_afr _ _ _ _ _ _ _]
-
-theorem cr1W_afr {n : Nat} {m m' : Mem} {visT visR g cvR x gen : Word} {r : List Word}
-    (h : cr1W n m visT visR g cvR x gen = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [cr1W] at h
-  | succ n =>
-  simp only [cr1W, cr1K.eq_def] at h
-  afr_auto h [cruleW_afr]
 
 theorem crsW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : IFEnv) (g rco rcl cgo cgl cvR c : Word)
     (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal) (cv : IConstantVal)
@@ -379,10 +326,10 @@ theorem crsW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     (Q1 := fun b a' y => StageR dn visR feR b.2 a' ∧ IWGrow m3 b.2 ∧ b.1 = [r3.tail.headD 0] ∧
       y = decI (r3.tail.headD 0) ∧ AbsOK b.2)
     (fun ⟨r4, m4⟩ h4 => by
-      obtain ⟨a', hrun, hS', hg, hr⟩ := cr1W_rel h4 hS3 hgH
+      obtain ⟨a', hrun, hS', hg, hr, hA4⟩ := cr1W_rel h4 hS3 hgH
         (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
-        (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03)
-      exact ⟨_, a', hrun, hS', hg, hr, rfl, cr1W_afr h4 hA3⟩) ?_
+        (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
+      exact ⟨_, a', hrun, hS', hg, hr, rfl, hA4⟩) ?_
   rintro ⟨r4, m4⟩ y a4 - ⟨hS4, hg4, hr4, rfl, hA4⟩
   dsimp only at hS4 hg4 hr4
   subst hr4

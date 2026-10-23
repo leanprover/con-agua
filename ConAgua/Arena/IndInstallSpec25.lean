@@ -96,14 +96,6 @@ theorem lpsW_mfrT {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n 
     simp only [lpsW] at h
     mfr_auto h [erToIwW_mfr]
 
-theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
-    AFr m m' := by
-  cases n with
-  | zero => simp [lpsW] at h
-  | succ n =>
-    simp only [lpsW] at h
-    afr_auto h [erToIwW_afr]
-
 theorem psGoW_mfr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word),
     psGoW n m o nP N k = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h

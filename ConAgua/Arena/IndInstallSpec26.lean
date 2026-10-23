@@ -61,11 +61,11 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.1; omega
   -- the scoping
   refine Sim.bindK (K := tblK2 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
-    (Sim.withFr (F := fun m2 => MFr [] [] m1 m2 ∧ AFr m1 m2)
-      (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb)
-      (fun _ _ e => ⟨sctW_mfr _ _ _ _ _ _ _ _ _ _ e, sctW_afr _ _ _ _ _ _ _ _ _ _ e⟩))
+    (Sim.withFr (F := fun m2 => MFr [] [] m1 m2)
+      (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb hA1)
+      (fun _ _ e => sctW_mfr _ _ _ _ _ _ _ _ _ _ e))
     fun rs' sok m2 a2 hQ => ?_
-  obtain ⟨⟨hS2, hg2, hsok, hsl⟩, hf2, ha2⟩ := hQ
+  obtain ⟨⟨hS2, hg2, hsok, hsl, hA2⟩, hf2⟩ := hQ
   by_cases hlen0 : rb.tail.tail.headD 0 ≠ nF
   · rw [tblK2_len (h := hlen0)]; exact Sim.of_none
   have hlen : rb.tail.tail.headD 0 = nF := Decidable.of_not_not hlen0
@@ -165,8 +165,8 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   · exact ((((((hf1.trans hf2).trans hf3).trans (efW_mfr h5)).trans (efW_mfr h6)).trans (efW_mfr h7)).trans
       hfM).trans (envPushW_mfr hW4)
   · subst hM
-    exact (((((((ha2.trans ha3).trans (efW_afr h5)).trans (efW_afr h6)).trans (efW_afr h7)).trans
-      (erAllocW_afr h8)).trans (wrER_afr _ _ _)).trans (envPushW_afr hW4)) hA1
+    exact ((((((ha3.trans (efW_afr h5)).trans (efW_afr h6)).trans (efW_afr h7)).trans
+      (erAllocW_afr h8)).trans (wrER_afr _ _ _)).trans (envPushW_afr hW4)) hA2
 
 /-! ## The `hb` memo in the memory at hand -/
 

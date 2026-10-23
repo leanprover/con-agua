@@ -3,6 +3,7 @@ import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndSumSpec2A
 import ConAgua.Arena.RecGenSpec4
 import ConAgua.Arena.RecClassSpecB
+import ConAgua.Arena.IndSumSpec2C
 
 /-!
 # `check_sum_ctor` refines `checkSumCtor` (lane `indproofs2`)
@@ -55,6 +56,7 @@ structure SumProg (p : Prog) : Prop where
   heq : p.lookup "sl_eq" = some slEq
   hfdr : p.lookup "field_doms_resolve" = some fieldDomsResolveL
   hiar : p.lookup "idx_args_resolve" = some idxArgsResolveL
+  hcr : CrfF p
   hpw : p.lookup "pin_word" = some pinWordL
   het : p.lookup "lvl_eq_true" = some lvlEqTrue
   hcn : p.lookup "sl_contains" = some slContains
@@ -186,7 +188,7 @@ theorem ctlW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
       plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil (n + 1),
       internConst_spec p hP.hcf hP.hcp hP.hic (n + 1),
       gafF_spec p hP.ad (n + 1), gaaF_spec p hP.ad (n + 1),
-      slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd (n + 1), iarW_spec p hP.hiar (n + 1),
+      slEq_spec p hP.heq (n + 1), fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr (n + 1), iarW_spec p hP.hiar hP.hcr (n + 1),
       fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd n] <;>
     finish (gen := 30) (instances := 5000) [ctlW]
 
@@ -240,19 +242,19 @@ theorem ceSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m 
 /-- `field_doms_resolve` as a `Sim`. -/
 theorem fdrSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n : Nat) (m : Mem)
     (a : AState) (o l : Word) (xs : List EIdx) (hS : StageR dn v fe m a)
-    (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
+    (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) (hA : AbsOK m) :
     Sim (fdrW n m v o l) (fieldDomsResolve fe xs) a
-      (fun r b m' a' => KeepPost dn v fe decW0B m m' a' r b) := fun r m' e => by
-  obtain ⟨x, a', h1, h2⟩ := fdrW_ok dn fe n m m' a v o l xs r e hS hd (hS.lt64 hb) hb
+      (fun r b m' a' => KeepPost dn v fe decW0B m m' a' r b ∧ AbsOK m') := fun r m' e => by
+  obtain ⟨x, a', h1, h2⟩ := fdrW_ok dn fe n m m' a v o l xs r e hS hd (hS.lt64 hb) hb hA
   exact ⟨x, a', h1, h2⟩
 
 /-- `idx_args_resolve` as a `Sim`. -/
 theorem iarSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n : Nat) (m : Mem)
     (a : AState) (o l : Word) (xs : List EIdx) (hS : StageR dn v fe m a)
-    (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
+    (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) (hA : AbsOK m) :
     Sim (iarW n m v o l) (idxArgsResolve fe xs) a
-      (fun r b m' a' => KeepPost dn v fe decW0B m m' a' r b) := fun r m' e => by
-  obtain ⟨x, a', h1, h2⟩ := iarW_ok dn fe n m m' a v o l xs r e hS hd (hS.lt64 hb) hb
+      (fun r b m' a' => KeepPost dn v fe decW0B m m' a' r b ∧ AbsOK m') := fun r m' e => by
+  obtain ⟨x, a', h1, h2⟩ := iarW_ok dn fe n m m' a v o l xs r e hS hd (hS.lt64 hb) hb hA
   exact ⟨x, a', h1, h2⟩
 
 /-- A callee run at the pre-block view `vis0` (the restriction), back at `vis`. -/
@@ -266,6 +268,26 @@ theorem sumKeep_restrict {dn : NIdx → Option ConLeche.Name} {vis vis0 : Word} 
 theorem sumUnless_true {α : Type} {c : Bool} (hc : c = true) (e : CheckError) (k : AM α) :
     ((unless c do fail e) >>= fun _ => k) = k := by subst hc; rfl
 
+theorem cfbW_afr : ∀ (n : Nat) (m m' : Mem) (isProp large s io il fv u : Word) (r : List Word),
+    cfbW n m isProp large s io il fv u = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [cfbW] at h
+  | n + 1, m, m', isProp, large, s, io, il, fv, u, r, h => by
+    simp only [cfbW, cfbK1.eq_def, cfbK2.eq_def, cfbK3.eq_def, cfbK4.eq_def, eqTrueW, eqTrueK.eq_def] at h
+    afr_auto h [stub_afr]
+
+theorem csfW_afr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl io il res j : Word) (r : List Word),
+    csfW n m vis isProp large s nP fo fl io il res j = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [csfW] at h
+  | n + 1, m, m', vis, isProp, large, s, nP, fo, fl, io, il, res, j, r, h => by
+    simp only [csfW, csfK1.eq_def, csfK2.eq_def, csfK3.eq_def, csfK4.eq_def, csfK5.eq_def] at h
+    afr_auto h [ftdF_afr, stub_afr, cfbW_afr n _ _ _ _ _ _ _ _ _ _,
+      (fun h => (set64IW_afr _ _ _).trans (csfW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _ _ h))]
+
+theorem fsortsW_afr {n : Nat} {m m' : Mem} {vis isProp large s nP fo fl io il nW : Word} {r : List Word}
+    (h : fsortsW n m vis isProp large s nP fo fl io il nW = some (r, m')) : AFr m m' := by
+  simp only [fsortsW, fsortsK1.eq_def, fsortsK2.eq_def] at h
+  afr_auto h [allocW_afr, csfW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _ _]
+
 /-- **`check_sum_ctor_tail`'s model refines `cscTailT`** (the twin's tail of `checkSumCtor`), the
 pre-block environment the restriction of `fe` to `vis0`. -/
 theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) (m : Mem)
@@ -274,18 +296,19 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hcq : decHL m cqO.toNat cqL.toNat = some cq1) (hcqb : cqO.toNat + cqL.toNat ≤ iwTop m)
     (hcqB : H cqB) (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64)
-    (hnf : nP.toNat + nF.toNat < 2 ^ 64) :
+    (hnf : nP.toNat + nF.toNat < 2 ^ 64) (hA : AbsOK m) :
     Sim (ctlW n m vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB)
       (cscTailT (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0)
         (lg != 0) cvCa nF.toNat (cq1, decI cqB)) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ x.1 = cvCa ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some x.2 ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m') := by
+        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m') := by
   have hv := hS.1.env.vis
   unfold ctlW cscTailT
   refine Sim.bindK (K := ctlK1 n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL) rfl (fun _ _ => rfl)
-    (sumSim_of_relAM (openPisAtFvarsF_spec dn vis fe nF cqB nP hcqB) hS) fun rx ox m1 a1 hQ => ?_
-  obtain ⟨hS1, hg1, hdec1⟩ := hQ
+    (Sim.withFr (F := AbsOK) (sumSim_of_relAM (openPisAtFvarsF_spec dn vis fe nF cqB nP hcqB) hS)
+      fun _ _ e => AbsOK.stub (by decide) hA e) fun rx ox m1 a1 hQ => ?_
+  obtain ⟨⟨hS1, hg1, hdec1⟩, hA1⟩ := hQ
   by_cases h0 : rx.headD 0 = 0
   · rw [ctlK1_no n m1 vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL rx h0]; exact Sim.of_none
   rw [ctlK1_yes n m1 vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL rx h0]
@@ -302,15 +325,17 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   generalize hxbw : rx.tail.tail.tail.headD 0 = xbw at hxb hxbd
   -- `param_levels`
   refine Sim.bindK (K := ctlK2 n vis0 vis T nP nIdx rs isP lg nF cqO cqL xo xlw xbw) rfl
-    (fun _ _ => rfl) (plSim (n + 1) m1 a1 lo ll lps hS1 (by rw [decHL_grow hg1 hlb]; exact hlps)
-      (by have := hg1.1; omega)) fun ru us m2 a2 hQ => ?_
-  obtain ⟨hS2, hg2, hu, hus⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (plSim (n + 1) m1 a1 lo ll lps hS1
+      (by rw [decHL_grow hg1 hlb]; exact hlps) (by have := hg1.1; omega)) fun _ _ e => plW_afr e hA1)
+    fun ru us m2 a2 hQ => ?_
+  obtain ⟨⟨hS2, hg2, hu, hus⟩, hA2⟩ := hQ
   subst hus
   rw [ctlK2_some]
   -- `intern_const`
   refine Sim.bindK (K := ctlK3 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw) rfl
-    (fun _ _ => rfl) (ceSim m2 a2 T (ru.headD 0) hS2 hT hu) fun hd e m3 a3 hQ => ?_
-  obtain ⟨he, hS3, hg3⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (ceSim m2 a2 T (ru.headD 0) hS2 hT hu)
+      fun _ _ e => ceinternW_afr e hA2) fun hd e m3 a3 hQ => ?_
+  obtain ⟨⟨he, hS3, hg3⟩, hA3⟩ := hQ
   subst he
   by_cases hbig : 4294967296 ≤ hd
   · rw [ctlK3_big n m3 vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw hd hbig]; exact Sim.of_none
@@ -320,15 +345,17 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have h4 := gafF_ok dn vis fe CWF xbw hxb
   rw [CWF_eq, hxbd] at h4
   refine Sim.bindK (K := ctlK4 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw hd) rfl
-    (fun _ _ => rfl) (sumSim_of_relW h4 hS3) fun rf xfn m4 a4 hQ => ?_
-  obtain ⟨hS4, hg4, hf32, hfd⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relW h4 hS3)
+      fun _ _ e => AFr.of_frame (gafF_frame e) hA3) fun rf xfn m4 a4 hQ => ?_
+  obtain ⟨⟨hS4, hg4, hf32, hfd⟩, hA4⟩ := hQ
   rw [ctlK4_some]
   -- `get_app_args_f`
   have h5 := gaaF_ok dn vis fe CWF xbw hxb
   rw [CWF_eq, hxbd] at h5
   refine Sim.bindK (K := ctlK5 n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw hd (rf.headD 0)) rfl
-    (fun _ _ => rfl) (sumSim_of_relW h5 hS4) fun ra args m5 a5 hQ => ?_
-  obtain ⟨hS5, hg5, hargs, hab⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relW h5 hS4)
+      fun _ _ e => gaaF_afr e hA4) fun ra args m5 a5 hQ => ?_
+  obtain ⟨⟨hS5, hg5, hargs, hab⟩, hA5⟩ := hQ
   rw [sumGetD0, sumGetD1] at hargs hab
   rw [ctlK5_some]
   subst hfd
@@ -378,8 +405,9 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hxlb5 : xo.toNat + xlw.toNat ≤ iwTop m5 := by have := hg15.1; omega
   -- `field_doms_resolve`, at the pre-block view
   refine Sim.bindK (K := ctlK7 n vis0 vis isP lg rs nP nF xo xlw ao al) rfl (fun _ _ => rfl)
-    (fdrSim (n + 1) m5 a5 xo xlw xl1 (hS5.restrict vis0) hxl5 hxlb5) fun r1 b1 m6 a6 hQ => ?_
-  obtain ⟨hS6, hg6, hb1⟩ := sumKeep_restrict hv hQ
+    (fdrSim (n + 1) m5 a5 xo xlw xl1 (hS5.restrict vis0) hxl5 hxlb5 hA5) fun r1 b1 m6 a6 hQ => ?_
+  obtain ⟨hS6, hg6, hb1⟩ := sumKeep_restrict hv hQ.1
+  have hA6 := hQ.2
   by_cases h1 : r1.headD 0 = 0
   · rw [ctlK7_no (h := h1)]; exact Sim.of_none
   rw [ctlK7_yes (h := h1)]
@@ -396,9 +424,10 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hdb6 : (ao + nP).toNat + (al - nP).toNat ≤ iwTop m6 := by
     rw [hao, halp]; have := hg6.1; omega
   refine Sim.bindK (K := ctlK8 n vis isP lg rs nP nF xo xlw ao al) rfl (fun _ _ => rfl)
-    (iarSim (n + 1) m6 a6 (ao + nP) (al - nP) (args.drop nP.toNat) (hS6.restrict vis0) hdrop6 hdb6)
+    (iarSim (n + 1) m6 a6 (ao + nP) (al - nP) (args.drop nP.toNat) (hS6.restrict vis0) hdrop6 hdb6 hA6)
     fun r2 b2 m7 a7 hQ => ?_
-  obtain ⟨hS7, hg7, hb2⟩ := sumKeep_restrict hv hQ
+  obtain ⟨hS7, hg7, hb2⟩ := sumKeep_restrict hv hQ.1
+  have hA7 := hQ.2
   by_cases h2 : r2.headD 0 = 0
   · rw [ctlK8_no (h := h2)]; exact Sim.of_none
   rw [ctlK8_yes (h := h2)]
@@ -408,13 +437,14 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   -- the field sorts
   have hg67 := hg6.trans hg7
   refine Sim.bindK (K := ctlK9) rfl (fun _ _ => rfl)
-    (fsortsW_ok n m7 a7 isP lg rs nP xo xlw (ao + nP) (al - nP) nF xl1 (args.drop nP.toNat) hS7
-      (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
+    (Sim.withFr (F := AbsOK) (fsortsW_ok n m7 a7 isP lg rs nP xo xlw (ao + nP) (al - nP) nF xl1
+      (args.drop nP.toNat) hS7 (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
       (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hrs hnf)
+      fun _ _ e => fsortsW_afr e hA7)
     fun r9 sorts m8 a8 hQ => ?_
-  obtain ⟨hS8, hg8, hd8, hb8⟩ := hQ
+  obtain ⟨⟨hS8, hg8, hd8, hb8⟩, hA8⟩ := hQ
   exact Sim.ret ⟨hS8, (((hg1.trans hg15).trans hg67).trans hg8), rfl, by simpa using hd8,
-    by simpa using hb8⟩
+    by simpa using hb8, hA8⟩
 
 /-! ## `check_sum_ctor`: the word model -/
 
@@ -619,20 +649,21 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (cvC cvTa : IConstantVal) (hS : StageR dn vis fe m a) (hT : H T)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hcv : DecB (fun m => decCVp m cvCw.toNat) m cvC) (hta : DecB (fun m => decCVp m cvTaw.toNat) m cvTa)
-    (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64) :
+    (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64)
+    (hA : AbsOK m) :
     Sim (ctorW n m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw)
       (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvC nF.toNat cvTa) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = cvCw ∧ x.1 = cvC ∧
         decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2 ∧
-        (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m') := by
+        (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m') := by
   unfold ctorW
   rw [checkSumCtor_eq]
   -- `check_constant_val`
   refine Sim.bindK (K := ctorK2 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM (checkConstantVal_spec dn vis fe cvCw cvC)
-      ⟨hS, DecB.get (OMono.decCVp _) hcv⟩) fun _ _ m1 a1 hQ => ?_
-  obtain ⟨hS1, hg1, -⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relAM (checkConstantVal_spec dn vis fe cvCw cvC)
+      ⟨hS, DecB.get (OMono.decCVp _) hcv⟩) fun _ _ e => AbsOK.stub (by decide) hA e) fun _ _ m1 a1 hQ => ?_
+  obtain ⟨⟨hS1, hg1, -⟩, hA1⟩ := hQ
   rw [ctorK2_some]
   -- `strip_pis`
   obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.2.2.2.2.1
@@ -640,8 +671,9 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have h2 := stripF_pis_ok dn vis fe (nP + nF) w1 hw1l
   rw [sum_toNat_add hnf, hw1d] at h2
   refine Sim.bindK (K := ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
-    (fun _ _ => rfl) (fun r m' e => h2 _ _ _ r e hS1) fun r2 o2 m2 a2 hQ => ?_
-  obtain ⟨hS2, hg2, hdec2⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (fun r m' e => h2 _ _ _ r e hS1)
+      fun _ _ e => stripF_afr e hA1) fun r2 o2 m2 a2 hQ => ?_
+  obtain ⟨⟨hS2, hg2, hdec2⟩, hA2⟩ := hQ
   by_cases h20 : r2.headD 0 = 0
   · rw [ctorK3_no (h := h20)]; exact Sim.of_none
   rw [ctorK3_yes (h := h20)]
@@ -657,11 +689,11 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hlps2 : decHL m2 lo.toNat ll.toNat = some lps := by rw [decHL_grow hg02 hlb]; exact hlps
   -- `struct_ctor_resid_ok`
   refine Sim.bindK (K := ctorK4 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
-    (fun _ _ => rfl) (fun r m' e => by
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (fun r m' e => by
       obtain ⟨x, a', h1, h2⟩ := srW_ok dn vis fe (n + 2) m2 m' a2 T lo ll nP nF nIdx _ r lps e hS2 hT hcb
         hlps2 (hS2.lt64 (by have := hg02.1; omega)) (by have := hg02.1; omega) (by omega) hni
-      exact ⟨x, a', h1, h2⟩) fun r3 b3 m3 a3 hQ => ?_
-  obtain ⟨hS3, hg3, hb3, -⟩ := hQ
+      exact ⟨x, a', h1, h2⟩) fun _ _ e => srW_afr _ _ _ _ _ _ _ _ _ _ _ e hA2) fun r3 b3 m3 a3 hQ => ?_
+  obtain ⟨⟨hS3, hg3, hb3, -⟩, hA3⟩ := hQ
   by_cases h30 : r3.headD 0 = 0
   · rw [ctorK4_no (h := h30)]; exact Sim.of_none
   rw [ctorK4_yes (h := h30)]
@@ -675,8 +707,9 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have h4 := openPisAtFvarsF_spec dn vis fe nP w3 0 hw3l
   rw [hw3d, show (0 : Word).toNat = 0 from rfl] at h4
   refine Sim.bindK (K := ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
-    (fun _ _ => rfl) (sumSim_of_relAM h4 hS3) fun r4 o4 m4 a4 hQ => ?_
-  obtain ⟨hS4, hg4, hdec4⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relAM h4 hS3)
+      fun _ _ e => AbsOK.stub (by decide) hA3 e) fun r4 o4 m4 a4 hQ => ?_
+  obtain ⟨⟨hS4, hg4, hdec4⟩, hA4⟩ := hQ
   by_cases h40 : r4.headD 0 = 0
   · rw [ctorK5_no (h := h40)]; exact Sim.of_none
   rw [ctorK5_yes (h := h40)]
@@ -696,8 +729,9 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have h5 := openPisAtFvarsF_spec dn vis fe nP w5 0 hw5l
   rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5
   refine Sim.bindK (K := ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (sumSim_of_relW h5 hS4) fun r5 o5 m5 a5 hQ => ?_
-  obtain ⟨hS5, hg5, hdec5⟩ := hQ
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relW h5 hS4)
+      fun _ _ e => AbsOK.stub (by decide) hA4 e) fun r5 o5 m5 a5 hQ => ?_
+  obtain ⟨⟨hS5, hg5, hdec5⟩, hA5⟩ := hQ
   by_cases h50 : r5.headD 0 = 0
   · rw [ctorK6_no (h := h50)]; exact Sim.of_none
   rw [ctorK6_yes (h := h50)]
@@ -710,9 +744,10 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine Sim.bind_twin (x := (tl, tb)) (a₁ := a5) rfl ?_
   -- `fvar_type_ds`
   refine Sim.bindK (K := ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (sumSim_of_relW (ftdsF_ok dn vis fe _ _ tl) ⟨hS5, htl, fun _ => htlb⟩)
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sumSim_of_relW (ftdsF_ok dn vis fe _ _ tl) ⟨hS5, htl, fun _ => htlb⟩)
+      fun _ _ e => ftdsF_afr e hA5)
     fun r6 tdoms m6 a6 hQ => ?_
-  obtain ⟨hS6, hg6, htd, htdb⟩ := hQ
+  obtain ⟨⟨hS6, hg6, htd, htdb⟩, hA6⟩ := hQ
   rw [sumGetD0, sumGetD1] at htd htdb
   rw [ctorK7_some]
   -- `check_struct_doms_at`
@@ -722,20 +757,21 @@ theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hclb6 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat ≤ iwTop m6 := by
     have := hg56.1; omega
   refine Sim.bindK (K := ctorK8 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
-    (fun _ _ => rfl) (sdSim (n + 2) m6 a6 0 _ _ _ _ nP cl tdoms hS6 hcl6 htd hclb6 htdb
+    (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (sdSim (n + 2) m6 a6 0 _ _ _ _ nP cl tdoms hS6 hcl6 htd hclb6 htdb
       (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hS6.lt64 hclb6; omega))
+      fun _ _ e => sdomsW_afr e hA6)
     fun _ _ m7 a7 hQ => ?_
-  obtain ⟨hS7, hg7⟩ := hQ
+  obtain ⟨⟨hS7, hg7⟩, hA7⟩ := hQ
   rw [ctorK8_some]
   -- the tail
   have hg06 := (hg04.trans hg56)
   refine sumSim_map (K := ctorK9 cvCw) rfl (fun _ _ => rfl)
     (ctlW_ok n m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hS7 hT
       (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
-      (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf)
+      (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf hA7)
     fun r8 x m8 a8 hQ => ?_
-  obtain ⟨hS8, hg8, hx1, hd8, hb8⟩ := hQ
-  exact ⟨hS8, ((hg06.trans hg7).trans hg8), rfl, hx1, by simpa using hd8, by simpa using hb8⟩
+  obtain ⟨hS8, hg8, hx1, hd8, hb8, hA8⟩ := hQ
+  exact ⟨hS8, ((hg06.trans hg7).trans hg8), rfl, hx1, by simpa using hd8, by simpa using hb8, hA8⟩
 
 
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** (through stubs: `check_constant_val`,
@@ -751,7 +787,8 @@ theorem checkSumCtor_refines (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St) (
     (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
     (hcv : DecB (fun m => decCVp m cvCw.toNat) s₀.mem cvC)
     (hta : DecB (fun m => decCVp m cvTaw.toNat) s₀.mem cvTa)
-    (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64) :
+    (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 3)) "check_sum_ctor"
       [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvCw, nF, cvTaw]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -768,7 +805,7 @@ theorem checkSumCtor_refines (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St) (
   refine triple_post (ctorW_spec p hP n s₀ vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', h0, h1, hd, -⟩ := (ctorW_ok n _ a₀ vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw
-    lps cvC cvTa hS hT hlps hlb hcv hta hrs hni hnf).run hm
+    lps cvC cvTa hS hT hlps hlb hcv hta hrs hni hnf hA).run hm
   exact ⟨hl, hok, hS', hg', h0, h1, hd⟩
 
 end L.Ind

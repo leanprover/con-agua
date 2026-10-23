@@ -3,6 +3,7 @@ import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndSumSpec2C
 
 /-!
 # `check_struct_proj_table` refines `checkStructProjTable` (lane `indproofs2`)
@@ -190,7 +191,7 @@ def sctK3 (rest : Mem → Option (List Word × Mem)) (nP b r1 r2 : Word) :
 def sctK2 (rest : Mem → Option (List Word × Mem)) (vis nP b r1 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (stubM "consts_resolve_ffast" m [vis, b])
+  | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (crfF m [vis, b])
 /-- After `has_fvar_fast`. -/
 def sctK1 (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -220,14 +221,14 @@ theorem sctK4_no (h : ¬ (r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1)) :
 theorem sctK3_some : sctK3 rest nP b r1 r2 (some (r, m)) =
     sctK4 rest r1 r2 (r.headD 0) (lbbF m [CWF, nP + 1, b]) := rfl
 theorem sctK2_some : sctK2 rest vis nP b r1 (some (r, m)) =
-    sctK3 rest nP b r1 (r.headD 0) (stubM "consts_resolve_ffast" m [vis, b]) := rfl
+    sctK3 rest nP b r1 (r.headD 0) (crfF m [vis, b]) := rfl
 theorem sctK1_some : sctK1 rest vis nP lo ll b (some (r, m)) =
     sctK2 rest vis nP b (r.headD 0) (stubM "all_level_params_defined" m [lo, ll, b]) := rfl
 end arms
 attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
 
-theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL)
-    (n : Nat) : ∀ (s₀ : St) (vis nP lo ll bO bL : Word),
+theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
+    (hp : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL) (n : Nat) : ∀ (s₀ : St) (vis nP lo ll bO bL : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_proj_table_scoped" [vis, nP, lo, ll, bO, bL]
     ⦃fun r s' => LocEq s' s₀ ∧ sctW n s₀.mem vis nP lo ll bO bL = some (r, s'.mem); ⊤⦄ := by
   induction n with
@@ -241,7 +242,7 @@ theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "check
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         hffF_spec p hf n, stubM_spec p "all_level_params_defined" n,
-        stubM_spec p "consts_resolve_ffast" n, lbbF_spec p hb n, ih] <;>
+        crfF_spec p hcr n, lbbF_spec p hb n, ih] <;>
       finish (gen := 30) (instances := 5000) [rdW_eq]
 
 /-- The twin's per-body scoping test (`checkStructProjTable`'s `allM` body, verbatim). -/
@@ -265,20 +266,20 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (lps : List NIdx) (hnP : nP.toNat + 1 < 2 ^ 64) (n : Nat) :
     ∀ (m : Mem) (a : AState) (bO bL : Word) (bs : List EIdx),
     StageR dn vis fe m a → decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
-    decHL m bO.toNat bL.toNat = some bs → bO.toNat + bL.toNat ≤ iwTop m →
+    decHL m bO.toNat bL.toNat = some bs → bO.toNat + bL.toNat ≤ iwTop m → AbsOK m →
     Sim (sctW n m vis nP lo ll bO bL) (bs.allM (scopeT fe lps nP.toNat)) a
       (fun r b m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
-        (r.headD 0).toNat ≤ 1) := by
+        (r.headD 0).toNat ≤ 1 ∧ AbsOK m') := by
   induction n with
-  | zero => intro m a bO bL bs _ _ _ _ _; exact Sim.of_none
+  | zero => intro m a bO bL bs _ _ _ _ _ _; exact Sim.of_none
   | succ n ih =>
-  intro m a bO bL bs hS hlps hlb hbs hbb
+  intro m a bO bL bs hS hlps hlb hbs hbb hA
   by_cases hl : bL = 0
   · rw [sctW_nil (h := hl)]
     have : bs = [] := by
       subst hl; have := decHL_length m hbs; simp at this; exact this
     subst this
-    exact Sim.ret ⟨hS, IWGrow.refl _, rfl, by decide⟩
+    exact Sim.ret ⟨hS, IWGrow.refl _, rfl, by decide, hA⟩
   rw [sctW_cons (h := hl)]
   obtain ⟨w, bs', rfl, hw, hwl, hbs'⟩ := decHL_cons hbs hl (hS.lt64 hbb)
   rw [hw]
@@ -286,24 +287,27 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hcwf : CWF.toNat = coreWalkFuel := CWF_eq
   have h1 := hffF_ok dn vis fe CWF w hwl
   rw [hcwf] at h1
-  refine Sim.bindK (K := sctK1 _ vis nP lo ll w) rfl (fun _ _ => rfl) (sumSim_of_relW h1 hS)
+  refine Sim.bindK (K := sctK1 _ vis nP lo ll w) rfl (fun _ _ => rfl)
+    (Sim.withFr (F := AbsOK) (sumSim_of_relW h1 hS) fun _ _ e => AFr.of_frame (hffF_frame e) hA)
     fun r1 a1 m1 s1 hQ => ?_
-  obtain ⟨hS1, hg1, hb1, hl1⟩ := hQ
+  obtain ⟨⟨hS1, hg1, hb1, hl1⟩, hA1⟩ := hQ
   rw [sctK1_some]
   refine Sim.bindK (K := sctK2 _ vis nP w (r1.headD 0)) rfl (fun _ _ => rfl)
-    (sumSim_of_relAM (allLevelParamsDefined_spec dn vis fe lo ll w hwl lps)
-      ⟨hS1, by rw [decHL_grow hg1 hlb]; exact hlps⟩) fun r2 a2 m2 s2 hQ => ?_
-  obtain ⟨hS2, hg2, hb2, hl2⟩ := hQ
+    (Sim.withFr (F := AbsOK) (sumSim_of_relAM (allLevelParamsDefined_spec dn vis fe lo ll w hwl lps)
+      ⟨hS1, by rw [decHL_grow hg1 hlb]; exact hlps⟩) fun _ _ e => AbsOK.stub (by decide) hA1 e)
+    fun r2 a2 m2 s2 hQ => ?_
+  obtain ⟨⟨hS2, hg2, hb2, hl2⟩, hA2⟩ := hQ
   rw [sctK2_some]
   refine Sim.bindK (K := sctK3 _ nP w (r1.headD 0) (r2.headD 0)) rfl (fun _ _ => rfl)
-    (sumSim_of_relAM (constsResolveFFast_spec dn vis fe w hwl) hS2) fun r3 a3 m3 s3 hQ => ?_
-  obtain ⟨hS3, hg3, hb3, hl3⟩ := hQ
+    (sumSim_of_relW (crfF_ok dn vis fe w hwl) ⟨hS2, hA2⟩) fun r3 a3 m3 s3 hQ => ?_
+  obtain ⟨⟨hS3, hg3, hb3, hl3⟩, hA3⟩ := hQ
   rw [sctK3_some]
   have h4 := lbbF_ok dn vis fe CWF (nP + 1) w hwl
   rw [hcwf, sumToNat_succ (by omega)] at h4
   refine Sim.bindK (K := sctK4 _ (r1.headD 0) (r2.headD 0) (r3.headD 0)) rfl (fun _ _ => rfl)
-    (sumSim_of_relW h4 hS3) fun r4 a4 m4 s4 hQ => ?_
-  obtain ⟨hS4, hg4, hb4, hl4⟩ := hQ
+    (Sim.withFr (F := AbsOK) (sumSim_of_relW h4 hS3) fun _ _ e => AFr.of_frame (lbbF_frame e) hA3)
+    fun r4 a4 m4 s4 hQ => ?_
+  obtain ⟨⟨hS4, hg4, hb4, hl4⟩, hA4⟩ := hQ
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
   obtain ⟨-, e1⟩ := sumB01 hb1 hl1
   obtain ⟨e2, -⟩ := sumB01 hb2 hl2
@@ -320,13 +324,14 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [sumToNat_succ (by omega), sumToNat_pred hl]; omega
     refine sumSim_map (K := sctK5) rfl (fun _ _ => rfl)
       (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (by rw [decHL_grow hg14 hlb]; exact hlps)
-        (by have := hg14.1; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.1; omega))
-      fun r b m' a' hQ => ⟨hQ.1, hg14.trans hQ.2.1, by simpa using hQ.2.2.1, by simpa using hQ.2.2.2⟩
+        (by have := hg14.1; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.1; omega) hA4)
+      fun r b m' a' hQ => ⟨hQ.1, hg14.trans hQ.2.1, by simpa using hQ.2.2.1, by simpa using hQ.2.2.2.1,
+        hQ.2.2.2.2⟩
   · rw [sctK4_no (h := hc)]
     have ht : (!a1 && a2 && a3 && a4) = false := by
       cases a1 <;> cases a2 <;> cases a3 <;> cases a4 <;> simp_all
     simp only [ht]
-    exact Sim.ret ⟨hS4, hg14, rfl, by decide⟩
+    exact Sim.ret ⟨hS4, hg14, rfl, by decide, hA4⟩
 
 
 /-! ## `check_struct_proj_table`: the word model -/
@@ -486,6 +491,7 @@ structure TblProg (p : Prog) : Prop where
   htbl : p.lookup "check_struct_proj_table" = some checkStructProjTableL
   hrec : RecProg p
   hi1 : I1lF p
+  hcr : CrfF p
 
 set_option maxHeartbeats 4000000 in
 theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
@@ -500,7 +506,7 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
         hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 (n + 1),
-      sctW_spec p hP.hbb hP.hhf hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
+      sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
       envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
       erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"] <;>
     finish (gen := 30) (instances := 5000) [tblW, tblMem, rdW_eq]
@@ -549,12 +555,11 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [hw, ← hwd]
   -- `struct_proj_bodies`
   refine Sim.bindK (K := tblK1 p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
-    (Q := fun rb ob m1 a1 => StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ PBDecA m1 rb ob)
     (fun r m' e => by
-      obtain ⟨x, a', h1, h2, h3, h4, -⟩ := spbW_ok dn vis fe (n + 1) m m' a T nP nF w r e hS hwl (by omega)
+      obtain ⟨x, a', h1, h2⟩ := spbW_ok dn vis fe (n + 1) m m' a T nP nF w r e hS hwl (by omega)
         nF.toNat_lt hA
-      exact ⟨x, a', h1, h2, h3, h4⟩) fun rb ob m1 a1 hQ => ?_
-  obtain ⟨hS1, hg1, hdec1⟩ := hQ
+      exact ⟨x, a', h1, h2⟩) fun rb ob m1 a1 hQ => ?_
+  obtain ⟨hS1, hg1, hdec1, hA1⟩ := hQ
   by_cases h10 : rb.headD 0 = 0
   · rw [tblK1_no (h := h10)]; exact Sim.of_none
   rw [tblK1_yes (h := h10)]
@@ -567,9 +572,9 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.1; omega
   -- the scoping
   refine Sim.bindK (K := tblK2 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
-    (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb)
+    (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb hA1)
     fun rs' sok m2 a2 hQ => ?_
-  obtain ⟨hS2, hg2, hsok, hsl⟩ := hQ
+  obtain ⟨hS2, hg2, hsok, hsl, -⟩ := hQ
   by_cases hlen0 : rb.tail.tail.headD 0 ≠ nF
   · rw [tblK2_len (h := hlen0)]; exact Sim.of_none
   have hlen : rb.tail.tail.headD 0 = nF := Decidable.of_not_not hlen0
@@ -693,14 +698,6 @@ theorem checkStructProjTable_refines (p : Prog) (hP : TblProg p) (n : Nat) (s₀
   exact ⟨hl, hok, hS', hg'⟩
 
 /-! ## The walk memos across the table's steps -/
-
-theorem sctW_afr : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word) (r : List Word),
-    sctW n m vis nP lo ll bO bL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [sctW] at h
-  | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
-    simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
-    afr_auto h [sctW_afr n _ _ _ _ _ _ _ _ _, stub_afr, (fun h => AFr.of_frame (hffF_frame h)),
-      (fun h => AFr.of_frame (lbbF_frame h))]
 
 theorem efgW_afr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → AFr m m'
