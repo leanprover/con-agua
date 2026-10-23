@@ -303,8 +303,7 @@ theorem NcOut.tco {m : Mem} {r : List Word} {x : Option (Nat × List (IConstantV
   | some y => exact h
 
 /-- `target_ctors_of` simulates `targetCtorsOf`. -/
-theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (hcs : CtorSums fe)
-    (n : Nat) {m m' : Mem} {a : AState} {r : List Word} (h : tcoK (ntW n m vis I) = some (r, m'))
+theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (n : Nat) {m m' : Mem} {a : AState} {r : List Word} (h : tcoK (ntW n m vis I) = some (r, m'))
     (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.targetCtorsOf fe (decI I)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x ∧ MFr [] [] m m' := by
@@ -315,23 +314,20 @@ theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word)
   rw [hn, tcoK_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis I hI hcs n m _ a r1 hn hS
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis I hI n m _ a r1 hn hS
   exact ⟨x, a', hrun, hS', hg, hout.tco, ntWf_mfr (show ntWf (n + 1) m vis I = some (r1, m1) from hn)⟩
 
-/-- **`target_ctors_of` refines `targetCtorsOf`** (through `nest_container`'s stubs; the environment's
-constructor records' parameter and field counts sum below `2^64`, `nestContainer_refines`'
-hypothesis). -/
+/-- **`target_ctors_of` refines `targetCtorsOf`** (through `nest_container`'s stubs). -/
 @[refines ConRon.Arena.targetCtorsOf]
 theorem targetCtorsOf_refines (p : Prog) (L : RcLook p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (hcs : CtorSums fe)
-    (hS : StageR dn vis fe s₀.mem a₀) :
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word) (hI : H I) (hS : StageR dn vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "target_ctors_of" [vis, I]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCtorsOf fe (decI I)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCtorsOf fe (decI I)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.targetCtorsOf fe (decI I)) a₀); ⊤⦄ := by
   refine triple_post (targetCtorsOf_spec p L n s₀ vis I) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout, -⟩ := tcoW_ok dn fe vis I hI hcs n hm hS
+  obtain ⟨x, a', hrun, hS', hg, hout, -⟩ := tcoW_ok dn fe vis I hI n hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 

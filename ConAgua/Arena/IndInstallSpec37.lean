@@ -110,7 +110,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
     (hcx : ShapeCV m p0) (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block)
-    (hv : AllVis fe) (hcs : CtorSums fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp) (hA : AbsOK m)
+    (hv : AllVis fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp) (hA : AbsOK m)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     (hta : ∃ mp, taMR m mp) (hrb : RecsB m p0) :
@@ -309,7 +309,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   obtain ⟨s8, hs8, -, x8, a8, hrun8, hS8, hg8, hBP8, hP8, hA8, hrb8, hlp8⟩ :=
     triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (checkBlockPass_refines hP.pass hcl hfs n hn _ _ hS7 hq7 hsrc7 hcx7 (b := raw) (by cases raw <;> rfl)
-      hv hcs hP7 hA7 hkp) c8
+      hv hP7 hA7 hkp) c8
   simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8
   subst hs8
   have hg18 := hg17.trans hg8
@@ -354,7 +354,7 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hv : AllVis fe)
-    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) (hA : AbsOK s₀.mem)
+    (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) (hA : AbsOK s₀.mem)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec") (hta : ∃ mp, taMR s₀.mem mp)
     (hrb : RecsB s₀.mem p0) :
@@ -365,7 +365,7 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hS hq hsrc hcx hblk hv
-      hcs hPm hma hA hkp hkt hkr hta hrb) hm
+      hPm hma hA hkp hkt hkr hta hrb) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind

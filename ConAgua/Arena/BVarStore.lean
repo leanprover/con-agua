@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -34,6 +35,12 @@ namespace L.Arena
 abbrev BREC : ArrId := 22
 /-- The `bvar` cons-table slots, both tiers interleaved. -/
 abbrev BSLOT : ArrId := 23
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def bvarGS : GrowSch :=
+  ⟨BSLOT, BREC, 1, 22, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ BREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `bvar` record (FNV-1a over its word). -/
 def bvarHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
@@ -99,7 +106,7 @@ def bfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def bvarFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := len(BSLOT.u64) >> 1;
+  n := BSLOT.u64[len(BSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪bfindLoop⟫;
@@ -135,7 +142,7 @@ theorem bfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (bfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `bvar` table. -/
-def nSlotsB (m : Mem) : Word := m.len64 BSLOT >>> 1
+def nSlotsB (m : Mem) : Word := rdW (m.arr64 BSLOT) (m.len64 BSLOT - 1) + SN0
 
 include hp in
 theorem bvarFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -160,44 +167,56 @@ end find
 /-- The node count of tier `t` of the `bvar` table, `CTL[22 + t]`. -/
 def bcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (22 + t)
 
-/-- `bvar_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `bvar_push`'s room checks: the handle index, the record array. -/
 def bpushOK (m : Mem) (t : Word) : Bool :=
-  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 BREC >>> (1 : Word)) &&
-    decide (bcnt m t + 1 ≤ (nSlotsB m >>> (2 : Word)) * 3)
+  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 BREC >>> (1 : Word))
 
 /-- The memory after `bvar_push(t, u, j)` appended node `c`. -/
 def bpushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 BREC (c * 2 + t) u).set64 BSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (22 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def bvarPush : FunDecl := lfn (t, u, j) locals (c) {
+def bvarPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[22 + t];
   if c >= 134217728 { abort };
   if len(BREC.u64) >> 1 <= c { abort };
-  if ((len(BSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
+  gk := BSLOT.u64[len(BSLOT.u64) - 1];
   BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[22 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 BREC) (i * 2 + t))
+
 section push
 variable (p : Prog) (hp : p.lookup "bvar_push" = some bvarPush)
+
+/-- The growth's hash block computes `bhash`. -/
+theorem bhash_ok : HashOK p bvarGS 4 bhash := by
+  intro k s₀
+  simp only [bvarGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [bhash, bvarHashW, LocEq, St.setLoc]
 
 include hp in
 theorem bvarPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "bvar_push" [t, u, j]
     ⦃fun r s' => LocEq s' s₀ ∧ bpushOK s₀.mem t = true ∧ r = [bcnt s₀.mem t] ∧
-      s'.mem = bpushMem s₀.mem t u j (bcnt s₀.mem t); ⊤⦄ := by
+      growIf BSLOT 22 bhash s₀.mem (bpushMem s₀.mem t u j (bcnt s₀.mem t))
+        (bcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, bvarPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [bcnt, bpushOK, bpushMem, nSlotsB, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p bvarGS BSLOT 22 rfl rfl 4 bhash (bhash_ok p) n] <;>
+      finish [bcnt, bpushOK, bpushMem, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -222,10 +241,14 @@ def binternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (bvarS + rs₁.tail.headD 0, m)
     else if bpushOK m 1 then
-      some (bvarS + bcnt m 1, bpushMem m 1 u (rs₁.tail.tail.headD 0) (bcnt m 1))
+      match growIf BSLOT 22 bhash m (bpushMem m 1 u (rs₁.tail.tail.headD 0) (bcnt m 1)) (bcnt m 1) with
+      | some m' => some (bvarS + bcnt m 1, m')
+      | none => none
     else none
   else if bpushOK m 0 then
-    some (bvarP + bcnt m 0, bpushMem m 0 u (rs₀.tail.tail.headD 0) (bcnt m 0))
+    match growIf BSLOT 22 bhash m (bpushMem m 0 u (rs₀.tail.tail.headD 0) (bcnt m 0)) (bcnt m 0) with
+    | some m' => some (bvarP + bcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -36,9 +37,16 @@ abbrev ZREC : ArrId := 8
 /-- The `zero` cons-table slots, both tiers interleaved. -/
 abbrev ZSLOT : ArrId := 9
 
+
 /-- The (constant) hash of the `zero` record: there is only one key, so the home slot of every
 probe is the same, fixed slot. -/
 def zeroHashW : Word := fnvBasis
+
+/-- The growth schema of this table (`SlotGrow.lean`; one node per tier, so it never grows). -/
+def zeroGS : GrowSch :=
+  ⟨ZSLOT, ZREC, 1, 8, lblk (n, k, t, i, c, h) {
+    h := ⟪zeroHashW⟫
+  }⟩
 
 /-- The model of the match: **every** node of this table is the `zero` node. -/
 def zmatchW (_r : Array Word) (_t _i : Word) : Bool := true
@@ -101,7 +109,7 @@ def zfindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def zeroFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
-  n := len(ZSLOT.u64) >> 1;
+  n := ZSLOT.u64[len(ZSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪zfindLoop⟫;
@@ -137,7 +145,7 @@ theorem zfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (zfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `zero` table. -/
-def nSlotsZ (m : Mem) : Word := m.len64 ZSLOT >>> 1
+def nSlotsZ (m : Mem) : Word := rdW (m.arr64 ZSLOT) (m.len64 ZSLOT - 1) + SN0
 
 include hp in
 theorem zeroFind_spec (n : Nat) (s₀ : St) (t h : Word) :
@@ -162,44 +170,56 @@ end find
 /-- The node count of tier `t` of the `zero` table, `CTL[8 + t]`. -/
 def zcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (8 + t)
 
-/-- `zero_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `zero_push`'s room checks: the handle index, the record array. -/
 def zpushOK (m : Mem) (t : Word) : Bool :=
-  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 ZREC >>> (1 : Word)) &&
-    decide (zcnt m t + 1 ≤ (nSlotsZ m >>> (2 : Word)) * 3)
+  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 ZREC >>> (1 : Word))
 
 /-- The memory after `zero_push(t, j)` appended node `c`. -/
 def zpushMem (m : Mem) (t j c : Word) : Mem :=
   (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def zeroPush : FunDecl := lfn (t, j) locals (c) {
+def zeroPush : FunDecl := lfn (t, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[8 + t];
   if c >= 134217728 { abort };
   if len(ZREC.u64) >> 1 <= c { abort };
-  if ((len(ZSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
+  gk := ZSLOT.u64[len(ZSLOT.u64) - 1];
   ZREC.u64[c * 2 + t] := 0;
   ZSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[8 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG zeroGS 3⟫ };
   return c
 }
 
+/-- The (constant) hash of node `i` of tier `t`. -/
+def zhash (_m : Mem) (_t _i : Word) : Word := zeroHashW
+
 section push
 variable (p : Prog) (hp : p.lookup "zero_push" = some zeroPush)
+
+/-- The growth's hash block computes `zhash`. -/
+theorem zhash_ok : HashOK p zeroGS 3 zhash := by
+  intro k s₀
+  simp only [zeroGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [zhash, zeroHashW, LocEq, St.setLoc]
 
 include hp in
 theorem zeroPush_spec (n : Nat) (s₀ : St) (t j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "zero_push" [t, j]
     ⦃fun r s' => LocEq s' s₀ ∧ zpushOK s₀.mem t = true ∧ r = [zcnt s₀.mem t] ∧
-      s'.mem = zpushMem s₀.mem t j (zcnt s₀.mem t); ⊤⦄ := by
+      growIf ZSLOT 8 zhash s₀.mem (zpushMem s₀.mem t j (zcnt s₀.mem t))
+        (zcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, zeroPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [zcnt, zpushOK, zpushMem, nSlotsZ, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p zeroGS ZSLOT 8 rfl rfl 3 zhash (zhash_ok p) n] <;>
+      finish [zcnt, zpushOK, zpushMem, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -224,10 +244,14 @@ def zinternW (m : Mem) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (zeroS + rs₁.tail.headD 0, m)
     else if zpushOK m 1 then
-      some (zeroS + zcnt m 1, zpushMem m 1 (rs₁.tail.tail.headD 0) (zcnt m 1))
+      match growIf ZSLOT 8 zhash m (zpushMem m 1 (rs₁.tail.tail.headD 0) (zcnt m 1)) (zcnt m 1) with
+      | some m' => some (zeroS + zcnt m 1, m')
+      | none => none
     else none
   else if zpushOK m 0 then
-    some (zeroP + zcnt m 0, zpushMem m 0 (rs₀.tail.tail.headD 0) (zcnt m 0))
+    match growIf ZSLOT 8 zhash m (zpushMem m 0 (rs₀.tail.tail.headD 0) (zcnt m 0)) (zcnt m 0) with
+    | some m' => some (zeroP + zcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/

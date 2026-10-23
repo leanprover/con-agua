@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -44,6 +45,12 @@ namespace L.Arena
 abbrev FAREC : ArrId := 29
 /-- The `forallE` cons-table slots, both tiers interleaved. -/
 abbrev FASLOT : ArrId := 30
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def forallGS : GrowSch :=
+  ⟨FASLOT, FAREC, 2, 30, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ FAREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FAREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `forallE` record (FNV-1a over its two words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
@@ -112,7 +119,7 @@ def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
-  n := len(FASLOT.u64) >> 1;
+  n := FASLOT.u64[len(FASLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fafindLoop⟫;
@@ -148,7 +155,7 @@ theorem fafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `forallE` table. -/
-def nSlotsFa (m : Mem) : Word := m.len64 FASLOT >>> 1
+def nSlotsFa (m : Mem) : Word := rdW (m.arr64 FASLOT) (m.len64 FASLOT - 1) + SN0
 
 include hp in
 theorem forallFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
@@ -173,10 +180,9 @@ end find
 /-- The node count of tier `t` of the `forallE` table, `CTL[30 + t]`. -/
 def facnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (30 + t)
 
-/-- `forall_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `forall_push`'s room checks: the handle index, the record array. -/
 def fapushOK (m : Mem) (t : Word) : Bool :=
-  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 FAREC >>> (2 : Word)) &&
-    decide (facnt m t + 1 ≤ (nSlotsFa m >>> (2 : Word)) * 3)
+  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 FAREC >>> (2 : Word))
 
 /-- The memory after `forall_push(t, ty, body, j)` appended node `c`. -/
 def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
@@ -184,36 +190,50 @@ def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
+def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[30 + t];
   if c >= 134217728 { abort };
   if len(FAREC.u64) >> 2 <= c { abort };
-  if ((len(FASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
+  gk := FASLOT.u64[len(FASLOT.u64) - 1];
   FAREC.u64[k] := ty;
   FAREC.u64[k + 1] := body;
   FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[30 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG forallGS 6⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def fahash (m : Mem) (t i : Word) : Word :=
+  forallHashW (rdW (m.arr64 FAREC) (i * 4 + t * 2)) (rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1))
+
 section push
 variable (p : Prog) (hp : p.lookup "forall_push" = some forallPush)
+
+/-- The growth's hash block computes `fahash`. -/
+theorem fahash_ok : HashOK p forallGS 6 fahash := by
+  intro k s₀
+  simp only [forallGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [fahash, forallHashW, LocEq, St.setLoc]
 
 include hp in
 theorem forallPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "forall_push" [t, ty, body, j]
     ⦃fun r s' => LocEq s' s₀ ∧ fapushOK s₀.mem t = true ∧ r = [facnt s₀.mem t] ∧
-      s'.mem = fapushMem s₀.mem t ty body j (facnt s₀.mem t); ⊤⦄ := by
+      growIf FASLOT 30 fahash s₀.mem (fapushMem s₀.mem t ty body j (facnt s₀.mem t))
+        (facnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, forallPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [facnt, fapushOK, fapushMem, nSlotsFa, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p forallGS FASLOT 30 rfl rfl 6 fahash (fahash_ok p) n] <;>
+      finish [fapushMem, facnt, fapushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -246,10 +266,14 @@ def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (forallS + rs₁.tail.headD 0, m)
     else if fapushOK m 1 then
-      some (forallS + facnt m 1, fapushMem m 1 ty body (rs₁.tail.tail.headD 0) (facnt m 1))
+      match growIf FASLOT 30 fahash m (fapushMem m 1 ty body (rs₁.tail.tail.headD 0) (facnt m 1)) (facnt m 1) with
+      | some m' => some (forallS + facnt m 1, m')
+      | none => none
     else none
   else if fapushOK m 0 then
-    some (forallP + facnt m 0, fapushMem m 0 ty body (rs₀.tail.tail.headD 0) (facnt m 0))
+    match growIf FASLOT 30 fahash m (fapushMem m 0 ty body (rs₀.tail.tail.headD 0) (facnt m 0)) (facnt m 0) with
+    | some m' => some (forallP + facnt m 0, m')
+    | none => none
   else none
 
 /-- The L FunDecl for `intern_forall`. Named `internForallL`, not `internForallE`: con-ron's

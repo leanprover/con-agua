@@ -20,8 +20,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section census
 variable {p : Prog} (L : NbLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  (hcs : CtorSums fe)
-include L hcs
+include L
 
 @[refines ConRon.Arena.nestPos]
 theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
@@ -35,9 +34,9 @@ theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : A
       ∃ x a', (nestPos V fe c fu.toNat prog dep.toNat kb.toNat (decI e) NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧ H (r.tail.headD 0) ∧
       decI (r.tail.headD 0) = x.2.1 ∧ NSB s'.mem (r.tail.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).1 s₀ vis ctx fu po pl dep kb e ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).1 s₀ vis ctx fu po pl dep kb e ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).1 s₀.mem s'.mem a₀ ctx fu po pl dep kb e ns c prog NS _ hm h0 h1 h2 h3 hP hA
+  have := (nbOK_all dn vis fe n hn).1 s₀.mem s'.mem a₀ ctx fu po pl dep kb e ns c prog NS _ hm h0 h1 h2 h3 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines_part ConRon.Arena.nestPos "binder arm (nest_pos_bind)"]
@@ -53,9 +52,9 @@ theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
       ∃ x a', (posBindT V fe c fu.toNat prog dep.toNat kb.toNat (c.hiAt prog.length) (decI w) NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧ H (r.tail.headD 0) ∧
       decI (r.tail.headD 0) = x.2.1 ∧ NSB s'.mem (r.tail.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.1 s₀ vis ctx fu po pl dep kb w ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.1 s₀ vis ctx fu po pl dep kb w ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.1 s₀.mem s'.mem a₀ ctx fu po pl dep kb w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
+  have := (nbOK_all dn vis fe n hn).2.1 s₀.mem s'.mem a₀ ctx fu po pl dep kb w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines_part ConRon.Arena.nestPos "application arm (nest_pos_app)"]
@@ -71,9 +70,9 @@ theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ 
       ∃ x a', (posAppT V fe c fu.toNat prog kb.toNat hi.toNat (decI w) NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧ x.2.1 = decI w ∧
       NSB s'.mem (r.tail.headD 0) x.2.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.1 s₀ vis ctx fu po pl kb hi w ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.1 s₀ vis ctx fu po pl kb hi w ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb hi w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb hi w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines ConRon.Arena.nestCont]
@@ -91,9 +90,9 @@ theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
       ∃ x a', (nestCont V fe c fu.toNat prog kb.toNat (decI nn) (decI us) args NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.1 s₀ vis ctx fu po pl kb nn us aO aL ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.1 s₀ vis ctx fu po pl kb nn us aO aL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ hm h0 h1 h2 h3 h4 h5 h6 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ hm h0 h1 h2 h3 h4 h5 h6 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines ConRon.Arena.nestContKey]
@@ -112,9 +111,9 @@ theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
       ∃ x a', (nestContKey V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.1 s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.1 s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines ConRon.Arena.nestContNew]
@@ -133,9 +132,9 @@ theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
       ∃ x a', (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.2.1 s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.1 s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines ConRon.Arena.nestFrame]
@@ -155,9 +154,9 @@ theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
     ⦃fun r s' => LocEq s' s₀ ∧
       ∃ x a', (nestFrame V fe c fu.toNat prog hi.toNat (decI us) ds nPc.toNat grp NS).run a₀ = .ok (x, a') ∧
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.2.2.1 s₀ vis ctx fu po pl hi us dO dL nPc gO gL ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.1 s₀ vis ctx fu po pl hi us dO dL nPc gO gL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines ConRon.Arena.nestCtors]
@@ -178,9 +177,9 @@ theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
       StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
       OutsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines_part ConRon.Arena.nestCtors "one constructor (nest_ctors_one)"]
@@ -199,9 +198,9 @@ theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
       KlB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ks ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ H (r.tail.tail.headD 0) ∧
       decI (r.tail.tail.headD 0) = closed ∧ NSB s'.mem (r.tail.tail.tail.headD 0) NS3 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ hm h0 h1 h2 h3 h4 h5 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ hm h0 h1 h2 h3 h4 h5 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines_part ConRon.Arena.nestCtors "field walk (nest_ctors_walk)"]
@@ -219,9 +218,9 @@ theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ ks.length = nF.toNat ∧
       H (r.tail.tail.headD 0) ∧ decI (r.tail.tail.headD 0) = cur ∧ H (r.tail.tail.tail.headD 0) ∧
       decI (r.tail.tail.tail.headD 0) = closed ∧ NSB s'.mem (r.tail.tail.tail.tail.headD 0) ns2 ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi nF crest ns) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.2.2.1 s₀ vis ctx root fu po pl hi nF crest ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ hm h0 h1 h2 h3 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ hm h0 h1 h2 h3 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 @[refines ConRon.Arena.nestFields]
@@ -246,9 +245,9 @@ theorem nestFields_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ 
       H (r.tail.tail.tail.tail.headD 0) ∧ decI (r.tail.tail.tail.tail.headD 0) = x.2.2.1 ∧
       NSB s'.mem (r.tail.tail.tail.tail.tail.headD 0) x.2.2.2 ∧ x.1.length = ks.length + nF.toNat ∧
       x.2.1.length = nds.length + nF.toNat ∧ (nF.toNat = 0 ∨ base.toNat + j.toNat + nF.toNat < 2 ^ 64) ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post ((nbSpec_all L n).2.2.2.2.2.2.2.2.2.2 s₀ vis ctx fu po pl base nF j cur ns kO kL dO dL) ?_
+  refine triple_post ((nbSpec_all L stubCall (stubCall_spec p) n).2.2.2.2.2.2.2.2.2.2 s₀ vis ctx fu po pl base nF j cur ns kO kL dO dL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := (nbOK_all dn vis fe hcs n hn).2.2.2.2.2.2.2.2.2.2 s₀.mem s'.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
+  have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.2.2 s₀.mem s'.mem a₀ ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
 end census

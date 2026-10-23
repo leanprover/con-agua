@@ -55,25 +55,28 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
   have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 63 := by
     have := hc.1 POOL (by simp [POOL, wordArrays]); omega
   have hw := loadMem_ctl_lt b pb s8 s64 hc
-  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by simp [litSch]; omega)⟩,
-    storeR_init _ _ _ _ hz (by simp [appSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [sortSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [constSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [letSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [bvarSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [fvarSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [lamSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [forallSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [projSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [zeroSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [succSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [maxSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [imaxSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [paramSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [lsSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [nanonSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [nstrSch]; omega),
-    storeR_init _ _ _ _ hz (by simp [nnumSch]; omega), ?_,
+  have hs : ∀ a, a < wordArrays → a ∈ slotArrs → 17 ≤ ((loadMem b pb s8 s64).arr64 a).size ∧
+      ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 63 := fun a ha hsl => by
+    have := hc.1 a ha; exact ⟨this.2 hsl, by omega⟩
+  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by simp [litSch]; omega) (hs _ (by decide) (by decide))⟩,
+    storeR_init _ _ _ _ hz (by simp [appSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [sortSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [constSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [letSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [bvarSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [fvarSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [lamSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [forallSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [projSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [zeroSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [succSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [maxSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [imaxSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [paramSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [lsSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [nanonSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [nstrSch]; omega) (hs _ (by decide) (by decide)),
+    storeR_init _ _ _ _ hz (by simp [nnumSch]; omega) (hs _ (by decide) (by decide)), ?_,
     ⟨constT_empty _, constT_empty _⟩, ⟨constT_empty _, constT_empty _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
@@ -114,7 +117,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     TblR.zero _ a ha (loadMem_rd b pb s8 s64) (h63 a hs) hctl
   have hf : ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
       ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFL).size < 2 ^ 62 :=
-    ⟨hc.1 70 (by decide), hc.1 71 (by decide)⟩
+    ⟨(hc.1 70 (by decide)).1, (hc.1 71 (by decide)).1⟩
   refine ⟨hT NID (.inl rfl) (by decide), hT LID (.inr (.inl rfl)) (by decide),
     hT EID (.inr (.inr rfl)) (by decide), ?_, hf⟩
   have hd : 1 ≤ ((loadMem b pb s8 s64).arr64 DECL).size := hc.2.2.1

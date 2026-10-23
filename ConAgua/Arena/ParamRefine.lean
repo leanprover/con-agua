@@ -85,9 +85,6 @@ theorem fld_param0 (m : Mem) (t i : Word) :
 def PRecRel (m : Mem) (t i : Word) (k : ParamNode) : Prop :=
   rdW (m.arr64 PREC) (i * 2 + t) = k.n.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 PREC) (i * 2 + t))
-
 /-- **The state relation** of the `param` store: the library's relation for the level store's two
 `param` tables. -/
 def ParamR (m : Mem) (a : AState) : Prop :=
@@ -158,12 +155,13 @@ theorem ppushMem_eq (m : Mem) (t u j c : Word) :
 theorem pinternW_eq (m : Mem) (u : Word) :
     pinternW m u = internM paramSch m 0 (ppushOK m) [u]
       (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 0 u (baseW m 0) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0)
-      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 1 u (baseW m 1) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0) := by
+      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 1 u (baseW m 1) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0)
+      phash := by
   have e0 : ∀ x, hdW paramSch.tag.toUInt64 0 x = paramP + x := fun x => by
     simp [hdW, paramSch, paramP, LTag.param]
   have e1 : ∀ x, hdW paramSch.tag.toUInt64 1 x = paramS + x := fun x => by
     simp [hdW, paramSch, paramS, LTag.param]
-  simp only [pinternW, internM, ppushMem_eq, e0, e1, true_and]
+  simp only [pinternW, internM, pushM, ppushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_param` refines `internLNode (.param _)` -/

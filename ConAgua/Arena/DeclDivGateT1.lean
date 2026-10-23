@@ -87,8 +87,8 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   cases k with
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
-  have hw := callW_model (M := fun mq => dmPgW p k mq ps vis c)
-    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard k · ps vis c) hcall
+  have hw := callW_model (M := fun mq => dmPgW p (realCall p) k mq ps vis c)
+    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard (realCall p) (realCall_spec p) k · ps vis c) hcall
   unfold dmPgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- the run's twin facts, once the run is known
@@ -156,13 +156,13 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   have hx3 := decW0B_false hd3 z3'
   have hpd3 := ConRon.Bridge.denote_ext hpd2 c3.ext
   -- all level params
-  cases h4 : stubM "all_level_params_defined" m3 [0, 0, r1.headD 0] with
+  cases h4 : realCall p k "all_level_params_defined" [0, 0, r1.headD 0] m3 with
   | none => rw [h4] at hw; simp at hw
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, bW_some] at hw
-  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := allLevelParamsDefinedT_spec dn vis fe 0 0 (r1.headD 0)
-    hl1 [] m3 m4 a3 r4 h4 ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?]⟩
+  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 (r1.headD 0)
+    hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
   have hC4 := StageC.of_T hT4 c4.ok
   by_cases z4 : r4.headD 0 = 0
@@ -224,8 +224,9 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   cases k with
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
-  have hw := callW_model (M := fun mq => dmCgW p k mq vis c annVal ho hl eqE proof)
-    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
+  have hw := callW_model (M := fun mq => dmCgW p (realCall p) k mq vis c annVal ho hl eqE proof)
+    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard (realCall p) (realCall_spec p) k · vis c annVal ho
+      hl eqE proof) hcall
   unfold dmCgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   have fin : ∀ x a', (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
@@ -292,13 +293,13 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   have hx3 := decW0B_false hd3 z3'
   have hpd3 := ConRon.Bridge.denote_ext hpd2 c3.ext
   -- all level params
-  cases h4 : stubM "all_level_params_defined" m3 [0, 0, r1.headD 0] with
+  cases h4 : realCall p k "all_level_params_defined" [0, 0, r1.headD 0] m3 with
   | none => rw [h4] at hw; simp at hw
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [h4, bW_some] at hw
-  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := allLevelParamsDefinedT_spec dn vis fe 0 0 (r1.headD 0)
-    hl1 [] m3 m4 a3 r4 h4 ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?]⟩
+  obtain ⟨x4, a4, hrun4, hT4, hg4, hd4⟩ := apdF_okT dn vis fe 0 0 (r1.headD 0)
+    hl1 [] m3 m4 a3 r4 (apdF_of_callW hD.apd h4) ⟨hC3.stageT, by rw [h0w]; simp [decHL, hslice?], [], rfl⟩
   rw [hx1] at hrun4
   obtain ⟨c4, -⟩ := runsC_step (ConRon.Bridge.alpd0_runsC hC3.check hpd3) hrun4
   have hC4 := StageC.of_T hT4 c4.ok

@@ -250,23 +250,23 @@ def nbFrameK4 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL 
   | none => none
   | some (_, m4) => nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
       (fgW k m4 hi us dO dL gO gL po pl 0 0)
-def nbFrameK3 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
+def nbFrameK3 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ra, m3) => nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
-      (stubM "infer_type_core" m3 [vis, hi, ra.headD 0])
-def nbFrameK2 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
+      (cR k "infer_type_core" [vis, hi, ra.headD 0] m3)
+def nbFrameK2 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hc, m2) =>
     if 4294967296 ≤ hc then none
-    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL])
-def nbFrameK1 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
+    else nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL])
+def nbFrameK1 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rn, m1) =>
     if 4294967296 ≤ rn.headD 0 then none
-    else nbFrameK2 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (ceinternW m1 (rn.headD 0) us)
+    else nbFrameK2 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (ceinternW m1 (rn.headD 0) us)
 
 def nbCtorsK3 (ctorsF : MW19) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns2 : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -358,70 +358,70 @@ def nbFieldsK1 (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j kO kL dO d
 
 mutual
 /-- `nest_pos(vis, ctx, fuel, progOff, progLen, dep, kb, e, ns)`. -/
-def nbPosW : Nat → MW9
+def nbPosW (cR : CallM) : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, dep, kb, e, ns =>
     if fu = 0 then none
-    else nbPosK1 n (nbBindW n) (nbAppW n) vis ctx (fu - 1) po pl dep kb e ns (nhiW m ctx pl)
-      (stubM "whnf_top" m [vis, dep, e])
+    else nbPosK1 n (nbBindW cR n) (nbAppW cR n) vis ctx (fu - 1) po pl dep kb e ns (nhiW m ctx pl)
+      (cR n "whnf_top" [vis, dep, e] m)
 /-- `nest_pos_bind(vis, ctx, fuel, progOff, progLen, dep, kb, w, ns)`. -/
-def nbBindW : Nat → MW9
+def nbBindW (cR : CallM) : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, dep, kb, w, ns =>
     if eViewW m w = [] then none
-    else nbBindK1 (nbPosW n) vis ctx fu po pl dep kb (eViewW m w) ns
+    else nbBindK1 (nbPosW cR n) vis ctx fu po pl dep kb (eViewW m w) ns
       (noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
         (nhiW m ctx pl) ((eViewW m w).tail.headD 0))
 /-- `nest_pos_app(vis, ctx, fuel, progOff, progLen, kb, hi, w, ns)`. -/
-def nbAppW : Nat → MW9
+def nbAppW (cR : CallM) : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, kb, hi, w, ns =>
-    nbAppK1 n (nbContW n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
+    nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
 /-- `nest_cont(vis, ctx, fuel, progOff, progLen, kb, n, us, argsOff, argsLen, ns)`. -/
-def nbContW : Nat → MW11
+def nbContW (cR : CallM) : Nat → MW11
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, kb, nn, us, aO, aL, ns =>
-    nbContK1 k (nbKeyW k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn)
+    nbContK1 k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn)
 /-- `nest_cont_key(vis, ctx, fuel, progOff, progLen, kb, n, us, dsOff, dsLen, nPc, cty, ns)`. -/
-def nbKeyW : Nat → MW13
+def nbKeyW (cR : CallM) : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns =>
-    nbKeyK1 k (nbNewW k) vis ctx fu po pl kb nn us dO dL nPc cty ns (posRecW m [nn, us, dO, dL])
+    nbKeyK1 k (nbNewW cR k) vis ctx fu po pl kb nn us dO dL nPc cty ns (posRecW m [nn, us, dO, dL])
 /-- `nest_cont_new(vis, ctx, fuel, progOff, progLen, kb, n, us, dsOff, dsLen, nPc, cty, ns)`. -/
-def nbNewW : Nat → MW13
+def nbNewW (cR : CallM) : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns =>
-    nbNewK1 k (nbFrameW k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl)
+    nbNewK1 k (nbFrameW cR k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl)
 /-- `nest_frame(vis, ctx, fuel, progOff, progLen, hi, us, dsOff, dsLen, nPc, grpOff, grpLen, ns)`. -/
-def nbFrameW : Nat → MW13
+def nbFrameW (cR : CallM) : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, hi, us, dO, dL, nPc, gO, gL, ns =>
-    nbFrameK1 k (nbCtorsW k) vis ctx fu po pl hi us dO dL nPc gO gL ns
+    nbFrameK1 cR k (nbCtorsW cR k) vis ctx fu po pl hi us dO dL nPc gO gL ns
       (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m))
 /-- `nest_ctors(vis, ctx, root, fuel, progOff, progLen, hi, us, dsOff, dsLen, namesOff, namesLen,
 holesOff, holesLen, csOff, csLen, ns, outsOff, outsLen)`. -/
-def nbCtorsW : Nat → MW19
+def nbCtorsW (cR : CallM) : Nat → MW19
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cO, cL, ns, oO, oL =>
     if cL = 0 then some ([oO, oL, ns], m)
-    else nbCtorsK1 k (nbCtorsW k) vis ctx root fu po pl hi us dO dL no nl hO hL cO cL oO oL
-      (nbOneW k m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
+    else nbCtorsK1 k (nbCtorsW cR k) vis ctx root fu po pl hi us dO dL no nl hO hL cO cL oO oL
+      (nbOneW cR k m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) ns)
 /-- `nest_ctors_one(vis, ctx, root, fuel, progOff, progLen, hi, us, dsOff, dsLen, namesOff,
 namesLen, holesOff, holesLen, cv, nF, ns)`. -/
-def nbOneW : Nat → MW17
+def nbOneW (cR : CallM) : Nat → MW17
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns =>
-    nbOneK1 k (nbWalkW k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW k m vis no nl us dO dL hO hL cv hi)
+    nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW cR k m vis no nl us dO dL hO hL cv hi)
 /-- `nest_ctors_walk(vis, ctx, root, fuel, progOff, progLen, hi, nF, crest, ns)`. -/
-def nbWalkW : Nat → MW10
+def nbWalkW (cR : CallM) : Nat → MW10
   | 0, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, root, fu, po, pl, hi, nF, crest, ns =>
-    if root ≠ 0 then nbWalkK1 k (nbFieldsW k) vis ctx po pl hi nF crest ns (wfWf k m crest)
-    else nbWalkK2 k hi (nbFieldsW k m vis ctx fu po pl hi nF 0 crest ns 0 0 0 0)
+    if root ≠ 0 then nbWalkK1 k (nbFieldsW cR k) vis ctx po pl hi nF crest ns (wfWf k m crest)
+    else nbWalkK2 k hi (nbFieldsW cR k m vis ctx fu po pl hi nF 0 crest ns 0 0 0 0)
 /-- `nest_fields(vis, ctx, fuel, progOff, progLen, base, nF, j, cur, ns, ksOff, ksLen, ndsOff,
 ndsLen)`. -/
-def nbFieldsW : Nat → MW14
+def nbFieldsW (cR : CallM) : Nat → MW14
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, base, nF, j, cur, ns, kO, kL, dO, dL =>
     if nF = 0 then some ([kO, kL, dO, dL, cur, ns], m)
@@ -429,8 +429,8 @@ def nbFieldsW : Nat → MW14
     else if base + j < base then none
     else if base + j + 1 = 0 then none
     else if eViewW m cur = [] then none
-    else nbFieldsK1 k (nbFieldsW k) vis ctx fu po pl base nF j kO kL dO dL (eViewW m cur)
-      (nbPosW k m vis ctx fu po pl (base + j) 0 ((eViewW m cur).tail.headD 0) ns)
+    else nbFieldsK1 k (nbFieldsW cR k) vis ctx fu po pl base nF j kO kL dO dL (eViewW m cur)
+      (nbPosW cR k m vis ctx fu po pl (base + j) 0 ((eViewW m cur).tail.headD 0) ns)
 end
 
 /-! ## The models' arms -/
@@ -562,17 +562,17 @@ theorem nbFrameK5_some (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO 
 theorem nbFrameK4_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (w_ : List Word) (m4 : Mem) :
     nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (w_, m4)) = nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
       (fgW k m4 hi us dO dL gO gL po pl 0 0) := rfl
-theorem nbFrameK3_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (ra : List Word) (m3 : Mem) :
-    nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (ra, m3)) = nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
-      (stubM "infer_type_core" m3 [vis, hi, ra.headD 0]) := rfl
-theorem nbFrameK2_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (hc : Word) (m2 : Mem) :
-    nbFrameK2 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (hc, m2)) =
+theorem nbFrameK3_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (ra : List Word) (m3 : Mem) :
+    nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (ra, m3)) = nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
+      (cR k "infer_type_core" [vis, hi, ra.headD 0] m3) := rfl
+theorem nbFrameK2_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (hc : Word) (m2 : Mem) :
+    nbFrameK2 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (hc, m2)) =
     if 4294967296 ≤ hc then none
-    else nbFrameK3 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL]) := rfl
-theorem nbFrameK1_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (rn : List Word) (m1 : Mem) :
-    nbFrameK1 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (rn, m1)) =
+    else nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (mknF m2 [hc, dO, dL]) := rfl
+theorem nbFrameK1_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (rn : List Word) (m1 : Mem) :
+    nbFrameK1 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (rn, m1)) =
     if 4294967296 ≤ rn.headD 0 then none
-    else nbFrameK2 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (ceinternW m1 (rn.headD 0) us) := rfl
+    else nbFrameK2 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (ceinternW m1 (rn.headD 0) us) := rfl
 theorem nbCtorsK3_some (ctorsF : MW19) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns2 : Word) (r : List Word) (m3 : Mem) :
     nbCtorsK3 ctorsF vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns2 (some (r, m3)) = ctorsF m3 vis ctx root fu po pl hi us dO dL no nl hO hL (cO + 1) (cL - 1) ns2
       (r.headD 0) (r.tail.headD 0) := rfl
@@ -627,60 +627,60 @@ theorem nbFieldsK2_some (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j k
 theorem nbFieldsK1_some (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j kO kL dO dL : Word) (v : List Word) (rp : List Word) (m1 : Mem) :
     nbFieldsK1 k fieldsF vis ctx fu po pl base nF j kO kL dO dL v (some (rp, m1)) = nbFieldsK2 k fieldsF vis ctx fu po pl base nF j kO kL dO dL v (rp.headD 0) (rp.tail.headD 0)
       (rp.tail.tail.headD 0) (fvinternW m1 (base + j) (v.tail.headD 0)) := rfl
-theorem nbPosW_succ (n : Nat) (m : Mem) (vis ctx fu po pl dep kb e ns : Word) :
-    nbPosW (n + 1) m vis ctx fu po pl dep kb e ns =
+theorem nbPosW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl dep kb e ns : Word) :
+    nbPosW cR (n + 1) m vis ctx fu po pl dep kb e ns =
       if fu = 0 then none
-      else nbPosK1 n (nbBindW n) (nbAppW n) vis ctx (fu - 1) po pl dep kb e ns (nhiW m ctx pl)
-        (stubM "whnf_top" m [vis, dep, e]) := by
+      else nbPosK1 n (nbBindW cR n) (nbAppW cR n) vis ctx (fu - 1) po pl dep kb e ns (nhiW m ctx pl)
+        (cR n "whnf_top" [vis, dep, e] m) := by
   rw [nbPosW]
-theorem nbBindW_succ (n : Nat) (m : Mem) (vis ctx fu po pl dep kb w ns : Word) :
-    nbBindW (n + 1) m vis ctx fu po pl dep kb w ns =
+theorem nbBindW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl dep kb w ns : Word) :
+    nbBindW cR (n + 1) m vis ctx fu po pl dep kb w ns =
       if eViewW m w = [] then none
-      else nbBindK1 (nbPosW n) vis ctx fu po pl dep kb (eViewW m w) ns
+      else nbBindK1 (nbPosW cR n) vis ctx fu po pl dep kb (eViewW m w) ns
         (noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
           (nhiW m ctx pl) ((eViewW m w).tail.headD 0)) := by
   rw [nbBindW]
-theorem nbAppW_succ (n : Nat) (m : Mem) (vis ctx fu po pl kb hi w ns : Word) :
-    nbAppW (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
+theorem nbAppW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl kb hi w ns : Word) :
+    nbAppW cR (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
   rw [nbAppW]
-theorem nbContW_succ (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us aO aL ns : Word) :
-    nbContW (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 k (nbKeyW k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by
+theorem nbContW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us aO aL ns : Word) :
+    nbContW cR (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by
   rw [nbContW]
-theorem nbKeyW_succ (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
-    nbKeyW (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbKeyK1 k (nbNewW k) vis ctx fu po pl kb nn us dO dL nPc cty ns (posRecW m [nn, us, dO, dL]) := by
+theorem nbKeyW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
+    nbKeyW cR (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbKeyK1 k (nbNewW cR k) vis ctx fu po pl kb nn us dO dL nPc cty ns (posRecW m [nn, us, dO, dL]) := by
   rw [nbKeyW]
-theorem nbNewW_succ (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
-    nbNewW (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbNewK1 k (nbFrameW k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl) := by
+theorem nbNewW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
+    nbNewW cR (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbNewK1 k (nbFrameW cR k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl) := by
   rw [nbNewW]
-theorem nbFrameW_succ (k : Nat) (m : Mem) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
-    nbFrameW (k + 1) m vis ctx fu po pl hi us dO dL nPc gO gL ns =
-nbFrameK1 k (nbCtorsW k) vis ctx fu po pl hi us dO dL nPc gO gL ns
+theorem nbFrameW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
+    nbFrameW cR (k + 1) m vis ctx fu po pl hi us dO dL nPc gO gL ns =
+nbFrameK1 cR k (nbCtorsW cR k) vis ctx fu po pl hi us dO dL nPc gO gL ns
         (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) := by
   rw [nbFrameW]
-theorem nbCtorsW_succ (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) :
-    nbCtorsW (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
+theorem nbCtorsW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) :
+    nbCtorsW cR (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
       if cL = 0 then some ([oO, oL, ns], m)
-      else nbCtorsK1 k (nbCtorsW k) vis ctx root fu po pl hi us dO dL no nl hO hL cO cL oO oL
-        (nbOneW k m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
+      else nbCtorsK1 k (nbCtorsW cR k) vis ctx root fu po pl hi us dO dL no nl hO hL cO cL oO oL
+        (nbOneW cR k m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
           (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) ns) := by
   rw [nbCtorsW]
-theorem nbOneW_succ (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) :
-    nbOneW (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = nbOneK1 k (nbWalkW k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW k m vis no nl us dO dL hO hL cv hi) := by
+theorem nbOneW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) :
+    nbOneW cR (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW cR k m vis no nl us dO dL hO hL cv hi) := by
   rw [nbOneW]
-theorem nbWalkW_succ (k : Nat) (m : Mem) (vis ctx root fu po pl hi nF crest ns : Word) :
-    nbWalkW (k + 1) m vis ctx root fu po pl hi nF crest ns =
-      if root ≠ 0 then nbWalkK1 k (nbFieldsW k) vis ctx po pl hi nF crest ns (wfWf k m crest)
-      else nbWalkK2 k hi (nbFieldsW k m vis ctx fu po pl hi nF 0 crest ns 0 0 0 0) := by
+theorem nbWalkW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi nF crest ns : Word) :
+    nbWalkW cR (k + 1) m vis ctx root fu po pl hi nF crest ns =
+      if root ≠ 0 then nbWalkK1 k (nbFieldsW cR k) vis ctx po pl hi nF crest ns (wfWf k m crest)
+      else nbWalkK2 k hi (nbFieldsW cR k m vis ctx fu po pl hi nF 0 crest ns 0 0 0 0) := by
   rw [nbWalkW]
-theorem nbFieldsW_succ (k : Nat) (m : Mem) (vis ctx fu po pl base nF j cur ns kO kL dO dL : Word) :
-    nbFieldsW (k + 1) m vis ctx fu po pl base nF j cur ns kO kL dO dL =
+theorem nbFieldsW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl base nF j cur ns kO kL dO dL : Word) :
+    nbFieldsW cR (k + 1) m vis ctx fu po pl base nF j cur ns kO kL dO dL =
       if nF = 0 then some ([kO, kL, dO, dL, cur, ns], m)
       else if cur >>> 28 ≠ 6 then none
       else if base + j < base then none
       else if base + j + 1 = 0 then none
       else if eViewW m cur = [] then none
-      else nbFieldsK1 k (nbFieldsW k) vis ctx fu po pl base nF j kO kL dO dL (eViewW m cur)
-        (nbPosW k m vis ctx fu po pl (base + j) 0 ((eViewW m cur).tail.headD 0) ns) := by
+      else nbFieldsK1 k (nbFieldsW cR k) vis ctx fu po pl base nF j kO kL dO dL (eViewW m cur)
+        (nbPosW cR k m vis ctx fu po pl (base + j) 0 ((eViewW m cur).tail.headD 0) ns) := by
   rw [nbFieldsW]
 attribute [ind_grind] nbBindK6_some nbBindK5_some nbBindK4_some nbBindK3_some nbBindK2_some nbBindK1_some
   nbPosK3_some nbPosK4_some nbPosK5_some nbPosK2_some nbPosK1_some nbAppK4_some nbAppK6_some nbAppK5_some
