@@ -279,7 +279,8 @@ theorem brgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /-- **`block_rec_want`'s model refines the twin's `mapM` of `name_rec`.** -/
 theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m : Mem) (a : AState) (mo ml : Word) (ms : List MemberShape),
-    StageR dn vis fe m a → PSlR decMS ms mo ml m →
+    StageR dn vis fe m a →
+    DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) m ms ∧ (ml = 0 ∨ mo.toNat + ml.toNat ≤ iwTop m) →
     Sim (brwW n m mo ml) (ms.mapM fun ms => internNNode (.str ms.cvT.name "rec")) a
       (fun r xs m' a' => decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
@@ -289,10 +290,12 @@ theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     intro m a mo ml ms hS hms
     by_cases hl : ml = 0
     · rw [brwW_nil n m mo ml hl]
-      subst hl; rw [partsPSl_nil hms]
+      have : ms = [] := by
+        have := decPL_length _ (show decPL _ _ _ _ = _ from hms.1); subst hl; simpa using this
+      subst this
       exact Sim.ret ⟨by simp [decHL, hslice?], by simp, hS, IWGrow.refl _⟩
     rw [brwW_cons n m mo ml hl]
-    obtain ⟨pc, ms0, ms', rfl, hw, hpb, hms0, hms'⟩ := partsPSl_cons hms hl
+    obtain ⟨pc, ms0, ms', rfl, hw, hpb, hms0, hms'⟩ := partsPSl_cons ⟨hms.1, hms.2.resolve_left hl⟩ hl
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decMS_some (show decMS (truncM m) pc = some ms0 from hms0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)
     rw [hw, hcw]
@@ -305,7 +308,7 @@ theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rintro r1 x1 m1 a1 ⟨hS1, hg1, hx1l, hx1⟩
     refine Sim.bindK (K := bggK3 n (r1.headD 0))
       (body := fun r2 m2 => bgoK3 (consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0)))
-      (by simp [bggK3]) (fun _ _ => bggK3_some ..) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 (hms'.grow decMS_mono hg1)) ?_
+      (by simp [bggK3]) (fun _ _ => bggK3_some ..) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 ⟨(hms'.grow decMS_mono hg1).1, Or.inr (hms'.grow decMS_mono hg1).2⟩) ?_
     rintro r2 xs m2 a2 ⟨hd2, hb2, hS2, hg2⟩
     intro r m' e
     cases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with
@@ -379,12 +382,15 @@ structure IndPartsProg3 (p : Prog) : Prop extends IndPartsProg2 p where
   nameSet : p.lookup "block_rec_name_set_ok" = some blockRecNameSetOk
 
 /-- **`block_rec_name_set_ok` refines `blockRecNameSetOk`** (through the stub `name_rec`): the
-members and recursors slices of records decoded below the tops. -/
+members and recursors slices of records decoded below the tops (the members' below the top unless
+empty: an empty slice's offset is whatever its record holds). -/
 @[refines ConRon.Arena.blockRecNameSetOk]
 theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mo ml ro rl : Word)
     (ms : List MemberShape) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀)
-    (hms : PSlR decMS ms mo ml s₀.mem) (hrs : PSlR decRS recs ro rl s₀.mem) :
+    (hms : DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) s₀.mem ms ∧
+      (ml = 0 ∨ mo.toNat + ml.toNat ≤ iwTop s₀.mem))
+    (hrs : PSlR decRS recs ro rl s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "block_rec_name_set_ok" [mo, ml, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockRecNameSetOk ms recs) a₀ ∧
       r = [if AM.res (ConRon.Arena.blockRecNameSetOk ms recs) a₀ then 1 else 0] ∧
