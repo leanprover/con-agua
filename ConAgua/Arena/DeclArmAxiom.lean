@@ -218,7 +218,8 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
     (h : cdaW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
     (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a) :
+    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a)
+    (hN : L.Rom.NamesDn dn a L.Rom.quotNames) :
     ∃ fe' a', (checkDecl V pins fe (.axiomDecl cv)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   have hdecl := hD.recs i.toNat hi
@@ -265,7 +266,7 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     obtain ⟨r3, m3⟩ := rm3
     rw [e3, cdaQ1_some] at h
     obtain ⟨blk, a3, hrun3, hS3, hg3, hD3, -⟩ :=
-      hX.quot.rom.basis dn vis fe 4 (by decide) n m1 a r3 m3 hS1 e3
+      hX.quot.rom.quot dn vis fe n m1 a r3 m3 ⟨hS1, hok, hN⟩ e3
     have hrun3' : (BasisKind.decls .quotK).run a = .ok (blk, a3) := hrun3
     have hok3 := (ConRon.Bridge.BasisKind.decls_run hok hrun3').1
     generalize r3.headD 0 = o3 at h hD3
@@ -515,12 +516,12 @@ theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal), i.toNat < ds.size →
       ds[i.toNat]? = some (.axiomDecl cv) → ConRon.Bridge.StateOK a₀ →
-      LoopR pins dn s₀.mem a₀ vis fe pend ds →
+      L.Rom.NamesDn dn a₀ L.Rom.quotNames → LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_axiom" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.axiomDecl cv)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.axiomDecl cv)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.axiomDecl cv)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv hi hd hok0 hLR
+  intro n s₀ a₀ vis fe pend i cv hi hd hok0 hN hLR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -531,7 +532,7 @@ theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
   have hd' : ds[i.toNat] = .axiomDecl cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdaW_ok (pins := pins) hX hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok0
+    cdaW_ok (pins := pins) hX hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok0 hN
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hres]

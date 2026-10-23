@@ -29,6 +29,16 @@ def ciFits : ConLeche.ConstantInfo → Bool
       decide (rs.length < 2 ^ 59) && rs.all ruleFits
   | _ => false
 
+/-- The `sortZ` names of a constant (an inductive's). -/
+def ciZ : ConLeche.ConstantInfo → List ConLeche.Name
+  | .indInfo _ c => pwNames c.sortZ
+  | _ => []
+
+/-- **What re-interning a constant's `sortZ` names needs** at the memo `memo`: none, or a
+well-formed state and memo naming them through `dn` (`ZOK`, plus the memo for `internCV_sstep`). -/
+def ZOKM (dn : NIdx → Option ConLeche.Name) (zs : List ConLeche.Name) (a : AState) (memo : EMemo) : Prop :=
+  zs = [] ∨ (ConRon.Bridge.StateOK a ∧ ConRon.Bridge.Frontend.EMemoOK a.store memo ∧ NamesDn dn a zs)
+
 theorem rdU_ntBW {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) {n : Nat} {m : Mem} {i : Word}
     {k : Word → Mem → Option (List Word × Mem)} {f : List Word → Mem → Option (List Word × Mem)}
     {v : List Word × Mem} (h : ntBW (rdU p n m i k) f = some v) : ntBW (k (u64W rom i) m) f = some v := by
@@ -237,11 +247,11 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Con
       (UInt64.ofNat nF) (fun i hi => by omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, ofNat_toNat_lt hnP, ofNat_toNat_lt hnF]
 
-/-- An inductive (its `sortZ` without names). -/
+/-- An inductive (its `sortZ` names already in the store, `ZOKM`). -/
 theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
     (caps : ConLeche.IndCaps) (hcaps : capsFits caps = true)
-    (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
+    (k : Nat) (a : AState) (hz : ZOKM dn (pwNames caps.sortZ) a memo) (m : Mem) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
     (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen (.indInfo v caps)).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
@@ -268,7 +278,11 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
   have hp5 : (pp + 5).toNat = pp.toNat + 5 := by
     rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt (by omega)
   obtain ⟨ic, a3, hrun3, hI3, hM3, hs3, hq3, hek3, ht3, hIW3, hH3⟩ :=
-    caps_rel hL hr dn _ memo1 caps hcaps k' m2 a1 q2 (pp + 5) rest r3 m3 hI2 hM2 hs2 hd2
+    caps_rel hL hr dn _ memo1 caps hcaps k' m2 a1 (by
+      rcases hz with h | ⟨hok, hmo, hn⟩
+      · exact .inl h
+      · have st := (ConRon.Bridge.Frontend.internCV_sstep hok hmo hrun2).1
+        exact .inr ⟨st.ok, hn.ext st.ext⟩) q2 (pp + 5) rest r3 m3 hI2 hM2 hs2 hd2
       (by omega) (by omega) h3
   rw [hp5] at hek3 hH3
   refine ⟨memo1, .indInfo icv ic, a3, ?_, hI3, hM3, hs3, ?_,
@@ -429,7 +443,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
 @[refines_part ConRon.Arena.Frontend.internCI "the pinned constants' kinds"]
 theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (c : ConLeche.ConstantInfo) (hfit : ciFits c = true)
-    (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
+    (k : Nat) (m : Mem) (a : AState) (hz : ZOKM dn (ciZ c) a memo) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
     (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen c).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
@@ -445,7 +459,7 @@ theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
         simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ h]; rfl) hI hM hst hd hc
   | indInfo v caps =>
     simp only [ciFits, Bool.and_eq_true] at hfit
-    exact ci_ind hL hr dn seen memo v hfit.1 caps hfit.2 k m a q rest r m' hI hM hst hd hc
+    exact ci_ind hL hr dn seen memo v hfit.1 caps hfit.2 k a hz m q rest r m' hI hM hst hd hc
   | ctorInfo v nP nF =>
     simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
     exact ci_ctor hL hr dn seen memo v hfit.1.1 nP nF hfit.1.2 hfit.2 k m a q rest r m' hI hM hst hd hc
