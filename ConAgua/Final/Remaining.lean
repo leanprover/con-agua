@@ -15,22 +15,18 @@ namespace ConAgua.Final
 
 open L L.Compiler L.Checker L.Arena ConRon.Arena
 
-/-- **`checker_x64_accepts` for the committed file `asm/checker.s`**, from the one named hypothesis still open:
-the inductive arm's contract `IndArmSpec` (lane `indproofs4`) at the checker's program with the ROM
-substituted. -/
+/-- **The final theorem for the committed file `asm/checker.s`** (called through the entry stub
+`ca_start`, `AbiCall`), from the one named hypothesis still open: the inductive arm's contract
+`IndArmSpec` (lane `indproofs4`) at the checker's program with the ROM substituted. -/
 theorem checkerFile_accepts_remaining [Host]
     (hIA : ∀ bs dn, L.Ind.DnInj dn → IndArmSpec (checkerProg.subPB bs) dn)
-    (G : L.Compiler.Layout) (hG : G.Ok) (htab : G.tab = checkerTab)
-    (k0 : Nat) (hcode : Code checkerFile k0) (hnargs : G.nargs = 0)
+    (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63)
-    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
-    (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-      dm (label enterL) :=
-  checkerFile_accepts (pipelineRefines_checker (loopStage_of hIA)) G hG htab k0
-    hcode hnargs b pb h64 hb hpb s8 s64 N hN62 dm ra hmem hc
+      dm (label abiStartL) :=
+  checkerFile_accepts (pipelineRefines_checker (loopStage_of hIA)) k0 hcode b pb h64 hb hpb dm ra hc
 
 #print axioms checkerFile_accepts_remaining
 

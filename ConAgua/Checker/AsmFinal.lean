@@ -1,6 +1,8 @@
 import ConAgua.Checker.AsmFileEq
 import ConAgua.Checker.ProgWf
 import ConAgua.Final.Statement
+import ConAgua.Final.Abi
+import ConAgua.Checker.AsmStubEq
 
 /-!
 # The final theorems, for the committed assembler file `asm/checker.s`
@@ -18,13 +20,17 @@ printer that wrote the file is trusted; the parser, the assembler and the loader
 compiler output"; docs/design/asmfile.md.
 
 `checkerAsm_accepts` is the same for the compiler's output (`Code checkerAsm k0`, the trampoline
-and the functions); `checkerFile_accepts` gets that code from the file's, after the stub. The stub
-itself is not used yet: the theorems start at the trampoline's entry (`HarnessCall`); lane `abi`
-will show that the stub establishes the layout.
+and the functions); `checkerFile_accepts_enter` gets that code from the file's, after the stub,
+and starts at the trampoline's entry (`HarnessCall`). The final theorems `checkerFile_accepts`,
+`checkerFile_model_exists` and `checkerFile_no_False` start at the stub's entry `ca_start`
+(`AbiCall`, lane `abi`): the file's stub is `abiStub checkerTab` (`checkerStub_eq`), which lays
+out the table, the L stack and the arrays in the caller's zero region and enters the trampoline
+(`checker_x64_accepts_abi`, `ConAgua/Final/Abi.lean`).
 
-The remaining hypotheses are those of `checker_x64_accepts`, with `G.tab = checkerTab` (the
-loader's table is the one the code was compiled for); `Prog.wf`, the entry and the result count
-are discharged here.
+For `checkerFile_accepts_enter` the remaining hypotheses are those of `checker_x64_accepts`, with
+`G.tab = checkerTab` (the loader's table is the one the code was compiled for); `Prog.wf`, the
+entry and the result count are discharged here, and for the final theorems also the table's fit
+for the stub (`checkerTab_abiOk`).
 -/
 
 namespace ConAgua.Final
@@ -57,8 +63,9 @@ theorem code_of_checkerFile [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
   rw [checkerFile_eq.lit] at hcode
   exact hcode.right
 
-/-- **`checker_x64_accepts` for the committed file `asm/checker.s`.** -/
-theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
+/-- `checker_x64_accepts` for the committed file `asm/checker.s`, from the trampoline's entry
+(`HarnessCall`; the lemma `checkerFile_accepts` is built on, through the stub). -/
+theorem checkerFile_accepts_enter [Host] (hP : PipelineRefines checkerProg)
     (G : L.Compiler.Layout) (hG : G.Ok) (htab : G.tab = checkerTab)
     (k0 : Nat) (hcode : Code checkerFile k0) (hnargs : G.nargs = 0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
@@ -71,15 +78,39 @@ theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
   checkerAsm_accepts hP G hG htab _ (code_of_checkerFile hcode) hnargs b pb h64 hb hpb s8 s64 N
     hN62 dm ra hmem hc
 
-/-- **`x64_model_exists` for the committed file `asm/checker.s`.** -/
-theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
-    (hP : PipelineRefines checkerProg)
-    (G : L.Compiler.Layout) (hG : G.Ok) (htab : G.tab = checkerTab)
-    (k0 : Nat) (hcode : Code checkerFile k0) (hnargs : G.nargs = 0)
+/-! ## From the entry stub: the final theorems
+
+The harness calls the stub `ca_start` (`AbiCall`: the two buffers and a zero region); the file's
+stub is `abiStub checkerTab` (`checkerStub_eq`), which sets up the layout and enters the
+trampoline (`checker_x64_accepts_abi`, `ConAgua/Final/Abi.lean`). -/
+
+theorem checkerTab_abiOk : abiTabOk checkerTab = true := by decide
+
+/-- The file's code: the stub, then the compiler's output. -/
+theorem code_of_checkerFile_abi [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
+    Code (abiStub checkerTab ++ compileProg checkerTab checkerProg "check") k0 := by
+  rw [checkerFile_eq, checkerStub_eq] at hcode
+  exact hcode
+
+/-- **The final theorem for the committed file `asm/checker.s`**: the harness calls `ca_start` as
+`AbiCall` says; if the machine reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts
+`[b]`. -/
+theorem checkerFile_accepts [Host] (hP : PipelineRefines checkerProg)
+    (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (hpb : pb.size < 2 ^ 63)
-    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
-    (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+      dm (label abiStartL) :=
+  checker_x64_accepts_abi checkerProg hP checkerTab checkerTab_abiOk checkerProg_wf (by decide) k0
+    (code_of_checkerFile_abi hcode) L.Checker.checkL checkerProg_lookup_check (by decide)
+    b pb h64 hb hpb dm ra hc
+
+/-- **An accepted file has a model** (`asm/checker.s`, called through the stub). -/
+theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
+    (hP : PipelineRefines checkerProg) (k0 : Nat) (hcode : Code checkerFile k0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
           ∃ (pins : List ConLeche.NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
@@ -88,26 +119,23 @@ theorem checkerFile_model_exists (V : Type w) [ConLeche.SetTheory V] [Host]
             ConLeche.checkDeclsPure .verified (ConLeche.fueledOps .verified F) pins
               (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
             Nonempty (ConLeche.Model V env)))
-      dm (label enterL) :=
+      dm (label abiStartL) :=
   eventually_weaken _ _ _ _
     (fun _ ⟨hpc, h⟩ => ⟨hpc, fun hrdx hacc => twinAccepts_model V (h hrdx hacc)⟩)
-    (checkerFile_accepts hP G hG htab k0 hcode hnargs b pb h64 hb hpb s8 s64 N hN62 dm ra hmem hc)
+    (checkerFile_accepts hP k0 hcode b pb h64 hb hpb dm ra hc)
 
-/-- **`x64_no_False` for the committed file `asm/checker.s`.** -/
+/-- **No `False`** (`asm/checker.s`, called through the stub). -/
 theorem checkerFile_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
-    (hP : PipelineRefines checkerProg)
-    (G : L.Compiler.Layout) (hG : G.Ok) (htab : G.tab = checkerTab)
-    (k0 : Nat) (hcode : Code checkerFile k0) (hnargs : G.nargs = 0)
+    (hP : PipelineRefines checkerProg) (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [b])
     (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
-    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
-    (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
+    (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-      dm (label enterL) :=
+      dm (label abiStartL) :=
   eventually_weaken _ _ _ _
     (fun _ ⟨hpc, h⟩ => ⟨hpc, fun ⟨hrdx, hacc⟩ => twinAccepts_no_False V hfalse (h hrdx hacc)⟩)
-    (checkerFile_accepts hP G hG htab k0 hcode hnargs b pb h64 hb hpb s8 s64 N hN62 dm ra hmem hc)
+    (checkerFile_accepts hP k0 hcode b pb h64 hb hpb dm ra hc)
 
 /-- info: 'ConAgua.Final.checkerFile_model_exists' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_model_exists
