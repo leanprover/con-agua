@@ -362,15 +362,25 @@ def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb
 (`ds.anyM`, stopping at the first hit). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (j, x, b) {
-  j := 0;
-  while j < dsl {
-    x := IW.u64[dso + j];
-    b := call nest_occ(mno, mnl, 0, 0, x);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (b, r) {
+  if dsl == 0 { return 0 };
+  b := call nest_occ(mno, mnl, 0, 0, IW.u64[dso]);
+  if b != 0 { return 1 };
+  r := call target_major_of_outside_occ(mno, mnl, dso + 1, dsl - 1);
+  return r
+}
+
+/-- `target_major_of`'s OUTSIDE branch, after the parameter checks: the instantiation's index
+count and sort, in the block's universe (Q1), the record. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
+@[l_impl ConRon.Arena.targetMajorOf]
+def targetMajorOfOutsideTail : FunDecl := lfn (vis, p, pfo, pfl, I, us, dso, dsl, cso, csl)
+    locals (nidx, sI, e, r) {
+  (nidx, sI) := call target_outside_inst(vis, I, us, dso, dsl);
+  e := call lvl_eq_c(sI, IW.u64[p + 6]);
+  if e != 2 { abort };
+  r := call mk_target_major(I, us, dso, dsl, dsl, nidx, cso, csl, 0, 0, 0, pfo, pfl);
+  return r
 }
 
 /-- `target_major_of`'s OUTSIDE branch: not `Quot`, a stored inductive, parameters closed and
@@ -378,22 +388,32 @@ occurring, in the block's universe (Q1). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOfOutside : FunDecl := lfn (vis, p, pfo, pfl, I, us, args_o, args_l, mno, mnl)
-    locals (qq, ok3, nPc, cso, csl, dso, dsl, cl, nidx, sI, e, r) {
+    locals (qq, ok3, nPc, cso, csl, cl, r) {
   qq := call pin_at(47);
   if I == qq { abort };
   (ok3, nPc, cso, csl) := call target_ctors_of(vis, I);
   if ok3 == 0 { abort };
   if args_l < nPc { abort };
-  dso := args_o;
-  dsl := nPc;
-  cl := call target_major_of_outside_closed(dso, dsl, IW.u64[p + 4]);
+  cl := call target_major_of_outside_closed(args_o, nPc, IW.u64[p + 4]);
   if cl == 0 { abort };
-  cl := call target_major_of_outside_occ(mno, mnl, dso, dsl);
+  cl := call target_major_of_outside_occ(mno, mnl, args_o, nPc);
   if cl == 0 { abort };
-  (nidx, sI) := call target_outside_inst(vis, I, us, dso, dsl);
-  e := call lvl_eq_c(sI, IW.u64[p + 6]);
-  if e != 2 { abort };
-  r := call mk_target_major(I, us, dso, dsl, nPc, nidx, cso, csl, 0, 0, 0, pfo, pfl);
+  r := call target_major_of_outside_tail(vis, p, pfo, pfl, I, us, args_o, nPc, cso, csl);
+  return r
+}
+
+/-- `target_major_of` after the head's `const` view: the member or the outside branch. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
+@[l_impl ConRon.Arena.targetMajorOf]
+def targetMajorOfConst : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y)
+    locals (mno, mnl, ok2, t, r) {
+  (mno, mnl) := call block_shape_member_names(p);
+  (ok2, t) := call sl_find(mno, mnl, x);
+  if ok2 != 0 {
+    r := call target_major_of_member(p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y, t);
+    return r
+  };
+  r := call target_major_of_outside(vis, p, pfo, pfl, x, y, args_o, args_l, mno, mnl);
   return r
 }
 
@@ -402,19 +422,13 @@ OUTSIDE stored inductive (a nested block's container). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
-    locals (args_o, args_l, hd, tag, g, x, y, z, mno, mnl, ok2, t, r) {
+    locals (args_o, args_l, hd, tag, g, x, y, z, r) {
   (args_o, args_l) := call get_app_args_f(⟪CWF⟫, mty);
   hd := call get_app_fn_f(⟪CWF⟫, mty);
   tag := hd >> 28;
   if tag != 3 { abort };
   (g, x, y, z) := call e_view(hd);
-  (mno, mnl) := call block_shape_member_names(p);
-  (ok2, t) := call sl_find(mno, mnl, x);
-  if ok2 != 0 {
-    r := call target_major_of_member(p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y, t);
-    return r
-  };
-  r := call target_major_of_outside(vis, p, pfo, pfl, x, y, args_o, args_l, mno, mnl);
+  r := call target_major_of_const(vis, p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y);
   return r
 }
 
@@ -862,7 +876,9 @@ def recCheckFns : Prog :=
    ("target_major_of_member", targetMajorOfMember),
    ("target_major_of_outside_closed", targetMajorOfOutsideClosed),
    ("target_major_of_outside_occ", targetMajorOfOutsideOcc),
-   ("target_major_of_outside", targetMajorOfOutside), ("target_major_of", targetMajorOf),
+   ("target_major_of_outside", targetMajorOfOutside),
+   ("target_major_of_outside_tail", targetMajorOfOutsideTail), ("target_major_of", targetMajorOf),
+   ("target_major_of_const", targetMajorOfConst),
    ("target_pin_tys", targetPinTys), ("target_major_pins", targetMajorPins),
    ("block_rec_split_own_aux", blockRecSplitOwnAux),
    ("block_rec_want_aux_names", blockRecWantAuxNames), ("ptr_names_copy", ptrNamesCopy), ("ptr_list_names", ptrListNames),
