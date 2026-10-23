@@ -279,7 +279,7 @@ theorem checkDeclOpaque_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p) (hC :
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (cdo_specW p hp hV.rcp hC.red.pa n s₀ i vis)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame hA.closed n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
+    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
   subst hs
   have hd' : ds[i.toNat] = .opaqueDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd

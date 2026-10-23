@@ -169,5 +169,6 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,censussorry,sonnet,25,31,"census: proven-locally status (own proof term sorry-free, sorry only via named callees) + sorry-sources work queue; local/lean_local CSV columns; master: 165 of 165 sorry targets proven locally"
 2026-10-22,erecfix,opus,30,25,"CoreErec and IndCore write sets by per-chunk kernel checks (Compiler/WriteSetSplit: names_tree, prog_all, closedW_of_all): CoreErec 20 GB -> 3.0 GB/12 s, IndCore ~22 GB -> 3.2 GB/12 s"
 2026-10-22,knotwire,opus,35,41,"tagged whnf refinements restated over KnotAllProg (KnotTagged), stub bundles and supKeep_twin deleted; entry points under CoreS/StageT (KnotEntry), knot_all @[refines coreKnot]"
+2026-10-22,loopt2,opus,35,15,"declaration texts as TextProg (agree but openFns) + StepIn; checkerProg_*In for cvg/iv/arm/natGate/dg by per-chunk checks (Checker/LoopDecl, 11 s); DeclCallees checkerProg no longer false"
 2026-10-22,knotwire,opus,5,10,"census after landing 1 (phases 5-7: +38 proven, -17 sorry); journal"
 2026-10-23,indproofs3,opus,40,90,"landing 5: helpers tail (checkBlockTables; tail/pass/block models) and rec (9 RecCheck targets, 2 L bugs) merged, Prog.lean regenerated; journal moved to docs/design/indproofs3.md incl. LoopT plan and StageT migration approach"

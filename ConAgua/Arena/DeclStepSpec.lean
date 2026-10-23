@@ -101,7 +101,7 @@ theorem checkValueGroup_spec (hm : mode = .verified) (hP : CvgProg p) :
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cvg_specW p hP n s₀ vis g)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame hP.closed n (f := "check_value_group") (by decide) [vis, g] s₀)
+    (hP.closed.memFrame n (f := "check_value_group") (by decide) [vis, g] s₀)
   subst hs
   obtain ⟨a', hrun', hS', hg'⟩ := cvgW_ok hW ⟨hR.check, hR.iw⟩ hg
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun'

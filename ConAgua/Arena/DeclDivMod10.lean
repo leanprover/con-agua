@@ -152,7 +152,7 @@ def DivGateSpecD (p : Prog) (pins : List INatOpPinSet) : Prop :=
 
 theorem divGateSpecD (hD : DmProg10 p) (pins : List INatOpPinSet)
     (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe) (hsA : ∀ dn vis fe, SubstCAll p dn vis fe)
-    (hCl : closedA p stepA stepC dgFns = true) : DivGateSpecD p pins := by
+    (hCl : StepIn p dgFns) : DivGateSpecD p pins := by
   intro dn hdn vis w fe2 n hn
   refine CallRef.refAM (fun k m a res m' ⟨hS, hP⟩ hcall => ?_)
   cases k with
@@ -165,7 +165,7 @@ theorem divGateSpecD (hD : DmProg10 p) (pins : List INatOpPinSet)
       f ∈ dgFns → callW p k f args mx = some (rx, my) → MemFrame stepA stepC mx my := by
     intro k f args mx my rx hf hc
     obtain ⟨s', hs', hfr', -⟩ := triple_of_callW (s₀ := ⟨mx, Locals.init []⟩)
-      (invoke_memFrame hCl k hf args ⟨mx, Locals.init []⟩) hc
+      (hCl.memFrame k hf args ⟨mx, Locals.init []⟩) hc
     rw [← hs']; exact hfr'
   have hfr : MemFrame stepA stepC m m' := hfrOf (by simp [dgFns]) hcall
   have hN : NatGateProg p := hD.toDmProg9.toDmProg8.toDmProg7.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
