@@ -202,10 +202,23 @@ theorem ResRel.congr {n : Nat} {vs : List Word} {R R' : Reg64s} (h : ResRel n vs
   | 4 => exact h4
   | _ + 5 => exact h5
 
+/-- `Inv` only reads the locals, the allocation and the leaf flag of the context. -/
+theorem Inv.ctx {G : Layout} {ctx ctx' : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
+    (hn : ctx'.nl = ctx.nl) (ha : ctx'.alloc = ctx.alloc) (hl : ctx'.leaf = ctx.leaf) : Inv G ctx' F σ s where
+  r15 := hI.r15
+  lo := hI.lo
+  lo8 := hl ▸ hI.lo8
+  hi := hI.hi
+  slot := hn ▸ ha ▸ hI.slot
+  al := ⟨ha ▸ hI.al.reg, ha ▸ hI.al.inj, fun h => ha ▸ hI.al.leaf (hl ▸ h)⟩
+  reg := hn ▸ ha ▸ hI.reg
+  frame := hn ▸ ha ▸ hI.frame
+  mem := hI.mem
+
 /-- `Inv` for a new L state with the same locals, from the same registers and frame slots. -/
 theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
     (hloc : σ'.loc = σ.loc) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
-    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r)
+    (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r)
     (hfr : ∀ x < ctx.nl, ctx.alloc.lookup x = none →
       rdW s'.dmem (A (s.regs.rsp.toNat + 8 * x)) = rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)))
     (hm : MemRel G σ'.mem s'.dmem) : Inv G ctx F σ' s' where
@@ -216,16 +229,20 @@ theorem Inv.congr {G : Layout} {ctx : Ctx} {F : Nat} {σ σ' : St} {s s' : Machi
   slot := hI.slot
   al := hI.al
   reg := fun x hx r hr => by
-    have ⟨h1, h2, h3, _⟩ := hI.al.ne hr
-    rw [hR r h1 h2 h3, hloc]; exact hI.reg x hx r hr
+    rw [hR r (hI.al.reg x r hr), hloc]; exact hI.reg x hx r hr
   frame := fun x hx hn => by rw [hsp, hfr x hx hn, hloc]; exact hI.frame x hx hn
   mem := hm
 
 /-- `Inv` after a change of the scratch registers and the flags. -/
 theorem Inv.of_regs {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
     (hd : s'.dmem = s.dmem) (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
-    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
+    (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x _ _ => by rw [hd]) (hd ▸ hI.mem)
+
+/-- Reading a register after a write. -/
+theorem rget_set (R : Reg64s) (r r' : Reg64) (v : BitVec 64) :
+    (R.set64 r v).get64 r' = if r' = r then v else R.get64 r' := by
+  cases r <;> cases r' <;> simp [Reg64s.set64, Reg64s.get64]
 
 /-- The registers but `rax`, `rcx`, `rdx` after a write of one of them. -/
 theorem get64_set64_scratch {R : Reg64s} {r : Reg64} (hr : r = .rax ∨ r = .rcx ∨ r = .rdx) (v : BitVec 64)
@@ -438,7 +455,7 @@ theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (
 theorem Inv.only {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s)
     (h : Only (s.regs.rsp.toNat + 8 * ctx.nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem)
     (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
-    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
+    (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x hx hn => by
       have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn
       exact h.rdW_eq (by omega) (by omega))
@@ -448,7 +465,7 @@ theorem Inv.only {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv 
 theorem Inv.only_res {ctx : Ctx} {F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G ctx F σ s) {a b : Nat}
     (h : Only a b s.dmem s'.dmem) (hab : ∀ x, a ≤ x → x < b → G.InRes x)
     (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15)
-    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
+    (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x hx hn => by
       have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.lo
       refine rdW_congr fun j hj => ?_

@@ -148,7 +148,8 @@ theorem EPost.of_eq {nl F t : Nat} {s s' s'' : MachineData} (h : EPost nl F t s 
 /-- `Inv` after an expression step. -/
 theorem Inv.ofE {G : Layout} (hG : G.Ok) {ctx : Ctx} {F t : Nat} {σ : St} {s s' : MachineData}
     (hI : Inv G ctx F σ s) (hE : EPost ctx.nl F t s s') : Inv G ctx F σ s' :=
-  hI.only hG (hE.mem.mono (by omega) (Nat.le_refl _)) hE.rsp hE.r15 hE.keep
+  hI.only hG (hE.mem.mono (by omega) (Nat.le_refl _)) hE.rsp hE.r15 fun r hr =>
+    hE.keep r (allocRegs_ne hr).1 (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1
 
 theorem slot_addr (s : MachineData) (j : Nat) (off : Int) (h : off = 8 * (j : Int)) :
     A ((s.regs.get64 .rsp).toNat + off.toNat) = A (s.regs.rsp.toNat + 8 * j) := by

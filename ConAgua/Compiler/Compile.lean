@@ -532,10 +532,10 @@ def valInto (ctx : Ctx) (r : Reg64) (e : Expr) : Program :=
   | none => compileE ctx e 0 ++ [movRR r .rax]
 
 /-- Does `e` read register `r` (a local kept there)? -/
-def Expr.readsReg (ctx : Ctx) (r : Reg64) : Expr → Bool
-  | .var x => ctx.alloc.lookup x == some r
-  | .bin _ a b | .cmpw _ a b => Expr.readsReg ctx r a || Expr.readsReg ctx r b
-  | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.readsReg ctx r i
+def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
+  | .var x => al.lookup x == some r
+  | .bin _ a b | .cmpw _ a b => Expr.readsReg al r a || Expr.readsReg al r b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.readsReg al r i
   | _ => false
 
 /-- Results `i, i + 1, …` (`i ≥ 1`) of a `return` straight into their registers. -/
@@ -545,9 +545,16 @@ def retRegs (ctx : Ctx) : Nat → List Expr → Program
 
 /-- No value computed after result `i` is written (the later results, and result 0, computed
 last) reads its register. -/
-def retSafe (ctx : Ctx) (e0 : Expr) : Nat → List Expr → Bool
+def retSafe (al : List (Var × Reg64)) (e0 : Expr) : Nat → List Expr → Bool
   | _, [] => true
-  | i, _ :: es => !(e0 :: es).any (Expr.readsReg ctx (resReg i)) && retSafe ctx e0 (i + 1) es
+  | i, _ :: es => !(e0 :: es).any (Expr.readsReg al (resReg i)) && retSafe al e0 (i + 1) es
+
+/-- `retDirect` applies: the `n` results fit the registers, and no value reads a result register
+written before it. -/
+def retOk (al : List (Var × Reg64)) (es : List Expr) (n : Nat) : Bool :=
+  match es with
+  | [] => decide (n ≤ maxRes)
+  | e0 :: rest => decide (n ≤ maxRes) && decide (es.length ≤ n) && retSafe al e0 1 rest
 
 /-- Set results `i, …, i + n - 1` (registers) to `0`. -/
 def zeroRes : Nat → Nat → Program
@@ -559,12 +566,11 @@ results `1, 2, …` first, then result 0 (`rax`, which computing any value clobb
 up to `n`; when the results fit the registers and no value reads a result register written
 before it. -/
 def retDirect (ctx : Ctx) (es : List Expr) (n : Nat) : Option Program :=
-  match es with
-  | [] => if n ≤ maxRes then some (zeroRes 0 n) else none
-  | e0 :: rest =>
-    if n ≤ maxRes ∧ es.length ≤ n ∧ retSafe ctx e0 1 rest then
-      some (retRegs ctx 1 rest ++ compileE ctx e0 0 ++ zeroRes es.length (n - es.length))
-    else none
+  if retOk ctx.alloc es n then
+    match es with
+    | [] => some (zeroRes 0 n)
+    | e0 :: rest => some (retRegs ctx 1 rest ++ compileE ctx e0 0 ++ zeroRes es.length (n - es.length))
+  else none
 
 /-- Decrement the fuel counter; leave through `ca_exhausted` if it was zero. -/
 def burnFuel : Program :=
@@ -664,14 +670,14 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
 
 /-- The temporaries of a statement's code (`compileS`). -/
-def tempsS (ctx : Ctx) : Stmt → Nat
+def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
   | .skip | .brk | .abort => 0
   | .set _ e => tempsE e
-  | .ret es => if (retDirect ctx es ctx.nr).isSome then tempsEs es else tempsArgs 0 es
+  | .ret es => if retOk al es nr then tempsEs es else tempsArgs 0 es
   | .st8 _ i e | .st64 _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
-  | .seq s t => max (tempsS ctx s) (tempsS ctx t)
-  | .ite c s t => max (tempsC c) (max (tempsS ctx s) (tempsS ctx t))
-  | .while c s => max (tempsC c) (tempsS ctx s)
+  | .seq s t => max (tempsS al nr s) (tempsS al nr t)
+  | .ite c s t => max (tempsC c) (max (tempsS al nr s) (tempsS al nr t))
+  | .while c s => max (tempsC c) (tempsS al nr s)
   | .call _ _ args => if args.length ≤ argRegs.length then tempsEs args else tempsArgs 0 args
   | .gset _ e => tempsE e
 
@@ -753,7 +759,7 @@ def nodupB {α} [BEq α] : List α → Bool
 `i` in `argRegs[i]`. -/
 def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
   al.all (fun (x, r) => allocRegs.contains r && (np ≤ x || argRegs[x]? == some r)) &&
-  nodupB (al.map (·.2)) && nodupB (al.map (·.1))
+  nodupB (al.map (·.2)) && nodupB (al.map (·.1)) && (al.isEmpty || decide (np ≤ argRegs.length))
 
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
 return address, and the arguments are in `argRegs` (at most 9) or at `rsi`. It sets its first
@@ -765,12 +771,13 @@ def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
   let al := leafAlloc fd
   let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
                      leaf, alloc := if leaf && allocOk fd.nparams al then al else [] }
-  let F := fd.nlocals + tempsS ctx fd.body
+  let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
   let body := (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
       else copyParams 0 fd.nparams) ++
     zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
     compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
-  if leaf && ctx.alloc.length == fd.nlocals && tempsS ctx fd.body == 0 then
+  if leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
+      tempsS ctx.alloc ctx.nr fd.body == 0 then
     [.label (fnL f)] ++ body ++ [i64 .ret]
   else
   [.label (fnL f),
