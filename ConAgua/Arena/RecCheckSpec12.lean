@@ -1,6 +1,9 @@
 import ConAgua.Arena.RecCheckSpec11
 import ConAgua.Arena.IndInstallSpec6
 
+
+noncomputable section
+
 /-!
 # `RecCheck`: `targetClassMatch` (lane `indproofs3`, helper `rec`)
 
