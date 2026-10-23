@@ -436,13 +436,13 @@ def dmCgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c annVal ho hl eqE pro
   if r3.headD 0 ≠ 0 then some ([0], m3) else
   ntBW (cl n "all_level_params_defined" [0, 0, r1.headD 0] m3) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
-  ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 =>
+  ntBW (cl n "consts_resolve_ffast" [vs, r1.headD 0] m4) fun r5 m5 =>
   if r5.headD 0 = 0 then some ([0], m5) else
   ntBW (callW p n "subst_const0_list" [c, annVal, ho, hl] m5) fun r6 m6 =>
   ntBW (callW p n "consts_resolve_all" [vs, r6.headD 0, r6.tail.headD 0] m6) fun r7 m7 =>
   if r7.headD 0 = 0 then some ([0], m7) else
   ntBW (callW p n "subst_const0" [c, annVal, 4000000000, eqE] m7) fun r8 m8 =>
-  ntBW (stubM "consts_resolve_ffast" m8 [vs, r8.headD 0]) fun r9 m9 => some ([r9.headD 0], m9)
+  ntBW (cl n "consts_resolve_ffast" [vs, r8.headD 0] m8) fun r9 m9 => some ([r9.headD 0], m9)
 
 set_option maxHeartbeats 3200000 in
 theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_cert_guard" = some divModCertGuardL)
@@ -454,7 +454,7 @@ theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mo
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       lbbF_spec p hb n, hffF_spec p hf n,
-      hcl n "all_level_params_defined", stubM_spec p "consts_resolve_ffast" n,
+      hcl n "all_level_params_defined", hcl n "consts_resolve_ffast",
       callW_spec p n "subst_const_all", callW_spec p n "subst_const0_list",
       callW_spec p n "consts_resolve_all", callW_spec p n "subst_const0"] <;>
     finish (gen := 30) (instances := 10000) [dmCgW, ntBW]
@@ -553,7 +553,7 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
   rw [if_neg z4] at hw
   have hx4 := decW0B_true hd4 z4
   -- consts resolve of the proof
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, r1.headD 0] with
+  cases h5 : stubCall k "consts_resolve_ffast" [vis, r1.headD 0] m4 with
   | none => rw [h5] at hw; simp at hw
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
@@ -610,7 +610,7 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
   obtain ⟨r8, m8⟩ := q8
   rw [h8, bW_some] at hw
   obtain ⟨x8, a8, hrun8, hS8, hg8, hl8, hx8⟩ := hs0 c annVal eqE hc hann heq k m7 a7 r8 m8 hS7 h8
-  cases h9 : stubM "consts_resolve_ffast" m8 [vis, r8.headD 0] with
+  cases h9 : stubCall k "consts_resolve_ffast" [vis, r8.headD 0] m8 with
   | none => rw [h9] at hw; simp at hw
   | some q9 =>
   obtain ⟨r9, m9⟩ := q9

@@ -124,7 +124,7 @@ def dmPgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (ps vs c : Word) : Option 
   if r3.headD 0 ≠ 0 then some ([0], m3) else
   ntBW (cl n "all_level_params_defined" [0, 0, r1.headD 0] m3) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
-  ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 => some ([r5.headD 0], m5)
+  ntBW (cl n "consts_resolve_ffast" [vs, r1.headD 0] m4) fun r5 m5 => some ([r5.headD 0], m5)
 
 set_option maxHeartbeats 1600000 in
 theorem pg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_pin_guard" = some divModPinGuardL)
@@ -138,7 +138,7 @@ theorem pg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mo
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "div_mod_decl_pin", lbbF_spec p hb n,
       hffF_spec p hf n, hcl n "all_level_params_defined",
-      stubM_spec p "consts_resolve_ffast" n] <;>
+      hcl n "consts_resolve_ffast"] <;>
     finish (gen := 30) (instances := 10000) [dmPgW, ntBW]
 
 theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
@@ -208,7 +208,7 @@ theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
     rfl
   rw [if_neg z4] at hw
   have hx4 := decW0B_true hd4 z4
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, r1.headD 0] with
+  cases h5 : stubCall k "consts_resolve_ffast" [vis, r1.headD 0] m4 with
   | none => rw [h5] at hw; simp at hw
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
