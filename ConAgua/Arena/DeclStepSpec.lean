@@ -81,34 +81,4 @@ theorem LoopR.of_step {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
     h.pmemo.imp fun _ hq => hq.frame step_pmemo.1 step_pmemo.2 hf,
     PinSetsR.grow h.pinsets (RecGrow.of_ext h.iw hx) (hf.2.1 _ step_pins.1) (hf.2.1 _ step_pins.2)⟩
 
-section specs
-variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration) (p : Prog)
-
-/-- **`check_value_group` refines `checkValueGroup`** (at `.verified`, through the stubs of the
-core and the walks): from the loop's relation, the loop's relation after it. -/
-@[refines ConRon.Arena.checkValueGroup]
-theorem checkValueGroup_spec (hm : mode = .verified) (hP : CvgProg p) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
-      LoopR pins dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_value_group" [vis, g]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkValueGroup mode fe vg) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (checkValueGroup mode fe vg) a₀) vis fe pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend g vg hg hR
-  subst hm
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cvg_specW p hP stubCall (stubCall_spec p) n s₀ vis g)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hP.closed.memFrame n (f := "check_value_group") (by decide) [vis, g] s₀)
-  subst hs
-  obtain ⟨a', hrun', hS', hg'⟩ := cvgW_ok hW ⟨hR.check, hR.iw⟩ hg
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, hst ▸ hR.of_step hS' hf ?_⟩
-  rw [← erecP_reset s.mem]
-  exact IWGrow.erecPExt hg'
-
-end specs
-
 end L.Arena

@@ -7,9 +7,8 @@ import ConAgua.Arena.PhaseWorker
 /-!
 # Phase B under `StageT` (lane `loopt3`, items 12 and 12a)
 
-`Checker.lean`'s `checkPendingGo_refines` runs `check_value_group` through its stubs
-(`checkValueGroup_spec`, `stubCall`). Here phase B runs it from `StageT` with the program's own
-core (`cvgW_okT`, `realCall p`). Per pending check:
+Phase B runs `check_value_group` from `StageT` with the program's own core (`cvgW_okT`,
+`realCall p`; its `StageR` version through the stubs is gone). Per pending check:
 
 * **The twin side** (`TwinPend`): con-ron's phase-B invariant (`Arena.checkPendingList_bridge`'s
   induction hypotheses): `FoldOK` at the final environment `env` (names unique), the remaining
