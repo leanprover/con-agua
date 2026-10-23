@@ -303,30 +303,4 @@ theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
   erw [hrun4, exc_ok_bind', hrun5]
   rfl
 
-/-- **`check_decl_defn` refines `checkDecl`'s `.defnDecl` arm** at the loop's relation, the variant
-list in memory being `pins` (through the gates' specs, `DefnProg`). -/
-theorem checkDeclDefn_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p)
-    (pins : List INatOpPinSet) (hG : DefnProg p pins) (dn : NIdx → Option ConLeche.Name)
-    (hdn : DnInj dn) (ds : Array IDeclaration) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint), i.toNat < ds.size →
-      ds[i.toNat]? = some (.defnDecl cv v hh) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_defn" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.defnDecl cv v hh)) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.defnDecl cv v hh)) a₀) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.defnDecl cv v hh)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv v hh hi hd hR
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdf_specW p hG.df n s₀ i vis)
-  subst hs
-  have hd' : ds[i.toNat] = .defnDecl cv v hh := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨fe', a', hrun', hS', hg', hf⟩ :=
-    cdfW_ok hA hV hG hdn hW ⟨hR.check, hR.iw⟩ hR.pinsets hR.decls hi hd'
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_⟩
-  rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
-
 end L.Arena
