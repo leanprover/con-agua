@@ -268,7 +268,7 @@ def asmTheorem : Name := `ConAgua.Final.checkerAsm_accepts_remaining
 /-- Lines `A` for the end-to-end theorem (if `env` has it): its binders (`A hyp name type`, with
 `Prop`-typed ones marked), its axioms (`A axiom name`) and the nearest sources of `sorryAx`
 (`A src name`). All on top of the memos `links` already fills (one more constant). -/
-def asmLines (env : Environment) : IO Unit := do
+def asmLines (env : Environment) (axMemo : IO.Ref (NameMap (Array Name))) : IO Unit := do
   let some ci := env.find? asmTheorem | return
   let some mi := env.getModuleIdxFor? asmTheorem | return
   let m := env.header.moduleNames[mi.toNat]!
@@ -285,10 +285,41 @@ def asmLines (env : Environment) : IO Unit := do
   let (bs, _) ← (act.run' {}).toIO { fileName := "", fileMap := default } { env }
   for (n, t, isP) in bs do
     IO.println s!"A\thyp\t{n}\t{clean t}\t{if isP then "prop" else "data"}\t{m}"
-  let axMemo ← IO.mkRef ({} : NameMap (Array Name))
   for a in ← axiomsOf env axMemo asmTheorem do IO.println s!"A\taxiom\t{a}\t\t\t{m}"
   let memo ← IO.mkRef ({} : NameMap (Array Name))
   for s in ← sorrySources env memo asmTheorem do IO.println s!"A\tsrc\t{s}\t\t\t{m}"
+  -- the end-to-end cone: the project's constants (ConAgua/ConRon/ConLeche, not the Lean core)
+  -- the theorem transitively mentions, and how many of them do not depend on `sorryAx`
+  -- (`A cone total clean`); one walk over references, `axiomsOf` is already memoized
+  let ours (c : Name) : Bool :=
+    let m := modOf env c
+    (`ConAgua).isPrefixOf m || isOurTier m
+  let mut seen : NameSet := NameSet.empty.insert asmTheorem
+  let mut todo : Array Name := #[asmTheorem]
+  let mut total := 0
+  let mut clean := 0
+  while todo.size > 0 do
+    let c := todo.back!
+    todo := todo.pop
+    let some ci := env.find? c | continue
+    -- counted: theorems and definitions, not the auxiliary `proof_N`/`match_N`/... constants,
+    -- types, constructors or recursors (the walk still goes through all of them)
+    if owner env c == c && (ci matches .thmInfo _ | .defnInfo _ | .opaqueInfo _) then
+      total := total + 1
+      unless (← axiomsOf env axMemo c).contains ``sorryAx do clean := clean + 1
+    let used := ci.type.getUsedConstants ++
+      (match ci with
+       | .defnInfo v => v.value.getUsedConstants
+       | .thmInfo v => v.value.getUsedConstants
+       | .opaqueInfo v => v.value.getUsedConstants
+       | .ctorInfo v => #[v.induct]
+       | .inductInfo v => v.ctors.toArray
+       | _ => #[])
+    for u in used do
+      if !seen.contains u && ours u then
+        seen := seen.insert u
+        todo := todo.push u
+  IO.println s!"A\tcone\t{total}\t{clean}\t\t{m}"
 
 /-- The links of every module in `env`, with the axioms of linked theorems. -/
 def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
@@ -320,7 +351,7 @@ def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
             else if bad.isEmpty then "ok"
             else "axioms:" ++ ",".intercalate (bad.toList.map toString)
       IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\t{status}"
-  asmLines env
+  asmLines env axMemo
 
 /-- Child `--targets ROOT`: the target pass, in a process of its own. -/
 def mainTargets (root : Name) (verbose : Bool) : IO UInt32 := do

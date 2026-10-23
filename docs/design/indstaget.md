@@ -77,3 +77,39 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   `StageR` `RSim` whose post gives `StageR ∧ AbsOK` after, lifted by con-ron's
   `PSpec`/`PSpecP`/`PSpecL`), **`RSim.liftC`** (a core-calling callee's `StageT` `RSim`, `CheckOK`
   after from con-ron's `CSpec`).
+
+## Landing 3: the first chain under `StageC` (`classRecTyOk`, `classRecTysOk`)
+
+* **The core's write set** (`IndTwin.lean`'s `coreStageA`/`coreStageC`, decided for `checkerProg`
+  in `Checker/IndCore.lean`) now also excludes arrays 51, 155 and the stage memos 201‥208 (CTL 52,
+  158, 202‥219): `absOK_core` (`AbsOK` across a core call), `RSim.coreAbs`.
+* `IndT/Lift.lean`: the four entries under `StageC` (`inferC_rsim`, `whnfC_rsim`,
+  `ensureSortC_rsim`, `isDefEqC_rsim`): the knot's sim, con-ron's `*_crun` (`CoreStep`, the answer
+  denotes and is scoped), `AbsOK` after.
+* `rgW_sim`'s continuation also gets the twin's run of `targetMajorAt` (`RSim.withRun`), so a
+  `StageC` caller gets the `PStep` from con-ron's `targetMajorAt_spec`.
+* `IndT/RecGen3.lean`: `ccoW_simT` threads `AbsOK`. `IndT/RecGen7.lean`: `ccoW_simC`,
+  **`rtoW_simC`**, **`rtsW_simC`** (by induction; the extension after one recursor from con-ron's
+  `classRecTyOk_spec` applied to its run), `classRecTyOk_refinesC`, `classRecTysOk_refinesC`
+  (census links; `classRecTyOk_refines` deleted, `classRecTysOk_refines` untagged, still used by
+  `genRecCheck` under `StageR`).
+* **The pattern** (for helpers): a core-calling theorem's `StageC` version copies the `StageR`
+  proof; at a core-free callee `RSim.liftP*` with con-ron's spec of its twin (preconditions from
+  the theorem's con-ron preconditions, moved along by con-ron's `*_ext` lemmas over the `Ext` of the
+  steps so far); at a core call `*C_rsim`; at an L-only step `of_pstep … (PStep.refl …)`; for a
+  sub-theorem already under `StageC`, `RSim.withRun` on it and con-ron's spec of its twin on the run
+  for the `Ext`/`CoreStep` the next preconditions need.
+
+## Landing 4: target list; the declaration side's census links
+
+* `docs/stagec-targets.txt`: the lane's 59 census targets (those whose sorry sources included one
+  of the four core contracts at the start). Done: the target's sorry sources contain none of the
+  four (lane `e2emeter` counts it).
+* The eight declaration-side targets had their `@[refines]` on `StageR` theorems through the core
+  stubs although lanes `loopt2`/`loopt3` had proved `StageT`/`StageC` versions; the tags moved:
+  `checkConstantVal_refinesT`, `checkThmVal_refinesT` (tagged), `checkDefnVal_refinesT`,
+  `checkOpaqueVal_refinesT` (new, from `dvW_okT`; `DeclArmT.lean`), `certW_okT` (was a
+  `refines_part`; `certifyNatEqs` now proven), `cmC`, `cpaC` (`DeclDivGateT2.lean`), `crpW_okT`
+  (`DeclCrpT.lean`). The `StageR` theorems stay (their arms still use them), untagged.
+* Threaded `cR`: `tptW` (RecCheckSpec), `tmpW` (RecCheckSpec5), with the `StageR` frame lemmas in
+  RecGenSpec19.

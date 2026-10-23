@@ -62,7 +62,7 @@ variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 
 /-- **`certify_nat_eqs` under `StageT`** (`certify_ref`'s, the program's own `is_def_eq_core`
 through the knot's `StageT` sim). -/
-@[refines_part ConRon.Arena.certifyNatEqs "under StageT, the program's own is_def_eq_core"]
+@[refines ConRon.Arena.certifyNatEqs]
 theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
     (ps : List (EIdx × EIdx)) :
     ∀ (k : Nat), k ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (r : List Word) (m' : Mem),

@@ -26,7 +26,7 @@ open L.Arena
 /-- After `strip_pis`: `0` if it failed, else the walk of the body from index `0`. -/
 def usgK1 (n : Nat) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (rs, m1) => if rs.headD 0 = 0 then some (0, m1) else hbGoW n m1 0 (rs.tail.tail.tail.headD 0)
+  | some (rs, m1) => if rs.headD 0 = 0 then some (0, m1) else hbGoW n m1 CWF 0 (rs.tail.tail.tail.headD 0)
 
 def usgW (n : Nat) (m : Mem) (cty nP j : Word) : Option (Word × Mem) :=
   usgK1 n (stripF 6 m [nP + j + 1, cty])
@@ -42,7 +42,7 @@ def ustW (n : Nat) (m : Mem) (cty nP j : Word) : Option (Word × Mem) :=
 theorem usgK1_some_zero {n : Nat} {rs : List Word} {m1 : Mem} (h : rs.headD 0 = 0) :
     usgK1 n (some (rs, m1)) = some (0, m1) := by simp only [usgK1, if_pos h]
 theorem usgK1_some_ne {n : Nat} {rs : List Word} {m1 : Mem} (h : ¬ rs.headD 0 = 0) :
-    usgK1 n (some (rs, m1)) = hbGoW n m1 0 (rs.tail.tail.tail.headD 0) := by simp only [usgK1, if_neg h]
+    usgK1 n (some (rs, m1)) = hbGoW n m1 CWF 0 (rs.tail.tail.tail.headD 0) := by simp only [usgK1, if_neg h]
 theorem ustK1_some_zero {n : Nat} {rs : List Word} {m1 : Mem} (h : rs.headD 0 = 0) :
     ustK1 n (some (rs, m1)) = some (0, m1) := by simp only [ustK1, if_pos h]
 theorem ustK1_some_ne {n : Nat} {rs : List Word} {m1 : Mem} (h : ¬ rs.headD 0 = 0) :
@@ -95,7 +95,7 @@ theorem add3_toNat {nP j : Word} (h : nP.toNat + j.toNat + 1 < 2 ^ 64) :
 
 theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
+    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
     (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : usgW n m cty nP j = some (r, m')) :
     ∃ b mp' a', (structUsedLaterGo mp (decI cty) nP.toNat j.toNat).run a = .ok ((b, mp'), a') ∧
       r = (if b then 1 else 0) ∧ hbMR m' mp' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
@@ -128,9 +128,9 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [usDrop3_eq] at hb32 hbe
       have hbH : H (rs.tail.tail.tail.headD 0) := hb32
       obtain ⟨b, mp', a', hr2, hb, hM2, hS2, hg2⟩ :=
-        hbGoOK n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp coreWalkFuel hn (Nat.le_refl _) h hS1 hbH hM1
+        hbGoOK n m1 m' a1 CWF 0 (rs.tail.tail.tail.headD 0) r mp h hS1 hbH hM1
       refine ⟨b, mp', a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
-      rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
+      rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe, CWF_eq] at hr2
       simp only [structUsedLaterGo, StateT.run_bind]
       rw [hrun]
       simp only [except_ok_bind]
@@ -138,7 +138,7 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
+    (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
     (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : ustW n m cty nP j = some (r, m')) :
     ∃ b a', (structUsedLater (decI cty) nP.toNat j.toNat).run a = .ok (b, a') ∧
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
@@ -171,7 +171,7 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [usDrop3_eq] at hb32 hbe
       have hbH : H (rs.tail.tail.tail.headD 0) := hb32
       obtain ⟨b, a', hr2, hb, hM2, hS2, hg2⟩ :=
-        hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hn hbH hS1 hM1 h
+        hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h
       refine ⟨b, a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
       rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
       simp only [structUsedLater, StateT.run_bind]
@@ -193,7 +193,7 @@ sharing the caller's `hb` memo. -/
 @[refines ConRon.Arena.structUsedLaterGo]
 theorem structUsedLaterGo_refines (hp : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis cty nP j : Word)
-    (mp : Std.HashMap (EIdx × Nat) Bool) (hn : 2 ^ 31 + n ≤ coreWalkFuel)
+    (mp : Std.HashMap (EIdx × Nat) Bool)
     (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : StageR dn vis fe s₀.mem a₀)
     (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_used_later_go" [cty, nP, j]
@@ -205,7 +205,7 @@ theorem structUsedLaterGo_refines (hp : p.lookup "struct_used_later_go" = some s
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (structUsedLaterGo_spec p hv hf hput hins hgo hbp hst hp n s₀ cty nP j) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, mp', a', hrun, hb, hM', hS', hg⟩ := usgW_ok n _ _ a₀ cty nP j _ mp hn hsum hc hS hM hm
+  obtain ⟨b, mp', a', hrun, hb, hM', hS', hg⟩ := usgW_ok n _ _ a₀ cty nP j _ mp hsum hc hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hb, by rw [hres]; exact hM', by rw [hst]; exact hS', hg⟩
 
@@ -217,7 +217,7 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
     (hfast : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL)
     (hp : p.lookup "struct_used_later" = some structUsedLaterL)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis cty nP j : Word)
-    (mp : Std.HashMap (EIdx × Nat) Bool) (hn : 2 ^ 31 + n ≤ coreWalkFuel)
+    (mp : Std.HashMap (EIdx × Nat) Bool)
     (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty) (hS : StageR dn vis fe s₀.mem a₀)
     (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "struct_used_later" [cty, nP, j]
@@ -229,7 +229,7 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (structUsedLater_spec p hv hf hput hins hgo hbp hst hcl hfast hp n s₀ cty nP j) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hb, hM', hS', hg⟩ := ustW_ok n _ _ a₀ cty nP j _ mp hn hsum hc hS hM hm
+  obtain ⟨b, a', hrun, hb, hM', hS', hg⟩ := ustW_ok n _ _ a₀ cty nP j _ mp hsum hc hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hb, hM', by rw [hst]; exact hS', hg⟩
 
@@ -331,15 +331,15 @@ def bnums (bs : List Bool) : List Nat := bs.map (fun b => if b then 1 else 0)
 theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cty nP n base : Word) (r : List Word)
       (mp : Std.HashMap (EIdx × Nat) Bool),
-    2 ^ 31 + k ≤ coreWalkFuel → nP.toNat + base.toNat + n.toNat + 1 < 2 ^ 64 → H cty →
+    nP.toNat + base.toNat + n.toNat + 1 < 2 ^ 64 → H cty →
     StageR dn vis fe m a → hbMR m mp → ulW k m cty nP n base = some (r, m') →
     ∃ bs mp' a', (structUsedLaterList (decI cty) nP.toNat mp n.toNat base.toNat).run a = .ok (bs, a') ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (bnums bs) ∧ r.tail.headD 0 = n ∧
       (r.headD 0).toNat + n.toNat = iwTop m' ∧ hbMR m' mp' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   induction k with
-  | zero => intro m m' a cty nP n base r mp _ _ _ _ _ h; simp [ulW] at h
+  | zero => intro m m' a cty nP n base r mp _ _ _ _ h; simp [ulW] at h
   | succ k ih =>
-    intro m m' a cty nP n base r mp hk hb hc hS hM h
+    intro m m' a cty nP n base r mp hb hc hS hM h
     by_cases hn0 : n = 0
     · rw [ulW_zero k m cty nP n base hn0] at h
       cases hal : allocW m 0 with
@@ -382,14 +382,14 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
           obtain ⟨rg, m1⟩ := pg
           rw [hg, ulK1_some] at h
           obtain ⟨b, mp1, a1, hrun1, hrg, hM1, hS1, hg1⟩ :=
-            usgW_ok k' m m1 a cty nP base rg mp (by omega) (by omega) hc hS hM hg
+            usgW_ok k' m m1 a cty nP base rg mp (by omega) hc hS hM hg
           cases hl : ulW (k' + 1) m1 cty nP (n - 1) (base + 1) with
           | none => rw [hl] at h; simp [ulK2] at h
           | some pl =>
             obtain ⟨rr, m2⟩ := pl
             rw [hl, ulK2_some] at h
             obtain ⟨bs, mp2, a2, hrun2, hdec, hlen, htop, hM2, hS2, hg2⟩ :=
-              ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by omega) (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
+              ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
             cases hcw : consW (k' + 1) m2 rg (rr.headD 0) (rr.tail.headD 0) with
             | none => rw [hcw] at h; simp [ulK3] at h
             | some pc =>
@@ -440,7 +440,7 @@ as the `0`/`1` numbers of an `IW` slice, all through the caller's shared `hb` me
 @[refines ConRon.Arena.structUsedLaterList]
 theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis cty nP cnt base : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hb : nP.toNat + base.toNat + cnt.toNat + 1 < 2 ^ 64) (hc' : H cty)
+    (hb : nP.toNat + base.toNat + cnt.toNat + 1 < 2 ^ 64) (hc' : H cty)
     (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_list" [cty, nP, cnt, base]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -454,7 +454,7 @@ theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : 
   refine triple_post (ulW_spec p hv hf hput hins hgo hbp hst hsg ha hc hsc hp n s₀ cty nP cnt base) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨bs, mp', a', hrun, hdec, hlen, htop, hM', hS', hg⟩ :=
-    ulW_ok n _ _ a₀ cty nP cnt base r mp hn hb hc' hS hM hm
+    ulW_ok n _ _ a₀ cty nP cnt base r mp hb hc' hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hdec, hlen, htop, ⟨mp', hM'⟩, by rw [hst]; exact hS', hg⟩
 

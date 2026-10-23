@@ -41,6 +41,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 
 /-- **`check_div_mod_certs` under `StageC`** (`cm_ref`'s at the real program; con-ron's
 `checkDivModCerts_bridge_aux`). -/
+@[refines ConRon.Arena.checkDivModCerts]
 theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
     (c annVal : Word) (hc : H c) (hann : H annVal) {nm : ConLeche.Name} {v : ConLeche.Expr}
@@ -303,6 +304,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : C
 
 /-- **`check_div_mod_pin_at` under `StageC`** (`cpa_ref`'s at the real program; con-ron's
 `checkDivModPinAt_bridge`, which takes the pin guard's `true` for the pin's scope). -/
+@[refines ConRon.Arena.checkDivModPinAt]
 theorem cpaC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
     {c value ps : Word} {ip : INatOpPinSet} {psP : ConLeche.NatOpPinSet} {nm : ConLeche.Name}

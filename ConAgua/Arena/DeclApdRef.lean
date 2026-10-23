@@ -622,16 +622,17 @@ end step2
 theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (n : Nat) (hS : StageR dn vis fe m a) (env : ApdEnv a) (o l e r : Word)
     (lps : List NIdx) (ks : List ConLeche.Name) (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
-    (hdec : decHL m o.toNat l.toNat = some lps) (he : H e) (mp0 : Std.HashMap EIdx Bool)
-    (hM : apdMR m mp0) (hb : apdEntryW n m o l e = some (r, m')) :
+    (hdec : decHL m o.toNat l.toNat = some lps) (he : H e)
+    (hM : rdW (m.arr64 CTL) apdSch.cs + 2 ≠ 0 → apdMR (mclearG apdSch m) ∅)
+    (hb : apdEntryW n m o l e = some (r, m')) :
     ∃ b, (ConRon.Arena.allLevelParamsDefined lps (decE e)).run a = .ok (b, a) ∧
-      r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' := by
+      r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ ∃ mp, apdMR m' mp := by
   unfold apdEntryW at hb
   by_cases h0 : rdW (m.arr64 CTL) apdSch.cs + 2 = 0
   · simp [h0] at hb
   rw [if_neg h0] at hb
   have hf0 : MemFrame [] [apdSch.cs, apdSch.cs + 1] m (mclearG apdSch m) := mclearG_frame apdSch m
-  have hM0 := memoRV_clear apdSch apdSch_wf bmKey apdVR m mp0 hM h0
+  have hM0 := hM h0
   have hA0 : ArenaR (mclearG apdSch m) a :=
     ArenaR.frame (A := []) (C := [apdSch.cs, apdSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by
@@ -648,7 +649,7 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp [apdSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [apdSch])
-  refine ⟨b, ?_, hr, hS', hg⟩
+  refine ⟨b, ?_, hr, hS', hg, _, hM1⟩
   have hrn := readNames_run a lps ks hks
   simp only [ConRon.Arena.allLevelParamsDefined]
   have hcw : (UInt64.toNat 4000000000) = coreWalkFuel := CWF_eq
@@ -723,7 +724,8 @@ theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx →
     refine triple_post (allLevelParamsDefined_spec_raw p hp.eview hp.lsnode hp.find hp.put hp.clear
       hp.lmem hp.lnode hp.lapd hp.ls hp.go hp.entry n s₀ o l e) ?_
     rintro r s' ⟨hloc, hm⟩
-    obtain ⟨b, hrun, hr, hS', hg⟩ := apdEntry_ok n hS env o l e _ lps ks hks hdec he mp0 hM hm
+    obtain ⟨b, hrun, hr, hS', hg, -⟩ := apdEntry_ok n hS env o l e _ lps ks hks hdec he
+      (memoRV_clear apdSch apdSch_wf bmKey apdVR _ mp0 hM) hm
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     refine ⟨hloc, hok, ?_⟩
     change KeepPost dn vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
