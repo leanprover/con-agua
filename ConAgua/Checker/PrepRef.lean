@@ -1,5 +1,6 @@
 import ConAgua.Checker.PrepLoopRef
 import ConAgua.Checker.PrepCopyRef
+import ConAgua.Checker.PrepJoinRef
 import ConAgua.Census.Attr
 
 /-!
@@ -48,16 +49,16 @@ theorem recsAt_range (pre ds : Array IDeclaration) :
 CTL[240]` first), when L returns, the twin's `preparePrelude pre ds` succeeds, and `DECL`
 represents its result (each record with `RecOK`), the store relation and the pins hold at the
 twin's state after, the pool only grew. -/
-theorem pPrep_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AState) (pre : PreludeIx)
-    (ds : Array IDeclaration) (r : Word)
+theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AState) (pre : PreludeIx)
+    (ds : Array IDeclaration) (np r : Word)
     (hD : ∀ x (h : x < (pre.decls ++ ds).size), DeclAtF (m.arr64 DECL) (m.arr64 DLP) x (pre.decls ++ ds)[x] ∧
       RecOK (m.arr64 DECL) (m.arr64 DLP) x)
     (hn : (rdW (m.arr64 DECL) 0).toNat = (pre.decls ++ ds).size)
-    (hnp : (rdW (m.arr64 CTL) 240).toNat = pre.decls.size)
+    (hnp : np.toNat = pre.decls.size)
     (hDsz : 1 + 8 * (pre.decls ++ ds).size ≤ (m.arr64 DECL).size) (hDsz' : (m.arr64 DECL).size < 2 ^ 64)
     (hW : ∀ x (h : x < (pre.decls ++ ds).size), WalkableDecl (pre.decls ++ ds)[x])
     (hA : ArenaR m a) (hseen : ∃ s, SeenR m s) (hnix : ∃ idx, NixR m idx) (hI : IWOK m)
-    (hP : PinsR m a.pins) (h : pPrepW p n m = some (r, m')) :
+    (hP : PinsR m a.pins) (h : pPrepW.k10 p n (some (np, m)) = some (r, m')) :
     ∃ ds' a', (preparePrelude pre ds).run a = .ok (ds', a') ∧
       (rdW (m'.arr64 DECL) 0).toNat = ds'.size ∧
       (∀ x (h : x < ds'.size), DeclAtF (m'.arr64 DECL) (m'.arr64 DLP) x ds'[x] ∧
@@ -91,16 +92,14 @@ theorem pPrep_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AState
   generalize hdsA : pre.decls ++ ds = dsAll at hD hn hDsz hW
   have hsz := hI.2.2.1
   have htsz : iwTop m ≤ (m.arr64 IW).size := hI.1
-  cases n with
-  | zero => rw [pPrepW.eq_1] at h; cases h
-  | succ n =>
-  by_cases hlt : rdW (m.arr64 DECL) 0 < rdW (m.arr64 CTL) 240
-  · simp [pPrepW, hlt] at h
+  simp only [pPrepW.k10] at h
+  by_cases hlt : rdW (m.arr64 DECL) 0 < np
+  · rw [if_pos hlt] at h; cases h
+  rw [if_neg hlt] at h
   by_cases hbig : 576460752303423488 ≤ rdW (m.arr64 DECL) 0
-  · simp [pPrepW, hlt, hbig] at h
-  rw [pPrepW.arm1 _ _ _ hlt hbig] at h
+  · rw [if_pos hbig] at h; cases h
+  rw [if_neg hbig] at h
   generalize hnw : rdW (m.arr64 DECL) 0 = nw at h hn hlt hbig
-  generalize hnpw : rdW (m.arr64 CTL) 240 = np at h hnp hlt
   have hn59 : nw.toNat < 2 ^ 59 := by
     have := UInt64.not_le.mp hbig; rw [UInt64.lt_iff_toNat_lt] at this; simpa using this
   have hnpn : np.toNat ≤ nw.toNat := by
@@ -344,20 +343,94 @@ theorem pPrep_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AState
   · rw [hfinP, hP₉, hP₆', hDLP₅]
   · rw [hfin]; simp [hD₉s]
 
-/-- **`prepare_prelude()` refines `preparePrelude pre ds`**: from `DECL` holding the prelude's
-records then the stream's (`pre.decls ++ ds`, the prelude's count in `CTL[240]`), when L returns,
+/-- **`prepare_prelude` on the model**, from the prelude's records in `PDECL` and the stream's in
+`DECL` (`prelude_join` puts them together first). -/
+theorem pPrep_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AState) (pre : PreludeIx)
+    (ds : Array IDeclaration) (r : Word)
+    (hPD : ∀ x (h : x < pre.decls.size), DeclAtF (m.arr64 PDECL) (m.arr64 DLP) x pre.decls[x] ∧
+      RecOK (m.arr64 PDECL) (m.arr64 DLP) x)
+    (hDS : ∀ x (h : x < ds.size), DeclAtF (m.arr64 DECL) (m.arr64 DLP) x ds[x] ∧
+      RecOK (m.arr64 DECL) (m.arr64 DLP) x)
+    (hnp : (rdW (m.arr64 PDECL) 0).toNat = pre.decls.size)
+    (hns : (rdW (m.arr64 DECL) 0).toNat = ds.size) (hDsz' : (m.arr64 DECL).size < 2 ^ 64)
+    (hW : ∀ x (h : x < (pre.decls ++ ds).size), WalkableDecl (pre.decls ++ ds)[x])
+    (hA : ArenaR m a) (hseen : ∃ s, SeenR m s) (hnix : ∃ idx, NixR m idx) (hI : IWOK m)
+    (hP : PinsR m a.pins) (h : pPrepW p n m = some (r, m')) :
+    ∃ ds' a', (preparePrelude pre ds).run a = .ok (ds', a') ∧
+      (rdW (m'.arr64 DECL) 0).toNat = ds'.size ∧
+      (∀ x (h : x < ds'.size), DeclAtF (m'.arr64 DECL) (m'.arr64 DLP) x ds'[x] ∧
+        RecOK (m'.arr64 DECL) (m'.arr64 DLP) x) ∧
+      ArenaR m' a' ∧ IWOK m' ∧ PinsR m' a'.pins ∧ m'.arr64 DLP = m.arr64 DLP ∧
+      (m'.arr64 DECL).size = (m.arr64 DECL).size := by
+  cases n with
+  | zero => rw [pPrepW.eq_1] at h; cases h
+  | succ n =>
+  rw [pPrepW.arm1] at h
+  cases hj : pPJoinW n m with
+  | none => rw [hj] at h; simp [pPrepW.k10] at h
+  | some rr =>
+  obtain ⟨np, m₁⟩ := rr
+  rw [hj] at h
+  obtain ⟨hnpw, hnp59, hns59, hroom, hpre, hstr, hcnt, hmf⟩ := pPJoin_ok n m m₁ np hj
+  have hDLP : m₁.arr64 DLP = m.arr64 DLP := hmf.1 DLP (by decide) (by decide)
+  have hDs : (m₁.arr64 DECL).size = (m.arr64 DECL).size := hmf.2.2.1 DECL
+  have hnpn : np.toNat = pre.decls.size := by rw [hnpw]; exact hnp
+  rw [hns] at hstr hcnt hroom
+  have hD₁ : ∀ x (h : x < (pre.decls ++ ds).size),
+      DeclAtF (m₁.arr64 DECL) (m₁.arr64 DLP) x (pre.decls ++ ds)[x] ∧
+      RecOK (m₁.arr64 DECL) (m₁.arr64 DLP) x := by
+    intro x hx
+    rw [hDLP]
+    by_cases hxp : x < pre.decls.size
+    · rw [Array.getElem_append_left hxp]
+      have e := hpre x (by omega)
+      exact ⟨declAtF_congr e (hPD x hxp).1, recOK_congr e (hPD x hxp).2⟩
+    · have hx' : x - pre.decls.size < ds.size := by simp at hx; omega
+      rw [Array.getElem_append_right (by omega)]
+      have e : ∀ k < 8, dw (m₁.arr64 DECL) x k = dw (m.arr64 DECL) (x - pre.decls.size) k := by
+        intro k hk
+        have := hstr (x - pre.decls.size) hx' k hk
+        rwa [hnpn, show pre.decls.size + (x - pre.decls.size) = x by omega] at this
+      exact ⟨declAtF_congr e (hDS _ hx').1, recOK_congr e (hDS _ hx').2⟩
+  have hA4 : ∀ b ∈ [DECL], 64 ≤ b := by
+    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide
+  have hA₁ : ArenaR m₁ a := ArenaR.frame_ext [DECL] [] hA4 (by simp) m m₁ hmf a hA
+  have hseen₁ : ∃ s, SeenR m₁ s := by
+    obtain ⟨s, hs⟩ := hseen
+    exact ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [DECL] [] (by decide) (by simp) _ _ hmf _ hs⟩
+  have hnix₁ : ∃ idx, NixR m₁ idx := by
+    obtain ⟨idx, hs⟩ := hnix
+    exact ⟨idx, memoRV_frame hnSch hnSch_wf nmKey _ [DECL] [] (by decide) (by simp) _ _ hmf
+      (fun _ _ h => h) idx hs⟩
+  have hI₁ : IWOK m₁ := by
+    obtain ⟨h1, h2, h3, h4, h5⟩ := hI
+    have hIW : m₁.arr64 IW = m.arr64 IW := hmf.1 IW (by decide) (by decide)
+    have hER : m₁.arr64 EREC = m.arr64 EREC := hmf.1 EREC (by decide) (by decide)
+    have h200 : iwTop m₁ = iwTop m := by simp only [iwTop]; rw [hmf.2.1 200 (by simp)]
+    have h129 : erTop m₁ = erTop m := by simp only [erTop]; rw [hmf.2.1 129 (by simp)]
+    exact ⟨by rw [h200, hIW]; exact h1, by rw [h129, hER]; exact h2, by rw [hIW]; exact h3,
+      by rw [hER]; exact h4, by rw [hmf.2.2.1 CTL]; exact h5⟩
+  have hP₁ : PinsR m₁ a.pins := hP.congr (hmf.1 PINS (by decide) (by decide))
+  obtain ⟨ds', a', hrun, h1, h2, h3, h4, h5, h6, h7⟩ :=
+    pPrepCore_ok p hx n m₁ m' a pre ds np r hD₁ (by rw [hcnt, hnpn]; simp) hnpn
+      (by rw [hDs]; simp; omega) (by rw [hDs]; exact hDsz') hW hA₁ hseen₁ hnix₁ hI₁ hP₁ h
+  exact ⟨ds', a', hrun, h1, h2, h3, h4, h5, by rw [h6, hDLP], by rw [h7, hDs]⟩
+
+/-- **`prepare_prelude()` refines `preparePrelude pre ds`**: from the prelude's records in `PDECL`
+and the stream's in `DECL` (each array's count in its word `0`), when L returns,
 the twin succeeds, `DECL` represents the prepared array (with the same per-record facts), and
 the store relation and the pins hold at the twin's state after. (`movedNames`, which
 `preparePrelude` drops, is not computed: D30.) -/
 @[refines ConRon.Arena.Frontend.preparePrelude]
 theorem preparePrelude_refines (p : Prog) (hp : PrepProg p) (hn : PrepExt p) (hh : HoistProg p)
     (hx : HoistExt p) (n : Nat) (s₀ : St) (a : AState) (pre : PreludeIx) (ds : Array IDeclaration)
-    (hD : ∀ x (h : x < (pre.decls ++ ds).size),
-      DeclAtF (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x (pre.decls ++ ds)[x] ∧
+    (hPD : ∀ x (h : x < pre.decls.size),
+      DeclAtF (s₀.mem.arr64 PDECL) (s₀.mem.arr64 DLP) x pre.decls[x] ∧
+      RecOK (s₀.mem.arr64 PDECL) (s₀.mem.arr64 DLP) x)
+    (hDS : ∀ x (h : x < ds.size), DeclAtF (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x ds[x] ∧
       RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x)
-    (hcnt : (rdW (s₀.mem.arr64 DECL) 0).toNat = (pre.decls ++ ds).size)
-    (hnp : (rdW (s₀.mem.arr64 CTL) 240).toNat = pre.decls.size)
-    (hDsz : 1 + 8 * (pre.decls ++ ds).size ≤ (s₀.mem.arr64 DECL).size)
+    (hnp : (rdW (s₀.mem.arr64 PDECL) 0).toNat = pre.decls.size)
+    (hns : (rdW (s₀.mem.arr64 DECL) 0).toNat = ds.size)
     (hDsz' : (s₀.mem.arr64 DECL).size < 2 ^ 64)
     (hW : ∀ x (h : x < (pre.decls ++ ds).size), WalkableDecl (pre.decls ++ ds)[x])
     (hA : ArenaR s₀.mem a) (hseen : ∃ s, SeenR s₀.mem s) (hnix : ∃ idx, NixR s₀.mem idx)
@@ -370,7 +443,7 @@ theorem preparePrelude_refines (p : Prog) (hp : PrepProg p) (hn : PrepExt p) (hh
       ArenaR s'.mem a' ∧ IWOK s'.mem ∧ PinsR s'.mem a'.pins ∧ s'.mem.arr64 DLP = s₀.mem.arr64 DLP ∧
       (s'.mem.arr64 DECL).size = (s₀.mem.arr64 DECL).size; ⊤⦄ :=
   triple_post (preparePrelude_spec p hp hn hh hx n s₀) (fun r s' h =>
-    ⟨h.1, pPrep_ok p hx n s₀.mem s'.mem a pre ds (r.headD 0) hD hcnt hnp hDsz hDsz' hW hA hseen hnix
+    ⟨h.1, pPrep_ok p hx n s₀.mem s'.mem a pre ds (r.headD 0) hPD hDS hnp hns hDsz' hW hA hseen hnix
       hI hP h.2⟩)
 
 attribute [refines ConRon.Arena.Frontend.frontOf] pFront_ok
