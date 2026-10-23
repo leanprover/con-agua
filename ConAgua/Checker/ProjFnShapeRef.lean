@@ -19,7 +19,6 @@ open Std.WP
 open scoped Lean.Order
 open L L.Arena
 open ConRon.Arena
-open L.Front.Ind (nview_tier viewN_run decN_tag decN_idx rdW_add run_bind)
 
 namespace L.Checker
 
@@ -102,7 +101,7 @@ theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
   have htop := UInt64.toNat_lt m.top
   have e : ∀ c : Word, c.toNat < lw.toNat →
       rdW (m.arr64 POOL) (o + c) = (m.arr64 POOL)[o.toNat + c.toNat]?.getD 0 :=
-    fun c hc => rdW_add _ _ _ (by omega)
+    fun c hc => L.Front.Ind.rdW_add _ _ _ (by omega)
   have e0 : rdW (m.arr64 POOL) o = (m.arr64 POOL)[o.toNat]?.getD 0 := rfl
   have hp4 : (strWords "proj").length = 4 := by rw [strWords_proj]; rfl
   have hp9 : (strWords "projTable").length = 9 := by rw [strWords_projTable]; rfl
@@ -161,7 +160,7 @@ theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
 
 theorem tag_eq_iff (w : Word) (hw : w.toNat < 2 ^ 32) (c : UInt32) (hc : c.toNat < 16) :
     (decI w : NIdx).tag = c ↔ w >>> 28 = c.toUInt64 := by
-  rw [decN_tag w hw]
+  rw [L.Front.Ind.decN_tag w hw]
   have h16 := L.Front.Ind.shr28_lt w hw
   constructor
   · intro e
@@ -201,7 +200,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   split at h
   · cases h
   rename_i hs
-  have hv := nview_tier hR w hw hs
+  have hv := L.Front.Ind.nview_tier hR w hw hs
   have ht1 : tierW w ≤ 1 := tierW_le w
   split at h
   · cases h
@@ -209,9 +208,9 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   obtain ⟨x, hx, hq, -⟩ := storeR_node nnumSch NnRecRel nnhash m _ _ _ hR.nnum (tierW w) ht1 (idxW w)
     (by simp only [cntW, nnumSch]; exact UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.num x.pre x.n, a) := by
-    apply viewN_run
-    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
-    simp only [NTag.anonymous, NTag.str, NTag.num, decN_idx, Tbl.node?]
+    apply L.Front.Ind.viewN_run
+    rw [EStore.ns, hv, NTables.get, L.Front.Ind.decN_tag w hw, hg]
+    simp only [NTag.anonymous, NTag.str, NTag.num, L.Front.Ind.decN_idx, Tbl.node?]
     by_cases ht : tierW w = 0
     · simp only [ht, ↓reduceIte] at hx; simp [ht, hx]
     · simp only [ht, ↓reduceIte] at hx; simp [ht, hx]
@@ -230,7 +229,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
     omega
   simp only [hq', ↓reduceIte] at h
   simp only [NIdx.isProjFnShape, htagT, ite_true]
-  rw [run_bind _ _ a _ hview]
+  rw [L.Front.Ind.run_bind _ _ a _ hview]
   simp only [hpre]
   split at h
   · rename_i hg
@@ -251,7 +250,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   split at h
   · cases h
   rename_i hs'
-  have hv' := nview_tier hR q hq32 hs'
+  have hv' := L.Front.Ind.nview_tier hR q hq32 hs'
   have ht1' : tierW q ≤ 1 := tierW_le q
   split at h
   · cases h
@@ -259,16 +258,16 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   obtain ⟨y, hy, hrel⟩ := storeR_node nstrSch NsRecRel nshash m _ _ _ hR.nstr (tierW q) ht1' (idxW q)
     (by simp only [cntW, nstrSch]; exact UInt64.not_le.mp hc')
   have hview' : (viewN (decI q)).run a = .ok (.str y.pre y.s, a) := by
-    apply viewN_run
-    rw [EStore.ns, hv', NTables.get, decN_tag q hq32, hg']
-    simp only [NTag.anonymous, NTag.str, decN_idx, Tbl.node?]
+    apply L.Front.Ind.viewN_run
+    rw [EStore.ns, hv', NTables.get, L.Front.Ind.decN_tag q hq32, hg']
+    simp only [NTag.anonymous, NTag.str, L.Front.Ind.decN_idx, Tbl.node?]
     by_cases ht : tierW q = 0
     · simp only [ht, ↓reduceIte] at hy; simp [ht, hy]
     · simp only [ht, ↓reduceIte] at hy; simp [ht, hy]
   obtain ⟨-, hol, hsl, -⟩ := hrel
   refine ⟨y.s == "proj" || y.s == "projTable", ?_, pfsStr_ok m _ y.s r hol hsl h⟩
   simp only [htagS, ite_true]
-  rw [run_bind _ _ a _ hview']
+  rw [L.Front.Ind.run_bind _ _ a _ hview']
   rfl
 
 /-! ## The refinement -/
