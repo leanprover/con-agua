@@ -1272,7 +1272,7 @@ theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (h
     (hpcx : p.lookup "check_pending_next" = some checkPendingNextL)
     (hp : p.lookup "install_then_check" = some installThenCheckL) (n : Nat) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState)
-    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀) (hcE : a₀.caches = Caches.empty)
+    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀)
     (hR : LoopR pins dn s₀.mem a₀ 0 (mkIFEnv IEnv.empty) #[] ds)
     (hM : LoopMem dn s₀.mem a₀) (hc : CoreMemos s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
@@ -1302,7 +1302,7 @@ theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (h
     obtain ⟨e, hL⟩ := FoldOut.eq h2
     refine ⟨h1, e, hL, h3, h4, ?_⟩
     subst hm
-    have := TwinPend.startAM hT hcE h1 (by rw [hX]; exact e)
+    have := TwinPend.startAM hT h1 (by rw [hX]; exact e)
     rwa [hA] at this
   have inner : ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
       ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ ∧

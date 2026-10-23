@@ -21,16 +21,17 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- **Phase B on the worker is phase B on the state**, when the caches are empty: the same
-verdict (the states after differ only on an empty list, where nothing runs). -/
+/-- **Phase B on the worker is phase B on the state**, when the caches are empty (needed only if
+some check runs): the same verdict (the states after differ only on an empty list, where nothing
+runs). -/
 theorem checkPendingList_worker_ok {mode : ConLeche.CheckMode} {fe : IFEnv}
-    {pend : List PendingCheck} {s s' : AState} (hc : s.caches = Caches.empty)
+    {pend : List PendingCheck} {s s' : AState} (hc : pend ≠ [] → s.caches = Caches.empty)
     (h : checkPendingList mode fe pend s = .ok (.ok (), s')) :
     ∃ s'', checkPendingList mode fe pend s.worker = .ok (.ok (), s'') := by
   cases pend with
   | nil => exact ⟨s.worker, rfl⟩
   | cons pc rest =>
-    have hpc := checkPending_worker (mode := mode) (fe := fe) (pc := pc) hc
+    have hpc := checkPending_worker (mode := mode) (fe := fe) (pc := pc) (hc (by simp))
     refine ⟨s', ?_⟩
     simp only [checkPendingList] at h ⊢
     rw [hpc]; exact h

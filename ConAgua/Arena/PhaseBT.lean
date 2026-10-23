@@ -115,6 +115,49 @@ theorem installFold_drop {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} 
             have h2 := installStep_drop hA
             exact ⟨fun _ => hk.1 h2.1, fun _ => hk.2 h2.2⟩
 
+/-- **Item 12a, from any start**: an accepting `installFold` ends with empty caches, or ran no
+record (the state and the fold's tuple unchanged). The parse before the loop leaves the caches
+non-empty (con-ron's `FoldOK_of_start` note), so phase B's start uses this form. -/
+theorem installFold_cachesOr {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} :
+    ∀ (ds : List IDeclaration) (p q : Nat × IFEnv × Array PendingCheck) (s s' : AState),
+      installFold mode pins p ds s = .ok (.ok q, s') →
+      s'.caches = Caches.empty ∨ (q = p ∧ s' = s) := by
+  intro ds
+  induction ds with
+  | nil =>
+    intro p q s s' h
+    simp only [installFold] at h
+    obtain ⟨he, rfl⟩ := ConRon.Bridge.AM.pure_ok h
+    cases he; exact .inr ⟨rfl, rfl⟩
+  | cons d ds ih =>
+    intro p q s s' h
+    simp only [installFold] at h
+    obtain ⟨r, s1, h1, h⟩ := ConRon.Bridge.AM.bind_ok h
+    cases r with
+    | error e => obtain ⟨he, -⟩ := ConRon.Bridge.AM.pure_ok h; cases he
+    | ok p' =>
+      refine .inl ?_
+      rcases ih p' q s1 s' h with hk | ⟨-, rfl⟩
+      · exact hk
+      simp only [installDeclStep] at h1
+      cases hP : andPinOk d s with
+      | error e => rw [hP] at h1; cases h1
+      | ok w =>
+        obtain ⟨b, s0⟩ := w
+        cases b with
+        | false => rw [hP] at h1; cases h1
+        | true =>
+          rw [hP] at h1
+          simp only at h1
+          cases hA : installStep mode pins p.1 p.2.1 p.2.2 d s0 with
+          | error e => rw [hA] at h1; cases h1
+          | ok v =>
+            obtain ⟨x, s2⟩ := v
+            rw [hA] at h1
+            simp only [Except.ok.injEq, Prod.mk.injEq] at h1
+            obtain ⟨-, rfl⟩ := h1
+            exact (installStep_drop hA).1
+
 /-- Item 12a in the `AM` form. -/
 theorem installFold_cachesAM {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
     {ds : List IDeclaration} {p q : Nat × IFEnv × Array PendingCheck} {a : AState}
@@ -131,14 +174,16 @@ value group at the store (`PendRel`), the caches empty and the scratch tier off.
 structure TwinPend (fe : IFEnv) (pend : List PendingCheck) (a : AState) : Prop where
   fold : ∃ env pendP, FoldOK V env fe a ∧ ConLeche.NodupNames env ∧
     ListRel (PendRel a.store env) pend pendP
-  caches : a.caches = Caches.empty
+  /-- The caches are empty when a check is left (each check ends in `dropScratch`). -/
+  caches : pend ≠ [] → a.caches = Caches.empty
   off : a.store.scratchOn = false
 
-/-- **`TwinPend` at phase B's start**, from `TwinFold` at the loop's start (caches empty) and
-phase A's accepting twin run (`Arena.installFold_bridge`, `PhaseA.nodup`, `installFold_drop`). -/
+/-- **`TwinPend` at phase B's start**, from `TwinFold` at the loop's start and phase A's
+accepting twin run (`Arena.installFold_bridge`, `PhaseA.nodup`, `installFold_drop`,
+`installFold_cachesOr`: a pending check exists only if some record ran). -/
 theorem TwinPend.start {pins : List INatOpPinSet} {ds : Array IDeclaration} {a₀ a : AState}
     {k : Nat} {fe : IFEnv} {pend : Array PendingCheck}
-    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀) (hc : a₀.caches = Caches.empty)
+    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀)
     (hrun : installFold V pins (0, mkIFEnv IEnv.empty, #[]) ds.toList a₀ =
       .ok (.ok (k, fe, pend), a)) :
     TwinPend fe pend.toList a := by
@@ -151,19 +196,23 @@ theorem TwinPend.start {pins : List INatOpPinSet} {ds : Array IDeclaration} {a�
     ConRon.Bridge.Arena.installFold_bridge rfl hk hind hT.pp ds.toList dsP env 0 k
       (mkIFEnv IEnv.empty) fe #[] pend [] a₀ a hok hnd hpins hT.pd hden .nil hrun
   have hd := installFold_drop ds.toList _ _ a₀ a hrun
-  exact ⟨⟨env', pendP', hok', hA.nodup hnd, by simpa using hrel⟩, hd.1 hc, hd.2 hT.off⟩
+  refine ⟨⟨env', pendP', hok', hA.nodup hnd, by simpa using hrel⟩, fun hne => ?_, hd.2 hT.off⟩
+  rcases installFold_cachesOr ds.toList _ _ a₀ a hrun with h | ⟨he, -⟩
+  · exact h
+  · simp only [Prod.mk.injEq] at he
+    exact absurd (by rw [he.2.2]) hne
 
 /-- `TwinPend` at the `AM` form of phase A's run. -/
 theorem TwinPend.startAM {pins : List INatOpPinSet} {ds : Array IDeclaration} {a₀ : AState}
     {k : Nat} {fe : IFEnv} {pend : Array PendingCheck}
-    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀) (hc : a₀.caches = Caches.empty)
+    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀)
     (hok : AM.ok (installFold V pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)
     (hres : AM.res (installFold V pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ =
       .ok (k, fe, pend)) :
     TwinPend fe pend.toList (AM.st (installFold V pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) := by
   have hrun := AM.run_of_ok _ _ hok
   rw [hres] at hrun
-  exact TwinPend.start hT hc hrun
+  exact TwinPend.start hT hrun
 
 /-- **con-ron's `CheckOK` at a record's view**: the prefix environment, the restricted index
 (`IFEnvOK_prefix`), the caches empty. -/
@@ -173,7 +222,7 @@ theorem TwinPend.checkAt {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCh
   obtain ⟨env, -, hok, hnd, -⟩ := h.fold
   exact ⟨env.prefixTo pc.vis,
     { state := hok.check.state
-      caches := ConRon.Bridge.CacheOK.of_empty h.caches
+      caches := ConRon.Bridge.CacheOK.of_empty (h.caches (by simp))
       pins := hok.check.pins
       ienv := ConRon.Bridge.IFEnvOK_prefix hok hnd pc.vis }⟩
 
@@ -193,7 +242,7 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
   | cons hp hrest =>
     have hpre := hp.prefix
     obtain ⟨hok₁, hx₁, hc₁, -⟩ :=
-      ConRon.Bridge.Arena.checkPending_prefix rfl hk hok hp.pers hnd h.caches
+      ConRon.Bridge.Arena.checkPending_prefix rfl hk hok hp.pers hnd (h.caches (by simp))
         (by rw [hpre]; exact hp.envWF) hp.kind hp.cv hp.jv hp.wsty hp.wsjv hrun
     have hoff : a'.store.scratchOn = false := by
       simp only [checkPending] at hrun
@@ -203,7 +252,7 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
       simp only [Except.ok.injEq, Prod.mk.injEq] at r2
       obtain ⟨-, rfl⟩ := r2
       rfl
-    exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ hrest⟩, hc₁, hoff⟩, hx₁⟩
+    exact ⟨⟨⟨env, _, hok₁, hnd, PendRel.listRel_mono hx₁ ⟨[], rfl⟩ hrest⟩, fun _ => hc₁, hoff⟩, hx₁⟩
 
 end twin
 
