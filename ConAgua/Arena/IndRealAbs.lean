@@ -36,11 +36,15 @@ open L.Arena
 
 /-! ## The memo predicate -/
 
-/-- A list of arrays apart from the walk memos' (49, 50, 51, 155). -/
-def memoFreeA (A : List ArrId) : Bool := A.all fun b => b != 49 && b != 50 && b != 51 && b != 155
+/-- A list of arrays apart from the walk memos' (49, 50, 51, 155; the core's 151‥153, 52‥54) and
+the pins. -/
+def memoFreeA (A : List ArrId) : Bool := A.all fun b => b != 49 && b != 50 && b != 51 && b != 155 &&
+  b != PINS && b != 151 && b != 152 && b != 153 && b != 52 && b != 53 && b != 54
 
-/-- A list of `CTL` words apart from the walk memos' epoch words (48, 50, 52, 158). -/
-def memoFreeC (C : List Word) : Bool := C.all fun x => x != 48 && x != 50 && x != 52 && x != 158
+/-- A list of `CTL` words apart from the walk memos' epoch words (48, 50, 52, 158; the core's 152,
+154, 156, 54, 56, 58). -/
+def memoFreeC (C : List Word) : Bool := C.all fun x => x != 48 && x != 50 && x != 52 && x != 158 &&
+  x != 152 && x != 154 && x != 156 && x != 54 && x != 56 && x != 58
 
 theorem AbMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbMemo m)
     (hf : MemFrame A C m m') (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) : AbMemo m' :=
@@ -61,28 +65,55 @@ theorem IlMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : IlMemo m
 
 /-- `memoFreeA`, unfolded. -/
 theorem memoFreeA_iff {A : List ArrId} (hA : memoFreeA A = true) :
-    (49 : ArrId) ∉ A ∧ (50 : ArrId) ∉ A ∧ (51 : ArrId) ∉ A ∧ (155 : ArrId) ∉ A := by
-  have h : ∀ b ∈ A, b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 := fun b hb => by
+    (49 : ArrId) ∉ A ∧ (50 : ArrId) ∉ A ∧ (51 : ArrId) ∉ A ∧ (155 : ArrId) ∉ A ∧ PINS ∉ A ∧
+      ((151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A) ∧
+      ((52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A) := by
+  have h : ∀ b ∈ A, b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 ∧ b ≠ PINS ∧ b ≠ 151 ∧ b ≠ 152 ∧ b ≠ 153 ∧
+      b ≠ 52 ∧ b ≠ 53 ∧ b ≠ 54 := fun b hb => by
     have := List.all_eq_true.mp hA b hb; simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at this
-    exact ⟨this.1.1.1, this.1.1.2, this.1.2, this.2⟩
-  exact ⟨fun hm => (h _ hm).1 rfl, fun hm => (h _ hm).2.1 rfl, fun hm => (h _ hm).2.2.1 rfl,
-    fun hm => (h _ hm).2.2.2 rfl⟩
+    obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩ := this
+    exact ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩
+  refine ⟨fun hm => (h _ hm).1 rfl, fun hm => (h _ hm).2.1 rfl, fun hm => (h _ hm).2.2.1 rfl,
+    fun hm => (h _ hm).2.2.2.1 rfl, fun hm => (h _ hm).2.2.2.2.1 rfl,
+    ⟨fun hm => (h _ hm).2.2.2.2.2.1 rfl, fun hm => (h _ hm).2.2.2.2.2.2.1 rfl,
+      fun hm => (h _ hm).2.2.2.2.2.2.2.1 rfl⟩,
+    ⟨fun hm => (h _ hm).2.2.2.2.2.2.2.2.1 rfl, fun hm => (h _ hm).2.2.2.2.2.2.2.2.2.1 rfl,
+      fun hm => (h _ hm).2.2.2.2.2.2.2.2.2.2 rfl⟩⟩
 
 /-- `memoFreeC`, unfolded. -/
 theorem memoFreeC_iff {C : List Word} (hC : memoFreeC C = true) :
-    (48 : Word) ∉ C ∧ (50 : Word) ∉ C ∧ (52 : Word) ∉ C ∧ (158 : Word) ∉ C := by
-  have h : ∀ x ∈ C, x ≠ 48 ∧ x ≠ 50 ∧ x ≠ 52 ∧ x ≠ 158 := fun x hx => by
+    (48 : Word) ∉ C ∧ (50 : Word) ∉ C ∧ (52 : Word) ∉ C ∧ (158 : Word) ∉ C ∧
+      ((152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) ∧
+      ((54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) := by
+  have h : ∀ x ∈ C, x ≠ 48 ∧ x ≠ 50 ∧ x ≠ 52 ∧ x ≠ 158 ∧ x ≠ 152 ∧ x ≠ 154 ∧ x ≠ 156 ∧ x ≠ 54 ∧
+      x ≠ 56 ∧ x ≠ 58 := fun x hx => by
     have := List.all_eq_true.mp hC x hx; simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at this
-    exact ⟨this.1.1.1, this.1.1.2, this.1.2, this.2⟩
-  exact ⟨fun hm => (h _ hm).1 rfl, fun hm => (h _ hm).2.1 rfl, fun hm => (h _ hm).2.2.1 rfl,
-    fun hm => (h _ hm).2.2.2 rfl⟩
+    exact ⟨this.1.1.1.1.1.1.1.1.1, this.1.1.1.1.1.1.1.1.2, this.1.1.1.1.1.1.1.2, this.1.1.1.1.1.1.2,
+      this.1.1.1.1.1.2, this.1.1.1.1.2, this.1.1.1.2, this.1.1.2, this.1.2, this.2⟩
+  refine ⟨fun hm => (h _ hm).1 rfl, fun hm => (h _ hm).2.1 rfl, fun hm => (h _ hm).2.2.1 rfl,
+    fun hm => (h _ hm).2.2.2.1 rfl,
+    ⟨fun hm => (h _ hm).2.2.2.2.1 rfl, fun hm => (h _ hm).2.2.2.2.2.1 rfl,
+      fun hm => (h _ hm).2.2.2.2.2.2.1 rfl⟩,
+    ⟨fun hm => (h _ hm).2.2.2.2.2.2.2.1 rfl, fun hm => (h _ hm).2.2.2.2.2.2.2.2.1 rfl,
+      fun hm => (h _ hm).2.2.2.2.2.2.2.2.2 rfl⟩⟩
+
+/-- **`WkOK` across a writer apart from the pins and the core's walk memos.** -/
+theorem WkOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : WkOK m)
+    (hf : MemFrame A C m m') (hP : PINS ∉ A)
+    (hW : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
+    (hL : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) : WkOK m' :=
+  ⟨h.1.frame hf hW hWC hL hLC, by rw [hf.2.2.1]; exact h.2.1, by rw [hf.2.2.1]; exact h.2.2.1,
+    by rw [hf.2.2.1]; exact h.2.2.2.1, by simp only [pinW, hf.1 PINS hP (by decide)]; exact h.2.2.2.2⟩
 
 /-- **`AbsOK` across a writer apart from the walk memos' arrays and epoch words.** -/
 theorem AbsOK.frameD {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbsOK m)
     (hf : MemFrame A C m m') (hA : memoFreeA A = true) (hC : memoFreeC C = true) : AbsOK m' :=
-  let ⟨a1, a2, a3, a4⟩ := memoFreeA_iff hA
-  let ⟨c1, c2, c3, c4⟩ := memoFreeC_iff hC
-  ⟨h.1.frame hf a1 c1, h.2.1.frame hf a3 c3, h.2.2.1.frame hf a4 c4, h.2.2.2.frame hf a2 c2⟩
+  let ⟨a1, a2, a3, a4, a5, a6, a7⟩ := memoFreeA_iff hA
+  let ⟨c1, c2, c3, c4, c5, c6⟩ := memoFreeC_iff hC
+  ⟨h.1.frame hf a1 c1, h.2.1.frame hf a3 c3, h.2.2.1.frame hf a4 c4, h.2.2.2.1.frame hf a2 c2,
+    h.2.2.2.2.frame hf a5 a6 a7 c5 c6⟩
 
 /-! ## Steps that keep it
 
@@ -329,7 +360,7 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
     RelW abF [CWF, e, d, k] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
       (abstract1Fast CWF.toNat (decI e) d.toNat k.toNat)
       (fun m m' a r x => KeepPost dn vis fe decW0E m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl⟩
+  intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl, hWk⟩
   have hfr := abF_frame h
   obtain ⟨n, hc⟩ := callF_run h
   match n, hc with
@@ -363,6 +394,7 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl) hcp
   exact ⟨_, _, by rw [CWF_eq]; exact hrun', ⟨hS', hg, hlt, hres.symm⟩, ⟨_, hA'.2⟩,
     hI1.frame hfr (by decide) (by decide), hCr.frame hfr (by decide) (by decide),
-    hIl.frame hfr (by decide) (by decide)⟩
+    hIl.frame hfr (by decide) (by decide),
+    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 end L.Ind

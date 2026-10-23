@@ -375,7 +375,7 @@ end census
 
 theorem pinternW_afr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : AFr m m' := by
   rw [pinternW_eq] at h
-  exact AFr.of_frame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h) (by simp [paramSch, PREC, PSLOT, memoFreeA])
+  exact AFr.of_frame (internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h) (by simp [paramSch, PREC, PSLOT, PINS, memoFreeA])
     (by simp [paramSch, memoFreeC])
 
 theorem plgW_afr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') → AFr m m'
