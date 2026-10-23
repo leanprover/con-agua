@@ -97,7 +97,7 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hpf : p.lookup "param_find" = some paramFind) (hpp : p.lookup "param_push" = some paramPush)
   (hip : p.lookup "intern_param" = some internParam)
   (hplg : p.lookup "param_levels_go" = some paramLevelsGoL)
-  (hpl : p.lookup "param_levels" = some paramLevelsL)
+  (hpl : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p)
   (hcf : p.lookup "const_find" = some constFind) (hcp : p.lookup "const_push" = some constPush)
   (hic : p.lookup "intern_const" = some internConst)
   (hbf : p.lookup "bvar_find" = some bvarFind) (hbp : p.lookup "bvar_push" = some bvarPush)
@@ -106,7 +106,7 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (heq : p.lookup "sl_eq" = some slEq)
   (hp : p.lookup "struct_ctor_resid_ok" = some structCtorResidOkL)
-include ha hc hsc hg hpf hpp hip hplg hpl hcf hcp hic hbf hbp hib hpg hps heq hp
+include ha hc hsc hg hpf hpp hip hplg hpl hil hcf hcp hic hbf hbp hib hpg hps heq hp
 
 theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_ctor_resid_ok" [T, lo, ll, nP, o, nIdx, cbody]
@@ -118,7 +118,7 @@ theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        plW_spec p ha hc hsc hg hpf hpp hip hplg hpl k, internConst_spec p hcf hcp hic k,
+        plW_spec p ha hc hsc hg hpf hpp hip hplg hpl hil k, internConst_spec p hcf hcp hic k,
         stubM_spec p "get_app_fn_f" k, stubM_spec p "get_app_args_f" k,
         psAtW_spec p ha hc hsc hbf hbp hib hpg hps k, slEq_spec p heq k] <;>
       finish (gen := 20) [srRes]
@@ -143,7 +143,7 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [h1, plK4_some] at h
-  cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [h2] at h; cases h
   | some y =>
   obtain ⟨r2, m2⟩ := y
@@ -152,7 +152,7 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    internLsIw_spec dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hH, by simpa using hx⟩
   simp only [paramLevels, StateT.run_bind, hrun1]
   exact hrun2

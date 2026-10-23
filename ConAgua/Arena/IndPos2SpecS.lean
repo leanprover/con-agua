@@ -514,9 +514,9 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbFrameW_succ] at h
   -- the group's head name
-  have hhn : (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
+  have hhn : (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
-      (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
+      (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ H (rn.headD 0) ∧
       (match grp with
         | [] => internNNode .anonymous
@@ -525,12 +525,12 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
     · rw [if_pos h0]
       have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
       subst this
-      cases hst : stubM "intern_nanon" m [] with
+      cases hst : naF m [] with
       | none => exact Or.inl rfl
       | some pr =>
       obtain ⟨rn, m1⟩ := pr
-      obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := internNanonStub_spec dn vis fe m m1 a rn hst hS
-      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.stub (by decide) hst, hxH, by rw [hxd]; exact hrun⟩
+      obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
+      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [NAREC, NASLOT]) (by simp), hxH, by rw [hxd]; exact hrun⟩
     · rw [if_neg h0]
       obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
         cases grp with

@@ -18,6 +18,7 @@ open L.Arena
 /-- The lookups of the `nestPos` block (and its leaves). -/
 structure NbLook (p : Prog) : Prop where
   hi1 : I1Prog p
+  na : NaF p
   ct : CtLook p
   nit : NitLook p
   nag : NagLook p
@@ -255,7 +256,7 @@ theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Wo
   rw [invoke_eq _ L.pframe]
   simp only [callFn, nestFrameL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      stubM_spec p "intern_nanon" n, internConst_spec p R.cf R.cp R.ci n,
+      naF_spec p L.na n, internConst_spec p R.cf R.cp R.ci n,
       stubM_spec p "mk_app_n_f" n, stubM_spec p "infer_type_core" n,
       nestFrameGrp_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hfg n,
       nestGroupCtors_spec p L.nt L.nit.hc2 L.hap L.hgc n,

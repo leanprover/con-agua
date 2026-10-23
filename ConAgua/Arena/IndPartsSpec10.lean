@@ -135,7 +135,7 @@ def brwW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, mo, ml =>
     if ml = 0 then some ([0, 0], m)
-    else brwK1 n mo ml (stubM "name_rec" m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))])
+    else brwK1 n mo ml (nrF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))])
 /-- After `name_rec`. -/
 def brwK1 (n : Nat) (mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -158,7 +158,7 @@ section arms
 variable (n : Nat) (m m1 : Mem) (mo ml ro rl rc : Word) (r1 : List Word)
 theorem brwW_nil (h : ml = 0) : brwW (n + 1) m mo ml = some ([0, 0], m) := by simp [brwW, h]
 theorem brwW_cons (h : ml ≠ 0) : brwW (n + 1) m mo ml = brwK1 n mo ml
-    (stubM "name_rec" m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))]) := by
+    (nrF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))]) := by
   simp [brwW, h]
 theorem brwK1_some : brwK1 n mo ml (some (r1, m1)) = bggK3 n (r1.headD 0) (brwW n m1 (mo + 1) (ml - 1)) := by
   simp [brwK1]
@@ -185,7 +185,7 @@ theorem brw_spec (hp : p.lookup "block_rec_want" = some blockRecWant) (n : Nat) 
     rw [invoke_eq _ hp]
     simp only [callFn, blockRecWant]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, stubM_spec p "name_rec" n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nrF_spec p hP.nr n,
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -301,7 +301,7 @@ theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hw, hcw]
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m ca) m ms0.cvT from hcv) hcab
     rw [List.mapM_cons]
-    have h1 := partsSimStub (nameRec_spec dn vis fe _ hnl) hS
+    have h1 := partsSimW (nrF_ok dn vis fe _ hnl) hS
     rw [hne] at h1
     refine Sim.bindK (K := brwK1 n mo ml) (body := fun r1 m1 => bggK3 n (r1.headD 0) (brwW n m1 (mo + 1) (ml - 1)))
       (by simp [brwK1]) (fun _ _ => brwK1_some ..) h1 ?_

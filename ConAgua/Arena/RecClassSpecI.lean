@@ -376,6 +376,7 @@ structure MjProg (p : Prog) : Prop where
   mtm : p.lookup "mk_target_major" = some mkTargetMajor
   tmd : p.lookup "target_major_default" = some targetMajorDefault
   tma : p.lookup "target_major_at" = some targetMajorAt
+  na : NaF p
   bf : p.lookup "bvar_find" = some bvarFind
   bp : p.lookup "bvar_push" = some bvarPush
   ib : p.lookup "intern_bvar" = some internBVar
@@ -441,7 +442,7 @@ theorem classGenMajor_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (g c 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma n,
+        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n,
         rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, instPisWith_spec p h.ev h.ipw h.hi1 n,
         classGenMajorOpen_spec p h n, classGenMajorCi_spec p h n] <;>
       finish (gen := 20) [rdW_eq]

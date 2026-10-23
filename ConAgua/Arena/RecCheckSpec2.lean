@@ -5,6 +5,7 @@ import ConAgua.Arena.RecGenSpec2
 import ConAgua.Arena.IndPartsSpec2
 import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndPartsSpec4
+import ConAgua.Arena.IndRealNames
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)
@@ -469,7 +470,7 @@ theorem mkTargetMajor_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
 
 mutual
 /-- **The model of `target_major_default`.** -/
-def tmdW (m : Mem) : Option (List Word × Mem) := tmdK1 (stubM "intern_nanon" m [])
+def tmdW (m : Mem) : Option (List Word × Mem) := tmdK1 (naF m [])
 /-- After `intern_nanon`. -/
 def tmdK1 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -484,7 +485,7 @@ def tmdK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m2) => some ([r.headD 0], m2)
 end
 
-theorem tmdW_eq (m : Mem) : tmdW m = tmdK1 (stubM "intern_nanon" m []) := rfl
+theorem tmdW_eq (m : Mem) : tmdW m = tmdK1 (naF m []) := rfl
 theorem tmdK1_some (ra : List Word) (m1 : Mem) :
     tmdK1 (some (ra, m1)) = tmdK2 m1 (ra.headD 0) (pinWordV m1 52) := rfl
 theorem tmdK2_some (m1 : Mem) (anon ls : Word) :
@@ -498,14 +499,14 @@ grind_pattern [ind_grind] tmdK3_some => tmdK3 (some (r, m2))
 
 theorem targetMajorDefault_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
-    (hp : p.lookup "target_major_default" = some targetMajorDefault) (n : Nat) (s₀ : St) :
+    (hp : p.lookup "target_major_default" = some targetMajorDefault) (hna : NaF p) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_default" []
     ⦃fun r s' => LocEq s' s₀ ∧ tmdW s₀.mem = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, targetMajorDefault]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "intern_nanon" n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n] <;>
+      naF_spec p hna n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n] <;>
     finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
 
 
@@ -560,12 +561,12 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       decTM m' (r.headD 0).toNat = some tm := by
   rw [tmdW_eq] at h
-  cases h1 : stubM "intern_nanon" m [] with
+  cases h1 : naF m [] with
   | none => rw [h1] at h; simp [tmdK1] at h
   | some x1 =>
   obtain ⟨ra, m1⟩ := x1
   rw [h1, tmdK1_some] at h
-  obtain ⟨anon, a1, hrun1, hS1, hg1, hw1, hl1⟩ := internNanonStub_spec dn vis fe m m1 a ra h1 hS
+  obtain ⟨anon, a1, hrun1, hS1, hg1, hw1, hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
   cases hp : pinWordV m1 52 with
   | none => rw [hp] at h; simp [tmdK2] at h
   | some ls =>
@@ -609,13 +610,13 @@ and `mk_target_major`). -/
 @[refines ConRon.Arena.targetMajorDefault]
 theorem targetMajorDefault_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
-    (hp : p.lookup "target_major_default" = some targetMajorDefault) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "target_major_default" = some targetMajorDefault) (hna : NaF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hS : StageR dn vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_default" []
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok ConRon.Arena.targetMajorDefault a₀ ∧
       StageR dn vis fe s'.mem (AM.st ConRon.Arena.targetMajorDefault a₀) ∧ IWGrow s₀.mem s'.mem ∧
       decTM s'.mem (r.headD 0).toNat = some (AM.res ConRon.Arena.targetMajorDefault a₀); ⊤⦄ := by
-  refine triple_post (targetMajorDefault_spec p ha hpw hm hp n s₀) ?_
+  refine triple_post (targetMajorDefault_spec p ha hpw hm hp hna n s₀) ?_
   rintro r s' ⟨hl, hw⟩
   obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmdW_ok dn vis fe _ _ a₀ r hw hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

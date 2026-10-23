@@ -72,6 +72,7 @@ structure NckProg (p : Prog) : Prop where
   internParam : p.lookup "intern_param" = some internParam
   plGo : p.lookup "param_levels_go" = some paramLevelsGoL
   pl : p.lookup "param_levels" = some paramLevelsL
+  il : IlF p
   namesCopy : p.lookup "member_names_copy" = some memberNamesCopy
   names : p.lookup "block_shape_member_names" = some blockShapeMemberNames
   erCopy : p.lookup "er_copy" = some erCopy
@@ -92,7 +93,7 @@ theorem nck_spec (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (q fo fl : Wo
       blockShapeMemberNames_spec p hP.alloc hP.namesCopy hP.names n,
       blockShapeLps_spec2 p hP.alloc hP.erCopy hP.erToIw hP.lps n,
       blockShapeNIdxs_spec p hP.alloc hP.nIdxsCopy hP.nIdxs n,
-      plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl n,
+      plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl hP.il n,
       iwAlloc_specW p hP.alloc n] <;>
     finish (gen := 20) [nckW, nckRec, nctxMem, allocMem, allocW, rdW_eq]
 

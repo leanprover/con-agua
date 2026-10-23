@@ -90,13 +90,13 @@ theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [hg, plK4_some] at h
-  cases hs : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  cases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [hs] at h; cases h
   | some y =>
   obtain ⟨r2, m2⟩ := y
   rw [hs, plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact (plgW_mfr k hg).trans (MFr.ofStub hs)
+  exact (plgW_mfr k hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp))
 
 theorem thW_mfr : ∀ (n : Nat) {m m' : Mem} {tyo tyl base : Word} {r : List Word},
     thW n m tyo tyl base = some (r, m') → MFr [] [] m m'
@@ -219,6 +219,7 @@ structure TcmLook (p : Prog) : Prop where
   ip : p.lookup "intern_param" = some internParam
   plg : p.lookup "param_levels_go" = some paramLevelsGoL
   pl : p.lookup "param_levels" = some paramLevelsL
+  il : IlF p
   ff : p.lookup "fvar_find" = some fvarFind
   fp : p.lookup "fvar_push" = some fvarPush
   iff : p.lookup "intern_fvar" = some internFVar
@@ -237,7 +238,7 @@ theorem targetClassMatch_spec (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       stubM_spec p "lvls_eq_c" n, blockShapeMemberNames_spec p L.ha L.mnc L.mn n,
       blockShapeLps_spec p L.ha L.erc L.eri L.lps n,
-      plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl n,
+      plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl L.il n,
       targetHoles_spec p L.ff L.fp L.iff L.ic L.ha L.sc L.th n, tpd_spec p L.tp n] <;>
     finish (gen := 40) (instances := 20000) [tcmW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
       loc_init9, loc_init10, loc_init11]

@@ -561,7 +561,7 @@ theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma n, classGenMinorCi_spec p h n,
+        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n, classGenMinorCi_spec p h n,
         classGenMinorTyBody_spec p h n] <;>
       finish (gen := 20) [rdW_eq]
 
