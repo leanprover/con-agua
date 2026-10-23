@@ -2,6 +2,7 @@ import ConAgua.Checker.Entry
 import ConAgua.Compiler.WFFast
 import ConAgua.Front.IndApply
 import ConAgua.Arena.DeclArmsNat
+import ConAgua.Checker.Hoist
 import ConRon.Arena.Frontend.PreludeText
 
 /-!
@@ -22,9 +23,8 @@ program) into `PRE`, runs `pre_front_run`, aborts if a line did not apply (the t
 
 **`prepare_prelude()`** is `preparePrelude pre r.decls`: `frontOf` (each prelude record, in order,
 replaced by the first stream record that declares its key, which leaves the stream), then the
-ground hoist `hoistNatOpGround`. The hoist is the identity on every stream whose pinned `Nat`
-operations come after their ground (the toolchain's own export order); L checks that it is the
-identity (`hoist_ok`) and aborts (declines) otherwise, a completeness loss only. Then `DECL` is
+ground hoist `hoistNatOpGround` (`hoist_nat_op_ground`, `ConAgua/Checker/Hoist.lean`), which
+reorders the stream when a pinned `Nat` operation precedes its ground. Then `DECL` is
 rewritten in the prepared order.
 
 `preludeBytes` is the twin's `preludeText` (`preludeBytes_eq`, by the kernel). Proof obligations
@@ -205,19 +205,6 @@ def declKeyL : FunDecl := lfn (i) locals (x, r) {
   return r
 }
 
-/-- `first_declaring(ord, c, g)`: the first position `i < c` of the order whose record declares
-`g`, or `c` (`nameIndex`'s first-record-wins lookup). -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:129-138 ConRon.Arena.Frontend.nameIndex
-def firstDeclaringL : FunDecl := lfn (ord, c, g) locals (i, d) {
-  i := 0;
-  while i < c {
-    d := call decl_declares(IW.u64[ord + i], g);
-    if d != 0 { return i };
-    i += 1
-  };
-  return c
-}
-
 /-- `slice_has(o, l, n)`: `n` in the `IW` slice. -/
 -- con-ron: none — `List.contains` on an `IW` slice (`natOpNames.contains`)
 def sliceHasL : FunDecl := lfn (o, l, n) locals (j) {
@@ -238,33 +225,6 @@ def natOpRecordL : FunDecl := lfn (n) locals (o1, l1, o2, l2, a, b) {
   a := call slice_has(o1, l1, n);
   b := call slice_has(o2, l2, n);
   if a != 0 || b != 0 { return 1 };
-  return 0
-}
-
-/-- `hoist_ok(ord, c)`: `hoistTargets` is empty on the prepared order — no pinned `Nat`
-operation at position `i` has a ground (`natOpDeps`) first declared after `i`. Aborts (declines)
-where the twin would reorder. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:283-311 ConRon.Arena.Frontend.hoistTargetsGo
-@[l_impl ConRon.Arena.Frontend.hoistTargetsGo]
-def hoistOkL : FunDecl := lfn (ord, c) locals (i, x, n, op, o, l, j, pos) {
-  i := 0;
-  while i < c {
-    x := 1 + 8 * IW.u64[ord + i];
-    if DECL.u64[x] == 2 {
-      n := DECL.u64[x + 1];
-      op := call nat_op_record(n);
-      if op != 0 {
-        (o, l) := call nat_op_deps(n);
-        j := 0;
-        while j < l {
-          pos := call first_declaring(ord, c, IW.u64[o + j]);
-          if pos < c && i < pos { abort };
-          j += 1
-        }
-      }
-    };
-    i += 1
-  };
   return 0
 }
 
@@ -312,7 +272,7 @@ def preparePreludeL : FunDecl :=
     if IW.u64[mk + j] == 0 { IW.u64[ord + c] := j; c += 1 };
     j += 1
   };
-  d := call hoist_ok(ord, c);
+  ord := call hoist_nat_op_ground(ord, c);
   t := call iw_alloc(8 * c);
   i := 0;
   while i < c {
@@ -331,7 +291,6 @@ def preparePreludeL : FunDecl :=
 def preludeProg : Prog :=
   [("builtin_prelude", builtinPreludeL), ("prepare_prelude", preparePreludeL),
    ("decl_declares", declDeclaresL), ("decl_key", declKeyL),
-   ("first_declaring", firstDeclaringL), ("slice_has", sliceHasL),
-   ("nat_op_record", natOpRecordL), ("hoist_ok", hoistOkL)]
+   ("slice_has", sliceHasL), ("nat_op_record", natOpRecordL)] ++ hoistProg
 
 end L.Checker
