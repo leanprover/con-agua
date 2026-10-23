@@ -175,11 +175,12 @@ theorem rec2SimNestOcc (hS : StageR dn vis fe m a) {no nl e : Word} {names : Lis
     (hn : decHL m no.toNat nl.toNat = some names) (hnb : no.toNat + nl.toNat < 2 ^ 64)
     {mp0 : Std.HashMap EIdx Bool} (hM : noMR m mp0) (k : Nat) :
     RSim (noConstWf k m no nl 0 0 e) (ConRon.Arena.nestOcc names 0 0 (decI e)) a
-      (fun b a' x => a' = a ∧ (b.1 != 0) = x ∧ noMR b.2 ∅ ∧ StageR dn vis fe b.2 a ∧ IWGrow m b.2) := by
+      (fun b a' x => a' = a ∧ (b.1 != 0) = x ∧ noMR b.2 ∅ ∧ StageR dn vis fe b.2 a ∧ IWGrow m b.2 ∧
+        MFr [NOM] [204, 205] m b.2) := by
   rintro ⟨r, m'⟩ h
-  obtain ⟨x, hrun, hx, hM', hS', hg, -⟩ := noConstWf_ok k dn fe vis m m' a no nl 0 0 e r names mp0 h hS hh
+  obtain ⟨x, hrun, hx, hM', hS', hg, hf⟩ := noConstWf_ok k dn fe vis m m' a no nl 0 0 e r names mp0 h hS hh
     hn hnb hM
-  exact ⟨x, a, by simpa [decE_eq] using hrun, rfl, hx, hM', hS', hg⟩
+  exact ⟨x, a, by simpa [decE_eq] using hrun, rfl, hx, hM', hS', hg, hf⟩
 
 /-- `pi_binders` as a simulation, with its write set. -/
 theorem rec2SimPiBinders (n : Nat) (hS : StageR dn vis fe m a) {h : Word} (hh : H h) :
@@ -210,18 +211,161 @@ theorem rec2RecW_decCF {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassFiel
   intro m'' hg
   exact hy m'' fun j hj => rec_iwN_stab rfl hget htop j hj m'' hg
 
+/-! ## Decodings stable above a bound (lane `indproofs4`, helper `cls`)
+
+A result written into a slot of a slice allocated before it was computed is a write below the top,
+which `IWGrow` does not allow; what is created after the allocation reads only words above the
+slots. `AgreeA b m m'`: the pools grew and every word from `b` to the old top stayed;
+`StabA b f m x`: `f` decodes `x` in every such memory (and so stably, `StabA.stabD`). -/
+
+/-- The pools grew, keeping every word from `b` to the old top. -/
+def AgreeA (b : Nat) (m m' : Mem) : Prop :=
+  iwTop m ≤ iwTop m' ∧ erTop m ≤ erTop m' ∧
+    (∀ i, b ≤ i → i < iwTop m → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
+    (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
+
+theorem AgreeA.refl (b : Nat) (m : Mem) : AgreeA b m m :=
+  ⟨Nat.le_refl _, Nat.le_refl _, fun _ _ _ => rfl, fun _ _ => rfl⟩
+
+theorem AgreeA.of_grow {b : Nat} {m m' : Mem} (h : IWGrow m m') : AgreeA b m m' :=
+  ⟨h.1, h.2.1, fun i _ hi => h.2.2.1 i hi, h.2.2.2⟩
+
+theorem AgreeA.trans {b : Nat} {m₁ m₂ m₃ : Mem} (h₁ : AgreeA b m₁ m₂) (h₂ : AgreeA b m₂ m₃) :
+    AgreeA b m₁ m₃ :=
+  ⟨Nat.le_trans h₁.1 h₂.1, Nat.le_trans h₁.2.1 h₂.2.1,
+    fun i hb hi => (h₂.2.2.1 i hb (Nat.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2.1 i hb hi),
+    fun i hi => (h₂.2.2.2 i (Nat.lt_of_lt_of_le hi h₁.2.1)).trans (h₁.2.2.2 i hi)⟩
+
+theorem AgreeA.mono {b b' : Nat} {m m' : Mem} (hb : b ≤ b') (h : AgreeA b m m') : AgreeA b' m m' :=
+  ⟨h.1, h.2.1, fun i hb' hi => h.2.2.1 i (Nat.le_trans hb hb') hi, h.2.2.2⟩
+
+theorem AgreeA.iwN {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i) (hi : i < iwTop m) :
+    iwN m' i = iwN m i := by
+  simp only [L.Ind.iwN, nat?, iwA]; rw [h.2.2.1 i hb hi]
+
+theorem AgreeA.iwH {k : IdxKind} {b : Nat} {m m' : Mem} (h : AgreeA b m m') {i : Nat} (hb : b ≤ i)
+    (hi : i < iwTop m) : (iwH m' i : Option (Idx k)) = iwH m i := by
+  simp only [L.Ind.iwH, hd?, iwA]; rw [h.2.2.1 i hb hi]
+
+/-- `f` decodes `x` in every memory agreeing with `m` from `b` on. -/
+def StabA {α : Type} (b : Nat) (f : Mem → Option α) (m : Mem) (x : α) : Prop :=
+  ∀ m', AgreeA b m m' → f m' = some x
+
+namespace StabA
+variable {α : Type} {b : Nat} {f : Mem → Option α} {m m' : Mem} {x : α}
+theorem get (h : StabA b f m x) : f m = some x := h m (AgreeA.refl b m)
+theorem grow (h : StabA b f m x) (hg : AgreeA b m m') : StabA b f m' x := fun m'' h' => h m'' (hg.trans h')
+theorem mono {b' : Nat} (hb : b ≤ b') (h : StabA b' f m x) : StabA b f m x := fun m' h' => h m' (h'.mono hb)
+theorem stabD (h : StabA b f m x) : StabD f m x := fun m' hg => h m' (AgreeA.of_grow hg)
+end StabA
+
+/-- A constant decoded below the tops is stable above any bound (it lives in `EREC`). -/
+theorem stabA_decCVp {m : Mem} {q : Nat} {x : IConstantVal} (h : DecB (fun m => decCVp m q) m x) (b : Nat) :
+    StabA b (fun m => decCVp m q) m x := by
+  intro m' hA
+  have h' : decCV (erA (truncM m)) q = some x := h
+  show decCV (erA m') q = some x
+  refine ArrExt.decCV (fun i v hv => ?_) h'
+  obtain ⟨hi, hv'⟩ := truncM_er_get hv
+  simp only [erA] at hv' ⊢; rw [hA.2.2.2 i hi]; exact hv'
+
+/-- **A pointer slice stable above `b`**: empty, or from `b` on below the top, every pointer
+decoding stably above `b`. -/
+def SPLA {α : Type} (b : Nat) (dec : Mem → Nat → Option α) (m : Mem) (o l : Nat) (xs : List α) : Prop :=
+  (l = 0 ∨ b ≤ o) ∧ o + l ≤ iwTop m ∧ ∃ ps, decNL m o l = some ps ∧
+    FA2 (fun q x => StabA b (fun m => dec m q) m x) ps xs
+
+namespace SPLA
+variable {α : Type} {b : Nat} {dec : Mem → Nat → Option α} {m m' : Mem} {o l : Nat} {xs : List α}
+
+theorem nil (o : Nat) (ho : o ≤ iwTop m) : SPLA b dec m o 0 [] :=
+  ⟨.inl rfl, by omega, [], by simp [decNL], FA2.nil⟩
+
+theorem decNL_agree (h : SPLA b dec m o l xs) (hA : AgreeA b m m') : decNL m' o l = decNL m o l := by
+  rcases h.1 with h0 | hb
+  · subst h0; rfl
+  simp only [decNL]
+  apply mapM_opt_congr
+  intro j hj
+  have := List.mem_range.mp hj
+  exact hA.iwN (by omega) (by have := h.2.1; omega)
+
+theorem grow (h : SPLA b dec m o l xs) (hA : AgreeA b m m') : SPLA b dec m' o l xs := by
+  obtain ⟨h1, h2, ps, hps, hf⟩ := h
+  exact ⟨h1, Nat.le_trans h2 hA.1, ps, by rw [decNL_agree ⟨h1, h2, ps, hps, hf⟩ hA]; exact hps,
+    FA2.imp (fun _ _ hq => hq.grow hA) hf⟩
+
+theorem mono {b' : Nat} (hb : b ≤ b') (h : SPLA b' dec m o l xs) : SPLA b dec m o l xs := by
+  obtain ⟨h1, h2, ps, hps, hf⟩ := h
+  exact ⟨h1.imp id (Nat.le_trans hb), h2, ps, hps, FA2.imp (fun _ _ hq => hq.mono hb) hf⟩
+
+theorem toSPL (h : SPLA b dec m o l xs) : SPL dec m o l xs := by
+  obtain ⟨-, h2, ps, hps, hf⟩ := h
+  exact ⟨h2, ps, hps, FA2.imp (fun _ _ hq => hq.stabD) hf⟩
+
+theorem mapM_of_forall₂ {m' : Mem} : ∀ {ps : List Nat} {xs : List α},
+    FA2 (fun q x => dec m' q = some x) ps xs → ps.mapM (dec m') = some xs
+  | [], [], _ => rfl
+  | q :: ps, x :: xs, .cons h1 h2 => by
+    simp only [List.mapM_cons, h1, mapM_of_forall₂ h2]; rfl
+
+/-- The whole slice decodes stably above `b`. -/
+theorem stab (h : SPLA b dec m o l xs) : StabA b (fun m => decPL m (dec m) o l) m xs := by
+  intro m' hA
+  obtain ⟨h1, h2, ps, hps, hf⟩ := h
+  show decPL m' (dec m') o l = some xs
+  rw [decPL_eq_bind, decNL_agree ⟨h1, h2, ps, hps, hf⟩ hA, hps]
+  exact mapM_of_forall₂ (FA2.imp (fun _ _ hq => hq m' hA) hf)
+
+/-- `sl_cons` of a pointer decoding stably above `b` onto a slice stable above `b`, at a top from
+`b` on. -/
+theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {x ow lw : Word} {r : List Word} {y : α} (h : consW n m x ow lw = some (r, m'))
+    (hS : StageR dn vis fe m a) (hl : SPLA b dec m ow.toNat lw.toNat xs) (hbt : b ≤ iwTop m)
+    (hy : StabA b (fun m => dec m x.toNat) m y) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      SPLA b dec m' (r.headD 0).toNat (r.tail.headD 0).toNat (y :: xs) := by
+  obtain ⟨h1, h2, ps, hps, hf⟩ := hl
+  obtain ⟨hr, -, -, -, -, -⟩ := consW_decN h hS.2.2.2.1 hS.2.2.2.2.2 h2 hps
+  obtain ⟨hS', hg, hdn, htop⟩ := consW_stageN h hS h2 hps
+  refine ⟨hS', hg, .inr ?_, by omega, x.toNat :: ps, hdn,
+    FA2.cons (hy.grow (AgreeA.of_grow hg)) (FA2.imp (fun _ _ hq => hq.grow (AgreeA.of_grow hg)) hf)⟩
+  rw [hr]; exact hbt
+
+end SPLA
+
+/-- A one- or three-word record at the top decodes stably above any bound up to that top. -/
+theorem rec2RecW_decCF_A {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassField} {b : Nat}
+    (h : recW m k ws = some (r, m')) (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hk : k.toNat = ws.length) (hb : b ≤ iwTop m)
+    (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((r.headD 0).toNat + j) = some (ws[j]'hj).toNat) →
+      decCF m'' (r.headD 0).toNat = some y) :
+    StabA b (fun m => decCF m (r.headD 0).toNat) m' y := by
+  obtain ⟨hr, hget, -, -, htop, -⟩ := recW_post h hc hsz hk
+  subst hr
+  intro m'' hA
+  refine hy m'' fun j hj => ?_
+  have hlt : (rdW (m.arr64 CTL) 200).toNat + j < iwTop m' := by rw [htop]; simp [iwTop]; omega
+  simp only [List.headD_cons]
+  rw [hA.iwN (by simp only [iwTop] at hb; omega) hlt]
+  simp only [L.Ind.iwN, nat?, iwA, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
+
 /-- The post of `class_fields_of(_go)`: the stage relation, growth, the fields' kinds a stable slice,
-`nest_occ`'s memo relation at some map. -/
+`nest_occ`'s memo relation at some map, and the write set outside the other walk memos (lane
+`indproofs4`, helper `cls`: `class_ctor_of` carries `RcMR` across the call); the kinds' slice and
+records lie above the entry's top (`SPLA`, for `class_ctors_of`'s writes into its result slots). -/
 def CfoQ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (b : List Word × Mem)
     (a' : AState) (ks : List ClassField) : Prop :=
-  StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ SPL decCF b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat ks ∧
-    ∃ mp, noMR b.2 mp
+  StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧
+    SPLA (iwTop m) decCF b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat ks ∧
+    (∃ mp, noMR b.2 mp) ∧ MFr [NOM] [204, 205] m b.2
 
 /-- The common tail of both arms: the record, the rest, the cons. -/
 theorem cfgTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat} {m m2 : Mem}
     {a2 : AState} {k : Word} {ws : List Word} {y : ClassField} {mp : Std.HashMap EIdx Bool}
     {rest : Mem → Option (List Word × Mem)} {opR : AM (List ClassField)}
-    (hS2 : StageR dn vis fe m2 a2) (hg2 : IWGrow m m2) (hM2 : noMR m2 mp) (hk : k.toNat = ws.length)
+    (hS2 : StageR dn vis fe m2 a2) (hg2 : IWGrow m m2) (hM2 : noMR m2 mp) (hf2 : MFr [NOM] [204, 205] m m2)
+    (hk : k.toNat = ws.length)
     (hy : ∀ m'', (∀ j (hj : j < ws.length), iwN m'' ((rdW (m2.arr64 CTL) 200).toNat + j) = some (ws[j]'hj).toNat) →
       decCF m'' (rdW (m2.arr64 CTL) 200).toNat = some y)
     (hrest : ∀ m5, StageR dn vis fe m5 a2 → IWGrow m2 m5 → noMR m5 mp → RSim (rest m5) opR a2 (CfoQ dn vis fe m5)) :
@@ -231,19 +375,20 @@ theorem cfgTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have hsz := hS2.2.2.2.1
   obtain ⟨hr5, -, hg5, hf5, htop5, hroom5⟩ := recW_post h5 hc hsz hk
   have hS5 := stage_frame_iw hS2 hf5 (by omega)
-  have hy5 := rec2RecW_decCF h5 hc hsz hk (by rw [hr5]; exact hy)
+  have hy5 := rec2RecW_decCF_A (b := iwTop m) h5 hc hsz hk hg2.1 (by rw [hr5]; exact hy)
   rw [cfgK5_some]
   refine RSim.bind (K := cfgK7 n (r5.headD 0)) rfl (hrest m5 hS5 hg5 (rec2NoMR_iw hf5 hM2)) ?_
-  rintro ⟨r6, m6⟩ ks a6 - ⟨hS6, hg6, hsp6, mp6, hM6⟩
-  dsimp only at hS6 hg6 hsp6 hM6
+  rintro ⟨r6, m6⟩ ks a6 - ⟨hS6, hg6, hsp6, ⟨mp6, hM6⟩, hf6⟩
+  dsimp only at hS6 hg6 hsp6 hM6 hf6
   rw [cfgK7_some]
   refine RSim.lstep (K := cfgK6) rfl fun ⟨r7, m7⟩ h7 => ?_
-  obtain ⟨hS7, hg7, hsp7⟩ := SPL.cons h7 hS6 hsp6 (hy5.grow hg6)
-  obtain ⟨hsb, ps, hps, -⟩ := hsp6
+  obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hS6 (hsp6.mono (Nat.le_trans hg2.1 hg5.1))
+    (Nat.le_trans hg2.1 (Nat.le_trans hg5.1 hg6.1)) (hy5.grow (AgreeA.of_grow hg6))
+  obtain ⟨-, hsb, ps, hps, -⟩ := hsp6
   obtain ⟨-, -, -, hf7, -⟩ := consW_decN h7 hS6.2.2.2.1 hS6.2.2.2.2.2 hsb hps
   rw [cfgK6_some]
-  exact RSim.pure_some ⟨hS7, hg2.trans (hg5.trans (hg6.trans hg7)), by simpa using hsp7, mp6,
-    rec2NoMR_iw hf7 hM6⟩
+  exact RSim.pure_some ⟨hS7, hg2.trans (hg5.trans (hg6.trans hg7)), by simpa using hsp7, ⟨mp6,
+    rec2NoMR_iw hf7 hM6⟩, hf2.trans ((MFr.of_iw hf5).up.trans (hf6.trans (MFr.of_iw hf7).up))⟩
 
 theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (bsh : BlockShape)
     (ihs : List (Nat × Nat)) (n : Nat) :
@@ -267,8 +412,8 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       have := decHL_length m hfs; rw [hfl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
     subst this
     rw [ConRon.Arena.classFieldsOf]
-    exact RSim.pure_some ⟨hS, IWGrow.refl m, by simpa using SPL.nil (dec := decCF) (m := m) 0 (by omega),
-      mp0, hM⟩
+    exact RSim.pure_some ⟨hS, IWGrow.refl m,
+      (by simpa using SPLA.nil (b := iwTop m) (dec := decCF) (m := m) 0 (by omega)), ⟨mp0, hM⟩, MFr.refl _ _ _⟩
   rw [cfgW_cons (h := hfl)]
   obtain ⟨w0, fs', rfl, hw0, hw0H, hfs'⟩ := decHL_cons hfs hfl (by omega)
   subst hw0
@@ -284,9 +429,10 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hM1 := rec2NoMR_stub (by decide) h1 hM
   refine RSim.bind (K := cfgK2 n _ io il i (r1.headD 0)) rfl
     (rec2SimNestOcc hS1 hwH (by rw [decHL_grow hg1 hmb]; exact hmn) (by omega) hM1 n) ?_
-  rintro ⟨occ, m2⟩ b a2 - ⟨ha2, hob, hM2, hS2, hg2⟩
+  rintro ⟨occ, m2⟩ b a2 - ⟨ha2, hob, hM2, hS2, hg2, hf2⟩
   subst a2
-  dsimp only at hob hM2 hS2 hg2
+  dsimp only at hob hM2 hS2 hg2 hf2
+  have hf12 : MFr [NOM] [204, 205] m m2 := (MFr.stub (by decide) h1).up.trans hf2
   rw [cfgK2_some]
   have hg12 := hg1.trans hg2
   refine RSim.lstep (K := cfgK3 n _ (r1.headD 0) occ m2) rfl fun ⟨hc, cls⟩ h3 => ?_
@@ -306,7 +452,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     have hlen : (List.filter (fun h => h.1 == i.toNat) ihs).length = 0 := by rw [← hcnt, hA.2]; rfl
     subst hb
     simp only [hlen, Bool.not_false, Bool.true_and, beq_self_eq_true, if_true]
-    refine cfgTail hS2 hg12 hM2 rfl ?_ hrest
+    refine cfgTail hS2 hg12 hM2 hf12 rfl ?_ hrest
     intro m'' hw
     have := hw 0 (by simp)
     simp only [decCF]; simp at this; rw [this]; rfl
@@ -324,7 +470,7 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     dsimp only at hS4 hg4 hf4 hd4
     rw [cfgK4_some]
     have hbl : bs.length = (r4.tail.headD 0).toNat := decHL_length _ hd4
-    refine cfgTail hS4 (hg12.trans hg4) (rec2NoMR_iw hf4 hM2) rfl ?_
+    refine cfgTail hS4 (hg12.trans hg4) (rec2NoMR_iw hf4 hM2) (hf12.trans (MFr.of_iw hf4).up) rfl ?_
       (fun m5 hS5 hg5 hM5 => hrest m5 hS5 (hg4.trans hg5) hM5)
     intro m'' hw
     have h0 := hw 0 (by simp)
@@ -391,9 +537,9 @@ theorem cfoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   refine RSim.bindPure (K := cfgK6) rfl (cfgW_sim dn vis fe bsh ihs n m1 a _ _ io il i fo fl fs mp0 hS1 hd1
     (by omega) (hih.grow hg1) hib (by rw [decHL_grow hg1 hfb]; exact hfs) (Nat.le_trans hfb hg1.1) hi
     (rec2NoMR_iw hf1 hM)) ?_
-  rintro ⟨r2, m2⟩ ks a2 - ⟨hS2, hg2, hsp2, hM2⟩
+  rintro ⟨r2, m2⟩ ks a2 - ⟨hS2, hg2, hsp2, hM2, hf2⟩
   rw [cfgK6_some]
-  exact RSim.pure_some ⟨hS2, hg1.trans hg2, by simpa using hsp2, hM2⟩
+  exact RSim.pure_some ⟨hS2, hg1.trans hg2, by simpa using hsp2.mono hg1.1, hM2, (MFr.of_iw hf1).up.trans hf2⟩
 
 /-- **`class_fields_of` refines `classFieldsOf`** (through the stub `fvar_type_d`): the fields' kinds
 are a stable slice of `ClassField` records; `nest_occ`'s memo relation is needed before and holds

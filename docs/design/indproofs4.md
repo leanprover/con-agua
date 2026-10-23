@@ -97,3 +97,34 @@ Discharged (contracts deleted): `internNanonStub_spec`, `internLsIw_spec`, `name
 * Census: phase 8 95 proven / 110 sorry (from 90 / 115): `targetMajorAt`, `targetMajorDefault`,
   `BlockShape.nestCtx`, `paramLevels`, `blockRecNameSetOk` proven; phase 2 `NIdx.isProjFnShape` proven
   (`isProjFnShape_refines`).
+
+## Landing 3 (landed as `eff51a9c`, phase 8: 120 proven / 89 sorry)
+* **`checkBlockPass_refines`** (`IndInstallSpec36`): the eight callees chained by hand (as
+  `cbcW_sim`); the record by `bpRec_bpassR` (a fresh 19-word record of parts decoded below the tops
+  is `BPassR`; `bpMem = wrIW`, `recMem_post`); `CtorSums` across the formers' environment
+  (`checkBlockInds_ctorSums`: `checkBlockInds` pushes `.indInfo` only; needs the environment's rows
+  all visible, `AllVis` — an unrestricted environment, as the loop's). New hypotheses at the pass:
+  `AllVis fe`, `CtorSums fe`, `PosMR`, the posFree write set of `passCallees`.
+* Helpers `spine` (165 min, ~75 work: `get_app_fn_f`, `pi_result_f`, `mk_app_n_f`; one bundle
+  `AdF`; `get_app_args_f` open: `getAppArgs_refines'` assumes `SPN.size < 2^63`) and `names`
+  (180 min, ~75 work) merged; phase 8 to 120 / 89.
+
+## Landing 4 (in progress)
+* **`checkBlock_refines`** (`IndInstallSpec37`): names distinct (`block_shape_all_ctors` via
+  `acW_ok` for its frame, `block_caps_ctor_names` via `ctorNamesW_dec`/`_room`, member names via
+  `memberNamesW_room`, `slNodup_refines` twice), flush, `blockRawRec_refines` (the
+  `mentions_any` memo across the IW writers and the flush by `maMR_mfr`), pass, tail.
+  `ShapeCV.grow`.
+
+## Reply to the coordinator / lane loopt3: `IndArmSpec` premises (2026-10-23 ~09:30)
+(SendMessage cannot reach the coordinator from this lane; answering here.)
+* **Yes**, the stage needs `StageMemos m` and `CrOK m` as premises, and should return both in the
+  post (only the stage writes arrays 201‥208; `consts_resolve_ffast` keeps `CrOK`).
+* Also needed: **`∃ mp, MemoRG i1lSch lfKey decE m mp`** (`instantiate1_lift_fast`'s memo, array
+  51 / `CTL[52]`; not in `CoreMemos`, whose `coreIlSch` is 50/50) — premise and post.
+  `abstract1_fast`'s memo (49/48) is `CoreMemos`' `coreAbSch`: covered.
+* Two environment facts at the arm: **`AllVis fe`** (`∀ n e, fe.idx[n]? = some e → e.1 <
+  fe.visibleBelow`, an unrestricted environment; `IndInstallSpec36`) and **`CtorSums fe`**
+  (`IndPosSpec2`: every stored `ctorInfo` has `nPc + nF < 2^64`). If `FoldOK` implies them, a
+  pointer to the lemma suffices; otherwise please add them (`CtorSums` could later go away with an
+  L wrap guard in `nest_ctor_entry_strip`).
