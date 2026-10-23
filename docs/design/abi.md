@@ -116,3 +116,19 @@ e2e at this state (`--latest ''`): `check` 407 agree-accept (app-lam included), 
 `harness/main.c` also takes lane compopt2's patch: `MADV_HUGEPAGE` on each word array's slot
 except its first and last 2 MB (their measurement: c04a 3.54 → 3.32 s, page faults 201 K → 15 K,
 Init ~0.95×, small fixtures unchanged). Harness-only, no proof impact.
+
+## Proof phase: notes collected before it starts
+
+* Waits for compproofD (6-register variant: the trampoline loads ≤ 6 entry arguments into
+  `rdi r8 r9 r10 r11 rsi`; `check` has none, and the stub relies on no register across the call)
+  and lane asmfile (the final theorems over the committed `asm/checker.s` via `include_asm`, with
+  `checkerFile = checkerStub ++ compileProg …`).
+* asmfile leaves `abiStub checkerTab = checkerStub` unchecked: one kernel step overflows the kernel
+  stack (10 380 directives), a split proof costs 22 s / 4.5 GB, nearly all of it evaluating the 4 646
+  ROM words (`romWordList`). Options: prove the stub's behaviour directly about the literal
+  `checkerStub`, or make the ROM words a literal word list in the table literal (as slowmods'
+  `romDataLit`) so the equation is cheap. asmfile's split-proof code is in its journal.
+* The proof itself: the stub's run (an induction over its list of stores) ends at `ca_enter` with
+  `rdi = base`, `rsi = 2^62 - 1` and memory satisfying `Layout.Ok`/`MemRel` for the partition
+  layout; then `compile_correct`. New premises: the buffers hold `b`/`pb`; `[base, base + base_len)`
+  is mapped, zero, disjoint from both buffers and from the machine stack; the return address.
