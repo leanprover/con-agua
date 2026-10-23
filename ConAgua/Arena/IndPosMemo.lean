@@ -177,6 +177,26 @@ macro_rules
 
 theorem MFr.ofStub {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
     (hf : f ∈ stubNames := by decide) : MFr [] [] m m' := MFr.stub hf h
+/-- Across `fvar_b` (its write set, the `fvarRange` memo). -/
+theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (fvbF_frame h)
+    (fun b hb => .inl (by simp only [frA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+    (fun x hx => .inl (by simp only [frC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
+/-- Across `has_fvar_fast`. -/
+theorem MFr.ofHffF {m m' : Mem} {args r : List Word} (h : hffF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (hffF_frame h)
+    (fun b hb => .inl (by simp only [frA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+    (fun x hx => .inl (by simp only [frC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
+/-- Across `bvar_b` (its write set, the `bvarB` memo). -/
+theorem MFr.ofBvbF {m m' : Mem} {args r : List Word} (h : bvbF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (bvbF_frame h)
+    (fun b hb => .inl (by simp only [walkA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+    (fun x hx => .inl (by simp only [walkC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
+/-- Across `loose_bvars_bounded_fast`. -/
+theorem MFr.ofLbbF {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (lbbF_frame h)
+    (fun b hb => .inl (by simp only [walkA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+    (fun x hx => .inl (by simp only [walkC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 /-- Across `strip_pis`/`strip_lams` (their write set, `stripF_frame`). -/
 theorem MFr.ofStripF {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg m args = some (r, m')) :
     MFr [] [] m m' := MFr.of_iw (stripF_frame h)
@@ -239,7 +259,7 @@ theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word)
   | 0, _, _, _, _, _, _, h => by simp [dcGoW] at h
   | n + 1, m, m', hi, off, l, r, h => by
     unfold dcGoW dcK at h
-    mfr_auto h [MFr.ofStub, MFr.ofI1F, dcGoW_mfr n _ _ _ _ _ _]
+    mfr_auto h [MFr.ofFvbF, dcGoW_mfr n _ _ _ _ _ _]
 
 theorem dcWf_mfr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
     MFr [] [] m m' := by

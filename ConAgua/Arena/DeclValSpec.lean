@@ -15,6 +15,8 @@ word models with the core's stubs (`stubM`), `install_header`'s and `install_val
 the core (`infer_type_core`, `ensure_sort_core`, `is_def_eq_core`), the walks and `lvl_eq_c`.
 -/
 
+noncomputable section
+
 open ConRon.Arena
 open Std.WP
 open scoped Lean.Order

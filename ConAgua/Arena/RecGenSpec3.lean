@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpecH
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.DeclHeader
 
 /-!
@@ -115,23 +116,23 @@ theorem ccoGuards (mode : ConLeche.CheckMode) {dn : NIdx → Option ConLeche.Nam
     · simp [hn]
     · simp [hn] at hd; exact absurd hd hb5
   -- the four walks, as in `ivgW_ok`
-  cases h6 : stubM "loose_bvars_bounded_fast" m4 [4000000000, 0, wt] with
+  cases h6 : lbbF m4 [4000000000, 0, wt] with
   | none => rw [h6] at h; simp [L.Arena.ihK6] at h
   | some rm6 =>
   obtain ⟨r6, m6⟩ := rm6
   rw [h6, L.Arena.ihK6_some] at h
   obtain ⟨x6, a6, hrun6, hS6, hg6, hx6, -⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 wt hwtl m4 m6 a3 r6 h6 hS4
+    lbbF_ok dn vis fe 4000000000 0 wt hwtl m4 m6 a3 r6 h6 hS4
   by_cases hb6 : r6.headD 0 = 0
   · rw [if_pos hb6] at h; simp at h
   rw [if_neg hb6] at h
-  cases h7 : stubM "has_fvar_fast" m6 [4000000000, wt] with
+  cases h7 : hffF m6 [4000000000, wt] with
   | none => rw [h7] at h; simp [L.Arena.ihK7] at h
   | some rm7 =>
   obtain ⟨r7, m7⟩ := rm7
   rw [h7, L.Arena.ihK7_some] at h
   obtain ⟨x7, a7, hrun7, hS7, hg7, hx7, -⟩ :=
-    hasFvarFast_spec dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
+    hffF_ok dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
   by_cases hb7 : r7.headD 0 ≠ 0
   · rw [if_pos hb7] at h; simp at h
   rw [if_neg hb7, hr4t] at h
@@ -229,7 +230,7 @@ theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
         envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
         L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
         stubM_spec p "is_proj_fn_shape" n,
-        stubM_spec p "loose_bvars_bounded_fast" n, stubM_spec p "has_fvar_fast" n,
+        lbbF_spec p h.bvb n, hffF_spec p h.hf n,
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
 

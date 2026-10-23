@@ -26,15 +26,6 @@ theorem constsResolveFFastT_spec (e : Word) (he : H e) :
     RelAM "consts_resolve_ffast" [vis, e] (StageT dn vis fe)
       (constsResolveFFast fe (decI e)) (KeepPostT dn vis fe decW0B) := sorry
 
-/-- `has_fvar_fast(fuel, e)` under `StageT`. -/
-theorem hasFvarFastT_spec (f e : Word) (he : H e) :
-    RelAM "has_fvar_fast" [f, e] (StageT dn vis fe)
-      (hasFvarFast f.toNat (decI e)) (KeepPostT dn vis fe decW0B) := sorry
-
-/-- `loose_bvars_bounded_fast(fuel, k, e)` under `StageT`. -/
-theorem looseBVarsBoundedFastT_spec (f k e : Word) (he : H e) :
-    RelAM "loose_bvars_bounded_fast" [f, k, e] (StageT dn vis fe)
-      (looseBVarsBoundedFast f.toNat k.toNat (decI e)) (KeepPostT dn vis fe decW0B) := sorry
 
 /-- `all_level_params_defined(lps.off, lps.len, e)` under `StageT`. -/
 theorem allLevelParamsDefinedT_spec (o l e : Word) (he : H e) (lps : List NIdx) :
