@@ -142,21 +142,21 @@ def nbContK4 (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) :
   | some (r4, m4) =>
     if aL ≠ nPc + r4.headD 0 then none
     else nbAppK6 (keyF m4 vis ctx fu po pl kb nn us aO nPc nPc (r4.tail.headD 0) ns)
-def nbContK3 (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) :
+def nbContK3 (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (key, m3) => nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (nitWf k m3 vis ctx hp key)
-def nbContK2 (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) :
+  | some (key, m3) => nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (nitWf cR k m3 vis ctx hp key)
+def nbContK2 (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m2) => nbContK3 k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (posRecW m2 [nn, us, aO, nPc])
-def nbContK1 (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns : Word) :
+  | some (_, m2) => nbContK3 cR k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (posRecW m2 [nn, us, aO, nPc])
+def nbContK1 (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then none
     else if aL < r.tail.headD 0 then none
-    else nbContK2 k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
+    else nbContK2 cR k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
       (p2ccW k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0))
 
 def nbKeyK2 (k : Nat) (newF : MW13) (vis ctx fu po pl kb nn us dO dL nPc cty ns key : Word) :
@@ -203,24 +203,24 @@ def nbNewK5 (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL hw : 
   | none => none
   | some (rg, m5) => nbNewK6 k frameF vis ctx fu kb us dO dL nPc ns wO wL hw (rg.headD 0) (rg.tail.headD 0)
       (caW k m5 us dO dL (rg.headD 0) (rg.tail.headD 0) 0 0)
-def nbNewK4 (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) :
+def nbNewK4 (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (g0, m4) => nbNewK5 k frameF vis ctx fu kb us dO dL nPc ns wO wL hw
-      (ggW k m4 vis ctx hw us dO dL mO mL (g0.headD 0) (g0.tail.headD 0))
-def nbNewK3 (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) :
+      (ggW cR k m4 vis ctx hw us dO dL mO mL (g0.headD 0) (g0.tail.headD 0))
+def nbNewK3 (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (pr, m3) => nbNewK4 k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (new1W m3 pr)
-def nbNewK2 (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns wO wL : Word) :
+  | some (pr, m3) => nbNewK4 cR k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (new1W m3 pr)
+def nbNewK2 (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns wO wL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rm, m2) => nbNewK3 k frameF vis ctx fu kb us dO dL nPc ns wO wL (rm.headD 0) (rm.tail.headD 0)
+  | some (rm, m2) => nbNewK3 cR k frameF vis ctx fu kb us dO dL nPc ns wO wL (rm.headD 0) (rm.tail.headD 0)
       (nhiW m2 ctx wL) (posRecW m2 [nn, cty])
-def nbNewK1 (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns : Word) :
+def nbNewK1 (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rw, m1) => nbNewK2 k frameF vis ctx fu kb nn us dO dL nPc cty ns (rw.headD 0) (rw.tail.headD 0)
+  | some (rw, m1) => nbNewK2 cR k frameF vis ctx fu kb nn us dO dL nPc cty ns (rw.headD 0) (rw.tail.headD 0)
       (nfmW k m1 vis nn)
 
 def nbFrameK8 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -381,7 +381,7 @@ def nbAppW (cR : CallM) : Nat → MW9
 def nbContW (cR : CallM) : Nat → MW11
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, kb, nn, us, aO, aL, ns =>
-    nbContK1 k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn)
+    nbContK1 cR k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn)
 /-- `nest_cont_key(vis, ctx, fuel, progOff, progLen, kb, n, us, dsOff, dsLen, nPc, cty, ns)`. -/
 def nbKeyW (cR : CallM) : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -391,7 +391,7 @@ def nbKeyW (cR : CallM) : Nat → MW13
 def nbNewW (cR : CallM) : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns =>
-    nbNewK1 k (nbFrameW cR k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl)
+    nbNewK1 cR k (nbFrameW cR k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl)
 /-- `nest_frame(vis, ctx, fuel, progOff, progLen, hi, us, dsOff, dsLen, nPc, grpOff, grpLen, ns)`. -/
 def nbFrameW (cR : CallM) : Nat → MW13
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -493,15 +493,15 @@ theorem nbContK4_some (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Wo
     nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (some (r4, m4)) =
     if aL ≠ nPc + r4.headD 0 then none
     else nbAppK6 (keyF m4 vis ctx fu po pl kb nn us aO nPc nPc (r4.tail.headD 0) ns) := rfl
-theorem nbContK3_some (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) (key : Word) (m3 : Mem) :
-    nbContK3 k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (some (key, m3)) = nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (nitWf k m3 vis ctx hp key) := rfl
-theorem nbContK2_some (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) (w_ : List Word) (m2 : Mem) :
-    nbContK2 k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (some (w_, m2)) = nbContK3 k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (posRecW m2 [nn, us, aO, nPc]) := rfl
-theorem nbContK1_some (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns : Word) (r : List Word) (m1 : Mem) :
-    nbContK1 k keyF vis ctx fu po pl kb nn us aO aL ns (some (r, m1)) =
+theorem nbContK3_some (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) (key : Word) (m3 : Mem) :
+    nbContK3 cR k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (some (key, m3)) = nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (nitWf cR k m3 vis ctx hp key) := rfl
+theorem nbContK2_some (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc hp : Word) (w_ : List Word) (m2 : Mem) :
+    nbContK2 cR k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (some (w_, m2)) = nbContK3 cR k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (posRecW m2 [nn, us, aO, nPc]) := rfl
+theorem nbContK1_some (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns : Word) (r : List Word) (m1 : Mem) :
+    nbContK1 cR k keyF vis ctx fu po pl kb nn us aO aL ns (some (r, m1)) =
     if r.headD 0 = 0 then none
     else if aL < r.tail.headD 0 then none
-    else nbContK2 k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
+    else nbContK2 cR k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
       (p2ccW k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0)) := rfl
 theorem nbKeyK2_some (k : Nat) (newF : MW13) (vis ctx fu po pl kb nn us dO dL nPc cty ns key : Word) (r : List Word) (m2 : Mem) :
     nbKeyK2 k newF vis ctx fu po pl kb nn us dO dL nPc cty ns key (some (r, m2)) =
@@ -533,16 +533,16 @@ theorem nbNewK6_some (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO
 theorem nbNewK5_some (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL hw : Word) (rg : List Word) (m5 : Mem) :
     nbNewK5 k frameF vis ctx fu kb us dO dL nPc ns wO wL hw (some (rg, m5)) = nbNewK6 k frameF vis ctx fu kb us dO dL nPc ns wO wL hw (rg.headD 0) (rg.tail.headD 0)
       (caW k m5 us dO dL (rg.headD 0) (rg.tail.headD 0) 0 0) := rfl
-theorem nbNewK4_some (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) (g0 : List Word) (m4 : Mem) :
-    nbNewK4 k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (some (g0, m4)) = nbNewK5 k frameF vis ctx fu kb us dO dL nPc ns wO wL hw
-      (ggW k m4 vis ctx hw us dO dL mO mL (g0.headD 0) (g0.tail.headD 0)) := rfl
-theorem nbNewK3_some (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) (pr : Word) (m3 : Mem) :
-    nbNewK3 k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (some (pr, m3)) = nbNewK4 k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (new1W m3 pr) := rfl
-theorem nbNewK2_some (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns wO wL : Word) (rm : List Word) (m2 : Mem) :
-    nbNewK2 k frameF vis ctx fu kb nn us dO dL nPc cty ns wO wL (some (rm, m2)) = nbNewK3 k frameF vis ctx fu kb us dO dL nPc ns wO wL (rm.headD 0) (rm.tail.headD 0)
+theorem nbNewK4_some (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) (g0 : List Word) (m4 : Mem) :
+    nbNewK4 cR k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (some (g0, m4)) = nbNewK5 k frameF vis ctx fu kb us dO dL nPc ns wO wL hw
+      (ggW cR k m4 vis ctx hw us dO dL mO mL (g0.headD 0) (g0.tail.headD 0)) := rfl
+theorem nbNewK3_some (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb us dO dL nPc ns wO wL mO mL hw : Word) (pr : Word) (m3 : Mem) :
+    nbNewK3 cR k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (some (pr, m3)) = nbNewK4 cR k frameF vis ctx fu kb us dO dL nPc ns wO wL mO mL hw (new1W m3 pr) := rfl
+theorem nbNewK2_some (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns wO wL : Word) (rm : List Word) (m2 : Mem) :
+    nbNewK2 cR k frameF vis ctx fu kb nn us dO dL nPc cty ns wO wL (some (rm, m2)) = nbNewK3 cR k frameF vis ctx fu kb us dO dL nPc ns wO wL (rm.headD 0) (rm.tail.headD 0)
       (nhiW m2 ctx wL) (posRecW m2 [nn, cty]) := rfl
-theorem nbNewK1_some (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns : Word) (rw : List Word) (m1 : Mem) :
-    nbNewK1 k frameF vis ctx fu kb nn us dO dL nPc cty ns (some (rw, m1)) = nbNewK2 k frameF vis ctx fu kb nn us dO dL nPc cty ns (rw.headD 0) (rw.tail.headD 0)
+theorem nbNewK1_some (cR : CallM) (k : Nat) (frameF : MW13) (vis ctx fu kb nn us dO dL nPc cty ns : Word) (rw : List Word) (m1 : Mem) :
+    nbNewK1 cR k frameF vis ctx fu kb nn us dO dL nPc cty ns (some (rw, m1)) = nbNewK2 cR k frameF vis ctx fu kb nn us dO dL nPc cty ns (rw.headD 0) (rw.tail.headD 0)
       (nfmW k m1 vis nn) := rfl
 theorem nbFrameK8_some (r : List Word) (m8 : Mem) :
     nbFrameK8 (some (r, m8)) = some ([r.tail.tail.headD 0], m8) := rfl
@@ -644,13 +644,13 @@ theorem nbAppW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl kb hi w n
     nbAppW cR (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
   rw [nbAppW]
 theorem nbContW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us aO aL ns : Word) :
-    nbContW cR (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by
+    nbContW cR (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 cR k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by
   rw [nbContW]
 theorem nbKeyW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
     nbKeyW cR (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbKeyK1 k (nbNewW cR k) vis ctx fu po pl kb nn us dO dL nPc cty ns (posRecW m [nn, us, dO, dL]) := by
   rw [nbKeyW]
 theorem nbNewW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
-    nbNewW cR (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbNewK1 k (nbFrameW cR k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl) := by
+    nbNewW cR (k + 1) m vis ctx fu po pl kb nn us dO dL nPc cty ns = nbNewK1 cR k (nbFrameW cR k) vis ctx fu kb nn us dO dL nPc cty ns (nwsWf k m ctx dO dL po pl) := by
   rw [nbNewW]
 theorem nbFrameW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     nbFrameW cR (k + 1) m vis ctx fu po pl hi us dO dL nPc gO gL ns =

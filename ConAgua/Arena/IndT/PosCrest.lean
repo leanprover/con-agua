@@ -101,7 +101,7 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   obtain ⟨r2, m2⟩ := pr2
   rw [hil, p2ctK2_some] at h
   obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
-    IlpRd.realC hIlpf hC CWF _ _ _ _ cvv.levelParams m1 m2 a r2 hus hwtH ⟨rfl, cvLpsA_iwFr hlp⟩ hS1 hdec1 hil
+    IlpRd.realC hIlpf hC k CWF _ _ _ _ cvv.levelParams m1 m2 a r2 hus hwtH ⟨rfl, cvLpsA_iwFr hlp⟩ hS1 hdec1 hil
   rw [CWF_eq, ← hwtd] at hrun1
   have hA2 : AbsOK m2 := hAF2 hA1
   obtain ⟨c1, hctyP⟩ := ConRon.Bridge.Inductives.instLPFast_cstep hC.check hcvl hpre.hus hcvt hrun1

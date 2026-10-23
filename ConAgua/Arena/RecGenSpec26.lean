@@ -450,7 +450,7 @@ theorem decB_decPL_bound {α : Type} {f : Mem → Nat → Option α} {m : Mem} {
   omega
 
 /-- `target_ctor_at` writes no walk memo. -/
-theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR n) {m m' : Mem} {M c : Word} {r : List Word}
+theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR) {m m' : Mem} {M c : Word} {r : List Word}
     (h : tcW cR n m M c = some (r, m')) : MFr [] [] m m' := by
   simp only [tcW] at h
   split at h
@@ -470,7 +470,7 @@ theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR n) {m m' : Mem} {M c : Wor
   rw [h2] at h
   simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
-  obtain ⟨A, C, hA, hC, hfr⟩ := hF _ _ _ _ h2
+  obtain ⟨A, C, hA, hC, hfr⟩ := hF _ _ _ _ _ h2
   exact MFr.of_frame hfr hA hC
 
 /-- `inst_pis_with` with its arguments a slice below the top unless empty. -/

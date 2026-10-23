@@ -1103,7 +1103,7 @@ theorem targetCtorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m m' : Mem)
     (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word) (cR : CallM)
-    (hI : IlpRd cR n dn vis fe (IlpBase m a)) (hS : StageR dn vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
+    (hI : IlpRd cR dn vis fe (IlpBase m a)) (hS : StageR dn vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
     (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
     (hlpb : (rdW (m.arr64 EREC) (c + 2)).toNat = 0 ∨
       (rdW (m.arr64 EREC) (c + 1)).toNat + (rdW (m.arr64 EREC) (c + 2)).toNat ≤ (m.arr64 EREC).size)
@@ -1154,7 +1154,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨x, a2, hrun, ⟨hS2, hg2, hd1, hd2⟩, -, hA2⟩ :=
-          hI CWF (r1.headD 0) (r1.tail.headD 0) wl wt cv.levelParams m1 m2 a r2 hwl2 hwtlt
+          hI n CWF (r1.headD 0) (r1.tail.headD 0) wl wt cv.levelParams m1 m2 a r2 hwl2 hwtlt
             ⟨rfl, erToIwW_iwFr hcl⟩ hS1 hdec1 hi
         refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hd1, by simpa using hd2,
           (erToIwW_afr hcl).trans hA2⟩

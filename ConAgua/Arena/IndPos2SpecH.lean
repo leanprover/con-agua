@@ -145,14 +145,14 @@ def ntyK6 : Option (List Word × Mem) → Option (List Word × Mem)
 def ntyK5 (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) => ntyK6 (instW k m5 (rdW (m5.arr64 IW) (key + 2)) (rdW (m5.arr64 IW) (key + 3)) (r5.headD 0))
-def ntyK4 (k : Nat) (key cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ntyK4 (cR : CallM) (k : Nat) (key cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => ntyK5 k key (stubM "inst_lp_fast" m4 [CWF, r4.headD 0, r4.tail.headD 0,
-      rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)])
-def ntyK3 (k : Nat) (key cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (r4, m4) => ntyK5 k key (cR k "inst_lp_fast" [CWF, r4.headD 0, r4.tail.headD 0,
+      rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)] m4)
+def ntyK3 (cR : CallM) (k : Nat) (key cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => if r3.headD 0 = 0 then none else ntyK4 k key cvC (cvLpsW k m3 cvC)
-def ntyK1 (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (r3, m3) => if r3.headD 0 = 0 then none else ntyK4 cR k key cvC (cvLpsW k m3 cvC)
+def ntyK1 (cR : CallM) (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then none
@@ -160,31 +160,32 @@ def ntyK1 (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Wo
     else if lsNodeW m1 (rdW (m1.arr64 IW) (key + 1)) = [] then none
     else if (lsNodeW m1 (rdW (m1.arr64 IW) (key + 1))).tail.headD 0 ≠
         rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 2) then none
-    else ntyK3 k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
+    else ntyK3 cR k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
       rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 3)])
-/-- The model of `nest_inst_type_ty(vis, key)` at exec fuel `k + 1`. -/
-def ntyW (k : Nat) (m : Mem) (vis key : Word) : Option (List Word × Mem) :=
-  ntyK1 k key (envFindW m (rdW (m.arr64 IW) key) vis)
+/-- The model of `nest_inst_type_ty(vis, key)` at exec fuel `k + 1` (its `inst_lp_fast` read through
+`cR`). -/
+def ntyW (cR : CallM) (k : Nat) (m : Mem) (vis key : Word) : Option (List Word × Mem) :=
+  ntyK1 cR k key (envFindW m (rdW (m.arr64 IW) key) vis)
 
 section arms
-variable (k : Nat) (m1 m3 m4 m5 m6 : Mem) (key cvC : Word) (r r3 r4 r5 r6 : List Word)
+variable (cR : CallM) (k : Nat) (m1 m3 m4 m5 m6 : Mem) (key cvC : Word) (r r3 r4 r5 r6 : List Word)
 theorem ntyK6_none (h : r6.headD 0 = 0) : ntyK6 (some (r6, m6)) = none := by rw [ntyK6, if_pos h]
 theorem ntyK6_some (h : ¬ r6.headD 0 = 0) : ntyK6 (some (r6, m6)) = some ([r6.tail.headD 0], m6) := by
   rw [ntyK6, if_neg h]
 theorem ntyK5_some : ntyK5 k key (some (r5, m5)) =
     ntyK6 (instW k m5 (rdW (m5.arr64 IW) (key + 2)) (rdW (m5.arr64 IW) (key + 3)) (r5.headD 0)) := rfl
-theorem ntyK4_some : ntyK4 k key cvC (some (r4, m4)) = ntyK5 k key (stubM "inst_lp_fast" m4 [CWF, r4.headD 0,
-    r4.tail.headD 0, rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)]) := rfl
-theorem ntyK3_none (h : r3.headD 0 = 0) : ntyK3 k key cvC (some (r3, m3)) = none := by rw [ntyK3, if_pos h]
-theorem ntyK3_some (h : ¬ r3.headD 0 = 0) : ntyK3 k key cvC (some (r3, m3)) = ntyK4 k key cvC (cvLpsW k m3 cvC) := by
+theorem ntyK4_some : ntyK4 cR k key cvC (some (r4, m4)) = ntyK5 k key (cR k "inst_lp_fast" [CWF, r4.headD 0,
+    r4.tail.headD 0, rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)] m4) := rfl
+theorem ntyK3_none (h : r3.headD 0 = 0) : ntyK3 cR k key cvC (some (r3, m3)) = none := by rw [ntyK3, if_pos h]
+theorem ntyK3_some (h : ¬ r3.headD 0 = 0) : ntyK3 cR k key cvC (some (r3, m3)) = ntyK4 cR k key cvC (cvLpsW k m3 cvC) := by
   rw [ntyK3, if_neg h]
-theorem ntyK1_eq (r : List Word) (m1 : Mem) : ntyK1 k key (some (r, m1)) =
+theorem ntyK1_eq (r : List Word) (m1 : Mem) : ntyK1 cR k key (some (r, m1)) =
     if r.headD 0 = 0 then none
     else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then none
     else if lsNodeW m1 (rdW (m1.arr64 IW) (key + 1)) = [] then none
     else if (lsNodeW m1 (rdW (m1.arr64 IW) (key + 1))).tail.headD 0 ≠
         rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 2) then none
-    else ntyK3 k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
+    else ntyK3 cR k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
       rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 3)]) := rfl
 end arms
 attribute [ind_grind] ntyK6_none ntyK6_some ntyK5_some ntyK4_some ntyK3_none ntyK3_some ntyK1_eq
@@ -206,30 +207,32 @@ structure NtyLook (p : Prog) : Prop where
   hp : p.lookup "nest_inst_type_ty" = some nestInstTypeTyL
   hst : StripProg p
 
-theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (k : Nat) (s₀ : St) (vis key : Word) :
+theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
+    (vis key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type_ty" [vis, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ ntyW k s₀.mem vis key = some ([r.headD 0], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ntyW cR k s₀.mem vis key = some ([r.headD 0], s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hl.hp]
   simp only [callFn, nestInstTypeTyL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, viewLsLen_specE p hl.hls hl.hvl k,
       stripPis_specF p hl.hst k, cvLps_spec p hl.ha hl.hc hl.he hl.hcv k,
-      stubM_spec p "inst_lp_fast" k, instPisWith_spec p hl.hv hl.hip hl.hi1 k] <;>
+      hcR k "inst_lp_fast", instPisWith_spec p hl.hv hl.hip hl.hi1 k] <;>
     finish (gen := 20) [ntyW, rdW_eq, Locals.init_cons_zero]
 
 
 /-- `nest_inst_type_ty` at any exec fuel. -/
-def ntyWf : Nat → Mem → Word → Word → Option (List Word × Mem)
+def ntyWf (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | k + 1, m, vis, key => ntyW k m vis key
+  | k + 1, m, vis, key => ntyW cR k m vis key
 
-theorem nestInstTypeTy_spec' (p : Prog) (hl : NtyLook p) (k : Nat) (s₀ : St) (vis key : Word) :
+theorem nestInstTypeTy_spec' (p : Prog) (hl : NtyLook p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
+    (vis key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_inst_type_ty" [vis, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ ntyWf k s₀.mem vis key = some ([r.headD 0], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ntyWf cR k s₀.mem vis key = some ([r.headD 0], s'.mem); ⊤⦄ := by
   cases k with
   | zero => exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | succ k => exact nestInstTypeTy_spec p hl k s₀ vis key
+  | succ k => exact nestInstTypeTy_spec p hl cR hcR k s₀ vis key
 
 def nitK5 (ty : Word) (rs : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -250,8 +253,8 @@ def nitK1 (k : Nat) (ctx hi : Word) : Option (List Word × Mem) → Option (List
   | none => none
   | some (r1, m1) => nitK2 k ctx hi (r1.headD 0) (piBW k m1 CWF (r1.headD 0))
 /-- The model of `nest_inst_type(vis, ctx, hi, key)` at exec fuel `k + 1`. -/
-def nitW (k : Nat) (m : Mem) (vis ctx hi key : Word) : Option (List Word × Mem) :=
-  nitK1 k ctx hi (ntyWf k m vis key)
+def nitW (cR : CallM) (k : Nat) (m : Mem) (vis ctx hi key : Word) : Option (List Word × Mem) :=
+  nitK1 k ctx hi (ntyWf cR k m vis key)
 
 section arms
 variable (k : Nat) (m1 m2 m4 m5 : Mem) (ctx hi ty : Word) (r1 rs r4 r5 v : List Word)
@@ -282,14 +285,15 @@ structure NitLook (p : Prog) : Prop where
   hlf : p.lookup "lvl_eq_fueled" = some lvlEqFueled
   hp : p.lookup "nest_inst_type" = some nestInstTypeL
 
-theorem nestInstType_spec (p : Prog) (hl : NitLook p) (k : Nat) (s₀ : St) (vis ctx hi key : Word) :
+theorem nestInstType_spec (p : Prog) (hl : NitLook p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
+    (vis ctx hi key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ nitW k s₀.mem vis ctx hi key = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ nitW cR k s₀.mem vis ctx hi key = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hl.hp]
   simp only [callFn, nestInstTypeL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      nestInstTypeTy_spec' p hl.ty k, piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k,
+      nestInstTypeTy_spec' p hl.ty cR hcR k, piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k,
       eView_spec p hl.ty.hv k, nestOccAny_spec p hl.no hl.hoa k, lvlEqFueled_spec p hl.hlf k] <;>
     finish (gen := 20) [nitW, rdW_eq, Locals.init_cons_zero, List.getD_cons_zero, List.getD_cons_succ]
 

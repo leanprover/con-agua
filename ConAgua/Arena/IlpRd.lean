@@ -6,7 +6,7 @@ import ConAgua.Arena.IndCopy2
 # How a model's `inst_lp_fast` call is read (lane `indstaget`, helper `rcC`)
 
 A model calling `inst_lp_fast` reads the call through `cR : CallM` (`IndCallM.lean`). Its
-relational lemma (`StageR`) takes the call's contract as a hypothesis `IlpRd cR k … Pre`: at a call
+relational lemma (`StageR`) takes the call's contract as a hypothesis `IlpRd cR … Pre`: at a call
 point satisfying `Pre` (what the model's lemma knows there beyond `StageR`, e.g. `IlpBase`: the
 twin state of the lemma's start and an `IW`-only frame from its start memory), the call refines
 `instLPFast`, keeps `StageR`, writes no stage memo and keeps `AbsOK`.
@@ -28,11 +28,11 @@ def StageMemoFr (m m' : Mem) : Prop :=
   ∃ (A : List ArrId) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
     (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m'
 
-/-- **The contract of a reading of `inst_lp_fast`** at exec fuel `k`, at call points satisfying
+/-- **The contract of a reading of `inst_lp_fast`** at every exec fuel, at call points satisfying
 `Pre`. -/
-def IlpRd (cR : CallM) (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def IlpRd (cR : CallM) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (Pre : Mem → AState → Prop) : Prop :=
-  ∀ (f o l us e : Word) (ks : List NIdx) (m m' : Mem) (a : AState) (r : List Word), H us → H e →
+  ∀ (k : Nat) (f o l us e : Word) (ks : List NIdx) (m m' : Mem) (a : AState) (r : List Word), H us → H e →
     Pre m a → StageR dn vis fe m a → decHL m o.toNat l.toNat = some ks →
     cR k "inst_lp_fast" [f, o, l, us, e] m = some (r, m') →
     ∃ x a', (instLPFast f.toNat ks (decI us) (decI e)).run a = .ok (x, a') ∧
@@ -43,24 +43,24 @@ leave the twin state: the start's twin state, an `IW` frame from the start memor
 def IlpBase (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop :=
   a = a₀ ∧ MemFrame [IW] [200] m₀ m
 
-theorem IlpRd.stub {k : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {Pre : Mem → AState → Prop} : IlpRd stubCall k dn vis fe Pre := by
-  intro f o l us e ks m m' a r hu he _ hS hd h
+theorem IlpRd.stub {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {Pre : Mem → AState → Prop} : IlpRd stubCall dn vis fe Pre := by
+  intro k f o l us e ks m m' a r hu he _ hS hd h
   obtain ⟨x, a', hrun, hK⟩ := instLPFast_spec dn vis fe f o l us e hu he ks m m' a r h ⟨hS, hd⟩
   exact ⟨x, a', hrun, hK, stubM_memoFrame _ (by decide) _ _ _ _ h, stub_afr h⟩
 
 /-- **Every call of a reading of `inst_lp_fast` writes no stage memo.** -/
-def IlpFr (cR : CallM) (k : Nat) : Prop :=
-  ∀ (args : List Word) (m m' : Mem) (r : List Word), cR k "inst_lp_fast" args m = some (r, m') →
+def IlpFr (cR : CallM) : Prop :=
+  ∀ (k : Nat) (args : List Word) (m m' : Mem) (r : List Word), cR k "inst_lp_fast" args m = some (r, m') →
     StageMemoFr m m'
 
-theorem IlpFr.stub {k : Nat} : IlpFr stubCall k :=
-  fun _ _ _ _ h => stubM_memoFrame _ (by decide) _ _ _ _ h
+theorem IlpFr.stub : IlpFr stubCall :=
+  fun _ _ _ _ _ h => stubM_memoFrame _ (by decide) _ _ _ _ h
 
-theorem IlpRd.mono {cR : CallM} {k : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {Pre Pre' : Mem → AState → Prop} (h : IlpRd cR k dn vis fe Pre)
-    (hP : ∀ m a, Pre' m a → Pre m a) : IlpRd cR k dn vis fe Pre' :=
-  fun f o l us e ks m m' a r hu he hp => h f o l us e ks m m' a r hu he (hP m a hp)
+theorem IlpRd.mono {cR : CallM} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {Pre Pre' : Mem → AState → Prop} (h : IlpRd cR dn vis fe Pre)
+    (hP : ∀ m a, Pre' m a → Pre m a) : IlpRd cR dn vis fe Pre' :=
+  fun k f o l us e ks m m' a r hu he hp => h k f o l us e ks m m' a r hu he (hP m a hp)
 
 /-- `IlpBase` along a further `IW` frame. -/
 theorem IlpBase.iw {m₀ m m' : Mem} {a₀ a : AState} (h : IlpBase m₀ a₀ m a)
@@ -89,5 +89,29 @@ theorem erToIwW_iwFr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   exact (allocW_iwFrame hal).trans (erCopyW_iwFr _ _ _ _ _ _ hc)
+
+/-- `stripPis` reads the store only: a successful run leaves the twin state. -/
+theorem stripPis_st : ∀ (k : Nat) (h : EIdx) (a a' : AState) (x : Option (List EIdx × EIdx)),
+    (ConRon.Arena.stripPis k h).run a = .ok (x, a') → a' = a := by
+  intro k
+  induction k with
+  | zero => intro h a a' x hr; simp [ConRon.Arena.stripPis, StateT.run, pure, StateT.pure, Except.pure] at hr; exact hr.2.symm
+  | succ k ih =>
+    intro h a a' x hr
+    simp only [ConRon.Arena.stripPis] at hr
+    split at hr
+    · simp only [viewBind, StateT.run_bind, StateT.run_get, pure_bind, StateT.run_pure] at hr
+      split at hr
+      · simp [failDanglingE, fail, StateT.run, throwThe, MonadExceptOf.throw, StateT.lift, Functor.map, Except.map] at hr
+      · rename_i ty b _
+        cases hk : (ConRon.Arena.stripPis k b).run a with
+        | error e => rw [StateT.run_bind, hk] at hr; simp [bind, Except.bind] at hr
+        | ok q =>
+          obtain ⟨y, a1⟩ := q
+          have := ih b a a1 y hk
+          subst this
+          rw [StateT.run_bind, hk] at hr
+          cases y <;> simp [bind, Except.bind, StateT.run, pure, StateT.pure, Except.pure] at hr <;> exact hr.2.symm
+    · simp [StateT.run, pure, StateT.pure, Except.pure] at hr; exact hr.2.symm
 
 end L.Ind
