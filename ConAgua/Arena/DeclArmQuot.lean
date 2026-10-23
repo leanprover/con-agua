@@ -376,35 +376,4 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     (fun _ _ => trivial) (fun _ _ _ => trivial) h hS trivial hD hi hd hok hN hcvD
   exact ⟨fe', a', h1, h2, h3⟩
 
-/-- **`check_decl_quot` refines `checkDecl`'s `.quotDecl` arm** at the loop's relation (through the
-ROM stubs; `StateOK` of the twin state for the canonical comparison). -/
-theorem checkDeclQuot_loop' {p : Prog} (hA : ArmProg p) (hR : RecProg p) (hQ : QuotProg p)
-    (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn)
-    (ds : Array IDeclaration) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (k : ConLeche.QuotKind) (cv : IConstantVal), i.toNat < ds.size →
-      ds[i.toNat]? = some (.quotDecl k cv) → ConRon.Bridge.StateOK a₀ →
-      L.Rom.NamesDn dn a₀ L.Rom.quotNames →
-      (∃ c, ConRon.Arena.Frontend.denoteCV a₀.store cv = some c) →
-      LoopR pins dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_quot" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.quotDecl k cv)) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.quotDecl k cv)) a₀) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.quotDecl k cv)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i k cv hi hd hok hN hcvD hLR
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdq_specW p hQ.cdq hR n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_quot") (by decide) [i, vis] s₀)
-  subst hs
-  have hd' : ds[i.toNat] = .quotDecl k cv := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdqW_ok (pins := pins) hQ hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok hN hcvD
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_⟩
-  rw [hst, hres]
-  exact hLR.of_step hS' hf (IWGrow.erecPExt hg')
-
 end L.Arena

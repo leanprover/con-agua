@@ -261,33 +261,4 @@ theorem cdoW_ok {p : Prog} (hV : ValProg p) (hC : CrpProg p) {dn : NIdx → Opti
       if_false, StateT.run_pure]
     rfl
 
-/-- **`check_decl_opaque` refines `checkDecl`'s `.opaqueDecl` arm** at the loop's relation
-(through the core's, the walks' and the ROM stubs). -/
-theorem checkDeclOpaque_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
-    (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (pins : List INatOpPinSet)
-    (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (cv : IConstantVal) (v : EIdx), i.toNat < ds.size →
-      ds[i.toNat]? = some (.opaqueDecl cv v) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_opaque" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.opaqueDecl cv v)) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.opaqueDecl cv v)) a₀) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.opaqueDecl cv v)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv v hi hd hR
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (cdo_specW p hp hV.rcp hC.red.pa n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_opaque") (by decide) [i, vis] s₀)
-  subst hs
-  have hd' : ds[i.toNat] = .opaqueDecl cv v := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdoW_ok (pins := pins) hV hC hdn hW ⟨hR.check, hR.iw⟩ hR.decls hi hd'
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_⟩
-  rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
-
 end L.Arena
