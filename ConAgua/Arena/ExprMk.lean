@@ -306,7 +306,7 @@ theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some 
     rw [← apushOK_eqC] at hok
     simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
   refine ⟨t, j, ht, h, ?_, ?_⟩
-  · rw [apushMem_eqC]; exact hg
+  · rw [apushMem_eqC]; rw [pushMX_none (C := appCS) rfl] at hg; exact hg
   · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
     · rw [show appCS.P = 8 * 134217728 from rfl]; exact hw_fields _ _ h
     · rw [show appCS.S = 9 * 134217728 from rfl]; exact hw_fields _ _ h
