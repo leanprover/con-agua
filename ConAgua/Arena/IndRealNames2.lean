@@ -208,7 +208,7 @@ theorem ipfW_run {m : Mem} {a : AState} (hR : ArenaR m a) {n w : Word} (h : ipfW
   obtain ⟨hb, hle⟩ := ipfStrW_ok m _ _ s hpool.2.2.1 (by have := hpool.2.2.2; simp only [SliceOK] at hsl; omega) hk
   refine ⟨?_, hle⟩
   simp only [NIdx.isProjFnShape, htag, decide_eq_true c2', if_true, StateT.run_bind, hv1]
-  simp only [bind, Except.bind, hqt, decide_eq_true d2', if_true, StateT.run_bind, hv2]
+  simp only [bind, Except.bind, hqt, decide_eq_true d2', if_true]
   rw [hb]
   simp only [StateT.run, StateT.bind] at hv2 ⊢
   rw [hv2]; rfl
@@ -223,7 +223,7 @@ theorem ipfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   cases n' with
   | zero => exact (callW_zero_false hc').elim
   | succ n =>
-  obtain ⟨s', hs', -, -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (isProjFnShape_specW ipfProg rfl n _ x) hc'
   simp only at hm hW
   obtain ⟨hrun, hle⟩ := ipfW_run hS.1.arena.1 hW
@@ -239,7 +239,7 @@ theorem ipfF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   cases n' with
   | zero => exact (callW_zero_false hc').elim
   | succ n =>
-  obtain ⟨s', hs', -, -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (isProjFnShape_specW ipfProg rfl n _ x) hc'
   simp only at hm hW
   obtain ⟨hrun, hle⟩ := ipfW_run hT.stage.1.arena.1 hW
