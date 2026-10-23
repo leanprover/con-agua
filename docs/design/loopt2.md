@@ -190,6 +190,45 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
 * **`StageC.lean`**: `callW_leafFrame`, `StageC.of_leaf` (L stage relation after + leaf frame +
   con-ron's `IStepS` ⇒ `StageC` after), `StageC.of_T` (`StageT` after + con-ron's `CheckOK` after).
 
+## Landing 8: phase A under `StageT` (the switch, option b)
+
+* **`CheckerT.lean`** (new, above `LoopT.lean`): phase A's step and fold run their callees from
+  `StageT`. Moved here and restated (the `StageR`-only versions are gone): `installValue_loopT`
+  (`ivW_okT`, from `ivW_genT`), `istg_cd`/`istg_iv`/`istgW_ok`, `installStepGo_specT`,
+  `installStep_pieces`/`installStep_refines`, `installDeclStep_refines`, the fold
+  (`FoldGoSpec`/`FoldNextSpec`, `installFoldGo_refines`) and `installThenCheck_refines`
+  (from `Checker.lean`, `DeclStepGo.lean`); `CheckDeclSpec`/`checkDecl_loop`/`arm_callW`
+  (`DeclCheckLoop.lean`) replaced by `CheckDeclSpecT`/`checkDecl_loopT`/`arm_callWT`.
+* **What the fold carries** (`FoldGoSpec`'s hypotheses): `TwinFold`, `LoopR`, and the memory's
+  half `LoopMem` (sizes, pin flag, `dnP`) and `CoreMemos`. At `install_decl_step`'s entry
+  `TwinOK` is `TwinOK.of_check` of `TwinFold`'s `FoldOK` and the memory's half; `and_pin_ok` is a
+  leaf and leaves the twin state alone on the front's records (`andPinOk_st_one`); the bracket's
+  opening keeps `TwinOK` (`flush_loopW`, `enter_loopW`, from `TwinFold.off`: the scratch tier is
+  off at every loop head, `installStep_off`); `install_step_go` runs `check_decl`/`install_value`
+  from `StageT` and gets `CoreMemos` back; `is_none`/`is_some` are leaves (`triple_leafMemos`);
+  `LoopMem` comes back from the step's write set (`LoopClosed`, `installDeclStep_loop`) and
+  `TwinFold.step_pext`.
+* **The arms.** `ArmSpecT` (from `StageT`, `StateOK`, `FoldOK` and the record's denotation, back
+  to `LoopR` and `CoreMemos`). Theorem arm: `checkDeclThm_loopT` (`cdtW_okT`). Opaque arm:
+  `checkDeclOpaque_loopT` (helper `loopt2-crp`'s `cdoW_okT`, `DeclCrpT.lean`: `check_reduce_pin`
+  under `StageC`, `crpW_okT`; the twin side carried by con-ron's `FoldOK` across the push,
+  `checkConstantVal_bridge_of_fold`). Axiom, definition
+  and quotient arms: their `StageR` specs (`ArmSpec`) and the interim contract
+  **`stubArm_keepsCoreMemos`** (`sorry`; the census lists it among the sorry sources): those arms,
+  run from `StageT` on their record, keep `CoreMemos`. Their `StageC` versions replace it
+  (option a).
+* **Fuel.** The core's `StageT` sims need `n ≤ 2^62`; the specs from `check_decl` up take it
+  (`PipelineRefines` has `N < 2^62`).
+* `LoopCallees dn p` (`DeclCallees` with `KnotStageProg`, `LeafClosed`, `LoopClosed`).
+* **`CrOK` in `LoopT`** (coordinator's request for lanes `stubs`/`tails`/`indproofs4`):
+  `consts_resolve_ffast`'s walk memo (`CRM`, `CTL[158]`) well formed, a field of `LoopT` beside
+  `StageMemos`; `CrOK.frame`, `CrOK.zero`; `coreLoopA`/`coreLoopC` exclude `CRM`/`CTL[158]`
+  (the core does not write them; `Checker/LoopCore.lean` re-decided).
+* `loopFns` membership by index (`installDeclStep_loop`, `checkOpaqueVal_loop`): a regenerated
+  `loopFns` moves the index (fix the number).
+* Master's `lakefile.toml` had lost `DeclArmT`, `LeafFns`, `Checker.LeafAll`, `StageC` in a merge;
+  restored.
+
 ## `PipelineRefines checkerProg`: remaining obligations (as far as lane `loopt2` sees them)
 
 `checker_x64_accepts` (`Final/Statement.lean`) holds for any program with `PipelineRefines p`; the
@@ -205,11 +244,11 @@ proves `PipelineRefines checkerProg` yet. Between the per-function refinements a
 | 5 | `prepare_prelude` refines `preparePrelude` (with the declined hoist) | `Checker/Prelude.lean` | integrate | no refinement theorem found |
 | 6 | `intern_all_pins` refines `internAllPins` at the decoded pin list | `Rom/Stage.lean`, `Arena/RomCI.lean` (`refines_part`) | romload | partial |
 | 7 | Front → loop handoff: the front's `DeclsF` (inductive records included) to the loop's relation; `LoopR` carries `DeclsR` (one-constant kinds only) | `Front/StateDR.lean`, `Arena/Checker.lean` | **loopt2** | open: `LoopR` over `DeclsF` (or a relation between them) |
-| 8 | The loop's start: `LoopR`, decls4's `TwinFold` (`Final/Twin.lean` `stages_frame` gives the twin half), `LoopMem` (sizes, pin flag, `dn` the startup store's `denoteN`, all persistent), `CoreMemos` (`CoreMemos.zero` on the loaded memory), `∃ k, dn k = some u` for the quotient arm (`NamesDn`) | `Arena/Checker.lean`, `Arena/LoopT.lean` | **loopt2** | open (pieces: `CoreMemos.zero`, `LoopMem`, `TwinOK.of_check`) |
-| 9 | Phase A: `installFold` refines (`installFoldGo_refines`, `Arena/Checker.lean`) — from the stub specs of the core (`stubM`), the walks, the ROM readers' quotient precondition (`DeclCheckLoop.lean`'s two `sorry`s) | `Arena/Checker.lean`, `DeclCheckLoop.lean` | **loopt2** | the `StageT` switch in progress (landings 3–7; arms: theorem done, opaque by helper `loopt2-crp`, axiom/quot/defn through `stubArm_keepsCoreMemos` first, then their `StageC` versions) |
+| 8 | The loop's start: `installThenCheck_refines`' hypotheses (`Arena/CheckerT.lean`): `LoopR`, decls4's `TwinFold` (now with `off`: the scratch tier off; `Final/Twin.lean` `stages_frame` gives the twin half), `LoopMem` (sizes, pin flag, `dn` the startup store's `denoteN`, all persistent), `CoreMemos` (`CoreMemos.zero` on the loaded memory), fuel `n ≤ 2^62`; later `∃ k, dn k = some u` for the quotient arm (`NamesDn`), `StageMemos`/`CrOK` (`.zero`) when the stage's arms need `LoopT` | `Arena/CheckerT.lean`, `Arena/LoopT.lean` | **loopt2** | open (pieces: `CoreMemos.zero`, `StageMemos.zero`, `CrOK.zero`, `LoopMem`, `TwinOK.of_check`) |
+| 9 | Phase A: `installFold` refines (`installFoldGo_refines`, `Arena/CheckerT.lean`) under `StageT` — through the walks' contracts, the ROM readers' quotient precondition (`DeclCheckLoop.lean`'s two `sorry`s), and `stubArm_keepsCoreMemos` for the axiom, definition and quotient arms | `Arena/CheckerT.lean`, `DeclCheckLoop.lean` | **loopt2** | switched (landing 8; theorem and opaque arms under `StageT`); next: the three arms' `StageC` versions (option a) |
 | 10 | The inductive arm (kind 6: `ind_block_to_erec` + `check_ind_decl` against `checkDecl`'s `.indDecl` case) | `Arena/DeclCheckLoop.lean` (dispatcher), `Ind*` | indproofs3 (spec), **loopt2** (plug in) | open |
 | 11 | The inductive install step's twin (`TwinFold`/`stepCI`/`erecCiW_ok` for an inductive block; con-ron's `installStep`) | `Arena/DeclTwin.lean`, `DeclRec.lean` | **loopt2** | open |
 | 12 | Phase B: `checkPendingList` refines (`checkPendingGo_refines`) — `check_value_group` through stubs (`cvgW_okT` ready; needs `StageT` in phase B) | `Arena/Checker.lean` | **loopt2** | open |
 | 12a | Phase B on the twin's worker: lane tails' `checkPendingGo_worker` (`PhaseWorker.lean`) needs `a₀.caches = Caches.empty` after `installFold` (every step ends in `dropScratch`, which flushes) | `Arena/Checker.lean` (fold post) | **loopt2** | open |
-| 13 | The program hypotheses for `checkerProg`: `DeclCallees` (TextProg halves proved: `checkerProg_cvg/iv/arm`; `CheckDeclProg`'s other lookups, `ValProg`, `CrpProg`, `QuotProg`, `AxProg`, `NatSubProg'`, `DmProg10`, `IstgProg`), `BracketProg`, `KnotStageProg`, `LeafClosed` (proved), `LoopClosed` (proved), `RomReady` | `Checker/` | **loopt2** (loop ones) | partial |
+| 13 | The program hypotheses for `checkerProg`: `LoopCallees` (`DeclCallees` + `KnotStageProg`, `LeafClosed`, `LoopClosed`); `DeclCallees` (TextProg halves proved: `checkerProg_cvg/iv/arm`; `CheckDeclProg`'s other lookups, `ValProg`, `CrpProg`, `QuotProg`, `AxProg`, `NatSubProg'`, `DmProg10`, `IstgProg`), `BracketProg`, `KnotStageProg`, `LeafClosed` (proved), `LoopClosed` (proved), `RomReady` | `Checker/` | **loopt2** (loop ones) | partial |
 | 14 | The remaining `sorry`d stub contracts the loop goes through (`IndStubs`, `IndStubsT`, `DeclRomStubs`, `stubM_spec`) | various | owning lanes | listed in the census' sorry sources |

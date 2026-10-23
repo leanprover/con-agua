@@ -412,7 +412,7 @@ theorem istg_iv (hP : IvProg p) (hC : CvgProg p) {n : Nat} {m0 m' : Mem} {a : AS
 theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {r : List Word}
     (h : istgW p n m i vis = some (r, m')) (hR : LoopR pins dn m a vis fe pend ds)
-    (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0) (hF : ∃ env, FoldOK V env fe a)
+    (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0) (hFo : ∃ env, FoldOK V env fe a)
     (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
     (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) :
     IstgPost pins dn ds pend (installStepGo mode pins fe (dsAt ds i)) a m' r := by
@@ -468,7 +468,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
     subst hm1
     rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hF hden hc h (by rw [hd]; rfl)
+    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hc h (by rw [hd]; rfl)
   | quotDecl k cv =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
@@ -482,7 +482,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
     have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
     subst hm1
     rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hF hden hc h (by rw [hd]; rfl)
+    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hc h (by rw [hd]; rfl)
   | thmDecl cv v =>
     obtain ⟨hk, -⟩ := hdecl
     rw [hk] at h
@@ -520,7 +520,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
       subst hm1
       rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hF hden hc h (by rw [hd]; exact hT)
+      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hc h (by rw [hd]; exact hT)
     · rw [if_neg hc0] at h
       have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := fun h' => hc0 (hiff.mpr h')
@@ -558,7 +558,7 @@ theorem istgW_ok (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p
       have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
       subst hm1
       rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hF hden hc h (by rw [hd]; exact hT)
+      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hc h (by rw [hd]; exact hT)
     · rw [if_neg hc0] at h
       have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
           true := fun h' => hc0 (hiff.mpr h')
@@ -591,8 +591,9 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
     (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) :
     ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (pend : Array PendingCheck) (i : Word) (hi : i.toNat < ds.size), ConRon.Bridge.StateOK a₀ →
-      (∃ env, FoldOK V env fe a₀) → (∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) →
+      (∃ env, FoldOK V env fe a₀) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds → TwinOK dn s₀.mem a₀ fe → pinW s₀.mem 0 ≠ 0 →
+      (∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step_go" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (installStepGo mode pins fe (dsAt ds i)) a₀) (r.headD 0)
@@ -601,7 +602,7 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
         vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
       (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none) ∧
       CoreMemos s'.mem; ⊤⦄ := by
-  intro n hn s₀ a₀ vis fe pend i hi hok0 hF hden hR hTw hfl
+  intro n hn s₀ a₀ vis fe pend i hi hok0 hF hR hTw hfl hden
   refine triple_post (istg_specW p hG n s₀ i vis) ?_
   rintro r s' ⟨hloc, hW⟩
   obtain ⟨x, a', hrun, hL, hvg, hne, hcm⟩ :=
@@ -719,9 +720,9 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
     (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
     (i : Word) (hi : i.toNat < ds.size) (hpk : ConRon.Bridge.PinsOK a₀)
     (hoff : a₀.store.scratchOn = false) (hF : ∃ env, FoldOK V env fe a₀)
-    (hden : ∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x)
     (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
-    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0) :
+    (hTw : TwinOK dn s₀.mem a₀ fe) (hfl : pinW s₀.mem 0 ≠ 0)
+    (hden : ∃ x, Frontend.denoteDecl a₀.store (dsAt ds i) = some x) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
@@ -796,7 +797,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : LoopCallees dn p) (hb 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (flush_loopW (pins := pins) dn ds p hb n · a₀ vis fe pend),
         (enter_loopW (pins := pins) dn ds p hb n · (AM.st flushCaches a₀) vis fe pend hwf' hoff'),
-        (installStepGo_specT mode pins dn ds p hm (hm ▸ checkDecl_loopT hdc.cd hdc.knot hdc.leaf hdc.loop pins dn hdc.dninj ds) hdc.istg hdc.iv hdc.cvg n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe hde),
+        (installStepGo_specT mode pins dn ds p hm (hm ▸ checkDecl_loopT hdc.cd hdc.knot hdc.leaf hdc.loop pins dn hdc.dninj ds) hdc.istg hdc.iv hdc.cvg n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
         (isNone_refinesC pins dn ds p hdc.leaf hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refinesC pins dn ds p hdc.leaf hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
@@ -856,7 +857,7 @@ theorem installDeclStep_core (hm : mode = .verified) (hb : BracketProg p) (hdc :
     have hn' : n ≤ 2 ^ 62 := by omega
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (andPinOk_refinesT pins dn ds p hdc.leaf hdc.and_pin_ok n · a₀ vis fe pend · · hpk hT.off hF0 hden0),
+        (andPinOk_refinesT pins dn ds p hdc.leaf hdc.and_pin_ok n · a₀ vis fe pend · · hpk hT.off hF0),
         (installStep_refines mode pins dn ds p hm hdc hb hpp hpn hps hpi n hn' · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
       finish
 
