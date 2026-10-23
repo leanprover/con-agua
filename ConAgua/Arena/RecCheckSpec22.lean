@@ -363,7 +363,8 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     have h0 : rpN0 bs = internNNode .anonymous := by unfold rpN0; rw [hm]
     rw [h0]
     refine Sim.bindK (K := tpnK0 p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl)
-      (fun r m' e => by
+      (show Sim (callW p (n + 1) "intern_nanon" [] m) (internNNode .anonymous) a
+        (fun r x m' a' => KeepPost dn vis fe decW0N m m' a' r x) from fun r m' e => by
         obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (naF_spec p L.rna (n + 1) _ []) e
         exact naF_ok dn vis fe m s'.mem a r hs hS) ?_
     rintro r0 x0 m0 a0 ⟨hS0, hg0, hx0b, hx0⟩
