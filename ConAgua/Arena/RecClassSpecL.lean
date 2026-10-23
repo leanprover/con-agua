@@ -154,7 +154,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
       pure (some r)) a (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rw [cW_eq]
   refine RSim.bind (K := cK1 n g c x d lvls ds0 dl0 nPc fo fl ihso ihsl) rfl
-    (RSim.withF (simGetAppArgs hS hres) (fun _ hb => stub_afr hb)) ?_
+    (RSim.withF (simGetAppArgs hS hres) (fun _ hb => gaaF_afr hb)) ?_
   rintro ⟨r1, m1⟩ ra a1 - ⟨⟨hS1, hg1, hra, hrb⟩, hf1⟩
   dsimp only at hS1 hg1 hra hrb
   simp only [getD_zero, Nat.zero_add, getD_one] at hra hrb

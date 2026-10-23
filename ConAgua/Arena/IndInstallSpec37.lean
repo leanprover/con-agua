@@ -99,7 +99,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   have hP1 := hPm.fr (MFr.of_iw hf1)
   obtain ⟨mp0, hmp0⟩ := hma
   have hma1 := maMR_mfr (MFr.of_iw hf1) hmp0
-  have hA1 : AbsOK s1.mem := AFr.of_frame hf1 hA
+  have hA1 : AbsOK s1.mem := AFr.of_frame hf1 (by decide) (by decide) hA
   simp only [List.headD_cons, List.tail_cons] at h
   have hT1 : iwTop s1.mem < 2 ^ 64 := (rdW (s1.mem.arr64 CTL) 200).toNat_lt
   -- the constructors' names
@@ -133,7 +133,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [List.headD_cons, List.tail_cons, List.map_map] at h hd2
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hma2 := maMR_mfr (MFr.of_iw hf2) hma1
-  have hA2 : AbsOK s2.mem := AFr.of_frame hf2 hA1
+  have hA2 : AbsOK s2.mem := AFr.of_frame hf2 (by decide) (by decide) hA1
   have hg12 := hg1.trans hg2
   have hT2 : iwTop s2.mem < 2 ^ 64 := (rdW (s2.mem.arr64 CTL) 200).toNat_lt
   -- the members' names
@@ -164,7 +164,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [List.headD_cons, List.tail_cons] at h
   have hP3 := hP2.fr (MFr.of_iw hf3)
   have hma3 := maMR_mfr (MFr.of_iw hf3) hma2
-  have hA3 : AbsOK s3.mem := AFr.of_frame hf3 hA2
+  have hA3 : AbsOK s3.mem := AFr.of_frame hf3 (by decide) (by decide) hA2
   -- the two `sl_nodup`s
   have hcn3 : (decHL s3.mem (rdW (s1.mem.arr64 CTL) 200).toNat tot.toNat : Option (List NIdx)) =
       some (bs.allCtors.map (fun x => x.1.name)) := by
