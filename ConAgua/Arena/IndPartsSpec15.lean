@@ -122,7 +122,7 @@ theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨r1, m1⟩ := x
   rw [h1] at hm
   simp only [plW.plK4] at hm
-  cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [h2] at hm; cases hm
   | some y =>
   obtain ⟨r2, m2⟩ := y
@@ -132,7 +132,7 @@ theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd (by omega) ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    internLsIw_spec dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   refine ⟨x, a2, ?_, by simpa using hH, by simpa using hx, hS2, hg1.trans hg2⟩
   simp only [paramLevels, StateT.run_bind, hrun1]
   exact hrun2
@@ -216,12 +216,12 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   | none =>
     have h1 : lgw = 0 := hlg
     rw [if_neg (by rw [h1]; decide)] at e
-    cases h3 : stubM "intern_nanon" m [] with
+    cases h3 : naF m [] with
     | none => rw [h3] at e; cases e
     | some x =>
     obtain ⟨r3, m3⟩ := x
     rw [h3, bbK14_some] at e
-    obtain ⟨an, a3, hrun3, hS3, hg3, hal, hae⟩ := internNanonStub_spec dn vis fe m m3 a r3 h3 hS
+    obtain ⟨an, a3, hrun3, hS3, hg3, hal, hae⟩ := naF_ok dn vis fe m m3 a r3 h3 hS
     cases h2 : posRecW m3 [mo, ml, ro2, rl2, nPd, r3.headD 0, s, 0, ip] with
     | none => rw [h2] at e; cases e
     | some x =>

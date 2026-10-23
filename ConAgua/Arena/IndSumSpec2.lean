@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndSumSpec2A
+import ConAgua.Arena.IndRealNames
 
 /-! Continued from `IndSumSpec2A.lean` (split by size; lane `indproofs`). -/
 
@@ -183,7 +184,7 @@ where
   /-- After `param_levels_go`. -/
   plK4 : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
-    | some (r, m1) => plK5 (stubM "intern_ls_iw" m1 [r.headD 0, r.tail.headD 0])
+    | some (r, m1) => plK5 (ilF m1 [r.headD 0, r.tail.headD 0])
   /-- After `intern_ls_iw`. -/
   plK5 : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
@@ -193,14 +194,14 @@ omit ha hc hsc hg hpf hpp hip hp in
 theorem plW_succ (k : Nat) (m : Mem) (o l : Word) : plW (k + 1) m o l = plW.plK4 (plgW k m o l) := rfl
 omit ha hc hsc hg hpf hpp hip hp in
 theorem plK4_some (r : List Word) (m1 : Mem) :
-    plW.plK4 (some (r, m1)) = plW.plK5 (stubM "intern_ls_iw" m1 [r.headD 0, r.tail.headD 0]) := rfl
+    plW.plK4 (some (r, m1)) = plW.plK5 (ilF m1 [r.headD 0, r.tail.headD 0]) := rfl
 omit ha hc hsc hg hpf hpp hip hp in
 theorem plK5_some (r : List Word) (m2 : Mem) : plW.plK5 (some (r, m2)) = some ([r.headD 0], m2) := rfl
 grind_pattern [ind_grind] plW_succ => plW (k + 1) m o l
 grind_pattern [ind_grind] plK4_some => plW.plK4 (some (r, m1))
 grind_pattern [ind_grind] plK5_some => plW.plK5 (some (r, m2))
 
-theorem plW_spec (hq : p.lookup "param_levels" = some paramLevelsL) (k : Nat) (s₀ : St) (o l : Word) :
+theorem plW_spec (hq : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p) (k : Nat) (s₀ : St) (o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ plW k s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq]
@@ -210,13 +211,13 @@ theorem plW_spec (hq : p.lookup "param_levels" = some paramLevelsL) (k : Nat) (s
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        plgW_spec p ha hc hsc hg hpf hpp hip hp k, stubM_spec p "intern_ls_iw" k] <;>
+        plgW_spec p ha hc hsc hg hpf hpp hip hp k, ilF_spec p hil k] <;>
       finish
 
 /-- **`param_levels` refines `paramLevels`** under the stage relation (through the stub
 `intern_ls_iw`). -/
 @[refines ConRon.Arena.paramLevels]
-theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (k : Nat) (s₀ : St)
+theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p) (k : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
     (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hd : decHL s₀.mem o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
@@ -225,7 +226,7 @@ theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (paramLevels lps) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (paramLevels lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       H (r.headD 0) ∧ decI (r.headD 0) = AM.res (paramLevels lps) a₀; ⊤⦄ := by
-  refine triple_post (plW_spec p ha hc hsc hg hpf hpp hip hp hq k s₀ o l) ?_
+  refine triple_post (plW_spec p ha hc hsc hg hpf hpp hip hp hq hil k s₀ o l) ?_
   rintro r s' ⟨hl, hm⟩
   cases k with
   | zero => cases hm
@@ -236,7 +237,7 @@ theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [h1, plK4_some] at hm
-  cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [h2] at hm; cases hm
   | some y =>
   obtain ⟨r2, m2⟩ := y
@@ -245,7 +246,7 @@ theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (
   obtain ⟨rfl, rfl⟩ := hm
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
-    internLsIw_spec dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+    ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
   have hrun : (paramLevels lps).run a₀ = .ok (x, a2) := by
     simp only [paramLevels, StateT.run_bind, hrun1]
     exact hrun2

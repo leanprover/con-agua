@@ -69,7 +69,7 @@ def grtK6 (n : Nat) (b2o b2l : Word) : Option (List Word × Mem) → Option (Lis
 
 def grtK5 (n : Nat) (b2o b2l mv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r5, m5) => grtK6 n b2o b2l (stubM "mk_app_n_f" m5 [mv, r5.headD 0, r5.tail.headD 0])
+  | some (r5, m5) => grtK6 n b2o b2l (mknF m5 [mv, r5.headD 0, r5.tail.headD 0])
 
 def grtK4 (n : Nat) (fo fl t b2o b2l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -126,7 +126,7 @@ theorem grtK3_some : grtK3 n g c fo fl t (some (r3, m3)) =
     grtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0) (rec2MotVarF n m3 g c) := rfl
 theorem grtK4_some : grtK4 n fo fl t b2o b2l (some (r4, m4)) = grtK5 n b2o b2l (r4.headD 0) (snocW n m4 fo fl t) := rfl
 theorem grtK5_some : grtK5 n b2o b2l mv (some (r5, m5)) =
-    grtK6 n b2o b2l (stubM "mk_app_n_f" m5 [mv, r5.headD 0, r5.tail.headD 0]) := rfl
+    grtK6 n b2o b2l (mknF m5 [mv, r5.headD 0, r5.tail.headD 0]) := rfl
 theorem grtK6_some : grtK6 n b2o b2l (some (r6, m6)) = grtK7 (closeW n m6 b2o b2l 0 (r6.headD 0)) := rfl
 theorem grtK7_some : grtK7 (some (r7, m7)) = some ([1, r7.headD 0], m7) := rfl
 theorem gtW_eq : gtW (n + 1) m g c =
@@ -188,7 +188,7 @@ theorem classGenRecTyTail_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (
         stubM_spec p "fvar_type_ds" n, slAppend_specW p h.alloc h.copy h.app n,
         slSnoc_specW p h.alloc h.copy h.snoc n,
         rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-        stubM_spec p "mk_app_n_f" n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct n] <;>
+        mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
 theorem classGenRecTy_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (g c : Word) :
@@ -273,7 +273,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   rw [hr5] at ⊢
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := grtK6 n (r3.headD 0) (r3.tail.headD 0)) rfl
-    ((mkAppN_spec dn vis fe _ _ _ hmvH (ifs ++ [decI t])).sim ⟨hS5, hd5⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hmvH (ifs ++ [decI t])).sim ⟨hS5, hd5⟩) ?_
   rintro ⟨r6, m6⟩ body a6 - ⟨hS6, hg6, hbH, hbd⟩
   dsimp only at hS6 hg6 hbH hbd
   rw [grtK6_some]

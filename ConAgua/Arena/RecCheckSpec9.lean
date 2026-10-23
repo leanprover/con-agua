@@ -10,6 +10,8 @@ are carried as `RcMR m` of the memory at hand: helper `posmemo`'s `PosMR` (which
 `replace_fvars`' banked memo) and `target_abs`' `ta` memo.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

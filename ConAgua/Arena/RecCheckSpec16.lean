@@ -1,5 +1,8 @@
 import ConAgua.Arena.RecCheckSpec15
 
+
+noncomputable section
+
 /-!
 # `RecCheck`: `targetK53`, the relational side (lane `indproofs3`, helper `rec`)
 
@@ -350,14 +353,14 @@ theorem tkaW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc ip usp lao lal
   have hlp := (hla.grow hg03).take (k := K)
   rw [hnP] at hlp
   generalize hL : (if lal < K then lal else K) = lpl at h hlp
-  cases h5 : stubM "mk_app_n_f" m3 [hd, lao, lpl] with
+  cases h5 : mknF m3 [hd, lao, lpl] with
   | none => rw [h5] at h; simp [tkaK5] at h
   | some x =>
   obtain ⟨ra, m4⟩ := x
   rw [h5, tkaK5_some] at h
-  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mkAppN_spec dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
+  obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
     ⟨hS3, hlp.1⟩
-  have hP4 : RcMR m4 := hP3.stub (by decide) h5
+  have hP4 : RcMR m4 := hP3.fr (MFr.ofMknF h5)
   have hg04 := hg03.trans hg4
   cases h6 : memberNamesW n m4 q with
   | none => rw [h6] at h; simp [tkaK6] at h
@@ -426,24 +429,24 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
   | zero => simp [tkhW] at h
   | succ n =>
   rw [tkhW_succ] at h
-  cases h1 : stubM "get_app_fn_f" m [CWF, leafW] with
+  cases h1 : gafF m [CWF, leafW] with
   | none => rw [h1] at h; simp [tkhK1] at h
   | some x =>
   obtain ⟨rl, m1⟩ := x
   rw [h1, tkhK1_some] at h
-  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := getAppFn_spec dn vis fe CWF leafW hl m m1 a rl h1 hS
+  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m m1 a rl h1 hS
   rw [CWF_eq, ← decE_eq] at run1
   rw [← hlhD, ← decE_eq] at run1
-  have hP1 := hP.stub (by decide) h1
-  cases h2 : stubM "get_app_fn_f" m1 [CWF, majDom] with
+  have hP1 := hP.fr (MFr.ofGafF h1)
+  cases h2 : gafF m1 [CWF, majDom] with
   | none => rw [h2] at h; simp [tkhK2] at h
   | some x =>
   obtain ⟨rm, m2⟩ := x
   rw [h2] at h
-  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := getAppFn_spec dn vis fe CWF majDom hmj m1 m2 a1 rm h2 hS1
+  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := gafF_ok dn vis fe CWF majDom hmj m1 m2 a1 rm h2 hS1
   rw [CWF_eq, ← decE_eq] at run2
   rw [← hmhD, ← decE_eq] at run2
-  have hP2 := hP1.stub (by decide) h2
+  have hP2 := hP1.fr (MFr.ofGafF h2)
   have hg12 := hg1.trans hg2
   by_cases t1 : rl.headD 0 >>> 28 ≠ 3
   · rw [tkhK2_l (h := t1)] at h

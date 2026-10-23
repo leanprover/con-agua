@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPartsSpec13
 import ConAgua.Arena.IndSumSpec2
+import ConAgua.Arena.IndRealNames
 
 /-!
 # Refinements of `IndParts`, part 14 (lane `indproofs2`, helper `parts`): `blockShape?`
@@ -195,7 +196,7 @@ def bbK14 (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option
 /-- **The model of `block_shape_seal`** (at exec fuel `n + 1`). -/
 def bsealW (n : Nat) (m : Mem) (mo ml ro2 rl2 nPd s ip lg elim : Word) : Option (List Word × Mem) :=
   if lg ≠ 0 then bbPack (posRecW m [mo, ml, ro2, rl2, nPd, elim, s, 1, ip])
-  else bbK14 mo ml ro2 rl2 nPd s ip (stubM "intern_nanon" m [])
+  else bbK14 mo ml ro2 rl2 nPd s ip (naF m [])
 
 /-- After `block_shape_large`. -/
 def bbK13' (n : Nat) (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -363,6 +364,7 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   internParam : p.lookup "intern_param" = some internParam
   plGo : p.lookup "param_levels_go" = some paramLevelsGoL
   pl : p.lookup "param_levels" = some paramLevelsL
+  il : IlF p
   namesOf : p.lookup "block_shape_names_of" = some blockShapeNamesOf
   pinsF : p.lookup "block_shape_pins_formers" = some blockShapePinsFormers
   pinsR : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs
@@ -381,6 +383,7 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   build : p.lookup "block_shape_build" = some blockShapeBuild
   shape : p.lookup "block_shape" = some blockShape
   parts : p.lookup "block_parts" = some blockParts
+  na : NaF p
 
 theorem bseal_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (mo ml ro2 rl2 nPd s ip lg elim : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "block_shape_seal" [mo, ml, ro2, rl2, nPd, s, ip, lg, elim]
@@ -389,7 +392,7 @@ theorem bseal_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (mo m
   simp only [callFn, blockShapeSeal]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      stubM_spec p "intern_nanon" n, bsp_spec p hP.alloc hP.pack n] <;>
+      naF_spec p hP.na n, bsp_spec p hP.alloc hP.pack n] <;>
     finish (gen := 20) [bsealW]
 
 set_option maxHeartbeats 20000000 in
@@ -403,7 +406,7 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bct_spec p hP.toIndPartsProg4 hP.ctorsOf (n + 1),
-      plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl (n + 1),
+      plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl hP.il (n + 1),
       bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo hP.groups n,
       bmo_spec p hP.toIndPartsProg4 hP.rec4 hP.membersOf (n + 1),
       brs_spec p hP.toIndPartsProg4 hP.rec6 hP.rhssOf hP.recsOf (n + 1),

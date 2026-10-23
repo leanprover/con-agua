@@ -152,13 +152,13 @@ theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k 
   obtain ⟨r1, m1⟩ := x
   rw [h1, plK4_some] at h
   refine (plgW_mfrP k _ _ _ _ _ h1).trans ?_
-  cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [h2] at h; simp [plW.plK5] at h
   | some y =>
   obtain ⟨r2, m2⟩ := y
   rw [h2, plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]; exact MFr.ofStub h2
+  rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
 
 /-! ## A fresh `TargetMajor` record, decoded below the tops -/
 
@@ -271,6 +271,7 @@ structure TmmProg (p : Prog) : Prop where
   iparam : p.lookup "intern_param" = some internParam
   plgo : p.lookup "param_levels_go" = some paramLevelsGoL
   pl : p.lookup "param_levels" = some paramLevelsL
+  il : IlF p
   eq : p.lookup "sl_eq" = some slEq
   mkTm : p.lookup "mk_target_major" = some mkTargetMajor
   mem : p.lookup "target_major_of_member" = some targetMajorOfMember
@@ -408,9 +409,9 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
       MFr [] [] s1.mem m') ?_ ?_
   · intro r2 m2 e2
     obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-      (plW_spec p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl n _ _ _) e2
+      (plW_spec p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl hP.il n _ _ _) e2
     obtain ⟨s2', hs2', -, hok, hS2, hg2, hH2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-      (paramLevels_refines p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl n _ a dn
+      (paramLevels_refines p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl hP.il n _ a dn
         vis fe _ _ _ hS1 hlps1 (by omega) htop1) e2
     rw [hs2'] at hS2 hg2
     exact ⟨_, _, partsRunOfOk hok, hS2, hg2, hH2, hd2, plW_mfrP hW2⟩
