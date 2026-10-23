@@ -242,3 +242,60 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
   the migration reaches those callers first, the memory-only threading becomes unnecessary.
 * ETA `IndArmSpec`: the `StageR` arm theorem today; the exact `IndArmSpec` statement needs
   `CoreMemos m'` after (StageT migration, loopt3) and the extra premises listed above.
+
+## Helper `indproofs4-grc`: `genRecCheck`
+
+`genRecCheck_refines` (`IndInstallSpec41`, census: proven locally) replaces the pending contract
+`genRecCheck_pending` (deleted); `checkBlockRec_refines` now goes through it (moved from
+`IndInstallSpec21` to `IndInstallSpec41`; `IndInstallSpec31` imports it).
+
+* **L fixes in `RecGen.lean`** (no deviation rows: the twin's behaviour): `gen_rec_check_prep`
+  tested the large flag with `== 1`, the twin (and `decBS`) with `!= 0`; `gen_rec_check_minor_ok`
+  summed the constructor counts mod `2^64` (now `return 0` past `2^64`, above every slot count).
+* Files: `IndInstallSpec38` (the loops `gen_rec_check_former_tys`, `_former_tys_c`, `_minor_ok`;
+  helper fork), `39` (`gen_rec_check_pop_all`, `struct_elim_level` under `StageR` with the handle
+  bound, and the **stub contract `blockLargeElimAllowed_spec`** (`sorry`: true of the real function,
+  which stores nothing — its closure is checked to have an empty write set; the twin reads the level
+  back, `StageT`)), `40` (`gen_rec_check_prep`'s model: right-nested suffix blocks `grpB`, `grpC`,
+  `grpS2`, `grpS2b`, `grpS3`, `grpD`, one `vcgen` each; the flat 25-call body timed out at 4M
+  heartbeats; middle blocks change the `seq` association, suffixes do not), `41` (the twin cut into
+  continuation-passing parts `grcTwinA…R`, `genRecCheck_split` by `rfl`; the sims; the glue).
+* `RecGenSpec28`'s `CnsRec` carries its source class pointer (`CnsSrc`), so that `ClassesLp`
+  passes through `classes_nfs` (`classesNfs_refinesLp`).
+* New hypotheses: `genRecCheck_refines`/`checkBlockRec_refines`: `RecsB` (the shape's recursor
+  slice below the top, also when empty), `ClassesLp` (`classes_ctors`' own), `bs.nP < 2^63`, IW
+  size `< 2^63`, `RcMR`, `GrcProg p`, `closedA p rcFreeA rcFreeC fsR` (`target_rec_pins`,
+  `class_stream_recs`). `checkBlockTail_refines`: the same on the pass record (`RecsB`/`ClassesLp`
+  at its words 3, 15/16, the shape's nP word), `RcMR`, the size, `closedA … rcFree` with
+  `tailRcCallees`. `checkBlock_refines`: `∃ taMR`, `RecsB`, `ShapeLp` (the members' constructors'
+  level-parameter slices in `EREC`), `bs.nP < 2^63`, the size, `closedA p taFreeA taFreeC fsT`
+  (`block_raw_rec`, `check_block_pass`), `closedA … rcFree`, and the **pending program fact
+  `PassGrcOK p`** (the pass's record satisfies the tail's three record conditions given the input's:
+  to be discharged from the pass's refinement). The `closedA` facts were checked by `#eval` on
+  `checkerProg` (empty violation lists); the decided theorems are not written.
+
+### Reply to coordinator (2026-10-23, split / files / ETA)
+
+* **Split: OK.** A fresh lane takes the StageR→StageT migration plus the core-entry contracts (`stubM_spec`, `inferTypeCore`, `isDefEqCore`, `ensureSortCore`, `whnf`, `stubM_memoFrame`). indproofs4 keeps the block functions, genRecCheck, blockLargeElimAllowed, `check_ind_decl`→`IndArmSpec` and the walk/leaf contracts.
+* **Files in flight:** me: `IndPartsSpec15` (ShapeSl, committed) and a new `IndInstallSpec42` (`check_ind_decl` at StageR). Helper grc: `IndInstallSpec38–41`, `RecGen.lean` (AbsOK threading). Helper memo: new `IndRealMemo*.lean`, `Checker/IndRealMemo.lean`. Helper slow: `IndSumSpec12/5`, `IndInstallSpec17`, `RecClassSpec*`. It has been told to drop `IndSumSpec14` and take master's (slowmods-b) version. I merge master before landing and resolve toward the faster version.
+* **ETA:** `check_ind_decl` at StageR (with a `basisPinHit` contract and pending program facts for block_parts' ShapeCV/ShapeLp) is planned for the next landing. The full `IndArmSpec` needs StageT (the new lane) and `CoreMemos`. It comes after that.
+
+### check_ind_decl at StageR (IndInstallSpec42)
+
+* Model `cidW` (K1 after basis_pin_hit, K3 after ind_params_ok, K4 after block_parts, K2 the view). The shapeless branch is `none`: `checkShapeless_refines` has post `False`, so the spec discharges it.
+* `cidW_ok` composes checkBasisDecl_refines, indParamsOk_refines, blockParts_refines and checkBlock_refines. It ends in `(checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧ StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m'`.
+* Inputs: StageR, StateOK (for the basis pin's canon comparison), the block decoded as `DecB decEBlk`, `o + l ≤ erTop`, `w < 2^63`, AllVis, CtorSums, and `CidMemos` (PosMR, maMR, AbsOK, taMR).
+* `ShapeSrc` and `RecsB` come from `ShapeSl` (PartsR). `ShapeCV` comes from `DecB decBS` (`shapeCV_of_decB`).
+* The memos cross basis_pin_hit and block_parts through one write-set fact: `closedA p cidFreeA cidFreeC fsC`, which forbids arrays 201..208 and 49, and CTL 202..219 and 48. An `#eval` over the call closures shows both callees satisfy it in checkerProg (basis_pin_hit: 139 fns, block_parts: 95 fns, no bad function).
+* Pending program facts (hypotheses):
+  * `BphOK p`: basis_pin_hit refines basisPinHit. Helper `bph` is proving it.
+  * `PartsOK p`: block_parts' record has ShapeLp, an nP word below 2^63 and IW size below 2^63. grc has been asked whether L guards can drop the 2^63 bounds. ShapeLp could follow from DecB decBS if CtorLp were weakened to `… ∨ len = 0`, as CVExt is.
+* Fuel: checkBlock_refines needs `2^31 + (n+4) ≤ coreWalkFuel` (4e9). **IndArmSpec quantifies `n ≤ 2^62`, so its fuel bound must be tightened (or check_block's lifted)** before cidW_ok can discharge it.
+
+### Landing (2026-10-23, check_ind_decl)
+
+* `cidW_ok` (IndInstallSpec42) is proven. It carries `@[refines_part checkDecl "the inductive arm (check_ind_decl), under StageR"]`. Its only pending program fact is `PassGrcOK`: helper grc removed `PartsOK` by weakening CtorLp to allow an empty slice at any offset (`shapeLp_of_decB`). The `AbsKeep` facts and the closedA write sets still have to be decided for checkerProg.
+* `basisPinHit_ok` (IndRealBph2, helper bph) is proven, with no L change and no extra premise.
+* grc: `gen_rec_check_prep` has three capacity guards, so the `hsz`/`hnP` 2^63 bounds are gone everywhere. `PassGrcOK` lost its nP conjunct.
+* slow helper: IndSumSpec12 498→45 s, IndInstallSpec17 152→9, IndSumSpec5 138→53, RecClassSpecN 134→44, K 120→27, B 62→10.
+* Build note: the RSS-sum guard double-counts the mmapped oleans that lean processes share, and it killed a full rebuild at 20–26 GB "RSS" while the real (PSS) peak was 12 GB. Use `_tmp/indproofs4/pssguard.sh`.
