@@ -327,7 +327,7 @@ theorem p2sdW_ok : ∀ (n : Nat) (m m' : Mem) (a : AState) (sO sL ns : Word)
     cases n with
     | zero => simp [nitWf, p2sdK2] at h
     | succ n' =>
-    cases hni : nitW n' m1 vis ctx (nhiW m ctx 0) key with
+    cases hni : nitW stubCall n' m1 vis ctx (nhiW m ctx 0) key with
     | none => simp only [nitWf] at h; rw [hni] at h; simp [p2sdK2] at h
     | some pr2 =>
     obtain ⟨r2, m2⟩ := pr2
@@ -335,8 +335,8 @@ theorem p2sdW_ok : ∀ (n : Nat) (m m' : Mem) (a : AState) (sO sL ns : Word)
     rw [hni, p2sdK2_some] at h
     have hW : WCtx dn vis fe m ctx 0 0 c [] := ⟨hU, by simp [HSl, HolesAt], by simpa using hhi⟩
     have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
-    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2 a1 key kk
-      r2 hni hS1 (hU.grow hg1) (hkd.get (decNK_mono _) |>.symm ▸ (hkd.stab (decNK_mono _) m1 hg1))
+    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2 a1 key kk
+      r2 stubCall IlpRd.stub IlpFr.stub hni hS1 (hU.grow hg1) (hkd.get (decNK_mono _) |>.symm ▸ (hkd.stab (decNK_mono _) m1 hg1))
       (pos2_nk_in (hkd.grow (decNK_mono _) hg1)).2 ((hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
         obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'
         have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.2.2.1 _ (by omega)]; exact h0w
@@ -344,7 +344,7 @@ theorem p2sdW_ok : ∀ (n : Nat) (m m' : Mem) (a : AState) (sO sL ns : Word)
         rw [this] at h0'; cases h0'
         rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
         exact hksl') hP1
-    have hA2 := nitW_afr hni hA1
+    have hA2 := nitW_afr (fun _ _ e => ntyWf_afr e) hni hA1
     have hg12 := hg1.trans hg2
     have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
       Nat.le_trans hksl hg12.1
