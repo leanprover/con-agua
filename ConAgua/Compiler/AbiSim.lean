@@ -69,6 +69,46 @@ theorem abiVals_length (tab : Tab) (h : tab.nb = 2) :
   simp [List.length_flatMap, List.map_const']
   omega
 
+/-- The bytes of `romWord bs`: `bs`, then zeros. -/
+theorem romWord_toBytes (bs : List UInt8) (h : bs.length ≤ 8) :
+    (romWord bs).toBytes = bs ++ List.replicate (8 - bs.length) 0 := by
+  rw [romWord, UInt64.toBytes_ofBytes _ (by simp; omega)]
+  rw [List.take_of_length_le (by simp; omega)]
+
+/-- Byte `i` of the constant data is byte `i % 8` of word `i / 8`. -/
+theorem romVals_byte : ∀ (bs : List UInt8) (i : Nat) (hi : i < bs.length),
+    ∃ w, (romVals bs)[i / 8]? = some (.imm w) ∧ w.toBytes[i % 8]? = some bs[i] := by
+  intro bs
+  induction bs using romVals.induct with
+  | case1 b0 b1 b2 b3 b4 b5 b6 b7 rest ih =>
+    intro i hi
+    simp only [List.length_cons] at hi
+    by_cases h8 : i < 8
+    · refine ⟨romWord [b0, b1, b2, b3, b4, b5, b6, b7], ?_, ?_⟩
+      · rw [Nat.div_eq_of_lt h8]; simp [romVals]
+      · rw [romWord_toBytes _ (by simp), Nat.mod_eq_of_lt h8]
+        have : (b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: rest) = [b0, b1, b2, b3, b4, b5, b6, b7] ++ rest := rfl
+        simp only [this, List.getElem_append_left (show i < [b0, b1, b2, b3, b4, b5, b6, b7].length by simp; omega)]
+        rw [List.getElem?_append_left (by simp; omega)]
+        simp [List.getElem?_eq_getElem (show i < [b0, b1, b2, b3, b4, b5, b6, b7].length by simp; omega)]
+    · obtain ⟨j, rfl⟩ : ∃ j, i = j + 8 := ⟨i - 8, by omega⟩
+      obtain ⟨w, h1, h2⟩ := ih j (by omega)
+      refine ⟨w, ?_, ?_⟩
+      · rw [show (j + 8) / 8 = j / 8 + 1 by omega]; simpa [romVals] using h1
+      · rw [show (j + 8) % 8 = j % 8 by omega, h2]; simp
+  | case2 => intro i hi; simp at hi
+  | case3 bs h1 h2 =>
+    intro i hi
+    have hlen : bs.length < 8 := by
+      match bs, h1, h2 with
+      | [], _, _ | [_], _, _ | [_, _], _, _ | [_, _, _], _, _ | [_, _, _, _], _, _
+      | [_, _, _, _, _], _, _ | [_, _, _, _, _, _], _, _ | [_, _, _, _, _, _, _], _, _ => simp
+      | _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _, h, _ => exact absurd rfl (h _ _ _ _ _ _ _ _ _)
+    refine ⟨romWord bs, ?_, ?_⟩
+    · rw [romVals.eq_3 bs h1 h2, Nat.div_eq_of_lt (by omega)]; rfl
+    · rw [romWord_toBytes _ (by omega), Nat.mod_eq_of_lt (by omega), List.getElem?_append_left hi]
+      simp [hi]
+
 theorem stores_only (R : Reg64s) (base : Nat) :
     ∀ (vs : List SVal) (m : DataMem) (d : Nat), base + d + 8 * vs.length ≤ 2 ^ 64 →
     Only (base + d) (base + d + 8 * vs.length) m (stores R base m d vs)
@@ -111,6 +151,148 @@ theorem stores_byte (R : Reg64s) (base : Nat) :
       have := stores_byte R base vs (wrW m (A (base + d)) (v.val R)) (d + 8) i j (by omega) hj (by omega)
       rw [show base + (d + 8) + 8 * i + j = base + d + 8 * (i + 1) + j by omega] at this
       simpa using this
+
+theorem abiTabOk_spec {tab : Tab} (h : abiTabOk tab = true) :
+    tab.nb = 2 ∧ 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng ≤ 2 ^ 31 ∧
+      abiNeed tab < 2 ^ 64 := by
+  simpa [abiTabOk, Bool.and_eq_true, decide_eq_true_eq, and_assoc] using h
+
+theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
+  intro v hv
+  simp only [abiVals, List.mem_append, List.mem_cons, List.mem_flatMap, List.not_mem_nil, or_false] at hv
+  have hrom : ∀ bs : List UInt8, ∀ v ∈ romVals bs, v.noRax := by
+    intro bs
+    induction bs using romVals.induct with
+    | case1 _ _ _ _ _ _ _ _ _ ih =>
+      intro v hv; simp only [romVals, List.mem_cons] at hv
+      rcases hv with rfl | hv
+      · trivial
+      · exact ih v hv
+    | case2 => intro v hv; simp [romVals] at hv
+    | case3 bs h1 h2 =>
+      intro v hv
+      rw [romVals.eq_3 bs h1 h2] at hv
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hv
+      subst hv; trivial
+  rcases hv with ((((h | h | h | h) | h) | h) | h) | h
+  · subst h; trivial
+  · subst h; trivial
+  · subst h; simp [SVal.noRax]
+  · subst h; simp [SVal.noRax]
+  · split at h
+    · simp only [List.mem_cons, List.not_mem_nil, or_false] at h
+      rcases h with rfl | rfl <;> simp [SVal.noRax]
+    · simp at h
+  · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
+  · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
+  · exact hrom _ v h
+
+/-! ## The layout the stub sets up -/
+
+/-- The layout of the stub's partition: the table at `base`, the L stack in slot `1`, byte arrays
+`0`/`1` the caller's buffers `[inp, inp + n)`, `[pins, pins + np)`, word array `a` in slot
+`abiSlot64 tab a` with `abiWords` words. -/
+def abiLayout (tab : Tab) (base inp n pins np : Nat) : Layout where
+  tab
+  T := base
+  b8 a := if a = 0 then inp else if a = 1 then pins else base + abiSlot * abiSlot8 a
+  s8 a := if a = 0 then n else if a = 1 then np else abiSlot
+  b64 a := base + abiSlot * abiSlot64 tab a
+  s64 _ := abiWords
+  lo := base + abiSlot
+  hi := base + abiSlot + abiStack
+  nargs := 0
+
+section
+variable (tab : Tab) (base inp n pins np : Nat)
+@[simp] theorem abiLayout_tab : (abiLayout tab base inp n pins np).tab = tab := rfl
+@[simp] theorem abiLayout_T : (abiLayout tab base inp n pins np).T = base := rfl
+@[simp] theorem abiLayout_b64 (a : Nat) : (abiLayout tab base inp n pins np).b64 a = base + abiSlot * abiSlot64 tab a := rfl
+@[simp] theorem abiLayout_s64 (a : Nat) : (abiLayout tab base inp n pins np).s64 a = abiWords := rfl
+@[simp] theorem abiLayout_lo : (abiLayout tab base inp n pins np).lo = base + abiSlot := rfl
+@[simp] theorem abiLayout_hi : (abiLayout tab base inp n pins np).hi = base + abiSlot + abiStack := rfl
+@[simp] theorem abiLayout_nargs : (abiLayout tab base inp n pins np).nargs = 0 := rfl
+@[simp] theorem abiLayout_b8_0 : (abiLayout tab base inp n pins np).b8 0 = inp := rfl
+@[simp] theorem abiLayout_b8_1 : (abiLayout tab base inp n pins np).b8 1 = pins := rfl
+@[simp] theorem abiLayout_s8_0 : (abiLayout tab base inp n pins np).s8 0 = n := rfl
+@[simp] theorem abiLayout_s8_1 : (abiLayout tab base inp n pins np).s8 1 = np := rfl
+end
+
+/-- The caller's side of the stub's layout: the region `[base, base + blen)` is large enough and
+in the address space, the buffers are in the address space, apart from the region and from each
+other. -/
+structure AbiGeom (tab : Tab) (base blen inp n pins np : Nat) : Prop where
+  need : abiNeed tab ≤ blen
+  fits : base + blen < 2 ^ 64
+  inEnd : inp + n < 2 ^ 64
+  pinsEnd : pins + np < 2 ^ 64
+  inDisj : ∀ x, inp ≤ x → x < inp + n → x < base ∨ base + blen ≤ x
+  pinsDisj : ∀ x, pins ≤ x → x < pins + np → x < base ∨ base + blen ≤ x
+  bufDisj : ∀ x, inp ≤ x → x < inp + n → ¬ (pins ≤ x ∧ x < pins + np)
+
+theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pins np : Nat}
+    (hg : AbiGeom tab base blen inp n pins np) : (abiLayout tab base inp n pins np).Ok := by
+  obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
+  have hneed := hg.need
+  have hfits := hg.fits
+  simp only [abiNeed, hnb, abiSlot] at hneed
+  have h2 : ∀ a, a < 2 → a = 0 ∨ a = 1 := by omega
+  -- the bytes of byte array `a < 2` are outside the region
+  have hb8 : ∀ a < 2, ∀ x, (abiLayout tab base inp n pins np).In8 a x → x < base ∨ base + blen ≤ x := by
+    intro a ha x ⟨h3, h4⟩
+    rcases h2 a ha with rfl | rfl
+    · simp only [abiLayout_b8_0, abiLayout_s8_0] at h3 h4; exact hg.inDisj x h3 h4
+    · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hg.pinsDisj x h3 h4
+  constructor
+  · simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs]; omega
+  · simp only [abiLayout_hi, abiSlot, abiStack]; omega
+  · simp only [abiLayout_lo, abiLayout_hi]; omega
+  · intro a ha; simp only [abiLayout_tab, hnb] at ha
+    rcases h2 a ha with rfl | rfl
+    · simpa using hg.inEnd
+    · simpa using hg.pinsEnd
+  · intro a ha
+    simp only [abiLayout_tab] at ha
+    simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords]; omega
+  · intro x ⟨h1, h2'⟩ ⟨h3, h4⟩
+    simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs, abiLayout_lo, abiLayout_hi,
+      abiSlot] at h1 h2' h3 h4; omega
+  · intro x ⟨h1, h2'⟩ hx
+    simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h1 h2'
+    rcases hx with ⟨a, ha, hin⟩ | ⟨a, ha, h3, h4⟩
+    · simp only [abiLayout_tab, hnb] at ha
+      rcases hb8 a ha x hin with h | h <;> omega
+    · simp only [abiLayout_tab] at ha
+      simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4; omega
+  · intro x ⟨h1, h2'⟩ hx
+    simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h1 h2'
+    rcases hx with ⟨a, ha, hin⟩ | ⟨a, ha, h3, h4⟩
+    · simp only [abiLayout_tab, hnb] at ha
+      rcases hb8 a ha x hin with h | h <;> omega
+    · simp only [abiLayout_tab] at ha
+      simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4; omega
+  · intro a ha b hb hab x ⟨h3, h4⟩ ⟨h5, h6⟩
+    simp only [abiLayout_tab, hnb] at ha hb
+    rcases h2 a ha with rfl | rfl <;> rcases h2 b hb with rfl | rfl
+    · exact hab rfl
+    · simp only [abiLayout_b8_0, abiLayout_s8_0, abiLayout_b8_1, abiLayout_s8_1] at h3 h4 h5 h6
+      exact hg.bufDisj x h3 h4 ⟨h5, h6⟩
+    · simp only [abiLayout_b8_0, abiLayout_s8_0, abiLayout_b8_1, abiLayout_s8_1] at h3 h4 h5 h6
+      exact hg.bufDisj x h5 h6 ⟨h3, h4⟩
+    · exact hab rfl
+  · intro a ha b hb hab x ⟨h3, h4⟩ ⟨h5, h6⟩
+    simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h3 h4 h5 h6
+    rcases Nat.lt_or_gt_of_ne hab with h | h
+    · have : 2 ^ 35 * (2 + (2 - 2) + a) + 2 ^ 35 ≤ 2 ^ 35 * (2 + (2 - 2) + b) := by
+        rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+      omega
+    · have : 2 ^ 35 * (2 + (2 - 2) + b) + 2 ^ 35 ≤ 2 ^ 35 * (2 + (2 - 2) + a) := by
+        rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+      omega
+  · intro a ha b hb x hin ⟨h5, h6⟩
+    simp only [abiLayout_tab, hnb] at ha hb
+    simp only [abiLayout_b64, abiLayout_s64, abiSlot64, hnb, abiSlot, abiWords] at h5 h6
+    rcases hb8 a ha x hin with h | h <;> omega
 
 section
 variable [Host]
@@ -180,41 +362,6 @@ theorem sim_stores (Q : MachineState → Prop) (R : Reg64s) (base : Nat) (hb : R
       have h8 := hR .r8 (by decide)
       simp only [Reg64s.get64_r8] at h8
       rw [hr8]; simp [BinOp.eval, h8]
-
-theorem abiTabOk_spec {tab : Tab} (h : abiTabOk tab = true) :
-    tab.nb = 2 ∧ 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng ≤ 2 ^ 31 ∧
-      abiNeed tab < 2 ^ 64 := by
-  simpa [abiTabOk, Bool.and_eq_true, decide_eq_true_eq, and_assoc] using h
-
-theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
-  intro v hv
-  simp only [abiVals, List.mem_append, List.mem_cons, List.mem_flatMap, List.not_mem_nil, or_false] at hv
-  have hrom : ∀ bs : List UInt8, ∀ v ∈ romVals bs, v.noRax := by
-    intro bs
-    induction bs using romVals.induct with
-    | case1 _ _ _ _ _ _ _ _ _ ih =>
-      intro v hv; simp only [romVals, List.mem_cons] at hv
-      rcases hv with rfl | hv
-      · trivial
-      · exact ih v hv
-    | case2 => intro v hv; simp [romVals] at hv
-    | case3 bs h1 h2 =>
-      intro v hv
-      rw [romVals.eq_3 bs h1 h2] at hv
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hv
-      subst hv; trivial
-  rcases hv with ((((h | h | h | h) | h) | h) | h) | h
-  · subst h; trivial
-  · subst h; trivial
-  · subst h; simp [SVal.noRax]
-  · subst h; simp [SVal.noRax]
-  · split at h
-    · simp only [List.mem_cons, List.not_mem_nil, or_false] at h
-      rcases h with rfl | rfl <;> simp [SVal.noRax]
-    · simp at h
-  · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
-  · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
-  · exact hrom _ v h
 
 /-- **The stub.** From `ca_start`, with the region's first table words mapped: if `base_len`
 (`r9`) is below `abiNeed`, the stub returns with `rdx = 1`; otherwise it writes the table's words
