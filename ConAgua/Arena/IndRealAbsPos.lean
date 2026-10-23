@@ -40,15 +40,15 @@ theorem cvLpsA_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : L.Aren
   | succ n => exact erToIwW_afr h
 
 
-theorem bvbW_afr {n : Nat} {m m' : Mem} {h x : Word} (hb : bvbW n m h CWF = some (x, m')) : AFr m m' := by
+theorem bvbW_afr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) : AFr m m' := by
   have hfr : BbFrame m m' := by
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := f) hs] at hb
         match n, hb with
-        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
         simp only [Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨-, rfl⟩ := hb
         exact MemFrame.refl _ _ _
@@ -913,13 +913,13 @@ theorem hbInsW_afr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, 
   exact AFr.of_frame (msetG_frame hbSch hbSch_wf m m2 e i r hs)
 
 -- from IndPosMemo
-theorem hbGoW_afr : ∀ (n : Nat) (m m' : Mem) (i h r : Word), hbGoW n m i h = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, hh => by simp [hbGoW] at hh
-  | n + 1, m, m', i, h, r, hh => by
-    have node : ∀ {m m' : Mem} {i g x y z r : Word}, hbNodeW n m i g x y z = some (r, m') → AFr m m' := by
-      intro m m' i g x y z r h
+theorem hbGoW_afr : ∀ (n : Nat) (m m' : Mem) (f i h r : Word), hbGoW n m f i h = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, hh => by simp [hbGoW] at hh
+  | n + 1, m, m', f, i, h, r, hh => by
+    have node : ∀ {m m' : Mem} {f i g x y z r : Word}, hbNodeW n f m i g x y z = some (r, m') → AFr m m' := by
+      intro m m' f i g x y z r h
       unfold hbNodeW hbO1 hbL1 hbL2 at h
-      afr_auto h [hbGoW_afr n _ _ _ _ _]
+      afr_auto h [hbGoW_afr n _ _ _ _ _ _]
     unfold hbGoW hbK1 hbK2 hbK3 hbK4 at hh
     afr_auto hh [bvbW_afr, node, hbInsW_afr]
 
@@ -928,7 +928,7 @@ theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
   unfold hbFastW at h
   split at h
   · simp at h
-  exact AFr.trans (AFr.of_frame (mclearG_frame hbSch m)) (hbGoW_afr _ _ _ _ _ _ h)
+  exact AFr.trans (AFr.of_frame (mclearG_frame hbSch m)) (hbGoW_afr _ _ _ _ _ _ _ h)
 
 -- from IndPosMemo
 theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}

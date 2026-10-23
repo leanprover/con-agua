@@ -55,7 +55,7 @@ open L.Arena
 /-- **`struct_proj_guards` leaves the `hb` memo well formed** (its walk's memo after the clear). -/
 theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem}
     {a : AState} {cty nP nF so sl : Word} {r : List Word} {mp : Std.HashMap (EIdx × Nat) Bool}
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
+    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR dn vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
     ∃ mp', hbMR m' mp' := by
   unfold spgW at h
@@ -76,7 +76,7 @@ theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨u, m2⟩ := x
   rw [hu, spgK2_some] at h
   obtain ⟨-, mp', -, -, -, -, -, hM2, -, -⟩ :=
-    ulW_ok n _ _ a cty nP nF 0 u ∅ hn (by simpa using hb) hc' hS0 hM0 hu
+    ulW_ok n _ _ a cty nP nF 0 u ∅ (by simpa using hb) hc' hS0 hM0 hu
   cases hr : rowW n m2 (u.headD 0) (u.tail.headD 0) so sl z 0 nF with
   | none => rw [hr] at h; cases h
   | some y =>
