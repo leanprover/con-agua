@@ -7,6 +7,7 @@ import ConAgua.Census.Attr
 import ConAgua.L.ModelGen
 import ConAgua.L.ProgHas
 import ConAgua.Arena.IndCopy
+import ConAgua.Arena.DeclNatDeps
 
 /-!
 # The ground hoist: `hoistNatOpGround` in L (lane `front3`)
@@ -313,6 +314,27 @@ def hoistClosureL : FunDecl := lfn (i, j, ord, tg, ws) locals (r) {
 
 /-! ## The targets -/
 
+/-- `slice_has(o, l, n, j)`: `n` in the `IW` slice `IW[o + j ‥ o + l)`. -/
+-- con-ron: none — `List.contains` on an `IW` slice (`natOpNames.contains`)
+def sliceHasL : FunDecl := lfn (o, l, n, j) locals (r) {
+  if l <= j { return 0 };
+  if IW.u64[o + j] == n { return 1 };
+  r := call slice_has(o, l, n, j + 1);
+  return r
+}
+
+/-- `nat_op_record(n)`: `isNatOpRecord` of a definition named `n`. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:108-116 ConRon.Arena.Frontend.isNatOpRecord
+@[l_impl ConRon.Arena.Frontend.isNatOpRecord]
+def natOpRecordL : FunDecl := lfn (n) locals (o1, l1, o2, l2, a, b) {
+  (o1, l1) := call nat_div_mod_names();
+  (o2, l2) := call nat_op_names();
+  a := call slice_has(o1, l1, n, 0);
+  b := call slice_has(o2, l2, n, 0);
+  if a != 0 || b != 0 { return 1 };
+  return 0
+}
+
 /-- `hoist_deps(i, o, l, q, ord, tg, ws)`: the grounds `IW[o + q ‥ o + l)` of the operation at
 `i`: each first declared after `i` pulls its closure ahead of `i`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:283-311 ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps
@@ -456,11 +478,20 @@ def hoistProg : Prog :=
    ("hoist_targets_go", hoistTargetsGoL), ("hoist_zero", hoistZeroL), ("hoist_any", hoistAnyL),
    ("hoist_bucket", hoistBucketL), ("hoist_chain", hoistChainL), ("hoist_emit", hoistEmitL),
    ("hoist_apply", hoistApplyL), ("hoist_nat_op_ground", hoistNatOpGroundL),
+   ("slice_has", sliceHasL), ("nat_op_record", natOpRecordL),
    ("hs_find", memoFindG hsSch), ("hs_put", memoPutG hsSch), ("hs_clear", memoClearG hsSch),
    ("hn_find", memoFindG hnSch), ("hn_put", memoPutG hnSch), ("hn_clear", memoClearG hnSch)]
 
 /-- The hoist's functions in a program. -/
 abbrev HoistProg (p : Prog) : Prop := ProgHas p hoistProg
+
+/-- The functions outside the hoist it calls (the `Nat` operations' pins, `iw_alloc`). -/
+def hoistExtProg : Prog :=
+  [("nat_op_names", natOpNamesL), ("nat_div_mod_names", natDivModNamesL),
+   ("nat_op_deps", natOpDepsL), ("pin_at", pinAtL), ("iw_alloc", iwAlloc)]
+
+/-- The functions outside the hoist in a program. -/
+abbrev HoistExt (p : Prog) : Prop := ProgHas p hoistExtProg
 
 /-! ## The name index -/
 
@@ -588,5 +619,34 @@ l_model hoistApply_spec (p : Prog) (hp : HoistProg p) (ha : p.lookup "iw_alloc" 
     hoistEmit_spec p hp n]
   grind [arena_grind] gen 20 heartbeats 1000000
 
+/-! ## The targets and the whole pass -/
+
+/-- **`slice_has` is its model `hSliceHasW`** (generated; reads only). -/
+l_model sliceHas_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "slice_has" ↦ hSliceHasW ro]
+  specs []
+  grind [arena_grind]
+
+/-- **`nat_op_record` is its model `hNatOpRecW`** (generated). -/
+l_model natOpRecord_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "nat_op_record" ↦ hNatOpRecW]
+  specs [callW_spec p n "nat_div_mod_names" [], callW_spec p n "nat_op_names" [],
+    sliceHas_spec p hp n]
+  grind [arena_grind]
+
+/-- **`hoist_targets_go` is its model `hTargetsGoW`** (generated). -/
+l_model hoistTargetsGo_spec (p : Prog) (hp : HoistProg p)
+  fns [hp.get "hoist_targets_go" ↦ hTargetsGoW]
+  specs [natOpRecord_spec p hp n, fun s₀ c => callW_spec p n "nat_op_deps" [c] s₀,
+    hoistDeps_spec p hp n]
+  grind [arena_grind] gen 20
+
+/-- **`hoist_nat_op_ground` is its model `hNatOpGroundW`** (generated). -/
+l_model hoistNatOpGround_spec (p : Prog) (hp : HoistProg p) (hx : HoistExt p)
+  fns [hp.get "hoist_nat_op_ground" ↦ hNatOpGroundW]
+  specs [memoClearG_spec hnSch p _ (hp.get "hn_clear") n, hoistIndexGo_spec p hp n,
+    iwAlloc_specW p (hx.get "iw_alloc") n, hoistZero_spec p hp n, hoistTargetsGo_spec p hp n,
+    hoistAny_spec p hp n, hoistApply_spec p hp (hx.get "iw_alloc") n]
+  grind [arena_grind] gen 20
 
 end L.Checker
