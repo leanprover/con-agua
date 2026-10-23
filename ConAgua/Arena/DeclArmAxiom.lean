@@ -526,7 +526,7 @@ theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (cda_specW p hX.cda hX.val.rcp hX.quot.pa n s₀ i vis)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame hA.closed n (f := "check_decl_axiom") (by decide) [i, vis] s₀)
+    (hA.closed.memFrame n (f := "check_decl_axiom") (by decide) [i, vis] s₀)
   subst hs
   have hd' : ds[i.toNat] = .axiomDecl cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd

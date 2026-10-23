@@ -590,25 +590,18 @@ def ivFns : List FnName :=
    "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "install_value_guards",
    "env_push", "env_row_set", "erec_vg"]
 
-theorem ivProg_closed : closedA ivProg stepA stepC ivFns = true := by decide +kernel
-
 /-- A program with `install_value`'s text. -/
-def IvProg (p : Prog) : Prop := ∀ f ∈ ivFns, p.lookup f = ivProg.lookup f
+structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns
 
 section ivLookups
 variable {p : Prog} (h : IvProg p)
 include h
-theorem IvProg.closed : closedA p stepA stepC ivFns = true := closedW_of_agree ivProg_closed h
-theorem IvProg.iv : p.lookup "install_value" = some installValueL := (h _ (by decide)).trans rfl
-theorem IvProg.rec : RecProg p :=
-  ⟨(h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl,
-   (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl,
-   (h _ (by decide)).trans rfl⟩
-theorem IvProg.ih : IhProg p :=
-  ⟨(h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl,
-   (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl,
-   (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl,
-   (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl, (h _ (by decide)).trans rfl⟩
+theorem IvProg.iv : p.lookup "install_value" = some installValueL :=
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem IvProg.recP : RecProg p := by
+  constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
+theorem IvProg.ih : IhProg p := by
+  constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
 end ivLookups
 
 /-! ## The callees' specs at the loop's relation -/
@@ -645,11 +638,11 @@ theorem installValue_loop (hP : IvProg p) (hC : CvgProg p) :
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (iv_specW p hP.iv hP.rec hP.ih hC n s₀ i vis ck vk)
+    (iv_specW p hP.iv hP.recP hP.ih hC n s₀ i vis ck vk)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame hP.closed n (f := "install_value") (by decide) [i, vis, ck, vk] s₀)
+    (hP.closed.memFrame n (f := "install_value") (by decide) [i, vis, ck, vk] s₀)
   subst hs
-  obtain ⟨x, a', hrun', hS', hg', hvg, hne⟩ := ivW_ok hP.rec hW ⟨hR.check, hR.iw⟩ hR.decls hi hk
+  obtain ⟨x, a', hrun', hS', hg', hvg, hne⟩ := ivW_ok hP.recP hW ⟨hR.check, hR.iw⟩ hR.decls hi hk
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_, by rw [hres]; exact hvg, by rw [hres]; exact hne⟩
   rw [hst, hres]

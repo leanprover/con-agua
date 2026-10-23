@@ -145,7 +145,7 @@ structure StuckCallees (p : Prog) : Prop where
   den : CoreDen
   strLitSupported : StrLitSupportedOK p
   strLitCtor : StrLitCtorOK p
-  /-- `strLitSupported` keeps every stored node's view (`supKeep_twin`, a `sorry` in `WhnfBase`). -/
+  /-- `strLitSupported` keeps every stored node's view (`supKeep_of`, `StrLitKeep.lean`). -/
   supKeep : ∀ fe, SupKeep fe
   lazyDeltaStep : LazyDeltaStepH p
   reduceProjCore : ReduceProjCoreH p
