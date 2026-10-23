@@ -325,12 +325,11 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only [show UInt64.ofNat 13 = (13 : Word) from rfl] at e13
   rw [e13]
   have hlen : G.pre.length = l12 := decHL_length _ (hpre.get (OMono.decHL _ _))
-  have hm := mjW_sim dn vis fe n m a g c (UInt64.ofNat l12) G hS hG
+  have hm := mjW_sim dn vis fe n m a g c (UInt64.ofNat l12) G hS hG hA
   have hd13 : (UInt64.ofNat l12 : Word).toNat = G.pre.length := by rw [t13, hlen]
   rw [hd13] at hm
-  refine RSim.bind (K := gtK1 n g c (UInt64.ofNat l12)) rfl (RSim.withF hm (fun _ hb => mjW_afr hb)) ?_
-  rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hf1⟩
-  have hA1 := hf1 hA
+  refine RSim.bind (K := gtK1 n g c (UInt64.ofNat l12)) rfl hm ?_
+  rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hA1⟩
   dsimp only at hS1 hg1 ho1
   cases o1 with
   | none =>

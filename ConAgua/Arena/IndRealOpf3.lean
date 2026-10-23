@@ -435,10 +435,10 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
     rw [ht4]; exact hd2
 
 /-- **`open_pis_at_fvars_f` refines `openPisAtFvarsF`** under the stage relation and the walk
-memos (replaces `IndStubs.openPisAtFvarsF_spec`, with the fvar indices below `2^63`: they do not
-wrap); the memos are well formed after. -/
+memos (replaces `IndStubs.openPisAtFvarsF_spec`; a first fvar index `≥ 2^63` aborts, deviation
+D33, so the indices do not wrap); the memos are well formed after. -/
 @[refines ConRon.Arena.openPisAtFvarsF]
-theorem opfF_ok (k e i : Word) (he : H e) (hi : i.toNat < 2 ^ 63) :
+theorem opfF_ok (k e i : Word) (he : H e) :
     RelW opfF [k, e, i] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
       (openPisAtFvarsF k.toNat (decI e) i.toNat)
       (fun m m' a r x => KeepPost dn vis fe decOLE m m' a r x ∧ AbsOK m') := by
@@ -452,6 +452,16 @@ theorem opfF_ok (k e i : Word) (he : H e) (hi : i.toNat < 2 ^ 63) :
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
   have hctl : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
   simp only [opfTopK] at c'
+  by_cases hsh : i >>> 63 ≠ 0
+  · rw [if_pos hsh] at c'; cases c'
+  rw [if_neg hsh] at c'
+  have hi : i.toNat < 2 ^ 63 := by
+    have h1 := congrArg UInt64.toNat (Decidable.not_not.mp hsh)
+    rw [UInt64.toNat_shiftRight] at h1
+    simp only [UInt64.toNat_zero, UInt64.reduceToNat, Nat.shiftRight_eq_div_pow, Nat.reduceMod,
+      Nat.reducePow] at h1
+    have := i.toNat_lt
+    omega
   generalize hco : rdW (m.arr64 CTL) 136 = co at c'
   by_cases hlen : m.len64 SPN < co
   · rw [if_pos hlen] at c'; cases c'

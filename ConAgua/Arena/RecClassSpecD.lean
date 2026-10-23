@@ -56,6 +56,14 @@ theorem simOpenPis (hS : StageR dn vis fe m a) {k e i : Word} (he : H e) :
       (KP dn vis fe m decOLE) :=
   (openPisAtFvarsF_spec dn vis fe k e i he).sim hS
 
+/-- `open_pis_at_fvars_f`'s real refinement (`opfF_ok`): the walk memos kept. -/
+theorem simOpenPisF (hS : StageR dn vis fe m a) (hA : AbsOK m) {k e i : Word} (he : H e) :
+    RSim (opfF m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a
+      (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
+  rintro ⟨r, m'⟩ h
+  obtain ⟨x, a', hrun, hK, hA'⟩ := opfF_ok dn vis fe k e i he m m' a r h ⟨hS, hA⟩
+  exact ⟨x, a', hrun, hK, hA'⟩
+
 /-- `fvar_head`'s result. -/
 def decFH (r : List Word) : Option Nat → Prop
   | none => r = [0, 0]
