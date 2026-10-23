@@ -26,9 +26,10 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val") (hOpf : OpfF p) (hLC : LvlCacheProg p)
+  (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hLT in
 /-- **`check_sum_ctors` under `StageC`** (twin side: con-ron's `checkSumCtors_spec`'s proof). -/
 theorem sctsW_okC
     (vis0 T lo ll nP nIdx rs isP lg cvTaw : Word) (lps : List NIdx) (cvTa : IConstantVal)
@@ -118,7 +119,7 @@ theorem sctsW_okC
   subst hw3v
   simp only [checkSumCtors]
   refine Sim.bindK (K := sctsK1 _ (j + 3) w3) rfl (fun _ _ => rfl)
-    (ctorW_okC hq henv hV hkc j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa hC hT hlps
+    (ctorW_okC hq henv hV hkc hOpf hLC hLT j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa hC hT hlps
       hlb hcvB hta hrs hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe) fun r x m1 a1 hQ => ?_
   obtain ⟨hC1, hg1, hr0, hx1, hsorts, hsb, hA1, c1⟩ := hQ
   have hS1 := hC1.stage
@@ -202,7 +203,7 @@ theorem sctsW_okC
 
 
 
-include hq henv hV hkc in
+include hq henv hV hkc hOpf hLC hLT in
 /-- **`check_sum_ctors` refines `checkSumCtors .verified`** under `StageC` (the inputs'
 denotations as con-ron's `checkSumCtors_spec` asks), the pre-block environment the restriction of
 `fe` to `vis0`: the new constructor list and the sorts lists as fresh pointer slices decoded below
@@ -240,7 +241,7 @@ theorem checkSumCtors_refinesC (hP : SumProg p) (k : Nat) (hk : k ≤ 2 ^ 62) (s
   refine triple_post (sctsW_spec p hP (realCall p) (realCall_spec p) k s₀ vis0 vis T lo ll nP nIdx rs isP
     lg cvTaw cO cL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hC', hg', hd1, -, hd2, -, hA', -⟩ := (sctsW_okC hq henv hV hkc vis0 T lo ll nP nIdx rs isP lg
+  obtain ⟨hok, hC', hg', hd1, -, hd2, -, hA', -⟩ := (sctsW_okC hq henv hV hkc hOpf hLC hLT vis0 T lo ll nP nIdx rs isP lg
     cvTaw lps cvTa hT hrs hws k hk _ a₀ cO cL cs csP hC hlps hlb hta hcs hA hTP hlpsP hrsP hcvTaP hcsP
     hok₀ hfe).run hm
   exact ⟨hl, hok, hC', hg', hd1, hd2, hA'⟩
