@@ -44,6 +44,42 @@ def PFr (ord mk nw : Word) (m m' : Mem) : Prop :=
     (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m'.words.size = m.words.size ∧
     ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
 
+
+/-! ## The unmarked positions -/
+
+theorem unm_nil (m : Mem) (mk : Word) (lo hi : Nat) (h : hi ≤ lo) : unm m mk lo hi = [] := by
+  simp [unm, Nat.sub_eq_zero_of_le h]
+
+theorem unm_succ (m : Mem) (mk : Word) (lo hi : Nat) (h : lo < hi) :
+    unm m mk lo hi = if rdW (m.arr64 IW) (mk + UInt64.ofNat lo) = 0 then lo :: unm m mk (lo + 1) hi
+      else unm m mk (lo + 1) hi := by
+  unfold unm
+  rw [show hi - lo = (hi - (lo + 1)) + 1 by omega, List.range'_succ, List.filter_cons]
+  simp
+
+theorem unm_congr (m m' : Mem) (mk : Word) (lo hi : Nat)
+    (h : ∀ x, lo ≤ x → x < hi →
+      rdW (m'.arr64 IW) (mk + UInt64.ofNat x) = rdW (m.arr64 IW) (mk + UInt64.ofNat x)) :
+    unm m' mk lo hi = unm m mk lo hi := by
+  unfold unm
+  apply List.filter_congr
+  intro x hx
+  rw [List.mem_range'_1] at hx
+  rw [h x hx.1 (by omega)]
+
+theorem mem_unm {m : Mem} {mk : Word} {lo hi x : Nat} :
+    x ∈ unm m mk lo hi ↔ lo ≤ x ∧ x < hi ∧ rdW (m.arr64 IW) (mk + UInt64.ofNat x) = 0 := by
+  simp only [unm, List.mem_filter, List.mem_range'_1, decide_eq_true_eq]
+  constructor
+  · rintro ⟨⟨h1, h2⟩, h3⟩; exact ⟨h1, by omega, h3⟩
+  · rintro ⟨h1, h2, h3⟩; exact ⟨⟨h1, by omega⟩, h3⟩
+
+theorem unm_sorted (m : Mem) (mk : Word) (lo hi : Nat) : (unm m mk lo hi).Pairwise (· < ·) :=
+  (List.pairwise_lt_range' 1).filter _
+
+theorem rdW_of_get? {A B : Array Word} {x : Word} (h : A[x.toNat]? = B[x.toNat]?) : rdW A x = rdW B x := by
+  simp only [rdW, h]
+
 /-- **`prep_front` is `frontOf`** from the prelude record `aw` on (`acc` the front so far, the
 twin's stream the unmarked records). -/
 theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
@@ -75,6 +111,66 @@ theorem pRest_ok (nw ord mk : Word) :
       MemFrame [IW] [] m m' ∧
       ∀ x : Nat, (x < ord.toNat + c.toNat ∨ ord.toNat + nw.toNat ≤ x) →
         (m'.arr64 IW)[x]? = (m.arr64 IW)[x]? := by
-  sorry
+  intro fuel
+  induction fuel with
+  | zero => intro m m' c j r _ _ _ _ _ h; simp [pRestW.eq_1] at h
+  | succ fuel ih =>
+    intro m m' c j r h1 h2 h3 hcj hjn h
+    by_cases hj : nw ≤ j
+    · rw [pRestW.arm1 _ _ _ _ _ _ _ hj] at h
+      cases h
+      have : nw.toNat ≤ j.toNat := UInt64.le_iff_toNat_le.mp hj
+      rw [unm_nil _ _ _ _ this]
+      exact ⟨by simp, fun k hk => by simp at hk, MemFrame.refl _ _ _, fun _ _ => rfl⟩
+    · have hjlt : j.toNat < nw.toNat := by
+        have := mt UInt64.le_iff_toNat_le.mpr hj; omega
+      have hj1 := toNat_succ j (by omega)
+      have hmkj : mk + j = mk + UInt64.ofNat j.toNat := by simp
+      by_cases hz : rdW (m.arr64 IW) (mk + j) = 0
+      · rw [pRestW.arm2 _ _ _ _ _ _ _ hj hz, pRestW.k1.arm1] at h
+        have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_succ c (by omega)
+        have hsz : ((m.set64 IW (ord + c) j).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
+        obtain ⟨hr, hk, hfr, hout⟩ := ih _ m' (c + 1) (j + 1) r h1 (hsz ▸ h2) (hsz ▸ h3)
+          (by omega) (by omega) h
+        have hoc : (ord + c).toNat = ord.toNat + c.toNat := by
+          rw [UInt64.toNat_add]; omega
+        have hU : unm (m.set64 IW (ord + c) j) mk (j + 1).toNat nw.toNat =
+            unm m mk (j.toNat + 1) nw.toNat := by
+          rw [hj1]
+          apply unm_congr
+          intro x hx1 hx2
+          rw [rdW_set64]
+          have : ¬ (ord + c = mk + UInt64.ofNat x) := by
+            intro e
+            have := congrArg UInt64.toNat e
+            rw [hoc, addW_toNat mk x (by omega)] at this
+            omega
+          simp [this]
+        rw [hU] at hr hk
+        rw [unm_succ _ _ _ _ hjlt]; simp only [← hmkj, hz, ↓reduceIte]
+        refine ⟨by simp [hr, hc1]; omega, fun k hk' => ?_, ?_, ?_⟩
+        · cases k with
+          | zero =>
+            simp only [List.getElem_cons_zero, Nat.add_zero]
+            have hx := hout (ord.toNat + c.toNat) (Or.inl (by omega))
+            rw [rdW_addr _ _ _ (by omega), hx, Mem.arr64_set64_same, hoc]
+            simp [Array.getElem?_setIfInBounds]
+            simp only [show ord.toNat + c.toNat < (m.arr64 IW).size by omega, ↓reduceIte,
+              Option.getD_some]
+          | succ k =>
+            simp only [List.getElem_cons_succ]
+            have := hk k (by simp only [List.length_cons] at hk'; omega)
+            rw [hc1, show c.toNat + 1 + k = c.toNat + (k + 1) by omega] at this
+            exact this
+        · exact (MemFrame.set64 m IW (by decide) _ _).trans hfr
+        · intro x hx
+          rw [hout x (by omega), Mem.arr64_set64_same, hoc]
+          simp [Array.getElem?_setIfInBounds]
+          omega
+      · rw [pRestW.arm3 _ _ _ _ _ _ _ hj hz, pRestW.k1.arm1] at h
+        obtain ⟨hr, hk, hfr, hout⟩ := ih m m' c (j + 1) r h1 h2 h3 (by omega) (by omega) h
+        rw [hj1] at hr hk
+        rw [unm_succ _ _ _ _ hjlt]; simp only [← hmkj, hz, ↓reduceIte]
+        exact ⟨hr, hk, hfr, hout⟩
 
 end L.Checker
