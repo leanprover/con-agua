@@ -832,7 +832,7 @@ def ihK1 (nPc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m1) =>
     if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
     else ihK2 nPc (r.tail.headD 0) (r.tail.tail.headD 0)
-      (stubM "get_app_args_f" m1 [CWF, r.tail.tail.tail.headD 0])
+      (gaaF m1 [CWF, r.tail.tail.tail.headD 0])
 
 /-- **The model of `class_gen_ih_parts`.** -/
 def ihW (m : Mem) (g t tele w d : Word) : Option (List Word × Mem) :=
@@ -847,20 +847,20 @@ theorem ihK2_some : ihK2 nPc xo xl (some (r, m1)) =
 theorem ihK1_some : ihK1 nPc (some (r, m1)) =
     (if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
     else ihK2 nPc (r.tail.headD 0) (r.tail.tail.headD 0)
-      (stubM "get_app_args_f" m1 [CWF, r.tail.tail.tail.headD 0])) := rfl
+      (gaaF m1 [CWF, r.tail.tail.tail.headD 0])) := rfl
 end arms
 grind_pattern [ind_grind] ihK2_some => ihK2 nPc xo xl (some (r, m1))
 grind_pattern [ind_grind] ihK1_some => ihK1 nPc (some (r, m1))
 
 set_option maxHeartbeats 1600000 in
 theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
-    (n : Nat) (s₀ : St) (g t tele w d : Word) :
+    (had : AdF p) (n : Nat) (s₀ : St) (g t tele w d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧ ihW s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "open_pis_at_fvars_f" n, stubM_spec p "get_app_args_f" n] <;>
+      stubM_spec p "open_pis_at_fvars_f" n, gaaF_spec p had n] <;>
     finish (gen := 20) [ihW]
 
 
@@ -996,12 +996,12 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
           | cons a2 t2 => cases t2 <;> rfl
       rw [hleaf3] at h
       obtain ⟨hl1, hl2⟩ := hleaf
-      cases ha : stubM "get_app_args_f" m1 [CWF, (r1.drop 3).headD 0] with
+      cases ha : gaaF m1 [CWF, (r1.drop 3).headD 0] with
       | none => rw [ha] at h; simp [ihK2] at h
       | some r2m =>
         obtain ⟨r2, m2⟩ := r2m
         rw [ha] at h
-        obtain ⟨args, a2, hrun2, hS2, hg2, hdec2⟩ := getAppArgs_spec dn vis fe CWF ((r1.drop 3).headD 0) hl1 m1 m2 a1 r2 ha hS1
+        obtain ⟨args, a2, hrun2, hS2, hg2, hdec2⟩ := gaaF_ok dn vis fe CWF ((r1.drop 3).headD 0) hl1 m1 m2 a1 r2 ha hS1
         generalize hN : (match G.cls[t.toNat]? with | some M => M.nPc | none => 0) = N at hnp64 h
         have gd : ∀ (l : List Word), l.getD 0 0 = l.headD 0 ∧ l.getD 1 0 = l.tail.headD 0 ∧
             l.getD 2 0 = l.tail.tail.headD 0 := by
@@ -1100,7 +1100,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
 `get_app_args` stubs). -/
 @[refines ConRon.Arena.ClassGen.ihParts]
 theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (g t tele w d : Word) (G : ClassGen) (hS : StageR dn vis fe s₀.mem a₀) (hw : H w)
     (hcls : decAt s₀.mem (decPL s₀.mem (decTM s₀.mem)) (g.toNat + 3) = some G.cls)
     (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
@@ -1111,7 +1111,7 @@ theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" =
       IWGrow s₀.mem s'.mem ∧
       IhRes s'.mem r (AM.res (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀);
       ⊤⦄ := by
-  refine triple_post (classGenIhParts_spec p hp n s₀ g t tele w d) ?_
+  refine triple_post (classGenIhParts_spec p hp had n s₀ g t tele w d) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hres⟩ := ihW_ok dn vis fe _ _ a₀ g t tele w d G r hS hw hcls (by omega) hm
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ a' res hrun

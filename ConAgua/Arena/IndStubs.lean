@@ -62,6 +62,20 @@ theorem stubM_memoFrame (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r
     ∃ (A : List ArrId) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
       (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m' := sorry
 
+/-- **The `abstract1` walk's memo is well formed** (lane `indproofs4`, helper `abs`): array 49
+(`ABMEMO`) with epoch word `CTL[48]` (`Abs1.lean`'s `abSch`, the core's `coreAbSch`) at some map.
+`abstract1_fast` clears it on entry and exit, so it needs this of the memory it starts from and
+leaves it so (`IndRealAbs.lean`); `StageR` says nothing about array 49, so callers thread it. -/
+def AbsOK (m : Mem) : Prop :=
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨49, 48⟩ : MemoSch) lfKey decE m mp
+
+/-- **Every stub keeps the `abstract1` memo well formed** (lane `indproofs4`, helper `abs`).
+`sorry` until the owning lanes land the functions, like `stubM_memoFrame`; true of the real
+functions: those that do not reach the `abstract1` walk leave array 49 and `CTL[48]` alone, and
+the core's (`whnf`, `infer_type`, …) keep `CoreMemos`, which contains `AbsOK`. -/
+theorem stubM_absOK (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r : List Word)
+    (h : stubM f m args = some (r, m')) (hA : AbsOK m) : AbsOK m' := sorry
+
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
 def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → Prop) (op : AM α)
@@ -110,21 +124,6 @@ theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
     RelAM "open_pis_at_fvars_f" [k, e, i] (StageR dn vis fe)
       (openPisAtFvarsF k.toNat (decI e) i.toNat) (KeepPost dn vis fe decOLE) := sorry
 
-/-- `get_app_args(fuel, e)`. -/
-theorem getAppArgs_spec (f e : Word) (he : H e) :
-    RelAM "get_app_args_f" [f, e] (StageR dn vis fe)
-      (getAppArgs f.toNat (decI e)) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
-
-/-- `fvar_type_d(e)`. -/
-theorem fvarTypeD_spec (e : Word) (he : H e) :
-    RelAM "fvar_type_d" [e] (StageR dn vis fe)
-      (fvarTypeD (decI e)) (KeepPost dn vis fe decW0E) := sorry
-
-/-- `fvar_type_ds(off, len)`. -/
-theorem fvarTypeDs_spec (o l : Word) (xs : List EIdx) :
-    RelAM "fvar_type_ds" [o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
-      (fvarTypeDs xs) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
-
 /-- `inst_lp_fast(fuel, ks.off, ks.len, us, e)`. -/
 theorem instLPFast_spec (f o l us e : Word) (hu : H us) (he : H e) (ks : List NIdx) :
     RelAM "inst_lp_fast" [f, o, l, us, e]
@@ -142,11 +141,6 @@ theorem instantiate1LiftFast_spec (f e v d : Word) (he : H e) (hv : H v) :
     RelAM "instantiate1_lift_fast" [f, e, v, d] (StageR dn vis fe)
       (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat) (KeepPost dn vis fe decW0E) := sorry
 
-/-- `abstract1_fast(fuel, e, d, k)`. -/
-theorem abstract1Fast_spec (f e d k : Word) (he : H e) :
-    RelAM "abstract1_fast" [f, e, d, k] (StageR dn vis fe)
-      (abstract1Fast f.toNat (decI e) d.toNat k.toNat) (KeepPost dn vis fe decW0E) := sorry
-
 
 /-- `all_level_params_defined(lps.off, lps.len, e)`. -/
 theorem allLevelParamsDefined_spec (o l e : Word) (he : H e) (lps : List NIdx) :
@@ -158,13 +152,6 @@ theorem allLevelParamsDefined_spec (o l e : Word) (he : H e) (lps : List NIdx) :
 theorem nameRecI_spec (n i : Word) (hn : H n) :
     RelAM "name_rec_i" [n, i] (StageR dn vis fe)
       (internNNode (.str (decI n) s!"rec_{i.toNat}")) (KeepPost dn vis fe decW0N) := sorry
-
-/-- `ind_params_ok(nP, off, len)` (the block's constant records, an `IW` list of `EREC`
-pointers). -/
-theorem indParamsOk_spec (nP o l : Word) (blk : List IConstantInfo) :
-    RelAM "ind_params_ok" [nP, o, l]
-      (fun m a => StageR dn vis fe m a ∧ decPL m (fun q => decCI (erA m) dn q) o.toNat l.toNat = some blk)
-      (indParamsOk nP.toNat blk) (KeepPost dn vis fe decW0B) := sorry
 
 /-- A `PropWhen` from its three words (`decPW`'s layout: `0` `never`, `1` `ifAllZero` with the
 names the handle slice `(o, l)` of `a`). -/

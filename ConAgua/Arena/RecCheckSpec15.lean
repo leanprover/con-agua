@@ -36,7 +36,7 @@ def tkhK4 (n : Nat) (vis q fto ftl Mc ip usp ii : Word) (ra : List Word) :
 def tkhK3 (n : Nat) (vis q fto ftl Mc majDom ip usp ii : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m) => tkhK4 n vis q fto ftl Mc ip usp ii ra (stubM "get_app_args_f" m [CWF, majDom])
+  | some (ra, m) => tkhK4 n vis q fto ftl Mc ip usp ii ra (gaaF m [CWF, majDom])
 
 def tkhK2 (n : Nat) (vis q fto ftl Mc leafW majDom lh : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -47,7 +47,7 @@ def tkhK2 (n : Nat) (vis q fto ftl Mc leafW majDom lh : Word) :
     else if eViewW m lh = [] then none
     else if eViewW m (rm.headD 0) = [] then none
     else tkhK3 n vis q fto ftl Mc majDom ((eViewW m lh).tail.headD 0) ((eViewW m lh).tail.tail.headD 0)
-      ((eViewW m (rm.headD 0)).tail.headD 0) (stubM "get_app_args_f" m [CWF, leafW])
+      ((eViewW m (rm.headD 0)).tail.headD 0) (gaaF m [CWF, leafW])
 
 def tkhK1 (n : Nat) (vis q fto ftl Mc leafW majDom : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -82,10 +82,10 @@ theorem tkhK2_ok (h : ¬ lh >>> 28 ≠ 3) (h2 : ¬ rm.headD 0 >>> 28 ≠ 3) (h3 
     (h4 : ¬ eViewW m (rm.headD 0) = []) :
     tkhK2 n vis q fto ftl Mc leafW majDom lh (some (rm, m)) =
     tkhK3 n vis q fto ftl Mc majDom ((eViewW m lh).tail.headD 0) ((eViewW m lh).tail.tail.headD 0)
-      ((eViewW m (rm.headD 0)).tail.headD 0) (stubM "get_app_args_f" m [CWF, leafW]) := by
+      ((eViewW m (rm.headD 0)).tail.headD 0) (gaaF m [CWF, leafW]) := by
   simp only [tkhK2]; rw [if_neg h, if_neg h2, if_neg h3, if_neg h4]
 theorem tkhK3_some : tkhK3 n vis q fto ftl Mc majDom ip usp ii (some (ra, m)) =
-    tkhK4 n vis q fto ftl Mc ip usp ii ra (stubM "get_app_args_f" m [CWF, majDom]) := rfl
+    tkhK4 n vis q fto ftl Mc ip usp ii ra (gaaF m [CWF, majDom]) := rfl
 theorem tkhK4_i (h : ip ≠ ii) : tkhK4 n vis q fto ftl Mc ip usp ii ra (some (rb, m)) = some ([0], m) := by
   simp only [tkhK4]; rw [if_pos h]
 theorem tkhK4_l (h : ¬ ip ≠ ii) (h2 : ra.tail.headD 0 ≠ rb.tail.headD 0) :
@@ -110,7 +110,7 @@ theorem tkh_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (vis q fto ftl
     simp only [callFn, targetK53Heads]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, gafF_spec p L.ad n,
-        stubM_spec p "get_app_args_f" n, eView_spec p L.hv n, tka_spec p L n] <;>
+        gaaF_spec p L.ad n, eView_spec p L.hv n, tka_spec p L n] <;>
       finish (gen := 40) (instances := 20000) [loc_init4, loc_init5, loc_init6]
 
 /-! ## `target_k53` -/

@@ -8,6 +8,7 @@ import ConAgua.Arena.Pins
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.MemoLibRel
 import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndRealAbs
 
 /-!
 # Refinements of `IndPos2` (lane `induct`, worker E, round 2)
@@ -1109,6 +1110,37 @@ theorem instPisWith_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
 
 end census
 
+/-- `inst_pis_with` keeps the `abstract1` memo. -/
+theorem instW_afr (n : Nat) : ∀ (m m' : Mem) (ao al e : Word) (r : List Word), instW n m ao al e = some (r, m') →
+    AFr m m' := by
+  induction n with
+  | zero => intro m m' ao al e r h; simp [instW] at h
+  | succ n ih =>
+    intro m m' ao al e r h
+    by_cases h0 : al = 0
+    · rw [instW_nil (h := h0)] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
+      exact AFr.refl _
+    by_cases h6 : e >>> 28 ≠ 6
+    · rw [instW_nopi (h := h0) (h2 := h6)] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+      rw [← h.2]; exact AFr.refl _
+    rw [instW_pi (h := h0) (h2 := h6)] at h
+    by_cases hv : eViewW m e = []
+    · rw [instK1_abort (h := hv)] at h; simp at h
+    rw [instK1_ok (h := hv)] at h
+    cases hst : i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) ao, 0] with
+    | none => rw [hst] at h; simp [instK2] at h
+    | some p1 =>
+    obtain ⟨rb, m1⟩ := p1
+    rw [hst, instK2_some] at h
+    cases hi : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with
+    | none => rw [hi] at h; simp [instK3] at h
+    | some p2 =>
+    obtain ⟨r2, m2⟩ := p2
+    rw [hi, instK3_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact (i1F_afr hst).trans (ih _ _ _ _ _ _ hi)
+
 /-! ## `close_telescope` -/
 
 mutual
@@ -1119,7 +1151,7 @@ def closeW : Nat → Mem → Word → Word → Word → Word → Option (List Wo
     else closeK1 dO i (closeW n m (dO + 1) (dl - 1) (i + 1) body)
 def closeK1 (dO i : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => closeK2 dO (stubM "abstract1_fast" m1 [CWF, r1.headD 0, i, 0])
+  | some (r1, m1) => closeK2 dO (abF m1 [CWF, r1.headD 0, i, 0])
 def closeK2 (dO : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) => closeK3 (mkForallW m2 (rdW (m2.arr64 IW) dO) (r2.headD 0))
@@ -1134,7 +1166,7 @@ theorem closeW_nil (h : dl = 0) : closeW (n + 1) m dO dl i body = some ([body], 
 theorem closeW_cons (h : dl ≠ 0) : closeW (n + 1) m dO dl i body =
     closeK1 dO i (closeW n m (dO + 1) (dl - 1) (i + 1) body) := by simp [closeW, h]
 theorem closeK1_some : closeK1 dO i (some (r1, m1)) =
-    closeK2 dO (stubM "abstract1_fast" m1 [CWF, r1.headD 0, i, 0]) := by rw [closeK1]
+    closeK2 dO (abF m1 [CWF, r1.headD 0, i, 0]) := by rw [closeK1]
 theorem closeK2_some : closeK2 dO (some (r2, m2)) =
     closeK3 (mkForallW m2 (rdW (m2.arr64 IW) dO) (r2.headD 0)) := by rw [closeK2]
 theorem closeK3_big (h : 4294967296 ≤ r) : closeK3 (some (r, m3)) = none := by simp [closeK3, h]
@@ -1152,8 +1184,8 @@ variable (p : Prog) (hd : p.lookup "der_b" = some derB)
   (hpf : p.lookup "forall_find" = some forallFind)
   (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
   (hmk : p.lookup "mk_forall" = some mkForall)
-  (hp : p.lookup "close_telescope" = some closeTelescope)
-include hd hpf hpp hpi hmk hp
+  (hp : p.lookup "close_telescope" = some closeTelescope) (hab : AbF p)
+include hd hpf hpp hpi hmk hp hab
 
 theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "close_telescope" [dO, dl, i, body]
@@ -1168,7 +1200,7 @@ theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
     simp only [callFn, closeTelescope]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "abstract1_fast" n, mkForall_spec p hd hpf hpp hpi hmk n, ih] <;>
+        abF_spec p hab n, mkForall_spec p hd hpf hpp hpi hmk n, ih] <;>
       finish (gen := 20)
 
 end spec
@@ -1182,13 +1214,13 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word),
     closeW n m dO dl i body = some (r, m') → StageR dn vis fe m a → H body →
     decHL m dO.toNat dl.toNat = some ds → dO.toNat + dl.toNat < 2 ^ 64 →
-    dO.toNat + dl.toNat ≤ iwTop m → i.toNat + dl.toNat < 2 ^ 64 →
+    dO.toNat + dl.toNat ≤ iwTop m → i.toNat + dl.toNat < 2 ^ 64 → AbsOK m →
     ∃ x a', (ConRon.Arena.closeTelescope ds i.toNat (decI body)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ decW0E m' r x := by
+      IWGrow m m' ∧ decW0E m' r x ∧ AbsOK m' := by
   induction n with
   | zero => intro dn fe vis m m' a dO dl i body ds r h; simp [closeW] at h
   | succ n ih =>
-    intro dn fe vis m m' a dO dl i body ds r h hS hbody hdec hb hit hib
+    intro dn fe vis m m' a dO dl i body ds r h hS hbody hdec hb hit hib hA
     by_cases hdl : dl = 0
     · rw [closeW_nil n m dO dl i body hdl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -1197,7 +1229,7 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
         have h0 : dl.toNat = 0 := by rw [hdl]; rfl
         rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
       subst this
-      exact ⟨decI body, a, rfl, hS, IWGrow.refl _, hbody, rfl⟩
+      exact ⟨decI body, a, rfl, hS, IWGrow.refl _, ⟨hbody, rfl⟩, hA⟩
     · have hl1 : dl.toNat = (dl.toNat - 1) + 1 := by have := toNat_ne_zero' hdl; omega
       rw [hl1, decHL, hslice?_succ] at hdec
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
@@ -1211,18 +1243,18 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       | some rm1 =>
         obtain ⟨r1, m1⟩ := rm1
         rw [hr1, closeK1_some] at h
-        obtain ⟨x1, a1, hrun1, hS1, hg1, hlt1, hdec1⟩ :=
+        obtain ⟨x1, a1, hrun1, hS1, hg1, ⟨hlt1, hdec1⟩, hA1⟩ :=
           ih dn fe vis m m1 a (dO + 1) (dl - 1) (i + 1) body bs r1 hr1 hS hbody
             (by rw [hdo1, hdl1]; exact hbs) (by rw [hdo1, hdl1]; omega) (by rw [hdo1, hdl1]; omega)
-            (by rw [hi1, hdl1]; omega)
+            (by rw [hi1, hdl1]; omega) hA
         rw [hi1] at hrun1
-        cases hr2 : stubM "abstract1_fast" m1 [CWF, r1.headD 0, i, 0] with
+        cases hr2 : abF m1 [CWF, r1.headD 0, i, 0] with
         | none => rw [hr2] at h; simp [closeK2] at h
         | some rm2 =>
           obtain ⟨r2, m2⟩ := rm2
           rw [hr2, closeK2_some] at h
-          obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
-            abstract1Fast_spec dn vis fe CWF (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 hS1
+          obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hlt2, hdec2⟩, hA2⟩ :=
+            abF_ok dn vis fe (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 ⟨hS1, hA1⟩
           rw [CWF_eq, hdec1, show (0 : Word).toNat = 0 from rfl] at hrun2
           have hg12 := hg1.trans hg2
           have hd0 : dO.toNat < iwTop m := by omega
@@ -1240,7 +1272,7 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
               obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
-              refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ?_, rfl⟩
+              refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
               · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]
                 rw [hrun1]
                 simp only [except_ok_bind, StateT.run_bind]
@@ -1259,8 +1291,8 @@ variable (p : Prog) (hd : p.lookup "der_b" = some derB)
   (hpf : p.lookup "forall_find" = some forallFind)
   (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
   (hmk : p.lookup "mk_forall" = some mkForall)
-  (hp : p.lookup "close_telescope" = some closeTelescope)
-include hd hpf hpp hpi hmk hp
+  (hp : p.lookup "close_telescope" = some closeTelescope) (hab : AbF p)
+include hd hpf hpp hpi hmk hp hab
 
 /-- **`close_telescope` refines `closeTelescope`** (through the `abstract1_fast` stub and master's
 `mk_forall`). -/
@@ -1269,17 +1301,19 @@ theorem closeTelescope_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     (fe : IFEnv) (vis dO dl i body : Word) (ds : List EIdx) (hbody : H body)
     (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem dO.toNat dl.toNat = some ds)
     (hb : dO.toNat + dl.toNat < 2 ^ 64) (hit : dO.toNat + dl.toNat ≤ iwTop s₀.mem)
-    (hib : i.toNat + dl.toNat < 2 ^ 64) :
+    (hib : i.toNat + dl.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "close_telescope" [dO, dl, i, body]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      decW0E s'.mem r (AM.res (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀); ⊤⦄ := by
-  refine triple_post (closeTelescope_spec p hd hpf hpp hpi hmk hp n s₀ dO dl i body) ?_
+      decW0E s'.mem r (AM.res (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀) ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (closeTelescope_spec p hd hpf hpp hpi hmk hp hab n s₀ dO dl i body) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout⟩ := closeW_ok n dn fe vis _ _ a₀ dO dl i body ds r hm hS hbody hdec hb hit hib
+  obtain ⟨x, a', hrun, hS', hg, hout, hA'⟩ :=
+    closeW_ok n dn fe vis _ _ a₀ dO dl i body ds r hm hS hbody hdec hb hit hib hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout, hA'⟩
 
 end census
 

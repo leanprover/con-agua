@@ -105,7 +105,7 @@ def gpbK1 (n : Nat) (g : Word) : Option (List Word × Mem) → Option (List Word
 /-- **The model of `class_gen_prefix_binders`.** -/
 def gpbW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, g => gpbK1 n g (stubM "fvar_type_ds" m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)])
+  | n + 1, m, g => gpbK1 n g (ftdsF m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)])
 
 /-! ## Arms -/
 
@@ -158,7 +158,7 @@ theorem snW_eq (ctor : Word) : snW (n + 1) m g s mc d cls ctor =
     pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g cls d (fcW n m g cls ctor) := by
   simp only [snW]
 theorem gpbW_eq : gpbW (n + 1) m g =
-    gpbK1 n g (stubM "fvar_type_ds" m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)]) := rfl
+    gpbK1 n g (ftdsF m [rdW (m.arr64 IW) (g + 1), rdW (m.arr64 IW) (g + 2)]) := rfl
 theorem gpbK1_some : gpbK1 n g (some (r1, m1)) = gpbK2 n (r1.headD 0) (r1.tail.headD 0) (psW n m1 g 0 0) := rfl
 theorem gpbK2_fail (h : r2.headD 0 = 0) : gpbK2 n pbo pbl (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [gpbK2, if_pos h]
@@ -264,7 +264,7 @@ theorem prefixBinders_spec (n : Nat) (s₀ : St) (g : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_ds" n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
+        ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
       finish (gen := 20) [rdW_eq]
 
 end specs
@@ -441,38 +441,39 @@ theorem rec2Count_succ (sl : List ClassSlot) (s : Nat) (hs : s < sl.length) :
 theorem pfTail {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a1 : AState}
     (n : Nat) (ty : Word) (hty : H ty) (hS1 : StageR dn vis fe m1 a1) (hg1 : IWGrow m m1)
     (rest : Option (List Word × Mem)) (opR : AM (Option (List EIdx)))
-    (hrest : RSim rest opR a1 (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ decIHO b.2 b.1 o)) :
+    (hrest : RSim rest opR a1
+      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2)) :
     RSim (pfR (pfK2 n ty rest)) (do
       let __do_lift ← opR
       match __do_lift with
       | none => pure none
       | some rest => pure (some (decI ty :: rest))) a1
-      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o) := by
+      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
   refine RSim.bind (K := fun o => pfR (pfK2 n ty o)) rfl hrest ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho⟩
+  rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
   cases o with
   | none =>
     rw [pfK2_fail (h := ho)]
-    exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl⟩
+    exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl, hA2⟩
   | some rl =>
   obtain ⟨h21, hd2, hb2⟩ := ho
   rw [pfK2_ok (h := by rw [h21]; decide)]
   refine RSim.lstep (K := fun o => pfR (pfK3 o)) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hty hd2
   simp only [pfK3_some, pfR_some, List.headD_cons, List.tail_cons]
-  exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3,
-    by simp only [List.tail_cons, List.headD_cons]; exact Nat.le_of_eq ht3⟩
+  exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), ⟨rfl, by simpa using hd3,
+    by simp only [List.tail_cons, List.headD_cons]; exact Nat.le_of_eq ht3⟩, consW_afr h3 hA2⟩
 
 theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (g : Word)
     (hns : G.nP + G.slots.length < 2 ^ 64) (n : Nat) :
     ∀ (m : Mem) (a : AState) (s mc : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
-    s.toNat ≤ G.slots.length → mc.toNat = ((G.slots.take s.toNat).filter rec2IsMot).length →
+    s.toNat ≤ G.slots.length → mc.toNat = ((G.slots.take s.toNat).filter rec2IsMot).length → AbsOK m →
     RSim (psW n m g s mc) (ConRon.Arena.ClassGen.prefixBinders.slotsGo G s.toNat (G.slots.drop s.toNat)) a
-      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o) := by
+      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o ∧ AbsOK b.2) := by
   induction n using Nat.strongRecOn with
   | ind n ih =>
-  intro m a s mc hS hG hsl hmc
+  intro m a s mc hS hG hsl hmc hA
   cases n with
   | zero => intro b hb; simp [psW] at hb
   | succ n =>
@@ -490,7 +491,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have : G.slots.length ≤ s.toNat := by
       rw [e8] at hend; have := UInt64.le_iff_toNat_le.mp hend; rw [t8] at this; omega
     rw [List.drop_eq_nil_of_le this, ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_1]
-    exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl, by simp [decHL, hslice?], by simp⟩
+    exact RSim.pure_some ⟨hS, IWGrow.refl m, ⟨rfl, by simp [decHL, hslice?], by simp⟩, hA⟩
   have hlt : s.toNat < G.slots.length := by
     rw [e8] at hend
     have : ¬ (UInt64.ofNat sl : Word).toNat ≤ s.toNat := fun x => hend (UInt64.le_iff_toNat_le.mpr x)
@@ -517,15 +518,15 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     | zero => intro b hb; simp [smW, pfR] at hb
     | succ n =>
     rw [smW_eq]
-    have hm := motW_sim dn vis fe n m a g mc (rdW (m.arr64 IW) g + s) G hS hG
+    have hm := motW_sim dn vis fe n m a g mc (rdW (m.arr64 IW) g + s) G hS hG hA
     rw [hmc, hd] at hm
     refine RSim.bind (K := fun o => pfR (pfK1 n (fun m1 => psW n m1 g (s + 1) (mc + 1)) o)) rfl hm ?_
-    rintro ⟨r1, m1⟩ o a1 - ⟨hS1, hg1, ho⟩
+    rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hA1⟩
     dsimp only at hS1 hg1 ho
     cases o with
     | none =>
       rw [pfK1_fail (h := ho)]
-      exact RSim.pure_some ⟨hS1, hg1, rfl⟩
+      exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
     | some ty =>
     obtain ⟨h11, htyH, htyd⟩ := ho
     rw [pfK1_ok (h := by rw [h11]; decide)]
@@ -536,7 +537,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have hmc1 : (mc + 1).toNat = mc.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     have hr := ih n (by omega) m1 a1 (s + 1) (mc + 1) hS1 (hG.grow (decCG_mono _) hg1) (by omega)
-      (by rw [hmc1, hs1, hcnt, hmc]; simp [rec2IsMot])
+      (by rw [hmc1, hs1, hcnt, hmc]; simp [rec2IsMot]) hA1
     rw [hs1] at hr
     exact pfTail n _ htyH hS1 hg1 _ _ hr
   | minor c C ihs =>
@@ -563,35 +564,36 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rw [hf] at hres
       rw [pfK4_fail (h := hres)]
       simp only [pure_bind]
-      exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl⟩
+      exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl, hA⟩
     | some X =>
     rw [hf] at hres
     obtain ⟨h41, hX⟩ := hres
     rw [pfK4_ok (h := by rw [h41]; decide)]
     simp only []
-    have hm := mnW_sim dn vis fe n m a g (UInt64.ofNat c) (r4.tail.headD 0) (rdW (m.arr64 IW) g + s) G X hS hG hns hX
+    have hm := mnW_sim dn vis fe n m a g (UInt64.ofNat c) (r4.tail.headD 0) (rdW (m.arr64 IW) g + s) G X hS hG hns hX hA
     rw [tc, hd] at hm
     refine RSim.bind (K := fun o => pfR (pfK1 n (fun m1 => psW n m1 g (s + 1) mc) o)) rfl hm ?_
-    rintro ⟨r1, m1⟩ o a1 - ⟨hS1, hg1, ho⟩
+    rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hA1⟩
     dsimp only at hS1 hg1 ho
     cases o with
     | none =>
       rw [pfK1_fail (h := ho)]
-      exact RSim.pure_some ⟨hS1, hg1, rfl⟩
+      exact RSim.pure_some ⟨hS1, hg1, rfl, hA1⟩
     | some ty =>
     obtain ⟨h11, htyH, htyd⟩ := ho
     rw [pfK1_ok (h := by rw [h11]; decide)]
     dsimp only
     rw [← htyd]
     have hr := ih n (by omega) m1 a1 (s + 1) mc hS1 (hG.grow (decCG_mono _) hg1) (by omega)
-      (by rw [hs1, hcnt, hmc]; simp [rec2IsMot])
+      (by rw [hs1, hcnt, hmc]; simp [rec2IsMot]) hA1
     rw [hs1] at hr
     exact pfTail n _ htyH hS1 hg1 _ _ hr
 
 theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem) (a : AState)
     (g : Word) (G : ClassGen) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) :
-    RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a (KP dn vis fe m decIHO) := by
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
+    RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
+      (fun b a' x => KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
@@ -611,28 +613,42 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [e1, e2]
   have hpar : decHL m o1 l1 = some G.params := by
     rw [← hGe]; exact (show DecB (fun m => (decHL m o1 l1 : Option (List EIdx))) m ps from hpd).get (OMono.decHL _ _)
-  refine RSim.bind (K := gpbK1 n g) rfl ((fvarTypeDs_spec dn vis fe _ _ G.params).sim
-    ⟨hS, by rw [t1, t2]; exact hpar⟩) ?_
-  rintro ⟨r1, m1⟩ pbs a1 - ⟨hS1, hg1, hpbs, hpbb⟩
+  have hpb : 0 < l1 → o1 + l1 ≤ iwTop m := by
+    intro hl
+    have hpd' : decHL (truncM m) o1 l1 = some ps := hpd
+    have hs : (iwA (truncM m)).size ≤ iwTop m := by
+      apply Nat.le_of_not_lt
+      intro h
+      have := truncM_iw_get? m (iwTop m)
+      rw [if_neg (Nat.lt_irrefl _), Array.getElem?_eq_getElem h] at this
+      cases this
+    rcases decHL_le hpd' with h0 | h0
+    · omega
+    · exact Nat.le_trans h0 hs
+  refine RSim.bind (K := gpbK1 n g) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ G.params).sim
+      ⟨hS, by rw [t1, t2]; exact hpar, by rw [t1, t2]; exact hpb⟩) (fun _ hb => ftdsF_afr hb)) ?_
+  rintro ⟨r1, m1⟩ pbs a1 - ⟨⟨hS1, hg1, hpbs, hpbb⟩, hf1⟩
   dsimp only at hS1 hg1 hpbs hpbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hpbs hpbb
   rw [gpbK1_some]
   have hps := psW_sim dn vis fe G g hns n m1 a1 0 0 hS1 (hG.grow (decCG_mono _) hg1) (by simp) (by simp)
+    (hf1 hA)
   simp only [UInt64.toNat_zero, List.drop_zero] at hps
   refine RSim.bind (K := gpbK2 n (r1.headD 0) (r1.tail.headD 0)) rfl hps ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho⟩
+  rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho, hA2⟩
   dsimp only at hS2 hg2 ho
   cases o with
   | none =>
     rw [gpbK2_fail (h := ho)]
-    exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl⟩
+    exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
   | some sbs =>
   obtain ⟨h21, hsb, hsbb⟩ := ho
   rw [gpbK2_ok (h := by rw [h21]; decide)]
   refine RSim.lstep (K := gpbK3) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 ((decHL_decB hpbs hpbb).grow (OMono.decHL _ _) hg2) hsb hsbb
   rw [gpbK3_some]
-  exact RSim.pure_some ⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩
+  exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩,
+    appendW_afr h3 hA2⟩
 
 /-- **`class_gen_prefix_binders` refines `ClassGen.prefixBinders`** (through the stubs of
 `class_gen_motive_ty`, `class_gen_minor_ty` and `fvar_type_ds`): the parameters' binders, then
@@ -641,12 +657,13 @@ every slot's, a slice below the top. -/
 theorem classGenPrefixBinders_refines (p : Prog) (hp : PbProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g : Word) (G : ClassGen)
     (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) :
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_prefix_binders" [g]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.prefixBinders G) a₀ ∧
       KP dn vis fe s₀.mem decIHO (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.prefixBinders G) a₀)
-        (AM.res (ConRon.Arena.ClassGen.prefixBinders G) a₀); ⊤⦄ :=
+        (AM.res (ConRon.Arena.ClassGen.prefixBinders G) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (prefixBinders_spec p hp n s₀ g) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (gpbW_sim dn vis fe n _ a₀ g G hS hG hns).am hw⟩
+    let h := (gpbW_sim dn vis fe n _ a₀ g G hS hG hns hA).am hw
+    ⟨hl, h.1, h.2.1, h.2.2⟩
 
 end L.Ind
