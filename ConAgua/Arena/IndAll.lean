@@ -38,6 +38,14 @@ import ConAgua.Arena.IndInstallSpec20
 import ConAgua.Arena.IndInstallSpec21
 import ConAgua.Arena.IndInstallSpec22
 import ConAgua.Arena.IndInstallSpec23
+import ConAgua.Arena.IndInstallSpec24
+import ConAgua.Arena.IndInstallSpec25
+import ConAgua.Arena.IndInstallSpec26
+import ConAgua.Arena.IndInstallSpec27
+import ConAgua.Arena.IndInstallSpec28
+import ConAgua.Arena.IndInstallSpec29
+import ConAgua.Arena.IndInstallSpec30
+import ConAgua.Arena.IndInstallSpec31
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec2
@@ -113,6 +121,20 @@ import ConAgua.Arena.IndPos2SpecT
 import ConAgua.Arena.IndPos2SpecU
 import ConAgua.Arena.IndPos2SpecV
 import ConAgua.Arena.IndTwin
+import ConAgua.Arena.IndStubsT
+
+import ConAgua.Arena.RecCheckSpec9
+import ConAgua.Arena.RecCheckSpec10
+import ConAgua.Arena.RecCheckSpec11
+import ConAgua.Arena.RecCheckSpec12
+import ConAgua.Arena.RecCheckSpec13
+import ConAgua.Arena.RecCheckSpec14
+import ConAgua.Arena.RecCheckSpec15
+import ConAgua.Arena.RecCheckSpec16
+import ConAgua.Arena.RecCheckSpec17
+import ConAgua.Arena.RecCheckSpec18
+import ConAgua.Arena.RecCheckSpec19
+import ConAgua.Arena.RecCheckSpec20
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/
