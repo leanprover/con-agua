@@ -130,7 +130,8 @@ def lineLoop : Stmt := lblk (i, w, idx, pl, tag, ks, k, v, e, ok, x) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
-@[l_impl ConLeche.Frontend.scanLineLoop]
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2423-2425 ConLeche.Frontend.LinePayload.isAbsent
+@[l_impl ConLeche.Frontend.scanLineLoop ConLeche.Frontend.LinePayload.isAbsent]
 def scanLineLoop : FunDecl := lfn (i) locals (w, idx, pl, tag, ks, k, v, e, ok, x) {
   w := 1;
   ⟪lineLoop⟫;
