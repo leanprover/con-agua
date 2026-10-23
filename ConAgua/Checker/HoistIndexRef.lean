@@ -201,7 +201,6 @@ theorem hix_declAtF {D P : Array Word} {i : Nat} {d : IDeclaration}
 theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
     (idx : Std.HashMap NIdx Nat) (hR : NixR m idx) (hr : r.toNat < 2 ^ 59)
     (hD : DeclAtF (m.arr64 DECL) (m.arr64 DLP) r.toNat d) (hok : RecOK (m.arr64 DECL) r.toNat)
-    (hoff : dw (m.arr64 DECL) r.toNat 0 = 6 → (dw (m.arr64 DECL) r.toNat 2).toNat ≠ 0)
     (hk : k.toNat + 1 < 2 ^ 64) (h : hNamesW n m k (1 + 8 * r) = some (z, m')) :
     NixR m' (insertNames idx k.toNat d.names) ∧ MemFrame [HNIX] [75, 76] m m' := by
   cases n with
@@ -222,7 +221,7 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
       obtain ⟨z', m₁⟩ := zm
       rw [hg] at h; simp only [hNamesW.k1, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, rfl⟩ := h
-      exact hNamesGo_ok n m m₁ k _ _ 0 z' _ t b idx hR rfl ht (hoff h6)
+      exact hNamesGo_ok n m m₁ k _ _ 0 z' _ t b idx hR rfl ht (hok.2 h6)
         (by simpa using hb) hk hg
   · have hD' := hix_declAtF (fun b nP e => hind ⟨b, nP, e⟩) hD
     obtain ⟨h6, hn⟩ := hix_declAt_names hD'
@@ -234,28 +233,18 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
       rw [hi] at h; simp only [hNamesW.k1, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, rfl⟩ := h
       rw [hn]
-      exact hIns_ok m m₁ _ k z' idx hR (hok h6).1 hk hi
+      exact hIns_ok m m₁ _ k z' idx hR (hok.1 h6).1 hk hi
 
-/-- The stream's inductive blocks do not start at the pool's word `0` (its top).
-
-Needed by `hoist_index_go`: `IndDeclAt` decodes the block from `trunc P t`, whose word `0` is
-cleared, while `hoist_names_go` reads `DIND[DIND[o + q] + 1]` from the pool itself. With `o = 0`
-the twin's first member is the constant record at `0` (name `P[1]`), the program's is the one at
-`P[0]` (the top; name `P[P[0] + 1]`): `OrdR` alone does not make `hoistIndexGo_ok` true. -/
-def OffPos (m : Mem) (ord : Word) (ds : Array IDeclaration) : Prop :=
-  ∀ k, k < ds.size →
-    dw (m.arr64 DECL) (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat 0 = 6 →
-    (dw (m.arr64 DECL) (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat 2).toNat ≠ 0
-
-theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclaration)
+/-- `hoistIndexGo_ok`, generalized over the memory, position and map for the induction. -/
+private theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclaration)
     (hc : ds.size = c.toNat) (hc60 : c.toNat < 2 ^ 60) :
-    ∀ (m m' : Mem) (k r : Word) (idx : Std.HashMap NIdx Nat), OrdR m ord ds → OffPos m ord ds →
+    ∀ (m m' : Mem) (k r : Word) (idx : Std.HashMap NIdx Nat), OrdR m ord ds →
     k ≤ c → NixR m idx → hIndexGoW n m ord c k = some (r, m') →
     NixR m' (nameIndex ds idx k.toNat) ∧ MemFrame [HNIX] [75, 76] m m' := by
   induction n with
-  | zero => intro m m' k r idx _ _ _ _ h; simp [hIndexGoW.eq_1] at h
+  | zero => intro m m' k r idx _ _ _ h; simp [hIndexGoW.eq_1] at h
   | succ n ih =>
-    intro m m' k r idx hO hoff hk hR h
+    intro m m' k r idx hO hk hR h
     by_cases hck : c ≤ k
     · rw [hIndexGoW.arm1 n m ord c k hck] at h
       cases h
@@ -267,21 +256,19 @@ theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclaration)
       have hkc : k.toNat < ds.size := by
         have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hck); omega
       obtain ⟨hr, hD, hok⟩ := hO k.toNat hkc
-      have hof := hoff k.toNat hkc
-      simp only [UInt64.ofNat_toNat] at hr hD hok hof
+      simp only [UInt64.ofNat_toNat] at hr hD hok
       cases hi : hNamesW n m k (1 + 8 * rdW (m.arr64 IW) (ord + k)) with
       | none => rw [hi] at h; simp [hIndexGoW.k1] at h
       | some zm =>
         obtain ⟨z, m₁⟩ := zm
         rw [hi, hIndexGoW.k1.arm1] at h
-        obtain ⟨hR₁, hF₁⟩ := hNames_ok n m m₁ k _ z _ idx hR hr hD hok hof (by omega) hi
+        obtain ⟨hR₁, hF₁⟩ := hNames_ok n m m₁ k _ z _ idx hR hr hD hok (by omega) hi
         have hIW : m₁.arr64 IW = m.arr64 IW := hF₁.1 IW (by decide) (by decide)
         have hDE : m₁.arr64 DECL = m.arr64 DECL := hF₁.1 DECL (by decide) (by decide)
         have hDL : m₁.arr64 DLP = m.arr64 DLP := hF₁.1 DLP (by decide) (by decide)
         have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
         obtain ⟨hR', hF'⟩ := ih m₁ m' (k + 1) r _
           (by unfold OrdR; rw [hIW, hDE, hDL]; exact hO)
-          (by unfold OffPos; rw [hIW, hDE]; exact hoff)
           (UInt64.le_iff_toNat_le.mpr (by omega)) hR₁ h
         refine ⟨?_, hF₁.trans hF'⟩
         rw [nameIndex, dif_pos hkc, ← hk1]
@@ -317,8 +304,7 @@ theorem hoistIndexGo_ok (n : Nat) (m m' : Mem) (ord c k r : Word) (ds : Array ID
     (hc60 : c.toNat < 2 ^ 60) (hord : ord.toNat + c.toNat < 2 ^ 64) (hk : k ≤ c)
     (hR : NixR m idx) (h : hIndexGoW n m ord c k = some (r, m')) :
     NixR m' (nameIndex ds idx k.toNat) ∧ MemFrame [HNIX] [75, 76] m m' := by
-  -- FALSE as stated: see `OffPos`. Proven under `OffPos` as `hoistIndexGo_ok'`.
-  sorry
+  exact hoistIndexGo_ok' n ord c ds hc hc60 m m' k r idx hO hk hR h
 
 /-- The name index's positions are positions of the stream. -/
 theorem nameIndex_lt (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (k : Nat)
