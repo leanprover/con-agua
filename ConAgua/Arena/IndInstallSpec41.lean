@@ -10,12 +10,28 @@ import ConAgua.Arena.IndRealNames
 
 
 /-!
-# Refinements of `IndInstall`, part 41 (lane `indproofs4`, helper `grc`): `genRecCheck`, the parts
+# Refinements of `IndInstall`, part 41 (lane `indproofs4`, helper `grc`): `genRecCheck`
 
-The twin's `genRecCheck` cut into continuation-passing parts (`grcTwinA` … `grcTwinR`,
-`genRecCheck_split` by `rfl`), the glue (stable slices below the tops, `ClassesLp` through
-`classes_nfs`, the stage memos across callees whose program text writes outside them), and the
-simulations of `gen_rec_check_prep`'s three parts (`grpAW_ok`, `grpCW_ok`, `grpBW_ok`).
+`gen_rec_check` (`RecGen.lean`) refines the twin's `genRecCheck` (`genRecCheck_refines`), and with
+it `check_block_rec` refines `checkBlockRec` (`checkBlockRec_refines`, formerly through the pending
+contract `genRecCheck_pending`).
+
+* The twin is cut into continuation-passing parts (`grcTwinA` … `grcTwinR`; `genRecCheck_split`
+  by `rfl`), one per part of the L code: `gen_rec_check_prep`'s pins, stream and guards
+  (`grpAW_ok`), its classes, constructors, count, formers and level (`grpBW_ok`), its generator
+  record, prefix and recursor types (`grpCW_ok`), then `gen_rec_check`'s pushes, rules, pops and
+  flushes (`gckW_sim`).
+* Glue: stable slices decoded below the tops (`spl_decB`, `csRes_decB`), the class reading's words
+  (`crWords`), a fresh `ClassGen` record (`cgRec_decB`), the classes' constructor level-parameter
+  slices through `classes_nfs` (`classesNfs_refinesLp`, from `CnsRec`'s source pointer), the
+  prefix's slice fresh (`gpbW_simF`), the stage memos across `target_rec_pins` and
+  `class_stream_recs` by their program text (`RcMR.ofMfr`).
+* `block_large_elim_allowed` enters through its stub contract (`IndInstallSpec39`).
+
+Hypotheses beyond the stage relation and the decodings: `RecsB` (the shape's recursor slice below
+the top, also when empty), `ClassesLp` (the classes' constructors' level-parameter slices in
+`EREC`, `classes_ctors`' own hypothesis), `bs.nP < 2^63`, the pool's size below `2^63` (they bound
+`nP + k` and `nP + slots`), `RcMR`, and the program facts `GrcProg p`, `closedA p mfrA mfrC fsR`.
 -/
 
 noncomputable section
@@ -846,5 +862,572 @@ theorem grpCW_ok {p : Prog} (P : GrcProg p) (n : Nat) {dn : NIdx → Option ConL
       cvRis rdv.recCls) a2, _, fun {β} k => ?_, hS3, hgP.trans hg3, hG.grow (decCG_mono _) hg3, hns, rfl, ?_⟩
   · simp only [grcTwinC, StateT.run_bind, hrun2, except_ok_bind, hrun3]
   · simpa [decCVS] using hd3
+
+-- ==== S41G.lean
+/-! ## Part B: the classes, their constructors, the count, the formers, the level -/
+
+theorem ClassesLp.grow {m m' : Mem} {mo ml : Word} {ms : List TargetMajor} (h : ClassesLp m mo ml)
+    (hms : PSlR decTM ms mo ml m) (hg : IWGrow m m') (hk : KeepW m m') (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    ClassesLp m' mo ml := by
+  intro c hc v o l hv ho hl
+  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.1
+  obtain ⟨v', hv', hsrc⟩ := decPL_getH (truncM m) hms0 c hc
+  obtain ⟨hvt, hvm⟩ := rec2IwN_trunc hv'
+  rw [iwN_grow hg hvt, hvm] at hv
+  have e := Option.some.inj hv
+  subst e
+  have hs := hsrc
+  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at hs
+  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hct, -⟩ := hs
+  obtain ⟨o', l', ho'', hl'', hdct⟩ := decAt_some hct
+  obtain ⟨h6t, h6⟩ := rec2IwN_trunc ho''
+  obtain ⟨h7t, h7⟩ := rec2IwN_trunc hl''
+  rw [iwN_grow hg h6t, h6] at ho
+  rw [show v' + 6 + 1 = v' + 7 by omega] at h7t h7
+  rw [iwN_grow hg h7t, h7] at hl
+  have e1 := Option.some.inj ho
+  have e2 := Option.some.inj hl
+  subst e1 e2
+  have hol : o' < 2 ^ 64 ∧ l' < 2 ^ 64 := by
+    simp only [iwN, nat?, Option.map_eq_some_iff] at h6 h7
+    obtain ⟨w1, -, rfl⟩ := h6; obtain ⟨w2, -, rfl⟩ := h7
+    exact ⟨w1.toNat_lt, w2.toNat_lt⟩
+  refine (h c hc v' o' l' hvm h6 h7).grow (cAs := cts) ?_ hsz hg hk
+  show decPL (truncM m) (decCN (truncM m)) _ _ = some cts
+  rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
+  exact hdct
+
+/-- A handle word of a record decoded below the tops, read at its word address. -/
+theorem installIwH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
+    (h : iwH (truncM m) (w.toNat + i) = some x) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    (rdW (m.arr64 IW) (w + UInt64.ofNat i)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 IW) (w + UInt64.ofNat i)) = x := by
+  simp only [iwH, hd?, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨v, hv, hx⟩ := h
+  obtain ⟨hi, hv'⟩ := truncM_iw_get hv
+  simp only [iwA] at hv'
+  have hlt : w.toNat + i < (m.arr64 IW).size := (Array.getElem?_eq_some_iff.mp hv').1
+  have he : (w + UInt64.ofNat i).toNat = w.toNat + i := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)]; exact Nat.mod_eq_of_lt (by omega)
+  have hr : rdW (m.arr64 IW) (w + UInt64.ofNat i) = v := by simp only [rdW, he, hv']; rfl
+  rw [hr]
+  split at hx
+  · exact ⟨by assumption, Option.some.inj hx⟩
+  · cases hx
+
+theorem grpBW_ok {p : Prog} (P : GrcProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {m : Mem} {a : AState} {pp pO pL tO tL rd mO mL cO cL cRo cRl : Word}
+    {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
+    {ms : List TargetMajor} {cvTas : List IConstantVal} {cvRis : List IConstantVal}
+    {r : List Word} {m' : Mem}
+    (h : grpBW p n m vis pp pO pL tO tL rd mO mL cO cL cRo cRl = some (r, m'))
+    (hS : StageR dn vis fe m a) (hbs : BSOK m pp.toNat bs) (hrb : RecsB m pp)
+    (hpar : decHL m pO.toNat pL.toNat = some params) (hparb : pO.toNat + pL.toNat ≤ iwTop m)
+    (htbl : PSlR decNCN tbl tO tL m) (hrd : DecB (fun m => decCR m rd.toNat) m rdv)
+    (hms : PSlR decTM ms mO mL m) (hcv : PSlR decCVp cvTas cO cL m) (hlp : ClassesLp m mO mL)
+    (hcvR : DecB (fun m => decPL m (decCVp m) cRo.toNat cRl.toNat) m cvRis)
+    (hns : bs.nP + rdv.slots.length < 2 ^ 64) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m) :
+    ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
+        (grcTwinB V fe bs tbl rdv ms cvTas (fun ms2 ctors ftc elim =>
+          grcTwinC V fe bs params rdv cvRis ms2 ctors ftc elim k)).run a = (k G cvGs).run a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ DecB (fun m => decCG m (r.headD 0).toNat) m' G ∧
+      G.nP + G.slots.length < 2 ^ 64 ∧ G.slots = rdv.slots ∧ decCVS m' r.tail cvGs := by
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hp8 := hbs.ptop
+  obtain ⟨hrd3, hslD, -, -, hslb⟩ := crWords hrd
+  unfold grpBW at h
+  -- the formers' types
+  cases c1 : callW p n "gen_rec_check_former_tys" [cO, cL] m with
+  | none => rw [c1] at h; cases h
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [c1, grpB1_some] at h
+  obtain ⟨s1, hs1, -, hS1, hg1, hf1, hft1, hftb1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (genRecCheckFormerTys_refines P.ia P.gft n _ a cO cL cvTas hS hcv) c1
+  simp only at hs1 hS1 hg1 hf1 hft1 hftb1; subst hs1
+  have hP1 := hP.fr hf1
+  have hk1 := callW_keepW c1
+  -- `classes_nfs`
+  cases c2 : callW p n "classes_nfs" [vis, pp, r1.headD 0, r1.tail.headD 0, tO, tL, mO, mL] s1.mem with
+  | none => rw [c2] at h; cases h
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [c2, grpB2_some] at h
+  obtain ⟨s2, hs2, -, hok2, hms2, hS2, hg2, hP2, hlp2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (classesNfs_refinesLp P.cns n _ a dn fe vis pp _ _ tO tL mO mL bs (cvTas.map (·.type)) tbl ms hS1
+      (hbs.grow hg1) hft1 hftb1 (htbl.grow (fun q => decNCN_mono q) hg1) (hms.grow (fun q => decTM_mono q) hg1) hP1
+      (hlp.grow hms hg1 hk1 hsz)) c2
+  simp only at hs2 hms2 hS2 hg2 hP2 hlp2; subst hs2
+  have hk2 := callW_keepW c2
+  have hrun2 := AM.run_of_ok _ a hok2
+  generalize AM.res (ConRon.Arena.classesNfs V fe bs (cvTas.map (·.type)) tbl ms) a = ms2 at hrun2 hms2
+  generalize AM.st (ConRon.Arena.classesNfs V fe bs (cvTas.map (·.type)) tbl ms) a = a2 at hrun2 hS2
+  have hg12 := hg1.trans hg2
+  -- `classes_ctors`
+  have hsz2 : (s2.mem.arr64 IW).size = (m.arr64 IW).size := by rw [hk2 IW, hk1 IW]
+  cases c3 : callW p n "classes_ctors" [vis, pp, r1.headD 0, r1.tail.headD 0, rd, r2.headD 0, r2.tail.headD 0]
+      s2.mem with
+  | none => rw [c3] at h; cases h
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [c3, grpB3_some] at h
+  obtain ⟨s3, hs3, -, hok3, hS3, hg3, hsp3, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (classesCtors_refines P.ccs n _ a2 dn fe vis pp _ _ rd _ _ bs (cvTas.map (·.type)) rdv ms2 hS2
+      (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.1)
+      (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk (by rw [hsz2]; exact hsz5) hP2) c3
+  simp only at hs3 hS3 hg3 hsp3; subst hs3
+  have hrun3 := AM.run_of_ok _ a2 hok3
+  generalize AM.res (ConRon.Arena.classesCtors V fe bs (cvTas.map (·.type)) rdv ms2 0 ms2) a2 = ctors at hrun3 hsp3
+  generalize AM.st (ConRon.Arena.classesCtors V fe bs (cvTas.map (·.type)) rdv ms2 0 ms2) a2 = a3 at hrun3 hS3
+  have hg13 := hg12.trans hg3
+  have hctD := spl_decB hsp3.toSPL
+  -- the count
+  have er0 : rdW (s3.mem.arr64 IW) rd = rdW (m.arr64 IW) rd := partsRdIW_grow hg13 (by omega)
+  have er1 : rdW (s3.mem.arr64 IW) (rd + 1) = rdW (m.arr64 IW) (rd + 1) :=
+    partsRdIW_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
+  rw [er0, er1] at h
+  cases c4 : callW p n "gen_rec_check_minor_ok" [rdW (m.arr64 IW) rd, rdW (m.arr64 IW) (rd + 1), r3.headD 0,
+      r3.tail.headD 0] s3.mem with
+  | none => rw [c4] at h; cases h
+  | some q4 =>
+  obtain ⟨r4, m4⟩ := q4
+  rw [c4] at h
+  obtain ⟨s4, hs4, -, hm4, hmo⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (genRecCheckMinorOk_refines P.csm P.gmo n _ _ _ _ _ rdv.slots ctors
+      ((hslD.grow (OMono.decPL decCS_mono _ _) hg13).get (OMono.decPL decCS_mono _ _)) hslb
+      (hctD.get (OMono.decPL decCC_lh_mono _ _)) (hS3.lt64 hsp3.2.1) hS3.2.2.2.1) c4
+  simp only at hs4 hm4 hmo; subst hs4
+  by_cases h0 : r4.headD 0 = 0
+  · rw [grpB4_bad (h := h0)] at h; cases h
+  rw [grpB4_ok (h := h0), hm4] at h
+  have hcount : ((rdv.slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum) = true := by
+    rw [← hmo]; simpa using h0
+  -- the classes' formers
+  cases c5 : callW p n "gen_rec_check_former_tys_c" [vis, cO, cL, r2.headD 0, r2.tail.headD 0] s3.mem with
+  | none => rw [c5] at h; cases h
+  | some q5 =>
+  obtain ⟨r5, m5⟩ := q5
+  rw [c5, grpB5_some] at h
+  obtain ⟨s5, hs5, -, hok5, hS5, hg5, hftc5, hftcb5⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (genRecCheckFormerTysC_refines P.cft P.gftc n _ a3 dn vis fe cO cL _ _ cvTas ms2 hS3
+      (hcv.grow (fun q => OMono.decCVp q) hg13) (hms2.grow (fun q => decTM_mono q) hg3)) c5
+  simp only at hs5 hS5 hg5 hftc5 hftcb5; subst hs5
+  have hrun5 := AM.run_of_ok _ a3 hok5
+  generalize AM.res (ms2.mapM (ConRon.Arena.classFormerTy fe cvTas)) a3 = ftc at hrun5 hftc5
+  generalize AM.st (ms2.mapM (ConRon.Arena.classFormerTy fe cvTas)) a3 = a5 at hrun5 hS5
+  have hg15 := hg13.trans hg5
+  -- the elimination level
+  have hbsD : decBS (truncM m) pp.toNat = some bs := hbs.1
+  obtain ⟨-, -, -, helim, -, hlarge, -⟩ := decBS_some hbsD
+  obtain ⟨hel5, hel5'⟩ := installIwH (i := 5) helim hsz
+  have hL := installIwB (k := 7) hlarge hsz
+  have ew5 : rdW (s5.mem.arr64 IW) (pp + 5) = rdW (m.arr64 IW) (pp + UInt64.ofNat 5) :=
+    partsRdIW_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
+  have ew7 : rdW (s5.mem.arr64 IW) (pp + 7) = rdW (m.arr64 IW) (pp + UInt64.ofNat 7) :=
+    partsRdIW_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
+  rw [ew5, ew7] at h
+  cases c6 : callW p n "struct_elim_level" [rdW (m.arr64 IW) (pp + UInt64.ofNat 5),
+      rdW (m.arr64 IW) (pp + UInt64.ofNat 7)] s5.mem with
+  | none => rw [c6] at h; cases h
+  | some q6 =>
+  obtain ⟨r6, m6⟩ := q6
+  rw [c6, grpB6_some] at h
+  obtain ⟨s6, hs6, -, a6, hrun6, hS6, hg6, hel6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+    (structElimLevel_stage P.sel n _ a5 _ _ hS5 hel5) c6
+  simp only at hs6 hrun6 hS6 hg6 hel6; subst hs6
+  rw [hel5', hL] at hrun6
+  have hg16 := hg15.trans hg6
+  -- part C
+  obtain ⟨G, cvGs, a', hrunC, hS', hg', hG', hns', hsl', hcg'⟩ := grpCW_ok P n h hS6 (hbs.grow hg16)
+    (hrb.grow hg16 (by omega)) (decHL_grow' hg16 hparb hpar) (Nat.le_trans hparb hg16.1)
+    (hrd.grow (decCR_mono _) hg16) (hms2.grow (fun q => decTM_mono q) (hg3.trans (hg5.trans hg6)))
+    (hctD.grow (OMono.decPL decCC_lh_mono _ _) (hg5.trans hg6))
+    (decHL_grow' hg6 hftcb5 hftc5) (Nat.le_trans hftcb5 hg6.1) hel6 rfl
+    (hcvR.grow (OMono.decPL (fun q => OMono.decCVp q) _ _) hg16) hns
+  refine ⟨G, cvGs, a', fun {β} k => ?_, hS', hg16.trans hg', hG', hns', hsl', hcg'⟩
+  rw [← hrunC k]
+  simp only [grcTwinB, StateT.run_bind, hrun2, except_ok_bind, hrun3, hcount, hrun5, hrun6, ite_true]
+
+-- ==== S41H.lean
+/-! ## The whole prep -/
+
+/-- `class_stream_recs`' result, decoded below the tops. -/
+theorem csRes_decB {m : Mem} {r : List Word} {cvs : List IConstantVal} (h : CsRes m r cvs) :
+    DecB (fun x => decPL x (decCVp x) (r.headD 0).toNat (r.tail.headD 0).toNat) m cvs := by
+  obtain ⟨ptrs, hp, hd, hx, hb⟩ := h
+  show decPL (truncM m) (decCVp (truncM m)) _ _ = some cvs
+  rw [decPL_eq_bind, show decNL (truncM m) (r.headD 0).toNat (r.tail.headD 0).toNat = some ptrs from
+    decNL_decB hp hb]
+  rw [decPL_eq_bind, hp] at hd
+  simp only [Option.bind_eq_bind, Option.bind_some] at hd
+  have : ∀ (qs : List Nat) (xs : List IConstantVal), qs.mapM (decCVp m) = some xs → (∀ q ∈ qs, CVExt m q) →
+      qs.mapM (decCVp (truncM m)) = some xs := by
+    intro qs
+    induction qs with
+    | nil => intro xs h _; simpa using h
+    | cons q qs ih =>
+      intro xs h hq
+      simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+        Option.some.injEq] at h
+      obtain ⟨x, hx1, ys, hys, rfl⟩ := h
+      have e : decCVp (truncM m) q = some x := installCvDecB hx1 (hq q (by simp))
+      simp only [List.mapM_cons, e, ih ys hys (fun q' hq' => hq q' (by simp [hq'])), Option.bind_eq_bind,
+        Option.bind_some, Option.pure_def]
+  exact this ptrs cvs hd hx
+
+theorem decPL_trunc_len {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat} {xs : List α}
+    (h : decPL (truncM m) f o l = some xs) : xs.length ≤ iwTop m := by
+  rw [decPL_length _ h]
+  rcases Nat.eq_zero_or_pos l with h0 | h0
+  · omega
+  · have hg := mapM_opt_get (fun j => do f (← iwN (truncM m) (o + j))) (List.range l) xs h (l - 1)
+      (by simp; omega)
+    simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at hg
+    obtain ⟨v, hv, -⟩ := hg
+    have := (rec2IwN_trunc hv).1
+    omega
+
+/-- **`gen_rec_check_prep`'s model refines the twin's `genRecCheck` up to the checked recursor
+types.** -/
+theorem grpW_ok {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+    (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {m : Mem} {a : AState} {pp nested pO pL tO tL rd mO mL cO cL bO bL : Word}
+    {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
+    {ms : List TargetMajor} {cvTas : List IConstantVal} {block : List IConstantInfo} {r : List Word} {m' : Mem}
+    (h : grpW p n m vis pp nested pO pL tO tL rd mO mL cO cL bO bL = some (r, m'))
+    (hS : StageR dn vis fe m a) (hbs : BSOK m pp.toNat bs) (hrb : RecsB m pp)
+    (hpar : decHL m pO.toNat pL.toNat = some params) (hparb : pO.toNat + pL.toNat ≤ iwTop m)
+    (htbl : PSlR decNCN tbl tO tL m) (hrd : DecB (fun m => decCR m rd.toNat) m rdv)
+    (hms : PSlR decTM ms mO mL m) (hcv : PSlR decCVp cvTas cO cL m)
+    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hlp : ClassesLp m mO mL)
+    (hnP : bs.nP < 2 ^ 63) (hsz : (m.arr64 IW).size < 2 ^ 63) (hP : RcMR m) :
+    ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
+        (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
+          grcTwinB V fe bs tbl rdv ms cvTas (fun ms2 ctors ftc elim =>
+            grcTwinC V fe bs params rdv cvRis ms2 ctors ftc elim k))).run a = (k G cvGs).run a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ DecB (fun m => decCG m (r.headD 0).toNat) m' G ∧
+      G.nP + G.slots.length < 2 ^ 64 ∧ G.slots = rdv.slots ∧ decCVS m' r.tail cvGs := by
+  have hT : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hns : bs.nP + rdv.slots.length < 2 ^ 64 := by
+    have h' : decCR (truncM m) rd.toNat = some rdv := hrd
+    simp only [decCR, bind, Option.bind_eq_some_iff, pure] at h'
+    obtain ⟨sl, hsl, rc, -, hR⟩ := h'
+    rw [← Option.some.inj hR]
+    obtain ⟨o, l, -, -, hd⟩ := decAt_some hsl
+    have := decPL_trunc_len hd
+    simp only; omega
+  have hnpk : bs.nP + bs.k < 2 ^ 64 := by
+    obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some (show decBS (truncM m) pp.toNat = some bs from hbs.1)
+    obtain ⟨o, l, -, -, hd⟩ := decAt_some hmem
+    have := decPL_trunc_len hd
+    rw [BlockShape.k]; omega
+  unfold grpW at h
+  cases cA : grpAW p n m vis pp nested mO mL bO bL with
+  | none => rw [cA] at h; cases h
+  | some qA =>
+  obtain ⟨rA, mA⟩ := qA
+  rw [cA, grpKA_some] at h
+  obtain ⟨cvRis, aA, hrunA, hSA, hgA, hPA, hkA, hcsA⟩ := grpAW_ok P hclR hfR n cA hS hbs hrb hms hblk hP
+  have hszA : (mA.arr64 IW).size = (m.arr64 IW).size := hkA IW
+  obtain ⟨G, cvGs, a', hrunB, hS', hg', hG', hns', hsl', hcg'⟩ := grpBW_ok P n h hSA (hbs.grow hgA)
+    (hrb.grow hgA (by have := hbs.ptop; omega)) (decHL_grow' hgA hparb hpar) (Nat.le_trans hparb hgA.1)
+    (htbl.grow (fun q => decNCN_mono q) hgA) (hrd.grow (decCR_mono _) hgA) (hms.grow (fun q => decTM_mono q) hgA)
+    (hcv.grow (fun q => OMono.decCVp q) hgA) (hlp.grow hms hgA hkA (by omega)) (csRes_decB hcsA) hns hnpk
+    (by omega) hPA
+  exact ⟨G, cvGs, a', fun {β} k => by rw [hrunA]; exact hrunB k, hS', hgA.trans hg', hG', hns', hsl', hcg'⟩
+
+-- ==== S41a2.lean
+/-! ## `gen_rec_check`'s model -/
+
+section model
+variable (p : Prog) (n : Nat)
+
+/-- After the second flush: `(fe2, out.off, out.len)`. -/
+def gckK6 (v oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m) => some ([v, oo, ol], m)
+
+/-- After the pop: the flush. -/
+def gckK5 (oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => gckK6 (r.headD 0) oo ol (callW p n "flush_caches" [] m)
+
+/-- After `class_recs_rules_ok`: the pop. -/
+def gckK4 (fR po pl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => gckK5 p n (r.headD 0) (r.tail.headD 0)
+      (callW p n "gen_rec_check_pop_all" [fR, po, pl] m)
+
+/-- After the flush: `class_recs_rules_ok`. -/
+def gckK3 (vis rd g cgo cgl fR po pl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m) => gckK4 p n fR po pl (callW p n "class_recs_rules_ok"
+      [vis, fR, g, rdW (m.arr64 IW) (rd + 2), rdW (m.arr64 IW) (rd + 3), cgo, cgl] m)
+
+/-- After `class_fe_r`: the flush. -/
+def gckK2 (vis rd g cgo cgl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => gckK3 p n vis rd g cgo cgl (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0)
+      (callW p n "flush_caches" [] m)
+
+/-- After the prep: `class_fe_r`. -/
+def gckK1 (vis pp rd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => gckK2 p n vis rd (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0)
+      (callW p n "class_fe_r" [pp, r.tail.headD 0, r.tail.tail.headD 0, rdW (m.arr64 IW) (rd + 2),
+        rdW (m.arr64 IW) (rd + 3), vis] m)
+
+/-- **The model of `gen_rec_check`** (body fuel `n`). -/
+def gckW (m : Mem) (vis pp nested pO pL tO tL rd mO mL cO cL bO bL : Word) : Option (List Word × Mem) :=
+  gckK1 p n vis pp rd (callW p n "gen_rec_check_prep" [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL,
+    bO, bL] m)
+
+end model
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem) (r : List Word) (vis pp rd g cgo cgl fR po pl v oo ol : Word)
+theorem gckK6_some : gckK6 v oo ol (some (r, m)) = some ([v, oo, ol], m) := rfl
+theorem gckK5_some : gckK5 p n oo ol (some (r, m)) = gckK6 (r.headD 0) oo ol (callW p n "flush_caches" [] m) := rfl
+theorem gckK4_some : gckK4 p n fR po pl (some (r, m)) = gckK5 p n (r.headD 0) (r.tail.headD 0)
+    (callW p n "gen_rec_check_pop_all" [fR, po, pl] m) := rfl
+theorem gckK3_some : gckK3 p n vis rd g cgo cgl fR po pl (some (r, m)) = gckK4 p n fR po pl
+    (callW p n "class_recs_rules_ok" [vis, fR, g, rdW (m.arr64 IW) (rd + 2), rdW (m.arr64 IW) (rd + 3), cgo, cgl] m) :=
+  rfl
+theorem gckK2_some : gckK2 p n vis rd g cgo cgl (some (r, m)) = gckK3 p n vis rd g cgo cgl (r.headD 0)
+    (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "flush_caches" [] m) := rfl
+theorem gckK1_some : gckK1 p n vis pp rd (some (r, m)) = gckK2 p n vis rd (r.headD 0) (r.tail.headD 0)
+    (r.tail.tail.headD 0) (callW p n "class_fe_r" [pp, r.tail.headD 0, r.tail.tail.headD 0,
+      rdW (m.arr64 IW) (rd + 2), rdW (m.arr64 IW) (rd + 3), vis] m) := rfl
+end arms
+
+attribute [ind_grind] gckK6_some gckK5_some gckK4_some gckK3_some gckK2_some gckK1_some
+
+set_option maxHeartbeats 1600000 in
+theorem gck_spec (p : Prog) (hp : p.lookup "gen_rec_check" = some genRecCheckL) (n : Nat)
+    (s₀ : St) (vis pp nested pO pL tO tL rd mO mL cO cL bO bL : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "gen_rec_check"
+      [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL, bO, bL]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      gckW p n s₀.mem vis pp nested pO pL tO tL rd mO mL cO cL bO bL = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, genRecCheckL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "gen_rec_check_prep", callW_spec p n "class_fe_r", callW_spec p n "flush_caches",
+      callW_spec p n "class_recs_rules_ok", callW_spec p n "gen_rec_check_pop_all"] <;>
+    finish (gen := 40) (instances := 20000) [gckW, rdW_eq]
+
+-- ==== S41I.lean
+/-! ## `gen_rec_check` -/
+
+theorem decRRS.grow {m m' : Mem} {r : List Word} {xs : List (IConstantVal × TargetMajor × List EIdx)}
+    (h : decRRS m r xs) (hg : IWGrow m m') : decRRS m' r xs :=
+  ⟨h.1.grow (OMono.decPL decRR_mono _ _) hg, Nat.le_trans h.2 hg.1⟩
+
+/-- **`gen_rec_check`'s model refines `genRecCheck`.** -/
+theorem gckW_sim {p : Prog} (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+    (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {m : Mem} {a : AState} {pp nested pO pL tO tL rd mO mL cO cL bO bL : Word}
+    {bs : BlockShape} {params : List EIdx} {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead}
+    {ms : List TargetMajor} {cvTas : List IConstantVal} {block : List IConstantInfo}
+    (hS : StageR dn vis fe m a) (hbs : BSOK m pp.toNat bs) (hrb : RecsB m pp)
+    (hpar : decHL m pO.toNat pL.toNat = some params) (hparb : pO.toNat + pL.toNat ≤ iwTop m)
+    (htbl : PSlR decNCN tbl tO tL m) (hrd : DecB (fun m => decCR m rd.toNat) m rdv)
+    (hms : PSlR decTM ms mO mL m) (hcv : PSlR decCVp cvTas cO cL m)
+    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hlp : ClassesLp m mO mL)
+    (hnP : bs.nP < 2 ^ 63) (hsz : (m.arr64 IW).size < 2 ^ 63) (hP : RcMR m) :
+    Sim (gckW p n m vis pp nested pO pL tO tL rd mO mL cO cL bO bL)
+      (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas block) a
+      (fun r x m' a' => StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow m m' ∧ decRRS m' r.tail x.2) := by
+  intro r m' h
+  unfold gckW at h
+  obtain ⟨hrd3, -, hrcD, hrcb, -⟩ := crWords hrd
+  -- the prep
+  cases c1 : callW p n "gen_rec_check_prep" [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL, bO, bL] m with
+  | none => rw [c1] at h; cases h
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [c1, gckK1_some] at h
+  cases n with
+  | zero => rw [callW_zero] at c1; cases c1
+  | succ n =>
+  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (grp_spec p P.prep n _ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) c1
+  simp only at hs1 hw1; subst hs1
+  obtain ⟨G, cvGs, a1, hrunP, hS1, hg1, hG1, hns1, -, hcg1⟩ := grpW_ok P hclR hfR n hw1 hS hbs hrb hpar hparb
+    htbl hrd hms hcv hblk hlp hnP hsz hP
+  have e2 : rdW (s1.mem.arr64 IW) (rd + 2) = rdW (m.arr64 IW) (rd + 2) :=
+    partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
+  have e3 : rdW (s1.mem.arr64 IW) (rd + 3) = rdW (m.arr64 IW) (rd + 3) :=
+    partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
+  rw [e2, e3] at h
+  -- the pushes
+  cases c2 : callW p (n + 1) "class_fe_r" [pp, r1.tail.headD 0, r1.tail.tail.headD 0,
+      rdW (m.arr64 IW) (rd + 2), rdW (m.arr64 IW) (rd + 3), vis] s1.mem with
+  | none => rw [c2] at h; cases h
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [c2, gckK2_some] at h
+  obtain ⟨s2, hs2, -, hS2, hg2, hpv2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (classFeR_refines p P.cfr (n + 1) _ a1 dn vis fe pp _ _ _ _ bs cvGs rdv.recCls hS1 (hbs.1.grow (decBS_mono _) hg1)
+      hcg1 (hrcD.grow (OMono.decNL _ _) hg1)) c2
+  simp only at hs2 hS2 hg2 hpv2; subst hs2
+  generalize hfrr : ConRon.Arena.classFeR bs cvGs rdv.recCls fe = FR at hS2 hpv2
+  obtain ⟨feR, prevs⟩ := FR
+  simp only at hS2 hpv2
+  -- the flush
+  cases c3 : callW p (n + 1) "flush_caches" [] s2.mem with
+  | none => rw [c3] at h; cases h
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [c3, gckK3_some] at h
+  obtain ⟨s3, hs3, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (flushCaches_spec p P.flush (n + 1) _) c3
+  simp only at hs3 hfok hfm; subst hs3
+  obtain ⟨hS3, hg3⟩ := flush_stage hS2 hfok
+  rw [← hfm] at hS3 hg3
+  have hg23 := hg2.trans hg3
+  have hg13 := hg1.trans hg23
+  -- the rules
+  have e2' : rdW (s3.mem.arr64 IW) (rd + 2) = rdW (m.arr64 IW) (rd + 2) :=
+    partsRdIW_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
+  have e3' : rdW (s3.mem.arr64 IW) (rd + 3) = rdW (m.arr64 IW) (rd + 3) :=
+    partsRdIW_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
+  rw [e2', e3'] at h
+  have hcg3 := hcg1.grow hg23
+  cases c4 : callW p (n + 1) "class_recs_rules_ok" [vis, r2.headD 0, r1.headD 0, rdW (m.arr64 IW) (rd + 2),
+      rdW (m.arr64 IW) (rd + 3), r1.tail.headD 0, r1.tail.tail.headD 0] s3.mem with
+  | none => rw [c4] at h; cases h
+  | some q4 =>
+  obtain ⟨r4, m4⟩ := q4
+  rw [c4, gckK4_some] at h
+  obtain ⟨s4, hs4, -, hok4, hS4, hg4, hd4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (classRecsRulesOk_refines p P.crr (n + 1) _ _ dn vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G rdv.recCls cvGs
+      hS3 (hG1.grow (decCG_mono _) hg23) hns1 (hrcD.grow (OMono.decNL _ _) hg13) hrcb hcg3
+      (hS3.lt64 hcg3.1)) c4
+  simp only at hs4 hS4 hg4 hd4; subst hs4
+  have hrun4 := AM.run_of_ok _ _ hok4
+  generalize AM.res (ConRon.Arena.classRecsRulesOk V vis.toNat feR G rdv.recCls cvGs cvGs rdv.recCls)
+    { a1 with caches := Caches.empty } = out at hrun4 hd4
+  generalize AM.st (ConRon.Arena.classRecsRulesOk V vis.toNat feR G rdv.recCls cvGs cvGs rdv.recCls)
+    { a1 with caches := Caches.empty } = a4 at hrun4 hS4
+  -- the pops
+  cases c5 : callW p (n + 1) "gen_rec_check_pop_all" [r2.headD 0, r2.tail.headD 0, r2.tail.tail.headD 0]
+      s4.mem with
+  | none => rw [c5] at h; cases h
+  | some q5 =>
+  obtain ⟨r5, m5⟩ := q5
+  rw [c5, gckK5_some] at h
+  obtain ⟨s5, hs5, -, hS5, hg5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+    (genRecCheckPopAll_refines P.eix P.ers P.ept P.gpa (n + 1) _ a4 dn (r2.headD 0) feR _ _ prevs hS4
+      (hpv2.grow (hg3.trans hg4))) c5
+  simp only at hs5 hS5 hg5; subst hs5
+  -- the flush
+  cases c6 : callW p (n + 1) "flush_caches" [] s5.mem with
+  | none => rw [c6] at h; cases h
+  | some q6 =>
+  obtain ⟨r6, m6⟩ := q6
+  rw [c6, gckK6_some] at h
+  obtain ⟨s6, hs6, -, hfok6, hfm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+    (flushCaches_spec p P.flush (n + 1) _) c6
+  simp only at hs6 hfok6 hfm6; subst hs6
+  obtain ⟨hS6, hg6⟩ := flush_stage hS5 hfok6
+  rw [← hfm6] at hS6 hg6
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  refine ⟨(prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR, out), { a4 with caches := Caches.empty }, ?_,
+    by simpa using hS6, hg1.trans (hg23.trans (hg4.trans (hg5.trans hg6))),
+    by have := hd4.grow (hg5.trans hg6); simp only [decRRS] at this ⊢; simpa using this⟩
+  have hvis : fe.visibleBelow = vis.toNat := hS.1.env.vis
+  rw [genRecCheck_split, hrunP]
+  simp only [grcTwinR, hfrr, StateT.run_bind, flushCaches_run, except_ok_bind, hvis, hrun4]
+  rfl
+
+-- ==== S41J.lean
+/-- **`gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,
+cvTas.off, cvTas.len, block.off, block.len)` refines `genRecCheck`**: from the stage relation, the
+block's shape (`BSOK`, its recursor shapes' slice below the top: `RecsB`), the parameters, the
+positivity table, the class reading, the classes (their constructors' level-parameter slices in
+`EREC`: `ClassesLp`), the formers and the raw block decoded below the tops, the parameter count
+and the pool's size below `2^63`, and the recursor check's walk memos well formed (`RcMR`): the
+environment with the generated recursors at the returned view, the recursors' records `r.tail`
+decoded below the tops. Program facts: the lookups (`GrcProg`) and the write set of the callees
+that keep the stage memos by their text (`hclR`). Through `block_large_elim_allowed`'s contract
+(`IndInstallSpec39`). -/
+@[refines ConRon.Arena.genRecCheck]
+theorem genRecCheck_refines {p : Prog} (P : GrcProg p) {fsR : List FnName}
+    (hclR : closedA p mfrA mfrC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (s₀ : St)
+    (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {pp nested pO pL tO tL rd mO mL cO cL bO bL : Word} {bs : BlockShape} {params : List EIdx}
+    {tbl : List NestCtorNf} {rdv : ConRon.Arena.ClassRead} {ms : List TargetMajor}
+    {cvTas : List IConstantVal} {block : List IConstantInfo}
+    (hS : StageR dn vis fe s₀.mem a₀) (hbs : BSOK s₀.mem pp.toNat bs) (hrb : RecsB s₀.mem pp)
+    (hpar : decHL s₀.mem pO.toNat pL.toNat = some params) (hparb : pO.toNat + pL.toNat ≤ iwTop s₀.mem)
+    (htbl : PSlR decNCN tbl tO tL s₀.mem) (hrd : DecB (fun m => decCR m rd.toNat) s₀.mem rdv)
+    (hms : PSlR decTM ms mO mL s₀.mem) (hcv : PSlR decCVp cvTas cO cL s₀.mem)
+    (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hlp : ClassesLp s₀.mem mO mL)
+    (hnP : bs.nP < 2 ^ 63) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 63) (hP : RcMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check"
+      [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL, bO, bL]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas block) a₀ ∧
+      StageR dn (r.headD 0) (AM.res (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas
+        block) a₀).1 s'.mem (AM.st (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas
+        block) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decRRS s'.mem r.tail (AM.res (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas
+        block) a₀).2; ⊤⦄ := by
+  cases n with
+  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  | succ n =>
+  refine triple_post (gck_spec p P.grc n s₀ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨hok, hQ⟩ := Sim.run (gckW_sim P hclR hfR n hS hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hnP hsz hP) hm
+  exact ⟨hl, hok, hQ⟩
+
+/-! ## `check_block_rec` -/
+
+/-- **`check_block_rec` refines `checkBlockRec`** (through `genRecCheck_refines`). -/
+@[refines ConRon.Arena.checkBlockRec]
+theorem checkBlockRec_refines (p : Prog) (hp : p.lookup "check_block_rec" = some checkBlockRec)
+    (P : GrcProg p) {fsR : List FnName} (hclR : closedA p mfrA mfrC fsR = true)
+    (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
+    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (pp nested pO pL tO tL rd mO mL bO bL cO cL : Word) (bs : BlockShape) (params : List EIdx)
+    (tbl : List NestCtorNf) (rdv : ClassRead) (ms : List TargetMajor) (cvTas : List IConstantVal)
+    (block : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
+    (hpre : BSOK s₀.mem pp.toNat bs ∧
+        decHL s₀.mem pO.toNat pL.toNat = some params ∧ pO.toNat + pL.toNat ≤ iwTop s₀.mem ∧
+        PSlR decNCN tbl tO tL s₀.mem ∧ DecB (fun m => decCR m rd.toNat) s₀.mem rdv ∧
+        PSlR decTM ms mO mL s₀.mem ∧ PSlR decCVp cvTas cO cL s₀.mem ∧
+        DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block)
+    (hrb : RecsB s₀.mem pp) (hlp : ClassesLp s₀.mem mO mL) (hnP : bs.nP < 2 ^ 63)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 63) (hP : RcMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_rec"
+      [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, bO, bL, cO, cL]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a₀ ∧
+      StageR dn (r.headD 0)
+        (AM.res (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a₀).1
+        s'.mem (AM.st (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decRRS s'.mem r.tail
+        (AM.res (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a₀).2; ⊤⦄ := by
+  refine triple_post (icr_spec p hp n s₀ vis pp nested pO pL tO tL rd mO mL bO bL cO cL) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨hbs, hpar, hparb, htbl, hrd, hms, hcv, hblk⟩ := hpre
+  have hsim : Sim (icrW p n s₀.mem vis pp nested pO pL tO tL rd mO mL bO bL cO cL)
+      (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a₀
+      (fun r x m' a' => StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow s₀.mem m' ∧ decRRS m' r.tail x.2) := by
+    unfold icrW ConRon.Arena.checkBlockRec
+    refine Sim.post (K := icrK) rfl (fun _ _ => rfl)
+      (installSimCall (Q := fun r x m' a' => StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow s₀.mem m' ∧
+        decRRS m' r.tail x.2) (genRecCheck_refines P hclR hfR n ⟨s₀.mem, Locals.init []⟩ a₀ hS hbs hrb hpar hparb htbl
+        hrd hms hcv hblk hlp hnP hsz hP) (fun r s' h => by obtain ⟨-, hok, hQ⟩ := h; exact ⟨hok, hQ⟩)) ?_
+    rintro r x m a ⟨h1, h2, h3⟩
+    exact ⟨h1, h2, by simp only [decRRS] at h3 ⊢; simpa using h3⟩
+  obtain ⟨hok, hQ⟩ := Sim.run hsim hm
+  exact ⟨hl, hok, hQ⟩
 
 end L.Ind
