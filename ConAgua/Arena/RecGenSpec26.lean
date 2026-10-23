@@ -397,32 +397,39 @@ theorem decCN_words {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (f
   refine ⟨a, by simpa using ra.1, h3t, hcv, by rw [hw]; exact hwH, by rw [hw]; exact hwD, by simpa using rn.1, rn.2,
     hnt⟩
 
-/-- A fresh `rec6` record of stably decoding parts decodes stably as a `ClassCtor`. -/
+/-- A fresh `rec6` record (at or above `b`) of parts stable above `b` decodes stably above `b` as a
+`ClassCtor`. -/
 theorem rec6_decCC {m m' : Mem} {q : Word} {cvw nFw ko kl tyD tyN : Word} {cv : IConstantVal}
-    {kinds : List ClassField} (hget : ∀ j < 6, (m'.arr64 IW)[q.toNat + j]? = [cvw, nFw, ko, kl, tyD, tyN][j]?)
-    (hq : q.toNat + 6 ≤ iwTop m') (hg : IWGrow m m') (hcv : DecB (fun m => decCVp m cvw.toNat) m cv)
-    (hks : SPL decCF m ko.toNat kl.toNat kinds) (hD : H tyD) (hN : H tyN) :
-    StabD (fun m => decCC m q.toNat) m' ⟨cv, nFw.toNat, kinds, decI tyD, decI tyN⟩ := by
-  intro m'' hg''
+    {kinds : List ClassField} {b : Nat}
+    (hget : ∀ j < 6, (m'.arr64 IW)[q.toNat + j]? = [cvw, nFw, ko, kl, tyD, tyN][j]?)
+    (hq : q.toNat + 6 ≤ iwTop m') (hb : b ≤ q.toNat) (hg : IWGrow m m')
+    (hcv : DecB (fun m => decCVp m cvw.toNat) m cv)
+    (hks : SPLA b decCF m ko.toNat kl.toNat kinds) (hD : H tyD) (hN : H tyN) :
+    StabA b (fun m => decCC m q.toNat) m' ⟨cv, nFw.toNat, kinds, decI tyD, decI tyN⟩ := by
+  intro m'' hA
+  have hA0 : AgreeA b m m'' := (AgreeA.of_grow hg).trans hA
   have hw : ∀ j (hj : j < 6), iwN m'' (q.toNat + j) =
       some ([cvw, nFw, ko, kl, tyD, tyN][j]'(by simpa using hj)).toNat := fun j hj => by
+    rw [hA.iwN (by omega) (by omega)]
     simp only [iwN, nat?, iwA]
-    rw [hg''.2.2.1 _ (by omega), hget j hj, List.getElem?_eq_getElem (by simp <;> omega)]; rfl
+    rw [hget j hj, List.getElem?_eq_getElem (by simp; omega)]; rfl
   have h0 := hw 0 (by omega)
   have h1 := hw 1 (by omega)
   have h2 := hw 2 (by omega)
   have h3 := hw 3 (by omega)
   have hhD : (iwH m'' (q.toNat + 4) : Option EIdx) = some (decI tyD) := by
+    rw [hA.iwH (by omega) (by omega)]
     simp only [iwH, hd?, iwA]
-    rw [hg''.2.2.1 _ (by omega), hget 4 (by omega)]
+    rw [hget 4 (by omega)]
     simp [hD]
   have hhN : (iwH m'' (q.toNat + 5) : Option EIdx) = some (decI tyN) := by
+    rw [hA.iwH (by omega) (by omega)]
     simp only [iwH, hd?, iwA]
-    rw [hg''.2.2.1 _ (by omega), hget 5 (by omega)]
+    rw [hget 5 (by omega)]
     simp [hN]
   simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at h0 h1 h2 h3
-  have e1 : decCVp m'' cvw.toNat = some cv := hcv.stab (OMono.decCVp _) m'' (hg.trans hg'')
-  have e3 := ((hks.grow (hg.trans hg'')).decPL)
+  have e1 : decCVp m'' cvw.toNat = some cv := stabA_decCVp hcv b m'' hA0
+  have e3 := hks.stab m'' hA0
   simp only [decCC, decAt, h0, Nat.add_assoc, Nat.reduceAdd, h1, h2, h3, Option.bind_eq_bind,
     Option.bind_some, e1, e3, hhD, hhN]
   rfl
@@ -519,7 +526,8 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
     (hcA : DecB (fun m => decCN m cA.toNat) m cA') (hlp : CtorLp m cA) (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m) :
     ∃ x a', (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA').run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ StabD (fun m => decCC m (r.headD 0).toNat) m' x ∧ RcMR m' := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ StabA (iwTop m) (fun m => decCC m (r.headD 0).toNat) m' x ∧
+        RcMR m' := by
   have hsz := hS.2.2.2.1
   have hbsD : DecB (fun m => decBS m q.toNat) m bs := hbs.1
   have hq9 : q.toNat + 9 ≤ iwTop m := by have := hbs.ptop; omega
@@ -679,7 +687,7 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
       (e0' :: es') kinds hS5 (hbs.grow hg15) (by rw [decHL_grow hg15 hftb]; exact hft)
       (Nat.le_trans hftb hg15.1) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg15)
       hmsb (by rw [decHL_grow hg5 hbl]; exact hdl) (Nat.le_trans hbl hg5.1)
-      (hes.grow (fun q => decNCN_mono q) (hg4.trans hg5)) hsp5
+      (hes.grow (fun q => decNCN_mono q) (hg4.trans hg5)) hsp5.toSPL
       (by simpa using (r5.tail.headD 0).toNat_lt) hP5) c6
   simp only at hs6 hS6 hg6 hP6; subst hs6
   have run6 := AM.run_of_ok _ a5 hok6
@@ -767,8 +775,10 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
     rfl
   · have := rec6_decCC (m := s8.mem) (q := r9.headD 0) (cvw := UInt64.ofNat ca) (nFw := UInt64.ofNat cA'.2)
       (ko := r5.headD 0) (kl := r5.tail.headD 0) (tyD := r8.tail.headD 0) (tyN := rdW (s8.mem.arr64 IW) (e0w + 4))
-      (fun j hj => by simpa using hget9 j (by simpa using hj)) (by simp at ht9; omega) hg9
-      (by rw [hcaT]; exact hcv.grow (OMono.decCVp _) (hg26.trans (hg7.trans hg8))) (hsp5.grow (hg6.trans (hg7.trans hg8))) h8H hty8H
+      (fun j hj => by simpa using hget9 j (by simpa using hj)) (by simp at ht9; omega)
+      (by rw [hq9']; exact hg18.1) hg9
+      (by rw [hcaT]; exact hcv.grow (OMono.decCVp _) (hg26.trans (hg7.trans hg8)))
+      ((hsp5.mono hg14.1).grow (AgreeA.of_grow (hg6.trans (hg7.trans hg8)))) h8H hty8H
     simp only [List.headD_cons]
     rw [h8D, hty8D, UInt64.toNat_ofNat_of_lt' hnFb] at this
     exact this
@@ -780,7 +790,8 @@ end rel
 stubs and `target_k53`'s contracts): the class's shape (`BSOK`, its parameter count plus member
 count word-sized), former types, the class reading, the classes and the `[cv, nF]` record decoded
 below the tops, the constant's level-parameter slice in `EREC` (`CtorLp`), the pool's size `+ 5`
-word-sized (`class_minor_slot`), the walk memos well formed; the `ClassCtor` record decoded stably. -/
+word-sized (`class_minor_slot`), the walk memos well formed; the `ClassCtor` record decoded stably
+above the entry's top (`StabA`). -/
 @[refines ConRon.Arena.classCtorOf]
 theorem classCtorOf_refines {p : Prog} (P : CxoProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c cA : Word) (bs : BlockShape)
@@ -795,7 +806,7 @@ theorem classCtorOf_refines {p : Prog} (P : CxoProg p) (n : Nat) (s₀ : St) (a�
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      StabD (fun m => decCC m (r.headD 0).toNat) s'.mem
+      StabA (iwTop s₀.mem) (fun m => decCC m (r.headD 0).toNat) s'.mem
         (AM.res (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀) ∧ RcMR s'.mem; ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
