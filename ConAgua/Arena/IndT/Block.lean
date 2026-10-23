@@ -47,9 +47,14 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
     (hta : ∃ mp, taMR m mp) (hrb : RecsB m p0)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a.store fe = some env)
     {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some shP)
-    {blockP : List ConLeche.ConstantInfo} (hbP : Frontend.denoteCIList a.store block = some blockP) :
+    {blockP : List ConLeche.ConstantInfo} (hbP : Frontend.denoteCIList a.store block = some blockP)
+    {fsH fsM : List FnName} (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
+    (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH)
+    (hclM : closedA p maFreeA maFreeC fsM = true)
+    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM) :
     Sim (icbW p (n + 4) m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m' ∧ RcMR m' ∧
+        ∃ mp, maMR m' mp) := by
   have hS := hC.stage
   intro r m' h
   unfold icbW at h
@@ -218,10 +223,10 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   | some q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [c7, icbK7_some] at h
-  obtain ⟨s7, hs7, -, hok7, hst7, hr7, -, hS7, hg7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
+  obtain ⟨s7, hs7, -, hok7, hst7, hr7, hma7, hS7, hg7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (blockRawRec_refines p hP.ma hP.ha hP.mnc hP.bsmn hP.pdm hP.brm hP.brg hP.brr (n + 3) _ _ dn vis fe p0 bs
       _ hS6 hq6 hsrc6 hma6) c7
-  simp only at hs7 hst7 hr7 hS7 hg7
+  simp only at hs7 hst7 hr7 hma7 hS7 hg7
   subst hs7
   have hP7 := PosMR.ofClosed hcl hfr c7 hP6
   have hA7 : AbsOK s7.mem := hkr _ _ _ _ _ c7 hA6
@@ -251,6 +256,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
       (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP) c8
   simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8 hC8
   subst hs8
+  have hma8 := maMR.ofClosed hclM (hfM _ (by simp)) c8 hma7
   have hg18 := hg17.trans hg8
   have hta8 := taMR.ofClosed hclT (hfT _ (by decide)) c8 hta7
   replace hrb8 := hrb8 (hrb.grow hg17 (by omega))
@@ -262,14 +268,15 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   rw [c9, icbK9_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
+  obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9, hR9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
     (checkBlockTail_refinesC hkp henv₁ hV hkc hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hC8
       hBP8 (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8 hcoh8 hden8 hqP
-      (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs) c9
-  simp only at hs9 hS9 hg9 hM9 hA9
+      (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH) c9
+  simp only at hs9 hS9 hg9 hM9 hA9 hR9
   subst hs9
   have hrun9 := AM.run_of_ok _ _ hok9
-  refine ⟨_, _, ?_, by simpa using hS9, hg18.trans hg9, hM9, hA9⟩
+  have hma9 := maMR.ofClosed hclM (hfM _ (by simp)) c9 hma8
+  refine ⟨_, _, ?_, by simpa using hS9, hg18.trans hg9, hM9, hA9, hR9, hma9⟩
   simp only [ConRon.Arena.checkBlock, hnodup]
   simp only [Bool.false_eq_true, ite_false, StateT.run_bind, flushCaches_run, except_ok_bind, hrun7,
     hrun8, hrun9]
@@ -297,15 +304,19 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
     (hrb : RecsB s₀.mem p0)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a₀.store fe = some env)
     {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a₀.store bs = some shP)
-    {blockP : List ConLeche.ConstantInfo} (hbP : Frontend.denoteCIList a₀.store block = some blockP) :
+    {blockP : List ConLeche.ConstantInfo} (hbP : Frontend.denoteCIList a₀.store block = some blockP)
+    {fsH fsM : List FnName} (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
+    (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH)
+    (hclM : closedA p maFreeA maFreeC fsM = true)
+    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "check_block" [vis, bO, bL, p0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
+      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (icbW_simC hkp henv hV hkc hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hC hq
-      hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP) hm
+      hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM) hm
     ⟨hl, hok, hQ⟩
 
 end sims
