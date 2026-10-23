@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Compiler.SimFun
+public import ConAgua.Compiler.SimTail
 public import ConAgua.Compiler.SimStore
 
 @[expose] public section
@@ -48,7 +49,7 @@ theorem stepSim (t : NTree) (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, 
   | set x e => exact sim_set hG hTab p _ _ x e
   | st8 a i e => exact sim_st8 hG hTab p _ _ a i e
   | st64 a i e => exact sim_st64 hG hTab p _ _ a i e
-  | seq s t ihs iht => exact sim_seq p _ _ hPm s t ihs iht
+  | seq s u ihs iht => exact sim_seq p _ _ hPm s u ihs iht (sim_tail hG hTab p t n hF hProg s u)
   | ite c s t ihs iht => exact sim_ite hG hTab p _ _ c s t ihs iht
   | «while» c s ih => exact sim_while hG hTab p n hE c s ih
   | brk => exact sim_brk p _ _

@@ -315,6 +315,9 @@ structure Ctx where
   leaf : Bool := false
   /-- The locals kept in registers (`leafAlloc`); the others are in the frame. -/
   alloc : List (Var × Reg64) := []
+  /-- The frame's size in words, if the function may make tail calls (it calls, so it has a
+  frame): a tail call pops the frame and jumps. -/
+  tailF : Option Nat := none
   deriving Repr
 
 /-- The registers a leaf keeps locals in: neither the scratch registers `rax`/`rcx`/`rdx`, nor
@@ -615,6 +618,32 @@ def compileRegArgs (ctx : Ctx) : List Reg64 → List Expr → Program
   | r :: rs, e :: es => valInto ctx r e ++ compileRegArgs ctx rs es
   | _, _ => []
 
+/-- `es` is `xs.map .var`. -/
+def retVars : List Expr → List Var → Bool
+  | [], [] => true
+  | .var y :: es, x :: xs => y == x && retVars es xs
+  | _, _ => false
+
+/-- No element twice (`Bool`, for the kernel). -/
+def nodupB {α} [BEq α] : List α → Bool
+  | [] => true
+  | a :: l => !l.contains a && nodupB l
+
+/-- `x⃗ := f(a⃗); return x⃗` as a tail call: when all of this function's results come from `f` (`x⃗`
+distinct, as many as the function returns, and `f` sets them all) and the arguments go in
+registers, pop the frame, burn fuel and jump to `f`, which returns to this function's caller. -/
+def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
+  | .call xs f args, .ret es =>
+    match ctx.tailF with
+    | some F =>
+      if retVars es xs && nodupB xs && xs.length == ctx.nr && decide (ctx.nr ≤ nrOf ctx.nrt ctx.tab f) &&
+          decide (args.length ≤ argRegs.length) then
+        some (compileRegArgs ctx argRegs args ++ burnFuel ++
+          [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), jmpL (fnL f)])
+      else none
+    | none => none
+  | _, _ => none
+
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e =>
@@ -648,7 +677,10 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (mb .r15 (ctx.tab.base64 a)),
        movMR (mbi .rcx .rax .W64) .rdx]
-  | .seq s t => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
+  | .seq s t =>
+    match tailCode ctx s t with
+    | some code => code
+    | none => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
   | .ite c .abort .skip =>
     -- `if c abort`: one conditional jump to the error exit
     compileC ctx (path.ch 3) c true errorL 0
@@ -764,11 +796,6 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
     allocRegs.contains r && !ps.any (·.2 == r)
   ps ++ (chosen.filter (fd.nparams ≤ ·)).zip free
 
-/-- No element twice (`Bool`, for the kernel). -/
-def nodupB {α} [BEq α] : List α → Bool
-  | [] => true
-  | a :: l => !l.contains a && nodupB l
-
 /-- An allocation the proof can use: registers from `allocRegs`, no register twice, a parameter
 `i` in `argRegs[i]`. -/
 def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
@@ -778,9 +805,10 @@ def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
 /-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
 used when `allocOk`). -/
 def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
+  let al := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) then leafAlloc fd else []
   { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
-    leaf := !Stmt.calls fd.body,
-    alloc := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) then leafAlloc fd else [] }
+    leaf := !Stmt.calls fd.body, alloc := al,
+    tailF := if Stmt.calls fd.body then some (fd.nlocals + tempsS al (Stmt.nret fd.body) fd.body) else none }
 
 /-- A leaf that keeps every local in a register and needs no temporaries has no frame (and no
 stack check). -/

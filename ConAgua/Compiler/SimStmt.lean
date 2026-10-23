@@ -99,6 +99,20 @@ theorem EPost.spost {G : Layout} {nl F t : Nat} {d d' : MachineData} (h : EPost 
     (hlo : G.lo ≤ d.regs.rsp.toNat) : SPost G F d d' :=
   ⟨h.rsp, h.rbp, h.r15, by rw [h.r14]; exact Nat.le_refl _, Pres.of_only h.mem (by omega) (Nat.le_refl _)⟩
 
+/-- What a function's code keeps when it returns to its caller from a frame of `F` words at `rsp`
+(a tail call: the frame popped, the return address above it taken). -/
+structure TPost (G : Layout) (F : Nat) (d d' : MachineData) : Prop where
+  rsp : d'.regs.rsp.toNat = top d F + 8
+  rbp : d'.regs.rbp = d.regs.rbp
+  r15 : d'.regs.r15 = d.regs.r15
+  r14 : d'.regs.r14.toNat ≤ d.regs.r14.toNat
+  mem : Pres G (top d F) d.dmem d'.dmem
+
+theorem SPost.trans_t {G : Layout} {F : Nat} {d d' d'' : MachineData} (h : SPost G F d d')
+    (h' : TPost G F d' d'') : TPost G F d d'' :=
+  ⟨by rw [h'.rsp]; simp only [top, h.rsp], h'.rbp.trans h.rbp, h'.r15.trans h.r15,
+    Nat.le_trans h'.r14 h.r14, h.mem.trans (by have := h'.mem; simp only [top, h.rsp] at this; exact this)⟩
+
 /-- The exits of a statement whose run is `R`, for code that ends at `kend`. -/
 structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R : Except Err (Sig × St))
     (kend : Nat) (Q : MachineState → Prop) : Prop where
@@ -108,6 +122,27 @@ structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R :
     ResOut G ctx.nr vs d' → Ev Q d' (label ctx.retL)
   err : ∀ d', (∃ e, R = .error e ∧ e ≠ .outOfFuel) → GPost G (top d F) d d' → Ev Q d' (label errorL)
   exh : ∀ d', GPost G (top d F) d d' → Ev Q d' (label exhaustedL)
+  /-- A tail call returns to the caller of the current function, whose return address `ra` is
+  the word above the frame. -/
+  tail : ∀ Fw, ctx.tailF = some Fw → Fw = F ∧ ∀ vs σ' d' (ra : Word), R = .ok (.ret vs, σ') →
+    MemRel G σ'.mem d'.dmem → TPost G F d d' → ResOut G ctx.nr vs d' →
+    rdW d'.dmem (A (top d F)) = some ra → Ev Q d' (Int64.ofBitVec ra.toBitVec)
+
+/-- The tail exit of a statement inside another (after `SPost`), from the outer one's. -/
+theorem Conts.tail_fwd [Host] {G : Layout} {ctx ctx' : Ctx} {F : Nat} {d d1 : MachineData}
+    {R R1 : Except Err (Sig × St)} {kend : Nat} {Q : MachineState → Prop} (hK : Conts G ctx F d R kend Q)
+    (ht : ctx'.tailF = ctx.tailF) (hn : ctx'.nr = ctx.nr) (hS : SPost G F d d1)
+    (hR : ∀ vs σ', R1 = .ok (.ret vs, σ') → R = .ok (.ret vs, σ')) :
+    ∀ Fw, ctx'.tailF = some Fw → Fw = F ∧ ∀ vs σ' d' (ra : Word), R1 = .ok (.ret vs, σ') →
+      MemRel G σ'.mem d'.dmem → TPost G F d1 d' → ResOut G ctx'.nr vs d' →
+      rdW d'.dmem (A (top d1 F)) = some ra → Ev Q d' (Int64.ofBitVec ra.toBitVec) := by
+  intro Fw hFw
+  rw [ht] at hFw
+  refine ⟨(hK.tail Fw hFw).1, fun vs σ' d' ra hr hm hT hO hra => ?_⟩
+  rw [hn] at hO
+  have htop : top d1 F = top d F := by simp only [top, hS.rsp]
+  rw [htop] at hra
+  exact (hK.tail Fw hFw).2 vs σ' d' ra (hR vs σ' hr) hm (hS.trans_t hT) hO hra
 
 /-- The result counts of `ctx` fit statement `s`: every `return` of `s` sets at most `ctx.nr`
 results, which fit the result registers and area, and `ctx.nrt` gives every callee's count. -/
@@ -134,6 +169,15 @@ def SimS [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig �
     TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
+
+/-- The simulation of `s; t` where it is compiled as a tail call (`tailCode`). -/
+def SimSTail [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
+    (s t : Stmt) : Prop :=
+  ∀ (ctx : Ctx) (F : Nat) (k : Nat) (code : Program), ctx.tab = G.tab → 8 * F + 8 < maxOff →
+    tailCode ctx s t = some code → Code code k → Stmt.wf p ctx.nl G.tab (.seq s t) = true →
+    NrOk p G ctx (.seq s t) → TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr (.seq s t)) →
+    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
+    Conts G ctx F d (run (.seq s t) σ) (k + code.length) Q → Ev Q d (at_ k)
 
 /-- `exec p n` on statement `s` from state `σ`. -/
 def execRun (p : Prog) (n : Nat) (s : Stmt) (σ : St) : Except Err (Sig × St) := (exec p n s).run σ
@@ -380,15 +424,21 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
 
 omit hG hTab in
 theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
-    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
+    (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t)
+    (htail : SimSTail p G (stepRun p K) P s t) :
     SimS p G (stepRun p K) P (.seq s t) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
-  simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS] at hc hK
+  cases htc : tailCode ctx s t
+  case some code =>
+    simp only [htc] at hc hK
+    exact htail ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hP hK
+  simp only [htc] at hc hK
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [tempsS] at htmp
-  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_⟩
+  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro σ1 d1 hr1 hI1 hS1
-    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_⟩
+    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_congr (hK.normal σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)) ?_
       simp only [List.length_append]; omega
@@ -400,6 +450,7 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
       exact hK.err d2 ⟨e, by rw [step_seq_run, hr1]; exact hr2, hne⟩ (hS1.trans_g hG2)
     · intro d2 hG2
       exact hK.exh d2 (hS1.trans_g hG2)
+    · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_seq_run, hr1]; exact hr2
   · intro σ1 d1 hr1 hI1 hS1
     exact hK.brk σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1
   · intro v σ1 d1 hr1 hI1 hS1 hv
@@ -408,6 +459,7 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
     exact hK.err d1 ⟨e, by rw [step_seq_run, hr1], hne⟩ hG1
   · intro d1 hG1
     exact hK.exh d1 hG1
+  · exact hK.tail_fwd rfl rfl (SPost.refl d) fun vs σ' hr1 => by rw [step_seq_run, hr1]
 
 omit hG hTab in
 /-- `compileS` of an `if` other than `if c abort`. -/
@@ -455,7 +507,7 @@ theorem sim_ite (c : Cond) (s t : Stmt)
     rw [hE]
     refine ev_label hc2.tail.head ?_
     refine ht ctx F _ _ hT hF hc3.left hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
-      ⟨?_, ?_, ?_, ?_, ?_⟩
+      ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_label hc3.right.head ?_
       refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)) ?_
@@ -468,12 +520,13 @@ theorem sim_ite (c : Cond) (s t : Stmt)
       exact hK.err d2 ⟨e, by rw [step_ite_run, hc1v]; exact hr2, hne⟩ (hS1.trans_g hG2)
     · intro d2 hG2
       exact hK.exh d2 (hS1.trans_g hG2)
+    · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_ite_run, hc1v]; exact hr2
   · -- the condition is true: the then branch
     intro d1 hc1v hE1
     have hI1 := hI.ofE hG hE1
     have hS1 := hE1.spost (G := G) hI.lo
     refine hs ctx F _ _ hT hF hc1.left hwf.1.2 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls])) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.r14]; exact hP)
-      ⟨?_, ?_, ?_, ?_, ?_⟩
+      ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_jmp hc2.head ?_
       rw [hX]
@@ -488,6 +541,7 @@ theorem sim_ite (c : Cond) (s t : Stmt)
       exact hK.err d2 ⟨e, by rw [step_ite_run, hc1v]; exact hr2, hne⟩ (hS1.trans_g hG2)
     · intro d2 hG2
       exact hK.exh d2 (hS1.trans_g hG2)
+    · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_ite_run, hc1v]; exact hr2
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
@@ -520,7 +574,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
     have hI1 := hI.ofE hG hE1
     have hS1 := hE1.spost (G := G) hI.lo
     refine hs { ctx with brk := ctx.lbl path "X" } F _ _ hT hF hc2.left hwf.2 ⟨hN.ret, hN.le, hN.callee, fun hl => by have := hN.leaf hl; simp_all [Stmt.calls]⟩ (htmp.mono (Nat.le_max_right _ _)) σ d1 Q
-      (hI1.ctx (ctx' := { ctx with brk := ctx.lbl path "X" }) rfl rfl rfl) (by rw [hE1.r14]; exact hP) ⟨?_, ?_, ?_, ?_, ?_⟩
+      (hI1.ctx (ctx' := { ctx with brk := ctx.lbl path "X" }) rfl rfl rfl) (by rw [hE1.r14]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
     · -- the body ends normally: burn fuel and go round
       intro σ1 d2 hr1 hI2 hS2
       have hS12 := hS1.trans hS2
@@ -541,7 +595,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
           SPost.regs (by simp) (by simp) (by simp) (by simp [Reg64s.set64_r14, u64_sub_one_toNat hpos])
         have hS13 := hS12.trans hS3
         refine hE (.while c s) ctx F path k hT hF hc0 (by simp [Stmt.wf, hwf.1, hwf.2]) hN (by simpa only [tempsS] using htmp) σ1 _ Q
-          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) fun r hr => by rw [rget_set, if_neg (allocRegs_ne hr).2.2.2.2.2.1]) ?_ ⟨?_, ?_, ?_, ?_, ?_⟩
+          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) fun r hr => by rw [rget_set, if_neg (allocRegs_ne hr).2.2.2.2.2.1]) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
         · show _ < n
           have := hS12.r14
           simp [Reg64s.set64_r14, u64_sub_one_toNat hpos]
@@ -558,6 +612,8 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
           exact hK.err d4 ⟨e, by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2, hne⟩ (hS13.trans_g hG4)
         · intro d4 hG4
           exact hK.exh d4 (hS13.trans_g hG4)
+        · exact hK.tail_fwd rfl rfl hS13 fun vs σ' hr2 => by
+            rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2
     · -- `break`: leave the loop
       intro σ1 d2 hr1 hI2 hS2
       show Ev Q d2 (label (ctx.lbl path "X"))
@@ -571,6 +627,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
       exact hK.err d2 ⟨e, by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1], hne⟩ (hS1.trans_g hG2)
     · intro d2 hG2
       exact hK.exh d2 (hS1.trans_g hG2)
+    · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr1 => by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_while_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
