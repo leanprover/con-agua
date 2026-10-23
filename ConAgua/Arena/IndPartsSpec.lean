@@ -319,7 +319,7 @@ theorem numCtorsOf_spec (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Na
 end specs
 
 /-- A sum of words that does not wrap (`¬ a + b < b`) is the sum of the naturals. -/
-theorem word_add_nowrap {a b : Word} (h : ¬ a + b < b) : a.toNat + b.toNat < 2 ^ 64 := by
+theorem nctAddNowrap {a b : Word} (h : ¬ a + b < b) : a.toNat + b.toNat < 2 ^ 64 := by
   have h1 := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h)
   rw [UInt64.toNat_add] at h1
   have ha := a.toNat_lt; have hb := b.toNat_lt
@@ -386,7 +386,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
         by_cases hw : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r' < r'
         · rw [numCtorsOfW_cons_wrap _ _ _ hw] at h; cases h
         rw [numCtorsOfW_cons_some _ _ _ hw] at h
-        have hnw := word_add_nowrap hw
+        have hnw := nctAddNowrap hw
         simp only [Option.some.injEq] at h
         rw [hl2rd, hr'] at h hnw
         have hl2b : l2 < 2 ^ 64 := by
