@@ -55,9 +55,9 @@ theorem invoke_agree {k k' : Stmt → M Sig} (hk : ∀ s, s.callsP P = true → 
   cases h : p.lookup f with
   | none => rfl
   | some fd =>
-    simp only
-    unfold callFn
-    rw [hk fd.body (hcl f fd hf h)]
+    have e : callFn k fd vs = callFn k' fd vs := by
+      unfold callFn; rw [hk fd.body (hcl f fd hf h)]
+    simp only [pure_bind, e]
 
 theorem step_agree {k k' : Stmt → M Sig} (hk : ∀ s, s.callsP P = true → k s = k' s) :
     ∀ s, s.callsP P = true → step p k s = step q k' s := by
@@ -120,8 +120,8 @@ theorem checkerProg_front_run (n : Nat) :
 
 /-! ## The refinements -/
 
+open scoped Lean.Order
 open Std.WP L.Arena L.Front ConRon.Arena ConRon.Arena.Frontend
-open ConLeche.Frontend hiding StateD RecordVerdict applyLine parseBytes ParseResultD
 
 /-- **Bytes → stores, at the checker's program**: when `front_run()` returns `0` on a memory
 holding the input `b` and related to the arena state `a₀` and to the blank parse state, con-ron's
