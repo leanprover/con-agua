@@ -788,7 +788,7 @@ theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p
   (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP).mono
     fun _ hx => Nat.lt_of_lt_of_le hx hg.1
 
-theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word) (hcs : CtorSums fe)
+theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word)
     (k : Nat) : ∀ (m m' : Mem) (a : AState) (off l oo ol : Word) (cs : List NIdx)
       (out : List (IConstantVal × Nat)) (r : List Word),
     gcW k m vis nPc off l oo ol = some (r, m') → StageR dn vis fe m a →
@@ -834,7 +834,7 @@ theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word
     | some pr =>
     obtain ⟨r1, m1⟩ := pr
     rw [hnt] at h
-    obtain ⟨x, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis _ hcH hcs k m m1 a r1 hnt hS
+    obtain ⟨x, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis _ hcH k m m1 a r1 hnt hS
     rw [hcd] at hrun1
     cases x with
     | none =>
@@ -910,12 +910,11 @@ variable (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwCopy)
   (hp : p.lookup "nest_group_ctors" = some nestGroupCtorsL)
 include hl hc hap hp
 
-/-- **`nest_group_ctors` refines `nestGroupCtors`** (through `nest_container`'s stubs; the
-environment's constructor counts sum below `2^64`). -/
+/-- **`nest_group_ctors` refines `nestGroupCtors`** (through `nest_container`'s stubs). -/
 @[refines ConRon.Arena.nestGroupCtors]
 theorem nestGroupCtors_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis nPc off l oo ol : Word) (cs : List NIdx) (out : List (IConstantVal × Nat))
-    (hcs : CtorSums fe) (hS : StageR dn vis fe s₀.mem a₀)
+    (hS : StageR dn vis fe s₀.mem a₀)
     (hcs' : decHL s₀.mem off.toNat l.toNat = some cs) (hcb : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem)
     (hol : ol.toNat = out.length) (hob : oo.toNat + out.length ≤ iwTop s₀.mem)
     (hout : CsAt s₀.mem oo.toNat out (· < iwTop s₀.mem)) :
@@ -929,7 +928,7 @@ theorem nestGroupCtors_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
         (· < iwTop s'.mem); ⊤⦄ := by
   refine triple_post (nestGroupCtors_spec p hl hc hap hp k s₀ vis nPc off l oo ol) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, h1, h2, h3⟩ := gcW_ok dn fe vis nPc hcs k _ _ a₀ off l oo ol cs out _ hm hS
+  obtain ⟨res, a', hrun, hS', hg, h1, h2, h3⟩ := gcW_ok dn fe vis nPc k _ _ a₀ off l oo ol cs out _ hm hS
     hcs' hcb hol hob hout
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hlc, hok, by rw [hst]; exact hS', hg, ?_, ?_, ?_⟩

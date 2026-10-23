@@ -132,62 +132,62 @@ section spec
 variable (p : Prog)
 
 /-- The specs of the block at exec fuel `n`. -/
-def NbSpec (n : Nat) : Prop :=
+def NbSpec (cR : CallM) (n : Nat) : Prop :=
   (∀ (s₀ : St) (vis ctx fu po pl dep kb e ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_pos" [vis, ctx, fu, po, pl, dep, kb, e, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbPosW n s₀.mem vis ctx fu po pl dep kb e ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbPosW cR n s₀.mem vis ctx fu po pl dep kb e ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl dep kb w ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_pos_bind" [vis, ctx, fu, po, pl, dep, kb, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbBindW n s₀.mem vis ctx fu po pl dep kb w ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbBindW cR n s₀.mem vis ctx fu po pl dep kb w ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl kb hi w ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbAppW n s₀.mem vis ctx fu po pl kb hi w ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbAppW cR n s₀.mem vis ctx fu po pl kb hi w ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_cont" [vis, ctx, fu, po, pl, kb, nn, us, aO, aL, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbContW n s₀.mem vis ctx fu po pl kb nn us aO aL ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbContW cR n s₀.mem vis ctx fu po pl kb nn us aO aL ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_cont_key" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbKeyW n s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbKeyW cR n s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_cont_new" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbNewW n s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbNewW cR n s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_frame" [vis, ctx, fu, po, pl, hi, us, dO, dL, nPc, gO, gL, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbFrameW n s₀.mem vis ctx fu po pl hi us dO dL nPc gO gL ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbFrameW cR n s₀.mem vis ctx fu po pl hi us dO dL nPc gO gL ns =
       some ([r.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_ctors" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cO, cL, ns,
       oO, oL]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbCtorsW n s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbCtorsW cR n s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_ctors_one" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbOneW n s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbOneW cR n s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_ctors_walk" [vis, ctx, root, fu, po, pl, hi, nF, crest, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbWalkW n s₀.mem vis ctx root fu po pl hi nF crest ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbWalkW cR n s₀.mem vis ctx root fu po pl hi nF crest ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
         r.tail.tail.tail.tail.headD 0], s'.mem); ⊤⦄) ∧
   (∀ (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL : Word), ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nest_fields" [vis, ctx, fu, po, pl, base, nF, j, cur, ns, kO, kL, dO, dL]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbFieldsW n s₀.mem vis ctx fu po pl base nF j cur ns kO kL dO dL =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbFieldsW cR n s₀.mem vis ctx fu po pl base nF j cur ns kO kL dO dL =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
         r.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.headD 0], s'.mem); ⊤⦄)
 
-variable {p} (L : NbLook p) (n : Nat) (ih : NbSpec p n)
-include L ih
+variable {p} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (ih : NbSpec p cR n)
+include L hcR ih
 
 theorem nbFields_step (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_fields" [vis, ctx, fu, po, pl, base, nF, j, cur, ns, kO,
       kL, dO, dL]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbFieldsW (n + 1) s₀.mem vis ctx fu po pl base nF j cur ns kO kL dO dL =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbFieldsW cR (n + 1) s₀.mem vis ctx fu po pl base nF j cur ns kO kL dO dL =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
         r.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
@@ -204,7 +204,7 @@ theorem nbFields_step (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL
 
 theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ctors_walk" [vis, ctx, root, fu, po, pl, hi, nF, crest, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbWalkW (n + 1) s₀.mem vis ctx root fu po pl hi nF crest ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbWalkW cR (n + 1) s₀.mem vis ctx root fu po pl hi nF crest ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
         r.tail.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
@@ -220,14 +220,14 @@ theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
 
 theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ctors_one" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbOneW (n + 1) s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbOneW cR (n + 1) s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
   rw [invoke_eq _ L.pone]
   simp only [callFn, nestCtorsOneL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      nestCtorsCrest_spec p L.ct n, hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
+      nestCtorsCrest_spec p L.ct cR hcR n, hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
       nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.nt.ad L.hro n, nestCtorNf_spec' p L n,
       slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, rec6_specW p R.ha L.h6 n] <;>
     simp_all [nbOneW_succ, nbOneK1_some, nbOneK2_some, nbOneK3_some, nbOneK4_some, nbOneK5_some,
@@ -237,7 +237,7 @@ theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv
 
 theorem nbCtors_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ctors" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cO, cL, ns, oO, oL]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbCtorsW (n + 1) s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbCtorsW cR (n + 1) s₀.mem vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
@@ -251,14 +251,14 @@ theorem nbCtors_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL 
 
 theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_frame" [vis, ctx, fu, po, pl, hi, us, dO, dL, nPc, gO, gL, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbFrameW (n + 1) s₀.mem vis ctx fu po pl hi us dO dL nPc gO gL ns = some ([r.headD 0], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ nbFrameW cR (n + 1) s₀.mem vis ctx fu po pl hi us dO dL nPc gO gL ns = some ([r.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
   rw [invoke_eq _ L.pframe]
   simp only [callFn, nestFrameL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       naF_spec p L.na n, internConst_spec p R.cf R.cp R.ci n,
-      mknF_spec p L.nt.ad n, stubM_spec p "infer_type_core" n,
+      mknF_spec p L.nt.ad n, hcR n "infer_type_core",
       nestFrameGrp_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hfg n,
       nestGroupCtors_spec p L.nt L.nit.hc2 L.hap L.hgc n,
       nestFrameHoles_spec p R.ha L.nit.hc2 L.nag.hsn R.hl.hff R.hl.hfp R.hl.hif L.hfh n, hCtors] <;>
@@ -269,7 +269,7 @@ theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Wo
 
 theorem nbNew_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_cont_new" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbNewW (n + 1) s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbNewW cR (n + 1) s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
@@ -289,7 +289,7 @@ theorem nbNew_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
 
 theorem nbKey_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_cont_key" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbKeyW (n + 1) s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbKeyW cR (n + 1) s₀.mem vis ctx fu po pl kb nn us dO dL nPc cty ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
@@ -304,7 +304,7 @@ theorem nbKey_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
 
 theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_cont" [vis, ctx, fu, po, pl, kb, nn, us, aO, aL, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbContW (n + 1) s₀.mem vis ctx fu po pl kb nn us aO aL ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbContW cR (n + 1) s₀.mem vis ctx fu po pl kb nn us aO aL ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
@@ -320,7 +320,7 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
 
 theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbAppW (n + 1) s₀.mem vis ctx fu po pl kb hi w ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbAppW cR (n + 1) s₀.mem vis ctx fu po pl kb hi w ns =
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
@@ -335,7 +335,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
 
 theorem nbBind_step (s₀ : St) (vis ctx fu po pl dep kb w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_bind" [vis, ctx, fu, po, pl, dep, kb, w, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbBindW (n + 1) s₀.mem vis ctx fu po pl dep kb w ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbBindW cR (n + 1) s₀.mem vis ctx fu po pl dep kb w ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
@@ -352,14 +352,14 @@ theorem nbBind_step (s₀ : St) (vis ctx fu po pl dep kb w ns : Word) :
 
 theorem nbPos_step (s₀ : St) (vis ctx fu po pl dep kb e ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos" [vis, ctx, fu, po, pl, dep, kb, e, ns]
-    ⦃fun r s' => LocEq s' s₀ ∧ nbPosW (n + 1) s₀.mem vis ctx fu po pl dep kb e ns =
+    ⦃fun r s' => LocEq s' s₀ ∧ nbPosW cR (n + 1) s₀.mem vis ctx fu po pl dep kb e ns =
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
   rw [invoke_eq _ L.ppos]
   simp only [callFn, nestPosL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      nestCtxHiAt_specE p R.hi n, stubM_spec p "whnf_top" n, nestOcc_spec' p L.nit.no n, hBind, hApp] <;>
+      nestCtxHiAt_specE p R.hi n, hcR n "whnf_top", nestOcc_spec' p L.nit.no n, hBind, hApp] <;>
     simp_all [nbPosW_succ, nbPosK1_some, nbPosK2_some, nbPosK3_some, nbPosK4_some, nbPosK5_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
@@ -372,17 +372,17 @@ namespace L.Ind
 
 open L.Arena
 
-theorem nbSpec_zero (p : Prog) : NbSpec p 0 := by
+theorem nbSpec_zero (p : Prog) (cR : CallM) : NbSpec p cR 0 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
     exact triple_post (invoke_exec0 p _ _ _) (fun _ _ h => h.elim)
 
 /-- **The block refines its word models**, at every exec fuel. -/
-theorem nbSpec_all {p : Prog} (L : NbLook p) (n : Nat) : NbSpec p n := by
+theorem nbSpec_all {p : Prog} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : NbSpec p cR n := by
   induction n with
-  | zero => exact nbSpec_zero p
+  | zero => exact nbSpec_zero p cR
   | succ n ih =>
-    exact ⟨nbPos_step L n ih, nbBind_step L n ih, nbApp_step L n ih, nbCont_step L n ih, nbKey_step L n ih,
-      nbNew_step L n ih, nbFrame_step L n ih, nbCtors_step L n ih, nbOne_step L n ih, nbWalk_step L n ih,
-      nbFields_step L n ih⟩
+    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR hcR n ih, nbApp_step L cR hcR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR hcR n ih,
+      nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR hcR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR hcR n ih,
+      nbFields_step L cR hcR n ih⟩
 
 end L.Ind
