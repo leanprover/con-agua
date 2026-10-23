@@ -602,6 +602,15 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   exact ⟨T'', hE'', hT'', hTv'', hfr.trans hfr'', hI'', fun x hx => by
     rw [hmono'' x (by rw [hT'x x hx]; exact hx), hT'x x hx]⟩
 
+/-- Every moved record moves before itself. -/
+def TLt (T : Std.HashMap Nat Nat) : Prop := ∀ (k t : Nat), T[k]? = some t → t < k
+
+theorem reachIn_gt {idx : Std.HashMap NIdx Nat} {i : Nat} {D : Nat → List NIdx} {N : Nat → Prop}
+    {j x : Nat} (h : HoistTwin.ReachIn idx i D N j x) (hij : i < j) : i < x := by
+  induction h with
+  | base _ => exact hij
+  | step _ hs _ _ => obtain ⟨_, _, _, h2, _⟩ := hs; exact h2
+
 theorem tgtR_congr {m : Mem} {tg : Word} {c : Nat} {T T' : Std.HashMap Nat Nat} (h : TgtR m tg c T)
     (e : ∀ k : Nat, T'[k]? = T[k]?) : TgtR m tg c T' :=
   ⟨fun k hk => by rw [e k]; exact h.1 k hk, fun k hk => by rw [e k]; exact h.2 k hk⟩
@@ -611,11 +620,12 @@ targets after are its map. -/
 theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
     {ord tg ws : Word} {c : Nat} {i j : Nat} (hi : i < c) (hj : j < c) (n : Nat) (m m' : Mem)
     (T : Std.HashMap Nat Nat) (r : Word) (hE : HEnv m a ds idx ord tg ws c) (hT : TgtR m tg c T)
-    (hTv : TgtV T c) (hTi : ∀ (k t : Nat), T[k]? = some t → t ≤ i)
+    (hTv : TgtV T c) (hTi : ∀ (k t : Nat), T[k]? = some t → t ≤ i) (hij : i < j) (hlt : TLt T)
     (h : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat j) ord tg ws = some (r, m')) :
     ∃ T'', (hoistClosure ds idx i ds.size T [j]).run a = .ok (T'', a) ∧
       HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ HFr tg ws c m m' ∧
-      (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ (∀ k : Nat, (T[k]?).isSome → T''[k]? = T[k]?) := by
+      (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ (∀ k : Nat, (T[k]?).isSome → T''[k]? = T[k]?) ∧
+      TLt T'' := by
   have hc := hE.c60
   have r1 := hE.rg1; have r2 := hE.rg2; have r3 := hE.rg3; have r4 := hE.isz
   cases n with
@@ -633,7 +643,8 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       (fun _ h => h.elim) (fun _ h => h.elim) (Or.inr hTj) (fun _ h => h.elim)
     have e : ∀ k : Nat, T''[k]? = T[k]? := fun k => by rw [hget k]; simp
     exact ⟨T'', hrun, hE, tgtR_congr hT e, fun x t hx => hTv x t (by rw [← e x]; exact hx),
-      HFr.refl _ _ _ _, fun x t hx => hTi x t (by rw [← e x]; exact hx), fun k _ => e k⟩
+      HFr.refl _ _ _ _, fun x t hx => hTi x t (by rw [← e x]; exact hx), fun k _ => e k,
+      fun x t hx => hlt x t (by rw [← e x]; exact hx)⟩
   rw [hClosureW.arm2 _ _ _ _ _ _ _ hm] at h
   have hTj : T[j]? = none := by
     cases e : T[j]? with
@@ -734,7 +745,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       · exact e.symm
       · exact absurd ⟨h0, by rw [e]; rfl⟩ hk
   refine ⟨T'', hrun, hE', tgtR_congr hT' e, fun x t hx => hTv' x t (by rw [← e x]; exact hx),
-    hfr₀.trans hfr', fun x t hx => ?_, fun k hk => ?_⟩
+    hfr₀.trans hfr', fun x t hx => ?_, fun k hk => ?_, fun x t hx => ?_⟩
   · rw [e x] at hx
     rcases hI'.ext x with e' | ⟨-, e'⟩
     · rw [e'] at hx; exact hTi x t hx
@@ -746,6 +757,11 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       · exact hk
     rw [hmono' k h1, Std.HashMap.getElem?_insert, if_neg]
     intro e'; simp at e'; subst e'; rw [hTj] at hk; cases hk
+  · rw [e x] at hx
+    rcases hI'.ext x with e' | ⟨h0, e'⟩
+    · rw [e'] at hx; exact hlt x t hx
+    · rw [e'] at hx; cases hx
+      exact reachIn_gt (hI'.reach x h0 (by rw [e']; rfl)) hij
 
 /-! ## The grounds of one operation -/
 
@@ -759,24 +775,24 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     {ord tg ws : Word} {c : Nat} {i : Nat} (hi : i < c) (o l : Word) :
     ∀ (gs : List NIdx) (n : Nat) (m m' : Mem) (T : Std.HashMap Nat Nat) (q r : Word),
     HEnv m a ds idx ord tg ws c → TgtR m tg c T → TgtV T c → (∀ (k t : Nat), T[k]? = some t → t ≤ i) →
-    GrR m o q gs → q.toNat + gs.length = l.toNat → (gs ≠ [] → ws.toNat + c ≤ o.toNat) →
+    TLt T → GrR m o q gs → q.toNat + gs.length = l.toNat → (gs ≠ [] → ws.toNat + c ≤ o.toNat) →
     o.toNat + l.toNat < 2 ^ 64 →
     hDepsW n m (UInt64.ofNat i) o l q ord tg ws = some (r, m') →
     ∃ T'', (hoistTargetsGo.hoistDeps ds idx T i gs).run a = .ok (T'', a) ∧
       HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧
-      (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ HFr tg ws c m m' := by
+      (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ HFr tg ws c m m' ∧ TLt T'' := by
   intro gs
   induction gs with
   | nil =>
-    intro n m m' T q r hE hT hTv hTi _ hl _ _ h
+    intro n m m' T q r hE hT hTv hTi hlt _ hl _ _ h
     cases n with
     | zero => rw [hDepsW.eq_1] at h; cases h
     | succ n =>
     rw [hDepsW.arm1 _ _ _ _ _ _ _ _ _ (by rw [UInt64.le_iff_toNat_le]; simp at hl; omega)] at h
     cases h
-    exact ⟨T, rfl, hE, hT, hTv, hTi, HFr.refl _ _ _ _⟩
+    exact ⟨T, rfl, hE, hT, hTv, hTi, HFr.refl _ _ _ _, hlt⟩
   | cons g gs ih =>
-    intro n m m' T q r hE hT hTv hTi hG hl ho' hol h
+    intro n m m' T q r hE hT hTv hTi hlt hG hl ho' hol h
     have ho := ho' (by simp)
     have hc := hE.c60
     cases n with
@@ -816,7 +832,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     | none =>
       rw [hgi] at hr; simp only [tgW] at hr; subst hr
       rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (by simp), hDepsW.k1.arm1] at h
-      exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
+      exact ih n m m' T (q + 1) r hE hT hTv hTi hlt (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
     | some jj =>
       rw [hgi] at hr; simp only [tgW] at hr; subst hr
       have hjc : jj < c := hE.nixlt g jj hgi
@@ -840,16 +856,16 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         | some rr =>
         obtain ⟨z, m₁⟩ := rr
         rw [hcl, hDepsW.k2.arm1, hDepsW.k1.arm1] at h
-        obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -⟩ :=
-          closure_ok hi hjc n m m₁ T z hE hT hTv hTi hcl
-        obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr'⟩ :=
-          ih n m₁ m' T₁ (q + 1) r hE₁ hT₁ hTv₁ hTi₁ (hG1 m₁ hfr₁) hl1 (fun _ => ho) hol h
-        refine ⟨T'', ?_, hE', hT', hTv', hTi', hfr₁.trans hfr'⟩
+        obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -, hlt₁⟩ :=
+          closure_ok hi hjc n m m₁ T z hE hT hTv hTi hij hlt hcl
+        obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr', hlt'⟩ :=
+          ih n m₁ m' T₁ (q + 1) r hE₁ hT₁ hTv₁ hTi₁ hlt₁ (hG1 m₁ hfr₁) hl1 (fun _ => ho) hol h
+        refine ⟨T'', ?_, hE', hT', hTv', hTi', hfr₁.trans hfr', hlt'⟩
         rw [HoistTwin.run_bind, hrun]
         exact hrun'
       · dsimp only
         rw [if_neg (by omega)]
         rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (fun ⟨_, h2⟩ => hij (hci.mp h2)), hDepsW.k1.arm1] at h
-        exact ih n m m' T (q + 1) r hE hT hTv hTi (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
+        exact ih n m m' T (q + 1) r hE hT hTv hTi hlt (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
 
 end L.Checker
