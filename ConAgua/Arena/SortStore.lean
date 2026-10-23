@@ -180,13 +180,13 @@ def sopushMem (m : Mem) (t u j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := SOSLOT.u64[len(SOSLOT.u64) - 1];
   ⟪hpBlkS⟫;
   c := CTL.u64[16 + t];
   if c >= 134217728 { abort };
   if len(SOREC.u64) >> 1 <= c { abort };
   if len(SOLP.u64) >> 1 <= c { abort };
   SOREC.u64[c * 2 + t] := u;
+  gk := SOSLOT.u64[len(SOSLOT.u64) - 1];
   SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
   SOLP.u64[c * 2 + t] := x;

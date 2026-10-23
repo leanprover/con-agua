@@ -188,13 +188,13 @@ def apushMem (m : Mem) (t f a j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := ASLOT.u64[len(ASLOT.u64) - 1];
   c := CTL.u64[4 + t];
   if c >= 134217728 { abort };
   if len(AREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
   AREC.u64[k] := f;
   AREC.u64[k + 1] := a;
+  gk := ASLOT.u64[len(ASLOT.u64) - 1];
   ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[4 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG appGS 6⟫ };

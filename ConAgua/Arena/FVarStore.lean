@@ -190,7 +190,6 @@ def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := FVSLOT.u64[len(FVSLOT.u64) - 1];
   ⟪lpBlkF⟫;
   c := CTL.u64[26 + t];
   if c >= 134217728 { abort };
@@ -199,6 +198,7 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, 
   k := c * 4 + t * 2;
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
+  gk := FVSLOT.u64[len(FVSLOT.u64) - 1];
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
   FVLP.u64[c * 2 + t] := x;

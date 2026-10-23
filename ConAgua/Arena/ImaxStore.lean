@@ -184,7 +184,6 @@ def impushMem (m : Mem) (t u v j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := ISLOT.u64[len(ISLOT.u64) - 1];
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -195,6 +194,7 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk
   k := c * 4 + t * 2;
   IREC.u64[k] := u;
   IREC.u64[k + 1] := v;
+  gk := ISLOT.u64[len(ISLOT.u64) - 1];
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
   IHP.u64[c * 2 + t] := x;

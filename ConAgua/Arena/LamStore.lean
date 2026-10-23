@@ -191,13 +191,13 @@ def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := LASLOT.u64[len(LASLOT.u64) - 1];
   c := CTL.u64[28 + t];
   if c >= 134217728 { abort };
   if len(LAREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
   LAREC.u64[k] := ty;
   LAREC.u64[k + 1] := body;
+  gk := LASLOT.u64[len(LASLOT.u64) - 1];
   LASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[28 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG lamGS 6⟫ };

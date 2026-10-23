@@ -410,7 +410,6 @@ def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := SLOT.u64[len(SLOT.u64) - 1];
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
@@ -419,6 +418,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, g
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
+  gk := SLOT.u64[len(SLOT.u64) - 1];
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
@@ -743,7 +743,6 @@ def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := SLOT.u64[len(SLOT.u64) - 1];
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
@@ -752,6 +751,7 @@ def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
+  gk := SLOT.u64[len(SLOT.u64) - 1];
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };

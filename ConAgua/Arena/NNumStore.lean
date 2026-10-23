@@ -183,13 +183,13 @@ def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := NNSLOT.u64[len(NNSLOT.u64) - 1];
   c := CTL.u64[38 + t];
   if c >= 134217728 { abort };
   if len(NNREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
   NNREC.u64[k] := pre;
   NNREC.u64[k + 1] := u;
+  gk := NNSLOT.u64[len(NNSLOT.u64) - 1];
   NNSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[38 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nnumGS 6⟫ };

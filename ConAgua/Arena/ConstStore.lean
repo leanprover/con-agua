@@ -189,7 +189,6 @@ def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := CSLOT.u64[len(CSLOT.u64) - 1];
   ⟪lsBlkC⟫;
   c := CTL.u64[18 + t];
   if c >= 134217728 { abort };
@@ -198,6 +197,7 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gn, gk, 
   k := c * 4 + t * 2;
   CREC.u64[k] := f;
   CREC.u64[k + 1] := a;
+  gk := CSLOT.u64[len(CSLOT.u64) - 1];
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
   CLP.u64[c * 2 + t] := x;

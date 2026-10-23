@@ -192,7 +192,6 @@ def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := PJSLOT.u64[len(PJSLOT.u64) - 1];
   c := CTL.u64[32 + t];
   if c >= 134217728 { abort };
   if len(PJREC.u64) < (c + 1) * 6 { abort };
@@ -200,6 +199,7 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, 
   PJREC.u64[k] := n;
   PJREC.u64[k + 1] := u;
   PJREC.u64[k + 2] := e;
+  gk := PJSLOT.u64[len(PJSLOT.u64) - 1];
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };

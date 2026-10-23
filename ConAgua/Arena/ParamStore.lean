@@ -176,11 +176,11 @@ def ppushMem (m : Mem) (t u j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def paramPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := PSLOT.u64[len(PSLOT.u64) - 1];
   c := CTL.u64[14 + t];
   if c >= 134217728 { abort };
   if len(PREC.u64) >> 1 <= c { abort };
   PREC.u64[c * 2 + t] := u;
+  gk := PSLOT.u64[len(PSLOT.u64) - 1];
   PSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[14 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG paramGS 4⟫ };

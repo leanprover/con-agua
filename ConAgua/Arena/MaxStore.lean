@@ -184,7 +184,6 @@ def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := MSLOT.u64[len(MSLOT.u64) - 1];
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -195,6 +194,7 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk,
   k := c * 4 + t * 2;
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
+  gk := MSLOT.u64[len(MSLOT.u64) - 1];
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
   MHP.u64[c * 2 + t] := x;

@@ -226,7 +226,6 @@ def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := NSSLOT.u64[len(NSSLOT.u64) - 1];
   c := CTL.u64[36 + t];
   if c >= 134217728 { abort };
   if len(NSREC.u64) < (c + 1) * 8 { abort };
@@ -235,6 +234,7 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc,
   NSREC.u64[k + 1] := o;
   NSREC.u64[k + 2] := l;
   NSREC.u64[k + 3] := h;
+  gk := NSSLOT.u64[len(NSSLOT.u64) - 1];
   NSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[36 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nstrGS 8⟫ };

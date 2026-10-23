@@ -225,7 +225,6 @@ def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  gk := LSSLOT.u64[len(LSSLOT.u64) - 1];
   x := 0;
   q := 0;
   ⟪hpLoopLs⟫;
@@ -237,6 +236,7 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y,
   LSREC.u64[k] := o;
   LSREC.u64[k + 1] := l;
   LSREC.u64[k + 2] := h;
+  gk := LSSLOT.u64[len(LSSLOT.u64) - 1];
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
   LSHP.u64[c * 2 + t] := x;
