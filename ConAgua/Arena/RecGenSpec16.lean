@@ -98,12 +98,12 @@ set_option linter.deprecated false
 
 /-! ## Frames -/
 
-theorem pinternW_mfr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
+theorem pinternW_mfrP {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
   rw [pinternW_eq] at h
   exact MFr.of_low ⟨_, _, internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h, by simp [paramSch, PREC, PSLOT],
     by simp [paramSch]⟩
 
-theorem plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
+theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
     MFr [] [] m m'
   | 0, _, _, _, _, _, h => by simp [plgW] at h
   | k + 1, m, m', o, l, r, h => by
@@ -125,13 +125,13 @@ theorem plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW
     by_cases hb : 4294967296 ≤ u
     · rw [plK1_big (h := hb)] at h; cases h
     rw [plK1_ok (h := hb)] at h
-    refine (pinternW_mfr h1).trans ?_
+    refine (pinternW_mfrP h1).trans ?_
     cases h2 : plgW k m1 (o + 1) (l - 1) with
     | none => rw [h2] at h; simp [plK2] at h
     | some y =>
     obtain ⟨r2, m2⟩ := y
     rw [h2, plK2_some] at h
-    refine (plgW_mfr k _ _ _ _ _ h2).trans ?_
+    refine (plgW_mfrP k _ _ _ _ _ h2).trans ?_
     cases h3 : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
     | none => rw [h3] at h; simp [plK3] at h
     | some z =>
@@ -140,7 +140,7 @@ theorem plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact consW_mfr h3
 
-theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
+theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
     MFr [] [] m m' := by
   cases k with
   | zero => simp [plW] at h
@@ -151,7 +151,7 @@ theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [h1, plK4_some] at h
-  refine (plgW_mfr k _ _ _ _ _ h1).trans ?_
+  refine (plgW_mfrP k _ _ _ _ _ h1).trans ?_
   cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [h2] at h; simp [plW.plK5] at h
   | some y =>
@@ -226,8 +226,7 @@ def tmmW (p : Prog) (n : Nat) (m : Mem) (pp cao cal pfo pfl fvo fvl ao al I us t
     (rdW (m.arr64 IW) (pp + 4)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) pp + t) + 1))
     (rdW (m.arr64 IW) (rdW (m.arr64 IW) (cao + t))) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (cao + t) + 1)) t pfo pfl ao
     (if rdW (m.arr64 IW) (pp + 4) < al then rdW (m.arr64 IW) (pp + 4) else al)
-    (if rdW (m.arr64 IW) (pp + 1) = 0 then some ([0, 0], m)
-     else callW p n "cv_lps" [rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) pp))] m)
+    (callW p n "block_shape_lps" [pp] m)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (I us fvo fl2 nP nidx co cl t pfo pfl ao al2 blvls : Word)
@@ -244,7 +243,7 @@ theorem tmmK4_some : tmmK4 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] tmmK1_some tmmK2_some tmmK3_some tmmK4_some
 
-set_option maxHeartbeats 1600000 in
+set_option maxHeartbeats 4000000 in
 theorem tmm_spec (p : Prog) (hp : p.lookup "target_major_of_member" = some targetMajorOfMember) (n : Nat)
     (s₀ : St) (pp cao cal pfo pfl fvo fvl ao al I us t : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_major_of_member" [pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, I, us, t]
@@ -253,7 +252,7 @@ theorem tmm_spec (p : Prog) (hp : p.lookup "target_major_of_member" = some targe
   simp only [callFn, targetMajorOfMember]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cv_lps", callW_spec p n "param_levels", callW_spec p n "sl_eq",
+      callW_spec p n "block_shape_lps", callW_spec p n "param_levels", callW_spec p n "sl_eq",
       callW_spec p n "mk_target_major"] <;>
     finish (gen := 40) (instances := 20000) [tmmW, rdW_eq]
 
@@ -263,6 +262,7 @@ structure TmmProg (p : Prog) : Prop where
   erCopy : p.lookup "er_copy" = some erCopy
   erToIw : p.lookup "er_to_iw" = some erToIw
   cvl : p.lookup "cv_lps" = some cvLps
+  lps : p.lookup "block_shape_lps" = some blockShapeLps
   copy : p.lookup "iw_copy" = some iwCopy
   cons : p.lookup "sl_cons" = some slCons
   get : p.lookup "sl_get" = some slGet
@@ -307,6 +307,17 @@ theorem take_min_len {α : Type} (xs : List α) (k l : Nat) (h : xs.length = l) 
   · rw [Nat.min_eq_left hk]
   · rw [Nat.min_eq_right (by omega), ← h, List.take_length, List.take_of_length_le (by omega)]
 
+/-- Across `block_shape_lps`. -/
+theorem lpsW_mfrP {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
+    MFr [] [] m m' := by
+  cases n with
+  | zero => simp [lpsW] at h
+  | succ n =>
+    simp only [lpsW] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h; exact MFr.refl _ _ _
+    · exact erToIwW_mfr h
+
 /-- **`target_major_of_member`'s model simulates `targetMajorOf`'s member branch.** -/
 theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao al I us t : Word} {bs : BlockShape}
@@ -340,7 +351,6 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   have htl : t.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h1)
   have htc : t.toNat < cal.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h2)
   have hml0 : ml ≠ 0 := fun e => by rw [e] at htl; simp at htl
-  rw [if_neg hml0]
   -- the members
   have hmd' : decPL (truncM m) (decMS (truncM m)) mo.toNat ml.toNat = some bs.members := hmd
   obtain ⟨hlenM, hgetM⟩ := pos2_decPL_trunc hmd'
@@ -381,36 +391,15 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
     have := tmRdAt (o := UInt64.ofNat vc) (i := 1) (by rw [UInt64.toNat_ofNat_of_lt' hvcb]; simpa using hcl')
       (by rw [UInt64.toNat_ofNat_of_lt' hvcb]; simp; omega)
     simpa using this.1
-  rw [hw0, rt, rni, rc, rco, rcl, rt0, rc0, hnpw]
+  rw [hw0, rt, rni, rc, rco, rcl, hnpw]
   simp only [tmoMemT, List.getElem?_eq_getElem hvtl, List.getElem?_eq_getElem hvcl, unwrapOr, pure_bind]
-  -- `cv_lps` of member 0's former
-  have hcvT' : decCVp m cvq = some (bs.members[0]'hv0l).cvT := (OMono.decCVp cvq).mono _ _ _ (IWGrow.refl m).truncExt hcvT
-  have hcvqb : cvq + 3 < 2 ^ 64 := by
-    obtain ⟨-, -, hty⟩ := decCV_some (a := erA (truncM m)) (q := cvq) hcvT
-    obtain ⟨w, hw, -, -⟩ := hd?_some hty
-    have h1 := (truncM_er_get hw).1
-    have h2 : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-    have h3 : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
-    omega
-  have hcvqe : (UInt64.ofNat cvq : Word).toNat = cvq := UInt64.toNat_ofNat_of_lt' (show cvq < 2 ^ 64 by omega)
-  have hcvq3 : (UInt64.ofNat cvq : Word).toNat + 3 < 2 ^ 64 := by rw [hcvqe]; exact hcvqb
+  -- `block_shape_lps`
   refine Sim.mstep (K := tmmK1 p n I us fvo _ _ _ co cl t pfo pfl ao _) rfl (fun _ _ => rfl) fun r1 m1 e1 => ?_
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (L.Ind.cvLps_spec p hP.alloc hP.erCopy hP.erToIw hP.cvl n _ (UInt64.ofNat cvq)) e1
-  obtain ⟨hS1, hg1, -, hlps1, htop1⟩ := pos2_cvLpsW_stage hW1 hS
-    (by rw [hcvqe]; exact hcvT') hcvq3
-  have hf1 := posmemo_cvLpsW_mfr hW1
+    (blockShapeLps_spec p hP.alloc hP.erCopy hP.erToIw hP.lps n _ pp) e1
+  obtain ⟨hS1, hg1, hlps1, htop1⟩ := lpsW_ok' hW1 hS hq
+  have hf1 := lpsW_mfrP hW1
   rw [tmmK1_some]
-  have hlpsEq : bs.lps = (bs.members[0]'hv0l).cvT.levelParams := by
-    obtain ⟨x, xs, hm⟩ : ∃ x xs, bs.members = x :: xs := by
-      cases hm : bs.members with
-      | nil => rw [hm] at hv0l; simp at hv0l
-      | cons x xs => exact ⟨x, xs, rfl⟩
-    have e1 : bs.lps = x.cvT.levelParams := by unfold BlockShape.lps; rw [hm]
-    have e2 : bs.members[0]? = some x := by rw [hm]; rfl
-    rw [List.getElem?_eq_getElem hv0l] at e2
-    rw [e1, Option.some.inj e2]
-  rw [hlpsEq]
   have hT1 : iwTop s1.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   refine Sim.bindK (K := tmmK2 p n I us fvo _ _ _ co cl t pfo pfl ao _)
     (body := fun r2 m2 => tmmK3 p n I us fvo _ _ _ co cl t pfo pfl (r2.headD 0) (callW p n "sl_eq" [ao, _, fvo, _] m2))
@@ -422,9 +411,9 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
       (plW_spec p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl n _ _ _) e2
     obtain ⟨s2', hs2', -, hok, hS2, hg2, hH2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
       (paramLevels_refines p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl n _ a dn
-        vis fe _ _ _ hS1 hlps1 (by rw [htop1]; exact hT1) (Nat.le_of_eq htop1)) e2
+        vis fe _ _ _ hS1 hlps1 (by omega) htop1) e2
     rw [hs2'] at hS2 hg2
-    exact ⟨_, _, partsRunOfOk hok, hS2, hg2, hH2, hd2, plW_mfr hW2⟩
+    exact ⟨_, _, partsRunOfOk hok, hS2, hg2, hH2, hd2, plW_mfrP hW2⟩
   rintro r2 blv m2 a2 ⟨hS2, hg2, hH2, hd2, hf2⟩
   have hg02 := hg1.trans hg2
   -- the parameter prefixes

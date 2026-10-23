@@ -70,23 +70,23 @@ def cbpK4 (p : Prog) (n : Nat) (vis ctx caO caL : Word) : Option (List Word × M
   | none => none
   | some (r, m) => cbpK5 p n vis ctx caO caL (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0)
       (callW p n "pin_word" [53] m)
-def cbpK3 (p : Prog) (n : Nat) (vis ctx hO hL caO caL : Word) :
+def cbposK3 (p : Prog) (n : Nat) (vis ctx hO hL caO caL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => cbpK4 p n vis ctx caO caL
       (callW p n "nest_root" [vis, ctx, hO, hL, caO, caL, r.headD 0, 0, 0] m)
-def cbpK2 (p : Prog) (n : Nat) (vis ctx hO hL caO caL : Word) :
+def cbposK2 (p : Prog) (n : Nat) (vis ctx hO hL caO caL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => cbpK3 p n vis ctx hO hL caO caL (callW p n "check_block_positivity_init" [] m)
-def cbpK1 (p : Prog) (n : Nat) (vis caO caL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (_, m) => cbposK3 p n vis ctx hO hL caO caL (callW p n "check_block_positivity_init" [] m)
+def cbposK1 (p : Prog) (n : Nat) (vis caO caL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => cbpK2 p n vis (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) caO caL
+  | some (r, m) => cbposK2 p n vis (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) caO caL
       (callW p n "nest_uniform" [r.headD 0, caO, caL] m)
 
 /-- **The model of `check_block_positivity(vis, p, cvO, cvL, caO, caL)`** (body fuel `n`). -/
-def cbpW (p : Prog) (n : Nat) (m : Mem) (vis q cvO cvL caO caL : Word) : Option (List Word × Mem) :=
-  cbpK1 p n vis caO caL (callW p n "block_nest_ctx" [vis, q, cvO, cvL] m)
+def cbposW (p : Prog) (n : Nat) (m : Mem) (vis q cvO cvL caO caL : Word) : Option (List Word × Mem) :=
+  cbposK1 p n vis caO caL (callW p n "block_nest_ctx" [vis, q, cvO, cvL] m)
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (vis q ctx hO hL caO caL oO oL ns : Word) (r : List Word)
@@ -99,20 +99,20 @@ theorem cbpK5_some : cbpK5 p n vis ctx caO caL oO oL ns (some (r, m)) = cbpK6 p 
     (callW p n "lvl_eq_true" [rdW (m.arr64 IW) (ctx + 9), r.headD 0] m) := rfl
 theorem cbpK4_some : cbpK4 p n vis ctx caO caL (some (r, m)) = cbpK5 p n vis ctx caO caL (r.headD 0)
     (r.tail.headD 0) (r.tail.tail.headD 0) (callW p n "pin_word" [53] m) := rfl
-theorem cbpK3_some : cbpK3 p n vis ctx hO hL caO caL (some (r, m)) = cbpK4 p n vis ctx caO caL
+theorem cbposK3_some : cbposK3 p n vis ctx hO hL caO caL (some (r, m)) = cbpK4 p n vis ctx caO caL
     (callW p n "nest_root" [vis, ctx, hO, hL, caO, caL, r.headD 0, 0, 0] m) := rfl
-theorem cbpK2_some : cbpK2 p n vis ctx hO hL caO caL (some (r, m)) =
-    cbpK3 p n vis ctx hO hL caO caL (callW p n "check_block_positivity_init" [] m) := rfl
-theorem cbpK1_some : cbpK1 p n vis caO caL (some (r, m)) = cbpK2 p n vis (r.headD 0) (r.tail.headD 0)
+theorem cbposK2_some : cbposK2 p n vis ctx hO hL caO caL (some (r, m)) =
+    cbposK3 p n vis ctx hO hL caO caL (callW p n "check_block_positivity_init" [] m) := rfl
+theorem cbposK1_some : cbposK1 p n vis caO caL (some (r, m)) = cbposK2 p n vis (r.headD 0) (r.tail.headD 0)
     (r.tail.tail.headD 0) caO caL (callW p n "nest_uniform" [r.headD 0, caO, caL] m) := rfl
 end arms
-attribute [ind_grind] cbpK8_some cbpK7_some cbpK6_some cbpK5_some cbpK4_some cbpK3_some cbpK2_some cbpK1_some
+attribute [ind_grind] cbpK8_some cbpK7_some cbpK6_some cbpK5_some cbpK4_some cbposK3_some cbposK2_some cbposK1_some
 
 set_option maxHeartbeats 1600000 in
-theorem cbp_spec (p : Prog) (hp : p.lookup "check_block_positivity" = some checkBlockPositivity) (n : Nat)
+theorem cbpos_spec (p : Prog) (hp : p.lookup "check_block_positivity" = some checkBlockPositivity) (n : Nat)
     (s₀ : St) (vis q cvO cvL caO caL : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_positivity" [vis, q, cvO, cvL, caO, caL]
-    ⦃fun r s' => LocEq s' s₀ ∧ cbpW p n s₀.mem vis q cvO cvL caO caL = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cbposW p n s₀.mem vis q cvO cvL caO caL = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkBlockPositivity]
   sym only [lang_grind, arena_grind, ind_grind] =>
@@ -121,7 +121,7 @@ theorem cbp_spec (p : Prog) (hp : p.lookup "check_block_positivity" = some check
       callW_spec p n "check_block_positivity_init", callW_spec p n "nest_root", callW_spec p n "pin_word",
       callW_spec p n "lvl_eq_true", callW_spec p n "check_abs_ctor_sorts_all",
       callW_spec p n "check_block_positivity_nfs"] <;>
-    finish (gen := 40) (instances := 20000) [cbpW, rdW_eq]
+    finish (gen := 40) (instances := 20000) [cbposW, rdW_eq]
 
 /-! ## The fresh `NestState` -/
 
@@ -151,11 +151,11 @@ theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {dn : NIdx → Option
 /-! ## The relation -/
 
 /-- **`check_block_positivity`'s model refines `checkBlockPositivity`.** -/
-theorem cbpW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2) ≤ coreWalkFuel)
+theorem cbposW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2) ≤ coreWalkFuel)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (hcs : CtorSums fe) {m m' : Mem}
     {a : AState} {q cvO cvL caO caL : Word} {P : BlockParts} {cvTas : List IConstantVal}
     {css : List (List (IConstantVal × Nat))} {r : List Word}
-    (h : cbpW p (n + 2) m vis q cvO cvL caO caL = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : cbposW p (n + 2) m vis q cvO cvL caO caL = some (r, m')) (hS : StageR dn vis fe m a)
     (hq : DecB (fun m => decBS m q.toNat) m P.shape) (hsrc : ShapeSrc m q)
     (hcv : PSlR decCVp cvTas cvO cvL m) (hcss : PSlR decCNSB css caO caL m) (hPM : PosMR m) :
     ∃ x a', (ConRon.Arena.checkBlockPositivity V fe P cvTas css).run a = .ok (x, a') ∧
@@ -163,13 +163,13 @@ theorem cbpW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2) 
       PSlR decKSS x.1 (r.headD 0) (r.tail.headD 0) m' ∧
       PSlR decNFS x.2.1 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧
       NSB m' ((r.drop 4).headD 0) x.2.2 := by
-  unfold cbpW at h
+  unfold cbposW at h
   -- the walk's context
   cases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with
-  | none => rw [h1] at h; simp [cbpK1] at h
+  | none => rw [h1] at h; simp [cbposK1] at h
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
-  rw [h1, cbpK1_some] at h
+  rw [h1, cbposK1_some] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (bnc_spec p hP.nck hP.nh hP.bnc n _ vis q cvO cvL) h1
   obtain ⟨⟨c, holes⟩, a1, hrun1, hc1, hho1, hhob1, hS1, hg1, hin1, hsl1, hhi1, hpn1⟩ :=
@@ -179,20 +179,20 @@ theorem cbpW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2) 
   obtain ⟨hlen, hcb1, hcss1⟩ := pos3_cssAt (hcss.grow decCNSB_mono hg1)
   -- `nest_uniform`
   cases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with
-  | none => rw [h2] at h; simp [cbpK2] at h
+  | none => rw [h2] at h; simp [cbposK2] at h
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
-  rw [h2, cbpK2_some] at h
+  rw [h2, cbposK2_some] at h
   obtain ⟨s2, rfl, -, hok2, hS2, hg2, hP2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (nestUniform_refines p hP.nu hP.nuCs hP.nuP (n + 2) _ a1 dn fe vis (r1.headD 0) caO caL c css hS1 hU1
       hhi1 hlen hcss1 hP1) h2
   have hrun2 := partsRunOfOk hok2
   -- the empty state
   cases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with
-  | none => rw [h3] at h; simp [cbpK3] at h
+  | none => rw [h3] at h; simp [cbposK3] at h
   | some x3 =>
   obtain ⟨r3, m3⟩ := x3
-  rw [h3, cbpK3_some] at h
+  rw [h3, cbposK3_some] at h
   obtain ⟨hS3, hg3, hf3, hns3⟩ := pos3_init hP h3 hS2
   have hg13 := hg2.trans hg3
   -- the root frame
@@ -317,9 +317,9 @@ theorem checkBlockPositivity_refines (p : Prog) (hP : PosBlkProg p) (n : Nat)
         (r.tail.tail.tail.headD 0) s'.mem ∧
       NSB s'.mem ((r.drop 4).headD 0) (AM.res (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a₀).2.2;
       ⊤⦄ := by
-  refine triple_post (cbp_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
+  refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbpW_ok hP n hn hcs hm hS hq hsrc hcv hcss hPM
+  obtain ⟨x, a', hrun, hQ⟩ := cbposW_ok hP n hn hcs hm hS hq hsrc hcv hcss hPM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]

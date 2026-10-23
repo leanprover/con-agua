@@ -95,7 +95,8 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal} {k : ConLeche.QuotKind}
     (hW : qphW p n m (UInt64.ofNat k.slot) q = some (r, m')) (hS : StageR dn vis fe m a)
-    (hq : decCV (erecP m) q.toNat = some cv) (hok : ConRon.Bridge.StateOK a) :
+    (hq : decCV (erecP m) q.toNat = some cv) (hok : ConRon.Bridge.StateOK a)
+    (hN : L.Rom.NamesDn dn a L.Rom.quotNames) :
     ∃ b a', (quotPinHit k cv).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       decW0B m' r b := by
   have hks : (UInt64.ofNat k.slot).toNat = k.slot :=
@@ -109,7 +110,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, qphK1_some] at hW
-  obtain ⟨blk, a1, hrun1, hS1, hg1, hD1, hr1⟩ := hR.basis dn vis fe 4 (by decide) n m a r1 m1 hS h1
+  obtain ⟨blk, a1, hrun1, hS1, hg1, hD1, hr1⟩ := hR.quot dn vis fe n m a r1 m1 ⟨hS, hok, hN⟩ h1
   have hrun1' : (BasisKind.decls .quotK).run a = .ok (blk, a1) := hrun1
   have hok1 := (ConRon.Bridge.BasisKind.decls_run hok hrun1').1
   have hlen : blk.length = (r1.tail.headD 0).toNat := decPL_length (truncM m1) hD1
@@ -263,7 +264,9 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
     {cv : IConstantVal} (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
     (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a) :
+    (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
+    (hN : L.Rom.NamesDn dn a L.Rom.quotNames)
+    (hcvD : ∃ c, ConRon.Arena.Frontend.denoteCV a.store cv = some c) :
     ∃ fe' a', (checkDecl V pins fe (.quotDecl k cv)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   have hdecl := hD.recs i.toNat hi
@@ -296,7 +299,10 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     (qph_specW p hQ.qph n ⟨m1, Locals.init []⟩ _ _) h2
   rw [hs2] at hW2
   obtain ⟨b, a2, hrun2, hS2, hg2, hd2⟩ :=
-    qphW_ok hQ.canon hQ.rom hW2 hS1 (by rw [hq1]; exact hcv1) hok
+    qphW_ok hQ.canon hQ.rom hW2 hS1 (by rw [hq1]; exact hcv1) hok hN
+  obtain ⟨c, hc⟩ := hcvD
+  have hrun2' : quotPinHit k cv a = .ok (b, a2) := hrun2
+  obtain ⟨hok2, hx2, -⟩ := ConRon.Bridge.quotPinHit_run hok hc hrun2'
   by_cases z2 : r2.headD 0 = 0
   · rw [if_pos z2] at h; cases h
   rw [if_neg z2] at h
@@ -316,7 +322,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (checkBasisDecl_refines p hQ.basis hQ.canon hQ.rom hQ.pa hQ.cbd n ⟨m2, Locals.init []⟩ a2 dn hdn fe
-        vis 4 (by decide) hS2) h3
+        vis 4 (by decide) hS2 (fun _ => ⟨hok2, L.Rom.NamesDn.ext hN hx2⟩)) h3
     subst hs3
     have hrun3 := AM.run_of_ok _ _ hok3
     refine ⟨_, _, ?_, by simpa using hS3, hg1.trans (hg2.trans hg3)⟩
@@ -355,12 +361,14 @@ theorem checkDeclQuot_loop' {p : Prog} (hA : ArmProg p) (hR : RecProg p) (hQ : Q
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (k : ConLeche.QuotKind) (cv : IConstantVal), i.toNat < ds.size →
       ds[i.toNat]? = some (.quotDecl k cv) → ConRon.Bridge.StateOK a₀ →
+      L.Rom.NamesDn dn a₀ L.Rom.quotNames →
+      (∃ c, ConRon.Arena.Frontend.denoteCV a₀.store cv = some c) →
       LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_quot" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.quotDecl k cv)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.quotDecl k cv)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.quotDecl k cv)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i k cv hi hd hok hLR
+  intro n s₀ a₀ vis fe pend i k cv hi hd hok hN hcvD hLR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdq_specW p hQ.cdq hR n s₀ i vis)
@@ -370,7 +378,7 @@ theorem checkDeclQuot_loop' {p : Prog} (hA : ArmProg p) (hR : RecProg p) (hQ : Q
   have hd' : ds[i.toNat] = .quotDecl k cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdqW_ok (pins := pins) hQ hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok
+    cdqW_ok (pins := pins) hQ hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok hN hcvD
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hres]

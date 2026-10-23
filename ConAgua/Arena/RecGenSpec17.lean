@@ -180,18 +180,18 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
 /-! ## `target_ctors_of`, `target_outside_inst`'s frame, the constructors' slice -/
 
 /-- After `nest_container`: its four words. -/
-def tcoK : Option (List Word × Mem) → Option (List Word × Mem)
+def tcoPK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m)
 
-theorem tcoK_some (r : List Word) (m : Mem) :
-    tcoK (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m) := rfl
-attribute [ind_grind] tcoK_some
+theorem tcoPK_some (r : List Word) (m : Mem) :
+    tcoPK (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m) := rfl
+attribute [ind_grind] tcoPK_some
 
 theorem tco_spec (p : Prog) (hl : NtLook p) (hp : p.lookup "target_ctors_of" = some targetCtorsOf) (k : Nat)
     (s₀ : St) (vis I : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_ctors_of" [vis, I]
-    ⦃fun r s' => LocEq s' s₀ ∧ tcoK (ntWf k s₀.mem vis I) = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ tcoPK (ntWf k s₀.mem vis I) = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, targetCtorsOf]
   sym only [lang_grind, arena_grind, ind_grind] =>
@@ -460,13 +460,13 @@ theorem tmoW_sim {p : Prog} (hP : TmoOProg p) {dn : NIdx → Option ConLeche.Nam
     | succ k =>
     obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tco_spec p hP.nt hP.tco k _ vis I) e2
     cases k with
-    | zero => simp [ntWf, tcoK] at hW2
+    | zero => simp [ntWf, tcoPK] at hW2
     | succ k' =>
     cases hnt : ntW k' m vis I with
-    | none => rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoK] at hW2
+    | none => rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoPK] at hW2
     | some y =>
     obtain ⟨r, m'⟩ := y
-    rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoK_some] at hW2
+    rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
     simp only [Option.some.injEq, Prod.mk.injEq] at hW2
     obtain ⟨rfl, hm'⟩ := hW2
     obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok dn fe vis I hI hcs k' m m' a r hnt hS
