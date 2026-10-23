@@ -71,10 +71,10 @@ theorem roK_pstep {c : NestCtx} {hi : Nat} {cur : EIdx} {curP : ConLeche.Expr}
     exact p5.trans p9
 
 section steps
-variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq henv in
+include hq hIlpf henv in
 theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n) :
     OneOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, hWalk, -⟩ := ih
@@ -91,7 +91,7 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   rw [hct, nbOneK1_some] at h
   obtain ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hC1, hg1, hcrH, hcrd, hP1, hA1, c1,
       crestP, hcrP, hwc⟩ :=
-    p2ctW_okC hq dn vis fe henv (by omega) hct hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
+    p2ctW_okC hq hIlpf dn vis fe henv (by omega) hct hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
       (hCc.hds.get (OMono.decHL _ _)) hCc.hdsb hCc.hholes hCc.hholesb ((erecP_ext m).decCV hcv) hcv3 hP hA hpre
       hcvP hcl
   have hS1 := hC1.stage

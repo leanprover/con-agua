@@ -78,6 +78,13 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
 
 /-! ## `nest_holes(_go)` refines `nestHoles(.go)` -/
 
+/-- `cv_lps` writes the record pool only. -/
+theorem cvLpsA_iwFr {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
+    (h : L.Arena.cvLpsW n m q = some (r, m')) : MemFrame [IW] [200] m m' := by
+  cases n with
+  | zero => simp [L.Arena.cvLpsW] at h
+  | succ n => exact erToIwW_iwFr h
+
 theorem snocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : snocW n m o l x = some (r, m'))
     (hS : StageR dn vis fe m a) : StageR dn vis fe m' a := by
