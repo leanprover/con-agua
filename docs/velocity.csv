@@ -182,5 +182,7 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,loopt2,opus,120,40,"CallM (stubCall/realCall) models for cvg/ccv/dv/tv; cvgW_okT (check_value_group StageT->StageT, ivg as hypothesis); TwinOK.of_check/TwinMem.step; LoopDecl agreement split into <5 GB modules"
 2026-10-23,loopt2,opus,90,30,"DeclValT (check_defn/opaque/thm_val StageT), TwinStep (TwinOK.of_grow/of_istep, StageS), LoopFns/LoopAll (loop write set, LoopMem), TwinFold.step_pext"
 2026-10-23,loopt2,opus,70,40,"quot ROM readers proved (helper loopt2-quot: StageR+StateOK+NamesDn); ivgW_okT via IndStubsT; CallM for crp/cert/cm/cpa; TwinOK.push, CoreMemos.zero"
+2026-10-23,e2efix,claude-opus-5-5,70,27,"B1 analysed (master's indproofs3-rec fix taken); B3 classified (capacity/harness: 2^27 retry where the reference accepts, agree-timeout, CA_HWM); e2e.py 162 min -> 9 min (trace only disagreements, trace cache, --rerun-failing, 8 jobs largest first); abort soundness + 23 abort sites vs twin"
 2026-10-23,loopt2,opus,50,20,"install_header, check_constant_val, theorem arm under StageT (DeclValT, DeclArmT); design note: arms past core calls carry con-ron CheckOK"
 2026-10-23,tails,opus,50,30,"reservedRecName under StageR (helper tails-p5), coreWalkFuel/checkFuel, AState.worker via checkPendingGo_worker"
+2026-10-23,loopt2,opus,60,30,"StageC (StageR+CheckOK+TwinMem), LeafFns/LeafClosed checkerProg (scripts/leaf_fns.py), StageC.of_leaf/of_T; TwinMem/of_check moved to TwinStep"
