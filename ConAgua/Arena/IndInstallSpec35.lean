@@ -35,18 +35,24 @@ theorem consRecsTFSim_of {p : Prog} (L : CbrLook p) {fs : List FnName}
   exact ⟨_, _, hrun, hS', hg, HbMemo.ofClosed hcl hf hc hM, hA'⟩
 
 /-- **`check_block_tail(bO, bL, q)` refines `checkBlockTail`**: from the pass's record (`BPassR`),
-the stage relation at its environment, the raw block decoded and the `hb` memo well formed, the
-stage relation at the returned view of the twin's environment, the pools grown, the memo kept.
-Program facts: the lookups (`TailProg`, `CbrLook`) and the write set of the callees without a memo
-lemma (`hcl`, decided for the checker's program). -/
+the stage relation at its environment, the raw block decoded, the `hb` memo and the recursor
+check's walk memos (`RcMR`) well formed, and what `genRecCheck_refines` needs of the record (its
+shape's recursor slice below the top, its classes' constructors' level-parameter slices in `EREC`):
+the stage relation at the returned
+view of the twin's environment, the pools grown, the `hb` memo kept. Program facts: the lookups
+(`TailProg`, `CbrLook`) and the write sets of the callees without a memo lemma (`hcl`, `hclR`). -/
 @[refines ConRon.Arena.checkBlockTail]
 theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name}
+    (hn : 2 ^ 31 + n ≤ coreWalkFuel) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
+    (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : BPassR vis fe s₀.mem q bp)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hM : HbMemo s₀.mem)
-    (hA : AbsOK s₀.mem) (hk : ∀ f ∈ tailKeepCallees, AbsKeep p f) :
+    (hA : AbsOK s₀.mem) (hk : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hR : RcMR s₀.mem) (hrb : RecsB s₀.mem (rdW (s₀.mem.arr64 IW) (q + 3)))
+    (hlp : ClassesLp s₀.mem (rdW (s₀.mem.arr64 IW) (q + 15)) (rdW (s₀.mem.arr64 IW) (q + 16)))
+ :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_tail" [bO, bL, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTail V block bp) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockTail V block bp) a₀) s'.mem
@@ -55,7 +61,8 @@ theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs 
   refine triple_post (ictl_spec p hP.tail n s₀ bO bL q) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hM', hA'⟩ :=
-    ictlW_sim hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hn hS hq hblk hM hA hk r s'.mem hm
+    ictlW_sim hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hn hclR hfR hS hq hblk hM hA hk hR hrb hlp
+      r s'.mem hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres, hst]; exact hS', hg, hM', hA'⟩
 
