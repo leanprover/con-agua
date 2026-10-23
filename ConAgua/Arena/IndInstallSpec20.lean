@@ -226,8 +226,8 @@ theorem iacW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name
 /-- **`check_abs_ctor_sorts` refines `checkAbsCtorSorts`** (through `all_level_params_defined`'s,
 `open_pis_at_fvars_f`'s stubs and `check_struct_field_sorts_i`'s pending contract): the context
 decoded below the tops with its holes' bound below `2^64`, the constructors and their normal forms
-slices decoded below the tops (an empty slice anywhere). -/
-@[refines ConRon.Arena.checkAbsCtorSorts]
+slices decoded below the tops (an empty slice anywhere). Under `StageR`; the census link is
+`checkAbsCtorSorts_refinesC` (`IndT/Install6.lean`). -/
 theorem checkAbsCtorSorts_refines (p : Prog) (hP : AbsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (ctx isP co cl oo ol : Word)
     (c : NestCtx) (b : Bool) (cs : List (IConstantVal × Nat)) (os : List (List NestFieldKind × EIdx))
@@ -305,8 +305,8 @@ theorem iaaW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name
 
 /-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`** (through `check_abs_ctor_sorts`'
 stubs and pending contract): every member's constructors and normal forms as slices of
-`[off, len]` pointers decoded below the tops. -/
-@[refines ConRon.Arena.checkAbsCtorSortsAll]
+`[off, len]` pointers decoded below the tops. Under `StageR`; the census link is
+`checkAbsCtorSortsAll_refinesC` (`IndT/Install6.lean`). -/
 theorem checkAbsCtorSortsAll_refines (p : Prog) (hP : AbsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (ctx isP so sl oo ol : Word)
     (c : NestCtx) (b : Bool) (css : List (List (IConstantVal × Nat)))
