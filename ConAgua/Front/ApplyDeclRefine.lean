@@ -9,7 +9,7 @@ import ConAgua.Census.Attr
 relates to the declaration record `d` (`DeclR`, `DeclIface.lean`), then con-ron's
 `applyLine st (.decl d)` is `pure (.inl st')` (no interning, no verdict), the memory after is
 related to the same arena state by `ArenaD` and to `st'` by `StateDR`: the record is appended to
-`DECL`, its universe parameter names to `DLP` (`DeclsR`, `StateDR.lean`).
+`DECL`, its universe parameter names to `DLP` (`DeclsF`, `StateDR.lean`).
 -/
 
 open Std.WP

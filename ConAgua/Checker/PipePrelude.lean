@@ -32,13 +32,14 @@ theorem builtin_of_parts {p : Prog} (hp : p.lookup "builtin_prelude" = some buil
     (h2 : ∀ m, P1 m → 240 < (m.arr64 CTL).size → P2 (m.set64 CTL 240 (rdW (m.arr64 L.Front.DECL) 0)))
     (h3 : StageSpec p "front_reset" P2 fun _ => P3) :
     StageSpec p "builtin_prelude" P0 fun _ => P3 := by
-  intro n s₀
+  intro n hn s₀
   rw [invoke_eq _ hp]
   simp only [callFn, builtinPreludeL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ld64, (h1 n ·), (h3 n ·)]
+    have hn' : n ≤ 2 ^ 62 := by omega
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ld64, (h1 n hn' ·), (h3 n hn' ·)]
     all_goals grind [lang_grind, arena_grind]
 
 /-! ## The twin's prelude, from the frontend's -/
@@ -122,7 +123,7 @@ theorem pre_empty (st : StateD) : st.pre #[] = st := by
 
 theorem bp_h1 (h64 : System.Platform.numBits = 64) (a : AState) :
     StageSpec checkerProg "pre_front_run" (BP0 a) fun r m => r.headD 0 = 0 → BP1 a m := by
-  intro n s₀
+  intro n _hn s₀
   apply M.triple_of_run
   intro s r s' hs hrun
   refine ⟨hs ▸ (L.Front.invoke_loc hrun).1, fun ⟨hA, hD, ht, hpool, h0⟩ hr0 => ?_⟩
@@ -152,7 +153,7 @@ theorem bp_h2 (a : AState) : ∀ m, BP1 a m → 240 < (m.arr64 CTL).size →
   simpa [rdW] using this
 
 theorem bp_h3 (a : AState) : StageSpec checkerProg "front_reset" (BP2 a) fun _ => BP3 a := by
-  intro n s₀
+  intro n _hn s₀
   refine triple_post (frontReset_spec checkerProg checkerProg_prepProg n s₀)
     fun _ s' ⟨hl, hok, hm⟩ => ⟨hl, fun ⟨st, a', hb, hA, hD, ht, h240, hrk⟩ => ?_⟩
   have hf := resetM_frame s₀.mem

@@ -27,7 +27,7 @@ namespace L.Arena
 
 open L.Ind
 open L.Rom (PinSetsR PinSetR SliceR HdrR)
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -207,7 +207,7 @@ theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
     {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration}
     {cv : IConstantVal} {v : EIdx} {hh : ConLeche.ReducibilityHint}
     (h : cdfW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a) (hPS : PinSetsR m pins)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .defnDecl cv v hh) :
     ∃ fe' a', (checkDecl V pins fe (.defnDecl cv v hh)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' ∧ MemFrame stepA stepC m m' := by

@@ -35,7 +35,7 @@ parameter here: the consumers relate it to the store).
 | 6 | `projInfo tbl` | `tableName` `p+1`, `structName` `p+2`, lps `p+3`,`p+4`, `numParams` `p+5`, `ctor` `p+6`, `numFields` `p+7`, `structSort` `p+8`, bodies `p+9`,`p+10`, guards `p+11`,`p+12`, `off` `p+13` |
 
 The declarations themselves are the front's records (`DECL`/`DLP`, `Front/StateDR.lean`'s
-`DeclsR`); an inductive block will need a slice of constant records (not yet).
+`DeclsF`); an inductive block will need a slice of constant records (not yet).
 
 `ValueGroup` (6 words): `kind` (0 defn, 1 thm, 2 opaque), cv (4 words), `jv`. A `PendingCheck`
 is three words of `PEND` (`Checker.lean`): the value group's record pointer, `pos`, `vis`.
