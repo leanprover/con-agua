@@ -272,8 +272,8 @@ section census
 variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt) (hftd : FtdF p)
 include hp hftd
 
-/-- **`check_block_doms_at` refines `checkBlockDomsAt .verified`.** -/
-@[refines ConRon.Arena.checkBlockDomsAt]
+/-- **`check_block_doms_at` refines `checkBlockDomsAt .verified`.** Under `StageR`; the census
+link is `checkBlockDomsAt_refinesC` (`IndT/Install1.lean`). -/
 theorem checkBlockDomsAt_refines (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis off fo fl dO dl j : Word)
     (fvs doms : List EIdx) (hStage : StageR dn vis fe s₀.mem a₀)

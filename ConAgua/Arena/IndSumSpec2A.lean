@@ -189,8 +189,8 @@ theorem checkStructDomsAt_of_block (fe : IFEnv) (off : Nat) (fvs doms : List EId
     | true => simp only [bind, Except.bind] at h ⊢; exact ih _ _ (by simpa using h)
 
 /-- **`check_struct_doms_at` refines `checkStructDomsAt .verified`** (through the stubs
-`fvar_type_d`, `is_def_eq_core`). -/
-@[refines ConRon.Arena.checkStructDomsAt]
+`fvar_type_d`, `is_def_eq_core`). Under `StageR`; the census link is `checkStructDomsAt_refinesC`
+(`IndT/Install1.lean`). -/
 theorem checkStructDomsAt_refines (p : Prog) (hg : p.lookup "sl_get" = some slGet)
     (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (hftd : FtdF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis off fo fl dO dl j : Word)
