@@ -26,19 +26,28 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 /-! The two contracts left. Their proven replacements exist: `crfF_okT` (`IndRealMemoCrT.lean`,
 pre `StageT ∧ CrMemo`, post `KeepPostT ∧ CrMemo`) and `apdF_okT` (`IndRealApdT.lean`, pre `StageT`
-with the slice and the parameters' names read back). The callers (`DeclCvgT`, `DeclValT`,
-`DeclCrpT`, `DeclDivGateT1`) cannot switch yet: (1) their models (`ivgW`, `ihW`, `rpgW`, the
-`Nat.div` gates' `DeclDivMod5`/`DeclDivMod6` models) read both calls through the opaque `stubM`, and
-the same models serve the `StageR` proofs (`DeclCvg`, `DeclHeader`, `DeclReduceSpec`, `DeclDivMod5`,
-`DeclDivMod6`, lane `indstaget`'s `RecGenSpec3`), which have no walk memos to give the real walks:
-the models must read these two calls through their `CallM` (`stubCall` for `StageR`, `realCall p`
-for `StageT`, with `ProgHas p crfP`/`ProgHas p apdP` in the bundles); (2) `crfF_okT` needs
-`CrMemo` (array 155), which neither `StageT` nor the arms' contract (`ArmSpecT`, phase B's
-`checkValueGroup_specT`, the inductive arm) carries: `LoopT.cr` has it but `CheckerT`'s loop runs
-on `LoopR ∧ StageT ∧ CoreMemos`; it must be threaded through the `StageT` declaration theorems
-(pre and post), across the core's calls (whose write set `coreStageA` includes array 155: a
-closure check without it); (3) `apdF_okT` needs the level parameters' names to read back
-(`cv.levelParams` in `DeclCvgT`/`DeclValT`; trivial for `lps = []` in `DeclCrpT`/`DeclDivGateT1`). -/
+with the slice and the parameters' names read back). Users switched (helper `indproofs4-t2`): the
+`all_level_params_defined` call of `reduce_pin_guard` (`rpgW`, `DeclCrpT`) and of the `Nat.div`
+gates' guards (`dmPgW`, `dmCgW`, `DeclDivGateT1`), read through their `CallM` (`stubCall` for the
+`StageR` proofs, `realCall p` with `ApdF p` in `CrpProg`/`DmProg5` under `StageT`; `lps = []`).
+Users left:
+
+* `install_header` (`ihW_okT`, `DeclValT`; both calls): `ihW` (`DeclHeader.lean`) is lane
+  `indstaget`'s (its second reading parameter, `class_const_ok`'s `RecGen3`).
+* `install_value_guards` (`ivgW_okT`, `DeclCvgT`; both calls): `apdF_okT` needs
+  `cv.levelParams`' names read back, which none of `ivgW_okT`'s callers has (`ivW_genT`,
+  `dvW_okT`, `tvW_okT`, `cvgW_okT`: the record's denotation is not threaded to them; phase B's
+  could take it from `StoreDen.constLps`, the constant being in `fe`).
+* every `consts_resolve_ffast` call (`ivgW`, `rpgW`, `dmPgW`, `dmCgW`): `crfF_okT` needs `CrMemo`
+  (array 155, `CTL[158]`; `= CrOK`, `crMemo_iff_crOK`), which no caller has. `StageT`, `StageC`,
+  `TwinMem`, `CoreMemos` say nothing of array 155 and phase A/B's loops run on
+  `LoopR ∧ LoopMem ∧ CoreMemos` (not `LoopT`, whose `cr` has it), so it must be threaded as a pre
+  and a post from the loop's start (`LoopStart.crOK`) through both loops, every arm (`ArmSpecT`,
+  `IndArmSpec`: a hypothesis of `Final/Remaining.lean`), the value checks and gates. The core's
+  calls keep it by frame (`coreStageA` excludes 155), but a leaf's frame does not (`leafA` has
+  array 155: `consts_resolve_ffast` and `consts_resolve_all` are leaves), so the leaf calls on the
+  way need a narrower leaf write set without the walk's functions, and `consts_resolve_all` (the
+  `Nat.div` gate's, through its `StageR` stub contract) a refinement that keeps it. -/
 
 /-- `consts_resolve_ffast(vis, e)` under `StageT`. -/
 theorem constsResolveFFastT_spec (e : Word) (he : H e) :

@@ -76,10 +76,10 @@ theorem rpg_fin {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 `reducePinGuard_run`. -/
 theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
     (hpd : p.lookup "reduce_decl_pin" = some reduceDeclPinL) (hR : L.Rom.RomRefs p)
-    (hcl : LeafClosed p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (hcl : LeafClosed p) (hap : ApdF p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {cn : ConLeche.Name}
-    (h : rpgW p n m vis c = some (r, m')) (hS : StageC dn vis fe env m a) (hc : c.toNat < 2 ^ 32)
+    (h : rpgW p (realCall p) n m vis c = some (r, m')) (hS : StageC dn vis fe env m a) (hc : c.toNat < 2 ^ 32)
     (hd : denoteN a.store.ns (decI c) = some cn) :
     ∃ x a', (reducePinGuard fe (decI c)).run a = .ok (x, a') ∧ StageC dn vis fe env m' a' ∧
       Ext a.store a'.store ∧ x = ConLeche.reducePinGuard env cn ∧
@@ -150,14 +150,14 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   rw [if_neg hb3] at h
   have ex3 : x3 = false := by rw [← hx3]; simpa using hb3
   -- `all_level_params_defined`
-  cases h4 : stubM "all_level_params_defined" m3 [0, 0, e] with
+  cases h4 : realCall p n "all_level_params_defined" [0, 0, e] m3 with
   | none => rw [h4] at h; simp [rpgK4] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, rpgK4_some] at h
   obtain ⟨x4, a4, hrun4, hS4, hg4, hx4, -⟩ :=
-    allLevelParamsDefinedT_spec dn vis fe 0 0 e he1l [] m3 m4 a3 r4 h4
-      ⟨hS3, by simp [decHL, hslice?]⟩
+    apdF_okT dn vis fe 0 0 e he1l [] m3 m4 a3 r4 (apdF_of_callW hap h4)
+      ⟨hS3, by simp [decHL, hslice?], [], rfl⟩
   by_cases hb4 : r4.headD 0 = 0
   · rw [if_pos hb4] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -277,10 +277,11 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, crpK3_some] at hW
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (rpg_specW p hC.bvb hC.hf hC.rpg n ⟨s2.mem, Locals.init []⟩ vis c) h3
+    (rpg_specW p hC.bvb hC.hf hC.rpg (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis c)
+    h3
   subst hs3
   obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
-    rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hW3 hC2 hc hnm2
+    rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hC.apd hW3 hC2 hc hnm2
   by_cases e3 : r3.headD 0 = 0
   · rw [if_pos e3] at hW; cases hW
   rw [if_neg e3] at hW
