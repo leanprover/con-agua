@@ -89,7 +89,7 @@ def den(p):
 
 def trend_svg(pts):
     """Proven shares (left axis, %) and lines of L code / proofs (right axis, thousands) per census run."""
-    W, H, ml, mr, mt, mb = 900, 360, 50, 70, 20, 70
+    W, H, ml, mr, mt, mb = 900, 395, 50, 70, 20, 105
     n = len(pts)
     # x is time (not run index), so the whole history keeps its real proportions
     ts = [datetime.datetime.strptime(p["date"][:16], "%Y-%m-%d %H:%M").timestamp() for p in pts]
@@ -123,18 +123,31 @@ def trend_svg(pts):
             o.append(f'<text x="{x:.1f}" y="{H - mb + 16}" text-anchor="end" fill="#666" transform="rotate(-35 {x:.1f} {H - mb + 16})">{tick.strftime("%m-%d %H:%M")}</text>')
         tick += datetime.timedelta(hours=1)
     def line(vals, y, color, dash=""):
-        d = " ".join(f"{'M' if i == 0 else 'L'}{xs[i]:.1f},{y(v):.1f}" for i, v in enumerate(vals))
+        # vals may hold None (older census rows lack the critical-path columns): those points are skipped
+        d = " ".join(f"{'M' if i == 0 else 'L'}{xs[i]:.1f},{y(v):.1f}" for i, v in enumerate(vals) if v is not None)
+        d = "M" + d[1:] if d else d
+        if not d:
+            return
         o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
+    def col(k):
+        return [float(p[k]) if p.get(k) not in (None, "") else None for p in pts]
+    srcs = col("sorry_sources")
+    n0 = next((v for v in srcs if v), None)  # first recorded count of sorry sources
+    elim = [None if v is None or not n0 else 100 * (1 - v / n0) for v in srcs]
     series = [("proven", lean, yl, "#2e7d5b", ""), ("proven locally", cnt, yl, "#7aa6d6", ""),
               ("L written", wr, yl, "#d9a520", ""),
+              ("StageC migration", col("stagec_pct"), yl, "#e07b39", ''),
+              ("sorry-free e2e cone", col("cone_pct"), yl, "#1b1b1b", 'stroke-dasharray="2 3"'),
+              (f"sorry sources removed (of {int(n0) if n0 else '?'})", elim, yl, "#d6457f", 'stroke-dasharray="10 3 2 3"'),
               ("proof lines (k)", pk, yr, "#8a5cb8", 'stroke-dasharray="6 4"'), ("L code lines (k)", lk, yr, "#c0504d", 'stroke-dasharray="6 4"')]
     for name, vals, y, c, dash in series:
         line(vals, y, c, dash)
-    lx = ml
-    for name, vals, y, c, dash in series:
-        o.append(f'<line x1="{lx}" x2="{lx + 22}" y1="{H - 12}" y2="{H - 12}" stroke="{c}" stroke-width="2" {dash}/>'
-                 f'<text x="{lx + 27}" y="{H - 8}" fill="#333">{name}</text>')
-        lx += 170
+    # legend: two rows of four (the labels do not fit in one row)
+    for i, (name, vals, y, c, dash) in enumerate(series):
+        lx = ml + (i % 4) * 205
+        ly = H - 30 + 18 * (i // 4)
+        o.append(f'<line x1="{lx}" x2="{lx + 22}" y1="{ly}" y2="{ly}" stroke="{c}" stroke-width="2" {dash}/>'
+                 f'<text x="{lx + 27}" y="{ly + 4}" fill="#333">{name}</text>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
 
@@ -337,6 +350,15 @@ _loc = _last.get("lean_local") or _last.get("lean_sorry")
 sorry_share = int(_loc) / den(_last) if _loc else None
 na_n, na_lines = int(_last.get("na") or 0), int(_last.get("lean_na") or 0)
 w(f"| **{pct(lean_share)}** | {pct(lean_share + sorry_share) if sorry_share is not None else '—'} | {pct(lean_l)} | **{eta_s}** | {len(running)} | {pct(over / max(1, work + over))} |\n")
+# the critical path to a sorry-free end-to-end theorem (columns added by census.py; older rows lack them)
+def _f(k, fmt):
+    v = _last.get(k)
+    return fmt(float(v)) if v not in (None, "") else "n/a"
+_n0 = next((int(float(p["sorry_sources"])) for p in progress if p.get("sorry_sources") not in (None, "")), None)
+w("| StageC migration | Sorry-free share of the end-to-end cone | Remaining sorry sources |")
+w("|---:|---:|---:|")
+w(f"| **{_f('stagec_pct', lambda v: f'{v:.1f}%')}** | **{_f('cone_pct', lambda v: f'{v:.1f}%')}** | "
+  f"**{_f('sorry_sources', lambda v: str(int(v)))}**{f' (first recorded: {_n0})' if _n0 is not None else ''} |\n")
 w(f"_Not counted: {na_n} \"not needed\" functions ({na_lines} Lean lines; `docs/not-needed.md`, each with a reason), "
   "which L deliberately does not implement. From the census of 2026-10-23 on, every percentage is over the twin's Lean lines minus these, "
   f"so 100% is reachable; the trend curves use that denominator throughout (earlier points were not rescaled, there was nothing n/a then)._\n")
