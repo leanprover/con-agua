@@ -284,7 +284,7 @@ theorem tmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     {a0 a1 a2 a3 a4 a5 a6 a7 a8 a11 a12 : Word} {r : List Word} {ds pfvs : List EIdx}
     {ctors : List (IConstantVal × Nat)}
     (h : mkTMW m a0 a1 a2 a3 a4 a5 a6 a7 a8 0 0 a11 a12 = some (r, m')) (hS : StageR dn vis fe m a)
-    (h0 : H a0) (h1 : H a1) (hds : HSl0 m a2 a3 ds) (hct : PSlR decCN ctors a6 a7 m) (hpf : HSl0 m a11 a12 pfvs) :
+    (h0 : H a0) (h1 : H a1) (hds : HSl0 m a2 a3 ds) (hct : DecB (fun m => decPL m (decCN m) a6.toNat a7.toNat) m ctors) (hpf : HSl0 m a11 a12 pfvs) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       DecB (fun m => decTM m (r.headD 0).toNat) m'
         { ind := decI a0, lvls := decI a1, ds := ds, nPc := a4.toNat, nIdx := a5.toNat, ctors := ctors,
@@ -315,7 +315,7 @@ theorem tmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have dds : decHL (truncM m') a2.toNat a3.toNat = some ds := (hds.decB).grow (OMono.decHL _ _) hg
   have dpf : decHL (truncM m') a11.toNat a12.toNat = some pfvs := (hpf.decB).grow (OMono.decHL _ _) hg
   have dct : decPL (truncM m') (decCN (truncM m')) a6.toNat a7.toNat = some ctors :=
-    hct.1.grow (OMono.decPL decCN_mono _ _) hg
+    hct.grow (OMono.decPL decCN_mono _ _) hg
   show decTM (truncM m') (iwTop m) = some _
   simp only [Nat.add_zero] at e0
   simp only [decTM, decAt, e0, Option.bind_eq_bind, Option.bind_some, e1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11,
