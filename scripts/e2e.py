@@ -18,7 +18,16 @@ Steps (all in _tmp/e2e/<checkout name>/):
 Never a merge gate. Niced; every run has a timeout; a monitor kills any run above PER_RUN_GB and the
 largest run while all together are above TOTAL_GB.
 
-Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--write] [--csv]
+Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
+                     [--trace {disagree,all,none}] [--trace-sample N] [--write] [--csv]
+
+Speed (lane `e2efix`): the tracing interpreter (`e2e-l trace`, up to T_INTERP s per run) runs by default
+only where L and the reference disagree (L errors where the reference accepts, `DISAGREE-*`), plus
+`--trace-sample` of the fixtures where L aborts and the reference rejects; `--trace all` traces every L
+error. Traces are cached per (program, fixture, entry) in `tracecache.json`, so a second `--trace all`
+on the same program costs nothing. `--rerun-failing` reruns only the fixtures that were not
+`agree-accept`/`agree-reject*` in both entries of a previous `results.json` (default: this checkout's)
+and merges them into it. Fixtures are started largest first (the long runs do not form the tail).
 """
 import argparse
 import collections
@@ -58,6 +67,9 @@ ACCEPT = "accept"
 BIG_WORDS = 1 << 25        # words per array on the retry after an error
 TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to this size
 TRACE_WORDS = 1 << 18
+DEFAULT_JOBS = 8           # shared machine: at most ~8 runs at a time (each well under PER_RUN_GB)
+# classes that count as passing for `--rerun-failing`
+PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)")
 
 # the real con-ron binary (the Rust checker, built from the vendored revision: DESIGN.md, lane
 # `integrate`, "A second reference"); `$CON_RON` overrides
@@ -611,10 +623,11 @@ def report(res, asm, compiled, clashes, args, t0):
             for r in sorted(errs, key=lambda r: r["size"])[:80]:
                 lines.append(f"| `{r['id']}` | {r['size']} | {r[entry]['class']} | {r[entry]['l']} | {r[entry].get('interp', '–')} | "
                              f"{r[entry]['ref']} | {r[entry].get('trace', '–')} |")
-        ab = collections.Counter((r[entry].get("stop", "?"), r[entry]["ref"]) for r in res
-                                 if r[entry]["class"] == "agree-reject (L aborts)")
+        aborts = [r for r in res if r[entry]["class"] == "agree-reject (L aborts)"]
+        ab = collections.Counter((r[entry]["stop"], r[entry]["ref"]) for r in aborts if "stop" in r[entry])
         if ab:
-            lines += ["", "Where L aborts when both reject (the reference's stage: `line` = frontend, `decl` = the fold):", "",
+            lines += ["", "Where L aborts when both reject (the reference's stage: `line` = frontend, `decl` = the fold; "
+                      f"{sum(ab.values())} of {len(aborts)} traced, `--trace all` traces all):", "",
                       "| L stops at | reference | fixtures |", "|---|---|---:|"]
             lines += [f"| {a} | {b} | {n} |" for (a, b), n in sorted(ab.items(), key=lambda x: -x[1])]
         capn = [r for r in res if r[entry].get("small")]
@@ -770,8 +783,15 @@ def same_outcome(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-build", action="store_true")
-    ap.add_argument("--jobs", type=int, default=max(1, min(16, (os.cpu_count() or 4) // 4)))
+    ap.add_argument("--jobs", type=int, default=DEFAULT_JOBS)
     ap.add_argument("--only", default=None, help="regex on fixture ids")
+    ap.add_argument("--rerun-failing", nargs="?", const=os.path.join(WORK, "results.json"), default=None,
+                    metavar="RESULTS", help="rerun only the fixtures not passing in RESULTS (a previous "
+                    "results.json; default this checkout's) and merge them into it")
+    ap.add_argument("--trace", choices=["disagree", "all", "none"], default="disagree",
+                    help="which L errors get the tracing interpreter (default: where L and the reference disagree)")
+    ap.add_argument("--trace-sample", type=int, default=0,
+                    help="also trace this many (evenly spread) fixtures where L aborts and the reference rejects")
     ap.add_argument("--no-interp", action="store_true")
     ap.add_argument("--no-diff", action="store_true", help="skip the per-function differential tests")
     ap.add_argument("--diff-sample", type=int, default=24, help="fixtures for e2e-diff (L.run is slow: ~3 min each)")
@@ -821,6 +841,16 @@ def main():
     fx = fixtures()
     if args.only:
         fx = [f for f in fx if re.search(args.only, f[0])]
+    prev = None
+    if args.rerun_failing:
+        prev = json.load(open(args.rerun_failing))["results"]
+        failing = {r["id"] for r in prev if any(r[e]["class"] not in PASSING for e in ENTRIES)}
+        fx = [f for f in fx if f[0] in failing]
+        log(f"rerunning {len(fx)} previously failing fixtures (of {len(prev)}) from {args.rerun_failing}")
+    with open(prog, "rb") as fh:
+        prog_key = hashlib.sha1(fh.read()).hexdigest()[:16]
+    tcache_path = os.path.join(WORK, "tracecache.json")
+    tcache = json.load(open(tcache_path)) if os.path.exists(tcache_path) else {}
     cache_path = os.path.join(WORK, "refcache.json")
     cache = json.load(open(cache_path)) if os.path.exists(cache_path) else {}
     rk = ref_key()
@@ -830,6 +860,9 @@ def main():
     def spread(k):
         return set(small[i * len(small) // k] for i in range(k)) if k and small else set()
     diff_set, interp_set = spread(args.diff_sample), spread(args.interp_sample)
+    fids = [f[0] for f in fx]
+    k = args.trace_sample
+    trace_sample = set(fids[i * len(fids) // k] for i in range(k)) if k and fids else set()
 
     conron_key = None
     conron_pins = os.path.join(WORK, f"pins{npins}.con-ron-pins")
@@ -871,12 +904,22 @@ def main():
             d = {"ref": ref + (f" ({where})" if where else ""), "l": lo, "class": classify(lo, ref, where)}
             if cap:
                 d["small"] = cap
-            if lo == "error" and size <= TRACE_MAX_BYTES:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
-                ls = out.splitlines()
-                if st == "ok" and len(ls) >= 2:
+            want = (args.trace == "all" or
+                    (args.trace == "disagree" and (d["class"] == "l-error" or d["class"].startswith("DISAGREE")
+                                                   or fid in trace_sample)))
+            if lo == "error" and size <= TRACE_MAX_BYTES and want:
+                tk = f"{prog_key}:{h}:{entry}:{TRACE_WORDS}"
+                if tk in tcache:
+                    ls = tcache[tk]
+                else:
+                    st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
+                    ls = out.splitlines()[:2] if st == "ok" else [st]
+                    tcache[tk] = ls
+                if len(ls) >= 2:
                     d["trace"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1] + " (" + ls[1][len("stack "):] + ")"
                     d["stop"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1]
+                else:
+                    d["trace"] = f"untraced ({ls[0] if ls else 'no output'})"
             if not args.no_interp and entry == "check_np" and fid in interp_set:
                 st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
                 d["interp"] = interp_outcome(out, st)
@@ -906,14 +949,21 @@ def main():
         return r
 
     res = []
+    order = {f[0]: i for i, f in enumerate(fx)}
     with cf.ThreadPoolExecutor(args.jobs) as ex:
-        for i, r in enumerate(ex.map(one, fx)):
-            res.append(r)
+        futs = [ex.submit(one, f) for f in sorted(fx, key=lambda f: -os.path.getsize(f[1]))]
+        for i, fu in enumerate(cf.as_completed(futs)):
+            res.append(fu.result())
             if i % 50 == 0:
-                log(f"{i}/{len(fx)}")
-    with open(cache_path + ".tmp", "w") as fh:
-        json.dump(cache, fh)
-    os.replace(cache_path + ".tmp", cache_path)
+                log(f"{i}/{len(fx)} ({time.time() - t0:.0f} s)")
+    res.sort(key=lambda r: order[r["id"]])
+    if prev is not None:
+        new = {r["id"]: r for r in res}
+        res = [new.get(r["id"], r) for r in prev]
+    for path_, obj in ((cache_path, cache), (tcache_path, tcache)):
+        with open(path_ + ".tmp", "w") as fh:
+            json.dump(obj, fh)
+        os.replace(path_ + ".tmp", path_)
     with open(os.path.join(WORK, "results.json"), "w") as fh:
         json.dump({"results": res, "stubs": {g: v[0] for g, v in asm["stubs"].items()}}, fh, indent=1)
     md = report(res, asm, compiled, clashes, args, t0)
