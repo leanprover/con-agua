@@ -155,6 +155,13 @@ Pieces:
   on there): a file that elaborates that way can still fail `lake build`. Check with
   `lake build`.
 
+## Fuel bound in the stage specs (landing 5)
+
+`StageSpec` and `RelSpec` now quantify only over fuels `n ≤ 2^62` (loopt3: the core's
+simulations need it, and fuel only transfers upward). `check_of_stages` takes `n ≤ 2^62`; the
+stages run at `n - 1`; `PipelineRefines` already has `N < 2^62`. The stage proofs before the loop
+ignore the bound.
+
 ## Obligations
 
 | # | Stage / obligation | Status |
