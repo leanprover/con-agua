@@ -269,12 +269,10 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨vD, evD, hvD, dvD⟩ := iwH_rdW_at (w := x) (k := 4) htyD hsz1
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at enF evD
   rw [enF, evD]
-  have ho := simOpenPis (k := UInt64.ofNat X.nF) (i := d) hS1 hvD
+  have ho := simOpenPisF (k := UInt64.ofNat X.nF) (i := d) hS1 hA1 hvD
   rw [tnF, dvD] at ho
-  refine RSim.bind (K := fun o => cK4 (mbK1 n g c x d vl _ _ _ o)) rfl
-    (RSim.withF ho (fun _ hb => stub_afr hb)) ?_
-  rintro ⟨r2, m2⟩ o2 a2 - ⟨⟨hS2, hg2, ho2⟩, hf2⟩
-  have hA2 := hf2 hA1
+  refine RSim.bind (K := fun o => cK4 (mbK1 n g c x d vl _ _ _ o)) rfl ho ?_
+  rintro ⟨r2, m2⟩ o2 a2 - ⟨⟨hS2, hg2, ho2⟩, hA2⟩
   dsimp only at hS2 hg2 ho2
   cases o2 with
   | none =>
@@ -350,7 +348,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | none => exact ho5
   | some e => obtain ⟨h1, h2⟩ := ho5; exact ⟨by simpa using h1, by simpa [decW0E] using h2⟩
 
-/-- **`class_gen_minor_ty` refines `ClassGen.minorTy`** (through the stubs of its callees: `open_pis`,
+/-- **`class_gen_minor_ty` refines `ClassGen.minorTy`** (through `open_pis_at_fvars_f`'s real refinement and its other callees:
 `get_app_args`, `mk_app_n_f`, `fvar_type_ds`, `close_telescope`'s `abstract1_fast`, …; the generator
 and the constructor record decoded below the tops). -/
 @[refines ConRon.Arena.ClassGen.minorTy]
