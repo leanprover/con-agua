@@ -332,8 +332,8 @@ end rel
 /-- **`target_major_nfs` refines `targetMajorNfs`** (through `target_class_match`'s contracts and
 stubs): the class's shape (`BSOK`), former types, openers, parameters, constructors and the walk's
 table entries decoded below the tops (the slices below the top unless empty), the walk memos well
-formed; the kept entries a pointer slice decoded below the tops. -/
-@[refines ConRon.Arena.targetMajorNfs]
+formed; the kept entries a pointer slice decoded below the tops. Under `StageR`; the census link
+is `targetMajorNfs_refinesC` (`IndT/RecCheckTmn`). -/
 theorem targetMajorNfs_refines (p : Prog) (L : TmnLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl : Word)
     (bs : BlockShape) (formerTys pfvs ds : List EIdx) (ctors : List (IConstantVal × Nat)) (nfs : List NestCtorNf)
