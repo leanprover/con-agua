@@ -483,7 +483,7 @@ def litProgStr : Prog :=
 
 /-! ## The specs: the library's, from the table's obligations -/
 
-theorem ite_bne (b : Bool) : ((if b = true then (1 : Word) else 0) != 0) = b := by
+theorem ite_bneC (b : Bool) : ((if b = true then (1 : Word) else 0) != 0) = b := by
   cases b <;> rfl
 
 theorem dec_le_not_lt (x y : Word) : decide (x ≤ y) = !decide (y < x) := by
@@ -546,7 +546,7 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
       BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
-      | exact ite_bne _
+      | exact ite_bneC _
   ghash := litH_ok p
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
@@ -568,7 +568,7 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
       BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
-      | exact ite_bne _
+      | exact ite_bneC _
   ghash := litH_ok p
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl

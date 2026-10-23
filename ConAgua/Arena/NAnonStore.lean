@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.ConsLibSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.ConsLib
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -21,7 +22,9 @@ is excluded by `Schema.WF`'s shape).
   tier `t` at `NAREC[2 i + t]`. The node count of tier `t` is `CTL[34 + t]`.
 * **Cons table.** Word array `NASLOT`, the same open addressing as `SLOT`/`ZSLOT`.
 
-The functions: `nanon_find(t, h)`, `nanon_push(t, j)` and `intern_nanon()`.
+The functions `nanon_find(t, h)`, `nanon_push(t, j)` and `intern_nanon()` are the
+cons-table library's templates (`ConsLib.lean`) at the schema `nanonCS` (no scratch skip); their
+specs are the library's (`ConsLibSpec.lean`) from this table's obligations (`nanonOK`).
 -/
 
 set_option experimental.vcgen true
@@ -50,119 +53,52 @@ def nanonGS : GrowSch :=
 /-- The model of the match: **every** node of this table is the `anonymous` node. -/
 def namatchW (_r : Array Word) (_t _i : Word) : Bool := true
 
+/-- The (constant) hash of node `i` of tier `t`. -/
+def nahash (_m : Mem) (_t _i : Word) : Word := nahashW
+
+/-! ## The schema -/
+
+/-- The handle word of node `0` of the persistent / scratch `anonymous` tier (tag `0`). -/
+def naP : Word := 0x00000000
+def naS : Word := 0x08000000
+
+/-- The `nanon` table as a cons schema: no key word, a dummy record word `0`; every node matches;
+no scratch skip. -/
+def nanonCS : ConsSch where
+  ra := NAREC
+  sa := NASLOT
+  w := 1
+  st := 2
+  ca := 34
+  P := naP
+  S := naS
+  fname := "nanon_find"
+  pname := "nanon_push"
+  nk := 0
+  mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
+  np := 0
+  room := condOf (lblk (t, j, c) { if len(NAREC.u64) >> 1 <= c { skip } })
+  recW := [.const 0]
+  ghash := nanonGS.hash
+  ihash := lblk (h) { h := ⟪nahashW⟫ }
+  skipW := none
+  mtM m _ t i := namatchW (m.arr64 NAREC) t i
+  qhM _ _ := nahashW
+  hsM := nahash
+  vsM _ := [0]
+  roomM m _ c := decide (m.len64 NAREC >>> (1 : Word) ≤ c)
+
 /-! ## `nanon_find(t, h)`: the probe -/
 
-/-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `namatchW`). -/
+/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
 def naprobeW (sl r : Array Word) (t b n j d : Word) : List Word :=
-  if d < n then
-    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
-    else if namatchW r t (slotV sl b (j * 2 + t) - 1) then [1, slotV sl b (j * 2 + t) - 1, j, d]
-    else naprobeW sl r t b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
-  else []
-termination_by n.toNat - d.toNat
-decreasing_by
-  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
-  have := n.toNat_lt
-  have : (d + 1).toNat = d.toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  omega
-
-section probeArms
-variable (sl r : Array Word) (t b n j d : Word)
-
-theorem naprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≤ b) : naprobeW sl r t b n j d = [0, 0, j, d] := by
-  rw [naprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
-
-theorem naprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : ¬ sl[k] ≤ b) (hm : namatchW r t (sl[k] - b - 1) = true) :
-    naprobeW sl r t b n j d = [1, sl[k] - b - 1, j, d] := by
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [naprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
-
-theorem naprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : namatchW r t (sl[k] - b - 1) = false)
-    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    naprobeW sl r t b n j d = naprobeW sl r t b n j' d' := by
-  subst hj' hd'
-  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
-  rw [naprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
-
-end probeArms
-
-grind_pattern [arena_grind] naprobeW_free => naprobeW sl r t b n j d, sl[k]
-grind_pattern [arena_grind] naprobeW_hit => naprobeW sl r t b n j d, sl[k]
-grind_pattern [arena_grind] naprobeW_next =>
-  naprobeW sl r t b n j d, sl[k], naprobeW sl r t b n j' d'
-
-def nafindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
-  while d < n {
-    v := NASLOT.u64[j * 2 + t];
-    if v <= b { return (0, 0, j, d) };
-    v := v - b;
-    if 0 == 0 { return (1, v - 1, j, d) };
-    j := (j + 1) * u64(j + 1 < n);
-    d += 1
-  }
-}
+  cprobeW sl (fun i => namatchW r t i) t b n j d
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
-def nanonFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
-  n := NASLOT.u64[len(NASLOT.u64) - 1] + ⟪SN0⟫;
-  b := CTL.u64[62] * t;
-  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
-  ⟪nafindLoop⟫;
-  abort
-}
-
-section find
-variable (p : Prog) (hp : p.lookup "nanon_find" = some nanonFind)
-
-theorem nafindLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p n nafindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
-      naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := nafindLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [namatchW, baseW]
-
-theorem nafindLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) nafindLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
-      r.retOr (naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
-      naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ :=
-  Triple.step_exec (nafindLoop_spec p (n + 1) s₀)
+def nanonFind : FunDecl := consFindG nanonCS
 
 /-- The slot count of a tier of the `anonymous` table. -/
 def nSlotsNA (m : Mem) : Word := rdW (m.arr64 NASLOT) (m.len64 NASLOT - 1) + SN0
-
-include hp in
-theorem nanonFind_spec (n : Nat) (s₀ : St) (t h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nanon_find" [t, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) t
-        (baseW s₀.mem t) (nSlotsNA s₀.mem) (homeW h (nSlotsNA s₀.mem)) 0; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nanonFind]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, nafindLoop_step_spec p n, ld64] <;>
-      finish [nSlotsNA, homeW, baseW]
-
-end find
 
 /-! ## `nanon_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -178,96 +114,20 @@ def napushMem (m : Mem) (t j c : Word) : Mem :=
   (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nanonPush : FunDecl := lfn (t, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
-  c := CTL.u64[34 + t];
-  if c >= 134217728 { abort };
-  if len(NAREC.u64) >> 1 <= c { abort };
-  gk := NASLOT.u64[len(NASLOT.u64) - 1];
-  NAREC.u64[c * 2 + t] := 0;
-  NASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
-  CTL.u64[34 + (t & 1)] := c + 1;
-  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG nanonGS 3⟫ };
-  return c
-}
-
-/-- The (constant) hash of node `i` of tier `t`. -/
-def nahash (_m : Mem) (_t _i : Word) : Word := nahashW
-
-section push
-variable (p : Prog) (hp : p.lookup "nanon_push" = some nanonPush)
-
-/-- The growth's hash block computes `nahash`. -/
-theorem nahash_ok : HashOK p nanonGS 3 nahash := by
-  intro k s₀
-  simp only [nanonGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nahash, nahashW, LocEq, St.setLoc]
-
-include hp in
-theorem nanonPush_spec (n : Nat) (s₀ : St) (t j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nanon_push" [t, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ napushOK s₀.mem t = true ∧ r = [nacnt s₀.mem t] ∧
-      growIf NASLOT 34 nahash s₀.mem (napushMem s₀.mem t j (nacnt s₀.mem t))
-        (nacnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nanonPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p nanonGS NASLOT 34 rfl rfl 3 nahash (nahash_ok p) n] <;>
-      finish [nacnt, napushOK, napushMem, baseW, growIf_grow', growIf_keep']
-
-end push
+def nanonPush : FunDecl := consPushG nanonCS
 
 /-! ## `intern_nanon()`: hash-cons the name `anonymous`
 
 con-ron's `NStore::intern` at `anonymous` and the arena's `internNNode .anonymous`: the persistent
 probe, the scratch probe if the scratch tier is open, the append to the tier the store is in. -/
 
-/-- The handle word of node `0` of the persistent / scratch `anonymous` tier (tag `0`). -/
-def naP : Word := 0x00000000
-def naS : Word := 0x08000000
-
 /-- The model of `intern_nanon`: the handle and the memory after, or `none` where the L code
-aborts. -/
-def nainternW (m : Mem) : Option (Word × Mem) :=
-  let h := nahashW
-  let rs₀ := naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (baseW m 0) (nSlotsNA m) (homeW h (nSlotsNA m)) 0
-  let rs₁ := naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW h (nSlotsNA m)) 0
-  if rs₀ = [] then none
-  else if rs₀.headD 0 ≠ 0 then some (naP + rs₀.tail.headD 0, m)
-  else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁ = [] then none
-    else if rs₁.headD 0 ≠ 0 then some (naS + rs₁.tail.headD 0, m)
-    else if napushOK m 1 then
-      match growIf NASLOT 34 nahash m (napushMem m 1 (rs₁.tail.tail.headD 0) (nacnt m 1)) (nacnt m 1) with
-      | some m' => some (naS + nacnt m 1, m')
-      | none => none
-    else none
-  else if napushOK m 0 then
-    match growIf NASLOT 34 nahash m (napushMem m 0 (rs₀.tail.tail.headD 0) (nacnt m 0)) (nacnt m 0) with
-    | some m' => some (naP + nacnt m 0, m')
-    | none => none
-  else none
+aborts (the library's `consInternM`). -/
+def nainternW (m : Mem) : Option (Word × Mem) := consInternM nanonCS m []
 
 /-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
 @[l_impl ConRon.Arena.internNNode]
-def internNAnon : FunDecl := lfn () locals (h, fd, i, j, d) {
-  h := ⟪nahashW⟫;
-  (fd, i, j, d) := call nanon_find(0, h);
-  if fd != 0 { return ⟪naP⟫ + i };
-  if CTL.u64[1] != 0 {
-    (fd, i, j, d) := call nanon_find(1, h);
-    if fd != 0 { return ⟪naS⟫ + i };
-    i := call nanon_push(1, j);
-    return ⟪naS⟫ + i
-  };
-  i := call nanon_push(0, j);
-  return ⟪naP⟫ + i
-}
+def internNAnon : FunDecl := consInternG nanonCS
 
 /-- The `anonymous` store functions, as one `#eval`-able program. -/
 def nanonProg : Prog :=
@@ -293,25 +153,76 @@ def internNAnons (m : Mem) : Nat → Option (List Word)
 /- Scratch open: the one node goes to the scratch tier (the persistent tier is empty). -/
 #guard internNAnons (nanonMem 1) 2 == some [0x08000000, 0x08000000]
 
-section intern
-variable (p : Prog) (hpf : p.lookup "nanon_find" = some nanonFind)
-  (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)
+/-! ## The specs: the library's, from this table's obligations -/
 
-include hpf hpp hp in
-theorem internNAnon_spec (n : Nat) (s₀ : St) :
+section specs
+variable (p : Prog)
+
+/-- The growth's hash block computes `nahash`. -/
+theorem nahash_ok : HashOK p nanonGS 4 nahash := by
+  intro k s₀
+  simp only [nanonGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nahash, nahashW, LocEq, St.setLoc]
+
+/-- **The `nanon` table's obligations.** -/
+theorem nanonOK : ConsOK p nanonCS where
+  match_ := by
+    intro s
+    simp [nanonCS, condOf, Cond.pval, Expr.pval, namatchW, Cmp.eval, L.Notation.blk]
+  ghash := nahash_ok p
+  ihash := by
+    intro n s₀
+    simp only [nanonCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nahashW]
+  recs := ⟨by
+      intro e he s s' _
+      simp only [nanonCS, List.mem_cons, List.not_mem_nil, or_false] at he
+      subst he; simp [Expr.pval],
+    fun s => by simp [nanonCS, Expr.pval]⟩
+  room := fun s => by
+    simp only [nanonCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+  skips := by intro e he; simp [nanonCS] at he
+  pre := rfl
+  colA := by simp [nanonCS]
+  push_np := by decide
+  arrs := by decide
+
+theorem nanonFind_spec (hp : p.lookup "nanon_find" = some nanonFind) (n : Nat) (s₀ : St) (t h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nanon_find" [t, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) t
+        (baseW s₀.mem t) (nSlotsNA s₀.mem) (homeW h (nSlotsNA s₀.mem)) 0; ⊤⦄ :=
+  consFindG_spec p nanonCS (((nanonOK p).match_)) hp n s₀ t [] rfl h trivial
+
+theorem napushOK_eqC (m : Mem) (t : Word) : napushOK m t = pushOKC nanonCS m t := by
+  simp only [napushOK, pushOKC, nacnt, cntC, nanonCS, ← decide_not, UInt64.not_le]; rfl
+
+theorem napushMem_eqC (m : Mem) (t j c : Word) :
+    napushMem m t j c = pushMC nanonCS m t [0] j c := by
+  simp [napushMem, pushMC, tailM, wrRecK, nanonCS, baseW,
+    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ NAREC by decide)]
+
+theorem nanonPush_spec (hp : p.lookup "nanon_push" = some nanonPush) (n : Nat) (s₀ : St) (t j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nanon_push" [t, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ napushOK s₀.mem t = true ∧ r = [nacnt s₀.mem t] ∧
+      growIf NASLOT 34 nahash s₀.mem (napushMem s₀.mem t j (nacnt s₀.mem t))
+        (nacnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [napushOK_eqC]
+  simp only [napushMem_eqC]
+  exact consPushG_spec p nanonCS (nanonOK p) hp n s₀ t [] rfl j
+
+theorem internNAnon_spec (hpf : p.lookup "nanon_find" = some nanonFind)
+    (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)
+    (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nanon" []
-    ⦃fun r s' => LocEq s' s₀ ∧ nainternW s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, internNAnon]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nanonFind_spec p hpf n, nanonPush_spec p hpp n] <;>
-      finish [nainternW, nahashW, baseW]
+    ⦃fun r s' => LocEq s' s₀ ∧ nainternW s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ :=
+  consInternG_spec p nanonCS (nanonOK p) hpf hpp "intern_nanon" hp n s₀ [] rfl trivial
 
-end intern
+end specs
 
 end L.Arena
