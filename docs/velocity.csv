@@ -213,3 +213,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,pipeline,opus,70,40,"landing 6: R7 pinsFull/iw; prefix_caches (twin parse keeps caches and pins), prefix_frontDecls, prefix_quotU; erecTop bound out of intern_all_pins"
 2026-10-23,loopt3,opus-5.5,70,25,landing 2: LoopStart (zeros, dnOf, loop_start), LoopStage (loopStage_of via triple_subPB), Final/Remaining (checkerAsm_accepts from the remaining named hypotheses)
 2026-10-23,indproofs4,opus,90,60,"checkBlock refined (IndInstallSpec37); helper cls: classNodesAgree/FieldsAgree/CtorOf/CtorsOf/classesCtors/classesNfs (proven locally); phase 8 120/96/2/5"
+2026-10-23,slowmods,opus-5.5,15,5,ProjFnShapeRef from IndRealIpf's spec (~290 s -> 2 s)
