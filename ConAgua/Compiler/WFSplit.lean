@@ -86,6 +86,27 @@ syntax (name := tabLit) "tab_lit% " term:max : term
 def thm (n : Name) (ty v : Lean.Expr) (_ : List Name) : Declaration :=
   .thmDecl { name := n, levelParams := [], type := ty, value := v }
 
+unsafe def evalNTree (e : Lean.Expr) : MetaM NTree := evalExpr NTree (mkConst ``NTree) e
+
+/-- `nrt_lit name : p` declares `name : NTree`, the literal of `Prog.nrt p` (the result counts of
+`p`'s functions, evaluated by compiled code), and `name_eq : Prog.nrt p = name`, checked by the
+kernel (once; the per-function checks of `asm_lit` then read the literal). -/
+syntax (name := nrtLit) "nrt_lit " ident " : " term:max : command
+
+@[command_elab nrtLit] unsafe def elabNrtLit : CommandElab := fun stx => do
+  let `(nrt_lit $n:ident : $progS) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let pE ← elabTermEnsuringType progS (mkConst ``Prog)
+    synthesizeSyntheticMVarsNoPostponing
+    let pE ← instantiateMVars pE
+    let lhs := mkApp (mkConst ``Prog.nrt) pE
+    let t ← evalNTree lhs
+    let treeTy := mkConst ``NTree
+    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
+    addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name))
+      (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
+
 register_option progWfChunk : Nat := {
   defValue := 32
   descr := "prog_wf: functions per kernel check"

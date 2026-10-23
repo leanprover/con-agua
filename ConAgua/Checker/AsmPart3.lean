@@ -8,6 +8,6 @@ namespace L.Checker
 
 open L L.Compiler
 
-asm_lit_fns checkerAsm : checkerTab checkerProg 875 1167
+asm_lit_fns checkerAsm : checkerTab checkerNrt checkerProg 875 1167
 
 end L.Checker

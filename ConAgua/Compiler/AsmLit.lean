@@ -4,9 +4,10 @@ import ConAgua.Compiler.Compile
 /-!
 # The compiler's output as a kernel-checked literal
 
-`asm_lit name : tab p entry` declares `name : Program`, a literal (constructor applications), and
+`asm_lit name : tab nrt p entry` declares `name : Program`, a literal (constructor applications), and
 `name_eq : compileProg tab p entry = name`, checked by the kernel. DESIGN.md, "Kernel-checked
-compiler output".
+compiler output". `nrt` is a constant holding `Prog.nrt p` as a literal, with `nrt_eq : Prog.nrt p =
+nrt` (`nrt_lit`, `WFSplit.lean`): the result counts of the functions, which every call site looks up.
 
 * **The literal.** Each function's code is computed by compiled code (`compileFn`, evaluated
   here) and turned back into a term (`toExpr`, Kraken's derived instances), with every label
@@ -16,11 +17,11 @@ compiler output".
   found does not matter: the kernel checks it.
 * **Per function** `name.f<i> : Program` (the code of the `i`-th function, a balanced `++` of
   list literals of at most 64 directives, so that the term stays shallow) and
-  `name.f<i>_eq : compileFn tab f fd = name.f<i>`, by `Eq.refl`: the kernel evaluates
+  `name.f<i>_eq : compileFn tab nrt f fd = name.f<i>`, by `Eq.refl`: the kernel evaluates
   `compileFn` on that one function and compares. The trampoline: `name.tramp`, `name.tramp_eq`.
 * **The whole program**: `name := name.tramp ++ (name.f0 ++ (name.f1 ++ … ++ []))`, and
   `name_eq` from the per-function equations by `List.flatMap_cons` and congruence, without
-  evaluation.
+  evaluation, and `nrt_eq`.
 
 The table must be cheap to unfold (a literal: `tab_lit%`); the program must reduce to a list
 literal by `whnf`.
@@ -40,6 +41,7 @@ def labelExpr (f : String) (s : String) : Lean.Expr := Id.run do
   if s == errorL then return mkConst ``errorL
   if s == exhaustedL then return mkConst ``exhaustedL
   if s == finishL then return mkConst ``finishL
+  if s == okL then return mkConst ``okL
   if s == enterL then return mkConst ``enterL
   if s.startsWith "ca_f_" then return mkApp (mkConst ``fnL) (mkStrLit (s.drop 5).toString)
   let pre := ".Lca_" ++ f ++ "_"
@@ -72,7 +74,7 @@ def directiveExpr (f : String) (d : Directive) : Lean.Expr :=
       else none
 
 /-- The code of every function of `p`. -/
-def progCode (tab : Tab) (p : Prog) : List Program := p.map fun x => compileFn tab x.1 x.2
+def progCode (tab : Tab) (t : NTree) (p : Prog) : List Program := p.map fun x => compileFn tab t x.1 x.2
 
 unsafe def evalProgramsU (e : Lean.Expr) : MetaM (List Program) :=
   evalExpr (List Program) (mkApp (mkConst ``List [0]) (mkApp (mkConst ``List [0]) (mkConst ``Directive))) e
@@ -119,7 +121,7 @@ def progElem (i : Nat) (x : Lean.Expr) : MetaM (String × Lean.Expr × Lean.Expr
 
 /-- Declare `name.f<i>` and `name.f<i>_eq` for the functions `lo ≤ i < hi` of `p` (`elems`), except
 those already declared (by `asm_lit_fns` in an imported module). -/
-def declFns (name : Name) (tabE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat) :
+def declFns (name : Name) (tabE nrtE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat) :
     MetaM (Array Name) := do
   let hi := min hi elems.size
   let env ← getEnv
@@ -131,57 +133,60 @@ def declFns (name : Name) (tabE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi
     let slice := mkApp3 (mkConst ``List.take [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl))
       (mkRawNatLit (hi - i0)) (mkApp3 (mkConst ``List.drop [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String)
         (mkConst ``FunDecl)) (mkRawNatLit i0) pE)
-    codes := (← evalPrograms (mkApp2 (mkConst ``progCode) tabE slice)).toArray
+    codes := (← evalPrograms (mkApp3 (mkConst ``progCode) tabE nrtE slice)).toArray
     for i in todo do
       let (f, fE, fdE) ← progElem i elems[i]!
-      declLit (name ++ Name.mkSimple s!"f{i}") (mkApp3 (mkConst ``compileFn) tabE fE fdE) f codes[i - i0]!
+      declLit (name ++ Name.mkSimple s!"f{i}") (mkApp4 (mkConst ``compileFn) tabE nrtE fE fdE) f codes[i - i0]!
   return (List.range (hi - lo)).toArray.map fun i => name ++ Name.mkSimple s!"f{i + lo}"
 
-/-- `asm_lit_fns name : tab p lo hi`: the per-function literals and equations of `asm_lit name`
+/-- `asm_lit_fns name : tab nrt p lo hi`: the per-function literals and equations of `asm_lit name`
 for the functions `lo ≤ i < hi` only, so that a large program's checks can be spread over several
 modules (built in parallel); `asm_lit` then skips them. -/
-syntax (name := asmLitFns) "asm_lit_fns " ident " : " term:max term:max num num : command
+syntax (name := asmLitFns) "asm_lit_fns " ident " : " term:max term:max term:max num num : command
 
 @[command_elab asmLitFns] def elabAsmLitFns : CommandElab := fun stx => do
-  let `(asm_lit_fns $n:ident : $tabS $progS $lo $hi) := stx | throwUnsupportedSyntax
+  let `(asm_lit_fns $n:ident : $tabS $nrtS $progS $lo $hi) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
     let tabE ← elabTermEnsuringType tabS (mkConst ``Tab)
+    let nrtE ← elabTermEnsuringType nrtS (mkConst ``NTree)
     let pE ← elabTermEnsuringType progS (mkConst ``Prog)
     synthesizeSyntheticMVarsNoPostponing
     let tabE ← instantiateMVars tabE
+    let nrtE ← instantiateMVars nrtE
     let pE ← instantiateMVars pE
-    discard <| declFns name tabE pE (← listElemsW pE) lo.getNat hi.getNat
+    discard <| declFns name tabE nrtE pE (← listElemsW pE) lo.getNat hi.getNat
 
-/-- `asm_lit name : tab p entry` -/
-syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max term:max term:max : command
+/-- `asm_lit name : tab nrt p entry` (`nrt` a constant, with `nrt_eq : Prog.nrt p = nrt`) -/
+syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident term:max term:max : command
 
 @[command_elab asmLit] def elabAsmLit : CommandElab := fun stx => do
-  let `($[$doc?:docComment]? asm_lit $n:ident : $tabS $progS $entryS) := stx | throwUnsupportedSyntax
+  let `($[$doc?:docComment]? asm_lit $n:ident : $tabS $nrtS:ident $progS $entryS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
     let tabE ← elabTermEnsuringType tabS (mkConst ``Tab)
+    let nrtN ← realizeGlobalConstNoOverload nrtS
+    let nrtE := mkConst nrtN
+    let nrtEqE := mkConst (nrtN.appendAfter "_eq")
     let pE ← elabTermEnsuringType progS (mkConst ``Prog)
     let entryE ← elabTermEnsuringType entryS (mkConst ``String)
     synthesizeSyntheticMVarsNoPostponing
     let tabE ← instantiateMVars tabE
     let pE ← instantiateMVars pE
     let entryE ← instantiateMVars entryE
-    -- `compileProg tab p entry`, unfolded once: `trampoline tab entry ++ List.flatMap g p`
-    let some (.defnInfo ci) := (← getEnv).find? ``compileProg | throwError "compileProg"
-    let body := ci.value.beta #[tabE, pE, entryE]
-    unless body.isAppOfArity ``HAppend.hAppend 6 do throwError "asm_lit: unexpected shape of compileProg: {body}"
-    let flatE := body.appArg!
-    unless flatE.isAppOfArity ``List.flatMap 4 do throwError "asm_lit: unexpected shape of compileProg: {flatE}"
+    -- `compileFns tab nrt p`, unfolded once: `List.flatMap g p`
+    let some (.defnInfo ci) := (← getEnv).find? ``compileFns | throwError "compileFns"
+    let flatE := ci.value.beta #[tabE, nrtE, pE]
+    unless flatE.isAppOfArity ``List.flatMap 4 do throwError "asm_lit: unexpected shape of compileFns: {flatE}"
     let g := flatE.appFn!.appArg!
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
     -- the trampoline
     let trampN := name ++ `tramp
-    let trE := mkApp2 (mkConst ``trampoline) tabE entryE
+    let trE := mkApp3 (mkConst ``trampoline) tabE entryE (mkApp3 (mkConst ``nrOf) nrtE tabE entryE)
     declLit trampN trE "" (← evalProgram trE)
     -- the functions (those not declared yet by `asm_lit_fns`)
     let elems ← listElemsW pE
-    let fnNames ← declFns name tabE pE elems 0 elems.size
+    let fnNames ← declFns name tabE nrtE pE elems 0 elems.size
     -- `name := tramp ++ (f0 ++ (f1 ++ … ++ []))`, and `flatMap g p = f0 ++ (f1 ++ … ++ [])`
     let nil := mkApp (mkConst ``List.nil [0]) dirTy
     let mut rhs := nil
@@ -211,16 +216,26 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max term:max t
     let whole := appendE (mkConst trampN) rhs
     addAndCompile (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
     addDocString' name .missing doc?
-    -- `compileProg tab p entry = name`: `p` unfolds to the literal `tl`
-    let eqTy := mkApp3 (mkConst ``Eq [1]) progTy (mkApp3 (mkConst ``compileProg) tabE pE entryE) (mkConst name)
+    -- `compileProgT tab nrt p entry = name`: `p` unfolds to the literal `tl`
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
       (mkApp2 (mkConst ``instHAppendOfAppend [0]) progTy (mkApp (mkConst ``List.instAppend [0]) dirTy))
     let progTo := mkForall `_ .default progTy progTy
-    let tr := mkApp2 (mkConst ``trampoline) tabE entryE
-    let h1 := mkApp6 (mkConst ``congrArg [1, 1]) progTy progTo tr (mkConst trampN) appC (mkConst (trampN.appendAfter "_eq"))
+    let h1 := mkApp6 (mkConst ``congrArg [1, 1]) progTy progTo trE (mkConst trampN) appC (mkConst (trampN.appendAfter "_eq"))
     let flatP := mkApp4 (mkConst ``List.flatMap [0, 0]) elemTy dirTy g tl
-    let top := mkApp8 (mkConst ``congr [1, 1]) progTy progTy (mkApp appC tr) (mkApp appC (mkConst trampN)) flatP rhs h1 pf
-    addDecl (.thmDecl { name := name.appendAfter "_eq", levelParams := [], type := eqTy, value := top })
+    let top := mkApp8 (mkConst ``congr [1, 1]) progTy progTy (mkApp appC trE) (mkApp appC (mkConst trampN)) flatP rhs h1 pf
+    let progTE := mkApp4 (mkConst ``compileProgT) tabE nrtE pE entryE
+    let topN := name ++ `progT_eq
+    addDecl (.thmDecl { name := topN, levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progTy progTE (mkConst name),
+                        value := top })
+    -- `compileProg tab p entry = compileProgT tab (Prog.nrt p) p entry = compileProgT tab nrt p entry`
+    let treeTy := mkConst ``NTree
+    let progOf ← withLocalDeclD `t treeTy fun t => mkLambdaFVars #[t] (mkApp4 (mkConst ``compileProgT) tabE t pE entryE)
+    let nrtP := mkApp (mkConst ``Prog.nrt) pE
+    let hN := mkApp6 (mkConst ``congrArg [1, 1]) treeTy progTy nrtP nrtE progOf nrtEqE
+    let eqTy := mkApp3 (mkConst ``Eq [1]) progTy (mkApp3 (mkConst ``compileProg) tabE pE entryE) (mkConst name)
+    let whole := mkApp6 (mkConst ``Eq.trans [1]) progTy (mkApp3 (mkConst ``compileProg) tabE pE entryE) progTE
+      (mkConst name) hN (mkConst topN)
+    addDecl (.thmDecl { name := name.appendAfter "_eq", levelParams := [], type := eqTy, value := whole })
 where
   appE (appC a b : Lean.Expr) : Lean.Expr := mkApp2 appC a b
 

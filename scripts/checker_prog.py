@@ -202,6 +202,11 @@ def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1
 parameter count; the names are distinct; the frames fit). -/
 prog_wf checkerProg_wf : checkerTab checkerProg
 
+/-- The result counts of `checkerProg`'s functions (`Prog.nrt`), as a literal, with
+`checkerNrt_eq : Prog.nrt checkerProg = checkerNrt` (`nrt_lit`): every call site of the compiled
+code looks its callee's count up in it (`asm_lit`). -/
+nrt_lit checkerNrt : checkerProg
+
 end L.Checker
 '''
 
@@ -216,7 +221,7 @@ namespace L.Checker
 
 open L L.Compiler
 
-asm_lit_fns checkerAsm : checkerTab checkerProg {lo} {hi}
+asm_lit_fns checkerAsm : checkerTab checkerNrt checkerProg {lo} {hi}
 
 end L.Checker
 '''
@@ -239,7 +244,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- **The checker's code**: `compileProg checkerTab checkerProg "check"`, as a literal. -/
-asm_lit checkerAsm : checkerTab checkerProg "check"
+asm_lit checkerAsm : checkerTab checkerNrt checkerProg "check"
 
 end L.Checker
 '''
