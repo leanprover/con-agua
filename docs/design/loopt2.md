@@ -159,3 +159,20 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
 * `TwinOK.push` (`TwinStep.lean`): across a push of a constant whose readbacks hold (`CIDen`),
   onto an index whose rows are all visible; the definition arm's gates run after the push, at the
   extended environment. `CoreMemos.zero` (`LoopT.lean`): the zeroed memory's core memos.
+
+## Landing 6: `install_header`, `check_constant_val`, the theorem arm under `StageT`
+
+* `ihW_okT`, `ccvW_okT` (`DeclValT.lean`); `erecCiW_frame`/`erecCiW_okT`,
+  `checkConstantVal_refinesT`, `checkThmVal_refinesT`, `cdtW_okT` (the theorem arm,
+  `DeclArmT.lean`; post: the stage relation at the pushed environment and `CoreMemos`).
+* **Design for the remaining arms** (opaque, defn, axiom, quot): where an arm continues after its
+  push or after core calls with operations that grow the store (the reduce-pin gate's
+  `reduceStoredOk`/`reduceDeclPin`/…, the definition arm's gates), `TwinOK` needs either (a) the
+  pushed constant's readbacks (`TwinOK.push`, `CIDen`: its level parameters denote, from the
+  declaration's `denoteCV` at the loop head and `Ext` since), or (b) `StateOK` for
+  `TwinOK.of_istep`. Neither survives a core call on the L side (`StageT` sims give no `Ext`, no
+  `StateOK`). con-ron carries both on the twin side: `checkConstantVal_bridge`, `KnotSpec`,
+  `reduceStoredOk_run`, `reduceDeclPin_run`, `reducePinGuard_run`, … give `CheckOK` (so `StateOK`)
+  and `Ext` after each twin sub-operation from `CheckOK` before (and the inputs' denotations). So
+  the arms past their first core call carry con-ron's `CheckOK V env fe a` beside `StageR` and the
+  memory's half, and get `TwinOK` where they need it by `TwinOK.of_check`.

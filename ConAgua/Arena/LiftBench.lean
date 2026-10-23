@@ -35,7 +35,7 @@ def liftCheck (build : Mem → Option (Word × Mem)) (k c : Word)
     (expect : Mem → Option (Word × Mem)) : Bool :=
   match build (liftMem 16) with
   | none => false
-  | some (t, m) => match liftRun "lift_entry" [t, k, c] m with
+  | some (t, m) => match liftRun "lift_entry" [t, k, c, 4000000000] m with
     | none => false
     | some (r, m) => match expect m with
       | none => false
