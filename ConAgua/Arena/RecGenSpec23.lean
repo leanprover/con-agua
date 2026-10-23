@@ -293,7 +293,7 @@ theorem cnaW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (es : List 
   obtain ⟨r2, m2⟩ := x2
   rw [c2] at h
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (tk_spec p P.k53 k _ vis q fto ftl mc teo tel leaf w) c2
+    (tk_spec p P.k53 stubCall (stubCall_spec p) k _ vis q fto ftl mc teo tel leaf w) c2
   simp only at hs2 hw2
   subst hs2
   obtain ⟨c, a2, run2, hc, hS2, hg2, hP2⟩ := tkW_ok dn fe vis k hw2 hS1 (hbs.grow hg1)

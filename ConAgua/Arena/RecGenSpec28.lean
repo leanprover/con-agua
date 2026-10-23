@@ -261,7 +261,7 @@ theorem tmnW_okP (mb : Mem) (n : Nat) :
     ∀ {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso dsl cto ctl nfo nfl : Word}
     {r : List Word} {bs : BlockShape} {formerTys pfvs ds : List EIdx} {ctors : List (IConstantVal × Nat)}
     {nfs : List NestCtorNf},
-    tmnW n m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some (r, m') →
+    tmnW stubCall n m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some (r, m') →
     StageR dn vis fe m a → BSOK m q.toNat bs → H us →
     decHL m fto.toNat ftl.toNat = some formerTys → fto.toNat + ftl.toNat ≤ iwTop m →
     HSl0 m pfo pfl pfvs → HSl0 m dso dsl ds →
@@ -298,7 +298,7 @@ theorem tmnW_okP (mb : Mem) (n : Nat) :
   obtain ⟨v, hv, ps', hps', rfl⟩ := hps
   cases hpb with
   | cons hpv hpb' =>
-  cases h1 : tmnW n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with
+  cases h1 : tmnW stubCall n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with
   | none => rw [h1] at h; simp [tmnK1] at h
   | some x =>
   obtain ⟨rr, m1⟩ := x
@@ -337,7 +337,7 @@ theorem tmnW_okP (mb : Mem) (n : Nat) :
     rw [ConRon.Arena.targetMajorNfs, hrun_tail]; simp only [hf, Bool.false_eq_true, if_false]; rfl
   rw [tmnK2_yes (h := hh)] at h
   have ht : ctors.any (fun c => c.1.name == nf.ctor) = true := by rw [← hany]; simpa using hh
-  cases h3 : tcmF n m1 vis q fto ftl pfo pfl us dso dsl (rdW (m1.arr64 IW) (e + 1)) (rdW (m1.arr64 IW) (e + 2))
+  cases h3 : tcmF stubCall n m1 vis q fto ftl pfo pfl us dso dsl (rdW (m1.arr64 IW) (e + 1)) (rdW (m1.arr64 IW) (e + 2))
       (rdW (m1.arr64 IW) (e + 3)) with
   | none => rw [h3] at h; simp [tmnK3] at h
   | some x =>
@@ -690,7 +690,7 @@ theorem cnsW_ok (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
   rw [c1, cnsK1_some] at h
-  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tmn_spec p P.tmn k _ vis q fto ftl
+  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tmn_spec p P.tmn stubCall (stubCall_spec p) k _ vis q fto ftl
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 11)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 12))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 1)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 2))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6))
