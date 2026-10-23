@@ -36,5 +36,10 @@ superset of `fs` has a step's write set, `stepA`/`stepC`; `StepIn.memFrame` is
 lists, `stageCoreFns` and `declExtFns` (the open callees' own callees outside both: the ROM
 readers' `rci_*`/`rom_*` helpers, the walks' `apd_*`/`alpd_*`), 759 functions reached; every one
 has a step's write set (per-chunk checks as `LoopCore.lean`), so `checkerProg_cvgIn`, `_ivIn`,
-`_armIn`, `_natGateIn`, `_dgIn`. The agreement halves for `checkerProg` are not proved (the
-`reprStr` check says they hold; a kernel proof compares `String`s across the 1720-entry list).
+`_armIn`, `_natGateIn`, `_dgIn`.
+
+**Agreement halves** (after landing 1, at the coordinator's request): one `rfl` per lookup
+(`checkerProg_cvgOwnK`, `_ivOwnK`, `_armOwnK`, chunks of 12 names; the elaborator and the kernel
+walk `checkerProg`'s list comparing names, about 0.5 s per lookup; the whole of `LoopDecl.lean`
+builds in ~90 s), and membership of `fs` minus `openFns` in the chunks by `decide +kernel`. So
+`checkerProg_cvg : CvgProg checkerProg`, `checkerProg_iv`, `checkerProg_arm` are theorems.
