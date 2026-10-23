@@ -19,6 +19,9 @@ compare before/after of the same module, not single digits.
 | `ConAgua.Arena.IndSumSpec14` (helper b) | 223 s, 3.2 GB | 23 s, 3.0 GB | `tblW_spec`: recipe 1 (`grind (gen := 30)`) |
 | `ConAgua.Arena.DefEqLeaves` (helper b) | 260 s, 3.1 GB | 14 s, 3.0 GB | `sameConstHeads_spec`, `isEagerReduce_spec`: `L.evalC_spec`, simp, per-branch model lemmas, `grind -lia -linarith` (one trivial `>>> 28` goal cost 25-30 s in `lia`, 209 s in `linarith`, not bounded by `maxHeartbeats`) |
 | `ConAgua.Arena.ConstsResolveFRefine` (helper b) | 249 s, 3.2 GB | 17 s, 2.8 GB | `crf_spec`: recipe 1 with `L.evalC_spec`; `clp_spec` (79 s): one `simp_all only […]` instead of `grind` (2.5 s) |
+| `ConAgua.Arena.RecCheckSpec18` (helper a) | 49 s, 9.8 GB | 18 s, 3.5 GB | `cpMem_eq`: the discharger clears the twenty `(b + k).toNat = …` facts before `omega` (PLAN memory hygiene) |
+| `ConAgua.Arena.InstLPWalkGo` (helper a) | 85-167 s, 2.0 GB | 31 s | `vcgen` with `L.evalC_spec`, simp the locals and reads to `rdW`, `grind` |
+| `ConAgua.Scan.Line` (helper c) | 231 s (344 s under load), 1.2 GB | 93 s under load | `lineLoop_spec`: `L.evalC_spec`/`L.evalE_spec`, `subst_vars`, simp, `grind` |
 | `ConAgua.Arena.DeclDivMod2` (helper a) | 275 s, 3.1 GB | 14 s, 2.9 GB | `certCtx_specW` (straight-line code): plain `vcgen`, `rename_i`, split the callees' posts, `subst` the locals, one `simp (decide := true)`; depends on `vcgen`'s order of inaccessible names |
 | `ConAgua.Arena.RecCheckSpec14` (helper a) | 297 s, 3.5 GB | 78 s, 3.0 GB | recipe on `ee_spec`/`tte_spec`/`tka_spec`, `ld64_rdW_spec` in `tka_spec`; `tka_spec`'s 11 goals still ~75 s |
 
