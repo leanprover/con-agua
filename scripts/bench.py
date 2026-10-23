@@ -203,10 +203,13 @@ def main():
     ap.add_argument("--words", type=int, default=None, help="fixed CA_WORDS (default: per fixture, as e2e.py)")
     ap.add_argument("--json", default=None, help="write all measurements here")
     ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (pins, e2e-ref, e2e-l)")
     args = ap.parse_args()
     random.seed(args.seed)
     os.makedirs(WORK, exist_ok=True)
-    os.makedirs(e2e.WORK, exist_ok=True)  # fixtures are unpacked there (shared with scripts/e2e.py)
+    os.makedirs(e2e.WORK, exist_ok=True)
+    if not args.no_build:
+        e2e.lake("build", "ConAgua.E2E.Check", "ConRon.Dump.Pins", "e2e-l", "e2e-ref", "romgen")  # fixtures are unpacked there (shared with scripts/e2e.py)
 
     ids = args.fixtures or ([f[0] for f in e2e.fixtures()] if args.set == "all" else SETS[args.set])
     if args.only:
