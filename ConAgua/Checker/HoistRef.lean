@@ -1,5 +1,6 @@
 import ConAgua.Checker.HoistTargetsRef
 import ConAgua.Checker.HoistOrderRef
+import ConAgua.Census.Attr
 
 /-!
 # `hoist_nat_op_ground` refines `hoistNatOpGround` (lane `front4`)
@@ -12,6 +13,8 @@ component) is not computed (docs/deviations.md D30).
 -/
 
 open ConRon.Arena ConRon.Arena.Frontend
+open Std.WP
+open scoped Lean.Order
 open L.Arena L.Ind L.Front L.Front.Ind
 
 namespace L.Checker
@@ -237,5 +240,44 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       have hC5 : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by
         intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide
       exact ArenaR.frame_ext _ _ hA5 hC5 m₅ m' hf' a hE₅.arena
+
+/-- **`hoist_nat_op_ground(ord, c)` refines `hoistNatOpGround`** (its first component; the second,
+`movedNames`, is dropped by `preparePrelude` and not computed: docs/deviations.md D30). When L
+returns `r`, the twin succeeds in the same state and `IW[r ‥ r + c)` is the order of its records;
+the memory still represents the store and the pins, and the pool only grew. -/
+@[refines_part ConRon.Arena.Frontend.hoistNatOpGround
+  "the reordered records (movedNames, dropped by preparePrelude, is not computed: D30)"]
+theorem hoistNatOpGround_refines (p : Prog) (hp : HoistProg p) (hx : HoistExt p) (n : Nat) (s₀ : St)
+    (a : AState) (ds : Array IDeclaration) (ord cw : Word) (hA : ArenaR s₀.mem a)
+    (hseen : ∃ s, SeenR s₀.mem s) (hnix : ∃ idx, NixR s₀.mem idx) (hO : OrdR s₀.mem ord ds)
+    (hc : ds.size = cw.toNat) (hc60 : cw.toNat < 2 ^ 60)
+    (hW : ∀ k (h : k < ds.size), WalkableDecl ds[k]) (hI : IWOK s₀.mem)
+    (hord : ord.toNat + cw.toNat ≤ iwTop s₀.mem) (hP : PinsR s₀.mem a.pins) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "hoist_nat_op_ground" [ord, cw]
+    ⦃fun r s' => ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧
+      OrdR s'.mem (r.headD 0) res.1 ∧ ArenaR s'.mem a ∧ IWOK s'.mem ∧ IWGrow s₀.mem s'.mem ∧
+      (r.headD 0).toNat + cw.toNat ≤ iwTop s'.mem ∧ PinsR s'.mem a.pins; ⊤⦄ :=
+  triple_post (hoistNatOpGround_spec p hp hx n s₀ ord cw) (fun r s' h =>
+    hNatOpGround_ok p hx n s₀.mem s'.mem a ds ord cw (r.headD 0) hA hseen hnix hO hc hc60 hW hI hord hP h.2)
+
+/-! ## The links
+
+The pieces are stated over the generated models (`hWalkW`, …), each of which is its L function by
+the generated spec (`hoistWalk_spec`, …, `Hoist.lean`): the chain L = model ⊑ twin. -/
+
+attribute [refines ConRon.Arena.Frontend.usedConstsGo] hoistWalk_ok
+attribute [refines ConRon.Arena.Frontend.usedConstsRules] hoistRulesGo_ok
+attribute [refines ConRon.Arena.Frontend.usedConstsBlock] hoistBlockGo_ok
+attribute [refines ConRon.Arena.Frontend.IDeclaration.usedConsts] hoistDepsOf_ok
+attribute [refines ConRon.Arena.Frontend.nameIndex] hoistIndexGo_ok
+attribute [refines ConRon.Arena.Frontend.hoistClosure] closure_ok
+attribute [refines ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps] deps_ok
+attribute [refines ConRon.Arena.Frontend.hoistTargetsGo] targets_ok
+attribute [refines ConRon.Arena.Frontend.isNatOpRecord] natOpRec_ok
+attribute [refines ConRon.Arena.Frontend.hoistTargets] hNatOpGround_ok
+attribute [refines ConRon.Arena.Frontend.reorder ConRon.Arena.Frontend.hoistKey
+  ConRon.Arena.Frontend.hoistLt] hoistApply_ok
+attribute [refines_part ConRon.Arena.Frontend.applyHoist
+  "the sorted records (movedNames, dropped by preparePrelude, is not computed: D30)"] hoistApply_ok
 
 end L.Checker

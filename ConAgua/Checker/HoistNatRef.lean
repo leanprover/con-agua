@@ -670,10 +670,7 @@ theorem natOpDepsCall_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₂ : Mem) (
       (r.tail.headD 0).toNat = gs.length ∧
       (gs ≠ [] → iwTop m ≤ (r.headD 0).toNat ∧ (r.headD 0).toNat + gs.length ≤ iwTop m₂) ∧
       AFr m m₂ := by
-  -- NOT PROVABLE as stated: `nat_op_deps` calls `nat_op_pins` (which calls `nat_op_pins_a/b/c`),
-  -- and `HoistExt` does not pin those down. With them added to `hoistExtProg` this is
-  -- `natOpDepsCall_ok' p hx (hx.get "nat_op_pins") (hx.get "nat_op_pins_a")
-  --   (hx.get "nat_op_pins_b") (hx.get "nat_op_pins_c") n m m₂ a w r hI hP hw h`.
-  sorry
+  exact natOpDepsCall_ok' p hx (hx.get "nat_op_pins") (hx.get "nat_op_pins_a")
+    (hx.get "nat_op_pins_b") (hx.get "nat_op_pins_c") n m m₂ a w r hI hP hw h
 
 end L.Checker
