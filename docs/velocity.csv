@@ -246,4 +246,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,60,40,(helpers sum+pos) IndSum/IndInstall 15 targets + positivity walk 9 targets under StageC
 2026-10-23,compopt2,claude-opus-5-5,420,40,tooling: compopt2 profiling tools + clang oracle + slot-table prototype generators; journal
 2026-10-23,indstaget,claude-opus-5-5,90,30,"checkBlockTail/Pass/Block under StageC (+helpers grc, cbpos); all 59 targets core-contract free"
+2026-10-23,conslib,claude-opus-5-5,50,35,"ConsLib pilot: generic cons-table templates + specs (ConsLib, ConsLibSpec), app table on it; program file byte-identical to master"
 2026-10-23,indstaget,claude-opus-5-5,45,15,"real check_constant_val in the StageC block chain; cidW_okC"
