@@ -419,7 +419,7 @@ theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds
 
 include L
 
-@[refines ConRon.Arena.nestRoot]
+/-- Under `StageR`; the census link is `nestRoot_refinesC` (`IndT/PosRoot.lean`). -/
 theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (holes : List EIdx) (css : List (List (IConstantVal × Nat))) (NS : NestState)
     (outss : List (List (List NestFieldKind × EIdx))) (hS : StageR dn vis fe s₀.mem a₀)
@@ -440,7 +440,7 @@ theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
     hhi hpn hho hhob hcl hcb hcss hns hout houtb hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestSeeds]
+/-- Under `StageR`; the census link is `nestSeeds_refinesC` (`IndT/PosRoot.lean`). -/
 theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx sO sL ns : Word)
     (c : NestCtx) (seeds : List (NestKey × Nat)) (NS : NestState) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hsl : sL.toNat = seeds.length)
