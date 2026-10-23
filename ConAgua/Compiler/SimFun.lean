@@ -96,8 +96,9 @@ theorem storeParams_length_le (ctx : Ctx) : ∀ (rs : List Reg64) (i : Nat), (st
 /-- The parameters passed in registers `rs`: those not kept in registers into their slots. -/
 theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
     ∀ (rs : List Reg64) (i k : Nat) (s : MachineData), Code (storeParams ctx i rs) k →
-    s.regs.rsp.toNat = sp → 8 * (i + rs.length) < 2 ^ 31 → sp + 8 * (i + rs.length) ≤ 2 ^ 64 →
-    (∀ y, sp + 8 * i ≤ y → y < sp + 8 * (i + rs.length) → (s.dmem.get? (A y)).isSome) →
+    s.regs.rsp.toNat = sp →
+    (∀ x, i ≤ x → x < i + rs.length → ctx.alloc.lookup x = none → 8 * x < 2 ^ 31 ∧ sp + 8 * x + 8 ≤ 2 ^ 64 ∧
+      ∀ t < 8, (s.dmem.get? (A (sp + 8 * x + t))).isSome) →
     (∀ s', s'.regs = s.regs → Only (sp + 8 * i) (sp + 8 * (i + rs.length)) s.dmem s'.dmem →
       ((∀ x, i ≤ x → x < i + rs.length → (ctx.alloc.lookup x).isSome) → s'.dmem = s.dmem) →
       (∀ x, i ≤ x → x < i + rs.length → ctx.alloc.lookup x = none →
@@ -107,12 +108,12 @@ theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
   intro rs
   induction rs with
   | nil =>
-    intro i k s _ _ _ _ _ hK
+    intro i k s _ _ _ hK
     exact ev_congr (hK s rfl (Only.refl _ _ _) (fun _ => rfl) (fun x h1 h2 => absurd h2 (by simp; omega)))
       (by simp [storeParams])
   | cons r rs ih =>
-    intro i k s hc hsp hoff hov hmap hK
-    simp only [List.length_cons] at hoff hov hmap hK
+    intro i k s hc hsp hmap hK
+    simp only [List.length_cons] at hmap hK
     have hc0 := hc
     simp only [storeParams] at hc
     -- the rest, from a state that agrees with `s` but for slot `i`
@@ -123,9 +124,10 @@ theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
         (ctx.alloc.lookup i = none → rdW s1.dmem (A (sp + 8 * i)) = some (UInt64.ofBitVec (s.regs.get64 r))) →
         Ev Q s1 (at_ (k + m)) := by
       intro m s1 hc1 hm hr1 hO1 hs1 hv1
-      refine ih (i + 1) (k + m) s1 hc1 (by rw [hr1]; exact hsp) (by omega) (by omega) ?_ ?_
-      · intro y h1 h2
-        exact hO1.grows _ (hmap y (by omega) (by omega))
+      refine ih (i + 1) (k + m) s1 hc1 (by rw [hr1]; exact hsp) ?_ ?_
+      · intro x h1 h2 hn
+        obtain ⟨a1, a2, a3⟩ := hmap x (by omega) (by omega) hn
+        exact ⟨a1, a2, fun t ht => hO1.grows _ (a3 t ht)⟩
       · intro s' hr' hO' hs' hv'
         refine ev_congr (hK s' (hr'.trans hr1) (hO1.union hO' (by omega) (by omega) (by omega) (by omega)) ?_ ?_) ?_
         · intro hall
@@ -134,6 +136,7 @@ theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
         · intro x h1 h2 hn
           by_cases hxi : x = i
           · subst hxi
+            have := (hmap x (Nat.le_refl _) (by omega) hn).2.1
             rw [hO'.rdW_eq (by omega) (by omega), hv1 hn]; simp
           · rw [hv' x (by omega) (by omega) hn, hr1]
             congr 3
@@ -146,9 +149,10 @@ theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
         (fun _ => rfl) (fun h => by simp [hl] at h)) (by simp)
     | none =>
       simp only [hl, List.singleton_append] at hc
+      obtain ⟨a1, a2, a3⟩ := hmap i (Nat.le_refl _) (by omega) hl
       refine ev_movMR hc.head ⟨by omega, by omega⟩ ?_ ?_
       · rw [slot_addr _ i _ (by omega), hsp]
-        exact isSome_rdW fun t ht => by rw [A_add]; exact hmap _ (by omega) (by omega)
+        exact isSome_rdW fun t ht => by rw [A_add]; exact a3 t ht
       rw [slot_addr _ i _ (by omega), hsp]
       exact hrest 1 _ hc.tail (by simp [storeParams, hl]; omega) rfl
         (Only.wrW (by omega) |>.mono (by omega) (by omega))
@@ -158,8 +162,8 @@ theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
 theorem sim_zeroLocals (ctx : Ctx) (hal : ∀ x r, ctx.alloc.lookup x = some r → r ∈ allocRegs)
     (hinj : ∀ x y r, ctx.alloc.lookup x = some r → ctx.alloc.lookup y = some r → x = y) (sp : Nat) (Q : MachineState → Prop) :
     ∀ (m j k : Nat) (s : MachineData), Code (zeroLocals ctx j m) k → s.regs.rsp.toNat = sp →
-    8 * (j + m) < 2 ^ 31 → sp + 8 * (j + m) ≤ 2 ^ 64 →
-    (∀ y, sp + 8 * j ≤ y → y < sp + 8 * (j + m) → (s.dmem.get? (A y)).isSome) →
+    (∀ x, j ≤ x → x < j + m → ctx.alloc.lookup x = none → 8 * x < 2 ^ 31 ∧ sp + 8 * x + 8 ≤ 2 ^ 64 ∧
+      ∀ t < 8, (s.dmem.get? (A (sp + 8 * x + t))).isSome) →
     (∀ s', Only (sp + 8 * j) (sp + 8 * (j + m)) s.dmem s'.dmem →
       ((∀ x, j ≤ x → x < j + m → (ctx.alloc.lookup x).isSome) → s'.dmem = s.dmem) →
       (∀ x, j ≤ x → x < j + m → ctx.alloc.lookup x = none → rdW s'.dmem (A (sp + 8 * x)) = some 0) →
@@ -170,11 +174,11 @@ theorem sim_zeroLocals (ctx : Ctx) (hal : ∀ x r, ctx.alloc.lookup x = some r �
   intro m
   induction m with
   | zero =>
-    intro j k s _ _ _ _ _ hK
+    intro j k s _ _ _ hK
     exact hK s (Only.refl _ _ _) (fun _ => rfl) (fun x h1 h2 => absurd h2 (by omega))
       (fun x r h1 h2 => absurd h2 (by omega)) (fun _ _ => rfl)
   | succ m ih =>
-    intro j k s hc hsp hoff hov hmap hK
+    intro j k s hc hsp hmap hK
     simp only [zeroLocals] at hc
     have hrest : ∀ s1 : MachineData, s1.regs.rsp = s.regs.rsp → Only (sp + 8 * j) (sp + 8 * (j + 1)) s.dmem s1.dmem →
         ((ctx.alloc.lookup j).isSome → s1.dmem = s.dmem) →
@@ -183,9 +187,10 @@ theorem sim_zeroLocals (ctx : Ctx) (hal : ∀ x r, ctx.alloc.lookup x = some r �
         (∀ r, ctx.alloc.lookup j ≠ some r → s1.regs.get64 r = s.regs.get64 r) →
         Ev Q s1 (at_ (k + 1)) := by
       intro s1 hr1 hO1 hs1 hz1 hzr1 hk1
-      refine ih (j + 1) (k + 1) s1 hc.tail (by rw [hr1]; exact hsp) (by omega) (by omega) ?_ ?_
-      · intro y h1 h2
-        exact hO1.grows _ (hmap y (by omega) (by omega))
+      refine ih (j + 1) (k + 1) s1 hc.tail (by rw [hr1]; exact hsp) ?_ ?_
+      · intro x h1 h2 hn
+        obtain ⟨a1, a2, a3⟩ := hmap x (by omega) (by omega) hn
+        exact ⟨a1, a2, fun t ht => hO1.grows _ (a3 t ht)⟩
       · intro s' hO' hs' hz' hzr' hk'
         refine ev_congr (hK s' (hO1.union hO' (by omega) (by omega) (by omega) (by omega)) ?_ ?_ ?_ ?_) (by omega)
         · intro hall
@@ -193,7 +198,9 @@ theorem sim_zeroLocals (ctx : Ctx) (hal : ∀ x r, ctx.alloc.lookup x = some r �
           exact hs1 (hall j (Nat.le_refl _) (by omega))
         · intro x h1 h2 hn
           by_cases hxj : x = j
-          · subst hxj; rw [hO'.rdW_eq (by omega) (by omega)]; exact hz1 hn
+          · subst hxj
+            have := (hmap x (Nat.le_refl _) (by omega) hn).2.1
+            rw [hO'.rdW_eq (by omega) (by omega)]; exact hz1 hn
           · exact hz' x (by omega) (by omega) hn
         · intro x r h1 h2 hr
           by_cases hxj : x = j
@@ -214,14 +221,107 @@ theorem sim_zeroLocals (ctx : Ctx) (hal : ∀ x r, ctx.alloc.lookup x = some r �
       · rw [rget_set, if_neg (fun e => h (by rw [hl, e]))]
     | none =>
       simp only [hl] at hc
+      obtain ⟨a1, a2, a3⟩ := hmap j (Nat.le_refl _) (by omega) hl
       refine ev_movMI hc.head ⟨by omega, by omega⟩ ?_ ?_
       · rw [slot_addr _ j _ (by omega), hsp]
-        exact isSome_rdW fun t ht => by rw [A_add]; exact hmap _ (by omega) (by omega)
+        exact isSome_rdW fun t ht => by rw [A_add]; exact a3 t ht
       rw [slot_addr _ j _ (by omega), hsp]
       exact hrest _ rfl ((Only.wrW (by omega)).mono (by omega) (by omega)) (fun h => by simp [hl] at h)
         (fun _ => by rw [rdW_wrW_same]; rfl) (fun r h => by simp [hl] at h) (fun _ _ => rfl)
 
 end
+
+/-! ## The register allocation, checked -/
+
+theorem reg64_beq_iff {a b : Reg64} : (a == b) = true ↔ a = b := by
+  cases a <;> cases b <;> decide
+
+instance : LawfulBEq Reg64 where
+  eq_of_beq h := reg64_beq_iff.mp h
+  rfl {a} := reg64_beq_iff.mpr rfl
+
+theorem nodupB_cons {α} [BEq α] [LawfulBEq α] {a : α} {l : List α} :
+    nodupB (a :: l) = true ↔ a ∉ l ∧ nodupB l = true := by
+  simp [nodupB]
+
+theorem lookup_mem {al : List (Var × Reg64)} {x : Var} {r : Reg64} (h : al.lookup x = some r) :
+    (x, r) ∈ al := by
+  induction al with
+  | nil => simp at h
+  | cons a al ih =>
+    obtain ⟨y, r'⟩ := a
+    simp only [List.lookup_cons] at h
+    split at h
+    · rename_i he; cases h; simp only [beq_iff_eq] at he; simp [he]
+    · exact List.mem_cons_of_mem _ (ih h)
+
+theorem lookup_mem_snd {al : List (Var × Reg64)} {x : Var} {r : Reg64} (h : al.lookup x = some r) :
+    r ∈ al.map (·.2) := by
+  induction al with
+  | nil => simp at h
+  | cons a al ih =>
+    obtain ⟨y, r'⟩ := a
+    simp only [List.lookup_cons] at h
+    split at h
+    · cases h; simp
+    · simp [ih h]
+
+/-- What `allocOk` checks. -/
+structure AllocSpec (np : Nat) (al : List (Var × Reg64)) : Prop where
+  reg : ∀ x r, al.lookup x = some r → r ∈ allocRegs
+  arg : ∀ x r, al.lookup x = some r → x < np → argRegs.getD x .rax = r
+  inj : ∀ x y r, al.lookup x = some r → al.lookup y = some r → x = y
+  np : al ≠ [] → np ≤ argRegs.length
+
+theorem AllocSpec.nil (np : Nat) : AllocSpec np [] :=
+  ⟨fun _ _ h => by simp at h, fun _ _ h => by simp at h, fun _ _ _ h => by simp at h, fun h => absurd rfl h⟩
+
+theorem allocOk_spec {np : Nat} {al : List (Var × Reg64)} (h : allocOk np al = true) : AllocSpec np al := by
+  simp only [allocOk, Bool.and_eq_true, List.all_eq_true, Bool.or_eq_true, decide_eq_true_eq,
+    List.isEmpty_iff] at h
+  obtain ⟨⟨⟨hall, hn2⟩, -⟩, hnp⟩ := h
+  have hmem : ∀ x r, al.lookup x = some r → (x, r) ∈ al := fun x r => lookup_mem
+  refine ⟨fun x r hl => ?_, fun x r hl hx => ?_, fun x y r hx hy => ?_, fun hne => ?_⟩
+  · have := hall _ (hmem x r hl)
+    simp only [List.contains_iff_mem] at this
+    exact this.1
+  · have := (hall _ (hmem x r hl)).2
+    rcases this with h1 | h1
+    · simp only [L.Var] at *; omega
+    · simp only [beq_iff_eq] at h1
+      simp [List.getD_eq_getElem?_getD, h1]
+  · clear hall hnp hmem
+    induction al with
+    | nil => simp at hx
+    | cons a al ih =>
+      obtain ⟨z, r'⟩ := a
+      have hnd := nodupB_cons.mp hn2
+      simp only [List.lookup_cons] at hx hy
+      split at hx <;> split at hy
+      · simp_all
+      · cases hx; exact absurd (lookup_mem_snd hy) hnd.1
+      · cases hy; exact absurd (lookup_mem_snd hx) hnd.1
+      · exact ih hnd.2 hx hy
+  · rcases hnp with h1 | h1
+    · exact absurd h1 hne
+    · exact h1
+
+theorem tempsEs_le : ∀ (es : List Expr) (i : Nat), tempsEs es ≤ tempsArgs i es
+  | [], _ => Nat.le_refl _
+  | e :: es, i => by
+    have := tempsEs_le es (i + 1)
+    simp only [tempsEs, tempsArgs]; omega
+
+theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s ≤ tempsSB s
+  | .skip | .brk | .abort => Nat.le_refl _
+  | .set _ _ | .st8 .. | .st64 .. | .gset .. => by simp [tempsS, tempsSB]
+  | .seq s t | .ite _ s t => by
+    have := tempsS_le al nr s; have := tempsS_le al nr t; simp only [tempsS, tempsSB]; omega
+  | .while _ s => by have := tempsS_le al nr s; simp only [tempsS, tempsSB]; omega
+  | .ret es => by
+    have := tempsEs_le es 0; simp only [tempsS, tempsSB]; split <;> omega
+  | .call _ _ es => by
+    have := tempsEs_le es 0; simp only [tempsS, tempsSB]; split <;> omega
 
 /-- Every `return` fits the result registers and area. -/
 theorem Stmt.nret_le_of_wf {p : Prog} {nl : Nat} {tab : Tab} :

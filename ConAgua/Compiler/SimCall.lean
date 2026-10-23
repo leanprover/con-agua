@@ -228,8 +228,8 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
     (Q : MachineState → Prop)
     (hres : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
     ∀ (n i k : Nat) (s : MachineData), Code (loadRes ctx vs.length i n) k → i + n ≤ G.tab.nres →
-    8 * (ctx.nl + vs.length) < 2 ^ 31 → s.regs.r15.toNat = G.T → G.lo ≤ s.regs.rsp.toNat →
-    s.regs.rsp.toNat + 8 * (ctx.nl + vs.length) ≤ G.hi →
+    (0 < vs.length → 8 * (ctx.nl + vs.length) < 2 ^ 31) → s.regs.r15.toNat = G.T → G.lo ≤ s.regs.rsp.toNat →
+    (0 < vs.length → s.regs.rsp.toNat + 8 * (ctx.nl + vs.length) ≤ G.hi) →
     (∀ x, G.InRes x → (s.dmem.get? (A x)).isSome) →
     (∀ j (h : j < vs.length), rdW s.dmem (A (s.regs.rsp.toNat + 8 * (ctx.nl + j))) = some vs[j]) →
     (∀ j < i, j < maxRes → rres s.regs j = ws.getD j 0) →
@@ -289,6 +289,7 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
           (fun _ _ _ _ => rfl) (fun h => absurd h (by omega)) hsl
       by_cases hi : i < vs.length
       · simp only [hi, if_true] at hc
+        have hoff := hoff (by omega)
         refine ev_movRM hc.head ⟨by omega, by omega⟩ (v := vs[i]) ?_ (hstep _ (by simp [hi]))
         rw [slot_addr _ (ctx.nl + i) _ (by omega)]; exact hsl i hi
       · simp only [hi, if_false] at hc
@@ -297,8 +298,9 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
     · simp only [him, if_false] at hc
       have hcell := resAddr_cell (G := G) (i := i) (by omega) (by omega)
       have hcellv : ∀ (j : Nat), j < vs.length → s.regs.rsp.toNat + 8 * (ctx.nl + j) + 8 ≤ G.resAddr i ∨
-          G.resAddr i + 8 ≤ s.regs.rsp.toNat + 8 * (ctx.nl + j) := fun j hj =>
-        hG.res_stack_disj hcell fun t ht => ⟨by omega, by omega⟩
+          G.resAddr i + 8 ≤ s.regs.rsp.toNat + 8 * (ctx.nl + j) := fun j hj => by
+        have := hhis (by omega)
+        exact hG.res_stack_disj hcell fun t ht => ⟨by omega, by omega⟩
       have hend : G.resAddr i + 8 ≤ 2 ^ 64 := by
         have := hG.tab_end; simp only [Layout.tabEnd, Tab.nxres] at this
         simp only [Layout.resAddr]; omega
@@ -325,6 +327,7 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
           rw [hd, rdW_wrW_A hend (by omega) (hcellv j hj)]; exact hsl j hj
       by_cases hi : i < vs.length
       · simp only [hi, if_true, List.cons_append, List.nil_append] at hc
+        have hoff := hoff (by omega)
         refine ev_movRM hc.head ⟨by omega, by omega⟩ (v := vs[i]) ?_ ?_
         · rw [slot_addr _ (ctx.nl + i) _ (by omega)]; exact hsl i hi
         refine ev_movMR (hT ▸ hc.tail.head) hroff ?_ ?_
@@ -837,7 +840,7 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
       rw [← hvl] at hc2
       have h1sp := congrArg UInt64.toNat hE1.rsp
       refine sim_loadRes hG ctx hT vs vs Q (by omega) ctx.nr 0 _ s1 hc2.left (by omega)
-        (by rw [hvl]; omega) hI1.r15 hI1.lo (by rw [h1sp, hvl]; have := hI.hi; omega)
+        (fun _ => by rw [hvl]; omega) hI1.r15 hI1.lo (fun _ => by rw [h1sp, hvl]; have := hI.hi; omega)
         (fun x hx => hI1.mem.res x hx) (fun j hj => by rw [h1sp]; simpa [h1sp] using hslots j hj)
         (fun j hj => absurd hj (Nat.not_lt_zero _)) (fun j _ hj => absurd hj (Nat.not_lt_zero _))
         (fun _ _ => rfl) ?_
