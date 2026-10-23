@@ -37,7 +37,7 @@ ASM_OUT = os.path.join(ROOT, "ConAgua", "Checker", "Asm.lean")
 # (`ldc`), whose `romIdx` the kernel then evaluates once per part instead of once per function
 # (~5 s each; 110 copies: 350 s in one part before, docs/design/slowmods.md)
 ASM_PARTS = 6
-PRE_PARTS = 2
+PRE_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
 # the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
