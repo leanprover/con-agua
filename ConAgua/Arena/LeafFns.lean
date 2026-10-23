@@ -216,6 +216,14 @@ theorem leaf_mem (f : FnName) (h : (leafTree.find (L.Compiler.nameCode f)).isSom
   have := L.Compiler.namesTree_spec leafTree.eq f
   rw [h] at this; exact of_decide_eq_true this.symm
 
+/-- `loopFns` as a tree of name codes: membership by name, stable under a regenerated list. -/
+names_tree loopTree : loopFns
+
+theorem loop_mem (f : FnName) (h : (loopTree.find (L.Compiler.nameCode f)).isSome = true) :
+    f ∈ loopFns := by
+  have := L.Compiler.namesTree_spec loopTree.eq f
+  rw [h] at this; exact of_decide_eq_true this.symm
+
 theorem leafA_pins : PINS ∉ leafA := by decide +kernel
 theorem leafA_memo : (50 : ArrId) ∉ leafA ∧ (49 : ArrId) ∉ leafA := by decide +kernel
 theorem leafA_walk : (151 : ArrId) ∉ leafA ∧ (152 : ArrId) ∉ leafA ∧ (153 : ArrId) ∉ leafA := by

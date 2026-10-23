@@ -1,4 +1,4 @@
-import ConAgua.Arena.LoopT
+import ConAgua.Arena.TwinStep
 
 /-!
 # Lifting stage facts from `StageR` to `StageT` (lane `indproofs3`)

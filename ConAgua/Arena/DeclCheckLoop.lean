@@ -5,7 +5,7 @@ import ConAgua.Arena.DeclDivMod10
 import ConAgua.Arena.DeclNatSubAll
 
 /-!
-# `check_decl` refines `checkDecl` at the loop's relation (lane `decls3`)
+# `check_decl`'s arms at the loop's relation (lane `decls3`)
 
 `check_decl(i, vis)` reads the record's kind word and calls one arm (`DeclStep.lean`). Under the
 front's records (`DeclsR`: every record is an axiom, definition, theorem, opaque or quotient,
@@ -16,9 +16,10 @@ front's records (`DeclsR`: every record is an axiom, definition, theorem, opaque
 Each arm's spec at the loop's relation is a theorem, all five proved: the theorem arm
 (`DeclArmLoop.lean`), the opaque arm (`DeclArmOpaque.lean`), the quotient and axiom arms (the
 canonical comparisons, which need the twin state well formed: `StateOK`, a hypothesis of
-`ArmSpec` and `CheckDeclSpec`, from the fold's `TwinFold`, lane `decls4`), and the definition arm
-through the gates' specs (`DefnProg`: `NatGateSpec`, `DivGateSpec`). The callees' own stub specs
-(the ROM readers, `lvl_eq_c`) are `sorry`.
+`ArmSpec`, from the fold's `TwinFold`, lane `decls4`), and the definition arm through the gates'
+specs (`DefnProg`: `NatGateSpec`, `DivGateSpec`). The callees' own stub specs (the ROM readers,
+`lvl_eq_c`) are `sorry`. The dispatcher's refinement is `CheckerT.lean`'s `checkDecl_loopT` (under
+`StageT`, lane `loopt2`).
 -/
 
 open ConRon.Arena
@@ -178,80 +179,5 @@ theorem cd_specW (hp : p.lookup "check_decl" = some checkDeclL) (n : Nat) (s₀ 
       finish (gen := 20) [cdSel, rdW_eq]
 
 end model
-
-/-- An arm's run through `callW`, at the loop's relation. -/
-theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {f : FnName} {d : IDeclaration} (hA : ArmSpec pins dn ds p f d)
-    {n : Nat} {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
-    {i : Word} {r : List Word} (hi : i.toNat < ds.size) (hd : ds[i.toNat]? = some d)
-    (hok : ConRon.Bridge.StateOK a)
-    (hR : LoopR pins dn m a vis fe pend ds) (h : cdRet (callW p n f [i, vis] m) = some (r, m')) :
-    AM.ok (checkDecl V pins fe d) a ∧
-      LoopR pins dn m' (AM.st (checkDecl V pins fe d) a) (r.headD 0) (AM.res (checkDecl V pins fe d) a)
-        pend ds := by
-  cases h1 : callW p n f [i, vis] m with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, cdRet_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s', hs', -, hok, hL⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (hA n ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR) h1
-  subst hs'
-  exact ⟨hok, by simpa using hL⟩
-
-/-- **`check_decl` refines `checkDecl`** at the loop's relation, for the front's record kinds
-(through the arms' specs: every arm's but the definition arm's is proved). -/
-@[refines_part ConRon.Arena.checkDecl "one-constant records (the front's kinds 1-5)"]
-theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinSet)
-    (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
-    CheckDeclSpec V pins dn ds p := by
-  intro n s₀ a₀ vis fe pend i hi hok hR
-  refine triple_post (cd_specW p hP.cd n s₀ i vis) ?_
-  rintro r s' ⟨hl, h⟩
-  refine ⟨hl, ?_⟩
-  have hdecl := hR.decls.recs i.toNat hi
-  have hds : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
-  have hd : ds[i.toNat]? = some ds[i.toNat] := Array.getElem?_eq_getElem hi
-  rw [hds]
-  have h1 := hR.decls.room
-  have h2 := hR.decls.dsize
-  have hw0 : rdW (s₀.mem.arr64 DECL) (1 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 0 :=
-    rdW_dw _ (by omega) (by decide) (by decide)
-  cases n with
-  | zero => simp [cdW] at h
-  | succ n =>
-  rw [cdW_step, hw0] at h
-  generalize hdi : ds[i.toNat] = d at hdecl hd
-  cases d with
-  | axiomDecl cv =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (1 : Word) ≠ 6 by decide, if_false, if_true] at h
-    exact arm_callW (checkDeclAxiom_loop pins dn ds hP hdn cv) hi hd hok hR h
-  | defnDecl cv v hh =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
-      if_true] at h
-    exact arm_callW (checkDeclDefn_loop pins dn ds hP hdn cv v hh) hi hd hok hR h
-  | thmDecl cv v =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,
-      show (3 : Word) ≠ 2 by decide, if_false, if_true] at h
-    exact arm_callW (fun n s₀ a₀ vis fe pend i hi hd _ hR =>
-      checkDeclThm_loop hP.arm hP.val hP.th pins dn ds n s₀ a₀ vis fe pend i cv v hi hd hR) hi hd hok hR h
-  | opaqueDecl cv v =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
-      show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at h
-    exact arm_callW (checkDeclOpaque_loop pins dn ds hP hdn cv v) hi hd hok hR h
-  | quotDecl k cv =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
-      show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide, show (5 : Word) ≠ 4 by decide,
-      if_false, if_true] at h
-    exact arm_callW (checkDeclQuot_loop pins dn ds hP hdn k cv) hi hd hok hR h
-  | indDecl _ _ => exact hdecl.elim
-  | basisDecl _ => exact hdecl.elim
 
 end L.Arena
