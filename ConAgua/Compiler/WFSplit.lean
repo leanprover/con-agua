@@ -88,6 +88,18 @@ syntax (name := tabLit) "tab_lit% " term:max : term
     let e ← instantiateMVars e
     return tabToExpr (← evalTab e)
 
+/-- `bytes_lit% e`: the byte list `e`, evaluated (by compiled code) and inserted as a literal
+(`bytesToExpr`), for constant data the kernel would otherwise compute from its definition. -/
+syntax (name := bytesLit) "bytes_lit% " term:max : term
+
+@[term_elab bytesLit] unsafe def elabBytesLit : TermElab := fun stx _ => do
+  let `(bytes_lit% $t) := stx | throwUnsupportedSyntax
+  let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
+  let e ← elabTermEnsuringType t ty
+  synthesizeSyntheticMVarsNoPostponing
+  let bs ← evalExpr (List UInt8) ty (← instantiateMVars e)
+  return bytesToExpr bs.toArray
+
 /-- A theorem declaration. -/
 def thm (n : Name) (ty v : Lean.Expr) (_ : List Name) : Declaration :=
   .thmDecl { name := n, levelParams := [], type := ty, value := v }
