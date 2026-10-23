@@ -180,7 +180,8 @@ theorem shapeLp_of_decB {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun 
   obtain ⟨hrdv, hvb⟩ := iwN_rdW_at (w := UInt64.ofNat co') (k := k) hv0 hsz
   simp only [CtorLp]
   rw [hrdv]
-  have hcnD : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m _ := by
+  have hcnD : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m
+      (cts[k]'(by rw [decPL_length _ hdc]; exact hk)) := by
     show decCN (truncM m) _ = _
     rw [UInt64.toNat_ofNat_of_lt' hvb]; exact hcn
   obtain ⟨a, ha, ha3, hcv, -⟩ := decCN_words hcnD hsz
@@ -194,7 +195,7 @@ theorem shapeLp_of_decB {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun 
   obtain ⟨w2, hw2⟩ : ∃ w, (m.arr64 EREC)[a + 2]? = some w :=
     ⟨_, Array.getElem?_eq_getElem (show a + 2 < (m.arr64 EREC).size by omega)⟩
   rw [rdW_of_get? e1.symm hw1, rdW_of_get? e2.symm hw2]
-  rcases hx w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, show a + 1 + 1 = a + 2 by omega, hw2])
+  rcases hx w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, hw2])
     with h | h
   · right; omega
   · left; exact h

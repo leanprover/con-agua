@@ -712,7 +712,7 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
       (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 2)).toNat ≤ (s6.mem.arr64 EREC).size := by
     have e1 : (UInt64.ofNat ca + 1 : Word).toNat = ca + 1 := by rw [UInt64.toNat_add]; simp <;> omega
     have e2 : (UInt64.ofNat ca + 2 : Word).toNat = ca + 2 := by rw [UInt64.toNat_add]; simp <;> omega
-    rw [rdW_er_grow hgm6 (by rw [e1]; omega), rdW_er_grow hgm6 (by rw [e2]; omega), hkm6 EREC]
+    rw [rdW_er_grow hgm6 (by rw [e2]; omega), rdW_er_grow hgm6 (by rw [e1]; omega), hkm6 EREC]
     have := hlp; simp only [CtorLp] at this; rw [hcam] at this; exact this
   obtain ⟨s7, hs7, -, hok7, hS7, hg7, ht7H, ht7D⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (targetCtorAt_refines p P.ha P.erc P.eri P.cvl P.tca n _ a6 dn vis fe (r1.headD 0) (UInt64.ofNat ca) tm cA'.1

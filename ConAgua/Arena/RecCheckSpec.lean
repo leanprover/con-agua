@@ -981,7 +981,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨hS1, hg1, by simp [decHL, hslice?], ?_, ?_⟩
-    · simp only [List.headD_cons, List.tail_cons]; rw [hq, ht1]; rfl
+    · simp only [List.headD_cons, List.tail_cons]; rw [hq, ht1]
     · rw [hm1]; simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec (k := k) h hsz hc hEs hsrc
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
