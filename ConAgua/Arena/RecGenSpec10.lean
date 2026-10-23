@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec9
+import ConAgua.Arena.IndRealNames
 
 /-!
 # `RecGen`: `classRecsRulesOk` (lane `indproofs2`, helper `rec3`)
@@ -43,12 +44,12 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a)
     (hd : decTM m' (r.headD 0).toNat = some tm) : DecB (fun m => decTM m (r.headD 0).toNat) m' tm := by
   rw [tmdW_eq] at h
-  cases h1 : stubM "intern_nanon" m [] with
+  cases h1 : naF m [] with
   | none => rw [h1] at h; simp [tmdK1] at h
   | some x1 =>
   obtain ⟨ra, m1⟩ := x1
   rw [h1, tmdK1_some] at h
-  obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := internNanonStub_spec dn vis fe m m1 a ra h1 hS
+  obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
   cases hp : pinWordV m1 52 with
   | none => rw [hp] at h; simp [tmdK2] at h
   | some ls =>
@@ -338,6 +339,7 @@ structure CrrProg (p : Prog) : Prop where
   mtm : p.lookup "mk_target_major" = some mkTargetMajor
   tmd : p.lookup "target_major_default" = some targetMajorDefault
   tma : p.lookup "target_major_at" = some targetMajorAt
+  na : NaF p
   rec4 : p.lookup "rec4" = some rec4
   go : p.lookup "class_recs_rules_ok_go" = some classRecsRulesOkGo
   top : p.lookup "class_recs_rules_ok" = some classRecsRulesOkL
@@ -358,7 +360,7 @@ theorem classRecsRulesOkGo_spec (p : Prog) (h : CrrProg p) (n : Nat) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classRulesOk_spec p h.crs n,
-        targetMajorAt_spec p h.crs.alloc h.pw h.mtm h.tmd h.tma n,
+        targetMajorAt_spec p h.crs.alloc h.pw h.mtm h.tmd h.tma h.na n,
         rec4_specW p h.crs.alloc n h.rec4, slCons_specW p h.crs.alloc h.crs.copy h.crs.cons n, ih] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
         loc_init9, loc_init10]

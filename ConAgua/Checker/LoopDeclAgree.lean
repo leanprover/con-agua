@@ -1,5 +1,6 @@
 import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.IndRealWalk
+import ConAgua.Checker.IndRealNames
 
 /-!
 # The declaration texts' agreement halves for the checker's program (lane `loopt2`)
@@ -98,6 +99,6 @@ theorem checkerProg_cvg : CvgProg checkerProg :=
   ⟨⟨checkerProg_cvgAgree, checkerProg_cvgIn⟩, checkerProg_bvb, checkerProg_hf⟩
 
 theorem checkerProg_iv : IvProg checkerProg :=
-  ⟨⟨checkerProg_ivAgree, checkerProg_ivIn⟩, checkerProg_bvb, checkerProg_hf⟩
+  ⟨⟨checkerProg_ivAgree, checkerProg_ivIn⟩, checkerProg_bvb, checkerProg_hf, checkerProg_ipf⟩
 
 end L.Checker

@@ -134,14 +134,14 @@ theorem pos3_plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : pl
     | some x =>
       obtain ⟨r1, m1⟩ := x
       rw [hg, plK4_some] at h
-      cases hs : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+      cases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with
       | none => rw [hs] at h; simp [plW.plK5] at h
       | some y =>
         obtain ⟨r2, m2⟩ := y
         rw [hs, plK5_some] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         rw [← h.2]
-        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.ofStub hs)
+        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp))
 
 theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h : nckW n m p fo fl = some (r, m')) :
     MFr [] [] m m' := by
