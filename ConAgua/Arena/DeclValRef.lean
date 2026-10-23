@@ -187,7 +187,7 @@ theorem dvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   | succ n =>
   rw [dvW_step, ev, et] at h
   have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
-  cases h1 : ivgW n m vis (c + 1) wv with
+  cases h1 : ivgW stubCall n m vis (c + 1) wv with
   | none => rw [h1] at h; simp [dvK1] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
@@ -282,7 +282,7 @@ theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     · rfl
   subst hb
   -- the value's guards, then the common tail
-  cases h5 : ivgW n m4 vis (c + 1) wv with
+  cases h5 : ivgW stubCall n m4 vis (c + 1) wv with
   | none => rw [h5] at h; simp [dvK1] at h
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5

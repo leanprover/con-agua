@@ -55,3 +55,23 @@ Proof:
 About 200 lines. Measured (bench, 3 rounds, load ~18): **P+T vs base: 0.992× instructions,
 0.935× cycles, 0.939× wall** (c03d 0.490 → 0.432 s, let-ladder 1.27 → 1.17 s, beta-ladder 2.82 →
 2.69 s, c04a 3.23 → 3.06 s).
+
+## E3: leaf temporaries in registers (measured, not proved: dropped)
+
+Port on branch `compproofT-e3` (commit "WIP compproofT-e3", unproved): `Ctx.tregs` = the
+registers of `allocRegs` that hold no local of the leaf and are none of its `nr` result
+registers (`tempRegs`); temporaries `t < tregs.length` live there (`Ctx.stTmp`/`ldTmp`); a leaf
+is frameless if every local is in a register and `tempsS ≤ tregs.length`. Frameless functions
+68 → 169 of 1753. The prototype also used `rbx`/`r12`/`r13` (which needs the trampoline to save
+them); measured as `E3x` (uncommitted trampoline change) for comparison.
+
+bench (default set, 5 rounds, load ~80, vs P+T): **E3 0.993× instructions, 0.998× cycles; E3x
+0.984× / 0.999×** (c03d 3 878 → 3 876 M (E3) / 3 817 M (E3x), c04a 24 350 → 24 317 / 23 941 M).
+An earlier run (5 rounds, load ~36): E3 0.993× instructions, 1.010× cycles. The instruction gain
+is under 1% and the cycles do not move: the hot kernel leaves (`der_b`, the `*_find`s) have
+more locals than free registers, so only small leaves gain. The proof would generalize `EPost`
+(registers kept: all but scratch and the temporary registers from `t` on), `TmpFit`, the
+temporary reads/writes of `sim_expr`/`sim_cond`/`sim_args`/`sim_loadRes`/the stores and
+`AllocOk` (temporary registers disjoint from locals and results, distinct): medium cost for
+nothing measurable. Not done; E2 not attempted either (see compopt2: its −6% instructions were
+−1% cycles).

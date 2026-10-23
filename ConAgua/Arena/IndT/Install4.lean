@@ -41,8 +41,9 @@ theorem Sim.callW_posB {α : Type} {p : Prog} {f : FnName} {args : List Word} {m
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
 
-include hq henv in
+include hq henv hV hkc in
 /-- **`check_block_inds` under `StageC`** (twin side: con-ron's `checkBlockInds_spec`'s proof). -/
 theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {pp isRec : Word} {bs : BlockShape} {b : Bool}
@@ -95,7 +96,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
         (Q := fun r x m' a' => TeleOutC dn vis fe env m r x m' a' ∧ AbsOK m' ∧
           ConRon.Bridge.CoreStep V env fe a a')
-        (checkBlockTele_refinesC hq henv hP.toCstProg hP.bTele k (by omega) ⟨m, Locals.init []⟩ a
+        (checkBlockTele_refinesC hq henv hV hkc hP.toCstProg hP.bTele k (by omega) ⟨m, Locals.init []⟩ a
           (UInt64.ofNat bs.nP) _ ms0 hC hmok hA hm0 hfe)
         fun _ _ ⟨_, hok, hQ, hA', hc⟩ => ⟨hok, hQ, hA', hc⟩) n hn
       rw [UInt64.toNat_ofNat_of_lt' hnpb] at h; exact Sim.withRunC h) ?_
@@ -115,7 +116,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       have h := Sim.callW_posB (N := 2 ^ 62) (fun k hk => installSimCall
         (Q := fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m1 m' ∧
           PSlR decTele x (r.headD 0) (r.tail.headD 0) m' ∧ AbsOK m')
-        (checkBlockTeles_refinesC hq henv hP.toInstProg (k + 1) hk ⟨m1, Locals.init []⟩ a1
+        (checkBlockTeles_refinesC hq henv hV hkc hP.toInstProg (k + 1) hk ⟨m1, Locals.init []⟩ a1
         (UInt64.ofNat bs.nP) (o + 1) (l - 1) rest hC1 (hrest.grow hg1) hA1
         (ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP) hfe1)
         fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2⟩) n hn
@@ -208,7 +209,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     ((hrb4 ((hrb.grow (hg1.trans hg2) (by omega)).grow hg3 (by have := hg1.trans hg2; have := this.1; omega))).grow
       (hg5.trans hg6) (by omega)), c14.trans c5⟩
 
-include hq henv in
+include hq henv hV hkc in
 /-- **`check_block_inds` refines `checkBlockInds`** under `StageC` (stage 1; the shape's and the
 environment's denotations as con-ron's `checkBlockInds_spec` asks): the environment with the
 formers pushed at the returned view, the formers' constants and the shape with its sort below the
@@ -229,7 +230,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀); ⊤⦄ :=
   triple_post (ibi_spec p hP.inds n s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ, hA', hR', hc⟩ :=
-      Sim.run (ibiW_simC hq henv hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh) hm
+      Sim.run (ibiW_simC hq henv hV hkc hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh) hm
     ⟨hl, hok, hQ, hA', hR', hc⟩
 
 end sims

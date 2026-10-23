@@ -24,16 +24,20 @@ cd "$main"
 [ "$(git rev-parse --abbrev-ref HEAD)" = master ] || { echo "main checkout not on master" >&2; exit 2; }
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then echo "main checkout not clean" >&2; git status --short >&2; exit 2; fi
 before="$(git rev-parse HEAD)"
-# The branch must already contain master: the lane merges master and builds in its own worktree
-# (in parallel, outside the lock); then the build below is a cache hit and the lock is held briefly.
+# Lanes should merge master and build in their own worktree first (then the build below is a cache
+# hit and the lock is held briefly). A branch that is behind master is still landed if it merges
+# cleanly: the build and generated-file checks below are the safety net (a failure resets master),
+# so busy hours do not send lanes into merge/retry loops.
 if ! git merge-base --is-ancestor HEAD "$branch"; then
-  echo "land.sh: $branch does not contain current master ($(git rev-parse --short HEAD)); merge master into it, build in your worktree, then retry" >&2
-  exit 4
+  echo "land.sh: note: $branch does not contain current master ($(git rev-parse --short HEAD)); merging anyway, the build below decides" >&2
 fi
 if ! git merge --no-ff --no-edit "$branch"; then
   git merge --abort || true
   echo "land.sh: merge conflict; merge master into $branch in your worktree, then retry" >&2; exit 1
 fi
+# asm/checker.s: a stale file already fails the build above (ConAgua.Checker.AsmFileEq, `checkerFile_eq`,
+# names the first differing function); the regeneration check and the Kraken-parser cross-check run
+# off the critical path in the coordinator's census run (_tmp/census-run.sh).
 if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check || ! timeout 600 python3 scripts/loop_fns.py --check || ! timeout 600 python3 scripts/leaf_fns.py --check || ! python3 scripts/modules_check.py || ! timeout 900 python3 scripts/preloop_ws.py --check; then
   git reset --hard "$before"
   echo "land.sh: build or generated-file check (core_fns.py / loop_fns.py / leaf_fns.py / preloop_ws.py --check, modules_check.py) failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
