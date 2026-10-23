@@ -139,6 +139,66 @@ theorem ShapeLp.grow {m m' : Mem} {p0 : Word} {bs : BlockShape} (h : ShapeLp m p
   rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
   exact hdc
 
+/-- **A shape decoded below the tops has its members' constructors' level-parameter slices in
+`EREC` or empty** (`ShapeLp`): each constructor's constant record is decoded below the tops, so its
+slice lies below `EREC`'s top or is empty (`CVExt`). -/
+theorem shapeLp_of_decB {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun m => decBS m p0.toNat) m bs)
+    (hE : erTop m ≤ (m.arr64 EREC).size) (hsz : (m.arr64 IW).size < 2 ^ 64) : ShapeLp m p0 := by
+  intro o l ho hl j hj c hc co cl hco hcl k hk
+  obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some (show decBS (truncM m) p0.toNat = some bs from hq)
+  obtain ⟨o', l', ho', hl', hd⟩ := decAt_some hmem
+  rw [(rec2IwN_trunc ho').2] at ho
+  rw [(rec2IwN_trunc hl').2] at hl
+  have e1 := Option.some.inj ho
+  have e2 := Option.some.inj hl
+  subst e1 e2
+  obtain ⟨c', hc', hms⟩ := decPL_getH (truncM m) hd j hj
+  rw [(rec2IwN_trunc hc').2] at hc
+  have e3 := Option.some.inj hc
+  subst e3
+  simp only [decMS, bind, Option.bind_eq_some_iff, pure] at hms
+  obtain ⟨_, -, _, -, _, -, cts, hcts, -⟩ := hms
+  obtain ⟨co', cl', hco', hcl', hdc⟩ := decAt_some hcts
+  rw [(rec2IwN_trunc hco').2] at hco
+  rw [show c' + 2 + 1 = c' + 3 by omega] at hcl'
+  rw [(rec2IwN_trunc hcl').2] at hcl
+  have e4 := Option.some.inj hco
+  have e5 := Option.some.inj hcl
+  subst e4 e5
+  have hcob : co' < 2 ^ 64 := by
+    have h6 := (rec2IwN_trunc hco').2
+    simp only [iwN, nat?, Option.map_eq_some_iff] at h6
+    obtain ⟨w1, -, rfl⟩ := h6; exact w1.toNat_lt
+  have hclb : cl' < 2 ^ 64 := by
+    have h7 := (rec2IwN_trunc hcl').2
+    simp only [iwN, nat?, Option.map_eq_some_iff] at h7
+    obtain ⟨w2, -, rfl⟩ := h7; exact w2.toNat_lt
+  rw [UInt64.toNat_ofNat_of_lt' hclb] at hk
+  obtain ⟨v, hv, hcn⟩ := decPL_getH (truncM m) hdc k hk
+  have hv0 := (rec2IwN_trunc hv).2
+  rw [← UInt64.toNat_ofNat_of_lt' hcob] at hv0
+  obtain ⟨hrdv, hvb⟩ := iwN_rdW_at (w := UInt64.ofNat co') (k := k) hv0 hsz
+  simp only [CtorLp]
+  rw [hrdv]
+  have hcnD : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m _ := by
+    show decCN (truncM m) _ = _
+    rw [UInt64.toNat_ofNat_of_lt' hvb]; exact hcn
+  obtain ⟨a, ha, ha3, hcv, -⟩ := decCN_words hcnD hsz
+  rw [ha]
+  obtain ⟨⟨-, hx⟩, -⟩ := rec3CVExt_of_trunc (show decCVp (truncM m) a = _ from hcv)
+  have ha64 : a + 3 < 2 ^ 64 := by have := (rdW (m.arr64 CTL) 129).toNat_lt; simp only [erTop] at ha3; omega
+  have e1 : (UInt64.ofNat a + 1 : Word).toNat = a + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+  have e2 : (UInt64.ofNat a + 2 : Word).toNat = a + 2 := by rw [UInt64.toNat_add]; simp <;> omega
+  obtain ⟨w1, hw1⟩ : ∃ w, (m.arr64 EREC)[a + 1]? = some w :=
+    ⟨_, Array.getElem?_eq_getElem (show a + 1 < (m.arr64 EREC).size by omega)⟩
+  obtain ⟨w2, hw2⟩ : ∃ w, (m.arr64 EREC)[a + 2]? = some w :=
+    ⟨_, Array.getElem?_eq_getElem (show a + 2 < (m.arr64 EREC).size by omega)⟩
+  rw [rdW_of_get? e1.symm hw1, rdW_of_get? e2.symm hw2]
+  rcases hx w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, show a + 1 + 1 = a + 2 by omega, hw2])
+    with h | h
+  · right; omega
+  · left; exact h
+
 /-- **What the recursor stage needs of the pass's record** (a pending program fact, like
 `ConsRecsTFSim` was: to be discharged from the pass's refinement, whose shape copies the input's
 recursor slice and parameter count, and whose classes' constructor records are the input members').

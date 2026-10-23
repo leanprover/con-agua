@@ -73,7 +73,7 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     have hlb : l' < 2 ^ 64 := by simp [erA] at hb; omega
     have hlp : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size := by
       rw [hr1, hr2, UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; simpa [erA] using hb
-    exact cvLpsW_stage h hS hcv hq hlp
+    exact cvLpsW_stage h hS hcv hq (.inr hlp)
 
 
 /-! ## `nest_holes(_go)` refines `nestHoles(.go)` -/

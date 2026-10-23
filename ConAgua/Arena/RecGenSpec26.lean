@@ -505,9 +505,10 @@ structure CxoProg (p : Prog) : Prop extends CfaProg p where
   r6 : p.lookup "rec6" = some rec6
   cxo : p.lookup "class_ctor_of" = some classCtorOfL
 
-/-- The constant's level-parameter slice lies in `EREC` (`target_ctor_at`'s hypothesis), at the
-constant of the `[cv, nF]` record `cA`. -/
+/-- The constant's level-parameter slice lies in `EREC` or is empty (`target_ctor_at`'s
+hypothesis), at the constant of the `[cv, nF]` record `cA`. -/
 def CtorLp (m : Mem) (cA : Word) : Prop :=
+  (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cA + 2)).toNat = 0 ∨
   (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cA + 1)).toNat + (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cA + 2)).toNat ≤
     (m.arr64 EREC).size
 
@@ -706,7 +707,8 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
   have hca3' : ca + 3 < 2 ^ 64 := by
     have := (rdW (s1.mem.arr64 CTL) 129).toNat_lt; simp only [erTop] at hca3; omega
   have hkm6 : KeepW m s6.mem := hk1.trans (hk2.trans (hk4.trans (hk5.trans hk6)))
-  have hlp6 : (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 1)).toNat +
+  have hlp6 : (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 2)).toNat = 0 ∨
+      (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 1)).toNat +
       (rdW (s6.mem.arr64 EREC) (UInt64.ofNat ca + 2)).toNat ≤ (s6.mem.arr64 EREC).size := by
     have e1 : (UInt64.ofNat ca + 1 : Word).toNat = ca + 1 := by rw [UInt64.toNat_add]; simp <;> omega
     have e2 : (UInt64.ofNat ca + 2 : Word).toNat = ca + 2 := by rw [UInt64.toNat_add]; simp <;> omega
