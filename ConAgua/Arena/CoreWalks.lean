@@ -511,6 +511,55 @@ theorem hasFvar_core (hp : AbsProg p) (hpf : p.lookup "has_fvar" = some hasFvarL
       simp [h0, h0']
   · unfold ResH HW; rw [← hr0]; split <;> decide
 
+/-- `inst1(e, v, d)`: a call of `inst_entry(e, v, d)` (the checker's `inst1A`, `Checker/Entry.lean`,
+the same text). -/
+def inst1W : FunDecl := lfn (e, v, d) locals (r) {
+  r := call inst_entry(e, v, d);
+  return r
+}
+
+/-- `inst1`'s model: `inst_entry`'s run, its first word. -/
+def inst1WW (p : Prog) (n : Nat) (m : Mem) (e v d : Word) : Option (Word × Mem) :=
+  match callW p n "inst_entry" [e, v, d] m with
+  | none => none
+  | some (r, m') => some (r.headD 0, m')
+
+theorem inst1W_spec {p : Prog} (hi : p.lookup "inst1" = some inst1W) (n : Nat) (s₀ : St)
+    (e v d : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst1" [e, v, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ inst1WW p n s₀.mem e v d = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hi]
+  simp only [callFn, inst1W]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "inst_entry"] <;>
+    finish [inst1WW]
+
+
+/-- `inst1` through its call of `inst_entry`. -/
+theorem inst1_wrap {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry" = some instEntry)
+    (hle : p.lookup "lift_entry" = some liftEntry) (hi : p.lookup "inst1" = some inst1W) :
+    Inst1OK p := by
+  intro n s₀ a₀ dn vis fe M eb e v d hS he' _
+  cases n with
+  | zero => exact CoreSpec.zeroW hi _ _ _ _ _ _ _ _ _ _ _
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs hr
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hr (inst1W_spec hi n s₀ e v d)
+  subst hs
+  refine ⟨hloc, ?_⟩
+  unfold inst1WW at hW
+  cases hc : callW p n "inst_entry" [e, v, d] s.mem with
+  | none => simp [hc] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  simp only [hc, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hw, hm⟩ := hW
+  rw [← hm]
+  obtain ⟨h1, h2, h3, h4⟩ :=
+    CoreSpec.of_callW (inst1_core hp he hle "inst_entry" he n s a₀ dn vis fe M eb e v d hS he') hc
+  exact ⟨h1, h2, by rw [h3]; simp only [decH, hw], by unfold ResH at h4 ⊢; rw [← hw]; exact h4⟩
+
 /-- **The walks' programs**, at their names (what `CoreWalks`' bridges need of a program). -/
 structure CoreWalkProg (p : Prog) : Prop where
   il : InstListProg p
@@ -518,8 +567,9 @@ structure CoreWalkProg (p : Prog) : Prop where
   inst : InstProg p
   ie : p.lookup "inst_entry" = some instEntry
   le : p.lookup "lift_entry" = some liftEntry
-  /-- The core's call sites name `instantiate1Fast`'s L function `inst1`: the same `FunDecl`. -/
-  i1 : p.lookup "inst1" = some instEntry
+  /-- The core's call sites name `instantiate1Fast`'s L function `inst1`: a call of
+  `inst_entry`. -/
+  i1 : p.lookup "inst1" = some inst1W
   bvb : BvbProg p
   abs : AbsProg p
   ae : p.lookup "abs_entry" = some absEntry
@@ -533,8 +583,7 @@ theorem CoreWalkProg.iotaInst1OK (hp : CoreWalkProg p) : IotaInst1OK p :=
   inst1_core hp.inst hp.ie hp.le "inst_entry" hp.ie
 
 theorem CoreWalkProg.inst1OK (hp : CoreWalkProg p) : Inst1OK p :=
-  fun n s₀ a₀ dn vis fe M eb e v d hS he _ =>
-    inst1_core hp.inst hp.ie hp.le "inst1" hp.i1 n s₀ a₀ dn vis fe M eb e v d hS he
+  inst1_wrap hp.inst hp.ie hp.le hp.i1
 
 theorem CoreWalkProg.lbbOK (hp : CoreWalkProg p) : LooseBVarsBoundedFastOK p := lbb_core hp.bvb
 

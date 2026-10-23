@@ -99,3 +99,21 @@ new `LoopCallees` fields at `checkerProg`.
 the loaded memory and `CoreRM.frame` over the pre-loop write set (it avoids arrays and `CTL` words
 96‥127). `Final/Remaining.lean`'s `checkerAsm_accepts_remaining` assumes exactly `hLC`, `hTop`.
 Also removed: the arms' unused `StageR` loop specs (`checkDecl*_loop'`, `checkDeclThm_loop`).
+
+## Landing 4: the loop's program hypotheses at `checkerProg` (item 13 for the loop)
+
+Helper `loopt3-prog` (`Checker/LoopProgInd.lean`, `LoopProgTac.lean`, `LoopProg.lean`):
+`checkerProg_indIn : StepIn checkerProg indFns` (call-closed superset `loopFns` minus a
+hand-written list `loopStepOut` of 58 names that reach a write outside the step's write set,
+compared by name codes; if a new loop function reaches such a write the per-chunk check fails and
+the name must be added); `checkerProg_loopCalleesPB bs (RomOK bs) (romData prefix) : ∀ dn, DnInj
+dn → IndArmSpec (checkerProg.subPB bs) dn → QuotDn dn → LoopCallees dn (checkerProg.subPB bs)` and
+`checkerProg_loopTopPB` (general lemmas: write sets and lookups across `subPB`, the seven `PB`
+readers, `romRefs_of` for the substituted readers; tactic `prog_bundle`, lookups from
+`checkerProg_nodup` and positions, ~50 ms each). **Fix in another lane's file**
+(`Arena/CoreWalks.lean`, coordinator's go-ahead): `CoreWalkProg.i1` asked
+`checkerProg.lookup "inst1" = some instEntry`, false for `checkerProg` (it binds the wrapper
+`inst1A`); now `inst1W` (same text as `inst1A`), `inst1OK` re-proved through the call
+(`inst1_wrap`). **The end-to-end theorem** (`Final/Remaining.lean`, `checkerAsm_accepts_remaining`)
+now assumes only `IndArmSpec (checkerProg.subPB bs) dn` for injective `dn` (beside the stub
+contracts' `sorry`s).
