@@ -502,9 +502,9 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
     envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
     erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+    List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+    reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
   all_goals grind (gen := 30) (instances := 5000) [lang_grind, arena_grind, ind_grind, tblW, tblMem, rdW_eq]
 
 /-! ## `check_struct_proj_table`: the relation to the twin -/
