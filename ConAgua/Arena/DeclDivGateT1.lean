@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclDivMod10
 import ConAgua.Arena.DeclCrpT
 import ConAgua.Arena.IndStubsT
+import ConAgua.Arena.IndRealWalkT
 import ConRon.Bridge.Checker.DivMod
 
 /-!
@@ -8,7 +9,7 @@ import ConRon.Bridge.Checker.DivMod
 
 `div_mod_pin_guard` (`pgC`) and `div_mod_cert_guard` (`cgC`) under `StageC`: their leaves by their
 `StageR` refinements (`DeclDivMod*.lean`), the leaves' write set and con-ron's step lemmas
-(`StageC.of_core`), the walks the stubs stand for by their `StageT` contracts (`IndStubsT.lean`)
+(`StageC.of_core`), the walks the stubs stand for by their `StageT` contracts (`IndRealWalkT.lean`, `IndStubsT.lean`)
 and con-ron's `RunsC` lemmas (`lbbF_runsC`, `hasFvarF_runsC`, `alpd0_runsC`, `crF_runsC`). The twin
 side follows con-ron's `divModPinGuard_run` and `divModCertGuard_run` (`Bridge/Checker/DivMod.lean`).
 -/
@@ -87,7 +88,7 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
   have hw := callW_model (M := fun mq => dmPgW p k mq ps vis c)
-    (pg_specW p hD.lDivModPinGuard k · ps vis c) hcall
+    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard k · ps vis c) hcall
   unfold dmPgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- the run's twin facts, once the run is known
@@ -103,13 +104,13 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   have hC1 := StageC.of_core hC hS1 hf1 (CoreStep.refl hC.check)
   rw [← hx1] at hpd
   -- loose bvars
-  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0] with
+  cases h2 : lbbF m1 [4000000000, 0, r1.headD 0] with
   | none => rw [h2] at hw; simp at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
-    looseBVarsBoundedFastT_spec dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a r2 h2 hC1.stageT
+    lbbF_okT dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a r2 h2 hC1.stageT
   rw [fuelW_eq, h0w] at hrun2
   obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC1.check hpd) hrun2
   have hC2 := StageC.of_T hT2 c2.ok
@@ -129,13 +130,13 @@ theorem pgC (hD : DmProg6 p) (hcl : LeafClosed p) {ps c : Word} {ip : INatOpPinS
   have hx2 := decW0B_true hd2 z2
   have hpd2 := ConRon.Bridge.denote_ext hpd c2.ext
   -- has fvar
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, r1.headD 0] with
+  cases h3 : hffF m2 [4000000000, r1.headD 0] with
   | none => rw [h3] at hw; simp at hw
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, bW_some] at hw
   obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
-    hasFvarFastT_spec dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
+    hffF_okT dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq] at hrun3
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
   have hC3 := StageC.of_T hT3 c3.ok
@@ -224,7 +225,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
   have hw := callW_model (M := fun mq => dmCgW p k mq vis c annVal ho hl eqE proof)
-    (cg_specW p hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
+    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
   unfold dmCgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   have fin : ∀ x a', (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof)).run a =
@@ -238,13 +239,13 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   have c1 := ConRon.Bridge.CoreStep.of_istep hC.check hi1
   have hC1 := StageC.of_core hC hS1 hf1 c1
   -- loose bvars
-  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0] with
+  cases h2 : lbbF m1 [4000000000, 0, r1.headD 0] with
   | none => rw [h2] at hw; simp at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
-    looseBVarsBoundedFastT_spec dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hC1.stageT
+    lbbF_okT dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hC1.stageT
   rw [fuelW_eq, h0w, hx1] at hrun2
   obtain ⟨c2, -⟩ := runsC_step (ConRon.Bridge.lbbF_runsC hC1.check hpd) hrun2
   have hC2 := StageC.of_T hT2 c2.ok
@@ -264,13 +265,13 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hs0 : SubstC0 p dn vis fe)
   have hx2 := decW0B_true hd2 z2
   have hpd2 := ConRon.Bridge.denote_ext hpd c2.ext
   -- has fvar
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, r1.headD 0] with
+  cases h3 : hffF m2 [4000000000, r1.headD 0] with
   | none => rw [h3] at hw; simp at hw
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, bW_some] at hw
   obtain ⟨x3, a3, hrun3, hT3, hg3, hd3⟩ :=
-    hasFvarFastT_spec dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
+    hffF_okT dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hC2.stageT
   rw [fuelW_eq, hx1] at hrun3
   obtain ⟨c3, -⟩ := runsC_step (ConRon.Bridge.hasFvarF_runsC hC2.check hpd2) hrun3
   have hC3 := StageC.of_T hT3 c3.ok
