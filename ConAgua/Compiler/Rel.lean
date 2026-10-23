@@ -239,6 +239,10 @@ theorem Inv.of_regs {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s s' : Machine
     (hR : ∀ r ∈ allocRegs, s'.regs.get64 r = s.regs.get64 r) : Inv G ctx F σ s' :=
   hI.congr rfl hsp h15 hR (fun x _ _ => by rw [hd]) (hd ▸ hI.mem)
 
+/-- The registers of `allocRegs` agree, for states built by writes of other registers. -/
+macro "alloc_keep" : tactic => `(tactic| (intro r hr; have hne := allocRegs_ne hr; cases r <;>
+  first | exact absurd rfl hne.1 | exact absurd rfl hne.2.1 | exact absurd rfl hne.2.2.1 | rfl))
+
 /-- Reading a register after a write. -/
 theorem rget_set (R : Reg64s) (r r' : Reg64) (v : BitVec 64) :
     (R.set64 r v).get64 r' = if r' = r then v else R.get64 r' := by
