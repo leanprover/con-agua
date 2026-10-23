@@ -14,7 +14,8 @@ DESIGN.md, "The checker as one program (lane `integrate`)". Steps:
    the file: the imports, `checkerProg`, `checkerStubs`; and `ProgWf.lean`: `Prog.wf` by `prog_wf`
    (`WFSplit.lean`).
 4. Write `ConAgua/Checker/Asm.lean` and `AsmPart<k>.lean`: the compiled checker as a kernel-checked
-   literal (`asm_lit`, DESIGN.md "Kernel-checked compiler output").
+   literal (`asm_lit`, DESIGN.md "Kernel-checked compiler output"). Then regenerate the committed
+   file `asm/checker.s` with `scripts/asm_file.py` (it needs `Checker/Prog.lean` built).
 
 Usage: scripts/checker_prog.py [--no-build] [--check]   (`--check`: fail if the file would change)
 """
@@ -255,9 +256,9 @@ ASM = '''{imports}
 `checkerAsm : Program` is the compiled checker as a literal term, and
 `checkerAsm_eq : compileProg checkerTab checkerProg "check" = checkerAsm` is checked by the kernel,
 one function at a time (`asm_lit`, `ConAgua/Compiler/AsmLit.lean`; the functions' checks are in
-`AsmPart0` … `AsmPart{last}`). The harness prints
-`checkerAsm` (`ConAgua/Checker/AsmEmit.lean`), so running the compiler as compiled Lean code is
-not trusted. DESIGN.md, "Kernel-checked compiler output".
+`AsmPart0` … `AsmPart{last}`), so running the compiler as compiled Lean code is not trusted.
+`checkerFile_eq` (`ConAgua/Checker/AsmFileEq.lean`) compares it with the committed file
+`asm/checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
 -/
 
 namespace L.Checker
@@ -353,6 +354,7 @@ def main():
     if a.check:
         return
     e2e.log(f"wrote {OUT}: {len(entries)} functions ({len(stubs)} stubs), {len(imports)} imports")
+    e2e.log("asm/checker.s is now stale: build, then run scripts/asm_file.py and commit the file")
 
 
 if __name__ == "__main__":
