@@ -38,7 +38,7 @@ open scoped Lean.Order
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 
 /-! ## The inductive stage's per-call memos (a memory-only clause)
 

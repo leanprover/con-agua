@@ -20,7 +20,7 @@ set_option linter.unusedSimpArgs false
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 section model
 variable (p : Prog)
@@ -118,7 +118,7 @@ theorem cdoW_ok {p : Prog} (hV : ValProg p) (hC : CrpProg p) {dn : NIdx → Opti
     (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word}
     {r : List Word} {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
     {v : EIdx} (h : cdoW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .opaqueDecl cv v) :
     ∃ fe' a', (checkDecl V pins fe (.opaqueDecl cv v)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by

@@ -203,7 +203,7 @@ end L.Arena
 namespace L.Arena
 
 open L.Ind
-open L.Front (DECL DLP DeclsR DeclAt CVAt dw hintW)
+open L.Front (DECL DLP DeclsF DeclAt CVAt dw hintW)
 
 /-! ### The twin's values -/
 
@@ -545,7 +545,7 @@ one, `CVAt`), its value word, its hint, all of it below the top. -/
 theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
     (h : erecCiW n m i ck = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size) :
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ nat? (erecP m') (r.headD 0).toNat = some ck.toNat ∧
       (∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
         decCV (erecP m') ((r.headD 0).toNat + 1) = some cv) ∧
@@ -662,7 +662,7 @@ theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
     {ci : IConstantInfo}
     (h : erecCiW n m i ck = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') dn (r.headD 0).toNat = some ci ∧
       decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
@@ -694,7 +694,7 @@ theorem erecCiW_okA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration}
     {cv : IConstantVal}
     (h : erecCiW n m i 0 = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hcv : CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') dn (r.headD 0).toNat = some (.axiomInfo cv) ∧

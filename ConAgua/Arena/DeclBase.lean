@@ -11,7 +11,7 @@ import ConAgua.Arena.DeclPins
 
 Split out of `Checker.lean` so that the loop's callees (`Decl*.lean`) can state their specs over
 `LoopR`: the pending checks `PEND` (137, three words each, `CTL[130]` of them), the promotion
-`LoopR` (`CheckR` + `PendR` + the front's `DeclsR` + the work pools + the promotion memo's arrays),
+`LoopR` (`CheckR` + `PendR` + the front's `DeclsF` + the work pools + the promotion memo's arrays),
 `dsAt`, `vgOut`.
 -/
 
@@ -24,7 +24,7 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsR)
+open L.Front (DECL DLP DeclsF)
 
 /-- For `AM.res` at the fold's result types. -/
 instance : Inhabited IFEnv := ⟨mkIFEnv IEnv.empty⟩
@@ -48,13 +48,20 @@ structure PendR (m : Mem) (pend : Array PendingCheck) : Prop where
 
 /-! ## The loop's relation -/
 
+/-- A front record that is not an inductive block is a one-constant record. -/
+theorem declAt_of_F {D P : Array Word} {i : Nat} {d : IDeclaration} (h : L.Front.DeclAtF D P i d)
+    (hne : ∀ b k, d ≠ .indDecl b k) : L.Front.DeclAt D P i d := by
+  cases d with
+  | indDecl b k => exact (hne b k rfl).elim
+  | _ => exact h
+
 /-- **What the declaration loop keeps**: the checker state at the view `vis` of `fe`, the
 pending checks, and the declaration records. -/
 structure LoopR (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState)
     (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (ds : Array IDeclaration) : Prop where
   check : CheckR dn m a vis fe
   pend : PendR m pend
-  decls : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds
+  decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds
   /-- The work pool and the record pool are in bounds (lane `induct`'s `IWOK`): the callees of
   the step run on the stage relation `StageR = CheckR ∧ IWOK`. -/
   iw : L.Ind.IWOK m
