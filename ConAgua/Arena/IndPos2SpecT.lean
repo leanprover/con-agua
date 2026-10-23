@@ -22,7 +22,7 @@ section census
 variable {p : Prog} (L : NbLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include L
 
-@[refines ConRon.Arena.nestPos]
+/-- Under `StageR`; the census link is `nestPos_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -39,7 +39,7 @@ theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : A
   have := (nbOK_all dn vis fe n hn).1 s₀.mem s'.mem a₀ ctx fu po pl dep kb e ns c prog NS _ hm h0 h1 h2 h3 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestPos "binder arm (nest_pos_bind)"]
+/-- Under `StageR`; the census link is `nestPosBind_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -57,7 +57,7 @@ theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
   have := (nbOK_all dn vis fe n hn).2.1 s₀.mem s'.mem a₀ ctx fu po pl dep kb w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestPos "application arm (nest_pos_app)"]
+/-- Under `StageR`; the census link is `nestPosApp_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -75,7 +75,7 @@ theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ 
   have := (nbOK_all dn vis fe n hn).2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb hi w ns c prog NS _ hm h0 h1 h2 h3 h4 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestCont]
+/-- Under `StageR`; the census link is `nestCont_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word)
     (c : NestCtx) (prog : List NestHole) (args : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -95,7 +95,7 @@ theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
   have := (nbOK_all dn vis fe n hn).2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ hm h0 h1 h2 h3 h4 h5 h6 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestContKey]
+/-- Under `StageR`; the census link is `nestContKey_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -116,7 +116,7 @@ theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
   have := (nbOK_all dn vis fe n hn).2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestContNew]
+/-- Under `StageR`; the census link is `nestContNew_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -137,7 +137,7 @@ theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
   have := (nbOK_all dn vis fe n hn).2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestFrame]
+/-- Under `StageR`; the census link is `nestFrame_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (grp : List (NIdx × EIdx)) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -159,7 +159,7 @@ theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
   have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestCtors]
+/-- Under `StageR`; the census link is `nestCtors_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cs : List (IConstantVal × Nat)) (NS : NestState) (outs : List (List NestFieldKind × EIdx))
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -182,7 +182,7 @@ theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
   have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestCtors "one constructor (nest_ctors_one)"]
+/-- Under `StageR`; the census link is `nestCtorsOne_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cvv : IConstantVal) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -203,7 +203,7 @@ theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
   have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ hm h0 h1 h2 h3 h4 h5 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestCtors "field walk (nest_ctors_walk)"]
+/-- Under `StageR`; the census link is `nestCtorsWalk_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -223,7 +223,7 @@ theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
   have := (nbOK_all dn vis fe n hn).2.2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ hm h0 h1 h2 h3 hP hA
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestFields]
+/-- Under `StageR`; the census link is `nestFields_refinesC` (`IndT/PosCensus.lean`). -/
 theorem nestFields_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState) (ks : List NestFieldKind) (nds : List EIdx)
     (h0 : StageR dn vis fe s₀.mem a₀)

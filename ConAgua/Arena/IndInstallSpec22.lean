@@ -45,7 +45,7 @@ theorem installSimSumCtors {p : Prog} (hP : SumProg p) (n : Nat) {dn : NIdx → 
         PSlR decIS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧ AbsOK m') := by
   intro r m' e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (sctsW_spec p hP n _ vis vis T lo ll nP nIdx rs isP lg cvTa co cl) e
+    (sctsW_spec p hP stubCall (stubCall_spec p) n _ vis vis T lo ll nP nIdx rs isP lg cvTa co cl) e
   obtain ⟨hS, hl, hlb, hcv, hcs, hA⟩ := hpre
   have hfe : fe.restrictTo vis.toNat = fe := by rw [← hS.1.env.vis]; rfl
   have h := sctsW_ok (dn := dn) (vis := vis) (fe := fe) vis T lo ll nP nIdx rs isP lg cvTa lps cvv

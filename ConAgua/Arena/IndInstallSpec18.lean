@@ -250,8 +250,8 @@ theorem iisrW_sim {p : Prog} (hP : IdxProg p) (dn : NIdx → Option ConLeche.Nam
 /-- **`check_block_idx_sorts` refines `checkBlockIdxSorts`** (through `open_pis_at_fvars_f`'s stub
 and `check_struct_field_sorts_i`'s pending contract): the shape record, the member records and
 the formers decoded below the tops; every member's index sorts a slice of `[off, len]` pointers
-below the tops (`sl_cons`-built, D18). -/
-@[refines ConRon.Arena.checkBlockIdxSorts]
+below the tops (`sl_cons`-built, D18). Under `StageR`; the census link is
+`checkBlockIdxSorts_refinesC` (`IndT/Install5.lean`). -/
 theorem checkBlockIdxSorts_refines (p : Prog) (hP : IdxProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp mo ml co cl : Word)
     (bs : BlockShape) (mss : List MemberShape) (cvs : List IConstantVal)
