@@ -426,18 +426,60 @@ def certCtxW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
     rdW (m4.arr64 IW) (r0.headD 0 + 6), r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0, r9.headD 0] mp) fun _ mf =>
   some ([rq.headD 0], mf)
 
-set_option maxHeartbeats 12800000 in
+private theorem getElem_toNat_rdW {a : Array Word} {x : Word} (h : x.toNat < a.size) :
+    a[x.toNat] = rdW a x := (rdW_eq a x _ rfl h).symm
+
+/-- Straight-line code: after `vcgen`, each callee's `LocEq` post fixes the next state's locals, so
+the states are taken apart and their locals substituted; `certCtxW` then unfolds call by call.
+(`sym … finish` took ~265 s here, crawling the `setLoc` chains.) -/
 theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_ctx" []
     ⦃fun r s' => LocEq s' s₀ ∧ certCtxW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, certCtxL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "nat_op_pins", callW_spec p n "const_e", callW_spec p n "nat_var",
       callW_spec p n "nat_one", callW_spec p n "nat_ap1", callW_spec p n "iw_alloc",
-      callW_spec p n "cert_ctx_pins", callW_spec p n "cert_ctx_main"] <;>
-    finish (gen := 30) (instances := 10000) [certCtxW, ntBW, rdW_eq]
+      callW_spec p n "cert_ctx_pins", callW_spec p n "cert_ctx_main"]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+  · rfl
+  · rename_i s13 a13 rs11 s12 a12 h6 rs10 s11 rs9 s10 a11 rs8 s9 a10 rs7 s8 a9 h5 h4 rs6 s7 h3 rs5 s6
+      h2 rs4 s5 h1 rs3 s4 h0 rs2 s3 rs1 s2 a8 rs0 s1 s0' a7 a6 a5 a4 a3 a2 a1 a0
+    subst a13
+    obtain ⟨l12, c12⟩ := a12
+    obtain ⟨l11, c11⟩ := a7
+    obtain ⟨l10, c10⟩ := a11
+    obtain ⟨l9, c9⟩ := a10
+    obtain ⟨l8, c8⟩ := a9
+    obtain ⟨l7, c7⟩ := a6
+    obtain ⟨l6, c6⟩ := a5
+    obtain ⟨l5, c5⟩ := a4
+    obtain ⟨l4, c4⟩ := a3
+    obtain ⟨l3, c3⟩ := a2
+    obtain ⟨l2, c2⟩ := a8
+    obtain ⟨l1, c1⟩ := a1
+    obtain ⟨l0, c0⟩ := a0
+    obtain ⟨m12, L12⟩ := s12
+    obtain ⟨m11, L11⟩ := s11
+    obtain ⟨m10, L10⟩ := s10
+    obtain ⟨m9, L9⟩ := s9
+    obtain ⟨m8, L8⟩ := s8
+    obtain ⟨m7, L7⟩ := s7
+    obtain ⟨m6, L6⟩ := s6
+    obtain ⟨m5, L5⟩ := s5
+    obtain ⟨m4, L4⟩ := s4
+    obtain ⟨m3, L3⟩ := s3
+    obtain ⟨m2, L2⟩ := s2
+    obtain ⟨m1, L1⟩ := s1
+    obtain ⟨m0, L0⟩ := s0'
+    simp only [LocEq] at l12 l11 l10 l9 l8 l7 l6 l5 l4 l3 l2 l1 l0
+    subst l12 l11 l10 l9 l8 l7 l6 l5 l4 l3 l2 l1 l0
+    simp (config := {decide := true}) only [St.setLoc_loc, St.setLoc_mem, Locals.init_nil, reduceIte,
+      getElem_toNat_rdW] at c12 c11 c10 c9 c8 c7 c6 c5 c4 c3 c2 c1 c0 ⊢
+    simp only [certCtxW, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0, bW_some, Sig.retVal, Sig.retOr]
 
 theorem rdW_iw_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by

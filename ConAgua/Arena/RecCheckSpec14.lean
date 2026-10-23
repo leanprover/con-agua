@@ -115,10 +115,13 @@ theorem ee_spec (p : Prog) (L : K53Look p) (n : Nat) :
     intro s₀ o l
     rw [invoke_eq _ L.ee]
     simp only [callFn, eraseEach]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        eftF_spec p L.tmn.tcm.tp.rc n, slCons_specW p L.tmn.tcm.ha L.tmn.tcm.ic L.tmn.tcm.sc n] <;>
-      finish (gen := 20) [rdW_eq]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
+      eftF_spec p L.tmn.tcm.tp.rc n, slCons_specW p L.tmn.tcm.ha L.tmn.tcm.ic L.tmn.tcm.sc n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 10) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 /-! ## `target_k53_tele` -/
 
@@ -156,9 +159,12 @@ theorem tte_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (bso bsl teo t
   | succ n =>
     rw [invoke_eq _ L.tte]
     simp only [callFn, targetK53Tele]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ee_spec p L n, slEq_spec p L.eq n] <;>
-      finish (gen := 20)
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ee_spec p L n, slEq_spec p L.eq n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+        Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 /-! ## `target_k53_args` -/
 
@@ -263,12 +269,15 @@ theorem tka_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St)
   | succ n =>
     rw [invoke_eq _ L.tka]
     simp only [callFn, targetK53Args]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ee_spec p L n, slEq_spec p L.eq n,
-        internConst_spec p L.cf L.cp L.ic n, mknF_spec p L.ad n,
-        blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc L.tmn.tcm.mn n, noF_spec p L n,
-        tcmF_spec p L.tmn.tcm n] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-        loc_init9, loc_init10]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ee_spec p L n, slEq_spec p L.eq n,
+      internConst_spec p L.cf L.cp L.ic n, mknF_spec p L.ad n,
+      blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc L.tmn.tcm.mn n, noF_spec p L n,
+      tcmF_spec p L.tmn.tcm n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+        Locals.init_cons_zero, Locals.init_cons_succ, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
+        loc_init9, loc_init10, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals grind (gen := 40) (instances := 20000) [lang_grind, arena_grind, ind_grind]
 
 end L.Ind
