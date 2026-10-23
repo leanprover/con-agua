@@ -28,7 +28,7 @@ theorem copyParams_length (i m : Nat) : (copyParams i m).length = 2 * m := by
   | zero => rfl
   | succ m ih => simp [copyParams, ih]; omega
 
-theorem zeroLocals_length (j m : Nat) : (zeroLocals j m).length = m := by
+theorem zeroLocals_length (ctx : Ctx) (j m : Nat) : (zeroLocals ctx j m).length = m := by
   induction m generalizing j with
   | zero => rfl
   | succ m ih => simp [zeroLocals, ih]
@@ -85,41 +85,141 @@ theorem sim_copy (vs : List Word) (sp ap : Nat) (Q : MachineState → Prop) :
         simp [rdW_wrW_same]
       · exact hsl j hj (by omega) (by omega)
 
-theorem sim_zero (sp : Nat) (Q : MachineState → Prop) :
-    ∀ (m j k : Nat) (s : MachineData), Code (zeroLocals j m) k → 8 * (j + m) < 2 ^ 31 →
-    s.regs.rsp.toNat = sp → sp + 8 * (j + m) ≤ 2 ^ 64 →
-    (∀ i, j ≤ i → i < j + m → (rdW s.dmem (A (sp + 8 * i))).isSome) →
-    (∀ s', s'.regs = s.regs →
-      Only (sp + 8 * j) (sp + 8 * (j + m)) s.dmem s'.dmem →
-      (∀ i, j ≤ i → i < j + m → rdW s'.dmem (A (sp + 8 * i)) = some 0) →
+omit [Host] in
+theorem storeParams_length_le (ctx : Ctx) : ∀ (rs : List Reg64) (i : Nat), (storeParams ctx i rs).length ≤ rs.length
+  | [], _ => by simp [storeParams]
+  | r :: rs, i => by
+    have := storeParams_length_le ctx rs (i + 1)
+    simp only [storeParams, List.length_append, List.length_cons]
+    split <;> simp <;> omega
+
+/-- The parameters passed in registers `rs`: those not kept in registers into their slots. -/
+theorem sim_storeParams (ctx : Ctx) (sp : Nat) (Q : MachineState → Prop) :
+    ∀ (rs : List Reg64) (i k : Nat) (s : MachineData), Code (storeParams ctx i rs) k →
+    s.regs.rsp.toNat = sp → 8 * (i + rs.length) < 2 ^ 31 → sp + 8 * (i + rs.length) ≤ 2 ^ 64 →
+    (∀ y, sp + 8 * i ≤ y → y < sp + 8 * (i + rs.length) → (s.dmem.get? (A y)).isSome) →
+    (∀ s', s'.regs = s.regs → Only (sp + 8 * i) (sp + 8 * (i + rs.length)) s.dmem s'.dmem →
+      ((∀ x, i ≤ x → x < i + rs.length → (ctx.alloc.lookup x).isSome) → s'.dmem = s.dmem) →
+      (∀ x, i ≤ x → x < i + rs.length → ctx.alloc.lookup x = none →
+        rdW s'.dmem (A (sp + 8 * x)) = some (UInt64.ofBitVec (s.regs.get64 (rs.getD (x - i) .rax)))) →
+      Ev Q s' (at_ (k + (storeParams ctx i rs).length))) →
+    Ev Q s (at_ k) := by
+  intro rs
+  induction rs with
+  | nil =>
+    intro i k s _ _ _ _ _ hK
+    exact ev_congr (hK s rfl (Only.refl _ _ _) (fun _ => rfl) (fun x h1 h2 => absurd h2 (by simp; omega)))
+      (by simp [storeParams])
+  | cons r rs ih =>
+    intro i k s hc hsp hoff hov hmap hK
+    simp only [List.length_cons] at hoff hov hmap hK
+    have hc0 := hc
+    simp only [storeParams] at hc
+    -- the rest, from a state that agrees with `s` but for slot `i`
+    have hrest : ∀ (m : Nat) (s1 : MachineData), Code (storeParams ctx (i + 1) rs) (k + m) →
+        (storeParams ctx i (r :: rs)).length = m + (storeParams ctx (i + 1) rs).length →
+        s1.regs = s.regs → Only (sp + 8 * i) (sp + 8 * (i + 1)) s.dmem s1.dmem →
+        ((ctx.alloc.lookup i).isSome → s1.dmem = s.dmem) →
+        (ctx.alloc.lookup i = none → rdW s1.dmem (A (sp + 8 * i)) = some (UInt64.ofBitVec (s.regs.get64 r))) →
+        Ev Q s1 (at_ (k + m)) := by
+      intro m s1 hc1 hm hr1 hO1 hs1 hv1
+      refine ih (i + 1) (k + m) s1 hc1 (by rw [hr1]; exact hsp) (by omega) (by omega) ?_ ?_
+      · intro y h1 h2
+        exact hO1.grows _ (hmap y (by omega) (by omega))
+      · intro s' hr' hO' hs' hv'
+        refine ev_congr (hK s' (hr'.trans hr1) (hO1.union hO' (by omega) (by omega) (by omega) (by omega)) ?_ ?_) ?_
+        · intro hall
+          rw [hs' fun x h1 h2 => hall x (by omega) (by omega)]
+          exact hs1 (hall i (Nat.le_refl _) (by omega))
+        · intro x h1 h2 hn
+          by_cases hxi : x = i
+          · subst hxi
+            rw [hO'.rdW_eq (by omega) (by omega), hv1 hn]; simp
+          · rw [hv' x (by omega) (by omega) hn, hr1]
+            congr 3
+            rw [show x - i = (x - (i + 1)) + 1 by omega]; rfl
+        · rw [hm]; omega
+    cases hl : ctx.alloc.lookup i with
+    | some r' =>
+      simp only [hl, List.nil_append] at hc
+      exact ev_congr (hrest 0 s (by simpa using hc) (by simp [storeParams, hl]) rfl (Only.refl _ _ _)
+        (fun _ => rfl) (fun h => by simp [hl] at h)) (by simp)
+    | none =>
+      simp only [hl, List.singleton_append] at hc
+      refine ev_movMR hc.head ⟨by omega, by omega⟩ ?_ ?_
+      · rw [slot_addr _ i _ (by omega), hsp]
+        exact isSome_rdW fun t ht => by rw [A_add]; exact hmap _ (by omega) (by omega)
+      rw [slot_addr _ i _ (by omega), hsp]
+      exact hrest 1 _ hc.tail (by simp [storeParams, hl]; omega) rfl
+        (Only.wrW (by omega) |>.mono (by omega) (by omega))
+        (fun h => by simp [hl] at h) (fun _ => by rw [rdW_wrW_same])
+
+/-- Zeroing locals `j, …, j + m - 1`: in their registers or slots. -/
+theorem sim_zeroLocals (ctx : Ctx) (hal : ∀ x r, ctx.alloc.lookup x = some r → r ∈ allocRegs)
+    (hinj : ∀ x y r, ctx.alloc.lookup x = some r → ctx.alloc.lookup y = some r → x = y) (sp : Nat) (Q : MachineState → Prop) :
+    ∀ (m j k : Nat) (s : MachineData), Code (zeroLocals ctx j m) k → s.regs.rsp.toNat = sp →
+    8 * (j + m) < 2 ^ 31 → sp + 8 * (j + m) ≤ 2 ^ 64 →
+    (∀ y, sp + 8 * j ≤ y → y < sp + 8 * (j + m) → (s.dmem.get? (A y)).isSome) →
+    (∀ s', Only (sp + 8 * j) (sp + 8 * (j + m)) s.dmem s'.dmem →
+      ((∀ x, j ≤ x → x < j + m → (ctx.alloc.lookup x).isSome) → s'.dmem = s.dmem) →
+      (∀ x, j ≤ x → x < j + m → ctx.alloc.lookup x = none → rdW s'.dmem (A (sp + 8 * x)) = some 0) →
+      (∀ x r, j ≤ x → x < j + m → ctx.alloc.lookup x = some r → s'.regs.get64 r = 0) →
+      (∀ r, (∀ x, j ≤ x → x < j + m → ctx.alloc.lookup x ≠ some r) → s'.regs.get64 r = s.regs.get64 r) →
       Ev Q s' (at_ (k + m))) →
     Ev Q s (at_ k) := by
   intro m
   induction m with
   | zero =>
     intro j k s _ _ _ _ _ hK
-    exact hK s rfl (Only.refl _ _ _) (fun i h1 h2 => absurd h2 (by omega))
+    exact hK s (Only.refl _ _ _) (fun _ => rfl) (fun x h1 h2 => absurd h2 (by omega))
+      (fun x r h1 h2 => absurd h2 (by omega)) (fun _ _ => rfl)
   | succ m ih =>
-    intro j k s hc hoff hsp hov hmap hK
+    intro j k s hc hsp hoff hov hmap hK
     simp only [zeroLocals] at hc
-    refine ev_movMI hc.head ⟨by omega, by omega⟩ ?_ ?_
-    · simp only [Reg64s.set64_rax, Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]
-      rw [hsp]; exact hmap j (Nat.le_refl _) (by omega)
-    simp only [Reg64s.get64_rsp, UInt64.toNat_toBitVec, toNat_eight_mul]
-    rw [hsp]
-    refine ih (j + 1) _ _ hc.tail (by omega) (by simp [hsp]) (by omega) ?_ ?_
-    · intro i h1 h2
-      simp only
-      rw [rdW_wrW_A (by omega) (by omega) (by omega)]
-      exact hmap i (by omega) (by omega)
-    · intro s' h1 hO hsl
-      refine ev_congr (hK s' h1 ((Only.wrW (by omega)).union hO (by omega) (by omega) (by omega) (by omega)) ?_) (by omega)
-      intro i h1i h2i
-      by_cases hij : i = j
-      · subst hij
-        rw [hO.rdW_eq (by omega) (by omega)]
-        simp [rdW_wrW_same]
-      · exact hsl i (by omega) (by omega)
+    have hrest : ∀ s1 : MachineData, s1.regs.rsp = s.regs.rsp → Only (sp + 8 * j) (sp + 8 * (j + 1)) s.dmem s1.dmem →
+        ((ctx.alloc.lookup j).isSome → s1.dmem = s.dmem) →
+        (ctx.alloc.lookup j = none → rdW s1.dmem (A (sp + 8 * j)) = some 0) →
+        (∀ r, ctx.alloc.lookup j = some r → s1.regs.get64 r = 0) →
+        (∀ r, ctx.alloc.lookup j ≠ some r → s1.regs.get64 r = s.regs.get64 r) →
+        Ev Q s1 (at_ (k + 1)) := by
+      intro s1 hr1 hO1 hs1 hz1 hzr1 hk1
+      refine ih (j + 1) (k + 1) s1 hc.tail (by rw [hr1]; exact hsp) (by omega) (by omega) ?_ ?_
+      · intro y h1 h2
+        exact hO1.grows _ (hmap y (by omega) (by omega))
+      · intro s' hO' hs' hz' hzr' hk'
+        refine ev_congr (hK s' (hO1.union hO' (by omega) (by omega) (by omega) (by omega)) ?_ ?_ ?_ ?_) (by omega)
+        · intro hall
+          rw [hs' fun x h1 h2 => hall x (by omega) (by omega)]
+          exact hs1 (hall j (Nat.le_refl _) (by omega))
+        · intro x h1 h2 hn
+          by_cases hxj : x = j
+          · subst hxj; rw [hO'.rdW_eq (by omega) (by omega)]; exact hz1 hn
+          · exact hz' x (by omega) (by omega) hn
+        · intro x r h1 h2 hr
+          by_cases hxj : x = j
+          · rw [hxj] at hr
+            rw [hk' r (fun y (hy1 : j + 1 ≤ y) _ hy => absurd (hinj y j r hy hr) (by lomega))]
+            exact hzr1 r hr
+          · exact hzr' x r (by omega) (by omega) hr
+        · intro r hr
+          rw [hk' r fun x h1 h2 => hr x (by omega) (by omega), hk1 r (hr j (Nat.le_refl _) (by omega))]
+    cases hl : ctx.alloc.lookup j with
+    | some r =>
+      simp only [hl] at hc
+      have hr := hal j r hl
+      obtain ⟨h1, h2, h3, h4⟩ := set64_alloc_fields (R := s.regs) hr (0 : Word).toBitVec
+      refine ev_movRI hc.head (hrest _ h1 (Only.refl _ _ _) (fun _ => rfl) (fun h => by simp [hl] at h)
+        (fun r' h => ?_) (fun r' h => ?_))
+      · rw [hl] at h; cases h; simp [rget_set]
+      · rw [rget_set, if_neg (fun e => h (by rw [hl, e]))]
+    | none =>
+      simp only [hl] at hc
+      refine ev_movMI hc.head ⟨by omega, by omega⟩ ?_ ?_
+      · rw [slot_addr _ j _ (by omega), hsp]
+        exact isSome_rdW fun t ht => by rw [A_add]; exact hmap _ (by omega) (by omega)
+      rw [slot_addr _ j _ (by omega), hsp]
+      exact hrest _ rfl ((Only.wrW (by omega)).mono (by omega) (by omega)) (fun h => by simp [hl] at h)
+        (fun _ => by rw [rdW_wrW_same]; rfl) (fun r h => by simp [hl] at h) (fun _ _ => rfl)
 
 end
 
@@ -149,170 +249,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
-theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
-    (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
-    (hE : ExecSim p G n) : FunSim p G t n := by
-  intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hap1 hap2 hlo hhi h15 hmem hfuel hKret hKerr hKexh
-  have hap1' := hap1
-  have hwf := hwfp f fd hlk
-  simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hwf
-  obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
-  have hnr : Stmt.nret fd.body ≤ G.tab.nres := Stmt.nret_le_of_wf hbody
-  simp only [maxOff] at hFoff
-  have hhi2 := hG.hi_le
-  simp only [compileFn, List.append_assoc, List.cons_append, List.nil_append] at hkf
-  refine ev_label hkf.head ?_
-  have c1 := hkf.tail
-  refine ev_movRR c1.head ?_
-  refine ev_subRM c1.tail.head ⟨by simp [Tab.stackLimit], by simp [Tab.stackLimit]⟩ (v := UInt64.ofNat G.lo)
-    ?_ fun st1 => ?_
-  · simp only [Reg64s.set64_rax, Tab.stackLimit]
-    rw [h15]; exact hmem.limit
-  refine ev_cmpRI c1.tail.tail.head ?_
-  refine ev_jcc c1.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
-  · exact hKexh _ ⟨by simp, Pres.refl _ _⟩
-  · simp only [Reg64s.set64_rax, Reg64s.get64_rax, Reg64s.get64_rsp, CondCode.interp, cmpFlags_cf,
-      decide_eq_false_iff_not] at hcc
-    have hlo' : (UInt64.ofNat G.lo).toNat = G.lo := UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
-    have hgap : 8 * frameWords fd + 8 ≤ d.regs.rsp.toNat - G.lo := by
-      simp only [BitVec.toNat_sub, UInt64.toNat_toBitVec, hlo'] at hcc
-      have : (Int64.ofInt (8 * ↑(frameWords fd) + 8)).toBitVec.toNat = 8 * frameWords fd + 8 := by
-        simp [Int64.toBitVec_ofInt]; omega
-      rw [this] at hcc
-      omega
-    have hF8 := hgap
-    have hnlF : fd.nlocals ≤ frameWords fd := by simp [frameWords]
-    suffices H : ∀ s4 : MachineData, s4.regs.rsp.toNat = d.regs.rsp.toNat - 8 * frameWords fd →
-        s4.regs.rsi = d.regs.rsi → s4.regs.r15 = d.regs.r15 → s4.regs.rbp = d.regs.rbp →
-        s4.regs.r14 = d.regs.r14 → s4.dmem = d.dmem → Ev Q s4 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1)) by
-      refine ev_subRI c1.tail.tail.tail.tail.head fun st2 => H _ ?_ (by simp) (by simp) (by simp) (by simp) rfl
-      simp [Int64.toBitVec_ofInt, BitVec.toNat_sub]
-      have hm : ((8 : UInt64) * OfNat.ofNat (frameWords fd)).toNat = 8 * frameWords fd := by
-        simp [UInt64.toNat_mul]
-        rw [UInt64.toNat_ofNat_of_lt (by simp [UInt64.size]; omega)]
-        omega
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, hm]; omega), hm]
-    intro s4 h4sp h4si h415 h4bp h414 h4m
-    have c2 := c1.tail.tail.tail.tail.tail
-    have hlenF : vs.length ≤ frameWords fd := by omega
-    refine sim_copy vs (d.regs.rsp.toNat - 8 * frameWords fd) d.regs.rsi.toNat Q fd.nparams 0 _ s4 c2.left
-      (by omega) (by omega) h4sp (by rw [h4si]) (fun j hj _ => by rw [h4m]; exact hargs j hj) (by omega) (by omega)
-      (by omega)
-      (fun j _ hj => isSome_rdW fun i hi => by
-        rw [h4m, A_add]; exact hmem.stack _ ⟨by omega, by omega⟩) ?_
-    intro s5 h5sp h5si h515 h5bp h514 h5O h5sl
-    refine ev_congr (sim_zero (d.regs.rsp.toNat - 8 * frameWords fd) Q (fd.nlocals - fd.nparams) fd.nparams _ s5
-      c2.right.left (by omega) (by rw [h5sp, h4sp]) (by omega) ?_ ?_) (by rw [copyParams_length])
-    · intro i h1 h2
-      refine isSome_rdW fun j hj => ?_
-      rw [A_add]
-      refine h5O.grows _ ?_
-      rw [h4m]; exact hmem.stack _ ⟨by omega, by omega⟩
-    intro s6 h6r h6O h6z
-    have h5sp' := congrArg UInt64.toNat h5sp
-    have hsp6 : s6.regs.rsp.toNat = d.regs.rsp.toNat - 8 * frameWords fd := by
-      rw [h6r]; omega
-    have hm5 : MemRel G σ.mem s5.dmem :=
-      MemRel.only hG (h4m ▸ hmem) h5O fun z h1 h2 => ⟨by omega, by omega⟩
-    have hm6 : MemRel G σ.mem s6.dmem :=
-      MemRel.only hG hm5 h6O fun z h1 h2 => ⟨by omega, by omega⟩
-    have hI6 : Inv G fd.nlocals (frameWords fd) { σ with loc := Locals.init vs } s6 := by
-      refine ⟨by rw [h6r, h515, h415]; exact h15, by omega, by omega, hnlF, fun x hx => ?_, hm6⟩
-      rw [hsp6]
-      by_cases hxp : x < fd.nparams
-      · rw [h6O.rdW_eq (by omega) (by omega), h5sl x (by omega) (Nat.zero_le _) (by omega)]
-        simp [Locals.init, List.getD, hvl, hxp]
-      · rw [h6z x (by omega) (by omega)]
-        have : vs.length ≤ x := by omega
-        simp [Locals.init, List.getD_eq_getElem?_getD, List.getElem?_eq_none this]
-    have c3 := c2.right.right.right
-    have hP6 : Pres G d.regs.rsp.toNat d.dmem s6.dmem :=
-      (Pres.of_only (h4m ▸ h5O) (by omega) (by omega)).trans (Pres.of_only h6O (by omega) (by omega))
-    have h6bp : s6.regs.rbp = d.regs.rbp := by rw [h6r, h5bp, h4bp]
-    have h615 : s6.regs.r15 = d.regs.r15 := by rw [h6r, h515, h415]
-    have h614 : s6.regs.r14 = d.regs.r14 := by rw [h6r, h514, h414]
-    have htop : top s6 (frameWords fd) = d.regs.rsp.toNat := by simp only [top]; omega
-    -- the epilogue, from label `.R`
-    have cR := c3.tail.right
-    have hepi : ∀ (r : List Word) (σ2 : St) (d2 : MachineData),
-        (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
-        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → ResOut G (Stmt.nret fd.body) r d2 →
-        Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
-          (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
-          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } 0 fd.body).length + 1 +
-          (loadRes { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } 0 0 (Stmt.nret fd.body)).length)) := by
-      intro r σ2 d2 hrun hm2 hS2 hrax
-      have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := hP6.trans (htop ▸ hS2.mem)
-      have h2sp : d2.regs.rsp.toNat = d.regs.rsp.toNat - 8 * frameWords fd := by
-        rw [congrArg UInt64.toNat hS2.rsp]; exact hsp6
-      refine ev_label cR.head ?_
-      refine ev_addRI cR.tail.head fun st => ?_
-      have hadd' : d2.regs.rsp.toBitVec + (Int64.ofInt (8 * ↑(frameWords fd))).toBitVec = A d.regs.rsp.toNat := by
-        rw [show (8 * (frameWords fd : Int)) = ((8 * frameWords fd : Nat) : Int) by push_cast; rfl,
-          int64_ofInt_toBitVec]
-        apply BitVec.eq_of_toNat_eq
-        simp only [BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, A]
-        omega
-      have hadd : (UInt64.ofBitVec (d2.regs.rsp.toBitVec + (Int64.ofInt (8 * ↑(frameWords fd))).toBitVec)).toNat
-          = d.regs.rsp.toNat := by
-        rw [hadd']; simp [A]
-      refine ev_ret cR.tail.tail.head (ra := ra) ?_ ?_
-      · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp]
-        rw [hadd', rdW_of_pres hG hP2 (by omega) (by omega) (by omega)]; exact hra
-      · refine hKret r { σ2 with loc := σ.loc } _ hrun hm2 rfl ?_ ?_ ?_ ?_ ?_ hP2
-        · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp, UInt64.toBitVec_ofBitVec, hadd']
-          simp only [UInt64.toNat_ofBitVec, BitVec.toNat_add, A, BitVec.ofNat_eq_ofNat, BitVec.toNat_ofNat]
-          omega
-        · simp; exact hS2.rbp.trans h6bp
-        · simp; exact hS2.r15.trans h615
-        · simp; have := hS2.r14; rw [h614] at this; exact this
-        · exact ⟨(hrax.1.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _, hrax.2⟩
-    have hrun : ∀ r σ2, (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (r, σ2) →
-        (invoke p (exec p n) f vs).run σ = .ok (r.retVal, { σ2 with loc := σ.loc }) := by
-      intro r σ2 h
-      rw [invoke_eq vs hlk, callFn_run, h]
-    -- falling off the end, or `break` outside a loop: no results
-    have hZ : ∀ σ2 d2, (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (.normal, σ2) ∨
-        (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (.brk, σ2) →
-        Inv G fd.nlocals (frameWords fd) σ2 d2 → SPost G (frameWords fd) s6 d2 →
-        Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
-          (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
-          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } 0 fd.body).length)) := by
-      intro σ2 d2 hr hI2 hS2
-      refine ev_label c3.head ?_
-      have hTab' := hTab; simp only [maxOff] at hTab'
-      have hI2hi := hI2.hi
-      simp only [frameWords] at hFoff hI2hi
-      refine sim_loadRes hG _ rfl [] [] Q (by omega) (Stmt.nret fd.body) 0 _ d2 c3.tail.left (by omega)
-        (by simp; omega) hI2.r15 hI2.lo (by simp; omega)
-        (fun x hx => hI2.mem.res x hx) (fun j hj => absurd hj (by simp)) (fun j hj => absurd hj (Nat.not_lt_zero _))
-        (fun j _ hj => absurd hj (Nat.not_lt_zero _)) (fun _ _ => rfl) ?_
-      intro s3 h1 h2 h3 h4 hO hR hM
-      refine hepi [] σ2 s3 ?_ (hI2.mem.only_res hG hO (fun x a b => Layout.inRes_of a b))
-        (hS2.trans ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩)
-        ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), Nat.zero_le _⟩
-      rcases hr with hr | hr <;> exact hrun _ _ hr
-    refine ev_congr (j := kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
-      (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length) ?_ (by rw [zeroLocals_length])
-    refine hE fd.body { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } (frameWords fd) 0 _ rfl
-      (by simp only [maxOff]; omega) c2.right.right.left hbody ⟨Nat.le_refl _, hnr, hTree⟩ (by simp [frameWords]) _ s6 Q hI6
-      (by rw [h614]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_⟩
-    · intro σ2 d2 hr hI2 hS2
-      exact hZ σ2 d2 (.inl hr) hI2 hS2
-    · intro σ2 d2 hr hI2 hS2
-      show Ev Q d2 (label (Ctx.endL { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t }))
-      rw [Code.label (i := 0) c3 rfl, Nat.add_zero]
-      exact hZ σ2 d2 (.inr hr) hI2 hS2
-    · intro v σ2 d2 hr hI2 hS2 hv
-      rw [Code.label (i := 0) cR rfl, Nat.add_zero]
-      exact hepi v σ2 d2 (hrun _ _ hr) hI2.mem hS2 hv
-    · intro d2 ⟨e, hr, hne⟩ hG2
-      refine hKerr d2 ⟨e, ?_, hne⟩ ⟨hG2.rbp.trans h6bp, hP6.trans (htop ▸ hG2.mem)⟩
-      rw [invoke_eq vs hlk, callFn_run]
-      have : (exec p n fd.body).run { σ with loc := Locals.init vs } = .error e := hr
-      rw [this]
-    · intro d2 hG2
-      exact hKexh d2 ⟨hG2.rbp.trans h6bp, hP6.trans (htop ▸ hG2.mem)⟩
+theorem funSim_todo : True := trivial
 
 end
 

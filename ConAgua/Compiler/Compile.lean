@@ -762,29 +762,39 @@ def allocOk (np : Nat) (al : List (Var × Reg64)) : Bool :=
   al.all (fun (x, r) => allocRegs.contains r && (np ≤ x || argRegs[x]? == some r)) &&
   nodupB (al.map (·.2)) && nodupB (al.map (·.1)) && (al.isEmpty || decide (np ≤ argRegs.length))
 
+/-- The context of the body of function `f`: a leaf keeps locals in registers (`leafAlloc`,
+used when `allocOk`). -/
+def fnCtx (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Ctx :=
+  { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
+    leaf := !Stmt.calls fd.body,
+    alloc := if !Stmt.calls fd.body && allocOk fd.nparams (leafAlloc fd) then leafAlloc fd else [] }
+
+/-- A leaf that keeps every local in a register and needs no temporaries has no frame (and no
+stack check). -/
+def frameless (ctx : Ctx) (fd : FunDecl) : Bool :=
+  ctx.leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
+    tempsS ctx.alloc ctx.nr fd.body == 0
+
+/-- A function's code between its prologue and its epilogue: parameters, zeroed locals, body,
+results. -/
+def fnBody (ctx : Ctx) (fd : FunDecl) : Program :=
+  (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
+   else copyParams 0 fd.nparams) ++
+  zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
+  compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
+
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
 return address, and the arguments are in `argRegs` (at most 6) or at `rsi`. It sets its first
-`Stmt.nret fd.body` results; `t` holds every function's count (`Prog.nrt`), for the call sites.
-A leaf that keeps every local in a register and needs no temporaries has no frame (and no stack
-check). -/
+`Stmt.nret fd.body` results; `t` holds every function's count (`Prog.nrt`), for the call sites. -/
 def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  let leaf := !Stmt.calls fd.body
-  let al := leafAlloc fd
-  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t,
-                     leaf, alloc := if leaf && allocOk fd.nparams al then al else [] }
+  let ctx := fnCtx tab t f fd
   let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  let body := (if fd.nparams ≤ argRegs.length then storeParams ctx 0 (argRegs.take fd.nparams)
-      else copyParams 0 fd.nparams) ++
-    zeroLocals ctx fd.nparams (fd.nlocals - fd.nparams) ++
-    compileS ctx 0 fd.body ++ [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL]
-  if leaf && (List.range fd.nlocals).all (fun x => (ctx.alloc.lookup x).isSome) &&
-      tempsS ctx.alloc ctx.nr fd.body == 0 then
-    [.label (fnL f)] ++ body ++ [i64 .ret]
+  if frameless ctx fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
   else
   [.label (fnL f),
    movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
-   i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ body ++
+   i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
   [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
 /-- The entry's arguments `i, i + 1, …` from the table into the registers `rs`. -/

@@ -861,7 +861,7 @@ theorem argRegs_getD_mem : ∀ i < argRegs.length, argRegs.getD i .rax ∈ alloc
 omit [Host] hG hTab in
 theorem compileFn_head (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) :
     (compileFn tab t f fd)[0]? = some (.label (fnL f)) := by
-  dsimp only [compileFn]; split <;> split <;> rfl
+  dsimp only [compileFn]; split <;> rfl
 
 /-- A call, from the state `s1` with the arguments in place: fuel, `call`, the results into the
 locals. -/
