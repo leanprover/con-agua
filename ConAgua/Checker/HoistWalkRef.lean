@@ -717,21 +717,25 @@ def BlockAt (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
   (∀ j, q.toNat ≤ j → j < c.toNat → (m.arr64 DLP)[o.toNat + j]?.getD 0 ≠ 0) ∧
   q ≤ c ∧ ∀ ci ∈ cs, ci.isTowerEntry = false
 
-/-- **`hoist_block_go` refines `usedConstsBlock`.** -/
-theorem hoistBlockGo_ok (n : Nat) :
+/-- `BlockAt` without the bound on `o + c` (the decoding bounds the words read). -/
+def BlockAt' (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
+  (∃ t, t ≤ ((m.arr64 DLP)[0]?.getD 0).toNat ∧
+    decCIs (trunc (m.arr64 DLP) t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
+  o.toNat ≠ 0 ∧
+  (∀ j, q.toNat ≤ j → j < c.toNat → (m.arr64 DLP)[o.toNat + j]?.getD 0 ≠ 0) ∧
+  q ≤ c ∧ ∀ ci ∈ cs, ci.isTowerEntry = false
+
+theorem blockGo_ok' (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k i tg ws sp o c q sp' : Word) (seen : Std.HashSet EIdx)
       (acc : Array NIdx) (cs : List IConstantInfo),
-    ArenaR m a → SeenR m seen → BlockAt m o c q cs →
+    ArenaR m a → SeenR m seen → BlockAt' m o c q cs →
     hBlockGoW n m k i tg ws sp o c q = some (sp', m') →
-    ∃ (seen' : Std.HashSet EIdx) (ns : List Word),
-      (usedConstsBlock seen acc cs).run a = .ok ((seen', acc ++ (ns.map decI).toArray), a) ∧
-      (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ SeenR m' seen' ∧
-      ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
+    WRes m m' i k tg ws sp sp' acc (usedConstsBlock seen acc cs) a := by
   intro m m' a k i tg ws sp o c q sp' seen acc cs hA hs hB hb
   induction n generalizing m sp q seen acc cs with
   | zero => rw [hBlockGoW.eq_def] at hb; cases hb
   | succ n ih =>
-    obtain ⟨⟨t, ht, hdec⟩, hoc, ho0, hptr, hqc, htow⟩ := hB
+    obtain ⟨⟨t, ht, hdec⟩, ho0, hptr, hqc, htow⟩ := hB
     by_cases hc : c ≤ q
     · rw [hBlockGoW.arm1 n m k i tg ws sp o c q hc] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
@@ -744,15 +748,15 @@ theorem hoistBlockGo_ok (n : Nat) :
     rw [hk] at hdec
     obtain ⟨pN, ci, cs', hp, hci, hdec', rfl⟩ := decCIs_succ hdec
     have ht64 : t < 2 ^ 64 := Nat.lt_of_le_of_lt ht (UInt64.toNat_lt _)
-    have hpi : (o + q).toNat = o.toNat + q.toNat := by
-      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
     obtain ⟨pw, hpw, rfl⟩ : ∃ pw, (trunc (m.arr64 DLP) t)[o.toNat + q.toNat]? = some pw ∧
         pN = pw.toNat := by
       simp only [nat?] at hp
       cases h : (trunc (m.arr64 DLP) t)[o.toNat + q.toNat]? with
       | none => rw [h] at hp; cases hp
       | some pw => rw [h] at hp; exact ⟨pw, rfl, (Option.some.inj hp).symm⟩
-    obtain ⟨hPp, -⟩ := trunc_get hpw (by omega)
+    obtain ⟨hPp, hpt⟩ := trunc_get hpw (by omega)
+    have hpi : (o + q).toNat = o.toNat + q.toNat := by
+      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
     have hpd : rdW (m.arr64 DIND) (o + q) = pw := rdW_of hpi hPp
     have hpN : 0 < pw.toNat := by
       have := hptr q.toNat (Nat.le_refl _) hqc'
@@ -784,7 +788,7 @@ theorem hoistBlockGo_ok (n : Nat) :
       have hq1 : (q + 1).toNat = q.toNat + 1 := by
         have := c.toNat_lt
         rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by simp; omega)
-      refine ih m₂ sp₂ (q + 1) seen₂ acc₂ cs' hA2 hs2 ⟨⟨t, by rw [hP]; exact ht, ?_⟩, hoc, ho0,
+      refine ih m₂ sp₂ (q + 1) seen₂ acc₂ cs' hA2 hs2 ⟨⟨t, by rw [hP]; exact ht, ?_⟩, ho0,
         fun j h1 h2 => by rw [hP]; exact hptr j (by omega) h2,
         UInt64.le_iff_toNat_le.mpr (by omega), fun ci h => htow ci (by simp [h])⟩ hb2
       rw [hP, hq1, show c.toNat - (q.toNat + 1) = c.toNat - q.toNat - 1 by omega, ← Nat.add_assoc]
@@ -823,6 +827,69 @@ theorem hoistBlockGo_ok (n : Nat) :
       | recInfo v mi rp rules => exact absurd rfl (hn v mi rp rules)
       | _ => simp only [pure_bind]; exact N
 
+/-- **`hoist_block_go` refines `usedConstsBlock`.** -/
+theorem hoistBlockGo_ok (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (k i tg ws sp o c q sp' : Word) (seen : Std.HashSet EIdx)
+      (acc : Array NIdx) (cs : List IConstantInfo),
+    ArenaR m a → SeenR m seen → BlockAt m o c q cs →
+    hBlockGoW n m k i tg ws sp o c q = some (sp', m') →
+    ∃ (seen' : Std.HashSet EIdx) (ns : List Word),
+      (usedConstsBlock seen acc cs).run a = .ok ((seen', acc ++ (ns.map decI).toArray), a) ∧
+      (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ SeenR m' seen' ∧
+      ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
+  intro m m' a k i tg ws sp o c q sp' seen acc cs hA hs hB hb
+  obtain ⟨h1, -, h3⟩ := hB
+  exact blockGo_ok' n m m' a k i tg ws sp o c q sp' seen acc cs hA hs ⟨h1, h3⟩ hb
+
+theorem toNat_rec (r : Word) (hr : r.toNat < 2 ^ 59) : (1 + 8 * r).toNat = 1 + 8 * r.toNat := by
+  rw [UInt64.toNat_add, UInt64.toNat_mul]
+  have : (1 : UInt64).toNat = 1 := rfl
+  have : (8 : UInt64).toNat = 8 := rfl
+  simp only [*]
+  rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+
+theorem rdW_dw0 (D : Array Word) (r : Word) (hr : r.toNat < 2 ^ 59) :
+    rdW D (1 + 8 * r) = dw D r.toNat 0 := by
+  simp only [rdW, dw, toNat_rec r hr, Nat.add_zero]
+
+theorem rdW_dw (D : Array Word) (r j : Word) (hr : r.toNat < 2 ^ 59) (hj : j.toNat < 8) :
+    rdW D (1 + 8 * r + j) = dw D r.toNat j.toNat := by
+  have : (1 + 8 * r + j).toNat = 1 + 8 * r.toNat + j.toNat := by
+    rw [UInt64.toNat_add, toNat_rec r hr]; exact Nat.mod_eq_of_lt (by omega)
+  simp only [rdW, dw, this]
+
+theorem seenR_clear {m : Mem} {seen : Std.HashSet EIdx} (hs : SeenR m seen)
+    (h0 : ¬ rdW (m.arr64 CTL) hsSch.cs + 2 = 0) :
+    SeenR (mclearG hsSch m) ∅ ∧ MemFrame [HSEEN] [73, 74] m (mclearG hsSch m) := by
+  refine ⟨memoRG_congr (fun x => ?_) (memoRG_clear hsSch hsSch_wf bmKey (fun _ => ()) m _ hs h0), ?_⟩
+  · rw [Std.HashMap.getElem?_empty]; exact Std.HashMap.getElem?_empty
+  · refine (mclearG_frame hsSch m).mono (by simp) ?_
+    intro x hx
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl <;> decide
+
+/-- The finish of `usedConsts`: the array of a walk from `#[]`. -/
+theorem fin_ok {m m' : Mem} {i k tg ws sp sp' : Word} {a : AState}
+    {Y : AM (Std.HashSet EIdx × Array NIdx)} (h : WRes m m' i k tg ws sp sp' #[] Y a) :
+    ∃ ns : List Word,
+      (Y >>= fun p => pure p.2).run a = .ok ((ns.map decI).toArray, a) ∧
+      (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ (∃ seen', SeenR m' seen') ∧
+      ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
+  obtain ⟨seen', ns, hY, hw, hs, mn, hn, hf⟩ := h
+  refine ⟨ns, ?_, hw, ⟨seen', hs⟩, mn, hn, hf⟩
+  rw [StateT.run_bind, hY, except_ok_bind, Array.empty_append]; rfl
+
+theorem fin2_ok {m m' : Mem} {i k tg ws sp sp' : Word} {a : AState}
+    {X : AM (Std.HashSet EIdx × Array NIdx)}
+    {G : Std.HashSet EIdx → Array NIdx → AM (Std.HashSet EIdx × Array NIdx)}
+    (h : WRes m m' i k tg ws sp sp' #[] (X >>= fun x => G x.1 x.2) a) :
+    ∃ ns : List Word,
+      (X >>= fun x => (G x.1 x.2 >>= fun p => pure p.2)).run a = .ok ((ns.map decI).toArray, a) ∧
+      (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ (∃ seen', SeenR m' seen') ∧
+      ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
+  have := fin_ok h
+  simpa only [bind_assoc] using this
+
 /-- A record the hoist can walk: an inductive block has no projection table. -/
 def WalkableDecl : IDeclaration → Prop
   | .indDecl b _ => ∀ ci ∈ b, ci.isTowerEntry = false
@@ -838,6 +905,100 @@ theorem hoistDepsOf_ok (n : Nat) :
       (IDeclaration.usedConsts d).run a = .ok ((ns.map decI).toArray, a) ∧
       (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ (∃ seen', SeenR m' seen') ∧
       ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
-  sorry
+  intro m m' a k i r tg ws sp sp' d hA ⟨seen, hs⟩ hr hD hok hwk hb
+  cases n with
+  | zero => rw [hDepsOfW.eq_def] at hb; cases hb
+  | succ n =>
+  by_cases h0 : rdW (m.arr64 CTL) hsSch.cs + 2 = 0
+  · rw [hDepsOfW.eq_def] at hb; simp [h0] at hb
+  obtain ⟨hs₀, hf₀⟩ := seenR_clear hs h0
+  have hA₀ := frame_ext' hf₀ hA
+  have hDe : (mclearG hsSch m).arr64 DECL = m.arr64 DECL := hf₀.1 _ (by decide) (by decide)
+  have e0 := rdW_dw0 (m.arr64 DECL) r hr
+  have e2 : rdW (m.arr64 DECL) (1 + 8 * r + 2) = dw (m.arr64 DECL) r.toNat 2 :=
+    rdW_dw (m.arr64 DECL) r 2 hr (by decide)
+  have e3 : rdW (m.arr64 DECL) (1 + 8 * r + 3) = dw (m.arr64 DECL) r.toNat 3 :=
+    rdW_dw (m.arr64 DECL) r 3 hr (by decide)
+  have e4 : rdW (m.arr64 DECL) (1 + 8 * r + 4) = dw (m.arr64 DECL) r.toNat 4 :=
+    rdW_dw (m.arr64 DECL) r 4 hr (by decide)
+  have e5 : rdW (m.arr64 DECL) (1 + 8 * r + 5) = dw (m.arr64 DECL) r.toNat 5 :=
+    rdW_dw (m.arr64 DECL) r 5 hr (by decide)
+  rw [hDepsOfW.eq_def] at hb
+  simp only [h0, if_false, hDe, e0, e2, e3, e4, e5] at hb
+  -- the kinds
+  have one : ∀ {c : IConstantVal}, dw (m.arr64 DECL) r.toNat 0 ≠ 6 →
+      decI (dw (m.arr64 DECL) r.toNat 4) = c.type →
+      hWalkW n (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 4) i k tg ws sp 4000000000 = some (sp', m') →
+      ∃ ns : List Word,
+        (IDeclaration.usedConsts (.axiomDecl c)).run a = .ok ((ns.map decI).toArray, a) ∧
+        (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ (∃ seen', SeenR m' seen') ∧
+        ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
+    intro c h6 hty hw
+    have W := walkOK n _ m' a _ i k tg ws sp 4000000000 sp' ∅ #[] hA₀ (hok.1 h6).2.1 hs₀ hw
+    simp only [IDeclaration.usedConsts]
+    rw [← hty]
+    exact fin_ok (wres_pre hf₀ W)
+  have two : ∀ {c : IConstantVal} {v : EIdx}, dw (m.arr64 DECL) r.toNat 0 ≠ 6 →
+      decI (dw (m.arr64 DECL) r.toNat 4) = c.type → decI (dw (m.arr64 DECL) r.toNat 5) = v →
+      hDepsOfW.k1 n k i (1 + 8 * r) tg ws
+        (hWalkW n (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 4) i k tg ws sp 4000000000) =
+        some (sp', m') →
+      ∃ ns : List Word,
+        (usedConstsGo ∅ #[] coreWalkFuel c.type >>= fun x =>
+          (usedConstsGo x.1 x.2 coreWalkFuel v >>= fun p => pure p.2)).run a =
+            .ok ((ns.map decI).toArray, a) ∧
+        (∀ w ∈ ns, w.toNat < 2 ^ 32) ∧ (∃ seen', SeenR m' seen') ∧
+        ∃ mn, notesW m i k tg ws sp ns = some (sp', mn) ∧ MemFrame [HSEEN] [73, 74] mn m' := by
+    intro c v h6 hty hv hw
+    rw [hDepsOfW.k1.eq_def] at hw
+    cases h1 : hWalkW n (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 4) i k tg ws sp 4000000000 with
+    | none => rw [h1] at hw; cases hw
+    | some pr =>
+    obtain ⟨sp₁, m₁⟩ := pr
+    rw [h1] at hw
+    simp only at hw
+    have W1 := walkOK n _ m₁ a _ i k tg ws sp 4000000000 sp₁ ∅ #[] hA₀ (hok.1 h6).2.1 hs₀ h1
+    rw [W1.arr DECL (by decide) (by decide) (by decide), hDe, e5] at hw
+    have W2 := walk_then (walkOK n) hA₀ W1 (hok.1 h6).2.2
+      (f := fun x => usedConstsGo x.1 x.2 (4000000000 : Word).toNat
+        (decE (dw (m.arr64 DECL) r.toNat 5))) (fun _ _ => rfl) hw
+    rw [← hty, ← hv]
+    exact fin2_ok (G := fun s ac => usedConstsGo s ac (4000000000 : Word).toNat
+      (decE (dw (m.arr64 DECL) r.toNat 5))) (wres_pre hf₀ W2)
+  cases d with
+  | axiomDecl cv =>
+    obtain ⟨h1, -, hty, -⟩ := hD
+    rw [if_pos h1] at hb
+    exact one (by rw [h1]; decide) hty hb
+  | defnDecl cv v hh =>
+    obtain ⟨h2, ⟨-, hty, -⟩, hv, -⟩ := hD
+    rw [if_neg (by rw [h2]; decide), if_pos (Or.inl h2)] at hb
+    exact two (by rw [h2]; decide) hty hv hb
+  | thmDecl cv v =>
+    obtain ⟨h2, ⟨-, hty, -⟩, hv⟩ := hD
+    rw [if_neg (by rw [h2]; decide), if_pos (Or.inr (Or.inl h2))] at hb
+    exact two (by rw [h2]; decide) hty hv hb
+  | opaqueDecl cv v =>
+    obtain ⟨h2, ⟨-, hty, -⟩, hv⟩ := hD
+    rw [if_neg (by rw [h2]; decide), if_pos (Or.inr (Or.inr h2))] at hb
+    exact two (by rw [h2]; decide) hty hv hb
+  | indDecl b nP =>
+    obtain ⟨h6, -, t, ht, hdec⟩ := hD
+    rw [if_neg (by rw [h6]; decide), if_neg (by rw [h6]; decide),
+      if_neg (by rw [h6]; exact fun h => h rfl)] at hb
+    obtain ⟨ho0, hptr⟩ := hok.2 h6
+    have hP : (mclearG hsSch m).arr64 DLP = m.arr64 DLP := hf₀.1 _ (by decide) (by decide)
+    have hBA : BlockAt' (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 2) (dw (m.arr64 DECL) r.toNat 3) 0 b :=
+      ⟨⟨t, by rw [hP]; exact ht, by rw [hP]; simpa using hdec⟩, ho0,
+        fun j _ hj => by rw [hP]; exact hptr j hj, UInt64.zero_le, hwk⟩
+    have W := blockGo_ok' n _ m' a k i tg ws sp _ _ 0 sp' ∅ #[] b hA₀ hs₀ hBA hb
+    simp only [IDeclaration.usedConsts]
+    exact fin_ok (wres_pre hf₀ W)
+  | basisDecl kd => exact hD.elim
+  | quotDecl qk cv =>
+    obtain ⟨h5, -, -⟩ := hD
+    rw [if_neg (by rw [h5]; decide), if_neg (by rw [h5]; decide), if_pos (by rw [h5]; decide)] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    exact ⟨[], rfl, by simp, ⟨∅, hs₀⟩, m, rfl, hf₀⟩
 
 end L.Checker
