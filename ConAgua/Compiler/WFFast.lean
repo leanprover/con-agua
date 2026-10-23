@@ -106,6 +106,46 @@ theorem progTree_spec : ∀ {p : Prog} {t : NTree}, progTree p = some t →
         have hb : (g == f) = false := by simpa using hg
         simp [hb, this]
 
+/-- Inserting a key that is not there succeeds. -/
+theorem NTree.insert_isSome {k v : Nat} : ∀ {t : NTree}, t.find k = none → (t.insert k v).isSome
+  | .leaf, _ => rfl
+  | .node l k' v' r, h => by
+    simp only [find] at h
+    simp only [insert]
+    by_cases h1 : k < k'
+    · simp only [h1, ite_true] at h ⊢; simpa using insert_isSome h
+    · by_cases h2 : k = k'
+      · simp [h2] at h
+      · simp only [h1, h2, ite_false] at h ⊢; simpa using insert_isSome h
+
+/-- With distinct names, `Prog.nrt` maps every function to its result count (`Compile.lean`). -/
+theorem Prog.nrTree_spec : ∀ {p : Prog}, (p.map (·.1)).Nodup →
+    ∃ t, Prog.nrTree p = some t ∧ ∀ f, t.find (nameCode f) = (p.lookup f).map (Stmt.nret ·.body)
+  | [], _ => ⟨.leaf, rfl, fun _ => rfl⟩
+  | (f, fd) :: p, hnd => by
+    simp only [List.map_cons, List.nodup_cons] at hnd
+    obtain ⟨t₀, h0, hf⟩ := Prog.nrTree_spec hnd.2
+    have hn : t₀.find (nameCode f) = none := by
+      rw [hf, Option.map_eq_none_iff, List.lookup_eq_none_iff]
+      intro x hx
+      have : f ≠ x.1 := fun he => hnd.1 (List.mem_map.mpr ⟨x, hx, he.symm⟩)
+      simpa using this
+    obtain ⟨t₁, h1⟩ := Option.isSome_iff_exists.mp (NTree.insert_isSome (v := Stmt.nret fd.body) hn)
+    obtain ⟨_, hf'⟩ := NTree.find_insert h1
+    refine ⟨t₁, by simp [Prog.nrTree, h0, h1], fun g => ?_⟩
+    rw [hf', hf, List.lookup_cons]
+    by_cases hg : g = f
+    · simp [hg]
+    · have : nameCode g ≠ nameCode f := fun h => hg (nameCode_inj h)
+      have hb : (g == f) = false := by simpa using hg
+      simp [hb, this]
+
+/-- `nrOf (Prog.nrt p)` gives every function's result count, if the names are distinct. -/
+theorem nrOf_nrt {p : Prog} (hnd : (p.map (·.1)).Nodup) (tab : Tab) {f : FnName} {fd : FunDecl}
+    (h : p.lookup f = some fd) : nrOf (Prog.nrt p) tab f = Stmt.nret fd.body := by
+  obtain ⟨t, ht, hf⟩ := Prog.nrTree_spec hnd
+  simp [nrOf, Prog.nrt, ht, hf, h]
+
 /-! ## The check -/
 
 /-- `Stmt.wf` with call targets looked up in the tree. -/

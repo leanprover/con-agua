@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Compiler.Correct
+public import ConAgua.Compiler.WFFast
 
 @[expose] public section
 
@@ -75,20 +76,38 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
       d (label enterL) := by
   simp only [Prog.wf_eq, Prog.wfSpec, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hwf
-  obtain ⟨⟨hfds, _⟩, hTab⟩ := hwf
+  obtain ⟨⟨hfds, hnd⟩, hTab⟩ := hwf
   have hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true :=
     fun f fd hl => hfds (f, fd) (mem_of_lookup hl)
-  have hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab f fd) kf :=
-    fun f fd hl => code_of_lookup p _ hcode.right hl
-  obtain ⟨_, hFun⟩ := execSim_all hG hTab p hwfp hProg N
+  have hcode' : Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) ++
+      compileFns G.tab (Prog.nrt p) p) k0 := hcode
+  have hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab (Prog.nrt p) f fd) kf :=
+    fun f fd hl => code_of_lookup p _ hcode'.right hl
+  have hTree : ∀ g fd, p.lookup g = some fd → nrOf (Prog.nrt p) G.tab g = Stmt.nret fd.body :=
+    fun g fd hl => nrOf_nrt hnd G.tab hl
+  obtain ⟨_, hFun⟩ := execSim_all hG hTab p hwfp (Prog.nrt p) hTree hProg N
   obtain ⟨kf, hkf⟩ := hProg entry fd hentry
   have hlF : label (fnL entry) = at_ kf := by rw [Code.label (i := 0) hkf rfl]; rfl
-  have ht := hcode.left
+  -- the entry's result count
+  have hc0 : nrOf (Prog.nrt p) G.tab entry = Stmt.nret fd.body := hTree entry fd hentry
+  have hnr : Stmt.nret fd.body ≤ G.tab.nres := by
+    have := hwfp entry fd hentry
+    simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true] at this
+    exact Stmt.nret_le_of_wf this.1.2
+  have ht0 := hcode'.left
+  rw [hc0] at ht0
+  have hz := ht0.left.right
+  have hz2 := ht0.right
+  simp only [burnFuel, List.length_append, List.length_cons, List.length_nil] at hz hz2
+  have e25 : ∀ a L : Nat, a = 25 → k0 + (a + L) = k0 + 24 + 1 + L := by intros; omega
+  rw [e25 _ _ rfl] at hz2
+  have ht := ht0
   simp only [trampoline, burnFuel, List.cons_append, List.nil_append] at ht
   have hlEnter : label enterL = at_ (k0 + 0) := Code.label (i := 0) ht rfl
-  have hlExh : label exhaustedL = at_ (k0 + 14) := Code.label (i := 14) ht rfl
-  have hlErr : label errorL = at_ (k0 + 17) := Code.label (i := 17) ht rfl
-  have hlFin : label finishL = at_ (k0 + 19) := Code.label (i := 19) ht rfl
+  have hlExh : label exhaustedL = at_ (k0 + 13) := Code.label (i := 13) ht rfl
+  have hlErr : label errorL = at_ (k0 + 16) := Code.label (i := 16) ht rfl
+  have hlFin : label finishL = at_ (k0 + 18) := Code.label (i := 18) ht rfl
+  have hlOk : label okL = at_ (k0 + 24) := Code.label (i := 24) ht rfl
   rw [hlEnter]
   -- the common exit `ca_finish`: restore the caller's stack and registers, return
   have hfin : ∀ s : MachineData, s.regs.rbp.toNat = d.regs.rsp.toNat - 24 →
@@ -99,17 +118,17 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       (s.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) s) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (at_ (k0 + 19)) := by
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (at_ (k0 + 18)) := by
     intro s hbp h15 h14 hbp' hra' hout
-    refine ev_label (Code.get (i := 19) ht rfl) ?_
-    refine ev_movRR (Code.get (i := 20) ht rfl) ?_
-    refine ev_pop (Code.get (i := 21) ht rfl) (v := d.regs.r15) ?_ ?_
+    refine ev_label (Code.get (i := 18) ht rfl) ?_
+    refine ev_movRR (Code.get (i := 19) ht rfl) ?_
+    refine ev_pop (Code.get (i := 20) ht rfl) (v := d.regs.r15) ?_ ?_
     · addr_simp; rw [hbp]; exact h15
-    refine ev_pop (Code.get (i := 22) ht rfl) (v := d.regs.r14) ?_ ?_
+    refine ev_pop (Code.get (i := 21) ht rfl) (v := d.regs.r14) ?_ ?_
     · addr_simp; rw [hbp]; exact h14
-    refine ev_pop (Code.get (i := 23) ht rfl) (v := d.regs.rbp) ?_ ?_
+    refine ev_pop (Code.get (i := 22) ht rfl) (v := d.regs.rbp) ?_ ?_
     · addr_simp; rw [hbp]; exact hbp'
-    refine ev_ret (Code.get (i := 24) ht rfl) (ra := ra) ?_ ?_
+    refine ev_ret (Code.get (i := 23) ht rfl) (ra := ra) ?_ ?_
     · addr_simp; rw [hbp]; exact hra'
     refine Eventually.done _ ⟨rfl, ?_, ?_, ?_, ?_, ?_⟩
     · addr_simp; rw [hbp]; simp only [A, BitVec.toNat_ofNat]; omega
@@ -243,9 +262,9 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (label exhaustedL) := by
     intro s hbp hdm
     rw [hlExh]
-    refine ev_label (Code.get (i := 14) ht rfl) ?_
-    refine ev_movRI (Code.get (i := 15) ht rfl) ?_
-    refine ev_jmp (Code.get (i := 16) ht rfl) ?_
+    refine ev_label (Code.get (i := 13) ht rfl) ?_
+    refine ev_movRI (Code.get (i := 14) ht rfl) ?_
+    refine ev_jmp (Code.get (i := 15) ht rfl) ?_
     exact hexit _ (by simp [hbp]) hdm (Or.inl (by simp))
   have hs8 : 8 ≤ G.hi := by omega
   refine ev_sub1 (Code.get (i := 9) ht rfl) fun st hst => ?_
@@ -340,23 +359,47 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
     · -- the entry function returned
       intro r σ' d' hinv hm' hloc hrsp' hrbp' hr15' hr14' hrax' hpres'
       simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
-      refine ev_movRI (Code.get (i := 12) ht rfl) ?_
-      refine ev_jmp (Code.get (i := 13) ht rfl) ?_
-      simp only [UInt64.toNat_mk', A_toNat] at hpres'
+      refine ev_jmp (Code.get (i := 12) ht rfl) ?_
+      rw [hlOk]
+      refine ev_label (Code.get (i := 24) ht rfl) ?_
+      simp only [UInt64.toNat_mk', A_toNat] at hpres' hrsp'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
-      rw [hsz] at hpres'
-      refine hexit _ (by simp [hrbp', h8bp]) (fun x h1 h2 => hcsS _ hpres' x h1 h2) (Or.inr ?_)
+      rw [hsz] at hpres' hrsp'
+      have hTab' := hTab; simp only [maxOff] at hTab'
+      have hlen := hrax'.2.2
+      -- zero the results past the entry's
+      refine sim_loadRes hG _ rfl [] r _ (by omega) (G.tab.nres - Stmt.nret fd.body) (Stmt.nret fd.body) _ d'
+        hz (by omega) (by simp) (by rw [hr15']; simpa using h815) (by have := hG.lo_le; omega) (by simp; omega)
+        (fun x hx => hm'.res x hx) (fun j hj => absurd hj (by simp))
+        (fun j hj hm => hrax'.1 j hj hm) (fun j h1 h2 => hrax'.2.1 j h1 h2)
+        (fun j hj => by simp only [List.getD_eq_getElem?_getD, List.getElem?_nil, Option.getD_none,
+          List.getElem?_eq_none (show r.length ≤ j by omega)]) ?_
+      intro s' q1 q2 q3 q4 hO hR hM
+      refine ev_movRI hz2.head ?_
+      refine ev_jmp hz2.tail.head ?_
+      have hres' : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+          s'.dmem.get? (A x) = d'.dmem.get? (A x) := by
+        intro x h1 h2
+        refine hO.same x (by omega) (Classical.byContradiction fun hc => ?_)
+        simp only [not_or, Nat.not_lt, Nat.not_le] at hc
+        exact (hcs x (by omega) (by omega)).2.2.2 (Layout.inRes_of hc.1 hc.2).tab
+      refine hexit _ (by simp [q2, hrbp', h8bp]) (fun x h1 h2 => by
+          rw [show ({ s' with regs := s'.regs.set64 .rdx (Int64.ofInt 0).toBitVec } : MachineData).dmem = s'.dmem
+            from rfl, hres' x h1 h2]
+          exact hcsS _ hpres' x h1 h2) (Or.inr ?_)
       have hrun : run p N entry args m = .ok (r, σ'.mem) := by simp [run, hinv, Except.map]
       rw [hrun]
-      exact ⟨by simp, ⟨hrax'.1.congr rfl rfl rfl rfl rfl rfl, hrax'.2⟩, hm'⟩
+      refine ⟨by simp, ⟨?_, fun j h1 h2 => by simpa using hM j h1 (by omega), by omega⟩,
+        hm'.only_res hG hO fun x a b => Layout.inRes_of a b⟩
+      exact ResRel.set64 (n := G.tab.nres) (fun j hj hm => hR j (by omega) hm) (Or.inr (Or.inl rfl)) _
     · -- an error
       intro d' ⟨x, hx, hne⟩ hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'
       have hsz : (A (G.hi - 8)).toNat = G.hi - 8 := by simp only [A, BitVec.toNat_ofNat]; omega
       rw [hsz] at hG'
       rw [hlErr]
-      refine ev_label (Code.get (i := 17) ht rfl) ?_
-      refine ev_movRI (Code.get (i := 18) ht rfl) ?_
+      refine ev_label (Code.get (i := 16) ht rfl) ?_
+      refine ev_movRI (Code.get (i := 17) ht rfl) ?_
       obtain ⟨w1, w2, w3, w4⟩ := hcsw _ (fun y h1 h2 => hcsS _ hG'.mem y h1 h2)
       refine hfin _ (by simp [hG'.rbp, h8bp]) w1 w2 w3 w4 (Or.inr ?_)
       have hrun : run p N entry args m = .error x := by simp [run, hx, Except.map]
