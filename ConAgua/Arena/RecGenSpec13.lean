@@ -25,15 +25,15 @@ open L.Arena
 /-! ## The models -/
 
 /-- **The model of `target_canon_params(pfo, pfl, e)`** at exec fuel `k + 1`. -/
-def tcpW (k : Nat) (m : Mem) (pfo pfl e : Word) : Option (Word × Mem) :=
-  match posRecW m [3, pfo, pfl] with
+def tcpPW (k : Nat) (m : Mem) (pfo pfl e : Word) : Option (Word × Mem) :=
+  match posRecW m [3, if pfl = 0 then 0 else pfo, pfl] with
   | none => none
   | some (f, m1) => rxW k m1 f e
 
 /-- `target_canon_params` at any exec fuel. -/
-def tcpWf : Nat → Mem → Word → Word → Word → Option (Word × Mem)
+def tcpPWf : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
-  | k + 1, m, pfo, pfl, e => tcpW k m pfo pfl e
+  | k + 1, m, pfo, pfl, e => tcpPW k m pfo pfl e
 
 mutual
 /-- **The model of `class_key_canon_go(po, pl, dO, dL, q, j)`.** -/
@@ -41,7 +41,7 @@ def ckgW : Nat → Mem → Word → Word → Word → Word → Word → Word →
   | 0, _, _, _, _, _, _, _ => none
   | k + 1, m, po, pl, dO, dL, q, j =>
     if dL ≤ j then some m
-    else ckgK k po pl dO dL q j (tcpWf k m po pl (rdW (m.arr64 IW) (dO + j)))
+    else ckgK k po pl dO dL q j (tcpPWf k m po pl (rdW (m.arr64 IW) (dO + j)))
 /-- After `target_canon_params`: write, recurse. -/
 def ckgK (k : Nat) (po pl dO dL q j : Word) : Option (Word × Mem) → Option Mem
   | none => none
@@ -52,7 +52,7 @@ section arms
 variable (k : Nat) (m m2 : Mem) (po pl dO dL q j z : Word)
 theorem ckgW_done (h : dL ≤ j) : ckgW (k + 1) m po pl dO dL q j = some m := by simp [ckgW, h]
 theorem ckgW_step (h : ¬ dL ≤ j) : ckgW (k + 1) m po pl dO dL q j =
-    ckgK k po pl dO dL q j (tcpWf k m po pl (rdW (m.arr64 IW) (dO + j))) := by simp [ckgW, h]
+    ckgK k po pl dO dL q j (tcpPWf k m po pl (rdW (m.arr64 IW) (dO + j))) := by simp [ckgW, h]
 theorem ckgK_some : ckgK k po pl dO dL q j (some (z, m2)) =
     ckgW k (m2.set64 IW (q + j) z) po pl dO dL q (j + 1) := by rw [ckgK]
 end arms
@@ -151,23 +151,23 @@ section spec
 variable {p : Prog} (L : KofProg p)
 include L
 
-theorem tcp_spec (k : Nat) (s₀ : St) (pfo pfl e : Word) :
+theorem tcpP_spec (k : Nat) (s₀ : St) (pfo pfl e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_canon_params" [pfo, pfl, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ tcpW k s₀.mem pfo pfl e = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ tcpPW k s₀.mem pfo pfl e = some (r.headD 0, s'.mem); ⊤⦄ := by
   have hrx := (rxSpec_all p L.rx k).2.2.2.2.2.2.2
   rw [invoke_eq _ L.tcp]
   simp only [callFn, targetCanonParams]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       posRec3_specW p L.rx.ha L.h3 k, hrx] <;>
-    finish (gen := 20) [tcpW]
+    finish (gen := 20) [tcpPW]
 
-theorem tcp_specF (k : Nat) (s₀ : St) (pfo pfl e : Word) :
+theorem tcpP_specF (k : Nat) (s₀ : St) (pfo pfl e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "target_canon_params" [pfo, pfl, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ tcpWf k s₀.mem pfo pfl e = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ tcpPWf k s₀.mem pfo pfl e = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases k with
   | zero => rw [invoke_eq _ L.tcp]; simp only [callFn, targetCanonParams]; vcgen [exec] <;> grind
-  | succ k => exact tcp_spec L k s₀ pfo pfl e
+  | succ k => exact tcpP_spec L k s₀ pfo pfl e
 
 theorem ckg_spec (k : Nat) : ∀ (s₀ : St) (po pl dO dL q j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "class_key_canon_go" [po, pl, dO, dL, q, j]
@@ -182,7 +182,7 @@ theorem ckg_spec (k : Nat) : ∀ (s₀ : St) (po pl dO dL q j : Word),
     simp only [callFn, classKeyCanonGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        tcp_specF L k, ih] <;>
+        tcpP_specF L k, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 theorem kc_spec (k : Nat) (s₀ : St) (po pl key : Word) :
@@ -256,14 +256,24 @@ theorem decCK_decB_of_nk {m : Mem} {k : Nat} {nk : NestKey} (h : DecB (fun m => 
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
-theorem tcpW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs : List EIdx)
-    (h : tcpW k m pfo pfl e = some (z, m')) (hS : StageR dn vis fe m a)
+theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs : List EIdx)
+    (h : tcpPW k m pfo pfl e = some (z, m')) (hS : StageR dn vis fe m a)
     (hpf : decHL m pfo.toNat pfl.toNat = some pfvs) (hpb : pfo.toNat + pfl.toNat ≤ iwTop m) (he : H e)
     (hP : PosMR m) :
     ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE z, a') ∧ H z ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ PosMR m' := by
-  unfold tcpW at h
-  cases hr1 : posRecW m [3, pfo, pfl] with
+  unfold tcpPW at h
+  -- the openers' offset as recorded: `0` for an empty slice
+  obtain ⟨po, hpo, hpf, hpb⟩ : ∃ po : Word, po = (if pfl = 0 then 0 else pfo) ∧
+      decHL m po.toNat pfl.toNat = some pfvs ∧ po.toNat + pfl.toNat ≤ iwTop m := by
+    by_cases h0 : pfl = 0
+    · subst h0
+      have hx : pfvs = [] := by simpa [decHL, hslice?] using hpf.symm
+      subst hx
+      exact ⟨0, by simp, by simp [decHL, hslice?], by simp⟩
+    · exact ⟨pfo, by simp [h0], hpf, hpb⟩
+  rw [← hpo] at h
+  cases hr1 : posRecW m [3, po, pfl] with
   | none => rw [hr1] at h; cases h
   | some p1 =>
   obtain ⟨f, m1⟩ := p1
@@ -314,15 +324,15 @@ theorem ckgW_ok (k : Nat) :
     (by rw [iwH_agree (RdS.of_grow hg0) hoj]; exact decHL_getI hds _ hjl) (by have := hg0.1; omega)
   generalize rdW (m.arr64 IW) (dO + j) = x at h hxH hxd
   cases k with
-  | zero => simp [tcpWf, ckgK] at h
+  | zero => simp [tcpPWf, ckgK] at h
   | succ k' =>
-  simp only [tcpWf] at h
-  cases htc : tcpW k' m po pl x with
+  simp only [tcpPWf] at h
+  cases htc : tcpPW k' m po pl x with
   | none => rw [htc] at h; simp [ckgK] at h
   | some p2 =>
   obtain ⟨z, m2⟩ := p2
   rw [htc, ckgK_some] at h
-  obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpW_ok dn fe vis k' m m2 a po pl x z pfvs htc hS
+  obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok dn fe vis k' m m2 a po pl x z pfvs htc hS
     (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.1; omega) hxH hP
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
@@ -605,7 +615,7 @@ include L
 /-- **`target_canon_params` refines `targetCanonParams`** (`replace_fvars` through its `mk_app_n`
 stub): the parameters a slice below the top, the walk memos well formed before and after. -/
 @[refines ConRon.Arena.targetCanonParams]
-theorem targetCanonParams_refines (k : Nat) (s₀ : St) (a₀ : AState) (pfo pfl e : Word) (pfvs : List EIdx)
+theorem targetCanonParams_refinesP (k : Nat) (s₀ : St) (a₀ : AState) (pfo pfl e : Word) (pfvs : List EIdx)
     (hS : StageR dn vis fe s₀.mem a₀) (hpf : decHL s₀.mem pfo.toNat pfl.toNat = some pfvs)
     (hpb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem) (he : H e) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_canon_params" [pfo, pfl, e]
@@ -613,9 +623,9 @@ theorem targetCanonParams_refines (k : Nat) (s₀ : St) (a₀ : AState) (pfo pfl
       decE (r.headD 0) = AM.res (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧ H (r.headD 0) ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (tcp_spec L k s₀ pfo pfl e) ?_
+  refine triple_post (tcpP_spec L k s₀ pfo pfl e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpW_ok dn fe vis k _ _ a₀ pfo pfl e _ pfvs hm hS hpf hpb he hP
+  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpPW_ok dn fe vis k _ _ a₀ pfo pfl e _ pfvs hm hS hpf hpb he hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres], hH, by rw [hst]; exact hS', hg, hP'⟩
 

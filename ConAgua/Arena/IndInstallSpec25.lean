@@ -88,7 +88,7 @@ theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 /-! ## `check_struct_proj_table` -/
 
-theorem lpsW_mfr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
+theorem lpsW_mfrT {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
     MFr [] [] m m' := by
   cases n with
   | zero => simp [lpsW] at h

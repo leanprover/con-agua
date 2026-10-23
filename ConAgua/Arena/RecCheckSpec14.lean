@@ -83,6 +83,7 @@ structure K53Look (p : Prog) : Prop where
   tkh : p.lookup "target_k53_heads" = some targetK53Heads
   tka : p.lookup "target_k53_args" = some targetK53Args
   tk : p.lookup "target_k53" = some targetK53
+  strip : StripProg p
 
 theorem eftF_spec (p : Prog) (L : RcLook p) (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erase_fvar_tys" [e]

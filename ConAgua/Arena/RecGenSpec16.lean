@@ -98,12 +98,12 @@ set_option linter.deprecated false
 
 /-! ## Frames -/
 
-theorem pinternW_mfr {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
+theorem pinternW_mfrP {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
   rw [pinternW_eq] at h
   exact MFr.of_low ⟨_, _, internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ h, by simp [paramSch, PREC, PSLOT],
     by simp [paramSch]⟩
 
-theorem plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
+theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
     MFr [] [] m m'
   | 0, _, _, _, _, _, h => by simp [plgW] at h
   | k + 1, m, m', o, l, r, h => by
@@ -125,13 +125,13 @@ theorem plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW
     by_cases hb : 4294967296 ≤ u
     · rw [plK1_big (h := hb)] at h; cases h
     rw [plK1_ok (h := hb)] at h
-    refine (pinternW_mfr h1).trans ?_
+    refine (pinternW_mfrP h1).trans ?_
     cases h2 : plgW k m1 (o + 1) (l - 1) with
     | none => rw [h2] at h; simp [plK2] at h
     | some y =>
     obtain ⟨r2, m2⟩ := y
     rw [h2, plK2_some] at h
-    refine (plgW_mfr k _ _ _ _ _ h2).trans ?_
+    refine (plgW_mfrP k _ _ _ _ _ h2).trans ?_
     cases h3 : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
     | none => rw [h3] at h; simp [plK3] at h
     | some z =>
@@ -140,7 +140,7 @@ theorem plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact consW_mfr h3
 
-theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
+theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
     MFr [] [] m m' := by
   cases k with
   | zero => simp [plW] at h
@@ -151,7 +151,7 @@ theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m
   | some x =>
   obtain ⟨r1, m1⟩ := x
   rw [h1, plK4_some] at h
-  refine (plgW_mfr k _ _ _ _ _ h1).trans ?_
+  refine (plgW_mfrP k _ _ _ _ _ h1).trans ?_
   cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
   | none => rw [h2] at h; simp [plW.plK5] at h
   | some y =>
@@ -424,7 +424,7 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
       (paramLevels_refines p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl n _ a dn
         vis fe _ _ _ hS1 hlps1 (by rw [htop1]; exact hT1) (Nat.le_of_eq htop1)) e2
     rw [hs2'] at hS2 hg2
-    exact ⟨_, _, partsRunOfOk hok, hS2, hg2, hH2, hd2, plW_mfr hW2⟩
+    exact ⟨_, _, partsRunOfOk hok, hS2, hg2, hH2, hd2, plW_mfrP hW2⟩
   rintro r2 blv m2 a2 ⟨hS2, hg2, hH2, hd2, hf2⟩
   have hg02 := hg1.trans hg2
   -- the parameter prefixes
