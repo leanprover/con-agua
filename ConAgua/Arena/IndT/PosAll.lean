@@ -176,15 +176,14 @@ theorem nbOKC_zero : NbOKC p dn vis fe env 0 := by
     simp_all [nbPosW, nbBindW, nbAppW, nbContW, nbKeyW, nbNewW, nbFrameW, nbCtorsW, nbOneW, nbWalkW, nbFieldsW]
 
 variable {dn vis fe env} in
-/-- **The block's `StageC` facts** at every exec fuel up to the core walk's. -/
+/-- **The block's `StageC` facts** at every exec fuel below `2^62` (the knot's sims'). -/
 theorem nbOKC_all (hq : KnotStageProg p) (henv : ConLeche.EnvWF env) :
-    ∀ n, n ≤ coreWalkFuel → NbOKC p dn vis fe env n
+    ∀ n, n ≤ 2 ^ 62 → NbOKC p dn vis fe env n
   | 0, _ => nbOKC_zero dn vis fe env
-  | n + 1, hk => by
+  | n + 1, hn => by
     have ih := nbOKC_all hq henv n (by omega)
-    have hn : n + 1 ≤ 2 ^ 62 := Nat.le_trans hk coreWalkFuel_le
     exact ⟨posOKC_step hq dn vis fe henv n (by omega) ih, bindOKC_step p dn vis fe henv n ih,
-      appOKC_step p dn vis fe n ih, contOKC_step p dn vis fe n hk ih, keyOKC_step p dn vis fe n ih,
+      appOKC_step p dn vis fe n ih, contOKC_step p dn vis fe n ih, keyOKC_step p dn vis fe n ih,
       newOKC_step p dn vis fe n ih, frameOKC_step hq dn vis fe henv n hn ih, ctorsOKC_step p dn vis fe env n ih,
       oneOKC_step hq dn vis fe henv n hn ih, walkOKC_step p dn vis fe henv n ih,
       fieldsOKC_step p dn vis fe henv n ih⟩
