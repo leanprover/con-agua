@@ -111,3 +111,15 @@ Census (worktree): phase 1c 62 proven / 10 written / 1 todo (545 / 616 / 625 Lea
 185 / 5 / 106 (991 / 1003 / 1305). Left in 1c: `builtinPreludeE`, the ROM interns (`internCI`,
 `internCaps`, `internRules`, `internRule`, `internFire`, `internCV`, `internCIList`,
 `internExprList`, `internExpr`: parts only), `internProjTable` (todo).
+
+### Open (front4)
+
+* Phase 1c: `builtinPreludeE` (lane `pipeline` rewrote `builtin_prelude`; its `PreludeStage`),
+  the ROM interns (`internCI`, `internCaps`, `internRules`, `internRule`, `internFire`, `internCV`,
+  `internCIList`: parts only; `internExpr`, `internExprList`: `rom_exprs_to`/`rom_pins_to` have
+  models in `Rom/PinReadSpec.lean` but no refinement against the twin's `EMemo`-keyed interning),
+  `internProjTable` (todo). Phase 0's five `written` targets are the same ROM interns
+  (`internExpr`, `internExprList`, `internCIList`) and two parts (`viewN`, `EStore.dropScratch`);
+  the con-leche hash/beq targets of phase 0 are covered once `internExpr*` are proven.
+* For `PrepareStage`: `RecOK`/`WalkableDecl` of the parsed records and the hoist memos' relation
+  must come from the front's relation (`R5`), see Landing 3.
