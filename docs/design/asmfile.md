@@ -129,8 +129,12 @@ Olean of `ConAguaAsm.Checker`: 17 MB. The file: 5.3 MB, 251 120 lines (251 094 d
   build, run `scripts/asm_file.py`, commit `asm/checker.s`. Otherwise the build fails at
   `checkerFile_eq` naming the first stale function, and `land.sh` at `asm_file.py --check`.
 * A merge conflict in `asm/checker.s`: take either side and rerun `scripts/asm_file.py`.
-* Not changed: `scripts/e2e.py` still compiles its own programs with `e2e-l asm`; it could link
-  `asm/checker.s` for the `check` entry.
+* Not changed: `scripts/e2e.py` still compiles its own programs with `e2e-l asm`. Linking
+  `asm/checker.s` is not a drop-in: e2e's program is not `checkerProg`'s code (1753 functions, no
+  stubs, a DIAG array: `nw 215`, `diag 214`, for its `missing CODE` verdicts), while the file has
+  `ca_diag = -1` and 214 word arrays. It would need e2e to run the file as a separate column.
+* Coordinator (2026-10-23): design approved; land after compproofD; PLAN.md rule added; the stub
+  check goes to lane `abi`.
 
 ## Negative tests (scratch, `_tmp/asmfile/Bad.lean`)
 
