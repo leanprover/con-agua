@@ -231,10 +231,18 @@ theorem constPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lsBlkC_spec p (exec p n),
-        growBlkG_spec p constGS CSLOT 18 rfl rfl 10 cehash (cehash_ok p) n] <;>
-      finish [cecnt, cepushOK, cepushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lsBlkC_spec p (exec p n),
+        growBlkG_spec p constGS CSLOT 18 rfl rfl 10 cehash (cehash_ok p) n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals first
+      | (rw [growIf_grow]; (focus simp only [cepushMem, cecnt, baseW, SCB]; grind [arena_grind, lang_grind]);
+          grind [arena_grind, lang_grind, cecnt, gnW, gexpW])
+      | (rw [growIf_keep]; (focus simp only [cepushMem, cecnt, baseW, SCB]; grind [arena_grind, lang_grind]);
+          grind [arena_grind, lang_grind, cecnt, gnW, gexpW])
+      | grind [arena_grind, lang_grind, cecnt, cepushOK, baseW, LocEq]
 
 end push
 

@@ -410,6 +410,7 @@ def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
+  gk := SLOT.u64[len(SLOT.u64) - 1];
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
@@ -418,7 +419,6 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, g
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
-  gk := SLOT.u64[len(SLOT.u64) - 1];
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
@@ -439,6 +439,8 @@ theorem litH_ok : HashOK p litGS 7 litH := by
     vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [litH, LocEq, St.setLoc]
 
 include hp in
+-- the memory goal of the no-growth arm (four record words) needs ~400k heartbeats
+set_option maxHeartbeats 1000000 in
 theorem litPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_push" [t, o, l, h, j]
@@ -450,10 +452,18 @@ theorem litPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n] <;>
-      finish [cnt, pushOK, pushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals first
+      | (rw [growIf_grow]; (focus simp only [pushMem, cnt, baseW, SCB]; grind [arena_grind, lang_grind]);
+          grind [arena_grind, lang_grind, cnt, gnW, gexpW])
+      | (rw [growIf_keep]; (focus simp only [pushMem, cnt, baseW, SCB]; grind [arena_grind, lang_grind]);
+          grind [arena_grind, lang_grind, cnt, gnW, gexpW])
+      | grind [arena_grind, lang_grind, cnt, pushOK, baseW, LocEq]
 
 end push
 
@@ -743,6 +753,7 @@ def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
+  gk := SLOT.u64[len(SLOT.u64) - 1];
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
@@ -751,7 +762,6 @@ def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
-  gk := SLOT.u64[len(SLOT.u64) - 1];
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
@@ -762,6 +772,8 @@ section pushStr
 variable (p : Prog) (hp : p.lookup "lit_push_str" = some litPushStr)
 
 include hp in
+-- the memory goal of the no-growth arm (four record words) needs ~400k heartbeats
+set_option maxHeartbeats 1000000 in
 theorem litPushStr_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_push_str" [t, o, l, h, j]
@@ -773,10 +785,18 @@ theorem litPushStr_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n] <;>
-      finish [cnt, pushOK, pushMemStr, baseW, growIf_grow, growIf_keep, gnW, gexpW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p litGS SLOT 2 rfl rfl 7 litH (litH_ok p) n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals first
+      | (rw [growIf_grow]; (focus simp only [pushMemStr, cnt, baseW, SCB]; grind [arena_grind, lang_grind]);
+          grind [arena_grind, lang_grind, cnt, gnW, gexpW])
+      | (rw [growIf_keep]; (focus simp only [pushMemStr, cnt, baseW, SCB]; grind [arena_grind, lang_grind]);
+          grind [arena_grind, lang_grind, cnt, gnW, gexpW])
+      | grind [arena_grind, lang_grind, cnt, pushOK, baseW, LocEq]
 
 end pushStr
 
