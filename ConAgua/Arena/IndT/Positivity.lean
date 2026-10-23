@@ -31,10 +31,10 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 section sim
-variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq henv in
+include hq hIlpf henv in
 /-- **`check_block_positivity`'s model refines `checkBlockPositivity` under `StageC`** (con-ron's
 `checkBlockPositivity_spec`'s preconditions). -/
 theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' : Mem} {a : AState}
@@ -122,7 +122,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   rw [h4, cbpK4_some] at h
   obtain ⟨s4, rfl, -, ⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ :=
     triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (nestRoot_refinesC hP.rs hq (n + 2) dn vis fe henv hn _ _ (r1.headD 0) (r1.tail.headD 0)
+    (nestRoot_refinesC hP.rs hq hIlpf (n + 2) dn vis fe henv hn _ _ (r1.headD 0) (r1.tail.headD 0)
       (r1.tail.tail.headD 0) caO caL (r3.headD 0) 0 0 c holes css {} [] hC3 (hU1.grow hg13) hhi1 hpn1
       (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
       (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
@@ -239,10 +239,10 @@ end sim
 /-! ## Census -/
 
 section census
-variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
-include hq henv in
+include hq hIlpf henv in
 /-- **`check_block_positivity` refines `checkBlockPositivity`** under `StageC` (the knot's core
 calls; con-ron's `checkBlockPositivity_spec`'s preconditions: the parts, the formers and the
 members' constructors denoted, their stored types closed, the index denoting `env`). The shape
@@ -278,7 +278,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 
       ⊤⦄ := by
   refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq henv hP n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
+  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hP n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
     hT hct
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
