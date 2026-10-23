@@ -1,4 +1,5 @@
 import ConAgua.Checker.Prog
+import ConAgua.Checker.ProgWf
 import ConAgua.Checker.PreludeSim
 import ConAgua.Compiler.WriteSetSplit
 
