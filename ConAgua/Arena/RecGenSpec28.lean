@@ -867,8 +867,8 @@ theorem cnsRec_mapM {mb mF : Mem} {S : Nat → Prop} {hi : Nat} (hg : IWGrow mb 
 
 /-- **`classes_nfs` refines `classesNfs`** (through `target_major_nfs`' contracts and stubs): the
 block's shape (`BSOK`), former types, the walk's table and the classes decoded below the tops, the
-walk memos well formed; the classes with their entries a pointer slice decoded below the tops. -/
-@[refines ConRon.Arena.classesNfs]
+walk memos well formed; the classes with their entries a pointer slice decoded below the tops.
+Under `StageR`; the census link is `classesNfs_refinesC` (`IndT/RecGen28`). -/
 theorem classesNfs_refines {p : Prog} (P : CnsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl tblo tbll mo ml : Word)
     (bs : BlockShape) (formerTys : List EIdx) (tbl : List NestCtorNf) (ms : List TargetMajor)
