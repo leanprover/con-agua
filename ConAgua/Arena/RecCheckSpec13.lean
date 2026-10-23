@@ -116,65 +116,65 @@ theorem consW_pslr {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMon
 
 /-! ## The word model -/
 
-def tcmF : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def tcmF (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl =>
-    tcmW n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl
+    tcmW cR n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl
 
 def tmnK4 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rc, m) => some ([rc.headD 0, rc.tail.headD 0], m)
 
-def tmnK3 (n : Nat) (rr : List Word) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def tmnK3 (cR : CallM) (n : Nat) (rr : List Word) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rk, m) =>
     if rk.headD 0 = 0 then some ([rr.headD 0, rr.tail.headD 0], m)
     else tmnK4 (consW n m e (rr.headD 0) (rr.tail.headD 0))
 
-def tmnK2 (n : Nat) (vis q fto ftl pfo pfl us dso dsl : Word) (rr : List Word) (m : Mem) (e : Word) :
+def tmnK2 (cR : CallM) (n : Nat) (vis q fto ftl pfo pfl us dso dsl : Word) (rr : List Word) (m : Mem) (e : Word) :
     Option Word → Option (List Word × Mem)
   | none => none
   | some hv =>
     if hv = 0 then some ([rr.headD 0, rr.tail.headD 0], m)
-    else tmnK3 n rr e (tcmF n m vis q fto ftl pfo pfl us dso dsl (rdW (m.arr64 IW) (e + 1))
+    else tmnK3 cR n rr e (tcmF cR n m vis q fto ftl pfo pfl us dso dsl (rdW (m.arr64 IW) (e + 1))
       (rdW (m.arr64 IW) (e + 2)) (rdW (m.arr64 IW) (e + 3)))
 
-def tmnK1 (n : Nat) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo : Word) :
+def tmnK1 (cR : CallM) (n : Nat) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rr, m) => tmnK2 n vis q fto ftl pfo pfl us dso dsl rr m (rdW (m.arr64 IW) nfo)
+  | some (rr, m) => tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m (rdW (m.arr64 IW) nfo)
       (chnW n m cto ctl (rdW (m.arr64 IW) (rdW (m.arr64 IW) nfo)))
 
 /-- **The model of `target_major_nfs`** (exec fuel). -/
-def tmnW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def tmnW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, q, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo, nfl =>
     if nfl = 0 then some ([0, 0], m)
-    else tmnK1 n vis q fto ftl pfo pfl us dso dsl cto ctl nfo
-      (tmnW n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1))
+    else tmnK1 cR n vis q fto ftl pfo pfl us dso dsl cto ctl nfo
+      (tmnW cR n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1))
 
 section arms
-variable (n : Nat) (m : Mem) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl e hv : Word) (rr rk rc : List Word)
+variable (cR : CallM) (n : Nat) (m : Mem) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl e hv : Word) (rr rk rc : List Word)
 theorem tmnK4_some : tmnK4 (some (rc, m)) = some ([rc.headD 0, rc.tail.headD 0], m) := rfl
-theorem tmnK3_drop (h : rk.headD 0 = 0) : tmnK3 n rr e (some (rk, m)) = some ([rr.headD 0, rr.tail.headD 0], m) := by
+theorem tmnK3_drop (h : rk.headD 0 = 0) : tmnK3 cR n rr e (some (rk, m)) = some ([rr.headD 0, rr.tail.headD 0], m) := by
   simp only [tmnK3]; rw [if_pos h]
-theorem tmnK3_keep (h : ¬ rk.headD 0 = 0) : tmnK3 n rr e (some (rk, m)) =
+theorem tmnK3_keep (h : ¬ rk.headD 0 = 0) : tmnK3 cR n rr e (some (rk, m)) =
     tmnK4 (consW n m e (rr.headD 0) (rr.tail.headD 0)) := by simp only [tmnK3]; rw [if_neg h]
-theorem tmnK2_no (h : hv = 0) : tmnK2 n vis q fto ftl pfo pfl us dso dsl rr m e (some hv) =
+theorem tmnK2_no (h : hv = 0) : tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m e (some hv) =
     some ([rr.headD 0, rr.tail.headD 0], m) := by simp only [tmnK2]; rw [if_pos h]
-theorem tmnK2_yes (h : ¬ hv = 0) : tmnK2 n vis q fto ftl pfo pfl us dso dsl rr m e (some hv) =
-    tmnK3 n rr e (tcmF n m vis q fto ftl pfo pfl us dso dsl (rdW (m.arr64 IW) (e + 1))
+theorem tmnK2_yes (h : ¬ hv = 0) : tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m e (some hv) =
+    tmnK3 cR n rr e (tcmF cR n m vis q fto ftl pfo pfl us dso dsl (rdW (m.arr64 IW) (e + 1))
       (rdW (m.arr64 IW) (e + 2)) (rdW (m.arr64 IW) (e + 3))) := by simp only [tmnK2]; rw [if_neg h]
-theorem tmnK1_some : tmnK1 n vis q fto ftl pfo pfl us dso dsl cto ctl nfo (some (rr, m)) =
-    tmnK2 n vis q fto ftl pfo pfl us dso dsl rr m (rdW (m.arr64 IW) nfo)
+theorem tmnK1_some : tmnK1 cR n vis q fto ftl pfo pfl us dso dsl cto ctl nfo (some (rr, m)) =
+    tmnK2 cR n vis q fto ftl pfo pfl us dso dsl rr m (rdW (m.arr64 IW) nfo)
       (chnW n m cto ctl (rdW (m.arr64 IW) (rdW (m.arr64 IW) nfo))) := rfl
-theorem tmnW_nil (h : nfl = 0) : tmnW (n + 1) m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some ([0, 0], m) := by
+theorem tmnW_nil (h : nfl = 0) : tmnW cR (n + 1) m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some ([0, 0], m) := by
   simp [tmnW, h]
-theorem tmnW_cons (h : ¬ nfl = 0) : tmnW (n + 1) m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl =
-    tmnK1 n vis q fto ftl pfo pfl us dso dsl cto ctl nfo
-      (tmnW n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1)) := by simp [tmnW, h]
+theorem tmnW_cons (h : ¬ nfl = 0) : tmnW cR (n + 1) m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl =
+    tmnK1 cR n vis q fto ftl pfo pfl us dso dsl cto ctl nfo
+      (tmnW cR n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1)) := by simp [tmnW, h]
 end arms
 attribute [ind_grind] tmnK4_some tmnK3_drop tmnK3_keep tmnK2_no tmnK2_yes tmnK1_some tmnW_nil tmnW_cons
 
@@ -184,22 +184,22 @@ structure TmnLook (p : Prog) : Prop where
   chn : p.lookup "ctors_have_name" = some ctorsHaveName
   tmn : p.lookup "target_major_nfs" = some targetMajorNfs
 
-theorem tcmF_spec (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St)
+theorem tcmF_spec (p : Prog) (L : TcmLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
     (vis q fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_class_match"
       [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      tcmF n s₀.mem vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, s'.mem); ⊤⦄ := by
+      tcmF cR n s₀.mem vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact targetClassMatch_spec p L n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl
+  | succ n => exact targetClassMatch_spec p L cR hcR n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl
 
-theorem tmn_spec (p : Prog) (L : TmnLook p) (n : Nat) :
+theorem tmn_spec (p : Prog) (L : TmnLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_major_nfs"
       [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo, nfl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      tmnW n s₀.mem vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some (r, s'.mem); ⊤⦄ := by
+      tmnW cR n s₀.mem vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl
@@ -210,7 +210,7 @@ theorem tmn_spec (p : Prog) (L : TmnLook p) (n : Nat) :
     simp only [callFn, targetMajorNfs]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        ctorsHaveName_spec p L.chn n, tcmF_spec p L.tcm n,
+        ctorsHaveName_spec p L.chn n, tcmF_spec p L.tcm cR hcR n,
         slCons_specW p L.tcm.ha L.tcm.ic L.tcm.sc n] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
         loc_init9, loc_init10, loc_init11, loc_init12]
@@ -222,7 +222,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem tcmF_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso dsl lvls edso edsl : Word}
     {r : List Word} {bs : BlockShape} {formerTys pfvs ds eds : List EIdx}
-    (h : tcmF n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, m'))
+    (h : tcmF stubCall n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, m'))
     (hS : StageR dn vis fe m a) (hbs : BSOK m q.toNat bs) (hus : H us) (hlv : H lvls)
     (hft : decHL m fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop m)
     (hpf : HSl0 m pfo pfl pfvs) (hds : HSl0 m dso dsl ds) (heds : HSl0 m edso edsl eds) (hP : RcMR m) :
@@ -235,7 +235,7 @@ theorem tcmF_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso ds
 theorem tmnW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso dsl cto ctl nfo nfl : Word}
     {r : List Word} {bs : BlockShape} {formerTys pfvs ds : List EIdx} {ctors : List (IConstantVal × Nat)}
     {nfs : List NestCtorNf},
-    tmnW n m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some (r, m') →
+    tmnW stubCall n m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl = some (r, m') →
     StageR dn vis fe m a → BSOK m q.toNat bs → H us →
     decHL m fto.toNat ftl.toNat = some formerTys → fto.toNat + ftl.toNat ≤ iwTop m →
     HSl0 m pfo pfl pfvs → HSl0 m dso dsl ds → PSlR decCN ctors cto ctl m → PSlR decNCN nfs nfo nfl m →
@@ -259,7 +259,7 @@ theorem tmnW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {q fto ftl pfo pfl us 
   rw [tmnW_cons (h := hl)] at h
   have hsz := hS.2.2.2.1
   obtain ⟨nf, nfs', rfl, hnf0, hnf'⟩ := hnf.uncons hl hsz
-  cases h1 : tmnW n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with
+  cases h1 : tmnW stubCall n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with
   | none => rw [h1] at h; simp [tmnK1] at h
   | some x =>
   obtain ⟨rr, m1⟩ := x
@@ -294,7 +294,7 @@ theorem tmnW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {q fto ftl pfo pfl us 
     rw [ConRon.Arena.targetMajorNfs, hrun_tail]; simp only [hf, Bool.false_eq_true, if_false]; rfl
   rw [tmnK2_yes (h := hh)] at h
   have ht : ctors.any (fun c => c.1.name == nf.ctor) = true := by rw [← hany]; simpa using hh
-  cases h3 : tcmF n m1 vis q fto ftl pfo pfl us dso dsl (rdW (m1.arr64 IW) (e + 1)) (rdW (m1.arr64 IW) (e + 2))
+  cases h3 : tcmF stubCall n m1 vis q fto ftl pfo pfl us dso dsl (rdW (m1.arr64 IW) (e + 1)) (rdW (m1.arr64 IW) (e + 2))
       (rdW (m1.arr64 IW) (e + 3)) with
   | none => rw [h3] at h; simp [tmnK3] at h
   | some x =>
@@ -349,7 +349,7 @@ theorem targetMajorNfs_refines (p : Prog) (L : TmnLook p) (n : Nat) (s₀ : St) 
         (r.headD 0) (r.tail.headD 0) s'.mem ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
-  refine triple_post (tmn_spec p L n s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl) ?_
+  refine triple_post (tmn_spec p L stubCall (stubCall_spec p) n s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl) ?_
   rintro r s' ⟨hl', hm⟩
   obtain ⟨ys, a', run, hys, hS', hg, hP'⟩ := tmnW_ok dn fe vis n hm hS hbs hus hft hftb hpf hds hct hnf hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
