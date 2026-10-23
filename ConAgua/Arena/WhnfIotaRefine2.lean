@@ -654,7 +654,7 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       · rw [hstF]; exact hS₁
       · rw [hresF]; simp [decBool]
     · rw [tsW_cont p vis T nF k m m₁ j r₁ hlt hc h0] at hL
-      obtain ⟨tbl, htbl⟩ := hpf k m a dn vis fe M eb T j r₁ m₁ hS hc h0
+      obtain ⟨tbl, htbl, -⟩ := hpf k m a dn vis fe M eb T j r₁ m₁ hS hc h0
       have hsome : AM.res (fe.findProj? (decI T) j.toNat) a = some (tbl.entry j.toNat) := by
         rw [hres]; simp only [decEntry, if_neg h0, htbl, Option.map_some]
       rw [hsome] at hrunF

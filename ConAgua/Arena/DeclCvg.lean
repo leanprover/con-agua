@@ -19,9 +19,10 @@ other than `130`.
 
 The text is a concrete program `cvgProg`: this lane's functions, lane `induct`'s library and stubs,
 and the real master callees (`pin_word`, lane `whnf`'s `lvl_eq_c` with lane `levels`'
-`lvl_eq`). A program `p` that agrees with it on the reached functions (`CvgProg p`) has the same
-write set (`closedW_of_agree`). When a stub's lane lands its function, `cvgProg` takes the real one
-and the `decide` reruns.
+`lvl_eq`). A program `p` with that text (`CvgProg p`, a `TextProg`) agrees with it on the reached
+functions but `openFns` (the core's entry points and the walks: real code in the checker, stubs
+here) and has the write set on a call-closed superset (`StepIn`; for the checker's program,
+`ConAgua/Checker/LoopDecl.lean`).
 -/
 
 open ConRon.Arena
@@ -56,28 +57,57 @@ def cvgFns : List FnName :=
    "iw_alloc", "er_copy", "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined",
    "consts_resolve_ffast", "is_def_eq_core"]
 
-set_option profiler true in
-theorem cvgProg_closed : closedA cvgProg stepA stepC cvgFns = true := by decide +kernel
+/-- **The callees the declaration texts do not fix** (lane `loopt2`): real code in the checker's
+program, stubs in the texts (`cvgProg`, `ivProg`, `armText`): the core's entry points, the walks,
+the ROM readers and the gates' leaves. Their specs come from their own refinements (or
+`stubM_spec`), never from the texts' lookups; their write set is the checker's (`StepIn`). -/
+def openFns : List FnName :=
+  ["infer_type_core", "ensure_sort_core", "is_def_eq_core", "loose_bvars_bounded_fast",
+   "has_fvar_fast", "all_level_params_defined", "is_proj_fn_shape", "nat_lit_supported", "rom_cv",
+   "rom_ci", "rom_expr_pin", "rom_basis_decls", "rom_basis_decls_a", "rom_pin_sets",
+   "consts_resolve_ffast"]
+
+/-- **`fs` lies in a call-closed function set with a step's write set** (`stepA`, `stepC`). -/
+def StepIn (p : Prog) (fs : List FnName) : Prop :=
+  ∃ F : List FnName, (∀ f ∈ fs, f ∈ F) ∧ closedA p stepA stepC F = true
+
+open Std.WP in
+open scoped Lean.Order in
+/-- A function of `fs` keeps the memory outside a step's write set (`invoke_memFrame`). -/
+theorem StepIn.memFrame {p : Prog} {fs : List FnName} (h : StepIn p fs) (n : Nat) {f : FnName}
+    (hf : f ∈ fs) (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
+    ⦃fun _ s => MemFrame stepA stepC s₀.mem s.mem ∧ s.mem.bytes = s₀.mem.bytes; ⊤⦄ :=
+  by obtain ⟨_, hF, hc⟩ := h; exact invoke_memFrame hc n (hF f hf) vs s₀
+
+/-- **A program with a text `q` on the functions `fs`**: it agrees with `q` on `fs` but
+`openFns`, and `fs` has a step's write set in it. -/
+structure TextProg (p q : Prog) (fs : List FnName) : Prop where
+  agree : ∀ f ∈ fs, f ∉ openFns → p.lookup f = q.lookup f
+  closed : StepIn p fs
 
 /-- A program with `check_value_group`'s text. -/
-def CvgProg (p : Prog) : Prop := ∀ f ∈ cvgFns, p.lookup f = cvgProg.lookup f
-
-theorem CvgProg.closed {p : Prog} (h : CvgProg p) : closedA p stepA stepC cvgFns = true :=
-  closedW_of_agree cvgProg_closed h
+structure CvgProg (p : Prog) : Prop extends TextProg p cvgProg cvgFns
 
 section lookups
 variable {p : Prog} (h : CvgProg p)
 include h
 theorem CvgProg.cvg : p.lookup "check_value_group" = some checkValueGroupL :=
-  (h _ (by decide)).trans rfl
-theorem CvgProg.reset : p.lookup "iw_reset" = some L.Ind.iwReset := (h _ (by decide)).trans rfl
-theorem CvgProg.pin : p.lookup "pin_word" = some pinWordL := (h _ (by decide)).trans rfl
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem CvgProg.reset : p.lookup "iw_reset" = some L.Ind.iwReset :=
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem CvgProg.pin : p.lookup "pin_word" = some pinWordL :=
+  (h.agree _ (by decide) (by decide)).trans rfl
 theorem CvgProg.ivg : p.lookup "install_value_guards" = some installValueGuardsL :=
-  (h _ (by decide)).trans rfl
-theorem CvgProg.lps : p.lookup "cv_lps" = some L.Ind.cvLps := (h _ (by decide)).trans rfl
-theorem CvgProg.eti : p.lookup "er_to_iw" = some L.Ind.erToIw := (h _ (by decide)).trans rfl
-theorem CvgProg.alloc : p.lookup "iw_alloc" = some L.Ind.iwAlloc := (h _ (by decide)).trans rfl
-theorem CvgProg.copy : p.lookup "er_copy" = some L.Ind.erCopy := (h _ (by decide)).trans rfl
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem CvgProg.lps : p.lookup "cv_lps" = some L.Ind.cvLps :=
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem CvgProg.eti : p.lookup "er_to_iw" = some L.Ind.erToIw :=
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem CvgProg.alloc : p.lookup "iw_alloc" = some L.Ind.iwAlloc :=
+  (h.agree _ (by decide) (by decide)).trans rfl
+theorem CvgProg.copy : p.lookup "er_copy" = some L.Ind.erCopy :=
+  (h.agree _ (by decide) (by decide)).trans rfl
 end lookups
 
 end L.Arena
