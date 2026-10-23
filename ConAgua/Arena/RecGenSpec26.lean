@@ -540,7 +540,7 @@ theorem cxoW_ok (n : Nat) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA
   obtain ⟨r1, m1⟩ := x1
   rw [c1, cxoK1_some] at h
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma n _ mo ml c) c1
+    (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na n _ mo ml c) c1
   simp only at hs1 hw1; subst hs1
   obtain ⟨tm, a1, run1, hS1, hg1, hTM⟩ := rec3TMA_sim dn vis fe n m a mo ml c ms hS hms hmsb _ hw1
   dsimp only at hS1 hg1 hTM

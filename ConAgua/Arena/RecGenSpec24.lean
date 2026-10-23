@@ -226,12 +226,12 @@ theorem cfa_spec (p : Prog) (hp : p.lookup "class_fields_agree" = some classFiel
 
 theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr [] [] m m' := by
   rw [tmdW_eq] at h
-  cases h1 : stubM "intern_nanon" m [] with
+  cases h1 : naF m [] with
   | none => rw [h1] at h; simp [tmdK1] at h
   | some x1 =>
   obtain ⟨ra, m1⟩ := x1
   rw [h1, tmdK1_some] at h
-  refine (MFr.ofStub h1).trans ?_
+  refine (MFr.of_frame (naF_frame h1) (by simp [NAREC, NASLOT]) (by simp)).trans ?_
   cases hp : pinWordV m1 52 with
   | none => rw [hp] at h; simp [tmdK2] at h
   | some ls =>
@@ -279,12 +279,12 @@ theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tm
 theorem leafAtW_mfr {m m' : Mem} {mm leaf : Word} {r : List Word} (h : leafAtW m mm leaf = some (r, m')) :
     MFr [] [] m m' := by
   simp only [leafAtW] at h
-  cases h1 : stubM "get_app_fn_f" m [CWF, leaf] with
+  cases h1 : gafF m [CWF, leaf] with
   | none => rw [h1] at h; cases h
   | some x =>
   obtain ⟨r1, m1⟩ := x
   simp only [h1] at h
-  refine (MFr.ofStub h1).trans ?_
+  refine (MFr.ofGafF h1).trans ?_
   have hm : m' = m1 := by
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
@@ -351,6 +351,8 @@ structure CfaProg (p : Prog) : Prop extends CnaProg p where
   bp : p.lookup "bvar_push" = some bvarPush
   ib : p.lookup "intern_bvar" = some internBVar
   cfa : p.lookup "class_fields_agree" = some classFieldsAgreeL
+  na : NaF p
+  ad : AdF p
 
 section rel
 variable {p : Prog} (P : CfaProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
@@ -501,7 +503,7 @@ theorem cfaW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (j i : Word),
   obtain ⟨r3, m3⟩ := x3
   rw [c3, cfaK4_some] at h
   obtain ⟨s3, hs3, -, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma k _ mo ml (UInt64.ofNat t)) c3
+    (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na k _ mo ml (UInt64.ofNat t)) c3
   simp only at hs3 hw3; subst hs3
   obtain ⟨tm, a3, run3, hS3, hg3, hTM⟩ := rec3TMA_sim dn vis fe k s2.mem a2 mo ml (UInt64.ofNat t) ms hS2
     (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg02) hmsb _ hw3
@@ -519,10 +521,10 @@ theorem cfaW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (j i : Word),
     exact hf.elim
   | succ k' =>
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (classLeafAt_refines p P.cla P.hv k' _ a3 dn vis fe (r3.headD 0) (r2.tail.tail.tail.headD 0) tm hS3 hlwH
+    (classLeafAt_refines p P.cla P.hv P.ad k' _ a3 dn vis fe (r3.headD 0) (r2.tail.tail.tail.headD 0) tm hS3 hlwH
       (hTM.get (decTM_mono _)) (decTM_lt_top hTM)) c4
   obtain ⟨s4', hs4', -, hw4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (leafAt_spec p P.cla P.hv k' _ (r3.headD 0) (r2.tail.tail.tail.headD 0)) c4
+    (leafAt_spec p P.cla P.hv P.ad k' _ (r3.headD 0) (r2.tail.tail.tail.headD 0)) c4
   simp only at hs4 hS4 hg4 hb4 hs4' hw4; subst hs4
   rw [hs4'] at hw4
   have hP4 := hP3.fr (leafAtW_mfr hw4)
