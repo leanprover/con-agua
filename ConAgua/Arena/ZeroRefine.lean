@@ -78,9 +78,6 @@ theorem zeroSch_wf : zeroSch.WF :=
 /-- Node `i` of tier `t` holds the `zero` node: trivially (there is only one `ZeroNode`). -/
 def ZRecRel (_m : Mem) (_t _i : Word) (_k : ZeroNode) : Prop := True
 
-/-- The (constant) hash of node `i` of tier `t`. -/
-def zhash (_m : Mem) (_t _i : Word) : Word := zeroHashW
-
 /-- **The state relation** of the `zero` store: the library's relation for the level store's two
 `zero` tables. -/
 def ZeroR (m : Mem) (a : AState) : Prop :=
@@ -130,12 +127,13 @@ theorem zpushMem_eq (m : Mem) (t j c : Word) :
 theorem zinternW_eq (m : Mem) :
     zinternW m = internM zeroSch m 0 (zpushOK m) [0]
       (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 0 (baseW m 0) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0)
-      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (baseW m 1) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0) := by
+      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (baseW m 1) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0)
+      zhash := by
   have e0 : ∀ x, hdW zeroSch.tag.toUInt64 0 x = zeroP + x := fun x => by
     simp [hdW, zeroSch, zeroP, LTag.zero]
   have e1 : ∀ x, hdW zeroSch.tag.toUInt64 1 x = zeroS + x := fun x => by
     simp [hdW, zeroSch, zeroS, LTag.zero]
-  simp only [zinternW, internM, zpushMem_eq, e0, e1, true_and]
+  simp only [zinternW, internM, pushM, zpushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_zero` refines `internLNode .zero` -/

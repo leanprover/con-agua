@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -40,6 +41,12 @@ namespace L.Arena
 abbrev PJREC : ArrId := 31
 /-- The `proj` cons-table slots, both tiers interleaved. -/
 abbrev PJSLOT : ArrId := 32
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def projGS : GrowSch :=
+  ⟨PJSLOT, PJREC, 3, 32, lblk (n, k, t, i, c, h) {
+    h := (((⟪fnvBasis⟫ ^ PJREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `proj` record (FNV-1a over its three words). -/
 def projHashW (n u e : Word) : Word :=
@@ -110,7 +117,7 @@ def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
-  nn := len(PJSLOT.u64) >> 1;
+  nn := PJSLOT.u64[len(PJSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), nn);
   ⟪pjfindLoop⟫;
@@ -146,7 +153,7 @@ theorem pjfindLoop_step_spec (nn : Nat) (s₀ : St) :
   Triple.step_exec (pjfindLoop_spec p (nn + 1) s₀)
 
 /-- The slot count of a tier of the `proj` table. -/
-def nSlotsPj (m : Mem) : Word := m.len64 PJSLOT >>> 1
+def nSlotsPj (m : Mem) : Word := rdW (m.arr64 PJSLOT) (m.len64 PJSLOT - 1) + SN0
 
 include hp in
 theorem projFind_spec (nn : Nat) (s₀ : St) (t n u e h : Word) :
@@ -176,8 +183,7 @@ width (3) is not a power of two, so (as for `letE`) the record-room check is sta
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (`L` has no
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
-  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC) &&
-    decide (pjcnt m t + 1 ≤ (nSlotsPj m >>> (2 : Word)) * 3)
+  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 6 ≤ m.len64 PJREC)
 
 /-- The memory after `proj_push(t, n, u, e, j)` appended node `c`. -/
 def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
@@ -185,37 +191,52 @@ def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
+def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[32 + t];
   if c >= 134217728 { abort };
   if len(PJREC.u64) < (c + 1) * 6 { abort };
-  if ((len(PJSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
+  gk := PJSLOT.u64[len(PJSLOT.u64) - 1];
   PJREC.u64[k] := n;
   PJREC.u64[k + 1] := u;
   PJREC.u64[k + 2] := e;
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def pjhash (m : Mem) (t i : Word) : Word :=
+  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
+    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
+
 section push
 variable (p : Prog) (hp : p.lookup "proj_push" = some projPush)
+
+/-- The growth's hash block computes `pjhash`. -/
+theorem pjhash_ok : HashOK p projGS 7 pjhash := by
+  intro k s₀
+  simp only [projGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [pjhash, projHashW, LocEq, St.setLoc]
 
 include hp in
 theorem projPush_spec (nn : Nat) (s₀ : St) (t n u e j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p nn) "proj_push" [t, n, u, e, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pjpushOK s₀.mem t = true ∧ r = [pjcnt s₀.mem t] ∧
-      s'.mem = pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t); ⊤⦄ := by
+      growIf PJSLOT 32 pjhash s₀.mem (pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t))
+        (pjcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, projPush]
   cases nn with
   | zero => vcgen [exec] <;> grind
   | succ nn =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [pjcnt, pjpushOK, pjpushMem, nSlotsPj, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p projGS PJSLOT 32 rfl rfl 7 pjhash (pjhash_ok p) nn] <;>
+      finish [pjcnt, pjpushOK, pjpushMem, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -246,10 +267,14 @@ def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (projS + rs₁.tail.headD 0, m)
     else if pjpushOK m 1 then
-      some (projS + pjcnt m 1, pjpushMem m 1 n u e (rs₁.tail.tail.headD 0) (pjcnt m 1))
+      match growIf PJSLOT 32 pjhash m (pjpushMem m 1 n u e (rs₁.tail.tail.headD 0) (pjcnt m 1)) (pjcnt m 1) with
+      | some m' => some (projS + pjcnt m 1, m')
+      | none => none
     else none
   else if pjpushOK m 0 then
-    some (projP + pjcnt m 0, pjpushMem m 0 n u e (rs₀.tail.tail.headD 0) (pjcnt m 0))
+    match growIf PJSLOT 32 pjhash m (pjpushMem m 0 n u e (rs₀.tail.tail.headD 0) (pjcnt m 0)) (pjcnt m 0) with
+    | some m' => some (projP + pjcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

@@ -90,9 +90,6 @@ theorem fld_sort0 (m : Mem) (t i : Word) :
 def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
   rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 SOREC) (i * 2 + t))
-
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
 tables. -/
 def SortR (m : Mem) (a : AState) : Prop :=
@@ -162,7 +159,8 @@ theorem sopushMem_eq (m : Mem) (t u j c : Word) :
 theorem sointernW_eq (m : Mem) (u : Word) :
     sointernW m u = internMD sortSch SOLP (lvlHPW m u) m (soskipW m u) (sopushOK m) [u]
       (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) := by
+      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
+      sohash := by
   have e0 : ∀ x, hdW sortSch.tag.toUInt64 0 x = sortP + x := fun x => by
     simp [hdW, sortSch, sortP, ETag.sort]
   have e1 : ∀ x, hdW sortSch.tag.toUInt64 1 x = sortS + x := fun x => by
@@ -182,11 +180,13 @@ theorem sointernW_eqK (m : Mem) (u : Word) (hctl : sortSch.ca.toNat + 2 ≤ (m.a
     sointernW m u = mkK SOLP sortSch.ca (cnt2 m sortSch.ca) (lvlHPW m u)
       (internM sortSch m (soskipW m u) (sopushOK m) [u]
         (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)) := by
+        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) sohash) := by
   rw [sointernW_eq]
-  refine internMD_mkK sortSch sortSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  refine internMD_mkK sortSch sortSch_wf _ _ _ _ _ _ _ _ sohash (by decide) (by decide)
+    (fun m k x t i => by simp only [sohash, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)])
+    hctl (fun t ht hp => ?_)
   simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  obtain ⟨⟨h1, -⟩, h2⟩ := hp
   exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by
@@ -210,7 +210,7 @@ include hR hu in
 theorem sointern_core (w : Word) (m₁ : Mem)
     (hI : internM sortSch m (soskipW m u) (sopushOK m) [u]
         (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) =
+        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) sohash =
       some (w, m₁)) :
     AM.ok (internE (.sort (decI u))) a ∧
     SortR m₁ (AM.st (internE (.sort (decI u))) a) ∧

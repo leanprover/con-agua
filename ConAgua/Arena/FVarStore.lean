@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -40,6 +41,12 @@ namespace L.Arena
 abbrev FVREC : ArrId := 25
 /-- The `fvar` cons-table slots, both tiers interleaved. -/
 abbrev FVSLOT : ArrId := 26
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def fvarGS : GrowSch :=
+  ⟨FVSLOT, FVREC, 2, 26, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ FVREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FVREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of an `fvar` record (FNV-1a over its two words). -/
 def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnvPrime
@@ -109,7 +116,7 @@ def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v, b) {
-  n := len(FVSLOT.u64) >> 1;
+  n := FVSLOT.u64[len(FVSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fvfindLoop⟫;
@@ -145,7 +152,7 @@ theorem fvfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fvfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `fvar` table. -/
-def nSlotsFv (m : Mem) : Word := m.len64 FVSLOT >>> 1
+def nSlotsFv (m : Mem) : Word := rdW (m.arr64 FVSLOT) (m.len64 FVSLOT - 1) + SN0
 
 include hp in
 theorem fvarFind_spec (n : Nat) (s₀ : St) (t u ty h : Word) :
@@ -170,11 +177,10 @@ end find
 /-- The node count of tier `t` of the `fvar` table, `CTL[26 + t]`. -/
 def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 
-/-- `fvar_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `fvar_push`'s room checks: the handle index, the record array. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
   decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 FVREC >>> (2 : Word)) &&
-    decide (fvcnt m t < m.len64 FVLP >>> (1 : Word)) &&
-    decide (fvcnt m t + 1 ≤ (nSlotsFv m >>> (2 : Word)) * 3)
+    decide (fvcnt m t < m.len64 FVLP >>> (1 : Word))
 
 /-- The memory after `fvar_push(t, u, ty, j)` appended node `c`. -/
 def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
@@ -183,39 +189,53 @@ def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
     (exprLPW m ty)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix) {
+def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪lpBlkF⟫;
   c := CTL.u64[26 + t];
   if c >= 134217728 { abort };
   if len(FVREC.u64) >> 2 <= c { abort };
   if len(FVLP.u64) >> 1 <= c { abort };
-  if ((len(FVSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
+  gk := FVSLOT.u64[len(FVSLOT.u64) - 1];
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
   FVLP.u64[c * 2 + t] := x;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG fvarGS 10⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def fvhash (m : Mem) (t i : Word) : Word :=
+  fvarHashW (rdW (m.arr64 FVREC) (i * 4 + t * 2)) (rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1))
+
 section push
 variable (p : Prog) (hp : p.lookup "fvar_push" = some fvarPush)
+
+/-- The growth's hash block computes `fvhash`. -/
+theorem fvhash_ok : HashOK p fvarGS 10 fvhash := by
+  intro k s₀
+  simp only [fvarGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [fvhash, fvarHashW, LocEq, St.setLoc]
 
 include hp in
 theorem fvarPush_spec (n : Nat) (s₀ : St) (t u ty j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "fvar_push" [t, u, ty, j]
     ⦃fun r s' => LocEq s' s₀ ∧ fvpushOK s₀.mem t = true ∧ r = [fvcnt s₀.mem t] ∧
-      s'.mem = fvpushMem s₀.mem t u ty j (fvcnt s₀.mem t); ⊤⦄ := by
+      growIf FVSLOT 26 fvhash s₀.mem (fvpushMem s₀.mem t u ty j (fvcnt s₀.mem t))
+        (fvcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, fvarPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lpBlkF_spec p (exec p n)] <;>
-      finish [fvcnt, fvpushOK, fvpushMem, nSlotsFv, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lpBlkF_spec p (exec p n),
+        growBlkG_spec p fvarGS FVSLOT 26 rfl rfl 10 fvhash (fvhash_ok p) n] <;>
+      finish [fvpushMem, fvcnt, fvpushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -246,10 +266,14 @@ def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (fvarS + rs₁.tail.headD 0, m)
     else if fvpushOK m 1 then
-      some (fvarS + fvcnt m 1, fvpushMem m 1 u ty (rs₁.tail.tail.headD 0) (fvcnt m 1))
+      match growIf FVSLOT 26 fvhash m (fvpushMem m 1 u ty (rs₁.tail.tail.headD 0) (fvcnt m 1)) (fvcnt m 1) with
+      | some m' => some (fvarS + fvcnt m 1, m')
+      | none => none
     else none
   else if fvpushOK m 0 then
-    some (fvarP + fvcnt m 0, fvpushMem m 0 u ty (rs₀.tail.tail.headD 0) (fvcnt m 0))
+    match growIf FVSLOT 26 fvhash m (fvpushMem m 0 u ty (rs₀.tail.tail.headD 0) (fvcnt m 0)) (fvcnt m 0) with
+    | some m' => some (fvarP + fvcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

@@ -1,0 +1,544 @@
+module
+
+public import ConAgua.Arena.SlotGrow
+meta import ConAgua.L.Semantics
+
+@[expose] public section
+
+/-!
+# The growth block's model and spec (lane slotgrow)
+
+The models of the loops of `growB` (`SlotGrow.lean`), each a function of the memory and the loop's
+variables that returns `none` where the L code aborts, and the spec of the block as spliced into a
+push (`growBlkG S o`): it keeps the push's own variables (below `o`) and leaves the memory
+`growM S.sa S.ca H m`, where `H m t i` is the hash the schema's `hash` block computes for node
+`i` of tier `t` (`HashOK`).
+
+The table relation's side (the growth re-registers every node, so every node is found again) is
+`StoreLib.lean`'s `storeR_growIf`.
+-/
+
+set_option experimental.vcgen true
+
+open Std.WP
+open scoped Lean.Order
+
+namespace L.Arena
+
+/-- The growth exponent of slot array `sa`: its last word. -/
+def gexpW (sa : ArrId) (m : Mem) : Word := rdW (m.arr64 sa) (m.len64 sa - 1)
+
+/-- The largest slot count the slot array `sa` can take: the largest multiple of 8 whose two tiers
+leave the last word clear. -/
+def gcapW (sa : ArrId) (m : Mem) : Word := ((m.len64 sa - 1) >>> 4) <<< 3
+
+/-- The slot count of a tier of the table with slot array `sa`. -/
+def gnW (sa : ArrId) (m : Mem) : Word := gexpW sa m + SN0
+
+/-- The probe loop: from slot `j` of tier `t` after `d` steps, the first free slot (`none`: the
+abort after `n` steps). -/
+def gprobeW (sl : Array Word) (t n j d : Word) : Option Word :=
+  if rdW sl (j * 2 + t) = 0 then some j
+  else if n ≤ d then none
+  else gprobeW sl t n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+termination_by n.toNat - d.toNat
+decreasing_by
+  have : d.toNat < n.toNat := by
+    have := ‹¬ n ≤ d›; simp only [UInt64.le_iff_toNat_le] at this; omega
+  have := n.toNat_lt
+  have : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  omega
+
+/-- The node loop: register nodes `i, …, c - 1` of tier `t` (slot base `b`) among `n` slots,
+`H` the hash of a node. -/
+def gnodesW (sa : ArrId) (H : Mem → Word → Word → Word) (n t b c i : Word) (m : Mem) :
+    Option Mem :=
+  if i < c then
+    match gprobeW (m.arr64 sa) t n (homeW (H m t i) n) 0 with
+    | none => none
+    | some j => gnodesW sa H n t b c (i + 1) (m.set64 sa (j * 2 + t) (b + i + 1))
+  else some m
+termination_by c.toNat - i.toNat
+decreasing_by
+  have : i.toNat < c.toNat := UInt64.lt_iff_toNat_lt.mp ‹i < c›
+  have := c.toNat_lt
+  have : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  omega
+
+/-- The tier loop: register the nodes of tiers `t, …, 1`. -/
+def gtiersW (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (n t : Word) (m : Mem) :
+    Option Mem :=
+  if t < 2 then
+    match gnodesW sa H n t (rdW (m.arr64 CTL) SCB * t) (rdW (m.arr64 CTL) (ca + t)) 0 m with
+    | none => none
+    | some m' => gtiersW sa ca H n (t + 1) m'
+  else some m
+termination_by 2 - t.toNat
+decreasing_by
+  have : t.toNat < 2 := UInt64.lt_iff_toNat_lt.mp ‹t < 2›
+  have : (t + 1).toNat = t.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  omega
+
+/-- Eight zero words of `sa` from `k`. -/
+def zero8 (sa : ArrId) (k : Word) (m : Mem) : Mem :=
+  (((((((m.set64 sa k 0).set64 sa (k + 1) 0).set64 sa (k + 2) 0).set64 sa (k + 3) 0).set64 sa
+    (k + 4) 0).set64 sa (k + 5) 0).set64 sa (k + 6) 0).set64 sa (k + 7) 0
+
+/-- The zero loop: the words `[k, n)` of `sa`, eight at a time. (Where `k + 8` would wrap, the
+L code's stores are out of bounds: the model stops.) -/
+def gzeroW (sa : ArrId) (n k : Word) (m : Mem) : Mem :=
+  if k < n ∧ k.toNat + 8 < 2 ^ 64 then gzeroW sa n (k + 8) (zero8 sa k m) else m
+termination_by n.toNat - k.toNat
+decreasing_by
+  have : k.toNat < n.toNat := UInt64.lt_iff_toNat_lt.mp ‹k < n ∧ _›.1
+  have : (k + 8).toNat = k.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+  omega
+
+/-- **The growth**: the memory after `growB`, `none` where it aborts. -/
+def growM (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m : Mem) : Option Mem :=
+  if (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) ≤ gnW sa m then none
+  else gtiersW sa ca H (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) 0
+    (gzeroW sa (gnW sa m * 2) 0 (m.set64 sa (m.len64 sa - 1)
+      ((if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) - SN0)))
+
+/-- **A push's tail**: from the memory `m` after the push's writes, grow if node count `c + 1`
+passes half the slot count of the memory `m₀` before them (the push reads the exponent first). -/
+def growIf (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word) :
+    Option Mem :=
+  if gnW sa m₀ < (c + 1) * 2 then growM sa ca H m else some m
+
+theorem growIf_grow (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
+    (h : gnW sa m₀ < (c + 1) * 2) : growIf sa ca H m₀ m c = growM sa ca H m := by
+  simp [growIf, h]
+
+theorem growIf_keep (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
+    (h : ¬ gnW sa m₀ < (c + 1) * 2) : growIf sa ca H m₀ m c = some m := by
+  simp [growIf, h]
+
+/-! ### The frame of the growth -/
+
+/-- From `m` to `m'` only array `sa` changes, and no size. -/
+def GFr (sa : ArrId) (m m' : Mem) : Prop :=
+  (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
+    m'.words.size = m.words.size
+
+theorem GFr.refl (sa : ArrId) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl⟩
+
+theorem GFr.trans {sa : ArrId} {m₁ m₂ m₃ : Mem} (h₁ : GFr sa m₁ m₂) (h₂ : GFr sa m₂ m₃) :
+    GFr sa m₁ m₃ :=
+  ⟨fun b hb => (h₂.1 b hb).trans (h₁.1 b hb), fun b => (h₂.2.1 b).trans (h₁.2.1 b),
+    h₂.2.2.trans h₁.2.2⟩
+
+theorem GFr.set64 (sa : ArrId) (m : Mem) (i v : Word) : GFr sa m (m.set64 sa i v) := by
+  refine ⟨fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb, fun b => ?_, Mem.words_size_set64 _ _ _ _⟩
+  by_cases h : b = sa
+  · subst h; exact Mem.size_arr64_set64 _ _ _ _
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]
+
+theorem GFr.zero8 (sa : ArrId) (k : Word) (m : Mem) : GFr sa m (zero8 sa k m) := by
+  unfold L.Arena.zero8
+  exact ((((((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans
+    (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)).trans
+    (GFr.set64 _ _ _ _) |>.trans (GFr.set64 _ _ _ _)
+
+theorem gzeroW_fr (sa : ArrId) (n k : Word) (m : Mem) : GFr sa m (gzeroW sa n k m) := by
+  fun_induction gzeroW sa n k m with
+  | case1 k m _ ih => exact (GFr.zero8 sa k m).trans ih
+  | case2 => exact GFr.refl _ _
+
+theorem gnodesW_fr (sa : ArrId) (H : Mem → Word → Word → Word) (n t b c i : Word) (m m' : Mem)
+    (h : gnodesW sa H n t b c i m = some m') : GFr sa m m' := by
+  fun_induction gnodesW sa H n t b c i m generalizing m' with
+  | case1 => simp_all
+  | case2 i m _ j _ ih => exact (GFr.set64 _ _ _ _).trans (ih _ h)
+  | case3 => simp_all; subst h; exact GFr.refl _ _
+
+theorem gtiersW_fr (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (n t : Word)
+    (m m' : Mem) (h : gtiersW sa ca H n t m = some m') : GFr sa m m' := by
+  fun_induction gtiersW sa ca H n t m generalizing m' with
+  | case1 => simp_all
+  | case2 t m _ m₁ hm ih => exact (gnodesW_fr _ _ _ _ _ _ _ _ _ hm).trans (ih _ h)
+  | case3 => simp_all; subst h; exact GFr.refl _ _
+
+/-- `growIf_grow` with the test as the push computes it (the exponent read before its writes). -/
+theorem growIf_grow' (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
+    (h : rdW (m₀.arr64 sa) (m₀.len64 sa - 1) + SN0 < (c + 1) * 2) :
+    growIf sa ca H m₀ m c = growM sa ca H m :=
+  growIf_grow sa ca H m₀ m c h
+
+theorem growIf_keep' (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
+    (h : ¬ rdW (m₀.arr64 sa) (m₀.len64 sa - 1) + SN0 < (c + 1) * 2) :
+    growIf sa ca H m₀ m c = some m :=
+  growIf_keep sa ca H m₀ m c h
+
+/-- **The growth writes only the slot array** (and keeps every size). -/
+theorem growIf_frame (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m m' : Mem)
+    (c : Word) (h : growIf sa ca H m₀ m c = some m') :
+    (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
+      m'.words.size = m.words.size := by
+  change GFr sa m m'
+  unfold growIf at h
+  split at h
+  · unfold growM at h
+    generalize (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) = N at h
+    split at h
+    · simp at h
+    · exact ((GFr.set64 _ _ _ _).trans (gzeroW_fr _ _ _ _)).trans (gtiersW_fr _ _ _ _ _ _ _ h)
+  · simp at h; subst h; exact GFr.refl _ _
+
+/-- Word stores to two different arrays commute. -/
+theorem Mem.set64_comm (m : Mem) (a b : ArrId) (i j v w : Word) (h : a ≠ b) :
+    (m.set64 a i v).set64 b j w = (m.set64 b j w).set64 a i v := by
+  have e1 : (m.set64 a i v).arr64 b = m.arr64 b := Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)
+  have e2 : (m.set64 b j w).arr64 a = m.arr64 a := Mem.arr64_set64_ne _ _ _ _ _ h
+  simp only [Mem.set64] at *
+  rw [e1, e2]
+  congr 1
+  apply Array.ext_getElem?
+  intro n
+  simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  grind
+
+/-! ### The growth commutes with a write to another array -/
+
+section
+variable (sa A : ArrId) (k x : Word) (hA : A ≠ sa)
+include hA
+
+theorem zero8_set64 (i : Word) (m : Mem) :
+    zero8 sa i (m.set64 A k x) = (zero8 sa i m).set64 A k x := by
+  simp only [zero8, Mem.set64_comm _ A sa _ _ _ _ hA]
+
+theorem gzeroW_set64 (n i : Word) (m : Mem) :
+    gzeroW sa n i (m.set64 A k x) = (gzeroW sa n i m).set64 A k x := by
+  fun_induction gzeroW sa n i m with
+  | case1 i m h ih =>
+    rw [gzeroW]; simp only [h, and_self, ↓reduceIte]; rw [zero8_set64 sa A k x hA, ih]
+  | case2 i m h => rw [gzeroW]; simp only [h, ↓reduceIte]
+
+theorem gnodesW_set64 (H : Mem → Word → Word → Word)
+    (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) (n t b c i : Word) (m : Mem) :
+    gnodesW sa H n t b c i (m.set64 A k x) = (gnodesW sa H n t b c i m).map (·.set64 A k x) := by
+  have ea : ∀ m : Mem, (m.set64 A k x).arr64 sa = m.arr64 sa :=
+    fun m => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hA)
+  fun_induction gnodesW sa H n t b c i m with
+  | case1 i m hi hp => rw [gnodesW]; simp [hi, ea, hH, hp]
+  | case2 i m hi j hp ih =>
+    rw [gnodesW]; simp only [hi, ↓reduceIte, ea, hH, hp]
+    rw [← ih, Mem.set64_comm _ A sa _ _ _ _ hA]
+  | case3 i m hi => rw [gnodesW]; simp [hi]
+
+theorem gtiersW_set64 (hAc : A ≠ CTL) (ca : Word) (H : Mem → Word → Word → Word)
+    (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) (n t : Word) (m : Mem) :
+    gtiersW sa ca H n t (m.set64 A k x) = (gtiersW sa ca H n t m).map (·.set64 A k x) := by
+  have ec : (m : Mem) → (m.set64 A k x).arr64 CTL = m.arr64 CTL :=
+    fun m => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hAc)
+  fun_induction gtiersW sa ca H n t m with
+  | case1 t m ht hn =>
+    rw [gtiersW]; simp [ht, ec, gnodesW_set64 sa A k x hA H hH, hn]
+  | case2 t m ht m' hn ih =>
+    rw [gtiersW]; simp only [ht, ↓reduceIte, ec, gnodesW_set64 sa A k x hA H hH, hn, Option.map_some]
+    exact ih
+  | case3 t m ht => rw [gtiersW]; simp [ht]
+
+end
+
+/-- **The growth commutes with a write to another array** that the hash does not read (a push's
+column write before its growth). -/
+theorem growIf_set64 (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
+    (A : ArrId) (k x : Word) (hA : A ≠ sa) (hAc : A ≠ CTL)
+    (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) :
+    growIf sa ca H m₀ (m.set64 A k x) c = (growIf sa ca H m₀ m c).map (fun m' => m'.set64 A k x) := by
+  have ea : (m.set64 A k x).arr64 sa = m.arr64 sa := Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hA)
+  have el : (m.set64 A k x).len64 sa = m.len64 sa := by simp only [Mem.len64, ea]
+  have en : gnW sa (m.set64 A k x) = gnW sa m := by simp only [gnW, gexpW, el, ea]
+  have ec : gcapW sa (m.set64 A k x) = gcapW sa m := by simp only [gcapW, el]
+  unfold growIf
+  split
+  · unfold growM
+    simp only [en, ec, el]
+    generalize (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) = N
+    split
+    · rfl
+    · rw [Mem.set64_comm _ A sa _ _ _ _ hA, gzeroW_set64 sa A k x hA,
+        gtiersW_set64 sa A k x hA hAc ca H hH]
+  · rfl
+
+/-- A word array after a store, for any array. -/
+theorem arr64_set64_any (m : Mem) (a a' : ArrId) (i v : Word) :
+    (m.set64 a i v).arr64 a' = if a = a' then (m.arr64 a).set! i.toNat v else m.arr64 a' := by
+  simp only [Mem.set64, Mem.arr64]
+  by_cases h : a = a'
+  · subst h; simp [Array.getD]
+    intro h1 h2; omega
+  · simp [h, Array.getD]
+    split
+    · rw [Array.getElem_setIfInBounds_ne]; omega
+    · rfl
+/-- After a growth and a write to another array, the memory agrees with the write alone outside
+the slot array. -/
+theorem growIf_set64_out {S : ArrId} {ca : Word} {H : Mem → Word → Word → Word} {m₀ m m₁ : Mem}
+    {c : Word} (hg : growIf S ca H m₀ m c = some m₁) (D : ArrId) (q v : Word) :
+    ∀ b, b ≠ S → (m₁.set64 D q v).arr64 b = (m.set64 D q v).arr64 b := by
+  obtain ⟨g1, -, -⟩ := growIf_frame _ _ _ _ _ _ _ hg
+  intro b hb
+  rw [arr64_set64_any, arr64_set64_any]
+  split
+  · rename_i h; subst h; rw [g1 _ hb]
+  · exact g1 b hb
+
+/-- The schema's `hash` block, spliced at `o`, sets `h` (`o + 5`) to `H m t i` (`t` at `o + 2`,
+`i` at `o + 3`) and changes nothing else. -/
+def HashOK (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word) : Prop :=
+  ∀ (k : Stmt → M Sig) (s₀ : St),
+    ⦃fun s => s = s₀⦄
+    step p k (shiftS o S.hash)
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧
+      LocEq s' (s₀.setLoc (o + 5) (H s₀.mem (s₀.loc (o + 2)) (s₀.loc (o + 3)))); ⊤⦄
+
+/-- The variables below `o` are kept. -/
+def KeepLo (o : Nat) (s s' : St) : Prop := ∀ x, x < o → s'.loc x = s.loc x
+
+theorem KeepLo.loc {o : Nat} {s s' : St} (h : KeepLo o s s') (x : Var) (hx : x < o) :
+    s'.loc x = s.loc x := h x hx
+
+grind_pattern [lang_grind] KeepLo.loc => KeepLo o s s', s'.loc x
+
+/-! ### The loops of the growth block, spliced at `o`
+
+`n, k, t, i, c, h, j, b, d` are the locals `o + 0 … o + 8`. -/
+
+/-- Every local but `x` and `y` is kept. -/
+def Keep2 (x y : Var) (s s' : St) : Prop := ∀ z, z ≠ x → z ≠ y → s'.loc z = s.loc z
+
+theorem Keep2.loc {x y : Var} {s s' : St} (h : Keep2 x y s s') (z : Var) (hx : z ≠ x) (hy : z ≠ y) :
+    s'.loc z = s.loc z := h z hx hy
+
+grind_pattern [lang_grind] Keep2.loc => Keep2 x y s s', s'.loc z
+
+theorem gprobeW_free (sl : Array Word) (t n j d : Word) (k : Nat) (hk : k = (j * 2 + t).toNat)
+    (hks : k < sl.size) (hv : sl[k] = 0) : gprobeW sl t n j d = some j := by
+  rw [gprobeW, rdW_eq sl _ k hk hks]; simp [hv]
+
+theorem gprobeW_next (sl : Array Word) (t n j d : Word) (k : Nat) (hk : k = (j * 2 + t).toNat)
+    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hd : ¬ n ≤ d) :
+    gprobeW sl t n j d = gprobeW sl t n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1) := by
+  rw [gprobeW, rdW_eq sl _ k hk hks]; simp [hv, hd]
+
+grind_pattern [arena_grind] gprobeW_free => gprobeW sl t n j d, sl[k]
+grind_pattern [arena_grind] gprobeW_next => gprobeW sl t n j d, sl[k]
+
+theorem gprobeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n (shiftS o (probeLoopB S))
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (o + 6) (o + 8) s₀ s' ∧
+      gprobeW (s₀.mem.arr64 S.sa) (s₀.loc (o + 2)) (s₀.loc o) (s₀.loc (o + 6)) (s₀.loc (o + 8)) =
+        some (s'.loc (o + 6)); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+  rw [exec, step_while (w := shiftS o (probeLoopB S)) rfl]
+  simp only [shiftS, shiftC, shiftE]
+  simp only [Nat.add_comm _ o, Nat.add_zero]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, setLoc, ld64, ih] <;> finish [Keep2]
+
+theorem gprobeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (shiftS o (probeLoopB S))
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ Keep2 (o + 6) (o + 8) s₀ s' ∧
+      gprobeW (s₀.mem.arr64 S.sa) (s₀.loc (o + 2)) (s₀.loc o) (s₀.loc (o + 6)) (s₀.loc (o + 8)) =
+        some (s'.loc (o + 6)); ⊤⦄ :=
+  Triple.step_exec (gprobeLoop_spec p S o (n + 1) s₀)
+
+section nodes
+variable (sa : ArrId) (H : Mem → Word → Word → Word) (n t b c i : Word) (m : Mem)
+
+theorem gnodesW_done (h : ¬ i < c) : gnodesW sa H n t b c i m = some m := by
+  rw [gnodesW]; simp [h]
+
+theorem gnodesW_step (sl : Array Word) (j₀ d : Word) (hi : i < c) (hsl : sl = m.arr64 sa)
+    (hj₀ : j₀ = UInt64.ofNat (((H m t i * golden) ^^^ ((H m t i * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)) (hd : d = 0) (hs : (gprobeW sl t n j₀ d).isSome) :
+    gnodesW sa H n t b c i m = gnodesW sa H n t b c (i + 1)
+      (m.set64 sa ((gprobeW sl t n j₀ d).getD 0 * 2 + t) (b + i + 1)) := by
+  subst hsl hd
+  have e0 : homeW (H m t i) n = j₀ := by rw [hj₀]; rfl
+  rw [gnodesW, e0]; simp only [hi, ↓reduceIte]
+  cases e : gprobeW (m.arr64 sa) t n j₀ 0 <;> simp_all
+
+end nodes
+
+grind_pattern [arena_grind] gnodesW_done => gnodesW sa H n t b c i m
+grind_pattern [arena_grind] gnodesW_step => gnodesW sa H n t b c i m, gprobeW sl t n j₀ d
+
+theorem gnodeLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+    (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n (shiftS o (nodeLoopB S))
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
+      s'.loc (o + 2) = s₀.loc (o + 2) ∧
+      gnodesW S.sa H (s₀.loc o) (s₀.loc (o + 2)) (s₀.loc (o + 7)) (s₀.loc (o + 4)) (s₀.loc (o + 3))
+        s₀.mem = some s'.mem; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+  rw [exec, step_while (w := shiftS o (nodeLoopB S)) rfl]
+  simp only [shiftS, shiftC, shiftE]
+  simp only [Nat.add_comm _ o, Nat.add_zero]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih, hH (exec p n), gprobeLoop_step_spec p S o n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
+    Nat.add_left_cancel_iff, Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
+  all_goals grind [lang_grind, arena_grind, KeepLo, Keep2]
+
+theorem gnodeLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+    (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (shiftS o (nodeLoopB S))
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
+      s'.loc (o + 2) = s₀.loc (o + 2) ∧
+      gnodesW S.sa H (s₀.loc o) (s₀.loc (o + 2)) (s₀.loc (o + 7)) (s₀.loc (o + 4)) (s₀.loc (o + 3))
+        s₀.mem = some s'.mem; ⊤⦄ :=
+  Triple.step_exec (gnodeLoop_spec p S o H hH (n + 1) s₀)
+
+section tiers
+variable (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (n t : Word) (m : Mem)
+
+theorem gtiersW_done (h : ¬ t < 2) : gtiersW sa ca H n t m = some m := by
+  rw [gtiersW]; simp [h]
+
+theorem gtiersW_step (b c i : Word) (ht : t < 2) (hb : b = rdW (m.arr64 CTL) SCB * t)
+    (hc : c = rdW (m.arr64 CTL) (ca + t)) (hi : i = 0) (hs : (gnodesW sa H n t b c i m).isSome) :
+    gtiersW sa ca H n t m = gtiersW sa ca H n (t + 1) ((gnodesW sa H n t b c i m).getD m) := by
+  subst hb hc hi
+  rw [gtiersW]; simp only [ht, ↓reduceIte]
+  cases e : gnodesW sa H n t (rdW (m.arr64 CTL) SCB * t) (rdW (m.arr64 CTL) (ca + t)) 0 m <;> simp_all
+
+end tiers
+
+grind_pattern [arena_grind] gtiersW_done => gtiersW sa ca H n t m
+grind_pattern [arena_grind] gtiersW_step => gtiersW sa ca H n t m, gnodesW sa H n t b c i m
+
+theorem gtierLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+    (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n (shiftS o (tierLoopB S))
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧
+      gtiersW S.sa S.ca H (s₀.loc o) (s₀.loc (o + 2)) s₀.mem = some s'.mem; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+  rw [exec, step_while (w := shiftS o (tierLoopB S)) rfl]
+  simp only [shiftS, shiftC, shiftE]
+  simp only [Nat.add_comm _ o]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih, gnodeLoop_step_spec p S o H hH n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
+    Nat.add_left_cancel_iff, Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
+  all_goals grind [lang_grind, arena_grind, KeepLo]
+
+theorem gtierLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word)
+    (hH : HashOK p S o H) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (shiftS o (tierLoopB S))
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧
+      gtiersW S.sa S.ca H (s₀.loc o) (s₀.loc (o + 2)) s₀.mem = some s'.mem; ⊤⦄ :=
+  Triple.step_exec (gtierLoop_spec p S o H hH (n + 1) s₀)
+
+section zero
+variable (sa : ArrId) (n k : Word) (m : Mem)
+
+theorem gzeroW_done (h : ¬ k < n) : gzeroW sa n k m = m := by
+  rw [gzeroW]; simp [h]
+
+theorem gzeroW_step (h : k < n) (hn : n < 18446744073709551608) :
+    gzeroW sa n k m = gzeroW sa n (k + 8) ((((((((m.set64 sa k 0).set64 sa (k + 1) 0).set64 sa
+      (k + 2) 0).set64 sa (k + 3) 0).set64 sa (k + 4) 0).set64 sa (k + 5) 0).set64 sa (k + 6) 0).set64
+      sa (k + 7) 0) := by
+  have : k.toNat + 8 < 2 ^ 64 := by
+    have := UInt64.lt_iff_toNat_lt.mp h; have := UInt64.lt_iff_toNat_lt.mp hn
+    have e : (18446744073709551608 : Word).toNat = 18446744073709551608 := rfl
+    omega
+  rw [gzeroW]; simp only [h, this, and_self, ↓reduceIte, zero8]
+
+end zero
+
+grind_pattern [arena_grind] gzeroW_done => gzeroW sa n k m
+grind_pattern [arena_grind] gzeroW_step => gzeroW sa n k m
+
+theorem gzeroLoop_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
+    (hc : s₀.loc (o + 4) < 18446744073709551608) :
+    ⦃fun s => s = s₀⦄
+    exec p n (shiftS o (zeroLoopB S))
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
+      s'.mem = gzeroW S.sa (s₀.loc (o + 4)) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+  rw [exec, step_while (w := shiftS o (zeroLoopB S)) rfl]
+  simp only [shiftS, shiftC, shiftE]
+  simp only [Nat.add_comm _ o]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, ih]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
+    Nat.left_eq_add, Nat.reduceEqDiff, ite_true, ite_false] at *)
+  all_goals grind [lang_grind, arena_grind, KeepLo]
+
+theorem gzeroLoop_step_spec (p : Prog) (S : GrowSch) (o : Nat) (n : Nat) (s₀ : St)
+    (hc : s₀.loc (o + 4) < 18446744073709551608) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (shiftS o (zeroLoopB S))
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ s'.loc o = s₀.loc o ∧
+      s'.mem = gzeroW S.sa (s₀.loc (o + 4)) (s₀.loc (o + 1)) s₀.mem; ⊤⦄ :=
+  Triple.step_exec (gzeroLoop_spec p S o (n + 1) s₀ hc)
+
+/-- The new slot count `n` when it is the cap: the old count `k` is below it, so `c = 2 k` (the
+zero loop's bound) stays below `2^64 - 8`. -/
+theorem gdbl_lt_cap (x k : Word) (h : ¬ (x >>> 4) <<< 3 ≤ k) : k * 2 < 18446744073709551608 := by
+  have hc : ((x >>> 4) <<< 3).toNat ≤ 9223372036854775800 := by
+    rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftRight]
+    have := x.toNat_lt
+    simp; omega
+  rw [UInt64.le_iff_toNat_le] at h
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul]
+  have e : (18446744073709551608 : Word).toNat = 18446744073709551608 := rfl
+  simp only [e]; simp; omega
+
+/-- The new slot count `n` when it is `2 k` (as a word): at most the cap. -/
+theorem gdbl_lt_dbl (x k : Word) (h : ¬ (x >>> 4) <<< 3 < k * 2) :
+    k * 2 < 18446744073709551608 := by
+  have hc : ((x >>> 4) <<< 3).toNat ≤ 9223372036854775800 := by
+    rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftRight]
+    have := x.toNat_lt
+    simp; omega
+  generalize (x >>> 4) <<< 3 = cap at h hc
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul] at h
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul]
+  have e : (18446744073709551608 : Word).toNat = 18446744073709551608 := rfl
+  simp only [e]; simp at h ⊢; omega
+
+theorem growM_ok (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m : Mem)
+    (h : ¬ (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) ≤ gnW sa m) :
+    growM sa ca H m = gtiersW sa ca H (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) 0
+      (gzeroW sa (gnW sa m * 2) 0 (m.set64 sa (m.len64 sa - 1)
+        ((if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) - SN0))) := by
+  rw [growM]; simp only [h, ↓reduceIte]
+
+grind_pattern [arena_grind] growM_ok => growM sa ca H m
+
+/-- **The growth block spliced at `o`**: it keeps the variables below `o`, completes normally, and
+leaves `growM`'s memory. -/
+theorem growBlkG_spec (p : Prog) (S : GrowSch) (sa : ArrId) (ca : Word) (hsa : S.sa = sa)
+    (hca : S.ca = ca) (o : Nat) (H : Mem → Word → Word → Word) (hH : HashOK p S o H) (n : Nat)
+    (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (growBlkG S o)
+    ⦃fun r s' => r = .normal ∧ KeepLo o s₀ s' ∧ growM sa ca H s₀.mem = some s'.mem; ⊤⦄ := by
+  subst hsa hca
+  unfold growBlkG
+  simp only [growB, L.Notation.blk, shiftS, shiftC, shiftE]
+  simp only [Nat.add_comm _ o, Nat.add_zero]
+  vcgen [step, evalE, evalC, setLoc, ld64, st64, gzeroLoop_step_spec p S o n,
+    gtierLoop_step_spec p S o H hH n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval, decide_eq_true_eq,
+    Nat.left_eq_add, Nat.add_eq_left, Nat.reduceEqDiff, ite_true, ite_false] at *)
+  all_goals grind [lang_grind, arena_grind, KeepLo, gnW, gexpW, gcapW, gdbl_lt_cap, gdbl_lt_dbl]
+
+end L.Arena

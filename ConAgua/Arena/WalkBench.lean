@@ -107,7 +107,7 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
   | none => false
 
 /- Not enough fuel for 50 nested applications: no answer. -/
-#guard (walkRun 40 "bb_bench" [50, 3] (walkMem 64)).isNone
-#guard (walkRun 200 "bb_bench" [50, 3] (walkMem 64)).map (·.1) == some 4
+#guard (walkRun 40 "bb_bench" [50, 3] (walkMem 128)).isNone
+#guard (walkRun 200 "bb_bench" [50, 3] (walkMem 128)).map (·.1) == some 4
 
 end L.Arena

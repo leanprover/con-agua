@@ -112,10 +112,6 @@ def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
   rdW (m.arr64 FAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
   rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def fahash (m : Mem) (t i : Word) : Word :=
-  forallHashW (rdW (m.arr64 FAREC) (i * 4 + t * 2)) (rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `forallE` store: the library's relation for the two `forallE`
 tables. -/
 def ForallR (m : Mem) (a : AState) : Prop :=
@@ -200,12 +196,13 @@ theorem fainternW_eq (m : Mem) (ty body : Word) :
       (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (baseW m 0) (nSlotsFa m)
         (homeW (forallHashW ty body) (nSlotsFa m)) 0)
       (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (baseW m 1) (nSlotsFa m)
-        (homeW (forallHashW ty body) (nSlotsFa m)) 0) := by
+        (homeW (forallHashW ty body) (nSlotsFa m)) 0)
+      fahash := by
   have e0 : ∀ x, hdW forallSch.tag.toUInt64 0 x = forallP + x := fun x => by
     simp [hdW, forallSch, forallP, ETag.forallE]
   have e1 : ∀ x, hdW forallSch.tag.toUInt64 1 x = forallS + x := fun x => by
     simp [hdW, forallSch, forallS, ETag.forallE]
-  simp only [fainternW, internM, fapushMem_eq, e0, e1]
+  simp only [fainternW, internM, pushM, fapushMem_eq, e0, e1]
   rfl
 
 /-- The L skip test is the arena's. -/

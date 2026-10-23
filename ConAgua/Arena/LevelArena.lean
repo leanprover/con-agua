@@ -70,7 +70,7 @@ theorem tier_node {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schem
   have hT : TierR S R hs m t (if t = 0 then P else Q) := by
     rcases word_le_one t ht with rfl | rfl
     · simpa using hR.2.2.1
-    · simpa using hR.2.2.2
+    · simpa using hR.2.2.2.1
   obtain ⟨hc, -, -, hrec, -⟩ := hT
   have hlt : i.toNat < (if t = 0 then P else Q).nodes.size := by
     rcases Array.getElem?_eq_some_iff.mp hx with ⟨h, -⟩; exact h

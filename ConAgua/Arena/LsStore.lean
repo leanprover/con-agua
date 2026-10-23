@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
 
@@ -41,6 +42,12 @@ namespace L.Arena
 abbrev LSREC : ArrId := 39
 /-- The level-list cons-table slots, both tiers interleaved. -/
 abbrev LSSLOT : ArrId := 40
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def lsGS : GrowSch :=
+  ⟨LSSLOT, LSREC, 3, 40, lblk (n, k, t, i, c, h) {
+    h := LSREC.u64[i * 6 + t * 3 + 2]
+  }⟩
 
 /-! ## `ls_match(t, i, o, l, h)` -/
 
@@ -139,7 +146,7 @@ def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lsFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(LSSLOT.u64) >> 1;
+  n := LSSLOT.u64[len(LSSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lsfindLoop⟫;
@@ -179,7 +186,7 @@ theorem lsfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lsfindLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier of the level-list table. -/
-def nSlotsLs (m : Mem) : Word := m.len64 LSSLOT >>> 1
+def nSlotsLs (m : Mem) : Word := rdW (m.arr64 LSSLOT) (m.len64 LSSLOT - 1) + SN0
 
 include hpe hpm hp in
 theorem lsFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -208,8 +215,7 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
   decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 6 ≤ m.len64 LSREC) &&
-    decide (lscnt m t < m.len64 LSHP >>> (1 : Word)) &&
-    decide (lscnt m t + 1 ≤ (nSlotsLs m >>> (2 : Word)) * 3)
+    decide (lscnt m t < m.len64 LSHP >>> (1 : Word))
 
 /-- The memory after `ls_push(t, o, l, h, j)` appended node `c`. -/
 def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
@@ -218,7 +224,7 @@ def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
     |>.set64 LSHP (c * 2 + t) (lsOrW m o l.toNat)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y) {
+def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   x := 0;
   q := 0;
   ⟪hpLoopLs⟫;
@@ -226,34 +232,47 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y)
   if c >= 134217728 { abort };
   if len(LSREC.u64) < (c + 1) * 6 { abort };
   if len(LSHP.u64) >> 1 <= c { abort };
-  if ((len(LSSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
+  gk := LSSLOT.u64[len(LSSLOT.u64) - 1];
   LSREC.u64[k] := o;
   LSREC.u64[k + 1] := l;
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
   LSHP.u64[c * 2 + t] := x;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG lsGS 14⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`: its word 2. -/
+def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2)
+
 section push
 variable (p : Prog) (hp : p.lookup "ls_push" = some lsPush)
+
+/-- The growth's hash block computes `lshash`. -/
+theorem lshash_ok : HashOK p lsGS 14 lshash := by
+  intro k s₀
+  simp only [lsGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lshash, LocEq, St.setLoc]
 
 include hp in
 theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_push" [t, o, l, h, j]
     ⦃fun r s' => LocEq s' s₀ ∧ lspushOK s₀.mem t = true ∧ r = [lscnt s₀.mem t] ∧
-      s'.mem = lspushMem s₀.mem t o l h j (lscnt s₀.mem t); ⊤⦄ := by
+      growIf LSSLOT 40 lshash s₀.mem (lspushMem s₀.mem t o l h j (lscnt s₀.mem t))
+        (lscnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, lsPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n] <;>
-      finish [lscnt, lspushOK, lspushMem, nSlotsLs, baseW, lsOrW_zero]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n,
+        growBlkG_spec p lsGS LSSLOT 40 rfl rfl 14 lshash (lshash_ok p) n] <;>
+      finish [lspushMem, lscnt, lspushOK, baseW, lsOrW_zero, growIf_grow', growIf_keep']
 
 end push
 
@@ -280,10 +299,14 @@ def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (lsS + rs₁.tail.headD 0, m)
     else if lspushOK m 1 then
-      some (lsS + lscnt m 1, lspushMem m 1 o l h (rs₁.tail.tail.headD 0) (lscnt m 1))
+      match growIf LSSLOT 40 lshash m (lspushMem m 1 o l h (rs₁.tail.tail.headD 0) (lscnt m 1)) (lscnt m 1) with
+      | some m' => some (lsS + lscnt m 1, m')
+      | none => none
     else none
   else if lspushOK m 0 then
-    some (lsP + lscnt m 0, lspushMem m 0 o l h (rs₀.tail.tail.headD 0) (lscnt m 0))
+    match growIf LSSLOT 40 lshash m (lspushMem m 0 o l h (rs₀.tail.tail.headD 0) (lscnt m 0)) (lscnt m 0) with
+    | some m' => some (lsP + lscnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode -/

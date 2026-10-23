@@ -81,9 +81,6 @@ theorem nanonSch_wf : nanonSch.WF :=
 /-- Node `i` of tier `t` holds the `anonymous` node: trivially (there is only one `AnonNode`). -/
 def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
 
-/-- The (constant) hash of node `i` of tier `t`. -/
-def nahash (_m : Mem) (_t _i : Word) : Word := nahashW
-
 /-- **The state relation** of the `anonymous` store: the library's relation for the name store's
 two `anonymous` tables. -/
 def NAnonR (m : Mem) (a : AState) : Prop :=
@@ -133,12 +130,13 @@ theorem napushMem_eq (m : Mem) (t j c : Word) :
 theorem nainternW_eq (m : Mem) :
     nainternW m = internM nanonSch m 0 (napushOK m) [0]
       (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (baseW m 0) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0) := by
+      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
+      nahash := by
   have e0 : ∀ x, hdW nanonSch.tag.toUInt64 0 x = naP + x := fun x => by
     simp [hdW, nanonSch, naP, NTag.anonymous]
   have e1 : ∀ x, hdW nanonSch.tag.toUInt64 1 x = naS + x := fun x => by
     simp [hdW, nanonSch, naS, NTag.anonymous]
-  simp only [nainternW, internM, napushMem_eq, e0, e1, true_and]
+  simp only [nainternW, internM, pushM, napushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_nanon` refines `internNNode .anonymous` -/

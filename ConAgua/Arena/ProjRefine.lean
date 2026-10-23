@@ -99,11 +99,6 @@ def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
   (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
   rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def pjhash (m : Mem) (t i : Word) : Word :=
-  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
-    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
-
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
 tables. -/
 def ProjR (m : Mem) (a : AState) : Prop :=
@@ -195,12 +190,13 @@ theorem pjinternW_eq (m : Mem) (n u e : Word) :
       (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (baseW m 0) (nSlotsPj m)
         (homeW (projHashW n u e) (nSlotsPj m)) 0)
       (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (baseW m 1) (nSlotsPj m)
-        (homeW (projHashW n u e) (nSlotsPj m)) 0) := by
+        (homeW (projHashW n u e) (nSlotsPj m)) 0)
+      pjhash := by
   have e0 : ∀ x, hdW projSch.tag.toUInt64 0 x = projP + x := fun x => by
     simp [hdW, projSch, projP, ETag.proj]
   have e1 : ∀ x, hdW projSch.tag.toUInt64 1 x = projS + x := fun x => by
     simp [hdW, projSch, projS, ETag.proj]
-  simp only [pjinternW, internM, pjpushMem_eq, e0, e1]
+  simp only [pjinternW, internM, pushM, pjpushMem_eq, e0, e1]
   rfl
 
 /-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/

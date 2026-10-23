@@ -60,17 +60,17 @@ theorem lvlCnt_of_arena {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Ar
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · rw [hflag]; exact Nat.le_refl _
   · exact cnt_le hR.succ.2.2.1.1 hR'.succ.2.2.1.1 hp.succs (by decide)
-  · exact cnt_le hR.succ.2.2.2.1 hR'.succ.2.2.2.1 hs.succs (by decide)
+  · exact cnt_le hR.succ.2.2.2.1.1 hR'.succ.2.2.2.1.1 hs.succs (by decide)
   · exact cnt_le hR.zero.2.2.1.1 hR'.zero.2.2.1.1 hp.zeros (by decide)
-  · exact cnt_le hR.zero.2.2.2.1 hR'.zero.2.2.2.1 hs.zeros (by decide)
+  · exact cnt_le hR.zero.2.2.2.1.1 hR'.zero.2.2.2.1.1 hs.zeros (by decide)
   · exact cnt_le hR.max.2.2.1.1 hR'.max.2.2.1.1 hp.maxs (by decide)
-  · exact cnt_le hR.max.2.2.2.1 hR'.max.2.2.2.1 hs.maxs (by decide)
+  · exact cnt_le hR.max.2.2.2.1.1 hR'.max.2.2.2.1.1 hs.maxs (by decide)
   · exact cnt_le hR.imax.2.2.1.1 hR'.imax.2.2.1.1 hp.imaxs (by decide)
-  · exact cnt_le hR.imax.2.2.2.1 hR'.imax.2.2.2.1 hs.imaxs (by decide)
+  · exact cnt_le hR.imax.2.2.2.1.1 hR'.imax.2.2.2.1.1 hs.imaxs (by decide)
   · exact cnt_le hR.param.2.2.1.1 hR'.param.2.2.1.1 hp.params (by decide)
-  · exact cnt_le hR.param.2.2.2.1 hR'.param.2.2.2.1 hs.params (by decide)
+  · exact cnt_le hR.param.2.2.2.1.1 hR'.param.2.2.2.1.1 hs.params (by decide)
   · exact cnt_le hR.ls.2.2.1.1 hR'.ls.2.2.1.1 hlp (by decide)
-  · exact cnt_le hR.ls.2.2.2.1 hR'.ls.2.2.2.1 hls (by decide)
+  · exact cnt_le hR.ls.2.2.2.1.1 hR'.ls.2.2.2.1.1 hls (by decide)
 
 /-- **A level interning grows the level tables** (a hit changes nothing, a miss is
 `LStore.intern`). -/

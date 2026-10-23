@@ -80,19 +80,19 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
   · by_cases hon : a.store.lss.ls.scratchOn = true
     · simp only [hon, ↓reduceIte] at hf
       cases v <;> simp only [LTables.find?, Tbl.find?] at hf
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.zero.2.2.2 (by decide) (by decide) hf
+      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.zero.2.2.2.1 (by decide) (by decide) hf
         simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, zeroSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.succ.2.2.2 (by decide) (by decide) hf
+      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.succ.2.2.2.1 (by decide) (by decide) hf
         simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, succSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.max.2.2.2 (by decide) (by decide) hf
+      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.max.2.2.2.1 (by decide) (by decide) hf
         simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, maxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.imax.2.2.2 (by decide) (by decide) hf
+      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.imax.2.2.2.1 (by decide) (by decide) hf
         simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
-      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.param.2.2.2 (by decide) (by decide) hf
+      · obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.param.2.2.2.1 (by decide) (by decide) hf
         simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
     · simp [hon] at hf
@@ -274,7 +274,7 @@ theorem lsview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LsNodeView}
     simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch]
   · by_cases hon : a.store.lss.scratchOn = true
     · simp only [hon, ↓reduceIte, LsTables.find?, Tbl.find?] at hf
-      obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.ls.2.2.2 (by decide) (by decide) hf
+      obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.ls.2.2.2.1 (by decide) (by decide) hf
       simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch, hon]
     · simp [hon] at hf
 
