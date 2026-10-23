@@ -2,6 +2,7 @@ import ConAgua.Arena.IndInstallSpec37
 import ConAgua.Arena.IndRealIpo
 import ConAgua.Arena.IndPartsSpec15
 import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.IndRealBph2
 import ConAgua.Census.Attr
 
 /-!
@@ -22,11 +23,10 @@ refinements:
 `ShapeCV` (the members' constant records within `EREC`) follows from the record's decoding below
 the tops (`shapeCV_of_decB`).
 
+`basis_pin_hit` refines `basisPinHit` by `basisPinHitL`'s proof (`IndRealBph2.basisPinHit_ok`).
+
 **Pending program facts** (hypotheses here, to be discharged):
 
-* `BphOK p`: `basis_pin_hit` refines `basisPinHit`. Its L code exists (`Checker/Entry.lean`); the
-  proof is a loop model over `rom_basis_decls`, the name pre-filter, `er_to_iw` and
-  `canon_eq_list` (`canonEqList_refines`).
 * `PartsOK p`: `block_parts`' record also satisfies what the recursor stage takes as input.
   That is `ShapeLp`, the parameter count's word below `2^63`, and `IW`'s size below `2^63`.
   These are the same facts `PassGrcOK` asks of the pass.
@@ -127,20 +127,6 @@ end model
 
 /-! ## The pending program facts -/
 
-/-- **`basis_pin_hit(off, len)` refines `basisPinHit`** (pending: the L function exists,
-`Checker/Entry.lean`'s `basisPinHitL`; its proof is open). Its result is `(0, _)` for `none`, and
-`(≠ 0, k)` with `k < 4` the kind's word for `some`. -/
-def BphOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
-    (o l : Word) (blk : List IConstantInfo) (r : List Word),
-    StageR dn vis fe m a → ConRon.Bridge.StateOK a →
-    DecB (fun m => decEBlk dn m o.toNat l.toNat) m blk →
-    callW p n "basis_pin_hit" [o, l] m = some (r, m') →
-    ∃ x a', (basisPinHit blk).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-      match x with
-      | none => r.headD 0 = 0
-      | some k => r.headD 0 ≠ 0 ∧ (r.tail.headD 0).toNat < 4 ∧ basisOfW (r.tail.headD 0).toNat = k
-
 /-- **`block_parts`' record satisfies the recursor stage's input facts** (pending). These are the
 members' constructors' level-parameter slices in `EREC` (`ShapeLp`), the parameter count's word
 below `2^63` when the declared count is, and the pool's size below `2^63`. -/
@@ -235,13 +221,15 @@ structure CidProg (p : Prog) : Prop where
   ipo : p.lookup "ind_params_ok" = some L.Checker.indParamsOkL
   parts : IndPartsProg5 p
   cb : CbProg p
+  bph : BphProg p
 
 /-- **`check_ind_decl`'s model refines the `.indDecl` arm of `checkDecl`** at the stage relation.
 Inputs: the block's `EREC` slice decoded below the tops, the twin state well formed (`StateOK`,
 for the basis pin's canonical comparison), the declared parameter count below `2^63`, an
 environment whose entries are visible and whose constructors' sums are words, and the walk
 memos (`CidMemos`). Program facts: the lookups (`CidProg`), the write sets, `AbsKeep` of the
-callees outside the `abstract1` cascade, and the pending `PassGrcOK`, `BphOK`, `PartsOK`. -/
+callees outside the `abstract1` cascade, and the pending `PassGrcOK` and `PartsOK`. -/
+@[refines_part ConRon.Arena.checkDecl "the inductive arm (check_ind_decl), under StageR"]
 theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
@@ -250,7 +238,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (hclC : closedA p cidFreeA cidFreeC fsC = true)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
-    (hkr : AbsKeep p "block_raw_rec") (hgp : PassGrcOK p) (hbph : BphOK p) (hpo : PartsOK p)
+    (hkr : AbsKeep p "block_raw_rec") (hgp : PassGrcOK p) (hpo : PartsOK p)
     {n : Nat} (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {o l w : Word} {r : List Word} {block : List IConstantInfo}
@@ -271,7 +259,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [c1, cidK1_some] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hx⟩ := hbph n dn vis fe m m1 a o l block r1 hS hok hblk c1
+  obtain ⟨x, a1, hrun1, hS1, hg1, hx⟩ := basisPinHit_ok P.bph n dn vis fe m m1 a o l block r1 hS hok hblk c1
   have hM1 := hM.call hclC (hfC _ (by simp [cidFrameCallees])) c1
   have hblk1 := hblk.grow (decEBlk_mono _ _ _) hg1
   cases x with
@@ -288,7 +276,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
       (checkBasisDecl_refines p P.basis P.canon P.rom P.pa P.cbd n ⟨m1, Locals.init []⟩ a1 dn hdn fe
         vis (r1.tail.headD 0) (by omega) hS1
-        (fun e => absurd (congrArg UInt64.toNat e) (by simp; omega))) c2
+        (fun e => absurd hk4 (by rw [e]; decide))) c2
     subst hs2
     have hrun2 := AM.run_of_ok _ _ hok2
     rw [hkind] at hrun2 hS2
@@ -361,13 +349,13 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hgp n hn ⟨s4.mem, Locals.init []⟩
+    (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hgp n (by omega) ⟨s4.mem, Locals.init []⟩
       a4 hS4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hv hcs hP4 hma4 hA4
       hkp hkt hkr hta4 hsl4.2 hlp4 hnP hsz4) (callW_mono c5 (by omega))
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
   refine ⟨_, _, ?_, by simpa using hS5, hg1.trans (hg4.trans hg5)⟩
-  simp only [checkDecl, StateT.run_bind, hrun1, exc_ok_bind', hrun3, Bool.not_true, hrun4]
+  simp only [checkDecl, StateT.run_bind, hrun1, exc_ok_bind', hrun3, Bool.not_true, Bool.false_eq_true, ite_false, hrun4]
   exact hrun5
 
 end L.Ind
