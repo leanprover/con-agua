@@ -98,11 +98,6 @@ def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
   rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1) = k.val.word.toUInt64 ∧
   rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def lehash (m : Mem) (t i : Word) : Word :=
-  letHashW (rdW (m.arr64 LEREC) (i * 6 + t * 3)) (rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1))
-    (rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2))
-
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
 tables. -/
 def LetR (m : Mem) (a : AState) : Prop :=
@@ -195,12 +190,13 @@ theorem leinternW_eq (m : Mem) (ty val body : Word) :
       (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 0 ty val body (baseW m 0) (nSlotsLe m)
         (homeW (letHashW ty val body) (nSlotsLe m)) 0)
       (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 1 ty val body (baseW m 1) (nSlotsLe m)
-        (homeW (letHashW ty val body) (nSlotsLe m)) 0) := by
+        (homeW (letHashW ty val body) (nSlotsLe m)) 0)
+      lehash := by
   have e0 : ∀ x, hdW letSch.tag.toUInt64 0 x = letP + x := fun x => by
     simp [hdW, letSch, letP, ETag.letE]
   have e1 : ∀ x, hdW letSch.tag.toUInt64 1 x = letS + x := fun x => by
     simp [hdW, letSch, letS, ETag.letE]
-  simp only [leinternW, internM, lepushMem_eq, e0, e1]
+  simp only [leinternW, internM, pushM, lepushMem_eq, e0, e1]
   rfl
 
 /-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left

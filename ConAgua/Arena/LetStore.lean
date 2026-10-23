@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -36,6 +37,12 @@ namespace L.Arena
 abbrev LEREC : ArrId := 20
 /-- The `letE` cons-table slots, both tiers interleaved. -/
 abbrev LESLOT : ArrId := 21
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def letGS : GrowSch :=
+  ⟨LESLOT, LEREC, 3, 20, lblk (n, k, t, i, c, h) {
+    h := (((⟪fnvBasis⟫ ^ LEREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `letE` record (FNV-1a over its three words). -/
 def letHashW (ty val body : Word) : Word :=
@@ -106,7 +113,7 @@ def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w, b) {
-  n := len(LESLOT.u64) >> 1;
+  n := LESLOT.u64[len(LESLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lefindLoop⟫;
@@ -142,7 +149,7 @@ theorem lefindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `letE` table. -/
-def nSlotsLe (m : Mem) : Word := m.len64 LESLOT >>> 1
+def nSlotsLe (m : Mem) : Word := rdW (m.arr64 LESLOT) (m.len64 LESLOT - 1) + SN0
 
 include hp in
 theorem letFind_spec (n : Nat) (s₀ : St) (t ty val body h : Word) :
@@ -172,8 +179,7 @@ width (3) is not a power of two, so (unlike `app`'s `>> 2`) the record-room chec
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (L has no division:
 `PLAN.md`, "the language L"). -/
 def lepushOK (m : Mem) (t : Word) : Bool :=
-  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 6 ≤ m.len64 LEREC) &&
-    decide (lecnt m t + 1 ≤ (nSlotsLe m >>> (2 : Word)) * 3)
+  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 6 ≤ m.len64 LEREC)
 
 /-- The memory after `letE_push(t, ty, val, body, j)` appended node `c`. -/
 def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
@@ -181,37 +187,52 @@ def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
+def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   c := CTL.u64[20 + t];
   if c >= 134217728 { abort };
   if len(LEREC.u64) < (c + 1) * 6 { abort };
-  if ((len(LESLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
+  gk := LESLOT.u64[len(LESLOT.u64) - 1];
   LEREC.u64[k] := ty;
   LEREC.u64[k + 1] := val;
   LEREC.u64[k + 2] := body;
   LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG letGS 7⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def lehash (m : Mem) (t i : Word) : Word :=
+  letHashW (rdW (m.arr64 LEREC) (i * 6 + t * 3)) (rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1))
+    (rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2))
+
 section push
 variable (p : Prog) (hp : p.lookup "letE_push" = some letPush)
+
+/-- The growth's hash block computes `lehash`. -/
+theorem lehash_ok : HashOK p letGS 7 lehash := by
+  intro k s₀
+  simp only [letGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lehash, letHashW, LocEq, St.setLoc]
 
 include hp in
 theorem letPush_spec (n : Nat) (s₀ : St) (t ty val body j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "letE_push" [t, ty, val, body, j]
     ⦃fun r s' => LocEq s' s₀ ∧ lepushOK s₀.mem t = true ∧ r = [lecnt s₀.mem t] ∧
-      s'.mem = lepushMem s₀.mem t ty val body j (lecnt s₀.mem t); ⊤⦄ := by
+      growIf LESLOT 20 lehash s₀.mem (lepushMem s₀.mem t ty val body j (lecnt s₀.mem t))
+        (lecnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, letPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [lecnt, lepushOK, lepushMem, nSlotsLe, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p letGS LESLOT 20 rfl rfl 7 lehash (lehash_ok p) n] <;>
+      finish [lepushMem, lecnt, lepushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -241,10 +262,14 @@ def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (letS + rs₁.tail.headD 0, m)
     else if lepushOK m 1 then
-      some (letS + lecnt m 1, lepushMem m 1 ty val body (rs₁.tail.tail.headD 0) (lecnt m 1))
+      match growIf LESLOT 20 lehash m (lepushMem m 1 ty val body (rs₁.tail.tail.headD 0) (lecnt m 1)) (lecnt m 1) with
+      | some m' => some (letS + lecnt m 1, m')
+      | none => none
     else none
   else if lepushOK m 0 then
-    some (letP + lecnt m 0, lepushMem m 0 ty val body (rs₀.tail.tail.headD 0) (lecnt m 0))
+    match growIf LESLOT 20 lehash m (lepushMem m 0 ty val body (rs₀.tail.tail.headD 0) (lecnt m 0)) (lecnt m 0) with
+    | some m' => some (letP + lecnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

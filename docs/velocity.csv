@@ -234,6 +234,9 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,slowmods,opus-5.5,60,20,ROM byte literals as flatten of chunks; pb_check reads romDataLit (pb part 6.2->4.1 GB, ProgWf 6.1->4.1 GB)
 2026-10-23,compproofB,opus-5.5,70,60,"prototype B proved: per-function result count (nrt tree by nameCode, trampoline zeroes the rest); compile_correct sorry-free; full set 0.920x instr / 0.976x wall vs master, e2e 0 class changes"
 2026-10-23,indstaget,claude-opus-5-5,90,30,AbsOK carries WkOK; StageC lifts (liftP/PP/PL/C)
+2026-10-23,slotgrow,opus-5.5,330,150,"growable cons (intern) slot tables: growth block in all 19 X_push (in-place rehash from the dense records, 1/2 load, from 8 slots), proofs complete; cap_check 17-word slot minimum; default set 0.67x wall vs master"
 2026-10-23,indstaget,claude-opus-5-5,120,25,classRecTyOk/classRecTysOk under StageC; core write set; StageC core entries
 2026-10-23,indstaget,claude-opus-5-5,60,20,decl-side census links moved to StageT/C (8 targets); tpt/tmp over CallM; stagec-targets.txt
+2026-10-23,indproofs4,opus-5.5,180,120,"PassGrcOK discharged (pgo); hb + mentions_const walks take twin fuel (hbf, mcf); memo helper (i1lF_ok, crfF_ok, AbsOK bundle); StageT walk refinements crfF_okT/apdF_okT (wkt, t2: rpgW/DivGate switched); AllVis.of_coh"
 2026-10-23,indstaget,claude-opus-5-5,150,30,classRuleOk/classRulesOk/classRecsRulesOk + (helper tpt) targetPinTys/targetMajorPins/classMajors under StageC
+2026-10-23,indstaget,claude-opus-5-5,90,30,checkBlockClasses/classStreamRecs + (helper pds) targetParamsDefEq..classesCtors under StageC

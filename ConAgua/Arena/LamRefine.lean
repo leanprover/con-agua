@@ -113,10 +113,6 @@ def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
   rdW (m.arr64 LAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
   rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def lahash (m : Mem) (t i : Word) : Word :=
-  lamHashW (rdW (m.arr64 LAREC) (i * 4 + t * 2)) (rdW (m.arr64 LAREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `lam` store: the library's relation for the two `lam` tables. -/
 def LamR (m : Mem) (a : AState) : Prop :=
   StoreR lamSch LaRecRel lahash m a.store.scratchOn a.store.pers.lams a.store.scr.lams
@@ -199,12 +195,13 @@ theorem lainternW_eq (m : Mem) (ty body : Word) :
       (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 0 ty body (baseW m 0) (nSlotsLa m)
         (homeW (lamHashW ty body) (nSlotsLa m)) 0)
       (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 1 ty body (baseW m 1) (nSlotsLa m)
-        (homeW (lamHashW ty body) (nSlotsLa m)) 0) := by
+        (homeW (lamHashW ty body) (nSlotsLa m)) 0)
+      lahash := by
   have e0 : ∀ x, hdW lamSch.tag.toUInt64 0 x = lamP + x := fun x => by
     simp [hdW, lamSch, lamP, ETag.lam]
   have e1 : ∀ x, hdW lamSch.tag.toUInt64 1 x = lamS + x := fun x => by
     simp [hdW, lamSch, lamS, ETag.lam]
-  simp only [lainternW, internM, lapushMem_eq, e0, e1]
+  simp only [lainternW, internM, pushM, lapushMem_eq, e0, e1]
   rfl
 
 /-- The L skip test is the arena's. -/

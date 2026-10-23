@@ -80,9 +80,6 @@ theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SR
 def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
   rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 SREC) (i * 2 + t))
-
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/
 def SuccR (m : Mem) (a : AState) : Prop :=
@@ -152,7 +149,8 @@ theorem spushMem_eq (m : Mem) (t u j c : Word) :
 theorem sinternW_eq (m : Mem) (u : Word) :
     sinternW m u = internMD succSch SHP (lvlHPW m u) m 0 (spushOK m) [u]
       (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) := by
+      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
+      shash := by
   have e0 : ∀ x, hdW succSch.tag.toUInt64 0 x = succP + x := fun x => by
     simp [hdW, succSch, succP, LTag.succ]
   have e1 : ∀ x, hdW succSch.tag.toUInt64 1 x = succS + x := fun x => by
@@ -172,11 +170,13 @@ theorem sinternW_eqK (m : Mem) (u : Word) (hctl : succSch.ca.toNat + 2 ≤ (m.ar
     sinternW m u = mkK SHP succSch.ca (cnt2 m succSch.ca) (lvlHPW m u)
       (internM succSch m 0 (spushOK m) [u]
       (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)) := by
+      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) shash) := by
   rw [sinternW_eq]
-  refine internMD_mkK succSch succSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  refine internMD_mkK succSch succSch_wf _ _ _ _ _ _ _ _ shash (by decide) (by decide)
+    (fun m k x t i => by simp only [shash, Mem.arr64_set64_ne _ _ _ _ _ (show SREC ≠ SHP by decide)])
+    hctl (fun t ht hp => ?_)
   simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  obtain ⟨⟨h1, -⟩, h2⟩ := hp
   exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem succLocal : RLocal succSch SRecRel shash [] [] := by
@@ -193,7 +193,7 @@ include hR hu in
 theorem sintern_core (w : Word) (m₁ : Mem)
     (hI : internM succSch m 0 (spushOK m) [u]
       (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) =
+      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) shash =
       some (w, m₁)) :
     AM.ok (internLNode (.succ (decI u))) a ∧
     SuccR m₁ (AM.st (internLNode (.succ (decI u))) a) ∧

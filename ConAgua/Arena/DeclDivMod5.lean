@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclDivMod4
 import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndCopy
+import ConAgua.Arena.IndRealApdT
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: applying a certificate (lane `decls3`, `decls3-divmod`)
@@ -54,6 +55,8 @@ structure DmProg5 (p : Prog) : Prop extends DmProg2 p where
   lDivModCertGuard : p.lookup "div_mod_cert_guard" = some divModCertGuardL
   bvb : BvbProg p
   hf : HfF p
+  /-- `all_level_params_defined`'s program (the guards under `StageT`, `DeclDivGateT1.lean`). -/
+  apd : ApdF p
 
 section applied
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -424,14 +427,14 @@ theorem constsResolveAll_refines (hD : DmProg5 p) (o l : Word) (hyps : List EIdx
 
 /-! ## `div_mod_cert_guard` -/
 
-def dmCgW (p : Prog) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
+def dmCgW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
     Option (List Word × Mem) :=
   ntBW (callW p n "subst_const_all" [c, annVal, 4000000000, proof] m) fun r1 m1 =>
   ntBW (lbbF m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
   ntBW (hffF m2 [4000000000, r1.headD 0]) fun r3 m3 =>
   if r3.headD 0 ≠ 0 then some ([0], m3) else
-  ntBW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
+  ntBW (cl n "all_level_params_defined" [0, 0, r1.headD 0] m3) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
   ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 =>
   if r5.headD 0 = 0 then some ([0], m5) else
@@ -443,15 +446,15 @@ def dmCgW (p : Prog) (n : Nat) (m : Mem) (vs c annVal ho hl eqE proof : Word) :
 
 set_option maxHeartbeats 3200000 in
 theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_cert_guard" = some divModCertGuardL)
-    (n : Nat) (s₀ : St) (vs c annVal ho hl eqE proof : Word) :
+    (cl : CallM) (hcl : CallSpec p cl) (n : Nat) (s₀ : St) (vs c annVal ho hl eqE proof : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_guard" [vs, c, annVal, ho, hl, eqE, proof]
-    ⦃fun res s' => LocEq s' s₀ ∧ dmCgW p n s₀.mem vs c annVal ho hl eqE proof = some (res, s'.mem); ⊤⦄ := by
+    ⦃fun res s' => LocEq s' s₀ ∧ dmCgW p cl n s₀.mem vs c annVal ho hl eqE proof = some (res, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divModCertGuardL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       lbbF_spec p hb n, hffF_spec p hf n,
-      stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n,
+      hcl n "all_level_params_defined", stubM_spec p "consts_resolve_ffast" n,
       callW_spec p n "subst_const_all", callW_spec p n "subst_const0_list",
       callW_spec p n "consts_resolve_all", callW_spec p n "subst_const0"] <;>
     finish (gen := 30) (instances := 10000) [dmCgW, ntBW]
@@ -479,8 +482,9 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
       (divModCertGuard fe (decI c) (decE annVal) hyps (decE eqE) (decE proof))
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hann, heq, hpr, hd, hb⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => dmCgW p k mq vis c annVal ho hl eqE proof)
-    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard k · vis c annVal ho hl eqE proof) hcall
+  have hw := callW_model (M := fun mq => dmCgW p stubCall k mq vis c annVal ho hl eqE proof)
+    (cg_specW p hD.bvb hD.hf hD.lDivModCertGuard stubCall (stubCall_spec p) k · vis c annVal ho hl
+      eqE proof) hcall
   unfold dmCgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   -- subst_const_all
@@ -529,7 +533,7 @@ theorem cg_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p d
   have z3' : r3.headD 0 = 0 := by simpa using z3
   have hx3 := decW0B_false hd3 z3'
   -- all level params
-  cases h4 : stubM "all_level_params_defined" m3 [0, 0, r1.headD 0] with
+  cases h4 : stubCall k "all_level_params_defined" [0, 0, r1.headD 0] m3 with
   | none => rw [h4] at hw; simp at hw
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4

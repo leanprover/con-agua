@@ -793,8 +793,8 @@ stubs and `target_k53`'s contracts): the class's shape (`BSOK`, its parameter co
 count word-sized), former types, the class reading, the classes and the `[cv, nF]` record decoded
 below the tops, the constant's level-parameter slice in `EREC` (`CtorLp`), the pool's size `+ 5`
 word-sized (`class_minor_slot`), the walk memos well formed; the `ClassCtor` record decoded stably
-above the entry's top (`StabA`). -/
-@[refines ConRon.Arena.classCtorOf]
+above the entry's top (`StabA`). Under `StageR`; the census link is `classCtorOf_refinesC`
+(`IndT/RecGen27`). -/
 theorem classCtorOf_refines {p : Prog} (P : CxoProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c cA : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cA' : IConstantVal × Nat)

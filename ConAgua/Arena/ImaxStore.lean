@@ -4,6 +4,7 @@ public import ConAgua.Arena.Store
 public import ConAgua.Arena.LpCol
 meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
+meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
 
 @[expose] public section
@@ -35,6 +36,12 @@ namespace L.Arena
 abbrev IREC : ArrId := 12
 /-- The `imax` cons-table slots, both tiers interleaved. -/
 abbrev ISLOT : ArrId := 13
+
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def imaxGS : GrowSch :=
+  ⟨ISLOT, IREC, 2, 12, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ IREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ IREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of an `imax` record (FNV-1a over its two words). -/
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
@@ -103,7 +110,7 @@ def imfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def imaxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
-  n := len(ISLOT.u64) >> 1;
+  n := ISLOT.u64[len(ISLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪imfindLoop⟫;
@@ -139,7 +146,7 @@ theorem imfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (imfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `imax` table. -/
-def nSlotsI (m : Mem) : Word := m.len64 ISLOT >>> 1
+def nSlotsI (m : Mem) : Word := rdW (m.arr64 ISLOT) (m.len64 ISLOT - 1) + SN0
 
 include hp in
 theorem imaxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
@@ -164,11 +171,10 @@ end find
 /-- The node count of tier `t` of the `imax` table, `CTL[12 + t]`. -/
 def imcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (12 + t)
 
-/-- `imax_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `imax_push`'s room checks: the handle index, the record array. -/
 def impushOK (m : Mem) (t : Word) : Bool :=
   decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 IREC >>> (2 : Word)) &&
-    decide (imcnt m t < m.len64 IHP >>> (1 : Word)) &&
-    decide (imcnt m t + 1 ≤ (nSlotsI m >>> (2 : Word)) * 3)
+    decide (imcnt m t < m.len64 IHP >>> (1 : Word))
 
 /-- The memory after `imax_push(t, u, v, j)` appended node `c`. -/
 def impushMem (m : Mem) (t u v j c : Word) : Mem :=
@@ -177,7 +183,7 @@ def impushMem (m : Mem) (t u v j c : Word) : Mem :=
     (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
+def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -185,25 +191,38 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
   if c >= 134217728 { abort };
   if len(IREC.u64) >> 2 <= c { abort };
   if len(IHP.u64) >> 1 <= c { abort };
-  if ((len(ISLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
+  gk := ISLOT.u64[len(ISLOT.u64) - 1];
   IREC.u64[k] := u;
   IREC.u64[k + 1] := v;
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
   IHP.u64[c * 2 + t] := x;
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG imaxGS 11⟫ };
   return c
 }
 
+/-- The hash of node `i` of tier `t`. -/
+def imhash (m : Mem) (t i : Word) : Word :=
+  imaxHashW (rdW (m.arr64 IREC) (i * 4 + t * 2)) (rdW (m.arr64 IREC) (i * 4 + t * 2 + 1))
+
 section push
 variable (p : Prog) (hp : p.lookup "imax_push" = some imaxPush)
+
+/-- The growth's hash block computes `imhash`. -/
+theorem imhash_ok : HashOK p imaxGS 11 imhash := by
+  intro k s₀
+  simp only [imaxGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [imhash, imaxHashW, LocEq, St.setLoc]
 
 include hp in
 theorem imaxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "imax_push" [t, u, v, j]
     ⦃fun r s' => LocEq s' s₀ ∧ impushOK s₀.mem t = true ∧ r = [imcnt s₀.mem t] ∧
-      s'.mem = impushMem s₀.mem t u v j (imcnt s₀.mem t); ⊤⦄ := by
+      growIf ISLOT 12 imhash s₀.mem (impushMem s₀.mem t u v j (imcnt s₀.mem t))
+        (imcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, imaxPush]
   cases n with
@@ -211,8 +230,9 @@ theorem imaxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
-        hpBlkM2_spec p (exec p n)] <;>
-      finish [imcnt, impushOK, impushMem, nSlotsI, baseW]
+        hpBlkM2_spec p (exec p n),
+        growBlkG_spec p imaxGS ISLOT 12 rfl rfl 11 imhash (imhash_ok p) n] <;>
+      finish [impushMem, imcnt, impushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 
@@ -237,10 +257,14 @@ def iminternW (m : Mem) (u v : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (imaxS + rs₁.tail.headD 0, m)
     else if impushOK m 1 then
-      some (imaxS + imcnt m 1, impushMem m 1 u v (rs₁.tail.tail.headD 0) (imcnt m 1))
+      match growIf ISLOT 12 imhash m (impushMem m 1 u v (rs₁.tail.tail.headD 0) (imcnt m 1)) (imcnt m 1) with
+      | some m' => some (imaxS + imcnt m 1, m')
+      | none => none
     else none
   else if impushOK m 0 then
-    some (imaxP + imcnt m 0, impushMem m 0 u v (rs₀.tail.tail.headD 0) (imcnt m 0))
+    match growIf ISLOT 12 imhash m (impushMem m 0 u v (rs₀.tail.tail.headD 0) (imcnt m 0)) (imcnt m 0) with
+    | some m' => some (imaxP + imcnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/

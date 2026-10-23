@@ -6,6 +6,8 @@ import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.IndPos2SpecB
 import ConAgua.Arena.RecCheckSpec7
 import ConAgua.Arena.ConstsResolveFRefine2
+import ConAgua.Arena.IndMemoFns
+import ConAgua.Arena.IndRealCrFKeep
 
 /-!
 # The declaration loop with the core's invariants: `LoopT` (lane `loopt`)
@@ -135,6 +137,96 @@ theorem CrOK.zero {m : Mem} (hsz : 160 ≤ (m.arr64 CTL).size)
     (hA : ∀ j, rdW (m.arr64 L.Stubs.CRM) j = 0) (hC : rdW (m.arr64 CTL) 158 = 0) :
     L.Stubs.CrOK m :=
   ⟨_, memoRV_zeroAt L.Stubs.crSch bmKey L.Stubs.CrV m (by simp; omega) hC hA⟩
+
+/-! ## The inductive arm's memos: `IndMemos` (a memory-only clause)
+
+`check_ind_decl`'s stage clears three groups of memos on entry, each needing a well-formed memo
+beforehand: the stage memos (`StageMemos`), `instantiate1Lift`'s (`I1Memo`, array 51, `CTL[52]`)
+and `consts_resolve_ffast`'s (`CrOK`, array 155, `CTL[158]`). The loop carries them beside
+`CoreMemos`: the inductive arm's contract (`IndArmSpec`) takes and gives them back, and the loop's
+other callees keep them (`IndMemoClosed`: they write none of these words but through
+`consts_resolve_ffast`, which keeps its memo, `crfF_keepsCrOK`, `IndRealCrFKeep.lean`). -/
+
+/-- **The memos the inductive arm needs well formed at its entry.** -/
+structure IndMemos (m : Mem) : Prop where
+  stage : StageMemos m
+  i1 : I1Memo m
+  cr : L.Stubs.CrOK m
+
+/-- **The zeroed memory has a well-formed `instantiate1Lift` memo** (empty, epoch `0`). -/
+theorem I1Memo.zero {m : Mem} (hsz : 54 ≤ (m.arr64 CTL).size) (hA : ∀ j, rdW (m.arr64 51) j = 0)
+    (hC : rdW (m.arr64 CTL) 52 = 0) : I1Memo m :=
+  ⟨_, memoRV_zeroAt ⟨51, 52⟩ lfKey _ m (by simp; omega) hC hA⟩
+
+/-- **The zeroed memory has well-formed inductive memos.** -/
+theorem IndMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
+    (hA : ∀ b : ArrId, b = 51 ∨ b = 155 ∨ (201 ≤ b ∧ b ≤ 208) → ∀ j, rdW (m.arr64 b) j = 0)
+    (hC : ∀ x : Word, x.toNat = 52 ∨ x.toNat = 158 ∨ (202 ≤ x.toNat ∧ x.toNat ≤ 219) →
+      rdW (m.arr64 CTL) x = 0) : IndMemos m :=
+  ⟨StageMemos.zero hsz (fun b h1 h2 => hA b (.inr (.inr ⟨h1, h2⟩)))
+      (fun x h1 h2 => hC x (.inr (.inr ⟨h1, h2⟩))),
+    I1Memo.zero (by omega) (hA 51 (.inl rfl)) (hC 52 (.inl rfl)),
+    CrOK.zero (by omega) (hA _ (.inr (.inl rfl))) (hC 158 (.inr (.inl rfl)))⟩
+
+/-- **`IndMemos` across a writer outside its arrays and `CTL` words.** -/
+theorem IndMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : IndMemos m)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ≠ 51 ∧ b ≠ 155 ∧ (b < 201 ∨ 208 < b))
+    (hC : ∀ x ∈ C, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNat < 202 ∨ 219 < x.toNat)) :
+    IndMemos m' :=
+  ⟨h.stage.frame hf (fun b hb => (hA b hb).2.2) (fun x hx => (hC x hx).2.2),
+    I1Memo.frame h.i1 hf (fun hb => (hA _ hb).1 rfl) (fun hx => (hC _ hx).1 rfl),
+    CrOK.frame h.cr hf (fun hb => (hA _ hb).2.1 rfl) (fun hx => (hC _ hx).2.1 rfl)⟩
+
+/-- `IndMemos` across a write of one `CTL` word outside its words. -/
+theorem IndMemos.setCtl {m : Mem} (h : IndMemos m) (c v : Word)
+    (hc : c.toNat ≠ 52 ∧ c.toNat ≠ 158 ∧ (c.toNat < 202 ∨ 219 < c.toNat)) :
+    IndMemos (m.set64 CTL c v) :=
+  h.frame (MemFrame.setCtl m c v) (by simp) (fun x hx => by simp at hx; subst hx; exact hc)
+
+/-- **The frame relation of `IndMemoClosed`**: the inductive memos, if well formed at the start,
+are at the end. -/
+theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → IndMemos m) where
+  refl _ h := h
+  st64 m₀ m a i v h ha h0 := by
+    rcases ha with ⟨hc, ha⟩ | ⟨rfl, hi⟩
+    · exact (h h0).frame (MemFrame.set64 m a hc i v)
+        (fun b hb => by simp at hb; subst hb; exact imA_spec b ha) (by simp)
+    · exact (h h0).frame (MemFrame.setCtl m i v) (by simp)
+        (fun x hx => by simp at hx; subst hx; exact imC_spec x hi)
+  setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩ (by simp) (by simp)
+
+/-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
+theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
+    (hI : IndMemos m) : IndMemos m' :=
+  have hf := L.Ind.crfF_frame h
+  ⟨hI.stage.frame hf (by simp) (by simp), I1Memo.frame hI.i1 hf (by simp) (by simp),
+    L.Ind.crfF_keepsCrOK h hI.cr⟩
+
+/-- Every call of a leaf of `imFns` keeps `IndMemos`. -/
+theorem indMemos_leaf {p : Prog} (hp : L.Ind.CrfF p) :
+    ∀ g ∈ imLeaves, ∀ n m₀ vs, ⦃fun s => IndMemos m₀ → IndMemos s.mem⦄ invoke p (exec p n) g vs
+      ⦃fun _ s => IndMemos m₀ → IndMemos s.mem; ⊤⦄ := by
+  intro g hg n m₀ vs
+  simp only [imLeaves, List.mem_singleton] at hg
+  subst hg
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (L.Ind.crfF_spec p hp n s vs)
+  exact fun h0 => (hs h0).crfF hc
+
+/-- **A call of a function of `imFns` keeps `IndMemos`.** -/
+theorem invoke_indMemos {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) (n : Nat)
+    {f : FnName} (hf : f ∈ imFns) (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun _ s => IndMemos s₀.mem → IndMemos s.mem; ⊤⦄ :=
+  invoke_frameL p hcl indMemos_wframe (indMemos_leaf hp) n f hf vs s₀
+
+/-- The same through `callW`. -/
+theorem callW_indMemos {p : Prog} (hcl : IndMemoClosed p) (hp : L.Ind.CrfF p) {n : Nat}
+    {f : FnName} (hf : f ∈ imFns) {vs : List Word} {m m' : Mem} {r : List Word}
+    (hc : callW p n f vs m = some (r, m')) (hI : IndMemos m) : IndMemos m' := by
+  obtain ⟨s', hs', h⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_indMemos hcl hp n hf vs _) hc
+  exact hs' ▸ h hI
 
 /-- **The zeroed memory has well-formed core memos** (empty, epoch `0`): what `TwinMem` needs of
 the loaded memory at the loop's start (open end 5). -/

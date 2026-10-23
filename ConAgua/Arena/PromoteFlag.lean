@@ -25,7 +25,7 @@ variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → 
 theorem storeR_flag (hS : S.WF) (hfr : RFrame S R hs) (m : Mem) (on : Bool)
     (P Q : Tbl α (Idx k) δ) (h : StoreR S R hs m on P Q) (w : Word) :
     StoreR S R hs (m.set64 CTL 1 w) (w != 0) P Q := by
-  obtain ⟨⟨hsz, hscb⟩, _, hP, hQ⟩ := h
+  obtain ⟨⟨hsz, hscb⟩, _, hP, hQ, hG⟩ := h
   have hsz' : ((m.set64 CTL 1 w).arr64 CTL).size = (m.arr64 CTL).size := size_set64 _ _ _ _ _
   have h1 : (1 : Word).toNat < (m.arr64 CTL).size := by
     have := hS.ca.1; simp; omega
@@ -52,7 +52,7 @@ theorem storeR_flag (hS : S.WF) (hfr : RFrame S R hs) (m : Mem) (on : Bool)
       · simpa using hS.scb.2.2.2
     · simp only [baseW, hrd SCB hscb']
   refine ⟨⟨by rw [hsz']; exact hsz, by rw [hrd SCB hscb']; exact hscb⟩, ?_,
-    tier 0 P (by decide) hP, tier 1 Q (by decide) hQ⟩
+    tier 0 P (by decide) hP, tier 1 Q (by decide) hQ, growR_of_sa S m _ hsa hG⟩
   have h1' : 1 < (m.arr64 CTL).size := by simpa using h1
   rw [rdW_set64]; simp [h1']
 
@@ -167,10 +167,11 @@ theorem internM_pw (hS : S.WF) (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) �
     (hR : StoreR S R hs m on tbP tbS) (hfl : rdW (m.arr64 CTL) 1 = 0) (mt : Word → Word → Bool)
     (x0 : Word) (rs₀ rs₁ : List Word) (hP0 : ProbeOKG S m 0 (mt 0) x0 rs₀)
     (pk : Word → Bool) (hpk : ∀ t, pk t = true → PushRoom S m t) (sk : Word) (vs : List Word)
-    (w : Word) (m' : Mem) (hI : internM S m sk pk vs rs₀ rs₁ = some (w, m')) : PW w := by
+    {H : Mem → Word → Word → Word} (w : Word) (m' : Mem)
+    (hI : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) : PW w := by
   have hg : S.tag.toUInt64.toNat < 16 := by
     rw [UInt32.toNat_toUInt64]; exact hS.tag
-  obtain ⟨-, -, hT0, -⟩ := hR
+  obtain ⟨-, -, hT0, -, -⟩ := hR
   simp only [internM, hfl, ne_eq, not_true_eq_false, ↓reduceIte] at hI
   split at hI
   · simp at hI
@@ -181,7 +182,7 @@ theorem internM_pw (hS : S.WF) (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) �
     exact hdW0_pw _ _ hg (hitIdx_lt S R hs m 0 _ hT0 _ _ rs₀ hP0 (fun h => hn0 ⟨hh.1, h⟩) hh.2)
   split at hI
   · rename_i hpk0
-    obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hI)
+    obtain ⟨rfl, -⟩ := pushM_some S H m 0 vs _ w m' hI
     exact hdW0_pw _ _ hg (hpk 0 hpk0).1
   · simp at hI
 
