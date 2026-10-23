@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec9
+import ConAgua.Arena.IndRealWalk
 
 /-!
 # `RecCheck`: `targetParamsDefEq` (lane `indproofs3`, helper `rec`)
@@ -13,6 +14,8 @@ at the twin's `coreWalkFuel`, any exec fuel: `bvbW_stageC`), `fvar_b`, `infer_ty
 with its write set `taAW_mfr`, new here). L: handle guards after both `target_abs` calls (the
 model carries no `< 2^32` bound on the result; the twin compares `EIdx`s).
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -269,12 +272,12 @@ def pdsK3 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) :
   | none => none
   | some (r, m) =>
     if pfl < r.headD 0 then some ([0], m)
-    else pdsK4 n vis d no nl lvls ho hl pfo pfl a b (stubM "fvar_b" m [CWF, b])
+    else pdsK4 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b])
 
 def pdsK2 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (x, m) =>
-    if x ≠ 0 then some ([0], m) else pdsK3 n vis d no nl lvls ho hl pfo pfl a b (stubM "fvar_b" m [CWF, a])
+    if x ≠ 0 then some ([0], m) else pdsK3 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, a])
 
 def pdsK1 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -311,11 +314,11 @@ theorem pdsK4_ok (h : ¬ pfl < r.headD 0) : pdsK4 n vis d no nl lvls ho hl pfo p
 theorem pdsK3_out (h : pfl < r.headD 0) : pdsK3 n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
     some ([0], m) := by simp only [pdsK3]; rw [if_pos h]
 theorem pdsK3_ok (h : ¬ pfl < r.headD 0) : pdsK3 n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    pdsK4 n vis d no nl lvls ho hl pfo pfl a b (stubM "fvar_b" m [CWF, b]) := by simp only [pdsK3]; rw [if_neg h]
+    pdsK4 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b]) := by simp only [pdsK3]; rw [if_neg h]
 theorem pdsK2_b (h : x ≠ 0) : pdsK2 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
   simp [pdsK2, h]
 theorem pdsK2_ok (h : ¬ x ≠ 0) : pdsK2 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
-    pdsK3 n vis d no nl lvls ho hl pfo pfl a b (stubM "fvar_b" m [CWF, a]) := by simp [pdsK2, h]
+    pdsK3 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, a]) := by simp [pdsK2, h]
 theorem pdsK1_b (h : x ≠ 0) : pdsK1 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
   simp [pdsK1, h]
 theorem pdsK1_ok (h : ¬ x ≠ 0) : pdsK1 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
@@ -329,6 +332,7 @@ structure TpLook (p : Prog) : Prop where
   rc : RcLook p
   ta : TaLook p
   bvb : BvbProg p
+  hf : HfF p
   step : p.lookup "target_params_def_eq_step" = some targetParamsDefEqStep
   tpd : p.lookup "target_params_def_eq" = some targetParamsDefEq
 
@@ -341,7 +345,7 @@ theorem tpdStep_spec (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St) (vis d no n
   simp only [callFn, targetParamsDefEqStep]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bvarBL_spec p L.bvb n, stubM_spec p "fvar_b" n, tcp_specF p L.rc n, ta_specF p L.ta n,
+      bvarBL_spec p L.bvb n, fvbF_spec p L.hf n, tcp_specF p L.rc n, ta_specF p L.ta n,
       stubM_spec p "infer_type_core" n, stubM_spec p "is_def_eq_core" n] <;>
     finish (gen := 40) (instances := 20000) [pdsW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11]
 

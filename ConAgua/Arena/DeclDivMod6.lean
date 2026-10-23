@@ -8,6 +8,8 @@ import ConAgua.Arena.DeclRomStubs
 Part 6: `bool_ctor_typed`, `div_mod_pin_guard`, `div_mod_certs_guard_go`, `div_mod_certs_guard`.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 set_option linter.unusedSimpArgs false
@@ -116,16 +118,16 @@ theorem boolCtorTyped_refines (hD : DmProg6 p) (nm : Word) :
 
 def dmPgW (p : Prog) (n : Nat) (m : Mem) (ps vs c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "div_mod_decl_pin" [ps, c] m) fun r1 m1 =>
-  ntBW (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
+  ntBW (lbbF m1 [4000000000, 0, r1.headD 0]) fun r2 m2 =>
   if r2.headD 0 = 0 then some ([0], m2) else
-  ntBW (stubM "has_fvar_fast" m2 [4000000000, r1.headD 0]) fun r3 m3 =>
+  ntBW (hffF m2 [4000000000, r1.headD 0]) fun r3 m3 =>
   if r3.headD 0 ≠ 0 then some ([0], m3) else
   ntBW (stubM "all_level_params_defined" m3 [0, 0, r1.headD 0]) fun r4 m4 =>
   if r4.headD 0 = 0 then some ([0], m4) else
   ntBW (stubM "consts_resolve_ffast" m4 [vs, r1.headD 0]) fun r5 m5 => some ([r5.headD 0], m5)
 
 set_option maxHeartbeats 1600000 in
-theorem pg_specW (p : Prog) (hp : p.lookup "div_mod_pin_guard" = some divModPinGuardL) (n : Nat)
+theorem pg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_pin_guard" = some divModPinGuardL) (n : Nat)
     (s₀ : St) (ps vs c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_pin_guard" [ps, vs, c]
     ⦃fun r s' => LocEq s' s₀ ∧ dmPgW p n s₀.mem ps vs c = some (r, s'.mem); ⊤⦄ := by
@@ -133,8 +135,8 @@ theorem pg_specW (p : Prog) (hp : p.lookup "div_mod_pin_guard" = some divModPinG
   simp only [callFn, divModPinGuardL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_decl_pin", stubM_spec p "loose_bvars_bounded_fast" n,
-      stubM_spec p "has_fvar_fast" n, stubM_spec p "all_level_params_defined" n,
+      callW_spec p n "div_mod_decl_pin", lbbF_spec p hb n,
+      hffF_spec p hf n, stubM_spec p "all_level_params_defined" n,
       stubM_spec p "consts_resolve_ffast" n] <;>
     finish (gen := 30) (instances := 10000) [dmPgW, ntBW]
 
@@ -144,18 +146,18 @@ theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
       (divModPinGuard ip fe (decI c)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hP⟩ hcall => ?_
   have hw := callW_model (M := fun mq => dmPgW p k mq ps vis c)
-    (pg_specW p hD.lDivModPinGuard k · ps vis c) hcall
+    (pg_specW p hD.bvb hD.hf hD.lDivModPinGuard k · ps vis c) hcall
   unfold dmPgW at hw
   have h0w : (0 : Word).toNat = 0 := rfl
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, hx1⟩, hw⟩ :=
     (divModDeclPin_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bind_ ⟨hS, hc, hP⟩ hw
-  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0] with
+  cases h2 : lbbF m1 [4000000000, 0, r1.headD 0] with
   | none => rw [h2] at hw; simp at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
   rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hS1
+    lbbF_ok dn vis fe 4000000000 0 (r1.headD 0) hl1 m1 m2 a1 r2 h2 hS1
   rw [fuelW_eq, h0w, hx1] at hrun2
   by_cases z2 : r2.headD 0 = 0
   · rw [if_pos z2] at hw
@@ -167,12 +169,12 @@ theorem pg_ref (hD : DmProg6 p) (ps c : Word) (ip : INatOpPinSet) :
     rfl
   rw [if_neg z2] at hw
   have hx2 := decW0B_true hd2 z2
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, r1.headD 0] with
+  cases h3 : hffF m2 [4000000000, r1.headD 0] with
   | none => rw [h3] at hw; simp at hw
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
   rw [h3, bW_some] at hw
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := hasFvarFast_spec dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hS2
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := hffF_ok dn vis fe 4000000000 (r1.headD 0) hl1 m2 m3 a2 r3 h3 hS2
   rw [fuelW_eq, hx1] at hrun3
   by_cases z3 : r3.headD 0 ≠ 0
   · rw [if_pos z3] at hw

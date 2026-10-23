@@ -263,6 +263,7 @@ def classReadRecCls : FunDecl := lfn (nP, mo, ml, ro, rl) locals
   if rl == 0 { return (1, 0, 0) };
   rc := IW.u64[ro];
   mI := IW.u64[rc + 2];
+  if mI + 1 == 0 { abort };
   ty := EREC.u64[IW.u64[rc] + 3];
   (ok, p, c, concl) := call open_pis_at_fvars_f(mI + 1, ty, 0);
   if ok == 0 { return (0, 0, 0) };

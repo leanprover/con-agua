@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec3
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.CoreRefine
 import ConAgua.Arena.ScratchRefine
 
@@ -102,12 +103,12 @@ def crgK1 (N : Nat) (visR cvR gen : Word) : Option (List Word × Mem) → Option
 def crgK0 (N : Nat) (visR cvR gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r0, m0) =>
-    if r0.headD 0 = 0 then none else crgK1 N visR cvR gen (stubM "has_fvar_fast" m0 [CWF, gen])
+    if r0.headD 0 = 0 then none else crgK1 N visR cvR gen (hffF m0 [CWF, gen])
 
 /-- **The model of `class_rule_ok_guards`.** -/
 def crgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
-  | N + 1, m, visR, cvR, gen => crgK0 N visR cvR gen (stubM "loose_bvars_bounded_fast" m [CWF, 0, gen])
+  | N + 1, m, visR, cvR, gen => crgK0 N visR cvR gen (lbbF m [CWF, 0, gen])
 
 def cruK4 (gen : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -137,9 +138,9 @@ noncomputable def cruleW : Nat → Mem → Word → Word → Word → Word → W
 section arms
 variable (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
 theorem crgW_eq : crgW (N + 1) m visR cvR gen =
-    crgK0 N visR cvR gen (stubM "loose_bvars_bounded_fast" m [CWF, 0, gen]) := rfl
+    crgK0 N visR cvR gen (lbbF m [CWF, 0, gen]) := rfl
 theorem crgK0_some : crgK0 N visR cvR gen (some (r0, m0)) =
-    if r0.headD 0 = 0 then none else crgK1 N visR cvR gen (stubM "has_fvar_fast" m0 [CWF, gen]) := rfl
+    if r0.headD 0 = 0 then none else crgK1 N visR cvR gen (hffF m0 [CWF, gen]) := rfl
 theorem crgK1_some : crgK1 N visR cvR gen (some (r1, m1)) =
     if r1.headD 0 ≠ 0 then none else crgK2 visR gen (L.Arena.cvLpsW N m1 cvR) := rfl
 theorem crgK2_some : crgK2 visR gen (some (r2, m2)) =
@@ -184,6 +185,8 @@ structure CruleProg (p : Prog) extends FlushProg p : Prop where
   guards : p.lookup "class_rule_ok_guards" = some classRuleOkGuards
   rule : p.lookup "class_rule_ok" = some classRuleOkL
   strip : StripProg p
+  bvb : BvbProg p
+  hf : HfF p
 
 theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St) (visR cvR gen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok_guards" [visR, cvR, gen]
@@ -195,7 +198,7 @@ theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (N : Nat) (s₀ : St
   | succ N =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "loose_bvars_bounded_fast" N, stubM_spec p "has_fvar_fast" N,
+        lbbF_spec p h.bvb N, hffF_spec p h.hf N,
         L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps N,
         stubM_spec p "all_level_params_defined" N, stubM_spec p "consts_resolve_ffast" N] <;>
       finish (gen := 20)
@@ -236,23 +239,23 @@ theorem crgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | zero => simp [crgW] at h
   | succ N =>
   rw [crgW_eq] at h
-  cases h1 : stubM "loose_bvars_bounded_fast" m [CWF, 0, gen] with
+  cases h1 : lbbF m [CWF, 0, gen] with
   | none => rw [h1] at h; simp [crgK0] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, crgK0_some] at h
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe CWF 0 gen hgen m m1 a r1 h1 hS
+    lbbF_ok dn vis fe CWF 0 gen hgen m m1 a r1 h1 hS
   by_cases hb1 : r1.headD 0 = 0
   · rw [if_pos hb1] at h; simp at h
   rw [if_neg hb1] at h
-  cases h2 : stubM "has_fvar_fast" m1 [CWF, gen] with
+  cases h2 : hffF m1 [CWF, gen] with
   | none => rw [h2] at h; simp [crgK1] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, crgK1_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
-    hasFvarFast_spec dn vis fe CWF gen hgen m1 m2 a1 r2 h2 hS1
+    hffF_ok dn vis fe CWF gen hgen m1 m2 a1 r2 h2 hS1
   by_cases hb2 : r2.headD 0 ≠ 0
   · rw [if_pos hb2] at h; simp at h
   rw [if_neg hb2] at h

@@ -10,6 +10,8 @@ key onto the rest's slice, D18), `check_block_classes_count` / `check_block_clas
 Callees enter as their runs (`callW`), turned into the twin's by their refinements (`Sim`).
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
