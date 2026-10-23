@@ -574,8 +574,8 @@ end rel
 /-- **`class_fields_agree` refines `classFieldsAgree`** (through `target_k53`'s and `fvar_type_d`'s
 contracts and stubs): the class's shape (`BSOK`), former types, the classes, the datum's variables,
 the class's entries decoded below the tops, the field kinds a stable slice (as `class_fields_of`
-returns them) with a word-sized field index, the walk memos well formed. -/
-@[refines ConRon.Arena.classFieldsAgree]
+returns them) with a word-sized field index, the walk memos well formed. Under `StageR`; the census
+link is `classFieldsAgree_refinesC` (`IndT/RecGen24`). -/
 theorem classFieldsAgree_refines {p : Prog} (P : CfaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl mo ml fvo fvl eo el i0 ko kl : Word)
     (bs : BlockShape) (formerTys : List EIdx) (ms : List TargetMajor) (fvs : List EIdx)

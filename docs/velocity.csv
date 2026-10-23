@@ -239,3 +239,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,60,20,decl-side census links moved to StageT/C (8 targets); tpt/tmp over CallM; stagec-targets.txt
 2026-10-23,indproofs4,opus-5.5,180,120,"PassGrcOK discharged (pgo); hb + mentions_const walks take twin fuel (hbf, mcf); memo helper (i1lF_ok, crfF_ok, AbsOK bundle); StageT walk refinements crfF_okT/apdF_okT (wkt, t2: rpgW/DivGate switched); AllVis.of_coh"
 2026-10-23,indstaget,claude-opus-5-5,150,30,classRuleOk/classRulesOk/classRecsRulesOk + (helper tpt) targetPinTys/targetMajorPins/classMajors under StageC
+2026-10-23,indstaget,claude-opus-5-5,90,30,checkBlockClasses/classStreamRecs + (helper pds) targetParamsDefEq..classesCtors under StageC

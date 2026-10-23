@@ -174,86 +174,86 @@ def tkaK8 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0], m)
 
-def tkaK7 (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def tkaK7 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (occ, m) =>
     if occ = 0 then some ([0], m)
-    else tkaK8 (tcmF n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+    else tkaK8 (tcmF cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
       (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl)
 
-def tkaK6 (n : Nat) (vis q fto ftl Mc usp lao lpl app : Word) :
+def tkaK6 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl app : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rn, m) => tkaK7 n vis q fto ftl Mc usp lao lpl (noF n m (rn.headD 0) (rn.tail.headD 0) 0 0 app)
+  | some (rn, m) => tkaK7 cR n vis q fto ftl Mc usp lao lpl (noF n m (rn.headD 0) (rn.tail.headD 0) 0 0 app)
 
-def tkaK5 (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def tkaK5 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m) => tkaK6 n vis q fto ftl Mc usp lao lpl (ra.headD 0) (memberNamesW n m q)
+  | some (ra, m) => tkaK6 cR n vis q fto ftl Mc usp lao lpl (ra.headD 0) (memberNamesW n m q)
 
-def tkaK4 (vis q fto ftl Mc usp lao lpl : Word) (n : Nat) : Option (Word × Mem) → Option (List Word × Mem)
+def tkaK4 (cR : CallM) (vis q fto ftl Mc usp lao lpl : Word) (n : Nat) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hd, m) =>
     if 4294967296 ≤ hd then none
-    else tkaK5 n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl])
+    else tkaK5 cR n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl])
 
-def tkaK3 (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (m : Mem) : Option Word → Option (List Word × Mem)
+def tkaK3 (cR : CallM) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
   | some e =>
     if e = 0 then some ([0], m)
-    else tkaK4 vis q fto ftl Mc usp lao (if lal < K then lal else K) n (ceinternW m ip usp)
+    else tkaK4 cR vis q fto ftl Mc usp lao (if lal < K then lal else K) n (ceinternW m ip usp)
 
-def tkaK2 (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (r1 : List Word) :
+def tkaK2 (cR : CallM) (n : Nat) (vis q fto ftl Mc ip usp lao lal K : Word) (r1 : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m) => tkaK3 n vis q fto ftl Mc ip usp lao lal K m
+  | some (r2, m) => tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m
       (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0))
 
-def tkaK1 (n : Nat) (vis q fto ftl Mc ip usp lao lal mao mal K : Word) :
+def tkaK1 (cR : CallM) (n : Nat) (vis q fto ftl Mc ip usp lao lal mao mal K : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m) => tkaK2 n vis q fto ftl Mc ip usp lao lal K r1
+  | some (r1, m) => tkaK2 cR n vis q fto ftl Mc ip usp lao lal K r1
       (eeW n m (if mal < K then mao else mao + K) (if mal < K then 0 else mal - K))
 
 /-- **The model of `target_k53_args`** (exec fuel; `K` the class's parameter count, read once). -/
-def tkaW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def tkaW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, q, fto, ftl, Mc, ip, usp, lao, lal, mao, mal =>
-    tkaK1 n vis q fto ftl Mc ip usp lao lal mao mal (rdW (m.arr64 IW) (Mc + 4))
+    tkaK1 cR n vis q fto ftl Mc ip usp lao lal mao mal (rdW (m.arr64 IW) (Mc + 4))
       (eeW n m (if lal < rdW (m.arr64 IW) (Mc + 4) then lao else lao + rdW (m.arr64 IW) (Mc + 4))
         (if lal < rdW (m.arr64 IW) (Mc + 4) then 0 else lal - rdW (m.arr64 IW) (Mc + 4)))
 
 section arms
-variable (n : Nat) (m : Mem) (vis q fto ftl Mc ip usp lao lal mao mal lpl app hd e occ K : Word)
+variable (cR : CallM) (n : Nat) (m : Mem) (vis q fto ftl Mc ip usp lao lal mao mal lpl app hd e occ K : Word)
   (r r1 r2 ra rn : List Word)
-theorem tkaW_succ : tkaW (n + 1) m vis q fto ftl Mc ip usp lao lal mao mal =
-    tkaK1 n vis q fto ftl Mc ip usp lao lal mao mal (rdW (m.arr64 IW) (Mc + 4))
+theorem tkaW_succ : tkaW cR (n + 1) m vis q fto ftl Mc ip usp lao lal mao mal =
+    tkaK1 cR n vis q fto ftl Mc ip usp lao lal mao mal (rdW (m.arr64 IW) (Mc + 4))
       (eeW n m (if lal < rdW (m.arr64 IW) (Mc + 4) then lao else lao + rdW (m.arr64 IW) (Mc + 4))
         (if lal < rdW (m.arr64 IW) (Mc + 4) then 0 else lal - rdW (m.arr64 IW) (Mc + 4))) := rfl
-theorem tkaK1_some : tkaK1 n vis q fto ftl Mc ip usp lao lal mao mal K (some (r1, m)) =
-    tkaK2 n vis q fto ftl Mc ip usp lao lal K r1
+theorem tkaK1_some : tkaK1 cR n vis q fto ftl Mc ip usp lao lal mao mal K (some (r1, m)) =
+    tkaK2 cR n vis q fto ftl Mc ip usp lao lal K r1
       (eeW n m (if mal < K then mao else mao + K) (if mal < K then 0 else mal - K)) := rfl
-theorem tkaK2_some : tkaK2 n vis q fto ftl Mc ip usp lao lal K r1 (some (r2, m)) =
-    tkaK3 n vis q fto ftl Mc ip usp lao lal K m
+theorem tkaK2_some : tkaK2 cR n vis q fto ftl Mc ip usp lao lal K r1 (some (r2, m)) =
+    tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m
       (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) := rfl
-theorem tkaK3_no (h : e = 0) : tkaK3 n vis q fto ftl Mc ip usp lao lal K m (some e) = some ([0], m) := by
+theorem tkaK3_no (h : e = 0) : tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m (some e) = some ([0], m) := by
   simp only [tkaK3]; rw [if_pos h]
-theorem tkaK3_yes (h : ¬ e = 0) : tkaK3 n vis q fto ftl Mc ip usp lao lal K m (some e) =
-    tkaK4 vis q fto ftl Mc usp lao (if lal < K then lal else K) n (ceinternW m ip usp) := by
+theorem tkaK3_yes (h : ¬ e = 0) : tkaK3 cR n vis q fto ftl Mc ip usp lao lal K m (some e) =
+    tkaK4 cR vis q fto ftl Mc usp lao (if lal < K then lal else K) n (ceinternW m ip usp) := by
   simp only [tkaK3]; rw [if_neg h]
-theorem tkaK4_big (h : 4294967296 ≤ hd) : tkaK4 vis q fto ftl Mc usp lao lpl n (some (hd, m)) = none := by
+theorem tkaK4_big (h : 4294967296 ≤ hd) : tkaK4 cR vis q fto ftl Mc usp lao lpl n (some (hd, m)) = none := by
   simp only [tkaK4]; rw [if_pos h]
-theorem tkaK4_ok (h : ¬ 4294967296 ≤ hd) : tkaK4 vis q fto ftl Mc usp lao lpl n (some (hd, m)) =
-    tkaK5 n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl]) := by
+theorem tkaK4_ok (h : ¬ 4294967296 ≤ hd) : tkaK4 cR vis q fto ftl Mc usp lao lpl n (some (hd, m)) =
+    tkaK5 cR n vis q fto ftl Mc usp lao lpl (mknF m [hd, lao, lpl]) := by
   simp only [tkaK4]; rw [if_neg h]
-theorem tkaK5_some : tkaK5 n vis q fto ftl Mc usp lao lpl (some (ra, m)) =
-    tkaK6 n vis q fto ftl Mc usp lao lpl (ra.headD 0) (memberNamesW n m q) := rfl
-theorem tkaK6_some : tkaK6 n vis q fto ftl Mc usp lao lpl app (some (rn, m)) =
-    tkaK7 n vis q fto ftl Mc usp lao lpl (noF n m (rn.headD 0) (rn.tail.headD 0) 0 0 app) := rfl
-theorem tkaK7_no (h : occ = 0) : tkaK7 n vis q fto ftl Mc usp lao lpl (some (occ, m)) = some ([0], m) := by
+theorem tkaK5_some : tkaK5 cR n vis q fto ftl Mc usp lao lpl (some (ra, m)) =
+    tkaK6 cR n vis q fto ftl Mc usp lao lpl (ra.headD 0) (memberNamesW n m q) := rfl
+theorem tkaK6_some : tkaK6 cR n vis q fto ftl Mc usp lao lpl app (some (rn, m)) =
+    tkaK7 cR n vis q fto ftl Mc usp lao lpl (noF n m (rn.headD 0) (rn.tail.headD 0) 0 0 app) := rfl
+theorem tkaK7_no (h : occ = 0) : tkaK7 cR n vis q fto ftl Mc usp lao lpl (some (occ, m)) = some ([0], m) := by
   simp only [tkaK7]; rw [if_pos h]
-theorem tkaK7_yes (h : ¬ occ = 0) : tkaK7 n vis q fto ftl Mc usp lao lpl (some (occ, m)) =
-    tkaK8 (tcmF n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+theorem tkaK7_yes (h : ¬ occ = 0) : tkaK7 cR n vis q fto ftl Mc usp lao lpl (some (occ, m)) =
+    tkaK8 (tcmF cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
       (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl) := by
   simp only [tkaK7]; rw [if_neg h]
 theorem tkaK8_some : tkaK8 (some (r, m)) = some ([r.headD 0], m) := rfl
@@ -262,10 +262,10 @@ attribute [ind_grind] tkaW_succ tkaK1_some tkaK2_some tkaK3_no tkaK3_yes tkaK4_b
   tkaK6_some tkaK7_no tkaK7_yes tkaK8_some
 
 set_option maxHeartbeats 8000000 in
-theorem tka_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St)
+theorem tka_spec (p : Prog) (L : K53Look p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
     (vis q fto ftl Mc ip usp lao lal mao mal : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_k53_args" [vis, q, fto, ftl, Mc, ip, usp, lao, lal, mao, mal]
-    ⦃fun r s' => LocEq s' s₀ ∧ tkaW n s₀.mem vis q fto ftl Mc ip usp lao lal mao mal = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ tkaW cR n s₀.mem vis q fto ftl Mc ip usp lao lal mao mal = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   | succ n =>
@@ -274,7 +274,8 @@ theorem tka_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ee_spec p L n, slEq_spec p L.eq n,
       internConst_spec p L.cf L.cp L.ic n, mknF_spec p L.ad n,
       blockShapeMemberNames_spec p L.tmn.tcm.ha L.tmn.tcm.mnc L.tmn.tcm.mn n, noF_spec p L n,
-      tcmF_spec p L.tmn.tcm n]
+      tcmF_spec p L.tmn.tcm cR hcR n]
+    all_goals (try clear hcR)
     -- `LocEq` unfolded, the callee posts' `s'.loc = …` serve `simp` as rewrites (`*`): the
     -- locals are resolved before `grind`, not by its E-matching through the chain (78 s -> ~5 s).
     all_goals (try simp only [LocEq] at *)

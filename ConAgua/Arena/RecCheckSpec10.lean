@@ -232,97 +232,97 @@ def pdsK11 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0], m)
 
-def pdsK10 (vis d av bv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def pdsK10 (cR : CallM) (n : Nat) (vis d av bv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => pdsK11 (stubM "is_def_eq_core" m [vis, d, av, bv])
+  | some (_, m) => pdsK11 (cR n "is_def_eq_core" [vis, d, av, bv] m)
 
-def pdsK9 (vis d av bv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def pdsK9 (cR : CallM) (n : Nat) (vis d av bv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => pdsK10 vis d av bv (stubM "infer_type_core" m [vis, d, bv])
+  | some (_, m) => pdsK10 cR n vis d av bv (cR n "infer_type_core" [vis, d, bv] m)
 
-def pdsK8 (vis d av : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def pdsK8 (cR : CallM) (n : Nat) (vis d av : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (bv, m) =>
     if 4294967296 ≤ bv then none
     else if av = bv then some ([1], m)
-    else pdsK9 vis d av bv (stubM "infer_type_core" m [vis, d, av])
+    else pdsK9 cR n vis d av bv (cR n "infer_type_core" [vis, d, av] m)
 
-def pdsK7 (n : Nat) (vis d no nl lvls ho hl av : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def pdsK7 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl av : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => pdsK8 vis d av (taF n m no nl lvls ho hl (r.headD 0))
+  | some (r, m) => pdsK8 cR n vis d av (taF n m no nl lvls ho hl (r.headD 0))
 
-def pdsK6 (n : Nat) (vis d no nl lvls ho hl pfo pfl b : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def pdsK6 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl b : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (av, m) =>
-    if 4294967296 ≤ av then none else pdsK7 n vis d no nl lvls ho hl av (tcpF n m pfo pfl b)
+    if 4294967296 ≤ av then none else pdsK7 cR n vis d no nl lvls ho hl av (tcpF n m pfo pfl b)
 
-def pdsK5 (n : Nat) (vis d no nl lvls ho hl pfo pfl b : Word) :
+def pdsK5 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => pdsK6 n vis d no nl lvls ho hl pfo pfl b (taF n m no nl lvls ho hl (r.headD 0))
+  | some (r, m) => pdsK6 cR n vis d no nl lvls ho hl pfo pfl b (taF n m no nl lvls ho hl (r.headD 0))
 
-def pdsK4 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) :
+def pdsK4 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) =>
-    if pfl < r.headD 0 then some ([0], m) else pdsK5 n vis d no nl lvls ho hl pfo pfl b (tcpF n m pfo pfl a)
+    if pfl < r.headD 0 then some ([0], m) else pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (tcpF n m pfo pfl a)
 
-def pdsK3 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) :
+def pdsK3 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) =>
     if pfl < r.headD 0 then some ([0], m)
-    else pdsK4 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b])
+    else pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b])
 
-def pdsK2 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def pdsK2 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (x, m) =>
-    if x ≠ 0 then some ([0], m) else pdsK3 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, a])
+    if x ≠ 0 then some ([0], m) else pdsK3 cR n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, a])
 
-def pdsK1 (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def pdsK1 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (x, m) =>
-    if x ≠ 0 then some ([0], m) else pdsK2 n vis d no nl lvls ho hl pfo pfl a b (bvbW n m b CWF)
+    if x ≠ 0 then some ([0], m) else pdsK2 cR n vis d no nl lvls ho hl pfo pfl a b (bvbW n m b CWF)
 
 /-- **The model of `target_params_def_eq_step`** (body fuel `n`). -/
-def pdsW (n : Nat) (m : Mem) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (List Word × Mem) :=
-  pdsK1 n vis d no nl lvls ho hl pfo pfl a b (bvbW n m a CWF)
+def pdsW (cR : CallM) (n : Nat) (m : Mem) (vis d no nl lvls ho hl pfo pfl a b : Word) : Option (List Word × Mem) :=
+  pdsK1 cR n vis d no nl lvls ho hl pfo pfl a b (bvbW n m a CWF)
 
 section arms
-variable (n : Nat) (m : Mem) (vis d no nl lvls ho hl pfo pfl a b av bv x : Word) (r : List Word)
+variable (cR : CallM) (n : Nat) (m : Mem) (vis d no nl lvls ho hl pfo pfl a b av bv x : Word) (r : List Word)
 theorem pdsK11_some : pdsK11 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem pdsK10_some : pdsK10 vis d av bv (some (r, m)) = pdsK11 (stubM "is_def_eq_core" m [vis, d, av, bv]) := rfl
-theorem pdsK9_some : pdsK9 vis d av bv (some (r, m)) =
-    pdsK10 vis d av bv (stubM "infer_type_core" m [vis, d, bv]) := rfl
-theorem pdsK8_big (h : 4294967296 ≤ bv) : pdsK8 vis d av (some (bv, m)) = none := by simp [pdsK8, h]
-theorem pdsK8_eq (h : ¬ 4294967296 ≤ bv) (he : av = bv) : pdsK8 vis d av (some (bv, m)) = some ([1], m) := by
+theorem pdsK10_some : pdsK10 cR n vis d av bv (some (r, m)) = pdsK11 (cR n "is_def_eq_core" [vis, d, av, bv] m) := rfl
+theorem pdsK9_some : pdsK9 cR n vis d av bv (some (r, m)) =
+    pdsK10 cR n vis d av bv (cR n "infer_type_core" [vis, d, bv] m) := rfl
+theorem pdsK8_big (h : 4294967296 ≤ bv) : pdsK8 cR n vis d av (some (bv, m)) = none := by simp [pdsK8, h]
+theorem pdsK8_eq (h : ¬ 4294967296 ≤ bv) (he : av = bv) : pdsK8 cR n vis d av (some (bv, m)) = some ([1], m) := by
   simp [pdsK8, h, he]
-theorem pdsK8_ne (h : ¬ 4294967296 ≤ bv) (he : ¬ av = bv) : pdsK8 vis d av (some (bv, m)) =
-    pdsK9 vis d av bv (stubM "infer_type_core" m [vis, d, av]) := by simp [pdsK8, h, he]
-theorem pdsK7_some : pdsK7 n vis d no nl lvls ho hl av (some (r, m)) =
-    pdsK8 vis d av (taF n m no nl lvls ho hl (r.headD 0)) := rfl
-theorem pdsK6_big (h : 4294967296 ≤ av) : pdsK6 n vis d no nl lvls ho hl pfo pfl b (some (av, m)) = none := by
+theorem pdsK8_ne (h : ¬ 4294967296 ≤ bv) (he : ¬ av = bv) : pdsK8 cR n vis d av (some (bv, m)) =
+    pdsK9 cR n vis d av bv (cR n "infer_type_core" [vis, d, av] m) := by simp [pdsK8, h, he]
+theorem pdsK7_some : pdsK7 cR n vis d no nl lvls ho hl av (some (r, m)) =
+    pdsK8 cR n vis d av (taF n m no nl lvls ho hl (r.headD 0)) := rfl
+theorem pdsK6_big (h : 4294967296 ≤ av) : pdsK6 cR n vis d no nl lvls ho hl pfo pfl b (some (av, m)) = none := by
   simp [pdsK6, h]
-theorem pdsK6_ok (h : ¬ 4294967296 ≤ av) : pdsK6 n vis d no nl lvls ho hl pfo pfl b (some (av, m)) =
-    pdsK7 n vis d no nl lvls ho hl av (tcpF n m pfo pfl b) := by simp [pdsK6, h]
-theorem pdsK5_some : pdsK5 n vis d no nl lvls ho hl pfo pfl b (some (r, m)) =
-    pdsK6 n vis d no nl lvls ho hl pfo pfl b (taF n m no nl lvls ho hl (r.headD 0)) := rfl
-theorem pdsK4_out (h : pfl < r.headD 0) : pdsK4 n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
+theorem pdsK6_ok (h : ¬ 4294967296 ≤ av) : pdsK6 cR n vis d no nl lvls ho hl pfo pfl b (some (av, m)) =
+    pdsK7 cR n vis d no nl lvls ho hl av (tcpF n m pfo pfl b) := by simp [pdsK6, h]
+theorem pdsK5_some : pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (some (r, m)) =
+    pdsK6 cR n vis d no nl lvls ho hl pfo pfl b (taF n m no nl lvls ho hl (r.headD 0)) := rfl
+theorem pdsK4_out (h : pfl < r.headD 0) : pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
     some ([0], m) := by simp only [pdsK4]; rw [if_pos h]
-theorem pdsK4_ok (h : ¬ pfl < r.headD 0) : pdsK4 n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    pdsK5 n vis d no nl lvls ho hl pfo pfl b (tcpF n m pfo pfl a) := by simp only [pdsK4]; rw [if_neg h]
-theorem pdsK3_out (h : pfl < r.headD 0) : pdsK3 n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
+theorem pdsK4_ok (h : ¬ pfl < r.headD 0) : pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
+    pdsK5 cR n vis d no nl lvls ho hl pfo pfl b (tcpF n m pfo pfl a) := by simp only [pdsK4]; rw [if_neg h]
+theorem pdsK3_out (h : pfl < r.headD 0) : pdsK3 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
     some ([0], m) := by simp only [pdsK3]; rw [if_pos h]
-theorem pdsK3_ok (h : ¬ pfl < r.headD 0) : pdsK3 n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
-    pdsK4 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b]) := by simp only [pdsK3]; rw [if_neg h]
-theorem pdsK2_b (h : x ≠ 0) : pdsK2 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
+theorem pdsK3_ok (h : ¬ pfl < r.headD 0) : pdsK3 cR n vis d no nl lvls ho hl pfo pfl a b (some (r, m)) =
+    pdsK4 cR n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, b]) := by simp only [pdsK3]; rw [if_neg h]
+theorem pdsK2_b (h : x ≠ 0) : pdsK2 cR n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
   simp [pdsK2, h]
-theorem pdsK2_ok (h : ¬ x ≠ 0) : pdsK2 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
-    pdsK3 n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, a]) := by simp [pdsK2, h]
-theorem pdsK1_b (h : x ≠ 0) : pdsK1 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
+theorem pdsK2_ok (h : ¬ x ≠ 0) : pdsK2 cR n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
+    pdsK3 cR n vis d no nl lvls ho hl pfo pfl a b (fvbF m [CWF, a]) := by simp [pdsK2, h]
+theorem pdsK1_b (h : x ≠ 0) : pdsK1 cR n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) = some ([0], m) := by
   simp [pdsK1, h]
-theorem pdsK1_ok (h : ¬ x ≠ 0) : pdsK1 n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
-    pdsK2 n vis d no nl lvls ho hl pfo pfl a b (bvbW n m b CWF) := by simp [pdsK1, h]
+theorem pdsK1_ok (h : ¬ x ≠ 0) : pdsK1 cR n vis d no nl lvls ho hl pfo pfl a b (some (x, m)) =
+    pdsK2 cR n vis d no nl lvls ho hl pfo pfl a b (bvbW n m b CWF) := by simp [pdsK1, h]
 end arms
 attribute [ind_grind] pdsK11_some pdsK10_some pdsK9_some pdsK8_big pdsK8_eq pdsK8_ne pdsK7_some pdsK6_big
   pdsK6_ok pdsK5_some pdsK4_out pdsK4_ok pdsK3_out pdsK3_ok pdsK2_b pdsK2_ok pdsK1_b pdsK1_ok
@@ -337,75 +337,75 @@ structure TpLook (p : Prog) : Prop where
   tpd : p.lookup "target_params_def_eq" = some targetParamsDefEq
 
 set_option maxHeartbeats 2000000 in
-theorem tpdStep_spec (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St) (vis d no nl lvls ho hl pfo pfl a b : Word) :
+theorem tpdStep_spec (p : Prog) (L : TpLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis d no nl lvls ho hl pfo pfl a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_params_def_eq_step"
       [vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ pdsW n s₀.mem vis d no nl lvls ho hl pfo pfl a b = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ pdsW cR n s₀.mem vis d no nl lvls ho hl pfo pfl a b = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ L.step]
   simp only [callFn, targetParamsDefEqStep]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bvarBL_spec p L.bvb n, fvbF_spec p L.hf n, tcp_specF p L.rc n, ta_specF p L.ta n,
-      stubM_spec p "infer_type_core" n, stubM_spec p "is_def_eq_core" n] <;>
+      hcR n "infer_type_core", hcR n "is_def_eq_core"] <;>
     finish (gen := 40) (instances := 20000) [pdsW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11]
 
 /-! ## `target_params_def_eq`: the word model -/
 
 
 
-def pdsF : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def pdsF (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b => pdsW n m vis d no nl lvls ho hl pfo pfl a b
+  | n + 1, m, vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b => pdsW cR n m vis d no nl lvls ho hl pfo pfl a b
 
 mutual
-def pdeW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def pdeW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao, al, bo, bl =>
     if al = 0 then some ([if bl = 0 then 1 else 0], m)
     else if bl = 0 then some ([0], m)
-    else pdeK1 n vis d no nl lvls ho hl pfo pfl ao al bo bl
-      (pdsF n m vis d no nl lvls ho hl pfo pfl (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))
-def pdeK1 (n : Nat) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word) :
+    else pdeK1 cR n vis d no nl lvls ho hl pfo pfl ao al bo bl
+      (pdsF cR n m vis d no nl lvls ho hl pfo pfl (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))
+def pdeK1 (cR : CallM) (n : Nat) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then some ([0], m1)
-    else pdsK11 (pdeW n m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1))
+    else pdsK11 (pdeW cR n m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1))
 end
 
 section arms
-variable (n : Nat) (m m1 : Mem) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word) (r : List Word)
-theorem pdeW_nil (h : al = 0) : pdeW (n + 1) m vis d no nl lvls ho hl pfo pfl ao al bo bl =
+variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word) (r : List Word)
+theorem pdeW_nil (h : al = 0) : pdeW cR (n + 1) m vis d no nl lvls ho hl pfo pfl ao al bo bl =
     some ([if bl = 0 then 1 else 0], m) := by simp [pdeW, h]
-theorem pdeW_nilr (h : ¬ al = 0) (hb : bl = 0) : pdeW (n + 1) m vis d no nl lvls ho hl pfo pfl ao al bo bl =
+theorem pdeW_nilr (h : ¬ al = 0) (hb : bl = 0) : pdeW cR (n + 1) m vis d no nl lvls ho hl pfo pfl ao al bo bl =
     some ([0], m) := by simp [pdeW, h, hb]
-theorem pdeW_cons (h : ¬ al = 0) (hb : ¬ bl = 0) : pdeW (n + 1) m vis d no nl lvls ho hl pfo pfl ao al bo bl =
-    pdeK1 n vis d no nl lvls ho hl pfo pfl ao al bo bl
-      (pdsF n m vis d no nl lvls ho hl pfo pfl (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo)) := by
+theorem pdeW_cons (h : ¬ al = 0) (hb : ¬ bl = 0) : pdeW cR (n + 1) m vis d no nl lvls ho hl pfo pfl ao al bo bl =
+    pdeK1 cR n vis d no nl lvls ho hl pfo pfl ao al bo bl
+      (pdsF cR n m vis d no nl lvls ho hl pfo pfl (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo)) := by
   simp [pdeW, h, hb]
-theorem pdeK1_stop (h : r.headD 0 = 0) : pdeK1 n vis d no nl lvls ho hl pfo pfl ao al bo bl (some (r, m1)) =
+theorem pdeK1_stop (h : r.headD 0 = 0) : pdeK1 cR n vis d no nl lvls ho hl pfo pfl ao al bo bl (some (r, m1)) =
     some ([0], m1) := by simp only [pdeK1]; rw [if_pos h]
-theorem pdeK1_go (h : ¬ r.headD 0 = 0) : pdeK1 n vis d no nl lvls ho hl pfo pfl ao al bo bl (some (r, m1)) =
-    pdsK11 (pdeW n m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1)) := by simp only [pdeK1]; rw [if_neg h]
+theorem pdeK1_go (h : ¬ r.headD 0 = 0) : pdeK1 cR n vis d no nl lvls ho hl pfo pfl ao al bo bl (some (r, m1)) =
+    pdsK11 (pdeW cR n m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1)) := by simp only [pdeK1]; rw [if_neg h]
 end arms
 attribute [ind_grind] pdeW_nil pdeW_nilr pdeW_cons pdeK1_stop pdeK1_go
 
-theorem pdsF_spec (p : Prog) (L : TpLook p) (n : Nat) (s₀ : St) (vis d no nl lvls ho hl pfo pfl a b : Word) :
+theorem pdsF_spec (p : Prog) (L : TpLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis d no nl lvls ho hl pfo pfl a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_params_def_eq_step"
       [vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ pdsF n s₀.mem vis d no nl lvls ho hl pfo pfl a b = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ pdsF cR n s₀.mem vis d no nl lvls ho hl pfo pfl a b = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact tpdStep_spec p L n s₀ vis d no nl lvls ho hl pfo pfl a b
+  | succ n => exact tpdStep_spec p L cR hcR n s₀ vis d no nl lvls ho hl pfo pfl a b
 
-theorem tpd_spec (p : Prog) (L : TpLook p) (n : Nat) :
+theorem tpd_spec (p : Prog) (L : TpLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (vis d no nl lvls ho hl pfo pfl ao al bo bl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_params_def_eq"
       [vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao, al, bo, bl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      pdeW n s₀.mem vis d no nl lvls ho hl pfo pfl ao al bo bl = some (r, s'.mem); ⊤⦄ := by
+      pdeW cR n s₀.mem vis d no nl lvls ho hl pfo pfl ao al bo bl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis d no nl lvls ho hl pfo pfl ao al bo bl
@@ -415,7 +415,7 @@ theorem tpd_spec (p : Prog) (L : TpLook p) (n : Nat) :
     rw [invoke_eq _ L.tpd]
     simp only [callFn, targetParamsDefEq]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdsF_spec p L n, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdsF_spec p L cR hcR n, ih] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10,
         loc_init11, loc_init12]
 

@@ -149,60 +149,60 @@ def tcmK6 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0], m)
 
-def tcmK5 (n : Nat) (vis pfo pfl dso dsl edso edsl d : Word) (rn rb : List Word) :
+def tcmK5 (cR : CallM) (n : Nat) (vis pfo pfl dso dsl edso edsl d : Word) (rn rb : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rh, m) => tcmK6 (pdeW n m vis d (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
+  | some (rh, m) => tcmK6 (pdeW cR n m vis d (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
       (rh.tail.headD 0) pfo pfl dso dsl edso edsl)
 
-def tcmK4 (n : Nat) (vis fto ftl pfo pfl dso dsl edso edsl : Word) (rn : List Word) :
+def tcmK4 (cR : CallM) (n : Nat) (vis fto ftl pfo pfl dso dsl edso edsl : Word) (rn : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m) =>
     if pfl + ftl < pfl then none
-    else tcmK5 n vis pfo pfl dso dsl edso edsl (pfl + ftl) rn rb (thW n m fto ftl pfl)
+    else tcmK5 cR n vis pfo pfl dso dsl edso edsl (pfl + ftl) rn rb (thW n m fto ftl pfl)
 
-def tcmK3 (n : Nat) (vis fto ftl pfo pfl dso dsl edso edsl : Word) (rn : List Word) :
+def tcmK3 (cR : CallM) (n : Nat) (vis fto ftl pfo pfl dso dsl edso edsl : Word) (rn : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rl, m) => tcmK4 n vis fto ftl pfo pfl dso dsl edso edsl rn (plW n m (rl.headD 0) (rl.tail.headD 0))
+  | some (rl, m) => tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (plW n m (rl.headD 0) (rl.tail.headD 0))
 
-def tcmK2 (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word) :
+def tcmK2 (cR : CallM) (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rn, m) => tcmK3 n vis fto ftl pfo pfl dso dsl edso edsl rn (lpsW n m p)
+  | some (rn, m) => tcmK3 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (lpsW n m p)
 
-def tcmK1 (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word) :
+def tcmK1 (cR : CallM) (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) =>
     if r.headD 0 ≠ 2 then some ([0], m)
-    else tcmK2 n vis p fto ftl pfo pfl dso dsl edso edsl (memberNamesW n m p)
+    else tcmK2 cR n vis p fto ftl pfo pfl dso dsl edso edsl (memberNamesW n m p)
 
 /-- **The model of `target_class_match`** (body fuel `n`). -/
-def tcmW (n : Nat) (m : Mem) (vis p fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
+def tcmW (cR : CallM) (n : Nat) (m : Mem) (vis p fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
     Option (List Word × Mem) :=
-  tcmK1 n vis p fto ftl pfo pfl dso dsl edso edsl (stubM "lvls_eq_c" m [us, lvls])
+  tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (stubM "lvls_eq_c" m [us, lvls])
 
 section arms
-variable (n : Nat) (m : Mem) (vis p fto ftl pfo pfl dso dsl edso edsl d : Word) (r rn rb rh rl : List Word)
+variable (cR : CallM) (n : Nat) (m : Mem) (vis p fto ftl pfo pfl dso dsl edso edsl d : Word) (r rn rb rh rl : List Word)
 theorem tcmK6_some : tcmK6 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem tcmK5_some : tcmK5 n vis pfo pfl dso dsl edso edsl d rn rb (some (rh, m)) =
-    tcmK6 (pdeW n m vis d (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0) (rh.tail.headD 0) pfo pfl
+theorem tcmK5_some : tcmK5 cR n vis pfo pfl dso dsl edso edsl d rn rb (some (rh, m)) =
+    tcmK6 (pdeW cR n m vis d (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0) (rh.tail.headD 0) pfo pfl
       dso dsl edso edsl) := rfl
-theorem tcmK4_wrap (h : pfl + ftl < pfl) : tcmK4 n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
+theorem tcmK4_wrap (h : pfl + ftl < pfl) : tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
     none := by simp only [tcmK4]; rw [if_pos h]
-theorem tcmK4_ok (h : ¬ pfl + ftl < pfl) : tcmK4 n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
-    tcmK5 n vis pfo pfl dso dsl edso edsl (pfl + ftl) rn rb (thW n m fto ftl pfl) := by
+theorem tcmK4_ok (h : ¬ pfl + ftl < pfl) : tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
+    tcmK5 cR n vis pfo pfl dso dsl edso edsl (pfl + ftl) rn rb (thW n m fto ftl pfl) := by
   simp only [tcmK4]; rw [if_neg h]
-theorem tcmK3_some : tcmK3 n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rl, m)) =
-    tcmK4 n vis fto ftl pfo pfl dso dsl edso edsl rn (plW n m (rl.headD 0) (rl.tail.headD 0)) := rfl
-theorem tcmK2_some : tcmK2 n vis p fto ftl pfo pfl dso dsl edso edsl (some (rn, m)) =
-    tcmK3 n vis fto ftl pfo pfl dso dsl edso edsl rn (lpsW n m p) := rfl
-theorem tcmK1_no (h : r.headD 0 ≠ 2) : tcmK1 n vis p fto ftl pfo pfl dso dsl edso edsl (some (r, m)) =
+theorem tcmK3_some : tcmK3 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rl, m)) =
+    tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (plW n m (rl.headD 0) (rl.tail.headD 0)) := rfl
+theorem tcmK2_some : tcmK2 cR n vis p fto ftl pfo pfl dso dsl edso edsl (some (rn, m)) =
+    tcmK3 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (lpsW n m p) := rfl
+theorem tcmK1_no (h : r.headD 0 ≠ 2) : tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (some (r, m)) =
     some ([0], m) := by simp only [tcmK1]; rw [if_pos h]
-theorem tcmK1_yes (h : ¬ r.headD 0 ≠ 2) : tcmK1 n vis p fto ftl pfo pfl dso dsl edso edsl (some (r, m)) =
-    tcmK2 n vis p fto ftl pfo pfl dso dsl edso edsl (memberNamesW n m p) := by
+theorem tcmK1_yes (h : ¬ r.headD 0 ≠ 2) : tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (some (r, m)) =
+    tcmK2 cR n vis p fto ftl pfo pfl dso dsl edso edsl (memberNamesW n m p) := by
   simp only [tcmK1]; rw [if_neg h]
 end arms
 attribute [ind_grind] tcmK6_some tcmK5_some tcmK4_wrap tcmK4_ok tcmK3_some tcmK2_some tcmK1_no tcmK1_yes
@@ -231,12 +231,12 @@ structure TcmLook (p : Prog) : Prop where
   th : p.lookup "target_holes" = some targetHoles
   tcm : p.lookup "target_class_match" = some targetClassMatch
 
-theorem targetClassMatch_spec (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St)
+theorem targetClassMatch_spec (p : Prog) (L : TcmLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
     (vis q fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_class_match"
       [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      tcmW n s₀.mem vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, s'.mem); ⊤⦄ := by
+      tcmW cR n s₀.mem vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ L.tcm]
   simp only [callFn, targetClassMatch]
   sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
@@ -244,7 +244,7 @@ theorem targetClassMatch_spec (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St)
       stubM_spec p "lvls_eq_c" n, blockShapeMemberNames_spec p L.ha L.mnc L.mn n,
       blockShapeLps_spec p L.ha L.erc L.eri L.lps n,
       plW_spec p L.ha L.ic L.sc L.sg L.pf L.pp L.ip L.plg L.pl L.il n,
-      targetHoles_spec p L.ff L.fp L.iff L.ic L.ha L.sc L.th n, tpd_spec p L.tp n] <;>
+      targetHoles_spec p L.ff L.fp L.iff L.ic L.ha L.sc L.th n, tpd_spec p L.tp cR hcR n] <;>
     finish (gen := 40) (instances := 20000) [tcmW, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
       loc_init9, loc_init10, loc_init11]
 
@@ -263,7 +263,7 @@ theorem word_add_nowrap {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNa
 
 theorem tcmW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso dsl lvls edso edsl : Word}
     {r : List Word} {bs : BlockShape} {formerTys pfvs ds eds : List EIdx}
-    (h : tcmW n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, m'))
+    (h : tcmW stubCall n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, m'))
     (hS : StageR dn vis fe m a) (hbs : BSOK m q.toNat bs) (hus : H us) (hlv : H lvls)
     (hft : decHL m fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop m)
     (hpf : HSl0 m pfo pfl pfvs) (hds : HSl0 m dso dsl ds) (heds : HSl0 m edso edsl eds) (hP : RcMR m) :
@@ -337,7 +337,7 @@ theorem tcmW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso ds
     (by rw [← hd]; exact (pfl + ftl).toNat_lt)
   have hP5 := hP4.fr (thW_mfr n h5)
   have hg05 := hg04.trans hg5
-  cases h6 : pdeW n m5 vis (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
+  cases h6 : pdeW stubCall n m5 vis (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
       (rh.tail.headD 0) pfo pfl dso dsl edso edsl with
   | none => rw [h6] at h; simp [tcmK6] at h
   | some x =>
@@ -362,8 +362,8 @@ end rel
 stubs under `target_params_def_eq`): the shape record as `BSOK` (decoded below the tops, its member
 slice and records below the top), the former types decoded below the top, the other three slices decoded (below the top
 unless empty), the walk memos well
-formed; the verdict as `r[0] ≠ 0`. -/
-@[refines ConRon.Arena.targetClassMatch]
+formed; the verdict as `r[0] ≠ 0`. Under `StageR`; the census link is `targetClassMatch_refinesC`
+(`IndT/RecCheckTcm`). -/
 theorem targetClassMatch_refines (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl pfo pfl us dso dsl lvls edso edsl : Word)
     (bs : BlockShape) (formerTys pfvs ds eds : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
@@ -378,7 +378,7 @@ theorem targetClassMatch_refines (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St
       (r.headD 0 != 0) = AM.res (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
-  refine triple_post (targetClassMatch_spec p L n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl) ?_
+  refine triple_post (targetClassMatch_spec p L stubCall (stubCall_spec p) n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl) ?_
   rintro r s' ⟨hl', hm⟩
   obtain ⟨c, a', run, hc, hS', hg, hP'⟩ := tcmW_ok dn fe vis n hm hS hbs hus hlv hft hftb hpf hds heds hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
