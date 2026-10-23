@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.KnotEntry
+import ConAgua.Arena.IndStubsT
 
 /-!
 # `check_value_group` under `StageT` (lane `loopt2`)
@@ -20,8 +21,7 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **`install_value_guards` under `StageT`** (what `cvgW_okT` needs of it; lane `indproofs3`'s
-`StageT` contracts of the four walks give it, `ivgW_okT`). -/
+/-- **`install_value_guards` under `StageT`** (the statement `ivgW_okT` proves). -/
 def IvgT : Prop :=
   ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q v : Word} {r : List Word} {cv : IConstantVal},
@@ -29,6 +29,90 @@ def IvgT : Prop :=
     decCV (erA m) q.toNat = some cv → q.toNat + 3 < 2 ^ 64 → v.toNat < 2 ^ 32 →
     ∃ a', (installValueGuards fe cv (decI v)).run a = .ok ((), a') ∧ StageT dn vis fe m' a' ∧
       IWGrow m m'
+
+/-- **`install_value_guards` under `StageT`** (`ivgW_ok`'s): the copy by its frame
+(`StageT.of_iw`), the four walks by lane `indproofs3`'s `StageT` contracts (`IndStubsT.lean`). -/
+theorem ivgW_okT : IvgT := by
+  intro dn vis fe a n m m' q v r cv h hS hq hqb hv
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
+  have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
+    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
+  have e2 : rdW (m.arr64 EREC) (q + 2) = w2 :=
+    rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw2
+  have hsrc : w2.toNat = 0 ∨ w1.toNat + w2.toNat ≤ (m.arr64 EREC).size := by
+    rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
+    · exact .inl h0
+    · exact .inr (L.Ind.hslice?_bound _ _ _ _ hsl h0)
+  cases n with
+  | zero => simp [ivgW] at h
+  | succ n =>
+  cases n with
+  | zero => simp [ivgW, cvLpsW, ivgK1] at h
+  | succ n =>
+  rw [ivgW_step, cvLpsW_step, e1, e2] at h
+  cases h1 : erToIwW n m w1 w2 with
+  | none => rw [h1] at h; simp [ivgK1] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, ivgK1_some] at h
+  obtain ⟨-, hr1t, hdec1, hS1R, hg1, htop1⟩ := erToIwW_stage h1 hS.stage hsrc
+  have hS1 := StageT.of_iw hS hS1R (erToIwW_frame h1 hS.stage hsrc)
+  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, v] with
+  | none => rw [h2] at h; simp [ivgK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, ivgK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
+    looseBVarsBoundedFastT_spec dn vis fe 4000000000 0 v hv m1 m2 a r2 h2 hS1
+  by_cases hb2 : r2.headD 0 = 0
+  · rw [if_pos hb2] at h; simp at h
+  rw [if_neg hb2] at h
+  cases h3 : stubM "has_fvar_fast" m2 [4000000000, v] with
+  | none => rw [h3] at h; simp [ivgK3] at h
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, ivgK3_some] at h
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
+    hasFvarFastT_spec dn vis fe 4000000000 v hv m2 m3 a2 r3 h3 hS2
+  by_cases hb3 : r3.headD 0 ≠ 0
+  · rw [if_pos hb3] at h; simp at h
+  rw [if_neg hb3] at h
+  rw [hr1t] at h
+  cases h4 : stubM "all_level_params_defined" m3 [r1.headD 0, w2, v] with
+  | none => rw [h4] at h; simp [ivgK4] at h
+  | some rm4 =>
+  obtain ⟨r4, m4⟩ := rm4
+  rw [h4, ivgK4_some] at h
+  have hdec3 : decHL m3 (r1.headD 0).toNat w2.toNat = some cv.levelParams := by
+    rw [decHL_grow (hg2.trans hg3) (by omega), hdec1]; exact hsl
+  obtain ⟨x4, a4, hrun4, hS4, hg4, hx4, -⟩ :=
+    allLevelParamsDefinedT_spec dn vis fe (r1.headD 0) w2 v hv cv.levelParams m3 m4 a3 r4 h4
+      ⟨hS3, hdec3⟩
+  by_cases hb4 : r4.headD 0 = 0
+  · rw [if_pos hb4] at h; simp at h
+  rw [if_neg hb4] at h
+  cases h5 : stubM "consts_resolve_ffast" m4 [vis, v] with
+  | none => rw [h5] at h; simp [ivgK5] at h
+  | some rm5 =>
+  obtain ⟨r5, m5⟩ := rm5
+  rw [h5, ivgK5_some] at h
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hx5, -⟩ :=
+    constsResolveFFastT_spec dn vis fe v hv m4 m5 a4 r5 h5 hS4
+  by_cases hb5 : r5.headD 0 = 0
+  · rw [if_pos hb5] at h; simp at h
+  rw [if_neg hb5] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
+  have ex3 : x3 = false := by rw [← hx3]; simpa using hb3
+  have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
+  have ex5 : x5 = true := by rw [← hx5]; simpa using hb5
+  rw [fuelW] at hrun2 hrun3
+  refine ⟨a5, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5)))⟩
+  rw [show ((0 : Word).toNat) = 0 from rfl] at hrun2
+  simp only [installValueGuards, StateT.run_bind, hrun2, exc_ok_bind', ex2, hrun3, ex3, hrun4,
+    ex4, hrun5, ex5, if_true, Bool.false_eq_true, if_false, StateT.run_pure]
+  rfl
 
 /-- The memory after `iw_reset` keeps `StageT`. -/
 theorem iwReset_stageT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
@@ -39,7 +123,7 @@ theorem iwReset_stageT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
 /-- **`check_value_group` refines `checkValueGroup .verified` under `StageT`**, at the model
 level, from the memory after `iw_reset`: the program's own calls of the core (`realCall p`). -/
 theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
-    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (hivg : IvgT)
+    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {g : Word} {r : List Word} {vg : ValueGroup}
     (h : cvgW (realCall p) n m vis g = some (r, m')) (hS : StageT dn vis fe m a)
@@ -170,7 +254,7 @@ theorem cvgW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
     have hcv4 : decCV (erA m4) (g + 1).toNat = some vg.cv := by
       rw [hg1']
       exact ArrExt.decCV (IWGrow.erecExt (hg1.trans (hg2.trans hg4))) hcv
-    obtain ⟨a5, hrun5, hS5, hg5⟩ := hivg h5 hS4 hcv4 (by rw [hg1']; omega) hwjl
+    obtain ⟨a5, hrun5, hS5, hg5⟩ := ivgW_okT h5 hS4 hcv4 (by rw [hg1']; omega) hwjl
     obtain ⟨a', hrun', hS', hg'⟩ :=
       tail m5 a5 hS5 (hg1.trans (hg2.trans (hg4.trans hg5))) h
     refine ⟨a', ?_, hS', hg'⟩

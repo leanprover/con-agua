@@ -115,6 +115,22 @@ theorem StageMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
       exact hC _ (by decide) (by decide)
   rw [this]; decide
 
+/-- **The zeroed memory has well-formed core memos** (empty, epoch `0`): what `TwinMem` needs of
+the loaded memory at the loop's start (open end 5). -/
+theorem CoreMemos.zero {m : Mem} (hsz : 158 ≤ (m.arr64 CTL).size)
+    (hA : ∀ b : ArrId, b = 49 ∨ b = 50 ∨ b = 52 ∨ b = 53 ∨ b = 54 ∨ b = 151 ∨ b = 152 ∨ b = 153 →
+      ∀ j, rdW (m.arr64 b) j = 0)
+    (hC : ∀ x : Word, x = 48 ∨ x = 50 ∨ x = 54 ∨ x = 56 ∨ x = 58 ∨ x = 152 ∨ x = 154 ∨ x = 156 →
+      rdW (m.arr64 CTL) x = 0) : CoreMemos m :=
+  ⟨⟨_, memoRV_zeroAt coreIlSch lfKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreAbSch lfKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreWsSch lfKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreFlSch bmKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreLsbSch bmKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreLpSch lfKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreLplSch ilKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩,
+    ⟨_, memoRV_zeroAt coreLplsSch ilKey _ m (by simp; omega) (hC _ (by simp)) (hA _ (by simp))⟩⟩
+
 /-! ## The relation -/
 
 /-- **The declaration loop's relation with the core's invariants**: `LoopR`, the twin's invariants

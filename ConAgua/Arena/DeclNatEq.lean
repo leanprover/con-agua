@@ -923,22 +923,23 @@ theorem EqL.cons {m : Mem} {o l : Nat} {e : EIdx × EIdx} {es : List (EIdx × EI
     refine ⟨p', a', b', ?_, hr', ha', hb', by simpa using he'⟩
     simpa [Nat.add_assoc, Nat.add_comm 1 j] using hp'
 
-def certW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
+def certW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
   if l = 0 then some ([1], m) else
-  ntBW (stubM "is_def_eq_core" m [vis, 2, rdW (m.arr64 IW) (rdW (m.arr64 IW) o),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)]) fun r1 m1 =>
+  ntBW (cl n "is_def_eq_core" [vis, 2, rdW (m.arr64 IW) (rdW (m.arr64 IW) o),
+      rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)] m) fun r1 m1 =>
   if r1.headD 0 = 0 then some ([0], m1)
   else ntBW (callW p n "certify_nat_eqs" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
-theorem certify_specW (p : Prog) (hp : p.lookup "certify_nat_eqs" = some certifyNatEqsL) (n : Nat)
+theorem certify_specW (p : Prog) (hp : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
+    (cl : CallM) (hc : CallSpec p cl) (n : Nat)
     (s₀ : St) (vis o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "certify_nat_eqs" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ certW p n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ certW p cl n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, certifyNatEqsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "is_def_eq_core" n, callW_spec p n "certify_nat_eqs"] <;>
+      hc n "is_def_eq_core", callW_spec p n "certify_nat_eqs"] <;>
     finish (gen := 20) [certW, ntBW]
 
 local notation "V" => ConLeche.CheckMode.verified
@@ -955,7 +956,7 @@ theorem certify_ref (hN : NatEqProg p) (o l : Word) (ps : List (EIdx × EIdx)) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => certW p k mm vis o l) (certify_specW p hN.lNatCertify k · vis o l) hc
+    have hw := callW_model (M := fun mm => certW p stubCall k mm vis o l) (certify_specW p hN.lNatCertify stubCall (stubCall_spec p) k · vis o l) hc
     simp only [certW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
@@ -965,7 +966,7 @@ theorem certify_ref (hN : NatEqProg p) (o l : Word) (ps : List (EIdx × EIdx)) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
-    have hw := callW_model (M := fun mm => certW p k mm vis o l) (certify_specW p hN.lNatCertify k · vis o l) hc
+    have hw := callW_model (M := fun mm => certW p stubCall k mm vis o l) (certify_specW p hN.lNatCertify stubCall (stubCall_spec p) k · vis o l) hc
     unfold certW at hw
     rw [if_neg (fun h => hl0 (by simp [h]))] at hw
     have hpp' : rdW (m.arr64 IW) o = pp := by
@@ -979,7 +980,7 @@ theorem certify_ref (hN : NatEqProg p) (o l : Word) (ps : List (EIdx × EIdx)) :
         rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
       simp only [iwA] at h3; simp [rdW, hpb, h3]
     rw [hpp', hea', heb'] at hw
-    cases h1 : stubM "is_def_eq_core" m [vis, 2, ea, eb] with
+    cases h1 : stubCall k "is_def_eq_core" [vis, 2, ea, eb] m with
     | none => rw [h1] at hw; simp at hw
     | some q1 =>
     obtain ⟨r1, m1⟩ := q1

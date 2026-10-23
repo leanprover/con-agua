@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclRomStubs
 import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.DeclCanonEq
+import ConRon.Bridge.Checker.Basis
 
 /-!
 # `check_basis_decl(vis, kind)` refines `checkBasisDecl` (lane `decls3`)
@@ -109,7 +110,8 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem cbdK4_ok {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {k : Word} {r : List Word} (hk : k.toNat < 5)
     (h : cbdK4 p n vis (callW p n "rom_basis_decls_a" [k] m) = some (r, m'))
-    (hS : StageR dn vis fe m a) :
+    (hS : StageR dn vis fe m a)
+    (hQ : k.toNat = 4 → ConRon.Bridge.StateOK a ∧ L.Rom.NamesDn dn a L.Rom.quotNames) :
     ∃ fe' a', (do installBasisDecls fe (← BasisKind.declsA (basisOfW k.toNat))).run a =
       .ok (fe', a') ∧ StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   cases h4 : callW p n "rom_basis_decls_a" [k] m with
@@ -117,7 +119,16 @@ theorem cbdK4_ok {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p) {dn : NIdx
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, cbdK4_some] at h
-  obtain ⟨cis, a4, hrun4, hS4, hg4, hD4, -⟩ := hR.basisA dn vis fe k hk n m a r4 m4 hS h4
+  obtain ⟨cis, a4, hrun4, hS4, hg4, hD4, -⟩ :
+      ∃ cis a4, (BasisKind.declsA (basisOfW k.toNat)).run a = .ok (cis, a4) ∧
+        KeepPost dn vis fe (decRBlk dn) m m4 a4 r4 cis := by
+    by_cases h4' : k.toNat < 4
+    · exact hR.basisA dn vis fe k h4' n m a r4 m4 hS h4
+    · have hk4 : k.toNat = 4 := by omega
+      have : k = 4 := UInt64.toNat_inj.mp (by rw [hk4]; rfl)
+      subst this
+      obtain ⟨hok, hN⟩ := hQ hk4
+      exact hR.quotA dn vis fe n m a r4 m4 ⟨hS, hok, hN⟩ h4
   cases h5 : callW p n "install_basis_decls" [vis, r4.headD 0, r4.tail.headD 0] m4 with
   | none => rw [h5] at h; cases h
   | some rm5 =>
@@ -138,7 +149,8 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
     (hpa : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "check_basis_decl" = some checkBasisDeclL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (fe : IFEnv) (vis k : Word)
-    (hk : k.toNat < 5) (hS : StageR dn vis fe s₀.mem a₀) :
+    (hk : k.toNat < 5) (hS : StageR dn vis fe s₀.mem a₀)
+    (hQ : k = 4 → ConRon.Bridge.StateOK a₀ ∧ L.Rom.NamesDn dn a₀ L.Rom.quotNames) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_basis_decl" [vis, k]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkBasisDecl fe (basisOfW k.toNat)) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkBasisDecl fe (basisOfW k.toNat)) a₀) s'.mem
@@ -191,7 +203,11 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
     rw [if_neg h0] at h
     have hfind : (fe.find? (decI (pinW s₀.mem (1 + (0 : Word).toNat))) == some ea) = true := by
       rw [← hb3]; simpa using h0
+    have hrun2' : eqA.run a₀ = .ok (ea, a2) := hrun2
+    obtain ⟨hok0, hN0⟩ := hQ rfl
+    have st2 := (ConRon.Bridge.internCI_fresh hok0 hrun2').1
     obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hR (by decide) h hS3
+      (fun _ => ⟨st2.ok, L.Rom.NamesDn.ext hN0 st2.ext⟩)
     refine ⟨fe', a', ?_, hS', hg2.trans (hg3.trans hg')⟩
     simp only [checkBasisDecl, basisOfW, show (4 : Word).toNat = 4 from rfl,
       show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, if_true,
@@ -202,7 +218,8 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) 
     simp only [hfind, if_true]
     exact hrun'
   · rw [if_neg h4] at h
-    obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hR hk h hS
+    obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hR hk h hS (fun e => absurd
+      (UInt64.toNat_inj.mp (by rw [e]; rfl)) h4)
     refine ⟨fe', a', ?_, hS', hg'⟩
     have hq : (basisOfW k.toNat == ConLeche.BasisKind.quotK) = false := by
       have : k.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))
