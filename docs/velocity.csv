@@ -177,3 +177,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,romfix,opus,11,4,"CIReadRefCaps caps_rel > 15 GB -> 2.5 GB, 5.6 s (comega: rewrite+clear the chained (c+k).toNat equalities before omega)"
 2026-10-23,loopt2,opus,120,40,"CallM (stubCall/realCall) models for cvg/ccv/dv/tv; cvgW_okT (check_value_group StageT->StageT, ivg as hypothesis); TwinOK.of_check/TwinMem.step; LoopDecl agreement split into <5 GB modules"
 2026-10-23,loopt2,opus,90,30,"DeclValT (check_defn/opaque/thm_val StageT), TwinStep (TwinOK.of_grow/of_istep, StageS), LoopFns/LoopAll (loop write set, LoopMem), TwinFold.step_pext"
+2026-10-23,front3,opus,150,60,"landing 2: the ground hoist in L (Checker/Hoist.lean: name index, closure by marking at push, bucket reorder; 27 functions, l_model models+specs for all but hoist_targets_go/hoist_nat_op_ground); natop_order, natop_before_ble agree-accept; D18/D24 fixed, D30; provenance.py locate prefers public decls"
