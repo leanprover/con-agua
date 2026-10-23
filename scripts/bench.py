@@ -6,6 +6,7 @@ set with INTERLEAVED repetitions: per round, the fixtures in random order and pe
 systems in random order, so that drifting machine load hits every system alike. Reports per
 fixture and as geometric means (over the fixtures every system accepts):
 * `instructions:u` (`perf stat`; nearly deterministic, the primary measure on this shared machine),
+* cycles (`cycles:u` + `cycles:k`, median: less sensitive to preemption on a loaded machine than wall),
 * wall time: median and spread ((max - min) / median) over the rounds,
 * peak RSS (max over the rounds).
 
@@ -105,7 +106,7 @@ def run(cmd, env=None, cpus=None):
     The wall time includes `perf stat`'s own small start-up cost, the same for every system."""
     pre = ["nice", "-n", "10"] + (["taskset", "-c", cpus] if cpus else [])
     statf = os.path.join(WORK, f"perf.{os.getpid()}")
-    full = pre + ["perf", "stat", "-x,", "-e", "instructions:u", "-o", statf, "--"] + cmd
+    full = pre + ["perf", "stat", "-x,", "-e", "instructions:u,cycles:u,cycles:k", "-o", statf, "--"] + cmd
     t0 = time.perf_counter()
     p = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env,
                          start_new_session=True)
@@ -117,14 +118,16 @@ def run(cmd, env=None, cpus=None):
         out, _ = p.communicate()
         rc = None
     wall = time.perf_counter() - t0
-    instr = None
+    instr, cyc = None, 0
     if os.path.exists(statf):
         for line in open(statf).read().splitlines():
             f = line.split(",")
             if len(f) > 2 and f[2].startswith("instructions") and f[0].isdigit():
                 instr = int(f[0])
+            if len(f) > 2 and f[2].startswith("cycles") and f[0].isdigit():
+                cyc += int(f[0])
         os.remove(statf)
-    return out.decode(errors="replace").strip(), rc, wall, instr
+    return out.decode(errors="replace").strip(), rc, wall, instr, cyc or None
 
 
 def peak_rss(cmd, env, cpus):
@@ -300,11 +303,11 @@ def main():
             ss = list(systems)
             random.shuffle(ss)
             for s in ss:
-                out, rc, wall, instr = run(s.cmd(path), env_of(s, fid), args.cpus)
+                out, rc, wall, instr, cyc = run(s.cmd(path), env_of(s, fid), args.cpus)
                 v = s.verdict(out, rc)
                 if v != verdict[(fid, s.name)]:
                     log(f"  {fid} {s.name}: verdict {v} != warm-up {verdict[(fid, s.name)]}")
-                meas[(fid, s.name)].append({"wall": wall, "instr": instr, "verdict": v})
+                meas[(fid, s.name)].append({"wall": wall, "instr": instr, "cycles": cyc, "verdict": v})
         log(f"round {rnd + 1}/{rounds} ({time.time() - t0:.0f} s)")
     rss = {}
     for fid, path in fx:
@@ -318,9 +321,11 @@ def main():
         ms = meas[(fid, n)]
         ws = [m["wall"] for m in ms]
         ins = [m["instr"] for m in ms if m["instr"] is not None]
+        cys = [m["cycles"] for m in ms if m.get("cycles")]
         med = statistics.median(ws)
         return {"wall": med, "spread": (max(ws) - min(ws)) / med if med else 0,
-                "instr": statistics.median(ins) if ins else None, "rss": rss[(fid, n)],
+                "instr": statistics.median(ins) if ins else None,
+                "cycles": statistics.median(cys) if cys else None, "rss": rss[(fid, n)],
                 "verdict": verdict[(fid, n)]}
     st = {(fid, n): stats(fid, n) for fid, _ in fx for n in names}
     lv = {verdict[(fid, s.name)] for fid, _ in fx for s in systems if s.kind in ("L", "Lold")}
@@ -342,12 +347,14 @@ def main():
             lines.append(f"| MISMATCH between L binaries on `{fid}`: {lvs} |")
     ok = [fid for fid, _ in fx if all(verdict[(fid, n)] == "accept" for n in names)]
     lines += ["", f"Geometric means of the ratio to `{base}` over the {len(ok)} fixtures every system accepts:", "",
-              "| system | instructions | wall |", "|---|---:|---:|"]
+              "| system | instructions | cycles (user+kernel, median) | wall |", "|---|---:|---:|---:|"]
     for n in names:
         gi = gmean([st[(f, n)]["instr"] / st[(f, base)]["instr"] for f in ok
                     if st[(f, n)]["instr"] and st[(f, base)]["instr"]])
         gw = gmean([st[(f, n)]["wall"] / st[(f, base)]["wall"] for f in ok])
-        lines.append(f"| {n} | {gi:.3f} | {gw:.3f} |")
+        gc = gmean([st[(f, n)]["cycles"] / st[(f, base)]["cycles"] for f in ok
+                    if st[(f, n)]["cycles"] and st[(f, base)]["cycles"]])
+        lines.append(f"| {n} | {gi:.3f} | {gc:.3f} | {gw:.3f} |")
     print("\n".join(lines))
     if args.json:
         with open(args.json, "w") as fh:

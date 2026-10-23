@@ -621,7 +621,6 @@ formers' view), the stage relation at that view of the formers' environment, the
 record's shape's recursor slice below the top if the input's is (`RecsB`), its classes'
 constructors' level-parameter slices in `EREC` (`ClassesLp`). Program facts: the lookups (`PassProg`) and the write set of the callees without a memo lemma
 (`hcl`). -/
-@[refines ConRon.Arena.checkBlockPass]
 theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs) (n : Nat)
     (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name}
