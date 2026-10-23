@@ -402,12 +402,16 @@ theorem FrX.set {x : Nat} {m₁ m₂ : Mem} (h₁ : FrX x m₁ m₂) (k v : Word
 /-! ## The records, as words -/
 
 /-- **A class record written by the loop**, as words: the class `p0`'s words but `nfs` (decoded
-in `mb`), the `nfs` slice above `hi` (or empty), its pointers those of `PtrsB`. -/
-def CnsRec (mb : Mem) (hi : Nat) (m : Mem) (w : Nat) (M : TargetMajor) : Prop :=
-  ∃ p0 src eo el ps, DecB (fun m => decTM m p0) mb src ∧ hi ≤ w ∧ w + 13 ≤ iwTop m ∧
+in `mb`) at a source pointer `p0` satisfying `S`, the `nfs` slice above `hi` (or empty), its pointers
+those of `PtrsB`. -/
+def CnsRec (mb : Mem) (S : Nat → Prop) (hi : Nat) (m : Mem) (w : Nat) (M : TargetMajor) : Prop :=
+  ∃ p0 src eo el ps, DecB (fun m => decTM m p0) mb src ∧ S p0 ∧ hi ≤ w ∧ w + 13 ≤ iwTop m ∧
     (∀ k < 13, k ≠ 9 → k ≠ 10 → (m.arr64 IW)[w + k]? = (iwA (truncM mb))[p0 + k]?) ∧
     iwN m (w + 9) = some eo ∧ iwN m (w + 10) = some el ∧ decNL m eo el = some ps ∧
     eo + el ≤ iwTop m ∧ (el = 0 ∨ hi ≤ eo) ∧ PtrsB mb ps M.nfs ∧ M = { src with nfs := M.nfs }
+
+/-- A source class of the loop: a pointer of the classes' slice `(mo, ml)` in `mb`. -/
+def CnsSrc (mb : Mem) (mo ml : Word) (p0 : Nat) : Prop := ∃ c < ml.toNat, iwN mb (mo.toNat + c) = some p0
 
 theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + l ≤ iwTop m)
     (hx : l = 0 ∨ x < o ∨ o + l ≤ x) : decNL m' o l = decNL m o l := by
@@ -418,10 +422,10 @@ theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + 
   simp only [iwN, nat?, iwA]
   rw [h.2 (o + j) (by omega) (by omega)]
 
-theorem CnsRec.frame {mb : Mem} {hi x : Nat} {m m' : Mem} {w : Nat} {M : TargetMajor}
-    (h : CnsRec mb hi m w M) (hF : FrX x m m') (hx : x < hi) : CnsRec mb hi m' w M := by
-  obtain ⟨p0, src, eo, el, ps, hsrc, hw, htop, hwords, h9, h10, hps, hb, hfr, hpb, hM⟩ := h
-  refine ⟨p0, src, eo, el, ps, hsrc, hw, Nat.le_trans htop hF.1, fun k hk h9 h10 => ?_, ?_, ?_, ?_,
+theorem CnsRec.frame {mb : Mem} {S : Nat → Prop} {hi x : Nat} {m m' : Mem} {w : Nat} {M : TargetMajor}
+    (h : CnsRec mb S hi m w M) (hF : FrX x m m') (hx : x < hi) : CnsRec mb S hi m' w M := by
+  obtain ⟨p0, src, eo, el, ps, hsrc, hS0, hw, htop, hwords, h9, h10, hps, hb, hfr, hpb, hM⟩ := h
+  refine ⟨p0, src, eo, el, ps, hsrc, hS0, hw, Nat.le_trans htop hF.1, fun k hk h9 h10 => ?_, ?_, ?_, ?_,
     Nat.le_trans hb hF.1, hfr, hpb, hM⟩
   · rw [hF.2 _ (by omega) (by omega)]; exact hwords k hk h9 h10
   · simp only [iwN, nat?, iwA] at h9 ⊢; rw [hF.2 _ (by omega) (by omega)]; exact h9
@@ -436,9 +440,9 @@ theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
       PtrsB.mapM hg h2]; rfl
 
 /-- **A record written by the loop decodes below the tops.** -/
-theorem CnsRec.decB {mb : Mem} {hi : Nat} {m : Mem} {w : Nat} {M : TargetMajor} (hg : IWGrow mb m)
-    (h : CnsRec mb hi m w M) : DecB (fun m => decTM m w) m M := by
-  obtain ⟨p0, src, eo, el, ps, hsrc, hw, htop, hwords, h9, h10, hps, hb, -, hpb, hM⟩ := h
+theorem CnsRec.decB {mb : Mem} {S : Nat → Prop} {hi : Nat} {m : Mem} {w : Nat} {M : TargetMajor}
+    (hg : IWGrow mb m) (h : CnsRec mb S hi m w M) : DecB (fun m => decTM m w) m M := by
+  obtain ⟨p0, src, eo, el, ps, hsrc, -, hw, htop, hwords, h9, h10, hps, hb, -, hpb, hM⟩ := h
   have ew : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → (iwA (truncM m))[w + k]? = (iwA (truncM mb))[p0 + k]? :=
     fun k hk a b => by rw [truncM_iw_get?, if_pos (by omega)]; exact hwords k hk a b
   have e : ∀ k, k < 13 → k ≠ 9 → k ≠ 10 → iwN (truncM m) (w + k) = iwN (truncM mb) (p0 + k) :=
@@ -635,10 +639,10 @@ theorem cnsW_ok (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List TargetMajor) (ws : List Nat),
     cnsW p k m vis q fto ftl tblo tbll mo ml qr j = some m' →
     StageR dn vis fe m a → IWGrow mb m → qr.toNat + ml.toNat ≤ iwTop m → RcMR m → j ≤ ml →
-    decNL m qr.toNat j.toNat = some ws → FA2 (CnsRec mb (qr.toNat + ml.toNat) m) ws acc →
+    decNL m qr.toNat j.toNat = some ws → FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m) ws acc →
     ∃ rest a', (ConRon.Arena.classesNfs V fe bs formerTys tbl (ms.drop j.toNat)).run a = .ok (rest, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow mb m' ∧ qr.toNat + ml.toNat ≤ iwTop m' ∧ RcMR m' ∧
-      ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧ FA2 (CnsRec mb (qr.toNat + ml.toNat) m') ws' (acc ++ rest) := by
+      ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧ FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m') ws' (acc ++ rest) := by
   have hms0 : decPL (truncM mb) (decTM (truncM mb)) mo.toNat ml.toNat = some ms := hms.1
   have hlen := decPL_length _ hms0
   obtain ⟨tps, -, htps, hmap⟩ := sumDecNL_of_decB htbl.1
@@ -830,8 +834,8 @@ theorem cnsW_ok (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hes4 : decNL m4 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some pse := by
     rw [decNL_frX hFr1 hes.2 (by omega)]
     exact hpse
-  have hnew : CnsRec mb (qr.toNat + ml.toNat) m4 nm.toNat { ms[j.toNat]'(by omega) with nfs := es } :=
-    ⟨p0, _, _, _, pse, hsrcmb, hqnm, by rw [ht4]; omega, hwords, hw9, hw10, hes4,
+  have hnew : CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m4 nm.toNat { ms[j.toNat]'(by omega) with nfs := es } :=
+    ⟨p0, _, _, _, pse, hsrcmb, ⟨j.toNat, hjl, hp0m⟩, hqnm, by rw [ht4]; omega, hwords, hw9, hw10, hes4,
       by have := hes.2; rw [ht4]; omega, hfr', hpseb, rfl⟩
   -- the result slot
   have hws4 : decNL m4 qr.toNat (j + 1).toNat = some (ws ++ [nm.toNat]) := by
@@ -841,7 +845,7 @@ theorem cnsW_ok (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
       rw [← hE, set64IW_get, if_pos ⟨hqj.symm, by rw [szD]; rw [hqj] at bq; exact bq⟩]
       rfl
     simp [this]
-  have hacc4 : FA2 (CnsRec mb (qr.toNat + ml.toNat) m4) (ws ++ [nm.toNat])
+  have hacc4 : FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m4) (ws ++ [nm.toNat])
       (acc ++ [{ ms[j.toNat]'(by omega) with nfs := es }]) :=
     FA2.snoc (FA2.imp (fun _ _ hr => CnsRec.frame hr hFr (by omega)) hacc) hnew
   have hje1 : j + 1 ≤ ml := UInt64.le_iff_toNat_le.mpr (by omega)
@@ -855,8 +859,8 @@ theorem cnsW_ok (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
 
 end loop
 
-theorem cnsRec_mapM {mb mF : Mem} {hi : Nat} (hg : IWGrow mb mF) :
-    ∀ {ws : List Nat} {xs : List TargetMajor}, FA2 (CnsRec mb hi mF) ws xs → ws.mapM (decTM (truncM mF)) = some xs
+theorem cnsRec_mapM {mb mF : Mem} {S : Nat → Prop} {hi : Nat} (hg : IWGrow mb mF) :
+    ∀ {ws : List Nat} {xs : List TargetMajor}, FA2 (CnsRec mb S hi mF) ws xs → ws.mapM (decTM (truncM mF)) = some xs
   | [], [], .nil => rfl
   | _ :: _, _ :: _, .cons h1 h2 => by
     simp only [List.mapM_cons, show decTM (truncM mF) _ = some _ from h1.decB hg, cnsRec_mapM hg h2]; rfl
