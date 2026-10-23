@@ -71,8 +71,8 @@ def storesCode (d : Nat) : List SVal → Program
   | [] => []
   | v :: vs => v.code d ++ storesCode (d + 8) vs
 
-/-- The little-endian word of (at most) eight bytes. -/
-def romWord (bs : List UInt8) : Word := UInt64.ofNat (Nat.ofBytes (bs.take 8))
+/-- The little-endian word of (at most) eight bytes, padded with zeros. -/
+def romWord (bs : List UInt8) : Word := UInt64.ofBytes (bs ++ List.replicate (8 - bs.length) 0)
 
 /-- The words of the constant data `bs` (the last one padded with zeros): structural, and `Nat`
 arithmetic, so that the kernel evaluates it fast. -/
