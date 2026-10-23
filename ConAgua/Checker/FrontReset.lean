@@ -66,7 +66,7 @@ theorem resetM_frame (m : Mem) : MemFrame [] idCtl m (resetM m) :=
     (clear_frame LID (.inr (.inl rfl)) _)).trans (clear_frame EID (.inr (.inr rfl)) _)
 
 /-- A memo of table `b` survives a frame that leaves its stamp word alone. -/
-theorem tblMemo_frame {b : ArrId} (hb : TblIx b) {C : List Word} {m m' : Mem}
+theorem tblMemo_frame {k : IdxKind} {b : ArrId} (hb : TblIx b) {C : List Word} {m m' : Mem}
     (hf : MemFrame [] C m m') (hC : (spS b).cs ∉ C) {sp : Std.HashMap Nat (Idx k)}
     (h : MemoRV (spS b) idKey hVR m sp) : MemoRV (spS b) idKey hVR m' sp :=
   memoRV_frame (spS b) (spS_wf b hb) idKey hVR [] C (by simp) hC m m' hf (fun _ _ h => h) sp h
@@ -84,7 +84,7 @@ theorem resetM0_frame' (m : Mem) : MemFrame [] [70, 71, 72] m (resetM0 m) :=
     ((MemFrame.setCtl _ 72 0).mono (by simp) (by simp))
 
 /-- A table whose dense size is `0` and whose sparse memo is empty represents the empty table. -/
-theorem _root_.L.Front.TblR.empty {m m' : Mem} {b : ArrId} {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t)
+theorem _root_.L.Front.TblR.empty {k : IdxKind} {m m' : Mem} {b : ArrId} {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t)
     (hf : MemFrame [] idCtl m m') (hz : szW m' b = 0)
     (hsp : MemoRV (spS b) idKey hVR m' (∅ : Std.HashMap Nat (Idx k))) :
     TblR m' b ({} : ConLeche.Frontend.IdTable (Idx k)) where
