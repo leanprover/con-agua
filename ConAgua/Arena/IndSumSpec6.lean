@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndRealMemo
+import ConAgua.Arena.IndRealIlpP
 
 /-!
 # Refinements of `IndSum`, sixth file (lane `indproofs`)
@@ -349,7 +350,7 @@ def spbK2 (k : Nat) (T nF : Word) : Option (List Word × Mem) → Option (List W
 /-- After `struct_proj_ps`. -/
 def spbK1 (k : Nat) (T nF cty : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rp, m1) => spbK2 k T nF (stubM "inst_pis_at_lift" m1 [CWF, rp.headD 0, rp.tail.headD 0, cty])
+  | some (rp, m1) => spbK2 k T nF (ipalF m1 [CWF, rp.headD 0, rp.tail.headD 0, cty])
 /-- **The model of `struct_proj_bodies`.** -/
 def spbW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
@@ -359,7 +360,7 @@ section arms
 variable (k : Nat) (m m1 m2 m3 : Mem) (T nP nF cty : Word) (rp ri rg : List Word)
 theorem spbW_succ : spbW (k + 1) m T nP nF cty = spbK1 k T nF cty (projPsW k m nP) := rfl
 theorem spbK1_some : spbK1 k T nF cty (some (rp, m1)) =
-    spbK2 k T nF (stubM "inst_pis_at_lift" m1 [CWF, rp.headD 0, rp.tail.headD 0, cty]) := rfl
+    spbK2 k T nF (ipalF m1 [CWF, rp.headD 0, rp.tail.headD 0, cty]) := rfl
 theorem spbK2_none (h : ri.headD 0 = 0) : spbK2 k T nF (some (ri, m2)) = some ([0, 0, 0], m2) := by
   simp only [spbK2, if_pos h]
 theorem spbK2_some (h : ri.headD 0 ≠ 0) :
@@ -392,8 +393,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hgo : p.lookup "struct_ps_at_go" = some structPsAtGoL)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (hpj : p.lookup "struct_proj_ps" = some structProjPsL)
-  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL) (hi1 : I1lF p)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1
+  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL) (hi1 : I1lF p) (hipal : IpalF p)
+include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1 hipal
 
 theorem spbW_spec (k : Nat) (s₀ : St) (T nP nF cty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_proj_bodies" [T, nP, nF, cty]
@@ -405,7 +406,7 @@ theorem spbW_spec (k : Nat) (s₀ : St) (T nP nF cty : Word) :
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        projPsW_spec p ha hc hsc hpf hpp hib hgo hps hpj k, stubM_spec p "inst_pis_at_lift" k,
+        projPsW_spec p ha hc hsc hpf hpp hib hgo hps hpj k, ipalF_spec p hipal k,
         pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hi1 k] <;>
       finish (gen := 20)
 
@@ -446,15 +447,14 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨ps, a1, hrun1, hS1, hg1, hps, -⟩ := psAtW_stage dn vis fe k' m m0 a 1 nP r0 h0 hS (by simpa using hnP)
   have hA0 : AbsOK m0 := psAtW_afr h0 hA
   simp only [List.headD_cons, List.tail_cons] at h
-  cases h2 : stubM "inst_pis_at_lift" m0 [CWF, r0.headD 0, r0.tail.headD 0, cty] with
+  cases h2 : ipalF m0 [CWF, r0.headD 0, r0.tail.headD 0, cty] with
   | none => rw [h2] at h; simp [spbK2] at h
   | some x2 =>
   obtain ⟨ri, m2⟩ := x2
   rw [h2] at h
-  have hA2 : AbsOK m2 := AbsOK.stub (by decide) hA0 h2
-  obtain ⟨xo, a2, hrun2, hS2, hg2, hdec2⟩ :=
-    instPisAtLift_spec dn vis fe CWF (r0.headD 0) (r0.tail.headD 0) cty hcty ps m0 m2 a1 ri h2
-      ⟨hS1, by simpa using hps⟩
+  obtain ⟨xo, a2, hrun2, ⟨hS2, hg2, hdec2⟩, hA2⟩ :=
+    ipalF_ok dn vis fe CWF (r0.headD 0) (r0.tail.headD 0) cty hcty ps m0 m2 a1 ri h2
+      ⟨hS1, hA0, by simpa using hps⟩
   have hrun0 : ∀ {β : Type} (f : Option EIdx → AM β),
       (do let ps ← structProjPs nP.toNat; let r ← instPisAtLift coreWalkFuel ps (decI cty); f r).run a =
         (f xo).run a2 := by
@@ -519,11 +519,11 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hgo : p.lookup "struct_ps_at_go" = some structPsAtGoL)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (hpj : p.lookup "struct_proj_ps" = some structProjPsL)
-  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL) (hi1 : I1lF p)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1
+  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL) (hi1 : I1lF p) (hipal : IpalF p)
+include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1 hipal
 
-/-- **`struct_proj_bodies` refines `structProjBodies`** (through the stubs `inst_pis_at_lift`,
-`instantiate1_lift_fast`). -/
+/-- **`struct_proj_bodies` refines `structProjBodies`** (through the models `ipalF`,
+`i1lF`). -/
 @[refines ConRon.Arena.structProjBodies]
 theorem structProjBodies_refines (k : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T nP nF cty : Word)
@@ -536,7 +536,7 @@ theorem structProjBodies_refines (k : Nat) (s₀ : St) (a₀ : AState)
       PBDecA s'.mem r (AM.res (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (spbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1
-    k s₀ T nP nF cty) ?_
+    hipal k s₀ T nP nF cty) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hdec, hA'⟩ :=
     spbW_ok dn vis fe k _ _ _ _ _ _ _ _ hm hS hcty hnP nF.toNat_lt hA
