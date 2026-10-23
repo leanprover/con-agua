@@ -72,17 +72,6 @@ theorem AFr.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFram
     (hC : C.all (fun x => x != 48) = true := by decide) : AFr m m' :=
   fun h => h.frameD hf hA hC
 
-syntax "afr_auto" ident "[" term,* "]" : tactic
-macro_rules
-  | `(tactic| afr_auto $h [$ts,*]) => `(tactic|
-    repeat' (first
-      | with_reducible exact AFr.refl _
-      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; exact AFr.refl _)
-      | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact AFr.refl _)
-      | (simp only [reduceCtorEq] at $h:ident; done)
-      | (first $[| refine AFr.trans ($ts (by with_reducible assumption)) ?_]*)
-      | split at $h:ident))
-
 /-- A write of an array other than `CTL` and 49. -/
 theorem AFr.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (h49 : (a != 49) = true) (k v : Word) :
     AFr m (m.set64 a k v) :=
@@ -98,6 +87,17 @@ macro "afr_set" : tactic => `(tactic|
     | with_reducible refine AFr.trans ?_ (AFr.set64 _ _ (by decide) (by decide) _ _)
     | with_reducible refine AFr.trans ?_ (AFr.setCtl _ _ (by decide) _)
     | with_reducible exact AFr.refl _))
+
+syntax "afr_auto" ident "[" term,* "]" : tactic
+macro_rules
+  | `(tactic| afr_auto $h [$ts,*]) => `(tactic|
+    repeat' (first
+      | with_reducible exact AFr.refl _
+      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; afr_set; done)
+      | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact AFr.refl _)
+      | (simp only [reduceCtorEq] at $h:ident; done)
+      | (first $[| refine AFr.trans ($ts (by with_reducible assumption)) ?_]*)
+      | split at $h:ident))
 
 /-- Across a writer of the record pool (`IW`, its top `CTL[200]`). -/
 theorem AbsOK.iw {m m' : Mem} (h : AbsOK m) (hf : MemFrame [IW] [200] m m') : AbsOK m' :=
@@ -227,6 +227,24 @@ theorem RSim.withF {β α : Type} {o : Option β} {op : AM α} {a : AState} {Q :
     RSim o op a (fun b a' x => Q b a' x ∧ F b) := fun b hb =>
   let ⟨x, a', h1, h2⟩ := h b hb
   ⟨x, a', h1, h2, hf b hb⟩
+
+theorem snocW_afr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : snocW n m o l x = some (r, m')) :
+    AFr m m' := by
+  unfold snocW at h
+  afr_auto h [allocW_afr, copyW_afr]
+
+theorem erCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), erCopyW n m d s l = some m' → AFr m m'
+  | 0, _, _, _, _, _, h => by simp [erCopyW] at h
+  | n + 1, m, m', d, s, l, h => by
+    by_cases hl : l = 0
+    · rw [erCopyW_nil n m d s l hl] at h; cases h; exact AFr.refl _
+    · rw [erCopyW_step n m d s l hl] at h
+      exact (set64IW_afr _ _ _).trans (erCopyW_afr n _ _ _ _ _ h)
+
+theorem erToIwW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m')) :
+    AFr m m' := by
+  unfold erToIwW at h
+  afr_auto h [allocW_afr, erCopyW_afr _ _ _ _ _ _]
 
 /-- Across a stub. -/
 theorem AbsOK.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word} (hA : AbsOK m)

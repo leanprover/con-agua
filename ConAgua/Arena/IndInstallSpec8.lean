@@ -275,7 +275,7 @@ theorem ibtW_sim (p : Prog) (hP : CstProg p) (n : Nat) {dn : NIdx → Option Con
     (callW p n "check_sum_tele" [vis, UInt64.ofNat c, nP + UInt64.ofNat msh.nIdx, UInt64.ofNat c] m1))
     rfl (fun _ _ => rfl)
     (Sim.withFr (installSimStub (p := p) (n := n) (checkConstantVal_spec dn vis fe _ msh.cvT) ⟨hS, hcvm⟩)
-      (fun _ _ e => callW_stub_afr e hA)) ?_
+      (fun _ _ e => callW_stub_afr e (by decide) hA)) ?_
   rintro - - m1 a1 ⟨⟨hS1, hg1, -⟩, hA1⟩
   have hcvm1 : decCVp m1 (UInt64.ofNat c : Word).toNat = some msh.cvT := by
     rw [hc']; exact DecB.stab (OMono.decCVp _) hcv m1 hg1
