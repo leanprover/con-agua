@@ -180,8 +180,8 @@ def bvarPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, g
   c := CTL.u64[22 + t];
   if c >= 134217728 { abort };
   if len(BREC.u64) >> 1 <= c { abort };
-  BREC.u64[c * 2 + t] := u;
   gk := BSLOT.u64[len(BSLOT.u64) - 1];
+  BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[22 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
@@ -216,7 +216,7 @@ theorem bvarPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
         growBlkG_spec p bvarGS BSLOT 22 rfl rfl 4 bhash (bhash_ok p) n] <;>
-      finish [bcnt, bpushOK, bpushMem, baseW, growIf_grow, growIf_keep, gnW, gexpW]
+      finish [bcnt, bpushOK, bpushMem, baseW, growIf_grow', growIf_keep']
 
 end push
 

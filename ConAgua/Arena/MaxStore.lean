@@ -192,9 +192,9 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk,
   if len(MREC.u64) >> 2 <= c { abort };
   if len(MHP.u64) >> 1 <= c { abort };
   k := c * 4 + t * 2;
+  gk := MSLOT.u64[len(MSLOT.u64) - 1];
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
-  gk := MSLOT.u64[len(MSLOT.u64) - 1];
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
   MHP.u64[c * 2 + t] := x;
@@ -228,19 +228,11 @@ theorem maxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
         hpBlkM2_spec p (exec p n),
-        growBlkG_spec p maxGS MSLOT 10 rfl rfl 11 mhash (mhash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [mpushMem, mcnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, mcnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [mpushMem, mcnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, mcnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, mcnt, mpushOK, baseW, LocEq]
+        growBlkG_spec p maxGS MSLOT 10 rfl rfl 11 mhash (mhash_ok p) n] <;>
+      finish [mpushMem, mcnt, mpushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

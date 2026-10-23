@@ -192,10 +192,10 @@ def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gn, gk, gt, gi,
   if c >= 134217728 { abort };
   if len(LEREC.u64) < (c + 1) * 6 { abort };
   k := c * 6 + t * 3;
+  gk := LESLOT.u64[len(LESLOT.u64) - 1];
   LEREC.u64[k] := ty;
   LEREC.u64[k + 1] := val;
   LEREC.u64[k + 2] := body;
-  gk := LESLOT.u64[len(LESLOT.u64) - 1];
   LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG letGS 7⟫ };
@@ -229,18 +229,10 @@ theorem letPush_spec (n : Nat) (s₀ : St) (t ty val body j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p letGS LESLOT 20 rfl rfl 7 lehash (lehash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [lepushMem, lecnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, lecnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [lepushMem, lecnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, lecnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, lecnt, lepushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p letGS LESLOT 20 rfl rfl 7 lehash (lehash_ok p) n] <;>
+      finish [lepushMem, lecnt, lepushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

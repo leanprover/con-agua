@@ -195,9 +195,9 @@ def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, g
   if c >= 134217728 { abort };
   if len(FAREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
+  gk := FASLOT.u64[len(FASLOT.u64) - 1];
   FAREC.u64[k] := ty;
   FAREC.u64[k + 1] := body;
-  gk := FASLOT.u64[len(FASLOT.u64) - 1];
   FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[30 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG forallGS 6⟫ };
@@ -230,18 +230,10 @@ theorem forallPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p forallGS FASLOT 30 rfl rfl 6 fahash (fahash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [fapushMem, facnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, facnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [fapushMem, facnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, facnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, facnt, fapushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p forallGS FASLOT 30 rfl rfl 6 fahash (fahash_ok p) n] <;>
+      finish [fapushMem, facnt, fapushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

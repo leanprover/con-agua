@@ -195,9 +195,9 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gn, gk, 
   if len(CREC.u64) >> 2 <= c { abort };
   if len(CLP.u64) >> 1 <= c { abort };
   k := c * 4 + t * 2;
+  gk := CSLOT.u64[len(CSLOT.u64) - 1];
   CREC.u64[k] := f;
   CREC.u64[k + 1] := a;
-  gk := CSLOT.u64[len(CSLOT.u64) - 1];
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
   CLP.u64[c * 2 + t] := x;
@@ -231,18 +231,10 @@ theorem constPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lsBlkC_spec p (exec p n),
-        growBlkG_spec p constGS CSLOT 18 rfl rfl 10 cehash (cehash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [cepushMem, cecnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, cecnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [cepushMem, cecnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, cecnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, cecnt, cepushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lsBlkC_spec p (exec p n),
+        growBlkG_spec p constGS CSLOT 18 rfl rfl 10 cehash (cehash_ok p) n] <;>
+      finish [cepushMem, cecnt, cepushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

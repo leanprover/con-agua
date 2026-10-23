@@ -185,8 +185,8 @@ def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi,
   if c >= 134217728 { abort };
   if len(SREC.u64) >> 1 <= c { abort };
   if len(SHP.u64) >> 1 <= c { abort };
-  SREC.u64[c * 2 + t] := u;
   gk := SSLOT.u64[len(SSLOT.u64) - 1];
+  SREC.u64[c * 2 + t] := u;
   SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
   SHP.u64[c * 2 + t] := x;
@@ -219,18 +219,10 @@ theorem succPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
-        growBlkG_spec p succGS SSLOT 6 rfl rfl 8 shash (shash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [spushMem, scnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, scnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [spushMem, scnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, scnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, scnt, spushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
+        growBlkG_spec p succGS SSLOT 6 rfl rfl 8 shash (shash_ok p) n] <;>
+      finish [spushMem, scnt, spushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

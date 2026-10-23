@@ -185,8 +185,8 @@ def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi,
   if c >= 134217728 { abort };
   if len(SOREC.u64) >> 1 <= c { abort };
   if len(SOLP.u64) >> 1 <= c { abort };
-  SOREC.u64[c * 2 + t] := u;
   gk := SOSLOT.u64[len(SOSLOT.u64) - 1];
+  SOREC.u64[c * 2 + t] := u;
   SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
   SOLP.u64[c * 2 + t] := x;
@@ -219,18 +219,10 @@ theorem sortPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
-        growBlkG_spec p sortGS SOSLOT 16 rfl rfl 8 sohash (sohash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [sopushMem, socnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, socnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [sopushMem, socnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, socnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, socnt, sopushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n),
+        growBlkG_spec p sortGS SOSLOT 16 rfl rfl 8 sohash (sohash_ok p) n] <;>
+      finish [sopushMem, socnt, sopushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

@@ -196,9 +196,9 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, 
   if len(FVREC.u64) >> 2 <= c { abort };
   if len(FVLP.u64) >> 1 <= c { abort };
   k := c * 4 + t * 2;
+  gk := FVSLOT.u64[len(FVSLOT.u64) - 1];
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
-  gk := FVSLOT.u64[len(FVSLOT.u64) - 1];
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
   FVLP.u64[c * 2 + t] := x;
@@ -232,18 +232,10 @@ theorem fvarPush_spec (n : Nat) (s₀ : St) (t u ty j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lpBlkF_spec p (exec p n),
-        growBlkG_spec p fvarGS FVSLOT 26 rfl rfl 10 fvhash (fvhash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [fvpushMem, fvcnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, fvcnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [fvpushMem, fvcnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, fvcnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, fvcnt, fvpushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lpBlkF_spec p (exec p n),
+        growBlkG_spec p fvarGS FVSLOT 26 rfl rfl 10 fvhash (fvhash_ok p) n] <;>
+      finish [fvpushMem, fvcnt, fvpushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

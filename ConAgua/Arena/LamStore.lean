@@ -195,9 +195,9 @@ def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, gc, 
   if c >= 134217728 { abort };
   if len(LAREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
+  gk := LASLOT.u64[len(LASLOT.u64) - 1];
   LAREC.u64[k] := ty;
   LAREC.u64[k + 1] := body;
-  gk := LASLOT.u64[len(LASLOT.u64) - 1];
   LASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[28 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG lamGS 6⟫ };
@@ -230,18 +230,10 @@ theorem lamPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p lamGS LASLOT 28 rfl rfl 6 lahash (lahash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [lapushMem, lacnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, lacnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [lapushMem, lacnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, lacnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, lacnt, lapushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p lamGS LASLOT 28 rfl rfl 6 lahash (lahash_ok p) n] <;>
+      finish [lapushMem, lacnt, lapushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

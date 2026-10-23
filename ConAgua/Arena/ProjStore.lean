@@ -196,10 +196,10 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, 
   if c >= 134217728 { abort };
   if len(PJREC.u64) < (c + 1) * 6 { abort };
   k := c * 6 + t * 3;
+  gk := PJSLOT.u64[len(PJSLOT.u64) - 1];
   PJREC.u64[k] := n;
   PJREC.u64[k + 1] := u;
   PJREC.u64[k + 2] := e;
-  gk := PJSLOT.u64[len(PJSLOT.u64) - 1];
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };
@@ -226,8 +226,17 @@ theorem projPush_spec (nn : Nat) (s₀ : St) (t n u e j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p nn) "proj_push" [t, n, u, e, j]
     ⦃fun r s' => LocEq s' s₀ ∧ pjpushOK s₀.mem t = true ∧ r = [pjcnt s₀.mem t] ∧
-      s'.mem = pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf PJSLOT 32 pjhash s₀.mem (pjpushMem s₀.mem t n u e j (pjcnt s₀.mem t))
+        (pjcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, projPush]
+  cases nn with
+  | zero => vcgen [exec] <;> grind
+  | succ nn =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p projGS PJSLOT 32 rfl rfl 7 pjhash (pjhash_ok p) nn] <;>
+      finish [pjcnt, pjpushOK, pjpushMem, baseW, growIf_grow', growIf_keep']
 
 end push
 

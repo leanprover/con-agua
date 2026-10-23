@@ -230,11 +230,11 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc,
   if c >= 134217728 { abort };
   if len(NSREC.u64) < (c + 1) * 8 { abort };
   k := c * 8 + t * 4;
+  gk := NSSLOT.u64[len(NSSLOT.u64) - 1];
   NSREC.u64[k] := q;
   NSREC.u64[k + 1] := o;
   NSREC.u64[k + 2] := l;
   NSREC.u64[k + 3] := h;
-  gk := NSSLOT.u64[len(NSSLOT.u64) - 1];
   NSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[36 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nstrGS 8⟫ };
@@ -266,18 +266,10 @@ theorem nsPush_spec (n : Nat) (s₀ : St) (t q o l h j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p nstrGS NSSLOT 36 rfl rfl 8 nshash (nshash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [nspushMem, nscnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, nscnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [nspushMem, nscnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, nscnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, nscnt, nspushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p nstrGS NSSLOT 36 rfl rfl 8 nshash (nshash_ok p) n] <;>
+      finish [nspushMem, nscnt, nspushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

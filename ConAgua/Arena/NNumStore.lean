@@ -187,9 +187,9 @@ def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gn, gk, gt, gi, gc, g
   if c >= 134217728 { abort };
   if len(NNREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
+  gk := NNSLOT.u64[len(NNSLOT.u64) - 1];
   NNREC.u64[k] := pre;
   NNREC.u64[k + 1] := u;
-  gk := NNSLOT.u64[len(NNSLOT.u64) - 1];
   NNSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[38 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nnumGS 6⟫ };
@@ -222,18 +222,10 @@ theorem nnumPush_spec (n : Nat) (s₀ : St) (t pre u j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
-        growBlkG_spec p nnumGS NNSLOT 38 rfl rfl 6 nnhash (nnhash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [nnpushMem, nncnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, nncnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [nnpushMem, nncnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, nncnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, nncnt, nnpushOK, baseW, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p nnumGS NNSLOT 38 rfl rfl 6 nnhash (nnhash_ok p) n] <;>
+      finish [nnpushMem, nncnt, nnpushOK, baseW, growIf_grow', growIf_keep']
 
 end push
 

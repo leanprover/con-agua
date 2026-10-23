@@ -192,9 +192,9 @@ def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gn, gk, gt, gi, gc, gh, 
   if c >= 134217728 { abort };
   if len(AREC.u64) >> 2 <= c { abort };
   k := c * 4 + t * 2;
+  gk := ASLOT.u64[len(ASLOT.u64) - 1];
   AREC.u64[k] := f;
   AREC.u64[k + 1] := a;
-  gk := ASLOT.u64[len(ASLOT.u64) - 1];
   ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[4 + (t & 1)] := c + 1;
   if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG appGS 6⟫ };

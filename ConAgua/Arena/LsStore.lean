@@ -233,10 +233,10 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y,
   if len(LSREC.u64) < (c + 1) * 6 { abort };
   if len(LSHP.u64) >> 1 <= c { abort };
   k := c * 6 + t * 3;
+  gk := LSSLOT.u64[len(LSSLOT.u64) - 1];
   LSREC.u64[k] := o;
   LSREC.u64[k + 1] := l;
   LSREC.u64[k + 2] := h;
-  gk := LSSLOT.u64[len(LSSLOT.u64) - 1];
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
   LSHP.u64[c * 2 + t] := x;
@@ -269,18 +269,10 @@ theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n,
-        growBlkG_spec p lsGS LSSLOT 40 rfl rfl 14 lshash (lshash_ok p) n]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals first
-      | (rw [growIf_grow]; (focus simp only [lspushMem, lscnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, lscnt, gnW, gexpW])
-      | (rw [growIf_keep]; (focus simp only [lspushMem, lscnt, baseW, SCB]; grind [arena_grind, lang_grind]);
-          grind [arena_grind, lang_grind, lscnt, gnW, gexpW])
-      | grind [arena_grind, lang_grind, lscnt, lspushOK, baseW, lsOrW_zero, LocEq]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n,
+        growBlkG_spec p lsGS LSSLOT 40 rfl rfl 14 lshash (lshash_ok p) n] <;>
+      finish [lspushMem, lscnt, lspushOK, baseW, lsOrW_zero, growIf_grow', growIf_keep']
 
 end push
 
