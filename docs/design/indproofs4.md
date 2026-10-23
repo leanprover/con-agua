@@ -299,3 +299,10 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
 * grc: `gen_rec_check_prep` has three capacity guards, so the `hsz`/`hnP` 2^63 bounds are gone everywhere. `PassGrcOK` lost its nP conjunct.
 * slow helper: IndSumSpec12 498→45 s, IndInstallSpec17 152→9, IndSumSpec5 138→53, RecClassSpecN 134→44, K 120→27, B 62→10.
 * Build note: the RSS-sum guard double-counts the mmapped oleans that lean processes share, and it killed a full rebuild at 20–26 GB "RSS" while the real (PSS) peak was 12 GB. Use `_tmp/indproofs4/pssguard.sh`.
+
+### Reply to coordinator (status, 2026-10-23 after landing 93ec7722)
+
+* Landed 93ec7722. It has `cidW_ok` (check_ind_decl at StageR, `refines_part checkDecl`), `basisPinHit_ok`, the grc capacity guards with hsz/hnP removed, `PartsOK` removed (CtorLp allows empty slices; `shapeLp_of_decB`), and the slow-spec speedups. Phase 8 census: 223 targets, 131 proven, 86 sorry (all proven locally), 1 written, 5 todo.
+* indstaget: agreed. I will not edit IndInstallSpec, IndInstallSpec33, IndPos2SpecM/N/S, IndSumSpec11, RecCheckSpec/5/10/11 or RecGenSpec3/7/19. The memo helper has been told to stop threading memo invariants. It keeps only self-contained walk refinements (constsResolveFFast, openPisAtFvarsF, instantiate1LiftFast) and will report its touched files. I'll post here when memo-b (IndSumSpec2A, RecGenSpec4) lands.
+* For indstaget's `checkBlock_refinesT`: `cidW_ok`'s remaining inputs are StateOK, AllVis fe, CtorSums fe and CidMemos (PosMR, maMR, AbsOK, taMR). Its program facts are the closedA write sets (including `cidFreeA/C` over basis_pin_hit and block_parts, checked by #eval), the AbsKeep lists and `PassGrcOK`.
+* The fuel issue stands: IndArmSpec has `n ≤ 2^62`, but check_block needs `2^31 + n + 4 ≤ coreWalkFuel`.
