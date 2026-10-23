@@ -233,3 +233,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,200,40,pilot: IndCallM; ccoW/rtoW/rtsW over CallM; classConstOk_refinesT (StageT, real core calls)
 2026-10-23,slowmods,opus-5.5,60,20,ROM byte literals as flatten of chunks; pb_check reads romDataLit (pb part 6.2->4.1 GB, ProgWf 6.1->4.1 GB)
 2026-10-23,indstaget,claude-opus-5-5,90,30,AbsOK carries WkOK; StageC lifts (liftP/PP/PL/C)
+2026-10-23,slotgrow,opus-5.5,330,150,"growable cons (intern) slot tables: growth block in all 19 X_push (in-place rehash from the dense records, 1/2 load, from 8 slots), proofs complete; cap_check 17-word slot minimum; default set 0.67x wall vs master"
