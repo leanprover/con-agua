@@ -671,8 +671,8 @@ theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
           exact hrun2
 
 
-/-- **`target_pin_tys` refines `targetPinTys .verified`** (through the `infer_type_core` stub). -/
-@[refines ConRon.Arena.targetPinTys]
+/-- **`target_pin_tys` refines `targetPinTys .verified`** (through the `infer_type_core` stub).
+Under `StageR`; the census link is `targetPinTys_refinesC`. -/
 theorem targetPinTys_refines (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis d xo xl : Word)
     (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
