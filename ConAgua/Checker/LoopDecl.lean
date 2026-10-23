@@ -37,7 +37,10 @@ def declExtFns : List FnName :=
    "cert_halves", "cert_lor", "cert_lor_rhs", "cert_xor", "cert_xor_rhs", "cert_div_mod",
    "cert_rec_rhs", "cert_div_mod_guards", "cert_div_mod_eqs", "div_mod_cert_proofs",
    "div_mod_certs_guard_go", "div_mod_cert_guard", "subst_const_all", "subst_const0_list",
-   "consts_resolve_all", "check_div_mod_pin_at", "check_div_mod_certs", "div_mod_cert_applied"]
+   "consts_resolve_all", "check_div_mod_pin_at", "check_div_mod_certs", "div_mod_cert_applied",
+   -- lane `stubs`: the callees of `intern_ls_iw` and `consts_resolve_ffast`
+   "pool_room", "iw_pool", "crf_go", "cr_leaf", "cr_lit_pins", "pin_found", "crm_find", "crm_put",
+   "crm_clear", "is_str_lit"]
 
 /-- The call-closed superset: the texts' lists, their open callees' callees and the core. -/
 def declLoopFns : List FnName :=
@@ -120,13 +123,12 @@ theorem checkerProg_cvgOwn1 : ∀ f ∈ cvgOwn1, checkerProg.lookup f = cvgProg.
 
 /-- `cvgFns` but `openFns`, part 2. -/
 def cvgOwn2 : List FnName :=
-  ["lq_put", "install_value_guards", "cv_lps", "er_to_iw", "iw_alloc", "er_copy",
-   "consts_resolve_ffast"]
+  ["lq_put", "install_value_guards", "cv_lps", "er_to_iw", "iw_alloc", "er_copy"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkerProg_cvgOwn2 : ∀ f ∈ cvgOwn2, checkerProg.lookup f = cvgProg.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩
 
 set_option maxRecDepth 100000 in
 theorem cvgOwn_of : ∀ f ∈ cvgFns, f ∉ openFns →
@@ -154,13 +156,12 @@ theorem checkerProg_ivOwn0 : ∀ f ∈ ivOwn0, checkerProg.lookup f = ivProg.loo
 
 /-- `ivFns` but `openFns`, part 1. -/
 def ivOwn1 : List FnName :=
-  ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "consts_resolve_ffast",
-   "install_value_guards", "env_push", "env_row_set", "erec_vg"]
+  ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "install_value_guards", "env_push", "env_row_set", "erec_vg"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkerProg_ivOwn1 : ∀ f ∈ ivOwn1, checkerProg.lookup f = ivProg.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩
 
 set_option maxRecDepth 100000 in
 theorem ivOwn_of : ∀ f ∈ ivFns, f ∉ openFns →
@@ -186,13 +187,12 @@ theorem checkerProg_armOwn0 : ∀ f ∈ armOwn0, checkerProg.lookup f = armText.
 
 /-- `armFns` but `openFns`, part 1. -/
 def armOwn1 : List FnName :=
-  ["er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "consts_resolve_ffast",
-   "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c", "lq_find", "lvl_eq_rec"]
+  ["er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c", "lq_find", "lvl_eq_rec"]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkerProg_armOwn1 : ∀ f ∈ armOwn1, checkerProg.lookup f = armText.lookup f :=
-  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, List.forall_mem_cons.2 ⟨rfl, fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 /-- `armFns` but `openFns`, part 2. -/
 def armOwn2 : List FnName :=
