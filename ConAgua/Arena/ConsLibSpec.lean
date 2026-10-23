@@ -271,24 +271,28 @@ theorem argsOf_init1 (t : Word) (as : List Word) (j : Word) (k : Nat) (h : as.le
   subst h; exact argsOf_init [t] as [j] m
 
 
-/-- **`X_find(t, k, h)`** returns the probe of tier `t` from the home slot of `h`. -/
-theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C)
-    (hp : p.lookup C.fname = some (consFindG C)) (n : Nat) (s₀ : St) (t : Word) (ks : List Word)
-    (hks : ks.length = C.nk) (h : Word) :
+/-- `nk` words of a call's arguments from `base` on. -/
+def argsL (base nk : Nat) (vs : List Word) : List Word :=
+  (List.range nk).map fun i => Locals.init vs (i + base)
+
+theorem argsOf_mk (base nk : Nat) (m : Mem) (vs : List Word) :
+    argsOf base nk { mem := m, loc := Locals.init vs } = argsL base nk vs := rfl
+
+theorem argsL_eq (pre ks rest : List Word) (k : Nat) (hk : ks.length = k) :
+    argsL pre.length k (pre ++ (ks ++ rest)) = ks := by
+  subst hk; exact argsOf_init pre ks rest default
+
+/-- **`X_find(t, k, h)`** returns the probe of tier `t` from the home slot of `h` (for any
+argument list: `t`, the key, `h` and the initial step count are its words `0`, `1 ‥ nk`,
+`nk + 1`, `nk + 4`). -/
+theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : MatchOK p C)
+    (hp : p.lookup C.fname = some (consFindG C)) (n : Nat) (s₀ : St) (vs : List Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) C.fname (t :: (ks ++ [h]))
+    invoke p (exec p n) C.fname vs
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem ks t) t (baseW s₀.mem t) (gnW C.sa s₀.mem)
-        (homeW h (gnW C.sa s₀.mem)) 0; ⊤⦄ := by
-  have ek : ∀ m, argsOf 1 C.nk { mem := m, loc := Locals.init (t :: (ks ++ [h])) } = ks :=
-    fun m => by rw [← hks]; exact argsOf_init [t] ks [h] m
-  have e0 : Locals.init (t :: (ks ++ [h])) 0 = t := rfl
-  have eh : Locals.init (t :: (ks ++ [h])) (1 + C.nk) = h := by
-    rw [← hks]; simpa [Locals.init] using init_past [t] ks [h] 0
-  have ez : ∀ a : Nat, 2 ≤ a → Locals.init (t :: (ks ++ [h])) (a + C.nk) = 0 := fun a ha => by
-    apply init_oob
-    simp only [List.length_cons, List.length_append, List.length_nil]
-    omega
+      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem (argsL 1 C.nk vs) (Locals.init vs 0))
+        (Locals.init vs 0) (baseW s₀.mem (Locals.init vs 0)) (gnW C.sa s₀.mem)
+        (homeW (Locals.init vs (1 + C.nk)) (gnW C.sa s₀.mem)) (Locals.init vs (4 + C.nk)); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, consFindG, cfHead, seqs, List.map, mapS, mapE, lvF, L.Notation.blk]
   cases n with
@@ -300,9 +304,25 @@ theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C)
         Nat.reduceEqDiff, rd64_rdW, argsOf_setLoc_add 1 C.nk 2 (by decide),
         argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add 1 C.nk 6 (by decide),
         zero_ne_add 2 C.nk (by decide), zero_ne_add 3 C.nk (by decide),
-        zero_ne_add 4 C.nk (by decide), zero_ne_add 6 C.nk (by decide), ek, e0, eh,
-        ez 4 (by decide), ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
+        zero_ne_add 4 C.nk (by decide), zero_ne_add 6 C.nk (by decide), argsOf_mk,
+        ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false] at *)
     all_goals grind [lang_grind, arena_grind, gnW, gexpW, homeW, baseW]
+
+/-- `X_find(t, k, h)` at a key of `nk` words. -/
+theorem consFindG_spec (p : Prog) (C : ConsSch) (hM : MatchOK p C)
+    (hp : p.lookup C.fname = some (consFindG C)) (n : Nat) (s₀ : St) (t : Word) (ks : List Word)
+    (hks : ks.length = C.nk) (h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) C.fname (t :: (ks ++ [h]))
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = cprobeW (s₀.mem.arr64 C.sa) (C.mtM s₀.mem ks t) t (baseW s₀.mem t) (gnW C.sa s₀.mem)
+        (homeW h (gnW C.sa s₀.mem)) 0; ⊤⦄ := by
+  have ek := argsL_eq [t] ks [h] C.nk hks
+  have eh := init_last t ks h C.nk hks
+  have ez := init_past2 t ks h C.nk 4 hks (by decide)
+  simp only [List.length_singleton, List.singleton_append] at ek
+  vcgen [consFindG_specV p C hM hp n s₀]
+  all_goals simp_all [Locals.init_cons_zero]
 
 /-! ## `X_push`: the append -/
 
@@ -346,7 +366,7 @@ theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ :
   all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
         Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, ↓reduceIte, Nat.add_eq_zero_iff,
         false_and, and_false, Sig.retVal] at *)
-  all_goals grind [lang_grind, arena_grind, growK, tailM, Mem.arr64_set64_ne, baseW]
+  all_goals grind [lang_grind, arena_grind, growK, tailM, baseW]
 
 theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
     ∀ (es : List Expr), (∀ e ∈ es, LocOnly e) → ∀ (f : Nat) (s₁ : St),
@@ -384,16 +404,17 @@ theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
       all_goals grind
 
 /-- **`X_push(t, args, j)`** appends node `cntC` to tier `t` (record `vsM args`) at slot `j`,
-then grows if the tier passed half load. -/
-theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
-    (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (t : Word)
-    (as : List Word) (has : as.length = C.np) (j : Word) :
+then grows if the tier passed half load (any argument list: `t`, the inputs, `j` are its words
+`0`, `1 ‥ np`, `np + 1`). -/
+theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (vs : List Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) C.pname (t :: (as ++ [j]))
-    ⦃fun r s' => LocEq s' s₀ ∧ pushOKC C s₀.mem t = true ∧ r = [cntC C s₀.mem t] ∧
-      growIf C.sa C.ca C.hsM s₀.mem (pushMC C s₀.mem t (C.vsM as) j (cntC C s₀.mem t))
-        (cntC C s₀.mem t) = some s'.mem; ⊤⦄ := by
-  have hV := hO.recs.2
+    invoke p (exec p n) C.pname vs
+    ⦃fun r s' => LocEq s' s₀ ∧ pushOKC C s₀.mem (Locals.init vs 0) = true ∧
+      r = [cntC C s₀.mem (Locals.init vs 0)] ∧
+      growIf C.sa C.ca C.hsM s₀.mem (pushMC C s₀.mem (Locals.init vs 0) (C.vsM (argsL 1 C.np vs))
+        (Locals.init vs (1 + C.np)) (cntC C s₀.mem (Locals.init vs 0)))
+        (cntC C s₀.mem (Locals.init vs 0)) = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, consPushG, cpHead, cpMid, seqs, List.map, mapS, mapE, mapC, lvF, L.Notation.blk]
   cases n with
@@ -406,12 +427,25 @@ theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         Nat.reduceEqDiff, rd64_rdW, argsOf_setLoc_add 1 C.np 2 (by decide),
         argsOf_setLoc_add 1 C.np 3 (by decide), argsOf_setLoc_add 1 C.np 5 (by decide),
         zero_ne_add 1 C.np (by decide), zero_ne_add 2 C.np (by decide),
-        zero_ne_add 3 C.np (by decide), zero_ne_add 5 C.np (by decide),
-        argsOf_init1 t as j C.np has, init_last t as j C.np has, Locals.init_cons_zero,
-        init_past2 t as j C.np 2 has (by decide), init_past2 t as j C.np 3 has (by decide),
-        init_past2 t as j C.np 5 has (by decide), hO.room_eq, hO.recs.2, mapC, ofNat_zero',
+        zero_ne_add 3 C.np (by decide), zero_ne_add 5 C.np (by decide), argsOf_mk,
+        hO.room_eq, hO.recs.2, mapC, ofNat_zero',
         ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, growIf_growK, pushMC, pushOKC,
         cntC] at *)
     all_goals grind [lang_grind, arena_grind, gexpW]
+
+/-- `X_push(t, args, j)` at `np` inputs. -/
+theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (t : Word)
+    (as : List Word) (has : as.length = C.np) (j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) C.pname (t :: (as ++ [j]))
+    ⦃fun r s' => LocEq s' s₀ ∧ pushOKC C s₀.mem t = true ∧ r = [cntC C s₀.mem t] ∧
+      growIf C.sa C.ca C.hsM s₀.mem (pushMC C s₀.mem t (C.vsM as) j (cntC C s₀.mem t))
+        (cntC C s₀.mem t) = some s'.mem; ⊤⦄ := by
+  have ek := argsL_eq [t] as [j] C.np has
+  have ej := init_last t as j C.np has
+  simp only [List.length_singleton, List.singleton_append] at ek
+  vcgen [consPushG_specV p C hO hp n s₀]
+  all_goals simp_all [Locals.init_cons_zero]
 
 end L.Arena
