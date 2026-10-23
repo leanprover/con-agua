@@ -25,6 +25,6 @@ namespace L.Checker
 open L L.Compiler
 
 /-- **The checker's code**: `compileProg checkerTab checkerProg "check"`, as a literal. -/
-asm_lit checkerAsm : checkerTab checkerProg "check"
+asm_lit checkerAsm : checkerTab checkerNrt checkerProg "check"
 
 end L.Checker

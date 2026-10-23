@@ -16,16 +16,16 @@ namespace L.Compiler
 
 open L
 
-theorem code_of_lookup [Host] {tab : Tab} {f : FnName} {fd : FunDecl} :
-    ∀ (p : Prog) (k : Nat), Code (p.flatMap fun (f, fd) => compileFn tab f fd) k → p.lookup f = some fd →
-    ∃ kf, Code (compileFn tab f fd) kf := by
+theorem code_of_lookup [Host] {tab : Tab} {t : NTree} {f : FnName} {fd : FunDecl} :
+    ∀ (p : Prog) (k : Nat), Code (compileFns tab t p) k → p.lookup f = some fd →
+    ∃ kf, Code (compileFn tab t f fd) kf := by
   intro p
   induction p with
   | nil => intro k _ h; simp at h
   | cons q p ih =>
     obtain ⟨f', fd'⟩ := q
     intro k hc hl
-    simp only [List.flatMap_cons] at hc
+    simp only [compileFns, List.flatMap_cons] at hc
     simp only [List.lookup_cons] at hl
     split at hl
     · rename_i heq
@@ -33,14 +33,14 @@ theorem code_of_lookup [Host] {tab : Tab} {f : FnName} {fd : FunDecl} :
       have : f = f' := by simpa using heq
       subst this
       exact ⟨k, hc.left⟩
-    · exact ih _ hc.right hl
+    · exact ih _ (by simpa only [compileFns] using hc.right) hl
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
-theorem stepSim (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab f fd) kf)
-    (n : Nat) (hE : ExecSim p G n) (hF : FunSim p G n) : StepSim p G n := by
+theorem stepSim (t : NTree) (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t f fd) kf)
+    (n : Nat) (hE : ExecSim p G n) (hF : FunSim p G t n) : StepSim p G n := by
   have hPm : ∀ a b, a ≤ b → b ≤ n → a ≤ n := fun a b h1 h2 => Nat.le_trans h1 h2
   intro s
   induction s with
@@ -53,19 +53,20 @@ theorem stepSim (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compil
   | «while» c s ih => exact sim_while hG hTab p n hE c s ih
   | brk => exact sim_brk p _ _
   | ret e => exact sim_ret hG hTab p _ _ e
-  | call x f args => exact sim_call hG hTab p n hF hProg x f args
+  | call x f args => exact sim_call hG hTab p t n hF hProg x f args
   | abort => exact sim_abort p _ _
   | gset g e => exact sim_gset hG hTab p _ _ g e
 
-theorem execSim_all (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true)
-    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab f fd) kf) :
-    ∀ n, ExecSim p G n ∧ FunSim p G n := by
+theorem execSim_all (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
+    (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body)
+    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t f fd) kf) :
+    ∀ n, ExecSim p G n ∧ FunSim p G t n := by
   intro n
   induction n with
-  | zero => exact ⟨execSim_zero p G, funSim hG hTab p hwfp 0 (execSim_zero p G)⟩
+  | zero => exact ⟨execSim_zero p G, funSim hG hTab p hwfp t hTree 0 (execSim_zero p G)⟩
   | succ n ih =>
-    have hE := execSim_succ (stepSim hG hTab p hProg n ih.1 ih.2)
-    exact ⟨hE, funSim hG hTab p hwfp (n + 1) hE⟩
+    have hE := execSim_succ (stepSim hG hTab p t hProg n ih.1 ih.2)
+    exact ⟨hE, funSim hG hTab p hwfp t hTree (n + 1) hE⟩
 
 end
 

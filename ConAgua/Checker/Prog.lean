@@ -2199,4 +2199,9 @@ def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1
 -- the word arrays are the ones `cap_check` checks
 #guard (Prog.arrs checkerProg).2 == wordArrays
 
+-- The result counts of `checkerProg`'s functions (`Prog.nrt`), as a literal, with
+-- `checkerNrt_eq : Prog.nrt checkerProg = checkerNrt` (`nrt_lit`): every call site of the compiled
+-- code looks its callee's count up in it (`asm_lit`).
+nrt_lit checkerNrt : checkerProg
+
 end L.Checker
