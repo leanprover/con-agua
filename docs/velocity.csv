@@ -246,3 +246,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,60,40,(helpers sum+pos) IndSum/IndInstall 15 targets + positivity walk 9 targets under StageC
 2026-10-23,compopt2,claude-opus-5-5,420,40,tooling: compopt2 profiling tools + clang oracle + slot-table prototype generators; journal
 2026-10-23,indstaget,claude-opus-5-5,90,30,"checkBlockTail/Pass/Block under StageC (+helpers grc, cbpos); all 59 targets core-contract free"
+2026-10-23,asmfile,claude-opus-5-5,45,20,"committed asm/checker.s parsed by include_asm (strict parser + Kraken cross-check); checkerFile_eq; final theorems over the file; Lake input_file; asm_file.py"
