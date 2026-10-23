@@ -85,12 +85,12 @@ theorem hNoteW_frame {m₁ m₂ x₁ : Mem} {w i k tg ws sp sp' : Word}
     simp only [h0, h1, ite_false, ite_true, hNoteW.k1, hiw] at h ⊢
     split at h
     · rename_i hc
-      rw [if_pos hc]
+      rw [ite_eq_left hc]
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨_, rfl, MemFrame.set64_bothH (MemFrame.set64_bothH hf _ (by decide) _ _) _ (by decide) _ _⟩
     · rename_i hc
-      rw [if_neg hc]
+      rw [ite_eq_right hc]
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨_, rfl, hf⟩
@@ -367,10 +367,10 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
   by_cases hh : (mfindG hsSch m e 0).headD 0 ≠ 0
   · rw [hWalkW.arm1 n m e i k tg ws sp fu hfu hr hh] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    rw [seenR_hit hs he hr hh, if_pos rfl]
+    rw [seenR_hit hs he hr hh, ite_eq_left rfl]
     exact wres_pure hs
   rw [hWalkW.arm2 n m e i k tg ws sp fu hfu hr hh] at hb
-  rw [seenR_miss hs he hr (Decidable.of_not_not hh), if_neg Bool.false_ne_true]
+  rw [seenR_miss hs he hr (Decidable.of_not_not hh), ite_eq_right Bool.false_ne_true]
   cases hp : mputG hsSch m e 0 1 ((mfindG hsSch m e 0).headD 0) ((mfindG hsSch m e 0).tail.headD 0) with
   | none => rw [hp] at hb; simp [hWalkW.k1.eq_def] at hb
   | some m₀ =>
@@ -561,7 +561,7 @@ theorem trunc_get {P : Array Word} {t j : Nat} {w : Word} (h : (trunc P t)[j]? =
   simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.getElem?_extract,
     Array.size_extract, Nat.sub_zero, Nat.zero_add] at h
   have hj' : ¬ (0 = j) := by omega
-  simp only [hj', false_and, if_false] at h
+  simp only [hj', false_and, ite_false] at h
   split at h
   · exact ⟨h, by omega⟩
   · cases h
@@ -794,7 +794,7 @@ theorem blockGo_ok' (n : Nat) :
       rw [hP, hq1, show c.toNat - (q.toNat + 1) = c.toNat - q.toNat - 1 by omega, ← Nat.add_assoc]
       exact hdec'
     rcases hrec with ⟨h5, mi, rp, ow, cw, rules, rfl, h7, h8, hr⟩ | ⟨h5, hn⟩
-    · rw [if_pos h5] at hb
+    · rw [ite_eq_left h5] at hb
       obtain ⟨hP7, h7t⟩ := trunc_get h7 (by omega)
       obtain ⟨hP8, h8t⟩ := trunc_get h8 (by omega)
       have hp7 : (pw + 7).toNat = pw.toNat + 7 := by
@@ -821,7 +821,7 @@ theorem blockGo_ok' (n : Nat) :
       refine wres_bind W2 fun seen₂ ns₂ hs2 _ => ?_
       exact next m₂ sp₂ seen₂ _ (W2.arena (W1.arena hA)) hs2
         (by rw [W2.arr DLP (by decide) (by decide) (by decide), W1.arr DLP (by decide) (by decide) (by decide)]) hb
-    · rw [if_neg h5, hBlockGoW.k1.eq_def] at hb
+    · rw [ite_eq_right h5, hBlockGoW.k1.eq_def] at hb
       have N := next m₁ sp₁ seen₁ (acc ++ (List.map decI ns₁).toArray) (W1.arena hA) hs1 hD1 hb
       cases ci with
       | recInfo v mi rp rules => exact absurd rfl (hn v mi rp rules)
@@ -924,7 +924,7 @@ theorem hoistDepsOf_ok (n : Nat) :
   have e5 : rdW (m.arr64 DECL) (1 + 8 * r + 5) = dw (m.arr64 DECL) r.toNat 5 :=
     rdW_dw (m.arr64 DECL) r 5 hr (by decide)
   rw [hDepsOfW.eq_def] at hb
-  simp only [h0, if_false, hDe, e0, e2, e3, e4, e5] at hb
+  simp only [h0, ite_false, hDe, e0, e2, e3, e4, e5] at hb
   -- the kinds
   have one : ∀ {c : IConstantVal}, dw (m.arr64 DECL) r.toNat 0 ≠ 6 →
       decI (dw (m.arr64 DECL) r.toNat 4) = c.type →
@@ -968,24 +968,24 @@ theorem hoistDepsOf_ok (n : Nat) :
   cases d with
   | axiomDecl cv =>
     obtain ⟨h1, -, hty, -⟩ := hD
-    rw [if_pos h1] at hb
+    rw [ite_eq_left h1] at hb
     exact one (by rw [h1]; decide) hty hb
   | defnDecl cv v hh =>
     obtain ⟨h2, ⟨-, hty, -⟩, hv, -⟩ := hD
-    rw [if_neg (by rw [h2]; decide), if_pos (Or.inl h2)] at hb
+    rw [ite_eq_right (by rw [h2]; decide), ite_eq_left (Or.inl h2)] at hb
     exact two (by rw [h2]; decide) hty hv hb
   | thmDecl cv v =>
     obtain ⟨h2, ⟨-, hty, -⟩, hv⟩ := hD
-    rw [if_neg (by rw [h2]; decide), if_pos (Or.inr (Or.inl h2))] at hb
+    rw [ite_eq_right (by rw [h2]; decide), ite_eq_left (Or.inr (Or.inl h2))] at hb
     exact two (by rw [h2]; decide) hty hv hb
   | opaqueDecl cv v =>
     obtain ⟨h2, ⟨-, hty, -⟩, hv⟩ := hD
-    rw [if_neg (by rw [h2]; decide), if_pos (Or.inr (Or.inr h2))] at hb
+    rw [ite_eq_right (by rw [h2]; decide), ite_eq_left (Or.inr (Or.inr h2))] at hb
     exact two (by rw [h2]; decide) hty hv hb
   | indDecl b nP =>
     obtain ⟨h6, -, t, ht, hdec⟩ := hD
-    rw [if_neg (by rw [h6]; decide), if_neg (by rw [h6]; decide),
-      if_neg (by rw [h6]; exact fun h => h rfl)] at hb
+    rw [ite_eq_right (by rw [h6]; decide), ite_eq_right (by rw [h6]; decide),
+      ite_eq_right (by rw [h6]; exact fun h => h rfl)] at hb
     obtain ⟨ho0, hptr⟩ := hok.2 h6
     have hP : (mclearG hsSch m).arr64 DLP = m.arr64 DLP := hf₀.1 _ (by decide) (by decide)
     have hBA : BlockAt' (mclearG hsSch m) (dw (m.arr64 DECL) r.toNat 2) (dw (m.arr64 DECL) r.toNat 3) 0 b :=
@@ -997,7 +997,7 @@ theorem hoistDepsOf_ok (n : Nat) :
   | basisDecl kd => exact hD.elim
   | quotDecl qk cv =>
     obtain ⟨h5, -, -⟩ := hD
-    rw [if_neg (by rw [h5]; decide), if_neg (by rw [h5]; decide), if_pos (by rw [h5]; decide)] at hb
+    rw [ite_eq_right (by rw [h5]; decide), ite_eq_right (by rw [h5]; decide), ite_eq_left (by rw [h5]; decide)] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact ⟨[], rfl, by simp, ⟨∅, hs₀⟩, m, rfl, hf₀⟩
 
