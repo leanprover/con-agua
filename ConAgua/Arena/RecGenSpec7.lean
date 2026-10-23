@@ -202,11 +202,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- `install_header` keeps the `abstract1` memo. -/
 theorem ihHdrW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word}
-    (h : L.Arena.ihW n m vis q = some (r, m')) : AFr m m' := by
+    (h : L.Arena.ihW stubCall n m vis q = some (r, m')) : AFr m m' := by
   cases n with
   | zero => simp [L.Arena.ihW] at h
   | succ n =>
-  simp only [L.Arena.ihW, L.Arena.ihK1.eq_def, L.Arena.ihK2.eq_def, L.Arena.ihK3.eq_def, L.Arena.ihK4.eq_def,
+  simp only [stubCall, L.Arena.ihW, L.Arena.ihK1.eq_def, L.Arena.ihK2.eq_def, L.Arena.ihK3.eq_def, L.Arena.ihK4.eq_def,
     L.Arena.ihK5.eq_def, L.Arena.ihK6.eq_def, L.Arena.ihK7.eq_def, L.Arena.ihK8.eq_def, L.Arena.ihK9.eq_def] at h
   afr_auto h [envFindW_afr, ipfF_afr, cvLpsA_afr, lbbF_afr, hffF_afr, stub_afr]
 
@@ -215,8 +215,13 @@ theorem ccoW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word} (h : ccoW
   cases n with
   | zero => simp [ccoW] at h
   | succ n =>
-  simp only [ccoW, ccoK1.eq_def, ccoK2.eq_def, ccoK3.eq_def, stubCall] at h
-  afr_auto h [ihHdrW_afr, stub_afr]
+  simp only [ccoW, ccoK1.eq_def] at h
+  split at h
+  · cases h
+  rename_i r1 m1 h1
+  refine (ihHdrW_afr h1).trans ?_
+  simp only [ccoK2.eq_def, ccoK3.eq_def, stubCall] at h
+  afr_auto h [stub_afr]
 
 /-- A `RSim` whose post also records the twin's run. -/
 theorem RSim.withRun {β α : Type} {o : Option β} {op : AM α} {a : AState}
