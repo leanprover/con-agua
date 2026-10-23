@@ -33,14 +33,14 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hgs : decHL m go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop m)
     (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m) :
-    Sim (tblW p n m T C lo ll nP nF rs go gl off cvCaw vis)
+    Sim (tblW stubCall p n m T C lo ll nP nF rs go gl off cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards off.toNat cvCa fe) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AbsOK m') := by
   unfold tblW checkStructProjTable
   obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
   rw [hw, ← hwd]
   -- `struct_proj_bodies`
-  refine Sim.bindK (K := tblK1 p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := tblK1 stubCall p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
     (Q := fun rb ob m1 a1 => (StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ PBDecA m1 rb ob ∧ AbsOK m1) ∧
       MFr [] [] m m1)
     (fun r m' e => by
@@ -62,7 +62,7 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine Sim.bindK (K := tblK2 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
     (Sim.withFr (F := fun m2 => MFr [] [] m1 m2)
       (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb hA1)
-      (fun _ _ e => sctW_mfr _ _ _ _ _ _ _ _ _ _ e))
+      (fun _ _ e => sctW_mfr_stub _ _ _ _ _ _ _ _ _ _ e))
     fun rs' sok m2 a2 hQ => ?_
   obtain ⟨⟨hS2, hg2, hsok, hsl, hA2⟩, hf2⟩ := hQ
   by_cases hlen0 : rb.tail.tail.headD 0 ≠ nF

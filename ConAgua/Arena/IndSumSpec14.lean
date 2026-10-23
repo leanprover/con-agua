@@ -193,25 +193,27 @@ def sctK2 (rest : Mem → Option (List Word × Mem)) (vis nP b r1 : Word) :
   | none => none
   | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (crfF m [vis, b])
 /-- After `has_fvar_fast`. -/
-def sctK1 (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
+def sctK1 (c : CallM) (n : Nat) (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m) => sctK2 rest vis nP b (r1.headD 0) (stubM "all_level_params_defined" m [lo, ll, b])
+  | some (r1, m) => sctK2 rest vis nP b (r1.headD 0) (c n "all_level_params_defined" [lo, ll, b] m)
 
-/-- **The model of `check_struct_proj_table_scoped(vis, nP, lo, ll, bO, bL)`** at exec fuel `n`. -/
-def sctW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+/-- **The model of `check_struct_proj_table_scoped(vis, nP, lo, ll, bO, bL)`** at exec fuel `n`,
+reading `all_level_params_defined` through `c` (`stubCall`: the stub contract; `realCall p`: the
+program's own call, `IndRealSctC.lean`). -/
+def sctW (c : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, nP, lo, ll, bO, bL =>
     if bL = 0 then some ([1], m)
-    else sctK1 (fun m' => sctW n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
+    else sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
       (hffF m [CWF, rdW (m.arr64 IW) bO])
 
 section arms
-variable (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
+variable (c : CallM) (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
   (vis nP lo ll bO bL b r1 r2 r3 : Word) (r : List Word)
-theorem sctW_nil (h : bL = 0) : sctW (n + 1) m vis nP lo ll bO bL = some ([1], m) := by simp [sctW, h]
-theorem sctW_cons (h : bL ≠ 0) : sctW (n + 1) m vis nP lo ll bO bL =
-    sctK1 (fun m' => sctW n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
+theorem sctW_nil (h : bL = 0) : sctW c (n + 1) m vis nP lo ll bO bL = some ([1], m) := by simp [sctW, h]
+theorem sctW_cons (h : bL ≠ 0) : sctW c (n + 1) m vis nP lo ll bO bL =
+    sctK1 c n (fun m' => sctW c n m' vis nP lo ll (bO + 1) (bL - 1)) vis nP lo ll (rdW (m.arr64 IW) bO)
       (hffF m [CWF, rdW (m.arr64 IW) bO]) := by simp [sctW, h]
 theorem sctK5_some : sctK5 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem sctK4_yes (h : r1 = 0 ∧ r2 = 1 ∧ r3 = 1 ∧ r.headD 0 = 1) :
@@ -222,15 +224,16 @@ theorem sctK3_some : sctK3 rest nP b r1 r2 (some (r, m)) =
     sctK4 rest r1 r2 (r.headD 0) (lbbF m [CWF, nP + 1, b]) := rfl
 theorem sctK2_some : sctK2 rest vis nP b r1 (some (r, m)) =
     sctK3 rest nP b r1 (r.headD 0) (crfF m [vis, b]) := rfl
-theorem sctK1_some : sctK1 rest vis nP lo ll b (some (r, m)) =
-    sctK2 rest vis nP b (r.headD 0) (stubM "all_level_params_defined" m [lo, ll, b]) := rfl
+theorem sctK1_some : sctK1 c n rest vis nP lo ll b (some (r, m)) =
+    sctK2 rest vis nP b (r.headD 0) (c n "all_level_params_defined" [lo, ll, b] m) := rfl
 end arms
 attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
 
 theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
-    (hp : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL) (n : Nat) : ∀ (s₀ : St) (vis nP lo ll bO bL : Word),
+    (hp : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL)
+    (c : CallM) (hc : CallSpec p c) (n : Nat) : ∀ (s₀ : St) (vis nP lo ll bO bL : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_proj_table_scoped" [vis, nP, lo, ll, bO, bL]
-    ⦃fun r s' => LocEq s' s₀ ∧ sctW n s₀.mem vis nP lo ll bO bL = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ sctW c n s₀.mem vis nP lo ll bO bL = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis nP lo ll bO bL; rw [invoke_eq _ hp]; simp only [callFn, checkStructProjTableScopedL]
@@ -241,7 +244,7 @@ theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
     simp only [callFn, checkStructProjTableScopedL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hffF_spec p hf n, stubM_spec p "all_level_params_defined" n,
+        hffF_spec p hf n, hc n "all_level_params_defined",
         crfF_spec p hcr n, lbbF_spec p hb n, ih] <;>
       finish (gen := 30) (instances := 5000) [rdW_eq]
 
@@ -267,7 +270,7 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     ∀ (m : Mem) (a : AState) (bO bL : Word) (bs : List EIdx),
     StageR dn vis fe m a → decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     decHL m bO.toNat bL.toNat = some bs → bO.toNat + bL.toNat ≤ iwTop m → AbsOK m →
-    Sim (sctW n m vis nP lo ll bO bL) (bs.allM (scopeT fe lps nP.toNat)) a
+    Sim (sctW stubCall n m vis nP lo ll bO bL) (bs.allM (scopeT fe lps nP.toNat)) a
       (fun r b m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
         (r.headD 0).toNat ≤ 1 ∧ AbsOK m') := by
   induction n with
@@ -287,7 +290,7 @@ theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hcwf : CWF.toNat = coreWalkFuel := CWF_eq
   have h1 := hffF_ok dn vis fe CWF w hwl
   rw [hcwf] at h1
-  refine Sim.bindK (K := sctK1 _ vis nP lo ll w) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := sctK1 stubCall n _ vis nP lo ll w) rfl (fun _ _ => rfl)
     (Sim.withFr (F := AbsOK) (sumSim_of_relW h1 hS) fun _ _ e => (show AFr _ _ from AFr.of_frame (hffF_frame e)) hA)
     fun r1 a1 m1 s1 hQ => ?_
   obtain ⟨⟨hS1, hg1, hb1, hl1⟩, hA1⟩ := hQ
@@ -401,21 +404,22 @@ def tblK2 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl bO bL : Word) :
   | some (rs', m) => if bL ≠ nF then none else if rs'.headD 0 ≠ 1 then none
     else tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (ptF m [T])
 /-- After `struct_proj_bodies`. -/
-def tblK1 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl : Word) :
+def tblK1 (c : CallM) (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m) => if rb.headD 0 = 0 then none
     else tblK2 p n vis T lo ll nP C nF rs off go gl (rb.tail.headD 0) (rb.tail.tail.headD 0)
-      (sctW (n + 1) m vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0))
+      (sctW c (n + 1) m vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0))
 
 /-- **The model of `check_struct_proj_table(T, C, lo, ll, nP, nF, rs, go, gl, off, cvCa, vis)`**
-(its callees at exec fuel `n + 1`). -/
-def tblW (p : Prog) (n : Nat) (m : Mem) (T C lo ll nP nF rs go gl off cvCa vis : Word) :
+(its callees at exec fuel `n + 1`; `check_struct_proj_table_scoped` reads `all_level_params_defined`
+through `c`). -/
+def tblW (c : CallM) (p : Prog) (n : Nat) (m : Mem) (T C lo ll nP nF rs go gl off cvCa vis : Word) :
     Option (List Word × Mem) :=
-  tblK1 p n vis T lo ll nP C nF rs off go gl (spbW (n + 1) m T nP nF (rdW (m.arr64 EREC) (cvCa + 3)))
+  tblK1 c p n vis T lo ll nP C nF rs off go gl (spbW (n + 1) m T nP nF (rdW (m.arr64 EREC) (cvCa + 3)))
 
 section arms
-variable (p : Prog) (n : Nat) (m : Mem)
+variable (c : CallM) (p : Prog) (n : Nat) (m : Mem)
   (vis tn T lo ll nP C nF rs off go gl bO bL lo2 ll2 bo2 bl2 go2 gl2 q : Word) (r : List Word)
 theorem tblK9_some : tblK9 (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem tblK8_some : tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 go2 gl2 (some (q, m)) =
@@ -447,12 +451,12 @@ theorem tblK2_ok (h : bL = nF) (h1 : r.headD 0 = 1) :
       tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (ptF m [T]) := by
   simp only [tblK2]; rw [if_neg ((fun e => e h)), if_neg ((fun e => e h1))]
 theorem tblK1_no (h : r.headD 0 = 0) :
-    tblK1 p n vis T lo ll nP C nF rs off go gl (some (r, m)) = none := by
+    tblK1 c p n vis T lo ll nP C nF rs off go gl (some (r, m)) = none := by
   simp only [tblK1]; rw [if_pos h]
 theorem tblK1_yes (h : r.headD 0 ≠ 0) :
-    tblK1 p n vis T lo ll nP C nF rs off go gl (some (r, m)) =
+    tblK1 c p n vis T lo ll nP C nF rs off go gl (some (r, m)) =
       tblK2 p n vis T lo ll nP C nF rs off go gl (r.tail.headD 0) (r.tail.tail.headD 0)
-        (sctW (n + 1) m vis nP lo ll (r.tail.headD 0) (r.tail.tail.headD 0)) := by
+        (sctW c (n + 1) m vis nP lo ll (r.tail.headD 0) (r.tail.tail.headD 0)) := by
   simp only [tblK1]; rw [if_neg h]
 end arms
 attribute [ind_grind] tblK9_some tblK8_some tblK7_some tblK6_some tblK5_some tblK4_found tblK4_free
@@ -495,18 +499,18 @@ structure TblProg (p : Prog) : Prop where
   hcr : CrfF p
 
 set_option maxHeartbeats 4000000 in
-theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
+theorem tblW_spec (p : Prog) (hP : TblProg p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St)
     (T C lo ll nP nF rs go gl off cvCa vis : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "check_struct_proj_table"
       [T, C, lo, ll, nP, nF, rs, go, gl, off, cvCa, vis]
     ⦃fun r s' => LocEq s' s₀ ∧
-      tblW p n s₀.mem T C lo ll nP nF rs go gl off cvCa vis = some (r, s'.mem); ⊤⦄ := by
+      tblW c p n s₀.mem T C lo ll nP nF rs go gl off cvCa vis = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.htbl]
   simp only [callFn, checkStructProjTableL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
     spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
       hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal (n + 1),
-    sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
+    sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct c hc (n + 1), ptF_spec p hP.hpt (n + 1),
     envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
     erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
@@ -551,14 +555,14 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hgs : decHL m go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop m)
     (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m) :
-    Sim (tblW p n m T C lo ll nP nF rs go gl off cvCaw vis)
+    Sim (tblW stubCall p n m T C lo ll nP nF rs go gl off cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards off.toNat cvCa fe) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m') := by
   unfold tblW checkStructProjTable
   obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
   rw [hw, ← hwd]
   -- `struct_proj_bodies`
-  refine Sim.bindK (K := tblK1 p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := tblK1 stubCall p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
     (fun r m' e => by
       obtain ⟨x, a', h1, h2⟩ := spbW_ok dn vis fe (n + 1) m m' a T nP nF w r e hS hwl (by omega)
         nF.toNat_lt hA
@@ -695,7 +699,7 @@ theorem checkStructProjTable_refines (p : Prog) (hP : TblProg p) (n : Nat) (s₀
         (decI rs) guards off.toNat cvCa fe) a₀) s'.mem (AM.st (checkStructProjTable (decI T) (decI C)
           lps nP.toNat nF.toNat (decI rs) guards off.toNat cvCa fe) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (tblW_spec p hP n s₀ T C lo ll nP nF rs go gl off cvCaw vis) ?_
+  refine triple_post (tblW_spec p hP stubCall (stubCall_spec p) n s₀ T C lo ll nP nF rs go gl off cvCaw vis) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg'⟩ := (tblW_ok p hP n _ a₀ T C lo ll nP nF rs go gl off cvCaw lps guards cvCa hS hT
     hC hrs hnP hlps hlb hgs hgb hcv hA).run hm

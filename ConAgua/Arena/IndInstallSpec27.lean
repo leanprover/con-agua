@@ -181,7 +181,7 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
     (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow s2.mem m' ∧ MFr [] [] s2.mem m' ∧ AbsOK m')
     (fun r m' e => by
       obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-        (tblW_spec p hP.tbl j _ (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))
+        (tblW_spec p hP.tbl stubCall (stubCall_spec p) j _ (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))
           (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvp)) (rl.headD 0) (rl.tail.headD 0) (UInt64.ofNat bs.nP)
           (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6)) (rg.headD 0) (rg.tail.headD 0) 1
           (UInt64.ofNat cvp) vis) e
