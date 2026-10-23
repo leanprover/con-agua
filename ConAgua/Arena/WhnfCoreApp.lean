@@ -193,14 +193,15 @@ theorem internM_hw (hS : S.WF) (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) �
     (hR : StoreR S R hs m on tbP tbS) (mt : Word → Word → Bool) (x0 x1 : Word)
     (rs₀ rs₁ : List Word) (hP0 : ProbeOKG S m 0 (mt 0) x0 rs₀) (hP1 : ProbeOKG S m 1 (mt 1) x1 rs₁)
     (pk : Word → Bool) (hpk : ∀ t, pk t = true → PushRoom S m t) (sk : Word) (vs : List Word)
-    (w : Word) (m' : Mem) (hI : internM S m sk pk vs rs₀ rs₁ = some (w, m')) :
+    {H : Mem → Word → Word → Word} (w : Word) (m' : Mem)
+    (hI : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) :
     w.toNat < 2 ^ 32 := by
   have hg : S.tag.toUInt64.toNat < 16 := by
     rw [UInt32.toNat_toUInt64]; exact hS.tag
   have h0 : (0 : Word).toNat ≤ 1 := by decide
   have h1 : (1 : Word).toNat ≤ 1 := by decide
   have e27 : (2:Nat) ^ 27 = 134217728 := by decide
-  obtain ⟨-, -, hT0, hT1⟩ := hR
+  obtain ⟨-, -, hT0, hT1, -⟩ := hR
   simp only [internM] at hI
   split at hI
   · simp at hI
@@ -219,13 +220,13 @@ theorem internM_hw (hS : S.WF) (m : Mem) (on : Bool) (tbP tbS : Tbl α (Idx k) �
       exact hdW_lt _ _ _ hg h1 (hit_idx_lt S R hs m 1 _ hT1 _ _ rs₁ hP1 hz hhit)
     split at hI
     · rename_i hpk1
-      obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hI)
+      obtain ⟨rfl, -⟩ := pushM_some S H m 1 vs _ w m' hI
       have := (hpk 1 hpk1).1
       exact hdW_lt _ _ _ hg h1 this
     · simp at hI
   · split at hI
     · rename_i hpk0
-      obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hI)
+      obtain ⟨rfl, -⟩ := pushM_some S H m 0 vs _ w m' hI
       exact hdW_lt _ _ _ hg h0 (hpk 0 hpk0).1
     · simp at hI
 
