@@ -63,7 +63,9 @@ def loadMem (b pb : ByteArray) (s8 s64 : List Nat) : Mem :=
 /-- **The named hypothesis: L refines the twin's pipeline.** Every run of `check` (no arguments)
 from the loaded memory that returns `ACCEPT` first comes from an accepting twin pipeline on the
 same bytes. For every input size below `2^63`, **every pin-data buffer `pb`** (below `2^63`
-bytes), every capacity choice and every L fuel below `2^62`.
+bytes), every capacity choice (word arrays below `2^64` words, so that `len64` reads a size
+exactly; on the machine they fit in the address space, `Layout.Ok.end64`) and every L fuel below
+`2^62`.
 
 This is what the per-function lanes must deliver, composed: from `ArenaR (loadMem b pb s8 s64)
 (AState.init EStore.empty)` (`arenaR_init`, grown to every field, and the input buffer), each stage
@@ -74,7 +76,8 @@ twin's counted fuels (`docs/ROADMAP.md` §3 (b)). Partial: nothing is claimed ab
 aborts, runs out of fuel, or returns anything but `ACCEPT`. -/
 def PipelineRefines (p : Prog) : Prop :=
   ∀ (b pb : ByteArray) (s8 s64 : List Nat) (N : Nat) (rs : List Word) (m' : Mem),
-    System.Platform.numBits = 64 → b.size < 2 ^ 63 → pb.size < 2 ^ 63 → N < 2 ^ 62 →
+    System.Platform.numBits = 64 → b.size < 2 ^ 63 → pb.size < 2 ^ 63 → (∀ n ∈ s64, n < 2 ^ 64) →
+    N < 2 ^ 62 →
     L.run p N "check" [] (loadMem b pb s8 s64) = .ok (rs, m') →
     rs.headD 0 = ACCEPT → TwinAccepts [b]
 
@@ -127,7 +130,17 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
       have := hres.1 0 (by omega) (by simp [maxRes])
       simp only [rres] at this
       rwa [show rs.getD 0 0 = rs.headD 0 by cases rs <;> rfl] at this
-    exact hP b pb s8 s64 N rs m' h64 hb hpb hN62 hrun (hrax ▸ hacc)
+    have hs64 : ∀ n ∈ s64, n < 2 ^ 64 := by
+      intro n hn
+      obtain ⟨a, ha, rfl⟩ := List.getElem_of_mem hn
+      have hnw : a < G.tab.nw := by
+        rw [← hmem.nw]; simpa [loadMem] using ha
+      have hsz := hmem.size64 a hnw
+      have he := hG.end64 a hnw
+      have : ((loadMem b pb s8 s64).arr64 a).size = s64[a] := by
+        simp [loadMem, Mem.arr64, ha]
+      omega
+    exact hP b pb s8 s64 N rs m' h64 hb hpb hs64 hN62 hrun (hrax ▸ hacc)
 
 /-- **Corollary: an accepted file has a model.** Under `checker_x64_accepts`'s premises, if the
 machine reports accept, con-leche's parser reads `b` into records `rc`, con-leche's pure fold
@@ -188,7 +201,7 @@ def rejectProg : Prog := [("check", { nparams := 0, nlocals := 0, body := .ret [
 
 /-- It refines the twin, vacuously. -/
 theorem pipelineRefines_reject : PipelineRefines rejectProg := by
-  intro b pb s8 s64 N rs m' _ _ _ _ hrun hacc
+  intro b pb s8 s64 N rs m' _ _ _ _ _ hrun hacc
   cases N with
   | zero =>
     simp [L.run, invoke, lookupFn, rejectProg, callFn, exec, StateT.run, throw, throwThe,
