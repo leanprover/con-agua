@@ -286,8 +286,8 @@ theorem ibtsW_sim (p : Prog) (hP : InstProg p) (dn : NIdx → Option ConLeche.Na
 
 /-- **`check_block_teles` refines `checkBlockTeles`** (through `check_block_tele`'s stubs): the
 member slice decoded below the tops with its formers' constant records below the tops; the
-checked formers a slice of `[cvTa, s]` records, decoded below the tops (`sl_cons`-built, D18). -/
-@[refines ConRon.Arena.checkBlockTeles]
+checked formers a slice of `[cvTa, s]` records, decoded below the tops (`sl_cons`-built, D18). Under
+`StageR`; the census link is `checkBlockTeles_refinesC` (`IndT/Install3.lean`). -/
 theorem checkBlockTeles_refines (p : Prog) (hP : InstProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP o l : Word)
     (mss : List MemberShape) (hS : StageR dn vis fe s₀.mem a₀) (hms : MemsOK s₀.mem o l mss)

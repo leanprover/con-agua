@@ -105,7 +105,19 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndT.RecGen27",
   "ConAgua.Arena.IndT.GenRec1",
   "ConAgua.Arena.IndT.GenRec2",
-  "ConAgua.Arena.IndT.GenRec3"]
+  "ConAgua.Arena.IndT.GenRec3",
+  "ConAgua.Arena.IndT.Install1",
+  "ConAgua.Arena.IndT.Sum1",
+  "ConAgua.Arena.IndT.Sum2",
+  "ConAgua.Arena.IndT.Sum3",
+  "ConAgua.Arena.IndT.Install2",
+  "ConAgua.Arena.IndT.Sum4",
+  "ConAgua.Arena.IndT.Sum5",
+  "ConAgua.Arena.IndT.Install3",
+  "ConAgua.Arena.IndT.Install4",
+  "ConAgua.Arena.IndT.Install5",
+  "ConAgua.Arena.IndT.Install6",
+  "ConAgua.Arena.IndT.Install7"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).

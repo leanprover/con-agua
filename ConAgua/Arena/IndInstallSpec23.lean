@@ -337,8 +337,8 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
 `check_block_pass` calls it): the shape, member and
 former slices decoded below the tops; the stored constructors and their fields' sorts, per member,
 two slices of `[off, len]` pointers decoded below the tops (`sl_cons`-built, D18); the constructors
-also with each member slice's bound (`decCNSB`, for the positivity walk). -/
-@[refines ConRon.Arena.checkBlockCtors]
+also with each member slice's bound (`decCNSB`, for the positivity walk). Under `StageR`; the census
+link is `checkBlockCtors_refinesC` (`IndT/Install7.lean`). -/
 theorem checkBlockCtors_refines (p : Prog) (hP : CtorsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp mo ml co cl : Word)
     (bs : BlockShape) (mss : List MemberShape) (cvs : List IConstantVal)
