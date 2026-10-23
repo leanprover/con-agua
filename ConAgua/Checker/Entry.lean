@@ -36,15 +36,24 @@ def wordArrays : Nat := 214
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
 def ctlMin : Nat := 256
 
+/-- The slot arrays of the 19 cons tables (`SlotGrow.lean`): at least 17 words each (two tiers of
+`SN0 = 8` slots and the growth exponent word, `GrowR`). -/
+def slotArrs : List Nat := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40]
+
+/-- One array's capacity test: `2^62 ≤ len(b.u64)`, for a slot array also `len(b.u64) < 17` (as one
+wrapping comparison, `2^62 - 17 ≤ len - 17`). -/
+def capCond (b : Nat) : Cond :=
+  if b ∈ slotArrs then .cmp .ule (.const 4611686018427387887) (.bin .sub (.len64 b) (.const 17))
+  else .cmp .ule (.const 4611686018427387904) (.len64 b)
+
 /-- The body of `cap_check()`: every word array shorter than `2^62` words (handles, offsets and
-counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays) and at least
-17 words long (a cons table's first 2 × 8 slots and its growth exponent, `GrowR`), `CTL` at
+counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays), the slot
+arrays at least 17 words long (`slotArrs`), `CTL` at
 least `ctlMin` words, and the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
 `0` is a count, `StateDR`). -/
 def capCheckBody : Stmt :=
   (List.range wordArrays).foldr
-    (fun b s => .seq (.ite (.or (.cmp .ule (.const 4611686018427387904) (.len64 b))
-      (.cmp .ult (.len64 b) (.const 17))) .abort .skip) s)
+    (fun b s => .seq (.ite (capCond b) .abort .skip) s)
     (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
       (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
         (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
