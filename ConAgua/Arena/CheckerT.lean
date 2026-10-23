@@ -1258,7 +1258,7 @@ end fold
 `checkPendingList` on the phase-A state's worker: lane `pipeline`'s `SeqAccepts`): a returning
 run means the twin accepts. Phase A under `StageT` from the loop's start facts (`TwinFold`,
 `LoopMem`, `CoreMemos`), phase B under `StageT` (`PhaseBT.lean`, from con-ron's phase-B invariant
-`TwinPend`, which phase A's twin run gives from the empty caches at the start). -/
+`TwinPend`, which phase A's twin run gives). -/
 theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (hdc : LoopCallees dn p)
     (hFD : FrontDecls ds)
     (hpp : p.lookup "pend_push" = some pendPushL)

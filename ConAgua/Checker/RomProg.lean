@@ -56,7 +56,7 @@ theorem checkerProg_internAllPins_PB (bs : List UInt8) (hr : RomOK bs)
     invoke checkerProg (exec checkerProg n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (ConRon.Arena.internAllPins pins).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
-      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem; ⊤⦄ :=
+      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size; ⊤⦄ :=
   internAllPins_PB checkerProg checkerProg_noSt8PB bs (checkerProg_pinProg bs) hr hpre n s₀ a₀ hbs hA
     hP hok hpins hpp hoff hR hst hc
 

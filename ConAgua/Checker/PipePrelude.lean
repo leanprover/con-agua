@@ -6,6 +6,7 @@ import ConAgua.Checker.FrontProg
 import ConAgua.Checker.PreLoopWSStages
 import ConAgua.Front.FrontPre
 import ConAgua.Front.FrontPreOK
+import ConAgua.Census.Attr
 
 /-!
 # The stage `builtin_prelude` at `checkerProg` (lane `pipeline`)
@@ -165,6 +166,7 @@ theorem bp_h3 (a : AState) : StageSpec checkerProg "front_reset" (BP2 a) fun _ =
   · rw [hf.2.1 240 (by decide)]; exact h240
 
 /-- **`builtin_prelude` refines `builtinPreludeE`**, on the parse state and the arena. -/
+@[refines ConRon.Arena.Frontend.builtinPreludeE]
 theorem builtinPrelude_checker (h64 : System.Platform.numBits = 64) (a : AState) :
     StageSpec checkerProg "builtin_prelude" (BP0 a) fun _ => BP3 a :=
   builtin_of_parts checkerProg_builtin (bp_h1 h64 a) (bp_h2 a) (bp_h3 a)

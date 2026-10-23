@@ -1,5 +1,6 @@
 import ConAgua.Checker.PipePrelude
 import ConAgua.Checker.PrepRef
+import ConAgua.Checker.TwinPins
 
 /-!
 # The stages after `intern_reserved_pins` (lane `pipeline`)
@@ -150,6 +151,7 @@ structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState)
   arena : ArenaD m a
   decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds
   pf : PinFacts m a.pins
+  iw : L.Ind.IWOK m
 
 theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : PreludeIx)
     (rc : ParseResultD) (a : AState) :
@@ -176,9 +178,9 @@ theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : Prelu
     ⟨fun _ => h5.pf.full⟩)
     (stage_since n (preLoop_mem "prepare_prelude" (by decide +kernel)) s₀))
     (stageFrame_prepare_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
-  obtain ⟨ds', a', hrun, hcnt, hrecs, hAR, -, -, hDLP, hDs, hpe, hse, hpins, hle⟩ := hpost
+  obtain ⟨ds', a', hrun, hcnt, hrecs, hAR, hIW, -, hDLP, hDs, hpe, hse, hpins, hle⟩ := hpost
   refine ⟨ds', a', hrun, h5.since.step hk hpf,
-    ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.2)⟩, ?_, ?_⟩
+    ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.2)⟩, ?_, ?_, hIW⟩
   · refine ⟨by rw [hDs]; have := hc.1 DECL (by decide); omega, by rw [hDLP]; exact h5.decls.psize,
       by simpa [rdW] using hcnt, ?_, by rw [hDLP]; exact h5.decls.ptop, fun i hi => (hrecs i hi).1⟩
     rw [hDs]; have := h5.decls.room; omega
@@ -225,6 +227,8 @@ structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : Lis
   pinSets : PinSetsR m ipins
   rset : RsetR m
   pin0 : pinW m 0 ≠ 0
+  pinsFull : PinsFull m a.pins
+  iw : L.Ind.IWOK m
 
 theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63)
     (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
@@ -242,10 +246,22 @@ theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size 
     hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)
     (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
     (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
-  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR⟩ := hpost
-  refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_⟩
+  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop⟩ := hpost
+  have hpins' : a'.pins = a.pins := TwinCaches.internAllPins_pins hok hpins hoff hrun
+  have hPINS : s'.mem.arr64 PINS = s₀.mem.arr64 PINS := hsf.1 PINS (by decide +kernel) (by decide)
+  have h200 : rdW (s'.mem.arr64 CTL) 200 = rdW (s₀.mem.arr64 CTL) 200 :=
+    hsf.2.1 200 (not_mem_of_toNat (Z := [200]) (by decide +kernel) _ (by decide))
+  have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW := hsf.1 _ (by decide +kernel) (by decide)
+  have hc' := CapsOK.keep (h6.since.step hk hpf).keep h6.since.caps
+  refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_,
+    by rw [hpins']; exact h6.pf.full.congr hPINS, ?_⟩
   · rw [hsf.1 DECL (by decide +kernel) (by decide), hsf.1 DLP (by decide +kernel) (by decide)]
     exact h6.decls
   · simp only [pinW, hsf.1 PINS (by decide +kernel) (by decide)]; exact h6.pf.pin0
+  · refine ⟨?_, htop, ?_, ?_, ?_⟩
+    · simp only [L.Ind.iwTop, h200, hIW]; exact h6.iw.1
+    · have := hc'.1 L.Ind.IW (by decide); omega
+    · have := hc'.1 EREC (by decide); omega
+    · have := hc'.2.1; simp only [ctlMin] at this; omega
 
 end L.Checker
