@@ -230,8 +230,8 @@ theorem tmpW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rfl
 
 /-- **`target_major_pins` refines `targetMajorPins`** (through `target_pin_tys`'s and the stubs
-`mk_app_n_f`, `infer_type_core`; the interned head guarded below `2^32`). -/
-@[refines ConRon.Arena.targetMajorPins]
+`mk_app_n_f`, `infer_type_core`; the interned head guarded below `2^32`). Under `StageR`; the census
+link is `targetMajorPins_refinesC`. -/
 theorem targetMajorPins_refines (p : Prog) (hp : TmpProg p) (N : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (rP Mp : Word) (M : TargetMajor)
     (hS : StageR dn vis fe s₀.mem a₀) (hM : DecB (fun m => decTM m Mp.toNat) s₀.mem M) :

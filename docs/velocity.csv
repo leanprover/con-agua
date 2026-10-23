@@ -237,3 +237,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,slotgrow,opus-5.5,330,150,"growable cons (intern) slot tables: growth block in all 19 X_push (in-place rehash from the dense records, 1/2 load, from 8 slots), proofs complete; cap_check 17-word slot minimum; default set 0.67x wall vs master"
 2026-10-23,indstaget,claude-opus-5-5,120,25,classRecTyOk/classRecTysOk under StageC; core write set; StageC core entries
 2026-10-23,indstaget,claude-opus-5-5,60,20,decl-side census links moved to StageT/C (8 targets); tpt/tmp over CallM; stagec-targets.txt
+2026-10-23,indstaget,claude-opus-5-5,150,30,classRuleOk/classRulesOk/classRecsRulesOk + (helper tpt) targetPinTys/targetMajorPins/classMajors under StageC
