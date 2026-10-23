@@ -165,10 +165,6 @@ theorem instPisAtLift_spec (f o l e : Word) (he : H e) (xs : List EIdx) :
       (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (instPisAtLift f.toNat xs (decI e)) (KeepPost dn vis fe decOE) := sorry
 
-/-- `instantiate1_lift_fast(fuel, e, v, d)`. -/
-theorem instantiate1LiftFast_spec (f e v d : Word) (he : H e) (hv : H v) :
-    RelAM "instantiate1_lift_fast" [f, e, v, d] (StageR dn vis fe)
-      (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat) (KeepPost dn vis fe decW0E) := sorry
 
 
 /-- `all_level_params_defined(lps.off, lps.len, e)`. -/

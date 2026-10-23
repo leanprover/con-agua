@@ -85,7 +85,7 @@ theorem tailToNat {q : Word} {k : Nat} (h : q.toNat + k < 2 ^ 64) :
 /-- The tail's callees outside the `abstract1` cascade, which keep its memo (`AbsKeep`, a program
 fact). -/
 def tailKeepCallees : List FnName :=
-  ["check_block_idx_sorts", "cons_block_ctors", "check_block_rec", "check_block_tables"]
+  ["check_block_idx_sorts", "cons_block_ctors", "check_block_rec", "struct_proj_guards"]
 
 /-- **`check_block_tail`'s model refines `checkBlockTail`.** -/
 theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName}
@@ -252,14 +252,14 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m6 m' ∧ HbMemo m' ∧ AbsOK m')
     (fun r m' e7 => by
-      have hA7 := hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ e7 hA6
       obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨m6, Locals.init []⟩)
         (ctb_spec p hP.tabs.tabs k _ _ _ _ _ _ _ _ _) e7
       obtain ⟨x, a', h1, h2, h3, h4⟩ := ctbW_sim hP.tabs dn (UInt64.ofNat pw) bs k m6 a6 (r6.headD 0) fe3 _ _ _ _ _
         _ bs.members ctorsAs sss
         (by omega) hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
-        (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 r s7.mem hW7
-      exact ⟨x, a', h1, h2, h3, h4, hA7⟩)
+        (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 hA6
+        (fun f hf => hkeep f (by simp_all [tablesKeepCallees, tailKeepCallees])) r s7.mem hW7
+      exact ⟨x, a', h1, h2, h3, h4⟩)
     (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
 
 end L.Ind

@@ -96,6 +96,14 @@ theorem lpsW_mfrT {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n 
     simp only [lpsW] at h
     mfr_auto h [erToIwW_mfr]
 
+theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [lpsW] at h
+  | succ n =>
+    simp only [lpsW] at h
+    afr_auto h [erToIwW_afr]
+
 theorem psGoW_mfr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word),
     psGoW n m o nP N k = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h
@@ -123,12 +131,15 @@ theorem spaW_mfr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
   simp only [spaW, spaK.eq_def, spaK2.eq_def] at h
   mfr_auto h [binternW_mfr, mkProjW_mfr]
 
+theorem i1lF_mfr {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low ⟨_, _, i1lF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
+
 theorem pbW_mfr : ∀ (n : Nat) (m m' : Mem) (T k i h : Word) (r : List Word),
     pbW n m T k i h = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, hh => by simp [pbW] at hh
   | n + 1, m, m', T, k, i, h, r, hh => by
     simp only [pbW, pbK1.eq_def, pbK2.eq_def, pbK3.eq_def, pbK4.eq_def] at hh
-    mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _, spaW_mfr, MFr.ofStub, consW_mfr]
+    mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _, spaW_mfr, i1lF_mfr, consW_mfr]
 
 theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     (h : spbW k m T nP nF cty = some (r, m')) : MFr [] [] m m' := by

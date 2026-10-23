@@ -485,6 +485,7 @@ structure TblProg (p : Prog) : Prop where
   hef : p.lookup "er_from_iw" = some erFromIw
   htbl : p.lookup "check_struct_proj_table" = some checkStructProjTableL
   hrec : RecProg p
+  hi1 : I1lF p
 
 set_option maxHeartbeats 4000000 in
 theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
@@ -498,7 +499,7 @@ theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
-        hP.hpg hP.hgo hP.hps hP.hpj hP.hspb (n + 1),
+        hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 (n + 1),
       sctW_spec p hP.hbb hP.hhf hP.hsct (n + 1), ptF_spec p hP.hpt (n + 1),
       envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
       erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"] <;>
@@ -539,7 +540,7 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hrs : H rs) (hnP : nP.toNat + 1 < 2 ^ 64)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hgs : decHL m go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop m)
-    (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) :
+    (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m) :
     Sim (tblW p n m T C lo ll nP nF rs go gl off cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards off.toNat cvCa fe) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m') := by
@@ -548,10 +549,11 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [hw, ← hwd]
   -- `struct_proj_bodies`
   refine Sim.bindK (K := tblK1 p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
+    (Q := fun rb ob m1 a1 => StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ PBDecA m1 rb ob)
     (fun r m' e => by
-      obtain ⟨x, a', h1, h2⟩ := spbW_ok dn vis fe (n + 1) m m' a T nP nF w r e hS hwl (by omega)
-        nF.toNat_lt
-      exact ⟨x, a', h1, h2⟩) fun rb ob m1 a1 hQ => ?_
+      obtain ⟨x, a', h1, h2, h3, h4, -⟩ := spbW_ok dn vis fe (n + 1) m m' a T nP nF w r e hS hwl (by omega)
+        nF.toNat_lt hA
+      exact ⟨x, a', h1, h2, h3, h4⟩) fun rb ob m1 a1 hQ => ?_
   obtain ⟨hS1, hg1, hdec1⟩ := hQ
   by_cases h10 : rb.headD 0 = 0
   · rw [tblK1_no (h := h10)]; exact Sim.of_none
@@ -664,7 +666,7 @@ theorem tblW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /-- **`check_struct_proj_table` refines `checkStructProjTable`** (through the stubs
 `proj_table_name`, `has_fvar_fast`, `all_level_params_defined`, `consts_resolve_ffast`,
 `loose_bvars_bounded_fast`, and `struct_proj_bodies`' `inst_pis_at_lift`,
-`instantiate1_lift_fast`): from the stage relation at `vis` of `fe`, the level parameters and the
+`instantiate1_lift_fast`, with the walk memos `AbsOK`): from the stage relation at `vis` of `fe`, the level parameters and the
 guards decoded below the pool's top and the constructor below the record pool's top, a returning run
 returns the view of `fe` with the `projInfo` table pushed. -/
 @[refines ConRon.Arena.checkStructProjTable]
@@ -674,7 +676,7 @@ theorem checkStructProjTable_refines (p : Prog) (hP : TblProg p) (n : Nat) (s₀
     (hT : H T) (hC : H C) (hrs : H rs) (hnP : nP.toNat + 1 < 2 ^ 64)
     (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
     (hgs : decHL s₀.mem go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop s₀.mem)
-    (hcv : DecB (fun m => decCVp m cvCaw.toNat) s₀.mem cvCa) :
+    (hcv : DecB (fun m => decCVp m cvCaw.toNat) s₀.mem cvCa) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "check_struct_proj_table"
       [T, C, lo, ll, nP, nF, rs, go, gl, off, cvCaw, vis]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -687,7 +689,64 @@ theorem checkStructProjTable_refines (p : Prog) (hP : TblProg p) (n : Nat) (s₀
   refine triple_post (tblW_spec p hP n s₀ T C lo ll nP nF rs go gl off cvCaw vis) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg'⟩ := (tblW_ok p hP n _ a₀ T C lo ll nP nF rs go gl off cvCaw lps guards cvCa hS hT
-    hC hrs hnP hlps hlb hgs hgb hcv).run hm
+    hC hrs hnP hlps hlb hgs hgb hcv hA).run hm
   exact ⟨hl, hok, hS', hg'⟩
+
+/-! ## The walk memos across the table's steps -/
+
+theorem sctW_afr : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word) (r : List Word),
+    sctW n m vis nP lo ll bO bL = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [sctW] at h
+  | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
+    simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
+    afr_auto h [sctW_afr n _ _ _ _ _ _ _ _ _, stub_afr, (fun h => AFr.of_frame (hffF_frame h)),
+      (fun h => AFr.of_frame (lbbF_frame h))]
+
+theorem efgW_afr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
+    efgW n m q o l = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, h => by simp [efgW] at h
+  | n + 1, m, m', q, o, l, r, h => by
+    simp only [efgW, efgK.eq_def] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    · refine AFr.trans (set64ER_afr m q (rdW (m.arr64 IW) o)) ?_
+      afr_auto h [efgW_afr n _ _ _ _ _ _]
+
+theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
+    AFr m m' := by
+  simp only [efW, efK1.eq_def, efK2.eq_def] at h
+  afr_auto h [erAllocW_afr, efgW_afr _ _ _ _ _ _ _]
+
+theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
+    AFr m m' := by
+  simp only [envPushW] at h
+  split at h; · cases h
+  split at h; · cases h
+  split at h
+  rotate_left
+  · cases h
+  rename_i hc
+  obtain ⟨ht, -⟩ := hc
+  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON] := by
+    simp only [rowArr, List.mem_cons]
+    have : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
+        rowTag (rdW (m.arr64 EREC) (q + 1)) = 2 := by omega
+    rcases this with h0 | h0 | h0 <;> simp [h0]
+  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
+    rcases hrow with h | h | h | h <;> rw [h] <;> decide
+  have hf1 : AFr m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
+    unfold rowSet
+    exact (AFr.set64 m _ hne h49 _ _).trans (AFr.set64 _ _ hne h49 _ _)
+  simp only [envPushK] at h
+  split at h; · cases h
+  split at h
+  rotate_left
+  · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact hf1.trans ((AFr.set64 _ ECON (by decide) (by decide) _ _).trans (AFr.setCtl _ 128 (by decide) _))
+
 
 end L.Ind

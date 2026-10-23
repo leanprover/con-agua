@@ -324,37 +324,6 @@ theorem riW_afr {m m' : Mem} {cv mi rp3 reo rel : Word} {r : List Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (erAllocW_afr h1).trans (by simp only [riMem]; afr_set)
 
-theorem envPushW_afr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
-    AFr m m' := by
-  simp only [envPushW] at h
-  split at h; · cases h
-  split at h; · cases h
-  split at h
-  rotate_left
-  · cases h
-  rename_i hc
-  obtain ⟨ht, -⟩ := hc
-  have hrow : rowArr (rdW (m.arr64 EREC) (q + 1)) ∈ [132, 133, 134, ECON] := by
-    simp only [rowArr, List.mem_cons]
-    have : rowTag (rdW (m.arr64 EREC) (q + 1)) = 0 ∨ rowTag (rdW (m.arr64 EREC) (q + 1)) = 1 ∨
-        rowTag (rdW (m.arr64 EREC) (q + 1)) = 2 := by omega
-    rcases this with h0 | h0 | h0 <;> simp [h0]
-  have hne : rowArr (rdW (m.arr64 EREC) (q + 1)) ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
-  have h49 : memoFreeA [rowArr (rdW (m.arr64 EREC) (q + 1))] = true := by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hrow
-    rcases hrow with h | h | h | h <;> rw [h] <;> decide
-  have hf1 : AFr m (rowSet m (rdW (m.arr64 EREC) (q + 1)) (vis + 1) q) := by
-    unfold rowSet
-    exact (AFr.set64 m _ hne h49 _ _).trans (AFr.set64 _ _ hne h49 _ _)
-  simp only [envPushK] at h
-  split at h; · cases h
-  split at h
-  rotate_left
-  · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact hf1.trans ((AFr.set64 _ ECON (by decide) (by decide) _ _).trans (AFr.setCtl _ 128 (by decide) _))
-
 section rel2
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
