@@ -11,6 +11,7 @@ compare before/after of the same module, not single digits.
 |---|---:|---:|---|
 | `ConAgua.Checker.ProjFnShapeRef` | ~290 s (lane's figure) | 2 s, 2.5 GB | `pfs_spec` from `L.Ind.isProjFnShape_specW` (`IndRealIpf.lean`, the same L function's spec by `vcgen` with `L.evalC_spec`) plus `pfsW = ipfW`; its own `vcgen` over `evalC` had ~790 paths |
 | `ConAgua.Arena.DeclCanonExpr` | 442 s, 2.8 GB | 26 s, 2.6 GB | `canonExprEq_spec`: plain `vcgen`, then `simp only` the locals (`setLoc`/`setLocs`/`init9_k`, `Cmp.eval`) at every goal, then `grind`, instead of `sym … => vcgen … <;> finish` |
+| `ConAgua.Checker.FrontProgAgree` | 264 s, 4.3 GB | 15 s, 3.0 GB | `front_agree`: each `checkerProg.lookup f = frontAllProg.lookup f` by position on both sides (`lk_of_idx`, `LoopProgTac.lean`; `lkF_of_idx` from `frontAll_nodup`, one kernel check over name codes), the positions computed once per chunk by compiled code, the proof assigned without the elaborator's `isDefEq`; was `rfl` (141 s elaboration + 122 s kernel comparing `String`s) |
 
 ## Findings
 
@@ -28,3 +29,8 @@ compare before/after of the same module, not single digits.
   lemmas, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, …] at *)` and `all_goals grind
   [lang_grind, arena_grind, …]` closes the same goals in under 1 s each. Guarded per-arm equations
   for the model's `if` chain (PLAN) made no difference here: the cost was on the L side.
+
+- **Lookups by `rfl` in a big program** (`FrontProgAgree`, also `LoopDeclAgree`/`LoopDeclArm*`): the
+  elaborator and then the kernel compare the name with every name before it as `String`s. By
+  position instead (the names are distinct): ~50 ms per lookup. Elaborating the proof term with the
+  `rfl` term elaborator costs as much as the kernel check; assign the term from a tactic.
