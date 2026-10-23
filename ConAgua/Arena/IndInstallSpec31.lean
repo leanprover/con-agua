@@ -96,9 +96,9 @@ theorem tailToNat {q : Word} {k : Nat} (h : q.toNat + k < 2 ^ 64) :
   rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega)]; exact Nat.mod_eq_of_lt h
 
 /-- The tail's callees outside the `abstract1` cascade, which keep its memo (`AbsKeep`, a program
-fact). -/
+fact), and `gen_rec_check`'s (`check_block_rec` keeps it by `checkBlockRec_refines`). -/
 def tailKeepCallees : List FnName :=
-  ["check_block_idx_sorts", "cons_block_ctors", "check_block_rec", "check_block_tables"]
+  ["check_block_idx_sorts", "cons_block_ctors", "check_block_tables"] ++ grcKeepCallees
 
 /-- **`check_block_tail`'s model refines `checkBlockTail`.** -/
 theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName}
@@ -262,16 +262,19 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
         rdW (m3.arr64 IW) (q + 16), bO, bL, rdW (m3.arr64 IW) (q + 1), rdW (m3.arr64 IW) (q + 2)] m3)
       (ConRon.Arena.checkBlockRec V (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe) ⟨bs⟩ (ConRon.Arena.blockNestedBit bs kinds) params tbl rd
         cls block cvTas) a3
-      (fun r x m' a' => (StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow m3 m' ∧ decRRS m' r.tail x.2) ∧ HbMemo m') := by
+      (fun r x m' a' => (StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow m3 m' ∧ decRRS m' r.tail x.2 ∧ AbsOK m') ∧
+        HbMemo m') := by
     refine Sim.withFr (Sim.callW_pos (fun j => installSimCall
       (checkBlockRec_refines p hP.crec hP.grc hclR (fun f hf => hfR f (by
           simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
           rcases hf with rfl | rfl <;> decide)) j ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs
-        params tbl rd cls cvTas block hS3 hpre hrb3 hlp3 hnPb hsz3 hR3) (fun r s' h => by obtain ⟨-, hok, hS', hg, hd⟩ := h; rw [hnb] at hok hS' hd; exact ⟨hok, hS', hg, hd⟩)) k)
+        params tbl rd cls cvTas block hS3 hpre hrb3 hlp3 hnPb hsz3 hR3 hA3
+        (fun f hf => hkeep f (List.mem_append_right _ hf))) (fun r s' h => by
+          obtain ⟨-, hok, hS', hg, hd, hA'⟩ := h; rw [hnb] at hok hS' hd; exact ⟨hok, hS', hg, hd, hA'⟩)) k)
       (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)
   refine Sim.bindK (K := ictrK5 p k q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl)
-    (Sim.withFr hrec (fun _ _ e5 => hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ e5 hA3)) ?_
-  rintro r5 ⟨fe2b, outs⟩ m5 a5 ⟨⟨⟨hS5, hg5, hd5⟩, hM5⟩, hA5⟩
+    hrec ?_
+  rintro r5 ⟨fe2b, outs⟩ m5 a5 ⟨⟨hS5, hg5, hd5, hA5⟩, hM5⟩
   dsimp only
   rw [ictrK5_some, hS2.1.env.vis]
   -- `cons_block_recs_tf`
