@@ -35,10 +35,8 @@ ASM_OUT = os.path.join(ROOT, "ConAgua", "Checker", "Asm.lean")
 ASM_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
-# the frontend's input and parse-state id tables (`ConAgua/Checker/Prelude.lean`, `preFn`): the
-# dense arrays 64-66, the sparse arrays 72-74, their `CTL` words 64-72
-TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) (?:6[4-6]|7[2-4]) |\(n64 (?:6[4-6]|7[2-4])\)"
-                   r"|\((?:l64|s64) 1 \(c (?:6[4-9]|7[0-2])\)")
+# the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
+TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)")
 ENTRY = "check"
 # every module that imports the generated file (the asm parts, the write-set decisions, ...): its
 # olean may be stale or missing while the file is regenerated
@@ -89,8 +87,8 @@ def assemble(dumps):
         reach.append(f)
         for g, nargs, nres in e2e.calls_of(bodies[c[1]][2]):
             todo.append(g[len(PRE):] if g.startswith(PRE) else g)
-    # the frontend copied onto the prelude's arrays: from `front_run`, every function that touches
-    # the input or the id tables, or calls one that does
+    # the frontend copied onto the prelude's bytes: from `front_run`, every function that reads
+    # the input, or calls one that does
     calls = {f: [g for g, _, _ in e2e.calls_of(bodies[chosen[f]][2])] for f in reach}
     fr, todo2 = set(), ["front_run"]
     while todo2:
@@ -122,7 +120,7 @@ def assemble(dumps):
         if len(want[g]) != 1:
             problems.append(f"stub `{g}` called with {sorted(want[g])} arguments")
         stubs[g] = min(want[g])
-    return sorted(reach), src_of, stubs, sorted(pre), problems, errs
+    return sorted(reach), src_of, stubs, sorted(pre), sorted(fr - pre), problems, errs
 
 
 def sources(src_of):
@@ -174,12 +172,17 @@ open L L.Compiler
 /-- The called functions with no L code yet (each aborts). -/
 def checkerStubs : List String := [{stub_names}]
 
-/-- The frontend functions `builtin_prelude` runs on the prelude's arrays ({npre}; `preFn`,
+/-- The frontend functions `builtin_prelude` runs on the prelude's bytes ({npre}; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
 def preNames : List String := [
   {pre_names}]
 
 def preTree : NTree := nameTree preNames
+
+/-- The functions reachable from `front_run` that are not copied ({nshared}): the copies call them
+unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
+def preShared : List String := [
+  {shared_names}]
 
 /-- **The checker.** -/
 def checkerProg : Prog := [
@@ -272,7 +275,7 @@ def main():
         for bad, other, decl in clashes:
             e2e.log(f"CLASH: {bad} vs {other}: {decl}")
         sys.exit("modules clash on import (fix them first)")
-    reach, src_of, stubs, pre, problems, derrs = assemble(dumps)
+    reach, src_of, stubs, pre, shared, problems, derrs = assemble(dumps)
     if problems:
         for p in problems:
             e2e.log("PROBLEM: " + p)
@@ -291,6 +294,7 @@ def main():
     txt = HEADER.format(imports="\n".join(f"import {m}" for m in imports), nfun=len(entries),
                         nstub=len(stubs), stub_names=", ".join(lean_str(g) for g in sorted(stubs)),
                         pre_names=",\n  ".join(lean_str(f) for f in pre), npre=len(pre),
+                        shared_names=",\n  ".join(lean_str(f) for f in shared), nshared=len(shared),
                         entries=",\n".join(entries))
     n = len(entries)
     bounds = [n * k // ASM_PARTS for k in range(ASM_PARTS + 1)]
