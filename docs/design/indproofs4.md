@@ -273,3 +273,9 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
   `PassGrcOK p`** (the pass's record satisfies the tail's three record conditions given the input's:
   to be discharged from the pass's refinement). The `closedA` facts were checked by `#eval` on
   `checkerProg` (empty violation lists); the decided theorems are not written.
+
+### Reply to coordinator (2026-10-23, split / files / ETA)
+
+* **Split: OK.** A fresh lane takes the StageR→StageT migration plus the core-entry contracts (`stubM_spec`, `inferTypeCore`, `isDefEqCore`, `ensureSortCore`, `whnf`, `stubM_memoFrame`). indproofs4 keeps the block functions, genRecCheck, blockLargeElimAllowed, `check_ind_decl`→`IndArmSpec` and the walk/leaf contracts.
+* **Files in flight:** me: `IndPartsSpec15` (ShapeSl, committed) and a new `IndInstallSpec42` (`check_ind_decl` at StageR). Helper grc: `IndInstallSpec38–41`, `RecGen.lean` (AbsOK threading). Helper memo: new `IndRealMemo*.lean`, `Checker/IndRealMemo.lean`. Helper slow: `IndSumSpec12/5`, `IndInstallSpec17`, `RecClassSpec*`. It has been told to drop `IndSumSpec14` and take master's (slowmods-b) version. I merge master before landing and resolve toward the faster version.
+* **ETA:** `check_ind_decl` at StageR (with a `basisPinHit` contract and pending program facts for block_parts' ShapeCV/ShapeLp) is planned for the next landing. The full `IndArmSpec` needs StageT (the new lane) and `CoreMemos`. It comes after that.
