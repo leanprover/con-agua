@@ -184,6 +184,93 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
     (hCl : StepIn p dgFns) (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe)
     (hsA : ∀ dn vis fe, SubstCAll p dn vis fe) (pins : List INatOpPinSet) :
     DivGateSpecC p pins := by
-  sorry
+  intro dn hdn vis w fe2 env env2 n nm k hk m m' a r hn hcall hS hC henv hok2 hP hpd hnm
+  obtain ⟨psPs, hpd⟩ := hpd
+  cases k with
+  | zero => rw [callW_zero] at hcall; exact absurd hcall (by simp)
+  | succ k =>
+  have hk' : k ≤ 2 ^ 62 := by omega
+  have hw := callW_model (M := fun mq => dgW p k mq vis w n)
+    (dg_specW p hD.lDefnDivGate k · vis w n) hcall
+  unfold dgW at hw
+  have hfrOf : ∀ {k : Nat} {f : FnName} {args : List Word} {mx my : Mem} {rx : List Word},
+      f ∈ dgFns → callW p k f args mx = some (rx, my) → MemFrame stepA stepC mx my := by
+    intro k f args mx my rx hf hc
+    obtain ⟨s', hs', hfr', -⟩ := triple_of_callW (s₀ := ⟨mx, Locals.init []⟩)
+      (hCl.memFrame k hf args ⟨mx, Locals.init []⟩) hc
+    rw [← hs']; exact hfr'
+  have hfr : MemFrame stepA stepC m m' := hfrOf (by simp [dgFns]) hcall
+  have hN : NatGateProg p := hD.toDmProg9.toDmProg8.toDmProg7.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
+  suffices H : ∃ a', (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
+      StageR dn w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
+      Ext a.store a'.store ∧ IWGrow m m' by
+    obtain ⟨a', hr, hS', hC', hx, hg⟩ := H
+    exact ⟨a', hr, hS', hC', hx, hg, PinSetsR.step hP hg hfr, hfr⟩
+  -- the family's names
+  cases h1 : callW p k "nat_div_mod_names" [] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, bW_some] at hw
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hd1⟩ :=
+    natDivModNames_ref hN (vis := w) (fe := fe2) (dn := dn) k m a r1 m1 hS h1
+  obtain ⟨e1, -⟩ := ConRon.Bridge.natDivModNames_run hC.check.pins hrun1
+  rw [e1] at hrun1 hS1
+  have hC1 := StageC.of_core hC (hS1.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h1)
+    (CoreStep.refl hC.check)
+  have hP1 := PinSetsR.step hP hg1 (hfrOf (by simp [dgFns]) h1)
+  unfold decRL at hd1
+  simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd1
+  -- the membership
+  cases h2 : callW p k "sl_contains" [r1.headD 0, r1.tail.headD 0, n] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hN.lSlContains (vis := w) (fe := fe2)
+    (dn := dn) (r1.headD 0) (r1.tail.headD 0) n x1 (by exact_mod_cast hn) k m1 a r2 m2 ⟨hS1, hd1.1⟩ h2
+  have hP2 := PinSetsR.step hP1 hg2 (hfrOf (by simp [dgFns]) h2)
+  have hrun2' : (pure (x1.contains (decI n)) : AM Bool).run a = .ok (x2, a2) := hrun2
+  obtain ⟨hx2e, hxa⟩ := pure_run_eq hrun2'
+  rw [hxa] at hS2
+  have hC2 := StageC.of_core hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
+    (CoreStep.refl hC1.check)
+  have hG2 : IWGrow m m2 := hg1.trans hg2
+  have hrun1' : natDivModNames.run a = .ok (x1, a) := hrun1
+  by_cases z2 : r2.headD 0 ≠ 0
+  · rw [if_pos z2] at hw
+    have hx2 := decW0B_true hd2 z2
+    have hx2' : x1.contains (decI n) = true := by rw [← hx2e]; exact hx2
+    -- the variant records
+    cases h3 : callW p k "rom_pin_sets" [] m2 with
+    | none => rw [h3] at hw; simp at hw
+    | some q3 =>
+    obtain ⟨r3, m3⟩ := q3
+    rw [h3, bW_some] at hw
+    obtain ⟨hS3, hg3, hP3, hI3⟩ := romPinSets_ref hD hS2 hP2 h3
+    have hC3 := StageC.of_core hC2 (hS3.restrict vis)
+      (callW_leafFrame hcl (leaf_mem _ (by decide)) h3) (CoreStep.refl hC2.check)
+    -- the gate
+    cases h4 : callW p k "check_div_mod_pin" [r3.headD 0, r3.tail.headD 0, vis, w, n] m3 with
+    | none => rw [h4] at hw; simp at hw
+    | some q4 =>
+    obtain ⟨r4, m4⟩ := q4
+    rw [h4, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨a4, hrun4, hS4, hC4, c4, hg4⟩ := cpC hD.toDmProg9 hq hcl hdn (hs0 dn vis _)
+      (hsA dn vis _) henv hk' h4 hS3 hC3 hok2 (by exact_mod_cast hn) hI3 hpd hnm
+    refine ⟨a4, ?_, hS4, hC4, c4.ext, hG2.trans (hg3.trans hg4)⟩
+    simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', if_true]
+    exact hrun4
+  · rw [if_neg z2] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have z2' : r2.headD 0 = 0 := by simpa using z2
+    have hx2 := decW0B_false hd2 z2'
+    have hx2' : x1.contains (decI n) = false := by rw [← hx2e]; exact hx2
+    refine ⟨a, ?_, hS2, hC2, Ext.refl _, hG2⟩
+    simp only [divGateT, StateT.run_bind, hrun1', exc_ok_bind', hx2', Bool.false_eq_true, if_false]
+    rfl
 
 end L.Ind
