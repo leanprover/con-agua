@@ -123,12 +123,15 @@ theorem spaW_mfr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
   simp only [spaW, spaK.eq_def, spaK2.eq_def] at h
   mfr_auto h [binternW_mfr, mkProjW_mfr]
 
+theorem i1lF_mfr {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low ⟨_, _, i1lF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
+
 theorem pbW_mfr : ∀ (n : Nat) (m m' : Mem) (T k i h : Word) (r : List Word),
     pbW n m T k i h = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, hh => by simp [pbW] at hh
   | n + 1, m, m', T, k, i, h, r, hh => by
     simp only [pbW, pbK1.eq_def, pbK2.eq_def, pbK3.eq_def, pbK4.eq_def] at hh
-    mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _, spaW_mfr, MFr.ofStub, consW_mfr]
+    mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _, spaW_mfr, i1lF_mfr, consW_mfr]
 
 theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     (h : spbW k m T nP nF cty = some (r, m')) : MFr [] [] m m' := by
@@ -138,12 +141,17 @@ theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     simp only [spbW, spbK1.eq_def, spbK2.eq_def, spbK3.eq_def] at h
     mfr_auto h [projPsW_mfr, MFr.ofStub, pbW_mfr _ _ _ _ _ _ _ _]
 
+theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (crfF_frame h)
+    (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
+    (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
+
 theorem sctW_mfr : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word) (r : List Word),
     sctW n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [sctW] at h
   | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
     simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
-    mfr_auto h [sctW_mfr n _ _ _ _ _ _ _ _ _, MFr.ofStub, MFr.ofHffF, MFr.ofLbbF]
+    mfr_auto h [sctW_mfr n _ _ _ _ _ _ _ _ _, MFr.ofStub, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
 
 theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → MFr [] [] m m'

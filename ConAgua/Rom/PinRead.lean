@@ -1,4 +1,5 @@
 import ConAgua.Rom.PinStream
+import ConAgua.Rom.DataLit
 import ConAgua.Rom.Subst
 import ConAgua.Arena.IndIface
 
@@ -106,9 +107,9 @@ theorem romItems_subPB (bs : List UInt8) : (romItems []).toPB.subPB bs = romItem
 /-- `pb_check()`: the buffer starts with `romData`. -/
 -- con-ron: none — the pin-data buffer's header (the startup data the twin interns exactly)
 def pbCheck : FunDecl := lfn () locals (i) {
-  if len(PB.u8) < len(romData.c8) { abort };
-  while i < len(romData.c8) {
-    if PB.u8[i] != romData.c8[i] { abort };
+  if len(PB.u8) < len(romDataLit.c8) { abort };
+  while i < len(romDataLit.c8) {
+    if PB.u8[i] != romDataLit.c8[i] { abort };
     i += 1
   };
   return 0

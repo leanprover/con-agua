@@ -32,21 +32,22 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (hrs : H rs) (hnP : nP.toNat + 1 < 2 ^ 64)
     (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
     (hgs : decHL m go.toNat gl.toNat = some guards) (hgb : go.toNat + gl.toNat ≤ iwTop m)
-    (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) :
+    (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m) :
     Sim (tblW p n m T C lo ll nP nF rs go gl off cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards off.toNat cvCa fe) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ MFr [] [] m m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AbsOK m') := by
   unfold tblW checkStructProjTable
   obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
   rw [hw, ← hwd]
   -- `struct_proj_bodies`
   refine Sim.bindK (K := tblK1 p n vis T lo ll nP C nF rs off go gl) rfl (fun _ _ => rfl)
-    (Q := fun rb ob m1 a1 => (StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ PBDecA m1 rb ob) ∧ MFr [] [] m m1)
+    (Q := fun rb ob m1 a1 => (StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ PBDecA m1 rb ob ∧ AbsOK m1) ∧
+      MFr [] [] m m1)
     (fun r m' e => by
       obtain ⟨x, a', h1, h2⟩ := spbW_ok dn vis fe (n + 1) m m' a T nP nF w r e hS hwl (by omega)
-        nF.toNat_lt
+        nF.toNat_lt hA
       exact ⟨x, a', h1, h2, spbW_mfr e⟩) fun rb ob m1 a1 hQ => ?_
-  obtain ⟨⟨hS1, hg1, hdec1⟩, hf1⟩ := hQ
+  obtain ⟨⟨hS1, hg1, hdec1, hA1⟩, hf1⟩ := hQ
   by_cases h10 : rb.headD 0 = 0
   · rw [tblK1_no (h := h10)]; exact Sim.of_none
   rw [tblK1_yes (h := h10)]
@@ -60,10 +61,10 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   -- the scoping
   refine Sim.bindK (K := tblK2 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
     (Sim.withFr (F := fun m2 => MFr [] [] m1 m2)
-      (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb)
+      (sctW_ok nP lo ll lps hnP (n + 1) m1 a1 _ _ bodies.toList hS1 hlps1 hlb1 hbd hbb hA1)
       (fun _ _ e => sctW_mfr _ _ _ _ _ _ _ _ _ _ e))
     fun rs' sok m2 a2 hQ => ?_
-  obtain ⟨⟨hS2, hg2, hsok, hsl⟩, hf2⟩ := hQ
+  obtain ⟨⟨hS2, hg2, hsok, hsl, hA2⟩, hf2⟩ := hQ
   by_cases hlen0 : rb.tail.tail.headD 0 ≠ nF
   · rw [tblK2_len (h := hlen0)]; exact Sim.of_none
   have hlen : rb.tail.tail.headD 0 = nF := Decidable.of_not_not hlen0
@@ -78,9 +79,10 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   simp only [hsz, and_self, ite_true]
   -- `proj_table_name`
   refine Sim.bindK (K := tblK3 p n vis T lo ll nP C nF rs off go gl _ _) rfl (fun _ _ => rfl)
-    (Sim.withFr (F := fun m3 => MFr [] [] m2 m3) (sumSim_of_relW (ptF_ok dn vis fe T hT) hS2)
-      (fun _ _ e => MFr.of_frame (ptF_frame e) (by simp [POOL, NSREC, NSSLOT, NNREC, NNSLOT]) (by simp))) fun rt tn m3 a3 hQ => ?_
-  obtain ⟨⟨hS3, hg3, htnl, htn⟩, hf3⟩ := hQ
+    (Sim.withFr (F := fun m3 => MFr [] [] m2 m3 ∧ AFr m2 m3) (sumSim_of_relW (ptF_ok dn vis fe T hT) hS2)
+      (fun _ _ e => ⟨MFr.of_frame (ptF_frame e) (by simp [POOL, NSREC, NSSLOT, NNREC, NNSLOT]) (by simp),
+        AFr.of_frame (ptF_frame e)⟩)) fun rt tn m3 a3 hQ => ?_
+  obtain ⟨⟨hS3, hg3, htnl, htn⟩, hf3, ha3⟩ := hQ
   subst htn
   rw [tblK3_some]
   -- `env_find`
@@ -157,10 +159,13 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   subst hs4
   obtain ⟨hS9, hg9⟩ := envPushW_ok hW4 hSM hci
   rw [tblK9_some]
-  refine Sim.ret ⟨by simpa using hS9, ?_, ?_⟩
+  refine Sim.ret ⟨by simpa using hS9, ?_, ?_, ?_⟩
   · exact ((((((hg1.trans hg2).trans hg3).trans hg5).trans hg6).trans hg7).trans hgM).trans hg9
   · exact ((((((hf1.trans hf2).trans hf3).trans (efW_mfr h5)).trans (efW_mfr h6)).trans (efW_mfr h7)).trans
       hfM).trans (envPushW_mfr hW4)
+  · subst hM
+    exact ((((((ha3.trans (efW_afr h5)).trans (efW_afr h6)).trans (efW_afr h7)).trans
+      (erAllocW_afr h8)).trans (wrER_afr _ _ _)).trans (envPushW_afr hW4)) hA2
 
 /-! ## The `hb` memo in the memory at hand -/
 

@@ -494,21 +494,6 @@ theorem rulesW_afr {n : Nat} {m m' : Mem} {vis nP cO cL rO rL : Word} {r : List 
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ _ _ h2)
 
-theorem efgW_afr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
-    efgW n m q o l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, h => by simp [efgW] at h
-  | n + 1, m, m', q, o, l, r, h => by
-    simp only [efgW, efgK.eq_def] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    · refine AFr.trans (set64ER_afr m q (rdW (m.arr64 IW) o)) ?_
-      afr_auto h [efgW_afr n _ _ _ _ _ _]
-
-theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
-    AFr m m' := by
-  simp only [efW, efK1.eq_def, efK2.eq_def] at h
-  afr_auto h [erAllocW_afr, efgW_afr _ _ _ _ _ _ _]
-
 theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r : List Word},
     tsrmW n m ro rl flo fll fpo fpl = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [tsrmW] at h

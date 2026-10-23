@@ -37,22 +37,22 @@ theorem installSimSumCtors {p : Prog} (hP : SumProg p) (n : Nat) {dn : NIdx → 
     (cvv : IConstantVal) (cs : List (IConstantVal × Nat))
     (hpre : StageR dn vis fe m a ∧ decHL m lo.toNat ll.toNat = some lps ∧
         lo.toNat + ll.toNat ≤ iwTop m ∧ DecB (fun m => decCVp m cvTa.toNat) m cvv ∧
-        DecB (fun m => decPL m (decCN m) co.toNat cl.toNat) m cs) :
+        DecB (fun m => decPL m (decCN m) co.toNat cl.toNat) m cs ∧ AbsOK m) :
     Sim (callW p n "check_sum_ctors" [vis, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, co, cl] m)
       (checkSumCtors V fe fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvv cs) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         PSlR decCN x.1 (r.headD 0) (r.tail.headD 0) m' ∧
-        PSlR decIS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m') := by
+        PSlR decIS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧ AbsOK m') := by
   intro r m' e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (sctsW_spec p hP n _ vis vis T lo ll nP nIdx rs isP lg cvTa co cl) e
-  obtain ⟨hS, hl, hlb, hcv, hcs⟩ := hpre
+  obtain ⟨hS, hl, hlb, hcv, hcs, hA⟩ := hpre
   have hfe : fe.restrictTo vis.toNat = fe := by rw [← hS.1.env.vis]; rfl
   have h := sctsW_ok (dn := dn) (vis := vis) (fe := fe) vis T lo ll nP nIdx rs isP lg cvTa lps cvv
-    hT hrs n m a co cl cs hS hl hlb hcv hcs r s'.mem hW
+    hT hrs n m a co cl cs hS hl hlb hcv hcs hA r s'.mem hW
   rw [hfe] at h
-  obtain ⟨x, a', h1, hS', hg', hd1, hb1, hd2, hb2⟩ := h
-  exact ⟨x, a', h1, hS', hg', ⟨hd1, hb1⟩, ⟨hd2, hb2⟩⟩
+  obtain ⟨x, a', h1, hS', hg', hd1, hb1, hd2, hb2, hA'⟩ := h
+  exact ⟨x, a', h1, hS', hg', ⟨hd1, hb1⟩, ⟨hd2, hb2⟩, hA'⟩
 
 /-! ## `check_block_ctors_one` -/
 

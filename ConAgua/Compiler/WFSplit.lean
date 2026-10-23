@@ -43,17 +43,23 @@ def ntreeToExpr : NTree → Lean.Expr
   | .leaf => mkConst ``NTree.leaf
   | .node l k v r => mkApp4 (mkConst ``NTree.node) (ntreeToExpr l) (mkNatLit k) (mkNatLit v) (ntreeToExpr r)
 
-/-- A byte list as a balanced tree of `++` over chunks of at most 64 literal bytes, so that its
-expression is shallow (a long list literal is a term of linear depth, which the kernel and the
-compiler reject). -/
+/-- A byte list as `List.flatten [c₀, c₁, …]` of list literals of at most 256 bytes (a long list
+literal is a term of linear depth, which the kernel and the compiler reject); above 512 chunks, a
+balanced `++` of such. The kernel walks it about three times faster than a balanced `++` tree of
+64-byte chunks (each element passes one `flatten`, not ~10 `++`s): `romIdx` of the prelude's
+15 700 bytes in the checker's ROM 5 s -> 2 s, of the pin data 14 s -> 5 s (docs/design/slowmods.md). -/
 partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
-  if bs.size ≤ 64 then toExpr bs.toList
+  let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
+  let k := 256
+  let n := (bs.size + k - 1) / k
+  if n ≤ 512 then
+    let chunks := (List.range n).map fun i => toExpr (bs.extract (i * k) ((i + 1) * k)).toList
+    mkApp2 (mkConst ``List.flatten [0]) (mkConst ``UInt8)
+      (chunks.foldr (fun c acc => mkApp3 (mkConst ``List.cons [0]) ty c acc) (mkApp (mkConst ``List.nil [0]) ty))
   else
-    let h := (bs.size / 64 + 1) / 2 * 64
-    mkApp6 (mkConst ``HAppend.hAppend [0, 0, 0]) (mkApp (mkConst ``List [0]) (mkConst ``UInt8))
-      (mkApp (mkConst ``List [0]) (mkConst ``UInt8)) (mkApp (mkConst ``List [0]) (mkConst ``UInt8))
-      (mkApp2 (mkConst ``instHAppendOfAppend [0]) (mkApp (mkConst ``List [0]) (mkConst ``UInt8))
-        (mkApp (mkConst ``List.instAppend [0]) (mkConst ``UInt8)))
+    let h := (n + 1) / 2 * k
+    mkApp6 (mkConst ``HAppend.hAppend [0, 0, 0]) ty ty ty
+      (mkApp2 (mkConst ``instHAppendOfAppend [0]) ty (mkApp (mkConst ``List.instAppend [0]) (mkConst ``UInt8)))
       (bytesToExpr (bs.extract 0 h)) (bytesToExpr (bs.extract h bs.size))
 
 def tabToExpr (t : Tab) : Lean.Expr :=
@@ -81,6 +87,18 @@ syntax (name := tabLit) "tab_lit% " term:max : term
     synthesizeSyntheticMVarsNoPostponing
     let e ← instantiateMVars e
     return tabToExpr (← evalTab e)
+
+/-- `bytes_lit% e`: the byte list `e`, evaluated (by compiled code) and inserted as a literal
+(`bytesToExpr`), for constant data the kernel would otherwise compute from its definition. -/
+syntax (name := bytesLit) "bytes_lit% " term:max : term
+
+@[term_elab bytesLit] unsafe def elabBytesLit : TermElab := fun stx _ => do
+  let `(bytes_lit% $t) := stx | throwUnsupportedSyntax
+  let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
+  let e ← elabTermEnsuringType t ty
+  synthesizeSyntheticMVarsNoPostponing
+  let bs ← evalExpr (List UInt8) ty (← instantiateMVars e)
+  return bytesToExpr bs.toArray
 
 /-- A theorem declaration. -/
 def thm (n : Name) (ty v : Lean.Expr) (_ : List Name) : Declaration :=

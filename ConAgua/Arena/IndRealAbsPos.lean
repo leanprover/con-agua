@@ -945,13 +945,13 @@ theorem pcrW_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : L
 
 /-! ## The walks' memos -/
 
-theorem msetG_afrS {S : MemoSch} (hS : S.WF) (ha : (S.arr != 49) = true) (hc : (S.cs + 1 != 48) = true)
+theorem msetG_afrS {S : MemoSch} (hS : S.WF) (ha : memoFreeA [S.arr] = true) (hc : memoFreeC [S.cs + 1] = true)
     {m m' : Mem} {k1 k2 v : Word} (h : msetG S m k1 k2 v = some m') : AFr m m' :=
-  AFr.of_frame (msetG_frame S hS m m' k1 k2 v h) (by simp [ha]) (by simp [hc])
+  AFr.of_frame (msetG_frame S hS m m' k1 k2 v h) ha hc
 
-theorem mclearG_afrS (S : MemoSch) (hc : (S.cs != 48) = true) (hc1 : (S.cs + 1 != 48) = true) (m : Mem) :
+theorem mclearG_afrS (S : MemoSch) (hc : memoFreeC [S.cs, S.cs + 1] = true) (m : Mem) :
     AFr m (mclearG S m) :=
-  AFr.of_frame (mclearG_frame S m) rfl (by simp [hc, hc1])
+  AFr.of_frame (mclearG_frame S m) rfl hc
 
 theorem noW_afr (n : Nat) :
     (∀ (m m' : Mem) (no nl lo hi f h r : Word), noGoW n m no nl lo hi f h = some (r, m') → AFr m m') ∧
@@ -974,7 +974,7 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   | succ n =>
   simp only [noConstWf, noConstW] at h
   split at h; · cases h
-  refine (mclearG_afrS noSch rfl rfl m).trans ?_
+  refine (mclearG_afrS noSch rfl m).trans ?_
   cases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with
   | none => rw [hg] at h; simp [noClrK] at h
   | some x =>
@@ -982,7 +982,7 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   rw [hg] at h; simp only [noClrK] at h
   split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact ((noW_afr n).1 _ _ _ _ _ _ _ _ _ hg).trans (mclearG_afrS noSch rfl rfl m1)
+  exact ((noW_afr n).1 _ _ _ _ _ _ _ _ _ hg).trans (mclearG_afrS noSch rfl m1)
 
 theorem dpW_afr (n : Nat) :
     (∀ (m m' : Mem) (f h r : Word), dpGoW n m f h = some (r, m') → AFr m m') ∧
@@ -1012,7 +1012,7 @@ theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m'
   simp only [Option.some.injEq, Prod.mk.injEq] at heq; obtain ⟨-, rfl⟩ := heq
   split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-  exact ((mclearG_afrS dpSch rfl rfl m).trans ((dpW_afr n).1 _ _ _ _ _ hg)).trans (mclearG_afrS dpSch rfl rfl m1)
+  exact ((mclearG_afrS dpSch rfl m).trans ((dpW_afr n).1 _ _ _ _ _ hg)).trans (mclearG_afrS dpSch rfl m1)
 
 theorem noaW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi off l : Word) (r : List Word),
     noaW k m no nl lo hi off l = some (r, m') → AFr m m'
