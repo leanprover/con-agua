@@ -38,6 +38,45 @@ def fnvPrime : Word := 0x100000001b3
 /-- The multiply-xor finaliser of con-ron's `home_index` (`ron/hashmap2.rs`). -/
 def golden : Word := 0x9e3779b97f4a7c15
 
+/-! ## Words and slots -/
+
+/-- A word of `a`, `0` past its end. -/
+def rdW (a : Array Word) (x : Word) : Word := a[x.toNat]?.getD 0
+
+theorem rdW_eq (a : Array Word) (x : Word) (k : Nat) (hk : k = x.toNat) (h : k < a.size) :
+    rdW a x = a[k] := by subst hk; simp [rdW, h]
+grind_pattern [arena_grind] rdW_eq => rdW a x, a[k]
+
+/-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
+of the product with `n` (Lemire's range reduction) in place of the power-of-two mask. -/
+def homeW (h n : Word) : Word :=
+  UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)
+
+/-- The `CTL` word of the scratch tier's **slot base** `B` (`scratch_reset` adds `2^32`). A slot of
+tier `t` holds `B t + i + 1` for node `i`, with `B 0 = 0` and `B 1 = CTL[62]`; a slot word at or
+below the base is free. So the scratch tier is emptied by raising its base: every old slot falls
+at or below the new base, and no slot is zeroed. -/
+abbrev SCB : Word := 62
+
+/-- The slot base of tier `t` (`t ≤ 1`): `CTL[62] * t`. -/
+def baseW (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) SCB * t
+
+/-- A slot word `v` against the base `b`: `0` (free) at or below `b`, else `i + 1`. -/
+def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
+
+/-- Slot word `k` of `sl` against the base `b`. -/
+def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
+
+theorem slotV_free (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
+    (hv : sl[k] ≤ b) : slotV sl b x = 0 := by
+  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte]
+
+theorem slotV_used (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
+    (hv : ¬ sl[k] ≤ b) : slotV sl b x = sl[k] - b ∧ sl[k] - b ≠ 0 := by
+  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte, true_and]
+  intro h0
+  exact hv (by grind)
+
 /-- The initial slot count of a tier (`G = 0`). -/
 def SN0 : Word := 8
 

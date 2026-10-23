@@ -201,8 +201,8 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, 
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG fvarGS 10⟫ };
   FVLP.u64[c * 2 + t] := x;
+  if (⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG fvarGS 10⟫ };
   return c
 }
 

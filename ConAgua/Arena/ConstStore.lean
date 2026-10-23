@@ -200,8 +200,8 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gn, gk, 
   CREC.u64[k + 1] := a;
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << CSLOT.u64[len(CSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG constGS 10⟫ };
   CLP.u64[c * 2 + t] := x;
+  if (⟪SN0⟫ << CSLOT.u64[len(CSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG constGS 10⟫ };
   return c
 }
 

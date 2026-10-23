@@ -197,8 +197,8 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk
   IREC.u64[k + 1] := v;
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << ISLOT.u64[len(ISLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG imaxGS 11⟫ };
   IHP.u64[c * 2 + t] := x;
+  if (⟪SN0⟫ << ISLOT.u64[len(ISLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG imaxGS 11⟫ };
   return c
 }
 

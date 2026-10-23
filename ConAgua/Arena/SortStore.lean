@@ -189,8 +189,8 @@ def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi,
   SOREC.u64[c * 2 + t] := u;
   SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << SOSLOT.u64[len(SOSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG sortGS 8⟫ };
   SOLP.u64[c * 2 + t] := x;
+  if (⟪SN0⟫ << SOSLOT.u64[len(SOSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG sortGS 8⟫ };
   return c
 }
 

@@ -239,8 +239,8 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y,
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << LSSLOT.u64[len(LSSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG lsGS 14⟫ };
   LSHP.u64[c * 2 + t] := x;
+  if (⟪SN0⟫ << LSSLOT.u64[len(LSSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG lsGS 14⟫ };
   return c
 }
 
