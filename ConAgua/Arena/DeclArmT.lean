@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.DeclArmLoop
+import ConAgua.Arena.DeclStepGo
 
 /-!
 # The declaration arms under `StageT` (lane `loopt2`)
@@ -169,5 +170,116 @@ theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p)
   show (do checkConstantVal V fe cv; checkThmVal V fe cv v).run a = _
   simp only [StateT.run_bind, hrun2, exc_ok_bind']
   exact hrun3
+
+/-- **`erec_vg` writes the record pool and its top.** -/
+theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m q vk = some (r, m')) :
+    MemFrame [EREC] [129] m m' := by
+  unfold erecVgW at h
+  split at h
+  · cases h
+  rename_i g m1 h1
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  have f1 : MemFrame [EREC] [129] m m1 := by
+    rw [erAllocW_mem h1]; exact (MemFrame.setCtl m 129 _).mono (by simp) (by simp)
+  have fs : ∀ (x : Mem) (j : Word), MemFrame [EREC] [129] x (vgSet x g q j) := fun x j =>
+    (MemFrame.set64 x EREC (by decide) _ _).mono (by simp) (by simp)
+  have f0 : MemFrame [EREC] [129] m1 (m1.set64 EREC g vk) :=
+    (MemFrame.set64 m1 EREC (by decide) g vk).mono (by simp) (by simp)
+  exact (((((f1.trans f0).trans (fs _ 1)).trans (fs _ 2)).trans (fs _ 3)).trans (fs _ 4)).trans
+    (fs _ 5)
+
+/-- **`install_value` under `StageT`** (`ivW_gen`'s): the header and the value's guards under
+`StageT`; after the push the stage relation at the extended environment and `CoreMemos`. -/
+theorem ivW_genT {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
+    {ds : Array IDeclaration} {ci : IConstantInfo} {k : ValueKind}
+    (h : ivW p n m i vis ck vk = some (r, m')) (hS : StageT dn vis fe m a)
+    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hci : stepCI ck.toNat ds[i.toNat] = some ci) (hk : decVK vk.toNat = some k) :
+    ∃ a2 a3, (installHeader fe (stepCV ds[i.toNat])).run a = .ok ((), a2) ∧
+      (vk ≠ 1 → (installValueGuards fe (stepCV ds[i.toNat]) (stepVal ds[i.toNat])).run a2 =
+        .ok ((), a3)) ∧ (vk = 1 → a3 = a2) ∧
+      StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ CoreMemos m' ∧ IWGrow m m' ∧
+      decVG (erecP m') (r.tail.headD 0).toNat = some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩ := by
+  cases n with
+  | zero => simp [ivW] at h
+  | succ n =>
+  rw [ivW_step] at h
+  cases h1 : erecCiW n m i ck with
+  | none => rw [h1] at h; simp [ivK1] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, ivK1_some] at h
+  obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ := erecCiW_okT h1 hS hD hi hci
+  generalize hq : r1.headD 0 = q at h hci1 hcv1 hval1 htop1
+  have hb : q.toNat + 8 < 2 ^ 64 := by
+    have h1 := hS1.stage.2.2.1; have h2 := hS1.stage.2.2.2.2.1; omega
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  cases h2 : ihW n m1 vis (q + 1) with
+  | none => rw [h2] at h; simp [ivK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, ivK2_some] at h
+  obtain ⟨a2, hrun2, hS2, hg2⟩ :=
+    ihW_okT h2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
+  have tail : ∀ (m3 : Mem) (a3 : AState), StageT dn vis fe m3 a3 → IWGrow m1 m3 →
+      ivK4 p vis vk q (callW p n "env_push" [vis, q] m3) = some (r, m') →
+      StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ CoreMemos m' ∧ IWGrow m1 m' ∧
+      decVG (erecP m') (r.tail.headD 0).toNat = some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩ := by
+    intro m3 a3 hS3 hg3 h
+    have hx3 : ArrExt (erecP m1) (erecP m3) := IWGrow.erecPExt hg3
+    have hci3 := ArrExt.decCI hx3 hci1
+    obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci3
+    have hw : (rdW (m3.arr64 EREC) (q + 1)).toNat < 2 ^ 32 := by
+      rw [rdW_of_get? hq1.symm (erecP_get hw1)]; exact hwl
+    cases h4 : callW p n "env_push" [vis, q] m3 with
+    | none => rw [h4] at h; simp [ivK4] at h
+    | some rm4 =>
+    obtain ⟨r4, m4⟩ := rm4
+    rw [h4, ivK4_some] at h
+    obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+      (envPush_specW p hRp n ⟨m3, Locals.init []⟩ vis q hw) h4
+    subst hs4
+    obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3.stage hci3
+    have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+    cases h5 : erecVgW s4.mem q vk with
+    | none => rw [h5] at h; simp [ivK5] at h
+    | some rm5 =>
+    obtain ⟨r5, m5⟩ := rm5
+    rw [h5, ivK5_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
+    have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
+      have := (hg3.trans hg4).2.1; omega
+    obtain ⟨hS5, hg5, hvg⟩ := erecVgW_ok h5 hS4 (ArrExt.decCV hx4 hcv1) (ArrExt.hd? hx4 hval1)
+      htop4 hk
+    have hM5 : CoreMemos m5 := hM4.frame (erecVgW_frame h5)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+    exact ⟨by simpa using hS5, hM5, hg3.trans (hg4.trans hg5), by simpa using hvg⟩
+  by_cases hv1 : vk ≠ 1
+  · rw [if_pos hv1] at h
+    have hval2 : hd? (erecP m2) (q.toNat + 5) = some (stepVal ds[i.toNat]) :=
+      ArrExt.hd? (IWGrow.erecPExt hg2) hval1
+    obtain ⟨wv, hwv, hwvl, hwvd⟩ := hd?_some hval2
+    have hq5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+    have ev : rdW (m2.arr64 EREC) (q + 5) = wv := rdW_of_get? hq5.symm (erecP_get hwv)
+    rw [ev] at h
+    cases h3 : ivgW n m2 vis (q + 1) wv with
+    | none => rw [h3] at h; simp [ivK3] at h
+    | some rm3 =>
+    obtain ⟨r3, m3⟩ := rm3
+    rw [h3, ivK3_some] at h
+    have hcv2 : decCV (erA m2) (q + 1).toNat = some (stepCV ds[i.toNat]) := by
+      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt (hg2)) hcv1
+    obtain ⟨a3, hrun3, hS3, hg3⟩ := ivgW_okT h3 hS2 hcv2 (by rw [hq1]; omega) hwvl
+    obtain ⟨hS', hM', hg', hvg'⟩ := tail m3 a3 hS3 (hg2.trans hg3) h
+    refine ⟨a2, a3, hrun2, fun _ => by rw [hwvd]; exact hrun3, fun h' => absurd h' hv1, hS', hM',
+      hg1.trans hg', hvg'⟩
+  · rw [if_neg hv1] at h
+    obtain ⟨hS', hM', hg', hvg'⟩ := tail m2 a2 hS2 hg2 h
+    exact ⟨a2, a2, hrun2, fun h' => absurd h' hv1, fun _ => rfl, hS', hM', hg1.trans hg', hvg'⟩
 
 end L.Arena
