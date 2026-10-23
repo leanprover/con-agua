@@ -153,3 +153,18 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
   all of `EREC` that no caller can discharge — the same kind as the `hsmall` fixed in landing 3;
   needs re-proving first), `genRecCheck` (needs `classesNfs`, `classesCtors`,
   `blockLargeElimAllowed`), `targetMajorOf`. `RecCheckSpec14` takes ~380 s (`tka_spec`).
+
+### The `StageT` migration: approach (agreed with the coordinator, not started)
+* **Blocked until** lane `loopt2` restates `StoreDen.proj` over the environment's tables (today it
+  quantifies over every `EREC` offset at which `decTbl` decodes, so no `EREC` writer keeps
+  `TwinOK`; see `docs/design/loopt.md`). After it, `TwinOK` is a memory half (the `EREC`, `SPN`,
+  array-145 sizes, `CoreMemos`: frames) and a twin half (readback caches, `NStoreWF`, `StoreDen`).
+* **(1) A wrapper for callees whose twin op leaves the store and caches alone** (checks, readers,
+  pool and record writers): `StageR` `Sim` + "the op keeps `store`/`caches`" + the memory frame ⇒
+  `StageT` `Sim`; one line per existing theorem.
+* **(2) Restatement under `StageT`** only for the theorems whose chains intern (the stage's
+  interns, the nest walks, the record builders): bottom-up, the interns through
+  `StageT.of_coreRef` + the master `_core` lemmas, the core callees through `KnotEntry`'s
+  `KnotStageProg` sims (lane `knotwire`), the remaining true stubs through `StageT` versions of their
+  contracts (same `sorry` status; to be added with (1)).
+* At the stage's entry `StageT` comes from lane `loopt`'s `LoopT.stageT`.
