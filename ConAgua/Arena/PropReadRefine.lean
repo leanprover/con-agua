@@ -153,7 +153,7 @@ theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
     CoreS dn m { a with caches := { a.caches with readNC := X, readLsC := Y } } vis fe M eb :=
   ⟨hS.arena.caches_irrel _, (hS.core.readNC X).readLsC Y, hS.pins, hS.env, hS.readL, hY, hS.nwf,
     hS.erec, hS.spn, hS.memos, hS.bstk,
-    hS.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hX k x hk)) rfl (fun _ _ hv => hv)
+    hS.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hX k x hk)) (fun _ _ hv => hv)
       (fun _ _ _ hv => .inl hv) (hS.den.lvlAll.congr rfl)
       (hS.den.lsAll.congr rfl)⟩
 

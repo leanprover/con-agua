@@ -86,7 +86,6 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
           | none => intro h; cases h
           | some v => intro h; rw [hL.view i v e, hL.ls]; exact h⟩
         (by rw [hL.pins]) (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
-        (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
         (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa⟩,

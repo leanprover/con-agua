@@ -393,13 +393,13 @@ theorem denoteProjTable_parts {st : EStore} {t : IProjTable} {pt : ConLeche.Proj
     (∃ gs, denoteLList st.ls t.guards = some gs) ∧
     (∃ ks, ConRon.Arena.Frontend.denoteNList st.ns t.levelParams = some ks) := by
   unfold ConRon.Arena.Frontend.denoteProjTable at h
-  split at h
-  · rename_i lps _ h2 _
-    split at h
-    · rename_i ss _ gs h4 _ h6
-      exact ⟨⟨ss, h4⟩, ⟨gs, h6⟩, ⟨lps, h2⟩⟩
-    · cases h
-  · cases h
+  cases h1 : denoteN st.ns t.structName <;>
+    cases h2 : ConRon.Arena.Frontend.denoteNList st.ns t.levelParams <;>
+    cases h3 : denoteN st.ns t.ctor <;> simp only [h1, h2, h3] at h <;> try cases h
+  cases h4 : denoteL st.ls t.structSort <;>
+    cases h5 : ConRon.Arena.Frontend.denoteEArray st t.bodies <;>
+    cases h6 : denoteLList st.ls t.guards <;> simp only [h4, h5, h6] at h <;> try cases h
+  exact ⟨⟨_, rfl⟩, ⟨_, rfl⟩, ⟨_, rfl⟩⟩
 
 theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInfo}
     {cv : IConstantVal} {a : AState} (ht : ci.isTowerEntry = false)
@@ -472,8 +472,9 @@ theorem TwinOK.of_fold {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
     obtain ⟨hss, ⟨gs, hgs⟩, ⟨ks, hks⟩⟩ := denoteProjTable_parts hpt
     have hlen := (hi.proj c tbl hf).guards
     refine ⟨hss, fun i hi' => denoteLList_mem hgs _ ?_, ⟨ks, denoteNList_mapM hks⟩⟩
-    rw [List.getD_eq_getElem _ _ (by omega)]
-    exact List.getElem_mem _
+    have hlt : i < tbl.guards.length := by omega
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hlt, Option.getD_some]
+    exact List.getElem_mem hlt
   · obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hus
     obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
@@ -573,6 +574,7 @@ theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
   ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
     { h.den with
       constLps := fun c ci cv hf => h.den.constLps c ci cv (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
+      proj := fun c tbl hf => h.den.proj c tbl (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
       recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
         (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
 
