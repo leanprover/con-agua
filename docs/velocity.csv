@@ -178,3 +178,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indproofs3,opus,25,30,"landing 6: StageT.lift_keep (StageTLift.lean), four stub contracts under StageT (IndStubsT.lean) for loopt2"
 2026-10-23,stubs,opus,20,170,"e2e with no stubs: 399 fixtures accepted end to end by compiled check (all agree with con-ron, e2e-ref); bugs B1-B3 in docs/design/stubs.md; docs/e2e.md"
 2026-10-23,romfix,opus,11,4,"CIReadRefCaps caps_rel > 15 GB -> 2.5 GB, 5.6 s (comega: rewrite+clear the chained (c+k).toNat equalities before omega)"
+2026-10-23,loopt2,opus,120,40,"CallM (stubCall/realCall) models for cvg/ccv/dv/tv; cvgW_okT (check_value_group StageT->StageT, ivg as hypothesis); TwinOK.of_check/TwinMem.step; LoopDecl agreement split into <5 GB modules"
