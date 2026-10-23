@@ -374,24 +374,4 @@ theorem cruleW_ok {dn : NIdx → Option ConLeche.Name} {visT visR : Word} {feR :
     Bool.not_false]
   rfl
 
-/-- **`class_rule_ok` refines `classRuleOk`** (through the stubs of its guards, `infer_type_core`,
-`strip_lams`, and `class_rule_ok_domains`'s `consts_resolve_ffast`): the rule is returned as built.
-Under `StageR`; the census link is `classRuleOk_refinesC` (`IndT/RecGen4.lean`). -/
-theorem classRuleOk_refines (p : Prog) (hp : CruleProg p) (N : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : IFEnv) (cvR n gen : Word)
-    (cv : IConstantVal) (hS : StageR dn visR feR s₀.mem a₀) (hgen : H gen)
-    (hq : decCV (erecP s₀.mem) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64) (hA : AbsOK s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok" [visT, visR, cvR, n, gen]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)) a₀ ∧
-      KP dn visR feR s₀.mem decW0E (r, s'.mem)
-        (AM.st (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)) a₀)
-        (AM.res (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)) a₀) ∧
-      AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (classRuleOk_spec p hp stubCall (stubCall_spec p) N s₀ visT visR cvR n gen) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg, rfl, hA'⟩ := cruleW_ok hm hS hgen hq hqb hA
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, ⟨by rw [hst]; exact hS', hg, by rw [hres]; exact ⟨hgen, rfl⟩⟩, hA'⟩
-
 end L.Ind
