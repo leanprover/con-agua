@@ -342,7 +342,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [if_pos hcond, StateT.run_bind, hrun, exc_ok_bind']
     rw [htm1, gtm1]
     have hb' := hb
-    rw [fuelW] at hb'
+    rw [L.Arena.fuelW] at hb'
     exact hb'
 
 
