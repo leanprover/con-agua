@@ -27,9 +27,8 @@ the tops (`shapeCV_of_decB`).
 
 **Pending program facts** (hypotheses here, to be discharged):
 
-* `PartsOK p`: `block_parts`' record also satisfies what the recursor stage takes as input.
-  That is `ShapeLp`, the parameter count's word below `2^63`, and `IW`'s size below `2^63`.
-  These are the same facts `PassGrcOK` asks of the pass.
+* `PartsOK p`: `block_parts`' record also satisfies what the recursor stage takes as input,
+  `ShapeLp`, the fact `PassGrcOK` asks of the pass.
 
 The walk memos (`PosMR`, the `mentions_any` and `target_abs` memos, `abstract1`'s memo) cross
 `basis_pin_hit` and `block_parts` by their write set (`closedA … cidFreeA cidFreeC`: no array in
@@ -127,15 +126,12 @@ end model
 
 /-! ## The pending program facts -/
 
-/-- **`block_parts`' record satisfies the recursor stage's input facts** (pending). These are the
-members' constructors' level-parameter slices in `EREC` (`ShapeLp`), the parameter count's word
-below `2^63` when the declared count is, and the pool's size below `2^63`. -/
+/-- **`block_parts`' record has its members' constructors' level-parameter slices in `EREC`**
+(`ShapeLp`, pending), what the recursor stage takes of its input. -/
 def PartsOK (p : Prog) : Prop :=
   ∀ (n : Nat) (w o l : Word) (m m' : Mem) (r : List Word),
     callW p n "block_parts" [w, o, l] m = some (r, m') → r.headD 0 ≠ 0 →
-    ShapeLp m' (r.tail.headD 0) ∧
-    (w.toNat < 2 ^ 63 → ∀ v, iwN m' ((r.tail.headD 0).toNat + 4) = some v → v < 2 ^ 63) ∧
-    (m'.arr64 IW).size < 2 ^ 63
+    ShapeLp m' (r.tail.headD 0)
 
 /-! ## The write set of `basis_pin_hit` and `block_parts` -/
 
@@ -225,7 +221,7 @@ structure CidProg (p : Prog) : Prop where
 
 /-- **`check_ind_decl`'s model refines the `.indDecl` arm of `checkDecl`** at the stage relation.
 Inputs: the block's `EREC` slice decoded below the tops, the twin state well formed (`StateOK`,
-for the basis pin's canonical comparison), the declared parameter count below `2^63`, an
+for the basis pin's canonical comparison), an
 environment whose entries are visible and whose constructors' sums are words, and the walk
 memos (`CidMemos`). Program facts: the lookups (`CidProg`), the write sets, `AbsKeep` of the
 callees outside the `abstract1` cascade, and the pending `PassGrcOK` and `PartsOK`. -/
@@ -246,7 +242,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (h : cidW p n m vis o l w = some (r, m')) (hS : StageR dn vis fe m a)
     (hok : ConRon.Bridge.StateOK a)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
-    (hw : w.toNat < 2 ^ 63) (hv : AllVis fe) (hcs : CtorSums fe) (hM : CidMemos m) :
+    (hv : AllVis fe) (hcs : CtorSums fe) (hM : CidMemos m) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   cases n with
@@ -322,7 +318,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   by_cases z4 : r4.headD 0 = 0
   · rw [if_pos z4] at h; cases h
   rw [if_neg z4] at h
-  obtain ⟨hlp4, hnP4, hsz4⟩ := hpo n w o l m1 s4.mem r4 c4 z4
+  have hlp4 := hpo n w o l m1 s4.mem r4 c4 z4
   generalize AM.res (blockParts? w.toNat block) a1 = bp at hrun4 hR4
   generalize AM.st (blockParts? w.toNat block) a1 = a4 at hrun4 hS4
   cases bp with
@@ -336,9 +332,6 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     obtain ⟨bs', hbs', e⟩ := hd
     cases e
     exact hbs'
-  have hnP : bs.nP < 2 ^ 63 := by
-    obtain ⟨-, -, hnp, -⟩ := decBS_some (show decBS (truncM s4.mem) _ = some bs from hq4)
-    exact hnP4 hw _ (rec2IwN_trunc hnp).2
   obtain ⟨hP4, hma4, hA4, hta4⟩ := hM4
   -- `check_block`
   cases c5 : callW p n "check_block" [vis, o, l, r4.tail.headD 0] s4.mem with
@@ -351,7 +344,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hgp n (by omega) ⟨s4.mem, Locals.init []⟩
       a4 hS4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hv hcs hP4 hma4 hA4
-      hkp hkt hkr hta4 hsl4.2 hlp4 hnP hsz4) (callW_mono c5 (by omega))
+      hkp hkt hkr hta4 hsl4.2 hlp4) (callW_mono c5 (by omega))
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
   refine ⟨_, _, ?_, by simpa using hS5, hg1.trans (hg4.trans hg5)⟩
