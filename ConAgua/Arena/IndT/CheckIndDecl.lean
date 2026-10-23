@@ -29,8 +29,9 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hIlpf : IlpfF p)
 
-include hkp hV hkc in
+include hkp hV hkc hIlpf in
 /-- **`check_ind_decl`'s model refines the `.indDecl` arm of `checkDecl`** under `StageT` and the
 twin's fold invariant (`cidW_ok`'s, the inner stages under `StageC`): the post is `cidW_ok`'s. -/
 @[refines_part ConRon.Arena.checkDecl "the inductive arm (check_ind_decl), under StageC"]
@@ -193,7 +194,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     · exact ⟨0, by omega, callW_mono c5 (by omega)⟩
   have hmc5 := mcMR.ofClosed hclMc hfMc c5b hIM4.stage.mc
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -, hA5, hR5, hma5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (checkBlock_refinesC hkp hfold.envWF hV hkc P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT j hj
+    (checkBlock_refinesC hkp hfold.envWF hV hkc hIlpf P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT j hj
       ⟨s4.mem, Locals.init []⟩ a4 hC4 hq4 hsl4.1 (shapeCV_of_decB hq4)
       (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4 hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh
       (ConRon.Bridge.denoteFEnv_mono x04 hfold.denote) hshP

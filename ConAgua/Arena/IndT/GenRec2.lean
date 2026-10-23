@@ -36,7 +36,7 @@ def grcRcCallees : List FnName :=
     "class_fe_r", "flush_caches", "class_recs_rules_ok", "gen_rec_check_pop_all"]
 
 section parts
-variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (hIlpf : IlpfF p)
 
 include hkp henv in
 /-- **`gen_rec_check_prep`'s third part under `StageC`** (`grpCW_ok`'s): the generator record,
@@ -266,7 +266,7 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   · simp only [grcTwinC, StateT.run_bind, hrun2, except_ok_bind, hrun3]
   · simpa [decCVS] using hd3
 
-include hkp henv in
+include hkp henv hIlpf in
 /-- **`gen_rec_check_prep`'s second part under `StageC`** (`grpBW_ok`'s): the classes' entries
 and constructors, the count, the formers, the level, then the third part (`grpCW_okC`). -/
 theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Option ConLeche.Name}
@@ -367,7 +367,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   obtain ⟨r3, m3⟩ := q3
   rw [c3, grpB3_some] at h
   obtain ⟨s3, hs3, -, hok3, hC3, hg3, hsp3, hP3, hA3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (classesCtors_refinesC hkp henv P.ccs n hn _ a2 dn fe vis pp _ _ rd _ _ bs (cvTas.map (·.type)) rdv ms2 hC2 hA2
+    (classesCtors_refinesC hkp henv P.ccs hIlpf n hn _ a2 dn fe vis pp _ _ rd _ _ bs (cvTas.map (·.type)) rdv ms2 hC2 hA2
       (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.1)
       (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk (by rw [hsz2]; exact hsz5) hP2
       hsh2 hftP2 hrdP2 hms2P hformer hMs2) c3

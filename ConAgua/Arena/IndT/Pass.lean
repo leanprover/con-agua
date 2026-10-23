@@ -49,9 +49,9 @@ def PassTwin (a a' : AState) (x : BlockPass) (env₁ : ConLeche.Env) : Prop :=
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val") (hIlpf : IlpfF p)
 
-include hkp henv hV hkc in
+include hkp henv hV hkc hIlpf in
 /-- **`check_block_pass`' model under `StageC`** (`icpW_sim`'s; twin side con-ron's
 `checkBlockPass_of`). -/
 theorem icpW_simC (hP : PassProg p) {fs : List FnName}
@@ -313,7 +313,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   have hct := ConRon.Bridge.Inductives.checkBlockCtors_types hF3
   obtain ⟨s6, hs6, -, hok6, hC6, hg6, hP6, hA6, hks6, hnf6, hns6, -⟩ := triple_of_callW
     (s₀ := ⟨s5.mem, Locals.init []⟩)
-    (checkBlockPositivity_refinesC hkp henv₁ hP.pos n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
+    (checkBlockPositivity_refinesC hkp hIlpf henv₁ hP.pos n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
       cvTas ctorsAs hC5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hkP f (by simp [passKeepCallees, hf]))
       hpP5 hcvs5 hca5 hden₅ hT hct) c6
   simp only at hs6 hC6 hg6 hP6 hA6 hks6 hnf6 hns6
@@ -474,7 +474,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   · simp only [List.headD_cons]; rw [hw0]
     exact StageC.of_parts hS9 ck9 hA9 (dnE i9.ext)
 
-include hkp henv hV hkc in
+include hkp henv hV hkc hIlpf in
 /-- **`check_block_pass(vis, p0, isRec)` refines `checkBlockPass` under `StageC`**
 (`checkBlockPass_refines`'s, from `StageC` at the entry index and con-ron's `checkBlockPass_of`
 preconditions): besides `checkBlockPass_refines`' post, `StageC` at the formers' index and
@@ -498,7 +498,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
       ∃ env₁, StageC dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 env₁ s'.mem a' ∧ PassTwin a₀ a' x env₁;
       ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
-    ⟨hl, icpW_simC hkp henv hV hkc hP hcl hfs n hn hC hq hsrc hcx hb hPm hA hk hcoh hden hshP r s'.mem hm⟩
+    ⟨hl, icpW_simC hkp henv hV hkc hIlpf hP hcl hfs n hn hC hq hsrc hcx hb hPm hA hk hcoh hden hshP r s'.mem hm⟩
 
 end sims
 
