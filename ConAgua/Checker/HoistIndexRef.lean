@@ -200,7 +200,7 @@ theorem hix_declAtF {D P : Array Word} {i : Nat} {d : IDeclaration}
 /-- **`hoist_names` inserts a record's names** (record `r` of `DECL`, `x = 1 + 8 r`). -/
 theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
     (idx : Std.HashMap NIdx Nat) (hR : NixR m idx) (hr : r.toNat < 2 ^ 59)
-    (hD : DeclAtF (m.arr64 DECL) (m.arr64 DLP) r.toNat d) (hok : RecOK (m.arr64 DECL) r.toNat)
+    (hD : DeclAtF (m.arr64 DECL) (m.arr64 DLP) r.toNat d) (hok : RecOK (m.arr64 DECL) (m.arr64 DLP) r.toNat)
     (hk : k.toNat + 1 < 2 ^ 64) (h : hNamesW n m k (1 + 8 * r) = some (z, m')) :
     NixR m' (insertNames idx k.toNat d.names) ∧ MemFrame [HNIX] [75, 76] m m' := by
   cases n with
@@ -221,7 +221,7 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
       obtain ⟨z', m₁⟩ := zm
       rw [hg] at h; simp only [hNamesW.k1, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, rfl⟩ := h
-      exact hNamesGo_ok n m m₁ k _ _ 0 z' _ t b idx hR rfl ht (hok.2 h6)
+      exact hNamesGo_ok n m m₁ k _ _ 0 z' _ t b idx hR rfl ht (hok.2 h6).1
         (by simpa using hb) hk hg
   · have hD' := hix_declAtF (fun b nP e => hind ⟨b, nP, e⟩) hD
     obtain ⟨h6, hn⟩ := hix_declAt_names hD'
