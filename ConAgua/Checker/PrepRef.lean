@@ -63,7 +63,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       (∀ x (h : x < ds'.size), DeclAtF (m'.arr64 DECL) (m'.arr64 DLP) x ds'[x] ∧
         RecOK (m'.arr64 DECL) (m'.arr64 DLP) x) ∧
       ArenaR m' a' ∧ IWOK m' ∧ PinsR m' a'.pins ∧ m'.arr64 DLP = m.arr64 DLP ∧
-      (m'.arr64 DECL).size = (m.arr64 DECL).size := by
+      (m'.arr64 DECL).size = (m.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
+      a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size := by
   -- the big frame of the passes (arrays below 64 and `IW`; `CTL` words below 64)
   let A : List ArrId := List.range 64 ++ [IW]
   let C : List Word := (List.range 64).map UInt64.ofNat ++ [200]
@@ -163,7 +164,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   | some rr =>
   obtain ⟨z₄, m₄⟩ := rr
   rw [hfr, pPrepW.k6.arm1] at h
-  obtain ⟨front, rest, a₁, hrunF, hfs, hfront, hrest, hE₄, hpins₁, hpf₄⟩ :=
+  obtain ⟨front, rest, a₁, hrunF, hfs, hfront, hrest, hE₄, hpins₁, hpe₁, hse₁, hpf₄⟩ :=
     pFront_ok dsAll np nw ord mk n m₃ m₄ a 0 z₄ #[] hE₃ (by simp) rfl (by simp) hfr
   have hpre : (dsAll.toList.take np.toNat).drop (0 : Word).toNat = pre.decls.toList := by
     rw [← hdsA, hnp]; simp
@@ -308,7 +309,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     rw [hfin, ← hD₇, ← hIW₇ i hi, ← hdw i hi k hk]
     simp only [dw, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     rw [if_neg (by omega)]
-  refine ⟨res.1, a₁, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨res.1, a₁, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hpe₁, hse₁, hpins₁, by rw [hres]; omega⟩
   · simp only [preparePrelude, prepareD]
     rw [HoistTwin.run_bind, HoistTwin.run_bind, hrunF]
     simp only
@@ -369,7 +370,8 @@ theorem preparePrelude_refines (p : Prog) (hp : PrepProg p) (hn : PrepExt p) (hh
       (∀ x (h : x < ds'.size), DeclAtF (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x ds'[x] ∧
         RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
       ArenaR s'.mem a' ∧ IWOK s'.mem ∧ PinsR s'.mem a'.pins ∧ s'.mem.arr64 DLP = s₀.mem.arr64 DLP ∧
-      (s'.mem.arr64 DECL).size = (s₀.mem.arr64 DECL).size; ⊤⦄ :=
+      (s'.mem.arr64 DECL).size = (s₀.mem.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
+      a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size; ⊤⦄ :=
   triple_post (preparePrelude_spec p hp hn hh hx n s₀) (fun r s' h =>
     ⟨h.1, pPrepCore_ok p hx n s₀.mem s'.mem a pre ds _ (r.headD 0) hD hns hnp hDsz hDsz' hW hA hseen
       hnix hI hP rfl h.2⟩)
