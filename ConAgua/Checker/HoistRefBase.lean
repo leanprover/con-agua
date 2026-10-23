@@ -57,17 +57,18 @@ def TgtR (m : Mem) (tg : Word) (c : Nat) (T : Std.HashMap Nat Nat) : Prop :=
 /-- The handle words of a one-constant record are below `2 ^ 32` (its name, type and value: the
 words the hoist reads; an inductive block's members are decoded by `hd?`, which checks it), and an
 inductive block's member pointers do not start at the pool's word `0` (its top, which `trunc`
-clears: `IndDeclAt` would decode another word than L reads). -/
-def RecOK (D : Array Word) (r : Nat) : Prop :=
+clears: `IndDeclAt` would decode another word than L reads), nor point to it. -/
+def RecOK (D P : Array Word) (r : Nat) : Prop :=
   (dw D r 0 ≠ 6 → (dw D r 1).toNat < 2 ^ 32 ∧ (dw D r 4).toNat < 2 ^ 32 ∧ (dw D r 5).toNat < 2 ^ 32) ∧
-  (dw D r 0 = 6 → (dw D r 2).toNat ≠ 0)
+  (dw D r 0 = 6 → (dw D r 2).toNat ≠ 0 ∧
+    ∀ j < (dw D r 3).toNat, P[(dw D r 2).toNat + j]?.getD 0 ≠ 0)
 
 /-- **The stream in the order `ord`**: position `k` is the record `IW[ord + k]` of `DECL` (below
 `2 ^ 59`), which represents `ds[k]` (`RecOK`). -/
 def OrdR (m : Mem) (ord : Word) (ds : Array IDeclaration) : Prop :=
   ∀ k (h : k < ds.size), (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat < 2 ^ 59 ∧
     DeclAtF (m.arr64 DECL) (m.arr64 DLP) (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat ds[k] ∧
-    RecOK (m.arr64 DECL) (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat
+    RecOK (m.arr64 DECL) (m.arr64 DLP) (rdW (m.arr64 IW) (ord + UInt64.ofNat k)).toNat
 
 /-- **The notes**: `hoist_note(w, i, k, tg, ws, sp)` for each name word `w` of the list in
 order (the walk of record `k` for the operation at `i`); the stack size after. -/

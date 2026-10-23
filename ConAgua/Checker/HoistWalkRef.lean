@@ -56,11 +56,13 @@ theorem hoistRulesGo_ok (n : Nat) :
 
 /-- The block members `cs` are the constant records the pointers `DIND[o + q ‥ o + c)` point to
 (`decCIs` below some `t` at most the pool's top, as `IndDeclAt`; the offset not `0`, the pool's
-top, which `trunc` clears), none of them a projection table (a parsed block has none). -/
+top, which `trunc` clears, and no pointer `0`), none of them a projection table (a parsed block has none). -/
 def BlockAt (m : Mem) (o c q : Word) (cs : List IConstantInfo) : Prop :=
   (∃ t, t ≤ ((m.arr64 DLP)[0]?.getD 0).toNat ∧
     decCIs (trunc (m.arr64 DLP) t) (fun _ => none) (o.toNat + q.toNat) (c.toNat - q.toNat) = some cs) ∧
-  o.toNat + c.toNat < 2 ^ 63 ∧ o.toNat ≠ 0 ∧ q ≤ c ∧ ∀ ci ∈ cs, ci.isTowerEntry = false
+  o.toNat + c.toNat < 2 ^ 63 ∧ o.toNat ≠ 0 ∧
+  (∀ j, q.toNat ≤ j → j < c.toNat → (m.arr64 DLP)[o.toNat + j]?.getD 0 ≠ 0) ∧
+  q ≤ c ∧ ∀ ci ∈ cs, ci.isTowerEntry = false
 
 /-- **`hoist_block_go` refines `usedConstsBlock`.** -/
 theorem hoistBlockGo_ok (n : Nat) :
@@ -83,7 +85,7 @@ def WalkableDecl : IDeclaration → Prop
 theorem hoistDepsOf_ok (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k i r tg ws sp sp' : Word) (d : IDeclaration),
     ArenaR m a → (∃ seen, SeenR m seen) → r.toNat < 2 ^ 59 →
-    DeclAtF (m.arr64 DECL) (m.arr64 DLP) r.toNat d → RecOK (m.arr64 DECL) r.toNat → WalkableDecl d →
+    DeclAtF (m.arr64 DECL) (m.arr64 DLP) r.toNat d → RecOK (m.arr64 DECL) (m.arr64 DLP) r.toNat → WalkableDecl d →
     hDepsOfW n m k i (1 + 8 * r) tg ws sp = some (sp', m') →
     ∃ ns : List Word,
       (IDeclaration.usedConsts d).run a = .ok ((ns.map decI).toArray, a) ∧
