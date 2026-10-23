@@ -25,10 +25,8 @@ the tops (`shapeCV_of_decB`).
 
 `basis_pin_hit` refines `basisPinHit` by `basisPinHitL`'s proof (`IndRealBph2.basisPinHit_ok`).
 
-**Pending program facts** (hypotheses here, to be discharged):
-
-* `PartsOK p`: `block_parts`' record also satisfies what the recursor stage takes as input,
-  `ShapeLp`, the fact `PassGrcOK` asks of the pass.
+`ShapeLp` (what the recursor stage takes of its input) comes from the record's decoding
+(`shapeLp_of_decB`, `IndInstallSpec37`).
 
 The walk memos (`PosMR`, the `mentions_any` and `target_abs` memos, `abstract1`'s memo) cross
 `basis_pin_hit` and `block_parts` by their write set (`closedA … cidFreeA cidFreeC`: no array in
@@ -124,15 +122,6 @@ theorem cid_specW (hp : p.lookup "check_ind_decl" = some checkIndDecl)
 
 end model
 
-/-! ## The pending program facts -/
-
-/-- **`block_parts`' record has its members' constructors' level-parameter slices in `EREC`**
-(`ShapeLp`, pending), what the recursor stage takes of its input. -/
-def PartsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (w o l : Word) (m m' : Mem) (r : List Word),
-    callW p n "block_parts" [w, o, l] m = some (r, m') → r.headD 0 ≠ 0 →
-    ShapeLp m' (r.tail.headD 0)
-
 /-! ## The write set of `basis_pin_hit` and `block_parts` -/
 
 /-- The arrays they may write: all below 256 but the stage memos' (`201..208`) and `abstract1`'s
@@ -224,7 +213,7 @@ Inputs: the block's `EREC` slice decoded below the tops, the twin state well for
 for the basis pin's canonical comparison), an
 environment whose entries are visible and whose constructors' sums are words, and the walk
 memos (`CidMemos`). Program facts: the lookups (`CidProg`), the write sets, `AbsKeep` of the
-callees outside the `abstract1` cascade, and the pending `PassGrcOK` and `PartsOK`. -/
+callees outside the `abstract1` cascade, and the pending `PassGrcOK`. -/
 @[refines_part ConRon.Arena.checkDecl "the inductive arm (check_ind_decl), under StageR"]
 theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
@@ -234,7 +223,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (hclC : closedA p cidFreeA cidFreeC fsC = true)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
     (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
-    (hkr : AbsKeep p "block_raw_rec") (hgp : PassGrcOK p) (hpo : PartsOK p)
+    (hkr : AbsKeep p "block_raw_rec") (hgp : PassGrcOK p)
     {n : Nat} (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {o l w : Word} {r : List Word} {block : List IConstantInfo}
@@ -318,7 +307,6 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   by_cases z4 : r4.headD 0 = 0
   · rw [if_pos z4] at h; cases h
   rw [if_neg z4] at h
-  have hlp4 := hpo n w o l m1 s4.mem r4 c4 z4
   generalize AM.res (blockParts? w.toNat block) a1 = bp at hrun4 hR4
   generalize AM.st (blockParts? w.toNat block) a1 = a4 at hrun4 hS4
   cases bp with
@@ -344,7 +332,7 @@ theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlock_refines P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hgp n (by omega) ⟨s4.mem, Locals.init []⟩
       a4 hS4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hv hcs hP4 hma4 hA4
-      hkp hkt hkr hta4 hsl4.2 hlp4) (callW_mono c5 (by omega))
+      hkp hkt hkr hta4 hsl4.2 (shapeLp_of_decB hq4 hS4.2.2.1 hS4.2.2.2.1)) (callW_mono c5 (by omega))
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
   refine ⟨_, _, ?_, by simpa using hS5, hg1.trans (hg4.trans hg5)⟩
