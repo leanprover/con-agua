@@ -138,13 +138,13 @@ def rres (R : Reg64s) : Nat → Word
 /-- Of the first `n` results, those in registers hold the values `vs` (`0` past the end of `vs`). -/
 def ResRel (n : Nat) (vs : List Word) (R : Reg64s) : Prop := ∀ i < n, i < maxRes → rres R i = vs.getD i 0
 
-/-- The results past the registers are in the result area. -/
-def ResMem (G : Layout) (vs : List Word) (d : DataMem) : Prop :=
-  ∀ i, maxRes ≤ i → i < G.tab.nres → rdW d (A (G.resAddr i)) = some (vs.getD i 0)
+/-- Of the first `n` results, those past the registers are in the result area. -/
+def ResMem (G : Layout) (n : Nat) (vs : List Word) (d : DataMem) : Prop :=
+  ∀ i, maxRes ≤ i → i < n → rdW d (A (G.resAddr i)) = some (vs.getD i 0)
 
-/-- The results of a call, in the registers and the result area. -/
-def ResOut (G : Layout) (vs : List Word) (s : MachineData) : Prop :=
-  ResRel G.tab.nres vs s.regs ∧ ResMem G vs s.dmem
+/-- The results `vs` of a call, at most `n` of them, in the registers and the result area. -/
+def ResOut (G : Layout) (n : Nat) (vs : List Word) (s : MachineData) : Prop :=
+  ResRel n vs s.regs ∧ ResMem G n vs s.dmem ∧ vs.length ≤ n
 
 theorem rres_set64_resReg (R : Reg64s) {i j : Nat} (hi : i < maxRes) (hj : j < maxRes)
     (v : BitVec 64) : rres (R.set64 (resReg i) v) j = if j = i then UInt64.ofBitVec v else rres R j := by
