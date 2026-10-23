@@ -163,7 +163,8 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
-@[l_impl ConLeche.Frontend.readNat64]
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:103-112 ConLeche.Frontend.readNat
+@[l_impl ConLeche.Frontend.readNat64 ConLeche.Frontend.readNat]
 def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy) {
   top := CTL.u64[0];
   if len(POOL.u64) < top { abort };

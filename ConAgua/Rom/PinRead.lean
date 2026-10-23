@@ -118,7 +118,9 @@ def pbCheck : FunDecl := lfn () locals (i) {
 
 /-- `rom_exprs_to(q, o, k)`: `k` expressions at the current memo, their handles to `EREC[o ‥]`;
 the position after. -/
+-- con-ron: ConRon/Arena/Intern.lean:50-52 ConRon.Arena.internExprList
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:257-263 ConRon.Arena.Frontend.internExprList
+@[l_impl ConRon.Arena.Frontend.internExprList ConRon.Arena.internExprList]
 def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_expr(q);
@@ -128,7 +130,10 @@ def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
 }
 
 /-- `rom_pins_to(q, r, k)`: the variant's pins `k ‥ 7`, each at a fresh memo, to `EREC[r + k ‥]`. -/
+-- con-ron: ConRon/Arena/Intern.lean:47-48 ConRon.Arena.internExpr
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:253-255 ConRon.Arena.Frontend.internExpr
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:50-70 ConRon.Arena.internPinSet
+@[l_impl ConRon.Arena.internPinSet ConRon.Arena.internExpr ConRon.Arena.Frontend.internExpr]
 def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
   if k == 8 { return q };
   CTL.u64[132] := 0;
@@ -141,6 +146,7 @@ def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
 /-- `rom_lists_to(q, r, j)`: the variant's certificate lists `j ‥ 7`, each at a fresh memo, as
 `EREC` slices whose offset and length go to `EREC[r + 8 + 2j]`, `EREC[r + 9 + 2j]`. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:50-70 ConRon.Arena.internPinSet
+@[l_impl ConRon.Arena.internPinSet]
 def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
   if j == 8 { return q };
   l := call rom_u64(q);
