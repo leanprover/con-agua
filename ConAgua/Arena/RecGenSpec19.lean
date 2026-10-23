@@ -167,7 +167,7 @@ structure ClmProg (p : Prog) : Prop where
 /-- **`class_majors`' model simulates `classMajors`.** -/
 theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (pp cao cal pfo pfl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
-    (pfvs : List EIdx) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) :
+    (pfvs : List EIdx) (n : Nat) :
     ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey),
     StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → ShapeSrc m pp →
     PSlR decCNS css cao cal m → DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs →
@@ -241,7 +241,7 @@ theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name
     | zero => intro r m' e; rw [callW_zero] at e; cases e
     | succ k =>
     rw [← hmd]
-    exact installSimCall (targetMajorOf_refines hP.tmf dn vis fe k (by omega) _ a2 pp cao cal pfo pfl pfo pfl
+    exact installSimCall (targetMajorOf_refines hP.tmf dn vis fe k _ a2 pp cao cal pfo pfl pfo pfl
         (r2.headD 0) bs css pfvs pfvs hS2 (hq.grow (decBS_mono _) hg02)
         (partsHsrc_grow hg02 (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg02)
         (hpf.grow (OMono.decHL _ _) hg02) (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) hmH hP2)
@@ -266,7 +266,7 @@ theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name
   -- the rest
   refine Sim.bindK (K := ckkK2 p n r3) (body := fun r5 m5 => ckkK3 (callW p n "sl_cons"
       [r3.headD 0, r5.headD 0, r5.tail.headD 0] m5)) rfl (fun _ _ => rfl)
-    (ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' hS4 (hq.grow (decBS_mono _) hg04)
+    (ih m4 a4 (ko + 1) (kl - 1) ks' hS4 (hq.grow (decBS_mono _) hg04)
       (partsHsrc_grow hg04 (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg04)
       (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.1) (hks'.grow decCK_mono hg04) hP4) ?_
   rintro r5 xs m5 a5 ⟨hS5, hg5, hd5, hP5⟩
@@ -278,7 +278,7 @@ theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name
 stubs): the keys a slice of `ClassKey` records decoded below the tops; the classes a slice of fresh
 `TargetMajor` records. Under `StageR`; the census link is `classMajors_refinesC`. -/
 theorem classMajors_refines {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+    (fe : IFEnv) (n : Nat) (s₀ : St) (a₀ : AState)
     (pp cao cal pfo pfl ko kl : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
     (pfvs : List EIdx) (ks : List ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hsrc : ShapeSrc s₀.mem pp)
@@ -290,7 +290,7 @@ theorem classMajors_refines {p : Prog} (hP : ClmProg p) (dn : NIdx → Option Co
       PSlR decTM (AM.res (ConRon.Arena.classMajors V fe bs css pfvs ks) a₀) (r.headD 0) (r.tail.headD 0) s'.mem ∧
       PosMR s'.mem; ⊤⦄ :=
   triple_post (clm_spec p hP.cm n s₀ vis pp cao cal pfo pfl ko kl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (clmW_sim hP dn vis fe pp cao cal pfo pfl bs css pfvs n hn _ a₀ ko kl ks hS hq hsrc
+    let ⟨hok, hQ⟩ := Sim.run (clmW_sim hP dn vis fe pp cao cal pfo pfl bs css pfvs n _ a₀ ko kl ks hS hq hsrc
       hcss hpf hpfb hks hPm) hm
     ⟨hl, hok, hQ⟩
 

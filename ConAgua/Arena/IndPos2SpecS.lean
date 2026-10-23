@@ -99,7 +99,7 @@ theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
-theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+theorem fieldsOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     FieldsOK dn vis fe stubCall (n + 1) := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
   intro m m' a ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds r h hS hW hcur hns hks hkb hnd hndb hP hA
@@ -214,7 +214,7 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
     · rw [hnF1] at h'; subst h'; have := (base + j + 1).toNat_lt; omega
     · rw [hj1, hnF1] at h'; omega
 
-theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+theorem walkOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     WalkOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
   intro m m' a ctx root fu po pl hi nF crest ns c prog NS r h hS hW hcr hns hP hA
@@ -298,7 +298,7 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     simp only [walkK, hdec]
     rfl
 
-theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+theorem oneOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     OneOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, hWalk, -⟩ := ih
   intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS r h hS hW hC hcv
@@ -936,7 +936,7 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) : KeyOK dn vis fe 
     obtain ⟨x, a', hrun, rest⟩ := hnew r m' h
     exact ⟨x, a', by rw [htwin]; simpa using hrun, rest.1, hg12.trans rest.2.1, rest.2.2⟩
 
-theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe stubCall n) :
+theorem contOK_step (n : Nat) (ih : NbOK dn vis fe stubCall n) :
     ContOK dn vis fe stubCall (n + 1) := by
   obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r h hS hW hnn hus hargs hab hns hP hA
@@ -983,7 +983,7 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2
   rw [hcc, nbContK2_some] at h
-  obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2, hP2⟩ := p2ccW_ok dn vis fe (by omega) hcc hS1 hW1.u hds
+  obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2, hP2⟩ := p2ccW_ok dn vis fe hcc hS1 hW1.u hds
     (fun j hj => by omega) (by rw [hiO, hiL]; exact hidx) (fun j hj => by rw [hiO, hiL] at *; omega) hnn
     (hP.fr (ntWf_mfr (k := n' + 1) (by simpa [ntWf] using hnt)))
   have hA2 : AbsOK m2 := p2ccW_afr hcc (ntWf_afr (k := n' + 1) (by simpa [ntWf] using hnt) hA)
@@ -1392,15 +1392,15 @@ theorem nbOK_zero : NbOK dn vis fe stubCall 0 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
     simp_all [nbPosW, nbBindW, nbAppW, nbContW, nbKeyW, nbNewW, nbFrameW, nbCtorsW, nbOneW, nbWalkW, nbFieldsW]
 
-/-- The block's relational content at every fuel up to the walk fuel. -/
-theorem nbOK_all : ∀ n, 2 ^ 31 + n ≤ coreWalkFuel → NbOK dn vis fe stubCall n
-  | 0, _ => nbOK_zero dn vis fe
-  | n + 1, hk => by
-    have ih := nbOK_all n (by omega)
+/-- The block's relational content at every fuel. -/
+theorem nbOK_all : ∀ n, NbOK dn vis fe stubCall n
+  | 0 => nbOK_zero dn vis fe
+  | n + 1 => by
+    have ih := nbOK_all n
     exact ⟨posOK_step dn vis fe n ih, bindOK_step dn vis fe n ih, appOK_step dn vis fe n ih,
-      contOK_step dn vis fe n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
-      frameOK_step dn vis fe n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n hk ih,
-      walkOK_step dn vis fe n hk ih, fieldsOK_step dn vis fe n hk ih⟩
+      contOK_step dn vis fe n ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
+      frameOK_step dn vis fe n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n ih,
+      walkOK_step dn vis fe n ih, fieldsOK_step dn vis fe n ih⟩
 
 end steps
 

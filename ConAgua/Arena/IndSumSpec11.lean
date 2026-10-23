@@ -145,42 +145,42 @@ def csfK3 (n : Nat) (isProp large s io il fv res j : Word) :
   | none => none
   | some (ru, m) => csfK4 rest res j (ru.headD 0) (cfbW n m isProp large s io il fv (ru.headD 0))
 /-- After `infer_type_core`. -/
-def csfK2 (n : Nat) (vis isProp large s nP io il fv res j : Word) :
+def csfK2 (cR : CallM) (n : Nat) (vis isProp large s nP io il fv res j : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ry, m) => csfK3 rest n isProp large s io il fv res j
-      (stubM "ensure_sort_core" m [vis, nP + (j - 1), ry.headD 0])
+      (cR n "ensure_sort_core" [vis, nP + (j - 1), ry.headD 0] m)
 /-- After `fvar_type_d`. -/
-def csfK1 (n : Nat) (vis isProp large s nP io il fv res j : Word) :
+def csfK1 (cR : CallM) (n : Nat) (vis isProp large s nP io il fv res j : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rt, m) => csfK2 rest n vis isProp large s nP io il fv res j
-      (stubM "infer_type_core" m [vis, nP + (j - 1), rt.headD 0])
+  | some (rt, m) => csfK2 rest cR n vis isProp large s nP io il fv res j
+      (cR n "infer_type_core" [vis, nP + (j - 1), rt.headD 0] m)
 
 end model
 
 /-- **The model of `check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fo, fl, io, il, res,
 j)`** at exec fuel `n`. -/
-def csfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def csfW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, isProp, large, s, nP, fo, fl, io, il, res, j =>
     if j = 0 then some ([0], m)
     else if fl ≤ j - 1 then none
-    else csfK1 (fun m' => csfW n m' vis isProp large s nP fo fl io il res (j - 1)) n vis isProp large
+    else csfK1 (fun m' => csfW cR n m' vis isProp large s nP fo fl io il res (j - 1)) cR n vis isProp large
       s nP io il (rdW (m.arr64 IW) (fo + (j - 1))) res j
       (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
 
 section arms
-variable (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
+variable (rest : Mem → Option (List Word × Mem)) (cR : CallM) (n : Nat) (m : Mem)
   (vis isProp large s nP fo fl io il fv res j u : Word) (r : List Word)
 theorem csfW_zero (h : j = 0) :
-    csfW (n + 1) m vis isProp large s nP fo fl io il res j = some ([0], m) := by simp [csfW, h]
+    csfW cR (n + 1) m vis isProp large s nP fo fl io il res j = some ([0], m) := by simp [csfW, h]
 theorem csfW_oob (h : j ≠ 0) (hl : fl ≤ j - 1) :
-    csfW (n + 1) m vis isProp large s nP fo fl io il res j = none := by simp [csfW, h, hl]
+    csfW cR (n + 1) m vis isProp large s nP fo fl io il res j = none := by simp [csfW, h, hl]
 theorem csfW_step (h : j ≠ 0) (hl : ¬ fl ≤ j - 1) :
-    csfW (n + 1) m vis isProp large s nP fo fl io il res j =
-      csfK1 (fun m' => csfW n m' vis isProp large s nP fo fl io il res (j - 1)) n vis isProp large
+    csfW cR (n + 1) m vis isProp large s nP fo fl io il res j =
+      csfK1 (fun m' => csfW cR n m' vis isProp large s nP fo fl io il res (j - 1)) cR n vis isProp large
         s nP io il (rdW (m.arr64 IW) (fo + (j - 1))) res j
         (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by simp [csfW, h, hl]
 theorem csfK5_some : csfK5 (some (r, m)) = some ([0], m) := rfl
@@ -188,12 +188,12 @@ theorem csfK4_some : csfK4 rest res j u (some (r, m)) = csfK5 (rest (m.set64 IW 
   rfl
 theorem csfK3_some : csfK3 rest n isProp large s io il fv res j (some (r, m)) =
     csfK4 rest res j (r.headD 0) (cfbW n m isProp large s io il fv (r.headD 0)) := rfl
-theorem csfK2_some : csfK2 rest n vis isProp large s nP io il fv res j (some (r, m)) =
+theorem csfK2_some : csfK2 rest cR n vis isProp large s nP io il fv res j (some (r, m)) =
     csfK3 rest n isProp large s io il fv res j
-      (stubM "ensure_sort_core" m [vis, nP + (j - 1), r.headD 0]) := rfl
-theorem csfK1_some : csfK1 rest n vis isProp large s nP io il fv res j (some (r, m)) =
-    csfK2 rest n vis isProp large s nP io il fv res j
-      (stubM "infer_type_core" m [vis, nP + (j - 1), r.headD 0]) := rfl
+      (cR n "ensure_sort_core" [vis, nP + (j - 1), r.headD 0] m) := rfl
+theorem csfK1_some : csfK1 rest cR n vis isProp large s nP io il fv res j (some (r, m)) =
+    csfK2 rest cR n vis isProp large s nP io il fv res j
+      (cR n "infer_type_core" [vis, nP + (j - 1), r.headD 0] m) := rfl
 end arms
 attribute [ind_grind] csfW_zero csfW_oob csfW_step csfK5_some csfK4_some csfK3_some csfK2_some
   csfK1_some
@@ -205,11 +205,11 @@ variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_w
   (hp : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL) (hftd : FtdF p)
 include hg hpw het hc hb hp hftd
 
-theorem csfW_spec (n : Nat) : ∀ (s₀ : St) (vis isProp large s nP fo fl io il res j : Word),
+theorem csfW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis isProp large s nP fo fl io il res j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_field_sorts_i_go"
       [vis, isProp, large, s, nP, fo, fl, io, il, res, j]
     ⦃fun r s' => LocEq s' s₀ ∧
-      csfW n s₀.mem vis isProp large s nP fo fl io il res j = some (r, s'.mem); ⊤⦄ := by
+      csfW cR n s₀.mem vis isProp large s nP fo fl io il res j = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis isProp large s nP fo fl io il res j
@@ -221,8 +221,8 @@ theorem csfW_spec (n : Nat) : ∀ (s₀ : St) (vis isProp large s nP fo fl io il
     simp only [callFn, checkStructFieldSortsIGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        slGet_specW p hg n, ftdF_spec0 p hftd n, stubM_spec p "infer_type_core" n,
-        stubM_spec p "ensure_sort_core" n, cfbW_spec p hpw het hc hb n, ih] <;>
+        slGet_specW p hg n, ftdF_spec0 p hftd n, hcR n "infer_type_core",
+        hcR n "ensure_sort_core", cfbW_spec p hpw het hc hb n, ih] <;>
       finish (gen := 30) (instances := 5000) [getW, rdW_eq]
 
 end spec
@@ -386,7 +386,7 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     decHL m0 fo.toNat fl.toNat = some fvs → fo.toNat + fl.toNat ≤ iwTop m0 →
     decHL m0 io.toNat il.toNat = some idxArgs → io.toNat + il.toNat ≤ iwTop m0 →
     H s → nP.toNat + j.toNat < 2 ^ 64 →
-    Sim (csfW n m vis isProp large s nP fo fl io il res j)
+    Sim (csfW stubCall n m vis isProp large s nP fo fl io il res j)
       (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs j.toNat) a
       (fun _ xs m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
         decHL m' res.toNat (j.toNat + k) = some (xs ++ acc) ∧ res.toNat + j.toNat + k ≤ iwTop m') := by
@@ -398,7 +398,7 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     hidx hib hs hnj
   by_cases hj : j = 0
   · subst hj
-    rw [csfW_zero n m vis isProp large s nP fo fl io il res 0 rfl]
+    rw [csfW_zero stubCall n m vis isProp large s nP fo fl io il res 0 rfl]
     simp only [UInt64.toNat_zero, Nat.add_zero, Nat.zero_add] at hacc hroom ⊢
     simp only [checkStructFieldSortsI]
     exact Sim.ret ⟨hS, hg0, by simpa using hacc, hroom⟩
@@ -406,8 +406,8 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     ⟨j.toNat - 1, by have : j.toNat ≠ 0 := fun e => hj (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   have hJ : (j - 1).toNat = J := by rw [sumToNat_pred hj]; omega
   by_cases hl : fl ≤ j - 1
-  · rw [csfW_oob n m vis isProp large s nP fo fl io il res j hj hl]; exact Sim.of_none
-  rw [csfW_step n m vis isProp large s nP fo fl io il res j hj hl]
+  · rw [csfW_oob stubCall n m vis isProp large s nP fo fl io il res j hj hl]; exact Sim.of_none
+  rw [csfW_step stubCall n m vis isProp large s nP fo fl io il res j hj hl]
   have hJl : J < fl.toNat := by
     have : ¬ fl.toNat ≤ (j - 1).toNat := fun e => hl (UInt64.le_iff_toNat_le.mpr e)
     omega
@@ -424,13 +424,13 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     rw [List.getElem?_eq_getElem (by rw [decHL_length m hfvs']; exact hJl), hwd]
   refine Sim.bind_twin (x := decI w) (a₁ := a) (by rw [hget]; rfl) ?_
   have hdep : (nP + (j - 1)).toNat = nP.toNat + J := by rw [sum_toNat_add (by omega), hJ]
-  refine Sim.bindK (K := csfK1 _ n vis isProp large s nP io il w res j) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := csfK1 _ stubCall n vis isProp large s nP io il w res j) rfl (fun _ _ => rfl)
     (sumSim_of_relW (ftdF_ok dn vis fe w hwl) hS) fun rt t m1 a1 hQ => ?_
   obtain ⟨hS1, hg1, ht1, ht⟩ := hQ
   rw [csfK1_some]
   have h2 := inferTypeCore_spec dn vis fe (nP + (j - 1)) (rt.headD 0) ht1
   rw [hdep, ht] at h2
-  refine Sim.bindK (K := csfK2 _ n vis isProp large s nP io il w res j) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := csfK2 _ stubCall n vis isProp large s nP io il w res j) rfl (fun _ _ => rfl)
     (sumSim_of_relAM h2 hS1) fun ry ty m2 a2 hQ => ?_
   obtain ⟨hS2, hg2, hy1, hy⟩ := hQ
   rw [csfK2_some]
@@ -476,19 +476,19 @@ def fsortsK2 (res nW : Word) : Option (List Word × Mem) → Option (List Word �
   | none => none
   | some (_, m2) => some ([res, nW], m2)
 /-- After the allocation. -/
-def fsortsK1 (n : Nat) (vis isProp large s nP fo fl io il nW : Word) :
+def fsortsK1 (cR : CallM) (n : Nat) (vis isProp large s nP fo fl io il nW : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (res, m1) => fsortsK2 res nW (csfW n m1 vis isProp large s nP fo fl io il res nW)
+  | some (res, m1) => fsortsK2 res nW (csfW cR n m1 vis isProp large s nP fo fl io il res nW)
 
 /-- **The model of `check_struct_field_sorts_i(vis, isProp, large, s, nP, fo, fl, io, il, n)`** at
 callee fuel `n`. -/
-def fsortsW (n : Nat) (m : Mem) (vis isProp large s nP fo fl io il nW : Word) : Option (List Word × Mem) :=
-  fsortsK1 n vis isProp large s nP fo fl io il nW (allocW m nW)
+def fsortsW (cR : CallM) (n : Nat) (m : Mem) (vis isProp large s nP fo fl io il nW : Word) : Option (List Word × Mem) :=
+  fsortsK1 cR n vis isProp large s nP fo fl io il nW (allocW m nW)
 
-theorem fsortsK1_some (n : Nat) (vis isProp large s nP fo fl io il nW res : Word) (m1 : Mem) :
-    fsortsK1 n vis isProp large s nP fo fl io il nW (some (res, m1)) =
-      fsortsK2 res nW (csfW n m1 vis isProp large s nP fo fl io il res nW) := rfl
+theorem fsortsK1_some (cR : CallM) (n : Nat) (vis isProp large s nP fo fl io il nW res : Word) (m1 : Mem) :
+    fsortsK1 cR n vis isProp large s nP fo fl io il nW (some (res, m1)) =
+      fsortsK2 res nW (csfW cR n m1 vis isProp large s nP fo fl io il res nW) := rfl
 theorem fsortsK2_some (res nW : Word) (r : List Word) (m2 : Mem) :
     fsortsK2 res nW (some (r, m2)) = some ([res, nW], m2) := rfl
 attribute [ind_grind] fsortsK1_some fsortsK2_some
@@ -502,15 +502,15 @@ variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_w
   (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL) (hftd : FtdF p)
 include hg hpw het hc hb hgo hia hp hftd
 
-theorem fsortsW_spec (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW : Word) :
+theorem fsortsW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_field_sorts_i"
       [vis, isProp, large, s, nP, fo, fl, io, il, nW]
-    ⦃fun r s' => LocEq s' s₀ ∧ fsortsW n s₀.mem vis isProp large s nP fo fl io il nW = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ fsortsW cR n s₀.mem vis isProp large s nP fo fl io il nW = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkStructFieldSortsIL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      iwAlloc_specW p hia n, csfW_spec p hg hpw het hc hb hgo hftd n] <;>
+      iwAlloc_specW p hia n, csfW_spec p hg hpw het hc hb hgo hftd cR hcR n] <;>
     finish (gen := 30) (instances := 5000) [fsortsW]
 
 end spec2
@@ -522,7 +522,7 @@ theorem fsortsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     (hS : StageR dn vis fe m a) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
     (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hidx : decHL m io.toNat il.toNat = some idxArgs)
     (hib : io.toNat + il.toNat ≤ iwTop m) (hs : H s) (hnj : nP.toNat + nW.toNat < 2 ^ 64) :
-    Sim (fsortsW n m vis isProp large s nP fo fl io il nW)
+    Sim (fsortsW stubCall n m vis isProp large s nP fo fl io il nW)
       (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs nW.toNat) a
       (fun r xs m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
@@ -552,8 +552,8 @@ include hg hpw het hc hb hgo hia hp hftd
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** (through the stubs
 `fvar_type_d`, `infer_type_core`, `ensure_sort_core`, `lv_leq_top`, `lvl_eq_c`): from the stage
 relation, the field variables and the index arguments decoded below the pool's top, the sorts in a
-fresh `IW` slice. -/
-@[refines ConRon.Arena.checkStructFieldSortsI]
+fresh `IW` slice. Under `StageR`; the census link is `checkStructFieldSortsI_refinesC`
+(`IndT/Sum3.lean`). -/
 theorem checkStructFieldSortsI_refines (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis isProp large s nP fo fl io il nW : Word)
     (fvs idxArgs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
@@ -571,7 +571,7 @@ theorem checkStructFieldSortsI_refines (n : Nat) (s₀ : St) (a₀ : AState)
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs
           idxArgs nW.toNat) a₀); ⊤⦄ := by
-  refine triple_post (fsortsW_spec p hg hpw het hc hb hgo hia hp hftd n s₀ vis isProp large s nP fo fl io il nW) ?_
+  refine triple_post (fsortsW_spec p hg hpw het hc hb hgo hia hp hftd stubCall (stubCall_spec p) n s₀ vis isProp large s nP fo fl io il nW) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd, -⟩ :=
     (fsortsW_ok n _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hS hfvs hfb hidx hib hs hnj).run hm

@@ -314,8 +314,8 @@ theorem ibtW_sim (p : Prog) (hP : CstProg p) (n : Nat) {dn : NIdx → Option Con
 /-- **`check_block_tele` refines `checkBlockTele`** (through `check_constant_val`'s and
 `strip_pis`'s stubs; `nP + nIdx ≥ 2^64` a capacity abort): the member record decoded below the
 tops with its former's constant record below the tops; the checked former below the tops, its
-result sort a handle. -/
-@[refines ConRon.Arena.checkBlockTele]
+result sort a handle. Under `StageR`; the census link is `checkBlockTele_refinesC`
+(`IndT/Install3.lean`). -/
 theorem checkBlockTele_refines (p : Prog) (hP : CstProg p)
     (hp : p.lookup "check_block_tele" = some checkBlockTele) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP ms : Word) (msh : MemberShape)
