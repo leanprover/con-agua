@@ -890,7 +890,8 @@ def recCheckFns : Prog :=
   `block_shape_all_ctors`/`block_rec_lps_ok`/`block_rec_names_unreserved` are `Inductives/
   Positivity.lean`'s and `BlockParts.lean`'s, per the brief's exact conventions.
 * `replace_fvars` is `IndPos`'s `FvMap` replacement; `param_levels` is `IndSum`'s; `sum_rules` is
-  `IndSum`'s `sumRules`, read at a resolved major's parameter count and constructors.
+  `IndSum`'s `sumRules`, read at a resolved major's parameter count and constructors;
+  `er_from_iw` is `IndSum`'s `IW`-to-`EREC` slice copy.
 * `block_rec_name_set_ok(members.off, members.len, recs.off, recs.len)`: the brief left this
   callee's parameter convention unstated (`block_rec_name_set_ok(...)`); this module ASSUMES the
   twin's own argument order, `blockRecNameSetOk (members : List MemberShape) (recs : List
@@ -902,7 +903,7 @@ def recCheckForeign : Prog :=
    ("block_rec_lps_ok", stub 1), ("block_rec_names_unreserved", stub 2),
    ("block_rec_name_set_ok", stub 4), ("block_split", stub 2),
    ("block_shape_major_idx_at", stub 2), ("block_shape_rule_prefix_at", stub 2),
-   ("pi_binders", stub 2), ("sum_rules", stub 7)]
+   ("pi_binders", stub 2), ("sum_rules", stub 7), ("er_from_iw", stub 2)]
 
 /-- The module closes over the library, the stubs and its foreign callees. -/
 theorem recCheck_wf :
