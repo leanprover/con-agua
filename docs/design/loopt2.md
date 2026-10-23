@@ -93,3 +93,20 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
 * The loop's closure (`install_then_check`, 1373 functions of `checkerProg`) writes neither
   `PINS` nor bytes, and every `CTL` index it writes is below 1024: a step keeps the pin flag and
   every array's size (a decided write set, as `LoopDecl`).
+
+## Landing 3: models over a call reading; `check_value_group` under `StageT`
+
+* **`CallM`** (`DeclCvg.lean`): a model reads a call of the core's entry points (and `lvl_eq_c`)
+  through a parameter `c : CallM` (`Nat → FnName → List Word → Mem → Option …`): `stubCall` (the
+  stubs' opaque `stubM`, for the existing `StageR` proofs) or `realCall p` (`callW p`, for the
+  `StageT` ones); `CallSpec p c` is the L side (`stubCall_spec`, `realCall_spec`). `cvgW`,
+  `ccvW`, `dvW`, `tvW` take it; the `StageR` lemmas instantiate `stubCall` and are unchanged
+  otherwise. One model serves both proofs, no copy.
+* **`cvgW_okT`** (`DeclCvgT.lean`): `check_value_group` from `StageT` to `StageT`, the core's
+  entry points from `KnotStageProg`, `lvl_eq_c` from `lvlEqC_simT` (the sort's level reads back
+  by `ensureSort_view` and `StoreDen.sort`, the pinned zero by `StoreDen.zero`), the pool writers by
+  `StageT.of_iw`. `install_value_guards` under `StageT` is still a hypothesis (`IvgT`), until
+  lane `indproofs3`'s `StageT` contracts of the four walks land (`IndStubsT.lean`).
+* `LoopDecl.lean`'s agreement proofs are split into `LoopDeclAgree.lean` (cvg, iv),
+  `LoopDeclArm1.lean`, `LoopDeclArm.lean` (arms): 7.4 GB in one module, under 5 GB each now
+  (RSS of `lake env lean`, `scripts`-less measurement with `resource.getrusage`).
