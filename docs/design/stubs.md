@@ -39,3 +39,8 @@ survives on this path: `e2e.py` compiles the text dump with `DIAG` stubs; only
 **After**: the run is still going (tracing every L error is slow); hand checks of the compiled
 `check` on the 12 smallest fixtures: 3 **accept** (`indexed_nested_aux`, `nat_shiftleft_ok`,
 `nested_pin_names`), 9 `error`. Results and the agreement with the references: next entry.
+
+After merging master (lane loopt2's `LoopDecl` per-function agreement lists): `consts_resolve_ffast`
+is real code in `checkerProg` now, so it moved to `openFns` (`DeclCvg.lean`, the texts' open
+callees: its contract is its stub spec, as for `has_fvar_fast`) and out of `cvgOwn2`, `ivOwn1`,
+`armOwn1` (one `rfl` each fewer). For lane loopt2: mechanical, merge as is.
