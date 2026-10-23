@@ -376,17 +376,24 @@ theorem eagerW_go (h4 : h >>> 28 = 4) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 C
 
 end eagerArms
 
--- Three views: the paths cost ~20 s of `grind` (the default budget runs out).
+theorem del_rd64 (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
+  simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
+
+-- Three views: the `&&` conditions through `L.evalC_spec` (one path per `if`), then `grind`.
 set_option maxHeartbeats 2000000 in
 theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_eager_reduce" [h]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isEagerReduceW s₀.mem h = some (r.headD 0); ⊤⦄ := by
   rw [invoke_eq _ hp.eager]
   simp only [callFn, isEagerReduceL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      pinAt_rd p hp.pinat n] <;>
-    finish [eagerW_tag, eagerW_go, eagerF_tag, eagerF_go, eagerG_tag, eagerG_go, tierW, idxW]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, pinAt_rd p hp.pinat n]
+  all_goals (try simp only [Cond.pval, Expr.pval, del_rd64, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
+    Bool.or_eq_true] at *)
+  all_goals grind [lang_grind, arena_grind, eagerW_tag, eagerW_go, eagerF_tag, eagerF_go,
+    eagerG_tag, eagerG_go, tierW, idxW]
 
 theorem tag_beq_app (h : Word) (hh : HW h) :
     ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
@@ -1160,17 +1167,59 @@ def sameConstHeadsW (p : Prog) (n : Nat) (m : Mem) (a b : Word) : Option (Word �
   else (callW p n "get_app_fn" [rdW (m.arr64 AREC) (idxW a * 4 + tierW a * 2)] m).bind
     (scB1 p n (rdW (m.arr64 AREC) (idxW b * 4 + tierW b * 2)))
 
--- Four views and two calls: the paths cost ~2 min of `grind` (the default budget runs out).
+section schArms
+variable (p : Prog) (n : Nat) (m : Mem) (a b f2 n1 : Word) (r : List Word)
+
+theorem schW_a (ha : ¬ a >>> 28 = 4) : sameConstHeadsW p n m a b = some (0, m) := by
+  simp [sameConstHeadsW, ha]
+theorem schW_b (ha : a >>> 28 = 4) (hs : ¬ (tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (4 + tierW a) ≤ idxW a) (hb : ¬ b >>> 28 = 4) :
+    sameConstHeadsW p n m a b = some (0, m) := by
+  simp only [sameConstHeadsW, ha, hs, hc, hb, ne_eq, not_true_eq_false, not_false_eq_true,
+    ↓reduceIte]
+theorem schW_go (ha : a >>> 28 = 4) (hs : ¬ (tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (4 + tierW a) ≤ idxW a) (hb : b >>> 28 = 4)
+    (hs' : ¬ (tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc' : ¬ rdW (m.arr64 CTL) (4 + tierW b) ≤ idxW b) :
+    sameConstHeadsW p n m a b =
+      (callW p n "get_app_fn" [rdW (m.arr64 AREC) (idxW a * 4 + tierW a * 2)] m).bind
+        (scB1 p n (rdW (m.arr64 AREC) (idxW b * 4 + tierW b * 2))) := by
+  simp only [sameConstHeadsW, ha, hs, hc, hb, hs', hc', ne_eq, not_true_eq_false, ↓reduceIte]
+theorem scB1_tag (h : ¬ r.headD 0 >>> 28 = 3) : scB1 p n f2 (r, m) = some (0, m) := by
+  simp only [scB1, h, ne_eq, not_false_eq_true, ↓reduceIte]
+theorem scB1_go (h : r.headD 0 >>> 28 = 3)
+    (hs : ¬ (tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (18 + tierW (r.headD 0)) ≤ idxW (r.headD 0)) :
+    scB1 p n f2 (r, m) = (callW p n "get_app_fn" [f2] m).bind
+      (scB2 (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2))) := by
+  simp only [scB1, h, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
+theorem scB2_tag (h : ¬ r.headD 0 >>> 28 = 3) : scB2 n1 (r, m) = some (0, m) := by
+  simp only [scB2, h, ne_eq, not_false_eq_true, ↓reduceIte]
+theorem scB2_go (h : r.headD 0 >>> 28 = 3)
+    (hs : ¬ (tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (18 + tierW (r.headD 0)) ≤ idxW (r.headD 0)) :
+    scB2 n1 (r, m) = some (if n1 = rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2)
+      then 1 else 0, m) := by
+  simp only [scB2, h, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
+
+end schArms
+
+-- Four views and two calls. The `&&` conditions go through `L.evalC_spec`; `grind` runs without
+-- `lia`/`linarith`, which otherwise spend minutes on the `>>> 28` tag tests (nothing here needs them).
 set_option maxHeartbeats 2000000 in
 theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "same_const_heads" [a, b]
     ⦃fun r s' => LocEq s' s₀ ∧ sameConstHeadsW p n s₀.mem a b = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.sch]
   simp only [callFn, sameConstHeadsL]
-  sym only [lang_grind, arena_grind, defeq_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "get_app_fn"] <;>
-    finish [sameConstHeadsW, scB1, scB2, Option.bind_some, tierW, idxW]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"]
+  all_goals (try simp only [Cond.pval, Expr.pval, del_rd64, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
+    Bool.or_eq_true] at *)
+  all_goals grind -lia -linarith [lang_grind, arena_grind, schW_a, schW_b, schW_go, scB1_tag,
+    scB1_go, scB2_tag, scB2_go, tierW, idxW]
 
 /-- **`same_const_heads` refines `sameConstHeads`.** -/
 @[refines ConRon.Arena.sameConstHeads]
