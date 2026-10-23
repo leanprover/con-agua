@@ -170,7 +170,6 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
           fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk,
       hS.den.mono hN.lsext (by rw [hN.pins]) (by rw [hN.pins]) (fun _ _ hk => .inl (hN.caches ▸ hk))
-        (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
         (fun x u hv => by simpa only [EStore.view, hN.pers, hN.scr, hN.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hN.pers, hN.scr, hN.son] using hv))
         (hS.den.lvlAll.of_lext (fun u hu => by

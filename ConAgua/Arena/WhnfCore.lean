@@ -374,11 +374,13 @@ def FindProjOK (p : Prog) : Prop :=
 correction** (helper `whnf4-leaves`): at a field `i` below the table's `numFields` (the twin's
 `findProj?` answers no other entry) and universe arguments that are a stored `const` node's list
 (the callers' `us` is; the twin reads them back when the structure is a proposition, and a
-stored `const` node's list reads back, `StoreDen.constLs`). -/
+stored `const` node's list reads back, `StoreDen.constLs`), of a table the environment holds
+(`StoreDen.proj`; `ProjFound` gives it for the table `find_proj` answers). -/
 def FireOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl → i.toNat < tbl.numFields →
+    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
+    (∃ c, fe.find? c = some (.projInfo tbl)) → i.toNat < tbl.numFields →
     (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
@@ -404,12 +406,14 @@ def ErecKept (p : Prog) : Prop :=
 `FindProjOK` equates the twin's lookup with `decEntry`, which is `none` for a record that does not
 decode, so it does not exclude `find_proj` answering `(1, q)` for a `q` that fails to decode (then
 `reduce_proj_head` would read garbage where the twin says `none`). The record is read in the
-memory the call started from (`ErecKept`: the same after it). -/
+memory the call started from (`ErecKept`: the same after it), and it is a table the environment
+holds (what `StoreDen.proj` covers; lane `loopt2`). -/
 def ProjFound (p : Prog) : Prop :=
   ∀ (n : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb T i : Word) (r : List Word) (m' : Mem), CoreS dn m a vis fe M eb →
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
-    ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl
+    ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl ∧
+      ∃ c, fe.find? c = some (.projInfo tbl)
 
 /-- **The projection-table callees** (`find_proj`, `fire_ok`) and their record-pool facts: what
 `reduce_proj_core` and the ι side's `and_rescue_slots`/`major_to_ctor` assume of them. A part of

@@ -323,7 +323,7 @@ theorem findProj_erec {p : Prog} (hp : ProjProg p) {n : Nat} {vs : List Word} {m
     m'.arr64 EREC = m.arr64 EREC :=
   (proj_frame_erec hp (by decide) h).1
 
-/-- **`find_proj` answers a record that decodes** (`ProjFound`). -/
+/-- **`find_proj` answers a record that decodes, a table the environment holds** (`ProjFound`). -/
 theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
   intro n m a₀ dn vis fe M eb T i r m' hS hc hr
   cases n with
@@ -386,7 +386,9 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
   have b6' : rdW (m₂.arr64 EREC) (r₂.tail.headD 0) = 6 := by simpa using b6
   have h6 : (m₂.arr64 EREC)[(r₂.tail.headD 0).toNat]? = some 6 := by
     rw [rdW_some (by rw [b6']; decide), b6']
-  obtain ⟨tbl, -, htbl⟩ := decCI_six hciF h6
-  exact ⟨tbl, by rw [hq2, ← hE1]; exact htbl⟩
+  obtain ⟨tbl, hct, htbl⟩ := decCI_six hciF h6
+  refine ⟨tbl, by rw [hq2, ← hE1]; exact htbl, decI (r₁.headD 0), ?_⟩
+  rw [EnvR.find?_eq hS1.env (r₁.headD 0) hw ht, if_neg z, if_pos ((rowC_lt_iff _ _ z).mp lt), ← hq,
+    hci, hct]
 
 end L.Arena
