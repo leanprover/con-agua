@@ -77,8 +77,15 @@ per-function separation logic.
   List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
   Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
   beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)`, then `all_goals grind [lang_grind,
-  arena_grind, …, model defs]` (26 s; docs/design/slowmods.md). Before writing a spec of an L
-  function, grep for an existing one (ProjFnShapeRef re-proved IndRealIpf's, 290 s).
+  arena_grind, …, model defs]` (26 s; docs/design/slowmods.md). Often faster still, and without
+  `grind`: `vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs, …]` (loads come out
+  as `rd64`, with no bound proofs inside terms) and `all_goals simp_all [LocEq, Expr.pval, ipf_rd64,
+  BinOp.eval, Cmp.eval, St.setLoc*, Locals.init_cons_*, Sig.retVal, Sig.retOr, model def, its
+  `*_some` continuation lemmas]` (RecGenSpec16 241 s -> 11 s, IndInstallSpec28 209 s -> 6 s).
+  Before writing a spec of an L function, grep for an existing one (ProjFnShapeRef re-proved
+  IndRealIpf's, 290 s). A lookup `bigProg.lookup "f" = …` by `rfl` compares `String`s with every
+  name before it, in the elaborator and the kernel: use positions (`chk_lk`/`prog_bundle`,
+  `LoopProgTac.lean`; `front_agree`, `FrontProgAgree.lean`).
 - A long `&&`/`||` chain in an `if` costs `vcgen` one path per exit, and consecutive chains multiply.
   Pass `L.evalC_spec`/`L.evalE_spec` (`L/PureEval.lean`) instead of `evalC`/`evalE`, then
   `simp only [Cond.pval, Expr.pval, …] at *` before `grind`.

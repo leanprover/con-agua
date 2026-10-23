@@ -12,6 +12,10 @@ compare before/after of the same module, not single digits.
 | `ConAgua.Checker.ProjFnShapeRef` | ~290 s (lane's figure) | 2 s, 2.5 GB | `pfs_spec` from `L.Ind.isProjFnShape_specW` (`IndRealIpf.lean`, the same L function's spec by `vcgen` with `L.evalC_spec`) plus `pfsW = ipfW`; its own `vcgen` over `evalC` had ~790 paths |
 | `ConAgua.Arena.DeclCanonExpr` | 442 s, 2.8 GB | 26 s, 2.6 GB | `canonExprEq_spec`: plain `vcgen`, then `simp only` the locals (`setLoc`/`setLocs`/`init9_k`, `Cmp.eval`) at every goal, then `grind`, instead of `sym … => vcgen … <;> finish` |
 | `ConAgua.Checker.FrontProgAgree` | 264 s, 4.3 GB | 15 s, 3.0 GB | `front_agree`: each `checkerProg.lookup f = frontAllProg.lookup f` by position on both sides (`lk_of_idx`, `LoopProgTac.lean`; `lkF_of_idx` from `frontAll_nodup`, one kernel check over name codes), the positions computed once per chunk by compiled code, the proof assigned without the elaborator's `isDefEq`; was `rfl` (141 s elaboration + 122 s kernel comparing `String`s) |
+| `ConAgua.Arena.DeclNatDeps` | 627 s, 4.3 GB | 146 s, 3.9 GB | `natOpDeps_specW`: plain `vcgen`, `simp only` the locals and `a[i.toNat] = rdW a i` (`nd_getElem`), `grind -lia -ring -linarith` with one guarded equation per dispatch arm (`depsArmW_k`); still ~4 s per goal (32 goals; the 15 bound hypotheses of the loads) |
+| `ConAgua.Arena.RecGenSpec16` (helper c) | 241 s, 3.6 GB | 11 s, 2.8 GB | `tmm_spec`: `vcgen` with `L.evalE_spec`, `all_goals simp_all [...]`, no `grind` |
+| `ConAgua.Arena.IndInstallSpec28` (helper c) | 209 s, 4.1 GB | 6 s, 2.9 GB | `icp_spec`, same |
+| `ConAgua.Arena.IndInstallSpec12` (helper c) | 106 s, 3.1 GB | 6 s, 2.8 GB | `icf_spec`, `ica_spec`, same |
 
 ## Findings
 
@@ -34,3 +38,13 @@ compare before/after of the same module, not single digits.
   elaborator and then the kernel compare the name with every name before it as `String`s. By
   position instead (the names are distinct): ~50 ms per lookup. Elaborating the proof term with the
   `rfl` term elaborator costs as much as the kernel check; assign the term from a tactic.
+
+- **Second recipe, `evalE_spec` + `simp_all`** (helper c): with `ld64` in the `vcgen` set, a load's
+  bound hypothesis is used inside later `arr[i]'h` terms, so `simp … at *` cannot rewrite it and
+  `grind` hits instance limits; with `L.evalE_spec` the loads are `rd64` (no proofs inside) and one
+  `simp_all` with the model and its continuation lemmas closes every goal. Mind
+  `-UInt64.not_lt, -UInt64.not_le` where the model tests `x < y` and the L code `!(x < y)`.
+  On `DeclNatDeps` the same `simp_all` looped (step limit even at 4M steps, after `subst_vars`),
+  so that one stays on `grind`.
+- `Scan.Line`'s `lineLoop_spec` (231 s): the time is `vcgen` itself under `sym` (130 s; plain
+  `vcgen` without `sym` ran out of 4M heartbeats after 254 s), plus ~90 `finish`es of ~1 s. Open.
