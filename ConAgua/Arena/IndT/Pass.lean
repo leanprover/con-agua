@@ -188,16 +188,12 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   | some q4 =>
   obtain ⟨r4, m4⟩ := q4
   rw [c4, icpK4_some] at h
-  obtain ⟨s4, hs4, -, hok4, hctx4, hho4, hhob4, hS4, hg4, hin4, hsl4, hhi4, hpn4⟩ :=
-    triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (blockNestCtx_refines p hP.nck hP.nhl hP.bnc (n + 1) _ a3 dn (r1.headD 0) fe1 _ _ _ bs1 cvTas
-      hS3 hbs3 hsrc3 hcv3) c4
-  simp only at hs4 hctx4 hho4 hhob4 hS4 hg4 hin4 hsl4 hhi4 hpn4
-  subst hs4
-  have hrun4 := AM.run_of_ok _ a3 hok4
-  generalize AM.res (ConRon.Arena.blockNestCtx fe1 bs1 cvTas) a3 = x4 at hrun4 hctx4 hho4 hhi4 hpn4
-  generalize AM.st (ConRon.Arena.blockNestCtx fe1 bs1 cvTas) a3 = a4 at hrun4 hS4
-  obtain ⟨c, holes⟩ := x4
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+    (bnc_specC p hP.nck hP.nhl hP.bnc (realCall p) (realCall_spec p) (n + 1) _ _ _ _ _) c4
+  obtain ⟨⟨c, holes⟩, a4, hrun4, hctx4, hho4, hhob4, hS4, hg4, hin4, hsl4, hhi4, hpn4, hA4⟩ :=
+    bncC_simA (realCall p) (n + 1) hS3 hbs3 hsrc3 hcv3
+      (fun _ he => Sim.mono (opfSimRA (n := n + 2) hOpf he hS3 hA3) fun _ _ _ _ h => ⟨h.1.1, h.2⟩)
+      r4 s4.mem hW4
   have x13 : ConRon.Arena.Ext a1.store a3.store := x12.trans x23
   obtain ⟨k4, ⟨ctxP, holesP⟩, ⟨hctx, hholes, hctxOk, hhw, hpar, hlen, hnh, hnP⟩, hF4⟩ :=
     ConRon.Bridge.Inductives.blockNestCtx_spec (μ := V) fe1 henv₁ bs1 p₁P cvTas cvTasP hT a3 a4 _ k3.ok
@@ -211,7 +207,6 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨namesP, lpsP, paramsP, sortP, hctxEq, -, -, hparams, -, -⟩ :=
     ConRon.Bridge.Inductives.dCtx_inv hctx
   have hP4 := PosMR.ofClosed hcl (hfs _ (by decide)) c4 hP3
-  have hA4 : AbsOK s4.mem := hkP _ (by simp [passKeepCallees]) _ _ _ _ _ c4 hA3
   have hC4 := StageC.of_parts hS4 k4.ok hA4 (dnE (x01.trans x14))
   have hg14 := hg13.trans hg4
   -- the classes
