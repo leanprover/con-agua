@@ -78,3 +78,37 @@ The prototype was the same L code, spliced into master's `checker.prog`
 | let-ladder | 2.80 s | 1.80 s |
 | irrel_commit | 0.056 s, 89 MB | 0.042 s, 56 MB |
 | Init (v4.35.0) | 69.1 s, 6.35 GB, accept | 64.5 s, 2.95 GB, accept |
+
+## End-to-end check (the Lean-built program)
+
+`scripts/e2e.py` on the branch (675 fixtures):
+* `check`: 407 agree-accept, 3 agree-reject, 262 agree-reject (L aborts), 2 agree-timeout,
+  1 ref-timeout. No l-error, and no disagreement with `e2e-ref` or con-ron.
+* Capacity: the same 9 fixtures as on master needed `CA_WORDS` 2^25/2^27, so nothing new.
+* `check_np`: one l-timeout, `arena/good/perf/app-lam` at 2^27 words, which hit the 60 s limit
+  while the machine was loaded. Run alone it accepts in 18.3 s (master's `check_np`: 38.7 s).
+* Verdicts, `bench.py --set all --reps 0` comparing master's binary with the branch's, 675
+  fixtures: they differ on one, `e2e/whnf_core_loop`. That fixture loops forever, and the
+  reference times out on it. At 2^27 words master ended in `error` while the branch hit the 600 s
+  limit. Run alone at 2^27, both end at the limits: master after 10.5 min with memo arrays 150,
+  151 and 155 touched to the last page, the branch after 8.3 min. Neither accepts.
+
+## Benchmark of the Lean-built program (`bench.py`, interleaved, base = master's binary)
+
+The machine was loaded (load average 46–106), so the spreads are large.
+
+| set | instructions (geomean) | wall (geomean) |
+|---|---:|---:|
+| default (13 fixtures, 3 rounds) | 1.040 | **0.751** |
+| init (2 fixtures, 2 rounds) | 1.042 | **0.817** |
+
+| fixture | master | branch |
+|---|---:|---:|
+| c04a | 10.0 s, 2.20 GB | 7.95 s, 1.11 GB |
+| beta-ladder | 5.94 s, 1.54 GB | 4.49 s, 1.10 GB |
+| irrel_commit | 0.096 s, 89 MB | 0.070 s, 56 MB |
+| init-prelude | 0.568 s, 458 MB | 0.399 s, 176 MB |
+| Init (v4.35.0) | 78.3 s, 6.42 GB, accept | 74.5 s, 2.95 GB, accept |
+
+Instructions rise by 4% (the prototype: 3%) because `put` reads the header and computes the
+region on every miss, not only on growth.
