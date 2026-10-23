@@ -3829,7 +3829,6 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
 | 146‥149 | `PNM`, `PLM`, `PLSM`, `PEM` | `PMemoR` (`LoopR.pmemo`) | the promotion's four memos (names, levels, level lists, expressions; lane `decls2-promote`) |
 | 192 | `LH` | levels' heap (per call, no relation: scratch) | level-algorithm heap, nodes `[tag, a, b]`, bump-allocated below `CTL[192]` (lane `levels`) |
-| 209 | `PDECL` | – (`builtin_prelude` writes it, `prepare_prelude` reads it) | the prelude's declaration records, moved out of `DECL` after their parse, layout as `DECL` (lane `pipeline`; the prelude's parse no longer has id tables of its own: arrays 208‥213 and `CTL[240‥249]` are free of it, 208 is `MCM`) |
 
 `CTL` words:
 
@@ -3856,6 +3855,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 136‥191 | argument relations (reserved) | |
 | 140‥147 | `PMemoR` | stamp − 1, live count of `PNM`, `PLM`, `PLSM`, `PEM` (lane `decls2-promote`) |
 | 192 | levels' heap (per call) | the heap top (lane `levels`) |
+| 240 | `builtin_prelude` → `prepare_prelude` (lane `pipeline`) | the number of prelude records, `DECL[0‥P)` (the prelude's parse has no id tables of its own any more: arrays 208‥213 and `CTL[241‥249]` are free of it; 208 is `MCM`) |
 
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
 reserved tiers will raise that when they get fields.

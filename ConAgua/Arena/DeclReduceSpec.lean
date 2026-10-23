@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclRomStubs
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.WhnfDeltaRefine
 
@@ -10,6 +11,8 @@ con-leche values (`if c == pin then A else B`). In L: `pin_at(k)`, then `rom_cv`
 of two ids. One model (`selW`) and one relational lemma (`selW_ok`) serve all three; through the
 ROM stubs (`DeclRomStubs.lean`), so census `sorry`.
 -/
+
+noncomputable section
 
 open ConRon.Arena
 open Std.WP
@@ -469,13 +472,13 @@ def rpgK2 (vis e : Word) : Option (List Word × Mem) → Option (List Word × Me
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0], m2)
-    else rpgK3 vis e (stubM "has_fvar_fast" m2 [4000000000, e])
+    else rpgK3 vis e (hffF m2 [4000000000, e])
 
 /-- After the pin. -/
 def rpgK1 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
-    rpgK2 vis (r1.headD 0) (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0])
+    rpgK2 vis (r1.headD 0) (lbbF m1 [4000000000, 0, r1.headD 0])
 
 /-- **The model of `reduce_pin_guard(vis, c)`.** -/
 def rpgW : Nat → Mem → Word → Word → Option (List Word × Mem)
@@ -486,10 +489,10 @@ section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis c e : Word) (r1 r2 r3 r4 r5 : List Word)
 theorem rpgW_step : rpgW p (n + 1) m vis c = rpgK1 vis (callW p n "reduce_decl_pin" [c] m) := rfl
 theorem rpgK1_some : rpgK1 vis (some (r1, m1)) =
-    rpgK2 vis (r1.headD 0) (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) := rfl
+    rpgK2 vis (r1.headD 0) (lbbF m1 [4000000000, 0, r1.headD 0]) := rfl
 theorem rpgK2_some : rpgK2 vis e (some (r2, m2)) =
     if r2.headD 0 = 0 then some ([0], m2)
-    else rpgK3 vis e (stubM "has_fvar_fast" m2 [4000000000, e]) := rfl
+    else rpgK3 vis e (hffF m2 [4000000000, e]) := rfl
 theorem rpgK3_some : rpgK3 vis e (some (r3, m3)) =
     if r3.headD 0 ≠ 0 then some ([0], m3)
     else rpgK4 vis e (stubM "all_level_params_defined" m3 [0, 0, e]) := rfl
@@ -506,7 +509,7 @@ grind_pattern [ind_grind] rpgK3_some => rpgK3 vis e (some (r3, m3))
 grind_pattern [ind_grind] rpgK4_some => rpgK4 vis e (some (r4, m4))
 grind_pattern [ind_grind] rpgK5_some => rpgK5 (some (r5, m5))
 
-theorem rpg_specW (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n : Nat) (s₀ : St)
+theorem rpg_specW (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n : Nat) (s₀ : St)
     (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_pin_guard" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ rpgW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
@@ -517,8 +520,8 @@ theorem rpg_specW (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        callW_spec p n "reduce_decl_pin", stubM_spec p "loose_bvars_bounded_fast" n,
-        stubM_spec p "has_fvar_fast" n, stubM_spec p "all_level_params_defined" n,
+        callW_spec p n "reduce_decl_pin", lbbF_spec p hb n,
+        hffF_spec p hf n, stubM_spec p "all_level_params_defined" n,
         stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
 
@@ -527,7 +530,7 @@ end rpg
 /-- **`reduce_pin_guard(vis, c)` refines `reducePinGuard`** (through the walks' and `rom_expr_pin`'s
 stubs). -/
 @[refines ConRon.Arena.reducePinGuard]
-theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
+theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL) (hb : BvbProg p) (hf : HfF p)
     (hpd : p.lookup "reduce_decl_pin" = some reduceDeclPinL)
     (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
@@ -536,7 +539,7 @@ theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reducePinGuard fe (decI c)) a₀ ∧
       KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (reducePinGuard fe (decI c)) a₀) r
         (AM.res (reducePinGuard fe (decI c)) a₀); ⊤⦄ := by
-  refine triple_post (rpg_specW p hp n s₀ vis c) ?_
+  refine triple_post (rpg_specW p hb hf hp n s₀ vis c) ?_
   rintro r s' ⟨hl, h⟩
   refine ⟨hl, ?_⟩
   suffices ∃ x a', (reducePinGuard fe (decI c)).run a₀ = .ok (x, a') ∧
@@ -563,13 +566,13 @@ theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL
   have h00 : (0 : Word).toNat = 0 := rfl
   have hF : (4000000000 : Word).toNat = coreWalkFuel := rfl
   -- `loose_bvars_bounded_fast`
-  cases h2 : stubM "loose_bvars_bounded_fast" s1.mem [4000000000, 0, e] with
+  cases h2 : lbbF s1.mem [4000000000, 0, e] with
   | none => rw [h2] at h; simp [rpgK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, rpgK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hS1
+    lbbF_ok dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hS1
   rw [hF, h00] at hrun2
   by_cases hb2 : r2.headD 0 = 0
   · rw [if_pos hb2] at h
@@ -583,13 +586,13 @@ theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL
   rw [if_neg hb2] at h
   have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
   -- `has_fvar_fast`
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, e] with
+  cases h3 : hffF m2 [4000000000, e] with
   | none => rw [h3] at h; simp [rpgK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, rpgK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    hasFvarFast_spec dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
+    hffF_ok dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
   rw [hF] at hrun3
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h

@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.IndStubsT
 
@@ -12,6 +13,8 @@ lane `knotwire`), `lvl_eq_c` from lane `whnf`'s `lvlEqC_refines` (`lvlEqC_simT`)
 by their frames (`StageT.of_iw`). `StageT` holds after it: the twin's invariants survive the
 group's check, so the loop can carry them (open end 4, `docs/design/loopt2.md`).
 -/
+
+noncomputable section
 
 open ConRon.Arena
 
@@ -57,23 +60,23 @@ theorem ivgW_okT : IvgT := by
   rw [h1, ivgK1_some] at h
   obtain ⟨-, hr1t, hdec1, hS1R, hg1, htop1⟩ := erToIwW_stage h1 hS.stage hsrc
   have hS1 := StageT.of_iw hS hS1R (erToIwW_frame h1 hS.stage hsrc)
-  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, v] with
+  cases h2 : lbbF m1 [4000000000, 0, v] with
   | none => rw [h2] at h; simp [ivgK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, ivgK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
-    looseBVarsBoundedFastT_spec dn vis fe 4000000000 0 v hv m1 m2 a r2 h2 hS1
+    lbbF_okT dn vis fe 4000000000 0 v hv m1 m2 a r2 h2 hS1
   by_cases hb2 : r2.headD 0 = 0
   · rw [if_pos hb2] at h; simp at h
   rw [if_neg hb2] at h
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, v] with
+  cases h3 : hffF m2 [4000000000, v] with
   | none => rw [h3] at h; simp [ivgK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, ivgK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    hasFvarFastT_spec dn vis fe 4000000000 v hv m2 m3 a2 r3 h3 hS2
+    hffF_okT dn vis fe 4000000000 v hv m2 m3 a2 r3 h3 hS2
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h; simp at h
   rw [if_neg hb3] at h
