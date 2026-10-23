@@ -1,3 +1,4 @@
+import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndT.PosRoot
 import ConAgua.Arena.IndT.Install6
 import ConAgua.Arena.IndInstallSpec34
@@ -29,6 +30,17 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
+
+private theorem pos_mapM_mem {α β : Type} {f : α → Option β} :
+    ∀ {l : List α} {l' : List β}, l.mapM f = some l' → ∀ x ∈ l, ∃ y, f x = some y
+  | [], _, _, _, hx => absurd hx List.not_mem_nil
+  | a :: l, _, h, x, hx => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨y, hy, ys, hys, -⟩ := h
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact ⟨y, hy⟩
+    · exact pos_mapM_mem hys x hx
 
 section sim
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -88,14 +100,41 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
   rw [h2, cbposK2_some] at h
-  obtain ⟨s2, rfl, -, hok2, hS2, hg2, hP2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (nestUniform_refines p hP.nu hP.nuCs hP.nuP (n + 2) _ a1 dn fe vis (r1.headD 0) caO caL c css hS1 hU1
-      hhi1 hlen hcss1 hP1) h2
-  have hrun2 := partsRunOfOk hok2
+  obtain ⟨s2, rfl, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (nestUniform_spec p hP.nu hP.nuCs hP.nuP (realCall p) (realCall_spec p) (n + 2) _ (r1.headD 0) caO caL) h2
+  have hcss1P := ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP
+  have hPc : ∀ cs ∈ css, ∀ x ∈ cs, ∃ cvP, Frontend.denoteCV a1.store x.1 = some cvP := by
+    intro cs hcs x hx
+    obtain ⟨y, hy⟩ := pos_mapM_mem hcss1P cs hcs
+    obtain ⟨z, hz⟩ := pos_mapM_mem hy x hx
+    simp only [ConRon.Bridge.Inductives.dCtor, Option.map_eq_some_iff] at hz
+    obtain ⟨cvP, hcvP', -⟩ := hz
+    exact ⟨cvP, hcvP'⟩
+  obtain ⟨a2, hrun2, hS2, hg2, hP2, hJ2⟩ := unW_ok dn fe vis (r1.headD 0) c hhi1 (realCall p)
+    (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
+    (fun cvv => ∃ cvP, Frontend.denoteCV a1.store cvv = some cvP)
+    (fun _ a' _ cvv hJ hPx _ _ m1' a1' _ b hpd hrun hS1' => by
+      obtain ⟨hCm, hAm, hxm⟩ := hJ
+      obtain ⟨cvP, hcvP'⟩ := hPx
+      obtain ⟨-, -, hty⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP'
+      obtain ⟨hcn, -⟩ := ConRon.Bridge.Inductives.dCtx_fields
+        (ConRon.Bridge.Inductives.dCtx_ext _ hxm _ _ hctx)
+      obtain ⟨p1', -⟩ := ConRon.Bridge.Inductives.piDomsOcc_spec c.names ctxP.names c.nP (c.hiAt 0) c.nP
+        cvv.type cvP.type a' a1' b hCm.check.state ⟨hcn, ConRon.Bridge.denote_ext hty hxm⟩ hrun
+      exact IlpRd.realC hIlpf (hCm.of_pstep hS1' (pdoW_afr _ _ _ _ _ _ _ _ _ _ hpd hAm) p1'))
+    (fun _ _ _ a' a'' _ cvv _ _ hJ hPx _ hrun hS' hA' => by
+      obtain ⟨hCm, hAm, hxm⟩ := hJ
+      obtain ⟨cvP, hcvP'⟩ := hPx
+      obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.nestUniformOk_spec (μ := V) (env := env) (fe := fe)
+        env.find? c ctxP cvv cvP a' a'' _ hCm.check
+        ⟨ConRon.Bridge.Inductives.dCtx_ext _ hxm _ _ hctx, ConRon.Bridge.denoteCV_ext hcvP' hxm⟩ hrun
+      have hAm' := hA' nuAfr hAm
+      exact ⟨hCm.of_cstep hS' hAm' c3, hAm', hxm.trans c3.ext⟩)
+    (n + 2) s1.mem s2.mem a1 caO caL css hw2 hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1
   obtain ⟨c2, -, -, -⟩ := ConRon.Bridge.Inductives.nestUniform_spec (μ := V) (env := env) (fe := fe)
     env.find? c ctxP css cssP a1 _ _ hC1.check
-    ⟨hctx, ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP⟩ hrun2
-  have hA2 : AbsOK s2.mem := hk _ (by simp [posKeepCallees]) _ _ _ _ _ h2 hA1
+    ⟨hctx, hcss1P⟩ hrun2
+  have hA2 : AbsOK s2.mem := hJ2.2.1
   have hC2 := hC1.of_cstep hS2 hA2 c2
   -- the empty state
   cases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with

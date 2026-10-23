@@ -984,6 +984,18 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact ((noW_afr n).1 _ _ _ _ _ _ _ _ _ hg).trans (mclearG_afrS noSch rfl m1)
 
+/-- `pi_doms_occ` keeps `AbsOK`. -/
+theorem pdoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi n e : Word) (r : List Word),
+    pdoW k m no nl lo hi n e = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [pdoW] at h
+  | k + 1, m, m', no, nl, lo, hi, n, e, r, h => by
+    simp only [pdoW, pdoK1.eq_def] at h
+    afr_auto h [noConstWf_afr, pdoW_afr k _ _ _ _ _ _ _ _ _]
+
+/-- **`AbsOK` across `nest_uniform_ok`'s callees** (`nuW_ok`'s last conclusion). -/
+theorem nuAfr : NuAfr :=
+  ⟨fun _ _ _ _ _ _ _ _ _ h => pccW_afr h, pdoW_afr, fun _ _ _ _ _ _ _ _ _ h => noConstWf_afr h⟩
+
 theorem dpW_afr (n : Nat) :
     (∀ (m m' : Mem) (f h r : Word), dpGoW n m f h = some (r, m') → AFr m m') ∧
     (∀ (m m' : Mem) (f1 g x y z r : Word), dpNodeW n m f1 g x y z = some (r, m') → AFr m m') := by
