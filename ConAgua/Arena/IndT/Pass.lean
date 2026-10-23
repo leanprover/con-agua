@@ -87,7 +87,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨r1, m1⟩ := q1
   rw [c1, icpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hout, hA1, hrb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (checkBlockInds_refinesC hkp henv hV hkc hOpf hLC hLT hP.inds (n + 2) (by omega) _ a p0 isRec bs b hC hq hsrc hcx hb hA
+    (checkBlockInds_refinesC hkp henv hV hkc hOpf hLC hP.inds (n + 2) (by omega) _ a p0 isRec bs b hC hq hsrc hcx hb hA
       (fun f hf => hkP f (by simp [passKeepCallees, hf])) hshP hden hcoh) c1
   simp only at hs1 hout
   subst hs1
