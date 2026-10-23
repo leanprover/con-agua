@@ -91,6 +91,94 @@ def clW (m : Mem) (vis g x h : Word) : Option (List Word × Mem) :=
     ntBW (callW p k "env_find" [x, vis] m) fun r mr => some ([r.headD 0], mr)
   else some ([1], m)
 
+/-- The tail of every compound node: probe again, record `r`, return it. -/
+def crfT2 (r : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, mp) => some ([r], mp)
+
+def crfT1 (h r : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rf, mf) => crfT2 r (callW p k "crm_put" [h, 0, r, rf.headD 0, rf.tail.headD 0] mf)
+
+def crfT (m : Mem) (h r : Word) : Option (List Word × Mem) :=
+  crfT1 p k h r (callW p k "crm_find" [h, 0] m)
+
+/-- The `fvar` arm, after the annotation. -/
+def crfFv (h : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, ma) => crfT p k ma h (ra.headD 0)
+
+/-- The two-child arms (`app`, `lam`, `forallE`). -/
+def crfB2 (h a : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, mb) => crfT p k mb h (if a ≠ 0 ∧ rb.headD 0 ≠ 0 then 1 else 0)
+
+def crfB1 (vis f h y : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, ma) => crfB2 p k h (ra.headD 0) (callW p k "crf_go" [vis, f - 1, y] ma)
+
+/-- The `letE` arm. -/
+def crfL3 (h a b : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rc, mc) => crfT p k mc h (if a ≠ 0 ∧ b ≠ 0 ∧ rc.headD 0 ≠ 0 then 1 else 0)
+
+def crfL2 (vis f h w a : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, mb) => crfL3 p k h a (rb.headD 0) (callW p k "crf_go" [vis, f - 1, w] mb)
+
+def crfL1 (vis f h y w : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, ma) => crfL2 p k vis f h w (ra.headD 0) (callW p k "crf_go" [vis, f - 1, y] ma)
+
+/-- The `proj` arm: the child, then the structure name. -/
+def crfP2 (h r : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (re, me) => crfT p k me h (if re.headD 0 ≠ 0 ∧ r ≠ 0 then 1 else 0)
+
+def crfP1 (vis h x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rr, mr) => crfP2 p k h (rr.headD 0) (callW p k "env_find" [x, vis] mr)
+
+/-- `crf_go` on a memo miss at a compound node (the view's words `rv`). -/
+def crfN (m : Mem) (vis f h : Word) (rv : List Word) : Option (List Word × Mem) :=
+  if rv.headD 0 = 1 then crfFv p k h (callW p k "crf_go" [vis, f - 1, rv.tail.tail.headD 0] m)
+  else if rv.headD 0 = 4 ∨ rv.headD 0 = 5 ∨ rv.headD 0 = 6 then
+    crfB1 p k vis f h (rv.tail.tail.headD 0) (callW p k "crf_go" [vis, f - 1, rv.tail.headD 0] m)
+  else if rv.headD 0 = 7 then
+    crfL1 p k vis f h (rv.tail.tail.headD 0) (rv.tail.tail.tail.headD 0)
+      (callW p k "crf_go" [vis, f - 1, rv.tail.headD 0] m)
+  else crfP1 p k vis h (rv.tail.headD 0)
+    (callW p k "crf_go" [vis, f - 1, rv.tail.tail.tail.headD 0] m)
+
+/-- After the probe. -/
+def crfM (vis f h : Word) (rv : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rf, mf) =>
+    if rf.headD 0 ≠ 0 then some ([rdW (mf.arr64 CRM) (rf.tail.headD 0 * 4 + 3)], mf)
+    else crfN p k mf vis f h rv
+
+/-- A leaf's answer. -/
+def crfLf : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, mr) => some ([r.headD 0], mr)
+
+/-- After the view. -/
+def crfV (vis f h : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rv, mv) =>
+    if rv.headD 0 = 0 ∨ rv.headD 0 = 2 ∨ rv.headD 0 = 3 ∨ rv.headD 0 = 8 then
+      crfLf (callW p k "cr_leaf" [vis, rv.headD 0, rv.tail.headD 0, h] mv)
+    else crfM p k vis f h rv (callW p k "crm_find" [h, 0] mv)
+
+/-- `crf_go(vis, f, h)`. -/
+def crfW (m : Mem) (vis f h : Word) : Option (List Word × Mem) :=
+  if f = 0 then none else crfV p k vis f h (callW p k "e_view" [h] m)
+
+/-- `consts_resolve_ffast(vis, e)`. -/
+def crffW (m : Mem) (vis e : Word) : Option (List Word × Mem) :=
+  ntBW (callW p k "crm_clear" [] m) fun _ mc =>
+  ntBW (callW p k "crf_go" [vis, 4000000000, e] mc) fun r mr => some ([r.headD 0], mr)
+
 end models
 
 theorem clpL_none (p : Prog) (k : Nat) (vis : Word) (z : Bool) (ks : List Word) :
@@ -133,5 +221,28 @@ theorem cl_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis g x h : W
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k "is_str_lit",
       callW_spec p k "cr_lit_pins", callW_spec p k "env_find"] <;>
     finish (gen := 20) [clW, ntBW]
+
+set_option maxHeartbeats 6400000 in
+theorem crf_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis f h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "crf_go" [vis, f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ crfW p k s₀.mem vis f h = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.go]
+  simp only [callFn, crfGo]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p k "e_view", callW_spec p k "cr_leaf", callW_spec p k "crm_find",
+      callW_spec p k "crm_put", callW_spec p k "crf_go", callW_spec p k "env_find"] <;>
+    finish (gen := 20) [crfW, crfV, crfLf, crfM, crfN, crfP1, crfP2, crfL1, crfL2, crfL3,
+      crfB1, crfB2, crfFv, crfT, crfT1, crfT2]
+
+theorem crff_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "consts_resolve_ffast" [vis, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ crffW p k s₀.mem vis e = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.entry]
+  simp only [callFn, constsResolveFFastL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k "crm_clear",
+      callW_spec p k "crf_go"] <;>
+    finish (gen := 20) [crffW, ntBW]
 
 end L.Stubs
