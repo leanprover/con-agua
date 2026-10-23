@@ -66,16 +66,16 @@ theorem pirf_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL) (n 
 /-- The model of `ctor_family(vis, c)` (callees at fuel `n`). -/
 def cfW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "env_find" [c, vis] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0, 0], m1) else
-  if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 4 then some ([0, 0], m1) else
+  if r1.headD 0 = 0 then some ([0, 0, 0], m1) else
+  if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 4 then some ([0, 0, 0], m1) else
   ntBW (callW p n "pi_result_f" [CWF, rdW (m1.arr64 EREC) (r1.tail.headD 0 + 4)] m1) fun r2 m2 =>
   ntBW (callW p n "get_app_fn_f" [CWF, r2.headD 0] m2) fun r3 m3 =>
-  if r3.headD 0 >>> 28 ≠ 3 then some ([r1.tail.headD 0, 0], m3) else
+  if r3.headD 0 >>> 28 ≠ 3 then some ([r1.tail.headD 0, 0, 0], m3) else
   ntBW (callW p n "const_name_of" [r3.headD 0] m3) fun r4 m4 =>
   ntBW (callW p n "env_find" [r4.headD 0, vis] m4) fun r5 m5 =>
-  if r5.headD 0 = 0 then some ([r1.tail.headD 0, 0], m5) else
-  if rdW (m5.arr64 EREC) (r5.tail.headD 0) ≠ 3 then some ([r1.tail.headD 0, 0], m5) else
-  some ([r1.tail.headD 0, r5.tail.headD 0], m5)
+  if r5.headD 0 = 0 then some ([r1.tail.headD 0, 0, 0], m5) else
+  if rdW (m5.arr64 EREC) (r5.tail.headD 0) ≠ 3 then some ([r1.tail.headD 0, 0, 0], m5) else
+  some ([r1.tail.headD 0, r5.tail.headD 0, 1], m5)
 
 theorem cf_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamily) (n : Nat) (s₀ : St)
     (vis c : Word) :
@@ -92,7 +92,7 @@ theorem cf_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamily) (n : 
 /-- The model of `rec_rule_k_of(vis, c)`. -/
 def kofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "ctor_family" [vis, c] m) fun r m1 =>
-  if r.tail.headD 0 = 0 then some ([0], m1) else
+  if r.tail.tail.headD 0 = 0 then some ([0], m1) else
   if rdW (m1.arr64 EREC) (r.tail.headD 0 + 11) ≠ 0 ∧ rdW (m1.arr64 EREC) (r.headD 0 + 6) = 0 then
     some ([1], m1)
   else some ([0], m1)
@@ -110,7 +110,7 @@ theorem kof_spec (p : Prog) (hp : p.lookup "rec_rule_k_of" = some recRuleKOfL) (
 /-- The model of `rec_rule_eta_of(vis, c)`. -/
 def eofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "ctor_family" [vis, c] m) fun r m1 =>
-  if r.tail.headD 0 = 0 then some ([0], m1) else
+  if r.tail.tail.headD 0 = 0 then some ([0], m1) else
   if rdW (m1.arr64 EREC) (r.tail.headD 0 + 5) = 0 then some ([0], m1) else
   if rdW (m1.arr64 EREC) (r.tail.headD 0 + 6) ≠ c then some ([0], m1) else
   ntBW (callW p n "er_sl_eq" [rdW (m1.arr64 EREC) (r.headD 0 + 2), rdW (m1.arr64 EREC) (r.headD 0 + 3),
