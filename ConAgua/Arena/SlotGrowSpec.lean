@@ -110,6 +110,13 @@ theorem growIf_keep (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word
     (h : ¬ gnW sa m₀ < (c + 1) * 2) : growIf sa ca H m₀ m c = some m := by
   simp [growIf, h]
 
+/-- **The growth writes only the slot array** (and keeps every size). -/
+theorem growIf_frame (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m m' : Mem)
+    (c : Word) (h : growIf sa ca H m₀ m c = some m') :
+    (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
+      m'.words.size = m.words.size := by
+  sorry
+
 /-- The schema's `hash` block, spliced at `o`, sets `h` (`o + 5`) to `H m t i` (`t` at `o + 2`,
 `i` at `o + 3`) and changes nothing else. -/
 def HashOK (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word) : Prop :=
