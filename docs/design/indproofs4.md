@@ -299,3 +299,64 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
 * grc: `gen_rec_check_prep` has three capacity guards, so the `hsz`/`hnP` 2^63 bounds are gone everywhere. `PassGrcOK` lost its nP conjunct.
 * slow helper: IndSumSpec12 498→45 s, IndInstallSpec17 152→9, IndSumSpec5 138→53, RecClassSpecN 134→44, K 120→27, B 62→10.
 * Build note: the RSS-sum guard double-counts the mmapped oleans that lean processes share, and it killed a full rebuild at 20–26 GB "RSS" while the real (PSS) peak was 12 GB. Use `_tmp/indproofs4/pssguard.sh`.
+
+## Helper `indproofs4-memo`: the walk-memo stubs (`instantiate1_lift_fast`, `consts_resolve_ffast`)
+
+Discharged (contracts deleted): `instantiate1LiftFast_spec`. Switched at the inductive stage (contract
+kept for its other users): `constsResolveFFast_spec`.
+
+* **One bundled predicate.** `AbsOK` (`IndStubs.lean`) is now the four walk memos outside `StageR`:
+  `AbMemo` (array 49, `CTL[48]`, helper `abs`'s), `I1Memo` (51 / `CTL[52]`, `i1lSch`), `CrMemo`
+  (155 / `CTL[158]`, lane `tails`' `CrOK`, definitionally) and `IlMemo` (50 / `CTL[50]`, `ilSch`;
+  not used yet, for `open_pis_at_fvars_f`). The name stays (rename later by `sed`): every theorem
+  helper `abs` threaded carries the new memos for free, and the in-flight files
+  `IndInstallSpec31/35/37` needed one-line edits only. Frames: `memoFreeA`/`memoFreeC` (the four
+  arrays and epoch words), `AbsOK.frameD`, `AFr.of_frame` (defaults unchanged in use);
+  `AbMemo.frame`, `I1Memo.frame`, `CrMemo.frame`, `IlMemo.frame` for a walk that writes one of them.
+  `TwinOK.absOK`/`StageT.absOK` now take `I1Memo m` and `CrMemo m` (not in `CoreMemos`; loopt3's
+  `LoopT` memo clause has `CrOK`). `stubM_absOK` covers all four.
+* **`instantiate1_lift_fast`** (`Arena/IndRealMemo.lean`): `i1lF := callF i1lP …` (the walk, `bvar_b`'s
+  and `lift_entry`'s programs; write set `i1lA`/`i1lC`, below 64), `keeps_i1lFast` (the twin keeps
+  `cp`), `i1lF_ok` (`StageR ∧ AbsOK` → `KeepPost … decW0E ∧ AbsOK`): the twin's run from `a` is the
+  run from `withI1C a mp` (`i1lFast_run`: it clears `inst1LC` at entry), so `i1lFast_refines` applies
+  with `I1Memo`'s map. **L change**: `instantiate1_lift_fast` returns `r & 4294967295`, as
+  `abs_entry` and `inst_entry` do (the result word must be a handle for `decW0E`; a memo hit returns a
+  stored word with no bound); `i1lFastW_correct`/`i1lFast_refines` give the bound (no deviation: the
+  twin's handles are 32-bit). Bundle `I1lF`, `checkerProg_i1l` (`Checker/IndRealMemo.lean`).
+* **Threading (i1l)**: `pbW_ok`, `spbW_ok`, `structProjBodies(Go)_refines` (`IndSumSpec6`), `tblW_ok`,
+  `checkStructProjTable_refines` (`IndSumSpec14`, hypothesis only), `tblW_okM` (`IndInstallSpec26`),
+  `ctoW_sim`, `ctbW_sim`, `checkBlockTables_refines` (`IndInstallSpec27`, hypothesis and post). At
+  the tail (`IndInstallSpec31`) the post replaces the program fact `AbsKeep p "check_block_tables"`;
+  `struct_proj_guards` (its walk `ulW` has no `AFr` lemma) is the new `AbsKeep` callee
+  (`tablesKeepCallees`, in `tailKeepCallees`). `TblProg` got `hi1 : I1lF p`.
+* **`consts_resolve_ffast`** (`Arena/IndRealCrF.lean`, low: the model `crfF := callF crfP …`, `crfP`
+  = `crfProg` and its six reads, write set `[155] [158, 159]`; `Arena/IndRealMemoCr.lean`, above
+  lane `tails`' `ConstsResolveFRefine2`: `crfF_ok`, `StageR ∧ AbsOK` → `KeepPost … decW0B ∧ AbsOK`,
+  from `constsResolveFFast_refines` at `crfP` by `relW_callF`). `ConstsResolveFRefine2` imports
+  `IndSumSpec2A` (whose models call it), so the relational lemmas `fdrW_ok`, `iarW_ok` and the census
+  theorems `fieldDomsResolve_refines`, `idxArgsResolve_refines`, `classRuleOkDomains_refines` moved
+  to the new `IndSumSpec2C.lean`. The model's `AFr` is not memory-only (the walk rewrites its memo),
+  so every chain through it takes `AbsOK` from the relational post: `iarW_afr`, `crgW_afr`,
+  `cruleW_afr`, `cr1W_afr` are gone, `cr1W_rel`/`cruleW_ok`/`crgW_ok` return `AbsOK`.
+* **Threading (crf)**: `sctW_ok` (`IndSumSpec14`); `crgW_ok`, `cruleW_ok`, `classRuleOk_refines`
+  (`RecGenSpec4`), `cr1W_rel`, `crsW_sim` (`RecGenSpec9`); the sum-constructor chain `fdrSim`,
+  `iarSim`, `ctlW_ok`, `ctorW_ok`, `checkSumCtor_refines` (`IndSumSpec12`), `sctsW_ok`,
+  `checkSumCtors_refines` (`IndSumSpec13`), `installSimSumCtors` (`IndInstallSpec22`), `icboW_sim`,
+  `icbgW_sim`, `checkBlockCtors_refines` (`IndInstallSpec23`, hypothesis only; `check_block_pass`
+  keeps `AbsKeep p "check_block_ctors"` for the post). New memory-only `AFr` lemmas for the models on
+  the way: `srW_afr`, `domsW_afr`/`sdomsW_afr`, `psGoW_afr`/`psAtW_afr`, the `param_levels` ones
+  (moved from `RecGenSpec9` to `IndSumSpec4`), `cfbW_afr`, `csfW_afr`, `fsortsW_afr`, `eqTrueW_afr`,
+  `lpsW_afr` (moved to `IndInstallSpec23`). `Sim.withFr` moved to `IndSim.lean`. Bundles: `SumProg`,
+  `CruleProg`, `TblProg` got `hcr : CrfF p`; `checkerProg_crf`.
+* **Not switched**: `constsResolveFFast_spec` stays for lane `loopt2`/`loopt3`'s declaration files
+  (`DeclCvg`, `DeclDivMod5/6`, `DeclReduceSpec`, `DeclHeader`) and for `ihW` (`DeclHeader`'s
+  `install_header` model, which `RecGenSpec3`'s `class_const_ok` reuses): those would need `AbsOK`
+  (or `CrOK`) threaded through the declaration arms. `constsResolveFFastT_spec` (`StageT`) likewise:
+  its users (`DeclCrpT`, `DeclCvgT`, `DeclValT`, `DeclDivGateT1`) have `CrOK` only in `LoopT`'s memo
+  clause, not at the call; a `StageT ∧ CrOK` version of `crfF_ok` plus that threading is loopt3's.
+* **`open_pis_at_fvars_f`: not done.** No refinement of `openPisAtFvarsF`/`…FGo`/`openPisAtFvars`
+  exists (phase 2 `written`): it needs `opf_go` against `openPisAtFvarsFGo` (the `SPN` slice as
+  `acc`, `inst_list` under `ArenaL` with `IlMemo`, `intern_fvar`, `spn_push`), the fallback `opa_go`
+  (`inst_entry`), and `spn_to_iw` for the result slice; then the same threading as `crf` for its
+  eleven users (`IndInstallSpec3/7/10/18/20`, `RecClassSpec(B,D)`, `RecGenSpec26`, `IndSumSpec12`),
+  where `opf`'s `AFr` is again only relational. `IlMemo` is in `AbsOK` already.
