@@ -216,10 +216,13 @@ def keyArgs (nk : Nat) (extra : List Expr) : List Expr := (List.range nk).map .v
 def ciFind (C : ConsSch) (t : Word) : Stmt :=
   .call [2 + C.nk, 3 + C.nk, 4 + C.nk, 5 + C.nk] C.fname (.const t :: keyArgs C.nk [.var C.nk])
 
+/-- The hash as a push input, if the record stores it. -/
+def hOpt (C : ConsSch) : List Expr := if C.nk < C.np then [.var C.nk] else []
+
 /-- `i := call X_push(t, k…, j)` (the push's record inputs: the key, then `h` if `np > nk`). -/
 def ciPush (C : ConsSch) (t : Word) : Stmt :=
   .call [3 + C.nk] C.pname
-    (.const t :: keyArgs C.nk ((if C.nk < C.np then [.var C.nk] else []) ++ [.var (4 + C.nk)]))
+    (.const t :: keyArgs C.nk (hOpt C ++ [.var (4 + C.nk)]))
 
 /-- `if fd != 0 { return B + i }`. -/
 def ciHit (C : ConsSch) (B : Word) : Stmt :=

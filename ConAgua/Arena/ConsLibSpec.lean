@@ -65,6 +65,9 @@ theorem argsOf_setLoc_add (base nk a : Nat) (ha : base ≤ a) (s : St) (v : Word
 theorem zero_ne_add (a nk : Nat) (h : 0 < a) : (0 = a + nk) = False := by
   simp only [eq_iff_iff, iff_false]; omega
 
+theorem self_ne_add (a nk : Nat) (h : 0 < a) : (nk = a + nk) = False := by
+  simp only [eq_iff_iff, iff_false]; omega
+
 theorem rd64_rdW (m : Mem) (a : ArrId) (i : Word) : rd64 m a i = rdW (m.arr64 a) i := by
   simp [rd64, rdW, Array.getD_eq_getD_getElem?]
 
@@ -156,8 +159,7 @@ def IHashOK : Prop :=
   ∀ (k : Stmt → M Sig) (s₀ : St),
     ⦃fun s => s = s₀⦄
     step p k C.ihash
-    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧
-      LocEq s' (s₀.setLoc C.nk (C.qhM s₀.mem (argsOf 0 C.nk s₀))); ⊤⦄
+    ⦃fun r s' => r = .normal ∧ s' = s₀.setLoc C.nk (C.qhM s₀.mem (argsOf 0 C.nk s₀)); ⊤⦄
 
 /-- **The skip word** is `skM` of the key. -/
 def SkipOK : Prop :=
@@ -447,5 +449,159 @@ theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
   simp only [List.length_singleton, List.singleton_append] at ek
   vcgen [consPushG_specV p C hO hp n s₀]
   all_goals simp_all [Locals.init_cons_zero]
+
+/-! ## `intern_X`: the model and the spec -/
+
+/-- The scratch-skip word `intern_X` computes: the table's skip word if the scratch tier is open. -/
+def skipC (C : ConsSch) (m : Mem) (ks : List Word) : Word :=
+  match C.skipW with
+  | some _ => if rdW (m.arr64 CTL) 1 ≠ 0 then C.skM ks else 0
+  | none => 0
+
+/-- The push's inputs: the key, and the hash if the record stores it. -/
+def pushArgs (C : ConsSch) (ks : List Word) (h : Word) : List Word :=
+  ks ++ (if C.nk < C.np then [h] else [])
+
+/-- The append of the key's record to tier `t` at slot `j`, with the handle (base `B`). -/
+def pushC (C : ConsSch) (m : Mem) (t B : Word) (ks : List Word) (h j : Word) : Option (Word × Mem) :=
+  if pushOKC C m t then
+    match growIf C.sa C.ca C.hsM m (pushMC C m t (C.vsM (pushArgs C ks h)) j (cntC C m t))
+      (cntC C m t) with
+    | some m' => some (B + cntC C m t, m')
+    | none => none
+  else none
+
+/-- The probe of tier `t` for key `ks` (hash `h`). -/
+def probeC (C : ConsSch) (m : Mem) (ks : List Word) (h t : Word) : List Word :=
+  cprobeW (m.arr64 C.sa) (C.mtM m ks t) t (baseW m t) (gnW C.sa m) (homeW h (gnW C.sa m)) 0
+
+/-- **The L model of `intern_X(k)`**: the handle and the memory after, `none` where the L code
+aborts. The persistent probe unless skipped, the scratch probe if the scratch tier is open, the
+append to the tier the store is in. -/
+def consInternM (C : ConsSch) (m : Mem) (ks : List Word) : Option (Word × Mem) :=
+  let h := C.qhM m ks
+  let rs₀ := probeC C m ks h 0
+  let rs₁ := probeC C m ks h 1
+  if skipC C m ks = 0 ∧ rs₀ = [] then none
+  else if skipC C m ks = 0 ∧ rs₀.headD 0 ≠ 0 then some (C.P + rs₀.tail.headD 0, m)
+  else if rdW (m.arr64 CTL) 1 ≠ 0 then
+    if rs₁ = [] then none
+    else if rs₁.headD 0 ≠ 0 then some (C.S + rs₁.tail.headD 0, m)
+    else pushC C m 1 C.S ks h (rs₁.tail.tail.headD 0)
+  else pushC C m 0 C.P ks h (rs₀.tail.tail.headD 0)
+
+theorem ConsOK.ihash_spec {p : Prog} {C : ConsSch} (hO : ConsOK p C) (k : Stmt → M Sig) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p k C.ihash
+    ⦃fun r s' => r = .normal ∧ s' = s₀.setLoc C.nk (C.qhM s₀.mem (argsOf 0 C.nk s₀)); ⊤⦄ :=
+  hO.ihash k s₀
+
+theorem evalArgs_spec (es : List Expr) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ evalArgs es ⦃fun vs s' => s' = s₀ ∧ vs = es.map (Expr.pval s₀); ⊤⦄ := by
+  induction es with
+  | nil => vcgen [evalArgs] <;> grind
+  | cons e es ih => vcgen [evalArgs, evalE_spec e s₀, ih] <;> grind
+
+theorem map_keyArgs (nk : Nat) (extra : List Expr) (s : St) :
+    (keyArgs nk extra).map (Expr.pval s) = argsOf 0 nk s ++ extra.map (Expr.pval s) := by
+  simp [keyArgs, argsOf, Expr.pval]
+
+theorem argsOf_self (m : Mem) (ks : List Word) (k : Nat) (h : ks.length = k) :
+    argsOf 0 k { mem := m, loc := Locals.init ks } = ks := by
+  subst h; simpa using argsOf_init [] ks [] m
+
+theorem argsL_app (t : Word) (ks rest : List Word) (k : Nat) (h : ks.length = k) :
+    argsL 1 k (t :: (ks ++ rest)) = ks := by
+  subst h; simpa using argsL_eq [t] ks rest ks.length rfl
+
+theorem init_app_past (t : Word) (ks rest : List Word) (k a : Nat) (h : ks.length = k) :
+    Locals.init (t :: (ks ++ rest)) (a + 1 + k) = Locals.init rest a := by
+  subst h; simpa [Nat.add_assoc, Nat.add_comm] using init_past [t] ks rest a
+
+theorem keyArgs_len (nk : Nat) (extra : List Expr) : (keyArgs nk extra).length = nk + extra.length := by
+  simp [keyArgs]
+
+theorem map_hOpt (C : ConsSch) (s : St) :
+    (hOpt C).map (Expr.pval s) = if C.nk < C.np then [s.loc C.nk] else [] := by
+  unfold hOpt; split <;> simp [Expr.pval]
+
+theorem argsL_push (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (t h j : Word)
+    (ks : List Word) (hks : ks.length = C.nk) :
+    argsL 1 C.np (t :: (ks ++ ((if C.nk < C.np then [h] else []) ++ [j]))) = pushArgs C ks h := by
+  unfold pushArgs
+  rw [← List.append_assoc]
+  apply argsL_app
+  split <;> simp <;> omega
+
+theorem init_push_j (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (t h j : Word)
+    (ks : List Word) (hks : ks.length = C.nk) :
+    Locals.init (t :: (ks ++ ((if C.nk < C.np then [h] else []) ++ [j]))) (1 + C.np) = j := by
+  rw [← List.append_assoc]
+  apply init_last
+  split <;> simp <;> omega
+
+/-- **`intern_X(k)`** returns the handle and the memory of `consInternM`. -/
+theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
+    (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
+    (fn : FnName)
+    (hpi : p.lookup fn = some (consInternG C)) (n : Nat) (s₀ : St) (ks : List Word)
+    (hks : ks.length = C.nk) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) fn ks
+    ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
+  have hn := hO.push_np
+  rw [invoke_eq _ hpi]
+  simp only [callFn]
+  cases hsk : C.skipW with
+  | some e =>
+    have he := hO.skips e hsk
+    simp only [consInternG, hsk, seqs, ciFind, ciHit, ciScr, ciEnd, ciPush, ciOpen]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec,
+        consFindG_specV p C hO.match_ hpf n, consPushG_specV p C hO hpp n]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, List.map_cons, map_keyArgs,
+        List.map_append, map_hOpt] at *)
+      all_goals subst_vars
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, hO.skips e hsk,
+        Nat.left_eq_add, Nat.add_eq_left, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+        argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
+        argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+        argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+        argsOf_self _ ks C.nk hks, argsL_app _ ks _ C.nk hks, Locals.init_cons_zero,
+        init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+        argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
+        self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
+      all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+        bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr] at *)
+      all_goals (simp_all)
+  | none =>
+    simp only [consInternG, hsk, seqs, ciFind, ciHit, ciScr, ciEnd, ciPush, ciOpen]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec,
+        consFindG_specV p C hO.match_ hpf n, consPushG_specV p C hO hpp n]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+        List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
+        Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdW, List.map_cons, map_keyArgs,
+        List.map_append, map_hOpt] at *)
+      all_goals subst_vars
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem,
+        Nat.left_eq_add, Nat.add_eq_left, Nat.add_right_cancel_iff, Nat.reduceEqDiff,
+        argsOf_setLoc 0 C.nk C.nk (by omega), argsOf_setLoc_add 0 C.nk 1 (by omega),
+        argsOf_setLoc_add 0 C.nk 2 (by omega), argsOf_setLoc_add 0 C.nk 3 (by omega),
+        argsOf_setLoc_add 0 C.nk 4 (by omega), argsOf_setLoc_add 0 C.nk 5 (by omega),
+        argsOf_self _ ks C.nk hks, argsL_app _ ks _ C.nk hks, Locals.init_cons_zero,
+        init_last _ ks _ C.nk hks, init_past2 _ ks _ C.nk 4 hks (by decide),
+        argsL_push C hn _ _ _ ks hks, init_push_j C hn _ _ _ ks hks, List.map_nil,
+        self_ne_add 1 C.nk (by decide), ↓reduceIte] at *)
+      all_goals (simp only [consInternM, skipC, hsk, probeC, pushC, Sig.retVal, List.headD_cons,
+        bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr] at *)
+      all_goals (simp_all)
+
 
 end L.Arena
