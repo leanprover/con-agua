@@ -228,7 +228,8 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident term
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
     -- the trampoline
     let trampN := name ++ `tramp
-    let trE := mkApp3 (mkConst ``trampoline) tabE entryE (mkApp3 (mkConst ``nrOf) nrtE tabE entryE)
+    let trE := mkApp4 (mkConst ``trampoline) tabE entryE (mkApp3 (mkConst ``nrOf) nrtE tabE entryE)
+      (mkApp2 (mkConst ``entryNp) pE entryE)
     declLit trampN trE "" (← evalProgram trE)
     -- the functions (those not declared yet by `asm_lit_fns`)
     let elems ← listElemsW pE
