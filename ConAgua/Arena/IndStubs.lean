@@ -214,19 +214,6 @@ theorem isProjFnShape_spec (n : Word) (hn : H n) :
     RelAM "is_proj_fn_shape" [n] (StageR dn vis fe)
       (NIdx.isProjFnShape (decI n)) (KeepPost dn vis fe decW0B) := sorry
 
-/-- `reserved_rec_name(n)`. -/
-theorem reservedRecName_spec (n : Word) (hn : H n) :
-    RelAM "reserved_rec_name" [n] (StageR dn vis fe)
-      (reservedRecName (decI n)) (KeepPost dn vis fe decW0B) := sorry
-
-/-- `rec_rule_bits(vis, ctor)`: the two bits `recRuleBits` writes (`k`, `eta`), which depend on the
-rule's constructor only. -/
-theorem recRuleBits_spec (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
-    RelAM "rec_rule_bits" [vis, c] (StageR dn vis fe)
-      (recRuleBits fe rl)
-      (KeepPost dn vis fe (fun _ r (x : IRecRule) =>
-        x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) := sorry
-
 /-- `ind_params_ok(nP, off, len)` (the block's constant records, an `IW` list of `EREC`
 pointers). -/
 theorem indParamsOk_spec (nP o l : Word) (blk : List IConstantInfo) :

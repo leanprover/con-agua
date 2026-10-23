@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndPartsSpec3
 import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndReal
 
 /-!
 # Refinements of `IndParts`, part 4 (lane `indproofs`, helper `parts`)
@@ -31,7 +32,7 @@ def recUW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | n + 1, m, ro, rl =>
     if rl = 0 then some ([1], m)
     else recUK1 n ro rl
-      (stubM "reserved_rec_name" m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
+      (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
 
 /-- After `reserved_rec_name`. -/
 def recUK1 (n : Nat) (ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -49,7 +50,7 @@ section arms
 variable (n : Nat) (m m1 m2 : Mem) (ro rl : Word) (r1 r : List Word)
 theorem recUW_nil (h : rl = 0) : recUW (n + 1) m ro rl = some ([1], m) := by simp [recUW, h]
 theorem recUW_cons (h : rl ≠ 0) : recUW (n + 1) m ro rl = recUK1 n ro rl
-    (stubM "reserved_rec_name" m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
+    (rrnF m [rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
   simp [recUW, h]
 theorem recUK1_hit (h : r1.headD 0 ≠ 0) : recUK1 n ro rl (some (r1, m1)) = some ([0], m1) := by
   simp only [recUK1]; rw [if_pos h]
@@ -67,7 +68,8 @@ grind_pattern [ind_grind] recUK2_some => recUK2 (some (r, m2))
 
 section spec
 variable (p : Prog) (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved)
-include hp
+  (hrrn : RrnF p)
+include hp hrrn
 
 theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_names_unreserved" [ro, rl]
@@ -82,7 +84,7 @@ theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
     simp only [callFn, blockRecNamesUnreserved]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "reserved_rec_name" n, ih] <;>
+        rrnF_spec p hrrn n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 end spec
@@ -167,13 +169,13 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
           rdW (m.arr64 EREC) (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h
-      cases hra : stubM "reserved_rec_name" m [rdW (m.arr64 EREC) (UInt64.ofNat a0)] with
+      cases hra : rrnF m [rdW (m.arr64 EREC) (UInt64.ofNat a0)] with
       | none => rw [hra] at h; simp [recUK1] at h
       | some rm1 =>
       obtain ⟨r1, m1⟩ := rm1
       rw [hra] at h
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
-        reservedRecName_spec dn vis fe _ hn32 m m1 a r1 hra hS
+        rrnF_ok dn vis fe _ hn32 m m1 a r1 hra hS
       rw [hnI] at hrun1
       by_cases hhit : r1.headD 0 ≠ 0
       · rw [recUK1_hit n m1 ro rl r1 hhit] at h
@@ -209,12 +211,12 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         · rw [hr2]; simp
 
 
-/-- **`block_rec_names_unreserved` refines `blockRecNamesUnreserved`** (through the stub
-`reserved_rec_name`). The recursor records must keep decoding as the pool grows (`hstab`: every
+/-- **`block_rec_names_unreserved` refines `blockRecNamesUnreserved`** (through `reserved_rec_name`'s
+refinement, `rrnF_ok`). The recursor records must keep decoding as the pool grows (`hstab`: every
 record lies below the pool's top). -/
 @[refines ConRon.Arena.blockRecNamesUnreserved]
 theorem blockRecNamesUnreserved_refines (p : Prog)
-    (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved)
+    (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved) (hrrn : RrnF p)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis ro rl : Word) (recs : List RecShape) (hS : StageR dn vis fe s₀.mem a₀)
     (hstab : ∀ m'', IWGrow s₀.mem m'' → decPL m'' (decRS m'') ro.toNat rl.toNat = some recs)
@@ -225,7 +227,7 @@ theorem blockRecNamesUnreserved_refines (p : Prog)
       r = [if AM.res (ConRon.Arena.blockRecNamesUnreserved recs) a₀ then 1 else 0] ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockRecNamesUnreserved recs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (blockRecNamesUnreserved_spec p hp n s₀ ro rl) ?_
+  refine triple_post (blockRecNamesUnreserved_spec p hp hrrn n s₀ ro rl) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun, hr, hS', hg⟩ := recUW_ok n dn fe vis s₀.mem s₀.mem s'.mem a₀ ro rl r recs hm
     (IWGrow.refl _) hS hstab hb
