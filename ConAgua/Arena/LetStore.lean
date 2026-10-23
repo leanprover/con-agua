@@ -37,6 +37,9 @@ abbrev LEREC : ArrId := 20
 /-- The `letE` cons-table slots, both tiers interleaved. -/
 abbrev LESLOT : ArrId := 21
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def letGS : GrowSch := ⟨LESLOT, LEREC, 3, 20, LESLOT_G, 3⟩
+
 /-- The hash of a `letE` record (FNV-1a over its three words). -/
 def letHashW (ty val body : Word) : Word :=
   (((fnvBasis ^^^ ty) * fnvPrime ^^^ val) * fnvPrime ^^^ body) * fnvPrime
@@ -106,7 +109,7 @@ def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w, b) {
-  n := len(LESLOT.u64) >> 1;
+  n := ⟪SN0⟫ << LESLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lefindLoop⟫;
@@ -142,7 +145,7 @@ theorem lefindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `letE` table. -/
-def nSlotsLe (m : Mem) : Word := m.len64 LESLOT >>> 1
+def nSlotsLe (m : Mem) : Word := SN0 <<< m.glob LESLOT_G
 
 include hp in
 theorem letFind_spec (n : Nat) (s₀ : St) (t ty val body h : Word) :
@@ -181,17 +184,17 @@ def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
+def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gr) {
   c := CTL.u64[20 + t];
   if c >= 134217728 { abort };
   if len(LEREC.u64) < (c + 1) * 6 { abort };
-  if ((len(LESLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
   LEREC.u64[k] := ty;
   LEREC.u64[k + 1] := val;
   LEREC.u64[k + 2] := body;
   LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << LESLOT_G) < (c + 1) * 2 { gr := call letE_grow() };
   return c
 }
 
@@ -270,7 +273,7 @@ def internLet : FunDecl := lfn (ty, val, body) locals (h, sk, fd, i, j, d) {
 
 /-- The `letE` store functions, as one `#eval`-able program. -/
 def letProg : Prog :=
-  [("letE_find", letFind), ("letE_push", letPush), ("intern_letE", internLet)]
+  [("letE_find", letFind), ("letE_push", letPush), ("letE_grow", slotGrowG letGS), ("intern_letE", internLet)]
 
 /-- A memory with 8 `letE` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥19 (the other tables') are unused here and left empty. -/

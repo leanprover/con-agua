@@ -45,6 +45,9 @@ abbrev FAREC : ArrId := 29
 /-- The `forallE` cons-table slots, both tiers interleaved. -/
 abbrev FASLOT : ArrId := 30
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def forallGS : GrowSch := ⟨FASLOT, FAREC, 2, 30, FASLOT_G, 2⟩
+
 /-- The hash of a `forallE` record (FNV-1a over its two words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
@@ -112,7 +115,7 @@ def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
-  n := len(FASLOT.u64) >> 1;
+  n := ⟪SN0⟫ << FASLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fafindLoop⟫;
@@ -148,7 +151,7 @@ theorem fafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `forallE` table. -/
-def nSlotsFa (m : Mem) : Word := m.len64 FASLOT >>> 1
+def nSlotsFa (m : Mem) : Word := SN0 <<< m.glob FASLOT_G
 
 include hp in
 theorem forallFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
@@ -184,16 +187,16 @@ def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
+def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
   c := CTL.u64[30 + t];
   if c >= 134217728 { abort };
   if len(FAREC.u64) >> 2 <= c { abort };
-  if ((len(FASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   FAREC.u64[k] := ty;
   FAREC.u64[k + 1] := body;
   FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[30 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << FASLOT_G) < (c + 1) * 2 { gr := call forall_grow() };
   return c
 }
 
@@ -278,7 +281,7 @@ def internForallL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
 
 /-- The `forallE` store functions, as one `#eval`-able program. -/
 def forallProg : Prog :=
-  [("forall_find", forallFind), ("forall_push", forallPush), ("intern_forall", internForallL)]
+  [("forall_find", forallFind), ("forall_push", forallPush), ("forall_grow", slotGrowG forallGS), ("intern_forall", internForallL)]
 
 /-- A memory with 8 `forallE` nodes and 16 slots per tier, the scratch tier closed or open.
 Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty; `CTL` reaches

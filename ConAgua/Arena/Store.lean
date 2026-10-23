@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
+public import ConAgua.Arena.SlotGrow
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -50,11 +51,9 @@ abbrev REC : ArrId := 2
 /-- The `lit` cons-table slots, both tiers interleaved. -/
 abbrev SLOT : ArrId := 3
 
-/-- FNV-1a offset basis and prime (con-ron's `nat::hash64`). -/
-def fnvBasis : Word := 0xcbf29ce484222325
-def fnvPrime : Word := 0x100000001b3
-/-- The multiply-xor finaliser of con-ron's `home_index` (`ron/hashmap2.rs`). -/
-def golden : Word := 0x9e3779b97f4a7c15
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def litGS : GrowSch := ⟨SLOT, REC, 4, 2, SLOT_G, 3⟩
+
 
 /-! ## `lit_hash(o, l)`: FNV-1a over the limbs of a slice -/
 
@@ -362,7 +361,7 @@ def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(SLOT.u64) >> 1;
+  n := ⟪SN0⟫ << SLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoop⟫;
@@ -402,7 +401,7 @@ theorem findLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (findLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier. -/
-def nSlots (m : Mem) : Word := m.len64 SLOT >>> 1
+def nSlots (m : Mem) : Word := SN0 <<< m.glob SLOT_G
 
 include hpe hpm hp in
 theorem litFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -444,11 +443,10 @@ def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
     CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
+def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
-  if ((len(SLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 8 + t * 4;
   REC.u64[k] := 0;
   REC.u64[k + 1] := o;
@@ -456,6 +454,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << SLOT_G) < (c + 1) * 2 { gr := call lit_grow() };
   return c
 }
 
@@ -531,7 +530,7 @@ def internLit : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
 /-- The store functions, as one `#eval`-able program. -/
 def litProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("lit_match", litMatch), ("lit_find", litFind),
-   ("lit_push", litPush), ("intern_lit", internLit)]
+   ("lit_push", litPush), ("lit_grow", slotGrowG litGS), ("intern_lit", internLit)]
 
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and 16 slots per
 tier, the scratch tier closed or open. -/
@@ -688,7 +687,7 @@ def findLoopStr : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(SLOT.u64) >> 1;
+  n := ⟪SN0⟫ << SLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoopStr⟫;
@@ -754,11 +753,10 @@ def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
     CTL (2 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
+def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gr) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
   if len(REC.u64) >> 3 <= c { abort };
-  if ((len(SLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 8 + t * 4;
   REC.u64[k] := 1;
   REC.u64[k + 1] := o;
@@ -766,6 +764,7 @@ def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << SLOT_G) < (c + 1) * 2 { gr := call lit_grow() };
   return c
 }
 

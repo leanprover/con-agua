@@ -45,6 +45,9 @@ abbrev LAREC : ArrId := 27
 /-- The `lam` cons-table slots, both tiers interleaved. -/
 abbrev LASLOT : ArrId := 28
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def lamGS : GrowSch := ⟨LASLOT, LAREC, 2, 28, LASLOT_G, 2⟩
+
 /-- The hash of a `lam` record (FNV-1a over its two words). -/
 def lamHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
@@ -112,7 +115,7 @@ def lafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lamFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
-  n := len(LASLOT.u64) >> 1;
+  n := ⟪SN0⟫ << LASLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lafindLoop⟫;
@@ -148,7 +151,7 @@ theorem lafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `lam` table. -/
-def nSlotsLa (m : Mem) : Word := m.len64 LASLOT >>> 1
+def nSlotsLa (m : Mem) : Word := SN0 <<< m.glob LASLOT_G
 
 include hp in
 theorem lamFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
@@ -184,16 +187,16 @@ def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
+def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gr) {
   c := CTL.u64[28 + t];
   if c >= 134217728 { abort };
   if len(LAREC.u64) >> 2 <= c { abort };
-  if ((len(LASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   LAREC.u64[k] := ty;
   LAREC.u64[k + 1] := body;
   LASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[28 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << LASLOT_G) < (c + 1) * 2 { gr := call lam_grow() };
   return c
 }
 
@@ -276,7 +279,7 @@ def internLamL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
 
 /-- The `lam` store functions, as one `#eval`-able program. -/
 def lamProg : Prog :=
-  [("lam_find", lamFind), ("lam_push", lamPush), ("intern_lam", internLamL)]
+  [("lam_find", lamFind), ("lam_push", lamPush), ("lam_grow", slotGrowG lamGS), ("intern_lam", internLamL)]
 
 /-- A memory with 8 `lam` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 other than `CTL`/`LAREC`/`LASLOT` are unused here and left empty; `CTL` reaches `28 + 2 = 30`

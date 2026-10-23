@@ -43,6 +43,9 @@ abbrev NSREC : ArrId := 35
 /-- The name `str` cons-table slots, both tiers interleaved. -/
 abbrev NSSLOT : ArrId := 36
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def nstrGS : GrowSch := ⟨NSSLOT, NSREC, 4, 36, NSSLOT_G, 3⟩
+
 /-! ## `nstr_match(t, i, q, o, l, h)` -/
 
 /-- The model of `nstr_match`: node `i` of tier `t` has prefix `q`, hash `h`, length `l` and the
@@ -141,7 +144,7 @@ def nsfindLoop : Stmt := lblk (t, q, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nsFind : FunDecl := lfn (t, q, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(NSSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << NSSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nsfindLoop⟫;
@@ -181,7 +184,7 @@ theorem nsfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (nsfindLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier of the name `str` table. -/
-def nSlotsNs (m : Mem) : Word := m.len64 NSSLOT >>> 1
+def nSlotsNs (m : Mem) : Word := SN0 <<< m.glob NSSLOT_G
 
 include hpe hpm hp in
 theorem nsFind_spec (n : Nat) (s₀ : St) (t q o l h : Word) :
@@ -219,11 +222,10 @@ def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (36 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k) {
+def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k, gr) {
   c := CTL.u64[36 + t];
   if c >= 134217728 { abort };
   if len(NSREC.u64) < (c + 1) * 8 { abort };
-  if ((len(NSSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 8 + t * 4;
   NSREC.u64[k] := q;
   NSREC.u64[k + 1] := o;
@@ -231,6 +233,7 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k) {
   NSREC.u64[k + 3] := h;
   NSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[36 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << NSSLOT_G) < (c + 1) * 2 { gr := call nstr_grow() };
   return c
 }
 
@@ -307,7 +310,7 @@ def internNStr : FunDecl := lfn (q, o, l) locals (h, f, i, j, d, sc) {
 /-- The name `str` store functions, as one `#eval`-able program. -/
 def nstrProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("nstr_match", nsMatch), ("nstr_find", nsFind),
-   ("nstr_push", nsPush), ("intern_nstr", internNStr)]
+   ("nstr_push", nsPush), ("nstr_grow", slotGrowG nstrGS), ("intern_nstr", internNStr)]
 
 /-- A memory with the strings `"a"`, `"b"`, `"a"`, `"ab"` in the pool (top 5), 8 nodes and 16
 slots per tier, the scratch tier closed or open. -/

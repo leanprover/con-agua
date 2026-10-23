@@ -36,6 +36,9 @@ abbrev IREC : ArrId := 12
 /-- The `imax` cons-table slots, both tiers interleaved. -/
 abbrev ISLOT : ArrId := 13
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def imaxGS : GrowSch := ⟨ISLOT, IREC, 2, 12, ISLOT_G, 2⟩
+
 /-- The hash of an `imax` record (FNV-1a over its two words). -/
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
@@ -103,7 +106,7 @@ def imfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def imaxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
-  n := len(ISLOT.u64) >> 1;
+  n := ⟪SN0⟫ << ISLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪imfindLoop⟫;
@@ -139,7 +142,7 @@ theorem imfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (imfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `imax` table. -/
-def nSlotsI (m : Mem) : Word := m.len64 ISLOT >>> 1
+def nSlotsI (m : Mem) : Word := SN0 <<< m.glob ISLOT_G
 
 include hp in
 theorem imaxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
@@ -177,7 +180,7 @@ def impushMem (m : Mem) (t u v j c : Word) : Mem :=
     (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
+def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -185,12 +188,12 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
   if c >= 134217728 { abort };
   if len(IREC.u64) >> 2 <= c { abort };
   if len(IHP.u64) >> 1 <= c { abort };
-  if ((len(ISLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   IREC.u64[k] := u;
   IREC.u64[k + 1] := v;
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << ISLOT_G) < (c + 1) * 2 { gr := call imax_grow() };
   IHP.u64[c * 2 + t] := x;
   return c
 }
@@ -261,7 +264,7 @@ def internImax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
 
 /-- The `imax` store functions, as one `#eval`-able program. -/
 def imaxProg : Prog :=
-  [("imax_find", imaxFind), ("imax_push", imaxPush), ("intern_imax", internImax)]
+  [("imax_find", imaxFind), ("imax_push", imaxPush), ("imax_grow", slotGrowG imaxGS), ("intern_imax", internImax)]
 
 /-- A memory with 8 `imax` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=

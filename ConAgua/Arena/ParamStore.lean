@@ -34,6 +34,9 @@ abbrev PREC : ArrId := 14
 /-- The `param` cons-table slots, both tiers interleaved. -/
 abbrev PSLOT : ArrId := 15
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def paramGS : GrowSch := ⟨PSLOT, PREC, 1, 14, PSLOT_G, 1⟩
+
 /-- The hash of a `param` record (FNV-1a over its word). -/
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -98,7 +101,7 @@ def pfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def paramFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := len(PSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << PSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪pfindLoop⟫;
@@ -134,7 +137,7 @@ theorem pfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (pfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `param` table. -/
-def nSlotsP (m : Mem) : Word := m.len64 PSLOT >>> 1
+def nSlotsP (m : Mem) : Word := SN0 <<< m.glob PSLOT_G
 
 include hp in
 theorem paramFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -169,14 +172,14 @@ def ppushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def paramPush : FunDecl := lfn (t, u, j) locals (c) {
+def paramPush : FunDecl := lfn (t, u, j) locals (c, gr) {
   c := CTL.u64[14 + t];
   if c >= 134217728 { abort };
   if len(PREC.u64) >> 1 <= c { abort };
-  if ((len(PSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   PREC.u64[c * 2 + t] := u;
   PSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[14 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << PSLOT_G) < (c + 1) * 2 { gr := call param_grow() };
   return c
 }
 
@@ -245,7 +248,7 @@ def internParam : FunDecl := lfn (u) locals (h, fd, i, j, d) {
 
 /-- The `param` store functions, as one `#eval`-able program. -/
 def paramProg : Prog :=
-  [("param_find", paramFind), ("param_push", paramPush), ("intern_param", internParam)]
+  [("param_find", paramFind), ("param_push", paramPush), ("param_grow", slotGrowG paramGS), ("intern_param", internParam)]
 
 /-- A memory with 8 `param` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥13 (the other tables' `REC`/`SLOT` arrays) are unused here and left empty. -/

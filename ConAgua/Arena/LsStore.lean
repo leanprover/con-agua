@@ -42,6 +42,9 @@ abbrev LSREC : ArrId := 39
 /-- The level-list cons-table slots, both tiers interleaved. -/
 abbrev LSSLOT : ArrId := 40
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def lsGS : GrowSch := ⟨LSSLOT, LSREC, 3, 40, LSSLOT_G, 2⟩
+
 /-! ## `ls_match(t, i, o, l, h)` -/
 
 /-- The model of `ls_match`: node `i` of tier `t` has hash `h`, length `l` and the words of the
@@ -139,7 +142,7 @@ def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lsFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := len(LSSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << LSSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lsfindLoop⟫;
@@ -179,7 +182,7 @@ theorem lsfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lsfindLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier of the level-list table. -/
-def nSlotsLs (m : Mem) : Word := m.len64 LSSLOT >>> 1
+def nSlotsLs (m : Mem) : Word := SN0 <<< m.glob LSSLOT_G
 
 include hpe hpm hp in
 theorem lsFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -218,7 +221,7 @@ def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
     |>.set64 LSHP (c * 2 + t) (lsOrW m o l.toNat)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y) {
+def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y, gr) {
   x := 0;
   q := 0;
   ⟪hpLoopLs⟫;
@@ -226,13 +229,13 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y)
   if c >= 134217728 { abort };
   if len(LSREC.u64) < (c + 1) * 6 { abort };
   if len(LSHP.u64) >> 1 <= c { abort };
-  if ((len(LSSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
   LSREC.u64[k] := o;
   LSREC.u64[k + 1] := l;
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << LSSLOT_G) < (c + 1) * 2 { gr := call ls_grow() };
   LSHP.u64[c * 2 + t] := x;
   return c
 }
@@ -306,7 +309,7 @@ def internLs : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
 /-- The level-list store functions, as one `#eval`-able program. -/
 def lsProg : Prog :=
   [("lit_hash", litHash), ("limbs_eq", limbsEq), ("ls_match", lsMatch), ("ls_find", lsFind),
-   ("ls_push", lsPush), ("intern_ls", internLs)]
+   ("ls_push", lsPush), ("ls_grow", slotGrowG lsGS), ("intern_ls", internLs)]
 
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 16 slots per tier, the scratch tier closed or open. -/

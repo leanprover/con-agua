@@ -37,6 +37,9 @@ abbrev NNREC : ArrId := 37
 /-- The `num` cons-table slots, both tiers interleaved. -/
 abbrev NNSLOT : ArrId := 38
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def nnumGS : GrowSch := ⟨NNSLOT, NNREC, 2, 38, NNSLOT_G, 2⟩
+
 /-- The hash of a `num` record (FNV-1a over its two words). -/
 def nnumHashW (pre u : Word) : Word := ((fnvBasis ^^^ pre) * fnvPrime ^^^ u) * fnvPrime
 
@@ -104,7 +107,7 @@ def nnfindLoop : Stmt := lblk (t, pre, u, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nnumFind : FunDecl := lfn (t, pre, u, h) locals (n, j, d, w, b) {
-  n := len(NNSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << NNSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nnfindLoop⟫;
@@ -140,7 +143,7 @@ theorem nnfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (nnfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `num` table. -/
-def nSlotsNN (m : Mem) : Word := m.len64 NNSLOT >>> 1
+def nSlotsNN (m : Mem) : Word := SN0 <<< m.glob NNSLOT_G
 
 include hp in
 theorem nnumFind_spec (n : Nat) (s₀ : St) (t pre u h : Word) :
@@ -176,16 +179,16 @@ def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k) {
+def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gr) {
   c := CTL.u64[38 + t];
   if c >= 134217728 { abort };
   if len(NNREC.u64) >> 2 <= c { abort };
-  if ((len(NNSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   NNREC.u64[k] := pre;
   NNREC.u64[k + 1] := u;
   NNSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[38 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << NNSLOT_G) < (c + 1) * 2 { gr := call nnum_grow() };
   return c
 }
 
@@ -254,7 +257,7 @@ def internNNum : FunDecl := lfn (pre, u) locals (h, fd, i, j, d) {
 
 /-- The `num` store functions, as one `#eval`-able program. -/
 def nnumProg : Prog :=
-  [("nnum_find", nnumFind), ("nnum_push", nnumPush), ("intern_nnum", internNNum)]
+  [("nnum_find", nnumFind), ("nnum_push", nnumPush), ("nnum_grow", slotGrowG nnumGS), ("intern_nnum", internNNum)]
 
 /-- A memory with 8 `num` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥36 (the other tables') are unused here and left empty. -/

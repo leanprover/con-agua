@@ -41,6 +41,9 @@ abbrev FVREC : ArrId := 25
 /-- The `fvar` cons-table slots, both tiers interleaved. -/
 abbrev FVSLOT : ArrId := 26
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def fvarGS : GrowSch := ⟨FVSLOT, FVREC, 2, 26, FVSLOT_G, 2⟩
+
 /-- The hash of an `fvar` record (FNV-1a over its two words). -/
 def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnvPrime
 
@@ -109,7 +112,7 @@ def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v, b) {
-  n := len(FVSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << FVSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fvfindLoop⟫;
@@ -145,7 +148,7 @@ theorem fvfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fvfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `fvar` table. -/
-def nSlotsFv (m : Mem) : Word := m.len64 FVSLOT >>> 1
+def nSlotsFv (m : Mem) : Word := SN0 <<< m.glob FVSLOT_G
 
 include hp in
 theorem fvarFind_spec (n : Nat) (s₀ : St) (t u ty h : Word) :
@@ -183,18 +186,18 @@ def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
     (exprLPW m ty)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix) {
+def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gr) {
   ⟪lpBlkF⟫;
   c := CTL.u64[26 + t];
   if c >= 134217728 { abort };
   if len(FVREC.u64) >> 2 <= c { abort };
   if len(FVLP.u64) >> 1 <= c { abort };
-  if ((len(FVSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << FVSLOT_G) < (c + 1) * 2 { gr := call fvar_grow() };
   FVLP.u64[c * 2 + t] := x;
   return c
 }
@@ -275,7 +278,7 @@ def internFVar : FunDecl := lfn (u, ty) locals (h, sk, fd, i, j, d) {
 
 /-- The `fvar` store functions, as one `#eval`-able program. -/
 def fvarProg : Prog :=
-  [("fvar_find", fvarFind), ("fvar_push", fvarPush), ("intern_fvar", internFVar)]
+  [("fvar_find", fvarFind), ("fvar_push", fvarPush), ("fvar_grow", slotGrowG fvarGS), ("intern_fvar", internFVar)]
 
 /-- A memory with 8 `fvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥24 (the other tables') are unused here and left empty. -/

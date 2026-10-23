@@ -36,6 +36,9 @@ abbrev MREC : ArrId := 10
 /-- The `max` cons-table slots, both tiers interleaved. -/
 abbrev MSLOT : ArrId := 11
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def maxGS : GrowSch := ⟨MSLOT, MREC, 2, 10, MSLOT_G, 2⟩
+
 /-- The hash of a `max` record (FNV-1a over its two words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
@@ -103,7 +106,7 @@ def mfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def maxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
-  n := len(MSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << MSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪mfindLoop⟫;
@@ -139,7 +142,7 @@ theorem mfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (mfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `max` table. -/
-def nSlotsM (m : Mem) : Word := m.len64 MSLOT >>> 1
+def nSlotsM (m : Mem) : Word := SN0 <<< m.glob MSLOT_G
 
 include hp in
 theorem maxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
@@ -177,7 +180,7 @@ def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
     (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
+def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gr) {
   ⟪hpBlkM1⟫;
   ⟪hpBlkM2⟫;
   x := x | y;
@@ -185,12 +188,12 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
   if c >= 134217728 { abort };
   if len(MREC.u64) >> 2 <= c { abort };
   if len(MHP.u64) >> 1 <= c { abort };
-  if ((len(MSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << MSLOT_G) < (c + 1) * 2 { gr := call max_grow() };
   MHP.u64[c * 2 + t] := x;
   return c
 }
@@ -261,7 +264,7 @@ def internMax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
 
 /-- The `max` store functions, as one `#eval`-able program. -/
 def maxProg : Prog :=
-  [("max_find", maxFind), ("max_push", maxPush), ("intern_max", internMax)]
+  [("max_find", maxFind), ("max_push", maxPush), ("max_grow", slotGrowG maxGS), ("intern_max", internMax)]
 
 /-- A memory with 8 `max` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=

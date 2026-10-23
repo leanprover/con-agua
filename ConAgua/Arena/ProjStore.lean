@@ -41,6 +41,9 @@ abbrev PJREC : ArrId := 31
 /-- The `proj` cons-table slots, both tiers interleaved. -/
 abbrev PJSLOT : ArrId := 32
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def projGS : GrowSch := ⟨PJSLOT, PJREC, 3, 32, PJSLOT_G, 3⟩
+
 /-- The hash of a `proj` record (FNV-1a over its three words). -/
 def projHashW (n u e : Word) : Word :=
   (((fnvBasis ^^^ n) * fnvPrime ^^^ u) * fnvPrime ^^^ e) * fnvPrime
@@ -110,7 +113,7 @@ def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
-  nn := len(PJSLOT.u64) >> 1;
+  nn := ⟪SN0⟫ << PJSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), nn);
   ⟪pjfindLoop⟫;
@@ -146,7 +149,7 @@ theorem pjfindLoop_step_spec (nn : Nat) (s₀ : St) :
   Triple.step_exec (pjfindLoop_spec p (nn + 1) s₀)
 
 /-- The slot count of a tier of the `proj` table. -/
-def nSlotsPj (m : Mem) : Word := m.len64 PJSLOT >>> 1
+def nSlotsPj (m : Mem) : Word := SN0 <<< m.glob PJSLOT_G
 
 include hp in
 theorem projFind_spec (nn : Nat) (s₀ : St) (t n u e h : Word) :
@@ -185,17 +188,17 @@ def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
     (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
+def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gr) {
   c := CTL.u64[32 + t];
   if c >= 134217728 { abort };
   if len(PJREC.u64) < (c + 1) * 6 { abort };
-  if ((len(PJSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
   PJREC.u64[k] := n;
   PJREC.u64[k + 1] := u;
   PJREC.u64[k + 2] := e;
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << PJSLOT_G) < (c + 1) * 2 { gr := call proj_grow() };
   return c
 }
 
@@ -275,7 +278,7 @@ def internProj : FunDecl := lfn (n, u, e) locals (h, sk, fd, i, j, d) {
 
 /-- The `proj` store functions, as one `#eval`-able program. -/
 def projProg : Prog :=
-  [("proj_find", projFind), ("proj_push", projPush), ("intern_proj", internProj)]
+  [("proj_find", projFind), ("proj_push", projPush), ("proj_grow", slotGrowG projGS), ("intern_proj", internProj)]
 
 /-- A memory with 8 `proj` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/

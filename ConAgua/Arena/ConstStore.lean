@@ -42,6 +42,9 @@ abbrev CREC : ArrId := 18
 /-- The `const` cons-table slots, both tiers interleaved. -/
 abbrev CSLOT : ArrId := 19
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def constGS : GrowSch := ⟨CSLOT, CREC, 2, 18, CSLOT_G, 2⟩
+
 /-- The hash of a `const` record (FNV-1a over its two words). -/
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
@@ -109,7 +112,7 @@ def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def constFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
-  n := len(CSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << CSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪cefindLoop⟫;
@@ -145,7 +148,7 @@ theorem cefindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (cefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `const` table. -/
-def nSlotsCe (m : Mem) : Word := m.len64 CSLOT >>> 1
+def nSlotsCe (m : Mem) : Word := SN0 <<< m.glob CSLOT_G
 
 include hp in
 theorem constFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
@@ -182,18 +185,18 @@ def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1)).set64 CLP (c * 2 + t) (lsHPW m a)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix) {
+def constPush : FunDecl := lfn (t, f, a, j) locals (c, k, x, g, ti, ix, gr) {
   ⟪lsBlkC⟫;
   c := CTL.u64[18 + t];
   if c >= 134217728 { abort };
   if len(CREC.u64) >> 2 <= c { abort };
   if len(CLP.u64) >> 1 <= c { abort };
-  if ((len(CSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   CREC.u64[k] := f;
   CREC.u64[k + 1] := a;
   CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << CSLOT_G) < (c + 1) * 2 { gr := call const_grow() };
   CLP.u64[c * 2 + t] := x;
   return c
 }
@@ -273,7 +276,7 @@ def internConst : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
 
 /-- The `const` store functions, as one `#eval`-able program. -/
 def constProg : Prog :=
-  [("const_find", constFind), ("const_push", constPush), ("intern_const", internConst)]
+  [("const_find", constFind), ("const_push", constPush), ("const_grow", slotGrowG constGS), ("intern_const", internConst)]
 
 /-- A memory with 8 `const` nodes and 16 slots per tier, the scratch tier closed or open.
 Arrays 0‥17 (the other tables') are unused here and left empty. -/

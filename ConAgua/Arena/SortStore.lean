@@ -36,6 +36,9 @@ abbrev SOREC : ArrId := 16
 /-- The `sort` cons-table slots, both tiers interleaved. -/
 abbrev SOSLOT : ArrId := 17
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def sortGS : GrowSch := ⟨SOSLOT, SOREC, 1, 16, SOSLOT_G, 1⟩
+
 /-- The hash of a `sort` record (FNV-1a over its word). -/
 def sortHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -100,7 +103,7 @@ def sofindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def sortFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := len(SOSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << SOSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪sofindLoop⟫;
@@ -136,7 +139,7 @@ theorem sofindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (sofindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `sort` table. -/
-def nSlotsSo (m : Mem) : Word := m.len64 SOSLOT >>> 1
+def nSlotsSo (m : Mem) : Word := SN0 <<< m.glob SOSLOT_G
 
 include hp in
 theorem sortFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -173,16 +176,16 @@ def sopushMem (m : Mem) (t u j c : Word) : Mem :=
     SOLP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix) {
+def sortPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gr) {
   ⟪hpBlkS⟫;
   c := CTL.u64[16 + t];
   if c >= 134217728 { abort };
   if len(SOREC.u64) >> 1 <= c { abort };
   if len(SOLP.u64) >> 1 <= c { abort };
-  if ((len(SOSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   SOREC.u64[c * 2 + t] := u;
   SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << SOSLOT_G) < (c + 1) * 2 { gr := call sort_grow() };
   SOLP.u64[c * 2 + t] := x;
   return c
 }
@@ -262,7 +265,7 @@ def internSort : FunDecl := lfn (u) locals (h, sk, fd, i, j, d) {
 
 /-- The `sort` store functions, as one `#eval`-able program. -/
 def sortProg : Prog :=
-  [("sort_find", sortFind), ("sort_push", sortPush), ("intern_sort", internSort)]
+  [("sort_find", sortFind), ("sort_push", sortPush), ("sort_grow", slotGrowG sortGS), ("intern_sort", internSort)]
 
 /-- A memory with 8 `sort` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥15 (the other tables') are unused here and left empty. -/

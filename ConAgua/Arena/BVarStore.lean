@@ -35,6 +35,9 @@ abbrev BREC : ArrId := 22
 /-- The `bvar` cons-table slots, both tiers interleaved. -/
 abbrev BSLOT : ArrId := 23
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def bvarGS : GrowSch := ⟨BSLOT, BREC, 1, 22, BSLOT_G, 1⟩
+
 /-- The hash of a `bvar` record (FNV-1a over its word). -/
 def bvarHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -99,7 +102,7 @@ def bfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def bvarFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := len(BSLOT.u64) >> 1;
+  n := ⟪SN0⟫ << BSLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪bfindLoop⟫;
@@ -135,7 +138,7 @@ theorem bfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (bfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `bvar` table. -/
-def nSlotsB (m : Mem) : Word := m.len64 BSLOT >>> 1
+def nSlotsB (m : Mem) : Word := SN0 <<< m.glob BSLOT_G
 
 include hp in
 theorem bvarFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -170,14 +173,14 @@ def bpushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 BREC (c * 2 + t) u).set64 BSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (22 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def bvarPush : FunDecl := lfn (t, u, j) locals (c) {
+def bvarPush : FunDecl := lfn (t, u, j) locals (c, gr) {
   c := CTL.u64[22 + t];
   if c >= 134217728 { abort };
   if len(BREC.u64) >> 1 <= c { abort };
-  if ((len(BSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[22 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << BSLOT_G) < (c + 1) * 2 { gr := call bvar_grow() };
   return c
 }
 
@@ -247,7 +250,7 @@ def internBVar : FunDecl := lfn (u) locals (h, fd, i, j, d) {
 
 /-- The `bvar` store functions, as one `#eval`-able program. -/
 def bvarProg : Prog :=
-  [("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar)]
+  [("bvar_find", bvarFind), ("bvar_push", bvarPush), ("bvar_grow", slotGrowG bvarGS), ("intern_bvar", internBVar)]
 
 /-- A memory with 8 `bvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥21 (the other tables') are unused here and left empty. -/

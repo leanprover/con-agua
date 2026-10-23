@@ -38,6 +38,9 @@ abbrev AREC : ArrId := 4
 /-- The `app` cons-table slots, both tiers interleaved. -/
 abbrev ASLOT : ArrId := 5
 
+/-- The growth schema of this table (`SlotGrow.lean`). -/
+def appGS : GrowSch := ⟨ASLOT, AREC, 2, 4, ASLOT_G, 2⟩
+
 /-- The hash of an `app` record (FNV-1a over its two words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
@@ -105,7 +108,7 @@ def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def appFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
-  n := len(ASLOT.u64) >> 1;
+  n := ⟪SN0⟫ << ASLOT_G;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪afindLoop⟫;
@@ -141,7 +144,7 @@ theorem afindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (afindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `app` table. -/
-def nSlotsA (m : Mem) : Word := m.len64 ASLOT >>> 1
+def nSlotsA (m : Mem) : Word := SN0 <<< m.glob ASLOT_G
 
 include hp in
 theorem appFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
@@ -177,16 +180,16 @@ def apushMem (m : Mem) (t f a j c : Word) : Mem :=
     (baseW m t + c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def appPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
+def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gr) {
   c := CTL.u64[4 + t];
   if c >= 134217728 { abort };
   if len(AREC.u64) >> 2 <= c { abort };
-  if ((len(ASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   AREC.u64[k] := f;
   AREC.u64[k + 1] := a;
   ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[4 + (t & 1)] := c + 1;
+  if (⟪SN0⟫ << ASLOT_G) < (c + 1) * 2 { gr := call app_grow() };
   return c
 }
 
@@ -265,7 +268,7 @@ def internApp : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
 
 /-- The `app` store functions, as one `#eval`-able program. -/
 def appProg : Prog :=
-  [("app_find", appFind), ("app_push", appPush), ("intern_app", internApp)]
+  [("app_find", appFind), ("app_push", appPush), ("app_grow", slotGrowG appGS), ("intern_app", internApp)]
 
 /-- A memory with 8 `app` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
