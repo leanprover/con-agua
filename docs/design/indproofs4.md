@@ -279,3 +279,15 @@ Discharged (contracts deleted): `fvarTypeD_spec`, `fvarTypeDs_spec`, `getAppArgs
 * **Split: OK.** A fresh lane takes the StageR→StageT migration plus the core-entry contracts (`stubM_spec`, `inferTypeCore`, `isDefEqCore`, `ensureSortCore`, `whnf`, `stubM_memoFrame`). indproofs4 keeps the block functions, genRecCheck, blockLargeElimAllowed, `check_ind_decl`→`IndArmSpec` and the walk/leaf contracts.
 * **Files in flight:** me: `IndPartsSpec15` (ShapeSl, committed) and a new `IndInstallSpec42` (`check_ind_decl` at StageR). Helper grc: `IndInstallSpec38–41`, `RecGen.lean` (AbsOK threading). Helper memo: new `IndRealMemo*.lean`, `Checker/IndRealMemo.lean`. Helper slow: `IndSumSpec12/5`, `IndInstallSpec17`, `RecClassSpec*`. It has been told to drop `IndSumSpec14` and take master's (slowmods-b) version. I merge master before landing and resolve toward the faster version.
 * **ETA:** `check_ind_decl` at StageR (with a `basisPinHit` contract and pending program facts for block_parts' ShapeCV/ShapeLp) is planned for the next landing. The full `IndArmSpec` needs StageT (the new lane) and `CoreMemos`. It comes after that.
+
+### check_ind_decl at StageR (IndInstallSpec42)
+
+* Model `cidW` (K1 after basis_pin_hit, K3 after ind_params_ok, K4 after block_parts, K2 the view). The shapeless branch is `none`: `checkShapeless_refines` has post `False`, so the spec discharges it.
+* `cidW_ok` composes checkBasisDecl_refines, indParamsOk_refines, blockParts_refines and checkBlock_refines. It ends in `(checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧ StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m'`.
+* Inputs: StageR, StateOK (for the basis pin's canon comparison), the block decoded as `DecB decEBlk`, `o + l ≤ erTop`, `w < 2^63`, AllVis, CtorSums, and `CidMemos` (PosMR, maMR, AbsOK, taMR).
+* `ShapeSrc` and `RecsB` come from `ShapeSl` (PartsR). `ShapeCV` comes from `DecB decBS` (`shapeCV_of_decB`).
+* The memos cross basis_pin_hit and block_parts through one write-set fact: `closedA p cidFreeA cidFreeC fsC`, which forbids arrays 201..208 and 49, and CTL 202..219 and 48. An `#eval` over the call closures shows both callees satisfy it in checkerProg (basis_pin_hit: 139 fns, block_parts: 95 fns, no bad function).
+* Pending program facts (hypotheses):
+  * `BphOK p`: basis_pin_hit refines basisPinHit. Helper `bph` is proving it.
+  * `PartsOK p`: block_parts' record has ShapeLp, an nP word below 2^63 and IW size below 2^63. grc has been asked whether L guards can drop the 2^63 bounds. ShapeLp could follow from DecB decBS if CtorLp were weakened to `… ∨ len = 0`, as CVExt is.
+* Fuel: checkBlock_refines needs `2^31 + (n+4) ≤ coreWalkFuel` (4e9). **IndArmSpec quantifies `n ≤ 2^62`, so its fuel bound must be tightened (or check_block's lifted)** before cidW_ok can discharge it.
