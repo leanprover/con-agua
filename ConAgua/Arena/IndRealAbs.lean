@@ -36,19 +36,53 @@ open L.Arena
 
 /-! ## The memo predicate -/
 
-/-- **`AbsOK` across a writer apart from array 49 and `CTL[48]`.** -/
-theorem AbsOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbsOK m)
-    (hf : MemFrame A C m m') (hA : ABMEMO ∉ A) (hC : (48 : Word) ∉ C) : AbsOK m' :=
-  let ⟨mp, hm⟩ := h
-  ⟨mp, memoRG_frame abSch abSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
+/-- A list of arrays apart from the walk memos' (49, 50, 51, 155). -/
+def memoFreeA (A : List ArrId) : Bool := A.all fun b => b != 49 && b != 50 && b != 51 && b != 155
 
-/-- A writer of arrays and `CTL` words below 48, or between 50 and 63, or above 63 … : the usual
-side conditions, decided. -/
+/-- A list of `CTL` words apart from the walk memos' epoch words (48, 50, 52, 158). -/
+def memoFreeC (C : List Word) : Bool := C.all fun x => x != 48 && x != 50 && x != 52 && x != 158
+
+theorem AbMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbMemo m)
+    (hf : MemFrame A C m m') (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) : AbMemo m' :=
+  let ⟨mp, hm⟩ := h; ⟨mp, memoRG_frame _ ⟨by decide, by decide⟩ lfKey decE A C hA hC m m' hf mp hm⟩
+
+theorem I1Memo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : I1Memo m)
+    (hf : MemFrame A C m m') (hA : (51 : ArrId) ∉ A) (hC : (52 : Word) ∉ C) : I1Memo m' :=
+  let ⟨mp, hm⟩ := h; ⟨mp, memoRG_frame _ ⟨by decide, by decide⟩ lfKey decE A C hA hC m m' hf mp hm⟩
+
+theorem CrMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : CrMemo m)
+    (hf : MemFrame A C m m') (hA : (155 : ArrId) ∉ A) (hC : (158 : Word) ∉ C) : CrMemo m' :=
+  let ⟨mp, hm⟩ := h
+  ⟨mp, memoRV_frame _ ⟨by decide, by decide⟩ bmKey _ A C hA hC m m' hf (fun _ _ h => h) mp hm⟩
+
+theorem IlMemo.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : IlMemo m)
+    (hf : MemFrame A C m m') (hA : (50 : ArrId) ∉ A) (hC : (50 : Word) ∉ C) : IlMemo m' :=
+  let ⟨mp, hm⟩ := h; ⟨mp, memoRG_frame _ ⟨by decide, by decide⟩ lfKey decE A C hA hC m m' hf mp hm⟩
+
+/-- `memoFreeA`, unfolded. -/
+theorem memoFreeA_iff {A : List ArrId} (hA : memoFreeA A = true) :
+    (49 : ArrId) ∉ A ∧ (50 : ArrId) ∉ A ∧ (51 : ArrId) ∉ A ∧ (155 : ArrId) ∉ A := by
+  have h : ∀ b ∈ A, b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155 := fun b hb => by
+    have := List.all_eq_true.mp hA b hb; simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at this
+    exact ⟨this.1.1.1, this.1.1.2, this.1.2, this.2⟩
+  exact ⟨fun hm => (h _ hm).1 rfl, fun hm => (h _ hm).2.1 rfl, fun hm => (h _ hm).2.2.1 rfl,
+    fun hm => (h _ hm).2.2.2 rfl⟩
+
+/-- `memoFreeC`, unfolded. -/
+theorem memoFreeC_iff {C : List Word} (hC : memoFreeC C = true) :
+    (48 : Word) ∉ C ∧ (50 : Word) ∉ C ∧ (52 : Word) ∉ C ∧ (158 : Word) ∉ C := by
+  have h : ∀ x ∈ C, x ≠ 48 ∧ x ≠ 50 ∧ x ≠ 52 ∧ x ≠ 158 := fun x hx => by
+    have := List.all_eq_true.mp hC x hx; simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at this
+    exact ⟨this.1.1.1, this.1.1.2, this.1.2, this.2⟩
+  exact ⟨fun hm => (h _ hm).1 rfl, fun hm => (h _ hm).2.1 rfl, fun hm => (h _ hm).2.2.1 rfl,
+    fun hm => (h _ hm).2.2.2 rfl⟩
+
+/-- **`AbsOK` across a writer apart from the walk memos' arrays and epoch words.** -/
 theorem AbsOK.frameD {A : List ArrId} {C : List Word} {m m' : Mem} (h : AbsOK m)
-    (hf : MemFrame A C m m') (hA : A.all (fun b => b != 49) = true)
-    (hC : C.all (fun x => x != 48) = true) : AbsOK m' :=
-  h.frame hf (fun hm => by have := List.all_eq_true.mp hA _ hm; simp at this)
-    (fun hm => by have := List.all_eq_true.mp hC _ hm; simp at this)
+    (hf : MemFrame A C m m') (hA : memoFreeA A = true) (hC : memoFreeC C = true) : AbsOK m' :=
+  let ⟨a1, a2, a3, a4⟩ := memoFreeA_iff hA
+  let ⟨c1, c2, c3, c4⟩ := memoFreeC_iff hC
+  ⟨h.1.frame hf a1 c1, h.2.1.frame hf a3 c3, h.2.2.1.frame hf a4 c4, h.2.2.2.frame hf a2 c2⟩
 
 /-! ## Steps that keep it
 
@@ -62,22 +96,22 @@ theorem AFr.refl (m : Mem) : AFr m m := id
 
 theorem AFr.trans {m₁ m₂ m₃ : Mem} (h₁ : AFr m₁ m₂) (h₂ : AFr m₂ m₃) : AFr m₁ m₃ := h₂ ∘ h₁
 
-/-- A writer apart from array 49 and `CTL[48]`. -/
+/-- A writer apart from the walk memos' arrays and epoch words. -/
 theorem AFr.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : A.all (fun b => b != 49) = true := by decide)
-    (hC : C.all (fun x => x != 48) = true := by decide) : AFr m m' :=
+    (hA : memoFreeA A = true := by decide)
+    (hC : memoFreeC C = true := by decide) : AFr m m' :=
   fun h => h.frameD hf hA hC
 
-/-- A write of an array other than `CTL` and 49. -/
-theorem AFr.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (h49 : (a != 49) = true) (k v : Word) :
+/-- A write of an array other than `CTL` and the walk memos'. -/
+theorem AFr.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (h49 : memoFreeA [a] = true) (k v : Word) :
     AFr m (m.set64 a k v) :=
-  fun h => h.frameD (MemFrame.set64 m a ha k v) (by simp [h49]) rfl
+  fun h => h.frameD (MemFrame.set64 m a ha k v) h49 rfl
 
-/-- A write of a `CTL` word other than 48. -/
-theorem AFr.setCtl (m : Mem) (c : Word) (h48 : (c != 48) = true) (v : Word) : AFr m (m.set64 CTL c v) :=
-  fun h => h.frameD (MemFrame.setCtl m c v) rfl (by simp [h48])
+/-- A write of a `CTL` word other than the walk memos' epoch words. -/
+theorem AFr.setCtl (m : Mem) (c : Word) (h48 : memoFreeC [c] = true) (v : Word) : AFr m (m.set64 CTL c v) :=
+  fun h => h.frameD (MemFrame.setCtl m c v) rfl h48
 
-/-- `afr_set`: `AFr m m'` for `m'` a chain of writes of `m` apart from array 49 and `CTL[48]`. -/
+/-- `afr_set`: `AFr m m'` for `m'` a chain of writes of `m` apart from the walk memos. -/
 macro "afr_set" : tactic => `(tactic|
   repeat (first
     | with_reducible refine AFr.trans ?_ (AFr.set64 _ _ (by decide) (by decide) _ _)
@@ -295,7 +329,7 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
     RelW abF [CWF, e, d, k] (fun m a => StageR dn vis fe m a ∧ AbsOK m)
       (abstract1Fast CWF.toNat (decI e) d.toNat k.toNat)
       (fun m m' a r x => KeepPost dn vis fe decW0E m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, mp, hmp⟩
+  intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl⟩
   have hfr := abF_frame h
   obtain ⟨n, hc⟩ := callF_run h
   match n, hc with
@@ -327,6 +361,8 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
           { a with memos := { a.memos with abs1C := mp } }) := hrun
   have hcp := (keepsW_abs1Fast coreWalkFuel (decE e) d.toNat k.toNat).cp_of_cpl.run hrun'
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl) hcp
-  exact ⟨_, _, by rw [CWF_eq]; exact hrun', ⟨hS', hg, hlt, hres.symm⟩, _, hA'.2⟩
+  exact ⟨_, _, by rw [CWF_eq]; exact hrun', ⟨hS', hg, hlt, hres.symm⟩, ⟨_, hA'.2⟩,
+    hI1.frame hfr (by decide) (by decide), hCr.frame hfr (by decide) (by decide),
+    hIl.frame hfr (by decide) (by decide)⟩
 
 end L.Ind

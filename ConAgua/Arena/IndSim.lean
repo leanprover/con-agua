@@ -104,4 +104,11 @@ theorem StageR.lt64 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     {a : AState} (hS : StageR dn vis fe m a) {x : Nat} (h : x ≤ iwTop m) : x < 2 ^ 64 := by
   obtain ⟨h1, -, h3, -, -⟩ := hS.2; omega
 
+/-- A memory fact of the model's result, added to a `Sim`'s post. -/
+theorem Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+    {Q : β → α → Mem → AState → Prop} {F : Mem → Prop}
+    (h : Sim mo op a Q) (hf : ∀ r m', mo = some (r, m') → F m') :
+    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ F m') := by
+  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, hf r m' e⟩
+
 end L.Ind

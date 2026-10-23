@@ -126,12 +126,12 @@ end model
 
 /-- The arrays they may write: all below 256 but the stage memos' (`201..208`) and `abstract1`'s
 memo (`49`). -/
-def cidFreeA : List ArrId := (List.range 256).filter (fun b => (b < 201 ∨ 208 < b) ∧ b ≠ 49)
+def cidFreeA : List ArrId := (List.range 256).filter (fun b => (b < 201 ∨ 208 < b) ∧ b ≠ 49 ∧ b ≠ 50 ∧ b ≠ 51 ∧ b ≠ 155)
 
 /-- The `CTL` words they may write: all below 256 but the stage memos' (`202..219`) and
-`abstract1`'s (`48`). -/
+the walk memos' epoch words (`48`, `50`, `52`, `158`). -/
 def cidFreeC : List Word :=
-  ((List.range 256).filter (fun c => (c < 202 ∨ 219 < c) ∧ c ≠ 48)).map Nat.toUInt64
+  ((List.range 256).filter (fun c => (c < 202 ∨ 219 < c) ∧ c ≠ 48 ∧ c ≠ 50 ∧ c ≠ 52 ∧ c ≠ 158)).map Nat.toUInt64
 
 /-- The callees of `check_ind_decl` that cross the walk memos by their write set. -/
 def cidFrameCallees : List FnName := ["basis_pin_hit", "block_parts"]
@@ -153,15 +153,7 @@ theorem CidMemos.frame {m m' : Mem} (h : CidMemos m) (hf : MemFrame cidFreeA cid
       rw [this]; exact h1)
   obtain ⟨hP, ⟨mp, hma⟩, hA, ⟨tp, hta⟩⟩ := h
   refine ⟨hP.fr hM, ⟨mp, maMR_mfr hM hma⟩, ?_, ⟨tp, taMR_mfr hM (by simp) (by simp) hta⟩⟩
-  exact AFr.of_frame hf
-    (by simp only [cidFreeA, List.all_eq_true, List.mem_filter, List.mem_range, decide_eq_true_eq, bne_iff_ne,
-          ne_eq]; intro b hb; exact hb.2.2)
-    (by simp only [cidFreeC, List.all_eq_true, List.mem_map, List.mem_filter, List.mem_range,
-          decide_eq_true_eq, bne_iff_ne, ne_eq]
-        rintro x ⟨c, ⟨hc, -, h48⟩, rfl⟩ e
-        apply h48
-        have := congrArg UInt64.toNat e
-        rwa [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)] at this) hA
+  exact AFr.of_frame hf (by decide +kernel) (by decide +kernel) hA
 
 theorem CidMemos.call {p : Prog} {fs : List FnName} (hcl : closedA p cidFreeA cidFreeC fs = true)
     {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
