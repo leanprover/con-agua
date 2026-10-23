@@ -119,7 +119,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
     (hD : DeclAtF (m.arr64 DECL) (m.arr64 DLP) i.toNat d) (hok : RecOK (m.arr64 DECL) (m.arr64 DLP) i.toNat)
     (hi : i.toNat < 2 ^ 59) (hA : ArenaR m a) (h : pKeyW m i = some (r, m')) :
     ∃ a', (preludeKey d).run a = .ok (decI r, a') ∧ r.toNat < 2 ^ 32 ∧ ArenaR m' a' ∧
-      HighFr m m' ∧ a'.pins = a.pins := by
+      HighFr m m' ∧ a'.pins = a.pins ∧ a'.store.pers = a.store.pers ∧ a'.store.scr = a.store.scr := by
   have e0 := hix_rd_dw0 (m.arr64 DECL) i hi
   have e1 := hix_rd_dw (m.arr64 DECL) i 1 hi (by decide)
   have e2 := hix_rd_dw (m.arr64 DECL) i 2 hi (by decide)
@@ -152,7 +152,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
         · intro e; subst e; revert hb; decide
         · simp only [nanonSch, List.mem_cons, List.not_mem_nil, or_false, not_or]
           constructor <;> (intro e; subst e; revert hx; decide)
-      · rcases hst with e | ⟨_, e⟩ | ⟨_, e⟩ <;> rw [e] <;> rfl
+      · rcases hst with e | ⟨_, e⟩ | ⟨_, e⟩ <;> rw [e] <;> exact ⟨rfl, rfl, rfl⟩
     · rw [pKeyW.arm2 m i hne6 (by rw [e3]; intro e; exact hc (by simpa using e)), e2] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -173,7 +173,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
       have e2' : rdW (m.arr64 DIND) (pw + 1) = w' :=
         hix_rdW hPw (by rw [UInt64.toNat_add]; simp; omega)
       rw [e1', e2']
-      refine ⟨a, ?_, hw32, hA, hHF, rfl⟩
+      refine ⟨a, ?_, hw32, hA, hHF, rfl, rfl, rfl⟩
       simp [preludeKey, pl_names_ind, hname]
       rfl
   · have hD' := hix_declAtF (fun b nP e => hind ⟨b, nP, e⟩) hD
@@ -181,7 +181,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
     rw [pKeyW.arm1 m i (by rw [e0]; exact h6), e1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨a, ?_, (hok.1 h6).1, hA, hHF, rfl⟩
+    refine ⟨a, ?_, (hok.1 h6).1, hA, hHF, rfl, rfl, rfl⟩
     simp [preludeKey, hn]
     rfl
 
