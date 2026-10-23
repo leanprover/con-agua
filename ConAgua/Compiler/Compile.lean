@@ -735,6 +735,17 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .gset _ e => Expr.uses w acc e
   | _ => acc
 
+/-- Insert local `x` before the first local used less (or as often, with a larger index). -/
+def rankIns (u : Array Nat) (x : Nat) : List Nat → List Nat
+  | [] => [x]
+  | y :: ys => if u[x]! > u[y]! || (u[x]! == u[y]! && x ≤ y) then x :: y :: ys else y :: rankIns u x ys
+
+/-- Locals by use, most used first (an insertion sort: structural, so that the kernel evaluates
+it when it checks the compiled checker, `asm_lit`). -/
+def rankInsSort (u : Array Nat) : List Nat → List Nat
+  | [] => []
+  | x :: xs => rankIns u x (rankInsSort u xs)
+
 /-- The most used locals of a leaf function with at most 6 parameters, in registers: a parameter
 keeps its argument register, the other locals take the remaining registers (those that are not
 result registers first: fewer conflicts at a `return`). -/
@@ -743,8 +754,7 @@ def leafAlloc (fd : FunDecl) : List (Var × Reg64) :=
   let u := Stmt.uses 1 (Array.replicate fd.nlocals 0) fd.body
   -- parameters count as used
   let u := (List.range fd.nparams).foldl (fun a i => a.modify i (· + 1)) u
-  let ranked := ((List.range fd.nlocals).filter (fun x => u[x]! > 0)).mergeSort
-    (fun x y => u[x]! > u[y]! || (u[x]! == u[y]! && x ≤ y))
+  let ranked := rankInsSort u ((List.range fd.nlocals).filter (fun x => u[x]! > 0))
   let chosen := ranked.take allocRegs.length
   let ps := (chosen.filter (· < fd.nparams)).map fun i => (i, argRegs.getD i .rdi)
   let free := [Reg64.rsi, .r11, .r10, .r9, .r8, .rdi].filter fun r =>
