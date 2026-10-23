@@ -113,3 +113,30 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   (`DeclCrpT.lean`). The `StageR` theorems stay (their arms still use them), untagged.
 * Threaded `cR`: `tptW` (RecCheckSpec), `tmpW` (RecCheckSpec5), with the `StageR` frame lemmas in
   RecGenSpec19.
+
+## Landings 5‥7: the rules chain, the RecCheck chain, the classes
+
+* **Rules chain** (mine): `cruleW`/`cr1W`/`crsW`/`crrW` over `cR` (RecGenSpec4/9/10);
+  `IndT/RecGen4` (`cruleW_okC`, `classRuleOk_refinesC`: the guards' twin chain from con-ron's
+  `classRuleOk_spec` — `RC.looseBVarsBoundedFast_pstep`, `RC.hasFvarFast_pstep`,
+  `allLevelParamsDefined_run`, `constsResolveFFast_pstep`, `infer_crun`, `ReadOK.flush`,
+  `stripLams_pstep`, `allM_domains_resolve` at the restricted index), `IndT/RecGen9`
+  (`cr1W_relC`, `crsW_simC`, `classRulesOk_refinesC`), `IndT/RecGen10` (`crrW_simC`,
+  `classRecsRulesOk_refinesC`). `StageC.of_check` (Lift): `StageC` after any twin step con-ron
+  gives `CheckOK` for (`CoreStep`, a flush), the store extended.
+* **Helper `tpt`**: `IndT/RecCheckPins` (`targetPinTys`, `targetMajorPins`: both now proven),
+  `IndT/RecGen19` (`classMajors`; `StageC.of_cstep`; `AFr` frames for `target_major_of`'s models).
+* **Helper `pds`**: models of RecCheckSpec10‥15 over `cR`; `IndT/RecCheck{Tpd,Tcm,Tmn,K53}`,
+  `IndT/RecGen{23,24,27,28}`: targetParamsDefEq (proven), targetClassMatch, targetMajorNfs,
+  targetK53, classNodesAgree, classFieldsAgree, classCtorOf, classCtorsOf, classesCtors, classesNfs.
+* **Mine**: `IndT/RecGen21` (`cbcW_simC`, `checkBlockClasses_refinesC`: a `callW`-level chain;
+  the walk memos across the callees by `AbsKeep` program facts), `IndT/StreamRecs` (`csrW` over
+  `cR`; `check_constant_val` real: `checkConstantVal_refinesT` + con-ron's
+  `checkConstantVal_bridge`).
+* Census after 87ddba90: phase 8 137 proven / 80 sorry; `inferTypeCore_spec` blocks 22 (46 at the
+  start), `ensureSortCore_spec` 22, `isDefEqCore_spec` out of the top ten.
+* **Interfaces agreed** (via the coordinator, with lane indproofs4): the arm theorem `cidW_okC`
+  (new IndT file) takes IndArmSpec's premises (`StageT`, `FoldOK`, the record's denotation,
+  `IndMemos m`) and gives `… run ∧ StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧
+  IndMemos m'`; con-ron's `IndOut` the loop gets from `indSpec_of_bridge` on the run. `CtorSums`
+  goes away by an L capacity guard in `nest_ctor_entry_strip` (helper pos).
