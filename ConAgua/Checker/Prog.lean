@@ -145,7 +145,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1736 functions, 9 of them stubs.
+1745 functions, 9 of them stubs.
 -/
 
 namespace L.Checker
@@ -871,18 +871,27 @@ def checkerProg : Prog := [
   ("hn_clear", L.Arena.memoClearG L.Checker.hnSch),
   ("hn_find", L.Arena.memoFindG L.Checker.hnSch),
   ("hn_put", L.Arena.memoPutG L.Checker.hnSch),
+  ("hoist_any", L.Checker.hoistAnyL),
   ("hoist_apply", L.Checker.hoistApplyL),
+  ("hoist_block_go", L.Checker.hoistBlockGoL),
+  ("hoist_bucket", L.Checker.hoistBucketL),
+  ("hoist_chain", L.Checker.hoistChainL),
+  ("hoist_close_go", L.Checker.hoistCloseGoL),
   ("hoist_closure", L.Checker.hoistClosureL),
   ("hoist_deps", L.Checker.hoistDepsL),
   ("hoist_deps_of", L.Checker.hoistDepsOfL),
+  ("hoist_emit", L.Checker.hoistEmitL),
+  ("hoist_index_go", L.Checker.hoistIndexGoL),
   ("hoist_ins", L.Checker.hoistInsL),
   ("hoist_ix", L.Checker.hoistIxL),
-  ("hoist_name_index", L.Checker.hoistNameIndexL),
   ("hoist_names", L.Checker.hoistNamesL),
+  ("hoist_names_go", L.Checker.hoistNamesGoL),
   ("hoist_nat_op_ground", L.Checker.hoistNatOpGroundL),
   ("hoist_note", L.Checker.hoistNoteL),
-  ("hoist_targets", L.Checker.hoistTargetsL),
+  ("hoist_rules_go", L.Checker.hoistRulesGoL),
+  ("hoist_targets_go", L.Checker.hoistTargetsGoL),
   ("hoist_walk", L.Checker.hoistWalkL),
+  ("hoist_zero", L.Checker.hoistZeroL),
   ("hs_clear", L.Arena.memoClearG L.Checker.hsSch),
   ("hs_find", L.Arena.memoFindG L.Checker.hsSch),
   ("hs_put", L.Arena.memoPutG L.Checker.hsSch),
