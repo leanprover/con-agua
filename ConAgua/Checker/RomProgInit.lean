@@ -117,7 +117,7 @@ theorem stateDR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     TblR.zero _ a ha (loadMem_rd b pb s8 s64) (h63 a hs) hctl
   have hf : ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧
       ((loadMem b pb s8 s64).arr64 L.Front.Ind.IFL).size < 2 ^ 62 :=
-    ⟨hc.1 70 (by decide), hc.1 71 (by decide)⟩
+    ⟨(hc.1 70 (by decide)).2, (hc.1 71 (by decide)).2⟩
   refine ⟨hT NID (.inl rfl) (by decide), hT LID (.inr (.inl rfl)) (by decide),
     hT EID (.inr (.inr rfl)) (by decide), ?_, hf⟩
   have hd : 1 ≤ ((loadMem b pb s8 s64).arr64 DECL).size := hc.2.2.1
