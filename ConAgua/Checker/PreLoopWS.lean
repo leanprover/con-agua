@@ -11,7 +11,7 @@ import ConAgua.Compiler.WriteSetSplit
 by `scripts/preloop_ws.py`), `preLoopA` the word arrays and `preLoopC` the `CTL` words their bodies
 store into (every `CTL` index in the closure is a literal or `k + (e &&& 1)`). Per-chunk kernel
 checks as `LoopCore.lean`. Corollaries: every stage's run is a `MemFrame preLoopA preLoopC`
-(`stageFrame_*`), and the set misses the arrays and words the declaration loop needs zero at its
+(`preLoopFrame_*`), and the set misses the arrays and words the declaration loop needs zero at its
 start (`preLoopA_loopZero`, `preLoopC_loopZero`).
 -/
 
@@ -136,37 +136,37 @@ theorem preLoop_frame (n : Nat) {f : FnName} (hf : f ∈ preLoopFns) (s₀ : St)
   exact (M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame checkerProg_preLoopClosed n hf [] s₀)).1
 
-theorem stageFrame_cap_check (n : Nat) (s₀ : St) :
+theorem preLoopFrame_cap_check (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "cap_check" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "cap_check" (by decide +kernel)) s₀
 
-theorem stageFrame_pb_check (n : Nat) (s₀ : St) :
+theorem preLoopFrame_pb_check (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "pb_check" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "pb_check" (by decide +kernel)) s₀
 
-theorem stageFrame_intern_reserved_pins (n : Nat) (s₀ : St) :
+theorem preLoopFrame_intern_reserved_pins (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "intern_reserved_pins" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "intern_reserved_pins" (by decide +kernel)) s₀
 
-theorem stageFrame_builtin_prelude (n : Nat) (s₀ : St) :
+theorem preLoopFrame_builtin_prelude (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "builtin_prelude" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "builtin_prelude" (by decide +kernel)) s₀
 
-theorem stageFrame_front_run (n : Nat) (s₀ : St) :
+theorem preLoopFrame_front_run (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "front_run" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "front_run" (by decide +kernel)) s₀
 
-theorem stageFrame_prepare_prelude (n : Nat) (s₀ : St) :
+theorem preLoopFrame_prepare_prelude (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "prepare_prelude" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "prepare_prelude" (by decide +kernel)) s₀
 
-theorem stageFrame_intern_all_pins (n : Nat) (s₀ : St) :
+theorem preLoopFrame_intern_all_pins (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "intern_all_pins" []
     ⦃fun _ s' => MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ :=
   preLoop_frame n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀
