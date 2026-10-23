@@ -15,9 +15,13 @@ starts at the label `ca_enter` (the trampoline) and at each function entry `ca_f
 segment `ca_f_g` are written as `lbl "g" n m` where that is their value. So the term is
 `stub ++ (trampoline ++ (f₀ ++ (… ++ (fₖ ++ []))))`, the shape `asm_lit`'s `checkerAsm` has.
 
-As a check (not needed for soundness), the code is printed again with Kraken's printer (`toATT`)
-and compared with the file's `.text` lines: parse ∘ print is the identity on the file, so the parser
-reads every instruction the way the printer (which wrote the file) meant it.
+The trusted base is this parser (`parseAsmFile`): the term comes from it alone. Two independent
+cross-checks, not needed for soundness: Kraken's own parser must read the file's code the same way
+(`ConAgua/AsmFile/CrossCheck.lean`, run by `scripts/asm_file.py` and `land.sh`: ~13 s, too slow to
+run here), and the assembler must encode what the file says (`harness/check-asm.sh`). And here,
+the code is printed again with Kraken's printer (`toATT`) and compared with the file's `.text`
+lines: parse ∘ print is the identity on the file, so the parser reads every instruction the way
+the printer (which wrote the file) meant it.
 
 Lake does not see the file through the import graph: the module that uses `include_asm` must be in
 a library whose `needs` list the file as an `input_file` (`lakefile.toml`, library `ConAguaAsm`), so

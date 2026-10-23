@@ -133,6 +133,11 @@ Olean of `ConAguaAsm.Checker`: 17 MB. The file: 5.3 MB, 251 120 lines (251 094 d
   `asm/checker.s` is not a drop-in: e2e's program is not `checkerProg`'s code (1753 functions, no
   stubs, a DIAG array: `nw 215`, `diag 214`, for its `missing CODE` verdicts), while the file has
   `ca_diag = -1` and 214 word arrays. It would need e2e to run the file as a separate column.
+* **Both parsers** (user, via the coordinator): the term comes from the strict parser alone (the
+  trusted one); Kraken's parser must agree on the file, else the first differing directive, its
+  line and function are named. Inside `include_asm` Kraken's parser took **17.1 s** (module 8.5 →
+  28.6 s), so it runs instead in `ConAgua/AsmFile/CrossCheck.lean` (`lake env lean --run`, 13 s
+  standalone), from `scripts/asm_file.py` in both modes, hence from `land.sh`.
 * Coordinator (2026-10-23): design approved; land after compproofD; PLAN.md rule added; the stub
   check goes to lane `abi`.
 

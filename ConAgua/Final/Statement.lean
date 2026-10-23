@@ -26,9 +26,10 @@ that has it.
   parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`, `Include.lean`, `Term.lean`) and
   the kernel checked `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab
   checkerProg "check"`; so neither the Lean compiler and runtime that computed the code nor the
-  printer that wrote the file is trusted, only the parser; the parser and the assembler are checked
-  against each other on the file by `harness/check-asm.sh` (DESIGN.md, "Kernel-checked compiler
-  output"; docs/design/asmfile.md);
+  printer that wrote the file is trusted, only the parser. Independent cross-checks on the file:
+  Kraken's own parser reads it the same way (`ConAgua/AsmFile/CrossCheck.lean`, in
+  `scripts/asm_file.py`), and the assembler encodes what it says (`harness/check-asm.sh`)
+  (DESIGN.md, "Kernel-checked compiler output"; docs/design/asmfile.md);
 * the loader's layout: the input bytes, the pin-data bytes, every other array zero, the table and
   the stack, as `G` says (`hG`, `hmem`, `HarnessCall`);
 * the harness: it calls `ca_enter` as `HarnessCall` states and reads the verdict as `rdx = 0 ∧ rax =
