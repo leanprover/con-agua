@@ -298,4 +298,190 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
             refine ⟨((frame_set _ _ _).trans (frame_set _ _ _)).trans hf, fun i hi => ?_, hB2⟩
             rw [hlow i hi, hr2 _ (by omega), iteF (by omega), iteF (by omega)]
 
+/-! ## `hoist_chain` -/
+
+theorem hChain_ok (T : Std.HashMap Nat Nat) (ord nx out : Word) (C : Nat) (w : Nat → Word)
+    (l1 : ord.toNat + C ≤ out.toNat) (l2 : nx.toNat + C ≤ out.toNat) (n : Nat) :
+    ∀ (m m' : Mem) (q q' : Word) (t a : Nat), out.toNat + C ≤ (m.arr64 IW).size →
+    (m.arr64 IW).size < 2 ^ 64 →
+    (∀ j < C, rd m (nx.toNat + j) = nxW T j C) →
+    (∀ y < C, rd m (ord.toNat + y) = w y) →
+    q.toNat + (posT T t a C).length ≤ C →
+    hChainW n m ord nx out q (tgW (posT T t a C).head?) = some (q', m') →
+    MemFrame [IW] [] m m' ∧ q'.toNat = q.toNat + (posT T t a C).length ∧
+    (∀ i y, (posT T t a C)[i]? = some y → rd m' (out.toNat + q.toNat + i) = w y) ∧
+    (∀ i < 2 ^ 64, (i < out.toNat + q.toNat ∨ out.toNat + q.toNat + (posT T t a C).length ≤ i) →
+      rd m' i = rd m i) := by
+  induction n with
+  | zero => intro m m' q q' t a _ _ _ _ _ h; simp [hChainW.eq_1] at h
+  | succ n ih =>
+    intro m m' q q' t a hb hs hnx hord hlen h
+    cases hh : (posT T t a C).head? with
+    | none =>
+      rw [List.head?_eq_none_iff] at hh
+      rw [hh] at h ⊢
+      rw [show tgW ([] : List Nat).head? = 0 from rfl, hChainW.arm1 n m ord nx out q 0 rfl] at h
+      cases h
+      exact ⟨MemFrame.refl _ _ _, by simp, fun i y hy => by simp at hy, fun _ _ _ => rfl⟩
+    | some x =>
+      have hx := posT_head T t a C x hh
+      have hxm := mem_posT.1 (List.mem_of_head? hh)
+      rw [hx, List.length_cons] at hlen
+      rw [hx]
+      rw [hh, tgW_some] at h
+      rw [hChainW.arm2 n m ord nx out q _ (by rw [← tgW_some]; exact tgW_some_ne x (by omega)),
+        addr1, addr1, addrW] at h
+      have hq1 := toNat_succ q (by omega)
+      have hr1 := fun j hj => rd_set m (out.toNat + q.toNat) j
+        (rdW (m.arr64 IW) (UInt64.ofNat (ord.toNat + x))) (by omega) hj
+      have he : rdW ((m.set64 IW (UInt64.ofNat (out.toNat + q.toNat))
+          (rdW (m.arr64 IW) (UInt64.ofNat (ord.toNat + x)))).arr64 IW)
+          (UInt64.ofNat (nx.toNat + x)) = tgW (posT T t (x + 1) C).head? := by
+        show rd _ _ = _
+        rw [hr1 _ (by omega), iteF (by omega), hnx x (by omega), nxW_some T x C t hxm.2.2]
+      rw [he] at h
+      obtain ⟨hf, hq', hv, hfr⟩ := ih _ m' (q + 1) q' t (x + 1) (by simp only [size_set64]; omega)
+        (by simp only [size_set64]; omega)
+        (fun j hj => by rw [hr1 _ (by omega), iteF (by omega)]; exact hnx j hj)
+        (fun y hy => by rw [hr1 _ (by omega), iteF (by omega)]; exact hord y hy)
+        (by omega) h
+      rw [hq1] at hq' hv hfr
+      refine ⟨(frame_set _ _ _).trans hf, by rw [hq', List.length_cons]; omega, ?_, ?_⟩
+      · intro i y hy
+        cases i with
+        | zero =>
+          rw [List.getElem?_cons_zero] at hy; cases hy
+          rw [hfr _ (by omega) (Or.inl (by omega)), Nat.add_zero, hr1 _ (by omega),
+            iteT ⟨rfl, by omega⟩]
+          exact hord x (by omega)
+        | succ i =>
+          rw [List.getElem?_cons_succ] at hy
+          rw [show out.toNat + q.toNat + (i + 1) = out.toNat + (q.toNat + 1) + i by omega]
+          exact hv i y hy
+      · intro i hi hio
+        rw [List.length_cons] at hio
+        rw [hfr i hi (by omega), hr1 _ hi, iteF (by omega)]
+
+/-! ## `hoist_emit` -/
+
+theorem hEmit_ok (T : Std.HashMap Nat Nat) (ord c tg hd nx out : Word) (w : Nat → Word)
+    (l1 : ord.toNat + c.toNat ≤ out.toNat) (l2 : nx.toNat + c.toNat ≤ out.toNat)
+    (l3 : tg.toNat + c.toNat ≤ out.toNat) (l4 : hd.toNat + c.toNat ≤ out.toNat)
+    (hlt : ∀ (k t : Nat), T[k]? = some t → t < k) (n : Nat) :
+    ∀ (m m' : Mem) (q p r : Word), out.toNat + c.toNat ≤ (m.arr64 IW).size →
+    (m.arr64 IW).size < 2 ^ 64 → p.toNat ≤ c.toNat →
+    (∀ j < c.toNat, rd m (tg.toNat + j) = tgW T[j]?) →
+    (∀ t < c.toNat, rd m (hd.toNat + t) = tgW (posT T t 0 c.toNat).head?) →
+    (∀ j < c.toNat, rd m (nx.toNat + j) = nxW T j c.toNat) →
+    (∀ y < c.toNat, rd m (ord.toNat + y) = w y) →
+    q.toNat + (emitL T c.toNat p.toNat).length ≤ c.toNat →
+    hEmitW n m ord c tg hd nx out q p = some (r, m') →
+    MemFrame [IW] [] m m' ∧
+    (∀ i y, (emitL T c.toNat p.toNat)[i]? = some y → rd m' (out.toNat + q.toNat + i) = w y) ∧
+    (∀ i < 2 ^ 64, (i < out.toNat + q.toNat ∨
+      out.toNat + q.toNat + (emitL T c.toNat p.toNat).length ≤ i) → rd m' i = rd m i) := by
+  induction n with
+  | zero => intro m m' q p r _ _ _ _ _ _ _ _ h; simp [hEmitW.eq_1] at h
+  | succ n ih =>
+    intro m m' q p r hb hs hpc htg hhd hnx hord hlen h
+    by_cases hcp : c ≤ p
+    · rw [hEmitW.arm1 n m ord c tg hd nx out q p hcp] at h
+      cases h
+      rw [word_le] at hcp
+      rw [emitL_end T _ _ hcp]
+      exact ⟨MemFrame.refl _ _ _, fun i y hy => by simp at hy, fun _ _ _ => rfl⟩
+    · have hcp' := hcp
+      rw [word_le] at hcp'
+      have hpc' : p.toNat < c.toNat := by omega
+      have hp1 := toNat_succ p (by omega)
+      rw [hEmitW.arm2 n m ord c tg hd nx out q p hcp, addrW] at h
+      rw [show rdW (m.arr64 IW) (UInt64.ofNat (hd.toNat + p.toNat)) =
+        tgW (posT T p.toNat 0 c.toNat).head? from hhd _ hpc'] at h
+      rw [emitL_left T _ _ hpc'] at hlen ⊢
+      simp only [blk, List.length_append] at hlen
+      cases hc : hChainW n m ord nx out q (tgW (posT T p.toNat 0 c.toNat).head?) with
+      | none => rw [hc, hEmitW.k2.eq_1] at h; cases h
+      | some qm =>
+        obtain ⟨q1, m1⟩ := qm
+        rw [hc] at h
+        obtain ⟨hf1, hq1, hv1, hfr1⟩ := hChain_ok T ord nx out c.toNat w l1 l2 n m m1 q q1
+          p.toNat 0 hb hs hnx hord (by omega) hc
+        have hs1 := frame_size hf1
+        have htg1 : rd m1 (tg.toNat + p.toNat) = tgW T[p.toNat]? := by
+          rw [hfr1 _ (by omega) (Or.inl (by omega))]; exact htg _ hpc'
+        -- the self step: `m2`, `q2`
+        obtain ⟨m2, q2, h2, hf2, hq2, hv2, hfr2⟩ : ∃ m2 q2,
+            hEmitW n m2 ord c tg hd nx out q2 (p + 1) = some (r, m') ∧
+            MemFrame [IW] [] m1 m2 ∧
+            q2.toNat = q1.toNat + (if T[p.toNat]? = none then [p.toNat] else []).length ∧
+            (∀ i y, (if T[p.toNat]? = none then [p.toNat] else [])[i]? = some y →
+              rd m2 (out.toNat + q1.toNat + i) = w y) ∧
+            (∀ i < 2 ^ 64, (i < out.toNat + q1.toNat ∨ out.toNat + q1.toNat +
+              (if T[p.toNat]? = none then [p.toNat] else []).length ≤ i) → rd m2 i = rd m1 i) := by
+          cases hTP : T[p.toNat]? with
+          | none =>
+            rw [hTP] at htg1
+            have hk1 : (if T[p.toNat]? = none then [p.toNat] else []).length = 1 := by simp [hTP]
+            rw [hEmitW.k2.arm1 n ord c tg hd nx out p q1 m1 (by rw [addrW]; exact htg1),
+              hEmitW.k1.arm1, addrW, addrW] at h
+            have hr2 := fun j hj => rd_set m1 (out.toNat + q1.toNat) j
+              (rdW (m1.arr64 IW) (UInt64.ofNat (ord.toNat + p.toNat))) (by omega) hj
+            refine ⟨_, _, h, frame_set _ _ _, ?_, ?_, ?_⟩
+            · simp only [ite_true, List.length_singleton]; exact toNat_succ q1 (by omega)
+            · intro i y hy
+              simp only [ite_true] at hy
+              cases i with
+              | zero =>
+                simp at hy; subst hy
+                rw [Nat.add_zero, hr2 _ (by omega), iteT ⟨rfl, by omega⟩]
+                show rd m1 _ = _
+                rw [hfr1 _ (by omega) (Or.inl (by omega))]; exact hord _ hpc'
+              | succ i => simp at hy
+            · intro i hi hio
+              simp only [ite_true, List.length_singleton] at hio
+              rw [hr2 _ hi, iteF (by omega)]
+          | some t =>
+            rw [hTP] at htg1
+            rw [hEmitW.k2.arm2 n ord c tg hd nx out p q1 m1 (by
+              rw [addrW]; show ¬ rd m1 _ = 0; rw [htg1]; exact tgW_some_ne t (by have := hlt _ _ hTP; omega)),
+              hEmitW.k1.arm1] at h
+            refine ⟨_, _, h, MemFrame.refl _ _ _, by simp, fun i y hy => by simp at hy,
+              fun _ _ _ => rfl⟩
+        have hs2 := frame_size hf2
+        have hfr12 : ∀ i < 2 ^ 64, (i < out.toNat ∨ out.toNat + c.toNat ≤ i) → rd m2 i = rd m i :=
+          fun i hi hio => by
+            rw [hfr2 i hi (by omega), hfr1 i hi (by omega)]
+        obtain ⟨hf3, hv3, hfr3⟩ := ih m2 m' q2 (p + 1) r (by omega) (by omega) (by omega)
+          (fun j hj => by rw [hfr12 _ (by omega) (Or.inl (by omega))]; exact htg j hj)
+          (fun j hj => by rw [hfr12 _ (by omega) (Or.inl (by omega))]; exact hhd j hj)
+          (fun j hj => by rw [hfr12 _ (by omega) (Or.inl (by omega))]; exact hnx j hj)
+          (fun j hj => by rw [hfr12 _ (by omega) (Or.inl (by omega))]; exact hord j hj)
+          (by rw [hp1]; omega) h2
+        rw [hp1] at hv3 hfr3
+        refine ⟨(hf1.trans hf2).trans hf3, ?_, ?_⟩
+        · intro i y hy
+          simp only [blk, List.append_assoc] at hy
+          by_cases hi1 : i < (posT T p.toNat 0 c.toNat).length
+          · rw [List.getElem?_append_left hi1] at hy
+            rw [hfr3 _ (by omega) (Or.inl (by omega)), hfr2 _ (by omega) (Or.inl (by omega))]
+            exact hv1 i y hy
+          · rw [List.getElem?_append_right (by omega)] at hy
+            by_cases hi2 : i - (posT T p.toNat 0 c.toNat).length <
+                (if T[p.toNat]? = none then [p.toNat] else []).length
+            · rw [List.getElem?_append_left hi2] at hy
+              rw [hfr3 _ (by omega) (Or.inl (by omega))]
+              have := hv2 _ y hy
+              rw [show out.toNat + q1.toNat + (i - (posT T p.toNat 0 c.toNat).length) =
+                out.toNat + q.toNat + i by omega] at this
+              exact this
+            · rw [List.getElem?_append_right (by omega)] at hy
+              have := hv3 _ y hy
+              rw [show out.toNat + q2.toNat + (i - (posT T p.toNat 0 c.toNat).length -
+                (if T[p.toNat]? = none then [p.toNat] else []).length) =
+                out.toNat + q.toNat + i by omega] at this
+              exact this
+        · intro i hi hio
+          simp only [blk, List.length_append] at hio
+          rw [hfr3 i hi (by omega), hfr2 i hi (by omega), hfr1 i hi (by omega)]
+
 end L.Checker
