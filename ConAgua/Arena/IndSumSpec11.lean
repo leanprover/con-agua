@@ -54,6 +54,28 @@ theorem eqTrue_specW (p : Prog) (hp : p.lookup "lvl_eq_true" = some lvlEqTrue) (
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stubM_spec p "lvl_eq_c" n] <;>
       finish (gen := 20) [eqTrueW]
 
+/-- The model of `lvl_eq_true(u, v)` at L fuel `k`, its `lvl_eq_c` call read through `cR`
+(`eqTrueW` is the stubs' reading). -/
+def eqTrueC (cR : CallM) : Nat → Mem → Word → Word → Option (Word × Mem)
+  | 0, _, _, _ => none
+  | k + 1, m, u, v => eqTrueK (cR k "lvl_eq_c" [u, v] m)
+
+theorem eqTrueC_succ (cR : CallM) (k : Nat) (m : Mem) (u v : Word) :
+    eqTrueC cR (k + 1) m u v = eqTrueK (cR k "lvl_eq_c" [u, v] m) := rfl
+
+theorem eqTrue_specC (p : Prog) (hp : p.lookup "lvl_eq_true" = some lvlEqTrue) (cR : CallM)
+    (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (u v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq_true" [u, v]
+    ⦃fun r s' => LocEq s' s₀ ∧ eqTrueC cR n s₀.mem u v = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lvlEqTrue]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hcR n "lvl_eq_c"] <;>
+      finish (gen := 20) [eqTrueC]
+
 /-! ## `check_field_sort_bound`: the word model -/
 
 /-- After `sl_contains`. -/
@@ -65,41 +87,41 @@ def cfbK3 (n : Nat) (io il fv : Word) : Option (Word × Mem) → Option (List Wo
   | none => none
   | some (eq, m) => cfbK4 eq m (containsW n m io il fv)
 /-- After `pin_word(53)`. -/
-def cfbK2 (n : Nat) (io il fv u : Word) (m : Mem) : Option Word → Option (List Word × Mem)
+def cfbK2 (cR : CallM) (n : Nat) (io il fv u : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
-  | some z => cfbK3 n io il fv (eqTrueW m u z)
+  | some z => cfbK3 n io il fv (eqTrueC cR n m u z)
 /-- After `lv_leq_top`. -/
 def cfbK1 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => if r.headD 0 = 2 then some ([0], m) else none
 
 /-- **The model of `check_field_sort_bound(isProp, large, s, io, il, fv, u)`** at exec fuel `n`. -/
-def cfbW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def cfbW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, isProp, large, s, io, il, fv, u =>
-    if isProp = 0 then cfbK1 (stubM "lv_leq_top" m [u, s])
-    else if large ≠ 0 then cfbK2 n io il fv u m (pinWordV m 53)
+    if isProp = 0 then cfbK1 (cR n "lv_leq_top" [u, s] m)
+    else if large ≠ 0 then cfbK2 cR n io il fv u m (pinWordV m 53)
     else some ([0], m)
 
 section arms
-variable (n : Nat) (m : Mem) (isProp large s io il fv u eq ct z : Word) (r : List Word)
+variable (cR : CallM) (n : Nat) (m : Mem) (isProp large s io il fv u eq ct z : Word) (r : List Word)
 theorem cfbK4_fail (h : eq = 0 ∧ ct = 0) : cfbK4 eq m (some ct) = none := by simp [cfbK4, h]
 theorem cfbK4_ok (h : ¬ (eq = 0 ∧ ct = 0)) : cfbK4 eq m (some ct) = some ([0], m) := by
   simp only [cfbK4, if_neg h]
 theorem cfbK3_some : cfbK3 n io il fv (some (eq, m)) = cfbK4 eq m (containsW n m io il fv) := rfl
-theorem cfbK2_some : cfbK2 n io il fv u m (some z) = cfbK3 n io il fv (eqTrueW m u z) := rfl
+theorem cfbK2_some : cfbK2 cR n io il fv u m (some z) = cfbK3 n io il fv (eqTrueC cR n m u z) := rfl
 theorem cfbK1_ok (h : r.headD 0 = 2) : cfbK1 (some (r, m)) = some ([0], m) := by
   simp only [cfbK1]; rw [if_pos h]
 theorem cfbK1_fail (h : r.headD 0 ≠ 2) : cfbK1 (some (r, m)) = none := by
   simp only [cfbK1]; rw [if_neg h]
 theorem cfbW_leq (h : isProp = 0) :
-    cfbW (n + 1) m isProp large s io il fv u = cfbK1 (stubM "lv_leq_top" m [u, s]) := by
+    cfbW cR (n + 1) m isProp large s io il fv u = cfbK1 (cR n "lv_leq_top" [u, s] m) := by
   simp [cfbW, h]
 theorem cfbW_large (h : isProp ≠ 0) (hl : large ≠ 0) :
-    cfbW (n + 1) m isProp large s io il fv u = cfbK2 n io il fv u m (pinWordV m 53) := by
+    cfbW cR (n + 1) m isProp large s io il fv u = cfbK2 cR n io il fv u m (pinWordV m 53) := by
   simp [cfbW, h, hl]
 theorem cfbW_none (h : isProp ≠ 0) (hl : large = 0) :
-    cfbW (n + 1) m isProp large s io il fv u = some ([0], m) := by simp [cfbW, h, hl]
+    cfbW cR (n + 1) m isProp large s io il fv u = some ([0], m) := by simp [cfbW, h, hl]
 end arms
 attribute [ind_grind] cfbK4_fail cfbK4_ok cfbK3_some cfbK2_some cfbK1_ok cfbK1_fail cfbW_leq
   cfbW_large cfbW_none
@@ -110,9 +132,9 @@ variable (p : Prog) (hpw : p.lookup "pin_word" = some pinWordL)
   (hp : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
 include hpw het hc hp
 
-theorem cfbW_spec (n : Nat) (s₀ : St) (isProp large s io il fv u : Word) :
+theorem cfbW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (isProp large s io il fv u : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_field_sort_bound" [isProp, large, s, io, il, fv, u]
-    ⦃fun r s' => LocEq s' s₀ ∧ cfbW n s₀.mem isProp large s io il fv u = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ cfbW cR n s₀.mem isProp large s io il fv u = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkFieldSortBoundL]
   cases n with
@@ -120,7 +142,7 @@ theorem cfbW_spec (n : Nat) (s₀ : St) (isProp large s io il fv u : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        stubM_spec p "lv_leq_top" n, pinWord_specV p hpw n, eqTrue_specW p het n,
+        hcR n "lv_leq_top", pinWord_specV p hpw n, eqTrue_specC p het cR hcR n,
         slContains_spec p hc n] <;>
       finish (gen := 20)
 
@@ -140,15 +162,15 @@ def csfK4 (res j u : Word) : Option (List Word × Mem) → Option (List Word × 
   | none => none
   | some (_, m) => csfK5 (rest (m.set64 IW (res + (j - 1)) u))
 /-- After `ensure_sort_core`: the bound. -/
-def csfK3 (n : Nat) (isProp large s io il fv res j : Word) :
+def csfK3 (cR : CallM) (n : Nat) (isProp large s io il fv res j : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ru, m) => csfK4 rest res j (ru.headD 0) (cfbW n m isProp large s io il fv (ru.headD 0))
+  | some (ru, m) => csfK4 rest res j (ru.headD 0) (cfbW cR n m isProp large s io il fv (ru.headD 0))
 /-- After `infer_type_core`. -/
 def csfK2 (cR : CallM) (n : Nat) (vis isProp large s nP io il fv res j : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ry, m) => csfK3 rest n isProp large s io il fv res j
+  | some (ry, m) => csfK3 rest cR n isProp large s io il fv res j
       (cR n "ensure_sort_core" [vis, nP + (j - 1), ry.headD 0] m)
 /-- After `fvar_type_d`. -/
 def csfK1 (cR : CallM) (n : Nat) (vis isProp large s nP io il fv res j : Word) :
@@ -186,10 +208,10 @@ theorem csfW_step (h : j ≠ 0) (hl : ¬ fl ≤ j - 1) :
 theorem csfK5_some : csfK5 (some (r, m)) = some ([0], m) := rfl
 theorem csfK4_some : csfK4 rest res j u (some (r, m)) = csfK5 (rest (m.set64 IW (res + (j - 1)) u)) :=
   rfl
-theorem csfK3_some : csfK3 rest n isProp large s io il fv res j (some (r, m)) =
-    csfK4 rest res j (r.headD 0) (cfbW n m isProp large s io il fv (r.headD 0)) := rfl
+theorem csfK3_some : csfK3 rest cR n isProp large s io il fv res j (some (r, m)) =
+    csfK4 rest res j (r.headD 0) (cfbW cR n m isProp large s io il fv (r.headD 0)) := rfl
 theorem csfK2_some : csfK2 rest cR n vis isProp large s nP io il fv res j (some (r, m)) =
-    csfK3 rest n isProp large s io il fv res j
+    csfK3 rest cR n isProp large s io il fv res j
       (cR n "ensure_sort_core" [vis, nP + (j - 1), r.headD 0] m) := rfl
 theorem csfK1_some : csfK1 rest cR n vis isProp large s nP io il fv res j (some (r, m)) =
     csfK2 rest cR n vis isProp large s nP io il fv res j
@@ -222,7 +244,7 @@ theorem csfW_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         slGet_specW p hg n, ftdF_spec0 p hftd n, hcR n "infer_type_core",
-        hcR n "ensure_sort_core", cfbW_spec p hpw het hc hb n, ih] <;>
+        hcR n "ensure_sort_core", cfbW_spec p hpw het hc hb cR hcR n, ih] <;>
       finish (gen := 30) (instances := 5000) [getW, rdW_eq]
 
 end spec
@@ -285,14 +307,14 @@ theorem cfbW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (a : AState) (isProp large s io il fv u : Word) (idxArgs : List EIdx) (hS : StageR dn vis fe m a)
     (hu : H u) (hs : H s) (hfv : H fv) (hidx : decHL m io.toNat il.toNat = some idxArgs)
     (hib : io.toNat + il.toNat ≤ iwTop m) :
-    Sim (cfbW n m isProp large s io il fv u)
+    Sim (cfbW stubCall n m isProp large s io il fv u)
       (sfbT (isProp != 0) (large != 0) (decI s) idxArgs (decI fv) (decI u)) a
       (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m') := by
   cases n with
   | zero => exact Sim.of_none
   | succ n =>
   by_cases hp : isProp = 0
-  · rw [cfbW_leq n m isProp large s io il fv u hp]
+  · rw [cfbW_leq stubCall n m isProp large s io il fv u hp]
     simp only [sfbT, hp, bne_self_eq_false, Bool.not_false, ite_true]
     rw [sfb_leq_eq]
     refine Sim.bindK (K := cfbK1) rfl (fun _ _ => rfl)
@@ -311,19 +333,22 @@ theorem cfbW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     · rw [cfbK1_fail m1 r h2]; exact Sim.of_none
   have hp' : (isProp != 0) = true := by simpa using hp
   by_cases hl : large = 0
-  · rw [cfbW_none n m isProp large s io il fv u hp hl]
+  · rw [cfbW_none stubCall n m isProp large s io il fv u hp hl]
     simp only [sfbT, hp', hl, bne_self_eq_false, Bool.not_true, Bool.false_eq_true, ite_false]
     exact Sim.congr (Sim.ret (x := ()) ⟨hS, IWGrow.refl _⟩) rfl
   have hl' : (large != 0) = true := by simpa using hl
-  rw [cfbW_large n m isProp large s io il fv u hp hl]
+  rw [cfbW_large stubCall n m isProp large s io il fv u hp hl]
   simp only [sfbT, hp', hl', Bool.not_true, Bool.false_eq_true, ite_false, ite_true]
   cases hz' : pinWordV m 53 with
   | none => exact Sim.of_none
   | some z =>
   obtain ⟨hrun0, hz⟩ := pinZero_stage hS hz'
   refine Sim.bind_twin hrun0 ?_
-  rw [cfbK2_some, eqTrueW]
-  cases he : stubM "lvl_eq_c" m [u, z] with
+  rw [cfbK2_some]
+  rcases n with _ | n'
+  · exact Sim.of_none
+  rw [eqTrueC_succ]
+  cases he : stubCall n' "lvl_eq_c" [u, z] m with
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨r1, m1⟩ := y
@@ -332,12 +357,12 @@ theorem cfbW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [eqTrueK_some, cfbK3_some]
   have hidx1 : decHL m1 io.toNat il.toNat = some idxArgs := by
     rw [decHL_grow hg1 hib]; exact hidx
-  cases hc : containsW n m1 io il fv with
+  cases hc : containsW (n' + 1) m1 io il fv with
   | none => exact Sim.of_none
   | some ct =>
   obtain ⟨ws, hws, hwsd, hwlt⟩ := slR_of_decHL m1 _ _ idxArgs hidx1 (hS1.lt64 (by have := hg1.1; omega))
   simp only [UInt64.ofNat_toNat] at hws
-  have hct := containsW_ok n _ _ _ _ _ _ hws hc
+  have hct := containsW_ok (n' + 1) _ _ _ _ _ _ hws hc
   by_cases hf : (if r1.headD 0 = 2 then (1 : Word) else 0) = 0 ∧ ct = 0
   · rw [cfbK4_fail _ _ _ hf]; exact Sim.of_none
   rw [cfbK4_ok _ _ _ hf]
@@ -436,7 +461,7 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [csfK2_some]
   have h3 := ensureSortCore_spec dn vis fe (nP + (j - 1)) (ry.headD 0) hy1
   rw [hdep, hy] at h3
-  refine Sim.bindK (K := csfK3 _ n isProp large s io il w res j) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := csfK3 _ stubCall n isProp large s io il w res j) rfl (fun _ _ => rfl)
     (sumSim_of_relAM h3 hS2) fun ru u m3 a3 hQ => ?_
   obtain ⟨hS3, hg3, hu1, hu⟩ := hQ
   rw [csfK3_some]

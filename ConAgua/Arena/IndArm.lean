@@ -27,8 +27,9 @@ theorem absKeep_of_closed {p : Prog} {A : List ArrId} {C : List Word} {fs : List
 
 section
 variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
-include hkp hV hkc in
+include hkp hV hkc hOpf hLC hLT in
 /-- **The inductive arm's contract** from `cidW_okC`, under its program facts. -/
 theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
@@ -50,7 +51,7 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
   obtain ⟨s', hs', -, hcid⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (cid_specW p P.cid P.csf P.csl n _ vis o l w) hc
   subst hs'
-  exact cidW_okC hkp hV hkc P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr hn hdn
+  exact cidW_okC hkp hV hkc hOpf hLC hLT P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr hn hdn
     hcid hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc
 
 end

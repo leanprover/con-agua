@@ -48,12 +48,15 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
       closedW_subPB bs checkerProg_coreErec, checkerProg_natAgreePB bs, checkerProg_lvlTextPB bs,
       hrom]
   have P : CidProg (Prog.subPB bs checkerProg) := by prog_bundle [hrom]
+  have hOpf : OpfF (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hLC : LvlCacheProg (Prog.subPB bs checkerProg) := by prog_bundle []
+  have hLT : (Prog.subPB bs checkerProg).lookup "lv_leq_top" = some lvLeqTop := by prog_bundle []
   have hk : ∀ f ∈ passKeepCalleesC ++ tailKeepCallees ++ ["block_raw_rec"],
       AbsKeep (Prog.subPB bs checkerProg) f := fun f hf =>
     (armAbs_split f hf).elim
       (absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free)
       (hK f)
-  exact indArmSpec_of hkp hV (hK _ (by decide)) P
+  exact indArmSpec_of hkp hV (hK _ (by decide)) hOpf hLC hLT P
     (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armRc) (by decide +kernel)
