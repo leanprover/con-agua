@@ -205,7 +205,6 @@ for the basis pin's canonical comparison), an
 environment whose entries are visible and whose constructors' sums are words, and the walk
 memos (`CidMemos`). Program facts: the lookups (`CidProg`), the write sets, `AbsKeep` of the
 callees outside the `abstract1` cascade. -/
-@[refines_part ConRon.Arena.checkDecl "the inductive arm (check_ind_decl), under StageR"]
 theorem cidW_ok {p : Prog} (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)

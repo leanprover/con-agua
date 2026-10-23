@@ -513,7 +513,7 @@ def ctorK2 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvT
 (its callees at exec fuel `n + 2`). -/
 def ctorW (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa : Word) :
     Option (List Word × Mem) :=
-  ctorK2 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (stubM "check_constant_val" m [vis, cvC])
+  ctorK2 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (cR (n + 2) "check_constant_val" [vis, cvC] m)
 
 section arms
 variable (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa cqO cqL cqB : Word)
@@ -574,7 +574,7 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR
   rw [invoke_eq _ hP.hctor]
   simp only [callFn, checkSumCtorL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    stubM_spec p "check_constant_val" (n + 2), stripPis_specF p hP.strip (n + 2),
+    hcR (n + 2) "check_constant_val", stripPis_specF p hP.strip (n + 2),
     srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
       hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad (n + 2),
     stubM_spec p "open_pis_at_fvars_f" (n + 2), ftdsF_spec p hP.ad (n + 2),
