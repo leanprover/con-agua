@@ -744,7 +744,11 @@ def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (qo
 }
 
 /-- **`tgt_stored_rules`**: `sum_rules` at the major's parameters and constructors; at an OUTSIDE
-major every rule's fire is recomputed once (`aux_rule_fire`) and rebuilt. -/
+major every rule's fire is recomputed once (`aux_rule_fire`) and rebuilt. The fire's two slices
+come back in `IW` (scratch); a rule record's slices are `EREC` slices (`decRule`, read by
+`rec_fire_levels`, `erec_push`, `promote_fire`), so both are copied into `EREC` once
+(`er_from_iw`), shared by every rule as the twin shares the one `f` (lane `e2efix`, bug B1:
+the `IW` offsets were stored as they were, and ι-reduction read `EREC` words there as levels). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:498-509 ConRon.Arena.tgtStoredRules
 @[l_impl ConRon.Arena.tgtStoredRules]
 def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
@@ -753,6 +757,8 @@ def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
     rhso, rhsl);
   if IW.u64[M + 8] != 0 { return (ro, rl) };
   (fk, flo, fll, fpo, fpl) := call aux_rule_fire(M, rP);
+  (flo, fll) := call er_from_iw(flo, fll);
+  (fpo, fpl) := call er_from_iw(fpo, fpl);
   (no, nl) := call tgt_stored_rules_remap(ro, rl, flo, fll, fpo, fpl);
   return (no, nl)
 }
