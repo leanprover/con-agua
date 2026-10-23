@@ -187,4 +187,65 @@ theorem prepareStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (pre : Prelu
       (stageC_prepare_prelude_off _ (by decide)) (stageC_prepare_prelude_off _ (by decide))
       (stageC_prepare_prelude_off _ (by decide))
 
+/-! ## `intern_all_pins` -/
+
+/-- The twin's facts before `internAllPins` (as `Final/Twin.lean`'s `stages_frame`). -/
+theorem prefix4_facts {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
+    {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
+    (h : TwinPrefix4 b sA pre sB rc sC ds sD) :
+    ConRon.Bridge.StateOK sD ∧ sD.store.scratchOn = false ∧ ConRon.Bridge.PinsOK sD ∧
+      ConRon.Bridge.PersPins sD := by
+  obtain ⟨hA, hB, hC, hD⟩ := h
+  have hok0 : ConRon.Bridge.StateOK (AState.init EStore.empty) := ⟨EStore.empty_wf⟩
+  obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, -⟩ := ConRon.Bridge.internReservedPins_run hok0 rfl hA
+  obtain ⟨hstep1, hpersPre, hnPre, preC, hrelPre⟩ :=
+    ConRon.Bridge.Frontend.builtinPreludeE_run hokA hoffA hpinsA hB
+  obtain ⟨hstep2, hpersR, rc', hclR, hrelR⟩ :=
+    ConRon.Bridge.Frontend.parseChunks_run hstep1.ok
+      (by rw [hstep1.scratch, hoffA]) (hpinsA.mono hstep1.ext hstep1.pins) hC
+  obtain ⟨hstep3, -, -, -⟩ :=
+    ConRon.Bridge.Frontend.preparePrelude_run (preC := preC) hstep2.ok
+      (by rw [hstep2.scratch, hstep1.scratch, hoffA])
+      (hpinsA.mono (hstep1.trans hstep2).ext (hstep1.trans hstep2).pins)
+      (ConRon.Bridge.Frontend.denoteDeclArray_ext hstep2.ext hrelPre) hpersPre
+      (hnPre.mono hstep2.ext) hrelR.decls hpersR hrelR.projNamed hD
+  refine ⟨hstep3.ok, by rw [hstep3.scratch, hstep2.scratch, hstep1.scratch]; exact hoffA,
+    hpinsA.mono ((hstep1.ext.trans hstep2.ext).trans hstep3.ext)
+      (by rw [hstep3.pins, hstep2.pins, hstep1.pins]),
+    hppA.mono (by rw [hstep3.pins, hstep2.pins, hstep1.pins])⟩
+
+/-- **After `intern_all_pins`**: what the declaration loop starts from (with the twin's prefix,
+`LoopStage`). Everything else is still the loaded memory's: `since.frame` (`MemFrame preLoopA
+preLoopC`, `PreLoopWS.lean`). -/
+structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : List INatOpPinSet)
+    (a : AState) : Prop where
+  since : Since l m pb
+  arena : ArenaD m a
+  decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds
+  pinSets : PinSetsR m ipins
+  rset : RsetR m
+  pin0 : pinW m 0 ≠ 0
+
+theorem pinsStage_checker (b pb : ByteArray) (s8 s64 : List Nat) (hpb : pb.size < 2 ^ 63)
+    (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
+    (ds : Array IDeclaration) (a : AState) (hpx : TwinPrefix4 b sA pre sB rc sC ds a) :
+    RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb s8 s64) m pb ds a) fun _ m =>
+      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧
+        R7 (loadMem b pb s8 s64) m pb ds ipins a' := by
+  intro n s₀ h6
+  have hc := CapsOK.keep h6.since.keep h6.since.caps
+  obtain ⟨hok, hoff, hpins, hpp⟩ := prefix4_facts hpx
+  have hbs : s₀.mem.arr8 PB = pb.data.toList.toArray := by
+    rw [h6.since.keep.arr8]; exact loadMem_pb b pb s8 s64
+  refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
+    (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.pf.full.names_size hok hpins hpp
+    hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl)
+    (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
+    (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
+  obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR⟩ := hpost
+  refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_⟩
+  · rw [hsf.1 DECL (by decide +kernel) (by decide), hsf.1 DLP (by decide +kernel) (by decide)]
+    exact h6.decls
+  · simp only [pinW, hsf.1 PINS (by decide +kernel) (by decide)]; exact h6.pf.pin0
+
 end L.Checker
