@@ -1,9 +1,11 @@
 import ConAgua.Arena.IndSumSpec4
+import ConAgua.Arena.IndRealMemo
 
 /-!
 # Refinements of `IndSum`, sixth file (lane `indproofs`)
 
-`struct_proj_bodies_go` (through the stub `instantiate1_lift_fast`).
+`struct_proj_bodies_go` (through `instantiate1_lift_fast`, `IndRealMemo.lean`, which needs the
+walk memos `AbsOK`).
 -/
 
 
@@ -46,7 +48,7 @@ def pbK1 (n : Nat) (T k i x y : Word) : Option (List Word × Mem) → Option (Li
   | none => none
   | some (ra, m1) =>
     if 4294967296 ≤ ra.headD 0 then none
-    else pbK2 n T k i x (stubM "instantiate1_lift_fast" m1 [CWF, y, ra.headD 0, 0])
+    else pbK2 n T k i x (i1lF m1 [CWF, y, ra.headD 0, 0])
 /-- After `instantiate1_lift_fast`: the recursion. -/
 def pbK2 (n : Nat) (T k i x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -67,7 +69,7 @@ theorem pbW_pi (hk : k ≠ 0) (ht : h >>> 28 = 6) (he : eViewW m h ≠ []) :
 theorem pbK1_big (hb : 4294967296 ≤ ra.headD 0) : pbK1 n T k i x y (some (ra, m1)) = none := by
   simp only [pbK1, if_pos hb]
 theorem pbK1_ok (hb : ¬ 4294967296 ≤ ra.headD 0) : pbK1 n T k i x y (some (ra, m1)) =
-    pbK2 n T k i x (stubM "instantiate1_lift_fast" m1 [CWF, y, ra.headD 0, 0]) := by
+    pbK2 n T k i x (i1lF m1 [CWF, y, ra.headD 0, 0]) := by
   simp only [pbK1, if_neg hb]
 theorem pbK2_some : pbK2 n T k i x (some (rb, m2)) = pbK3 n x (pbW n m2 T (k - 1) (i + 1) (rb.headD 0)) := by
   rw [pbK2]
@@ -98,8 +100,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
   (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
   (hap : p.lookup "struct_proj_arg_p" = some structProjArgPL)
-  (hp : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp
+  (hp : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL) (hi1 : I1lF p)
+include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp hi1
 
 theorem pbW_spec (n : Nat) : ∀ (s₀ : St) (T k i h : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_bodies_go" [T, k, i, h]
@@ -115,7 +117,7 @@ theorem pbW_spec (n : Nat) : ∀ (s₀ : St) (T k i h : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         eView_spec p hv n, spaW_spec p hd hpf hpp hib hjf hjp hji hmp hap n,
-        stubM_spec p "instantiate1_lift_fast" n, slCons_specW p ha hc hsc n, ih] <;>
+        i1lF_spec p hi1 n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
 end spec
@@ -146,6 +148,41 @@ theorem spaW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [show (0 : Word).toNat = 0 from rfl] at hr1
   rw [hr1]
   exact hr2
+
+theorem spaW_afr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = some (r, m')) : AFr m m' := by
+  simp only [spaW, spaK.eq_def, spaK2.eq_def] at h
+  afr_auto h [binternW_afr, mkProjW_afr]
+
+theorem psGoW_afr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word),
+    psGoW n m o nP N k = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h
+  | n + 1, m, m', o, nP, N, k, r, h => by
+    simp only [psGoW, psK0.eq_def, psK1.eq_def, psK2.eq_def, psK3.eq_def] at h
+    afr_auto h [psGoW_afr n _ _ _ _ _ _ _, binternW_afr, allocW_afr, consW_afr]
+
+theorem psAtW_afr {n : Nat} {m m' : Mem} {o nP : Word} {r : List Word} (h : psAtW n m o nP = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [psAtW] at h
+  | succ n =>
+    simp only [psAtW, psK3.eq_def] at h
+    afr_auto h [psGoW_afr _ _ _ _ _ _ _ _]
+
+theorem projPsW_afr {n : Nat} {m m' : Mem} {nP : Word} {r : List Word} (h : projPsW n m nP = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [projPsW] at h
+  | succ n =>
+    cases n with
+    | zero => simp [projPsW, psAtW, psK3] at h
+    | succ n =>
+      simp only [projPsW, psAtW, psK3.eq_def] at h
+      cases h1 : psGoW n m 1 nP nP 0 with
+      | none => simp [h1] at h
+      | some x =>
+        obtain ⟨r1, m1⟩ := x
+        simp only [h1, Option.some.injEq, Prod.mk.injEq] at h
+        rw [← h.2]; exact psGoW_afr _ _ _ _ _ _ _ _ h1
 
 theorem tag_iff (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
     (decE b).tag = t.toUInt32 ↔ b >>> 28 = t := by
@@ -180,18 +217,19 @@ def PBDec (m : Mem) (r : List Word) : Option (List EIdx) → Prop
 theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (T k i h : Word) (r : List Word),
     pbW n m T k i h = some (r, m') → StageR dn vis fe m a → H h → i.toNat + k.toNat < 2 ^ 64 →
+    AbsOK m →
     ∃ x a', (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDec m' r x ∧ AbsOK m' := by
   induction n with
   | zero => intro m m' a T k i h r hm; simp [pbW] at hm
   | succ n ih =>
-    intro m m' a T k i h r hm hS hh hik
+    intro m m' a T k i h r hm hS hh hik hA
     by_cases hk : k = 0
     · subst hk
       rw [pbW_nil n m T 0 i h rfl] at hm
       simp only [Option.some.injEq, Prod.mk.injEq] at hm
       obtain ⟨rfl, rfl⟩ := hm
-      refine ⟨some [], a, by simp [structProjBodiesGo]; rfl, hS, IWGrow.refl m, ?_⟩
+      refine ⟨some [], a, by simp [structProjBodiesGo]; rfl, hS, IWGrow.refl m, ?_, hA⟩
       simp [PBDec, decHL, hslice?]
     have hk1 : 1 ≤ k.toNat := by
       rcases Nat.eq_zero_or_pos k.toNat with h0 | h0
@@ -234,20 +272,21 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         have ha32 : (ra.headD 0).toNat < 2 ^ 32 := by
           have : ¬ (4294967296 : Nat) ≤ (ra.headD 0).toNat := hab; omega
         obtain ⟨a1, hrun1, hS1, hg1⟩ := spaW_ok dn vis fe m m1 a T i ra h1 hS
-        cases h2 : stubM "instantiate1_lift_fast" m1 [CWF, y, ra.headD 0, 0] with
+        have hA1 := spaW_afr h1 hA
+        cases h2 : i1lF m1 [CWF, y, ra.headD 0, 0] with
         | none => rw [h2] at hm; simp [pbK1, pbK2, pbK3, pbK4] at hm
         | some x2 =>
         obtain ⟨rb, m2⟩ := x2
         rw [h2, pbK2_some] at hm
-        obtain ⟨b', a2, hrun2, hS2, hg2, hb32, hbe⟩ :=
-          instantiate1LiftFast_spec dn vis fe CWF y (ra.headD 0) 0 hy32 ha32 m1 m2 a1 rb h2 hS1
+        obtain ⟨b', a2, ⟨hrun2, ⟨hS2, hg2, hb32, hbe⟩, hA2⟩⟩ :=
+          i1lF_ok dn vis fe CWF y (ra.headD 0) 0 hy32 ha32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
         cases h3 : pbW n m2 T (k - 1) (i + 1) (rb.headD 0) with
         | none => rw [h3] at hm; simp [pbK1, pbK2, pbK3, pbK4] at hm
         | some x3 =>
         obtain ⟨rr, m3⟩ := x3
         rw [h3] at hm
-        obtain ⟨x', a3, hrun3, hS3, hg3, hdec3⟩ :=
-          ih m2 m3 a2 T (k - 1) (i + 1) (rb.headD 0) rr h3 hS2 hb32 (by omega)
+        obtain ⟨x', a3, hrun3, hS3, hg3, hdec3, hA3⟩ :=
+          ih m2 m3 a2 T (k - 1) (i + 1) (rb.headD 0) rr h3 hS2 hb32 (by omega) hA2
         have hg13 := (hg1.trans hg2).trans hg3
         have hview' : (view (decE h)).run a = .ok (.forallE ty body, a) := view_run _ _ _ hview
         rw [CWF_eq, show (0 : Word).toNat = 0 from rfl, ← decE_eq y, hye, ← decE_eq (ra.headD 0)] at hrun2
@@ -268,7 +307,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
           rw [pbK3_none n m3 x rr hz] at hm
           simp only [Option.some.injEq, Prod.mk.injEq] at hm
           obtain ⟨rfl, rfl⟩ := hm
-          exact ⟨none, a3, htwin _ _ _ hrun3 rfl, hS3, hg13, rfl⟩
+          exact ⟨none, a3, htwin _ _ _ hrun3 rfl, hS3, hg13, rfl, hA3⟩
         | some l =>
           obtain ⟨h1', hdl, htl⟩ := hdec3
           rw [pbK3_some n m3 x rr (by rw [h1']; decide)] at hm
@@ -280,14 +319,15 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
           simp only [Option.some.injEq, Prod.mk.injEq] at hm
           obtain ⟨rfl, rfl⟩ := hm
           obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stage h4 hS3 htl hx32 hdl
-          refine ⟨some (ty :: l), a3, htwin _ _ _ hrun3 rfl, hS4, hg13.trans hg4, rfl, ?_, ?_⟩
+          refine ⟨some (ty :: l), a3, htwin _ _ _ hrun3 rfl, hS4, hg13.trans hg4, ⟨rfl, ?_, ?_⟩,
+            consW_afr h4 hA3⟩
           · simp only [List.tail_cons, List.headD_cons]; rw [← hxe, decE_eq]; exact hd4
           · simp only [List.tail_cons, List.headD_cons]; omega
       | _ => simp only [ViewR] at hVR <;> (rw [h6] at hVR) <;> simp at hVR
     · rw [pbW_tag n m T k i h hk ht] at hm
       simp only [Option.some.injEq, Prod.mk.injEq] at hm
       obtain ⟨rfl, rfl⟩ := hm
-      refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl⟩
+      refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl, hA⟩
       rw [hks, structProjBodiesGo, ← decE_eq,
         if_neg (fun e => ht (htf.mp e))]
       rfl
@@ -301,25 +341,28 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
   (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
   (hap : p.lookup "struct_proj_arg_p" = some structProjArgPL)
-  (hp : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp
+  (hp : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL) (hi1 : I1lF p)
+include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp hi1
 
 /-- **`struct_proj_bodies_go` refines `structProjBodiesGo`** (through the stub
-`instantiate1_lift_fast`): `(0, _, _)` for `none`, `(1, off, len)` the bodies' slice. -/
+`instantiate1_lift_fast`, with the walk memos `AbsOK`): `(0, _, _)` for `none`, `(1, off, len)` the
+bodies' slice. -/
 @[refines ConRon.Arena.structProjBodiesGo]
 theorem structProjBodiesGo_refines (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T k i h : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hh : H h) (hik : i.toNat + k.toNat < 2 ^ 64) :
+    (hS : StageR dn vis fe s₀.mem a₀) (hh : H h) (hik : i.toNat + k.toNat < 2 ^ 64)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_bodies_go" [T, k, i, h]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      PBDec s'.mem r (AM.res (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀); ⊤⦄ := by
-  refine triple_post (pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp n s₀ T k i h) ?_
+      PBDec s'.mem r (AM.res (structProjBodiesGo (decI T) k.toNat i.toNat (decI h)) a₀) ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hp hi1 n s₀ T k i h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hdec⟩ := pbW_ok dn vis fe n _ _ _ _ _ _ _ _ hm hS hh hik
+  obtain ⟨x, a', hrun, hS', hg, hdec, hA'⟩ := pbW_ok dn vis fe n _ _ _ _ _ _ _ _ hm hS hh hik hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec⟩
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec, hA'⟩
 
 end census
 
@@ -380,8 +423,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hgo : p.lookup "struct_ps_at_go" = some structPsAtGoL)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (hpj : p.lookup "struct_proj_ps" = some structProjPsL)
-  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp
+  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL) (hi1 : I1lF p)
+include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1
 
 theorem spbW_spec (k : Nat) (s₀ : St) (T nP nF cty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_proj_bodies" [T, nP, nF, cty]
@@ -394,7 +437,7 @@ theorem spbW_spec (k : Nat) (s₀ : St) (T nP nF cty : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         projPsW_spec p ha hc hsc hpf hpp hib hgo hps hpj k, stubM_spec p "inst_pis_at_lift" k,
-        pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg k] <;>
+        pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hi1 k] <;>
       finish (gen := 20)
 
 end spec2
@@ -408,9 +451,9 @@ def PBDecA (m : Mem) (r : List Word) : Option (Array EIdx) → Prop
 theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat)
     (m m' : Mem) (a : AState) (T nP nF cty : Word) (r : List Word)
     (h : spbW k m T nP nF cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty)
-    (hnP : 1 + nP.toNat < 2 ^ 64) (hnF : nF.toNat < 2 ^ 64) :
+    (hnP : 1 + nP.toNat < 2 ^ 64) (hnF : nF.toNat < 2 ^ 64) (hA : AbsOK m) :
     ∃ x a', (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDecA m' r x := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PBDecA m' r x ∧ AbsOK m' := by
   cases k with
   | zero => cases h
   | succ k =>
@@ -432,12 +475,14 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only [Option.some.injEq, Prod.mk.injEq] at h1
   obtain ⟨rfl, rfl⟩ := h1
   obtain ⟨ps, a1, hrun1, hS1, hg1, hps, -⟩ := psAtW_stage dn vis fe k' m m0 a 1 nP r0 h0 hS (by simpa using hnP)
+  have hA0 : AbsOK m0 := psAtW_afr h0 hA
   simp only [List.headD_cons, List.tail_cons] at h
   cases h2 : stubM "inst_pis_at_lift" m0 [CWF, r0.headD 0, r0.tail.headD 0, cty] with
   | none => rw [h2] at h; simp [spbK2] at h
   | some x2 =>
   obtain ⟨ri, m2⟩ := x2
   rw [h2] at h
+  have hA2 : AbsOK m2 := AbsOK.stub (by decide) hA0 h2
   obtain ⟨xo, a2, hrun2, hS2, hg2, hdec2⟩ :=
     instPisAtLift_spec dn vis fe CWF (r0.headD 0) (r0.tail.headD 0) cty hcty ps m0 m2 a1 ri h2
       ⟨hS1, by simpa using hps⟩
@@ -457,7 +502,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     rw [spbK2_none (k' + 1) m2 T nF ri hz] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
+    refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl, hA2⟩
     simp only [structProjBodies]
     rw [hrun0]; rfl
   | some e =>
@@ -468,8 +513,8 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     | some x3 =>
     obtain ⟨rg, m3⟩ := x3
     rw [h3] at h
-    obtain ⟨x, a3, hrun3, hS3, hg3, hdec3⟩ :=
-      pbW_ok dn vis fe (k' + 1) m2 m3 a2 T nF 0 (ri.tail.headD 0) rg h3 hS2 he32 (by simpa using hnF)
+    obtain ⟨x, a3, hrun3, hS3, hg3, hdec3, hA3⟩ :=
+      pbW_ok dn vis fe (k' + 1) m2 m3 a2 T nF 0 (ri.tail.headD 0) rg h3 hS2 he32 (by simpa using hnF) hA2
     rw [show (0 : Word).toNat = 0 from rfl, hee] at hrun3
     cases x with
     | none =>
@@ -477,7 +522,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rw [spbK3_none m3 rg hz] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨none, a3, ?_, hS3, (hg1.trans hg2).trans hg3, rfl⟩
+      refine ⟨none, a3, ?_, hS3, (hg1.trans hg2).trans hg3, rfl, hA3⟩
       simp only [structProjBodies]
       rw [hrun0]
       simp only [StateT.run_bind, hrun3]; rfl
@@ -486,8 +531,8 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rw [spbK3_some m3 rg (by rw [hl1]; decide)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨some l.toArray, a3, ?_, hS3, (hg1.trans hg2).trans hg3, rfl, by simpa using hdl,
-        by simpa using htl⟩
+      refine ⟨some l.toArray, a3, ?_, hS3, (hg1.trans hg2).trans hg3, ⟨rfl, by simpa using hdl,
+        by simpa using htl⟩, hA3⟩
       simp only [structProjBodies]
       rw [hrun0]
       simp only [StateT.run_bind, hrun3]; rfl
@@ -505,27 +550,29 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hgo : p.lookup "struct_ps_at_go" = some structPsAtGoL)
   (hps : p.lookup "struct_ps_at" = some structPsAtL)
   (hpj : p.lookup "struct_proj_ps" = some structProjPsL)
-  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL)
-include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp
+  (hp : p.lookup "struct_proj_bodies" = some structProjBodiesL) (hi1 : I1lF p)
+include ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1
 
 /-- **`struct_proj_bodies` refines `structProjBodies`** (through the stubs `inst_pis_at_lift`,
 `instantiate1_lift_fast`). -/
 @[refines ConRon.Arena.structProjBodies]
 theorem structProjBodies_refines (k : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T nP nF cty : Word)
-    (hS : StageR dn vis fe s₀.mem a₀) (hcty : H cty) (hnP : 1 + nP.toNat < 2 ^ 64) :
+    (hS : StageR dn vis fe s₀.mem a₀) (hcty : H cty) (hnP : 1 + nP.toNat < 2 ^ 64)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "struct_proj_bodies" [T, nP, nF, cty]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      PBDecA s'.mem r (AM.res (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀); ⊤⦄ := by
-  refine triple_post (spbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp
+      PBDecA s'.mem r (AM.res (structProjBodies (decI T) nP.toNat nF.toNat (decI cty)) a₀) ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (spbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hgo hps hpj hp hi1
     k s₀ T nP nF cty) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hdec⟩ :=
-    spbW_ok dn vis fe k _ _ _ _ _ _ _ _ hm hS hcty hnP nF.toNat_lt
+  obtain ⟨x, a', hrun, hS', hg, hdec, hA'⟩ :=
+    spbW_ok dn vis fe k _ _ _ _ _ _ _ _ hm hS hcty hnP nF.toNat_lt hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec⟩
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hdec, hA'⟩
 
 end census2
 
