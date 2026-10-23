@@ -56,6 +56,7 @@ structure ArfLook (p : Prog) : Prop where
   cons : p.lookup "sl_cons" = some slCons
   apl : p.lookup "abstract_prefix_list" = some abstractPrefixList
   arf : p.lookup "aux_rule_fire" = some auxRuleFire
+  ab : AbF p
 
 theorem auxRuleFire_spec (p : Prog) (h : ArfLook p) (n : Nat) (s₀ : St) (M rP : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "aux_rule_fire" [M, rP]
@@ -68,8 +69,32 @@ theorem auxRuleFire_spec (p : Prog) (h : ArfLook p) (n : Nat) (s₀ : St) (M rP 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         viewLs_specW p h.ln h.alloc h.pc h.vl n,
-        abstractPrefixList_spec p h.ap h.copy h.alloc h.cons h.apl n] <;>
+        abstractPrefixList_spec p h.ap h.copy h.alloc h.cons h.apl h.ab n] <;>
       finish (gen := 20) [rdW_eq]
+
+theorem poolCopyW_iwFrame : ∀ (n : Nat) (m m' : Mem) (d s l : Word), poolCopyW n m d s l = some m' →
+    MemFrame [IW] [200] m m'
+  | 0, _, _, _, _, _, h => by simp [poolCopyW] at h
+  | n + 1, m, m', d, s, l, h => by
+    by_cases hl : l = 0
+    · rw [poolCopyW_nil n m d s l hl] at h; cases h; exact MemFrame.refl _ _ _
+    · by_cases hs : s.toNat < (m.arr64 POOL).size
+      · rw [poolCopyW_step n m d s l hl hs] at h
+        exact (set64IW_frame _ _ _).trans (poolCopyW_iwFrame n _ _ _ _ _ h)
+      · rw [poolCopyW_oob n m d s l hl (by omega)] at h; cases h
+
+/-- `view_ls` writes only the record pool. -/
+theorem viewLsW_iwFrame {n : Nat} {m m' : Mem} {us : Word} {r : List Word}
+    (h : viewLsW n m us = some (r, m')) : MemFrame [IW] [200] m m' := by
+  unfold viewLsW at h
+  split at h; · simp at h
+  split at h; · simp at h
+  rename_i q m1 hal
+  split at h; · simp at h
+  rename_i m2 hc
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (allocW_iwFrame hal).trans (poolCopyW_iwFrame _ _ _ _ _ _ hc)
 
 /-- The fire `(1, lvls, pins)` as words. -/
 def decFire (m' : Mem) (r : List Word) : IRecRuleFire → Prop
@@ -79,8 +104,9 @@ def decFire (m' : Mem) (r : List Word) : IRecRuleFire → Prop
 
 theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (M rP : Word) (TM : TargetMajor) (hS : StageR dn vis fe m a)
-    (hM : DecB (fun m => decTM m M.toNat) m TM) (hP : PoolSmall m) :
-    RSim (arfW n m M rP) (ConRon.Arena.auxRuleFire TM rP.toNat) a (KP dn vis fe m decFire) := by
+    (hM : DecB (fun m => decTM m M.toNat) m TM) (hP : PoolSmall m) (hA : AbsOK m) :
+    RSim (arfW n m M rP) (ConRon.Arena.auxRuleFire TM rP.toNat) a
+      (fun b a' x => KP dn vis fe m decFire b a' x ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
@@ -98,6 +124,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨r1, m1⟩ := x1
   rw [h1, arfK1_some] at hb
   obtain ⟨ids, hrun1, hS1, hg1, hd1, -⟩ := viewLsW_ok h1 hS hvlH hP
+  have hA1 := hA.iw (viewLsW_iwFrame h1)
   -- the `ds` slice, below the tops
   have h' : decTM (truncM m) M.toNat = some TM := hM
   obtain ⟨-, -, ⟨o', l', ho', hl', hds'⟩, -⟩ := rec2DecTM_parts h'
@@ -122,9 +149,9 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     obtain ⟨r2, m2⟩ := x2
     rw [h2, arfK2_some] at hb
     cases hb
-    obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2⟩ := aplW_ok dn vis fe n m1 m2 a rP _ _ r2 TM.ds h2 hS1 hds1
-      (by rw [to, tl]; have := hS.2.1; omega) (by rw [to, tl]; have := hg1.1; omega) rP.toNat_lt
-    refine ⟨.nested ids xs, a2, ?_, hS2, hg1.trans hg2, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := aplW_ok dn vis fe n m1 m2 a rP _ _ r2 TM.ds h2 hS1 hds1
+      (by rw [to, tl]; have := hS.2.1; omega) (by rw [to, tl]; have := hg1.1; omega) rP.toNat_lt hA1
+    refine ⟨.nested ids xs, a2, ?_, ⟨hS2, hg1.trans hg2, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, hA2⟩
     · simp only [ConRon.Arena.auxRuleFire, StateT.run_bind]
       rw [← dvl, hrun1]
       simp only [bind, Except.bind]
@@ -143,7 +170,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     | succ n =>
     rw [show (UInt64.ofNat 0 : Word) = 0 from rfl, aplW_nil (h := rfl), arfK2_some] at hb
     cases hb
-    refine ⟨.nested ids [], a, ?_, hS1, hg1, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+    refine ⟨.nested ids [], a, ?_, ⟨hS1, hg1, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, hA1⟩
     · simp only [ConRon.Arena.auxRuleFire, StateT.run_bind]
       rw [← dvl, hrun1, hnil]
       rfl
@@ -158,12 +185,13 @@ the fire `.nested lvls pins` as `(1, lvls, pins)`, slices below the top. -/
 theorem auxRuleFire_refines (p : Prog) (hp : ArfLook p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M rP : Word) (TM : TargetMajor)
     (hS : StageR dn vis fe s₀.mem a₀) (hM : DecB (fun m => decTM m M.toNat) s₀.mem TM)
-    (hP : PoolSmall s₀.mem) :
+    (hP : PoolSmall s₀.mem) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "aux_rule_fire" [M, rP]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.auxRuleFire TM rP.toNat) a₀ ∧
       KP dn vis fe s₀.mem decFire (r, s'.mem) (AM.st (ConRon.Arena.auxRuleFire TM rP.toNat) a₀)
-        (AM.res (ConRon.Arena.auxRuleFire TM rP.toNat) a₀); ⊤⦄ :=
+        (AM.res (ConRon.Arena.auxRuleFire TM rP.toNat) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (auxRuleFire_spec p hp n s₀ M rP) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (arfW_sim dn vis fe n _ a₀ M rP TM hS hM hP).am hw⟩
+    let h := (arfW_sim dn vis fe n _ a₀ M rP TM hS hM hP hA).am hw
+    ⟨hl, h.1, h.2.1, h.2.2⟩
 
 end L.Ind

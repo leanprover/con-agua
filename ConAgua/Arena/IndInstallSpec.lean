@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.IndInstall
+import ConAgua.Arena.IndRealFvtD
 
 /-!
 # Refinements of `IndInstall` (lane `induct`)
@@ -41,7 +42,7 @@ def domsW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     else if dl ≤ j - 1 then none
     else
       domsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))])
+        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
 
 /-- After `fvar_type_d`: call `is_def_eq_core`. -/
 def domsK1 (n : Nat) (vis off fo fl dO dl j b : Word) :
@@ -76,7 +77,7 @@ theorem domsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1)
 theorem domsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
     domsW (n + 1) m vis off fo fl dO dl j =
       domsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
-        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
+        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
   simp [domsW, hj, hfl, hdl]
 theorem domsK1_some :
     domsK1 n vis off fo fl dO dl j b (some (ra, m1)) =
@@ -103,8 +104,8 @@ grind_pattern [ind_grind] domsK2_ok => domsK2 n vis off fo fl dO dl j (some (rb,
 /-! ## `domsW_spec`: the `vcgen` proof against the L code (no twin values) -/
 
 section spec
-variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
-include hp
+variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt) (hftd : FtdF p)
+include hp hftd
 
 theorem domsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_doms_at" [vis, off, fo, fl, dO, dl, j]
@@ -120,7 +121,7 @@ theorem domsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
     simp only [callFn, checkBlockDomsAt]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_d" n, stubM_spec p "is_def_eq_core" n, ih] <;>
+        ftdF_spec0 p hftd n, stubM_spec p "is_def_eq_core" n, ih] <;>
       finish (gen := 20)
 
 end spec
@@ -210,13 +211,13 @@ theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       rw [hdoeq] at h
       rw [hwa_eq] at h
       rw [hwb_eq] at h
-      cases hra : stubM "fvar_type_d" m [wa] with
+      cases hra : ftdF m [wa] with
       | none => rw [hra] at h; simp [domsK1] at h
       | some ram1 =>
         obtain ⟨ra, m1⟩ := ram1
         rw [hra, domsK1_some] at h
         obtain ⟨x1, a1, hrun1, hStage1, hg1, hw1lt, hw1eq⟩ :=
-          fvarTypeD_spec dn vis fe wa hwa_lt m m1 a ra hra hStage
+          ftdF_ok dn vis fe wa hwa_lt m m1 a ra hra hStage
         cases hrb : stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, wb] with
         | none => rw [hrb] at h; simp [domsK2] at h
         | some rbm2 =>
@@ -267,8 +268,8 @@ theorem domsW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
 /-! ## The census theorem -/
 
 section census
-variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
-include hp
+variable (p : Prog) (hp : p.lookup "check_block_doms_at" = some checkBlockDomsAt) (hftd : FtdF p)
+include hp hftd
 
 /-- **`check_block_doms_at` refines `checkBlockDomsAt .verified`.** -/
 @[refines ConRon.Arena.checkBlockDomsAt]
@@ -285,7 +286,7 @@ theorem checkBlockDomsAt_refines (n : Nat) (s₀ : St) (a₀ : AState)
       AM.ok (ConRon.Arena.checkBlockDomsAt V fe off.toNat fvs doms j.toNat) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkBlockDomsAt V fe off.toNat fvs doms j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (domsW_spec p hp n s₀ vis off fo fl dO dl j) ?_
+  refine triple_post (domsW_spec p hp hftd n s₀ vis off fo fl dO dl j) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hStage', hg⟩ := domsW_ok n dn fe s₀.mem s'.mem a₀ vis off fo fl dO dl j fvs doms r hm
     hStage hfvs hdoms hfob hdob hfot hdot hoob hjf hjd

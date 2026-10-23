@@ -35,8 +35,8 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
 
 theorem simFvarTypeD (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "fvar_type_d" m [e]) (fvarTypeD (decI e)) a (KP dn vis fe m decW0E) :=
-  (fvarTypeD_spec dn vis fe e he).sim hS
+    RSim (ftdF m [e]) (fvarTypeD (decI e)) a (KP dn vis fe m decW0E) :=
+  (ftdF_ok dn vis fe e he).sim hS
 
 theorem simPiResult (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
     RSim (pirF m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
@@ -47,9 +47,9 @@ theorem simGetAppFn (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
   have h := (gafF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simGetAppArgs (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "get_app_args_f" m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
+    RSim (gaaF m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
       (KP dn vis fe m (decRL (fun m => decHL m) 0)) := by
-  have h := (getAppArgs_spec dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
+  have h := (gaaF_ok dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simOpenPis (hS : StageR dn vis fe m a) {k e i : Word} (he : H e) :
     RSim (stubM "open_pis_at_fvars_f" m [k, e, i]) (openPisAtFvarsF k.toNat (decI e) i.toNat) a

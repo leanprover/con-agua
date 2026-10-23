@@ -18,6 +18,7 @@ open L.Arena
 /-- The lookups of the `nestPos` block (and its leaves). -/
 structure NbLook (p : Prog) : Prop where
   hi1 : I1Prog p
+  ab : AbF p
   na : NaF p
   ct : CtLook p
   nit : NitLook p
@@ -212,7 +213,7 @@ theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
   simp only [callFn, nestCtorsWalkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       whnfWalkFuel_spec' p L n, hFields,
-      closeTelescope_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI R.hk.forM L.hcl n] <;>
+      closeTelescope_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI R.hk.forM L.hcl L.ab n] <;>
     simp_all [nbWalkW_succ, nbWalkK1_some, nbWalkK2_some, nbWalkK3_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
@@ -326,7 +327,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
   rw [invoke_eq _ L.papp]
   simp only [callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      stubM_spec p "get_app_args_f" n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
+      gaaF_spec p L.nt.ad n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
       nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
     simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, nbAppK4_some, nbAppK5_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
@@ -343,7 +344,7 @@ theorem nbBind_step (s₀ : St) (vis ctx fu po pl dep kb w ns : Word) :
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestCtxHiAt_specE p R.hi n, eView_spec p R.hl.hv n, nestOcc_spec' p L.nit.no n,
       internFVar_spec p R.hl.hff R.hl.hfp R.hl.hif n, i1F_spec p L.hi1 n, hPos,
-      stubM_spec p "abstract1_fast" n, mkForall_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI R.hk.forM n] <;>
+      abF_spec p L.ab n, mkForall_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI R.hk.forM n] <;>
     simp_all [nbBindW_succ, nbBindK1_some, nbBindK2_some, nbBindK3_some, nbBindK4_some, nbBindK5_some,
       nbBindK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,

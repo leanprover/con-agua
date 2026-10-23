@@ -84,7 +84,7 @@ def agK1 (n : Nat) (vis nP fvs0O fvs0L s0 s : Word) :
   | some (r, m1) =>
     if r.headD 0 = 0 then none
     else if r.tail.tail.headD 0 ≠ fvs0L then none
-    else agK2 n vis nP fvs0L s0 s r (stubM "fvar_type_ds" m1 [fvs0O, fvs0L])
+    else agK2 n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L])
 
 /-- After `fvar_type_ds`: the doms comparison. -/
 def agK2 (n : Nat) (vis nP fvs0L s0 s : Word) (r : List Word) :
@@ -113,7 +113,7 @@ theorem agK1_abortL (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 ≠ fvs0L) :
   rw [agK1, if_neg h0, if_pos h]
 theorem agK1_ok (h0 : r.headD 0 ≠ 0) (h : r.tail.tail.headD 0 = fvs0L) :
     agK1 n vis nP fvs0O fvs0L s0 s (some (r, m1)) =
-      agK2 n vis nP fvs0L s0 s r (stubM "fvar_type_ds" m1 [fvs0O, fvs0L]) := by
+      agK2 n vis nP fvs0L s0 s r (ftdsF m1 [fvs0O, fvs0L]) := by
   rw [agK1, if_neg h0, if_neg (by simpa using h)]
 theorem agK2_some : agK2 n vis nP fvs0L s0 s r (some (rd, m2)) =
     agK3 s0 s (domsW n m2 vis 0 (r.tail.headD 0) (r.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP) := rfl
@@ -135,7 +135,7 @@ grind_pattern [ind_grind] agK4_abort => agK4 (some (re, m1))
 theorem checkBlockAgreeOne_spec (p : Prog)
     (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
     (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
-    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (n : Nat) (s₀ : St)
+    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (n : Nat) (s₀ : St)
     (vis nP fvs0O fvs0L s0 cvTa s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_agree_one"
       [vis, nP, fvs0O, fvs0L, s0, cvTa, s]
@@ -147,8 +147,8 @@ theorem checkBlockAgreeOne_spec (p : Prog)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "open_pis_at_fvars_f" n, stubM_spec p "fvar_type_ds" n,
-        domsW_spec p hd n, lvlEqFueled_spec p hl n] <;>
+        stubM_spec p "open_pis_at_fvars_f" n, ftdsF_spec p had n,
+        domsW_spec p hd had.ftd n, lvlEqFueled_spec p hl n] <;>
       finish (gen := 20) [agW, lveW]
 
 /-- A successful `domsW` has `j` within both lists. -/
@@ -230,15 +230,15 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
   have hlen1 := decHL_length m1 hfv1
   have hlen0 := decHL_length m hfvs0
   rw [hL] at hlen1
-  cases hrb : stubM "fvar_type_ds" m1 [fvs0O, fvs0L] with
+  cases hrb : ftdsF m1 [fvs0O, fvs0L] with
   | none => rw [hrb] at h; simp [agK2] at h
   | some rdm2 =>
   obtain ⟨rd, m2⟩ := rdm2
   rw [hrb, agK2_some] at h
   have hbound1 : fvs0O.toNat + fvs0L.toNat ≤ iwTop m1 := by have := hg1.1; omega
   obtain ⟨x2, a2, hrun2, hSt2, hg2, hdec2⟩ :=
-    fvarTypeDs_spec dn vis fe fvs0O fvs0L fvs0 m1 m2 a1 rd hrb
-      ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0⟩
+    ftdsF_ok dn vis fe fvs0O fvs0L fvs0 m1 m2 a1 rd hrb
+      ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0, fun _ => hbound1⟩
   simp only [decRL, show (0:Nat) + 1 = 1 from rfl, agGetD0, agGetD1] at hdec2
   obtain ⟨hdm2, hdb2⟩ := hdec2
   cases hw : domsW n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) nP with
@@ -291,7 +291,7 @@ sorts are equivalent; the L code aborts nowhere the twin does not fail. -/
 theorem checkBlockAgreeOne_refines (p : Prog)
     (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
     (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
-    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (n : Nat) (s₀ : St)
+    (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis nP fvs0O fvs0L s0 cvTa s : Word) (cv : IConstantVal) (fvs0 : List EIdx)
     (hStage : StageR dn vis fe s₀.mem a₀)
@@ -305,7 +305,7 @@ theorem checkBlockAgreeOne_refines (p : Prog)
       AM.ok (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (checkBlockAgreeOne_spec p hd hl hp (n + 1) s₀ vis nP fvs0O fvs0L s0 cvTa s) ?_
+  refine triple_post (checkBlockAgreeOne_spec p hd hl hp had (n + 1) s₀ vis nP fvs0O fvs0L s0 cvTa s) ?_
   rintro r s' ⟨hlq, hm⟩
   obtain ⟨a', hrun, hSt', hg⟩ := agW_ok n dn fe s₀.mem s'.mem a₀ vis nP fvs0O fvs0L s0 cvTa s r cv
     fvs0 hm hStage hty hfvs0 hfot hs hs0
