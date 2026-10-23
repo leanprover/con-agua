@@ -168,11 +168,6 @@ theorem instLPFast_spec (f o l us e : Word) (hu : H us) (he : H e) (ks : List NI
       (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some ks)
       (instLPFast f.toNat ks (decI us) (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
-/-- `inst_pis_at_lift(fuel, off, len, e)`. -/
-theorem instPisAtLift_spec (f o l e : Word) (he : H e) (xs : List EIdx) :
-    RelAM "inst_pis_at_lift" [f, o, l, e]
-      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
-      (instPisAtLift f.toNat xs (decI e)) (KeepPost dn vis fe decOE) := sorry
 
 
 

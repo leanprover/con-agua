@@ -16,7 +16,7 @@ argument of the `IW` slice, the tag test (`(0, 0)` at a non-`∀`), the binder v
 * **The loop** a named block (`ipalLoop`) with a recursive model (`ipalGoW`), the walk's calls
   through `i1lF`.
 * **`ipalF_ok`**: `RelW ipalF [f, o, l, e] (StageR ∧ AbsOK ∧ decHL) (instPisAtLift …)
-  (KeepPost … decOE ∧ AbsOK)`, by `i1lF_ok` per step (replaces `IndStubs.instPisAtLift_spec`,
+  (KeepPost … decOE ∧ AbsOK)`, by `i1lF_ok` per step (replaced `IndStubs.instPisAtLift_spec`, deleted,
   whose `stubM` statement cannot carry the walk memos `AbsOK`).
 -/
 
@@ -250,7 +250,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       rw [hnil]; rfl
 
 /-- **`inst_pis_at_lift` refines `instPisAtLift` under the stage relation and the walk memos**
-(replaces `IndStubs.instPisAtLift_spec`); the memos are well formed after. -/
+(replaced the deleted `IndStubs.instPisAtLift_spec`); the memos are well formed after. -/
 theorem ipalF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l e : Word)
     (he : H e) (xs : List EIdx) :
     RelW ipalF [f, o, l, e]
