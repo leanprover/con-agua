@@ -180,6 +180,14 @@ theorem growIf_frame (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Wor
     · exact ((GFr.set64 _ _ _ _).trans (gzeroW_fr _ _ _ _)).trans (gtiersW_fr _ _ _ _ _ _ _ h)
   · simp at h; subst h; exact GFr.refl _ _
 
+/-- **The growth commutes with a write to another array** that the hash does not read (a push's
+column write before its growth). -/
+theorem growIf_set64 (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
+    (A : ArrId) (k x : Word) (hA : A ≠ sa) (hAc : A ≠ CTL)
+    (hH : ∀ (m : Mem) (t i : Word), H (m.set64 A k x) t i = H m t i) :
+    growIf sa ca H m₀ (m.set64 A k x) c = (growIf sa ca H m₀ m c).map (fun m' => m'.set64 A k x) := by
+  sorry
+
 /-- The schema's `hash` block, spliced at `o`, sets `h` (`o + 5`) to `H m t i` (`t` at `o + 2`,
 `i` at `o + 3`) and changes nothing else. -/
 def HashOK (p : Prog) (S : GrowSch) (o : Nat) (H : Mem → Word → Word → Word) : Prop :=

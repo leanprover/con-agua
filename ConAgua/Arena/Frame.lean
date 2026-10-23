@@ -171,7 +171,7 @@ theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RL
     StoreR S R hs m' on tbP tbS := by
   obtain ⟨hra, hsa, hA₀, hc0, hc1, h1, hscb, h0⟩ := hap
   obtain ⟨hfa, hfc, hfs, -⟩ := hf
-  obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1⟩ := hR
+  obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := hR
   have eb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hfc SCB hscb]
   have era := hfa S.ra hra hS.ra_ctl
   have esa := hfa S.sa hsa hS.sa_ctl
@@ -183,9 +183,10 @@ theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RL
     rcases word_le_one t ht with rfl | rfl
     · simpa using hc0
     · exact hc1
-  refine ⟨⟨by rw [hfs]; exact hctl, by rw [hfc SCB hscb]; exact hb⟩, by rw [hfc 1 h1]; exact hfl, ?_, ?_⟩
+  refine ⟨⟨by rw [hfs]; exact hctl, by rw [hfc SCB hscb]; exact hb⟩, by rw [hfc 1 h1]; exact hfl, ?_, ?_, ?_⟩
   · exact tierR_mono S R hs m m' 0 tbP era esa (ec 0 (by decide)) (eb 0) (hloc.1 0) (hloc.2 0) hT0
   · exact tierR_mono S R hs m m' 1 tbS era esa (ec 1 (by decide)) (eb 1) (hloc.1 1) (hloc.2 1) hT1
+  · exact growR_of_sa S m m' esa hG
 
 end frame
 
@@ -205,19 +206,30 @@ theorem pushG_frame (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1)
       · exact hx.2
     simp [this]
 
+/-- An append and the growth after it change the table's two arrays and its two counts. -/
+theorem pushM_frame (S : Schema) (hS : S.WF) (H : Mem → Word → Word → Word) (m : Mem) (t : Word)
+    (ht : t ≤ 1) (vs : List Word) (j w : Word) (m' : Mem) (h : pushM S H m t vs j = some (w, m')) :
+    MemFrame [S.ra, S.sa] [S.ca, S.ca + 1] m m' := by
+  obtain ⟨-, hg⟩ := pushM_some S H m t vs j w m' h
+  obtain ⟨g1, g2, g3⟩ := growIf_frame _ _ _ _ _ _ _ hg
+  have hp := pushG_frame S hS m t ht vs j (cntW S m t)
+  refine ⟨fun b hb hc => ?_, fun x hx => ?_, fun b => (g2 b).trans (hp.2.2.1 b), g3.trans hp.2.2.2⟩
+  · have : b ≠ S.sa := fun e => hb (by simp [e])
+    rw [g1 b this]; exact hp.1 b hb hc
+  · rw [g1 CTL hS.sa_ctl.symm]; exact hp.2.1 x hx
+
 /-- **What an `intern_*` model changes**: the table's two arrays and its two counts. -/
 theorem internM_frame (S : Schema) (hS : S.WF) (m : Mem) (sk : Word) (pk : Word → Bool)
-    (vs rs₀ rs₁ : List Word) (w : Word) (m' : Mem) (h : internM S m sk pk vs rs₀ rs₁ = some (w, m')) :
+    (vs rs₀ rs₁ : List Word) {H : Mem → Word → Word → Word} (w : Word) (m' : Mem)
+    (h : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) :
     MemFrame [S.ra, S.sa] [S.ca, S.ca + 1] m m' := by
-  have h0 := pushG_frame S hS m 0 (by decide) vs
-  have h1 := pushG_frame S hS m 1 (by decide) vs
   simp only [internM] at h
   split at h <;> try split at h <;> try split at h <;> try split at h <;> try split at h <;>
     try split at h
   all_goals first
+    | exact pushM_frame S hS H m _ (by decide) vs _ w m' h
     | (simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-       first | with_reducible exact MemFrame.refl _ _ _ | with_reducible exact h0 _ _ |
-         with_reducible exact h1 _ _)
+       exact MemFrame.refl _ _ _)
     | simp at h
 
 /-! ## The arena side: an interning changes one table -/

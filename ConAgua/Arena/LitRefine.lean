@@ -578,7 +578,8 @@ theorem internWStr_eq (m : Mem) (o l : Word) :
         (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
       (probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l
         (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlots m)
-        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0) := by
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
+      litH := by
   have e0 : ∀ x, hdW litSch.tag.toUInt64 0 x = litP + x := fun x => by
     simp [hdW, litSch, litP, ETag.lit]
   have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
@@ -651,12 +652,13 @@ theorem TierRel_grow (t : Word) (ht : t ≤ 1) (tb : Tbl LitNode EIdx UInt64)
 include hg in
 /-- **Appending to the pool preserves the relation** (`natAddLit_refines`'s `hgrow`). -/
 theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
-  obtain ⟨hpool, hctl, hfl, hT0, hT1⟩ := hR
+  obtain ⟨hpool, hctl, hfl, hT0, hT1, hG⟩ := hR
   have hf := grow_ctl m m' hg 1 (by decide)
   have := Frame.size _ _ _ hg.1
   have := Frame.arr64 POOL CTL _ _ hg.1 (by decide)
   refine ⟨?_, ?_, by grind, TierRel_grow m m' hg 0 (by decide) _ hT0,
-    TierRel_grow m m' hg 1 (by decide) _ hT1⟩
+    TierRel_grow m m' hg 1 (by decide) _ hT1,
+    growR_of_sa litSch m m' (grow_arr m m' hg SLOT (by decide) (by decide)) hG⟩
   · obtain ⟨-, -, -, h1, h2⟩ := hg
     grind [PoolOK, store_grind]
   · exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩

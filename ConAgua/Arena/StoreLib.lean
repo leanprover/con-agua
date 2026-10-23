@@ -765,6 +765,11 @@ theorem protoRun_pushP (hs : L.on a = false) (hc : (L.getP a).nodes.size < 13421
 
 end protocol
 
+/-- The growth state reads only the slot array. -/
+theorem growR_of_sa (m m' : Mem) (h : m'.arr64 S.sa = m.arr64 S.sa) (hG : GrowR S m) :
+    GrowR S m' := by
+  simp only [GrowR, nSl, gnW, gexpW, len64_eq, h]; exact hG
+
 /-- The relation after an append to tier `t`, from the two tiers'. -/
 theorem storeR_push (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (vs : List Word)
     (j : Word) (hj : j < nSl S m) (on : Bool) (tbP tbS tbP' tbS' : Tbl α (Idx k) δ)
@@ -1291,7 +1296,7 @@ theorem pushM_sameOut (S : Schema) (hS : S.WF) (H : Mem → Word → Word → Wo
   · rw [g2 b]; exact pushG_size S m t vs j _ b
 
 theorem internM_sameOut (S : Schema) (hS : S.WF) (m : Mem) (sk : Word) (pk : Word → Bool)
-    (vs rs₀ rs₁ : List Word) (H : Mem → Word → Word → Word) (w : Word) (m' : Mem)
+    (vs rs₀ rs₁ : List Word) {H : Mem → Word → Word → Word} (w : Word) (m' : Mem)
     (h : internM S m sk pk vs rs₀ rs₁ H = some (w, m')) : SameOut S m m' := by
   have : SameOut S m m := ⟨⟨fun _ _ _ _ => rfl, rfl⟩, rfl, fun _ => rfl⟩
   simp only [internM] at h
