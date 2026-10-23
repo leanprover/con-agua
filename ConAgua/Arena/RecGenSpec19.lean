@@ -23,20 +23,20 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## Frames -/
 
 theorem tptW_mfr : ∀ (n : Nat) (m m' : Mem) (vis d xo xl : Word) (r : List Word),
-    tptW n m vis d xo xl = some (r, m') → MFr [] [] m m'
+    tptW stubCall n m vis d xo xl = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, h => by simp [tptW] at h
   | n + 1, m, m', vis, d, xo, xl, r, h => by
     by_cases hl : xl = 0
-    · rw [tptW_nil n m vis d xo xl hl] at h
+    · rw [tptW_nil stubCall n m vis d xo xl hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    rw [tptW_cons n m vis d xo xl hl] at h
-    cases h1 : stubM "infer_type_core" m [vis, d, rdW (m.arr64 IW) xo] with
+    rw [tptW_cons stubCall n m vis d xo xl hl] at h
+    cases h1 : stubCall n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m with
     | none => rw [h1] at h; simp [tptK] at h
     | some x =>
     obtain ⟨r1, m1⟩ := x
     rw [h1, tptK_some] at h
     refine (MFr.ofStub h1).trans ?_
-    cases h2 : tptW n m1 vis d (xo + 1) (xl - 1) with
+    cases h2 : tptW stubCall n m1 vis d (xo + 1) (xl - 1) with
     | none => rw [h2] at h; simp [tptK2] at h
     | some y =>
     obtain ⟨r2, m2⟩ := y
@@ -44,16 +44,16 @@ theorem tptW_mfr : ∀ (n : Nat) (m m' : Mem) (vis d xo xl : Word) (r : List Wor
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact tptW_mfr n _ _ _ _ _ _ _ h2
 
-theorem tmpW_mfr {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word} (h : tmpW N m vis rP M = some (r, m')) :
+theorem tmpW_mfr {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word} (h : tmpW stubCall N m vis rP M = some (r, m')) :
     MFr [] [] m m' := by
   cases N with
   | zero => simp [tmpW] at h
   | succ N =>
   by_cases hm : rdW (m.arr64 IW) (M + 8) ≠ 0
-  · rw [tmpW_mem N m vis rP M hm] at h
+  · rw [tmpW_mem stubCall N m vis rP M hm] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  rw [tmpW_out N m vis rP M hm] at h
-  cases h1 : tptW N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3)) with
+  rw [tmpW_out stubCall N m vis rP M hm] at h
+  cases h1 : tptW stubCall N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3)) with
   | none => rw [h1] at h; simp [tmpK1] at h
   | some x =>
   obtain ⟨r1, m1⟩ := x
@@ -74,7 +74,7 @@ theorem tmpW_mfr {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word} (h : t
   obtain ⟨r3, m3⟩ := z
   rw [h3, tmpK3_some] at h
   refine (MFr.ofMknF h3).trans ?_
-  cases h4 : stubM "infer_type_core" m3 [vis, rP, r3.headD 0] with
+  cases h4 : stubCall N "infer_type_core" [vis, rP, r3.headD 0] m3 with
   | none => rw [h4] at h; simp [tmpK4] at h
   | some w =>
   obtain ⟨r4, m4⟩ := w
@@ -255,7 +255,7 @@ theorem clmW_sim {p : Prog} (hP : ClmProg p) (dn : NIdx → Option ConLeche.Name
     (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m3 m' ∧ PosMR m') ?_ ?_
   · intro r4 m4 e4
     obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (targetMajorPins_spec p hP.tmp n _ vis _ _) e4
+      (targetMajorPins_spec p hP.tmp stubCall (stubCall_spec p) n _ vis _ _) e4
     obtain ⟨s4', hs4', -, hok, hS4, hg4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
       (targetMajorPins_refines p hP.tmp n _ a3 dn vis fe _ _ tm hS3 hd3) e4
     rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb] at hok hS4
