@@ -64,7 +64,8 @@ the ROM readers and the gates' leaves. Their specs come from their own refinemen
 def openFns : List FnName :=
   ["infer_type_core", "ensure_sort_core", "is_def_eq_core", "loose_bvars_bounded_fast",
    "has_fvar_fast", "all_level_params_defined", "is_proj_fn_shape", "nat_lit_supported", "rom_cv",
-   "rom_ci", "rom_expr_pin", "rom_basis_decls", "rom_basis_decls_a", "rom_pin_sets"]
+   "rom_ci", "rom_expr_pin", "rom_basis_decls", "rom_basis_decls_a", "rom_pin_sets",
+   "consts_resolve_ffast"]
 
 /-- **`fs` lies in a call-closed function set with a step's write set** (`stepA`, `stepC`). -/
 def StepIn (p : Prog) (fs : List FnName) : Prop :=
