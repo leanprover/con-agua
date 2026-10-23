@@ -12,8 +12,11 @@ con-ron's cons tables are `HashMap2`s (`ron/hashmap2.rs`): `insert_at` writes th
 past the load threshold `try_resize` doubles the slot count and rehashes the live entries. L's
 were fixed: a tier had `len(XSLOT) / 2` slots and `X_push` aborted at 3/4 load. Now:
 
-* **Slot count** of a tier: `SN0 << G` with `SN0 = 8` and `G`, the **growth exponent**, the
-  slot array's last word (zero at the start, so no initialisation). `X_find` reads it instead of
+* **Slot count** of a tier: `G + SN0` with `SN0 = 8` and `G` the slot array's last word (zero
+  at the start, so no initialisation). (Second design: `SN0 << G`, an exponent. Dropped because
+  the last word then blocks the last doubling: a table could use at most half its array, and
+  `app-lam` (25.2 M `app` nodes) aborted at `CA_WORDS = 2^27`, where master accepts. Now the
+  last growth is capped at the largest multiple of 8 that leaves the last word clear.) `X_find` reads it instead of
   `len(XSLOT) >> 1`; nothing else changes in the probe. (First prototype: a global per table.
   Dropped: `MemFrame` and every relation frame ignore globals, so a relation reading one would
   need a new frame notion everywhere; and `CTL` has no free words below 64, the store tier's
@@ -27,8 +30,8 @@ were fixed: a tier had `len(XSLOT) / 2` slots and `X_push` aborted at 3/4 load. 
   The two tiers share the slot array (interleaved), so they share `n`; each tier is at most half
   full.
 * **The growth block** (`growB S`, generic in `GrowSch` = slot array, record array, record
-  width, count index, hash block): `n' = 2n` (abort unless `2 n' < len(XSLOT)`, the last word
-  stays clear), `G += 1`, zero the old table's words `[0, 2n)` eight at a time (the words above
+  width, count index, hash block): `n' = min(2n, ((len - 1) >> 4) << 3)` (abort if that is no
+  growth), `G := n' - 8`, zero the old table's words `[0, 2n)` eight at a time (the words above
   are zero by invariant), then for both tiers and every node `i < CTL[ca + t]`: the node's hash
   (the schema's hash block: FNV-1a over the record's words written out, or the stored hash word
   for `lit`, `ls`, `nstr`), its home slot, linear probing to the first zero slot, write
@@ -99,3 +102,24 @@ flush): 0 disagreements with master.
   `growIf_set64`).
 * `cap_check` also requires every word array to have at least 17 words (`GrowR` at the start:
   2 × 8 slots and the exponent word); `arenaR_init` takes it.
+
+## Landing (2026-10-23)
+
+All 19 cons tables grow; no `sorry`. Merged with master after lane memoflush (growable memo
+tables in a fresh region above the old one, header in slot 0). The cons tables do it differently
+on purpose: their records are dense and are the source of every slot, so the growth zeroes the
+old table and re-registers the records in place (no second region, no old-slot walk); the memo
+tables have no such record store.
+
+Final measurement against master `e66ea826` (memo growth and the compiler's prototypes landed;
+both binaries from `e2e.write_checker`, `bench.py --set default --reps 3`, load ~80, spreads up
+to 45 %): wall **0.670×**, instructions 1.07×, con-ron 0.607× (c03d 0.93 → 0.82 s, let-ladder
+2.17 → 1.86 s, c04a 6.2 → 5.4 s, beta-ladder 5.2 → 6.2 s; RSS c04a 1.1 → 0.55 GB, beta-ladder
+2.6 → 0.95 GB). Verdicts: `bench.py --set all --reps 0`, 675 fixtures, no disagreement.
+
+Side changes: `cap_check` tests the 19 slot arrays' 17-word minimum with one wrapping compare
+per array (`capCond`; testing it for all 214 arrays overflowed `asm_lit`'s code generator on
+`cap_check`'s literal); `arenaR_init`/`arenaD_init`/`estoreEmpty_refines`/`aStateInit_refines`
+take the sizes hypothesis; `memosR_init` split out (`memosEmpty_refines` does not need it); lane
+derb's lazy-`der_b` lemmas in `ExprMk.lean` state the miss as `growIf … = some m₁` and read
+`der_b` through `der_congr` (its reads skip the slot arrays).
