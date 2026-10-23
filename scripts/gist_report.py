@@ -7,6 +7,7 @@ publish it to the project's gist.
                                       when that file is missing)
 
 Reads the files scripts/dashboard_data.py writes (run that first) and docs/deviations.md."""
+import datetime
 import csv, json, pathlib, re, subprocess, sys, datetime
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -90,7 +91,10 @@ def trend_svg(pts):
     """Proven shares (left axis, %) and lines of L code / proofs (right axis, thousands) per census run."""
     W, H, ml, mr, mt, mb = 900, 360, 50, 70, 20, 70
     n = len(pts)
-    xs = [ml + (W - ml - mr) * (i / max(1, n - 1)) for i in range(n)]
+    # x is time (not run index), so the whole history keeps its real proportions
+    ts = [datetime.datetime.strptime(p["date"][:16], "%Y-%m-%d %H:%M").timestamp() for p in pts]
+    t0, t1 = ts[0], max(ts[-1], ts[0] + 1)
+    xs = [ml + (W - ml - mr) * (t - t0) / (t1 - t0) for t in ts]
     lean = [100 * int(p["lean_proven"]) / den(p) for p in pts]
     cnt = [100 * (int(p["lean_proven"]) + int(p.get("lean_local") or p.get("lean_sorry") or 0)) / den(p) for p in pts]
     wr = [100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / den(p) for p in pts]
@@ -109,9 +113,15 @@ def trend_svg(pts):
         o.append(f'<text x="{ml - 6}" y="{yl(t) + 4:.1f}" text-anchor="end" fill="#666">{t}%</text>')
     for t in range(0, ktop + 1, step):
         o.append(f'<text x="{W - mr + 6}" y="{yr(t) + 4:.1f}" fill="#666">{t}k</text>')
-    for i, p in enumerate(pts):
-        if n <= 12 or i % max(1, n // 10) == 0 or i == n - 1:
-            o.append(f'<text x="{xs[i]:.1f}" y="{H - mb + 16}" text-anchor="end" fill="#666" transform="rotate(-35 {xs[i]:.1f} {H - mb + 16})">{p["date"][5:16]}</text>')
+    span_h = (t1 - t0) / 3600
+    every = next(h for h in (1, 2, 3, 6, 12, 24, 48, 168, 10**6) if span_h / h <= 12)
+    tick = datetime.datetime.fromtimestamp(t0).replace(minute=0, second=0, microsecond=0)
+    while tick.timestamp() <= t1:
+        if tick.timestamp() >= t0 and tick.hour % min(every, 24) == 0:
+            x = ml + (W - ml - mr) * (tick.timestamp() - t0) / (t1 - t0)
+            o.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{mt}" y2="{H - mb}" stroke="#f3f3f3"/>')
+            o.append(f'<text x="{x:.1f}" y="{H - mb + 16}" text-anchor="end" fill="#666" transform="rotate(-35 {x:.1f} {H - mb + 16})">{tick.strftime("%m-%d %H:%M")}</text>')
+        tick += datetime.timedelta(hours=1)
     def line(vals, y, color, dash=""):
         d = " ".join(f"{'M' if i == 0 else 'L'}{xs[i]:.1f},{y(v):.1f}" for i, v in enumerate(vals))
         o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
@@ -218,7 +228,7 @@ landings = json.loads((dash / "landings.json").read_text())
 velocity = list(csv.DictReader(open(dash / "velocity.csv")))
 # the images first: the report links them by a hash of their content
 (dash / "phases.svg").write_text(phases_svg())
-(dash / "trend.svg").write_text(trend_svg(progress[-40:]))
+(dash / "trend.svg").write_text(trend_svg(progress))
 perf = perf_data()
 if perf:
     (dash / "perf.svg").write_text(perf_svg(perf["rows"]))
