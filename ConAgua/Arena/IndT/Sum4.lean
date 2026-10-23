@@ -36,6 +36,7 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
 include hq henv in
 /-- **`check_sum_ctor_tail` under `StageC`** (twin side: the tail of con-ron's
@@ -282,7 +283,7 @@ theorem sdSimC (k : Nat) (hk : k ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo fl d
   exact sdomsW_simC hq henv k hk m a off fo fl dO dl j fvs doms fvsP domsP hC hA hfvs hdoms
     (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hjf hjd hfP hdP hws (r, m') e
 
-include hq henv hV hkc in
+include hq henv hV hkc hApd hCrk in
 /-- **`check_sum_ctor` under `StageC`** (twin side: con-ron's `checkSumCtor_spec`'s proof). -/
 theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
     (a : AState) (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
@@ -315,9 +316,10 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
   refine Sim.bindK (K := ctorK2 (realCall p) n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
     (fun _ _ => rfl) (Sim.withFr (F := AbsOK) (Sim.withRunC
       (installSimCall (Q := fun _ _ m' a' => StageT dn vis fe m' a' ∧ IWGrow m m')
-        (checkConstantVal_refinesT p hV hq (n + 2) hn _ a dn fe vis cvCw cvC hC.stageT
-          (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hS hcvx))
-        fun _ _ h => ⟨h.2.1, h.2.2⟩))
+        (checkConstantVal_refinesT p hV hq hApd hCrk (n + 2) hn _ a dn fe vis cvCw cvC hC.stageT
+          (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hS hcvx)
+          (denoteCV_lps hcvCP) hA.crMemo.crOK)
+        fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1⟩))
       fun _ _ e => hkc _ _ _ _ _ e hA) fun _ _ m1 a1 hQ => ?_
   obtain ⟨⟨⟨hT1, hg1⟩, hr1⟩, hA1⟩ := hQ
   have hS1 := hT1.stage
@@ -485,7 +487,7 @@ theorem ctorW_okC (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (m : Mem)
   exact ⟨hC8, ((hg06.trans hg7).trans hg8), rfl, hx1, by simpa using hd8, by simpa using hb8, hA8,
     ((c1.trans (hp16.toCore c1.ok)).trans c7).trans c8⟩
 
-include hq henv hV hkc in
+include hq henv hV hkc hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** under `StageC` (the knot's core calls;
 the inputs' denotations as con-ron's `checkSumCtor_spec` asks), the pre-block environment the
 restriction of `fe` to the view `vis0`. Returns `cvC` itself and the field sorts as a fresh `IW`
@@ -524,7 +526,7 @@ theorem checkSumCtor_refinesC (hP : SumProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62)
   refine triple_post (ctorW_spec p hP (realCall p) (realCall_spec p) n s₀ vis0 vis T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hkc n hn _ a₀ vis0 T lo ll nP nIdx rs
+  obtain ⟨hok, hC', hg', h0, h1, hd, -, hA', -⟩ := (ctorW_okC hq henv hV hkc hApd hCrk n hn _ a₀ vis0 T lo ll nP nIdx rs
     isP lg cvCw nF cvTaw lps cvC cvTa hC hT hlps hlb hcv hta hrs hni hnf hA hTP hlpsP hrsP hcvCP hcvTaP
     hws hok₀ hfe).run hm
   exact ⟨hl, hok, hC', hg', h0, h1, hd, hA'⟩

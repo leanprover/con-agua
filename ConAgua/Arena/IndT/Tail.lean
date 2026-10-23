@@ -41,9 +41,10 @@ theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env₁ : ConLeche.Env} (henv₁ : ConLeche.EnvWF env₁)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val") (hApd : ApdF p)
+  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hkp henv₁ hV hkc hApd in
+include hkp henv₁ hV hkc hApd hCrk in
 /-- **`check_block_tail` under `StageC`** (`ictlW_sim`'s; twin side con-ron's `checkBlockTail_of`). -/
 theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName}
     (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
@@ -250,7 +251,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
         (fun hx _ _ h => ConRon.Bridge.denoteCV_ext h hx) hx3 _ _ hcvP
     have d7 := ConRon.Bridge.denoteCIList_mono hx3 _ _ hbP
     refine Sim.withFr (Sim.callW_posB (N := k) (fun j hj => installSimCall
-      (checkBlockRec_refinesC hkp henv₂ hV hkc hApd hP.crec hP.grc hclR (fun f hf => hfR f (by
+      (checkBlockRec_refinesC hkp henv₂ hV hkc hApd hCrk hP.crec hP.grc hclR (fun f hf => hfR f (by
           simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
           rcases hf with rfl | rfl <;> decide)) j (by omega)
         ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs
@@ -294,7 +295,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
       exact ⟨x, a', h1, h2, h3, h4.1, h4.2, RcMR.ofClosedHb hclH hfH e7 hR6 h4.1⟩)
     (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
 
-include hkp henv₁ hV hkc hApd in
+include hkp henv₁ hV hkc hApd hCrk in
 /-- **`check_block_tail` refines `checkBlockTail` under `StageC`** (`checkBlockTail_refines`'s;
 twin side con-ron's `checkBlockTail_of`): from `StageC` at the formers' index and the pass record's
 denotation; the post is `StageR` (no core call follows the tables). -/
@@ -326,7 +327,7 @@ theorem checkBlockTail_refinesC (hP : TailProg p) (L : CbrLook p) {fs : List FnN
   refine triple_post (ictl_spec p hP.tail n s₀ bO bL q) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hM', hA', hR'⟩ :=
-    ictlW_simC hkp henv₁ hV hkc hApd hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hclR hfR hn hC
+    ictlW_simC hkp henv₁ hV hkc hApd hCrk hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hclR hfR hn hC
       hq hblk hM hA hk hR hrb hlp hcoh hden hqP hbP hTw henv₂ hMs hfRc hclH hfH r s'.mem hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres, hst]; exact hS', hg, hM', hA', hR'⟩
