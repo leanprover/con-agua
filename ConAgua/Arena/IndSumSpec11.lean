@@ -552,8 +552,8 @@ include hg hpw het hc hb hgo hia hp hftd
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** (through the stubs
 `fvar_type_d`, `infer_type_core`, `ensure_sort_core`, `lv_leq_top`, `lvl_eq_c`): from the stage
 relation, the field variables and the index arguments decoded below the pool's top, the sorts in a
-fresh `IW` slice. -/
-@[refines ConRon.Arena.checkStructFieldSortsI]
+fresh `IW` slice. Under `StageR`; the census link is `checkStructFieldSortsI_refinesC`
+(`IndT/Sum3.lean`). -/
 theorem checkStructFieldSortsI_refines (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis isProp large s nP fo fl io il nW : Word)
     (fvs idxArgs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
