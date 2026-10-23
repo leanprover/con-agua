@@ -11,6 +11,9 @@ so every word written lies above the old pool top and the results are carried as
 `struct_ctor_resid_ok` call has no fuel left for `param_levels`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -54,7 +57,7 @@ theorem ctorX_spec (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St)
     rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "check_constant_val" 0, stubM_spec p "strip_pis" 0,
+        stubM_spec p "check_constant_val" 0, stripPis_specF p hP.strip 0,
         srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
           hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr 0,
         callW_spec p 0 "open_pis_at_fvars_f", callW_spec p 0 "fvar_type_ds",
@@ -64,7 +67,7 @@ theorem ctorX_spec (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St)
     rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "check_constant_val" 1, stubM_spec p "strip_pis" 1,
+        stubM_spec p "check_constant_val" 1, stripPis_specF p hP.strip 1,
         srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
           hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr 1,
         callW_spec p 1 "open_pis_at_fvars_f", callW_spec p 1 "fvar_type_ds",

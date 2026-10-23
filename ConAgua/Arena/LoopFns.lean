@@ -8,7 +8,7 @@ import ConRon.Bridge.Promote.Pers
 
 `loopFns`: every function `install_then_check` reaches in the checker's program (phase A's fold,
 phase B's checks, the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1398 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1400 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -62,16 +62,16 @@ def loopFns : List FnName :=
    "cert_two_eqs", "cert_xor", "cert_xor_rhs", "certify_nat_eqs", "char_of_nat_ty_ok",
    "char_ty_ok", "check_abs_ctor_sorts", "check_abs_ctor_sorts_all", "check_abs_ctor_sorts_one",
    "check_basis_decl", "check_block", "check_block_agree", "check_block_agree_one",
-   "check_block_classes", "check_block_classes_keys", "check_block_classes_one_per_member",
-   "check_block_ctors", "check_block_ctors_go", "check_block_ctors_one", "check_block_doms_at",
-   "check_block_idx_sorts", "check_block_idx_sorts_one", "check_block_inds",
-   "check_block_inds_cv_tas", "check_block_inds_cv_tas_go", "check_block_pass",
-   "check_block_pass_rec", "check_block_positivity", "check_block_positivity_init",
-   "check_block_positivity_member", "check_block_positivity_member_go",
-   "check_block_positivity_split", "check_block_positivity_split_go", "check_block_rec",
-   "check_block_tables", "check_block_tables_one", "check_block_tail", "check_block_tail_rec",
-   "check_block_tele", "check_block_teles", "check_constant_val", "check_decl", "check_decl_axiom",
-   "check_decl_defn", "check_decl_opaque", "check_decl_quot", "check_decl_thm", "check_defn_val",
+   "check_block_classes", "check_block_classes_count", "check_block_classes_keys",
+   "check_block_classes_one_per_member", "check_block_ctors", "check_block_ctors_go",
+   "check_block_ctors_one", "check_block_doms_at", "check_block_idx_sorts",
+   "check_block_idx_sorts_one", "check_block_inds", "check_block_inds_cv_tas",
+   "check_block_inds_cv_tas_go", "check_block_pass", "check_block_pass_rec",
+   "check_block_positivity", "check_block_positivity_init", "check_block_positivity_nfs",
+   "check_block_positivity_nfs_member", "check_block_rec", "check_block_tables",
+   "check_block_tables_one", "check_block_tail", "check_block_tail_rec", "check_block_tele",
+   "check_block_teles", "check_constant_val", "check_decl", "check_decl_axiom", "check_decl_defn",
+   "check_decl_opaque", "check_decl_quot", "check_decl_thm", "check_defn_val",
    "check_div_mod_certs", "check_div_mod_pin", "check_div_mod_pin_at", "check_div_mod_pin_loop",
    "check_field_sort_bound", "check_ind_decl", "check_opaque_val", "check_pending",
    "check_pending_go", "check_pending_next", "check_reduce_pin", "check_shapeless",
@@ -94,10 +94,11 @@ def loopFns : List FnName :=
    "class_gen_rule", "class_gen_rule_body", "class_gen_rule_call1", "class_gen_rule_call1_close",
    "class_gen_rule_call1_tail", "class_gen_rule_calls_go", "class_gen_rule_close",
    "class_gen_rule_find_slot", "class_gen_rule_find_slot_go", "class_gen_rule_pvars_go",
-   "class_gen_slot_var", "class_key_canon", "class_key_of", "class_key_of_closed", "class_leaf_at",
-   "class_majors", "class_minor_slot", "class_minor_slot_go", "class_n_pc_of", "class_nodes_agree",
-   "class_of_motive_var", "class_read", "class_read_classes", "class_read_finish",
-   "class_read_minor", "class_read_minor_finish", "class_read_minor_ih1", "class_read_minor_ihs",
+   "class_gen_slot_var", "class_key_canon", "class_key_canon_go", "class_key_of",
+   "class_key_of_closed", "class_leaf_at", "class_majors", "class_minor_slot",
+   "class_minor_slot_go", "class_n_pc_of", "class_nodes_agree", "class_of_motive_var",
+   "class_read", "class_read_classes", "class_read_finish", "class_read_minor",
+   "class_read_minor_finish", "class_read_minor_ih1", "class_read_minor_ihs",
    "class_read_minor_tail", "class_read_mot_pos", "class_read_motive_slot", "class_read_n_slots",
    "class_read_rec_cls", "class_read_slot", "class_read_slot_motive", "class_read_slots",
    "class_read_slots_next", "class_read_slots_snoc", "class_rec_of", "class_rec_ty_ok",
@@ -273,18 +274,19 @@ def loopFns : List FnName :=
    "target_abs_go", "target_abs_node", "target_canon_params", "target_class_match",
    "target_ctor_at", "target_ctors_of", "target_holes", "target_k53", "target_k53_args",
    "target_k53_heads", "target_k53_tele", "target_major_at", "target_major_default",
-   "target_major_nfs", "target_major_of", "target_major_of_member", "target_major_of_outside",
-   "target_major_of_outside_closed", "target_major_of_outside_occ", "target_major_pins",
-   "target_outside_inst", "target_params_def_eq", "target_params_def_eq_step",
-   "target_pi_doms_with", "target_pin_tys", "target_rec_pins", "target_rec_pins_names",
-   "target_rec_pins_split", "tbl_eq", "tbl_eq_a", "tgt_rule_nested", "tgt_stored_rules",
-   "tgt_stored_rules_remap", "tower_slots_all", "trust_compiler_ok", "try_unfold_proj_app",
-   "type_sort_pw", "unfold_definition", "unfold_defn_at", "unfoldable_head", "unwrap_id_defs",
-   "unwrap_step", "vg_rd", "vg_wr", "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put",
-   "wh_clear", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core", "whnf_core_app",
-   "whnf_core_app2", "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj", "whnf_loop",
-   "whnf_step", "whnf_telescope", "whnf_top", "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put",
-   "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
+   "target_major_nfs", "target_major_of", "target_major_of_const", "target_major_of_member",
+   "target_major_of_outside", "target_major_of_outside_closed", "target_major_of_outside_occ",
+   "target_major_of_outside_tail", "target_major_pins", "target_outside_inst",
+   "target_params_def_eq", "target_params_def_eq_step", "target_pi_doms_with", "target_pin_tys",
+   "target_rec_pins", "target_rec_pins_names", "target_rec_pins_split", "tbl_eq", "tbl_eq_a",
+   "tgt_rule_nested", "tgt_stored_rules", "tgt_stored_rules_remap", "tower_slots_all",
+   "trust_compiler_ok", "try_unfold_proj_app", "type_sort_pw", "unfold_definition",
+   "unfold_defn_at", "unfoldable_head", "unwrap_id_defs", "unwrap_step", "vg_rd", "vg_wr",
+   "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put",
+   "whnf", "whnf_app", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_loop",
+   "whnf_core_step", "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top",
+   "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node",
+   "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
 
 /-- **The loop's write set**: no function it reaches writes the pin table or bytes. -/
 def LoopClosed (p : Prog) : Prop := closedA p loopA loopC loopFns = true

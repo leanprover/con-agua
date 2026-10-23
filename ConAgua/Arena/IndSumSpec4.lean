@@ -9,6 +9,9 @@ import ConAgua.Arena.PinsNatOp
 helper `parts`' `sl_eq` model (`IndPartsSpec5.lean`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

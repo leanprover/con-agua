@@ -1,9 +1,13 @@
 import ConAgua.Arena.IndPos2SpecG
 import ConAgua.Arena.IndInstallSpec3
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`
 (with `nest_occ_any`, `nest_inst_type_ty`), `nestGrowGroup`. -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 open ConRon.Arena
@@ -156,7 +160,7 @@ def ntyK1 (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Wo
     else if lsNodeW m1 (rdW (m1.arr64 IW) (key + 1)) = [] then none
     else if (lsNodeW m1 (rdW (m1.arr64 IW) (key + 1))).tail.headD 0 ≠
         rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 2) then none
-    else ntyK3 k key (r.tail.headD 0 + 1) (stubM "strip_pis" m1 [rdW (m1.arr64 IW) (key + 3),
+    else ntyK3 k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
       rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 3)])
 /-- The model of `nest_inst_type_ty(vis, key)` at exec fuel `k + 1`. -/
 def ntyW (k : Nat) (m : Mem) (vis key : Word) : Option (List Word × Mem) :=
@@ -180,13 +184,14 @@ theorem ntyK1_eq (r : List Word) (m1 : Mem) : ntyK1 k key (some (r, m1)) =
     else if lsNodeW m1 (rdW (m1.arr64 IW) (key + 1)) = [] then none
     else if (lsNodeW m1 (rdW (m1.arr64 IW) (key + 1))).tail.headD 0 ≠
         rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 2) then none
-    else ntyK3 k key (r.tail.headD 0 + 1) (stubM "strip_pis" m1 [rdW (m1.arr64 IW) (key + 3),
+    else ntyK3 k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
       rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 3)]) := rfl
 end arms
 attribute [ind_grind] ntyK6_none ntyK6_some ntyK5_some ntyK4_some ntyK3_none ntyK3_some ntyK1_eq
 
 /-- The lookups of `nest_inst_type_ty`. -/
 structure NtyLook (p : Prog) : Prop where
+  hi1 : I1Prog p
   ha : p.lookup "iw_alloc" = some iwAlloc
   hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
@@ -199,6 +204,7 @@ structure NtyLook (p : Prog) : Prop where
   hv : p.lookup "e_view" = some eView
   hip : p.lookup "inst_pis_with" = some instPisWith
   hp : p.lookup "nest_inst_type_ty" = some nestInstTypeTyL
+  hst : StripProg p
 
 theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (k : Nat) (s₀ : St) (vis key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type_ty" [vis, key]
@@ -208,8 +214,8 @@ theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (k : Nat) (s₀ : St) (v
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, viewLsLen_specE p hl.hls hl.hvl k,
-      stubM_spec p "strip_pis" k, cvLps_spec p hl.ha hl.hc hl.he hl.hcv k,
-      stubM_spec p "inst_lp_fast" k, instPisWith_spec p hl.hv hl.hip k] <;>
+      stripPis_specF p hl.hst k, cvLps_spec p hl.ha hl.hc hl.he hl.hcv k,
+      stubM_spec p "inst_lp_fast" k, instPisWith_spec p hl.hv hl.hip hl.hi1 k] <;>
     finish (gen := 20) [ntyW, rdW_eq, Locals.init_cons_zero]
 
 

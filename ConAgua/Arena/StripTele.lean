@@ -17,12 +17,8 @@ namespace L.Ind
 
 open L.Arena
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1342-1355 ConRon.Arena.stripPis -/
-@[l_impl ConRon.Arena.stripPis]
-def stripPisL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
-  o := CTL.u64[200];
-  n := 0;
-  h := e;
+/-- `strip_pis`'s loop (named, for its spec). -/
+def stripPisLoop : Stmt := lblk (k, e, o, n, h, g, x, y, z, q) {
   while n < k {
     if h >> 28 != 6 { CTL.u64[200] := o; return (0, 0, 0, 0) };
     (g, x, y, z) := call e_view(h);
@@ -30,8 +26,29 @@ def stripPisL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
     IW.u64[q] := x;
     h := y;
     n := n + 1
-  };
+  }
+}
+
+/-- con-ron: ConRon/Arena/ExprOps.lean:1342-1355 ConRon.Arena.stripPis -/
+@[l_impl ConRon.Arena.stripPis]
+def stripPisL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
+  o := CTL.u64[200];
+  n := 0;
+  h := e;
+  ⟪stripPisLoop⟫;
   return (1, o, k, h)
+}
+
+/-- `strip_lams`'s loop (named, for its spec). -/
+def stripLamsLoop : Stmt := lblk (k, e, o, n, h, g, x, y, z, q) {
+  while n < k {
+    if h >> 28 != 5 { CTL.u64[200] := o; return (0, 0, 0, 0) };
+    (g, x, y, z) := call e_view(h);
+    q := call iw_alloc(1);
+    IW.u64[q] := x;
+    h := y;
+    n := n + 1
+  }
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1327-1340 ConRon.Arena.stripLams -/
@@ -40,14 +57,7 @@ def stripLamsL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
   o := CTL.u64[200];
   n := 0;
   h := e;
-  while n < k {
-    if h >> 28 != 5 { CTL.u64[200] := o; return (0, 0, 0, 0) };
-    (g, x, y, z) := call e_view(h);
-    q := call iw_alloc(1);
-    IW.u64[q] := x;
-    h := y;
-    n := n + 1
-  };
+  ⟪stripLamsLoop⟫;
   return (1, o, k, h)
 }
 

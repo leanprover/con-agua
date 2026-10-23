@@ -15,6 +15,9 @@ refinement as a direct Hoare triple over `ArenaR` (as `IndView.lean`'s `eView_re
 reaches (none of them touch `core`/`pins`/`env`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -2,6 +2,9 @@ import ConAgua.Arena.RecClassSpecB
 
 /-! Continued from `RecClassSpecB.lean` (split by size; lane `indproofs`). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

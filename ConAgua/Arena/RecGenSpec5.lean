@@ -4,6 +4,9 @@ import ConAgua.Arena.RecGenSpec4
 # `RecGen`: `classFormerTy` (lane `indproofs2`, helper `rec`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

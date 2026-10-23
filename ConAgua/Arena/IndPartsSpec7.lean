@@ -17,6 +17,9 @@ Element decoders: `decSR` (`[cv, mI, rP, rules.off, rules.len]`, the rules an `E
 `decRule` records), `decSC` (`[cv, nP, nF]`), `decSplit` (`blockSplit`'s 6-word record).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

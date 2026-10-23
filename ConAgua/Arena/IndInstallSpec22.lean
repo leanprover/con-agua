@@ -8,6 +8,9 @@ Per member: `check_sum_ctors` (`IndSumSpec13`'s refinement, `installSimSumCtors`
 two results wrapped (`rec2`), recursion as the twin's with both pointers consed (D18).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

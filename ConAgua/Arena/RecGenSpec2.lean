@@ -8,6 +8,9 @@ import ConAgua.Arena.IndSumSpec2
 Leaves whose loops were rewritten as self-recursions on the shifted slice.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

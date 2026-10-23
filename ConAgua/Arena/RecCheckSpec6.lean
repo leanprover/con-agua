@@ -1,10 +1,14 @@
 import ConAgua.Arena.RecCheckSpec5
 import ConAgua.Arena.IndPos2SpecA
 import ConAgua.Arena.IndPos2SpecE
+import ConAgua.Arena.StageInst1
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `targetOutsideInst`
 -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -79,6 +83,7 @@ grind_pattern [ind_grind] toiK5_some => toiK5 (some (r5, m5))
 
 /-- The lookups `target_outside_inst` needs. -/
 structure ToiProg (p : Prog) : Prop where
+  hi1 : I1Prog p
   ix : p.lookup "env_ix" = some envIxL
   rowGet : p.lookup "env_row_get" = some envRowGetL
   find : p.lookup "env_find" = some envFindL
@@ -103,7 +108,7 @@ theorem targetOutsideInst_spec (p : Prog) (h : ToiProg p) (N : Nat) (s₀ : St) 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p h.ix h.rowGet h.find N, erToIw_specW p h.alloc h.copy h.eti N,
-        stubM_spec p "inst_lp_fast" N, instPisWith_spec p h.v h.ipw N,
+        stubM_spec p "inst_lp_fast" N, instPisWith_spec p h.v h.ipw h.hi1 N,
         piBinders_spec' p h.alloc h.icopy h.v h.sc h.pb N, eView_spec p h.v N] <;>
       finish (gen := 20) [rdW_eq]
 

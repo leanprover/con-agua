@@ -1,8 +1,12 @@
 import ConAgua.Arena.RecClassSpecJ
+import ConAgua.Arena.StageInst1
 
 /-!
 # `RecClass`: `ClassGen.minorTy` — models and specs (lane `indproofs2`, helper `rec2`)
 -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -529,7 +533,7 @@ theorem classGenMinorTyBody_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nPc
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "open_pis_at_fvars_f" n, targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd n,
+        stubM_spec p "open_pis_at_fvars_f" n, targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n,
         classGenMinorTyIhsGo_spec p h n, classGenMinorTyConcl_spec p h n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 

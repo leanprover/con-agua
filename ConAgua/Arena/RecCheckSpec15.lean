@@ -7,6 +7,8 @@ import ConAgua.Arena.RecCheckSpec14
 `target_k53_tele`, `target_k53_args`.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
@@ -133,12 +135,12 @@ def tkK1 (n : Nat) (vis q fto ftl Mc teo tel majDom : Word) : Option (List Word 
 def tkW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, q, fto, ftl, Mc, teo, tel, majDom, f =>
-    tkK1 n vis q fto ftl Mc teo tel majDom (stubM "strip_pis" m [tel, f])
+    tkK1 n vis q fto ftl Mc teo tel majDom (stripF 6 m [tel, f])
 
 section arms
 variable (n : Nat) (m : Mem) (vis q fto ftl Mc teo tel majDom f leafW : Word) (r rs rt : List Word)
 theorem tkW_succ : tkW (n + 1) m vis q fto ftl Mc teo tel majDom f =
-    tkK1 n vis q fto ftl Mc teo tel majDom (stubM "strip_pis" m [tel, f]) := rfl
+    tkK1 n vis q fto ftl Mc teo tel majDom (stripF 6 m [tel, f]) := rfl
 theorem tkK1_no (h : rs.headD 0 = 0) : tkK1 n vis q fto ftl Mc teo tel majDom (some (rs, m)) = some ([0], m) := by
   simp only [tkK1]; rw [if_pos h]
 theorem tkK1_ok (h : ¬ rs.headD 0 = 0) : tkK1 n vis q fto ftl Mc teo tel majDom (some (rs, m)) =
@@ -163,7 +165,7 @@ theorem tk_spec (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (vis q fto ftl 
     rw [invoke_eq _ L.tk]
     simp only [callFn, targetK53]
     sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, stubM_spec p "strip_pis" n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, stripPis_specF p L.strip n,
         tte_spec p L n, tkh_spec p L n] <;>
       finish (gen := 40) (instances := 20000) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8]
 

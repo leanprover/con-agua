@@ -4,6 +4,9 @@ import ConAgua.Arena.IndPos2SpecS
 function of the block, run by `exec` at a fuel `n` with `2^31 + n ≤ coreWalkFuel`, refines its twin
 (`nbSpec_all`: L ⊑ the word models; `nbOK_all`: the models ⊑ the twin). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP
