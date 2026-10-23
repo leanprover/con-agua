@@ -47,7 +47,7 @@ def ih1K4 (rr : Word) (m3 : Mem) : Option (List Word) → Option (List Word × M
   | none => none
   | some r4 =>
     if r4.headD 0 = 0 then some ([0, 0, 0], m3)
-    else ih1K5 d (r4.tail.headD 0) (stubM "get_app_args_f" m3 [CWF, rr])
+    else ih1K5 d (r4.tail.headD 0) (gaaF m3 [CWF, rr])
 
 /-- After the first `fvar_head`. -/
 def ih1K3 (rr : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -71,7 +71,7 @@ end models
 /-- **The model of `class_read_minor_ih1`.** -/
 def ih1W : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | n + 1, m, nP, mo, ml, d, x => ih1K1 n nP mo ml d (stubM "fvar_type_d" m [x])
+  | n + 1, m, nP, mo, ml, d, x => ih1K1 n nP mo ml d (ftdF m [x])
 
 mutual
 /-- **The model of `class_read_minor_ihs`.** -/
@@ -145,7 +145,7 @@ end models2
 def tailW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, nP, mo, ml, d, fo, fl, concl, c =>
-    tK1 n nP mo ml d fo fl c (stubM "get_app_args_f" m [CWF, concl])
+    tK1 n nP mo ml d fo fl c (gaaF m [CWF, concl])
 
 section models3
 variable (n : Nat) (nP mo ml d : Word)
@@ -190,7 +190,7 @@ section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (nP mo ml d x fo fl hd c cn t rr dom concl : Word)
   (r1 r2 r3 r4 r5 r6 r7 : List Word)
 
-theorem ih1W_eq : ih1W (n + 1) m nP mo ml d x = ih1K1 n nP mo ml d (stubM "fvar_type_d" m [x]) := rfl
+theorem ih1W_eq : ih1W (n + 1) m nP mo ml d x = ih1K1 n nP mo ml d (ftdF m [x]) := rfl
 theorem ih1K1_some : ih1K1 n nP mo ml d (some (r1, m1)) =
     ih1K2 n nP mo ml d (pirF m1 [CWF, r1.headD 0]) := rfl
 theorem ih1K2_some : ih1K2 n nP mo ml d (some (r2, m2)) =
@@ -202,7 +202,7 @@ theorem ih1K3_ok (h : r3.headD 0 ≠ 0) : ih1K3 n nP mo ml d rr (some (r3, m3)) 
 theorem ih1K4_fail (h : r4.headD 0 = 0) : ih1K4 d rr m3 (some r4) = some ([0, 0, 0], m3) := by
   rw [ih1K4, if_pos h]
 theorem ih1K4_ok (h : r4.headD 0 ≠ 0) : ih1K4 d rr m3 (some r4) =
-    ih1K5 d (r4.tail.headD 0) (stubM "get_app_args_f" m3 [CWF, rr]) := by rw [ih1K4, if_neg h]
+    ih1K5 d (r4.tail.headD 0) (gaaF m3 [CWF, rr]) := by rw [ih1K4, if_neg h]
 theorem ih1K5_fail (h : r5.tail.headD 0 = 0) : ih1K5 d t (some (r5, m5)) = some ([0, 0, 0], m5) := by
   rw [ih1K5, if_pos h]
 theorem ih1K5_ok (h : r5.tail.headD 0 ≠ 0) : ih1K5 d t (some (r5, m5)) =
@@ -257,7 +257,7 @@ theorem mK4_ok (h : r4.headD 0 ≠ 0) : mK4 n nP mo ml d fo fl concl m3 (some r4
     mK5 (tailW n m3 nP mo ml d fo fl concl (r4.tail.headD 0)) := by rw [mK4, if_neg h]
 theorem mK5_some : mK5 (some (r5, m5)) = some ([r5.headD 0, r5.tail.headD 0], m5) := rfl
 theorem tailW_eq : tailW (n + 1) m nP mo ml d fo fl concl c =
-    tK1 n nP mo ml d fo fl c (stubM "get_app_args_f" m [CWF, concl]) := rfl
+    tK1 n nP mo ml d fo fl c (gaaF m [CWF, concl]) := rfl
 theorem tK1_fail (h : r5.tail.headD 0 = 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) = some ([0, 0], m5) := by
   rw [tK1, if_pos h]
 theorem tK1_ok (h : r5.tail.headD 0 ≠ 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) =
@@ -332,7 +332,7 @@ theorem classReadMinorIh1_spec (n : Nat) (s₀ : St) (nP mo ml d x : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_d" n, pirF_spec p had n, stubM_spec p "get_app_args_f" n,
+        ftdF_spec p had n, pirF_spec p had n, gaaF_spec p had n,
         fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n] <;>
       finish (gen := 20) [rdW_eq, getD_one, getD_two, getD_three]
 
@@ -377,7 +377,7 @@ theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_args_f" n, gafF_spec p had n,
+        gaaF_spec p had n, gafF_spec p had n,
         classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 

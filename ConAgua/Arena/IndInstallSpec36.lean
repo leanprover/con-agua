@@ -259,6 +259,12 @@ structure PassProg (p : Prog) : Prop where
 def passCallees : List FnName :=
   ["check_block_inds", "check_block_ctors", "block_nest_ctx", "class_read", "class_read_classes"]
 
+/-- The pass's callees outside the `abstract1` cascade, which keep its memo (`AbsKeep`, a program
+fact), with those of `check_block_inds` and `check_block_positivity`. -/
+def passKeepCallees : List FnName :=
+  ["check_block_ctors", "block_nest_ctx", "check_block_classes", "class_seeds", "check_block_pass_rec"] ++
+    indsKeepCallees ++ posKeepCallees
+
 /-- **`check_block_pass`' model refines `checkBlockPass`.** -/
 theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs) (n : Nat)
@@ -266,10 +272,11 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     {fe : IFEnv} {m : Mem} {a : AState} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
     (hcx : ShapeCV m p0) (hb : (isRec != 0) = b) (hv : AllVis fe) (hcs : CtorSums fe)
-    (hPm : PosMR m) :
+    (hPm : PosMR m) (hA : AbsOK m) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
     Sim (icpW p (n + 3) m vis p0 isRec) (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b) a
       (fun r x m' a' => StageR dn (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' a' ∧ IWGrow m m' ∧
-        BPassR (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' (r.headD 0) x ∧ PosMR m') := by
+        BPassR (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m') := by
+  have hk' : ∀ f, f ∈ passKeepCallees → AbsKeep p f := hk
   intro r m' h
   unfold icpW at h
   -- the formers
@@ -278,8 +285,9 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [c1, icpK1_some] at h
-  obtain ⟨s1, hs1, -, hok1, hout⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (checkBlockInds_refines p hP.inds (n + 2) _ a dn vis fe p0 isRec bs b hS hq hsrc hcx hb) c1
+  obtain ⟨s1, hs1, -, hok1, hout, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (checkBlockInds_refines p hP.inds (n + 2) _ a dn vis fe p0 isRec bs b hS hq hsrc hcx hb hA
+      (fun f hf => hk' f (by simp [passKeepCallees, hf]))) c1
   simp only at hs1 hout
   subst hs1
   have hrun1 := AM.run_of_ok _ a hok1
@@ -307,6 +315,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   have hP2 : PosMR s2.mem := by
     rw [hfm]; exact hP1.fr (MFr.of_frame (flushMem_frame s1.mem) (by simp) (by
       intro x hx; left; have := flushCtl_lt x hx; omega))
+  have hA2 : AbsOK s2.mem := by rw [hfm]; exact AFr.of_frame (flushMem_frame s1.mem) (by decide) (by decide) hA1
   generalize ha2 : ({ a1 with caches := Caches.empty } : AState) = a2 at hS2
   have hg12 := hg2
   -- the constructors
@@ -339,6 +348,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   generalize AM.st (ConRon.Arena.checkBlockCtors V fe1 fe1 bs1 bs1.members cvTas) a2 = a3 at hrun3 hS3
   obtain ⟨ctorsAs, sss⟩ := x3
   have hP3 := PosMR.ofClosed hcl (hfs _ (by decide)) c3 hP2
+  have hA3 : AbsOK s3.mem := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c3 hA2
   have hg13 := hg12.trans hg3
   -- the positivity context
   have hbs3 := hbs1.grow (decBS_mono _) hg13
@@ -361,6 +371,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   generalize AM.st (ConRon.Arena.blockNestCtx fe1 bs1 cvTas) a3 = a4 at hrun4 hS4
   obtain ⟨c, holes⟩ := x4
   have hP4 := PosMR.ofClosed hcl (hfs _ (by decide)) c4 hP3
+  have hA4 : AbsOK s4.mem := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c4 hA3
   have hg14 := hg13.trans hg4
   -- the classes
   have hT4 : iwTop s4.mem < 2 ^ 64 := (rdW (s4.mem.arr64 CTL) 200).toNat_lt
@@ -421,6 +432,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
   rw [c5, icpK5_some] at h
+  have hA5 : AbsOK m5 := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c5 hA4
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hrd5, hms5, hP5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlockClasses_refines hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide)) dn (r1.headD 0) fe1 hcs1
       (n + 2) (by omega) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hS4 hBS hsrc4 hRD hca4 hpfD hpfb hP4) c5
@@ -442,10 +454,11 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   | some q6 =>
   obtain ⟨r6, m6⟩ := q6
   rw [c6, icpK6_some] at h
-  obtain ⟨s6, hs6, -, hok6, hS6, hg6, hP6, hks6, hnf6, hns6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+  obtain ⟨s6, hs6, -, hok6, hS6, hg6, hP6, hA6, hks6, hnf6, hns6⟩ := triple_of_callW
+    (s₀ := ⟨s5.mem, Locals.init []⟩)
     (checkBlockPositivity_refines p hP.pos n (by omega) _ a5 dn (r1.headD 0) fe1 hcs1 _ _ _ _ _ ⟨bs1⟩
-      cvTas ctorsAs hS5 hbs5 hsrc5 hcv5 hcb5 hP5) c6
-  simp only at hs6 hS6 hg6 hP6 hks6 hnf6 hns6
+      cvTas ctorsAs hS5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hk' f (by simp [passKeepCallees, hf]))) c6
+  simp only at hs6 hS6 hg6 hP6 hA6 hks6 hnf6 hns6
   subst hs6
   have hrun6 := AM.run_of_ok _ a5 hok6
   generalize AM.res (ConRon.Arena.checkBlockPositivity V fe1 ⟨bs1⟩ cvTas ctorsAs) a5 = x6 at hrun6 hks6 hnf6 hns6
@@ -472,6 +485,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
       (Nat.le_trans hhob4 hg46.1) hms6 hP6) c7
   simp only at hs7 hS7 hg7 hsd7 hP7
   subst hs7
+  have hA7 : AbsOK s7.mem := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c7 hA6
   have hrun7 := AM.run_of_ok _ a6 hok7
   generalize AM.res (ConRon.Arena.classSeeds c holes ms) a6 = seeds at hrun7 hsd7
   generalize AM.st (ConRon.Arena.classSeeds c holes ms) a6 = a7 at hrun7 hS7
@@ -488,10 +502,10 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   | some q8 =>
   obtain ⟨r8, m8⟩ := q8
   rw [c8, icpK8_some] at h
-  obtain ⟨s8, hs8, -, ns, a8, hrun8, hS8, hg8, hns8, hP8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
+  obtain ⟨s8, hs8, -, ns, a8, hrun8, hS8, hg8, hns8, hP8, hA8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (nestSeeds_refines hP.rs (n + 3) dn (r1.headD 0) fe1 hcs1 (by omega) _ a7 _ _ _ _ c seeds NS hS7 hU7
-      hhi4 hsd7.2.1 hsd7.2.2.2 hns7 hP7) c8
-  simp only at hs8 hS8 hg8 hns8 hP8
+      hhi4 hsd7.2.1 hsd7.2.2.2 hns7 hP7 hA7) c8
+  simp only at hs8 hS8 hg8 hns8 hP8 hA8
   subst hs8
   have hT8 : iwTop s8.mem < 2 ^ 64 := (rdW (s8.mem.arr64 CTL) 200).toNat_lt
   obtain ⟨-, -, -, hnfsB⟩ := nsb_words hns8 hT8
@@ -515,6 +529,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   rw [c9, icprK_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
+  have hA9 : AbsOK m9 := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c9 hA8
   obtain ⟨s9, hs9, -, hW9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
     (icpr_spec p hP.prec (n + 2) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) c9
   simp only at hs9 hW9
@@ -541,7 +556,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hms6.grow (fun q => decTM_mono q) (hg7.trans (hg8.trans hg9)))
     (htbl8.grow (fun q => decNCN_mono q) hg9)
   refine ⟨⟨fe1, cvTas, ⟨bs1⟩, ctorsAs, sss, kinds, nfs, c.params, rd, ms, ns.ctorNfs.toList⟩, a8, ?_,
-    ?_, hgA, ?_, hP9⟩
+    ?_, hgA, ?_, hP9, hA9⟩
   · rw [← ha2] at hrun3
     simp only [ConRon.Arena.checkBlockPass, StateT.run_bind, hrun1, except_ok_bind, BlockParts.complete,
       flushCaches_run, hrun3, hrun4, hrun5, hrun6, hrun7, hrun8]
@@ -563,12 +578,12 @@ theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
     {vis : Word} {fe : IFEnv} {p0 isRec : Word} {bs : BlockShape} {b : Bool}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0) (hb : (isRec != 0) = b) (hv : AllVis fe)
-    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) :
+    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hA : AbsOK s₀.mem) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 4)) "check_block_pass" [vis, p0, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b).run a₀ = .ok (x, a') ∧
       StageR dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
-      BPassR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem (r.headD 0) x ∧ PosMR s'.mem; ⊤⦄ :=
+      BPassR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
-    ⟨hl, icpW_sim hP hcl hfs n hn hS hq hsrc hcx hb hv hcs hPm r s'.mem hm⟩
+    ⟨hl, icpW_sim hP hcl hfs n hn hS hq hsrc hcx hb hv hcs hPm hA hk r s'.mem hm⟩
 
 end L.Ind

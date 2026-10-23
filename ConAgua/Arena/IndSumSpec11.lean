@@ -169,7 +169,7 @@ def csfW : Nat → Mem → Word → Word → Word → Word → Word → Word →
     else if fl ≤ j - 1 then none
     else csfK1 (fun m' => csfW n m' vis isProp large s nP fo fl io il res (j - 1)) n vis isProp large
       s nP io il (rdW (m.arr64 IW) (fo + (j - 1))) res j
-      (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))])
+      (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))])
 
 section arms
 variable (rest : Mem → Option (List Word × Mem)) (n : Nat) (m : Mem)
@@ -182,7 +182,7 @@ theorem csfW_step (h : j ≠ 0) (hl : ¬ fl ≤ j - 1) :
     csfW (n + 1) m vis isProp large s nP fo fl io il res j =
       csfK1 (fun m' => csfW n m' vis isProp large s nP fo fl io il res (j - 1)) n vis isProp large
         s nP io il (rdW (m.arr64 IW) (fo + (j - 1))) res j
-        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))]) := by simp [csfW, h, hl]
+        (ftdF m [rdW (m.arr64 IW) (fo + (j - 1))]) := by simp [csfW, h, hl]
 theorem csfK5_some : csfK5 (some (r, m)) = some ([0], m) := rfl
 theorem csfK4_some : csfK4 rest res j u (some (r, m)) = csfK5 (rest (m.set64 IW (res + (j - 1)) u)) :=
   rfl
@@ -202,8 +202,8 @@ section spec
 variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
   (het : p.lookup "lvl_eq_true" = some lvlEqTrue) (hc : p.lookup "sl_contains" = some slContains)
   (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
-  (hp : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
-include hg hpw het hc hb hp
+  (hp : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL) (hftd : FtdF p)
+include hg hpw het hc hb hp hftd
 
 theorem csfW_spec (n : Nat) : ∀ (s₀ : St) (vis isProp large s nP fo fl io il res j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_field_sorts_i_go"
@@ -221,7 +221,7 @@ theorem csfW_spec (n : Nat) : ∀ (s₀ : St) (vis isProp large s nP fo fl io il
     simp only [callFn, checkStructFieldSortsIGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        slGet_specW p hg n, stubM_spec p "fvar_type_d" n, stubM_spec p "infer_type_core" n,
+        slGet_specW p hg n, ftdF_spec0 p hftd n, stubM_spec p "infer_type_core" n,
         stubM_spec p "ensure_sort_core" n, cfbW_spec p hpw het hc hb n, ih] <;>
       finish (gen := 30) (instances := 5000) [getW, rdW_eq]
 
@@ -425,7 +425,7 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   refine Sim.bind_twin (x := decI w) (a₁ := a) (by rw [hget]; rfl) ?_
   have hdep : (nP + (j - 1)).toNat = nP.toNat + J := by rw [sum_toNat_add (by omega), hJ]
   refine Sim.bindK (K := csfK1 _ n vis isProp large s nP io il w res j) rfl (fun _ _ => rfl)
-    (sumSim_of_relAM (fvarTypeD_spec dn vis fe w hwl) hS) fun rt t m1 a1 hQ => ?_
+    (sumSim_of_relW (ftdF_ok dn vis fe w hwl) hS) fun rt t m1 a1 hQ => ?_
   obtain ⟨hS1, hg1, ht1, ht⟩ := hQ
   rw [csfK1_some]
   have h2 := inferTypeCore_spec dn vis fe (nP + (j - 1)) (rt.headD 0) ht1
@@ -499,8 +499,8 @@ variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_w
   (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
   (hgo : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
   (hia : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
-include hg hpw het hc hb hgo hia hp
+  (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL) (hftd : FtdF p)
+include hg hpw het hc hb hgo hia hp hftd
 
 theorem fsortsW_spec (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_field_sorts_i"
@@ -510,7 +510,7 @@ theorem fsortsW_spec (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW
   simp only [callFn, checkStructFieldSortsIL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      iwAlloc_specW p hia n, csfW_spec p hg hpw het hc hb hgo n] <;>
+      iwAlloc_specW p hia n, csfW_spec p hg hpw het hc hb hgo hftd n] <;>
     finish (gen := 30) (instances := 5000) [fsortsW]
 
 end spec2
@@ -546,8 +546,8 @@ variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_w
   (hb : p.lookup "check_field_sort_bound" = some checkFieldSortBoundL)
   (hgo : p.lookup "check_struct_field_sorts_i_go" = some checkStructFieldSortsIGoL)
   (hia : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
-include hg hpw het hc hb hgo hia hp
+  (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL) (hftd : FtdF p)
+include hg hpw het hc hb hgo hia hp hftd
 
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** (through the stubs
 `fvar_type_d`, `infer_type_core`, `ensure_sort_core`, `lv_leq_top`, `lvl_eq_c`): from the stage
@@ -571,7 +571,7 @@ theorem checkStructFieldSortsI_refines (n : Nat) (s₀ : St) (a₀ : AState)
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs
           idxArgs nW.toNat) a₀); ⊤⦄ := by
-  refine triple_post (fsortsW_spec p hg hpw het hc hb hgo hia hp n s₀ vis isProp large s nP fo fl io il nW) ?_
+  refine triple_post (fsortsW_spec p hg hpw het hc hb hgo hia hp hftd n s₀ vis isProp large s nP fo fl io il nW) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd, -⟩ :=
     (fsortsW_ok n _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hS hfvs hfb hidx hib hs hnj).run hm
