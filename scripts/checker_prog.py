@@ -31,8 +31,13 @@ ROOT = e2e.ROOT
 OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
 ASM_OUT = os.path.join(ROOT, "ConAgua", "Checker", "Asm.lean")
 # `checkerAsm`'s per-function kernel checks, spread over this many modules (built in parallel;
-# each loads `Checker/Prog.lean`, about 3 GB)
-ASM_PARTS = 4
+# each loads `Checker/Prog.lean`, about 3 GB): ASM_PARTS for the functions before the prelude's
+# copies, one kernel check per function; PRE_PARTS for the copies (`pre_*`, and the stubs after
+# them), one kernel check per part (`asmLitBatch`): every copy reads the prelude's 15 700 bytes
+# (`ldc`), whose `romIdx` the kernel then evaluates once per part instead of once per function
+# (~5 s each; 110 copies: 350 s in one part before, docs/design/slowmods.md)
+ASM_PARTS = 6
+PRE_PARTS = 2
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
 # the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
@@ -216,6 +221,7 @@ namespace L.Checker
 
 open L L.Compiler
 
+set_option asmLitBatch {batch} in
 asm_lit_fns checkerAsm : checkerTab checkerProg {lo} {hi}
 
 end L.Checker
@@ -297,13 +303,25 @@ def main():
                         shared_names=",\n  ".join(lean_str(f) for f in shared), nshared=len(shared),
                         entries=",\n".join(entries))
     n = len(entries)
-    bounds = [n * k // ASM_PARTS for k in range(ASM_PARTS + 1)]
+    s0 = len(reach)  # the first copy
+    bounds = [s0 * k // ASM_PARTS for k in range(ASM_PARTS)] + \
+        [s0 + (n - s0) * k // PRE_PARTS for k in range(PRE_PARTS + 1)]
+    nparts = ASM_PARTS + PRE_PARTS
     outs = [(OUT, txt)]
-    for k in range(ASM_PARTS):
+    for k in range(nparts):
+        lo, hi = bounds[k], bounds[k + 1]
         outs.append((os.path.join(ROOT, "ConAgua", "Checker", f"AsmPart{k}.lean"),
-                     ASM_PART.format(k=k, lo=bounds[k], hi=bounds[k + 1], hi_1=bounds[k + 1] - 1)))
-    outs.append((ASM_OUT, ASM.format(imports="\n".join(f"import ConAgua.Checker.AsmPart{k}" for k in range(ASM_PARTS)),
-                                     last=ASM_PARTS - 1)))
+                     ASM_PART.format(k=k, lo=lo, hi=hi, hi_1=hi - 1,
+                                     batch=1 if k < ASM_PARTS else max(1, hi - lo))))
+    outs.append((ASM_OUT, ASM.format(imports="\n".join(f"import ConAgua.Checker.AsmPart{k}" for k in range(nparts)),
+                                     last=nparts - 1)))
+    stale = [os.path.join(ROOT, "ConAgua", "Checker", f"AsmPart{k}.lean") for k in range(nparts, nparts + 16)]
+    stale = [p for p in stale if os.path.exists(p)]
+    if stale and a.check:
+        sys.exit(f"{stale[0]} is stale: run scripts/checker_prog.py")
+    for p in stale:
+        if not a.check:
+            os.remove(p)
     for path, t in outs:
         old = open(path, encoding="utf-8").read() if os.path.exists(path) else None
         if a.check:
