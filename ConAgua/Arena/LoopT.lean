@@ -330,6 +330,22 @@ structure TwinMem (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) : 
   memos : CoreMemos m
   dnN : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x
 
+/-- The memory's half of a `TwinOK`. -/
+theorem TwinOK.mem {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
+    (h : TwinOK dn m a fe) : TwinMem dn m a :=
+  ⟨h.erec, h.spn, h.bstk, h.memos, h.den.dnN⟩
+
+/-- **The memory's half across a step** that grows the name store (every old name keeps its
+readback), keeps the arrays' sizes and the core memos. -/
+theorem TwinMem.step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+    (h : TwinMem dn m a)
+    (hN : ∀ (k : NIdx) (x : ConLeche.Name), denoteN a.store.ns k = some x →
+      denoteN a'.store.ns k = some x)
+    (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hmem : CoreMemos m') :
+    TwinMem dn m' a' :=
+  ⟨by rw [hsz]; exact h.erec, by rw [hsz]; exact h.spn, by rw [hsz]; exact h.bstk, hmem,
+    fun k x e => hN k x (h.dnN k x e)⟩
+
 theorem denoteNList_mapM {st : NStore} :
     ∀ {l : List NIdx} {xs : List ConLeche.Name}, ConRon.Arena.Frontend.denoteNList st l = some xs →
       l.mapM (denoteN st) = some xs
@@ -441,19 +457,22 @@ theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInf
     · rename_i y _ hy _; exact ⟨y, hy⟩
     · cases hd
 
-/-- **`TwinOK` from the fold's invariant** and the memory's half. -/
-theorem TwinOK.of_fold {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
-    {env : ConLeche.Env} (hok : ConRon.Bridge.FoldOK .verified env fe a) (hm : TwinMem dn m a) :
+/-- **`TwinOK` from con-ron's check invariant** (`CheckOK`: the store's well-formedness, the
+caches, the pins, the environment index) and the memory's half. Every point of a step where
+con-ron's bridge lemmas give `CheckOK` (they carry it across the twin's operations) has `TwinOK`
+once the memory's half is kept. -/
+theorem TwinOK.of_check {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
+    {env : ConLeche.Env} (hok : ConRon.Bridge.CheckOK .verified env fe a) (hm : TwinMem dn m a) :
     TwinOK dn m a fe := by
-  have hwf := hok.check.state.wf
+  have hwf := hok.state.wf
   obtain ⟨rk, hw⟩ := hwf
   have hw' : StoreWF' a.store := StoreWF'.of_wf ⟨rk, hw⟩
   obtain ⟨rk', hw''⟩ := hw'
   have hLs : LsStoreWF' a.store.lss := hw''.lss
   have hL : LStoreWF' a.store.ls := hLs.ls
-  have hc := hok.check.caches
-  have hp := hok.check.pins
-  have hi := hok.check.ienv
+  have hc := hok.caches
+  have hp := hok.pins
+  have hi := hok.ienv
   refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
     fun c ci cv hf ht hcv => ?_, fun c tbl hf => ?_, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
@@ -493,7 +512,7 @@ theorem LoopT.of_fold {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
     (hR : LoopR pins dn m a vis fe pend ds) (hT : TwinFold pins ds fe pend a) (hm : TwinMem dn m a)
     (hflag : pinW m 0 ≠ 0) (hmemo : StageMemos m) : LoopT pins dn m a vis fe pend ds :=
   let ⟨_, hok, _⟩ := hT.fold
-  ⟨hR, TwinOK.of_fold hok hm, hflag, hmemo⟩
+  ⟨hR, TwinOK.of_check hok.check hm, hflag, hmemo⟩
 
 /-! ## `LoopT` across the bracket's L functions -/
 
