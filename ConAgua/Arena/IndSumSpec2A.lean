@@ -2,6 +2,7 @@ import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndView
 import ConAgua.Arena.StageInst1
+import ConAgua.Arena.IndRealCrF
 
 /-!
 # Refinements of `IndSum`, second file (lane `indproofs`)
@@ -268,7 +269,7 @@ def fdrW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 /-- After `fvar_type_d`. -/
 def fdrK1 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m1) => fdrK2 n v o l (stubM "consts_resolve_ffast" m1 [v, ra.headD 0])
+  | some (ra, m1) => fdrK2 n v o l (crfF m1 [v, ra.headD 0])
 /-- After `consts_resolve_ffast`. -/
 def fdrK2 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -285,7 +286,7 @@ def iarW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, v, o, l =>
     if l = 0 then some ([1], m)
-    else iarK n v o l (stubM "consts_resolve_ffast" m [v, rdW (m.arr64 IW) o])
+    else iarK n v o l (crfF m [v, rdW (m.arr64 IW) o])
 /-- After `consts_resolve_ffast`. -/
 def iarK (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -303,7 +304,7 @@ theorem fdrW_cons (hl : l ≠ 0) :
     fdrW (n + 1) m v o l = fdrK1 n v o l (ftdF m [rdW (m.arr64 IW) o]) := by
   simp [fdrW, hl]
 theorem fdrK1_some : fdrK1 n v o l (some (ra, m1)) =
-    fdrK2 n v o l (stubM "consts_resolve_ffast" m1 [v, ra.headD 0]) := by rw [fdrK1]
+    fdrK2 n v o l (crfF m1 [v, ra.headD 0]) := by rw [fdrK1]
 theorem fdrK2_no (h : rb.headD 0 = 0) : fdrK2 n v o l (some (rb, m2)) = some ([0], m2) := by
   rw [fdrK2, if_pos h]
 theorem fdrK2_yes (h : rb.headD 0 ≠ 0) :
@@ -311,7 +312,7 @@ theorem fdrK2_yes (h : rb.headD 0 ≠ 0) :
 theorem resK_some : resK (some (r, m)) = some ([r.headD 0], m) := rfl
 theorem iarW_nil (hl : l = 0) : iarW (n + 1) m v o l = some ([1], m) := by simp [iarW, hl]
 theorem iarW_cons (hl : l ≠ 0) :
-    iarW (n + 1) m v o l = iarK n v o l (stubM "consts_resolve_ffast" m [v, rdW (m.arr64 IW) o]) := by
+    iarW (n + 1) m v o l = iarK n v o l (crfF m [v, rdW (m.arr64 IW) o]) := by
   simp [iarW, hl]
 theorem iarK_no (h : rb.headD 0 = 0) : iarK n v o l (some (rb, m2)) = some ([0], m2) := by
   rw [iarK, if_pos h]
@@ -335,7 +336,8 @@ grind_pattern [ind_grind] resK'_some => resK' (some (r, m))
 section spec
 variable (p : Prog)
 
-theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (n : Nat) :
+theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (hcr : CrfF p)
+    (n : Nat) :
     ∀ (s₀ : St) (v o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [v, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ fdrW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
@@ -349,10 +351,10 @@ theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) 
     simp only [callFn, fieldDomsResolveL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ftdF_spec0 p hftd n, stubM_spec p "consts_resolve_ffast" n, ih] <;>
+        ftdF_spec0 p hftd n, crfF_spec p hcr n, ih] <;>
       finish (gen := 20)
 
-theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (n : Nat) :
+theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr : CrfF p) (n : Nat) :
     ∀ (s₀ : St) (v o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [v, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ iarW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
@@ -366,7 +368,7 @@ theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (n :
     simp only [callFn, idxArgsResolveL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "consts_resolve_ffast" n, ih] <;>
+        crfF_spec p hcr n, ih] <;>
       finish (gen := 20)
 
 end spec
@@ -383,172 +385,6 @@ theorem toNat_succ_of_lt {o l : Word} (hb : o.toNat + l.toNat < 2 ^ 64) (hl : l 
   have hlm : (l - 1).toNat = l.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hl1))]; simp
   omega
-
-theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
-    ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
-    fdrW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
-    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
-    ∃ b a', (fieldDomsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b := by
-  induction n with
-  | zero => intro m m' a v o l xs r h; simp [fdrW] at h
-  | succ n ih =>
-    intro m m' a v o l xs r h hS hd hb ht
-    by_cases hl : l = 0
-    · subst hl
-      rw [fdrW_nil n m v o 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      have : xs = [] := by simpa [decHL, hslice?] using hd.symm
-      subst this
-      exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
-    · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
-      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
-      rw [fdrW_cons n m v o l hl, hw] at h
-      cases h1 : ftdF m [w] with
-      | none => rw [h1] at h; simp [fdrK1] at h
-      | some x1 =>
-      obtain ⟨ra, m1⟩ := x1
-      rw [h1, fdrK1_some] at h
-      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok dn v fe w hw32 m m1 a ra h1 hS
-      cases h2 : stubM "consts_resolve_ffast" m1 [v, ra.headD 0] with
-      | none => rw [h2] at h; simp [fdrK2] at h
-      | some x2 =>
-      obtain ⟨rb, m2⟩ := x2
-      rw [h2] at h
-      obtain ⟨c, a2, hrun2, hS2, hg2, hceq, hc1⟩ :=
-        constsResolveFFast_spec dn v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 hS1
-      have hrun12 : ∀ (k : Bool → AM Bool),
-          (do let t ← fvarTypeD (decI w); let c ← constsResolveFFast fe t; k c).run a = (k c).run a2 := by
-        intro k
-        simp only [StateT.run_bind]
-        rw [hrun1]
-        simp only [bind, Except.bind]
-        rw [← hteq, hrun2]
-      by_cases hz : rb.headD 0 = 0
-      · rw [fdrK2_no n m2 v o l rb hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        have hc : c = false := by rw [← hceq, hz]; rfl
-        subst hc
-        refine ⟨false, a2, ?_, hS2, hg1.trans hg2, by simp [decW0B]⟩
-        have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
-        simp only [fieldDomsResolve]
-        rw [this]; rfl
-      · rw [fdrK2_yes n m2 v o l rb hz] at h
-        have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
-        subst hc
-        cases h3 : fdrW n m2 v (o + 1) (l - 1) with
-        | none => rw [h3] at h; simp [resK] at h
-        | some x3 =>
-        obtain ⟨r3, m3⟩ := x3
-        rw [h3, resK_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        have hg12 := hg1.trans hg2
-        obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2
-          (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
-        refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
-        have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
-        simp only [fieldDomsResolve]
-        rw [this]; exact hrun3
-
-theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
-    ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
-    iarW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
-    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
-    ∃ b a', (idxArgsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b := by
-  induction n with
-  | zero => intro m m' a v o l xs r h; simp [iarW] at h
-  | succ n ih =>
-    intro m m' a v o l xs r h hS hd hb ht
-    by_cases hl : l = 0
-    · subst hl
-      rw [iarW_nil n m v o 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      have : xs = [] := by simpa [decHL, hslice?] using hd.symm
-      subst this
-      exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
-    · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
-      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
-      rw [iarW_cons n m v o l hl, hw] at h
-      cases h2 : stubM "consts_resolve_ffast" m [v, w] with
-      | none => rw [h2] at h; simp [iarK] at h
-      | some x2 =>
-      obtain ⟨rb, m2⟩ := x2
-      rw [h2] at h
-      obtain ⟨c, a2, hrun2, hS2, hg2, hceq, hc1⟩ :=
-        constsResolveFFast_spec dn v fe w hw32 m m2 a rb h2 hS
-      have hrun12 : ∀ (k : Bool → AM Bool),
-          (do let c ← constsResolveFFast fe (decI w); k c).run a = (k c).run a2 := by
-        intro k
-        simp only [StateT.run_bind]
-        rw [hrun2]
-        rfl
-      by_cases hz : rb.headD 0 = 0
-      · rw [iarK_no n m2 v o l rb hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        have hc : c = false := by rw [← hceq, hz]; rfl
-        subst hc
-        refine ⟨false, a2, ?_, hS2, hg2, by simp [decW0B]⟩
-        have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
-        simp only [idxArgsResolve]
-        rw [this]; rfl
-      · rw [iarK_yes n m2 v o l rb hz] at h
-        have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
-        subst hc
-        cases h3 : iarW n m2 v (o + 1) (l - 1) with
-        | none => rw [h3] at h; simp [resK'] at h
-        | some x3 =>
-        obtain ⟨r3, m3⟩ := x3
-        rw [h3, resK'_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2
-          (by rw [decHL_grow hg2 (by omega)]; exact hd') (by omega) (by have := hg2.1; omega)
-        refine ⟨b3, a3, ?_, hS3, hg2.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
-        have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
-        simp only [idxArgsResolve]
-        rw [this]; exact hrun3
-
-/-! ## The census theorems -/
-
-/-- **`field_doms_resolve` refines `fieldDomsResolve`** (through the stubs `fvar_type_d`,
-`consts_resolve_ffast`), at the view `vis0` of the pre-block environment `fe₀`. -/
-@[refines ConRon.Arena.fieldDomsResolve]
-theorem fieldDomsResolve_refines (p : Prog)
-    (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (hftd : FtdF p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
-    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [vis0, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fieldDomsResolve fe₀ xs) a₀ ∧
-      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
-        (AM.res (fieldDomsResolve fe₀ xs) a₀); ⊤⦄ := by
-  refine triple_post (fdrW_spec p hp hftd n s₀ vis0 o l) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost⟩ := fdrW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
-
-/-- **`idx_args_resolve` refines `idxArgsResolve`** (through the stub `consts_resolve_ffast`),
-at the view `vis0` of the pre-block environment `fe₀`. -/
-@[refines ConRon.Arena.idxArgsResolve]
-theorem idxArgsResolve_refines (p : Prog)
-    (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
-    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
-    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [vis0, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (idxArgsResolve fe₀ xs) a₀ ∧
-      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (idxArgsResolve fe₀ xs) a₀) r
-        (AM.res (idxArgsResolve fe₀ xs) a₀); ⊤⦄ := by
-  refine triple_post (iarW_spec p hp n s₀ vis0 o l) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hpost⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
 
 end L.Ind
 

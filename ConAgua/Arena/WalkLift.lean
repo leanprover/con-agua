@@ -168,7 +168,7 @@ def i1lFast : FunDecl := lfn (f, e, v, d) locals (r, u) {
   u := call i1l_clear();
   r := call i1l_go(e, d, v, f);
   u := call i1l_clear();
-  return r
+  return r & 4294967295
 }
 
 /-- The walk's own functions (with `inst_prog`'s and `lift_entry`'s callees). -/

@@ -825,7 +825,7 @@ theorem i1lFastW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
     (f e v d r : Word) (he : e.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
     (hb : i1lFastW (n + 1) m f e v d = some (r, m')) :
     ∃ a', (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat).run a = .ok (decE r, a') ∧
-      ArenaI m' a' := by
+      ArenaI m' a' ∧ r.toNat < 2 ^ 32 := by
   have hcs : i1lSch.cs = 52 := rfl
   by_cases h0 : rdW (m.arr64 CTL) 52 + 2 = 0
   · simp [i1lFastW, hcs, h0] at hb
@@ -841,11 +841,12 @@ theorem i1lFastW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
       Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (i1lOK n).1 _ _ _ e d v f r₁ hA₀ he hv hw
-    exact ⟨_, by rw [i1lFast_run, ha₁]; rfl, ArenaI.imemo_clear m₁ a₁ hA₁ h1⟩
+    exact ⟨_, by rw [i1lFast_run, ha₁, decE_and32]; rfl, ArenaI.imemo_clear m₁ a₁ hA₁ h1, and32_lt r₁⟩
 
 /-- **`instantiate1_lift_fast(f, e, v, d)` refines the arena's `instantiate1LiftFast f e v d`**
 under `ArenaI` (`ArenaD` and the walk's memo), at the counter's fuel `f.toNat` and every L fuel:
-if the L walk returns, the twin's walk succeeds with the same handle, in a related state. -/
+if the L walk returns, the twin's walk succeeds with the same handle, in a related state; the
+handle (masked to 32 bits, as `abs_entry`'s and `inst_entry`'s) is below `2^32`. -/
 @[refines ConRon.Arena.instantiate1LiftFast]
 theorem i1lFast_refines (p : Prog) (hp : I1lProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (hA : ArenaI s₀.mem a₀) (f e v d : Word) (he : e.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
@@ -854,13 +855,14 @@ theorem i1lFast_refines (p : Prog) (hp : I1lProg p) (n : Nat) (s₀ : St) (a₀ 
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀ ∧
       ArenaI s'.mem (AM.st (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀) ∧
-      AM.res (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+      AM.res (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀ = decE (r.headD 0) ∧
+      (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (i1lFast_spec p hp (n + 1) s₀ f e v d)
   subst hs
-  obtain ⟨a', ha', hA'⟩ := i1lFastW_correct n _ _ a₀ hA f e v d _ he hv hI
+  obtain ⟨a', ha', hA', hlt⟩ := i1lFastW_correct n _ _ a₀ hA f e v d _ he hv hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hlt⟩
 
 end L.Arena

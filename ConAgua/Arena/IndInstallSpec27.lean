@@ -58,6 +58,9 @@ theorem spgW_zero (m : Mem) (cty nP nF so sl : Word) : spgW 0 m cty nP nF so sl 
     · rfl
     · simp [ulW, spgK2]
 
+/-- The tables' callees outside the walk-memo cascade (`AbsKeep`, a program fact). -/
+def tablesKeepCallees : List FnName := ["struct_proj_guards"]
+
 theorem nPnF_bound {x y : Word} (h : ¬ x + y + 1 ≤ x) : x.toNat + y.toNat + 1 < 2 ^ 64 := by
   have h' : x.toNat < (x + y + 1).toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h)
   rw [UInt64.toNat_add, UInt64.toNat_add] at h'
@@ -72,9 +75,10 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
     {cA : IConstantVal} {nF : Nat} {sorts : List LIdx} (hn : 2 ^ 31 + n ≤ coreWalkFuel)
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hms : DecB (fun m => decMS m ms.toNat) m msh) (hcs : PSlR decCN [(cA, nF)] co 1 m)
-    (hss : PSlR decIS [sorts] so 1 m) (hM : HbMemo m) :
+    (hss : PSlR decIS [sorts] so 1 m) (hM : HbMemo m) (hA : AbsOK m)
+    (hkeep : ∀ f ∈ tablesKeepCallees, AbsKeep p f) :
     Sim (ctoW p n m pp ms co so vis) (tabOne fe bs msh cA nF sorts) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   -- the constructor `[cv, nF]`
   obtain ⟨pc, y, ys, hy, hw0, hpcb, hdc, -⟩ := partsPSl_cons hcs (by decide)
@@ -154,8 +158,8 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
             · left; rw [h]; rfl
             · right; rw [hso', hsl']; exact h)
       rw [hwd, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
-      exact h) ?_
-  rintro rg guards m1 a1 ⟨hS1, hg1, hgd1, hgt1, hM1⟩
+      exact Sim.withFr (F := fun m1 => AFr m m1) h fun _ _ e => hkeep _ (by simp [tablesKeepCallees]) _ _ _ _ _ e) ?_
+  rintro rg guards m1 a1 ⟨⟨hS1, hg1, hgd1, hgt1, hM1⟩, ha1⟩
   rw [ctoK1_some]
   -- `block_shape_lps` (model only)
   refine Sim.mstep (K := ctoK2 p (j + 2) pp ms (UInt64.ofNat cvp) (UInt64.ofNat nF) vis rg) rfl
@@ -164,6 +168,7 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
     (blockShapeLps_spec2 p hP.tbl.ha hP.erCopy hP.erToIw hP.lps (j + 2) _ pp) h2
   obtain ⟨hS2, hg2, hl2, hlb2⟩ := lpsW_ok' hW2 hS1 (hq.grow (decBS_mono _) hg1)
   have hM2 : HbMemo s2.mem := hM1.fr (lpsW_mfrT hW2)
+  have hA2 : AbsOK s2.mem := lpsW_afr hW2 (ha1 hA)
   have hg12 := hg1.trans hg2
   -- `check_struct_proj_table`
   rw [ctoK2_some]
@@ -174,7 +179,7 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
   obtain ⟨hC32, hCn⟩ := partsCVName hg12 hcv hcvb
   rw [hnpw2, hms2]
   refine Sim.post (K := ctoK3) rfl (fun _ _ => rfl)
-    (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow s2.mem m' ∧ MFr [] [] s2.mem m')
+    (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow s2.mem m' ∧ MFr [] [] s2.mem m' ∧ AbsOK m')
     (fun r m' e => by
       obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
         (tblW_spec p hP.tbl j _ (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))
@@ -188,10 +193,10 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
         (UInt64.ofNat cvp) bs.lps guards cA hS2 hT32 hC32 hrs2
         (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2
         (by rw [decHL_grow hg2 (Nat.le_of_eq hgt1)]; exact hgd1) (by rw [hgt1]; exact hg2.1)
-        (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.grow (OMono.decCVp _) hg12 hcv)
+        (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.grow (OMono.decCVp _) hg12 hcv) hA2
       rw [hTn, hCn, hrse2, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
       exact h r s3.mem hW3)
-    fun r x m3 a3 h => ⟨h.1, hg12.trans h.2.1, hM2.fr h.2.2⟩
+    fun r x m3 a3 h => ⟨h.1, hg12.trans h.2.1, hM2.fr h.2.2.1, h.2.2.2⟩
 
 /-- **`check_block_tables`' model refines `checkBlockTables`.** -/
 theorem ctbW_sim {p : Prog} (hP : TabsProg p) (dn : NIdx → Option ConLeche.Name) (pp : Word) (bs : BlockShape)
@@ -200,26 +205,27 @@ theorem ctbW_sim {p : Prog} (hP : TabsProg p) (dn : NIdx → Option ConLeche.Nam
       (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))),
     2 ^ 31 + n ≤ coreWalkFuel → StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs →
     ShapeSrc m pp → PSlR decMS mss mo ml m → PSlR decCNS css co cl m → PSlR decISS sss so sl m → HbMemo m →
+    AbsOK m → (∀ f ∈ tablesKeepCallees, AbsKeep p f) →
     Sim (ctbW p n m pp mo ml co cl so sl vis) (ConRon.Arena.checkBlockTables bs mss css sss fe) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
   induction n with
   | zero => intros; rw [ctbW_zero]; exact Sim.of_none
   | succ n ih =>
-  intro m a vis fe mo ml co cl so sl mss css sss hn hS hq hsrc hmss hcss hsss hM
+  intro m a vis fe mo ml co cl so sl mss css sss hn hS hq hsrc hmss hcss hsss hM hA hkeep
   by_cases hml : ml = 0
   · subst hml
     rw [ctbW_nil1 p n m pp mo 0 co cl so sl vis rfl, cbt_nil bs mss css sss fe (.inl (partsPSl_nil hmss))]
-    exact Sim.ret ⟨hS, IWGrow.refl m, hM⟩
+    exact Sim.ret ⟨hS, IWGrow.refl m, hM, hA⟩
   by_cases hcl : cl = 0
   · subst hcl
     rw [ctbW_nil2 p n m pp mo ml co 0 so sl vis hml rfl,
       cbt_nil bs mss css sss fe (.inr (.inl (partsPSl_nil hcss)))]
-    exact Sim.ret ⟨hS, IWGrow.refl m, hM⟩
+    exact Sim.ret ⟨hS, IWGrow.refl m, hM, hA⟩
   by_cases hsl : sl = 0
   · subst hsl
     rw [ctbW_nil3 p n m pp mo ml co cl so 0 vis hml hcl rfl,
       cbt_nil bs mss css sss fe (.inr (.inr (partsPSl_nil hsss)))]
-    exact Sim.ret ⟨hS, IWGrow.refl m, hM⟩
+    exact Sim.ret ⟨hS, IWGrow.refl m, hM, hA⟩
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨msp, msh, rest, rfl, hwm, hmsb, hdm, hrest⟩ := partsPSl_cons hmss hml
@@ -266,7 +272,7 @@ theorem ctbW_sim {p : Prog} (hP : TabsProg p) (dn : NIdx → Option ConLeche.Nam
       (by rw [hwm, hwn, (hni0).mpr e3]), cbt_one bs msh rest css' sss' fe cA nF sorts e3, hwm, hwc, hws, hwo1, hwo2]
     have hcall : Sim (callW p n "check_block_tables_one" [pp, UInt64.ofNat msp, o1, o2, vis] m)
         (tabOne fe bs msh cA nF sorts) a
-        (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
+        (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
       cases n with
       | zero => rw [callW_zero]; exact Sim.of_none
       | succ k =>
@@ -274,23 +280,23 @@ theorem ctbW_sim {p : Prog} (hP : TabsProg p) (dn : NIdx → Option ConLeche.Nam
         obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
           (cto_spec p hP.one k _ pp (UInt64.ofNat msp) o1 o2 vis) e
         exact ctoW_sim hP k (by omega) hS hq hsrc (by rw [hmsp']; exact hdm)
-          ⟨hd1, hb1.resolve_left (by decide)⟩ ⟨hd2, hb2.resolve_left (by decide)⟩ hM r s'.mem hW
+          ⟨hd1, hb1.resolve_left (by decide)⟩ ⟨hd2, hb2.resolve_left (by decide)⟩ hM hA hkeep r s'.mem hW
     refine Sim.bindK (K := ctbK1 p n pp mo ml co cl so sl) (by simp [ctbK1.eq_def])
       (fun r m1 => ctbK1_some p n m1 pp mo ml co cl so sl r) hcall ?_
-    rintro r fe₂ m1 a1 ⟨hS1, hg1, hM1⟩
+    rintro r fe₂ m1 a1 ⟨hS1, hg1, hM1, hA1⟩
     exact Sim.post (K := ctbK2) rfl (fun _ _ => rfl)
       (ih m1 a1 (r.headD 0) fe₂ (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest css' sss'
         (by omega) hS1 (hq.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) (hrest.grow decMS_mono hg1)
-        (hcss'.grow decCNS_mono hg1) (hsss'.grow decISS_mono hg1) hM1)
-      (fun r x m a ⟨h1, h2, h3⟩ => ⟨h1, hg1.trans h2, h3⟩)
+        (hcss'.grow decCNS_mono hg1) (hsss'.grow decISS_mono hg1) hM1 hA1 hkeep)
+      (fun r x m a ⟨h1, h2, h3, h4⟩ => ⟨h1, hg1.trans h2, h3, h4⟩)
   · rw [ctbW_skip p n m pp mo ml co cl so sl vis hml hcl hsl (by
         rw [hwc, hwl1, hws, hwl2, hwm, hwn, hni0]; exact hc),
       cbt_skip bs msh rest cs css' ss sss' fe (by
         rw [hlen1, hlen2, ← hw1, ← hw1]; exact hc)]
     exact Sim.post (K := ctbK2) rfl (fun _ _ => rfl)
       (ih m a vis fe (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest css' sss'
-        (by omega) hS hq hsrc hrest hcss' hsss' hM)
-      (fun r x m a ⟨h1, h2, h3⟩ => ⟨h1, h2, h3⟩)
+        (by omega) hS hq hsrc hrest hcss' hsss' hM hA hkeep)
+      (fun r x m a ⟨h1, h2, h3, h4⟩ => ⟨h1, h2, h3, h4⟩)
 
 /-- **`check_block_tables` refines `checkBlockTables`**: from the stage relation at `vis` of `fe`,
 the shape record, the members, the stored constructors and their fields' sorts (per member, as
@@ -304,15 +310,16 @@ theorem checkBlockTables_refines (p : Prog) (hP : TabsProg p) (n : Nat) (s₀ : 
     (sss : List (List (List LIdx))) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hS : StageR dn vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hsrc : ShapeSrc s₀.mem pp)
     (hmss : PSlR decMS mss mo ml s₀.mem) (hcss : PSlR decCNS css co cl s₀.mem)
-    (hsss : PSlR decISS sss so sl s₀.mem) (hM : HbMemo s₀.mem) :
+    (hsss : PSlR decISS sss so sl s₀.mem) (hM : HbMemo s₀.mem) (hA : AbsOK s₀.mem)
+    (hkeep : ∀ f ∈ tablesKeepCallees, AbsKeep p f) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_tables" [pp, mo, ml, co, cl, so, sl, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTables bs mss css sss fe) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockTables bs mss css sss fe) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlockTables bs mss css sss fe) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem; ⊤⦄ :=
+      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (ctb_spec p hP.tabs n s₀ pp mo ml co cl so sl vis) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (ctbW_sim hP dn pp bs n s₀.mem a₀ vis fe mo ml co cl so sl mss css sss hn hS hq
-      hsrc hmss hcss hsss hM) hm
+      hsrc hmss hcss hsss hM hA hkeep) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind
