@@ -9,7 +9,8 @@ Steps (all in _tmp/e2e/<checkout name>/):
    (`Prog` lists and `p.lookup "f" = some d` hypotheses). The bindings are merged; the program is
    everything reachable from `check` and `check_np` (`ConAgua/E2E/Check.lean`). A called function
    with no L code (no binding, or only `abort` stubs) gets an e2e stub with its own code.
-2. **Compile.** `e2e-l asm` (checks `Prog.wf`) and `cc harness/e2e.c` for each entry.
+2. **Compile.** `e2e-l asm` (checks `Prog.wf`) and `cc harness/main.c` for each entry (the entry stub
+   lays out a fixed partition of one region, lane `abi`: no capacity retries).
 3. **Run** every fixture (con-leche's e2e fixtures and the arena tests) through the compiled
    `check` and `check_np`, the reference `e2e-ref` (the twin at the program's pin list; with and
    without the prelude), and `L.run` (`e2e-l run`) on small fixtures; classify.
@@ -64,8 +65,6 @@ DIFF_BIG_WORDS = 1 << 19   # words per array on e2e-diff's retry
 INTERP_MAX_BYTES = 20000   # L.run only on fixtures up to this size
 INTERP_WORDS = 1 << 18     # words per array under L.run
 ACCEPT = "accept"
-BIG_WORDS = 1 << 25        # words per array on the retry after an error
-HUGE_WORDS = 1 << 27       # the second retry, only where the reference accepts
 TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to this size
 TRACE_WORDS = 1 << 18
 DEFAULT_JOBS = 8           # shared machine: at most ~8 runs at a time (each well under PER_RUN_GB)
@@ -441,7 +440,7 @@ def compile_entry(prog, entry):
     r = subprocess.run([os.path.join(BIN, "e2e-l"), "asm", prog, entry, s], capture_output=True, text=True)
     if r.returncode != 0:
         return None, (r.stdout + r.stderr).strip()
-    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", "e2e.c"), s],
+    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", "main.c"), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         return None, c.stderr[-2000:]
@@ -633,13 +632,8 @@ def report(res, asm, compiled, clashes, args, t0):
                       f"{sum(ab.values())} of {len(aborts)} traced, `--trace all` traces all):", "",
                       "| L stops at | reference | fixtures |", "|---|---|---:|"]
             lines += [f"| {a} | {b} | {n} |" for (a, b), n in sorted(ab.items(), key=lambda x: -x[1])]
-        capn = [r for r in res if r[entry].get("small")]
-        if capn:
-            lines += ["", f"{len(capn)} fixtures got further with the larger capacity ({BIG_WORDS} words per array, "
-                      f"or {HUGE_WORDS} where the reference accepts): "
-                      + ", ".join(f"`{r['id']}`" for r in capn[:20])]
         cmp_bugs = [r for r in res if r[entry].get("interp") not in (None, "timeout", "memout") and
-                    not r[entry].get("small") and not same_outcome(r[entry]["interp"], r[entry]["l"])]
+                    not same_outcome(r[entry]["interp"], r[entry]["l"])]
         if cmp_bugs:
             lines += ["", "**Compiled vs `L.run` differ** (a compiler or harness bug, or a capacity difference):", "",
                       "| fixture | compiled | `L.run` |", "|---|---|---|"]
@@ -845,11 +839,13 @@ def main():
     reads_pins = any(c[0] and re.search(r"\bnb ([2-9]|\d\d)", c[1]) for c in compiled.values())
     env = dict(os.environ)
     npins = 0
+    pins_arg = []   # the compiled binaries take the pin-data file as their second argument
     if reads_pins:
         pins = os.path.join(WORK, "pins.bin")
         if not os.path.exists(pins):
             lake("exe", "romgen", pins, "1")
-        env["CA_PINS"] = pins
+        env["CA_PINS"] = pins   # for `e2e-l run`/`trace` and `e2e-diff`
+        pins_arg = [pins]
         npins = 1
     fx = fixtures()
     if args.only:
@@ -905,31 +901,12 @@ def main():
                 elif st == "ok":
                     cache[ck] = [ref, where]
             exe = compiled[entry][0]
-            cap = None
-            words = None   # CA_WORDS of the run whose outcome is reported (None: the default capacity)
             if exe:
-                st, out = guard.run([exe, path], T_COMPILED, env=env)
+                st, out = guard.run([exe, path] + pins_arg, T_COMPILED, env=env)
                 lo = l_outcome(out, st, stubs_by_code)
-                if lo == "error":
-                    # capacities: once more with every array 8 times larger
-                    st, out = guard.run([exe, path], T_COMPILED, env=dict(env, CA_WORDS=str(BIG_WORDS)))
-                    lo2 = l_outcome(out, st, stubs_by_code)
-                    if lo2 != lo:
-                        cap, lo, words = lo, lo2, BIG_WORDS
-                    elif ref == ACCEPT:
-                        # still an error where the reference accepts: once more at HUGE_WORDS (the
-                        # big perf fixtures intern ~10M application nodes; ~5.4 GB, under PER_RUN_GB)
-                        st, out = guard.run([exe, path], T_COMPILED, env=dict(env, CA_WORDS=str(HUGE_WORDS)))
-                        lo2 = l_outcome(out, st, stubs_by_code)
-                        if lo2 != lo:
-                            cap, lo, words = lo, lo2, HUGE_WORDS
             else:
                 lo = "crash"
             d = {"ref": ref + (f" ({where})" if where else ""), "l": lo, "class": classify(lo, ref, where)}
-            if words:
-                d["words"] = words
-            if cap:
-                d["small"] = cap
             want = (args.trace == "all" or
                     (args.trace == "disagree" and (d["class"] == "l-error" or d["class"].startswith("DISAGREE")
                                                    or fid in trace_sample)))
@@ -961,8 +938,7 @@ def main():
                     cache[ck] = cr
             r["conron"] = cr
             if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
-                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path],
-                                            dict(env, CA_WORDS=str(r["check"]["words"])) if r["check"].get("words") else env),
+                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path] + pins_arg, env),
                              "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path]),
                              "e2e-ref": perf_instr(guard, [os.path.join(BIN, "e2e-ref"), path, f"--pins={npins}"])}
         if not args.no_diff and fid in diff_set:
@@ -995,7 +971,7 @@ def main():
     with open(os.path.join(WORK, "results.json"), "w") as fh:
         json.dump({"results": res, "stubs": {g: v[0] for g, v in asm["stubs"].items()}}, fh, indent=1)
     if args.latest and not args.no_perf and not args.only and args.rerun_failing is None and not args.no_conron:
-        rows = [{"id": r["id"], "size": r["size"], "class": r["check"]["class"], "words": r["check"].get("words"), "perf": r["perf"]}
+        rows = [{"id": r["id"], "size": r["size"], "class": r["check"]["class"], "perf": r["perf"]}
                 for r in res if r.get("perf") and r["perf"].get("L") and r["perf"].get("con-ron")]
         os.makedirs(os.path.dirname(args.latest), exist_ok=True)
         rev = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
