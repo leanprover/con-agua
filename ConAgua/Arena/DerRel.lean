@@ -807,8 +807,10 @@ theorem derR_init (m : Mem) : DerR m (AState.init EStore.empty) := by
 
 /-- **`ArenaD` holds initially.** -/
 theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 63) : ArenaD (initMem sizes) (AState.init EStore.empty) :=
-  ⟨arenaR_init sizes hlen hctl hpool, derR_init _⟩
+    (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
+    ArenaD (initMem sizes) (AState.init EStore.empty) :=
+  ⟨arenaR_init sizes hlen hctl hpool hsz, derR_init _⟩
 
 /-! ## Appending to the pool keeps `ArenaD`, and `natAddLit_refinesD` -/
 

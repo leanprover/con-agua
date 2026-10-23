@@ -19,9 +19,10 @@ open ConRon.Arena
 /-- **The zeroed L memory is the twin's empty store** (`arenaD_init`). -/
 @[refines ConRon.Arena.EStore.empty]
 theorem estoreEmpty_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
-    (hctl : 64 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63) :
+    (hctl : 64 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
     ArenaD (initMem sizes) (AState.init EStore.empty) :=
-  arenaD_init sizes hlen hctl hpool
+  arenaD_init sizes hlen hctl hpool hsz
 
 /-! ## The rest of the initial state (lane `inits`)
 
@@ -44,7 +45,7 @@ start from it): the four represented tables are the empty map. -/
 theorem memosEmpty_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
     (hctl : 64 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63) :
     MemosR (initMem sizes) Memos.empty :=
-  (arenaR_init sizes hlen hctl hpool).memos
+  memosR_init sizes hctl
 
 /-- **The mode memos are empty in zeroed memory**: all six tables are the empty map, the plain
 tower's bank `0` and the eager set (`ModeMemos.empty` is both) bank `1`, at eager bit `0`. -/
@@ -103,13 +104,14 @@ theorem pinsEmpty_refines (sizes : List Nat) :
 EStore.empty` at once; with the store `st` arbitrary the other three parts are `.empty`. -/
 @[refines ConRon.Arena.AState.init]
 theorem aStateInit_refines (sizes : List Nat) (hlen : 64 ≤ sizes.length)
-    (hctl : 120 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63) :
+    (hctl : 120 ≤ sizes[1]?.getD 0) (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
     ArenaD (initMem sizes) (AState.init EStore.empty) ∧
     CoreR (initMem sizes) (AState.init EStore.empty).caches ∧
     PinsR (initMem sizes) (AState.init EStore.empty).pins ∧
     (∀ st, (AState.init st).store = st ∧ (AState.init st).memos = Memos.empty ∧
       (AState.init st).caches = Caches.empty ∧ (AState.init st).pins = Pins.empty) :=
-  ⟨arenaD_init sizes hlen (by omega) hpool, cachesEmpty_refines sizes hctl,
+  ⟨arenaD_init sizes hlen (by omega) hpool hsz, cachesEmpty_refines sizes hctl,
     (pinsEmpty_refines sizes).2, fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
 
 /-- **The empty environment's constant list is zeroed memory's** (`IEnv.empty`): with no constant

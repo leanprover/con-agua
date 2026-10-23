@@ -395,7 +395,8 @@ theorem initMem_rd (sizes : List Nat) (b : ArrId) (x : Word) : rdW ((initMem siz
 
 theorem storeR_init {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
     (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (m : Mem)
-    (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : S.ca.toNat + 2 ≤ (m.arr64 CTL).size)
+    (hsa : 17 ≤ (m.arr64 S.sa).size ∧ (m.arr64 S.sa).size < 2 ^ 63) :
     StoreR S R hs m false (Tbl.empty : Tbl α (Idx k) δ) Tbl.empty := by
   have hT : ∀ t, TierR S R hs m t (Tbl.empty : Tbl α (Idx k) δ) := by
     intro t
@@ -403,37 +404,56 @@ theorem storeR_init {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Sch
       fun i a h => by simp [Tbl.empty] at h, fun i a h => by simp [Tbl.empty] at h,
       fun a x h => by simp [Tbl.empty] at h, fun j _ => by simp [slotW, slotV, slotRd, hz],
       fun i hi => by simp [Tbl.empty] at hi⟩
-  exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1⟩
+  have hG : GrowR S m := by
+    have hg : gexpW S.sa m = 0 := hz _ _
+    have hn : (nSl S m).toNat = 8 := by simp only [nSl, gnW, hg]; decide
+    refine ⟨by rw [hg]; decide, by omega, hsa.2, fun k _ _ => hz _ _⟩
+  exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1, hG⟩
+
+/-- The walk memos in the all-zero memory are empty. -/
+theorem memosR_init (sizes : List Nat) (hctl : 64 ≤ sizes[1]?.getD 0) :
+    MemosR (initMem sizes) (AState.init EStore.empty).memos := by
+  have hz := initMem_rd sizes
+  have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
+    rw [initMem_arr]; simp [CTL]
+  exact ⟨memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega),
+    memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega),
+    memoRG_zero imSch lfKey _ _ hz (by rw [hc]; simp; omega),
+    memoRG_zero frSch bmKey _ _ hz (by rw [hc]; simp; omega)⟩
 
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
 theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 63) : ArenaR (initMem sizes) (AState.init EStore.empty) := by
+    (hpool : sizes[0]?.getD 0 < 2 ^ 63)
+    (hsz : ∀ b, b < 64 → 17 ≤ sizes[b]?.getD 0 ∧ sizes[b]?.getD 0 < 2 ^ 63) :
+    ArenaR (initMem sizes) (AState.init EStore.empty) := by
   have hz := initMem_rd sizes
+  have hs : ∀ b, b < 64 → 17 ≤ ((initMem sizes).arr64 b).size ∧ ((initMem sizes).arr64 b).size < 2 ^ 63 :=
+    fun b hb => by rw [initMem_arr]; simpa using hsz b hb
   have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]
   have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
     rw [initMem_arr]; simp [POOL]
   have hw : CTL < (initMem sizes).words.size := by
     show 1 < (sizes.map _).toArray.size; simp only [List.size_toArray, List.length_map]; omega
-  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by rw [hc]; simp [litSch]; omega)⟩,
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [appSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [sortSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [constSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [letSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [bvarSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [fvarSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [lamSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [forallSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [projSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [zeroSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [succSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [maxSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [imaxSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [paramSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_,
+  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by rw [hc]; simp [litSch]; omega) (hs _ (by decide))⟩,
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [appSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [sortSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [constSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [letSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [bvarSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [fvarSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [lamSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [forallSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [projSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [zeroSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [succSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [maxSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [imaxSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [paramSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega) (hs _ (by decide)),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega) (hs _ (by decide)), ?_,
     ⟨constT_empty _, constT_empty _⟩, ⟨constT_empty _, constT_empty _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
@@ -441,10 +461,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
   · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
-  · exact ⟨memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega),
-      memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega),
-      memoRG_zero imSch lfKey _ _ hz (by rw [hc]; simp; omega),
-      memoRG_zero frSch bmKey _ _ hz (by rw [hc]; simp; omega)⟩
+  · exact memosR_init sizes hctl
 
 /-! ## Interning lifts to `ArenaR`
 

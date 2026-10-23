@@ -37,12 +37,14 @@ def wordArrays : Nat := 214
 def ctlMin : Nat := 256
 
 /-- The body of `cap_check()`: every word array shorter than `2^62` words (handles, offsets and
-counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays), `CTL` at
+counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays) and at least
+17 words long (a cons table's first 2 × 8 slots and its growth exponent, `GrowR`), `CTL` at
 least `ctlMin` words, and the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
 `0` is a count, `StateDR`). -/
 def capCheckBody : Stmt :=
   (List.range wordArrays).foldr
-    (fun b s => .seq (.ite (.cmp .ule (.const 4611686018427387904) (.len64 b)) .abort .skip) s)
+    (fun b s => .seq (.ite (.or (.cmp .ule (.const 4611686018427387904) (.len64 b))
+      (.cmp .ult (.len64 b) (.const 17))) .abort .skip) s)
     (.seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
       (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
         (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
