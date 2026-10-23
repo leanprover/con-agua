@@ -139,7 +139,7 @@ include hcs in
 theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (cO cL ns oO oL : Word)
     (css : List (List (IConstantVal × Nat))) (NS : NestState) (outss : List (List (List NestFieldKind × EIdx)))
     (r : List Word),
-    p2rtW n m vis ctx hO hL cO cL ns oO oL = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
+    p2rtW stubCall n m vis ctx hO hL cO cL ns oO oL = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
     c.hiAt 0 < 2 ^ 64 → c.params.length + c.names.length < 2 ^ 64 →
     decHL m hO.toNat hL.toNat = some holes → hO.toNat + hL.toNat ≤ iwTop m →
     cL.toNat = css.length → cO.toNat + css.length ≤ iwTop m → CssAt m cO.toNat css → NSB m ns NS →
@@ -189,7 +189,7 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
       ⟨hus0, by show decHL (truncM m) _ _ = _; rw [decHL_truncM hpe0]; exact hpa0, hpe0, hn0, hne0,
         by rw [hpl]; exact hpn, hho, hhob⟩
     have hCt := (nbOK_all dn vis fe hcs n (by omega)).2.2.2.2.2.2.2.1
-    cases hc : nbCtorsW n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
+    cases hc : nbCtorsW stubCall n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
         (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx)
         (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with
     | none => rw [hc] at h; simp [p2rtK1] at h
@@ -283,7 +283,7 @@ include hcs in
 /-- **`nest_seeds`** simulated by `nestSeeds`. -/
 theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState) (r : List Word),
-    p2sdW n m vis ctx sO sL ns = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
+    p2sdW stubCall n m vis ctx sO sL ns = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
     c.hiAt 0 < 2 ^ 64 → sL.toNat = seeds.length → SeedsAt m sO.toNat seeds → NSB m ns NS → PosMR m → AbsOK m →
     ∃ x a', (nestSeeds V fe c seeds NS).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       NSB m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m'
@@ -359,7 +359,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
     have hKey := (nbOK_all dn vis fe hcs (n' + 1) (by omega)).2.2.2.2.1
-    cases hk3 : nbKeyW (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
+    cases hk3 : nbKeyW stubCall (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
     | none => rw [hk3] at h; simp [p2sdK3] at h
@@ -437,7 +437,7 @@ theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
       IWGrow s₀.mem s'.mem ∧ RootOutsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2 ∧
       PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (nestRoot_spec L n s₀ vis ctx hO hL cO cL ns oO oL) ?_
+  refine triple_post (nestRoot_spec L stubCall (stubCall_spec p) n s₀ vis ctx hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
   have := p2rtW_ok dn vis fe hcs ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
     hhi hpn hho hhob hcl hcb hcss hns hout houtb hP hA
@@ -452,7 +452,7 @@ theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
     ⦃fun r s' => LocEq s' s₀ ∧
       ∃ x a', (nestSeeds V fe c seeds NS).run a₀ = .ok (x, a') ∧ StageR dn vis fe s'.mem a' ∧
       IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (nestSeeds_spec L n s₀ vis ctx sO sL ns) ?_
+  refine triple_post (nestSeeds_spec L stubCall (stubCall_spec p) n s₀ vis ctx sO sL ns) ?_
   rintro r s' ⟨hlc, hm⟩
   have := p2sdW_ok dn vis fe hcs ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns hP hA
   exact ⟨hlc, by simpa using this⟩

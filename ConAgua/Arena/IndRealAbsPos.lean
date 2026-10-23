@@ -1086,11 +1086,11 @@ theorem pcrWf_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : 
   | k + 3, h => exact pcrW_afr h
 
 theorem p2ctW_afr {k : Nat} {m m' : Mem} {vis no nl us dO dL hO hL cv hi : Word} {r : List Word}
-    (h : p2ctW k m vis no nl us dO dL hO hL cv hi = some (r, m')) : AFr m m' := by
+    (h : p2ctW stubCall k m vis no nl us dO dL hO hL cv hi = some (r, m')) : AFr m m' := by
   cases k with
   | zero => simp [p2ctW] at h
   | succ k =>
-  simp only [p2ctW, p2ctK1.eq_def, p2ctK2.eq_def, p2ctK3.eq_def, p2ctK4.eq_def, cvLpsW] at h
+  simp only [p2ctW, p2ctK1.eq_def, p2ctK2.eq_def, p2ctK3.eq_def, p2ctK4.eq_def, cvLpsW, stubCall] at h
   afr_auto h [erToIwW_afr, stub_afr, pcrWf_afr]
 
 theorem ggW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx hi us dO dL cO cL gO gL : Word) (r : List Word),
