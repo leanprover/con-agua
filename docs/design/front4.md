@@ -91,8 +91,11 @@ and `movedNames` (todo, D30).
 * **The twin's array after `pick`'s erasures** is the list of unmarked stream positions mapped
   through the records (`unm`, `recsAt`); marking is erasing (`unm_mark`), `findIdx` on the mapped
   list is the first unmarked declaring position (`findIdx_hit`).
-* `preparePrelude_refines` (`Checker/PrepRef.lean`, `@[refines preparePrelude]`): from `DECL`
-  holding `pre.decls ++ ds` (count in `DECL[0]`, the prelude's in `CTL[240]`), each record with
+* Merged with lane `pipeline`'s `prelude_join` (the prelude's records now come in `PDECL`):
+  its `while` loops are self-recursions too (`prep_shift{,_rec}`, backward per record, depth `ns`;
+  `prep_join{,_rec}`), counts bounded by `2^59` each; `pPJoin_ok` (helper `front4-pjoin`).
+* `preparePrelude_refines` (`Checker/PrepRef.lean`, `@[refines preparePrelude]`): from `PDECL`
+  holding `pre.decls` and `DECL` holding `ds` (counts in word `0`), each record with
   `DeclAtF` + `RecOK` and walkable, `ArenaR`, the hoist's memos represented, `IWOK`, `PinsR`: when
   L returns, `preparePrelude pre ds` succeeds and `DECL` represents its result with the same
   per-record facts; `ArenaR`, `IWOK`, `PinsR` at the twin's state after. `movedNames` is covered
