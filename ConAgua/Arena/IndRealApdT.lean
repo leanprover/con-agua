@@ -57,6 +57,12 @@ theorem apdF_frame {m m' : Mem} {args r : List Word} (h : apdF m args = some (r,
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame apdP_closed (by decide) (run_of_callW hc)).1
 
+/-- **A program's call of `all_level_params_defined` is the model's** (`realCall p`'s reading). -/
+theorem apdF_of_callW {p : Prog} (hp : ApdF p) {n : Nat} {args r : List Word} {m m' : Mem}
+    (h : callW p n "all_level_params_defined" args m = some (r, m')) :
+    apdF m args = some (r, m') :=
+  callF_of_callW (by rw [← callW_agree apdP_closed (hp.agree apdPFns) n (by decide)]; exact h)
+
 theorem apdP_prog : ApdProg apdP := by
   constructor <;> rfl
 
