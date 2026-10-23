@@ -44,7 +44,7 @@ def srK4 (k : Nat) (nP o nIdx hd fn : Word) : Option (List Word × Mem) → Opti
 /-- After `get_app_fn`. -/
 def srK3 (k : Nat) (nP o nIdx cbody hd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rf, m3) => srK4 k nP o nIdx hd (rf.headD 0) (stubM "get_app_args_f" m3 [CWF, cbody])
+  | some (rf, m3) => srK4 k nP o nIdx hd (rf.headD 0) (gaaF m3 [CWF, cbody])
 /-- After `intern_const`. -/
 def srK2 (k : Nat) (nP o nIdx cbody : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -70,7 +70,7 @@ theorem srK2_big (h : 4294967296 ≤ hd) : srK2 k nP o nIdx cbody (some (hd, m2)
 theorem srK2_ok (h : ¬ 4294967296 ≤ hd) : srK2 k nP o nIdx cbody (some (hd, m2)) =
     srK3 k nP o nIdx cbody hd (gafF m2 [CWF, cbody]) := by simp only [srK2, if_neg h]
 theorem srK3_some : srK3 k nP o nIdx cbody hd (some (rf, m3)) =
-    srK4 k nP o nIdx hd (rf.headD 0) (stubM "get_app_args_f" m3 [CWF, cbody]) := rfl
+    srK4 k nP o nIdx hd (rf.headD 0) (gaaF m3 [CWF, cbody]) := rfl
 theorem srK4_some : srK4 k nP o nIdx hd fn (some (ra, m4)) =
     srK5 k nP nIdx hd fn (ra.headD 0) (ra.tail.headD 0) (psAtW k m4 o nP) := rfl
 theorem srK5_le (h : rp.tail.headD 0 ≤ al) : srK5 k nP nIdx hd fn ao al (some (rp, m5)) =
@@ -119,7 +119,7 @@ theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         plW_spec p ha hc hsc hg hpf hpp hip hplg hpl hil k, internConst_spec p hcf hcp hic k,
-        gafF_spec p had k, stubM_spec p "get_app_args_f" k,
+        gafF_spec p had k, gaaF_spec p had k,
         psAtW_spec p ha hc hsc hbf hbp hib hpg hps k, slEq_spec p heq k] <;>
       finish (gen := 20) [srRes]
 
@@ -229,13 +229,13 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨rf, m3⟩ := x3
   rw [h3, srK3_some] at h
   obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := gafF_ok dn vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
-  cases h4 : stubM "get_app_args_f" m3 [CWF, cbody] with
+  cases h4 : gaaF m3 [CWF, cbody] with
   | none => rw [h4] at h; cases h
   | some x4 =>
   obtain ⟨ra, m4⟩ := x4
   rw [h4, srK4_some] at h
   obtain ⟨args, a4, hrun4, hS4, hg4, hargs, hat⟩ :=
-    getAppArgs_spec dn vis fe CWF cbody hcb m3 m4 a3 ra h4 hS3
+    gaaF_ok dn vis fe CWF cbody hcb m3 m4 a3 ra h4 hS3
   cases h5 : psAtW k m4 o nP with
   | none => rw [h5] at h; cases h
   | some x5 =>

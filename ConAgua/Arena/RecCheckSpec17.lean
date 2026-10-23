@@ -445,6 +445,106 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
 
 end rel
 
+/-! ## The `abstract1` memo across the rules' writers -/
+
+theorem ruleMem_afr (m : Mem) (q a b c d e f : Word) : AFr m (ruleMem m q a b c d e f) := by
+  rw [ruleMem_eq]; exact wrER_afr _ m q
+
+theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (vis nP cO cL rO rL o : Word) (r : List Word),
+    rgoW n m vis nP cO cL rO rL o = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rgoW] at h
+  | n + 1, m, m', vis, nP, cO, cL, rO, rL, o, r, h => by
+    simp only [rgoW] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    · cases h1 : rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))] with
+      | none => rw [h1] at h; cases h
+      | some x =>
+      obtain ⟨kr, m1⟩ := x
+      rw [h1, rgoK1] at h
+      cases h2 : erAllocW m1 11 with
+      | none => rw [h2] at h; cases h
+      | some y =>
+      obtain ⟨q, m2⟩ := y
+      rw [h2, rgoK2] at h
+      cases h3 : rgoW n ((ruleMem m2 q _ _ nP _ (kr.headD 0) (kr.tail.headD 0)).set64 IW o q) vis nP
+          (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with
+      | none => rw [h3] at h; cases h
+      | some z =>
+      obtain ⟨r3, m3⟩ := z
+      rw [h3, rgoK3] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+      exact (AFr.of_frame (rrbF_frame h1)).trans ((erAllocW_afr h2).trans
+        (((ruleMem_afr _ _ _ _ _ _ _ _).trans (set64IW_afr _ _ _)).trans (rgoW_afr n _ _ _ _ _ _ _ _ _ _ h3)))
+
+theorem rulesW_afr {n : Nat} {m m' : Mem} {vis nP cO cL rO rL : Word} {r : List Word}
+    (h : rulesW n m vis nP cO cL rO rL = some (r, m')) : AFr m m' := by
+  simp only [rulesW] at h
+  generalize hk : (if rL < cL then rL else cL) = k at h
+  cases h1 : allocW m k with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨o, m1⟩ := x
+  rw [h1, rulesK1] at h
+  cases h2 : rgoW n m1 vis nP cO cL rO rL o with
+  | none => rw [h2] at h; cases h
+  | some y =>
+  obtain ⟨r2, m2⟩ := y
+  rw [h2, rulesK2] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ _ _ h2)
+
+theorem efgW_afr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
+    efgW n m q o l = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, h => by simp [efgW] at h
+  | n + 1, m, m', q, o, l, r, h => by
+    simp only [efgW, efgK.eq_def] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    · refine AFr.trans (set64ER_afr m q (rdW (m.arr64 IW) o)) ?_
+      afr_auto h [efgW_afr n _ _ _ _ _ _]
+
+theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
+    AFr m m' := by
+  simp only [efW, efK1.eq_def, efK2.eq_def] at h
+  afr_auto h [erAllocW_afr, efgW_afr _ _ _ _ _ _ _]
+
+theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r : List Word},
+    tsrmW n m ro rl flo fll fpo fpl = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [tsrmW] at h
+  | n + 1, m, m', ro, rl, flo, fll, fpo, fpl, r, h => by
+    by_cases h0 : rl = 0
+    · rw [tsrmW_nil (h := h0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
+    rw [tsrmW_cons (h := h0)] at h
+    cases ha : erAllocW m 11 with
+    | none => rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha]] at h; cases h
+    | some x =>
+    obtain ⟨q, m1⟩ := x
+    rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl =
+      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW, ha], tsrmK1_some] at h
+    have f1 : AFr m1 (rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) := by
+      simp only [rmMem]
+      exact AFr.of_frame (((((((((((MemFrame.set64 _ EREC (by decide) _ _).trans
+        (MemFrame.set64 _ EREC (by decide) _ _)).trans (MemFrame.set64 _ EREC (by decide) _ _)).trans
+        (MemFrame.set64 _ EREC (by decide) _ _)).trans (MemFrame.set64 _ EREC (by decide) _ _)).trans
+        (MemFrame.set64 _ EREC (by decide) _ _)).trans (MemFrame.set64 _ EREC (by decide) _ _)).trans
+        (MemFrame.set64 _ EREC (by decide) _ _)).trans (MemFrame.set64 _ EREC (by decide) _ _)).trans
+        (MemFrame.set64 _ EREC (by decide) _ _)).trans (MemFrame.set64 _ EREC (by decide) _ _))
+    generalize rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl = M at h f1
+    cases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with
+    | none => simp only [List.headD_cons, h2] at h; simp [tsrmK2] at h
+    | some x =>
+    obtain ⟨rr, m2⟩ := x
+    simp only [List.headD_cons, h2, tsrmK2_some] at h
+    cases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with
+    | none => rw [h3] at h; simp [tsrmK3] at h
+    | some x =>
+    obtain ⟨rc, m3⟩ := x
+    rw [h3, tsrmK3_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    exact (erAllocW_afr ha).trans (f1.trans ((tsrmW_afr n h2).trans (consW_afr h3)))
+
 /-! ## `tgt_stored_rules` -/
 
 theorem rcPoolSmall {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
@@ -554,10 +654,12 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {r : List Word}
     {cvv : IConstantVal} {TM : TargetMajor} {rhss : List EIdx}
     (h : tsrW n m vis cv rP M rhso rhsl = some (r, m')) (hS : StageR dn vis fe m a)
-    (hM : DecB (fun m => decTM m M.toNat) m TM) (hrh : DecB (fun m => decHL m rhso.toNat rhsl.toNat) m rhss) :
+    (hM : DecB (fun m => decTM m M.toNat) m TM) (hrh : DecB (fun m => decHL m rhso.toNat rhsl.toNat) m rhss)
+    (hA : AbsOK m) :
     ∃ rules a', (ConRon.Arena.tgtStoredRules fe cvv rP.toNat TM rhss).run a = .ok (rules, a') ∧
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      AbsOK m' := by
   cases n with
   | zero => simp [tsrW] at h
   | succ n =>
@@ -592,13 +694,14 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain ⟨rules, a1, run1, hS1, hg1, hd1, hb1⟩ := rulesW_ok cvv.name k m a _ _ _ rhso rhsl _ rhss hS hctors hrh
     rs m1 h1
   rw [e4, t4] at run1
+  have hA1 := rulesW_afr h1 hA
   have e8' : rdW (m1.arr64 IW) (M + 8) = UInt64.ofNat k8 := by
     rw [rdW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega), e8]
   by_cases hmem : rdW (m1.arr64 IW) (M + 8) ≠ 0
   · rw [tsrK1_mem (h := hmem)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have hk0 : k8 ≠ 0 := by intro e; apply hmem; rw [e8', e]; rfl
-    refine ⟨rules, a1, ?_, by simpa using hd1, by simpa using hb1, hS1, hg1⟩
+    refine ⟨rules, a1, ?_, by simpa using hd1, by simpa using hb1, hS1, hg1, hA1⟩
     simp only [ConRon.Arena.tgtStoredRules, StateT.run_bind, eCs, eNP, run1, except_ok_bind, eMem, decON, hk0,
       if_false]
     rfl
@@ -611,8 +714,8 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   | some x =>
   obtain ⟨rf, m2⟩ := x
   rw [h2, tsrK2_some] at h
-  obtain ⟨f, a2, run2, hS2, hg2, hdf⟩ := arfW_sim dn vis fe (k + 1) m1 a1 M rP TM hS1 (hM.grow (decTM_mono _) hg1)
-    (rcPoolSmall hS1) (rf, m2) h2
+  obtain ⟨f, a2, run2, ⟨hS2, hg2, hdf⟩, hA2⟩ := arfW_sim dn vis fe (k + 1) m1 a1 M rP TM hS1
+    (hM.grow (decTM_mono _) hg1) (rcPoolSmall hS1) hA1 (rf, m2) h2
   cases f with
   | plain => exact absurd hdf (by simp [decFire])
   | nested lvls pins =>
@@ -645,7 +748,8 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
     (decPL_rl_grow hg24 (by have := hg1.2; omega) (by simpa using decPL_rl_grow (IWGrow.refl _) (by simpa using hb1) hd1))
     (by have := hg24.1; simpa using (by omega : (rs.headD 0).toNat + (rs.tail.headD 0).toNat ≤ iwTop m4))
     ((IWGrow.erecPExtR hg4).hslice? hsl3) hsl4
-  refine ⟨_, a2, ?_, by simpa using hd5, by simpa using hb5, hS5, (((hg1.trans hg2).trans hg3).trans hg4).trans hg5⟩
+  refine ⟨_, a2, ?_, by simpa using hd5, by simpa using hb5, hS5, (((hg1.trans hg2).trans hg3).trans hg4).trans hg5,
+    tsrmW_afr _ h5 (efW_afr h4 (efW_afr h3 hA2))⟩
   simp only [ConRon.Arena.tgtStoredRules, StateT.run_bind, eCs, eNP, run1, except_ok_bind, eMem, decON, hk0,
     if_true]
   rw [run2]; rfl
@@ -662,18 +766,19 @@ theorem tgtStoredRules_refines (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) 
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis cv rP M rhso rhsl : Word) (cvv : IConstantVal)
     (TM : TargetMajor) (rhss : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hcv : DecB (fun m => decCVp m cv.toNat) s₀.mem cvv)
-    (hM : DecB (fun m => decTM m M.toNat) s₀.mem TM) (hrh : DecB (fun m => decHL m rhso.toNat rhsl.toNat) s₀.mem rhss) :
+    (hM : DecB (fun m => decTM m M.toNat) s₀.mem TM) (hrh : DecB (fun m => decHL m rhso.toNat rhsl.toNat) s₀.mem rhss)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "tgt_stored_rules" [vis, cv, rP, M, rhso, rhsl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.tgtStoredRules fe cvv rP.toNat TM rhss) a₀ ∧
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (ConRon.Arena.tgtStoredRules fe cvv rP.toNat TM rhss) a₀) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.tgtStoredRules fe cvv rP.toNat TM rhss) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (tsr_spec p L n s₀ vis cv rP M rhso rhsl) ?_
   rintro r s' ⟨hl', hm⟩
-  obtain ⟨rules, a', run, hd, hb, hS', hg⟩ := tsrW_ok dn fe vis n hm hS hM hrh (cvv := cvv)
+  obtain ⟨rules, a', run, hd, hb, hS', hg, hA'⟩ := tsrW_ok dn fe vis n hm hS hM hrh hA (cvv := cvv)
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl', hok, by rw [hres]; exact hd, hb, by rw [hst]; exact hS', hg⟩
+  exact ⟨hl', hok, by rw [hres]; exact hd, hb, by rw [hst]; exact hS', hg, hA'⟩
 
 end L.Ind

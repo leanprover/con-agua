@@ -77,7 +77,7 @@ def c1cK1 (n : Nat) (e app : Word) : Option (List Word × Mem) → Option (List 
 /-- **The model of `class_gen_rule_call1_close`.** -/
 def c1cW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | n + 1, m, xso, xsl, e, app => c1cK1 n e app (stubM "fvar_type_ds" m [xso, xsl])
+  | n + 1, m, xso, xsl, e, app => c1cK1 n e app (ftdsF m [xso, xsl])
 
 def c1tK6 (n : Nat) (xso xsl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -177,7 +177,7 @@ def grcK4 (n : Nat) (g body : Word) : Option (List Word × Mem) → Option (List
 
 def grcK3 (n : Nat) (g fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => grcK4 n g (r3.headD 0) (stubM "fvar_type_ds" m3 [fo, fl])
+  | some (r3, m3) => grcK4 n g (r3.headD 0) (ftdsF m3 [fo, fl])
 
 def grcK2 (n : Nat) (g fo fl sv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -265,7 +265,7 @@ theorem pvW_step (h : ¬ rP ≤ i) : pvW (n + 1) m g rP i = pvK1 n (fun m1 => pv
   simp only [pvW]; rw [if_neg h]
 theorem pvK1_some : pvK1 n next (some (r1, m1)) = pvK2 n (r1.headD 0) (next m1) := rfl
 theorem pvK2_some : pvK2 n v (some (r2, m2)) = fcK (consW n m2 v (r2.headD 0) (r2.tail.headD 0)) := rfl
-theorem c1cW_eq : c1cW (n + 1) m xso xsl e app = c1cK1 n e app (stubM "fvar_type_ds" m [xso, xsl]) := rfl
+theorem c1cW_eq : c1cW (n + 1) m xso xsl e app = c1cK1 n e app (ftdsF m [xso, xsl]) := rfl
 theorem c1cK1_big (h : e + r1.tail.headD 0 < e) : c1cK1 n e app (some (r1, m1)) = none := by rw [c1cK1, if_pos h]
 theorem c1cK1_ok (h : ¬ e + r1.tail.headD 0 < e) : c1cK1 n e app (some (r1, m1)) =
     c1cK2 (closeLamsW n m1 (r1.headD 0) (r1.tail.headD 0) e app) := by rw [c1cK1, if_neg h]
@@ -322,7 +322,7 @@ theorem grcK1_some : grcK1 n g fo fl ihso ihsl (some (r1, m1)) = grcK2 n g fo fl
   rfl
 theorem grcK2_some : grcK2 n g fo fl sv (some (r2, m2)) =
     grcK3 n g fo fl (mknF m2 [sv, r2.headD 0, r2.tail.headD 0]) := rfl
-theorem grcK3_some : grcK3 n g fo fl (some (r3, m3)) = grcK4 n g (r3.headD 0) (stubM "fvar_type_ds" m3 [fo, fl]) := rfl
+theorem grcK3_some : grcK3 n g fo fl (some (r3, m3)) = grcK4 n g (r3.headD 0) (ftdsF m3 [fo, fl]) := rfl
 theorem grcK4_some : grcK4 n g body (some (r4, m4)) =
     grcK5 n body (appendW n m4 (rdW (m4.arr64 IW) (g + 12)) (rdW (m4.arr64 IW) (g + 13)) (r4.headD 0) (r4.tail.headD 0)) :=
   rfl
@@ -445,7 +445,7 @@ theorem call1Close_spec (n : Nat) (s₀ : St) (xso xsl e app : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        stubM_spec p "fvar_type_ds" n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl n] <;>
+        ftdsF_spec p h.ad n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n] <;>
       finish (gen := 20)
 
 theorem call1Tail_spec (n : Nat) (s₀ : St) (fvso fvsl pvo pvl rlvls xso xsl idxo idxl r i e : Word) :
@@ -478,7 +478,7 @@ theorem call1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl pvo pvl rlv
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp n,
+        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad n,
         classRecOf_spec p h.cro n, call1Tail_spec p h n] <;>
       finish (gen := 20) (instances := 5000) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
         loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
@@ -514,8 +514,8 @@ theorem ruleClose_spec (n : Nat) (s₀ : St) (g s fo fl ihso ihsl : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
-        slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, stubM_spec p "fvar_type_ds" n,
-        closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl n] <;>
+        slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, ftdsF_spec p h.ad n,
+        closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 
 theorem ruleBody_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls x rP s fo fl : Word) :

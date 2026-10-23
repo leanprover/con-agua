@@ -25,7 +25,10 @@ functions producing L functions with the schema's array and `CTL` words spliced 
 `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
 three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
 
-* `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32))`, returning `(found, slot, steps)`.
+* `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
+  `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
+  eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
+  `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
 * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
   value (and on a miss, the stamp and the key, aborting past a 3/4 load). Callers probe right
   before (`set` = `find; put`); a walk that recursed since its first probe probes again.
@@ -54,7 +57,7 @@ def nG (S : MemoSch) (m : Mem) : Word := m.len64 S.arr >>> 2
 def cntG (S : MemoSch) (m : Mem) : Word := rdW (m.arr64 CTL) (S.cs + 1)
 
 /-- The hash input of a two-word key. -/
-def kh (k1 k2 : Word) : Word := k1 ^^^ (k2 <<< 32)
+def kh (k1 k2 : Word) : Word := (k1 ^^^ (k2 <<< 32)) ^^^ ((k2 >>> 32) * golden)
 
 /-! ## `X_find(k1, k2)`: the probe -/
 
@@ -127,7 +130,7 @@ def mfindLoopG (S : MemoSch) : Stmt := lblk (k1, k2, n, e, j, d) {
 def memoFindG (S : MemoSch) : FunDecl := lfn (k1, k2) locals (n, e, j, d) {
   n := len(S.arr.u64) >> 2;
   e := CTL.u64[⟪S.cs⟫] + 1;
-  j := k1 ^ (k2 << 32);
+  j := (k1 ^ (k2 << 32)) ^ ((k2 >> 32) * ⟪golden⟫);
   j := mulhi((j * ⟪golden⟫) ^ ((j * ⟪golden⟫) >> 32), n);
   ⟪mfindLoopG S⟫;
   abort

@@ -16,7 +16,9 @@
    Byte array 1, if the program has it, is the pin-data buffer (DESIGN.md, lane `romload`): the
    file CA_PINS (empty if unset).
 
-   env: CA_FUEL (default 2^62), CA_STACK (bytes, default 1 GiB), CA_WORDS (words per array),
+   env: CA_SIZES ("a=w,b=w,...": word array a gets w words), CA_SMALL ("a,b,...": these word arrays
+        get CA_SMALL_WORDS words; both lane compopt's table-sizing experiments; otherwise CA_WORDS),
+        CA_FUEL (default 2^62), CA_STACK (bytes, default 1 GiB), CA_WORDS (words per array),
         CA_PINS (the pin-data file), CA_HWM (if set: print to stderr, per word array, the words up to
         its highest touched page and the words on touched pages, `hwm ARRAY HIGH TOUCHED`, for arrays above CA_HWM words; by mincore, a
         diagnostic for capacity errors, lane e2efix) */
@@ -74,10 +76,26 @@ int main(int argc, char **argv) {
     T[2 + 2 * a] = a == 0 ? (uint64_t)buf : a == 1 ? (pins ? (uint64_t)pins : (uint64_t)map(8)) : (uint64_t)map(words);
     T[3 + 2 * a] = a == 0 ? (uint64_t)n : a == 1 ? (uint64_t)np : words;
   }
+  /* lane compopt experiment: CA_SMALL="a,b,..." arrays get CA_SMALL_WORDS words */
+  const char *sm = getenv("CA_SMALL");
+  uint64_t smw = (e = getenv("CA_SMALL_WORDS")) ? strtoull(e, 0, 0) : words;
   for (uint64_t a = 0; a < ca_nw; a++) {
-    arr[a] = map(8 * words);
+    uint64_t w = words;
+    const char *sz = getenv("CA_SIZES"); /* "a=words,b=words,..." */
+    if (sz) {
+      char key[32]; snprintf(key, sizeof key, ",%llu=", (unsigned long long)a);
+      char buf[8192]; snprintf(buf, sizeof buf, ",%s", sz);
+      char *q = strstr(buf, key);
+      if (q) w = strtoull(q + strlen(key), 0, 0);
+    }
+    if (sm) {
+      char key[32]; snprintf(key, sizeof key, ",%llu,", (unsigned long long)a);
+      char buf[4096]; snprintf(buf, sizeof buf, ",%s,", sm);
+      if (strstr(buf, key)) w = smw;
+    }
+    arr[a] = map(8 * w);
     T[2 + 2 * (ca_nb + a)] = (uint64_t)arr[a];
-    T[3 + 2 * (ca_nb + a)] = words;
+    T[3 + 2 * (ca_nb + a)] = w;
   }
   memcpy(&T[2 + 2 * na], ca_rom, ca_rom_len);
   ca_res r = ca_enter(T, fuel);

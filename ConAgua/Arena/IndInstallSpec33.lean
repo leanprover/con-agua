@@ -317,7 +317,7 @@ theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl 
     by_cases hf : fl ≤ j - 1
     · rw [csfW_oob n m vis isProp large s nP fo fl io il res j hj hf] at h; cases h
     rw [csfW_step n m vis isProp large s nP fo fl io il res j hj hf] at h
-    cases h1 : stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))] with
+    cases h1 : ftdF m [rdW (m.arr64 IW) (fo + (j - 1))] with
     | none => rw [h1] at h; simp [csfK1] at h
     | some x1 =>
     obtain ⟨r1, m1⟩ := x1
@@ -344,7 +344,7 @@ theorem pos3_csfW_mfr : ∀ (n : Nat) (m m' : Mem) (vis isProp large s nP fo fl 
     rw [h5, csfK5_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]
-    exact ((((MFr.ofStub h1).trans (MFr.ofStub h2)).trans (MFr.ofStub h3)).trans (pos3_cfbW_mfr h4)).trans
+    exact ((((MFr.ofFtdF h1).trans (MFr.ofStub h2)).trans (MFr.ofStub h3)).trans (pos3_cfbW_mfr h4)).trans
       ((MFr.set_iw _ _ _).trans (pos3_csfW_mfr n _ _ _ _ _ _ _ _ _ _ _ _ _ _ h5))
 
 theorem pos3_fsortsW_mfr {n : Nat} {m m' : Mem} {vis isProp large s nP fo fl io il nW : Word} {r : List Word}
@@ -371,7 +371,7 @@ theorem pos3_callW_fsorts_mfr {p : Prog} (hP : SumProg p) {n : Nat} {vis isP lar
   rcases n with _ | k
   · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs k _ vis isP large s nP
+    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs hP.ad.ftd k _ vis isP large s nP
       fo fl io il j) h
   exact pos3_fsortsW_mfr hW
 
