@@ -189,3 +189,8 @@ root = "ConAgua.E2E.Diff"
 [[lean_exe]]
 name = "romtest"
 root = "ConAgua.Rom.Test"
+
+# Lane `compopt`: `e2e-l asm` without the compiler proof's imports (`ConAgua/E2E/AsmOpt.lean`).
+[[lean_exe]]
+name = "compopt-asm"
+root = "ConAgua.E2E.AsmOpt"
