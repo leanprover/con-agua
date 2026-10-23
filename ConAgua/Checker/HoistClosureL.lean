@@ -161,7 +161,8 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
     {i k : Nat} (hi : i < c) (hk : k < c) {w : Word} (hw : w.toNat < 2 ^ 32)
     (h : hNoteW m w (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp = some (sp', m')) :
     (∃ j, idx[(decI w : NIdx)]? = some j ∧ i < j ∧ j ≠ k ∧ T[j]? = none ∧
-      sp'.toNat = sp.toNat + 1 ∧ HFr tg ws c m m' ∧ TgtR m' tg c (T.insert j i) ∧
+      sp'.toNat = sp.toNat + 1 ∧ MemFrame [IW] [] m m' ∧ HFr tg ws c m m' ∧
+      TgtR m' tg c (T.insert j i) ∧
       stk m' ws sp' = stk m ws sp ++ [j]) ∨
     ((¬ ∃ j, idx[(decI w : NIdx)]? = some j ∧ i < j ∧ j ≠ k ∧ T[j]? = none) ∧ sp' = sp ∧ m' = m) := by
   have hc := hE.c60
@@ -241,8 +242,10 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       rw [e1] at e2
       have hszIW : ((m.arr64 IW).set! (tg.toNat + j) (UInt64.ofNat i + 1)).size = (m.arr64 IW).size := by
         simp
-      refine ⟨j, rfl, h1, h2, h3, ?_, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_⟩
+      refine ⟨j, rfl, h1, h2, h3, ?_, ?_, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_⟩
       · rw [UInt64.toNat_add, UInt64.toNat_one]; omega
+      · exact (MemFrame.set64 m IW (by decide) _ _).trans
+          ((MemFrame.set64 _ IW (by decide) _ _))
       · exact (MemFrame.set64 m IW (by decide) _ _).trans
           ((MemFrame.set64 _ IW (by decide) _ _)) |>.mono (by simp) (by simp)
       · intro x hx
@@ -286,5 +289,112 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       rintro ⟨j', hj', a1, a2, a3⟩
       simp only [ho, Option.some.injEq] at hj'; subst hj'
       exact hcond ⟨a1, a2, a3⟩
+
+theorem seen_frameIW {m m' : Mem} (hf : MemFrame [IW] [] m m') (h : ∃ s, SeenR m s) :
+    ∃ s, SeenR m' s := by
+  obtain ⟨s, hs⟩ := h
+  exact ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by simp) m m' hf _ hs⟩
+
+/-! ## The notes of one record -/
+
+/-- **The notes of record `k`**: exactly the successors of `k` (through the constants `ns`) that
+were not marked get marked `i` and pushed, each once. -/
+theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
+    {ord tg ws : Word} {c : Nat} {i k : Nat} (hi : i < c) (hk : k < c) :
+    ∀ (ns : List Word) (m m' : Mem) (T : Std.HashMap Nat Nat) (sp sp' : Word),
+    HEnv m a ds idx ord tg ws c → TgtR m tg c T → TgtV T c → StkOK m ws sp c T →
+    (∀ w ∈ ns, w.toNat < 2 ^ 32) →
+    notesW m (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp ns = some (sp', m') →
+    ∃ (T' : Std.HashMap Nat Nat) (new : List Nat), TgtR m' tg c T' ∧ TgtV T' c ∧
+      MemFrame [IW] [] m m' ∧ HFr tg ws c m m' ∧ stk m' ws sp' = stk m ws sp ++ new ∧
+      StkOK m' ws sp' c T' ∧ (∀ x : Nat, T'[x]? = if x ∈ new then some i else T[x]?) ∧
+      (∀ x ∈ new, T[x]? = none ∧ Succ idx i (fun _ => ns.map decI) k x) ∧
+      (∀ x : Nat, T[x]? = none → Succ idx i (fun _ => ns.map decI) k x → x ∈ new) := by
+  intro ns
+  induction ns with
+  | nil =>
+    intro m m' T sp sp' hE hT hTv hS _ h
+    simp only [notesW, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨T, [], hT, hTv, MemFrame.refl _ _ _, HFr.refl _ _ _ _, by simp, hS, by simp, by simp, ?_⟩
+    rintro x - ⟨n, hn, -⟩
+    simp at hn
+  | cons w ns ih =>
+    intro m m' T sp sp' hE hT hTv hS hns h
+    simp only [notesW] at h
+    cases h1 : hNoteW m w (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp with
+    | none => rw [h1] at h; cases h
+    | some r =>
+    obtain ⟨sp₁, m₁⟩ := r
+    rw [h1] at h
+    have hw := hns w List.mem_cons_self
+    rcases note_ok hE hT hTv hS hi hk hw h1 with
+      ⟨j, hj, hij, hjk, hTj, hsp, hmf, hfr, hT₁, hstk⟩ | ⟨hno, hsp, hm⟩
+    · have hE₁ := hE.frame hfr (seen_frameIW hmf hE.seen)
+      have hTv₁ : TgtV (T.insert j i) c := by
+        intro x t hx
+        rw [Std.HashMap.getElem?_insert] at hx
+        split at hx
+        · cases hx; exact hi
+        · exact hTv x t hx
+      have hS₁ : StkOK m₁ ws sp₁ c (T.insert j i) := by
+        rw [StkOK, hstk]
+        refine ⟨?_, ?_⟩
+        · refine List.nodup_append.mpr ⟨hS.1, by simp, ?_⟩
+          intro x hx y hy e
+          simp at hy; subst hy; subst e
+          have := (hS.2 x hx).2; rw [hTj] at this; cases this
+        · intro x hx
+          rcases List.mem_append.mp hx with hx | hx
+          · refine ⟨(hS.2 x hx).1, ?_⟩
+            rw [Std.HashMap.getElem?_insert]
+            split
+            · rfl
+            · exact (hS.2 x hx).2
+          · simp at hx; subst hx
+            exact ⟨hE.nixlt _ _ hj, by simp [Std.HashMap.getElem?_insert]⟩
+      obtain ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, hnew, hall⟩ :=
+        ih m₁ m' (T.insert j i) sp₁ sp' hE₁ hT₁ hTv₁ hS₁ (fun w hw => hns w (List.mem_cons_of_mem _ hw)) h
+      refine ⟨T', j :: new, hT', hTv', hmf.trans hmf' |>.mono (by simp) (by simp), hfr.trans hfr',
+        by rw [hstk', hstk]; simp, hS', ?_, ?_, ?_⟩
+      · intro x
+        rw [hget x, Std.HashMap.getElem?_insert]
+        by_cases hx : x ∈ new
+        · simp [hx]
+        · by_cases e : j = x
+          · subst e; simp
+          · simp [hx, e, Ne.symm e]
+      · intro x hx
+        rcases List.mem_cons.mp hx with rfl | hx
+        · exact ⟨hTj, decI w, by simp, hj, hij, hjk⟩
+        · obtain ⟨h1, n, hn, h2⟩ := hnew x hx
+          refine ⟨?_, n, by simp at hn ⊢; exact Or.inr hn, h2⟩
+          rw [Std.HashMap.getElem?_insert] at h1
+          split at h1
+          · cases h1
+          · exact h1
+      · rintro x hx ⟨n, hn, h2⟩
+        simp only [List.map_cons, List.mem_cons] at hn
+        by_cases e : j = x
+        · subst e; exact List.mem_cons_self
+        · refine List.mem_cons_of_mem _ (hall x ?_ ?_)
+          · rw [Std.HashMap.getElem?_insert, if_neg (by simpa using e)]; exact hx
+          · rcases hn with hn | hn
+            · subst hn
+              rw [hj] at h2; obtain ⟨e1, -⟩ := h2; cases e1; exact absurd rfl e
+            · exact ⟨n, hn, h2⟩
+    · subst sp₁ m₁
+      obtain ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, hnew, hall⟩ :=
+        ih m m' T sp sp' hE hT hTv hS (fun w hw => hns w (List.mem_cons_of_mem _ hw)) h
+      refine ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, ?_, ?_⟩
+      · intro x hx
+        obtain ⟨h1, n, hn, h2⟩ := hnew x hx
+        exact ⟨h1, n, by simp at hn ⊢; exact Or.inr hn, h2⟩
+      · rintro x hx ⟨n, hn, h2⟩
+        simp only [List.map_cons, List.mem_cons] at hn
+        rcases hn with hn | hn
+        · subst hn
+          exact absurd ⟨x, h2.1, h2.2.1, h2.2.2, hx⟩ hno
+        · exact hall x hx ⟨n, hn, h2⟩
 
 end L.Checker
