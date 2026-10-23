@@ -271,19 +271,21 @@ theorem declVal_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym (gen := 16) (instances := 5000) only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        recDeclObj_spec p hL b hb n, declCode_spec p hL b hb n,
-        L.Scan.Records.scanIndD_spec p b hb hL.skip_ws hL.skip_digits hL.key_end hL.num_end
-          hL.key_at_g1 hL.key_at_g2 hL.key_at_g3 hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at
-          hL.value_at hL.next_member hL.slot_nat hL.match_word hL.scan_binder_info hL.hints_num
-          hL.hints_obj hL.scan_hints hL.scan_nat_list hL.match_lit hL.scan_bool hL.utf8_char
-          hL.utf8_valid hL.byte_in hL.hex_val hL.hex4 hL.hex3 hL.u_next hL.unescape hL.str_close
-          hL.has_escape hL.scan_string hL.scan_str_name hL.scan_num_name hL.scan_app hL.scan_binder
-          hL.scan_let hL.scan_const hL.scan_proj hL.scan_rule hL.scan_rules hL.scan_ind_rec
-          hL.scan_ind_recs hL.scan_ind_type hL.scan_ind_types hL.scan_ind_ctor hL.scan_ind_ctors
-          hL.scan_axiom hL.scan_def hL.scan_thm hL.scan_opaque hL.scan_quot hL.scan_ind_decl n] <;>
-        finish
+    vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs,
+      recDeclObj_spec p hL b hb n, declCode_spec p hL b hb n,
+      L.Scan.Records.scanIndD_spec p b hb hL.skip_ws hL.skip_digits hL.key_end hL.num_end
+        hL.key_at_g1 hL.key_at_g2 hL.key_at_g3 hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at
+        hL.value_at hL.next_member hL.slot_nat hL.match_word hL.scan_binder_info hL.hints_num
+        hL.hints_obj hL.scan_hints hL.scan_nat_list hL.match_lit hL.scan_bool hL.utf8_char
+        hL.utf8_valid hL.byte_in hL.hex_val hL.hex4 hL.hex3 hL.u_next hL.unescape hL.str_close
+        hL.has_escape hL.scan_string hL.scan_str_name hL.scan_num_name hL.scan_app hL.scan_binder
+        hL.scan_let hL.scan_const hL.scan_proj hL.scan_rule hL.scan_rules hL.scan_ind_rec
+        hL.scan_ind_recs hL.scan_ind_type hL.scan_ind_types hL.scan_ind_ctor hL.scan_ind_ctors
+        hL.scan_axiom hL.scan_def hL.scan_thm hL.scan_opaque hL.scan_quot hL.scan_ind_decl n]
+    -- The key test's `||` chain through `L.evalC_spec`: one path per `if`, not one per exit.
+    all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, beq_iff_eq,
+      or_assoc] at *)
+    all_goals grind (gen := 16) (instances := 5000) [lang_grind]
 
 attribute [local lang_grind] DFld.enc DFld.none dlvN in
 set_option maxHeartbeats 4000000 in

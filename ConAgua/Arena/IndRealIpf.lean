@@ -93,10 +93,12 @@ theorem isProjFnShape_specW (p : Prog) (hp : p.lookup "is_proj_fn_shape" = some 
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ ipfW s₀.mem x = some (r.headD 0); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, L.Checker.isProjFnShapeL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, Bool.and_eq_true,
-    decide_eq_true_eq, ipf_rd64, ipf_getElem] at *)
-  all_goals grind (gen := 20) (instances := 10000) [lang_grind, arena_grind, ipfW, ipfS, ipfStrW, tierW, idxW]
+  vcgen [exec, step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs]
+  all_goals simp_all [LocEq, Cond.pval, Expr.pval, ipf_rd64, BinOp.eval, Cmp.eval, St.setLoc_loc,
+    St.setLoc_mem, Locals.init_cons_zero, Sig.retVal, Sig.retOr, ipfW, ipfS, ipfStrW, tierW, idxW, nnQ,
+    nsO, nsL, decide_eq_true_eq, -UInt64.not_lt, -UInt64.not_le]
+  -- left: the `4294967295 < x` guard, kept as `decide (…) = false`
+  all_goals grind
 
 
 theorem str_beq (s t : String) : (s == t) = decide (strWords s = strWords t) := by

@@ -178,7 +178,12 @@ theorem cpMem_eq {m : Mem} {b old : Word} (hlt : old.toNat + 11 ≤ b.toNat) (hb
     show b + 3 + 1 = b + 4 by ac_rfl, show b + 4 + 1 = b + 5 by ac_rfl,
     show b + 5 + 1 = b + 6 by ac_rfl, show b + 6 + 1 = b + 7 by ac_rfl, show b + 7 + 1 = b + 8 by ac_rfl,
     show b + 8 + 1 = b + 9 by ac_rfl, show b + 9 + 1 = b + 10 by ac_rfl]
-  simp (disch := ((try simp only [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]); omega)) only [rdW_set64_ne_er]
+  -- The discharger rewrites with `t1 … c10` and clears them before `omega`: twenty chained
+  -- `(x + k).toNat` facts in context make each `omega` slow and the module peak at ~10 GB.
+  simp (disch := (
+    (try simp only [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10])
+    clear t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10
+    omega)) only [rdW_set64_ne_er]
 
 theorem rdW_agree {a a' : Array Word} {B : Nat} (hE : ∀ i < B, a'[i]? = a[i]?) {y : Word} (hy : y.toNat < B) :
     rdW a' y = rdW a y := by
