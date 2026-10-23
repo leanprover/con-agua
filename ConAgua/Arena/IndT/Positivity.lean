@@ -127,7 +127,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
       (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
       (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
       (hP2.fr hf3) hA3 hctxOk (fun y hy => (hhw y hy).1) hlenP hpar hctx2 hholes2 hcssP2
-      (by simp [dState]) rfl hcl) h4
+      (nsP := {}) (by simp [dState]) rfl hcl) h4
   obtain ⟨-, ⟨outsP, nsP⟩, ⟨houts, -, hwN⟩, -⟩ := ConRon.Bridge.Inductives.nestRoot_spec coreSpecV henv
     hctxOk holes holesP (fun y hy => (hhw y hy).1) hlenP hpar css cssP {} {} [] [] hcl _ a4 (outs, ns)
     hC3.check ⟨hctx2, hholes2, hcssP2, by simp [dState], rfl⟩ hrun4
@@ -172,7 +172,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   obtain ⟨namesP, lpsP, paramsP, sortP, hceq, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
   have hfind : ctxP.find? = env.find? := by rw [hceq]
   have hx14 := c2.ext.trans c3.ext
-  have hsort' : ConRon.Bridge.denoteL a4.store.ls (decI (rdW (s4.mem.arr64 IW) (r1.headD 0 + 9))) =
+  have hsort' : ConRon.Arena.denoteL a4.store.ls (decI (rdW (s4.mem.arr64 IW) (r1.headD 0 + 9))) =
       some ctxP.sort := by
     rw [hue, hceq]; exact ConRon.Bridge.denoteL_ext hsort hx14
   obtain ⟨c5, -⟩ := ConRon.Bridge.Inductives.lvlEq?_crun hC4.check hsort' hz hrun6

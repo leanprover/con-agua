@@ -306,8 +306,8 @@ fields' sorts' core stubs, and `nest_root`'s). The shape record and the formers 
 the members' constructors with their slices' bounds (`decCNSB`, from `checkBlockCtors_refines`), the
 walk memos well formed (`PosMR`), the fuel below the core walk's. After: the stage relation at the twin's state, the pools grown, the walk memos
 still well formed, the kinds (`decKSS`, the `outs` slice itself), the normal forms (`decNFS`, fresh)
-and the walk's state (`NSB`, `nest_root`'s). -/
-@[refines ConRon.Arena.checkBlockPositivity]
+and the walk's state (`NSB`, `nest_root`'s). Under `StageR`; the census link is
+`checkBlockPositivity_refinesC`. -/
 theorem checkBlockPositivity_refines (p : Prog) (hP : PosBlkProg p) (n : Nat)
     (hn : 2 ^ 31 + (n + 2) ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q cvO cvL caO caL : Word) (P : BlockParts)
