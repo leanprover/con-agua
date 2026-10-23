@@ -109,7 +109,7 @@ def EStore.reset (st : EStore) (on : Bool) : EStore :=
 
 /-- **`scratch_reset(f)` keeps `ArenaD`**, with every scratch table emptied and every flag
 `f ≠ 0`; the memos stay. -/
-@[refines_part ConRon.Arena.EStore.enableScratch "ArenaD", refines_part ConRon.Arena.EStore.dropScratch "ArenaD"]
+@[refines_part ConRon.Arena.EStore.enableScratch "ArenaD"]
 theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
     (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62) (h62 : SCB.toNat < (m.arr64 CTL).size) :
     ArenaD (resetMem m f) { a with store := EStore.reset a.store (f != 0) } := by
@@ -292,6 +292,25 @@ theorem scratchDrop_refines (p : Prog) (hp : p.lookup "scratch_drop" = some scra
   obtain ⟨hR, hDer⟩ := ArenaD.reset _ _ hD' 0 hlo h62
   simp only [show ((0 : Word) != 0) = false from rfl] at hR hDer
   exact ⟨by cases hR; constructor <;> assumption, DerR.of_store _ _ _ hDer rfl⟩
+
+/-- **`scratch_reset(0)` refines `EStore.dropScratch`**: `ArenaD` represents the whole store (every
+table's two tiers, the flag, the derived ranges), and after the call it represents the store with
+the scratch tables emptied and the flag off; the memos stay. It aborts only when the slot epoch
+`CTL[62]` reaches `2^62` (a capacity). -/
+@[refines ConRon.Arena.EStore.dropScratch]
+theorem scratchReset_dropScratch (p : Prog) (hr : p.lookup "scratch_reset" = some scratchReset)
+    (a : AState) (n : Nat) (s₀ : St) (hD : ArenaD s₀.mem a) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "scratch_reset" [0]
+    ⦃fun _ s' => LocEq s' s₀ ∧ ArenaD s'.mem { a with store := a.store.dropScratch }; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hlo, h62, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchReset_spec p hr n s₀ 0)
+  subst hs
+  refine ⟨hloc, ?_⟩
+  rw [hm]
+  exact ArenaD.reset _ _ hD 0 hlo h62
 
 /-! ## The other tiers -/
 

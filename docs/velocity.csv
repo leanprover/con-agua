@@ -201,5 +201,6 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,front4,opus,70,20,"prepare_prelude as self-recursions (models generated); refines preparePrelude (frontOf/pick/rest/rewrite; 3 helpers); phase 1c 62/10/1 (was 53/18/2)"
 2026-10-23,pipeline,opus,40,15,"landing 2: builtin_prelude on the shared parse state (input-only renaming, PDECL, front_reset, prelude_join; fixes PNID/MCM clash at 208); preSim stated"
 2026-10-23,front4,opus,25,25,"prelude_join merged as self-recursions + pPJoin_ok; preparePrelude_refines from PDECL+DECL; lane close (open list in journal)"
+2026-10-23,romintern,opus,30,20,"internAllPins full (decoder direction), BasisKind.decls/declsA complete by parts, EStore.dropScratch full: ROM interns covered; phase 0 215/1/80 (was 185/5/106), 1c 72/1/0 (was 62/10/1)"
 2026-10-23,pipeline,opus,150,60,"landing 3: prelude records stay in DECL (applyLine_pre, frontAll_refines_pre); preSim + checkerProg_preSim; front_run at checkerProg; ROM program hyps, cap_check (2^62, DECL/DLP), loaded-memory facts; pre-loop write set; front4 PrepRef adapted; PipelineRefines s64 premise"
 2026-10-23,indproofs4,opus,150,90,"checkBlockClasses, checkBlockTail refined; stable class readings DecB; class_read_rec_cls guard; helper walks: bvar_b/fvar_b/has_fvar_fast/loose_bvars_bounded_fast contracts discharged"
