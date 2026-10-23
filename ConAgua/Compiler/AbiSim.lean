@@ -187,6 +187,70 @@ theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
   · obtain ⟨a, _, h | h⟩ := h <;> subst h <;> trivial
   · exact hrom _ v h
 
+theorem flatMap_pair_getElem? {α : Type} (f g : Nat → α) :
+    ∀ n a, a < n → ((List.range n).flatMap fun a => [f a, g a])[2 * a]? = some (f a) ∧
+      ((List.range n).flatMap fun a => [f a, g a])[2 * a + 1]? = some (g a)
+  | 0, _, h => absurd h (by omega)
+  | n + 1, a, h => by
+    have hl : ((List.range n).flatMap fun a => [f a, g a]).length = 2 * n := by
+      simp [List.length_flatMap, List.map_const']; omega
+    rw [List.range_succ, List.flatMap_append]
+    by_cases ha : a < n
+    · obtain ⟨h1, h2⟩ := flatMap_pair_getElem? f g n a ha
+      rw [List.getElem?_append_left (by omega), List.getElem?_append_left (by omega)]
+      exact ⟨h1, h2⟩
+    · obtain rfl : a = n := by omega
+      rw [List.getElem?_append_right (by omega), List.getElem?_append_right (by omega), hl]
+      simp
+
+theorem flatMap_pair_length {α : Type} (f g : Nat → α) (n : Nat) :
+    ((List.range n).flatMap fun a => [f a, g a]).length = 2 * n := by
+  simp [List.length_flatMap, List.map_const']; omega
+
+/-- The table words of a two-byte-array table, by position. -/
+theorem abiVals_getElem? (tab : Tab) (h : tab.nb = 2) :
+    (abiVals tab)[0]? = some (.addr (abiSlot + abiStack)) ∧ (abiVals tab)[1]? = some (.addr abiSlot) ∧
+    (abiVals tab)[2]? = some (.reg .rdi) ∧ (abiVals tab)[3]? = some (.reg .rsi) ∧
+    (abiVals tab)[4]? = some (.reg .rdx) ∧ (abiVals tab)[5]? = some (.reg .rcx) ∧
+    (∀ a < tab.nw, (abiVals tab)[6 + 2 * a]? = some (.addr (abiSlot * abiSlot64 tab a)) ∧
+      (abiVals tab)[6 + 2 * a + 1]? = some (.imm abiWords.toUInt64)) ∧
+    (∀ i, (abiVals tab)[6 + 2 * tab.nw + i]? = (romVals tab.rom)[i]?) := by
+  have he : abiVals tab = [.addr (abiSlot + abiStack), .addr abiSlot, .reg .rdi, .reg .rsi, .reg .rdx, .reg .rcx] ++
+      (List.range tab.nw).flatMap (fun a => [.addr (abiSlot * abiSlot64 tab a), .imm abiWords.toUInt64]) ++
+      romVals tab.rom := by
+    simp [abiVals, h, show (List.range 2).drop 2 = [] from rfl]
+  rw [he]
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, fun a ha => ?_, fun i => ?_⟩
+  · obtain ⟨h1, h2⟩ := flatMap_pair_getElem? (fun a => SVal.addr (abiSlot * abiSlot64 tab a))
+      (fun _ => SVal.imm abiWords.toUInt64) tab.nw a ha
+    have hl := flatMap_pair_length (fun a => SVal.addr (abiSlot * abiSlot64 tab a))
+      (fun _ => SVal.imm abiWords.toUInt64) tab.nw
+    rw [List.getElem?_append_left (by simp [hl]; omega), List.getElem?_append_right (by simp),
+      List.getElem?_append_left (by simp [hl]; omega), List.getElem?_append_right (by simp; omega)]
+    simp only [List.length_cons, List.length_nil]
+    rw [show 6 + 2 * a - 6 = 2 * a by omega, show 6 + 2 * a + 1 - 6 = 2 * a + 1 by omega]
+    exact ⟨h1, h2⟩
+  · have hl := flatMap_pair_length (fun a => SVal.addr (abiSlot * abiSlot64 tab a))
+      (fun _ => SVal.imm abiWords.toUInt64) tab.nw
+    rw [List.getElem?_append_right (by simp [hl]; omega)]
+    simp only [List.length_append, List.length_cons, List.length_nil, hl]
+    congr 1; omega
+
+/-- The word an address store writes. -/
+theorem addr_val (R : Reg64s) (off : Nat) (h : R.r8.toNat + off < 2 ^ 64) :
+    UInt64.ofBitVec ((SVal.addr off).val R) = UInt64.ofNat (R.r8.toNat + off) := by
+  apply UInt64.toNat_inj.mp
+  simp only [SVal.val, Reg64s.get64_r8, UInt64.toNat_ofBitVec, BitVec.toNat_add, UInt64.toNat_toBitVec,
+    UInt64.toNat_ofNat', Nat.toUInt64, UInt64.toNat_ofNat]
+  omega
+
+/-- A word of `stores`, by position. -/
+theorem stores_rdW? (R : Reg64s) (base : Nat) (vs : List SVal) (m : DataMem) (i : Nat) (v : SVal)
+    (hv : vs[i]? = some v) (h : base + 8 * vs.length ≤ 2 ^ 64) :
+    rdW (stores R base m 0 vs) (A (base + 8 * i)) = some (UInt64.ofBitVec (v.val R)) := by
+  obtain ⟨hi, rfl⟩ := List.getElem?_eq_some_iff.mp hv
+  simpa using stores_rdW R base vs m 0 i hi (by simpa using h)
+
 /-! ## The layout the stub sets up -/
 
 /-- The layout of the stub's partition: the table at `base`, the L stack in slot `1`, byte arrays
@@ -369,8 +433,9 @@ theorem sim_stores (Q : MachineState → Prop) (R : Reg64s) (base : Nat) (hb : R
 registers but `rax` unchanged. -/
 theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Code (abiStub tab) k0)
     (Q : MachineState → Prop) (s : MachineData) (ra : Word)
-    (hmap : ∀ j < 8 * (abiVals tab).length, (s.dmem.get? (A (s.regs.r8.toNat + j))).isSome)
-    (hend : s.regs.r8.toNat + 8 * (abiVals tab).length ≤ 2 ^ 64)
+    (hmap : abiNeed tab ≤ s.regs.r9.toNat →
+      ∀ j < 8 * (abiVals tab).length, (s.dmem.get? (A (s.regs.r8.toNat + j))).isSome)
+    (hend : abiNeed tab ≤ s.regs.r9.toNat → s.regs.r8.toNat + 8 * (abiVals tab).length ≤ 2 ^ 64)
     (hra : rdW s.dmem s.regs.rsp.toBitVec = some ra)
     (hdec : ∀ st : MachineState, st.pc = Int64.ofBitVec ra.toBitVec → st.data.regs.rdx = 1 → Q st)
     (hgo : abiNeed tab ≤ s.regs.r9.toNat → ∀ s' : MachineData,
@@ -407,7 +472,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     have hge' : abiNeed tab ≤ s.regs.r9.toNat := by
       simpa [Nat.toUInt64, UInt64.toNat_ofNat, Nat.mod_eq_of_lt hneed] using hge
     refine sim_stores Q s.regs s.regs.r8.toNat rfl (abiVals tab) 0 _ _ hcS ?_ (abiVals_noRax tab)
-      (by omega) (by simpa using hend) (by simpa using hmap) ?_
+      (by omega) (by simpa using hend hge') (by simpa using hmap hge') ?_
     · intro r hr; cases r <;> first | exact absurd rfl hr | rfl
     intro s1 hs1 hR1
     have hk : k0 + 0 + 1 + 1 + 1 + 1 + (storesCode 0 (abiVals tab)).length =
