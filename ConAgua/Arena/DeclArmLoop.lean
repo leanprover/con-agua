@@ -13,8 +13,8 @@ and the declaration records, which no callee spec mentions, so they come from th
   five arms reach. A program `p` with that text (`ArmProg p`, a `TextProg`: agreeing there but
   on `openFns`) has a step's write set on them (`StepIn`); the arms' specs take their callees' lookup structures
   (`ValProg`, `RecProg`, …) beside it, as `DeclCallees` does.
-* The theorem arm `check_decl_thm(i, vis)` refines `checkDecl`'s `.thmDecl` arm
-  (`checkDeclThm_loop`).
+* The theorem arm `check_decl_thm(i, vis)` at the stage relation (`cdtW_ok`); its spec at the
+  loop's relation is `CheckerT.lean`'s `checkDeclThm_loopT`.
 -/
 
 open ConRon.Arena
@@ -208,32 +208,5 @@ theorem cdtW_ok {p : Prog} (hV : ValProg p) {dn : NIdx → Option ConLeche.Name}
   show (do checkConstantVal V fe cv; checkThmVal V fe cv v).run a = _
   simp only [StateT.run_bind, hrun2, exc_ok_bind']
   exact hrun3
-
-/-- **`check_decl_thm` refines `checkDecl`'s `.thmDecl` arm** at the loop's relation (through the
-core's stubs and `lvl_eq_c`'s). -/
-theorem checkDeclThm_loop {p : Prog} (hA : ArmProg p) (hV : ValProg p)
-    (hp : p.lookup "check_decl_thm" = some checkDeclThm) (pins : List INatOpPinSet)
-    (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (cv : IConstantVal) (v : EIdx), i.toNat < ds.size → ds[i.toNat]? = some (.thmDecl cv v) →
-      LoopR pins dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_thm" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.thmDecl cv v)) a₀ ∧
-      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.thmDecl cv v)) a₀) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.thmDecl cv v)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv v hi hd hR
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdt_specW p hp hV.rcp n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hA.closed.memFrame n (f := "check_decl_thm") (by decide) [i, vis] s₀)
-  subst hs
-  have hd' : ds[i.toNat] = .thmDecl cv v := by
-    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
-  obtain ⟨fe', a', hrun', hS', hg'⟩ := cdtW_ok (pins := pins) hV hW ⟨hR.check, hR.iw⟩ hR.decls hi hd'
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_⟩
-  rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
 
 end L.Arena
