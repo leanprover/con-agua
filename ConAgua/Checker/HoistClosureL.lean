@@ -556,4 +556,149 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   exact ⟨T'', hE'', hT'', hTv'', hfr.trans hfr'', hI'', fun x hx => by
     rw [hmono'' x (by rw [hT'x x hx]; exact hx), hT'x x hx]⟩
 
+theorem tgtR_congr {m : Mem} {tg : Word} {c : Nat} {T T' : Std.HashMap Nat Nat} (h : TgtR m tg c T)
+    (e : ∀ k : Nat, T'[k]? = T[k]?) : TgtR m tg c T' :=
+  ⟨fun k hk => by rw [e k]; exact h.1 k hk, fun k hk => by rw [e k]; exact h.2 k hk⟩
+
+/-- **`hoist_closure` is the twin's `hoistClosure … ds.size T [j]`**: the twin succeeds, and L's
+targets after are its map. -/
+theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
+    {ord tg ws : Word} {c : Nat} {i j : Nat} (hi : i < c) (hj : j < c) (n : Nat) (m m' : Mem)
+    (T : Std.HashMap Nat Nat) (r : Word) (hE : HEnv m a ds idx ord tg ws c) (hT : TgtR m tg c T)
+    (hTv : TgtV T c) (hTi : ∀ (k t : Nat), T[k]? = some t → t ≤ i)
+    (h : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat j) ord tg ws = some (r, m')) :
+    ∃ T'', (hoistClosure ds idx i ds.size T [j]).run a = .ok (T'', a) ∧
+      HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ HFr tg ws c m m' ∧
+      (∀ (k t : Nat), T''[k]? = some t → t ≤ i) ∧ (∀ k : Nat, (T[k]?).isSome → T''[k]? = T[k]?) := by
+  have hc := hE.c60
+  have r1 := hE.rg1; have r2 := hE.rg2; have r3 := hE.rg3; have r4 := hE.isz
+  cases n with
+  | zero => rw [hClosureW.eq_1] at h; cases h
+  | succ n =>
+  have hrd : rdW (m.arr64 IW) (tg + UInt64.ofNat j) = tgW T[j]? := hT.1 j hj
+  by_cases hm : rdW (m.arr64 IW) (tg + UInt64.ofNat j) ≠ 0
+  · rw [hClosureW.arm1 _ _ _ _ _ _ _ hm] at h
+    cases h
+    have hTj : (T[j]?).isSome := by
+      cases e : T[j]? with
+      | none => rw [hrd, e] at hm; exact absurd rfl hm
+      | some _ => rfl
+    obtain ⟨T'', hrun, hget⟩ := closure_exact ds idx i a (depsOf ds a) (fun _ => False) T j hTi
+      (fun _ h => h.elim) (fun _ h => h.elim) (Or.inr hTj) (fun _ h => h.elim)
+    have e : ∀ k : Nat, T''[k]? = T[k]? := fun k => by rw [hget k]; simp
+    exact ⟨T'', hrun, hE, tgtR_congr hT e, fun x t hx => hTv x t (by rw [← e x]; exact hx),
+      HFr.refl _ _ _ _, fun x t hx => hTi x t (by rw [← e x]; exact hx), fun k _ => e k⟩
+  rw [hClosureW.arm2 _ _ _ _ _ _ _ hm] at h
+  have hTj : T[j]? = none := by
+    cases e : T[j]? with
+    | none => rfl
+    | some t =>
+      rw [hrd, e] at hm
+      exact absurd (tgW_ne_zero t (by have := hTv j t e; omega)) hm
+  -- the first push
+  have e1 := set64_addr m tg j (UInt64.ofNat i + 1) (by omega)
+  have e2 : ((m.set64 IW (tg + UInt64.ofNat j) (UInt64.ofNat i + 1)).set64 IW ws
+      (UInt64.ofNat j)).arr64 IW = ((m.arr64 IW).set! (tg.toNat + j) (UInt64.ofNat i + 1)).set!
+      ws.toNat (UInt64.ofNat j) := by
+    rw [Mem.arr64_set64_same, e1]
+  generalize hm₀ : (m.set64 IW (tg + UInt64.ofNat j) (UInt64.ofNat i + 1)).set64 IW ws
+    (UInt64.ofNat j) = m₀ at e2 h
+  have hmf₀ : MemFrame [IW] [] m m₀ := by
+    rw [← hm₀]; exact (MemFrame.set64 m IW (by decide) _ _).trans (MemFrame.set64 _ IW (by decide) _ _)
+  have hfr₀ : HFr tg ws c m m₀ := by
+    refine ⟨hmf₀.mono (by simp) (by simp), fun x hx => ?_⟩
+    rw [e2]
+    simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    rw [if_neg (by omega), if_neg (by omega)]
+  have hE₀ := hE.frame hfr₀ (seen_frameIW hmf₀ hE.seen)
+  have hT₀ : TgtR m₀ tg c (T.insert j i) := by
+    refine ⟨fun x hx => ?_, fun x hx => ?_⟩
+    · rw [rdW_addr _ _ _ (by omega), e2]
+      simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      rw [if_neg (by omega)]
+      by_cases hxj : j = x
+      · subst hxj
+        rw [if_pos rfl, if_pos (by omega)]
+        simp [Std.HashMap.getElem?_insert, tgW, UInt64.ofNat_add]
+      · rw [if_neg (by omega), Std.HashMap.getElem?_insert, if_neg (by simpa using hxj),
+          ← hT.1 x hx, rdW_addr _ _ _ (by omega)]
+    · rw [Std.HashMap.getElem?_insert, if_neg (by simp; omega)]; exact hT.2 x hx
+  have hstk₀ : stk m₀ ws 1 = [j] := by
+    simp only [stk, UInt64.toNat_one, List.range_one, List.map_cons, List.map_nil,
+      List.cons.injEq, and_true]
+    rw [rdW_addr _ _ _ (by omega), e2]
+    simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Nat.add_zero]
+    rw [if_pos trivial, if_pos (by rw [Array.size_setIfInBounds]; omega)]
+    simp [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega : j < 2 ^ 64)]
+  have hTv₀ : TgtV (T.insert j i) c := by
+    intro x t hx
+    rw [Std.HashMap.getElem?_insert] at hx
+    split at hx
+    · cases hx; exact hi
+    · exact hTv x t hx
+  have hS₀ : StkOK m₀ ws 1 c (T.insert j i) := by
+    rw [StkOK, hstk₀]
+    exact ⟨by simp, by intro x hx; simp at hx; subst hx; exact ⟨hj, by simp [Std.HashMap.getElem?_insert]⟩⟩
+  have hI₀ : CloseInv ds a idx i j T (T.insert j i) (stk m₀ ws 1) := by
+    rw [hstk₀]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro x
+      rw [Std.HashMap.getElem?_insert]
+      split
+      · rename_i e; simp at e; subst e; exact Or.inr ⟨hTj, rfl⟩
+      · exact Or.inl rfl
+    · intro x hx; simp at hx; subst hx; exact hTj
+    · intro x hx0 hxs hxS
+      rw [Std.HashMap.getElem?_insert] at hxs
+      split at hxs
+      · rename_i e; simp at e; subst e; exact absurd (List.mem_singleton_self _) hxS
+      · rw [hx0] at hxs; cases hxs
+    · intro x hx0 hxs
+      rw [Std.HashMap.getElem?_insert] at hxs
+      split at hxs
+      · rename_i e; simp at e; subst e
+        exact .base ⟨hTj, by simp [Std.HashMap.getElem?_insert]⟩
+      · rw [hx0] at hxs; cases hxs
+  obtain ⟨T', hE', hT', hTv', hfr', hI', hmono'⟩ :=
+    closeGo_ok hi T n m₀ m' (T.insert j i) 1 r hE₀ hT₀ hTv₀ hS₀ hI₀ h
+  -- the newly marked records form a closed set reachable from `j`
+  let N : Nat → Prop := fun x => T[x]? = none ∧ (T'[x]?).isSome
+  have hjT' : (T'[j]?).isSome := by
+    rw [hmono' j (by simp [Std.HashMap.getElem?_insert])]; simp [Std.HashMap.getElem?_insert]
+  obtain ⟨T'', hrun, hget⟩ := closure_exact ds idx i a (depsOf ds a) N T j hTi
+    (fun k ⟨h0, hs⟩ => by
+      obtain ⟨⟨hk, hr⟩, -⟩ := hI'.done k h0 hs (by simp)
+      exact ⟨h0, hk, hr⟩)
+    (fun k ⟨h0, hs⟩ y hy => by
+      have := (hI'.done k h0 hs (by simp)).2 y hy
+      cases e : T[y]? with
+      | none => exact Or.inl ⟨e, this⟩
+      | some _ => exact Or.inr rfl)
+    (Or.inl ⟨hTj, hjT'⟩) (fun k ⟨h0, hs⟩ => hI'.reach k h0 hs)
+  have e : ∀ k : Nat, T''[k]? = T'[k]? := by
+    intro k
+    rw [hget k]
+    by_cases hk : N k
+    · rw [if_pos hk]
+      rcases hI'.ext k with e | ⟨-, e⟩
+      · have := hk.2; rw [e, hk.1] at this; cases this
+      · exact e.symm
+    · rw [if_neg hk]
+      rcases hI'.ext k with e | ⟨h0, e⟩
+      · exact e.symm
+      · exact absurd ⟨h0, by rw [e]; rfl⟩ hk
+  refine ⟨T'', hrun, hE', tgtR_congr hT' e, fun x t hx => hTv' x t (by rw [← e x]; exact hx),
+    hfr₀.trans hfr', fun x t hx => ?_, fun k hk => ?_⟩
+  · rw [e x] at hx
+    rcases hI'.ext x with e' | ⟨-, e'⟩
+    · rw [e'] at hx; exact hTi x t hx
+    · rw [e'] at hx; cases hx; exact Nat.le_refl _
+  · rw [e k]
+    have h1 : ((T.insert j i)[k]?).isSome := by
+      rw [Std.HashMap.getElem?_insert]; split
+      · rfl
+      · exact hk
+    rw [hmono' k h1, Std.HashMap.getElem?_insert, if_neg]
+    intro e'; simp at e'; subst e'; rw [hTj] at hk; cases hk
+
 end L.Checker
