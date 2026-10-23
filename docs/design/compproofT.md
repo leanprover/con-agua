@@ -56,6 +56,14 @@ About 200 lines. Measured (bench, 3 rounds, load ~18): **P+T vs base: 0.992× in
 0.935× cycles, 0.939× wall** (c03d 0.490 → 0.432 s, let-ladder 1.27 → 1.17 s, beta-ladder 2.82 →
 2.69 s, c04a 3.23 → 3.06 s).
 
+Checks (P+T, after merging master with asmfile): `asm/checker.s` regenerated (`asm_file.py`,
+206 240 directives, was 208 108 after P), `checkerFile_eq` and the `Final/Statement.lean` axiom
+guards pass (`propext`, `Classical.choice`, `Quot.sound`); `harness/check-asm.sh` OK (checker 190 509
+instructions match). `scripts/e2e.py` (P+T): `check` 407 agree-accept / 3 agree-reject / 262 L
+aborts / 2 timeouts / 1 memout, `check_np` 391/3/278/2/1, as master. Init (v4.35.0 export, 3 rounds,
+load ~62): 363.0 G → 360.3 G instructions, wall 44.5 → 47.3 s (spread 13–24%: noise; T's gain is
+in the deep recursions of the default set, not in Init).
+
 ## E3: leaf temporaries in registers (measured, not proved: dropped)
 
 Port on branch `compproofT-e3` (commit "WIP compproofT-e3", unproved): `Ctx.tregs` = the
