@@ -9,15 +9,19 @@ fixture and as geometric means (over the fixtures every system accepts):
 * wall time: median and spread ((max - min) / median) over the rounds,
 * peak RSS (max over the rounds).
 
-A warm-up round (not counted) fixes each fixture's L capacity (`CA_WORDS`: 2^22, else 2^25, else
-2^27, as `scripts/e2e.py` retries) and each system's verdict; L binaries that disagree on a verdict
-are flagged (`MISMATCH`), so comparing a candidate compiler against the baseline also checks it.
+A warm-up round (not counted) fixes each system's verdict (and, for binaries with the old harness,
+each fixture's capacity `CA_WORDS`: 2^22, else 2^25, else 2^27); L binaries that disagree on a
+verdict are flagged (`MISMATCH`), so comparing a candidate compiler against the baseline also
+checks it.
 
 Systems:
-  --bin NAME=PATH     a compiled L binary (`cc -O2 harness/e2e.c X.s`); repeatable; the FIRST one
-                      is the baseline the ratios refer to. Default: `L=<this checkout's compiled
-                      check>` (built from `checkerProg` with `e2e-l asm`, as `scripts/e2e.py` does).
-  --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with harness/e2e.c).
+  --bin NAME=PATH     a compiled L binary (`cc -O2 harness/main.c X.s`: `X FILE PINS`); repeatable;
+                      the FIRST L binary is the baseline the ratios refer to. Default: `L=<this
+                      checkout's compiled check>` (built from `checkerProg` with `e2e-l asm`, as
+                      `scripts/e2e.py` does).
+  --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with harness/main.c).
+  --bin-old / --asm-old NAME=…   the same with the old harness (`harness/e2e.c`: `CA_PINS`,
+                      `CA_WORDS` per fixture), e.g. a binary from before lane `abi`.
   --no-conron / --no-ref   leave out con-ron / e2e-ref.
 
 Fixtures: `--set quick|default|full|init` (below), `--only REGEX` (filters the set; with `--set all`,
@@ -139,7 +143,7 @@ class System:
     def verdict(self, out, rc):
         if rc is None:
             return "timeout"
-        if self.kind == "L":
+        if self.kind in ("L", "Lold"):
             return {"accept": "accept", "ok 1": "reject-front", "exhausted": "exhausted",
                     "error": "error"}.get(out, "other " + out[:40])
         if self.kind == "con-ron":
@@ -155,13 +159,13 @@ def compiled_check(work):
     return assemble(os.path.join(work, "check.s"), prog)
 
 
-def assemble(s, prog=None):
-    exe = s[:-2] + ".bin"
+def assemble(s, prog=None, harness="main.c"):
+    exe = s[:-2] + (".bin" if harness == "main.c" else ".old.bin")
     if prog:
         r = subprocess.run([os.path.join(BIN, "e2e-l"), "asm", prog, "check", s], capture_output=True, text=True)
         if r.returncode != 0:
             sys.exit(f"e2e-l asm failed: {r.stdout}{r.stderr}")
-    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", "e2e.c"), s],
+    c = subprocess.run(["cc", "-O2", "-o", exe, os.path.join(ROOT, "harness", harness), s],
                        capture_output=True, text=True)
     if c.returncode != 0:
         sys.exit(f"cc failed: {c.stderr[-2000:]}")
@@ -197,6 +201,8 @@ def main():
     ap.add_argument("--cpus", default=None, help="taskset CPU list for every run, e.g. 90-91")
     ap.add_argument("--bin", action="append", default=[], metavar="NAME=PATH")
     ap.add_argument("--asm", action="append", default=[], metavar="NAME=PATH.s")
+    ap.add_argument("--bin-old", action="append", default=[], metavar="NAME=PATH")
+    ap.add_argument("--asm-old", action="append", default=[], metavar="NAME=PATH.s")
     ap.add_argument("--no-conron", action="store_true")
     ap.add_argument("--no-ref", action="store_true")
     ap.add_argument("--no-wall", action="store_true", help="one counted round, instructions only")
@@ -229,13 +235,19 @@ def main():
             e2e.write_conron_pins(cpins[n], n)
 
     systems = []
-    bins = [b.split("=", 1) for b in args.bin] + [(n, assemble(os.path.abspath(p))) for n, p in
-                                                  (a.split("=", 1) for a in args.asm)]
+    bins = ([("L", *b.split("=", 1)) for b in args.bin] +
+            [("L", n, assemble(os.path.abspath(p))) for n, p in (a.split("=", 1) for a in args.asm)] +
+            [("Lold", *b.split("=", 1)) for b in args.bin_old] +
+            [("Lold", n, assemble(os.path.abspath(p), harness="e2e.c")) for n, p in
+             (a.split("=", 1) for a in args.asm_old)])
     if not bins:
-        bins = [("L", compiled_check(WORK))]
-    for name, path in bins:
+        bins = [("L", "L", compiled_check(WORK))]
+    for kind, name, path in bins:
         path = os.path.abspath(path)
-        systems.append(System(name, "L", lambda f, path=path: [path, f]))
+        if kind == "L":
+            systems.append(System(name, kind, lambda f, path=path: [path, f, pins[np_(f)]]))
+        else:
+            systems.append(System(name, kind, lambda f, path=path: [path, f]))
     if not args.no_conron:
         if not os.path.exists(e2e.CON_RON):
             sys.exit(f"no con-ron at {e2e.CON_RON} (--no-conron to skip)")
@@ -247,7 +259,7 @@ def main():
     path_of = dict(fx)
 
     def env_of(s, fid):
-        if s.kind != "L":
+        if s.kind != "Lold":
             return None
         return dict(os.environ, CA_PINS=pins[np_(path_of[fid])], CA_WORDS=str(words[fid]))
 
@@ -256,7 +268,7 @@ def main():
     for fid, path in fx:
         caps = [args.words] if args.words else CAPS
         for s in systems:
-            if s.kind == "L":
+            if s.kind == "Lold":
                 for c in caps:
                     words[fid] = max(c, words.get(fid, 0))
                     out, rc, *_ = run(s.cmd(path), env_of(s, fid), args.cpus)
@@ -273,7 +285,7 @@ def main():
 
     if args.reps == 0:
         # verdicts only: the warm-up's L verdicts, and every fixture where the L binaries differ
-        bad = [fid for fid, _ in fx if len({verdict[(fid, s.name)] for s in systems if s.kind == "L"}) > 1]
+        bad = [fid for fid, _ in fx if len({verdict[(fid, s.name)] for s in systems if s.kind in ("L", "Lold")}) > 1]
         print(f"{len(fx)} fixtures, {len(bad)} where the L binaries disagree")
         for fid in bad:
             print(f"MISMATCH `{fid}`: " + ", ".join(f"{s.name} {verdict[(fid, s.name)]}" for s in systems))
@@ -311,7 +323,7 @@ def main():
                 "instr": statistics.median(ins) if ins else None, "rss": rss[(fid, n)],
                 "verdict": verdict[(fid, n)]}
     st = {(fid, n): stats(fid, n) for fid, _ in fx for n in names}
-    lv = {verdict[(fid, s.name)] for fid, _ in fx for s in systems if s.kind == "L"}
+    lv = {verdict[(fid, s.name)] for fid, _ in fx for s in systems if s.kind in ("L", "Lold")}
     lines = [f"# bench: {len(fx)} fixtures, {rounds} rounds, systems {', '.join(names)} (baseline {base}); "
              f"cpus {args.cpus or 'any'}; load {os.getloadavg()[0]:.0f}", ""]
     hdr = "| fixture | CA_WORDS | " + " | ".join(f"{n} instr | {n} wall (spread) | {n} RSS" for n in names) + " |"
@@ -325,7 +337,7 @@ def main():
                       f"{x['wall']:.3f} s ({100 * x['spread']:.0f}%)",
                       f"{x['rss'] / 2**20:,.0f} MB" if x["rss"] else "–"]
         lines.append("| " + " | ".join(cells) + " |")
-        lvs = {verdict[(fid, s.name)] for s in systems if s.kind == "L"}
+        lvs = {verdict[(fid, s.name)] for s in systems if s.kind in ("L", "Lold")}
         if len(lvs) > 1:
             lines.append(f"| MISMATCH between L binaries on `{fid}`: {lvs} |")
     ok = [fid for fid, _ in fx if all(verdict[(fid, n)] == "accept" for n in names)]
