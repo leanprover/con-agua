@@ -1394,8 +1394,7 @@ environment with the generated recursors at the returned view, the recursors' re
 decoded below the tops. Program facts: the lookups (`GrcProg`) and the write set of the callees
 that keep the walk memos by their text (`hclR`), those that keep `abstract1`'s (`AbsKeep`). The word
 bounds come from `gen_rec_check_prep`'s capacity guards. Through `block_large_elim_allowed`'s contract
-(`IndInstallSpec39`). -/
-@[refines ConRon.Arena.genRecCheck]
+(`IndInstallSpec39`). Under `StageR`; the census link is `genRecCheck_refinesC` (`IndT/GenRec3.lean`). -/
 theorem genRecCheck_refines {p : Prog} (P : GrcProg p) {fsR : List FnName}
     (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR) (n : Nat) (s₀ : St)
     (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -1429,8 +1428,8 @@ theorem genRecCheck_refines {p : Prog} (P : GrcProg p) {fsR : List FnName}
 
 /-! ## `check_block_rec` -/
 
-/-- **`check_block_rec` refines `checkBlockRec`** (through `genRecCheck_refines`). -/
-@[refines ConRon.Arena.checkBlockRec]
+/-- **`check_block_rec` refines `checkBlockRec`** (through `genRecCheck_refines`). Under `StageR`; the
+census link is `checkBlockRec_refinesC` (`IndT/GenRec3.lean`). -/
 theorem checkBlockRec_refines (p : Prog) (hp : p.lookup "check_block_rec" = some checkBlockRec)
     (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ grcMemoCallees, f ∈ fsR)
