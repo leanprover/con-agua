@@ -103,7 +103,8 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndT.PosFrame",
   "ConAgua.Arena.IndT.PosNew",
   "ConAgua.Arena.IndT.PosKey",
-  "ConAgua.Arena.IndT.PosCont"]
+  "ConAgua.Arena.IndT.PosCont",
+  "ConAgua.Arena.IndT.PosApp"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
