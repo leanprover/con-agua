@@ -80,9 +80,6 @@ theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 BR
 def BRecRel (m : Mem) (t i : Word) (k : BVarNode) : Prop :=
   (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i
 
-/-- The hash of node `i` of tier `t`. -/
-def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 BREC) (i * 2 + t))
-
 /-- **The state relation** of the `bvar` store: the library's relation for the two `bvar`
 tables. -/
 def BVarR (m : Mem) (a : AState) : Prop :=
@@ -149,12 +146,13 @@ theorem bpushMem_eq (m : Mem) (t u j c : Word) :
 theorem binternW_eq (m : Mem) (u : Word) :
     binternW m u = internM bvarSch m 0 (bpushOK m) [u]
       (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 0 u (baseW m 0) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 1 u (baseW m 1) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0) := by
+      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 1 u (baseW m 1) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
+      bhash := by
   have e0 : ∀ x, hdW bvarSch.tag.toUInt64 0 x = bvarP + x := fun x => by
     simp [hdW, bvarSch, bvarP, ETag.bvar]
   have e1 : ∀ x, hdW bvarSch.tag.toUInt64 1 x = bvarS + x := fun x => by
     simp [hdW, bvarSch, bvarS, ETag.bvar]
-  simp only [binternW, internM, bpushMem_eq, e0, e1, true_and]
+  simp only [binternW, internM, pushM, bpushMem_eq, e0, e1, true_and]
   rfl
 
 /-! ## `intern_bvar` refines `internE (.bvar _)` -/
