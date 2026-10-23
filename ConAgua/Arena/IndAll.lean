@@ -151,6 +151,7 @@ import ConAgua.Arena.RecCheckSpec21
 import ConAgua.Arena.RecCheckSpec22
 import ConAgua.Arena.RecCheckSpec23
 import ConAgua.Arena.RecCheckSpec24
+import ConAgua.Arena.RecGenSpec28
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/
