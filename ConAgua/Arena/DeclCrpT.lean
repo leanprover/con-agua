@@ -485,9 +485,10 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (ov_specW p hV (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis q) h3
   subst hs3
-  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hn' "type mismatch in opaque" hW3 hS2
-    (ArrExt.decCI hx2 hci1)
+  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hC.apd hkp hn' "type mismatch in opaque"
+    hW3 hS2 (ArrExt.decCI hx2 hci1)
     (by have := ArrExt.decCV hx2 (decCI_cv hci1 (.inr rfl)); exact this) (ArrExt.hd? hx2 hval1)
+    (denoteCV_lps hcA) hCr2
   rw [← checkOpaqueVal_dvT] at hrun3
   -- the twin's value check: `CheckOK` at the old index, `StepOK` at the pushed one
   obtain ⟨hstep2, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkOpaqueVal_bridge rfl

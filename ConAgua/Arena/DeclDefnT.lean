@@ -55,7 +55,7 @@ environment, the core's memos, and the variant records. -/
 @[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
 theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOpPinSet}
     (hG : DefnProgT p pins) (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p)
-    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
+    (hap : ApdF p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {i : Word}
     {r : List Word} {ds : Array IDeclaration} {cv : IConstantVal} {v : EIdx}
     {hh : ConLeche.ReducibilityHint} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
@@ -128,9 +128,10 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (dv_specW p hV (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis q) h3
   subst hs3
-  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hn' "type mismatch in definition" hW3 hS2
-    (ArrExt.decCI hx2 hci1)
-    (ArrExt.decCV hx2 hcv1) (ArrExt.hd? hx2 hval1)
+  obtain ⟨a3, hrun3, hS3, hM3, hg3⟩ := dvW_okT hq hV.rcp hap hkp hn' "type mismatch in definition"
+    hW3 hS2 (ArrExt.decCI hx2 hci1)
+    (ArrExt.decCV hx2 hcv1) (ArrExt.hd? hx2 hval1) (denoteCV_lps hcA)
+    (hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr))
   have hPS3 := PinSetsR.step hPS2 hg3 (hfr (by decide) h3)
   rw [← checkDefnVal_dvT] at hrun3
   -- the twin's definition check: `CheckOK` at the old index, `StepOK` at the pushed one
