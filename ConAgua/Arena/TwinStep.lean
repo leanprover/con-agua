@@ -1,4 +1,4 @@
-import ConAgua.Arena.DeclLvlStage
+import ConAgua.Arena.IndTwin
 import ConRon.Bridge.Promote.Walk
 import ConRon.Bridge.Frontend.Shared
 
@@ -18,6 +18,10 @@ The memory's half (the sizes, the core memos) is the caller's, from the step's f
 con-ron's `IStepS` (`StateOK` after, `Ext`, caches and pins unchanged: `internName_sstep`,
 `internExprGo_sstep`, `internCIList_sstep`, …), so every interning-only twin operation keeps
 `TwinOK` (`TwinOK.of_istep`), with `StateOK` before.
+
+`StageS` (`StageT` and con-ron's `StateOK`) is the relation on stretches without a core call
+(`StateOK` is not re-derived after one): every interning step keeps it (`StageS.of_istep`).
+Shared with lane `indproofs3`.
 -/
 
 open ConRon.Arena
@@ -84,3 +88,27 @@ theorem TwinOK.of_istep {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
   h.of_grow hs.ok.wf hs.ext hs.caches hs.pins hE hS hB hM
 
 end L.Arena
+
+namespace L.Ind
+
+open L.Arena
+
+/-- **`StageT` and the twin store's well-formedness** (con-ron's `StateOK`): the relation on
+stretches of interning without a core call. -/
+structure StageS (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
+    (a : AState) : Prop where
+  stageT : StageT dn vis fe m a
+  ok : ConRon.Bridge.StateOK a
+
+/-- **`StageS` across an interning step**: the step's stage relation after it, the twin step's
+`IStepS`, the memory's sizes, core memos and pin flag kept. -/
+theorem StageS.of_istep {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {a a' : AState} (h : StageS dn vis fe m a) (hS : StageR dn vis fe m' a')
+    (hs : ConRon.Bridge.Frontend.IStepS a a')
+    (hsz : ∀ b, (m'.arr64 b).size = (m.arr64 b).size) (hM : CoreMemos m')
+    (hP : pinW m' 0 = pinW m 0) : StageS dn vis fe m' a' :=
+  ⟨⟨hS, h.stageT.twin.of_istep hs (by rw [hsz]; exact h.stageT.twin.erec)
+      (by rw [hsz]; exact h.stageT.twin.spn) (by rw [hsz]; exact h.stageT.twin.bstk) hM,
+    by rw [hP]; exact h.stageT.flag⟩, hs.ok⟩
+
+end L.Ind

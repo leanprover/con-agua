@@ -120,7 +120,7 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
   the push). `lvl_eq_fueled`'s model is `lfW cl n` (over a call reading; `lfW_stub` is lane
   `induct`'s `lveW`), `lfW_okT` through `lvlEqC_simT`. `install_value_guards` under `StageT` is
   still the hypothesis `IvgT`.
-* **`TwinStep.lean`**: `TwinOK.of_grow`/`TwinOK.of_istep`: `TwinOK` across any twin step that
+* **`TwinStep.lean`**: `TwinOK.of_grow`/`TwinOK.of_istep`, and `StageS` (`StageT` ∧ `StateOK`, for stretches without a core call; shared with lane `indproofs3`), `StageS.of_istep`: `TwinOK` across any twin step that
   grows a well-formed store and keeps the caches and pins (con-ron's `IStepS`, which every
   interning operation's `*_sstep` lemma gives from `StateOK`): the parts reading the old store by
   `Ext`, the parts over every node from the new store's well-formedness. The memory's half is the
