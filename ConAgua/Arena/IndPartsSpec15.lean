@@ -436,7 +436,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hnb : no.toNat + nl.toNat ≤ iwTop m)
     (hns : DecB (fun m => decNL m io.toNat ctl.toNat) m nIdxs) (hnsb : io.toNat + ctl.toNat ≤ iwTop m)
     (hl : decHL m lo.toNat ll.toNat = some cvT0.levelParams) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
-    Sim (btW n m nPd cto ctl cso csl rso rsl no nl io ctl lo ll)
+    Sim (btW stubCall n m nPd cto ctl cso csl rso rsl no nl io ctl lo ll)
       (tailJP nPd.toNat nIdxs cvT0.type
         (finJP nPd.toNat (cvT0 :: cvTs) nIdxs cvT0.levelParams cs (r0 :: rs) r0.1)) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
@@ -447,8 +447,8 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [tailJP_eq]
   unfold btW
   rw [hw]
-  refine Sim.bindK (K := btK1 n nPd cto ctl cso csl rso rsl no nl io lo ll)
-    (body := fun r1 m1 => btK2 n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0) m1 (pinWordV m1 53))
+  refine Sim.bindK (K := btK1 stubCall n nPd cto ctl cso csl rso rsl no nl io lo ll)
+    (body := fun r1 m1 => btK2 stubCall n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0) m1 (pinWordV m1 53))
     rfl (fun _ _ => rfl)
     (Q := fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') ?_ ?_
   · have := bsoW_sim (nP := nPd) (ty := rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
@@ -463,12 +463,12 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨hzrun, hzh⟩ := pinZero_stage hS1 hz
   revert r m' e
   refine Sim.bind_twin hzrun ?_
-  refine Sim.bindK (K := btK3 n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0))
+  refine Sim.bindK (K := btK3 stubCall n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0))
     (body := fun r2 m2 => bgoK3 (bfW n m2 nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0)
       (if r2.headD 0 = 2 then 1 else 0))) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x) ?_ ?_
   · have := partsSimStub (lvlEqStub_spec dn vis fe (r1.headD 0) z hs hzh) hS1
-    rwa [hsv] at this
+    rw [hsv] at this; exact this
   rintro r2 x2 m2 a2 ⟨hS2, hg2, hd2⟩
   have hg02 := hg1.trans hg2
   refine Sim.k3 (bfW_sim n hS2 (hts.grow (fun _ => OMono.decCVp _) hg02) (hcs.grow decSC_mono hg02)
@@ -564,7 +564,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
     (hS : StageR dn vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m) :
-    Sim (bbW n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
+    Sim (bbW stubCall n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -588,9 +588,9 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hmc := bmcW_sim (n + 2) (nPd := nPd) (k := ctl) (nC := csl) hS1 (hts.grow (fun _ => OMono.decCVp _) hg1)
     (hrs.grow decSR_mono hg1) (decHL_decB hd1 hb1) hb1
   rw [← hlen, ← hclen] at hmc
-  refine Sim.bindK (K := bbH2 n nPd cto ctl cso csl rso rsl (UInt64.ofNat p0) (r1.headD 0) (r1.tail.headD 0))
+  refine Sim.bindK (K := bbH2 stubCall n nPd cto ctl cso csl rso rsl (UInt64.ofNat p0) (r1.headD 0) (r1.tail.headD 0))
     (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0], m2)
-      else bbH3 n nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
+      else bbH3 stubCall n nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
         (r2.tail.tail.headD 0) (erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1))
           (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2))))
     rfl (fun _ _ => rfl) hmc.withRun ?_
@@ -655,26 +655,26 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /-! ## `block_shape`, `block_parts` -/
 
 /-- **The model of `block_shape`** (at exec fuel `n + 5`). -/
-def bshW (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word × Mem) :=
+def bshW (c : CallM) (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word × Mem) :=
   match bsW (n + 4) m off l with
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 0 then some ([0, 0], m1)
     else if rdW (m1.arr64 IW) (r1.tail.headD 0 + 1) = 0 ∨ rdW (m1.arr64 IW) (r1.tail.headD 0 + 5) = 0 then
       some ([0, 0], m1)
-    else bgoK3 (bbW n m1 nPd (rdW (m1.arr64 IW) (r1.tail.headD 0)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 1))
+    else bgoK3 (bbW c n m1 nPd (rdW (m1.arr64 IW) (r1.tail.headD 0)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 1))
       (rdW (m1.arr64 IW) (r1.tail.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 3))
       (rdW (m1.arr64 IW) (r1.tail.headD 0 + 4)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 5)))
 
-theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (nPd off l : Word) :
+theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd off l : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 5)) "block_shape" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ bshW n s₀.mem nPd off l = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ bshW c n s₀.mem nPd off l = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.shape]
   simp only [callFn, blockShape]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bs_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
-      bb_spec p hP n] <;>
+      bb_spec p hP c hc n] <;>
     finish (gen := 20) [bshW, rdW_eq, bgoK3_some]
 
 theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
@@ -688,7 +688,7 @@ theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l 
 theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
     (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk) :
-    Sim (bshW n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
+    Sim (bshW stubCall n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   rw [blockShape_eq]
   intro r m' e
@@ -752,20 +752,19 @@ def PartsR (x : Option BlockParts) (r : List Word) (m : Mem) : Prop :=
   | some bp => r.headD 0 = 1 ∧ DecB (fun m => decBP m (r.tail.headD 0).toNat) m bp ∧
       ShapeSl m (r.tail.headD 0)
 
-theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (nPd off l : Word) :
+theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd off l : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ bgoK3 (bshW n s₀.mem nPd off l) = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ bgoK3 (bshW c n s₀.mem nPd off l) = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.parts]
   simp only [callFn, blockParts]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP n] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP c hc n] <;>
     finish (gen := 20) [bgoK3_some]
 
 /-- **`block_shape` refines `blockShape?`** (through `strip_pis`, `get_app_fn_f`, `lvl_eq_c`,
 `intern_ls_iw`, `intern_nanon`, `name_rec`-free; capacity aborts: `nP + nIdx`, `nP + nF` wrapping,
 counts and recursor record words past `2^32`): the block an `EREC` slice of constant records decoded
 below the tops; the result `(ok, q)`, `q` a `BlockShape` record decoded below the tops (`ShapeR`). -/
-@[refines ConRon.Arena.blockShape?]
 theorem blockShape_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd off l : Word)
     (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
@@ -775,12 +774,11 @@ theorem blockShape_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : S
       ShapeR (AM.res (ConRon.Arena.blockShape? nPd.toNat blk) a₀) r s'.mem ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (bsh_spec p hP n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
+  triple_post (bsh_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (bshW_sim n hS hblk) hm
     ⟨hl, hok, hQ⟩
 
 /-- **`block_parts` refines `blockParts?`** (as `blockShape?`). -/
-@[refines ConRon.Arena.blockParts?]
 theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd off l : Word)
     (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
@@ -790,13 +788,13 @@ theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : S
       PartsR (AM.res (ConRon.Arena.blockParts? nPd.toNat blk) a₀) r s'.mem ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockParts? nPd.toNat blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (bpa_spec p hP n s₀ nPd off l) ?_
+  refine triple_post (bpa_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) ?_
   rintro r s' ⟨hl, hm⟩
-  have hsim : Sim (bgoK3 (bshW n s₀.mem nPd off l)) (ConRon.Arena.blockParts? nPd.toNat blk) a₀
+  have hsim : Sim (bgoK3 (bshW stubCall n s₀.mem nPd off l)) (ConRon.Arena.blockParts? nPd.toNat blk) a₀
       (fun r x m' a' => PartsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow s₀.mem m') := by
     unfold ConRon.Arena.blockParts?
     intro r m' e
-    cases h1 : bshW n s₀.mem nPd off l with
+    cases h1 : bshW stubCall n s₀.mem nPd off l with
     | none => rw [h1] at e; cases e
     | some x =>
     obtain ⟨r1, m1⟩ := x
