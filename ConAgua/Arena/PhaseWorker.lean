@@ -42,6 +42,7 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
   (hpg : p.lookup "check_pending_go" = some checkPendingGoL)
   (hpx : p.lookup "check_pending_next" = some checkPendingNextL) (hb : BracketProg p)
   (hm : mode = .verified) (hcv : CvgProg p)
+include hpc hpg hpx hb hm hcv
 
 /-- **L's phase B refines phase B on the worker** (`AState.worker` by the identity): a returning
 `check_pending_go(0, cnt, vis)` from a memory related to the phase-A state `a₀` (with empty
