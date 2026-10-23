@@ -205,7 +205,8 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
       (∀ k (hk : k < np.toNat), (rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat < nw.toNat ∧
         front[k]! = dsAll[(rdW (m'.arr64 IW) (ord + UInt64.ofNat k)).toNat]!) ∧
       rest = recsAt dsAll (unm m' mk np.toNat nw.toNat) ∧
-            PEnv m' a' dsAll np nw ord mk ∧ a'.pins = a.pins ∧ PFr ord mk nw m m' := by
+            PEnv m' a' dsAll np nw ord mk ∧ a'.pins = a.pins ∧ a'.store.pers = a.store.pers ∧
+              a'.store.scr = a.store.scr ∧ PFr ord mk nw m m' := by
   intro fuel
   induction fuel with
   | zero => intro m m' a aw r acc _ _ _ _ h; simp [pFrontW.eq_1] at h
@@ -225,7 +226,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
       have hnil : (dsAll.toList.take np.toNat).drop aw.toNat = [] :=
         List.drop_eq_nil_of_le (by simp; omega)
       refine ⟨acc, recsAt dsAll (unm m mk np.toNat nw.toNat), a, ?_, by omega,
-        fun k hk => hIW k (by omega), rfl, hE, rfl, PFr.refl _ _ _ _⟩
+        fun k hk => hIW k (by omega), rfl, hE, rfl, rfl, rfl, PFr.refl _ _ _ _⟩
       rw [hnil, frontOf.eq_1]; rfl
     · have hlt : aw.toNat < np.toNat := by have := mt UInt64.le_iff_toNat_le.mpr hstop; omega
       have ha1 : (aw + 1).toNat = aw.toNat + 1 := toNat_succ aw (by omega)
@@ -237,7 +238,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
       | some kv =>
       obtain ⟨key, m1⟩ := kv
       rw [hK, pFrontW.k3.arm1] at h
-      obtain ⟨a1, hrun1, hkey, hA1, hHF, hpins1⟩ :=
+      obtain ⟨a1, hrun1, hkey, hA1, hHF, hpins1, hpe1, hse1⟩ :=
         pKey_ok m m1 a aw key dsAll[aw.toNat] (hE.recs _ hawn).1 (hE.recs _ hawn).2 (by omega)
           hE.arena hK
       have hIW1 : m1.arr64 IW = m.arr64 IW := hHF.1 IW (by decide)
@@ -333,9 +334,9 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
           refine ⟨hv, ?_⟩
           rw [getElem!_pos (acc.push _) _ (by simp; omega)]
           simp [Array.getElem_push, hacc]
-      obtain ⟨front, rest, a', hrun, hfs, hfk, hrest, hE', hpins', hfr'⟩ :=
+      obtain ⟨front, rest, a', hrun, hfs, hfk, hrest, hE', hpins', hpe', hse', hfr'⟩ :=
         ih m2 m' a1 (aw + 1) r (acc.push dsAll[v.toNat]!) hE2 (by omega) (by simp [hacc, ha1]) hIW2 h2
-      refine ⟨front, rest, a', ?_, hfs, hfk, hrest, hE', hpins'.trans hpins1,
+      refine ⟨front, rest, a', ?_, hfs, hfk, hrest, hE', hpins'.trans hpins1, hpe'.trans hpe1, hse'.trans hse1,
           (PFr.of_high hHF).trans (hfr2.trans hfr')⟩
       rw [List.drop_eq_getElem_cons (by simp; omega), frontOf.eq_2, HoistTwin.run_bind]
       simp only [List.getElem_take, Array.getElem_toList, hrun1, hpick]

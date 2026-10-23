@@ -161,14 +161,14 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   rw [frK4_ok (hb := hdb)] at hk
   obtain ⟨a4, hr4, hS4, hg4⟩ := internConst_stage hS3 _ _ hcnH hlvH hci
   have hiw4 : m4.arr64 IW = m3.arr64 IW := lowFr_iw (ceinternW_low hci)
-  cases hst : stubM "mk_app_n_f" m4 [hd, q, l3] with
+  cases hst : mknF m4 [hd, q, l3] with
   | none => rw [hst] at hk; simp [frK5] at hk
   | some pr5 =>
   obtain ⟨rr, m5⟩ := pr5
   rw [hst, frK5_some] at hk
   simp only [Option.some.injEq, Prod.mk.injEq] at hk
   obtain ⟨rfl, rfl, rfl⟩ := hk
-  obtain ⟨x, a5, hr5, hS5, hg5, hx1, hx2⟩ := mkAppN_spec dn vis fe hd q l3 (lt_of_notbig hdb) ys m4 m5 a4 rr hst
+  obtain ⟨x, a5, hr5, hS5, hg5, hx1, hx2⟩ := mknF_ok dn vis fe hd q l3 (lt_of_notbig hdb) ys m4 m5 a4 rr hst
     ⟨hS4, by simp only [decHL, iwA, hiw4]; exact hdec3⟩
   refine ⟨some x, a5, ?_, ⟨by simp, by rw [← hx2]; rfl⟩, ?_⟩
   · simp only [StateT.run_bind]
@@ -179,7 +179,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
     rw [show (decE hd : EIdx) = decI hd from rfl, hr5]
     rfl
   · exact ⟨M3, G3, hS5, ((hg2.trans hg3).trans hg4).trans hg5,
-      (hR3.frame (RfFr.of_low (ceinternW_low hci))).frame (RfFr.stub (by decide) hst), hk3, hG3⟩
+      (hR3.frame (RfFr.of_low (ceinternW_low hci))).frame (RfFr.ofMknF hst), hk3, hG3⟩
 
 theorem default_hole : (default : NestHole) = ⟨⟨decI 0, decI 0, []⟩, 0⟩ := rfl
 

@@ -101,6 +101,13 @@ def TwinPrefix (b : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rc
     builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
     preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins sD = .ok (ipins, sE)
 
+/-- The twin's stages before `internAllPins` ran, from `AState.init EStore.empty`. -/
+def TwinPrefix4 (b : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD)
+    (sC : AState) (ds : Array IDeclaration) (sD : AState) : Prop :=
+  internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
+    preparePrelude pre rc.decls sC = .ok (ds, sD)
+
 section stages
 variable (p : Prog) (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
 
@@ -134,7 +141,8 @@ def PrepareStage : Prop := ∀ b pb s8 s64 pre rc a, InputsOK b pb s64 →
 
 /-- **Stage `intern_all_pins`** refines `internAllPins` at some pin list (the one `pb` decodes
 to). -/
-def PinsStage : Prop := ∀ b pb s8 s64 ds a, InputsOK b pb s64 →
+def PinsStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds a, InputsOK b pb s64 →
+  TwinPrefix4 b sA pre sB rc sC ds a →
   RelSpec p "intern_all_pins" ((ρ b pb s8 s64).R6 · ds a) fun _ m =>
     ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
 
@@ -225,9 +233,14 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
       fun m ⟨sA, pre, sB, rc, sC, hA, hB, hC, hR⟩ => ⟨(sA, pre, sB, rc, sC), hR,
         fun _ _ ⟨ds, sD, hD, hR'⟩ => ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR'⟩⟩)
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
-          Array IDeclaration × AState => (r.R6 · x.2.2.2.2.2.1 x.2.2.2.2.2.2)) _
-      (fun x => h7 b pb s8 s64 x.2.2.2.2.2.1 x.2.2.2.2.2.2 hin)
-      fun m ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR⟩ => ⟨(sA, pre, sB, rc, sC, ds, sD), hR,
+          Array IDeclaration × AState =>
+          fun m => TwinPrefix4 b x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2 ∧
+            r.R6 m x.2.2.2.2.2.1 x.2.2.2.2.2.2)
+      (fun x _ m => ∃ pins ipins a', internAllPins pins x.2.2.2.2.2.2 = .ok (ipins, a') ∧
+        r.R7 m x.2.2.2.2.2.1 ipins a')
+      (fun x n s₀ hP => h7 b pb s8 s64 _ _ _ _ _ _ _ hin hP.1 n s₀ hP.2)
+      fun m ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR⟩ => ⟨(sA, pre, sB, rc, sC, ds, sD),
+        ⟨⟨hA, hB, hC, hD⟩, hR⟩,
         fun _ _ ⟨pins, ipins, sE, hE, hR'⟩ =>
           ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR'⟩⟩)
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×

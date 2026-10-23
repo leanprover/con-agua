@@ -4,6 +4,9 @@ import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfBase
 
+
+noncomputable section
+
 /-!
 # Phase A's step body, `install_step_go`, refines `installStepGo` (lane `decls2`)
 
@@ -597,6 +600,7 @@ def ivFns : List FnName :=
 structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
   bvb : BvbProg p
   hf : HfF p
+  ipf : IpfF p
 
 section ivLookups
 variable {p : Prog} (h : IvProg p)
@@ -606,7 +610,7 @@ theorem IvProg.iv : p.lookup "install_value" = some installValueL :=
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
 theorem IvProg.ih : IhProg p := by
-  constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
+  constructor <;> first | exact h.bvb | exact h.hf | exact h.ipf | exact (h.agree _ (by decide) (by decide)).trans rfl
 end ivLookups
 
 end L.Arena

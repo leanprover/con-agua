@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec21
+import ConAgua.Arena.IndRealNames
 
 /-!
 # `RecCheck`: `targetRecPins`' name pins (lane `indproofs3`, helper `rec2`)
@@ -26,6 +27,7 @@ open L.Arena
 /-- The program bundle of `target_rec_pins` and its callees. -/
 structure RpLook (p : Prog) : Prop extends IndPartsProg3 p where
   erCopy : p.lookup "er_copy" = some erCopy
+  rna : NaF p
   erToIw : p.lookup "er_to_iw" = some erToIw
   slEq : p.lookup "sl_eq" = some slEq
   lpsOne : p.lookup "block_rec_lps_one" = some blockRecLpsOne
@@ -361,7 +363,10 @@ theorem tpnW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
     have h0 : rpN0 bs = internNNode .anonymous := by unfold rpN0; rw [hm]
     rw [h0]
     refine Sim.bindK (K := tpnK0 p (n + 1) reco recl auxo auxl) rfl (fun _ _ => rfl)
-      (installSimStub (p := p) (n := n + 1) (internNanonStub_spec dn vis fe) hS) ?_
+      (show Sim (callW p (n + 1) "intern_nanon" [] m) (internNNode .anonymous) a
+        (fun r x m' a' => KeepPost dn vis fe decW0N m m' a' r x) from fun r m' e => by
+        obtain ⟨s', rfl, -, hs⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (naF_spec p L.rna (n + 1) _ []) e
+        exact naF_ok dn vis fe m s'.mem a r hs hS) ?_
     rintro r0 x0 m0 a0 ⟨hS0, hg0, hx0b, hx0⟩
     refine (tpnB_sim p L n bs reco recl auxo auxl (r0.headD 0) x0 hx0b hx0 m0 a0 hS0
       (hrs.grow (fun q => decRS_mono q) hg0) (haux.grow (fun q => decRS_mono q) hg0)).mono ?_

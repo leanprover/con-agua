@@ -68,7 +68,7 @@ def ctmK1 (n : Nat) (no nl lvls : Word) : Option (List Word × Mem) → Option (
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some ([0, 0], m)
-    else ctmK2 n no nl lvls (stubM "get_app_fn_f" m [CWF, r.tail.tail.tail.headD 0])
+    else ctmK2 n no nl lvls (gafF m [CWF, r.tail.tail.tail.headD 0])
 
 /-- **The model of `ctor_member`** (at exec fuel `n + 1`). -/
 def ctmW (n : Nat) (m : Mem) (no nl lvls nP c : Word) : Option (List Word × Mem) :=
@@ -81,7 +81,7 @@ variable (n : Nat) (m : Mem) (no nl lvls : Word) (r : List Word)
 theorem ctmK1_none (h : r.headD 0 = 0) : ctmK1 n no nl lvls (some (r, m)) = some ([0, 0], m) := by
   simp only [ctmK1]; rw [if_pos h]
 theorem ctmK1_some (h : r.headD 0 ≠ 0) : ctmK1 n no nl lvls (some (r, m)) =
-    ctmK2 n no nl lvls (stubM "get_app_fn_f" m [CWF, r.tail.tail.tail.headD 0]) := by
+    ctmK2 n no nl lvls (gafF m [CWF, r.tail.tail.tail.headD 0]) := by
   simp only [ctmK1]; exact if_neg (c := r.headD 0 = 0) h
 theorem ctmK2_some : ctmK2 n no nl lvls (some (r, m)) = ctmK3 (memWk n m no nl lvls (r.headD 0)) := rfl
 theorem ctmK3_some : ctmK3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
@@ -90,7 +90,7 @@ attribute [ind_grind] ctmK1_none ctmK1_some ctmK2_some ctmK3_some
 
 theorem ctorMember_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
-    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St)
     (no nl lvls nP c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctor_member" [no, nl, lvls, nP, c]
     ⦃fun r s' => LocEq s' s₀ ∧ ctmW n s₀.mem no nl lvls nP c = some (r, s'.mem); ⊤⦄ := by
@@ -98,7 +98,7 @@ theorem ctorMember_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   simp only [callFn, ctorMember]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stripPis_specF p hst n, stubM_spec p "get_app_fn_f" n,
+      stripPis_specF p hst n, gafF_spec p had n,
       memberIdxAt_specK p hv hf hm n] <;>
     finish (gen := 20) [ctmW]
 
@@ -109,13 +109,13 @@ def ctmWk : Nat → Mem → Word → Word → Word → Word → Word → Option 
 
 theorem ctorMember_specK (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
-    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "ctor_member" = some ctorMember) (hst : StripProg p) (had : AdF p) (n : Nat) (s₀ : St)
     (no nl lvls nP c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ctor_member" [no, nl, lvls, nP, c]
     ⦃fun r s' => LocEq s' s₀ ∧ ctmWk n s₀.mem no nl lvls nP c = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ hp]; simp only [callFn, ctorMember]; vcgen [exec] <;> grind
-  | succ n => exact ctorMember_spec p hv hf hm hp hst n s₀ no nl lvls nP c
+  | succ n => exact ctorMember_spec p hv hf hm hp hst had n s₀ no nl lvls nP c
 
 /-! ## Reading decoded records' words -/
 
@@ -210,7 +210,7 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 3)) htyl) hS
   rw [hk, htye] at h1
   refine Sim.bindK (body := fun r m1 => if r.headD 0 = 0 then some ([0, 0], m1)
-      else ctmK2 n no nl lvls (stubM "get_app_fn_f" m1 [CWF, r.tail.tail.tail.headD 0]))
+      else ctmK2 n no nl lvls (gafF m1 [CWF, r.tail.tail.tail.headD 0]))
     rfl (fun _ _ => rfl) h1 ?_
   rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
   cases x1 with
@@ -223,7 +223,7 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
     rw [partsDrop3] at hbl hbe
     simp only [h1', show (1 : Word) ≠ 0 by decide, if_false]
-    have h2 := partsSimStub (getAppFn_spec dn vis fe CWF _ hbl) hS1
+    have h2 := partsSimW (gafF_ok dn vis fe CWF _ hbl) hS1
     rw [CWF_eq, hbe] at h2
     show Sim (ctmK2 n no nl lvls _) (getAppFn coreWalkFuel e1 >>= fun hd =>
       ConRon.Arena.memberIdxAt? names (decI lvls) hd) a1 _
@@ -340,7 +340,7 @@ theorem bgo_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some
     simp only [callFn, blockGroupsOne]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ctorMember_specK p hv hf hm hc hP.strip n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+        ctorMember_specK p hv hf hm hc hP.strip hP.ad n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- `blockGroups`' filter predicate for member `mm`. -/
@@ -671,7 +671,7 @@ theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : S
       MemIdxOut r (AM.res (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ctorMember? names (decI lvls) nP.toNat (cv, nF)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (ctorMember_spec p hP.view hP.find hP.midx hP.cmem hP.strip n s₀ no nl lvls nP c)
+  triple_post (ctorMember_spec p hP.view hP.find hP.midx hP.cmem hP.strip hP.ad n s₀ no nl lvls nP c)
     fun _ _ ⟨hl, hm⟩ =>
       let ⟨hok, hQ⟩ := Sim.run (ctmW_sim n hS hc hnm hnb hlv) hm
       ⟨hl, hok, hQ.1, hQ.2.2.1, hQ.2.2.2⟩

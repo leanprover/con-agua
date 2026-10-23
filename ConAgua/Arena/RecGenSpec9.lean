@@ -131,6 +131,7 @@ structure CrsProg (p : Prog) : Prop where
   internParam : p.lookup "intern_param" = some internParam
   plGo : p.lookup "param_levels_go" = some paramLevelsGoL
   pl : p.lookup "param_levels" = some paramLevelsL
+  il : IlF p
   crs : p.lookup "class_rules_ok" = some classRulesOkL
   one : p.lookup "class_rules_ok_one" = some classRulesOkOne
 
@@ -161,7 +162,7 @@ theorem classRulesOk_spec (p : Prog) (h : CrsProg p) (n : Nat) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         L.Arena.cvLps_specW p h.cr.alloc h.cr.copy h.cr.eti h.cr.lps n,
-        plW_spec p h.alloc h.copy h.cons h.slGet h.paramFind h.paramPush h.internParam h.plGo h.pl n,
+        plW_spec p h.alloc h.copy h.cons h.slGet h.paramFind h.paramPush h.internParam h.plGo h.pl h.il n,
         classGenRule_spec p h.ru n, classRulesOkOne_spec p h n,
         slCons_specW p h.alloc h.copy h.cons n, ih] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,

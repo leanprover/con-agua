@@ -67,7 +67,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   rw [c2K2_some, hr2]
   simp only [List.headD_cons, List.tail_cons]
   refine RSim.bind (K := c2K2b n d fo fl ihso ihsl) rfl
-    ((mkAppN_spec dn vis fe _ _ _ hmcH (ra.drop NPC ++ [decI capp])).sim ⟨hS2, hd2⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hmcH (ra.drop NPC ++ [decI capp])).sim ⟨hS2, hd2⟩) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨hS3, hg3, hbH, hbd⟩
   dsimp only at hS3 hg3 hbH hbd
   subst hbd
@@ -169,7 +169,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
     (by rw [decHL_grow hg12 hfb]; exact hfvs) (Nat.le_trans hfb hg12.1)
   rw [cK2b_some]
   refine RSim.bind (K := cK3 n g c d nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
-    ((mkAppN_spec dn vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) ?_
+    ((mknF_ok dn vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) ?_
   rintro ⟨r4, m4⟩ capp a4 - ⟨hS4, hg4, hcH, hcd⟩
   dsimp only at hS4 hg4 hcH hcd
   subst hcd

@@ -2,6 +2,7 @@ import ConAgua.Arena.RecGen
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.RecClassSpec
+import ConAgua.Arena.IndRealSpine
 
 /-!
 # Refinements of `RecGen` (lane `induct`, round 2)
@@ -491,7 +492,7 @@ theorem classMinorSlot_refines (p : Prog)
 
 /-- The word model of `class_leaf_at`. -/
 def leafAtW (m : Mem) (mm leaf : Word) : Option (List Word × Mem) :=
-  match stubM "get_app_fn_f" m [CWF, leaf] with
+  match gafF m [CWF, leaf] with
   | none => none
   | some (r, m1) =>
     if r.headD 0 >>> 28 ≠ 3 then some ([0], m1)
@@ -499,13 +500,13 @@ def leafAtW (m : Mem) (mm leaf : Word) : Option (List Word × Mem) :=
     else some ([if (eViewW m1 (r.headD 0)).tail.headD 0 = rdW (m1.arr64 IW) mm then 1 else 0], m1)
 
 theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAtL)
-    (hv : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (mm leaf : Word) :
+    (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (mm leaf : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_leaf_at" [mm, leaf]
     ⦃fun r s' => LocEq s' s₀ ∧ leafAtW s₀.mem mm leaf = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classLeafAtL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
+      gafF_spec p had n, eView_spec p hv n] <;>
     finish (gen := 20) [leafAtW, rdW_eq]
 
 theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
@@ -515,13 +516,13 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     ∃ b a', (ConRon.Arena.classLeafAt bigM (decI leaf)).run a = .ok (b, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
-  cases hs : stubM "get_app_fn_f" m [CWF, leaf] with
+  cases hs : gafF m [CWF, leaf] with
   | none => rw [hs] at h; simp at h
   | some r1m =>
     obtain ⟨r1, m1⟩ := r1m
     rw [hs] at h
     dsimp only at h
-    obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := getAppFn_spec dn vis fe CWF leaf hl m m1 a r1 hs hS
+    obtain ⟨x, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF leaf hl m m1 a r1 hs hS
     rw [CWF_eq] at hrun1
     generalize hw : r1.headD 0 = w at hd1 hd2 h
     have e1 : (decI leaf : EIdx) = decE leaf := rfl
@@ -608,7 +609,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
 /-- **`class_leaf_at` refines `classLeafAt`** (through the `get_app_fn` stub and `e_view`). -/
 @[refines ConRon.Arena.classLeafAt]
 theorem classLeafAt_refines (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAtL)
-    (hv : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (Mp leaf : Word) (bigM : TargetMajor)
     (hS : StageR dn vis fe s₀.mem a₀) (hl : H leaf) (hM : decTM s₀.mem Mp.toNat = some bigM)
     (hMt : Mp.toNat < iwTop s₀.mem) :
@@ -618,7 +619,7 @@ theorem classLeafAt_refines (p : Prog) (hp : p.lookup "class_leaf_at" = some cla
       IWGrow s₀.mem s'.mem ∧
       ((r.headD 0 != 0) = AM.res (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ ∧ (r.headD 0).toNat ≤ 1);
       ⊤⦄ := by
-  refine triple_post (leafAt_spec p hp hv n s₀ Mp leaf) ?_
+  refine triple_post (leafAt_spec p hp hv had n s₀ Mp leaf) ?_
   rintro r s' ⟨hl', hm⟩
   obtain ⟨b, a', hrun, hS', hg, h1, h2⟩ := leafAtW_ok dn vis fe _ _ a₀ Mp leaf bigM r hS hl hM hMt hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ a' b hrun

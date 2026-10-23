@@ -76,7 +76,7 @@ def rtK1 (ctx : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (hd, m1) =>
     if 4294967296 ≤ hd then none
-    else rtK2 (stubM "mk_app_n_f" m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)])
+    else rtK2 (mknF m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)])
 def rxRootW (m : Mem) (ctx i : Word) : Option (Word × Word × Mem) :=
   if rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0 then
     rtK1 ctx (ceinternW m (getDW m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
@@ -93,7 +93,7 @@ theorem erK1_some : erK1 m i (some z) = erK2 i (sointernW m z) := rfl
 theorem rtK2_some : rtK2 (some (r, m2)) = some (1, r.headD 0, m2) := rfl
 theorem rtK1_big (h : 4294967296 ≤ hd) : rtK1 ctx (some (hd, m1)) = none := by simp [rtK1, h]
 theorem rtK1_ok (h : ¬ 4294967296 ≤ hd) : rtK1 ctx (some (hd, m1)) =
-    rtK2 (stubM "mk_app_n_f" m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)]) := by
+    rtK2 (mknF m1 [hd, rdW (m1.arr64 IW) (ctx + 7), rdW (m1.arr64 IW) (ctx + 8)]) := by
   simp only [rtK1]; rw [if_neg h]
 theorem rxRootW_in (h : rdW (m.arr64 IW) (ctx + 4) ≤ i ∧ i < hiW m ctx 0) : rxRootW m ctx i =
     rtK1 ctx (ceinternW m (getDW m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
@@ -113,7 +113,7 @@ def frK5 : Option (List Word × Mem) → Option (Word × Word × Mem)
   | some (r, m5) => some (1, r.headD 0, m5)
 def frK4 (q l : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
-  | some (hd, m4) => if 4294967296 ≤ hd then none else frK5 (stubM "mk_app_n_f" m4 [hd, q, l])
+  | some (hd, m4) => if 4294967296 ≤ hd then none else frK5 (mknF m4 [hd, q, l])
 def pfrK3 (kp : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (q, l, m3) => frK4 q l (ceinternW m3 (rdW (m3.arr64 IW) kp) (rdW (m3.arr64 IW) (kp + 1)))
@@ -281,7 +281,7 @@ theorem pfrK2_some : pfrK2 n kp (some (f, m2)) =
 theorem pfrK3_some : pfrK3 kp (some (q, l, m3)) =
     frK4 q l (ceinternW m3 (rdW (m3.arr64 IW) kp) (rdW (m3.arr64 IW) (kp + 1))) := rfl
 theorem frK4_big (hb : 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = none := by simp [frK4, hb]
-theorem frK4_ok (hb : ¬ 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = frK5 (stubM "mk_app_n_f" m4 [hd, q, l]) := by
+theorem frK4_ok (hb : ¬ 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = frK5 (mknF m4 [hd, q, l]) := by
   simp only [frK4]; rw [if_neg hb]
 theorem frK5_some : frK5 (some (rr, m5)) = some (1, rr.headD 0, m5) := rfl
 theorem rxDsW_succ : rxDsW (n + 1) m f o l = dsA n f o l (allocW m l) := by simp [rxDsW]
@@ -352,6 +352,7 @@ open L.Arena
 
 /-- The lookups of the `replaceFVars` block. -/
 structure RxLook (p : Prog) : Prop where
+  ad : AdF p
   hl : AhLook p
   hk : MkLook p
   cf : p.lookup "const_find" = some constFind
@@ -393,7 +394,7 @@ theorem rxRoot_spec (n : Nat) (s₀ : St) (ctx i : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         hiAt_specW p L.hi n, slGetD_specW p L.gd n, internConst_spec p L.cf L.cp L.ci n,
-        stubM_spec p "mk_app_n_f" n] <;>
+        mknF_spec p L.ad n] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The specs of the block at exec fuel `n`. -/
@@ -467,7 +468,7 @@ theorem rxFrame_step (s₀ : St) (ctx po pl n1 i : Word) :
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hDs,
       posRec2_specW p L.ha L.h2 n, posRec4_specW p L.ha L.h4 n, posRec5_specW p L.ha L.h5 n,
-      internConst_spec p L.cf L.cp L.ci n, stubM_spec p "mk_app_n_f" n] <;>
+      internConst_spec p L.cf L.cp L.ci n, mknF_spec p L.ad n] <;>
     finish (gen := 20) [rdW_eq]
 
 theorem rxDs_step (s₀ : St) (f o l : Word) :
@@ -582,6 +583,9 @@ theorem RfFr.of_iw {m m' : Mem} (h : MemFrame [IW] [200] m m') : RfFr m m' :=
   ⟨_, _, h, by simp [RFM, IW], by simp, by simp, by simp⟩
 
 theorem RfFr.set_iw (m : Mem) (x v : Word) : RfFr m (m.set64 IW x v) := RfFr.of_iw (set64IW_frame m x v)
+
+theorem RfFr.ofMknF {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) : RfFr m m' :=
+  ⟨_, _, mknF_frame h, by simp [RFM, SPN, AREC, ASLOT, ADER], by simp, by simp, by simp⟩
 
 theorem RfFr.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word}
     (h : stubM f m args = some (r, m')) : RfFr m m' := by
@@ -1044,17 +1048,17 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     obtain ⟨a1, hr1, hS1, hg1⟩ := internConst_stage hS nm _ hnmH hlvH hci
     have hiw : m1.arr64 IW = m.arr64 IW := lowFr_iw (ceinternW_low hci)
     rw [hiw] at h
-    cases hst : stubM "mk_app_n_f" m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with
+    cases hst : mknF m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with
     | none => rw [hst] at h; simp [rtK2] at h
     | some p2 =>
     obtain ⟨rr, m2⟩ := p2
     rw [hst, rtK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
-    obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mkAppN_spec dn vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
+    obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mknF_ok dn vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
       ⟨hS1, by simp only [decHL, iwA, hiw]; exact hpa⟩
     refine ⟨some x, a2, ?_, ⟨by simp, by rw [← hx2]; rfl⟩,
-      hR.post hS2 (hg1.trans hg2) ((RfFr.of_low (ceinternW_low hci)).trans (RfFr.stub (by decide) hst))⟩
+      hR.post hS2 (hg1.trans hg2) ((RfFr.of_low (ceinternW_low hci)).trans (RfFr.ofMknF hst))⟩
     have hnm' : c.names.getD (i.toNat - c.nP) default = decI nm := by
       rw [hnmd, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]; rfl
     simp only [hnm', ConRon.Arena.internConstE, StateT.run_bind]
