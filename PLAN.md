@@ -69,6 +69,16 @@ per-function separation logic.
 - Do not `simp` the condition of a `dite` whose branches hold proofs that use the hypothesis (a
   `Char`'s validity, a `Fin` bound): the casts it leaves cost the kernel seconds. Step through it with
   `dite_eq_left`/`dite_eq_right` and an `iff` for the condition.
+- **No `sym only […] => vcgen … <;> finish` on a function with many paths** (an `if t == k { … }`
+  dispatch, a run of loads and calls). After `sym` every goal keeps the locals as `setLoc`/`setLocs`
+  chains and `finish` crawls through them; the cost grows with each arm (DeclCanonExpr: 1 s for the
+  first arm, 58 s for the last, 442 s in all). Use a plain `vcgen [exec, step, …, callee specs]`, then
+  `all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+  List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+  Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+  beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)`, then `all_goals grind [lang_grind,
+  arena_grind, …, model defs]` (26 s; docs/design/slowmods.md). Before writing a spec of an L
+  function, grep for an existing one (ProjFnShapeRef re-proved IndRealIpf's, 290 s).
 - A long `&&`/`||` chain in an `if` costs `vcgen` one path per exit, and consecutive chains multiply.
   Pass `L.evalC_spec`/`L.evalE_spec` (`L/PureEval.lean`) instead of `evalC`/`evalE`, then
   `simp only [Cond.pval, Expr.pval, …] at *` before `grind`.
