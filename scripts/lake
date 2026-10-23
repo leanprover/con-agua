@@ -12,7 +12,8 @@ merged or regenerated in between gets a cache entry "input hash of the old text 
 text" (or the reverse), and every worktree with that text then restores the wrong olean, silently.
 So a writing build here:
   1. holds a per-worktree lock (`.lake/scripts-lake.lock`): one build at a time in one worktree;
-  2. snapshots (path, mtime, size) of every source file (`*.lean`, lakefile, manifest, toolchain);
+  2. snapshots (path, mtime, size) of every source file (`*.lean`, lakefile, manifest, toolchain, and
+     the `input_file`s that modules read at elaboration time: everything under `asm/`);
   3. runs Lake against a private STAGING cache: `artifacts/` is a symlink to the shared one (artifacts
      are content-addressed and never rewritten -- harmless to share), `outputs/` (the input-hash ->
      artifact mappings, the only part that can be wrong) is a private copy;
@@ -52,14 +53,21 @@ def subcommand(args):
     return None
 
 
+# Directories of files that modules read at elaboration time (Lake `input_file`s, `include_asm`), and
+# the source directory of the library that `needs` them: a change to such a file during a build
+# invalidates every module of that library (lane asmfile).
+INPUT_DIRS = {"asm": "ConAguaAsm"}
+
+
 def snapshot(root):
     """(mtime_ns, size) of every file that can change a module's input hash or its compilation."""
     snap = {}
     for dp, dn, fn in os.walk(root):
         dn[:] = [d for d in dn if d not in (".lake", "_tmp", ".git")]
+        top = os.path.relpath(dp, root).split(os.sep)[0]
         for f in fn:
             if f.endswith(".lean") or f in ("lakefile.toml", "lakefile.lean",
-                                            "lean-toolchain"):
+                                            "lean-toolchain") or top in INPUT_DIRS:
                 p = os.path.join(dp, f)
                 try:
                     st = os.stat(p)
@@ -70,7 +78,15 @@ def snapshot(root):
 
 
 def invalidate(root, rel):
-    """Delete Lake's local state (trace, outputs, .hash files) for the module whose source is `rel`."""
+    """Delete Lake's local state (trace, outputs, .hash files) for the module whose source is `rel`
+    (for an input file: for every module of the library that reads it)."""
+    top = rel.split(os.sep)[0]
+    if top in INPUT_DIRS:
+        for dp, dn, fn in os.walk(os.path.join(root, INPUT_DIRS[top])):
+            for f in fn:
+                if f.endswith(".lean"):
+                    invalidate(root, os.path.relpath(os.path.join(dp, f), root))
+        return
     if not rel.endswith(".lean"):
         return
     base = rel[:-len(".lean")]

@@ -409,12 +409,38 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
   · intro d1 hG1
     exact hK.exh d1 hG1
 
+omit hG hTab in
+/-- `compileS` of an `if` other than `if c abort`. -/
+theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt} (h : ¬ (s = .abort ∧ t = .skip)) :
+    compileS ctx path (.ite c s t) =
+      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
+      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
+      [.label (ctx.lbl path "X")] := by
+  exact compileS.eq_7 ctx path c s t fun h1 h2 => h ⟨h1, h2⟩
+
+/-- `if c abort`: one conditional jump to `ca_error`. -/
+theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c .abort .skip) := by
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
+  simp only [compileS] at hc hK
+  simp only [tempsS] at htmp
+  refine sim_cond hG ctx hT hTab F hF c _ true _ 0 k hc hwf.1.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
+  · intro d1 hcv hE1
+    exact hK.err d1 ⟨.abort, by rw [step_ite_run, hcv]; rfl, by simp⟩ (hE1.spost (G := G) hI.lo).gpost
+  · intro d1 hcv hE1
+    exact hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) (hI.ofE hG hE1) (hE1.spost hI.lo)
+  · intro d1 ⟨e, he⟩ hE1
+    exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
+      (hE1.spost (G := G) hI.lo).gpost
+
 theorem sim_ite (c : Cond) (s t : Stmt)
     (hs : SimS p G (stepRun p K) P s) (ht : SimS p G (stepRun p K) P t) :
     SimS p G (stepRun p K) P (.ite c s t) := by
+  by_cases hab : s = .abort ∧ t = .skip
+  · obtain ⟨rfl, rfl⟩ := hab; exact sim_ifAbort hG hTab p K P c
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
-  simp only [compileS, List.append_assoc, List.cons_append, List.nil_append] at hc hK
+  simp only [compileS_ite hab, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   simp only [tempsS] at htmp
   have hc1 := hc.right
   have hc2 := hc1.right

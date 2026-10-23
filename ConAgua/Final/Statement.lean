@@ -19,14 +19,17 @@ that has it.
 
 ## What is trusted (see `docs/ROADMAP.md` §3, "Trusted base")
 
-* Kraken's x64 semantics (`Ev`, `MachineData`), the assembler, the printer and the loader: the
-  printed assembly of `compileProg G.tab p "check"` sits at `k0` (`hcode`). For the checker itself
-  the code hypothesis is over a literal: `ConAgua/Checker/AsmFinal.lean` restates these theorems
-  with `hcode : Code checkerAsm k0`, where `checkerAsm_eq : compileProg checkerTab checkerProg
-  "check" = checkerAsm` is checked by the kernel and the harness prints `checkerAsm`
-  (`ConAgua/Checker/AsmEmit.lean`), so the Lean compiler and runtime that would otherwise compute
-  the code are not trusted; the printer and the assembler are checked against each other on the
-  printed file by `harness/check-asm.sh` (DESIGN.md, "Kernel-checked compiler output");
+* Kraken's x64 semantics (`Ev`, `MachineData`), the assembler and the loader: the assembly of
+  `compileProg G.tab p "check"` sits at `k0` (`hcode`). For the checker itself the code hypothesis
+  is over the committed file: `ConAgua/Checker/AsmFinal.lean` restates these theorems with
+  `hcode : Code checkerFile k0`, where `checkerFile` is the code of `asm/checker.s` as the trusted
+  parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`, `Include.lean`, `Term.lean`) and
+  the kernel checked `checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab
+  checkerProg "check"`; so neither the Lean compiler and runtime that computed the code nor the
+  printer that wrote the file is trusted, only the parser. Independent cross-checks on the file:
+  Kraken's own parser reads it the same way (`ConAgua/AsmFile/CrossCheck.lean`, in
+  `scripts/asm_file.py`), and the assembler encodes what it says (`harness/check-asm.sh`)
+  (DESIGN.md, "Kernel-checked compiler output"; docs/design/asmfile.md);
 * the loader's layout: the input bytes, the pin-data bytes, every other array zero, the table and
   the stack, as `G` says (`hG`, `hmem`, `HarnessCall`);
 * the harness: it calls `ca_enter` as `HarnessCall` states and reads the verdict as `rdx = 0 ∧ rax =

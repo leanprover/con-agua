@@ -15,9 +15,9 @@ import ConAgua.Checker.AsmPart9
 `checkerAsm : Program` is the compiled checker as a literal term, and
 `checkerAsm_eq : compileProg checkerTab checkerProg "check" = checkerAsm` is checked by the kernel,
 one function at a time (`asm_lit`, `ConAgua/Compiler/AsmLit.lean`; the functions' checks are in
-`AsmPart0` … `AsmPart9`). The harness prints
-`checkerAsm` (`ConAgua/Checker/AsmEmit.lean`), so running the compiler as compiled Lean code is
-not trusted. DESIGN.md, "Kernel-checked compiler output".
+`AsmPart0` … `AsmPart9`), so running the compiler as compiled Lean code is not trusted.
+`checkerFile_eq` (`ConAgua/Checker/AsmFileEq.lean`) compares it with the committed file
+`asm/checker.s` (`scripts/asm_file.py`). DESIGN.md, "Kernel-checked compiler output".
 -/
 
 namespace L.Checker
