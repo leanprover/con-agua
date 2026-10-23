@@ -7,7 +7,7 @@ import ConAgua.Compiler.WriteSetSplit
 
 `checkL` (`Entry.lean`) runs the stages `cap_check`, `pb_check`, `intern_reserved_pins`,
 `builtin_prelude`, `front_run`, `prepare_prelude` and `intern_all_pins` before
-`install_then_check`. `preLoopFns` is their call closure in `checkerProg` (463 functions, computed
+`install_then_check`. `preLoopFns` is their call closure in `checkerProg` (471 functions, computed
 by `scripts/preloop_ws.py`), `preLoopA` the word arrays and `preLoopC` the `CTL` words their bodies
 store into (every `CTL` index in the closure is a literal or `k + (e &&& 1)`). Per-chunk kernel
 checks as `LoopCore.lean`. Corollaries: every stage's run is a `MemFrame preLoopA preLoopC`
@@ -26,13 +26,13 @@ def preLoopFns : List FnName := [
   "app_find", "app_push", "apply_any", "apply_decl", "apply_dline", "apply_expr", "apply_ind",
   "apply_level", "apply_nnum", "apply_nstr", "apply_rec", "apply_str", "builtin_prelude",
   "bvar_find", "bvar_push", "byte_in", "cap_check", "const_find", "const_push", "ctl_sum",
-  "d_member", "dec_chunk", "decl_code", "decl_cv", "decl_declares", "decl_key", "decl_kind",
-  "decl_push", "decl_val", "der_b", "dind_alloc", "e_view", "eid_sp_clear", "erec_alloc",
-  "esc_one", "esc_sur", "esp_find", "esp_put", "expr_fresh", "expr_get", "expr_node", "expr_put",
-  "expr_val", "fld_alloc", "fld_put", "forall_find", "forall_push", "front_init", "front_line",
-  "front_reset", "front_run", "fvar_find", "fvar_push", "has_escape", "hex3", "hex4", "hex_val",
-  "hints_num", "hints_obj", "hints_val", "hn_clear", "hn_find", "hn_put", "hoist_any", "hoist_app",
-  "hoist_apply", "hoist_block_go", "hoist_bucket", "hoist_chain", "hoist_close_go",
+  "d_member", "dec_chunk", "decl_code", "decl_cv", "decl_declares", "decl_declares_go", "decl_key",
+  "decl_kind", "decl_push", "decl_val", "der_b", "dind_alloc", "e_view", "eid_sp_clear",
+  "erec_alloc", "esc_one", "esc_sur", "esp_find", "esp_put", "expr_fresh", "expr_get", "expr_node",
+  "expr_put", "expr_val", "fld_alloc", "fld_put", "forall_find", "forall_push", "front_init",
+  "front_line", "front_reset", "front_run", "fvar_find", "fvar_push", "has_escape", "hex3", "hex4",
+  "hex_val", "hints_num", "hints_obj", "hints_val", "hn_clear", "hn_find", "hn_put", "hoist_any",
+  "hoist_app", "hoist_apply", "hoist_block_go", "hoist_bucket", "hoist_chain", "hoist_close_go",
   "hoist_closure", "hoist_deps", "hoist_deps_of", "hoist_emit", "hoist_forall", "hoist_fvar",
   "hoist_index_go", "hoist_ins", "hoist_ix", "hoist_lam", "hoist_let", "hoist_names",
   "hoist_names_go", "hoist_nat_op_ground", "hoist_note", "hoist_proj", "hoist_rules_go",
@@ -80,23 +80,24 @@ def preLoopFns : List FnName := [
   "pre_scan_quoted_nat", "pre_scan_rule", "pre_scan_rules", "pre_scan_str_name", "pre_scan_string",
   "pre_scan_thm", "pre_skip_braced", "pre_skip_digits", "pre_skip_ws", "pre_slot_nat",
   "pre_str_close", "pre_str_code", "pre_str_put_esc", "pre_u_next", "pre_unescape",
-  "pre_utf8_char", "pre_utf8_valid", "pre_value_at", "prepare_prelude", "proj_find", "proj_push",
-  "read_nat", "rec_decl_line", "rec_decl_obj", "rec_expr_loop", "rec_line_loop", "rec_nat_list",
-  "rec_num_name", "rec_obj", "rec_str_name", "rom_ex_leaf", "rom_ex_one", "rom_ex_ref",
-  "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels", "rom_lists_to",
-  "rom_lit", "rom_lvls_go", "rom_name", "rom_names_to", "rom_pins_to", "rom_put", "rom_sets_to",
-  "rom_u64", "rset_clear", "rset_find", "rset_put", "scan_app", "scan_axiom", "scan_binder",
-  "scan_binder_info", "scan_bool", "scan_const", "scan_def", "scan_hints", "scan_ind_ctor",
-  "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec", "scan_ind_recs", "scan_ind_type",
-  "scan_ind_types", "scan_let", "scan_line", "scan_line_loop", "scan_nat_list", "scan_num_name",
-  "scan_opaque", "scan_proj", "scan_quot", "scan_quoted_nat", "scan_rule", "scan_rules",
-  "scan_str_name", "scan_string", "scan_thm", "skip_braced", "skip_digits", "skip_ws", "slice_has",
-  "slot_nat", "sort_find", "sort_push", "stk_pool", "stk_push", "store_fuel", "str_close",
-  "str_code", "str_put_esc", "succ_find", "succ_push", "u_next", "unescape", "utf8_char",
-  "utf8_put", "utf8_valid", "validate_ind_d", "value_at", "vi_ctor", "vi_ids_go", "vi_k_expected",
-  "vi_listed", "vi_listed_go", "vi_map", "vi_map_go", "vi_nested", "vi_np_go", "vi_nparams",
-  "vi_order", "vi_order_go", "vi_order_in", "vi_rec", "vi_rec_idx", "vi_recs", "vi_recs_go",
-  "vi_tail", "vi_unsafe", "zero_find", "zero_push"]
+  "pre_utf8_char", "pre_utf8_valid", "pre_value_at", "prep_back", "prep_back_rec", "prep_copy",
+  "prep_copy_rec", "prep_find", "prep_front", "prep_rest", "prepare_prelude", "proj_find",
+  "proj_push", "read_nat", "rec_decl_line", "rec_decl_obj", "rec_expr_loop", "rec_line_loop",
+  "rec_nat_list", "rec_num_name", "rec_obj", "rec_str_name", "rom_ex_leaf", "rom_ex_one",
+  "rom_ex_ref", "rom_ex_two", "rom_expr", "rom_exprs_to", "rom_items", "rom_level", "rom_levels",
+  "rom_lists_to", "rom_lit", "rom_lvls_go", "rom_name", "rom_names_to", "rom_pins_to", "rom_put",
+  "rom_sets_to", "rom_u64", "rset_clear", "rset_find", "rset_put", "scan_app", "scan_axiom",
+  "scan_binder", "scan_binder_info", "scan_bool", "scan_const", "scan_def", "scan_hints",
+  "scan_ind_ctor", "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec", "scan_ind_recs",
+  "scan_ind_type", "scan_ind_types", "scan_let", "scan_line", "scan_line_loop", "scan_nat_list",
+  "scan_num_name", "scan_opaque", "scan_proj", "scan_quot", "scan_quoted_nat", "scan_rule",
+  "scan_rules", "scan_str_name", "scan_string", "scan_thm", "skip_braced", "skip_digits",
+  "skip_ws", "slice_has", "slot_nat", "sort_find", "sort_push", "stk_pool", "stk_push",
+  "store_fuel", "str_close", "str_code", "str_put_esc", "succ_find", "succ_push", "u_next",
+  "unescape", "utf8_char", "utf8_put", "utf8_valid", "validate_ind_d", "value_at", "vi_ctor",
+  "vi_ids_go", "vi_k_expected", "vi_listed", "vi_listed_go", "vi_map", "vi_map_go", "vi_nested",
+  "vi_np_go", "vi_nparams", "vi_order", "vi_order_go", "vi_order_in", "vi_rec", "vi_rec_idx",
+  "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find", "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `preLoopFns` store into. -/
 def preLoopA : List ArrId := [
