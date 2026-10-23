@@ -66,16 +66,112 @@ theorem ShapeCV.grow {m m' : Mem} {q : Word} (h : ShapeCV m q) (hg : IWGrow m m'
   rw [iwN_grow hg (by omega)] at hd
   exact CVExt_grow hg (h o l ho hl j hj c hc d hd)
 
+/-! ## What the recursor stage needs of the pass -/
+
+/-- Every word array below 256 but `target_abs`' memo's. -/
+def taFreeA : List ArrId := (List.range 256).filter (· ≠ TAM)
+/-- Every `CTL` word below 256 but that memo's two control words. -/
+def taFreeC : List Word := ((List.range 256).filter (fun c => c ≠ 212 ∧ c ≠ 213)).map Nat.toUInt64
+
+/-- A callee of a program whose text writes outside `target_abs`' memo keeps it. -/
+theorem taMR.ofClosed {p : Prog} {fs : List FnName} (hcl : closedA p taFreeA taFreeC fs = true)
+    {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
+    (h : callW p n f vs m = some (r, m')) (hM : ∃ mp, taMR m mp) : ∃ mp, taMR m' mp := by
+  obtain ⟨mp, hm⟩ := hM
+  refine ⟨mp, taMR_mfr (S := [201, 202, 203, 204, 205, 207, 208])
+    (T := [202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 214, 215, 216, 217, 218, 219])
+    ⟨taFreeA, taFreeC, (run_memFrame hcl hf (run_of_callW h)).1, fun b hb => ?_, fun x hx => ?_⟩
+    (by decide) (by decide) hm⟩
+  · simp only [taFreeA, List.mem_filter, List.mem_range, decide_eq_true_eq] at hb
+    have key : ∀ x < 256, x ≠ 206 → x < 201 ∨ 208 < x ∨ x ∈ [201, 202, 203, 204, 205, 207, 208] := by
+      decide +kernel
+    exact key b hb.1 (by simpa [TAM] using hb.2)
+  · simp only [taFreeC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq] at hx
+    obtain ⟨c, ⟨hc, h2⟩, rfl⟩ := hx
+    have : (Nat.toUInt64 c).toNat = c := by simp; omega
+    rw [this]
+    have key : ∀ x < 256, ¬ (x = 212 ∨ x = 213) → x < 202 ∨ 219 < x ∨
+        x.toUInt64 ∈ ([202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 214, 215, 216, 217, 218, 219] : List Word) := by
+      decide +kernel
+    exact key c hc (by omega)
+
+/-- **The members' constructors' level-parameter slices lie in `EREC`**: every constructor record
+`[cv, nF]` of every member of the shape at `p0` (its words `+ 2`, `+ 3`) satisfies `CtorLp`. -/
+def ShapeLp (m : Mem) (p0 : Word) : Prop :=
+  ∀ o l, iwN m p0.toNat = some o → iwN m (p0.toNat + 1) = some l → ∀ j < l, ∀ c, iwN m (o + j) = some c →
+    ∀ co cl, iwN m (c + 2) = some co → iwN m (c + 3) = some cl → CtorsLp m (UInt64.ofNat co) (UInt64.ofNat cl)
+
+theorem ShapeLp.grow {m m' : Mem} {p0 : Word} {bs : BlockShape} (h : ShapeLp m p0)
+    (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0) (hg : IWGrow m m') (hk : KeepW m m')
+    (hsz : (m.arr64 IW).size < 2 ^ 64) : ShapeLp m' p0 := by
+  intro o l ho hl j hj c hc co cl hco hcl
+  obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some (show decBS (truncM m) p0.toNat = some bs from hq)
+  obtain ⟨o', l', ho', hl', hd⟩ := decAt_some hmem
+  have ho0 := (rec2IwN_trunc ho').2
+  have hl0 := (rec2IwN_trunc hl').2
+  rw [iwN_grow hg (rec2IwN_trunc ho').1, ho0] at ho
+  rw [iwN_grow hg (rec2IwN_trunc hl').1, hl0] at hl
+  have e1 := Option.some.inj ho
+  have e2 := Option.some.inj hl
+  subst e1 e2
+  obtain ⟨c', hc', hms⟩ := decPL_getH (truncM m) hd j hj
+  obtain ⟨hct, hcm⟩ := rec2IwN_trunc hc'
+  rw [iwN_grow hg hct, hcm] at hc
+  have e3 := Option.some.inj hc
+  subst e3
+  simp only [decMS, bind, Option.bind_eq_some_iff, pure] at hms
+  obtain ⟨_, -, _, -, _, -, cts, hcts, -⟩ := hms
+  obtain ⟨co', cl', hco', hcl', hdc⟩ := decAt_some hcts
+  rw [iwN_grow hg (rec2IwN_trunc hco').1, (rec2IwN_trunc hco').2] at hco
+  rw [show c' + 2 + 1 = c' + 3 by omega] at hcl'
+  rw [iwN_grow hg (rec2IwN_trunc hcl').1, (rec2IwN_trunc hcl').2] at hcl
+  have e4 := Option.some.inj hco
+  have e5 := Option.some.inj hcl
+  subst e4 e5
+  have hol : co' < 2 ^ 64 ∧ cl' < 2 ^ 64 := by
+    have h6 := (rec2IwN_trunc hco').2; have h7 := (rec2IwN_trunc hcl').2
+    simp only [iwN, nat?, Option.map_eq_some_iff] at h6 h7
+    obtain ⟨w1, -, rfl⟩ := h6; obtain ⟨w2, -, rfl⟩ := h7
+    exact ⟨w1.toNat_lt, w2.toNat_lt⟩
+  refine (h o' l' ho0 hl0 j hj c' hcm co' cl' (rec2IwN_trunc hco').2 (rec2IwN_trunc hcl').2).grow
+    (cAs := cts) ?_ hsz hg hk
+  show decPL (truncM m) (decCN (truncM m)) _ _ = some cts
+  rw [UInt64.toNat_ofNat_of_lt' hol.1, UInt64.toNat_ofNat_of_lt' hol.2]
+  exact hdc
+
+/-- **What the recursor stage needs of the pass's record** (a pending program fact, like
+`ConsRecsTFSim` was: to be discharged from the pass's refinement, whose shape copies the input's
+recursor slice and parameter count, and whose classes' constructor records are the input members').
+From an input shape whose recursor slice lies below the top (`RecsB`), whose members' constructors'
+level-parameter slices lie in `EREC` (`ShapeLp`) and whose parameter count is below `2^63`, the
+record's shape's recursor slice lies below the top, its classes' constructors' level-parameter
+slices lie in `EREC`, and its shape's parameter count is below `2^63`. -/
+def PassGrcOK (p : Prog) : Prop :=
+  ∀ (n : Nat) (vis p0 isRec : Word) (m m' : Mem) (r : List Word),
+    callW p n "check_block_pass" [vis, p0, isRec] m = some (r, m') →
+    RecsB m p0 → ShapeLp m p0 → (∀ v, iwN m (p0.toNat + 4) = some v → v < 2 ^ 63) →
+    RecsB m' (rdW (m'.arr64 IW) (r.headD 0 + 3)) ∧
+    ClassesLp m' (rdW (m'.arr64 IW) (r.headD 0 + 15)) (rdW (m'.arr64 IW) (r.headD 0 + 16)) ∧
+    (∀ v, iwN m' ((rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat + 4) = some v → v < 2 ^ 63)
+
+/-- The callees of `check_block` before the tail that keep `target_abs`' memo by their text. -/
+def blockTaCallees : List FnName := ["block_raw_rec", "check_block_pass"]
+
 /-- **`check_block`'s model refines `checkBlock`.** -/
 theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
-    (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) (n : Nat) (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
+    (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) {fsR fsT : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
+    (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
+    (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (hgp : PassGrcOK p) (n : Nat)
+    (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
     (hcx : ShapeCV m p0) (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block)
-    (hv : AllVis fe) (hcs : CtorSums fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp) :
+    (hv : AllVis fe) (hcs : CtorSums fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp)
+    (hta : ∃ mp, taMR m mp) (hrb : RecsB m p0) (hlp : ShapeLp m p0) (hnP : bs.nP < 2 ^ 63)
+    (hsz : (m.arr64 IW).size < 2 ^ 63) :
     Sim (icbW p (n + 4) m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
   intro r m' h
@@ -97,6 +193,9 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   have hP1 := hPm.fr (MFr.of_iw hf1)
   obtain ⟨mp0, hmp0⟩ := hma
   have hma1 := maMR_mfr (MFr.of_iw hf1) hmp0
+  obtain ⟨tp0, htp0⟩ := hta
+  have hta1 : ∃ mp, taMR s1.mem mp := ⟨tp0, taMR_mfr (MFr.of_iw hf1) (by simp) (by simp) htp0⟩
+  have hk1 := callW_keepW c1
   simp only [List.headD_cons, List.tail_cons] at h
   have hT1 : iwTop s1.mem < 2 ^ 64 := (rdW (s1.mem.arr64 CTL) 200).toNat_lt
   -- the constructors' names
@@ -130,6 +229,9 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [List.headD_cons, List.tail_cons, List.map_map] at h hd2
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hma2 := maMR_mfr (MFr.of_iw hf2) hma1
+  have hta2 : ∃ mp, taMR s2.mem mp :=
+    let ⟨mp, h⟩ := hta1; ⟨mp, taMR_mfr (MFr.of_iw hf2) (by simp) (by simp) h⟩
+  have hk2 := hk1.trans (callW_keepW c2)
   have hg12 := hg1.trans hg2
   have hT2 : iwTop s2.mem < 2 ^ 64 := (rdW (s2.mem.arr64 CTL) 200).toNat_lt
   -- the members' names
@@ -160,6 +262,9 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [List.headD_cons, List.tail_cons] at h
   have hP3 := hP2.fr (MFr.of_iw hf3)
   have hma3 := maMR_mfr (MFr.of_iw hf3) hma2
+  have hta3 : ∃ mp, taMR s3.mem mp :=
+    let ⟨mp, h⟩ := hta2; ⟨mp, taMR_mfr (MFr.of_iw hf3) (by simp) (by simp) h⟩
+  have hk3 := hk2.trans (callW_keepW c3)
   -- the two `sl_nodup`s
   have hcn3 : (decHL s3.mem (rdW (s1.mem.arr64 CTL) 200).toNat tot.toNat : Option (List NIdx)) =
       some (bs.allCtors.map (fun x => x.1.name)) := by
@@ -220,6 +325,9 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   rw [← hfm] at hS6 hg6
   have hP6 := hP3.fr hfr6
   have hma6 := maMR_mfr hfr6 hma3
+  have hta6 : ∃ mp, taMR s6.mem mp :=
+    let ⟨mp, h⟩ := hta3; ⟨mp, taMR_mfr hfr6 (by simp) (by simp) h⟩
+  have hk6 := hk3.trans (callW_keepW c6)
   have hg16 := hg13.trans hg6
   -- the raw recursion bit
   have hq6 := hq.grow (decBS_mono _) hg16
@@ -240,6 +348,8 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   generalize AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) { a with caches := Caches.empty } = raw at hrun7 hr7
   subst hr7
   have hg17 := hg16.trans hg7
+  have hta7 := taMR.ofClosed hclT (hfT _ (by decide)) c7 hta6
+  have hk7 := hk6.trans (callW_keepW c7)
   -- the pass
   have hq7 := hq.grow (decBS_mono _) hg17
   have hsrc7 := partsHsrc_grow hg17 hq9 hsrc
@@ -255,6 +365,14 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only at hs8 hS8 hg8 hBP8 hP8
   subst hs8
   have hg18 := hg17.trans hg8
+  have hta8 := taMR.ofClosed hclT (hfT _ (by decide)) c8 hta7
+  have hk8 := hk7.trans (callW_keepW c8)
+  have hq0 : decBS (truncM m) p0.toNat = some bs := hq
+  obtain ⟨-, -, hnpw, -⟩ := decBS_some hq0
+  obtain ⟨hnpt, hnpm⟩ := rec2IwN_trunc hnpw
+  obtain ⟨hrb8, hlp8, hnP8⟩ := hgp (n + 4) vis p0 _ s7.mem s8.mem r8 c8 (hrb.grow hg17 (by omega))
+    (hlp.grow hq hsrc hg17 hk7 (by omega))
+    (fun v hv => by rw [iwN_grow hg17 hnpt, hnpm] at hv; cases hv; omega)
   -- the tail
   cases c9 : callW p (n + 4) "check_block_tail" [bO, bL, r8.headD 0] s8.mem with
   | none => rw [c9] at h; cases h
@@ -264,8 +382,9 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
-    (checkBlockTail_refines hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) _ _ hS8 hBP8
-      (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK) c9
+    (checkBlockTail_refines hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hS8 hBP8
+      (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK ⟨hP8, hta8⟩ hrb8 hlp8 hnP8
+      (by rw [hk8 IW]; exact hsz)) c9
   simp only at hs9 hS9 hg9 hM9
   subst hs9
   have hrun9 := AM.run_of_ok _ _ hok9
@@ -277,27 +396,36 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
 /-- **`check_block(vis, block.off, block.len, p0)` refines `checkBlock`**: from the stage relation,
 the block's shape decoded below the tops (`ShapeSrc`, `ShapeCV`), the raw block decoded, an
 unrestricted environment whose stored constructors' sums are words, and the walk memos
-(`PosMR`, the `mentions_any` memo) well formed: the stage relation at the returned view of the
-twin's environment, the pools grown, the `hb` memo kept. Program facts: the lookups (`CbProg`) and
-the two write sets (`hcl`, `hcl2`). -/
+(`PosMR`, the `mentions_any` memo, `target_abs`' memo) well formed, and what the recursor stage
+needs of the input shape (its recursor slice below the top, its members' constructors'
+level-parameter slices in `EREC`: `ShapeLp`, its parameter count and the pool's size below
+`2^63`): the stage relation at the returned view of the twin's environment, the pools grown, the
+`hb` memo kept. Program facts: the lookups (`CbProg`), the write sets (`hcl`, `hcl2`, `hclR`,
+`hclT`) and the pending fact `PassGrcOK p` (what the recursor stage needs of the pass's record). -/
 @[refines ConRon.Arena.checkBlock]
 theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
-    (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) (n : Nat) (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
+    (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) {fsR fsT : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
+    (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
+    (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (hgp : PassGrcOK p) (n : Nat)
+    (hn : 2 ^ 31 + (n + 4) ≤ coreWalkFuel)
     (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hv : AllVis fe)
-    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) :
+    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) (hta : ∃ mp, taMR s₀.mem mp)
+    (hrb : RecsB s₀.mem p0) (hlp : ShapeLp s₀.mem p0) (hnP : bs.nP < 2 ^ 63)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "check_block" [vis, bO, bL, p0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem; ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 n hn hS hq hsrc hcx hblk hv hcs hPm hma) hm
+    let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hgp n hn hS hq hsrc hcx hblk hv
+      hcs hPm hma hta hrb hlp hnP hsz) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind
