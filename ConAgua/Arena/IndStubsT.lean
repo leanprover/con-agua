@@ -42,6 +42,13 @@ theorem allLevelParamsDefinedT_spec (o l e : Word) (he : H e) (lps : List NIdx) 
       (fun m a => StageT dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps)
       (allLevelParamsDefined lps (decI e)) (KeepPostT dn vis fe decW0B) := sorry
 
+/-- `is_proj_fn_shape(n)` under `StageT` (lane `loopt2`'s `install_header`). It has L code
+(`isProjFnShapeL`) that only reads the name store: a real `Sim` through `StageT.lift_keep` from a
+`StageR` refinement is the intended replacement. -/
+theorem isProjFnShapeT_spec (n : Word) (hn : H n) :
+    RelAM "is_proj_fn_shape" [n] (StageT dn vis fe)
+      (NIdx.isProjFnShape (decI n)) (KeepPostT dn vis fe decW0B) := sorry
+
 end specs
 
 end L.Ind

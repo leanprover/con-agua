@@ -40,6 +40,9 @@ PRE = "pre_"
 TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) (?:6[4-6]|7[2-4]) |\(n64 (?:6[4-6]|7[2-4])\)"
                    r"|\((?:l64|s64) 1 \(c (?:6[4-9]|7[0-2])\)")
 ENTRY = "check"
+# every module that imports the generated file (the asm parts, the write-set decisions, ...): its
+# olean may be stale or missing while the file is regenerated
+OUT_MOD = "ConAgua.Checker.Prog"
 # modules never imported: the benchmarks (they clash with `NatBits` on `L.Arena.bv`), the generated
 # file itself and what imports it
 SKIP = re.compile(r"^ConAgua\.(Arena\.(LiftBench|Inst1Bench|WalkBench)\w*|Compiler\.WFAllBench|Checker\.(Prog|Wf|CoreErec)|E2E\.Check)$")
@@ -129,7 +132,7 @@ def sources(src_of):
     with open(inp, "w") as fh:
         for f, s in sorted(src_of.items()):
             fh.write(f"{s} {f}\n")
-    mods = [m for m in e2e.all_modules() if not SKIP.match(m)]
+    mods = [m for m in e2e.all_modules() if not SKIP.match(m) and OUT_MOD not in e2e.closure(m)]
     src = os.path.join(ROOT, "ConAgua", "Checker", "SourcesRun.lean")
     with open(src, "w") as fh:
         fh.write("".join(f"import {m}\n" for m in mods))
@@ -254,10 +257,16 @@ def main():
         # partial build silently drops lanes' modules (e.g. the frontend's, then `front_run` is
         # missing: "`builtin_prelude` calls `pre_front_run`, but `front_run` is not a copied
         # frontend function")
-        e2e.lake("build", "ConAgua", "ConAgua.Checker.Sources", "ConAgua.Checker.Entry",
-                 "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump")
+        # the generated file itself (and what imports it) may fail to build while it is stale:
+        # that is what this script fixes, so only the modules it reads must build
+        r = e2e.lake("build", "ConAgua", "ConAgua.Checker.Sources", "ConAgua.Checker.Entry",
+                     "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump", check=False)
+        if r.returncode != 0:
+            e2e.log("the full build failed (a stale generated file?); building the inputs only")
+            e2e.lake("build", "ConAgua.Checker.Sources", "ConAgua.Checker.Entry",
+                     "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump")
     e2e.log("dumping")
-    mods = [m for m in e2e.all_modules() if not SKIP.match(m)]
+    mods = [m for m in e2e.all_modules() if not SKIP.match(m) and OUT_MOD not in e2e.closure(m)]
     dumps, clashes = e2e.dump_sets(mods)
     if clashes:
         for bad, other, decl in clashes:
