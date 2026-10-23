@@ -84,7 +84,6 @@ theorem addW_toNat (x : Word) (k : Nat) (h : x.toNat + k < 2 ^ 64) :
   rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt h]
 
 theorem hnSch_wf : hnSch.WF := ⟨by decide, by decide⟩
-theorem hsSch_wf : hsSch.WF := ⟨by decide, by decide⟩
 
 /-- **The setting survives the hoist's passes.** -/
 theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
