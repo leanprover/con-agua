@@ -59,7 +59,7 @@ theorem mkAppW_leafFrame {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r
         · exact leafC_app.2)
 
 /-- `check_opaque_val` is one of the loop's functions. -/
-theorem checkOpaqueVal_loop : "check_opaque_val" ∈ loopFns := List.mem_of_getElem? (i := 207) rfl
+theorem checkOpaqueVal_loop : "check_opaque_val" ∈ loopFns := loop_mem _ rfl
 
 /-- `StageC` after a twin run, from `StageT` after it and con-ron's `CheckOK` from the start. -/
 theorem rpg_fin {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
