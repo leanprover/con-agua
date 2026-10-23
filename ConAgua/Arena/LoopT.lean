@@ -6,8 +6,7 @@ import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.IndPos2SpecB
 import ConAgua.Arena.RecCheckSpec7
 import ConAgua.Arena.ConstsResolveFRefine2
-import ConAgua.Arena.IndMemoFns
-import ConAgua.Arena.IndRealCrFKeep
+import ConAgua.Arena.CrOKFrame
 
 /-!
 # The declaration loop with the core's invariants: `LoopT` (lane `loopt`)
@@ -113,13 +112,6 @@ word `CTL[159]`) and clears it on entry by an epoch bump, which needs a well-for
 beforehand (`L.Stubs.CrOK`, lane `tails`' `constsResolveFFast_refines`). Only that function
 writes these words, so across the loop it is a frame fact (`CrOK.frame`), and it holds of the
 zeroed memory (`CrOK.zero`). Request of the coordinator, for `install_value_guards`' callers. -/
-
-/-- **`CrOK` across a writer outside `CRM` and `CTL[158]`.** -/
-theorem CrOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : L.Stubs.CrOK m)
-    (hf : MemFrame A C m m') (hA : L.Stubs.CRM ∉ A) (hC : (158 : Word) ∉ C) : L.Stubs.CrOK m' :=
-  let ⟨mp, hm⟩ := h
-  ⟨mp, memoRV_frame (S := L.Stubs.crSch) (hS := L.Stubs.crSch_wf) (K := bmKey) (VR := L.Stubs.CrV)
-    A C hA hC m m' hf (fun _ _ h => h) mp hm⟩
 
 /-- **The zeroed memory has a well-formed `consts_resolve_ffast` memo** (empty, epoch `0`). -/
 theorem CrOK.zero {m : Mem} (hsz : 160 ≤ (m.arr64 CTL).size)

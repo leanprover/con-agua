@@ -102,11 +102,15 @@ theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStagePro
 relation at the extended environment and the core's memos after it (the census link since lane
 `indstaget`). -/
 @[refines ConRon.Arena.checkThmVal]
-theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
+theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
+    (hkp : CrKeep p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hS : StageT dn vis fe s₀.mem a₀)
     (hc : decCI (erecP s₀.mem) dn c.toNat = some (.thmInfo cv))
-    (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v) :
+    (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v)
+    (hpre : ∃ env cP, ConLeche.EnvWF env ∧ ConRon.Bridge.CheckOK V env fe a₀ ∧
+      Frontend.denoteCV a₀.store cv = some cP ∧ ConLeche.Expr.WScoped 0 cP.type)
+    (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_thm_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkThmVal V fe cv v) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkThmVal V fe cv v) a₀) s'.mem
@@ -115,18 +119,21 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
   rintro r s' ⟨hl, hm⟩
   have hcv := decCI_cv hc (.inl rfl)
   obtain ⟨a', hrun, hS', hM', hg⟩ :=
-    tvW_okT hq hp.rcp hq.knot.lvc hq.lvlEqC hn hm hS hc hcv hv
+    tvW_okT hq hp.rcp hq.knot.lvc hq.lvlEqC hap hkp hn hm hS hc hcv hv hpre hCr
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
 
 /-- **`check_defn_val` refines `checkDefnVal .verified`** under `StageT`, at the arm's record
 (lane `indstaget`; `dvW_okT`). -/
 @[refines ConRon.Arena.checkDefnVal]
-theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
+theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
+    (hkp : CrKeep p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint)
     (hS : StageT dn vis fe s₀.mem a₀)
-    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.defnInfo cv v hh)) :
+    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.defnInfo cv v hh))
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks)
+    (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_defn_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDefnVal V fe cv v hh) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkDefnVal V fe cv v hh) a₀) s'.mem
@@ -134,7 +141,8 @@ theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p)
   refine triple_post (dv_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hcv, hv⟩ := decls_decCI_defn hc
-  obtain ⟨a', hrun, hS', hM', hg⟩ := dvW_okT hq hp.rcp hn "type mismatch in definition" hm hS hc hcv hv
+  obtain ⟨a', hrun, hS', hM', hg⟩ :=
+    dvW_okT hq hp.rcp hap hkp hn "type mismatch in definition" hm hS hc hcv hv hlps hCr
   rw [← checkDefnVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
@@ -142,11 +150,14 @@ theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p)
 /-- **`check_opaque_val` refines `checkOpaqueVal .verified`** under `StageT`, at the arm's record
 (lane `indstaget`; `dvW_okT`). -/
 @[refines ConRon.Arena.checkOpaqueVal]
-theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
+theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
+    (hkp : CrKeep p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hS : StageT dn vis fe s₀.mem a₀)
     (hc : decCI (erecP s₀.mem) dn c.toNat = some (.axiomInfo cv))
-    (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v) :
+    (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks)
+    (hCr : L.Stubs.CrOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_opaque_val" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkOpaqueVal V fe cv v) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkOpaqueVal V fe cv v) a₀) s'.mem
@@ -154,19 +165,21 @@ theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg 
   refine triple_post (ov_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
   have hcv := decCI_cv hc (.inr rfl)
-  obtain ⟨a', hrun, hS', hM', hg⟩ := dvW_okT hq hp.rcp hn "type mismatch in opaque" hm hS hc hcv hv
+  obtain ⟨a', hrun, hS', hM', hg⟩ :=
+    dvW_okT hq hp.rcp hap hkp hn "type mismatch in opaque" hm hS hc hcv hv hlps hCr
   rw [← checkOpaqueVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
 
 /-- **The theorem arm under `StageT`** (`cdtW_ok`'s). -/
-theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {env : ConLeche.Env} {c : ConLeche.ConstantVal}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {i : Word} {r : List Word}
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal} {v : EIdx}
     (h : cdtW p n m i vis = some (r, m')) (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .thmDecl cv v) :
+    (hd : ds[i.toNat] = .thmDecl cv v) (hfold : ConRon.Bridge.FoldOK V env fe a)
+    (hcvd : Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     ∃ fe' a', (checkDecl V pins fe (.thmDecl cv v)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
   cases n with
@@ -179,6 +192,7 @@ theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p)
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, cdtK1_some] at h
+  have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ :=
     erecCiW_okT (ci := .thmInfo cv) h1 hS hD hi (by rw [hd]; rfl)
   rw [hd] at hcv1 hval1
@@ -192,11 +206,19 @@ theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p)
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, cdtK2_some] at h
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (checkConstantVal_refinesT p hV hq n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
       (by rw [hq1]; exact hcv1) (by omega)) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2
+  -- the twin's constant check: `FoldOK` and the constant's denotation after it
+  obtain ⟨hstep1, _F1, hpure1⟩ :=
+    ConRon.Bridge.checkConstantVal_bridge_of_fold rfl (ConRon.Bridge.CoreSpec.of_core rfl) hfold hcvd hrun2
+  have hok1 := hfold.ofCore hstep1
+  have hcA := ConRon.Bridge.denoteCV_ext hcvd hstep1.ext
+  have hwsT : ConLeche.Expr.WScoped 0 c.type :=
+    ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkConstantVal_typeWF hpure1).fvar
   cases h3 : callW p n "check_thm_val" [vis, q] s2.mem with
   | none => rw [h3] at h; cases h
   | some rm3 =>
@@ -204,8 +226,9 @@ theorem cdtW_okT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p)
   rw [h3, cdtK3_some] at h
   have hx2 : ArrExt (erecP m1) (erecP s2.mem) := IWGrow.erecPExt hg2
   obtain ⟨s3, hs3, -, hok3, hS3, hM3, hg3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (checkThmVal_refinesT p hV hq n hn' ⟨s2.mem, Locals.init []⟩ _ dn fe vis q cv v hS2
-      (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)) h3
+    (checkThmVal_refinesT p hV hq hap hkp n hn' ⟨s2.mem, Locals.init []⟩ _ dn fe vis q cv v hS2
+      (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)
+      ⟨env, c, hok1.envWF, hok1.check, hcA, hwsT⟩ hCr2) h3
   subst hs3
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
@@ -235,12 +258,16 @@ theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m 
 
 /-- **`install_value` under `StageT`** (`ivW_gen`'s): the header and the value's guards under
 `StageT`; after the push the stage relation at the extended environment and `CoreMemos`. -/
-theorem ivW_genT {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem ivW_genT {p : Prog} (hRp : RecProg p) (hI : IhProg p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i ck vk : Word} {r : List Word}
-    {ds : Array IDeclaration} {ci : IConstantInfo} {k : ValueKind}
+    {ds : Array IDeclaration} {ci : IConstantInfo} {k : ValueKind} {env : ConLeche.Env}
+    {c : ConLeche.ConstantVal}
     (h : ivW p n m i vis ck vk = some (r, m')) (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hci : stepCI ck.toNat ds[i.toNat] = some ci) (hk : decVK vk.toNat = some k) :
+    (hci : stepCI ck.toNat ds[i.toNat] = some ci) (hk : decVK vk.toNat = some k)
+    (hfold : ConRon.Bridge.FoldOK V env fe a)
+    (hcvd : Frontend.denoteCV a.store (stepCV ds[i.toNat]) = some c) (hCr : L.Stubs.CrOK m) :
     ∃ a2 a3, (installHeader fe (stepCV ds[i.toNat])).run a = .ok ((), a2) ∧
       (vk ≠ 1 → (installValueGuards fe (stepCV ds[i.toNat]) (stepVal ds[i.toNat])).run a2 =
         .ok ((), a3)) ∧ (vk = 1 → a3 = a2) ∧
@@ -255,18 +282,27 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Nam
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, ivK1_some] at h
+  have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ := erecCiW_okT h1 hS hD hi hci
   generalize hq : r1.headD 0 = q at h hci1 hcv1 hval1 htop1
   have hb : q.toNat + 8 < 2 ^ 64 := by
     have h1 := hS1.stage.2.2.1; have h2 := hS1.stage.2.2.2.2.1; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  cases h2 : ihW n m1 vis (q + 1) with
+  cases h2 : callW p n "install_header" [vis, q + 1] m1 with
   | none => rw [h2] at h; simp [ivK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, ivK2_some] at h
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
+  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (ih_specW p hI n ⟨m1, Locals.init []⟩ vis (q + 1)) h2
+  rw [hs2] at hW2
   obtain ⟨a2, hrun2, hS2, hg2⟩ :=
-    ihW_okT h2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
+    ihW_okT hW2 hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
+  -- the parameters' names read back after the header: con-ron's `installHeader_bridge`
+  have hlps2 : ∃ ks, (stepCV ds[i.toNat]).levelParams.mapM (denoteN a2.store.ns) = some ks := by
+    obtain ⟨hstep, -⟩ := ConRon.Bridge.installHeader_bridge hfold hcvd hrun2
+    exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hstep.ext)
   have tail : ∀ (m3 : Mem) (a3 : AState), StageT dn vis fe m3 a3 → IWGrow m1 m3 →
       ivK4 p vis vk q (callW p n "env_push" [vis, q] m3) = some (r, m') →
       StageR dn (r.headD 0) (fe.push ci) m' a3 ∧ CoreMemos m' ∧ IWGrow m1 m' ∧
@@ -311,14 +347,14 @@ theorem ivW_genT {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Nam
     have hq5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
     have ev : rdW (m2.arr64 EREC) (q + 5) = wv := rdW_of_get? hq5.symm (erecP_get hwv)
     rw [ev] at h
-    cases h3 : ivgW n m2 vis (q + 1) wv with
+    cases h3 : ivgW (realCall p) n m2 vis (q + 1) wv with
     | none => rw [h3] at h; simp [ivK3] at h
     | some rm3 =>
     obtain ⟨r3, m3⟩ := rm3
     rw [h3, ivK3_some] at h
     have hcv2 : decCV (erA m2) (q + 1).toNat = some (stepCV ds[i.toNat]) := by
       rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt (hg2)) hcv1
-    obtain ⟨a3, hrun3, hS3, hg3⟩ := ivgW_okT h3 hS2 hcv2 (by rw [hq1]; omega) hwvl
+    obtain ⟨a3, hrun3, hS3, hg3, -⟩ := ivgW_okT hap hkp h3 hS2 hcv2 (by rw [hq1]; omega) hwvl hlps2 hCr2
     obtain ⟨hS', hM', hg', hvg'⟩ := tail m3 a3 hS3 (hg2.trans hg3) h
     refine ⟨a2, a3, hrun2, fun _ => by rw [hwvd]; exact hrun3, fun h' => absurd h' hv1, hS', hM',
       hg1.trans hg', hvg'⟩

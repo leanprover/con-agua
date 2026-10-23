@@ -288,6 +288,24 @@ theorem lfW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
     exact hne (if_neg h2)
   rw [← hdec, h2]; rfl
 
+/-- `lvl_eq_fueled`'s model keeps `consts_resolve_ffast`'s memo (its one call is a program call). -/
+theorem lfW_crOK {p : Prog} (hkp : CrKeep p) {n : Nat} {m m' : Mem} {u v : Word} {r : List Word}
+    (h : lfW (realCall p) n m u v = some (r, m')) (hCr : L.Stubs.CrOK m) : L.Stubs.CrOK m' := by
+  cases n with
+  | zero => simp [lfW] at h
+  | succ n =>
+  simp only [lfW] at h
+  cases hs : realCall p n "lvl_eq_c" [u, v] m with
+  | none => simp [hs] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  simp only [hs] at h
+  split at h
+  · cases h
+  · simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact hkp.call (im_mem _ rfl) hs hCr
+
 /-- **The value checks' common tail under `StageT`** (`dvK1_ok`'s): after the push, the stage
 relation at the extended environment and the core's memos well formed. -/
 theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
@@ -350,13 +368,14 @@ theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
   rfl
 
 /-- **`check_defn_val`/`check_opaque_val` under `StageT`** (`dvW_ok`'s). -/
-theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
+theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx} {ci : IConstantInfo} (msg : String)
     (h : dvW p (realCall p) n m vis c = some (r, m')) (hS : StageT dn vis fe m a)
     (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
-    (hv : hd? (erecP m) (c.toNat + 5) = some v) :
+    (hv : hd? (erecP m) (c.toNat + 5) = some v)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     ∃ a', (dvT fe cv v ci msg).run a = .ok (fe.push ci, a') ∧
       StageR dn (r.headD 0) (fe.push ci) m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
@@ -371,13 +390,14 @@ theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
   | succ n =>
   rw [dvW_step, ev, et] at h
   have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
-  cases h1 : ivgW n m vis (c + 1) wv with
+  cases h1 : ivgW (realCall p) n m vis (c + 1) wv with
   | none => rw [h1] at h; simp [dvK1] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1] at h
-  obtain ⟨a1, hrun1, hS1, hg1⟩ :=
-    ivgW_okT h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv) (by rw [hc1]; omega) hwvl
+  obtain ⟨a1, hrun1, hS1, hg1, -⟩ :=
+    ivgW_okT hap hkp h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv) (by rw [hc1]; omega)
+      hwvl hlps hCr
   obtain ⟨a', hrun', hS', hM', hg'⟩ := dvK1_okT hq hRp (by omega) msg h hS1
     (ArrExt.decCI (IWGrow.erecPExt hg1) hci) hcb hwvl hwtl hty
   refine ⟨a', ?_, hS', hM', hg1.trans hg'⟩
@@ -386,14 +406,17 @@ theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
 
 /-- **`check_thm_val` under `StageT`** (`tvW_ok`'s). -/
 theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCacheProg p)
-    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL)
+    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx}
     (h : tvW p (realCall p) n m vis c = some (r, m')) (hS : StageT dn vis fe m a)
     (hci : decCI (erecP m) dn c.toNat = some (.thmInfo cv))
     (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
-    (hv : hd? (erecP m) (c.toNat + 5) = some v) :
+    (hv : hd? (erecP m) (c.toNat + 5) = some v)
+    (hpre : ∃ env cP, ConLeche.EnvWF env ∧ ConRon.Bridge.CheckOK V env fe a ∧
+      Frontend.denoteCV a.store cv = some cP ∧ ConLeche.Expr.WScoped 0 cP.type)
+    (hCr : L.Stubs.CrOK m) :
     ∃ a', (checkThmVal V fe cv v).run a = .ok (fe.push (.thmInfo cv), a') ∧
       StageR dn (r.headD 0) (fe.push (.thmInfo cv)) m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
@@ -416,12 +439,14 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, tvK1_some] at h
+  have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ := hq.inferTypeCore_sim n hn' hS 0 wt hwtl r1 m1 h1
   cases h2 : realCall p n "ensure_sort_core" [vis, 0, r1.headD 0] m1 with
   | none => rw [h2] at h; simp [tvK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, tvK2_some] at h
+  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
     hq.ensureSortCore_sim n hn' hS1 0 (r1.headD 0) hx1l r2 m2 h2
   -- the zero level
@@ -449,22 +474,35 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, tvK4_some] at h
+  have hCr4 := lfW_crOK hkp h4 hCr2
   obtain ⟨x4, a4, hrun4, hS4, hg4, hr4⟩ :=
     lfW_okT hq hL hpc h4 hS2 hx2l hF.lv_lt.2.1 lu lz hdu hdz
+  -- the parameters' names read back at the guards: the prefix extends the store
+  have hlps4 : ∃ ks, cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
+    obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hpre
+    have hr1 := hrun1
+    rw [h00, ← hty] at hr1
+    have hr2 := hrun2
+    rw [hx1] at hr2
+    obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws hr1 hr2
+    obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4
+      (ConRon.Bridge.Core.lvlEq?_spec a2 _ _ hck2)
+    rw [hst4]
+    exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
   by_cases hb4 : r4.headD 0 = 0
   · rw [if_pos hb4] at h; simp at h
   rw [if_neg hb4] at h
   have ex4 := hr4 hb4
   -- the value's guards, then the common tail
-  cases h5 : ivgW n m4 vis (c + 1) wv with
+  cases h5 : ivgW (realCall p) n m4 vis (c + 1) wv with
   | none => rw [h5] at h; simp [dvK1] at h
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5
   rw [h5] at h
   have hg14 := hg1.trans (hg2.trans hg4)
-  obtain ⟨a5, hrun5, hS5, hg5⟩ :=
-    ivgW_okT h5 hS4 (by rw [hc1]; exact ArrExt.decCV (IWGrow.erecExt hg14) hcv)
-      (by rw [hc1]; omega) hwvl
+  obtain ⟨a5, hrun5, hS5, hg5, -⟩ :=
+    ivgW_okT hap hkp h5 hS4 (by rw [hc1]; exact ArrExt.decCV (IWGrow.erecExt hg14) hcv)
+      (by rw [hc1]; omega) hwvl hlps4 hCr4
   obtain ⟨a', hrun', hS', hM', hg'⟩ := dvK1_okT hq hRp hn' "type mismatch in theorem" h hS5
     (ArrExt.decCI (IWGrow.erecPExt (hg14.trans hg5)) hci) hcb hwvl hwtl hty
   refine ⟨a', ?_, hS', hM', hg14.trans (hg5.trans hg')⟩
