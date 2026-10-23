@@ -323,17 +323,6 @@ def grcKeepCallees : List FnName :=
   ["target_rec_pins", "class_stream_recs", "gen_rec_check_former_tys", "classes_nfs", "classes_ctors",
     "gen_rec_check_former_tys_c", "struct_elim_level", "class_fe_r", "gen_rec_check_pop_all"]
 
-/-- The recursor shapes' slice of the shape at `pp` lies below the top. -/
-def RecsB (m : Mem) (pp : Word) : Prop :=
-  ∀ o l, iwN m (pp.toNat + 2) = some o → iwN m (pp.toNat + 3) = some l → o + l ≤ iwTop m
-
-theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') (h3 : pp.toNat + 3 < iwTop m) :
-    RecsB m' pp := by
-  intro o l ho hl
-  rw [iwN_grow hg (by omega)] at ho
-  rw [iwN_grow hg h3] at hl
-  exact Nat.le_trans (h o l ho hl) hg.1
-
 /-- A number slice decoded in the cut pool is below the top (or empty). -/
 theorem decNL_trunc_slice {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL (truncM m) o l = some xs) :
     l = 0 ∨ o + l ≤ iwTop m := by
