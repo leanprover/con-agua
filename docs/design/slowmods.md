@@ -22,6 +22,7 @@ compare before/after of the same module, not single digits.
 | `ConAgua.Arena.RecCheckSpec18` (helper a) | 49 s, 9.8 GB | 18 s, 3.5 GB | `cpMem_eq`: the discharger clears the twenty `(b + k).toNat = …` facts before `omega` (PLAN memory hygiene) |
 | `ConAgua.Arena.InstLPWalkGo` (helper a) | 85-167 s, 2.0 GB | 31 s | `vcgen` with `L.evalC_spec`, simp the locals and reads to `rdW`, `grind` |
 | `ConAgua.Scan.Line` (helper c) | 231 s (344 s under load), 1.2 GB | 93 s under load | `lineLoop_spec`: `L.evalC_spec`/`L.evalE_spec`, `subst_vars`, simp, `grind` |
+| `ConAgua.Arena.WalkLeaves` (helper a) | 67 s (99 s under load), 1.3 GB | 51 s, 1.2 GB | `flNode_step`, `lsbNode_step`: `L.evalC_spec`, simp the locals and `rd64`/`a[i]` reads to `rdW`, `grind` |
 | `ConAgua.Arena.DeclDivMod2` (helper a) | 275 s, 3.1 GB | 14 s, 2.9 GB | `certCtx_specW` (straight-line code): plain `vcgen`, `rename_i`, split the callees' posts, `subst` the locals, one `simp (decide := true)`; depends on `vcgen`'s order of inaccessible names |
 | `ConAgua.Arena.RecCheckSpec14` (helper a) | 297 s, 3.5 GB | 78 s, 3.0 GB | recipe on `ee_spec`/`tte_spec`/`tka_spec`, `ld64_rdW_spec` in `tka_spec`; `tka_spec`'s 11 goals still ~75 s |
 
@@ -56,3 +57,5 @@ compare before/after of the same module, not single digits.
   so that one stays on `grind`.
 - `Scan.Line`'s `lineLoop_spec` (231 s): the time is `vcgen` itself under `sym` (130 s; plain
   `vcgen` without `sym` ran out of 4M heartbeats after 254 s), plus ~90 `finish`es of ~1 s. Open.
+- When the model reads memory with `rdW`, rewrite `rd64` and `a[x.toNat]` reads to `rdW` in the simp
+  before `grind` (helper a); otherwise `grind` fails or splits on `rdW_eq` instances.
