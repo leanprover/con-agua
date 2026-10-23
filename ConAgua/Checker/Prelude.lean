@@ -10,26 +10,28 @@ import ConRon.Arena.Frontend.PreludeText
 
 **`builtin_prelude()`** is the twin's `builtinPreludeE`: `parseBytes preludeText` with a fresh
 parse state, into the same stores. In L it runs **the frontend itself on the prelude bytes**: the
-functions reachable from `front_run` that read the input (byte array `0`) or the parse state's id
-tables (`NID`, `LID`, `EID`) are copied with `preFn` (`pre_<name>`; `scripts/checker_prog.py` lists
-them in `ConAgua/Checker/Prog.lean`), reading the byte array `PRE` (`2`) instead of the input, the
-constant `preludeLen` instead of its length, and the id tables `PNID`, `PLID`, `PEID` (dense),
-`PNSP`, `PLSP`, `PESP` (sparse) and `CTL[241‥249]` (`preCtl`) instead of the stream's (so the
-stream's parse starts with empty id tables, as the twin's second
-`parseBytes` does). `builtin_prelude` copies the prelude bytes (`preludeBytes`, a constant of the
-program) into `PRE`, runs `pre_front_run`, aborts if a line did not apply (the twin's
-`.error`), and records the number of prelude records in `CTL[240]`. The declaration arrays
-(`DECL`, `DLP`, `DIND`) are shared: the prelude's records are `DECL[0‥P)`, the stream's follow.
+functions reachable from `front_run` that read the input (byte array `0`), or call one that does,
+are copied with `preFn` (`pre_<name>`; `scripts/checker_prog.py` lists them in
+`ConAgua/Checker/Prog.lean`), reading the program's constant `preludeBytes` instead of the input
+(`ld8 0 i` becomes `ldc preludeBytes i`, `len8 0` the constant `preludeLenW`). Everything else is
+shared, the parse state included: `builtin_prelude` runs `pre_front_run` on the stream's own id
+tables and declaration arrays (empty at that point), aborts if a line did not apply (the twin's
+`.error`), moves the prelude's records out of `DECL` into `PDECL` (word `0` their number, record
+`i` at `1 + 8 i`, as `DECL`), and resets the parse state (`front_reset`: `DECL`'s count and the
+three id tables' dense sizes to `0`, their sparse maps cleared). So `front_run` then starts from
+the empty parse state, as the twin's second `parseBytes` does, and the prelude's records keep
+their pointers into the shared pool `DLP`. Proofs: the input renaming is a simulation (a copied
+function on memory `m` runs as the original on `m` with the input replaced by `preludeBytes`);
+the frontend's refinement then gives `parseBytes preludeText`.
 
-**`prepare_prelude()`** is `preparePrelude pre r.decls`: `frontOf` (each prelude record, in order,
-replaced by the first stream record that declares its key, which leaves the stream), then the
-ground hoist `hoistNatOpGround` (`hoist_nat_op_ground`, `ConAgua/Checker/Hoist.lean`), which
-reorders the stream when a pinned `Nat` operation precedes its ground. Then `DECL` is
-rewritten in the prepared order.
+**`prepare_prelude()`** is `preparePrelude pre r.decls`: first the prelude's records are put in
+front of the stream's in `DECL` (the stream's shifted up, `PDECL`'s copied below them), then
+`frontOf` (each prelude record, in order, replaced by the first stream record that declares its
+key, which leaves the stream), then the ground hoist `hoistNatOpGround` (`hoist_nat_op_ground`,
+`ConAgua/Checker/Hoist.lean`), which reorders the stream when a pinned `Nat` operation precedes
+its ground. Then `DECL` is rewritten in the prepared order.
 
-`preludeBytes` is the twin's `preludeText` (`preludeBytes_eq`, by the kernel). Proof obligations
-(DESIGN.md, lane `integrate`, `sorry`s): `preFn` preserves the frontend's refinement with the arrays
-renamed; `front_run`'s refinement from a `DECL` that already holds the prelude's records.
+`preludeBytes` is the twin's `preludeText` (`preludeBytes_eq`, by the kernel).
 -/
 
 namespace L.Checker
@@ -78,42 +80,19 @@ set_option maxRecDepth 100000 in
 theorem preludeBytes_eq : preludeBytes = ConRon.Arena.Frontend.preludeText.data.toList := by
   decide +kernel
 
-/-! ## The frontend, renamed onto the prelude's arrays -/
+/-! ## The frontend, reading the prelude's bytes -/
 
-/-- The prelude's bytes (a byte array). -/
-abbrev PRE : ArrId := 2
-/-- The prelude parse's id tables (the stream's are `NID`, `LID`, `EID`, `64`‥`66`). -/
-abbrev PNID : ArrId := 208
-abbrev PLID : ArrId := 209
-abbrev PEID : ArrId := 210
-/-- The prelude parse's sparse id tables (the stream's are `72`‥`74`, `Front/IdTable.lean`). -/
-abbrev PNSP : ArrId := 211
-abbrev PLSP : ArrId := 212
-abbrev PESP : ArrId := 213
-
-/-- The prelude parse's id-table `CTL` words: the stream's `64`‥`72` moved to `241`‥`249`. -/
-def preCtl (k : Word) : Word := if 64 ≤ k ∧ k ≤ 72 then k + 177 else k
+/-- The prelude's records, moved out of `DECL` after their parse (word `0` their number). -/
+abbrev PDECL : ArrId := 209
 
 /-- The prelude's length, as a word. -/
 def preludeLenW : Word := UInt64.ofNat preludeBytes.length
 
-/-- A word array of the frontend's parse state, renamed. -/
-def preA64 (a : ArrId) : ArrId :=
-  if a = L.Front.NID then PNID else if a = L.Front.LID then PLID else if a = L.Front.EID then PEID
-  else if a = 72 then PNSP else if a = 73 then PLSP else if a = 74 then PESP
-  else a
-
-/-- An index into array `a`, renamed: `CTL`'s id-table words (`preCtl`). -/
-def preIx (a : ArrId) : Expr → Expr
-  | .const k => if a = CTL then .const (preCtl k) else .const k
-  | e => e
-
-/-- An expression of the frontend, renamed. -/
+/-- An expression of the frontend, renamed: the input's bytes are the prelude's. -/
 def preE : Expr → Expr
-  | .ld8 a i => .ld8 (if a = 0 then PRE else a) (preE i)
+  | .ld8 a i => if a = 0 then .ldc preludeBytes (preE i) else .ld8 a (preE i)
   | .len8 a => if a = 0 then .const preludeLenW else .len8 a
-  | .ld64 a i => .ld64 (preA64 a) (preIx a (preE i))
-  | .len64 a => .len64 (preA64 a)
+  | .ld64 a i => .ld64 a (preE i)
   | .bin op a b => .bin op (preE a) (preE b)
   | .cmpw c a b => .cmpw c (preE a) (preE b)
   | .ldc d i => .ldc d (preE i)
@@ -133,8 +112,8 @@ def preName (t : NTree) (f : String) : String :=
 
 def preS (t : NTree) : Stmt → Stmt
   | .set x e => .set x (preE e)
-  | .st8 a i e => .st8 (if a = 0 then PRE else a) (preE i) (preE e)
-  | .st64 a i e => .st64 (preA64 a) (preIx a (preE i)) (preE e)
+  | .st8 a i e => .st8 a (preE i) (preE e)
+  | .st64 a i e => .st64 a (preE i) (preE e)
   | .seq s u => .seq (preS t s) (preS t u)
   | .ite c s u => .ite (preC c) (preS t s) (preS t u)
   | .while c s => .while (preC c) (preS t s)
@@ -143,7 +122,7 @@ def preS (t : NTree) : Stmt → Stmt
   | .gset g e => .gset g (preE e)
   | s => s
 
-/-- **A frontend function, renamed onto the prelude's arrays** (`t`: the copied functions). -/
+/-- **A frontend function, reading the prelude's bytes** (`t`: the copied functions). -/
 -- con-ron: none — a renaming of the frontend's L code (the twin's `parseBytes` runs on any bytes)
 def preFn (t : NTree) (d : FunDecl) : FunDecl := { d with body := preS t d.body }
 
@@ -153,20 +132,43 @@ def nameTree (fs : List String) : NTree :=
 
 /-! ## `builtin_prelude()` -/
 
-/-- `builtin_prelude()`: `builtinPreludeE` — the prelude's bytes into `PRE`, the frontend on them;
-the number of prelude records into `CTL[240]`. -/
+/-- `nid_sp_clear()` etc.: the id tables' sparse maps cleared. -/
+-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
+def nidSpClear : FunDecl := memoClearG (L.Front.spS L.Front.NID)
+-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
+def lidSpClear : FunDecl := memoClearG (L.Front.spS L.Front.LID)
+-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
+def eidSpClear : FunDecl := memoClearG (L.Front.spS L.Front.EID)
+
+/-- `front_reset()`: the empty parse state on the frontend's arrays (`StateD.blank`): no
+declaration records, the id tables' dense sizes `0`, their sparse maps cleared. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init
+def frontResetL : FunDecl := lfn () locals (z) {
+  DECL.u64[0] := 0;
+  CTL.u64[70] := 0;
+  CTL.u64[71] := 0;
+  CTL.u64[72] := 0;
+  z := call nid_sp_clear();
+  z := call lid_sp_clear();
+  z := call eid_sp_clear();
+  return 0
+}
+
+/-- `builtin_prelude()`: `builtinPreludeE` — the frontend on the prelude's bytes, its records
+moved to `PDECL`, the parse state reset. -/
 -- con-ron: ConRon/Arena/Frontend/Prelude.lean:39-52 ConRon.Arena.Frontend.builtinPreludeE
 @[l_impl ConRon.Arena.Frontend.builtinPreludeE]
-def builtinPreludeL : FunDecl := lfn () locals (i, r) {
-  if len(PRE.u8) < len(preludeBytes.c8) { abort };
-  i := 0;
-  while i < len(preludeBytes.c8) {
-    PRE.u8[i] := preludeBytes.c8[i];
-    i += 1
-  };
+def builtinPreludeL : FunDecl := lfn () locals (r, n, i, z) {
   r := call pre_front_run();
   if r != 0 { abort };
-  CTL.u64[240] := DECL.u64[0];
+  n := 1 + 8 * DECL.u64[0];
+  if len(PDECL.u64) < n { abort };
+  i := 0;
+  while i < n {
+    PDECL.u64[i] := DECL.u64[i];
+    i += 1
+  };
+  z := call front_reset();
   return 0
 }
 
@@ -205,8 +207,31 @@ def declKeyL : FunDecl := lfn (i) locals (x, r) {
   return r
 }
 
-/-- `prepare_prelude()`: `preparePrelude pre ds` on `DECL` = the prelude's `P = CTL[240]`
-records, then the stream's. -/
+/-- `prelude_join()`: `DECL` := the prelude's records (`PDECL`), then the stream's (`DECL`'s).
+Returns the prelude's number. -/
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
+def preludeJoinL : FunDecl := lfn () locals (np, ns, i) {
+  np := PDECL.u64[0];
+  ns := DECL.u64[0];
+  if 1152921504606846976 <= np { abort };
+  if 1152921504606846976 <= ns { abort };
+  if len(DECL.u64) < 1 + 8 * (np + ns) { abort };
+  i := 8 * ns;
+  while 0 < i {
+    i -= 1;
+    DECL.u64[1 + 8 * np + i] := DECL.u64[1 + i]
+  };
+  i := 0;
+  while i < 8 * np {
+    DECL.u64[1 + i] := PDECL.u64[1 + i];
+    i += 1
+  };
+  DECL.u64[0] := np + ns;
+  return np
+}
+
+/-- `prepare_prelude()`: `preparePrelude pre ds`, the prelude's `P` records (`PDECL`) and the
+stream's (`DECL`) joined in `DECL` first. -/
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:77-90 ConRon.Arena.Frontend.pick
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:133-140 ConRon.Arena.Frontend.preparePrelude
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
@@ -215,7 +240,7 @@ records, then the stream's. -/
   ConRon.Arena.Frontend.frontOf ConRon.Arena.Frontend.pick]
 def preparePreludeL : FunDecl :=
     lfn () locals (np, n, ord, mk, a, key, j, f, d, c, t, i, q, k) {
-  np := CTL.u64[240];
+  np := call prelude_join();
   n := DECL.u64[0];
   if n < np { abort };
   if 1152921504606846976 <= n { abort };
@@ -266,7 +291,9 @@ def preparePreludeL : FunDecl :=
 
 /-- The prelude stages' functions (`checkerProg` takes them from here). -/
 def preludeProg : Prog :=
-  [("builtin_prelude", builtinPreludeL), ("prepare_prelude", preparePreludeL),
+  [("builtin_prelude", builtinPreludeL), ("front_reset", frontResetL),
+   ("nid_sp_clear", nidSpClear), ("lid_sp_clear", lidSpClear), ("eid_sp_clear", eidSpClear),
+   ("prepare_prelude", preparePreludeL), ("prelude_join", preludeJoinL),
    ("decl_declares", declDeclaresL), ("decl_key", declKeyL)] ++ hoistProg
 
 end L.Checker

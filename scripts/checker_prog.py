@@ -35,10 +35,8 @@ ASM_OUT = os.path.join(ROOT, "ConAgua", "Checker", "Asm.lean")
 ASM_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
-# the frontend's input and parse-state id tables (`ConAgua/Checker/Prelude.lean`, `preFn`): the
-# dense arrays 64-66, the sparse arrays 72-74, their `CTL` words 64-72
-TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) (?:6[4-6]|7[2-4]) |\(n64 (?:6[4-6]|7[2-4])\)"
-                   r"|\((?:l64|s64) 1 \(c (?:6[4-9]|7[0-2])\)")
+# the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
+TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)")
 ENTRY = "check"
 # every module that imports the generated file (the asm parts, the write-set decisions, ...): its
 # olean may be stale or missing while the file is regenerated
@@ -89,8 +87,8 @@ def assemble(dumps):
         reach.append(f)
         for g, nargs, nres in e2e.calls_of(bodies[c[1]][2]):
             todo.append(g[len(PRE):] if g.startswith(PRE) else g)
-    # the frontend copied onto the prelude's arrays: from `front_run`, every function that touches
-    # the input or the id tables, or calls one that does
+    # the frontend copied onto the prelude's bytes: from `front_run`, every function that reads
+    # the input, or calls one that does
     calls = {f: [g for g, _, _ in e2e.calls_of(bodies[chosen[f]][2])] for f in reach}
     fr, todo2 = set(), ["front_run"]
     while todo2:
@@ -174,7 +172,7 @@ open L L.Compiler
 /-- The called functions with no L code yet (each aborts). -/
 def checkerStubs : List String := [{stub_names}]
 
-/-- The frontend functions `builtin_prelude` runs on the prelude's arrays ({npre}; `preFn`,
+/-- The frontend functions `builtin_prelude` runs on the prelude's bytes ({npre}; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
 def preNames : List String := [
   {pre_names}]
