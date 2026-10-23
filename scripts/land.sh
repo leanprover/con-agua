@@ -7,6 +7,7 @@
 #   2. Builds the given targets (default: ConAgua) with scripts/lake (which also seeds the shared cache).
 #   3. On a merge conflict or build failure: aborts/resets the merge, releases the lock, exits non-zero,
 #      so the lane fixes it in its own worktree (merge master there first) and runs land.sh again.
+export LAKE_NICE=0  # landings run at normal priority (scripts/lake nices lanes' builds)
 set -euo pipefail
 branch="$1"; shift || true
 # always build the whole library (ConAgua) plus whatever extra targets the lane names
