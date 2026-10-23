@@ -92,10 +92,9 @@ abbrev RSET : ArrId := 150
 /-- The schema of `RSET`. -/
 def rsetSch : MemoSch := ⟨RSET, 148⟩
 
-/-- `memo_push(h)`'s checks: room in the memo, `h` not in the set, room in the set. -/
+/-- `memo_push(h)`'s checks on the set: the probe returned, and `h` is not in the set. -/
 def rsetOK (m : Mem) (h : Word) : Prop :=
-  mfindG rsetSch m h 0 ≠ [] ∧ (mfindG rsetSch m h 0).headD 0 = 0 ∧
-    ¬ (nG rsetSch m >>> 2) * 3 < cntG rsetSch m + 1
+  mfindG rsetSch m h 0 ≠ [] ∧ (mfindG rsetSch m h 0).headD 0 = 0
 
 instance (m : Mem) (h : Word) : Decidable (rsetOK m h) := by unfold rsetOK; infer_instance
 
@@ -112,10 +111,14 @@ def memoPush : FunDecl := lfn (h) locals (o, f, j, d, z) {
   return 0
 }
 
+/-- The memory after recording `h` in the set (`m` itself where the put aborts). -/
+def mpushPut (m : Mem) (h : Word) : Mem :=
+  (mputG rsetSch m h 0 1 0 ((mfindG rsetSch m h 0).tail.headD 0)).getD m
+
 /-- The memory after recording `h`: in the set, then at the memo's end. -/
 def mpushMem (m : Mem) (h : Word) : Mem :=
-  ((mputMem rsetSch m 0 ((mfindG rsetSch m h 0).tail.headD 0) h 0 1).set64 RMEMO (memoCnt m) h).set64
-    CTL 132 (memoCnt m + 1)
+  ((mpushPut m h).set64 RMEMO (memoCnt (mpushPut m h)) h).set64 CTL 132
+    (memoCnt (mpushPut m h) + 1)
 
 /-- **The model of `memo_push`**: `none` where it aborts. -/
 def mpushW (m : Mem) (h : Word) : Option Mem :=
@@ -144,12 +147,19 @@ theorem memoPush_spec (p : Prog) (hp : p.lookup "memo_push" = some memoPush)
         memoFindG_spec rsetSch p "rset_find" hf n, memoPutG_spec rsetSch p "rset_put" hu n] <;>
       finish [mpushW, memoCnt]
 
-theorem mputMem_memo (m : Mem) (j h : Word) :
-    memoCnt (mputMem rsetSch m 0 j h 0 1) = memoCnt m ∧
-      (mputMem rsetSch m 0 j h 0 1).len64 RMEMO = m.len64 RMEMO := by
-  have hf := (mputMem_frame rsetSch ⟨by decide, by decide⟩ m 0 j h 0 1)
-  refine ⟨hf.2.1 132 (by simp [rsetSch]), ?_⟩
-  simp only [Mem.len64, hf.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)]
+theorem mpushPut_frame (m : Mem) (h : Word) : MemFrame [RSET] [149] m (mpushPut m h) := by
+  unfold mpushPut
+  cases hp : mputG rsetSch m h 0 1 0 ((mfindG rsetSch m h 0).tail.headD 0) with
+  | none => exact MemFrame.refl _ _ _
+  | some m₁ => exact mputG_frame rsetSch ⟨by decide, by decide⟩ m m₁ _ _ _ _ _ hp
+
+theorem mpushPut_memo (m : Mem) (h : Word) :
+    memoCnt (mpushPut m h) = memoCnt m ∧ (mpushPut m h).len64 RMEMO = m.len64 RMEMO ∧
+      (mpushPut m h).arr64 RMEMO = m.arr64 RMEMO := by
+  have hf := mpushPut_frame m h
+  have hR := hf.1 RMEMO (by simp [RSET, RMEMO]) (by decide)
+  refine ⟨hf.2.1 132 (by simp), ?_, hR⟩
+  simp only [Mem.len64, hR]
 
 /-- What `memo_push` checked, and its memory. -/
 theorem mpushW_eq {m m' : Mem} {h : Word} (hW : mpushW m h = some m') :
@@ -161,16 +171,14 @@ theorem mpushW_eq {m m' : Mem} {h : Word} (hW : mpushW m h = some m') :
   rename_i h2
   split at hW; · cases hW
   rename_i m₁ hput
-  simp only [mputG, ite_true, true_and] at hput
-  split at hput; · cases hput
-  rename_i h3
-  cases hput
-  obtain ⟨hc, hl⟩ := mputMem_memo m ((mfindG rsetSch m h 0).tail.headD 0) h
+  have hpp : mpushPut m h = m₁ := by simp only [mpushPut, hput, Option.getD_some]
+  obtain ⟨hc, hl, -⟩ := mpushPut_memo m h
+  rw [hpp] at hc hl
   split at hW
   · rename_i h4
     cases hW
     rw [hc, hl] at h4
-    exact ⟨h4, ⟨h1, by simpa using h2, h3⟩, by simp only [mpushMem, hc]⟩
+    exact ⟨h4, ⟨h1, by simpa using h2⟩, by simp only [mpushMem, hpp]⟩
   · cases hW
 
 /-- The back reference `k` is to an entry of the memo. -/

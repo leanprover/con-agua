@@ -196,11 +196,11 @@ theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Memo
     {e : ConLeche.Expr} (he : e ∉ seen) (x : Word)
     (hx : x.toNat < 2 ^ 32) (hsz' : memoCnt mem < mem.len64 RMEMO) :
     MemoR (mpushMem mem x) (seen ++ [e]) (m.insert e (decI x)) := by
-  have hf := mputMem_frame rsetSch ⟨by decide, by decide⟩ mem 0 ((mfindG rsetSch mem x 0).tail.headD 0) x 0 1
-  obtain ⟨hc, hl⟩ := mputMem_memo mem ((mfindG rsetSch mem x 0).tail.headD 0) x
-  have h1 := h.of_eq (hf.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)) hc (hf.2.2.1 CTL)
+  have hf := mpushPut_frame mem x
+  obtain ⟨hc, hl, hR⟩ := mpushPut_memo mem x
+  have h1 := h.of_eq hR hc (hf.2.2.1 CTL)
   have := h1.push0 he x hx (by rw [hc, hl]; exact hsz')
-  simpa only [mpushOld, mpushMem, hc] using this
+  simpa only [mpushOld, mpushMem] using this
 
 /-! ## The handle set `RSET` holds every memo entry -/
 
@@ -237,7 +237,7 @@ no entry of the memo is `h`. -/
 theorem RsetR.miss {mem : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 2 ^ 32) (hok : rsetOK mem h)
     (k : Nat) (hk : k < (memoCnt mem).toNat) : rdW (mem.arr64 RMEMO) (UInt64.ofNat k) ≠ h := by
   obtain ⟨mp, hG, hc⟩ := hR
-  obtain ⟨h1, h2, -⟩ := hok
+  obtain ⟨h1, h2⟩ := hok
   have hn := memoRG_miss rsetSch bmKey (fun _ => ()) mem mp hG h 0 ⟨hh, rfl⟩ h1 h2
   intro he
   have := hc k hk
@@ -265,14 +265,8 @@ theorem RsetR.push {mem mem' : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 
     rw [this]; exact hput
   have hG1 := memoRG_set rsetSch rsetSch_wf bmKey (fun _ => ()) mem mp hG h 0 1 ⟨hh, rfl⟩ m₁ hset
   rename_i hsz
-  have hm₁ : m₁ = mputMem rsetSch mem 0 ((mfindG rsetSch mem h 0).tail.headD 0) h 0 1 := by
-    simp only [mputG, ite_true, true_and] at hput
-    split at hput; · cases hput
-    cases hput; rfl
-  obtain ⟨hc1, -⟩ := mputMem_memo mem ((mfindG rsetSch mem h 0).tail.headD 0) h
-  rw [← hm₁] at hc1
-  have hf1 := (mputMem_frame rsetSch rsetSch_wf mem 0 ((mfindG rsetSch mem h 0).tail.headD 0) h 0 1)
-  rw [← hm₁] at hf1
+  have hf1 := mputG_frame rsetSch rsetSch_wf mem m₁ _ _ _ _ _ hput
+  have hc1 : memoCnt m₁ = memoCnt mem := hf1.2.1 132 (by simp [rsetSch])
   have hR1 : m₁.arr64 RMEMO = mem.arr64 RMEMO := hf1.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)
   have hf2 : MemFrame [RMEMO] [132] m₁ ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1)) :=
     ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp)).trans
@@ -463,8 +457,8 @@ theorem exLeafK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
 
 theorem mpushMem_frame1 (m : Mem) (h : Word) : MemFrame [RMEMO, RSET] [132, 149] m (mpushMem m h) := by
   simp only [mpushMem]
-  exact (((mputMem_frame rsetSch ⟨by decide, by decide⟩ _ _ _ _ _ _).mono (by simp [rsetSch])
-    (by simp [rsetSch])).trans ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp))).trans
+  exact (((mpushPut_frame m h).mono (by simp)
+    (by simp)).trans ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp))).trans
     ((MemFrame.setCtl _ 132 _).mono (by simp) (by simp))
 
 theorem mpushMem_frame (m : Mem) (h : Word) : MemFrame ExprA ExprC m (mpushMem m h) :=
