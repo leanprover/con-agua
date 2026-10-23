@@ -188,7 +188,7 @@ theorem classGenRecTyTail_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (
         stubM_spec p "fvar_type_ds" n, slAppend_specW p h.alloc h.copy h.app n,
         slSnoc_specW p h.alloc h.copy h.snoc n,
         rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-        mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct n] <;>
+        mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
 theorem classGenRecTy_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (g c : Word) :

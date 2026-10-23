@@ -206,11 +206,11 @@ structure InstProg (p : Prog) : Prop extends CstProg p where
 /-- `check_block_tele` as a `Sim` at every fuel. -/
 theorem installTeleSim {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {nP q : Word} {msh : MemberShape}
-    (hS : StageR dn vis fe m a) (hms : MemOK m q.toNat msh) :
+    (hS : StageR dn vis fe m a) (hms : MemOK m q.toNat msh) (hA : AbsOK m) :
     Sim (callW p n "check_block_tele" [vis, nP, q] m) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
-      (fun r x m' a' => TeleOut dn vis fe m r x m' a') :=
+      (fun r x m' a' => TeleOut dn vis fe m r x m' a' ∧ AbsOK m') :=
   Sim.callW_pos (fun k => installSimCall (checkBlockTele_refines p hP.toCstProg hP.bTele k
-    ⟨m, Locals.init []⟩ a dn vis fe nP q msh hS hms) fun _ _ ⟨_, hok, hQ⟩ => ⟨hok, hQ⟩) n
+    ⟨m, Locals.init []⟩ a dn vis fe nP q msh hS hms hA) fun _ _ ⟨_, hok, hQ, hA'⟩ => ⟨hok, hQ, hA'⟩) n
 
 /-- **A `rec2` record of a checked former**, decoded below the tops. -/
 theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
@@ -244,41 +244,45 @@ theorem installRec2Tele {p : Prog} (hP : InstProg p) (n : Nat) {dn : NIdx → Op
 /-- **`check_block_teles`' model refines `checkBlockTeles`.** -/
 theorem ibtsW_sim (p : Prog) (hP : InstProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (nP : Word) (n : Nat) : ∀ (m : Mem) (a : AState) (o l : Word) (mss : List MemberShape),
-    StageR dn vis fe m a → MemsOK m o l mss →
+    StageR dn vis fe m a → MemsOK m o l mss → AbsOK m →
     Sim (ibtsW p n m vis nP o l) (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-        PSlR decTele x (r.headD 0) (r.tail.headD 0) m') := by
+        PSlR decTele x (r.headD 0) (r.tail.headD 0) m' ∧ AbsOK m') := by
   induction n with
-  | zero => intro m a o l mss _ _; rw [ibtsW_zero]; exact Sim.of_none
+  | zero => intro m a o l mss _ _ _; rw [ibtsW_zero]; exact Sim.of_none
   | succ n ih =>
-  intro m a o l mss hS hms
+  intro m a o l mss hS hms hA
   by_cases hl : l = 0
   · rw [ibtsW_nil p n m vis nP o l hl]
     have : mss = [] := by
       have h := hms.1.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm
     subst this
-    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decTele m⟩
+    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decTele m, hA⟩
   obtain ⟨q, x, rest, rfl, hw, hqb, hmok, hrest⟩ := hms.cons hl
   rw [ibtsW_cons p n m vis nP o l hl, hw]
   unfold ConRon.Arena.checkBlockTeles
   refine Sim.bindK (K := ibtsK1 p n vis nP o l) (body := fun r1 m1 => ibtsK2 p n vis nP o l
       (callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [ibtsK1])
       (fun r m₁ => ibtsK1_some p n m₁ vis nP o l r)
-    (installTeleSim hP n hS hmok) ?_
-  rintro r1 x1 m1 a1 hT1
+    (installTeleSim hP n hS hmok hA) ?_
+  rintro r1 x1 m1 a1 ⟨hT1, hA1⟩
   refine Sim.mstep (K := ibtsK2 p n vis nP o l) (by simp [ibtsK2])
     (fun r m₁ => ibtsK2_some p n m₁ vis nP o l r) fun r2 m2 h2 => ?_
   obtain ⟨hS2, hg2, hd2, hlt2⟩ := installRec2Tele hP n hT1 h2
+  have hA2 : AbsOK m2 := by
+    obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (rec2_specW p hP.alloc n hP.rec2 _ _ _) h2
+    exact recW_afr hW hA1
   refine Sim.bindK (K := ibtsK3 p n (r2.headD 0)) (body := fun r3 m3 =>
       ibtsK4 (callW p n "sl_cons" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
-    (ih m2 a1 (o + 1) (l - 1) rest hS2 (hrest.grow hg2)) ?_
-  rintro r3 xs m3 a3 ⟨hS3, hg3, hxs⟩
+    (ih m2 a1 (o + 1) (l - 1) rest hS2 (hrest.grow hg2) hA2) ?_
+  rintro r3 xs m3 a3 ⟨hS3, hg3, hxs, hA3⟩
   refine Sim.mstep (K := ibtsK4) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
   obtain ⟨hS4, hg4, hd4, htop4⟩ := partsConsPL decTele_mono hW hS3 hxs.2 hxs.1 (hd2.grow (decTele_mono _) hg3)
-  exact Sim.ret ⟨hS4, (hg2.trans hg3).trans hg4, hd4, Nat.le_of_eq htop4⟩
+  exact Sim.ret ⟨hS4, (hg2.trans hg3).trans hg4, hd4, Nat.le_of_eq htop4, consW_afr hW hA3⟩
 
 /-- **`check_block_teles` refines `checkBlockTeles`** (through `check_block_tele`'s stubs): the
 member slice decoded below the tops with its formers' constant records below the tops; the
@@ -286,15 +290,16 @@ checked formers a slice of `[cvTa, s]` records, decoded below the tops (`sl_cons
 @[refines ConRon.Arena.checkBlockTeles]
 theorem checkBlockTeles_refines (p : Prog) (hP : InstProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP o l : Word)
-    (mss : List MemberShape) (hS : StageR dn vis fe s₀.mem a₀) (hms : MemsOK s₀.mem o l mss) :
+    (mss : List MemberShape) (hS : StageR dn vis fe s₀.mem a₀) (hms : MemsOK s₀.mem o l mss)
+    (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_teles" [vis, nP, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       PSlR decTele (AM.res (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀) (r.headD 0)
-        (r.tail.headD 0) s'.mem; ⊤⦄ :=
+        (r.tail.headD 0) s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (ibts_spec p hP.bTeles n s₀ vis nP o l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (ibtsW_sim p hP dn vis fe nP n _ a₀ o l mss hS hms) hm
+    let ⟨hok, hQ⟩ := Sim.run (ibtsW_sim p hP dn vis fe nP n _ a₀ o l mss hS hms hA) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind

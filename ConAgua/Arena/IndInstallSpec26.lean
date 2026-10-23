@@ -25,12 +25,6 @@ namespace L.Ind
 open L.Arena
 
 /-- Add a fact about the memory after, known from the model's run. -/
-theorem Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {F : Mem → Prop}
-    (h : Sim mo op a Q) (hf : ∀ r m', mo = some (r, m') → F m') :
-    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ F m') := by
-  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, hf r m' e⟩
-
 /-! ## `check_struct_proj_table`, keeping the memos -/
 
 /-- **`tblW_ok` with the memo frame**: the install writes outside the memo region. -/

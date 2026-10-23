@@ -95,9 +95,9 @@ theorem AFr.setCtl (m : Mem) (c : Word) (h48 : (c != 48) = true) (v : Word) : AF
 /-- `afr_set`: `AFr m m'` for `m'` a chain of writes of `m` apart from array 49 and `CTL[48]`. -/
 macro "afr_set" : tactic => `(tactic|
   repeat (first
-    | exact AFr.refl _
-    | refine AFr.trans ?_ (AFr.setCtl _ _ (by decide) _)
-    | refine AFr.trans ?_ (AFr.set64 _ _ (by decide) (by decide) _ _)))
+    | with_reducible refine AFr.trans ?_ (AFr.set64 _ _ (by decide) (by decide) _ _)
+    | with_reducible refine AFr.trans ?_ (AFr.setCtl _ _ (by decide) _)
+    | with_reducible exact AFr.refl _))
 
 /-- Across a writer of the record pool (`IW`, its top `CTL[200]`). -/
 theorem AbsOK.iw {m m' : Mem} (h : AbsOK m) (hf : MemFrame [IW] [200] m m') : AbsOK m' :=

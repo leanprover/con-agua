@@ -215,12 +215,16 @@ theorem ceinternW_mfr {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r
 theorem envFindW_mfr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     MFr [] [] m m' := by rw [envFindW_mem h]; exact MFr.refl _ _ _
 
+/-- Across `abstract1_fast` (its write set, the `abstract1` memo and the store, below 64). -/
+theorem MFr.ofAbF {m m' : Mem} {args r : List Word} (h : abF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low ⟨_, _, abF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
+
 theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List Word),
     closeW n m dO dl i body = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, h => by simp [closeW] at h
   | n + 1, m, m', dO, dl, i, body, r, h => by
     unfold closeW closeK1 closeK2 closeK3 at h
-    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofStub, MFr.ofI1F, mkForallW_mfr]
+    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofAbF, MFr.ofI1F, mkForallW_mfr]
 
 theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
   unfold stripW stripK at h

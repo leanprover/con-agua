@@ -445,7 +445,7 @@ theorem call1Close_spec (n : Nat) (s₀ : St) (xso xsl e app : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        stubM_spec p "fvar_type_ds" n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl n] <;>
+        stubM_spec p "fvar_type_ds" n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n] <;>
       finish (gen := 20)
 
 theorem call1Tail_spec (n : Nat) (s₀ : St) (fvso fvsl pvo pvl rlvls xso xsl idxo idxl r i e : Word) :
@@ -515,7 +515,7 @@ theorem ruleClose_spec (n : Nat) (s₀ : St) (g s fo fl ihso ihsl : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
         slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, stubM_spec p "fvar_type_ds" n,
-        closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl n] <;>
+        closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 
 theorem ruleBody_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls x rP s fo fl : Word) :
