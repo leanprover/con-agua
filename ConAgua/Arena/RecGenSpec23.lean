@@ -327,8 +327,7 @@ end rel
 /-- **`class_nodes_agree` refines `classNodesAgree`** (through `target_k53`'s contracts and
 stubs): the class's shape (`BSOK`), former types, the inductive hypothesis's class, the recorded
 telescope, the datum's variables and the class's entries decoded below the tops, the walk memos
-well formed. -/
-@[refines ConRon.Arena.classNodesAgree]
+well formed. Under `StageR`; the census link is `classNodesAgree_refinesC` (`IndT/RecGen23`). -/
 theorem classNodesAgree_refines {p : Prog} (P : CnaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl mc teo tel leaf fvo fvl i eo el : Word)
     (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (tele fvs : List EIdx)
