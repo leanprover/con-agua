@@ -208,4 +208,158 @@ theorem TwinPend.step {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck
 
 end twin
 
+/-! ## The L side -/
+
+/-- **The program hypotheses phase B under `StageT` takes**: the bracket, `check_value_group`'s
+text, the core's entry points under `StageT`, the leaves' and the loop's write sets, and phase B's
+three functions. -/
+structure PhaseBProg (p : Prog) : Prop where
+  bracket : BracketProg p
+  cvg : CvgProg p
+  knot : KnotStageProg p
+  leaf : LeafClosed p
+  loop : LoopClosed p
+  cp : p.lookup "check_pending" = some checkPendingL
+  cpg : p.lookup "check_pending_go" = some checkPendingGoL
+  cpx : p.lookup "check_pending_next" = some checkPendingNextL
+
+section bracket
+variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
+  (hb : BracketProg p)
+include hb
+
+/-- **`scratch_enter` keeps `TwinOK`** from a loop head (the store well formed, the scratch tier
+off), at any environment `fe'` (phase B's: the record's view). `CheckerT.lean`'s `enter_loopW`
+with the two environments apart. -/
+theorem enter_loopB {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word)
+    (fe fe' : IFEnv) (pend : Array PendingCheck) (hwf : StoreWF a₀.store)
+    (hoff : a₀.store.scratchOn = false) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds)
+    (hTw : TwinOK dn s₀.mem a₀ fe') (hfl : pinW s₀.mem 0 ≠ 0) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "scratch_enter" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
+      LoopR pins dn s'.mem (AM.st enterScratch a₀) vis fe pend ds ∧
+      TwinOK dn s'.mem (AM.st enterScratch a₀) fe' ∧ pinW s'.mem 0 ≠ 0; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (enter_loop dn ds p hb n s₀ a₀ vis fe pend hR)
+  obtain ⟨-, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
+  subst hs
+  have hf : MemFrame [] (resetCtl ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
+  refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hfl⟩
+  rw [enterScratch_st]
+  exact (hTw.frameLo hf (fun x h => by
+    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
+    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+      <;> decide)).enter hwf hoff
+
+/-- **`scratch_drop` keeps the core's memos** (a leaf), beside the loop's relation. -/
+theorem drop_loopB (hlc : LeafClosed p) {pins : List INatOpPinSet} (n : Nat) (s₀ : St)
+    (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
+    (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) (hc : CoreMemos s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "scratch_drop" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧
+      LoopR pins dn s'.mem (AM.st dropScratch a₀) vis fe pend ds ∧ CoreMemos s'.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (drop_loop (pins := pins) dn ds p hb n s₀ a₀ vis fe pend hR)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame hlc n (leaf_mem "scratch_drop" rfl) [] s₀)
+  subst hs
+  exact ⟨hloc, hok, hL, hc.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp⟩
+
+end bracket
+
+section specs
+variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
+  (ds : Array IDeclaration) (p : Prog)
+
+/-- **`check_value_group` refines `checkValueGroup` under `StageT`** (the program's own core,
+`cvgW_okT`): from the loop's relation, `TwinOK` and the pin flag, the loop's relation and the
+core's memos after it. -/
+@[refines ConRon.Arena.checkValueGroup]
+theorem checkValueGroup_specT (hm : mode = .verified) (hP : CvgProg p) (hq : KnotStageProg p) :
+    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
+      (pend : Array PendingCheck) (g : Word) (vg : ValueGroup),
+      decVG (erecP s₀.mem) g.toNat = some vg →
+      LoopR pins dn s₀.mem a₀ vis fe pend ds → TwinOK dn s₀.mem a₀ fe → pinW s₀.mem 0 ≠ 0 →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_value_group" [vis, g]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkValueGroup mode fe vg) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (checkValueGroup mode fe vg) a₀) vis fe pend ds ∧
+      CoreMemos s'.mem; ⊤⦄ := by
+  intro n hn s₀ a₀ vis fe pend g vg hg hR hTw hfl
+  subst hm
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (cvg_specW p hP (realCall p) (realCall_spec p) n s₀ vis g)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hP.closed.memFrame n (f := "check_value_group") (by decide) [vis, g] s₀)
+  subst hs
+  obtain ⟨a', hrun', hS', hg'⟩ :=
+    cvgW_okT hq hq.knot.lvc hq.lvlEqC hn hW ⟨⟨hR.check, hR.iw⟩, hTw, hfl⟩ hg
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun'
+  refine ⟨hloc, hok, hst ▸ hR.of_step hS'.stage hf ?_, hS'.twin.memos⟩
+  rw [← erecP_reset s.mem]
+  exact IWGrow.erecPExt hg'
+
+/-- `TwinOK` at a pending record's view, from phase B's twin invariant and the memory's half. -/
+theorem TwinPend.twinOK {fe : IFEnv} {pc : PendingCheck} {rest : List PendingCheck} {a : AState}
+    {m : Mem} (hT : TwinPend fe (pc :: rest) a) (hM : LoopMem dn m a) (hc : CoreMemos m) :
+    TwinOK dn m a (fe.restrictTo pc.vis) := by
+  obtain ⟨env, hck⟩ := hT.checkAt
+  exact TwinOK.of_check hck ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2⟩
+
+/-- **`check_pending` refines `checkPending` under `StageT`**: the bracket's opening keeps
+`TwinOK` at the record's view, `check_value_group` runs from `StageT`, the drop is a leaf. -/
+@[refines ConRon.Arena.checkPending]
+theorem checkPending_refinesT (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (j vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck) (hj : j.toNat < pend.size) (rest : List PendingCheck)
+    (hT : TwinPend fe (pdAt pend j :: rest) a₀)
+    (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) (hM : LoopMem dn s₀.mem a₀)
+    (hc : CoreMemos s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending" [j, vis]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkPending mode fe (pdAt pend j)) a₀ ∧
+      LoopR pins dn s'.mem (AM.st (checkPending mode fe (pdAt pend j)) a₀) vis fe pend ds ∧
+      CoreMemos s'.mem; ⊤⦄ := by
+  have hb := hP.bracket
+  have hvB := hR.vis
+  have hwf : StoreWF a₀.store := hT.stateOK.wf
+  have hoff := hT.off
+  have hTw := hT.twinOK dn hM hc
+  have hfl := hM.flag
+  have hres : ∀ m a, LoopR pins dn m a vis fe pend ds → ∀ v : Word,
+      LoopR pins dn m a v (fe.restrictTo v.toNat) pend ds := fun m a h v => h.restrict v
+  have hunr : ∀ m a (v : Word), LoopR pins dn m a v (fe.restrictTo (pdAt pend j).vis) pend ds →
+      LoopR pins dn m a vis fe pend ds := fun m a v h => h.unrestrict hvB
+  have hw : ∀ (m : Mem) (a : AState), LoopR pins dn m a vis fe pend ds → j.toNat < 2 ^ 62 →
+      (∀ (h : (3 * j).toNat < (m.arr64 PEND).size),
+        decVG (erecP m) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
+      (∀ (h : (3 * j + 2).toNat < (m.arr64 PEND).size),
+        ((m.arr64 PEND)[(3 * j + 2).toNat]).toNat = (pdAt pend j).vis) :=
+    fun m a h h62 => pend_words m pend h.pend j hj h62
+  have inner : ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending" [j, vis]
+      ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧ AM.ok (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀) ∧
+        AM.ok dropScratch (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) ∧ LoopR pins dn s'.mem (AM.st dropScratch (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀))) vis fe pend ds ∧ CoreMemos s'.mem; ⊤⦄ := by
+    rw [invoke_eq _ hP.cp]
+    simp only [callFn, checkPendingL]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      have hn' : n ≤ 2 ^ 62 := by omega
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          (enter_loopB (pins := pins) dn ds p hb n · a₀ vis fe (fe.restrictTo (pdAt pend j).vis) pend hwf hoff),
+          (checkValueGroup_specT mode pins dn ds p hm hP.cvg hP.knot n hn' · (AM.st enterScratch a₀) · (fe.restrictTo (pdAt pend j).vis) pend · (pdAt pend j).vg),
+          (drop_loopB dn ds p hb hP.leaf (pins := pins) n · (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) vis fe pend)] <;>
+        finish
+  exact triple_post inner fun r s' ⟨h0, h1, h2, h3, h4, h5⟩ => by
+    obtain ⟨o, st⟩ := checkPending_ok mode fe (pdAt pend j) a₀ h1 h2 h3
+    exact ⟨h0, o, by rw [st]; exact h4, h5⟩
+
+end specs
+
 end L.Arena
