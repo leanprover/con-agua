@@ -62,3 +62,18 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   `allLevelParamsDefinedT_spec`) in `ihW_okT`.
 * `lake`'s `.+` glob is not understood by `scripts/modules_check.py`: the `IndT` modules are
   listed one by one in `lakefile.toml`.
+
+## Landing 2: `AbsOK` carries `WkOK`; the `StageC` lifts
+
+* **`WkOK m`** (`IndStubs.lean`): `WalkMemos m` (arrays 151‥153, 52‥54), the sizes of `EREC`, `SPN`
+  and array 145 below `2^63`, the pin flag. `AbsOK m` (lane `indproofs4`'s walk memos) gets it as a
+  fifth conjunct, `memoFreeA`/`memoFreeC` exclude the pins and those arrays/epoch words too, so
+  every `AFr` model frame (143 lemmas, `afr_auto`) carries the whole memory half of `TwinOK` with no
+  new per-model lemma (a `KFr` family cloned from the `_afr` lemmas was the alternative). Fixed
+  sites: `AbsOK.frameD`, `WkOK.frame`, `abF_ok`, `i1lF_ok`, `crfF_ok`, `pinternW_afr`,
+  `TwinOK.absOK` (takes the pin flag), `cidFreeA`/`cidFreeC` (IndInstallSpec42).
+* `IndT/Lift.lean`: `StageC.of_pstep` (`StageC` across a twin step con-ron calls a `PStep`, the
+  memory half from `AbsOK` after), **`RSim.liftP`/`liftPP`/`liftPL`** (a core-free callee's
+  `StageR` `RSim` whose post gives `StageR ∧ AbsOK` after, lifted by con-ron's
+  `PSpec`/`PSpecP`/`PSpecL`), **`RSim.liftC`** (a core-calling callee's `StageT` `RSim`, `CheckOK`
+  after from con-ron's `CSpec`).
