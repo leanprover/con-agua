@@ -12,8 +12,6 @@ the propositional bit (`pin_word(53)`, `lvl_eq_true`), the fields' universes at 
 Hypotheses beyond the stage relation and the inputs' decodings, and who discharges them:
 * `PosMR s₀.mem` (the walk memos well formed now): the caller (`check_block_pass`), from its own
   pre; it is returned for the memory after, for `nest_seeds`.
-* `2 ^ 31 + (n + 2) ≤ coreWalkFuel`: the L fuel bound of `nest_root` (its walks' input-derived fuel
-  stays below the twin's).
 -/
 
 set_option experimental.vcgen true
@@ -154,7 +152,7 @@ def posKeepCallees : List FnName :=
     "check_block_positivity_nfs"]
 
 /-- **`check_block_positivity`'s model refines `checkBlockPositivity`.** -/
-theorem cbposW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2) ≤ coreWalkFuel)
+theorem cbposW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {q cvO cvL caO caL : Word} {P : BlockParts} {cvTas : List IConstantVal}
     {css : List (List (IConstantVal × Nat))} {r : List Word}
@@ -211,7 +209,7 @@ theorem cbposW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2
   rw [h4, cbpK4_some] at h
   obtain ⟨s4, rfl, -, ⟨outs, ns⟩, a4, hrun4, hS4, hg4, hO4, hOb4, hns4, hP4, hA4⟩ :=
     triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (nestRoot_refines hP.rs (n + 2) dn vis fe hn _ _ (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)
+    (nestRoot_refines hP.rs (n + 2) dn vis fe _ _ (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)
       caO caL (r3.headD 0) 0 0 c holes css {} [] hS3 (hU1.grow hg13) hhi1 hpn1
       (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
       (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
@@ -304,12 +302,12 @@ theorem cbposW_ok {p : Prog} (hP : PosBlkProg p) (n : Nat) (hn : 2 ^ 31 + (n + 2
 `open_pis_at_fvars_f`, `intern_ls_iw`, `inst_pis_with`'s, `lvl_eq_c`, `all_level_params_defined`, the
 fields' sorts' core stubs, and `nest_root`'s). The shape record and the formers decoded below the tops,
 the members' constructors with their slices' bounds (`decCNSB`, from `checkBlockCtors_refines`), the
-walk memos well formed (`PosMR`), the fuel below the core walk's. After: the stage relation at the twin's state, the pools grown, the walk memos
+walk memos well formed (`PosMR`). After: the stage relation at the twin's state, the pools grown, the walk memos
 still well formed, the kinds (`decKSS`, the `outs` slice itself), the normal forms (`decNFS`, fresh)
-and the walk's state (`NSB`, `nest_root`'s). -/
-@[refines ConRon.Arena.checkBlockPositivity]
+and the walk's state (`NSB`, `nest_root`'s). Under `StageR`; the census link is
+`checkBlockPositivity_refinesC`. -/
 theorem checkBlockPositivity_refines (p : Prog) (hP : PosBlkProg p) (n : Nat)
-    (hn : 2 ^ 31 + (n + 2) ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q cvO cvL caO caL : Word) (P : BlockParts)
     (cvTas : List IConstantVal) (css : List (List (IConstantVal × Nat)))
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem P.shape)
@@ -328,7 +326,7 @@ theorem checkBlockPositivity_refines (p : Prog) (hP : PosBlkProg p) (n : Nat)
       ⊤⦄ := by
   refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbposW_ok hP n hn hm hS hq hsrc hcv hcss hPM hA hk
+  obtain ⟨x, a', hrun, hQ⟩ := cbposW_ok hP n hm hS hq hsrc hcv hcss hPM hA hk
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]

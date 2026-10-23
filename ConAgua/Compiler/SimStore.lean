@@ -192,31 +192,29 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     rw [show G.T + (G.globAddr g - G.T) = G.globAddr g by simp only [Layout.globAddr, Layout.globStart]; omega] at this
     rw [this]; exact hm.glob g hg
 
-theorem Inv.store64 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {a : ArrId}
+theorem Inv.store64 {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {a : ArrId}
     (ha : a < G.tab.nw) {i : Word} (hi : i.toNat < (σ.mem.arr64 a).size) (v : Word) :
-    Inv G nl F { σ with mem := σ.mem.set64 a i v }
+    Inv G ctx F { σ with mem := σ.mem.set64 a i v }
       { s with dmem := wrW s.dmem (A (G.b64 a + 8 * i.toNat)) v.toBitVec } := by
   have hsz := hI.mem.size64 a ha
   have hend := hG.end64 a ha
-  refine ⟨hI.r15, hI.lo8, hI.hi, hI.nlF, fun x hx => ?_, hI.mem.store64 hG ha hi v⟩
-  have := hI.hi; have := hG.hi_le; have := hI.nlF; have := hI.lo
-  show rdW (wrW s.dmem _ _) (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
+  refine hI.congr rfl rfl rfl (fun _ _ => rfl) (fun x hx hn => ?_) (hI.mem.store64 hG ha hi v)
+  have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.lo
+  show rdW (wrW s.dmem _ _) (A (s.regs.rsp.toNat + 8 * x)) = _
   rw [rdW_wrW_A (by omega) (by omega) ?_]
-  · exact hI.frame x hx
   exact cell_disj (P := G.In64 a) (Q := G.InStack) (fun k hk => ⟨by omega, by omega⟩)
     (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.stack_arr t h2 (Or.inr ⟨a, ha, h1⟩)
 
-theorem Inv.store8 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {a : ArrId}
+theorem Inv.store8 {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {a : ArrId}
     (ha : a < G.tab.nb) {i : Word} (hi : i.toNat < (σ.mem.arr8 a).size) (v : Word) (V : Int)
     (hV : (V.take 8).toNat.toUInt8 = v.toUInt8) :
-    Inv G nl F { σ with mem := σ.mem.set8 a i v }
+    Inv G ctx F { σ with mem := σ.mem.set8 a i v }
       { s with dmem := Mem.storeInt s.dmem (A (G.b8 a + i.toNat)) 1 V } := by
   have hsz := hI.mem.size8 a ha
   have hend := hG.end8 a ha
-  refine ⟨hI.r15, hI.lo8, hI.hi, hI.nlF, fun x hx => ?_, hI.mem.store8 hG ha hi v V hV⟩
-  have := hI.hi; have := hG.hi_le; have := hI.nlF; have := hI.lo
-  show rdW (Mem.storeInt s.dmem _ 1 V) (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
-  rw [← hI.frame x hx]
+  refine hI.congr rfl rfl rfl (fun _ _ => rfl) (fun x hx hn => ?_) (hI.mem.store8 hG ha hi v V hV)
+  have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.lo
+  show rdW (Mem.storeInt s.dmem _ 1 V) (A (s.regs.rsp.toNat + 8 * x)) = _
   refine rdW_congr fun j hj => ?_
   rw [A_add]
   refine get?_store1_A (by omega) (by omega) fun he => ?_
@@ -239,18 +237,17 @@ theorem Pres.store8 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nb) {j
   refine get?_store1_A (by omega) hx fun he => hna (Or.inl ⟨a, ha, he ▸ ⟨by omega, by omega⟩⟩)
 
 /-- The memory relation after a write of a global variable, with the frame. -/
-theorem Inv.storeG {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {g : GVar}
+theorem Inv.storeG {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {g : GVar}
     (hg : g.id < G.tab.ng) (v : Word) :
-    Inv G nl F (σ.setG g v) { s with dmem := wrW s.dmem (A (G.globAddr g)) v.toBitVec } := by
+    Inv G ctx F (σ.setG g v) { s with dmem := wrW s.dmem (A (G.globAddr g)) v.toBitVec } := by
   have hc := Layout.inGlob_cell (G := G) hg
   have := hG.tab_end
   have hT : G.globAddr g + 8 ≤ G.tabEnd := by
     simp only [Layout.tabEnd, Layout.globAddr, Layout.globStart]; omega
-  refine ⟨hI.r15, hI.lo8, hI.hi, hI.nlF, fun x hx => ?_, hI.mem.storeG hG hg v⟩
-  have := hI.hi; have := hG.hi_le; have := hI.nlF; have := hI.lo
-  show rdW (wrW s.dmem _ _) (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
+  refine hI.congr rfl rfl rfl (fun _ _ => rfl) (fun x hx hn => ?_) (hI.mem.storeG hG hg v)
+  have := hI.hi; have := hG.hi_le; have := hI.slot x hx hn; have := hI.lo
+  show rdW (wrW s.dmem _ _) (A (s.regs.rsp.toNat + 8 * x)) = _
   rw [rdW_wrW_A (by omega) (by omega) ?_]
-  · exact hI.frame x hx
   exact cell_disj (P := G.InGlob) (Q := G.InStack) hc
     (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.tab_stack t h1.tab h2
 
@@ -288,15 +285,14 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
     (hcR : Code [i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (mb .r15 (ctx.tab.base64 a)), movMR (mbi .rcx .rax .W64) .rdx] kT)
     (hkend : kend = kT + 4) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
-    (hI : Inv G ctx.nl F σ d) (hE13 : EPost ctx.nl F 0 d s3) (hrax : s3.regs.rax = vi)
+    (hI : Inv G ctx F σ d) (hE13 : EPost ctx.nl F 0 d s3) (hrax : s3.regs.rax = vi)
     (hrdx : s3.regs.rdx = ve) (hK : Conts G ctx F d (stepRun p K (.st64 a i e) σ) kend Q) :
     Ev Q s3 (at_ kT) := by
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
   have hhi := hG.hi_le
-  have hnlF := hI.nlF
-  have hI3 := hI.only hG (hE13.mem.mono (by omega) (Nat.le_refl _)) hE13.rsp hE13.r15
+  have hI3 := hI.ofE hG hE13
   have hsz := hI3.mem.size64 a ha
   have hend := hG.end64 a ha
   have hlt : G.s64 a < UInt64.size := by simp [UInt64.size]; omega
@@ -330,7 +326,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
     rw [haddr]
     have hvb : vi.toNat < (σ.mem.arr64 a).size := by rw [hsz]; exact hvi'
     have hIs := hI3.store64 hG ha hvb ve
-    refine ev_congr (hK.normal { σ with mem := σ.mem.set64 a vi ve } _ ?_ (hIs.of_regs rfl (by simp) (by simp))
+    refine ev_congr (hK.normal { σ with mem := σ.mem.set64 a vi ve } _ ?_ (hIs.of_regs rfl (by simp) (by simp) (by alloc_keep))
       ⟨by simp [hE13.rsp], by simp [hE13.rbp], by simp [hE13.r15], by simp [hE13.r14], ?_⟩) ?_
     · rw [step_st64_run, hvi]; simp only [hve]
       rw [if_pos hvb]
@@ -348,14 +344,13 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i 
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
   have hhi := hG.hi_le
-  have hnlF := hI.nlF
   cases hl : loadInto ctx .rdx e
   case some code =>
     simp only [hl, List.append_assoc, List.length_append, List.length_cons, List.length_nil] at hc hK
-    refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (by omega) σ d Q hI ?_ ?_
+    refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (htmp.mono (tempsE_bin_left .add i e)) σ d Q hI ?_ ?_
     · intro vi s1 hvi hrax1 hE1
-      have hI1 : Inv G ctx.nl F σ s1 :=
-        hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+      have hI1 : Inv G ctx F σ s1 :=
+        hI.ofE hG hE1
       have hc1 := hc.right
       obtain ⟨ve, hve, hlen, hld⟩ := sim_loadInto (r := .rdx) hT hTab hF hI1 hwe hl hc1.left
       refine hld Q ?_
@@ -369,19 +364,25 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i 
       rw [step_st64_run]; simp only [hx]
   simp only [hl, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
   have hc1 := hc.right
-  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (by omega) σ d Q hI ?_ ?_
+  have hns : Expr.isSimple e = false := by
+    cases hs : Expr.isSimple e
+    · rfl
+    · have := loadInto_isSome (ctx := ctx) (r := .rdx) hs; simp [hl] at this
+  simp only [hns, Bool.false_eq_true, ite_false] at htmp
+  replace htmp := htmp.le (by omega)
+  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (.inr (by omega)) σ d Q hI ?_ ?_
   · intro vi s1 hvi hrax1 hE1
-    have hI1 : Inv G ctx.nl F σ s1 :=
-      hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+    have hI1 : Inv G ctx F σ s1 :=
+      hI.ofE hG hE1
     have hoff : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
     refine ev_movMR hc1.head hoff ?_ ?_
     · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI1.mapped (by omega)
     rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
     have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + 0) (s := s1)
       (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-    have hI2 := hI.only hG (hE2.mem.mono (by omega) (Nat.le_refl _)) hE2.rsp hE2.r15
+    have hI2 := hI.ofE hG hE2
     have hc2 := hc1.tail
-    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (by omega) σ _ Q hI2 ?_ ?_
+    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (.inr (by omega)) σ _ Q hI2 ?_ ?_
     · intro ve s3 hve hrax3 hE3
       have h1rsp := congrArg UInt64.toNat hE1.rsp
       have h2rsp := congrArg UInt64.toNat hE2.rsp
@@ -396,7 +397,7 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st64 a i 
         simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
       exact sim_st64_tail hG hTab p K hT hF ha hcR.tail.tail
         (by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega) hvi hve hI
-        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)) (by simp) (by simp [hrax3]) hK
+        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp) (by simp [hrax3]) hK
     · intro s3 herr3 hE3
       obtain ⟨x, hx⟩ := herr3
       refine hK.err s3 ⟨x, ?_, by rw [evalP_error hx]; simp⟩
@@ -415,15 +416,14 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
        movRM .rcx (mb .r15 (ctx.tab.base8 a)),
        i8 (.mov (.mem (mbi .rcx .rax .W8)) (.regOrMem (.reg (.low .rdx .W8))))] kT)
     (hkend : kend = kT + 4) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
-    (hI : Inv G ctx.nl F σ d) (hE13 : EPost ctx.nl F 0 d s3) (hrax : s3.regs.rax = vi)
+    (hI : Inv G ctx F σ d) (hE13 : EPost ctx.nl F 0 d s3) (hrax : s3.regs.rax = vi)
     (hrdx : s3.regs.rdx = ve) (hK : Conts G ctx F d (stepRun p K (.st8 a i e) σ) kend Q) :
     Ev Q s3 (at_ kT) := by
   have hF' := hF; simp only [maxOff] at hF'
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
   have hhi := hG.hi_le
-  have hnlF := hI.nlF
-  have hI3 := hI.only hG (hE13.mem.mono (by omega) (Nat.le_refl _)) hE13.rsp hE13.r15
+  have hI3 := hI.ofE hG hE13
   have hsz := hI3.mem.size8 a ha
   have hend := hG.end8 a ha
   have hlt : G.s8 a < UInt64.size := by simp [UInt64.size]; omega
@@ -457,11 +457,12 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
     simp only [Reg64s.set64_rcx, UInt64.toBitVec_ofBitVec, hrax]
     rw [haddr]
     refine ev_congr (hK.normal { σ with mem := σ.mem.set8 a vi ve } _ ?_
-      ((hI3.store8 hG ha hvb ve _ ?_).of_regs rfl (by simp) (by simp))
+      ((hI3.store8 hG ha hvb ve _ ?_).of_regs rfl (by simp) (by simp) ?_)
       ⟨by simp [hE13.rsp], by simp [hE13.rbp], by simp [hE13.r15], by simp [hE13.r14], ?_⟩) ?_
     · rw [step_st8_run, hvi]; simp only [hve]
       rw [if_pos hvb]
     · rw [byte_val, ← hrdx]
+    · alloc_keep
     · exact (Pres.of_only hE13.mem (by have := hI.lo; omega) (by simp only [top]; omega)).trans
         (Pres.store8 hG ha hvi' _)
     · omega
@@ -476,14 +477,13 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
   have hTab' := hTab; simp only [maxOff] at hTab'
   have hsp := hI.hi
   have hhi := hG.hi_le
-  have hnlF := hI.nlF
   cases hl : loadInto ctx .rdx e
   case some code =>
     simp only [hl, List.append_assoc, List.length_append, List.length_cons, List.length_nil] at hc hK
-    refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (by omega) σ d Q hI ?_ ?_
+    refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (htmp.mono (tempsE_bin_left .add i e)) σ d Q hI ?_ ?_
     · intro vi s1 hvi hrax1 hE1
-      have hI1 : Inv G ctx.nl F σ s1 :=
-        hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+      have hI1 : Inv G ctx F σ s1 :=
+        hI.ofE hG hE1
       have hc1 := hc.right
       obtain ⟨ve, hve, hlen, hld⟩ := sim_loadInto (r := .rdx) hT hTab hF hI1 hwe hl hc1.left
       refine hld Q ?_
@@ -497,19 +497,25 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
       rw [step_st8_run]; simp only [hx]
   simp only [hl, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append] at hc hK
   have hc1 := hc.right
-  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (by omega) σ d Q hI ?_ ?_
+  have hns : Expr.isSimple e = false := by
+    cases hs : Expr.isSimple e
+    · rfl
+    · have := loadInto_isSome (ctx := ctx) (r := .rdx) hs; simp [hl] at this
+  simp only [hns, Bool.false_eq_true, ite_false] at htmp
+  replace htmp := htmp.le (by omega)
+  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (.inr (by omega)) σ d Q hI ?_ ?_
   · intro vi s1 hvi hrax1 hE1
-    have hI1 : Inv G ctx.nl F σ s1 :=
-      hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+    have hI1 : Inv G ctx F σ s1 :=
+      hI.ofE hG hE1
     have hoff : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
     refine ev_movMR hc1.head hoff ?_ ?_
     · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI1.mapped (by omega)
     rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
     have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + 0) (s := s1)
       (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
-    have hI2 := hI.only hG (hE2.mem.mono (by omega) (Nat.le_refl _)) hE2.rsp hE2.r15
+    have hI2 := hI.ofE hG hE2
     have hc2 := hc1.tail
-    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (by omega) σ _ Q hI2 ?_ ?_
+    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (.inr (by omega)) σ _ Q hI2 ?_ ?_
     · intro ve s3 hve hrax3 hE3
       have h1rsp := congrArg UInt64.toNat hE1.rsp
       have h2rsp := congrArg UInt64.toNat hE2.rsp
@@ -524,7 +530,7 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
         simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
       exact sim_st8_tail hG hTab p K hT hF ha hcR.tail.tail
         (by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega) hvi hve hI
-        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)) (by simp) (by simp [hrax3]) hK
+        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp) (by simp [hrax3]) hK
     · intro s3 herr3 hE3
       obtain ⟨x, hx⟩ := herr3
       refine hK.err s3 ⟨x, ?_, by rw [evalP_error hx]; simp⟩
@@ -544,7 +550,7 @@ theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) :=
   have hTab' := hTab; simp only [maxOff] at hTab'
   refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf.2 (by omega) σ d Q hI ?_ ?_
   · intro v s1 hv hrax hE1
-    have hI1 := hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+    have hI1 := hI.ofE hG hE1
     have haddr : (s1.regs.get64 .r15).toNat + (ctx.tab.globOff g).toNat = G.globAddr g := by
       rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI1.r15, hT, Layout.globAddr_toNat]
     have hg := hwf.1

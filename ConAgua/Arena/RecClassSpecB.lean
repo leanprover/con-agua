@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpecA
+import ConAgua.Arena.IndRealOpf3
 
 /-! Continued from `RecClassSpecA.lean` (split by size; lane `indproofs`). -/
 
@@ -852,7 +853,7 @@ def ihK1 (nPc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
 /-- **The model of `class_gen_ih_parts`.** -/
 def ihW (m : Mem) (g t tele w d : Word) : Option (List Word × Mem) :=
   ihK1 (if t < rdW (m.arr64 IW) (g + 4) then rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 3) + t) + 4) else 0)
-    (stubM "open_pis_at_fvars_f" m [tele, w, d])
+    (opfF m [tele, w, d])
 
 section arms
 variable (nPc xo xl : Word) (r : List Word) (m1 : Mem)
@@ -869,12 +870,12 @@ grind_pattern [ind_grind] ihK1_some => ihK1 nPc (some (r, m1))
 
 set_option maxHeartbeats 1600000 in
 theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
-    (had : AdF p) (n : Nat) (s₀ : St) (g t tele w d : Word) :
+    (had : AdF p) (hopf : OpfF p) (n : Nat) (s₀ : St) (g t tele w d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧ ihW s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    stubM_spec p "open_pis_at_fvars_f" n, gaaF_spec p had n]
+    opfF_spec p hopf n, gaaF_spec p had n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
     List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
@@ -978,26 +979,26 @@ def IhRes (m' : Mem) (r : List Word) : Option (List EIdx × List EIdx) → Prop
 theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (g t tele w d : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
     (hw : H w) (hcls : decAt m (decPL m (decTM m)) (g.toNat + 3) = some G.cls)
-    (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (hA : AbsOK m)
     (h : ihW m g t tele w d = some (r, m')) :
     ∃ res a', (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ IhRes m' r res := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ IhRes m' r res ∧ AbsOK m' := by
   simp only [ihW] at h
   obtain ⟨hnp0, hnp64⟩ := ihNPc_word (t := t) hcls hsz
   rw [hnp0] at h
-  cases hs : stubM "open_pis_at_fvars_f" m [tele, w, d] with
+  cases hs : opfF m [tele, w, d] with
   | none => rw [hs] at h; simp [ihK1] at h
   | some r1m =>
     obtain ⟨r1, m1⟩ := r1m
     rw [hs] at h
-    obtain ⟨res1, a1, hrun1, hS1, hg1, hdec1⟩ := openPisAtFvarsF_spec dn vis fe tele w d hw m m1 a r1 hs hS
+    obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hA1⟩ := opfF_ok dn vis fe tele w d hw m m1 a r1 hs ⟨hS, hA⟩
     cases res1 with
     | none =>
       have h0 : r1.headD 0 = 0 := hdec1
       rw [ihK1_some, if_pos h0] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨none, a1, ?_, hS1, hg1, rfl⟩
+      refine ⟨none, a1, ?_, hS1, hg1, rfl, hA1⟩
       simp only [ConRon.Arena.ClassGen.ihParts, StateT.run_bind]
       rw [hrun1]
       rfl
@@ -1020,6 +1021,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
         obtain ⟨r2, m2⟩ := r2m
         rw [ha] at h
         obtain ⟨args, a2, hrun2, hS2, hg2, hdec2⟩ := gaaF_ok dn vis fe CWF ((r1.drop 3).headD 0) hl1 m1 m2 a1 r2 ha hS1
+        have hA2 : AbsOK m2 := gaaF_afr ha hA1
         generalize hN : (match G.cls[t.toNat]? with | some M => M.nPc | none => 0) = N at hnp64 h
         have gd : ∀ (l : List Word), l.getD 0 0 = l.headD 0 ∧ l.getD 1 0 = l.tail.headD 0 ∧
             l.getD 2 0 = l.tail.tail.headD 0 := by
@@ -1089,7 +1091,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
           have hsub : (r2.tail.headD 0 - UInt64.ofNat N).toNat = (r2.tail.headD 0).toNat - N := by
             rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [hTW]; omega)), hTW]
           have hdr := decHL_drop N hdec2' (by omega)
-          refine ⟨some (xs, args.drop N), a2, htwin, hS2, hg1.trans hg2, ?_⟩
+          refine ⟨some (xs, args.drop N), a2, htwin, hS2, hg1.trans hg2, ?_, hA2⟩
           refine ⟨rfl, ?_, ?_, ?_, ?_⟩
           · simpa using hxs2
           · have := hg2.1; simpa using Nat.le_trans hxtop' this
@@ -1105,7 +1107,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
               hlt (UInt64.lt_iff_toNat_lt.mpr hh)
             rw [hTW] at this; omega
           have hnil : args.drop N = [] := List.drop_eq_nil_of_le (by omega)
-          refine ⟨some (xs, args.drop N), a2, htwin, hS2, hg1.trans hg2, ?_⟩
+          refine ⟨some (xs, args.drop N), a2, htwin, hS2, hg1.trans hg2, ?_, hA2⟩
           refine ⟨rfl, ?_, ?_, ?_, ?_⟩
           · simpa using hxs2
           · have := hg2.1; simpa using Nat.le_trans hxtop' this
@@ -1114,26 +1116,27 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
             simp only [UInt64.toNat_zero]; omega
 
 
-/-- **`class_gen_ih_parts` refines `ClassGen.ihParts`** (through the `open_pis_at_fvars_f` and
-`get_app_args` stubs). -/
+/-- **`class_gen_ih_parts` refines `ClassGen.ihParts`** (through `open_pis_at_fvars_f`'s real
+refinement, under the walk memos, and `get_app_args`). -/
 @[refines ConRon.Arena.ClassGen.ihParts]
 theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
-    (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (had : AdF p) (hopf : OpfF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv)
     (g t tele w d : Word) (G : ClassGen) (hS : StageR dn vis fe s₀.mem a₀) (hw : H w)
     (hcls : decAt s₀.mem (decPL s₀.mem (decTM s₀.mem)) (g.toNat + 3) = some G.cls)
-    (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
+    (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
-      IhRes s'.mem r (AM.res (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀);
-      ⊤⦄ := by
-  refine triple_post (classGenIhParts_spec p hp had n s₀ g t tele w d) ?_
+      IhRes s'.mem r (AM.res (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀) ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (classGenIhParts_spec p hp had hopf n s₀ g t tele w d) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, hres⟩ := ihW_ok dn vis fe _ _ a₀ g t tele w d G r hS hw hcls (by omega) hm
+  obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok dn vis fe _ _ a₀ g t tele w d G r hS hw hcls (by omega) hA hm
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ a' res hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres, hA'⟩
 
 
 theorem eViewW_head3 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 3) :

@@ -140,3 +140,27 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   `IndMemos m`) and gives `… run ∧ StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧
   IndMemos m'`; con-ron's `IndOut` the loop gets from `indSpec_of_bridge` on the run. `CtorSums`
   goes away by an L capacity guard in `nest_ctor_entry_strip` (helper pos).
+
+## Landing 8: the block's top under `StageC` (all 59 targets done)
+
+* **Helper `grc`**: `IndT/GenRec1‥3` (`genRecCheck_refinesC`, `checkBlockRec_refinesC`).
+  **Helper `cbpos`**: `IndT/Positivity` (`cbposW_okC`, `checkBlockPositivity_refinesC`; no fuel
+  premise beyond `n + 2 ≤ 2^62`).
+* **Mine**: `IndT/Tail` (`ictlW_simC`, `checkBlockTail_refinesC`; `StageC.of_parts`: `StageC` from
+  `StageR`, `CheckOK`, `AbsOK` and the name decoder), `IndT/Pass` (`icpW_simC`,
+  `checkBlockPass_refinesC`), `IndT/Block` (`icbW_simC`, `checkBlock_refinesC`). Each copies the
+  `StageR` proof (IndInstallSpec35/36/37) and runs con-ron's step specs beside it
+  (`checkBlockInds_spec`, `ReadOK.flush`, `checkBlockCtors_specF`, `blockNestCtx_spec`,
+  `classesStage`, `checkBlockPositivity_spec`, `seedsStage`) for the next callee's preconditions
+  and for `CheckOK` across the core-free steps. The pass's post adds `StageC` at the formers'
+  index and `PassTwin` (what the tail takes: con-ron's `checkBlockPass_of` on the whole run); the
+  tail's post stays `StageR` (no core call after the tables).
+* Interface changes against the `StageR` versions: fuel `n + 4 ≤ 2^62` instead of
+  `2^31 + (n + 4) ≤ coreWalkFuel`; `AllVis` dropped (unused); `passKeepCalleesC` adds
+  `class_read`, `class_read_classes`, `check_block_classes_keys` (the classes' `AbsKeep`);
+  `checkBlock_refinesC` takes `ValProg p`, `AbsKeep p "check_constant_val"` (the tail's recursor
+  stage) and con-ron's preconditions (`IFEnvCoh fe`, `denoteFEnv`, `dShape`, `denoteCIList`).
+* The `@[refines]` tags moved off IndInstallSpec34/35/36/37's `StageR` theorems.
+* Census (worktree, after merging master f38d6f00): phase 8 141 proven / 76 sorry; all 59
+  targets of `docs/stagec-targets.txt` free of the four core contracts. `checkBlockPass`/
+  `checkBlock` still depend on `L.Ind.checkConstantVal_spec` (not one of the four).

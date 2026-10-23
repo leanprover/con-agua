@@ -135,7 +135,7 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx)
 
 /-- **`nest_root`** simulated by `nestRoot`. -/
-theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (cO cL ns oO oL : Word)
+theorem p2rtW_ok : ∀ (n : Nat) (m m' : Mem) (a : AState) (cO cL ns oO oL : Word)
     (css : List (List (IConstantVal × Nat))) (NS : NestState) (outss : List (List (List NestFieldKind × EIdx)))
     (r : List Word),
     p2rtW stubCall n m vis ctx hO hL cO cL ns oO oL = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
@@ -147,9 +147,9 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
       RootOutsB m' (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ NSB m' (r.tail.tail.headD 0) x.2 ∧ PosMR m' ∧
       AbsOK m'
-  | 0, _, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by
+  | 0, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by
     simp [p2rtW] at h
-  | n + 1, hn, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, hS, hU, hhi, hpn, hho, hhob, hcl, hcb, hcss,
+  | n + 1, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, hS, hU, hhi, hpn, hho, hhob, hcl, hcb, hcss,
       hns, hout, houtb, hP, hA => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     rw [p2rtW_succ] at h
@@ -187,7 +187,7 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
         (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) hO hL c.params c.names holes :=
       ⟨hus0, by show decHL (truncM m) _ _ = _; rw [decHL_truncM hpe0]; exact hpa0, hpe0, hn0, hne0,
         by rw [hpl]; exact hpn, hho, hhob⟩
-    have hCt := (nbOK_all dn vis fe n (by omega)).2.2.2.2.2.2.2.1
+    have hCt := (nbOK_all dn vis fe n).2.2.2.2.2.2.2.1
     cases hc : nbCtorsW stubCall n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
         (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx)
         (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with
@@ -226,7 +226,7 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     have hg13 := hg12.trans hg3
     have hcO1 : (cO + 1).toNat = cO.toNat + 1 := word_add_toNat (by simp; omega)
     have hcL1 : (cL - 1).toNat = css'.length := by rw [pos2_word_pred h0]; omega
-    obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns', hP', hA'⟩ := p2rtW_ok n (by omega) m3 m' a1 (cO + 1) (cL - 1)
+    obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns', hP', hA'⟩ := p2rtW_ok n m3 m' a1 (cO + 1) (cL - 1)
       (r1.tail.tail.headD 0) (ro.headD 0) (ro.tail.headD 0) css' x1.2 (outss ++ [x1.1]) r h hS3 (hU.grow hg13) hhi
       hpn (by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by omega)]; exact hho)
       (by have := hg13.1; omega) hcL1 (by rw [hcO1]; have := hg13.1; omega)
@@ -279,14 +279,14 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   (ctx : Word) (c : NestCtx)
 
 /-- **`nest_seeds`** simulated by `nestSeeds`. -/
-theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (sO sL ns : Word)
+theorem p2sdW_ok : ∀ (n : Nat) (m m' : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState) (r : List Word),
     p2sdW stubCall n m vis ctx sO sL ns = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
     c.hiAt 0 < 2 ^ 64 → sL.toNat = seeds.length → SeedsAt m sO.toNat seeds → NSB m ns NS → PosMR m → AbsOK m →
     ∃ x a', (nestSeeds V fe c seeds NS).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       NSB m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m'
-  | 0, _, m, m', a, sO, sL, ns, seeds, NS, r, h, _, _, _, _, _, _, _, _ => by simp [p2sdW] at h
-  | n + 1, hn, m, m', a, sO, sL, ns, seeds, NS, r, h, hS, hU, hhi, hsl, hsd, hns, hP, hA => by
+  | 0, m, m', a, sO, sL, ns, seeds, NS, r, h, _, _, _, _, _, _, _, _ => by simp [p2sdW] at h
+  | n + 1, m, m', a, sO, sL, ns, seeds, NS, r, h, hS, hU, hhi, hsl, hsd, hns, hP, hA => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     rw [p2sdW_succ] at h
     by_cases h0 : sL = 0
@@ -356,7 +356,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
-    have hKey := (nbOK_all dn vis fe (n' + 1) (by omega)).2.2.2.2.1
+    have hKey := (nbOK_all dn vis fe (n' + 1)).2.2.2.2.1
     cases hk3 : nbKeyW stubCall (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
@@ -373,7 +373,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     have hg13 := hg12.trans hg3
     have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
     have hsL1 : (sL - 1).toNat = seeds'.length := by rw [pos2_word_pred h0]; omega
-    obtain ⟨x, a', hrun, hS', hg', hns', hP', hA'⟩ := p2sdW_ok (n' + 1) (by omega) m3 m' a3 (sO + 1) (sL - 1)
+    obtain ⟨x, a', hrun, hS', hg', hns', hP', hA'⟩ := p2sdW_ok (n' + 1) m3 m' a3 (sO + 1) (sL - 1)
       (r3.tail.headD 0) seeds' x3.2 r h hS3 (hU.grow hg13) hhi hsL1
       (by rw [hsO1]; exact (hsd.grow hg13 htop).tail) hns3 hP3 hA3
     refine ⟨x, a', ?_, hS', hg13.trans hg', hns', hP', hA'⟩
@@ -420,7 +420,7 @@ theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds
 include L
 
 /-- Under `StageR`; the census link is `nestRoot_refinesC` (`IndT/PosRoot.lean`). -/
-theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
+theorem nestRoot_refines (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (holes : List EIdx) (css : List (List (IConstantVal × Nat))) (NS : NestState)
     (outss : List (List (List NestFieldKind × EIdx))) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hpn : c.params.length + c.names.length < 2 ^ 64)
@@ -436,12 +436,12 @@ theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
       PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (nestRoot_spec L stubCall (stubCall_spec p) n s₀ vis ctx hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2rtW_ok dn vis fe ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
+  have := p2rtW_ok dn vis fe ctx hO hL c holes n s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
     hhi hpn hho hhob hcl hcb hcss hns hout houtb hP hA
   exact ⟨hlc, by simpa using this⟩
 
 /-- Under `StageR`; the census link is `nestSeeds_refinesC` (`IndT/PosRoot.lean`). -/
-theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx sO sL ns : Word)
+theorem nestSeeds_refines (s₀ : St) (a₀ : AState) (ctx sO sL ns : Word)
     (c : NestCtx) (seeds : List (NestKey × Nat)) (NS : NestState) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hsl : sL.toNat = seeds.length)
     (hsd : SeedsAt s₀.mem sO.toNat seeds) (hns : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem) :
@@ -451,7 +451,7 @@ theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
       IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (nestSeeds_spec L stubCall (stubCall_spec p) n s₀ vis ctx sO sL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2sdW_ok dn vis fe ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns hP hA
+  have := p2sdW_ok dn vis fe ctx c n s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns hP hA
   exact ⟨hlc, by simpa using this⟩
 
 end census

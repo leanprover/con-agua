@@ -27,12 +27,12 @@ def rec2IhF (n : Nat) (m : Mem) (g t tele w d : Word) : Option (List Word × Mem
   fuelW n (ihW m g t tele w d)
 
 theorem rec2IhParts_specF (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some classGenIhParts)
-    (had : AdF p) (n : Nat) (s₀ : St) (g t tele w d : Word) :
+    (had : AdF p) (hopf : OpfF p) (n : Nat) (s₀ : St) (g t tele w d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧ rec2IhF n s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact classGenIhParts_spec p hp had n s₀ g t tele w d
+  | succ n => exact classGenIhParts_spec p hp had hopf n s₀ g t tele w d
 
 /-! ## `class_gen_minor_ty_ih1_tail` -/
 
@@ -260,7 +260,7 @@ def bW : Nat → Mem → Word → Word → Word → Word → Word → Word → W
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, g, c, x, d, lvls, ds0, dl0, nPc =>
     mbK1 n g c x d lvls ds0 dl0 nPc
-      (stubM "open_pis_at_fvars_f" m [rdW (m.arr64 IW) (x + 1), rdW (m.arr64 IW) (x + 4), d])
+      (opfF m [rdW (m.arr64 IW) (x + 1), rdW (m.arr64 IW) (x + 4), d])
 
 def mnK1 (n : Nat) (g c x d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -366,7 +366,7 @@ theorem cK3_some : cK3 n g c d nPc fo fl ihso ihsl rao ral (some (r3, m3)) =
     cK4 (c2W n m3 g c d nPc fo fl ihso ihsl rao ral (r3.headD 0)) := rfl
 theorem cK4_some : cK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem bW_eq : bW (n + 1) m g c x d lvls ds0 dl0 nPc = mbK1 n g c x d lvls ds0 dl0 nPc
-    (stubM "open_pis_at_fvars_f" m [rdW (m.arr64 IW) (x + 1), rdW (m.arr64 IW) (x + 4), d]) := rfl
+    (opfF m [rdW (m.arr64 IW) (x + 1), rdW (m.arr64 IW) (x + 4), d]) := rfl
 theorem mbK1_fail (h : r1.headD 0 = 0) : mbK1 n g c x d lvls ds0 dl0 nPc (some (r1, m1)) = some ([0, 0], m1) := by
   rw [mbK1, if_pos h]
 theorem mbK1_ok (h : r1.headD 0 ≠ 0) : mbK1 n g c x d lvls ds0 dl0 nPc (some (r1, m1)) =
@@ -463,7 +463,7 @@ theorem classGenMinorTyIh1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvs
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad n,
+      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
       classGenMinorTyIh1Tail_spec p h n]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
@@ -553,7 +553,7 @@ theorem classGenMinorTyBody_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nPc
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "open_pis_at_fvars_f" n, targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n,
+      opfF_spec p h.opf n, targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n,
       classGenMinorTyIhsGo_spec p h n, classGenMinorTyConcl_spec p h n]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
@@ -609,33 +609,20 @@ section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 theorem rec2SimIh (n : Nat) {m : Mem} {a : AState} (hS : StageR dn vis fe m a) {g : Word} {G : ClassGen}
-    (hG : DecB (fun m => decCG m g.toNat) m G) (t tele : Word) {w : Word} (hw : H w) (d : Word) :
+    (hG : DecB (fun m => decCG m g.toNat) m G) (t tele : Word) {w : Word} (hw : H w) (d : Word)
+    (hA : AbsOK m) :
     RSim (rec2IhF n m g t tele w d) (G.ihParts t.toNat tele.toNat (decI w) d.toNat) a
-      (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ IhRes b.2 b.1 x) := by
+      (fun b a' x => (StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ IhRes b.2 b.1 x) ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
   rintro ⟨r, m'⟩ h
-  obtain ⟨res, a', hrun, hS', hg, hres⟩ := ihW_ok dn vis fe m m' a g t tele w d G r hS hw
-    (rec2CG_cls (hG.get (decCG_mono _))) hS.2.2.2.1 h
-  exact ⟨res, a', hrun, hS', hg, hres⟩
+  obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok dn vis fe m m' a g t tele w d G r hS hw
+    (rec2CG_cls (hG.get (decCG_mono _))) hS.2.2.2.1 hA h
+  exact ⟨res, a', hrun, ⟨hS', hg, hres⟩, hA'⟩
 
 /-- `class_gen_minor_ty_ih1`, in continuation form: the twin's body of `ihsGo` at one recursive
 field, then `REST` at the inductive hypothesis. -/
-theorem exprGetDF_afr {n : Nat} {m m' : Mem} {o l i : Word} {r : List Word}
-    (h : fuelW n (exprGetDW m o l i) = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [fuelW] at h
-  | succ n => exact exprGetDW_afr h
-
-theorem rec2IhF_afr {n : Nat} {m m' : Mem} {g t tele w d : Word} {r : List Word}
-    (h : rec2IhF n m g t tele w d = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [rec2IhF, fuelW] at h
-  | succ n =>
-  simp only [rec2IhF, fuelW, L.Ind.ihW, L.Ind.ihK1.eq_def, L.Ind.ihK2.eq_def] at h
-  afr_auto h [stub_afr, gaaF_afr, ftdF_afr, ftdsF_afr]
-
 theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso wsl fvso fvsl i e : Word)
     (G : ClassGen) (ws fvs : List EIdx) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64)
@@ -670,9 +657,8 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   subst hwd
   rw [i1K1_some]
   refine RSim.bind (K := fun o => K (i1K2 n g t fvso fvsl i e o)) hK
-    (RSim.withF (rec2SimIh n hS1 (hG.grow (decCG_mono _) hg1) t tele hwH e) (fun _ hb => rec2IhF_afr hb)) ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hf2⟩
-  have hA2 := hf2 hA1
+    (rec2SimIh n hS1 (hG.grow (decCG_mono _) hg1) t tele hwH e hA1) ?_
+  rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
   dsimp only at hS2 hg2 ho
   have hg12 := hg1.trans hg2
   cases o with

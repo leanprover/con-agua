@@ -104,10 +104,10 @@ def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
 #guard agrees recProg "sum_to" [100] {}
 #guard agrees recProg "boom" [7] {}
 #guard agrees recProg "boom" [8] {}
--- A small stack: a call of `sum_to` takes 32 bytes (a 3-word frame and the return address), and
--- the stack check also reserves the next return address: 128 bytes hold three calls, not four.
-#guard agrees recProg "sum_to" [2] {} 100000 128
-#guard (runKraken recProg "sum_to" [3] {} 100000 128).toOption == some .exhausted
+-- A small stack: a call of `sum_to` takes 24 bytes (a 2-word frame and the return address), and
+-- the stack check also reserves the next return address: 128 bytes hold five calls, not six.
+#guard agrees recProg "sum_to" [4] {} 100000 128
+#guard (runKraken recProg "sum_to" [5] {} 100000 128).toOption == some .exhausted
 
 /-! `mulhi`, comparisons as words, constant data. -/
 
