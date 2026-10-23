@@ -8,6 +8,8 @@ offset is whatever its record holds), and `target_rec_pins_names`: the auxiliary
 (`n₀.rec_1 …`) against the ones the stream has, as sets, and no two recursors sharing a name.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

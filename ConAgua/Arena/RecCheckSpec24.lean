@@ -8,6 +8,8 @@ passes the same tests (`trp_twin`). Hypotheses: the stage relation, the shape an
 below the tops.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
