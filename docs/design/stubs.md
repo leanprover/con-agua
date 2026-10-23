@@ -36,11 +36,54 @@ all at `intern_ls_iw`** (`eq_at1`, `param_levels`); `check_np`: 1 agree-accept, 
 628 missing (`intern_ls_iw` 499, `consts_resolve_ffast` 129). The stub identity (`missing N`)
 survives on this path: `e2e.py` compiles the text dump with `DIAG` stubs; only
 `harness/check-asm.sh` (from `checkerAsm`) reads a stub as `error`, moot now with no stubs.
-**After**: the run is still going (tracing every L error is slow); hand checks of the compiled
-`check` on the 12 smallest fixtures: 3 **accept** (`indexed_nested_aux`, `nat_shiftleft_ok`,
-`nested_pin_names`), 9 `error`. Results and the agreement with the references: next entry.
+**After**: next entry.
 
 After merging master (lane loopt2's `LoopDecl` per-function agreement lists): `consts_resolve_ffast`
 is real code in `checkerProg` now, so it moved to `openFns` (`DeclCvg.lean`, the texts' open
 callees: its contract is its stub spec, as for `has_fvar_fast`) and out of `cvgOwn2`, `ivOwn1`,
 `armOwn1` (one `rfl` each fewer). For lane loopt2: mechanical, merge as is.
+
+## e2e with no stubs (2026-10-23, `162ba476` = landing 1's tree before the last master merge)
+
+`scripts/e2e.py --no-diff --no-perf --no-interp --jobs 12`, 675 fixtures, 9756 s (162 min: the
+tracer runs on every L error, and there are now ~270 of them, each up to 400 s); report in
+`docs/e2e.md`.
+
+**The first fixtures accepted end to end by the compiled checker: 399**, every one also accepted
+by con-ron and by `e2e-ref`. Against both references (`check`):
+
+| con-ron | e2e-ref | L `check` | fixtures |
+|---|---|---|---:|
+| accept | accept | **accept** | 399 |
+| reject | reject | no | 206 |
+| decline | decline | no | 55 |
+| accept | accept | no | 7 |
+| error | error | no | 4 |
+| timeout | timeout | – | 2 |
+| accept | accept | – (L timeout) | 1 |
+| exit -6 | memout | no | 1 |
+
+All three agree on accept/not on 664 of 675; con-ron and `e2e-ref` disagree on none; **no
+fixture where L accepts and a reference does not.** Classes: `check` 399 agree-accept, 3
+agree-reject, 262 agree-reject (L aborts), 7 l-error, 3 l-timeout, 1 ref-memout; `check_np` 385,
+3, 278, 6, 2, 1. (Before: 0 and 1 agree-accept.)
+
+The 7 `l-error`s (L aborts, both references accept), filed here as bugs (the coordinator assigns):
+
+* **B1. `lv_node` abort #2 under `rec_fire_levels` → `sle_go` → `lv_sub_int` → `lp_substl`**
+  (owner: whnf4, `InstLP.lean`; the recursors come from the inductive install, indproofs3):
+  `nest_rose_tree`, `inmodel_groups` (`check`), and `nested_rec`, `nested_struct_proj`,
+  `inmodel_nested` (`check_np`): ι-reduction of a **nested** inductive's recursor. Abort #2 is
+  `CTL[8 + t] <= i` at tag 0: the word handed to `lv_node` as a level is not a live level handle
+  (a word of another kind, or a slice word read past its end). Reproducer:
+  `scripts/e2e.py --only nested_rec`.
+* **B2. `hoist_ok`** (`natop_order`, `natop_before_ble`): the ground hoist; lane front3 is on it.
+* **B3. untraced** (`eager_open_nat_control` 67 KB, `inmodel_nested` under `check`,
+  `arena/good/perf/app-lam` 1.2 MB): the tracer ran out of time or size; open.
+* `l-timeout`s (3) and the 7 fixtures that got further with 8× larger arrays are capacities and
+  speed, not verdict bugs.
+
+Where L aborts and both references reject or decline (262), the stage agrees (`decl` for nearly
+all): an `abort` in L is how every twin error is translated, so these are agreements; the top
+rows are `check_value_group` abort #1 (27), `check_div_mod_pin_loop` (22, declines: D4),
+`nest_uniform` (19), `infer_spine_arg` (13).

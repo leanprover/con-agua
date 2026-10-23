@@ -173,3 +173,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,knotwire,opus,5,10,"census after landing 1 (phases 5-7: +38 proven, -17 sorry); journal"
 2026-10-23,stubs,opus,95,60,"L code for the 9 checkerProg stubs (StubNames, StubInd, ConstsResolveF; memo CRM=155); Prog.lean regenerated, 0 stubs; LoopDecl closure list; D28"
 2026-10-23,loopt2,opus,55,35,"StoreDen.proj over the environment tables (ProjFound returns membership; FireOkOK/ProjSortDen/FireDen/rpFire/rpHead/inferProjAt take it); TwinMem.proj gone (from IFEnvOK); TwinOK.frame without EREC; CvgProg/IvProg/ArmProg checkerProg proved (rfl per lookup)"
+2026-10-23,stubs,opus,20,170,"e2e with no stubs: 399 fixtures accepted end to end by compiled check (all agree with con-ron, e2e-ref); bugs B1-B3 in docs/design/stubs.md; docs/e2e.md"
