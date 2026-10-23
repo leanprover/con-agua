@@ -212,3 +212,10 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
   (members slice bound only when non-empty), **`targetRecPins_refines`** (`RecCheckSpec21‥24`, only
   decodings the caller holds). Reported, not fixed (same empty-slice kind): `targetCtorAt_refines`,
   `IndSumSpec3`'s `hsl`/`hslTa`, `blockShapeMemberNames_refines`' `hsrc`, `BSOK` component 2.
+* Integration (helper `integ`, 35 min): the four branches built together after three fixes —
+  `target_k53` moved to `stripF` (`K53Look.strip`), `TabsProg.hst`, and helper `pos-cls`'s models
+  follow helper `rec`'s L changes (`target_canon_params` records offset 0 for an empty prefix;
+  `target_major_of_member` calls `block_shape_lps`) — and lemma renames where helpers had used the
+  same names (`cbpos*`, `lpsW_mfrT`, `…P`). Left as is: `targetCanonParams` has two `@[refines]`
+  theorems (helper `rec`'s under `RcMR`, `pos-cls`'s `targetCanonParams_refinesP` under `PosMR`);
+  `lpsW_mfr` exists in three copies.
