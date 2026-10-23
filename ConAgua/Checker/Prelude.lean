@@ -205,29 +205,6 @@ def declKeyL : FunDecl := lfn (i) locals (x, r) {
   return r
 }
 
-/-- `slice_has(o, l, n)`: `n` in the `IW` slice. -/
--- con-ron: none — `List.contains` on an `IW` slice (`natOpNames.contains`)
-def sliceHasL : FunDecl := lfn (o, l, n) locals (j) {
-  j := 0;
-  while j < l {
-    if IW.u64[o + j] == n { return 1 };
-    j += 1
-  };
-  return 0
-}
-
-/-- `nat_op_record(n)`: `isNatOpRecord` of a definition named `n`. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:108-116 ConRon.Arena.Frontend.isNatOpRecord
-@[l_impl ConRon.Arena.Frontend.isNatOpRecord]
-def natOpRecordL : FunDecl := lfn (n) locals (o1, l1, o2, l2, a, b) {
-  (o1, l1) := call nat_div_mod_names();
-  (o2, l2) := call nat_op_names();
-  a := call slice_has(o1, l1, n);
-  b := call slice_has(o2, l2, n);
-  if a != 0 || b != 0 { return 1 };
-  return 0
-}
-
 /-- `prepare_prelude()`: `preparePrelude pre ds` on `DECL` = the prelude's `P = CTL[240]`
 records, then the stream's. -/
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:77-90 ConRon.Arena.Frontend.pick
@@ -290,7 +267,6 @@ def preparePreludeL : FunDecl :=
 /-- The prelude stages' functions (`checkerProg` takes them from here). -/
 def preludeProg : Prog :=
   [("builtin_prelude", builtinPreludeL), ("prepare_prelude", preparePreludeL),
-   ("decl_declares", declDeclaresL), ("decl_key", declKeyL),
-   ("slice_has", sliceHasL), ("nat_op_record", natOpRecordL)] ++ hoistProg
+   ("decl_declares", declDeclaresL), ("decl_key", declKeyL)] ++ hoistProg
 
 end L.Checker
