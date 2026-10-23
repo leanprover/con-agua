@@ -317,4 +317,550 @@ theorem liftEntryW_frame (n : Nat) (m : Mem) (h k c f : Word) : LfOK m (liftEntr
     exact (hc0.trans ((liftW_frame n).1 _ _ _ _ _ _ _ hw)).trans
       ((mclearG_frame lfSch m₁).mono (by simp) (by simp [liftC, lfSch]))
 
+/-! ## The callees under `ArenaI` -/
+
+theorem internE_inst1LC (v : ENodeView) (a : AState) (hok : AM.ok (internE v) a) :
+    (AM.st (internE v) a).memos.inst1LC = a.memos.inst1LC :=
+  (keeps_internE_i1 v).run (AM.run_of_ok _ _ hok)
+
+theorem mkApp_okI (m : Mem) (a : AState) (hA : ArenaI m a) (f x r : Word) (m' : Mem)
+    (hI : mkAppW m f x = some (r, m')) :
+    AM.ok (internE (.app (decE f) (decE x))) a ∧
+    ArenaI m' (AM.st (internE (.app (decE f) (decE x))) a) ∧
+    AM.res (internE (.app (decE f) (decE x))) a = decE r := by
+  obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hA.1 f x r m' hI
+  exact ⟨hok, ⟨hD, hA.2.across (mkAppW_frameA m m' f x r hI) (by decide) (by decide)
+    (internE_inst1LC _ a hok)⟩, hres⟩
+
+theorem mkLam_okI (m : Mem) (a : AState) (hA : ArenaI m a) (t b r : Word) (m' : Mem)
+    (hI : mkLamW m t b = some (r, m')) :
+    AM.ok (internE (.lam (decE t) (decE b))) a ∧
+    ArenaI m' (AM.st (internE (.lam (decE t) (decE b))) a) ∧
+    AM.res (internE (.lam (decE t) (decE b))) a = decE r := by
+  obtain ⟨hok, hD, hres⟩ := mkLam_ok m a hA.1 t b r m' hI
+  exact ⟨hok, ⟨hD, hA.2.across (mkLamW_frameA m m' t b r hI) (by decide) (by decide)
+    (internE_inst1LC _ a hok)⟩, hres⟩
+
+theorem mkForall_okI (m : Mem) (a : AState) (hA : ArenaI m a) (t b r : Word) (m' : Mem)
+    (hI : mkForallW m t b = some (r, m')) :
+    AM.ok (internE (.forallE (decE t) (decE b))) a ∧
+    ArenaI m' (AM.st (internE (.forallE (decE t) (decE b))) a) ∧
+    AM.res (internE (.forallE (decE t) (decE b))) a = decE r := by
+  obtain ⟨hok, hD, hres⟩ := mkForall_ok m a hA.1 t b r m' hI
+  exact ⟨hok, ⟨hD, hA.2.across (mkForallW_frameA m m' t b r hI) (by decide) (by decide)
+    (internE_inst1LC _ a hok)⟩, hres⟩
+
+theorem mkLet_okI (m : Mem) (a : AState) (hA : ArenaI m a) (t v b r : Word) (m' : Mem)
+    (hI : mkLetW m t v b = some (r, m')) :
+    AM.ok (internE (.letE (decE t) (decE v) (decE b))) a ∧
+    ArenaI m' (AM.st (internE (.letE (decE t) (decE v) (decE b))) a) ∧
+    AM.res (internE (.letE (decE t) (decE v) (decE b))) a = decE r := by
+  obtain ⟨hok, hD, hres⟩ := mkLet_ok m a hA.1 t v b r m' hI
+  exact ⟨hok, ⟨hD, hA.2.across (mkLetW_frameA m m' t v b r hI) (by decide) (by decide)
+    (internE_inst1LC _ a hok)⟩, hres⟩
+
+theorem mkProj_okI (m : Mem) (a : AState) (hA : ArenaI m a) (n i e r : Word) (m' : Mem)
+    (hI : mkProjW m n i e = some (r, m')) :
+    AM.ok (internE (.proj (decI n) i.toNat (decE e))) a ∧
+    ArenaI m' (AM.st (internE (.proj (decI n) i.toNat (decE e))) a) ∧
+    AM.res (internE (.proj (decI n) i.toNat (decE e))) a = decE r := by
+  obtain ⟨hok, hD, hres⟩ := mkProj_ok m a hA.1 n i e r m' hI
+  exact ⟨hok, ⟨hD, hA.2.across (mkProjW_frameA m m' n i e r hI) (by decide) (by decide)
+    (internE_inst1LC _ a hok)⟩, hres⟩
+
+theorem internBVar_I (m : Mem) (a : AState) (hA : ArenaI m a) (u r : Word) (m' : Mem)
+    (hI : binternW m u = some (r, m')) :
+    AM.ok (internE (.bvar u.toNat)) a ∧ ArenaI m' (AM.st (internE (.bvar u.toNat)) a) ∧
+    AM.res (internE (.bvar u.toNat)) a = decE r := by
+  obtain ⟨hok, hD, hres⟩ := internBVar_D m a hA.1 u r m' hI
+  exact ⟨hok, ⟨hD, hA.2.across (binternW_frameA m m' u r hI) (by decide) (by decide)
+    (internE_inst1LC _ a hok)⟩, hres⟩
+
+theorem bvbW_frame (n : Nat) (m m' : Mem) (h f x : Word) (hb : bvbW n m h f = some (x, m')) :
+    BbFrame m m' := by
+  obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bvbW]⟩
+  by_cases hs : derBW m h = 32767
+  · rw [bvbW_sat n m h f hs] at hb
+    obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bbN]⟩
+    rw [bbN_succ] at hb
+    exact bbMemoW_frame n m m' h f x hb
+  · rw [bvbW_pk n m h f hs] at hb
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    exact MemFrame.refl _ _ _
+
+/-- **`bvar_b`'s model under `ArenaI`.** -/
+theorem bvbW_okI (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
+    (h f x : Word) (hh : h.toNat < 2 ^ 32) (hb : bvbW n m h f = some (x, m')) :
+    ∃ a', (bvarB f.toNat (decE h)).run a = .ok (x.toNat, a') ∧ ArenaI m' a' := by
+  obtain ⟨a', ha', hD⟩ := bvbW_ok n m m' a hA.1 h f x hh hb
+  exact ⟨a', ha', hD, hA.2.across (bvbW_frame n m m' h f x hb) (by decide) (by decide)
+    ((keeps_bvarB_i1 _ _).run ha')⟩
+
+/-- **`lift_entry`'s model under `ArenaI`.** -/
+theorem liftEntryW_okI (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
+    (h k c f r : Word) (hh : h.toNat < 2 ^ 32) (hb : liftEntryW n m h k c f = some (r, m')) :
+    ∃ a', (liftLooseBVarsFast f.toNat k.toNat c.toNat (decE h)).run a = .ok (decE r, a') ∧
+      ArenaI m' a' := by
+  cases n with
+  | zero => simp [liftEntryW] at hb
+  | succ n =>
+  obtain ⟨a', ha', hD⟩ := liftEntryW_correct n m m' a hA.1 h k c f r hh hb
+  exact ⟨a', ha', hD, hA.2.across (liftEntryW_frame _ m h k c f r m' hb) (by decide) (by decide)
+    ((keeps_liftFast_i1 _ _ _ _).run ha')⟩
+
+/-! ## The statements, by fuel -/
+
+/-- What `i1l_go`'s model at L fuel `n` and counter `fu` says about the arena walk at the twin
+fuel `fu.toNat`. -/
+def LIGoOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (h d v fu r : Word), ArenaI m a →
+    h.toNat < 2 ^ 32 → v.toNat < 2 ^ 32 → i1lW n m h d v fu = some (r, m') →
+    ∃ a', (instantiate1LiftGo (decE v) fu.toNat (decE h) d.toNat).run a = .ok (decE r, a') ∧
+      ArenaI m' a'
+
+/-- The arena arm `arm` refines the L arm `armW` (with its counter) at `h`. -/
+def LIArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem))
+    (arm : AM EIdx) (m m' : Mem) (a : AState) (h d v fu r : Word) : Prop :=
+  armW n m h d v fu = some (r, m') → ∃ a', arm.run a = .ok (decE r, a') ∧ ArenaI m' a'
+
+/-- The five arms, given the view checks of each. -/
+def LIArmOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (h d v fu r : Word), ArenaI m a →
+    h.toNat < 2 ^ 32 → v.toNat < 2 ^ 32 →
+    (viewOK m h 4 → h >>> 28 = 4 → LIArmRef n i1lAppW
+      (inst1LiftArmApp (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)))
+        (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)))) m m' a h d v fu r) ∧
+    (viewOK m h 28 → h >>> 28 = 5 → LIArmRef n i1lLamW
+      (inst1LiftArmLam (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)))
+        (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)))) m m' a h d v fu r) ∧
+    (viewOK m h 30 → h >>> 28 = 6 → LIArmRef n i1lForallW
+      (inst1LiftArmForallE (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)))
+        (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)))) m m' a h d v fu r) ∧
+    (viewOK m h 20 → h >>> 28 = 7 → LIArmRef n i1lLetW
+      (inst1LiftArmLet (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)))
+        (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)))
+        (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))) m m' a h d v fu r) ∧
+    (viewOK m h 32 → h >>> 28 = 9 → LIArmRef n i1lProjW
+      (inst1LiftArmProj (decE v) fu.toNat (decE h) d.toNat
+        (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3)))
+        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat
+        (decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))) m m' a h d v fu r)
+
+/-! ## The dispatcher -/
+
+theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
+  intro m m' a h d v fu r hA hh hv hb
+  by_cases hfu : fu = 0
+  · rw [i1lW] at hb; simp [hfu] at hb
+  rw [i1lW.arm1 n m h d v fu hfu] at hb
+  rw [ctrW_toNat fu hfu, instantiate1LiftGo_succ, StateT.run_bind]
+  cases hx : bvbW n m h (fu - 1) with
+  | none => rw [hx, i1lW.k1] at hb; cases hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  rw [hx] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := bvbW_okI n m m₁ a hA h (fu - 1) x hh hx
+  rw [ha₁, except_ok_bind]
+  by_cases hcut : x ≤ d
+  · rw [i1lW.k1.arm1 n h d v fu x m₁ hcut] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    simp only [UInt64.le_iff_toNat_le.mp hcut, decide_true, ↓reduceIte]
+    exact ⟨a₁, rfl, hA₁⟩
+  have hcut' : ¬ x.toNat ≤ d.toNat := fun e => hcut (UInt64.le_iff_toNat_le.mpr e)
+  simp only [hcut', ↓reduceIte, StateT.run_bind]
+  have hR := hA₁.1.1
+  by_cases hs : tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
+  · rw [i1lW.k1] at hb; simp [hcut, hs] at hb
+  have vok : ∀ c0, ¬ rdW (m₁.arr64 CTL) (c0 + tierW h) ≤ idxW h → viewOK m₁ h c0 :=
+    fun c0 hc => ⟨hs, UInt64.not_le.mp hc⟩
+  by_cases g0 : h >>> 28 = 0
+  · by_cases hc : rdW (m₁.arr64 CTL) (22 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, hc] at hb
+    rw [view_run _ a₁ _ (view_bvar m₁ a₁ hR h hh (vok 22 hc) g0)]
+    simp only [except_ok_bind]
+    by_cases he : rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h) = d
+    · rw [i1lW.k1.arm2 n h d v fu x m₁ hcut hs g0 hc he] at hb
+      obtain ⟨a', ha', hA'⟩ := liftEntryW_okI n m₁ m' a₁ hA₁ v d 0 (fu - 1) r hv hb
+      simp only [he, ↓reduceIte]
+      exact ⟨a', by simpa using ha', hA'⟩
+    have he' : ¬ (rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h)).toNat = d.toNat :=
+      fun e => he (UInt64.toNat_inj.mp e)
+    by_cases hl : d < rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h)
+    · rw [i1lW.k1.arm3 n h d v fu x m₁ hcut hs g0 hc he hl] at hb
+      obtain ⟨hok, hA', hres⟩ := internBVar_I m₁ a₁ hA₁ _ r m' hb
+      have hl' : (rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h)).toNat > d.toNat := hl
+      have hsub : (rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h) - 1).toNat =
+          (rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h)).toNat - 1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+      simp only [he', hl', ↓reduceIte]
+      rw [← hsub, AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
+    · rw [i1lW.k1.arm4 n h d v fu x m₁ hcut hs g0 hc he hl] at hb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+      have hl' : ¬ (rdW (m₁.arr64 BREC) (idxW h * 2 + tierW h)).toNat > d.toNat := fun e => hl e
+      simp only [he', hl', ↓reduceIte]; exact ⟨a₁, rfl, hA₁⟩
+  have pure_h : ∀ w, a₁.store.view (decE h) = some w →
+      i1lW.k1 n h d v fu (some (x, m₁)) = some (h, m₁) →
+      (∀ y : AState, (match w with
+        | .bvar i =>
+          if i = d.toNat then liftLooseBVarsFast (fu - 1).toNat d.toNat 0 (decE v)
+          else if i > d.toNat then internE (.bvar (i - 1))
+          else pure (decE h)
+        | .fvar _ _ => pure (decE h)
+        | .sort _ => pure (decE h)
+        | .const _ _ => pure (decE h)
+        | .lit _ => pure (decE h)
+        | .app f a => inst1LiftArmApp (decE v) (fu - 1).toNat (decE h) d.toNat f a
+        | .lam ty body => inst1LiftArmLam (decE v) (fu - 1).toNat (decE h) d.toNat ty body
+        | .forallE ty body => inst1LiftArmForallE (decE v) (fu - 1).toNat (decE h) d.toNat ty body
+        | .letE ty val body => inst1LiftArmLet (decE v) (fu - 1).toNat (decE h) d.toNat ty val body
+        | .proj n i sub => inst1LiftArmProj (decE v) (fu - 1).toNat (decE h) d.toNat n i sub
+        : AM EIdx).run y = .ok (decE h, y)) →
+      ∃ a', ((view (decE h)).run a₁ >>= fun p => (match p.1 with
+        | .bvar i =>
+          if i = d.toNat then liftLooseBVarsFast (fu - 1).toNat d.toNat 0 (decE v)
+          else if i > d.toNat then internE (.bvar (i - 1))
+          else pure (decE h)
+        | .fvar _ _ => pure (decE h)
+        | .sort _ => pure (decE h)
+        | .const _ _ => pure (decE h)
+        | .lit _ => pure (decE h)
+        | .app f a => inst1LiftArmApp (decE v) (fu - 1).toNat (decE h) d.toNat f a
+        | .lam ty body => inst1LiftArmLam (decE v) (fu - 1).toNat (decE h) d.toNat ty body
+        | .forallE ty body => inst1LiftArmForallE (decE v) (fu - 1).toNat (decE h) d.toNat ty body
+        | .letE ty val body => inst1LiftArmLet (decE v) (fu - 1).toNat (decE h) d.toNat ty val body
+        | .proj n i sub => inst1LiftArmProj (decE v) (fu - 1).toNat (decE h) d.toNat n i sub
+        : AM EIdx).run p.2) = Except.ok (decE r, a') ∧ ArenaI m' a' := by
+    intro w hw hl hy
+    rw [hl] at hb; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [view_run _ a₁ w hw]
+    exact ⟨a₁, hy a₁, hA₁⟩
+  by_cases g1 : h >>> 28 = 1
+  · by_cases hc : rdW (m₁.arr64 CTL) (26 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, hc] at hb
+    obtain ⟨_, _, hw⟩ := view_fvar m₁ a₁ hR h hh (vok 26 hc) g1
+    exact pure_h _ hw (i1lW.k1.arm5 n h d v fu x m₁ hcut hs g0 g1 hc) (fun _ => rfl)
+  by_cases g2 : h >>> 28 = 2
+  · by_cases hc : rdW (m₁.arr64 CTL) (16 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, hc] at hb
+    obtain ⟨_, hw⟩ := view_sort m₁ a₁ hR h hh (vok 16 hc) g2
+    exact pure_h _ hw (i1lW.k1.arm6 n h d v fu x m₁ hcut hs g0 g1 g2 hc) (fun _ => rfl)
+  by_cases g3 : h >>> 28 = 3
+  · by_cases hc : rdW (m₁.arr64 CTL) (18 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, hc] at hb
+    obtain ⟨_, _, hw⟩ := view_const m₁ a₁ hR h hh (vok 18 hc) g3
+    exact pure_h _ hw (i1lW.k1.arm7 n h d v fu x m₁ hcut hs g0 g1 g2 g3 hc) (fun _ => rfl)
+  by_cases g8 : h >>> 28 = 8
+  · by_cases hc : rdW (m₁.arr64 CTL) (2 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, hc] at hb
+    obtain ⟨_, hw⟩ := view_lit m₁ a₁ hR h hh (vok 2 hc) g8
+    exact pure_h _ hw (i1lW.k1.arm8 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 hc) (fun _ => rfl)
+  have arm := ih m₁ m' a₁ h d v (fu - 1) r hA₁ hh hv
+  by_cases g4 : h >>> 28 = 4
+  · by_cases hc : rdW (m₁.arr64 CTL) (4 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, hc] at hb
+    rw [view_run _ a₁ _ (view_app m₁ a₁ hR h hh (vok 4 hc) g4).1]
+    rw [i1lW.k1.arm9 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 hc] at hb
+    exact arm.1 (vok 4 hc) g4 hb
+  by_cases g5 : h >>> 28 = 5
+  · by_cases hc : rdW (m₁.arr64 CTL) (28 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, hc] at hb
+    rw [view_run _ a₁ _ (view_lam m₁ a₁ hR h hh (vok 28 hc) g5).1]
+    rw [i1lW.k1.arm10 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 hc] at hb
+    exact arm.2.1 (vok 28 hc) g5 hb
+  by_cases g6 : h >>> 28 = 6
+  · by_cases hc : rdW (m₁.arr64 CTL) (30 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, g6, hc] at hb
+    rw [view_run _ a₁ _ (view_forall m₁ a₁ hR h hh (vok 30 hc) g6).1]
+    rw [i1lW.k1.arm11 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 g6 hc] at hb
+    exact arm.2.2.1 (vok 30 hc) g6 hb
+  by_cases g7 : h >>> 28 = 7
+  · by_cases hc : rdW (m₁.arr64 CTL) (20 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, g6, g7, hc] at hb
+    rw [view_run _ a₁ _ (view_let m₁ a₁ hR h hh (vok 20 hc) g7).1]
+    rw [i1lW.k1.arm12 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 g6 g7 hc] at hb
+    exact arm.2.2.2.1 (vok 20 hc) g7 hb
+  by_cases g9 : h >>> 28 = 9
+  · by_cases hc : rdW (m₁.arr64 CTL) (32 + tierW h) ≤ idxW h
+    · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, g6, g7, g9, hc] at hb
+    rw [view_run _ a₁ _ (view_proj m₁ a₁ hR h hh (vok 32 hc) g9).1]
+    rw [i1lW.k1.arm13 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 g6 g7 g9 hc] at hb
+    exact arm.2.2.2.2 (vok 32 hc) g9 hb
+  rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
+
+/-! ## The arms -/
+
+/-- **The tail of every arm**: intern the rebuilt node and record it in the memo. -/
+theorem i1lTail_ok (op : AM EIdx) (mkr : Option (Word × Mem)) (a₂ : AState) (h d r : Word)
+    (m' : Mem) (hh : h.toNat < 2 ^ 32)
+    (hmk : ∀ r₃ m₃, mkr = some (r₃, m₃) →
+      AM.ok op a₂ ∧ ArenaI m₃ (AM.st op a₂) ∧ AM.res op a₂ = decE r₃)
+    (hb : i1lAppW.k2 h d mkr = some (r, m')) :
+    ∃ a', (do let r ← op; inst1LSet (decE h, d.toNat) r; pure r : AM EIdx).run a₂ =
+      .ok (decE r, a') ∧ ArenaI m' a' := by
+  cases h3 : mkr with
+  | none => simp [h3, i1lAppW.k2] at hb
+  | some q =>
+    obtain ⟨r₃, m₃⟩ := q
+    rw [h3] at hb
+    by_cases hr : mfindG i1lSch m₃ h d = []
+    · simp [i1lAppW.k2, hr] at hb
+    rw [i1lAppW.k2.arm1 h d r₃ m₃ hr] at hb
+    cases h4 : mputG i1lSch m₃ h d r₃ ((mfindG i1lSch m₃ h d).headD 0)
+        ((mfindG i1lSch m₃ h d).tail.headD 0) with
+    | none => rw [h4] at hb; simp [i1lAppW.k1] at hb
+    | some m₄ =>
+      rw [h4, i1lAppW.k1.arm1, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      have hs : msetG i1lSch m₃ h d r₃ = some m₄ := by rw [msetG, ite_eq_right hr]; exact h4
+      obtain ⟨hok, hA₃, hres⟩ := hmk r₃ m₃ h3
+      refine ⟨_, ?_, ArenaI.imemo_set m₃ m₄ _ hA₃ h d r₃ hh hs⟩
+      simp only [StateT.run_bind, AM.run_of_ok _ _ hok, hres, except_ok_bind, inst1LSet_run]; rfl
+
+/-- **The memo probe of every arm**: a hit is the memo's value; a miss runs `miss`. -/
+theorem i1lProbe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a : AState)
+    (hA : ArenaI m a) (h d r : Word) (hh : h.toNat < 2 ^ 32)
+    (hhit : mfindG i1lSch m h d ≠ [] → (mfindG i1lSch m h d).headD 0 ≠ 0 →
+      armW = some (rdW (m.arr64 ILFM) ((mfindG i1lSch m h d).tail.headD 0 * 4 + 3), m))
+    (hnone : mfindG i1lSch m h d = [] → armW = none)
+    (hmiss : mfindG i1lSch m h d ≠ [] → (mfindG i1lSch m h d).headD 0 = 0 → armW = some (r, m') →
+      ∃ a', miss.run a = .ok (decE r, a') ∧ ArenaI m' a')
+    (hb : armW = some (r, m')) :
+    ∃ a', (do
+        match ← inst1LGet (decE h, d.toNat) with
+        | some r => pure r
+        | none => miss : AM EIdx).run a = .ok (decE r, a') ∧ ArenaI m' a' := by
+  rw [StateT.run_bind, inst1LGet_run, except_ok_bind]
+  by_cases hr : mfindG i1lSch m h d = []
+  · rw [hnone hr] at hb; cases hb
+  by_cases hh0 : (mfindG i1lSch m h d).headD 0 ≠ 0
+  · rw [hhit hr hh0] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [show a.memos.inst1LC[(decE h, d.toNat)]? = _ from
+      memoRG_hit i1lSch lfKey decE m _ hA.2 h d hr hh0 hh]
+    exact ⟨a, rfl, hA⟩
+  · simp only [ne_eq, Decidable.not_not] at hh0
+    rw [show a.memos.inst1LC[(decE h, d.toNat)]? = none from
+      memoRG_miss i1lSch lfKey decE m _ hA.2 h d hh hr hh0]
+    exact hmiss hr hh0 hb
+
+section arms
+variable (n : Nat) (ih : LIGoOK n) (m m' : Mem) (a : AState) (hA : ArenaI m a)
+  (h d v fu r : Word) (hh : h.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
+include ih hA hh hv
+
+theorem i1lAppArm_ok (hvw : viewOK m h 4) (hg : h >>> 28 = 4) :
+    LIArmRef (n + 1) i1lAppW
+      (inst1LiftArmApp (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)))
+        (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)))) m m' a h d v fu r := by
+  intro hb
+  obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hvw hg
+  rw [inst1LiftArmApp]
+  refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lAppW.arm1 n m h d v fu)
+    (fun hr => by rw [i1lAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
+  rw [i1lAppW.arm2 n m h d v fu hr (fun h => h hh0)] at hb
+  cases h1 : i1lW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d v fu with
+  | none => simp [h1, i1lAppW.k4] at hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  cases h2 : i1lW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) d v fu with
+  | none => simp [h1, h2, i1lAppW.k4, i1lAppW.k3] at hb
+  | some q =>
+  obtain ⟨y, m₂⟩ := q
+  simp only [h1, h2, i1lAppW.k4, i1lAppW.k3] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
+  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ haw hv h2
+  obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh
+    (fun r₃ m₃ h => mkApp_okI m₂ a₂ hA₂ x y r₃ m₃ h) hb
+  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
+
+theorem i1lLamArm_ok (hvw : viewOK m h 28) (hg : h >>> 28 = 5) :
+    LIArmRef (n + 1) i1lLamW
+      (inst1LiftArmLam (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)))
+        (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)))) m m' a h d v fu r := by
+  intro hb
+  by_cases hd1 : d + 1 = 0
+  · rw [i1lLamW] at hb; simp [hd1] at hb
+  obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1.1 h hh hvw hg
+  rw [inst1LiftArmLam]
+  refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lLamW.arm1 n m h d v fu hd1)
+    (fun hr => by rw [i1lLamW]; simp [hd1, hr]) (fun hr hh0 hb => ?_) hb
+  rw [i1lLamW.arm2 n m h d v fu hd1 hr (fun h => h hh0)] at hb
+  cases h1 : i1lW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d v fu with
+  | none => simp [h1, i1lLamW.k2] at hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  cases h2 : i1lW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) v fu with
+  | none => simp [h1, h2, i1lLamW.k2, i1lLamW.k1] at hb
+  | some q =>
+  obtain ⟨y, m₂⟩ := q
+  simp only [h1, h2, i1lLamW.k2, i1lLamW.k1] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
+  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw hv h2
+  rw [succW_toNat d hd1] at ha₂
+  obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh
+    (fun r₃ m₃ h => mkLam_okI m₂ a₂ hA₂ x y r₃ m₃ h) hb
+  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
+
+theorem i1lForallArm_ok (hvw : viewOK m h 30) (hg : h >>> 28 = 6) :
+    LIArmRef (n + 1) i1lForallW
+      (inst1LiftArmForallE (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)))
+        (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)))) m m' a h d v fu r := by
+  intro hb
+  by_cases hd1 : d + 1 = 0
+  · rw [i1lForallW] at hb; simp [hd1] at hb
+  obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1.1 h hh hvw hg
+  rw [inst1LiftArmForallE]
+  refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lForallW.arm1 n m h d v fu hd1)
+    (fun hr => by rw [i1lForallW]; simp [hd1, hr]) (fun hr hh0 hb => ?_) hb
+  rw [i1lForallW.arm2 n m h d v fu hd1 hr (fun h => h hh0)] at hb
+  cases h1 : i1lW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d v fu with
+  | none => simp [h1, i1lForallW.k2] at hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  cases h2 : i1lW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) v fu with
+  | none => simp [h1, h2, i1lForallW.k2, i1lForallW.k1] at hb
+  | some q =>
+  obtain ⟨y, m₂⟩ := q
+  simp only [h1, h2, i1lForallW.k2, i1lForallW.k1] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
+  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw hv h2
+  rw [succW_toNat d hd1] at ha₂
+  obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh
+    (fun r₃ m₃ h => mkForall_okI m₂ a₂ hA₂ x y r₃ m₃ h) hb
+  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
+
+theorem i1lLetArm_ok (hvw : viewOK m h 20) (hg : h >>> 28 = 7) :
+    LIArmRef (n + 1) i1lLetW
+      (inst1LiftArmLet (decE v) fu.toNat (decE h) d.toNat
+        (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)))
+        (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)))
+        (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))) m m' a h d v fu r := by
+  intro hb
+  by_cases hd1 : d + 1 = 0
+  · rw [i1lLetW] at hb; simp [hd1] at hb
+  obtain ⟨-, htw, hvw', hbw⟩ := view_let m a hA.1.1 h hh hvw hg
+  rw [inst1LiftArmLet]
+  refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lLetW.arm1 n m h d v fu hd1)
+    (fun hr => by rw [i1lLetW]; simp [hd1, hr]) (fun hr hh0 hb => ?_) hb
+  rw [i1lLetW.arm2 n m h d v fu hd1 hr (fun h => h hh0)] at hb
+  cases h1 : i1lW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d v fu with
+  | none => simp [h1, i1lLetW.k3] at hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  cases h2 : i1lW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) d v fu with
+  | none => simp [h1, h2, i1lLetW.k3, i1lLetW.k2] at hb
+  | some q =>
+  obtain ⟨y, m₂⟩ := q
+  cases h3 : i1lW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (d + 1) v fu with
+  | none => simp [h1, h2, h3, i1lLetW.k3, i1lLetW.k2, i1lLetW.k1] at hb
+  | some o =>
+  obtain ⟨z, m₃⟩ := o
+  simp only [h1, h2, h3, i1lLetW.k3, i1lLetW.k2, i1lLetW.k1] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA htw hv h1
+  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ hvw' hv h2
+  obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (d + 1) v fu z hA₂ hbw hv h3
+  rw [succW_toNat d hd1] at ha₃
+  obtain ⟨a', h4, h5⟩ := i1lTail_ok _ _ a₃ h d r m' hh
+    (fun r₄ m₄ h => mkLet_okI m₃ a₃ hA₃ x y z r₄ m₄ h) hb
+  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, ha₃, except_ok_bind]; exact h4, h5⟩
+
+theorem i1lProjArm_ok (hvw : viewOK m h 32) (hg : h >>> 28 = 9) :
+    LIArmRef (n + 1) i1lProjW
+      (inst1LiftArmProj (decE v) fu.toNat (decE h) d.toNat
+        (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3)))
+        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat
+        (decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))) m m' a h d v fu r := by
+  intro hb
+  obtain ⟨-, -, hew⟩ := view_proj m a hA.1.1 h hh hvw hg
+  rw [inst1LiftArmProj]
+  refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lProjW.arm1 n m h d v fu)
+    (fun hr => by rw [i1lProjW]; simp [hr]) (fun hr hh0 hb => ?_) hb
+  rw [i1lProjW.arm2 n m h d v fu hr (fun h => h hh0)] at hb
+  cases h1 : i1lW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d v fu with
+  | none => simp [h1, i1lProjW.k1] at hb
+  | some p =>
+  obtain ⟨x, m₁⟩ := p
+  simp only [h1, i1lProjW.k1] at hb
+  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hew hv h1
+  obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₁ h d r m' hh
+    (fun r₃ m₃ h => mkProj_okI m₁ a₁ hA₁ _ _ x r₃ m₃ h) hb
+  exact ⟨a', by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact h3, h4⟩
+
+end arms
+
+theorem liarmOK_succ (n : Nat) (ih : LIGoOK n) : LIArmOK (n + 1) := by
+  intro m m' a h d v fu r hA hh hv
+  exact ⟨i1lAppArm_ok n ih m m' a hA h d v fu r hh hv,
+    i1lLamArm_ok n ih m m' a hA h d v fu r hh hv,
+    i1lForallArm_ok n ih m m' a hA h d v fu r hh hv,
+    i1lLetArm_ok n ih m m' a hA h d v fu r hh hv,
+    i1lProjArm_ok n ih m m' a hA h d v fu r hh hv⟩
+
+/-- **The model of `i1l_go` refines `instantiate1LiftGo`** at the counter's fuel, for every L
+fuel. -/
+theorem i1lOK (n : Nat) : LIGoOK n ∧ LIArmOK n := by
+  induction n with
+  | zero =>
+    refine ⟨fun _ _ _ _ _ _ _ _ _ _ _ hb => by simp [i1lW] at hb,
+      fun _ _ _ _ _ _ _ _ _ _ _ => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    intro _ _ hb <;> simp [i1lAppW, i1lLamW, i1lForallW, i1lLetW, i1lProjW] at hb
+  | succ n ih => exact ⟨ligoOK_succ n ih.2, liarmOK_succ n ih.1⟩
+
+/-! ## The entry `instantiate1_lift_fast` refines `instantiate1LiftFast` -/
+
+theorem i1lFast_run (F : Nat) (e v : EIdx) (d : Nat) (a : AState) :
+    (instantiate1LiftFast F e v d).run a =
+      ((instantiate1LiftGo v F e d).run (withI1C a ∅) >>= fun p => .ok (p.1, withI1C p.2 ∅)) := by
+  simp only [instantiate1LiftFast, StateT.run_bind, inst1LClear_run, except_ok_bind]
+  cases (instantiate1LiftGo v F e d).run (withI1C a ∅) <;> rfl
+
+theorem i1lFastW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
+    (f e v d r : Word) (he : e.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
+    (hb : i1lFastW (n + 1) m f e v d = some (r, m')) :
+    ∃ a', (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat).run a = .ok (decE r, a') ∧
+      ArenaI m' a' := by
+  have hcs : i1lSch.cs = 52 := rfl
+  by_cases h0 : rdW (m.arr64 CTL) 52 + 2 = 0
+  · simp [i1lFastW, hcs, h0] at hb
+  rw [i1lFastW.arm1 n m f e v d (by rw [hcs]; exact h0)] at hb
+  have hA₀ := ArenaI.imemo_clear m a hA h0
+  cases hw : i1lW n (mclearG i1lSch m) e d v f with
+  | none => simp [hw, i1lFastW.k1] at hb
+  | some p =>
+    obtain ⟨r₁, m₁⟩ := p
+    by_cases h1 : rdW (m₁.arr64 CTL) 52 + 2 = 0
+    · simp [hw, i1lFastW.k1, hcs, h1] at hb
+    rw [hw, i1lFastW.k1.arm1 r₁ m₁ (by rw [hcs]; exact h1), Option.some.injEq,
+      Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨a₁, ha₁, hA₁⟩ := (i1lOK n).1 _ _ _ e d v f r₁ hA₀ he hv hw
+    exact ⟨_, by rw [i1lFast_run, ha₁]; rfl, ArenaI.imemo_clear m₁ a₁ hA₁ h1⟩
+
+/-- **`instantiate1_lift_fast(f, e, v, d)` refines the arena's `instantiate1LiftFast f e v d`**
+under `ArenaI` (`ArenaD` and the walk's memo), at the counter's fuel `f.toNat` and every L fuel:
+if the L walk returns, the twin's walk succeeds with the same handle, in a related state. -/
+@[refines ConRon.Arena.instantiate1LiftFast]
+theorem i1lFast_refines (p : Prog) (hp : I1lProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hA : ArenaI s₀.mem a₀) (f e v d : Word) (he : e.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "instantiate1_lift_fast" [f, e, v, d]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀ ∧
+      ArenaI s'.mem (AM.st (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀) ∧
+      AM.res (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (i1lFast_spec p hp (n + 1) s₀ f e v d)
+  subst hs
+  obtain ⟨a', ha', hA'⟩ := i1lFastW_correct n _ _ a₀ hA f e v d _ he hv hI
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
+  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+
 end L.Arena
