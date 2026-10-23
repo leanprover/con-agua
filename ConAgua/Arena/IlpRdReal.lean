@@ -15,10 +15,17 @@ namespace L.Ind
 open L.Arena
 
 theorem ilpfA_stage : ∀ b ∈ ilpfA, b < 201 ∨ 208 < b := by
-  simp only [ilpfA]; decide
+  intro b hb
+  simp only [ilpfA, List.mem_cons, List.not_mem_nil, or_false] at hb
+  left; rcases hb with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
+    h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;>
+    subst h <;> decide
 
 theorem ilpfC_stage : ∀ x ∈ ilpfC, x.toNat < 202 ∨ 219 < x.toNat := by
-  simp only [ilpfC]; decide +kernel
+  intro x hx
+  simp only [ilpfC, List.mem_cons, List.not_mem_nil, or_false] at hx
+  left; rcases hx with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
+    h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide
 
 /-- **`realCall p` meets the `inst_lp_fast` contract** at the call points of `IlpBase m₀ a₀`, from
 `StageT` at `(m₀, a₀)`. -/
