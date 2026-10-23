@@ -604,4 +604,23 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
       all_goals (simp_all)
 
 
+/-! ## What an interning does to memory -/
+
+/-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to a tier, with its
+growth. -/
+theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Word}
+    (h : consInternM C m ks = some (r, m₁)) :
+    m₁ = m ∨ ∃ t j, t ≤ 1 ∧ pushOKC C m t = true ∧
+      growIf C.sa C.ca C.hsM m (pushMC C m t (C.vsM (pushArgs C ks (C.qhM m ks))) j (cntC C m t))
+        (cntC C m t) = some m₁ ∧ r = (if t = 0 then C.P else C.S) + cntC C m t := by
+  simp only [consInternM, pushC] at h
+  repeat' split at h
+  all_goals simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
+  all_goals first
+    | exact .inl h.2.symm
+    | (obtain ⟨rfl, rfl⟩ := h
+       first
+         | exact .inr ⟨1, _, by decide, ‹_›, ‹_›, by simp⟩
+         | exact .inr ⟨0, _, by decide, ‹_›, ‹_›, by simp⟩)
+
 end L.Arena

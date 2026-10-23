@@ -149,3 +149,42 @@ a normalising `simp` and `grind` (2 s, 1.8 GB). Symbolic variable indices (`3 + 
   WhnfCoreApp, IndRealNames, View, ArenaRel, ScratchRefine, LpColRel, IndApplyRefine move into
   `ConsLibRel`); then `@[irreducible]`.
 * **Step 4:** K and S inside the library, with compopt2's final numbers.
+
+## Step 2: the pilot (`app`), 2026-10-23
+
+Approved by the coordinator: templates with the match inline, `ConsSch` per table, specs once,
+`ConsLibRel` as the user API, the leaked generic lemmas moved into the library.
+
+* `ConsLib.lean` (module): `mapE/mapC/mapS`, `lvF` (template variable → function variable),
+  `seqs`/`seqO` (right-nested blocks, as `lfn` writes them), `condOf`/`rhsOf` (an instance writes
+  a fragment's condition / expression with `lblk`), `ConsSch` (arrays, words, names, fragments,
+  and the models the obligations are stated against: `mtM qhM hsM vsM roomM skM`), the templates
+  `consFindG`, `consPushG` (record words by `cpWr`, tail `cpRest`, growth `growBlkG` at
+  `np + 4`), `consInternG` (with or without the scratch skip).
+* `ConsLibSpec.lean` (module): the obligations (`CMatchOK`, `HashOK` of the growth, `IHashOK`,
+  `CRecOK`, `RoomOK`, `SkipOK`, bundled as `ConsOK`), the probe model `cprobeW`, the push model
+  (`cntC`, `pushOKC`, `wrRecK`, `tailM`, `pushMC`, `growK`), **the intern model `consInternM`**,
+  and the specs `consFindG_spec(V)`, `consPushG_spec(V)`, `consInternG_spec` (the `V` forms take
+  any argument list, so `vcgen` can use them where the arguments are a computed list; the others
+  are corollaries at `t :: (ks ++ [h])`), `consInternM_cases` (hit, or append node `cntC` with
+  its growth: the generic form of `ExprMk.ainternW_grow`). Sorry-free, 13 s, 1.3 GB.
+  Symbolic variable indices need: indices written `k + C.nk` (never `C.nk + k`), `argsOf_setLoc*`,
+  `Keep1`, `zero_ne_add`/`self_ne_add`; and closed lemma terms in `simp only [...] at *` (a local
+  `have` in the list is itself rewritten to `True`). `omega` does not see facts stated on `Var`
+  (`abbrev Var := Nat`): annotate `(a : Nat)`.
+* `app` on it: `appCS`, `appFind := consFindG appCS`, …, obligations `appOK` (five one-line
+  proofs and the existing `appHash_ok`); `appFind_spec`, `appPush_spec`, `internApp_spec` keep
+  their statements as corollaries; `aprobeW` is `cprobeW` at the `app` match, `ainternW` is
+  `consInternM appCS m [f, a]`; `AppRefine.ainternW_eq` keeps its statement. ExprMk's
+  `ainternW_grow` keeps its statement, proved from `consInternM_cases`.
+* Byte identity: `repr (consFindG appCS) = repr appFind` (and push, intern) against master's
+  definitions (`#eval`, before replacing them); program-file diff below.
+
+### compopt2's final slot scheme (for step 4, relayed by the coordinator)
+
+KSTP (`scripts/compopt2/slotk2.py --sep --pertier --pingpong`, branch compopt2): per tier its
+own half of the slot array, its own `n_t` and region base `b_t ∈ {0, Q}` (last two words of the
+half), slot = (value, key `f | a << 32`), find reads only slots, growth of the pushing tier only,
+into the other region (zeroed streaming), walking the old region's slots in order. Measured vs
+master: c03d 0.874/0.912 (cycles/wall), beta-ladder 0.863/0.889, c04a 0.857/0.857, Init
+0.895/0.894, RSS ×1.20–1.27. Implemented inside the library once the 19 tables are migrated.
