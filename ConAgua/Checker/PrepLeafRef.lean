@@ -198,6 +198,56 @@ theorem pFind_ok (n : Nat) (m : Mem) (dsAll : Array IDeclaration) (mk nw w j r :
       rdW (m.arr64 IW) (mk + UInt64.ofNat (r.toNat - 1)) = 0 ∧ declares (decI w) dsAll[r.toNat - 1] = true ∧
       ∀ x (hx : x < dsAll.size), j.toNat ≤ x → x < r.toNat - 1 →
         rdW (m.arr64 IW) (mk + UInt64.ofNat x) = 0 → declares (decI w) dsAll[x] = false) := by
-  sorry
+  induction n generalizing j r with
+  | zero => simp [pFindW.eq_1] at h
+  | succ n ih =>
+    by_cases hnj : nw ≤ j
+    · rw [pFindW.arm1 n m mk nw w j hnj] at h
+      cases h
+      have := UInt64.le_iff_toNat_le.mp hnj
+      exact ⟨fun _ x hx hjx _ => absurd hx (by omega), fun h => absurd rfl h⟩
+    have hjn : j.toNat < nw.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hnj)
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hjx : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
+    have hjs : j.toNat < dsAll.size := hn ▸ hjn
+    obtain ⟨hDj, hokj⟩ := hD j.toNat hjs
+    have key : (rdW (m.arr64 IW) (mk + j) = 0 ∧ declares (decI w) dsAll[j.toNat] = true ∧
+        r = j + 1) ∨ ((rdW (m.arr64 IW) (mk + j) = 0 → declares (decI w) dsAll[j.toNat] = false) ∧
+        pFindW n m mk nw w (j + 1) = some r) := by
+      by_cases hz : rdW (m.arr64 IW) (mk + j) = 0
+      · rw [pFindW.arm2 n m mk nw w j hnj hz] at h
+        cases hd : pDeclW n m j w with
+        | none => rw [hd] at h; simp [pFindW.k2] at h
+        | some dv =>
+          have hdec := pDecl_ok n m j w dv dsAll[j.toNat] hDj hokj (by omega) hw hd
+          rw [hd] at h
+          by_cases hdv : dv ≠ 0
+          · rw [pFindW.k2.arm1 n mk nw w j m dv hdv] at h
+            cases h
+            exact .inl ⟨hz, hdec.mp hdv, rfl⟩
+          · rw [pFindW.k2.arm2 n mk nw w j m dv hdv, pFindW.k1.arm1] at h
+            refine .inr ⟨fun _ => ?_, h⟩
+            cases e : declares (decI w) dsAll[j.toNat]
+            · rfl
+            · exact absurd (hdec.mpr e) hdv
+      · rw [pFindW.arm3 n m mk nw w j hnj hz, pFindW.k1.arm1] at h
+        exact .inr ⟨fun e => absurd e hz, h⟩
+    rcases key with ⟨hz, hdec, rfl⟩ | ⟨hex, h'⟩
+    · have hr1 : (j + 1).toNat - 1 = j.toNat := by omega
+      refine ⟨fun h0 => absurd (congrArg UInt64.toNat h0) (by rw [hj1]; simp), fun _ => ?_⟩
+      refine ⟨by omega, by omega, ?_, ?_, fun x _ h1 h2 _ => absurd h2 (by omega)⟩
+      · simp only [hr1, hjx]; exact hz
+      · simp only [hr1]; exact hdec
+    · obtain ⟨ih0, ih1⟩ := ih (j + 1) r h'
+      rw [hj1] at ih0 ih1
+      refine ⟨fun h0 x hx hjx' hIW => ?_, fun h0 => ?_⟩
+      · by_cases e : x = j.toNat
+        · subst e; rw [hjx] at hIW; exact hex hIW
+        · exact ih0 h0 x hx (by omega) hIW
+      · obtain ⟨hx, hle, hIW, hdec, hmin⟩ := ih1 h0
+        refine ⟨hx, by omega, hIW, hdec, fun x hx' hjx' hxr hIW' => ?_⟩
+        by_cases e : x = j.toNat
+        · subst e; rw [hjx] at hIW'; exact hex hIW'
+        · exact hmin x hx' (by omega) hxr hIW'
 
 end L.Checker
