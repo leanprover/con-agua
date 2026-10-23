@@ -503,4 +503,176 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
 
 end rel
 
+/-- **`class_ctor_of` refines `classCtorOf`** under `StageC` (the knot's core calls; the inputs'
+denotations and scoping as con-ron's `classCtorOf_spec` asks; `open_pis_at_fvars_f`, `inst_lp_fast`
+through their stub contracts). -/
+@[refines ConRon.Arena.classCtorOf]
+theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env}
+    (henv : ConLeche.EnvWF env) (P : CxoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c cA : Word) (bs : BlockShape)
+    (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cA' : IConstantVal × Nat)
+    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hR : DecB (fun m => decCR m rd.toNat) s₀.mem R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) s₀.mem ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hcA : DecB (fun m => decCN m cA.toNat) s₀.mem cA') (hlp : CtorLp s₀.mem cA) (hnpk : bs.nP + bs.k < 2 ^ 64)
+    (hsz5 : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR s₀.mem)
+    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+    {cAP : ConLeche.ConstantVal × Nat}
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hmsP : ms.mapM (dMajor a₀.store) = some MsP)
+    (hcAP : ConRon.Bridge.Inductives.dCtor a₀.store cA' = some cAP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_ctor_of" [vis, q, fto, ftl, rd, mo, ml, c, cA]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀ ∧
+      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      StabA (iwTop s₀.mem) (fun m => decCC m (r.headD 0).toNat) s'.mem
+        (AM.res (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀) ∧ RcMR s'.mem ∧
+      AbsOK s'.mem; ⊤⦄ := by
+  cases n with
+  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  | succ n =>
+  refine triple_post (cxo_spec p P.cxo n s₀ vis q fto ftl rd mo ml c cA) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', run, hC', hg, hd, hP', hA'⟩ := cxoW_okC hq henv P dn fe n (by omega) hm hC hA hbs hft hftb
+    hR hms hmsb hcA hlp hnpk hsz5 hP hsh hftP hmsP hcAP hformer hMs
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
+
+
+section cos
+variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
+  (P : CosProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+  (vis q fto ftl rd mo ml c ao al qo : Word) (bs : BlockShape) (formerTys : List EIdx) (R : ClassRead)
+  (ms : List TargetMajor) (cAs : List (IConstantVal × Nat)) (m0 : Mem)
+  {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
+  {rdP : ConLeche.ClassRead}
+include hkp henv P
+
+/-- **`class_ctors_of`' loop under `StageC`** (twin side: con-ron's `classCtorsOf_spec`'s list
+induction, the extension after one constructor from con-ron's `classCtorOf_spec` on its run). -/
+theorem cosW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop m0) (hR : DecB (fun m => decCR m rd.toNat) m0 R)
+    (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m0 ms) (hmsb : mo.toNat + ml.toNat < 2 ^ 64)
+    (hcAs : DecB (fun m => decPL m (decCN m) ao.toNat al.toNat) m0 cAs) (hlp : CtorsLp m0 ao al)
+    (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m0.arr64 IW).size + 5 < 2 ^ 64) (hq : qo.toNat = iwTop m0)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (k : Nat) (hk' : k ≤ 2 ^ 62) :
+    ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List ClassCtor) (ps : List Nat)
+      (csP : List (ConLeche.ConstantVal × Nat)),
+    cosW p k m vis q fto ftl rd mo ml c ao al qo j = some m' → StageC dn vis fe env m a → AbsOK m →
+    IWGrow m0 m →
+    KeepW m0 m → iwTop m0 + al.toNat ≤ iwTop m → j ≤ al → decNL m qo.toNat j.toNat = some ps →
+    FA2 (fun p x => StabA (iwTop m0 + al.toNat) (fun m => decCC m p) m x) ps acc → RcMR m →
+    dShape a.store bs = some pP → Frontend.denoteEList a.store formerTys = some formerTysP →
+    ConRon.Bridge.Inductives.dClassRead a.store R = some rdP → ms.mapM (dMajor a.store) = some MsP →
+    dCtors a.store (cAs.drop j.toNat) = some csP →
+    ∃ xs a', (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat (cAs.drop j.toNat)).run a = .ok (xs, a') ∧
+      StageC dn vis fe env m' a' ∧ IWGrow m0 m' ∧ KeepW m0 m' ∧ iwTop m0 + al.toNat ≤ iwTop m' ∧ RcMR m' ∧
+      AbsOK m' ∧
+      ∃ ps', decNL m' qo.toNat al.toNat = some ps' ∧
+        FA2 (fun p x => StabA (iwTop m0 + al.toNat) (fun m => decCC m p) m' x) ps' (acc ++ xs) := by
+  have hcAs0 : decPL (truncM m0) (decCN (truncM m0)) ao.toNat al.toNat = some cAs := hcAs
+  have hlen := decPL_length _ hcAs0
+  induction k with
+  | zero => intro m m' a j acc ps csP h; simp [cosW] at h
+  | succ k ih =>
+  intro m m' a j acc ps csP h hC hA hg hk htop hja hps hfa hP hsh hftP hrdP hmsP hcsP
+  have hS := hC.stage
+  have hjk : j.toNat ≤ al.toNat := UInt64.le_iff_toNat_le.mp hja
+  by_cases hj : j < al
+  rotate_left
+  · rw [cosW_exit (h := hj)] at h
+    simp only [Option.some.injEq] at h; subst h
+    have h1 : al.toNat ≤ j.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hj
+    have hje : j.toNat = al.toNat := by omega
+    rw [List.drop_eq_nil_of_le (by omega)]
+    refine ⟨[], a, rfl, hC, hg, hk, htop, hP, hA, ps, by rw [← hje]; exact hps, by simpa using hfa⟩
+  have hjl : j.toNat < al.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  have := al.toNat_lt
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+  rw [cosW_step (h := hj)] at h
+  have hsz := hS.2.2.2.1
+  -- the constructor record
+  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hcAs0 j.toNat hjl
+  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
+  have hsz0 : (m0.arr64 IW).size < 2 ^ 64 := by omega
+  have hrd0 := iwN_rdW_at (w := ao) (k := j.toNat) hv0 hsz0
+  have hnj : ao + UInt64.ofNat j.toNat = ao + j := by simp
+  rw [hnj] at hrd0
+  have hT0 := (rdW (m0.arr64 CTL) 200).toNat_lt
+  have hajt : (ao + j).toNat = ao.toNat + j.toNat := by
+    simp only [iwTop] at hvt; rw [UInt64.toNat_add]; simp <;> omega
+  have hrd : rdW (m.arr64 IW) (ao + j) = UInt64.ofNat v := by
+    rw [rdW_grow hg (by rw [hajt]; exact hvt), hrd0.1]
+  rw [hrd] at h
+  have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd0.2
+  have hcA0 : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m0 cAs[j.toNat] := by
+    rw [hvT]; rw [← hlen] at hjl; exact hdv
+  have hlp0 : CtorLp m0 (UInt64.ofNat v) := by
+    have := hlp j.toNat hjl; rw [hnj, hrd0.1] at this; exact this
+  rw [List.drop_eq_getElem_cons (by rw [hlen]; omega)] at hcsP
+  obtain ⟨cAP, csP', rfl, hcAP, hcsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsP
+  -- `class_ctor_of`
+  cases c1 : callW p k "class_ctor_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat v] m with
+  | none => rw [c1] at h; simp [cosK] at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [c1] at h
+  obtain ⟨s1, hs1, -, hok1, hC1, hg1, hd1, hP1, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (classCtorOf_refinesC hkp henv P.toCxoProg k (by omega) _ a dn fe vis q fto ftl rd mo ml c (UInt64.ofNat v) bs
+      formerTys R ms cAs[j.toNat] hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.1)
+      (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
+      (hcA0.grow (decCN_mono _) hg) (hlp0.grow hcA0 hsz0 hg hk) hnpk (by rw [hk IW]; exact hsz5) hP
+      hsh hftP hmsP hcAP hformer hMs) c1
+  simp only at hs1 hC1 hg1 hd1 hP1 hA1; subst hs1
+  have run1 := AM.run_of_ok _ a hok1
+  obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
+    bs pP formerTys formerTysP R rdP ms MsP c.toNat cAs[j.toNat] cAP hformer hMs a _ _ hC.check
+    ⟨hsh, hftP, hrdP, hmsP, hcAP⟩ run1
+  generalize hx1 : AM.res (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cAs[j.toNat]) a = x1 at run1 hd1
+  generalize ha1 : AM.st (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cAs[j.toNat]) a = a1 at run1 hC1 cs1
+  have hS1 := hC1.stage
+  have hk1 := callW_keepW c1
+  -- the slot write
+  have hsz1 := hS1.2.2.2.1
+  have hTm := hS.lt64 (Nat.le_refl (iwTop m))
+  have hqj : (qo + j).toNat = qo.toNat + j.toNat := by rw [UInt64.toNat_add]; simp <;> omega
+  have hqb : (qo + j).toNat < (s1.mem.arr64 IW).size := by
+    have := hS1.2.1; have := hg1.1; omega
+  rw [cosK_ok (h := hqb)] at h
+  have hb0 : iwTop m0 + al.toNat ≤ iwTop m := htop
+  have hS2 := hS1.set_iw (qo + j) (r1.headD 0)
+  have hAb2 := set64IW_afr s1.mem (qo + j) (r1.headD 0) hA1
+  have hC2 := hC1.of_pstep hS2 hAb2 (PStep.refl hC1.check.state)
+  have hg2 : IWGrow m0 (s1.mem.set64 IW (qo + j) (r1.headD 0)) := (hg.trans hg1).set_iw _ _ (by omega)
+  have hk2 : KeepW m0 (s1.mem.set64 IW (qo + j) (r1.headD 0)) := (hk.trans hk1).set64 _ _ _
+  have hA2 : AgreeA (iwTop m0 + al.toNat) s1.mem (s1.mem.set64 IW (qo + j) (r1.headD 0)) :=
+    AgreeA.set_iw _ _ (by omega)
+  have hps1 : decNL s1.mem qo.toNat j.toNat = some ps := by
+    rw [decNL_grow hg1 (by omega)]; exact hps
+  have hps2 := decNL_write s1.mem qo.toNat j.toNat (qo + j) (r1.headD 0) ps hqj (by omega) hps1
+  have hfa2 : FA2 (fun p x => StabA (iwTop m0 + al.toNat) (fun m => decCC m p)
+      (s1.mem.set64 IW (qo + j) (r1.headD 0)) x) (ps ++ [(r1.headD 0).toNat]) (acc ++ [x1]) :=
+    FA2.snoc (FA2.imp (fun _ _ hq => (hq.grow (AgreeA.of_grow hg1)).grow hA2) hfa)
+      ((hd1.mono hb0).grow hA2)
+  obtain ⟨xs, a', run2, hC', hg', hk', ht', hP', hA', ps', hps', hfa'⟩ := ih (by omega) _ m' a1 (j + 1)
+    (acc ++ [x1]) (ps ++ [(r1.headD 0).toNat]) csP' h hC2 hAb2 hg2 hk2
+    (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg1.1)
+    (UInt64.le_iff_toNat_le.mpr (by omega)) (by rw [hj1]; exact hps2) hfa2 (hP1.fr (MFr.set_iw _ _ _))
+    (ConRon.Bridge.Inductives.dShape_ext cs1.ext _ _ hsh) (denoteEList_ext cs1.ext _ _ hftP)
+    (ConRon.Bridge.Inductives.dClassRead_ext cs1.ext _ _ hrdP)
+    (ConRon.Bridge.Inductives.dMajor_ext.list cs1.ext _ _ hmsP)
+    (by rw [hj1]; exact ConRon.Bridge.Inductives.dCtors_ext cs1.ext _ _ hcsP')
+  refine ⟨x1 :: xs, a', ?_, hC', hg', hk', ht', hP', hA', ps', hps', by simpa using hfa'⟩
+  rw [List.drop_eq_getElem_cons (by omega), ConRon.Arena.classCtorsOf]
+  rw [hj1] at run2
+  simp only [StateT.run_bind, run1, except_ok_bind, run2]
+  rfl
+
+end cos
+
 end L.Ind
