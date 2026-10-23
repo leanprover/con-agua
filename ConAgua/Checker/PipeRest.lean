@@ -140,10 +140,8 @@ theorem memoRV_zero0 {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [Lawfu
     (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (he : rdW (m.arr64 CTL) S.cs = 0)
     (hz : ∀ j, rdW (m.arr64 S.arr) j = 0) : MemoRV S K VR m (∅ : Std.HashMap κ ν) := by
   have hep : epG S m = 1 := by simp [epG, he]
-  have hst : ∀ j, mstG S m j = 0 := fun j => hz _
-  refine ⟨hctl, (by rw [hep]; decide), (fun j _ => by rw [hst, hep]; decide),
-    (fun j _ h => by rw [hst, hep] at h; cases h), (fun j j' _ _ h => by rw [hst, hep] at h; cases h),
-    (fun x v h => by simp at h)⟩
+  exact memoRV_fresh S K VR m hctl (by rw [hep]; decide) (by rw [hep, hz]; decide)
+    (fun j _ => by rw [hep]; simp [mstG, hz])
 
 /-- **After `prepare_prelude`**: `DECL` holds the prepared records. -/
 structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState) : Prop where
