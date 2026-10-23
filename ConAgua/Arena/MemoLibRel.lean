@@ -42,9 +42,15 @@ def mk1G (S : MemoSch) (m : Mem) (j : Word) : Word := rdW (m.arr64 S.arr) (j * 4
 def mk2G (S : MemoSch) (m : Mem) (j : Word) : Word := rdW (m.arr64 S.arr) (j * 4 + 2)
 def mvG (S : MemoSch) (m : Mem) (j : Word) : Word := rdW (m.arr64 S.arr) (j * 4 + 3)
 
-/-- Slot `e` of the run from the home slot of key `(k1, k2)`. -/
+/-- Slot `e` of the run of key `(k1, k2)` in the region from slot `b` of `n` slots. -/
+def runAt (b n k1 k2 : Word) (e : Nat) : Word := b + walkW n (homeW (kh k1 k2) n) e
+
+/-- Slot `e` of the run from the home slot of key `(k1, k2)`, in the memo's region. -/
 def mrunG (S : MemoSch) (m : Mem) (k1 k2 : Word) (e : Nat) : Word :=
-  walkW (nG S m) (homeW (kh k1 k2) (nG S m)) e
+  runAt (mbG S m) (nG S m) k1 k2 e
+
+/-- Slot `j` lies in the region from slot `b` of `n` slots. -/
+def InReg (b n j : Word) : Prop := b.toNat ≤ j.toNat ∧ j.toNat < b.toNat + n.toNat
 
 /-- The map's entry `o` is a value the slot word `w` denotes in `m` (by the value relation `VR`). -/
 def MemoV {ν : Type} (VR : Mem → Word → ν → Prop) (m : Mem) (w : Word) (o : Option ν) : Prop :=
@@ -54,23 +60,45 @@ section rel
 variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
 variable (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν → Prop)
 
-/-- **The memo relation, with a value relation that may read memory** (a value word can be a
-pointer into a tree heap: `VR m w v` says `w` denotes `v` in `m`). The live slots that are not
-tombstones hold distinct valid keys, each mapped by `mp` to a value its word denotes; every entry
-of `mp` sits in a live slot on the run from its encoded key's home, after live slots, and is the
-decoding of its own encoding. -/
-def MemoRV (m : Mem) (mp : Std.HashMap κ ν) : Prop :=
-  S.cs.toNat + 2 ≤ (m.arr64 CTL).size ∧ epG S m ≠ 0 ∧
-  (∀ j, j < nG S m → (mstG S m j).toNat ≤ (epG S m).toNat) ∧
-  (∀ j, j < nG S m → mstG S m j = epG S m → mk1G S m j ≠ TOMB →
-    K.ok (mk1G S m j) (mk2G S m j) ∧ MemoV VR m (mvG S m j) mp[K.dk (mk1G S m j) (mk2G S m j)]?) ∧
-  (∀ j j', j < nG S m → j' < nG S m → mstG S m j = epG S m → mstG S m j' = epG S m →
+/-- **The slots of a region represent a lookup function `f`**, at live stamp `e`: the live slots
+that are not tombstones hold distinct valid keys, each mapped by `f` to a value its word denotes;
+every entry of `f` is the decoding of its own encoding, not a tombstone key, and sits in a live
+slot on the run from its encoded key's home, after live slots. -/
+def MemoAt (e b n : Word) (m : Mem) (f : κ → Option ν) : Prop :=
+  (∀ j, InReg b n j → mstG S m j = e → mk1G S m j ≠ TOMB →
+    K.ok (mk1G S m j) (mk2G S m j) ∧ MemoV VR m (mvG S m j) (f (K.dk (mk1G S m j) (mk2G S m j)))) ∧
+  (∀ j j', InReg b n j → InReg b n j' → mstG S m j = e → mstG S m j' = e →
     mk1G S m j ≠ TOMB → mk1G S m j = mk1G S m j' → mk2G S m j = mk2G S m j' → j = j') ∧
-  (∀ (x : κ) (v : ν), mp[x]? = some v → K.dk (K.ek x).1 (K.ek x).2 = x ∧ ∃ d : Nat,
-    mstG S m (mrunG S m (K.ek x).1 (K.ek x).2 d) = epG S m ∧
-    mk1G S m (mrunG S m (K.ek x).1 (K.ek x).2 d) = (K.ek x).1 ∧
-    mk2G S m (mrunG S m (K.ek x).1 (K.ek x).2 d) = (K.ek x).2 ∧
-    ∀ e < d, mstG S m (mrunG S m (K.ek x).1 (K.ek x).2 e) = epG S m)
+  (∀ (x : κ) (v : ν), f x = some v → K.dk (K.ek x).1 (K.ek x).2 = x ∧ (K.ek x).1 ≠ TOMB ∧
+    ∃ d : Nat, mstG S m (runAt b n (K.ek x).1 (K.ek x).2 d) = e ∧
+    mk1G S m (runAt b n (K.ek x).1 (K.ek x).2 d) = (K.ek x).1 ∧
+    mk2G S m (runAt b n (K.ek x).1 (K.ek x).2 d) = (K.ek x).2 ∧
+    ∀ e' < d, mstG S m (runAt b n (K.ek x).1 (K.ek x).2 e') = e)
+
+end rel
+
+/-- The array's slot count (header slot included). -/
+def slotsG (S : MemoSch) (m : Mem) : Nat := (m.len64 S.arr).toNat / 4
+
+/-- **The region is well placed**: it is empty or lies in the array after the header slot; no
+slot holds a stamp above the live one; no slot above the region is live (so a region grown right
+above it starts empty). -/
+def RegOK (S : MemoSch) (m : Mem) : Prop :=
+  ((nG S m).toNat = 0 ∨ (1 ≤ (mbG S m).toNat ∧ (mbG S m).toNat + (nG S m).toNat ≤ slotsG S m)) ∧
+  (∀ j : Word, j.toNat < slotsG S m → (mstG S m j).toNat ≤ (epG S m).toNat) ∧
+  (∀ j : Word, (mbG S m).toNat + (nG S m).toNat ≤ j.toNat → j.toNat < slotsG S m →
+    mstG S m j ≠ epG S m)
+
+section rel2
+variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
+variable (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν → Prop)
+
+/-- **The memo relation, with a value relation that may read memory** (a value word can be a
+pointer into a tree heap: `VR m w v` says `w` denotes `v` in `m`): the control words are there,
+the live stamp is not `0`, the region is well placed, and its slots represent `mp`. -/
+def MemoRV (m : Mem) (mp : Std.HashMap κ ν) : Prop :=
+  S.cs.toNat + 2 ≤ (m.arr64 CTL).size ∧ epG S m ≠ 0 ∧ RegOK S m ∧
+  MemoAt S K VR (epG S m) (mbG S m) (nG S m) m (fun x => mp[x]?)
 
 /-- The value relation survives the memo's own writes (it reads other memory only). -/
 def VStable : Prop :=
@@ -81,94 +109,160 @@ relation `v = dv w`. -/
 def MemoRG (dv : Word → ν) (m : Mem) (mp : Std.HashMap κ ν) : Prop :=
   MemoRV S K (fun _ w v => v = dv w) m mp
 
-end rel
+end rel2
 
 /-! ## The probe -/
 
+theorem slotsG_lt (S : MemoSch) (m : Mem) : slotsG S m < 2 ^ 62 := by
+  have := (m.len64 S.arr).toNat_lt; simp only [slotsG]; omega
+
+theorem runAt_reg (b n k1 k2 : Word) (d : Nat) (hn : 0 < n) (hb : b.toNat + n.toNat < 2 ^ 64) :
+    InReg b n (runAt b n k1 k2 d) ∧
+      (runAt b n k1 k2 d).toNat = b.toNat + (walkW n (homeW (kh k1 k2) n) d).toNat := by
+  have hw := walkW_lt n (homeW (kh k1 k2) n) d (homeW_lt _ _ hn)
+  have hw' : (walkW n (homeW (kh k1 k2) n) d).toNat < n.toNat := hw
+  have e : (runAt b n k1 k2 d).toNat = b.toNat + (walkW n (homeW (kh k1 k2) n) d).toNat := by
+    simp only [runAt, UInt64.toNat_add]; omega
+  exact ⟨⟨by omega, by omega⟩, e⟩
+
 /-- The first `d` slots of the run of `(k1, k2)` are live and hold other keys. -/
-def MNoMatchG (S : MemoSch) (m : Mem) (k1 k2 : Word) (d : Nat) : Prop :=
-  ∀ e < d, mstG S m (mrunG S m k1 k2 e) = epG S m ∧
-    ¬ (mk1G S m (mrunG S m k1 k2 e) = k1 ∧ mk2G S m (mrunG S m k1 k2 e) = k2)
+def MNoMatchAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word) (d : Nat) : Prop :=
+  ∀ e' < d, mstG S m (runAt b n k1 k2 e') = e ∧
+    ¬ (mk1G S m (runAt b n k1 k2 e') = k1 ∧ mk2G S m (runAt b n k1 k2 e') = k2)
 
-/-- What the probe's result `rs` says: a hit is a live slot `rs[1]` with key `(k1, k2)`; a miss is
-the non-live slot `rs[1]`, step `rs[2]` of the run, after live slots with other keys. -/
-def MProbeOKG (S : MemoSch) (m : Mem) (k1 k2 : Word) (rs : List Word) : Prop :=
-  rs ≠ [] →
-    (rs.headD 0 ≠ 0 → mstG S m (rs.tail.headD 0) = epG S m ∧ mk1G S m (rs.tail.headD 0) = k1 ∧
-      mk2G S m (rs.tail.headD 0) = k2 ∧ rs.tail.headD 0 < nG S m) ∧
-    (rs.headD 0 = 0 → rs.tail.headD 0 = mrunG S m k1 k2 (rs.tail.tail.headD 0).toNat ∧
-      rs.tail.headD 0 < nG S m ∧ mstG S m (rs.tail.headD 0) ≠ epG S m ∧
-      MNoMatchG S m k1 k2 (rs.tail.tail.headD 0).toNat)
+/-- What the probe's result `rs` says: the region is not empty; a hit is a live slot `rs[1]` of the
+run with key `(k1, k2)`; a miss is the non-live slot `rs[1]`, step `rs[2]` of the run, after live
+slots with other keys. -/
+def MProbeOKAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word) (rs : List Word) : Prop :=
+  rs ≠ [] → 0 < n ∧
+    (rs.headD 0 ≠ 0 → mstG S m (rs.tail.headD 0) = e ∧ mk1G S m (rs.tail.headD 0) = k1 ∧
+      mk2G S m (rs.tail.headD 0) = k2 ∧ ∃ d : Nat, rs.tail.headD 0 = runAt b n k1 k2 d) ∧
+    (rs.headD 0 = 0 → rs.tail.headD 0 = runAt b n k1 k2 (rs.tail.tail.headD 0).toNat ∧
+      mstG S m (rs.tail.headD 0) ≠ e ∧ MNoMatchAt S m e b n k1 k2 (rs.tail.tail.headD 0).toNat)
 
-theorem mprobeG_ok (S : MemoSch) (m : Mem) (k1 k2 : Word)
-    (hx : homeW (kh k1 k2) (nG S m) < nG S m) :
-    ∀ (n : Nat) (d : Word), (nG S m).toNat - d.toNat = n → MNoMatchG S m k1 k2 d.toNat →
-      MProbeOKG S m k1 k2
-        (mprobeG (m.arr64 S.arr) k1 k2 (epG S m) (nG S m) (mrunG S m k1 k2 d.toNat) d) := by
-  intro n
-  induction n with
+theorem mprobeG_okAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word)
+    (hx : homeW (kh k1 k2) n < n) :
+    ∀ (k : Nat) (d : Word), n.toNat - d.toNat = k → MNoMatchAt S m e b n k1 k2 d.toNat →
+      MProbeOKAt S m e b n k1 k2
+        (mprobeG (m.arr64 S.arr) k1 k2 e b n (walkW n (homeW (kh k1 k2) n) d.toNat) d) := by
+  have hn : 0 < n := by
+    have : (homeW (kh k1 k2) n).toNat < n.toNat := hx
+    exact UInt64.lt_iff_toNat_lt.mpr (by omega)
+  intro k
+  induction k with
   | zero =>
-    intro d hk _; rw [mprobeG]; grind [MProbeOKG]
-  | succ n ih =>
+    intro d hk _; rw [mprobeG]; grind [MProbeOKAt]
+  | succ k ih =>
     intro d hk hnm
     have := ih (d + 1)
     clear ih
-    have hd : d < nG S m := by grind
+    have hd : d < n := by grind
     have hd1 : (d + 1).toNat = d.toNat + 1 := by grind
     specialize this (by grind)
-    have hlt : mrunG S m k1 k2 d.toNat < nG S m := walkW_lt _ _ _ hx
-    rw [hd1, mrunG, walkW_succ, ← mrunG] at this
+    rw [hd1, walkW_succ] at this
     rw [mprobeG]
-    by_cases h0 : rdW (m.arr64 S.arr) (mrunG S m k1 k2 d.toNat * 4) ≠ epG S m
+    have hrun : b + walkW n (homeW (kh k1 k2) n) d.toNat = runAt b n k1 k2 d.toNat := rfl
+    by_cases h0 : rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4) ≠ e
     · simp only [hd, h0, ↓reduceIte, ne_eq, not_false_eq_true]
-      grind [MProbeOKG, mstG]
-    by_cases hm : rdW (m.arr64 S.arr) (mrunG S m k1 k2 d.toNat * 4 + 1) = k1 ∧
-        rdW (m.arr64 S.arr) (mrunG S m k1 k2 d.toNat * 4 + 2) = k2
+      refine fun _ => ⟨hn, fun h => by simp at h, fun _ => ?_⟩
+      simp only [List.tail_cons, List.headD_cons, hrun]
+      exact ⟨rfl, by rw [← hrun]; exact h0, hnm⟩
+    by_cases hm : rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4 + 1) = k1 ∧
+        rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4 + 2) = k2
     · simp only [hd, h0, hm, ↓reduceIte, ne_eq, not_true_eq_false, and_self]
-      grind [MProbeOKG, mstG, mk1G, mk2G]
+      refine fun _ => ⟨hn, fun _ => ?_, fun h => by simp at h⟩
+      simp only [List.tail_cons, List.headD_cons]
+      simp only [ne_eq, Decidable.not_not] at h0
+      exact ⟨h0, hm.1, hm.2, d.toNat, hrun⟩
     · simp only [hd, h0, hm, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true]
-      exact this (by grind [MNoMatchG, mstG, mk1G, mk2G])
+      simp only [ne_eq, Decidable.not_not] at h0
+      exact this (fun e' he' => by
+        rcases Nat.lt_succ_iff_lt_or_eq.mp he' with h | h
+        · exact hnm e' h
+        · subst h; exact ⟨h0, hm⟩)
+
+/-- The probe from the home slot. -/
+theorem mprobeG_home_ok (S : MemoSch) (m : Mem) (e b n k1 k2 : Word) :
+    MProbeOKAt S m e b n k1 k2 (mprobeG (m.arr64 S.arr) k1 k2 e b n (homeW (kh k1 k2) n) 0) := by
+  by_cases hn : n = 0
+  · subst hn; rw [mprobeG]; simp [MProbeOKAt]
+  · have := mprobeG_okAt S m e b n k1 k2 (homeW_lt _ _ (by grind)) _ 0 rfl
+      (by simp [MNoMatchAt])
+    simpa [walkW] using this
 
 /-- The probe `X_find` makes. -/
-theorem mfindG_ok (S : MemoSch) (m : Mem) (k1 k2 : Word) : MProbeOKG S m k1 k2 (mfindG S m k1 k2) := by
-  by_cases hn : nG S m = 0
-  · simp only [mfindG]; rw [mprobeG]; simp [hn, MProbeOKG]
-  · have := mprobeG_ok S m k1 k2 (homeW_lt _ _ (by grind)) _ 0 rfl (by simp [MNoMatchG])
-    simpa [mrunG, walkW, mfindG] using this
+theorem mfindG_ok (S : MemoSch) (m : Mem) (k1 k2 : Word) :
+    MProbeOKAt S m (epG S m) (mbG S m) (nG S m) k1 k2 (mfindG S m k1 k2) :=
+  mprobeG_home_ok S m _ _ _ k1 k2
+
+/-- The free-slot probe of the growth. -/
+theorem mslotG_ok (S : MemoSch) (m : Mem) (e b n k1 k2 : Word) :
+    MProbeOKAt S m e b n k1 k2 (mslotG (m.arr64 S.arr) k1 k2 e b n) :=
+  mprobeG_home_ok S m e b n k1 k2
+
+/-- A non-empty region of a well-placed memo lies in the array. -/
+theorem RegOK.bound {S : MemoSch} {m : Mem} (h : RegOK S m) (hn : 0 < nG S m) :
+    1 ≤ (mbG S m).toNat ∧ (mbG S m).toNat + (nG S m).toNat ≤ slotsG S m := by
+  rcases h.1 with h0 | h1
+  · exact absurd h0 (by have : 0 < (nG S m).toNat := hn; omega)
+  · exact h1
+
+theorem RegOK.noov {S : MemoSch} {m : Mem} (h : RegOK S m) (hn : 0 < nG S m) :
+    (mbG S m).toNat + (nG S m).toNat < 2 ^ 64 := by
+  have := h.bound hn; have := slotsG_lt S m; omega
 
 section relLemmas
 variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
 variable (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν → Prop)
 
 omit [LawfulBEq κ] [LawfulHashable κ] in
+/-- **A probe hit is the entry of `f`**, a value the slot's word denotes. -/
+theorem memoAt_hit (e b n : Word) (m : Mem) (f : κ → Option ν) (hA : MemoAt S K VR e b n m f)
+    (hb : b.toNat + n.toNat < 2 ^ 64) (k1 k2 : Word) (rs : List Word)
+    (hok : MProbeOKAt S m e b n k1 k2 rs) (hr : rs ≠ []) (hh : rs.headD 0 ≠ 0) (hk : K.ok k1 k2) :
+    MemoV VR m (mvG S m (rs.tail.headD 0)) (f (K.dk k1 k2)) := by
+  obtain ⟨hn, hhit, -⟩ := hok hr
+  obtain ⟨h1, h2, h3, d, hd⟩ := hhit hh
+  have hreg := (runAt_reg b n k1 k2 d hn hb).1
+  rw [← hd] at hreg
+  have := hA.1 _ hreg h1 (by rw [h2]; exact K.ok_tomb k1 k2 hk)
+  rw [h2, h3] at this
+  exact this.2
+
+omit [LawfulBEq κ] [LawfulHashable κ] in
+/-- **A probe miss is the absence from `f`.** -/
+theorem memoAt_miss (e b n : Word) (m : Mem) (f : κ → Option ν) (hA : MemoAt S K VR e b n m f)
+    (k1 k2 : Word) (rs : List Word) (hok : MProbeOKAt S m e b n k1 k2 rs) (hk : K.ok k1 k2)
+    (hr : rs ≠ []) (hh : rs.headD 0 = 0) : f (K.dk k1 k2) = none := by
+  obtain ⟨-, -, hmiss⟩ := hok hr
+  obtain ⟨hj, hfree, hnm⟩ := hmiss hh
+  cases hc : f (K.dk k1 k2) with
+  | none => rfl
+  | some v =>
+    exfalso
+    obtain ⟨-, -, d, hd1, hd2, hd2', hd3⟩ := hA.2.2 _ _ hc
+    rw [K.ek_dk k1 k2 hk] at hd1 hd2 hd2' hd3
+    by_cases hlt' : d < (rs.tail.tail.headD 0).toNat
+    · exact (hnm d hlt').2 ⟨hd2, hd2'⟩
+    · by_cases heq : d = (rs.tail.tail.headD 0).toNat
+      · subst heq; rw [← hj] at hd1; exact hfree hd1
+      · have := hd3 (rs.tail.tail.headD 0).toNat (by omega)
+        rw [← hj] at this; exact hfree this
+
+omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **A probe hit is the map's entry**, a value the slot's word denotes. -/
 theorem memoRV_hit (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp) (k1 k2 : Word)
     (hr : mfindG S m k1 k2 ≠ []) (hh : (mfindG S m k1 k2).headD 0 ≠ 0) (hk : K.ok k1 k2) :
-    MemoV VR m (mvG S m ((mfindG S m k1 k2).tail.headD 0)) mp[K.dk k1 k2]? := by
-  obtain ⟨h1, h2, h3, h4⟩ := (mfindG_ok S m k1 k2 hr).1 hh
-  have := hR.2.2.2.1 _ h4 h1 (by rw [h2]; exact K.ok_tomb k1 k2 hk)
-  rw [h2, h3] at this
-  exact this.2
+    MemoV VR m (mvG S m ((mfindG S m k1 k2).tail.headD 0)) mp[K.dk k1 k2]? :=
+  memoAt_hit S K VR _ _ _ m _ hR.2.2.2 (hR.2.2.1.noov ((mfindG_ok S m k1 k2 hr).1)) k1 k2 _
+    (mfindG_ok S m k1 k2) hr hh hk
 
 omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **A probe miss is the map's absence.** -/
 theorem memoRV_miss (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp) (k1 k2 : Word)
     (hk : K.ok k1 k2) (hr : mfindG S m k1 k2 ≠ []) (hh : (mfindG S m k1 k2).headD 0 = 0) :
-    mp[K.dk k1 k2]? = none := by
-  obtain ⟨hj, hlt, hfree, hnm⟩ := (mfindG_ok S m k1 k2 hr).2 hh
-  cases hc : mp[K.dk k1 k2]? with
-  | none => rfl
-  | some v =>
-    exfalso
-    obtain ⟨-, d, hd1, hd2, hd2', hd3⟩ := hR.2.2.2.2.2 _ _ hc
-    rw [K.ek_dk k1 k2 hk] at hd1 hd2 hd2' hd3
-    clear hR hc
-    by_cases hlt' : d < ((mfindG S m k1 k2).tail.tail.headD 0).toNat
-    · exact (hnm d hlt').2 ⟨hd2, hd2'⟩
-    · by_cases heq : d = ((mfindG S m k1 k2).tail.tail.headD 0).toNat
-      · subst heq; rw [← hj] at hd1; exact hfree hd1
-      · have := hd3 ((mfindG S m k1 k2).tail.tail.headD 0).toNat (by omega)
-        rw [← hj] at this; exact hfree this
+    mp[K.dk k1 k2]? = none :=
+  memoAt_miss S K VR _ _ _ m (fun x => mp[x]?) hR.2.2.2 k1 k2 _ (mfindG_ok S m k1 k2) hk hr hh
 
 omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- A probe hit of `MemoRG` is the map's entry. -/
@@ -188,168 +282,104 @@ theorem memoRG_miss (dv : Word → ν) (m : Mem) (mp : Std.HashMap κ ν) (hR : 
 
 end relLemmas
 
-/-! ## Reads and frames of `put` and `clear` -/
+/-! ## Slot reads -/
 
-theorem nG_toNat (S : MemoSch) (m : Mem) : (nG S m).toNat = (m.arr64 S.arr).size % 2 ^ 64 / 4 := by
-  simp only [nG, len64_eq, UInt64.toNat_shiftRight, UInt64.toNat_ofNat', Nat.shiftRight_eq_div_pow]
-  rfl
-
-theorem nG_lt (S : MemoSch) (m : Mem) : (nG S m).toNat < 2 ^ 62 := by
-  rw [nG_toNat]; have := Nat.mod_lt (m.arr64 S.arr).size (show 0 < 2 ^ 64 by decide); omega
+theorem slotsG_toNat (S : MemoSch) (m : Mem) : slotsG S m = (m.arr64 S.arr).size % 2 ^ 64 / 4 := by
+  simp only [slotsG, len64_eq, UInt64.toNat_ofNat']
 
 /-- Word `f < 4` of slot `x`. -/
-theorem adG (S : MemoSch) (m : Mem) (x : Word) (hx : x < nG S m) (f : Word) (hf : f.toNat < 4) :
-    (x * 4 + f).toNat = x.toNat * 4 + f.toNat := by
-  have := nG_lt S m
-  have : x.toNat < (nG S m).toNat := hx
-  simp only [UInt64.toNat_add, UInt64.toNat_mul]
-  rw [show (4 : Word).toNat = 4 from rfl, Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+theorem adS (S : MemoSch) (m : Mem) (x : Word) (hx : x.toNat < slotsG S m) (f : Word)
+    (hf : f.toNat < 4) :
+    (x * 4 + f).toNat = x.toNat * 4 + f.toNat ∧ (x * 4 + f).toNat < (m.arr64 S.arr).size := by
+  have := slotsG_lt S m
+  rw [slotsG_toNat] at hx
+  have := (m.arr64 S.arr).size.mod_le (2 ^ 64)
+  have e : (x * 4 + f).toNat = x.toNat * 4 + f.toNat := by
+    simp only [UInt64.toNat_add, UInt64.toNat_mul]
+    rw [show (4 : Word).toNat = 4 from rfl, Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+  exact ⟨e, by omega⟩
 
-theorem adG_eq (S : MemoSch) (m : Mem) (x y : Word) (hx : x < nG S m) (hy : y < nG S m) (f g : Word)
-    (hf : f.toNat < 4) (hg : g.toNat < 4) : (x * 4 + f = y * 4 + g) ↔ (x = y ∧ f = g) := by
+theorem adS_eq (S : MemoSch) (m : Mem) (x y : Word) (hx : x.toNat < slotsG S m)
+    (hy : y.toNat < slotsG S m) (f g : Word) (hf : f.toNat < 4) (hg : g.toNat < 4) :
+    (x * 4 + f = y * 4 + g) ↔ (x = y ∧ f = g) := by
   constructor
   · intro h
     have h' := congrArg UInt64.toNat h
-    rw [adG S m x hx f hf, adG S m y hy g hg] at h'
+    rw [(adS S m x hx f hf).1, (adS S m y hy g hg).1] at h'
     exact ⟨UInt64.toNat_inj.mp (by omega), UInt64.toNat_inj.mp (by omega)⟩
   · rintro ⟨rfl, rfl⟩; rfl
 
-theorem adG_lt (S : MemoSch) (m : Mem) (x : Word) (hx : x < nG S m) (f : Word) (hf : f.toNat < 4) :
-    (x * 4 + f).toNat < (m.arr64 S.arr).size := by
-  rw [adG S m x hx f hf]
-  have h1 : x.toNat < (nG S m).toNat := hx
-  rw [nG_toNat] at h1
-  have := (m.arr64 S.arr).size.mod_le (2 ^ 64); omega
+theorem slotsG_set64 (S : MemoSch) (m : Mem) (a : ArrId) (k v : Word) :
+    slotsG S (m.set64 a k v) = slotsG S m := by
+  simp only [slotsG, len64_eq, size_set64]
 
-theorem mputMem_arr (S : MemoSch) (m : Mem) (fd j k1 k2 v : Word) (b : ArrId) (hb : b ≠ S.arr)
-    (hc : b ≠ CTL) : (mputMem S m fd j k1 k2 v).arr64 b = m.arr64 b := by
-  unfold mputMem; split <;> simp [Mem.arr64_set64_ne _ _ _ _ _ hb, Mem.arr64_set64_ne _ _ _ _ _ hc]
+/-- Word `f` of slot `j` after a write to word `g` of slot `s`. -/
+theorem rdS_set (S : MemoSch) (m : Mem) (s j f g v : Word) (hs : s.toNat < slotsG S m)
+    (hj : j.toNat < slotsG S m) (hf : f.toNat < 4) (hg : g.toNat < 4) :
+    rdW ((m.set64 S.arr (s * 4 + g) v).arr64 S.arr) (j * 4 + f) =
+      if s = j ∧ g = f then v else rdW (m.arr64 S.arr) (j * 4 + f) := by
+  rw [rdW_set64]
+  have := (adS S m s hs g hg).2
+  by_cases h : s = j ∧ g = f
+  · simp [h, this]
+  · have : ¬ (s * 4 + g = j * 4 + f) := fun e => h ((adS_eq S m s j hs hj g f hg hf).mp e)
+    simp [h, this]
 
-theorem mputMem_frame (S : MemoSch) (hS : S.WF) (m : Mem) (fd j k1 k2 v : Word) :
-    MemFrame [S.arr] [S.cs + 1] m (mputMem S m fd j k1 k2 v) := by
-  refine ⟨fun b hb hc => mputMem_arr S m fd j k1 k2 v b (by simpa using hb) hc, fun x hx => ?_,
-    fun b => ?_, ?_⟩
-  · have : x ≠ S.cs + 1 := by simpa using hx
-    have := hS.arr_ctl
-    unfold mputMem; split <;> simp only [rdW_set64] <;> grind
-  · unfold mputMem; split <;> simp only [size_set64]
-  · unfold mputMem; split <;> simp only [Mem.words_size_set64]
+/-- The four words of slot `j` after a write to word `g` of slot `s`. -/
+theorem slot_set (S : MemoSch) (m : Mem) (s g v : Word) (hs : s.toNat < slotsG S m)
+    (hg : g.toNat < 4) (j : Word) (hj : j.toNat < slotsG S m) :
+    mstG S (m.set64 S.arr (s * 4 + g) v) j = (if s = j ∧ g = 0 then v else mstG S m j) ∧
+    mk1G S (m.set64 S.arr (s * 4 + g) v) j = (if s = j ∧ g = 1 then v else mk1G S m j) ∧
+    mk2G S (m.set64 S.arr (s * 4 + g) v) j = (if s = j ∧ g = 2 then v else mk2G S m j) ∧
+    mvG S (m.set64 S.arr (s * 4 + g) v) j = (if s = j ∧ g = 3 then v else mvG S m j) := by
+  have r := fun f hf => rdS_set S m s j f g v hs hj hf hg
+  have r0 := r 0 (by decide)
+  simp only [UInt64.add_zero] at r0
+  exact ⟨r0, r 1 (by decide), r 2 (by decide), r 3 (by decide)⟩
 
-theorem mputG_frame (S : MemoSch) (hS : S.WF) (m m' : Mem) (k1 k2 v fd j : Word)
-    (h : mputG S m k1 k2 v fd j = some m') : MemFrame [S.arr] [S.cs + 1] m m' := by
-  simp only [mputG] at h
-  split at h
-  · simp at h
-  · simp only [Option.some.injEq] at h; subst h; exact mputMem_frame _ hS _ _ _ _ _ _
+theorem slot_set0 (S : MemoSch) (m : Mem) (s v : Word) (hs : s.toNat < slotsG S m)
+    (j : Word) (hj : j.toNat < slotsG S m) :
+    mstG S (m.set64 S.arr (s * 4) v) j = (if s = j then v else mstG S m j) ∧
+    mk1G S (m.set64 S.arr (s * 4) v) j = mk1G S m j ∧
+    mk2G S (m.set64 S.arr (s * 4) v) j = mk2G S m j ∧
+    mvG S (m.set64 S.arr (s * 4) v) j = mvG S m j := by
+  have := slot_set S m s 0 v hs (by decide) j hj
+  simpa using this
 
-theorem msetG_frame (S : MemoSch) (hS : S.WF) (m m' : Mem) (k1 k2 v : Word) (h : msetG S m k1 k2 v = some m') :
-    MemFrame [S.arr] [S.cs + 1] m m' := by
-  simp only [msetG] at h
-  split at h
-  · simp at h
-  · exact mputG_frame S hS m m' _ _ _ _ _ h
+/-- Slot reads through a write to another array. -/
+theorem slot_other (S : MemoSch) (m : Mem) (a : ArrId) (ha : a ≠ S.arr) (k v j : Word) :
+    mstG S (m.set64 a k v) j = mstG S m j ∧ mk1G S (m.set64 a k v) j = mk1G S m j ∧
+    mk2G S (m.set64 a k v) j = mk2G S m j ∧ mvG S (m.set64 a k v) j = mvG S m j := by
+  simp only [mstG, mk1G, mk2G, mvG, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm ha), and_self]
 
-theorem mclearG_frame (S : MemoSch) (m : Mem) : MemFrame [] [S.cs, S.cs + 1] m (mclearG S m) := by
-  have h1 := MemFrame.setCtl m S.cs (rdW (m.arr64 CTL) S.cs + 1)
-  have h2 := MemFrame.setCtl (m.set64 CTL S.cs (rdW (m.arr64 CTL) S.cs + 1)) (S.cs + 1) 0
-  exact (h1.mono (by simp) (by simp)).trans (h2.mono (by simp) (by simp))
+/-- The header words (0, 1, 2 of slot 0) through a write to a slot `s ≥ 1`. -/
+theorem hdr_set (S : MemoSch) (m : Mem) (s g v : Word) (hs : s.toNat < slotsG S m)
+    (hs1 : 1 ≤ s.toNat) (hg : g.toNat < 4) (f : Word) (hf : f.toNat < 3) :
+    rdW ((m.set64 S.arr (s * 4 + g) v).arr64 S.arr) f = rdW (m.arr64 S.arr) f := by
+  have h0 : (0 : Word).toNat < slotsG S m := by simp; omega
+  have := rdS_set S m s 0 f g v hs h0 (by omega) hg
+  simp only [UInt64.zero_mul, UInt64.zero_add] at this
+  rw [this]
+  have : ¬ s = 0 := fun e => by subst e; simp at hs1
+  simp [this]
 
-/-- A read of the memo after `put`'s writes at slot `j`. -/
-theorem mputMem_rd (S : MemoSch) (hS : S.WF) (m : Mem) (fd j k1 k2 v : Word) (hj : j < nG S m)
-    (x : Word) :
-    rdW ((mputMem S m fd j k1 k2 v).arr64 S.arr) x =
-      if x = j * 4 + 3 then v else if fd = 0 ∧ x = j * 4 + 2 then k2
-      else if fd = 0 ∧ x = j * 4 + 1 then k1
-      else if fd = 0 ∧ x = j * 4 + 0 then epG S m else rdW (m.arr64 S.arr) x := by
-  have l := fun f hf => adG_lt S m j hj f hf
-  have l0 := l 0 (by decide)
-  have l1 := l 1 (by decide)
-  have l2 := l 2 (by decide)
-  have l3 := l 3 (by decide)
-  have ne := fun f g hf hg (hfg : f ≠ g) (h : j * 4 + f = j * 4 + g) =>
-    hfg ((adG_eq S m j j hj hj f g hf hg).mp h).2
-  have n01 := ne 0 1 (by decide) (by decide) (by decide)
-  have n02 := ne 0 2 (by decide) (by decide) (by decide)
-  have n03 := ne 0 3 (by decide) (by decide) (by decide)
-  have n12 := ne 1 2 (by decide) (by decide) (by decide)
-  have n13 := ne 1 3 (by decide) (by decide) (by decide)
-  have n23 := ne 2 3 (by decide) (by decide) (by decide)
-  have hac := hS.arr_ctl
-  simp only [UInt64.add_zero] at l0 n01 n02 n03 ⊢
-  unfold mputMem
-  by_cases hfd : fd = 0
-  · simp only [hfd, ↓reduceIte, rdW_set64, size_set64, true_and, hac, false_and, l0, l1, l2, l3,
-      and_true, Mem.arr64_set64_ne _ _ _ _ _ hac]
-    by_cases h3 : x = j * 4 + 3
-    · subst h3; simp
-    by_cases h2 : x = j * 4 + 2
-    · subst h2; simp [Ne.symm n23]
-    by_cases h1 : x = j * 4 + 1
-    · subst h1; simp [Ne.symm n13, Ne.symm n12]
-    by_cases h0 : x = j * 4
-    · subst h0; simp [Ne.symm n03, Ne.symm n02, Ne.symm n01]
-    simp [Ne.symm h3, Ne.symm h2, Ne.symm h1, Ne.symm h0, h3, h2, h1, h0]
-  · simp only [hfd, ↓reduceIte, rdW_set64, l3, true_and, false_and, and_true]
-    by_cases h3 : x = j * 4 + 3
-    · subst h3; simp
-    · simp [Ne.symm h3, h3]
-
-/-- Reads of the memo after `put` at slot `j`. -/
-theorem mputMem_reads (S : MemoSch) (hS : S.WF) (m : Mem) (fd j k1 k2 v : Word)
-    (hj : j < nG S m) :
-    epG S (mputMem S m fd j k1 k2 v) = epG S m ∧ nG S (mputMem S m fd j k1 k2 v) = nG S m ∧
-    (∀ j', j' < nG S m → mstG S (mputMem S m fd j k1 k2 v) j' =
-      if j' = j ∧ fd = 0 then epG S m else mstG S m j') ∧
-    (∀ j', j' < nG S m → mk1G S (mputMem S m fd j k1 k2 v) j' =
-      if j' = j ∧ fd = 0 then k1 else mk1G S m j') ∧
-    (∀ j', j' < nG S m → mk2G S (mputMem S m fd j k1 k2 v) j' =
-      if j' = j ∧ fd = 0 then k2 else mk2G S m j') ∧
-    (∀ j', j' < nG S m → mvG S (mputMem S m fd j k1 k2 v) j' =
-      if j' = j then v else mvG S m j') := by
-  have hf := mputMem_frame S hS m fd j k1 k2 v
-  have hcs : S.cs ≠ S.cs + 1 := by
-    intro h; have := hS.cs; grind
-  have e := fun j' (hj' : j' < nG S m) f g hf hg => adG_eq S m j' j hj' hj f g hf hg
-  have rd := mputMem_rd S hS m fd j k1 k2 v hj
-  refine ⟨by simp only [epG, hf.2.1 S.cs (by simp [hcs])],
-    by simp only [nG, len64_eq, hf.2.2.1], fun j' hj' => ?_, fun j' hj' => ?_, fun j' hj' => ?_,
-    fun j' hj' => ?_⟩
-  · have e3 := e j' hj' 0 3 (by decide) (by decide)
-    have e2 := e j' hj' 0 2 (by decide) (by decide)
-    have e1 := e j' hj' 0 1 (by decide) (by decide)
-    have e0 := e j' hj' 0 0 (by decide) (by decide)
-    simp only [UInt64.add_zero] at e3 e2 e1 e0
-    simp only [mstG, rd, UInt64.add_zero, e3, e2, e1, e0]
-    by_cases h : j' = j <;> by_cases hfd : fd = 0 <;> simp [h, hfd]
-  · have e3 := e j' hj' 1 3 (by decide) (by decide)
-    have e2 := e j' hj' 1 2 (by decide) (by decide)
-    have e1 := e j' hj' 1 1 (by decide) (by decide)
-    have e0 := e j' hj' 1 0 (by decide) (by decide)
-    simp only [UInt64.add_zero] at e3 e2 e1 e0
-    simp only [mk1G, rd, UInt64.add_zero, e3, e2, e1, e0]
-    by_cases h : j' = j <;> by_cases hfd : fd = 0 <;> simp [h, hfd]
-  · have e3 := e j' hj' 2 3 (by decide) (by decide)
-    have e2 := e j' hj' 2 2 (by decide) (by decide)
-    have e1 := e j' hj' 2 1 (by decide) (by decide)
-    have e0 := e j' hj' 2 0 (by decide) (by decide)
-    simp only [UInt64.add_zero] at e3 e2 e1 e0
-    simp only [mk2G, rd, UInt64.add_zero, e3, e2, e1, e0]
-    by_cases h : j' = j <;> by_cases hfd : fd = 0 <;> simp [h, hfd]
-  · have e3 := e j' hj' 3 3 (by decide) (by decide)
-    have e2 := e j' hj' 3 2 (by decide) (by decide)
-    have e1 := e j' hj' 3 1 (by decide) (by decide)
-    have e0 := e j' hj' 3 0 (by decide) (by decide)
-    simp only [UInt64.add_zero] at e3 e2 e1 e0
-    simp only [mvG, rd, UInt64.add_zero, e3, e2, e1, e0]
-    by_cases h : j' = j <;> by_cases hfd : fd = 0 <;> simp [h, hfd]
-
-theorem mrunG_eq (S : MemoSch) (m m' : Mem) (h : nG S m' = nG S m) (k1 k2 : Word) (e : Nat) :
-    mrunG S m' k1 k2 e = mrunG S m k1 k2 e := by
-  simp only [mrunG, h]
-
-theorem mrunG_lt (S : MemoSch) (m : Mem) (k1 k2 : Word) (e : Nat) (hn : 0 < nG S m) :
-    mrunG S m k1 k2 e < nG S m :=
-  walkW_lt _ _ _ (homeW_lt _ _ hn)
+/-- The region, the stamp and the slot count are those of the header and `CTL`: a memory that
+agrees on the three header words, on `CTL[cs]` and on the array's size has the same region. -/
+theorem reg_congr (S : MemoSch) (m m' : Mem)
+    (hh : ∀ f : Word, f.toNat < 3 → rdW (m'.arr64 S.arr) f = rdW (m.arr64 S.arr) f)
+    (hc : rdW (m'.arr64 CTL) S.cs = rdW (m.arr64 CTL) S.cs)
+    (hz : (m'.arr64 S.arr).size = (m.arr64 S.arr).size) :
+    epG S m' = epG S m ∧ mbG S m' = mbG S m ∧ nG S m' = nG S m ∧ slotsG S m' = slotsG S m ∧
+      (hdG S m' ↔ hdG S m) := by
+  have he : epG S m' = epG S m := by simp only [epG, hc]
+  have hd : hdG S m' ↔ hdG S m := by
+    simp only [hdG, he, hh 0 (by decide)]
+  have hl : m'.len64 S.arr = m.len64 S.arr := by simp only [len64_eq, hz]
+  refine ⟨he, ?_, ?_, by simp only [slotsG, hl], hd⟩
+  · simp only [mbG, hh 1 (by decide)]
+    by_cases h : hdG S m <;> simp [h, hd]
+  · simp only [nG, hh 2 (by decide), hl]
+    by_cases h : hdG S m <;> simp [h, hd]
 
 section setClear
 variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
