@@ -8,7 +8,10 @@ import ConAgua.Arena.IndInstallSpec34
 `check_block_pass(vis, p0, isRec)` (`icpW`, `IndInstallSpec28`): the formers (`checkBlockInds`),
 the flush, the constructors, the positivity context, the classes (`RecGenSpec21`), the positivity
 check, the classes' seeds and the nested seeds, then the 19-word `BlockPass` record
-(`check_block_pass_rec`), decoded below the tops (`BPassR`, what `checkBlockTail` takes).
+(`check_block_pass_rec`), decoded below the tops (`BPassR`, what `checkBlockTail` takes), with what
+the recursor stage takes of it: its shape's recursor slice below the top (`RecsB`, the shape a copy
+of the input's by `block_shape_with_sort`) and its classes' constructors' level-parameter slices in
+`EREC` (`ClassesLp`, from the classes' decoding: `classesLp_of_decPL`).
 -/
 
 set_option experimental.vcgen true
@@ -163,6 +166,67 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
     have hr : rdW (m.arr64 IW) (q + 3) = w3 := by simp only [rdW, hq3, e3]; rfl
     rw [hr]; exact hsrc
 
+/-! ## The classes' constructors' level-parameter slices -/
+
+/-- **A constructor slice decoded below the tops has its constants' level-parameter slices in
+`EREC` or empty** (`CtorsLp`): each constructor's constant record is decoded below the tops
+(`CVExt`). -/
+theorem ctorsLp_of_decPL {m : Mem} {co cl : Nat} {cts : List (IConstantVal × Nat)}
+    (hdc : decPL (truncM m) (decCN (truncM m)) co cl = some cts) (hcob : co < 2 ^ 64) (hclb : cl < 2 ^ 64)
+    (hE : erTop m ≤ (m.arr64 EREC).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    CtorsLp m (UInt64.ofNat co) (UInt64.ofNat cl) := by
+  intro k hk
+  rw [UInt64.toNat_ofNat_of_lt' hclb] at hk
+  obtain ⟨v, hv, hcn⟩ := decPL_getH (truncM m) hdc k hk
+  have hv0 := (rec2IwN_trunc hv).2
+  rw [← UInt64.toNat_ofNat_of_lt' hcob] at hv0
+  obtain ⟨hrdv, hvb⟩ := iwN_rdW_at (w := UInt64.ofNat co) (k := k) hv0 hsz
+  simp only [CtorLp]
+  rw [hrdv]
+  have hcnD : DecB (fun m => decCN m (UInt64.ofNat v : Word).toNat) m
+      (cts[k]'(by rw [decPL_length _ hdc]; exact hk)) := by
+    show decCN (truncM m) _ = _
+    rw [UInt64.toNat_ofNat_of_lt' hvb]; exact hcn
+  obtain ⟨a, ha, ha3, hcv, -⟩ := decCN_words hcnD hsz
+  rw [ha]
+  obtain ⟨⟨-, hx⟩, -⟩ := rec3CVExt_of_trunc (show decCVp (truncM m) a = _ from hcv)
+  have ha64 : a + 3 < 2 ^ 64 := by have := (rdW (m.arr64 CTL) 129).toNat_lt; simp only [erTop] at ha3; omega
+  have e1 : (UInt64.ofNat a + 1 : Word).toNat = a + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+  have e2 : (UInt64.ofNat a + 2 : Word).toNat = a + 2 := by rw [UInt64.toNat_add]; simp <;> omega
+  obtain ⟨w1, hw1⟩ : ∃ w, (m.arr64 EREC)[a + 1]? = some w :=
+    ⟨_, Array.getElem?_eq_getElem (show a + 1 < (m.arr64 EREC).size by omega)⟩
+  obtain ⟨w2, hw2⟩ : ∃ w, (m.arr64 EREC)[a + 2]? = some w :=
+    ⟨_, Array.getElem?_eq_getElem (show a + 2 < (m.arr64 EREC).size by omega)⟩
+  rw [rdW_of_get? e1.symm hw1, rdW_of_get? e2.symm hw2]
+  rcases hx w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, hw2])
+    with h | h
+  · right; omega
+  · left; exact h
+
+theorem iwN_trunc_lt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : v < 2 ^ 64 := by
+  have h6 := (rec2IwN_trunc h).2
+  simp only [iwN, nat?, Option.map_eq_some_iff] at h6
+  obtain ⟨w, -, rfl⟩ := h6; exact w.toNat_lt
+
+/-- **A class slice decoded below the tops has its constructors' level-parameter slices in `EREC`
+or empty** (`ClassesLp`). -/
+theorem classesLp_of_decPL {m : Mem} {mo ml : Word} {ms : List TargetMajor}
+    (h : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms)
+    (hE : erTop m ≤ (m.arr64 EREC).size) (hsz : (m.arr64 IW).size < 2 ^ 64) : ClassesLp m mo ml := by
+  intro c hc v o l hv ho hl
+  obtain ⟨v', hv', htm⟩ := decPL_getH (truncM m) h c hc
+  rw [(rec2IwN_trunc hv').2] at hv
+  cases Option.some.inj hv
+  simp only [decTM, bind, Option.bind_eq_some_iff, pure] at htm
+  obtain ⟨_, -, _, -, _, -, _, -, _, -, cts, hcts, -⟩ := htm
+  obtain ⟨co, cl, hco, hcl, hdc⟩ := decAt_some hcts
+  rw [(rec2IwN_trunc hco).2] at ho
+  rw [show v + 6 + 1 = v + 7 by omega] at hcl
+  rw [(rec2IwN_trunc hcl).2] at hl
+  cases Option.some.inj ho
+  cases Option.some.inj hl
+  exact ctorsLp_of_decPL hdc (iwN_trunc_lt hco) (iwN_trunc_lt hcl) hE hsz
+
 /-! ## The constructors' sums across the formers' environment -/
 
 theorem am_bind_ok {α β : Type} {x : AM α} {f : α → AM β} {a a' : AState} {y : β}
@@ -275,7 +339,9 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hPm : PosMR m) (hA : AbsOK m) (hk : ∀ f ∈ passKeepCallees, AbsKeep p f) :
     Sim (icpW p (n + 3) m vis p0 isRec) (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b) a
       (fun r x m' a' => StageR dn (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' a' ∧ IWGrow m m' ∧
-        BPassR (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m') := by
+        BPassR (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m' ∧
+        (RecsB m p0 → RecsB m' (rdW (m'.arr64 IW) (r.headD 0 + 3))) ∧
+        ClassesLp m' (rdW (m'.arr64 IW) (r.headD 0 + 15)) (rdW (m'.arr64 IW) (r.headD 0 + 16))) := by
   have hk' : ∀ f, f ∈ passKeepCallees → AbsKeep p f := hk
   intro r m' h
   unfold icpW at h
@@ -285,7 +351,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [c1, icpK1_some] at h
-  obtain ⟨s1, hs1, -, hok1, hout, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s1, hs1, -, hok1, hout, hA1, hrb1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (checkBlockInds_refines p hP.inds (n + 2) _ a dn vis fe p0 isRec bs b hS hq hsrc hcx hb hA
       (fun f hf => hk' f (by simp [passKeepCallees, hf]))) c1
   simp only at hs1 hout
@@ -339,7 +405,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   rw [c3, icpK3_some] at h
   obtain ⟨s3, hs3, -, hok3, hS3, hg3, hca3, hss3, hcb3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (checkBlockCtors_refines p hP.ctors (n + 2) _ a2 dn (r1.headD 0) fe1 _ _ _ _ _ bs1 bs1.members cvTas
-      hS2 hbs2 hsrc2 hmss hcv2) c3
+      hS2 hbs2 hsrc2 hmss hcv2 hA2) c3
   simp only at hs3 hS3 hg3 hca3 hss3 hcb3
   subst hs3
   have hrun3 := AM.run_of_ok _ a2 hok3
@@ -555,21 +621,43 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
     (hrd5.grow (decCR_mono _) (hg6.trans (hg7.trans (hg8.trans hg9))))
     (hms6.grow (fun q => decTM_mono q) (hg7.trans (hg8.trans hg9)))
     (htbl8.grow (fun q => decNCN_mono q) hg9)
+  have hT9 : iwTop s9.mem < 2 ^ 64 := (rdW (s9.mem.arr64 CTL) 200).toNat_lt
+  have hrw : ∀ j (hj : j < 19), rdW (s9.mem.arr64 IW) (q + UInt64.ofNat j) =
+      [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0, r3.headD 0,
+        r3.tail.headD 0, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0, r6.headD 0, r6.tail.headD 0,
+        r6.tail.tail.headD 0, r6.tail.tail.tail.headD 0, rdW (s8.mem.arr64 IW) (r4.headD 0 + 7),
+        rdW (s8.mem.arr64 IW) (r4.headD 0 + 8), r5.headD 0, r5.tail.headD 0, r5.tail.tail.headD 0,
+        rdW (s8.mem.arr64 IW) (r8.headD 0 + 4), rdW (s8.mem.arr64 IW) (r8.headD 0 + 5)][j]'(by simpa using hj) := by
+    intro j hj
+    have e := hget j hj
+    have hqj : (q + UInt64.ofNat j).toNat = q.toNat + j := tailToNat (by omega)
+    rw [List.getElem?_eq_getElem (by simpa using hj)] at e
+    simp only [rdW, hqj, e]; rfl
+  have hr3 : rdW (s9.mem.arr64 IW) (q + 3) = r1.tail.tail.tail.headD 0 := hrw 3 (by omega)
+  have hr15 : rdW (s9.mem.arr64 IW) (q + 15) = r5.tail.headD 0 := hrw 15 (by omega)
+  have hr16 : rdW (s9.mem.arr64 IW) (q + 16) = r5.tail.tail.headD 0 := hrw 16 (by omega)
+  have hms9 := hms6.grow (fun q => decTM_mono q) (hg7.trans (hg8.trans hg9))
   refine ⟨⟨fe1, cvTas, ⟨bs1⟩, ctorsAs, sss, kinds, nfs, c.params, rd, ms, ns.ctorNfs.toList⟩, a8, ?_,
-    ?_, hgA, ?_, hP9, hA9⟩
+    ?_, hgA, ?_, hP9, hA9, fun hrb => ?_, ?_⟩
   · rw [← ha2] at hrun3
     simp only [ConRon.Arena.checkBlockPass, StateT.run_bind, hrun1, except_ok_bind, BlockParts.complete,
       flushCaches_run, hrun3, hrun4, hrun5, hrun6, hrun7, hrun8]
     rfl
   · simp only [List.headD_cons]; rw [hw0]; exact hS9
   · simp only [List.headD_cons]; rw [hw0]; exact hBP
+  · simp only [List.headD_cons]; rw [hr3]
+    exact (hrb1 hrb).grow (hg12.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans (hg7.trans
+      (hg8.trans hg9))))))) (by omega)
+  · simp only [List.headD_cons]; rw [hr15, hr16]
+    exact classesLp_of_decPL hms9.1 hS9.2.2.1 hS9.2.2.2.1
 
 /-- **`check_block_pass(vis, p0, isRec)` refines `checkBlockPass`**: from the stage relation, the
 block's shape decoded below the tops (with its member slice's bound and constant records), an
 unrestricted environment whose stored constructors' sums are words (`AllVis`, `CtorSums`) and the walk
 memos well formed, the pass's record at `r[0]` decoded below the tops (`BPassR`, at its word 0, the
-formers' view), the stage relation at that view of the formers' environment, the memos kept.
-Program facts: the lookups (`PassProg`) and the write set of the callees without a memo lemma
+formers' view), the stage relation at that view of the formers' environment, the memos kept, the
+record's shape's recursor slice below the top if the input's is (`RecsB`), its classes'
+constructors' level-parameter slices in `EREC` (`ClassesLp`). Program facts: the lookups (`PassProg`) and the write set of the callees without a memo lemma
 (`hcl`). -/
 @[refines ConRon.Arena.checkBlockPass]
 theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
@@ -582,7 +670,9 @@ theorem checkBlockPass_refines {p : Prog} (hP : PassProg p) {fs : List FnName}
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 4)) "check_block_pass" [vis, p0, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b).run a₀ = .ok (x, a') ∧
       StageR dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
-      BPassR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
+      BPassR (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem (r.headD 0) x ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧
+      (RecsB s₀.mem p0 → RecsB s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 3))) ∧
+      ClassesLp s'.mem (rdW (s'.mem.arr64 IW) (r.headD 0 + 15)) (rdW (s'.mem.arr64 IW) (r.headD 0 + 16)); ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
     ⟨hl, icpW_sim hP hcl hfs n hn hS hq hsrc hcx hb hv hcs hPm hA hk r s'.mem hm⟩
 

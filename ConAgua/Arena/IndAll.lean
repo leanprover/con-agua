@@ -115,6 +115,7 @@ import ConAgua.Arena.IndRealIpo
 import ConAgua.Arena.IndRealBph2
 import ConAgua.Arena.IndInstallSpec41
 import ConAgua.Arena.IndInstallSpec42
+import ConAgua.Arena.IndArmBridge
 import ConAgua.Arena.RecCheckSpec8
 import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.IndPosSpec2

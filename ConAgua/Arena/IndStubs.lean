@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndIface
+import ConAgua.Arena.WhnfBase
 
 /-!
 # The stubs' specs (lane `induct`)
@@ -66,13 +67,50 @@ theorem stubM_memoFrame (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r
 (`ABMEMO`) with epoch word `CTL[48]` (`Abs1.lean`'s `abSch`, the core's `coreAbSch`) at some map.
 `abstract1_fast` clears it on entry and exit, so it needs this of the memory it starts from and
 leaves it so (`IndRealAbs.lean`); `StageR` says nothing about array 49, so callers thread it. -/
-def AbsOK (m : Mem) : Prop :=
+def AbMemo (m : Mem) : Prop :=
   ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨49, 48⟩ : MemoSch) lfKey decE m mp
 
-/-- **Every stub keeps the `abstract1` memo well formed** (lane `indproofs4`, helper `abs`).
+/-- **The `instantiate1Lift` walk's memo is well formed** (helper `indproofs4-memo`): array 51
+(`ILFM`) with epoch word `CTL[52]` (`WalkLift.lean`'s `i1lSch`), what `instantiate1_lift_fast`
+needs (`IndRealMemo.lean`). -/
+def I1Memo (m : Mem) : Prop :=
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨51, 52⟩ : MemoSch) lfKey decE m mp
+
+/-- **The `constsResolveF` walk's memo table is related to some memo** (helper `indproofs4-memo`):
+array 155 (`CRM`) with epoch word `CTL[158]` (`ConstsResolveF.lean`'s `crSch`; lane `tails`'
+`CrOK`, `ConstsResolveFRefine2.lean`), what `consts_resolve_ffast` needs. -/
+def CrMemo (m : Mem) : Prop :=
+  ∃ mp : Std.HashMap EIdx Bool,
+    MemoRV (⟨155, 158⟩ : MemoSch) bmKey (fun _ w b => w = if b then 1 else 0) m mp
+
+/-- **The `instantiateList` walk's memo is well formed** (helper `indproofs4-memo`): array 50
+with epoch word `CTL[50]` (`InstList.lean`'s `ilSch`, the core's `coreIlSch`), what `inst_list`
+(under `open_pis_at_fvars_f`) needs. -/
+def IlMemo (m : Mem) : Prop :=
+  ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨50, 50⟩ : MemoSch) lfKey decE m mp
+
+/-- **The rest of the memory's half of `TwinOK`** (lane `indstaget`): the core's other walk memos
+(`WalkMemos`: arrays 151‥153, 52‥54), the three arrays whose sizes `TwinOK` bounds, the pin flag.
+Carried in `AbsOK` so that every model frame (`AFr`) carries it too: what lifts a stage theorem
+to `StageC` (`IndT/Lift.lean`). -/
+def WkOK (m : Mem) : Prop :=
+  WalkMemos m ∧ (m.arr64 EREC).size < 2 ^ 63 ∧ (m.arr64 SPN).size < 2 ^ 63 ∧
+    (m.arr64 145).size < 2 ^ 63 ∧ pinW m 0 ≠ 0
+
+/-- **The walk memos outside the stage relation are well formed** (lane `indproofs4`, helpers
+`abs`, `memo`): the memos of `abstract1` (array 49), `instantiate1Lift` (51), `constsResolveF`
+(155) and `instantiateList` (50). Each walk clears its memo on entry and exit, so it needs the
+memo well formed in the memory it starts from and leaves it so; `StageR` says nothing about these
+arrays, so the stage's theorems thread it as a hypothesis and a post. (The name is helper `abs`'s,
+from when it held the `abstract1` memo only.) The core's `CoreMemos` holds the first and the last
+(`IndRealAbsT.lean`). -/
+def AbsOK (m : Mem) : Prop := AbMemo m ∧ I1Memo m ∧ CrMemo m ∧ IlMemo m ∧ WkOK m
+
+/-- **Every stub keeps the walk memos well formed** (lane `indproofs4`, helpers `abs`, `memo`).
 `sorry` until the owning lanes land the functions, like `stubM_memoFrame`; true of the real
-functions: those that do not reach the `abstract1` walk leave array 49 and `CTL[48]` alone, and
-the core's (`whnf`, `infer_type`, …) keep `CoreMemos`, which contains `AbsOK`. -/
+functions: those that do not reach the four walks leave their arrays and epoch words alone, the
+walks clear and keep their memos, and the core's (`whnf`, `infer_type`, …) keep `CoreMemos`
+(arrays 49, 50) and write neither 51 nor 155. -/
 theorem stubM_absOK (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r : List Word)
     (h : stubM f m args = some (r, m')) (hA : AbsOK m) : AbsOK m' := sorry
 
@@ -136,10 +174,6 @@ theorem instPisAtLift_spec (f o l e : Word) (he : H e) (xs : List EIdx) :
       (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (instPisAtLift f.toNat xs (decI e)) (KeepPost dn vis fe decOE) := sorry
 
-/-- `instantiate1_lift_fast(fuel, e, v, d)`. -/
-theorem instantiate1LiftFast_spec (f e v d : Word) (he : H e) (hv : H v) :
-    RelAM "instantiate1_lift_fast" [f, e, v, d] (StageR dn vis fe)
-      (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat) (KeepPost dn vis fe decW0E) := sorry
 
 
 /-- `all_level_params_defined(lps.off, lps.len, e)`. -/
