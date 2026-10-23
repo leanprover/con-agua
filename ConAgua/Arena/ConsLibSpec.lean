@@ -565,8 +565,8 @@ def pushArgs (C : ConsSch) (ks : List Word) (h : Word) : List Word :=
 /-- The append of the key's record to tier `t` at slot `j`, with the handle (base `B`). -/
 def pushC (C : ConsSch) (m : Mem) (t B : Word) (ks : List Word) (h j : Word) : Option (Word × Mem) :=
   if pushOKC C m t then
-    match growIf C.sa C.ca C.hsM m (pushMC C m t (C.vsM (pushArgs C ks h)) j (cntC C m t))
-      (cntC C m t) with
+    match growIf C.sa C.ca C.hsM m (pushMX C m t (C.vsM (pushArgs C ks h)) (C.colM m (pushArgs C ks h))
+      j (cntC C m t)) (cntC C m t) with
     | some m' => some (B + cntC C m t, m')
     | none => none
   else none
@@ -590,11 +590,11 @@ def consInternM (C : ConsSch) (m : Mem) (ks : List Word) : Option (Word × Mem) 
     else pushC C m 1 C.S ks h (rs₁.tail.tail.headD 0)
   else pushC C m 0 C.P ks h (rs₀.tail.tail.headD 0)
 
-theorem ConsOK.ihash_spec {p : Prog} {C : ConsSch} (hO : ConsOK p C) (k : Stmt → M Sig) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p k C.ihash
+theorem ConsOK.ihash_spec {p : Prog} {C : ConsSch} (hO : ConsOK p C) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ C.keyOK s₀.mem (argsOf 0 C.nk s₀)⦄
+    step p (exec p n) C.ihash
     ⦃fun r s' => r = .normal ∧ s' = s₀.setLoc C.nk (C.qhM s₀.mem (argsOf 0 C.nk s₀)); ⊤⦄ :=
-  hO.ihash k s₀
+  hO.ihash n s₀
 
 theorem evalArgs_spec (es : List Expr) (s₀ : St) :
     ⦃fun s => s = s₀⦄ evalArgs es ⦃fun vs s' => s' = s₀ ∧ vs = es.map (Expr.pval s₀); ⊤⦄ := by
@@ -645,7 +645,7 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hpf : p.lookup C.fname = some (consFindG C)) (hpp : p.lookup C.pname = some (consPushG C))
     (fn : FnName)
     (hpi : p.lookup fn = some (consInternG C)) (n : Nat) (s₀ : St) (ks : List Word)
-    (hks : ks.length = C.nk) :
+    (hks : ks.length = C.nk) (hk : C.keyOK s₀.mem ks) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) fn ks
     ⦃fun r s' => LocEq s' s₀ ∧ consInternM C s₀.mem ks = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -659,7 +659,7 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     cases n with
     | zero => vcgen [exec] <;> grind
     | succ n =>
-      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec,
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
         consFindG_specV p C hO.match_ hpf n, consPushG_specV p C hO hpp n]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
         List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
@@ -683,7 +683,7 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     cases n with
     | zero => vcgen [exec] <;> grind
     | succ n =>
-      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec,
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
         consFindG_specV p C hO.match_ hpf n, consPushG_specV p C hO hpp n]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
         List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, BinOp.eval, Cmp.eval,
@@ -711,7 +711,8 @@ growth. -/
 theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Word}
     (h : consInternM C m ks = some (r, m₁)) :
     m₁ = m ∨ ∃ t j, t ≤ 1 ∧ pushOKC C m t = true ∧
-      growIf C.sa C.ca C.hsM m (pushMC C m t (C.vsM (pushArgs C ks (C.qhM m ks))) j (cntC C m t))
+      growIf C.sa C.ca C.hsM m (pushMX C m t (C.vsM (pushArgs C ks (C.qhM m ks)))
+        (C.colM m (pushArgs C ks (C.qhM m ks))) j (cntC C m t))
         (cntC C m t) = some m₁ ∧ r = (if t = 0 then C.P else C.S) + cntC C m t := by
   simp only [consInternM, pushC] at h
   repeat' split at h
