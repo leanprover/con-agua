@@ -649,6 +649,9 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        movRM .rcx (mb .r15 (ctx.tab.base64 a)),
        movMR (mbi .rcx .rax .W64) .rdx]
   | .seq s t => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
+  | .ite c .abort .skip =>
+    -- `if c abort`: one conditional jump to the error exit
+    compileC ctx (path.ch 3) c true errorL 0
   | .ite c s t =>
     compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
       [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
