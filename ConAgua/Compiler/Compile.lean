@@ -304,7 +304,7 @@ def simpleOp (ctx : Ctx) : Expr → Option (Operand .W64)
   | .glob g => some (oM (mb .r15 (ctx.tab.globOff g)))
   | .len8 a => some (oM (mb .r15 (ctx.tab.len8 a)))
   | .len64 a => some (oM (mb .r15 (ctx.tab.len64 a)))
-  | .const w => if fitsImm32 w then some (oI w.toInt64.toInt) else none
+  | .const w => if fitsImm32 w then some (.imm (.int64 w.toInt64)) else none
   | _ => none
 
 /-- `r := e` in one instruction, for a simple `e` (any constant). -/
@@ -312,15 +312,20 @@ def loadInto (ctx : Ctx) (r : Reg64) : Expr → Option Program
   | .const w => some [movRI r w]
   | e => (simpleOp ctx e).map fun o => [i64 (.mov (.reg (rr r)) o)]
 
+/-- `dst := dst op o` in one instruction, for the operations x64 has in the two-operand form
+`op r/m, r/m/imm` (add, sub, and, or, xor). -/
+def aluDirect : BinOp → RegOrMem .W64 → Operand .W64 → Option Directive
+  | .add, m, o => some (i64 (.add m o))
+  | .sub, m, o => some (i64 (.sub m o))
+  | .and, m, o => some (i64 (.and m o))
+  | .or, m, o => some (i64 (.or m o))
+  | .xor, m, o => some (i64 (.xor m o))
+  | _, _, _ => none
+
 /-- `rax := rax op o` in one instruction, where x64 has the form. -/
 def binDirect : BinOp → Operand .W64 → Option Directive
-  | .add, o => some (i64 (.add (.reg (rr .rax)) o))
-  | .sub, o => some (i64 (.sub (.reg (rr .rax)) o))
-  | .and, o => some (i64 (.and (.reg (rr .rax)) o))
-  | .or, o => some (i64 (.or (.reg (rr .rax)) o))
-  | .xor, o => some (i64 (.xor (.reg (rr .rax)) o))
   | .mul, .regOrMem m => some (i64 (.imul none (.reg (rr .rax)) (.regOrMem m)))
-  | _, _ => none
+  | op, o => aluDirect op (.reg (rr .rax)) o
 
 /-- `rax := rax op b` for a simple `b`, without temporaries. -/
 def binSimple (ctx : Ctx) (op : BinOp) (b : Expr) : Option Program :=
@@ -435,14 +440,7 @@ def storeRes (tab : Tab) : List Var → Nat → Program
 xor; `k` an imm32 constant). -/
 def setInPlace (x : Var) : Expr → Option Directive
   | .bin op (.var y) (.const k) =>
-    if y == x && fitsImm32 k then
-      let m : RegOrMem .W64 := .mem (mb .rsp (8 * x))
-      let o : Operand .W64 := oI k.toInt64.toInt
-      match op with
-      | .add => some (i64 (.add m o)) | .sub => some (i64 (.sub m o))
-      | .and => some (i64 (.and m o)) | .or => some (i64 (.or m o))
-      | .xor => some (i64 (.xor m o))
-      | _ => none
+    if y == x && fitsImm32 k then aluDirect op (.mem (mb .rsp (8 * x))) (.imm (.int64 k.toInt64))
     else none
   | _ => none
 
