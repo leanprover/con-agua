@@ -262,6 +262,34 @@ where
         unless out.contains a do out := out.push a
     return out
 
+/-- The end-to-end theorem whose remaining assumptions the report lists. -/
+def asmTheorem : Name := `ConAgua.Final.checkerAsm_accepts_remaining
+
+/-- Lines `A` for the end-to-end theorem (if `env` has it): its binders (`A hyp name type`, with
+`Prop`-typed ones marked), its axioms (`A axiom name`) and the nearest sources of `sorryAx`
+(`A src name`). All on top of the memos `links` already fills (one more constant). -/
+def asmLines (env : Environment) : IO Unit := do
+  let some ci := env.find? asmTheorem | return
+  let some mi := env.getModuleIdxFor? asmTheorem | return
+  let m := env.header.moduleNames[mi.toNat]!
+  let clean (s : String) := (s.replace "\t" " ").replace "\n" " "
+  let act : MetaM (Array (String × String × Bool)) :=
+    Meta.forallTelescope ci.type fun xs _ => do
+      let mut out := #[]
+      for x in xs do
+        let d ← x.fvarId!.getDecl
+        let isP ← Meta.isProp d.type
+        let t ← Meta.ppExpr d.type
+        out := out.push (toString d.userName, toString t, isP)
+      return out
+  let (bs, _) ← (act.run' {}).toIO { fileName := "", fileMap := default } { env }
+  for (n, t, isP) in bs do
+    IO.println s!"A\thyp\t{n}\t{clean t}\t{if isP then "prop" else "data"}\t{m}"
+  let axMemo ← IO.mkRef ({} : NameMap (Array Name))
+  for a in ← axiomsOf env axMemo asmTheorem do IO.println s!"A\taxiom\t{a}\t\t\t{m}"
+  let memo ← IO.mkRef ({} : NameMap (Array Name))
+  for s in ← sorrySources env memo asmTheorem do IO.println s!"A\tsrc\t{s}\t\t\t{m}"
+
 /-- The links of every module in `env`, with the axioms of linked theorems. -/
 def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
   let memo ← IO.mkRef ({} : NameMap (Array Name))
@@ -292,6 +320,7 @@ def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
             else if bad.isEmpty then "ok"
             else "axioms:" ++ ",".intercalate (bad.toList.map toString)
       IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\t{status}"
+  asmLines env
 
 /-- Child `--targets ROOT`: the target pass, in a process of its own. -/
 def mainTargets (root : Name) (verbose : Bool) : IO UInt32 := do

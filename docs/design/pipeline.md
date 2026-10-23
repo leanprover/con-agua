@@ -162,6 +162,29 @@ simulations need it, and fuel only transfers upward). `check_of_stages` takes `n
 stages run at `n - 1`; `PipelineRefines` already has `N < 2^62`. The stage proofs before the loop
 ignore the bound.
 
+## For the loop's start (landing 6)
+
+loopt3's list, answered:
+
+* `R7` gained `pinsFull : PinsFull m a.pins` (the pin table, unchanged since
+  `intern_reserved_pins`; `internAllPins` keeps `a.pins`: `TwinCaches.internAllPins_pins`,
+  `TwinPins.lean`) and `iw : L.Ind.IWOK m` (`R6.iw` from `preparePrelude_refines`; across
+  `intern_all_pins` `IW`/`CTL[200]` stand still and `erecTop ≤ |EREC|` now comes out of
+  `internPinSetsW_dec` … `checkerProg_internAllPins_PB` (`SInv.top`)).
+* `prefix_caches` (`TwinCaches.lean`): `sE.caches = (AState.init EStore.empty).caches ∧ sE.pins =
+  sA.pins`. con-ron's Bridge summarizes the parse with `ParseStep.cframe`, which lets the readback
+  and level-verdict caches move; the twin's parse writes none of them (`validateIndD` compares
+  levels on the unmemoised `readLevel`; `lvlEq?` is the only writer of `lvlEqC` and is not reached
+  before the fold). A closure search over `AM` programs (`Keeps`, `Fr`, the macro `keeps_step`).
+  L mirrors this (array 105, `lq`, is not written before the loop), so no deviation. With the
+  core's arrays/words 96‥127 untouched since the loaded memory (`preLoopA`/`preLoopC` have none),
+  `CoreR m sE.caches` is the empty caches over zero memos (loopt3's side, as `CoreMemos.zero`).
+* `prefix_frontDecls` (`TwinShapeFront.lean`): every inductive block of the prepared records is a
+  `FrontBlock`; `prefix_quotU` (`TwinShapeQuot.lean`): `u` has a persistent handle at `sE`
+  (interned by `internAllPins`' first basis block, `Eq.{u}`).
+* Written before the loop (so not zero): arrays 136 (`EREC`), CTL 129 (`erecTop`); not written:
+  arrays 132‥135, 137, 146‥149, 155, CTL 128, 130, 140‥147.
+
 ## Obligations
 
 | # | Stage / obligation | Status |

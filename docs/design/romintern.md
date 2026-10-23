@@ -58,3 +58,21 @@ way; the twin never calls it on ROM data (D29 stays Deliberate).
 `viewN`'s callers are `promoteN`, `validateIndD` (proven) and `NIdx.isProjFnShape` (phase 2,
 written: `is_proj_fn_shape` has L code, only a `sorry` stub spec `L.Ind.isProjFnShape_spec`). A
 refinement of `is_proj_fn_shape` covers `viewN` (helper `romintern-pfs`).
+
+## Landing 2: `is_proj_fn_shape` refines `NIdx.isProjFnShape` (helper `romintern-pfs`)
+
+* `ConAgua/Checker/ProjFnShapeRef.lean`: word model `pfsW` (`pfsPre`, `pfsStr`), its spec
+  `pfs_spec` (`vcgen`), and `isProjFnShape_refines` (`@[refines]`), stated as the `sorry` stub
+  `L.Ind.isProjFnShape_spec` (`IndStubs.lean`) but over the real program:
+  `RefAM p "is_proj_fn_shape" [n] (StageR dn vis fe) (NIdx.isProjFnShape (decI n)) (KeepPost … decW0B)`.
+  The stub's owner can now discharge it (and `isProjFnShapeT_spec` through `StageT.lift_keep`).
+* Twin match: the tag tests come before each `viewN` in both; L aborts exactly where `viewN`
+  fails (scratch handle while scratch is off, index past the count). No deviation.
+* Cost: ~290 s elaboration, 2.8 GB peak, nearly all `pfs_spec`: the `&&`/`||` chains give
+  `vcgen` ~790 paths (`maxHeartbeats 16000000`). `L.evalC_spec` cut the paths to 14 but left the
+  `ld64` bounds unsimplified and `grind` failed; a split of the L code into a prefix test and a
+  string test would be the fix if this lands on the build-stats watch list.
+* `viewN` is now covered (its last unproven caller was `isProjFnShape`).
+* Census (worktree, master `c138a4c7` merged): phase 0 216 proven / 0 written / 80 todo (1123 of
+  1305 Lean lines), was 215 / 1 / 80; phase 1c 72 / 1 / 0 (unchanged; `builtinPreludeE` is
+  `pipeline`'s); phase 2 251 proven (was 250).

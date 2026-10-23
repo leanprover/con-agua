@@ -48,6 +48,12 @@ for l in lanes:
     l["last_commit_min"] = min(ages) if ages else None
 (out / "lanes.json").write_text(json.dumps(lanes, indent=1))
 shutil.copy(root / "docs/progress.csv", out / "progress.csv")
+m = re.search(r"<!-- assumptions-json (.*?) -->", md)  # census.py's section of progress.md
+if m:
+    (out / "assumptions.json").write_text(m.group(1))
+for f in ("assumption-owners.json",):
+    if (root / "docs" / f).exists():
+        shutil.copy(root / "docs" / f, out / f)
 # velocity: repair rows with unquoted commas in the note (lanes append by hand)
 import csv
 vrows = list(csv.reader(open(root / "docs/velocity.csv")))
