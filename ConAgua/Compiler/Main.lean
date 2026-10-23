@@ -22,7 +22,7 @@ open L
 
 /-- What the harness sees after `ca_enter` returns, against L's result. -/
 def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
-  | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G rs s ∧ MemRel G m' s.dmem
+  | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G G.tab.nres rs s ∧ MemRel G m' s.dmem
   | .error .outOfFuel, _ => False
   | .error _, s => s.regs.rdx = 2
 
