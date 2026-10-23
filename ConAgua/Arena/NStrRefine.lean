@@ -204,7 +204,7 @@ theorem nsprobeW_arm (m : Mem) (q o l h t : Word) :
     ∀ j d, nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (baseW m t) (nSlotsNs m) j d =
       probeArm nstrSch m t (nsMt m q o l h t)
         (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (baseW m t) (nSlotsNs m)) j d := by
-  intro j d; rw [nsprobeW]; rfl
+  intro j d; rw [nsprobeW, cprobeW]; rfl
 
 theorem nspushOK_room (m : Mem) (t : Word) (h : nspushOK m t = true) : PushRoom nstrSch m t := by
   simp only [nspushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -229,7 +229,16 @@ theorem nsinternW_eq (m : Mem) (q o l : Word) :
     simp [hdW, nstrSch, nsP, NTag.str]
   have e1 : ∀ x, hdW nstrSch.tag.toUInt64 1 x = nsS + x := fun x => by
     simp [hdW, nstrSch, nsS, NTag.str]
-  simp only [nsinternW, internM, pushM, nspushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC nstrCS m t = nspushOK m t := fun t => (nspushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX nstrCS m t (nstrCS.vsM (pushArgs nstrCS [q, o, l]
+      (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat))))
+      (nstrCS.colM m (pushArgs nstrCS [q, o, l] (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat))))
+      j c = pushG nstrSch m t [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)] j c := by
+    intro t j c; rw [pushMX_none (C := nstrCS) rfl, ← nspushMem_eq, nspushMem_eqC]; rfl
+  have ec : ∀ t, cntC nstrCS m t = cntW nstrSch m t := fun t => rfl
+  have eh : nstrCS.qhM m [q, o, l] = nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat) := rfl
+  have es : skipC nstrCS m [q, o, l] = 0 := rfl
+  simp only [nsinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_nstr` refines `internNNode (.str _ _)` -/
