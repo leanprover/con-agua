@@ -65,11 +65,12 @@ INTERP_MAX_BYTES = 20000   # L.run only on fixtures up to this size
 INTERP_WORDS = 1 << 18     # words per array under L.run
 ACCEPT = "accept"
 BIG_WORDS = 1 << 25        # words per array on the retry after an error
+HUGE_WORDS = 1 << 27       # the second retry, only where the reference accepts
 TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to this size
 TRACE_WORDS = 1 << 18
 DEFAULT_JOBS = 8           # shared machine: at most ~8 runs at a time (each well under PER_RUN_GB)
 # classes that count as passing for `--rerun-failing`
-PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)")
+PASSING = ("agree-accept", "agree-reject", "agree-reject (L aborts)", "agree-timeout")
 
 # the real con-ron binary (the Rust checker, built from the vendored revision: DESIGN.md, lane
 # `integrate`, "A second reference"); `$CON_RON` overrides
@@ -545,6 +546,8 @@ def classify(lo, ref, where=""):
     """The class of one L outcome against the reference verdict (`where`: the reference's stage)."""
     if lo.startswith("missing "):
         return "missing"
+    if lo == "timeout" and ref == "timeout":
+        return "agree-timeout"
     if lo in ("timeout", "memout", "exhausted", "crash"):
         return "l-" + lo
     racc = ref == "accept"
@@ -632,7 +635,8 @@ def report(res, asm, compiled, clashes, args, t0):
             lines += [f"| {a} | {b} | {n} |" for (a, b), n in sorted(ab.items(), key=lambda x: -x[1])]
         capn = [r for r in res if r[entry].get("small")]
         if capn:
-            lines += ["", f"{len(capn)} fixtures got further with the larger capacity ({BIG_WORDS} words per array): "
+            lines += ["", f"{len(capn)} fixtures got further with the larger capacity ({BIG_WORDS} words per array, "
+                      f"or {HUGE_WORDS} where the reference accepts): "
                       + ", ".join(f"`{r['id']}`" for r in capn[:20])]
         cmp_bugs = [r for r in res if r[entry].get("interp") not in (None, "timeout", "memout") and
                     not r[entry].get("small") and not same_outcome(r[entry]["interp"], r[entry]["l"])]
@@ -899,6 +903,13 @@ def main():
                     lo2 = l_outcome(out, st, stubs_by_code)
                     if lo2 != lo:
                         cap, lo = lo, lo2
+                    elif ref == ACCEPT:
+                        # still an error where the reference accepts: once more at HUGE_WORDS (the
+                        # big perf fixtures intern ~10M application nodes; ~5.4 GB, under PER_RUN_GB)
+                        st, out = guard.run([exe, path], T_COMPILED, env=dict(env, CA_WORDS=str(HUGE_WORDS)))
+                        lo2 = l_outcome(out, st, stubs_by_code)
+                        if lo2 != lo:
+                            cap, lo = lo, lo2
             else:
                 lo = "crash"
             d = {"ref": ref + (f" ({where})" if where else ""), "l": lo, "class": classify(lo, ref, where)}
