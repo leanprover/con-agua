@@ -43,3 +43,6 @@ the top is now `e_view` 14%, `der_b` 13%, `crf_go` 6%, `forall_find` 5%, `crm_fi
 Fixtures without the bug pay a little for the 3 extra instructions per probe (`>>`, `*`, `^`):
 c04a_restart_70 43 089 M → 43 678 M (+1.4%), c03d_pi_depth_1030 5 728 M → 5 812 M (+1.5%), both
 measured against compopt's `base.bin` (master `efb16f47`, so this includes some master drift).
+
+e2e (full, 675 fixtures, rfhash before the master merge): `check` 407 agree-accept, 0 disagreements;
+con-ron / e2e-ref / L agree on accept/not on 672 of 675 (the rest: 2 timeouts, 1 memout, as before).

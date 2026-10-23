@@ -216,3 +216,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,slowmods,opus-5.5,15,5,ProjFnShapeRef from IndRealIpf's spec (~290 s -> 2 s)
 2026-10-23,loopt3,opus-5.5,35,20,landing 3: core_of_R7, prefix facts wired; end-to-end theorem now assumes only the loop's program hypotheses (LoopCallees incl. IndArmSpec, LoopTopProg) at checkerProg.subPB; dead StageR arm specs removed
 2026-10-23,pipeline,opus,15,15,"landing 7: builtinPreludeE census tag; lane close, open list"
+2026-10-23,rfhash,opus-5.5,35,28,"memo hash includes k2 high half (banked rf memo clustered): c05b 1471 G -> 33 G instr"
