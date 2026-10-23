@@ -189,3 +189,26 @@ at the reader call, i.e. the two consumers (the quotient arm's `qphW_ok`, the ax
   checkerProg` (per chunk, 14 s, 2.7 GB).
 * **`StageC.lean`**: `callW_leafFrame`, `StageC.of_leaf` (L stage relation after + leaf frame +
   con-ron's `IStepS` ⇒ `StageC` after), `StageC.of_T` (`StageT` after + con-ron's `CheckOK` after).
+
+## `PipelineRefines checkerProg`: remaining obligations (as far as lane `loopt2` sees them)
+
+`checker_x64_accepts` (`Final/Statement.lean`) holds for any program with `PipelineRefines p`; the
+x64 tie-in for `checkerProg` (`Checker/AsmFinal.lean`, compiler correctness) is done. Nothing
+proves `PipelineRefines checkerProg` yet. Between the per-function refinements and it:
+
+| # | Obligation | Where | Owner | Status |
+|---|---|---|---|---|
+| 1 | Compose `check`'s stages (`Checker/Entry.lean` `checkL`: `cap_check`, `pb_check`, `intern_reserved_pins`, `builtin_prelude`, `front_run`, `prepare_prelude`, `intern_all_pins`, `install_then_check`) into `PipelineRefines checkerProg`, handing each stage's relation to the next, from `loadMem b pb s8 s64` / `AState.init EStore.empty` | new file (Final/ or Checker/) | unassigned (driver) | open |
+| 2 | `intern_reserved_pins` refines `internReservedPins` | `Arena/RomPins.lean` `internReservedPins_refines` | romload | proved at `ArenaD` (needs ROM readiness from `cap_check`/`pb_check`) |
+| 3 | `builtin_prelude` refines `builtinPreludeE` (the frontend copy on the prelude bytes) | `Checker/Prelude.lean` | integrate | no refinement theorem found |
+| 4 | `front_run` refines `parseChunks [b]` | `Front/ChunkBridge.lean` `frontAll_refines_chunks` | front lanes | stated over `frontAllProg`; to be moved to `checkerProg` and to the prelude-extended parse state |
+| 5 | `prepare_prelude` refines `preparePrelude` (with the declined hoist) | `Checker/Prelude.lean` | integrate | no refinement theorem found |
+| 6 | `intern_all_pins` refines `internAllPins` at the decoded pin list | `Rom/Stage.lean`, `Arena/RomCI.lean` (`refines_part`) | romload | partial |
+| 7 | Front → loop handoff: the front's `DeclsF` (inductive records included) to the loop's relation; `LoopR` carries `DeclsR` (one-constant kinds only) | `Front/StateDR.lean`, `Arena/Checker.lean` | **loopt2** | open: `LoopR` over `DeclsF` (or a relation between them) |
+| 8 | The loop's start: `LoopR`, decls4's `TwinFold` (`Final/Twin.lean` `stages_frame` gives the twin half), `LoopMem` (sizes, pin flag, `dn` the startup store's `denoteN`, all persistent), `CoreMemos` (`CoreMemos.zero` on the loaded memory), `∃ k, dn k = some u` for the quotient arm (`NamesDn`) | `Arena/Checker.lean`, `Arena/LoopT.lean` | **loopt2** | open (pieces: `CoreMemos.zero`, `LoopMem`, `TwinOK.of_check`) |
+| 9 | Phase A: `installFold` refines (`installFoldGo_refines`, `Arena/Checker.lean`) — from the stub specs of the core (`stubM`), the walks, the ROM readers' quotient precondition (`DeclCheckLoop.lean`'s two `sorry`s) | `Arena/Checker.lean`, `DeclCheckLoop.lean` | **loopt2** | the `StageT` switch in progress (landings 3–7; arms: theorem done, opaque by helper `loopt2-crp`, axiom/quot/defn through `stubArm_keepsCoreMemos` first, then their `StageC` versions) |
+| 10 | The inductive arm (kind 6: `ind_block_to_erec` + `check_ind_decl` against `checkDecl`'s `.indDecl` case) | `Arena/DeclCheckLoop.lean` (dispatcher), `Ind*` | indproofs3 (spec), **loopt2** (plug in) | open |
+| 11 | The inductive install step's twin (`TwinFold`/`stepCI`/`erecCiW_ok` for an inductive block; con-ron's `installStep`) | `Arena/DeclTwin.lean`, `DeclRec.lean` | **loopt2** | open |
+| 12 | Phase B: `checkPendingList` refines (`checkPendingGo_refines`) — `check_value_group` through stubs; the twin runs phase B on `s'.worker` (`SeqAccepts`), L on the same state: relate them | `Arena/Checker.lean` | **loopt2** | open (`cvgW_okT` ready; needs `LoopT`/`StageT` in phase B and the worker relation) |
+| 13 | The program hypotheses for `checkerProg`: `DeclCallees` (TextProg halves proved: `checkerProg_cvg/iv/arm`; `CheckDeclProg`'s other lookups, `ValProg`, `CrpProg`, `QuotProg`, `AxProg`, `NatSubProg'`, `DmProg10`, `IstgProg`), `BracketProg`, `KnotStageProg`, `LeafClosed` (proved), `LoopClosed` (proved), `RomReady` | `Checker/` | **loopt2** (loop ones) | partial |
+| 14 | The remaining `sorry`d stub contracts the loop goes through (`IndStubs`, `IndStubsT`, `DeclRomStubs`, `stubM_spec`) | various | owning lanes | listed in the census' sorry sources |
