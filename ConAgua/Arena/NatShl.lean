@@ -270,10 +270,11 @@ theorem natShl_spec (n : Nat) (sâ‚€ : St) (oa la ob lb : Word) (hok : PoolOK sâ‚
       natTrim_spec p hpt n]
     all_goals (try simp only [ShlZeroInv, ShlInv, ShlBase, ShlZeroPost, ShlPost, Grows] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte,
-      Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
-      UInt64.toNat_zero] at *)
-    all_goals (try and_intros)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
+      Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    -- One `grind` per goal (no `and_intros`: 218 goals re-preprocess the same context).
     all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]
 
 end shlFn

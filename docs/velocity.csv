@@ -221,3 +221,10 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,loopt3,opus-5.5,30,35,landing 4: LoopCallees/LoopTopProg at checkerProg.subPB (helper loopt3-prog, StepIn indFns kernel-checked, CoreWalkProg.i1 fix); end-to-end theorem assumes only IndArmSpec
 2026-10-23,indproofs4,opus,150,120,"helpers fvt (fvar_type_d(s), get_app_args_f) and abs (abstract1_fast via AbsOK) merged; indParamsOk refined (real); checkBlock threads AbsOK"
 2026-10-23,compopt,opus-5.5,100,20,"tooling: bench.py (interleaved benchmark, init set), asmprof.py (exact instruction profile), compopt-asm, harness CA_SIZES/CA_SMALL, scripts/compopt (sizing experiments, L-source prototypes); journal: Init fixture, compiler prototypes A-E3, memory study"
+2026-10-23,compproofA,opus-5.5,70,75,"compopt prototypes A (simple right operands in place) and E1 (x*2^k as shl) proved; checkerAsm in 6 parts; 0.644x instructions, Init 697G->451G"
+2026-10-23,derb,opus-5.5,75,57,"mk_app/mk_lam/mk_forall read der_b only after a hash-cons miss (twin: derOfView only on a miss; new slot zeroed, statements unchanged), der_b tags in frequency order: Init 696.7 G -> 657.0 G instr (-5.7%)"
+2026-10-23,slowmods,opus-5.5,150,40,FrontProgAgree by positions; DeclNatDeps; helpers: RecGenSpec16 IndInstallSpec28/12 DeclDivMod2 RecCheckSpec14; PLAN recipe
+2026-10-23,slowmods,opus-5.5,5,15,helper b: IndSumSpec14 DefEqLeaves ConstsResolveFRefine
+2026-10-23,indproofs4,opus-5.5,200,90,"check_ind_decl at StageR (cidW_ok, IndInstallSpec42); basis_pin_hit refines basisPinHit (helper bph, IndRealBph*); genRecCheck AbsOK + capacity guards replace 2^63 bounds (helper grc); PartsR ShapeSl; 6 slow phase-8 specs 2.5-17x faster (helper slow)"
+2026-10-23,slowmods,opus-5.5,20,20,helpers: RecCheckSpec18 (9.8->3.5 GB) InstLPWalkGo Scan.Line
+2026-10-23,slowmods,opus-5.5,20,40,helpers: DeclNatDeps 43 s, IndRealIpf, Scan.Line, RecCheckSpec14, NatShl, FieldsDeclSpec, WalkLeaves

@@ -32,9 +32,12 @@ theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRec
     intro s₀ rco rcl cgo cgl t
     rw [invoke_eq _ hp]
     simp only [callFn, classRecOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [croK]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK]
 
 
 /-- The twin's `classRecOf`, as a recursion on the shifted lists. -/
@@ -280,9 +283,12 @@ theorem classReadMotiveSlot_spec (p : Prog) (hp : p.lookup "class_read_motive_sl
     intro s₀ so sl c
     rw [invoke_eq _ hp]
     simp only [callFn, classReadMotiveSlot]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [msK]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, msK]
 
 
 /-- The indices of the motive slots, counted from `j`. -/
@@ -448,9 +454,12 @@ theorem pinWord_specW (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [pinWordW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind [lang_grind, arena_grind, ind_grind, pinWordW]
 
 /-- After the sort interning. -/
 def svK2 (m : Mem) (g s : Word) : Option (Word × Mem) → Option (List Word × Mem)
@@ -481,10 +490,13 @@ theorem slotVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        pinWord_specW p hpin n, internSort_spec p hsf hsp his n, internFVar_spec p hff hfp hif n] <;>
-      finish [slotVarW, svK2]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      pinWord_specW p hpin n, internSort_spec p hsf hsp his n, internFVar_spec p hff hfp hif n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind [lang_grind, arena_grind, ind_grind, slotVarW, svK2]
 
 
 theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
@@ -633,10 +645,13 @@ theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
     ⦃fun s_ => s_ = s₀⦄ invoke p (exec p (n + 1)) "class_gen_mot_var" [g, c]
     ⦃fun r s' => LocEq s' s₀ ∧ motVarW n s₀.mem g c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenMotVar]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n] <;>
-    finish (gen := 20) [motVarW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, motVarW]
 
 
 theorem motIdx_lt : ∀ (sls : List ClassSlot) (j i : Nat), i ∈ motIdx j sls → j ≤ i ∧ i < j + sls.length := by
@@ -858,10 +873,13 @@ theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = so
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧ ihW s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "open_pis_at_fvars_f" n, gaaF_spec p had n] <;>
-    finish (gen := 20) [ihW]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    stubM_spec p "open_pis_at_fvars_f" n, gaaF_spec p had n]
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    decide_eq_true_eq] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, ihW]
 
 
 theorem decTM_nPc {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :

@@ -401,9 +401,12 @@ theorem findSlotGo_spec (n : Nat) : ∀ (s₀ : St) (so sl j c cn : Word),
     intro s₀ so sl j c cn
     rw [invoke_eq _ h.fsg]
     simp only [callFn, classGenRuleFindSlotGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq, loc_init4]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4]
 
 theorem findSlot_spec (n : Nat) (s₀ : St) (g c cn : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_find_slot" [g, c, cn]
@@ -413,9 +416,12 @@ theorem findSlot_spec (n : Nat) (s₀ : St) (g c cn : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, findSlotGo_spec p h n] <;>
-      finish (gen := 20) [rdW_eq]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, findSlotGo_spec p h n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem pvarsGo_spec (n : Nat) : ∀ (s₀ : St) (g rP i : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_pvars_go" [g, rP, i]
@@ -428,12 +434,15 @@ theorem pvarsGo_spec (n : Nat) : ∀ (s₀ : St) (g rP i : Word),
     intro s₀ g rP i
     rw [invoke_eq _ h.pv]
     simp only [callFn, classGenRulePvarsGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n,
-        slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
-        slCons_specW p h.alloc h.copy h.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n,
+      slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
+      slCons_specW p h.alloc h.copy h.cons n, ih]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem call1Close_spec (n : Nat) (s₀ : St) (xso xsl e app : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_call1_close" [xso, xsl, e, app]
@@ -443,10 +452,13 @@ theorem call1Close_spec (n : Nat) (s₀ : St) (xso xsl e app : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        ftdsF_spec p h.ad n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n] <;>
-      finish (gen := 20)
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      ftdsF_spec p h.ad n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
 theorem call1Tail_spec (n : Nat) (s₀ : St) (fvso fvsl pvo pvl rlvls xso xsl idxo idxl r i e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_call1_tail"
@@ -458,13 +470,15 @@ theorem call1Tail_spec (n : Nat) (s₀ : St) (fvso fvsl pvo pvl rlvls xso xsl id
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
-        internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n,
-        slSnoc_specW p h.alloc h.copy h.snoc n, call1Close_spec p h n] <;>
-      finish (gen := 20) (instances := 5000) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
-        loc_init10, loc_init11]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
+      internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n,
+      slSnoc_specW p h.alloc h.copy h.snoc n, call1Close_spec p h n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11]
 
 theorem call1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_call1"
@@ -476,12 +490,14 @@ theorem call1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl pvo pvl rlv
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad n,
-        classRecOf_spec p h.cro n, call1Tail_spec p h n] <;>
-      finish (gen := 20) (instances := 5000) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
-        loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad n,
+      classRecOf_spec p h.cro n, call1Tail_spec p h n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
 
 set_option maxHeartbeats 2000000 in
 theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word),
@@ -497,11 +513,13 @@ theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl 
     intro s₀ g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i
     rw [invoke_eq _ h.cg]
     simp only [callFn, classGenRuleCallsGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, isTag, isKp, loc_init4, loc_init5, loc_init6, loc_init7,
-        loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n, ih]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, isTag, isKp, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
 
 theorem ruleClose_spec (n : Nat) (s₀ : St) (g s fo fl ihso ihsl : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_gen_rule_close" [g, s, fo, fl, ihso, ihsl]
@@ -511,12 +529,15 @@ theorem ruleClose_spec (n : Nat) (s₀ : St) (g s fo fl ihso ihsl : Word) :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
-        slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, ftdsF_spec p h.ad n,
-        closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
+      slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, ftdsF_spec p h.ad n,
+      closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5]
 
 theorem ruleBody_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls x rP s fo fl : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_gen_rule_body" [g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fo, fl]
@@ -526,12 +547,14 @@ theorem ruleBody_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls x rP s fo f
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n, pvarsGo_spec p h n, callsGo_spec p h n,
-        ruleClose_spec p h n] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-        loc_init9, loc_init10]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n, pvarsGo_spec p h n, callsGo_spec p h n,
+      ruleClose_spec p h n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10]
 
 theorem classGenRule_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls c x : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_gen_rule" [g, rco, rcl, cgo, cgl, rlvls, c, x]
@@ -541,10 +564,13 @@ theorem classGenRule_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls c x : W
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        findSlot_spec p h n, stubM_spec p "open_pis_at_fvars_f" n, ruleBody_spec p h n] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      findSlot_spec p h n, stubM_spec p "open_pis_at_fvars_f" n, ruleBody_spec p h n]
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_nil, List.tail_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      decide_eq_true_eq] at *)
+    all_goals grind (gen := 20) (instances := 5000) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 end specs
 

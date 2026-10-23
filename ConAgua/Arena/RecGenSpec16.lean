@@ -250,11 +250,12 @@ theorem tmm_spec (p : Prog) (hp : p.lookup "target_major_of_member" = some targe
     ⦃fun r s' => LocEq s' s₀ ∧ tmmW p n s₀.mem pp cao cal pfo pfl fvo fvl ao al I us t = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, targetMajorOfMember]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "block_shape_lps", callW_spec p n "param_levels", callW_spec p n "sl_eq",
-      callW_spec p n "mk_target_major"] <;>
-    finish (gen := 40) (instances := 20000) [tmmW, rdW_eq]
+  vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
+    callW_spec p n "block_shape_lps", callW_spec p n "param_levels", callW_spec p n "sl_eq",
+    callW_spec p n "mk_target_major"]
+  all_goals simp_all [LocEq, Expr.pval, ipf_rd64, BinOp.eval, Cmp.eval, Cmp.evalW, St.setLocs_cons,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
+    Sig.retOr, tmmW, tmmK1_some, tmmK2_some, tmmK3_some, tmmK4_some, -UInt64.not_lt, -UInt64.not_le]
 
 /-- The lookups of `target_major_of_member`. -/
 structure TmmProg (p : Prog) : Prop where

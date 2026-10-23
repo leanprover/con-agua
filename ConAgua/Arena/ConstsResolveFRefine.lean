@@ -191,17 +191,20 @@ theorem pf_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis i : Word)
       callW_spec p k "pin_at", callW_spec p k "env_find"] <;>
     finish (gen := 20) [pfW, ntBW]
 
-set_option maxHeartbeats 6400000 in
+-- The two paths' goals are closed by rewriting (`simp_all`): the locals through the `LocEq`
+-- chain, the model's `pin_found` chain by the calls' posts. `grind` took ~80 s here (splitting
+-- the ten-way `&&`).
 theorem clp_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "cr_lit_pins" [vis, s]
     ⦃fun r s' => LocEq s' s₀ ∧ clpW p k s₀.mem vis s = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.lit]
   simp only [callFn, crLitPins]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, callW_spec p k "pin_found"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.and_eq_true, bne_iff_ne, ne_eq,
-    decide_eq_true_eq, beq_iff_eq] at *)
-  all_goals grind (gen := 20) (instances := 10000) [lang_grind, arena_grind, clpW, clpL_none,
-    clpL_nil, clpL_cons]
+  all_goals simp_all only [Cond.pval, Expr.pval, Cmp.eval, LocEq, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_cons, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil,
+    Nat.reduceEqDiff, clpW, clpL_cons, clpL_nil, Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq,
+    bne_iff_ne, ne_eq, Bool.false_or, or_assoc, Classical.not_and_iff_not_or_not, Decidable.not_not,
+    Sig.retVal, Sig.retOr, if_true, if_false, or_false, or_true]
 
 theorem cl_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis g x h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "cr_leaf" [vis, g, x, h]
@@ -219,12 +222,16 @@ theorem crf_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis f h : Wo
     ⦃fun r s' => LocEq s' s₀ ∧ crfW p k s₀.mem vis f h = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.go]
   simp only [callFn, crfGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p k "e_view", callW_spec p k "cr_leaf", callW_spec p k "crm_find",
-      callW_spec p k "crm_put", callW_spec p k "crf_go", callW_spec p k "env_find"] <;>
-    finish (gen := 20) (instances := 20000) [crfW, crfV, crfLf, crfM, crfN, crfP1, crfP2, crfL1, crfL2, crfL3,
-      crfB1, crfB2, crfFv, crfT, crfT1, crfT2]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
+    callW_spec p k "e_view", callW_spec p k "cr_leaf", callW_spec p k "crm_find",
+    callW_spec p k "crm_put", callW_spec p k "crf_go", callW_spec p k "env_find"]
+  all_goals (try simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
+    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
+    Bool.or_eq_true] at *)
+  all_goals grind (gen := 20) (instances := 20000) [lang_grind, arena_grind, crfW, crfV, crfLf,
+    crfM, crfN, crfP1, crfP2, crfL1, crfL2, crfL3, crfB1, crfB2, crfFv, crfT, crfT1, crfT2]
 
 theorem crff_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "consts_resolve_ffast" [vis, e]
