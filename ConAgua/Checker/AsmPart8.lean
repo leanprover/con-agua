@@ -9,6 +9,6 @@ namespace L.Checker
 open L L.Compiler
 
 set_option asmLitBatch 27 in
-asm_lit_fns checkerAsm : checkerTab checkerProg 1696 1723
+asm_lit_fns checkerAsm : checkerTab checkerNrt checkerProg 1696 1723
 
 end L.Checker

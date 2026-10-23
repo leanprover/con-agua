@@ -134,6 +134,59 @@ def Stmt.nres : Stmt → Nat
   | .call xs _ _ => xs.length
   | _ => 0
 
+/-! ## Names as numbers, and a search tree keyed by them
+
+The kernel compares `String`s slowly (UTF-8 byte lists), `Nat` literals fast (GMP): code that the
+kernel evaluates looks names up by `nameCode` in an `NTree` (`WFFast.lean`; the per-callee result
+counts below). -/
+
+/-- Bijective base-257 numeration of a byte list (digits `1..256`, least significant first). -/
+def bytesCode : List UInt8 → Nat
+  | [] => 0
+  | b :: l => (b.toNat + 1) + 257 * bytesCode l
+
+/-- A function name as a number. -/
+def nameCode (s : String) : Nat := bytesCode s.toByteArray.data.toList
+
+/-- Binary search tree: name code ↦ a number (the parameter count, the result count). -/
+inductive NTree where
+  | leaf
+  | node (l : NTree) (k v : Nat) (r : NTree)
+  deriving Repr, Inhabited
+
+def NTree.find (k : Nat) : NTree → Option Nat
+  | .leaf => none
+  | .node l k' v r => if k < k' then find k l else if k = k' then some v else find k r
+
+/-- Insert `k ↦ v`; `none` if `k` is there already. -/
+def NTree.insert (k v : Nat) : NTree → Option NTree
+  | .leaf => some (.node .leaf k v .leaf)
+  | .node l k' v' r =>
+    if k < k' then (insert k v l).map (.node · k' v' r)
+    else if k = k' then none
+    else (insert k v r).map (.node l k' v' ·)
+
+/-- The most results a statement returns: a function sets only these (`Ctx.nr`); a caller that
+reads more zeroes the rest itself. -/
+def Stmt.nret : Stmt → Nat
+  | .seq s t | .ite _ s t => max (Stmt.nret s) (Stmt.nret t)
+  | .while _ s => Stmt.nret s
+  | .ret es => es.length
+  | _ => 0
+
+/-- The result counts of a program's functions (`Stmt.nret` of the body) by `nameCode`; `none`
+if a name occurs twice (built right to left, as `WFFast.lean`'s `progTree`). -/
+def Prog.nrTree : Prog → Option NTree
+  | [] => some .leaf
+  | (f, fd) :: p => (Prog.nrTree p).bind (·.insert (nameCode f) (Stmt.nret fd.body))
+
+/-- `Prog.nrTree`, or the empty tree (then every call site reads all `nres` results; `Prog.wf`
+rules this case out). -/
+def Prog.nrt (p : Prog) : NTree := (Prog.nrTree p).getD .leaf
+
+/-- The results callee `f` sets: its entry in `t`, else all `tab.nres`. -/
+def nrOf (t : NTree) (tab : Tab) (f : FnName) : Nat := (t.find (nameCode f)).getD tab.nres
+
 /-- One more than the largest global variable an expression, a condition, a statement names. -/
 def Expr.nglob : Expr → Nat
   | .bin _ a b | .cmpw _ a b => max (Expr.nglob a) (Expr.nglob b)
@@ -189,6 +242,8 @@ abbrev jccL (cc : CondCode) (l : Label) : Directive := i64 (.jcc cc l)
 def errorL : Label := "ca_error"
 def exhaustedL : Label := "ca_exhausted"
 def finishL : Label := "ca_finish"
+/-- Where the trampoline zeroes the results that the entry function does not set. -/
+def okL : Label := "ca_ok"
 def enterL : Label := "ca_enter"
 /-- The entry label of function `f`. -/
 def fnL (f : FnName) : Label := "ca_f_" ++ f
@@ -236,6 +291,12 @@ structure Ctx where
   nl : Nat
   /-- Where `break` jumps. -/
   brk : Label
+  /-- The results this function sets at every return: its longest `return` (`Stmt.nret`). -/
+  nr : Nat := tab.nres
+  /-- The result counts of the program's functions, by `nameCode` (`Prog.nrt`), for the call
+  sites: a call sets only the callee's results, and the caller zeroes the locals it reads past
+  them. -/
+  nrt : NTree := .leaf
   deriving Repr
 
 /-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
@@ -428,6 +489,11 @@ def loadRes (ctx : Ctx) (k : Nat) : Nat → Nat → Program
      else if i < k then [movRM .rcx (ctx.tmp i), movMR (mb .r15 (ctx.tab.resOff i)) .rcx]
      else [i64 (.mov (.mem (mb .r15 (ctx.tab.resOff i))) (oI 0))]) ++ loadRes ctx k (i + 1) n
 
+/-- Zero the locals `xs` (the results a call reads past the callee's `nrOf`). -/
+def zeroVars : List Var → Program
+  | [] => []
+  | x :: xs => i64 (.mov (.mem (mb .rsp (8 * x))) (oI 0)) :: zeroVars xs
+
 /-- Store results `i, i + 1, …` into the locals `xs` (a result `i ≥ maxRes` from the result area,
 through `rcx`). -/
 def storeRes (tab : Tab) : List Var → Nat → Program
@@ -478,11 +544,11 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
       compileS { ctx with brk := ctx.lbl path "X" } (path.ch 6) s ++ burnFuel ++
       [jmpL (ctx.lbl path "H"), .label (ctx.lbl path "X")]
   | .brk => [jmpL ctx.brk]
-  | .ret es => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.tab.nres ++ [jmpL ctx.retL]
+  | .ret es => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.nr ++ [jmpL ctx.retL]
   | .call xs f args =>
     compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))] ++ burnFuel ++
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
-       ] ++ storeRes ctx.tab xs 0
+       ] ++ storeRes ctx.tab (xs.take (nrOf ctx.nrt ctx.tab f)) 0 ++ zeroVars (xs.drop (nrOf ctx.nrt ctx.tab f))
   | .abort => [jmpL errorL]
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
 
@@ -497,38 +563,50 @@ def zeroLocals : Nat → Nat → Program
   | j, n + 1 => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0)) :: zeroLocals (j + 1) n
 
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
-return address and `rsi` at the arguments. -/
-def compileFn (tab : Tab) (f : FnName) (fd : FunDecl) : Program :=
+return address and `rsi` at the arguments. It sets its first `Stmt.nret fd.body` results; `t`
+holds every function's count (`Prog.nrt`), for the call sites. -/
+def compileFn (tab : Tab) (t : NTree) (f : FnName) (fd : FunDecl) : Program :=
   let F := frameWords fd
-  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" }
+  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t }
   [.label (fnL f),
    movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++
   copyParams 0 fd.nparams ++ zeroLocals fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx 0 fd.body ++
-  [.label ctx.endL] ++ loadRes ctx 0 0 tab.nres ++ [.label ctx.retL,
+  [.label ctx.endL] ++ loadRes ctx 0 0 ctx.nr ++ [.label ctx.retL,
    i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
 /-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves
 `rbp`, `r14`, `r15`, switches to the L stack `[T]`, and calls `entry` with the arguments at
-`T + Tab.args`. -/
-def trampoline (tab : Tab) (entry : FnName) : Program :=
+`T + Tab.args`; `entry` sets `c` results, the trampoline zeroes the others up to `tab.nres`
+(`ca_ok`). -/
+def trampoline (tab : Tab) (entry : FnName) (c : Nat) : Program :=
   [.label enterL,
    i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .r15)),
    movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
    movRM .rsp (mb .r15 Tab.stackTop),
    i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++ burnFuel ++
   [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-   movRI .rdx 0, jmpL finishL,
+   jmpL okL,
    .label exhaustedL, movRI .rdx 1, jmpL finishL,
    .label errorL, movRI .rdx 2,
    .label finishL, movRR .rsp .rbp,
    i64 (.pop (.reg (rr .r15))), i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-   i64 .ret]
+   i64 .ret,
+   .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  [movRI .rdx 0, jmpL finishL]
+
+/-- Every function of `p`, with the result counts `t`. -/
+def compileFns (tab : Tab) (t : NTree) (p : Prog) : Program :=
+  p.flatMap fun (f, fd) => compileFn tab t f fd
+
+/-- The whole program, with the result counts `t`: the trampoline, then every function. -/
+def compileProgT (tab : Tab) (t : NTree) (p : Prog) (entry : FnName) : Program :=
+  trampoline tab entry (nrOf t tab entry) ++ compileFns tab t p
 
 /-- The whole program: the trampoline, then every function. -/
 def compileProg (tab : Tab) (p : Prog) (entry : FnName) : Program :=
-  trampoline tab entry ++ p.flatMap fun (f, fd) => compileFn tab f fd
+  compileProgT tab (Prog.nrt p) p entry
 
 end L.Compiler

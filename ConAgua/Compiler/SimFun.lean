@@ -123,17 +123,41 @@ theorem sim_zero (sp : Nat) (Q : MachineState → Prop) :
 
 end
 
+/-- Every `return` fits the result registers and area. -/
+theorem Stmt.nret_le_of_wf {p : Prog} {nl : Nat} {tab : Tab} :
+    ∀ {s : Stmt}, Stmt.wf p nl tab s = true → Stmt.nret s ≤ tab.nres
+  | .skip, _ | .brk, _ | .abort, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .call .., _ | .gset .., _ =>
+    Nat.zero_le _
+  | .seq s u, h => by
+    simp only [Stmt.wf, Bool.and_eq_true] at h
+    have h1 := Stmt.nret_le_of_wf h.1
+    have h2 := Stmt.nret_le_of_wf h.2
+    simp only [Stmt.nret]; omega
+  | .ite _ s u, h => by
+    simp only [Stmt.wf, Bool.and_eq_true] at h
+    have h1 := Stmt.nret_le_of_wf h.1.2
+    have h2 := Stmt.nret_le_of_wf h.2
+    simp only [Stmt.nret]; omega
+  | .while _ s, h => by
+    simp only [Stmt.wf, Bool.and_eq_true] at h
+    exact Stmt.nret_le_of_wf (s := s) h.2
+  | .ret es, h => by
+    simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at h
+    exact h.2
+
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
-theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (n : Nat)
-    (hE : ExecSim p G n) : FunSim p G n := by
+theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
+    (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body) (n : Nat)
+    (hE : ExecSim p G n) : FunSim p G t n := by
   intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hap1 hap2 hlo hhi h15 hmem hfuel hKret hKerr hKexh
   have hap1' := hap1
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
+  have hnr : Stmt.nret fd.body ≤ G.tab.nres := Stmt.nret_le_of_wf hbody
   simp only [maxOff] at hFoff
   have hhi2 := hG.hi_le
   simp only [compileFn, List.append_assoc, List.cons_append, List.nil_append] at hkf
@@ -212,11 +236,11 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     have cR := c3.tail.right
     have hepi : ∀ (r : List Word) (σ2 : St) (d2 : MachineData),
         (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
-        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → ResOut G r d2 →
+        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → ResOut G (Stmt.nret fd.body) r d2 →
         Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
           (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
-          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" } 0 fd.body).length + 1 +
-          (loadRes { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" } 0 0 G.tab.nres).length)) := by
+          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } 0 fd.body).length + 1 +
+          (loadRes { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } 0 0 (Stmt.nret fd.body)).length)) := by
       intro r σ2 d2 hrun hm2 hS2 hrax
       have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := hP6.trans (htop ▸ hS2.mem)
       have h2sp : d2.regs.rsp.toNat = d.regs.rsp.toNat - 8 * frameWords fd := by
@@ -253,30 +277,30 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
         Inv G fd.nlocals (frameWords fd) σ2 d2 → SPost G (frameWords fd) s6 d2 →
         Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
           (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
-          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" } 0 fd.body).length)) := by
+          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } 0 fd.body).length)) := by
       intro σ2 d2 hr hI2 hS2
       refine ev_label c3.head ?_
       have hTab' := hTab; simp only [maxOff] at hTab'
       have hI2hi := hI2.hi
       simp only [frameWords] at hFoff hI2hi
-      refine sim_loadRes hG _ rfl [] Q (by omega) G.tab.nres 0 _ d2 c3.tail.left (by omega)
+      refine sim_loadRes hG _ rfl [] [] Q (by omega) (Stmt.nret fd.body) 0 _ d2 c3.tail.left (by omega)
         (by simp; omega) hI2.r15 hI2.lo (by simp; omega)
         (fun x hx => hI2.mem.res x hx) (fun j hj => absurd hj (by simp)) (fun j hj => absurd hj (Nat.not_lt_zero _))
-        (fun j _ hj => absurd hj (Nat.not_lt_zero _)) ?_
+        (fun j _ hj => absurd hj (Nat.not_lt_zero _)) (fun _ _ => rfl) ?_
       intro s3 h1 h2 h3 h4 hO hR hM
       refine hepi [] σ2 s3 ?_ (hI2.mem.only_res hG hO (fun x a b => Layout.inRes_of a b))
         (hS2.trans ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩)
-        ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega)⟩
+        ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), Nat.zero_le _⟩
       rcases hr with hr | hr <;> exact hrun _ _ hr
     refine ev_congr (j := kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
       (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length) ?_ (by rw [zeroLocals_length])
-    refine hE fd.body { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" } (frameWords fd) 0 _ rfl
-      (by simp only [maxOff]; omega) c2.right.right.left hbody (by simp [frameWords]) _ s6 Q hI6
+    refine hE fd.body { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t } (frameWords fd) 0 _ rfl
+      (by simp only [maxOff]; omega) c2.right.right.left hbody ⟨Nat.le_refl _, hnr, hTree⟩ (by simp [frameWords]) _ s6 Q hI6
       (by rw [h614]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr hI2 hS2
       exact hZ σ2 d2 (.inl hr) hI2 hS2
     · intro σ2 d2 hr hI2 hS2
-      show Ev Q d2 (label (Ctx.endL { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" }))
+      show Ev Q d2 (label (Ctx.endL { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z", nr := Stmt.nret fd.body, nrt := t }))
       rw [Code.label (i := 0) c3 rfl, Nat.add_zero]
       exact hZ σ2 d2 (.inr hr) hI2 hS2
     · intro v σ2 d2 hr hI2 hS2 hv

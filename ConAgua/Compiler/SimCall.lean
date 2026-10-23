@@ -52,8 +52,8 @@ theorem evalArgsP_length {σ : St} {es : List Expr} {vs : List Word} (h : evalAr
 
 /-- The simulation of every call of a function of `p` under `exec p n`, with fewer than `n` units
 of machine fuel. -/
-def FunSim [Host] (p : Prog) (G : Layout) (n : Nat) : Prop :=
-  ∀ (f : FnName) (fd : FunDecl) (kf : Nat), p.lookup f = some fd → Code (compileFn G.tab f fd) kf →
+def FunSim [Host] (p : Prog) (G : Layout) (t : NTree) (n : Nat) : Prop :=
+  ∀ (f : FnName) (fd : FunDecl) (kf : Nat), p.lookup f = some fd → Code (compileFn G.tab t f fd) kf →
   ∀ (vs : List Word) (σ : St) (d : MachineData) (ra : Word) (Q : MachineState → Prop),
     vs.length = fd.nparams →
     rdW d.dmem (A d.regs.rsp.toNat) = some ra →
@@ -64,7 +64,7 @@ def FunSim [Host] (p : Prog) (G : Layout) (n : Nat) : Prop :=
     d.regs.r15.toNat = G.T → MemRel G σ.mem d.dmem → d.regs.r14.toNat < n →
     (∀ r σ' d', (invoke p (exec p n) f vs).run σ = .ok (r, σ') → MemRel G σ'.mem d'.dmem →
       σ'.loc = σ.loc → d'.regs.rsp.toNat = d.regs.rsp.toNat + 8 → d'.regs.rbp = d.regs.rbp →
-      d'.regs.r15 = d.regs.r15 → d'.regs.r14.toNat ≤ d.regs.r14.toNat → ResOut G r d' →
+      d'.regs.r15 = d.regs.r15 → d'.regs.r14.toNat ≤ d.regs.r14.toNat → ResOut G (Stmt.nret fd.body) r d' →
       Pres G d.regs.rsp.toNat d.dmem d'.dmem → Ev Q d' (Int64.ofBitVec ra.toBitVec)) →
     (∀ d', (∃ x, (invoke p (exec p n) f vs).run σ = .error x ∧ x ≠ .outOfFuel) →
       GPost G d.regs.rsp.toNat d d' → Ev Q d' (label errorL)) →
@@ -127,8 +127,9 @@ section
 variable [Host]
 
 /-- Setting results `i, …, i + n - 1` from the temporaries holding `vs` (and `0` past the end of
-`vs`): registers below `maxRes`, the result area from `maxRes` on. -/
-theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) (vs : List Word)
+`vs`): registers below `maxRes`, the result area from `maxRes` on. The results are those of `ws`,
+which agrees with `vs` from `i` on (the trampoline: the entry's results below `i`, zeroes). -/
+theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) (vs ws : List Word)
     (Q : MachineState → Prop)
     (hres : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
     ∀ (n i k : Nat) (s : MachineData), Code (loadRes ctx vs.length i n) k → i + n ≤ G.tab.nres →
@@ -136,23 +137,24 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
     s.regs.rsp.toNat + 8 * (ctx.nl + vs.length) ≤ G.hi →
     (∀ x, G.InRes x → (s.dmem.get? (A x)).isSome) →
     (∀ j (h : j < vs.length), rdW s.dmem (A (s.regs.rsp.toNat + 8 * (ctx.nl + j))) = some vs[j]) →
-    (∀ j < i, j < maxRes → rres s.regs j = vs.getD j 0) →
-    (∀ j, maxRes ≤ j → j < i → rdW s.dmem (A (G.resAddr j)) = some (vs.getD j 0)) →
+    (∀ j < i, j < maxRes → rres s.regs j = ws.getD j 0) →
+    (∀ j, maxRes ≤ j → j < i → rdW s.dmem (A (G.resAddr j)) = some (ws.getD j 0)) →
+    (∀ j, i ≤ j → ws.getD j 0 = vs.getD j 0) →
     (∀ s' : MachineData, s'.regs.rsp = s.regs.rsp → s'.regs.rbp = s.regs.rbp → s'.regs.r14 = s.regs.r14 →
       s'.regs.r15 = s.regs.r15 → Only (G.resAddr maxRes) (G.resAddr G.tab.nres) s.dmem s'.dmem →
-      (∀ j < i + n, j < maxRes → rres s'.regs j = vs.getD j 0) →
-      (∀ j, maxRes ≤ j → j < i + n → rdW s'.dmem (A (G.resAddr j)) = some (vs.getD j 0)) →
+      (∀ j < i + n, j < maxRes → rres s'.regs j = ws.getD j 0) →
+      (∀ j, maxRes ≤ j → j < i + n → rdW s'.dmem (A (G.resAddr j)) = some (ws.getD j 0)) →
       Ev Q s' (at_ (k + (loadRes ctx vs.length i n).length))) →
     Ev Q s (at_ k) := by
   have hhi := hG.hi_le
   intro n
   induction n with
   | zero =>
-    intro i k s _ _ _ _ _ _ _ _ hpre hpm h
+    intro i k s _ _ _ _ _ _ _ _ hpre hpm _ h
     exact ev_congr (h s rfl rfl rfl rfl (Only.refl _ _ _) (fun j hj => hpre j (by omega))
       (fun j h1 h2 => hpm j h1 (by omega))) (by simp [loadRes])
   | succ n ih =>
-    intro i k s hc hn hoff h15 hlo hhis hmap hsl hpre hpm h
+    intro i k s hc hn hoff h15 hlo hhis hmap hsl hpre hpm hw h
     simp only [loadRes] at hc
     -- after one result: the state `s2` holds result `i`
     have hnext : ∀ (m : Nat) (s2 : MachineData), Code (loadRes ctx vs.length (i + 1) n) (k + m) →
@@ -168,14 +170,14 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
       intro m s2 hc2 hlen r1 r2 r3 r4 hO hr hri hm hmi hsl2
       refine ih (i + 1) (k + m) s2 hc2 (by omega) hoff (by rw [r4]; exact h15) (by rw [r1]; exact hlo)
         (by rw [r1]; exact hhis) (fun x hx => hO.grows _ (hmap x hx)) (fun j hj => by rw [r1]; exact hsl2 j hj)
-        ?_ ?_ ?_
+        ?_ ?_ (fun j hj => hw j (by omega)) ?_
       · intro j hj hjm
         by_cases hji : j = i
-        · subst hji; exact hri hjm
+        · subst hji; rw [hw _ (Nat.le_refl _)]; exact hri hjm
         · rw [hr j hji hjm]; exact hpre j (by omega) hjm
       · intro j h1 h2
         by_cases hji : j = i
-        · subst hji; exact hmi h1
+        · subst hji; rw [hw _ (Nat.le_refl _)]; exact hmi h1
         · rw [hm j hji h1 (by omega)]; exact hpm j h1 (by omega)
       · intro s' q1 q2 q3 q4 hO' hR hM
         refine ev_congr (h s' (q1.trans r1) (q2.trans r2) (q3.trans r3) (q4.trans r4) (hO.trans hO' (Nat.le_refl _) (Nat.le_refl _))
@@ -325,6 +327,59 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState →
       exact ev_congr (hnext 2 { s with regs := s.regs.set64 .rcx (rs.headD 0).toBitVec } (rs.headD 0) rfl
         hc.tail.tail (by simp [storeRes, him]; omega) rfl rfl rfl rfl (fun j => rres_set64_rcx _ _ j) rfl) rfl
 
+/-- Zeroing the locals `xs`. -/
+theorem sim_zeroVars {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState → Prop) :
+    ∀ (xs : List Var) (k : Nat) (σ : St) (s : MachineData),
+    Code (zeroVars xs) k → xs.all (· < nl) = true → 8 * nl < 2 ^ 31 → Inv G nl F σ s →
+    (∀ s', Inv G nl F (σ.setLocs xs []) s' → s'.regs = s.regs →
+      Pres G (top s F) s.dmem s'.dmem → Ev Q s' (at_ (k + xs.length))) →
+    Ev Q s (at_ k) := by
+  intro xs
+  induction xs with
+  | nil =>
+    intro k σ s _ _ _ hI h
+    exact ev_congr (h s hI rfl (Pres.refl _ _)) (by simp)
+  | cons x xs ih =>
+    intro k σ s hc hxs hoff hI h
+    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at hxs
+    simp only [zeroVars] at hc
+    have hx := hxs.1
+    have := hI.nlF
+    have hhi := hI.hi
+    have hhi2 := hG.hi_le
+    have hlo := hI.lo
+    refine ev_movMI hc.head ⟨by lomega, by lomega⟩ ?_ ?_
+    · rw [slot_addr _ x _ (by omega)]; exact hI.mapped (by lomega)
+    rw [slot_addr _ x _ (by omega)]
+    have hI2 := hI.setLoc hG hx 0
+    have h0 : (Int64.ofInt 0).toBitVec = (0 : Word).toBitVec := rfl
+    rw [h0]
+    refine ih (k + 1) _ _ hc.tail hxs.2 hoff hI2 ?_
+    intro s' hI' hr hP
+    refine ev_congr (h s' (by simpa [St.setLocs] using hI') hr ?_) (by simp; omega)
+    have hw : Pres G (top s F) s.dmem (wrW s.dmem (A (s.regs.rsp.toNat + 8 * x)) (0 : Word).toBitVec) :=
+      Pres.of_only (Only.wrW (by lomega)) (by omega) (by simp only [top]; lomega)
+    exact hw.trans (by simpa [top] using hP)
+
+theorem zeroVars_length (xs : List Var) : (zeroVars xs).length = xs.length := by
+  induction xs with
+  | nil => rfl
+  | cons x xs ih => simp [zeroVars, ih]
+
+/-- A call's results: the callee's `c` of them, then zeroes. -/
+theorem St.setLocs_take_drop (xs : List Var) (σ : St) (r : List Word) (c : Nat) (h : r.length ≤ c) :
+    σ.setLocs xs r = (σ.setLocs (xs.take c) r).setLocs (xs.drop c) [] := by
+  induction xs generalizing σ r c with
+  | nil => simp [St.setLocs]
+  | cons x xs ih =>
+    cases c with
+    | zero =>
+      have : r = [] := List.eq_nil_of_length_eq_zero (by omega)
+      subst this; simp [St.setLocs]
+    | succ c =>
+      simp only [List.take_succ_cons, List.drop_succ_cons, St.setLocs]
+      exact ih _ _ _ (by simp; omega)
+
 end
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
@@ -399,7 +454,7 @@ theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.l
 
 theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
     SimS p G (stepRun p K) P (.ret es) := by
-  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨hargs, hlen⟩ := hwf
   simp only [compileS, List.append_assoc] at hc hK
@@ -414,26 +469,29 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
     have hc2 := hc.right
     rw [← hvl] at hc2
     have h1sp := congrArg UInt64.toNat hE1.rsp
-    refine sim_loadRes hG ctx hT vs Q (by omega) G.tab.nres 0 _ s1 (hT ▸ hc2.left) (by omega)
+    have hnr := hN.le
+    have hnret : es.length ≤ ctx.nr := hN.ret
+    refine sim_loadRes hG ctx hT vs vs Q (by omega) ctx.nr 0 _ s1 hc2.left (by omega)
       (by rw [hvl]; omega) hI1.r15 hI1.lo (by rw [h1sp, hvl]; have := hI.hi; omega)
       (fun x hx => hI1.mem.res x hx) (fun j hj => by rw [h1sp]; simpa [h1sp] using hslots j hj)
-      (fun j hj => absurd hj (Nat.not_lt_zero _)) (fun j _ hj => absurd hj (Nat.not_lt_zero _)) ?_
+      (fun j hj => absurd hj (Nat.not_lt_zero _)) (fun j _ hj => absurd hj (Nat.not_lt_zero _))
+      (fun _ _ => rfl) ?_
     intro s2 h1 h2 h3 h4 hO hR hM
     have hj := hc2.right
-    refine ev_jmp (hT ▸ hj.head) (hK.ret vs σ s2 (by simp [step_ret_run, hvs]; rfl)
+    refine ev_jmp hj.head (hK.ret vs σ s2 (by simp [step_ret_run, hvs]; rfl)
       (hI1.only_res hG hO (fun x a b => Layout.inRes_of a b) h1 h4) ((hE1.spost hI.lo).trans ?_)
-      ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega)⟩)
+      ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), by omega⟩)
     exact ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩
   · intro s1 herr hE1
     obtain ⟨y, hy⟩ := herr
     refine hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
       (hE1.spost hI.lo).gpost
 
-theorem sim_call (n : Nat) (hFun : FunSim p G n)
-    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab f fd) kf)
+theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t n)
+    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t f fd) kf)
     (xs : List Var) (f : FnName) (args : List Expr) :
     SimS p G (stepRun p (exec p n)) (· ≤ n) (.call xs f args) := by
-  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨⟨hxs, hxl⟩, hargs⟩, hfd⟩ := hwf
   cases hlk : p.lookup f with
@@ -519,12 +577,29 @@ theorem sim_call (n : Nat) (hFun : FunSim p G n)
             rdW_of_pres hG hpres1 (by omega) (by omega) (by omega), hloc]
           exact hI1.frame y hy
         have hTab' := hTab; simp only [maxOff] at hTab'
-        refine sim_storeRes hG ctx.nl F Q (by omega) xs 0 _ σ' r d' (hT ▸ hcR.tail.tail.tail.tail) hxs
-          (by omega) (by omega) hId
-          (fun j hj hm => by rw [Nat.zero_add] at hm ⊢; exact hrax.1 j (by omega) hm)
-          (fun j hj hm => by rw [Nat.zero_add] at hm ⊢; exact hrax.2 j hm (by omega)) ?_
-        intro s' hI' q1 q2 q3 q4 hP'
-        refine ev_congr (hK.normal (σ'.setLocs xs r) _ ?_ hI' ?_) ?_
+        have hcS := hcR.tail.tail.tail.tail
+        have hcn : nrOf ctx.nrt ctx.tab f = Stmt.nret fd.body := hT ▸ hN.callee f fd hlk
+        rw [hcn, hT] at hcS
+        have hxl' : xs.length ≤ G.tab.nres := hxl
+        have hxs1 : (xs.take (Stmt.nret fd.body)).all (· < ctx.nl) = true :=
+          List.all_eq_true.mpr fun y hy => List.all_eq_true.mp hxs y (List.mem_of_mem_take hy)
+        have hxs2 : (xs.drop (Stmt.nret fd.body)).all (· < ctx.nl) = true :=
+          List.all_eq_true.mpr fun y hy => List.all_eq_true.mp hxs y (List.mem_of_mem_drop hy)
+        have htk := List.length_take_le' (Stmt.nret fd.body) xs
+        refine sim_storeRes hG ctx.nl F Q (by omega) _ 0 _ σ' r d' hcS.left hxs1
+          (by rw [Nat.zero_add]; exact Nat.le_trans htk hxl') (by omega) hId
+          (fun j hj hm => by rw [Nat.zero_add] at hm ⊢; exact hrax.1 j (by simp at hj; omega) hm)
+          (fun j hj hm => by rw [Nat.zero_add] at hm ⊢; exact hrax.2.1 j hm (by simp at hj; omega)) ?_
+        intro s1' hI1' p1 p2 p3 p4 hP1
+        refine sim_zeroVars hG ctx.nl F Q _ _ _ s1' hcS.right hxs2 (by omega) hI1' ?_
+        intro s' hI'' hr' hP2
+        rw [← St.setLocs_take_drop xs σ' r _ hrax.2.2] at hI''
+        have q1 : s'.regs.rsp = d'.regs.rsp := by rw [hr', p1]
+        have q2 : s'.regs.rbp = d'.regs.rbp := by rw [hr', p2]
+        have q3 : s'.regs.r14 = d'.regs.r14 := by rw [hr', p3]
+        have q4 : s'.regs.r15 = d'.regs.r15 := by rw [hr', p4]
+        have hP' : Pres G (top d' F) d'.dmem s'.dmem := hP1.trans (by simpa [top, p1] using hP2)
+        refine ev_congr (hK.normal (σ'.setLocs xs r) _ ?_ hI'' ?_) ?_
         · rw [step_call_run, hvs]; simp only [hinv]
         · refine ⟨by rw [q1]; exact hrsp'', by rw [q2]; exact hrbp.trans hE1.rbp,
             by rw [q4]; exact hr15.trans hE1.r15, ?_, ?_⟩
@@ -538,7 +613,8 @@ theorem sim_call (n : Nat) (hFun : FunSim p G n)
             refine (hpres1.mono (by simp only [top]; omega)).trans ?_
             refine (hpres.mono (by simp only [top]; omega)).trans ?_
             exact hP'.mono (by simp only [top]; rw [hrsp']; omega)
-        · simp only [List.length_append, List.length_cons, List.length_nil, hT]; omega
+        · simp only [List.length_append, List.length_cons, zeroVars_length, hT, hN.callee f fd hlk]
+          omega
       all_goals
         intro d'
         have hlo1 := hI1.lo8
