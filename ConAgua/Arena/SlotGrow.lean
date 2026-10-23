@@ -185,6 +185,6 @@ def growB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
 
 /-- con-ron: none — the cons table's growth (the twin's `HashMap2::try_resize`, `ron/hashmap2.rs`,
 below the arena model's `Std.HashMap`), spliced into `X_push` with its variables from `o` on. -/
-def growBlkG (S : GrowSch) (o : Nat) : Stmt := shiftS o (growB S)
+@[irreducible] def growBlkG (S : GrowSch) (o : Nat) : Stmt := shiftS o (growB S)
 
 end L.Arena

@@ -48,6 +48,10 @@ def appGS : GrowSch :=
 /-- The hash of an `app` record (FNV-1a over its two words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
+/-- The hash of node `i` of tier `t`. -/
+def ahash (m : Mem) (t i : Word) : Word :=
+  appHashW (rdW (m.arr64 AREC) (i * 4 + t * 2)) (rdW (m.arr64 AREC) (i * 4 + t * 2 + 1))
+
 /-- The model of the match: node `i` of tier `t` is `(f, a)`. -/
 def amatchW (r : Array Word) (t i f a : Word) : Bool :=
   rdW r (i * 4 + t * 2) == f && rdW r (i * 4 + t * 2 + 1) == a
@@ -173,10 +177,9 @@ end find
 /-- The node count of tier `t` of the `app` table, `CTL[4 + t]`. -/
 def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 
-/-- `app_push`'s room checks: the handle index, the record array, the load limit. -/
+/-- `app_push`'s room checks: the handle index, the record array. -/
 def apushOK (m : Mem) (t : Word) : Bool :=
-  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 AREC >>> (2 : Word)) &&
-    decide (acnt m t + 1 ≤ (nSlotsA m >>> (2 : Word)) * 3)
+  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 AREC >>> (2 : Word))
 
 /-- The memory after `app_push(t, f, a, j)` appended node `c`. -/
 def apushMem (m : Mem) (t f a j c : Word) : Mem :=
@@ -185,6 +188,7 @@ def apushMem (m : Mem) (t f a j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
+  gk := ASLOT.u64[len(ASLOT.u64) - 1];
   c := CTL.u64[4 + t];
   if c >= 134217728 { abort };
   if len(AREC.u64) >> 2 <= c { abort };
@@ -193,20 +197,36 @@ def appPush : FunDecl := lfn (t, f, a, j) locals (c, k, gn, gk, gt, gi, gc, gh, 
   AREC.u64[k + 1] := a;
   ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[4 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << ASLOT.u64[len(ASLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG appGS 6⟫ };
+  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG appGS 6⟫ };
   return c
 }
 
 section push
 variable (p : Prog) (hp : p.lookup "app_push" = some appPush)
 
+/-- The growth's hash block computes `ahash`. -/
+theorem appHash_ok : HashOK p appGS 6 ahash := by
+  intro k s₀
+  simp only [appGS, shiftS, shiftE, L.Notation.blk]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [ahash, appHashW, LocEq, St.setLoc]
+
 include hp in
 theorem appPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "app_push" [t, f, a, j]
     ⦃fun r s' => LocEq s' s₀ ∧ apushOK s₀.mem t = true ∧ r = [acnt s₀.mem t] ∧
-      s'.mem = apushMem s₀.mem t f a j (acnt s₀.mem t); ⊤⦄ := by
-  sorry -- slotgrow: the push grows the table
+      growIf ASLOT 4 ahash s₀.mem (apushMem s₀.mem t f a j (acnt s₀.mem t)) (acnt s₀.mem t) = some s'.mem;
+      ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, appPush]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+        growBlkG_spec p appGS ASLOT 4 rfl rfl 6 ahash (appHash_ok p) n] <;>
+      finish [acnt, apushOK, apushMem, growIf_grow, growIf_keep, gnW, gexpW, baseW]
 
 end push
 
@@ -236,10 +256,14 @@ def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
     if rs₁ = [] then none
     else if rs₁.headD 0 ≠ 0 then some (appS + rs₁.tail.headD 0, m)
     else if apushOK m 1 then
-      some (appS + acnt m 1, apushMem m 1 f a (rs₁.tail.tail.headD 0) (acnt m 1))
+      match growIf ASLOT 4 ahash m (apushMem m 1 f a (rs₁.tail.tail.headD 0) (acnt m 1)) (acnt m 1) with
+      | some m' => some (appS + acnt m 1, m')
+      | none => none
     else none
   else if apushOK m 0 then
-    some (appP + acnt m 0, apushMem m 0 f a (rs₀.tail.tail.headD 0) (acnt m 0))
+    match growIf ASLOT 4 ahash m (apushMem m 0 f a (rs₀.tail.tail.headD 0) (acnt m 0)) (acnt m 0) with
+    | some m' => some (appP + acnt m 0, m')
+    | none => none
   else none
 
 /-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE

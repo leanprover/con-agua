@@ -181,6 +181,7 @@ def spushMem (m : Mem) (t u j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
+  gk := SSLOT.u64[len(SSLOT.u64) - 1];
   ⟪hpBlkS⟫;
   c := CTL.u64[6 + t];
   if c >= 134217728 { abort };
@@ -190,7 +191,7 @@ def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi,
   SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
   SHP.u64[c * 2 + t] := x;
-  if (⟪SN0⟫ << SSLOT.u64[len(SSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
+  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
   return c
 }
 

@@ -178,13 +178,14 @@ def bpushMem (m : Mem) (t u j c : Word) : Mem :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def bvarPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, gd) {
+  gk := BSLOT.u64[len(BSLOT.u64) - 1];
   c := CTL.u64[22 + t];
   if c >= 134217728 { abort };
   if len(BREC.u64) >> 1 <= c { abort };
   BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[22 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << BSLOT.u64[len(BSLOT.u64) - 1]) < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
+  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
   return c
 }
 
