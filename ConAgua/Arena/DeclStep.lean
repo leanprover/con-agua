@@ -28,7 +28,7 @@ word for the environment, the callee names and argument orders of its `stubFns`)
   (`decCV`: name, universe parameters, type). The checks in the twin's order; every `fail` is
   `abort`.
 
-The refinement of `install_step_go` is `Checker.lean`'s `installStepGo_spec` (still `sorry`): it
+The refinement of `install_step_go` is `CheckerT.lean`'s `installStepGo_specT`: it
 needs the front's `DeclAt` arm for kind `6` (lane `front`), the stub specs of `IndStubs.lean`, and
 the callees' frame on `PEND`/`DECL`/`DLP` from the program text.
 -/
