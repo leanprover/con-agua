@@ -119,7 +119,7 @@ def PushRoom (t : Word) : Prop :=
 /-- **The slot array's growth state**: the exponent is small, the two tiers' slots and the
 exponent word fit, and the words between them are zero (no write reaches them). -/
 def GrowR : Prop :=
-  (gexpW S.sa m).toNat < 56 ∧ 2 * (nSl S m).toNat + 1 ≤ (m.arr64 S.sa).size ∧
+  (gexpW S.sa m).toNat < 59 ∧ 2 * (nSl S m).toNat + 1 ≤ (m.arr64 S.sa).size ∧
   (m.arr64 S.sa).size < 2 ^ 63 ∧
   ∀ k : Word, 2 * (nSl S m).toNat ≤ k.toNat → k.toNat + 1 < (m.arr64 S.sa).size →
     rdW (m.arr64 S.sa) k = 0
@@ -272,10 +272,10 @@ end push
 
 /-! ## The slot count across an append -/
 
-theorem shl_SN0_toNat (g : Word) (h : g.toNat < 56) : (SN0 <<< g).toNat = 8 * 2 ^ g.toNat := by
+theorem shl_SN0_toNat (g : Word) (h : g.toNat < 59) : (SN0 <<< g).toNat = 8 * 2 ^ g.toNat := by
   simp only [SN0, UInt64.toNat_shiftLeft]
   rw [Nat.mod_eq_of_lt (a := g.toNat) (by omega), Nat.shiftLeft_eq]
-  have : 2 ^ g.toNat ≤ 2 ^ 55 := Nat.pow_le_pow_right (by omega) (by omega)
+  have : 2 ^ g.toNat ≤ 2 ^ 58 := Nat.pow_le_pow_right (by omega) (by omega)
   rw [Nat.mod_eq_of_lt (by simp; omega)]
   simp
 
@@ -291,7 +291,7 @@ include hS in
 theorem pushG_slot_lt (hG : GrowR S m) (ht : t ≤ 1) (hj : j < nSl S m) :
     (j * 2 + t).toNat < 2 * (nSl S m).toNat ∧ (j * 2 + t).toNat = j.toNat * 2 + t.toNat := by
   have hn := nSl_toNat S m hG
-  have : 2 ^ (gexpW S.sa m).toNat ≤ 2 ^ 55 := Nat.pow_le_pow_right (by omega) (by have := hG.1; omega)
+  have : 2 ^ (gexpW S.sa m).toNat ≤ 2 ^ 58 := Nat.pow_le_pow_right (by omega) (by have := hG.1; omega)
   have hj' : j.toNat < (nSl S m).toNat := UInt64.lt_iff_toNat_lt.mp hj
   have : t.toNat ≤ 1 := UInt64.le_iff_toNat_le.mp ht
   have e : (j * 2 + t).toNat = j.toNat * 2 + t.toNat := by

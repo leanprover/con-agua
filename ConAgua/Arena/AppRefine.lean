@@ -91,10 +91,6 @@ def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
   rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
   rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
 
-/-- The hash of node `i` of tier `t`. -/
-def ahash (m : Mem) (t i : Word) : Word :=
-  appHashW (rdW (m.arr64 AREC) (i * 4 + t * 2)) (rdW (m.arr64 AREC) (i * 4 + t * 2 + 1))
-
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
 def AppR (m : Mem) (a : AState) : Prop :=
   StoreR appSch ARecRel ahash m a.store.scratchOn a.store.pers.apps a.store.scr.apps
@@ -173,12 +169,13 @@ theorem apushMem_eq (m : Mem) (t f a j c : Word) :
 theorem ainternW_eq (m : Mem) (f a : Word) :
     ainternW m f a = internM appSch m (askipW m f a) (apushOK m) [f, a]
       (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (baseW m 0) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
-      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (baseW m 1) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0) := by
+      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (baseW m 1) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
+      ahash := by
   have e0 : ∀ x, hdW appSch.tag.toUInt64 0 x = appP + x := fun x => by
     simp [hdW, appSch, appP, ETag.app]
   have e1 : ∀ x, hdW appSch.tag.toUInt64 1 x = appS + x := fun x => by
     simp [hdW, appSch, appS, ETag.app]
-  simp only [ainternW, internM, apushMem_eq, e0, e1]
+  simp only [ainternW, internM, pushM, apushMem_eq, e0, e1]
   rfl
 
 /-- The L skip test is the arena's. -/
