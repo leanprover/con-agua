@@ -99,3 +99,17 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   steps so far); at a core call `*C_rsim`; at an L-only step `of_pstep … (PStep.refl …)`; for a
   sub-theorem already under `StageC`, `RSim.withRun` on it and con-ron's spec of its twin on the run
   for the `Ext`/`CoreStep` the next preconditions need.
+
+## Landing 4: target list; the declaration side's census links
+
+* `docs/stagec-targets.txt`: the lane's 59 census targets (those whose sorry sources included one
+  of the four core contracts at the start). Done: the target's sorry sources contain none of the
+  four (lane `e2emeter` counts it).
+* The eight declaration-side targets had their `@[refines]` on `StageR` theorems through the core
+  stubs although lanes `loopt2`/`loopt3` had proved `StageT`/`StageC` versions; the tags moved:
+  `checkConstantVal_refinesT`, `checkThmVal_refinesT` (tagged), `checkDefnVal_refinesT`,
+  `checkOpaqueVal_refinesT` (new, from `dvW_okT`; `DeclArmT.lean`), `certW_okT` (was a
+  `refines_part`; `certifyNatEqs` now proven), `cmC`, `cpaC` (`DeclDivGateT2.lean`), `crpW_okT`
+  (`DeclCrpT.lean`). The `StageR` theorems stay (their arms still use them), untagged.
+* Threaded `cR`: `tptW` (RecCheckSpec), `tmpW` (RecCheckSpec5), with the `StageR` frame lemmas in
+  RecGenSpec19.

@@ -82,7 +82,9 @@ theorem _root_.L.Ind.KnotStageProg.lvlEqC {p : Prog} (hq : KnotStageProg p) :
     p.lookup "lvl_eq_c" = some lvlEqCL :=
   (hq.knot.fire.lvlText _ (by decide)).trans rfl
 
-/-- **`check_constant_val` under `StageT`**, at the call. -/
+/-- **`check_constant_val` refines `checkConstantVal .verified`** under `StageT`, at the call (the
+census link since lane `indstaget`). -/
+@[refines ConRon.Arena.checkConstantVal]
 theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis q : Word) (cv : IConstantVal) (hS : StageT dn vis fe s₀.mem a₀)
@@ -96,8 +98,10 @@ theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStagePro
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
 
-/-- **`check_thm_val` under `StageT`**, at the call: the stage relation at the extended
-environment and the core's memos after it. -/
+/-- **`check_thm_val` refines `checkThmVal .verified`** under `StageT`, at the call: the stage
+relation at the extended environment and the core's memos after it (the census link since lane
+`indstaget`). -/
+@[refines ConRon.Arena.checkThmVal]
 theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis c : Word) (cv : IConstantVal) (v : EIdx) (hS : StageT dn vis fe s₀.mem a₀)
@@ -112,6 +116,46 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
   have hcv := decCI_cv hc (.inl rfl)
   obtain ⟨a', hrun, hS', hM', hg⟩ :=
     tvW_okT hq hp.rcp hq.knot.lvc hq.lvlEqC hn hm hS hc hcv hv
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
+
+/-- **`check_defn_val` refines `checkDefnVal .verified`** under `StageT`, at the arm's record
+(lane `indstaget`; `dvW_okT`). -/
+@[refines ConRon.Arena.checkDefnVal]
+theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (vis c : Word) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint)
+    (hS : StageT dn vis fe s₀.mem a₀)
+    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.defnInfo cv v hh)) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_defn_val" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDefnVal V fe cv v hh) a₀ ∧
+      StageR dn (r.headD 0) (AM.res (checkDefnVal V fe cv v hh) a₀) s'.mem
+        (AM.st (checkDefnVal V fe cv v hh) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (dv_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨hcv, hv⟩ := decls_decCI_defn hc
+  obtain ⟨a', hrun, hS', hM', hg⟩ := dvW_okT hq hp.rcp hn "type mismatch in definition" hm hS hc hcv hv
+  rw [← checkDefnVal_dvT] at hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
+
+/-- **`check_opaque_val` refines `checkOpaqueVal .verified`** under `StageT`, at the arm's record
+(lane `indstaget`; `dvW_okT`). -/
+@[refines ConRon.Arena.checkOpaqueVal]
+theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (n : Nat)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (vis c : Word) (cv : IConstantVal) (v : EIdx) (hS : StageT dn vis fe s₀.mem a₀)
+    (hc : decCI (erecP s₀.mem) dn c.toNat = some (.axiomInfo cv))
+    (hv : hd? (erecP s₀.mem) (c.toNat + 5) = some v) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_opaque_val" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkOpaqueVal V fe cv v) a₀ ∧
+      StageR dn (r.headD 0) (AM.res (checkOpaqueVal V fe cv v) a₀) s'.mem
+        (AM.st (checkOpaqueVal V fe cv v) a₀) ∧ CoreMemos s'.mem ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (ov_specW p hp (realCall p) (realCall_spec p) n s₀ vis c) ?_
+  rintro r s' ⟨hl, hm⟩
+  have hcv := decCI_cv hc (.inr rfl)
+  obtain ⟨a', hrun, hS', hM', hg⟩ := dvW_okT hq hp.rcp hn "type mismatch in opaque" hm hS hc hcv hv
+  rw [← checkOpaqueVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hS', hM', hg⟩
 

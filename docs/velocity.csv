@@ -235,3 +235,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,compproofB,opus-5.5,70,60,"prototype B proved: per-function result count (nrt tree by nameCode, trampoline zeroes the rest); compile_correct sorry-free; full set 0.920x instr / 0.976x wall vs master, e2e 0 class changes"
 2026-10-23,indstaget,claude-opus-5-5,90,30,AbsOK carries WkOK; StageC lifts (liftP/PP/PL/C)
 2026-10-23,indstaget,claude-opus-5-5,120,25,classRecTyOk/classRecTysOk under StageC; core write set; StageC core entries
+2026-10-23,indstaget,claude-opus-5-5,60,20,decl-side census links moved to StageT/C (8 targets); tpt/tmp over CallM; stagec-targets.txt
