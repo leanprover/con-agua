@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclStep
+import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.Pins
 import ConAgua.Arena.Frame
@@ -24,6 +25,8 @@ functions but `openFns` (the core's entry points and the walks: real code in the
 here) and has the write set on a call-closed superset (`StepIn`; for the checker's program,
 `ConAgua/Checker/LoopDecl.lean`).
 -/
+
+noncomputable section
 
 open ConRon.Arena
 
@@ -87,7 +90,9 @@ structure TextProg (p q : Prog) (fs : List FnName) : Prop where
   closed : StepIn p fs
 
 /-- A program with `check_value_group`'s text. -/
-structure CvgProg (p : Prog) : Prop extends TextProg p cvgProg cvgFns
+structure CvgProg (p : Prog) : Prop extends TextProg p cvgProg cvgFns where
+  bvb : BvbProg p
+  hf : HfF p
 
 section lookups
 variable {p : Prog} (h : CvgProg p)
@@ -194,12 +199,12 @@ def ivgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 
 def ivgK1 (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => ivgK2 vis v r1 (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, v])
+  | some (r1, m1) => ivgK2 vis v r1 (lbbF m1 [4000000000, 0, v])
 
 def ivgK2 (vis v : Word) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    if r2.headD 0 = 0 then none else ivgK3 vis v r1 (stubM "has_fvar_fast" m2 [4000000000, v])
+    if r2.headD 0 = 0 then none else ivgK3 vis v r1 (hffF m2 [4000000000, v])
 
 def ivgK3 (vis v : Word) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -221,9 +226,9 @@ section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis q v : Word) (r1 r2 r3 r4 r5 : List Word)
 theorem ivgW_step : ivgW (n + 1) m vis q v = ivgK1 vis v (cvLpsW n m q) := rfl
 theorem ivgK1_some : ivgK1 vis v (some (r1, m1)) =
-    ivgK2 vis v r1 (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, v]) := rfl
+    ivgK2 vis v r1 (lbbF m1 [4000000000, 0, v]) := rfl
 theorem ivgK2_some : ivgK2 vis v r1 (some (r2, m2)) =
-    if r2.headD 0 = 0 then none else ivgK3 vis v r1 (stubM "has_fvar_fast" m2 [4000000000, v]) :=
+    if r2.headD 0 = 0 then none else ivgK3 vis v r1 (hffF m2 [4000000000, v]) :=
   rfl
 theorem ivgK3_some : ivgK3 vis v r1 (some (r3, m3)) =
     if r3.headD 0 ≠ 0 then none
@@ -252,7 +257,8 @@ theorem ivg_specW (p : Prog) (h : CvgProg p) (n : Nat) (s₀ : St) (vis q v : Wo
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         cvLps_specW p h.alloc h.copy h.eti h.lps n,
-        stubM_spec p "loose_bvars_bounded_fast" n, stubM_spec p "has_fvar_fast" n,
+        lbbF_spec p h.bvb n, hffF_spec p h.hf n,
+
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
 
@@ -540,23 +546,23 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, ivgK1_some] at h
   obtain ⟨-, hr1t, hdec1, hS1, hg1, htop1⟩ := erToIwW_stage h1 hS hsrc
-  cases h2 : stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, v] with
+  cases h2 : lbbF m1 [4000000000, 0, v] with
   | none => rw [h2] at h; simp [ivgK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, ivgK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 v hv m1 m2 a r2 h2 hS1
+    lbbF_ok dn vis fe 4000000000 0 v hv m1 m2 a r2 h2 hS1
   by_cases hb2 : r2.headD 0 = 0
   · rw [if_pos hb2] at h; simp at h
   rw [if_neg hb2] at h
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, v] with
+  cases h3 : hffF m2 [4000000000, v] with
   | none => rw [h3] at h; simp [ivgK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, ivgK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    hasFvarFast_spec dn vis fe 4000000000 v hv m2 m3 a2 r3 h3 hS2
+    hffF_ok dn vis fe 4000000000 v hv m2 m3 a2 r3 h3 hS2
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h; simp at h
   rw [if_neg hb3] at h

@@ -13,6 +13,8 @@ an opaque is pinned, and goes to `check_decl` (the pinned names and every other 
 name lists under the pin table, the arm's twin (`ivT`), and the dispatch.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 set_option linter.unusedSimpArgs false
@@ -591,7 +593,9 @@ def ivFns : List FnName :=
    "env_push", "env_row_set", "erec_vg"]
 
 /-- A program with `install_value`'s text. -/
-structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns
+structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
+  bvb : BvbProg p
+  hf : HfF p
 
 section ivLookups
 variable {p : Prog} (h : IvProg p)
@@ -601,7 +605,8 @@ theorem IvProg.iv : p.lookup "install_value" = some installValueL :=
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
 theorem IvProg.ih : IhProg p := by
-  constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
+  constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
+
 end ivLookups
 
 /-! ## The callees' specs at the loop's relation -/
