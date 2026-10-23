@@ -1,0 +1,22 @@
+import ConAgua.Checker.AsmFileEq
+import ConAgua.Compiler.Abi
+import ConAgua.AsmFile.ListEq
+
+/-!
+# The committed file's stub is the entry stub
+
+`checkerStub_eq : checkerStub = abiStub checkerTab`: the code of `asm/checker.s` before the
+trampoline (`checkerStub`, `ConAgua/Checker/AsmFileEq.lean`) is lane `abi`'s entry stub for the
+checker's table (`ConAgua/Compiler/Abi.lean`). Kernel-checked in pieces (`list_eq`,
+`ConAgua/AsmFile/ListEq.lean`; 10 383 directives, ~10 s): the stub's words, ROM included, are
+structural `Nat` arithmetic (`romVals`, `romWord`), cheap for the kernel.
+-/
+
+namespace L.Checker
+
+open L.Compiler
+
+/-- **The file's stub is `abiStub checkerTab`.** -/
+list_eq checkerStub_eq : checkerStub = abiStub checkerTab
+
+end L.Checker

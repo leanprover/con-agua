@@ -43,10 +43,10 @@ theorem TeleOutC.toR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hV : ValProg p) (hkc : AbsKeep p "check_constant_val")
+  (hV : ValProg p)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- `check_sum_tele` under `StageC` as a `Sim` of its call (the constant and the start record the
 same, below the tops). -/
 theorem installCstSimC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
@@ -58,13 +58,13 @@ theorem installCstSimC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} 
       (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
         decCVp m' (r.headD 0).toNat = some x.1 ∧ CVExt m' (r.headD 0).toNat ∧
         H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2 ∧ AbsOK m') :=
-  installSimCall (checkSumTele_refinesC hq henv hV hkc hApd hCrk hP.alloc hP.copy hP.cons hP.view hP.fvarFind hP.fvarPush
+  installSimCall (checkSumTele_refinesC hq henv hV hApd hCrk hP.alloc hP.copy hP.cons hP.view hP.fvarFind hP.fvarPush
     hP.internFVar hP.wt hP.sortFind hP.sortPush hP.internSort hP.derB hP.forallFind hP.forallPush
     hP.internForall hP.mkForall hP.closeTele hP.erAlloc hP.cvNew hP.slow hP.i1 hP.ab hP.tele hP.strip
     n hn _ a cv k cv cvv cvv hC hcv hx.1 hx.2 hcv hx.1 hx.2 hA hcvP hcvP hws hfe)
     fun _ _ ⟨_, hok, hC', hg, hd, h32, hs, hb, hsl, hA'⟩ => ⟨hok, hC', hg, hd, ⟨hb, hsl⟩, h32, hs, hA'⟩
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_block_tele` under `StageC`** (twin side: con-ron's `checkBlockTele_specF`'s proof). -/
 theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {nP ms : Word} {msh : MemberShape}
@@ -102,7 +102,8 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
         (checkConstantVal_refinesT p hV hq hApd hCrk n hn _ a dn fe vis _ msh.cvT hC.stageT
           (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) (denoteCV_lps hcvP) hA.crMemo.crOK)
         fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1⟩))
-      (fun _ _ e => hkc _ _ _ _ _ e hA)) ?_
+      (fun _ _ e => checkConstantVal_absOK p hV hq hApd hCrk hn hC.stageT
+        (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) (denoteCV_lps hcvP) hA.crMemo.crOK e hA)) ?_
   rintro _ _ m1 a1 ⟨⟨⟨hT1, hg1⟩, hr1⟩, hA1⟩
   have hS1 := hT1.stage
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
@@ -117,7 +118,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
       (callW p n "strip_pis" [nP + UInt64.ofNat msh.nIdx, rdW (m2.arr64 EREC) (r2.headD 0 + 3)] m2))
     rfl (fun _ _ => rfl) (by
       rw [← hk]
-      exact Sim.withRunC (installCstSimC hq henv hV hkc hApd hCrk hP n hn hC1 hcvm1 (CVExt_grow hg1 hcvx) hA1 hcA hw1'
+      exact Sim.withRunC (installCstSimC hq henv hV hApd hCrk hP n hn hC1 hcvm1 (CVExt_grow hg1 hcvx) hA1 hcA hw1'
         (ConRon.Bridge.denoteFEnv_mono c1.ext hfe))) ?_
   rintro r2 ⟨cvTa, sx⟩ m2 a2 ⟨⟨hC2, hg2, hcvTa, hxTa, hs32, hsd, hA2⟩, hr2⟩
   obtain ⟨c2, F₂, cvTaP, sP, -, h2a, h2b⟩ := ConRon.Bridge.Inductives.checkSumTele_spec fe rfl
@@ -172,7 +173,7 @@ theorem ibtW_simC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     · exact CVExt_grow (hg3.trans hg4) hxTa
   · exact Sim.of_none
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_block_tele` refines `checkBlockTele`** under `StageC` (the knot's core calls; the
 member's denotation as con-ron's `checkBlockTele_specF` asks): the checked former below the tops,
 its result sort a handle. -/
@@ -190,10 +191,10 @@ theorem checkBlockTele_refinesC (hP : CstProg p)
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a₀);
       ⊤⦄ :=
   triple_post (ibt_spec p hp n s₀ vis nP ms) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ, hA', hc⟩ := Sim.run (ibtW_simC hq henv hV hkc hApd hCrk hP n hn hC hms hA hmsP hfe) hm
+    let ⟨hok, hQ, hA', hc⟩ := Sim.run (ibtW_simC hq henv hV hApd hCrk hP n hn hC hms hA hmsP hfe) hm
     ⟨hl, hok, hQ, hA', hc⟩
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_block_teles` under `StageC`** (twin side: con-ron's `checkBlockTeles_specF`'s
 proof). -/
 theorem ibtsW_simC (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
@@ -229,7 +230,7 @@ theorem ibtsW_simC (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
       (callW p (k + 1) "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [ibtsK1])
       (fun r m₁ => ibtsK1_some p (k + 1) m₁ vis nP o l r)
     (installSimCall (Q := fun r x m' a' => TeleOutC dn vis fe env m r x m' a' ∧ AbsOK m' ∧
-        ConRon.Bridge.CoreStep V env fe a a') (checkBlockTele_refinesC hq henv hV hkc hApd hCrk hP.toCstProg hP.bTele k (by omega)
+        ConRon.Bridge.CoreStep V env fe a a') (checkBlockTele_refinesC hq henv hV hApd hCrk hP.toCstProg hP.bTele k (by omega)
       ⟨m, Locals.init []⟩ a nP _ x hC hmok hA hxP hfe) fun _ _ ⟨_, hok, hQ, hA', hc⟩ => ⟨hok, hQ, hA', hc⟩) ?_
   rintro r1 x1 m1 a1 ⟨hT1, hA1, c1⟩
   refine Sim.mstep (K := ibtsK2 p (k + 1) vis nP o l) (by simp [ibtsK2])
@@ -255,7 +256,7 @@ theorem ibtsW_simC (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   exact Sim.ret ⟨hC3.of_pstep hS4 hA4 (PStep.refl hC3.check.state), (hg2.trans hg3).trans hg4,
     ⟨hd4, Nat.le_of_eq htop4⟩, hA4, c1.trans c3⟩
 
-include hq henv hV hkc hApd hCrk in
+include hq henv hV hApd hCrk in
 /-- **`check_block_teles` refines `checkBlockTeles`** under `StageC` (the members' denotations as
 con-ron's `checkBlockTeles_specF` asks): the checked formers a slice of `[cvTa, s]` records,
 decoded below the tops. -/
@@ -273,7 +274,7 @@ theorem checkBlockTeles_refinesC (hP : InstProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
       PSlR decTele (AM.res (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a₀) (r.headD 0)
         (r.tail.headD 0) s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (ibts_spec p hP.bTeles n s₀ vis nP o l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hC', hg, hd, hA', _⟩ := Sim.run (ibtsW_simC hq henv hV hkc hApd hCrk hP nP n hn _ a₀ o l mss mssP hC hms hA
+    let ⟨hok, hC', hg, hd, hA', _⟩ := Sim.run (ibtsW_simC hq henv hV hApd hCrk hP nP n hn _ a₀ o l mss mssP hC hms hA
       hmssP hfe) hm
     ⟨hl, hok, hC', hg, hd, hA'⟩
 

@@ -59,7 +59,7 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (armAbs_split f hf).elim
       (absKeep_of_closed (closedW_subPB bs checkerProg_armAbs) armAbsA_free armAbsC_free)
       (hK f)
-  exact indArmSpec_of hkp hV (hK _ (by decide)) hOpf hLC hLT hApd hCrk P
+  exact indArmSpec_of hkp hV hOpf hLC hLT hApd hCrk P
     (closedW_subPB bs checkerProg_armPos) (by decide +kernel) (by decide +kernel)
     (closedW_subPB bs checkerProg_armHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armRc) (by decide +kernel)
