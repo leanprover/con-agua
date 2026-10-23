@@ -327,7 +327,7 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
   have d0 := cnt_tier S R hsh m₁ _ _ _ hT₁ 0 (by decide)
   have d1 := cnt_tier S R hsh m₁ _ _ _ hT₁ 1 (by decide)
   have b0 := hT.2.2.1.2.1
-  have b1 := hT.2.2.2.2.1
+  have b1 := hT.2.2.2.1.2.1
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1
   have htag := hS.tag
   rcases hst with rfl | ⟨hoff, hsz, hy, rfl⟩ | ⟨hon', hsz, hy, rfl⟩
