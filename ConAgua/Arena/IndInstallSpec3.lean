@@ -286,8 +286,8 @@ theorem agW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (m m'
 
 /-- **`check_block_agree_one` is one step of `checkBlockAgree`** (member 0's telescope `fvs0`
 opened by the caller): the parameter telescopes agree in length and domains, and the result
-sorts are equivalent; the L code aborts nowhere the twin does not fail. -/
-@[refines_part ConRon.Arena.checkBlockAgree "one member's two agreements"]
+sorts are equivalent; the L code aborts nowhere the twin does not fail. Under `StageR`; the
+census part is `checkBlockAgreeOne_refinesC` (`IndT/Install2.lean`). -/
 theorem checkBlockAgreeOne_refines (p : Prog)
     (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
     (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)

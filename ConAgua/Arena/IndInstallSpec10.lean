@@ -198,8 +198,8 @@ theorem iagW_sim (p : Prog) (hP : AgreeProg p) (dn : NIdx → Option ConLeche.Na
 
 /-- **`check_block_agree` refines `checkBlockAgree`** (through `open_pis_at_fvars_f`'s,
 `fvar_type_ds`', `fvar_type_d`'s, `is_def_eq_core`'s and `lvl_eq_c`'s stubs): member 0's constant
-decoded below the tops, its sort a handle, the other members a slice of checked formers. -/
-@[refines ConRon.Arena.checkBlockAgree]
+decoded below the tops, its sort a handle, the other members a slice of checked formers. Under
+`StageR`; the census link is `checkBlockAgree_refinesC` (`IndT/Install2.lean`). -/
 theorem checkBlockAgree_refines (p : Prog) (hP : AgreeProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nP c0 s0 o l : Word)
     (cv0 : IConstantVal) (rest : List (IConstantVal × LIdx)) (hS : StageR dn vis fe s₀.mem a₀)

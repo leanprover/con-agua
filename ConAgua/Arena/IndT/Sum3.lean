@@ -85,17 +85,6 @@ theorem sfbT_cstep {env : ConLeche.Env} {fe : IFEnv} {isProp large : Bool} {s : 
           | exact absurd z6 (fun h => AM.fail_ok h)
           | (obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h))
 
-/-- A `RSim` of a word model is a `Sim` of it. -/
-theorem RSim.toSim {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AState}
-    {Q : List Word × Mem → AState → α → Prop} (h : RSim mo op a Q) :
-    Sim mo op a (fun r x m' a' => Q (r, m') a' x) := fun r m' e => h (r, m') e
-
-/-- A `Sim` also records the twin's run. -/
-theorem Sim.withRunC {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
-    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ op.run a = .ok (x, a')) := by
-  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, h1⟩
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
