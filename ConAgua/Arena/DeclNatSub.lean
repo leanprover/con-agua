@@ -366,7 +366,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     | some q1 =>
     obtain ⟨r1, m1⟩ := q1
     rw [h1, bW_some] at hw
-    obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 L.Arena.fuelW ea k m a r1 m1 hS hn hr hea h1
+    obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1
     obtain ⟨hS1, hg1, hl1, hx1⟩ := hK1
     rw [heb' m1 hg1] at hw
     cases h2 : callW p k "subst_const0" [nm, r, 4000000000, eb] m1 with
@@ -374,7 +374,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     | some q2 =>
     obtain ⟨r2, m2⟩ := q2
     rw [h2, bW_some] at hw
-    obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 L.Arena.fuelW eb k m1 a1 r2 m2 hS1 hn hr heb h2
+    obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 fuelW eb k m1 a1 r2 m2 hS1 hn hr heb h2
     obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
     cases h3 : callW p k "subst_const0_pairs" [nm, r, o + 1, l - 1] m2 with
     | none => rw [h3] at hw; simp at hw

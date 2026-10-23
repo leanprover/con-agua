@@ -86,7 +86,7 @@ theorem ccvW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, ccvK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    L.Ind.inferTypeCore_spec dn vis fe 0 wt hwtl m1 m2 a1 r2 h2 hS1
+    inferTypeCore_spec dn vis fe 0 wt hwtl m1 m2 a1 r2 h2 hS1
   cases h3 : stubCall n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with
   | none => rw [h3] at h; simp [ccvK3] at h
   | some rm3 =>
@@ -127,7 +127,7 @@ theorem dvK1_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, dvK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    L.Ind.inferTypeCore_spec dn vis fe 0 wv hwv m1 m2 a1 r2 h2 hS1
+    inferTypeCore_spec dn vis fe 0 wv hwv m1 m2 a1 r2 h2 hS1
   cases h3 : stubCall n "is_def_eq_core" [vis, 0, r2.headD 0, wt] m2 with
   | none => rw [h3] at h; simp [dvK3] at h
   | some rm3 =>
@@ -240,7 +240,7 @@ theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, tvK1_some] at h
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ :=
-    L.Ind.inferTypeCore_spec dn vis fe 0 wt hwtl m m1 a r1 h1 hS
+    inferTypeCore_spec dn vis fe 0 wt hwtl m m1 a r1 h1 hS
   cases h2 : stubCall n "ensure_sort_core" [vis, 0, r1.headD 0] m1 with
   | none => rw [h2] at h; simp [tvK2] at h
   | some rm2 =>
