@@ -457,8 +457,7 @@ theorem mrehashG_move (h : i < nb)
         (rdW (m.arr64 S.arr) (i * 4 + 2)) e nb nn).tail.headD 0) e
         (rdW (m.arr64 S.arr) (i * 4 + 1)) (rdW (m.arr64 S.arr) (i * 4 + 2))
         (rdW (m.arr64 S.arr) (i * 4 + 3))) := by
-  rw [mrehashG, ite_cond_eq_true _ _ (eq_true h), ite_cond_eq_true _ _ (eq_true hl),
-    ite_cond_eq_true _ _ (eq_true hs)]
+  rw [mrehashG, ite_eq_left h, ite_eq_left hl, ite_eq_left hs]
 
 end rehashArms
 
