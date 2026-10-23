@@ -270,10 +270,12 @@ def hoistOkL : FunDecl := lfn (ord, c) locals (i, x, n, op, o, l, j, pos) {
 
 /-- `prepare_prelude()`: `preparePrelude pre ds` on `DECL` = the prelude's `P = CTL[240]`
 records, then the stream's. -/
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:77-90 ConRon.Arena.Frontend.pick
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:133-140 ConRon.Arena.Frontend.preparePrelude
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:92-101 ConRon.Arena.Frontend.frontOf
-@[l_impl ConRon.Arena.Frontend.preparePrelude]
+@[l_impl ConRon.Arena.Frontend.preparePrelude ConRon.Arena.Frontend.prepareD
+  ConRon.Arena.Frontend.frontOf ConRon.Arena.Frontend.pick]
 def preparePreludeL : FunDecl :=
     lfn () locals (np, n, ord, mk, a, key, j, f, d, c, t, i, q, k) {
   np := CTL.u64[240];
