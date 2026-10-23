@@ -88,6 +88,35 @@ theorem RSim.liftPL {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Me
   obtain ⟨hs, hR⟩ := hsp a a' x hC.check.state hC.check.caches.readL hP hr
   exact ⟨x, a', hr, hC.of_pstep (hq _ _ _ hq').1 (hq _ _ _ hq').2 hs, hq', hR, hs⟩
 
+/-- **A program call's `StageR` `Sim` lifted to `StageC`** by con-ron's `PSpecP` of the twin, the
+walk memos across the call by the program fact `AbsKeep`. -/
+theorem Sim.liftCallPP {α : Type} {p : Prog} {n : Nat} {f : FnName} {args : List Word} {op : AM α}
+    {m : Mem} {a : AState} {Q : List Word → α → Mem → AState → Prop} {P : EStore → Prop}
+    {R : EStore → α → Prop} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (h : Sim (callW p n f args m) op a (fun r x m' a' => StageR dn vis fe m' a' ∧ Q r x m' a'))
+    (hk : AbsKeep p f) (hsp : PSpecP P op R) (hP : P a.store) :
+    Sim (callW p n f args m) op a (fun r x m' a' => StageC dn vis fe env m' a' ∧ Q r x m' a' ∧
+      AbsOK m' ∧ R a'.store x ∧ PStep a a') := by
+  intro r m' hc
+  obtain ⟨x, a', hr, hS, hq⟩ := h r m' hc
+  obtain ⟨hs, hR⟩ := hsp a a' x hC.check.state hC.check.pins hP hr
+  have hA' := hk n args m r m' hc hA
+  exact ⟨x, a', hr, hC.of_pstep hS hA' hs, hq, hA', hR, hs⟩
+
+/-- `Sim.liftCallPP` for a `PSpec`. -/
+theorem Sim.liftCallP {α : Type} {p : Prog} {n : Nat} {f : FnName} {args : List Word} {op : AM α}
+    {m : Mem} {a : AState} {Q : List Word → α → Mem → AState → Prop} {P : EStore → Prop}
+    {R : EStore → α → Prop} (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (h : Sim (callW p n f args m) op a (fun r x m' a' => StageR dn vis fe m' a' ∧ Q r x m' a'))
+    (hk : AbsKeep p f) (hsp : PSpec P op R) (hP : P a.store) :
+    Sim (callW p n f args m) op a (fun r x m' a' => StageC dn vis fe env m' a' ∧ Q r x m' a' ∧
+      AbsOK m' ∧ R a'.store x ∧ PStep a a') := by
+  intro r m' hc
+  obtain ⟨x, a', hr, hS, hq⟩ := h r m' hc
+  obtain ⟨hs, hR⟩ := hsp a a' x hC.check.state hP hr
+  have hA' := hk n args m r m' hc hA
+  exact ⟨x, a', hr, hC.of_pstep hS hA' hs, hq, hA', hR, hs⟩
+
 /-- **A `StageT` `RSim` of a core-calling callee is a `StageC` `RSim`**, by con-ron's `CSpec` of
 the twin (`CheckOK` after, from its `CoreStep`). -/
 theorem RSim.liftC {β α : Type} {o : Option (β × Mem)} {op : AM α} {m : Mem} {a : AState}
