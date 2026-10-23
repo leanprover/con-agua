@@ -8,6 +8,9 @@ import ConAgua.Arena.IndDecStab
 The recursor-name checks (`block_rec_names_unreserved`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

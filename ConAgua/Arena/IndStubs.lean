@@ -105,16 +105,6 @@ theorem constsResolveFFast_spec (e : Word) (he : H e) :
     RelAM "consts_resolve_ffast" [vis, e] (StageR dn vis fe)
       (constsResolveFFast fe (decI e)) (KeepPost dn vis fe decW0B) := sorry
 
-/-- `strip_pis(k, e)`. -/
-theorem stripPis_spec (k e : Word) (he : H e) :
-    RelAM "strip_pis" [k, e] (StageR dn vis fe)
-      (stripPis k.toNat (decI e)) (KeepPost dn vis fe decOLE) := sorry
-
-/-- `strip_lams(k, e)`. -/
-theorem stripLams_spec (k e : Word) (he : H e) :
-    RelAM "strip_lams" [k, e] (StageR dn vis fe)
-      (stripLams k.toNat (decI e)) (KeepPost dn vis fe decOLE) := sorry
-
 /-- `open_pis_at_fvars_f(n, e, i)`. -/
 theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
     RelAM "open_pis_at_fvars_f" [k, e, i] (StageR dn vis fe)
@@ -161,11 +151,6 @@ theorem instPisAtLift_spec (f o l e : Word) (he : H e) (xs : List EIdx) :
     RelAM "inst_pis_at_lift" [f, o, l, e]
       (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (instPisAtLift f.toNat xs (decI e)) (KeepPost dn vis fe decOE) := sorry
-
-/-- `instantiate1_fast(fuel, e, v, d)`. -/
-theorem instantiate1Fast_spec (f e v d : Word) (he : H e) (hv : H v) :
-    RelAM "instantiate1_fast" [f, e, v, d] (StageR dn vis fe)
-      (instantiate1Fast f.toNat (decI e) (decI v) d.toNat) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `instantiate1_lift_fast(fuel, e, v, d)`. -/
 theorem instantiate1LiftFast_spec (f e v d : Word) (he : H e) (hv : H v) :

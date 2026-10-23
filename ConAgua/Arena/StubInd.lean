@@ -60,40 +60,41 @@ def lvZeroCapsL : FunDecl := lfn (l) locals (t0, z, n, q, u) {
 
 /-! ## `rec_rule_bits(vis, c)` -/
 
-/-- `ctor_family(vis, c)`: `(cq, tq)`, the constructor `c`'s record and the record of the
-inductive its type's Π-result's head constant names, or `cq = 0` (`c` no constructor) or `tq = 0`
-(no `const` head, or the head not in the environment). The common prefix of `recRuleKOf` and
-`recRuleEtaOf`. -/
+/-- `ctor_family(vis, c)`: `(cq, tq, ok)`, the constructor `c`'s record and the record of the
+inductive its type's Π-result's head constant names, `ok = 1` when both exist (`c` a constructor,
+the head a `const` naming an inductive in the environment), else `ok = 0` (and `tq = 0`). The
+common prefix of `recRuleKOf` and `recRuleEtaOf`. The flag is a word of its own: a record may
+sit at offset `0` of `EREC`, so an offset is no sentinel. -/
 -- con-ron: ConRon/Arena/Core.lean:1851-1866 ConRon.Arena.recRuleKOf
 -- con-ron: ConRon/Arena/Core.lean:1868-1886 ConRon.Arena.recRuleEtaOf
 def ctorFamily : FunDecl := lfn (vis, c) locals (f, q, pr, hh, t, f2, q2) {
   (f, q) := call env_find(c, vis);
-  if f == 0 { return (0, 0) };
-  if EREC.u64[q] != 4 { return (0, 0) };
+  if f == 0 { return (0, 0, 0) };
+  if EREC.u64[q] != 4 { return (0, 0, 0) };
   pr := call pi_result_f(⟪CWF⟫, EREC.u64[q + 4]);
   hh := call get_app_fn_f(⟪CWF⟫, pr);
-  if hh >> 28 != 3 { return (q, 0) };
+  if hh >> 28 != 3 { return (q, 0, 0) };
   t := call const_name_of(hh);
   (f2, q2) := call env_find(t, vis);
-  if f2 == 0 { return (q, 0) };
-  if EREC.u64[q2] != 3 { return (q, 0) };
-  return (q, q2)
+  if f2 == 0 { return (q, 0, 0) };
+  if EREC.u64[q2] != 3 { return (q, 0, 0) };
+  return (q, q2, 1)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1851-1866 ConRon.Arena.recRuleKOf -/
 @[l_impl ConRon.Arena.recRuleKOf]
-def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq) {
-  (q, tq) := call ctor_family(vis, c);
-  if tq == 0 { return 0 };
+def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq, ok) {
+  (q, tq, ok) := call ctor_family(vis, c);
+  if ok == 0 { return 0 };
   if EREC.u64[tq + 11] != 0 && EREC.u64[q + 6] == 0 { return 1 };
   return 0
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1868-1886 ConRon.Arena.recRuleEtaOf -/
 @[l_impl ConRon.Arena.recRuleEtaOf]
-def recRuleEtaOfL : FunDecl := lfn (vis, c) locals (q, tq, r) {
-  (q, tq) := call ctor_family(vis, c);
-  if tq == 0 { return 0 };
+def recRuleEtaOfL : FunDecl := lfn (vis, c) locals (q, tq, ok, r) {
+  (q, tq, ok) := call ctor_family(vis, c);
+  if ok == 0 { return 0 };
   if EREC.u64[tq + 5] == 0 { return 0 };
   if EREC.u64[tq + 6] != c { return 0 };
   r := call er_sl_eq(EREC.u64[q + 2], EREC.u64[q + 3], EREC.u64[tq + 2], EREC.u64[tq + 3]);

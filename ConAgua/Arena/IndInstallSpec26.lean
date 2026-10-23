@@ -190,6 +190,7 @@ structure TabsProg (p : Prog) : Prop where
   hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL
   hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL
   hbp : BvbProg p
+  hst : StripProg p
   hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL
   hul : p.lookup "struct_used_later_list" = some structUsedLaterListL
   hgd : p.lookup "sl_getd" = some slGetD
@@ -241,7 +242,7 @@ theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option C
         (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ HbMemo m') := by
   intro r m' e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
+    (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
       hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg k _ cty nP nF so sl) e
   obtain ⟨mp, hmp⟩ := hM
   have hM' : HbMemo s'.mem := spgW_hb k hn hc' hb hS hmp hW

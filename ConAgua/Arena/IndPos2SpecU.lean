@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecT
 /-! # `IndPos2`, the root frame and the seeds (lane `indproofs2`, helper `pos2`): the word models of
 `nest_root`, `nest_seeds_fuel`, `nest_seeds`, and L ⊑ the models at every exec fuel. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

@@ -4,6 +4,9 @@ import ConAgua.Arena.IndDecStab
 /-! # `nestCtorNf` (lane `indproofs2`, helper `pos`): a frame constructor's record, read back through
 `FvMap.holeImg ctx prog prog.length` (`nest_hole_img_ds` for the parameters). -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

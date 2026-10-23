@@ -8,6 +8,9 @@ slice (`sl_cons`, D18), so every written word lies above the old pool top and th
 stable (`partsConsPL`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

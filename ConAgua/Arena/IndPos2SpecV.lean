@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecU
 /-! # `IndPos2`, the root frame and the seeds (lane `indproofs2`, helper `pos2`): the models
 simulated by the twin (`nestRoot`, `nestSeeds`, the seeds' fuel fold), and the census theorems. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

@@ -1,7 +1,11 @@
 import ConAgua.Arena.IndPos2SpecR
+import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the relational steps,
 `nest_fields` and `nest_ctors_walk`. -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 open ConRon.Arena
@@ -153,12 +157,12 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
     simp only [H]; simpa using this
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 (base + j) d hd hfv
   -- the body opened
-  cases hin : stubM "instantiate1_fast" m2 [CWF, b, fv, 0] with
+  cases hin : i1F m2 [CWF, b, fv, 0] with
   | none => rw [hin] at h; simp [nbFieldsK3] at h
   | some pr3 =>
   obtain ⟨rb, m3⟩ := pr3
   rw [hin, nbFieldsK3_some] at h
-  obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := instantiate1Fast_spec dn vis fe CWF b fv 0 hb hfvH m2 m3 a2 rb hin hS2
+  obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := i1F_ok dn vis fe b fv 0 hb m2 m3 a2 rb hin hS2
   rw [CWF_eq] at hrun3
   have hg13 := (hg1.trans hg2).trans hg3
   -- the kind and the walked domain appended
@@ -192,7 +196,7 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
         (Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1))
       (hks4.grow hg5) (by rw [hk40, hk41]; have := hg5.1; omega)
       (by rw [hrd]; simpa using hnd5) (by rw [hrd]; simp only [List.headD_cons, List.tail_cons]; omega)
-      ((((hP1.fr (fvinternW_mfr hfv)).stub (by decide) hin).fr (snocW_mfr hs1)).fr (snocW_mfr hs2))
+      ((((hP1.fr (fvinternW_mfr hfv)).fr (MFr.ofI1F hin)).fr (snocW_mfr hs1)).fr (snocW_mfr hs2))
   refine ⟨x, a', ?_, hS', hg15.trans hg', hK', hKb', hD', hDb', hcH', hcd', hns', ?_, ?_, ?_, hP'⟩
   · rw [hnF', ConRon.Arena.nestFields.eq_def]
     simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, hvb, except_ok_bind]
@@ -1184,13 +1188,13 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 dep d hd hfv
-  cases hin : stubM "instantiate1_fast" m2 [CWF, b, fv, 0] with
+  cases hin : i1F m2 [CWF, b, fv, 0] with
   | none => rw [hin] at h; simp [nbBindK3] at h
   | some pr3 =>
   obtain ⟨rb, m3⟩ := pr3
   rw [hin, nbBindK3_some] at h
   simp only [List.tail_cons, List.headD_cons] at h
-  obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := instantiate1Fast_spec dn vis fe CWF b fv 0 hb hfvH m2 m3 a2 rb hin hS2
+  obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := i1F_ok dn vis fe b fv 0 hb m2 m3 a2 rb hin hS2
   rw [CWF_eq] at hrun3
   have hg13 := (hg1.trans hg2).trans hg3
   -- the codomain walked
@@ -1201,7 +1205,7 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
   rw [hp, nbBindK4_some] at h
   obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hnbH, hnbd, hns4, hP4⟩ := hPos m3 m4 a3 ctx fu po pl (dep + 1) (kb + 1)
     (rb.headD 0) ns c prog NS rp hp hS3 (hW.grow hg13) (by simpa using hb2H) (hns.grow hg13 htop)
-    (((hP.setNo hf1 ⟨∅, hM1⟩).fr (fvinternW_mfr hfv)).stub (by decide) hin)
+    (((hP.setNo hf1 ⟨∅, hM1⟩).fr (fvinternW_mfr hfv)).fr (MFr.ofI1F hin))
   cases hab : stubM "abstract1_fast" m4 [CWF, rp.tail.headD 0, dep, 0] with
   | none => rw [hab] at h; simp [nbBindK5] at h
   | some pr5 =>

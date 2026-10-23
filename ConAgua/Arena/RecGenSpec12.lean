@@ -11,6 +11,9 @@ The rule-less generated recursors pushed temporarily, the displaced rows returne
 decoded by `env_pop_temp`'s `prevD`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

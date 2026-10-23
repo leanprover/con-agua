@@ -5,6 +5,7 @@ import ConAgua.Arena.RecClassSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.IndPartsSpec2
+import ConAgua.Arena.StageInst1
 
 /-!
 # Refinements of `RecCheck` (lane `induct`, round 2)
@@ -25,6 +26,9 @@ callee on the branch this round leaves unproven (`target_major_default`'s intern
 `target_ctor_at`'s `cv_lps`/`inst_lp_fast` outside-major path) without needing that callee's own
 spec.
 -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -688,7 +692,7 @@ def pdW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
     else if e >>> 28 ≠ 6 then some ([0, 0, 0], m)
     else if eViewW m e = [] then none
     else pdK1 n xo xl ((eViewW m e).tail.headD 0)
-      (stubM "instantiate1_fast" m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0])
+      (i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0])
 
 /-- After `instantiate1_fast`. -/
 def pdK1 (n : Nat) (xo xl d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -718,7 +722,7 @@ theorem pdW_ev (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e = []) :
   simp only [pdW, h, h1, h2, if_false, if_true]
 theorem pdW_cons (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e ≠ []) : pdW (n + 1) m xo xl e =
     pdK1 n xo xl ((eViewW m e).tail.headD 0)
-      (stubM "instantiate1_fast" m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0]) := by
+      (i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0]) := by
   simp only [pdW, h, h1, h2, if_false]
 theorem pdK1_some : pdK1 n xo xl d (some (r, m1)) = pdK2 n d (pdW n m1 (xo + 1) (xl - 1) (r.headD 0)) := by
   rw [pdK1]
@@ -742,7 +746,7 @@ grind_pattern [ind_grind] pdK3_some => pdK3 (some (r, m3))
 theorem targetPiDomsWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (n : Nat) :
+    (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (hi1 : I1Prog p) (n : Nat) :
     ∀ (s₀ : St) (xo xl e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pi_doms_with" [xo, xl, e]
     ⦃fun r s' => LocEq s' s₀ ∧ pdW n s₀.mem xo xl e = some (r, s'.mem); ⊤⦄ := by
@@ -756,7 +760,7 @@ theorem targetPiDomsWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     simp only [callFn, targetPiDomsWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        eView_spec p hv n, stubM_spec p "instantiate1_fast" n, slCons_specW p ha hc hsc n, ih] <;>
+        eView_spec p hv n, i1F_spec p hi1 n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
 
@@ -858,13 +862,13 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       have hxl1 : (xl - 1).toNat = c1 := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
       have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      cases hi : stubM "instantiate1_fast" m [CWF, (eViewW m e).getD 2 0, w, 0] with
+      cases hi : i1F m [CWF, (eViewW m e).getD 2 0, w, 0] with
       | none => rw [hi] at h; simp [pdK1] at h
       | some rim =>
         obtain ⟨ri, m1⟩ := rim
         rw [hi, pdK1_some] at h
         obtain ⟨t1, a1, hrun1, hS1, hg1, hd11, hd12⟩ :=
-          instantiate1Fast_spec dn vis fe CWF ((eViewW m e).getD 2 0) w 0 hblt hw2 m m1 a ri hi hS
+          i1F_ok dn vis fe ((eViewW m e).getD 2 0) w 0 hblt m m1 a ri hi hS
         cases hr : pdW n m1 (xo + 1) (xl - 1) (ri.headD 0) with
         | none => rw [hr] at h; simp [pdK2] at h
         | some rm =>
@@ -914,13 +918,14 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                 · simpa using Nat.le_of_eq ht3
 
 
-/-- **`target_pi_doms_with` refines `targetPiDomsWith`** (through `e_view`, the `instantiate1_fast`
-stub and `sl_cons`). -/
+/-- **`target_pi_doms_with` refines `targetPiDomsWith`** (through `e_view`, `instantiate1_fast`
+and `sl_cons`). -/
 @[refines ConRon.Arena.targetPiDomsWith]
 theorem targetPiDomsWith_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (hi1 : I1Prog p) (n : Nat) (s₀ : St)
+    (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (xo xl e : Word) (xs : List EIdx)
     (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs)
     (hb : xo.toNat + xl.toNat < 2 ^ 64) (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) :
@@ -929,7 +934,7 @@ theorem targetPiDomsWith_refines (p : Prog) (hv : p.lookup "e_view" = some eView
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ PdRes s'.mem r (AM.res (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀);
       ⊤⦄ := by
-  refine triple_post (targetPiDomsWith_spec p hv hc ha hsc hp n s₀ xo xl e) ?_
+  refine triple_post (targetPiDomsWith_spec p hv hc ha hsc hp hi1 n s₀ xo xl e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n _ _ a₀ xo xl e r xs hm hS he hxs hb hbt
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀ a' res hrun

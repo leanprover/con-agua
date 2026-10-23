@@ -8,6 +8,9 @@ Per member: the former's telescope opened (`open_pis_at_fvars_f`'s stub), the in
 universes (`check_struct_field_sorts_i`, `IndSumSpec11`'s refinement, `installSimFsorts`), recursion as the twin's with the pointers consed (D18).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

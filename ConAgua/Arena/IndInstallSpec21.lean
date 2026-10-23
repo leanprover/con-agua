@@ -8,6 +8,9 @@ A wrapper reordering its arguments to `gen_rec_check`'s (helper `rec`'s `RecGen`
 a pending contract below).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

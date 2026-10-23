@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndView
+import ConAgua.Arena.StageInst1
 
 /-!
 # Refinements of `IndSum`, second file (lane `indproofs`)
@@ -11,6 +12,9 @@ Functions of `IndSum.lean` whose proofs reuse `IndInstallSpec.lean` (which impor
   (`domsW`) with the empty result list, and the twin is `checkBlockDomsAt` up to the error
   message, so the relational lemma is `domsW_ok` and an `ok`-run transfer.
 -/
+
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -802,7 +806,7 @@ def wtK3 (k : Nat) (vis i n x y : Word) : Option (Word × Mem) → Option (List 
   | none => none
   | some (fv, m2) =>
     if 4294967296 ≤ fv then none
-    else wtK4 k vis i n x (stubM "instantiate1_fast" m2 [CWF, y, fv, 0])
+    else wtK4 k vis i n x (i1F m2 [CWF, y, fv, 0])
 /-- After `instantiate1_fast`: the recursion. -/
 def wtK4 (k : Nat) (vis i n x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -831,7 +835,7 @@ theorem wtK2_none (h1 : ¬ (v.headD 0 = 2 ∧ n = 0)) (h2 : ¬ (v.headD 0 = 6 �
 theorem wtK3_big (h : 4294967296 ≤ fv) : wtK3 k vis i n x y (some (fv, m2)) = none := by
   simp [wtK3, h]
 theorem wtK3_ok (h : ¬ 4294967296 ≤ fv) : wtK3 k vis i n x y (some (fv, m2)) =
-    wtK4 k vis i n x (stubM "instantiate1_fast" m2 [CWF, y, fv, 0]) := by
+    wtK4 k vis i n x (i1F m2 [CWF, y, fv, 0]) := by
   simp only [wtK3, if_neg h]
 theorem wtK4_some : wtK4 k vis i n x (some (rb, m3)) =
     wtK5 k x (wtW k m3 vis (i + 1) (n - 1) (rb.headD 0)) := by rw [wtK4]
@@ -857,8 +861,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hv : p.lookup "e_view" = some eView)
   (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
   (hif : p.lookup "intern_fvar" = some internFVar)
-  (hp : p.lookup "whnf_telescope" = some whnfTelescopeL)
-include ha hc hsc hv hff hfp hif hp
+  (hp : p.lookup "whnf_telescope" = some whnfTelescopeL) (hi1 : I1Prog p)
+include ha hc hsc hv hff hfp hif hp hi1
 
 theorem wtW_spec (k : Nat) : ∀ (s₀ : St) (vis i n e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "whnf_telescope" [vis, i, n, e]
@@ -874,7 +878,7 @@ theorem wtW_spec (k : Nat) : ∀ (s₀ : St) (vis i n e : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         stubM_spec p "whnf_top" k, eView_spec p hv k, internFVar_spec p hff hfp hif k,
-        stubM_spec p "instantiate1_fast" k, slCons_specW p ha hc hsc k, ih] <;>
+        i1F_spec p hi1 k, slCons_specW p ha hc hsc k, ih] <;>
       finish (gen := 20)
 
 end spec
@@ -1002,13 +1006,13 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
         rw [wtK3_ok k m2 vis i n x y fv hfv] at h
         have hfv32 : fv.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ fv.toNat := hfv; omega
         obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 i x hx32 h2
-        cases h3 : stubM "instantiate1_fast" m2 [CWF, y, fv, 0] with
+        cases h3 : i1F m2 [CWF, y, fv, 0] with
         | none => rw [h3] at h; simp [wtK4] at h
         | some x3 =>
         obtain ⟨rb, m3⟩ := x3
         rw [h3, wtK4_some] at h
         obtain ⟨b', a3, hrun3, hS3, hg3, hb32, hbeq⟩ :=
-          instantiate1Fast_spec dn vis fe CWF y fv 0 hy32 hfv32 m2 m3 a2 rb h3 hS2
+          i1F_ok dn vis fe y fv 0 hy32 m2 m3 a2 rb h3 hS2
         cases h4 : wtW k m3 vis (i + 1) (n - 1) (rb.headD 0) with
         | none => rw [h4] at h; simp [wtK5] at h
         | some x4 =>
@@ -1040,15 +1044,15 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
       | _ => simp [ViewR] at hVR <;> (try omega) <;> (have := hp.1; simp_all)
     · rw [wtK2_none k m1 vis i n v hs hp] at h; cases h
 
-/-- **`whnf_telescope` refines `whnfTelescope .verified`** (through the stubs `whnf`,
-`instantiate1_fast`): the binders' domains as an `IW` slice, the sort as a word. -/
+/-- **`whnf_telescope` refines `whnfTelescope .verified`** (through the stub `whnf`): the binders' domains as an `IW` slice, the sort as a word. -/
 @[refines ConRon.Arena.whnfTelescope]
 theorem whnfTelescope_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
     (hv : p.lookup "e_view" = some eView)
     (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
     (hif : p.lookup "intern_fvar" = some internFVar)
-    (hp : p.lookup "whnf_telescope" = some whnfTelescopeL) (k : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "whnf_telescope" = some whnfTelescopeL) (hi1 : I1Prog p) (k : Nat) (s₀ : St)
+    (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis i n e : Word)
     (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hin : i.toNat + n.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "whnf_telescope" [vis, i, n, e]
@@ -1060,7 +1064,7 @@ theorem whnfTelescope_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
       (r.tail.tail.headD 0).toNat < 2 ^ 32 ∧
       decI (r.tail.tail.headD 0) = (AM.res (whnfTelescope V fe i.toNat n.toNat (decI e)) a₀).2; ⊤⦄ := by
-  refine triple_post (wtW_spec p ha hc hsc hv hff hfp hif hp k s₀ vis i n e) ?_
+  refine triple_post (wtW_spec p ha hc hsc hv hff hfp hif hp hi1 k s₀ vis i n e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨bs, s, a', hrun, hS', hg, hd, ht, hs32, hs⟩ := wtW_ok dn fe k _ _ _ _ _ _ _ _ hm hS he hin
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

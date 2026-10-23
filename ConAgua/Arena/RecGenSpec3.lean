@@ -10,6 +10,9 @@ conclusion stated for `classConstOk`'s guards (they differ from `installHeader`'
 messages only).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena
