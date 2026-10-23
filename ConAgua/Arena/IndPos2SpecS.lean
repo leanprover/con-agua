@@ -334,7 +334,7 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
   obtain ⟨ru, m3⟩ := pr3
   rw [hu, nbOneK3_some] at h
   obtain ⟨bu, a6, hrun6, hS3, hg3, hru, hP3⟩ := u4W_ok dn vis fe (m0 := m2) _ nF _ ks hclH hksT n m2 m3 a5 0 ru
-    (by omega) hu hS2 (IWGrow.refl _) (by simp) hP2
+    hu hS2 (IWGrow.refl _) (by simp) hP2
   have hA3 := u4W_afr _ _ _ _ _ _ _ _ hu hA2
   cases bu with
   | true => rw [if_pos (by rw [hru]; decide)] at h; cases h

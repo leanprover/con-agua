@@ -124,7 +124,7 @@ theorem decBL_of_bnums {m : Mem} {o l : Nat} {bs : List Bool}
 `hb` memo, for a sorts slice below the pool's top. -/
 theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m : Mem) (a : AState) (cty nP nF so sl : Word) (sorts : List LIdx)
-    (mp : Std.HashMap (EIdx × Nat) Bool) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hc' : H cty)
+    (mp : Std.HashMap (EIdx × Nat) Bool) (hc' : H cty)
     (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64) (hS : StageR dn vis fe m a) (hM : hbMR m mp)
     (hs : decHL m so.toNat sl.toNat = some sorts) (hst : so.toNat + sl.toNat ≤ iwTop m) :
     Sim (spgW n m cty nP nF so sl) (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
@@ -151,7 +151,7 @@ theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       IWGrow m m2) ?_ fun u bs m2 a2 ⟨hd, hl, ht, hS2, hg2⟩ => ?_
   · intro u m2 e
     obtain ⟨bs, mp', a', hrun, hdec, hlen, htop, -, hS', hg⟩ :=
-      ulW_ok n _ _ a cty nP nF 0 u ∅ hn (by simpa using hb) hc' hS0 hM0 e
+      ulW_ok n _ _ a cty nP nF 0 u ∅ (by simpa using hb) hc' hS0 hM0 e
     exact ⟨bs, a', by simpa using hrun, hdec, hlen, htop, hS', hg0.trans hg⟩
   have hu := decBL_of_bnums hd
   rw [hl] at hu
@@ -195,7 +195,7 @@ memo (any well-formed one: the walk clears it). -/
 @[refines ConRon.Arena.structProjGuards]
 theorem structProjGuards_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis cty nP nF so sl : Word) (sorts : List LIdx) (mp : Std.HashMap (EIdx × Nat) Bool)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
+    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp)
     (hs : decHL s₀.mem so.toNat sl.toNat = some sorts) (hsbd : so.toNat + sl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_proj_guards" [cty, nP, nF, so, sl]
@@ -207,7 +207,7 @@ theorem structProjGuards_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NId
   refine triple_post (spg_spec p hv hf hput hins hgo hbp hst hsg ha hc hsc hul hgd hmf hmp him hcol hrow
     hpw hcl hp n s₀ cty nP nF so sl) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hS', hg, hd, -⟩ := (spgW_ok n _ a₀ cty nP nF so sl sorts mp hn hc' hb hS hM hs hsbd).run hm
+  obtain ⟨hok, hS', hg, hd, -⟩ := (spgW_ok n _ a₀ cty nP nF so sl sorts mp hc' hb hS hM hs hsbd).run hm
   exact ⟨hl, hok, hS', hg, hd⟩
 
 end census

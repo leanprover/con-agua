@@ -326,15 +326,15 @@ theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e =
   unfold resHeadW resHeadK at h
   mfr_auto h [MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
-theorem bvbW_mfr {n : Nat} {m m' : Mem} {h x : Word} (hb : bvbW n m h CWF = some (x, m')) : MFr [] [] m m' := by
+theorem bvbW_mfr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) : MFr [] [] m m' := by
   have hfr : BbFrame m m' := by
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := f) hs] at hb
         match n, hb with
-        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
         simp only [Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨-, rfl⟩ := hb
         exact MemFrame.refl _ _ _
@@ -355,13 +355,13 @@ theorem hbInsW_mfr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, 
   obtain ⟨-, rfl⟩ := h
   exact ⟨_, _, msetG_frame hbSch hbSch_wf m m2 e i r hs, by simp [hbSch], by simp [hbSch]⟩
 
-theorem hbGoW_mfr : ∀ (n : Nat) (m m' : Mem) (i h r : Word), hbGoW n m i h = some (r, m') → HbFr m m'
-  | 0, _, _, _, _, _, hh => by simp [hbGoW] at hh
-  | n + 1, m, m', i, h, r, hh => by
-    have node : ∀ {m m' : Mem} {i g x y z r : Word}, hbNodeW n m i g x y z = some (r, m') → HbFr m m' := by
-      intro m m' i g x y z r h
+theorem hbGoW_mfr : ∀ (n : Nat) (m m' : Mem) (f i h r : Word), hbGoW n m f i h = some (r, m') → HbFr m m'
+  | 0, _, _, _, _, _, _, hh => by simp [hbGoW] at hh
+  | n + 1, m, m', f, i, h, r, hh => by
+    have node : ∀ {m m' : Mem} {f i g x y z r : Word}, hbNodeW n f m i g x y z = some (r, m') → HbFr m m' := by
+      intro m m' f i g x y z r h
       unfold hbNodeW hbO1 hbL1 hbL2 at h
-      mfr_auto h [hbGoW_mfr n _ _ _ _ _]
+      mfr_auto h [hbGoW_mfr n _ _ _ _ _ _]
     unfold hbGoW hbK1 hbK2 hbK3 hbK4 at hh
     mfr_auto hh [bvbW_mfr, node, hbInsW_mfr]
 
@@ -369,7 +369,7 @@ theorem hbFastW_mfr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
   unfold hbFastW at h
   split at h
   · simp at h
-  exact MFr.trans ⟨_, _, mclearG_frame hbSch m, by simp, by simp [hbSch]⟩ (hbGoW_mfr _ _ _ _ _ _ h)
+  exact MFr.trans ⟨_, _, mclearG_frame hbSch m, by simp, by simp [hbSch]⟩ (hbGoW_mfr _ _ _ _ _ _ _ h)
 
 theorem ncnW_mfr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
     (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : RxFr m m' := by

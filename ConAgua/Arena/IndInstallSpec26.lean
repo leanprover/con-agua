@@ -10,8 +10,7 @@ table name a handle, which only the twin side of the proof provides), `struct_pr
 callee keeping its memo well formed (`tabSimSpg`), then one member (`ctoW_sim`) and the loop (`ctbW_sim`).
 
 **Hypotheses beyond the stage relation and the decodings**: `HbMemo m` (the `has_loose_bvar_b` memo
-well formed in the memory at hand; `struct_proj_guards` needs it) — returned for the memory after;
-the fuel bound `2 ^ 31 + n ≤ coreWalkFuel` (`structProjGuards_refines`' own).
+well formed in the memory at hand; `struct_proj_guards` needs it) — returned for the memory after.
 -/
 
 set_option linter.deprecated false
@@ -230,7 +229,7 @@ theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
 /-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
 theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
-    (hn : 2 ^ 31 + k ≤ coreWalkFuel) (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
+    (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR dn vis fe m a) (hM : HbMemo m) (hs : decHL m so.toNat sl.toNat = some sorts)
     (hst : sl = 0 ∨ so.toNat + sl.toNat ≤ iwTop m) :
     Sim (callW p (k + 1) "struct_proj_guards" [cty, nP, nF, so, sl] m)
@@ -243,16 +242,16 @@ theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option C
     (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
       hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg k _ cty nP nF so sl) e
   obtain ⟨mp, hmp⟩ := hM
-  have hM' : HbMemo s'.mem := spgW_hb k hn hc' hb hS hmp hW
+  have hM' : HbMemo s'.mem := spgW_hb k hc' hb hS hmp hW
   rcases hst with h0 | hst
   · subst h0
     rw [spgW_sl0] at hW
     have hs0 : sorts = [] := by simpa [decHL, hslice?] using hs.symm
     subst hs0
-    obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF 0 0 [] mp hn hc' hb hS hmp
+    obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF 0 0 [] mp hc' hb hS hmp
       (by simp [decHL, hslice?]) (by simp) r s'.mem hW
     exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
-  · obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF so sl sorts mp hn hc' hb hS hmp hs hst
+  · obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF so sl sorts mp hc' hb hS hmp hs hst
       r s'.mem hW
     exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
 

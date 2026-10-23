@@ -44,7 +44,7 @@ view of the twin's environment, the pools grown, the `hb` memo kept. Program fac
 @[refines ConRon.Arena.checkBlockTail]
 theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
-    (hn : 2 ^ 31 + n ≤ coreWalkFuel) {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
+    {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (s₀ : St) (a₀ : AState) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : BPassR vis fe s₀.mem q bp)
@@ -61,7 +61,7 @@ theorem checkBlockTail_refines {p : Prog} (hP : TailProg p) (L : CbrLook p) {fs 
   refine triple_post (ictl_spec p hP.tail n s₀ bO bL q) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hM', hA'⟩ :=
-    ictlW_sim hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hn hclR hfR hS hq hblk hM hA hk hR hrb hlp
+    ictlW_sim hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hclR hfR hS hq hblk hM hA hk hR hrb hlp
       r s'.mem hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres, hst]; exact hS', hg, hM', hA'⟩
