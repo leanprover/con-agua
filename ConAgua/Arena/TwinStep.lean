@@ -87,6 +87,58 @@ theorem TwinOK.of_istep {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (hB : (m'.arr64 145).size < 2 ^ 63) (hM : CoreMemos m') : TwinOK dn m' a' fe :=
   h.of_grow hs.ok.wf hs.ext hs.caches hs.pins hE hS hB hM
 
+/-- **One constant's readbacks**, as `StoreDen` asks them of the environment's constants: its
+level parameters (outside the tower), a projection table's levels, a recursor's rules' levels. -/
+structure CIDen (a : AState) (ci : IConstantInfo) : Prop where
+  lps : ∀ cv : IConstantVal, ci.isTowerEntry = false → (∀ s, ci.toConstantVal.run s = .ok (cv, s)) →
+    ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks
+  proj : ∀ tbl : IProjTable, ci = .projInfo tbl →
+    (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
+    (∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l) ∧
+    (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
+  recs : ∀ (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule), ci = .recInfo cv mI rP rules →
+    ∀ r ∈ rules, ∀ lvls pins, r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L
+
+/-- A push onto an index whose rows are all visible answers the pushed constant at its name and
+the old answers elsewhere. -/
+theorem find?_push_of_vis {fe : IFEnv} {ci : IConstantInfo}
+    (hv : ∀ (n : NIdx) (e : Nat × IConstantInfo), fe.idx[n]? = some e → e.1 < fe.visibleBelow) (n : NIdx) :
+    (fe.push ci).find? n = if ci.name = n then some ci else fe.find? n := by
+  simp only [IFEnv.find?, IFEnv.push, Std.HashMap.getElem?_insert]
+  by_cases h : ci.name = n
+  · subst h; simp
+  · have h' : (ci.name == n) = false := by simpa using h
+    simp only [h', Bool.false_eq_true, ite_false, h]
+    cases e : fe.idx[n]? with
+    | none => rfl
+    | some r =>
+      have := hv n r e
+      simp only [show r.1 < fe.visibleBelow + 1 by omega, this, ite_true]
+
+/-- **`TwinOK` across a push**: the pushed constant's readbacks (`CIDen`), an index whose rows are
+all visible (the loop's environment is never restricted when it grows). -/
+theorem TwinOK.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
+    {ci : IConstantInfo} (h : TwinOK dn m a fe) (hci : CIDen a ci)
+    (hv : ∀ (n : NIdx) (e : Nat × IConstantInfo), fe.idx[n]? = some e → e.1 < fe.visibleBelow) : TwinOK dn m a (fe.push ci) := by
+  have hf := find?_push_of_vis (ci := ci) hv
+  refine ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
+    { h.den with
+      constLps := fun c ci' cv hc ht hcv => ?_
+      proj := fun c tbl hc => ?_
+      recRules := fun c cv mI rP rules hc => ?_ }⟩
+  · rw [hf] at hc
+    split at hc
+    · cases hc; exact hci.lps cv ht hcv
+    · exact h.den.constLps c ci' cv hc ht hcv
+  · rw [hf] at hc
+    split at hc
+    · cases hc; exact hci.proj tbl rfl
+    · exact h.den.proj c tbl hc
+  · rw [hf] at hc
+    split at hc
+    · cases hc; exact hci.recs cv mI rP rules rfl
+    · exact h.den.recRules c cv mI rP rules hc
+
 end L.Arena
 
 namespace L.Ind

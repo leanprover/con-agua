@@ -150,9 +150,8 @@ theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
   simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, ex3, if_true, StateT.run_pure]
   rfl
 
-/-- **`check_defn_val`/`check_opaque_val` under `StageT`** (`dvW_ok`'s), `install_value_guards`
-under `StageT` given (`IvgT`). -/
-theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hivg : IvgT)
+/-- **`check_defn_val`/`check_opaque_val` under `StageT`** (`dvW_ok`'s). -/
+theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx} {ci : IConstantInfo} (msg : String)
@@ -179,7 +178,7 @@ theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hivg : IvgT
   obtain ⟨r1, m1⟩ := rm1
   rw [h1] at h
   obtain ⟨a1, hrun1, hS1, hg1⟩ :=
-    hivg h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv) (by rw [hc1]; omega) hwvl
+    ivgW_okT h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv) (by rw [hc1]; omega) hwvl
   obtain ⟨a', hrun', hS', hM', hg'⟩ := dvK1_okT hq hRp (by omega) msg h hS1
     (ArrExt.decCI (IWGrow.erecPExt hg1) hci) hcb hwvl hwtl hty
   refine ⟨a', ?_, hS', hM', hg1.trans hg'⟩
@@ -188,7 +187,7 @@ theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hivg : IvgT
 
 /-- **`check_thm_val` under `StageT`** (`tvW_ok`'s). -/
 theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCacheProg p)
-    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (hivg : IvgT)
+    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx}
@@ -265,7 +264,7 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   rw [h5] at h
   have hg14 := hg1.trans (hg2.trans hg4)
   obtain ⟨a5, hrun5, hS5, hg5⟩ :=
-    hivg h5 hS4 (by rw [hc1]; exact ArrExt.decCV (IWGrow.erecExt hg14) hcv)
+    ivgW_okT h5 hS4 (by rw [hc1]; exact ArrExt.decCV (IWGrow.erecExt hg14) hcv)
       (by rw [hc1]; omega) hwvl
   obtain ⟨a', hrun', hS', hM', hg'⟩ := dvK1_okT hq hRp hn' "type mismatch in theorem" h hS5
     (ArrExt.decCI (IWGrow.erecPExt (hg14.trans hg5)) hci) hcb hwvl hwtl hty
