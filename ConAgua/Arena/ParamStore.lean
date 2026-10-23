@@ -36,7 +36,10 @@ abbrev PREC : ArrId := 14
 abbrev PSLOT : ArrId := 15
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def paramGS : GrowSch := ⟨PSLOT, PREC, 1, 14, PSLOT_G, 1⟩
+def paramGS : GrowSch :=
+  ⟨PSLOT, PREC, 1, 14, PSLOT_G, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ PREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `param` record (FNV-1a over its word). -/
 def paramHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime

@@ -39,7 +39,10 @@ abbrev LEREC : ArrId := 20
 abbrev LESLOT : ArrId := 21
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def letGS : GrowSch := ⟨LESLOT, LEREC, 3, 20, LESLOT_G, 3⟩
+def letGS : GrowSch :=
+  ⟨LESLOT, LEREC, 3, 20, LESLOT_G, lblk (n, k, t, i, c, h) {
+    h := (((⟪fnvBasis⟫ ^ LEREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ LEREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `letE` record (FNV-1a over its three words). -/
 def letHashW (ty val body : Word) : Word :=

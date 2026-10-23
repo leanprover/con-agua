@@ -38,7 +38,10 @@ abbrev SOREC : ArrId := 16
 abbrev SOSLOT : ArrId := 17
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def sortGS : GrowSch := ⟨SOSLOT, SOREC, 1, 16, SOSLOT_G, 1⟩
+def sortGS : GrowSch :=
+  ⟨SOSLOT, SOREC, 1, 16, SOSLOT_G, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ SOREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `sort` record (FNV-1a over its word). -/
 def sortHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime

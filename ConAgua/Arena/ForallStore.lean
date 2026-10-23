@@ -47,7 +47,10 @@ abbrev FAREC : ArrId := 29
 abbrev FASLOT : ArrId := 30
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def forallGS : GrowSch := ⟨FASLOT, FAREC, 2, 30, FASLOT_G, 2⟩
+def forallGS : GrowSch :=
+  ⟨FASLOT, FAREC, 2, 30, FASLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ FAREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FAREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `forallE` record (FNV-1a over its two words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime

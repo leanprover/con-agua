@@ -43,7 +43,10 @@ abbrev PJREC : ArrId := 31
 abbrev PJSLOT : ArrId := 32
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def projGS : GrowSch := ⟨PJSLOT, PJREC, 3, 32, PJSLOT_G, 3⟩
+def projGS : GrowSch :=
+  ⟨PJSLOT, PJREC, 3, 32, PJSLOT_G, lblk (n, k, t, i, c, h) {
+    h := (((⟪fnvBasis⟫ ^ PJREC.u64[i * 6 + t * 3]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 1]) * ⟪fnvPrime⟫ ^ PJREC.u64[i * 6 + t * 3 + 2]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `proj` record (FNV-1a over its three words). -/
 def projHashW (n u e : Word) : Word :=

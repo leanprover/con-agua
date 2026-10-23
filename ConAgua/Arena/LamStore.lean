@@ -47,7 +47,10 @@ abbrev LAREC : ArrId := 27
 abbrev LASLOT : ArrId := 28
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def lamGS : GrowSch := ⟨LASLOT, LAREC, 2, 28, LASLOT_G, 2⟩
+def lamGS : GrowSch :=
+  ⟨LASLOT, LAREC, 2, 28, LASLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ LAREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ LAREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `lam` record (FNV-1a over its two words). -/
 def lamHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime

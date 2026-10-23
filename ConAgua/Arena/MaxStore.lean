@@ -38,7 +38,10 @@ abbrev MREC : ArrId := 10
 abbrev MSLOT : ArrId := 11
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def maxGS : GrowSch := ⟨MSLOT, MREC, 2, 10, MSLOT_G, 2⟩
+def maxGS : GrowSch :=
+  ⟨MSLOT, MREC, 2, 10, MSLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ MREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ MREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `max` record (FNV-1a over its two words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime

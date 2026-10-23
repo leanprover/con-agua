@@ -44,7 +44,10 @@ abbrev CREC : ArrId := 18
 abbrev CSLOT : ArrId := 19
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def constGS : GrowSch := ⟨CSLOT, CREC, 2, 18, CSLOT_G, 2⟩
+def constGS : GrowSch :=
+  ⟨CSLOT, CREC, 2, 18, CSLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ CREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ CREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `const` record (FNV-1a over its two words). -/
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime

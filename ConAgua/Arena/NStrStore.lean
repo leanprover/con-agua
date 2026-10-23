@@ -45,7 +45,10 @@ abbrev NSREC : ArrId := 35
 abbrev NSSLOT : ArrId := 36
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def nstrGS : GrowSch := ⟨NSSLOT, NSREC, 4, 36, NSSLOT_G, 3⟩
+def nstrGS : GrowSch :=
+  ⟨NSSLOT, NSREC, 4, 36, NSSLOT_G, lblk (n, k, t, i, c, h) {
+    h := NSREC.u64[i * 8 + t * 4 + 3]
+  }⟩
 
 /-! ## `nstr_match(t, i, q, o, l, h)` -/
 

@@ -53,7 +53,10 @@ abbrev REC : ArrId := 2
 abbrev SLOT : ArrId := 3
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def litGS : GrowSch := ⟨SLOT, REC, 4, 2, SLOT_G, 3⟩
+def litGS : GrowSch :=
+  ⟨SLOT, REC, 4, 2, SLOT_G, lblk (n, k, t, i, c, h) {
+    h := REC.u64[i * 8 + t * 4 + 3]
+  }⟩
 
 
 /-! ## `lit_hash(o, l)`: FNV-1a over the limbs of a slice -/

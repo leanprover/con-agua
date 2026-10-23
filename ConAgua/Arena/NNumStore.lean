@@ -39,7 +39,10 @@ abbrev NNREC : ArrId := 37
 abbrev NNSLOT : ArrId := 38
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def nnumGS : GrowSch := ⟨NNSLOT, NNREC, 2, 38, NNSLOT_G, 2⟩
+def nnumGS : GrowSch :=
+  ⟨NNSLOT, NNREC, 2, 38, NNSLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ NNREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ NNREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `num` record (FNV-1a over its two words). -/
 def nnumHashW (pre u : Word) : Word := ((fnvBasis ^^^ pre) * fnvPrime ^^^ u) * fnvPrime

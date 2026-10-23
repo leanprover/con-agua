@@ -40,7 +40,10 @@ abbrev AREC : ArrId := 4
 abbrev ASLOT : ArrId := 5
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def appGS : GrowSch := ⟨ASLOT, AREC, 2, 4, ASLOT_G, 2⟩
+def appGS : GrowSch :=
+  ⟨ASLOT, AREC, 2, 4, ASLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ AREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ AREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of an `app` record (FNV-1a over its two words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime

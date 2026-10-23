@@ -43,7 +43,10 @@ abbrev FVREC : ArrId := 25
 abbrev FVSLOT : ArrId := 26
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def fvarGS : GrowSch := ⟨FVSLOT, FVREC, 2, 26, FVSLOT_G, 2⟩
+def fvarGS : GrowSch :=
+  ⟨FVSLOT, FVREC, 2, 26, FVSLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ FVREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FVREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of an `fvar` record (FNV-1a over its two words). -/
 def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnvPrime

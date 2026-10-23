@@ -37,7 +37,10 @@ abbrev BREC : ArrId := 22
 abbrev BSLOT : ArrId := 23
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def bvarGS : GrowSch := ⟨BSLOT, BREC, 1, 22, BSLOT_G, 1⟩
+def bvarGS : GrowSch :=
+  ⟨BSLOT, BREC, 1, 22, BSLOT_G, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ BREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `bvar` record (FNV-1a over its word). -/
 def bvarHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime

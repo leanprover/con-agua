@@ -38,7 +38,10 @@ abbrev IREC : ArrId := 12
 abbrev ISLOT : ArrId := 13
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def imaxGS : GrowSch := ⟨ISLOT, IREC, 2, 12, ISLOT_G, 2⟩
+def imaxGS : GrowSch :=
+  ⟨ISLOT, IREC, 2, 12, ISLOT_G, lblk (n, k, t, i, c, h) {
+    h := ((⟪fnvBasis⟫ ^ IREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ IREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of an `imax` record (FNV-1a over its two words). -/
 def imaxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime

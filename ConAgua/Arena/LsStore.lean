@@ -44,7 +44,10 @@ abbrev LSREC : ArrId := 39
 abbrev LSSLOT : ArrId := 40
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def lsGS : GrowSch := ⟨LSSLOT, LSREC, 3, 40, LSSLOT_G, 2⟩
+def lsGS : GrowSch :=
+  ⟨LSSLOT, LSREC, 3, 40, LSSLOT_G, lblk (n, k, t, i, c, h) {
+    h := LSREC.u64[i * 6 + t * 3 + 2]
+  }⟩
 
 /-! ## `ls_match(t, i, o, l, h)` -/
 

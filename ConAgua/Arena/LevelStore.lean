@@ -38,7 +38,10 @@ abbrev SREC : ArrId := 6
 abbrev SSLOT : ArrId := 7
 
 /-- The growth schema of this table (`SlotGrow.lean`). -/
-def succGS : GrowSch := ⟨SSLOT, SREC, 1, 6, SSLOT_G, 1⟩
+def succGS : GrowSch :=
+  ⟨SSLOT, SREC, 1, 6, SSLOT_G, lblk (n, k, t, i, c, h) {
+    h := (⟪fnvBasis⟫ ^ SREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
+  }⟩
 
 /-- The hash of a `succ` record (FNV-1a over its word). -/
 def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
