@@ -288,7 +288,7 @@ theorem noF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl e r : Word} {names : L
 
 theorem tkaW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc ip usp lao lal mao mal : Word}
     {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {la ma : List EIdx}
-    (h : tkaW n m vis q fto ftl Mc ip usp lao lal mao mal = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : tkaW stubCall n m vis q fto ftl Mc ip usp lao lal mao mal = some (r, m')) (hS : StageR dn vis fe m a)
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
     (hip : H ip) (hus : H usp) (hla : HSl0 m lao lal la) (hma : HSl0 m mao mal ma) (hP : RcMR m) :
@@ -402,7 +402,7 @@ theorem tkaW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc ip usp lao lal
     show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl] at e11 e12 e1 e2 e3
   rw [e11, e12, e1, e2, e3] at h
-  cases h8 : tcmF n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+  cases h8 : tcmF stubCall n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
       (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with
   | none => rw [h8] at h; simp [tkaK8] at h
   | some x =>
@@ -419,7 +419,7 @@ theorem tkaW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc ip usp lao lal
   exact run8
 theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom : Word}
     {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor}
-    (h : tkhW n m vis q fto ftl Mc leafW majDom = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : tkhW stubCall n m vis q fto ftl Mc leafW majDom = some (r, m')) (hS : StageR dn vis fe m a)
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
     (hl : H leafW) (hmj : H majDom) (hP : RcMR m) :
@@ -529,7 +529,7 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
   rw [tkhK4_ok (h := hi) (h2 := hl2)] at h
   have hll : (la.length == ma.length) = true := by
     simp only [beq_iff_eq, hlen1, hlen2]; exact congrArg UInt64.toNat (by simpa using hl2)
-  cases h5 : tkaW n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0) (rb.tail.headD 0) with
+  cases h5 : tkaW stubCall n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0) (rb.tail.headD 0) with
   | none => rw [h5] at h; simp [tkhK5] at h
   | some x =>
   obtain ⟨r5, m5⟩ := x
@@ -544,7 +544,7 @@ theorem tkhW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom :
 
 theorem tkW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc teo tel majDom f : Word}
     {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {tele : List EIdx}
-    (h : tkW n m vis q fto ftl Mc teo tel majDom f = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : tkW stubCall n m vis q fto ftl Mc teo tel majDom f = some (r, m')) (hS : StageR dn vis fe m a)
     (hbs : BSOK m q.toNat bs) (hft : decHL m fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop m) (hMc : DecB (fun m => decTM m Mc.toNat) m TM)
     (htl : HSl0 m teo tel tele) (hmj : H majDom) (hf : H f) (hP : RcMR m) :
@@ -592,7 +592,7 @@ theorem tkW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl Mc teo tel majDom 
   rw [tkK2_ok (h := hz)] at h
   have : c1 = true := by rw [← hc1]; simpa using hz
   subst this
-  cases h3 : tkhW n m2 vis q fto ftl Mc (rs.tail.tail.tail.headD 0) majDom with
+  cases h3 : tkhW stubCall n m2 vis q fto ftl Mc (rs.tail.tail.tail.headD 0) majDom with
   | none => rw [h3] at h; simp [tkK3] at h
   | some x =>
   obtain ⟨r3, m3⟩ := x
@@ -612,8 +612,8 @@ end rel2
 /-- **`target_k53` (with `target_k53_tele`, `_heads`, `_args`, `erase_each`) refines `targetK53`**
 (through `strip_pis`, `get_app_fn_f`, `get_app_args_f`, `mk_app_n_f`, `target_class_match`'s
 contracts and stubs): the class's shape (`BSOK`), former types, the callee's class record and the
-recorded telescope decoded below the tops, the walk memos well formed; the verdict as `r[0] ≠ 0`. -/
-@[refines ConRon.Arena.targetK53]
+recorded telescope decoded below the tops, the walk memos well formed; the verdict as `r[0] ≠ 0`.
+Under `StageR`; the census link is `targetK53_refinesC` (`IndT/RecCheckK53`). -/
 theorem targetK53_refines (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl Mc teo tel majDom f : Word)
     (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (tele : List EIdx)
@@ -627,7 +627,7 @@ theorem targetK53_refines (p : Prog) (L : K53Look p) (n : Nat) (s₀ : St) (a₀
       (r.headD 0 != 0) = AM.res (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetK53 V fe bs formerTys TM tele (decE majDom) (decE f)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
-  refine triple_post (tk_spec p L n s₀ vis q fto ftl Mc teo tel majDom f) ?_
+  refine triple_post (tk_spec p L stubCall (stubCall_spec p) n s₀ vis q fto ftl Mc teo tel majDom f) ?_
   rintro r s' ⟨hl', hm⟩
   obtain ⟨c, a', run, hc, hS', hg, hP'⟩ := tkW_ok dn fe vis n hm hS hbs hft hftb hMc htl hmj hf hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run

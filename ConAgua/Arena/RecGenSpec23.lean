@@ -293,7 +293,7 @@ theorem cnaW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (es : List 
   obtain ⟨r2, m2⟩ := x2
   rw [c2] at h
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (tk_spec p P.k53 k _ vis q fto ftl mc teo tel leaf w) c2
+    (tk_spec p P.k53 stubCall (stubCall_spec p) k _ vis q fto ftl mc teo tel leaf w) c2
   simp only at hs2 hw2
   subst hs2
   obtain ⟨c, a2, run2, hc, hS2, hg2, hP2⟩ := tkW_ok dn fe vis k hw2 hS1 (hbs.grow hg1)
@@ -327,8 +327,7 @@ end rel
 /-- **`class_nodes_agree` refines `classNodesAgree`** (through `target_k53`'s contracts and
 stubs): the class's shape (`BSOK`), former types, the inductive hypothesis's class, the recorded
 telescope, the datum's variables and the class's entries decoded below the tops, the walk memos
-well formed. -/
-@[refines ConRon.Arena.classNodesAgree]
+well formed. Under `StageR`; the census link is `classNodesAgree_refinesC` (`IndT/RecGen23`). -/
 theorem classNodesAgree_refines {p : Prog} (P : CnaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl mc teo tel leaf fvo fvl i eo el : Word)
     (bs : BlockShape) (formerTys : List EIdx) (TM : TargetMajor) (tele fvs : List EIdx)
