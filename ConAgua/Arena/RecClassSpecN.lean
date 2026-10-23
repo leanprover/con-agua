@@ -528,7 +528,7 @@ theorem ruleBody_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls x rP s fo f
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd n, pvarsGo_spec p h n, callsGo_spec p h n,
+        targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n, pvarsGo_spec p h n, callsGo_spec p h n,
         ruleClose_spec p h n] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
         loc_init9, loc_init10]

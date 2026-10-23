@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.StageInst1
 
 /-! Continued from `IndPos2SpecB.lean` (split by size; lane `indproofs`). -/
 
@@ -428,6 +429,13 @@ theorem MFr.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List
     (h : stubM f m args = some (r, m')) : MFr [] [] m m' := by
   obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hf m m' args r h
   exact MFr.of_frame hfr hA hC
+
+/-- `instantiate1_fast` writes the expression tables and its memo only (`instA`, `instC`). -/
+theorem MFr.ofI1F {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m')) : MFr [] [] m m' := by
+  obtain ⟨n, hc⟩ := callF_run h
+  exact MFr.of_frame (run_memFrame i1Prog_closed (List.mem_cons_self ..) (run_of_callW hc)).1
+    (fun b hb => .inl (Nat.lt_trans (instA_lt b hb) (by decide)))
+    (fun x hx => .inl (Nat.lt_trans (instC_lt x hx) (by decide)))
 
 /-- The memo array `S.arr` and its stamp word survive an `MFr` that leaves them out. -/
 theorem MFr.memo {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (h : MFr S0 T0 m m') (b : ArrId) (x : Word)

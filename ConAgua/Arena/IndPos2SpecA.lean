@@ -7,6 +7,7 @@ import ConAgua.Arena.IndPartsSpec3
 import ConAgua.Arena.Pins
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.MemoLibRel
+import ConAgua.Arena.StageInst1
 
 /-!
 # Refinements of `IndPos2` (lane `induct`, worker E, round 2)
@@ -886,7 +887,7 @@ def instW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 def instK1 (n : Nat) (m : Mem) (ao al : Word) (v : List Word) : Option (List Word × Mem) :=
   if v = [] then none
   else instK2 n ao al
-    (stubM "instantiate1_fast" m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0])
+    (i1F m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0])
 def instK2 (n : Nat) (ao al : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rb, m1) => instK3 (instW n m1 (ao + 1) (al - 1) (rb.headD 0))
@@ -904,7 +905,7 @@ theorem instW_pi (h : al ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) :
     instW (n + 1) m ao al e = instK1 n m ao al (eViewW m e) := by simp only [instW]; rw [if_neg h, if_neg h2]
 theorem instK1_abort (h : v = []) : instK1 n m ao al v = none := by simp [instK1, h]
 theorem instK1_ok (h : v ≠ []) : instK1 n m ao al v = instK2 n ao al
-    (stubM "instantiate1_fast" m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0]) := by simp [instK1, h]
+    (i1F m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0]) := by simp [instK1, h]
 theorem instK2_some : instK2 n ao al (some (rb, m1)) = instK3 (instW n m1 (ao + 1) (al - 1) (rb.headD 0)) := by rw [instK2]
 theorem instK3_some : instK3 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [instK3]
 end arms
@@ -917,7 +918,7 @@ grind_pattern [ind_grind] instK2_some => instK2 n ao al (some (rb, m1))
 grind_pattern [ind_grind] instK3_some => instK3 (some (r, m2))
 
 theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "inst_pis_with" = some instPisWith) (n : Nat) :
+    (hp : p.lookup "inst_pis_with" = some instPisWith) (hi1 : I1Prog p) (n : Nat) :
     ∀ (s₀ : St) (ao al e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "inst_pis_with" [ao, al, e]
     ⦃fun r s' => LocEq s' s₀ ∧ instW n s₀.mem ao al e = some (r, s'.mem); ⊤⦄ := by
@@ -931,7 +932,7 @@ theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     simp only [callFn, instPisWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        eView_spec p hv n, stubM_spec p "instantiate1_fast" n, ih] <;> finish (gen := 20)
+        eView_spec p hv n, i1F_spec p hi1 n, ih] <;> finish (gen := 20)
 
 
 theorem ETables.get_forall (t : ETables) (i : EIdx) (ht : i.tag = ETag.forallE) (v : ENodeView)
@@ -1041,13 +1042,13 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           rw [UInt64.ofNat_toNat] at hwa_eq
           rw [hwa_eq] at h
           simp only [List.tail_cons] at h
-          cases hst : stubM "instantiate1_fast" m [CWF, vt.tail.headD 0, wa, 0] with
+          cases hst : i1F m [CWF, vt.tail.headD 0, wa, 0] with
           | none => rw [hst] at h; simp [instK2] at h
           | some rm =>
             obtain ⟨rb, m1⟩ := rm
             rw [hst, instK2_some] at h
             obtain ⟨x1, a1, hrun1, hS1, hg1, hlt1, hdec1⟩ :=
-              instantiate1Fast_spec dn vis fe CWF (vt.tail.headD 0) wa 0 hy2' hwa_lt m m1 a rb hst hS
+              i1F_ok dn vis fe (vt.tail.headD 0) wa 0 hy2' m m1 a rb hst hS
             cases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with
             | none => rw [hw] at h; simp [instK3] at h
             | some rm3 =>
@@ -1086,10 +1087,10 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "inst_pis_with" = some instPisWith)
-include hv hp
+    (hp : p.lookup "inst_pis_with" = some instPisWith) (hi1 : I1Prog p)
+include hv hp hi1
 
-/-- **`inst_pis_with` refines `instPisWith`** (through the `instantiate1_fast` stub). -/
+/-- **`inst_pis_with` refines `instPisWith`** (no stub left). -/
 @[refines ConRon.Arena.instPisWith]
 theorem instPisWith_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ao al e : Word) (args : List EIdx) (he : H e)
@@ -1100,7 +1101,7 @@ theorem instPisWith_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.instPisWith args (decI e)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       decOE s'.mem r (AM.res (ConRon.Arena.instPisWith args (decI e)) a₀); ⊤⦄ := by
-  refine triple_post (instPisWith_spec p hv hp n s₀ ao al e) ?_
+  refine triple_post (instPisWith_spec p hv hp hi1 n s₀ ao al e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := instW_ok n dn fe vis _ _ a₀ ao al e args r hm hS he hdec hb hit
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

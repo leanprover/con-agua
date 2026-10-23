@@ -1022,7 +1022,7 @@ theorem cpW_mfr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
   | 0, _, _, _, _, _, _, h => by simp [cpW] at h
   | n + 1, m, m', hp, dO, dL, r, h => by
     unfold cpW cpK1 cpK2 at h
-    mfr_auto h [bvbW_mfr, MFr.ofStub, cpW_mfr n _ _ _ _ _ _]
+    mfr_auto h [bvbW_mfr, MFr.ofStub, MFr.ofI1F, cpW_mfr n _ _ _ _ _ _]
 
 theorem ustW_mfr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : HbFr m m' := by
   unfold ustW ustK1 at h

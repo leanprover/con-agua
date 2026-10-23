@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosMemo
 import ConAgua.Arena.RecCheckSpec
+import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestHoles`,
 `nestRootCanon`, … -/
@@ -153,6 +154,7 @@ attribute [ind_grind] nhGoW_nil nhGoW_cons nhK1_miss nhK1_noind nhK1_ind nhK2_no
 
 /-- The lookups of `nest_holes`. -/
 structure NhLook (p : Prog) : Prop where
+  hi1 : I1Prog p
   ha : p.lookup "iw_alloc" = some iwAlloc
   hc : p.lookup "iw_copy" = some iwCopy
   hsn : p.lookup "sl_snoc" = some slSnoc
@@ -182,7 +184,7 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
     simp only [callFn, nestHolesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip k,
+        envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
         internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih] <;>
       finish (gen := 20) [rdW_eq]
 

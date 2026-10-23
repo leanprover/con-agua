@@ -1,5 +1,6 @@
 import ConAgua.Arena.RecGenSpec6
 import ConAgua.Arena.RecCheckSpec3
+import ConAgua.Arena.StageInst1
 
 /-!
 # `RecClass`: `ClassGen.major` (lane `indproofs2`, helper `rec2`)
@@ -367,6 +368,7 @@ grind_pattern [ind_grind] mjoK1_some => mjoK1 (some (r5, m5))
 
 /-- The lookups `class_gen_major` needs. -/
 structure MjProg (p : Prog) : Prop where
+  hi1 : I1Prog p
   alloc : p.lookup "iw_alloc" = some iwAlloc
   copy : p.lookup "iw_copy" = some iwCopy
   app : p.lookup "sl_append" = some slAppend
@@ -440,7 +442,7 @@ theorem classGenMajor_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (g c 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma n,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, instPisWith_spec p h.ev h.ipw n,
+        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, instPisWith_spec p h.ev h.ipw h.hi1 n,
         classGenMajorOpen_spec p h n, classGenMajorCi_spec p h n] <;>
       finish (gen := 20) [rdW_eq]
 

@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpecF
+import ConAgua.Arena.StageInst1
 
 /-!
 # `RecClass`: `classReadSlots` (lane `indproofs2`, helper `rec`)
@@ -150,7 +151,7 @@ def ssK4 (N : Nat) (p vis np n d body slot mo2 ml2 : Word) :
   | none => none
   | some (fv, m3) =>
     if 4294967296 ≤ fv then none
-    else ssK5 N p vis np n d slot mo2 ml2 (stubM "instantiate1_fast" m3 [CWF, body, fv, 0])
+    else ssK5 N p vis np n d slot mo2 ml2 (i1F m3 [CWF, body, fv, 0])
 
 /-- After `instantiate1_fast`. -/
 def ssK5 (N : Nat) (p vis np n d slot mo2 ml2 : Word) :
@@ -206,7 +207,7 @@ theorem ssK3_eq : ssK3 N p vis np n d dom body slot mo2 ml2 m2 =
 theorem ssK4_big (h : 4294967296 ≤ fv) : ssK4 N p vis np n d body slot mo2 ml2 (some (fv, m3)) = none := by
   rw [ssK4, if_pos h]
 theorem ssK4_ok (h : ¬ 4294967296 ≤ fv) : ssK4 N p vis np n d body slot mo2 ml2 (some (fv, m3)) =
-    ssK5 N p vis np n d slot mo2 ml2 (stubM "instantiate1_fast" m3 [CWF, body, fv, 0]) := by
+    ssK5 N p vis np n d slot mo2 ml2 (i1F m3 [CWF, body, fv, 0]) := by
   rw [ssK4, if_neg h]
 theorem ssK5_some : ssK5 N p vis np n d slot mo2 ml2 (some (r4, m4)) =
     ssK6 N slot (slotsW N m4 p vis np (n - 1) mo2 ml2 (d + 1) (r4.headD 0)) := by rw [ssK5]
@@ -244,6 +245,7 @@ structure SlotsProg (p : Prog) extends SlotProg p : Prop where
   slots : p.lookup "class_read_slots" = some classReadSlots
   next : p.lookup "class_read_slots_next" = some classReadSlotsNext
   msn : p.lookup "class_read_slots_snoc" = some classReadSlotsSnoc
+  hi1 : I1Prog p
 
 set_option maxHeartbeats 1000000 in
 theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (N : Nat) :
@@ -272,7 +274,7 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (N : Nat) :
       sym only [lang_grind, arena_grind, ind_grind] =>
         vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
           classReadSlotsSnoc_spec p hP.a hP.c hP.sn hP.msn N, internFVar_spec p hP.ff hP.fp hP.ifv N,
-          stubM_spec p "instantiate1_fast" N, slCons_specW p hP.a hP.c hP.sc N, ih1] <;>
+          i1F_spec p hP.hi1 N, slCons_specW p hP.a hP.c hP.sc N, ih1] <;>
         finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9]
 
 end L.Ind
@@ -305,10 +307,11 @@ theorem simInternFVar (hS : StageR dn vis fe m a) (u : Word) {ty : Word} (hty : 
   obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hS u ty hty h
   exact ⟨decE r, a', hrun, hS', hg, rfl⟩
 
-theorem simInst1 (hS : StageR dn vis fe m a) {e v : Word} (he : H e) (hv : H v) :
-    RSim (stubM "instantiate1_fast" m [CWF, e, v, 0]) (instantiate1Fast coreWalkFuel (decI e) (decI v) 0)
+theorem simInst1 (hS : StageR dn vis fe m a) {e v : Word} (he : H e) :
+    RSim (i1F m [CWF, e, v, 0]) (instantiate1Fast coreWalkFuel (decI e) (decI v) 0)
       a (KP dn vis fe m decW0E) := by
-  have h := (instantiate1Fast_spec dn vis fe CWF e v 0 he hv).sim hS
+  rintro ⟨r, m'⟩ hb
+  have h := i1F_ok dn vis fe e v 0 he m m' a r hb hS
   rw [CWF_eq] at h; exact h
 
 end sims
@@ -353,7 +356,7 @@ theorem slotsRest_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
   have hfv : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hbig (UInt64.le_iff_toNat_le.mpr e)
     simp at this; exact this
-  refine RSim.bind (K := ssK5 N p vis np n d slotw mo2 ml2) (by rw [ssK5]) (simInst1 hS3 hbody hfv) ?_
+  refine RSim.bind (K := ssK5 N p vis np n d slotw mo2 ml2) (by rw [ssK5]) (simInst1 hS3 hbody) ?_
   rintro ⟨r4, m4⟩ b2 a4 - ⟨hS4, hg4, hb4, rfl⟩
   dsimp only at hS4 hg4 hb4
   rw [ssK5_some]

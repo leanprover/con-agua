@@ -197,7 +197,7 @@ theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List 
   | 0, _, _, _, _, _, _, _, h => by simp [closeW] at h
   | n + 1, m, m', dO, dl, i, body, r, h => by
     unfold closeW closeK1 closeK2 closeK3 at h
-    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofStub, mkForallW_mfr]
+    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofStub, MFr.ofI1F, mkForallW_mfr]
 
 theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
   unfold stripW stripK at h
@@ -206,7 +206,7 @@ theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq =
 theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     MFr [] [] m m' := by
   unfold entryW entryK1 entryK2 entryK3 at h
-  mfr_auto h [stripW_mfr, MFr.ofStub]
+  mfr_auto h [stripW_mfr, MFr.ofStub, MFr.ofI1F]
 
 theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
     ncGoW k m vis C co cl cs ol fp = some (r, m') → MFr [] [] m m'
@@ -239,7 +239,7 @@ theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word)
   | 0, _, _, _, _, _, _, h => by simp [dcGoW] at h
   | n + 1, m, m', hi, off, l, r, h => by
     unfold dcGoW dcK at h
-    mfr_auto h [MFr.ofStub, dcGoW_mfr n _ _ _ _ _ _]
+    mfr_auto h [MFr.ofStub, MFr.ofI1F, dcGoW_mfr n _ _ _ _ _ _]
 
 theorem dcWf_mfr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
     MFr [] [] m m' := by
@@ -286,7 +286,7 @@ theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
   unfold resHeadW resHeadK at h
-  mfr_auto h [MFr.ofStub]
+  mfr_auto h [MFr.ofStub, MFr.ofI1F]
 
 theorem bvbW_mfr {n : Nat} {m m' : Mem} {h x : Word} (hb : bvbW n m h CWF = some (x, m')) : MFr [] [] m m' := by
   have hfr : BbFrame m m' := by

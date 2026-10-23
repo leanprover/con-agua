@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndPos2SpecG
 import ConAgua.Arena.IndInstallSpec3
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`
 (with `nest_occ_any`, `nest_inst_type_ty`), `nestGrowGroup`. -/
@@ -190,6 +191,7 @@ attribute [ind_grind] ntyK6_none ntyK6_some ntyK5_some ntyK4_some ntyK3_none nty
 
 /-- The lookups of `nest_inst_type_ty`. -/
 structure NtyLook (p : Prog) : Prop where
+  hi1 : I1Prog p
   ha : p.lookup "iw_alloc" = some iwAlloc
   hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
@@ -213,7 +215,7 @@ theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (k : Nat) (s₀ : St) (v
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, viewLsLen_specE p hl.hls hl.hvl k,
       stripPis_specF p hl.hst k, cvLps_spec p hl.ha hl.hc hl.he hl.hcv k,
-      stubM_spec p "inst_lp_fast" k, instPisWith_spec p hl.hv hl.hip k] <;>
+      stubM_spec p "inst_lp_fast" k, instPisWith_spec p hl.hv hl.hip hl.hi1 k] <;>
     finish (gen := 20) [ntyW, rdW_eq, Locals.init_cons_zero]
 
 

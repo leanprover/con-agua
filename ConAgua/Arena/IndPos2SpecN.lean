@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecM
+import ConAgua.Arena.StageInst1
 
 /-! # `IndPos2`, the `nestPos` block (lane `indproofs2`, helper `pos2`): the word models of the
 mutual block (`nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, `nest_cont_key`,
@@ -71,7 +72,7 @@ def nbBindK2 (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns :
   | none => none
   | some (fv, m2) =>
     if 4294967296 ≤ fv then none
-    else nbBindK3 posF vis ctx fu po pl dep kb v ns (stubM "instantiate1_fast" m2 [CWF, v.tail.tail.headD 0, fv, 0])
+    else nbBindK3 posF vis ctx fu po pl dep kb v ns (i1F m2 [CWF, v.tail.tail.headD 0, fv, 0])
 def nbBindK1 (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -346,7 +347,7 @@ def nbFieldsK2 (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j kO kL dO d
   | some (fv, m2) =>
     if 4294967296 ≤ fv then none
     else nbFieldsK3 k fieldsF vis ctx fu po pl base nF j kO kL dO dL kd nd ns2
-      (stubM "instantiate1_fast" m2 [CWF, v.tail.tail.headD 0, fv, 0])
+      (i1F m2 [CWF, v.tail.tail.headD 0, fv, 0])
 def nbFieldsK1 (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j kO kL dO dL : Word) (v : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -444,7 +445,7 @@ theorem nbBindK3_some (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Wo
 theorem nbBindK2_some (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns : Word) (fv : Word) (m2 : Mem) :
     nbBindK2 posF vis ctx fu po pl dep kb v ns (some (fv, m2)) =
     if 4294967296 ≤ fv then none
-    else nbBindK3 posF vis ctx fu po pl dep kb v ns (stubM "instantiate1_fast" m2 [CWF, v.tail.tail.headD 0, fv, 0]) := rfl
+    else nbBindK3 posF vis ctx fu po pl dep kb v ns (i1F m2 [CWF, v.tail.tail.headD 0, fv, 0]) := rfl
 theorem nbBindK1_some (posF : MW9) (vis ctx fu po pl dep kb : Word) (v : List Word) (ns : Word) (o : Word) (m1 : Mem) :
     nbBindK1 posF vis ctx fu po pl dep kb v ns (some (o, m1)) =
     if o ≠ 0 then none
@@ -620,7 +621,7 @@ theorem nbFieldsK2_some (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j k
     nbFieldsK2 k fieldsF vis ctx fu po pl base nF j kO kL dO dL v kd nd ns2 (some (fv, m2)) =
     if 4294967296 ≤ fv then none
     else nbFieldsK3 k fieldsF vis ctx fu po pl base nF j kO kL dO dL kd nd ns2
-      (stubM "instantiate1_fast" m2 [CWF, v.tail.tail.headD 0, fv, 0]) := rfl
+      (i1F m2 [CWF, v.tail.tail.headD 0, fv, 0]) := rfl
 theorem nbFieldsK1_some (k : Nat) (fieldsF : MW14) (vis ctx fu po pl base nF j kO kL dO dL : Word) (v : List Word) (rp : List Word) (m1 : Mem) :
     nbFieldsK1 k fieldsF vis ctx fu po pl base nF j kO kL dO dL v (some (rp, m1)) = nbFieldsK2 k fieldsF vis ctx fu po pl base nF j kO kL dO dL v (rp.headD 0) (rp.tail.headD 0)
       (rp.tail.tail.headD 0) (fvinternW m1 (base + j) (v.tail.headD 0)) := rfl

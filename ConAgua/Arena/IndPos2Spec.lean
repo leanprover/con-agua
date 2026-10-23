@@ -1116,7 +1116,7 @@ theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,
-      instPisWith_spec p hl.hv hip (n + 1),
+      instPisWith_spec p hl.hv hip hl.hi1 (n + 1),
       replaceApps_spec p hl hk hf hput hgo hnode hcl hra n] <;>
     finish (gen := 20) [pccW, St.setLocs_mem']
 
