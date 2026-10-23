@@ -188,31 +188,33 @@ def ccoK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m3) => some ([0], m3)
 
-def ccoK2 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ccoK2 (cR : CallM) (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => ccoK3 (stubM "ensure_sort_core" m2 [vis, 0, r2.headD 0])
+  | some (r2, m2) => ccoK3 (cR n "ensure_sort_core" [vis, 0, r2.headD 0] m2)
 
-def ccoK1 (vis q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ccoK1 (cR : CallM) (n : Nat) (vis q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m1) => ccoK2 vis (stubM "infer_type_core" m1 [vis, 0, rdW (m1.arr64 EREC) (q + 3)])
+  | some (_, m1) => ccoK2 cR n vis (cR n "infer_type_core" [vis, 0, rdW (m1.arr64 EREC) (q + 3)] m1)
 
-/-- **The model of `class_const_ok`**: `install_header`, then the inference. -/
-def ccoW : Nat → Mem → Word → Word → Option (List Word × Mem)
+/-- **The model of `class_const_ok`**: `install_header`, then the inference (the core's calls
+read through `c`: `IndCallM.lean`). -/
+def ccoW (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, vis, q => ccoK1 vis q (L.Arena.ihW n m vis q)
+  | n + 1, m, vis, q => ccoK1 cR n vis q (L.Arena.ihW n m vis q)
 
 section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (vis q : Word) (r1 r2 r3 : List Word)
-theorem ccoW_eq : ccoW (n + 1) m vis q = ccoK1 vis q (L.Arena.ihW n m vis q) := rfl
-theorem ccoK1_some : ccoK1 vis q (some (r1, m1)) =
-    ccoK2 vis (stubM "infer_type_core" m1 [vis, 0, rdW (m1.arr64 EREC) (q + 3)]) := rfl
-theorem ccoK2_some : ccoK2 vis (some (r2, m2)) = ccoK3 (stubM "ensure_sort_core" m2 [vis, 0, r2.headD 0]) := rfl
+variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis q : Word) (r1 r2 r3 : List Word)
+theorem ccoW_eq : ccoW cR (n + 1) m vis q = ccoK1 cR n vis q (L.Arena.ihW n m vis q) := rfl
+theorem ccoK1_some : ccoK1 cR n vis q (some (r1, m1)) =
+    ccoK2 cR n vis (cR n "infer_type_core" [vis, 0, rdW (m1.arr64 EREC) (q + 3)] m1) := rfl
+theorem ccoK2_some : ccoK2 cR n vis (some (r2, m2)) =
+    ccoK3 (cR n "ensure_sort_core" [vis, 0, r2.headD 0] m2) := rfl
 theorem ccoK3_some : ccoK3 (some (r3, m3)) = some ([0], m3) := rfl
 end arms
 
-grind_pattern [ind_grind] ccoW_eq => ccoW (n + 1) m vis q
-grind_pattern [ind_grind] ccoK1_some => ccoK1 vis q (some (r1, m1))
-grind_pattern [ind_grind] ccoK2_some => ccoK2 vis (some (r2, m2))
+grind_pattern [ind_grind] ccoW_eq => ccoW cR (n + 1) m vis q
+grind_pattern [ind_grind] ccoK1_some => ccoK1 cR n vis q (some (r1, m1))
+grind_pattern [ind_grind] ccoK2_some => ccoK2 cR n vis (some (r2, m2))
 grind_pattern [ind_grind] ccoK3_some => ccoK3 (some (r3, m3))
 
 /-- `class_const_ok_header`'s spec: `install_header`'s (`ih_specW`), the same body. -/
@@ -236,10 +238,10 @@ theorem classConstOkHeader_spec (p : Prog) (h : IhProg p)
 
 theorem classConstOk_spec (p : Prog) (h : IhProg p)
     (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
-    (hc : p.lookup "class_const_ok" = some classConstOkL)
+    (hc : p.lookup "class_const_ok" = some classConstOkL) (cR : CallM) (hcR : CallSpec p cR)
     (n : Nat) (s₀ : St) (vis q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ ccoW n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ccoW cR n s₀.mem vis q = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hc]
   simp only [callFn, classConstOkL]
   cases n with
@@ -248,13 +250,13 @@ theorem classConstOk_spec (p : Prog) (h : IhProg p)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classConstOkHeader_spec p h hh n,
-        stubM_spec p "infer_type_core" n, stubM_spec p "ensure_sort_core" n] <;>
+        hcR n "infer_type_core", hcR n "ensure_sort_core"] <;>
       finish (gen := 20) [rdW_eq]
 
 theorem ccoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (q : Word) (cv : IConstantVal) (hS : StageR dn vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
-    RSim (ccoW n m vis q) (ConRon.Arena.classConstOk .verified fe cv) a (KP dn vis fe m decUnit) := by
+    RSim (ccoW stubCall n m vis q) (ConRon.Arena.classConstOk .verified fe cv) a (KP dn vis fe m decUnit) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
@@ -270,13 +272,13 @@ theorem ccoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1
   have et : rdW (m1.arr64 EREC) (q + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
-  have hr : RSim (ccoK1 vis q (some (r1, m1)))
+  have hr : RSim (ccoK1 stubCall n vis q (some (r1, m1)))
       (do let stype ← inferTypeCore .verified fe checkFuel 0 cv.type
           let _u ← ensureSortCore .verified fe checkFuel 0 stype) a1 (KP dn vis fe m decUnit) := by
     rw [ccoK1_some, et, hty]
     have hi := (inferTypeCore_spec dn vis fe 0 wt hwtl).sim hS1
     rw [show (0 : Word).toNat = 0 from rfl] at hi
-    refine RSim.bind (K := ccoK2 vis) rfl hi ?_
+    refine RSim.bind (K := ccoK2 stubCall n vis) rfl hi ?_
     rintro ⟨r2, m2⟩ st a2 - ⟨hS2, hg2, hb2, rfl⟩
     dsimp only at hS2 hg2 hb2
     rw [ccoK2_some]
@@ -288,21 +290,5 @@ theorem ccoW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     exact RSim.pure_some ⟨hS3, (hg1.trans hg2).trans hg3, trivial⟩
   obtain ⟨x, a', hr', hQ⟩ := hr b hb
   exact ⟨x, a', by rw [hrun]; exact hr', hQ⟩
-
-/-- **`class_const_ok` refines `classConstOk`** (the guards are `install_header`'s, through its
-stubs; then the stubs `infer_type_core`, `ensure_sort_core`). -/
-@[refines ConRon.Arena.classConstOk]
-theorem classConstOk_refines (p : Prog) (h : IhProg p)
-    (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
-    (hc : p.lookup "class_const_ok" = some classConstOkL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal)
-    (hS : StageR dn vis fe s₀.mem a₀) (hq : decCV (erecP s₀.mem) q.toNat = some cv)
-    (hqb : q.toNat + 3 < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk .verified fe cv) a₀ ∧
-      KP dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk .verified fe cv) a₀)
-        (AM.res (ConRon.Arena.classConstOk .verified fe cv) a₀); ⊤⦄ :=
-  triple_post (classConstOk_spec p h hh hc n s₀ vis q) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (ccoW_sim dn vis fe n _ a₀ q cv hS hq hqb).am hw⟩
 
 end L.Ind

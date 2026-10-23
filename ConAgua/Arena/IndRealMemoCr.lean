@@ -30,12 +30,13 @@ well formed after. -/
 theorem crfF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW crfF [vis, e] (fun m a => StageR dn vis fe m a ∧ AbsOK m) (constsResolveFFast fe (decI e))
       (fun m m' a r x => KeepPost dn vis fe decW0B m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, hAb, hI1, hCr, hIl⟩
+  intro m m' a r h ⟨hS, hAb, hI1, hCr, hIl, hWk⟩
   have hfr := crfF_frame h
   obtain ⟨x, a', hrun, hK, hCr'⟩ := relW_callF (P := crfP)
     (L.Stubs.constsResolveFFast_refines crfP_prog (dn := dn) (vis := vis) (fe := fe) e he) m m' a r h
     ⟨hS, hCr⟩
   exact ⟨x, a', hrun, hK, hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
-    hCr', hIl.frame hfr (by decide) (by decide)⟩
+    hCr', hIl.frame hfr (by decide) (by decide),
+    hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 end L.Ind

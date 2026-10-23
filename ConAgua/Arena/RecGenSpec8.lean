@@ -31,41 +31,41 @@ def rtsK2 (n : Nat) (x : Word) : Option (List Word × Mem) → Option (List Word
 
 mutual
 /-- **The model of `class_rec_tys_ok`.** -/
-def rtsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def rtsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, g, k, ro, rl, vo, vl, co, cl =>
     if rl = 0 then some ([0, 0], m)
     else if vl = 0 ∨ cl = 0 then none
-    else rtsK1 n vis g k ro rl vo vl co cl
-      (rtoW n m vis g k (rdW (m.arr64 IW) ro) (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co))
-def rtsK1 (n : Nat) (vis g k ro rl vo vl co cl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+    else rtsK1 cR n vis g k ro rl vo vl co cl
+      (rtoW cR n m vis g k (rdW (m.arr64 IW) ro) (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co))
+def rtsK1 (cR : CallM) (n : Nat) (vis g k ro rl vo vl co cl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
-    rtsK2 n (r1.headD 0) (rtsW n m1 vis g k (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1))
+    rtsK2 n (r1.headD 0) (rtsW cR n m1 vis g k (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1))
 end
 
 section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (vis g k ro rl vo vl co cl x : Word) (r1 r2 r3 : List Word)
-theorem rtsW_nil (h : rl = 0) : rtsW (n + 1) m vis g k ro rl vo vl co cl = some ([0, 0], m) := by
+variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis g k ro rl vo vl co cl x : Word) (r1 r2 r3 : List Word)
+theorem rtsW_nil (h : rl = 0) : rtsW cR (n + 1) m vis g k ro rl vo vl co cl = some ([0, 0], m) := by
   simp [rtsW, h]
-theorem rtsW_short (h : ¬ rl = 0) (h2 : vl = 0 ∨ cl = 0) : rtsW (n + 1) m vis g k ro rl vo vl co cl = none := by
+theorem rtsW_short (h : ¬ rl = 0) (h2 : vl = 0 ∨ cl = 0) : rtsW cR (n + 1) m vis g k ro rl vo vl co cl = none := by
   simp only [rtsW]; rw [if_neg h, if_pos h2]
-theorem rtsW_cons (h : ¬ rl = 0) (h2 : ¬ (vl = 0 ∨ cl = 0)) : rtsW (n + 1) m vis g k ro rl vo vl co cl =
-    rtsK1 n vis g k ro rl vo vl co cl
-      (rtoW n m vis g k (rdW (m.arr64 IW) ro) (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)) := by
+theorem rtsW_cons (h : ¬ rl = 0) (h2 : ¬ (vl = 0 ∨ cl = 0)) : rtsW cR (n + 1) m vis g k ro rl vo vl co cl =
+    rtsK1 cR n vis g k ro rl vo vl co cl
+      (rtoW cR n m vis g k (rdW (m.arr64 IW) ro) (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)) := by
   simp only [rtsW]; rw [if_neg h, if_neg h2]
-theorem rtsK1_some : rtsK1 n vis g k ro rl vo vl co cl (some (r1, m1)) =
-    rtsK2 n (r1.headD 0) (rtsW n m1 vis g k (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1)) := by
+theorem rtsK1_some : rtsK1 cR n vis g k ro rl vo vl co cl (some (r1, m1)) =
+    rtsK2 n (r1.headD 0) (rtsW cR n m1 vis g k (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1)) := by
   rw [rtsK1]
 theorem rtsK2_some : rtsK2 n x (some (r2, m2)) = rtsK3 (consW n m2 x (r2.headD 0) (r2.tail.headD 0)) := rfl
 theorem rtsK3_some : rtsK3 (some (r3, m3)) = some ([r3.headD 0, r3.tail.headD 0], m3) := rfl
 end arms
 
-grind_pattern [ind_grind] rtsW_nil => rtsW (n + 1) m vis g k ro rl vo vl co cl
-grind_pattern [ind_grind] rtsW_short => rtsW (n + 1) m vis g k ro rl vo vl co cl
-grind_pattern [ind_grind] rtsW_cons => rtsW (n + 1) m vis g k ro rl vo vl co cl
-grind_pattern [ind_grind] rtsK1_some => rtsK1 n vis g k ro rl vo vl co cl (some (r1, m1))
+grind_pattern [ind_grind] rtsW_nil => rtsW cR (n + 1) m vis g k ro rl vo vl co cl
+grind_pattern [ind_grind] rtsW_short => rtsW cR (n + 1) m vis g k ro rl vo vl co cl
+grind_pattern [ind_grind] rtsW_cons => rtsW cR (n + 1) m vis g k ro rl vo vl co cl
+grind_pattern [ind_grind] rtsK1_some => rtsK1 cR n vis g k ro rl vo vl co cl (some (r1, m1))
 grind_pattern [ind_grind] rtsK2_some => rtsK2 n x (some (r2, m2))
 grind_pattern [ind_grind] rtsK3_some => rtsK3 (some (r3, m3))
 
@@ -74,10 +74,10 @@ structure RtsProg (p : Prog) extends RtoProg p : Prop where
   cons : p.lookup "sl_cons" = some slCons
   rts : p.lookup "class_rec_tys_ok" = some classRecTysOkL
 
-theorem classRecTysOk_spec (p : Prog) (h : RtsProg p) (n : Nat) :
+theorem classRecTysOk_spec (p : Prog) (h : RtsProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (vis g k ro rl vo vl co cl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_tys_ok" [vis, g, k, ro, rl, vo, vl, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ rtsW n s₀.mem vis g k ro rl vo vl co cl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ rtsW cR n s₀.mem vis g k ro rl vo vl co cl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis g k ro rl vo vl co cl
@@ -88,7 +88,7 @@ theorem classRecTysOk_spec (p : Prog) (h : RtsProg p) (n : Nat) :
     simp only [callFn, classRecTysOkL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRecTyOk_spec p h.toRtoProg n, slCons_specW p h.alloc h.copy h.cons n, ih] <;>
+        classRecTyOk_spec p h.toRtoProg cR hcR n, slCons_specW p h.alloc h.copy h.cons n, ih] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8]
 
 /-! ## Relational lemma -/
@@ -131,7 +131,7 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     RecsOK m ro.toNat rl.toNat (rcs.map (·.cvR)) →
     DecB (fun m => decPL m (decCVp m) vo.toNat vl.toNat) m cvs →
     DecB (fun m => decNL m co.toNat cl.toNat) m cs → AbsOK m →
-    RSim (rtsW n m vis g k ro rl vo vl co cl) (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a
+    RSim (rtsW stubCall n m vis g k ro rl vo vl co cl) (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a
       (fun b a' x => KP dn vis fe m decCVS b a' x ∧ AbsOK b.2) := by
   induction n with
   | zero => intros; intro b hb; simp [rtsW] at hb
@@ -188,7 +188,7 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hr := rtoW_sim (dn := dn) (vis := vis) (fe := fe) n m a g k (UInt64.ofNat p) (UInt64.ofNat pv)
     (UInt64.ofNat c0) G RS CV hS hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR) (by rw [tv]; exact hCV) hA
   rw [tc] at hr
-  refine RSim.bind (K := rtsK1 n vis g k ro rl vo vl co cl) (by simp [rtsK1]) hr ?_
+  refine RSim.bind (K := rtsK1 stubCall n vis g k ro rl vo vl co cl) (by simp [rtsK1]) hr ?_
   rintro ⟨r1, m1⟩ x a1 - ⟨⟨hS1, hg1, hx⟩, hA1⟩
   dsimp only at hS1 hg1 hx
   rw [rtsK1_some]
@@ -212,8 +212,8 @@ theorem rtsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   exact RSim.pure_some ⟨⟨hS3, hg1.trans (hg2.trans hg3), by simpa [decCVS] using hsp3⟩, consW_afr h3 hA2⟩
 
 /-- **`class_rec_tys_ok` refines `classRecTysOk`** (through `class_rec_ty_ok`'s stubs): the
-generated constants, a stable slice of records below the record top. -/
-@[refines ConRon.Arena.classRecTysOk]
+generated constants, a stable slice of records below the record top. Under `StageR`, for the
+callers not yet under `StageC`; the census link is `classRecTysOk_refinesC` (`IndT/RecGen7.lean`). -/
 theorem classRecTysOk_refines (p : Prog) (hp : RtsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g k ro rl vo vl co cl : Word)
     (G : ClassGen) (rcs : List RecShape) (cvs : List IConstantVal) (cs : List Nat)
@@ -228,7 +228,7 @@ theorem classRecTysOk_refines (p : Prog) (hp : RtsProg p) (n : Nat) (s₀ : St) 
       KP dn vis fe s₀.mem decCVS (r, s'.mem)
         (AM.st (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀)
         (AM.res (ConRon.Arena.classRecTysOk V fe G k.toNat rcs cvs cs) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (classRecTysOk_spec p hp n s₀ vis g k ro rl vo vl co cl) fun _ _ ⟨hl, hw⟩ =>
+  triple_post (classRecTysOk_spec p hp stubCall (stubCall_spec p) n s₀ vis g k ro rl vo vl co cl) fun _ _ ⟨hl, hw⟩ =>
     let h := (rtsW_sim dn vis fe g k G hns n _ a₀ ro rl vo vl co cl rcs cvs cs hS hG hrcs hok hcvs hcs hA).am hw
     ⟨hl, h.1, h.2.1, h.2.2⟩
 

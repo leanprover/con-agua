@@ -21,12 +21,8 @@ literals with GMP. `Prog.wf_of_wfFast` turns the check into `Prog.wf`:
 
 namespace L.Compiler
 
-/-! ## Names as numbers -/
+/-! ## Names as numbers (`nameCode`, in `Compile.lean`) -/
 
-/-- Bijective base-257 numeration of a byte list (digits `1..256`, least significant first). -/
-def bytesCode : List UInt8 → Nat
-  | [] => 0
-  | b :: l => (b.toNat + 1) + 257 * bytesCode l
 
 theorem bytesCode_inj : ∀ {a b : List UInt8}, bytesCode a = bytesCode b → a = b
   | [], [], _ => rfl
@@ -39,8 +35,6 @@ theorem bytesCode_inj : ∀ {a b : List UInt8}, bytesCode a = bytesCode b → a 
     have h2 : bytesCode l = bytesCode l' := by omega
     rw [UInt8.toNat_inj.mp h1, bytesCode_inj h2]
 
-/-- A function name as a number. -/
-def nameCode (s : String) : Nat := bytesCode s.toByteArray.data.toList
 
 theorem nameCode_inj {a b : String} (h : nameCode a = nameCode b) : a = b := by
   have h := bytesCode_inj h
@@ -49,24 +43,8 @@ theorem nameCode_inj {a b : String} (h : nameCode a = nameCode b) : a = b := by
   rw [ha, hb] at h
   simp_all [Array.toList_inj]
 
-/-! ## A search tree of names -/
+/-! ## A search tree of names (`NTree`, in `Compile.lean`) -/
 
-/-- Binary search tree: name code ↦ parameter count. -/
-inductive NTree where
-  | leaf
-  | node (l : NTree) (k v : Nat) (r : NTree)
-
-def NTree.find (k : Nat) : NTree → Option Nat
-  | .leaf => none
-  | .node l k' v r => if k < k' then find k l else if k = k' then some v else find k r
-
-/-- Insert `k ↦ v`; `none` if `k` is there already. -/
-def NTree.insert (k v : Nat) : NTree → Option NTree
-  | .leaf => some (.node .leaf k v .leaf)
-  | .node l k' v' r =>
-    if k < k' then (insert k v l).map (.node · k' v' r)
-    else if k = k' then none
-    else (insert k v r).map (.node l k' v' ·)
 
 theorem NTree.find_insert {k v : Nat} : ∀ {t t' : NTree}, t.insert k v = some t' →
     t.find k = none ∧ ∀ k', t'.find k' = if k' = k then some v else t.find k'
@@ -127,6 +105,46 @@ theorem progTree_spec : ∀ {p : Prog} {t : NTree}, progTree p = some t →
       · have : nameCode g ≠ nameCode f := fun h => hg (nameCode_inj h)
         have hb : (g == f) = false := by simpa using hg
         simp [hb, this]
+
+/-- Inserting a key that is not there succeeds. -/
+theorem NTree.insert_isSome {k v : Nat} : ∀ {t : NTree}, t.find k = none → (t.insert k v).isSome
+  | .leaf, _ => rfl
+  | .node l k' v' r, h => by
+    simp only [find] at h
+    simp only [insert]
+    by_cases h1 : k < k'
+    · simp only [h1, ite_true] at h ⊢; simpa using insert_isSome h
+    · by_cases h2 : k = k'
+      · simp [h2] at h
+      · simp only [h1, h2, ite_false] at h ⊢; simpa using insert_isSome h
+
+/-- With distinct names, `Prog.nrt` maps every function to its result count (`Compile.lean`). -/
+theorem Prog.nrTree_spec : ∀ {p : Prog}, (p.map (·.1)).Nodup →
+    ∃ t, Prog.nrTree p = some t ∧ ∀ f, t.find (nameCode f) = (p.lookup f).map (Stmt.nret ·.body)
+  | [], _ => ⟨.leaf, rfl, fun _ => rfl⟩
+  | (f, fd) :: p, hnd => by
+    simp only [List.map_cons, List.nodup_cons] at hnd
+    obtain ⟨t₀, h0, hf⟩ := Prog.nrTree_spec hnd.2
+    have hn : t₀.find (nameCode f) = none := by
+      rw [hf, Option.map_eq_none_iff, List.lookup_eq_none_iff]
+      intro x hx
+      have : f ≠ x.1 := fun he => hnd.1 (List.mem_map.mpr ⟨x, hx, he.symm⟩)
+      simpa using this
+    obtain ⟨t₁, h1⟩ := Option.isSome_iff_exists.mp (NTree.insert_isSome (v := Stmt.nret fd.body) hn)
+    obtain ⟨_, hf'⟩ := NTree.find_insert h1
+    refine ⟨t₁, by simp [Prog.nrTree, h0, h1], fun g => ?_⟩
+    rw [hf', hf, List.lookup_cons]
+    by_cases hg : g = f
+    · simp [hg]
+    · have : nameCode g ≠ nameCode f := fun h => hg (nameCode_inj h)
+      have hb : (g == f) = false := by simpa using hg
+      simp [hb, this]
+
+/-- `nrOf (Prog.nrt p)` gives every function's result count, if the names are distinct. -/
+theorem nrOf_nrt {p : Prog} (hnd : (p.map (·.1)).Nodup) (tab : Tab) {f : FnName} {fd : FunDecl}
+    (h : p.lookup f = some fd) : nrOf (Prog.nrt p) tab f = Stmt.nret fd.body := by
+  obtain ⟨t, ht, hf⟩ := Prog.nrTree_spec hnd
+  simp [nrOf, Prog.nrt, ht, hf, h]
 
 /-! ## The check -/
 
