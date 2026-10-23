@@ -112,7 +112,7 @@ theorem zeroNewOK (m : Mem) : NewOK zeroSch ZRecRel zhash m [0] zeroKey zeroHash
 theorem zprobeW_arm (m : Mem) (t : Word) :
     ∀ j d, zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (baseW m t) (nSlotsZ m) j d =
       probeArm zeroSch m t (zMt m t) (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (baseW m t) (nSlotsZ m)) j d := by
-  intro j d; rw [zprobeW]; rfl
+  intro j d; rw [zprobeW, cprobeW]; rfl
 
 theorem zpushOK_room (m : Mem) (t : Word) (h : zpushOK m t = true) : PushRoom zeroSch m t := by
   simp only [zpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -133,7 +133,14 @@ theorem zinternW_eq (m : Mem) :
     simp [hdW, zeroSch, zeroP, LTag.zero]
   have e1 : ∀ x, hdW zeroSch.tag.toUInt64 1 x = zeroS + x := fun x => by
     simp [hdW, zeroSch, zeroS, LTag.zero]
-  simp only [zinternW, internM, pushM, zpushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC zeroCS m t = zpushOK m t := fun t => (zpushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC zeroCS m t (zeroCS.vsM (pushArgs zeroCS [] (zeroHashW))) j c =
+      pushG zeroSch m t [0] j c := by
+    intro t j c; rw [← zpushMem_eq, zpushMem_eqC]; rfl
+  have ec : ∀ t, cntC zeroCS m t = cntW zeroSch m t := fun t => rfl
+  have eh : zeroCS.qhM m [] = zeroHashW := rfl
+  have es : skipC zeroCS m [] = 0 := rfl
+  simp only [zinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_zero` refines `internLNode .zero` -/

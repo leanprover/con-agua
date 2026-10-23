@@ -140,7 +140,7 @@ end query
 theorem pprobeW_arm (m : Mem) (u t : Word) :
     ∀ j d, pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (baseW m t) (nSlotsP m) j d =
       probeArm paramSch m t (pMt m u t) (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (baseW m t) (nSlotsP m)) j d := by
-  intro j d; rw [pprobeW]; rfl
+  intro j d; rw [pprobeW, cprobeW]; rfl
 
 theorem ppushOK_room (m : Mem) (t : Word) (h : ppushOK m t = true) : PushRoom paramSch m t := by
   simp only [ppushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -161,7 +161,14 @@ theorem pinternW_eq (m : Mem) (u : Word) :
     simp [hdW, paramSch, paramP, LTag.param]
   have e1 : ∀ x, hdW paramSch.tag.toUInt64 1 x = paramS + x := fun x => by
     simp [hdW, paramSch, paramS, LTag.param]
-  simp only [pinternW, internM, pushM, ppushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC paramCS m t = ppushOK m t := fun t => (ppushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC paramCS m t (paramCS.vsM (pushArgs paramCS [u] (paramHashW u))) j c =
+      pushG paramSch m t [u] j c := by
+    intro t j c; rw [← ppushMem_eq, ppushMem_eqC]; rfl
+  have ec : ∀ t, cntC paramCS m t = cntW paramSch m t := fun t => rfl
+  have eh : paramCS.qhM m [u] = paramHashW u := rfl
+  have es : skipC paramCS m [u] = 0 := rfl
+  simp only [pinternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_param` refines `internLNode (.param _)` -/

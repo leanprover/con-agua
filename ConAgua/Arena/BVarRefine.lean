@@ -131,7 +131,7 @@ end query
 theorem bprobeW_arm (m : Mem) (u t : Word) :
     ∀ j d, bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m) j d =
       probeArm bvarSch m t (bMt m u t) (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m)) j d := by
-  intro j d; rw [bprobeW]; rfl
+  intro j d; rw [bprobeW, cprobeW]; rfl
 
 theorem bpushOK_room (m : Mem) (t : Word) (h : bpushOK m t = true) : PushRoom bvarSch m t := by
   simp only [bpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -152,7 +152,14 @@ theorem binternW_eq (m : Mem) (u : Word) :
     simp [hdW, bvarSch, bvarP, ETag.bvar]
   have e1 : ∀ x, hdW bvarSch.tag.toUInt64 1 x = bvarS + x := fun x => by
     simp [hdW, bvarSch, bvarS, ETag.bvar]
-  simp only [binternW, internM, pushM, bpushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC bvarCS m t = bpushOK m t := fun t => (bpushOK_eqC m t).symm
+  have em : ∀ t j c, pushMC bvarCS m t (bvarCS.vsM (pushArgs bvarCS [u] (bvarHashW u))) j c =
+      pushG bvarSch m t [u] j c := by
+    intro t j c; rw [← bpushMem_eq, bpushMem_eqC]; rfl
+  have ec : ∀ t, cntC bvarCS m t = cntW bvarSch m t := fun t => rfl
+  have eh : bvarCS.qhM m [u] = bvarHashW u := rfl
+  have es : skipC bvarCS m [u] = 0 := rfl
+  simp only [binternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_bvar` refines `internE (.bvar _)` -/
