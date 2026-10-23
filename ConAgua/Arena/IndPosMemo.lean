@@ -200,6 +200,17 @@ theorem MFr.ofLbbF {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r,
 /-- Across `get_app_fn_f` (writes nothing). -/
 theorem MFr.ofGafF {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (gafF_frame h) (by simp) (by simp)
+/-- Across `fvar_type_d` (writes nothing). -/
+theorem MFr.ofFtdF {m m' : Mem} {args r : List Word} (h : ftdF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (ftdF_frame h) (by simp) (by simp)
+/-- Across `fvar_type_ds` (the pool and its top). -/
+theorem MFr.ofFtdsF {m m' : Mem} {args r : List Word} (h : ftdsF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_iw (ftdsF_frame h)
+/-- Across `get_app_args_f` (the stack, the pool, their tops). -/
+theorem MFr.ofGaaF {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (gaaF_frame h)
+    (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; rcases hb with rfl | rfl <;> decide))
+    (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 /-- Across `strip_pis`/`strip_lams` (their write set, `stripF_frame`). -/
 theorem MFr.ofStripF {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg m args = some (r, m')) :
     MFr [] [] m m' := MFr.of_iw (stripF_frame h)
@@ -215,12 +226,16 @@ theorem ceinternW_mfr {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r
 theorem envFindW_mfr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     MFr [] [] m m' := by rw [envFindW_mem h]; exact MFr.refl _ _ _
 
+/-- Across `abstract1_fast` (its write set, the `abstract1` memo and the store, below 64). -/
+theorem MFr.ofAbF {m m' : Mem} {args r : List Word} (h : abF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low ⟨_, _, abF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
+
 theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List Word),
     closeW n m dO dl i body = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, h => by simp [closeW] at h
   | n + 1, m, m', dO, dl, i, body, r, h => by
     unfold closeW closeK1 closeK2 closeK3 at h
-    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofStub, MFr.ofI1F, mkForallW_mfr]
+    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofAbF, MFr.ofI1F, mkForallW_mfr]
 
 theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
   unfold stripW stripK at h

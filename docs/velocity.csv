@@ -219,4 +219,7 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,pipeline,opus,15,15,"landing 7: builtinPreludeE census tag; lane close, open list"
 2026-10-23,rfhash,opus-5.5,35,28,"memo hash includes k2 high half (banked rf memo clustered): c05b 1471 G -> 33 G instr"
 2026-10-23,loopt3,opus-5.5,30,35,landing 4: LoopCallees/LoopTopProg at checkerProg.subPB (helper loopt3-prog, StepIn indFns kernel-checked, CoreWalkProg.i1 fix); end-to-end theorem assumes only IndArmSpec
+2026-10-23,indproofs4,opus,150,120,"helpers fvt (fvar_type_d(s), get_app_args_f) and abs (abstract1_fast via AbsOK) merged; indParamsOk refined (real); checkBlock threads AbsOK"
 2026-10-23,compopt,opus-5.5,100,20,"tooling: bench.py (interleaved benchmark, init set), asmprof.py (exact instruction profile), compopt-asm, harness CA_SIZES/CA_SMALL, scripts/compopt (sizing experiments, L-source prototypes); journal: Init fixture, compiler prototypes A-E3, memory study"
+2026-10-23,slowmods,opus-5.5,150,40,FrontProgAgree by positions; DeclNatDeps; helpers: RecGenSpec16 IndInstallSpec28/12 DeclDivMod2 RecCheckSpec14; PLAN recipe
+2026-10-23,slowmods,opus-5.5,5,15,helper b: IndSumSpec14 DefEqLeaves ConstsResolveFRefine

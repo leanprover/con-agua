@@ -75,9 +75,11 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
     (hcx : ShapeCV m p0) (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block)
-    (hv : AllVis fe) (hcs : CtorSums fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp) :
+    (hv : AllVis fe) (hcs : CtorSums fe) (hPm : PosMR m) (hma : ∃ mp, maMR m mp) (hA : AbsOK m)
+    (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hkr : AbsKeep p "block_raw_rec") :
     Sim (icbW p (n + 4) m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m') := by
   intro r m' h
   unfold icbW at h
   have hT0 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -97,6 +99,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   have hP1 := hPm.fr (MFr.of_iw hf1)
   obtain ⟨mp0, hmp0⟩ := hma
   have hma1 := maMR_mfr (MFr.of_iw hf1) hmp0
+  have hA1 : AbsOK s1.mem := AFr.of_frame hf1 (by decide) (by decide) hA
   simp only [List.headD_cons, List.tail_cons] at h
   have hT1 : iwTop s1.mem < 2 ^ 64 := (rdW (s1.mem.arr64 CTL) 200).toNat_lt
   -- the constructors' names
@@ -130,6 +133,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [List.headD_cons, List.tail_cons, List.map_map] at h hd2
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hma2 := maMR_mfr (MFr.of_iw hf2) hma1
+  have hA2 : AbsOK s2.mem := AFr.of_frame hf2 (by decide) (by decide) hA1
   have hg12 := hg1.trans hg2
   have hT2 : iwTop s2.mem < 2 ^ 64 := (rdW (s2.mem.arr64 CTL) 200).toNat_lt
   -- the members' names
@@ -160,6 +164,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only [List.headD_cons, List.tail_cons] at h
   have hP3 := hP2.fr (MFr.of_iw hf3)
   have hma3 := maMR_mfr (MFr.of_iw hf3) hma2
+  have hA3 : AbsOK s3.mem := AFr.of_frame hf3 (by decide) (by decide) hA2
   -- the two `sl_nodup`s
   have hcn3 : (decHL s3.mem (rdW (s1.mem.arr64 CTL) 200).toNat tot.toNat : Option (List NIdx)) =
       some (bs.allCtors.map (fun x => x.1.name)) := by
@@ -220,6 +225,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   rw [← hfm] at hS6 hg6
   have hP6 := hP3.fr hfr6
   have hma6 := maMR_mfr hfr6 hma3
+  have hA6 : AbsOK s6.mem := by rw [hfm]; exact AFr.of_frame (flushMem_frame s3.mem) (by decide) (by decide) hA3
   have hg16 := hg13.trans hg6
   -- the raw recursion bit
   have hq6 := hq.grow (decBS_mono _) hg16
@@ -235,6 +241,7 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   simp only at hs7 hst7 hr7 hS7 hg7
   subst hs7
   have hP7 := PosMR.ofClosed hcl hfr c7 hP6
+  have hA7 : AbsOK s7.mem := hkr _ _ _ _ _ c7 hA6
   have hrun7 := AM.run_of_ok _ _ hok7
   rw [hst7] at hrun7
   generalize AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) { a with caches := Caches.empty } = raw at hrun7 hr7
@@ -249,10 +256,10 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   | some q8 =>
   obtain ⟨r8, m8⟩ := q8
   rw [c8, icbK8_some] at h
-  obtain ⟨s8, hs8, -, x8, a8, hrun8, hS8, hg8, hBP8, hP8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
+  obtain ⟨s8, hs8, -, x8, a8, hrun8, hS8, hg8, hBP8, hP8, hA8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (checkBlockPass_refines hP.pass hcl hfs n hn _ _ hS7 hq7 hsrc7 hcx7 (b := raw) (by cases raw <;> rfl)
-      hv hcs hP7) c8
-  simp only at hs8 hS8 hg8 hBP8 hP8
+      hv hcs hP7 hA7 hkp) c8
+  simp only at hs8 hS8 hg8 hBP8 hP8 hA8
   subst hs8
   have hg18 := hg17.trans hg8
   -- the tail
@@ -263,13 +270,13 @@ theorem icbW_sim {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
   rw [c9, icbK9_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
+  obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
     (checkBlockTail_refines hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) _ _ hS8 hBP8
-      (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK) c9
-  simp only at hs9 hS9 hg9 hM9
+      (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt) c9
+  simp only at hs9 hS9 hg9 hM9 hA9
   subst hs9
   have hrun9 := AM.run_of_ok _ _ hok9
-  refine ⟨_, _, ?_, by simpa using hS9, hg18.trans hg9, hM9⟩
+  refine ⟨_, _, ?_, by simpa using hS9, hg18.trans hg9, hM9, hA9⟩
   simp only [ConRon.Arena.checkBlock, hnodup]
   simp only [Bool.false_eq_true, ite_false, StateT.run_bind, flushCaches_run, except_ok_bind, hrun7,
     hrun8, hrun9]
@@ -290,14 +297,16 @@ theorem checkBlock_refines {p : Prog} (hP : CbProg p) {fs fs2 : List FnName}
     (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m p0.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hv : AllVis fe)
-    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) :
+    (hcs : CtorSums fe) (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) (hA : AbsOK s₀.mem)
+    (hkp : ∀ f ∈ passKeepCallees, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hkr : AbsKeep p "block_raw_rec") :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "check_block" [vis, bO, bL, p0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem; ⊤⦄ :=
+      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 n hn hS hq hsrc hcx hblk hv hcs hPm hma) hm
+    let ⟨hok, hQ⟩ := Sim.run (icbW_sim hP hcl hfs hfr hcl2 hfs2 n hn hS hq hsrc hcx hblk hv hcs hPm hma hA hkp hkt hkr) hm
     ⟨hl, hok, hQ⟩
 
 end L.Ind

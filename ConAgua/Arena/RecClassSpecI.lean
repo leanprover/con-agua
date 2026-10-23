@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecGenSpec6
+import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.RecCheckSpec3
 import ConAgua.Arena.StageInst1
 
@@ -561,6 +562,57 @@ theorem rec2RdN {m : Mem} {w : Word} {k v : Nat} (h : iwN m (w.toNat + k) = some
   have := iwN_rdW_at h hsz
   exact ⟨this.1, UInt64.toNat_ofNat_of_lt' this.2⟩
 
+/-! ## The `abstract1` memo across `class_gen_major` -/
+
+theorem exprGetDW_afr {m m' : Mem} {o l i : Word} {r : List Word} (h : exprGetDW m o l i = some (r, m')) :
+    AFr m m' := by
+  unfold exprGetDW at h
+  afr_auto h [binternW_afr]
+
+theorem mkTMW_afr {m m' : Mem} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word} {r : List Word}
+    (h : mkTMW m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 = some (r, m')) : AFr m m' := by
+  simp only [mkTMW] at h
+  split at h; · cases h
+  rename_i q m1 h1
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  exact (allocW_afr h1).trans (by simp only [tmWr]; afr_set)
+
+theorem tmdW_afr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : AFr m m' := by
+  simp only [tmdW, tmdK1.eq_def, tmdK2.eq_def, tmdK3.eq_def] at h
+  afr_auto h [naF_afr, mkTMW_afr]
+
+theorem tmaW_afr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [tmaW] at h
+  | succ n =>
+  simp only [tmaW, tmaK.eq_def] at h
+  cases n <;> simp only [fuelW] at h <;> afr_auto h [tmdW_afr]
+
+theorem mjtW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 fo fl : Word} {r : List Word}
+    (h : mjtW n m ind lvls ds0 dl0 fo fl = some (r, m')) : AFr m m' := by
+  cases n with
+  | zero => simp [mjtW] at h
+  | succ n =>
+  simp only [mjtW, mjtK1.eq_def, mjtK2.eq_def, mjtK3.eq_def] at h
+  afr_auto h [ceinternW_afr, appendW_afr, mknF_afr]
+
+theorem mjoW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 nIdx ty d : Word} {r : List Word}
+    (h : mjoW n m ind lvls ds0 dl0 nIdx ty d = some (r, m')) : AFr m m' := by
+  cases n with
+  | zero => simp [mjoW] at h
+  | succ n =>
+  simp only [mjoW, mjoK.eq_def, mjoK1.eq_def] at h
+  afr_auto h [stub_afr, mjtW_afr]
+
+theorem mjW_afr {n : Nat} {m m' : Mem} {g c d : Word} {r : List Word} (h : mjW n m g c d = some (r, m')) :
+    AFr m m' := by
+  cases n with
+  | zero => simp [mjW] at h
+  | succ n =>
+  simp only [mjW, mjK1.eq_def, mjK2.eq_def, mjK3.eq_def, mjoK1.eq_def] at h
+  cases n <;> simp only [fuelW] at h <;> afr_auto h [tmaW_afr, exprGetDW_afr, instW_afr _ _ _ _ _ _ _, mjoW_afr]
+
 theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (g c d : Word) (G : ClassGen) (hS : StageR dn vis fe m a)
     (hG : DecB (fun m => decCG m g.toNat) m G) :
@@ -677,7 +729,7 @@ def motK4 (n : Nat) (d b : Word) : Option (List Word × Mem) → Option (List Wo
 
 def motK3 (n : Nat) (d fo fl : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (b, m3) => if 4294967296 ≤ b then none else motK4 n d b (stubM "fvar_type_ds" m3 [fo, fl])
+  | some (b, m3) => if 4294967296 ≤ b then none else motK4 n d b (ftdsF m3 [fo, fl])
 
 def motK2 (n : Nat) (d fo fl maj : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -712,7 +764,7 @@ theorem motK2_ok (h : ¬ 4294967296 ≤ srt) : motK2 n d fo fl maj (some (srt, m
 theorem motK3_big (h : 4294967296 ≤ b) : motK3 n d fo fl (some (b, m3)) = none := by
   rw [motK3, if_pos h]
 theorem motK3_ok (h : ¬ 4294967296 ≤ b) : motK3 n d fo fl (some (b, m3)) =
-    motK4 n d b (stubM "fvar_type_ds" m3 [fo, fl]) := by
+    motK4 n d b (ftdsF m3 [fo, fl]) := by
   rw [motK3, if_neg h]
 theorem motK4_big (h : d + r4.tail.headD 0 < d) : motK4 n d b (some (r4, m4)) = none := by
   rw [motK4, if_pos h]
@@ -744,6 +796,7 @@ structure MtProg (p : Prog) extends MjProg p : Prop where
   ifa : p.lookup "intern_forall" = some internForallL
   mkf : p.lookup "mk_forall" = some mkForall
   ct : p.lookup "close_telescope" = some closeTelescope
+  ab : AbF p
   mot : p.lookup "class_gen_motive_ty" = some classGenMotiveTy
 
 theorem classGenMotiveTy_spec (p : Prog) (h : MtProg p) (n : Nat) (s₀ : St) (g c d : Word) :
@@ -757,27 +810,30 @@ theorem classGenMotiveTy_spec (p : Prog) (h : MtProg p) (n : Nat) (s₀ : St) (g
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
-        mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, stubM_spec p "fvar_type_ds" n,
-        closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct n] <;>
+        mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
+        closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The decoded result of an `Option EIdx` producer. -/
 theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (g c d : Word) (G : ClassGen) (hS : StageR dn vis fe m a)
-    (hG : DecB (fun m => decCG m g.toNat) m G) :
-    RSim (motW n m g c d) (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a (KP dn vis fe m decOE) := by
+    (hG : DecB (fun m => decCG m g.toNat) m G) (hA : AbsOK m) :
+    RSim (motW n m g c d) (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a
+      (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
   rw [motW_eq]
   unfold ConRon.Arena.ClassGen.motiveTy
-  refine RSim.bind (K := motK1 n g d) rfl (mjW_sim dn vis fe n m a g c d G hS hG) ?_
-  rintro ⟨r1, m1⟩ o1 a1 - ⟨hS1, hg1, ho1⟩
+  refine RSim.bind (K := motK1 n g d) rfl
+    (RSim.withF (mjW_sim dn vis fe n m a g c d G hS hG) (fun _ hb => mjW_afr hb)) ?_
+  rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hf1⟩
+  have hA1 := hf1 hA
   dsimp only at hS1 hg1 ho1
   cases o1 with
   | none =>
     rw [motK1_fail (h := ho1)]
-    exact RSim.pure_some ⟨hS1, hg1, rfl⟩
+    exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
   | some p1 =>
   obtain ⟨ifs, maj⟩ := p1
   obtain ⟨h11, ⟨hifs, hfb⟩, hmH, hmd⟩ := ho1
@@ -789,21 +845,21 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
   rw [eve]
   refine RSim.bind (K := motK2 n d _ _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
-    IWGrow m1 b.2 ∧ x = decE b.1) ?_ ?_
+    IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨srt, m2⟩ h2
     obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS1 ve hve h2
     rw [dve] at hrun
-    exact ⟨decE srt, a', hrun, hS', hg, rfl⟩
-  rintro ⟨srt, m2⟩ x a2 - ⟨hS2, hg2, rfl⟩
+    exact ⟨decE srt, a', hrun, hS', hg, rfl, sointernW_afr h2 hA1⟩
+  rintro ⟨srt, m2⟩ x a2 - ⟨hS2, hg2, rfl, hA2⟩
   by_cases hbig : 4294967296 ≤ srt
   · rw [motK2_big (h := hbig)]; exact RSim.none
   rw [motK2_ok (h := hbig)]
   refine RSim.bind (K := motK3 n d _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
-    IWGrow m2 b.2 ∧ x = decE b.1) ?_ ?_
+    IWGrow m2 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨b, m3⟩ h3
     obtain ⟨a', hrun, hS', hg⟩ := mkForall_stage hS2 _ srt h3
-    exact ⟨decE b, a', by rw [← hmd]; exact hrun, hS', hg, rfl⟩
-  rintro ⟨b, m3⟩ x a3 - ⟨hS3, hg3, rfl⟩
+    exact ⟨decE b, a', by rw [← hmd]; exact hrun, hS', hg, rfl, mkForallW_afr h3 hA2⟩
+  rintro ⟨b, m3⟩ x a3 - ⟨hS3, hg3, rfl, hA3⟩
   by_cases hbig3 : 4294967296 ≤ b
   · rw [motK3_big (h := hbig3)]; exact RSim.none
   rw [motK3_ok (h := hbig3)]
@@ -812,9 +868,9 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     simp at this; exact this
   have hg13 := hg1.trans (hg2.trans hg3)
   rw [rec2MapM_classBinder]
-  refine RSim.bind (K := motK4 n d b) rfl ((fvarTypeDs_spec dn vis fe _ _ ifs).sim
-    ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs⟩) ?_
-  rintro ⟨r4, m4⟩ bs a4 - ⟨hS4, hg4, hbs, hbb⟩
+  refine RSim.bind (K := motK4 n d b) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ ifs).sim
+      ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).1⟩) (fun _ hb => ftdsF_afr hb)) ?_
+  rintro ⟨r4, m4⟩ bs a4 - ⟨⟨hS4, hg4, hbs, hbb⟩, hf4⟩
   dsimp only at hS4 hg4 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
   by_cases hov : d + r4.tail.headD 0 < d
@@ -827,26 +883,27 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     have h2 := (r4.tail.headD 0).toNat_lt
     omega
   refine RSim.bind (K := motK5) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
-    decW0E b.2 b.1 x) ?_ ?_
+    decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r5, m5⟩ h5
-    obtain ⟨x, a', hrun, hS', hg, hx⟩ := closeW_ok n dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs
-      (hS4.lt64 hbb) hbb hdl
-    exact ⟨x, a', hrun, hS', hg, hx⟩
-  rintro ⟨r5, m5⟩ x a5 - ⟨hS5, hg5, hx⟩
+    obtain ⟨x, a', hrun, hS', hg, hx, hA5⟩ := closeW_ok n dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs
+      (hS4.lt64 hbb) hbb hdl (hf4 hA3)
+    exact ⟨x, a', hrun, hS', hg, hx, hA5⟩
+  rintro ⟨r5, m5⟩ x a5 - ⟨hS5, hg5, hx, hA5⟩
   rw [motK5_some]
-  exact RSim.pure_some ⟨hS5, hg13.trans (hg4.trans hg5), rfl, by simpa [decW0E] using hx⟩
+  exact RSim.pure_some ⟨⟨hS5, hg13.trans (hg4.trans hg5), rfl, by simpa [decW0E] using hx⟩, hA5⟩
 
 /-- **`class_gen_motive_ty` refines `ClassGen.motiveTy`** (through the stubs of `class_gen_major`,
 `fvar_type_ds` and `close_telescope`'s `abstract1_fast`). -/
 @[refines ConRon.Arena.ClassGen.motiveTy]
 theorem classGenMotiveTy_refines (p : Prog) (hp : MtProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c d : Word) (G : ClassGen)
-    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) :
+    (hS : StageR dn vis fe s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_motive_ty" [g, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀ ∧
       KP dn vis fe s₀.mem decOE (r, s'.mem) (AM.st (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀)
-        (AM.res (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀); ⊤⦄ :=
+        (AM.res (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (classGenMotiveTy_spec p hp n s₀ g c d) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (motW_sim dn vis fe n _ a₀ g c d G hS hG).am hw⟩
+    let h := (motW_sim dn vis fe n _ a₀ g c d G hS hG hA).am hw
+    ⟨hl, h.1, h.2.1, h.2.2⟩
 
 end L.Ind

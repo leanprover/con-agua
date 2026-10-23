@@ -45,7 +45,7 @@ def sK2 (mdom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
     if r2.headD 0 >>> 28 ≠ 3 then some ([0, 0], m2)
     else if eViewW m2 (r2.headD 0) = [] then none
     else sK3 n p vis ((eViewW m2 (r2.headD 0)).tail.headD 0)
-      ((eViewW m2 (r2.headD 0)).tail.tail.headD 0) (stubM "get_app_args_f" m2 [CWF, mdom])
+      ((eViewW m2 (r2.headD 0)).tail.tail.headD 0) (gaaF m2 [CWF, mdom])
 
 def sK1 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -92,7 +92,7 @@ theorem sK2_nil (h : ¬ r2.headD 0 >>> 28 ≠ 3) (h2 : eViewW m2 (r2.headD 0) = 
     sK2 n p vis mdom (some (r2, m2)) = none := by rw [sK2, if_neg h, if_pos h2]
 theorem sK2_ok (h : ¬ r2.headD 0 >>> 28 ≠ 3) (h2 : eViewW m2 (r2.headD 0) ≠ []) :
     sK2 n p vis mdom (some (r2, m2)) = sK3 n p vis ((eViewW m2 (r2.headD 0)).tail.headD 0)
-      ((eViewW m2 (r2.headD 0)).tail.tail.headD 0) (stubM "get_app_args_f" m2 [CWF, mdom]) := by
+      ((eViewW m2 (r2.headD 0)).tail.tail.headD 0) (gaaF m2 [CWF, mdom]) := by
   rw [sK2, if_neg h, if_neg h2]
 theorem sK3_some : sK3 n p vis iName us (some (r3, m3)) =
     sK4 iName us (r3.headD 0) (r3.tail.headD 0) (npcW n m3 p vis iName) := rfl
@@ -163,7 +163,7 @@ theorem classReadSlotMotive_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         piBinders_spec' p hP.a hP.c hP.v hP.sc hP.pb n, gafF_spec p hP.ad n,
-        stubM_spec p "get_app_args_f" n, eView_spec p hP.v n,
+        gaaF_spec p hP.ad n, eView_spec p hP.v n,
         classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
         rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2] <;>
       finish (gen := 20) [rdW_eq]

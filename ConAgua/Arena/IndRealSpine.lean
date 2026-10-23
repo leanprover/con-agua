@@ -8,6 +8,7 @@ import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.IndPartsSpec2
+import ConAgua.Arena.IndRealFvt
 
 /-!
 # The spine adapters' stub contracts discharged (lane `indproofs4`, helper `spine`)
@@ -25,8 +26,8 @@ adapter specs are restated here.
 * `mk_app_n_f` copies the `IW` slice to the stack top (`iw_to_spn`, `i2sW_ok`), runs `mk_app_n`
   (`mkAppNFromW_ok` under `ArenaD`) and puts the top back. The room check `len(SPN) - top ≥ cnt`
   bounds the copy without a bound on `|SPN|` (which `StageR` does not carry).
-* `get_app_args_f` is not here: `getAppArgs_refines'` (`WhnfSpineArgs.lean`) assumes
-  `|SPN| < 2^63`, which `StageR` does not carry.
+* `get_app_args_f`, `fvar_type_d`, `fvar_type_ds` are in `IndRealFvt.lean` (helper `fvt`); their
+  program bundles are fields of `AdF`.
 -/
 
 set_option experimental.vcgen true
@@ -275,24 +276,6 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
       apply hoth
       intro he; subst he; omega
 
-/-- The stage relation across a writer above array 136 and `CTL[129]` that leaves the pool alone
-(`IndPos2SpecB`'s `StageR.frame_hi`, which sits above this file). -/
-theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 137 ≤ b) (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hA2 : IW ∉ A) (hC2 : (200 : Word) ∉ C) :
-    StageR dn vis fe m' a ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA2 (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun h => by have := hA _ h; simp [EREC] at this)
-    (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 hC2
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.2.1 129 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨CheckR.frame_hi hA hC hf hS.1, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.2.2.1 CTL]; exact hS.2
-  · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
-    · simp only [iwTop, h200]; exact Nat.le_refl _
-    · simp only [erTop, h129]; exact Nat.le_refl _
-
 /-- The adapter `mk_app_n_f(f, off, cnt)` over its callees' runs. -/
 def mknAdW (p : Prog) (n : Nat) (m : Mem) (f off cnt : Word) : Option (List Word × Mem) :=
   if m.len64 SPN < rdW (m.arr64 CTL) 136 then none else
@@ -339,23 +322,6 @@ theorem mknF_frame {m m' : Mem} {args r : List Word} (h : mknF m args = some (r,
     MemFrame [SPN, AREC, ASLOT, ADER] [136, 4, 5] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame mknProg_closed (by decide) (run_of_callW hc)).1
-
-/-- A decoded `IW` handle slice, word by word. -/
-theorem decHL_word {m : Mem} {o l : Word} {xs : List EIdx} (h : decHL m o.toNat l.toNat = some xs)
-    (hsz : (m.arr64 IW).size < 2 ^ 64) (i : Nat) (hi : i < l.toNat) :
-    ∃ w, rdW (m.arr64 IW) (o + i.toUInt64) = w ∧ w.toNat < 2 ^ 32 ∧
-      xs[i]? = some (decI w) := by
-  have hl : xs.length = l.toNat := decHL_length m h
-  have hb : o.toNat + l.toNat ≤ (m.arr64 IW).size := hslice?_bound _ _ _ _ h (by omega)
-  have hg := mapM_opt_get (fun j => hd? (iwA m) (o.toNat + j)) (List.range l.toNat) xs h i
-    (by simpa using hi)
-  have hiw : iwH m (o.toNat + i) = some (xs[i]'(by omega)) := by simpa [iwH] using hg
-  obtain ⟨w, h1, h2, h3⟩ := iwH_rdW hiw (by omega)
-  have ho : UInt64.ofNat (o.toNat + i) = o + i.toUInt64 := by
-    apply UInt64.toNat_inj.mp
-    simp [UInt64.toNat_add, Nat.toUInt64]
-  rw [ho] at h1
-  exact ⟨w, h1, h2, by rw [List.getElem?_eq_getElem (by omega), h3]⟩
 
 /-- **`mk_app_n_f`'s model refines `mkAppN`** (replaces `IndStubs.mkAppN_spec`): the slice copied
 to the stack top, `mk_app_n` (lane `whnf`'s `mkAppNFromW_ok` under `ArenaD`), the top put back;
@@ -456,6 +422,9 @@ structure AdF (p : Prog) : Prop where
   gaf : GafF p
   pir : PirF p
   mkn : MknF p
+  gaa : GaaF p
+  ftd : FtdF p
+  ftds : FtdsF p
 
 theorem gafF_spec (p : Prog) (hp : AdF p) (n : Nat) (s₀ : St) (args : List Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "get_app_fn_f" args
@@ -471,5 +440,20 @@ theorem mknF_spec (p : Prog) (hp : AdF p) (n : Nat) (s₀ : St) (args : List Wor
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "mk_app_n_f" args
     ⦃fun r s' => LocEq s' s₀ ∧ mknF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   mknF_spec0 p hp.mkn n s₀ args
+
+theorem gaaF_spec (p : Prog) (hp : AdF p) (n : Nat) (s₀ : St) (args : List Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "get_app_args_f" args
+    ⦃fun r s' => LocEq s' s₀ ∧ gaaF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
+  gaaF_spec0 p hp.gaa n s₀ args
+
+theorem ftdF_spec (p : Prog) (hp : AdF p) (n : Nat) (s₀ : St) (args : List Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_type_d" args
+    ⦃fun r s' => LocEq s' s₀ ∧ ftdF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
+  ftdF_spec0 p hp.ftd n s₀ args
+
+theorem ftdsF_spec (p : Prog) (hp : AdF p) (n : Nat) (s₀ : St) (args : List Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_type_ds" args
+    ⦃fun r s' => LocEq s' s₀ ∧ ftdsF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
+  ftdsF_spec0 p hp.ftds n s₀ args
 
 end L.Ind
