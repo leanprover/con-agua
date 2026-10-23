@@ -55,7 +55,7 @@ environment, the core's memos, and the variant records. -/
 @[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
 theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOpPinSet}
     (hG : DefnProgT p pins) (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p)
-    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
+    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {i : Word}
     {r : List Word} {ds : Array IDeclaration} {cv : IConstantVal} {v : EIdx}
     {hh : ConLeche.ReducibilityHint} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
@@ -63,7 +63,7 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .defnDecl cv v hh) (hfold : FoldOK V env fe a)
     (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) :
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hCr : L.Stubs.CrOK m) :
     ∃ fe' a', (checkDecl V pins fe (.defnDecl cv v hh)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ PinSetsR m' pins := by
   have hfr : ∀ {k : Nat} {f : FnName} {args : List Word} {mx my : Mem} {rx : List Word},
@@ -185,6 +185,8 @@ theorem cdfW_okT {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatO
   obtain ⟨a5, hrun5, hS5, hC5, -, hg5, hPS5, -⟩ := hG.div dn hdn vis w fe2 env env2 wn c.name n hn'
     m4 m5 a4 r5 hwnl h5 hS4 hC4 hok3.envWF (hstepOK2.mono hx4) hPS4 hPD4
     (ConRon.Bridge.denoteN_ext hnm3 hx4)
+    (hkp.call (im_mem _ rfl) h4 (hkp.call (im_mem _ rfl) h3 (hkp.call (im_mem _ rfl) h2
+      (hkp.call (im_mem _ rfl) h1 hCr))))
   refine ⟨fe2, a5, ?_, by simpa using hS5, hC5.mem.memos,
     hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hPS5⟩
   rw [checkDecl_defn_eq, ← hfe2]

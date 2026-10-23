@@ -139,6 +139,7 @@ def ArmSpecT (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
     ConRon.Bridge.StateOK a₀ → LoopR pins dn s₀.mem a₀ vis fe pend ds →
     StageT dn vis fe s₀.mem a₀ → (∃ env, FoldOK V env fe a₀) →
     (∃ x, Frontend.denoteDecl a₀.store d = some x) → (∃ pinsP, PinsDenote a₀.store pins pinsP) →
+    L.Stubs.CrOK s₀.mem →
   ⦃fun s => s = s₀⦄ invoke p (exec p n) f [i, vis]
   ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe d) a₀ ∧
     LoopR pins dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
@@ -148,7 +149,7 @@ def ArmSpecT (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
 theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg p)
     (hp : p.lookup "check_decl_thm" = some checkDeclThm) (cv : IConstantVal) (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_thm" (.thmDecl cv v) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS _ _ _
+  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS _ _ _ _
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdt_specW p hp hV.rcp n s₀ i vis)
@@ -165,10 +166,10 @@ theorem checkDeclThm_loopT (hA : ArmProg p) (hV : ValProg p) (hq : KnotStageProg
 
 /-- **`check_decl_opaque` under `StageT`** (helper `loopt2-crp`'s `cdoW_okT`). -/
 theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
-    (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hdn : DnInj dn)
+    (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hkp : CrKeep p) (hdn : DnInj dn)
     (hp : p.lookup "check_decl_opaque" = some checkDeclOpaque) (cv : IConstantVal) (v : EIdx) :
     ArmSpecT pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _
+  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden _ hCr
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -186,7 +187,7 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
   · cases hx
   rename_i c e hc he
   obtain ⟨fe', a', hrun', hS', hcm, hg'⟩ :=
-    cdoW_okT (pins := pins) hV hC hq hcl hlc hdn hn hW hS hR.decls hi hd' hF hc he
+    cdoW_okT (pins := pins) hV hC hq hcl hlc hkp hdn hn hW hS hR.decls hi hd' hF hc he hCr
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_, hcm⟩
   rw [hst, hres]
@@ -196,9 +197,9 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
 structural-`Nat` gate and the `Nat.div`-family pin gate under `StageC`). -/
 theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p pins)
     (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hin : StepIn p indFns)
-    (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint) :
+    (hkp : CrKeep p) (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint) :
     ArmSpecT pins dn ds p "check_decl_defn" (.defnDecl cv v hh) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden hPD
+  intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden hPD hCr
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdf_specW p hG.df n s₀ i vis)
@@ -215,7 +216,7 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
   · cases hx
   rename_i c e hc he
   obtain ⟨fe', a', hrun', hS', hcm, hg', -⟩ :=
-    cdfW_okT hA hV hG hq hcl hlc hdn hn hW hS hR.pinsets hR.decls hi hd' hF hc he hPD
+    cdfW_okT hA hV hG hq hcl hlc hkp hdn hn hW hS hR.pinsets hR.decls hi hd' hF hc he hPD hCr
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_, hcm⟩
   rw [hst, hres]
@@ -225,7 +226,7 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
 theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hdn : DnInj dn) (hQd : QuotDn dn) (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_axiom" (.axiomDecl cv) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ _ _
+  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ _ _ _
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -247,7 +248,7 @@ theorem checkDeclQuot_loopT (hA : ArmProg p) (hQ : QuotProg p) (hRp : RecProg p)
     (hcl : LeafClosed p) (hdn : DnInj dn) (hQd : QuotDn dn) (k : ConLeche.QuotKind)
     (cv : IConstantVal) :
     ArmSpecT pins dn ds p "check_decl_quot" (.quotDecl k cv) := by
-  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ hden _
+  intro n hn s₀ a₀ vis fe pend i hi hd hok hR hS _ hden _ _
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdq_specW p hQ.cdq hRp n s₀ i vis)
@@ -310,7 +311,7 @@ theorem arm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option C
   obtain ⟨rfl, rfl⟩ := h
   have hIM' := callW_indMemos hcl hcrf hf h1 hIM
   obtain ⟨s', hs', -, hok, hL, hc⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (hA n hn ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR hS hF hden hPD) h1
+    (hA n hn ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr) h1
   subst hs'
   exact ⟨hok, by simpa using hL, hc, hIM'⟩
 
@@ -417,8 +418,8 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     exact arm_callWT (checkDeclDefn_loopT pins dn ds hP.arm hP.val
         ⟨hP.df, hP.natSub, hP.natGate, hP.natCert, hP.natText,
           divGateSpecC hP.dm hq hcl hP.dgClosed (substC0_of hP.natSub.toNatSubProg)
-            (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) pins⟩
-        hq hcl hlc hin hdn cv v hh)
+            (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) ⟨hicl, hcrf⟩ pins⟩
+        hq hcl hlc hin ⟨hicl, hcrf⟩ hdn cv v hh)
       hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | thmDecl cv v =>
     rw [hdecl.1] at h
@@ -430,7 +431,7 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     rw [hdecl.1] at h
     simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
       show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at h
-    exact arm_callWT (checkDeclOpaque_loopT pins dn ds hP.arm hP.val hP.crp hq hcl hlc hdn hP.op cv v)
+    exact arm_callWT (checkDeclOpaque_loopT pins dn ds hP.arm hP.val hP.crp hq hcl hlc ⟨hicl, hcrf⟩ hdn hP.op cv v)
       hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
   | quotDecl k cv =>
     rw [hdecl.1] at h

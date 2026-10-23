@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.IndStubsT
+import ConAgua.Arena.CrOKFrame
 
 /-!
 # `check_value_group` under `StageT` (lane `loopt2`)
