@@ -455,17 +455,17 @@ def rpgK5 : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r5, m5) => some ([r5.headD 0], m5)
 
 /-- After `all_level_params_defined`. -/
-def rpgK4 (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def rpgK4 (cl : CallM) (n : Nat) (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) =>
-    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (stubM "consts_resolve_ffast" m4 [vis, e])
+    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (cl n "consts_resolve_ffast" [vis, e] m4)
 
 /-- After `has_fvar_fast`. -/
 def rpgK3 (cl : CallM) (n : Nat) (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 ≠ 0 then some ([0], m3)
-    else rpgK4 vis e (cl n "all_level_params_defined" [0, 0, e] m3)
+    else rpgK4 cl n vis e (cl n "all_level_params_defined" [0, 0, e] m3)
 
 /-- After `loose_bvars_bounded_fast`. -/
 def rpgK2 (cl : CallM) (n : Nat) (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -480,7 +480,8 @@ def rpgK1 (cl : CallM) (n : Nat) (vis : Word) : Option (List Word × Mem) → Op
   | some (r1, m1) =>
     rpgK2 cl n vis (r1.headD 0) (lbbF m1 [4000000000, 0, r1.headD 0])
 
-/-- **The model of `reduce_pin_guard(vis, c)`**, `all_level_params_defined` read through `cl`
+/-- **The model of `reduce_pin_guard(vis, c)`**, `all_level_params_defined` and
+`consts_resolve_ffast` read through `cl`
 (`stubCall` for the `StageR` proof, `realCall p` under `StageT`). -/
 def rpgW (cl : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
@@ -497,9 +498,9 @@ theorem rpgK2_some : rpgK2 cl n vis e (some (r2, m2)) =
     else rpgK3 cl n vis e (hffF m2 [4000000000, e]) := rfl
 theorem rpgK3_some : rpgK3 cl n vis e (some (r3, m3)) =
     if r3.headD 0 ≠ 0 then some ([0], m3)
-    else rpgK4 vis e (cl n "all_level_params_defined" [0, 0, e] m3) := rfl
-theorem rpgK4_some : rpgK4 vis e (some (r4, m4)) =
-    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (stubM "consts_resolve_ffast" m4 [vis, e]) :=
+    else rpgK4 cl n vis e (cl n "all_level_params_defined" [0, 0, e] m3) := rfl
+theorem rpgK4_some : rpgK4 cl n vis e (some (r4, m4)) =
+    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (cl n "consts_resolve_ffast" [vis, e] m4) :=
   rfl
 theorem rpgK5_some : rpgK5 (some (r5, m5)) = some ([r5.headD 0], m5) := rfl
 end arms
@@ -508,7 +509,7 @@ grind_pattern [ind_grind] rpgW_step => rpgW p cl (n + 1) m vis c
 grind_pattern [ind_grind] rpgK1_some => rpgK1 cl n vis (some (r1, m1))
 grind_pattern [ind_grind] rpgK2_some => rpgK2 cl n vis e (some (r2, m2))
 grind_pattern [ind_grind] rpgK3_some => rpgK3 cl n vis e (some (r3, m3))
-grind_pattern [ind_grind] rpgK4_some => rpgK4 vis e (some (r4, m4))
+grind_pattern [ind_grind] rpgK4_some => rpgK4 cl n vis e (some (r4, m4))
 grind_pattern [ind_grind] rpgK5_some => rpgK5 (some (r5, m5))
 
 theorem rpg_specW (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL)
@@ -524,7 +525,7 @@ theorem rpg_specW (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "reduce_pin_guard
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         callW_spec p n "reduce_decl_pin", lbbF_spec p hb n,
         hffF_spec p hf n, hcl n "all_level_params_defined",
-        stubM_spec p "consts_resolve_ffast" n] <;>
+        hcl n "consts_resolve_ffast"] <;>
       finish (gen := 20)
 
 end rpg
@@ -627,7 +628,7 @@ theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL
   rw [if_neg hb4] at h
   have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
   -- `consts_resolve_ffast`
-  cases h5 : stubM "consts_resolve_ffast" m4 [vis, e] with
+  cases h5 : stubCall n "consts_resolve_ffast" [vis, e] m4 with
   | none => rw [h5] at h; simp [rpgK5] at h
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5

@@ -1,5 +1,8 @@
 import ConAgua.Arena.IndInstallSpec42
 import ConAgua.Arena.IndT.Block
+import ConAgua.Arena.IndT.ArmMemos
+import ConAgua.Arena.IndRealAbsT
+import ConAgua.Arena.IndRealMemoCrT
 
 /-!
 # `check_ind_decl` under `StageC` (lane `indstaget`)
@@ -48,10 +51,19 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (h : cidW p n m vis o l w = some (r, m')) (hT : StageT dn vis fe m a)
     (hfold : ConRon.Bridge.FoldOK V env fe a)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
-    (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : CidMemos m) :
+    (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
+    (hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
+    {fsH fsM fsMc : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
+    (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
+    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc) :
     ∃ fe' a', (checkDecl V pins fe (.indDecl block w.toNat)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+      StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' ∧ IndMemos m' := by
   have hS := hT.stage
+  have hIM := hM
+  have hCM : CoreMemos m := hT.twin.memos
+  replace hM : CidMemos m := ⟨hIM.stage.pos, hIM.stage.ma,
+    hT.absOK hIM.i1 (L.Stubs.CrOK.crMemo hIM.cr), hIM.stage.ta⟩
   have hok : ConRon.Bridge.StateOK a := hfold.check.state
   obtain ⟨blockP, hbP⟩ : ∃ blockP, Frontend.denoteCIList a.store block = some blockP := by
     obtain ⟨x, hx⟩ := hden
@@ -73,6 +85,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   rw [c1, cidK1_some] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, hx⟩ := basisPinHit_ok P.bph n dn vis fe m m1 a o l block r1 hS hok hblk c1
   have hM1 := hM.call hclC (hfC _ (by simp [cidFrameCallees])) c1
+  obtain ⟨hIM1, hCM1⟩ := armMemos_call hclC (hfC _ (by simp [cidFrameCallees])) c1 hIM hCM
   obtain ⟨ok1, x1, hc1, hp1, -⟩ := ConRon.Bridge.basisPinHit_run hok hbP hrun1
   have k1 := (ConRon.Bridge.Inductives.PStep.of_caches ok1 x1 hc1 hp1).toCore hfold.check
   have hblk1 := hblk.grow (decEBlk_mono _ _ _) hg1
@@ -94,7 +107,8 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     subst hs2
     have hrun2 := AM.run_of_ok _ _ hok2
     rw [hkind] at hrun2 hS2
-    refine ⟨_, _, ?_, by simpa using hS2, hg1.trans hg2⟩
+    obtain ⟨hIM2, hCM2⟩ := armMemos_call hclC hfB c2 hIM1 hCM1
+    refine ⟨_, _, ?_, by simpa using hS2, hCM2, hg1.trans hg2, hIM2⟩
     simp only [checkDecl, StateT.run_bind, hrun1, exc_ok_bind']
     exact hrun2
   | none =>
@@ -135,6 +149,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4
   have hM4 := hM1.call hclC (hfC _ (by simp [cidFrameCallees])) c4
+  obtain ⟨hIM4, -⟩ := armMemos_call hclC (hfC _ (by simp [cidFrameCallees])) c4 hIM1 hCM1
   by_cases z4 : r4.headD 0 = 0
   · rw [if_pos z4] at h; cases h
   rw [if_neg z4] at h
@@ -176,15 +191,18 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     by_cases h5 : 5 ≤ n
     · exact ⟨n - 5, by omega, by rw [show n - 5 + 5 = n by omega]; exact c5⟩
     · exact ⟨0, by omega, callW_mono c5 (by omega)⟩
-  obtain ⟨s5, hs5, -, hok5, hS5, hg5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+  have hmc5 := mcMR.ofClosed hclMc hfMc c5b hIM4.stage.mc
+  obtain ⟨s5, hs5, -, hok5, hS5, hg5, -, hA5, hR5, hma5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlock_refinesC hkp hfold.envWF hV hkc P.cb hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT j hj
       ⟨s4.mem, Locals.init []⟩ a4 hC4 hq4 hsl4.1 (shapeCV_of_decB hq4)
       (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4 hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh
       (ConRon.Bridge.denoteFEnv_mono x04 hfold.denote) hshP
-      (ConRon.Bridge.denoteCIList_mono x04 _ _ hbP)) c5b
+      (ConRon.Bridge.denoteCIList_mono x04 _ _ hbP) hfRc hclH hfH hclM hfM) c5b
   subst hs5
   have hrun5 := AM.run_of_ok _ _ hok5
-  refine ⟨_, _, ?_, by simpa using hS5, hg1.trans (hg4.trans hg5)⟩
+  have hCM5 : CoreMemos s5.mem := ⟨hA5.2.2.2.1, hA5.1, hA5.2.2.2.2.1⟩
+  refine ⟨_, _, ?_, by simpa using hS5, hCM5, hg1.trans (hg4.trans hg5),
+    ⟨⟨hR5.pos, hma5, hmc5, hR5.ta⟩, hA5.2.1, hA5.2.2.1.crOK⟩⟩
   simp only [checkDecl, StateT.run_bind, hrun1, exc_ok_bind', hrun3, Bool.not_true, Bool.false_eq_true, ite_false, hrun4]
   exact hrun5
 
