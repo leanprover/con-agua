@@ -247,7 +247,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   obtain ⟨s8, hs8, -, x8, a8, hrun8, ⟨hS8, hg8, hBP8, hP8, hA8, hrb8, hlp8⟩, env₁, hC8, qP, i8, hcoh8,
       hden8, henv₁, hqP, hTw, henv₂, hMs⟩ :=
     triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (checkBlockPass_refinesC hkp henv hP.pass hcl hfs n hn _ _ hC7 hq7 hsrc7 hcx7 (b := raw)
+    (checkBlockPass_refinesC hkp henv hV hkc hP.pass hcl hfs n hn _ _ hC7 hq7 hsrc7 hcx7 (b := raw)
       (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP) c8
   simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8 hC8
   subst hs8

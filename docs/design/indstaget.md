@@ -164,3 +164,17 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
 * Census (worktree, after merging master f38d6f00): phase 8 141 proven / 76 sorry; all 59
   targets of `docs/stagec-targets.txt` free of the four core contracts. `checkBlockPass`/
   `checkBlock` still depend on `L.Ind.checkConstantVal_spec` (not one of the four).
+
+## Landing 9: the real constant check in the block chain; the arm under `StageC`
+
+* `check_constant_val` in the `StageC` chain is the program's own call:
+  - `ctsW`'s and `ctorW`'s calls now go through `cR` (IndSumSpec3: `ctsK1‥4` take `cR k`; IndSumSpec12: `ctorW`'s first call is `cR (n + 2)`).
+  - `IndT/Sum2`, `IndT/Sum4` and `IndT/Install3` use `checkConstantVal_refinesT` (`StageT`) with con-ron's `checkConstantVal_bridge` for `CheckOK` (`StageC.of_T`); the walk memos are kept by `AbsKeep p "check_constant_val"`.
+  - Every `StageC` theorem above them takes `hV : ValProg p` and `hkc` (threaded through Install3/4/7, Sum2/4/5, Pass, Block).
+  - The `StageR` proofs read `stubCall`, which unfolds to the old stub.
+* `IndT/CheckIndDecl`: `cidW_okC` (`refines_part` of `checkDecl`, replacing `cidW_ok`'s tag).
+  - Premises: `cidW_ok`'s, with `StageT` + `FoldOK V env fe a` in place of `StageR` + `StateOK`, and the record's denotation (`∃ x, denoteDecl …`) in place of `AllVis`, plus `n ≤ 2^62`.
+  - `check_block` runs at the call's own fuel `j + 5`, lifted by `callW_mono` only when the fuel is below 5 (from indproofs4's suggestion).
+  - `CheckOK` before `check_block` comes from con-ron's `basisPinHit_run` (`PStep.of_caches`), `indParamsOk_spec` and `blockParts?_spec`.
+  - The post is `cidW_ok`'s.
+* Census (worktree): phase 8 is 141 proven / 76 sorry. `checkConstantVal_spec` is no longer a sorry source of the block chain's targets.
