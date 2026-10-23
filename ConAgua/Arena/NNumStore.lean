@@ -111,7 +111,7 @@ def nnfindLoop : Stmt := lblk (t, pre, u, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nnumFind : FunDecl := lfn (t, pre, u, h) locals (n, j, d, w, b) {
-  n := ⟪SN0⟫ << NNSLOT.u64[len(NNSLOT.u64) - 1];
+  n := NNSLOT.u64[len(NNSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nnfindLoop⟫;
@@ -147,7 +147,7 @@ theorem nnfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (nnfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `num` table. -/
-def nSlotsNN (m : Mem) : Word := SN0 <<< rdW (m.arr64 NNSLOT) (m.len64 NNSLOT - 1)
+def nSlotsNN (m : Mem) : Word := rdW (m.arr64 NNSLOT) (m.len64 NNSLOT - 1) + SN0
 
 include hp in
 theorem nnumFind_spec (n : Nat) (s₀ : St) (t pre u h : Word) :
@@ -192,7 +192,7 @@ def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k, gn, gk, gt, gi, gc, g
   NNREC.u64[k + 1] := u;
   NNSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[38 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nnumGS 6⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG nnumGS 6⟫ };
   return c
 }
 

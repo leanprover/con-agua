@@ -13,12 +13,12 @@ import ConAgua.Census.Attr
 con-ron's cons tables are `HashMap2`s (`ron/hashmap2.rs`): `insert_at` writes the new entry and,
 past the load threshold, `try_resize` doubles the slot count and rehashes every live entry into
 the new table. L's cons tables (`StoreLib.lean`: slot `j` of tier `t` at `sa[2 j + t]`, `0` free,
-`B t + i + 1` node `i`) do the same. A tier has `SN0 << G` slots, where `G`, the **growth
-exponent**, is the slot array's last word (`0` in a fresh array); `X_find` reads it, and `X_push`
-runs the growth block when the tier it appended to passes half load.
+`B t + i + 1` node `i`) do the same. A tier has `SN0 + G` slots, where `G` is the slot array's last
+word (`0` in a fresh array); `X_find` reads it, and `X_push` runs the growth block when the tier it
+appended to passes half load.
 
-The growth block (`growBlkG`, in `X_push`) doubles the slot count (`G += 1`, aborting when the new table and the last word do not
-fit the slot array), zeroes the old table's slot words (`[0, 2 n)`; the words above them were never
+The growth block (`growBlkG`, in `X_push`) doubles the slot count, capped at the largest multiple of
+8 that leaves the slot array's last word clear (aborting when that is no growth), zeroes the old table's slot words (`[0, 2 n)`; the words above them were never
 written), and re-registers every node of both tiers: the hash of node `i` (the schema's `hash`
 block), its home slot, the first free slot from there (linear probing, as `X_find`), `B t + i + 1`.
 The records are dense and are the source: the old slots are not read, so the table grows in place.
@@ -77,7 +77,7 @@ theorem slotV_used (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (
   intro h0
   exact hv (by grind)
 
-/-- The initial slot count of a tier (`G = 0`). -/
+/-- The initial slot count of a tier (last word `0`). -/
 def SN0 : Word := 8
 
 /-- A growable cons table: slot array `sa`, record array `ra` (`w` words per node and tier, tiers
@@ -129,9 +129,9 @@ def shiftS (o : Nat) : Stmt → Stmt
 
 /-! ## The growth block -/
 
-/-- Zero the slot words `[k, n)`, eight at a time (`n` a multiple of 8). -/
+/-- Zero the slot words `[k, c)`, eight at a time (`c` a multiple of 8). -/
 def zeroLoopB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  while k < n {
+  while k < c {
     S.sa.u64[k] := 0; S.sa.u64[k + 1] := 0; S.sa.u64[k + 2] := 0; S.sa.u64[k + 3] := 0;
     S.sa.u64[k + 4] := 0; S.sa.u64[k + 5] := 0; S.sa.u64[k + 6] := 0; S.sa.u64[k + 7] := 0;
     k += 8
@@ -170,13 +170,17 @@ def tierLoopB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
   }
 }
 
-/-- The growth: double the slot count (the exponent in the slot array's last word), zero the old
-table, register every node again. Variables `0‥8` (`n, k, t, i, c, h, j, b, d`). -/
+/-- The growth: double the slot count `n = SN0 + G` (`G` the slot array's last word), but to at
+most the largest multiple of 8 that leaves the last word clear, and abort if that is no growth;
+zero the old table, register every node again. Variables `0‥8` (`n, k, t, i, c, h, j, b, d`). -/
 def growB (S : GrowSch) : Stmt := lblk (n, k, t, i, c, h, j, b, d) {
-  k := S.sa.u64[len(S.sa.u64) - 1];
-  n := (⟪SN0⟫ << k) * 2;
-  if (len(S.sa.u64) - 1) >> 1 < n { abort };
-  S.sa.u64[len(S.sa.u64) - 1] := k + 1;
+  k := S.sa.u64[len(S.sa.u64) - 1] + ⟪SN0⟫;
+  n := k * 2;
+  c := ((len(S.sa.u64) - 1) >> 4) << 3;
+  if c < n { n := c };
+  if n <= k { abort };
+  S.sa.u64[len(S.sa.u64) - 1] := n - ⟪SN0⟫;
+  c := k * 2;
   k := 0;
   ⟪zeroLoopB S⟫;
   t := 0;

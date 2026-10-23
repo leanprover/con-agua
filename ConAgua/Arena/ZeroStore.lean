@@ -109,7 +109,7 @@ def zfindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def zeroFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << ZSLOT.u64[len(ZSLOT.u64) - 1];
+  n := ZSLOT.u64[len(ZSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪zfindLoop⟫;
@@ -145,7 +145,7 @@ theorem zfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (zfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `zero` table. -/
-def nSlotsZ (m : Mem) : Word := SN0 <<< rdW (m.arr64 ZSLOT) (m.len64 ZSLOT - 1)
+def nSlotsZ (m : Mem) : Word := rdW (m.arr64 ZSLOT) (m.len64 ZSLOT - 1) + SN0
 
 include hp in
 theorem zeroFind_spec (n : Nat) (s₀ : St) (t h : Word) :
@@ -187,7 +187,7 @@ def zeroPush : FunDecl := lfn (t, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb, 
   ZREC.u64[c * 2 + t] := 0;
   ZSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[8 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG zeroGS 3⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG zeroGS 3⟫ };
   return c
 }
 

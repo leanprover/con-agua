@@ -328,7 +328,7 @@ def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := ⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1];
+  n := SLOT.u64[len(SLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoop⟫;
@@ -368,7 +368,7 @@ theorem findLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (findLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier. -/
-def nSlots (m : Mem) : Word := SN0 <<< rdW (m.arr64 SLOT) (m.len64 SLOT - 1)
+def nSlots (m : Mem) : Word := rdW (m.arr64 SLOT) (m.len64 SLOT - 1) + SN0
 
 include hpe hpm hp in
 theorem litFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
@@ -421,7 +421,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc, g
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
   return c
 }
 
@@ -676,7 +676,7 @@ def findLoopStr : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
-  n := ⟪SN0⟫ << SLOT.u64[len(SLOT.u64) - 1];
+  n := SLOT.u64[len(SLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoopStr⟫;
@@ -754,7 +754,7 @@ def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k, gn, gk, gt, gi, gc
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG litGS 7⟫ };
   return c
 }
 

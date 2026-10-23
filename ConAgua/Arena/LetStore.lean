@@ -113,7 +113,7 @@ def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w, b) {
-  n := ⟪SN0⟫ << LESLOT.u64[len(LESLOT.u64) - 1];
+  n := LESLOT.u64[len(LESLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lefindLoop⟫;
@@ -149,7 +149,7 @@ theorem lefindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (lefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `letE` table. -/
-def nSlotsLe (m : Mem) : Word := SN0 <<< rdW (m.arr64 LESLOT) (m.len64 LESLOT - 1)
+def nSlotsLe (m : Mem) : Word := rdW (m.arr64 LESLOT) (m.len64 LESLOT - 1) + SN0
 
 include hp in
 theorem letFind_spec (n : Nat) (s₀ : St) (t ty val body h : Word) :
@@ -198,7 +198,7 @@ def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k, gn, gk, gt, gi,
   LEREC.u64[k + 2] := body;
   LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG letGS 7⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG letGS 7⟫ };
   return c
 }
 

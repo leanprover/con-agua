@@ -108,7 +108,7 @@ def nafindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nanonFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << NASLOT.u64[len(NASLOT.u64) - 1];
+  n := NASLOT.u64[len(NASLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nafindLoop⟫;
@@ -144,7 +144,7 @@ theorem nafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (nafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `anonymous` table. -/
-def nSlotsNA (m : Mem) : Word := SN0 <<< rdW (m.arr64 NASLOT) (m.len64 NASLOT - 1)
+def nSlotsNA (m : Mem) : Word := rdW (m.arr64 NASLOT) (m.len64 NASLOT - 1) + SN0
 
 include hp in
 theorem nanonFind_spec (n : Nat) (s₀ : St) (t h : Word) :
@@ -186,7 +186,7 @@ def nanonPush : FunDecl := lfn (t, j) locals (c, gn, gk, gt, gi, gc, gh, gj, gb,
   NAREC.u64[c * 2 + t] := 0;
   NASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[34 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG nanonGS 3⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG nanonGS 3⟫ };
   return c
 }
 

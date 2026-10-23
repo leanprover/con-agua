@@ -117,7 +117,7 @@ def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
-  nn := ⟪SN0⟫ << PJSLOT.u64[len(PJSLOT.u64) - 1];
+  nn := PJSLOT.u64[len(PJSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), nn);
   ⟪pjfindLoop⟫;
@@ -153,7 +153,7 @@ theorem pjfindLoop_step_spec (nn : Nat) (s₀ : St) :
   Triple.step_exec (pjfindLoop_spec p (nn + 1) s₀)
 
 /-- The slot count of a tier of the `proj` table. -/
-def nSlotsPj (m : Mem) : Word := SN0 <<< rdW (m.arr64 PJSLOT) (m.len64 PJSLOT - 1)
+def nSlotsPj (m : Mem) : Word := rdW (m.arr64 PJSLOT) (m.len64 PJSLOT - 1) + SN0
 
 include hp in
 theorem projFind_spec (nn : Nat) (s₀ : St) (t n u e h : Word) :
@@ -202,7 +202,7 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k, gn, gk, gt, gi, gc, 
   PJREC.u64[k + 2] := e;
   PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG projGS 7⟫ };
   return c
 }
 

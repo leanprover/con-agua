@@ -119,7 +119,7 @@ def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << FASLOT.u64[len(FASLOT.u64) - 1];
+  n := FASLOT.u64[len(FASLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fafindLoop⟫;
@@ -155,7 +155,7 @@ theorem fafindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `forallE` table. -/
-def nSlotsFa (m : Mem) : Word := SN0 <<< rdW (m.arr64 FASLOT) (m.len64 FASLOT - 1)
+def nSlotsFa (m : Mem) : Word := rdW (m.arr64 FASLOT) (m.len64 FASLOT - 1) + SN0
 
 include hp in
 theorem forallFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
@@ -200,7 +200,7 @@ def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k, gn, gk, gt, gi, g
   FAREC.u64[k + 1] := body;
   FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[30 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG forallGS 6⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG forallGS 6⟫ };
   return c
 }
 

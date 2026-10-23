@@ -28,8 +28,12 @@ namespace L.Arena
 /-- The growth exponent of slot array `sa`: its last word. -/
 def gexpW (sa : ArrId) (m : Mem) : Word := rdW (m.arr64 sa) (m.len64 sa - 1)
 
+/-- The largest slot count the slot array `sa` can take: the largest multiple of 8 whose two tiers
+leave the last word clear. -/
+def gcapW (sa : ArrId) (m : Mem) : Word := ((m.len64 sa - 1) >>> 4) <<< 3
+
 /-- The slot count of a tier of the table with slot array `sa`. -/
-def gnW (sa : ArrId) (m : Mem) : Word := SN0 <<< gexpW sa m
+def gnW (sa : ArrId) (m : Mem) : Word := gexpW sa m + SN0
 
 /-- The probe loop: from slot `j` of tier `t` after `d` steps, the first free slot (`none`: the
 abort after `n` steps). -/
@@ -92,9 +96,10 @@ decreasing_by
 
 /-- **The growth**: the memory after `growB`, `none` where it aborts. -/
 def growM (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m : Mem) : Option Mem :=
-  if (m.len64 sa - 1) >>> 1 < gnW sa m * 2 then none
-  else gtiersW sa ca H (gnW sa m * 2) 0
-    (gzeroW sa (gnW sa m * 2) 0 (m.set64 sa (m.len64 sa - 1) (gexpW sa m + 1)))
+  if (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) ≤ gnW sa m then none
+  else gtiersW sa ca H (if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) 0
+    (gzeroW sa (gnW sa m * 2) 0 (m.set64 sa (m.len64 sa - 1)
+      ((if gcapW sa m < gnW sa m * 2 then gcapW sa m else gnW sa m * 2) - SN0)))
 
 /-- **A push's tail**: from the memory `m` after the push's writes, grow if node count `c + 1`
 passes half the slot count of the memory `m₀` before them (the push reads the exponent first). -/
@@ -157,12 +162,12 @@ theorem gtiersW_fr (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word)
 
 /-- `growIf_grow` with the test as the push computes it (the exponent read before its writes). -/
 theorem growIf_grow' (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
-    (h : SN0 <<< rdW (m₀.arr64 sa) (m₀.len64 sa - 1) < (c + 1) * 2) :
+    (h : rdW (m₀.arr64 sa) (m₀.len64 sa - 1) + SN0 < (c + 1) * 2) :
     growIf sa ca H m₀ m c = growM sa ca H m :=
   growIf_grow sa ca H m₀ m c h
 
 theorem growIf_keep' (sa : ArrId) (ca : Word) (H : Mem → Word → Word → Word) (m₀ m : Mem) (c : Word)
-    (h : ¬ SN0 <<< rdW (m₀.arr64 sa) (m₀.len64 sa - 1) < (c + 1) * 2) :
+    (h : ¬ rdW (m₀.arr64 sa) (m₀.len64 sa - 1) + SN0 < (c + 1) * 2) :
     growIf sa ca H m₀ m c = some m :=
   growIf_keep sa ca H m₀ m c h
 

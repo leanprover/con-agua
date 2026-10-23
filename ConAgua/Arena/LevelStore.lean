@@ -107,7 +107,7 @@ def sfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def succFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << SSLOT.u64[len(SSLOT.u64) - 1];
+  n := SSLOT.u64[len(SSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪sfindLoop⟫;
@@ -143,7 +143,7 @@ theorem sfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (sfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `succ` table. -/
-def nSlotsS (m : Mem) : Word := SN0 <<< rdW (m.arr64 SSLOT) (m.len64 SSLOT - 1)
+def nSlotsS (m : Mem) : Word := rdW (m.arr64 SSLOT) (m.len64 SSLOT - 1) + SN0
 
 include hp in
 theorem succFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -190,7 +190,7 @@ def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix, gn, gk, gt, gi,
   SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
   SHP.u64[c * 2 + t] := x;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG succGS 8⟫ };
   return c
 }
 

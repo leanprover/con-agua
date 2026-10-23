@@ -407,7 +407,7 @@ theorem storeR_init {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Sch
   have hG : GrowR S m := by
     have hg : gexpW S.sa m = 0 := hz _ _
     have hn : (nSl S m).toNat = 8 := by simp only [nSl, gnW, hg]; decide
-    refine ⟨by rw [hg]; decide, by omega, hsa.2, fun k _ _ => hz _ _⟩
+    refine ⟨by rw [hg]; decide, by omega, by omega, hsa.2, fun k _ _ => hz _ _⟩
   exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1, hG⟩
 
 /-- The walk memos in the all-zero memory are empty. -/

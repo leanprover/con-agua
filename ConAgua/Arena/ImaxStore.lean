@@ -110,7 +110,7 @@ def imfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def imaxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
-  n := ⟪SN0⟫ << ISLOT.u64[len(ISLOT.u64) - 1];
+  n := ISLOT.u64[len(ISLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪imfindLoop⟫;
@@ -146,7 +146,7 @@ theorem imfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (imfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `imax` table. -/
-def nSlotsI (m : Mem) : Word := SN0 <<< rdW (m.arr64 ISLOT) (m.len64 ISLOT - 1)
+def nSlotsI (m : Mem) : Word := rdW (m.arr64 ISLOT) (m.len64 ISLOT - 1) + SN0
 
 include hp in
 theorem imaxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
@@ -198,7 +198,7 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y, gn, gk
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
   IHP.u64[c * 2 + t] := x;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG imaxGS 11⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG imaxGS 11⟫ };
   return c
 }
 

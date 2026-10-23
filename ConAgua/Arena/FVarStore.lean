@@ -116,7 +116,7 @@ def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << FVSLOT.u64[len(FVSLOT.u64) - 1];
+  n := FVSLOT.u64[len(FVSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fvfindLoop⟫;
@@ -152,7 +152,7 @@ theorem fvfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (fvfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `fvar` table. -/
-def nSlotsFv (m : Mem) : Word := SN0 <<< rdW (m.arr64 FVSLOT) (m.len64 FVSLOT - 1)
+def nSlotsFv (m : Mem) : Word := rdW (m.arr64 FVSLOT) (m.len64 FVSLOT - 1) + SN0
 
 include hp in
 theorem fvarFind_spec (n : Nat) (s₀ : St) (t u ty h : Word) :
@@ -202,7 +202,7 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix, gn, gk, 
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
   FVLP.u64[c * 2 + t] := x;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG fvarGS 10⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG fvarGS 10⟫ };
   return c
 }
 

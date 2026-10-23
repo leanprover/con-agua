@@ -106,7 +106,7 @@ def bfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
 
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def bvarFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
-  n := ⟪SN0⟫ << BSLOT.u64[len(BSLOT.u64) - 1];
+  n := BSLOT.u64[len(BSLOT.u64) - 1] + ⟪SN0⟫;
   b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪bfindLoop⟫;
@@ -142,7 +142,7 @@ theorem bfindLoop_step_spec (n : Nat) (s₀ : St) :
   Triple.step_exec (bfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `bvar` table. -/
-def nSlotsB (m : Mem) : Word := SN0 <<< rdW (m.arr64 BSLOT) (m.len64 BSLOT - 1)
+def nSlotsB (m : Mem) : Word := rdW (m.arr64 BSLOT) (m.len64 BSLOT - 1) + SN0
 
 include hp in
 theorem bvarFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
@@ -184,7 +184,7 @@ def bvarPush : FunDecl := lfn (t, u, j) locals (c, gn, gk, gt, gi, gc, gh, gj, g
   BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[22 + (t & 1)] := c + 1;
-  if (⟪SN0⟫ << gk) < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
+  if gk + ⟪SN0⟫ < (c + 1) * 2 { ⟪growBlkG bvarGS 4⟫ };
   return c
 }
 
