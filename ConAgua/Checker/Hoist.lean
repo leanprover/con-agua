@@ -67,35 +67,36 @@ def hoistInsL : FunDecl := lfn (n, k) locals (fd, j, e0, z) {
   return 0
 }
 
-/-- `hoist_names(k, x)`: the names of the record at `DECL[x ..]` declared at position `k`
-(`IDeclaration.names`: an inductive block's members' names). -/
+/-- `hoist_names_go(k, o, c, q)`: the names of the block members `DIND[o + q ‥ o + c)`, declared at
+position `k`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:120-127 ConRon.Arena.Frontend.insertNames
-def hoistNamesL : FunDecl := lfn (k, x) locals (o, c, q, z) {
+def hoistNamesGoL : FunDecl := lfn (k, o, c, q) locals (z, r) {
+  if c <= q { return 0 };
+  z := call hoist_ins(DIND.u64[DIND.u64[o + q] + 1], k);
+  r := call hoist_names_go(k, o, c, q + 1);
+  return r
+}
+
+/-- `hoist_names(k, x)`: the names of the record at `DECL[x ..]` (`IDeclaration.names`: an
+inductive block's members' names), declared at position `k`. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:120-127 ConRon.Arena.Frontend.insertNames
+def hoistNamesL : FunDecl := lfn (k, x) locals (z) {
   if DECL.u64[x] != 6 {
     z := call hoist_ins(DECL.u64[x + 1], k);
     return 0
   };
-  o := DECL.u64[x + 2];
-  c := DECL.u64[x + 3];
-  q := 0;
-  while q < c {
-    z := call hoist_ins(DIND.u64[DIND.u64[o + q] + 1], k);
-    q += 1
-  };
+  z := call hoist_names_go(k, DECL.u64[x + 2], DECL.u64[x + 3], 0);
   return 0
 }
 
-/-- `hoist_name_index(ord, c)`: the name index of the `c` positions of `ord`. -/
+/-- `hoist_index_go(ord, c, k)`: positions `k ‥ c` into the name index. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:129-138 ConRon.Arena.Frontend.nameIndex
 @[l_impl ConRon.Arena.Frontend.nameIndex]
-def hoistNameIndexL : FunDecl := lfn (ord, c) locals (k, z) {
-  z := call hn_clear();
-  k := 0;
-  while k < c {
-    z := call hoist_names(k, 1 + 8 * IW.u64[ord + k]);
-    k += 1
-  };
-  return 0
+def hoistIndexGoL : FunDecl := lfn (ord, c, k) locals (z, r) {
+  if c <= k { return 0 };
+  z := call hoist_names(k, 1 + 8 * IW.u64[ord + k]);
+  r := call hoist_index_go(ord, c, k + 1);
+  return r
 }
 
 /-- `hoist_ix(n)`: `(1, m)` when the name index maps `n` to `m`, `(0, 0)` when it has no entry. -/
@@ -183,16 +184,39 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
   abort
 }
 
+/-- `hoist_rules_go(k, i, tg, ws, sp, ro, rc, r)`: the right-hand sides of the recursor rules
+`r ‥ rc` at `DIND[ro ..]` (eleven words each, the right-hand side at `+ 8`). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:72-82 ConRon.Arena.Frontend.usedConstsRules
+@[l_impl ConRon.Arena.Frontend.usedConstsRules]
+def hoistRulesGoL : FunDecl := lfn (k, i, tg, ws, sp, ro, rc, r) locals (x) {
+  if rc <= r { return sp };
+  sp := call hoist_walk(DIND.u64[ro + 11 * r + 8], i, k, tg, ws, sp, 4000000000);
+  x := call hoist_rules_go(k, i, tg, ws, sp, ro, rc, r + 1);
+  return x
+}
+
+/-- `hoist_block_go(k, i, tg, ws, sp, o, c, q)`: the block members `DIND[o + q ‥ o + c)`: each
+member's type, a recursor's rules. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:84-95 ConRon.Arena.Frontend.usedConstsBlock
+@[l_impl ConRon.Arena.Frontend.usedConstsBlock]
+def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
+  if c <= q { return sp };
+  p := DIND.u64[o + q];
+  sp := call hoist_walk(DIND.u64[p + 4], i, k, tg, ws, sp, 4000000000);
+  if DIND.u64[p] == 5 {
+    sp := call hoist_rules_go(k, i, tg, ws, sp, DIND.u64[p + 7], DIND.u64[p + 8], 0)
+  };
+  x := call hoist_block_go(k, i, tg, ws, sp, o, c, q + 1);
+  return x
+}
+
 /-- `hoist_deps_of(k, i, x, tg, ws, sp)`: the constants of the record at `DECL[x ..]` (position
-`k`), one visited set: the type and the value; an inductive block's members' types and its
-recursors' rule right-hand sides; a quotient none. The new stack size. -/
+`k`), one visited set: the type and the value; an inductive block's members; a quotient none. The
+new stack size. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:155-197 ConRon.Arena.Frontend.hoistClosure.pushDeps
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:97-106 ConRon.Arena.Frontend.IDeclaration.usedConsts
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:84-95 ConRon.Arena.Frontend.usedConstsBlock
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:72-82 ConRon.Arena.Frontend.usedConstsRules
-@[l_impl ConRon.Arena.Frontend.hoistClosure.pushDeps ConRon.Arena.Frontend.IDeclaration.usedConsts
-  ConRon.Arena.Frontend.usedConstsBlock ConRon.Arena.Frontend.usedConstsRules]
-def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd, o, c, q, p, ro, rc, r) {
+@[l_impl ConRon.Arena.Frontend.hoistClosure.pushDeps ConRon.Arena.Frontend.IDeclaration.usedConsts]
+def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd) {
   z := call hs_clear();
   kd := DECL.u64[x];
   if kd == 1 {
@@ -205,158 +229,179 @@ def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd, o, c, q, 
     return sp
   };
   if kd != 6 { return sp };
-  o := DECL.u64[x + 2];
-  c := DECL.u64[x + 3];
-  q := 0;
-  while q < c {
-    p := DIND.u64[o + q];
-    sp := call hoist_walk(DIND.u64[p + 4], i, k, tg, ws, sp, 4000000000);
-    if DIND.u64[p] == 5 {
-      ro := DIND.u64[p + 7];
-      rc := DIND.u64[p + 8];
-      r := 0;
-      while r < rc {
-        sp := call hoist_walk(DIND.u64[ro + 11 * r + 8], i, k, tg, ws, sp, 4000000000);
-        r += 1
-      }
-    };
-    q += 1
-  };
+  sp := call hoist_block_go(k, i, tg, ws, sp, DECL.u64[x + 2], DECL.u64[x + 3], 0);
   return sp
 }
 
-/-- `hoist_closure(i, j, ord, tg, ws)`: position `j` (after `i`) and every position it reaches
-through unmarked positions after `i` get target `i`. -/
+/-- `hoist_close_go(i, ord, tg, ws, sp)`: the worklist `ws[0 ‥ sp)`: pop a position, push the
+positions its constants reach (`hoist_deps_of`), until empty. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:155-197 ConRon.Arena.Frontend.hoistClosure
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:140-145 ConRon.Arena.Frontend.hoistDone
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:147-153 ConRon.Arena.Frontend.hoistDropDone
 @[l_impl ConRon.Arena.Frontend.hoistClosure ConRon.Arena.Frontend.hoistDone
   ConRon.Arena.Frontend.hoistDropDone]
-def hoistClosureL : FunDecl := lfn (i, j, ord, tg, ws) locals (sp, k) {
+def hoistCloseGoL : FunDecl := lfn (i, ord, tg, ws, sp) locals (k, r) {
+  if sp == 0 { return 0 };
+  k := IW.u64[ws + sp - 1];
+  sp := call hoist_deps_of(k, i, 1 + 8 * IW.u64[ord + k], tg, ws, sp - 1);
+  r := call hoist_close_go(i, ord, tg, ws, sp);
+  return r
+}
+
+/-- `hoist_closure(i, j, ord, tg, ws)`: position `j` (after `i`) and every position it reaches
+through unmarked positions after `i` get target `i`. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:155-197 ConRon.Arena.Frontend.hoistClosure
+def hoistClosureL : FunDecl := lfn (i, j, ord, tg, ws) locals (r) {
   if IW.u64[tg + j] != 0 { return 0 };
   IW.u64[tg + j] := i + 1;
   IW.u64[ws] := j;
-  sp := 1;
-  while sp != 0 {
-    sp -= 1;
-    k := IW.u64[ws + sp];
-    sp := call hoist_deps_of(k, i, 1 + 8 * IW.u64[ord + k], tg, ws, sp)
-  };
-  return 0
+  r := call hoist_close_go(i, ord, tg, ws, 1);
+  return r
 }
 
 /-! ## The targets -/
 
-/-- `hoist_deps(i, o, l, ord, tg, ws)`: the grounds `IW[o ‥ o + l)` of the operation at `i`:
-each first declared after `i` pulls its closure ahead of `i`. -/
+/-- `hoist_deps(i, o, l, q, ord, tg, ws)`: the grounds `IW[o + q ‥ o + l)` of the operation at
+`i`: each first declared after `i` pulls its closure ahead of `i`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:283-311 ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps
 @[l_impl ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps]
-def hoistDepsL : FunDecl := lfn (i, o, l, ord, tg, ws) locals (q, f, m, z) {
-  q := 0;
-  while q < l {
-    (f, m) := call hoist_ix(IW.u64[o + q]);
-    if f != 0 && i < m { z := call hoist_closure(i, m, ord, tg, ws) };
-    q += 1
-  };
-  return 0
+def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (f, m, z, r) {
+  if l <= q { return 0 };
+  (f, m) := call hoist_ix(IW.u64[o + q]);
+  if f != 0 && i < m { z := call hoist_closure(i, m, ord, tg, ws) };
+  r := call hoist_deps(i, o, l, q + 1, ord, tg, ws);
+  return r
 }
 
-/-- `hoist_targets(ord, c, tg, ws)`: for every pinned `Nat` operation record (a definition named
-in `natDivModNames`/`natOpNames`), its grounds' closures. -/
+/-- `hoist_targets_go(ord, c, tg, ws, i)`: positions `i ‥ c`: for every pinned `Nat` operation
+record (a definition named in `natDivModNames`/`natOpNames`), its grounds' closures. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:283-311 ConRon.Arena.Frontend.hoistTargetsGo
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:313-318 ConRon.Arena.Frontend.hoistTargets
-@[l_impl ConRon.Arena.Frontend.hoistTargetsGo ConRon.Arena.Frontend.hoistTargets]
-def hoistTargetsL : FunDecl := lfn (ord, c, tg, ws) locals (i, x, n, op, o, l, z) {
-  i := 0;
-  while i < c {
-    x := 1 + 8 * IW.u64[ord + i];
-    if DECL.u64[x] == 2 {
-      n := DECL.u64[x + 1];
-      op := call nat_op_record(n);
-      if op != 0 {
-        (o, l) := call nat_op_deps(n);
-        z := call hoist_deps(i, o, l, ord, tg, ws)
-      }
-    };
-    i += 1
+@[l_impl ConRon.Arena.Frontend.hoistTargetsGo]
+def hoistTargetsGoL : FunDecl := lfn (ord, c, tg, ws, i) locals (x, n, op, o, l, z, r) {
+  if c <= i { return 0 };
+  x := 1 + 8 * IW.u64[ord + i];
+  if DECL.u64[x] == 2 {
+    n := DECL.u64[x + 1];
+    op := call nat_op_record(n);
+    if op != 0 {
+      (o, l) := call nat_op_deps(n);
+      z := call hoist_deps(i, o, l, 0, ord, tg, ws)
+    }
   };
-  return 0
+  r := call hoist_targets_go(ord, c, tg, ws, i + 1);
+  return r
 }
 
 /-! ## The reorder -/
 
-/-- `hoist_apply(ord, c, tg)`: the positions sorted by `hoistKey` (for each position `p`: the
-positions moved to `p`, in order, then `p` unless it moved), as a new `IW` slice of record
-indices. -/
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:359-364 ConRon.Arena.Frontend.applyHoist
--- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:350-357 ConRon.Arena.Frontend.reorder
+/-- `hoist_zero(o, c, k)`: `IW[o + k ‥ o + c) := 0`. -/
+-- con-ron: none — L scratch-array plumbing (the twin's maps and arrays start empty)
+def hoistZeroL : FunDecl := lfn (o, c, k) locals (r) {
+  if c <= k { return 0 };
+  IW.u64[o + k] := 0;
+  r := call hoist_zero(o, c, k + 1);
+  return r
+}
+
+/-- `hoist_any(tg, c, k)`: `1` if some position `k ‥ c` has a target (the map is not empty). -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:366-373 ConRon.Arena.Frontend.hoistNatOpGround
+def hoistAnyL : FunDecl := lfn (tg, c, k) locals (r) {
+  if c <= k { return 0 };
+  if IW.u64[tg + k] != 0 { return 1 };
+  r := call hoist_any(tg, c, k + 1);
+  return r
+}
+
+/-- `hoist_bucket(tg, c, hd, tl, nx, k)`: positions `k ‥ c` with a target `t` appended, in order,
+to the list of target `t` (`hd[t]`, `tl[t]`: its first and last position `+ 1`; `nx[k]`: the next
+one `+ 1`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:322-330 ConRon.Arena.Frontend.hoistKey
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:332-338 ConRon.Arena.Frontend.hoistLt
-@[l_impl ConRon.Arena.Frontend.applyHoist ConRon.Arena.Frontend.reorder ConRon.Arena.Frontend.hoistKey
-  ConRon.Arena.Frontend.hoistLt]
-def hoistApplyL : FunDecl := lfn (ord, c, tg) locals (hd, tl, nx, k, t, out, q, p, e) {
+@[l_impl ConRon.Arena.Frontend.hoistKey ConRon.Arena.Frontend.hoistLt]
+def hoistBucketL : FunDecl := lfn (tg, c, hd, tl, nx, k) locals (t, r) {
+  if c <= k { return 0 };
+  t := IW.u64[tg + k];
+  if t != 0 {
+    if IW.u64[hd + t - 1] == 0 {
+      IW.u64[hd + t - 1] := k + 1
+    } else {
+      IW.u64[nx + IW.u64[tl + t - 1] - 1] := k + 1
+    };
+    IW.u64[tl + t - 1] := k + 1
+  };
+  r := call hoist_bucket(tg, c, hd, tl, nx, k + 1);
+  return r
+}
+
+/-- `hoist_chain(ord, nx, out, q, e)`: the list from `e` (a position `+ 1`, `0` at its end): the
+records to `out[q ..]`; the new `q`. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:350-357 ConRon.Arena.Frontend.reorder
+def hoistChainL : FunDecl := lfn (ord, nx, out, q, e) locals (r) {
+  if e == 0 { return q };
+  IW.u64[out + q] := IW.u64[ord + e - 1];
+  r := call hoist_chain(ord, nx, out, q + 1, IW.u64[nx + e - 1]);
+  return r
+}
+
+/-- `hoist_emit(ord, c, tg, hd, nx, out, q, p)`: positions `p ‥ c` of the sorted order: the
+positions moved to `p`, then `p` itself unless it moved. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:350-357 ConRon.Arena.Frontend.reorder
+@[l_impl ConRon.Arena.Frontend.reorder]
+def hoistEmitL : FunDecl := lfn (ord, c, tg, hd, nx, out, q, p) locals (r) {
+  if c <= p { return 0 };
+  q := call hoist_chain(ord, nx, out, q, IW.u64[hd + p]);
+  if IW.u64[tg + p] == 0 {
+    IW.u64[out + q] := IW.u64[ord + p];
+    q += 1
+  };
+  r := call hoist_emit(ord, c, tg, hd, nx, out, q, p + 1);
+  return r
+}
+
+/-- `hoist_apply(ord, c, tg)`: the positions sorted by `hoistKey` (the key `(t, 0, k)` of a
+position moved to `t`, `(k, 1, k)` of one that stays; distinct keys), as a new `IW` slice of
+record indices. -/
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:359-364 ConRon.Arena.Frontend.applyHoist
+@[l_impl ConRon.Arena.Frontend.applyHoist]
+def hoistApplyL : FunDecl := lfn (ord, c, tg) locals (hd, tl, nx, out, z) {
   hd := call iw_alloc(c);
   tl := call iw_alloc(c);
   nx := call iw_alloc(c);
-  k := 0;
-  while k < c { IW.u64[hd + k] := 0; IW.u64[nx + k] := 0; k += 1 };
-  k := 0;
-  while k < c {
-    t := IW.u64[tg + k];
-    if t != 0 {
-      if IW.u64[hd + t - 1] == 0 {
-        IW.u64[hd + t - 1] := k + 1
-      } else {
-        IW.u64[nx + IW.u64[tl + t - 1] - 1] := k + 1
-      };
-      IW.u64[tl + t - 1] := k + 1
-    };
-    k += 1
-  };
   out := call iw_alloc(c);
-  q := 0;
-  p := 0;
-  while p < c {
-    e := IW.u64[hd + p];
-    while e != 0 {
-      IW.u64[out + q] := IW.u64[ord + e - 1];
-      q += 1;
-      e := IW.u64[nx + e - 1]
-    };
-    if IW.u64[tg + p] == 0 {
-      IW.u64[out + q] := IW.u64[ord + p];
-      q += 1
-    };
-    p += 1
-  };
+  z := call hoist_zero(hd, c, 0);
+  z := call hoist_zero(nx, c, 0);
+  z := call hoist_bucket(tg, c, hd, tl, nx, 0);
+  z := call hoist_emit(ord, c, tg, hd, nx, out, 0, 0);
   return out
 }
 
 /-- `hoist_nat_op_ground(ord, c)`: the order after the hoist (`ord` itself when nothing moves). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:366-373 ConRon.Arena.Frontend.hoistNatOpGround
-@[l_impl ConRon.Arena.Frontend.hoistNatOpGround]
-def hoistNatOpGroundL : FunDecl := lfn (ord, c) locals (z, tg, ws, k, any, r) {
-  z := call hoist_name_index(ord, c);
+-- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:313-318 ConRon.Arena.Frontend.hoistTargets
+@[l_impl ConRon.Arena.Frontend.hoistNatOpGround ConRon.Arena.Frontend.hoistTargets]
+def hoistNatOpGroundL : FunDecl := lfn (ord, c) locals (z, tg, ws, a, r) {
+  z := call hn_clear();
+  z := call hoist_index_go(ord, c, 0);
   tg := call iw_alloc(c);
   ws := call iw_alloc(c);
-  k := 0;
-  while k < c { IW.u64[tg + k] := 0; k += 1 };
-  z := call hoist_targets(ord, c, tg, ws);
-  any := 0;
-  k := 0;
-  while k < c { if IW.u64[tg + k] != 0 { any := 1 }; k += 1 };
-  if any == 0 { return ord };
+  z := call hoist_zero(tg, c, 0);
+  z := call hoist_targets_go(ord, c, tg, ws, 0);
+  a := call hoist_any(tg, c, 0);
+  if a == 0 { return ord };
   r := call hoist_apply(ord, c, tg);
   return r
 }
 
 /-- The hoist's functions (`preludeProg` takes them). -/
 def hoistProg : Prog :=
-  [("hoist_ins", hoistInsL), ("hoist_names", hoistNamesL), ("hoist_name_index", hoistNameIndexL),
-   ("hoist_ix", hoistIxL), ("hoist_note", hoistNoteL), ("hoist_walk", hoistWalkL),
-   ("hoist_deps_of", hoistDepsOfL), ("hoist_closure", hoistClosureL), ("hoist_deps", hoistDepsL),
-   ("hoist_targets", hoistTargetsL), ("hoist_apply", hoistApplyL),
-   ("hoist_nat_op_ground", hoistNatOpGroundL),
+  [("hoist_ins", hoistInsL), ("hoist_names_go", hoistNamesGoL), ("hoist_names", hoistNamesL),
+   ("hoist_index_go", hoistIndexGoL), ("hoist_ix", hoistIxL), ("hoist_note", hoistNoteL),
+   ("hoist_walk", hoistWalkL), ("hoist_rules_go", hoistRulesGoL), ("hoist_block_go", hoistBlockGoL),
+   ("hoist_deps_of", hoistDepsOfL), ("hoist_close_go", hoistCloseGoL),
+   ("hoist_closure", hoistClosureL), ("hoist_deps", hoistDepsL),
+   ("hoist_targets_go", hoistTargetsGoL), ("hoist_zero", hoistZeroL), ("hoist_any", hoistAnyL),
+   ("hoist_bucket", hoistBucketL), ("hoist_chain", hoistChainL), ("hoist_emit", hoistEmitL),
+   ("hoist_apply", hoistApplyL), ("hoist_nat_op_ground", hoistNatOpGroundL),
    ("hs_find", memoFindG hsSch), ("hs_put", memoPutG hsSch), ("hs_clear", memoClearG hsSch),
    ("hn_find", memoFindG hnSch), ("hn_put", memoPutG hnSch), ("hn_clear", memoClearG hnSch)]
 
