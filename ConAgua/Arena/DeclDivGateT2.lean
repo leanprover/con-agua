@@ -1,0 +1,298 @@
+import ConAgua.Arena.DeclDivGateT1
+
+/-!
+# The `Nat.div`-family pin gate under `StageC`, part 2: the attempt (lane `loopt3`, `loopt3-div`)
+
+`check_div_mod_certs` (`cmC`) and `check_div_mod_pin_at` (`cpaC`) from the real program
+(`cmW p (realCall p)`, `cpaW p (realCall p)`): the core calls `infer_type_core`, `is_def_eq_core`
+by the knot's `StageT` sims (`KnotStageProg`) and `CheckOK` after from con-ron's `KnotSpec`
+(`StageC.of_T`), the leaves as in part 1. The twin side follows con-ron's
+`checkDivModCerts_bridge_aux` and `checkDivModPinAt_bridge`.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.deprecated false
+set_option linter.unusedSimpArgs false
+
+namespace L.Ind
+
+open L.Arena
+open L.Rom (PinSetsR PinSetR)
+open ConRon.Bridge (CheckOK StepOK PinsDenote PinSetDenote CoreStep CoreSpec)
+
+local notation "V" => ConLeche.CheckMode.verified
+
+/-- **`infer_type_core`'s twin side** (`defeq_check`'s): con-ron's `KnotSpec.infer` at `checkFuel`. -/
+theorem infer_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} {i t : EIdx}
+    {x : ConLeche.Expr} (henv : ConLeche.EnvWF env) (hck : CheckOK V env fe a)
+    (hi : denoteE a.store i = some x) (hws : ConLeche.Expr.WScoped d x)
+    (hrun : (inferTypeCore V fe checkFuel d i).run a = .ok (t, a')) :
+    CheckOK V env fe a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧
+      ConRon.Bridge.Core.SimE (ConLeche.inferTypeCore V env) d x a'.store t :=
+  ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun
+    (((CoreSpec.of_core rfl).knot env fe henv).infer a d i x hck hi hws)
+
+section certs
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+  {p : Prog}
+
+/-- **`check_div_mod_certs` under `StageC`** (`cm_ref`'s at the real program; con-ron's
+`checkDivModCerts_bridge_aux`). -/
+theorem cmC (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+    (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe) (henv : ConLeche.EnvWF env)
+    (c annVal : Word) (hc : H c) (hann : H annVal) {nm : ConLeche.Name} {v : ConLeche.Expr}
+    (hwsv : ConLeche.Expr.WScoped 0 v) :
+    ∀ (ss : List (List EIdx × EIdx)) (xs : List (List ConLeche.Expr × ConLeche.Expr))
+      (proofs : List EIdx) (ps : List ConLeche.Expr) (so sl po pl : Word) (k : Nat), k ≤ 2 ^ 62 →
+      ∀ (m : Mem) (a : AState) (res : List Word) (m' : Mem), StageC dn vis fe env m a →
+      StmtL m so.toNat sl.toNat ss → decHL m po.toNat pl.toNat = some proofs →
+      po.toNat + pl.toNat ≤ iwTop m → denoteN a.store.ns (decI c) = some nm →
+      denoteE a.store (decE annVal) = some v → ConRon.Bridge.StmtsDenote a.store ss xs →
+      Frontend.denoteEList a.store proofs = some ps →
+      (∀ q ∈ xs, (∀ h ∈ q.1, ConLeche.Expr.WScoped 2 h) ∧ ConLeche.Expr.WScoped 2 q.2) →
+      cmW p (realCall p) k m vis c annVal so sl po pl = some (res, m') →
+      ∃ x a', (checkDivModCerts V fe (decI c) (decE annVal) ss proofs).run a = .ok (x, a') ∧
+        StageC dn vis fe env m' a' ∧ CoreStep V env fe a a' ∧ IWGrow m m' ∧ decW0B m' res x := by
+  have hws4 : ConLeche.Expr.WScoped 4 v := ConLeche.Expr.WScoped.mono (by omega) hwsv
+  have hws2 : ConLeche.Expr.WScoped 2 v := ConLeche.Expr.WScoped.mono (by omega) hwsv
+  intro ss
+  induction ss with
+  | nil =>
+    intro xs proofs ps so sl po pl k hk m a res m' hC hs hd hb hn hv hsd hpr hwq hw
+    have hsl : sl = 0 := UInt64.toNat_inj.mp (by have := hs.2.1; simpa using this)
+    unfold cmW at hw
+    cases proofs with
+    | nil =>
+      have hpl : pl = 0 := UInt64.toNat_inj.mp (by have := decHL_length m hd; simp at this ⊢; omega)
+      simp only [hsl, hpl, and_self, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
+    | cons pf pfs =>
+      have hpl : pl ≠ 0 := fun e => by
+        have := decHL_length m hd; rw [e] at this; simp at this
+      rw [if_neg (fun h => hpl h.2), if_pos (Or.inl hsl)] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      exact ⟨false, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
+  | cons st ss ih =>
+    rcases st with ⟨hy, eqq⟩
+    intro xs proofs ps so sl po pl k hk m a res m' hC hs hd hb hn hv hsd hpr hwq hw
+    have hS := hC.stage
+    cases xs with
+    | nil => exact hsd.elim
+    | cons xq xrest =>
+    obtain ⟨hx, ex⟩ := xq
+    obtain ⟨hsd1, hsd2, hsd3⟩ := hsd
+    obtain ⟨hwh, hwe⟩ := hwq (hx, ex) (by simp)
+    unfold cmW at hw
+    obtain ⟨hsl0, q, hq0, hstm, hrest⟩ := StmtL.cons hS.2 hs
+    cases proofs with
+    | nil =>
+      have hpl : pl = 0 := UInt64.toNat_inj.mp (by have := decHL_length m hd; simp at this ⊢; omega)
+      simp only [hpl, and_true, or_true, hsl0, false_and, if_false, if_true, Option.some.injEq,
+        Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      exact ⟨false, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
+    | cons pf pfs =>
+    obtain ⟨px, pxs, hpx, hpxs, rfl⟩ := ConRon.Bridge.denoteEList_cons hpr
+    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    subst hpf
+    obtain ⟨ho, hl, e, hr3, hbd, hdh, he, hst2⟩ := hstm
+    obtain ⟨hp3, h0, h1, h2⟩ := hr3
+    have hst2' : eqq = decE e := hst2
+    subst hst2'
+    rw [if_neg (fun h => hsl0 h.1), if_neg (by rintro (h | h); exact hsl0 h; exact hpl0 h)] at hw
+    have hsz := hS.2.2.2.1
+    have hI1 := hS.2.1
+    have r0 : rdW (m.arr64 IW) so = q := hq0
+    have rq1 : rdW (m.arr64 IW) q = ho := rdW_iw_of h0 rfl
+    have rq2 : rdW (m.arr64 IW) (q + 1) = hl := rdW_iw_of h1 (word_add_one (by omega))
+    have rq3 : rdW (m.arr64 IW) (q + 2) = e := rdW_iw_of h2 (word_add_two (by omega))
+    have hlpos : 0 < pl.toNat :=
+      Nat.pos_of_ne_zero (fun e' => hpl0 (UInt64.toNat_inj.mp (by simpa using e')))
+    have hpo1 : (po + 1).toNat = po.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hpl1 : (pl - 1).toNat = pl.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    have hpo : po.toNat < iwTop m := by omega
+    have hq3 : q.toNat + 3 ≤ iwTop m := hp3
+    have hq0' : q.toNat < iwTop m := by omega
+    have hq1 : (q + 1).toNat < iwTop m := by rw [word_add_one (by omega)]; omega
+    have hq2 : (q + 2).toNat < iwTop m := by rw [word_add_two (by omega)]; omega
+    rw [r0, rq1, rq2, rq3] at hw
+    -- the guard
+    cases h1' : callW p k "div_mod_cert_guard" [vis, c, annVal, ho, hl, e, rdW (m.arr64 IW) po] m with
+    | none => rw [h1'] at hw; simp at hw
+    | some q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1', bW_some] at hw
+    obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, hxv1⟩ :=
+      cgC hD.toDmProg7.toDmProg6.toDmProg5 hcl hs0 hsA h1' hC hc hann he hpwlt hdh hbd hn hv hsd1
+        hsd2 hpx
+    have hrun1' : (divModCertGuard fe (decI c) (decE annVal) hy (decE e)
+        (decI (rdW (m.arr64 IW) po))).run a = .ok (x1, a1) := hrun1
+    by_cases z1 : r1.headD 0 = 0
+    · rw [if_pos z1] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hx1 := decW0B_false hd1 z1
+      refine ⟨false, a1, ?_, hC1, c1, hg1, decW0B_of_false _⟩
+      simp only [checkDivModCerts, StateT.run_bind, hrun1', exc_ok_bind', hx1, Bool.false_eq_true,
+        if_false]
+      rfl
+    rw [if_neg z1] at hw
+    have hx1 := decW0B_true hd1 z1
+    have hg' : ConLeche.divModCertGuard env nm v hx ex px = true := by rw [← hxv1, hx1]
+    simp only [ConLeche.divModCertGuard, Bool.and_eq_true, Bool.not_eq_true'] at hg'
+    have hPf : (ConLeche.Expr.substConstAll nm v px).hasFvar = false := hg'.1.1.1.1.2
+    have hn1 := ConRon.Bridge.denoteN_ext hn c1.ext
+    have hv1 := ConRon.Bridge.denote_ext hv c1.ext
+    -- the substituted proof
+    rw [iw_rd_grow hg1 hpo] at hw
+    cases h2' : callW p k "subst_const_all" [c, annVal, 4000000000, rdW (m.arr64 IW) po] m1 with
+    | none => rw [h2'] at hw; simp at hw
+    | some q2 =>
+    obtain ⟨r2, m2⟩ := q2
+    rw [h2', bW_some] at hw
+    obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := hsA c annVal _ hc hann hpwlt k m1 a1 r2 m2 hC1.stage h2'
+    subst hx2
+    obtain ⟨hi2, hpd⟩ := ConRon.Bridge.substConstAll_run coreWalkFuel hC1.check.state
+      hC1.check.pins hn1 hv1 (ConRon.Bridge.denote_ext hpx c1.ext) hrun2
+    have c2 := ConRon.Bridge.CoreStep.of_istep hC1.check hi2
+    have hC2 := StageC.of_core hC1 hS2 (callW_leafFrame hcl (leaf_mem _ (by decide)) h2') c2
+    have c02 := c1.trans c2
+    have hG2 : IWGrow m m2 := hg1.trans hg2
+    -- the substituted hypotheses
+    rw [iw_rd_grow hG2 hq0', rq1, iw_rd_grow hG2 hq1, rq2] at hw
+    cases h3' : callW p k "subst_const0_list" [c, annVal, ho, hl] m2 with
+    | none => rw [h3'] at hw; simp at hw
+    | some q3 =>
+    obtain ⟨r3, m3⟩ := q3
+    rw [h3', bW_some] at hw
+    have hdh2 : decHL m2 ho.toNat hl.toNat = some hy := by rw [decHL_grow hG2 hbd]; exact hdh
+    obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := sc0List_ref hD.toDmProg7.toDmProg6.toDmProg5 hs0 c
+      annVal hc hann hy ho hl k m2 a2 r3 m3 hC2.stage hdh2 (Nat.le_trans hbd hG2.1) h3'
+    simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd3
+    obtain ⟨hi3, hhs⟩ := ConRon.Bridge.substConst0List_run hy hx hC2.check.state hC2.check.pins
+      (ConRon.Bridge.denoteN_ext hn c02.ext) (ConRon.Bridge.denote_ext hv c02.ext)
+      (ConRon.Bridge.denoteEList_ext c02.ext _ _ hsd1) hrun3
+    have c3 := ConRon.Bridge.CoreStep.of_istep hC2.check hi3
+    have hC3 := StageC.of_core hC2 hS3 (callW_leafFrame hcl (leaf_mem _ (by decide)) h3') c3
+    have c03 := c02.trans c3
+    have hG3 : IWGrow m m3 := hG2.trans hg3
+    -- the application
+    obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hf4, hw⟩ :=
+      (applied_ref (dn := dn) (vis := vis) (fe := fe) hD.toDmProg7.toDmProg6.toDmProg5 (r2.headD 0)
+        (r3.headD 0) (r3.tail.headD 0) x3).bindL hcl (leaf_mem _ (by decide))
+        ⟨hC3.stage, hl2, hd3.1, hd3.2⟩ hw
+    obtain ⟨hi4, hap0⟩ := ConRon.Bridge.divModCertApplied_run hC3.check.state hC3.check.pins
+      (ConRon.Bridge.denote_ext hpd hi3.ext) hhs hrun4
+    have c4 := ConRon.Bridge.CoreStep.of_istep hC3.check hi4
+    have hC4 := StageC.of_core hC3 hS4 hf4 c4
+    have c04 := c03.trans c4
+    have hG4 : IWGrow m m4 := hG3.trans hg4
+    have hwsA : ConLeche.Expr.WScoped 4 (ConLeche.divModCertApplied
+        (ConLeche.Expr.substConstAll nm v px) (hx.map (ConLeche.Expr.substConst0 nm v))) := by
+      refine ConRon.Bridge.divModCertApplied_wscoped hPf fun h hh => ?_
+      obtain ⟨h0, hh0, rfl⟩ := List.mem_map.mp hh
+      exact ConRon.Bridge.substConst0_wscoped hws2 _ (hwh h0 hh0)
+    -- the type
+    cases k with
+    | zero => simp [realCall, callW_zero] at hw
+    | succ k' =>
+    have hk' : k' + 1 ≤ 2 ^ 62 := hk
+    cases h5 : realCall p (k' + 1) "infer_type_core" [vis, 4, r4.headD 0] m4 with
+    | none => rw [h5] at hw; simp at hw
+    | some q5 =>
+    obtain ⟨r5, m5⟩ := q5
+    rw [h5, bW_some] at hw
+    obtain ⟨x5, a5, hrun5, hT5, hg5, hl5, hx5⟩ :=
+      hq.inferTypeCore_sim (k' + 1) hk' hC4.stageT 4 (r4.headD 0) hl4 r5 m5 h5
+    subst hx5
+    have h4w : (4 : Word).toNat = 4 := rfl
+    rw [h4w] at hrun5
+    obtain ⟨hck5, hx5', hp5, tpx, htp5, hwstp, -⟩ := infer_check henv hC4.check hap0 hwsA hrun5
+    have c5 : CoreStep V env fe a4 a5 := ⟨hck5, hx5', hp5⟩
+    have hC5 := StageC.of_T hT5 hck5
+    have c05 := c04.trans c5
+    have hG5 : IWGrow m m5 := hG4.trans hg5
+    -- the equation, substituted
+    rw [iw_rd_grow hG5 hq2, rq3] at hw
+    cases h6 : callW p (k' + 1) "subst_const0" [c, annVal, 4000000000, e] m5 with
+    | none => rw [h6] at hw; simp at hw
+    | some q6 =>
+    obtain ⟨r6, m6⟩ := q6
+    rw [h6, bW_some] at hw
+    obtain ⟨x6, a6, hrun6, hS6, hg6, hl6, hx6⟩ :=
+      hs0 c annVal e hc hann he (k' + 1) m5 a5 r6 m6 hC5.stage h6
+    subst hx6
+    obtain ⟨hi6, hrhs⟩ := ConRon.Bridge.substConst0_run coreWalkFuel hC5.check.state hC5.check.pins
+      (ConRon.Bridge.denoteN_ext hn c05.ext) (ConRon.Bridge.denote_ext hv c05.ext)
+      (ConRon.Bridge.denote_ext hsd2 c05.ext) hrun6
+    have c6 := ConRon.Bridge.CoreStep.of_istep hC5.check hi6
+    have hC6 := StageC.of_core hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) c6
+    have hG6 : IWGrow m m6 := hG5.trans hg6
+    have hwsR : ConLeche.Expr.WScoped 4 (ConLeche.Expr.substConst0 nm v ex) :=
+      ConRon.Bridge.substConst0_wscoped hws4 _ (ConLeche.Expr.WScoped.mono (by omega) hwe)
+    -- the comparison
+    cases h7 : realCall p (k' + 1) "is_def_eq_core" [vis, 4, r5.headD 0, r6.headD 0] m6 with
+    | none => rw [h7] at hw; simp at hw
+    | some q7 =>
+    obtain ⟨r7, m7⟩ := q7
+    rw [h7, bW_some] at hw
+    obtain ⟨x7, a7, hrun7, hT7, hg7, hd7⟩ :=
+      hq.isDefEqCore_sim (k' + 1) hk' hC6.stageT 4 (r5.headD 0) (r6.headD 0) hl5 hl6 r7 m7 h7
+    rw [h4w] at hrun7
+    obtain ⟨hck7, hx7', hp7, -⟩ := defeq_check henv hC6.check
+      (ConRon.Bridge.denote_ext htp5 hi6.ext) hrhs hwstp hwsR hrun7
+    have c7 : CoreStep V env fe a6 a7 := ⟨hck7, hx7', hp7⟩
+    have hC7 := StageC.of_T hT7 hck7
+    have c07 := (c05.trans c6).trans c7
+    have hG7 : IWGrow m m7 := hG6.trans hg7
+    have hrun4' : (divModCertApplied (decI (r2.headD 0)) x3).run a3 =
+        .ok (decI (r4.headD 0), a4) := hrun4
+    have hrun2' : (substConstAll (decI c) (decE annVal) coreWalkFuel
+        (decI (rdW (m.arr64 IW) po))).run a1 = .ok (decI (r2.headD 0), a2) := hrun2
+    have hrun6' : (substConst0 (decI c) (decE annVal) coreWalkFuel (decE e)).run a5 =
+        .ok (decI (r6.headD 0), a6) := hrun6
+    by_cases z7 : r7.headD 0 = 0
+    · rw [if_pos z7] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hx7 : x7 = false := by rw [← hd7]; unfold decBool; rw [z7]; rfl
+      refine ⟨false, a7, ?_, hC7, c07, hG7, decW0B_of_false _⟩
+      simp only [checkDivModCerts, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true, hrun2',
+        hrun3, hrun4', hrun5, hrun6', hrun7, hx7, Bool.false_eq_true, if_false]
+      try rfl
+    rw [if_neg z7] at hw
+    have hx7 : x7 = true := by rw [← hd7]; simpa [decBool] using z7
+    cases h8 : callW p (k' + 1) "check_div_mod_certs" [vis, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m7 with
+    | none => rw [h8] at hw; simp at hw
+    | some q8 =>
+    obtain ⟨r8, m8⟩ := q8
+    rw [h8, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hdr1 : decHL m7 (po + 1).toNat (pl - 1).toNat = some pfs := by
+      rw [decHL_grow hG7 (by rw [hpo1, hpl1]; omega)]; exact hdrest
+    have hw8 := callW_model (M := fun mq => cmW p (realCall p) k' mq vis c annVal (so + 1) (sl - 1)
+      (po + 1) (pl - 1)) (cm_specW p hD.lCheckDivModCerts (realCall p) (realCall_spec p) k' · vis c
+      annVal (so + 1) (sl - 1) (po + 1) (pl - 1)) h8
+    obtain ⟨x8, a8, hrun8, hC8, c8, hg8, hd8⟩ := ih xrest pfs pxs (so + 1) (sl - 1) (po + 1) (pl - 1)
+      k' (by omega) m7 a7 r8 m8 hC7 (hrest.grow hG7) hdr1
+      (by rw [hpo1, hpl1]; have := hG7.1; omega)
+      (ConRon.Bridge.denoteN_ext hn c07.ext) (ConRon.Bridge.denote_ext hv c07.ext)
+      (ConRon.Bridge.StmtsDenote.mono c07.ext _ _ hsd3)
+      (ConRon.Bridge.denoteEList_ext c07.ext _ _ hpxs)
+      (fun q hq => hwq q (List.mem_cons_of_mem _ hq)) hw8
+    refine ⟨x8, a8, ?_, hC8, c07.trans c8, hG7.trans hg8, hd8⟩
+    simp only [checkDivModCerts, StateT.run_bind, hrun1', exc_ok_bind', hx1, if_true, hrun2',
+      hrun3, hrun4', hrun5, hrun6', hrun7, hx7, if_true]
+    exact hrun8
+
+end certs
+
+end L.Ind
