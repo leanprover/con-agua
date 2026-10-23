@@ -106,13 +106,13 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   have h00 : (0 : Word).toNat = 0 := rfl
   have hF : (4000000000 : Word).toNat = coreWalkFuel := rfl
   -- `loose_bvars_bounded_fast`
-  cases h2 : stubM "loose_bvars_bounded_fast" s1.mem [4000000000, 0, e] with
+  cases h2 : lbbF s1.mem [4000000000, 0, e] with
   | none => rw [h2] at h; simp [rpgK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, rpgK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
-    looseBVarsBoundedFastT_spec dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hT1
+    lbbF_okT dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hT1
   rw [hF, h00] at hrun2
   by_cases hb2 : r2.headD 0 = 0
   · rw [if_pos hb2] at h
@@ -128,13 +128,13 @@ theorem rpgW_okC {p : Prog} (hpa : p.lookup "pin_at" = some pinAtL)
   rw [if_neg hb2] at h
   have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
   -- `has_fvar_fast`
-  cases h3 : stubM "has_fvar_fast" m2 [4000000000, e] with
+  cases h3 : hffF m2 [4000000000, e] with
   | none => rw [h3] at h; simp [rpgK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, rpgK3_some] at h
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
-    hasFvarFastT_spec dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
+    hffF_okT dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
   rw [hF] at hrun3
   by_cases hb3 : r3.headD 0 ≠ 0
   · rw [if_pos hb3] at h
@@ -276,7 +276,7 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, crpK3_some] at hW
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (rpg_specW p hC.rpg n ⟨s2.mem, Locals.init []⟩ vis c) h3
+    (rpg_specW p hC.bvb hC.hf hC.rpg n ⟨s2.mem, Locals.init []⟩ vis c) h3
   subst hs3
   obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
     rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hW3 hC2 hc hnm2
