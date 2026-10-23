@@ -470,15 +470,14 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
 
 theorem ckc2W_ok (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (nP o l : Word) (xs : List EIdx) (r : List Word),
-    2 ^ 31 + n ≤ coreWalkFuel →
     ckc2W n m nP o l = some (r, m') → StageR dn vis fe m a → decHL m o.toNat l.toNat = some xs →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
     ∃ b a', (xs.allM (keyClosedTest nP.toNat)).run a = .ok (b, a') ∧
       KeepPost dn vis fe decW0B m m' a' r b := by
   induction n with
-  | zero => intro m m' a nP o l xs r _ h; simp [ckc2W] at h
+  | zero => intro m m' a nP o l xs r h; simp [ckc2W] at h
   | succ n ih =>
-    intro m m' a nP o l xs r hn h hS hd hb ht
+    intro m m' a nP o l xs r h hS hd hb ht
     by_cases hl : l = 0
     · subst hl
       rw [ckc2W_nil n m nP o 0 rfl] at h
@@ -495,7 +494,7 @@ theorem ckc2W_ok (n : Nat) :
       | some x2 =>
       obtain ⟨rb, m1⟩ := x2
       rw [h2] at h
-      obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stage dn vis fe hS n coreWalkFuel (by omega) w rb hw32 h2
+      obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) w rb hw32 h2
       by_cases hz : rb ≠ 0
       · rw [ckc2K1_open n m1 nP o l w rb hz] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -545,7 +544,7 @@ theorem ckc2W_ok (n : Nat) :
           rw [h4, ckcK3_some] at h
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 (by omega) h4 hS2
+          obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 h4 hS2
             (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
           refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
           simp only [List.allM_cons, StateT.run_bind]
@@ -557,7 +556,7 @@ theorem ckc2W_ok (n : Nat) :
 theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : List Word)
     (pfvs : List EIdx) (ck : ClassKey) (h : kofW k m nP po pl key = some (r, m')) (hS : StageR dn vis fe m a)
     (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
-    (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) (hn : 2 ^ 31 + (k + 1) ≤ coreWalkFuel) :
+    (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.classKeyOf nP.toNat pfvs ck).run a = .ok (x, a') ∧
       DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ (r.headD 0).toNat + 4 ≤ iwTop m' ∧
       (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
@@ -577,7 +576,7 @@ theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : L
   | some p2 =>
   obtain ⟨r2, m2⟩ := p2
   rw [hcl] at h
-  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 (by omega) hcl hS1 hds
+  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 hcl hS1 hds
     (by omega) hds1
   by_cases h0 : r2.headD 0 = 0
   · rw [kofK2_fail (h := h0)] at h; cases h
@@ -658,7 +657,7 @@ theorem classKeyCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (po pl key :
 /-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;
 `bvar_b` the master's walk, at exec fuel below `coreWalkFuel`). -/
 @[refines ConRon.Arena.classKeyOf]
-theorem classKeyOf_refines (k : Nat) (hn : 2 ^ 31 + (k + 1) ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+theorem classKeyOf_refines (k : Nat) (s₀ : St) (a₀ : AState)
     (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
     (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem)
     (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck) (hP : PosMR s₀.mem) :
@@ -673,7 +672,7 @@ theorem classKeyOf_refines (k : Nat) (hn : 2 ^ 31 + (k + 1) ≤ coreWalkFuel) (s
   refine triple_post (kof_spec L k s₀ nP po pl key) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ :=
-    kofW_ok dn fe vis k _ _ a₀ nP po pl key r pfvs ck hm hS hpf hpb hk hP hn
+    kofW_ok dn fe vis k _ _ a₀ nP po pl key r pfvs ck hm hS hpf hpb hk hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact h1, h2, h3, by rw [hst]; exact h4, h5, h6⟩
 

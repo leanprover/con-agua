@@ -463,7 +463,7 @@ theorem icpW_sim {p : Prog} (hP : PassProg p) {fs : List FnName}
   have hA5 : AbsOK m5 := hk' _ (by simp [passKeepCallees]) _ _ _ _ _ c5 hA4
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hrd5, hms5, hP5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (checkBlockClasses_refines hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide)) dn (r1.headD 0) fe1
-      (n + 2) (by omega) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hS4 hBS hsrc4 hRD hca4 hpfD hpfb hP4) c5
+      (n + 2) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hS4 hBS hsrc4 hRD hca4 hpfD hpfb hP4) c5
   simp only at hs5 hS5 hg5 hrd5 hms5 hP5
   subst hs5
   have hrun5 := AM.run_of_ok _ a4 hok5

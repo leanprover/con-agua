@@ -126,6 +126,9 @@ theorem spaW_mfr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
 theorem i1lF_mfr {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low ⟨_, _, i1lF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
 
+theorem ipalF_mfr {m m' : Mem} {args r : List Word} (h : ipalF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low ⟨_, _, ipalF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
+
 theorem pbW_mfr : ∀ (n : Nat) (m m' : Mem) (T k i h : Word) (r : List Word),
     pbW n m T k i h = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, hh => by simp [pbW] at hh
@@ -139,7 +142,7 @@ theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
   | zero => simp [spbW] at h
   | succ k =>
     simp only [spbW, spbK1.eq_def, spbK2.eq_def, spbK3.eq_def] at h
-    mfr_auto h [projPsW_mfr, MFr.ofStub, pbW_mfr _ _ _ _ _ _ _ _]
+    mfr_auto h [projPsW_mfr, ipalF_mfr, pbW_mfr _ _ _ _ _ _ _ _]
 
 theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (crfF_frame h)

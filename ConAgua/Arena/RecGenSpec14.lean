@@ -95,7 +95,7 @@ theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → 
 
 /-- **`class_key_of`'s run simulates `classKeyOf`** at every exec fuel below `coreWalkFuel`. -/
 theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) {m : Mem} {a : AState}
+    {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     {nP po pl key : Word} {pfvs : List EIdx} {ck : ClassKey} (hS : StageR dn vis fe m a)
     (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
     (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) :
@@ -112,7 +112,7 @@ theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Na
   | succ k =>
   rw [kofG_succ] at hW
   obtain ⟨x, a', hrun, h1, -, -, h4, h5, h6⟩ := kofW_ok dn fe vis k m s'.mem a nP po pl key r pfvs ck hW hS hpf hpb hk
-    hP (by omega)
+    hP
   exact ⟨x, a', hrun, h1, h4, h5, h6⟩
 
 /-! ## `check_block_classes_keys` -/
@@ -170,7 +170,7 @@ theorem ckk_spec (p : Prog) (hp : p.lookup "check_block_classes_keys" = some che
 
 /-- **`check_block_classes_keys`' model simulates `ks.mapM (classKeyOf nP params)`.** -/
 theorem ckkW_sim {p : Prog} (hP : KeysProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (nP po pl : Word) (pfvs : List EIdx) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) :
+    (nP po pl : Word) (pfvs : List EIdx) (n : Nat) :
     ∀ (m : Mem) (a : AState) (ko kl : Word) (ks : List ClassKey),
     StageR dn vis fe m a → DecB (fun m => decHL m po.toNat pl.toNat) m pfvs →
     po.toNat + pl.toNat ≤ iwTop m → PSlR decCK ks ko kl m → PosMR m →
@@ -194,11 +194,11 @@ theorem ckkW_sim {p : Prog} (hP : KeysProg p) (dn : NIdx → Option ConLeche.Nam
   simp only [List.mapM_cons]
   refine Sim.bindK (K := ckkK1 p n nP po pl ko kl) (body := fun r1 m1 => ckkK2 p n r1
       (ckkW p n m1 nP po pl (ko + 1) (kl - 1))) (by simp [ckkK1]) (fun r m₁ => ckkK1_some p n m₁ nP po pl ko kl r)
-    (kofCall_sim hP.toKofProg n (by omega) hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm) ?_
+    (kofCall_sim hP.toKofProg n hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm) ?_
   rintro r1 x1 m1 a1 ⟨hd1, hS1, hg1, hP1⟩
   refine Sim.bindK (K := ckkK2 p n r1) (body := fun r2 m2 => ckkK3 (callW p n "sl_cons"
       [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2)) rfl (fun _ _ => rfl)
-    (ih (by omega) m1 a1 (ko + 1) (kl - 1) ks' hS1 (hpf.grow (OMono.decHL _ _) hg1) (Nat.le_trans hpb hg1.1)
+    (ih m1 a1 (ko + 1) (kl - 1) ks' hS1 (hpf.grow (OMono.decHL _ _) hg1) (Nat.le_trans hpb hg1.1)
       (hks'.grow decCK_mono hg1) hP1) ?_
   rintro r2 xs m2 a2 ⟨hS2, hg2, hd2, hP2⟩
   refine Sim.mstep (K := ckkK3) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
