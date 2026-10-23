@@ -55,9 +55,12 @@ def TgtR (m : Mem) (tg : Word) (c : Nat) (T : Std.HashMap Nat Nat) : Prop :=
   (∀ k < c, rdW (m.arr64 IW) (tg + UInt64.ofNat k) = tgW T[k]?) ∧ (∀ k, c ≤ k → T[k]? = none)
 
 /-- The handle words of a one-constant record are below `2 ^ 32` (its name, type and value: the
-words the hoist reads; an inductive block's members are decoded by `hd?`, which checks it). -/
+words the hoist reads; an inductive block's members are decoded by `hd?`, which checks it), and an
+inductive block's member pointers do not start at the pool's word `0` (its top, which `trunc`
+clears: `IndDeclAt` would decode another word than L reads). -/
 def RecOK (D : Array Word) (r : Nat) : Prop :=
-  dw D r 0 ≠ 6 → (dw D r 1).toNat < 2 ^ 32 ∧ (dw D r 4).toNat < 2 ^ 32 ∧ (dw D r 5).toNat < 2 ^ 32
+  (dw D r 0 ≠ 6 → (dw D r 1).toNat < 2 ^ 32 ∧ (dw D r 4).toNat < 2 ^ 32 ∧ (dw D r 5).toNat < 2 ^ 32) ∧
+  (dw D r 0 = 6 → (dw D r 2).toNat ≠ 0)
 
 /-- **The stream in the order `ord`**: position `k` is the record `IW[ord + k]` of `DECL` (below
 `2 ^ 59`), which represents `ds[k]` (`RecOK`). -/
