@@ -545,7 +545,7 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     (fun {k} {r1} {r3} {m1} {m3} _ _ hS1 hcv1 hqb e3 => by
       obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
         (checkConstantVal_refines p hX.val k ⟨m1, Locals.init []⟩ a dn fe vis (r1.headD 0 + 1) cv
-          hS1 hcv1 (by rw [toNat_add_small _ 1 (by omega)]; omega)) e3
+          hS1 hcv1 (by have : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := toNat_add_small _ 1 (by omega); omega)) e3
       subst hs3
       exact ⟨hok3, hS3, hg3, trivial⟩)
     h hS trivial hD hi hd hok hN
