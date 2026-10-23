@@ -23,12 +23,12 @@ theorem liftC_lt : ∀ x ∈ liftC, x.toNat < 64 := by simp [liftC]
 theorem instC_lt : ∀ x ∈ instC, x.toNat < 64 := by simp [instC, liftC]
 
 /-- **`lift_entry` under `CheckR`.** -/
-theorem liftEntry_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h k c : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
-    (m' : Mem) (hrun : run liftProg fuel "lift_entry" [h, k, c] m = .ok (r, m')) :
-    ∃ a', (liftLooseBVarsFast F k.toNat c.toNat (decE h)).run a₀ = .ok (decE (r.headD 0), a') ∧
+theorem liftEntry_runC (fuel : Nat) (m : Mem) (a₀ : AState) (vis : Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h k c f : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
+    (m' : Mem) (hrun : run liftProg fuel "lift_entry" [h, k, c, f] m = .ok (r, m')) :
+    ∃ a', (liftLooseBVarsFast f.toNat k.toNat c.toNat (decE h)).run a₀ = .ok (decE (r.headD 0), a') ∧
       CheckR dn m' a' vis fe := by
-  obtain ⟨a', hr, hD⟩ := liftEntry_run fuel F hF m a₀ hR.arena h k c hh r m' hrun
+  obtain ⟨a', hr, hD⟩ := liftEntry_run fuel m a₀ hR.arena h k c f hh r m' hrun
   exact ⟨a', hr, hR.of_walk hD (liftEntry_frame liftProg_ok rfl hrun) (by decide) liftC_lt
     ((keeps_liftFast _ _ _ _).run hr)⟩
 

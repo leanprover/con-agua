@@ -5,9 +5,10 @@ import ConAgua.Rom.CIReadRefData
 
 The six entries of `CIRead.lean` against `CIReadSpec.lean`'s statements: `rom_ci`, `rom_cv`,
 `rom_expr_pin`, `rom_and_pin`, and `rom_basis_decls`/`rom_basis_decls_a` for the four kinds
-`basisPinHit` tries (`eqK`, `natK`, `emptyK`, `falseK`). The quotient kind (`4`) is open: its block
-holds `Quot`, whose `sortZ` is `.ifAllZero [u]`, and `decCaps` reads the name `u` back through
-`dn`, which `StageR` does not relate to the store (`CIReadRefCaps.lean`).
+`basisPinHit` tries (`eqK`, `natK`, `emptyK`, `falseK`) and the quotient kind (`4`). The quotient
+block holds `Quot`, whose `sortZ` is `.ifAllZero [u]`; `decCaps` reads the name `u` back through
+`dn`, which `StageR` does not relate to the store, so its refinement starts from a well-formed
+twin state in which `dn` reads `u` back (`NamesDn dn a quotNames`, `CIReadRefCaps.lean`).
 -/
 
 set_option linter.unusedSimpArgs false
@@ -177,10 +178,16 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   rw [h3, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hfit : ciFits (romCiVals[id.toNat]'(by simp [romCiVals]; omega)) = true :=
-    List.all_eq_true.mp romCiVals_fit _ (List.getElem_mem _)
+  have hfit : ciFits (romCiVals[id.toNat]'(by simp [romCiVals]; omega)) = true := by
+    have h := List.all_eq_true.mp romCiVals_fit _ (List.getElem_mem (h := by simp [romCiVals]; omega))
+    simp only [Bool.and_eq_true] at h
+    exact h.1
+  have hz : ZOKM dn (ciZ (romCiVals[id.toNat]'(by simp [romCiVals]; omega))) a ∅ := by
+    have h := List.all_eq_true.mp romCiVals_fit _ (List.getElem_mem (h := by simp [romCiVals]; omega))
+    simp only [Bool.and_eq_true, List.isEmpty_iff] at h
+    exact .inl h.2
   obtain ⟨memo', ici, a', hrun, hI3, -, -, -, -, -, -, hH⟩ :=
-    ci_rel hL hr dn [] ∅ _ hfit n m2 a _ rest' r3 m3 hI2 hM2 hs2 hpos h3
+    ci_rel hL hr dn [] ∅ _ hfit n m2 a hz _ rest' r3 m3 hI2 hM2 hs2 hpos h3
   refine ⟨ici, a', ?_, hI3.stage hS, hI3.grow, ?_⟩
   · rw [romCiT_eq id.toNat hid]
     simp only [ConRon.Arena.internCI]
@@ -301,7 +308,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hs : s.toNat < 31) (cs : List ConLeche.ConstantInfo)
     (hcs : ciEntries[s.toNat]'(by rw [ciEntries_len]; exact hs) = encBlock cs)
     (hfit : cs.all ciFits = true) (hcl : cs.length < 2 ^ 63) {n : Nat} {m m' : Mem} {a : AState}
-    {r : List Word} (hS : StageR dn vis fe m a) (hc : callW p n "rci_block" [s] m = some (r, m')) :
+    {r : List Word} (hS : StageR dn vis fe m a) (hz : ZOK dn (blkZ cs) a) (hc : callW p n "rci_block" [s] m = some (r, m')) :
     ∃ (ics : List IConstantInfo) (a' : AState), (ConRon.Arena.internCIList cs).run a = .ok (ics, a') ∧
       KeepPost dn vis fe (decRBlk dn) m m' a' r ics := by
   cases n with
@@ -360,7 +367,10 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rw [hq8, ← List.drop_drop, hpos, encBlock, List.append_assoc]; simp [u64B]
   have hlt := hI2.iw_lt
   obtain ⟨memo', ics, a', hrun, hlen, hI4, -, -, -, -, -, hik4, hB4⟩ :=
-    blockTo_rel hL hr dn cs hfit [] ∅ n _ a _ (r3.headD 0) _ rest' r4 m4 hI3 hM3 (by rw [hs3, hs2])
+    blockTo_rel hL hr dn cs hfit [] ∅ n _ a _ (r3.headD 0) _ rest' r4 m4 (by
+      rcases hz with h | ⟨hok, hn⟩
+      · exact .inl h
+      · exact .inr ⟨hok, ConRon.Bridge.Frontend.EMemoOK.empty _, hn⟩) hI3 hM3 (by rw [hs3, hs2])
       hd8 hcN (by rw [ho3, hi2]; exact Nat.le_refl _) (by rw [ho3, ht3, hcN]; exact Nat.le_refl _) h4
   refine ⟨ics, a', ?_, hI4.stage hS, hI4.grow, ?_, rfl⟩
   · simp only [ConRon.Arena.internCIList]
@@ -397,7 +407,7 @@ theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
     blockCall hL hr rest hrom dn vis fe 30 (by decide) ConLeche.andPin ciEntries_and andPin_fit.1
-      andPin_fit.2 hS h1
+      andPin_fit.2.1 hS (.inl andPin_fit.2.2) h1
   refine ⟨ics, a', hrun, hS', hg, ?_, rfl⟩
   simpa using hdec
 
@@ -422,10 +432,10 @@ theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hk0 : (k + 0).toNat = k.toNat := by simp
-  obtain ⟨hf1, hf2⟩ := basisDecls_fit k.toNat hk
+  obtain ⟨hf1, hf2, hf3⟩ := basisDecls_fit k.toNat hk
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
     blockCall hL hr rest hrom dn vis fe (k + 0) (by omega) _
-      (by simp only [hk0]; exact ciEntries_b k.toNat (by omega)) hf1 hf2 hS h1
+      (by simp only [hk0]; exact ciEntries_b k.toNat (by omega)) hf1 hf2 hS (.inl hf3) h1
   refine ⟨ics, a', ?_, hS', hg, ?_, rfl⟩
   · rw [basisOfW_eq k.toNat (by omega)]; exact hrun
   · simpa using hdec
@@ -451,46 +461,75 @@ theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hk5 : (k + 5).toNat = 5 + k.toNat := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨hf1, hf2⟩ := basisDeclsA_fit k.toNat hk
+  obtain ⟨hf1, hf2, hf3⟩ := basisDeclsA_fit k.toNat hk
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
     blockCall hL hr rest hrom dn vis fe (k + 5) (by omega) _
-      (by simp only [hk5]; exact ciEntries_bA k.toNat (by omega)) hf1 hf2 hS h1
+      (by simp only [hk5]; exact ciEntries_bA k.toNat (by omega)) hf1 hf2 hS (.inl hf3) h1
   refine ⟨ics, a', ?_, hS', hg, ?_, rfl⟩
   · rw [basisOfW_eq k.toNat (by omega)]; exact hrun
   · simpa using hdec
+
+/-- **The raw quotient block** (`rom_basis_decls(4)`), from a well-formed twin state in which `dn`
+reads `Quot`'s `sortZ` name `u` back. -/
+@[refines_part ConRon.Arena.BasisKind.decls "the quotient block"]
+theorem romBasisRef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomQuotRef p dn vis fe := by
+  intro n m a r m' ⟨hS, hok, hn⟩ hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => basisW p n mq 4 0) (basis_specW rom p hL n · 4) hc
+  unfold basisW at hw
+  rw [if_neg (by decide)] at hw
+  cases h1 : callW p n "rci_block" [4 + 0] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨hf1, hf2, hf3⟩ := basisDeclsQ_fit
+  obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
+    blockCall hL hr rest hrom dn vis fe (4 + 0) (by decide) (ConLeche.BasisKind.decls .quotK)
+      (by exact ciEntries_b 4 (by omega)) hf1 hf2 hS
+      (.inr ⟨hok, by rw [hf3]; exact hn⟩) h1
+  exact ⟨ics, a', hrun, hS', hg, by simpa using hdec, rfl⟩
+
+/-- **The annotated quotient block** (`rom_basis_decls_a(4)`), as `romBasisRef_quot`. -/
+@[refines_part ConRon.Arena.BasisKind.declsA "the quotient block"]
+theorem romBasisARef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomQuotARef p dn vis fe := by
+  intro n m a r m' ⟨hS, hok, hn⟩ hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => basisW p n mq 4 5) (basisA_specW rom p hL n · 4) hc
+  unfold basisW at hw
+  rw [if_neg (by decide)] at hw
+  cases h1 : callW p n "rci_block" [4 + 5] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨hf1, hf2, hf3⟩ := basisDeclsAQ_fit
+  obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
+    blockCall hL hr rest hrom dn vis fe (4 + 5) (by decide) (ConLeche.BasisKind.declsA .quotK)
+      (by exact ciEntries_bA 4 (by omega)) hf1 hf2 hS
+      (.inr ⟨hok, by rw [hf3]; exact hn⟩) h1
+  exact ⟨ics, a', hrun, hS', hg, by simpa using hdec, rfl⟩
 
 end entries
 
 /-! ## All six -/
 
-/-- **The quotient block** (`rom_basis_decls(4)`, `rom_basis_decls_a(4)`): open. `Quot`'s `sortZ`
-is `.ifAllZero [u]`; `decCaps` reads `u`'s handle back through `dn`, and nothing in `StageR`
-relates `dn` to the store (the statement needs a hypothesis like "`dn` reads back the store's
-names"). -/
-theorem romBasisRef_quot (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    RomRef p "rom_basis_decls" [4] (StageR dn vis fe) (BasisKind.decls (basisOfW 4))
-      (KeepPost dn vis fe (decRBlk dn)) := sorry
-
-/-- The annotated quotient block: open, as `romBasisRef_quot`. -/
-theorem romBasisARef_quot (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
-    RomRef p "rom_basis_decls_a" [4] (StageR dn vis fe) (BasisKind.declsA (basisOfW 4))
-      (KeepPost dn vis fe (decRBlk dn)) := sorry
-
 /-- **The readers refine the twin**, for a program reading a buffer that starts with `romData`
-(moved here from `CIReadSpec.lean`). Everything but the quotient blocks is proved
-(`romBasisRef_quot`, `romBasisARef_quot`). -/
+(moved here from `CIReadSpec.lean`). -/
 theorem romRefs_of (p : Prog) (h : RomReady p) : RomRefs p := by
   obtain ⟨rom, rest, hr, hrom, hL⟩ := h
   refine ⟨romCiRef_of hL hr rest hrom, romCvRef_of hL hr rest hrom,
-    romExprPinRef_of hL hr rest hrom, fun dn vis fe k hk => ?_, fun dn vis fe k hk => ?_,
-    romAndPinRef_of hL hr rest hrom⟩
-  · by_cases h4 : k.toNat < 4
-    · exact romBasisRef_lt4 hL hr rest hrom dn vis fe k h4
-    · have : k = 4 := by apply UInt64.toNat_inj.mp; simp; omega
-      subst this; exact romBasisRef_quot p dn vis fe
-  · by_cases h4 : k.toNat < 4
-    · exact romBasisARef_lt4 hL hr rest hrom dn vis fe k h4
-    · have : k = 4 := by apply UInt64.toNat_inj.mp; simp; omega
-      subst this; exact romBasisARef_quot p dn vis fe
+    romExprPinRef_of hL hr rest hrom, romBasisRef_lt4 hL hr rest hrom, romBasisARef_lt4 hL hr rest hrom,
+    romBasisRef_quot hL hr rest hrom, romBasisARef_quot hL hr rest hrom, romAndPinRef_of hL hr rest hrom⟩
 
 end L.Rom

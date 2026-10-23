@@ -1,13 +1,15 @@
 import ConAgua.Rom.CIReadRefCV
+import ConAgua.Arena.LevelInternRef
 
 /-!
 # The ROM constant readers: an inductive's capabilities (helper `decls4-rom`)
 
-`rci_caps(q, c)` refines `Frontend.internCaps` into the 15 words at `c` (`decCaps`), for
-capabilities whose `sortZ` carries no names (`.never`, `.ifAllZero []`): the twin keeps those
-names as values and interns none, the reader interns them (a no-op only for an empty list), and
-`decPW` reads them back through `dn`, which the stage relation does not relate to the store.
-Every pinned constant but `Quot` (whose `sortZ` is `.ifAllZero [u]`) is such.
+`rci_caps(q, c)` refines `Frontend.internCaps` into the 15 words at `c` (`decCaps`). The twin keeps
+the `sortZ` names as values and interns none; the reader interns them (`rci_name_sl`) and `decPW`
+reads them back through `dn`. Both agree when every such name already has a handle that `dn` and
+the store decode to it (`NamesDn`) in a well-formed store (`ZOK`): re-interning finds the handle
+and changes nothing (`internNameList_dn`, by `internName_denote_run`). Every pinned constant but
+`Quot` (whose `sortZ` is `.ifAllZero [u]`) has no `sortZ` names, and `ZOK` holds trivially.
 -/
 
 set_option linter.unusedSimpArgs false
@@ -88,6 +90,47 @@ theorem setERs_get : ∀ (ws : List (Word × Word)) (m : Mem) (j w : Word),
       exact er_set_get m j w hj
     · exact setERs_get t _ j w hnd.2 e (by rw [size_set64]; exact hj)
 
+/-! ## `sortZ` names the store already holds -/
+
+/-- The names of a `sortZ`. -/
+def pwNames : ConLeche.PropWhen → List ConLeche.Name
+  | .never => []
+  | .ifAllZero ns => ns
+
+/-- **What re-interning the names `zs` needs**: none, or a well-formed state naming them through
+`dn` (`NamesDn`). -/
+def ZOK (dn : NIdx → Option ConLeche.Name) (zs : List ConLeche.Name) (a : AState) : Prop :=
+  zs = [] ∨ (ConRon.Bridge.StateOK a ∧ NamesDn dn a zs)
+
+theorem ZOK.step {dn : NIdx → Option ConLeche.Name} {zs : List ConLeche.Name} {a a' : AState}
+    (h : ZOK dn zs a) (hs : ConRon.Bridge.StateOK a → ConRon.Bridge.Frontend.IStepS a a') :
+    ZOK dn zs a' := by
+  rcases h with h | ⟨hok, hn⟩
+  · exact .inl h
+  · have st := hs hok
+    exact .inr ⟨st.ok, hn.ext st.ext⟩
+
+/-- **Re-interning stored names is a no-op**, and `dn` reads their handles back. -/
+theorem internNameList_dn (dn : NIdx → Option ConLeche.Name) :
+    ∀ (zs : List ConLeche.Name) (a : AState), ZOK dn zs a →
+      ∃ ks : List NIdx, (Frontend.internNameList zs).run a = .ok (ks, a) ∧ ks.mapM dn = some zs
+  | [], a, _ => ⟨[], rfl, rfl⟩
+  | x :: zs, a, h => by
+    rcases h with h | ⟨hok, hn⟩
+    · cases h
+    have hwf : NStoreWF a.store.lss.ls.ns := by
+      obtain ⟨rk, w⟩ := hok.wf
+      obtain ⟨rk', w'⟩ := w.lss.ls
+      exact w'.ns
+    obtain ⟨k, hk, hd⟩ := hn x (by simp)
+    have h1 := internName_denote_run a hwf _ k x hd
+    obtain ⟨ks, h2, hks⟩ := internNameList_dn dn zs a
+      (.inr ⟨hok, hn.mono (fun y hy => by simp [hy])⟩)
+    refine ⟨k :: ks, ?_, ?_⟩
+    · simp only [Frontend.internNameList]
+      rw [run_bind_of _ _ _ _ _ h1, run_bind_of _ _ _ _ _ h2]; rfl
+    · simp [hk, hks]
+
 /-! ## `decCaps` from its words -/
 
 /-- A number word. -/
@@ -105,7 +148,7 @@ def szTag : ConLeche.PropWhen → Nat
   | .ifAllZero _ => 1
 
 theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {SA SC SZ : Nat → Prop}
-    (ic : IIndCaps) (we wct wep wef wul wup wrk wtag wnp : Word)
+    (ic : IIndCaps) (ks : List NIdx) (we wct wep wef wul wup wrk wtag wnp : Word)
     (h0 : (erA m)[c]? = some we) (h1 : (erA m)[c + 1]? = some wct) (h2 : (erA m)[c + 2]? = some wep)
     (h3 : (erA m)[c + 3]? = some wef) (h4 : (erA m)[c + 4]? = some wul)
     (h5 : (erA m)[c + 5]? = some wup) (h6 : (erA m)[c + 6]? = some wrk)
@@ -114,9 +157,10 @@ theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {
     (he : ic.eta = (we != 0)) (hc : ic.etaCtor = decI wct) (hep : ic.etaParams = wep.toNat)
     (hef : ic.etaFields = wef.toNat) (hul : ic.unitlike = (wul != 0)) (hup : ic.unitParams = wup.toNat)
     (hrk : ic.ruleK = (wrk != 0)) (hnp : ic.nparams = wnp.toNat)
-    (hsz : (wtag.toNat = 0 ∧ ic.sortZ = .never) ∨ (wtag.toNat = 1 ∧ ic.sortZ = .ifAllZero []))
+    (hsz : (wtag.toNat = 0 ∧ ic.sortZ = .never) ∨
+      (wtag.toNat = 1 ∧ ic.sortZ = .ifAllZero (pwNames ic.sortZ) ∧ ks.mapM dn = some (pwNames ic.sortZ)))
     (hZ : wtag.toNat = 1 → Holds SZ (fun _ => False)
-      (fun m => (hlist? (erA m) (c + 8) : Option (List NIdx))) m [])
+      (fun m => (hlist? (erA m) (c + 8) : Option (List NIdx))) m ks)
     (hA : Holds SA (fun _ => False) (fun m => (hlist? (erA m) (c + 10) : Option (List NIdx))) m ic.all)
     (hC : Holds SC (fun _ => False) (fun m => (hlist? (erA m) (c + 13) : Option (List NIdx))) m
       ic.ctors) :
@@ -136,11 +180,12 @@ theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {
   have eA := hA m' (fun i hi => hE i (.inr (.inr (.inl hi)))) (fun _ h => h.elim)
   have eC := hC m' (fun i hi => hE i (.inr (.inr (.inr (.inl hi))))) (fun _ h => h.elim)
   have ePW : decPW (erA m') dn (c + 7) = some ic.sortZ := by
-    rcases hsz with ⟨ht, hs⟩ | ⟨ht, hs⟩
+    rcases hsz with ⟨ht, hs⟩ | ⟨ht, hs, hks⟩
     · simp [decPW, nat?_of e7, ht, hs]
-    · have eZ := hZ ht m' (fun i hi => hE i (.inr (.inr (.inr (.inr ⟨ht, hi⟩))))) (fun _ h => h.elim)
+    · rw [hs]
+      have eZ := hZ ht m' (fun i hi => hE i (.inr (.inr (.inr (.inr ⟨ht, hi⟩))))) (fun _ h => h.elim)
       have : c + 7 + 1 = c + 8 := by omega
-      simp [decPW, nat?_of e7, ht, hs, this, eZ]
+      simp [decPW, nat?_of e7, ht, this, eZ, hks]
   have : ic = ⟨we != 0, decI wct, wep.toNat, wef.toNat, wul != 0, wup.toNat, wrk != 0, ic.sortZ,
       ic.all, wnp.toNat, ic.ctors⟩ := by
     cases ic; simp_all
@@ -150,23 +195,23 @@ theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {
 
 /-! ## `rci_caps` -/
 
-/-- The capabilities fit their encoding, and their `sortZ` carries no names. -/
+/-- The capabilities fit their encoding. -/
 def capsFits (c : ConLeche.IndCaps) : Bool :=
   nameFits c.etaCtor && c.all.all nameFits && c.ctors.all nameFits && decide (c.etaParams < 2 ^ 64) &&
     decide (c.etaFields < 2 ^ 64) && decide (c.unitParams < 2 ^ 64) && decide (c.nparams < 2 ^ 64) &&
-    (match c.sortZ with | .never => true | .ifAllZero ns => ns.isEmpty)
+    (pwNames c.sortZ).all nameFits
 
-theorem encCaps_eq (c : ConLeche.IndCaps)
-    (hz : c.sortZ = .never ∨ c.sortZ = .ifAllZero []) (rest : List UInt8) :
+theorem encCaps_eq (c : ConLeche.IndCaps) (rest : List UInt8) :
     encCaps c ++ rest = bw c.eta ++ (u64B c.etaParams ++ (u64B c.etaFields ++ (bw c.unitlike ++
       (u64B c.unitParams ++ (bw c.ruleK ++ (u64B c.nparams ++ (u64B (szTag c.sortZ) ++
-      (encName c.etaCtor ++ (encNameL c.all ++ (encNameL c.ctors ++ (encNameL [] ++ rest))))))))))) := by
-  rcases hz with h | h <;> simp [encCaps, h, szTag, List.append_assoc]
+      (encName c.etaCtor ++ (encNameL c.all ++ (encNameL c.ctors ++ (encNameL (pwNames c.sortZ) ++
+      rest))))))))))) := by
+  cases h : c.sortZ <;> simp [encCaps, h, szTag, pwNames, List.append_assoc]
 
-theorem encCaps_len (c : ConLeche.IndCaps) (hz : c.sortZ = .never ∨ c.sortZ = .ifAllZero []) :
+theorem encCaps_len (c : ConLeche.IndCaps) :
     (encCaps c).length = 64 + (encName c.etaCtor).length + (encNameL c.all).length +
-      (encNameL c.ctors).length + (encNameL []).length := by
-  have h := congrArg List.length (encCaps_eq c hz [])
+      (encNameL c.ctors).length + (encNameL (pwNames c.sortZ)).length := by
+  have h := congrArg List.length (encCaps_eq c [])
   simp only [List.append_nil, List.length_append, bw, u64B, List.length_cons, List.length_nil] at h
   omega
 
@@ -188,10 +233,11 @@ local macro "comega" : tactic => `(tactic| ((try simp only [hc1, hc2, hc3, hc4, 
   (try clear hc10) <;> (try clear hc12) <;> (try clear hc13) <;> (try clear hcN) <;> omega))
 
 /-- **`rci_caps` refines `Frontend.internCaps`**, into the 15 words at `c`. -/
-@[refines_part ConRon.Arena.Frontend.internCaps "sortZ without names"]
+@[refines_part ConRon.Arena.Frontend.internCaps "sortZ names the store holds"]
 theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo)
     (caps : ConLeche.IndCaps) (hfit : capsFits caps = true) (k : Nat) (m : Mem) (a : AState)
+    (hz : ZOK dn (pwNames caps.sortZ) a)
     (q c : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
     (hM : MemoR m seen memo) (hst : stkTop m = 0) (hd : rom.drop q.toNat = encCaps caps ++ rest)
     (hc0 : erTop m₀ ≤ c.toNat) (hc15 : c.toNat + 15 ≤ erTop m)
@@ -205,11 +251,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
         (fun _ => False) (fun m => decCaps (erA m) dn c.toNat) m' ic := by
   simp only [capsFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
   obtain ⟨⟨⟨⟨⟨⟨⟨hfn, hfa⟩, hfc⟩, hep⟩, hef⟩, hup⟩, hnp⟩, hfz⟩ := hfit
-  have hz : caps.sortZ = .never ∨ caps.sortZ = .ifAllZero [] := by
-    revert hfz; cases caps.sortZ with
-    | never => simp
-    | ifAllZero ns => cases ns <;> simp
-  have hd' := hd.trans (encCaps_eq caps hz rest)
+  have hd' := hd.trans (encCaps_eq caps rest)
   simp only [bw] at hd'
   have hlt := hI.er_lt
   have hgo := hI.grow.2.1
@@ -291,7 +333,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   obtain ⟨r1, m8⟩ := t1
   rw [h1, bW_some] at hw
   have hdn : rom.drop (q + 64).toNat = encName caps.etaCtor ++ (encNameL caps.all ++
-      (encNameL caps.ctors ++ (encNameL [] ++ rest))) := by
+      (encNameL caps.ctors ++ (encNameL (pwNames caps.sortZ) ++ rest))) := by
     rw [hq64, ← List.drop_drop, hd']; simp [u64B]
   obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr _ hfn hI1.arena hdn h1
   clear hd hd'
@@ -310,7 +352,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   obtain ⟨r2, m10⟩ := t2
   rw [h2, bW_some] at hw
   have hd2 : rom.drop (r1.tail.headD 0).toNat = encNameL caps.all ++ (encNameL caps.ctors ++
-      (encNameL [] ++ rest)) := drop_shift rom hr _ (encName caps.etaCtor) _ _ (by rw [hdn, List.append_assoc]) _ hq1
+      (encNameL (pwNames caps.sortZ) ++ rest)) := drop_shift rom hr _ (encName caps.etaCtor) _ _ (by rw [hdn, List.append_assoc]) _ hq1
   obtain ⟨wsA, a2, hrun2, hltA, hI10, hM10, hs10, hq2, hek10, ht10, hIW10, hH10⟩ :=
     nameSl_rel hL hr seen memo caps.all hfa k _ a1 _ (c + 10) _ _ m10 hI9 hM9 hd2
       (by comega) (by comega) h2
@@ -319,7 +361,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   | some t3 =>
   obtain ⟨r3, m11⟩ := t3
   rw [h3, bW_some] at hw
-  have hd3 : rom.drop (r2.headD 0).toNat = encNameL caps.ctors ++ (encNameL [] ++ rest) :=
+  have hd3 : rom.drop (r2.headD 0).toNat = encNameL caps.ctors ++ (encNameL (pwNames caps.sortZ) ++ rest) :=
     drop_shift rom hr _ (encNameL caps.all) _ _ (by rw [hd2, List.append_assoc]) _ hq2
   obtain ⟨wsC, a3, hrun3, hltC, hI11, hM11, hs11, hq3, hek11, ht11, hIW11, hH11⟩ :=
     nameSl_rel hL hr seen memo caps.ctors hfc k _ a2 _ (c + 13) _ _ m11 hI10 hM10 hd3
@@ -331,14 +373,19 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   rw [h4, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hd4 : rom.drop (r3.headD 0).toNat = encNameL [] ++ rest :=
+  have hd4 : rom.drop (r3.headD 0).toNat = encNameL (pwNames caps.sortZ) ++ rest :=
     drop_shift rom hr _ (encNameL caps.ctors) _ _ (by rw [hd3, List.append_assoc]) _ hq3
   obtain ⟨wsZ, a4, hrun4, -, hI12, hM12, hs12, hq4, hek12, ht12, hIW12, hH12⟩ :=
-    nameSl_rel hL hr seen memo [] rfl k _ a3 _ (c + 8) _ _ m12 hI11 hM11 hd4
+    nameSl_rel hL hr seen memo (pwNames caps.sortZ) hfz k _ a3 _ (c + 8) _ _ m12 hI11 hM11 hd4
       (by comega) (by comega) h4
-  have hz4 : (wsZ.map decI : List NIdx) = [] ∧ a4 = a3 := by
-    have e : (Frontend.internNameList [] : AM (List NIdx)).run a3 = .ok ([], a3) := rfl
-    rw [e] at hrun4
+  -- the `sortZ` names: re-interned at no cost
+  have hz3 : ZOK dn (pwNames caps.sortZ) a3 :=
+    ((hz.step fun hok => (ConRon.Bridge.Frontend.internName_sstep hok hrun1).1).step fun hok =>
+      (ConRon.Bridge.Frontend.internNameList_sstep _ hok hrun2).1).step fun hok =>
+      (ConRon.Bridge.Frontend.internNameList_sstep _ hok hrun3).1
+  obtain ⟨ks, hks, hdk⟩ := internNameList_dn dn _ a3 hz3
+  have hz4 : (wsZ.map decI : List NIdx) = ks ∧ a4 = a3 := by
+    rw [hks] at hrun4
     simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4
     exact ⟨hrun4.1.symm, hrun4.2.symm⟩
   obtain ⟨hzw, rfl⟩ := hz4
@@ -380,7 +427,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   · simp only [Frontend.internCaps]
     rw [run_bind_of _ _ _ _ _ hrun1, run_bind_of _ _ _ _ _ hrun2, run_bind_of _ _ _ _ _ hrun3]
     rfl
-  · simp only [List.headD_cons]; rw [hq4, hq3, hq2, hq1, hq64, encCaps_len caps hz]; simp [encNameL, u64B]
+  · simp only [List.headD_cons]; rw [hq4, hq3, hq2, hq1, hq64, encCaps_len caps]; simp [encNameL, u64B]
     comega
   · rw [hk12 _ (by comega) (by comega) (by comega), er_set_ne _ _ _ _ (by rw [hc1]; comega), hE8',
       setERs_ne ws m i (by
@@ -390,12 +437,12 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
           simp only [hc2, hc3, hc4, hc5, hc6, hc7, hc12] <;> comega)]
   · have hH := holds_decCaps (dn := dn) (c := c.toNat)
       ⟨caps.eta, decI (r1.headD 0), caps.etaParams, caps.etaFields, caps.unitlike, caps.unitParams,
-        caps.ruleK, caps.sortZ, wsA.map decI, caps.nparams, wsC.map decI⟩
+        caps.ruleK, caps.sortZ, wsA.map decI, caps.nparams, wsC.map decI⟩ ks
       v0 (r1.headD 0) _ _ v3 _ v5 _ _ hW0 hW1 hW2 hW3 hW4 hW5 hW6 hW7 hW12 hlt1
       (by rw [← hv0]; exact (bw_ne _).symm) rfl (ofNat_toNat_lt hep).symm (ofNat_toNat_lt hef).symm
       (by rw [← hv3]; exact (bw_ne _).symm) (ofNat_toNat_lt hup).symm
       (by rw [← hv5]; exact (bw_ne _).symm) (ofNat_toNat_lt hnp).symm
-      (by rw [ofNat_toNat_lt htag]; rcases hz with h | h <;> simp [h, szTag])
+      (by rw [ofNat_toNat_lt htag]; revert hdk; cases caps.sortZ <;> simp [szTag, pwNames])
       (fun _ => hH12) hA' hC'
     refine hH.mono (fun i hi => ?_) (fun _ h => h)
     rcases hi with hi | hi | hi | hi | ⟨-, hi⟩

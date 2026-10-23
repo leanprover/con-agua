@@ -45,83 +45,83 @@ def crpK8 : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r8, m8) => if r8.headD 0 = 0 then none else some ([0], m8)
 
 /-- After `mk_app`: the identity certificate. -/
-def crpK7 (vis x : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def crpK7 (cl : CallM) (n : Nat) (vis x : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ax, m7) => crpK8 (stubM "is_def_eq_core" m7 [vis, 1, ax, x])
+  | some (ax, m7) => crpK8 (cl n "is_def_eq_core" [vis, 1, ax, x] m7)
 
 /-- After `reduce_cert_var`: the handle guard, the application. -/
-def crpK6 (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crpK6 (cl : CallM) (n : Nat) (vis v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r6, m6) =>
-    if 4294967296 ≤ r6.headD 0 then none else crpK7 vis (r6.headD 0) (mkAppW m6 v (r6.headD 0))
+    if 4294967296 ≤ r6.headD 0 then none else crpK7 cl n vis (r6.headD 0) (mkAppW m6 v (r6.headD 0))
 
 /-- After the comparison with the pin. -/
-def crpK5 (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crpK5 (cl : CallM) (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) =>
-    if r5.headD 0 = 0 then none else crpK6 vis v (callW p n "reduce_cert_var" [c] m5)
+    if r5.headD 0 = 0 then none else crpK6 cl n vis v (callW p n "reduce_cert_var" [c] m5)
 
 /-- After `reduce_decl_pin`. -/
-def crpK4 (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crpK4 (cl : CallM) (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => crpK5 p n vis c v (stubM "is_def_eq_core" m4 [vis, 0, v, r4.headD 0])
+  | some (r4, m4) => crpK5 p cl n vis c v (cl n "is_def_eq_core" [vis, 0, v, r4.headD 0] m4)
 
 /-- After `reduce_pin_guard`. -/
-def crpK3 (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crpK3 (cl : CallM) (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
-    if r3.headD 0 = 0 then none else crpK4 p n vis c v (callW p n "reduce_decl_pin" [c] m3)
+    if r3.headD 0 = 0 then none else crpK4 p cl n vis c v (callW p n "reduce_decl_pin" [c] m3)
 
 /-- After `reduce_elem_ok`. -/
-def crpK2 (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crpK2 (cl : CallM) (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    if r2.headD 0 = 0 then none else crpK3 p n vis c v (callW p n "reduce_pin_guard" [vis, c] m2)
+    if r2.headD 0 = 0 then none else crpK3 p cl n vis c v (callW p n "reduce_pin_guard" [vis, c] m2)
 
 /-- After `reduce_stored_ok`. -/
-def crpK1 (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crpK1 (cl : CallM) (n : Nat) (vis c v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
-    if r1.headD 0 = 0 then none else crpK2 p n vis c v (callW p n "reduce_elem_ok" [vis, c] m1)
+    if r1.headD 0 = 0 then none else crpK2 p cl n vis c v (callW p n "reduce_elem_ok" [vis, c] m1)
 
 /-- **The model of `check_reduce_pin(vis, vis2, c, v)`.** -/
-def crpW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+def crpW (cl : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | n + 1, m, vis, vis2, c, v => crpK1 p n vis c v (callW p n "reduce_stored_ok" [vis2, c] m)
+  | n + 1, m, vis, vis2, c, v => crpK1 p cl n vis c v (callW p n "reduce_stored_ok" [vis2, c] m)
 
 section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 m8 : Mem) (vis vis2 c v x ax : Word)
+variable (cl : CallM) (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 m8 : Mem) (vis vis2 c v x ax : Word)
   (r1 r2 r3 r4 r5 r6 r8 : List Word)
-theorem crpW_step : crpW p (n + 1) m vis vis2 c v =
-    crpK1 p n vis c v (callW p n "reduce_stored_ok" [vis2, c] m) := rfl
-theorem crpK1_some : crpK1 p n vis c v (some (r1, m1)) =
-    if r1.headD 0 = 0 then none else crpK2 p n vis c v (callW p n "reduce_elem_ok" [vis, c] m1) :=
+theorem crpW_step : crpW p cl (n + 1) m vis vis2 c v =
+    crpK1 p cl n vis c v (callW p n "reduce_stored_ok" [vis2, c] m) := rfl
+theorem crpK1_some : crpK1 p cl n vis c v (some (r1, m1)) =
+    if r1.headD 0 = 0 then none else crpK2 p cl n vis c v (callW p n "reduce_elem_ok" [vis, c] m1) :=
   rfl
-theorem crpK2_some : crpK2 p n vis c v (some (r2, m2)) =
+theorem crpK2_some : crpK2 p cl n vis c v (some (r2, m2)) =
     if r2.headD 0 = 0 then none
-    else crpK3 p n vis c v (callW p n "reduce_pin_guard" [vis, c] m2) := rfl
-theorem crpK3_some : crpK3 p n vis c v (some (r3, m3)) =
-    if r3.headD 0 = 0 then none else crpK4 p n vis c v (callW p n "reduce_decl_pin" [c] m3) := rfl
-theorem crpK4_some : crpK4 p n vis c v (some (r4, m4)) =
-    crpK5 p n vis c v (stubM "is_def_eq_core" m4 [vis, 0, v, r4.headD 0]) := rfl
-theorem crpK5_some : crpK5 p n vis c v (some (r5, m5)) =
-    if r5.headD 0 = 0 then none else crpK6 vis v (callW p n "reduce_cert_var" [c] m5) := rfl
-theorem crpK6_some : crpK6 vis v (some (r6, m6)) =
-    if 4294967296 ≤ r6.headD 0 then none else crpK7 vis (r6.headD 0) (mkAppW m6 v (r6.headD 0)) :=
+    else crpK3 p cl n vis c v (callW p n "reduce_pin_guard" [vis, c] m2) := rfl
+theorem crpK3_some : crpK3 p cl n vis c v (some (r3, m3)) =
+    if r3.headD 0 = 0 then none else crpK4 p cl n vis c v (callW p n "reduce_decl_pin" [c] m3) := rfl
+theorem crpK4_some : crpK4 p cl n vis c v (some (r4, m4)) =
+    crpK5 p cl n vis c v (cl n "is_def_eq_core" [vis, 0, v, r4.headD 0] m4) := rfl
+theorem crpK5_some : crpK5 p cl n vis c v (some (r5, m5)) =
+    if r5.headD 0 = 0 then none else crpK6 cl n vis v (callW p n "reduce_cert_var" [c] m5) := rfl
+theorem crpK6_some : crpK6 cl n vis v (some (r6, m6)) =
+    if 4294967296 ≤ r6.headD 0 then none else crpK7 cl n vis (r6.headD 0) (mkAppW m6 v (r6.headD 0)) :=
   rfl
-theorem crpK7_some : crpK7 vis x (some (ax, m7)) =
-    crpK8 (stubM "is_def_eq_core" m7 [vis, 1, ax, x]) := rfl
+theorem crpK7_some : crpK7 cl n vis x (some (ax, m7)) =
+    crpK8 (cl n "is_def_eq_core" [vis, 1, ax, x] m7) := rfl
 theorem crpK8_some : crpK8 (some (r8, m8)) = if r8.headD 0 = 0 then none else some ([0], m8) := rfl
 end arms
 
-grind_pattern [ind_grind] crpW_step => crpW p (n + 1) m vis vis2 c v
-grind_pattern [ind_grind] crpK1_some => crpK1 p n vis c v (some (r1, m1))
-grind_pattern [ind_grind] crpK2_some => crpK2 p n vis c v (some (r2, m2))
-grind_pattern [ind_grind] crpK3_some => crpK3 p n vis c v (some (r3, m3))
-grind_pattern [ind_grind] crpK4_some => crpK4 p n vis c v (some (r4, m4))
-grind_pattern [ind_grind] crpK5_some => crpK5 p n vis c v (some (r5, m5))
-grind_pattern [ind_grind] crpK6_some => crpK6 vis v (some (r6, m6))
-grind_pattern [ind_grind] crpK7_some => crpK7 vis x (some (ax, m7))
+grind_pattern [ind_grind] crpW_step => crpW p cl (n + 1) m vis vis2 c v
+grind_pattern [ind_grind] crpK1_some => crpK1 p cl n vis c v (some (r1, m1))
+grind_pattern [ind_grind] crpK2_some => crpK2 p cl n vis c v (some (r2, m2))
+grind_pattern [ind_grind] crpK3_some => crpK3 p cl n vis c v (some (r3, m3))
+grind_pattern [ind_grind] crpK4_some => crpK4 p cl n vis c v (some (r4, m4))
+grind_pattern [ind_grind] crpK5_some => crpK5 p cl n vis c v (some (r5, m5))
+grind_pattern [ind_grind] crpK6_some => crpK6 cl n vis v (some (r6, m6))
+grind_pattern [ind_grind] crpK7_some => crpK7 cl n vis x (some (ax, m7))
 grind_pattern [ind_grind] crpK8_some => crpK8 (some (r8, m8))
 
 /-- The lookups of `check_reduce_pin`. -/
@@ -138,9 +138,9 @@ structure CrpProg (p : Prog) : Prop where
   ma : p.lookup "mk_app" = some mkApp
 
 set_option maxHeartbeats 1600000 in
-theorem crp_specW (h : CrpProg p) (n : Nat) (s₀ : St) (vis vis2 c v : Word) :
+theorem crp_specW (h : CrpProg p) (cl : CallM) (hc : CallSpec p cl) (n : Nat) (s₀ : St) (vis vis2 c v : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_reduce_pin" [vis, vis2, c, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ crpW p n s₀.mem vis vis2 c v = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ crpW p cl n s₀.mem vis vis2 c v = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.crp]
   simp only [callFn, checkReducePinL]
   cases n with
@@ -150,7 +150,7 @@ theorem crp_specW (h : CrpProg p) (n : Nat) (s₀ : St) (vis vis2 c v : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         callW_spec p n "reduce_stored_ok", callW_spec p n "reduce_elem_ok",
         callW_spec p n "reduce_pin_guard", callW_spec p n "reduce_decl_pin",
-        stubM_spec p "is_def_eq_core" n, callW_spec p n "reduce_cert_var",
+        hc n "is_def_eq_core", callW_spec p n "reduce_cert_var",
         mkApp_spec p h.db h.af h.ap h.ia h.ma n] <;>
       finish (gen := 20)
 
@@ -162,7 +162,7 @@ local notation "V" => ConLeche.CheckMode.verified
 the pushed view `vis2`, the gate at `vis` and back. -/
 theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     {vis vis2 : Word} {fe2 : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c v : Word}
-    {r : List Word} (hW : crpW p n m vis vis2 c v = some (r, m')) (hS : StageR dn vis2 fe2 m a)
+    {r : List Word} (hW : crpW p stubCall n m vis vis2 c v = some (r, m')) (hS : StageR dn vis2 fe2 m a)
     (hc : c.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
     ∃ a', (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v)).run a = .ok ((), a') ∧
       StageR dn vis2 fe2 m' a' ∧ IWGrow m m' := by
@@ -235,7 +235,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [← hpe] at hrun4
   generalize AM.st (reduceDeclPin (decI c)) a3 = a4 at hrun4 hS4
   -- the value against the pin
-  cases h5 : stubM "is_def_eq_core" s4.mem [vis, 0, v, r4.headD 0] with
+  cases h5 : stubCall n "is_def_eq_core" [vis, 0, v, r4.headD 0] s4.mem with
   | none => rw [h5] at hW; simp [crpK5] at hW
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5
@@ -272,7 +272,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨a7, hrun7, hS7, hg7⟩ := mkApp_stage hS6 v (r6.headD 0) h7
   have haxl := mkAppW_hw s6.mem a6 hS6.1.arena v (r6.headD 0) ax m7 h7
   -- the identity certificate
-  cases h8 : stubM "is_def_eq_core" m7 [vis, 1, ax, r6.headD 0] with
+  cases h8 : stubCall n "is_def_eq_core" [vis, 1, ax, r6.headD 0] m7 with
   | none => rw [h8] at hW; simp [crpK8] at hW
   | some rm8 =>
   obtain ⟨r8, m8⟩ := rm8
@@ -314,7 +314,7 @@ theorem checkReducePin_refines (p : Prog) (h : CrpProg p) (dn : NIdx → Option 
       (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v))
       (KeepPost dn vis2 fe2 decUnit) := by
   intro n s₀ a₀ hS
-  refine triple_post (crp_specW p h n s₀ vis vis2 c v) ?_
+  refine triple_post (crp_specW p h stubCall (stubCall_spec p) n s₀ vis vis2 c v) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hS', hg⟩ := crpW_ok h hdn hm hS hc hv
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
