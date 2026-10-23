@@ -256,39 +256,39 @@ def crrK4 (n : Nat) (y : Word) : Option (List Word × Mem) → Option (List Word
 
 mutual
 /-- **The model of `class_recs_rules_ok_go`.** -/
-noncomputable def crrW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+noncomputable def crrW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, visT, visR, g, rco, rcl, cgo, cgl, vo, vl, co, cl =>
     if vl = 0 then some ([0, 0], m)
     else if cl = 0 then some ([0, 0], m)
-    else crrK1 n visT visR g rco rcl cgo cgl vo vl co cl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
-      (crsW n m visT visR g rco rcl cgo cgl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
+    else crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
+      (crsW cR n m visT visR g rco rcl cgo cgl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
         (crrXs m g (rdW (m.arr64 IW) co)).1 (crrXs m g (rdW (m.arr64 IW) co)).2)
-noncomputable def crrK1 (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl cvG c : Word) :
+noncomputable def crrK1 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl cvG c : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => crrK2 n visT visR g rco rcl cgo cgl vo vl co cl cvG (r1.headD 0) (r1.tail.headD 0)
+  | some (r1, m1) => crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG (r1.headD 0) (r1.tail.headD 0)
       (tmaW n m1 (rdW (m1.arr64 IW) (g + 3)) (rdW (m1.arr64 IW) (g + 4)) c)
-noncomputable def crrK2 (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl : Word) :
+noncomputable def crrK2 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => crrK3 n visT visR g rco rcl cgo cgl vo vl co cl (recW m2 4 [cvG, r2.headD 0, ro, rl])
-noncomputable def crrK3 (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl : Word) :
+  | some (r2, m2) => crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (recW m2 4 [cvG, r2.headD 0, ro, rl])
+noncomputable def crrK3 (cR : CallM) (n : Nat) (visT visR g rco rcl cgo cgl vo vl co cl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
-    crrK4 n (r3.headD 0) (crrW n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1))
+    crrK4 n (r3.headD 0) (crrW cR n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1))
 end
 
 /-- **The model of `class_recs_rules_ok`.** -/
-noncomputable def crraW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+noncomputable def crraW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, visT, visR, g, rco, rcl, cgo, cgl =>
-    crrK5 (crrW n m visT visR g rco rcl cgo cgl cgo cgl rco rcl)
+    crrK5 (crrW cR n m visT visR g rco rcl cgo cgl cgo cgl rco rcl)
 
 section arms
-variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (visT visR g rco rcl cgo cgl vo vl co cl cvG c ro rl y : Word)
+variable (cR : CallM) (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (visT visR g rco rcl cgo cgl vo vl co cl cvG c ro rl y : Word)
   (r1 r2 r3 r4 r5 : List Word)
 theorem crrXs_hit (h : c < rdW (m.arr64 IW) (g + 10)) : crrXs m g c =
     (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c)),
@@ -296,41 +296,41 @@ theorem crrXs_hit (h : c < rdW (m.arr64 IW) (g + 10)) : crrXs m g c =
   rw [crrXs, if_pos h]
 theorem crrXs_miss (h : ¬ c < rdW (m.arr64 IW) (g + 10)) : crrXs m g c = (0, 0) := by
   rw [crrXs, if_neg h]
-theorem crrW_nil1 (h : vl = 0) : crrW (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl = some ([0, 0], m) := by
+theorem crrW_nil1 (h : vl = 0) : crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl = some ([0, 0], m) := by
   simp [crrW, h]
 theorem crrW_nil2 (h1 : ¬ vl = 0) (h : cl = 0) :
-    crrW (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl = some ([0, 0], m) := by
+    crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl = some ([0, 0], m) := by
   simp only [crrW]; rw [if_neg h1, if_pos h]
-theorem crrW_cons (h1 : ¬ vl = 0) (h : ¬ cl = 0) : crrW (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl =
-    crrK1 n visT visR g rco rcl cgo cgl vo vl co cl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
-      (crsW n m visT visR g rco rcl cgo cgl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
+theorem crrW_cons (h1 : ¬ vl = 0) (h : ¬ cl = 0) : crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl =
+    crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
+      (crsW cR n m visT visR g rco rcl cgo cgl (rdW (m.arr64 IW) vo) (rdW (m.arr64 IW) co)
         (crrXs m g (rdW (m.arr64 IW) co)).1 (crrXs m g (rdW (m.arr64 IW) co)).2) := by
   simp only [crrW]; rw [if_neg h1, if_neg h]
-theorem crrK1_some : crrK1 n visT visR g rco rcl cgo cgl vo vl co cl cvG c (some (r1, m1)) =
-    crrK2 n visT visR g rco rcl cgo cgl vo vl co cl cvG (r1.headD 0) (r1.tail.headD 0)
+theorem crrK1_some : crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG c (some (r1, m1)) =
+    crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG (r1.headD 0) (r1.tail.headD 0)
       (tmaW n m1 (rdW (m1.arr64 IW) (g + 3)) (rdW (m1.arr64 IW) (g + 4)) c) := by rw [crrK1]
-theorem crrK2_some : crrK2 n visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl (some (r2, m2)) =
-    crrK3 n visT visR g rco rcl cgo cgl vo vl co cl (recW m2 4 [cvG, r2.headD 0, ro, rl]) := by rw [crrK2]
-theorem crrK3_some : crrK3 n visT visR g rco rcl cgo cgl vo vl co cl (some (r3, m3)) =
-    crrK4 n (r3.headD 0) (crrW n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1)) := by
+theorem crrK2_some : crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl (some (r2, m2)) =
+    crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (recW m2 4 [cvG, r2.headD 0, ro, rl]) := by rw [crrK2]
+theorem crrK3_some : crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (some (r3, m3)) =
+    crrK4 n (r3.headD 0) (crrW cR n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1)) := by
   rw [crrK3]
 theorem crrK4_some : crrK4 n y (some (r4, m4)) = crrK5 (consW n m4 y (r4.headD 0) (r4.tail.headD 0)) := rfl
 theorem crrK5_some : crrK5 (some (r5, m5)) = some ([r5.headD 0, r5.tail.headD 0], m5) := rfl
-theorem crraW_eq : crraW (n + 1) m visT visR g rco rcl cgo cgl =
-    crrK5 (crrW n m visT visR g rco rcl cgo cgl cgo cgl rco rcl) := rfl
+theorem crraW_eq : crraW cR (n + 1) m visT visR g rco rcl cgo cgl =
+    crrK5 (crrW cR n m visT visR g rco rcl cgo cgl cgo cgl rco rcl) := rfl
 end arms
 
 grind_pattern [ind_grind] crrXs_hit => crrXs m g c
 grind_pattern [ind_grind] crrXs_miss => crrXs m g c
-grind_pattern [ind_grind] crrW_nil1 => crrW (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl
-grind_pattern [ind_grind] crrW_nil2 => crrW (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl
-grind_pattern [ind_grind] crrW_cons => crrW (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl
-grind_pattern [ind_grind] crrK1_some => crrK1 n visT visR g rco rcl cgo cgl vo vl co cl cvG c (some (r1, m1))
-grind_pattern [ind_grind] crrK2_some => crrK2 n visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl (some (r2, m2))
-grind_pattern [ind_grind] crrK3_some => crrK3 n visT visR g rco rcl cgo cgl vo vl co cl (some (r3, m3))
+grind_pattern [ind_grind] crrW_nil1 => crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl
+grind_pattern [ind_grind] crrW_nil2 => crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl
+grind_pattern [ind_grind] crrW_cons => crrW cR (n + 1) m visT visR g rco rcl cgo cgl vo vl co cl
+grind_pattern [ind_grind] crrK1_some => crrK1 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG c (some (r1, m1))
+grind_pattern [ind_grind] crrK2_some => crrK2 cR n visT visR g rco rcl cgo cgl vo vl co cl cvG ro rl (some (r2, m2))
+grind_pattern [ind_grind] crrK3_some => crrK3 cR n visT visR g rco rcl cgo cgl vo vl co cl (some (r3, m3))
 grind_pattern [ind_grind] crrK4_some => crrK4 n y (some (r4, m4))
 grind_pattern [ind_grind] crrK5_some => crrK5 (some (r5, m5))
-grind_pattern [ind_grind] crraW_eq => crraW (n + 1) m visT visR g rco rcl cgo cgl
+grind_pattern [ind_grind] crraW_eq => crraW cR (n + 1) m visT visR g rco rcl cgo cgl
 
 /-- The lookups `class_recs_rules_ok` needs. -/
 structure CrrProg (p : Prog) : Prop where
@@ -345,10 +345,10 @@ structure CrrProg (p : Prog) : Prop where
   top : p.lookup "class_recs_rules_ok" = some classRecsRulesOkL
 
 set_option maxHeartbeats 1000000 in
-theorem classRecsRulesOkGo_spec (p : Prog) (h : CrrProg p) (n : Nat) :
+theorem classRecsRulesOkGo_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (visT visR g rco rcl cgo cgl vo vl co cl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_recs_rules_ok_go" [visT, visR, g, rco, rcl, cgo, cgl, vo, vl, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ crrW n s₀.mem visT visR g rco rcl cgo cgl vo vl co cl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ crrW cR n s₀.mem visT visR g rco rcl cgo cgl vo vl co cl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ visT visR g rco rcl cgo cgl vo vl co cl
@@ -359,22 +359,22 @@ theorem classRecsRulesOkGo_spec (p : Prog) (h : CrrProg p) (n : Nat) :
     simp only [callFn, classRecsRulesOkGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRulesOk_spec p h.crs n,
+        classRulesOk_spec p h.crs cR hcR n,
         targetMajorAt_spec p h.crs.alloc h.pw h.mtm h.tmd h.tma h.na n,
         rec4_specW p h.crs.alloc n h.rec4, slCons_specW p h.crs.alloc h.crs.copy h.crs.cons n, ih] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
         loc_init9, loc_init10]
 
-theorem classRecsRulesOk_spec (p : Prog) (h : CrrProg p) (n : Nat) (s₀ : St) (visT visR g rco rcl cgo cgl : Word) :
+theorem classRecsRulesOk_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (visT visR g rco rcl cgo cgl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_recs_rules_ok" [visT, visR, g, rco, rcl, cgo, cgl]
-    ⦃fun r s' => LocEq s' s₀ ∧ crraW n s₀.mem visT visR g rco rcl cgo cgl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ crraW cR n s₀.mem visT visR g rco rcl cgo cgl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.top]
   simp only [callFn, classRecsRulesOkL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, classRecsRulesOkGo_spec p h n] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, classRecsRulesOkGo_spec p h cR hcR n] <;>
       finish (gen := 20) [loc_init4, loc_init5, loc_init6]
 
 /-! ## The relational lemma -/
@@ -423,7 +423,7 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     StageR dn visR feR m a → DecB (fun m => decCG m g.toNat) m G →
     DecB (fun m => decNL m rco.toNat rcl.toNat) m recCls → SPL decCVX m cgo.toNat cgl.toNat cvGs →
     SPL decCVX m vo.toNat vl.toNat cvs → DecB (fun m => decNL m co.toNat cl.toNat) m cs → AbsOK m →
-    RSim (crrW n m visT visR g rco rcl cgo cgl vo vl co cl)
+    RSim (crrW stubCall n m visT visR g rco rcl cgo cgl vo vl co cl)
       (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvs cs) a
       (fun b a' x => KP dn visR feR m decRRS b a' x ∧ AbsOK b.2) := by
   induction n with
@@ -470,7 +470,7 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
   -- `class_rules_ok`
   have hxs := rec3CtorsAt (c := UInt64.ofNat c0) hS hG
   rw [tc] at hxs
-  refine RSim.bind (K := crrK1 n visT visR g rco rcl cgo cgl vo vl co cl (UInt64.ofNat p) (UInt64.ofNat c0))
+  refine RSim.bind (K := crrK1 stubCall n visT visR g rco rcl cgo cgl vo vl co cl (UInt64.ofNat p) (UInt64.ofNat c0))
     (by rw [crrK1])
     (by
       have := crsW_sim dn visT visR feR g rco rcl cgo cgl (UInt64.ofNat p) (UInt64.ofNat c0) G recCls cvGs cv
@@ -496,13 +496,13 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
   have hM := rec3TMA_sim dn visR feR n m1 a1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0) G.cls hS1 (by rw [t3, t4]; exact hcls)
     (by rw [t3, t4]; exact hb3)
   rw [tc] at hM
-  refine RSim.bind (K := crrK2 n visT visR g rco rcl cgo cgl vo vl co cl (UInt64.ofNat p) (r1.headD 0)
+  refine RSim.bind (K := crrK2 stubCall n visT visR g rco rcl cgo cgl vo vl co cl (UInt64.ofNat p) (r1.headD 0)
     (r1.tail.headD 0)) (by rw [crrK2]) (RSim.withF hM (fun _ hb => tmaW_afr hb)) ?_
   rintro ⟨r2, m2⟩ M a2 - ⟨⟨hS2, hg2, hMd⟩, hf2⟩
   dsimp only at hS2 hg2 hMd
   rw [crrK2_some]
   -- `rec4`: L only
-  refine RSim.lstep (K := crrK3 n visT visR g rco rcl cgo cgl vo vl co cl) (by rw [crrK3])
+  refine RSim.lstep (K := crrK3 stubCall n visT visR g rco rcl cgo cgl vo vl co cl) (by rw [crrK3])
     fun ⟨r3, m3⟩ h3' => ?_
   obtain ⟨hS3, hg3, hr3, hget3, htop3⟩ := recW_stage h3' hS2 rfl
   have hA3 := recW_afr h3' (hf2 hA1)
@@ -536,8 +536,8 @@ theorem crrW_sim (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : 
     by simp only [List.headD_cons, List.tail_cons]; omega⟩, consW_afr h5 hA4⟩
 
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`** (through `class_rules_ok`'s stubs): the
-recursors with their majors and rules, a slice of `rec4` records decoded below the tops. -/
-@[refines ConRon.Arena.classRecsRulesOk]
+recursors with their majors and rules, a slice of `rec4` records decoded below the tops. Under `StageR`;
+the census link is `classRecsRulesOk_refinesC` (`IndT/RecGen10.lean`). -/
 theorem classRecsRulesOk_refines (p : Prog) (hp : CrrProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (visT visR : Word) (feR : IFEnv) (g rco rcl cgo cgl : Word)
     (G : ClassGen) (recCls : List Nat) (cvGs : List IConstantVal)
@@ -553,7 +553,7 @@ theorem classRecsRulesOk_refines (p : Prog) (hp : CrrProg p) (n : Nat) (s₀ : S
         (AM.st (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀)
         (AM.res (ConRon.Arena.classRecsRulesOk V visT.toNat feR G recCls cvGs cvGs recCls) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (classRecsRulesOk_spec p hp n s₀ visT visR g rco rcl cgo cgl) fun _ _ ⟨hl, hw⟩ => ?_
+  refine triple_post (classRecsRulesOk_spec p hp stubCall (stubCall_spec p) n s₀ visT visR g rco rcl cgo cgl) fun _ _ ⟨hl, hw⟩ => ?_
   cases n with
   | zero => simp [crraW] at hw
   | succ n =>
