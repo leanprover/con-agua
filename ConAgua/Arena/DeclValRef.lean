@@ -63,7 +63,7 @@ theorem erecP_bound {m : Mem} {i : Nat} {w : Word} (h : (erecP m)[i]? = some w) 
 /-- **`check_constant_val` refines `checkConstantVal .verified`** at the model level. -/
 theorem ccvW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : ccvW n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : ccvW stubCall n m vis q = some (r, m')) (hS : StageR dn vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
     ∃ a', (checkConstantVal V fe cv).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
@@ -80,14 +80,14 @@ theorem ccvW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, ccvK1_some] at h
   obtain ⟨a1, hrun1, hS1, hg1⟩ := ihW_ok h1 hS hq hqb
-  cases h2 : stubM "infer_type_core" m1 [vis, 0, wt] with
+  cases h2 : stubCall n "infer_type_core" [vis, 0, wt] m1 with
   | none => rw [h2] at h; simp [ccvK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, ccvK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
     inferTypeCore_spec dn vis fe 0 wt hwtl m1 m2 a1 r2 h2 hS1
-  cases h3 : stubM "ensure_sort_core" m2 [vis, 0, r2.headD 0] with
+  cases h3 : stubCall n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with
   | none => rw [h3] at h; simp [ccvK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
@@ -111,7 +111,7 @@ a `dvK1` run (after `install_value_guards`, from the twin's run of it) is the re
 theorem dvK1_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {n : Nat} {m1 m' : Mem} {c wv wt : Word} {r : List Word} {cv : IConstantVal}
     {ci : IConstantInfo} {a1 : AState} {r1 : List Word} (msg : String)
-    (h : dvK1 p n vis c wv wt (some (r1, m1)) = some (r, m')) (hS1 : StageR dn vis fe m1 a1)
+    (h : dvK1 p stubCall n vis c wv wt (some (r1, m1)) = some (r, m')) (hS1 : StageR dn vis fe m1 a1)
     (hci : decCI (erecP m1) dn c.toNat = some ci) (hcb : c.toNat + 5 < 2 ^ 64)
     (hwv : wv.toNat < 2 ^ 32) (hwt : wt.toNat < 2 ^ 32) (hty : cv.type = decI wt) :
     ∃ a', (do
@@ -121,14 +121,14 @@ theorem dvK1_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
         pure (fe.push ci) : AM IFEnv).run a1 = .ok (fe.push ci, a') ∧
       StageR dn (r.headD 0) (fe.push ci) m' a' ∧ IWGrow m1 m' := by
   rw [dvK1_some] at h
-  cases h2 : stubM "infer_type_core" m1 [vis, 0, wv] with
+  cases h2 : stubCall n "infer_type_core" [vis, 0, wv] m1 with
   | none => rw [h2] at h; simp [dvK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, dvK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
     inferTypeCore_spec dn vis fe 0 wv hwv m1 m2 a1 r2 h2 hS1
-  cases h3 : stubM "is_def_eq_core" m2 [vis, 0, r2.headD 0, wt] with
+  cases h3 : stubCall n "is_def_eq_core" [vis, 0, r2.headD 0, wt] m2 with
   | none => rw [h3] at h; simp [dvK3] at h
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
@@ -170,7 +170,7 @@ decodes to the constant `ci` the twin pushes, with constant value `cv` at `c + 1
 theorem dvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx} {ci : IConstantInfo} (msg : String)
-    (h : dvW p n m vis c = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : dvW p stubCall n m vis c = some (r, m')) (hS : StageR dn vis fe m a)
     (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v) :
     ∃ a', (dvT fe cv v ci msg).run a = .ok (fe.push ci, a') ∧
@@ -214,7 +214,7 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx}
-    (h : tvW p n m vis c = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : tvW p stubCall n m vis c = some (r, m')) (hS : StageR dn vis fe m a)
     (hci : decCI (erecP m) dn c.toNat = some (.thmInfo cv))
     (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
     (hv : hd? (erecP m) (c.toNat + 5) = some v) :
@@ -234,14 +234,14 @@ theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   | succ n =>
   rw [tvW_step, ev, et] at h
   -- the type's type and sort
-  cases h1 : stubM "infer_type_core" m [vis, 0, wt] with
+  cases h1 : stubCall n "infer_type_core" [vis, 0, wt] m with
   | none => rw [h1] at h; simp [tvK1] at h
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, tvK1_some] at h
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ :=
     inferTypeCore_spec dn vis fe 0 wt hwtl m m1 a r1 h1 hS
-  cases h2 : stubM "ensure_sort_core" m1 [vis, 0, r1.headD 0] with
+  cases h2 : stubCall n "ensure_sort_core" [vis, 0, r1.headD 0] m1 with
   | none => rw [h2] at h; simp [tvK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
@@ -262,13 +262,17 @@ theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
   simp only [List.headD_cons, hz] at h
   -- the comparison
-  cases h4 : lveW m2 (r2.headD 0) (pinW m2 53) with
+  cases h4 : lfW stubCall n m2 (r2.headD 0) (pinW m2 53) with
   | none => rw [h4] at h; simp [tvK4] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, tvK4_some] at h
+  have h4' : lveW m2 (r2.headD 0) (pinW m2 53) = some (r4, m4) := by
+    cases n with
+    | zero => simp [lfW] at h4
+    | succ k => exact h4
   obtain ⟨b, a4, hrun4, hS4, hg4, hr4⟩ :=
-    lveW_ok dn vis fe m2 m4 a2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 r4 h4 hS2
+    lveW_ok dn vis fe m2 m4 a2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 r4 h4' hS2
   by_cases hb4 : r4.headD 0 = 0
   · rw [if_pos hb4] at h; simp at h
   rw [if_neg hb4] at h
@@ -329,7 +333,7 @@ theorem checkConstantVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : S
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_constant_val" [vis, q]
     ⦃fun _r s' => LocEq s' s₀ ∧ AM.ok (checkConstantVal V fe cv) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (checkConstantVal V fe cv) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (ccv_specW p hp n s₀ vis q) ?_
+  refine triple_post (ccv_specW p hp stubCall (stubCall_spec p) n s₀ vis q) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨a', hrun, hS', hg⟩ := ccvW_ok hm hS hq hqb
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
@@ -346,7 +350,7 @@ theorem checkDefnVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDefnVal V fe cv v hh) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkDefnVal V fe cv v hh) a₀) s'.mem
         (AM.st (checkDefnVal V fe cv v hh) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (dv_specW p hp n s₀ vis c) ?_
+  refine triple_post (dv_specW p hp stubCall (stubCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hcv, hv⟩ := decls_decCI_defn hc
   obtain ⟨a', hrun, hS', hg⟩ := dvW_ok hp.rcp "type mismatch in definition" hm hS hc hcv hv
@@ -366,7 +370,7 @@ theorem checkOpaqueVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkOpaqueVal V fe cv v) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkOpaqueVal V fe cv v) a₀) s'.mem
         (AM.st (checkOpaqueVal V fe cv v) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (ov_specW p hp n s₀ vis c) ?_
+  refine triple_post (ov_specW p hp stubCall (stubCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
   have hcv := decCI_cv hc (.inr rfl)
   obtain ⟨a', hrun, hS', hg⟩ := dvW_ok hp.rcp "type mismatch in opaque" hm hS hc hcv hv
@@ -386,7 +390,7 @@ theorem checkThmVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (a
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkThmVal V fe cv v) a₀ ∧
       StageR dn (r.headD 0) (AM.res (checkThmVal V fe cv v) a₀) s'.mem
         (AM.st (checkThmVal V fe cv v) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (tv_specW p hp n s₀ vis c) ?_
+  refine triple_post (tv_specW p hp stubCall (stubCall_spec p) n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
   have hcv := decCI_cv hc (.inl rfl)
   obtain ⟨a', hrun, hS', hg⟩ := tvW_ok hp.rcp hm hS hc hcv hv
