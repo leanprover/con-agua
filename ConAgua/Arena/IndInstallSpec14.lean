@@ -8,6 +8,9 @@ read before the allocation and written at once, `wrER`), `env_push` (lane `decls
 as the twin's.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

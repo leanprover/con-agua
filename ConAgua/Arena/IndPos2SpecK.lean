@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPos2SpecJ
 /-! # `IndPos2`, the frame's helpers (lane `indproofs2`, helper `pos2`): records decoded below the
 tops (`DecB`) as the words L reads; `NestKey` equality and membership; `nestAcceptGroup`. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

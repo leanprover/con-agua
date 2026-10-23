@@ -4,6 +4,9 @@ import ConAgua.Arena.IndPos2SpecP
 walk's data below the tops (field-kind slices, the constructors' `(kinds, closed)` records, the
 fixed walk context), and the slice lemmas the block's relational proof uses. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

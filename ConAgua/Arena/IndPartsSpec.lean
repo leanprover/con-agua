@@ -10,6 +10,9 @@ the post says the memory is unchanged and the result word is the twin's value. T
 `IndIface.lean`'s; `decAt_some`, `iwN_rdW` read a decoded field.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

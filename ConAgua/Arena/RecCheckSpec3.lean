@@ -7,6 +7,9 @@ import ConAgua.Arena.RecSim
 Relational lemmas as `RSim` chains (`RecSim.lean`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

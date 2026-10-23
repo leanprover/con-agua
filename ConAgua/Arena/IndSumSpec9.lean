@@ -13,6 +13,9 @@ is decoded below the tops (`DecB`, `IndDecStab.lean`), so it stays decoded acros
 its constants decode in the record pool below its top (`erecP`), which `env_push` reads.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -8,6 +8,9 @@ import ConAgua.Arena.IndInstallSpec3
 (the two `anyM`s recursive).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

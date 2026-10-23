@@ -11,6 +11,9 @@ import ConAgua.Arena.IndInstall
 `triple_post` + `AM.of_run_ok`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

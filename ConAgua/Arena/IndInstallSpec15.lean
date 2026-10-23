@@ -7,6 +7,9 @@ The formers' constants `cvTa₀ :: cvs.map (·.1)` (`check_block_inds_cv_tas`, `
 D18), `block_shape_with_sort` below the tops, then stage 1: the formers checked, agreed, consed.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

@@ -8,6 +8,9 @@ import ConAgua.Arena.IndMaster
 # Refinements of `RecClass` (lane `induct`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

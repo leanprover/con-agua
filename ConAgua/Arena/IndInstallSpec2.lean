@@ -10,6 +10,9 @@ The leaves of `BlockInstall.lean`'s L translation: `check_block_positivity_init`
 record decoder `decKE`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

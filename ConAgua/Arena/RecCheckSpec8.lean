@@ -9,6 +9,9 @@ import ConAgua.Arena.DeclCanonView2
 `rec`'s (`aplW_ok`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

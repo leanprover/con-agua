@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndSumSpec9
+import ConAgua.Arena.StripTeleSpec
+import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndSumSpec10
 import ConAgua.Arena.IndSumSpec11
 import ConAgua.Arena.IndSumSpec12

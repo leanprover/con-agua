@@ -5,6 +5,9 @@ import ConAgua.Arena.IndInstallSpec22
 the relation
 -/
 
+
+noncomputable section
+
 set_option linter.deprecated false
 
 open ConRon.Arena

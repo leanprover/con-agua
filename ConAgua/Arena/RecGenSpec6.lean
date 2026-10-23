@@ -14,6 +14,9 @@ carried across the other callees by their write sets (`stubM_memoFrame` for the 
 `fvar_type_d`, `MemFrame [IW] [200]` for the records and `pi_binders`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

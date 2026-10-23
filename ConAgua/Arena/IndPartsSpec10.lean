@@ -7,6 +7,9 @@ import ConAgua.Arena.IndPartsSpec9
 recursors' names), `sl_set_eq` (with `sl_all_in`, library functions without a model before).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

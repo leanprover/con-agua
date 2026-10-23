@@ -9,6 +9,9 @@ The member abstraction, one memoised DAG walk (memo `ta`: array `TAM`, `CTL[212]
 word models by exec fuel, the L specs by `vcgen`, the relational lemma by strong induction.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

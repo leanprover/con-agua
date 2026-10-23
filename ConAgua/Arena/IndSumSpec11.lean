@@ -12,6 +12,9 @@ sorts are written into a pre-allocated `IW` slice from its end, so its relationa
 the already-written suffix (`acc`).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

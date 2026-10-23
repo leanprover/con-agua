@@ -6,6 +6,9 @@ import ConAgua.Arena.IndPartsSpec4
 `sl_eq` (word-wise list equality) and `block_rec_lps_ok`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

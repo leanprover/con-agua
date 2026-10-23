@@ -5,6 +5,9 @@ import ConAgua.Arena.IndPos2SpecF
 # `RecClass`: `classGenRecTy` (lane `indproofs2`, helper `rec2`)
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

@@ -9,6 +9,9 @@ of `block_shape_seal`, `block_shape_fin`, `block_shape_tail`, `block_shape_build
 `block_parts`.
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

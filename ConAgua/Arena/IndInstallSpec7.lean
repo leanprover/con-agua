@@ -10,6 +10,9 @@ parameters' count plus `k` (it bounds the context's `params.length + names.lengt
 `nest_root` needs).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 

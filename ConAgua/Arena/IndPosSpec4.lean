@@ -3,6 +3,9 @@ import ConAgua.Arena.IndPosSpec3
 /-! # `replaceFVars` and its maps, continued (lane `indproofs2`, helper `pos`): the frame, the
 `ds` loop, the walk, the entry. -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 open ConRon.Arena
 open Std.WP

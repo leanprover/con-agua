@@ -6,6 +6,9 @@ import ConAgua.Arena.IndPartsSpec5
 `block_shape_all_ctors`: the members' constructor lists concatenated (a copy per member).
 -/
 
+
+noncomputable section
+
 set_option experimental.vcgen true
 set_option linter.deprecated false
 
