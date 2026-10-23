@@ -62,50 +62,50 @@ def ctsK5 (q s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m5) => some ([q, s], m5)
 /-- After `cv_new`. -/
-def ctsK4 (vis s : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def ctsK4 (cR : CallM) (k : Nat) (vis s : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (q, m4) => ctsK5 q s (stubM "check_constant_val" m4 [vis, q])
+  | some (q, m4) => ctsK5 q s (cR k "check_constant_val" [vis, q] m4)
 /-- After `close_telescope`. -/
-def ctsK3 (vis cv s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ctsK3 (cR : CallM) (k : Nat) (vis cv s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rt, m3) => ctsK4 vis s (cvNewW m3 (rdW (m3.arr64 EREC) cv) (rdW (m3.arr64 EREC) (cv + 1))
+  | some (rt, m3) => ctsK4 cR k vis s (cvNewW m3 (rdW (m3.arr64 EREC) cv) (rdW (m3.arr64 EREC) (cv + 1))
       (rdW (m3.arr64 EREC) (cv + 2)) (rt.headD 0))
 /-- After `intern_sort`. -/
-def ctsK2 (k : Nat) (vis cv bo bl s : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def ctsK2 (cR : CallM) (k : Nat) (vis cv bo bl s : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ss, m2) => if 4294967296 ≤ ss then none else ctsK3 vis cv s (closeW k m2 bo bl 0 ss)
+  | some (ss, m2) => if 4294967296 ≤ ss then none else ctsK3 cR k vis cv s (closeW k m2 bo bl 0 ss)
 /-- After `whnf_telescope`. -/
-def ctsK1 (k : Nat) (vis cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ctsK1 (cR : CallM) (k : Nat) (vis cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => ctsK2 k vis cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)
+  | some (r1, m1) => ctsK2 cR k vis cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)
       (sointernW m1 (r1.tail.tail.headD 0))
 /-- **The model of `check_sum_tele_slow`.** -/
 def ctsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, cv, n, cvTa0 => ctsK1 k vis cv (wtW cR k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3)))
+  | k + 1, m, vis, cv, n, cvTa0 => ctsK1 cR k vis cv (wtW cR k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3)))
 
 section arms
 variable (cR : CallM) (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis cv n cvTa0 bo bl s ss q : Word) (r1 rt r5 : List Word)
 theorem ctsW_succ : ctsW cR (k + 1) m vis cv n cvTa0 =
-    ctsK1 k vis cv (wtW cR k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3))) := rfl
-theorem ctsK1_some : ctsK1 k vis cv (some (r1, m1)) = ctsK2 k vis cv (r1.headD 0) (r1.tail.headD 0)
+    ctsK1 cR k vis cv (wtW cR k m vis 0 n (rdW (m.arr64 EREC) (cvTa0 + 3))) := rfl
+theorem ctsK1_some : ctsK1 cR k vis cv (some (r1, m1)) = ctsK2 cR k vis cv (r1.headD 0) (r1.tail.headD 0)
     (r1.tail.tail.headD 0) (sointernW m1 (r1.tail.tail.headD 0)) := rfl
-theorem ctsK2_big (h : 4294967296 ≤ ss) : ctsK2 k vis cv bo bl s (some (ss, m2)) = none := by
+theorem ctsK2_big (h : 4294967296 ≤ ss) : ctsK2 cR k vis cv bo bl s (some (ss, m2)) = none := by
   simp [ctsK2, h]
-theorem ctsK2_ok (h : ¬ 4294967296 ≤ ss) : ctsK2 k vis cv bo bl s (some (ss, m2)) =
-    ctsK3 vis cv s (closeW k m2 bo bl 0 ss) := by simp only [ctsK2, if_neg h]
-theorem ctsK3_some : ctsK3 vis cv s (some (rt, m3)) = ctsK4 vis s (cvNewW m3 (rdW (m3.arr64 EREC) cv)
+theorem ctsK2_ok (h : ¬ 4294967296 ≤ ss) : ctsK2 cR k vis cv bo bl s (some (ss, m2)) =
+    ctsK3 cR k vis cv s (closeW k m2 bo bl 0 ss) := by simp only [ctsK2, if_neg h]
+theorem ctsK3_some : ctsK3 cR k vis cv s (some (rt, m3)) = ctsK4 cR k vis s (cvNewW m3 (rdW (m3.arr64 EREC) cv)
     (rdW (m3.arr64 EREC) (cv + 1)) (rdW (m3.arr64 EREC) (cv + 2)) (rt.headD 0)) := rfl
-theorem ctsK4_some : ctsK4 vis s (some (q, m4)) = ctsK5 q s (stubM "check_constant_val" m4 [vis, q]) := rfl
+theorem ctsK4_some : ctsK4 cR k vis s (some (q, m4)) = ctsK5 q s (cR k "check_constant_val" [vis, q] m4) := rfl
 theorem ctsK5_some : ctsK5 q s (some (r5, m5)) = some ([q, s], m5) := rfl
 end arms
 
 grind_pattern [ind_grind] ctsW_succ => ctsW cR (k + 1) m vis cv n cvTa0
-grind_pattern [ind_grind] ctsK1_some => ctsK1 k vis cv (some (r1, m1))
-grind_pattern [ind_grind] ctsK2_big => ctsK2 k vis cv bo bl s (some (ss, m2))
-grind_pattern [ind_grind] ctsK2_ok => ctsK2 k vis cv bo bl s (some (ss, m2))
-grind_pattern [ind_grind] ctsK3_some => ctsK3 vis cv s (some (rt, m3))
-grind_pattern [ind_grind] ctsK4_some => ctsK4 vis s (some (q, m4))
+grind_pattern [ind_grind] ctsK1_some => ctsK1 cR k vis cv (some (r1, m1))
+grind_pattern [ind_grind] ctsK2_big => ctsK2 cR k vis cv bo bl s (some (ss, m2))
+grind_pattern [ind_grind] ctsK2_ok => ctsK2 cR k vis cv bo bl s (some (ss, m2))
+grind_pattern [ind_grind] ctsK3_some => ctsK3 cR k vis cv s (some (rt, m3))
+grind_pattern [ind_grind] ctsK4_some => ctsK4 cR k vis s (some (q, m4))
 grind_pattern [ind_grind] ctsK5_some => ctsK5 q s (some (r5, m5))
 
 section spec
@@ -138,7 +138,7 @@ theorem ctsW_spec (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         wtW_spec p ha hc hsc hv hff hfp hif hwt hi1 cR hcR k, internSort_spec p hsf hsp his k,
         closeTelescope_spec p hd hpf hpp hpi hmk hct hab k, cvNew_specW p hea hcn k,
-        stubM_spec p "check_constant_val" k] <;>
+        hcR k "check_constant_val"] <;>
       finish (gen := 20)
 
 end spec
@@ -200,8 +200,8 @@ theorem ctsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨ss, m2⟩ := x2
   rw [h2] at h
   by_cases hss : 4294967296 ≤ ss
-  · rw [ctsK2_big k m2 vis cv _ _ _ ss hss] at h; cases h
-  rw [ctsK2_ok k m2 vis cv _ _ _ ss hss] at h
+  · rw [ctsK2_big _ k m2 vis cv _ _ _ ss hss] at h; cases h
+  rw [ctsK2_ok _ k m2 vis cv _ _ _ ss hss] at h
   have hss32 : ss.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ ss.toNat := hss; omega
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internSort_stage hS1 _ hs32 h2
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
@@ -221,6 +221,7 @@ theorem ctsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | some x4 =>
   obtain ⟨q, m4⟩ := x4
   rw [h4, ctsK4_some] at h
+  simp only [stubCall] at h
   have hnat : ∀ j, j < 4 → nat? (erA m3) (cv.toNat + j) = nat? (erA m) (cv.toNat + j) := fun j hj => by
     simp only [nat?, erA]; rw [hg13.2.2.2 _ (by omega)]
   obtain ⟨hS4, hg4, hq, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
