@@ -109,3 +109,10 @@ across the call).
 **Landed with slotgrow (2026-10-23).** slotgrow is on master (7d42fede); the hash-table
 workaround (`halfLen`, `abiSlotTableWords`, `CA_ABI_SLOT_WORDS`) is deleted: every word array gets
 `abiWords = 2^32` words.
+e2e at this state (`--latest ''`): `check` 407 agree-accept (app-lam included), 262 agree-reject
+(L aborts), 3 agree-reject, 2 agree-timeout, 1 agree-memout (`stack_fuel_offset`); `check_np` 391 /
+278 / 3 / 2 / 1. No other change against the compproofB baseline.
+
+`harness/main.c` also takes lane compopt2's patch: `MADV_HUGEPAGE` on each word array's slot
+except its first and last 2 MB (their measurement: c04a 3.54 → 3.32 s, page faults 201 K → 15 K,
+Init ~0.95×, small fixtures unchanged). Harness-only, no proof impact.

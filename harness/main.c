@@ -44,6 +44,15 @@ int main(int argc, char **argv) {
   uint8_t *base = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (base == MAP_FAILED) { perror("mmap"); return 3; }
+  /* Transparent huge pages for the word arrays (lane compopt2: dTLB misses were 13.5 M on c03d
+     against con-ron's 54 K; big fixtures -10..14% wall, Init -5%). Not the first and last 2 MB
+     of each array's slot: a small run touches only those (the start of every array, and the
+     slot tables' size word at the end), and must not zero 2 MB per array. */
+  for (uint64_t a = 0; a < ca_nw; a++) {
+    uintptr_t h = 2u << 20, s = (uintptr_t)base + ca_w0 + a * ca_slot;
+    uintptr_t lo = (s + 2 * h - 1) & ~(h - 1), hi = (s + ca_slot - h) & ~(h - 1);
+    if (hi > lo) madvise((void *)lo, hi - lo, MADV_HUGEPAGE);
+  }
   ca_res r = ca_start(in, n, pins, np, base, ca_region_size);
   if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
   else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
