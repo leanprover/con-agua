@@ -93,6 +93,14 @@ structure PipeRels (b pb : ByteArray) (s8 s64 : List Nat) where
 def InputsOK (b pb : ByteArray) (s64 : List Nat) : Prop :=
   System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ n ∈ s64, n < 2 ^ 64
 
+/-- The twin's stages before the fold ran, from `AState.init EStore.empty`. -/
+def TwinPrefix (b : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD)
+    (sC : AState) (ds : Array IDeclaration) (sD : AState) (pins : List ConLeche.NatOpPinSet)
+    (ipins : List INatOpPinSet) (sE : AState) : Prop :=
+  internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
+    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins sD = .ok (ipins, sE)
+
 section stages
 variable (p : Prog) (ρ : ∀ b pb s8 s64, PipeRels b pb s8 s64)
 
@@ -131,10 +139,13 @@ def PinsStage : Prop := ∀ b pb s8 s64 ds a, InputsOK b pb s64 →
     ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb s8 s64).R7 m ds ipins a'
 
 /-- **Stage `install_then_check`**: a returning call is the twin's accepting fold
-(`SeqAccepts`: phase A, then phase B on the phase-A state's worker). -/
-def LoopStage : Prop := ∀ b pb s8 s64 ds ipins a, InputsOK b pb s64 →
-  RelSpec p "install_then_check" ((ρ b pb s8 s64).R7 · ds ipins a) fun _ _ =>
-    ∃ fe a', SeqAccepts .verified ipins ds a fe a'
+(`SeqAccepts`: phase A, then phase B on the phase-A state's worker). It may use the twin's stages
+so far (`TwinPrefix`: `Final/Twin.lean`'s `stages_frame` turns them into the fold's start
+invariant). -/
+def LoopStage : Prop := ∀ b pb s8 s64 sA pre sB rc sC ds sD pins ipins sE, InputsOK b pb s64 →
+  TwinPrefix b sA pre sB rc sC ds sD pins ipins sE →
+  RelSpec p "install_then_check" ((ρ b pb s8 s64).R7 · ds ipins sE) fun _ _ =>
+    ∃ fe a', SeqAccepts .verified ipins ds sE fe a'
 
 end stages
 
@@ -221,10 +232,14 @@ theorem pipelineRefines_of_stages {p : Prog} (hp : p.lookup "check" = some check
           ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR'⟩⟩)
     (StageSpec.of_rel (fun x : AState × PreludeIx × AState × ParseResultD × AState ×
           Array IDeclaration × AState × List ConLeche.NatOpPinSet × List INatOpPinSet × AState =>
-          (r.R7 · x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2)) _
-      (fun x => h8 b pb s8 s64 x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2 hin)
+          fun m => TwinPrefix b x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2.1
+            x.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2 ∧
+          r.R7 m x.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.2.2.2.2)
+      (fun x _ _ => ∃ fe a', SeqAccepts .verified x.2.2.2.2.2.2.2.2.1 x.2.2.2.2.2.1
+        x.2.2.2.2.2.2.2.2.2 fe a')
+      (fun x n s₀ hP => h8 b pb s8 s64 _ _ _ _ _ _ _ _ _ _ hin hP.1 n s₀ hP.2)
       fun m ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hD, hE, hR⟩ =>
-        ⟨(sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE), hR, fun _ _ ⟨fe, sF, hF⟩ =>
+        ⟨(sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE), ⟨⟨hA, hB, hC, hD, hE⟩, hR⟩, fun _ _ ⟨fe, sF, hF⟩ =>
           ⟨pins, sA, sB, sC, sD, sE, sF, pre, rc, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩⟩)
     N { mem := loadMem b pb s8 s64, loc := Locals.init [] }
   simp only [L.run] at hrun
