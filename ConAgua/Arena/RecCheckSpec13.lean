@@ -11,6 +11,8 @@ the tops). Callees: `ctors_have_name` (helper `recb`'s `chnW`), `target_class_ma
 (`RecCheckSpec12`), `sl_cons`.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

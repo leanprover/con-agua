@@ -11,6 +11,8 @@ L: `erase_each` is the twin's `mapM` as a self-recursion consing each result (`s
 handle guard after `intern_const` (`mk_app_n_f`'s contract takes a handle).
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

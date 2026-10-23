@@ -107,6 +107,8 @@ import ConAgua.Arena.RecGenSpec15
 import ConAgua.Arena.RecGenSpec18
 import ConAgua.Arena.RecGenSpec19
 import ConAgua.Arena.RecGenSpec20
+import ConAgua.Arena.IndInstallSpec35
+import ConAgua.Arena.RecGenSpec21
 import ConAgua.Arena.RecCheckSpec8
 import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.IndPosSpec2

@@ -295,7 +295,7 @@ theorem nbKey_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
   simp only [callFn, nestContKeyL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       posRec4_specW p R.ha R.h4 n, nestKeysContains_spec p L.nag.hq L.nag.he L.nag.hkc n,
-      dc_spec' p L.dc.hh L.dc.hg L.dc.hp n, hNew] <;>
+      dc_spec' p L.dc.hf L.dc.hh L.dc.hg L.dc.hp n, hNew] <;>
     simp_all [nbKeyW_succ, nbKeyK1_some, nbKeyK2_some, nbAppK6_some, nestedW, Cmp.evalW,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
@@ -310,7 +310,7 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
   simp only [callFn, nestContL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nt_spec' p L.nt n, nestCtxHiAt_specE p R.hi n,
-      nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.hpc L.hcc n, posRec4_specW p R.ha R.h4 n,
+      nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.dc.hf L.hpc L.hcc n, posRec4_specW p R.ha R.h4 n,
       nestInstType_spec' p L.nit n, hKey] <;>
     simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,

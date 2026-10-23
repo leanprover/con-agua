@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec10
+import ConAgua.Arena.IndRealWalk
 
 /-!
 # `RecCheck`: `targetParamsDefEq`, the relational side (lane `indproofs3`, helper `rec`)
@@ -121,14 +122,14 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
       if_false]; rfl
   rw [pdsK2_ok (h := hb2)] at h
   have e2 : (b2.toNat != 0) = false := by simp at hb2; simp [hb2]
-  cases h3 : stubM "fvar_b" m2 [CWF, x] with
+  cases h3 : fvbF m2 [CWF, x] with
   | none => rw [h3] at h; cases h
   | some p3 =>
   obtain ⟨r3, m3⟩ := p3
   rw [h3] at h
-  obtain ⟨k3, a3, run3, hS3, hg3, hd3⟩ := fvarB_spec dn vis fe CWF x hx m2 m3 a2 r3 h3 hS2
+  obtain ⟨k3, a3, run3, hS3, hg3, hd3⟩ := fvbF_ok dn vis fe CWF x hx m2 m3 a2 r3 h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
-  have hP3 := hP2.stub (by decide) h3
+  have hP3 := hP2.fr (MFr.ofFvbF h3)
   by_cases hc3 : pfl < r3.headD 0
   · rw [pdsK3_out (h := hc3)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
@@ -138,14 +139,14 @@ theorem pdsC_ok (n : Nat) {m m' : Mem} {a : AState} {d no nl lvls ho hl pfo pfl 
       Bool.false_eq_true, if_false]; rfl
   rw [pdsK3_ok (h := hc3)] at h
   have e3 : ¬ k3 > pfvs.length := by rw [word_lt_iff] at hc3; simp only [decW0Nat] at hd3; omega
-  cases h4 : stubM "fvar_b" m3 [CWF, y] with
+  cases h4 : fvbF m3 [CWF, y] with
   | none => rw [h4] at h; cases h
   | some p4 =>
   obtain ⟨r4, m4⟩ := p4
   rw [h4] at h
-  obtain ⟨k4, a4, run4, hS4, hg4, hd4⟩ := fvarB_spec dn vis fe CWF y hy m3 m4 a3 r4 h4 hS3
+  obtain ⟨k4, a4, run4, hS4, hg4, hd4⟩ := fvbF_ok dn vis fe CWF y hy m3 m4 a3 r4 h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
-  have hP4 := hP3.stub (by decide) h4
+  have hP4 := hP3.fr (MFr.ofFvbF h4)
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
   by_cases hc4 : pfl < r4.headD 0
   · rw [pdsK4_out (h := hc4)] at h

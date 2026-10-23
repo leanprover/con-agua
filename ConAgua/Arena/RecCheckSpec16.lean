@@ -7,6 +7,8 @@ The twin split at the L functions' boundaries (`tkTele`, `tkHeads`, `tkArgs`, ve
 `targetK53`; `tk53_eq` puts them back together), each simulated by its word model.
 -/
 
+noncomputable section
+
 set_option experimental.vcgen true
 
 open ConRon.Arena

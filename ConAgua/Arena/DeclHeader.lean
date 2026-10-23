@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.IndRealWalk
 
 /-!
 # `install_header` refines `installHeader` (lane `decls2`, helper `decls2-header`)
@@ -8,6 +9,8 @@ On lane `indproofs`' template, as `install_value_guards` in `DeclCvg.lean`: word
 `reserved_from`/`reserved_contains` by fuel), their `vcgen` specs, and the relational lemma
 `ihW_ok` (a model run from the stage relation is a successful twin run of `installHeader`).
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 set_option linter.deprecated false
@@ -227,6 +230,8 @@ structure IhProg (p : Prog) : Prop where
   lps : p.lookup "cv_lps" = some cvLps
   cont : p.lookup "sl_contains" = some slContains
   nodup : p.lookup "sl_nodup" = some slNodup
+  bvb : BvbProg p
+  hf : HfF p
 
 mutual
 /-- **The model of `install_header`** (the name `x` and the type `t` read from `EREC` first). -/
@@ -255,12 +260,12 @@ def ihK4 (n : Nat) (vis t : Word) : Option (List Word × Mem) → Option (List W
 def ihK5 (vis t : Word) (r4 : List Word) (m4 : Mem) : Option Word → Option (List Word × Mem)
   | none => none
   | some d =>
-    if d = 0 then none else ihK6 vis t r4 (stubM "loose_bvars_bounded_fast" m4 [4000000000, 0, t])
+    if d = 0 then none else ihK6 vis t r4 (lbbF m4 [4000000000, 0, t])
 
 def ihK6 (vis t : Word) (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r6, m6) =>
-    if r6.headD 0 = 0 then none else ihK7 vis t r4 (stubM "has_fvar_fast" m6 [4000000000, t])
+    if r6.headD 0 = 0 then none else ihK7 vis t r4 (hffF m6 [4000000000, t])
 
 def ihK7 (vis t : Word) (r4 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -294,9 +299,9 @@ theorem ihK4_some : ihK4 n vis t (some (r4, m4)) =
     ihK5 vis t r4 m4 (nodupW n m4 (r4.headD 0) (r4.tail.headD 0)) := rfl
 theorem ihK5_some : ihK5 vis t r4 m4 (some d) =
     if d = 0 then none
-    else ihK6 vis t r4 (stubM "loose_bvars_bounded_fast" m4 [4000000000, 0, t]) := rfl
+    else ihK6 vis t r4 (lbbF m4 [4000000000, 0, t]) := rfl
 theorem ihK6_some : ihK6 vis t r4 (some (r6, m6)) =
-    if r6.headD 0 = 0 then none else ihK7 vis t r4 (stubM "has_fvar_fast" m6 [4000000000, t]) :=
+    if r6.headD 0 = 0 then none else ihK7 vis t r4 (hffF m6 [4000000000, t]) :=
   rfl
 theorem ihK7_some : ihK7 vis t r4 (some (r7, m7)) =
     if r7.headD 0 ≠ 0 then none
@@ -330,7 +335,7 @@ theorem ih_specW (p : Prog) (h : IhProg p) (n : Nat) (s₀ : St) (vis q : Word) 
         envFind_specW p h.ix h.rowGet h.find n, resCont_spec p h.resF h.resC n,
         cvLps_specW p h.alloc h.copy h.eti h.lps n, slNodup_spec p h.cont h.nodup n,
         stubM_spec p "is_proj_fn_shape" n,
-        stubM_spec p "loose_bvars_bounded_fast" n, stubM_spec p "has_fvar_fast" n,
+        lbbF_spec p h.bvb n, hffF_spec p h.hf n,
         stubM_spec p "all_level_params_defined" n, stubM_spec p "consts_resolve_ffast" n] <;>
       finish (gen := 20)
 
@@ -428,23 +433,23 @@ theorem ihW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
     · simp [hn]
     · simp [hn] at hd; exact absurd hd hb5
   -- the four walks, as in `ivgW_ok`
-  cases h6 : stubM "loose_bvars_bounded_fast" m4 [4000000000, 0, wt] with
+  cases h6 : lbbF m4 [4000000000, 0, wt] with
   | none => rw [h6] at h; simp [ihK6] at h
   | some rm6 =>
   obtain ⟨r6, m6⟩ := rm6
   rw [h6, ihK6_some] at h
   obtain ⟨x6, a6, hrun6, hS6, hg6, hx6, -⟩ :=
-    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 wt hwtl m4 m6 a3 r6 h6 hS4
+    lbbF_ok dn vis fe 4000000000 0 wt hwtl m4 m6 a3 r6 h6 hS4
   by_cases hb6 : r6.headD 0 = 0
   · rw [if_pos hb6] at h; simp at h
   rw [if_neg hb6] at h
-  cases h7 : stubM "has_fvar_fast" m6 [4000000000, wt] with
+  cases h7 : hffF m6 [4000000000, wt] with
   | none => rw [h7] at h; simp [ihK7] at h
   | some rm7 =>
   obtain ⟨r7, m7⟩ := rm7
   rw [h7, ihK7_some] at h
   obtain ⟨x7, a7, hrun7, hS7, hg7, hx7, -⟩ :=
-    hasFvarFast_spec dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
+    hffF_ok dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
   by_cases hb7 : r7.headD 0 ≠ 0
   · rw [if_pos hb7] at h; simp at h
   rw [if_neg hb7, hr4t] at h
