@@ -41,12 +41,6 @@ abbrev SOREC : ArrId := 16
 /-- The `sort` cons-table slots, both tiers interleaved. -/
 abbrev SOSLOT : ArrId := 17
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def sortGS : GrowSch :=
-  ⟨SOSLOT, SOREC, 1, 16, lblk (n, k, t, i, c, h) {
-    h := (⟪fnvBasis⟫ ^ SOREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `sort` record (FNV-1a over its word). -/
 def sortHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -80,13 +74,13 @@ def sortCS : ConsSch where
   fname := "sort_find"
   pname := "sort_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SOREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) {
     if len(SOREC.u64) >> 1 <= c || len(SOLP.u64) >> 1 <= c { skip } })
   recW := [.var 1]
-  ghash := sortGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 27) & 1 }))
   xloc := 4
@@ -141,12 +135,12 @@ def internSort : FunDecl := consInternG sortCS
 def sortProg : Prog :=
   [("sort_find", sortFind), ("sort_push", sortPush), ("intern_sort", internSort)]
 
-/-- A memory with 8 `sort` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `sort` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥15 (the other tables') are unused here and left empty. -/
 def sortMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate 32 0] ++ Array.replicate 44 (Array.replicate 32 0) }
+      Array.replicate consTestWords 0] ++ Array.replicate 44 (Array.replicate consTestWords 0) }
 
 /-- Intern each handle word in turn; the handles. -/
 def internSorts (m : Mem) : List Word → Option (List Word)
@@ -168,13 +162,6 @@ the scratch tier; a scratch child (`0x28000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `sohash`. -/
-theorem sohash_ok : HashOK p sortGS 9 sohash := by
-  intro k s₀
-  simp only [sortGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [sohash, sortHashW, LocEq, St.setLoc]
-
 theorem soPre_spec (k : Stmt → M Sig) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p k soPre
@@ -192,10 +179,14 @@ theorem sortOK : ConsOK p sortCS where
     intro s
     simp [sortCS, condOf, Cond.pval, Expr.pval, somatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := sohash_ok p
   ihash := by
     intro n s₀
     simp only [sortCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, sortHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, sortCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, sortHashW, argsOf, BinOp.eval]
   pre := by
@@ -225,6 +216,9 @@ theorem sortOK : ConsOK p sortCS where
     simp [sortCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [sortCS] at h
+  mloc := fun h => by simp [sortCS] at h
+  exnk := fun _ => by decide
 
 theorem sopushOK_eqC (m : Mem) (t : Word) : sopushOK m t = pushOKC sortCS m t := by
   simp only [sopushOK, pushOKC, sortCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

@@ -41,12 +41,6 @@ abbrev SREC : ArrId := 6
 /-- The `succ` cons-table slots, both tiers interleaved. -/
 abbrev SSLOT : ArrId := 7
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def succGS : GrowSch :=
-  ⟨SSLOT, SREC, 1, 6, lblk (n, k, t, i, c, h) {
-    h := (⟪fnvBasis⟫ ^ SREC.u64[i * 2 + t]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `succ` record (FNV-1a over its word). -/
 def succHashW (u : Word) : Word := (fnvBasis ^^^ u) * fnvPrime
 
@@ -80,13 +74,13 @@ def succCS : ConsSch where
   fname := "succ_find"
   pname := "succ_push"
   nk := 1
+  exact := true
   mc := condOf (lblk (t, u, h, n, j, d, v, b) {
     if SREC.u64[(v - 1) * 2 + t] == u { skip } })
   np := 1
   room := condOf (lblk (t, u, j, c) {
     if len(SREC.u64) >> 1 <= c || len(SHP.u64) >> 1 <= c { skip } })
   recW := [.var 1]
-  ghash := succGS.hash
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
   skipW := none
   xloc := 4
@@ -134,10 +128,10 @@ def internSucc : FunDecl := consInternG succCS
 def succProg : Prog :=
   [("succ_find", succFind), ("succ_push", succPush), ("intern_succ", internSucc)]
 
-/-- A memory with 8 `succ` nodes and 16 slots per tier, the scratch tier closed or open. -/
+/-- A memory with 8 `succ` nodes and `SN0` slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate 32 0] ++ Array.replicate 62 (Array.replicate 32 0) }
+      Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each word in turn; the handles. -/
 def internSuccs (m : Mem) : List Word → Option (List Word)
@@ -158,13 +152,6 @@ def internSuccs (m : Mem) : List Word → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `shash`. -/
-theorem shash_ok : HashOK p succGS 9 shash := by
-  intro k s₀
-  simp only [succGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [shash, succHashW, LocEq, St.setLoc]
-
 theorem sPre_spec (k : Stmt → M Sig) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p k sPre
@@ -182,10 +169,14 @@ theorem succOK : ConsOK p succCS where
     intro s
     simp [succCS, condOf, Cond.pval, Expr.pval, smatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := shash_ok p
   ihash := by
     intro n s₀
     simp only [succCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, succCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
   pre := by
@@ -213,6 +204,9 @@ theorem succOK : ConsOK p succCS where
     simp [succCS] at he
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [succCS] at h
+  mloc := fun h => by simp [succCS] at h
+  exnk := fun _ => by decide
 
 theorem spushOK_eqC (m : Mem) (t : Word) : spushOK m t = pushOKC succCS m t := by
   simp only [spushOK, pushOKC, succCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

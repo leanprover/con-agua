@@ -210,6 +210,7 @@ theorem lsCS_wf : lsCS.WF where
     simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
     exact colRoom_of m LSHP _ t ht hp.1.1 hp.2
   vs ks h hk := by simp [pushArgs, lsCS, hk]
+  ex h := by simp [lsCS] at h
 
 /-- `LsRecRel` does not read the column. -/
 theorem lsColFree : ColFree lsCS LsRecRel := by

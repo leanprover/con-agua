@@ -64,11 +64,11 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
   | .error _ => none
 
 /- `bvar 3` nested in 5 applications: bound 4. -/
-#guard (walkRun 1000 "bb_bench" [5, 3] (walkMem 16)).map (·.1) == some 4
+#guard (walkRun 1000 "bb_bench" [5, 3] (walkMem 64)).map (·.1) == some 4
 
 /- `letE (bvar 0) (sort u) (app (bvar 2) (bvar 0))`: `max (max 1 0) (3 - 1) = 2`. -/
 #guard
-  match walkRun 100 "intern_bvar" [0] (walkMem 16) with
+  match walkRun 100 "intern_bvar" [0] (walkMem 64) with
   | some (b0, m) => match walkRun 100 "intern_bvar" [2] m with
     | some (b2, m) => match walkRun 100 "intern_sort" [0x10000000] m with
       | some (s, m) => match walkRun 100 "intern_app" [b2, b0] m with
@@ -83,7 +83,7 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
 /- `lam (fvar 0 (sort u)) (forallE (bvar 1) (proj c 0 (bvar 3)))`: the `forallE`'s bound is
 `max 2 (4 - 1) = 3`, the `lam`'s `max 0 (3 - 1) = 2`. -/
 #guard
-  match walkRun 100 "intern_sort" [0x10000000] (walkMem 16) with
+  match walkRun 100 "intern_sort" [0x10000000] (walkMem 64) with
   | some (s, m) => match walkRun 100 "intern_fvar" [0, s] m with
     | some (fv, m) => match walkRun 100 "intern_bvar" [1] m with
       | some (b1, m) => match walkRun 100 "intern_bvar" [3] m with
@@ -101,13 +101,13 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
 
 /- The depth counter: `bvar 0` needs one level; at `0` the walk aborts (the twin throws). -/
 #guard
-  match walkRun 100 "intern_bvar" [0] (walkMem 16) with
+  match walkRun 100 "intern_bvar" [0] (walkMem 64) with
   | some (b0, m) => (walkRun 100 "bb_memo" [b0, 0] m).isNone &&
       (walkRun 100 "bb_memo" [b0, 1] m).map (·.1) == some 1
   | none => false
 
 /- Not enough fuel for 50 nested applications: no answer. -/
-#guard (walkRun 40 "bb_bench" [50, 3] (walkMem 128)).isNone
-#guard (walkRun 200 "bb_bench" [50, 3] (walkMem 128)).map (·.1) == some 4
+#guard (walkRun 40 "bb_bench" [50, 3] (walkMem 512)).isNone
+#guard (walkRun 200 "bb_bench" [50, 3] (walkMem 512)).map (·.1) == some 4
 
 end L.Arena

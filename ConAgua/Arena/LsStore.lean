@@ -44,12 +44,6 @@ abbrev LSREC : ArrId := 39
 /-- The level-list cons-table slots, both tiers interleaved. -/
 abbrev LSSLOT : ArrId := 40
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def lsGS : GrowSch :=
-  ⟨LSSLOT, LSREC, 3, 40, lblk (n, k, t, i, c, h) {
-    h := LSREC.u64[i * 6 + t * 3 + 2]
-  }⟩
-
 /-! ## `ls_match(t, i, o, l, h)` -/
 
 /-- The model of `ls_match`: node `i` of tier `t` has hash `h`, length `l` and the words of the
@@ -128,7 +122,6 @@ def lsCS : ConsSch where
   room := condOf (lblk (t, o, l, h, j, c) {
     if len(LSREC.u64) < (c + 1) * 6 || len(LSHP.u64) >> 1 <= c { skip } })
   recW := [.var 1, .var 2, .var 3]
-  ghash := lsGS.hash
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
   xloc := 7
@@ -176,11 +169,11 @@ def lsProg : Prog :=
    ("ls_push", lsPush), ("intern_ls", internLs)]
 
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
-16 slots per tier, the scratch tier closed or open. -/
+`SN0` slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
   { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 32 0] ++
-      Array.replicate 62 (Array.replicate 32 0) }
+      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate consTestWords 0] ++
+      Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each slice in turn; the handles. -/
 def internLss (m : Mem) : List (Word × Word) → Option (List Word)
@@ -202,13 +195,6 @@ section specs
 variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   (hpe : p.lookup "limbs_eq" = some limbsEq)
 
-/-- The growth's hash block computes `lshash`. -/
-theorem lshash_ok : HashOK p lsGS 14 lshash := by
-  intro k s₀
-  simp only [lsGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lshash, LocEq, St.setLoc]
-
 include hph hpe in
 theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
   match_ := by
@@ -220,7 +206,10 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
-  ghash := lshash_ok p
+  ihashG := fun h => by simp [lsCS] at h
+  qpure := fun _ h => by simp [lsCS] at h
+  mloc := fun _ => by simp [lsCS]
+  exnk := fun h => by simp [lsCS] at h
   ihash := by
     intro n s₀
     apply triple_pre_and

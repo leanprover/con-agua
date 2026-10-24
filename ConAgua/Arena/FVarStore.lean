@@ -46,12 +46,6 @@ abbrev FVREC : ArrId := 25
 /-- The `fvar` cons-table slots, both tiers interleaved. -/
 abbrev FVSLOT : ArrId := 26
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def fvarGS : GrowSch :=
-  ⟨FVSLOT, FVREC, 2, 26, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ FVREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FVREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of an `fvar` record (FNV-1a over its two words). -/
 def fvarHashW (u ty : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ ty) * fnvPrime
 
@@ -84,13 +78,13 @@ def fvarCS : ConsSch where
   fname := "fvar_find"
   pname := "fvar_push"
   nk := 2
+  exact := true
   mc := condOf (lblk (t, u, ty, h, n, j, d, v, b) {
     if FVREC.u64[(v - 1) * 4 + t * 2] == u && FVREC.u64[(v - 1) * 4 + t * 2 + 1] == ty { skip } })
   np := 2
   room := condOf (lblk (t, u, ty, j, c) {
     if len(FVREC.u64) >> 2 <= c || len(FVLP.u64) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := fvarGS.hash
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 27) & 1 }))
   xloc := 4
@@ -146,11 +140,11 @@ def internFVar : FunDecl := consInternG fvarCS
 def fvarProg : Prog :=
   [("fvar_find", fvarFind), ("fvar_push", fvarPush), ("intern_fvar", internFVar)]
 
-/-- A memory with 8 `fvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
+/-- A memory with 8 `fvar` nodes and `SN0` slots per tier, the scratch tier closed or open. Arrays
 0‥24 (the other tables') are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
   { words := (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 32 0, Array.replicate 32 0] ++ Array.replicate 62 (Array.replicate 32 0) }
+      #[Array.replicate consTestWords 0, Array.replicate consTestWords 0] ++ Array.replicate 62 (Array.replicate consTestWords 0) }
 
 /-- Intern each `(index, ty)` pair in turn; the handles. -/
 def internFVars (m : Mem) : List (Word × Word) → Option (List Word)
@@ -174,23 +168,20 @@ scratch tier; a scratch `ty` (`0x08000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `fvhash`. -/
-theorem fvhash_ok : HashOK p fvarGS 10 fvhash := by
-  intro k s₀
-  simp only [fvarGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [fvhash, fvarHashW, LocEq, St.setLoc]
-
 /-- **The `fvar` table's obligations.** -/
 theorem fvarOK : ConsOK p fvarCS where
   match_ := by
     intro s
     simp [fvarCS, condOf, Cond.pval, Expr.pval, fvmatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := fvhash_ok p
   ihash := by
     intro n s₀
     simp only [fvarCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, fvarHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, fvarCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, fvarHashW, argsOf, BinOp.eval]
   pre := by
@@ -220,6 +211,9 @@ theorem fvarOK : ConsOK p fvarCS where
     simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [fvarCS] at h
+  mloc := fun h => by simp [fvarCS] at h
+  exnk := fun _ => by decide
 
 theorem fvpushOK_eqC (m : Mem) (t : Word) : fvpushOK m t = pushOKC fvarCS m t := by
   simp only [fvpushOK, pushOKC, fvarCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

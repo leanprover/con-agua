@@ -44,12 +44,6 @@ abbrev NASLOT : ArrId := 34
 every probe is the same, fixed slot. -/
 def nahashW : Word := fnvBasis
 
-/-- The growth schema of this table (`SlotGrow.lean`; one node per tier, so it never grows). -/
-def nanonGS : GrowSch :=
-  ⟨NASLOT, NAREC, 1, 34, lblk (n, k, t, i, c, h) {
-    h := ⟪nahashW⟫
-  }⟩
-
 /-- The model of the match: **every** node of this table is the `anonymous` node. -/
 def namatchW (_r : Array Word) (_t _i : Word) : Bool := true
 
@@ -76,11 +70,11 @@ def nanonCS : ConsSch where
   fname := "nanon_find"
   pname := "nanon_push"
   nk := 0
+  exact := true
   mc := condOf (lblk (t, h, n, j, d, v, b) { if 0 == 0 { skip } })
   np := 0
   room := condOf (lblk (t, j, c) { if len(NAREC.u64) >> 1 <= c { skip } })
   recW := [.const 0]
-  ghash := nanonGS.hash
   ihash := lblk (h) { h := ⟪nahashW⟫ }
   skipW := none
   mtM m _ t i := namatchW (m.arr64 NAREC) t i
@@ -127,7 +121,7 @@ def nanonProg : Prog :=
 other tables') are unused here and left empty. -/
 def nanonMem (scratch : Word) : Mem :=
   { words := ((Array.replicate 33 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
-      #[Array.replicate 16 0, Array.replicate 32 0] }
+      #[Array.replicate 16 0, Array.replicate consTestWords 0] }
 
 /-- Intern `anonymous` `k` times in a row: the handle, every time, is the first persistent
 node. -/
@@ -148,22 +142,19 @@ def internNAnons (m : Mem) : Nat → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `nahash`. -/
-theorem nahash_ok : HashOK p nanonGS 4 nahash := by
-  intro k s₀
-  simp only [nanonGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [nahash, nahashW, LocEq, St.setLoc]
-
 /-- **The `nanon` table's obligations.** -/
 theorem nanonOK : ConsOK p nanonCS where
   match_ := by
     intro s
     simp [nanonCS, condOf, Cond.pval, Expr.pval, namatchW, Cmp.eval, L.Notation.blk]
-  ghash := nahash_ok p
   ihash := by
     intro n s₀
     simp only [nanonCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, nahashW]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, nanonCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, nahashW]
   recs := ⟨by
@@ -178,6 +169,9 @@ theorem nanonOK : ConsOK p nanonCS where
   colA := by simp [nanonCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [nanonCS] at h
+  mloc := fun h => by simp [nanonCS] at h
+  exnk := fun _ => by decide
 
 theorem napushOK_eqC (m : Mem) (t : Word) : napushOK m t = pushOKC nanonCS m t := by
   simp only [napushOK, pushOKC, nacnt, cntC, nanonCS, ← decide_not, UInt64.not_le]; rfl
