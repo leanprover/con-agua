@@ -18,6 +18,15 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
+/-- **Peel one callee off a continuation model** (`K none = none`): its run returned, and the
+model is the continuation's at that result. -/
+theorem callK_some {γ : Type} {K : Option (List Word × Mem) → Option γ} {o : Option (List Word × Mem)}
+    {v : γ} (h : K o = some v) (hn : K none = none) :
+    ∃ r m, o = some (r, m) ∧ K (some (r, m)) = some v := by
+  cases o with
+  | none => rw [hn] at h; cases h
+  | some q => exact ⟨q.1, q.2, rfl, h⟩
+
 /-! ## `proj_lit_to_ctor` -/
 
 /-- The model of `proj_lit_to_ctor`: not a `lit` handle, or a `natVal` one, answers it unchanged;
@@ -169,11 +178,8 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
     rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
   rw [if_neg hkind] at hW
   obtain ⟨s', hv⟩ := hviewS (by simpa using hkind)
-  cases hcall1 : callW p n "str_lit_supported" [vis] s.mem with
-  | none => simp [hcall1] at hW
-  | some q₁ =>
-  obtain ⟨r₁, m₁⟩ := q₁
-  simp only [hcall1] at hW
+  rcases hcall1 : callW p n "str_lit_supported" [vis] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [hcall1, reduceCtorEq] at hW
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, -⟩ :=
     CoreSpec.of_callW (hStrSup n s a₀ dn vis fe MM eb hS) hcall1
   by_cases hsup0 : r₁.headD 0 = 0
@@ -203,19 +209,13 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
   have hv₁ : a₁.store.view (decE h) = some (.lit (.strVal s')) := by
     show (AM.st (strLitSupported fe) a₀).store.view (decE h) = _
     exact hsupKeep a₀ _ _ hv
-  cases hcall2 : callW p n "str_lit_ctor" [h] m₁ with
-  | none => simp [hcall2] at hW
-  | some q₂ =>
-  obtain ⟨r₂, m₂⟩ := q₂
-  simp only [hcall2] at hW
+  rcases hcall2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩
+    <;> simp only [hcall2, reduceCtorEq] at hW
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ :=
     CoreSpec.of_callW (hStrCtor n { s with mem := m₁ } a₁ dn vis fe M₁ eb h s' hS₁ hh hv₁)
       hcall2
-  cases hcall3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with
-  | none => rw [hcall3] at hW; simp at hW
-  | some q₃ =>
-  obtain ⟨r₃, m₃⟩ := q₃
-  simp only [hcall3, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases hcall3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩
+    <;> simp only [hcall3, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   have hslot := (hk n (Nat.le_refl n)).whnf F { s with mem := m₂ }
     (AM.st (strLitToConstructor s') a₁) dn vis fe M₂ eb mode d (r₂.headD 0) hF hn
@@ -516,11 +516,8 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   unfold rpArgW at hW
-  cases hc1 : callW p n "intern_bvar" [0] s.mem with
-  | none => simp [hc1] at hW
-  | some q₁ =>
-  obtain ⟨r₁, m₁⟩ := q₁
-  simp only [hc1] at hW
+  rcases hc1 : callW p n "intern_bvar" [0] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [hc1, reduceCtorEq] at hW
   obtain ⟨hok1, hD1, hres1, hfr1, hhw1⟩ := callW_internBVar p hp n s a₀ hS.arena 0 r₁ m₁ hc1
   have h0 : (0 : Word).toNat = 0 := rfl
   rw [h0] at hok1 hD1 hres1
@@ -557,11 +554,8 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
       rw [List.getD_eq_getElem?_getD, List.getD_getElem?, dif_neg (by simp [har₁.size]; omega), hw]
   by_cases hv : mode &&& 1 = 0
   · rw [if_pos hv] at hW
-    cases hc2 : callW p n "proj_cert" [vis, k, ao, an] m₁ with
-    | none => simp [hc2] at hW
-    | some q₂ =>
-    obtain ⟨r₂, m₂⟩ := q₂
-    simp only [hc2] at hW
+    rcases hc2 : callW p n "proj_cert" [vis, k, ao, an] m₁ with _ | ⟨r₂, m₂⟩
+      <;> simp only [hc2, reduceCtorEq] at hW
     cases n with
     | zero => simp [callW_zero] at hc2
     | succ N =>
@@ -797,22 +791,15 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   obtain ⟨hlp, hnp, hw6, hctor, hnf⟩ := hwords
   unfold rpFireW at hW
   -- get_app_args
-  cases hc1 : callW p n "get_app_args" [e1] s.mem with
-  | none => simp [hc1] at hW
-  | some q₁ =>
-  obtain ⟨r₁, m₁⟩ := q₁
-  simp only [hc1] at hW
+  rcases hc1 : callW p n "get_app_args" [e1] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [hc1, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
     (getAppArgs_spec' p hp.spine n s a₀ hS.arena.1 e1 he1 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hE₁ : m₁.arr64 EREC = s.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
   -- ls_node
-  cases hc2 : callW p n "ls_node" [us] m₁ with
-  | none => simp [hc2] at hW
-  | some q₂ =>
-  obtain ⟨r₂, m₂⟩ := q₂
-  simp only [hc2] at hW
+  rcases hc2 : callW p n "ls_node" [us] m₁ with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, reduceCtorEq] at hW
   obtain ⟨t₂, ht₂, ht₂s, hne₂, hr₂⟩ := triple_of_callW (lsNode_spec p hp.lsn n { s with mem := m₁ } us) hc2
   have hm₂ : m₂ = m₁ := by rw [← ht₂, ht₂s]
   subst hm₂
@@ -825,11 +812,8 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat :=
     lsNodeW_viewLen hS₁.arena.1 hus hl₂
   -- fire_ok
-  cases hc3 : callW p n "fire_ok" [q, i, us] m₂ with
-  | none => simp [hc3] at hW
-  | some q₃ =>
-  obtain ⟨r₃, m₃⟩ := q₃
-  simp only [hc3] at hW
+  rcases hc3 : callW p n "fire_ok" [q, i, us] m₂ with _ | ⟨r₃, m₃⟩
+    <;> simp only [hc3, reduceCtorEq] at hW
   have hq₂ : decTbl (m₂.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
   have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂ hfe hlt hvus
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, -⟩ := CoreSpec.of_callW hfok hc3
@@ -1005,11 +989,8 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   unfold rpHeadW at hW
-  cases hc1 : callW p n "get_app_fn" [e1] s.mem with
-  | none => simp [hc1] at hW
-  | some q₁ =>
-  obtain ⟨r₁, m₁⟩ := q₁
-  simp only [hc1] at hW
+  rcases hc1 : callW p n "get_app_fn" [e1] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [hc1, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, hm₁, -, hhw, hrun1⟩ := triple_of_callW
     (getAppFn_refines p hp.spine n s a₀ hS.arena.1 e1 he1) hc1
   have hm₁' : m₁ = s.mem := by rw [← ht₁]; exact hm₁
@@ -1137,21 +1118,15 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
   cases n with
   | zero => simp [callW_zero] at hW
   | succ N =>
-  cases hc1 : callW p (N + 1) "proj_lit_to_ctor" [mode, vis, d, c] s.mem with
-  | none => simp only [hc1] at hW; cases hW
-  | some q₁ =>
-  obtain ⟨r₁, m₁⟩ := q₁
-  simp only [hc1] at hW
+  rcases hc1 : callW p (N + 1) "proj_lit_to_ctor" [mode, vis, d, c] s.mem with _ | ⟨r₁, m₁⟩
+    <;> simp only [hc1, reduceCtorEq] at hW
   have hplit := projLitToCtor_refines' p hp hStrSup hStrCtor N (hk.mono (by omega)) F (by omega) (by omega) s a₀
     dn vis fe MM eb mode d c hs hc' hsup
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW hplit hc1
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1
-  cases hc2 : callW p (N + 1) "find_proj" [vis, sn, i] m₁ with
-  | none => simp only [hc2] at hW; cases hW
-  | some q₂ =>
-  obtain ⟨r₂, m₂⟩ := q₂
-  simp only [hc2] at hW
+  rcases hc2 : callW p (N + 1) "find_proj" [vis, sn, i] m₁ with _ | ⟨r₂, m₂⟩
+    <;> simp only [hc2, reduceCtorEq] at hW
   have hfp := hc.findProj (N + 1) { s with mem := m₁ } _ dn vis fe M₁ eb sn i hS₁ hsn
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, -⟩ := CoreSpec.of_callW hfp hc2
   have hE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hE (N + 1) "find_proj" [vis, sn, i] m₁ r₂ m₂ (Or.inl rfl) hc2
@@ -1183,11 +1158,8 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
     unfold decEntry; rw [if_neg hf, hdt]; rfl
   rw [hde] at hrun2
   have hq : decTbl (m₂.arr64 EREC) (r₂.tail.headD 0).toNat = some tbl := by rw [hE₂]; exact hdt
-  cases hc3 : callW p (N + 1) "reduce_proj_head" [mode, vis, r₁.headD 0, r₂.tail.headD 0, i] m₂ with
-  | none => simp only [hc3] at hW; cases hW
-  | some q₃ =>
-  obtain ⟨r₃, m₃⟩ := q₃
-  simp only [hc3] at hW
+  rcases hc3 : callW p (N + 1) "reduce_proj_head" [mode, vis, r₁.headD 0, r₂.tail.headD 0, i] m₂ with _ | ⟨r₃, m₃⟩
+    <;> simp only [hc3, reduceCtorEq] at hW
   have hhead := rpHead_refines p hp hc N { s with mem := m₂ } _ dn vis fe M₂ eb mode (r₁.headD 0)
     (r₂.tail.headD 0) i tbl ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq hfe
     (by simpa [IProjTable.entry] using findProj?_lt hrun2)
