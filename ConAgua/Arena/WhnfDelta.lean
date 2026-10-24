@@ -128,12 +128,12 @@ def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) 
   nc := call const_e(nt);
   ty := EREC.u64[p + 4];
   if ty >> 28 != 6 { return 0 };
-  t := (ty >> 27) & 1;
-  i := ty & 134217727;
+  t := ⟦ty⟧.tier;
+  i := ⟦ty⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[30 + t] <= i { abort };
-  dom := FAREC.u64[i * 4 + t * 2];
-  body := FAREC.u64[i * 4 + t * 2 + 1];
+  if FORALL⟨t⟩.count <= i { abort };
+  dom := FORALL⟨t⟩[i].ty;
+  body := FORALL⟨t⟩[i].b;
   if dom == nc && body == nc { return 1 };
   return 0
 }
@@ -166,16 +166,16 @@ def litToCtorIfNatL : FunDecl :=
   lfn (vis, h) locals (tag, t, i, k, sup, o, cnt, r) {
   tag := h >> 28;
   if tag != 8 { return h };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= i { abort };
-  k := REC.u64[i * 8 + t * 4];
+  if LIT⟨t⟩.count <= i { abort };
+  k := LIT⟨t⟩[i].kind;
   if k != 0 { return h };
   sup := call nat_lit_supported(vis);
   if sup == 0 { return h };
-  o := REC.u64[i * 8 + t * 4 + 1];
-  cnt := REC.u64[i * 8 + t * 4 + 2];
+  o := LIT⟨t⟩[i].o;
+  cnt := LIT⟨t⟩[i].l;
   r := call nat_lit_to_ctor(o, cnt);
   return r
 }
@@ -191,33 +191,33 @@ handle word; before, the last arm answered "no match" for the tags `10`‥`15` t
 @[l_impl ConRon.Arena.rawNatLit?]
 def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
   tag := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if tag == 0 { if CTL.u64[22 + t] <= i { abort }; return (0, 0, 0) };
-  if tag == 1 { if CTL.u64[26 + t] <= i { abort }; return (0, 0, 0) };
-  if tag == 2 { if CTL.u64[16 + t] <= i { abort }; return (0, 0, 0) };
+  if tag == 0 { if BVAR⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 1 { if FVAR⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 2 { if SORT⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 3 {
-    if CTL.u64[18 + t] <= i { abort };
+    if CONST⟨t⟩.count <= i { abort };
     nz := call pin_at(2);
     el := call pin_word(52);
-    if CREC.u64[i * 4 + t * 2] == nz && CREC.u64[i * 4 + t * 2 + 1] == el {
+    if CONST⟨t⟩[i].n == nz && CONST⟨t⟩[i].us == el {
       return (1, CTL.u64[0], 0)
     };
     return (0, 0, 0)
   };
-  if tag == 4 { if CTL.u64[4 + t] <= i { abort }; return (0, 0, 0) };
-  if tag == 5 { if CTL.u64[28 + t] <= i { abort }; return (0, 0, 0) };
-  if tag == 6 { if CTL.u64[30 + t] <= i { abort }; return (0, 0, 0) };
-  if tag == 7 { if CTL.u64[20 + t] <= i { abort }; return (0, 0, 0) };
+  if tag == 4 { if APP⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 5 { if LAM⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 6 { if FORALL⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 7 { if LET⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 8 {
-    if CTL.u64[2 + t] <= i { abort };
-    k := REC.u64[i * 8 + t * 4];
-    if k == 0 { return (1, REC.u64[i * 8 + t * 4 + 1], REC.u64[i * 8 + t * 4 + 2]) };
+    if LIT⟨t⟩.count <= i { abort };
+    k := LIT⟨t⟩[i].kind;
+    if k == 0 { return (1, LIT⟨t⟩[i].o, LIT⟨t⟩[i].l) };
     return (0, 0, 0)
   };
   if tag != 9 { abort };
-  if CTL.u64[32 + t] <= i { abort };
+  if PROJ⟨t⟩.count <= i { abort };
   return (0, 0, 0)
 }
 
@@ -272,11 +272,11 @@ every unfolding leaked its spine onto the stack: whnf-delta2). -/
 def unfoldDefnAtL : FunDecl :=
   lfn (e, n, us, p) locals (tu, iu, usl, lpl, po, value, v, top, ao, an, r) {
   if us >> 28 != 0 { abort };
-  tu := (us >> 27) & 1;
-  iu := us & 134217727;
+  tu := ⟦us⟧.tier;
+  iu := ⟦us⟧.idx;
   if tu != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[40 + tu] <= iu { abort };
-  usl := LSREC.u64[iu * 6 + tu * 3 + 1];
+  if LS⟨tu⟩.count <= iu { abort };
+  usl := LS⟨tu⟩[iu].l;
   lpl := EREC.u64[p + 3];
   if usl != lpl { return (0, 0) };
   po := EREC.u64[p + 2];
@@ -298,12 +298,12 @@ def unfoldDefinitionL : FunDecl :=
   lfn (vis, e) locals (hh, t, i, n, us, found, p, fl, r) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return (0, 0) };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  n := CREC.u64[i * 4 + t * 2];
-  us := CREC.u64[i * 4 + t * 2 + 1];
+  if CONST⟨t⟩.count <= i { abort };
+  n := CONST⟨t⟩[i].n;
+  us := CONST⟨t⟩[i].us;
   (found, p) := call env_find(n, vis);
   if found == 0 { return (0, 0) };
   if EREC.u64[p] != 1 { return (0, 0) };
@@ -400,11 +400,11 @@ constant: at the empty levels, `reduce_nat_succ`. (A split of `reduce_nat`, whnf
 -- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatKL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, c, us, el, rf, rh) {
-  t2 := (f >> 27) & 1;
-  i2 := f & 134217727;
-  if CTL.u64[18 + t2] <= i2 { abort };
-  c := CREC.u64[i2 * 4 + t2 * 2];
-  us := CREC.u64[i2 * 4 + t2 * 2 + 1];
+  t2 := ⟦f⟧.tier;
+  i2 := ⟦f⟧.idx;
+  if CONST⟨t2⟩.count <= i2 { abort };
+  c := CONST⟨t2⟩[i2].n;
+  us := CONST⟨t2⟩[i2].us;
   el := call pin_word(52);
   if us != el { return (0, 0) };
   (rf, rh) := call reduce_nat_succ(mode, vis, d, c, b);
@@ -417,18 +417,18 @@ binary operation) or `reduce_nat_wf`. (A split of `reduce_nat`, whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatApL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, g, a, t3, i3, c, us, el, isbin, stored, rf, rh) {
-  t2 := (f >> 27) & 1;
-  i2 := f & 134217727;
-  if CTL.u64[4 + t2] <= i2 { abort };
-  g := AREC.u64[i2 * 4 + t2 * 2];
-  a := AREC.u64[i2 * 4 + t2 * 2 + 1];
+  t2 := ⟦f⟧.tier;
+  i2 := ⟦f⟧.idx;
+  if APP⟨t2⟩.count <= i2 { abort };
+  g := APP⟨t2⟩[i2].f;
+  a := APP⟨t2⟩[i2].a;
   if g >> 28 != 3 { return (0, 0) };
-  t3 := (g >> 27) & 1;
-  i3 := g & 134217727;
+  t3 := ⟦g⟧.tier;
+  i3 := ⟦g⟧.idx;
   if t3 != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t3] <= i3 { abort };
-  c := CREC.u64[i3 * 4 + t3 * 2];
-  us := CREC.u64[i3 * 4 + t3 * 2 + 1];
+  if CONST⟨t3⟩.count <= i3 { abort };
+  c := CONST⟨t3⟩[i3].n;
+  us := CONST⟨t3⟩[i3].us;
   el := call pin_word(52);
   if us != el { return (0, 0) };
   isbin := call nat_bin_op_name(c);
@@ -449,8 +449,8 @@ whnf-delta2.) -/
 def reduceNatHeadL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (tag2, t2, i2, rf, rh) {
   tag2 := f >> 28;
-  t2 := (f >> 27) & 1;
-  i2 := f & 134217727;
+  t2 := ⟦f⟧.tier;
+  i2 := ⟦f⟧.idx;
   if t2 != 0 && CTL.u64[1] == 0 { abort };
   if tag2 == 3 {
     (rf, rh) := call reduce_nat_k(mode, vis, d, f, b);
@@ -460,15 +460,15 @@ def reduceNatHeadL : FunDecl :=
     (rf, rh) := call reduce_nat_ap(mode, vis, d, f, b);
     return (rf, rh)
   };
-  if tag2 == 0 { if CTL.u64[22 + t2] <= i2 { abort }; return (0, 0) };
-  if tag2 == 1 { if CTL.u64[26 + t2] <= i2 { abort }; return (0, 0) };
-  if tag2 == 2 { if CTL.u64[16 + t2] <= i2 { abort }; return (0, 0) };
-  if tag2 == 5 { if CTL.u64[28 + t2] <= i2 { abort }; return (0, 0) };
-  if tag2 == 6 { if CTL.u64[30 + t2] <= i2 { abort }; return (0, 0) };
-  if tag2 == 7 { if CTL.u64[20 + t2] <= i2 { abort }; return (0, 0) };
-  if tag2 == 8 { if CTL.u64[2 + t2] <= i2 { abort }; return (0, 0) };
+  if tag2 == 0 { if BVAR⟨t2⟩.count <= i2 { abort }; return (0, 0) };
+  if tag2 == 1 { if FVAR⟨t2⟩.count <= i2 { abort }; return (0, 0) };
+  if tag2 == 2 { if SORT⟨t2⟩.count <= i2 { abort }; return (0, 0) };
+  if tag2 == 5 { if LAM⟨t2⟩.count <= i2 { abort }; return (0, 0) };
+  if tag2 == 6 { if FORALL⟨t2⟩.count <= i2 { abort }; return (0, 0) };
+  if tag2 == 7 { if LET⟨t2⟩.count <= i2 { abort }; return (0, 0) };
+  if tag2 == 8 { if LIT⟨t2⟩.count <= i2 { abort }; return (0, 0) };
   if tag2 != 9 { abort };
-  if CTL.u64[32 + t2] <= i2 { abort };
+  if PROJ⟨t2⟩.count <= i2 { abort };
   return (0, 0)
 }
 
@@ -489,12 +489,12 @@ whnf-delta2). -/
 def reduceNatL : FunDecl :=
   lfn (mode, vis, d, e) locals (t, i, f, b, rf, rh) {
   if e >> 28 != 4 { return (0, 0) };
-  t := (e >> 27) & 1;
-  i := e & 134217727;
+  t := ⟦e⟧.tier;
+  i := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  f := AREC.u64[i * 4 + t * 2];
-  b := AREC.u64[i * 4 + t * 2 + 1];
+  if APP⟨t⟩.count <= i { abort };
+  f := APP⟨t⟩[i].f;
+  b := APP⟨t⟩[i].a;
   (rf, rh) := call reduce_nat_head(mode, vis, d, f, b);
   return (rf, rh)
 }

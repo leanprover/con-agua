@@ -359,11 +359,11 @@ def betaPeelW : Stmt := lblk (t, a, ao, an, i, co, cn, tt, x, e2, e3) {
       CTL.u64[136] := co;
       return (1, e3)
     };
-    tt := (t >> 27) & 1;
-    x := t & 134217727;
+    tt := ⟦t⟧.tier;
+    x := ⟦t⟧.idx;
     if tt != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + tt] <= x { abort };
-    t := LAREC.u64[x * 4 + tt * 2 + 1];
+    if LAM⟨tt⟩.count <= x { abort };
+    t := LAM⟨tt⟩[x].b;
     if len(SPN.u64) <= co + cn { abort };
     SPN.u64[co + cn] := SPN.u64[ao + i];
     cn += 1;

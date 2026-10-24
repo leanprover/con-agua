@@ -53,10 +53,10 @@ theorem appCount_spec (p : Prog) (hp : p.lookup "app_count" = some appCountL) (n
 def appFillLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
-    SPN.u64[o + n] := AREC.u64[x * 4 + t * 2 + 1];
-    e := AREC.u64[x * 4 + t * 2]
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
+    SPN.u64[o + n] := APP⟨t⟩[x].a;
+    e := APP⟨t⟩[x].f
   }
 }
 
@@ -220,10 +220,10 @@ theorem fillW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
 def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     SPN.u64[o + n] := e;
-    e := AREC.u64[x * 4 + t * 2]
+    e := APP⟨t⟩[x].f
   }
 }
 

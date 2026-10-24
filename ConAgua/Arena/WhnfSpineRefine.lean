@@ -26,11 +26,11 @@ def getAppFnLoop : Stmt := lblk (e, f, t, x) {
   while e >> 28 == 4 {
     if f == 0 { abort };
     f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[4 + t] <= x { abort };
-    e := AREC.u64[x * 4 + t * 2]
+    if APP⟨t⟩.count <= x { abort };
+    e := APP⟨t⟩[x].f
   }
 }
 
@@ -252,11 +252,11 @@ def piResultLoop : Stmt := lblk (e, f, t, x) {
   while e >> 28 == 6 {
     if f == 0 { abort };
     f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    e := FAREC.u64[x * 4 + t * 2 + 1]
+    if FORALL⟨t⟩.count <= x { abort };
+    e := FORALL⟨t⟩[x].b
   }
 }
 
@@ -445,11 +445,11 @@ non-`∀`, the trailing `return (1, e)` at `k = 0`. -/
 def peelPisLoop : Stmt := lblk (k, e, t, x) {
   while k != 0 {
     if e >> 28 != 6 { return (0, 0) };
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    e := FAREC.u64[x * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= x { abort };
+    e := FORALL⟨t⟩[x].b;
     k -= 1
   }
 }

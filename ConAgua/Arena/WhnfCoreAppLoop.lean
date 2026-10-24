@@ -25,11 +25,11 @@ into the middle of a sequence must be one statement, so the push is not a block 
 /-- The λ-head arm of the loop body. -/
 def whnfAppLamW : Stmt := lblk (mode, vis, d, v, hd, vo, vn, same, ao, an, i, top, a, node, ap, st, e2, e3, t, x) {
   if v >> 28 == 5 {
-    t := (v >> 27) & 1;
-    x := v & 134217727;
+    t := ⟦v⟧.tier;
+    x := ⟦v⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + t] <= x { abort };
-    (st, e3) := call beta_peel(LAREC.u64[x * 4 + t * 2 + 1], a, ao, an, i + 1);
+    if LAM⟨t⟩.count <= x { abort };
+    (st, e3) := call beta_peel(LAM⟨t⟩[x].b, a, ao, an, i + 1);
     CTL.u64[136] := top;
     return (st, e3)
   }
