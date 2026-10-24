@@ -128,6 +128,11 @@ theorem tierA_ne {a b : Nat} (ha : a < 256) (hb : b < 256) (h : a ≠ b) (t u : 
   rcases tierA_cases' a t with e1 | e1 <;> rcases tierA_cases' b u with e2 | e2 <;>
     rw [e1, e2] at e <;> (have e' : (_ : Nat) = _ := e; omega)
 
+/-- A plain array below `256` is neither tier of another such array. -/
+theorem ne_tierA {a b : Nat} (ha : a < 256) (hb : b < 256) (h : a ≠ b) (t : Word) :
+    a ≠ tierA b t := by
+  simpa using tierA_ne ha hb h 0 t
+
 /-- The two tiers of one array differ. -/
 theorem tierA_ne_tier (a : Nat) {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) (h : t ≠ u) :
     tierA a t ≠ tierA a u := by
