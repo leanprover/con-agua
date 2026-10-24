@@ -190,7 +190,7 @@ def strPut : FunDecl := lfn (vs, ve) locals (top, n, j, pt, pb) {
   if len(IN.u8) < ve { abort };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   n := ve - vs;
   if len(POOL⟨pt⟩) < pb { abort };
   if len(POOL⟨pt⟩) - pb < n { abort };

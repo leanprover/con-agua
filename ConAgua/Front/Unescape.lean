@@ -202,7 +202,7 @@ def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb
   if len(IN.u8) < ve { abort };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   j := vs;
   ⟪escLoop⟫;

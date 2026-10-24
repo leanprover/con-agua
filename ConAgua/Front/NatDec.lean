@@ -92,7 +92,7 @@ def madLoop : Stmt := lblk (o, n, w, y, i, x, lo, pt, pb) {
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
 def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo, pt, pb) {
   pt := ⦃o⦄.tier;
-  pb := o - ⦃o⦄.base;
+  pb := ⦃o⦄.idx;
   ⟪madLoop⟫;
   return y
 }
@@ -164,7 +164,7 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy, pt, pb) {
 def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   i := c;
   ⟪decLoop⟫;

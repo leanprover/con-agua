@@ -131,7 +131,7 @@ grind_pattern [arena_grind] Frame.set64_both => Frame a (m.set64 b i v) (m'.set6
 
 /-! ## The virtual pool: the pool as proofs see it (lane tierpool)
 
-The pool is a tiered word array: tier `t` is array `tierA POOL t` (`POOL` = 0, `POOL1` = 256).
+The pool is a tiered word array: tier `t` is array `tierA 0 t` (`POOL` = 0, `POOL1` = 256).
 Its slices are named by *tier-tagged* addresses: bit 40 is the tier, the low 40 bits are the
 index into the tier's array (`⦃x⦄.tier`, `⦃x⦄.idx`, `L/Notation.lean`). Tier 1 is the scratch
 tier, open while the arena's scratch flag is set (`scratch_reset`, `Scratch.lean`): `CTL[0]` is
@@ -142,26 +142,26 @@ Proofs read the pool only through `vpool m`, an array with a word for every addr
 with `pcap m` (`2^41 - 1` on a pool whose tier arrays have fewer than `2^40` words, so that a
 hypothesis `pcap m < 2^64` carries the tier arrays' bound), and never unfold `vpool`/`prd`. -/
 
-/-- The pool's tier-1 array, `tierA POOL 1`. -/
+/-- The pool's tier-1 array, `tierA 0 1`. -/
 abbrev POOL1 : ArrId := 256
 
-theorem tierA_pool0 : tierA POOL 0 = POOL := by decide
-theorem tierA_pool1 : tierA POOL 1 = POOL1 := by decide
+theorem tierA_pool0 : tierA 0 0 = POOL := by decide
+theorem tierA_pool1 : tierA 0 1 = POOL1 := by decide
 
 /-- The pool's tiers are its two arrays. -/
-theorem tierA_pool (t : Word) : tierA POOL t = POOL ∨ tierA POOL t = POOL1 := by
+theorem tierA_pool (t : Word) : tierA 0 t = POOL ∨ tierA 0 t = POOL1 := by
   have h : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 := by
     rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
   rcases h with h | h <;> simp [tierA, tierOff, h]
-grind_pattern [arena_grind] tierA_pool => tierA POOL t
+grind_pattern [arena_grind] tierA_pool => tierA 0 t
 
-theorem tierA_pool_ne (t : Word) (b : ArrId) (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : b ≠ tierA POOL t := by
+theorem tierA_pool_ne (t : Word) (b : ArrId) (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : b ≠ tierA 0 t := by
   rcases tierA_pool t with h | h <;> rw [h] <;> assumption
 
 @[arena_grind =] theorem tag_tier_toNat (x : Word) : (x >>> 40).toNat = x.toNat / 2 ^ 40 := by
   rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
 
-theorem tag_idx_toNat (x : Word) : (x &&& 1099511627775).toNat = x.toNat % 2 ^ 40 := by
+@[arena_grind =] theorem tag_idx_toNat (x : Word) : (x &&& 1099511627775).toNat = x.toNat % 2 ^ 40 := by
   rw [UInt64.toNat_and]
   have : (1099511627775 : Word).toNat = 2 ^ 40 - 1 := by decide
   rw [this, Nat.and_two_pow_sub_one_eq_mod]
@@ -179,7 +179,7 @@ theorem tag_idx_toNat (x : Word) : (x &&& 1099511627775).toNat = x.toNat % 2 ^ 4
   rw [UInt64.toNat_sub_of_le _ _ hle, tag_base_toNat]; omega
 
 theorem tierA_word (t : Word) (ht : t.toNat ≤ 1) :
-    tierA POOL t = if t.toNat = 0 then POOL else POOL1 := by
+    tierA 0 t = if t.toNat = 0 then POOL else POOL1 := by
   have e : (t &&& 1).toNat = t.toNat := by
     rw [UInt64.toNat_and, UInt64.toNat_one, Nat.and_one_is_mod]; omega
   unfold tierA tierOff; rw [e]
@@ -189,7 +189,7 @@ theorem tierA_word (t : Word) (ht : t.toNat ≤ 1) :
     simp [this]
 
 theorem tierA_tag (x : Word) (hx : x.toNat < 2 ^ 41) :
-    tierA POOL (x >>> 40) = if x.toNat < 2 ^ 40 then POOL else POOL1 := by
+    tierA 0 (x >>> 40) = if x.toNat < 2 ^ 40 then POOL else POOL1 := by
   have h1 : (x >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
   rw [tierA_word _ h1, tag_tier_toNat]
   by_cases h : x.toNat < 2 ^ 40
@@ -200,11 +200,11 @@ theorem tierA_tag (x : Word) (hx : x.toNat < 2 ^ 41) :
 /-- The pool word at the tagged address `x`: what the L load `POOL⦃x⦄` reads, `0` where it
 aborts (and at addresses of no tier, `2^41` and up). -/
 def prd (m : Mem) (x : Word) : Word :=
-  if x.toNat < 2 ^ 41 then (m.arr64 (tierA POOL (x >>> 40)))[(x &&& 1099511627775).toNat]?.getD 0
+  if x.toNat < 2 ^ 41 then (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat]?.getD 0
   else 0
 
 /-- The store `POOL⟨⦃x⦄.tier⟩[⦃x⦄.idx] := v` at the tagged address `x` (a model's pool write). -/
-def pst (m : Mem) (x v : Word) : Mem := m.set64 (tierA POOL (x >>> 40)) (x &&& 1099511627775) v
+def pst (m : Mem) (x v : Word) : Mem := m.set64 (tierA 0 (x >>> 40)) (x &&& 1099511627775) v
 
 /-- The tier arrays are below `2^40` words. -/
 def PSmall (m : Mem) : Prop := (m.arr64 POOL).size < 2 ^ 40 ∧ (m.arr64 POOL1).size < 2 ^ 40
@@ -280,17 +280,17 @@ grind_pattern [arena_grind] vpool_getD => (vpool m)[x.toNat]?.getD 0
 /-- An L load of the pool at the tagged address `x` (`POOL⦃x⦄`), in bounds, reads the virtual
 pool. -/
 theorem vpool_ld (m : Mem) (x : Word)
-    (h : (x &&& 1099511627775).toNat < (m.arr64 (tierA POOL (x >>> 40))).size)
+    (h : (x &&& 1099511627775).toNat < (m.arr64 (tierA 0 (x >>> 40))).size)
     (h' : x.toNat < (vpool m).size) :
-    (m.arr64 (tierA POOL (x >>> 40)))[(x &&& 1099511627775).toNat] = (vpool m)[x.toNat] := by
+    (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat] = (vpool m)[x.toNat] := by
   have h41 : x.toNat < 2 ^ 41 := vpool_size m ▸ h'
   have e := vpool_get? m x h41
   rw [Array.getElem?_eq_getElem h'] at e
-  have e2 : prd m x = (m.arr64 (tierA POOL (x >>> 40)))[(x &&& 1099511627775).toNat] := by
+  have e2 : prd m x = (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat] := by
     unfold prd; rw [if_pos h41, Array.getElem?_eq_getElem h]; rfl
   rw [Option.some.inj e, e2]
 grind_pattern [arena_grind] vpool_ld =>
-  (m.arr64 (tierA POOL (x >>> 40)))[(x &&& 1099511627775).toNat], vpool m
+  (m.arr64 (tierA 0 (x >>> 40)))[(x &&& 1099511627775).toNat], vpool m
 
 /-- The tagged address of index `i` of tier `t`. -/
 theorem tag_of (t i : Word) (ht : t.toNat ≤ 1) (hi : i.toNat < 2 ^ 40) :
@@ -312,9 +312,9 @@ theorem prd_nat (m : Mem) (x : Nat) (hx : x < 2 ^ 41) :
   rw [hxw, if_pos hx, tierA_tag _ (by rw [hxw]; exact hx), hxw, tag_idx_toNat, hxw]
 
 theorem prd_set64t (m : Mem) (t i v : Word) (x : Nat) (ht : t.toNat ≤ 1)
-    (hi : i.toNat < (m.arr64 (tierA POOL t)).size) (hs : (m.arr64 (tierA POOL t)).size ≤ 2 ^ 40)
+    (hi : i.toNat < (m.arr64 (tierA 0 t)).size) (hs : (m.arr64 (tierA 0 t)).size ≤ 2 ^ 40)
     (hx : x < 2 ^ 41) :
-    prd (m.set64 (tierA POOL t) i v) (UInt64.ofNat x) =
+    prd (m.set64 (tierA 0 t) i v) (UInt64.ofNat x) =
       if x = t.toNat * 2 ^ 40 + i.toNat then v else prd m (UInt64.ofNat x) := by
   rw [prd_nat _ x hx, prd_nat m x hx, tierA_word t ht]
   rw [tierA_word t ht] at hi hs
@@ -346,8 +346,8 @@ theorem prd_set64t (m : Mem) (t i v : Word) (x : Nat) (ht : t.toNat ≤ 1)
 /-- **An L store into the pool** (`POOL⟨t⟩[i] := v`), in bounds, is a store into the virtual pool
 at the tagged address `t·2^40 + i`. -/
 theorem vpool_set64t (m : Mem) (t i v : Word) (ht : t.toNat ≤ 1)
-    (hi : i.toNat < (m.arr64 (tierA POOL t)).size) (hs : (m.arr64 (tierA POOL t)).size ≤ 2 ^ 40) :
-    vpool (m.set64 (tierA POOL t) i v) = (vpool m).set! (t.toNat * 2 ^ 40 + i.toNat) v := by
+    (hi : i.toNat < (m.arr64 (tierA 0 t)).size) (hs : (m.arr64 (tierA 0 t)).size ≤ 2 ^ 40) :
+    vpool (m.set64 (tierA 0 t) i v) = (vpool m).set! (t.toNat * 2 ^ 40 + i.toNat) v := by
   apply Array.ext_getElem?
   intro j
   rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
@@ -357,23 +357,23 @@ theorem vpool_set64t (m : Mem) (t i v : Word) (ht : t.toNat ≤ 1)
     by_cases e : t.toNat * 2 ^ 40 + i.toNat = j
     · subst e; simp [hb]
     · simp [e, Ne.symm e]
-  · have e1 : (vpool (m.set64 (tierA POOL t) i v))[j]? = none :=
+  · have e1 : (vpool (m.set64 (tierA 0 t) i v))[j]? = none :=
       Array.getElem?_eq_none (by rw [vpool_size]; omega)
     have e2 : (vpool m)[j]? = none := Array.getElem?_eq_none (by rw [vpool_size]; omega)
     have hij : t.toNat * 2 ^ 40 + i.toNat ≠ j := by omega
     simp [e1, e2, hij]
-grind_pattern [arena_grind] vpool_set64t => vpool (m.set64 (tierA POOL t) i v)
+grind_pattern [arena_grind] vpool_set64t => vpool (m.set64 (tierA 0 t) i v)
 
 /-- An L load of the pool's tier `t` at index `i` (`POOL⟨t⟩[i]`), in bounds, reads the virtual
 pool at the tagged address `t·2^40 + i`. -/
 theorem vpool_ldt (m : Mem) (t i : Word) (ht : t.toNat ≤ 1)
-    (hi : i.toNat < (m.arr64 (tierA POOL t)).size) (hs : (m.arr64 (tierA POOL t)).size ≤ 2 ^ 40)
+    (hi : i.toNat < (m.arr64 (tierA 0 t)).size) (hs : (m.arr64 (tierA 0 t)).size ≤ 2 ^ 40)
     (h' : t.toNat * 2 ^ 40 + i.toNat < (vpool m).size) :
-    (m.arr64 (tierA POOL t))[i.toNat] = (vpool m)[t.toNat * 2 ^ 40 + i.toNat] := by
+    (m.arr64 (tierA 0 t))[i.toNat] = (vpool m)[t.toNat * 2 ^ 40 + i.toNat] := by
   have hx : t.toNat * 2 ^ 40 + i.toNat < 2 ^ 41 := by omega
   have e := vpool_getNat? m _ hx
   rw [Array.getElem?_eq_getElem h'] at e
-  have key : (m.arr64 (tierA POOL t))[i.toNat]?.getD 0 = prd m (UInt64.ofNat (t.toNat * 2 ^ 40 + i.toNat)) := by
+  have key : (m.arr64 (tierA 0 t))[i.toNat]?.getD 0 = prd m (UInt64.ofNat (t.toNat * 2 ^ 40 + i.toNat)) := by
     rw [prd_nat m _ hx, tierA_word t ht]
     have hs' := hs; rw [tierA_word t ht] at hs'
     by_cases ht0 : t.toNat = 0
@@ -385,6 +385,48 @@ theorem vpool_ldt (m : Mem) (t i : Word) (ht : t.toNat ≤ 1)
       simp only [h1, h2, ↓reduceIte]; simp only [ht0, ↓reduceIte]
   rw [Array.getElem?_eq_getElem hi, Option.getD_some] at key
   rw [key]; exact (Option.some.inj e).symm
+
+/-- `vpool_ldt` for a writer's relative index `pb + k` (a `grind` lemma only for that shape: on a
+tagged load `POOL⦃x⦄`, whose index is `x &&& …`, it would compete with `vpool_ld`). -/
+theorem vpool_ldt_add (m : Mem) (t i k : Word) (ht : t.toNat ≤ 1)
+    (hi : (i + k).toNat < (m.arr64 (tierA 0 t)).size) (hs : (m.arr64 (tierA 0 t)).size ≤ 2 ^ 40)
+    (h' : t.toNat * 2 ^ 40 + (i + k).toNat < (vpool m).size) :
+    (m.arr64 (tierA 0 t))[(i + k).toNat] = (vpool m)[t.toNat * 2 ^ 40 + (i + k).toNat] :=
+  vpool_ldt m t (i + k) ht hi hs h'
+-- (no grind pattern: `vpool_ldrel`/`vpool_ldidx` cover the writers' loads)
+
+/-- A writer's store `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx + k] := v`, in bounds, is a store into the virtual
+pool at `T + k`. -/
+theorem vpool_stidx (m : Mem) (T k v : Word) (hT : T.toNat < 2 ^ 41)
+    (hi : ((T &&& 1099511627775) + k).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
+    (hs : (m.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : T.toNat % 2 ^ 40 + k.toNat < 2 ^ 40) :
+    vpool (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v) =
+      (vpool m).set! (T + k).toNat v := by
+  have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
+  rw [vpool_set64t m _ _ v ht hi hs]
+  congr 1
+  rw [tag_tier_toNat, UInt64.toNat_add, tag_idx_toNat, UInt64.toNat_add,
+    Nat.mod_eq_of_lt (a := T.toNat % 2 ^ 40 + k.toNat) (by omega),
+    Nat.mod_eq_of_lt (a := T.toNat + k.toNat) (by omega)]; omega
+grind_pattern [arena_grind] vpool_stidx =>
+  vpool (m.set64 (tierA 0 (T >>> 40)) ((T &&& 1099511627775) + k) v)
+
+/-- A writer's load `POOL⟨⦃T⦄.tier⟩[⦃T⦄.idx + k]`, in bounds, reads the virtual pool at `T + k`. -/
+theorem vpool_ldidx (m : Mem) (T k : Word) (hT : T.toNat < 2 ^ 41)
+    (hi : ((T &&& 1099511627775) + k).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
+    (hs : (m.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : T.toNat % 2 ^ 40 + k.toNat < 2 ^ 40) (h' : (T + k).toNat < (vpool m).size) :
+    (m.arr64 (tierA 0 (T >>> 40)))[((T &&& 1099511627775) + k).toNat] = (vpool m)[(T + k).toNat] := by
+  have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
+  have e : (T >>> 40).toNat * 2 ^ 40 + ((T &&& 1099511627775) + k).toNat = (T + k).toNat := by
+    rw [tag_tier_toNat, UInt64.toNat_add, tag_idx_toNat, UInt64.toNat_add,
+      Nat.mod_eq_of_lt (a := T.toNat % 2 ^ 40 + k.toNat) (by omega),
+      Nat.mod_eq_of_lt (a := T.toNat + k.toNat) (by omega)]; omega
+  rw [vpool_ldt m _ _ ht hi hs (by rw [e]; exact h')]
+  simp only [e]
+grind_pattern [arena_grind] vpool_ldidx =>
+  (m.arr64 (tierA 0 (T >>> 40)))[((T &&& 1099511627775) + k).toNat], vpool m
 
 /-- A writer's store `POOL⟨⦃T⦄.tier⟩[(T - ⦃T⦄.base) + k] := v` (`T` its top, the tier and the
 relative base decoded once) is a store into the virtual pool at `T + k`. -/
@@ -409,43 +451,43 @@ grind_pattern [arena_grind] tag_rel => (T - ((T >>> 40) <<< 40) + k).toNat
 /-- A writer's store `POOL⟨⦃T⦄.tier⟩[(T - ⦃T⦄.base) + k] := v`, in bounds, is a store into the
 virtual pool at `T + k`. -/
 theorem vpool_strel (m : Mem) (T k v : Word) (hT : T.toNat < 2 ^ 41)
-    (hi : (T - ((T >>> 40) <<< 40) + k).toNat < (m.arr64 (tierA POOL (T >>> 40))).size)
-    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hi : (T - ((T >>> 40) <<< 40) + k).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
+    (hs : (m.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
     (hk : (T - ((T >>> 40) <<< 40)).toNat + k.toNat < 2 ^ 40) :
-    vpool (m.set64 (tierA POOL (T >>> 40)) (T - ((T >>> 40) <<< 40) + k) v) =
+    vpool (m.set64 (tierA 0 (T >>> 40)) (T - ((T >>> 40) <<< 40) + k) v) =
       (vpool m).set! (T + k).toNat v := by
   have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
   rw [vpool_set64t m _ _ v ht hi hs, tag_rel T k hT hk]
 grind_pattern [arena_grind] vpool_strel =>
-  vpool (m.set64 (tierA POOL (T >>> 40)) (T - ((T >>> 40) <<< 40) + k) v)
+  vpool (m.set64 (tierA 0 (T >>> 40)) (T - ((T >>> 40) <<< 40) + k) v)
 
 /-- A writer's load `POOL⟨⦃T⦄.tier⟩[(T - ⦃T⦄.base) + k]` (its top `T`, the tier and the relative
 base decoded once), in bounds, reads the virtual pool at `T + k`. -/
 theorem vpool_ldrel (m : Mem) (T k : Word) (hT : T.toNat < 2 ^ 41)
-    (hi : (T - ((T >>> 40) <<< 40) + k).toNat < (m.arr64 (tierA POOL (T >>> 40))).size)
-    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hi : (T - ((T >>> 40) <<< 40) + k).toNat < (m.arr64 (tierA 0 (T >>> 40))).size)
+    (hs : (m.arr64 (tierA 0 (T >>> 40))).size ≤ 2 ^ 40)
     (hk : (T - ((T >>> 40) <<< 40)).toNat + k.toNat < 2 ^ 40)
     (h' : (T + k).toNat < (vpool m).size) :
-    (m.arr64 (tierA POOL (T >>> 40)))[(T - ((T >>> 40) <<< 40) + k).toNat] = (vpool m)[(T + k).toNat] := by
+    (m.arr64 (tierA 0 (T >>> 40)))[(T - ((T >>> 40) <<< 40) + k).toNat] = (vpool m)[(T + k).toNat] := by
   have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
   have e := tag_rel T k hT hk
   rw [vpool_ldt m _ _ ht hi hs (by rw [e]; exact h')]
   simp only [e]
 grind_pattern [arena_grind] vpool_ldrel =>
-  (m.arr64 (tierA POOL (T >>> 40)))[(T - ((T >>> 40) <<< 40) + k).toNat], vpool m
+  (m.arr64 (tierA 0 (T >>> 40)))[(T - ((T >>> 40) <<< 40) + k).toNat], vpool m
 
 /-- A pool store leaves the other words of the virtual pool alone. -/
 theorem vpool_set64t_get (m : Mem) (t i v : Word) (j : Nat) (ht : t.toNat ≤ 1)
-    (hi : i.toNat < (m.arr64 (tierA POOL t)).size) (hs : (m.arr64 (tierA POOL t)).size ≤ 2 ^ 40)
+    (hi : i.toNat < (m.arr64 (tierA 0 t)).size) (hs : (m.arr64 (tierA 0 t)).size ≤ 2 ^ 40)
     (hij : t.toNat * 2 ^ 40 + i.toNat ≠ j) :
-    (vpool (m.set64 (tierA POOL t) i v))[j]? = (vpool m)[j]? := by
+    (vpool (m.set64 (tierA 0 t) i v))[j]? = (vpool m)[j]? := by
   rw [vpool_set64t m t i v ht hi hs, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [hij]
 
 /-- Stores elsewhere leave the virtual pool alone. -/
 theorem vpool_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ POOL ∧ a ≠ POOL1) :
     vpool (m.set64 a i v) = vpool m := by
-  have e : ∀ t, (m.set64 a i v).arr64 (tierA POOL t) = m.arr64 (tierA POOL t) := fun t =>
+  have e : ∀ t, (m.set64 a i v).arr64 (tierA 0 t) = m.arr64 (tierA 0 t) := fun t =>
     Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (tierA_pool_ne t a h.1 h.2))
   simp only [vpool, prd, e]
 grind_pattern [arena_grind] vpool_set64_ne => vpool (m.set64 a i v)
@@ -453,7 +495,7 @@ grind_pattern [arena_grind] vpool_set64_ne => vpool (m.set64 a i v)
 /-- The virtual pool reads only the pool's two arrays. -/
 theorem vpool_congr {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
     (h1 : m'.arr64 POOL1 = m.arr64 POOL1) : vpool m' = vpool m := by
-  have e : ∀ t, m'.arr64 (tierA POOL t) = m.arr64 (tierA POOL t) := fun t => by
+  have e : ∀ t, m'.arr64 (tierA 0 t) = m.arr64 (tierA 0 t) := fun t => by
     rcases tierA_pool t with h | h <;> rw [h] <;> assumption
   simp only [vpool, prd, e]
 
@@ -496,7 +538,7 @@ theorem PFrame.trans {m m' m'' : Mem} (h : PFrame m m') (h' : PFrame m' m'') : P
 grind_pattern [arena_grind] PFrame.trans => PFrame m m'', PFrame m' m''
 
 theorem PFrame.set64 {m m' : Mem} (t i v : Word) (h : PFrame m m') :
-    PFrame m (m'.set64 (tierA POOL t) i v) := by
+    PFrame m (m'.set64 (tierA 0 t) i v) := by
   refine ⟨h.bytes, by simp [Mem.set64, h.size], fun b h0 h1 => ?_, ?_, ?_, h.glob⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne t b h0 h1), h.arr b h0 h1]
   · rcases tierA_pool t with e | e <;> rw [e]
@@ -505,7 +547,7 @@ theorem PFrame.set64 {m m' : Mem} (t i v : Word) (h : PFrame m m') :
   · rcases tierA_pool t with e | e <;> rw [e]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), h.size1]
     · rw [Mem.size_arr64_set64, h.size1]
-grind_pattern [arena_grind] PFrame.set64 => PFrame m (m'.set64 (tierA POOL t) i v)
+grind_pattern [arena_grind] PFrame.set64 => PFrame m (m'.set64 (tierA 0 t) i v)
 
 theorem PFrame.set64_both {m m' : Mem} (b : ArrId) (i v : Word) (h : PFrame m m')
     (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : PFrame (m.set64 b i v) (m'.set64 b i v) := by
@@ -522,11 +564,11 @@ theorem PFrame.arr64 {m m' : Mem} (b : ArrId) (h : PFrame m m') (h0 : b ≠ POOL
 grind_pattern [arena_grind] PFrame.arr64 => PFrame m m', m'.arr64 b
 
 theorem PFrame.tsize {m m' : Mem} (t : Word) (h : PFrame m m') :
-    (m'.arr64 (tierA POOL t)).size = (m.arr64 (tierA POOL t)).size := by
+    (m'.arr64 (tierA 0 t)).size = (m.arr64 (tierA 0 t)).size := by
   rcases tierA_pool t with e | e <;> rw [e]
   · exact h.size0
   · exact h.size1
-grind_pattern [arena_grind] PFrame.tsize => PFrame m m', (m'.arr64 (tierA POOL t)).size
+grind_pattern [arena_grind] PFrame.tsize => PFrame m m', (m'.arr64 (tierA 0 t)).size
 
 theorem PFrame.pcap {m m' : Mem} (h : PFrame m m') : pcap m' = pcap m :=
   pcap_congr h.size0 h.size1
@@ -575,7 +617,7 @@ the saved tier-0 top `PTOP0` is inside tier 0's array. -/
 def PoolOK (m : Mem) : Prop :=
   CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
   (m.glob PTOP0).toNat ≤ (m.arr64 POOL).size ∧
-  (m.top - ((m.top >>> 40) <<< 40)).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size
+  m.top.toNat % 2 ^ 40 ≤ (m.arr64 (tierA 0 (m.top >>> 40))).size
 
 /-- `m'` is `m` with limbs appended to the pool: only the pool's tier arrays and the top
 changed, the pool below the old top did not, and the top only moved up, inside its tier. Every
@@ -588,7 +630,7 @@ structure Grows (m m' : Mem) : Prop where
   cap : m'.top.toNat ≤ pcap m'
   pcapEq : pcap m' = pcap m
   tier : m'.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ m.top.toNat
-  inn : (m'.top - ((m'.top >>> 40) <<< 40)).toNat ≤ (m'.arr64 (tierA POOL (m'.top >>> 40))).size
+  inn : m'.top.toNat % 2 ^ 40 ≤ (m'.arr64 (tierA 0 (m'.top >>> 40))).size
 
 
 /-- A slice of the pool in use: below the top, and, while the scratch tier is open (the top in
@@ -604,7 +646,7 @@ theorem PoolOK.small {m : Mem} (h : PoolOK m) : PSmall m := pcap_small m (by hav
 theorem PoolOK.top41 {m : Mem} (h : PoolOK m) : m.top.toNat < 2 ^ 41 := by
   have := h.2.2.2.1; rw [pcap_eq m (by have := h.2.2.1; omega)] at this; omega
 
-theorem PSmall.tier {m : Mem} (h : PSmall m) (t : Word) : (m.arr64 (tierA POOL t)).size < 2 ^ 40 := by
+theorem PSmall.tier {m : Mem} (h : PSmall m) (t : Word) : (m.arr64 (tierA 0 t)).size < 2 ^ 40 := by
   rcases tierA_pool t with e | e <;> rw [e]
   · exact h.1
   · exact h.2
@@ -618,23 +660,22 @@ the pool below the old top, and moved the top up by `k` words that fit in the to
 (its length check), grew the pool. -/
 theorem Grows.intro (m m' : Mem) (hok : PoolOK m) (hf : PFrame (m.set64 CTL 0 m'.top) m')
     (ha : Agree (vpool m') (vpool m) m.top.toNat) (hle : m.top.toNat ≤ m'.top.toNat)
-    (hk : (m.top - ((m.top >>> 40) <<< 40)).toNat + (m'.top.toNat - m.top.toNat) ≤
-      (m.arr64 (tierA POOL (m.top >>> 40))).size) : Grows m m' := by
+    (hk : m.top.toNat % 2 ^ 40 + (m'.top.toNat - m.top.toNat) ≤
+      (m.arr64 (tierA 0 (m.top >>> 40))).size) : Grows m m' := by
   have hs := hok.small
   have h41 := hok.top41
   have hsz := hs.tier (m.top >>> 40)
-  rw [tag_off_toNat] at hk
   have hp : pcap m' = pcap m := by rw [hf.pcap, pcap_set64]
   have hp' : pcap m = 2 ^ 41 - 1 := pcap_of_small m hs
   have hq : m'.top.toNat / 2 ^ 40 = m.top.toNat / 2 ^ 40 := by omega
   have ht : m'.top >>> 40 = m.top >>> 40 := tag_tier_eq hq
-  have hsize : (m'.arr64 (tierA POOL (m'.top >>> 40))).size = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
+  have hsize : (m'.arr64 (tierA 0 (m'.top >>> 40))).size = (m.arr64 (tierA 0 (m.top >>> 40))).size := by
     rw [ht]
     rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e]
     · rw [hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
     · rw [hf.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   refine ⟨hf, ha, hle, by omega, hp, by omega, ?_⟩
-  rw [tag_off_toNat, hsize]; omega
+  rw [hsize]; omega
 grind_pattern [arena_grind] Grows.intro => Grows m m'
 
 /-- A grown pool keeps the pool invariant. -/

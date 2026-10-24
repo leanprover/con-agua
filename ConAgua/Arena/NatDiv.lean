@@ -119,7 +119,7 @@ def shl1Loop : Stmt := lblk (r, n, bit, i, c, x, rt, rb) {
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x, rt, rb) {
   rt := ⦃r⦄.tier;
-  rb := r - ⦃r⦄.base;
+  rb := ⦃r⦄.idx;
   c := bit;
   ⟪shl1Loop⟫;
   return c
@@ -139,7 +139,7 @@ def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
   rt := ⦃r⦄.tier;
-  rb := r - ⦃r⦄.base;
+  rb := ⦃r⦄.idx;
   ⟪dsubLoop⟫;
   return c
 }
@@ -158,7 +158,7 @@ def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
   rt := ⦃r⦄.tier;
-  rb := r - ⦃r⦄.base;
+  rb := ⦃r⦄.idx;
   ⟪daddLoop⟫;
   return c
 }

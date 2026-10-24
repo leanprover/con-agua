@@ -103,7 +103,7 @@ def romPutPB : FunDecl := lfn (i, l) locals (top, j, pt, pb) {
   j := 0;
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   if len(POOL⟨pt⟩) - pb < l { abort };
   ⟪(rputLoop []).toPB⟫;

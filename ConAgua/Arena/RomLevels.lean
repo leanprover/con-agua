@@ -149,7 +149,7 @@ def sputLoop : Stmt := lblk (b, k, top, j, pt, pb) {
 def stkPool : FunDecl := lfn (b, k) locals (top, j, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   if len(POOL⟨pt⟩) - pb < k { abort };
   ⟪sputLoop⟫;

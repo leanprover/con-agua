@@ -120,7 +120,7 @@ def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
 def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
   if len(POOL⟨pt⟩) - pb <= n { abort };
@@ -186,9 +186,9 @@ def AddInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat < C ∧
-  s.loc 10 = s.loc 4 >>> 40 ∧ s.loc 11 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
-  (s.loc 11).toNat + (s.loc 5).toNat < (s.mem.arr64 (tierA POOL (s.loc 10))).size ∧
-  (s.mem.arr64 (tierA POOL (s.loc 10))).size ≤ 2 ^ 40 ∧ (s.loc 10).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 10).toNat * 2 ^ 40 + (s.loc 11).toNat = (s.loc 4).toNat ∧
+  (s.loc 11).toNat + (s.loc 5).toNat < (s.mem.arr64 (tierA 0 (s.loc 10))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 10))).size ≤ 2 ^ 40 ∧ (s.loc 10).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧ (s.loc 7).toNat ≤ 1 ∧

@@ -135,7 +135,7 @@ con-ron: ConRon/Arena/Monad.lean:533-537 ConRon.Arena.internLevels -/
 def spnLs : FunDecl := lfn (b, l) locals (top, r, h, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   if len(POOL⟨pt⟩) - pb < l { abort };
   r := call spn_pool(b, top, l);

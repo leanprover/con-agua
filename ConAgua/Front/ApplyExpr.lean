@@ -85,7 +85,7 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h, pt, pb) {
 def lsPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if len(POOL⟨pt⟩) < pb { abort };
   i := v + 1;
   ⟪lsLoop⟫;

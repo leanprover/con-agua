@@ -101,7 +101,7 @@ def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
 def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   n := la;
   if lb < la { n := lb };
   if len(POOL⟨pt⟩) - pb < n { abort };
@@ -116,7 +116,7 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
 def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
   if len(POOL⟨pt⟩) - pb < n { abort };
@@ -131,7 +131,7 @@ def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
 def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
   if len(POOL⟨pt⟩) - pb < n { abort };
@@ -167,9 +167,9 @@ def BitInv (f : Word → Word → Word) (Pg : Array Word) (C : Nat) (s : St) : P
   POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ Pg.size = 2 ^ 41 ∧
   pcap s.mem = C ∧ Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
-  s.loc 9 = s.loc 4 >>> 40 ∧ s.loc 10 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
-  (s.loc 10).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 9))).size ∧
-  (s.mem.arr64 (tierA POOL (s.loc 9))).size ≤ 2 ^ 40 ∧ (s.loc 9).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 9).toNat * 2 ^ 40 + (s.loc 10).toNat = (s.loc 4).toNat ∧
+  (s.loc 10).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 9))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 9))).size ≤ 2 ^ 40 ∧ (s.loc 9).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 6).toNat ≤ (s.loc 5).toNat ∧

@@ -165,7 +165,7 @@ def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y, pt, pb) {
 def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
-  pb := top - ⦃top⦄.base;
+  pb := ⦃top⦄.idx;
   if lb < 2 {
     if lb == 1 { w := POOL⦃ob⦄ };
     b := w & 63;
@@ -213,6 +213,9 @@ def ShrInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧ (s.loc 0).toNat + (s.loc 5).toNat ≤ (s.loc 4).toNat ∧
+  (s.loc 11).toNat * 2 ^ 40 + (s.loc 12).toNat = (s.loc 4).toNat ∧
+  (s.loc 12).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 11))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 7).toNat < 64 ∧ (s.loc 8).toNat ≤ (s.loc 5).toNat ∧
   (s.loc 9).toNat = lv Pg (s.loc 0).toNat (s.loc 5).toNat (s.loc 8).toNat ∧
   pv (vpool s.mem) (s.loc 4).toNat (s.loc 8).toNat * sh (s.loc 7).toNat +
@@ -221,14 +224,15 @@ def ShrInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
       lowb (s.loc 9).toNat (s.loc 7).toNat * wt (s.loc 8).toNat
 
 def ShrPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧
   pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-  s'.loc 0 = s₀.loc 0 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 6 = s₀.loc 6 ∧
   s'.loc 7 = s₀.loc 7 ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat * sh (s₀.loc 7).toNat +
       lowb (lv Pg (s₀.loc 0).toNat (s₀.loc 5).toNat 0) (s₀.loc 7).toNat =
     pv Pg (s₀.loc 0).toNat (s₀.loc 5).toNat
 
+set_option maxHeartbeats 2000000 in
 include hpl in
 theorem shrLoop_spec (n : Nat) (s₀ : St) (h : ShrInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n shrLoop ⦃fun r s' => ShrPost Pg C s₀ r s'; ⊤⦄ := by
@@ -261,13 +265,17 @@ theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_shr" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat / 2 ^ pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natShr]
@@ -276,7 +284,7 @@ theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       shrLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
-    all_goals (try simp only [ShrInv, ShrPost, Grows] at *)
+    all_goals (try simp only [ShrInv, ShrPost] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
