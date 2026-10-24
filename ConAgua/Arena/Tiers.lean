@@ -558,7 +558,7 @@ structure CheckR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vi
 `PinsR` and `EnvR`; the walk's own theorem gives `ArenaD`. -/
 theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {A : List ArrId} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a) :
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a) :
     CheckR dn m' a' vis fe := by
   have hc : a'.caches = a.caches := congrArg Prod.fst hk
   have hp : a'.pins = a.pins := congrArg Prod.snd hk

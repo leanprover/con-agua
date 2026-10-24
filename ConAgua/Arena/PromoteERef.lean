@@ -251,7 +251,7 @@ theorem pe_two (n : Nat) (ihE : ∀ (m : Mem) (a : AState) (pm : PMemo) (f h : W
       ArenaD m a → PMemoR m pm → h.toNat < 2 ^ 32 → callW p n "promote_e" [f, h] m = some (r, m') →
       PEOk (promoteE pm f.toNat (decE h)) m a pm (r.headD 0) m')
     {g mk : FnName} {C : EIdx → EIdx → ENodeView} {A : List ArrId} {Cs : List Word}
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ Cs, x.toNat < 64) (hAe : ∀ b ∈ A, b ∈ eArrs)
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ Cs, x.toNat < 64) (hAe : ∀ b ∈ A, b ∈ eArrs)
     (hCe : ∀ x ∈ Cs, x ∈ eCtl)
     (hs : ∀ n s₀ x y, ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) g [x, y]
       ⦃fun r s' => LocEq s' s₀ ∧ piW p n mk [x, y] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄)

@@ -149,7 +149,7 @@ theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : 
   MemFrame.trans h₁ h₂
 
 theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
   hf.mono (fun b hb => List.mem_range.mpr (hA b hb))
     (fun x hx => by
       have := hC x hx

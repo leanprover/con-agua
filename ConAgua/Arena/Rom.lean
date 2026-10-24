@@ -657,7 +657,7 @@ def StoreA : List ArrId := List.range 64
 def StoreC : List Word := (List.range 64).map UInt64.ofNat
 
 theorem frame_store {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
+    (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
   h.mono (fun b hb => by simp [StoreA, hA b hb]) (fun x hx => by
     simp only [StoreC, List.mem_map, List.mem_range]
     exact ⟨x.toNat, hC x hx, by simp⟩)

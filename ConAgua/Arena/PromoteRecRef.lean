@@ -600,7 +600,8 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
       (fr _ _ _)).trans (fr _ _ _)
 
 /-- The arrays a value-group promotion writes. -/
-theorem vg_arrs : ∀ b ∈ EREC :: eArrs, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
+theorem vg_arrs : ∀ b ∈ EREC :: eArrs, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) ∨
+    (256 ≤ b ∧ b < 306) ∨ (310 < b ∧ b < 320) := by
   simp only [eArrs, lsArrs, lArrs, List.cons_append, List.nil_append, List.forall_mem_cons,
     List.not_mem_nil, false_imp_iff, implies_true, and_true, EREC, POOL, NAREC, NASLOT, NSREC,
     NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,

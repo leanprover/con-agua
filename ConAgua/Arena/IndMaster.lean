@@ -28,7 +28,7 @@ open L.Arena
 theorem mkK_frame {A : ArrId} (hA : A ≠ CTL) {c s d : Word} {x : Option (Word × Mem)} {m m' : Mem}
     {r : Word} {A₀ : List ArrId} {C₀ : List Word}
     (hx : ∀ r₁ m₁, x = some (r₁, m₁) → MemFrame A₀ C₀ m m₁) (h : mkK A c s d x = some (r, m')) :
-    MemFrame (A :: A₀) C₀ m m' := by
+    MemFrame (A :: (A + 256) :: A₀) C₀ m m' := by
   match x, hx, h with
   | some (r₁, m₁), hx, h =>
     rw [mkK_some] at h
@@ -47,7 +47,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : 
 and `Keeps cp`: the stage relation after. -/
 theorem stage_of_ok {op : AM EIdx} {A : List ArrId} {C : List Word} (hS : StageR dn vis fe m a)
     (hok : AM.ok op a) (hD : ArenaD m' (AM.st op a)) (hres : AM.res op a = decE r)
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hk : Keeps cp op) :
     ∃ a', op.run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hrun := AM.run_of_ok op a hok
@@ -61,7 +61,7 @@ theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.1.arena u r m' hI
   have hI₂ := hI
   exact stage_of_ok hS hok hD hres (consInternM_frame bvarCS_wf hI₂)
-    (by simp [bvarCS, bvarSch, BREC, BSLOT]) (by simp [bvarCS, bvarSch]) (keeps_internE _)
+    (by simp [ConsSch.wset, bvarCS, bvarSch, BREC, BSLOT]) (by simp [bvarCS, bvarSch]) (keeps_internE _)
 
 theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toNat < 2 ^ 32)
     (hI : fvinternW m u ty = some (r, m')) :
@@ -91,7 +91,7 @@ theorem mkApp_stage (hS : StageR dn vis fe m a) (f x : Word) (hI : mkAppW m f x 
     ∃ a', (internE (.app (decE f) (decE x))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hS.1.arena f x r m' hI
-  have hf : MemFrame [ADER, AREC, ASLOT] [4, 5] m m' := by
+  have hf : MemFrame [ADER, ADER + 256, AREC, AREC + 256, ASLOT, ASLOT + 256] [4, 5] m m' := by
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame appCS_wf hx) hI
@@ -101,7 +101,7 @@ theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b 
     ∃ a', (internE (.lam (decE t) (decE b))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := mkLam_ok m a hS.1.arena t b r m' hI
-  have hf : MemFrame [LADER, LAREC, LASLOT] [28, 29] m m' := by
+  have hf : MemFrame [LADER, LADER + 256, LAREC, LAREC + 256, LASLOT, LASLOT + 256] [28, 29] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame lamCS_wf hx) hI
@@ -111,7 +111,7 @@ theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW 
     ∃ a', (internE (.forallE (decE t) (decE b))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := mkForall_ok m a hS.1.arena t b r m' hI
-  have hf : MemFrame [FADER, FAREC, FASLOT] [30, 31] m m' := by
+  have hf : MemFrame [FADER, FADER + 256, FAREC, FAREC + 256, FASLOT, FASLOT + 256] [30, 31] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame forallCS_wf hx) hI
@@ -121,7 +121,7 @@ theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t 
     ∃ a', (internE (.letE (decE t) (decE v) (decE b))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := mkLet_ok m a hS.1.arena t v b r m' hI
-  have hf : MemFrame [LEDER, LEREC, LESLOT] [20, 21] m m' := by
+  have hf : MemFrame [LEDER, LEDER + 256, LEREC, LEREC + 256, LESLOT, LESLOT + 256] [20, 21] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame letCS_wf hx) hI
@@ -131,7 +131,7 @@ theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m 
     ∃ a', (internE (.proj (decI n) i.toNat (decE e))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   obtain ⟨hok, hD, hres⟩ := mkProj_ok m a hS.1.arena n i e r m' hI
-  have hf : MemFrame [PJDER, PJREC, PJSLOT] [32, 33] m m' := by
+  have hf : MemFrame [PJDER, PJDER + 256, PJREC, PJREC + 256, PJSLOT, PJSLOT + 256] [32, 33] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
       exact consInternM_frame projCS_wf hx) hI
@@ -205,7 +205,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     {A : List ArrId} {C : List Word}
     (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64)) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64) ∨ (256 ≤ b ∧ b < 298) ∨ (310 < b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a) :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by

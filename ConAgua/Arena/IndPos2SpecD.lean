@@ -149,7 +149,7 @@ end census
 /-! ## Low frames: writers of the store tiers (arrays and `CTL` words below 64) -/
 
 def LowFr (m m' : Mem) : Prop :=
-  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b < 64) ∧ (∀ x ∈ C, x.toNat < 64)
+  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ (∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) ∧ (∀ x ∈ C, x.toNat < 64)
 
 theorem LowFr.refl (m : Mem) : LowFr m m := ⟨[], [], MemFrame.refl _ _ _, by simp, by simp⟩
 
