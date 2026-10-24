@@ -15,8 +15,7 @@ rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 name = "ConAgua"
 # `ConAgua.Arena.Refine` imports con-ron's arena (not `module` files), so the `module` root
 # `ConAgua` cannot import it; it is built through the glob (the root is listed too, see
-# vendor/README.md, "Lake quirk"). `ConAgua.Capstone` imports `ConAgua.Arena.LitRefine`, so it is
-# a plain (non-`module`) file too, and built the same way.
+# vendor/README.md, "Lake quirk").
 globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.StoreLib", "ConAgua.Arena.LitRefine",
   "ConAgua.Arena.AppStore", "ConAgua.Arena.AppRefine",
   "ConAgua.Arena.LevelStore", "ConAgua.Arena.LevelRefine",
@@ -62,7 +61,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.DefEqStuck", "ConAgua.Arena.DefEqStuckEta", "ConAgua.Arena.DefEqStuckShape", "ConAgua.Arena.DefEqStuckWith", "ConAgua.Arena.DefEqStuckGo", "ConAgua.Arena.DefEqStuckCert", "ConAgua.Arena.DefEqStuckUnit", "ConAgua.Arena.DefEqStuckIrrel", "ConAgua.Arena.DefEqStuckStr", "ConAgua.Arena.DefEqStuckApp", "ConAgua.Arena.DefEqStuckDisp", "ConAgua.Arena.DefEqStuckProj", "ConAgua.Arena.DefEqStuckTail", "ConAgua.Arena.DefEqBody", "ConAgua.Arena.DefEqKnot", "ConAgua.Arena.KnotTagged", "ConAgua.Arena.KnotEntry", "ConAgua.Arena.StoreDen", "ConAgua.Arena.StoreDenIntern", "ConAgua.Arena.StoreDenLvl", "ConAgua.Arena.LevelView", "ConAgua.Arena.LvlGrow", "ConAgua.Arena.CapsNeverZeroCore", "ConAgua.Arena.RecFireEnv", "ConAgua.Arena.RecFireCore", "ConAgua.Arena.CoreDen", "ConAgua.Arena.InferFieldSort", "ConAgua.Arena.InferFieldSortNat", "ConAgua.Arena.PropRead", "ConAgua.Arena.PropReadLoops", "ConAgua.Arena.PropReadW", "ConAgua.Arena.PropReadRefine", "ConAgua.Arena.PropReadRefine2", "ConAgua.Arena.PropReadRefine3", "ConAgua.Arena.PropReadRefine4", "ConAgua.Arena.StrLitKeep", "ConAgua.Arena.StrLit", "ConAgua.Arena.StrLitBase", "ConAgua.Arena.StrLitUtf8", "ConAgua.Arena.StrLitCv", "ConAgua.Arena.StrLitUtf8", "ConAgua.Arena.StrLitTy", "ConAgua.Arena.StrLitList", "ConAgua.Arena.StrLitChar", "ConAgua.Arena.StrLitSup", "ConAgua.Arena.StrLitCtor",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
-  "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
+  "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
   "ConAgua.Final.Twin", "ConAgua.Final.Statement", "ConAgua.Audit.Final", "ConAgua.Compiler.AbiSim", "ConAgua.Final.Abi", "ConAgua.Checker.AsmStubEq", "ConAgua.AsmFile.ListEq",
   "ConAgua.Arena.DeclBase", "ConAgua.Arena.DeclAll", "ConAgua.Arena.DeclLvlStage", "ConAgua.Arena.LoopT", "ConAgua.Arena.DeclAndPin", "ConAgua.Arena.DeclAndPinInd", "ConAgua.Arena.DeclAndPinIndDec", "ConAgua.Arena.DeclAndPinIndCopy", "ConAgua.Arena.DeclAndPinIndCopy2", "ConAgua.Arena.DeclAndPinIndRef", "ConAgua.Arena.RomLevel", "ConAgua.Arena.RomLevels", "ConAgua.Arena.DeclStep", "ConAgua.Arena.DeclHeader", "ConAgua.Arena.RomExpr", "ConAgua.Arena.RomExprRef", "ConAgua.Arena.RomItems", "ConAgua.Arena.RomCI", "ConAgua.Arena.Prelude",
   "ConAgua.Arena.Promote", "ConAgua.Arena.PromoteProg", "ConAgua.Arena.PromoteMemo", "ConAgua.Arena.PromoteTest", "ConAgua.Arena.PromoteTwin", "ConAgua.Arena.PromoteFlag", "ConAgua.Arena.PromotePi", "ConAgua.Arena.PromotePiE", "ConAgua.Arena.PromoteN", "ConAgua.Arena.PromoteNRef", "ConAgua.Arena.PromoteL", "ConAgua.Arena.PromoteLRef", "ConAgua.Arena.PromoteLsRef", "ConAgua.Arena.PromoteE", "ConAgua.Arena.PromoteERef", "ConAgua.Arena.PromoteRec", "ConAgua.Arena.PromoteRecRef",

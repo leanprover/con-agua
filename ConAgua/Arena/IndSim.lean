@@ -1,12 +1,13 @@
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.SimLib
 
 /-!
 # Composing relational lemmas (lane `indproofs2`)
 
 Lane `indproofs` measured ~19 proof lines per L line, two thirds in the relational lemmas: per
 callee, `cases h : callee … with | none => … | some x => obtain …; rw [h, K_some] at h; obtain … :=
-callee_ok …`, then the twin's run rewritten bind by bind. `Sim mo op a Q` packages one callee's
+callee_ok …`, then the twin's run rewritten bind by bind. `Sim mo op a Q` (`SimLib.lean`) packages one callee's
 relational fact (its model result `mo` is simulated by the twin run `op` from `a`, with `Q` after);
 `Sim.bindK` composes a model continuation (`K none = none`, `K (some (r, m₁)) = body r m₁`, the
 template's continuation defs, both by `rfl`) with the twin's `>>=`, so a straight-line wrapper's
@@ -20,71 +21,6 @@ open ConRon.Arena
 namespace L.Ind
 
 open L.Arena
-
-/-- **The model result `mo` is simulated by the twin run `op` from `a`**: if the model returns
-`(r, m')`, the twin succeeds with some `x`, state `a'`, and `Q r x m' a'`. -/
-def Sim {β α : Type} (mo : Option (β × Mem)) (op : AM α) (a : AState)
-    (Q : β → α → Mem → AState → Prop) : Prop :=
-  ∀ r m', mo = some (r, m') → ∃ x a', op.run a = .ok (x, a') ∧ Q r x m' a'
-
-section sim
-variable {β γ α δ : Type}
-
-/-- The end of a chain: the model returned `(r, m)`, the twin `pure x`. -/
-theorem Sim.ret {r : β} {m : Mem} {x : α} {a : AState} {Q : β → α → Mem → AState → Prop}
-    (h : Q r x m a) : Sim (some (r, m)) (pure x : AM α) a Q := by
-  intro r' m' e; simp only [Option.some.injEq, Prod.mk.injEq] at e; obtain ⟨rfl, rfl⟩ := e
-  exact ⟨x, a, rfl, h⟩
-
-/-- A model that does not return. -/
-theorem Sim.of_none {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop} :
-    Sim (none : Option (β × Mem)) op a Q := fun _ _ e => by cases e
-
-/-- **One callee, then the rest**: the model's continuation `K` over the callee's result, the
-twin's bind. -/
-theorem Sim.bindK {K : Option (β × Mem) → Option (γ × Mem)} {body : β → Mem → Option (γ × Mem)}
-    {mo : Option (β × Mem)} {op : AM α} {g : α → AM δ} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {R : γ → δ → Mem → AState → Prop}
-    (hn : K Option.none = Option.none) (hs : ∀ r m₁, K (some (r, m₁)) = body r m₁)
-    (h1 : Sim mo op a Q) (h2 : ∀ r x m₁ a₁, Q r x m₁ a₁ → Sim (body r m₁) (g x) a₁ R) :
-    Sim (K mo) (op >>= g) a R := by
-  intro r m' e
-  cases hmo : mo with
-  | none => rw [hmo, hn] at e; cases e
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    rw [hmo, hs] at e
-    obtain ⟨x, a₁, hr1, hQ⟩ := h1 r₁ m₁ hmo
-    obtain ⟨y, a₂, hr2, hR⟩ := h2 r₁ x m₁ a₁ hQ r m' e
-    exact ⟨y, a₂, by simp only [StateT.run_bind, hr1]; exact hr2, hR⟩
-
-/-- **A twin-only step** (the model does nothing for it: a pin read, a pure computation): its run
-from `a` is known. -/
-theorem Sim.bind_twin {mo : Option (β × Mem)} {op : AM α} {g : α → AM δ} {a a₁ : AState} {x : α}
-    {R : β → δ → Mem → AState → Prop} (hr : op.run a = .ok (x, a₁)) (h : Sim mo (g x) a₁ R) :
-    Sim mo (op >>= g) a R := by
-  intro r m' e
-  obtain ⟨y, a₂, h2, hR⟩ := h r m' e
-  exact ⟨y, a₂, by simp only [StateT.run_bind, hr]; exact h2, hR⟩
-
-/-- Weaken the post. -/
-theorem Sim.mono {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q Q' : β → α → Mem → AState → Prop}
-    (h : Sim mo op a Q) (hq : ∀ r x m a', Q r x m a' → Q' r x m a') : Sim mo op a Q' := by
-  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, hq _ _ _ _ h2⟩
-
-/-- Rewrite the twin side. -/
-theorem Sim.congr {mo : Option (β × Mem)} {op op' : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
-    (h : Sim mo op a Q) (e : op = op') : Sim mo op' a Q := e ▸ h
-
-/-- **The census form**: a model run that returned gives `AM.ok`, and the post at `AM.res`/`AM.st`. -/
-theorem Sim.run [Inhabited α] {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {r : β} {m' : Mem} (h : Sim mo op a Q) (hm : mo = some (r, m')) :
-    AM.ok op a ∧ Q r (AM.res op a) m' (AM.st op a) := by
-  obtain ⟨x, a', h1, h2⟩ := h r m' hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ h1
-  exact ⟨hok, by rw [hst, hres]; exact h2⟩
-
-end sim
 
 /-! ## Pieces every wrapper repeated -/
 
@@ -105,7 +41,7 @@ theorem StageR.lt64 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   obtain ⟨h1, -, h3, -, -⟩ := hS.2; omega
 
 /-- A memory fact of the model's result, added to a `Sim`'s post. -/
-theorem Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} {F : Mem → Prop}
     (h : Sim mo op a Q) (hf : ∀ r m', mo = some (r, m') → F m') :
     Sim mo op a (fun r x m' a' => Q r x m' a' ∧ F m') := by

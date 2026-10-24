@@ -26,48 +26,36 @@ open L.Arena
 section deps
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
-def depsW (m : Mem) (c : Word) : List Word :=
-  if c = pinW m 15 then [pinW m 15] else
-  if c = pinW m 16 then [pinW m 16] else
-  if c = pinW m 17 then [pinW m 15, pinW m 17] else
-  if c = pinW m 18 then [pinW m 16, pinW m 18] else
-  if c = pinW m 19 then [pinW m 16, pinW m 18, pinW m 19] else
-  if c = pinW m 20 then [pinW m 20] else
-  if c = pinW m 21 then [pinW m 21] else
-  if c = pinW m 22 then [pinW m 15, pinW m 17, pinW m 21, pinW m 22] else
-  if c = pinW m 23 then [pinW m 15, pinW m 17, pinW m 21, pinW m 23] else
-  if c = pinW m 24 then [pinW m 21, pinW m 23, pinW m 24] else
-  if c = pinW m 25 then [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 25] else
-  if c = pinW m 26 then [pinW m 16, pinW m 17, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 26] else
-  if c = pinW m 27 then [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 27] else
-  if c = pinW m 28 then [pinW m 17, pinW m 18, pinW m 21, pinW m 28] else
-  if c = pinW m 29 then [pinW m 17, pinW m 21, pinW m 22, pinW m 29] else
-  []
+/-- **The grounds of each structural `Nat` operation**, as pin numbers: the operation pinned at
+`i` needs the operations pinned at `is` (`natOpDeps`'s `if` chain, in its order). -/
+def depsTab : List (Nat × List Nat) :=
+  [(15, [15]), (16, [16]), (17, [15, 17]), (18, [16, 18]), (19, [16, 18, 19]), (20, [20]), (21, [21]),
+   (22, [15, 17, 21, 22]), (23, [15, 17, 21, 23]), (24, [21, 23, 24]), (25, [16, 18, 21, 22, 23, 25]),
+   (26, [16, 17, 18, 21, 22, 23, 26]), (27, [16, 18, 21, 22, 23, 27]), (28, [17, 18, 21, 28]),
+   (29, [17, 21, 22, 29])]
+
+/-- The first entry `(i, is)` of `tab` with `c = f i` gives `is.map f`; none gives `[]`. -/
+def depsL (f : Nat → Word) (c : Word) : List (Nat × List Nat) → List Word
+  | [] => []
+  | (i, is) :: t => if c = f i then is.map f else depsL f c t
+
+def depsW (m : Mem) (c : Word) : List Word := depsL (pinW m) c depsTab
+
+/-- `depsL`'s allocation: the first entry `(i, is)` with `c = f i` allocates a fresh `IW` slice
+holding `is.map f`; none gives `(0, 0)`. -/
+def armsW (p : Prog) (n : Nat) (m1 : Mem) (f : Nat → Word) (c : Word) :
+    List (Nat × List Nat) → Option (List Word × Mem)
+  | [] => some ([0, 0], m1)
+  | (i, is) :: t => if c = f i then
+      ntBW (callW p n "iw_alloc" [UInt64.ofNat is.length] m1) fun rq mq =>
+        some ([rq.headD 0, UInt64.ofNat is.length], wrIW mq (rq.headD 0) (is.map f))
+    else armsW p n m1 f c t
 
 /-- The word `j` of the pin record at `pi`. -/
 def pw (m1 : Mem) (pi j : Word) : Word := rdW (m1.arr64 IW) (pi + j)
 
-def natOpDepsW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "nat_op_pins" [] m) fun rp m1 =>
-  let pi := rp.headD 0
-  if c = pw m1 pi 0 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0))) else
-  if c = pw m1 pi 1 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1))) else
-  if c = pw m1 pi 2 then ntBW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2))) else
-  if c = pw m1 pi 3 then ntBW (callW p n "iw_alloc" [2] m1) fun rq mq => some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3))) else
-  if c = pw m1 pi 4 then ntBW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 4))) else
-  if c = pw m1 pi 5 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 5))) else
-  if c = pw m1 pi 6 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6))) else
-  if c = pw m1 pi 7 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7))) else
-  if c = pw m1 pi 8 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 8))) else
-  if c = pw m1 pi 9 then ntBW (callW p n "iw_alloc" [3] m1) fun rq mq => some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 6)).set64 IW (rq.headD 0 + 1) (pw m1 pi 8)).set64 IW (rq.headD 0 + 2) (pw m1 pi 9))) else
-  if c = pw m1 pi 10 then ntBW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 10))) else
-  if c = pw m1 pi 11 then ntBW (callW p n "iw_alloc" [7] m1) fun rq mq => some ([rq.headD 0, 7], (((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 2)).set64 IW (rq.headD 0 + 2) (pw m1 pi 3)).set64 IW (rq.headD 0 + 3) (pw m1 pi 6)).set64 IW (rq.headD 0 + 4) (pw m1 pi 7)).set64 IW (rq.headD 0 + 5) (pw m1 pi 8)).set64 IW (rq.headD 0 + 6) (pw m1 pi 11))) else
-  if c = pw m1 pi 12 then ntBW (callW p n "iw_alloc" [6] m1) fun rq mq => some ([rq.headD 0, 6], ((((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 7)).set64 IW (rq.headD 0 + 4) (pw m1 pi 8)).set64 IW (rq.headD 0 + 5) (pw m1 pi 12))) else
-  if c = pw m1 pi 13 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 13))) else
-  if c = pw m1 pi 14 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 6)).set64 IW (rq.headD 0 + 2) (pw m1 pi 7)).set64 IW (rq.headD 0 + 3) (pw m1 pi 14))) else
-  some ([0, 0], m1)
-
-/-- `natOpDepsW` after `nat_op_pins`: the dispatch on `c`. -/
+/-- `nat_op_deps` after `nat_op_pins` (the pin record at `pi`): the dispatch on `c`, as the L text
+writes it (`armsW` for the proofs, `depsArmW_eq`). -/
 def depsArmW (p : Prog) (n : Nat) (m1 : Mem) (pi c : Word) : Option (List Word × Mem) :=
   if c = pw m1 pi 0 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 0))) else
   if c = pw m1 pi 1 then ntBW (callW p n "iw_alloc" [1] m1) fun rq mq => some ([rq.headD 0, 1], (mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 1))) else
@@ -85,6 +73,10 @@ def depsArmW (p : Prog) (n : Nat) (m1 : Mem) (pi c : Word) : Option (List Word �
   if c = pw m1 pi 13 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 3)).set64 IW (rq.headD 0 + 2) (pw m1 pi 6)).set64 IW (rq.headD 0 + 3) (pw m1 pi 13))) else
   if c = pw m1 pi 14 then ntBW (callW p n "iw_alloc" [4] m1) fun rq mq => some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0 + 0) (pw m1 pi 2)).set64 IW (rq.headD 0 + 1) (pw m1 pi 6)).set64 IW (rq.headD 0 + 2) (pw m1 pi 7)).set64 IW (rq.headD 0 + 3) (pw m1 pi 14))) else
   some ([0, 0], m1)
+
+
+def natOpDepsW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
+  ntBW (callW p n "nat_op_pins" [] m) fun rp m1 => depsArmW p n m1 (rp.headD 0) c
 
 theorem natOpDepsW_eq (p : Prog) (n : Nat) (m : Mem) (c : Word) : natOpDepsW p n m c =
     ntBW (callW p n "nat_op_pins" [] m) fun rp m1 => depsArmW p n m1 (rp.headD 0) c := rfl
@@ -196,416 +188,127 @@ theorem decI_inj_iff {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y
     ((decI x : Idx κ) = decI y) ↔ x = y :=
   ⟨fun e => (decI_eq_iff x hx _).mp e ▸ decI_word_self y hy, fun e => e ▸ rfl⟩
 
+theorem pin_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (i : Nat) (h1 : 1 ≤ i) (h2 : i ≤ 51) :
+    (pinW m i).toNat < 2 ^ 32 := by
+  have := hF.names_lt (i - 1) (by omega)
+  rwa [show 1 + (i - 1) = i by omega] at this
+
+/-- Every pin `depsTab` names is a name pin (`1 ≤ i ≤ 51`). -/
+theorem depsTab_ok : ∀ x ∈ depsTab, x.2.length < 2 ^ 64 ∧ ∀ i ∈ x.2, 1 ≤ i ∧ i ≤ 51 := by decide
+
+theorem depsL_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (c : Word) :
+    ∀ tab : List (Nat × List Nat), (∀ x ∈ tab, x.2.length < 2 ^ 64 ∧ ∀ i ∈ x.2, 1 ≤ i ∧ i ≤ 51) →
+      ∀ w ∈ depsL (pinW m) c tab, w.toNat < 2 ^ 32
+  | [], _ => by simp [depsL]
+  | (i, is) :: t, ht => by
+    simp only [depsL]
+    split
+    · simp only [List.mem_map]
+      rintro _ ⟨j, hj, rfl⟩
+      have := (ht _ List.mem_cons_self).2 j hj
+      exact pin_lt hF j this.1 this.2
+    · exact depsL_lt hF c t fun x hx => ht x (List.mem_cons_of_mem _ hx)
+
+theorem depsW_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (c : Word) :
+    ∀ w ∈ depsW m c, w.toNat < 2 ^ 32 := depsL_lt hF c depsTab depsTab_ok
+
+/-- `depsArmW` on the pin record of `m` (word `j` is pin `j + 15`) is `armsW` over `depsTab`. -/
+theorem depsArmW_eq {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} {f : Nat → Word}
+    (hv : ∀ j : Word, j.toNat < 15 → pw m1 pi j = f (j.toNat + 15)) :
+    depsArmW p n m1 pi c = armsW p n m1 f c depsTab := by
+  simp only [depsArmW, armsW, depsTab]
+  simp only [List.map_cons, List.map_nil]
+  simp only [List.length_cons, List.length_nil]
+  simp only [wrIW]
+  simp only [UInt64.add_zero]
+  simp only [UInt64.add_assoc]
+  simp only [UInt64.reduceAdd, Nat.reduceAdd]
+  simp only [UInt64.reduceOfNat]
+  simp only [hv 0 (by decide), hv 1 (by decide), hv 2 (by decide), hv 3 (by decide), hv 4 (by decide),
+    hv 5 (by decide), hv 6 (by decide), hv 7 (by decide), hv 8 (by decide), hv 9 (by decide),
+    hv 10 (by decide), hv 11 (by decide), hv 12 (by decide), hv 13 (by decide), hv 14 (by decide)]
+  simp only [UInt64.reduceToNat, Nat.reduceAdd]
+
 theorem natOpDeps_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word}
     (hc : c.toNat < 2 ^ 32) :
     (natOpDeps (decI c)).run a = .ok ((depsW m c).map decI, a) := by
-  simp [natOpDeps, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map,
-decI_inj_iff hc (hF.names_lt 14 (by decide)),
-    decI_inj_iff hc (hF.names_lt 15 (by decide)),
-    decI_inj_iff hc (hF.names_lt 16 (by decide)),
-    decI_inj_iff hc (hF.names_lt 17 (by decide)),
-    decI_inj_iff hc (hF.names_lt 18 (by decide)),
-    decI_inj_iff hc (hF.names_lt 19 (by decide)),
-    decI_inj_iff hc (hF.names_lt 20 (by decide)),
-    decI_inj_iff hc (hF.names_lt 21 (by decide)),
-    decI_inj_iff hc (hF.names_lt 22 (by decide)),
-    decI_inj_iff hc (hF.names_lt 23 (by decide)),
-    decI_inj_iff hc (hF.names_lt 24 (by decide)),
-    decI_inj_iff hc (hF.names_lt 25 (by decide)),
-    decI_inj_iff hc (hF.names_lt 26 (by decide)),
-    decI_inj_iff hc (hF.names_lt 27 (by decide)),
-    decI_inj_iff hc (hF.names_lt 28 (by decide)), depsW]
-  by_cases e1 : c = pinW m 15
-  · simp only [if_pos e1]; rfl
-  simp only [if_neg e1]
-  by_cases e2 : c = pinW m 16
-  · simp only [if_pos e2]; rfl
-  simp only [if_neg e2]
-  by_cases e3 : c = pinW m 17
-  · simp only [if_pos e3]; rfl
-  simp only [if_neg e3]
-  by_cases e4 : c = pinW m 18
-  · simp only [if_pos e4]; rfl
-  simp only [if_neg e4]
-  by_cases e5 : c = pinW m 19
-  · simp only [if_pos e5]; rfl
-  simp only [if_neg e5]
-  by_cases e6 : c = pinW m 20
-  · simp only [if_pos e6]; rfl
-  simp only [if_neg e6]
-  by_cases e7 : c = pinW m 21
-  · simp only [if_pos e7]; rfl
-  simp only [if_neg e7]
-  by_cases e8 : c = pinW m 22
-  · simp only [if_pos e8]; rfl
-  simp only [if_neg e8]
-  by_cases e9 : c = pinW m 23
-  · simp only [if_pos e9]; rfl
-  simp only [if_neg e9]
-  by_cases e10 : c = pinW m 24
-  · simp only [if_pos e10]; rfl
-  simp only [if_neg e10]
-  by_cases e11 : c = pinW m 25
-  · simp only [if_pos e11]; rfl
-  simp only [if_neg e11]
-  by_cases e12 : c = pinW m 26
-  · simp only [if_pos e12]; rfl
-  simp only [if_neg e12]
-  by_cases e13 : c = pinW m 27
-  · simp only [if_pos e13]; rfl
-  simp only [if_neg e13]
-  by_cases e14 : c = pinW m 28
-  · simp only [if_pos e14]; rfl
-  simp only [if_neg e14]
-  by_cases e15 : c = pinW m 29
-  · simp only [if_pos e15]; rfl
-  simp only [if_neg e15]
+  have hd : ∀ i, 1 ≤ i → i ≤ 51 → ((decI c : NIdx) = decI (pinW m i) ↔ c = pinW m i) :=
+    fun i h1 h2 => decI_inj_iff hc (pin_lt hF i h1 h2)
+  simp only [depsW, depsTab]
+  simp only [depsL, List.map_cons, List.map_nil]
+  simp [natOpDeps, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map, hd 15 (by decide) (by decide),
+    hd 16 (by decide) (by decide), hd 17 (by decide) (by decide), hd 18 (by decide) (by decide),
+    hd 19 (by decide) (by decide), hd 20 (by decide) (by decide), hd 21 (by decide) (by decide),
+    hd 22 (by decide) (by decide), hd 23 (by decide) (by decide), hd 24 (by decide) (by decide),
+    hd 25 (by decide) (by decide), hd 26 (by decide) (by decide), hd 27 (by decide) (by decide),
+    hd 28 (by decide) (by decide), hd 29 (by decide) (by decide)]
+  simp only [apply_ite (fun z => StateT.run z a), apply_ite (List.map (decI : Word → NIdx)),
+    apply_ite (fun l => (Except.ok (l, a) : Except CheckError (List NIdx × AState))), StateT.run_pure,
+    List.map_cons, List.map_nil]
   rfl
+
+/-- **`armsW` keeps the stage** and answers the slice of `depsL`. -/
+theorem armsW_keep (hN : NatGateProg p) {k : Nat} {m m1 m' : Mem} {a : AState} {c : Word}
+    {r : List Word} (hS1 : StageR dn vis fe m1 a) (hg1 : IWGrow m m1) (hF : PinsFull m a.pins) :
+    ∀ tab : List (Nat × List Nat), (∀ x ∈ tab, x.2.length < 2 ^ 64 ∧ ∀ i ∈ x.2, 1 ≤ i ∧ i ≤ 51) →
+      armsW p k m1 (pinW m) c tab = some (r, m') →
+      KeepPost dn vis fe (decRL (fun m => decHL m) 0) m m' a r
+        ((depsL (pinW m) c tab).map (decI : Word → NIdx)) := by
+  intro tab
+  induction tab with
+  | nil =>
+    intro _ hw
+    simp only [armsW, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨hS1, hg1, by simp [depsL, decRL, decHL, hslice?]⟩
+  | cons x t ih =>
+    obtain ⟨i, is⟩ := x
+    intro ht hw
+    simp only [armsW, depsL] at hw ⊢
+    by_cases hci : c = pinW m i
+    · rw [if_pos hci] at hw ⊢
+      cases hq : callW p k "iw_alloc" [UInt64.ofNat is.length] m1 with
+      | none => rw [hq] at hw; simp at hw
+      | some qq =>
+      obtain ⟨rq, mq⟩ := qq
+      rw [hq, bW_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hi := ht _ List.mem_cons_self
+      refine (emit_keep hN.lIwAlloc hS1 ?_ ?_ hq rfl rfl).of_grow hg1
+      · rw [List.length_map, UInt64.toNat_ofNat_of_lt' hi.1]
+      · simp only [List.mem_map]
+        rintro _ ⟨j, hj, rfl⟩
+        exact pin_lt hF j (hi.2 j hj).1 (hi.2 j hj).2
+    · rw [if_neg hci] at hw ⊢
+      exact ih (fun x hx => ht x (List.mem_cons_of_mem _ hx)) hw
+
+theorem pinRecW_get (m : Mem) (i : Nat) (h : i < (pinRecW m).length) (hi : i < 15) :
+    (pinRecW m)[i] = pinW m (i + 15) := by
+  rcases i with _|_|_|_|_|_|_|_|_|_|_|_|_|_|_|i
+  all_goals first | rfl | omega
 
 theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
     CallRef p "nat_op_deps" [c] (fun m a => StageR dn vis fe m a ∧ H c) (natOpDeps (decI c))
       (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc⟩ hcall => ?_
   have hw := callW_model (M := fun mm => natOpDepsW p k mm c) (natOpDeps_specW p hN.lNatOpDeps k · c) hcall
-  unfold natOpDepsW at hw
+  simp only [natOpDepsW] at hw
   cases hp : callW p k "nat_op_pins" [] m with
   | none => rw [hp] at hw; simp at hw
   | some qp =>
   obtain ⟨rp, m1⟩ := qp
   rw [hp, bW_some] at hw
-  obtain ⟨h0, hrec, hPINS, hr⟩ := natOpPins_fref hN k m rp m1 hS.2 hp
-  have hF := hS.1.pins.full h0
-  have hS1 := hrec.2.1.stage hS
-  have hg1 := hrec.2.1.1
+  obtain ⟨h0, hrec, -, hr⟩ := natOpPins_fref hN k m rp m1 hS.2 hp
   have hrec' : RecPost m m1 [rp.headD 0] (pinRecW m) := by rw [← hr]; exact hrec
-  dsimp only at hw
-  have v0 : pw m1 (rp.headD 0) 0 = pinW m 15 := pw_rec hS.2 hrec' 0 (by simp [pinRecW])
-  have v1 : pw m1 (rp.headD 0) 1 = pinW m 16 := pw_rec hS.2 hrec' 1 (by simp [pinRecW])
-  have v2 : pw m1 (rp.headD 0) 2 = pinW m 17 := pw_rec hS.2 hrec' 2 (by simp [pinRecW])
-  have v3 : pw m1 (rp.headD 0) 3 = pinW m 18 := pw_rec hS.2 hrec' 3 (by simp [pinRecW])
-  have v4 : pw m1 (rp.headD 0) 4 = pinW m 19 := pw_rec hS.2 hrec' 4 (by simp [pinRecW])
-  have v5 : pw m1 (rp.headD 0) 5 = pinW m 20 := pw_rec hS.2 hrec' 5 (by simp [pinRecW])
-  have v6 : pw m1 (rp.headD 0) 6 = pinW m 21 := pw_rec hS.2 hrec' 6 (by simp [pinRecW])
-  have v7 : pw m1 (rp.headD 0) 7 = pinW m 22 := pw_rec hS.2 hrec' 7 (by simp [pinRecW])
-  have v8 : pw m1 (rp.headD 0) 8 = pinW m 23 := pw_rec hS.2 hrec' 8 (by simp [pinRecW])
-  have v9 : pw m1 (rp.headD 0) 9 = pinW m 24 := pw_rec hS.2 hrec' 9 (by simp [pinRecW])
-  have v10 : pw m1 (rp.headD 0) 10 = pinW m 25 := pw_rec hS.2 hrec' 10 (by simp [pinRecW])
-  have v11 : pw m1 (rp.headD 0) 11 = pinW m 26 := pw_rec hS.2 hrec' 11 (by simp [pinRecW])
-  have v12 : pw m1 (rp.headD 0) 12 = pinW m 27 := pw_rec hS.2 hrec' 12 (by simp [pinRecW])
-  have v13 : pw m1 (rp.headD 0) 13 = pinW m 28 := pw_rec hS.2 hrec' 13 (by simp [pinRecW])
-  have v14 : pw m1 (rp.headD 0) 14 = pinW m 29 := pw_rec hS.2 hrec' 14 (by simp [pinRecW])
-  rw [v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14] at hw
-  refine ⟨_, a, natOpDeps_run hF hc, ?_⟩
-  by_cases b1 : c = pinW m 15
-  · rw [if_pos b1] at hw
-    have hd : depsW m c = [pinW m 15] := by simp only [depsW, if_pos b1]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [1] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 15], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl
-      · exact hF.names_lt 14 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 1) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b1] at hw
-  by_cases b2 : c = pinW m 16
-  · rw [if_pos b2] at hw
-    have hd : depsW m c = [pinW m 16] := by simp only [depsW, if_neg b1, if_pos b2]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [1] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 16], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl
-      · exact hF.names_lt 15 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 1) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b2] at hw
-  by_cases b3 : c = pinW m 17
-  · rw [if_pos b3] at hw
-    have hd : depsW m c = [pinW m 15, pinW m 17] := by simp only [depsW, if_neg b1, if_neg b2, if_pos b3]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [2] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 15, pinW m 17], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl
-      · exact hF.names_lt 14 (by decide)
-      · exact hF.names_lt 16 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 2) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b3] at hw
-  by_cases b4 : c = pinW m 18
-  · rw [if_pos b4] at hw
-    have hd : depsW m c = [pinW m 16, pinW m 18] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_pos b4]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [2] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 16, pinW m 18], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl
-      · exact hF.names_lt 15 (by decide)
-      · exact hF.names_lt 17 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 2) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b4] at hw
-  by_cases b5 : c = pinW m 19
-  · rw [if_pos b5] at hw
-    have hd : depsW m c = [pinW m 16, pinW m 18, pinW m 19] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_pos b5]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [3] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 16, pinW m 18, pinW m 19], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl
-      · exact hF.names_lt 15 (by decide)
-      · exact hF.names_lt 17 (by decide)
-      · exact hF.names_lt 18 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 3) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b5] at hw
-  by_cases b6 : c = pinW m 20
-  · rw [if_pos b6] at hw
-    have hd : depsW m c = [pinW m 20] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_pos b6]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [1] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 20], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl
-      · exact hF.names_lt 19 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 1) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b6] at hw
-  by_cases b7 : c = pinW m 21
-  · rw [if_pos b7] at hw
-    have hd : depsW m c = [pinW m 21] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_pos b7]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [1] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 21], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl
-      · exact hF.names_lt 20 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 1) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b7] at hw
-  by_cases b8 : c = pinW m 22
-  · rw [if_pos b8] at hw
-    have hd : depsW m c = [pinW m 15, pinW m 17, pinW m 21, pinW m 22] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_pos b8]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [4] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 15, pinW m 17, pinW m 21, pinW m 22], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl
-      · exact hF.names_lt 14 (by decide)
-      · exact hF.names_lt 16 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 21 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 4) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b8] at hw
-  by_cases b9 : c = pinW m 23
-  · rw [if_pos b9] at hw
-    have hd : depsW m c = [pinW m 15, pinW m 17, pinW m 21, pinW m 23] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_pos b9]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [4] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 15, pinW m 17, pinW m 21, pinW m 23], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl
-      · exact hF.names_lt 14 (by decide)
-      · exact hF.names_lt 16 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 22 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 4) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b9] at hw
-  by_cases b10 : c = pinW m 24
-  · rw [if_pos b10] at hw
-    have hd : depsW m c = [pinW m 21, pinW m 23, pinW m 24] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_pos b10]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [3] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 21, pinW m 23, pinW m 24], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 22 (by decide)
-      · exact hF.names_lt 23 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 3) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b10] at hw
-  by_cases b11 : c = pinW m 25
-  · rw [if_pos b11] at hw
-    have hd : depsW m c = [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 25] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_neg b10, if_pos b11]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [6] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 25], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl | rfl | rfl
-      · exact hF.names_lt 15 (by decide)
-      · exact hF.names_lt 17 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 21 (by decide)
-      · exact hF.names_lt 22 (by decide)
-      · exact hF.names_lt 24 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 6) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b11] at hw
-  by_cases b12 : c = pinW m 26
-  · rw [if_pos b12] at hw
-    have hd : depsW m c = [pinW m 16, pinW m 17, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 26] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_neg b10, if_neg b11, if_pos b12]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [7] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 16, pinW m 17, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 26], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-      · exact hF.names_lt 15 (by decide)
-      · exact hF.names_lt 16 (by decide)
-      · exact hF.names_lt 17 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 21 (by decide)
-      · exact hF.names_lt 22 (by decide)
-      · exact hF.names_lt 25 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 7) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b12] at hw
-  by_cases b13 : c = pinW m 27
-  · rw [if_pos b13] at hw
-    have hd : depsW m c = [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 27] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_neg b10, if_neg b11, if_neg b12, if_pos b13]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [6] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 27], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl | rfl | rfl
-      · exact hF.names_lt 15 (by decide)
-      · exact hF.names_lt 17 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 21 (by decide)
-      · exact hF.names_lt 22 (by decide)
-      · exact hF.names_lt 26 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 6) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b13] at hw
-  by_cases b14 : c = pinW m 28
-  · rw [if_pos b14] at hw
-    have hd : depsW m c = [pinW m 17, pinW m 18, pinW m 21, pinW m 28] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_neg b10, if_neg b11, if_neg b12, if_neg b13, if_pos b14]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [4] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 17, pinW m 18, pinW m 21, pinW m 28], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl
-      · exact hF.names_lt 16 (by decide)
-      · exact hF.names_lt 17 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 27 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 4) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b14] at hw
-  by_cases b15 : c = pinW m 29
-  · rw [if_pos b15] at hw
-    have hd : depsW m c = [pinW m 17, pinW m 21, pinW m 22, pinW m 29] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_neg b10, if_neg b11, if_neg b12, if_neg b13, if_neg b14, if_pos b15]
-    rw [hd]
-    cases hq : callW p k "iw_alloc" [4] m1 with
-    | none => rw [hq] at hw; simp at hw
-    | some qq =>
-    obtain ⟨rq, mq⟩ := qq
-    rw [hq, bW_some] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    have hlt : ∀ w ∈ [pinW m 17, pinW m 21, pinW m 22, pinW m 29], w.toNat < 2 ^ 32 := by
-      intro w hw
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl
-      · exact hF.names_lt 16 (by decide)
-      · exact hF.names_lt 20 (by decide)
-      · exact hF.names_lt 21 (by decide)
-      · exact hF.names_lt 28 (by decide)
-    exact (emit_keep hN.lIwAlloc hS1 (N := 4) rfl hlt hq rfl (by simp [wrIW, UInt64.add_assoc])).of_grow hg1
-  rw [if_neg b15] at hw
-  have hd : depsW m c = [] := by simp only [depsW, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6, if_neg b7, if_neg b8, if_neg b9, if_neg b10, if_neg b11, if_neg b12, if_neg b13, if_neg b14, if_neg b15]
-  rw [hd]
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
-  refine ⟨hS1, hg1, ?_⟩
-  simp [decRL, decHL, hslice?]
+  rw [depsArmW_eq (f := pinW m) fun j hj => by
+    have := pw_rec hS.2 hrec' j.toNat (by simp [pinRecW]; omega)
+    rw [UInt64.ofNat_toNat] at this
+    rw [this, pinRecW_get m _ _ hj]] at hw
+  exact ⟨_, a, natOpDeps_run (hS.1.pins.full ‹_›) hc,
+    armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.1.pins.full ‹_›) depsTab depsTab_ok hw⟩
+
+
 
 @[refines ConRon.Arena.natOpDeps]
 theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :
@@ -616,4 +319,3 @@ theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :
 end deps
 
 end L.Ind
-

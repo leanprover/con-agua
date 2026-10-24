@@ -5,9 +5,9 @@ import ConAgua.Arena.WhnfBase
 # How a model reads a call of the core (lane `loopt2`'s `CallM`, moved here by lane `indstaget`)
 
 A model that calls the core's entry points (`whnf_top`, `infer_type_core`, `ensure_sort_core`,
-`is_def_eq_core`) and `lvl_eq_c` reads the call through a parameter `c : CallM`: `stubCall` (the
-stubs' opaque `stubM`, for the `StageR` proofs through the stub contracts) or `realCall p` (the
-program's own `callW`, for the `StageT` proofs through the knot's sims). One model serves both.
+`is_def_eq_core`) and `lvl_eq_c` reads the call through a parameter `c : CallM`, always
+`realCall p` (the program's own `callW`) now: the second reading `stubCall` (the stubs' `stubM`,
+for the `StageR` proofs through the stub contracts) went with those proofs (lane `cleanup`).
 Moved from `DeclCvg.lean` so that the inductive stage's models (below `DeclCvg`) can use it.
 -/
 

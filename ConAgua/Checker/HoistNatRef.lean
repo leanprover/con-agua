@@ -203,11 +203,6 @@ theorem PinsFull.frameA {m m' : Mem} {ps : Pins} (h : PinsFull m ps) (hf : AFr m
     PinsFull m' ps :=
   h.congr hf.pins
 
-theorem pin_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (i : Nat) (h1 : 1 ≤ i) (h2 : i ≤ 51) :
-    (pinW m i).toNat < 2 ^ 32 := by
-  have := hF.names_lt (i - 1) (by omega)
-  rwa [show 1 + (i - 1) = i by omega] at this
-
 /-- **`nat_op_record(w)`** is "the name `w` is in `natDivModNames` or `natOpNames`". -/
 theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : AState) (w op : Word)
     (hI : IWOK m) (hP : pinW m 0 ≠ 0 → PinsFull m a.pins) (hw : w.toNat < 2 ^ 32)
@@ -325,88 +320,6 @@ theorem natOpPins_call {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc)
   rw [hq0, hcomp]
   exact ⟨h0, rfl, rfl, by simpa [iwTop, pinRecW] using hroom⟩
 
-/-- The grounds' words are names. -/
-theorem depsW_lt {m : Mem} {ps : Pins} (hF : PinsFull m ps) (w : Word) :
-    ∀ x ∈ depsW m w, x.toNat < 2 ^ 32 := by
-  intro x hx
-  rw [depsW] at hx
-  by_cases e15 : w = pinW m 15
-  · rw [if_pos e15] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e15] at hx
-  by_cases e16 : w = pinW m 16
-  · rw [if_pos e16] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e16] at hx
-  by_cases e17 : w = pinW m 17
-  · rw [if_pos e17] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e17] at hx
-  by_cases e18 : w = pinW m 18
-  · rw [if_pos e18] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e18] at hx
-  by_cases e19 : w = pinW m 19
-  · rw [if_pos e19] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e19] at hx
-  by_cases e20 : w = pinW m 20
-  · rw [if_pos e20] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e20] at hx
-  by_cases e21 : w = pinW m 21
-  · rw [if_pos e21] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e21] at hx
-  by_cases e22 : w = pinW m 22
-  · rw [if_pos e22] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e22] at hx
-  by_cases e23 : w = pinW m 23
-  · rw [if_pos e23] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e23] at hx
-  by_cases e24 : w = pinW m 24
-  · rw [if_pos e24] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e24] at hx
-  by_cases e25 : w = pinW m 25
-  · rw [if_pos e25] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e25] at hx
-  by_cases e26 : w = pinW m 26
-  · rw [if_pos e26] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e26] at hx
-  by_cases e27 : w = pinW m 27
-  · rw [if_pos e27] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e27] at hx
-  by_cases e28 : w = pinW m 28
-  · rw [if_pos e28] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e28] at hx
-  by_cases e29 : w = pinW m 29
-  · rw [if_pos e29] at hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact pin_lt hF _ (by decide) (by decide)
-  rw [if_neg e29] at hx
-  simp at hx
-
 /-- `nat_op_deps`'s answer for a nonempty list: a fresh slice of its words. -/
 theorem depsSlice_ok {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat}
     {m m1 m₂ : Mem} {r ws : List Word} {N : Word} (hA : AFr m m1)
@@ -439,13 +352,41 @@ theorem depsSlice_ok {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : 
   · exact hA.2.1.1
   · rw [htop]; exact Nat.le_refl _
 
-/-- **The call of `nat_op_deps(w)`**, given the pin record's builders. -/
-theorem natOpDepsCall_ok' (p : Prog) (hx : HoistExt p)
-    (hP' : p.lookup "nat_op_pins" = some natOpPinsL)
-    (hPA : p.lookup "nat_op_pins_a" = some natOpPinsAL)
-    (hPB : p.lookup "nat_op_pins_b" = some natOpPinsBL)
-    (hPC : p.lookup "nat_op_pins_c" = some natOpPinsCL)
-    (n : Nat) (m m₂ : Mem) (a : AState) (w : Word)
+/-- `armsW`'s answer: a fresh slice of `depsL`'s words (empty: `(0, 0)`). -/
+theorem armsW_slice {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat}
+    {m M1 m₂ : Mem} {ps : Pins} {r : List Word} {w : Word} (hA : AFr m M1) (hP : PinsFull m ps) :
+    ∀ tab : List (Nat × List Nat), (∀ x ∈ tab, x.2.length < 2 ^ 64 ∧ ∀ i ∈ x.2, 1 ≤ i ∧ i ≤ 51) →
+      armsW p k M1 (pinW m) w tab = some (r, m₂) →
+      GrR m₂ (r.headD 0) 0 ((depsL (pinW m) w tab).map decI) ∧
+      (r.tail.headD 0).toNat = ((depsL (pinW m) w tab).map (decI : Word → NIdx)).length ∧
+      ((depsL (pinW m) w tab).map (decI : Word → NIdx) ≠ [] → iwTop m ≤ (r.headD 0).toNat ∧
+        (r.headD 0).toNat + ((depsL (pinW m) w tab).map (decI : Word → NIdx)).length ≤ iwTop m₂) ∧
+      AFr m m₂ := by
+  intro tab
+  induction tab with
+  | nil =>
+    intro _ hw
+    simp only [armsW, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨fun j hj => by simp [depsL] at hj, rfl, fun h => absurd rfl h, hA⟩
+  | cons x t ih =>
+    obtain ⟨i, is⟩ := x
+    intro ht hw
+    simp only [armsW, depsL] at hw ⊢
+    by_cases hci : w = pinW m i
+    · rw [if_pos hci] at hw ⊢
+      have hi := ht _ List.mem_cons_self
+      refine depsSlice_ok hal hA ?_ ?_ hw
+      · simp only [List.mem_map]
+        rintro _ ⟨j, hj, rfl⟩
+        exact pin_lt hP j (hi.2 j hj).1 (hi.2 j hj).2
+      · rw [List.length_map, UInt64.toNat_ofNat_of_lt' hi.1]
+    · rw [if_neg hci] at hw ⊢
+      exact ih (fun x hx => ht x (List.mem_cons_of_mem _ hx)) hw
+
+/-- **The call of `nat_op_deps(w)`** is `natOpDeps (decI w)`: its result `(o, l)` is a slice of
+the grounds, above the old pool top unless empty. -/
+theorem natOpDepsCall_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₂ : Mem) (a : AState) (w : Word)
     (r : List Word) (hI : IWOK m) (hP : PinsFull m a.pins) (hw : w.toNat < 2 ^ 32)
     (h : callW p n "nat_op_deps" [w] m = some (r, m₂)) :
     ∃ gs : List NIdx, (natOpDeps (decI w)).run a = .ok (gs, a) ∧ GrR m₂ (r.headD 0) 0 gs ∧
@@ -457,220 +398,23 @@ theorem natOpDepsCall_ok' (p : Prog) (hx : HoistExt p)
   | succ k =>
   have hm := callW_model (M := fun mm => natOpDepsW p k mm w)
     (natOpDeps_specW p (hx.get "nat_op_deps") k · w) h
-  unfold natOpDepsW at hm
+  simp only [natOpDepsW] at hm
   cases hp : callW p k "nat_op_pins" [] m with
   | none => rw [hp] at hm; simp at hm
   | some qp =>
   obtain ⟨rp, m1⟩ := qp
   rw [hp, bW_some] at hm
-  obtain ⟨_, hr, hm1, hroom⟩ := natOpPins_call (hx.get "iw_alloc") (hx.get "pin_at") hP' hPA hPB
-    hPC k m rp m1 hI hp
+  obtain ⟨_, hr, hm1, hroom⟩ := natOpPins_call (hx.get "iw_alloc") (hx.get "pin_at")
+    (hx.get "nat_op_pins") (hx.get "nat_op_pins_a") (hx.get "nat_op_pins_b") (hx.get "nat_op_pins_c")
+    k m rp m1 hI hp
   subst hr hm1
   obtain ⟨hA, -, hrd⟩ := allocWr_ok (k := 21) hI rfl hroom
-  have v : ∀ j (hj : j < 21), pw (wrIW (allocMem m 21) (rdW (m.arr64 CTL) 200) (pinRecW m))
-      ([rdW (m.arr64 CTL) 200].headD 0) (UInt64.ofNat j) = (pinRecW m)[j]! :=
-    fun j hj => hrd j hj
-  dsimp only at hm
-  generalize hM1 : wrIW (allocMem m 21) (rdW (m.arr64 CTL) 200) (pinRecW m) = M1 at hm v hA
-  generalize hPI : [rdW (m.arr64 CTL) 200].headD 0 = PI at hm v
-  have v0 : pw M1 PI 0 = pinW m 15 := v 0 (by decide)
-  have v1 : pw M1 PI 1 = pinW m 16 := v 1 (by decide)
-  have v2 : pw M1 PI 2 = pinW m 17 := v 2 (by decide)
-  have v3 : pw M1 PI 3 = pinW m 18 := v 3 (by decide)
-  have v4 : pw M1 PI 4 = pinW m 19 := v 4 (by decide)
-  have v5 : pw M1 PI 5 = pinW m 20 := v 5 (by decide)
-  have v6 : pw M1 PI 6 = pinW m 21 := v 6 (by decide)
-  have v7 : pw M1 PI 7 = pinW m 22 := v 7 (by decide)
-  have v8 : pw M1 PI 8 = pinW m 23 := v 8 (by decide)
-  have v9 : pw M1 PI 9 = pinW m 24 := v 9 (by decide)
-  have v10 : pw M1 PI 10 = pinW m 25 := v 10 (by decide)
-  have v11 : pw M1 PI 11 = pinW m 26 := v 11 (by decide)
-  have v12 : pw M1 PI 12 = pinW m 27 := v 12 (by decide)
-  have v13 : pw M1 PI 13 = pinW m 28 := v 13 (by decide)
-  have v14 : pw M1 PI 14 = pinW m 29 := v 14 (by decide)
-  rw [v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14] at hm
+  rw [depsArmW_eq (f := pinW m) fun j hj => by
+    have := hrd j.toNat (by simp [pinRecW]; omega)
+    rw [UInt64.ofNat_toNat] at this
+    simp only [pw, List.headD_cons, this, getElem!_pos (pinRecW m) j.toNat (by simp [pinRecW]; omega),
+      pinRecW_get m _ _ hj]] at hm
   rw [natOpDeps_run hP hw]
-  refine ⟨_, rfl, ?_⟩
-  by_cases b15 : w = pinW m 15
-  · rw [if_pos b15] at hm
-    rw [depsW, if_pos b15]
-    have hlt : ∀ x ∈ [pinW m 15], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_pos b15] at this
-    have hm' : ntBW (callW p k "iw_alloc" [1] M1) (fun rq mq =>
-        some ([rq.headD 0, 1], wrIW mq (rq.headD 0) [pinW m 15])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b15] at hm
-  by_cases b16 : w = pinW m 16
-  · rw [if_pos b16] at hm
-    rw [depsW, if_neg b15, if_pos b16]
-    have hlt : ∀ x ∈ [pinW m 16], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_pos b16] at this
-    have hm' : ntBW (callW p k "iw_alloc" [1] M1) (fun rq mq =>
-        some ([rq.headD 0, 1], wrIW mq (rq.headD 0) [pinW m 16])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b16] at hm
-  by_cases b17 : w = pinW m 17
-  · rw [if_pos b17] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_pos b17]
-    have hlt : ∀ x ∈ [pinW m 15, pinW m 17], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_pos b17] at this
-    have hm' : ntBW (callW p k "iw_alloc" [2] M1) (fun rq mq =>
-        some ([rq.headD 0, 2], wrIW mq (rq.headD 0) [pinW m 15, pinW m 17])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b17] at hm
-  by_cases b18 : w = pinW m 18
-  · rw [if_pos b18] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_pos b18]
-    have hlt : ∀ x ∈ [pinW m 16, pinW m 18], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_pos b18] at this
-    have hm' : ntBW (callW p k "iw_alloc" [2] M1) (fun rq mq =>
-        some ([rq.headD 0, 2], wrIW mq (rq.headD 0) [pinW m 16, pinW m 18])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b18] at hm
-  by_cases b19 : w = pinW m 19
-  · rw [if_pos b19] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_pos b19]
-    have hlt : ∀ x ∈ [pinW m 16, pinW m 18, pinW m 19], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_pos b19] at this
-    have hm' : ntBW (callW p k "iw_alloc" [3] M1) (fun rq mq =>
-        some ([rq.headD 0, 3], wrIW mq (rq.headD 0) [pinW m 16, pinW m 18, pinW m 19])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b19] at hm
-  by_cases b20 : w = pinW m 20
-  · rw [if_pos b20] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_pos b20]
-    have hlt : ∀ x ∈ [pinW m 20], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_pos b20] at this
-    have hm' : ntBW (callW p k "iw_alloc" [1] M1) (fun rq mq =>
-        some ([rq.headD 0, 1], wrIW mq (rq.headD 0) [pinW m 20])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b20] at hm
-  by_cases b21 : w = pinW m 21
-  · rw [if_pos b21] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_pos b21]
-    have hlt : ∀ x ∈ [pinW m 21], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_pos b21] at this
-    have hm' : ntBW (callW p k "iw_alloc" [1] M1) (fun rq mq =>
-        some ([rq.headD 0, 1], wrIW mq (rq.headD 0) [pinW m 21])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b21] at hm
-  by_cases b22 : w = pinW m 22
-  · rw [if_pos b22] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_pos b22]
-    have hlt : ∀ x ∈ [pinW m 15, pinW m 17, pinW m 21, pinW m 22], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_pos b22] at this
-    have hm' : ntBW (callW p k "iw_alloc" [4] M1) (fun rq mq =>
-        some ([rq.headD 0, 4], wrIW mq (rq.headD 0) [pinW m 15, pinW m 17, pinW m 21, pinW m 22])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b22] at hm
-  by_cases b23 : w = pinW m 23
-  · rw [if_pos b23] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_pos b23]
-    have hlt : ∀ x ∈ [pinW m 15, pinW m 17, pinW m 21, pinW m 23], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_pos b23] at this
-    have hm' : ntBW (callW p k "iw_alloc" [4] M1) (fun rq mq =>
-        some ([rq.headD 0, 4], wrIW mq (rq.headD 0) [pinW m 15, pinW m 17, pinW m 21, pinW m 23])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b23] at hm
-  by_cases b24 : w = pinW m 24
-  · rw [if_pos b24] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_pos b24]
-    have hlt : ∀ x ∈ [pinW m 21, pinW m 23, pinW m 24], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_pos b24] at this
-    have hm' : ntBW (callW p k "iw_alloc" [3] M1) (fun rq mq =>
-        some ([rq.headD 0, 3], wrIW mq (rq.headD 0) [pinW m 21, pinW m 23, pinW m 24])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b24] at hm
-  by_cases b25 : w = pinW m 25
-  · rw [if_pos b25] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_pos b25]
-    have hlt : ∀ x ∈ [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 25], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_pos b25] at this
-    have hm' : ntBW (callW p k "iw_alloc" [6] M1) (fun rq mq =>
-        some ([rq.headD 0, 6], wrIW mq (rq.headD 0) [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 25])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b25] at hm
-  by_cases b26 : w = pinW m 26
-  · rw [if_pos b26] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_pos b26]
-    have hlt : ∀ x ∈ [pinW m 16, pinW m 17, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 26], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_pos b26] at this
-    have hm' : ntBW (callW p k "iw_alloc" [7] M1) (fun rq mq =>
-        some ([rq.headD 0, 7], wrIW mq (rq.headD 0) [pinW m 16, pinW m 17, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 26])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b26] at hm
-  by_cases b27 : w = pinW m 27
-  · rw [if_pos b27] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_pos b27]
-    have hlt : ∀ x ∈ [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 27], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_pos b27] at this
-    have hm' : ntBW (callW p k "iw_alloc" [6] M1) (fun rq mq =>
-        some ([rq.headD 0, 6], wrIW mq (rq.headD 0) [pinW m 16, pinW m 18, pinW m 21, pinW m 22, pinW m 23, pinW m 27])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b27] at hm
-  by_cases b28 : w = pinW m 28
-  · rw [if_pos b28] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_neg b27, if_pos b28]
-    have hlt : ∀ x ∈ [pinW m 17, pinW m 18, pinW m 21, pinW m 28], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_neg b27, if_pos b28] at this
-    have hm' : ntBW (callW p k "iw_alloc" [4] M1) (fun rq mq =>
-        some ([rq.headD 0, 4], wrIW mq (rq.headD 0) [pinW m 17, pinW m 18, pinW m 21, pinW m 28])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b28] at hm
-  by_cases b29 : w = pinW m 29
-  · rw [if_pos b29] at hm
-    rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_neg b27, if_neg b28, if_pos b29]
-    have hlt : ∀ x ∈ [pinW m 17, pinW m 21, pinW m 22, pinW m 29], x.toNat < 2 ^ 32 := by
-      have := depsW_lt hP w
-      rwa [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_neg b27, if_neg b28, if_pos b29] at this
-    have hm' : ntBW (callW p k "iw_alloc" [4] M1) (fun rq mq =>
-        some ([rq.headD 0, 4], wrIW mq (rq.headD 0) [pinW m 17, pinW m 21, pinW m 22, pinW m 29])) = some (r, m₂) := by
-      rw [← hm]; simp [wrIW, UInt64.add_assoc]
-    exact depsSlice_ok (hx.get "iw_alloc") hA hlt rfl hm'
-  rw [if_neg b29] at hm
-  rw [depsW, if_neg b15, if_neg b16, if_neg b17, if_neg b18, if_neg b19, if_neg b20, if_neg b21, if_neg b22, if_neg b23, if_neg b24, if_neg b25, if_neg b26, if_neg b27, if_neg b28, if_neg b29]
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
-  exact ⟨fun j hj => by simp at hj, rfl, fun h => absurd rfl h, hA⟩
-
-/-- **The call of `nat_op_deps(w)`** is `natOpDeps (decI w)`: its result `(o, l)` is a slice of
-the grounds, above the old pool top unless empty. -/
-theorem natOpDepsCall_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₂ : Mem) (a : AState) (w : Word)
-    (r : List Word) (hI : IWOK m) (hP : PinsFull m a.pins) (hw : w.toNat < 2 ^ 32)
-    (h : callW p n "nat_op_deps" [w] m = some (r, m₂)) :
-    ∃ gs : List NIdx, (natOpDeps (decI w)).run a = .ok (gs, a) ∧ GrR m₂ (r.headD 0) 0 gs ∧
-      (r.tail.headD 0).toNat = gs.length ∧
-      (gs ≠ [] → iwTop m ≤ (r.headD 0).toNat ∧ (r.headD 0).toNat + gs.length ≤ iwTop m₂) ∧
-      AFr m m₂ := by
-  exact natOpDepsCall_ok' p hx (hx.get "nat_op_pins") (hx.get "nat_op_pins_a")
-    (hx.get "nat_op_pins_b") (hx.get "nat_op_pins_c") n m m₂ a w r hI hP hw h
+  exact ⟨_, rfl, armsW_slice (hx.get "iw_alloc") hA hP depsTab depsTab_ok hm⟩
 
 end L.Checker

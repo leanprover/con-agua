@@ -2,18 +2,14 @@ import ConAgua.Arena.IndIface
 import ConAgua.Arena.WhnfBase
 
 /-!
-# The stubs' specs (lane `induct`)
+# The inductive stage's shared predicates (lane `induct`; once the stubs' specs)
 
-What each callee of the inductive stage that another lane owns must prove. The L side of every
-stub is one opaque word model `stubM f` and one statement `stubM_spec` (a returning call of `f` is
-its model); the twin side is a `RelAM` statement per stub (a model run from a memory in the stage
-relation at the view `vis` of `fe`, the arguments decoding to the twin's, is a successful twin run,
-the stage relation holds after it at the same environment, the pools only grew, and the results
-decode the twin's result). **All are proved by `sorry` until the owning lane lands the function**
-(DESIGN.md, lane `induct`, "`sorry`s"): a refinement through a stub inherits the `sorry`, the
-honest census status of a function whose callees are not proved yet. The shape is the one this
-lane's refinements use for every callee (`IndSumSpec.lean`: callee models inside `vcgen`, twin
-facts afterwards), so a stub enters a proof exactly as a translated function does.
+This file held the stub contracts of the inductive stage's callees (`stubM_spec` and a `RelAM`
+statement per stub, all `sorry`). Every callee is now the program's own call (`realCall`) or a
+pure model, and the contracts and the `StageR` theorems through them are gone (lane `cleanup`,
+docs/design/cleanup.md). What is left: the opaque word model `stubM` (still named in a few
+models, e.g. `IndPartsSpec4`'s `wsK2`), `RelAM`, the walk-memo predicates that
+make up `AbsOK`, and the result decoders `pwWords`, `decZC`, `decLvlEq`.
 
 `H w`: a handle word (below `2^32`).
 -/
@@ -29,17 +25,10 @@ open L.Arena
 /-- A handle word. -/
 abbrev H (w : Word) : Prop := w.toNat < 2 ^ 32
 
-/-! ## The stubs as word models
-
-Each stub's L side is one opaque **word model** `stubM f` (the memory and result words a call of
-`f` produces), and its twin side a `RelAM` statement: a model run from a related memory is a twin
-run with the relation after. This is the shape lane `induct`'s refinements use for every callee
-(`IndSumSpec.lean`'s template: callee **model** specs inside `vcgen`, twin facts afterwards), so
-a stub enters a proof exactly as a translated function does. The owning lane replaces `stubM f`
-by its function's model and proves both statements. -/
+/-! ## The stubs as word models -/
 
 /-- The word model of the stub `f`: what a call `f(args)` leaves. Opaque: nothing is known about
-it but the two `sorry`'d statements below. -/
+it. -/
 opaque stubM (f : FnName) : Mem → List Word → Option (List Word × Mem)
 
 /-- **The `abstract1` walk's memo is well formed** (lane `indproofs4`, helper `abs`): array 49

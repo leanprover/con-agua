@@ -64,7 +64,7 @@ theorem RSim.toSim {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a 
     Sim mo op a (fun r x m' a' => Q (r, m') a' x) := fun r m' e => h (r, m') e
 
 /-- A `Sim` also records the twin's run. -/
-theorem Sim.withRunC {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.withRunC {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
     Sim mo op a (fun r x m' a' => Q r x m' a' ∧ op.run a = .ok (x, a')) := by
   intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, h1⟩

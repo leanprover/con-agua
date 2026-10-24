@@ -19,8 +19,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
-  AFr.of_frame (gafF_frame h)
 theorem fvbF_afr {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (fvbF_frame h)
 

@@ -31,7 +31,7 @@ theorem KPT.kp {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
     (h : KPT dn vis fe m dec b a' x) : KP dn vis fe m dec b a' x := ⟨h.1.stage, h.2⟩
 
 /-- A `Sim` is a `RSim` of the same model. -/
-theorem Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
     RSim mo op a (fun b a' x => Q b.1 x b.2 a') := by
   intro ⟨r, m'⟩ e
