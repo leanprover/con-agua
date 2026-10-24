@@ -458,11 +458,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
       subst hrecs
       refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_, hJ⟩
       simp [CrRes, decNL]
-    · have hpos : 1 ≤ rl.toNat := by
-        rcases Nat.eq_zero_or_pos rl.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hrl
-        · omega
-      obtain ⟨r1, hr1⟩ : ∃ r1, rl.toNat = r1 + 1 := ⟨rl.toNat - 1, by omega⟩
+    · obtain ⟨r1, hr1, hrl1⟩ := wordSucc_of_ne hrl
       rw [hr1] at hrecs
       obtain ⟨p0, rc, rest, rfl, hp0, hrc, hrest⟩ := decPL_cons hrecs
       obtain ⟨q, hq, hcv, hmIq⟩ := decRS_fields hrc
@@ -479,11 +475,9 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
       have hqb : q < 2 ^ 64 := hrdq.2
       have hE64 : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
       have hq3 : q + 3 < 2 ^ 64 := by
-        cases hw : (m.arr64 EREC)[q + 3]? with
-        | none => simp [hd?, erA, hw] at htyp
-        | some w =>
-          have := (Array.getElem?_eq_some_iff.mp hw).1
-          omega
+        rcases hw : (m.arr64 EREC)[q + 3]? with _ | w
+        · simp [hd?, erA, hw] at htyp
+        · have := (Array.getElem?_eq_some_iff.mp hw).1; omega
       obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erH_rdW htyp hq3
       have hq3w : UInt64.ofNat q + 3 = UInt64.ofNat (q + 3) := by simp [UInt64.ofNat_add]
       have hguard : rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 ≠ 0 := by
@@ -492,11 +486,8 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
         have h1 : rc.mI + 1 < 2 ^ 64 := by
           rw [hrd0.1, hrdm.2] at hguard
           have hlt : rc.mI < 2 ^ 64 := (iwN_rdW hmIq (by have := iwN_lt hmIq; omega)).2
-          rcases Nat.lt_or_ge (rc.mI + 1) (2 ^ 64) with hc | hc
-          · exact hc
-          exfalso
-          have e : rc.mI = 2 ^ 64 - 1 := by omega
-          apply hguard; rw [e]; decide
+          refine Nat.lt_of_not_ge fun hc => hguard ?_
+          rw [show rc.mI = 2 ^ 64 - 1 by omega]; decide
         have hh : (UInt64.ofNat rc.mI).toNat = rc.mI := UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
         rw [UInt64.toNat_add, hh]
         show (rc.mI + 1) % 2 ^ 64 = _
@@ -506,11 +497,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
       obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hJ1⟩ :=
         hO.2 n (UInt64.ofNat rc.mI + 1) wt 0 hwtlt m m1 a r1' hs hS hJ
       have hrun1' : (openPisAtFvarsF (rc.mI + 1) rc.cvR.type 0) a = .ok (res1, a1) := by
-        have := hrun1
-        rw [hmIw, hwtd] at this
-        have h0 : (0 : Word).toNat = 0 := rfl
-        rw [h0] at this
-        exact this
+        rw [hmIw, hwtd] at hrun1; exact hrun1
       cases res1 with
       | none =>
         have h0 : r1'.headD 0 = 0 := hdec1
@@ -523,19 +510,14 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
         have h0 : r1'.headD 0 ≠ 0 := by rw [h1]; decide
         rw [crK1, if_neg h0] at h
         have hleaf3 : r1'.tail.tail.tail.headD 0 = (r1'.drop 3).headD 0 := by
-          cases r1' with
-          | nil => rfl
-          | cons a1' t1 => cases t1 with
-            | nil => rfl
-            | cons a2' t2 => cases t2 <;> rfl
+          rcases r1' with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
         rw [hleaf3] at h
         obtain ⟨hl1, hl2⟩ := hleaf
         obtain ⟨⟨r2, m2⟩, hf, h⟩ := of_K h (by simp only [crK2])
         obtain ⟨x, a2, hrun2, hS2, hg2, hr2, hxb⟩ :=
           fvarHeadW_ok dn vis fe m1 m2 a1 ((r1'.drop 3).headD 0) hl1 r2 hf hS1
         have hJ2 : J m2 := hO.1 _ _ (fvarHeadW_afr hf) hJ1
-        have hrun2' : (ConRon.Arena.fvarHead concl) a1 = .ok (x, a2) := by
-          rw [← hl2]; exact hrun2
+        have hrun2' : (ConRon.Arena.fvarHead concl) a1 = .ok (x, a2) := by rw [← hl2]; exact hrun2
         cases x with
         | none =>
           have hr20 : r2.headD 0 = 0 := by rw [hr2]; rfl
@@ -551,12 +533,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
           have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
             rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
           have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
-            have := hS2.2
-            have := iwTop m
-            have hh := hmt
-            have h3 := hS.2.2.2.1
-            have h4 := hS.2.1
-            omega
+            have := hS2.2; have := hS.2.2.2.1; have := hS.2.1; omega
           obtain ⟨r3, hc, h⟩ := of_K h (by simp only [crK3])
           have hcm := cmvW_ok (n - 1) m2 nP mo ml (UInt64.ofNat i) r3 motPos hmot2 hmlb hc
           rw [UInt64.toNat_ofNat_of_lt' hi64] at hcm
@@ -573,15 +550,10 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
             have hr30 : r3.headD 0 ≠ 0 := by rw [hcm]; show (1 : Word) ≠ 0; decide
             have hr3t : r3.tail.headD 0 = UInt64.ofNat cc := by rw [hcm]; rfl
             have hcc64 : cc < 2 ^ 64 := by
-              have := cmv_lt _ _ _ _ co
-              have := decNL_length m2 hmot2
-              have := ml.toNat_lt
-              omega
+              have := cmv_lt _ _ _ _ co; have := decNL_length m2 hmot2; have := ml.toNat_lt; omega
             rw [crK3, if_neg hr30, hr3t] at h
             obtain ⟨⟨r4, m4⟩, hr, h⟩ := of_K h rfl
             have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-            have hrl1 : (rl - 1).toNat = r1 := by
-              rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
             have hrest' : ∀ m3, IWGrow m2 m3 → decPL m3 (decRS m3) (ro + 1).toNat (rl - 1).toNat = some rest := by
               intro m3 hg3
               have := hstab m3 ((hg1.trans hg2).trans hg3)
@@ -846,11 +818,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       subst hslots
       exact ⟨hS, IWGrow.refl m, [], by simp [decNL], by simp [decPL, ConRon.Arena.ClassRead.classes],
         by simp, by simp⟩
-    · have hpos : 1 ≤ sl.toNat := by
-        rcases Nat.eq_zero_or_pos sl.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hsl
-        · omega
-      obtain ⟨l1, hl1⟩ : ∃ l1, sl.toNat = l1 + 1 := ⟨sl.toNat - 1, by omega⟩
+    · obtain ⟨l1, hl1, hsl1⟩ := wordSucc_of_ne hsl
       rw [hl1] at hslots hext
       obtain ⟨sp, cs, rest, rfl, hsp, hcs, hrest⟩ := decPL_cons hslots
       obtain ⟨hhead, hextt⟩ := SlotsExt_cons hext
@@ -859,8 +827,6 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
       have hso1 : (so + 1).toNat = so.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; have := iwN_lt hsp; omega
-      have hsl1 : (sl - 1).toNat = l1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
       have e0 : UInt64.ofNat so.toNat = so := UInt64.ofNat_toNat
       have hrd0 := iwN_rdW hsp (by have := iwN_lt hsp; omega)
       rw [e0] at hrd0
