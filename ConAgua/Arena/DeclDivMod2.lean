@@ -40,54 +40,15 @@ theorem CallRef.bind_ {α β : Type} {p : Prog} {f : FnName} {args : List Word}
     (h : CallRef p f args pre op post) {n : Nat} {m : Mem} {a : AState} (hpre : pre m a)
     {K : List Word → Mem → Option β} {res : β}
     (hw : ntBW (callW p n f args m) K = some res) :
-    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res := by
-  cases hc : callW p n f args m with
-  | none => rw [hc] at hw; simp at hw
-  | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [hc, bW_some] at hw
-    obtain ⟨x, a1, hr, hp⟩ := h n m a r1 m1 hpre hc
-    exact ⟨r1, m1, x, a1, hr, hp, hw⟩
+    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res :=
+  let ⟨r1, m1, hc, hw⟩ := ntBW_some hw; let ⟨x, a1, hr, hp⟩ := h n m a r1 m1 hpre hc; ⟨r1, m1, x, a1, hr, hp, hw⟩
 
 theorem FRef.bind_ {β : Type} {p : Prog} {f : FnName} {args : List Word} {pre : Mem → Prop}
     {post : Mem → Mem → List Word → Prop} (h : FRef p f args pre post) {n : Nat} {m : Mem}
     (hpre : pre m) {K : List Word → Mem → Option β} {res : β}
     (hw : ntBW (callW p n f args m) K = some res) :
-    ∃ r1 m1, post m m1 r1 ∧ K r1 m1 = some res := by
-  cases hc : callW p n f args m with
-  | none => rw [hc] at hw; simp at hw
-  | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [hc, bW_some] at hw
-    exact ⟨r1, m1, h n m r1 m1 hpre hc, hw⟩
-
-theorem RelAM.bind_ {α β : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
-    {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
-    (h : RelAM f args pre op post) {m : Mem} {a : AState} (hpre : pre m a)
-    {K : List Word → Mem → Option β} {res : β}
-    (hw : ntBW (stubM f m args) K = some res) :
-    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res := by
-  cases hc : stubM f m args with
-  | none => rw [hc] at hw; simp at hw
-  | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [hc, bW_some] at hw
-    obtain ⟨x, a1, hr, hp⟩ := h m m1 a r1 hc hpre
-    exact ⟨r1, m1, x, a1, hr, hp, hw⟩
-
-theorem RelW.bind_ {α β : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
-    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
-    (h : RelW W args pre op post) {m : Mem} {a : AState} (hpre : pre m a)
-    {K : List Word → Mem → Option β} {res : β}
-    (hw : ntBW (W m args) K = some res) :
-    ∃ r1 m1 x a1, op.run a = .ok (x, a1) ∧ post m m1 a1 r1 x ∧ K r1 m1 = some res := by
-  cases hc : W m args with
-  | none => rw [hc] at hw; simp at hw
-  | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [hc, bW_some] at hw
-    obtain ⟨x, a1, hr, hp⟩ := h m m1 a r1 hc hpre
-    exact ⟨r1, m1, x, a1, hr, hp, hw⟩
+    ∃ r1 m1, post m m1 r1 ∧ K r1 m1 = some res :=
+  let ⟨r1, m1, hc, hw⟩ := ntBW_some hw; ⟨r1, m1, h n m r1 m1 hpre hc, hw⟩
 
 /-! ## The lookups -/
 
