@@ -295,16 +295,20 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   subst hr1
   have hF := hS.1.pins.full h0
   simp only [List.headD_cons] at hw
+  obtain ⟨r2, m2, he2, he⟩ := ntBW_some hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at he
+  obtain ⟨rfl, rfl⟩ := he
   have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
   have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) hw hS (Or.inr (by
+  obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) he2 hS (Or.inr (by
     have := hsl.1; omega))
-  have hd2 : decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat =
+  have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat =
       some ((certsOf ip).getD (dmSlotW m c).toNat []) := by
     rw [hdec]; exact sliceR_hslice hsl hsz
   refine ⟨(certsOf ip).getD (dmSlotW m c).toNat [], a, divModCertProofs_run hF hc ip, hS2, hg2, ?_⟩
   unfold decRL
   rw [ntGetD0, show (0 + 1 : Nat) = 1 from rfl, ntGetD1]
+  simp only [List.headD_cons, List.tail_cons]
   exact ⟨hd2, by omega⟩
 
 @[refines ConRon.Arena.divModDeclPin]
