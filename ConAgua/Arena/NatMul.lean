@@ -42,6 +42,7 @@ def macHi : FunDecl := lfn (x, y, t, c) locals (lo, hi) {
 section mac
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
 
+set_option maxHeartbeats 2000000 in
 include hph in
 theorem macHi_spec (n : Nat) (s₀ : St) (x y t c : Word) :
     ⦃fun s => s = s₀⦄
@@ -70,8 +71,8 @@ def zeroLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
 def colLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
   while i < la {
     x := POOL⦃oa + i⦄;
-    t := POOL⟨pt⟩[pb + i + j];
-    POOL⟨pt⟩[pb + i + j] := x * y + t + c;
+    t := POOL⟨pt⟩[pb + (i + j)];
+    POOL⟨pt⟩[pb + (i + j)] := x * y + t + c;
     c := call mac_hi(x, y, t, c);
     i += 1
   }
@@ -84,7 +85,7 @@ def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
     c := 0;
     i := 0;
     ⟪colLoop⟫;
-    POOL⟨pt⟩[pb + la + j] := c;
+    POOL⟨pt⟩[pb + (la + j)] := c;
     j += 1
   }
 }
@@ -130,6 +131,9 @@ def MulBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 5).toNat = (s.loc 1).toNat + (s.loc 3).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
+  s.loc 12 = s.loc 4 >>> 40 ∧ s.loc 13 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
+  (s.loc 13).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 12))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 12))).size ≤ 2 ^ 40 ∧ (s.loc 12).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat
 
@@ -153,13 +157,14 @@ def RowInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   pv (vpool s.mem) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) =
     pv Pg (s.loc 0).toNat (s.loc 1).toNat * pv Pg (s.loc 2).toNat (s.loc 7).toNat
 
+set_option maxHeartbeats 2000000 in
 theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n zeroLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -170,15 +175,15 @@ theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
       vcgen [step, evalE, evalC, setLoc, setLocs, st64, ih] <;> finish [ZeroInv, MulBase]
 
 -- the multiply-accumulate step (see the proof) needs more than the default budget
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 2000000 in
 include hph in
 theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n colLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
           (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
@@ -205,24 +210,24 @@ include hph in
 theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) colLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
           (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
           pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * (s₀.loc 10).toNat * wt (s₀.loc 7).toNat; ⊤⦄ :=
   Triple.step_exec (colLoop_spec p hph Pg C (n + 1) s₀ h)
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 2000000 in
 include hph in
 theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     exec p n rowLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -244,9 +249,9 @@ include hph in
 theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) rowLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ :=
   Triple.step_exec (rowLoop_spec p hph Pg C (n + 1) s₀ h)
@@ -254,10 +259,10 @@ theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
 theorem zeroLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) zeroLoop
-    ⦃fun r s' => r = .normal ∧ Frame POOL s₀.mem s'.mem ∧
+    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
       pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
       s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 7 = s₀.loc 7 ∧
+      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧
       pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ :=
   Triple.step_exec (zeroLoop_spec p Pg C (n + 1) s₀ h)
 
@@ -267,7 +272,7 @@ section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_mul" = some natMul)
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 2000000 in
 include hph hpt hpn in
 /-- `nat_mul` appends `a * b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
@@ -275,13 +280,17 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_mul" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       pcap s'.mem = pcap s₀.mem ∧
       s₀.mem.top.toNat + (r.headD 0).toNat ≤ pcap s'.mem ∧
       Agree (vpool s'.mem) (vpool s₀.mem) s₀.mem.top.toNat ∧
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat * pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natMul]
@@ -291,7 +300,7 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       zeroLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
       rowLoop_step_spec p hph (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
-    all_goals (try simp only [ZeroInv, RowInv, MulBase, Grows] at *)
+    all_goals (try simp only [ZeroInv, RowInv, MulBase] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, UInt64.toNat_zero] at *)

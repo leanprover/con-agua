@@ -139,6 +139,7 @@ def CmpInv (P : Array Word) (C : Nat) (s : St) : Prop :=
 section cmp
 variable (p : Prog)
 
+set_option maxHeartbeats 1000000 in
 theorem cmpLoop_spec (n : Nat) (s₀ : St) (h : CmpInv (vpool s₀.mem) (pcap s₀.mem) s₀) :
     ⦃fun s => s = s₀⦄
     exec p n cmpLoop
