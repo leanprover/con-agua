@@ -207,7 +207,7 @@ theorem callW_mkApp (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : 
     AM.ok (internE (.app (decE f) (decE x))) a₀ ∧
     ArenaD m' (AM.st (internE (.app (decE f) (decE x))) a₀) ∧
     AM.res (internE (.app (decE f) (decE x))) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (mkApp_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp n
     s₀ f x) h
   obtain ⟨-, hm⟩ := hm
@@ -222,19 +222,19 @@ theorem callW_mkAppNFrom (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a�
     AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
     ArenaD m' (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
     AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW (Q := fun r s' =>
       LocEq s' s₀ ∧ AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
         ArenaD s'.mem (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
         AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
-        MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem)
+        MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem)
     (mkAppNFrom_refines p hp n s₀ a₀ hD f o k i xs hf hx hik) h
   obtain ⟨s'', hm⟩ := triple_of_callW (mkAppNFromL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp
     hp.mknf n s₀ f o k i) h
   exact ⟨hok, hD', hres, hfr, mkAppNFromW_hw _ s₀.mem a₀ f o k i rfl hD hf _ _ hm.2.2⟩
 
 /-- **The `app` interning writes neither the stack nor its top.** -/
-theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [4, 5] m m') :
+theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [AREC, ASLOT, ADER, SPN]) (by decide)
@@ -244,7 +244,7 @@ theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [
 /-- **`CoreS` across an `app` interning step.** -/
 theorem CoreS.of_app {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
-    (hcpl : cpl a' = cpl a) (hf : MemFrame [AREC, ASLOT, ADER] [4, 5] m m') :
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by

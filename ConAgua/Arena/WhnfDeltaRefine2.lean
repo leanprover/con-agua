@@ -1096,12 +1096,12 @@ theorem callW_mkAppN (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState) (h
     (m' : Mem) (h : callW p n "mk_app_n" [f, o, k] s₀.mem = some (r, m')) :
     AM.ok (mkAppN (decE f) xs.toList) a₀ ∧ ArenaD m' (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
     AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-    MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hok, hD', hres, hfr⟩ := triple_of_callW (Q := fun r s' =>
       LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
         ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
         AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
-        MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem)
+        MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] s₀.mem s'.mem)
     (mkAppN_refines p hp n s₀ a₀ hD f o k xs hf hx) h
   obtain ⟨s'', hm⟩ := triple_of_callW (mkAppNL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp hp.mkn
     n s₀ f o k) h
