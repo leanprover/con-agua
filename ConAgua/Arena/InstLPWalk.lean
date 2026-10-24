@@ -351,11 +351,11 @@ def ilwBinK₁ (p : Prog) (n : Nat) (mk : FnName) (h f a ko kc vo vc fu : Word) 
 
 /-- **The model of `lp_app`, `lp_lam`, `lp_forall`** at L fuel `n + 1` (record array `R`, node
 maker `mk`). -/
-def ilwBinW (R : ArrId) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) :
+def ilwBinW (R : TRec) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) :
     Option (Word × Mem) :=
-  ilwProbe m h (ilwBinK₁ p n mk h (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2))
-    (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)) ko kc vo vc fu
-    (callW p n "lp_go" [rdW (m.arr64 R) (idxW h * 4 + tierW h * 2), ko, kc, vo, vc, fu] m))
+  ilwProbe m h (ilwBinK₁ p n mk h (tfld m R (tierW h) (idxW h) 0)
+    (tfld m R (tierW h) (idxW h) 1) ko kc vo vc fu
+    (callW p n "lp_go" [tfld m R (tierW h) (idxW h) 0, ko, kc, vo, vc, fu] m))
 
 /-- `lp_let_tail` after the third child: the rebuild. -/
 def ilwLetTK (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)

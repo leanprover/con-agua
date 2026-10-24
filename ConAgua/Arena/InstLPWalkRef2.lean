@@ -212,25 +212,25 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
 
 /-- **A two-child arm** (`lp_app`, `lp_lam`, `lp_forall`: record array `R`, node maker `mk`, node
 constructor `C`) refines the twin's. -/
-theorem ilw_binArm (R : ArrId) (mk : FnName) (C : EIdx → EIdx → ENodeView)
+theorem ilw_binArm (R : TRec) (mk : FnName) (C : EIdx → EIdx → ENodeView)
     (hmk : ∀ (m m' : Mem) (a : AState) (M : ModeMaps) (x y : Word) (rs : List Word),
       CoreS dn m a vis fe M eb → ILWMemo m a → HW x → HW y → callW p n mk [x, y] m = some (rs, m') →
       HW (rs.headD 0) → ILWStep (internE (C (decE x) (decE y))) a dn m m' vis fe M eb (rs.headD 0))
     {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (hf : HW (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2)))
-    (ha : HW (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)))
+    (hf : HW (tfld m R (tierW h) (idxW h) 0))
+    (ha : HW (tfld m R (tierW h) (idxW h) 1))
     (hW : ilwBinW R mk p n m h ko kc vo vc fu = some (r, m')) :
     ILWStep (ilwArmT (decE h) (do
-      let t ← instLPGo ks vs fu.toNat (decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2)))
-      let b ← instLPGo ks vs fu.toNat (decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)))
-      ilwRbT (t == decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2)) &&
-        b == decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1))) (decE h) (internE (C t b))))
+      let t ← instLPGo ks vs fu.toNat (decE (tfld m R (tierW h) (idxW h) 0))
+      let b ← instLPGo ks vs fu.toNat (decE (tfld m R (tierW h) (idxW h) 1))
+      ilwRbT (t == decE (tfld m R (tierW h) (idxW h) 0) &&
+        b == decE (tfld m R (tierW h) (idxW h) 1)) (decE h) (internE (C t b))))
       a dn m m' vis fe M eb r := by
   unfold ilwBinW at hW
-  generalize rdW (m.arr64 R) (idxW h * 4 + tierW h * 2) = fw at hf hW ⊢
-  generalize rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1) = aw at ha hW ⊢
+  generalize tfld m R (tierW h) (idxW h) 0 = fw at hf hW ⊢
+  generalize tfld m R (tierW h) (idxW h) 1 = aw at ha hW ⊢
   refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
       | none => none
       | some (x, m₁) => match callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with

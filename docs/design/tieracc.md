@@ -73,4 +73,27 @@ excluded: `L/TRec`, `L/Notation`, `L/ModelGen`, `Arena/StoreFields*`, `StoreLib*
 ## Log
 
 * 2026-10-24: interface (TRec, notation, ModelGen, StoreFields); `e_view` converted (phase L);
-  asm/checker.s regenerated.
+  asm/checker.s regenerated. **Batch 1 landed** (04b2c8da); verdicts 675/675 as master.
+* 2026-10-24: lane tierarr landed its tiered arrays with the surface syntax `A⟨t⟩[i]`,
+  `R⟨t⟩[i].f` (an `L.Record` in a tiered array) — the same text as this lane's first accessor
+  syntax. The store accessors became `R⟨t, i⟩.f` (comma: no overlap with `A⟨t⟩[i]`);
+  `R⟦h⟧.f`, `R⟨t⟩.count`, `⟦h⟧.tier` stay. After the switch the body of `TRec.ld` is
+  tierarr's `ld64t R.arr t (i * w + f)` (the coordinator's interface: arguments fixed, only the
+  body changes).
+* Phase L by three helpers (whnf/defeq: 11 files, 47 spec proofs in 26 files; walks: 7 files,
+  ~30 proofs; infer/misc: 12 files, ~30 proofs), all by `_tmp/tieracc/lconv.py` (regex rewrite
+  of the L text) plus hand edits where an index was shared in a local (`k := i * 4 + t * 2`:
+  `pnArm`, `peLit`, `nameRecPre`). No slowdown measured (spec proofs timed before/after).
+* The `l_model` families (Lift, WalkLift, Inst1, the Hoist walk) went to phase P directly:
+  `l_model` generates the models from the L text, so they read `tfld`/`tcnt` (offsets as
+  numerals: `ModelGen.fieldNum` reads the field constant's value, so `tfld m APP t i 1`;
+  field names in proofs gave mismatched `omega` atoms once `simp` had unfolded one copy). Their
+  refinements were rewritten by `_tmp/tieracc/pconv.py` (raw proof terms → `tfld`/`tcnt`,
+  balanced-parenthesis parser) and use the `…T` forms of `View.lean`'s lemmas (definitionally the
+  raw ones: `view_appT … := view_app …`); LiftRefine, WalkLiftRefine, Inst1Refine needed no
+  manual edit; HoistWalkRef needed `tfld_arr_eq` (a field depends only on its array) where it
+  rewrote with `m₁.arr64 LEREC = m.arr64 LEREC`. InstLP stays phase L: its models are generic
+  over the raw array (`ilwBinW AREC …`), and the rewritten models sent `finish` searching for
+  25 min; bridged instead.
+* Leak-script kinds added: `P-unfold` (`TRec.ad` in a proof outside the library: the phase-L
+  bridges) and `P-cslot` (`viewOK m h 4`, `vok 22`: a count slot by number).
