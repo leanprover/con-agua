@@ -114,8 +114,8 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
     unfold denoteLs at hvs; rw [hvw] at hvs; exact hvs
   rw [hln] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
-  generalize tfld m₁ LS (tierW us) (idxW us) 0 = vo at hW hvt hsl
-  generalize tfld m₁ LS (tierW us) (idxW us) 1 = vc at hW hvt hsl
+  generalize tfld m₁ LVLS (tierW us) (idxW us) 0 = vo at hW hvt hsl
+  generalize tfld m₁ LVLS (tierW us) (idxW us) 1 = vc at hW hvt hsl
   -- `keys_ok`: the keys read back
   cases h2 : callW p k "keys_ok" [ko, kc] m₁ with
   | none => rw [h2] at hW; cases hW

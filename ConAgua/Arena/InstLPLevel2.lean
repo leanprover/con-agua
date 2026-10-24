@@ -251,8 +251,8 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.1 hw hv
   rw [e₁] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
-  generalize tfld m LS (tierW w) (idxW w) 0 = o at hW t₁ s₁
-  generalize tfld m LS (tierW w) (idxW w) 1 = l at hW t₁ s₁
+  generalize tfld m LVLS (tierW w) (idxW w) 0 = o at hW t₁ s₁
+  generalize tfld m LVLS (tierW w) (idxW w) 1 = l at hW t₁ s₁
   have u1 : ¬ m.len64 SPN < spTop m := fun u1 => by simp [u1] at hW
   have u2 : ¬ m.len64 SPN - spTop m < l := fun u2 => by simp [u1, u2] at hW
   simp only [u1, u2, ↓reduceIte] at hW

@@ -387,8 +387,8 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   have hkr : NmsR (nameN a.store.lss.ls.ns) m EREC lo lc ks :=
     nmsR_of_hslice _ _ lc.toNat lps ks lo lc rfl hl hbound hk
   -- the run
-  rcases hc : callW p n "lv_spw" [o, c, lo, lc, tfld m LS (tierW us) (idxW us) 0,
-      tfld m LS (tierW us) (idxW us) 1] m with _ | ⟨r, m₁⟩
+  rcases hc : callW p n "lv_spw" [o, c, lo, lc, tfld m LVLS (tierW us) (idxW us) 0,
+      tfld m LVLS (tierW us) (idxW us) 1] m with _ | ⟨r, m₁⟩
   · rw [hc] at hW; cases hW
   rw [hc] at hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

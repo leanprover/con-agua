@@ -892,15 +892,15 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   · simp [g0] at hne
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [g0, hs] at hne
-  by_cases hc : tcnt m LS (tierW h) ≤ idxW h
+  by_cases hc : tcnt m LVLS (tierW h) ≤ idxW h
   · simp [g0, hs, hc] at hne
   simp only [g0, hs, hc, ↓reduceIte, List.tail_cons, List.headD_cons]
   have hi : idxW h < cntC lsCS m (tierW h) := UInt64.not_le.mp hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) hi
-  have hlen : x.us.length = (tfld m LS (tierW h) (idxW h) 1).toNat := by
-    have := sliceL_length (m.arr64 POOL) (tfld m LS (tierW h) (idxW h) 0).toNat
-      (tfld m LS (tierW h) (idxW h) 1).toNat
+  have hlen : x.us.length = (tfld m LVLS (tierW h) (idxW h) 1).toNat := by
+    have := sliceL_length (m.arr64 POOL) (tfld m LVLS (tierW h) (idxW h) 0).toNat
+      (tfld m LVLS (tierW h) (idxW h) 1).toNat
     rw [hrel.2.1] at this; simpa [lsWords] using this
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
     rw [isPersistent_decI h hh]; rfl

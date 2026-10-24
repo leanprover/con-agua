@@ -978,8 +978,8 @@ end refs13
 def unfoldDefnAtW (p : Prog) (n : Nat) (m : Mem) (e nw usw q : Word) : Option (Word × Word × Mem) :=
   if usw >>> 28 ≠ 0 then none
   else if tierW usw ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m LS (tierW usw) ≤ idxW usw then none
-  else if tfld m LS (tierW usw) (idxW usw) 1 ≠ rdW (m.arr64 EREC) (q + 3) then
+  else if tcnt m LVLS (tierW usw) ≤ idxW usw then none
+  else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ rdW (m.arr64 EREC) (q + 3) then
     some (0, 0, m)
   else
   match callW p n "const_val_at" [nw, rdW (m.arr64 EREC) (q + 2), rdW (m.arr64 EREC) (q + 3),
@@ -1135,22 +1135,22 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   by_cases g2 : tierW usw ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos g2] at hW; cases hW
   rw [if_neg g2] at hW
-  by_cases g3 : tcnt s₀.mem LS (tierW usw) ≤ idxW usw
+  by_cases g3 : tcnt s₀.mem LVLS (tierW usw) ≤ idxW usw
   · rw [if_pos g3] at hW; cases hW
   rw [if_neg g3] at hW
   -- the level list's view
-  have hls : lsNodeW s₀.mem usw = [tfld s₀.mem LS (tierW usw) (idxW usw) 0,
-      tfld s₀.mem LS (tierW usw) (idxW usw) 1] := by
+  have hls : lsNodeW s₀.mem usw = [tfld s₀.mem LVLS (tierW usw) (idxW usw) 0,
+      tfld s₀.mem LVLS (tierW usw) (idxW usw) 1] := by
     unfold lsNodeW
     rw [if_neg (by simpa using g1'), if_neg g2, if_neg g3]
   have hvl' := lsNodeW_viewLen hC.arena.1 hus hls
   rw [LsStore.viewLen_eq_map] at hvl'
   obtain ⟨l, hview, hllen⟩ : ∃ l, a₀.store.lss.view (decI usw) = some l ∧
-      l.length = (tfld s₀.mem LS (tierW usw) (idxW usw) 1).toNat := by
+      l.length = (tfld s₀.mem LVLS (tierW usw) (idxW usw) 1).toNat := by
     cases hv : a₀.store.lss.view (decI usw) with
     | none => rw [hv] at hvl'; cases hvl'
     | some l => rw [hv] at hvl'; exact ⟨l, rfl, Option.some.inj hvl'⟩
-  by_cases g4 : tfld s₀.mem LS (tierW usw) (idxW usw) 1 ≠
+  by_cases g4 : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 ≠
       rdW (s₀.mem.arr64 EREC) (q + 3)
   · rw [if_pos g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -1164,7 +1164,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [if_neg g4] at hW
-  have g4' : tfld s₀.mem LS (tierW usw) (idxW usw) 1 =
+  have g4' : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 =
       rdW (s₀.mem.arr64 EREC) (q + 3) := by simpa using g4
   have hleneq : l.length = cv.levelParams.length := by rw [hllen, hlen, g4']
   -- const_val_at

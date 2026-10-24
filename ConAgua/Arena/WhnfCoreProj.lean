@@ -327,7 +327,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hsc] at hl
   rw [if_neg hsc] at hl
-  by_cases hbd : tcnt m LS (tierW h) ≤ idxW h
+  by_cases hbd : tcnt m LVLS (tierW h) ≤ idxW h
   · simp [hbd] at hl
   rw [if_neg hbd] at hl
   have g0' : h >>> 28 = 0 := by simpa using g0
@@ -341,7 +341,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   · -- persistent
     have hlt : (idxW h).toNat < a.store.lss.pers.lists.nodes.size := by
       rw [← ConsR.cntP hR.ls]
-      have : ¬ tcnt m LS 0 ≤ idxW h := by rw [h0] at hbd; exact hbd
+      have : ¬ tcnt m LVLS 0 ≤ idxW h := by rw [h0] at hbd; exact hbd
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.pers.lists.nodes[(idxW h).toNat]? = some x :=
       ⟨_, Array.getElem?_eq_getElem hlt⟩
@@ -360,7 +360,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
       rw [← hfl]; simpa using hsc'
     have hlt : (idxW h).toNat < a.store.lss.scr.lists.nodes.size := by
       rw [← ConsR.cntS hR.ls]
-      have : ¬ tcnt m LS 1 ≤ idxW h := by rw [h1] at hbd; exact hbd
+      have : ¬ tcnt m LVLS 1 ≤ idxW h := by rw [h1] at hbd; exact hbd
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.scr.lists.nodes[(idxW h).toNat]? = some x :=
       ⟨_, Array.getElem?_eq_getElem hlt⟩

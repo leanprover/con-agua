@@ -97,9 +97,9 @@ abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 +
 /-- Node `i` of tier `t` holds the list `k.us`: a slice below the pool top holding its handle
 words, and the slice's hash. -/
 def LsRecRel (m : Mem) (t i : Word) (k : ListNode) : Prop :=
-  (tfld m LS t i 0).toNat + (tfld m LS t i 1).toNat ≤ m.top.toNat ∧
-  sliceL (m.arr64 POOL) (tfld m LS t i 0).toNat (tfld m LS t i 1).toNat = lsWords k.us ∧
-  tfld m LS t i 2 = hashN (m.arr64 POOL) (tfld m LS t i 0).toNat (tfld m LS t i 1).toNat
+  (tfld m LVLS t i 0).toNat + (tfld m LVLS t i 1).toNat ≤ m.top.toNat ∧
+  sliceL (m.arr64 POOL) (tfld m LVLS t i 0).toNat (tfld m LVLS t i 1).toNat = lsWords k.us ∧
+  tfld m LVLS t i 2 = hashN (m.arr64 POOL) (tfld m LVLS t i 0).toNat (tfld m LVLS t i 1).toNat
 
 /-- `LsRecRel` in the raw words (inside the store library). -/
 theorem LsRecRel_raw (m : Mem) (t i : Word) (k : ListNode) :

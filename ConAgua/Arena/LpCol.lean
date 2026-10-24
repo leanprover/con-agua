@@ -93,7 +93,7 @@ def lvlHPW (m : Mem) (u : Word) : Word :=
 def lsHPW (m : Mem) (us : Word) : Word :=
   if tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if us >>> 28 = 0 then
-    (if idxW us < tcnt m LS (tierW us) then tfld m LS_HP (tierW us) (idxW us) 0
+    (if idxW us < tcnt m LVLS (tierW us) then tfld m LS_HP (tierW us) (idxW us) 0
      else 0)
   else 0
 
@@ -250,7 +250,7 @@ def lsBlkC : Stmt := lblk (t, f, a, j, c, k, x, g, ti, ix) {
   ti := ⟦a⟧.tier;
   ix := ⟦a⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 0 { if ix < LS⟨ti⟩.count { x := LS_HP⟨ti, ix⟩ } }
+    if g == 0 { if ix < LVLS⟨ti⟩.count { x := LS_HP⟨ti, ix⟩ } }
   }
 }
 

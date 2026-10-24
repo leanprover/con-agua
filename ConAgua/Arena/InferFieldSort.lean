@@ -263,8 +263,8 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   unfold fszW at h
   rw [e₁] at h
   simp only [List.headD_cons, List.tail_cons] at h
-  cases e₂ : substLW EREC POOL n (m.set64 CTL 192 0) fs po pl (tfld m LS (tierW us) (idxW us) 0)
-      (tfld m LS (tierW us) (idxW us) 1) with
+  cases e₂ : substLW EREC POOL n (m.set64 CTL 192 0) fs po pl (tfld m LVLS (tierW us) (idxW us) 0)
+      (tfld m LVLS (tierW us) (idxW us) 1) with
   | none => rw [e₂] at h; simp [fszK₁] at h
   | some q₁ =>
   obtain ⟨x, m₁⟩ := q₁

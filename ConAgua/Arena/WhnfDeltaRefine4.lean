@@ -358,10 +358,10 @@ end refs22
 
 
 theorem view_nca (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (c : Word) (hv : viewOK m h c)
-    (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-      (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨ (h >>> 28 = 7 ∧ c = 20) ∨
-      (h >>> 28 = 8 ∧ c = 2) ∨ (h >>> 28 = 9 ∧ c = 32)) :
+    (c : TRec) (hv : viewOK m h c)
+    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+      (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨ (h >>> 28 = 7 ∧ c = LET) ∨
+      (h >>> 28 = 8 ∧ c = LIT) ∨ (h >>> 28 = 9 ∧ c = PROJ)) :
     ∃ v, a.store.view (decE h) = some v ∧ (∀ c us, v ≠ .const c us) ∧ (∀ g x, v ≠ .app g x) := by
   rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
   · exact ⟨_, view_bvar m a hR h hh hv g, fun c us => nofun, fun c us => nofun⟩
@@ -397,9 +397,9 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
   -- the tags that only check a bound
-  have simple : ∀ (c : Word), (f >>> 28 = 0 ∧ c = 22) ∨ (f >>> 28 = 1 ∧ c = 26) ∨ (f >>> 28 = 2 ∧ c = 16) ∨
-      (f >>> 28 = 5 ∧ c = 28) ∨ (f >>> 28 = 6 ∧ c = 30) ∨ (f >>> 28 = 7 ∧ c = 20) ∨
-      (f >>> 28 = 8 ∧ c = 2) ∨ (f >>> 28 = 9 ∧ c = 32) →
+  have simple : ∀ (c : TRec), (f >>> 28 = 0 ∧ c = BVAR) ∨ (f >>> 28 = 1 ∧ c = FVAR) ∨ (f >>> 28 = 2 ∧ c = SORT) ∨
+      (f >>> 28 = 5 ∧ c = LAM) ∨ (f >>> 28 = 6 ∧ c = FORALL) ∨ (f >>> 28 = 7 ∧ c = LET) ∨
+      (f >>> 28 = 8 ∧ c = LIT) ∨ (f >>> 28 = 9 ∧ c = PROJ) →
       (if tcnt s₀.mem c (tierW f) ≤ idxW f then none else
         some ((0 : Word), (0 : Word), s₀.mem)) = some (r.headD 0, r.tail.headD 0, s'.mem) →
       CoreRef (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀ decOptR dn
@@ -473,33 +473,33 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     · unfold ResW at hrw ⊢; rw [← hr0, ← hr1]; exact hrw
   rw [if_neg g4] at hW
   by_cases g0 : f >>> 28 = 0
-  · rw [if_pos g0] at hW; exact simple 22 (Or.inl ⟨g0, rfl⟩) hW
+  · rw [if_pos g0] at hW; exact simple BVAR (Or.inl ⟨g0, rfl⟩) hW
   rw [if_neg g0] at hW
   by_cases g1 : f >>> 28 = 1
-  · rw [if_pos g1] at hW; exact simple 26 (Or.inr (Or.inl ⟨g1, rfl⟩)) hW
+  · rw [if_pos g1] at hW; exact simple FVAR (Or.inr (Or.inl ⟨g1, rfl⟩)) hW
   rw [if_neg g1] at hW
   by_cases g2 : f >>> 28 = 2
-  · rw [if_pos g2] at hW; exact simple 16 (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
+  · rw [if_pos g2] at hW; exact simple SORT (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
   rw [if_neg g2] at hW
   by_cases g5 : f >>> 28 = 5
-  · rw [if_pos g5] at hW; exact simple 28 (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
+  · rw [if_pos g5] at hW; exact simple LAM (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
   rw [if_neg g5] at hW
   by_cases g6 : f >>> 28 = 6
-  · rw [if_pos g6] at hW; exact simple 30 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
+  · rw [if_pos g6] at hW; exact simple FORALL (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
   rw [if_neg g6] at hW
   by_cases g7 : f >>> 28 = 7
   · rw [if_pos g7] at hW
-    exact simple 20 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
+    exact simple LET (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
   rw [if_neg g7] at hW
   by_cases g8 : f >>> 28 = 8
   · rw [if_pos g8] at hW
-    exact simple 2 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩))))))) hW
+    exact simple LIT (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩))))))) hW
   rw [if_neg g8] at hW
   by_cases g9 : f >>> 28 ≠ 9
   · rw [if_pos g9] at hW; cases hW
   rw [if_neg g9] at hW
   have g9' : f >>> 28 = 9 := by simpa using g9
-  exact simple 32 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))))
+  exact simple PROJ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))))
     (by simpa using hW)
 
 end refs23

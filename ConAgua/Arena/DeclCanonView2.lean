@@ -164,7 +164,7 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
     ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids := by
   have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
-  have hc : ¬ tcnt m LS (tierW h) ≤ idxW h := fun c => hne (by
+  have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
@@ -245,8 +245,8 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hlsn, hbnd, hsl⟩ := lsNodeW_store hR hu hv
   rw [hlsn] at h
   simp only [List.headD_cons, List.tail_cons] at h
-  generalize tfld m LS (tierW us) (idxW us) 0 = o at *
-  generalize tfld m LS (tierW us) (idxW us) 1 = l at *
+  generalize tfld m LVLS (tierW us) (idxW us) 0 = o at *
+  generalize tfld m LVLS (tierW us) (idxW us) 1 = l at *
   rcases hal : allocW m l with _ | ⟨q, m1⟩ <;> simp only [hal, reduceCtorEq] at h
   rcases hcp : poolCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h

@@ -378,9 +378,9 @@ theorem decLs_idx (h : Word) : (decI h : LsIdx).idxNat = (idxW h).toNat := by
 the list's handle words, below the pool top. -/
 theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
-    lsNodeW m h = [tfld m LS (tierW h) (idxW h) 0, tfld m LS (tierW h) (idxW h) 1] ∧
-      (tfld m LS (tierW h) (idxW h) 0).toNat + (tfld m LS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
-      sliceL (m.arr64 POOL) (tfld m LS (tierW h) (idxW h) 0).toNat (tfld m LS (tierW h) (idxW h) 1).toNat =
+    lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] ∧
+      (tfld m LVLS (tierW h) (idxW h) 0).toNat + (tfld m LVLS (tierW h) (idxW h) 1).toNat ≤ m.top.toNat ∧
+      sliceL (m.arr64 POOL) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat =
         lsWords ids := by
   have hfl := ConsR.flag hR.ls
   have ht1 := tierW_le h
@@ -405,7 +405,7 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, decLs_idx h, apply_ite LsTables.lists] at hz
     obtain ⟨hc, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 _ _ hz
-    replace hc : ¬ tcnt m LS (tierW h) ≤ idxW h := hc
+    replace hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := hc
     simp only [LsRecRel] at hr
     refine ⟨?_, hr.1, hr.2.1⟩
     simp [lsNodeW, g0, hsc, hc]
@@ -416,13 +416,13 @@ count. -/
 theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hne : lsNodeW m h ≠ []) :
     ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids ∧
-      (lsNodeW m h).tail.headD 0 = tfld m LS (tierW h) (idxW h) 1 ∧
-      (tfld m LS (tierW h) (idxW h) 1).toNat = ids.length := by
+      (lsNodeW m h).tail.headD 0 = tfld m LVLS (tierW h) (idxW h) 1 ∧
+      (tfld m LVLS (tierW h) (idxW h) 1).toNat = ids.length := by
   have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
-  have hc : ¬ tcnt m LS (tierW h) ≤ idxW h := fun c => hne (by
+  have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
-  have hval : lsNodeW m h = [tfld m LS (tierW h) (idxW h) 0, tfld m LS (tierW h) (idxW h) 1] := by
+  have hval : lsNodeW m h = [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1] := by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
@@ -442,7 +442,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
       have hon : a.store.lss.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hsc ⟨ht, h1⟩
       simp only [ht, beq_iff_eq, ↓reduceIte, hon]; exact hget _ hx
-  · have := sliceL_length (m.arr64 POOL) (tfld m LS (tierW h) (idxW h) 0).toNat (tfld m LS (tierW h) (idxW h) 1).toNat
+  · have := sliceL_length (m.arr64 POOL) (tfld m LVLS (tierW h) (idxW h) 0).toNat (tfld m LVLS (tierW h) (idxW h) 1).toNat
     rw [hr.2.1] at this; simpa [lsWords] using this.symm
 
 /-- The readback cache of lists holds readbacks. -/
