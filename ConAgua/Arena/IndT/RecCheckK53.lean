@@ -30,20 +30,11 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem eftF_afr {n : Nat} {m m' : Mem} {e : Word} {r : List Word} (h : eftF n m e = some (r, m')) :
     AFr m m' := by
-  cases n with
-  | zero => simp [eftF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [eftF] at h
   simp only [eftF, eftW] at h
-  cases ha : allocW m 1 with
-  | none => rw [ha] at h; simp [eftK1] at h
-  | some x =>
-  obtain ⟨f, m1⟩ := x
-  rw [ha, eftK1_some] at h
-  cases hr : rxW n (m1.set64 IW f 2) f e with
-  | none => rw [hr] at h; simp [eftK2] at h
-  | some y =>
-  obtain ⟨z, m2⟩ := y
-  rw [hr, eftK2_some] at h
+  rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
+  rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact ((allocW_afr ha).trans (set64IW_afr _ _ _)).trans (rxW_afr hr)
 
@@ -56,21 +47,9 @@ theorem eeW_afr : ∀ (n : Nat) {m m' : Mem} {o l : Word} {r : List Word}, eeW n
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
       exact AFr.refl _
     rw [eeW_cons (h := hl)] at h
-    cases h1 : eftF n m (rdW (m.arr64 IW) o) with
-    | none => rw [h1] at h; simp [eeK0] at h
-    | some x =>
-    obtain ⟨rv, m1⟩ := x
-    rw [h1, eeK0_some] at h
-    cases h2 : eeW n m1 (o + 1) (l - 1) with
-    | none => rw [h2] at h; simp [eeK1] at h
-    | some y =>
-    obtain ⟨rr, m2⟩ := y
-    rw [h2, eeK1_some] at h
-    cases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with
-    | none => rw [h3] at h; simp [eeK2] at h
-    | some z =>
-    obtain ⟨rc, m3⟩ := z
-    rw [h3, eeK2_some] at h
+    rcases h1 : eftF n m (rdW (m.arr64 IW) o) with _ | ⟨rv, m1⟩ <;> simp only [h1, eeK0, reduceCtorEq] at h
+    rcases h2 : eeW n m1 (o + 1) (l - 1) with _ | ⟨rr, m2⟩ <;> simp only [h2, eeK1, reduceCtorEq] at h
+    rcases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, eeK2, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact ((eftF_afr h1).trans (eeW_afr n h2)).trans (consW_afr h3)
 
@@ -90,24 +69,12 @@ theorem eraseAll_spec (xs : List EIdx) (xsP : List ConLeche.Expr) :
 
 theorem tteW_afr {n : Nat} {m m' : Mem} {bso bsl teo tel : Word} {r : List Word}
     (h : tteW n m bso bsl teo tel = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [tteW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tteW] at h
   rw [tteW_succ] at h
-  cases h1 : eeW n m bso bsl with
-  | none => rw [h1] at h; simp [tteK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, tteK1_some] at h
-  cases h2 : eeW n m1 teo tel with
-  | none => rw [h2] at h; simp [tteK2] at h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
-  rw [h2, tteK2_some] at h
-  cases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with
-  | none => rw [h3] at h; simp [tteK3] at h
-  | some e =>
-  rw [h3, tteK3_some] at h
+  rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
+  rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteK2, reduceCtorEq] at h
+  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (eeW_afr n h1).trans (eeW_afr n h2)
 
@@ -159,9 +126,8 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       (r.headD 0 != 0) = c ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AbsOK m' := by
   have hS := hC.stage
   obtain ⟨-, hMlv, hMds, hMnpc, -, -, -, -, hMpf⟩ := ConRon.Bridge.Inductives.dMajor_inv hMcP
-  cases n with
-  | zero => simp [tkaW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tkaW] at h
   rw [tkaW_succ] at h
   have hsz := hS.2.2.2.1
   obtain ⟨hlvH, hlvD, hdsS, hnP, hpfS, hMt⟩ := tmFields hMc hsz
@@ -169,24 +135,14 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by
       have := (rdW (m.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hMt; omega)]; omega
   generalize hK : rdW (m.arr64 IW) (Mc + 4) = K at h hnP
-  cases h1 : eeW n m (if lal < K then lao else lao + K) (if lal < K then 0 else lal - K) with
-  | none => rw [h1] at h; simp [tkaK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, tkaK1_some] at h
+  rcases h1 : eeW n m (if lal < K then lao else lao + K) (if lal < K then 0 else lal - K) with _ | ⟨r1, m1⟩ <;> simp only [h1, tkaK1, reduceCtorEq] at h
   obtain ⟨le, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hla.drop hP
   have hA1 := eeW_afr n h1 hA
-  cases h2 : eeW n m1 (if mal < K then mao else mao + K) (if mal < K then 0 else mal - K) with
-  | none => rw [h2] at h; simp [tkaK2] at h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
-  rw [h2, tkaK2_some] at h
+  rcases h2 : eeW n m1 (if mal < K then mao else mao + K) (if mal < K then 0 else mal - K) with _ | ⟨r2, m2⟩ <;> simp only [h2, tkaK2, reduceCtorEq] at h
   obtain ⟨me, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (hma.grow hg1).drop hP1
   have hA2 := eeW_afr n h2 hA1
-  cases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with
-  | none => rw [h3] at h; simp [tkaK3] at h
-  | some e =>
-  rw [h3] at h
+  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> rw [h3] at h <;>
+    try (simp only [tkaK3, reduceCtorEq] at h; done)
   have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.1; omega)) hd2
     (hS2.lt64 hb2)
   have hg12 := hg1.trans hg2
@@ -213,11 +169,8 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     · rw [if_neg hq] at he; exact absurd he he0
   subst heq
   -- the leaf's class
-  cases h4 : ceinternW m2 ip usp with
-  | none => rw [h4] at h; simp [tkaK4] at h
-  | some x =>
-  obtain ⟨hd, m3⟩ := x
-  rw [h4] at h
+  rcases h4 : ceinternW m2 ip usp with _ | ⟨hd, m3⟩ <;> rw [h4] at h <;>
+    try (simp only [tkaK4, reduceCtorEq] at h; done)
   obtain ⟨a3, run3, hS3, hg3⟩ := internConst_stage hS2 ip usp hip hus h4
   have hA3 := ceinternW_afr h4 hA2
   obtain ⟨q3, hhdP⟩ := ConRon.Bridge.Inductives.internConstE_run hC2.check.state
@@ -233,11 +186,7 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hlp := (hla.grow hg03).take (k := K)
   rw [hnP] at hlp
   generalize hL : (if lal < K then lal else K) = lpl at h hlp
-  cases h5 : mknF m3 [hd, lao, lpl] with
-  | none => rw [h5] at h; simp [tkaK5] at h
-  | some x =>
-  obtain ⟨ra, m4⟩ := x
-  rw [h5, tkaK5_some] at h
+  rcases h5 : mknF m3 [hd, lao, lpl] with _ | ⟨ra, m4⟩ <;> simp only [h5, tkaK5, reduceCtorEq] at h
   obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
     ⟨hS3, hlp.1⟩
   have hA4 := mknF_afr h5 hA3
@@ -248,11 +197,7 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have q14 := q13.trans q4
   have hP4 : RcMR m4 := hP3.fr (MFr.ofMknF h5)
   have hg04 := hg03.trans hg4
-  cases h6 : memberNamesW n m4 q with
-  | none => rw [h6] at h; simp [tkaK6] at h
-  | some x =>
-  obtain ⟨rn, m5⟩ := x
-  rw [h6, tkaK6_some] at h
+  rcases h6 : memberNamesW n m4 q with _ | ⟨rn, m5⟩ <;> simp only [h6, tkaK6, reduceCtorEq] at h
   have hbs4 := hbs.grow hg04
   obtain ⟨hS5, hg5, -, hdn, htn⟩ := memberNamesW_stage h6 hS4 hbs4
   have hf5 := (memberNamesW_dec h6 hS4.2.2.2.1 hS4.2.2.2.2.2 hbs4.dec
@@ -260,11 +205,8 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hP5 : RcMR m5 := hP4.fr (MFr.of_iw hf5)
   have hA5 := AFr.iw hf5 hA4
   have hC5 := hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state)
-  cases h7 : noF n m5 (rn.headD 0) (rn.tail.headD 0) 0 0 (ra.headD 0) with
-  | none => rw [h7] at h; simp [tkaK7] at h
-  | some x =>
-  obtain ⟨occ, m6⟩ := x
-  rw [h7] at h
+  rcases h7 : noF n m5 (rn.headD 0) (rn.tail.headD 0) 0 0 (ra.headD 0) with _ | ⟨occ, m6⟩ <;> rw [h7] at h <;>
+    try (simp only [tkaK7, reduceCtorEq] at h; done)
   obtain ⟨b, run6, hb6, hS6, hg6, hP6⟩ := noF_ok dn fe vis n h7 hS5 happH hdn (Nat.le_of_eq htn) hP5
   have hA6 := noF_afr h7 hA5
   have hC6 := hC5.of_pstep hS6 hA6 (PStep.refl hC5.check.state)
@@ -292,12 +234,8 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl] at e11 e12 e1 e2 e3
   rw [e11, e12, e1, e2, e3] at h
-  cases h8 : tcmF (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
-      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with
-  | none => rw [h8] at h; simp [tkaK8] at h
-  | some x =>
-  obtain ⟨r8, m8⟩ := x
-  rw [h8, tkaK8_some] at h
+  rcases h8 : tcmF (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with _ | ⟨r8, m8⟩ <;> simp only [h8, tkaK8, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hpfl := ConRon.Bridge.Inductives.denoteEList_length (denoteEList_ext q14.ext _ _ hMpf)
   obtain ⟨c, a8, run8, hc, hC8, hg8, hP8, hA8⟩ := tcmF_okC hq henv n (by omega) h8 hC6 hA6
@@ -335,15 +273,10 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
     ∃ c a', (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)).run a = .ok (c, a') ∧
       (r.headD 0 != 0) = c ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AbsOK m' := by
   have hS := hC.stage
-  cases n with
-  | zero => simp [tkhW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tkhW] at h
   rw [tkhW_succ] at h
-  cases h1 : gafF m [CWF, leafW] with
-  | none => rw [h1] at h; simp [tkhK1] at h
-  | some x =>
-  obtain ⟨rl, m1⟩ := x
-  rw [h1, tkhK1_some] at h
+  rcases h1 : gafF m [CWF, leafW] with _ | ⟨rl, m1⟩ <;> simp only [h1, tkhK1, reduceCtorEq] at h
   obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m m1 a rl h1 hS
   rw [CWF_eq, ← decE_eq] at run1
   rw [← hlhD, ← decE_eq] at run1
@@ -352,11 +285,8 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
   obtain ⟨e1, hlh⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hlwP run1
   subst a1
   have hC1 := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  cases h2 : gafF m1 [CWF, majDom] with
-  | none => rw [h2] at h; simp [tkhK2] at h
-  | some x =>
-  obtain ⟨rm, m2⟩ := x
-  rw [h2] at h
+  rcases h2 : gafF m1 [CWF, majDom] with _ | ⟨rm, m2⟩ <;> rw [h2] at h <;>
+    try (simp only [tkhK2, reduceCtorEq] at h; done)
   obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := gafF_ok dn vis fe CWF majDom hmj m1 m2 a rm h2 hS1
   rw [CWF_eq, ← decE_eq] at run2
   rw [← hmhD, ← decE_eq] at run2
@@ -402,22 +332,15 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
   obtain ⟨-, hv1⟩ := ConRon.Bridge.Inductives.viewConst_run vr1
   obtain ⟨I'P, us'P, -, hI', hus'⟩ := ConRon.Bridge.denote_const_inv hC.check.state.wf
     (ConRon.Bridge.view_of_viewConst_tag ct1 hv1.symm) hlh
-  cases h3 : gaaF m2 [CWF, leafW] with
-  | none => rw [h3] at h; simp [tkhK3] at h
-  | some x =>
-  obtain ⟨ra, m3⟩ := x
-  rw [h3, tkhK3_some] at h
+  rcases h3 : gaaF m2 [CWF, leafW] with _ | ⟨ra, m3⟩ <;> simp only [h3, tkhK3, reduceCtorEq] at h
   obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := gaaF_ok dn vis fe CWF leafW hl m2 m3 a ra h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
   have hP3 := hP2.fr (MFr.ofGaaF h3)
   have hA3 := gaaF_afr h3 hA2
   obtain ⟨e3, hlaP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hlwP run3
   subst a3
-  cases h4 : gaaF m3 [CWF, majDom] with
-  | none => rw [h4] at h; simp [tkhK4] at h
-  | some x =>
-  obtain ⟨rb, m4⟩ := x
-  rw [h4] at h
+  rcases h4 : gaaF m3 [CWF, majDom] with _ | ⟨rb, m4⟩ <;> rw [h4] at h <;>
+    try (simp only [tkhK4, reduceCtorEq] at h; done)
   obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := gaaF_ok dn vis fe CWF majDom hmj m3 m4 a rb h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
   have hP4 := hP3.fr (MFr.ofGaaF h4)
@@ -457,12 +380,8 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
   rw [tkhK4_ok (h := hi) (h2 := hl2)] at h
   have hll : (la.length == ma.length) = true := by
     simp only [beq_iff_eq, hlen1, hlen2]; exact congrArg UInt64.toNat (by simpa using hl2)
-  cases h5 : tkaW (realCall p) n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0)
-      (rb.tail.headD 0) with
-  | none => rw [h5] at h; simp [tkhK5] at h
-  | some x =>
-  obtain ⟨r5, m5⟩ := x
-  rw [h5, tkhK5_some] at h
+  rcases h5 : tkaW (realCall p) n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0)
+      (rb.tail.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, tkhK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨c, a5, run5, hc, hC5, hg5, hP5, hA5⟩ := tkaW_okC hq henv n (by omega) h5 hC4 hA4
     (hbs.grow hg14) (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega)
@@ -494,16 +413,12 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       .ok (c, a') ∧ (r.headD 0 != 0) = c ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧
       AbsOK m' := by
   have hS := hC.stage
-  cases n with
-  | zero => simp [tkW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tkW] at h
   rw [tkW_succ] at h
   rw [tk53_eq]
-  cases h1 : stripF 6 m [tel, f] with
-  | none => rw [h1] at h; simp [tkK1] at h
-  | some x =>
-  obtain ⟨rs, m1⟩ := x
-  rw [h1] at h
+  rcases h1 : stripF 6 m [tel, f] with _ | ⟨rs, m1⟩ <;> rw [h1] at h <;>
+    try (simp only [tkK1, reduceCtorEq] at h; done)
   obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripF_pis_ok dn vis fe tel f hf m m1 a rs h1 hS
   rw [← decE_eq, ← htl.len] at run1
   have hP1 := hP.fr (MFr.ofStripF h1)
@@ -524,11 +439,8 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hl3 : (rs.drop 3).headD 0 = rs.tail.tail.tail.headD 0 := by
     rcases rs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [hl3] at hlwH hlwD
-  cases h2 : tteW n m1 (rs.tail.headD 0) (rs.tail.tail.headD 0) teo tel with
-  | none => rw [h2] at h; simp [tkK2] at h
-  | some x =>
-  obtain ⟨rt, m2⟩ := x
-  rw [h2] at h
+  rcases h2 : tteW n m1 (rs.tail.headD 0) (rs.tail.tail.headD 0) teo tel with _ | ⟨rt, m2⟩ <;> rw [h2] at h <;>
+    try (simp only [tkK2, reduceCtorEq] at h; done)
   obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok dn fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
   have hA2 := tteW_afr h2 hA1
   have q2 := tkTele_cstep hC.check htw htlP run2
@@ -544,11 +456,7 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   rw [tkK2_ok (h := hz)] at h
   have : c1 = true := by rw [← hc1]; simpa using hz
   subst this
-  cases h3 : tkhW (realCall p) n m2 vis q fto ftl Mc (rs.tail.tail.tail.headD 0) majDom with
-  | none => rw [h3] at h; simp [tkK3] at h
-  | some x =>
-  obtain ⟨r3, m3⟩ := x
-  rw [h3, tkK3_some] at h
+  rcases h3 : tkhW (realCall p) n m2 vis q fto ftl Mc (rs.tail.tail.tail.headD 0) majDom with _ | ⟨r3, m3⟩ <;> simp only [h3, tkK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   rw [← decE_eq] at hlwD
   obtain ⟨c, a3, run3, hc, hC3, hg3, hP3, hA3⟩ := tkhW_okC hq henv n (by omega) h3 hC2 hA2

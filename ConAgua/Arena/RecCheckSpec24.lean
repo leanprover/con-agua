@@ -59,30 +59,24 @@ theorem trp_twin (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : ASta
   unfold ConRon.Arena.targetRecPins
   rcases hm : bs.members with _ | ⟨ms0, rest⟩
   · simp only [rpN0, hm] at hn
-    cases hb : ConRon.Arena.blockSplit blk with
-    | none => rw [hb] at h4; cases h4
-    | some t =>
-      obtain ⟨cvTs, cs, rs⟩ := t
-      rw [hb] at h4
-      rw [hm] at h2
-      have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-          fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
-      simp [StateT.run_bind, hw', h0, h1, h2, hn, hw, hc, hnd, hb, h4, except_ok_bind]
-      rw [if_pos hc]; simp [hnd, hb, h4]; rfl
+    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
+    · cases h4
+    rw [hm] at h2
+    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
+        fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
+    simp [StateT.run_bind, hw', h0, h1, h2, hn, hw, hc, hnd, hb, h4, except_ok_bind]
+    rw [if_pos hc]; simp [hnd, hb, h4]; rfl
   · simp only [rpN0, hm] at hn
     change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
     simp only [Except.ok.injEq, Prod.mk.injEq] at hn
     obtain ⟨rfl, rfl⟩ := hn
-    cases hb : ConRon.Arena.blockSplit blk with
-    | none => rw [hb] at h4; cases h4
-    | some t =>
-      obtain ⟨cvTs, cs, rs⟩ := t
-      rw [hb] at h4
-      rw [hm] at h2
-      have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-          fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
-      simp [StateT.run_bind, hw', h0, h1, h2, hw, hc, hnd, hb, h4, except_ok_bind]
-      rw [if_pos hc]; simp [hnd, hb, h4]; rfl
+    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
+    · cases h4
+    rw [hm] at h2
+    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
+        fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
+    simp [StateT.run_bind, hw', h0, h1, h2, hw, hc, hnd, hb, h4, except_ok_bind]
+    rw [if_pos hc]; simp [hnd, hb, h4]; rfl
 
 /-! ## The model -/
 
@@ -178,8 +172,7 @@ theorem soaW_ok0 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         (r.tail.tail.tail.headD 0) m' := by
   by_cases hl : recl = 0
   · rw [soaW_nil n m reco recl k hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [hrs.nil hl]
     exact ⟨hS, IWGrow.refl _, PSlR.nil _ _, PSlR.nil _ _⟩
   · exact soaW_ok (n + 1) m m' a reco recl k recs r h hS (hrs.pslr hl)
@@ -226,11 +219,8 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   unfold trpW at e
   rw [rd2, rd3] at e
   -- `block_rec_lps_ok`
-  cases h1 : callW p (n + 2) "block_rec_lps_ok" [pp] m with
-  | none => rw [h1] at e; cases e
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1] at e
+  rcases h1 : callW p (n + 2) "block_rec_lps_ok" [pp] m with _ | ⟨r1, m1⟩ <;> rw [h1] at e
+  · cases e
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockRecLpsOk_spec p L.alloc L.erCopy L.erToIw L.slEq L.copy L.cons L.lpsOne L.lpsGo L.lps L.lpsOk
       (n + 2) _ pp) h1
@@ -239,11 +229,8 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
     refine Classical.byContradiction fun hc => ?_; rw [trpK1_zero _ _ _ _ _ _ _ _ _ (by rw [hr1]; simp [hc])] at e; cases e
   rw [trpK1_ok _ _ _ _ _ _ _ _ _ (by rw [hr1, hc0]; decide)] at e
   -- `block_rec_names_unreserved`
-  cases h2 : callW p (n + 2) "block_rec_names_unreserved" [ro, rl] s1.mem with
-  | none => rw [h2] at e; cases e
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2] at e
+  rcases h2 : callW p (n + 2) "block_rec_names_unreserved" [ro, rl] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at e
+  · cases e
   obtain ⟨s2, rfl, -, hok2, hr2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (blockRecNamesUnreserved_refines p L.unres L.rrn (n + 2) _ a dn fe vis ro rl bs.recs hS1
       ((hrsB.grow (OMono.decPL (fun q => decRS_mono q) _ _) hg1).stab (OMono.decPL (fun q => decRS_mono q) _ _))
@@ -258,11 +245,7 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   have hrun1 := partsRunOfOk hok2
   rw [hc1] at hrun1
   -- `block_rec_split_own_aux`
-  cases h3 : callW p (n + 2) "block_rec_split_own_aux" [ro, rl, ml] s2.mem with
-  | none => rw [h3] at e; cases e
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, trpK3_some] at e
+  rcases h3 : callW p (n + 2) "block_rec_split_own_aux" [ro, rl, ml] s2.mem with _ | ⟨r3, m3⟩ <;> simp only [h3, trpK3, reduceCtorEq] at e
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (soa_spec p L.toIndPartsProg L.soa (n + 2) _ ro rl ml) h3
   dsimp only at hW3
@@ -271,11 +254,8 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   rw [hk] at hown haux
   rw [rd0 _ (hg12.trans hg3)] at e
   -- `block_rec_name_set_ok`
-  cases h4 : callW p (n + 2) "block_rec_name_set_ok" [mo, ml, r3.headD 0, r3.tail.headD 0] s3.mem with
-  | none => rw [h4] at e; cases e
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4] at e
+  rcases h4 : callW p (n + 2) "block_rec_name_set_ok" [mo, ml, r3.headD 0, r3.tail.headD 0] s3.mem with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+  · cases e
   have hms3 := hms.grow (fun q => decMS_mono q) (hg12.trans hg3)
   obtain ⟨s4, rfl, -, hok4, hr4, hS4, hg4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (blockRecNameSetOk_refines p L.toIndPartsProg3 n _ _ dn vis fe mo ml (r3.headD 0) (r3.tail.headD 0)
@@ -289,12 +269,9 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   have hrun2 := partsRunOfOk hok4
   rw [hc2] at hrun2
   -- `target_rec_pins_names`
-  cases h5 : callW p (n + 2) "target_rec_pins_names"
-      [mo, ml, ro, rl, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0] s4.mem with
-  | none => rw [h5] at e; cases e
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5] at e
+  rcases h5 : callW p (n + 2) "target_rec_pins_names"
+      [mo, ml, ro, rl, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0] s4.mem with _ | ⟨r5, m5⟩ <;> rw [h5] at e
+  · cases e
   obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (tpn_spec p L.names (n + 1) _ mo ml ro rl _ _) h5
   dsimp only at hW5
@@ -307,11 +284,8 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   subst hc3
   rw [trpK5_ok _ _ _ _ _ _ _ _ _ (by rw [hr5]; decide)] at e
   -- `target_rec_pins_split`
-  cases h6 : callW p (n + 2) "target_rec_pins_split" [pp, ml, rl, bo, bl] s5.mem with
-  | none => rw [h6] at e; cases e
-  | some x6 =>
-  obtain ⟨r6, m6⟩ := x6
-  rw [h6] at e
+  rcases h6 : callW p (n + 2) "target_rec_pins_split" [pp, ml, rl, bo, bl] s5.mem with _ | ⟨r6, m6⟩ <;> rw [h6] at e
+  · cases e
   obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (tps_spec p L.psplit (n + 1) _ pp ml rl bo bl) h6
   dsimp only at hW6
@@ -322,8 +296,7 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
     refine Classical.byContradiction fun hc => ?_; rw [trpK6_zero _ _ (by rw [hr6]; simp [hc])] at e; cases e
   subst hc4
   rw [trpK6_ok _ _ (by rw [hr6]; decide)] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   have h4' : splitOk bs blk = true := by
     change Except.ok (splitOk bs blk, _) = Except.ok (true, _) at hrun4
     simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4; exact hrun4.1
