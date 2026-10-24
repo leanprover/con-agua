@@ -83,8 +83,7 @@ theorem posRec3_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 :
     (n : Nat) (s₀ : St) (a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [← posRec3_eq, invoke_eq _ h3]
-  simp only [callFn, rec3]
+  simp only [← posRec3_eq, invoke_eq _ h3, callFn, rec3]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -192,8 +191,7 @@ theorem nbFields_step (s₀ : St) (vis ctx fu po pl base nF j cur ns kO kL dO dL
         r.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pfields]
-  simp only [callFn, nestFieldsL]
+  simp only [invoke_eq _ L.pfields, callFn, nestFieldsL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p R.hl.hv n, hPos, internFVar_spec p R.hl.hff R.hl.hfp R.hl.hif n,
       i1F_spec p L.hi1 n, slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, hFields] <;>
@@ -209,8 +207,7 @@ theorem nbWalk_step (s₀ : St) (vis ctx root fu po pl hi nF crest ns : Word) :
         r.tail.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pwalk]
-  simp only [callFn, nestCtorsWalkL]
+  simp only [invoke_eq _ L.pwalk, callFn, nestCtorsWalkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       whnfWalkFuel_spec' p L n, hFields,
       closeTelescope_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI R.hk.forM L.hcl L.ab n] <;>
@@ -224,8 +221,7 @@ theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pone]
-  simp only [callFn, nestCtorsOneL]
+  simp only [invoke_eq _ L.pone, callFn, nestCtorsOneL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestCtorsCrest_spec p L.ct cR hcR n, hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
       nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.nt.ad L.hro n, nestCtorNf_spec' p L n,
@@ -241,8 +237,7 @@ theorem nbCtors_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL 
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pctors]
-  simp only [callFn, nestCtorsL]
+  simp only [invoke_eq _ L.pctors, callFn, nestCtorsL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       hOne, posRec3_specW p R.ha L.h3 n, slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, hCtors] <;>
     simp_all [nbCtorsW_succ, nbCtorsK1_some, nbCtorsK2_some, nbCtorsK3_some,
@@ -254,8 +249,7 @@ theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Wo
     ⦃fun r s' => LocEq s' s₀ ∧ nbFrameW cR (n + 1) s₀.mem vis ctx fu po pl hi us dO dL nPc gO gL ns = some ([r.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pframe]
-  simp only [callFn, nestFrameL]
+  simp only [invoke_eq _ L.pframe, callFn, nestFrameL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       naF_spec p L.na n, internConst_spec p R.cf R.cp R.ci n,
       mknF_spec p L.nt.ad n, hcR n "infer_type_core",
@@ -273,8 +267,7 @@ theorem nbNew_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pnew]
-  simp only [callFn, nestContNewL]
+  simp only [invoke_eq _ L.pnew, callFn, nestContNewL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestWalkStack_spec' p L n, nestFrameMates_specW p L.fm n, nestCtxHiAt_specE p R.hi n,
       posRec2_specW p R.ha R.h2 n, slNew1_specW p R.ha L.hn1 n,
@@ -293,8 +286,7 @@ theorem nbKey_step (s₀ : St) (vis ctx fu po pl kb nn us dO dL nPc cty ns : Wor
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pkey]
-  simp only [callFn, nestContKeyL]
+  simp only [invoke_eq _ L.pkey, callFn, nestContKeyL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       posRec4_specW p R.ha R.h4 n, nestKeysContains_spec p L.nag.hq L.nag.he L.nag.hkc n,
       dc_spec' p L.dc.hf L.dc.hh L.dc.hg L.dc.hp n, hNew] <;>
@@ -308,8 +300,7 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pcont]
-  simp only [callFn, nestContL]
+  simp only [invoke_eq _ L.pcont, callFn, nestContL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nt_spec' p L.nt n, nestCtxHiAt_specE p R.hi n,
       nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.dc.hf L.hpc L.hcc n, posRec4_specW p R.ha R.h4 n,
@@ -324,8 +315,7 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
       some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.papp]
-  simp only [callFn, nestPosAppL]
+  simp only [invoke_eq _ L.papp, callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       gaaF_spec p L.nt.ad n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
       nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
@@ -339,8 +329,7 @@ theorem nbBind_step (s₀ : St) (vis ctx fu po pl dep kb w ns : Word) :
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.pbind]
-  simp only [callFn, nestPosBindL]
+  simp only [invoke_eq _ L.pbind, callFn, nestPosBindL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestCtxHiAt_specE p R.hi n, eView_spec p R.hl.hv n, nestOcc_spec' p L.nit.no n,
       internFVar_spec p R.hl.hff R.hl.hfp R.hl.hif n, i1F_spec p L.hi1 n, hPos,
@@ -356,8 +345,7 @@ theorem nbPos_step (s₀ : St) (vis ctx fu po pl dep kb e ns : Word) :
       some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   obtain ⟨hPos, hBind, hApp, hCont, hKey, hNew, hFrame, hCtors, hOne, hWalk, hFields⟩ := ih
   have R := L.ct.cr.rx
-  rw [invoke_eq _ L.ppos]
-  simp only [callFn, nestPosL]
+  simp only [invoke_eq _ L.ppos, callFn, nestPosL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nestCtxHiAt_specE p R.hi n, hcR n "whnf_top", nestOcc_spec' p L.nit.no n, hBind, hApp] <;>
     simp_all [nbPosW_succ, nbPosK1_some, nbPosK2_some, nbPosK3_some, nbPosK4_some, nbPosK5_some,

@@ -328,14 +328,13 @@ theorem classReadMinorIh1_spec (n : Nat) (s₀ : St) (nP mo ml d x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_ih1" [nP, mo, ml, d, x]
     ⦃fun r s' => LocEq s' s₀ ∧ ih1W n s₀.mem nP mo ml d x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hi1]; simp only [callFn, classReadMinorIh1]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ftdF_spec p had n, pirF_spec p had n, gaaF_spec p had n,
-        fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n] <;>
-      finish (gen := 20) [rdW_eq, getD_one, getD_two, getD_three]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      ftdF_spec p had n, pirF_spec p had n, gaaF_spec p had n,
+      fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n] <;>
+    finish (gen := 20) [rdW_eq, getD_one, getD_two, getD_three]
 
 include hfh hv hf hcm hi1 hc ha hsc h2 his had in
 theorem classReadMinorIhs_spec (n : Nat) : ∀ (s₀ : St) (nP mo ml d fo fl : Word),
@@ -359,43 +358,40 @@ theorem classReadMinorFinish_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl hd c :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_finish" [nP, mo, ml, d, fo, fl, hd, c]
     ⦃fun r s' => LocEq s' s₀ ∧ finW n s₀.mem nP mo ml d fo fl hd c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hfin]; simp only [callFn, classReadMinorFinish]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        eView_spec p hv n, classReadMinorIhs_spec p hfh hv hf hcm hc ha hsc h2 hi1 his had n,
-        rec5_specW p ha n h5] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      eView_spec p hv n, classReadMinorIhs_spec p hfh hv hf hcm hc ha hsc h2 hi1 his had n,
+      rec5_specW p ha n h5] <;>
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl had in
 theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor_tail" [nP, mo, ml, d, fo, fl, concl, c]
     ⦃fun r s' => LocEq s' s₀ ∧ tailW n s₀.mem nP mo ml d fo fl concl c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ htl]; simp only [callFn, classReadMinorTail]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        gaaF_spec p had n, gafF_spec p had n,
-        classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      gaaF_spec p had n, gafF_spec p had n,
+      classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n] <;>
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl hpb hmin had in
 theorem classReadMinor_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (nP mo ml d dom : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor" [nP, mo, ml, d, dom]
     ⦃fun r s' => LocEq s' s₀ ∧ minorW cR n s₀.mem nP mo ml d dom = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hmin]; simp only [callFn, classReadMinor]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        piBinders_spec' p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
-        fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
-        classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      piBinders_spec' p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
+      fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
+      classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n] <;>
+    finish (gen := 20) [rdW_eq, loc_init4]
 
 end specs
 

@@ -47,10 +47,7 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
     · rw [if_pos h0]
       have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
       subst this
-      cases hst : naF m [] with
-      | none => exact Or.inl rfl
-      | some pr =>
-      obtain ⟨rn, m1⟩ := pr
+      rcases hst : naF m [] with _ | ⟨rn, m1⟩; · exact Or.inl rfl
       obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
       exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [NAREC, NASLOT]) (by simp),
         naF_afr hst, hxH, by rw [hxd]; exact hrun⟩
@@ -83,14 +80,9 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
       obtain ⟨hr, hs⟩ := ConRon.Bridge.AM.pure_ok hrun1
       rw [hs, hr]
       simp only [dGrp, List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hgrpP
-      cases hx : ConRon.Bridge.Inductives.dGE a.store x with
-      | none => rw [hx] at hgrpP; simp at hgrpP
-      | some y =>
-      cases hxs : grp'.mapM (ConRon.Bridge.Inductives.dGE a.store) with
-      | none => rw [hx, hxs] at hgrpP; simp at hgrpP
-      | some ys =>
-      rw [hx, hxs] at hgrpP
-      simp only [Option.bind_some, Option.some.injEq] at hgrpP
+      rcases hx : ConRon.Bridge.Inductives.dGE a.store x with _ | y; · rw [hx] at hgrpP; simp at hgrpP
+      rcases hxs : grp'.mapM (ConRon.Bridge.Inductives.dGE a.store) with _ | ys; · rw [hx, hxs] at hgrpP; simp at hgrpP
+      simp only [hx, hxs, Option.bind_some, Option.some.injEq] at hgrpP
       subst hgrpP
       simp only [ConRon.Bridge.Inductives.dGE, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hx
       obtain ⟨cP, hcP, tyP, htyP, rfl⟩ := hx
@@ -102,11 +94,8 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
     exact fun e => this (UInt64.le_iff_toNat_le.mp e)
   rw [if_neg hrnb] at h
   -- the instantiation `hn.{us} ds`, typed
-  cases hic : ceinternW m1 (rn.headD 0) us with
-  | none => rw [hic] at h; simp [nbFrameK2] at h
-  | some pr2 =>
-  obtain ⟨hc', m2⟩ := pr2
-  rw [hic, nbFrameK2_some] at h
+  rcases hic : ceinternW m1 (rn.headD 0) us with _ | ⟨hc', m2⟩ <;> rw [hic] at h; · simp [nbFrameK2] at h
+  rw [nbFrameK2_some] at h
   by_cases hcb : 4294967296 ≤ hc'
   · rw [if_pos hcb] at h; cases h
   rw [if_neg hcb] at h
@@ -119,11 +108,8 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
     (ConRon.Bridge.denoteLs_ext husP p1.ext) e2
   have hA2 : AbsOK m2 := ceinternW_afr hic hA1
   have hg12 := hg1.trans hg2
-  cases hma : mknF m2 [hc', dO, dL] with
-  | none => rw [hma] at h; simp [nbFrameK3] at h
-  | some pr3 =>
-  obtain ⟨ra, m3⟩ := pr3
-  rw [hma, nbFrameK3_some] at h
+  rcases hma : mknF m2 [hc', dO, dL] with _ | ⟨ra, m3⟩ <;> rw [hma] at h; · simp [nbFrameK3] at h
+  rw [nbFrameK3_some] at h
   obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mknF_ok dn vis fe hc' dO dL hcH ds m2 m3 a2 ra hma
     ⟨hS2, (hds.grow (OMono.decHL _ _) hg12).get (OMono.decHL _ _)⟩
   obtain ⟨p3, happ⟩ := ConRon.Bridge.Inductives.mkAppN_run ds dsP p2.ok hc2
@@ -134,11 +120,8 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
   have hwapp : ConLeche.Expr.WScoped hi.toNat
       (ConLeche.Expr.mkAppN (.const (grpP.headD default).1 usP) dsP) :=
     ConLeche.Expr.WScoped.mkAppN (by simp [ConLeche.Expr.WScoped]) hwds
-  cases hit : realCall p n "infer_type_core" [vis, hi, ra.headD 0] m3 with
-  | none => rw [hit] at h; simp [nbFrameK4] at h
-  | some pr4 =>
-  obtain ⟨rt, m4⟩ := pr4
-  rw [hit, nbFrameK4_some] at h
+  rcases hit : realCall p n "infer_type_core" [vis, hi, ra.headD 0] m3 with _ | ⟨rt, m4⟩ <;> rw [hit] at h; · simp [nbFrameK4] at h
+  rw [nbFrameK4_some] at h
   obtain ⟨ty, a4, hrun4, hC4, hg4, -, hA4, c4, -⟩ :=
     inferC_rsim hq henv n (by omega) hC3 hA3 hi (ra.headD 0) happH (by rw [happd]; exact happ) hwapp _ hit
   dsimp only at hC4 hg4 hA4
@@ -146,21 +129,15 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
   have hg14 := (hg12.trans hg3).trans hg4
   have c3 := p13.toCore hC.check
   -- the stack grown and the names
-  cases hfg : fgW n m4 hi us dO dL gO gL po pl 0 0 with
-  | none => rw [hfg] at h; simp [nbFrameK5] at h
-  | some pr5 =>
-  obtain ⟨rp, m5⟩ := pr5
-  rw [hfg, nbFrameK5_some] at h
+  rcases hfg : fgW n m4 hi us dO dL gO gL po pl 0 0 with _ | ⟨rp, m5⟩ <;> rw [hfg] at h; · simp [nbFrameK5] at h
+  rw [nbFrameK5_some] at h
   obtain ⟨hS5, hg5, hP5, hN5, hNb5⟩ := fgW_ok dn vis fe hi us dO dL ds hus n m4 m5 a4 gO gL po pl 0 0 grp prog [] rp
     hfg hS4 (hds.grow (OMono.decHL _ _) hg14) hgl (by have := hg14.1; omega) (hgrp.grow hgb hg14)
     (hW.hs.grow hg14) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hP5 hN5
   -- the group's constructors
-  cases hgc : gcW n m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0 with
-  | none => rw [hgc] at h; simp [nbFrameK6] at h
-  | some pr6 =>
-  obtain ⟨rc, m6⟩ := pr6
-  rw [hgc, nbFrameK6_some] at h
+  rcases hgc : gcW n m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0 with _ | ⟨rc, m6⟩ <;> rw [hgc] at h; · simp [nbFrameK6] at h
+  rw [nbFrameK6_some] at h
   obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
     rc hgc hS5 hN5 (fun j hj => by omega) (by simp) (by simp) (fun i hi => by simp at hi)
   have hx04 := c3.ext.trans c4.ext
@@ -170,11 +147,8 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
   simp only [List.nil_append] at hvc
   -- the holes
   have hg46 := hg5.trans hg6
-  cases hfh : fhW n m6 hi gO gL 0 0 with
-  | none => rw [hfh] at h; simp [nbFrameK7] at h
-  | some pr7 =>
-  obtain ⟨rh, m7⟩ := pr7
-  rw [hfh, nbFrameK7_some] at h
+  rcases hfh : fhW n m6 hi gO gL 0 0 with _ | ⟨rh, m7⟩ <;> rw [hfh] at h; · simp [nbFrameK7] at h
+  rw [nbFrameK7_some] at h
   obtain ⟨holes, a7, hrun7, hS7, hg7, hH7, hHb7⟩ := fhW_ok dn vis fe n m6 m7 a6 hi gO gL 0 0 grp [] rh hfh hS6 hgl
     (by have := (hg14.trans hg46).1; omega) (hgrp.grow hgb (hg14.trans hg46)) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hH7
@@ -205,15 +179,11 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
   have hC7 : StageC dn vis fe env m7 a7 := hC4.of_pstep hS7 hA7 p57
   have hx07 := hx04.trans p57.ext
   have hlenG : grp.length = grpP.length := (ConLeche.option_mapM_length hgrpP).symm
-  cases hct : nbCtorsW (realCall p) n m7 vis ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us dO dL
+  rcases hct : nbCtorsW (realCall p) n m7 vis ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us dO dL
       (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) (rh.headD 0) (rh.tail.headD 0) (rc.headD 0) (rc.tail.headD 0)
-      ns 0 0 with
-  | none => rw [hct] at h; simp [nbFrameK8] at h
-  | some pr8 =>
-  obtain ⟨r8, m8⟩ := pr8
+      ns 0 0 with _ | ⟨r8, m8⟩; · rw [hct] at h; simp [nbFrameK8] at h
   rw [hct, nbFrameK8_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hP7 := hP5.grow (hg6.trans hg7)
   have hpl2 : (rp.tail.headD 0).toNat = pl.toNat + gL.toNat := by rw [← hP7.1, List.length_append, hW.len]; simp [hgl]
   have hprog2 : dProg a7.store (prog ++ grp.map fun (x : NIdx × EIdx) =>

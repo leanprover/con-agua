@@ -213,3 +213,26 @@ statements may change; census targets/links and the end-to-end statement/axioms 
 * `KnotUpTo` → `exec_mono` (item I): **not possible as stated.** `KnotOK p k` quantifies over twin
   fuels `F ≥ k`; `KnotOK p n` gives only `F ≥ n`, so the smaller-fuel instances do not follow from
   fuel monotonicity of L (which goes the other way). The `UpTo` hypotheses stay.
+
+### Batch 4: helpers `shrink-pos`, `shrink-rec`, `shrink-chk` (2026-10-24)
+
+* **`shrink-pos`** (IndPos*, IndT/Pos*, IndRealAbsPos): the hand `MFr`/`AFr` frame proofs in
+  IndPosSpec5 and IndRealAbsPos (the 194-line cross-file duplicate) by the existing `mfr_auto`/
+  `afr_auto` (moved earlier; explicit splits where the macros were 2× slower), one-line callee
+  splits, `Prod.mk.inj (Option.some.inj h)` for ~180 result injections, merged `rw`/`simp only`
+  runs, `snocW_core`: **21365 → 18961 (−2404, −11 %) in 42 files**; IndRealAbsPos 945 → 515,
+  IndPosSpec5 852 → 452. IndPosSpec5 +0.6 s, IndRealAbsPos ~+40 % CPU at equal wall time.
+* **`shrink-rec`** (RecGen*, RecClass*, IndT/RecGen*, IndT/GenRec*): `SimLib` gained `of_K`,
+  `of_ite_none(')` (peel one callee or guard off a model continuation inside a `… = some …`
+  hypothesis: 2 lines for a 5-line split), ~190 callee splits and ~200 `cases` splits scripted,
+  old-style proofs (`slotVarW_ok`, `fvarHeadW_ok`, `crW_ok`, …) rewritten: **22548 → 21181 (−1367)
+  in 52 files**; elaboration unchanged. Remaining repeated block: the 4-line `simp only
+  [St.setLoc_loc, …]` list after `vcgen` in the specs (26 copies here) — a simp set or macro would
+  remove it, which PLAN excludes.
+* **`shrink-chk`** (RecCheck*, IndParts*, IndSum*, IndT/RecCheck*, IndT/Sum*): `Sim` chains for the
+  `mentions_const_go`/`has_loose_b_var_b_go`/`target_abs_go` walks, `kSome_inv`/`ipK_inv`
+  one-line splits, one generic `ipCopyW_get` for both copy loops, `rcSl_step`:
+  **23925 → 21947 (−1978) in 52 files**; IndSumSpec5 47 → 28 s, IndSumSpec4 19.5 → 10.8 s.
+* Totals batch 4: `loc.py` proof lines 314857 → 309108 (**−5749**); since the lane started
+  321147 → 309108 (−12039, −3.7 %). Full rebuild of the merged state 13 min wall (105 CPU-min).
+  Census unchanged (1328/0/1352, links 2075); axioms unchanged.

@@ -38,8 +38,7 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h
   obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hw h6 hev
-  rw [hv] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [hv, List.tail_cons, List.headD_cons] at h
   -- the twin's view of the `Π`
   obtain ⟨-, hvbS⟩ := ConRon.Bridge.Inductives.viewBind_run hvb
   obtain ⟨dP, bP, rfl, hdP, hbP⟩ := ConRon.Bridge.denote_forallE_inv hC.check.state.wf
@@ -49,11 +48,8 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   obtain ⟨hn0, hnb0, -, -, hnP, -⟩ := ctx_fields hW.u.dec hW.u.inn htop
   have hne0 := ctx_names_end hW.u.dec hW.u.inn hW.u.sl htop
   have hhi := hW.hi htop
-  cases hno : noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-      (nhiW m ctx pl) d with
-  | none => rw [hno] at h; simp [nbBindK1] at h
-  | some pr =>
-  obtain ⟨o, m1⟩ := pr
+  rcases hno : noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
+      (nhiW m ctx pl) d with _ | ⟨o, m1⟩; · rw [hno] at h; simp [nbBindK1] at h
   rw [hno, nbBindK1_some] at h
   obtain ⟨mp, hmp⟩ := hP.no
   obtain ⟨bo, hrun1, hbo, hM1, hS1, hg1, hf1⟩ := noConstWf_ok n dn fe vis m m1 a _ _ _ _ d o c.names mp hno hS hd hn0
@@ -69,30 +65,21 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   rw [if_neg hd1] at h
   by_cases hk1 : kb + 1 = 0
   · rw [if_pos hk1] at h; cases h
-  rw [if_neg hk1] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [if_neg hk1, List.tail_cons, List.headD_cons] at h
   -- the variable, the body opened
-  cases hfv : fvinternW m1 dep d with
-  | none => rw [hfv] at h; simp [nbBindK2] at h
-  | some pr2 =>
-  obtain ⟨fv, m2⟩ := pr2
-  rw [hfv, nbBindK2_some] at h
+  rcases hfv : fvinternW m1 dep d with _ | ⟨fv, m2⟩ <;> rw [hfv] at h; · simp [nbBindK2] at h
+  rw [nbBindK2_some] at h
   by_cases hfvb : 4294967296 ≤ fv
   · rw [if_pos hfvb] at h; cases h
-  rw [if_neg hfvb] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [if_neg hfvb, List.tail_cons, List.headD_cons] at h
   have hfvH : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 dep d hd hfv
   have e2 : (internFVarE dep.toNat (decI d)).run a = .ok (decI fv, a2) := by simpa [internFVarE, decE_eq] using hrun2
   obtain ⟨p2, hfvP⟩ := ConRon.Bridge.Inductives.internFVarE_run hC.check.state hdP e2
-  cases hin : i1F m2 [CWF, b, fv, 0] with
-  | none => rw [hin] at h; simp [nbBindK3] at h
-  | some pr3 =>
-  obtain ⟨rb, m3⟩ := pr3
-  rw [hin, nbBindK3_some] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  rcases hin : i1F m2 [CWF, b, fv, 0] with _ | ⟨rb, m3⟩ <;> rw [hin] at h; · simp [nbBindK3] at h
+  simp only [nbBindK3_some, List.tail_cons, List.headD_cons] at h
   obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := i1F_ok dn vis fe b fv 0 hb m2 m3 a2 rb hin hS2
   rw [CWF_eq] at hrun3
   have e3 : (instantiate1Fast coreWalkFuel (decI b) (decI fv) 0).run a2 = .ok (b2, a3) := by simpa using hrun3
@@ -108,11 +95,8 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   have hx03 := p23.ext
   have hdep1 : (dep + 1).toNat = dep.toNat + 1 := pos2_word_succ hd1
   -- the codomain walked
-  cases hp : nbPosW (realCall p) n m3 vis ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns with
-  | none => rw [hp] at h; simp [nbBindK4] at h
-  | some pr4 =>
-  obtain ⟨rp, m4⟩ := pr4
-  rw [hp, nbBindK4_some] at h
+  rcases hp : nbPosW (realCall p) n m3 vis ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns with _ | ⟨rp, m4⟩ <;> rw [hp] at h; · simp [nbBindK4] at h
+  rw [nbBindK4_some] at h
   have hwb : ConLeche.Expr.WScoped (dep + 1).toNat (bP.instantiate1 (.fvar dep.toNat dP) 0) := by
     rw [hdep1]; exact ConLeche.Expr.WScoped.instantiate1 hww.1 0 hww.2
   have hb2P' : denoteE a3.store (decI (rb.headD 0)) = some (bP.instantiate1 (.fvar dep.toNat dP) 0) := by
@@ -125,29 +109,21 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   obtain ⟨-, v1, ⟨-, hnbP, -, -⟩, -⟩ := ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc
     fu.toNat prog progP (dep + 1).toNat (kb + 1).toNat (decI (rb.headD 0)) _ NS nsP hwb
     a3 a4 x hC3.check ⟨dCtx_ext _ hx03 _ _ hctx, dProg_ext hx03 _ _ hprog, hb2P', dState_ext hx03 _ _ hnsP⟩ hrun4
-  cases hab : abF m4 [CWF, rp.tail.headD 0, dep, 0] with
-  | none => rw [hab] at h; simp [nbBindK5] at h
-  | some pr5 =>
-  obtain ⟨ra, m5⟩ := pr5
-  rw [hab, nbBindK5_some] at h
+  rcases hab : abF m4 [CWF, rp.tail.headD 0, dep, 0] with _ | ⟨ra, m5⟩ <;> rw [hab] at h; · simp [nbBindK5] at h
+  rw [nbBindK5_some] at h
   obtain ⟨nb2, a5, hrun5, ⟨hS5, hg5, hnb2H, hnb2d⟩, hA5⟩ := abF_ok dn vis fe _ dep 0 hnbH m4 m5 a4 ra hab ⟨hS4, hA4⟩
-  rw [CWF_eq] at hrun5
-  rw [hnbd] at hrun5
+  simp only [CWF_eq, hnbd] at hrun5
   have e5 : (abstract1Fast coreWalkFuel x.2.1 dep.toNat 0).run a4 = .ok (nb2, a5) := by simpa using hrun5
   obtain ⟨r1, r2, r3, r4, -, r7⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a4) rfl e5
     (ConRon.Bridge.ExprOps.abstract1Fast_spec ConRon.Bridge.Core.fvarBSpec coreWalkFuel a4 x.2.1 dep.toNat 0
       hC4.check.state (by rw [hnbP]; rfl))
   have p5 : PStep a4 a5 := PStep.of_caches r1 r2 r3 r4
-  cases hmf : mkForallW m5 d (ra.headD 0) with
-  | none => rw [hmf] at h; simp [nbBindK6] at h
-  | some pr6 =>
-  obtain ⟨z, m6⟩ := pr6
-  rw [hmf, nbBindK6_some] at h
+  rcases hmf : mkForallW m5 d (ra.headD 0) with _ | ⟨z, m6⟩ <;> rw [hmf] at h; · simp [nbBindK6] at h
+  rw [nbBindK6_some] at h
   by_cases hzb : 4294967296 ≤ z
   · rw [if_pos hzb] at h; cases h
   rw [if_neg hzb] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a6, hrun6, hS6, hg6⟩ := mkForall_stage hS5 d (ra.headD 0) hmf
   have hzH : H z := by
     have : ¬ (4294967296 : Word).toNat ≤ z.toNat := fun e => hzb (UInt64.le_iff_toNat_le.mpr e)

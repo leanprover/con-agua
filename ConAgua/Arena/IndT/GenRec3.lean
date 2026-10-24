@@ -75,11 +75,8 @@ theorem grpW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA r
         ∀ f : Nat → Nat, ConLeche.EnvWF (ConLeche.consBlockRecsBare pP 0
           ((cvGsP.zip rdv.recCls).map fun x => (x.1, f x.2)) env) := by
   unfold grpW at h
-  cases cA : grpAW p n m vis pp nested rd mO mL bO bL with
-  | none => rw [cA] at h; cases h
-  | some qA =>
-  obtain ⟨rA, mA⟩ := qA
-  rw [cA, grpKA_some] at h
+  obtain ⟨⟨rA, mA⟩, cA, h⟩ := of_K h rfl
+  rw [grpKA_some] at h
   obtain ⟨⟨hsz5, hnpk, hns⟩, cvRis, aA, hrunA, hCA, hgA, hPA, hkA, hcsA, hAA, cA', cvRisP, hcvRP, hwRis⟩ :=
     grpAW_okC hkp henv hV hApd hCrk P hclR hfR n hn cA hC hbs hrb hrd hms hblk hP hA hkeep hsh hblkP
   have hszA : (mA.arr64 IW).size = (m.arr64 IW).size := hkA IW
@@ -132,17 +129,12 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   unfold gckW at h
   obtain ⟨hrd3, -, hrcD, hrcb, -⟩ := crWords hrd
   -- the prep
-  cases c1 : callW p n "gen_rec_check_prep" [vis, pp, nested, pO, pL, tO, tL, rd, mO, mL, cO, cL, bO, bL] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1, gckK1_some] at h
-  cases n with
-  | zero => rw [callW_zero] at c1; cases c1
-  | succ n =>
-  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [gckK1_some] at h
+  rcases n with _ | n
+  · rw [callW_zero] at c1; cases c1
+  obtain ⟨s1, rfl, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (grp_spec p P.prep n _ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) c1
-  simp only at hs1 hw1; subst hs1
   obtain ⟨G, cvGs, a1, hrunP, hC1, hg1, hG1, hns1, -, hcg1, hA1, hP1, c1', gP, cvGsP, hgP, hcvGs, hfrG, henvR⟩ :=
     grpW_okC hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hw1 hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA
       hkeep hsh hparP htblP hrdP hmsP hcvTP hblkP hT hMsT hfRc
@@ -153,16 +145,11 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)
   rw [e2, e3] at h
   -- the pushes
-  cases c2 : callW p (n + 1) "class_fe_r" [pp, r1.tail.headD 0, r1.tail.tail.headD 0,
-      rdW (m.arr64 IW) (rd + 2), rdW (m.arr64 IW) (rd + 3), vis] s1.mem with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2, gckK2_some] at h
-  obtain ⟨s2, hs2, -, hS2, hg2, hpv2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
+  rw [gckK2_some] at h
+  obtain ⟨s2, rfl, -, hS2, hg2, hpv2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classFeR_refines p P.cfr (n + 1) _ a1 dn vis fe pp _ _ _ _ bs cvGs rdv.recCls hS1 (hbs.1.grow (decBS_mono _) hg1)
       hcg1 (hrcD.grow (OMono.decNL _ _) hg1)) c2
-  simp only at hs2 hS2 hg2 hpv2; subst hs2
   have hP2 := RcMR.ofClosed hclR (hfRc _ (by decide)) c2 hP1
   have hA2 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c2 hA1
   -- the twin's pushed index, and the constructors' view inside it
@@ -188,14 +175,10 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   obtain ⟨feR, prevs⟩ := FR
   simp only at hS2 hpv2 hfeR hie2R hpop
   -- the flush into the rule-less recursors' environment
-  cases c3 : callW p (n + 1) "flush_caches" [] s2.mem with
-  | none => rw [c3] at h; cases h
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [c3, gckK3_some] at h
-  obtain ⟨s3, hs3, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+  rw [gckK3_some] at h
+  obtain ⟨s3, rfl, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c3
-  simp only at hs3 hfok hfm; subst hs3
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hP2
   obtain ⟨hS3, hg3⟩ := flush_stage hS2 hfok
   rw [← hfm] at hS3 hg3
@@ -218,17 +201,12 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       ({ a1 with caches := Caches.empty } : AState).store := by
     rw [← hvis]; exact hie2R.toS
   have henvR' := henvR (fun c => c)
-  cases c4 : callW p (n + 1) "class_recs_rules_ok" [vis, r2.headD 0, r1.headD 0, rdW (m.arr64 IW) (rd + 2),
-      rdW (m.arr64 IW) (rd + 3), r1.tail.headD 0, r1.tail.tail.headD 0] s3.mem with
-  | none => rw [c4] at h; cases h
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [c4, gckK4_some] at h
-  obtain ⟨s4, hs4, -, hok4, ⟨hC4, hg4, hd4⟩, hA4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+  obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
+  rw [gckK4_some] at h
+  obtain ⟨s4, rfl, -, hok4, ⟨hC4, hg4, hd4⟩, hA4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (classRecsRulesOk_refinesC hkp hApd P.crr (n + 1) (by omega) _ _ henvR' vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G
       rdv.recCls cvGs hC3 (hG1.grow (decCG_mono _) hg23) hns1 (hrcD.grow (OMono.decNL _ _) hg13) hrcb hcg3
       (hS3.lt64 hcg3.1) hA3 hgP hcvGs hie) c4
-  simp only at hs4 hC4 hg4 hd4 hA4; subst hs4
   have hP4 := RcMR.ofClosed hclR (hfRc _ (by decide)) c4 hP3
   have hrun4 := AM.run_of_ok _ _ hok4
   obtain ⟨c12', -⟩ := ConRon.Bridge.Inductives.classRecsRulesOk_spec feR vis.toNat
@@ -239,27 +217,18 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   generalize AM.st (ConRon.Arena.classRecsRulesOk V vis.toNat feR G rdv.recCls cvGs cvGs rdv.recCls)
     { a1 with caches := Caches.empty } = a4 at hrun4 hC4 c12'
   -- the pops
-  cases c5 : callW p (n + 1) "gen_rec_check_pop_all" [r2.headD 0, r2.tail.headD 0, r2.tail.tail.headD 0]
-      s4.mem with
-  | none => rw [c5] at h; cases h
-  | some q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [c5, gckK5_some] at h
-  obtain ⟨s5, hs5, -, hS5, hg5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+  obtain ⟨⟨r5, m5⟩, c5, h⟩ := of_K h rfl
+  rw [gckK5_some] at h
+  obtain ⟨s5, rfl, -, hS5, hg5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (genRecCheckPopAll_refines P.eix P.ers P.ept P.gpa (n + 1) _ a4 dn (r2.headD 0) feR _ _ prevs hC4.stage
       (hpv2.grow (hg3.trans hg4))) c5
-  simp only at hs5 hS5 hg5; subst hs5
   have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) c5 hP4
   have hA5 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c5 hA4
   -- the flush back
-  cases c6 : callW p (n + 1) "flush_caches" [] s5.mem with
-  | none => rw [c6] at h; cases h
-  | some q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [c6, gckK6_some] at h
-  obtain ⟨s6, hs6, -, hfok6, hfm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+  obtain ⟨⟨r6, m6⟩, c6, h⟩ := of_K h rfl
+  rw [gckK6_some] at h
+  obtain ⟨s6, rfl, -, hfok6, hfm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c6
-  simp only at hs6 hfok6 hfm6; subst hs6
   have hP6 := RcMR.ofClosed hclR (hfRc _ (by decide)) c6 hP5
   obtain ⟨hS6, hg6⟩ := flush_stage hS5 hfok6
   have hA6 : AbsOK s6.mem := by rw [hfm6]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA5
@@ -272,8 +241,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       { a4 with caches := Caches.empty } :=
     ⟨hok13.state, hok13.caches, hok13.pins,
       ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? hok13.ienv (feq_find hpop)⟩
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨(prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR, out), { a4 with caches := Caches.empty }, ?_,
     hC.of_checkE (by simpa using hS6) hA6 hok13' hext12, hg1.trans (hg23.trans (hg4.trans (hg5.trans hg6))),
     by have := hd4.grow (hg5.trans hg6); simp only [decRRS] at this ⊢; simpa using this, hA6, hP6,
@@ -328,9 +296,8 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
         block) a₀).2 ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl
         rdv ms cvTas block) a₀); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (gck_spec p P.grc n s₀ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hQ⟩ := Sim.run (gckW_simC hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl

@@ -138,12 +138,11 @@ theorem classRulesOkOne_spec (p : Prog) (h : CrsProg p) (cR : CallM) (hcR : Call
     ⦃fun r s' => LocEq s' s₀ ∧ cr1W cR n s₀.mem visT visR g cvR x gen = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.one]
   simp only [callFn, classRulesOkOne]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, classRuleOk_spec p h.cr cR hcR n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, classRuleOk_spec p h.cr cR hcR n] <;>
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
 
 theorem classRulesOk_spec (p : Prog) (h : CrsProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (visT visR g rco rcl cgo cgl cvR c xo xl : Word),

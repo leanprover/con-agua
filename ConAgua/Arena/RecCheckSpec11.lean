@@ -89,11 +89,8 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
       pdsK5 cR n vis d no nl lvls ho hl pfo pfl y (tcpF n m4 pfo pfl x) = some (r, m') ∧
       StageR dn vis fe m4 a4 ∧ IWGrow m m4 ∧ RcMR m4 ∧ AFr m m4) := by
   unfold pdsW at h
-  cases h1 : bvbW n m x CWF with
-  | none => rw [h1] at h; cases h
-  | some p1 =>
-  obtain ⟨b1, m1⟩ := p1
-  rw [h1] at h
+  rcases h1 : bvbW n m x CWF with _ | ⟨b1, m1⟩ <;> rw [h1] at h
+  · cases h
   obtain ⟨a1, r1, hS1, hg1, hf1⟩ := bvbW_stageC dn fe vis hS n x b1 hx h1
   have hP1 := hP.fr hf1
   by_cases hb1 : b1 ≠ 0
@@ -105,11 +102,8 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
     simp only [tpClosed, StateT.run_bind, r1, except_ok_bind, e1, if_true]; rfl
   rw [pdsK1_ok (h := hb1)] at h
   have e1 : (b1.toNat != 0) = false := by simp at hb1; simp [hb1]
-  cases h2 : bvbW n m1 y CWF with
-  | none => rw [h2] at h; cases h
-  | some p2 =>
-  obtain ⟨b2, m2⟩ := p2
-  rw [h2] at h
+  rcases h2 : bvbW n m1 y CWF with _ | ⟨b2, m2⟩ <;> rw [h2] at h
+  · cases h
   obtain ⟨a2, r2, hS2, hg2, hf2⟩ := bvbW_stageC dn fe vis hS1 n y b2 hy h2
   have hP2 := hP1.fr hf2
   by_cases hb2 : b2 ≠ 0
@@ -122,11 +116,8 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
       if_false]; rfl
   rw [pdsK2_ok (h := hb2)] at h
   have e2 : (b2.toNat != 0) = false := by simp at hb2; simp [hb2]
-  cases h3 : fvbF m2 [CWF, x] with
-  | none => rw [h3] at h; cases h
-  | some p3 =>
-  obtain ⟨r3, m3⟩ := p3
-  rw [h3] at h
+  rcases h3 : fvbF m2 [CWF, x] with _ | ⟨r3, m3⟩ <;> rw [h3] at h
+  · cases h
   obtain ⟨k3, a3, run3, hS3, hg3, hd3⟩ := fvbF_ok dn vis fe CWF x hx m2 m3 a2 r3 h3 hS2
   rw [CWF_eq, ← decE_eq] at run3
   have hP3 := hP2.fr (MFr.ofFvbF h3)
@@ -140,11 +131,8 @@ theorem pdsC_ok (n : Nat) {cR : CallM} {m m' : Mem} {a : AState} {d no nl lvls h
       Bool.false_eq_true, if_false]; rfl
   rw [pdsK3_ok (h := hc3)] at h
   have e3 : ¬ k3 > pfvs.length := by rw [word_lt_iff] at hc3; simp only [decW0Nat] at hd3; omega
-  cases h4 : fvbF m3 [CWF, y] with
-  | none => rw [h4] at h; cases h
-  | some p4 =>
-  obtain ⟨r4, m4⟩ := p4
-  rw [h4] at h
+  rcases h4 : fvbF m3 [CWF, y] with _ | ⟨r4, m4⟩ <;> rw [h4] at h
+  · cases h
   obtain ⟨k4, a4, run4, hS4, hg4, hd4⟩ := fvbF_ok dn vis fe CWF y hy m3 m4 a3 r4 h4 hS3
   rw [CWF_eq, ← decE_eq] at run4
   have hP4 := hP3.fr (MFr.ofFvbF h4)

@@ -51,8 +51,7 @@ theorem nestOccAny_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "nest_occ_any"
     rw [invoke_eq _ hp]; simp only [callFn, nestOccAnyL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ no nl lo hi off ln
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestOccAnyL]
+    simp only [invoke_eq _ hp, callFn, nestOccAnyL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestOcc_spec' p hl k, ih] <;>
       finish (gen := 20) [Locals.init_cons_zero]
@@ -72,8 +71,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hl0 : l = 0
     · rw [noaW_nil (h := hl0)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : xs = [] := by simpa [decHL, hslice?] using hxs.symm
       subst this
@@ -82,9 +80,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hlz : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
     have hxs2 := hxs
-    simp only [decHL] at hxs2
-    rw [hl', hslice?_succ] at hxs2
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hxs2
+    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hxs2
     obtain ⟨x, hx, xs', hxs', rfl⟩ := hxs2
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
@@ -92,11 +88,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     obtain ⟨mp0, hM0⟩ := hP.no
-    cases hno : noConstWf k m no nl lo hi (rdW (m.arr64 IW) off) with
-    | none => rw [hno] at h; simp [noaK] at h
-    | some pr =>
-    obtain ⟨b1, m1⟩ := pr
-    rw [hno] at h
+    rcases hno : noConstWf k m no nl lo hi (rdW (m.arr64 IW) off) with _ | ⟨b1, m1⟩ <;> rw [hno] at h; · simp [noaK] at h
     obtain ⟨c1, hrun1, hc1, hM1, hS1, hg1, hf1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi _ b1 names mp0 hno hS hxH
       hn (by omega) hM0
     have hP1 := hP.setNo hf1 ⟨∅, hM1⟩
@@ -104,8 +96,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     rw [List.anyM_cons]
     by_cases hb : b1 ≠ 0
     · rw [noaK_hit (h := hb)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : c1 = true := by rw [← hc1]; simpa using hb
       subst this
       refine ⟨true, ?_, hS1, hg1, rfl, hP1⟩
@@ -130,8 +121,7 @@ theorem viewLsLen_specE (p : Prog) (hl : p.lookup "ls_node" = some lsNode)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "view_ls_len" [us]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ lsNodeW s₀.mem us ≠ [] ∧
       r = [1, (lsNodeW s₀.mem us).tail.headD 0]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, viewLsLenL]
+  simp only [invoke_eq _ hp, callFn, viewLsLenL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -211,8 +201,7 @@ theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (cR : CallM) (hcR : Call
     (vis key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type_ty" [vis, key]
     ⦃fun r s' => LocEq s' s₀ ∧ ntyW cR k s₀.mem vis key = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestInstTypeTyL]
+  simp only [invoke_eq _ hl.hp, callFn, nestInstTypeTyL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, viewLsLen_specE p hl.hls hl.hvl k,
@@ -292,8 +281,7 @@ theorem nestInstType_spec (p : Prog) (hl : NitLook p) (cR : CallM) (hcR : CallSp
     (vis ctx hi key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
     ⦃fun r s' => LocEq s' s₀ ∧ nitW cR k s₀.mem vis ctx hi key = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestInstTypeL]
+  simp only [invoke_eq _ hl.hp, callFn, nestInstTypeL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestInstTypeTy_spec' p hl.ty cR hcR k, piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k,

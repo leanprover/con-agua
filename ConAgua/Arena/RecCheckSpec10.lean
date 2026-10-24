@@ -40,14 +40,12 @@ theorem taCW_same {n : Nat} {m m' : Mem} {no nl lvls ho hl hh nn vus r : Word}
     by_cases hv : vus ≠ lvls
     · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
     rw [if_neg hv] at h
-    cases hf : findW n m no nl nn with
-    | none => rw [hf] at h; simp [taCK] at h
-    | some fr =>
-      rw [hf] at h
-      simp only [taCK] at h
-      split at h
-      · simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
-      split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm)
+    rcases hf : findW n m no nl nn with _ | fr <;> rw [hf] at h <;>
+      try (simp only [taCK, reduceCtorEq] at h; done)
+    simp only [taCK] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
+    split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm)
 
 theorem taGoW_mfr (n : Nat) :
     (∀ (m m' : Mem) (no nl lvls ho hl f h r : Word), taGoW n m no nl lvls ho hl f h = some (r, m') →
@@ -82,55 +80,28 @@ theorem taGoW_mfr (n : Nat) :
     | some pr =>
       obtain ⟨rn, m1⟩ := pr
       rw [hn, taG4_some] at hg
-      cases hs : msetG taSch m1 h 0 rn with
-      | none => rw [hs] at hg; simp [taG5] at hg
-      | some m2 =>
-        rw [hs, taG5_some] at hg
-        simp only [Option.some.injEq, Prod.mk.injEq] at hg
-        rw [← hg.2]
-        cases j with
-        | zero => simp [taNodeW] at hn
-        | succ i =>
-          exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
-            ⟨_, _, msetG_frame taSch taSch_wf m1 m2 h 0 rn hs, by simp [taSch, TAM], by simp [taSch]⟩
+      rcases hs : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [hs, taG5, reduceCtorEq] at hg
+      simp only [Option.some.injEq, Prod.mk.injEq] at hg
+      rw [← hg.2]
+      cases j with
+      | zero => simp [taNodeW] at hn
+      | succ i =>
+        exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
+          ⟨_, _, msetG_frame taSch taSch_wf m1 m2 h 0 rn hs, by simp [taSch, TAM], by simp [taSch]⟩
   · intro m m' no nl lvls ho hl f1 g x y z r hn
     unfold taNodeW at hn
     split at hn
-    · cases h1 : taGoW j m no nl lvls ho hl f1 x with
-      | none => rw [h1] at hn; simp [taB1] at hn
-      | some p1 =>
-        obtain ⟨a2, m1⟩ := p1
-        rw [h1, taB1_some] at hn
-        cases h2 : taGoW j m1 no nl lvls ho hl f1 y with
-        | none => rw [h2] at hn; simp [taB2] at hn
-        | some p2 =>
-          obtain ⟨x2, m2⟩ := p2
-          rw [h2, taB2_some] at hn
-          exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_mfr hn).up
+    · rcases h1 : taGoW j m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taB1, reduceCtorEq] at hn
+      rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taB2, reduceCtorEq] at hn
+      exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_mfr hn).up
     split at hn
-    · cases h1 : taGoW j m no nl lvls ho hl f1 x with
-      | none => rw [h1] at hn; simp [taL1] at hn
-      | some p1 =>
-        obtain ⟨a2, m1⟩ := p1
-        rw [h1, taL1_some] at hn
-        cases h2 : taGoW j m1 no nl lvls ho hl f1 y with
-        | none => rw [h2] at hn; simp [taL2] at hn
-        | some p2 =>
-          obtain ⟨x2, m2⟩ := p2
-          rw [h2, taL2_some] at hn
-          cases h3 : taGoW j m2 no nl lvls ho hl f1 z with
-          | none => rw [h3] at hn; simp [taL3] at hn
-          | some p3 =>
-            obtain ⟨c2, m3⟩ := p3
-            rw [h3, taL3_some] at hn
-            exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
-              (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_mfr hn).up
-    · cases h1 : taGoW j m no nl lvls ho hl f1 z with
-      | none => rw [h1] at hn; simp [taP1] at hn
-      | some p1 =>
-        obtain ⟨a2, m1⟩ := p1
-        rw [h1, taP1_some] at hn
-        exact (ihG _ _ _ _ _ _ _ _ _ _ h1).trans (rpMkW_mfr hn).up
+    · rcases h1 : taGoW j m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taL1, reduceCtorEq] at hn
+      rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taL2, reduceCtorEq] at hn
+      rcases h3 : taGoW j m2 no nl lvls ho hl f1 z with _ | ⟨c2, m3⟩ <;> simp only [h3, taL3, reduceCtorEq] at hn
+      exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
+        (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_mfr hn).up
+    · rcases h1 : taGoW j m no nl lvls ho hl f1 z with _ | ⟨a2, m1⟩ <;> simp only [h1, taP1, reduceCtorEq] at hn
+      exact (ihG _ _ _ _ _ _ _ _ _ _ h1).trans (rpMkW_mfr hn).up
 
 /-- **`target_abs` writes only its memo** (array `TAM`, `CTL[212]`, `CTL[213]`) besides the stores'
 interns. -/
@@ -210,8 +181,7 @@ theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n : N
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
       · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   have hk : sp a' = sp a := by
     rw [bvarB_run] at hrun

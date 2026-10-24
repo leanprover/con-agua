@@ -37,9 +37,8 @@ theorem slotVarW_afr {m m' : Mem} {g s : Word} {r : List Word} (h : slotVarW m g
 
 theorem rec2MotVarF_afr {n : Nat} {m m' : Mem} {g c : Word} {r : List Word}
     (h : rec2MotVarF n m g c = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [rec2MotVarF, fuelW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [rec2MotVarF, fuelW] at h
   simp only [rec2MotVarF, fuelW, motVarW, mvK.eq_def, mvK2.eq_def] at h
   afr_auto h [slotVarW_afr]
 
@@ -59,9 +58,8 @@ theorem rec2SimMotVar {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64) :
     RSim (rec2MotVarF n m g c) (ConRon.Arena.ClassGen.motVar G c.toNat) a
       (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ H (b.1.headD 0) ∧ decE (b.1.headD 0) = x) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rintro ⟨r, m'⟩ h
   obtain ⟨-, hgt, -⟩ := rec2CG_parts hG
   obtain ⟨hg, hsl⟩ := rec2CG_get (hG.get (decCG_mono _))
@@ -193,30 +191,28 @@ theorem classGenRecTyTail_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (
     ⦃fun r s' => LocEq s' s₀ ∧ grtW n s₀.mem g c rP fo fl maj t = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rtt]
   simp only [callFn, classGenRecTyTail]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
-        slSnoc_specW p h.alloc h.copy h.snoc n,
-        rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-        mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
+      slSnoc_specW p h.alloc h.copy h.snoc n,
+      rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
+      mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n] <;>
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
 theorem classGenRecTy_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (g c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rec_ty" [g, c]
     ⦃fun r s' => LocEq s' s₀ ∧ gtW n s₀.mem g c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rt]
   simp only [callFn, classGenRecTy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classGenMajor_spec p h.toMjProg n, internFVar_spec p h.fvf h.fvp h.ifv n,
-        classGenRecTyTail_spec p h n] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      classGenMajor_spec p h.toMjProg n, internFVar_spec p h.fvf h.fvp h.ifv n,
+      classGenRecTyTail_spec p h n] <;>
+    finish (gen := 20) [rdW_eq]
 
 /-! ## `class_gen_rec_ty` refines `classGenRecTy` -/
 
@@ -247,9 +243,8 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
     (hmaj : H maj) (ht : H t) (hA : AbsOK m) :
     RSim (grtW n m g c rP fo fl maj t) (rec2RecTyTail G c.toNat ifs (decI maj) (decI t)) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [grtW_eq]
   unfold rec2RecTyTail
   rw [rec2MapM_genBinder]
@@ -316,9 +311,8 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gtW n m g c) (ConRon.Arena.classGenRecTy G c.toNat) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [gtW_eq, rec2RecTy_eq]
   obtain ⟨-, hgt, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts hG
   obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS.2.2.2.1
@@ -331,11 +325,8 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   refine RSim.bind (K := gtK1 n g c (UInt64.ofNat l12)) rfl hm ?_
   rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hA1⟩
   dsimp only at hS1 hg1 ho1
-  cases o1 with
-  | none =>
-    rw [gtK1_fail (h := ho1)]
-    exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
-  | some p1 =>
+  rcases o1 with _ | p1
+  · rw [gtK1_fail (h := ho1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
   obtain ⟨ifs, maj⟩ := p1
   obtain ⟨h11, ⟨hifs, hfb⟩, hmH, hmd⟩ := ho1
   simp only [getD_one, getD_two, Nat.reduceAdd] at hifs hfb

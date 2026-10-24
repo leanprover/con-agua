@@ -107,8 +107,7 @@ theorem erToIwW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erT
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (MFr.of_iw (posmemo_erCopyW_iw _ _ _ _ _ _ hc))
 
 theorem consW_mfr {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} (h : consW n m x o l = some (r, m')) :
@@ -119,56 +118,17 @@ theorem consW_mfr {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} (h : con
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ((allocW_mfr hal).trans (MFr.set_iw _ _ _)).trans (MFr.of_iw (posmemo_copyW_iw _ _ _ _ _ _ hc))
 
 theorem piBW_mfr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), piBW n m fuel h = some (r, m') →
     MFr [] [] m m'
   | 0, _, _, _, _, _, hh => by simp [piBW] at hh
   | n + 1, m, m', fuel, h, r, hh => by
-    by_cases hf : fuel = 0
-    · rw [piBW_fuel0 (hf := hf)] at hh; cases hh
-    by_cases hg : h >>> 28 ≠ 6
-    · rw [piBW_leaf (hf := hf) (hg := hg)] at hh
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]; exact MFr.refl _ _ _
-    rw [piBW_node (hf := hf) (hg := hg)] at hh
-    by_cases hr : eViewW m h = []
-    · rw [hr, piBK1_nil] at hh; cases hh
-    rw [piBK1_ne (hr := hr)] at hh
-    cases h1 : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-    | none => rw [h1] at hh; simp [piBK2] at hh
-    | some p1 =>
-    obtain ⟨rs, m1⟩ := p1
-    rw [h1, piBK2_some] at hh
-    cases h2 : consW n m1 ((eViewW m h).getD 1 0) (rs.headD 0) (rs.getD 1 0) with
-    | none => rw [h2] at hh; simp [piBK3] at hh
-    | some p2 =>
-    obtain ⟨r2, m2⟩ := p2
-    rw [h2, piBK3_some] at hh
-    simp only [Option.some.injEq, Prod.mk.injEq] at hh
-    obtain ⟨-, rfl⟩ := hh
-    exact (piBW_mfr n _ _ _ _ _ h1).trans (consW_mfr h2)
+    simp only [piBW, piBK1, piBK2.eq_def, piBK3.eq_def] at hh
+    mfr_auto hh [piBW_mfr n _ _ _ _ _, consW_mfr]
 
-/-! ## Frames of the models, by `mfr_auto`
-
-`mfr_auto h [f₁, …]` proves `MFr S T m m'` from `h : model = some (r, m')` once the model's
-continuations are unfolded at `h`: it splits `h`'s `match`es and `if`s in evaluation order, and at
-each callee hypothesis `callee … = some (x, m₁)` steps the frame by the first `fᵢ` that applies
-to it (an `MFr [] []` frame is weakened to any `S T`). -/
-
-syntax "mfr_auto" ident "[" term,* "]" : tactic
-macro_rules
-  | `(tactic| mfr_auto $h [$ts,*]) => `(tactic|
-    repeat' (first
-      | with_reducible exact MFr.refl _ _ _
-      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; exact MFr.refl _ _ _)
-      | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact MFr.refl _ _ _)
-      | (simp only [reduceCtorEq] at $h:ident; done)
-      | (first $[| refine MFr.trans ($ts (by with_reducible assumption)) ?_]*)
-      | (first $[| refine MFr.trans (MFr.up ($ts (by with_reducible assumption))) ?_]*)
-      | (first $[| refine MFr.trans (MFr.mono ($ts (by with_reducible assumption)) (by simp) (by simp)) ?_]*)
-      | split at $h:ident))
+/-! ## Frames of the models, by `mfr_auto` (`IndPos2SpecC`) -/
 
 /-- Across `fvar_b` (its write set, the `fvarRange` memo). -/
 theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : MFr [] [] m m' :=
@@ -315,8 +275,7 @@ theorem bvbW_mfr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
       · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   exact MFr.of_frame hfr (by simp [BMEMO]) (fun x hx => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
@@ -327,10 +286,7 @@ abbrev HbFr (m m' : Mem) : Prop := MFr [HBM] [214, 215] m m'
 
 theorem hbInsW_mfr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : HbFr m m' := by
   unfold hbInsW at h
-  cases hs : msetG hbSch m e i r with
-  | none => rw [hs] at h; simp at h
-  | some m2 =>
-  rw [hs] at h
+  rcases hs : msetG hbSch m e i r with _ | m2 <;> rw [hs] at h; · simp at h
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   exact ⟨_, _, msetG_frame hbSch hbSch_wf m m2 e i r hs, by simp [hbSch], by simp [hbSch]⟩

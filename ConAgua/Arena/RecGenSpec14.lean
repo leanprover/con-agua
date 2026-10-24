@@ -103,13 +103,11 @@ theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Na
       (fun r x m' a' => DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow m m' ∧ PosMR m') := by
   intro r m' e
-  cases n with
-  | zero => rw [callW_zero] at e; cases e
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at e; cases e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (kof_specG L k _ nP po pl key) e
-  cases k with
-  | zero => rw [kofG_zero] at hW; cases hW
-  | succ k =>
+  rcases k with _ | k
+  · rw [kofG_zero] at hW; cases hW
   rw [kofG_succ] at hW
   obtain ⟨x, a', hrun, h1, -, -, h4, h5, h6⟩ := kofW_ok dn fe vis k m s'.mem a nP po pl key r pfvs ck hW hS hpf hpb hk
     hP
@@ -282,9 +280,8 @@ theorem cntW_ok (n : Nat) : ∀ (m : Mem) (o l w r : Word) (ms : List TargetMajo
       have hys' : decPL m (decTM m) (o + 1).toNat (l - 1).toNat = some ys := by
         have hl1' : (l - 1).toNat = l1 := by omega
         rw [hco1, hl1']; exact hys
-      cases hc : cntW n m (o + 1) (l - 1) w with
-      | none => rw [cntW_cons n m o l w hl, hc] at h; simp [cntK] at h
-      | some r1 =>
+      rcases hc : cntW n m (o + 1) (l - 1) w with _ | r1
+      · rw [cntW_cons n m o l w hl, hc] at h; simp [cntK] at h
       rw [cntW_cons n m o l w hl, hc] at h
       obtain ⟨h1, h1l⟩ := ih m (o + 1) (l - 1) w r1 ys hc hys' (by omega) hsz hw
       have hl1' : (l - 1).toNat = l1 := by omega
@@ -380,10 +377,7 @@ theorem opmW_ok (n : Nat) : ∀ (m : Mem) (j k o l r : Word) (ms : List TargetMa
       omega
     have hj1 : (j + 1).toNat = j.toNat + 1 :=
       word_add_toNat (by rw [show (1 : Word).toNat = 1 from rfl]; have := k.toNat_lt; omega)
-    cases hc : cntW n m o l (j + 1) with
-    | none => rw [hc] at h; simp [opmK] at h
-    | some c =>
-    rw [hc] at h
+    obtain ⟨c, hc, h⟩ := of_K h (by simp only [opmK])
     obtain ⟨hc1, -⟩ := cntW_ok n m o l (j + 1) c ms hc hd hb hsz
       (fun e => by have := congrArg UInt64.toNat e; rw [hj1] at this; simp at this)
     rw [hj1, Nat.add_sub_cancel] at hc1

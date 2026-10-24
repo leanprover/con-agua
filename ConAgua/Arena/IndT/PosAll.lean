@@ -42,11 +42,8 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
     rw [pos2_word_pred hf0]; omega
   have hhi := hW.hi htop
   -- the reduct
-  cases hwt : realCall p n "whnf_top" [vis, dep, e] m with
-  | none => rw [hwt] at h; simp [nbPosK1] at h
-  | some pr =>
-  obtain ⟨rw, m1⟩ := pr
-  rw [hwt, nbPosK1_some] at h
+  rcases hwt : realCall p n "whnf_top" [vis, dep, e] m with _ | ⟨rw, m1⟩ <;> rw [hwt] at h; · simp [nbPosK1] at h
+  rw [nbPosK1_some] at h
   obtain ⟨w, a1, hrun1, hC1, hg1, ⟨hwH, hwd⟩, hA1, c1, wP, hwP, hww⟩ :=
     whnfC_rsim hq henv n hn hC hA dep e he heP hwe _ hwt
   dsimp only at hC1 hg1 hwH hwd hA1
@@ -56,11 +53,8 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
   obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hW1.u.dec hW1.u.inn htop1
   have hne1 := ctx_names_end hW1.u.dec hW1.u.inn hW1.u.sl htop1
   have hhi1 : (nhiW m ctx pl).toNat = c.hiAt prog.length := hhi
-  cases hno : noConstWf n m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1)) (rdW (m1.arr64 IW) (ctx + 4))
-      (nhiW m ctx pl) (rw.headD 0) with
-  | none => rw [hno] at h; simp [nbPosK2] at h
-  | some pr2 =>
-  obtain ⟨o, m2⟩ := pr2
+  rcases hno : noConstWf n m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1)) (rdW (m1.arr64 IW) (ctx + 4))
+      (nhiW m ctx pl) (rw.headD 0) with _ | ⟨o, m2⟩; · rw [hno] at h; simp [nbPosK2] at h
   rw [hno, nbPosK2_some] at h
   have hP1 : PosMR m1 := hP.fr (coreF_mfr hq (by decide) hwt)
   obtain ⟨mp, hmp⟩ := hP1.no
@@ -83,11 +77,8 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
     subst hbo'
     obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hW2.u.dec hW2.u.inn htop2
     have hne2 := ctx_names_end hW2.u.dec hW2.u.inn hW2.u.sl htop2
-    cases hno2 : noConstWf n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4))
-        (nhiW m ctx pl) e with
-    | none => rw [hno2] at h; simp [nbPosK3] at h
-    | some pr3 =>
-    obtain ⟨o2, m3⟩ := pr3
+    rcases hno2 : noConstWf n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4))
+        (nhiW m ctx pl) e with _ | ⟨o2, m3⟩; · rw [hno2] at h; simp [nbPosK3] at h
     rw [hno2] at h
     obtain ⟨mp2, hmp2⟩ := hP2.no
     obtain ⟨bo2, hrun3, hbo2, hM3, hS3, hg3, hf3⟩ := noConstWf_ok n dn fe vis m2 m3 a1 _ _ _ _ _ o2 c.names mp2 hno2 hS2
@@ -100,24 +91,20 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
     simp only [nbPosK3] at h
     by_cases ho2 : o2 ≠ 0
     · rw [if_pos ho2] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       refine ⟨(.ordinary, w, NS), a1, ?_, hC3, hg12.trans hg3, by simp [decNFK], by simpa using hwH,
         by simpa using hwd, by simpa using hns3, hP3, hA3, c1⟩
-      rw [hfu, nestPos_succ]
-      simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
+      simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
     · rw [if_neg ho2] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       refine ⟨(.ordinary, decI e, NS), a1, ?_, hC3, hg12.trans hg3, by simp [decNFK], by simpa using he,
         by simp, by simpa using hns3, hP3, hA3, c1⟩
-      rw [hfu, nestPos_succ]
-      simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
+      simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
   rw [if_neg ho] at h
   have hbo' : bo = true := by rw [← hbo]; simpa using ho
@@ -126,11 +113,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
   by_cases h6 : rw.headD 0 >>> 28 = 6
   · -- a binder
     rw [if_pos h6] at h
-    cases hb : nbBindW (realCall p) n m2 vis ctx (fu - 1) po pl dep kb (rw.headD 0) ns with
-    | none => rw [hb] at h; simp [nbPosK4] at h
-    | some pr4 =>
-    obtain ⟨rb, m4⟩ := pr4
-    rw [hb] at h
+    rcases hb : nbBindW (realCall p) n m2 vis ctx (fu - 1) po pl dep kb (rw.headD 0) ns with _ | ⟨rb, m4⟩ <;> rw [hb] at h; · simp [nbPosK4] at h
     simp only [nbPosK4, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨x, a4, hrun4, hC4, hg4, hk4, hxH, hxd, hns4, hP4, hA4, c4⟩ :=
@@ -140,16 +123,11 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       by simpa using hns4, hP4, hA4, c1.trans c4⟩
     have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
     rw [hwd] at hrun4
-    rw [hfu, nestPos_succ]
-    simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
+    simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4
   · -- an application
     rw [if_neg h6] at h
-    cases hp : nbAppW (realCall p) n m2 vis ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns with
-    | none => rw [hp] at h; simp [nbPosK5] at h
-    | some pr4 =>
-    obtain ⟨rp, m4⟩ := pr4
-    rw [hp] at h
+    rcases hp : nbAppW (realCall p) n m2 vis ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns with _ | ⟨rp, m4⟩ <;> rw [hp] at h; · simp [nbPosK5] at h
     simp only [nbPosK5, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨x, a4, hrun4, hC4, hg4, hk4, hx1, hns4, hP4, hA4, c4⟩ :=
@@ -160,8 +138,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4, c1.trans c4⟩
     have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
     rw [hwd, hhi1] at hrun4
-    rw [hfu, nestPos_succ]
-    simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
+    simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4
 
 end steps

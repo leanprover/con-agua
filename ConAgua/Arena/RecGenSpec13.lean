@@ -277,12 +277,7 @@ theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs 
       exact ⟨0, by simp, by simp [decHL, hslice?], by simp⟩
     · exact ⟨pfo, by simp [h0], hpf, hpb⟩
   rw [← hpo] at h
-  cases hr1 : posRecW m [3, po, pfl] with
-  | none => rw [hr1] at h; cases h
-  | some p1 =>
-  obtain ⟨f, m1⟩ := p1
-  rw [hr1] at h
-  simp only at h
+  rcases hr1 : posRecW m [3, po, pfl] with _ | ⟨f, m1⟩ <;> simp only [hr1, reduceCtorEq] at h
   obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
   simp only [List.length_cons, List.length_nil] at ht1
   have g0 := iwN_of_get (by simpa using hget1 0 (by simp))
@@ -331,11 +326,8 @@ theorem ckgW_ok (k : Nat) :
   | zero => simp [tcpPWf, ckgK] at h
   | succ k' =>
   simp only [tcpPWf] at h
-  cases htc : tcpPW k' m po pl x with
-  | none => rw [htc] at h; simp [ckgK] at h
-  | some p2 =>
-  obtain ⟨z, m2⟩ := p2
-  rw [htc, ckgK_some] at h
+  obtain ⟨⟨z, m2⟩, htc, h⟩ := of_K h (by simp only [ckgK])
+  rw [ckgK_some] at h
   obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok dn fe vis k' m m2 a po pl x z pfvs htc hS
     (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.1; omega) hxH hP
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
@@ -372,18 +364,10 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk htop
   unfold kcW at h
-  cases hal : allocW m (rdW (m.arr64 IW) (key + 3)) with
-  | none => rw [hal] at h; cases h
-  | some p1 =>
-  obtain ⟨q, m1⟩ := p1
-  rw [hal] at h
-  simp only at h
+  rcases hal : allocW m (rdW (m.arr64 IW) (key + 3)) with _ | ⟨q, m1⟩ <;> simp only [hal, reduceCtorEq] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
-  cases hgo : ckgW k m1 po pl (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) q 0 with
-  | none => rw [hgo] at h; simp [kcK] at h
-  | some m2 =>
-  rw [hgo] at h
+  obtain ⟨m2, hgo, h⟩ := of_K h rfl
   obtain ⟨ys, a2, hrun, hdec2, hS2, hg12, ht2, hP2⟩ := ckgW_ok dn fe vis k m m1 m2 a po pl _ _ q 0 pfvs nk.ds []
     hgo hS1 hg1 (by omega) (by omega) hpf hpb hds hdsb (by simp) (by simp [decHL, hslice?])
     (hP.fr (allocW_mfr hal))
@@ -394,13 +378,9 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
     have e : (key + 1).toNat = key.toNat + 1 := word_add_toNat (by simp; omega)
     simp only [rdW]; rw [e, hg12.2.2.1 _ (by omega)]
   rw [e0, e1] at h
-  cases hr4 : posRecW m2 [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)] with
-  | none => rw [hr4] at h; simp at h
-  | some p4 =>
-  obtain ⟨nkw, m3⟩ := p4
-  rw [hr4] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hr4 : posRecW m2 [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)]
+    with _ | ⟨nkw, m3⟩ <;> simp only [hr4, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS3, hg3, hk3, ht3, hget3⟩ := posRecW_stage hr4 hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hqb : q.toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 := by have := hg12.1; omega
@@ -415,14 +395,14 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
     cases ho; cases hl
     have := hg3.1; omega
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
-  have r2 : rdW (m3.arr64 IW) (nkw + 2) = q := by
-    have := hget3 2 (by simp)
-    have e : (nkw + 2).toNat = nkw.toNat + 2 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; simp at this; rw [this]; rfl
-  have r3 : rdW (m3.arr64 IW) (nkw + 3) = rdW (m.arr64 IW) (key + 3) := by
-    have := hget3 3 (by simp)
-    have e : (nkw + 3).toNat = nkw.toNat + 3 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; simp at this; rw [this]; rfl
+  have rk (j : Nat) (hj : j < 4) : rdW (m3.arr64 IW) (nkw + UInt64.ofNat j) =
+      [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)][j]'(by simpa using hj) := by
+    have := hget3 j (by simpa using hj)
+    have hj' : (UInt64.ofNat j : Word).toNat = j := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    have e : (nkw + UInt64.ofNat j).toNat = nkw.toNat + j := by rw [word_add_toNat (by rw [hj']; omega), hj']
+    simp only [rdW, e]; rw [this, List.getElem?_eq_getElem]; rfl
+  have r2 : rdW (m3.arr64 IW) (nkw + 2) = q := rk 2 (by decide)
+  have r3 : rdW (m3.arr64 IW) (nkw + 3) = rdW (m.arr64 IW) (key + 3) := rk 3 (by decide)
   refine ⟨ckOfNk ⟨decI (rdW (m.arr64 IW) key), decI (rdW (m.arr64 IW) (key + 1)), ys⟩, a2, ?_,
     decCK_decB_of_nk (decNK_decB_of_in hdk hin), by simp only [List.headD_cons]; omega,
     by simp only [List.headD_cons]; rw [r2, r3]; have := hg3.1; omega, hS3, hg12.trans hg3, hP2.fr (posRecW_mfr hr4)⟩
@@ -440,31 +420,20 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2W_nil n m nP o l hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2W_cons n m nP o l hl] at h
-    cases h1 : bvbW n m (rdW (m.arr64 IW) o) CWF with
-    | none => rw [h1] at h; simp [ckc2K1] at h
-    | some p1 =>
-    obtain ⟨rb, m1⟩ := p1
-    rw [h1] at h
+    obtain ⟨⟨rb, m1⟩, h1, h⟩ := of_K h (by simp only [ckc2K1])
     refine (bvbW_mfr h1).trans ?_
     by_cases hb : rb ≠ 0
     · rw [ckc2K1_open (h := hb)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2K1_closed (h := hb)] at h
-    cases h2 : fvbF m1 [CWF, rdW (m.arr64 IW) o] with
-    | none => rw [h2] at h; simp [ckc2K2] at h
-    | some p2 =>
-    obtain ⟨rf, m2⟩ := p2
-    rw [h2] at h
+    obtain ⟨⟨rf, m2⟩, h2, h⟩ := of_K h (by simp only [ckc2K2])
     refine (MFr.ofFvbF h2).trans ?_
     by_cases hf : nP < rf.headD 0
     · rw [ckc2K2_open (h := hf)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2K2_closed (h := hf)] at h
-    cases h3 : ckc2W n m2 nP (o + 1) (l - 1) with
-    | none => rw [h3] at h; simp [ckcK3] at h
-    | some p3 =>
-    obtain ⟨r3, m3⟩ := p3
-    rw [h3, ckcK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [ckcK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact ckc2W_mfr n _ _ _ _ _ _ h3
 
@@ -481,24 +450,18 @@ theorem ckc2W_ok (n : Nat) :
     by_cases hl : l = 0
     · subst hl
       rw [ckc2W_nil n m nP o 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : xs = [] := by simpa [decHL, hslice?] using hd.symm
       subst this
       exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
     · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [ckc2W_cons n m nP o l hl, hw] at h
-      cases h2 : bvbW n m w CWF with
-      | none => rw [h2] at h; simp [ckc2K1] at h
-      | some x2 =>
-      obtain ⟨rb, m1⟩ := x2
-      rw [h2] at h
+      obtain ⟨⟨rb, m1⟩, h2, h⟩ := of_K h (by simp only [ckc2K1])
       obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) w rb hw32 h2
       by_cases hz : rb ≠ 0
       · rw [ckc2K1_open n m1 nP o l w rb hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hk : rb.toNat ≠ 0 := fun e => hz (UInt64.toNat_inj.mp (by simpa using e))
         refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
         simp only [List.allM_cons, StateT.run_bind, keyClosedTest]
@@ -506,13 +469,8 @@ theorem ckc2W_ok (n : Nat) :
         simp only [bind, Except.bind, hk, bne_iff_ne, ne_eq, not_false_eq_true, ite_true]
         rfl
       · rw [ckc2K1_closed n m1 nP o l w rb hz] at h
-        have hk : rb.toNat = 0 := by have hz' : rb = 0 := by simpa using hz
-                                     rw [hz']; rfl
-        cases h3 : fvbF m1 [CWF, w] with
-        | none => rw [h3] at h; simp [ckc2K2] at h
-        | some x3 =>
-        obtain ⟨rf, m2⟩ := x3
-        rw [h3] at h
+        have hk : rb.toNat = 0 := by rw [show rb = 0 by simpa using hz]; rfl
+        obtain ⟨⟨rf, m2⟩, h3, h⟩ := of_K h (by simp only [ckc2K2])
         obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvbF_ok dn vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
         rw [CWF_eq] at hrun2
         have hg12 := hg1.trans hg2
@@ -527,8 +485,7 @@ theorem ckc2W_ok (n : Nat) :
           rfl
         by_cases hn' : nP < rf.headD 0
         · rw [ckc2K2_open n m2 nP o l rf hn'] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hn'' := hlt.mp hn'
           refine ⟨false, a2, ?_, hS2, hg12, by simp [decW0B]⟩
           simp only [List.allM_cons, StateT.run_bind]
@@ -537,13 +494,9 @@ theorem ckc2W_ok (n : Nat) :
           rfl
         · rw [ckc2K2_closed n m2 nP o l rf hn'] at h
           have hn'' : kf ≤ nP.toNat := by have := mt hlt.mpr hn'; omega
-          cases h4 : ckc2W n m2 nP (o + 1) (l - 1) with
-          | none => rw [h4] at h; simp [ckcK3] at h
-          | some x4 =>
-          obtain ⟨r4, m3⟩ := x4
-          rw [h4, ckcK3_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨⟨r4, m3⟩, h4, h⟩ := of_K h rfl
+          rw [ckcK3_some] at h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 h4 hS2
             (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
           refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
@@ -562,27 +515,19 @@ theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : L
       (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
   unfold kofW at h
-  cases hc : kcW k m po pl key with
-  | none => rw [hc] at h; cases h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [hc, kofK1_some] at h
+  obtain ⟨⟨r1, m1⟩, hc, h⟩ := of_K h rfl
+  rw [kofK1_some] at h
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ := kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck hc hS hpf hpb hk hP
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
-  cases hcl : ckc2W (k + 1) m1 nP (rdW (m1.arr64 IW) (r1.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.headD 0 + 3)) with
-  | none => rw [hcl] at h; simp [kofK2] at h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [hcl] at h
+  obtain ⟨⟨r2, m2⟩, hcl, h⟩ := of_K h rfl
   obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 hcl hS1 hds
     (by omega) hds1
   by_cases h0 : r2.headD 0 = 0
   · rw [kofK2_fail (h := h0)] at h; cases h
   rw [kofK2_ok (h := h0)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hbt : b = true := by rw [← hb2]; exact bne_iff_ne.mpr h0
   subst hbt
   refine ⟨ckOfNk nk, a2, ?_, ?_, by simpa using (by have := hg2.1; omega : (r1.headD 0).toNat + 4 ≤ iwTop m2), ?_,
@@ -597,15 +542,11 @@ theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : L
     rw [hr2']
     rfl
   · simpa using hd1.grow (decCK_mono _) hg2
-  · have e2 : rdW (m2.arr64 IW) (r1.headD 0 + 2) = rdW (m1.arr64 IW) (r1.headD 0 + 2) := by
-      have e : (r1.headD 0 + 2).toNat = (r1.headD 0).toNat + 2 :=
-        word_add_toNat (by rw [show (2 : Word).toNat = 2 from rfl]; omega)
-      simp only [rdW, e]; rw [hg2.2.2.1 _ (by omega)]
-    have e3 : rdW (m2.arr64 IW) (r1.headD 0 + 3) = rdW (m1.arr64 IW) (r1.headD 0 + 3) := by
-      have e : (r1.headD 0 + 3).toNat = (r1.headD 0).toNat + 3 :=
-        word_add_toNat (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
-      simp only [rdW, e]; rw [hg2.2.2.1 _ (by omega)]
-    simp only [List.headD_cons]; rw [e2, e3]; have := hg2.1; omega
+  · have ek (j : Word) (hj : j.toNat < 4) :
+        rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
+      simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
+      rw [hg2.2.2.1 _ (by omega)]
+    simp only [List.headD_cons]; rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.1; omega
 
 end rel
 

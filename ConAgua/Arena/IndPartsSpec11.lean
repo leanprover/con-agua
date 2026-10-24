@@ -46,16 +46,11 @@ theorem consW_ptop {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   simp only [consW] at h
   split at h
   · cases h
-  cases hal : allocW m (l + 1) with
-  | none => rw [hal] at h; cases h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  rw [hal] at h
+  rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩ <;> rw [hal] at h
+  · cases h
   simp only at h
-  cases hcp : copyW (n - 1) (m1.set64 IW q x) (q + 1) o l with
-  | none => rw [hcp] at h; cases h
-  | some m2 =>
-  rw [hcp] at h
+  rcases hcp : copyW (n - 1) (m1.set64 IW q x) (q + 1) o l with _ | m2 <;> rw [hcp] at h
+  · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   obtain ⟨rfl, rfl, hroom⟩ := allocW_facts hal hsz
@@ -82,19 +77,13 @@ theorem piBW_ptop (n : Nat) : ∀ (m m' : Mem) (fuel h : Word) (rs : List Word),
     by_cases hr : eViewW m h = []
     · rw [hr, piBK1_nil] at hh; cases hh
     rw [piBK1_ne n m fuel _ hr] at hh
-    cases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-    | none => rw [hrec] at hh; simp [piBK2] at hh
-    | some rm =>
-      obtain ⟨rs1, m1⟩ := rm
-      rw [hrec, piBK2_some] at hh
-      cases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with
-      | none => rw [hcons] at hh; simp [piBK3] at hh
-      | some rm2 =>
-        obtain ⟨r2, m2⟩ := rm2
-        rw [hcons, piBK3_some] at hh
-        simp only [Option.some.injEq, Prod.mk.injEq] at hh
-        obtain ⟨-, rfl⟩ := hh
-        exact consW_ptop hcons (ih _ _ _ _ _ hrec hP)
+    obtain ⟨rs1, m1, hrec, hh⟩ := ipK_inv hh (by simp [piBK2])
+    rw [piBK2_some] at hh
+    obtain ⟨r2, m2, hcons, hh⟩ := ipK_inv hh (by simp [piBK3])
+    rw [piBK3_some] at hh
+    simp only [Option.some.injEq, Prod.mk.injEq] at hh
+    obtain ⟨-, rfl⟩ := hh
+    exact consW_ptop hcons (ih _ _ _ _ _ hrec hP)
 
 theorem bcW_ptop {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r : List Word}
     (h : bcW n m nPd k nC nR cvT rOk rMI rRP = some (r, m')) (hP : PTop m) : PTop m' := by
@@ -106,17 +95,15 @@ theorem bcW_ptop {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r 
   | zero => simp [bchW, bcK] at h
   | succ n =>
   rw [bchW_step] at h
-  cases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with
-  | none => rw [hp] at h; simp [bchW.bchK1, bcK] at h
-  | some rm =>
-    obtain ⟨rs, m1⟩ := rm
-    rw [hp, bchK1_some] at h
-    by_cases hr : eViewW m1 (rs.getD 2 0) = []
-    · rw [hr] at h; simp [bchW.bchK2, bcK] at h
-    rw [bchK2_ne _ _ _ hr, bcK_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
-    exact piBW_ptop n _ _ _ _ _ hp hP
+  rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
+  · simp [bchW.bchK1, bcK] at h
+  rw [bchK1_some] at h
+  by_cases hr : eViewW m1 (rs.getD 2 0) = []
+  · rw [hr] at h; simp [bchW.bchK2, bcK] at h
+  rw [bchK2_ne _ _ _ hr, bcK_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact piBW_ptop n _ _ _ _ _ hp hP
 
 /-! ## The program bundle -/
 
@@ -291,11 +278,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [partsFindM_cons]
     simp only [bmfPred, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
-    refine Sim.bindK (K := bmfK1 n no nl ro rl mm (UInt64.ofNat pc) (UInt64.ofNat mI))
-      (body := fun r1 m1 => if r1.headD 0 = mm then some ([1, UInt64.ofNat mI,
-          rdW (m1.arr64 IW) (UInt64.ofNat pc + 2)], m1)
-        else bmfK2 (bmfW n m1 no nl (ro + 1) (rl - 1) mm)) (by simp [bmfK1])
-      (fun _ _ => by simp only [bmfK1])
+    refine Sim.bindK (by simp [bmfK1]) (fun _ _ => by rw [bmfK1])
       (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
@@ -321,8 +304,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
       simp only [hc, hb, if_false, Bool.false_eq_true]
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
-      refine Sim.bindK (K := bmfK2) (body := fun r m' => some ([r.headD 0, r.tail.headD 0,
-          r.tail.tail.headD 0], m')) rfl (fun _ _ => rfl)
+      refine Sim.bindK rfl (fun _ _ => by rw [bmfK2])
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
           (Nat.le_trans hnb hg1.1)) ?_
       rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
@@ -446,11 +428,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
     have hrl : rs.length = rl.toNat := (decPL_length _ hrs.1)
-    refine Sim.bindK (K := bmgK1 n nPd k nC no nl ro rl cto ctl idx (UInt64.ofNat pc))
-      (body := fun r1 m1 => if 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0 then none
-        else bmgK2 n nPd k nC no nl ro rl cto ctl idx (bcW n m1 nPd k nC rl (UInt64.ofNat pc) (r1.headD 0)
-          (r1.tail.headD 0) (r1.tail.tail.headD 0)))
-      (by simp [bmgK1]) (fun _ _ => by simp only [bmgK1]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
+    refine Sim.bindK (by simp [bmgK1]) (fun _ _ => by rw [bmgK1]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
     rintro r1 x m1 a1 ⟨rfl, hxb, hS1, hg1⟩
     by_cases hbig : 4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0 ∨
         4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0
@@ -470,10 +448,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
       omega
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
-    refine Sim.bindK (K := bmgK2 n nPd k nC no nl ro rl cto ctl idx)
-      (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-        else bmgK3 n (r2.tail.tail.headD 0) (bmgW n m2 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1)))
-      (by simp [bmgK2]) (fun _ _ => by simp only [bmgK2])
+    refine Sim.bindK (by simp [bmgK2]) (fun _ _ => by rw [bmgK2])
       (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
         StageR dn vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
     · revert hE
@@ -514,11 +489,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
       (by rw [hidx1, hctl1]; have := hg02.1; omega)
     rw [hidx1] at hrec
-    refine Sim.bindK (K := bmgK3 n ((encONN (some (c1, c2))).tail.tail.headD 0))
-      (body := fun r3 m3 => if r3.headD 0 = 0 then some ([0, 0, 0], m3)
-        else bsK3 (consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0)
-          (r3.tail.tail.headD 0)))
-      (by simp [bmgK3]) (fun _ _ => by simp only [bmgK3]) hrec ?_
+    refine Sim.bindK (by simp [bmgK3]) (fun _ _ => by rw [bmgK3]) hrec ?_
     rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩
     cases x3 with
     | none =>
@@ -529,13 +500,10 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨h1', hd3, hb3'⟩ := hR3
     rw [if_neg (by rw [h1']; decide)]
     intro r m' e
-    cases h4 : consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with
-    | none => rw [h4] at e; cases e
-    | some x4 =>
-    obtain ⟨r4, m4⟩ := x4
-    rw [h4, bsK3_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h4 : consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+    · cases e
+    rw [bsK3_some] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stageN h4 hS3 hb3' (hd3.get (OMono.decNL _ _))
     refine ⟨some (c2 :: ns), a3, rfl, ⟨rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hS4,
       (hg02.trans hg3).trans hg4⟩
@@ -586,13 +554,10 @@ theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s
   have hsim := bmgW_sim (b nPd (fun h => hg (Or.inl h))) (b k (fun h => hg (Or.inr (Or.inl h))))
     (b nC (fun h => hg (Or.inr (Or.inr (Or.inl h))))) (b rl (fun h => hg (Or.inr (Or.inr (Or.inr h))))) n
     s₀.mem a₀ cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.2; omega)
-  cases hb : bmgW n s₀.mem nPd k nC no nl ro rl cto ctl 0 with
-  | none => rw [hb] at hm; cases hm
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [hb, bmfK2_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
+  rcases hb : bmgW n s₀.mem nPd k nC no nl ro rl cto ctl 0 with _ | ⟨r1, m1⟩ <;> rw [hb] at hm
+  · cases hm
+  rw [bmfK2_some] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨hok, hR, hS', hg'⟩ := Sim.run hsim hb
   exact ⟨hl, hok, NsR_three hR, hS', hg'⟩
 

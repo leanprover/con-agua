@@ -250,11 +250,7 @@ theorem rteGoW_mem (n : Nat) : ∀ (m m' : Mem) (b ro rl : Word) (r : List Word)
   simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero] at h00
   have hb11 : b.toNat + 11 < 2 ^ 64 := by omega
   rw [cpMem_eq h00 hb11] at h
-  cases h1 : rteGoW n (wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro))) (b + 11) (ro + 1) (rl - 1) with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, rteK1_some] at h
+  rcases h1 : rteGoW n (wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro))) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r1, m1⟩ <;> simp only [h1, rteK1, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   generalize hW : wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) = W at h1
   have hfr := wrER_frame (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) m b

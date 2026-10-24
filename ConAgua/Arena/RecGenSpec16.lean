@@ -108,34 +108,21 @@ theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plg
   | k + 1, m, m', o, l, r, h => by
     by_cases hl : l = 0
     · rw [plgW_nil k m o l hl] at h
-      cases ha : allocW m 0 with
-      | none => rw [ha] at h; cases h
-      | some x =>
-        obtain ⟨q, m1⟩ := x
-        rw [ha, plK0_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        rw [← h.2]; exact allocW_mfr ha
+      obtain ⟨⟨q, m1⟩, ha, h⟩ := of_K h rfl
+      rw [plK0_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      rw [← h.2]; exact allocW_mfr ha
     rw [plgW_cons k m o l hl] at h
-    cases h1 : pinternW m (rdW (m.arr64 IW) o) with
-    | none => rw [h1] at h; simp [plK1] at h
-    | some x =>
-    obtain ⟨u, m1⟩ := x
-    rw [h1] at h
+    obtain ⟨⟨u, m1⟩, h1, h⟩ := of_K h (by simp only [plK1])
     by_cases hb : 4294967296 ≤ u
     · rw [plK1_big (h := hb)] at h; cases h
     rw [plK1_ok (h := hb)] at h
     refine (pinternW_mfrP h1).trans ?_
-    cases h2 : plgW k m1 (o + 1) (l - 1) with
-    | none => rw [h2] at h; simp [plK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2, plK2_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [plK2_some] at h
     refine (plgW_mfrP k _ _ _ _ _ h2).trans ?_
-    cases h3 : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [h3] at h; simp [plK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [h3, plK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [plK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact consW_mfr h3
 
@@ -145,17 +132,11 @@ theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k 
   | zero => simp [plW] at h
   | succ k =>
   rw [plW_succ] at h
-  cases h1 : plgW k m o l with
-  | none => rw [h1] at h; simp [plW.plK4] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, plK4_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [plK4_some] at h
   refine (plgW_mfrP k _ _ _ _ _ h1).trans ?_
-  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [h2] at h; simp [plW.plK5] at h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2, plK5_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+  rw [plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
 
@@ -421,10 +402,8 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   have hnpe : (UInt64.ofNat bs.nP : Word).toNat = bs.nP := UInt64.toNat_ofNat_of_lt' hnpb
   have hmin : ∀ x : Word, (if UInt64.ofNat bs.nP < x then UInt64.ofNat bs.nP else x).toNat = min bs.nP x.toNat := by
     intro x
-    by_cases hx : UInt64.ofNat bs.nP < x
-    · rw [if_pos hx]; have := UInt64.lt_iff_toNat_lt.mp hx; rw [hnpe] at this ⊢; omega
-    · rw [if_neg hx]; have : ¬ (UInt64.ofNat bs.nP).toNat < x.toNat := fun h => hx (UInt64.lt_iff_toNat_lt.mpr h)
-      rw [hnpe] at this; omega
+    have := @UInt64.lt_iff_toNat_lt (UInt64.ofNat bs.nP) x
+    split <;> rename_i hx <;> simp only [hx, hnpe, true_iff, false_iff] at this ⊢ <;> omega
   have hagT : decHL (truncM m) ao.toNat al.toNat = some args := hag
   have hfvT : decHL (truncM m) fvo.toNat fvl.toNat = some fvs := hfv
   have hal := decHL_length _ hagT
@@ -463,10 +442,7 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   by_cases h3 : r3.headD 0 = 0
   · rw [if_pos h3]; exact Sim.of_none
   rw [if_neg h3]
-  have hws : ws1 = ws2 := by
-    rcases Decidable.em (ws1 = ws2) with h | hne
-    · exact h
-    · rw [if_neg hne] at heq; exact absurd heq h3
+  have hws : ws1 = ws2 := Decidable.byContradiction fun hne => h3 (by rwa [if_neg hne] at heq)
   have hc : (decI us == blv && args.take bs.nP == fvs.take bs.nP) = true := by
     rw [← hd2, hu', hws1, hws2, hws]; simp
   simp only [hc, if_true]
@@ -476,8 +452,7 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
     (mkTargetMajor_spec p hP.alloc hP.mkTm n _ _ _ _ _ _ _ _ _ _ _ _ _ _) e4
   rw [mkTMW_eq, Option.map_eq_some_iff] at hW4
   obtain ⟨⟨q, m4'⟩, hpr, he⟩ := hW4
-  simp only [Prod.mk.injEq] at he
-  obtain ⟨rfl, rfl⟩ := he
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj he
   rw [hm3] at hpr
   obtain ⟨hS4, hg4, hq4, ht4, hget4⟩ := posRecW_stage hpr hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht4
