@@ -228,7 +228,7 @@ theorem Grows.push1 (m : Mem) (t v : Word) (ht : t = m.top) (h : PoolOK m)
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · rw [htop]
     exact Frame.set64_both POOL CTL _ _ 0 _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) (by decide)
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]
+  · rw [vpool_set64_ne _ _ _ _ (by decide), vpool_set64 _ _ _ hs]
     exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _)
   · rw [htop, hn]; omega
   · rw [htop, hn, Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.size_arr64_set64]; omega

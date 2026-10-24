@@ -343,7 +343,7 @@ theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     have hn1 : (n - 1).toNat = k := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
     refine .cons hn0 ?_ (ih ls (o + 1) (n - 1) (by rw [ho1, hn1]; exact h2) (by omega) hls)
-    have hw : rdW (vpool m) o = u.word.toUInt64 := by simpa [rdW] using h1
+    have hw : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using h1
     rw [hw]; exact denoteL_lvR hR u l hl
 
 theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
@@ -525,8 +525,8 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     have hpoolv := vpool_congr hpool
     have hpoolc := pcap_congr hpool
     have htop := m.top.toNat_lt
-    have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpool]; exact s₁) (by omega) hd₁
-    have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpool]; exact s₂) (by omega) hd₂
+    have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
+    have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
     obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ h
     have hR' : ArenaR m' a := ArenaR.frame lh_not_arena c192_not_arena hx.memFrame hR₀
     obtain ⟨c, hrun⟩ := lvlsEq?_run a us vs lu lv hu hv hc he
