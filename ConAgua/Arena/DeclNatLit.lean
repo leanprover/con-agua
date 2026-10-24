@@ -361,9 +361,10 @@ theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOk
   rw [invoke_eq _ hp]
   simp only [callFn, natSuccOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW]
+    finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 
 theorem natSuccOk_nonctor {ci : IConstantInfo} (h : ciTag ci ≠ 4) : natSuccOk (some ci) = pure false := by

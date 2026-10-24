@@ -221,8 +221,9 @@ theorem m2cConstView_spec (p : Prog) (hp : p.lookup "m2c_const_view" = some m2cC
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [cvwW, tierW, idxW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;>
+      finish [cvwW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- Model of `m2c_ctor`. -/
 def m2cCtorW (p : Prog) (n : Nat) (m : Mem) (mode vis d ro cvjP major : Word) :

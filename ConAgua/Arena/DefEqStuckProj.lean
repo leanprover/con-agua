@@ -347,9 +347,11 @@ theorem projPair_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode 
     ⦃fun r s' => LocEq s' s₀ ∧ ppK p n mode vis d a b s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.projPair]
   simp only [callFn, defeqProjPairL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "lazy_delta_proj_reduction"] <;>
-  simp_all [ppK, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, PJREC, Cmp.eval,
+  simp_all [ppK, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval, St.setLocs_cons, CTL,
+    PJREC, Cmp.eval,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 

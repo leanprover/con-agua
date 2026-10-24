@@ -353,7 +353,8 @@ theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [islW, tierW, idxW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 2) :
@@ -467,9 +468,10 @@ theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis 
   rw [invoke_eq _ hp.isCtorApp]
   simp only [callFn, isCtorAppL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [icaW, tierW, idxW]
+    finish [icaW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :
@@ -922,9 +924,10 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := piResidualLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE,
         callW_spec p k "inst_entry", ih] <;>
-      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
+      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW, tfld, tcnt, TRec.ad]
 
 
 theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidualL) (k : Nat)

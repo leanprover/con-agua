@@ -726,8 +726,9 @@ theorem iotaRecHead_spec (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRe
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [irHeadW, tierW, idxW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+        tcntM, evalE_tierE, evalE_idxE] <;>
+      finish [irHeadW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- **`iota_rec_head` as a run**: the memory unchanged; another tag, or the `const` view. -/
 theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL) (n : Nat)

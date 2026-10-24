@@ -64,11 +64,11 @@ namespace L.Arena
 def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  c := CREC.u64[i * 4 + t * 2];
+  if CONST⟨t⟩.count <= i { abort };
+  c := CONST⟨t, i⟩.n;
   (flag, q) := call env_find(c, vis);
   if flag == 0 { return 0 };
   return u64(EREC.u64[q] == 4)
@@ -79,11 +79,11 @@ def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
 @[l_impl ConRon.Arena.isStrLit]
 def isStrLitL : FunDecl := lfn (h) locals (t, i) {
   if h >> 28 != 8 { return 0 };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= i { abort };
-  return u64(REC.u64[i * 8 + t * 4] == 1)
+  if LIT⟨t⟩.count <= i { abort };
+  return u64(LIT⟨t, i⟩.kind == 1)
 }
 
 /-! ## `find_rule(ro, rc, c)`, `rec_rule_k(ro, rc)`
@@ -144,11 +144,11 @@ def eRecGetL : FunDecl := lfn (k) locals () { return EREC.u64[k] }
 /-- The head name of a `const` handle (the view checks, then the stored name). -/
 -- con-ron: ConRon/Arena/Core.lean:348-365 ConRon.Arena.iotaCtorNeverProp
 def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  return CREC.u64[i * 4 + t * 2]
+  if CONST⟨t⟩.count <= i { abort };
+  return CONST⟨t, i⟩.n
 }
 
 /-- The family test of `iota_ctor_never_prop` at the inductive's record `indP`: it is an
@@ -307,11 +307,11 @@ literal to its reduced constructor form. -/
 @[l_impl ConRon.Arena.litMajorToCtor]
 def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, c, r) {
   if h >> 28 != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= i { abort };
-  kind := REC.u64[i * 8 + t * 4];
+  if LIT⟨t⟩.count <= i { abort };
+  kind := LIT⟨t, i⟩.kind;
   if kind != 1 { r := call lit_to_ctor_if_nat(vis, h); return r };
   sup := call str_lit_supported(vis);
   if sup == 0 { return h };
@@ -378,11 +378,11 @@ def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
 def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
   while i < an {
     if e >> 28 != 6 { return (0, 0) };
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    body := FAREC.u64[x * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= x { abort };
+    body := FORALL⟨t, x⟩.b;
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
     e := b2;
     i += 1
@@ -455,11 +455,11 @@ def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
   tta := call infer_io(mode, vis, d, ta);
   hh := call whnf(mode, vis, d, tta);
   if hh >> 28 != 2 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  i := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[16 + t] <= i { abort };
-  uT := SOREC.u64[i * 2 + t];
+  if SORT⟨t⟩.count <= i { abort };
+  uT := SORT⟨t, i⟩.u;
   z := call pin_word(53);
   ok := call lvl_eq_c(uT, z);
   if ok == 0 { abort };
@@ -596,8 +596,8 @@ scratch handle, the index below the tier's count. Aborts on a dangling handle (t
 fails there); returns `0`. -/
 -- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
 def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
-  t := (h >> 27) & 1;
-  x := h & 134217727;
+  t := ⟦h⟧.tier;
+  x := ⟦h⟧.idx;
   g := h >> 28;
   if t != 0 && CTL.u64[1] == 0 { abort };
   c := 0;
@@ -626,11 +626,11 @@ def spnGetL : FunDecl := lfn (k) locals () { return SPN.u64[k] }
 /-- The record of a `forallE` handle: its domain and body (the guards of a stored-node read). -/
 -- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
 def iotaCertsFullPartsL : FunDecl := lfn (h) locals (t, x) {
-  t := (h >> 27) & 1;
-  x := h & 134217727;
+  t := ⟦h⟧.tier;
+  x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[30 + t] <= x { abort };
-  return (FAREC.u64[x * 4 + t * 2], FAREC.u64[x * 4 + t * 2 + 1])
+  if FORALL⟨t⟩.count <= x { abort };
+  return (FORALL⟨t, x⟩.ty, FORALL⟨t, x⟩.b)
 }
 
 /-- The `forallE` arm of `iota_certs_full_aux` (split off: the function was too long for `vcgen`):

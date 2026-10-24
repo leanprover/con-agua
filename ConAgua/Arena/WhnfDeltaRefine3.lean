@@ -532,9 +532,10 @@ theorem reduceNatK_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) 
   rw [invoke_eq _ hp.reduceNatK]
   simp only [callFn, reduceNatKL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_word", callW_spec p n "reduce_nat_succ"] <;>
-    finish (gen := 30) [reduceNatKW, tierW, idxW]
+    finish (gen := 30) [reduceNatKW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- The model of `reduce_nat_ap`: `(flag, result, memory)`. -/
 def reduceNatApW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
@@ -585,10 +586,11 @@ theorem reduceNatAp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
   rw [invoke_eq _ hp.reduceNatAp]
   simp only [callFn, reduceNatApL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_word", callW_spec p n "nat_bin_op_name", callW_spec p n "nat_op_stored",
       callW_spec p n "reduce_nat_op", callW_spec p n "reduce_nat_wf"] <;>
-    finish (gen := 30) [reduceNatApW, tierW, idxW]
+    finish (gen := 30) [reduceNatApW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- The model of `reduce_nat_head`: `(flag, result, memory)`. -/
 def reduceNatHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
@@ -628,9 +630,10 @@ theorem reduceNatHead_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : S
   rw [invoke_eq _ hp.reduceNatHead]
   simp only [callFn, reduceNatHeadL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "reduce_nat_k", callW_spec p n "reduce_nat_ap"] <;>
-    finish (gen := 30) [reduceNatHeadW, tierW, idxW]
+    finish (gen := 30) [reduceNatHeadW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- The model of `reduce_nat`: `(flag, result, memory)`. -/
 def reduceNatW (p : Prog) (n : Nat) (m : Mem) (mode vis d e : Word) :
@@ -651,9 +654,10 @@ theorem reduceNat_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
   rw [invoke_eq _ hp.reduceNat]
   simp only [callFn, reduceNatL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "reduce_nat_head"] <;>
-    finish (gen := 30) [reduceNatW, tierW, idxW]
+    finish (gen := 30) [reduceNatW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
     (h : (natAddArm u v).run a₁ = .ok (some x, a₂)) :

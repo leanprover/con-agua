@@ -50,25 +50,25 @@ def i1lGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   x := call bvar_b(fu - 1, h);
   if x <= d { return h };
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 0 {
-    if CTL.u64[22 + t] <= i { abort };
-    x := BREC.u64[i * 2 + t];
+    if BVAR⟨t⟩.count <= i { abort };
+    x := BVAR⟨t, i⟩.i;
     if x == d { r := call lift_entry(v, d, 0, fu - 1); return r };
     if d < x { r := call intern_bvar(x - 1); return r };
     return h
   };
-  if g == 1 { if CTL.u64[26 + t] <= i { abort }; return h };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return h };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return h };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return h };
-  if g == 4 { if CTL.u64[4 + t] <= i { abort }; r := call i1l_app(h, d, v, fu - 1); return r };
-  if g == 5 { if CTL.u64[28 + t] <= i { abort }; r := call i1l_lam(h, d, v, fu - 1); return r };
-  if g == 6 { if CTL.u64[30 + t] <= i { abort }; r := call i1l_forall(h, d, v, fu - 1); return r };
-  if g == 7 { if CTL.u64[20 + t] <= i { abort }; r := call i1l_let(h, d, v, fu - 1); return r };
-  if g == 9 { if CTL.u64[32 + t] <= i { abort }; r := call i1l_proj(h, d, v, fu - 1); return r };
+  if g == 1 { if FVAR⟨t⟩.count <= i { abort }; return h };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return h };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return h };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return h };
+  if g == 4 { if APP⟨t⟩.count <= i { abort }; r := call i1l_app(h, d, v, fu - 1); return r };
+  if g == 5 { if LAM⟨t⟩.count <= i { abort }; r := call i1l_lam(h, d, v, fu - 1); return r };
+  if g == 6 { if FORALL⟨t⟩.count <= i { abort }; r := call i1l_forall(h, d, v, fu - 1); return r };
+  if g == 7 { if LET⟨t⟩.count <= i { abort }; r := call i1l_let(h, d, v, fu - 1); return r };
+  if g == 9 { if PROJ⟨t⟩.count <= i { abort }; r := call i1l_proj(h, d, v, fu - 1); return r };
   abort
 }
 
@@ -77,10 +77,10 @@ def i1lGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
 def i1lApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := AREC.u64[i * 4 + t * 2];
-  a := AREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call i1l_go(f, d, v, fu);
   y := call i1l_go(a, d, v, fu);
   r := call mk_app(x, y);
@@ -95,10 +95,10 @@ def i1lLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   if d + 1 == 0 { abort };
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := LAREC.u64[i * 4 + t * 2];
-  a := LAREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call i1l_go(f, d, v, fu);
   y := call i1l_go(a, d + 1, v, fu);
   r := call mk_lam(x, y);
@@ -113,10 +113,10 @@ def i1lForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y
   if d + 1 == 0 { abort };
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := FAREC.u64[i * 4 + t * 2];
-  a := FAREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call i1l_go(f, d, v, fu);
   y := call i1l_go(a, d + 1, v, fu);
   r := call mk_forall(x, y);
@@ -131,11 +131,11 @@ def i1lLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, y
   if d + 1 == 0 { abort };
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := LEREC.u64[i * 6 + t * 3];
-  a := LEREC.u64[i * 6 + t * 3 + 1];
-  b := LEREC.u64[i * 6 + t * 3 + 2];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call i1l_go(f, d, v, fu);
   y := call i1l_go(a, d, v, fu);
   z := call i1l_go(b, d + 1, v, fu);
@@ -150,11 +150,11 @@ def i1lLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, y
 def i1lProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  nm := PJREC.u64[i * 6 + t * 3];
-  ix := PJREC.u64[i * 6 + t * 3 + 1];
-  e := PJREC.u64[i * 6 + t * 3 + 2];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call i1l_go(e, d, v, fu);
   r := call mk_proj(nm, ix, x);
   (fd, j, e0) := call i1l_find(h, d);
@@ -207,7 +207,9 @@ l_model i1lGo_spec (p : Prog) (hp : I1lProg p)
     mkForall_spec p (hp.lift.get "der_b") (hp.lift.get "forall_find") (hp.lift.get "forall_push") (hp.lift.get "intern_forall") (hp.lift.get "mk_forall") n,
     mkLet_spec p (hp.lift.get "der_b") (hp.lift.get "letE_find") (hp.lift.get "letE_push") (hp.lift.get "intern_letE") (hp.lift.get "mk_let") n,
     mkProj_spec p (hp.lift.get "der_b") (hp.lift.get "proj_find") (hp.lift.get "proj_push") (hp.lift.get "intern_proj") (hp.lift.get "mk_proj") n]
-  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-- **`instantiate1_lift_fast` is its model `i1lFastW`** (generated). -/
 l_model i1lFast_spec (p : Prog) (hp : I1lProg p)

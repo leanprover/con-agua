@@ -130,9 +130,10 @@ theorem isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) 
   rw [invoke_eq _ hp.bt]
   simp only [callFn, isBoolTrueL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
-    finish [isBoolTrueW, tierW, idxW, rdW]
+    finish [isBoolTrueW, tierW, idxW, tfld, tcnt, TRec.ad, rdW]
 
 theorem decI_bne {k : IdxKind} (v w : Word) (hv : v.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32) :
     ((decI v : Idx k) != decI w) = !decide (v = w) := by
@@ -357,14 +358,16 @@ theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isEagerReduceW s₀.mem h = some (r.headD 0); ⊤⦄ := by
   rw [invoke_eq _ hp.eager]
   simp only [callFn, isEagerReduceL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, pinAt_rd p hp.pinat n]
-  all_goals (try simp only [Cond.pval, Expr.pval, del_rd64, St.setLoc_loc, St.setLoc_mem,
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, pinAt_rd p hp.pinat n]
+  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
+    Expr.pval_idxE, del_rd64, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
     Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
     Bool.or_eq_true] at *)
   all_goals grind [lang_grind, arena_grind, eagerW_tag, eagerW_go, eagerF_tag, eagerF_go,
-    eagerG_tag, eagerG_go, tierW, idxW]
+    eagerG_tag, eagerG_go, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem tag_beq_app (h : Word) (hh : HW h) :
     ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
@@ -505,9 +508,10 @@ theorem isNatZero_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (
   rw [invoke_eq _ hp.natzero]
   simp only [callFn, isNatZeroL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
-    finish [isNatZeroW, tierW, idxW]
+    finish [isNatZeroW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
@@ -742,9 +746,10 @@ theorem headHint_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (v
   rw [invoke_eq _ hp.hhint]
   simp only [callFn, headHintL]
   sym only [lang_grind, arena_grind, defeq_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [tierW, idxW]
+    finish [tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- The hint the twin reads off a lookup. -/
 def hintOf : Option IConstantInfo → ConLeche.ReducibilityHint
@@ -949,9 +954,11 @@ theorem unfoldableHead_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
   rw [invoke_eq _ hp.ufh]
   simp only [callFn, unfoldableHeadL]
   sym only [lang_grind, arena_grind, defeq_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "ls_node"] <;>
-    finish [unfoldableHeadW, ufHeadF, ufEnvF, ufLsF, Option.bind_some, tierW, idxW]
+    finish [unfoldableHeadW, ufHeadF, ufEnvF, ufLsF, Option.bind_some, tierW, idxW, tfld, tcnt,
+      TRec.ad]
 
 theorem toNat_beq (a b : Word) : (a.toNat == b.toNat) = decide (a = b) := by
   by_cases h : a = b
@@ -1144,14 +1151,16 @@ theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
     ⦃fun r s' => LocEq s' s₀ ∧ sameConstHeadsW p n s₀.mem a b = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.sch]
   simp only [callFn, sameConstHeadsL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"]
-  all_goals (try simp only [Cond.pval, Expr.pval, del_rd64, St.setLoc_loc, St.setLoc_mem,
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, callW_spec p n "get_app_fn"]
+  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE,
+    Expr.pval_idxE, del_rd64, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil,
     Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true,
     Bool.or_eq_true] at *)
   all_goals grind -lia -linarith [lang_grind, arena_grind, schW_a, schW_b, schW_go, scB1_tag,
-    scB1_go, scB2_tag, scB2_go, tierW, idxW]
+    scB1_go, scB2_tag, scB2_go, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- **`same_const_heads` refines `sameConstHeads`.** -/
 @[refines ConRon.Arena.sameConstHeads]

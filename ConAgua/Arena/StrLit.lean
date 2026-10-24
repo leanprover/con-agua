@@ -360,13 +360,13 @@ def strLitCtorL : FunDecl :=
   lfn (h) locals (cons, ofNat, nilE, t, i, o, cnt, spine, slN, sl, r) {
   (cons, ofNat, nilE) := call str_ctor_pre();
   if h >> 28 != 8 { abort };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= i { abort };
-  if REC.u64[i * 8 + t * 4] != 1 { abort };
-  o := REC.u64[i * 8 + t * 4 + 1];
-  cnt := REC.u64[i * 8 + t * 4 + 2];
+  if LIT⟨t⟩.count <= i { abort };
+  if LIT⟨t, i⟩.kind != 1 { abort };
+  o := LIT⟨t, i⟩.o;
+  cnt := LIT⟨t, i⟩.l;
   spine := call str_cons_spine(cons, ofNat, nilE, o, o + cnt);
   slN := call pin_at(6);
   sl := call const_e(slN);

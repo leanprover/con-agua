@@ -33,12 +33,13 @@ theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   rw [invoke_eq _ (hp.get "ar_app")]
   simp only [callFn, arApp]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
           ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -49,12 +50,13 @@ theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   rw [invoke_eq _ (hp.get "ar_lam")]
   simp only [callFn, arLam]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
           ih,
       mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
           (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -65,12 +67,13 @@ theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Wo
   rw [invoke_eq _ (hp.get "ar_forall")]
   simp only [callFn, arForall]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
           ih,
       mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
           (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -81,12 +84,13 @@ theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   rw [invoke_eq _ (hp.get "ar_let")]
   simp only [callFn, arLet]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
           ih,
       mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
           (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -97,12 +101,13 @@ theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word
   rw [invoke_eq _ (hp.get "ar_proj")]
   simp only [callFn, arProj]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
           ih,
       mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
           (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 include hp in
 /-- **`abs_go`, `ab_node` and the arms are their models**, at every fuel. -/

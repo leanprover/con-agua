@@ -495,11 +495,11 @@ def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
   if g == 5 { r := call abs_lam(h, k, d, fu); return r };
   if g == 6 { r := call abs_forall(h, k, d, fu); return r };
   if g == 1 {
-    t := (h >> 27) & 1;
-    i := h & 134217727;
+    t := ⟦h⟧.tier;
+    i := ⟦h⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[26 + t] <= i { abort };
-    x := FVREC.u64[i * 4 + t * 2];
+    if FVAR⟨t⟩.count <= i { abort };
+    x := FVAR⟨t, i⟩.i;
     if x == d { r := call intern_bvar(k); return r };
     return h
   };
@@ -513,12 +513,12 @@ def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
 def absApp : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[4 + t] <= i { abort };
-  f := AREC.u64[i * 4 + t * 2];
-  a := AREC.u64[i * 4 + t * 2 + 1];
+  if APP⟨t⟩.count <= i { abort };
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k, d, fu);
   if x == f && y == a { r := h } else { r := call mk_app(x, y) };
@@ -533,12 +533,12 @@ def absLam : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[28 + t] <= i { abort };
-  f := LAREC.u64[i * 4 + t * 2];
-  a := LAREC.u64[i * 4 + t * 2 + 1];
+  if LAM⟨t⟩.count <= i { abort };
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k + 1, d, fu);
   if x == f && y == a { r := h } else { r := call mk_lam(x, y) };
@@ -553,12 +553,12 @@ def absForall : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[30 + t] <= i { abort };
-  f := FAREC.u64[i * 4 + t * 2];
-  a := FAREC.u64[i * 4 + t * 2 + 1];
+  if FORALL⟨t⟩.count <= i { abort };
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k + 1, d, fu);
   if x == f && y == a { r := h } else { r := call mk_forall(x, y) };
@@ -573,13 +573,13 @@ def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[20 + t] <= i { abort };
-  f := LEREC.u64[i * 6 + t * 3];
-  a := LEREC.u64[i * 6 + t * 3 + 1];
-  b := LEREC.u64[i * 6 + t * 3 + 2];
+  if LET⟨t⟩.count <= i { abort };
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call abs_go(f, k, d, fu);
   y := call abs_go(a, k, d, fu);
   z := call abs_go(b, k + 1, d, fu);
@@ -594,13 +594,13 @@ def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y
 def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[32 + t] <= i { abort };
-  nm := PJREC.u64[i * 6 + t * 3];
-  ix := PJREC.u64[i * 6 + t * 3 + 1];
-  e := PJREC.u64[i * 6 + t * 3 + 2];
+  if PROJ⟨t⟩.count <= i { abort };
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call abs_go(e, k, d, fu);
   if x == e { r := h } else { r := call mk_proj(nm, ix, x) };
   (fd, j, e0) := call ab_find(h, k);
@@ -700,10 +700,11 @@ theorem absNode_step (n : Nat) (ih : AbsArmSpec p n) : AbsNodeSpec p (n + 1) := 
   rw [invoke_eq _ (hp.get "ab_node")]
   simp only [callFn, absNode]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
-    finish [viewOK, tierW, idxW]
+    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
 
 end specs
 

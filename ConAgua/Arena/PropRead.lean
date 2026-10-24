@@ -49,12 +49,12 @@ namespace L.Arena
 /-- `binder_dom(k, e)`'s loop: `k` ∀ binders down, the domain at `k = 0`. -/
 def binderDomLoop : Stmt := lblk (k, e, t, x) {
   while e >> 28 == 6 {
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    if k == 0 { return (1, FAREC.u64[x * 4 + t * 2]) };
-    e := FAREC.u64[x * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= x { abort };
+    if k == 0 { return (1, FORALL⟨t, x⟩.ty) };
+    e := FORALL⟨t, x⟩.b;
     k -= 1
   }
 }
@@ -71,11 +71,11 @@ def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
   while e >> 28 == 4 {
     if f == 0 { abort };
     f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[4 + t] <= x { abort };
-    e := AREC.u64[x * 4 + t * 2]
+    if APP⟨t⟩.count <= x { abort };
+    e := APP⟨t, x⟩.f
   }
 }
 
@@ -96,12 +96,12 @@ def appCountAtL : FunDecl := lfn (e, f) locals (t, x, f0) {
 def residualPWL : FunDecl := lfn (fl, h) locals (t, x, t0, z) {
   if fl == 0 { return (0, 0, 0) };
   if h >> 28 != 2 { return (0, 0, 0) };
-  t := (h >> 27) & 1;
-  x := h & 134217727;
+  t := ⟦h⟧.tier;
+  x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[16 + t] <= x { abort };
+  if SORT⟨t⟩.count <= x { abort };
   t0 := CTL.u64[192];
-  z := call lv_zero(SOREC.u64[x * 2 + t]);
+  z := call lv_zero(SORT⟨t, x⟩.u);
   if z != 0 { return (1, 0, 0) };
   return (2, t0, CTL.u64[192] - t0)
 }
@@ -113,11 +113,11 @@ def lamProjLoop : Stmt := lblk (f, k, e, t, x) {
   while e >> 28 == 5 {
     if f == 0 { abort };
     f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + t] <= x { abort };
-    e := LAREC.u64[x * 4 + t * 2 + 1];
+    if LAM⟨t⟩.count <= x { abort };
+    e := LAM⟨t, x⟩.b;
     k += 1
   }
 }
@@ -129,11 +129,11 @@ def lamProjL : FunDecl := lfn (f, k, e) locals (t, x, j) {
   ⟪lamProjLoop⟫;
   if f == 0 { abort };
   if e >> 28 != 0 { return (0, 0, 0) };
-  t := (e >> 27) & 1;
-  x := e & 134217727;
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[22 + t] <= x { abort };
-  j := BREC.u64[x * 2 + t];
+  if BVAR⟨t⟩.count <= x { abort };
+  j := BVAR⟨t, x⟩.i;
   if j < k { return (1, k, j) };
   return (0, 0, 0)
 }
@@ -146,11 +146,11 @@ def unwrapStepL : FunDecl :=
     lfn (vis, f, e) locals (cnt, hh, t, x, fd, p, lf, k, j, top, ao, an, r) {
   (cnt, hh) := call app_count_at(e, f);
   if hh >> 28 != 3 { return (0, 0) };
-  t := (hh >> 27) & 1;
-  x := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  x := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= x { abort };
-  (fd, p) := call env_find(CREC.u64[x * 4 + t * 2], vis);
+  if CONST⟨t⟩.count <= x { abort };
+  (fd, p) := call env_find(CONST⟨t, x⟩.n, vis);
   if fd == 0 { return (0, 0) };
   if EREC.u64[p] != 1 { return (0, 0) };
   (lf, k, j) := call lam_proj(f, 0, EREC.u64[p + 5]);
@@ -187,11 +187,11 @@ def peelPisWL : FunDecl := lfn (vis, f, k, e) locals (u, t, x, r1, r2) {
     u := call unwrap_id_defs(vis, f, 4, e);
     if u >> 28 != 6 { return (0, 0) }
   };
-  t := (u >> 27) & 1;
-  x := u & 134217727;
+  t := ⟦u⟧.tier;
+  x := ⟦u⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[30 + t] <= x { abort };
-  (r1, r2) := call peel_pis_w(vis, f, k - 1, FAREC.u64[x * 4 + t * 2 + 1]);
+  if FORALL⟨t⟩.count <= x { abort };
+  (r1, r2) := call peel_pis_w(vis, f, k - 1, FORALL⟨t, x⟩.b);
   return (r1, r2)
 }
 
@@ -264,11 +264,11 @@ def typeSortPWLoop : Stmt := lblk (vis, f, rt, r, d, t, x) {
   while r >> 28 == 6 {
     if f == 0 { abort };
     f -= 1;
-    t := (r >> 27) & 1;
-    x := r & 134217727;
+    t := ⟦r⟧.tier;
+    x := ⟦r⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    r := FAREC.u64[x * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= x { abort };
+    r := FORALL⟨t, x⟩.b;
     d += 1
   }
 }
@@ -346,19 +346,19 @@ def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
   while e >> 28 == 5 || e >> 28 == 7 || e >> 28 == 4 {
     if f == 0 { abort };
     f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
+    t := ⟦e⟧.tier;
+    x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if e >> 28 == 5 {
-      if CTL.u64[28 + t] <= x { abort };
-      e := LAREC.u64[x * 4 + t * 2 + 1]
+      if LAM⟨t⟩.count <= x { abort };
+      e := LAM⟨t, x⟩.b
     } else {
       if e >> 28 == 7 {
-        if CTL.u64[20 + t] <= x { abort };
-        e := LEREC.u64[x * 6 + t * 3 + 2]
+        if LET⟨t⟩.count <= x { abort };
+        e := LET⟨t, x⟩.b
       } else {
-        if CTL.u64[4 + t] <= x { abort };
-        e := AREC.u64[x * 4 + t * 2]
+        if APP⟨t⟩.count <= x { abort };
+        e := APP⟨t, x⟩.f
       }
     }
   }

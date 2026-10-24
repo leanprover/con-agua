@@ -251,10 +251,12 @@ theorem etaCert_spec (n : Nat) (s₀ : St) (mode vis d ty1 body1 b : Word) :
       (callW p n "io_neutral" [b] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.etaCert]
   simp only [callFn, etaCertL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "io_neutral", callW_spec p n "infer_io", callW_spec p n "whnf",
       callW_spec p n "defeq", callW_spec p n "eta_cert_body"] <;>
-  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL,
+  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+    St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 

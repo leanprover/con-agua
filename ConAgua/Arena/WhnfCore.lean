@@ -114,32 +114,32 @@ def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd,
 def whnfCoreStepL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
   g := e >> 28;
-  t := (e >> 27) & 1;
-  i := e & 134217727;
+  t := ⟦e⟧.tier;
+  i := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 4 {
-    if CTL.u64[4 + t] <= i { abort };
+    if APP⟨t⟩.count <= i { abort };
     (st, r) := call whnf_core_app(mode, cheap, vis, d, e);
     return (st, r)
   };
   if g == 9 {
-    if CTL.u64[32 + t] <= i { abort };
-    (st, r) := call whnf_core_step_proj(mode, cheap, vis, d, e, PJREC.u64[i * 6 + t * 3],
-      PJREC.u64[i * 6 + t * 3 + 1], PJREC.u64[i * 6 + t * 3 + 2]);
+    if PROJ⟨t⟩.count <= i { abort };
+    (st, r) := call whnf_core_step_proj(mode, cheap, vis, d, e, PROJ⟨t, i⟩.n,
+      PROJ⟨t, i⟩.i, PROJ⟨t, i⟩.e);
     return (st, r)
   };
   if g == 7 {
-    if CTL.u64[20 + t] <= i { abort };
-    r := call inst1(LEREC.u64[i * 6 + t * 3 + 2], LEREC.u64[i * 6 + t * 3 + 1], 0);
+    if LET⟨t⟩.count <= i { abort };
+    r := call inst1(LET⟨t, i⟩.b, LET⟨t, i⟩.v, 0);
     return (1, r)
   };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; abort };
-  if g == 1 { if CTL.u64[26 + t] <= i { abort }; return (0, e) };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return (0, e) };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return (0, e) };
-  if g == 5 { if CTL.u64[28 + t] <= i { abort }; return (0, e) };
-  if g == 6 { if CTL.u64[30 + t] <= i { abort }; return (0, e) };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return (0, e) };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; abort };
+  if g == 1 { if FVAR⟨t⟩.count <= i { abort }; return (0, e) };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return (0, e) };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return (0, e) };
+  if g == 5 { if LAM⟨t⟩.count <= i { abort }; return (0, e) };
+  if g == 6 { if FORALL⟨t⟩.count <= i { abort }; return (0, e) };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return (0, e) };
   abort
 }
 
@@ -153,11 +153,11 @@ def whnfAppL : FunDecl :=
     a := SPN.u64[ao + i];
     node := SPN.u64[ao + an + i];
     if v >> 28 == 5 {
-      t := (v >> 27) & 1;
-      x := v & 134217727;
+      t := ⟦v⟧.tier;
+      x := ⟦v⟧.idx;
       if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[28 + t] <= x { abort };
-      (st, e3) := call beta_peel(LAREC.u64[x * 4 + t * 2 + 1], a, ao, an, i + 1);
+      if LAM⟨t⟩.count <= x { abort };
+      (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
       CTL.u64[136] := top;
       return (st, e3)
     };
@@ -197,11 +197,11 @@ def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) 
       CTL.u64[136] := co;
       return (1, e3)
     };
-    tt := (t >> 27) & 1;
-    x := t & 134217727;
+    tt := ⟦t⟧.tier;
+    x := ⟦t⟧.idx;
     if tt != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + tt] <= x { abort };
-    t := LAREC.u64[x * 4 + tt * 2 + 1];
+    if LAM⟨tt⟩.count <= x { abort };
+    t := LAM⟨tt, x⟩.b;
     if len(SPN.u64) <= co + cn { abort };
     SPN.u64[co + cn] := SPN.u64[ao + i];
     cn += 1;
@@ -242,12 +242,12 @@ def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
   if hh >> 28 != 3 { return (0, 0) };
-  t := (hh >> 27) & 1;
-  x := hh & 134217727;
+  t := ⟦hh⟧.tier;
+  x := ⟦hh⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= x { abort };
-  k := CREC.u64[x * 4 + t * 2];
-  us := CREC.u64[x * 4 + t * 2 + 1];
+  if CONST⟨t⟩.count <= x { abort };
+  k := CONST⟨t, x⟩.n;
+  us := CONST⟨t, x⟩.us;
   (st, r) := call reduce_proj_fire(mode, vis, e1, q, i, k, us);
   return (st, r)
 }
@@ -299,11 +299,11 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
 @[l_impl ConRon.Arena.projLitToCtor]
 def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   if h >> 28 != 8 { return h };
-  t := (h >> 27) & 1;
-  x := h & 134217727;
+  t := ⟦h⟧.tier;
+  x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[2 + t] <= x { abort };
-  if REC.u64[x * 8 + t * 4] != 1 { return h };
+  if LIT⟨t⟩.count <= x { abort };
+  if LIT⟨t, x⟩.kind != 1 { return h };
   s := call str_lit_supported(vis);
   if s == 0 { return h };
   c := call str_lit_ctor(h);
