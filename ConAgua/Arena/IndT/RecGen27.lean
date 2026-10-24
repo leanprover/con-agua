@@ -30,6 +30,12 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## Frames -/
 
+/-- Across the real `open_pis_at_fvars_f` (its write set, `opfF_frame`). -/
+theorem MFr.ofOpfF {m m' : Mem} {args r : List Word} (h : opfF m args = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_frame (opfF_frame h)
+    (by simp [opfA, instListA, mkA, instA, liftA, SPN, IW, FVREC, FVSLOT, FVLP])
+    (by simp [opfC, instListC, mkC, instC, liftC])
+
 theorem cnfW_afr : ∀ (k : Nat) (m m' : Mem) (nfo nfl nm q j rp r : Word),
     cnfW k m nfo nfl nm q j rp = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [cnfW] at h
@@ -148,8 +154,8 @@ theorem cfoW_afr {n : Nat} {m m' : Mem} {q io il i fo fl : Word} {r : List Word}
 
 section rel
 variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (P : CxoProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-include hq henv P hIlpf
+  (P : CxoProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+include hq henv P hIlpf hOpf
 
 /-- **`class_ctor_of`'s model under `StageC`** (twin side: con-ron's `classCtorOf_spec`'s proof). -/
 theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c cA : Word} {r : List Word}
@@ -293,13 +299,12 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   obtain ⟨r4, m4⟩ := x4
   rw [c4] at h
   obtain ⟨s4, hs4, -, hw4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (stubM_spec p "open_pis_at_fvars_f" (n + 1) _ [UInt64.ofNat cA'.2, rdW (s2.mem.arr64 IW) (e0w + 4),
+    (opfF_spec p hOpf (n + 1) _ [UInt64.ofNat cA'.2, rdW (s2.mem.arr64 IW) (e0w + 4),
       UInt64.ofNat (bs.nP + bs.k)]) c4
   simp only at hs4 hw4; subst hs4
-  obtain ⟨ox, a4, run4, hS4, hg4, hd4⟩ := openPisAtFvarsF_spec dn vis fe _ _ (UInt64.ofNat (bs.nP + bs.k)) htyH
-    _ _ a1 r4 hw4 hS2
-  have hP4 := hP2.fr (MFr.ofStub hw4)
-  have hA4 := stub_afr hw4 (by decide) hA2
+  obtain ⟨ox, a4, run4, ⟨hS4, hg4, hd4⟩, hA4⟩ := opfF_ok dn vis fe _ _ (UInt64.ofNat (bs.nP + bs.k)) htyH
+    _ _ a1 r4 hw4 ⟨hS2, hA2⟩
+  have hP4 := hP2.fr (MFr.ofOpfF hw4)
   rw [UInt64.toNat_ofNat_of_lt' hnFb, UInt64.toNat_ofNat_of_lt' hnpk, htyD] at run4
   obtain ⟨q4, ho4⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC2.check.state he0ty run4
   have hC4 := hC2.of_pstep hS4 hA4 q4
@@ -485,7 +490,7 @@ denotations and scoping as con-ron's `classCtorOf_spec` asks; `open_pis_at_fvars
 through their stub contracts). -/
 @[refines ConRon.Arena.classCtorOf]
 theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env}
-    (henv : ConLeche.EnvWF env) (P : CxoProg p) (hIlpf : IlpfF p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (henv : ConLeche.EnvWF env) (P : CxoProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c cA : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cA' : IConstantVal × Nat)
     (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs)
@@ -514,7 +519,7 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
   | succ n =>
   refine triple_post (cxo_spec p P.cxo n s₀ vis q fto ftl rd mo ml c cA) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', run, hC', hg, hd, hP', hA'⟩ := cxoW_okC hq henv P hIlpf dn fe n (by omega) hm hC hA hbs hft hftb
+  obtain ⟨x, a', run, hC', hg, hd, hP', hA'⟩ := cxoW_okC hq henv P hIlpf hOpf dn fe n (by omega) hm hC hA hbs hft hftb
     hR hms hmsb hcA hlp hnpk hsz5 hP hsh hftP hmsP hcAP hformer hMs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
@@ -522,12 +527,12 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
 
 section cos
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (P : CosProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+  (P : CosProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
   (vis q fto ftl rd mo ml c ao al qo : Word) (bs : BlockShape) (formerTys : List EIdx) (R : ClassRead)
   (ms : List TargetMajor) (cAs : List (IConstantVal × Nat)) (m0 : Mem)
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
   {rdP : ConLeche.ClassRead}
-include hkp henv P hIlpf
+include hkp henv P hIlpf hOpf
 
 /-- **`class_ctors_of`' loop under `StageC`** (twin side: con-ron's `classCtorsOf_spec`'s list
 induction, the extension after one constructor from con-ron's `classCtorOf_spec` on its run). -/
@@ -600,7 +605,7 @@ theorem cosW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
   obtain ⟨r1, m1⟩ := x1
   rw [c1] at h
   obtain ⟨s1, hs1, -, hok1, hC1, hg1, hd1, hP1, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (classCtorOf_refinesC hkp henv P.toCxoProg hIlpf k (by omega) _ a dn fe vis q fto ftl rd mo ml c (UInt64.ofNat v) bs
+    (classCtorOf_refinesC hkp henv P.toCxoProg hIlpf hOpf k (by omega) _ a dn fe vis q fto ftl rd mo ml c (UInt64.ofNat v) bs
       formerTys R ms cAs[j.toNat] hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.1)
       (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
       (hcA0.grow (decCN_mono _) hg) (hlp0.grow hcA0 hsz0 hg hk) hnpk (by rw [hk IW]; exact hsz5) hP
@@ -654,8 +659,8 @@ end cos
 
 section cosf
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (P : CosProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-include hkp henv P hIlpf
+  (P : CosProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+include hkp henv P hIlpf hOpf
 
 /-- `cosW_okC` from the fresh result slice. -/
 theorem cosF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml c ao al : Word} {r : List Word}
@@ -693,7 +698,7 @@ theorem cosF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vi
   obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hC.stage
   have hf1 := allocW_mfr hal
   have hA1 := allocW_afr hal hA
-  obtain ⟨xs, a', run, hC', hg', -, ht', hP', hA', ps', hps', hfa'⟩ := cosW_okC hkp henv P hIlpf dn fe vis q fto ftl rd
+  obtain ⟨xs, a', run, hC', hg', -, ht', hP', hA', ps', hps', hfa'⟩ := cosW_okC hkp henv P hIlpf hOpf dn fe vis q fto ftl rd
     mo ml c ao al qo bs formerTys R ms cAs m hbs hft hftb hR hms hmsb hcAs hlp hnpk hsz5 hq hformer hMs
     (n + 1) (by omega) m1 m2 a 0 [] [] csP hl (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1
     (KeepW.of_mfr hf1) (by omega) UInt64.zero_le (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP
@@ -708,7 +713,7 @@ end cosf
 denotations and scoping as con-ron's `classCtorsOf_spec` asks). -/
 @[refines ConRon.Arena.classCtorsOf]
 theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
-    (henv : ConLeche.EnvWF env) (P : CosProg p) (hIlpf : IlpfF p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (henv : ConLeche.EnvWF env) (P : CosProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml c ao al : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (cAs : List (IConstantVal × Nat))
     (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs)
@@ -737,19 +742,19 @@ theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   | succ n =>
   refine triple_post (cos_spec p P.ha P.cos n s₀ vis q fto ftl rd mo ml c ao al) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨xs, a', run, hC', hg, hd, hP', hA'⟩ := cosF_okC hkp henv P hIlpf dn fe n (by omega) hm hC hA hbs hft hftb
+  obtain ⟨xs, a', run, hC', hg, hd, hP', hA'⟩ := cosF_okC hkp henv P hIlpf hOpf dn fe n (by omega) hm hC hA hbs hft hftb
     hR hms hmsb hcAs hlp hnpk hsz5 hP hsh hftP hrdP hmsP hcsP hformer hMs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩
 
 section ccs
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (P : CcsProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+  (P : CcsProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
   (vis q fto ftl rd mo ml qo : Word) (bs : BlockShape) (formerTys : List EIdx) (R : ClassRead)
   (ms : List TargetMajor) (m0 : Mem)
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {MsP : List ConLeche.TargetMajor}
   {rdP : ConLeche.ClassRead}
-include hkp henv P hIlpf
+include hkp henv P hIlpf hOpf
 
 /-- **`classes_ctors`' loop under `StageC`** (twin side: con-ron's `classesCtors_spec`'s list
 induction, the extension after one class from con-ron's `classCtorsOf_spec` on its run). -/
@@ -838,7 +843,7 @@ theorem ccsW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
     exact hf.elim
   | succ k' =>
   obtain ⟨s1, hs1, -, hok1, hC1, hg1, hd1, hP1, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (classCtorsOf_refinesC hkp henv P.toCosProg hIlpf (k' + 1) (by omega) _ a dn fe vis q fto ftl rd mo ml c
+    (classCtorsOf_refinesC hkp henv P.toCosProg hIlpf hOpf (k' + 1) (by omega) _ a dn fe vis q fto ftl rd mo ml c
       (UInt64.ofNat o) (UInt64.ofNat l) bs formerTys R ms ms[c.toNat].ctors hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft)
       (Nat.le_trans hftb hg.1) (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg)
       hmsb (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) (hlp0.grow hcts' hsz0 hg hk) hnpk
@@ -917,8 +922,8 @@ end ccs
 
 section ccsf
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (P : CcsProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
-include hkp henv P hIlpf
+  (P : CcsProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+include hkp henv P hIlpf hOpf
 
 /-- `ccsW_okC` from the fresh result slice. -/
 theorem ccsF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q fto ftl rd mo ml : Word} {r : List Word}
@@ -956,7 +961,7 @@ theorem ccsF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vi
   obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hC.stage
   have hf1 := allocW_mfr hal
   have hA1 := allocW_afr hal hA
-  obtain ⟨xss, a', run, hC', hg', -, ht', hP', hA', ps', hps', hfa'⟩ := ccsW_okC hkp henv P hIlpf dn fe vis q fto ftl rd
+  obtain ⟨xss, a', run, hC', hg', -, ht', hP', hA', ps', hps', hfa'⟩ := ccsW_okC hkp henv P hIlpf hOpf dn fe vis q fto ftl rd
     mo ml qo bs formerTys R ms m hbs hft hftb hR hms hmsb hlp hnpk hsz5 hq hformer hMs (n + 1) hn m1 m2 a 0
     [] [] MsP hl (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1
     (KeepW.of_mfr hf1) (by omega) UInt64.zero_le (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP
@@ -971,7 +976,7 @@ end ccsf
 denotations and scoping as con-ron's `classesCtors_spec` asks). -/
 @[refines ConRon.Arena.classesCtors]
 theorem classesCtors_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
-    (henv : ConLeche.EnvWF env) (P : CcsProg p) (hIlpf : IlpfF p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (henv : ConLeche.EnvWF env) (P : CcsProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl rd mo ml : Word) (bs : BlockShape)
     (formerTys : List EIdx) (R : ClassRead) (ms : List TargetMajor) (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem)
     (hbs : BSOK s₀.mem q.toNat bs) (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
@@ -999,7 +1004,7 @@ theorem classesCtors_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   | succ n =>
   refine triple_post (ccs_spec p P.ha P.ccs n s₀ vis q fto ftl rd mo ml) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨xss, a', run, hC', hg, hd, hP', hA'⟩ := ccsF_okC hkp henv P hIlpf dn fe n (by omega) hm hC hA hbs hft
+  obtain ⟨xss, a', run, hC', hg, hd, hP', hA'⟩ := ccsF_okC hkp henv P hIlpf hOpf dn fe n (by omega) hm hC hA hbs hft
     hftb hR hms hmsb hlp hnpk hsz5 hP hsh hftP hrdP hmsP hformer hMs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hd, hP', hA'⟩

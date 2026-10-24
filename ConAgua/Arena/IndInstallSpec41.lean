@@ -7,6 +7,7 @@ import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.RecClassSpecM
 import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.IndRealBle
 
 
 /-!
@@ -312,6 +313,8 @@ structure GrcProg (p : Prog) : Prop where
   gpa : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll
   prep : p.lookup "gen_rec_check_prep" = some genRecCheckPrep
   grc : p.lookup "gen_rec_check" = some genRecCheckL
+  ble : BleProg p
+  opf : OpfF p
 
 /-- The callees of `gen_rec_check_prep` that keep the recursor check's walk memos by their program
 text. -/

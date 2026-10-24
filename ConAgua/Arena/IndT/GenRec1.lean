@@ -10,7 +10,7 @@ import ConRon.Bridge.Inductives.BlockRec
 `gen_rec_check_prep`'s first part (`grpAW_ok`'s, `IndInstallSpec41`) under `StageC`; twin side
 con-ron's `genRecCheck_spec`'s proof: `targetRecPins` (`targetRecPins_spec`, a `PSpecP`),
 `classStreamRecs` (`classStreamRecs_refinesC`, con-ron's `classStreamRecs_spec` on its run),
-`blockLargeElimAllowed` (its stub contract, con-ron's `blockLargeElimAllowed_cspec`). Also:
+`blockLargeElimAllowed` (`blockLargeElimAllowed_simC`, `IndRealBle`). Also:
 `StageC.of_checkE` (`StageC` at another view and environment, from con-ron's `CheckOK` there) and
 `classesNfs_refinesLpC` (`classes_nfs` under `StageC` with the classes' constructors'
 level-parameter slices, `classesNfs_refinesLp`'s).
@@ -272,6 +272,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     (hms.1.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg12).get (OMono.decPL (fun q => decTM_mono q) _ _)
   have hmsb : mO.toNat + mL.toNat < 2 ^ 64 := hS.lt64 hms.2
   have hsh2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
+  have hsrc2 : ShapeSrc s2.mem pp := partsHsrc_grow hg12 (partsShapeFacts hbs.1 hbs.2.1).2.1 hbs.2.1
   by_cases hn0 : nested = 0
   · rw [grpK2_any (h1 := hk0) (h := h7) (hn := hn0)] at h
     cases c3 : callW p n "gen_rec_check_any_no_member" [mO, mL] s2.mem with
@@ -288,17 +289,13 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     | some q4 =>
     obtain ⟨r4, m4⟩ := q4
     rw [c4] at h
-    obtain ⟨s4, hs4, -, hst⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-      (stubM_spec p "block_large_elim_allowed" n _ [pp, r3.headD 0]) c4
-    simp only at hs4 hst; subst hs4
-    obtain ⟨al, a4, hr4, hS4, hm4, hd4⟩ := blockLargeElimAllowed_spec dn vis fe pp (r3.headD 0) bs _ _ a2 _ hst
-      ⟨hS2, hbs.1.grow (decBS_mono _) hg12⟩
-    obtain ⟨c3', -⟩ := ConRon.Bridge.Inductives.blockLargeElimAllowed_cspec fe bs pP _ a2 a4 al hC2.check
-      hsh2 hr4
-    have hC4 : StageC dn vis fe env s2.mem a4 := hC2.of_check (by rw [← hm4]; exact hS4) hA2 c3'.ok c3'.ext
+    obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
+      (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
+    subst hm4
+    have c3' := p4.toCore hC2.check
     by_cases h0 : r4.headD 0 = 0
     · rw [grpK4_bad (h := h0)] at h; cases h
-    rw [grpK4_ok (h := h0), hm4] at h
+    rw [grpK4_ok (h := h0)] at h
     have hal : al = true := by rw [← hd4.1]; simpa using h0
     refine hgoal s2.mem a4 hC4 hg12 hP2 (hk1.trans hk2) hA2 hcs2
       (hlarge_run _ a2 a4 al (by rw [hany, hn0]; rfl) hr4 hal rfl) (c12.trans c3')
@@ -309,17 +306,13 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     | some q4 =>
     obtain ⟨r4, m4⟩ := q4
     rw [c4] at h
-    obtain ⟨s4, hs4, -, hst⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-      (stubM_spec p "block_large_elim_allowed" n _ [pp, nested]) c4
-    simp only at hs4 hst; subst hs4
-    obtain ⟨al, a4, hr4, hS4, hm4, hd4⟩ := blockLargeElimAllowed_spec dn vis fe pp nested bs _ _ a2 _ hst
-      ⟨hS2, hbs.1.grow (decBS_mono _) hg12⟩
-    obtain ⟨c3', -⟩ := ConRon.Bridge.Inductives.blockLargeElimAllowed_cspec fe bs pP _ a2 a4 al hC2.check
-      hsh2 hr4
-    have hC4 : StageC dn vis fe env s2.mem a4 := hC2.of_check (by rw [← hm4]; exact hS4) hA2 c3'.ok c3'.ext
+    obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
+      (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
+    subst hm4
+    have c3' := p4.toCore hC2.check
     by_cases h0 : r4.headD 0 = 0
     · rw [grpK4_bad (h := h0)] at h; cases h
-    rw [grpK4_ok (h := h0), hm4] at h
+    rw [grpK4_ok (h := h0)] at h
     have hal : al = true := by rw [← hd4.1]; simpa using h0
     have hnb : (nested != 0) = ((nested != 0) || ms.any (·.member.isNone)) := by
       have : (nested != 0) = true := by simpa using hn0
