@@ -205,6 +205,25 @@ theorem ConsR.cons_hit (hW : C.WF) (h : ConsR C R m on P Q) (t : Word) (ht : t �
 
 /-! ## Keeping the relation -/
 
+/-- **The relation survives any change that keeps the table's arrays, its `CTL` words (counts,
+flag, scratch epoch) and every node's relation and hash** (e.g. the pool growing under `lit`). -/
+theorem ConsR.mono {m' : Mem} (h : ConsR C R m on P Q) (hra : m'.arr64 C.ra = m.arr64 C.ra)
+    (hsa : m'.arr64 C.sa = m.arr64 C.sa) (hsz : (m'.arr64 CTL).size = (m.arr64 CTL).size)
+    (hc : ∀ x, x = 1 ∨ x = SCB ∨ x = C.ca ∨ x = C.ca + 1 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (hR : ∀ t i a, R m t i a → R m' t i a) (hh : ∀ t i, C.hsM m' t i = C.hsM m t i) :
+    ConsR C R m' on P Q := by
+  obtain ⟨⟨h1, h2⟩, hfl, hT0, hT1, hG⟩ := h
+  have tier : ∀ t (tb : Tbl α (Idx k) δ), t ≤ 1 → TierR C.sch R C.hsM m t tb →
+      TierR C.sch R C.hsM m' t tb := fun t tb ht hT =>
+    tierR_mono C.sch R C.hsM m m' t tb hra hsa
+      (by simp only [cntW]; rcases word_le_one t ht with rfl | rfl
+          · exact hc _ (.inr (.inr (.inl (by simp [ConsSch.sch]))))
+          · exact hc _ (.inr (.inr (.inr rfl))))
+      (by simp only [baseW, hc SCB (.inr (.inl rfl))]) (hR t) (hh t) hT
+  exact ⟨⟨by rw [hsz]; exact h1, by rw [hc SCB (.inr (.inl rfl))]; exact h2⟩,
+    by rw [hc 1 (.inl rfl)]; exact hfl, tier 0 P (by decide) hT0, tier 1 Q (by decide) hT1,
+    growR_of_sa C.sch m m' hsa hG⟩
+
 /-- **A table's relation survives a writer it is apart from** (`Frame.lean`'s `Apart`, `RLocal`). -/
 theorem ConsR.frame (hW : C.WF) {A₀ : List ArrId} {C₀ : List Word}
     (hl : RLocal C.sch R C.hsM A₀ C₀) {A : List ArrId} {Cw : List Word}
