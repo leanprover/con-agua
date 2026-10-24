@@ -290,3 +290,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,lmretro,claude-opus-5-5,30,20,"R3 Ind*: 24 functions on l_model (helper), -1048 lines, 28 files 2101 G -> 1911 G"
 2026-10-24,lmretro,claude-opus-5-5,30,20,"R3 RecClass*: 34 functions on l_model (helper), -1212 lines in 11 files, 1304 G -> 1217 G"
 2026-10-24,blkcopy,claude-opus-5-5,40,30,"utf8_valid skips ASCII runs with scan!; asm regenerated; long_line_5mib -35%"
+2026-10-24,lmretro,claude-opus-5-5,15,25,"l_model: lfn followed by a newline, root-qualified library names in generated proofs"
