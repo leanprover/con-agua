@@ -252,8 +252,8 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       cplL a₀ := by
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
-  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN])
+    (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]) (by simp [ConsSch.wset, POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 
