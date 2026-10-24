@@ -202,12 +202,12 @@ def lsPutL (b : Array UInt8) (v : Word) : Word := lsCntN b (v + 1) 0
 `top + cnt`, leaves the pool below alone, sets the top after them, and changes nothing else. -/
 theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' →
-    top.toNat + cnt.toNat ≤ (m.arr64 POOL).size → (m.arr64 POOL).size < 2 ^ 63 →
+    top.toNat + cnt.toNat ≤ pcap m → pcap m < 2 ^ 63 →
     (lsCntN b i cnt).toNat = cnt.toNat + (itemsN b i).length ∧
-    (m'.arr64 POOL).size = (m.arr64 POOL).size ∧
-    top.toNat + (lsCntN b i cnt).toNat ≤ (m'.arr64 POOL).size ∧
-    (∀ j, j < top.toNat + cnt.toNat → (m'.arr64 POOL)[j]? = (m.arr64 POOL)[j]?) ∧
-    (∀ k (hk : k < (itemsN b i).length), (m'.arr64 POOL)[top.toNat + cnt.toNat + k]? =
+    pcap m' = pcap m ∧
+    top.toNat + (lsCntN b i cnt).toNat ≤ pcap m' ∧
+    (∀ j, j < top.toNat + cnt.toNat → (vpool m')[j]? = (vpool m)[j]?) ∧
+    (∀ k (hk : k < (itemsN b i).length), (vpool m')[top.toNat + cnt.toNat + k]? =
         some (tblW m LID (itemsN b i)[k])) ∧
     (∀ x ∈ itemsN b i, tblOK m LID x = true) ∧
     (0 < (m.arr64 CTL).size → m'.top = top + lsCntN b i cnt ∧
@@ -225,7 +225,7 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
   | case3 m i cnt h1 h2 h3 h4 h5 h6 ih =>
     intro m' h hr hs
     obtain ⟨hok, hlt⟩ := h6
-    have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+    have hlen : (m.len64 POOL).toNat = pcap m := by
       simp only [Mem.len64]; exact toNat_ofNat_size _ hs
     have htc : (top + cnt).toNat = top.toNat + cnt.toNat := by
       rw [UInt64.toNat_add]; simp; omega
@@ -284,15 +284,15 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
 
 /-- `ls_put`'s slice fits in the pool after it (what `intern_ls` needs). -/
 theorem lsPut_room (b : Array UInt8) (m m' : Mem) (v : Word) (h : lsPutW b m v = some m')
-    (hs : (m.arr64 POOL).size < 2 ^ 63) :
-    (m'.arr64 POOL).size < 2 ^ 64 ∧ m.top.toNat + (lsPutL b v).toNat ≤ (m'.arr64 POOL).size := by
+    (hs : pcap m < 2 ^ 63) :
+    pcap m' < 2 ^ 64 ∧ m.top.toNat + (lsPutL b v).toNat ≤ pcap m' := by
   unfold lsPutW at h
   split at h
   · cases h
   rename_i ht
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+  have hlen : (m.len64 POOL).toNat = pcap m := by
     simp only [Mem.len64]; exact toNat_ofNat_size _ hs
-  have ht' : m.top.toNat ≤ (m.arr64 POOL).size := by
+  have ht' : m.top.toNat ≤ pcap m := by
     have := UInt64.not_lt.mp ht; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
   obtain ⟨-, h3, h4, -⟩ := lsLoopM_facts b m.top m _ 0 m' h (by simpa using ht') hs
   exact ⟨by omega, h4⟩
@@ -746,7 +746,7 @@ theorem nodeProj_spec (n : Nat) (s₀ : St) (a c d : Word) :
       finish [projW, NONE]
 
 theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (c d : Word) :
+    (hps : pcap s₀.mem < 2 ^ 63) (c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "node_lit" [c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ litW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -774,7 +774,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (c d : Word) :
+    (hps : pcap s₀.mem < 2 ^ 63) (c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "node_lit_str" [c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ litStrW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -796,7 +796,7 @@ theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
       finish [litStrW, Keep.size]
 
 theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a c : Word) :
+    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (a c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "node_const" [a, c]
     ⦃fun r s' => LocEq s' s₀ ∧ constW b s₀.mem a c = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -822,7 +822,7 @@ theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (pl a c d : Word) :
+    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (pl a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "expr_node" [pl, a, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ nodeW b s₀.mem pl a c d = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -848,7 +848,7 @@ theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
     (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (pl idx a c d : Word) :
+    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (pl idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_expr" [pl, idx, a, c, d]
     ⦃fun _ s' => LocEq s' s₀ ∧ applyExprW b s₀.mem pl idx a c d = some s'.mem; ⊤⦄ := by
