@@ -49,7 +49,7 @@ theorem indArmSpec_of (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List Fn
     (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hlpsDn : ∀ dn, DnInj dn → ∀ (w : Word) (block : List IConstantInfo), BlockLpsDn dn w block) :
     ∀ dn, DnInj dn → IndArmSpec p dn := by
-  intro dn hdn pins n hn m m' a vis fe env block nP o l w r _ hw hdec hb _ hT _ hfold hden hM hc
+  intro dn hdn pins n hn m m' a vis fe env block nP o l w r _ hw hdec hb _ hT _ hfold hden _hlpd hM hc
   subst hw
   obtain ⟨s', hs', -, hcid⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (cid_specW p P.cid P.csl n _ vis o l w) hc
