@@ -337,51 +337,11 @@ def sameT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) 
   if sp then pure .eq
   else unfold2T mode r fe depth a b
 
-section smK
-variable (p : Prog) (n : Nat) (mode vis d a b ka ha kb hb : Word)
-
-def smK3 (m : Mem) : Option (Word × Word × Word × Mem) :=
-  llK3 (callW p n "lds_unfold2" [mode, vis, d, a, b] m)
-
-def smK2 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => if r.headD 0 ≠ 0 then some (1, 0, 0, m) else smK3 p n mode vis d a b m
-
-def smK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if 2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb ∧ r.headD 0 ≠ 0 then
-      smK2 p n mode vis d a b (callW p n "defeq_spine" [mode, vis, d, a, b] m)
-    else smK3 p n mode vis d a b m
-
-variable (r : List Word) (m : Mem)
-theorem smK3_s : smK3 p n mode vis d a b m = llK3 (callW p n "lds_unfold2" [mode, vis, d, a, b] m) := rfl
-theorem smK2_t (h : r.headD 0 ≠ 0) : smK2 p n mode vis d a b (some (r, m)) = some (1, 0, 0, m) := by
-  simp only [smK2, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem smK2_f (h : r.headD 0 = 0) : smK2 p n mode vis d a b (some (r, m)) = smK3 p n mode vis d a b m := by
-  simp only [smK2, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem smK1_t (h : 2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb ∧ r.headD 0 ≠ 0) :
-    smK1 p n mode vis d a b ka ha kb hb (some (r, m)) =
-      smK2 p n mode vis d a b (callW p n "defeq_spine" [mode, vis, d, a, b] m) := by
-  simp only [smK1]; rw [if_pos h]
-theorem smK1_f (h : ¬ (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb ∧ r.headD 0 ≠ 0)) :
-    smK1 p n mode vis d a b ka ha kb hb (some (r, m)) = smK3 p n mode vis d a b m := by
-  simp only [smK1]; rw [if_neg h]
-end smK
-
-theorem ldsSame_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : St) (mode vis d a b ka ha kb hb : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lds_same" [mode, vis, d, a, b, ka, ha, kb, hb]
-    ⦃fun r s' => LocEq s' s₀ ∧ smK1 p n mode vis d a b ka ha kb hb
-      (callW p n "same_const_heads" [a, b] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.same]
-  simp only [callFn, ldsSameL]
-  sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "same_const_heads",
-      callW_spec p n "defeq_spine", callW_spec p n "lds_unfold2"] <;>
-    finish [smK1_t, smK1_f, smK2_t, smK2_f, smK3_s, llK3_s, St.setLocs_mem']
+/-- **`lds_same` is its model `smW`** (generated). -/
+l_model ldsSame_spec (p : Prog) (hp : LazyProg p)
+  fns [hp.same ↦ smW tuple]
+  specs [callW_spec p n "same_const_heads", callW_spec p n "defeq_spine", callW_spec p n "lds_unfold2"]
+  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
 
 theorem sameRegular_w (ka ha kb hb : Word) :
     ConLeche.ReducibilityHint.sameRegular (decHintW ka ha) (decHintW kb hb) =
@@ -407,8 +367,9 @@ theorem ldsSame_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     CoreSpec p (n + 1) "lds_same" [mode, vis, d, a, b, ka, ha, kb, hb]
       (sameT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
         (decHintW ka ha) (decHintW kb hb)) decDS s₀ a₀ dn vis fe M eb Res3 := by
-  refine CoreSpec.of_model (ldsSame_spec p hp n s₀ mode vis d a b ka ha kb hb)
+  refine CoreSpec.of_model (ldsSame_spec p hp (n + 1) s₀ mode vis d a b ka ha kb hb)
     fun r s' hW => ?_
+  rw [smW.arm1] at hW
   have hS := hs.rel
   unfold sameT
   cases hc1 : callW p n "same_const_heads" [a, b] s₀.mem with
@@ -422,16 +383,16 @@ theorem ldsSame_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
   rw [sameRegular_w]
   -- the unfold arm
   have unf : ∀ (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
-      smK3 p (k + 1) mode vis d a b m₂ = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
+      smW.j1 p (k + 1) mode vis d a b 0 m₂ = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
       CoreRef (unfold2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
         a₂ decDS dn m₂ vis fe M₂ eb r s'.mem Res3 := by
     intro m₂ M₂ a₂ hS₂ h
-    rw [smK3_s] at h
+    rw [smW.j1.arm2 (hc1 := rfl)] at h
     cases hc3 : callW p (k + 1) "lds_unfold2" [mode, vis, d, a, b] m₂ with
     | none => rw [hc3] at h; cases h
     | some q =>
     obtain ⟨r₃, m₃⟩ := q
-    rw [hc3, llK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
+    rw [hc3, smW.k_lds_unfold2.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
     obtain ⟨g1, g2, g3, hm⟩ := h
     have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
       (ldsUnfold2_refines p hp hc k (hk.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
@@ -439,7 +400,7 @@ theorem ldsSame_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     rw [← hm]
     exact coreRef_redec e₃ (decDS_eq g1 g2 g3) (res3_eq g1 g2 g3 e₃.2.2.2)
   by_cases hcnd : 2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb ∧ r₁.headD 0 ≠ 0
-  · rw [smK1_t (h := hcnd)] at hW
+  · rw [smW.k_same_const_heads.arm1 (hc1 := hcnd)] at hW
     have hsch : (decide (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) && decBool r₁) = true := by
       simp only [Bool.and_eq_true, decide_eq_true_eq, hcnd.1, hcnd.2.1, hcnd.2.2.1, true_and,
         decBool_t hcnd.2.2.2]
@@ -447,16 +408,17 @@ theorem ldsSame_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     refine coreRef_callK hW rfl
         (defeqSpine_refines p hp.spine hc.store k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hwa hwb)
       fun r₂ m₂ hW e₂ M₂ hS₂ => ?_
+    rw [smW.k_defeq_spine.arm1] at hW
     by_cases h2 : r₂.headD 0 ≠ 0
-    · rw [smK2_t (h := h2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+    · rw [smW.j1.arm1 (hc1 := h2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨g1, g2, g3, hm⟩ := hW
       rw [decBool_t h2, ← hm]
       exact coreRef_ret hS₂ (by simp only [decDS, ← g1]; rfl) (res3_of hw1 hw0 hw0 g1 g2 g3)
     have h2' : r₂.headD 0 = 0 := by simpa using h2
-    rw [smK2_f (h := h2')] at hW
+    rw [h2'] at hW
     rw [decBool_f h2']
     exact unf _ _ _ hS₂ hW
-  · rw [smK1_f (h := hcnd)] at hW
+  · rw [smW.k_same_const_heads.arm2 (hc1 := hcnd)] at hW
     have hsch : (decide (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) && decBool r₁) = false := by
       by_cases hz : r₁.headD 0 = 0
       · rw [decBool_f hz]; simp
