@@ -266,57 +266,11 @@ def unfold2T (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
     deltaQuick mode r depth a₃ b₃
   | _, _ => pure .unknown
 
-section uK
-variable (p : Prog) (n : Nat) (mode vis d b : Word)
-
-def uK4 (a₃ : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => llK3 (callW p n "delta_quick" [mode, vis, d, a₃, r.headD 0] m)
-
-def uK3 (rb : List Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => uK4 p n mode vis d (r.headD 0)
-      (callW p n "whnf_core" [mode, 1, vis, d, rb.tail.headD 0] m)
-
-def uK2 (ra : List Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (rb, m) =>
-    if ra.headD 0 = 0 ∨ rb.headD 0 = 0 then some (3, 0, 0, m)
-    else uK3 p n mode vis d rb (callW p n "whnf_core" [mode, 1, vis, d, ra.tail.headD 0] m)
-
-def uK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (ra, m) => uK2 p n mode vis d ra (callW p n "unfold_definition" [vis, b] m)
-
-variable (r ra rb : List Word) (m : Mem) (a₃ : Word)
-theorem uK4_s : uK4 p n mode vis d a₃ (some (r, m)) =
-    llK3 (callW p n "delta_quick" [mode, vis, d, a₃, r.headD 0] m) := rfl
-theorem uK3_s : uK3 p n mode vis d rb (some (r, m)) = uK4 p n mode vis d (r.headD 0)
-    (callW p n "whnf_core" [mode, 1, vis, d, rb.tail.headD 0] m) := rfl
-theorem uK2_z (h : ra.headD 0 = 0 ∨ rb.headD 0 = 0) :
-    uK2 p n mode vis d ra (some (rb, m)) = some (3, 0, 0, m) := by
-  simp only [uK2, h, ↓reduceIte]
-theorem uK2_nz (h : ¬ (ra.headD 0 = 0 ∨ rb.headD 0 = 0)) : uK2 p n mode vis d ra (some (rb, m)) =
-    uK3 p n mode vis d rb (callW p n "whnf_core" [mode, 1, vis, d, ra.tail.headD 0] m) := by
-  simp only [uK2, h, ↓reduceIte]
-theorem uK1_s : uK1 p n mode vis d b (some (ra, m)) =
-    uK2 p n mode vis d ra (callW p n "unfold_definition" [vis, b] m) := rfl
-end uK
-
-theorem ldsUnfold2_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lds_unfold2" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ uK1 p n mode vis d b (callW p n "unfold_definition" [vis, a] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.unfold2]
-  simp only [callFn, ldsUnfold2L]
-  sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "unfold_definition",
-      callW_spec p n "whnf_core", callW_spec p n "delta_quick"] <;>
-    finish [uK1_s, uK2_z, uK2_nz, uK3_s, uK4_s, llK3_s, St.setLocs_mem']
+/-- **`lds_unfold2` is its model `uW`** (generated). -/
+l_model ldsUnfold2_spec (p : Prog) (hp : LazyProg p)
+  fns [hp.unfold2 ↦ uW tuple]
+  specs [callW_spec p n "unfold_definition", callW_spec p n "whnf_core", callW_spec p n "delta_quick"]
+  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
 
 /-- **`lds_unfold2` refines `unfold2T`** at the knot. -/
 theorem ldsUnfold2_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
@@ -326,17 +280,18 @@ theorem ldsUnfold2_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n 
     CoreSpec p (n + 1) "lds_unfold2" [mode, vis, d, a, b]
       (unfold2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
       decDS s₀ a₀ dn vis fe M eb Res3 := by
-  refine CoreSpec.of_model (ldsUnfold2_spec p hp n s₀ mode vis d a b)
+  refine CoreSpec.of_model (ldsUnfold2_spec p hp (n + 1) s₀ mode vis d a b)
     fun r s' hW => ?_
+  rw [uW.arm1] at hW
   have hS := hs.rel
   unfold unfold2T
   refine coreRef_callK hW rfl (hc.unfold n _ a₀ dn vis fe M eb a hS ha)
     fun ra m₁ hW e₁ M₁ hS₁ => ?_
-  rw [uK1_s] at hW
+  rw [uW.k_unfold_definition.arm1] at hW
   refine coreRef_callK hW rfl (hc.unfold n _ _ dn vis fe M₁ eb b hS₁ hb)
     fun rb m₂ hW e₂ M₂ hS₂ => ?_
   by_cases h0 : ra.headD 0 = 0 ∨ rb.headD 0 = 0
-  · rw [uK2_z (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [uW.k_unfold_definition_2.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨g1, g2, g3, hm⟩ := hW
     rw [← hm]
     rcases h0 with h0 | h0
@@ -345,23 +300,23 @@ theorem ldsUnfold2_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n 
     · rw [decOptR_none h0]
       cases decOptR ra <;>
         exact coreRef_ret hS₂ (by simp only [decDS, ← g1]; rfl) (res3_of hw3 hw0 hw0 g1 g2 g3)
-  rw [uK2_nz (h := h0)] at hW
+  rw [uW.k_unfold_definition_2.arm2 (hc1 := h0)] at hW
   have ha0 : ra.headD 0 ≠ 0 := fun h => h0 (.inl h)
   have hb0 : rb.headD 0 ≠ 0 := fun h => h0 (.inr h)
   rw [decOptR_some ha0, decOptR_some hb0]
   refine coreRef_callK hW rfl
       ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2)
     fun r₃ m₃ hW e₃ M₃ hS₃ => ?_
-  rw [uK3_s] at hW
+  rw [uW.k_whnf_core.arm1] at hW
   refine coreRef_callK hW rfl
       ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.2.2.2.2)
     fun r₄ m₄ hW e₄ M₄ hS₄ => ?_
-  rw [uK4_s] at hW
+  rw [uW.k_whnf_core_2.arm1] at hW
   cases hc5 : callW p n "delta_quick" [mode, vis, d, r₃.headD 0, r₄.headD 0] m₄ with
   | none => rw [hc5] at hW; cases hW
   | some q =>
   obtain ⟨r₅, m₅⟩ := q
-  rw [hc5, llK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  rw [hc5, uW.k_delta_quick.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨g1, g2, g3, hm⟩ := hW
   obtain ⟨k, rfl⟩ := callW_succ hc5
   have e₅ := CoreSpec.of_callW (s₀ := ⟨m₄, Locals.init []⟩)
