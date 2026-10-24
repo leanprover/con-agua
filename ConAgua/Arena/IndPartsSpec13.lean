@@ -408,8 +408,7 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨pc, cv, ts', rfl, hw, hpb, hcv, hts'⟩ := partsPSl_cons hts hc
     rw [hw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) hcv hpb
-    rcases hb : resContW n m (rdW (m.arr64 EREC) (UInt64.ofNat pc)) with _ | b <;> rw [hb] at h
-    · simp [bpfK1] at h
+    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpfK1])
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
@@ -419,11 +418,9 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
     rw [bpfK1_ok n m cto ctl lo ll _ b hb0] at h
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    rcases h1 : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat pc + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat pc + 2)) with _ | ⟨rp, m1⟩ <;> rw [h1] at h
-    · simp [bpfK2] at h
+    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpfK2])
     rw [bpfK2_some] at h
-    rcases he : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with _ | e <;> rw [he] at h
-    · simp [bpfK3] at h
+    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpfK3])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS hcv hpb hl hlb
     by_cases he0 : e = 0
     · rw [bpfK3_ne n m1 cto ctl lo ll e he0] at h
@@ -527,8 +524,7 @@ theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       rw [hw, hpw1] at hnp; exact hnpeq.mp (by simpa using hnp)
     rw [hw, hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
-    rcases hb : resContW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) with _ | b <;> rw [hb] at h
-    · simp [bpcK1] at h
+    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpcK1])
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
@@ -538,11 +534,9 @@ theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.and_false, Bool.false_and]; rfl⟩
     rw [bpcK1_ok n m nP cso csl lo ll _ b hb0] at h
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    rcases h1 : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 2)) with _ | ⟨rp, m1⟩ <;> rw [h1] at h
-    · simp [bpcK2] at h
+    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpcK2])
     rw [bpcK2_some] at h
-    rcases he : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with _ | e <;> rw [he] at h
-    · simp [bpcK3] at h
+    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpcK3])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb hl hlb
     by_cases he0 : e = 0
     · rw [bpcK3_ne n m1 nP cso csl lo ll e he0] at h

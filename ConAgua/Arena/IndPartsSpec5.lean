@@ -407,13 +407,10 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   obtain ⟨hrw, hab⟩ := iwN_rdW ha0 (by have := rc.toNat_lt; omega)
   rw [ofNat_toNat_word] at hrw
   rw [hrw] at h
-  rcases hh : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat a0 + 1))
-      (rdW (m.arr64 EREC) (UInt64.ofNat a0 + 2)) with _ | ⟨rp, m1⟩ <;> rw [hh] at h
-  · simp [lpsOneW.loK1] at h
+  obtain ⟨rp, m1, hh, h⟩ := ipK_inv h (by simp [lpsOneW.loK1])
   rw [loK1_some] at h
   obtain ⟨hsh, hdec, hg, hf, htp, hroom⟩ := erLpsW_dec hh hsz hc hE hcvR
-  rcases he : eqW n m1 (rp.headD 0) (rp.getD 1 0) wo wl with _ | e <;> rw [he] at h
-  · simp [lpsOneW.loK2] at h
+  obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [lpsOneW.loK2])
   rw [loK2_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf.2.2.1 IW]; exact hsz
@@ -471,8 +468,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
       obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
       rw [ofNat_toNat_word] at hv'
       rw [lpsGoW_cons n m ro rl wo wl hl, hv'] at h
-      rcases h1 : lpsOneW n m (UInt64.ofNat v) wo wl with _ | ⟨r1, m1⟩ <;> rw [h1] at h
-      · simp [lgK1] at h
+      obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [lgK1])
       have hvv : (UInt64.ofNat v).toNat = v := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hvb)
       have hwb' : wo.toNat + wl.toNat ≤ iwTop m := by have := hg0.1; omega
       obtain ⟨hr1, hg1, hf1, hw1⟩ := lpsOneW_ok n m m1 (UInt64.ofNat v) wo wl r1 rc ns h1 hsz hc
@@ -487,8 +483,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
         have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
         have hrl1 : (rl - 1).toNat = k := by
           rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
-        rcases hrec : lpsGoW n m1 (ro + 1) (rl - 1) wo wl with _ | ⟨r2, m2⟩ <;> rw [hrec] at h
-        · simp [lgK3] at h
+        obtain ⟨r2, m2, hrec, h⟩ := ipK_inv h (by simp [lgK3])
         rw [lgK3_some] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hr2, hg2, hf2, hw2⟩ := ih m0 m1 m2 (ro + 1) (rl - 1) wo wl r2 rest ns hrec
@@ -587,8 +582,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   have hp64 : p.toNat + 9 < 2 ^ 64 := by
     have h64 : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
     omega
-  rcases h1 : lpsW n m p with _ | ⟨lr, m1⟩ <;> rw [h1] at h
-  · simp [lokK1] at h
+  obtain ⟨lr, m1, h1, h⟩ := ipK_inv h (by simp [lokK1])
   obtain ⟨hlr, hdec1, hg1, hf1, hlt1, hw1⟩ := lpsW_dec h1 hsz hc hE hq hp64
   have hq1 := hstab m1 hg1
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
@@ -605,8 +599,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   by_cases hL : rdW (m1.arr64 IW) (p + 7) ≠ 0
   · -- large
     rw [lokK1_large n m1 p lr hL] at h
-    rcases h2 : consW n m1 (rdW (m1.arr64 IW) (p + 5)) (lr.headD 0) (lr.getD 1 0) with _ | ⟨cr, m2⟩ <;> rw [h2] at h
-    · simp [lokK2] at h
+    obtain ⟨cr, m2, h2, h⟩ := ipK_inv h (by simp [lokK2])
     rw [lokK2_some] at h
     obtain ⟨w5, hw5, hw532, hw5I⟩ := iwH_rdW h4 (by omega)
     rw [e5] at hw5
@@ -621,9 +614,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
       rw [hf2.1 EREC (by simp [EREC, IW]) (by decide)]; exact hE1
     have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hf2.2.2.1 IW]; exact hsz1
     have hc2 : 200 < (m2.arr64 CTL).size := by rw [hf2.2.2.1 CTL]; exact hc1
-    rcases h3 : lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3))
-        (cr.headD 0) (cr.getD 1 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
-    · simp [lokK3] at h
+    obtain ⟨r3, m3, h3, h⟩ := ipK_inv h (by simp [lokK3])
     rw [lokK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hwant : decHL m2 (cr.headD 0).toNat (cr.getD 1 0).toNat = some (bs.elim :: bs.lps) := by
@@ -645,9 +636,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   · have hz : rdW (m1.arr64 IW) (p + 7) = 0 := by simpa using hL
     rw [lokK1_small n m1 p lr hz] at h
     have hlargeF : bs.large = false := by rw [← hlarge, hz]; rfl
-    rcases h3 : lpsGoW n m1 (rdW (m1.arr64 IW) (p + 2)) (rdW (m1.arr64 IW) (p + 3))
-        (lr.headD 0) (lr.getD 1 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
-    · simp [lokK3] at h
+    obtain ⟨r3, m3, h3, h⟩ := ipK_inv h (by simp [lokK3])
     rw [lokK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hwant : decHL m1 (lr.headD 0).toNat (lr.getD 1 0).toNat = some bs.lps := by

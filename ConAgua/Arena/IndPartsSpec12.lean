@@ -204,8 +204,7 @@ theorem bsnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       exact ⟨hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
     rw [bsnW_cons n m cto ctl hl] at h
     obtain ⟨pc, cv0, ts', rfl, hw, hpb, hcv0, hts'⟩ := partsPSl_cons hts hl
-    rcases h1 : bsnW n m (cto + 1) (ctl - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
-    · simp [bsnW.bsnK] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bsnW.bsnK])
     rw [bsnK_some] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (cto + 1) (ctl - 1) ts' r1 h1 hS hts'
     have hctolt : cto.toNat < iwTop m := by have := hts.2; have : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega
@@ -282,8 +281,7 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     have hro8 : (ro + 8).toNat = ro.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
     have hrest : DecB (fun m => decRules (erA m) (ro + 11).toNat (rl - 1).toNat) m rs' := by
       show decRules _ _ _ = _; rw [hro11, partsPred_of hL]; exact hrs'
-    rcases h1 : brhW n m (ro + 11) (rl - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
-    · simp [brhW.brhK] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [brhW.brhK])
     rw [brhK_some] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 11) (rl - 1) rs' r1 h1 hS hrest
     have hrd : rdW (m1.arr64 EREC) (ro + 8) = w := by
@@ -336,8 +334,7 @@ theorem bctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       have := partsIwLt hnF; rw [UInt64.toNat_add, hpw]; simp; omega
     obtain ⟨hcw, hcvb, hclt⟩ := partsIwRd hcvp hpw
     obtain ⟨hfw, hfb, hflt⟩ := partsIwRd hnF hp2
-    rcases h1 : bctW n m (cso + 1) (csl - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
-    · simp [bctW.bctK] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bctW.bctK])
     rw [bctK_some] at h
     obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (cso + 1) (csl - 1) cs' r1 h1 hS hcs'
     rw [partsRdIW_grow hg1 (by rw [hpw]; exact hclt), hcw, partsRdIW_grow hg1 (by rw [hp2]; exact hflt),
@@ -413,8 +410,7 @@ theorem bmoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       have := partsIwLt hglen; rw [UInt64.toNat_add, hgpw]; simp; omega
     obtain ⟨hgow, hgob, hgolt⟩ := partsIwRd hgoff hgpw
     obtain ⟨hglw, hglb, hgllt⟩ := partsIwRd hglen hgp1
-    rcases h1 : bmoW n m (cto + 1) (ctl - 1) (io + 1) (go + 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
-    · simp [bmoW.bmoK] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bmoW.bmoK])
     rw [bmoK_some] at h
     obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (cto + 1) (ctl - 1) (io + 1) (go + 1) ts' ns' gss' r1 h1 hS hts'
       hns' hnb' hgs'

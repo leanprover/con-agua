@@ -41,8 +41,7 @@ theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : Li
     | nil => rw [allInW.arm1 n m _ 0 o2 l2 rfl] at h; simp at h; simp [h]
     | @cons _ _ ws hl hs =>
       rw [allInW.arm2 n m _ _ o2 l2 hl] at h
-      rcases hb : containsW n m o2 l2 (rdW (m.arr64 IW) o1) with _ | b <;> rw [hb] at h
-      · simp [allInW.k1] at h
+      obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [allInW.k1])
       have := containsW_ok n m o2 l2 _ b ws2 h2 hb
       by_cases b0 : b = 0
       · rw [allInW.k1.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
@@ -220,8 +219,7 @@ theorem brgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     rw [brgW_cons n m ro rl hl] at h
     obtain ⟨pc, rs0, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     rw [hw] at h
-    rcases h1 : brgW n m (ro + 1) (rl - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
-    · simp [brgW.brgK] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [brgW.brgK])
     rw [brgK_some] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 1) (rl - 1) rs' r1 h1 hS hrs'
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decRS_some (show decRS (truncM m) pc = some rs0 from hrs0)

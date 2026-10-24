@@ -165,8 +165,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
           rdW (m.arr64 EREC) (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h
-      rcases hra : rrnF m [rdW (m.arr64 EREC) (UInt64.ofNat a0)] with _ | ⟨r1, m1⟩ <;> rw [hra] at h
-      · simp [recUK1] at h
+      obtain ⟨r1, m1, hra, h⟩ := ipK_inv h (by simp [recUK1])
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
         rrnF_ok dn vis fe _ hn32 m m1 a r1 hra hS
       rw [hnI] at hrun1
@@ -179,8 +178,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rfl
       · have hmiss : r1.headD 0 = 0 := by simpa using hhit
         rw [recUK1_miss n m1 ro rl r1 hmiss] at h
-        rcases hrec : recUW n m1 (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> rw [hrec] at h
-        · simp [recUK2] at h
+        obtain ⟨r2, m2, hrec, h⟩ := ipK_inv h (by simp [recUK2])
         rw [recUK2_some] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hx : x1 = false := by
@@ -500,8 +498,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   | zero => simp [wsC] at h
   | succ n =>
   rw [wsC_step] at h
-  rcases hpz : pinWordV m 53 with _ | z <;> rw [hpz] at h
-  · simp [wsK1C] at h
+  obtain ⟨z, hpz, h⟩ := ipK_inv1 h (by simp [wsK1C])
   rw [wsK1C_some] at h
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hpz
@@ -512,8 +509,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   have hfull := hS.1.pins.full hpin0
   have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
   have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
-  rcases hrb : cR n "lvl_eq_c" [s, z] m with _ | ⟨r2, m2⟩ <;> rw [hrb] at h
-  · simp [wsK2] at h
+  obtain ⟨r2, m2, hrb, h⟩ := ipK_inv h (by simp [wsK2])
   rw [wsK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hdec2⟩ :=
     hlvl n r2 m2 hpin0 (by rw [← hz]; exact hrb)

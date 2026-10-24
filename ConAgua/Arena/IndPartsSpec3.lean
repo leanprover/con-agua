@@ -183,11 +183,9 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
       · rw [hr, piBK1_nil] at hpb; simp at hpb
       obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr
       rw [piBK1_ne n m fuel _ hr] at hpb
-      rcases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with _ | ⟨rs1, m1⟩ <;> rw [hrec] at hpb
-      · simp [piBK2] at hpb
+      obtain ⟨rs1, m1, hrec, hpb⟩ := ipK_inv hpb (by simp [piBK2])
       rw [piBK2_some] at hpb
-      rcases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with _ | ⟨r2, m2⟩ <;> rw [hcons] at hpb
-      · simp [piBK3] at hpb
+      obtain ⟨r2, m2, hcons, hpb⟩ := ipK_inv hpb (by simp [piBK3])
       rw [piBK3_some] at hpb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hpb)
       obtain ⟨hvw, hty, hb⟩ := view_forall m a hR h hh hvok hg6
@@ -441,8 +439,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
   have hnl : nl.toNat = names.length := (decHL_length m hnames).symm
   have hnlw : [UInt64.ofNat names.length] = [nl] := by rw [← hnl, ofNat_toNat_word nl]
   rw [recTW_step] at hrt
-  rcases hra : stripF 6 m [mI, ty] with _ | ⟨r1, m1⟩ <;> rw [hra] at hrt
-  · simp [recTK1] at hrt
+  obtain ⟨r1, m1, hra, hrt⟩ := ipK_inv hrt (by simp [recTK1])
   obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok dn vis fe mI ty hty m m1 a r1 hra hS
   have hty' : (decI ty : EIdx) = decE ty := rfl
   cases x1 with
@@ -483,8 +480,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             tierW (r1.tail.tail.tail.headD 0) * 2) := by rw [hew]; rfl
       have hdomlt : ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0).toNat < 2 ^ 32 := by
         rw [hdomw]; exact hty2
-      rcases hra3 : gafF m1 [CWF, (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0] with _ | ⟨r3, m3⟩ <;> rw [hra3] at hrt
-      · simp [recTK3] at hrt
+      obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTK3])
       obtain ⟨x3, a3, hrun3, hS3, hg3, hdl3, hdI3⟩ :=
         gafF_ok dn vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
       have hR3 : ArenaR m3 a3 := hS3.1.arena.1
@@ -696,8 +692,7 @@ theorem bchW_two {n : Nat} {m m' : Mem} {cvT : Word} {r : List Word}
   | zero => simp [bchW] at h
   | succ n =>
     rw [bchW_step] at h
-    rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
-    · simp [bchW.bchK1] at h
+    obtain ⟨rs, m1, hp, h⟩ := ipK_inv h (by simp [bchW.bchK1])
     rw [bchK1_some] at h
     by_cases hr : eViewW m1 (rs.getD 2 0) = []
     · rw [hr] at h; simp [bchW.bchK2] at h
@@ -970,8 +965,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
   | zero => simp [bcW] at h
   | succ n =>
   rw [bcW_def] at h
-  rcases hh : bchW n m cvT with _ | ⟨r1, m1⟩ <;> rw [hh] at h
-  · simp [bcK] at h
+  obtain ⟨r1, m1, hh, h⟩ := ipK_inv h (by simp [bcK])
   rw [bcK_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hty32, hty⟩ := decCVp_type hcv hb

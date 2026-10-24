@@ -326,8 +326,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       have e3 : UInt64.ofNat v + 3 = UInt64.ofNat (v + 3) := by
         apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
       rw [acGoW_cons n m off l q k hl] at h
-      rcases hc1 : ccW n m off q k with _ | ⟨cl, m1⟩ <;> rw [hc1] at h
-      · simp [acK1] at h
+      obtain ⟨cl, m1, hc1, h⟩ := ipK_inv h (by simp [acK1])
       rw [acK1_some] at h
       have hcoW : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2) = UInt64.ofNat co := by
         rw [hvw, e2]; exact hcow

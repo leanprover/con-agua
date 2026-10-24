@@ -77,11 +77,9 @@ theorem piBW_ptop (n : Nat) : ∀ (m m' : Mem) (fuel h : Word) (rs : List Word),
     by_cases hr : eViewW m h = []
     · rw [hr, piBK1_nil] at hh; cases hh
     rw [piBK1_ne n m fuel _ hr] at hh
-    rcases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with _ | ⟨rs1, m1⟩ <;> rw [hrec] at hh
-    · simp [piBK2] at hh
+    obtain ⟨rs1, m1, hrec, hh⟩ := ipK_inv hh (by simp [piBK2])
     rw [piBK2_some] at hh
-    rcases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with _ | ⟨r2, m2⟩ <;> rw [hcons] at hh
-    · simp [piBK3] at hh
+    obtain ⟨r2, m2, hcons, hh⟩ := ipK_inv hh (by simp [piBK3])
     rw [piBK3_some] at hh
     simp only [Option.some.injEq, Prod.mk.injEq] at hh
     obtain ⟨-, rfl⟩ := hh
