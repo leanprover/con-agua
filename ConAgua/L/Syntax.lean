@@ -59,6 +59,13 @@ inductive Cmp where
   | eq | ne | ult | ule | slt | sle
   deriving Repr, DecidableEq, Inhabited
 
+/-- The byte source of a block read (lane blkcopy, docs/design/blkcopy.md): byte array `a`, or
+the constant bytes `d` (read-only data, part of the program, like `ldc`). -/
+inductive BSrc where
+  | arr (a : ArrId)
+  | rom (d : List UInt8)
+  deriving Repr, DecidableEq, Inhabited
+
 /-- Word expressions. Reading an array can fail (out of bounds); nothing else can. -/
 inductive Expr where
   | const (w : Word)
@@ -83,7 +90,21 @@ inductive Expr where
   | ld64t (a : ArrId) (t i : Expr)
   /-- The length of tier `t` of the tiered array `a`. -/
   | len64t (a : ArrId) (t : Expr)
+  /-- The little-endian word of the bytes `i, …, i + 7` of `s` (lane blkcopy). -/
+  | ld8x8 (s : BSrc) (i : Expr)
   deriving Repr, DecidableEq, Inhabited
+
+/-- A word array as the destination or source of a block copy: array `a`, or tier `t` of the
+tiered array `a` (`tierA a t`; `t` must be simple, as for `st64t`). -/
+inductive WArr where
+  | plain (a : ArrId)
+  | tier (a : ArrId) (t : Expr)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- The array id of a block operand (tier `0`'s for a tiered one). -/
+@[expose] def WArr.arr : WArr → ArrId
+  | .plain a => a
+  | .tier a _ => a
 
 /-- Conditions. `and`/`or` short-circuit. -/
 inductive Cond where
@@ -119,6 +140,14 @@ inductive Stmt where
   | gset (g : GVar) (e : Expr)
   /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
   | st64t (a : ArrId) (t i e : Expr)
+  /-- `copy D[di ..] := S[si ..] for n`: words `si, …, si + n - 1` of `S` to `di, …` of `D`, in
+  ascending order; bounds checked once, before anything is written (lane blkcopy). -/
+  | copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr)
+  /-- `copy D[di ..] := S.u8[si ..] for n`: the bytes zero-extended into words. -/
+  | copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr)
+  /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
+  (`c`: a 256-byte class table, constant data). -/
+  | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
   deriving Repr, Inhabited
 
 /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start

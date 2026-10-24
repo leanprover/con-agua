@@ -281,3 +281,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,tieracc,claude-opus-5-5,200,80,"batch 3: proof side through the accessors (scripted pconv + fixes in ~60 files): records/views/models state tfld/tcnt, viewOK by store, leaks 2175 -> 8 lines"
 2026-10-24,lmretro,claude-opus-5-5,110,60,"step 0: l_model continuations named after their call (k_g), natural negative arm hypotheses, group callees through specs, simp step mode; 7 l_model families and 17 refinements adapted by script"
 2026-10-24,tieracc,claude-opus-5-5,40,40,"batch 4: tag-indexed name-table counts by store (nameCnt), keys_ok/proj_table_name; journal + perf (instructions 1.000)"
+2026-10-24,blkcopy,claude-opus-5-5,130,45,"block primitives copy64/copy8w/scan8/ld8x8: syntax, semantics, codegen, sim proofs (SimBlock), arms in WF/write sets/prelude/subst; asm unchanged"

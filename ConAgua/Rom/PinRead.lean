@@ -27,6 +27,11 @@ byte array `PB` (DESIGN.md, "The pin data as an input"):
 
 namespace L
 
+/-- A block's constant bytes `↦ PB`. -/
+def BSrc.toPB : BSrc → BSrc
+  | .arr a => .arr a
+  | .rom _ => .arr L.Rom.PB
+
 /-- `ldc _ i ↦ PB.u8[i]`: a ROM reader turned into a pin-data reader. -/
 def Expr.toPB : Expr → Expr
   | .const w => .const w
@@ -41,6 +46,11 @@ def Expr.toPB : Expr → Expr
   | .glob g => .glob g
   | .ld64t a t i => .ld64t a t.toPB i.toPB
   | .len64t a t => .len64t a t.toPB
+  | .ld8x8 b i => .ld8x8 b.toPB i.toPB
+
+def WArr.toPB : WArr → WArr
+  | .plain a => .plain a
+  | .tier a t => .tier a t.toPB
 
 def Cond.toPB : Cond → Cond
   | .cmp c a b => .cmp c a.toPB b.toPB
@@ -62,6 +72,9 @@ def Stmt.toPB : Stmt → Stmt
   | .abort => .abort
   | .gset g e => .gset g e.toPB
   | .st64t a t i e => .st64t a t.toPB i.toPB e.toPB
+  | .copy64 d di s si n => .copy64 d.toPB di.toPB s.toPB si.toPB n.toPB
+  | .copy8w d di s si n => .copy8w d.toPB di.toPB s.toPB si.toPB n.toPB
+  | .scan8 x s i e c => .scan8 x s.toPB i.toPB e.toPB c
 
 -- con-ron: none — the transform of a ROM reader into a pin-data reader (no twin)
 def FunDecl.toPB (fd : FunDecl) : FunDecl := { fd with body := fd.body.toPB }

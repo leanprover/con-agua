@@ -84,6 +84,8 @@ syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
 syntax "len" "(" ident ")" : lexpr
 syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
 syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+/-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+syntax "le64!" "(" ident ", " lexpr ")" : lexpr
 syntax "u64" "(" lcond ")" : lexpr
 syntax "(" lexpr ")" : lexpr
 syntax:70 lexpr:70 " * " lexpr:71 : lexpr
@@ -128,6 +130,13 @@ syntax "break" : lstmt
 syntax "return " lexpr : lstmt
 syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
 syntax "abort" : lstmt
+/-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+/-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+`B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+  lexpr ")" : lstmt
 syntax "skip" : lstmt
 syntax "⟪" term "⟫" : lstmt
 
@@ -140,6 +149,14 @@ meta def splitArr (id : Ident) : MacroM (Term × String) := do
   | .str pre "u64" => return (mkIdentFrom id pre, "u64")
   | .str pre "c8" => return (mkIdentFrom id pre, "c8")
   | _ => Macro.throwErrorAt id "expected `A.u8`, `A.u64` or `D.c8`"
+
+/-- The byte source of `A.u8` / `D.c8`. -/
+meta def bsrcOf (id : Ident) : MacroM Term := do
+  let (arr, k) ← splitArr id
+  match k with
+  | "u8" => `(L.BSrc.arr $arr)
+  | "c8" => `(L.BSrc.rom $arr)
+  | _ => Macro.throwErrorAt id "expected bytes `A.u8` or `D.c8`"
 
 meta def lookupVar (env : Array Name) (id : Ident) : MacroM Term := do
   match env.idxOf? id.getId with
@@ -223,6 +240,7 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     | "u64" => `(L.Expr.len64 $arr)
     | _ => `(L.Expr.const (UInt64.ofNat (List.length $arr)))
   | `(lexpr| mulhi($a:lexpr, $b:lexpr)) => bin `(L.BinOp.mulhi) a b
+  | `(lexpr| le64!($a:ident, $i:lexpr)) => do `(L.Expr.ld8x8 $(← bsrcOf a) $(← transExpr env i))
   | `(lexpr| u64($c:lcond)) => do
     let (op, a, b) ← cmpSplit c
     `(L.Expr.cmpw $op $(← transExpr env a) $(← transExpr env b))
@@ -298,6 +316,25 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
     let es ← (#[e] ++ es.getElems).mapM (transExpr env)
     `(L.Stmt.ret [$es,*])
   | `(lstmt| abort) => `(L.Stmt.abort)
+  | `(lstmt| $x:ident := scan!($a:ident, $i:lexpr, $e:lexpr, $c:ident)) => do
+    `(L.Stmt.scan8 $(← lookupVar env x) $(← bsrcOf a) $(← transExpr env i) $(← transExpr env e) $c)
+  | `(lstmt| copy!($d:ident $[⟨$dt:lexpr⟩]?, $di:lexpr, $src:ident $[⟨$st:lexpr⟩]?, $si:lexpr, $n:lexpr)) => do
+    let (da, dk) ← splitArr d
+    unless dk == "u64" do Macro.throwErrorAt d "the destination of a copy is a word array `A.u64`"
+    let dw ← match dt with
+      | some t => do `(L.WArr.tier $da $(← transExpr env t))
+      | none => `(L.WArr.plain $da)
+    let di ← transExpr env di
+    let si ← transExpr env si
+    let n ← transExpr env n
+    let (sa, sk) ← splitArr src
+    match sk with
+    | "u64" =>
+      let sw ← match st with
+        | some t => do `(L.WArr.tier $sa $(← transExpr env t))
+        | none => `(L.WArr.plain $sa)
+      `(L.Stmt.copy64 $dw $di $sw $si $n)
+    | _ => `(L.Stmt.copy8w $dw $di $(← bsrcOf src) $si $n)
   | `(lstmt| skip) => `(L.Stmt.skip)
   | `(lstmt| ⟪$t⟫) => do
     let names := env.map fun n => Syntax.mkStrLit n.toString

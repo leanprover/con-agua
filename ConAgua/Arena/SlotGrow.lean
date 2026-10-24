@@ -88,7 +88,13 @@ def shiftE (o : Nat) : Expr → Expr
   | .ldc d i => .ldc d (shiftE o i)
   | .ld64t a t i => .ld64t a (shiftE o t) (shiftE o i)
   | .len64t a t => .len64t a (shiftE o t)
+  | .ld8x8 b i => .ld8x8 b (shiftE o i)
   | e => e
+
+/-- A block operand with its tier expression renamed. -/
+def shiftW (o : Nat) : WArr → WArr
+  | .plain a => .plain a
+  | .tier a t => .tier a (shiftE o t)
 
 /-- Condition `c` with every local variable index raised by `o`. -/
 def shiftC (o : Nat) : Cond → Cond
@@ -109,6 +115,9 @@ def shiftS (o : Nat) : Stmt → Stmt
   | .call xs f args => .call (xs.map (· + o)) f (args.map (shiftE o))
   | .gset g e => .gset g (shiftE o e)
   | .st64t a t i e => .st64t a (shiftE o t) (shiftE o i) (shiftE o e)
+  | .copy64 d di s si n => .copy64 (shiftW o d) (shiftE o di) (shiftW o s) (shiftE o si) (shiftE o n)
+  | .copy8w d di s si n => .copy8w (shiftW o d) (shiftE o di) s (shiftE o si) (shiftE o n)
+  | .scan8 x s i e c => .scan8 (x + o) s (shiftE o i) (shiftE o e) c
   | s => s
 
 end L.Arena
