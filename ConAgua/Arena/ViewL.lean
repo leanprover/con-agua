@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.StoreFields
 
 @[expose] public section
 
@@ -22,9 +23,7 @@ def maxW (x y : Word) : Word := x + (y - x) * (if x < y then 1 else 0)
 /-- Truncating `z - 1` (branch-free in L: `z - u64(0 < z)`). -/
 def predW (z : Word) : Word := z - (if 0 < z then 1 else 0)
 
-/-- The tier bit and the index of a handle word. -/
-def tierW (h : Word) : Word := (h >>> 27) &&& 1
-def idxW (h : Word) : Word := h &&& 134217727
+-- The tier bit and the index of a handle word: `tierW`, `idxW` (`StoreFields.lean`).
 
 /-- The view checks: a scratch handle needs the scratch tier open, and the index must be below
 the tier's count `CTL[c + t]`. -/

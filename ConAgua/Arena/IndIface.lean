@@ -636,49 +636,42 @@ def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
 count, an unknown tag) aborts, as the twin's `view` fails. The projections `viewBind`,
 `viewApp`, … are reads of this (the twin tests the tag first). -/
 -- con-ron: ConRon/Arena/Monad.lean:153-160 ConRon.Arena.view
-def eView : FunDecl := lfn (h) locals (g, t, i, k) {
+def eView : FunDecl := lfn (h) locals (g, t, i) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if 4294967295 < h { abort };
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return (0, BREC.u64[i * 2 + t], 0, 0) };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return (0, BVAR⟨t, i⟩.i, 0, 0) };
   if g == 1 {
-    if CTL.u64[26 + t] <= i { abort };
-    k := i * 4 + t * 2;
-    return (1, FVREC.u64[k], FVREC.u64[k + 1], 0)
+    if FVAR⟨t⟩.count <= i { abort };
+    return (1, FVAR⟨t, i⟩.i, FVAR⟨t, i⟩.ty, 0)
   };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return (2, SOREC.u64[i * 2 + t], 0, 0) };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return (2, SORT⟨t, i⟩.u, 0, 0) };
   if g == 3 {
-    if CTL.u64[18 + t] <= i { abort };
-    k := i * 4 + t * 2;
-    return (3, CREC.u64[k], CREC.u64[k + 1], 0)
+    if CONST⟨t⟩.count <= i { abort };
+    return (3, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us, 0)
   };
   if g == 4 {
-    if CTL.u64[4 + t] <= i { abort };
-    k := i * 4 + t * 2;
-    return (4, AREC.u64[k], AREC.u64[k + 1], 0)
+    if APP⟨t⟩.count <= i { abort };
+    return (4, APP⟨t, i⟩.f, APP⟨t, i⟩.a, 0)
   };
   if g == 5 {
-    if CTL.u64[28 + t] <= i { abort };
-    k := i * 4 + t * 2;
-    return (5, LAREC.u64[k], LAREC.u64[k + 1], 0)
+    if LAM⟨t⟩.count <= i { abort };
+    return (5, LAM⟨t, i⟩.ty, LAM⟨t, i⟩.b, 0)
   };
   if g == 6 {
-    if CTL.u64[30 + t] <= i { abort };
-    k := i * 4 + t * 2;
-    return (6, FAREC.u64[k], FAREC.u64[k + 1], 0)
+    if FORALL⟨t⟩.count <= i { abort };
+    return (6, FORALL⟨t, i⟩.ty, FORALL⟨t, i⟩.b, 0)
   };
   if g == 7 {
-    if CTL.u64[20 + t] <= i { abort };
-    k := i * 6 + t * 3;
-    return (7, LEREC.u64[k], LEREC.u64[k + 1], LEREC.u64[k + 2])
+    if LET⟨t⟩.count <= i { abort };
+    return (7, LET⟨t, i⟩.ty, LET⟨t, i⟩.v, LET⟨t, i⟩.b)
   };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return (8, 0, 0, 0) };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return (8, 0, 0, 0) };
   if g == 9 {
-    if CTL.u64[32 + t] <= i { abort };
-    k := i * 6 + t * 3;
-    return (9, PJREC.u64[k], PJREC.u64[k + 1], PJREC.u64[k + 2])
+    if PROJ⟨t⟩.count <= i { abort };
+    return (9, PROJ⟨t, i⟩.n, PROJ⟨t, i⟩.i, PROJ⟨t, i⟩.e)
   };
   abort
 }

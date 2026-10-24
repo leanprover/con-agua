@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Syntax
+public import ConAgua.L.TRec
 public meta import Lean
 
 public section
@@ -30,6 +31,11 @@ lfn (b_dummy, j) locals (c) {
 * `A⟨t⟩[i]` reads word `i` of tier `t` of the tiered word array `A` (`L.tierA A t`: `A`, or
   `A + tierOff` when `t & 1 = 1`); `len(A⟨t⟩)` is that tier's length, `A⟨t⟩[i] := e` writes it,
   and `R⟨t⟩[i].f` / `R⟨t⟩[i].f := e` are records in a tiered array (lane tierarr).
+* The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
+  `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
+  column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
+  tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index; `R⟨t, i⟩.f := e` writes a field
+  (the store library only).
 * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
   `len(D.c8)` is its length (a constant).
 * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
@@ -69,6 +75,12 @@ syntax ident noWs "[" lexpr "]" : lexpr
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+syntax ident noWs "⟦" lexpr "⟧" : lexpr
+syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
 syntax "len" "(" ident ")" : lexpr
 syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
 syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
@@ -105,6 +117,7 @@ syntax ident " += " lexpr : lstmt
 syntax ident " -= " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
 syntax "if " lcond lblock : lstmt
@@ -142,6 +155,9 @@ meta def localOrGlobal (env : Array Name) (id : Ident) : Option Term :=
 meta def recField (r f : Ident) : Term × Term :=
   ((r : Term), (mkIdentFrom f (r.getId ++ f.getId) : Term))
 
+/-- `R⟨t, i⟩.f`: the field constant `R.f : L.Word` of the store record `R : L.TRec`. -/
+meta def trecField (r f : Ident) : Term := mkIdentFrom f (r.getId ++ f.getId)
+
 /-- A single comparison: the operator and the operands (`a > b` is `b < a`). -/
 meta def cmpSplit : TSyntax `lcond → MacroM (Term × TSyntax `lexpr × TSyntax `lexpr)
   | `(lcond| $a:lexpr == $b:lexpr) => return (← `(L.Cmp.eq), a, b)
@@ -175,6 +191,24 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     `(L.Expr.ld64t $a $(← transExpr env t) $(← transExpr env i))
   | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
     `(L.Expr.len64t $a $(← transExpr env t))
+  | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident) => do
+    `(L.TRec.ld $r $(← transExpr env t) $(← transExpr env i) $(trecField r f))
+  | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩) => do
+    `(L.TRec.ld $r $(← transExpr env t) $(← transExpr env i) 0)
+  | `(lexpr| $r:ident⟨$t:lexpr⟩.$c:ident) => do
+    unless c.getId == `count do Macro.throwErrorAt c "expected `R⟨t⟩.count`"
+    `(L.TRec.cntE $r $(← transExpr env t))
+  | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
+    let h ← transExpr env h
+    `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) $(trecField r f))
+  | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
+    let h ← transExpr env h
+    `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) 0)
+  | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
+    match c.getId with
+    | `tier => `(L.tierE $(← transExpr env h))
+    | `idx => `(L.idxE $(← transExpr env h))
+    | _ => Macro.throwErrorAt c "expected `⟦h⟧.tier` or `⟦h⟧.idx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i
@@ -242,6 +276,8 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
       $(← transExpr env e))
   | `(lstmt| $a:ident⟨$t:lexpr⟩[$i:lexpr] := $e:lexpr) => do
     `(L.Stmt.st64t $a $(← transExpr env t) $(← transExpr env i) $(← transExpr env e))
+  | `(lstmt| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident := $e:lexpr) => do
+    `(L.TRec.st $r $(← transExpr env t) $(← transExpr env i) $(trecField r f) $(← transExpr env e))
   | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
     let (arr, b) ← splitArr a
     let i ← transExpr env i

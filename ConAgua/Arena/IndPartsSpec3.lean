@@ -36,7 +36,8 @@ theorem eViewShape (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
       finish [List.getD_cons_zero, List.getD_cons_succ, List.headD_cons]
 
 /-- `e_view`'s spec with its four result words spelt out. -/

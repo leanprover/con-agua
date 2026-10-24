@@ -70,8 +70,9 @@ theorem eView_spec (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [eViewW, tierW, idxW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+      finish [eViewW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 end L.Ind
 
