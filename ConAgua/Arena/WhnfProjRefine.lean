@@ -420,7 +420,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   generalize ho : rdW (m.arr64 CTL) 0 = o at hW c5 c6
   have hot : o = m.top := ho.symm
   have hotn : o.toNat = m.top.toNat := by rw [hot]
-  have ef : (UInt64.ofNat pcap m).toNat = pcap m := by
+  have ef : (UInt64.ofNat (pcap m)).toNat = pcap m := by
     simp; omega
   have hno : o.toNat + 9 < 2 ^ 64 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c5
@@ -441,6 +441,8 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have hpsz : ((ptMem m o).arr64 POOL).size = pcap m := by
     simp only [ptMem, ptBytes, size_set64]
   have hk := ptMem_slice m o hno hsz
+  have hkv : sliceL (vpool (ptMem m o)) o.toNat 9 = strWords "projTable" := by
+    rw [sliceL_vpool _ _ _ (by rw [hpsz]; omega) (by rw [hpsz]; omega)]; exact hk
   rcases hc1 : callW p n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩ <;>
     simp only [hc1, reduceCtorEq] at hW
   obtain ⟨c7, hW⟩ := of_ite_none hW
@@ -448,7 +450,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have ht32 : t.toNat < 2 ^ 32 := by
     have := mt UInt64.lt_iff_toNat_lt.mpr c1; simp at this; omega
   have tr1 := internNStr_refinesA p hp.litHash hp.limbsEq hp.nsMatch hp.nsFind hp.nsPush hp.nstr a₀ n
-      ⟨ptMem m o, Locals.init []⟩ t o 9 hR1 ht32 hsl "projTable" hk
+      ⟨ptMem m o, Locals.init []⟩ t o 9 hR1 ht32 hsl "projTable" hkv
   obtain ⟨s₂, hs₂, -, hok1, hR2, hres1⟩ := triple_of_callW tr1 hc1
   rw [hs₂] at hR2
   have hrun1 := AM.run_of_ok _ _ hok1

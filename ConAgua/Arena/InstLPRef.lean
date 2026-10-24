@@ -456,7 +456,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
 theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
     d.toNat + l.toNat ≤ pcap m → pcap m < 2 ^ 63 →
     b.toNat + l.toNat < 2 ^ 64 →
-    MemFrame [POOL] [] m m' ∧ (∀ i : Word, i.toNat < d.toNat → rdW (vpool m') i = rdW (vpool m) i) ∧
+    MemFrame [POOL] [] m m' ∧ (∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
       sliceL (vpool m') d.toNat l.toNat = sliceL (m.arr64 SPN) b.toNat l.toNat := by
   intro n
   induction n with
@@ -495,7 +495,7 @@ theorem spnPoolW_ok : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b 
       have e2 : rdW ((m.set64 POOL d (rdW (m.arr64 SPN) b)).arr64 POOL) d = rdW (m.arr64 SPN) b := by
         rw [rdW_set64]; simp [show d.toNat < pcap m by omega]
       simp only [rdW] at e1 e2 ⊢
-      rw [e1, e2]
+      rw [vpool_getD, e1, e2]
 
 /-- `spn_pool` above the top grows the pool. -/
 theorem spnPoolW_grows : ∀ (n : Nat) (m m' : Mem) (b d l : Word), spnPoolW n m b d l = some m' →
@@ -551,7 +551,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
     (hb : b.toNat + l.toNat < 2 ^ 64) (hW : spnLsW n m b l = some (r, m')) :
     ∃ a', (internLsNode hs).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ r.toNat < 2 ^ 32 ∧
       MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' ∧
-      (∀ i : Word, i.toNat < m.top.toNat → rdW (vpool m') i = rdW (vpool m) i) ∧
+      (∀ i : Word, i.toNat < m.top.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
       m.top.toNat ≤ m'.top.toNat ∧ pcap m' = pcap m ∧
       a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.memos = a.memos := by
   cases n with
@@ -606,9 +606,9 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   · exact (hf₁.mono (by simp) (by simp)).trans ((by rw [← hm₂]; exact (MemFrame.setCtl _ _ _).mono (by simp) (by simp)
       : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
   · intro i hi
-    rw [hpool₃v, hpool₂v]
+    rw [hpool₃, hpool₂]
     have := hg₁.2.1 i.toNat hi
-    simp only [rdW]; rw [this]
+    simp only [rdW]; rw [← vpool_getD, ← vpool_getD, this]
   · rw [htop₃, htop₂, htl]; omega
   · rw [hpool₃, hpool₂]; exact hf₁.2.2.1 POOL
 
