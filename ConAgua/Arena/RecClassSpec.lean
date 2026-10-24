@@ -200,40 +200,82 @@ theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 
 
 
+/-! ## How `class_read`'s models read `open_pis_at_fvars_f`
+
+The models of `class_read` and its callees read their `open_pis_at_fvars_f` calls through a
+`cR : CallM` (`IndCallM.lean`): `stubCall` (the stub contract, for the `StageR` proofs) or
+`realCall p` (the program's own call, for `AbsOK` across `class_read`). Their relational lemmas
+take `OpfJ cR J`: the reading refines the twin and keeps an invariant `J` of the memory, which
+every `AFr` step keeps as well (`J := True` for the stubs, `J := AbsOK` for the real call). -/
+
+/-- **`cR`'s `open_pis_at_fvars_f` refines `openPisAtFvarsF`, keeping `J`**; `J` is kept by every
+step that keeps `AbsOK`. -/
+def OpfJ (cR : CallM) (J : Mem → Prop) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    Prop :=
+  (∀ m m', AFr m m' → J m → J m') ∧
+  ∀ (N : Nat) (k e i : Word), H e → ∀ (m m' : Mem) (a : AState) (r : List Word),
+    cR N "open_pis_at_fvars_f" [k, e, i] m = some (r, m') → StageR dn vis fe m a → J m →
+    ∃ x a', (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a') ∧
+      KeepPost dn vis fe decOLE m m' a' r x ∧ J m'
+
+/-- The stubs' reading (the stub contract `openPisAtFvarsF_spec`). -/
+theorem opfJ_stub (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    OpfJ stubCall (fun _ => True) dn vis fe :=
+  ⟨fun _ _ _ _ => trivial, fun _ k e i he m m' a r h hS _ => by
+    obtain ⟨x, a', hr, hp⟩ := openPisAtFvarsF_spec dn vis fe k e i he m m' a r h hS
+    exact ⟨x, a', hr, hp, trivial⟩⟩
+
+/-- The program's own reading keeps `AbsOK` (`opfF_ok`). -/
+theorem opfJ_real {p : Prog} (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) : OpfJ (realCall p) AbsOK dn vis fe :=
+  ⟨fun _ _ h hA => h hA, fun N k e i he m m' a r h hS hA => by
+    obtain ⟨s', hs, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (opfF_spec p hOpf N _ [k, e, i]) h
+    rw [hs] at hW
+    exact opfF_ok dn vis fe k e i he m m' a r hW ⟨hS, hA⟩⟩
+
+theorem gafF_afrR {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
+  AFr.of_frame (gafF_frame h)
+
+theorem fvarHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : fvarHeadW m e = some (r, m')) :
+    AFr m m' := by
+  unfold fvarHeadW at h
+  afr_auto h [gafF_afrR]
+
 /-! ## `class_read_rec_cls` -/
 
 mutual
 /-- **The model of `class_read_rec_cls`.** -/
-def crW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def crW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, nP, mo, ml, ro, rl =>
     if rl = 0 then some ([1, 0, 0], m)
     else if rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 = 0 then none
-    else crK1 n nP mo ml ro rl
-      (stubM "open_pis_at_fvars_f" m
+    else crK1 cR n nP mo ml ro rl
+      (cR n "open_pis_at_fvars_f"
         [rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1,
-         rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0])
+         rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
 
 /-- After `open_pis_at_fvars_f`. -/
-def crK1 (n : Nat) (nP mo ml ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def crK1 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 0 then some ([0, 0, 0], m1)
-    else crK2 n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0))
+    else crK2 cR n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0))
 
 /-- After `fvar_head`. -/
-def crK2 (n : Nat) (nP mo ml ro rl : Word) (m1 : Mem) : Option (List Word × Mem) → Option (List Word × Mem)
+def crK2 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) (m1 : Mem) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else crK3 n nP mo ml ro rl m2 (cmvW (n - 1) m2 nP mo ml (r2.tail.headD 0))
+    else crK3 cR n nP mo ml ro rl m2 (cmvW (n - 1) m2 nP mo ml (r2.tail.headD 0))
 
 /-- After `class_of_motive_var`. -/
-def crK3 (n : Nat) (nP mo ml ro rl : Word) (m2 : Mem) : Option (List Word) → Option (List Word × Mem)
+def crK3 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) (m2 : Mem) : Option (List Word) → Option (List Word × Mem)
   | none => none
   | some r3 =>
     if r3.headD 0 = 0 then some ([0, 0, 0], m2)
-    else crK4 n (r3.tail.headD 0) (crW n m2 nP mo ml (ro + 1) (rl - 1))
+    else crK4 n (r3.tail.headD 0) (crW cR n m2 nP mo ml (ro + 1) (rl - 1))
 
 /-- After the recursive call. -/
 def crK4 (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -250,31 +292,31 @@ end
 
 
 section arms
-variable (n : Nat) (m m1 m2 m4 m5 : Mem) (nP mo ml ro rl c : Word) (r r1 r2 r4 r5 : List Word)
-theorem crW_nil (h : rl = 0) : crW (n + 1) m nP mo ml ro rl = some ([1, 0, 0], m) := by simp [crW, h]
+variable (cR : CallM) (n : Nat) (m m1 m2 m4 m5 : Mem) (nP mo ml ro rl c : Word) (r r1 r2 r4 r5 : List Word)
+theorem crW_nil (h : rl = 0) : crW cR (n + 1) m nP mo ml ro rl = some ([1, 0, 0], m) := by simp [crW, h]
 theorem crW_big (h : rl ≠ 0) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 = 0) :
-    crW (n + 1) m nP mo ml ro rl = none := by
+    crW cR (n + 1) m nP mo ml ro rl = none := by
   simp [crW, h, h1]
 theorem crW_cons (h : rl ≠ 0) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 ≠ 0) :
-    crW (n + 1) m nP mo ml ro rl = crK1 n nP mo ml ro rl
-      (stubM "open_pis_at_fvars_f" m
+    crW cR (n + 1) m nP mo ml ro rl = crK1 cR n nP mo ml ro rl
+      (cR n "open_pis_at_fvars_f"
         [rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1,
-         rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0]) := by
+         rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m) := by
   simp [crW, h, h1]
-theorem crK1_fail (h : r1.headD 0 = 0) : crK1 n nP mo ml ro rl (some (r1, m1)) = some ([0, 0, 0], m1) := by
+theorem crK1_fail (h : r1.headD 0 = 0) : crK1 cR n nP mo ml ro rl (some (r1, m1)) = some ([0, 0, 0], m1) := by
   rw [crK1, if_pos h]
-theorem crK1_ok (h : r1.headD 0 ≠ 0) : crK1 n nP mo ml ro rl (some (r1, m1)) =
-    crK2 n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0)) := by
+theorem crK1_ok (h : r1.headD 0 ≠ 0) : crK1 cR n nP mo ml ro rl (some (r1, m1)) =
+    crK2 cR n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0)) := by
   rw [crK1, if_neg h]
-theorem crK2_fail (h : r2.headD 0 = 0) : crK2 n nP mo ml ro rl m1 (some (r2, m2)) = some ([0, 0, 0], m2) := by
+theorem crK2_fail (h : r2.headD 0 = 0) : crK2 cR n nP mo ml ro rl m1 (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [crK2, if_pos h]
-theorem crK2_ok (h : r2.headD 0 ≠ 0) : crK2 n nP mo ml ro rl m1 (some (r2, m2)) =
-    crK3 n nP mo ml ro rl m2 (cmvW (n - 1) m2 nP mo ml (r2.tail.headD 0)) := by
+theorem crK2_ok (h : r2.headD 0 ≠ 0) : crK2 cR n nP mo ml ro rl m1 (some (r2, m2)) =
+    crK3 cR n nP mo ml ro rl m2 (cmvW (n - 1) m2 nP mo ml (r2.tail.headD 0)) := by
   rw [crK2, if_neg h]
-theorem crK3_fail (r3 : List Word) (h : r3.headD 0 = 0) : crK3 n nP mo ml ro rl m2 (some r3) = some ([0, 0, 0], m2) := by
+theorem crK3_fail (r3 : List Word) (h : r3.headD 0 = 0) : crK3 cR n nP mo ml ro rl m2 (some r3) = some ([0, 0, 0], m2) := by
   rw [crK3, if_pos h]
-theorem crK3_ok (r3 : List Word) (h : r3.headD 0 ≠ 0) : crK3 n nP mo ml ro rl m2 (some r3) =
-    crK4 n (r3.tail.headD 0) (crW n m2 nP mo ml (ro + 1) (rl - 1)) := by
+theorem crK3_ok (r3 : List Word) (h : r3.headD 0 ≠ 0) : crK3 cR n nP mo ml ro rl m2 (some r3) =
+    crK4 n (r3.tail.headD 0) (crW cR n m2 nP mo ml (ro + 1) (rl - 1)) := by
   rw [crK3, if_neg h]
 theorem crK4_fail (h : r4.headD 0 = 0) : crK4 n c (some (r4, m4)) = some ([0, 0, 0], m4) := by
   rw [crK4, if_pos h]
@@ -284,15 +326,15 @@ theorem crK4_ok (h : r4.headD 0 ≠ 0) : crK4 n c (some (r4, m4)) =
 theorem crK5_some : crK5 (some (r5, m5)) = some ([1, r5.headD 0, r5.tail.headD 0], m5) := by rw [crK5]
 end arms
 
-grind_pattern [ind_grind] crW_nil => crW (n + 1) m nP mo ml ro rl
-grind_pattern [ind_grind] crW_big => crW (n + 1) m nP mo ml ro rl
-grind_pattern [ind_grind] crW_cons => crW (n + 1) m nP mo ml ro rl
-grind_pattern [ind_grind] crK1_fail => crK1 n nP mo ml ro rl (some (r1, m1))
-grind_pattern [ind_grind] crK1_ok => crK1 n nP mo ml ro rl (some (r1, m1))
-grind_pattern [ind_grind] crK2_fail => crK2 n nP mo ml ro rl m1 (some (r2, m2))
-grind_pattern [ind_grind] crK2_ok => crK2 n nP mo ml ro rl m1 (some (r2, m2))
-grind_pattern [ind_grind] crK3_fail => crK3 n nP mo ml ro rl m2 (some r3)
-grind_pattern [ind_grind] crK3_ok => crK3 n nP mo ml ro rl m2 (some r3)
+grind_pattern [ind_grind] crW_nil => crW cR (n + 1) m nP mo ml ro rl
+grind_pattern [ind_grind] crW_big => crW cR (n + 1) m nP mo ml ro rl
+grind_pattern [ind_grind] crW_cons => crW cR (n + 1) m nP mo ml ro rl
+grind_pattern [ind_grind] crK1_fail => crK1 cR n nP mo ml ro rl (some (r1, m1))
+grind_pattern [ind_grind] crK1_ok => crK1 cR n nP mo ml ro rl (some (r1, m1))
+grind_pattern [ind_grind] crK2_fail => crK2 cR n nP mo ml ro rl m1 (some (r2, m2))
+grind_pattern [ind_grind] crK2_ok => crK2 cR n nP mo ml ro rl m1 (some (r2, m2))
+grind_pattern [ind_grind] crK3_fail => crK3 cR n nP mo ml ro rl m2 (some r3)
+grind_pattern [ind_grind] crK3_ok => crK3 cR n nP mo ml ro rl m2 (some r3)
 grind_pattern [ind_grind] crK4_fail => crK4 n c (some (r4, m4))
 grind_pattern [ind_grind] crK4_ok => crK4 n c (some (r4, m4))
 grind_pattern [ind_grind] crK5_some => crK5 (some (r5, m5))
@@ -302,10 +344,11 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
     (hcm : p.lookup "class_of_motive_var" = some classOfMotiveVar)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (had : AdF p) (n : Nat) :
+    (hp : p.lookup "class_read_rec_cls" = some classReadRecCls) (had : AdF p) (cR : CallM)
+    (hcR : CallSpec p cR) (n : Nat) :
     ∀ (s₀ : St) (nP mo ml ro rl : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_rec_cls" [nP, mo, ml, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ crW n s₀.mem nP mo ml ro rl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ crW cR n s₀.mem nP mo ml ro rl = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ nP mo ml ro rl; rw [invoke_eq _ hp]; simp only [callFn, classReadRecCls]
@@ -316,7 +359,7 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
     simp only [callFn, classReadRecCls]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "open_pis_at_fvars_f" n, fvarHead_spec p hfh hv had n,
+        hcR n "open_pis_at_fvars_f", fvarHead_spec p hfh hv had n,
         classOfMotiveVar_spec p hf hcm n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -407,29 +450,30 @@ def CrRes (m' : Mem) (r : List Word) : Option (List Nat) → Prop
       decNL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some cs ∧
       (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m'
 
-theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
+    (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (nP mo ml ro rl : Word) (r : List Word) (recs : List RecShape)
       (motPos : List Nat),
-    crW n m nP mo ml ro rl = some (r, m') → StageR dn vis fe m a →
+    crW cR n m nP mo ml ro rl = some (r, m') → StageR dn vis fe m a → J m →
     decPL m (decRS m) ro.toNat rl.toNat = some recs →
     (∀ m1, IWGrow m m1 → decPL m1 (decRS m1) ro.toNat rl.toNat = some recs) →
     decNL m mo.toNat ml.toNat = some motPos → mo.toNat + ml.toNat ≤ iwTop m →
     ro.toNat + rl.toNat < 2 ^ 64 →
     ∃ res a', (ConRon.Arena.classReadRecCls nP.toNat motPos recs).run a = .ok (res, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CrRes m' r res := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CrRes m' r res ∧ J m' := by
   induction n with
   | zero => intro m m' a nP mo ml ro rl r recs motPos h; simp [crW] at h
   | succ n ih =>
-    intro m m' a nP mo ml ro rl r recs motPos h hS hrecs hstab hmot hmt hb
+    intro m m' a nP mo ml ro rl r recs motPos h hS hJ hrecs hstab hmot hmt hb
     by_cases hrl : rl = 0
-    · rw [crW_nil n m nP mo ml ro rl hrl] at h
+    · rw [crW_nil cR n m nP mo ml ro rl hrl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hz : rl.toNat = 0 := by rw [hrl]; rfl
       rw [hz] at hrecs
       simp [decPL] at hrecs
       subst hrecs
-      refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_⟩
+      refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_, hJ⟩
       simp [CrRes, decNL]
     · have hpos : 1 ≤ rl.toNat := by
         rcases Nat.eq_zero_or_pos rl.toNat with h0 | h0
@@ -460,7 +504,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erH_rdW htyp hq3
       have hq3w : UInt64.ofNat q + 3 = UInt64.ofNat (q + 3) := by simp [UInt64.ofNat_add]
       have hguard : rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 ≠ 0 := by
-        intro h0; rw [crW_big n m nP mo ml ro rl hrl h0] at h; cases h
+        intro h0; rw [crW_big cR n m nP mo ml ro rl hrl h0] at h; cases h
       have hmIw : (UInt64.ofNat rc.mI + 1).toNat = rc.mI + 1 := by
         have h1 : rc.mI + 1 < 2 ^ 64 := by
           rw [hrd0.1, hrdm.2] at hguard
@@ -474,14 +518,14 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         rw [UInt64.toNat_add, hh]
         show (rc.mI + 1) % 2 ^ 64 = _
         exact Nat.mod_eq_of_lt h1
-      simp only [crW_cons n m nP mo ml ro rl hrl hguard, hrd0.1, hrdm.2, hrdq.1, hq3w, hwt] at h
-      cases hs : stubM "open_pis_at_fvars_f" m [UInt64.ofNat rc.mI + 1, wt, 0] with
+      simp only [crW_cons cR n m nP mo ml ro rl hrl hguard, hrd0.1, hrdm.2, hrdq.1, hq3w, hwt] at h
+      cases hs : cR n "open_pis_at_fvars_f" [UInt64.ofNat rc.mI + 1, wt, 0] m with
       | none => rw [hs] at h; simp [crK1] at h
       | some r1m =>
         obtain ⟨r1', m1⟩ := r1m
         rw [hs] at h
-        obtain ⟨res1, a1, hrun1, hS1, hg1, hdec1⟩ :=
-          openPisAtFvarsF_spec dn vis fe (UInt64.ofNat rc.mI + 1) wt 0 hwtlt m m1 a r1' hs hS
+        obtain ⟨res1, a1, hrun1, ⟨hS1, hg1, hdec1⟩, hJ1⟩ :=
+          hO.2 n (UInt64.ofNat rc.mI + 1) wt 0 hwtlt m m1 a r1' hs hS hJ
         have hrun1' : (openPisAtFvarsF (rc.mI + 1) rc.cvR.type 0) a = .ok (res1, a1) := by
           have := hrun1
           rw [hmIw, hwtd] at this
@@ -494,7 +538,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
           rw [crK1, if_pos h0] at h
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          exact ⟨none, a1, cr_fail1 nP.toNat motPos rc rest a a1 hrun1', hS1, hg1, rfl⟩
+          exact ⟨none, a1, cr_fail1 nP.toNat motPos rc rest a a1 hrun1', hS1, hg1, rfl, hJ1⟩
         | some xl =>
           obtain ⟨xs, concl⟩ := xl
           obtain ⟨h1, -, hleaf⟩ := hdec1
@@ -515,6 +559,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
             rw [hf] at h
             obtain ⟨x, a2, hrun2, hS2, hg2, hr2, hxb⟩ :=
               fvarHeadW_ok dn vis fe m1 m2 a1 ((r1'.drop 3).headD 0) hl1 r2 hf hS1
+            have hJ2 : J m2 := hO.1 _ _ (fvarHeadW_afr hf) hJ1
             have hrun2' : (ConRon.Arena.fvarHead concl) a1 = .ok (x, a2) := by
               rw [← hl2]; exact hrun2
             cases x with
@@ -524,7 +569,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
               exact ⟨none, a2, cr_fail2 nP.toNat motPos rc rest a a1 a2 xs concl hrun1' hrun2',
-                hS2, hg1.trans hg2, rfl⟩
+                hS2, hg1.trans hg2, rfl, hJ2⟩
             | some i =>
               have hi64 : i < 2 ^ 64 := hxb i rfl
               have hr20 : r2.headD 0 ≠ 0 := by rw [hr2]; show (1 : Word) ≠ 0; decide
@@ -553,7 +598,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                   simp only [Option.some.injEq, Prod.mk.injEq] at h
                   obtain ⟨rfl, rfl⟩ := h
                   exact ⟨none, a2, cr_fail3 nP.toNat motPos rc rest a a1 a2 xs concl i hrun1' hrun2' co,
-                    hS2, hg1.trans hg2, rfl⟩
+                    hS2, hg1.trans hg2, rfl, hJ2⟩
                 | some cc =>
                   rw [co] at hcm
                   have hr30 : r3.headD 0 ≠ 0 := by rw [hcm]; show (1 : Word) ≠ 0; decide
@@ -564,7 +609,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                     have := ml.toNat_lt
                     omega
                   rw [crK3, if_neg hr30, hr3t] at h
-                  cases hr : crW n m2 nP mo ml (ro + 1) (rl - 1) with
+                  cases hr : crW cR n m2 nP mo ml (ro + 1) (rl - 1) with
                   | none => rw [hr] at h; simp [crK4] at h
                   | some r4m =>
                     obtain ⟨r4, m4⟩ := r4m
@@ -581,8 +626,8 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                     have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).1
                     have hb' : (ro + 1).toNat + (rl - 1).toNat < 2 ^ 64 := by rw [hro1, hrl1]; omega
                     have hrest2 := hrest' m2 (IWGrow.refl m2)
-                    obtain ⟨res4, a4, hrun4, hS4, hg4, hres4⟩ := ih m2 m4 a2 nP mo ml (ro + 1) (rl - 1) r4 rest
-                      motPos hr hS2 hrest2 hrest' hmot2 hmt2 hb'
+                    obtain ⟨res4, a4, hrun4, hS4, hg4, hres4, hJ4⟩ := ih m2 m4 a2 nP mo ml (ro + 1) (rl - 1) r4 rest
+                      motPos hr hS2 hJ2 hrest2 hrest' hmot2 hmt2 hb'
                     have hg14 := (hg1.trans hg2).trans hg4
                     cases res4 with
                     | none =>
@@ -591,7 +636,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                       simp only [Option.some.injEq, Prod.mk.injEq] at h
                       obtain ⟨rfl, rfl⟩ := h
                       exact ⟨none, a4, cr_fail4 nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc hrun1' hrun2' co hrun4,
-                        hS4, hg14, rfl⟩
+                        hS4, hg14, rfl, hJ4⟩
                     | some cs =>
                       obtain ⟨hr41, hdn4, hle4⟩ := hres4
                       have hr40 : r4.headD 0 ≠ 0 := by rw [hr41]; decide
@@ -605,7 +650,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                         obtain ⟨rfl, rfl⟩ := h
                         obtain ⟨hS5, hg5, hdn5, htop5⟩ := consW_stageN hcw hS4 hle4 hdn4
                         refine ⟨some (cc :: cs), a4, cr_ok nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc cs
-                          hrun1' hrun2' co hrun4, hS5, hg14.trans hg5, ?_⟩
+                          hrun1' hrun2' co hrun4, hS5, hg14.trans hg5, ?_, hO.1 _ _ (consW_afr hcw) hJ4⟩
                         refine ⟨rfl, ?_, ?_⟩
                         · simpa [UInt64.toNat_ofNat_of_lt' hcc64] using hdn5
                         · simpa using Nat.le_of_eq htop5
@@ -634,10 +679,11 @@ theorem classReadRecCls_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fv
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       CrRes s'.mem r (AM.res (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀); ⊤⦄ := by
-  refine triple_post (classReadRecCls_spec p hfh hv hf hcm hc ha hsc hp had n s₀ nP mo ml ro rl) ?_
+  refine triple_post (classReadRecCls_spec p hfh hv hf hcm hc ha hsc hp had stubCall (stubCall_spec p)
+    n s₀ nP mo ml ro rl) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, hres⟩ := crW_ok dn vis fe n _ _ a₀ nP mo ml ro rl r recs motPos hm hS
-    hrecs hstab hmot hmt hb
+  obtain ⟨res, a', hrun, hS', hg, hres, -⟩ := crW_ok dn vis fe stubCall _ (opfJ_stub dn vis fe) n _ _ a₀
+    nP mo ml ro rl r recs motPos hm hS trivial hrecs hstab hmot hmt hb
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀ a' res hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
 

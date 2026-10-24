@@ -173,21 +173,22 @@ def mK2 : Option (List Word × Mem) → Option (List Word × Mem)
     else mK3 n nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0)
       (fvarHeadW m2 (r2.tail.tail.tail.headD 0))
 
-def mK1 (dom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mK1 (cR : CallM) (dom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => mK2 n nP mo ml d (stubM "open_pis_at_fvars_f" m1 [r1.tail.headD 0, dom, d])
+  | some (r1, m1) => mK2 n nP mo ml d (cR n "open_pis_at_fvars_f" [r1.tail.headD 0, dom, d] m1)
 
 end models3
 
 /-- **The model of `class_read_minor`.** -/
-def minorW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def minorW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | n + 1, m, nP, mo, ml, d, dom => mK1 n nP mo ml d dom (piBW n m CWF dom)
+  | n + 1, m, nP, mo, ml, d, dom => mK1 n nP mo ml d cR dom (piBW n m CWF dom)
 
 /-! ## Arms (for `finish`) -/
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (nP mo ml d x fo fl hd c cn t rr dom concl : Word)
+  (cR : CallM)
   (r1 r2 r3 r4 r5 r6 r7 : List Word)
 
 theorem ih1W_eq : ih1W (n + 1) m nP mo ml d x = ih1K1 n nP mo ml d (ftdF m [x]) := rfl
@@ -239,9 +240,9 @@ theorem finW_ok (h : ¬ hd >>> 28 ≠ 3) (h2 : eViewW m hd ≠ []) :
 theorem finK1_some : finK1 c cn (some (r1, m1)) = finK2 (recW m1 5 [1, c, cn, r1.headD 0, r1.tail.headD 0]) := rfl
 theorem finK2_some : finK2 (some (r2, m2)) = some ([1, r2.headD 0], m2) := rfl
 
-theorem minorW_eq : minorW (n + 1) m nP mo ml d dom = mK1 n nP mo ml d dom (piBW n m CWF dom) := rfl
-theorem mK1_some : mK1 n nP mo ml d dom (some (r1, m1)) =
-    mK2 n nP mo ml d (stubM "open_pis_at_fvars_f" m1 [r1.tail.headD 0, dom, d]) := rfl
+theorem minorW_eq : minorW cR (n + 1) m nP mo ml d dom = mK1 n nP mo ml d cR dom (piBW n m CWF dom) := rfl
+theorem mK1_some : mK1 n nP mo ml d cR dom (some (r1, m1)) =
+    mK2 n nP mo ml d (cR n "open_pis_at_fvars_f" [r1.tail.headD 0, dom, d] m1) := rfl
 theorem mK2_fail (h : r2.headD 0 = 0) : mK2 n nP mo ml d (some (r2, m2)) = some ([0, 0], m2) := by
   rw [mK2, if_pos h]
 theorem mK2_ok (h : r2.headD 0 ≠ 0) : mK2 n nP mo ml d (some (r2, m2)) =
@@ -292,8 +293,8 @@ grind_pattern [ind_grind] finW_nil => finW (n + 1) m nP mo ml d fo fl hd c
 grind_pattern [ind_grind] finW_ok => finW (n + 1) m nP mo ml d fo fl hd c
 grind_pattern [ind_grind] finK1_some => finK1 c cn (some (r1, m1))
 grind_pattern [ind_grind] finK2_some => finK2 (some (r2, m2))
-grind_pattern [ind_grind] minorW_eq => minorW (n + 1) m nP mo ml d dom
-grind_pattern [ind_grind] mK1_some => mK1 n nP mo ml d dom (some (r1, m1))
+grind_pattern [ind_grind] minorW_eq => minorW cR (n + 1) m nP mo ml d dom
+grind_pattern [ind_grind] mK1_some => mK1 n nP mo ml d cR dom (some (r1, m1))
 grind_pattern [ind_grind] mK2_fail => mK2 n nP mo ml d (some (r2, m2))
 grind_pattern [ind_grind] mK2_ok => mK2 n nP mo ml d (some (r2, m2))
 grind_pattern [ind_grind] mK3_fail => mK3 n nP mo ml d fo fl concl (some (r3, m3))
@@ -382,16 +383,16 @@ theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c 
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 include hfh hv hf hcm hi1 hc ha hsc h2 his h5 hfin htl hpb hmin had in
-theorem classReadMinor_spec (n : Nat) (s₀ : St) (nP mo ml d dom : Word) :
+theorem classReadMinor_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (nP mo ml d dom : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_minor" [nP, mo, ml, d, dom]
-    ⦃fun r s' => LocEq s' s₀ ∧ minorW n s₀.mem nP mo ml d dom = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ minorW cR n s₀.mem nP mo ml d dom = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hmin]; simp only [callFn, classReadMinor]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        piBinders_spec' p ha hc hv hsc hpb n, stubM_spec p "open_pis_at_fvars_f" n,
+        piBinders_spec' p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
         fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
         classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n] <;>
       finish (gen := 20) [rdW_eq, loc_init4]
