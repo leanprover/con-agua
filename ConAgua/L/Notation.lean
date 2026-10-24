@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Syntax
+public import ConAgua.L.TRec
 public meta import Lean
 
 public section
@@ -64,6 +65,11 @@ syntax "⟪" term "⟫" : lexpr
 syntax ident : lexpr
 syntax ident noWs "[" lexpr "]" : lexpr
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+syntax ident noWs "⟦" lexpr "⟧" : lexpr
 syntax "len" "(" ident ")" : lexpr
 syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
 syntax "u64" "(" lcond ")" : lexpr
@@ -99,6 +105,7 @@ syntax ident " += " lexpr : lstmt
 syntax ident " -= " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
 syntax "if " lcond lblock : lstmt
 syntax "if " lcond lblock " else " lblock : lstmt
 syntax "if " lcond lblock " else " lstmt : lstmt
@@ -134,6 +141,9 @@ meta def localOrGlobal (env : Array Name) (id : Ident) : Option Term :=
 meta def recField (r f : Ident) : Term × Term :=
   ((r : Term), (mkIdentFrom f (r.getId ++ f.getId) : Term))
 
+/-- `R⟨t⟩[i].f`: the field constant `R.f : L.Word` of the tiered record `R : L.TRec`. -/
+meta def trecField (r f : Ident) : Term := mkIdentFrom f (r.getId ++ f.getId)
+
 /-- A single comparison: the operator and the operands (`a > b` is `b < a`). -/
 meta def cmpSplit : TSyntax `lcond → MacroM (Term × TSyntax `lexpr × TSyntax `lexpr)
   | `(lcond| $a:lexpr == $b:lexpr) => return (← `(L.Cmp.eq), a, b)
@@ -160,6 +170,19 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
   | `(lexpr| $r:ident[$i:lexpr].$f:ident) => do
     let (R, F) := recField r f
     `(L.Expr.ld64 (L.Record.arr $R) (L.Record.at $R $(← transExpr env i) $F))
+  | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident) => do
+    `(L.TRec.ld $r $(← transExpr env t) $(← transExpr env i) $(trecField r f))
+  | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr]) => do
+    `(L.TRec.ld $r $(← transExpr env t) $(← transExpr env i) 0)
+  | `(lexpr| $r:ident⟨$t:lexpr⟩.$c:ident) => do
+    unless c.getId == `count do Macro.throwErrorAt c "expected `R⟨t⟩.count`"
+    `(L.TRec.cntE $r $(← transExpr env t))
+  | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
+    let h ← transExpr env h
+    `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) $(trecField r f))
+  | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
+    let h ← transExpr env h
+    `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) 0)
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i
@@ -221,6 +244,8 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| $r:ident[$i:lexpr].$f:ident := $e:lexpr) => do
     let (R, F) := recField r f
     `(L.Stmt.st64 (L.Record.arr $R) (L.Record.at $R $(← transExpr env i) $F) $(← transExpr env e))
+  | `(lstmt| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident := $e:lexpr) => do
+    `(L.TRec.st $r $(← transExpr env t) $(← transExpr env i) $(trecField r f) $(← transExpr env e))
   | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
     let (arr, b) ← splitArr a
     let i ← transExpr env i
