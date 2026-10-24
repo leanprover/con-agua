@@ -94,6 +94,44 @@ models cascade.
 4. **C** and **E** per area, together (both touch the same relational lemmas).
 5. **G/H** only if the user wants the L changes; H only together with A on the same code.
 
+## Decisions (user, 2026-10-24)
+
+Order approved: B (copy-paste factoring) + the low-risk part of I first, then an A pilot on one
+family whose models have ≤ 1 reader, then D, then C+E per area; G/H only if a later measurement
+shows real savings. Delete Capstone and `Scan.DriverLink`. Dropping `cR` is acceptable (live
+statements may change; census targets/links and the end-to-end statement/axioms must not).
+`scripts/loc.py` counts `lblk` blocks as L, reported separately, not as a saving.
+
 ## Log
 
-(empty: waiting for the user's choice of plan)
+### Batch 1: pilot B + I (2026-10-24)
+
+* **`loc.py`**: named statement blocks (`lblk`) count as L; a 4th column `blk_lines` (2796 at
+  master `9409753c`): master is now 18645 L / 321147 proof lines (was 15849 / 323943). The gist's
+  cache moved to `loc-cache-v2.json` (recomputed at every point) and its footnote says so.
+* **Deleted** `Capstone` (582 lines) and `Scan/DriverLink` (202); `Scan/ValidatorLink` keeps only
+  `scanLine_run` (its census link), the three whole-buffer theorems only Capstone used went with
+  them. The unbuilt `Spike/` (4 modules, 638 lines + `gen_scale.py`, "kept for reference") too.
+* **`natOpDeps`** (`DeclNatDeps`, `Checker/HoistNatRef`): the 15-way `if` chain is a table
+  (`depsTab : List (Nat × List Nat)`, pin ↦ grounds), the twin's list is `depsL (pinW m) c depsTab`
+  and the model's allocation `armsW … depsTab`; one bridge `depsArmW_eq` (the hand model, which the
+  vcgen spec still uses, equals `armsW` by six `simp only` steps), then each relational lemma is one
+  induction over the table (`armsW_keep` for `StageR`, `armsW_slice` for the hoist's `AFr`/`GrR`).
+  `natOpDeps_run` (twin ⇄ `depsW`) by `apply_ite` instead of 15 `by_cases`. 595 → 284 and 647 → 393
+  non-blank lines; `DeclNatDeps` elaboration 48 s → 41 s.
+* **`DeclNatEq`**: `nat_ap1`/`nat_ap2` and the six `nat_eq_*` arms as `Sim` chains. New helpers in
+  `DeclNatBase` (next to `CallRef`/`ntBW`): `CallRef.sim`, `CallRef.of_sim` (a `CallRef` from a
+  `Sim` of the spec's model), `Sim.ntB` (`Sim.bindK` for an `ntBW` step), `Sim.ntRet` (the last
+  `ntBW` step). A 60-line arm became 12 lines. 883 → 614; elaboration unchanged (~16 s, the vcgen
+  specs dominate).
+* **Library duplicates**: `IndSim` re-declared `SimLib`'s `Sim` and six lemmas in `L.Ind`: removed,
+  `IndSim` imports `SimLib`; the `Sim.*` lemmas declared in `L.Ind` files now live in
+  `L.Arena.Sim.*` (dot notation). `gafF_afr`, `nameCopyW_afr`, `memberNamesW_afr` existed twice
+  (`…R` copies in `RecClassSpec*`, upstream of the originals): one copy each, under the plain name.
+  (`piBW_afr`/`piBW_afrR` stay: neither file sees the other.)
+* Totals: `loc.py` proof lines 321147 → 318947 (−2200), 33 files. Full rebuild after the
+  `DeclNatBase` change ~10 min wall (64 CPU-min). Census unchanged (1328/0/1352, links 2075);
+  `checkerFile_accepts_remaining` axioms [propext, Classical.choice, Quot.sound].
+* Helpers `shrink-decl` (DeclNat*/DeclDiv*), `shrink-promote` (Promote*Ref, CIReadRef*, RomExprRef),
+  `shrink-whnf` (WhnfDeltaRefine*, DefEqMid*, ConstsResolveFRefine*, PropReadRefine*, StrLit*,
+  InferBodyBind*) started on this state.
