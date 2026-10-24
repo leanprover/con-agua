@@ -147,11 +147,11 @@ def ecK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m) =>
     if r.headD 0 >>> 28 ≠ 6 then some (0, m)
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else if tcnt m FORALL (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
     else ecK4 p n mode vis d ty1 body1 b
-      (rdW (m.arr64 FAREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2 + 1))
+      (tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
       (callW p n "defeq" [mode, vis, d,
-        rdW (m.arr64 FAREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2), ty1] m)
+        tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 0, ty1] m)
 
 def ecK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
@@ -197,12 +197,12 @@ theorem ecK4_yes (h : r.headD 0 ≠ 0) : ecK4 p n mode vis d ty1 body1 b cod2 (s
 theorem ecK3_no (h : r.headD 0 >>> 28 ≠ 6) : ecK3 p n mode vis d ty1 body1 b (some (r, m)) = some (0, m) := by
   simp only [ecK3, h, ne_eq, not_false_eq_true, ↓reduceIte]
 theorem ecK3_ok (h1 : r.headD 0 >>> 28 = 6) (h2 : ¬ (tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h3 : idxW (r.headD 0) < rdW (m.arr64 CTL) (30 + tierW (r.headD 0))) :
+    (h3 : idxW (r.headD 0) < tcnt m FORALL (tierW (r.headD 0))) :
     ecK3 p n mode vis d ty1 body1 b (some (r, m)) = ecK4 p n mode vis d ty1 body1 b
-      (rdW (m.arr64 FAREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2 + 1))
+      (tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
       (callW p n "defeq" [mode, vis, d,
-        rdW (m.arr64 FAREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2), ty1] m) := by
-  have h3' : ¬ rdW (m.arr64 CTL) (30 + tierW (r.headD 0)) ≤ idxW (r.headD 0) := by simpa using h3
+        tfld m FORALL (tierW (r.headD 0)) (idxW (r.headD 0)) 0, ty1] m) := by
+  have h3' : ¬ tcnt m FORALL (tierW (r.headD 0)) ≤ idxW (r.headD 0) := by simpa using h3
   simp only [ecK3, h1, h2, h3', ne_eq, not_true_eq_false, ↓reduceIte]
 theorem ecK2_some : ecK2 p n mode vis d ty1 body1 b (some (r, m)) =
     ecK3 p n mode vis d ty1 body1 b (callW p n "whnf" [mode, vis, d, r.headD 0] m) := rfl
@@ -255,7 +255,7 @@ theorem etaCert_spec (n : Nat) (s₀ : St) (mode vis d ty1 body1 b : Word) :
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "io_neutral", callW_spec p n "infer_io", callW_spec p n "whnf",
       callW_spec p n "defeq", callW_spec p n "eta_cert_body"] <;>
-  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+  simp_all [ecK1, ecK2, ecK3, ecK4, call1W, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
@@ -446,9 +446,9 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   have h6' : r₃.headD 0 >>> 28 = 6 := by simpa using h6
   by_cases ht : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
   · simp only [ecK3, h6', ht, ne_eq, not_true_eq_false, ↓reduceIte] at hW; cases hW
-  by_cases hi : rdW (m₃.arr64 CTL) (30 + tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
+  by_cases hi : tcnt m₃ FORALL (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
   · simp only [ecK3, h6', ht, hi, ne_eq, not_true_eq_false, ↓reduceIte] at hW; cases hW
-  have hi' : idxW (r₃.headD 0) < rdW (m₃.arr64 CTL) (30 + tierW (r₃.headD 0)) := by simpa using hi
+  have hi' : idxW (r₃.headD 0) < tcnt m₃ FORALL (tierW (r₃.headD 0)) := by simpa using hi
   rw [ecK3_ok (h1 := h6') (h2 := ht) (h3 := hi')] at hW
   simp only [h6', decide_true, ↓reduceIte]
   obtain ⟨hv, hty2, hcod2⟩ := view_forall m₃ _ hS₃.arena.1 (r₃.headD 0) hh3 ⟨ht, hi'⟩ h6'

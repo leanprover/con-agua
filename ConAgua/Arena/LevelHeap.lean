@@ -57,21 +57,21 @@ def lvNodeW (m : Mem) (p : Word) : List Word :=
       rdW (m.arr64 LH) (p - 4294967296 + 2)]
   else if tierW p ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
   else if p >>> 28 = 0 then
-    if rdW (m.arr64 CTL) (8 + tierW p) ≤ idxW p then [] else [0, 0, 0]
+    if tcnt m ZERO (tierW p) ≤ idxW p then [] else [0, 0, 0]
   else if p >>> 28 = 1 then
-    if rdW (m.arr64 CTL) (6 + tierW p) ≤ idxW p then []
-    else [1, rdW (m.arr64 SREC) (idxW p * 2 + tierW p), 0]
+    if tcnt m SUCC (tierW p) ≤ idxW p then []
+    else [1, tfld m SUCC (tierW p) (idxW p) 0, 0]
   else if p >>> 28 = 2 then
-    if rdW (m.arr64 CTL) (10 + tierW p) ≤ idxW p then []
-    else [2, rdW (m.arr64 MREC) (idxW p * 4 + tierW p * 2),
-      rdW (m.arr64 MREC) (idxW p * 4 + tierW p * 2 + 1)]
+    if tcnt m MAX (tierW p) ≤ idxW p then []
+    else [2, tfld m MAX (tierW p) (idxW p) 0,
+      tfld m MAX (tierW p) (idxW p) 1]
   else if p >>> 28 = 3 then
-    if rdW (m.arr64 CTL) (12 + tierW p) ≤ idxW p then []
-    else [3, rdW (m.arr64 IREC) (idxW p * 4 + tierW p * 2),
-      rdW (m.arr64 IREC) (idxW p * 4 + tierW p * 2 + 1)]
+    if tcnt m IMAX (tierW p) ≤ idxW p then []
+    else [3, tfld m IMAX (tierW p) (idxW p) 0,
+      tfld m IMAX (tierW p) (idxW p) 1]
   else if p >>> 28 = 4 then
-    if rdW (m.arr64 CTL) (14 + tierW p) ≤ idxW p then []
-    else [4, rdW (m.arr64 PREC) (idxW p * 2 + tierW p), 0]
+    if tcnt m PARAM (tierW p) ≤ idxW p then []
+    else [4, tfld m PARAM (tierW p) (idxW p) 0, 0]
   else []
 
 /-- con-ron: none — the level scratch heap (the twin reads `ConLeche.Level` trees back, `readLevelM`) -/
@@ -112,7 +112,7 @@ theorem lvNode_spec (p : Prog) (hp : p.lookup "lv_node" = some lvNode) (n : Nat)
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
         evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-      finish [lvNodeW, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [lvNodeW, tierW, idxW]
 
 /-! ## `lh_mk(g, a, b)`: allocate a heap node -/
 

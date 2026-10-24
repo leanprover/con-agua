@@ -208,8 +208,8 @@ theorem igoOK_succ (n : Nat) (ih : IArmOK n) : IGoOK (n + 1) := by
     · rw [instW] at hb; simp [hfu, hcut, g0, hs] at hb
     by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
     · rw [instW] at hb; simp [hfu, hcut, g0, hs, hc] at hb
-    have hv : viewOK m h 22 := ⟨hs, UInt64.not_le.mp hc⟩
-    rw [instantiate1ArmBVar, StateT.run_bind, viewBVar_run, viewBVar_okT m a hA.1 h hh hv]
+    have hv : viewOK m h BVAR := ⟨hs, UInt64.not_le.mp hc⟩
+    rw [instantiate1ArmBVar, StateT.run_bind, viewBVar_run, viewBVar_ok m a hA.1 h hh hv]
     simp only [except_ok_bind]
     by_cases he : tfld m BVAR (tierW h) (idxW h) 0 = d
     · rw [instW.arm5 n m h d v fu hfu hcut g4 g5 g6 g0 hs hc he] at hb
@@ -265,10 +265,10 @@ theorem iappArm_ok (hg : h >>> 28 = 4) :
   · rw [instAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   by_cases hc : tcnt m APP (tierW h) ≤ idxW h
   · rw [instAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
-  have hv : viewOK m h 4 := ⟨hs, UInt64.not_le.mp hc⟩
-  obtain ⟨-, hfw, haw⟩ := view_appT m a hA.1 h hh hv hg
+  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp hc⟩
+  obtain ⟨-, hfw, haw⟩ := view_app m a hA.1 h hh hv hg
   rw [instAppW.arm2 n m h d v fu hr (fun h => h hh0) hs hc] at hb
-  rw [StateT.run_bind, viewApp_run, viewApp_okT m a hA.1 h hh hv, except_ok_bind]
+  rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1 h hh hv, except_ok_bind]
   cases h1 : instW n m (tfld m APP (tierW h) (idxW h) 0) d v fu with
   | none => simp [h1, instAppW.k4] at hb
   | some p =>
@@ -295,10 +295,10 @@ theorem ilamArm_ok (hg : h >>> 28 = 5) :
   · rw [instLamW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
   · rw [instLamW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
-  have hv : viewOK m h 28 := ⟨hs, UInt64.not_le.mp hc⟩
-  obtain ⟨-, hfw, haw⟩ := view_lamT m a hA.1 h hh hv hg
+  have hv : viewOK m h LAM := ⟨hs, UInt64.not_le.mp hc⟩
+  obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1 h hh hv hg
   rw [instLamW.arm2 n m h d v fu hd1 hr (fun h => h hh0) hs hc] at hb
-  rw [StateT.run_bind, viewBind_run, viewBind_lamT m a hA.1 h hh hv hg, except_ok_bind]
+  rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1 h hh hv hg, except_ok_bind]
   cases h1 : instW n m (tfld m LAM (tierW h) (idxW h) 0) d v fu with
   | none => simp [h1, instLamW.k2] at hb
   | some p =>
@@ -329,10 +329,10 @@ theorem iforallArm_ok (hg : h >>> 28 = 6) :
   · rw [instForallW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
   · rw [instForallW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
-  have hv : viewOK m h 30 := ⟨hs, UInt64.not_le.mp hc⟩
-  obtain ⟨-, hfw, haw⟩ := view_forallT m a hA.1 h hh hv hg
+  have hv : viewOK m h FORALL := ⟨hs, UInt64.not_le.mp hc⟩
+  obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1 h hh hv hg
   rw [instForallW.arm2 n m h d v fu hd1 hr (fun h => h hh0) hs hc] at hb
-  rw [StateT.run_bind, viewBind_run, viewBind_forallT m a hA.1 h hh hv hg, except_ok_bind]
+  rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1 h hh hv hg, except_ok_bind]
   cases h1 : instW n m (tfld m FORALL (tierW h) (idxW h) 0) d v fu with
   | none => simp [h1, instForallW.k2] at hb
   | some p =>
@@ -363,10 +363,10 @@ theorem iletArm_ok (hg : h >>> 28 = 7) :
   · rw [instLetW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   by_cases hc : tcnt m LET (tierW h) ≤ idxW h
   · rw [instLetW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
-  have hv : viewOK m h 20 := ⟨hs, UInt64.not_le.mp hc⟩
-  obtain ⟨-, htw, hvw, hbw⟩ := view_letT m a hA.1 h hh hv hg
+  have hv : viewOK m h LET := ⟨hs, UInt64.not_le.mp hc⟩
+  obtain ⟨-, htw, hvw, hbw⟩ := view_let m a hA.1 h hh hv hg
   rw [instLetW.arm2 n m h d v fu hd1 hr (fun h => h hh0) hs hc] at hb
-  rw [StateT.run_bind, viewLet_run, viewLet_okT m a hA.1 h hh hv, except_ok_bind]
+  rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1 h hh hv, except_ok_bind]
   cases h1 : instW n m (tfld m LET (tierW h) (idxW h) 0) d v fu with
   | none => simp [h1, instLetW.k3] at hb
   | some p =>
@@ -398,10 +398,10 @@ theorem iprojArm_ok (hg : h >>> 28 = 9) :
   · rw [instProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
   by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
   · rw [instProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
-  have hv : viewOK m h 32 := ⟨hs, UInt64.not_le.mp hc⟩
-  obtain ⟨-, -, hew⟩ := view_projT m a hA.1 h hh hv hg
+  have hv : viewOK m h PROJ := ⟨hs, UInt64.not_le.mp hc⟩
+  obtain ⟨-, -, hew⟩ := view_proj m a hA.1 h hh hv hg
   rw [instProjW.arm2 n m h d v fu hr (fun h => h hh0) hs hc] at hb
-  rw [StateT.run_bind, viewProj_run, viewProj_okT m a hA.1 h hh hv, except_ok_bind]
+  rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1 h hh hv, except_ok_bind]
   cases h1 : instW n m (tfld m PROJ (tierW h) (idxW h) 2) d v fu with
   | none => simp [h1, instProjW.k1] at hb
   | some p =>

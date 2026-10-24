@@ -706,12 +706,10 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (Word ×
       | some (r₂, m₂) =>
         if rdW (m₂.arr64 EREC) (q + 4) >>> 28 ≠ 6 then some (0, m₂)
         else if tierW (rdW (m₂.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
-        else if rdW (m₂.arr64 CTL) (30 + tierW (rdW (m₂.arr64 EREC) (q + 4))) ≤
+        else if tcnt m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) ≤
             idxW (rdW (m₂.arr64 EREC) (q + 4)) then none
-        else some (if rdW (m₂.arr64 FAREC) (idxW (rdW (m₂.arr64 EREC) (q + 4)) * 4 +
-              tierW (rdW (m₂.arr64 EREC) (q + 4)) * 2) = r₂.headD 0 ∧
-            rdW (m₂.arr64 FAREC) (idxW (rdW (m₂.arr64 EREC) (q + 4)) * 4 +
-              tierW (rdW (m₂.arr64 EREC) (q + 4)) * 2 + 1) = r₂.headD 0 then 1 else 0, m₂)
+        else some (if tfld m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) (idxW (rdW (m₂.arr64 EREC) (q + 4))) 0 = r₂.headD 0 ∧
+            tfld m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) (idxW (rdW (m₂.arr64 EREC) (q + 4))) 1 = r₂.headD 0 then 1 else 0, m₂)
 
 theorem natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (found q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_succ_ok" [found, q]
@@ -722,7 +720,7 @@ theorem natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish [natSuccOkW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [natSuccOkW, tierW, idxW]
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
 
@@ -854,14 +852,14 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   by_cases hsc : tierW (rdW (s₀.mem.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
-  by_cases hbd : rdW (m₂.arr64 CTL) (30 + tierW (rdW (s₀.mem.arr64 EREC) (q + 4))) ≤
+  by_cases hbd : tcnt m₂ FORALL (tierW (rdW (s₀.mem.arr64 EREC) (q + 4))) ≤
       idxW (rdW (s₀.mem.arr64 EREC) (q + 4))
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
-  have hvOK : viewOK m₂ (rdW (s₀.mem.arr64 EREC) (q + 4)) 30 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK m₂ (rdW (s₀.mem.arr64 EREC) (q + 4)) FORALL := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.1 _ htyl hvOK hg'
   have hz := natSuccOk_run_forall hC.pins cv np nf _ _ _ hl0 hrun' (by
       rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forall _ htyl).mpr hg')) (by rw [hty]; exact hview)

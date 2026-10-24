@@ -153,8 +153,8 @@ theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
 /-! ## `residual_pw` -/
 
 theorem pr_viewSort_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
-    a.store.viewSort (decE h) = some (decI (rdW (m.arr64 SOREC) (idxW h * 2 + tierW h))) := by
+    (hv : viewOK m h SORT) (hg : h >>> 28 = 2) :
+    a.store.viewSort (decE h) = some (decI (tfld m SORT (tierW h) (idxW h) 0)) := by
   have hvs := (L.Ind.view_sort_f m a hR h hh hv hg).1
   unfold EStore.view at hvs; unfold EStore.viewSort EStore.persGetSort
   have ht : (decE h).tag = ETag.sort := by
@@ -207,13 +207,13 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   simp only [hg, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   by_cases hv1 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hv1] at hW
-  by_cases hv2 : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
+  by_cases hv2 : tcnt m SORT (tierW h) ≤ idxW h
   · simp [hv1, hv2] at hW
   simp only [hv1, hv2, ↓reduceIte] at hW
-  have hvo : viewOK m h 16 := ⟨hv1, UInt64.not_le.mp hv2⟩
+  have hvo : viewOK m h SORT := ⟨hv1, UInt64.not_le.mp hv2⟩
   obtain ⟨hview, hu⟩ := L.Ind.view_sort_f m a hR h hh hvo hg
   have hvs := pr_viewSort_ok m a hR h hh hvo hg
-  generalize hw : rdW (m.arr64 SOREC) (idxW h * 2 + tierW h) = u at hW hview hu hvs
+  generalize hw : tfld m SORT (tierW h) (idxW h) 0 = u at hW hview hu hvs
   obtain ⟨l, hl⟩ := (hden dn m a vis fe M eb hS).sort _ _ hview
   have hlv : LvR (nameN a.store.lss.ls.ns) m u l := by
     have := denoteL_lvR hR (decI u) l hl
@@ -387,8 +387,8 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   have hkr : NmsR (nameN a.store.lss.ls.ns) m EREC lo lc ks :=
     nmsR_of_hslice _ _ lc.toNat lps ks lo lc rfl hl hbound hk
   -- the run
-  rcases hc : callW p n "lv_spw" [o, c, lo, lc, lsO m (tierW us) (idxW us),
-      lsL m (tierW us) (idxW us)] m with _ | ⟨r, m₁⟩
+  rcases hc : callW p n "lv_spw" [o, c, lo, lc, tfld m LVLS (tierW us) (idxW us) 0,
+      tfld m LVLS (tierW us) (idxW us) 1] m with _ | ⟨r, m₁⟩
   · rw [hc] at hW; cases hW
   rw [hc] at hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

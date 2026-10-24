@@ -49,11 +49,11 @@ def arNodeW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if h >>> 28 = 6 then arForallW n m h c d k fu
     else if h >>> 28 = 1 then
       if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
+      else if tcnt m FVAR (tierW h) ≤ idxW h then none
       else if d + k < d then none
-      else if d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k then
-        if c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) < c then none
-        else binternW m (c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)))
+      else if d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k then
+        if c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0) < c then none
+        else binternW m (c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0))
       else some (h, m)
     else if h >>> 28 = 7 then arLetW n m h c d k fu
     else if h >>> 28 = 9 then arProjW n m h c d k fu
@@ -67,16 +67,16 @@ def arAppW : Nat → Mem → Word → Word → Word → Word → Word → Option
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxW h then none
     else
-      match arW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c d k fu with
+      match arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu with
       | none => none
       | some (x, m₁) =>
-        match arW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) c d k fu with
+        match arW n m₁ (tfld m APP (tierW h) (idxW h) 1) c d k fu with
         | none => none
         | some (y, m₂) =>
-          asetK h c (rbAppW m₂ h (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) x y)
+          asetK h c (rbAppW m₂ h (tfld m APP (tierW h) (idxW h) 0)
+            (tfld m APP (tierW h) (idxW h) 1) x y)
 
 /-- **The model of `abs_lam`.** -/
 def arLamW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -87,16 +87,16 @@ def arLamW : Nat → Mem → Word → Word → Word → Word → Word → Option
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+    else if tcnt m LAM (tierW h) ≤ idxW h then none
     else
-      match arW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c d k fu with
+      match arW n m (tfld m LAM (tierW h) (idxW h) 0) c d k fu with
       | none => none
       | some (x, m₁) =>
-        match arW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (c + 1) d k fu with
+        match arW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (c + 1) d k fu with
         | none => none
         | some (y, m₂) =>
-          asetK h c (rbLamW m₂ h (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) x y)
+          asetK h c (rbLamW m₂ h (tfld m LAM (tierW h) (idxW h) 0)
+            (tfld m LAM (tierW h) (idxW h) 1) x y)
 
 /-- **The model of `abs_forall`.** -/
 def arForallW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -107,16 +107,16 @@ def arForallW : Nat → Mem → Word → Word → Word → Word → Word → Opt
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+    else if tcnt m FORALL (tierW h) ≤ idxW h then none
     else
-      match arW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c d k fu with
+      match arW n m (tfld m FORALL (tierW h) (idxW h) 0) c d k fu with
       | none => none
       | some (x, m₁) =>
-        match arW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (c + 1) d k fu with
+        match arW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (c + 1) d k fu with
         | none => none
         | some (y, m₂) =>
-          asetK h c (rbForallW m₂ h (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) x y)
+          asetK h c (rbForallW m₂ h (tfld m FORALL (tierW h) (idxW h) 0)
+            (tfld m FORALL (tierW h) (idxW h) 1) x y)
 
 /-- **The model of `abs_let`.** -/
 def arLetW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -127,20 +127,20 @@ def arLetW : Nat → Mem → Word → Word → Word → Word → Word → Option
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+    else if tcnt m LET (tierW h) ≤ idxW h then none
     else
-      match arW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c d k fu with
+      match arW n m (tfld m LET (tierW h) (idxW h) 0) c d k fu with
       | none => none
       | some (x, m₁) =>
-        match arW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) c d k fu with
+        match arW n m₁ (tfld m LET (tierW h) (idxW h) 1) c d k fu with
         | none => none
         | some (y, m₂) =>
-          match arW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (c + 1) d k fu with
+          match arW n m₂ (tfld m LET (tierW h) (idxW h) 2) (c + 1) d k fu with
           | none => none
           | some (z, m₃) =>
-            asetK h c (rbLetW m₃ h (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))
-              (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-              (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) x y z)
+            asetK h c (rbLetW m₃ h (tfld m LET (tierW h) (idxW h) 0)
+              (tfld m LET (tierW h) (idxW h) 1)
+              (tfld m LET (tierW h) (idxW h) 2) x y z)
 
 /-- **The model of `abs_proj`.** -/
 def arProjW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -150,14 +150,14 @@ def arProjW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+    else if tcnt m PROJ (tierW h) ≤ idxW h then none
     else
-      match arW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c d k fu with
+      match arW n m (tfld m PROJ (tierW h) (idxW h) 2) c d k fu with
       | none => none
       | some (x, m₁) =>
-        asetK h c (rbProjW m₁ h (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) x)
+        asetK h c (rbProjW m₁ h (tfld m PROJ (tierW h) (idxW h) 0)
+          (tfld m PROJ (tierW h) (idxW h) 1)
+          (tfld m PROJ (tierW h) (idxW h) 2) x)
 end
 
 
@@ -256,14 +256,14 @@ theorem arNodeW_let (hg : h >>> 28 = 7) : arNodeW (n + 1) m h c d k fu = arLetW 
 theorem arNodeW_proj (hg : h >>> 28 = 9) : arNodeW (n + 1) m h c d k fu = arProjW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_fvar_in (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (hdk : ¬ d + k < d) (hi : d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)
-    (ho : ¬ c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) < c) :
-    arNodeW (n + 1) m h c d k fu = binternW m (c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))) := by
+theorem arNodeW_fvar_in (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+    (hdk : ¬ d + k < d) (hi : d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k)
+    (ho : ¬ c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0) < c) :
+    arNodeW (n + 1) m h c d k fu = binternW m (c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0)) := by
   rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi, ho]; simp
 
-theorem arNodeW_fvar_out (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (hdk : ¬ d + k < d) (hi : ¬ (d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)) :
+theorem arNodeW_fvar_out (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+    (hdk : ¬ d + k < d) (hi : ¬ (d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k)) :
     arNodeW (n + 1) m h c d k fu = some (h, m) := by
   rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi]; simp
 
@@ -278,13 +278,13 @@ theorem arAppW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).h
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arAppW_miss (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 = 0)
-    (hvk : viewOK m h 4) :
+    (hvk : viewOK m h APP) :
     arAppW (n + 1) m h c d k fu =
-      rappK₁ n h c d k fu (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
-        (arW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c d k fu) := by
+      rappK₁ n h c d k fu (tfld m APP (tierW h) (idxW h) 0)
+        (tfld m APP (tierW h) (idxW h) 1)
+        (arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu) := by
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c d k fu <;> rfl
+  cases arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu <;> rfl
 
 theorem arLamW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
     (hh : (mfindG abSch m h c).headD 0 ≠ 0) :
@@ -293,13 +293,13 @@ theorem arLamW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
   rw [arLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arLamW_miss (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
-    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h 28) :
+    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h LAM) :
     arLamW (n + 1) m h c d k fu =
-      rlamK₁ n h c d k fu (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (arW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c d k fu) := by
+      rlamK₁ n h c d k fu (tfld m LAM (tierW h) (idxW h) 0)
+        (tfld m LAM (tierW h) (idxW h) 1)
+        (arW n m (tfld m LAM (tierW h) (idxW h) 0) c d k fu) := by
   rw [arLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c d k fu <;> rfl
+  cases arW n m (tfld m LAM (tierW h) (idxW h) 0) c d k fu <;> rfl
 
 theorem arForallW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
     (hh : (mfindG abSch m h c).headD 0 ≠ 0) :
@@ -308,13 +308,13 @@ theorem arForallW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
   rw [arForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arForallW_miss (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
-    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h 30) :
+    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h FORALL) :
     arForallW (n + 1) m h c d k fu =
-      rfaK₁ n h c d k fu (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (arW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c d k fu) := by
+      rfaK₁ n h c d k fu (tfld m FORALL (tierW h) (idxW h) 0)
+        (tfld m FORALL (tierW h) (idxW h) 1)
+        (arW n m (tfld m FORALL (tierW h) (idxW h) 0) c d k fu) := by
   rw [arForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c d k fu <;> rfl
+  cases arW n m (tfld m FORALL (tierW h) (idxW h) 0) c d k fu <;> rfl
 
 theorem arLetW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
     (hh : (mfindG abSch m h c).headD 0 ≠ 0) :
@@ -323,18 +323,18 @@ theorem arLetW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
   rw [arLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arLetW_miss (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
-    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h 20) :
+    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h LET) :
     arLetW (n + 1) m h c d k fu =
-      rleK₁ n h c d k fu (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
-        (arW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c d k fu) := by
+      rleK₁ n h c d k fu (tfld m LET (tierW h) (idxW h) 0)
+        (tfld m LET (tierW h) (idxW h) 1)
+        (tfld m LET (tierW h) (idxW h) 2)
+        (arW n m (tfld m LET (tierW h) (idxW h) 0) c d k fu) := by
   rw [arLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c d k fu with
+  cases arW n m (tfld m LET (tierW h) (idxW h) 0) c d k fu with
   | none => rfl
   | some p =>
     obtain ⟨x, m₁⟩ := p
-    cases arW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) c d k fu <;> rfl
+    cases arW n m₁ (tfld m LET (tierW h) (idxW h) 1) c d k fu <;> rfl
 
 theorem arProjW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 ≠ 0) :
     arProjW (n + 1) m h c d k fu =
@@ -342,14 +342,14 @@ theorem arProjW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).
   rw [arProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arProjW_miss (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 = 0)
-    (hvk : viewOK m h 32) :
+    (hvk : viewOK m h PROJ) :
     arProjW (n + 1) m h c d k fu =
-      rpjK₁ h c (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2))
-        (arW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c d k fu) := by
+      rpjK₁ h c (tfld m PROJ (tierW h) (idxW h) 0)
+        (tfld m PROJ (tierW h) (idxW h) 1)
+        (tfld m PROJ (tierW h) (idxW h) 2)
+        (arW n m (tfld m PROJ (tierW h) (idxW h) 2) c d k fu) := by
   rw [arProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c d k fu <;> rfl
+  cases arW n m (tfld m PROJ (tierW h) (idxW h) 2) c d k fu <;> rfl
 
 end arms
 
@@ -578,7 +578,7 @@ theorem arNode_step (n : Nat) (ih : ArArmSpec p n) : ArNodeSpec p (n + 1) := by
       tcntM, evalE_tierE, evalE_idxE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish [viewOK, tierW, idxW]
 
 end specs
 

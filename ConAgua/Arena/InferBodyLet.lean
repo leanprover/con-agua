@@ -418,8 +418,8 @@ def faK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m) =>
     if r.headD 0 >>> 28 ≠ 2 then none
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (16 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else faK4 p n mode vis d body (rdW (m.arr64 SOREC) (idxW (r.headD 0) * 2 + tierW (r.headD 0)))
+    else if tcnt m SORT (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else faK4 p n mode vis d body (tfld m SORT (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
       (callW p n "intern_fvar" [d, ty] m)
 
 def faK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
@@ -461,8 +461,7 @@ theorem inferForallIO_spec (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
         evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [faK, faK2_some, faK3, faK4_some, faK5_some, faK6_some, faK7_some, faK8_some, call1W,
     Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, tfld,
-    tcnt, TRec.ad]
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, tfld]
 
 end ifa
 

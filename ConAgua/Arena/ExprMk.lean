@@ -65,23 +65,23 @@ in bits 0‥14, fvar range in bits 15‥29, `derFW` below): `& 32767` is `packBF
 def derBW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 0 then
-    if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then 0
-    else satSuccW (rdW (m.arr64 BREC) (idxW h * 2 + tierW h))
+    if tcnt m BVAR (tierW h) ≤ idxW h then 0
+    else satSuccW (tfld m BVAR (tierW h) (idxW h) 0)
   else if h >>> 28 = 4 then
-    if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 ADER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxW h then 0
+    else tfld m APP_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 5 then
-    if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 LADER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m LAM (tierW h) ≤ idxW h then 0
+    else tfld m LAM_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 6 then
-    if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 FADER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m FORALL (tierW h) ≤ idxW h then 0
+    else tfld m FORALL_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 7 then
-    if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 LEDER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m LET (tierW h) ≤ idxW h then 0
+    else tfld m LET_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 9 then
-    if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m PROJ (tierW h) ≤ idxW h then 0
+    else tfld m PROJ_DER (tierW h) (idxW h) 0 &&& 32767
   else 0
 
 /-- **The model of the second result of `der_b`: the fvar range** (lane `exprops3`). `bvar`/`sort`/
@@ -91,23 +91,23 @@ read the SAME packed word shifted and masked (`(>> 15) & 32767` is `packBFL_fvar
 def derFW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 1 then
-    if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then 0
-    else satSuccW (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
+    if tcnt m FVAR (tierW h) ≤ idxW h then 0
+    else satSuccW (tfld m FVAR (tierW h) (idxW h) 0)
   else if h >>> 28 = 4 then
-    if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 ADER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxW h then 0
+    else (tfld m APP_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 5 then
-    if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 LADER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m LAM (tierW h) ≤ idxW h then 0
+    else (tfld m LAM_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 6 then
-    if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 FADER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m FORALL (tierW h) ≤ idxW h then 0
+    else (tfld m FORALL_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 7 then
-    if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 LEDER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m LET (tierW h) ≤ idxW h then 0
+    else (tfld m LET_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 9 then
-    if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m PROJ (tierW h) ≤ idxW h then 0
+    else (tfld m PROJ_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else 0
 
 /-- con-ron: none — reads L's derived-range array (the twin's `bvarOfData (derived h)`); returns the
@@ -117,26 +117,26 @@ are tested in order of frequency on Init (`app` 4, `bvar` 0, `const` 3, `lam` 5,
 `sort` 2, `proj` 9, `letE` 7; lane `derb`); the tests are disjoint, so the order changes no result. -/
 def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return (0, 0, 0) };
-  if g == 4 { if CTL.u64[4 + t] <= i { return (0, 0, 0) }; x := ADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 4 { if APP⟨t⟩.count <= i { return (0, 0, 0) }; x := APP_DER⟨t, i⟩; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 0 {
-    if CTL.u64[22 + t] <= i { return (0, 0, 0) };
-    x := BREC.u64[i * 2 + t];
+    if BVAR⟨t⟩.count <= i { return (0, 0, 0) };
+    x := BVAR⟨t, i⟩.i;
     return ((x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), 0, 0)
   };
-  if g == 3 { if CTL.u64[18 + t] <= i { return (0, 0, 0) }; return (0, 0, CLP.u64[i * 2 + t]) };
-  if g == 5 { if CTL.u64[28 + t] <= i { return (0, 0, 0) }; x := LADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 3 { if CONST⟨t⟩.count <= i { return (0, 0, 0) }; return (0, 0, CONST_LP⟨t, i⟩) };
+  if g == 5 { if LAM⟨t⟩.count <= i { return (0, 0, 0) }; x := LAM_DER⟨t, i⟩; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 1 {
-    if CTL.u64[26 + t] <= i { return (0, 0, 0) };
-    x := FVREC.u64[i * 4 + t * 2];
-    return (0, (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), FVLP.u64[i * 2 + t])
+    if FVAR⟨t⟩.count <= i { return (0, 0, 0) };
+    x := FVAR⟨t, i⟩.i;
+    return (0, (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), FVAR_LP⟨t, i⟩)
   };
-  if g == 6 { if CTL.u64[30 + t] <= i { return (0, 0, 0) }; x := FADER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
-  if g == 2 { if CTL.u64[16 + t] <= i { return (0, 0, 0) }; return (0, 0, SOLP.u64[i * 2 + t]) };
-  if g == 9 { if CTL.u64[32 + t] <= i { return (0, 0, 0) }; x := PJDER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
-  if g == 7 { if CTL.u64[20 + t] <= i { return (0, 0, 0) }; x := LEDER.u64[i * 2 + t]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 6 { if FORALL⟨t⟩.count <= i { return (0, 0, 0) }; x := FORALL_DER⟨t, i⟩; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 2 { if SORT⟨t⟩.count <= i { return (0, 0, 0) }; return (0, 0, SORT_LP⟨t, i⟩) };
+  if g == 9 { if PROJ⟨t⟩.count <= i { return (0, 0, 0) }; x := PROJ_DER⟨t, i⟩; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 7 { if LET⟨t⟩.count <= i { return (0, 0, 0) }; x := LET_DER⟨t, i⟩; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   return (0, 0, 0)
 }
 
@@ -152,7 +152,7 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
       finish [derBW, derFW, exprLPW, tierW, idxW, satSuccW]
 
 attribute [arena_grind =] mkK_some
@@ -255,7 +255,8 @@ theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (
     intro b x hx; simp only [rdW]; grind
   have hd := pushZ_der m t f a hT
   have hctl := pushZ_ctl m t f a hT ht
-  refine ⟨?_, ?_, ?_⟩ <;> (try unfold derBW) <;> (try unfold derFW) <;> (try unfold exprLPW) <;> simp only [hctl] <;>
+  refine ⟨?_, ?_, ?_⟩ <;> (try unfold derBW) <;> (try unfold derFW) <;> (try unfold exprLPW) <;>
+    simp only [tcnt, tfld] <;> simp (config := {decide := true}) only [TRec.ad, ↓reduceIte] <;> simp only [hctl] <;>
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
   simp (config := {decide := true}) only [hd, pushZ_arr, BREC, FVREC, FVLP, SOLP, CLP, ADER, LADER,
     FADER, LEDER, PJDER, CTL, AREC, ASLOT, LAREC, LASLOT, FAREC, FASLOT, ne_eq] <;>
@@ -292,9 +293,13 @@ theorem der_congr {S : ArrId} (hS : S = ASLOT ∨ S = LASLOT ∨ S = FASLOT) {m�
     (hf : ∀ b, b ≠ S → m₂.arr64 b = m₃.arr64 b) (h : Word) :
     derBW m₂ h = derBW m₃ h ∧ derFW m₂ h = derFW m₃ h ∧ exprLPW m₂ h = exprLPW m₃ h := by
   rcases hS with rfl | rfl | rfl <;>
-  simp only [derBW, derFW, exprLPW, hf CTL (by decide), hf BREC (by decide), hf ADER (by decide),
-    hf LADER (by decide), hf FADER (by decide), hf LEDER (by decide), hf PJDER (by decide),
-    hf FVREC (by decide), hf FVLP (by decide), hf SOLP (by decide), hf CLP (by decide), and_self]
+  simp only [derBW, derFW, exprLPW, hf CTL (by decide), tcnt_arr_eq _ (hf CTL (by decide)),
+    tfld_arr_eq (R := BVAR) (hf BREC (by decide)), tfld_arr_eq (R := APP_DER) (hf ADER (by decide)),
+    tfld_arr_eq (R := LAM_DER) (hf LADER (by decide)), tfld_arr_eq (R := FORALL_DER) (hf FADER (by decide)),
+    tfld_arr_eq (R := LET_DER) (hf LEDER (by decide)), tfld_arr_eq (R := PROJ_DER) (hf PJDER (by decide)),
+    tfld_arr_eq (R := FVAR) (hf FVREC (by decide)), tfld_arr_eq (R := FVAR_LP) (hf FVLP (by decide)),
+    tfld_arr_eq (R := SORT_LP) (hf SOLP (by decide)), tfld_arr_eq (R := CONST_LP) (hf CLP (by decide)),
+    and_self]
 
 theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 4 ≠ cnt2 m 4) :
@@ -426,7 +431,7 @@ def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl) {
   s := CTL.u64[4] + CTL.u64[5];
   r := call intern_app(f, a);
   if CTL.u64[4] + CTL.u64[5] != s {
-    q := (r & 134217727) * 2 + ((r >> 27) & 1);
+    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
     if len(ADER.u64) <= q { abort };
     ADER.u64[q] := 0;
     (x, xf, xl) := call der_b(f);
@@ -453,7 +458,7 @@ def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl) {
   s := CTL.u64[28] + CTL.u64[29];
   r := call intern_lam(t, b);
   if CTL.u64[28] + CTL.u64[29] != s {
-    q := (r & 134217727) * 2 + ((r >> 27) & 1);
+    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
     if len(LADER.u64) <= q { abort };
     LADER.u64[q] := 0;
     (x, xf, xl) := call der_b(t);
@@ -478,7 +483,7 @@ def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl) {
   s := CTL.u64[30] + CTL.u64[31];
   r := call intern_forall(t, b);
   if CTL.u64[30] + CTL.u64[31] != s {
-    q := (r & 134217727) * 2 + ((r >> 27) & 1);
+    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
     if len(FADER.u64) <= q { abort };
     FADER.u64[q] := 0;
     (x, xf, xl) := call der_b(t);
@@ -509,7 +514,7 @@ def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, y
   s := CTL.u64[20] + CTL.u64[21];
   r := call intern_letE(t, v, b);
   if CTL.u64[20] + CTL.u64[21] != s {
-    q := (r & 134217727) * 2 + ((r >> 27) & 1);
+    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
     if len(LEDER.u64) <= q { abort };
     x := x + (y - x) * u64(x < y);
     z := z - u64(0 < z) + u64(z == 32767);
@@ -533,7 +538,7 @@ def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl) {
   s := CTL.u64[32] + CTL.u64[33];
   r := call intern_proj(n, i, e);
   if CTL.u64[32] + CTL.u64[33] != s {
-    q := (r & 134217727) * 2 + ((r >> 27) & 1);
+    q := (⟦r⟧.idx) * 2 + (⟦r⟧.tier);
     if len(PJDER.u64) <= q { abort };
     PJDER.u64[q] := x + xf * 32768 + xl * 1073741824
   };
@@ -578,7 +583,7 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
         derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -596,7 +601,7 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
         derB_spec p hd n, internLamL_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, mkLamW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -614,7 +619,7 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
         derB_spec p hd n, internForallL_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, mkForallW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -632,7 +637,7 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
         derB_spec p hd n, internLet_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [mkLetW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -650,7 +655,7 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
         derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [mkProjW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]

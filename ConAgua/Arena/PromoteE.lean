@@ -33,9 +33,9 @@ def peW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
   else memoK peSch h (callW p n "pe_arm" [f - 1, h] m)
 
 /-- The literal record's words. -/
-abbrev ltK (m : Mem) (h : Word) : Word := rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4)
-abbrev ltO (m : Mem) (h : Word) : Word := rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)
-abbrev ltL (m : Mem) (h : Word) : Word := rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)
+abbrev ltK (m : Mem) (h : Word) : Word := tfld m LIT (tierW h) (idxW h) 0
+abbrev ltO (m : Mem) (h : Word) : Word := tfld m LIT (tierW h) (idxW h) 1
+abbrev ltL (m : Mem) (h : Word) : Word := tfld m LIT (tierW h) (idxW h) 2
 
 /-- **The model of `pe_lit(h)`.** -/
 def peLitW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
@@ -163,7 +163,7 @@ theorem promoteE_spec (f h : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec peSch p _ (hp.get "pe_find") n, memoPutG_spec peSch p _ (hp.get "pe_put") n,
       callW_spec p n "pe_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [peW_pers, peW_hit, peW_miss, memoK_some, mvG, tierW, tfld, tcnt, TRec.ad]
+    finish [peW_pers, peW_hit, peW_miss, memoK_some, mvG, tierW]
 
 theorem peArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_arm" [f, h]
@@ -188,7 +188,7 @@ theorem peLit_spec (h : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pi_lit_str", callW_spec p n "pi_lit", evalE_tld, tld, evalE_cnt, tcntM,
       evalE_tierE, evalE_idxE] <;>
-    finish [peLitW, hd1_some, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [peLitW, hd1_some, tierW, idxW]
 
 theorem peConst_spec (f a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_const" [f, a, b]
