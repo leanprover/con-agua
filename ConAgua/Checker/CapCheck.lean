@@ -60,7 +60,8 @@ def capTail : Stmt :=
   .seq (.ite (.cmp .ult (.len64 CTL) (.const (UInt64.ofNat ctlMin))) .abort .skip)
     (.seq (.ite (.cmp .eq (.len64 67) (.const 0)) .abort .skip)
       (.seq (.ite (.cmp .eq (.len64 68) (.const 0)) .abort .skip)
-        (.ret [.const 0])))
+        (.seq (.ite (.cmp .ule (.const 1099511627776) (.len64 0)) .abort .skip)
+          (.ret [.const 0]))))
 
 /-- A run of the checks of the arrays `l`, then `t`, that returns: every array of `l` has a
 length below `2^62` as a word, and the run is `t`'s. -/
@@ -114,7 +115,9 @@ theorem capTail_run {p : Prog} {k : Stmt → M Sig} (s : St) (r : Sig) (s' : St)
   · simp [hc, hd, run_throw', error_bind'] at h
   by_cases hq : s.mem.len64 68 = 0
   · simp [hc, hd, hq, run_throw', error_bind'] at h
-  · simp [hc, hd, hq] at h
+  by_cases hp : (1099511627776 : Word) ≤ s.mem.len64 0
+  · simp [hc, hd, hq, hp, run_throw', error_bind'] at h
+  · simp [hc, hd, hq, hp] at h
     change Except.ok _ = _ at h
     cases h
     refine ⟨?_, hd, hq, rfl, rfl⟩

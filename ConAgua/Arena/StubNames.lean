@@ -81,18 +81,20 @@ def reservedRecNameL : FunDecl := lfn (n) locals (r) {
 def poolRoom : FunDecl := lfn (k) locals (o) {
   o := CTL.u64[0];
   if o + k < o { abort };
-  if len(POOL.u64) < o + k { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o + k - ⦃o⦄.base { abort };
   CTL.u64[0] := o + k;
   return o
 }
 
 /-- `name_rec(n)`: the name `n.rec`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
-def nameRecL : FunDecl := lfn (n) locals (o, s) {
+def nameRecL : FunDecl := lfn (n) locals (o, s, pt, pb) {
   o := call pool_room(3);
-  POOL.u64[o] := 114;
-  POOL.u64[o + 1] := 101;
-  POOL.u64[o + 2] := 99;
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  POOL⟨pt⟩[o - pb] := 114;
+  POOL⟨pt⟩[o + 1 - pb] := 101;
+  POOL⟨pt⟩[o + 2 - pb] := 99;
   s := call intern_nstr(n, o, 3);
   if s >= 4294967296 { abort };
   return s
@@ -112,19 +114,21 @@ def decLen : FunDecl := lfn (x) locals (k) {
 
 /-- `name_rec_i(n, i)`: the name `n.rec_i` (`i` in decimal). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
-def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s) {
+def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   k := call dec_len(i);
   o := call pool_room(k + 4);
-  POOL.u64[o] := 114;
-  POOL.u64[o + 1] := 101;
-  POOL.u64[o + 2] := 99;
-  POOL.u64[o + 3] := 95;
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  POOL⟨pt⟩[o - pb] := 114;
+  POOL⟨pt⟩[o + 1 - pb] := 101;
+  POOL⟨pt⟩[o + 2 - pb] := 99;
+  POOL⟨pt⟩[o + 3 - pb] := 95;
   j := o + 4 + k;
   x := i;
   while o + 4 < j {
     j -= 1;
     q := mulhi(x, 14757395258967641293) >> 3;
-    POOL.u64[j] := 48 + (x - q * 10);
+    POOL⟨pt⟩[j - pb] := 48 + (x - q * 10);
     x := q
   };
   s := call intern_nstr(n, o, k + 4);
@@ -136,9 +140,11 @@ def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s) {
 
 /-- `iw_pool(s, d, l)`: `POOL[d + j] := IW[s + j]` for `j < l`. -/
 -- con-ron: none — L scratch-array plumbing (the twin's list is a value)
-def iwPool : FunDecl := lfn (s, d, l) locals (u) {
+def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
   if l == 0 { return 0 };
-  POOL.u64[d] := IW.u64[s];
+  pt := ⦃d⦄.tier;
+  pb := ⦃d⦄.base;
+  POOL⟨pt⟩[d - pb] := IW.u64[s];
   u := call iw_pool(s + 1, d + 1, l - 1);
   return 0
 }

@@ -60,7 +60,7 @@ def exprPut : FunDecl := tblPutG EID "esp_find" "esp_put"
 
 /-! ## `ls_put(v)` -/
 
-def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
+def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h, pt, pb) {
   while 0 == 0 {
     if len(IN.u8) <= i { CTL.u64[0] := top + cnt; return (top, cnt) };
     c := IN.u8[i];
@@ -71,8 +71,8 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
       x := call read_nat(i, e);
       if x == 18446744073709551615 { abort };
       h := call level_get(x);
-      if len(POOL.u64) <= top + cnt { abort };
-      POOL.u64[top + cnt] := h;
+      if len(POOL⟨pt⟩) <= pb + cnt { abort };
+      POOL⟨pt⟩[pb + cnt] := h;
       cnt += 1;
       i := e
     } else {
@@ -82,9 +82,11 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
-def lsPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h) {
+def lsPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h, pt, pb) {
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
+  if len(POOL⟨pt⟩) < pb { abort };
   i := v + 1;
   ⟪lsLoop⟫;
   return (0, 0)
@@ -385,8 +387,8 @@ def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
   (o, l) := call nat_dec(c, d);
-  if len(POOL.u64) < o { abort };
-  if len(POOL.u64) - o < l { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
   h := call intern_lit(o, l);
   return h
 }
@@ -418,8 +420,8 @@ of `0` aborts (as `apply_str`'s), the sentinel for "no body". -/
 def nodeLitStr : FunDecl := lfn (c, d) locals (o, l, h) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
-  if len(POOL.u64) < o { abort };
-  if len(POOL.u64) - o < l { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
   h := call intern_lit_str(o, l);
   return h
 }

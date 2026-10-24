@@ -59,42 +59,44 @@ end mac
 
 /-! ## `nat_mul(oa, la, ob, lb)`: append `a * b` to the pool, return its length -/
 
-def zeroLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t) {
+def zeroLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
   while i < la {
-    POOL.u64[top + i] := 0;
+    POOL⟨pt⟩[pb + i] := 0;
     i += 1
   }
 }
 
 /-- One row: add `a * y`, shifted by `j` limbs, into the result (con-ron's `mul_u64_from`). -/
-def colLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t) {
+def colLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
   while i < la {
-    x := POOL.u64[oa + i];
-    t := POOL.u64[top + i + j];
-    POOL.u64[top + i + j] := x * y + t + c;
+    x := POOL⦃oa + i⦄;
+    t := POOL⟨pt⟩[pb + i + j];
+    POOL⟨pt⟩[pb + i + j] := x * y + t + c;
     c := call mac_hi(x, y, t, c);
     i += 1
   }
 }
 
 /-- All rows (con-ron's `mul_from`). -/
-def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t) {
+def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
   while j < lb {
-    y := POOL.u64[ob + j];
+    y := POOL⦃ob + j⦄;
     c := 0;
     i := 0;
     ⟪colLoop⟫;
-    POOL.u64[top + la + j] := c;
+    POOL⟨pt⟩[pb + la + j] := c;
     j += 1
   }
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t) {
+def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := la + lb;
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪zeroLoop⟫;
   ⟪rowLoop⟫;
   n := call nat_trim(top, n);

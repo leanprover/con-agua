@@ -71,7 +71,7 @@ grind_pattern [arena_grind] hashN_succ => hashN p o k', hashN p o k, p[j]
 
 def hashLoop : Stmt := lblk (o, l, i, h) {
   while i < l {
-    h := (h ^ POOL.u64[o + i]) * ⟪fnvPrime⟫;
+    h := (h ^ POOL⦃o + i⦄) * ⟪fnvPrime⟫;
     i += 1
   }
 }
@@ -169,9 +169,28 @@ grind_pattern [arena_grind] eqW_end => eqW p a b l i
 grind_pattern [arena_grind] eqW_ne => eqW p a b l i, p[ja], p[jb]
 grind_pattern [arena_grind] eqW_eq => eqW p a b l i, p[ja], p[jb], eqW p a b l i'
 
+/-! `limbs_eq` reads the pool through tagged addresses (`POOL⦃a + i⦄`); its model compares the
+virtual pool `vpool m` (`Pool.lean`), whose word `x` is the tagged read `prd m x`, so that the spec
+needs no bound on the record's slice. -/
+
+theorem vpool_rd (m : Mem) (x : Word) : (vpool m)[x.toNat]?.getD 0 = prd m x := by
+  rw [vpool_get?]; rfl
+
+theorem eqWv_ne (m : Mem) (a b l i : Word) (hi : i < l) (hne : prd m (a + i) ≠ prd m (b + i)) :
+    eqW (vpool m) a b l i = false := by
+  rw [eqW]; simp only [hi, ↓reduceIte, vpool_rd, hne]
+
+theorem eqWv_eq (m : Mem) (a b l i i' : Word) (hi : i < l) (hi' : i' = i + 1)
+    (he : prd m (a + i) = prd m (b + i)) : eqW (vpool m) a b l i = eqW (vpool m) a b l i' := by
+  subst hi'
+  rw [eqW]; simp only [hi, ↓reduceIte, vpool_rd, he]
+
+grind_pattern [arena_grind] eqWv_ne => eqW (vpool m) a b l i, prd m (a + i), prd m (b + i)
+grind_pattern [arena_grind] eqWv_eq => eqW (vpool m) a b l i, prd m (a + i), prd m (b + i), eqW (vpool m) a b l i'
+
 def eqLoop : Stmt := lblk (a, b, l, i) {
   while i < l {
-    if POOL.u64[a + i] != POOL.u64[b + i] { return 0 };
+    if POOL⦃a + i⦄ != POOL⦃b + i⦄ { return 0 };
     i += 1
   }
 }
@@ -210,7 +229,7 @@ include hp in
 theorem limbsEq_spec (n : Nat) (s₀ : St) (a b l : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "limbs_eq" [a, b, l]
-    ⦃fun r s' => s' = s₀ ∧ r = [if eqW (s₀.mem.arr64 POOL) a b l 0 then 1 else 0]; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r = [if eqW (vpool s₀.mem) a b l 0 then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, limbsEq]
   cases n with

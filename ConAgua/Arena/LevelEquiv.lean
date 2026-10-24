@@ -148,7 +148,7 @@ def equivsW : Nat → Mem → Word → Word → Word → Word → Option (Word �
   | 0, _, _, _, _, _ => none
   | n + 1, m, a, ln, b, k =>
     if ln = 0 ∨ k = 0 then some (if ln = k then 2 else 1, m)
-    else esK n a ln b k (equivW n m (rdW (m.arr64 POOL) a) (rdW (m.arr64 POOL) b))
+    else esK n a ln b k (equivW n m (prd m a) (prd m b))
 termination_by n _ _ _ _ _ => (n, 0)
 
 /-- After comparing the heads. -/
@@ -165,7 +165,7 @@ theorem equivsW_end (h : ln = 0 ∨ k = 0) :
   rw [equivsW]; simp [h]
 theorem equivsW_cons (h : ¬ (ln = 0 ∨ k = 0)) :
     equivsW (n + 1) m a ln b k =
-      esK n a ln b k (equivW n m (rdW (m.arr64 POOL) a) (rdW (m.arr64 POOL) b)) := by
+      esK n a ln b k (equivW n m (prd m a) (prd m b)) := by
   rw [equivsW]; simp only [h, ↓reduceIte]
 theorem esK_stop (hz : z ≠ 2) : esK n a ln b k (some (z, m₁)) = some (z, m₁) := by
   rw [esK]; simp [hz]
@@ -182,7 +182,7 @@ grind_pattern [level_grind] esK_go => esK n a ln b k (some (2, m₁))
 @[l_impl ConLeche.Level.isEquivList]
 def lvEquivs : FunDecl := lfn (a, n, b, k) locals (z) {
   if n == 0 || k == 0 { if n == k { return 2 }; return 1 };
-  z := call lv_equiv(POOL.u64[a], POOL.u64[b]);
+  z := call lv_equiv(POOL⦃a⦄, POOL⦃b⦄);
   if z != 2 { return z };
   z := call lv_equivs(a + 1, n - 1, b + 1, k - 1);
   return z

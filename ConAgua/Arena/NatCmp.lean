@@ -97,8 +97,8 @@ theorem pv_len_lt (p q : Array Word) (oa ob la lb : Nat) (hn : Norm q ob lb) (hl
 
 def cmpLoop : Stmt := lblk (oa, la, ob, lb, k, x, y) {
   while 0 < k {
-    x := POOL.u64[oa + k - 1];
-    y := POOL.u64[ob + k - 1];
+    x := POOL⦃oa + k - 1⦄;
+    y := POOL⦃ob + k - 1⦄;
     if x < y { return 0 };
     if y < x { return 2 };
     k -= 1

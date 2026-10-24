@@ -69,10 +69,12 @@ def strParamSortL : FunDecl := lfn (pn) locals (pl, sp, so) {
 
 /-- `str_ls1(u)`: the level list `[u]`, its one handle word at the pool top. -/
 -- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode
-def strLs1L : FunDecl := lfn (u) locals (o, h) {
+def strLs1L : FunDecl := lfn (u) locals (o, h, pt, pb) {
   o := CTL.u64[0];
-  if len(POOL.u64) <= o { abort };
-  POOL.u64[o] := u;
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  if len(POOL⟨pt⟩) <= o - pb { abort };
+  POOL⟨pt⟩[o - pb] := u;
   CTL.u64[0] := o + 1;
   h := call intern_ls(o, 1);
   return h
@@ -281,19 +283,19 @@ def strLitSupportedL : FunDecl := lfn (vis) locals (r) {
 the code point at `k` and its length, `(0, 0)` for invalid bytes. -/
 -- con-ron: none — `s.toList`'s decoding of the literal's UTF-8 bytes (`utf8_char` on the pool)
 def strUtf8CharL : FunDecl := lfn (k, n) locals (c0, c1, c2, c3, v) {
-  c0 := POOL.u64[k] & 255;
+  c0 := POOL⦃k⦄ & 255;
   if c0 < 0x80 { return (c0, 1) };
   if c0 < 0xC2 { return (0, 0) };
   if c0 < 0xE0 {
     if n <= k + 1 { return (0, 0) };
-    c1 := POOL.u64[k + 1] & 255;
+    c1 := POOL⦃k + 1⦄ & 255;
     if c1 < 0x80 || 0xC0 <= c1 { return (0, 0) };
     return (((c0 & 0x1F) << 6) | (c1 & 0x3F), 2)
   };
   if c0 < 0xF0 {
     if n <= k + 2 { return (0, 0) };
-    c1 := POOL.u64[k + 1] & 255;
-    c2 := POOL.u64[k + 2] & 255;
+    c1 := POOL⦃k + 1⦄ & 255;
+    c2 := POOL⦃k + 2⦄ & 255;
     if c1 < 0x80 || 0xC0 <= c1 || c2 < 0x80 || 0xC0 <= c2 { return (0, 0) };
     v := ((c0 & 0x0F) << 12) | ((c1 & 0x3F) << 6) | (c2 & 0x3F);
     if v < 0x800 || (0xD800 <= v && v < 0xE000) { return (0, 0) };
@@ -301,9 +303,9 @@ def strUtf8CharL : FunDecl := lfn (k, n) locals (c0, c1, c2, c3, v) {
   };
   if c0 < 0xF5 {
     if n <= k + 3 { return (0, 0) };
-    c1 := POOL.u64[k + 1] & 255;
-    c2 := POOL.u64[k + 2] & 255;
-    c3 := POOL.u64[k + 3] & 255;
+    c1 := POOL⦃k + 1⦄ & 255;
+    c2 := POOL⦃k + 2⦄ & 255;
+    c3 := POOL⦃k + 3⦄ & 255;
     if c1 < 0x80 || 0xC0 <= c1 || c2 < 0x80 || 0xC0 <= c2 || c3 < 0x80 || 0xC0 <= c3 {
       return (0, 0)
     };

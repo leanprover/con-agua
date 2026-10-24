@@ -117,31 +117,33 @@ def escOneN (b : Array UInt8) (e j : Word) : Word × Word × Word :=
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:556-557 ConLeche.Frontend.utf8Of
 @[l_impl ConLeche.Frontend.utf8Of]
-def utf8Put : FunDecl := lfn (top, k, cp) locals (q) {
+def utf8Put : FunDecl := lfn (top, k, cp) locals (q, pt, pb) {
   q := top + k;
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.base;
   if cp < 128 {
-    if len(POOL.u64) <= q { abort };
-    POOL.u64[q] := cp;
+    if len(POOL⟨pt⟩) <= q - pb { abort };
+    POOL⟨pt⟩[q - pb] := cp;
     return k + 1
   };
   if cp < 2048 {
-    if len(POOL.u64) <= q + 1 { abort };
-    POOL.u64[q] := 192 + (cp >> 6);
-    POOL.u64[q + 1] := 128 + (cp & 63);
+    if len(POOL⟨pt⟩) <= q + 1 - pb { abort };
+    POOL⟨pt⟩[q - pb] := 192 + (cp >> 6);
+    POOL⟨pt⟩[q + 1 - pb] := 128 + (cp & 63);
     return k + 2
   };
   if cp < 65536 {
-    if len(POOL.u64) <= q + 2 { abort };
-    POOL.u64[q] := 224 + (cp >> 12);
-    POOL.u64[q + 1] := 128 + ((cp >> 6) & 63);
-    POOL.u64[q + 2] := 128 + (cp & 63);
+    if len(POOL⟨pt⟩) <= q + 2 - pb { abort };
+    POOL⟨pt⟩[q - pb] := 224 + (cp >> 12);
+    POOL⟨pt⟩[q + 1 - pb] := 128 + ((cp >> 6) & 63);
+    POOL⟨pt⟩[q + 2 - pb] := 128 + (cp & 63);
     return k + 3
   };
-  if len(POOL.u64) <= q + 3 { abort };
-  POOL.u64[q] := 240 + (cp >> 18);
-  POOL.u64[q + 1] := 128 + ((cp >> 12) & 63);
-  POOL.u64[q + 2] := 128 + ((cp >> 6) & 63);
-  POOL.u64[q + 3] := 128 + (cp & 63);
+  if len(POOL⟨pt⟩) <= q + 3 - pb { abort };
+  POOL⟨pt⟩[q - pb] := 240 + (cp >> 18);
+  POOL⟨pt⟩[q + 1 - pb] := 128 + ((cp >> 12) & 63);
+  POOL⟨pt⟩[q + 2 - pb] := 128 + ((cp >> 6) & 63);
+  POOL⟨pt⟩[q + 3 - pb] := 128 + (cp & 63);
   return k + 4
 }
 
@@ -175,12 +177,12 @@ def u8PutW (m : Mem) (top k cp : Word) : Option (Word × Mem) :=
 
 /-! ## The loop -/
 
-def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn) {
+def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn, pt, pb) {
   while j < ve {
     c := IN.u8[j];
     if c != 92 {
-      if len(POOL.u64) <= top + k { abort };
-      POOL.u64[top + k] := c;
+      if len(POOL⟨pt⟩) <= pb + k { abort };
+      POOL⟨pt⟩[pb + k] := c;
       k += 1;
       j += 1
     } else {
@@ -195,11 +197,13 @@ def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
 @[l_impl ConLeche.Frontend.unescape]
-def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn) {
+def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
+  if len(POOL⟨pt⟩) < pb { abort };
   j := vs;
   ⟪escLoop⟫;
   CTL.u64[0] := top + k;

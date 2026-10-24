@@ -57,7 +57,7 @@ theorem lookupW_next (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : ¬ (kc = 0 
 /-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst -/
 def lvLookupG : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
   if kc == 0 || vc == 0 { return (0, 0) };
-  if KA.u64[ko] == w { return (1, VA.u64[vo]) };
+  if KA.u64[ko] == w { return (1, VA⦃vo⦄) };
   (f, v) := call lv_lookup(ko + 1, kc - 1, vo + 1, vc - 1, w);
   return (f, v)
 }

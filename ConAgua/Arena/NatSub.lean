@@ -56,11 +56,11 @@ def subBorrow : FunDecl := lfn (x, y, c) locals (d) {
 
 /-! ## `nat_sub(oa, la, ob, lb)` -/
 
-def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
+def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x - y - c;
+    POOL⟨pt⟩[pb + i] := x - y - c;
     c := call sub_borrow(x, y, c);
     i += 1
   }
@@ -68,11 +68,13 @@ def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y) {
+def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪subLoop⟫;
   if c != 0 { n := 0 } else { n := call nat_trim(top, n) };
   CTL.u64[0] := top + n;

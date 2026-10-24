@@ -405,7 +405,7 @@ def iwCopy : FunDecl := lfn (d, s, l) locals (u) {
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def poolCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
-  IW.u64[d] := POOL.u64[s];
+  IW.u64[d] := POOL⦃s⦄;
   u := call pool_copy(d + 1, s + 1, l - 1);
   return 0
 }

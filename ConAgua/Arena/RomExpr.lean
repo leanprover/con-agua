@@ -231,14 +231,16 @@ def romLitW (m : Mem) (k : Word) : Option (Word × Mem) :=
 
 /-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:189-251 ConRon.Arena.Frontend.internExprGo
-def romLit : FunDecl := lfn (k) locals (o, h) {
+def romLit : FunDecl := lfn (k) locals (o, h, pt, pb) {
   o := CTL.u64[0];
-  if len(POOL.u64) <= o { abort };
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  if len(POOL⟨pt⟩) <= o - pb { abort };
   if k == 0 {
     h := call intern_lit(o, 0);
     return h
   };
-  POOL.u64[o] := k;
+  POOL⟨pt⟩[o - pb] := k;
   CTL.u64[0] := o + 1;
   h := call intern_lit(o, 1);
   return h

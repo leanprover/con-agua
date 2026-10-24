@@ -69,40 +69,42 @@ def xorF : Word → Word → Word := fun a b => a ^^^ b
 /-- One pass: limb `i` of the result is the operand limbs (zero-extended) combined bitwise. The
 three loops are the same shape (`AddInv`'s, without a carry); only the combining operator
 differs, so each needs its own `Stmt` (L has no higher-order operator parameter). -/
-def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
+def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x & y;
+    POOL⟨pt⟩[pb + i] := x & y;
     i += 1
   }
 }
 
-def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
+def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x | y;
+    POOL⟨pt⟩[pb + i] := x | y;
     i += 1
   }
 }
 
-def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
+def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x ^ y;
+    POOL⟨pt⟩[pb + i] := x ^ y;
     i += 1
   }
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
+def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := la;
   if lb < la { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪andLoop⟫;
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;
@@ -111,11 +113,13 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
+def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪orLoop⟫;
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;
@@ -124,11 +128,13 @@ def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
+def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪xorLoop⟫;
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;

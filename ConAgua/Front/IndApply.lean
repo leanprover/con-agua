@@ -152,7 +152,7 @@ def nameRecPre : FunDecl := lfn (h) locals (g, t, i, k, o) {
   k := i * 8 + t * 4;
   if NSREC.u64[k + 2] != 3 { return (0, 0) };
   o := NSREC.u64[k + 1];
-  if POOL.u64[o] == 114 && POOL.u64[o + 1] == 101 && POOL.u64[o + 2] == 99 {
+  if POOL⦃o⦄ == 114 && POOL⦃o + 1⦄ == 101 && POOL⦃o + 2⦄ == 99 {
     return (1, NSREC.u64[k])
   };
   return (0, 0)

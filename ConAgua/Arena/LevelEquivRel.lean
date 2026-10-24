@@ -112,7 +112,7 @@ theorem equivW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l r x : Word) (L R : 
 /-- The words `A[a .. a + n)` are pointers to the levels `ls`. -/
 inductive LvsR (N : Word → Name → Prop) (m : Mem) : Word → Word → List Level → Prop
   | nil {a : Word} : LvsR N m a 0 []
-  | cons {a n : Word} {l : Level} {ls : List Level} : n ≠ 0 → LvR N m (rdW (m.arr64 POOL) a) l →
+  | cons {a n : Word} {l : Level} {ls : List Level} : n ≠ 0 → LvR N m (prd m a) l →
       LvsR N m (a + 1) (n - 1) ls → LvsR N m a n (l :: ls)
 
 theorem LvsR.mono {m m' : Mem} (he : HeapExt m m') {a n : Word} {ls : List Level}
@@ -129,7 +129,7 @@ theorem LvsR.zero {m : Mem} {a : Word} {ls : List Level} (h : LvsR N m a 0 ls) :
   | cons hn _ _ => exact absurd rfl hn
 
 theorem LvsR.ne {m : Mem} {a n : Word} {ls : List Level} (h : LvsR N m a n ls) (hn : n ≠ 0) :
-    ∃ l ls', ls = l :: ls' ∧ LvR N m (rdW (m.arr64 POOL) a) l ∧ LvsR N m (a + 1) (n - 1) ls' := by
+    ∃ l ls', ls = l :: ls' ∧ LvR N m (prd m a) l ∧ LvsR N m (a + 1) (n - 1) ls' := by
   cases h with
   | nil => exact absurd rfl hn
   | cons _ hl hls => exact ⟨_, _, rfl, hl, hls⟩

@@ -25,7 +25,7 @@ namespace L.Arena
 
 def trimLoop : Stmt := lblk (o, n) {
   while 0 < n {
-    if POOL.u64[o + n - 1] != 0 { return n };
+    if POOL⦃o + n - 1⦄ != 0 { return n };
     n -= 1
   }
 }
@@ -90,7 +90,7 @@ The result slice starts at the old top `CTL[0]`. One pass of ripple carry over
 /-- Limb `i` of the slice `(o, l)`, `0` past its end (con-ron's `limb`, `ron/nat.rs:112`). -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def natLimb : FunDecl := lfn (o, l, i) {
-  if i < l { return POOL.u64[o + i] };
+  if i < l { return POOL⦃o + i⦄ };
   return 0
 }
 
@@ -105,11 +105,11 @@ def addCarry : FunDecl := lfn (x, y, c) locals (s) {
   return 0
 }
 
-def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
+def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
   while i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL.u64[top + i] := x + y + c;
+    POOL⟨pt⟩[pb + i] := x + y + c;
     c := call add_carry(x, y, c);
     i += 1
   }
@@ -117,13 +117,15 @@ def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y) {
+def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := la;
   if la < lb { n := lb };
-  if len(POOL.u64) - top <= n { abort };
+  if len(POOL⟨pt⟩) - pb <= n { abort };
   ⟪addLoop⟫;
-  POOL.u64[top + n] := c;
+  POOL⟨pt⟩[pb + n] := c;
   n := call nat_trim(top, n + 1);
   CTL.u64[0] := top + n;
   return n

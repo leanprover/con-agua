@@ -106,10 +106,10 @@ grind_pattern [arena_grind] shr63_le => x >>> 63
 
 /-! ## The in-place passes -/
 
-def shl1Loop : Stmt := lblk (r, n, bit, i, c, x) {
+def shl1Loop : Stmt := lblk (r, n, bit, i, c, x, rt, rb) {
   while i < n {
-    x := POOL.u64[r + i];
-    POOL.u64[r + i] := (x << 1) | c;
+    x := POOL⦃r + i⦄;
+    POOL⟨rt⟩[rb + i] := (x << 1) | c;
     c := x >> 63;
     i += 1
   }
@@ -117,17 +117,19 @@ def shl1Loop : Stmt := lblk (r, n, bit, i, c, x) {
 
 /-- `div_shl1(r, n, bit)`: `R := 2 R + bit` in place; returns the carry out. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x) {
+def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x, rt, rb) {
+  rt := ⦃r⦄.tier;
+  rb := r - ⦃r⦄.base;
   c := bit;
   ⟪shl1Loop⟫;
   return c
 }
 
-def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y) {
+def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
   while i < n {
-    x := POOL.u64[r + i];
+    x := POOL⦃r + i⦄;
     y := call nat_limb(ob, lb, i);
-    POOL.u64[r + i] := x - y - c;
+    POOL⟨rt⟩[rb + i] := x - y - c;
     c := call sub_borrow(x, y, c);
     i += 1
   }
@@ -135,16 +137,18 @@ def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y) {
 
 /-- `div_sub(r, n, ob, lb)`: `R := R - b` in place (`b` zero-extended); returns the borrow. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y) {
+def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
+  rt := ⦃r⦄.tier;
+  rb := r - ⦃r⦄.base;
   ⟪dsubLoop⟫;
   return c
 }
 
-def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y) {
+def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
   while i < n {
-    x := POOL.u64[r + i];
+    x := POOL⦃r + i⦄;
     y := call nat_limb(ob, lb, i);
-    POOL.u64[r + i] := x + y + c;
+    POOL⟨rt⟩[rb + i] := x + y + c;
     c := call add_carry(x, y, c);
     i += 1
   }
@@ -152,7 +156,9 @@ def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y) {
 
 /-- `div_add(r, n, ob, lb)`: `R := R + b` in place (`b` zero-extended); returns the carry. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y) {
+def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
+  rt := ⦃r⦄.tier;
+  rb := r - ⦃r⦄.base;
   ⟪daddLoop⟫;
   return c
 }
@@ -484,38 +490,40 @@ def bitLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c) {
 
 /-- One limb of the dividend, from the top (con-ron's `dm_limbs`): `pa` and `pq` point at the
 current limb of `a` and of the quotient, `i` counts the limbs done. -/
-def limbLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq) {
+def limbLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
   while i < la {
     pa -= 1;
     pq -= 1;
-    x := POOL.u64[pa];
+    x := POOL⦃pa⦄;
     q := 0;
     j := 64;
     ⟪bitLoop⟫;
-    POOL.u64[pq] := q;
+    POOL⟨pt⟩[pq - pb] := q;
     i += 1
   }
 }
 
 /-- The remainder starts at `0`. -/
-def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq) {
+def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
   while j < n {
-    POOL.u64[ro + j] := 0;
+    POOL⟨pt⟩[ro + j - pb] := 0;
     j += 1
   }
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq) {
+def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.base;
   if lb == 0 {
     c := call nat_trim(oa, la);
     return (top, 0, oa, c)
   };
   n := lb + 1;
-  if len(POOL.u64) - top < la { abort };
-  if len(POOL.u64) - top - la < n { abort };
+  if len(POOL⟨pt⟩) - (top - pb) < la { abort };
+  if len(POOL⟨pt⟩) - (top - pb) - la < n { abort };
   ro := top + la;
   ⟪rzLoop⟫;
   pa := oa + la;

@@ -105,8 +105,8 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
 def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
-  if len(POOL.u64) < o { abort };
-  if len(POOL.u64) - o < l { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
+  if len(POOL⟨⦃o⦄.tier⟩) - (o - ⦃o⦄.base) < l { abort };
   z := call apply_nstr(idx, a, o, l);
   return 0
 }

@@ -35,7 +35,7 @@ namespace L.Arena
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst -/
 def lpLookup : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
   if kc == 0 || vc == 0 { return (0, 0) };
-  if SPN.u64[ko] == w { return (1, POOL.u64[vo]) };
+  if SPN.u64[ko] == w { return (1, POOL⦃vo⦄) };
   (f, v) := call lp_lookup(ko + 1, kc - 1, vo + 1, vc - 1, w);
   return (f, v)
 }
