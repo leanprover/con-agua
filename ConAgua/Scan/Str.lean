@@ -470,13 +470,6 @@ theorem utf8ValidLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, L.Scan.Utf8.utf8Char_spec p hpc b n,
         ih] <;> finish
 
-include hpc in
-theorem utf8ValidLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) utf8ValidLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [utf8ValidN b (s₀.loc 0) (s₀.loc 1)]; ⊤⦄ :=
-  Triple.step_exec (utf8ValidLoop_spec p b hb hpc (n + 1) s₀ hm)
 
 include hpc hpv in
 theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
@@ -489,7 +482,7 @@ theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalArgs, utf8ValidLoop_step_spec p b hb hpc n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, fun s₀ hm => Triple.step_exec (utf8ValidLoop_spec p b hb hpc (n + 1) s₀ hm)] <;> finish
 
 section hex4Hex3
 
@@ -591,14 +584,6 @@ theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
         utf8Valid_spec p b hb hpc hpv n, byteIn_spec p b hb hpb n,
         hex4_spec p b hb hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
 
-include hpc hpv hpb hph hp4 hp3 hpx in
-theorem unescapeLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    step p (exec p n) unescapeLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ s'.loc 1 = s₀.loc 1 ∧ r ≠ .brk ∧
-      r.retOr [utf8ValidN b (s'.loc 2) (s₀.loc 1)] =
-        [unescN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (unescapeLoop_spec p b hb hpc hpv hpb hph hp4 hp3 hpx (n + 1) s₀)
 
 include hpc hpv hpb hph hp4 hp3 hpx hpu in
 theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
@@ -612,7 +597,7 @@ theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : W
   | succ n =>
     sym only [lang_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
-        unescapeLoop_step_spec p b hb hpc hpv hpb hph hp4 hp3 hpx n,
+        fun s₀ => Triple.step_exec (unescapeLoop_spec p b hb hpc hpv hpb hph hp4 hp3 hpx (n + 1) s₀),
         utf8Valid_spec p b hb hpc hpv n] <;> finish
 
 attribute [local lang_grind] scanStringN
