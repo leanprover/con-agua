@@ -187,11 +187,7 @@ theorem isBoolTrue_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
     CoreSpec p (n + 1) "is_bool_true" [h] (isBoolTrue (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (isBoolTrue_spec p hp n s₀ h)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (isBoolTrue_spec p hp n s₀ h) fun r s' ⟨hm, hloc, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
   have hrun' := isBoolTrue_run _ _ hS.arena.1 hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
@@ -437,12 +433,7 @@ theorem isEagerReduce_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
     CoreSpec p (n + 1) "is_eager_reduce" [h] (isEagerReduce (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (isEagerReduce_spec p hp n s₀ h)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (isEagerReduce_spec p hp n s₀ h) fun r s' ⟨hm, hloc, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
   have hrun' := isEagerReduce_run _ _ hS.arena.1 hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
@@ -585,11 +576,7 @@ theorem isNatZero_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "is_nat_zero" [e] (isNatZero (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (isNatZero_spec p hp n s₀ e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (isNatZero_spec p hp n s₀ e) fun r s' ⟨hm, hloc, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
   have hrun' := isNatZero_run _ _ hS.arena.1 hS.pins e he _ hW
   refine coreRef_pure hS hrun' rfl ?_
