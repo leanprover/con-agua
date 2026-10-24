@@ -132,11 +132,7 @@ theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} 
   | succ n =>
   have hw := callW_model (M := fun mq => freshW p n mq) (fresh_specW rom p hL n ·) hc
   unfold freshW at hw
-  cases h1 : callW p n "rset_clear" [] ((m.set64 CTL 131 0).set64 CTL 132 0) with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨s', rfl, -, -, hm⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)

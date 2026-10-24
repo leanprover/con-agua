@@ -42,7 +42,6 @@ theorem decE_idx (h : Word) : (decE h).idxNat = (idxW h).toNat := by
 theorem decE_pers (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).isPersistent = (tierW h == 0) := by
   rw [decE_eq, isPersistent_decI h hh]; rfl
 
-
 /-! ## Nodes of a table -/
 
 /-! ## The view -/
@@ -114,11 +113,9 @@ theorem get_lit (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit]
 
-
 theorem view_run (h : EIdx) (a : AState) (v : ENodeView) (hv : a.store.view h = some v) :
     (view h).run a = .ok (v, a) := by
   simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-
 
 /-! ## Arithmetic of the arms -/
 
@@ -155,19 +152,11 @@ theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := by
 theorem word_lt {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
   simp; exact x.word.toNat_lt
 
-
 theorem except_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) :
     (Except.ok x >>= f) = f x := rfl
 
-theorem pure_run (v : Nat) (a : AState) : (pure v : AM Nat).run a = .ok (v, a) := rfl
-
-
 theorem decI_word {k : IdxKind} (x : Idx k) : decI x.word.toUInt64 = x := by
   cases x; simp [decI]
-
-theorem decE_pers' (h : Word) (hh : h.toNat < 2 ^ 32) (ht : tierW h = 0) :
-    (decE h).isPersistent = true := by
-  rw [decE_pers h hh, ht]; rfl
 
 /-! ## The view, one lemma per tag -/
 

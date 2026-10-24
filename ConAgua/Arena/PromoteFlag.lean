@@ -18,7 +18,6 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-
 /-- The four flags of a related state agree (each table's relation has its store's flag equal to
 `CTL[1] != 0`). -/
 theorem ArenaR.flagsEq {m : Mem} {a : AState} (hR : ArenaR m a) : FlagsEq a.store :=
@@ -80,29 +79,11 @@ theorem ArenaD.flag {m : Mem} {a : AState} (hD : ArenaD m a) (w : Word) :
 An `intern_*` model (`internM`) with `CTL[1] = 0` answers `hdW tag 0 i` for a node `i < 2^27` of
 the persistent tier: a handle word below `2^32` with tier bit `0`. -/
 
-theorem hdW0_toNat (g i : Word) (hg : g.toNat < 16) (hi : i.toNat < 2 ^ 27) :
-    (hdW g 0 i).toNat = g.toNat * 268435456 + i.toNat := by
-  simp only [hdW, UInt64.toNat_add, UInt64.toNat_mul]
-  have e1 : (0x10000000 : Word).toNat = 268435456 := rfl
-  have e2 : (0 : Word).toNat = 0 := rfl
-  rw [e1, e2]
-  omega
-
 /-- A persistent handle word: below `2^32`, tier bit `0`. -/
 def PW (w : Word) : Prop := w.toNat < 2 ^ 32 ∧ tierW w = 0
-
-theorem hdW0_pw (g i : Word) (hg : g.toNat < 16) (hi : i.toNat < 2 ^ 27) : PW (hdW g 0 i) := by
-  have ht := hdW0_toNat g i hg hi
-  refine ⟨by omega, ?_⟩
-  have h27 := bit27_toNat (hdW g 0 i)
-  apply UInt64.toNat_inj.mp
-  rw [show tierW (hdW g 0 i) = (hdW g 0 i >>> 27) &&& 1 from rfl, h27, ht]
-  show (g.toNat * 268435456 + i.toNat) / 2 ^ 27 % 2 = 0
-  omega
 
 /-- A persistent handle word decodes to a persistent handle. -/
 theorem PW.pers {k : IdxKind} {w : Word} (h : PW w) : (decI w : Idx k).isPersistent = true := by
   rw [isPersistent_decI w h.1]; simp only [beq_iff_eq]; exact h.2
-
 
 end L.Arena

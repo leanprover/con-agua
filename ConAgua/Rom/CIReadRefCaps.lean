@@ -327,11 +327,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   -- the eta constructor
   unfold capsW.capsTailW at hw
   have hq64 : (q + 64).toNat = q.toNat + 64 := by rw [UInt64.toNat_add]; simp; comega
-  cases h1 : callW p k "rom_name" [q + 64] (setERs m ws) with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m8⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m8, h1, hw⟩ := ntBW_inv hw
   have hdn : rom.drop (q + 64).toNat = encName caps.etaCtor ++ (encNameL caps.all ++
       (encNameL caps.ctors ++ (encNameL (pwNames caps.sortZ) ++ rest))) := by
     rw [hq64, ← List.drop_drop, hd']; simp [u64B]
@@ -346,31 +342,19 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
-  cases h2 : callW p (k + 1) "rci_name_sl" [r1.tail.headD 0, c + 10] (m8.set64 EREC (c + 1) (r1.headD 0)) with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m10⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m10, h2, hw⟩ := ntBW_inv hw
   have hd2 : rom.drop (r1.tail.headD 0).toNat = encNameL caps.all ++ (encNameL caps.ctors ++
       (encNameL (pwNames caps.sortZ) ++ rest)) := drop_shift rom hr _ (encName caps.etaCtor) _ _ (by rw [hdn, List.append_assoc]) _ hq1
   obtain ⟨wsA, a2, hrun2, hltA, hI10, hM10, hs10, hq2, hek10, ht10, hIW10, hH10⟩ :=
     nameSl_rel hL hr seen memo caps.all hfa k _ a1 _ (c + 10) _ _ m10 hI9 hM9 hd2
       (by comega) (by comega) h2
-  cases h3 : callW p (k + 1) "rci_name_sl" [r2.headD 0, c + 13] m10 with
-  | none => rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m11⟩ := t3
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m11, h3, hw⟩ := ntBW_inv hw
   have hd3 : rom.drop (r2.headD 0).toNat = encNameL caps.ctors ++ (encNameL (pwNames caps.sortZ) ++ rest) :=
     drop_shift rom hr _ (encNameL caps.all) _ _ (by rw [hd2, List.append_assoc]) _ hq2
   obtain ⟨wsC, a3, hrun3, hltC, hI11, hM11, hs11, hq3, hek11, ht11, hIW11, hH11⟩ :=
     nameSl_rel hL hr seen memo caps.ctors hfc k _ a2 _ (c + 13) _ _ m11 hI10 hM10 hd3
       (by comega) (by comega) h3
-  cases h4 : callW p (k + 1) "rci_name_sl" [r3.headD 0, c + 8] m11 with
-  | none => rw [h4] at hw; simp at hw
-  | some t4 =>
-  obtain ⟨r4, m12⟩ := t4
-  rw [h4, bW_some] at hw
+  obtain ⟨r4, m12, h4, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hd4 : rom.drop (r3.headD 0).toNat = encNameL (pwNames caps.sortZ) ++ rest :=

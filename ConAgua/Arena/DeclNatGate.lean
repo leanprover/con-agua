@@ -194,11 +194,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     have hw := callW_model (M := fun mm => depsStoredW p k mm vis o l) (depsStored_specW p hN.lNatOpDepsStored k · vis o l) hc
     unfold depsStoredW at hw
     rw [if_neg hl0] at hw
-    cases h1 : callW p k "env_find" [rdW (m.arr64 IW) o, vis] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.1.env h1
     subst hn
     rw [natOpDepsStored_cons]

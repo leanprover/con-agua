@@ -85,11 +85,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
   have hlt := hI.er_lt
   have hgo := hI.grow.2.1
   have hrom := hr; simp only [RomOK] at hrom
-  cases h1 : callW p k "erec_alloc" [sz] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨hI1, ho1, ht1, hE1, hIW1, -⟩ := hI.erAlloc (erAllocCall hL h1)
   have hf1 : MemFrame [] [129] m m1 := by
     have := erAllocCall hL h1; simp only [erAllocW] at this
@@ -103,11 +99,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
-  cases h2 : callW p (k + 1) "rci_cv" [q + 8, r1.headD 0 + 1] (m1.set64 EREC (r1.headD 0) (UInt64.ofNat kn)) with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m2⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
   have hlen := drop_len rom _ (u64B kn) _ hd (by simp [u64B])
   simp only [u64B, List.length_cons, List.length_nil] at hlen
   have hq8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
@@ -266,11 +258,7 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
   have i1 : (UInt64.ofNat 3 = 1) = False := by decide
   have i3 : (UInt64.ofNat 3 = 3) = True := by decide
   simp only [ciTailW, i1, i3, ite_false, ite_true] at hw
-  cases h3 : callW p (k' + 1) "rci_caps" [q2, pp + 5] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m3⟩ := t3
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlt := hI2.er_lt
@@ -385,11 +373,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
   have hw8 : (erA m7)[pp.toNat + 8]? = some (UInt64.ofNat rs.length) := by
     rw [← hm7, ← hp8]
     exact er_set_get _ _ _ (by rw [size_set64]; omega)
-  cases h5 : callW p (k' + 1) "rci_rules_to" [q2 + 24, r4.headD 0, UInt64.ofNat rs.length] m7 with
-  | none => rw [h5] at hw; simp at hw
-  | some t5 =>
-  obtain ⟨r5, m6⟩ := t5
-  rw [h5, bW_some] at hw
+  obtain ⟨r5, m6, h5, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlenR := drop_len rom _ (u64B mI ++ u64B rP ++ u64B rs.length) _

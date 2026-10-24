@@ -348,11 +348,6 @@ theorem ArenaR.frame {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ a
     (hR.memos.frame (fun b hb h => hA b hb (List.mem_append_right _ h))
       (fun x hx h => hC x hx (List.mem_append_right _ h)) hf)
 
-/-- `ArenaR` as a `Stable` predicate (`run_keeps`). -/
-theorem ArenaR.stable {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
-    (hC : ∀ x ∈ C, x ∉ arenaCtl) (a : AState) : Stable A C (ArenaR · a) :=
-  fun _ _ hf hR => hR.frame hA hC hf
-
 theorem not_mem_arenaCtl (x : Word) (hx : 64 ≤ x.toNat) : x ∉ arenaCtl := by
   intro h
   simp only [arenaCtl, storeCtl, memoCtl, List.mem_append, List.mem_cons, List.not_mem_nil,

@@ -161,16 +161,4 @@ theorem bintern_correct (w : Word) (m' : Mem) (hI : binternW m u = some (w, m'))
 
 end intern
 
-/-- `intern_bvar` refines `internE (.bvar _)` under `BVarR`. -/
-theorem internBVar_refines (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
-    (hpp : p.lookup "bvar_push" = some bvarPush) (hp : p.lookup "intern_bvar" = some internBVar)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : BVarR s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_bvar" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.bvar u.toNat)) a₀ ∧
-      BVarR s'.mem (AM.st (internE (.bvar u.toNat)) a₀) ∧
-      AM.res (internE (.bvar u.toNat)) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internBVar_spec p hpf hpp hp n s₀ u)
-    (Sim.ofOkD (bintern_correct s₀.mem a₀ hR u))
-
 end L.Arena

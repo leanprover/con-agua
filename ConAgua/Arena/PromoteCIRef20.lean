@@ -62,20 +62,12 @@ theorem recBlock_rel {n : Nat} {d5 w5 w6 l : Word} {m m' : Mem} {r : List Word}
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hbig)
     simpa using this
   have h11 : (11 * l).toNat = 11 * l.toNat := toNat_mul11 l (by omega)
-  cases hal : callW p (n + 1) "erec_alloc" [11 * l] m with
-  | none => rw [hal] at hW; cases hW
-  | some x =>
-  obtain ⟨r5, ma⟩ := x
-  rw [hal] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r5, ma⟩, hal, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hd5, hTa, hroom, hfa, hEa⟩ := alloc_rel p hp hal
   rw [h11] at hTa hroom
-  cases hwr : callW p (n + 1) "erec_wr4" [d5, w5, w6, r5.headD 0, l] ma with
-  | none => rw [hwr] at hW; cases hW
-  | some x =>
-  obtain ⟨z, mb⟩ := x
-  rw [hwr] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, mb⟩, hwr, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   subst hm
   obtain ⟨t1, t2, t3, t4, t5, t6, t7⟩ := wr4_rel p hp (d := d5) (by rw [hEa]; omega)
@@ -117,24 +109,16 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   | succ n =>
   have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add1 _ (by omega)
   have e5 : (q + 5).toNat = q.toNat + 5 := toNat_add5 _ (by omega)
-  cases hrd : callW p (n + 1) "erec_rd4" [q + 5] m with
-  | none => rw [hrd] at hW; cases hW
-  | some x =>
-  obtain ⟨ra, m0⟩ := x
-  rw [hrd] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨ra, m0⟩, hrd, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm0, hr0, -⟩ := rd4_call p hp hrd
   obtain rfl := hm0.symm
   rw [rd4W_of hsz (by rw [e5]; simpa using h5) (by rw [e5]; simpa using h6)
     (by rw [e5]; simpa using h7) (by rw [e5]; simpa using h8)] at hr0
   subst hr0
   simp only [g0, g1, g2, g3, List.headD_cons, List.tail_cons] at hW
-  cases hca : callW p (n + 1) "promote_cv" [f, q + 1] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨c, m₁⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨c, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a1, pm1, cv', hrun1, hD1, hP1, hCV, hg1, hts1, hcp1, hfr1⟩ :=
     cv_rel p hp (n + 1) m a pm f (q + 1) cv c m₁ hD hP
       (by rw [e1]; exact (preE_mono m hDt).decCV hcv) hsz hca
@@ -153,22 +137,14 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz1
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₁ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
-  cases hbl : callW p (n + 1) "rec_block" [dl.headD 0 + 5, w5, w6, w8] m₂ with
-  | none => rw [hbl] at hW; cases hW
-  | some x =>
-  obtain ⟨bl, m₃⟩ := x
-  rw [hbl] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨bl, m₃⟩, hbl, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨c60, u1, u2, u3, u4, u5, u6, u7, u8, u9⟩ := recBlock_rel p hp (d5 := dl.headD 0 + 5)
     hsz2 (by rw [e5d, b2]; omega) b5 hbl
   rw [e5d] at u3 u6 u7 u8 u9
   have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [u3.2.2]; exact hsz2
-  cases hpr : callW p (n + 1) "promote_rules" [f, w7, w8, bl.headD 0] m₃ with
-  | none => rw [hpr] at hW; cases hW
-  | some x =>
-  obtain ⟨z, m₄⟩ := x
-  rw [hpr] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, m₄⟩, hpr, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hr, hm4⟩ := Prod.mk.inj (Option.some.inj hW)
   subst hm4
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4

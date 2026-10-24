@@ -117,16 +117,6 @@ theorem byteAt_lt_iff (pos : USize) (wpos : Word) (lit : Nat) (hlit0 : 0 < lit) 
 
 /-! ## `slot_nat` -/
 
-include h64 hsize in
-/-- `slot_nat(ks, v)`, through the model: the numeric slot every record loop inlines. -/
-theorem slotNat_eq_slotNatN (ks v : USize) :
-    slotNatN b.data ks.toUInt64 v.toUInt64 =
-      if numEnd b v == v then 0 else if ks < numEnd b v then (numEnd b v).toUInt64 else 0 := by
-  have hsize64 : b.size < 2 ^ 64 := by omega
-  unfold slotNatN
-  rw [USize.toNat_toUInt64, ← numEnd_toUInt64_eq b h64 hsize64 v]
-  simp only [← eq_toUInt64_iff, ← lt_toUInt64_iff, beq_iff_eq]
-
 /-! ## `scan_quoted_nat` -/
 
 include h64 hsize in

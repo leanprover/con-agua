@@ -450,20 +450,27 @@ meta partial def shiftPos (s : Syntax) (off : Nat) : Syntax :=
   | .ident i raw v pre => .ident (sh i) raw v pre
   | .missing => .missing
 
-/-- The `lfn` term of `c`, read back from this file. -/
+/-- The `lfn` term of `c`, read back from its source file (this file, or the `.lean` file of the
+module that declares it, found from the module name relative to the working directory). -/
 meta def lfnSyntax (c : Name) : CommandElabM Syntax := do
   let some rs ← findDeclarationRanges? c | throwError "l_model: no source for {c}"
-  let fm ← getFileMap
+  let env ← getEnv
+  let (fm, here) ← match env.getModuleIdxFor? c with
+    | none => pure ((← getFileMap), true)
+    | some idx =>
+      let mod := env.header.moduleNames[idx.toNat]!
+      let path : System.FilePath := (mod.toString.replace "." "/") ++ ".lean"
+      pure (FileMap.ofString (← IO.FS.readFile path), false)
   let src := fm.source
   let p1 := fm.ofPosition rs.range.pos
   let p2 := fm.ofPosition rs.range.endPos
   let txt := (String.Pos.Raw.extract src p1 p2)
   let parts := txt.splitOn ":= lfn "
   let some i := parts.tail.head? |>.map (fun s => "lfn " ++ s)
-    | throwError "l_model: {c} is not `… := lfn …` in this file"
+    | throwError "l_model: {c} is not `… := lfn …`"
   let off := p1.byteIdx + parts.head!.utf8ByteSize + ":= ".length
   match Parser.runParserCategory (← getEnv) `term i with
-  | .ok stx => return shiftPos stx off
+  | .ok stx => return if here then shiftPos stx off else stx
   | .error e => throwError "l_model: cannot re-parse the L text of {c}: {e}"
 
 /-! ## Translation -/

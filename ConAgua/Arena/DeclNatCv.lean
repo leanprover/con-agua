@@ -21,6 +21,13 @@ namespace L.Ind
 
 open L.Arena
 
+/-- A returning `ntBW`: its callee returned. -/
+theorem ntBW_some {β : Type} {mo : Option (List Word × Mem)} {k : List Word → Mem → Option β} {res : β}
+    (hw : ntBW mo k = some res) : ∃ r m, mo = some (r, m) ∧ k r m = some res := by
+  cases mo with
+  | none => cases hw
+  | some q => exact ⟨q.1, q.2, rfl, hw⟩
+
 /-- The inline constant value of a non-projection record. -/
 def ciCv? : IConstantInfo → Option IConstantVal
   | .axiomInfo v | .defnInfo v _ _ | .thmInfo v => some v

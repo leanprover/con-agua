@@ -54,23 +54,15 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     have hwm := erecP_get hwA
     have hlt : ptr.toNat + 1 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hwm).1
     have e1 : (ptr + 1).toNat = ptr.toNat + 1 := toNat_add1 _ (by omega)
-    cases hrd : callW p n "erec_rd1" [ptr + 1] m with
-    | none => rw [hrd] at hW; cases hW
-    | some x =>
-    obtain ⟨rr, m0⟩ := x
-    rw [hrd] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨rr, m0⟩, hrd, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hm0, hr0, -⟩ := rd1_call p hp hrd
     obtain rfl := hm0.symm
     rw [rd1W_of hsz (by rw [e1]; simpa using hwm)] at hr0
     subst hr0
     simp only [g0, List.headD_cons] at hW
-    cases hcb : callW p n "env_erase" [w] m with
-    | none => rw [hcb] at hW; cases hW
-    | some x =>
-    obtain ⟨z, m1⟩ := x
-    rw [hcb] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨z, m1⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨s1, hs1, -, hE1⟩ := callW_triple
       (envErase_spec p hp.env_ix hp.env_row_set hp.env_erase n ⟨m, Locals.init []⟩ (fe := fe) vis w hE hwl) hcb
     obtain ⟨s2, hs2, hmem, -, hrt, -⟩ := callW_triple
