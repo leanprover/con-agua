@@ -146,7 +146,8 @@ theorem inferSpineIOW_spec (p : Prog) (n : Nat) (s₀ : St) :
         evalE_tierE, evalE_idxE] <;>
     simp_all [spioLoop, spPush, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
       St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
-      tfld, tcnt, TRec.ad, forall_arr_set64 _ SPN, forall_arr_set64 _ CTL]
+      tfld, tcnt, TRec.ad, forall_arr_set64 _ SPN _ _ _ (by decide) (by decide),
+      forall_arr_set64 _ CTL _ _ _ (by decide) (by decide)]
 
 /-- The tail of a spine: the result type at the accumulator, the top put back. -/
 def spTail (p : Prog) (n : Nat) (m : Mem) (ty co cn : Word) : Option (Word × Mem) :=
