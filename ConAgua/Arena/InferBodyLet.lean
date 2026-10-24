@@ -460,10 +460,12 @@ theorem inferForallIO_spec (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
   simp only [callFn, inferForallIOL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, callW_spec p n "infer_io",
       callW_spec p n "whnf", callW_spec p n "intern_fvar", callW_spec p n "inst1",
-      callW_spec p n "ensure_sort", callW_spec p n "intern_imax", callW_spec p n "intern_sort"] <;>
+      callW_spec p n "ensure_sort", callW_spec p n "intern_imax", callW_spec p n "intern_sort",
+        evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
   simp_all [faK, faK2_some, faK3, faK4_some, faK5_some, faK6_some, faK7_some, faK8_some, call1W,
     Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, tfld,
+    tcnt, TRec.ad]
 
 end ifa
 

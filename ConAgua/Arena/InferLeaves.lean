@@ -72,8 +72,9 @@ theorem ensureSort_spec (n : Nat) (s₀ : St) (mode vis d e : Word) :
   rw [invoke_eq _ hp.ensureSort]
   simp only [callFn, ensureSortL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "whnf"] <;>
-    finish [ensureSortK_ok, tierW, idxW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "whnf",
+      evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    finish [ensureSortK_ok, tierW, idxW, tfld, tcnt, TRec.ad]
 
 end es
 
@@ -501,8 +502,10 @@ theorem inferLit_spec (n : Nat) (s₀ : St) (vis e : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
-      callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish [inferLitK_nat, inferLitK_str, litArmK_ok, pinArmK_some, call1W_some, tierW, idxW]
+      callW_spec p n "pin_at", callW_spec p n "const_e", evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE] <;>
+    finish [inferLitK_nat, inferLitK_str, litArmK_ok, pinArmK_some, call1W_some, tierW, idxW, tfld,
+      tcnt, TRec.ad]
 
 end il
 

@@ -139,21 +139,20 @@ def piSortTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, ok, r) {
 `2` num (counts `CTL[38 + t]`). -/
 -- con-ron: ConRon/Arena/Monad.lean:374-379 ConRon.Arena.viewN
 @[l_impl ConRon.Arena.viewN]
-def nameRecPre : FunDecl := lfn (h) locals (g, t, i, k, o) {
+def nameRecPre : FunDecl := lfn (h) locals (g, t, i, o) {
   if 4294967295 < h { abort };
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[34 + t] <= i { abort }; return (0, 0) };
-  if g == 2 { if CTL.u64[38 + t] <= i { abort }; return (0, 0) };
+  if g == 0 { if NANON⟨t⟩.count <= i { abort }; return (0, 0) };
+  if g == 2 { if NNUM⟨t⟩.count <= i { abort }; return (0, 0) };
   if g != 1 { abort };
-  if CTL.u64[36 + t] <= i { abort };
-  k := i * 8 + t * 4;
-  if NSREC.u64[k + 2] != 3 { return (0, 0) };
-  o := NSREC.u64[k + 1];
+  if NSTR⟨t⟩.count <= i { abort };
+  if NSTR⟨t⟩[i].l != 3 { return (0, 0) };
+  o := NSTR⟨t⟩[i].o;
   if POOL.u64[o] == 114 && POOL.u64[o + 1] == 101 && POOL.u64[o + 2] == 99 {
-    return (1, NSREC.u64[k])
+    return (1, NSTR⟨t⟩[i].p)
   };
   return (0, 0)
 }

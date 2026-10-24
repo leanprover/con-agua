@@ -159,32 +159,30 @@ def piLs : FunDecl := lfn (o, l) locals (sc, r) {
 persistently (`promoteN`'s three view arms). -/
 -- con-ron: ConRon/Arena/Promote.lean:80-101 ConRon.Arena.promoteN
 @[l_impl ConRon.Arena.promoteN]
-def pnArm : FunDecl := lfn (f, h) locals (g, t, i, k, q, o, l, r) {
+def pnArm : FunDecl := lfn (f, h) locals (g, t, i, q, o, l, r) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if 4294967295 < h { abort };
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 0 {
-    if CTL.u64[34 + t] <= i { abort };
+    if NANON⟨t⟩.count <= i { abort };
     r := call pi_nanon();
     return r
   };
   if g == 1 {
-    if CTL.u64[36 + t] <= i { abort };
-    k := i * 8 + t * 4;
-    q := NSREC.u64[k];
-    o := NSREC.u64[k + 1];
-    l := NSREC.u64[k + 2];
+    if NSTR⟨t⟩.count <= i { abort };
+    q := NSTR⟨t⟩[i].p;
+    o := NSTR⟨t⟩[i].o;
+    l := NSTR⟨t⟩[i].l;
     q := call promote_n(f, q);
     r := call pi_nstr(q, o, l);
     return r
   };
   if g == 2 {
-    if CTL.u64[38 + t] <= i { abort };
-    k := i * 4 + t * 2;
-    q := NNREC.u64[k];
-    o := NNREC.u64[k + 1];
+    if NNUM⟨t⟩.count <= i { abort };
+    q := NNUM⟨t⟩[i].p;
+    o := NNUM⟨t⟩[i].i;
     q := call promote_n(f, q);
     r := call pi_nnum(q, o);
     return r
@@ -197,7 +195,7 @@ def pnArm : FunDecl := lfn (f, h) locals (g, t, i, k, q, o, l, r) {
 @[l_impl ConRon.Arena.promoteN]
 def promoteNL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
   if f == 0 { abort };
-  if (h >> 27) & 1 == 0 { return h };
+  if ⟦h⟧.tier == 0 { return h };
   (fd, j, d) := call pn_find(h, 0);
   if fd != 0 { return PNM.u64[j * 4 + 3] };
   r := call pn_arm(f - 1, h);
@@ -232,7 +230,7 @@ def plArm : FunDecl := lfn (f, h) locals (g, a, b, x, y, r) {
 @[l_impl ConRon.Arena.promoteL]
 def promoteLL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
   if f == 0 { abort };
-  if (h >> 27) & 1 == 0 { return h };
+  if ⟦h⟧.tier == 0 { return h };
   (fd, j, d) := call pl_find(h, 0);
   if fd != 0 { return PLM.u64[j * 4 + 3] };
   r := call pl_arm(f - 1, h);
@@ -274,7 +272,7 @@ def plsArm : FunDecl := lfn (f, h) locals (o, l, q, u, r) {
 -- con-ron: ConRon/Arena/Promote.lean:140-150 ConRon.Arena.promoteLs
 @[l_impl ConRon.Arena.promoteLs]
 def promoteLsL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
-  if (h >> 27) & 1 == 0 { return h };
+  if ⟦h⟧.tier == 0 { return h };
   (fd, j, d) := call pls_find(h, 0);
   if fd != 0 { return PLSM.u64[j * 4 + 3] };
   r := call pls_arm(f, h);
@@ -288,13 +286,12 @@ def promoteLsL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 /-- `pe_lit(h)`: the scratch literal `h` (its pool slice and kind) interned persistently. -/
 -- con-ron: ConRon/Arena/Promote.lean:152-199 ConRon.Arena.promoteE
 @[l_impl ConRon.Arena.promoteE]
-def peLit : FunDecl := lfn (h) locals (t, i, k, o, l, r) {
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  k := i * 8 + t * 4;
-  o := REC.u64[k + 1];
-  l := REC.u64[k + 2];
-  if REC.u64[k] == 1 { r := call pi_lit_str(o, l); return r };
+def peLit : FunDecl := lfn (h) locals (t, i, o, l, r) {
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  o := LIT⟨t⟩[i].o;
+  l := LIT⟨t⟩[i].l;
+  if LIT⟨t⟩[i].kind == 1 { r := call pi_lit_str(o, l); return r };
   r := call pi_lit(o, l);
   return r
 }
@@ -366,7 +363,7 @@ def peArm : FunDecl := lfn (f, h) locals (g, a, b, c, r) {
 @[l_impl ConRon.Arena.promoteE]
 def promoteEL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
   if f == 0 { abort };
-  if (h >> 27) & 1 == 0 { return h };
+  if ⟦h⟧.tier == 0 { return h };
   (fd, j, d) := call pe_find(h, 0);
   if fd != 0 { return PEM.u64[j * 4 + 3] };
   r := call pe_arm(f - 1, h);

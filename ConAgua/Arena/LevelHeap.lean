@@ -82,20 +82,20 @@ def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
     return (LH.u64[o], LH.u64[o + 1], LH.u64[o + 2])
   };
   g := p >> 28;
-  t := (p >> 27) & 1;
-  i := p & 134217727;
+  t := ⟦p⟧.tier;
+  i := ⟦p⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[8 + t] <= i { abort }; return (0, 0, 0) };
-  if g == 1 { if CTL.u64[6 + t] <= i { abort }; return (1, SREC.u64[i * 2 + t], 0) };
+  if g == 0 { if ZERO⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if g == 1 { if SUCC⟨t⟩.count <= i { abort }; return (1, SUCC⟨t⟩[i].u, 0) };
   if g == 2 {
-    if CTL.u64[10 + t] <= i { abort };
-    return (2, MREC.u64[i * 4 + t * 2], MREC.u64[i * 4 + t * 2 + 1])
+    if MAX⟨t⟩.count <= i { abort };
+    return (2, MAX⟨t⟩[i].u, MAX⟨t⟩[i].v)
   };
   if g == 3 {
-    if CTL.u64[12 + t] <= i { abort };
-    return (3, IREC.u64[i * 4 + t * 2], IREC.u64[i * 4 + t * 2 + 1])
+    if IMAX⟨t⟩.count <= i { abort };
+    return (3, IMAX⟨t⟩[i].u, IMAX⟨t⟩[i].v)
   };
-  if g == 4 { if CTL.u64[14 + t] <= i { abort }; return (4, PREC.u64[i * 2 + t], 0) };
+  if g == 4 { if PARAM⟨t⟩.count <= i { abort }; return (4, PARAM⟨t⟩[i].n, 0) };
   abort
 }
 
@@ -110,8 +110,9 @@ theorem lvNode_spec (p : Prog) (hp : p.lookup "lv_node" = some lvNode) (n : Nat)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [lvNodeW, tierW, idxW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+      finish [lvNodeW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-! ## `lh_mk(g, a, b)`: allocate a heap node -/
 
