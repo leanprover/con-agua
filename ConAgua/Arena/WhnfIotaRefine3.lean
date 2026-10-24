@@ -338,12 +338,10 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
           decBool L ∧ HW (L.headD 0) := by
       intro hcf hLe hme
       subst hLe; subst hme
-      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-        (andRescueSlotsGo_stop_run fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat a _ _
-          (tbl.entry j.toNat) (decBool r₂) hrunF hb' hcf)
-      refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, by simp [HW]⟩
-      · rw [hstF]; exact hS₂
-      · rw [hresF]; simp [decBool]
+      refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_stop_run fe (decI anW) (decI ctor) nP.toNat (decI us)
+        K j.toNat a _ _ (tbl.entry j.toNat) (decBool r₂) hrunF hb' hcf) ⟨M₂, hS₂, hK₁.trans hK₂,
+        hSt₁.trans hSt₂⟩ ?_ (by simp [ResH, HW])
+      · simp [decBool]
     have hL' := hL
     simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL'
     rw [ldE_eq _ _ hx6] at hL'
@@ -513,14 +511,14 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
     (hc.wscopedBFast n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb d fab hS hfab) hc1
   by_cases h0 : r₁.headD 0 = 0
   · rw [if_pos h0] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : decBool r₁ = false := by simp only [decBool]; rw [h0]; rfl
     rw [hb] at hrun1
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
       (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ⟨M₁, ?_, hK₁, hm ▸ hSt₁⟩, ?_, ?_⟩
-    · rw [hstF, ← hm]; exact hS₁
+    refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, ?_⟩
+    · rw [hstF]; exact hS₁
     · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h0] at hW
@@ -534,14 +532,14 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   rw [h00] at hrun2
   by_cases h20 : r₂.headD 0 = 0
   · rw [if_pos h20] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb2 : decBool r₂ = false := by simp only [decBool]; rw [h20]; rfl
     rw [hb2] at hrun2
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
       (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hm ▸ hSt₁.trans hSt₂⟩, ?_, ?_⟩
-    · rw [hstF, ← hm]; exact hS₂
+    refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, ?_⟩
+    · rw [hstF]; exact hS₂
     · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h20] at hW
@@ -549,15 +547,15 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   rw [hb2] at hrun2
   rcases hc3 : callW p n "leaf_guard" [fab, major] m₂ with _ | ⟨r₃, m₃⟩ <;>
     simp only [hc3, reduceCtorEq] at hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
     (hc.leafGuard n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb fab major hS₂ hfab hmaj) hc3
   have hrun3 := AM.run_of_ok _ _ hok3
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
     (fabScopeOk_go d.toNat (decE fab) (decE major) a₀ _ _ _ _ hrun1 hrun2 hrun3)
   have hr3 : r₃.headD 0 = r.headD 0 := by simpa using hr
-  refine ⟨hokF, ⟨M₃, ?_, hK₁.trans (hK₂.trans hK₃), hm ▸ hSt₁.trans (hSt₂.trans hSt₃)⟩, ?_, ?_⟩
-  · rw [hstF, ← hm]; exact hS₃
+  refine ⟨hokF, ⟨M₃, ?_, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, ?_, ?_⟩
+  · rw [hstF]; exact hS₃
   · rw [hresF, hres3]; simp only [decBool]; rw [hr3]
   · unfold ResH HW; rw [← hr3]; exact hr₃
 
@@ -696,14 +694,14 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
       rw [if_pos (by rw [hk0]; decide)] at hW
       rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
         simp only [hc1, reduceCtorEq] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+      obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
       have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
         (litMajorToCtor_run_nat _ fe d.toNat (decE h) a₀ htag N hview)
         (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
       obtain ⟨hok, hca, hres, hr₁⟩ := hcr
       refine ⟨hok, ?_, ?_, ?_⟩
-      · rw [← hm]; exact hca
+      · exact hca
       · rw [hres]; simp only [decH]; rw [hr1]
       · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
     | strVal str =>
@@ -715,15 +713,15 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
         (hw.strLitSupported n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb hS) hc1
       by_cases h0 : r₁.headD 0 = 0
       · rw [if_pos h0] at hW
-        obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+        obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         have hb : decBool r₁ = false := by simp only [decBool]; rw [h0]; rfl
         rw [hb] at hrun1
         obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
           (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀ _ htag
             str hview hrun1)
         have hr1 : r.headD 0 = h := by simpa using hr.symm
-        refine ⟨hokF, ⟨M₁, ?_, hK₁, hm ▸ hSt₁⟩, ?_, ?_⟩
-        · rw [hstF, ← hm]; exact hS₁
+        refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, ?_⟩
+        · rw [hstF]; exact hS₁
         · rw [hresF]; simp only [decH]; rw [hr1]
         · unfold ResH HW; rw [hr1]; exact hh
       · rw [if_neg h0] at hW
@@ -753,14 +751,14 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
   · rw [if_pos h8] at hW
     rcases hc1 : callW p n "lit_to_ctor_if_nat" [vis, h] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hc1, reduceCtorEq] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hr1 : r.headD 0 = r₁.headD 0 := by simpa using hr.symm
     have hcr := CoreRef.of_run_eq (T' := litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h))
       (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀ (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
       (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h hS hh) hc1)
     obtain ⟨hok, hca, hres, hr₁⟩ := hcr
     refine ⟨hok, ?_, ?_, ?_⟩
-    · rw [← hm]; exact hca
+    · exact hca
     · rw [hres]; simp only [decH]; rw [hr1]
     · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
 

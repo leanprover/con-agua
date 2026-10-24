@@ -235,10 +235,8 @@ theorem dlW_ok (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
       have hrun := defEqList_stop_run (coreKnot (decMode mode) fe id F) fe d.toNat _ _
         (aas.toList.drop (i.toNat + 1)) (bs.toList.drop (i.toNat + 1)) a _ hrunT
       rw [hdra, hdrb]
-      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-      refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, by simp [HW]⟩
-      · rw [hstF]; exact hS₁
-      · rw [hresF]; simp [decBool]
+      refine CoreRef.of_run (ok := ResH) hrun ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ (by simp [ResH, HW])
+      · simp [decBool]
     · rw [dlW_cont p mode vis d ao an bo bn k m m₁ i r₁ hn hc h0] at hL
       have hsa₁ : SpineN m₁ ao an aas := hsa.toN.keep hSt₁.size hSt₁.below (hta hna) hS.spn
       have hsb₁ : SpineN m₁ bo bn bs := hsb.toN.keep hSt₁.size hSt₁.below (htb hnb) hS.spn
@@ -412,15 +410,15 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
       hsm htm) hc1
   by_cases h0 : r₁.headD 0 = 0
   · rw [if_pos h0] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : decOptR r₁ = none := by simp only [decOptR, decOpt, h0, ↓reduceIte]
     rw [hnone] at hrunP
     have hrun1 := iotaIndexOk_run_none (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat
       cnP.toNat (decE tyCtor) margs.toList idx.toList a₀ _ hI' hrunP
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun1
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ⟨M₁, ?_, hK₁, hm ▸ hSt₁⟩, ?_, ?_⟩
-    · rw [hstF, ← hm]; exact hS₁
+    refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, ?_⟩
+    · rw [hstF]; exact hS₁
     · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h0] at hW
@@ -612,11 +610,9 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       have hnone : AM.res (fe.findProj? (decI T) j.toNat) a = none := by
         rw [hres]; simp only [decEntry, h0, ↓reduceIte]
       rw [hnone] at hrunF
-      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
-        (towerSlotsAllGo_stop_run fe (decI T) K j.toNat a _ none hrunF rfl)
-      refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, by simp [HW]⟩
-      · rw [hstF]; exact hS₁
-      · rw [hresF]; simp [decBool]
+      refine CoreRef.of_run (ok := ResH) (towerSlotsAllGo_stop_run fe (decI T) K j.toNat a _ none hrunF rfl)
+        ⟨M₁, hS₁, hK₁, hSt₁⟩ ?_ (by simp [ResH, HW])
+      · simp [decBool]
     · rw [tsW_cont p vis T nF k m m₁ j r₁ hlt hc h0] at hL
       obtain ⟨tbl, htbl, -⟩ := hpf k m a dn vis fe M eb T j r₁ m₁ hS hc h0
       have hsome : AM.res (fe.findProj? (decI T) j.toNat) a = some (tbl.entry j.toNat) := by
