@@ -52,7 +52,7 @@ theorem mkK_pw {A : ArrId} (hA : A ≠ CTL) {c s d : Word} {x : Option (Word × 
 /-- `intern_lit_str`'s model refines `internE (.lit (.strVal s))` under `ArenaD`
 (`DerRel.lean`'s `internLit_D` at the `strVal` arm). -/
 theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
-    (hq : SliceOK m o l) (s : String) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (hq : SliceOK m o l) (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
     (m' : Mem) (hI : internWStr m o l = some (r, m')) :
     AM.ok (internE (.lit (.strVal s))) a ∧ ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
     AM.res (internE (.lit (.strVal s))) a = decE r := by
@@ -247,9 +247,9 @@ theorem slice0 {m : Mem} {o l : Word} (hsl : SliceOK m o l) :
 /-- **`pi_lit` refines `internPersistentE (.lit (.natVal _))`**, the number the pool slice
 holds. -/
 theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
-    (hn : Norm (m.arr64 POOL) o.toNat l.toNat) (r : Word) (m' : Mem)
+    (hn : Norm (vpool m) o.toNat l.toNat) (r : Word) (m' : Mem)
     (h : piW p n "intern_lit" [o, l] m = some (r, m')) :
-    ∃ a', (internPersistentE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))).run a =
+    ∃ a', (internPersistentE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))).run a =
       .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧ MemFrame [REC, SLOT] [1, 2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
@@ -266,7 +266,7 @@ theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
 /-- **`pi_lit_str` refines `internPersistentE (.lit (.strVal s))`**, `s` the string the pool
 slice holds. -/
 theorem piLitStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
-    (s : String) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
+    (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
     (h : piW p n "intern_lit_str" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [REC, SLOT] [1, 2, 3] m m' :=

@@ -33,13 +33,13 @@ theorem internLit_refinesD_hw (p : Prog) (hph : p.lookup "lit_hash" = some litHa
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hA : ArenaD s₀.mem a₀)
-    (hq : SliceOK s₀.mem o l) (hn : Norm (s₀.mem.arr64 POOL) o.toNat l.toNat) :
+    (hq : SliceOK s₀.mem o l) (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ =
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0) ∧ HW (r.headD 0); ⊤⦄ := by
   have ⟨_, _, hps, htop⟩ := hA.1.lit.1
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
@@ -59,13 +59,13 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hpool : ∀ m a, R m a → PoolOK m)
   (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
-    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      R s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      R s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
       HW (r.headD 0); ⊤⦄)
 
 include hpl hpc hpt hpa hpn hpool hgrow hI in
@@ -75,12 +75,12 @@ theorem natAddLit_refines_hw (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_add_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
-      R s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)) ∧
+      AM.ok (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ ∧
+      R s'.mem (AM.st (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)) ∧
       HW (r.headD 0); ⊤⦄ := by
   have hok := hpool _ _ hR
   simp only [PoolOK, SliceOK] at hok ha hb
@@ -104,13 +104,13 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hpool : ∀ m a, R m a → PoolOK m)
   (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
-    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      R s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      R s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
       HW (r.headD 0); ⊤⦄)
   (hg : p.lookup "nat_succ_lit" = some natSuccLitL)
 
@@ -121,9 +121,9 @@ theorem natSuccLit_refines_hw (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_succ_lit" [oa, la]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat) 1) a₀ ∧
-      R s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat) 1) a₀) ∧
-      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat) 1) a₀ =
+      AM.ok (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat) 1) a₀ ∧
+      R s'.mem (AM.st (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat) 1) a₀) ∧
+      AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat) 1) a₀ =
         some (decE (r.headD 0)) ∧ HW (r.headD 0); ⊤⦄ := by
   have hok := hpool _ _ hR
   simp only [PoolOK, SliceOK] at hok ha
@@ -148,13 +148,13 @@ variable (p : Prog)
 
 theorem natSuccLit_inst (hp : WhnfDeltaProg' p) :
     ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), ArenaD s₀.mem a₀ →
-    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
       HW (r.headD 0); ⊤⦄ :=
   fun a₀ n s₀ o l hA hq hn => internLit_refinesD_hw p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
     hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn
@@ -162,14 +162,14 @@ theorem natSuccLit_inst (hp : WhnfDeltaProg' p) :
 /-- `natSuccLit_inst` with "the pool only grew since `m₀`" carried along. -/
 theorem natSuccLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
     ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), (ArenaD s₀.mem a₀ ∧ PoolGrew m₀ s₀.mem) →
-    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    SliceOK s₀.mem o l → Norm (vpool s₀.mem) o.toNat l.toNat →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      (ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      (ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
         PoolGrew m₀ s'.mem) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
       HW (r.headD 0); ⊤⦄ := by
   intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
   apply L.M.triple_of_run
@@ -186,9 +186,9 @@ theorem callW_natSuccLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hs : SliceOK s₀.mem o cnt) (r : List Word) (m' : Mem)
     (h : callW p n "nat_succ_lit" [o, cnt] s₀.mem = some (r, m')) :
-    AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat) 1) a₀ ∧
-    CoreS dn m' (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat) 1) a₀) vis fe MM eb ∧
-    AM.res (natAddArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat) 1) a₀ = some (decE (r.headD 0)) ∧
+    AM.ok (natAddArm (pv (vpool s₀.mem) o.toNat cnt.toNat) 1) a₀ ∧
+    CoreS dn m' (AM.st (natAddArm (pv (vpool s₀.mem) o.toNat cnt.toNat) 1) a₀) vis fe MM eb ∧
+    AM.res (natAddArm (pv (vpool s₀.mem) o.toNat cnt.toNat) 1) a₀ = some (decE (r.headD 0)) ∧
     MemFrame natA natC s₀.mem m' ∧ HW (r.headD 0) ∧ PoolGrew s₀.mem m' := by
   obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres, hhw⟩ := triple_of_callW
     (natSuccLit_refines_hw p hp.natLimb' hp.addCarry' hp.natTrim' hp.natAdd' hp.natAddLit
@@ -815,10 +815,10 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
   rw [← hm]
   obtain ⟨hok5, hS5, hres5, hfr5, hhw5, hP5⟩ := callW_natSuccLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M' eb _ _
     hS3 hsl r₅ m₅ h5
-  have hsome : rawDec m₃ r₄ = some (pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat
+  have hsome : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf]
   rw [hsome] at hrun4
-  have hi := natAddArm_run_internE (u := pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat
+  have hi := natAddArm_run_internE (u := pv (vpool m₃) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat) (v := 1) (by rw [AM.run_of_ok _ _ hok5, hres5])
   have hz := redSucc_run_some (coreKnot (decMode mode) fe id F) fe d.toNat (decI c) (decE b) a₀ a₁ a₂ a₂ _
     s₀.mem hC.pins (decBool r₁) hsup hcond (decE (r₃.headD 0)) (by rw [hrun3]; rfl) _ hrun4 _ hi
@@ -833,29 +833,29 @@ end refs18
 /-- **A slice below the old top survives a growth of the pool**: the slice, its value and its
 normalisation. -/
 theorem PoolGrew.slice {m m' : Mem} (hg : PoolGrew m m') {o l : Word} (hs : SliceOK m o l)
-    (hn : Norm (m.arr64 POOL) o.toNat l.toNat) :
-    SliceOK m' o l ∧ pv (m'.arr64 POOL) o.toNat l.toNat = pv (m.arr64 POOL) o.toNat l.toNat ∧
-      Norm (m'.arr64 POOL) o.toNat l.toNat := by
+    (hn : Norm (vpool m) o.toNat l.toNat) :
+    SliceOK m' o l ∧ pv (vpool m') o.toNat l.toNat = pv (vpool m) o.toNat l.toNat ∧
+      Norm (vpool m') o.toNat l.toNat := by
   refine ⟨?_, Agree.pv _ _ _ _ _ hg.below (by unfold SliceOK at hs; exact hs), ?_⟩
   · have := hg.top; unfold SliceOK at hs ⊢; omega
   · intro hpos
     have := hn hpos
     have hlt : o.toNat + (l.toNat - 1) < m.top.toNat := by unfold SliceOK at hs; omega
-    rw [show (m'.arr64 POOL)[o.toNat + (l.toNat - 1)]? = (m.arr64 POOL)[o.toNat + (l.toNat - 1)]? from
+    rw [show (vpool m')[o.toNat + (l.toNat - 1)]? = (vpool m)[o.toNat + (l.toNat - 1)]? from
       hg.below _ hlt]
     exact this
 
 theorem Grows.slice {m m' : Mem} (hg : Grows m m') {o l : Word} (hs : SliceOK m o l)
-    (hn : Norm (m.arr64 POOL) o.toNat l.toNat) :
-    SliceOK m' o l ∧ pv (m'.arr64 POOL) o.toNat l.toNat = pv (m.arr64 POOL) o.toNat l.toNat ∧
-      Norm (m'.arr64 POOL) o.toNat l.toNat := by
+    (hn : Norm (vpool m) o.toNat l.toNat) :
+    SliceOK m' o l ∧ pv (vpool m') o.toNat l.toNat = pv (vpool m) o.toNat l.toNat ∧
+      Norm (vpool m') o.toNat l.toNat := by
   obtain ⟨-, hag, hle, -, -⟩ := hg
   refine ⟨?_, Agree.pv _ _ _ _ _ hag (by unfold SliceOK at hs; exact hs), ?_⟩
   · unfold SliceOK at hs ⊢; omega
   · intro hpos
     have := hn hpos
     have hlt : o.toNat + (l.toNat - 1) < m.top.toNat := by unfold SliceOK at hs; omega
-    rw [show (m'.arr64 POOL)[o.toNat + (l.toNat - 1)]? = (m.arr64 POOL)[o.toNat + (l.toNat - 1)]? from
+    rw [show (vpool m')[o.toNat + (l.toNat - 1)]? = (vpool m)[o.toNat + (l.toNat - 1)]? from
       hag _ hlt]
     exact this
 
@@ -865,10 +865,10 @@ def NatOpResultOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb c oa la ob lb : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW c →
     SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
-    Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat → Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat →
+    Norm (vpool s₀.mem) oa.toNat la.toNat → Norm (vpool s₀.mem) ob.toNat lb.toNat →
     CoreSpec p n "nat_op_result" [c, oa, la, ob, lb]
-      (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) decOptR s₀ a₀ dn vis fe MM eb (fun _ => True)
+      (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat)) decOptR s₀ a₀ dn vis fe MM eb (fun _ => True)
 
 theorem hw_mask32 (y : Word) : HW (y &&& 4294967295) := and32_lt y
 
@@ -938,7 +938,7 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [if_neg hf2] at hW
   obtain ⟨hsl2, hnorm2⟩ := hslice2 hf2
-  have hsome2 : rawDec m₁ r₂ = some (pv (m₁.arr64 POOL) (r₂.tail.headD 0).toNat
+  have hsome2 : rawDec m₁ r₂ = some (pv (vpool m₁) (r₂.tail.headD 0).toNat
       (r₂.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf2]
   rw [hsome2] at hrun2
   -- second `whnf`
@@ -981,7 +981,7 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [if_neg hf4] at hW
   obtain ⟨hsl4, hnorm4⟩ := hslice4 hf4
-  have hsome4 : rawDec m₃ r₄ = some (pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat
+  have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf4]
   rw [hsome4] at hrun4
   obtain ⟨hsl2', hpv2, hnorm2'⟩ := hgrow.slice hsl2 hnorm2
@@ -1002,12 +1002,12 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
   dsimp only at hres5' hS₅
   rw [hpv2] at hres5' hS₅
   have hz := redOp_run_some (coreKnot (decMode mode) fe id F) d.toNat (decI c) (decE a) (decE b) a₀ a₁
-    a₁ a₂ a₂ (AM.st (natOpResult (decI c) (pv (m₁.arr64 POOL) (r₂.tail.headD 0).toNat
-      (r₂.tail.tail.headD 0).toNat) (pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat
+    a₁ a₂ a₂ (AM.st (natOpResult (decI c) (pv (vpool m₁) (r₂.tail.headD 0).toNat
+      (r₂.tail.tail.headD 0).toNat) (pv (vpool m₃) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat)) a₂)
     (decE (r₁.headD 0)) (decE (r₃.headD 0))
-    (pv (m₁.arr64 POOL) (r₂.tail.headD 0).toNat (r₂.tail.tail.headD 0).toNat)
-    (pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat (r₄.tail.tail.headD 0).toNat)
+    (pv (vpool m₁) (r₂.tail.headD 0).toNat (r₂.tail.tail.headD 0).toNat)
+    (pv (vpool m₃) (r₄.tail.headD 0).toNat (r₄.tail.tail.headD 0).toNat)
     (decOptR r₅) (by rw [hrun1]; rfl) hrun2 (by rw [hrun3]; rfl) hrun4 hres5'
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', ?_, ?_, ?_⟩
@@ -1106,7 +1106,7 @@ theorem callW_reduceNatWf (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (hn
       · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
     rw [if_neg hf4] at hW
     obtain ⟨hsl4, hnorm4⟩ := hslice4 hf4
-    have hsome4 : rawDec m₃ r₄ = some (pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat
+    have hsome4 : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
         (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf4]
     rw [hsome4] at hrun4
     cases h5 : callW p n "whnf" [mode, vis, d, b] m₃ with

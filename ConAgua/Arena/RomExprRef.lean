@@ -817,7 +817,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     split at hI
     · cases hI
     rename_i hroom
-    have hroom' : mem.top.toNat < (mem.arr64 POOL).size := by
+    have hroom' : mem.top.toNat < pcap mem := by
       have := hpool.2.2.1
       simp only [Mem.len64, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat'] at hroom
       rw [Nat.mod_eq_of_lt (by omega)] at hroom; omega

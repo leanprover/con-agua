@@ -95,7 +95,7 @@ theorem viewN_anon (hg : h >>> 28 = 0) (hc : ¬ rdW (m.arr64 CTL) (34 + tierW h)
 theorem viewN_str (hg : h >>> 28 = 1) (hc : ¬ rdW (m.arr64 CTL) (36 + tierW h) ≤ idxW h) :
     ∃ s, (viewN (decI h)).run a = .ok (.str (decI (nsQ m (tierW h) (idxW h))) s, a) ∧
       SliceOK m (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h)) ∧
-      sliceL (m.arr64 POOL) (nsO m (tierW h) (idxW h)).toNat (nsL m (tierW h) (idxW h)).toNat =
+      sliceL (vpool m) (nsO m (tierW h) (idxW h)).toNat (nsL m (tierW h) (idxW h)).toNat =
         strWords s ∧ (nsQ m (tierW h) (idxW h)).toNat < 2 ^ 32 := by
   have e1 : ((decI h : NIdx).tag = 1) := (decI_tag_eq h hh 1 (by decide)).mpr (by rw [hg]; rfl)
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.nstr (tierW h) (tierW_le h)
@@ -334,10 +334,12 @@ theorem pn_rel : ∀ n : Nat,
       rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩
       dsimp only [pnStrK, pnNumK]
       have hpool : m₁.arr64 POOL = m.arr64 POOL := hfr₁.1 POOL (by decide) (by decide)
+      have hpoolv := vpool_congr hpool
+      have hpoolc := pcap_congr hpool
       have htop : m₁.top = m.top := by simp only [top_rdW]; exact hfr₁.2.1 0 (by decide)
       refine (Sim.hd1 (sim_pi (fun n s₀ => piNStr_spec p hp n s₀ _ _ _) fun n _ _ h =>
         piNStr_rel p hp n m₁ a₁ hD₁ _ _ _ hpw₁ (by simp only [SliceOK, htop]; exact hsl) st
-          (by rw [hpool]; exact hk) _ _ h)).mono ?_
+          (by rw [hpoolv]; exact hk) _ _ h)).mono ?_
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
       exact ⟨rfl, hD₂, hP₁.frameLo (by simp [NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁⟩
