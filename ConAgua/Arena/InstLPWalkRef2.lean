@@ -59,14 +59,14 @@ include hp ih
 theorem ilw_fvarArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (hty : HW (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)))
+    (hty : HW (tfld m FVAR (tierW h) (idxW h) 1))
     (hW : ilwFVarW p n m h ko kc vo vc fu = some (r, m')) :
-    ILWStep (instLPArmFVar ks vs fu.toNat (decE h) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat
-      (decE (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)))) a dn m m' vis fe M eb r := by
+    ILWStep (instLPArmFVar ks vs fu.toNat (decE h) (tfld m FVAR (tierW h) (idxW h) 0).toNat
+      (decE (tfld m FVAR (tierW h) (idxW h) 1))) a dn m m' vis fe M eb r := by
   rw [instLPArmFVar_eq]
   unfold ilwFVarW at hW
-  generalize rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) = iw at hW ⊢
-  generalize rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1) = tw at hty hW ⊢
+  generalize tfld m FVAR (tierW h) (idxW h) 0 = iw at hW ⊢
+  generalize tfld m FVAR (tierW h) (idxW h) 1 = tw at hty hW ⊢
   refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [tw, ko, kc, vo, vc, fu] m with
       | none => none
       | some (x, m₁) => if x.headD 0 = tw then some (h, m₁) else ilwChk (callW p n "intern_fvar" [iw, x.headD 0] m₁))
@@ -88,16 +88,16 @@ theorem ilw_fvarArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
 theorem ilw_projArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (he : HW (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
+    (he : HW (tfld m PROJ (tierW h) (idxW h) 2))
     (hW : ilwProjW p n m h ko kc vo vc fu = some (r, m')) :
-    ILWStep (instLPArmProj ks vs fu.toNat (decE h) (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3)))
-      (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat
-      (decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))) a dn m m' vis fe M eb r := by
+    ILWStep (instLPArmProj ks vs fu.toNat (decE h) (decI (tfld m PROJ (tierW h) (idxW h) 0))
+      (tfld m PROJ (tierW h) (idxW h) 1).toNat
+      (decE (tfld m PROJ (tierW h) (idxW h) 2))) a dn m m' vis fe M eb r := by
   rw [instLPArmProj_eq]
   unfold ilwProjW at hW
-  generalize rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3) = nw at hW ⊢
-  generalize rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1) = iw at hW ⊢
-  generalize rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2) = ew at he hW ⊢
+  generalize tfld m PROJ (tierW h) (idxW h) 0 = nw at hW ⊢
+  generalize tfld m PROJ (tierW h) (idxW h) 1 = iw at hW ⊢
+  generalize tfld m PROJ (tierW h) (idxW h) 2 = ew at he hW ⊢
   refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [ew, ko, kc, vo, vc, fu] m with
       | none => none
       | some (x, m₁) => ilwRbProj p n m₁ h nw iw ew (x.headD 0))
@@ -121,18 +121,18 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
     {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (hf : HW (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)))
-    (ha : HW (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)))
-    (hb : HW (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))
+    (hf : HW (tfld m LET (tierW h) (idxW h) 0))
+    (ha : HW (tfld m LET (tierW h) (idxW h) 1))
+    (hb : HW (tfld m LET (tierW h) (idxW h) 2))
     (hW : ilwLetW p n m h ko kc vo vc fu = some (r, m')) :
-    ILWStep (instLPArmLet ks vs fu.toNat (decE h) (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)))
-      (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)))
-      (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))) a dn m m' vis fe M eb r := by
+    ILWStep (instLPArmLet ks vs fu.toNat (decE h) (decE (tfld m LET (tierW h) (idxW h) 0))
+      (decE (tfld m LET (tierW h) (idxW h) 1))
+      (decE (tfld m LET (tierW h) (idxW h) 2))) a dn m m' vis fe M eb r := by
   rw [instLPArmLet_eq]
   unfold ilwLetW at hW
-  generalize rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3) = fw at hf hW ⊢
-  generalize rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1) = aw at ha hW ⊢
-  generalize rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2) = bw at hb hW ⊢
+  generalize tfld m LET (tierW h) (idxW h) 0 = fw at hf hW ⊢
+  generalize tfld m LET (tierW h) (idxW h) 1 = aw at ha hW ⊢
+  generalize tfld m LET (tierW h) (idxW h) 2 = bw at hb hW ⊢
   refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
       | none => none
       | some (x, m₁) => match callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with

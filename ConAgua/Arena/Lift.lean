@@ -54,26 +54,26 @@ def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
   x := call der_b(h);
   if x < 32767 && x <= c { return h };
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 0 {
-    if CTL.u64[22 + t] <= i { abort };
-    x := BREC.u64[i * 2 + t];
+    if BVAR⟨t⟩.count <= i { abort };
+    x := BVAR⟨t, i⟩.i;
     if x < c { return h };
     if x + k < x { abort };
     r := call intern_bvar(x + k);
     return r
   };
-  if g == 4 { if CTL.u64[4 + t] <= i { abort }; r := call lift_app(h, c, k, fu - 1); return r };
-  if g == 5 { if CTL.u64[28 + t] <= i { abort }; r := call lift_lam(h, c, k, fu - 1); return r };
-  if g == 6 { if CTL.u64[30 + t] <= i { abort }; r := call lift_forall(h, c, k, fu - 1); return r };
-  if g == 7 { if CTL.u64[20 + t] <= i { abort }; r := call lift_let(h, c, k, fu - 1); return r };
-  if g == 9 { if CTL.u64[32 + t] <= i { abort }; r := call lift_proj(h, c, k, fu - 1); return r };
-  if g == 1 { if CTL.u64[26 + t] <= i { abort }; return h };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return h };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return h };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return h };
+  if g == 4 { if APP⟨t⟩.count <= i { abort }; r := call lift_app(h, c, k, fu - 1); return r };
+  if g == 5 { if LAM⟨t⟩.count <= i { abort }; r := call lift_lam(h, c, k, fu - 1); return r };
+  if g == 6 { if FORALL⟨t⟩.count <= i { abort }; r := call lift_forall(h, c, k, fu - 1); return r };
+  if g == 7 { if LET⟨t⟩.count <= i { abort }; r := call lift_let(h, c, k, fu - 1); return r };
+  if g == 9 { if PROJ⟨t⟩.count <= i { abort }; r := call lift_proj(h, c, k, fu - 1); return r };
+  if g == 1 { if FVAR⟨t⟩.count <= i { abort }; return h };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return h };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return h };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return h };
   abort
 }
 
@@ -82,10 +82,10 @@ def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
 def liftApp : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := AREC.u64[i * 4 + t * 2];
-  a := AREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := APP⟨t, i⟩.f;
+  a := APP⟨t, i⟩.a;
   x := call lift_go(f, c, k, fu);
   y := call lift_go(a, c, k, fu);
   r := call mk_app(x, y);
@@ -100,10 +100,10 @@ def liftLam : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := LAREC.u64[i * 4 + t * 2];
-  a := LAREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := LAM⟨t, i⟩.ty;
+  a := LAM⟨t, i⟩.b;
   x := call lift_go(f, c, k, fu);
   y := call lift_go(a, c + 1, k, fu);
   r := call mk_lam(x, y);
@@ -118,10 +118,10 @@ def liftForall : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := FAREC.u64[i * 4 + t * 2];
-  a := FAREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := FORALL⟨t, i⟩.ty;
+  a := FORALL⟨t, i⟩.b;
   x := call lift_go(f, c, k, fu);
   y := call lift_go(a, c + 1, k, fu);
   r := call mk_forall(x, y);
@@ -136,11 +136,11 @@ def liftLet : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, b, x, y
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := LEREC.u64[i * 6 + t * 3];
-  a := LEREC.u64[i * 6 + t * 3 + 1];
-  b := LEREC.u64[i * 6 + t * 3 + 2];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := LET⟨t, i⟩.ty;
+  a := LET⟨t, i⟩.v;
+  b := LET⟨t, i⟩.b;
   x := call lift_go(f, c, k, fu);
   y := call lift_go(a, c, k, fu);
   z := call lift_go(b, c + 1, k, fu);
@@ -155,11 +155,11 @@ def liftLet : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, b, x, y
 def liftProj : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, nm, ix, e, x, r, u) {
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  nm := PJREC.u64[i * 6 + t * 3];
-  ix := PJREC.u64[i * 6 + t * 3 + 1];
-  e := PJREC.u64[i * 6 + t * 3 + 2];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  nm := PROJ⟨t, i⟩.n;
+  ix := PROJ⟨t, i⟩.i;
+  e := PROJ⟨t, i⟩.e;
   x := call lift_go(e, c, k, fu);
   r := call mk_proj(nm, ix, x);
   (fd, j, d) := call lf_find(h, c);
@@ -198,6 +198,8 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
     mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push") (hp.get "intern_forall") (hp.get "mk_forall") n,
     mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE") (hp.get "mk_let") n,
     mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n]
-  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena
