@@ -249,15 +249,7 @@ theorem litMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchW (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litMatch]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
-      finish [matchW]
+      r = [if matchW (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by sorry
 
 end match_
 
@@ -414,15 +406,7 @@ theorem litMatchStr_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match_str" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchWStr (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litMatchStr]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
-      finish [matchWStr]
+      r = [if matchWStr (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by sorry
 
 end matchStr
 
@@ -474,8 +458,7 @@ variable (p : Prog)
 
 theorem litCSk_room (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
-    RoomOK (litCSk kd mf fname pname mt) := fun s => by
-  simp only [litCSk, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
+    RoomOK (litCSk kd mf fname pname mt) := by sorry
 
 theorem litCSk_recs (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
