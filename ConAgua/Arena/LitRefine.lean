@@ -455,7 +455,7 @@ theorem litMatchStrOK :
   intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s'⟩⟩ := k
   · grind [litMtStr, matchWStr, RecRel_natVal, NatRec_raw]
-  · obtain ⟨h0, hsl, hw, hh⟩ : StrRec m t i s' := RecRel_strVal m t i s' ▸ hr
+  · obtain ⟨h0, hsl, hw, hh⟩ := (StrRec_raw m t i s').mp (RecRel_strVal m t i s' ▸ hr)
     obtain ⟨-, -, hps, htop⟩ := hpool
     simp only [SliceOK] at hq
     have key := slice_key (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
