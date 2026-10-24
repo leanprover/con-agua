@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.NAnonStore
 
@@ -84,7 +84,7 @@ def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
 /-- **The state relation** of the `anonymous` store: the library's relation for the name store's
 two `anonymous` tables. -/
 def NAnonR (m : Mem) (a : AState) : Prop :=
-  StoreR nanonSch NaRecRel nahash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.anons
+  ConsR nanonCS NaRecRel m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.anons
     a.store.lss.ls.ns.scr.anons
 
 /-- A node's relation and hash depend on nothing. -/
@@ -106,8 +106,8 @@ theorem naHomeOK (m : Mem) : HomeOK nahash (naMt m) m nahashW := by
   intro t i _; rfl
 
 /-- The record `nanon_push` writes holds the node (trivially). -/
-theorem naNewOK (m : Mem) : NewOK nanonSch NaRecRel nahash m [0] naKey nahashW := by
-  intro t j _ _
+theorem naNewOK (m : Mem) : NewOKR nanonSch NaRecRel nahash m [0] naKey nahashW := by
+  intro t _ _
   exact ⟨trivial, rfl⟩
 
 /-! ## The bridges from the L models -/
@@ -122,6 +122,16 @@ theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom 
   have := UInt64.toNat_shiftRight (m.len64 NAREC) 1
   simp only [PushRoom, cntW, nacnt, nanonSch, len64_eq] at *
   grind
+
+/-- **The `nanon` table's shape.** -/
+theorem nanonCS_wf : nanonCS.WF where
+  sch := nanonSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [nanonCS] at h
+  colRoom A h := by simp [nanonCS] at h
+  room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, nanonCS, hk]
 
 theorem napushMem_eq (m : Mem) (t j c : Word) :
     napushMem m t j c = pushG nanonSch m t [0] j c := by
@@ -157,13 +167,10 @@ include hR in
 theorem naintern_correct (w : Word) (m' : Mem) (hI : nainternW m = some (w, m')) :
     AM.ok (internNNode .anonymous) a ∧
     NAnonR m' (AM.st (internNNode .anonymous) a) ∧
-    AM.res (internNNode .anonymous) a = decI w := by
-  rw [nainternW_eq] at hI
-  exact intern_correctG nanonSch NaRecRel nahash nanonSch_wf naFrame nanonLens a m hR _ _ _ _ _
-    (internNNode_anon_run a) false rfl 0 (by simp) (by simp) _ _ (naMatchOK m)
-    (naHomeOK m) _ _ (probe_homeG nanonSch m 0 _ _ (naprobeW_arm m 0) _)
-    (probe_homeG nanonSch m 1 _ _ (naprobeW_arm m 1) _) _ (napushOK_room m) _ rfl
-    (naNewOK m) w m' hI
+    AM.res (internNNode .anonymous) a = decI w :=
+  consIntern_correct nanonCS_wf naFrame (colFree_none _ rfl) nanonLens a hR _ _ _ _ _
+    (internNNode_anon_run a) false rfl [] (by simp [show skipC nanonCS m [] = 0 from rfl])
+    (by simp) ⟨rfl, naMatchOK m, naHomeOK m, naNewOK m⟩ w m' hI
 
 end intern
 
