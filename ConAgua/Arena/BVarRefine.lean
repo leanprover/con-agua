@@ -78,7 +78,13 @@ theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 BR
 
 /-- Node `i` of tier `t` holds `bvar k.i`: its word is the index, which fits in a word. -/
 def BRecRel (m : Mem) (t i : Word) (k : BVarNode) : Prop :=
-  (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i
+  (tfld m BVAR t i 0).toNat = k.i
+
+/-- `BRecRel` in the raw words (inside the store library). -/
+theorem BRecRel_raw (m : Mem) (t i : Word) (k : BVarNode) :
+    BRecRel m t i k ↔
+    (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i
+  := Iff.rfl
 
 /-- **The state relation** of the `bvar` store: the library's relation for the two `bvar`
 tables. -/
@@ -90,7 +96,7 @@ theorem bvarFrame : RFrame bvarSch BRecRel bhash := by
   intro m m' t i _ hf
   have h0 := hf 0 (by decide)
   rw [fld_bvar0, fld_bvar0] at h0
-  exact ⟨fun a h => by simpa only [BRecRel, h0] using h, by simp only [bhash, h0]⟩
+  exact ⟨fun a h => by simpa only [BRecRel_raw, h0] using h, by simp only [bhash, h0]⟩
 
 /-! ## The query's obligations -/
 
@@ -104,7 +110,7 @@ variable (m : Mem) (u : Word)
 theorem bvarMatchOK : MatchOK BRecRel (bMt m u) m (bvarKey u.toNat) := by
   intro t i k hr
   obtain ⟨ki⟩ := k
-  simp only [BRecRel] at hr
+  simp only [BRecRel_raw] at hr
   simp only [bMt, bmatchW, beq_iff_eq, bvarKey, BVarNode.mk.injEq, ← hr]
   exact ⟨fun h => by rw [h], fun h => UInt64.toNat_inj.mp h⟩
 
@@ -121,7 +127,7 @@ theorem bvarNewOK : NewOKR bvarSch BRecRel bhash m [u] (bvarKey u.toNat) (bvarHa
     have := hroom.2
     rw [fld_newRecM bvarSch bvarSch_wf] <;> simp only [bvarSch, Schema.ad] at * <;> grind
   rw [fld_bvar0] at e
-  simp only [BRecRel, bhash, bvarKey, e]
+  simp only [BRecRel_raw, bhash, bvarKey, e]
   exact ⟨trivial, trivial⟩
 
 end query

@@ -10,7 +10,7 @@ public import ConAgua.Arena.StoreFields
 
 What every expression walk's L code shares: a handle word's tier bit and index (the tag is
 `h >> 28`), the view's checks (`viewOK`: the scratch tier open for a scratch handle, the index
-below the tier's count `CTL[c + t]`), and the branch-free `max`, truncating `z - 1` and the
+below the tier's count in its store), and the branch-free `max`, truncating `z - 1` and the
 saturating range arithmetic of the derived words (`satSuccW`, `satPredW`), which keep a walk's
 bodies loop- and branch-free per tag (the house rule; `DESIGN.md`, lane `walk`).
 -/
@@ -26,9 +26,9 @@ def predW (z : Word) : Word := z - (if 0 < z then 1 else 0)
 -- The tier bit and the index of a handle word: `tierW`, `idxW` (`StoreFields.lean`).
 
 /-- The view checks: a scratch handle needs the scratch tier open, and the index must be below
-the tier's count `CTL[c + t]`. -/
-def viewOK (m : Mem) (h c : Word) : Prop :=
-  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ idxW h < rdW (m.arr64 CTL) (c + tierW h)
+the count of the handle's tier in the store `c`. -/
+def viewOK (m : Mem) (h : Word) (c : TRec) : Prop :=
+  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ idxW h < tcnt m c (tierW h)
 
 /-- `min (x + 1) 32767` without wrapping (branch-free in L:
 `(x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x)`), con-leche's `satSucc`. -/

@@ -95,11 +95,21 @@ abbrev nsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 +
 /-- Node `i` of tier `t` holds `str k.pre k.s`: the prefix's handle word, a slice below the pool
 top holding the string's bytes, and the hash. -/
 def NsRecRel (m : Mem) (t i : Word) (k : StrNode) : Prop :=
-  nsQ m t i = k.pre.word.toUInt64 ∧
-  (nsO m t i).toNat + (nsL m t i).toNat ≤ m.top.toNat ∧
-  sliceL (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s ∧
-  rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3) =
-    nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat)
+  tfld m NSTR t i 0 = k.pre.word.toUInt64 ∧
+  (tfld m NSTR t i 1).toNat + (tfld m NSTR t i 2).toNat ≤ m.top.toNat ∧
+  sliceL (m.arr64 POOL) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat = strWords k.s ∧
+  tfld m NSTR t i 3 =
+    nstrHashW (tfld m NSTR t i 0) (hashN (m.arr64 POOL) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat)
+
+/-- `NsRecRel` in the raw words (inside the store library). -/
+theorem NsRecRel_raw (m : Mem) (t i : Word) (k : StrNode) :
+    NsRecRel m t i k ↔
+    nsQ m t i = k.pre.word.toUInt64 ∧
+    (nsO m t i).toNat + (nsL m t i).toNat ≤ m.top.toNat ∧
+    sliceL (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s ∧
+    rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3) =
+      nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat)
+  := Iff.rfl
 
 /-- **The state relation** of the name `str` table: the library's relation for its two tables. -/
 def NStrR (m : Mem) (a : AState) : Prop :=
@@ -118,7 +128,7 @@ theorem nstrFrame : RFrame nstrSch NsRecRel nshash := by
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [nshash, h3]⟩
-  simpa only [NsRecRel, nsQ, nsO, nsL, h0, h1, h2, h3, hp, ht] using h
+  simpa only [NsRecRel_raw, nsQ, nsO, nsL, h0, h1, h2, h3, hp, ht] using h
 
 /-! ## The query's obligations -/
 
@@ -135,7 +145,8 @@ include hpool hqw hq hk in
 theorem nstrMatchOK :
     MatchOK NsRecRel (nsMt m q o l (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat))) m
       (nstrKey (decI q) s) := by
-  intro t i k ⟨hpre, hsl, hw, hh⟩
+  intro t i k hr
+  obtain ⟨hpre, hsl, hw, hh⟩ := (NsRecRel_raw m t i k).mp hr
   obtain ⟨-, -, hps, htop⟩ := hpool
   simp only [SliceOK] at hq
   have key := slice_key (m.arr64 POOL) (nsO m t i) (nsL m t i) o l (by omega) (by omega)
@@ -192,7 +203,7 @@ theorem nstrNewOK :
   rw [fld_nstr0] at e0
   rw [fld_nstr] at e1 e2 e3
   have hdq := word_decI (decI q : NIdx) q hqw
-  simp only [nstrKey, NsRecRel, nshash, nsQ, nsO, nsL, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [nstrKey, NsRecRel_raw, nshash, nsQ, nsO, nsL, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl, htop]
@@ -247,7 +258,7 @@ include hg in
 theorem NsRecRel_grow (t i : Word) (k : StrNode) (h : NsRecRel m t i k) : NsRecRel m' t i k := by
   have hr := grow_arr m m' hg NSREC (by decide) (by decide)
   obtain ⟨hfr, hag, ht1, ht2, hps'⟩ := hg
-  simp only [NsRecRel, nsQ, nsO, nsL, hr] at h ⊢
+  simp only [NsRecRel_raw, nsQ, nsO, nsL, hr] at h ⊢
   obtain ⟨h0, hsl, hw, hh⟩ := h
   exact ⟨h0, by omega, by rw [Agree.sliceL _ _ _ _ _ hag hsl, hw],
     by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩

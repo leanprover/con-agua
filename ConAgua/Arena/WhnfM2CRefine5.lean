@@ -221,7 +221,7 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr3 := (Option.some.inj hcv).symm
   obtain ⟨hvw, hn32, -⟩ := view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
-  have hn0 : rdW (m.arr64 CREC) (idxW (r2.headD 0) * 4 + tierW (r2.headD 0) * 2) = r3.headD 0 := by
+  have hn0 : tfld m CONST (tierW (r2.headD 0)) (idxW (r2.headD 0)) 0 = r3.headD 0 := by
     rw [hr3]; rfl
   rw [hn0] at hvw hn32
   rcases c4 : callW p N "env_find" [r3.headD 0, vis] m with _ | ⟨r4, m4⟩ <;>

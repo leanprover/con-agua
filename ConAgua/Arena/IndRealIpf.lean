@@ -72,15 +72,15 @@ def ipfS (m : Mem) (p : Word) : Option Word :=
   if 4294967295 < p then none
   else if p >>> 28 ≠ 1 then some 0
   else if tierW p ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (36 + tierW p) ≤ idxW p then none
-  else some (ipfStrW m (nsO m (tierW p) (idxW p)) (nsL m (tierW p) (idxW p)))
+  else if tcnt m NSTR (tierW p) ≤ idxW p then none
+  else some (ipfStrW m (tfld m NSTR (tierW p) (idxW p) 1) (tfld m NSTR (tierW p) (idxW p) 2))
 
 /-- `is_proj_fn_shape`'s body. -/
 def ipfW (m : Mem) (n : Word) : Option Word :=
   if 4294967295 < n then none
   else if n >>> 28 ≠ 2 then some 0
   else if tierW n ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (38 + tierW n) ≤ idxW n then none
+  else if tcnt m NNUM (tierW n) ≤ idxW n then none
   else ipfS m (nnQ m (tierW n) (idxW n))
 
 set_option maxHeartbeats 3200000 in
@@ -94,7 +94,7 @@ theorem isProjFnShape_specW (p : Prog) (hp : p.lookup "is_proj_fn_shape" = some 
   all_goals simp_all [LocEq, Cond.pval, Expr.pval, ipf_rd64, BinOp.eval, Cmp.eval, St.setLoc_loc,
     St.setLoc_mem, Locals.init_cons_zero, Sig.retVal, Sig.retOr, ipfW, ipfS, ipfStrW, tierW, idxW, nnQ,
     nsO, nsL, decide_eq_true_eq, Expr.pval_tld, Expr.pval_cntE, Expr.pval_tierE, Expr.pval_idxE,
-    tfld, tcnt, TRec.ad, -UInt64.not_lt, -UInt64.not_le]
+    -UInt64.not_lt, -UInt64.not_le]
   -- left: the `4294967295 < x` guard, kept as `decide (…) = false`
   all_goals grind
 

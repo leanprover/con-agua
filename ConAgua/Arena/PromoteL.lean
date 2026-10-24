@@ -101,7 +101,7 @@ theorem promoteL_spec (f h : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec plSch p _ (hp.get "pl_find") n, memoPutG_spec plSch p _ (hp.get "pl_put") n,
       callW_spec p n "pl_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [plW_pers, plW_hit, plW_miss, memoK_some, mvG, tierW, tfld, tcnt, TRec.ad]
+    finish [plW_pers, plW_hit, plW_miss, memoK_some, mvG, tierW]
 
 theorem plArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pl_arm" [f, h]
@@ -233,7 +233,7 @@ theorem promoteLs_spec (f h : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec plsSch p _ (hp.get "pls_find") n, memoPutG_spec plsSch p _ (hp.get "pls_put") n,
       callW_spec p n "pls_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [plsW_pers, plsW_hit, plsW_miss, memoK_some, mvG, tierW, tfld, tcnt, TRec.ad]
+    finish [plsW_pers, plsW_hit, plsW_miss, memoK_some, mvG, tierW]
 
 end specs2
 

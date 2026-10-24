@@ -82,8 +82,15 @@ theorem fld_max (m : Mem) (t i f : Word) :
 
 /-- Node `i` of tier `t` holds the `max` node `k`: its two handle words. -/
 def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
-  rdW (m.arr64 MREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-  rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+  tfld m MAX t i 0 = k.u.word.toUInt64 ∧
+  tfld m MAX t i 1 = k.v.word.toUInt64
+
+/-- `MRecRel` in the raw words (inside the store library). -/
+theorem MRecRel_raw (m : Mem) (t i : Word) (k : BinLNode) :
+    MRecRel m t i k ↔
+    rdW (m.arr64 MREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
+    rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
 def MaxR (m : Mem) (a : AState) : Prop :=
@@ -97,7 +104,7 @@ theorem maxFrame : RFrame maxSch MRecRel mhash := by
   have h1 := hf 1 (by decide)
   rw [fld_max0, fld_max0] at h0
   rw [fld_max, fld_max] at h1
-  exact ⟨fun a h => by simpa only [MRecRel, h0, h1] using h, by simp only [mhash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [MRecRel_raw, h0, h1] using h, by simp only [mhash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -114,7 +121,7 @@ theorem maxMatchOK : MatchOK MRecRel (mMt m u v) m (maxKey (decI u) (decI v)) :=
   have := word_decI k.u u hu
   have := word_decI k.v v hv
   obtain ⟨ku, kv⟩ := k
-  grind [mMt, mmatchW, MRecRel, decE_eq]
+  grind [mMt, mmatchW, MRecRel_raw, decE_eq]
 
 theorem maxHomeOK : HomeOK mhash (mMt m u v) m (maxHashW u v) := by
   intro t i hm
@@ -139,7 +146,7 @@ theorem maxNewOK : NewOKR maxSch MRecRel mhash m [u, v] (maxKey (decI u) (decI v
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decI u : LIdx) u hu
   have := word_decI (decI v : LIdx) v hv
-  simp only [MRecRel, mhash, maxKey, e0, e1]
+  simp only [MRecRel_raw, mhash, maxKey, e0, e1]
   grind [decE_eq]
 
 end query
@@ -183,7 +190,7 @@ theorem maxCS_wf : maxCS.WF where
 theorem maxColFree : ColFree maxCS MRecRel := by
   intro A h m k x t i a hr
   simp only [maxCS, Option.some.injEq] at h; subst h
-  simpa only [MRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)] using hr
+  simpa only [MRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)] using hr
 
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
 theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
@@ -192,7 +199,7 @@ theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minter
 
 theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by
   intro m m' hra _ _; simp only [maxSch] at hra
-  exact ⟨fun t i k h => by simpa only [MRecRel, hra] using h, fun t i => by simp only [mhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [MRecRel_raw, hra] using h, fun t i => by simp only [mhash, hra]⟩
 
 /-! ## `intern_max` refines `internLNode (.max _ _)` -/
 

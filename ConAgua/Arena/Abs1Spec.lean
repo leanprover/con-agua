@@ -39,7 +39,7 @@ theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
           ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -56,7 +56,7 @@ theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
           ih,
       mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
           (hp.get "mk_lam") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -73,7 +73,7 @@ theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Wo
           ih,
       mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
           (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -90,7 +90,7 @@ theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
           ih,
       mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
           (hp.get "intern_letE") (hp.get "mk_let") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -107,7 +107,7 @@ theorem absProj_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word
           ih,
       mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
           (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
-    finish (gen := 20) [tfld, tcnt, TRec.ad, viewOK, tierW, idxW]
+    finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
 /-- **`abs_go`, `ab_node` and the arms are their models**, at every fuel. -/

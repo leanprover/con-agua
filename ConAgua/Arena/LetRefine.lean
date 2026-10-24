@@ -94,9 +94,17 @@ theorem fld_let (m : Mem) (t i f : Word) :
 
 /-- Node `i` of tier `t` holds `letE k.ty k.val k.body`: its three handle words. -/
 def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
-  rdW (m.arr64 LEREC) (i * 6 + t * 3) = k.ty.word.toUInt64 ∧
-  rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1) = k.val.word.toUInt64 ∧
-  rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64
+  tfld m LET t i 0 = k.ty.word.toUInt64 ∧
+  tfld m LET t i 1 = k.val.word.toUInt64 ∧
+  tfld m LET t i 2 = k.body.word.toUInt64
+
+/-- `LeRecRel` in the raw words (inside the store library). -/
+theorem LeRecRel_raw (m : Mem) (t i : Word) (k : LetNode) :
+    LeRecRel m t i k ↔
+    rdW (m.arr64 LEREC) (i * 6 + t * 3) = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1) = k.val.word.toUInt64 ∧
+    rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
 tables. -/
@@ -112,7 +120,7 @@ theorem letFrame : RFrame letSch LeRecRel lehash := by
   rw [fld_let0, fld_let0] at h0
   rw [fld_let, fld_let] at h1
   rw [fld_let, fld_let] at h2
-  exact ⟨fun a h => by simpa only [LeRecRel, h0, h1, h2] using h,
+  exact ⟨fun a h => by simpa only [LeRecRel_raw, h0, h1, h2] using h,
     by simp only [lehash, h0, h1, h2]⟩
 
 /-! ## The query's obligations -/
@@ -133,7 +141,7 @@ theorem letMatchOK :
   have := word_decI k.val val hval
   have := word_decI k.body body hbody
   obtain ⟨kty, kval, kbody⟩ := k
-  grind [leMt, lematchW, LeRecRel, decE_eq]
+  grind [leMt, lematchW, LeRecRel_raw, decE_eq]
 
 theorem letHomeOK : HomeOK lehash (leMt m ty val body) m (letHashW ty val body) := by
   intro t i hm
@@ -163,7 +171,7 @@ theorem letNewOK :
   have := word_decI (decE ty) ty hty
   have := word_decI (decE val) val hval
   have := word_decI (decE body) body hbody
-  simp only [LeRecRel, lehash, letKey, e0, e1, e2]
+  simp only [LeRecRel_raw, lehash, letKey, e0, e1, e2]
   grind [decE_eq]
 
 end query

@@ -51,6 +51,20 @@ def mapE (f : Var → Var) : Expr → Expr
   | .len64t a t => .len64t a (mapE f t)
   | e => e
 
+/-- Renaming commutes with the store-record accessors (`L/TRec.lean`). -/
+theorem mapE_tld (f : Var → Var) (R : TRec) (t i : Expr) (g : Word) :
+    mapE f (R.ld t i g) = R.ld (mapE f t) (mapE f i) g := by
+  simp only [TRec.ld, TRec.adE]; split <;> split <;> simp [mapE]
+
+theorem mapE_cntE (f : Var → Var) (R : TRec) (t : Expr) :
+    mapE f (R.cntE t) = R.cntE (mapE f t) := by simp [TRec.cntE, mapE]
+
+theorem mapE_tierE (f : Var → Var) (h : Expr) : mapE f (tierE h) = tierE (mapE f h) := by
+  simp [tierE, mapE]
+
+theorem mapE_idxE (f : Var → Var) (h : Expr) : mapE f (idxE h) = idxE (mapE f h) := by
+  simp [idxE, mapE]
+
 /-- Condition `c` with every variable renamed by `f`. -/
 def mapC (f : Var → Var) : Cond → Cond
   | .cmp c a b => .cmp c (mapE f a) (mapE f b)

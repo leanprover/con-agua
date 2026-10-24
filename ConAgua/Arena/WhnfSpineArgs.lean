@@ -68,8 +68,8 @@ def appFillL : FunDecl := lfn (e, o, n) locals (t, x) {
 }
 
 /-- The function child and the argument child of an `.app` handle word. -/
-def fnW (m : Mem) (e : Word) : Word := rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)
-def argW (m : Mem) (e : Word) : Word := rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1)
+def fnW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 0
+def argW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 1
 
 /-- The model of the fill loop, by L fuel. -/
 def fillW : Nat → Mem → Word → Word → Word → Option Mem
@@ -155,9 +155,9 @@ theorem argsW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN)]
+      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
     have h2 : argW (m.set64 SPN k v) e = argW m e := by
-      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN)]
+      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
     simp only [argsW, h1, h2, argsW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -302,7 +302,7 @@ theorem nodesW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN)]
+      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
     simp only [nodesW, h1, nodesW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -369,7 +369,7 @@ function. -/
 theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e', f'))
     (hc : e >>> 28 = 4) :
     f.toNat ≠ 0 ∧ ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
-      idxW e < rdW (m.arr64 CTL) (4 + tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
+      idxW e < tcnt m APP (tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
       (f - 1).toNat = f.toNat - 1 := by
   have hf0 : f ≠ 0 := by
     intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
@@ -379,10 +379,10 @@ theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e
     by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
     · simp [hv] at hL
     · exact hv
-  have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+  have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
     rw [gafLoopW] at hL
     simp only [hc, ↓reduceIte, hf0, hv1] at hL
-    by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
+    by_cases hv : tcnt m APP (tierW e) ≤ idxW e
     · simp [hv] at hL
     · exact hv
   have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
@@ -646,7 +646,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
 theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC) :
     ∀ (c : Nat) (e : Word), nodesW m' e c = nodesW m e c
   | 0, _ => rfl
-  | c + 1, e => by simp only [nodesW, fnW, h, nodesW_congr h c]
+  | c + 1, e => by simp only [nodesW, fnW, h, nodesW_congr h c, tfld_arr_eq (R := APP) h]
 
 /-- con-ron: ConRon/Arena/Core.lean:2125-2128 ConRon.Arena.getAppSpine
 con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
