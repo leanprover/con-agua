@@ -157,12 +157,8 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
       (stuckIrrel_at p hq hi hc n hk F _ st dn vis fe M' eb mode d a b hF hn
         ⟨hS', hs.mode4, hs.eb_mode⟩ ha hb) (fun r r' h => by simp only [decBool, h]) hc'
   simp only [strK] at hW
-  by_cases h1 : tierW lt ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · rw [if_pos h1] at hW; cases hW
-  rw [if_neg h1] at hW
-  by_cases h2 : rdW (s.mem.arr64 CTL) (2 + tierW lt) ≤ idxW lt
-  · rw [if_pos h2] at hW; cases hW
-  rw [if_neg h2] at hW
+  obtain ⟨h1, hW⟩ := of_ite_none hW
+  obtain ⟨h2, hW⟩ := of_ite_none hW
   obtain ⟨kn, hkv, hrec⟩ := view_lit_f s.mem a₀ hR lt hlt ⟨h1, by simpa using h2⟩ hg
   rw [hl] at hkv
   have hkl : kn.l = l := by cases hkv; rfl
@@ -184,12 +180,8 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
       simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
       exact hirr a₀ s.mem M hS hW
     simp only [h3, not_true_eq_false, ↓reduceIte] at hW
-    by_cases h4 : tierW fo ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-    · rw [if_pos h4] at hW; cases hW
-    rw [if_neg h4] at hW
-    by_cases h5 : rdW (s.mem.arr64 CTL) (18 + tierW fo) ≤ idxW fo
-    · rw [if_pos h5] at hW; cases hW
-    rw [if_neg h5] at hW
+    obtain ⟨h4, hW⟩ := of_ite_none hW
+    obtain ⟨h5, hW⟩ := of_ite_none hW
     obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
     have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
     generalize rdW (s.mem.arr64 CREC) (idxW fo * 4 + tierW fo * 2) = co at hnw hW hv

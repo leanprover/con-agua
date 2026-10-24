@@ -300,14 +300,11 @@ theorem consW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {x o l : Word} {r : List 
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
     (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
   simp only [consW] at h
-  by_cases h0 : l + 1 = 0
-  · simp [h0] at h
+  have h0 : ¬ l + 1 = 0 := fun h0 => by simp [h0] at h
   simp only [h0, if_false] at h
   simp only [allocW] at h
-  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
-  · simp [h1] at h
-  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
-  · simp [h1, h2] at h
+  have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
+  have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1 := fun h2 => by simp [h1, h2] at h
   simp only [h1, h2, if_false] at h
   cases hcp : copyW (n - 1) ((allocMem m (l + 1)).set64 IW (rdW (m.arr64 CTL) 200) x)
       (rdW (m.arr64 CTL) 200 + 1) o l with

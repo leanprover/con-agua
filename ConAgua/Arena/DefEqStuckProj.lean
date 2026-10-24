@@ -49,9 +49,7 @@ theorem ldpr_exit_run (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (d
   simp only [lazyDeltaProjReduction, StateT.run_bind, h, except_ok_bind]
   cases st with
   | cont a' b' => exact absurd rfl (hst a' b')
-  | eq => rfl
-  | diff => rfl
-  | unknown => rfl
+  | eq | diff | unknown => rfl
 
 /-! ## `ldpr_exit` -/
 
@@ -261,11 +259,7 @@ theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
   | succ k ih =>
     intro hkn K hK m m' a MM eb x y v hS heb hx hy h
     simp only [ldprW] at h
-    cases hcl : callW p k "lazy_delta_step" [mode, vis, d, x, y] m with
-    | none => simp [hcl] at h
-    | some q =>
-    obtain ⟨r, m₁⟩ := q
-    simp only [hcl] at h
+    rcases hcl : callW p k "lazy_delta_step" [mode, vis, d, x, y] m with _ | ⟨r, m₁⟩ <;> simp only [hcl, reduceCtorEq] at h
     cases k with
     | zero => simp [callW_zero] at hcl
     | succ j =>
@@ -434,18 +428,10 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
   rw [if_neg g2] at hW
   have g1' : a >>> 28 = 9 := by simpa using g1
   have g2' : b >>> 28 = 9 := by simpa using g2
-  by_cases c1 : tierW a ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · rw [if_pos c1] at hW; cases hW
-  rw [if_neg c1] at hW
-  by_cases c2 : rdW (s.mem.arr64 CTL) (32 + tierW a) ≤ idxW a
-  · rw [if_pos c2] at hW; cases hW
-  rw [if_neg c2] at hW
-  by_cases c3 : tierW b ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · rw [if_pos c3] at hW; cases hW
-  rw [if_neg c3] at hW
-  by_cases c4 : rdW (s.mem.arr64 CTL) (32 + tierW b) ≤ idxW b
-  · rw [if_pos c4] at hW; cases hW
-  rw [if_neg c4] at hW
+  obtain ⟨c1, hW⟩ := of_ite_none hW
+  obtain ⟨c2, hW⟩ := of_ite_none hW
+  obtain ⟨c3, hW⟩ := of_ite_none hW
+  obtain ⟨c4, hW⟩ := of_ite_none hW
   obtain ⟨hva, hx1, hx3⟩ := view_proj s.mem a₀ hR a ha ⟨c1, by simpa using c2⟩ g1'
   obtain ⟨hvb, hy1, hy3⟩ := view_proj s.mem a₀ hR b hb ⟨c3, by simpa using c4⟩ g2'
   have hboth : ((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = true := by

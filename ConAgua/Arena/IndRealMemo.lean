@@ -106,9 +106,8 @@ theorem i1lF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   intro m m' a r h ⟨hS, hAb, ⟨mp, hmp⟩, hCr, hIl, hWk⟩
   have hfr := i1lF_frame h
   obtain ⟨n, hc⟩ := callF_run h
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   have hA : ArenaI m (withI1C a mp) := ⟨hS.1.arena.withI1C mp, hmp⟩
   obtain ⟨s', hs', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (i1lFast_refines i1lP i1lP_prog n _ _ hA f e v d he hv) hc

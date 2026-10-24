@@ -151,13 +151,6 @@ structure M2CProg' (p : Prog) : Prop extends IotaProg4 p, M2CProg p where
 
 /-! ## Results -/
 
-theorem CoreRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → Option ConLeche.Name}
-    {m m' : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
-    (hrun : T.run a = .ok (v, a')) (hA : CoreAfter dn m m' a' vis fe M eb) (hv : v = decH r)
-    (hr : ResH r) : CoreRef T a decH dn m vis fe M eb r m' := by
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
-
 theorem GrowRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → Option ConLeche.Name}
     {m m' : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
     (hrun : T.run a = .ok (v, a')) (hA : CoreAfterG dn m m' a' vis fe M eb) (hv : v = decH r)
@@ -166,12 +159,6 @@ theorem GrowRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → O
   exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
 
 /-- A run that ends with a pure answer `w`: its result list. -/
-theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r := by
-  rw [h]; rfl
-
-theorem resH_of_m2c (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
-  unfold ResH; rw [← h]; exact hw
-
 theorem CoreAfterG.compK {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₂ : AState}
     {vis : Word} {fe : IFEnv} {M M' : ModeMaps} {eb : Word}
     (hK : KeptAll M M' eb) (hSt : StackGrew m₀ m₁)
@@ -230,22 +217,14 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   dsimp only at hW
   rw [hs'] at hW
   simp only [m2cPreW] at hW
-  cases c1 : callW p N "infer_io" [mode, vis, d, major] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p N "infer_io" [mode, vis, d, major] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, hr1⟩ := CoreSpec.of_callW
     ((hk N (Nat.le_refl _)).inferIO F ⟨m, Locals.init []⟩ a dn vis fe M eb mode d major hnF hn62
       ⟨hS, hm4, hebm⟩ hmaj) c1
   have e1 : m1.arr64 EREC = m.arr64 EREC := hE _ _ _ _ _ _ (by simp) c1
-  cases c2 : callW p N "whnf" [mode, vis, d, r1.headD 0] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p N "whnf" [mode, vis, d, r1.headD 0] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
     ((hk N (Nat.le_refl _)).whnf F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d _ hnF hn62
       ⟨hS1, hm4, hebm⟩ hr1) c2
@@ -254,12 +233,8 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res1] at hrun1
   rw [res2] at hrun2
-  cases c3 : callW p N "get_app_fn" [r2.headD 0] m2 with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨r3, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
+  rcases c3 : callW p N "get_app_fn" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, hm3, -, hh3, hga⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (getAppFn_refines' p hp.spine.fn N _ _ hS2.arena.1 (r2.headD 0) hr2) c3
   have hm3' : m3 = m2 := ht3.symm.trans hm3
@@ -268,40 +243,27 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hStA : StackKept m m3 := hSt1.trans hSt2
   by_cases g3 : r3.headD 0 >>> 28 ≠ 3
   · rw [if_pos g3] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨_, ⟨_, _, _, _, hrun1, hrun2, hga, fun _ => ?_, fun h => absurd rfl h⟩,
       ⟨M2, hS2, hKA, hStA⟩, e2.trans e1, fun h => absurd rfl h⟩
     exact fun ht => g3 ((decE_tag_eq _ hh3 3 (by decide)).mp ht)
   rw [if_neg g3] at hW
   have g3' : r3.headD 0 >>> 28 = 3 := by simpa using g3
-  cases c4 : callW p N "m2c_const_view" [r3.headD 0] m3 with
-  | none => rw [c4] at hW; cases hW
-  | some q =>
-  obtain ⟨r4, m4⟩ := q
-  rw [c4] at hW
-  simp only at hW
+  rcases c4 : callW p N "m2c_const_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
   obtain ⟨t4, ht4, -, hm4', hcv⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (m2cConstView_spec p hp.constView N _ (r3.headD 0)) c4
   have hm4e : m4 = m3 := ht4.symm.trans hm4'
   subst hm4e
   simp only [cvwW] at hcv
-  by_cases v1 : tierW (r3.headD 0) ≠ 0 ∧ rdW (m4.arr64 CTL) 1 = 0
-  · rw [if_pos v1] at hcv; cases hcv
-  rw [if_neg v1] at hcv
-  by_cases v2 : rdW (m4.arr64 CTL) (18 + tierW (r3.headD 0)) ≤ idxW (r3.headD 0)
-  · rw [if_pos v2] at hcv; cases hcv
-  rw [if_neg v2] at hcv
+  obtain ⟨v1, hcv⟩ := of_ite_none hcv
+  obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr4 := (Option.some.inj hcv).symm
   obtain ⟨hvw, hn32, hu32⟩ := view_const_f m4 _ hS2.arena.1 (r3.headD 0) hh3
     ⟨v1, UInt64.not_le.mp v2⟩ g3'
-  cases c5 : callW p N "ls_node" [r4.tail.headD 0] m4 with
-  | none => rw [c5] at hW; cases hW
-  | some q =>
-  obtain ⟨r5, m5⟩ := q
-  rw [c5] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  rcases c5 : callW p N "ls_node" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩ <;>
+    simp only [c5, reduceCtorEq] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨t5, ht5, ht5s, hne5, hr5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
     (lsNode_spec p hp.lvl.lsnode N _ (r4.tail.headD 0)) c5
   have hm5 : m5 = m4 := by rw [← ht5, ht5s]
@@ -324,12 +286,6 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
     rw [hr4]; exact hn32
 
 end pre
-
-theorem decBool_f_m2c {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
-  unfold decBool; rw [h]; rfl
-
-theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
-  unfold decBool; exact bne_iff_ne.mpr h
 
 theorem ret_eq {w : Word} {m₁ m' : Mem} {r : List Word}
     (h : some (w, m₁) = some (r.headD 0, m')) : w = r.headD 0 ∧ m₁ = m' := by
@@ -369,17 +325,11 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   cases N with
   | zero => simp [callW_zero] at hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "fab_scope_ok" [d, fab, major] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
-  obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, -⟩ := CoreSpec.of_callW
+  rcases c1 : callW p (N' + 1) "fab_scope_ok" [d, fab, major] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, -⟩ := CoreSpec.run
     (fabScopeOk_refines' p hp.toIotaProg' hc (N' + 1) ⟨m, Locals.init []⟩ a dn vis fe M eb d fab major
       hS hfab hmaj) c1
-  have hrun1 := AM.run_of_ok _ _ ok1
-  rw [res1] at hrun1
   by_cases g1 : r1.headD 0 = 0
   · rw [if_pos g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
@@ -389,28 +339,17 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     rfl
   rw [if_neg g1] at hW
   rw [decBool_t_m2c g1] at hrun1
-  cases c2 : callW p (N' + 1) "infer_io" [mode, vis, d, fab] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
-  obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
+  rcases c2 : callW p (N' + 1) "infer_io" [mode, vis, d, fab] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
+  obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
     ((hk _ (Nat.le_refl _)).inferIO F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d fab hnF hn62
       ⟨hS1, hm4, hebm⟩ hfab) c2
-  have hrun2 := AM.run_of_ok _ _ ok2
-  rw [res2, show decH r2 = decE (r2.headD 0) from rfl] at hrun2
-  cases c3 : callW p (N' + 1) "defeq" [mode, vis, d, tmaj, r2.headD 0] m2 with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨r3, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
-  obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, -⟩ := CoreSpec.of_callW
+  rw [show decH r2 = decE (r2.headD 0) from rfl] at hrun2
+  rcases c3 : callW p (N' + 1) "defeq" [mode, vis, d, tmaj, r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
+  obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, -⟩ := CoreSpec.run
     ((hk _ (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d tmaj _ hnF hn62
       ⟨hS2, hm4, hebm⟩ htm hr2) c3
-  have hrun3 := AM.run_of_ok _ _ ok3
-  rw [res3] at hrun3
   have hKA : KeptAll M M3 eb := hK1.trans (hK2.trans hK3)
   have hStA : StackKept m m3 := hSt1.trans (hSt2.trans hSt3)
   by_cases g3 : r3.headD 0 = 0
@@ -427,17 +366,11 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   by_cases g4 : mode &&& 1 = 0
   · rw [if_pos g4] at hW
     have hv' : (decMode mode).verifiedChecks = true := by rw [hv]; simpa using g4
-    cases c4 : callW p (N' + 1) "proof_irrel" [mode, vis, d, fab, major] m3 with
-    | none => rw [c4] at hW; cases hW
-    | some q =>
-    obtain ⟨r4, m4⟩ := q
-    rw [c4] at hW
-    simp only at hW
-    obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, -⟩ := CoreSpec.of_callW
+    rcases c4 : callW p (N' + 1) "proof_irrel" [mode, vis, d, fab, major] m3 with _ | ⟨r4, m4⟩ <;>
+      simp only [c4, reduceCtorEq] at hW
+    obtain ⟨hrun4, ⟨M4, hS4, hK4, hSt4⟩, -⟩ := CoreSpec.run
       (hpi N' (hk.mono (Nat.le_succ _)) F (by omega) (by omega)
         ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d fab major hS3 hm4 hebm hfab hmaj) c4
-    have hrun4 := AM.run_of_ok _ _ ok4
-    rw [res4] at hrun4
     by_cases g5 : r4.headD 0 = 0
     · rw [if_neg (by simpa using g5)] at hW
       obtain ⟨hr, rfl⟩ := ret_eq hW
@@ -533,12 +466,8 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   cases N with
   | zero => simp [callW_zero] at hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "get_app_args" [tmaj] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N' + 1) "get_app_args" [tmaj] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨t1, ht1, -, hfr1, hg1, htop1, -, xs, hargs, hsp1⟩ := triple_of_callW
     (s₀ := ⟨m, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a hS.arena.1 tmaj htm hS.spn) c1
   rw [ht1] at hfr1 hg1 hsp1
@@ -554,12 +483,8 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     rfl
   rw [if_neg g1] at hW
   have hle : cnP.toNat ≤ xs.length := by rw [hlen]; exact UInt64.not_lt.mp g1
-  cases c2 : callW p (N' + 1) "intern_const" [ctor, ust] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p (N' + 1) "intern_const" [ctor, ust] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨ok2, hD2, res2, hfr2, hh2⟩ := callW_internConst' p hp.constFind' hp.constPush'
     hp.internConst' (N' + 1) m1 a hS1.arena ctor ust hctor hus r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
@@ -568,23 +493,16 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   have hsp2 : SpineR m2 (r1.headD 0) cnP (xs.take cnP.toNat).toArray :=
     (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
       (hfr2.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide))
-  cases c3 : callW p (N' + 1) "mk_app_n" [r2.headD 0, r1.headD 0, cnP] m2 with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨r3, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
+  rcases c3 : callW p (N' + 1) "mk_app_n" [r2.headD 0, r1.headD 0, cnP] m2 with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨ok3, hD3, res3, hfr3, hh3⟩ := callW_mkAppN' p hp.spine (N' + 1) m2 _ hS2.arena
     (r2.headD 0) (r1.headD 0) cnP _ hh2 hsp2 r3 m3 c3
   have hrun3 := AM.run_of_ok _ _ ok3
   rw [res3, show ((xs.take cnP.toNat).toArray).toList = xs.take cnP.toNat from rfl,
     show decE (r2.headD 0) = decI (r2.headD 0) from rfl] at hrun3
   have hS3 := hS2.of_app hD3 (Keeps.run (keeps_cpl_mkAppN' _ _) hrun3) hfr3
-  cases c4 : callW p (N' + 1) "m2c_check" [mode, vis, d, tmaj, r3.headD 0, major] m3 with
-  | none => rw [c4] at hW; cases hW
-  | some q =>
-  obtain ⟨r4, m4⟩ := q
-  rw [c4] at hW
+  rcases c4 : callW p (N' + 1) "m2c_check" [mode, vis, d, tmaj, r3.headD 0, major] m3 with _ | ⟨r4, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   have hck := m2cCheck_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
     mode d tmaj (r3.headD 0) major hm4 hebm htm hh3 hmaj m3 _ M hS3 r4 m4 c4
@@ -615,12 +533,8 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   cases N with
   | zero => simp [callW_zero] at hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "m2c_pre" [mode, vis, d, major] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨L, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N' + 1) "m2c_pre" [mode, vis, d, major] m with _ | ⟨L, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨a1, hpre, ⟨M1, hS1, hK1, hSt1⟩, -, hhw⟩ := m2cPre_ok p hp hE N' F
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS
     L m1 c1
@@ -658,12 +572,8 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
     rw [if_neg hc]; rfl
   rw [if_neg g3] at hW
   have g3' : lpl = L.tail.tail.tail.tail.headD 0 := by simpa using g3
-  cases c2 : callW p (N' + 1) "m2c_k2" [mode, vis, d, ctor, cnP, L.tail.headD 0,
-      L.tail.tail.tail.headD 0, major] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
+  rcases c2 : callW p (N' + 1) "m2c_k2" [mode, vis, d, ctor, cnP, L.tail.headD 0,
+      L.tail.tail.tail.headD 0, major] m1 with _ | ⟨r2, m2⟩ <;> simp only [c2, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   obtain ⟨ok2, hA2, res2, hr2⟩ := m2cK2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor htm hus hmaj m1 a1 M1 hS1 r2 m2

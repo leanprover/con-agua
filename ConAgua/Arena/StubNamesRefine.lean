@@ -83,12 +83,8 @@ theorem prhW_iff (n : Nat) : ∀ (m : Mem) (x k hi r : Word), hi.toNat ≤ 51 �
     rw [if_neg hk] at h
     have hk' : k.toNat < hi.toNat := by
       have := UInt64.not_le.mp hk; exact UInt64.lt_iff_toNat_lt.mp this
-    by_cases h0 : pinW m 0 = 0
-    · rw [if_pos h0] at h; cases h
-    rw [if_neg h0] at h
-    by_cases h5 : 51 ≤ k
-    · rw [if_pos h5] at h; cases h
-    rw [if_neg h5] at h
+    obtain ⟨h0, h⟩ := of_ite_none h
+    obtain ⟨h5, h⟩ := of_ite_none h
     by_cases he : pinW m (1 + k.toNat) = x
     · rw [if_pos he] at h; cases Option.some.inj h
       refine ⟨by decide, ?_⟩
@@ -238,9 +234,7 @@ theorem resContW_iff {n : Nat} {m : Mem} {x r : Word} (h : resContW n m x = some
   | zero => simp [resContW] at h
   | succ n =>
     rw [resContW_step] at h
-    by_cases h0 : pinW m 0 = 0
-    · rw [if_pos h0] at h; cases h
-    rw [if_neg h0] at h
+    obtain ⟨h0, h⟩ := of_ite_none h
     obtain ⟨hr, hiff⟩ := resFromW_iff n m x 0 r (by simp) h
     exact ⟨hr, hiff.trans (by simp)⟩
 
@@ -248,9 +242,7 @@ theorem lghW_iff {m : Mem} {x r : Word} (h : lghW m x = some r) :
     r ≤ 1 ∧ (r ≠ 0 ↔ x ∈ [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8, pinW m 9,
       pinW m 10, pinW m 11, pinW m 13]) := by
   unfold lghW at h
-  by_cases h0 : pinW m 0 = 0
-  · rw [if_pos h0] at h; cases h
-  rw [if_neg h0] at h
+  obtain ⟨h0, h⟩ := of_ite_none h
   split at h <;> rename_i hc <;> cases Option.some.inj h
   · refine ⟨by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc
   · refine ⟨by decide, ?_⟩; simp only [List.mem_cons, List.not_mem_nil, or_false]; simpa using hc

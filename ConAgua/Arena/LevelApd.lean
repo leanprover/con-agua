@@ -192,22 +192,7 @@ theorem apdW_ok (hN : NameRel N) (n : Nat) : ∀ (m : Mem) (l o k x : Word) (L :
       rw [apdW_succ A n m l o k (by simp [lvG, hv]) (by simp [lvG, hv]) (lv_fields hv).1,
         (lv_fields hv).2.1] at h
       rw [ih _ _ _ _ _ _ _ ha hps h]; rfl
-    | @max _ a b L₁ L₂ hv ha hb =>
-      rw [apdW_bin A n m l o k (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
-        (lv_fields hv).2.1, (lv_fields hv).2.2] at h
-      cases e : apdW A n m a o k with
-      | none => rw [e] at h; simp [apdK] at h
-      | some y =>
-        rw [e] at h
-        have hy := ih _ _ _ _ _ _ _ ha hps e
-        by_cases hy0 : y = 0
-        · subst hy0; rw [apK_zero] at h; simp at h
-          have : Level.allParamsDefined ps L₁ = false := by revert hy; cases Level.allParamsDefined ps L₁ <;> simp
-          simp [Level.allParamsDefined, this, ← h]
-        · rw [apK_ne (hx := hy0)] at h
-          have : Level.allParamsDefined ps L₁ = true := by revert hy; cases Level.allParamsDefined ps L₁ <;> simp_all
-          rw [ih _ _ _ _ _ _ _ hb hps h]; simp [Level.allParamsDefined, this]
-    | @imax _ a b L₁ L₂ hv ha hb =>
+    | @max _ a b L₁ L₂ hv ha hb | @imax _ a b L₁ L₂ hv ha hb =>
       rw [apdW_bin A n m l o k (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
         (lv_fields hv).2.1, (lv_fields hv).2.2] at h
       cases e : apdW A n m a o k with

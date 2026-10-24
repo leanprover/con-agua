@@ -163,8 +163,7 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
   | thmDecl cv v => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
   | opaqueDecl cv v => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
   | quotDecl k cv => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
-  | indDecl b nP => exact hd.elim
-  | basisDecl k => exact hd.elim
+  | indDecl b nP | basisDecl k => exact hd.elim
 
 /-- **`and_pin_ok` refines `andPinOk`** on record `i` of the loop's declarations. -/
 @[refines_part ConRon.Arena.andPinOk "one-constant records (the front's record kinds)"]

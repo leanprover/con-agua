@@ -175,8 +175,7 @@ def flArm (acc : List (Nat × EIdx)) (seen : Std.HashMap EIdx Unit) (F : Nat) :
   | .bvar _ | .sort _ | .const _ _ | .lit _ => pure (acc, seen)
   | .fvar idx ty => fvarLeavesGo ((idx, ty) :: acc) seen F ty
   | .app f a => fvarLeavesGoArmApp acc seen F f a
-  | .lam ty body => fvarLeavesGoArmBind acc seen F ty body
-  | .forallE ty body => fvarLeavesGoArmBind acc seen F ty body
+  | .lam ty body | .forallE ty body => fvarLeavesGoArmBind acc seen F ty body
   | .letE ty val body => fvarLeavesGoArmLet acc seen F ty val body
   | .proj _ _ sub => fvarLeavesGo acc seen F sub
 
@@ -217,8 +216,7 @@ def FlNodeOK (n : Nat) : Prop :=
 
 theorem flGoOK_succ (n : Nat) (ih : FlNodeOK n) : FlGoOK (n + 1) := by
   intro m m' a seen acc h k c k' hD hM hL hh hb
-  by_cases hc : c = 0
-  · rw [flW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [flW] at hb; simp [hc] at hb
   rw [ctrW_toNat c hc, fvarLeavesGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
@@ -230,8 +228,7 @@ theorem flGoOK_succ (n : Nat) (ih : FlNodeOK n) : FlGoOK (n + 1) := by
     intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  by_cases hr : mfindG flSch m h 0 = []
-  · rw [flW] at hb; simp [hc, hf, hr] at hb
+  have hr : ¬ mfindG flSch m h 0 = [] := fun hr => by rw [flW] at hb; simp [hc, hf, hr] at hb
   have hk : bmKey.ok h 0 := ⟨hh, rfl⟩
   by_cases hh0 : (mfindG flSch m h 0).headD 0 ≠ 0
   · rw [flW_hit n m h k c hc hf hr hh0] at hb
@@ -267,15 +264,11 @@ theorem flSeq_ok (n : Nat) (ih : FlGoOK n) (m m' : Mem) (a : AState) (seen : Std
         fvarLeavesGo acc seen c.toNat (decE bw) :
           AM (List (Nat × EIdx) × Std.HashMap EIdx Unit)).run a = .ok ((acc', seen'), a) ∧
       MemoRG flSch bmKey decU m' seen' ∧ LeafR m' k' acc' ∧ FlFrame m m' := by
-  cases h1 : flW n m fw k c with
-  | none => simp only [h1, flSeqK, reduceCtorEq] at hb
-  | some q =>
-    obtain ⟨k₁, m₁⟩ := q
-    rw [h1, flSeqK_some] at hb
-    obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc fw k c k₁ hD hM hL hf h1
-    obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ := ih m₁ m' a seen₁ acc₁ bw k₁ c k' (hf₁.arenaD hD) hM₁ hL₁ hb' hb
-    exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
-      hf₁.trans hf₂⟩
+  rcases h1 : flW n m fw k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeqK, flSeqK_some, reduceCtorEq] at hb
+  obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc fw k c k₁ hD hM hL hf h1
+  obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ := ih m₁ m' a seen₁ acc₁ bw k₁ c k' (hf₁.arenaD hD) hM₁ hL₁ hb' hb
+  exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
+    hf₁.trans hf₂⟩
 
 theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
   intro m m' a seen acc h k c k' hD hM hL hh hb
@@ -285,24 +278,19 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
   have vok : ∀ c, ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
   have leaf : ∀ v, a.store.view (decE h) = some v → flArm acc seen c.toNat v = pure (acc, seen) →
-      k' = k → m' = m →
+      flNodeW (n + 1) m h k c = some (k, m) →
       ∃ acc' seen', (flNodeA acc seen c.toNat (decE h)).run a = .ok ((acc', seen'), a) ∧
         MemoRG flSch bmKey decU m' seen' ∧ LeafR m' k' acc' ∧ FlFrame m m' := by
-    intro v hv hx hk hm; subst hk hm
+    intro v hv hx e; rw [e] at hb; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact ⟨acc, seen, by rw [flNodeA_run _ _ _ _ a _ hv, hx]; rfl, hM, hL, MemFrame.refl _ _ _⟩
   by_cases g0 : h >>> 28 = 0
-  · by_cases hc : rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g0, hc] at hb
-    rw [flNodeW_bvar n m h k c g0 (vok 22 hc)] at hb
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact leaf _ (view_bvar m a hR h hh (vok 22 hc) g0) rfl rfl rfl
+  · have hvo := vok 22 fun hc => by rw [flNodeW] at hb; simp [hs, g0, hc] at hb
+    exact leaf _ (view_bvar m a hR h hh hvo g0) rfl (flNodeW_bvar n m h k c g0 hvo)
   by_cases g1 : h >>> 28 = 1
-  · by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g1, hc] at hb
-    by_cases hl : m.len64 LVS >>> 1 ≤ k
-    · rw [flNodeW] at hb; simp [hs, g1, hc, hl] at hb
-    obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh (vok 26 hc) g1
-    rw [flNodeW_fvar n m h k c g1 (vok 26 hc) hl] at hb
+  · have hvo := vok 26 fun hc => by rw [flNodeW] at hb; simp [hs, g1, hc] at hb
+    have hl : ¬ m.len64 LVS >>> 1 ≤ k := fun hl => by rw [flNodeW] at hb; simp [hs, g1, UInt64.not_le.mpr hvo.2, hl] at hb
+    obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
+    rw [flNodeW_fvar n m h k c g1 hvo hl] at hb
     have hfp : FlFrame m (lvsPush m k (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
         (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))) :=
       (lvsPush_frame m k (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
@@ -316,74 +304,56 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
         hL₁ hty hb
     exact ⟨acc', seen', by rw [flNodeA_run _ _ _ _ a _ hv]; exact ha, hM', hL', hfp.trans hf'⟩
   by_cases g4 : h >>> 28 = 4
-  · by_cases hc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g4, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok 4 hc) g4
-    rw [flNodeW_app n m h k c (vok 4 hc) g4] at hb
+  · have hvo := vok 4 fun hc => by rw [flNodeW] at hb; simp [hs, g4, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
+    rw [flNodeW_app n m h k c hvo g4] at hb
     obtain ⟨acc', seen', h1, h2⟩ := flSeq_ok n ih m m' a seen acc hD hM k hL _ _ c k' hf ha hb
     exact ⟨acc', seen', (flNodeA_run _ _ _ _ a _ hv).trans
       (by simp only [flArm, fvarLeavesGoArmApp]; exact h1), h2⟩
   by_cases g5 : h >>> 28 = 5
-  · by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g5, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok 28 hc) g5
-    rw [flNodeW_lam n m h k c (vok 28 hc) g5] at hb
+  · have hvo := vok 28 fun hc => by rw [flNodeW] at hb; simp [hs, g5, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh hvo g5
+    rw [flNodeW_lam n m h k c hvo g5] at hb
     obtain ⟨acc', seen', h1, h2⟩ := flSeq_ok n ih m m' a seen acc hD hM k hL _ _ c k' hf ha hb
     exact ⟨acc', seen', (flNodeA_run _ _ _ _ a _ hv).trans
       (by simp only [flArm, fvarLeavesGoArmBind]; exact h1), h2⟩
   by_cases g6 : h >>> 28 = 6
-  · by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g6, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok 30 hc) g6
-    rw [flNodeW_forall n m h k c (vok 30 hc) g6] at hb
+  · have hvo := vok 30 fun hc => by rw [flNodeW] at hb; simp [hs, g6, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh hvo g6
+    rw [flNodeW_forall n m h k c hvo g6] at hb
     obtain ⟨acc', seen', h1, h2⟩ := flSeq_ok n ih m m' a seen acc hD hM k hL _ _ c k' hf ha hb
     exact ⟨acc', seen', (flNodeA_run _ _ _ _ a _ hv).trans
       (by simp only [flArm, fvarLeavesGoArmBind]; exact h1), h2⟩
   by_cases g7 : h >>> 28 = 7
-  · by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g7, hc] at hb
-    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok 20 hc) g7
-    rw [flNodeW_let n m h k c (vok 20 hc) g7] at hb
+  · have hvo := vok 20 fun hc => by rw [flNodeW] at hb; simp [hs, g7, hc] at hb
+    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh hvo g7
+    rw [flNodeW_let n m h k c hvo g7] at hb
     rw [flNodeA_run _ _ _ _ a _ hv]
     simp only [flArm, fvarLeavesGoArmLet]
-    cases h1 : flW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with
-    | none => simp only [h1, flSeq3K, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨k₁, m₁⟩ := q
-      rw [h1, flSeq3K_some] at hb
-      obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc _ k c k₁ hD hM hL ht h1
-      obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ :=
-        flSeq_ok n ih m₁ m' a seen₁ acc₁ (hf₁.arenaD hD) hM₁ k₁ hL₁ _ _ c k' hv' hb' hb
-      exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
-        hf₁.trans hf₂⟩
+    rcases h1 : flW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeq3K, flSeq3K_some, reduceCtorEq] at hb
+    obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc _ k c k₁ hD hM hL ht h1
+    obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ :=
+      flSeq_ok n ih m₁ m' a seen₁ acc₁ (hf₁.arenaD hD) hM₁ k₁ hL₁ _ _ c k' hv' hb' hb
+    exact ⟨acc₂, seen₂, by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact ha₂, hM₂, hL₂,
+      hf₁.trans hf₂⟩
   by_cases g9 : h >>> 28 = 9
-  · by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g9, hc] at hb
-    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok 32 hc) g9
-    rw [flNodeW_proj n m h k c (vok 32 hc) g9] at hb
+  · have hvo := vok 32 fun hc => by rw [flNodeW] at hb; simp [hs, g9, hc] at hb
+    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh hvo g9
+    rw [flNodeW_proj n m h k c hvo g9] at hb
     obtain ⟨acc', seen', h1, h2⟩ := ih m m' a seen acc _ k c k' hD hM hL he hb
     exact ⟨acc', seen', (flNodeA_run _ _ _ _ a _ hv).trans h1, h2⟩
   by_cases g2 : h >>> 28 = 2
-  · by_cases hc : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g2, hc] at hb
-    rw [flNodeW_sort n m h k c g2 (vok 16 hc)] at hb
-    obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok 16 hc) g2
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact leaf _ hv rfl rfl rfl
+  · have hvo := vok 16 fun hc => by rw [flNodeW] at hb; simp [hs, g2, hc] at hb
+    obtain ⟨_, hv⟩ := view_sort m a hR h hh hvo g2
+    exact leaf _ hv rfl (flNodeW_sort n m h k c g2 hvo)
   by_cases g3 : h >>> 28 = 3
-  · by_cases hc : rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g3, hc] at hb
-    rw [flNodeW_const n m h k c g3 (vok 18 hc)] at hb
-    obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok 18 hc) g3
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact leaf _ hv rfl rfl rfl
+  · have hvo := vok 18 fun hc => by rw [flNodeW] at hb; simp [hs, g3, hc] at hb
+    obtain ⟨_, _, hv⟩ := view_const m a hR h hh hvo g3
+    exact leaf _ hv rfl (flNodeW_const n m h k c g3 hvo)
   by_cases g8 : h >>> 28 = 8
-  · by_cases hc : rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h
-    · rw [flNodeW] at hb; simp [hs, g8, hc] at hb
-    rw [flNodeW_lit n m h k c g8 (vok 2 hc)] at hb
-    obtain ⟨_, hv⟩ := view_lit m a hR h hh (vok 2 hc) g8
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact leaf _ hv rfl rfl rfl
+  · have hvo := vok 2 fun hc => by rw [flNodeW] at hb; simp [hs, g8, hc] at hb
+    obtain ⟨_, hv⟩ := view_lit m a hR h hh hvo g8
+    exact leaf _ hv rfl (flNodeW_lit n m h k c g8 hvo)
   rw [flNodeW] at hb; simp [hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
 
 theorem flGoOK (n : Nat) : FlGoOK n ∧ FlNodeOK n := by
@@ -410,8 +380,7 @@ def lsbArm (bl : List (Nat × EIdx)) (memo : Std.HashMap EIdx Bool) (F : Nat) :
   | .bvar _ | .sort _ | .const _ _ | .lit _ => pure (true, memo)
   | .fvar idx ty => if leafMem bl idx ty then leavesSubGo bl memo F ty else pure (false, memo)
   | .app f a => leavesSubArmApp bl memo F f a
-  | .lam ty body => leavesSubArmBind bl memo F ty body
-  | .forallE ty body => leavesSubArmBind bl memo F ty body
+  | .lam ty body | .forallE ty body => leavesSubArmBind bl memo F ty body
   | .letE ty val body => leavesSubArmLet bl memo F ty val body
   | .proj _ _ sub => leavesSubGo bl memo F sub
 
@@ -462,8 +431,7 @@ def LsbNodeOK (n : Nat) : Prop :=
 
 theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
   intro m m' a memo bl h k c r hD hM hL hh hb
-  by_cases hc : c = 0
-  · rw [lsbW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [lsbW] at hb; simp [hc] at hb
   rw [ctrW_toNat c hc, leavesSubGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
@@ -475,8 +443,7 @@ theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
     intro e; exact hf (UInt64.toNat_inj.mp (by simpa using e))
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
-  by_cases hr : mfindG lsbSch m h 0 = []
-  · rw [lsbW] at hb; simp [hc, hf, hr] at hb
+  have hr : ¬ mfindG lsbSch m h 0 = [] := fun hr => by rw [lsbW] at hb; simp [hc, hf, hr] at hb
   have hk : bmKey.ok h 0 := ⟨hh, rfl⟩
   by_cases hh0 : (mfindG lsbSch m h 0).headD 0 ≠ 0
   · rw [lsbW_hit n m h k c hc hf hr hh0] at hb
@@ -497,22 +464,18 @@ theorem lsbGoOK_succ (n : Nat) (ih : LsbNodeOK n) : LsbGoOK (n + 1) := by
     have e := memoRG_miss lsbSch bmKey decBW m memo hM h 0 hk hr hh0
     simp only [bmKey] at e
     rw [e]
-    cases hn : lsbNodeW n m h k (c - 1) with
-    | none => simp [lsbK, hn] at hb
-    | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      simp only [hn, lsbK, lsbSet_eq] at hb
-      cases hs : msetG lsbSch m₁ h 0 r₁ with
-      | none => simp [hs, wsSetK] at hb
-      | some m₂ =>
-        simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo bl h k (c - 1) r₁ hD hM hL hh hn
-        refine ⟨memo₁.insert (decE h) (r₁ != 0), ?_, ?_, hle, ?_⟩
-        · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
-        · have := memoRG_set lsbSch lsbSch_wf bmKey decBW m₁ memo₁ hM₁ h 0 r₁ hk m₂ hs
-          simpa [bmKey, decBW] using this
-        · exact hf₁.trans ((msetG_frame lsbSch lsbSch_wf m₁ m₂ h 0 r₁ hs).mono (by simp) (by simp))
+    rcases hn : lsbNodeW n m h k (c - 1) with _ | ⟨r₁, m₁⟩ <;> simp only [hn, lsbK, lsbSet_eq, reduceCtorEq] at hb
+    cases hs : msetG lsbSch m₁ h 0 r₁ with
+    | none => simp [hs, wsSetK] at hb
+    | some m₂ =>
+      simp only [hs, wsSetK, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨memo₁, ha₁, hM₁, hle, hf₁⟩ := ih m m₁ a memo bl h k (c - 1) r₁ hD hM hL hh hn
+      refine ⟨memo₁.insert (decE h) (r₁ != 0), ?_, ?_, hle, ?_⟩
+      · simp only [StateT.run_bind, ha₁, except_ok_bind]; rfl
+      · have := memoRG_set lsbSch lsbSch_wf bmKey decBW m₁ memo₁ hM₁ h 0 r₁ hk m₂ hs
+        simpa [bmKey, decBW] using this
+      · exact hf₁.trans ((msetG_frame lsbSch lsbSch_wf m₁ m₂ h 0 r₁ hs).mono (by simp) (by simp))
 
 theorem lsbAnd_ok (n : Nat) (ih : LsbGoOK n) (m m' : Mem) (a : AState) (memo : Std.HashMap EIdx Bool)
     (bl : List (Nat × EIdx)) (hD : ArenaD m a) (hM : MemoRG lsbSch bmKey decBW m memo) (k : Word)
@@ -550,22 +513,18 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
   have vok : ∀ c, ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
   have one : ∀ v, a.store.view (decE h) = some v → lsbArm bl memo c.toNat v = pure (true, memo) →
-      r = 1 → m' = m →
+      lsbNodeW (n + 1) m h k c = some (1, m) →
       ∃ memo', (lsbNodeA bl memo c.toNat (decE h)).run a = .ok ((r != 0, memo'), a) ∧
         MemoRG lsbSch bmKey decBW m' memo' ∧ r ≤ 1 ∧ LsbFrame m m' := by
-    intro v hv hx hr hm; subst hr hm
+    intro v hv hx e; rw [e] at hb; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact ⟨memo, by rw [lsbNodeA_run _ _ _ _ a _ hv, hx]; rfl, hM, by decide, MemFrame.refl _ _ _⟩
   have hk62 : k.toNat < 2 ^ 63 := hL.small
   by_cases g0 : h >>> 28 = 0
-  · by_cases hc : rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g0, hc] at hb
-    rw [lsbNodeW_bvar n m h k c g0 (vok 22 hc)] at hb
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact one _ (view_bvar m a hR h hh (vok 22 hc) g0) rfl rfl rfl
+  · have hvo := vok 22 fun hc => by rw [lsbNodeW] at hb; simp [hs, g0, hc] at hb
+    exact one _ (view_bvar m a hR h hh hvo g0) rfl (lsbNodeW_bvar n m h k c g0 hvo)
   by_cases g1 : h >>> 28 = 1
-  · by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g1, hc] at hb
-    obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh (vok 26 hc) g1
+  · have hvo := vok 26 fun hc => by rw [lsbNodeW] at hb; simp [hs, g1, hc] at hb
+    obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
     have hlm := lfmW_ok (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
       (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) hty k.toNat k rfl hk62 hL.hw
     rw [← hL.eq] at hlm
@@ -574,40 +533,36 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
     by_cases hin : leafMem bl (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat
         (decE (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))) = true
     · rw [hin] at hlm
-      rw [lsbNodeW_fvar_in n m h k c g1 (vok 26 hc) (by rw [hlm]; decide)] at hb
+      rw [lsbNodeW_fvar_in n m h k c g1 hvo (by rw [hlm]; decide)] at hb
       simp only [hin, ↓reduceIte]
       exact ih m m' a memo bl _ k c r hD hM hL hty hb
     · simp only [hin, Bool.false_eq_true, ↓reduceIte] at hlm
-      rw [lsbNodeW_fvar_out n m h k c g1 (vok 26 hc) hlm] at hb
+      rw [lsbNodeW_fvar_out n m h k c g1 hvo hlm] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       simp only [hin, Bool.false_eq_true, ↓reduceIte]
       exact ⟨memo, rfl, hM, by decide, MemFrame.refl _ _ _⟩
   by_cases g4 : h >>> 28 = 4
-  · by_cases hc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g4, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok 4 hc) g4
-    rw [lsbNodeW_app n m h k c (vok 4 hc) g4] at hb
+  · have hvo := vok 4 fun hc => by rw [lsbNodeW] at hb; simp [hs, g4, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
+    rw [lsbNodeW_app n m h k c hvo g4] at hb
     obtain ⟨memo', h1, h2⟩ := lsbAnd_ok n ih m m' a memo bl hD hM k hL _ _ c r hf ha hb
     exact ⟨memo', (lsbNodeA_run _ _ _ _ a _ hv).trans (by simp only [lsbArm, leavesSubArmApp]; exact h1), h2⟩
   by_cases g5 : h >>> 28 = 5
-  · by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g5, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok 28 hc) g5
-    rw [lsbNodeW_lam n m h k c (vok 28 hc) g5] at hb
+  · have hvo := vok 28 fun hc => by rw [lsbNodeW] at hb; simp [hs, g5, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh hvo g5
+    rw [lsbNodeW_lam n m h k c hvo g5] at hb
     obtain ⟨memo', h1, h2⟩ := lsbAnd_ok n ih m m' a memo bl hD hM k hL _ _ c r hf ha hb
     exact ⟨memo', (lsbNodeA_run _ _ _ _ a _ hv).trans (by simp only [lsbArm, leavesSubArmBind]; exact h1), h2⟩
   by_cases g6 : h >>> 28 = 6
-  · by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g6, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok 30 hc) g6
-    rw [lsbNodeW_forall n m h k c (vok 30 hc) g6] at hb
+  · have hvo := vok 30 fun hc => by rw [lsbNodeW] at hb; simp [hs, g6, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh hvo g6
+    rw [lsbNodeW_forall n m h k c hvo g6] at hb
     obtain ⟨memo', h1, h2⟩ := lsbAnd_ok n ih m m' a memo bl hD hM k hL _ _ c r hf ha hb
     exact ⟨memo', (lsbNodeA_run _ _ _ _ a _ hv).trans (by simp only [lsbArm, leavesSubArmBind]; exact h1), h2⟩
   by_cases g7 : h >>> 28 = 7
-  · by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g7, hc] at hb
-    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok 20 hc) g7
-    rw [lsbNodeW_let n m h k c (vok 20 hc) g7] at hb
+  · have hvo := vok 20 fun hc => by rw [lsbNodeW] at hb; simp [hs, g7, hc] at hb
+    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh hvo g7
+    rw [lsbNodeW_let n m h k c hvo g7] at hb
     rw [lsbNodeA_run _ _ _ _ a _ hv]
     simp only [lsbArm, leavesSubArmLet]
     cases h1 : lsbW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with
@@ -629,33 +584,23 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
         simp only [StateT.run_bind, ha₁, except_ok_bind, this, ↓reduceIte]
         exact ha₂
   by_cases g9 : h >>> 28 = 9
-  · by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g9, hc] at hb
-    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok 32 hc) g9
-    rw [lsbNodeW_proj n m h k c (vok 32 hc) g9] at hb
+  · have hvo := vok 32 fun hc => by rw [lsbNodeW] at hb; simp [hs, g9, hc] at hb
+    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh hvo g9
+    rw [lsbNodeW_proj n m h k c hvo g9] at hb
     obtain ⟨memo', h1, h2⟩ := ih m m' a memo bl _ k c r hD hM hL he hb
     exact ⟨memo', (lsbNodeA_run _ _ _ _ a _ hv).trans h1, h2⟩
   by_cases g2 : h >>> 28 = 2
-  · by_cases hc : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g2, hc] at hb
-    rw [lsbNodeW_sort n m h k c g2 (vok 16 hc)] at hb
-    obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok 16 hc) g2
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact one _ hv rfl rfl rfl
+  · have hvo := vok 16 fun hc => by rw [lsbNodeW] at hb; simp [hs, g2, hc] at hb
+    obtain ⟨_, hv⟩ := view_sort m a hR h hh hvo g2
+    exact one _ hv rfl (lsbNodeW_sort n m h k c g2 hvo)
   by_cases g3 : h >>> 28 = 3
-  · by_cases hc : rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g3, hc] at hb
-    rw [lsbNodeW_const n m h k c g3 (vok 18 hc)] at hb
-    obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok 18 hc) g3
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact one _ hv rfl rfl rfl
+  · have hvo := vok 18 fun hc => by rw [lsbNodeW] at hb; simp [hs, g3, hc] at hb
+    obtain ⟨_, _, hv⟩ := view_const m a hR h hh hvo g3
+    exact one _ hv rfl (lsbNodeW_const n m h k c g3 hvo)
   by_cases g8 : h >>> 28 = 8
-  · by_cases hc : rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h
-    · rw [lsbNodeW] at hb; simp [hs, g8, hc] at hb
-    rw [lsbNodeW_lit n m h k c g8 (vok 2 hc)] at hb
-    obtain ⟨_, hv⟩ := view_lit m a hR h hh (vok 2 hc) g8
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact one _ hv rfl rfl rfl
+  · have hvo := vok 2 fun hc => by rw [lsbNodeW] at hb; simp [hs, g8, hc] at hb
+    obtain ⟨_, hv⟩ := view_lit m a hR h hh hvo g8
+    exact one _ hv rfl (lsbNodeW_lit n m h k c g8 hvo)
   rw [lsbNodeW] at hb; simp [hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
 
 theorem lsbGoOK (n : Nat) : LsbGoOK n ∧ LsbNodeOK n := by
@@ -688,8 +633,7 @@ theorem lgW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : LgMem
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨?_, ⟨⟨sp, hsp⟩, ⟨lp, hlp⟩⟩, by decide, MemFrame.refl _ _ _⟩
     simp only [leafGuard, StateT.run_bind, derivedE_run, except_ok_bind, ← hd, hf]; rfl
-  by_cases h0 : rdW (m.arr64 CTL) 154 + 2 = 0
-  · simp [lgW, hf, h0] at hb
+  have h0 : ¬ rdW (m.arr64 CTL) 154 + 2 = 0 := fun h0 => by simp [lgW, hf, h0] at hb
   rw [lgW_go n m fab base hf h0] at hb
   have hc₁ : FlFrame m (mclearG flSch m) := (mclearG_frame flSch m).mono (by simp) (by simp)
   have hD₀ : ArenaD (mclearG flSch m) a := hc₁.arenaD hD
@@ -701,8 +645,7 @@ theorem lgW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : LgMem
     obtain ⟨k, m₁⟩ := q
     obtain ⟨bl, seen', ha₁, hS₁, hL₁, hf₁⟩ := (flGoOK n).1 _ _ a ∅ [] base 0 4000000000 k hD₀ hS₀ hL₀ hbase hfl
     rw [coreWalkFuel_toNat] at ha₁
-    by_cases h1 : rdW (m₁.arr64 CTL) 156 + 2 = 0
-    · simp [hfl, lgK, h1] at hb
+    have h1 : ¬ rdW (m₁.arr64 CTL) 156 + 2 = 0 := fun h1 => by simp [hfl, lgK, h1] at hb
     rw [hfl, lgK_some n fab k m₁ h1] at hb
     have hf01 : FlFrame m m₁ := hc₁.trans hf₁
     have hlp₁ : MemoRG lsbSch bmKey decBW m₁ lp :=

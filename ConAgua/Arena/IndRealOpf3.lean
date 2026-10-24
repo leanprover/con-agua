@@ -195,11 +195,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   simp only [opfGoK] at c'
   by_cases hn : n = 0
   · rw [if_pos hn] at c'
-    cases h1 : callW opfP k "inst_list" [e, co, cn, 0] m with
-    | none => rw [h1] at c'; cases c'
-    | some p1 =>
-    obtain ⟨r1, m1⟩ := p1
-    rw [h1, bW_some] at c'
+    obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     obtain ⟨a1, hrun1, hS1, hg1, hAb1, hspn1, htop1, hlt1⟩ := opfIl_ok hS hAb hsl he h1
     subst hn
@@ -216,36 +212,16 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
   rw [if_neg hg] at c'
   have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
-  cases h1 : callW opfP k "e_view" [e] m with
-  | none => rw [h1] at c'; cases c'
-  | some p1 =>
-  obtain ⟨rv, m1⟩ := p1
-  rw [h1, bW_some] at c'
+  obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
   subst m1
-  cases h2 : callW opfP k "inst_list" [rv.tail.headD 0, co, cn, 0] m with
-  | none => rw [h2] at c'; cases c'
-  | some p2 =>
-  obtain ⟨rd, m2⟩ := p2
-  rw [h2, bW_some] at c'
+  obtain ⟨rd, m2, h2, c'⟩ := ntBW_some c'
   obtain ⟨a2, hrun2, hS2, hg2, hAb2, hspn2, htop2, hlt2⟩ := opfIl_ok hS hAb hsl hx h2
-  cases h3 : callW opfP k "intern_fvar" [i, rd.headD 0] m2 with
-  | none => rw [h3] at c'; cases c'
-  | some p3 =>
-  obtain ⟨rf, m3⟩ := p3
-  rw [h3, bW_some] at c'
+  obtain ⟨rf, m3, h3, c'⟩ := ntBW_some c'
   obtain ⟨a3, hrun3, hS3, hg3, hAb3, hspn3, htop3, hlt3⟩ := opfFv_ok hS2 hAb2 hlt2 h3
-  cases h4 : callW opfP k "spn_push" [rf.headD 0] m3 with
-  | none => rw [h4] at c'; cases c'
-  | some p4 =>
-  obtain ⟨ru, m4⟩ := p4
-  rw [h4, bW_some] at c'
+  obtain ⟨ru, m4, h4, c'⟩ := ntBW_some c'
   obtain ⟨hS4, hg4, hAb4, hroom, htop4, hsp4, hsz4⟩ := spnPushW_ok hS3 hAb3 (push_of_callW h4)
-  cases h5 : callW opfP k "opf_go" [n - 1, rv.tail.tail.headD 0, i + 1, co, cn + 1] m4 with
-  | none => rw [h5] at c'; cases c'
-  | some p5 =>
-  obtain ⟨rb, m5⟩ := p5
-  rw [h5, bW_some] at c'
+  obtain ⟨rb, m5, h5, c'⟩ := ntBW_some c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   have ht3 : rdW (m3.arr64 CTL) 136 = co + cn := htop3.trans (htop2.trans htop)
   have hs3 : m3.arr64 SPN = m.arr64 SPN := hspn3.trans hspn2
@@ -303,36 +279,16 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
   rw [if_neg hg] at c'
   have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
-  cases h1 : callW opfP k "e_view" [e] m with
-  | none => rw [h1] at c'; cases c'
-  | some p1 =>
-  obtain ⟨rv, m1⟩ := p1
-  rw [h1, bW_some] at c'
+  obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
   subst m1
-  cases h2 : callW opfP k "intern_fvar" [i, rv.tail.headD 0] m with
-  | none => rw [h2] at c'; cases c'
-  | some p2 =>
-  obtain ⟨rf, m2⟩ := p2
-  rw [h2, bW_some] at c'
+  obtain ⟨rf, m2, h2, c'⟩ := ntBW_some c'
   obtain ⟨a2, hrun2, hS2, hg2, hAb2, hspn2, htop2, hlt2⟩ := opfFv_ok hS hAb hx h2
-  cases h3 : callW opfP k "inst_entry" [rv.tail.tail.headD 0, rf.headD 0, 0] m2 with
-  | none => rw [h3] at c'; cases c'
-  | some p3 =>
-  obtain ⟨rb, m3⟩ := p3
-  rw [h3, bW_some] at c'
+  obtain ⟨rb, m3, h3, c'⟩ := ntBW_some c'
   obtain ⟨a3, hrun3, hS3, hg3, hAb3, hspn3, htop3, hlt3⟩ := opfI1_ok hS2 hAb2 hy h3
-  cases h4 : callW opfP k "spn_push" [rf.headD 0] m3 with
-  | none => rw [h4] at c'; cases c'
-  | some p4 =>
-  obtain ⟨ru, m4⟩ := p4
-  rw [h4, bW_some] at c'
+  obtain ⟨ru, m4, h4, c'⟩ := ntBW_some c'
   obtain ⟨hS4, hg4, hAb4, hroom, htop4, hsp4, hsz4⟩ := spnPushW_ok hS3 hAb3 (push_of_callW h4)
-  cases h5 : callW opfP k "opa_go" [n - 1, rb.headD 0, i + 1] m4 with
-  | none => rw [h5] at c'; cases c'
-  | some p5 =>
-  obtain ⟨ro, m5⟩ := p5
-  rw [h5, bW_some] at c'
+  obtain ⟨ro, m5, h5, c'⟩ := ntBW_some c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   generalize ht : rdW (m.arr64 CTL) 136 = t at htb hib ⊢
   have ht3 : rdW (m3.arr64 CTL) 136 = t := htop3.trans (htop2.trans ht)
@@ -369,16 +325,8 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
     {r : List Word} (hS : StageR dn vis fe m2 a2) (hAb : AbsOK m2) (hsl : SpineR m2 co n fvs.toArray)
     (hb : b.toNat < 2 ^ 32) (h : opfTail k n co b (allocW m2 n) = some (r, m')) :
     KeepPost dn vis fe decOLE m2 m' a2 r (some (fvs, decE b)) ∧ AbsOK m' := by
-  cases ha : allocW m2 n with
-  | none => rw [ha] at h; cases h
-  | some p2 =>
-  obtain ⟨q, m3⟩ := p2
-  rw [ha, opfTail_some] at h
-  cases c3 : s2iW k m3 q co n with
-  | none => rw [c3] at h; cases h
-  | some p3 =>
-  obtain ⟨r3, m4⟩ := p3
-  rw [c3, bW_some] at h
+  obtain ⟨⟨q, m3⟩, ha, h⟩ := of_K h rfl; rw [opfTail_some] at h
+  obtain ⟨r3, m4, c3, h⟩ := ntBW_some h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
@@ -443,17 +391,14 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       (fun m m' a r x => KeepPost dn vis fe decOLE m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hAb⟩
   obtain ⟨N, hc⟩ := callF_run h
-  cases N with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ K =>
+  rcases N with _ | K
+  · rw [callW_zero] at hc; cases hc
   have c' := callW_model (M := fun mm => opfTopK opfP K mm k e i)
     (fun s => opfTopK_spec opfP rfl rfl rfl K s k e i) hc
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
   have hctl : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
   simp only [opfTopK] at c'
-  by_cases hsh : i >>> 63 ≠ 0
-  · rw [if_pos hsh] at c'; cases c'
-  rw [if_neg hsh] at c'
+  obtain ⟨hsh, c'⟩ := of_ite_none c'
   have hi : i.toNat < 2 ^ 63 := by
     have h1 := congrArg UInt64.toNat (Decidable.not_not.mp hsh)
     rw [UInt64.toNat_shiftRight] at h1
@@ -462,20 +407,14 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     have := i.toNat_lt
     omega
   generalize hco : rdW (m.arr64 CTL) 136 = co at c'
-  by_cases hlen : m.len64 SPN < co
-  · rw [if_pos hlen] at c'; cases c'
-  rw [if_neg hlen] at c'
+  obtain ⟨hlen, c'⟩ := of_ite_none c'
   have hcob : co.toNat ≤ (m.arr64 SPN).size := by
     have : ¬ (((m.arr64 SPN).size : Nat).toUInt64 < co) := hlen
     rw [UInt64.lt_iff_toNat_lt] at this
     have h2 : (((m.arr64 SPN).size : Nat).toUInt64).toNat = (m.arr64 SPN).size := by
       simp [Nat.toUInt64]; omega
     omega
-  cases h1 : callW opfP K "opf_go" [k, e, i, co, 0] m with
-  | none => rw [h1] at c'; cases c'
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [h1, bW_some] at c'
+  obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1⟩ := opfGo_ok dn vis fe K m m1 a k e i co 0 #[] r1
     h1 hS hAb he (by simpa using SpineR.empty' (m := m) hcob) (by rw [hco]; simp) (by simp; omega)
   have hrun := opfF_run k.toNat (decE e) i.toNat a a1 x1 hrun1
@@ -499,11 +438,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
     have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz1]
-    cases h2 : callW opfP K "opa_go" [k, e, i] (m1.set64 CTL 136 co) with
-    | none => rw [h2] at c'; cases c'
-    | some p2 =>
-    obtain ⟨r2, m2⟩ := p2
-    rw [h2, bW_some] at c'
+    obtain ⟨r2, m2, h2, c'⟩ := ntBW_some c'
     simp only [opfK3] at c'
     obtain ⟨x2, a2, hrun2, hS2, hg2, hAb2, -, hO2⟩ := opaGo_ok dn vis fe K _ m2 a1 k e i r2 h2
       hS1' hAb1' he (by rw [htop1, hsz1']; exact hcob) (by rw [htop1, hsz1']; omega)

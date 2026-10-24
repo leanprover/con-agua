@@ -31,8 +31,7 @@ theorem LsStore.viewLen_of_view (st : LsStore) (i : LsIdx) (ids : List LIdx)
     split at h
     · rw [if_pos (by assumption)]
       cases e : i |> fun _ => (st.pers.lists.node? i.idxNat) with
-      | none => simp_all
-      | some r => simp_all
+      | none | some r => simp_all
     · cases h
   · rw [if_neg (by assumption)]
     split at h
@@ -41,8 +40,7 @@ theorem LsStore.viewLen_of_view (st : LsStore) (i : LsIdx) (ids : List LIdx)
       split at h
       · rw [if_pos (by assumption)]
         cases e : (st.scr.lists.node? i.idxNat) with
-        | none => simp_all
-        | some r => simp_all
+        | none | some r => simp_all
       · cases h
     · cases h
 
@@ -237,11 +235,9 @@ theorem eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
     (L.Ind.eViewW m h).headD 0 = h >>> 28 := by
   unfold L.Ind.eViewW at hne ⊢
   dsimp only at hne ⊢
-  by_cases c0 : (4294967295 : Word) < h
-  · rw [if_pos c0] at hne; exact absurd rfl hne
+  have c0 : ¬ (4294967295 : Word) < h := fun c0 => by rw [if_pos c0] at hne; exact absurd rfl hne
   rw [if_neg c0] at hne ⊢
-  by_cases c1 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos c1] at hne; exact absurd rfl hne
+  have c1 : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c1 => by rw [if_pos c1] at hne; exact absurd rfl hne
   rw [if_neg c1] at hne ⊢
   by_cases g0 : h >>> 28 = 0
   · rw [if_pos g0] at hne ⊢

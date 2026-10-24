@@ -153,8 +153,7 @@ theorem lhPushW_ext {m m' : Mem} {w o : Word} (h : lhPushW m w = some (o, m')) :
   split at h
   · simp at h
   · rename_i hc
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     simp only [not_or, UInt64.not_le, ne_eq, Decidable.not_not, Nat.not_le] at hc
     obtain ⟨h40, hlen, hctl⟩ := hc
     have ht : (htop m).toNat < 2 ^ 40 := by

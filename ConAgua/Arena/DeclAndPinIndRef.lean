@@ -38,10 +38,7 @@ theorem erToIwW_wordsA {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : erCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   have hIW := allocMem_IW m l
@@ -290,9 +287,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   | zero => simp [andpW] at h
   | succ n =>
   rw [andpW_step] at h
-  by_cases hfl : rdW (m.arr64 PINS) 0 = 0
-  · rw [if_pos hfl] at h; cases h
-  rw [if_neg hfl] at h
+  obtain ⟨hfl, h⟩ := of_ite_none h
   have hF : PinsFull m a.pins := hS.1.pins.full hfl
   have hdecl' := hdecl
   obtain ⟨h6, hnP, t, -, hdec⟩ := hdecl'
@@ -362,8 +357,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   | some x =>
   obtain ⟨r4, m4⟩ := x
   rw [h4, andpK4_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   rw [hl2] at h4
   obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hd4⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (L.Ind.canonEqList_refines p hp.canon dn vis fe _ _ _ _ block pinned n ⟨m3, Locals.init []⟩ a1
@@ -408,8 +402,7 @@ theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
   | zero => simp [andpW] at h
   | succ n =>
   rw [andpW_step] at h
-  by_cases hfl : rdW (m.arr64 PINS) 0 = 0
-  · rw [if_pos hfl] at h; cases h
+  have hfl : ¬ rdW (m.arr64 PINS) 0 = 0 := fun hfl => by rw [if_pos hfl] at h; cases h
   rw [if_neg hfl, if_neg hk] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   exact ⟨hfl, h.2.symm, h.1.symm⟩
