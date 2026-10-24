@@ -810,6 +810,31 @@ theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := decI_word x
 
 theorem decE_eq_decI (w : Word) : (decE w : EIdx) = decI w := rfl
 
+/-! ### `Sim` steps for the certificate builders -/
+
+/-- `w` is the word of the index `x` (`decW0E` of a result is `DW (r.headD 0) x`). -/
+def DW {κ : IdxKind} (w : Word) (x : Idx κ) : Prop := H w ∧ decI w = x
+
+theorem DW.of {κ : IdxKind} {w : Word} {x : Idx κ} (e : w = x.word.toUInt64) : DW w x :=
+  e ▸ ⟨dmWord_lt32 x, decI_word x⟩
+
+/-- The post of a `KeepPost` callee, its growth counted from `m0`. -/
+abbrev KG {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m0 : Mem)
+    (dec : Mem → List Word → α → Prop) : List Word → α → Mem → AState → Prop :=
+  fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧ dec m' r x
+
+theorem CallRef.simG {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
+    {op : AM α} {dec : Mem → List Word → α → Prop} (h : CallRef p f args pre op (KeepPost dn vis fe dec))
+    {n : Nat} {m m0 : Mem} {a : AState} (hp : pre m a) (hG : IWGrow m0 m) :
+    Sim (callW p n f args m) op a (KG dn vis fe m0 dec) :=
+  (h.sim hp).mono fun _ _ _ _ ⟨hS', hg, hd⟩ => ⟨hS', hG.trans hg, hd⟩
+
+theorem natAp2_dw (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {a : AState} {c x y : Word} {c' : NIdx}
+    {x' y' : EIdx} (hS : StageR dn vis fe m a) (hG : IWGrow m0 m) (h1 : DW c c') (h2 : DW x x')
+    (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG dn vis fe m0 decW0E) := by
+  obtain ⟨h1, rfl⟩ := h1; obtain ⟨h2, rfl⟩ := h2; obtain ⟨h3, rfl⟩ := h3
+  exact (natAp2_ref hN c x y).simG ⟨hS, h1, h2, h3⟩ hG
+
 
 @[refines ConRon.Arena.natVar]
 theorem natVar_refines (hD : DmProg2 p) (i : Word) :
