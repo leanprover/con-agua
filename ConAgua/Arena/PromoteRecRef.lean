@@ -91,6 +91,21 @@ theorem hslice?_agree {a b : Array Word} {t : Nat} (h : ∀ i < t, b[i]? = a[i]?
     simp only [List.mem_range] at hj
     simp only [hd?, h (o + j) (by omega)]
 
+/-- **The statement of a list promotion** `gl` refining the twin's `TL` over the slice `(o, l)`
+that `hslice?` decodes, the results written at `[q, q + l)` above it. -/
+def ListRel (p : Prog) (gl : FnName) {k : IdxKind}
+    (TL : PMemo → Nat → List (Idx k) → AM (PMemo × List (Idx k))) : Prop :=
+    ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
+    (us : List (Idx k)) (r : List Word) (m' : Mem),
+    ArenaD m a → PMemoR m pm → hslice? (m.arr64 EREC) o.toNat l.toNat = some us →
+    (o.toNat + l.toNat ≤ q.toNat ∨ l = 0) → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
+    (m.arr64 EREC).size < 2 ^ 64 → callW p n gl [f, o, l, q] m = some (r, m') →
+    ∃ a' pm' us', (TL pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
+      PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
+      (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
+      (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
+      MemFrame (EREC :: eArrs) eCtl m m'
+
 section lists
 variable (p : Prog) (hp : PromoteProg p)
 include hp
@@ -111,16 +126,7 @@ theorem list_gen {k : IdxKind} (g gl : FnName) (T : PMemo → Nat → Idx k → 
       callW p n g [f, u.word.toUInt64] m = some (r, m') →
       ∃ a' pm', (T pm f.toNat u).run a = .ok ((pm', decI (r.headD 0)), a') ∧ ArenaD m' a' ∧
         PMemoR m' pm' ∧ PW (r.headD 0) ∧ cp a' = cp a ∧ MemFrame eArrs eCtl m m') :
-    ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
-    (us : List (Idx k)) (r : List Word) (m' : Mem),
-    ArenaD m a → PMemoR m pm → hslice? (m.arr64 EREC) o.toNat l.toNat = some us →
-    (o.toNat + l.toNat ≤ q.toNat ∨ l = 0) → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
-    (m.arr64 EREC).size < 2 ^ 64 → callW p n gl [f, o, l, q] m = some (r, m') →
-    ∃ a' pm' us', (TL pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
-      PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
-      (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
-      (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-      MemFrame (EREC :: eArrs) eCtl m m' := by
+    ListRel p gl TL := by
   intro n
   induction n with
   | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc; rw [callW_zero'] at hc; cases hc
@@ -258,16 +264,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
     (TL : PMemo → Nat → List (Idx k) → AM (PMemo × List (Idx k)))
     (hk : ∀ n f o l r m₁, sliceK p n kw f o l (some (r, m₁)) =
       offK (r.headD 0) (callW p n gl [f, o, l, r.headD 0] m₁))
-    (hlist : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
-      (us : List (Idx k)) (r : List Word) (m' : Mem),
-      ArenaD m a → PMemoR m pm → hslice? (m.arr64 EREC) o.toNat l.toNat = some us →
-      (o.toNat + l.toNat ≤ q.toNat ∨ l = 0) → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
-      (m.arr64 EREC).size < 2 ^ 64 → callW p n gl [f, o, l, q] m = some (r, m') →
-      ∃ a' pm' us', (TL pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
-        PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
-        (∀ i < q.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
-        (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ cp a' = cp a ∧
-        MemFrame (EREC :: eArrs) eCtl m m')
+    (hlist : ListRel p gl TL)
     (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
     (us : List (Idx k)) (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
     (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us)
