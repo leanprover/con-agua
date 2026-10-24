@@ -302,8 +302,8 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     (hp : PoolOK m) (hcd : c ≤ d) (hdig : Digits b c.toNat (d.toNat - c.toNat))
     (h : natDecW b m c d = some (r, m')) :
     ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧
-      Norm (m'.arr64 POOL) m.top.toNat l.toNat ∧
-      pv (m'.arr64 POOL) m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
+      Norm (vpool m') m.top.toNat l.toNat ∧
+      pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
   obtain ⟨hctl, hctl0, hps, htop⟩ := hp
   unfold natDecW at h
   rw [rdW_ctl_top] at h
@@ -326,13 +326,14 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨l, rfl, ⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · rw [hpool]; exact hag
+  · rw [vpool_set64_ne _ _ _ _ (by decide)]
+    exact Agree.vpool hag (by omega) (by omega) (by omega) (by omega)
   · rw [htop', htl']; omega
   · rw [htop', htl', hpool, hsz]; exact htl
   · rw [hpool, hsz]
   · simp only [SliceOK, htop', htl']; omega
-  · rw [hpool]; exact hN
-  · rw [hpool]; exact hv
+  · rw [vpool_set64_ne _ _ _ _ (by decide), Norm_vpool _ _ _ (by omega) (by omega)]; exact hN
+  · rw [vpool_set64_ne _ _ _ _ (by decide), pv_vpool _ _ _ (by omega) (by omega)]; exact hv
 
 /-! ## con-leche's `readNatAt` is the decimal value -/
 

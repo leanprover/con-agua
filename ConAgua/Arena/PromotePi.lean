@@ -307,7 +307,7 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
 
 /-- **`pi_nstr` refines `internPersistentN (.str _ s)`**, `s` the string the pool slice holds. -/
 theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq : PW q)
-    (hsl : SliceOK m o l) (s : String) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (hsl : SliceOK m o l) (s : String) (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
     (r : Word) (m' : Mem) (h : piW p n "intern_nstr" [q, o, l] m = some (r, m')) :
     ∃ a', (internPersistentN (.str (decI q) s)).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [NSREC, NSSLOT] [1, 36, 37] m m' := by
@@ -322,13 +322,15 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
   have ⟨_, _, hps, htop⟩ := hR₀.lit.1
   have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
   have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
   obtain ⟨s', rfl, -, hI⟩ := callW_triple (internNStr_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "nstr_match")
     (hp.get "nstr_find") (hp.get "nstr_push") (hp.get "intern_nstr") n ⟨m.set64 CTL 1 0, Locals.init []⟩ q o l
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := nsintern_correct _ (onA false a) hR₀.lit.1 hR₀.nstr q o l hq.1 hsl₀ s
-    (by rw [hpool]; exact hk) _ _ hI
+    (by rw [hpoolv]; exact hk) _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
   have hR₁ := hR₀.lift_nstr _ _ _ _ hX hf
     (AM.st_proto nstrLens _ _ _ _ _ _ _ (internNNode_str_run _ _ _) hok)
@@ -513,7 +515,7 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
 /-- **`pi_ls` refines `internPersistentLs us`**, `us` the persistent handles the pool slice
 holds. -/
 theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
-    (us : List LIdx) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us)
+    (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
     (hus : lsKids us) (r : Word) (m' : Mem) (h : piW p n "intern_ls" [o, l] m = some (r, m')) :
     ∃ a', (internPersistentLs us).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [LSREC, LSSLOT, LSHP] [1, 40, 41] m m' := by
@@ -528,15 +530,17 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
   have ⟨_, _, hps, htop⟩ := hR₀.lit.1
   have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpoolv := vpool_congr hpool
+  have hpoolc := pcap_congr hpool
   have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
   have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
   obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLs_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "ls_match")
     (hp.get "ls_find") (hp.get "ls_push") (hp.get "intern_ls") n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := lsintern_correct _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us
-    (by rw [hpool]; exact hk) _ _ hI
-  have hL := lsintern_hp _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us (by rw [hpool]; exact hk) hR₀.lsHp
-    (lsOrW_ok _ _ hR₀ o l hsl₀ us (by rw [hpool]; exact hk)) _ _ hI
+    (by rw [hpoolv]; exact hk) _ _ hI
+  have hL := lsintern_hp _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us (by rw [hpoolv]; exact hk) hR₀.lsHp
+    (lsOrW_ok _ _ hR₀ o l hsl₀ us (by rw [hpoolv]; exact hk)) _ _ hI
   have hf := lsinternW_frame _ o l _ _ hI
   have hR₁ := hR₀.lift_ls _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ _ (internLsNode_run _ _) hok)

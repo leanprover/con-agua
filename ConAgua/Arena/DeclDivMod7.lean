@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclDivMod6
 import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the environment guard (lane `decls3`, `decls3-divmod`)
@@ -30,35 +31,11 @@ structure DmProg7 (p : Prog) : Prop extends DmProg6 p where
 section envguard
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
-def egW (p : Prog) (n : Nat) (m : Mem) (v c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "nat_op_guard" [v, c] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  ntBW (callW p n "nat_op_deps" [c] m1) fun r2 m2 =>
-  ntBW (callW p n "nat_op_stored_ok_all" [v, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
-  if r3.headD 0 = 0 then some ([0], m3) else
-  ntBW (callW p n "pin_at" [0] m3) fun r4 m4 =>
-  ntBW (callW p n "rom_ci" [0] m4) fun r5 m5 =>
-  ntBW (callW p n "find_is" [v, r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
-  if r6.headD 0 = 0 then some ([0], m6) else
-  ntBW (callW p n "pin_at" [30] m6) fun r7 m7 =>
-  ntBW (callW p n "bool_ctor_typed" [v, r7.headD 0] m7) fun r8 m8 =>
-  if r8.headD 0 = 0 then some ([0], m8) else
-  ntBW (callW p n "pin_at" [31] m8) fun r9 m9 =>
-  ntBW (callW p n "bool_ctor_typed" [v, r9.headD 0] m9) fun r10 m10 => some ([r10.headD 0], m10)
-
-set_option maxHeartbeats 3200000 in
-theorem eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvGuardL) (n : Nat)
-    (s₀ : St) (v c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_env_guard" [v, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ egW p n s₀.mem v c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModEnvGuardL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps",
-      callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci",
-      callW_spec p n "find_is", callW_spec p n "bool_ctor_typed"] <;>
-    finish (gen := 30) (instances := 10000) [egW, ntBW]
+/-- **`div_mod_env_guard` is its model `egW`** (generated). -/
+l_model eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvGuardL)
+  fns [hp ↦ egW list]
+  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci", callW_spec p n "find_is", callW_spec p n "bool_ctor_typed"]
+  grind [arena_grind] heartbeats 3200000 bind ntBW simp [ntBW]
 
 theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg
 
@@ -66,9 +43,9 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
     CallRef p "div_mod_env_guard" [vis, c] (fun m s => StageR dn vis fe m s ∧ H c)
       (divModEnvGuard fe (decI c)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hc⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => egW p k mq vis c)
-    (eg_specW p hD.lDivModEnvGuard k · vis c) hcall
-  unfold egW at hw
+  have hw := callW_model (M := fun mq => egW p (k + 1) mq vis c)
+    (eg_specW p hD.lDivModEnvGuard (k + 1) · vis c) hcall
+  rw [egW.arm1] at hw
   have hT := hD.ty
   -- the dependency guard
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hw⟩ :=

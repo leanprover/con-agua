@@ -109,9 +109,9 @@ theorem strWords_projTableI : strWords "projTable" = [112, 114, 111, 106, 84, 97
 
 theorem strWords_proj : strWords "proj" = [112, 114, 111, 106] := by decide
 
-theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).size < 2 ^ 63)
-    (hb : o.toNat + l.toNat ≤ (m.arr64 POOL).size)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) :
+theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : pcap m < 2 ^ 63)
+    (hb : o.toNat + l.toNat ≤ pcap m)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) :
     (ipfStrW m o l != 0) = (s == "proj" || s == "projTable") ∧ (ipfStrW m o l).toNat ≤ 1 := by
   have hlen : (strWords s).length = l.toNat := by rw [← hk, sliceL_length]
   rw [str_beq, str_beq, strWords_proj, strWords_projTableI, ← hk]
@@ -124,34 +124,43 @@ theorem ipfStrW_ok (m : Mem) (o l : Word) (s : String) (hsz : (m.arr64 POOL).siz
   have e6 : (o + 6).toNat = o.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
   have e7 : (o + 7).toNat = o.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
   have e8 : (o + 8).toNat = o.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+  have v0 := vpool_getD_nat m o.toNat (by omega)
+  have v1 := vpool_getD_nat m (o.toNat + 1) (by omega)
+  have v2 := vpool_getD_nat m (o.toNat + 2) (by omega)
+  have v3 := vpool_getD_nat m (o.toNat + 3) (by omega)
+  have v4 := vpool_getD_nat m (o.toNat + 4) (by omega)
+  have v5 := vpool_getD_nat m (o.toNat + 5) (by omega)
+  have v6 := vpool_getD_nat m (o.toNat + 6) (by omega)
+  have v7 := vpool_getD_nat m (o.toNat + 7) (by omega)
+  have v8 := vpool_getD_nat m (o.toNat + 8) (by omega)
   by_cases h4 : l = 4
   · subst h4
     simp only [ipfStrW, rdW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
-      e1, e2, e3]
+      e1, e2, e3, v0, v1, v2, v3]
     by_cases b0 : (m.arr64 POOL)[o.toNat]?.getD 0 = 112 <;>
     by_cases b1 : (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 <;>
     by_cases b2 : (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 <;>
-    by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;> simp [b0, b1, b2, b3]
+    by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;> simp [b0, b1, b2, b3, v0, v1, v2, v3]
   by_cases h9 : l = 9
   · subst h9
     simp only [ipfStrW, rdW, sliceL, List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ,
-      e1, e2, e3, e4, e5, e6, e7, e8]
+      e1, e2, e3, e4, e5, e6, e7, e8, v0, v1, v2, v3, v4, v5, v6, v7, v8]
     by_cases b0 : (m.arr64 POOL)[o.toNat]?.getD 0 = 112 <;>
     by_cases b1 : (m.arr64 POOL)[o.toNat + 1]?.getD 0 = 114 <;>
     by_cases b2 : (m.arr64 POOL)[o.toNat + 2]?.getD 0 = 111 <;>
     by_cases b3 : (m.arr64 POOL)[o.toNat + 3]?.getD 0 = 106 <;>
-    simp [b0, b1, b2, b3] <;>
+    simp [b0, b1, b2, b3, v0, v1, v2, v3] <;>
     by_cases b4 : (m.arr64 POOL)[o.toNat + 4]?.getD 0 = 84 <;>
     by_cases b5 : (m.arr64 POOL)[o.toNat + 5]?.getD 0 = 97 <;>
     by_cases b6 : (m.arr64 POOL)[o.toNat + 6]?.getD 0 = 98 <;>
     by_cases b7 : (m.arr64 POOL)[o.toNat + 7]?.getD 0 = 108 <;>
-    by_cases b8 : (m.arr64 POOL)[o.toNat + 8]?.getD 0 = 101 <;> simp [b4, b5, b6, b7, b8]
+    by_cases b8 : (m.arr64 POOL)[o.toNat + 8]?.getD 0 = 101 <;> simp [b4, b5, b6, b7, b8, v4, v5, v6, v7, v8]
   · have hl4 : l.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))
     have hl9 : l.toNat ≠ 9 := fun e => h9 (UInt64.toNat_inj.mp (by simpa using e))
-    have d1 : decide (sliceL (m.arr64 POOL) o.toNat l.toNat = [112, 114, 111, 106]) = false := by
+    have d1 : decide (sliceL (vpool m) o.toNat l.toNat = [112, 114, 111, 106]) = false := by
       simp only [decide_eq_false_iff_not]; intro e
       have := congrArg List.length e; rw [sliceL_length] at this; simp at this; omega
-    have d2 : decide (sliceL (m.arr64 POOL) o.toNat l.toNat = [112, 114, 111, 106, 84, 97, 98, 108, 101])
+    have d2 : decide (sliceL (vpool m) o.toNat l.toNat = [112, 114, 111, 106, 84, 97, 98, 108, 101])
         = false := by
       simp only [decide_eq_false_iff_not]; intro e
       have := congrArg List.length e; rw [sliceL_length] at this; simp at this; omega

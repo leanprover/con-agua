@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclDivMod3
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the certificate builders, part 4 (lane `decls3`, `decls3-divmod`)
@@ -42,35 +43,18 @@ theorem CallRef.simPair {f : FnName} {args : List Word} {pre : Mem → AState �
       (fun r x m' a' => KeepPost dn vis fe decStmtL m0 m' a' r x) :=
   Sim.ntRet (h.simG hp hG) fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
-def certLorRhsW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_halves" [cx, c] m) fun r1 m1 =>
-  ntBW (callW p n "nat_ap2" [rdW (m1.arr64 IW) (cx + 13), rdW (m1.arr64 IW) (cx + 9), r1.headD 0] m1) fun r2 m2 =>
-  ntBW (callW p n "nat_ap2" [rdW (m2.arr64 IW) (cx + 10), rdW (m2.arr64 IW) (cx + 1), rdW (m2.arr64 IW) (cx + 9)] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap2" [rdW (m3.arr64 IW) (cx + 10), rdW (m3.arr64 IW) (cx + 2), rdW (m3.arr64 IW) (cx + 9)] m3) fun r4 m4 =>
-  ntBW (callW p n "nat_ap2" [rdW (m4.arr64 IW) (cx + 12), r3.headD 0, r4.headD 0] m4) fun r5 m5 =>
-  ntBW (callW p n "nat_ap2" [rdW (m5.arr64 IW) (cx + 13), r3.headD 0, r4.headD 0] m5) fun r6 m6 =>
-  ntBW (callW p n "nat_ap2" [rdW (m6.arr64 IW) (cx + 14), r5.headD 0, r6.headD 0] m6) fun r7 m7 =>
-  ntBW (callW p n "nat_ap2" [rdW (m7.arr64 IW) (cx + 12), r2.headD 0, r7.headD 0] m7) fun r8 m8 =>
-  some ([r8.headD 0], m8)
-
-set_option maxHeartbeats 1600000 in
-theorem certLorRhs_specW (p : Prog) (hp : p.lookup "cert_lor_rhs" = some certLorRhsL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_lor_rhs" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certLorRhsW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certLorRhsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_halves", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certLorRhsW, ntBW, rdW_eq]
+/-- **`cert_lor_rhs` is its model `certLorRhsW`** (generated). -/
+l_model certLorRhs_specW (p : Prog) (hp : p.lookup "cert_lor_rhs" = some certLorRhsL)
+  fns [hp ↦ certLorRhsW list]
+  specs [callW_spec p n "cert_halves", callW_spec p n "nat_ap2"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certLorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_lor_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certLorRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mm => certLorRhsW p k mm cx c)
-    (fun k s₀ => certLorRhs_specW p hD.lCertLorRhs k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certLorRhsW certLorRhs
+  refine CallRef.of_sim (M := fun k mm => certLorRhsW p (k + 1) mm cx c)
+    (fun k s₀ => certLorRhs_specW p hD.lCertLorRhs (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certLorRhsW.arm1]; unfold certLorRhs
   have hN := hD.toNatEqProg
   refine Sim.ntB ((certHalves_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m)) fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
   refine Sim.ntB (natAp2_dw hN hS1 hG1 (.of (hC.grow hG1).f13) (.of (hC.grow hG1).f9) hl1)
@@ -85,34 +69,18 @@ theorem certLorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   exact Sim.ntRet (natAp2_dw hN hS7 hG7 (.of (hC.grow hG7).f12) hl2 hl7)
     fun _ _ _ _ _ h => h
 
-def certXorRhsW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_halves" [cx, c] m) fun r1 m1 =>
-  ntBW (callW p n "nat_ap2" [rdW (m1.arr64 IW) (cx + 13), rdW (m1.arr64 IW) (cx + 9), r1.headD 0] m1) fun r2 m2 =>
-  ntBW (callW p n "nat_ap2" [rdW (m2.arr64 IW) (cx + 10), rdW (m2.arr64 IW) (cx + 1), rdW (m2.arr64 IW) (cx + 9)] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap2" [rdW (m3.arr64 IW) (cx + 10), rdW (m3.arr64 IW) (cx + 2), rdW (m3.arr64 IW) (cx + 9)] m3) fun r4 m4 =>
-  ntBW (callW p n "nat_ap2" [rdW (m4.arr64 IW) (cx + 12), r3.headD 0, r4.headD 0] m4) fun r5 m5 =>
-  ntBW (callW p n "nat_ap2" [rdW (m5.arr64 IW) (cx + 10), r5.headD 0, rdW (m5.arr64 IW) (cx + 9)] m5) fun r6 m6 =>
-  ntBW (callW p n "nat_ap2" [rdW (m6.arr64 IW) (cx + 12), r2.headD 0, r6.headD 0] m6) fun r7 m7 =>
-  some ([r7.headD 0], m7)
-
-set_option maxHeartbeats 1600000 in
-theorem certXorRhs_specW (p : Prog) (hp : p.lookup "cert_xor_rhs" = some certXorRhsL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_xor_rhs" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certXorRhsW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certXorRhsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_halves", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certXorRhsW, ntBW, rdW_eq]
+/-- **`cert_xor_rhs` is its model `certXorRhsW`** (generated). -/
+l_model certXorRhs_specW (p : Prog) (hp : p.lookup "cert_xor_rhs" = some certXorRhsL)
+  fns [hp ↦ certXorRhsW list]
+  specs [callW_spec p n "cert_halves", callW_spec p n "nat_ap2"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certXorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_xor_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certXorRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mm => certXorRhsW p k mm cx c)
-    (fun k s₀ => certXorRhs_specW p hD.lCertXorRhs k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certXorRhsW certXorRhs
+  refine CallRef.of_sim (M := fun k mm => certXorRhsW p (k + 1) mm cx c)
+    (fun k s₀ => certXorRhs_specW p hD.lCertXorRhs (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certXorRhsW.arm1]; unfold certXorRhs
   have hN := hD.toNatEqProg
   refine Sim.ntB ((certHalves_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m)) fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
   refine Sim.ntB (natAp2_dw hN hS1 hG1 (.of (hC.grow hG1).f13) (.of (hC.grow hG1).f9) hl1)
@@ -128,32 +96,18 @@ theorem certXorRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     fun _ _ _ _ _ h => h
 
 
-def certGcdW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 1), rdW (m1.arr64 IW) (cx + 7)] m1) fun r2 m2 =>
-  ntBW (callW p n "nat_ap2" [rdW (m2.arr64 IW) (cx + 10), rdW (m2.arr64 IW) (cx + 2), rdW (m2.arr64 IW) (cx + 1)] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap2" [c, r3.headD 0, rdW (m3.arr64 IW) (cx + 1)] m3) fun r4 m4 =>
-  ntBW (callW p n "cert_two_eqs" [cx, c, r1.headD 0, r2.headD 0, r4.headD 0, rdW (m4.arr64 IW) (cx + 2)] m4) fun r5 m5 =>
-  some ([r5.headD 0, r5.tail.headD 0], m5)
-
-set_option maxHeartbeats 1600000 in
-theorem certGcd_specW (p : Prog) (hp : p.lookup "cert_gcd" = some certGcdL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_gcd" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certGcdW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certGcdL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certGcdW, ntBW, rdW_eq]
+/-- **`cert_gcd` is its model `certGcdW`** (generated). -/
+l_model certGcd_specW (p : Prog) (hp : p.lookup "cert_gcd" = some certGcdL)
+  fns [hp ↦ certGcdW list]
+  specs [callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certGcd_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_gcd" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certGcd cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certGcdW p k mm cx c)
-    (fun k s₀ => certGcd_specW p hD.lCertGcd k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certGcdW certGcd
+  refine CallRef.of_sim (M := fun k mm => certGcdW p (k + 1) mm cx c)
+    (fun k s₀ => certGcd_specW p hD.lCertGcd (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certGcdW.arm1]; unfold certGcd
   have hN := hD.toNatEqProg
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -165,33 +119,18 @@ theorem certGcd_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   exact Sim.ntRet (certTwoEqs_dw hD hS4 hC hG4 hc hl1 hl2 hl4 (.of (hC.grow hG4).f2))
     fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
-def certShiftLeftW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 2), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 2), rdW (m1.arr64 IW) (cx + 7)] m1) fun r2 m2 =>
-  ntBW (callW p n "nat_ap2" [rdW (m2.arr64 IW) (cx + 13), rdW (m2.arr64 IW) (cx + 9), rdW (m2.arr64 IW) (cx + 1)] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap2" [rdW (m3.arr64 IW) (cx + 14), rdW (m3.arr64 IW) (cx + 2), rdW (m3.arr64 IW) (cx + 3)] m3) fun r4 m4 =>
-  ntBW (callW p n "nat_ap2" [c, r3.headD 0, r4.headD 0] m4) fun r5 m5 =>
-  ntBW (callW p n "cert_two_eqs" [cx, c, r1.headD 0, r2.headD 0, r5.headD 0, rdW (m5.arr64 IW) (cx + 1)] m5) fun r6 m6 =>
-  some ([r6.headD 0, r6.tail.headD 0], m6)
-
-set_option maxHeartbeats 1600000 in
-theorem certShiftLeft_specW (p : Prog) (hp : p.lookup "cert_shift_left" = some certShiftLeftL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_shift_left" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certShiftLeftW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certShiftLeftL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certShiftLeftW, ntBW, rdW_eq]
+/-- **`cert_shift_left` is its model `certShiftLeftW`** (generated). -/
+l_model certShiftLeft_specW (p : Prog) (hp : p.lookup "cert_shift_left" = some certShiftLeftL)
+  fns [hp ↦ certShiftLeftW list]
+  specs [callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certShiftLeft_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_shift_left" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certShiftLeft cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certShiftLeftW p k mm cx c)
-    (fun k s₀ => certShiftLeft_specW p hD.lCertShiftLeft k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certShiftLeftW certShiftLeft
+  refine CallRef.of_sim (M := fun k mm => certShiftLeftW p (k + 1) mm cx c)
+    (fun k s₀ => certShiftLeft_specW p hD.lCertShiftLeft (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certShiftLeftW.arm1]; unfold certShiftLeft
   have hN := hD.toNatEqProg
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f2) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -205,33 +144,18 @@ theorem certShiftLeft_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   exact Sim.ntRet (certTwoEqs_dw hD hS5 hC hG5 hc hl1 hl2 hl5 (.of (hC.grow hG5).f1))
     fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
-def certShiftRightW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 2), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 2), rdW (m1.arr64 IW) (cx + 7)] m1) fun r2 m2 =>
-  ntBW (callW p n "nat_ap2" [rdW (m2.arr64 IW) (cx + 14), rdW (m2.arr64 IW) (cx + 2), rdW (m2.arr64 IW) (cx + 3)] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap2" [c, rdW (m3.arr64 IW) (cx + 1), r3.headD 0] m3) fun r4 m4 =>
-  ntBW (callW p n "nat_ap2" [rdW (m4.arr64 IW) (cx + 11), r4.headD 0, rdW (m4.arr64 IW) (cx + 9)] m4) fun r5 m5 =>
-  ntBW (callW p n "cert_two_eqs" [cx, c, r1.headD 0, r2.headD 0, r5.headD 0, rdW (m5.arr64 IW) (cx + 1)] m5) fun r6 m6 =>
-  some ([r6.headD 0, r6.tail.headD 0], m6)
-
-set_option maxHeartbeats 1600000 in
-theorem certShiftRight_specW (p : Prog) (hp : p.lookup "cert_shift_right" = some certShiftRightL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_shift_right" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certShiftRightW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certShiftRightL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certShiftRightW, ntBW, rdW_eq]
+/-- **`cert_shift_right` is its model `certShiftRightW`** (generated). -/
+l_model certShiftRight_specW (p : Prog) (hp : p.lookup "cert_shift_right" = some certShiftRightL)
+  fns [hp ↦ certShiftRightW list]
+  specs [callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certShiftRight_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_shift_right" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certShiftRight cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certShiftRightW p k mm cx c)
-    (fun k s₀ => certShiftRight_specW p hD.lCertShiftRight k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certShiftRightW certShiftRight
+  refine CallRef.of_sim (M := fun k mm => certShiftRightW p (k + 1) mm cx c)
+    (fun k s₀ => certShiftRight_specW p hD.lCertShiftRight (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certShiftRightW.arm1]; unfold certShiftRight
   have hN := hD.toNatEqProg
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f2) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -245,36 +169,18 @@ theorem certShiftRight_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   exact Sim.ntRet (certTwoEqs_dw hD hS5 hC hG5 hc hl1 hl2 hl5 (.of (hC.grow hG5).f1))
     fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
-def certLandW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 1), rdW (m1.arr64 IW) (cx + 7)] m1) fun r2 m2 =>
-  ntBW (callW p n "cert_halves" [cx, c] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap2" [rdW (m3.arr64 IW) (cx + 13), rdW (m3.arr64 IW) (cx + 9), r3.headD 0] m3) fun r4 m4 =>
-  ntBW (callW p n "nat_ap2" [rdW (m4.arr64 IW) (cx + 10), rdW (m4.arr64 IW) (cx + 1), rdW (m4.arr64 IW) (cx + 9)] m4) fun r5 m5 =>
-  ntBW (callW p n "nat_ap2" [rdW (m5.arr64 IW) (cx + 10), rdW (m5.arr64 IW) (cx + 2), rdW (m5.arr64 IW) (cx + 9)] m5) fun r6 m6 =>
-  ntBW (callW p n "nat_ap2" [rdW (m6.arr64 IW) (cx + 13), r5.headD 0, r6.headD 0] m6) fun r7 m7 =>
-  ntBW (callW p n "nat_ap2" [rdW (m7.arr64 IW) (cx + 12), r4.headD 0, r7.headD 0] m7) fun r8 m8 =>
-  ntBW (callW p n "cert_two_eqs" [cx, c, r1.headD 0, r2.headD 0, r8.headD 0, rdW (m8.arr64 IW) (cx + 8)] m8) fun r9 m9 =>
-  some ([r9.headD 0, r9.tail.headD 0], m9)
-
-set_option maxHeartbeats 1600000 in
-theorem certLand_specW (p : Prog) (hp : p.lookup "cert_land" = some certLandL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_land" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certLandW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certLandL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_guard", callW_spec p n "cert_halves", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"] <;>
-    finish (gen := 30) (instances := 10000) [certLandW, ntBW, rdW_eq]
+/-- **`cert_land` is its model `certLandW`** (generated). -/
+l_model certLand_specW (p : Prog) (hp : p.lookup "cert_land" = some certLandL)
+  fns [hp ↦ certLandW list]
+  specs [callW_spec p n "cert_guard", callW_spec p n "cert_halves", callW_spec p n "cert_two_eqs", callW_spec p n "nat_ap2"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certLand_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_land" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certLand cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certLandW p k mm cx c)
-    (fun k s₀ => certLand_specW p hD.lCertLand k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certLandW certLand
+  refine CallRef.of_sim (M := fun k mm => certLandW p (k + 1) mm cx c)
+    (fun k s₀ => certLand_specW p hD.lCertLand (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certLandW.arm1]; unfold certLand
   have hN := hD.toNatEqProg
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -292,31 +198,18 @@ theorem certLand_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   exact Sim.ntRet (certTwoEqs_dw hD hS8 hC hG8 hc hl1 hl2 hl8 (.of (hC.grow hG8).f8))
     fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
-def certLorW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 1), rdW (m1.arr64 IW) (cx + 7)] m1) fun r2 m2 =>
-  ntBW (callW p n "cert_lor_rhs" [cx, c] m2) fun r3 m3 =>
-  ntBW (callW p n "cert_two_eqs" [cx, c, r1.headD 0, r2.headD 0, r3.headD 0, rdW (m3.arr64 IW) (cx + 2)] m3) fun r4 m4 =>
-  some ([r4.headD 0, r4.tail.headD 0], m4)
-
-set_option maxHeartbeats 1600000 in
-theorem certLor_specW (p : Prog) (hp : p.lookup "cert_lor" = some certLorL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_lor" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certLorW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certLorL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_guard", callW_spec p n "cert_lor_rhs", callW_spec p n "cert_two_eqs"] <;>
-    finish (gen := 30) (instances := 10000) [certLorW, ntBW, rdW_eq]
+/-- **`cert_lor` is its model `certLorW`** (generated). -/
+l_model certLor_specW (p : Prog) (hp : p.lookup "cert_lor" = some certLorL)
+  fns [hp ↦ certLorW list]
+  specs [callW_spec p n "cert_guard", callW_spec p n "cert_lor_rhs", callW_spec p n "cert_two_eqs"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certLor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_lor" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certLor cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certLorW p k mm cx c)
-    (fun k s₀ => certLor_specW p hD.lCertLor k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certLorW certLor
+  refine CallRef.of_sim (M := fun k mm => certLorW p (k + 1) mm cx c)
+    (fun k s₀ => certLor_specW p hD.lCertLor (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certLorW.arm1]; unfold certLor
   have hN := hD.toNatEqProg
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -326,31 +219,18 @@ theorem certLor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   exact Sim.ntRet (certTwoEqs_dw hD hS3 hC hG3 hc hl1 hl2 hl3 (.of (hC.grow hG3).f2))
     fun _ _ _ _ _ ⟨h1, h2, h3⟩ => ⟨h1, h2, decStmtL_pair h3⟩
 
-def certXorW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 3), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 1), rdW (m1.arr64 IW) (cx + 7)] m1) fun r2 m2 =>
-  ntBW (callW p n "cert_xor_rhs" [cx, c] m2) fun r3 m3 =>
-  ntBW (callW p n "cert_two_eqs" [cx, c, r1.headD 0, r2.headD 0, r3.headD 0, rdW (m3.arr64 IW) (cx + 2)] m3) fun r4 m4 =>
-  some ([r4.headD 0, r4.tail.headD 0], m4)
-
-set_option maxHeartbeats 1600000 in
-theorem certXor_specW (p : Prog) (hp : p.lookup "cert_xor" = some certXorL) (n : Nat) (s₀ : St)
-    (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_xor" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certXorW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certXorL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "cert_xor_rhs"] <;>
-    finish (gen := 30) (instances := 10000) [certXorW, ntBW, rdW_eq]
+/-- **`cert_xor` is its model `certXorW`** (generated). -/
+l_model certXor_specW (p : Prog) (hp : p.lookup "cert_xor" = some certXorL)
+  fns [hp ↦ certXorW list]
+  specs [callW_spec p n "cert_guard", callW_spec p n "cert_two_eqs", callW_spec p n "cert_xor_rhs"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certXor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_xor" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certXor cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certXorW p k mm cx c)
-    (fun k s₀ => certXor_specW p hD.lCertXor k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certXorW certXor
+  refine CallRef.of_sim (M := fun k mm => certXorW p (k + 1) mm cx c)
+    (fun k s₀ => certXor_specW p hD.lCertXor (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certXorW.arm1]; unfold certXor
   have hN := hD.toNatEqProg
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f3) (.of hC.f1) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -363,33 +243,18 @@ theorem certXor_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
 
 /-! ## `cert_rec_rhs` -/
 
-def certRecRhsW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "nat_ap2" [rdW (m.arr64 IW) (cx + 14), rdW (m.arr64 IW) (cx + 1),
-    rdW (m.arr64 IW) (cx + 2)] m) fun r1 m1 =>
-  ntBW (callW p n "nat_ap2" [c, r1.headD 0, rdW (m1.arr64 IW) (cx + 2)] m1) fun r2 m2 =>
-  if c = rdW (m2.arr64 IW) (cx + 11) then
-    ntBW (callW p n "pin_at" [3] m2) fun r3 m3 =>
-    ntBW (callW p n "nat_ap1" [r3.headD 0, r2.headD 0] m3) fun r4 m4 => some ([r4.headD 0], m4)
-  else some ([r2.headD 0], m2)
-
-set_option maxHeartbeats 1600000 in
-theorem certRecRhs_specW (p : Prog) (hp : p.lookup "cert_rec_rhs" = some certRecRhsL) (n : Nat)
-    (s₀ : St) (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_rec_rhs" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certRecRhsW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certRecRhsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_ap2", callW_spec p n "pin_at", callW_spec p n "nat_ap1"] <;>
-    finish (gen := 30) (instances := 10000) [certRecRhsW, ntBW, rdW_eq]
+/-- **`cert_rec_rhs` is its model `certRecRhsW`** (generated). -/
+l_model certRecRhs_specW (p : Prog) (hp : p.lookup "cert_rec_rhs" = some certRecRhsL)
+  fns [hp ↦ certRecRhsW list]
+  specs [callW_spec p n "nat_ap2", callW_spec p n "pin_at", callW_spec p n "nat_ap1"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certRecRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_rec_rhs" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certRecRhs cc (decI c)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mq => certRecRhsW p k mq cx c)
-    (fun k s₀ => certRecRhs_specW p hD.lCertRecRhs k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certRecRhsW certRecRhs
+  refine CallRef.of_sim (M := fun k mq => certRecRhsW p (k + 1) mq cx c)
+    (fun k s₀ => certRecRhs_specW p hD.lCertRecRhs (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certRecRhsW.arm1]; unfold certRecRhs
   have hN := hD.toNatEqProg
   refine Sim.ntB (natAp2_dw hN hS (.refl m) (.of hC.f14) (.of hC.f1) (.of hC.f2))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1⟩ => ?_
@@ -402,29 +267,11 @@ theorem certRecRhs_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
 
 /-! ## `cert_div_mod_eqs` -/
 
-def certDivModEqsW (p : Prog) (n : Nat) (m : Mem) (cx c h1 h2 h3 h4 recRhs baseRhs : Word) :
-    Option (List Word × Mem) :=
-  ntBW (callW p n "cert_eq" [cx, c, recRhs] m) fun r1 m1 =>
-  ntBW (callW p n "cert_eq" [cx, c, baseRhs] m1) fun r2 m2 =>
-  ntBW (callW p n "rec2" [h1, h2] m2) fun r3 m3 =>
-  ntBW (callW p n "rec3" [r3.headD 0, 2, r1.headD 0] m3) fun r4 m4 =>
-  ntBW (callW p n "stmt1" [h3, r2.headD 0] m4) fun r5 m5 =>
-  ntBW (callW p n "stmt1" [h4, r2.headD 0] m5) fun r6 m6 =>
-  ntBW (callW p n "rec3" [r4.headD 0, r5.headD 0, r6.headD 0] m6) fun r7 m7 =>
-  some ([r7.headD 0, 3], m7)
-
-set_option maxHeartbeats 1600000 in
-theorem certDivModEqs_specW (p : Prog) (hp : p.lookup "cert_div_mod_eqs" = some certDivModEqsL)
-    (n : Nat) (s₀ : St) (cx c h1 h2 h3 h4 recRhs baseRhs : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_div_mod_eqs" [cx, c, h1, h2, h3, h4, recRhs, baseRhs]
-    ⦃fun r s' => LocEq s' s₀ ∧ certDivModEqsW p n s₀.mem cx c h1 h2 h3 h4 recRhs baseRhs = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certDivModEqsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_eq", callW_spec p n "rec2", callW_spec p n "rec3",
-      callW_spec p n "stmt1"] <;>
-    finish (gen := 30) (instances := 10000) [certDivModEqsW, ntBW]
+/-- **`cert_div_mod_eqs` is its model `certDivModEqsW`** (generated). -/
+l_model certDivModEqs_specW (p : Prog) (hp : p.lookup "cert_div_mod_eqs" = some certDivModEqsL)
+  fns [hp ↦ certDivModEqsW list]
+  specs [callW_spec p n "cert_eq", callW_spec p n "rec2", callW_spec p n "rec3", callW_spec p n "stmt1"]
+  grind [arena_grind] finish [ntBW] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certDivModEqs_ref (hD : DmProg2 p) (cx c h1 h2 h3 h4 recRhs baseRhs : Word) (cc : CertCtxA) :
     CallRef p "cert_div_mod_eqs" [cx, c, h1, h2, h3, h4, recRhs, baseRhs]
@@ -432,10 +279,10 @@ theorem certDivModEqs_ref (hD : DmProg2 p) (cx c h1 h2 h3 h4 recRhs baseRhs : Wo
         H recRhs ∧ H baseRhs)
       (certDivModEqs cc (decI c) (decE h1) (decE h2) (decE h3) (decE h4) (decE recRhs) (decE baseRhs))
       (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mq => certDivModEqsW p k mq cx c h1 h2 h3 h4 recRhs baseRhs)
-    (fun k s₀ => certDivModEqs_specW p hD.lCertDivModEqs k s₀ cx c h1 h2 h3 h4 recRhs baseRhs)
+  refine CallRef.of_sim (M := fun k mq => certDivModEqsW p (k + 1) mq cx c h1 h2 h3 h4 recRhs baseRhs)
+    (fun k s₀ => certDivModEqs_specW p hD.lCertDivModEqs (k + 1) s₀ cx c h1 h2 h3 h4 recRhs baseRhs)
     fun k m s ⟨hS, hC, hc, hh1, hh2, hh3, hh4, hrr, hbr⟩ => ?_
-  unfold certDivModEqsW certDivModEqs
+  rw [certDivModEqsW.arm1]; unfold certDivModEqs
   refine Sim.ntB ((certEq_ref hD cx c recRhs cc).simG ⟨hS, hC, hc, hrr⟩ (.refl m))
     fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((certEq_ref hD cx c baseRhs cc).simG ⟨hS1, hC.grow hg1, hc, hbr⟩ hg1)
@@ -457,33 +304,19 @@ theorem certDivModEqs_ref (hD : DmProg2 p) (cx c h1 h2 h3 h4 recRhs baseRhs : Wo
     hrec7.2.1.1)))), stmtL_of_rec3 hrec7 (st1.grow (hg5.trans hg6)) (hs5.grow hg6) hs6⟩
 
 
-def certDivModGuardsW (p : Prog) (n : Nat) (m : Mem) (cx c recRhs baseRhs : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_guard" [cx, rdW (m.arr64 IW) (cx + 2), rdW (m.arr64 IW) (cx + 1), rdW (m.arr64 IW) (cx + 6)] m) fun r1 m1 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m1.arr64 IW) (cx + 3), rdW (m1.arr64 IW) (cx + 2), rdW (m1.arr64 IW) (cx + 6)] m1) fun r2 m2 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m2.arr64 IW) (cx + 2), rdW (m2.arr64 IW) (cx + 1), rdW (m2.arr64 IW) (cx + 7)] m2) fun r3 m3 =>
-  ntBW (callW p n "cert_guard" [cx, rdW (m3.arr64 IW) (cx + 3), rdW (m3.arr64 IW) (cx + 2), rdW (m3.arr64 IW) (cx + 7)] m3) fun r4 m4 =>
-  ntBW (callW p n "cert_div_mod_eqs" [cx, c, r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, recRhs, baseRhs] m4) fun r5 m5 =>
-  some ([r5.headD 0, r5.tail.headD 0], m5)
-
-set_option maxHeartbeats 1600000 in
-theorem certDivModGuards_specW (p : Prog) (hp : p.lookup "cert_div_mod_guards" = some certDivModGuardsL) (n : Nat) (s₀ : St)
-    (cx c recRhs baseRhs : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_div_mod_guards" [cx, c, recRhs, baseRhs]
-    ⦃fun r s' => LocEq s' s₀ ∧ certDivModGuardsW p n s₀.mem cx c recRhs baseRhs = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certDivModGuardsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_div_mod_eqs", callW_spec p n "cert_guard"] <;>
-    finish (gen := 30) (instances := 10000) [certDivModGuardsW, ntBW, rdW_eq]
+/-- **`cert_div_mod_guards` is its model `certDivModGuardsW`** (generated). -/
+l_model certDivModGuards_specW (p : Prog) (hp : p.lookup "cert_div_mod_guards" = some certDivModGuardsL)
+  fns [hp ↦ certDivModGuardsW list]
+  specs [callW_spec p n "cert_div_mod_eqs", callW_spec p n "cert_guard"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certDivModGuards_ref (hD : DmProg2 p) (cx c recRhs baseRhs : Word) (cc : CertCtxA) :
     CallRef p "cert_div_mod_guards" [cx, c, recRhs, baseRhs] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H recRhs ∧ H baseRhs)
       (certDivModGuards cc (decI c) (decE recRhs) (decE baseRhs)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mm => certDivModGuardsW p k mm cx c recRhs baseRhs)
-    (fun k s₀ => certDivModGuards_specW p hD.lCertDivModGuards k s₀ cx c recRhs baseRhs)
+  refine CallRef.of_sim (M := fun k mm => certDivModGuardsW p (k + 1) mm cx c recRhs baseRhs)
+    (fun k s₀ => certDivModGuards_specW p hD.lCertDivModGuards (k + 1) s₀ cx c recRhs baseRhs)
     fun k m s ⟨hS, hC, hc, hrecRhs, hbaseRhs⟩ => ?_
-  unfold certDivModGuardsW certDivModGuards
+  rw [certDivModGuardsW.arm1]; unfold certDivModGuards
   refine Sim.ntB (certGuard_dw hD hS hC (.refl m) (.of hC.f2) (.of hC.f1) (.of hC.f6))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1, rfl⟩ => ?_
   refine Sim.ntB (certGuard_dw hD hS1 hC hG1 (.of (hC.grow hG1).f3) (.of (hC.grow hG1).f2) (.of (hC.grow hG1).f6))
@@ -499,30 +332,18 @@ theorem certDivModGuards_ref (hD : DmProg2 p) (cx c recRhs baseRhs : Word) (cc :
 
 /-! ## `cert_div_mod` -/
 
-def certDivModW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_rec_rhs" [cx, c] m) fun r1 m1 =>
-  ntBW (callW p n "cert_div_mod_guards" [cx, c, r1.headD 0,
-    if c = rdW (m1.arr64 IW) (cx + 11) then rdW (m1.arr64 IW) (cx + 8) else rdW (m1.arr64 IW) (cx + 1)] m1)
-    fun r2 m2 => some ([r2.headD 0, r2.tail.headD 0], m2)
-
-set_option maxHeartbeats 1600000 in
-theorem certDivMod_specW (p : Prog) (hp : p.lookup "cert_div_mod" = some certDivModL) (n : Nat)
-    (s₀ : St) (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "cert_div_mod" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ certDivModW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certDivModL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_rec_rhs", callW_spec p n "cert_div_mod_guards"] <;>
-    finish (gen := 30) (instances := 10000) [certDivModW, ntBW, rdW_eq]
+/-- **`cert_div_mod` is its model `certDivModW`** (generated). -/
+l_model certDivMod_specW (p : Prog) (hp : p.lookup "cert_div_mod" = some certDivModL)
+  fns [hp ↦ certDivModW list]
+  specs [callW_spec p n "cert_rec_rhs", callW_spec p n "cert_div_mod_guards"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem certDivMod_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "cert_div_mod" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certDivMod cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mq => certDivModW p k mq cx c)
-    (fun k s₀ => certDivMod_specW p hD.lCertDivMod k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold certDivModW certDivMod
+  refine CallRef.of_sim (M := fun k mq => certDivModW p (k + 1) mq cx c)
+    (fun k s₀ => certDivMod_specW p hD.lCertDivMod (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [certDivModW.arm1]; unfold certDivMod
   refine Sim.ntB ((certRecRhs_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1, rfl⟩ => ?_
   have hC1 := hC.grow hG1
@@ -538,39 +359,18 @@ theorem certDivMod_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
       (by simp only [decE_eq_decI, decI_word, Bool.false_eq_true, if_false])
 
 /-! ## `div_mod_cert_stmts_at` -/
-def divModCertStmtsAtW (p : Prog) (n : Nat) (m : Mem) (cx c : Word) : Option (List Word × Mem) :=
-  if c = rdW (m.arr64 IW) (cx + 15) then
-    ntBW (callW p n "cert_gcd" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-  else if c = rdW (m.arr64 IW) (cx + 16) then
-    ntBW (callW p n "cert_shift_left" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-  else if c = rdW (m.arr64 IW) (cx + 17) then
-    ntBW (callW p n "cert_shift_right" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-  else if c = rdW (m.arr64 IW) (cx + 18) then
-    ntBW (callW p n "cert_land" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-  else if c = rdW (m.arr64 IW) (cx + 19) then
-    ntBW (callW p n "cert_lor" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-  else if c = rdW (m.arr64 IW) (cx + 20) then
-    ntBW (callW p n "cert_xor" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-  else ntBW (callW p n "cert_div_mod" [cx, c] m) fun r m' => some ([r.headD 0, r.tail.headD 0], m')
-
-set_option maxHeartbeats 1600000 in
-theorem divModCertStmtsAt_specW (p : Prog) (hp : p.lookup "div_mod_cert_stmts_at" = some divModCertStmtsAtL)
-    (n : Nat) (s₀ : St) (cx c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_stmts_at" [cx, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ divModCertStmtsAtW p n s₀.mem cx c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertStmtsAtL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_gcd", callW_spec p n "cert_shift_left", callW_spec p n "cert_shift_right", callW_spec p n "cert_land", callW_spec p n "cert_lor", callW_spec p n "cert_xor", callW_spec p n "cert_div_mod"] <;>
-    finish (gen := 30) (instances := 10000) [divModCertStmtsAtW, ntBW, rdW_eq]
+/-- **`div_mod_cert_stmts_at` is its model `divModCertStmtsAtW`** (generated). -/
+l_model divModCertStmtsAt_specW (p : Prog) (hp : p.lookup "div_mod_cert_stmts_at" = some divModCertStmtsAtL)
+  fns [hp ↦ divModCertStmtsAtW list]
+  specs [callW_spec p n "cert_gcd", callW_spec p n "cert_shift_left", callW_spec p n "cert_shift_right", callW_spec p n "cert_land", callW_spec p n "cert_lor", callW_spec p n "cert_xor", callW_spec p n "cert_div_mod"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem divModCertStmtsAt_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
     CallRef p "div_mod_cert_stmts_at" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (divModCertStmtsAt cc (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mq => divModCertStmtsAtW p k mq cx c)
-    (fun k s₀ => divModCertStmtsAt_specW p hD.lDivModCertStmtsAt k s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
-  unfold divModCertStmtsAtW divModCertStmtsAt
+  refine CallRef.of_sim (M := fun k mq => divModCertStmtsAtW p (k + 1) mq cx c)
+    (fun k s₀ => divModCertStmtsAt_specW p hD.lDivModCertStmtsAt (k + 1) s₀ cx c) fun k m s ⟨hS, hC, hc⟩ => ?_
+  rw [divModCertStmtsAtW.eq_2]; unfold divModCertStmtsAt
   refine Sim.iteW hC.f15 hc (fun _ => (certGcd_ref hD cx c cc).simPair ⟨hS, hC, hc⟩ (.refl m)) fun _ => ?_
   refine Sim.iteW hC.f16 hc (fun _ => (certShiftLeft_ref hD cx c cc).simPair ⟨hS, hC, hc⟩ (.refl m)) fun _ => ?_
   refine Sim.iteW hC.f17 hc (fun _ => (certShiftRight_ref hD cx c cc).simPair ⟨hS, hC, hc⟩ (.refl m)) fun _ => ?_
@@ -581,28 +381,18 @@ theorem divModCertStmtsAt_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
 
 /-! ## `div_mod_cert_stmts` -/
 
-def divModCertStmtsW (p : Prog) (n : Nat) (m : Mem) (c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "cert_ctx" [] m) fun r1 m1 =>
-  ntBW (callW p n "div_mod_cert_stmts_at" [r1.headD 0, c] m1) fun r2 m2 =>
-  some ([r2.headD 0, r2.tail.headD 0], m2)
-
-theorem divModCertStmts_specW (p : Prog) (hp : p.lookup "div_mod_cert_stmts" = some divModCertStmtsL)
-    (n : Nat) (s₀ : St) (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_stmts" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ divModCertStmtsW p n s₀.mem c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertStmtsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "cert_ctx", callW_spec p n "div_mod_cert_stmts_at"] <;>
-    finish (gen := 20) (instances := 10000) [divModCertStmtsW, ntBW]
+/-- **`div_mod_cert_stmts` is its model `divModCertStmtsW`** (generated). -/
+l_model divModCertStmts_specW (p : Prog) (hp : p.lookup "div_mod_cert_stmts" = some divModCertStmtsL)
+  fns [hp ↦ divModCertStmtsW list]
+  specs [callW_spec p n "cert_ctx", callW_spec p n "div_mod_cert_stmts_at"]
+  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
 
 theorem divModCertStmts_ref (hD : DmProg2 p) (c : Word) :
     CallRef p "div_mod_cert_stmts" [c] (fun m s => StageR dn vis fe m s ∧ H c)
       (divModCertStmts (decI c)) (KeepPost dn vis fe decStmtL) := by
-  refine CallRef.of_sim (M := fun k mq => divModCertStmtsW p k mq c)
-    (fun k s₀ => divModCertStmts_specW p hD.lDivModCertStmts k s₀ c) fun k m s ⟨hS, hc⟩ => ?_
-  unfold divModCertStmtsW divModCertStmts
+  refine CallRef.of_sim (M := fun k mq => divModCertStmtsW p (k + 1) mq c)
+    (fun k s₀ => divModCertStmts_specW p hD.lDivModCertStmts (k + 1) s₀ c) fun k m s ⟨hS, hc⟩ => ?_
+  rw [divModCertStmtsW.arm1]; unfold divModCertStmts
   refine Sim.ntB ((certCtx_ref hD).sim hS) fun r1 x1 m1 a1 ⟨hS1, hg1, hctx⟩ => ?_
   exact (divModCertStmtsAt_ref hD (r1.headD 0) c x1).simPair ⟨hS1, hctx, hc⟩ hg1
 

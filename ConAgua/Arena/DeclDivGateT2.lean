@@ -427,9 +427,9 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
-    have hw := callW_model (M := fun mq => loopW p k mq vis c value po pl)
-      (loop_specW p hD.lCheckDivModPinLoop k · vis c value po pl) hc'
-    simp [loopW, hpl] at hw
+    have hw := callW_model (M := fun mq => loopW p (k + 1) mq vis c value po pl)
+      (loop_specW p hD.lCheckDivModPinLoop (k + 1) · vis c value po pl) hc'
+    simp [loopW.eq_2, hpl] at hw
   | cons ip rest ih =>
     intro psPs po pl tried k hk m a res m' hC hCr hI hpd hn hv hc'
     cases psPs with
@@ -440,9 +440,9 @@ theorem loopC (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp 
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
     have hk' : k ≤ 2 ^ 62 := by omega
-    have hw := callW_model (M := fun mq => loopW p k mq vis c value po pl)
-      (loop_specW p hD.lCheckDivModPinLoop k · vis c value po pl) hc'
-    unfold loopW at hw
+    have hw := callW_model (M := fun mq => loopW p (k + 1) mq vis c value po pl)
+      (loop_specW p hD.lCheckDivModPinLoop (k + 1) · vis c value po pl) hc'
+    rw [loopW.eq_2] at hw
     have hS := hC.stage
     have hsz := hS.2.2.2.1
     have hI1 := hS.2.1

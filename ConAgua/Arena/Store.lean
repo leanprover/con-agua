@@ -86,14 +86,14 @@ def litHash : FunDecl := lfn (o, l) locals (i, h) {
 section hash
 variable (p : Prog) (hp : p.lookup "lit_hash" = some litHash)
 
-theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ (s₀.mem.arr64 POOL).size)
+theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem)
     (hi : (s₀.loc 2).toNat ≤ (s₀.loc 1).toNat)
-    (hh : s₀.loc 3 = hashN (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
+    (hh : s₀.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
     ⦃fun s => s = s₀⦄
     exec p n hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ := by
+      s'.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -101,22 +101,22 @@ theorem hashLoop_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
 
-theorem hashLoop_step_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ (s₀.mem.arr64 POOL).size)
+theorem hashLoop_step_spec (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ pcap s₀.mem)
     (hi : (s₀.loc 2).toNat ≤ (s₀.loc 1).toNat)
-    (hh : s₀.loc 3 = hashN (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
+    (hh : s₀.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) hashLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
+      s'.loc 3 = hashN (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
   Triple.step_exec (hashLoop_spec p (n + 1) s₀ hs hb hi hh)
 
 include hp in
-theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (hs : pcap s₀.mem < 2 ^ 64)
+    (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_hash" [o, l]
-    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (s₀.mem.arr64 POOL) o.toNat l.toNat; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (vpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litHash]
   cases n with
@@ -189,7 +189,7 @@ theorem eqLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (s₀.mem.arr64 POOL) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
+      r.retOr [1] = [if eqW (vpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
         then 1 else 0]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -202,7 +202,7 @@ theorem eqLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) eqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (s₀.mem.arr64 POOL) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
+      r.retOr [1] = [if eqW (vpool s₀.mem) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)
         then 1 else 0]; ⊤⦄ :=
   Triple.step_exec (eqLoop_spec p (n + 1) s₀)
 
@@ -210,7 +210,7 @@ include hp in
 theorem limbsEq_spec (n : Nat) (s₀ : St) (a b l : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "limbs_eq" [a, b, l]
-    ⦃fun r s' => s' = s₀ ∧ r = [if eqW (s₀.mem.arr64 POOL) a b l 0 then 1 else 0]; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r = [if eqW (vpool s₀.mem) a b l 0 then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, limbsEq]
   cases n with
@@ -249,7 +249,15 @@ theorem litMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchW (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by sorry
+      r = [if matchW (s₀.mem.arr64 REC) (vpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litMatch]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
+      finish [matchW]
 
 end match_
 
@@ -269,7 +277,7 @@ def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
 
 /-- The pool slice of a key is in bounds (what `lit_hash`'s spec needs). -/
 def litKeyOK (m : Mem) (ks : List Word) : Prop :=
-  (m.arr64 POOL).size < 2 ^ 64 ∧ (ks.getD 0 0).toNat + (ks.getD 1 0).toNat ≤ (m.arr64 POOL).size
+  pcap m < 2 ^ 64 ∧ (ks.getD 0 0).toNat + (ks.getD 1 0).toNat ≤ pcap m
 
 /-- The schema of one literal kind: kind word `kd`, match function `mf` (model `mt`), function
 names. -/
@@ -294,8 +302,8 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   recW := [.const kd, .var 1, .var 2, .var 3]
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
-  mtM m ks t i := mt (m.arr64 REC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
-  qhM m ks := hashN (m.arr64 POOL) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
+  mtM m ks t i := mt (m.arr64 REC) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
+  qhM m ks := hashN (vpool m) (ks.getD 0 0).toNat (ks.getD 1 0).toNat
   hsM := litH
   vsM as := kd :: as
   roomM m _ c := decide (m.len64 REC >>> (3 : Word) ≤ c)
@@ -406,7 +414,15 @@ theorem litMatchStr_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_match_str" [t, i, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if matchWStr (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by sorry
+      r = [if matchWStr (s₀.mem.arr64 REC) (vpool s₀.mem) t i o l h then 1 else 0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litMatchStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
+      finish [matchWStr]
 
 end matchStr
 
@@ -541,7 +557,7 @@ include hph hpe in
 theorem internLit_spec (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit) (n : Nat) (s₀ : St) (o l : Word)
-    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+    (hs : pcap s₀.mem < 2 ^ 64) (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ internW s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ :=
@@ -551,7 +567,7 @@ include hph hpe in
 theorem internLitStr_spec (hpm : p.lookup "lit_match_str" = some litMatchStr)
     (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
     (hp : p.lookup "intern_lit_str" = some internLitStr) (n : Nat) (s₀ : St) (o l : Word)
-    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+    (hs : pcap s₀.mem < 2 ^ 64) (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit_str" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ internWStr s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ :=

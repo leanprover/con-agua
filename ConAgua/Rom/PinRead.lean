@@ -91,9 +91,7 @@ open L.Arena L.Ind
 -- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
 def romU64PB : FunDecl := lfn (i) locals (x) {
   if len(PB.u8) < i + 8 || i + 8 < i { abort };
-  x := PB.u8[i] + PB.u8[i + 1] * 256 + PB.u8[i + 2] * 65536 + PB.u8[i + 3] * 16777216 +
-    PB.u8[i + 4] * 4294967296 + PB.u8[i + 5] * 1099511627776 +
-    PB.u8[i + 6] * 281474976710656 + PB.u8[i + 7] * 72057594037927936;
+  x := le64!(PB.u8, i);
   return x
 }
 
