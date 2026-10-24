@@ -916,82 +916,43 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         cases pol <;> simp_all [neg_interp, cmpCC_interp]
       refine ev_congr (hfall _ (hev.trans (by rw [this])) hE4) ?_
       simp only [List.length_append, List.length_cons, List.length_nil]; omega
-  | and p q ihp ihq =>
+  | and p q ihp ihq | or p q ihp ihq =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
     simp only [tempsC] at htmp
-    cases pol with
-    | false =>
-      simp only [compileC] at hc hfall
-      refine ihp _ false l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
-      · intro s1 hp hE1; exact hjmp s1 (by simp [evalCP, hp]; rfl) hE1
-      · intro s1 hp hE1
-        have hI1 := hI.ofE hG hE1
-        refine ihq _ false l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
-        · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))
-        · intro s2 hq hE2
-          refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
-          simp only [List.length_append]; omega
-        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
-    | true =>
-      simp only [compileC, List.append_assoc] at hc hfall
-      have hS := hc.right.right
-      have hlS := Code.label (i := 0) hS rfl
-      refine ihp _ false _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
-      · intro s1 hp hE1
-        rw [hlS]
-        refine ev_label hS.head ?_
-        refine ev_congr (hfall s1 (by simp [evalCP, hp]; rfl) hE1) ?_
-        simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s1 hp hE1
-        have hI1 := hI.ofE hG hE1
-        refine ihq _ true l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
-        · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))
-        · intro s2 hq hE2
-          refine ev_label hS.head ?_
-          refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
-          simp only [List.length_append, List.length_cons, List.length_nil]; omega
-        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
-  | or p q ihp ihq =>
-    intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
-    simp only [Cond.wf, Bool.and_eq_true] at hwf
-    simp only [tempsC] at htmp
-    cases pol with
-    | true =>
-      simp only [compileC] at hc hfall
-      refine ihp _ true l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
-      · intro s1 hp hE1; exact hjmp s1 (by simp [evalCP, hp]; rfl) hE1
-      · intro s1 hp hE1
-        have hI1 := hI.ofE hG hE1
-        refine ihq _ true l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
-        · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))
-        · intro s2 hq hE2
-          refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
-          simp only [List.length_append]; omega
-        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
-    | false =>
-      simp only [compileC, List.append_assoc] at hc hfall
-      have hS := hc.right.right
-      have hlS := Code.label (i := 0) hS rfl
-      refine ihp _ true _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
-      · intro s1 hp hE1
-        rw [hlS]
-        refine ev_label hS.head ?_
-        refine ev_congr (hfall s1 (by simp [evalCP, hp]; rfl) hE1) ?_
-        simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s1 hp hE1
-        have hI1 := hI.ofE hG hE1
-        refine ihq _ false l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
-        · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))
-        · intro s2 hq hE2
-          refine ev_label hS.head ?_
-          refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
-          simp only [List.length_append, List.length_cons, List.length_nil]; omega
-        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
+    -- `and` with `false` and `or` with `true` jump straight to `l`; the other two through a label
+    cases pol <;> first
+    | (simp only [compileC] at hc hfall
+       refine ihp _ _ l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
+       · intro s1 hp hE1; exact hjmp s1 (by simp [evalCP, hp]; rfl) hE1
+       · intro s1 hp hE1
+         have hI1 := hI.ofE hG hE1
+         refine ihq _ _ l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
+         · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))
+         · intro s2 hq hE2
+           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
+           simp only [List.length_append]; omega
+         · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
+       · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1)
+    | (simp only [compileC, List.append_assoc] at hc hfall
+       have hS := hc.right.right
+       have hlS := Code.label (i := 0) hS rfl
+       refine ihp _ _ _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
+       · intro s1 hp hE1
+         rw [hlS]
+         refine ev_label hS.head ?_
+         refine ev_congr (hfall s1 (by simp [evalCP, hp]; rfl) hE1) ?_
+         simp only [List.length_append, List.length_cons, List.length_nil]; omega
+       · intro s1 hp hE1
+         have hI1 := hI.ofE hG hE1
+         refine ihq _ _ l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
+         · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))
+         · intro s2 hq hE2
+           refine ev_label hS.head ?_
+           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
+           simp only [List.length_append, List.length_cons, List.length_nil]; omega
+         · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
+       · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1)
   | not p ih =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf] at hwf
