@@ -32,17 +32,11 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
   split at hW
   case isFalse => cases hW
   rename_i hcl
-  cases hI : romItemsW rom n (resetMem mem) allPinsOff with
-  | none => rw [hI] at hW; simp [iapK] at hW
-  | some r =>
-  obtain ⟨q, m₁⟩ := r
-  rw [hI] at hW
+  rcases hI : romItemsW rom n (resetMem mem) allPinsOff with _ | ⟨q, m₁⟩ <;> rw [hI] at hW
+  · simp [iapK] at hW
   simp only [iapK] at hW
-  cases hS : internPinSetsW rom n m₁ q with
-  | none => rw [hS] at hW; simp [iap2K] at hW
-  | some r =>
-  obtain ⟨q', m₂⟩ := r
-  rw [hS] at hW
+  rcases hS : internPinSetsW rom n m₁ q with _ | ⟨q', m₂⟩ <;> rw [hS] at hW
+  · simp [iap2K] at hW
   simp only [iap2K, Option.some.injEq] at hW
   subst hW
   have hd : rom.drop allPinsOff.toNat = encItems [] (itemsAllPins []) ++ rest := by

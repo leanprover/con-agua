@@ -274,3 +274,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,tierarr,claude-opus-5-5,150,110,"tiered arrays in L and the compiler (ld64t/len64t/st64t, tierA a t = a + 256 (t & 1)): semantics, notation, ModelGen, write sets, codegen, sim proofs; phase-1 design + prototype measurements in the journal; D35"
 2026-10-24,shrink,claude-opus-5-5,15,45,"batch 5: helpers inst/iota/core (-3.1k proof lines)"
 2026-10-24,tieracc,claude-opus-5-5,150,60,"batch 1: store accessor library (L/TRec, StoreFields, notation R⟨t, i⟩.f/R⟦h⟧.f/R⟨t⟩.count, l_model support), e_view converted, layout_leaks.py"
+2026-10-24,shrink,claude-opus-5-5,30,90,"batch 6: helpers sc/front/front2 (-2.1k); lane total -17.2k proof lines"

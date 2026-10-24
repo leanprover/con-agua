@@ -117,15 +117,6 @@ theorem matchLitLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     sym only [lang_grind, LITS_length] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ldc, ih] <;> finish
 
-theorem matchLitLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hi : (s₀.loc 0).toNat + (s₀.loc 2).toNat < 2 ^ 64)
-    (ho : (s₀.loc 1).toNat + (s₀.loc 2).toNat ≤ LITS.length) (hk : (s₀.loc 3).toNat ≤ (s₀.loc 2).toNat) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) matchLitLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if matchLitN b (s₀.loc 0).toNat LITS (s₀.loc 1).toNat (s₀.loc 2).toNat
-        (s₀.loc 3).toNat then 1 else 0]; ⊤⦄ :=
-  Triple.step_exec (matchLitLoop_spec p b hb (n + 1) s₀ hm hi ho hk)
 
 include hp in
 @[refines ConLeche.Frontend.matchLit]
@@ -141,7 +132,7 @@ theorem matchLit_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalArgs, matchLitLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, fun s₀ hm hi ho hk => Triple.step_exec (matchLitLoop_spec p b hb (n + 1) s₀ hm hi ho hk)] <;> finish
 
 end matchLit
 

@@ -106,24 +106,18 @@ theorem ilw_arm {m m' : Mem} {a : AState} {M : ModeMaps} {h r : Word} {body : AM
   rw [if_neg hr0] at hW
   by_cases hh0 : (mfindG lpSch m h 0).headD 0 ≠ 0
   · rw [if_pos hh0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hget, hw⟩ := ilw_hit hM h hh hr0 hh0
     exact ILWStep.refl (by simp only [ilwArmT, StateT.run_bind, instLPGet_run, except_ok_bind, hget]; rfl)
       hS hM hw
   rw [if_neg hh0] at hW
   have hmiss := ilw_miss hM h hh hr0 hh0
-  cases hY : Y with
-  | none => rw [hY] at hW; simp [ilwSetK] at hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  rw [hY, ilwSetK_some] at hW
-  cases h4 : msetG lpSch m₃ h 0 r₃ with
-  | none => rw [h4] at hW; cases hW
-  | some m₄ =>
-  rw [h4] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  rcases hY : Y with _ | ⟨r₃, m₃⟩ <;> rw [hY] at hW
+  · simp [ilwSetK] at hW
+  rw [ilwSetK_some] at hW
+  rcases h4 : msetG lpSch m₃ h 0 r₃ with _ | m₄ <;> rw [h4] at hW
+  · cases hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨a₃, r3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hM₃, hg₃, hr⟩ := hbody r₃ m₃ hmiss hY
   obtain ⟨hS₄, hSt₄, hM₄⟩ := ilw_set hS₃ hM₃ h r₃ hh hr h4
   refine ⟨_, ?_, ⟨M₃, hS₄, hK₃, hSt₃.trans hSt₄⟩, hM₄, hg₃.trans (ILWGrow.of_lss rfl), hr⟩
@@ -163,16 +157,11 @@ theorem ilw_rebuild {c : Bool} {I : AM EIdx} {a : AState} {m m' : Mem} {M : Mode
   | false =>
     show ILWStep I _ _ _ _ _ _ _ _ _
     rw [hYr] at hY; simp only [Bool.false_eq_true, ↓reduceIte] at hY
-    cases h5 : Yn with
-    | none => rw [h5] at hY; cases hY
-    | some q =>
-    obtain ⟨zs, m₅⟩ := q
-    rw [h5, ilwChk_some] at hY
+    rcases h5 : Yn with _ | ⟨zs, m₅⟩ <;> simp only [h5, ilwChk, reduceCtorEq] at hY
     by_cases hb : 4294967296 ≤ zs.headD 0
     · rw [if_pos hb] at hY; cases hY
     rw [if_neg hb] at hY
-    simp only [Option.some.injEq, Prod.mk.injEq] at hY
-    obtain ⟨rfl, rfl⟩ := hY
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hY)
     have hz : HW (zs.headD 0) := by
       unfold HW; have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
     exact hnew rfl zs h5 hz

@@ -79,9 +79,7 @@ structure HEnv (m : Mem) (a : AState) (ds : Array IDeclaration) (idx : Std.HashM
 
 theorem addW_toNat (x : Word) (k : Nat) (h : x.toNat + k < 2 ^ 64) :
     (x + UInt64.ofNat k).toNat = x.toNat + k := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat']
-  have : k < 2 ^ 64 := by omega
-  rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt h]
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
 
 theorem hnSch_wf : hnSch.WF := ⟨by decide, by decide⟩
 
@@ -95,12 +93,8 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
   have htop : iwTop m' = iwTop m := by
     simp only [iwTop]; rw [hf.1.2.1 200 (by decide)]
-  have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b := by
-    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl <;> decide
-  have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by
-    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl <;> decide
+  have hA : ∀ b ∈ [IW, HSEEN], 64 ≤ b := by decide
+  have hC : ∀ x ∈ ([73, 74] : List Word), 64 ≤ x.toNat := by simp
   refine ⟨ArenaR.frame_ext [IW, HSEEN] [73, 74] hA hC m m' hf.1 a hE.arena, hs,
     ?_, hE.size, hE.c60, hE.walk, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
     by rw [hsz]; exact hE.isz, by rw [htop]; exact hE.top, ?_⟩
@@ -137,10 +131,8 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
   have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.2.2.1 IW
-  have hA : ∀ b ∈ [IW], 64 ≤ b := by
-    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide
-  have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by
-    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide
+  have hA : ∀ b ∈ [IW], 64 ≤ b := by decide
+  have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
   obtain ⟨s, hs⟩ := hE.seen
   refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,
     ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.1 _ hs⟩,
@@ -171,8 +163,7 @@ theorem set64_addr (m : Mem) (x : Word) (k : Nat) (v : Word) (h : x.toNat + k < 
 theorem tgW_ne_zero (t : Nat) (h : t + 1 < 2 ^ 64) : tgW (some t) ≠ 0 := by
   intro e
   have := congrArg UInt64.toNat e
-  simp only [tgW, UInt64.toNat_ofNat', Nat.mod_eq_of_lt h] at this
-  simp at this
+  simp only [tgW, UInt64.toNat_ofNat', Nat.mod_eq_of_lt h] at this; simp at this
 
 /-- A nodup list of positions below `c`, all marked, and one more unmarked position below `c`:
 the list is shorter than `c`. -/
@@ -213,11 +204,8 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
   have hc := hE.c60
   have r1 := hE.rg1; have r2 := hE.rg2; have r3 := hE.rg3; have r4 := hE.isz
   unfold hNoteW at h
-  cases hx : hIxW m w with
-  | none => rw [hx] at h; cases h
-  | some rr =>
-  obtain ⟨r, m₁⟩ := rr
-  rw [hx] at h
+  rcases hx : hIxW m w with _ | ⟨r, m₁⟩ <;> rw [hx] at h
+  · cases h
   obtain ⟨hm1, hr⟩ := hoistIx_ok m m₁ w r idx hE.nix hw hx
   subst m₁
   cases ho : idx[(decI w : NIdx)]? with
@@ -241,25 +229,10 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
     -- the condition in `Nat`
     have hci : (UInt64.ofNat i + 1 < UInt64.ofNat (j + 1)) ↔ i < j := by
       rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
-      simp only [UInt64.toNat_one]
-      rw [Nat.mod_eq_of_lt (by omega : i < 2 ^ 64), Nat.mod_eq_of_lt (by omega : i + 1 < 2 ^ 64),
-        Nat.mod_eq_of_lt (by omega : j + 1 < 2 ^ 64)]
-      omega
+      simp only [UInt64.toNat_one]; omega
     have hck : (UInt64.ofNat (j + 1) ≠ UInt64.ofNat k + 1) ↔ j ≠ k := by
-      have e0 : UInt64.ofNat (j + 1) = UInt64.ofNat j + 1 := by rw [UInt64.ofNat_add]; rfl
-      rw [e0]
-      constructor
-      · intro h e; exact h (by rw [e])
-      · intro h e
-        apply h
-        have e2 : UInt64.ofNat j = UInt64.ofNat k := by
-          have := congrArg (· - 1) e
-          simp only [UInt64.add_sub_cancel] at this
-          exact this
-        have := congrArg UInt64.toNat e2
-        rw [UInt64.toNat_ofNat', UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega),
-          Nat.mod_eq_of_lt (by omega)] at this
-        exact this
+      rw [ne_eq, ne_eq, ← UInt64.toNat_inj, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
+      simp only [UInt64.toNat_one]; omega
     have hcz : (rdW (m.arr64 IW) (tg + UInt64.ofNat (j + 1) - 1) = 0) ↔ T[j]? = none := by
       rw [htgj, hrd]
       cases hTj : T[j]? with
@@ -367,11 +340,8 @@ theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx 
   | cons w ns ih =>
     intro m m' T sp sp' hE hT hTv hS hns h
     simp only [notesW] at h
-    cases h1 : hNoteW m w (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp with
-    | none => rw [h1] at h; cases h
-    | some r =>
-    obtain ⟨sp₁, m₁⟩ := r
-    rw [h1] at h
+    rcases h1 : hNoteW m w (UInt64.ofNat i) (UInt64.ofNat k) tg ws sp with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at h
+    · cases h
     have hw := hns w List.mem_cons_self
     rcases note_ok hE hT hTv hS hi hk hw h1 with
       ⟨j, hj, hij, hjk, hTj, hsp, hmf, hfr, hT₁, hstk⟩ | ⟨hno, hsp, hm⟩
@@ -512,11 +482,9 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   have hks : kw.toNat < ds.size := hE.size ▸ hkc
   obtain ⟨hr59, hD, hok⟩ := hE.ordR kw.toNat hks
   rw [← hkw'] at hr59 hD hok
-  cases hd : hDepsOfW n m kw (UInt64.ofNat i) (1 + 8 * rdW (m.arr64 IW) (ord + kw)) tg ws (sp - 1) with
-  | none => rw [hd] at h; simp [hCloseGoW.k1.eq_1] at h
-  | some rr =>
-  obtain ⟨sp₁, m₁⟩ := rr
-  rw [hd, hCloseGoW.k1.arm1] at h
+  rcases hd : hDepsOfW n m kw (UInt64.ofNat i) (1 + 8 * rdW (m.arr64 IW) (ord + kw)) tg ws (sp - 1) with _ | ⟨sp₁, m₁⟩ <;> rw [hd] at h
+  · simp [hCloseGoW.k1.eq_1] at h
+  rw [hCloseGoW.k1.arm1] at h
   obtain ⟨ns, hrun, hns, hseen₁, mn, hnotes, hfr₁⟩ :=
     hoistDepsOf_ok n m m₁ a kw (UInt64.ofNat i) _ tg ws (sp - 1) sp₁ ds[kw.toNat] hE.arena hE.seen
       hr59 hD hok (hE.walk _ hks) hd
@@ -817,11 +785,8 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
       rw [hrd]
       simpa using hp'
     have hl1 : (q + 1).toNat + gs.length = l.toNat := by rw [hq1]; simp at hl; omega
-    cases hx : hIxW m (rdW (m.arr64 IW) (o + q)) with
-    | none => rw [hx] at h; simp [hDepsW.k3.eq_1] at h
-    | some rr =>
-    obtain ⟨rw', m₁⟩ := rr
-    rw [hx] at h
+    rcases hx : hIxW m (rdW (m.arr64 IW) (o + q)) with _ | ⟨rw', m₁⟩ <;> rw [hx] at h
+    · simp [hDepsW.k3.eq_1] at h
     obtain ⟨hm1, hr⟩ := hoistIx_ok m m₁ _ rw' idx hE.nix hw hx
     subst m₁
     rw [hg] at hr
@@ -837,10 +802,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
       have hjc : jj < c := hE.nixlt g jj hgi
       have hci : (UInt64.ofNat i + 1 < UInt64.ofNat (jj + 1)) ↔ i < jj := by
         rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
-        simp only [UInt64.toNat_one]
-        rw [Nat.mod_eq_of_lt (by omega : i < 2 ^ 64), Nat.mod_eq_of_lt (by omega : i + 1 < 2 ^ 64),
-          Nat.mod_eq_of_lt (by omega : jj + 1 < 2 ^ 64)]
-        omega
+        simp only [UInt64.toNat_one]; omega
       by_cases hij : i < jj
       · dsimp only
         rw [if_pos (by omega : jj > i)]
@@ -850,11 +812,9 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         rw [hDepsW.k3.arm1 _ _ _ _ _ _ _ _ _ _ ⟨hne, hci.mpr hij⟩] at h
         have hj1 : UInt64.ofNat (jj + 1) - 1 = UInt64.ofNat jj := by rw [UInt64.ofNat_add]; simp
         rw [hj1] at h
-        cases hcl : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat jj) ord tg ws with
-        | none => rw [hcl] at h; simp [hDepsW.k2.eq_1] at h
-        | some rr =>
-        obtain ⟨z, m₁⟩ := rr
-        rw [hcl, hDepsW.k2.arm1, hDepsW.k1.arm1] at h
+        rcases hcl : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat jj) ord tg ws with _ | ⟨z, m₁⟩ <;> rw [hcl] at h
+        · simp [hDepsW.k2.eq_1] at h
+        rw [hDepsW.k2.arm1, hDepsW.k1.arm1] at h
         obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -, hlt₁⟩ :=
           closure_ok hi hjc n m m₁ T z hE hT hTv hTi hij hlt hcl
         obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr', hlt'⟩ :=

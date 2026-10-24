@@ -80,28 +80,12 @@ theorem armOwn_of : ∀ f ∈ armFns, f ∉ openFns →
 theorem checkerProg_armAgree : ∀ f ∈ armFns, f ∉ openFns → checkerProg.lookup f = armText.lookup f := by
   intro f hf ho
   have h := armOwn_of f hf ho
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn0 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn1 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn2 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn3 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn4 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn5 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn6 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn7 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn8 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn9 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_armOwn10 f h
-  exact checkerProg_armOwn11 f h
+  simp only [List.mem_append] at h
+  exact h.elim (checkerProg_armOwn0 f) fun h => h.elim (checkerProg_armOwn1 f) fun h =>
+    h.elim (checkerProg_armOwn2 f) fun h => h.elim (checkerProg_armOwn3 f) fun h =>
+    h.elim (checkerProg_armOwn4 f) fun h => h.elim (checkerProg_armOwn5 f) fun h =>
+    h.elim (checkerProg_armOwn6 f) fun h => h.elim (checkerProg_armOwn7 f) fun h =>
+    h.elim (checkerProg_armOwn8 f) fun h => h.elim (checkerProg_armOwn9 f) fun h =>
+    h.elim (checkerProg_armOwn10 f) (checkerProg_armOwn11 f)
 
 end L.Checker

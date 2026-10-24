@@ -118,11 +118,6 @@ theorem pbLoop_spec (bs d : List UInt8) (n : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ldc, ih] <;> finish [romB]
 
-theorem pbLoop_step_spec (bs d : List UInt8) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) (pbLoop bs d)
-    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ eqW bs d (s₀.loc 0) = true; ⊤⦄ :=
-  Triple.step_exec (pbLoop_spec p bs d (n + 1) s₀)
 
 theorem pbCheckG_spec (bs d : List UInt8) (hp : p.lookup "pb_check" = some (pbCheckG bs d)) (n : Nat)
     (s₀ : St) :
@@ -136,7 +131,7 @@ theorem pbCheckG_spec (bs d : List UInt8) (hp : p.lookup "pb_check" = some (pbCh
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pbLoop_step_spec p bs d n] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (pbLoop_spec p bs d (n + 1) s₀)] <;>
       finish
 
 /-- What `pb_check`'s checks give: the buffer starts with `d`. -/
