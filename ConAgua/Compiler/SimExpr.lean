@@ -576,10 +576,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         have hev : evalP σ (.bin op a b) = .ok (op.eval va vb) := by simp [evalP, hva, hvb]; rfl
         refine ev_congr (hok _ s' hev (by rw [hr, hrax1]) (hE1.trans hE' (Nat.le_refl _))) ?_
         simp only [List.length_append]; omega
-      · intro s1 herra hE1
-        refine herr s1 ?_ hE1
-        obtain ⟨x, hx⟩ := herra
-        exact ⟨x, by simp [evalP, hx]; rfl⟩
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1
     simp only [hbs] at hc hok
     simp only [binSimple_none hbs, Bool.false_eq_true, ite_false] at htmp
     refine sim_pair hG hF0 iha ihb (.inl rfl) hc hwf.1 hwf.2 (htmp.le (by omega)) hI
@@ -643,10 +640,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
             UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, cmpCC_interp, Cmp.evalW]
         · exact (hE1.trans hE2 (Nat.le_refl _)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s1 herra hE1
-        refine herr s1 ?_ hE1
-        obtain ⟨x, hx⟩ := herra
-        exact ⟨x, by simp [evalP, hx]; rfl⟩
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1
     simp only [hcs] at hc hok
     simp only [cmpSimple_none hcs, Bool.false_eq_true, ite_false] at htmp
     refine sim_pair hG hF0 iha ihb (.inl rfl) hc hwf.1 hwf.2 (htmp.le (by omega)) hI
@@ -712,10 +706,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           rw [dite_eq_left hcc]
         · exact hE1.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · intro s1 herra hE1
-      refine herr s1 ?_ hE1
-      obtain ⟨x, hx⟩ := herra
-      exact ⟨x, by simp [evalP, hx]; rfl⟩
+    · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1
   | ld8 a i ih =>
     intro t k hc hwf htmp σ s Q hI hok herr
     simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
@@ -758,10 +749,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           rw [dite_eq_left (by omega)]
         · exact hE1.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · intro s1 herra hE1
-      refine herr s1 ?_ hE1
-      obtain ⟨x, hx⟩ := herra
-      exact ⟨x, by simp [evalP, hx]; rfl⟩
+    · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1
   | ld64 a i ih =>
     intro t k hc hwf htmp σ s Q hI hok herr
     simp only [Expr.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
@@ -803,10 +791,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           rw [dite_eq_left (by omega)]
         · exact hE1.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · intro s1 herra hE1
-      refine herr s1 ?_ hE1
-      obtain ⟨x, hx⟩ := herra
-      exact ⟨x, by simp [evalP, hx]; rfl⟩
+    · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalP, hx]; rfl⟩ hE1
 
 end
 
@@ -908,10 +893,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
             cases pol <;> simp_all [neg_interp, cmpCC_interp]
           refine ev_congr (hfall _ (hev.trans (by rw [this])) hE4) ?_
           simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s1 herra hE1
-        refine herr s1 ?_ hE1
-        obtain ⟨x, hx⟩ := herra
-        exact ⟨x, by simp [evalCP, hx]; rfl⟩
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
     simp only [hcs] at hc hfall
     simp only [cmpSimple_none hcs, Bool.false_eq_true, ite_false] at htmp
     refine sim_pair hG hF (sim_expr hG ctx hT hTab F hF a) (sim_expr hG ctx hT hTab F hF b) (.inl rfl) hc
@@ -951,12 +933,8 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         · intro s2 hq hE2
           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
           simp only [List.length_append]; omega
-        · intro s2 hq hE2
-          obtain ⟨x, hx⟩ := hq
-          exact herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · intro s1 hp hE1
-        obtain ⟨x, hx⟩ := hp
-        exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
+        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
     | true =>
       simp only [compileC, List.append_assoc] at hc hfall
       have hS := hc.right.right
@@ -975,12 +953,8 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           refine ev_label hS.head ?_
           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
           simp only [List.length_append, List.length_cons, List.length_nil]; omega
-        · intro s2 hq hE2
-          obtain ⟨x, hx⟩ := hq
-          exact herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · intro s1 hp hE1
-        obtain ⟨x, hx⟩ := hp
-        exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
+        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
   | or p q ihp ihq =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
@@ -997,12 +971,8 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         · intro s2 hq hE2
           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
           simp only [List.length_append]; omega
-        · intro s2 hq hE2
-          obtain ⟨x, hx⟩ := hq
-          exact herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · intro s1 hp hE1
-        obtain ⟨x, hx⟩ := hp
-        exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
+        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
     | false =>
       simp only [compileC, List.append_assoc] at hc hfall
       have hS := hc.right.right
@@ -1021,12 +991,8 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           refine ev_label hS.head ?_
           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2 (Nat.le_refl _))) ?_
           simp only [List.length_append, List.length_cons, List.length_nil]; omega
-        · intro s2 hq hE2
-          obtain ⟨x, hx⟩ := hq
-          exact herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
-      · intro s1 hp hE1
-        obtain ⟨x, hx⟩ := hp
-        exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
+        · exact fun s2 ⟨x, hx⟩ hE2 => herr s2 ⟨x, by simp [evalCP, hp, hx]; rfl⟩ (hE1.trans hE2 (Nat.le_refl _))
+      · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
   | not p ih =>
     intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
     simp only [Cond.wf] at hwf
@@ -1035,9 +1001,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
     refine ih _ (!pol) l t k hc hwf htmp σ s Q hI ?_ ?_ ?_
     · intro s1 hp hE1; exact hjmp s1 (by rw [evalCP, hp]; cases pol <;> rfl) hE1
     · intro s1 hp hE1; exact hfall s1 (by rw [evalCP, hp]; cases pol <;> rfl) hE1
-    · intro s1 hp hE1
-      obtain ⟨x, hx⟩ := hp
-      exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
+    · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
 
 end
 

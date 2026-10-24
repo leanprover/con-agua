@@ -597,9 +597,7 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
           rw [hR2.keep r hne.1 hne.2.1 hne.2.2.1 hnr]; exact hr1
         | succ i => simpa using hregs i (by simpa using hi)
       · simp only [List.length_append]; omega
-    · intro s2 he hR2
-      obtain ⟨x, hx⟩ := he
-      exact herr s2 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩
+    · exact fun s2 ⟨x, hx⟩ hR2 => herr s2 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩
         ((hR1.trans hR2).mono fun r' h => h.elim (fun h => h ▸ List.mem_cons_self)
           (fun h => List.mem_cons_of_mem _ h))
 
@@ -663,9 +661,7 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
           have := hregs j (by simpa using hj)
           simpa [show i + 1 + j = i + (j + 1) by omega] using this
       · simp only [List.length_append]; omega
-    · intro s2 he hR2
-      obtain ⟨x, hx⟩ := he
-      exact herr s2 ⟨x, by simp [evalArgsP, hv0, hx]; rfl⟩
+    · exact fun s2 ⟨x, hx⟩ hR2 => herr s2 ⟨x, by simp [evalArgsP, hv0, hx]; rfl⟩
         ((hR1.trans hR2).mono fun r' h => h.elim (fun h => ⟨i, Nat.le_refl _, by simp only [List.length_cons]; omega, h⟩)
           (fun ⟨j, h1, h2, h3⟩ => ⟨j, by omega, by simp only [List.length_cons]; omega, h3⟩))
 
@@ -719,12 +715,8 @@ theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < 
             rw [h2rsp] at this
             rw [← this]; congr 2; omega
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s3 herr3 hE3
-        obtain ⟨x, hx⟩ := herr3
-        exact herr s3 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩ (hE2.trans hE3 (by omega))
-    · intro s1 herr1 hE1
-      obtain ⟨x, hx⟩ := herr1
-      exact herr s1 ⟨x, by simp [evalArgsP, hx]; rfl⟩ hE1
+      · exact fun s3 ⟨x, hx⟩ hE3 => herr s3 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩ (hE2.trans hE3 (by omega))
+    · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalArgsP, hx]; rfl⟩ hE1
 
 omit hTab in
 theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.lo ≤ t) (hx : t ≤ x)
