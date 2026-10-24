@@ -1220,6 +1220,15 @@ def replacements : List (String × FunDecl) :=
    ("skip_digits", skipDigitsB), ("skip_ws", skipWsB), ("rom_u64", romU64B), ("rom_put", romPutB),
    ("iw_copy", iwCopyB), ("er_copy", erCopyB), ("pool_copy", poolCopyB)]
 
+/-- Calls of `rom_u64` inlined as the intrinsic (same bounds: abort unless `i + 8 ≤ len`, no
+carry). -/
+def inlRomU64 : Stmt → Stmt
+  | .call xs f args => if f == "rom_u64" then .call xs "__ld8x8_pb" args else .call xs f args
+  | .seq s t => .seq (inlRomU64 s) (inlRomU64 t)
+  | .ite c s t => .ite c (inlRomU64 s) (inlRomU64 t)
+  | .while c s => .while c (inlRomU64 s)
+  | s => s
+
 /-- Replace the bodies of the functions in `only` (all of `replacements` if empty). -/
 def blkify (rs : List (String × FunDecl)) (only : List String) (p : Prog) : Prog :=
   p.map fun (f, fd) =>
@@ -1238,6 +1247,8 @@ def main (args : List String) : IO Unit := do
     | _ => []
   let rs := if args.getD 2 "" == "tp" then L.Blk.replacementsTP else L.Blk.replacements
   let p := L.Blk.blkify rs only checkerProg
+  let p := if only.isEmpty || only.contains "inl_rom_u64" then
+    p.map fun (f, fd) => (f, { fd with body := L.Blk.inlRomU64 fd.body }) else p
   let missing := L.Blk.replacements.filter fun (f, _) => (checkerProg.lookup f).isNone
   unless missing.isEmpty do IO.eprintln s!"not in checkerProg: {missing.map (·.1)}"
   let tab : Tab := L.CompilerB.Prog.tab p checkerTab.nb checkerTab.nw
