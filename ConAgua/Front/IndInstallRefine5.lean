@@ -98,9 +98,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   | zero => simp [installW] at h
   | succ n =>
   simp only [installW] at h
-  split at h
-  · cases h
-  rename_i hbig
+  split at h; cases h; rename_i hbig
   have ht32 : tn.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (.inl (UInt64.le_iff_toNat_le.mpr (by simp; omega)))
   have hc32 : cn.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
@@ -109,26 +107,13 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     hbig (.inr (.inr (UInt64.le_iff_toNat_le.mpr (by simp; omega))))
   have hN : (tn + cn + rn).toNat = tys.length + cts.length + rcs.length := by
     rw [UInt64.toNat_add, UInt64.toNat_add]; omega
-  cases h1 : allocW m DLP (tn + cn + rn) with
-  | none => rw [h1, allocK_none] at h; cases h
-  | some x =>
-  obtain ⟨bo, m₁⟩ := x
-  rw [h1, allocK_some] at h
+  rcases h1 : allocW m DLP (tn + cn + rn) with _ | ⟨bo, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
   rw [hN] at P3 P4
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
-  cases h2 : instTypesW n b.data m₁ bo to tn 0 with
-  | none => rw [h2, mK_none] at h; cases h
-  | some m₂ =>
-  rw [h2, mK_some] at h
-  cases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with
-  | none => rw [h3, mK_none] at h; cases h
-  | some m₃ =>
-  rw [h3, mK_some] at h
-  cases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with
-  | none => rw [h4, mK_none] at h; cases h
-  | some m₄ =>
-  rw [h4, mK_some] at h
+  rcases h2 : instTypesW n b.data m₁ bo to tn 0 with _ | m₂ <;> simp only [h2, mK, reduceCtorEq] at h
+  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, mK, reduceCtorEq] at h
+  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, mK, reduceCtorEq] at h
   have hifr1 : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types

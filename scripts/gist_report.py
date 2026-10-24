@@ -136,7 +136,6 @@ def trend_svg(pts):
     series = [("proven", lean, yl, "#2e7d5b", ""), ("proven locally", cnt, yl, "#7aa6d6", ""),
               ("L written", wr, yl, "#d9a520", ""),
               ("StageC migration", col("stagec_pct"), yl, "#e07b39", ''),
-              ("sorry-free e2e cone", col("cone_pct"), yl, "#1b1b1b", 'stroke-dasharray="2 3"'),
               (f"layout encapsulated (of {LEAKS0} lines)", enc, yl, "#d6457f", 'stroke-dasharray="10 3 2 3"'),
               ("proof lines (k)", pk, yr, "#8a5cb8", 'stroke-dasharray="6 4"'), ("L code lines (k)", lk, yr, "#c0504d", 'stroke-dasharray="6 4"')]
     for name, vals, y, c, dash in series:

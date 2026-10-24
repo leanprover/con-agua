@@ -82,11 +82,9 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   have hOc : OrdR (mclearG hnSch m) ord ds :=
     ordR_low (iwTop m) hO (by omega) (by omega) (fun x _ => by rw [hIWc])
       (hfc.1 DECL (by simp) (by decide)) (hfc.1 DLP (by simp) (by decide))
-  cases hix : hIndexGoW n (mclearG hnSch m) ord cw 0 with
-  | none => rw [hix] at h; simp [hNatOpGroundW.k6.eq_1] at h
-  | some rr =>
-  obtain ⟨z₁, m₁⟩ := rr
-  rw [hix, hNatOpGroundW.k6.arm1] at h
+  rcases hix : hIndexGoW n (mclearG hnSch m) ord cw 0 with _ | ⟨z₁, m₁⟩ <;> rw [hix] at h
+  · simp [hNatOpGroundW.k6.eq_1] at h
+  rw [hNatOpGroundW.k6.arm1] at h
   obtain ⟨hR₁, hf₁⟩ := hoistIndexGo_ok n _ m₁ ord cw 0 z₁ ds ∅ hOc hc hc60 (by omega)
     UInt64.zero_le hRc hix
   simp only [UInt64.toNat_zero] at hR₁
@@ -100,25 +98,19 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     exact ⟨by rw [htop₁, hIW₁]; exact h1, by rw [h129, hER]; exact h2, by rw [hIW₁]; exact h3,
       by rw [hER]; exact h4, by rw [hf₀₁.2.2.1 CTL]; exact h5⟩
   -- the targets and the stack
-  cases ha₁ : allocW m₁ cw with
-  | none => rw [ha₁] at h; simp [hNatOpGroundW.k5.eq_1] at h
-  | some rr =>
-  obtain ⟨tg, m₂⟩ := rr
-  rw [ha₁, hNatOpGroundW.k5.arm1] at h
+  rcases ha₁ : allocW m₁ cw with _ | ⟨tg, m₂⟩ <;> rw [ha₁] at h
+  · simp [hNatOpGroundW.k5.eq_1] at h
+  rw [hNatOpGroundW.k5.arm1] at h
   obtain ⟨hA₂, htg, htop₂, hroom₂⟩ := allocW_afr ha₁ hI₁
-  cases ha₂ : allocW m₂ cw with
-  | none => rw [ha₂] at h; simp [hNatOpGroundW.k4.eq_1] at h
-  | some rr =>
-  obtain ⟨ws, m₃⟩ := rr
-  rw [ha₂, hNatOpGroundW.k4.arm1] at h
+  rcases ha₂ : allocW m₂ cw with _ | ⟨ws, m₃⟩ <;> rw [ha₂] at h
+  · simp [hNatOpGroundW.k4.eq_1] at h
+  rw [hNatOpGroundW.k4.arm1] at h
   obtain ⟨hA₃, hws, htop₃, hroom₃⟩ := allocW_afr ha₂ hA₂.2.2
   have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.2.2.1 IW, hIW₁]
   have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hA₃.1.2.2.1 IW, hsz₂]
-  cases hz : hZeroW n m₃ tg cw 0 with
-  | none => rw [hz] at h; simp [hNatOpGroundW.k3.eq_1] at h
-  | some rr =>
-  obtain ⟨z₄, m₄⟩ := rr
-  rw [hz, hNatOpGroundW.k3.arm1] at h
+  rcases hz : hZeroW n m₃ tg cw 0 with _ | ⟨z₄, m₄⟩ <;> rw [hz] at h
+  · simp [hNatOpGroundW.k3.eq_1] at h
+  rw [hNatOpGroundW.k3.arm1] at h
   obtain ⟨hf₄, hrd₄⟩ := hZero_ok n m₃ m₄ tg cw 0 z₄ (by rw [hsz₃]; omega) (by rw [hsz₃]; exact hsz) hz
   have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hf₄.2.2.1 IW, hsz₃]
   have htop₄ : iwTop m₄ = iwTop m₃ := by simp only [iwTop]; rw [hf₄.2.1 200 (by simp)]
@@ -139,12 +131,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have h129 : erTop m₄ = erTop m₃ := by simp only [erTop]; rw [hf₄.2.1 129 (by simp)]
     exact ⟨by rw [htop₄, hf₄.2.2.1 IW]; exact h1, by rw [h129, hER]; exact h2,
       by rw [hf₄.2.2.1 IW]; exact h3, by rw [hER]; exact h4, by rw [hf₄.2.2.1 CTL]; exact h5⟩
-  have hA4 : ∀ b ∈ [IW, HNIX], 64 ≤ b := by
-    intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-    rcases hb with rfl | rfl <;> decide
-  have hC4 : ∀ x ∈ ([75, 76, 200] : List Word), 64 ≤ x.toNat := by
-    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl <;> decide
+  have hA4 : ∀ b ∈ [IW, HNIX], 64 ≤ b := by decide
+  have hC4 : ∀ x ∈ ([75, 76, 200] : List Word), 64 ≤ x.toNat := by simp
   have hE₄ : HEnv m₄ a ds (nameIndex ds ∅ 0) ord tg ws cw.toNat := by
     obtain ⟨s, hs⟩ := hseen
     refine ⟨ArenaR.frame_ext _ _ hA4 hC4 m m₄ hfA a hA,
@@ -161,22 +149,17 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     simp [tgW]
   have hP₄ : PinsR m₄ a.pins := hP.congr (hfA.1 PINS (by decide) (by decide))
   -- the targets pass
-  cases ht : hTargetsGoW p n m₄ ord cw tg ws 0 with
-  | none => rw [ht] at h; simp [hNatOpGroundW.k2.eq_1] at h
-  | some rr =>
-  obtain ⟨z₅, m₅⟩ := rr
-  rw [ht, hNatOpGroundW.k2.arm1] at h
+  rcases ht : hTargetsGoW p n m₄ ord cw tg ws 0 with _ | ⟨z₅, m₅⟩ <;> rw [ht] at h
+  · simp [hNatOpGroundW.k2.eq_1] at h
+  rw [hNatOpGroundW.k2.arm1] at h
   obtain ⟨T, hrunT, hE₅, hT₅, hTv₅, hlt₅, hP₅, hlow₅⟩ :=
     targets_ok hx cw rfl n m₄ m₅ ∅ 0 z₅ hE₄ hT₄ (fun _ _ h => by simp at h)
       (fun _ _ h => by simp at h) (fun _ _ h => by simp at h) (by simp) hP₄ ht
   simp only [UInt64.toNat_zero] at hrunT
   have hrunH : (hoistTargets ds).run a = .ok (T, a) := hrunT
   -- `hoist_any`
-  cases hy : hAnyW n m₅ tg cw 0 with
-  | none => rw [hy] at h; simp [hNatOpGroundW.k1.eq_1] at h
-  | some rr =>
-  obtain ⟨av, m₆⟩ := rr
-  rw [hy] at h
+  rcases hy : hAnyW n m₅ tg cw 0 with _ | ⟨av, m₆⟩ <;> rw [hy] at h
+  · simp [hNatOpGroundW.k1.eq_1] at h
   obtain ⟨hm6, hav⟩ := hoistAny_ok n m₅ m₆ tg cw 0 av T hT₅ (by have := hE₅.rg3; omega) hlt₅ hy
   subst m₆
   simp only [UInt64.toNat_zero] at hav
@@ -208,8 +191,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       | false => rfl
       | true =>
         exfalso; apply hav0; apply hav.mpr
-        intro j _ _
-        exact Std.HashMap.getElem?_of_isEmpty e
+        exact fun j _ _ => Std.HashMap.getElem?_of_isEmpty e
     have hord₅ : ord.toNat + cw.toNat ≤ iwTop m₅ := by have := hgrow₅.1; omega
     have htg₅ : tg.toNat + cw.toNat ≤ iwTop m₅ := by have := hE₅.top; have := hE₅.rg2; omega
     obtain ⟨hI', hgrow', hf', hout, hout', hget⟩ :=
@@ -239,10 +221,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       simp only [hres1, List.getElem_toArray, List.getElem_map]
       rw [getElem!_pos ds _ (hmem _ (List.getElem_mem _))]
       exact hok
-    · have hA5 : ∀ b ∈ [IW], 64 ≤ b := by
-        intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide
-      have hC5 : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by
-        intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; decide
+    · have hA5 : ∀ b ∈ [IW], 64 ≤ b := by decide
+      have hC5 : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
       exact ArenaR.frame_ext _ _ hA5 hC5 m₅ m' hf' a hE₅.arena
 
 /-- **`hoist_nat_op_ground(ord, c)` refines `hoistNatOpGround`** (its first component; the second,

@@ -436,11 +436,9 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
     exact ⟨[], [], m, a, seen, rfl, rfl, inv, SliceR.nil (by simpa using hb), EW.refl _ _ _,
       MemFrame.refl _ _ _⟩
   rw [romExprsToW_succ rom n mem q o k hk] at hW
-  cases hE : romExprW rom n mem q with
-  | none => rw [hE] at hW; simp [exsToK] at hW
-  | some t =>
-  obtain ⟨h, q₁, m₁⟩ := t
-  rw [hE, exsToK_some] at hW
+  rcases hE : romExprW rom n mem q with _ | ⟨h, q₁, m₁⟩ <;> rw [hE] at hW
+  · simp [exsToK] at hW
+  rw [exsToK_some] at hW
   obtain ⟨e, rest, m₂, a₁, -, -, hrun, inv₁, -, -, hlt, -, hf₁⟩ :=
     dec_child rom hr (romExprW_dec rom hr n) inv hE
   have hk1 : 1 ≤ k.toNat := by
@@ -494,11 +492,9 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
   · simp [romPinsToW, h8, hc'] at hW
   have hc : rclearOK mem := Decidable.not_not.mp hc'
   rw [romPinsToW_step rom n mem q k r h8 hc] at hW
-  cases hX : romExprsToW rom n (resetMem mem) q (r + k) 1 with
-  | none => rw [hX] at hW; simp [pinsK] at hW
-  | some t =>
-  obtain ⟨q₁, m₁⟩ := t
-  rw [hX, pinsK_some] at hW
+  rcases hX : romExprsToW rom n (resetMem mem) q (r + k) 1 with _ | ⟨q₁, m₁⟩ <;> rw [hX] at hW
+  · simp [pinsK] at hW
+  rw [pinsK_some] at hW
   have hk8 : k.toNat < 8 := by
     have : k.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
@@ -565,11 +561,8 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   have hj8 : j.toNat < 8 := by
     have : j.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
-  cases hA : erAllocW mem (u64W rom q) with
-  | none => rw [hA] at hW; simp [listsK] at hW
-  | some t =>
-  obtain ⟨o, m₁⟩ := t
-  rw [hA] at hW
+  rcases hA : erAllocW mem (u64W rom q) with _ | ⟨o, m₁⟩ <;> rw [hA] at hW
+  · simp [listsK] at hW
   generalize hl : u64W rom q = l at hA hW
   obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl
   obtain ⟨hi8, hi9⟩ := hdrIdx (r := r) (j := j) (by omega) hj8
@@ -596,11 +589,9 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   · simp [hc'] at hW
   have hc : rclearOK mh := Decidable.not_not.mp hc'
   simp only [ite_eq_left hc] at hW
-  cases hX : romExprsToW rom n (resetMem mh) (q + 8) o l with
-  | none => rw [hX] at hW; simp [lists2K] at hW
-  | some t =>
-  obtain ⟨q₁, m₂⟩ := t
-  rw [hX, lists2K_some] at hW
+  rcases hX : romExprsToW rom n (resetMem mh) (q + 8) o l with _ | ⟨q₁, m₂⟩ <;> rw [hX] at hW
+  · simp [lists2K] at hW
+  rw [lists2K_some] at hW
   obtain ⟨es, hs, mm, a₁, seen₁, hrun₁, hlen₁, inv₂, hsl₂, hew₂, hfr₂⟩ :=
     exprsTo_dec rom hr n _ a [] ∅ (q + 8) o l q₁ m₂ (invh.reset hc)
       (by rw [resetMem_top]; omega) (by rw [resetMem_top, resetMem_size]; exact invh.top) hX
@@ -675,27 +666,21 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   have hkm : (k - 1).toNat = k.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hk1)]; simp
   have ho1 : (o + 1).toNat = o.toNat + 1 := addN (by simp; omega)
-  cases hA : erAllocW mem 24 with
-  | none => rw [hA] at hW; simp [setsK] at hW
-  | some t =>
-  obtain ⟨r, m₁⟩ := t
-  rw [hA, setsK_some] at hW
+  rcases hA : erAllocW mem 24 with _ | ⟨r, m₁⟩ <;> rw [hA] at hW
+  · simp [setsK] at hW
+  rw [setsK_some] at hW
   obtain ⟨hr₀, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.2.2.1 EREC
   have h24 : (24 : Word).toNat = 24 := rfl
   have inv₁ : SInv m₁ a := inv.frameE (hf₁.mono (by simp) (by simp)) (by omega)
-  cases hP : romPinsToW rom n m₁ q r 0 with
-  | none => rw [hP] at hW; simp [sets2K] at hW
-  | some t =>
-  obtain ⟨q₁, m₂⟩ := t
-  rw [hP, sets2K_some] at hW
+  rcases hP : romPinsToW rom n m₁ q r 0 with _ | ⟨q₁, m₂⟩ <;> rw [hP] at hW
+  · simp [sets2K] at hW
+  rw [sets2K_some] at hW
   obtain ⟨es, hs, a₁, hrunP, hlenE, inv₂, hslP, ewP, frP⟩ :=
     pinsTo_dec rom hr n m₁ a q r 0 q₁ m₂ inv₁ (by decide) (by omega) hP
-  cases hL : romListsToW rom n m₂ q₁ r 0 with
-  | none => rw [hL] at hW; simp [sets3K] at hW
-  | some t =>
-  obtain ⟨q₂, m₃⟩ := t
-  rw [hL, sets3K_some] at hW
+  rcases hL : romListsToW rom n m₂ q₁ r 0 with _ | ⟨q₂, m₃⟩ <;> rw [hL] at hW
+  · simp [sets3K] at hW
+  rw [sets3K_some] at hW
   obtain ⟨ess, hss, a₂, hrunL, hl1, hl2, inv₃, hallL, ewL, frL⟩ :=
     listsTo_dec rom hr n m₂ a₁ q₁ r 0 q₂ m₃ inv₂ (by decide) (by have := ewP.top; omega) hL
   simp only [UInt64.add_zero, show (8 : Word) - 0 = 8 from rfl, show (0 : Word).toNat = 0 from rfl,
@@ -765,11 +750,9 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
   · simp [internPinSetsW, hu] at hW
   rw [internPinSetsW_eq rom n mem q (Decidable.not_not.mp hu)] at hW
   generalize hcw : u64W rom q = c at hW
-  cases hAl : erAllocW mem c with
-  | none => rw [hAl] at hW; simp [ipsK] at hW
-  | some t =>
-  obtain ⟨o, m₁⟩ := t
-  rw [hAl, ipsK_some] at hW
+  rcases hAl : erAllocW mem c with _ | ⟨o, m₁⟩ <;> rw [hAl] at hW
+  · simp [ipsK] at hW
+  rw [ipsK_some] at hW
   obtain ⟨ho, ht₁, hroom, hf₁, -⟩ := erAlloc_ok hAl hc
   generalize hm₂ : (m₁.set64 CTL 150 o).set64 CTL 151 c = m₂ at hW
   have hf₂ : MemFrame [EREC] [129, 150, 151] mem m₂ := by

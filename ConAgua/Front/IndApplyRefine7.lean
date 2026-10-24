@@ -56,16 +56,10 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
     by_cases hk : k = j.toNat
     · subst hk
       rw [if_pos hT] at h
-      cases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with
-      | none => rw [hs, pK_none] at h; cases h
-      | some q =>
-      obtain ⟨ok, kk⟩ := q
-      rw [hs, pK_some] at h
+      rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> simp only [hs, pK, reduceCtorEq] at h
       obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ ok kk hs
       refine ⟨_, s1, fun x hx => ?_⟩
-      split at h
-      · cases h
-      rename_i hc
+      split at h; cases h; rename_i hc
       by_cases hok : ok = 0
       · simp [hok] at hx
       · simp only [hok, if_false, Option.some.injEq] at hx
@@ -78,8 +72,7 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
           | some q =>
           obtain ⟨ok, kk⟩ := q
           rw [hs, pK_some] at h
-          split at h
-          · cases h
+          split at h; cases h
           · exact h
         · exact h
       exact ih (j + 1) hrest k (by rw [hj1]; omega) h2 hT
@@ -102,25 +95,14 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
   have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
     intro s hs; rw [wd_eq, widx2 _ _ (by omega)]
   obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
-  cases hl : lkW m NID (rdW (m.arr64 IFR) r) with
-  | none => rw [hl, wK_none] at h; cases h
-  | some rnw =>
-  rw [hl, wK_some] at h
+  rcases hl : lkW m NID (rdW (m.arr64 IFR) r) with _ | rnw <;> simp only [hl, wK, reduceCtorEq] at h
   rw [wd_eq] at hl
   have hname := (lkW_name hD a hl).1
   rw [c1.1] at hname
-  split at h
-  · cases h
-  rename_i h8
-  split at h
-  · cases h
-  rename_i h7
-  split at h
-  · cases h
-  rename_i h6
-  split at h
-  · cases h
-  rename_i h4
+  split at h; cases h; rename_i h8
+  split at h; cases h; rename_i h7
+  split at h; cases h; rename_i h6
+  split at h; cases h; rename_i h4
   have e8 : rdW (m.arr64 IFR) (r + 8) = np := Classical.byContradiction h8
   have e7 : rdW (m.arr64 IFR) (r + 7) = tn := Classical.byContradiction h7
   have e6 : rdW (m.arr64 IFR) (r + 6) = cn := Classical.byContradiction h6
@@ -129,9 +111,7 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     show (6 : Word).toNat = 6 from rfl] at e8 e7 e6
   refine ⟨_, hname, by rw [← c6.1, e8], by rw [← c5.1, e7], by rw [← c4.1, e6], fun kE hkE => ?_, ?_⟩
   · simp only [keOf] at hkE
-    split at hkE
-    · cases hkE
-    rename_i hk0
+    split at hkE; cases hkE; rename_i hk0
     simp only [Option.some.injEq] at hkE
     have e4 : rdW (m.arr64 IFR) (r + 4) = ke - 1 := Classical.byContradiction fun hne => h4 ⟨hk0, hne⟩
     rw [ix 4 (by decide)] at e4
@@ -188,10 +168,7 @@ theorem recsGoW_twin {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     rename_i hlt
     have hj1 := wsucc j rn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    cases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with
-    | none => rw [hr, uK_none] at h; cases h
-    | some u =>
-    rw [hr, uK_some] at h
+    rcases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with _ | u <;> simp only [hr, uK, reduceCtorEq] at h
     by_cases hkj : k = j.toNat
     · subst hkj
       have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
@@ -258,9 +235,7 @@ theorem unsafeW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : 
     rename_i hlt
     have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    split at h
-    · cases h
-    rename_i h0
+    split at h; cases h; rename_i h0
     by_cases hkj : k = j.toNat
     · subst hkj
       have hix : (to + 11 * j + 7).toNat = to.toNat + 11 * j.toNat + 7 := widx _ _ _ _ (by simp; omega)
@@ -289,9 +264,7 @@ theorem npGoW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : 
     rename_i hlt
     have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    split at h
-    · cases h
-    rename_i h0
+    split at h; cases h; rename_i h0
     by_cases hkj : k = j.toNat
     · subst hkj
       have hix : (to + 11 * j + 10).toNat = to.toNat + 11 * j.toNat + 10 := widx _ _ _ _ (by simp; omega)
@@ -320,10 +293,7 @@ theorem nparamsW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn n
     simp
   rename_i h0
   have hne : tys ≠ [] := fun e => h0 (by apply UInt64.toNat_inj.mp; rw [htn, e]; rfl)
-  cases hg : npGoW n m to tn (rdW (m.arr64 IFR) (to + 10)) 0 with
-  | none => rw [hg, unitK_none] at h; cases h
-  | some u =>
-  rw [hg, unitK_some] at h
+  rcases hg : npGoW n m to tn (rdW (m.arr64 IFR) (to + 10)) 0 with _ | u <;> simp only [hg, unitK, reduceCtorEq] at h
   cases h
   have hall := npGoW_twin hL htn hto n 0 hg
   have h0' : 0 < tys.length := by cases tys with | nil => exact absurd rfl hne | cons _ _ => simp

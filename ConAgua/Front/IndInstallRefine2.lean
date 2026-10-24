@@ -178,11 +178,9 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   have hps := hD.psize
   have hpt := hD.ptop
   unfold typeW at h
-  cases h1 : allocW m DLP 20 with
-  | none => rw [h1] at h; cases h
-  | some r =>
-  obtain ⟨q1, m₁⟩ := r
-  rw [h1] at h; simp only [allocK] at h
+  rcases h1 : allocW m DLP 20 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
+  · cases h
+  simp only [allocK] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
   simp only [show (20 : Word).toNat = 20 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
@@ -246,11 +244,9 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have hps := hD.psize
   have hpt := hD.ptop
   unfold ctorRW at h
-  cases h1 : allocW m DLP 7 with
-  | none => rw [h1] at h; cases h
-  | some r =>
-  obtain ⟨q1, m₁⟩ := r
-  rw [h1] at h; simp only [allocK] at h
+  rcases h1 : allocW m DLP 7 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
+  · cases h
+  simp only [allocK] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
   simp only [show (7 : Word).toNat = 7 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)

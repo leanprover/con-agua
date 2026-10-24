@@ -221,8 +221,7 @@ theorem allocW_facts (m m' : Mem) (a : ArrId) (ha : a = IFR ∨ a = IFL) (n o : 
   by_cases h2 : m.len64 a - (rdW (m.arr64 a) 0 + 1) < n
   · rw [if_pos h2] at h; cases h
   rw [if_neg h2] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hlen : (m.len64 a).toNat = (m.arr64 a).size :=
     UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)
   have ht : (rdW (m.arr64 a) 0).toNat = topN m a := rfl
@@ -274,33 +273,27 @@ theorem allocW_facts' (m m' : Mem) (a : ArrId) (n o : Word) (h : allocW m a n = 
   by_cases h2 : m.len64 a - (rdW (m.arr64 a) 0 + 1) < n
   · rw [if_pos h2] at h; cases h
   rw [if_neg h2] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact fun c hc => Mem.arr64_set64_ne _ _ _ _ _ hc
 
 theorem pushLW_facts (m m' : Mem) (x o : Word) (hR : Room m) (h : pushLW m x = some (o, m')) :
     o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + 1 ∧ Room m' ∧ Grow m m' ∧
       wd m' IFL (topN m IFL + 1) = x ∧ m'.arr64 IFR = m.arr64 IFR := by
   unfold pushLW at h
-  cases ha : allocW m IFL 1 with
-  | none => rw [ha] at h; cases h
-  | some om =>
-    obtain ⟨o₁, m₁⟩ := om
-    rw [ha, pushK_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨a1, a2, a3, a4, -, a6, a7⟩ := allocW_facts m m₁ IFL (.inr rfl) 1 o₁ hR ha
-    have h1 : (1 : Word).toNat = 1 := rfl
-    rw [h1] at a2 a6
-    have hin : o₁.toNat < (m₁.arr64 IFL).size := by rw [a4.fr.2.2.1 IFL]; omega
-    obtain ⟨g1, g2, g3⟩ := grow_set m₁ IFL (.inr rfl) o₁ x (topN m IFL + 1) (topN m IFL + 2)
-      (by omega) (by omega) (by omega)
-    refine ⟨a1, by rw [g3, a2], g2 a3, ⟨a4.fr.trans g1.fr, fun c hc => Nat.le_trans (a4.top c hc) (g1.top c hc),
-      fun c hc j hj1 hj2 hj3 => ?_⟩, by rw [← a1]; exact wd_set64_same _ _ _ _ hin, ?_⟩
-    · rw [g1.keep c hc j hj1 (Nat.le_trans hj2 (a4.top c hc)) (fun hh => by obtain ⟨hc', h5, -⟩ := hh; rw [hc'] at hj2; omega)]
-      exact a4.keep c hc j hj1 hj2 hj3
-    · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      exact a7 IFR (by decide)
+  rcases ha : allocW m IFL 1 with _ | ⟨o₁, m₁⟩ <;> simp only [ha, pushK, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a1, a2, a3, a4, -, a6, a7⟩ := allocW_facts m m₁ IFL (.inr rfl) 1 o₁ hR ha
+  have h1 : (1 : Word).toNat = 1 := rfl
+  rw [h1] at a2 a6
+  have hin : o₁.toNat < (m₁.arr64 IFL).size := by rw [a4.fr.2.2.1 IFL]; omega
+  obtain ⟨g1, g2, g3⟩ := grow_set m₁ IFL (.inr rfl) o₁ x (topN m IFL + 1) (topN m IFL + 2)
+    (by omega) (by omega) (by omega)
+  refine ⟨a1, by rw [g3, a2], g2 a3, ⟨a4.fr.trans g1.fr, fun c hc => Nat.le_trans (a4.top c hc) (g1.top c hc),
+    fun c hc j hj1 hj2 hj3 => ?_⟩, by rw [← a1]; exact wd_set64_same _ _ _ _ hin, ?_⟩
+  · rw [g1.keep c hc j hj1 (Nat.le_trans hj2 (a4.top c hc)) (fun hh => by obtain ⟨hc', h5, -⟩ := hh; rw [hc'] at hj2; omega)]
+    exact a4.keep c hc j hj1 hj2 hj3
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    exact a7 IFR (by decide)
 
 /-! ## `ifl_ids` -/
 
@@ -373,24 +366,20 @@ theorem idsM_facts (b : Array UInt8) (m m' : Mem) (v : Word) (hR : Room m)
       (rdW (m.arr64 IFL) 0 + 1).toNat = topN m IFL + 1 ∧
       (lsCntN b (v + 1) 0).toNat = (listN b v).length := by
   unfold idsM at h
-  cases ha : allocW m IFL 0 with
-  | none => rw [ha, idsK0_none] at h; cases h
-  | some om =>
-    obtain ⟨o, m₁⟩ := om
-    rw [ha, idsK0_some] at h
-    obtain ⟨a1, a2, a3, a4, -, -, a7⟩ := allocW_facts m m₁ IFL (.inr rfl) 0 o hR ha
-    have a2' : topN m₁ IFL = topN m IFL := by rw [a2]; rfl
-    obtain ⟨i1, i2, i3, i4, i5, i6⟩ := idsLoopM_facts b m₁ (v + 1) m' h a3
-    have hlist : listN b v = itemsN b (v + 1) := rfl
-    have hs := i2.2.2.2
-    have hs2 := i2.2.1
-    refine ⟨by rw [hlist, i1, a2'], i2, a4.trans i3, i4.trans (a7 IFR (by decide)),
-      fun k hk => by rw [← a2']; exact i5 k hk, i6, ?_, ?_⟩
-    · have ht : (rdW (m.arr64 IFL) 0).toNat = topN m IFL := rfl
-      have := hR.2.2.2
-      have := hR.2.1
-      rw [UInt64.toNat_add, ht, UInt64.toNat_one, Nat.mod_eq_of_lt (by omega)]
-    · rw [lsCntN_len b _ _ (by rw [hlist] at *; simp; omega)]; simp [hlist]
+  rcases ha : allocW m IFL 0 with _ | ⟨o, m₁⟩ <;> simp only [ha, idsK0, reduceCtorEq] at h
+  obtain ⟨a1, a2, a3, a4, -, -, a7⟩ := allocW_facts m m₁ IFL (.inr rfl) 0 o hR ha
+  have a2' : topN m₁ IFL = topN m IFL := by rw [a2]; rfl
+  obtain ⟨i1, i2, i3, i4, i5, i6⟩ := idsLoopM_facts b m₁ (v + 1) m' h a3
+  have hlist : listN b v = itemsN b (v + 1) := rfl
+  have hs := i2.2.2.2
+  have hs2 := i2.2.1
+  refine ⟨by rw [hlist, i1, a2'], i2, a4.trans i3, i4.trans (a7 IFR (by decide)),
+    fun k hk => by rw [← a2']; exact i5 k hk, i6, ?_, ?_⟩
+  · have ht : (rdW (m.arr64 IFL) 0).toNat = topN m IFL := rfl
+    have := hR.2.2.2
+    have := hR.2.1
+    rw [UInt64.toNat_add, ht, UInt64.toNat_one, Nat.mod_eq_of_lt (by omega)]
+  · rw [lsCntN_len b _ _ (by rw [hlist] at *; simp; omega)]; simp [hlist]
 
 /-! ## The generic record loop -/
 
@@ -447,8 +436,7 @@ theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanR
     · obtain ⟨rfl, hF⟩ := H.close i w seen st m d e hi h125 h hR
       rw [objLoopW_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125] at hm
-      simp only [Option.some.injEq, Prod.mk.injEq] at hm
-      obtain ⟨rfl, rfl⟩ := hm
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
       exact ⟨(succ_toUInt64 b h64 hsize i).symm, hF⟩
     by_cases h44 : byteAt b i = 44
     · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
@@ -573,8 +561,7 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
     by_cases h93 : byteAt b i = 93
     · obtain ⟨rfl, rfl⟩ := HG.close i acc w l e hi h93 h
       rw [listLoopW_close _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h93]; rfl)] at hm
-      simp only [Option.some.injEq, Prod.mk.injEq] at hm
-      obtain ⟨rfl, rfl⟩ := hm
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
       refine ⟨rfl, by simp [hc], (succ_toUInt64 b h64 hsize i).symm, hrun, IGrow.refl _ _ _ _, hR,
         by simpa using ho, hQr _⟩
     by_cases h44 : byteAt b i = 44
@@ -587,16 +574,8 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
     · obtain ⟨x, e₁, hS, hie, h'⟩ := HG.item i acc w l e hi h123 h
       rw [listLoopW_open _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h123]; decide)
         (by rw [byteW_eq b h64 hsize, h123]; rfl), hfa] at hm
-      cases hal : allocW m A (indSizeN sub) with
-      | none => rw [hal, listK1_none] at hm; cases hm
-      | some qm =>
-      obtain ⟨q, m₁⟩ := qm
-      rw [hal, listK1_some] at hm
-      cases hob : objW b.data (flagsW m₁ sub q) i.toUInt64 sub q with
-      | none => rw [hob, listK2_none] at hm; cases hm
-      | some em =>
-      obtain ⟨e₂, m₂⟩ := em
-      rw [hob, listK2_some] at hm
+      rcases hal : allocW m A (indSizeN sub) with _ | ⟨q, m₁⟩ <;> simp only [hal, listK1, reduceCtorEq] at hm
+      rcases hob : objW b.data (flagsW m₁ sub q) i.toUInt64 sub q with _ | ⟨e₂, m₂⟩ <;> simp only [hob, listK2, reduceCtorEq] at hm
       obtain ⟨t1, t2, t3, t4, t5, t6⟩ := item i m m₁ q x e₁ e₂ m₂ hi h123 hS hR hal hob
       subst t1
       rw [if_pos ((lt_toUInt64_iff _ _).mp hie)] at hm
@@ -762,12 +741,9 @@ theorem num_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
   unfold numW at hmem
   obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
   rw [hsl] at hmem
-  split at hmem
-  · cases hmem
-  rename_i hx
+  split at hmem; cases hmem; rename_i hx
   rw [if_neg (by decide)] at hmem
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-  obtain ⟨rfl, rfl⟩ := hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨rfl, _, rfl, hnum hx⟩
 
 /-- An optional number key (slot `(6, s, _)`): the flag `1`, then the number. -/
@@ -783,12 +759,9 @@ theorem opt_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
   unfold numW at hmem
   obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
   rw [hsl] at hmem
-  split at hmem
-  · cases hmem
-  rename_i hx
+  split at hmem; cases hmem; rename_i hx
   rw [if_pos rfl] at hmem
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-  obtain ⟨rfl, rfl⟩ := hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨rfl, _, rfl, hnum hx⟩
 
 /-- A Boolean key (slot `(2, s, _)`). -/
@@ -801,8 +774,7 @@ theorem bool_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (x : Bool) (
   unfold boolW at hmem
   obtain ⟨hh, hend, hval⟩ := boolV_link b h64 hsize v x e hx
   rw [if_neg hh, if_pos rfl] at hmem
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-  obtain ⟨rfl, rfl⟩ := hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend, by rw [← hval]; rfl⟩
 
 /-- A Boolean key read past (slot `(8, _, _)`). -/
@@ -815,8 +787,7 @@ theorem boolp_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (x : Bool) 
   unfold boolW at hmem
   obtain ⟨hh, hend, -⟩ := boolV_link b h64 hsize v x e hx
   rw [if_neg hh, if_neg (by decide)] at hmem
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-  obtain ⟨rfl, rfl⟩ := hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend, rfl⟩
 
 /-- A number list's position (slot `(3, s, _)`, `levelParams`). -/
@@ -829,8 +800,7 @@ theorem lps_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
     show ¬ ((3 : Word) = 2 ∨ (3 : Word) = 8) by decide, true_or, if_true, if_false] at hmem
   unfold nlistW at hmem
   rw [if_pos rfl] at hmem
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-  obtain ⟨rfl, rfl⟩ := hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
   exact ⟨hend.symm, rfl, list_link b h64 hsize v xs e hx⟩
@@ -846,8 +816,7 @@ theorem all_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
     if_false] at hmem
   unfold nlistW at hmem
   rw [if_neg (by decide), if_neg (by decide)] at hmem
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-  obtain ⟨rfl, rfl⟩ := hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
   exact ⟨hend.symm, rfl⟩
@@ -866,13 +835,9 @@ theorem ids_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
   rw [if_neg (by decide), if_pos rfl] at hmem
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
-  cases hi : idsM b.data m v.toUInt64 with
-  | none => rw [hi, nlK_none] at hmem; cases hmem
-  | some m₁ =>
-    rw [hi, nlK_some] at hmem
-    simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-    obtain ⟨rfl, rfl⟩ := hmem
-    exact ⟨hend.symm, m₁, rfl, rfl, list_link b h64 hsize v xs e hx⟩
+  rcases hi : idsM b.data m v.toUInt64 with _ | m₁ <;> simp only [hi, nlK, reduceCtorEq] at hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
+  exact ⟨hend.symm, m₁, rfl, rfl, list_link b h64 hsize v xs e hx⟩
 
 /-- A list of records (slot `(7, s, sub)`). -/
 theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
@@ -886,14 +851,9 @@ theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
     show ¬ ((7 : Word) = 3 ∨ (7 : Word) = 4 ∨ (7 : Word) = 5) by decide, if_true,
     if_false] at hmem
   rw [if_pos ((lt_toUInt64_iff _ _).mp hiv)] at hmem
-  cases hl : listW b.data m v.toUInt64 sub with
-  | none => rw [hl, memK_none] at hmem; cases hmem
-  | some r =>
-    obtain ⟨⟨o, c, e₁⟩, m₁⟩ := r
-    rw [hl, memK_some] at hmem
-    simp only [Option.some.injEq, Prod.mk.injEq] at hmem
-    obtain ⟨rfl, rfl⟩ := hmem
-    exact ⟨o, c, m₁, rfl, rfl⟩
+  rcases hl : listW b.data m v.toUInt64 sub with _ | ⟨⟨o, c, e₁⟩, m₁⟩ <;> simp only [hl, memK, reduceCtorEq] at hmem
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
+  exact ⟨o, c, m₁, rfl, rfl⟩
 
 end arms
 

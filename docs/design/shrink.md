@@ -254,3 +254,47 @@ statements may change; census targets/links and the end-to-end statement/axioms 
   **33557 → 32457 (−1100) in 69 files**; DeclCanonExpr2 5.2 → 3.2 s, WhnfSpineRefine 4.1 → 2.8 s.
 * Totals batch 5: `loc.py` proof lines on master 310312 (other lanes added ~1.2k since batch 4)
   → 307165 (**−3147**). Full rebuild 18 min wall (119 CPU-min). Census unchanged; axioms unchanged.
+
+### Batch 6: helpers `shrink-sc`, `shrink-front`, `shrink-front2` (2026-10-24)
+
+* **`shrink-sc`** (Scan, Compiler, AsmFile, Checker Hoist*/Front*/LoopDecl*, Rom): 34 single-use
+  `_step_spec` wrappers inlined into `vcgen`, `FrontProgAgree` as one list and one `front_agree`
+  call (−117 lines, 14 → 7.5 s), 15 identical branches of `LineLink` as one group, ~75 scripted
+  callee splits, `HoistClosureL` arithmetic by `omega`: −945 in 34 files. Its compiler part
+  (`sim_pair` for the operand-spilling sequence, one `sim_st` for `st64`/`st8`, −218 lines in
+  `SimExpr`/`SimStore`) conflicted with lane `tierarr`'s new tiered-access cases in the same
+  places and was dropped in the merge (master's version kept); worth redoing on top of tierarr.
+* **`shrink-front`** (stalled 2 h, then finished one file): `Scan/KeyLink` `keyAt_eq_keyAtN` by one
+  local `byteAt`/`byteW` bridge and a `split <;> simp` instead of eleven position lemmas and ~20
+  hand arms: **570 → 124 (−446)**, 2.6 → 1.5 s.
+* **`shrink-front2`** (Front links, IndApplyRefine*, IndInstallRefine*, FrontPreOK*, DeclAxiomSpec*,
+  DeclReduceSpec*, InstLPRef*/InstLPWalkRef*): 134 scripted one-line callee splits (not `of_K`:
+  after a later `obtain ⟨rfl, …⟩` the shadowed hypothesis can resurface), `stdAxiomOk_eq`'s two
+  50-line blocks as one, `nm_key_le`/`le_numEnd`/`num_val` for the record loops:
+  **12722 → 11836 (−886) in 33 files**; elaboration unchanged.
+* Totals batch 6: `loc.py` proof lines on master 308279 → 306220 (**−2059**). Full rebuild 24 min
+  wall (117 CPU-min, machine loaded). Census unchanged; axioms unchanged.
+
+## Summary so far
+
+| batch | what | proof lines |
+|---|---|---:|
+| 1 | pilot B (natOpDeps table, DeclNatEq `Sim`), Capstone/DriverLink/Spike, Sim/AFr dedup | −2200 |
+| 2 | A pilot (low yield), dead-code cone, helpers decl/promote/whnf | −3772 |
+| 3 | D: six large program bundles as `ProgHas` | −318 |
+| 4 | helpers pos/rec/chk | −5749 |
+| 5 | helpers inst/iota/core | −3147 |
+| 6 | helpers sc/front/front2 | −2059 |
+| | **total** | **−17245** |
+
+From 321147 (lane start, new `loc.py` rule) the lane removed 17.2k proof lines (5.4 %); master is
+at 306220 with other lanes' additions. Observations:
+* The B/C rollout gives 4–13 % per area, more in old-style relational files (per-callee case splits,
+  replayed binds, hand frame lemmas), little in the StageC/`CoreRef`/`Sim` files that were already
+  written compactly. Build time did not grow (most files equal or faster; three files ±30 %).
+* What remains large is the model/spec layer (~56k lines): `l_model` cannot take 38 % of the
+  functions (several results, loops) and retrofitting moves names in every refinement. Extending
+  `l_model` with several-result returns and loops is the precondition for any further big cut.
+* Open small items: the compiler `sim_pair`/`sim_st` refactor redone on top of tierarr (~−200);
+  `cR` drop (~−150, touches ~45 files); the remaining 4-line `simp only [St.setLoc_loc, …]` lists
+  after `vcgen` (~−120 with a simp set).

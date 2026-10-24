@@ -111,12 +111,8 @@ theorem piResW_ok : ∀ (n : Nat) (f h r : Word), piResW n m f h = some r →
   | succ n ih =>
     intro f h r hw
     simp only [piResW] at hw
-    split at hw
-    · cases hw
-    rename_i hf
-    split at hw
-    · cases hw
-    rename_i hne
+    split at hw; cases hw; rename_i hf
+    split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
     rw [fuel_pred hf, ConRon.Arena.Frontend.piResultD, run_bind _ _ a _ hv]
     split at hw
@@ -138,29 +134,22 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
   | succ n ih =>
     intro f h r hw
     simp only [teleW] at hw
-    split at hw
-    · cases hw
-    rename_i hf
-    split at hw
-    · cases hw
-    rename_i hne
+    split at hw; cases hw; rename_i hf
+    split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
     have hf1 := fuel_pred hf
     rw [hf1, ConRon.Arena.Frontend.indPiTeleLen, run_bind _ _ a _ hv]
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      cases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with
-      | none => rw [hrec] at hw; cases hw
-      | some r' =>
-        rw [hrec, teleK_some] at hw
-        cases hw
-        obtain ⟨h1, h2⟩ := ih _ _ _ hrec
-        simp only
-        rw [run_bind _ _ a _ h1]
-        have hlt : (f - 1).toNat < 2 ^ 64 := UInt64.toNat_lt _
-        have : (r' + 1).toNat = r'.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-        exact ⟨by rw [this]; rfl, by omega⟩
+      rcases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | r' <;> simp only [hrec, teleK, reduceCtorEq] at hw
+      cases hw
+      obtain ⟨h1, h2⟩ := ih _ _ _ hrec
+      simp only
+      rw [run_bind _ _ a _ h1]
+      have hlt : (f - 1).toNat < 2 ^ 64 := UInt64.toNat_lt _
+      have : (r' + 1).toNat = r'.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      exact ⟨by rw [this]; rfl, by omega⟩
     · rename_i h6
       cases hw
       refine ⟨?_, by simp only [UInt64.toNat_zero]; omega⟩
@@ -177,37 +166,29 @@ theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some
   | succ n ih =>
     intro f h ok r hw
     simp only [sortTeleW] at hw
-    split at hw
-    · cases hw
-    rename_i hf
-    split at hw
-    · cases hw
-    rename_i hne
+    split at hw; cases hw; rename_i hf
+    split at hw; cases hw; rename_i hne
     obtain ⟨v, hv, hr⟩ := view_ok' m a hR h hne
     have hf1 := fuel_pred hf
     rw [hf1, piSortTeleLen?, run_bind _ _ a _ hv]
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      cases hrec : sortTeleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with
-      | none => rw [hrec] at hw; cases hw
-      | some q =>
-        obtain ⟨ok', r'⟩ := q
-        rw [hrec, stK_some] at hw
-        obtain ⟨h1, h2⟩ := ih _ _ _ _ hrec
-        simp only
-        rw [run_bind _ _ a _ h1]
-        by_cases hok : ok' = 0
-        · rw [if_pos hok] at hw
-          cases hw
-          simp only [hok, if_true, Option.map_none]
-          exact ⟨rfl, by simp⟩
-        · rw [if_neg hok] at hw
-          cases hw
-          have : (r' + 1).toNat = r'.toNat + 1 := by
-            rw [UInt64.toNat_add]; simp; have := UInt64.toNat_lt (f - 1); omega
-          simp only [hok, if_false, Option.map_some, this, show (1 : Word) ≠ 0 by decide]
-          exact ⟨rfl, by omega⟩
+      rcases hrec : sortTeleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | ⟨ok', r'⟩ <;> simp only [hrec, stK, reduceCtorEq] at hw
+      obtain ⟨h1, h2⟩ := ih _ _ _ _ hrec
+      simp only
+      rw [run_bind _ _ a _ h1]
+      by_cases hok : ok' = 0
+      · rw [if_pos hok] at hw
+        cases hw
+        simp only [hok, if_true, Option.map_none]
+        exact ⟨rfl, by simp⟩
+      · rw [if_neg hok] at hw
+        cases hw
+        have : (r' + 1).toNat = r'.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; have := UInt64.toNat_lt (f - 1); omega
+        simp only [hok, if_false, Option.map_some, this, show (1 : Word) ≠ 0 by decide]
+        exact ⟨rfl, by omega⟩
     · rename_i h6
       split at hw
       · rename_i h2
@@ -242,13 +223,10 @@ theorem ctlSumW_eq : ∀ (n : Nat) (m : Mem) (k c s : Word), ctlSumW n m k c = s
     split at h
     · cases h; rename_i hc; subst hc; rfl
     · rename_i hc
-      cases hr : ctlSumW n m (k + 1) (c - 1) with
-      | none => rw [hr] at h; cases h
-      | some r =>
-        rw [hr, addK_some] at h
-        cases h
-        rw [ih _ _ _ _ hr, fuel_pred hc]
-        rfl
+      rcases hr : ctlSumW n m (k + 1) (c - 1) with _ | r <;> simp only [hr, addK, reduceCtorEq] at h
+      cases h
+      rw [ih _ _ _ _ hr, fuel_pred hc]
+      rfl
 
 /-- **`store_fuel` is the twin's `storeFuel`**: the store's node count `+ 1`. -/
 @[refines ConRon.Arena.Frontend.storeFuel]
@@ -348,23 +326,17 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     ∃ v, (viewN (decI w)).run a = .ok (v, a) ∧ (f ≠ 0 → v = .str (decI T) "rec" ∧ T.toNat < 2 ^ 32) ∧
       (f = 0 → ∀ T', v ≠ .str T' "rec") := by
   unfold nrpW at h
-  split at h
-  · cases h
-  rename_i hb
+  split at h; cases h; rename_i hb
   have hw : w.toNat < 2 ^ 32 := by
     have : ¬ (4294967295 : Nat) < w.toNat := hb
     omega
-  split at h
-  · cases h
-  rename_i hs
+  split at h; cases h; rename_i hs
   have hv := nview_tier hR w hw hs
   have ht1 : tierW w ≤ 1 := tierW_le w
   split at h
   · -- anonymous
     rename_i hg
-    split at h
-    · cases h
-    rename_i hc
+    split at h; cases h; rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW w) ht1 (idxW w)
       (UInt64.not_le.mp hc)
@@ -377,9 +349,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   split at h
   · -- num
     rename_i hg0 hg
-    split at h
-    · cases h
-    rename_i hc
+    split at h; cases h; rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
       (UInt64.not_le.mp hc)
@@ -389,13 +359,9 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     by_cases ht : tierW w = 0
     · rw [if_pos ht] at hx; simp [ht, hx]
     · rw [if_neg ht] at hx; simp [ht, hx]
-  split at h
-  · cases h
-  rename_i hg0 hg2 hg1
+  split at h; cases h; rename_i hg0 hg2 hg1
   have hg : w >>> 28 = 1 := by simpa using hg1
-  split at h
-  · cases h
-  rename_i hc
+  split at h; cases h; rename_i hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.nstr (tierW w) ht1 (idxW w)
     (UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by

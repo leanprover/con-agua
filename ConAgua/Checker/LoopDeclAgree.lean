@@ -55,14 +55,9 @@ theorem cvgOwn_of : ∀ f ∈ cvgFns, f ∉ openFns →
     f ∈ cvgOwn0 ++ (cvgOwn1 ++ cvgOwn2) := by
   decide +kernel
 
-theorem checkerProg_cvgAgree : ∀ f ∈ cvgFns, f ∉ openFns → checkerProg.lookup f = cvgProg.lookup f := by
-  intro f hf ho
-  have h := cvgOwn_of f hf ho
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_cvgOwn0 f h
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_cvgOwn1 f h
-  exact checkerProg_cvgOwn2 f h
+theorem checkerProg_cvgAgree : ∀ f ∈ cvgFns, f ∉ openFns → checkerProg.lookup f = cvgProg.lookup f :=
+  fun f hf ho => (List.mem_append.1 (cvgOwn_of f hf ho)).elim (checkerProg_cvgOwn0 f) fun h =>
+    (List.mem_append.1 h).elim (checkerProg_cvgOwn1 f) (checkerProg_cvgOwn2 f)
 
 /-- `ivFns` but `openFns`, part 0. -/
 def ivOwn0 : List FnName :=
@@ -89,11 +84,7 @@ theorem ivOwn_of : ∀ f ∈ ivFns, f ∉ openFns →
     f ∈ ivOwn0 ++ ivOwn1 := by
   decide +kernel
 
-theorem checkerProg_ivAgree : ∀ f ∈ ivFns, f ∉ openFns → checkerProg.lookup f = ivProg.lookup f := by
-  intro f hf ho
-  have h := ivOwn_of f hf ho
-  rcases List.mem_append.1 h with h | h
-  · exact checkerProg_ivOwn0 f h
-  exact checkerProg_ivOwn1 f h
+theorem checkerProg_ivAgree : ∀ f ∈ ivFns, f ∉ openFns → checkerProg.lookup f = ivProg.lookup f :=
+  fun f hf ho => (List.mem_append.1 (ivOwn_of f hf ho)).elim (checkerProg_ivOwn0 f) (checkerProg_ivOwn1 f)
 
 end L.Checker

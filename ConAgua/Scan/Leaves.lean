@@ -81,13 +81,6 @@ theorem skipWsLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := skipWsLoop) rfl]
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
-theorem skipWsLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hi : (s₀.loc 0).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) skipWsLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 0 = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat); ⊤⦄ :=
-  Triple.step_exec (skipWsLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
 @[refines ConLeche.Frontend.skipWs]
@@ -101,7 +94,7 @@ theorem skipWs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, skipWsLoop_step_spec p b hb n] <;> finish
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, fun s₀ hm hi => Triple.step_exec (skipWsLoop_spec p b hb (n + 1) s₀ hm hi)] <;> finish
 
 end skipWs
 
@@ -175,13 +168,6 @@ theorem skipDigitsLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := skipDigitsLoop) rfl]
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
-theorem skipDigitsLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hi : (s₀.loc 0).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) skipDigitsLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 0 = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat); ⊤⦄ :=
-  Triple.step_exec (skipDigitsLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
 @[refines ConLeche.Frontend.skipDigits]
@@ -196,7 +182,7 @@ theorem skipDigits_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalArgs, skipDigitsLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, fun s₀ hm hi => Triple.step_exec (skipDigitsLoop_spec p b hb (n + 1) s₀ hm hi)] <;> finish
 
 end skipDigits
 
@@ -248,13 +234,6 @@ theorem newlineFromLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := newlineFromLoop) rfl]
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
-theorem newlineFromLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hi : (s₀.loc 0).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) newlineFromLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0] = [UInt64.ofNat (newlineFromN b (s₀.loc 0).toNat)]; ⊤⦄ :=
-  Triple.step_exec (newlineFromLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
 @[refines ConLeche.Frontend.newlineFrom]
@@ -269,7 +248,7 @@ theorem newlineFrom_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalArgs, newlineFromLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, fun s₀ hm hi => Triple.step_exec (newlineFromLoop_spec p b hb (n + 1) s₀ hm hi)] <;> finish
 
 end newlineFrom
 
@@ -330,13 +309,6 @@ theorem keyEndLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := keyEndLoop) rfl]
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
-theorem keyEndLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hj : (s₀.loc 0).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) keyEndLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0] = [UInt64.ofNat (keyEndN b (s₀.loc 0).toNat)]; ⊤⦄ :=
-  Triple.step_exec (keyEndLoop_spec p b hb (n + 1) s₀ hm hj)
 
 include hp in
 @[refines ConLeche.Frontend.keyEnd]
@@ -350,7 +322,7 @@ theorem keyEnd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, keyEndLoop_step_spec p b hb n] <;> finish
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, fun s₀ hm hj => Triple.step_exec (keyEndLoop_spec p b hb (n + 1) s₀ hm hj)] <;> finish
 
 end keyEnd
 
@@ -406,13 +378,6 @@ theorem hasEscapeLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     rw [exec, step_while (w := hasEscapeLoop) rfl]
     sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
-theorem hasEscapeLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hj : (s₀.loc 0).toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) hasEscapeLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0] = [UInt64.ofNat (hasEscapeN b (s₀.loc 0).toNat (s₀.loc 1).toNat)]; ⊤⦄ :=
-  Triple.step_exec (hasEscapeLoop_spec p b hb (n + 1) s₀ hm hj)
 
 include hp in
 @[refines ConLeche.Frontend.hasEscape]
@@ -426,7 +391,7 @@ theorem hasEscape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, hasEscapeLoop_step_spec p b hb n] <;> finish
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, fun s₀ hm hj => Triple.step_exec (hasEscapeLoop_spec p b hb (n + 1) s₀ hm hj)] <;> finish
 
 end hasEscape
 
