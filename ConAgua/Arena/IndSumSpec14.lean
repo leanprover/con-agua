@@ -104,17 +104,14 @@ theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
       exact h.2.symm
     | @cons _ _ ws hl hs =>
       rw [efgW_cons n m q o l hl] at h
-      cases h1 : efgW n (m.set64 EREC q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1) with
-      | none => rw [h1] at h; cases h
-      | some x =>
-        obtain ⟨r1, m1⟩ := x
-        rw [h1, efgK_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨-, rfl⟩ := h
-        show m1 = wrER (m.set64 EREC q (rdW (m.arr64 IW) o)) (q + 1) ws
-        have hI : (m.set64 EREC q (rdW (m.arr64 IW) o)).arr64 IW = m.arr64 IW :=
-          Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-        exact ih _ _ _ _ _ _ _ h1 (slR_congr hI hs)
+      obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+      rw [efgK_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      show m1 = wrER (m.set64 EREC q (rdW (m.arr64 IW) o)) (q + 1) ws
+      have hI : (m.set64 EREC q (rdW (m.arr64 IW) o)).arr64 IW = m.arr64 IW :=
+        Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+      exact ih _ _ _ _ _ _ _ h1 (slR_congr hI hs)
 
 /-- Handle words at `q, q + 1, …` decode as the handle list. -/
 theorem sumHslice_of_get {k : IdxKind} {a : Array Word} : ∀ (ws : List Word) (q : Nat),
@@ -139,16 +136,10 @@ theorem efW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧ (r.headD 0).toNat = erTop m ∧
       hslice? (erecP m') (r.headD 0).toNat l.toNat = some xs ∧ erTop m' = erTop m + l.toNat := by
   unfold efW at h
-  cases hal : erAllocW m l with
-  | none => rw [hal] at h; cases h
-  | some y =>
-  obtain ⟨q, m1⟩ := y
-  rw [hal, efK1_some] at h
-  cases hc : efgW n m1 q o l with
-  | none => rw [hc] at h; cases h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [hc, efK2_some] at h
+  obtain ⟨q, m1, hal, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [efK1_some] at h
+  obtain ⟨r2, m2, hc, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [efK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨ws, hws, rfl, hwl⟩ := slR_of_decHL m _ _ xs hd (hS.lt64 hb)

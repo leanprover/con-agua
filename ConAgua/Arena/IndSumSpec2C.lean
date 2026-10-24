@@ -46,18 +46,11 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [fdrW_cons n m v o l hl, hw] at h
-      cases h1 : ftdF m [w] with
-      | none => rw [h1] at h; simp [fdrK1] at h
-      | some x1 =>
-      obtain ⟨ra, m1⟩ := x1
-      rw [h1, fdrK1_some] at h
+      obtain ⟨ra, m1, h1, h⟩ := kSome_inv h (by simp [fdrK1]) (fun _ _ => rfl)
+      rw [fdrK1_some] at h
       obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := ftdF_ok dn v fe w hw32 m m1 a ra h1 hS
       have hA1 := ftdF_afr h1 hA
-      cases h2 : crfF m1 [v, ra.headD 0] with
-      | none => rw [h2] at h; simp [fdrK2] at h
-      | some x2 =>
-      obtain ⟨rb, m2⟩ := x2
-      rw [h2] at h
+      obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [fdrK2]) (fun _ _ => rfl)
       obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, hc1⟩, hA2⟩ :=
         crfF_ok dn v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 ⟨hS1, hA1⟩
       have hrun12 : ∀ (k : Bool → AM Bool),
@@ -80,11 +73,8 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       · rw [fdrK2_yes n m2 v o l rb hz] at h
         have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
         subst hc
-        cases h3 : fdrW n m2 v (o + 1) (l - 1) with
-        | none => rw [h3] at h; simp [resK] at h
-        | some x3 =>
-        obtain ⟨r3, m3⟩ := x3
-        rw [h3, resK_some] at h
+        obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+        rw [resK_some] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         have hg12 := hg1.trans hg2
@@ -116,11 +106,7 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
     · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
       obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
       rw [iarW_cons n m v o l hl, hw] at h
-      cases h2 : crfF m [v, w] with
-      | none => rw [h2] at h; simp [iarK] at h
-      | some x2 =>
-      obtain ⟨rb, m2⟩ := x2
-      rw [h2] at h
+      obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [iarK]) (fun _ _ => rfl)
       obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, hc1⟩, hA2⟩ :=
         crfF_ok dn v fe w hw32 m m2 a rb h2 ⟨hS, hA⟩
       have hrun12 : ∀ (k : Bool → AM Bool),
@@ -142,11 +128,8 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
       · rw [iarK_yes n m2 v o l rb hz] at h
         have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
         subst hc
-        cases h3 : iarW n m2 v (o + 1) (l - 1) with
-        | none => rw [h3] at h; simp [resK'] at h
-        | some x3 =>
-        obtain ⟨r3, m3⟩ := x3
-        rw [h3, resK'_some] at h
+        obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+        rw [resK'_some] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨b3, a3, hrun3, ⟨hS3, hg3, hd3, hd31⟩, hA3⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2

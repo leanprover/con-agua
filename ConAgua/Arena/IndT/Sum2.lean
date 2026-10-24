@@ -67,11 +67,8 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   rw [hw'] at h
   have hdw : denoteE a.store (decI w) = some cvTaP.type := by
     rw [hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP
-  cases h1 : wtW (realCall p) k m vis 0 n w with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, ctsK1_some] at h
+  obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [ctsK1_some] at h
   obtain ⟨⟨bs, s⟩, a1, hrun1, hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ :=
     wtW_simC hq henv k (by omega) m a 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws _ h1
   dsimp only at hC1 hg1 hd1 ht1 hs32 hs hA1
@@ -81,11 +78,7 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 n.toNat (decI w) cvTaP.type hws a a1 (bs, s)
     hC.check ⟨hdw, hfe⟩ hrun1
   dsimp only at hbs hsP
-  cases h2 : sointernW m1 (r1.tail.tail.headD 0) with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨ss, m2⟩ := x2
-  rw [h2] at h
+  obtain ⟨ss, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   by_cases hss : 4294967296 ≤ ss
   · rw [ctsK2_big _ k m2 vis cv _ _ _ ss hss] at h; cases h
   rw [ctsK2_ok _ k m2 vis cv _ _ _ ss hss] at h
@@ -97,11 +90,8 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hS2 hA2 p2
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
     obtain ⟨hI, -, hsz1, -⟩ := hS1.2; simp only [iwTop] at hI ht1 ⊢; omega
-  cases h3 : closeW k m2 (r1.headD 0) (r1.tail.headD 0) 0 ss with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨rt, m3⟩ := x3
-  rw [h3, ctsK3_some] at h
+  obtain ⟨rt, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [ctsK3_some] at h
   obtain ⟨ty, a3, hrun3, hS3, hg3, ⟨hty32, htyd⟩, hA3⟩ := closeW_ok k dn fe vis m2 m3 a2 _ _ 0 ss bs rt h3 hS2
     hss32 (by rw [decHL_grow hg2 ht1]; exact hd1) hb1 (by have := hg2.1; omega)
     (by rw [show (0 : Word).toNat = 0 from rfl]; omega) hA2
@@ -133,11 +123,8 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     obtain ⟨hn, hl, -⟩ := ConRon.Bridge.denoteCV_inv hcvP
     simp only [Frontend.denoteCV, ConRon.Bridge.denoteN_ext hn c3.ext,
       ConRon.Bridge.denoteNListE_ext c3.ext _ _ hl, htyd, hty]
-  cases h5 : realCall p k "check_constant_val" [vis, q] m4 with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, ctsK5_some] at h
+  obtain ⟨r5, m5, h5, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [ctsK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hqx : CVExt m4 q.toNat := ⟨by omega, fun lo ll e1 e2 => by
@@ -213,11 +200,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
     rw [← hw]; congr 1
   rw [hw'] at h
-  cases h1 : stripF 6 m [n, w] with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1] at h
+  obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 m m1 a r1 h1 hS
   have hdw : denoteE a.store (decI w) = some cvTaP.type := by
     rw [hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP
@@ -274,11 +257,8 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
       rfl
     | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
   · rw [ctK1_slow (realCall p) k m1 vis cv n cvTa0 r1 hf] at h
-    cases h2 : ctsW (realCall p) k m1 vis cv n cvTa0 with
-    | none => rw [h2] at h; cases h
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2, ctK2_some] at h
+    obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+    rw [ctK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hApd hCrk k (by omega)

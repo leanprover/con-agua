@@ -26,6 +26,15 @@ namespace L.Ind
 
 open L.Arena
 
+/-- **Inverting a model continuation** (`K none = none`, `K (some (r, m)) = body r m`): a result
+of `K o` comes from a result of `o`. Replaces `cases h : o | none => … | some …` blocks. -/
+theorem kSome_inv {β γ : Type} {K : Option (β × Mem) → Option γ} {body : β → Mem → Option γ}
+    {o : Option (β × Mem)} {y : γ} (h : K o = some y) (hn : K none = none)
+    (hs : ∀ r m, K (some (r, m)) = body r m) : ∃ r m, o = some (r, m) ∧ body r m = some y := by
+  rcases o with _ | ⟨r, m⟩
+  · rw [hn] at h; cases h
+  · exact ⟨r, m, rfl, hs r m ▸ h⟩
+
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `check_struct_doms_at` -/

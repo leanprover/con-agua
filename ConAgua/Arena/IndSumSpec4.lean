@@ -137,16 +137,10 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   | zero => cases h
   | succ k =>
   rw [plW_succ] at h
-  cases h1 : plgW k m o l with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, plK4_some] at h
-  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [h2] at h; cases h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2, plK5_some] at h
+  obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [plK4_some] at h
+  obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
@@ -206,11 +200,8 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   | zero => cases h
   | succ k =>
   rw [srW_succ] at h
-  cases h1 : plW k m lo ll with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, srK1_some] at h
+  obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [srK1_some] at h
   obtain ⟨us, a1, hrun1, hS1, hg1, hus, husd⟩ := plW_ok dn vis fe k m m1 a lo ll lps r1 h1 hS hd hb ht
   cases h2 : ceinternW m1 T (r1.headD 0) with
   | none => rw [h2] at h; cases h
@@ -222,17 +213,11 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   rw [srK2_ok k m2 nP o nIdx cbody hd' hbig] at h
   have hd32 : hd'.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ hd'.toNat := hbig; omega
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 T (r1.headD 0) hT hus h2
-  cases h3 : gafF m2 [CWF, cbody] with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨rf, m3⟩ := x3
-  rw [h3, srK3_some] at h
+  obtain ⟨rf, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [srK3_some] at h
   obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := gafF_ok dn vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
-  cases h4 : gaaF m3 [CWF, cbody] with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨ra, m4⟩ := x4
-  rw [h4, srK4_some] at h
+  obtain ⟨ra, m4, h4, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+  rw [srK4_some] at h
   obtain ⟨args, a4, hrun4, hS4, hg4, hargs, hat⟩ :=
     gaaF_ok dn vis fe CWF cbody hcb m3 m4 a3 ra h4 hS3
   cases h5 : psAtW k m4 o nP with
