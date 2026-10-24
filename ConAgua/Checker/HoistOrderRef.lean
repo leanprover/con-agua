@@ -88,23 +88,23 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
   have hsz := hI.2.2.1
   rw [hApplyW.arm1] at h
   rcases ha1 : allocW m c with _ | ⟨hd, m1⟩ <;> rw [ha1] at h
-  · rw [hApplyW.k8.eq_1] at h; cases h
-  rw [hApplyW.k8.arm1] at h
+  · rw [hApplyW.k_iw_alloc.eq_1] at h; cases h
+  rw [hApplyW.k_iw_alloc.arm1] at h
   obtain ⟨hq1, rfl, _, hr1, ht1⟩ := allocW_post ha1 hI
   have hI1 := iwok_alloc ha1 hI
   rcases ha2 : allocW (allocMem m c) c with _ | ⟨tl, m2⟩ <;> rw [ha2] at h
-  · rw [hApplyW.k7.eq_1] at h; cases h
-  rw [hApplyW.k7.arm1] at h
+  · rw [hApplyW.k_iw_alloc_2.eq_1] at h; cases h
+  rw [hApplyW.k_iw_alloc_2.arm1] at h
   obtain ⟨hq2, rfl, _, hr2, ht2⟩ := allocW_post ha2 hI1
   have hI2 := iwok_alloc ha2 hI1
   rcases ha3 : allocW (allocMem (allocMem m c) c) c with _ | ⟨nx, m3⟩ <;> rw [ha3] at h
-  · rw [hApplyW.k6.eq_1] at h; cases h
-  rw [hApplyW.k6.arm1] at h
+  · rw [hApplyW.k_iw_alloc_3.eq_1] at h; cases h
+  rw [hApplyW.k_iw_alloc_3.arm1] at h
   obtain ⟨hq3, rfl, _, hr3, ht3⟩ := allocW_post ha3 hI2
   have hI3 := iwok_alloc ha3 hI2
   rcases ha4 : allocW (allocMem (allocMem (allocMem m c) c) c) c with _ | ⟨out', m4⟩ <;> rw [ha4] at h
-  · rw [hApplyW.k5.eq_1] at h; cases h
-  rw [hApplyW.k5.arm1] at h
+  · rw [hApplyW.k_iw_alloc_4.eq_1] at h; cases h
+  rw [hApplyW.k_iw_alloc_4.arm1] at h
   obtain ⟨hq4, rfl, _, hr4, ht4⟩ := allocW_post ha4 hI3
   have hI4 := iwok_alloc ha4 hI3
   -- the four slices
@@ -125,13 +125,13 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
   have hs : (m.arr64 IW).size < 2 ^ 64 := hsz
   -- zero `hd`, zero `nx`
   rcases hz1 : hZeroW n m4 hd c 0 with _ | ⟨z5, m5⟩ <;> rw [hz1] at h
-  · rw [hApplyW.k4.eq_1] at h; cases h
-  rw [hApplyW.k4.arm1] at h
+  · rw [hApplyW.k_hoist_zero.eq_1] at h; cases h
+  rw [hApplyW.k_hoist_zero.arm1] at h
   obtain ⟨hf5, hv5⟩ := hZero_ok n m4 m5 hd c 0 z5 (by rw [hIW4]; omega) (by rw [hIW4]; omega) hz1
   have hs5 : (m5.arr64 IW).size = (m.arr64 IW).size := by rw [frame_size hf5, hIW4]
   rcases hz2 : hZeroW n m5 nx c 0 with _ | ⟨z6, m6⟩ <;> rw [hz2] at h
-  · rw [hApplyW.k3.eq_1] at h; cases h
-  rw [hApplyW.k3.arm1] at h
+  · rw [hApplyW.k_hoist_zero_2.eq_1] at h; cases h
+  rw [hApplyW.k_hoist_zero_2.arm1] at h
   obtain ⟨hf6, hv6⟩ := hZero_ok n m5 m6 nx c 0 z6 (by rw [hs5]; omega) (by rw [hs5]; omega) hz2
   have hs6 : (m6.arr64 IW).size = (m.arr64 IW).size := by rw [frame_size hf6, hs5]
   have hrd4 : ∀ i, rd m4 i = rd m i := fun i => by simp only [rd, hIW4]
@@ -139,8 +139,8 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
     rw [hv6 i (by omega), iteF (by simp; omega), hv5 i (by omega), iteF (by simp; omega), hrd4]
   -- buckets
   rcases hb : hBucketW n m6 tg c hd tl nx 0 with _ | ⟨z7, m7⟩ <;> rw [hb] at h
-  · rw [hApplyW.k2.eq_1] at h; cases h
-  rw [hApplyW.k2.arm1] at h
+  · rw [hApplyW.k_hoist_bucket.eq_1] at h; cases h
+  rw [hApplyW.k_hoist_bucket.arm1] at h
   have htg6 : ∀ j < c.toNat, rd m6 (tg.toNat + j) = tgW T[j]? := fun j hj => by
     rw [hlow6 _ (by omega)]; show rdW _ _ = _; rw [← addrN]; exact hT.1 j hj
   obtain ⟨hf7, hlow7, hB7⟩ := hBucket_ok T tg c hd tl nx (by omega) (by omega) (by omega) hlt n
@@ -154,8 +154,8 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
   have hs7 : (m7.arr64 IW).size = (m.arr64 IW).size := by rw [frame_size hf7, hs6]
   -- the emission
   rcases he : hEmitW n m7 ord c tg hd nx out' 0 0 with _ | ⟨z8, m8⟩ <;> rw [he] at h
-  · rw [hApplyW.k1.eq_1] at h; cases h
-  rw [hApplyW.k1.arm1] at h
+  · rw [hApplyW.k_hoist_emit.eq_1] at h; cases h
+  rw [hApplyW.k_hoist_emit.arm1] at h
   cases h
   have hE := emitL_eq_sort T c.toNat hlt
   have hEl := emitL_length T c.toNat hlt

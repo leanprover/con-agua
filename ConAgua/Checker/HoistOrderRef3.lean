@@ -127,7 +127,7 @@ theorem hAny_ok (n : Nat) (m : Mem) (tg c : Word) (T : Std.HashMap Nat Nat)
         refine ⟨rfl, ?_⟩
         refine ⟨fun h => absurd h (by decide), fun hall => ?_⟩
         exact (hne (by rw [hrd, hz]; exact hall _ (Nat.le_refl _) (by omega))).elim
-      · rw [hAnyW.arm3 n m tg c k (by rw [word_le]; omega) hne] at h
+      · rw [hAnyW.arm3 n m tg c k (by rw [word_le]; omega) (Decidable.of_not_not hne)] at h
         obtain ⟨rfl, hr⟩ := ih (k + 1) r m' h
         refine ⟨rfl, ?_⟩
         rw [hr, toNat_succ k (by omega)]
@@ -189,7 +189,7 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
       | none =>
         rw [hT] at hrd
         rw [hBucketW.arm4 n m tg c hd tl nx k hck (by rw [hrd]; simp [tgW]),
-          hBucketW.k1.arm1] at h
+          hBucketW.j1.arm1] at h
         have hB' : BInv T c.toNat hd.toNat tl.toNat nx.toNat (k + 1).toNat m := by
           rw [hk1]
           refine ⟨fun t ht => ?_, fun t ht hne => ?_, fun j hj => ?_⟩
@@ -209,8 +209,8 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
           fun i v => size_set64 _ _ _ _ _
         by_cases h0 : posT T t 0 k.toNat = []
         · rw [h0] at hhd
-          rw [hBucketW.arm2 n m tg c hd tl nx k hck hne hhd, hBucketW.k2.arm1,
-            hBucketW.k1.arm1, hrd, addr1, addr1] at h
+          rw [hBucketW.arm2 n m tg c hd tl nx k hck hne hhd, hBucketW.j2.arm1,
+            hBucketW.j1.arm1, hrd, addr1, addr1] at h
           have hr2 := fun j hj => rd_set2 m (hd.toNat + t) (tl.toNat + t) j
             (k + 1) (k + 1) (by omega) (by omega) hs hj
           have hB' : BInv T c.toNat hd.toNat tl.toNat nx.toNat (k + 1).toNat
@@ -255,8 +255,8 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
             have htl : rdW (m.arr64 IW) (UInt64.ofNat (tl.toNat + t)) = UInt64.ofNat (l + 1) := by
               have := hB.tl t (by omega) h0
               rw [hl, tgW_some] at this; exact this
-            rw [hBucketW.arm3 n m tg c hd tl nx k hck hne hnz, hBucketW.k2.arm1,
-              hBucketW.k1.arm1, hrd, addr1, htl, addr1] at h
+            rw [hBucketW.arm3 n m tg c hd tl nx k hck hne hnz, hBucketW.j2.arm1,
+              hBucketW.j1.arm1, hrd, addr1, htl, addr1] at h
             have hr2 := fun j hj => rd_set2 m (nx.toNat + l) (tl.toNat + t) j
               (k + 1) (k + 1) (by omega) (by omega) hs hj
             have hB' : BInv T c.toNat hd.toNat tl.toNat nx.toNat (k + 1).toNat
@@ -392,7 +392,7 @@ theorem hEmit_ok (T : Std.HashMap Nat Nat) (ord c tg hd nx out : Word) (w : Nat 
       rw [emitL_left T _ _ hpc'] at hlen ⊢
       simp only [blk, List.length_append] at hlen
       cases hc : hChainW n m ord nx out q (tgW (posT T p.toNat 0 c.toNat).head?) with
-      | none => rw [hc, hEmitW.k2.eq_1] at h; cases h
+      | none => rw [hc, hEmitW.k_hoist_chain.eq_1] at h; cases h
       | some qm =>
         obtain ⟨q1, m1⟩ := qm
         rw [hc] at h
@@ -414,8 +414,8 @@ theorem hEmit_ok (T : Std.HashMap Nat Nat) (ord c tg hd nx out : Word) (w : Nat 
           | none =>
             rw [hTP] at htg1
             have hk1 : (if T[p.toNat]? = none then [p.toNat] else []).length = 1 := by simp [hTP]
-            rw [hEmitW.k2.arm1 n ord c tg hd nx out p q1 m1 (by rw [addrW]; exact htg1),
-              hEmitW.k1.arm1, addrW, addrW] at h
+            rw [hEmitW.k_hoist_chain.arm1 n ord c tg hd nx out p q1 m1 (by rw [addrW]; exact htg1),
+              hEmitW.j1.arm1, addrW, addrW] at h
             have hr2 := fun j hj => rd_set m1 (out.toNat + q1.toNat) j
               (rdW (m1.arr64 IW) (UInt64.ofNat (ord.toNat + p.toNat))) (by omega) hj
             refine ⟨_, _, h, frame_set _ _ _, ?_, ?_, ?_⟩
@@ -434,9 +434,9 @@ theorem hEmit_ok (T : Std.HashMap Nat Nat) (ord c tg hd nx out : Word) (w : Nat 
               rw [hr2 _ hi, iteF (by omega)]
           | some t =>
             rw [hTP] at htg1
-            rw [hEmitW.k2.arm2 n ord c tg hd nx out p q1 m1 (by
+            rw [hEmitW.k_hoist_chain.arm2 n ord c tg hd nx out p q1 m1 (by
               rw [addrW]; show ¬ rd m1 _ = 0; rw [htg1]; exact tgW_some_ne t (by have := hlt _ _ hTP; omega)),
-              hEmitW.k1.arm1] at h
+              hEmitW.j1.arm1] at h
             refine ⟨_, _, h, MemFrame.refl _ _ _, by simp, fun i y hy => by simp at hy,
               fun _ _ _ => rfl⟩
         have hs2 := frame_size hf2

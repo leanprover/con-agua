@@ -49,7 +49,7 @@ theorem hIns_ok (m m' : Mem) (w k r : Word) (idx : Std.HashMap NIdx Nat) (hR : N
         ((mfindG hnSch m w 0).tail.headD 0) with
     | none => rw [hp] at h; cases h
     | some m₁ =>
-      rw [hp, hInsW.k2.arm1] at h
+      rw [hp, hInsW.k_hn_put.arm1] at h
       cases h
       have hs : msetG hnSch m w 0 (k + 1) = some m' := by rw [msetG_eq _ _ _ _ _ h0]; exact hp
       have hc : idx.contains (decI w) = false := by
@@ -162,8 +162,8 @@ theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array W
         hix_rdW (hP ▸ hPw) (by rw [UInt64.toNat_add]; simp; omega)
       rw [e1, e2] at h
       rcases hi : hInsW m w k with _ | ⟨z, m₁⟩ <;> rw [hi] at h
-      · simp [hNamesGoW.k1] at h
-      rw [hNamesGoW.k1.arm1] at h
+      · simp [hNamesGoW.k_hoist_ins] at h
+      rw [hNamesGoW.k_hoist_ins.arm1] at h
       obtain ⟨hR₁, hF₁⟩ := hIns_ok m m₁ w k z idx hR hw32 hk hi
       have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       obtain ⟨hR', hF'⟩ := ih m₁ m' k o c (q + 1) r P t cs' _ hR₁
@@ -212,12 +212,12 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind
     obtain ⟨h6, -, t, ht, hb⟩ := hD
-    rw [hNamesW.arm2 n m k _ (by rw [e0, h6]; simp), e2, e3] at h
+    rw [hNamesW.arm2 n m k _ (by rw [e0, h6]), e2, e3] at h
     cases hg : hNamesGoW n m k (dw (m.arr64 DECL) r.toNat 2) (dw (m.arr64 DECL) r.toNat 3) 0 with
     | none => rw [hg] at h; cases h
     | some zm =>
       obtain ⟨z', m₁⟩ := zm
-      rw [hg] at h; simp only [hNamesW.k1, Option.some.injEq, Prod.mk.injEq] at h
+      rw [hg] at h; simp only [hNamesW.k_hoist_ins, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, rfl⟩ := h
       exact hNamesGo_ok n m m₁ k _ _ 0 z' _ t b idx hR rfl ht (hok.2 h6).1
         (by simpa using hb) hk hg
@@ -228,7 +228,7 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
     | none => rw [hi] at h; cases h
     | some zm =>
       obtain ⟨z', m₁⟩ := zm
-      rw [hi] at h; simp only [hNamesW.k1, Option.some.injEq, Prod.mk.injEq] at h
+      rw [hi] at h; simp only [hNamesW.k_hoist_ins, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨-, rfl⟩ := h
       rw [hn]
       exact hIns_ok m m₁ _ k z' idx hR (hok.1 h6).1 hk hi
@@ -256,8 +256,8 @@ private theorem hoistIndexGo_ok' (n : Nat) (ord c : Word) (ds : Array IDeclarati
       obtain ⟨hr, hD, hok⟩ := hO k.toNat hkc
       simp only [UInt64.ofNat_toNat] at hr hD hok
       rcases hi : hNamesW n m k (1 + 8 * rdW (m.arr64 IW) (ord + k)) with _ | ⟨z, m₁⟩ <;> rw [hi] at h
-      · simp [hIndexGoW.k1] at h
-      rw [hIndexGoW.k1.arm1] at h
+      · simp [hIndexGoW.k_hoist_names] at h
+      rw [hIndexGoW.k_hoist_names.arm1] at h
       obtain ⟨hR₁, hF₁⟩ := hNames_ok n m m₁ k _ z _ idx hR hr hD hok (by omega) hi
       have hIW : m₁.arr64 IW = m.arr64 IW := hF₁.1 IW (by decide) (by decide)
       have hDE : m₁.arr64 DECL = m.arr64 DECL := hF₁.1 DECL (by decide) (by decide)
