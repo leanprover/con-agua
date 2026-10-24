@@ -642,36 +642,36 @@ def eView : FunDecl := lfn (h) locals (g, t, i) {
   i := ⟦h⟧.idx;
   if 4294967295 < h { abort };
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return (0, BVAR⟨t⟩[i].i, 0, 0) };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return (0, BVAR⟨t, i⟩.i, 0, 0) };
   if g == 1 {
     if FVAR⟨t⟩.count <= i { abort };
-    return (1, FVAR⟨t⟩[i].i, FVAR⟨t⟩[i].ty, 0)
+    return (1, FVAR⟨t, i⟩.i, FVAR⟨t, i⟩.ty, 0)
   };
-  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return (2, SORT⟨t⟩[i].u, 0, 0) };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return (2, SORT⟨t, i⟩.u, 0, 0) };
   if g == 3 {
     if CONST⟨t⟩.count <= i { abort };
-    return (3, CONST⟨t⟩[i].n, CONST⟨t⟩[i].us, 0)
+    return (3, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us, 0)
   };
   if g == 4 {
     if APP⟨t⟩.count <= i { abort };
-    return (4, APP⟨t⟩[i].f, APP⟨t⟩[i].a, 0)
+    return (4, APP⟨t, i⟩.f, APP⟨t, i⟩.a, 0)
   };
   if g == 5 {
     if LAM⟨t⟩.count <= i { abort };
-    return (5, LAM⟨t⟩[i].ty, LAM⟨t⟩[i].b, 0)
+    return (5, LAM⟨t, i⟩.ty, LAM⟨t, i⟩.b, 0)
   };
   if g == 6 {
     if FORALL⟨t⟩.count <= i { abort };
-    return (6, FORALL⟨t⟩[i].ty, FORALL⟨t⟩[i].b, 0)
+    return (6, FORALL⟨t, i⟩.ty, FORALL⟨t, i⟩.b, 0)
   };
   if g == 7 {
     if LET⟨t⟩.count <= i { abort };
-    return (7, LET⟨t⟩[i].ty, LET⟨t⟩[i].v, LET⟨t⟩[i].b)
+    return (7, LET⟨t, i⟩.ty, LET⟨t, i⟩.v, LET⟨t, i⟩.b)
   };
   if g == 8 { if LIT⟨t⟩.count <= i { abort }; return (8, 0, 0, 0) };
   if g == 9 {
     if PROJ⟨t⟩.count <= i { abort };
-    return (9, PROJ⟨t⟩[i].n, PROJ⟨t⟩[i].i, PROJ⟨t⟩[i].e)
+    return (9, PROJ⟨t, i⟩.n, PROJ⟨t, i⟩.i, PROJ⟨t, i⟩.e)
   };
   abort
 }

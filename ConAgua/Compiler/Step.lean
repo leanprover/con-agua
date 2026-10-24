@@ -657,6 +657,42 @@ theorem ev_shiftI {n : Nat} (hn : n < 64) {op : BinOp} (hop : op = .shl ∨ op =
         (refine ev_flags h ?_
          simp_all [BinOp.eval, UInt64.toBitVec_shiftLeft, UInt64.toBitVec_shiftRight, Nat.mod_eq_of_lt hn])
 
+/-- `shl r, n` with an immediate count, for any register (tiered accesses: `tierDesc`). -/
+theorem ev_shlRI {n : Nat} (hn : n < 64) {r : Reg64}
+    (hk : Host.prog[k]? = some (i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt n))))))
+    (h : ∀ st, Ev Q { s with regs := s.regs.set64 r ((UInt64.ofBitVec (s.regs.get64 r)) <<< (UInt64.ofNat n)).toBitVec, status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [imm8_count hn]
+  split
+  · simp only [Effects.All]
+    refine ev_flags h ?_
+    simp_all [UInt64.toBitVec_shiftLeft, Nat.mod_eq_of_lt hn]
+  · simp only [Effects.All]
+    intro af
+    (try split) <;> (try split) <;> simp only [Effects.All] <;> intros <;>
+      (refine ev_flags h ?_
+       simp_all [UInt64.toBitVec_shiftLeft, Nat.mod_eq_of_lt hn])
+
+/-- `add r, r15`. -/
+theorem ev_addR15 {r : Reg64} (hk : Host.prog[k]? = some (i64 (.add (.reg (rr r)) (oR .r15))))
+    (h : ∀ st, Ev Q { s with regs := s.regs.set64 r (s.regs.get64 r + s.regs.r15.toBitVec), status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  intros; refine ev_flags h ?_; simp [BitVec.add_comm]
+
+/-- `cmp rax, [b + off]`, for any base register. -/
+theorem ev_cmpRMb {b : Reg64} {off : Int} (hk : Host.prog[k]? = some (i64 (.cmp (.reg (rr .rax)) (oM (mb b off)))))
+    (hoff : SmallOff off) {v : Word} (hv : rdW s.dmem (A ((s.regs.get64 b).toNat + off.toNat)) = some v)
+    (h : Ev Q { s with status := cmpFlags s.regs.rax.toBitVec v.toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_disp _ _ hoff.1 (by omega)]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  simp only [hi, Effects.All]
+  exact h
+
 end
 
 end L.Compiler

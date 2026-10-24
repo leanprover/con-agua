@@ -17,12 +17,12 @@ with one constant per field (`APP.f`, `APP.a`, `LET.ty`, …). L code writes
 
 | L | meaning | expands to |
 |---|---|---|
-| `APP⟨t⟩[i].f` | field `f` of node `i` of tier `t` | `TRec.ld APP t i APP.f` |
-| `APP_DER⟨t⟩[i]` | a one-word column | `TRec.ld APP_DER t i 0` |
+| `APP⟨t, i⟩.f` | field `f` of node `i` of tier `t` | `TRec.ld APP t i APP.f` |
+| `APP_DER⟨t, i⟩` | a one-word column | `TRec.ld APP_DER t i 0` |
 | `APP⟦h⟧.a` | field of the node handle `h` names | `TRec.ld APP (tierE h) (idxE h) APP.a` |
 | `APP⟨t⟩.count` | node count of tier `t` | `TRec.cntE APP t` |
 | `⟦h⟧.tier`, `⟦h⟧.idx` | a handle's tier bit / index | `tierE h`, `idxE h` |
-| `APP⟨t⟩[i].f := e` | field store (library only) | `TRec.st APP t i APP.f e` |
+| `APP⟨t, i⟩.f := e` | field store (library only) | `TRec.st APP t i APP.f e` |
 
 The builders are ordinary `Expr`/`Stmt` values (inlined: no call, nothing new in the semantics or
 the compiler). Today `TRec.adE` emits exactly the old index expressions (`i * 4 + t * 2 + 1`,

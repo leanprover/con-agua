@@ -47,6 +47,8 @@ def Expr.pval (s : St) : Expr → Word
   | .cmpw c a b => c.evalW (Expr.pval s a) (Expr.pval s b)
   | .ldc d i => rdc d (Expr.pval s i)
   | .glob g => s.mem.glob g
+  | .ld64t a t i => rd64 s.mem (tierA a (Expr.pval s t)) (Expr.pval s i)
+  | .len64t a t => s.mem.len64 (tierA a (Expr.pval s t))
 
 /-- A condition's value in `s` (short-circuit makes no difference: nothing is written). -/
 def Cond.pval (s : St) : Cond → Bool
@@ -68,6 +70,8 @@ theorem evalE_spec (e : Expr) (s₀ : St) :
   | cmpw c a b iha ihb => vcgen [evalE, iha, ihb] <;> grind [Expr.pval]
   | ldc d i ih => vcgen [evalE, ldc, ih] <;> simp_all [Expr.pval, rdc, List.getD]
   | glob g => vcgen [evalE] <;> grind [Expr.pval]
+  | ld64t a t i iht ihi => vcgen [evalE, ld64, iht, ihi] <;> simp_all [Expr.pval, rd64, Array.getD]
+  | len64t a t ih => vcgen [evalE, ih] <;> grind [Expr.pval]
 
 theorem evalC_spec (c : Cond) (s₀ : St) :
     ⦃fun s => s = s₀⦄ evalC c ⦃fun b s' => s' = s₀ ∧ b = Cond.pval s₀ c; ⊤⦄ := by

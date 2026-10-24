@@ -164,6 +164,12 @@ def evalE : Expr → M Word
     return c.evalW x y
   | .ldc d i => do ldc d (← evalE i)
   | .glob g => do return (← get).mem.glob g
+  | .ld64t a t i => do
+    let u ← evalE t
+    ld64 (tierA a u) (← evalE i)
+  | .len64t a t => do
+    let u ← evalE t
+    return (← get).mem.len64 (tierA a u)
 
 def evalC : Cond → M Bool
   | .cmp c a b => do
@@ -261,6 +267,12 @@ def step (p : Prog) (k : Stmt → M Sig) : Stmt → M Sig
   | .gset g e => do
     let v ← evalE e
     setG g v
+    return .normal
+  | .st64t a t i e => do
+    let u ← evalE t
+    let j ← evalE i
+    let v ← evalE e
+    st64 (tierA a u) j v
     return .normal
 
 /-- The interpreter with `n` units of fuel. -/

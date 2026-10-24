@@ -86,6 +86,8 @@ def shiftE (o : Nat) : Expr → Expr
   | .ld64 a i => .ld64 a (shiftE o i)
   | .cmpw c a b => .cmpw c (shiftE o a) (shiftE o b)
   | .ldc d i => .ldc d (shiftE o i)
+  | .ld64t a t i => .ld64t a (shiftE o t) (shiftE o i)
+  | .len64t a t => .len64t a (shiftE o t)
   | e => e
 
 /-- Condition `c` with every local variable index raised by `o`. -/
@@ -106,6 +108,7 @@ def shiftS (o : Nat) : Stmt → Stmt
   | .ret es => .ret (es.map (shiftE o))
   | .call xs f args => .call (xs.map (· + o)) f (args.map (shiftE o))
   | .gset g e => .gset g (shiftE o e)
+  | .st64t a t i e => .st64t a (shiftE o t) (shiftE o i) (shiftE o e)
   | s => s
 
 end L.Arena

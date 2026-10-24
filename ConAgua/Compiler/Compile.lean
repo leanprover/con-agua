@@ -91,6 +91,8 @@ def Expr.roms : Expr → List (List UInt8)
   | .bin _ a b | .cmpw _ a b => Expr.roms a ++ Expr.roms b
   | .ld8 _ i | .ld64 _ i => Expr.roms i
   | .ldc d i => d :: Expr.roms i
+  | .ld64t _ t i => Expr.roms t ++ Expr.roms i
+  | .len64t _ t => Expr.roms t
   | _ => []
 
 def Cond.roms : Cond → List (List UInt8)
@@ -108,6 +110,7 @@ def Stmt.roms : Stmt → List (List UInt8)
   | .ret es => es.flatMap Expr.roms
   | .call _ _ args => args.flatMap Expr.roms
   | .gset _ e => Expr.roms e
+  | .st64t _ t i e => Expr.roms t ++ Expr.roms i ++ Expr.roms e
 
 /-- Insert `d` before the first longer string (structural, so the kernel evaluates it). -/
 def romInsert (d : List UInt8) : List (List UInt8) → List (List UInt8)
@@ -192,6 +195,8 @@ def Expr.nglob : Expr → Nat
   | .bin _ a b | .cmpw _ a b => max (Expr.nglob a) (Expr.nglob b)
   | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.nglob i
   | .glob g => g.id + 1
+  | .ld64t _ t i => max (Expr.nglob t) (Expr.nglob i)
+  | .len64t _ t => Expr.nglob t
   | _ => 0
 
 def Cond.nglob : Cond → Nat
@@ -208,6 +213,7 @@ def Stmt.nglob : Stmt → Nat
   | .while c s => max (Cond.nglob c) (Stmt.nglob s)
   | .ret es | .call _ _ es => es.foldl (fun acc e => max acc (Expr.nglob e)) 0
   | .gset g e => max (g.id + 1) (Expr.nglob e)
+  | .st64t _ t i e => max (Expr.nglob t) (max (Expr.nglob i) (Expr.nglob e))
 
 /-- The table layout of a program with `nb` byte arrays and `nw` word arrays. -/
 def Prog.tab (p : Prog) (nb nw : Nat) : Tab :=
@@ -261,6 +267,8 @@ def Expr.isSimple : Expr → Bool
 def tempsE : Expr → Nat
   | .bin _ a b | .cmpw _ a b => if Expr.isSimple b then tempsE a else max (tempsE a) (1 + tempsE b)
   | .ld8 _ i | .ld64 _ i | .ldc _ i => tempsE i
+  | .ld64t _ t i => if Expr.isSimple t then tempsE i else max (tempsE t) (1 + tempsE i)
+  | .len64t _ t => tempsE t
   | _ => 0
 
 def tempsC : Cond → Nat
@@ -289,6 +297,7 @@ def tempsSB : Stmt → Nat
   | .while c s => max (tempsC c) (tempsSB s)
   | .call _ _ args => tempsArgs 0 args
   | .gset _ e => tempsE e
+  | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
 
 /-- A bound on the number of words in the frame of `fd` (`Prog.wf` checks that it is small). -/
 def frameWords (fd : FunDecl) : Nat := fd.nlocals + tempsSB fd.body
@@ -452,6 +461,14 @@ def cmpReg (ctx : Ctx) (a b : Expr) : Option Program :=
     | _, _ => none
   | _ => none
 
+/-- `r := T + 4096 (r & 1)`: from a tier word in `r`, the address of the tier's descriptor
+block (tier `1` of array `a` is array `a + tierOff`, whose descriptor is `16 · tierOff = 4096`
+bytes further). -/
+def tierDesc (r : Reg64) : Program :=
+  [i64 (.and (.reg (rr r)) (.imm (.int64 (1 : Word).toInt64))),
+   i64 (.shl (.reg (rr r)) (.imm8 (.int64 (Int64.ofInt 12)))),
+   i64 (.add (.reg (rr r)) (oR .r15))]
+
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
   | .const w, _ => [movRI .rax w]
@@ -495,6 +512,15 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom))),
        i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))]
   | .glob g, _ => [movRM .rax (mb .r15 (ctx.tab.globOff g))]
+  | .ld64t a t i, k =>
+    (match loadInto ctx .rdx t with
+     | some ld => compileE ctx i k ++ ld
+     | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
+         [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
+      [i64 (.cmp (.reg (rr .rax)) (oM (mb .rdx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (mb .rdx (ctx.tab.base64 a)),
+       movRM .rax (mbi .rcx .rax .W64)]
+  | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (mb .rax (ctx.tab.len64 a))]
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -540,6 +566,8 @@ def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
   | .var x => al.lookup x == some r
   | .bin _ a b | .cmpw _ a b => Expr.readsReg al r a || Expr.readsReg al r b
   | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.readsReg al r i
+  | .ld64t _ t i => Expr.readsReg al r t || Expr.readsReg al r i
+  | .len64t _ t => Expr.readsReg al r t
   | _ => false
 
 /-- Results `i, i + 1, …` (`i ≥ 1`) of a `return` straight into their registers. -/
@@ -704,6 +732,15 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        ] ++ storeRes ctx.tab (xs.take (nrOf ctx.nrt ctx.tab f)) 0 ++ zeroVars (xs.drop (nrOf ctx.nrt ctx.tab f))
   | .abort => [jmpL errorL]
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
+  | .st64t a t i e =>
+    (match loadInto ctx .rdx e with
+     | some code => compileE ctx i 0 ++ code
+     | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
+      [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
+      (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
+      [i64 (.cmp (.reg (rr .rax)) (oM (mb .rcx (ctx.tab.len64 a)))), jccL .nc errorL,
+       movRM .rcx (mb .rcx (ctx.tab.base64 a)),
+       movMR (mbi .rcx .rax .W64) .rdx]
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
@@ -716,6 +753,7 @@ def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
   | .while c s => max (tempsC c) (tempsS al nr s)
   | .call _ _ args => if args.length ≤ argRegs.length then tempsEs args else tempsArgs 0 args
   | .gset _ e => tempsE e
+  | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
 def copyParams : Nat → Nat → Program
@@ -752,6 +790,8 @@ def Expr.uses (w : Nat) (acc : Array Nat) : Expr → Array Nat
   | .var x => acc.modify x (· + w)
   | .bin _ a b | .cmpw _ a b => Expr.uses w (Expr.uses w acc a) b
   | .ld8 _ i | .ld64 _ i | .ldc _ i => Expr.uses w acc i
+  | .ld64t _ t i => Expr.uses w (Expr.uses w acc t) i
+  | .len64t _ t => Expr.uses w acc t
   | _ => acc
 
 def Cond.uses (w : Nat) (acc : Array Nat) : Cond → Array Nat
@@ -768,6 +808,7 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .while c s => Stmt.uses (8 * w) (Cond.uses (8 * w) acc c) s
   | .ret es | .call _ _ es => es.foldl (Expr.uses w) acc
   | .gset _ e => Expr.uses w acc e
+  | .st64t _ t i e => Expr.uses w (Expr.uses w (Expr.uses w acc t) i) e
   | _ => acc
 
 /-- Insert local `x` before the first local used less (or as often, with a larger index). -/

@@ -81,6 +81,8 @@ theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (ste
     vcgen [step, setLocs, evalArgs_same args, invoke_keepW p k hk f m₀] <;> grind [St.setLocs_mem']
   | «abort» => vcgen [step] <;> grind
   | «gset» g e => vcgen [step, setG, evalE_same e] <;> grind [KeepW.setG, St.setG_mem]
+  | st64t a t i e =>
+    vcgen [step, st64, evalE_same t, evalE_same i, evalE_same e] <;> grind [KeepW.set64]
 
 theorem exec_keepW (p : Prog) (n : Nat) : KeepWK (exec p n) := by
   induction n with

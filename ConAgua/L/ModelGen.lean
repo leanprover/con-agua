@@ -546,6 +546,17 @@ meta def splitArr (id : Ident) : GenM (Term × String) := do
   | .str pre "c8" => return (mkIdentFrom id pre, "c8")
   | _ => throwErrorAt id "expected `A.u8`, `A.u64` or `D.c8`"
 
+/-- A store-record field constant (`APP.a : Word`, an `abbrev` of a numeral) as that numeral, so
+that models and proofs state field offsets as numbers (`tfld m APP t i 1`). -/
+meta def fieldNum (fI : Ident) : GenM Term := do
+  let c ← realizeGlobalConstNoOverload fI
+  let some v := ((← getEnv).find? c).bind (·.value?) | throwErrorAt fI "not a field constant"
+  let v := v.consumeMData
+  let n? := if v.isAppOfArity ``OfNat.ofNat 3 then (v.getArg! 1).consumeMData.rawNatLit? else none
+  match n? with
+  | some n => pure (Syntax.mkNumLit (toString n))
+  | none => throwErrorAt fI m!"field constant {c} is not a numeral: {v}"
+
 mutual
 meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $n:num) => pure (.lit n.getNat)
@@ -561,26 +572,34 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     pure (.rd ctx.mem (← `(L.Record.arr $r)) (.raw ad))
   | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident) => do
     let fI := mkIdentFrom f (r.getId ++ f.getId)
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
+    let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
+    pure (.rd ctx.mem (← `(L.tierA (L.Record.arr $r) $(← (← transE E ctx t).render))) (.raw ad))
+  | `(lexpr| $a:ident⟨$t:lexpr⟩[$i:lexpr]) => do
+    pure (.rd ctx.mem (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i))
+  | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
+    pure (.raw (← `(L.Mem.len64 $(← ctx.mem.render) (L.tierA $a $(← (← transE E ctx t).render)))))
+  | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident) => do
+    let fI ← fieldNum (mkIdentFrom f (r.getId ++ f.getId))
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
       $(← (← transE E ctx i).render) $fI)))
-  | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr]) => do
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
+  | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩) => do
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
       $(← (← transE E ctx i).render) 0)))
   | `(lexpr| $r:ident⟨$t:lexpr⟩.$c:ident) => do
     unless c.getId == `count do throwErrorAt c "expected `R⟨t⟩.count`"
-    pure (.raw (← `(L.Arena.tcnt $(← ctx.mem.render) $r $(← (← transE E ctx t).render))))
+    pure (.raw (← `($(mkIdent `L.Arena.tcnt) $(← ctx.mem.render) $r $(← (← transE E ctx t).render))))
   | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
-    let fI := mkIdentFrom f (r.getId ++ f.getId)
+    let fI ← fieldNum (mkIdentFrom f (r.getId ++ f.getId))
     let h ← (← transE E ctx h).render
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r (L.Arena.tierW $h) (L.Arena.idxW $h) $fI)))
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) $fI)))
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
     let h ← (← transE E ctx h).render
-    pure (.raw (← `(L.Arena.tfld $(← ctx.mem.render) $r (L.Arena.tierW $h) (L.Arena.idxW $h) 0)))
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) 0)))
   | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
     let h ← (← transE E ctx h).render
     match c.getId with
-    | `tier => pure (.raw (← `(L.Arena.tierW $h)))
-    | `idx => pure (.raw (← `(L.Arena.idxW $h)))
+    | `tier => pure (.raw (← `($(mkIdent `L.Arena.tierW) $h)))
+    | `idx => pure (.raw (← `($(mkIdent `L.Arena.idxW) $h)))
     | _ => throwErrorAt c "expected `⟦h⟧.tier` or `⟦h⟧.idx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
@@ -702,6 +721,12 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       let fI := mkIdentFrom f (r.getId ++ f.getId)
       let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
       store (← `(L.Record.arr $r)) (.raw ad) e
+    | `(lstmt| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident := $e:lexpr) => do
+      let fI := mkIdentFrom f (r.getId ++ f.getId)
+      let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
+      store (← `(L.tierA (L.Record.arr $r) $(← (← transE E ctx t).render))) (.raw ad) e
+    | `(lstmt| $a:ident⟨$t:lexpr⟩[$i:lexpr] := $e:lexpr) => do
+      store (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i) e
     | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
       let (arr, k) ← splitArr a
       unless k == "u64" do throwErrorAt s "l_model: byte stores are not supported"
