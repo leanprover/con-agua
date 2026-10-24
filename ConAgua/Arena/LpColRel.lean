@@ -379,18 +379,18 @@ theorem derAt_out {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited
 
 /-- **A column read with the count check is `f` of the derived record** (`f default = 0`: a
 dangling index reads `0`, the twin's `default`). -/
-theorem col_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] (S : Schema)
-    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (A : ArrId) (f : δ → Word)
-    (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : StoreR S R hs m on P Q)
+theorem col_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] {C : ConsSch}
+    {R : Mem → Word → Word → α → Prop} (A : ArrId) (f : δ → Word)
+    (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : ConsR C R m on P Q)
     (hc0 : ColT A f m 0 P) (hc1 : ColT A f m 1 Q) (hf0 : f default = 0) (t i : Word) (ht : t ≤ 1) :
-    (if i < rdW (m.arr64 CTL) (S.ca + t) then rdW (m.arr64 A) (i * 2 + t) else 0) =
+    (if i < rdW (m.arr64 CTL) (C.ca + t) then rdW (m.arr64 A) (i * 2 + t) else 0) =
       f ((if t = 0 then P else Q).derAt i.toNat) := by
-  have hcnt := cnt_tier S R hs m on P Q hT t ht
+  have hcnt := hT.cnt t ht
   have hc : ColT A f m t (if t = 0 then P else Q) := by
     rcases word_le_one t ht with rfl | rfl
     · simpa using hc0
     · simpa using hc1
-  simp only [cntW] at hcnt
+  simp only [cntC] at hcnt
   split
   · rename_i hlt
     have hi : i.toNat < (if t = 0 then P else Q).nodes.size := by
@@ -401,18 +401,18 @@ theorem col_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited 
     rw [derAt_out hc.1 _ (by rw [← hcnt]; exact UInt64.not_lt.mp hge |> UInt64.le_iff_toNat_le.mp), hf0]
 
 /-- **A constant bit with the count check.** -/
-theorem const_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] (S : Schema)
-    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (f : δ → Word) (v : Word)
-    (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : StoreR S R hs m on P Q)
+theorem const_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] {C : ConsSch}
+    {R : Mem → Word → Word → α → Prop} (f : δ → Word) (v : Word)
+    (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : ConsR C R m on P Q)
     (hc0 : ConstT (fun d => f d = v) P) (hc1 : ConstT (fun d => f d = v) Q) (hf0 : f default = 0)
     (t i : Word) (ht : t ≤ 1) :
-    (if i < rdW (m.arr64 CTL) (S.ca + t) then v else 0) = f ((if t = 0 then P else Q).derAt i.toNat) := by
-  have hcnt := cnt_tier S R hs m on P Q hT t ht
+    (if i < rdW (m.arr64 CTL) (C.ca + t) then v else 0) = f ((if t = 0 then P else Q).derAt i.toNat) := by
+  have hcnt := hT.cnt t ht
   have hc : ConstT (fun d => f d = v) (if t = 0 then P else Q) := by
     rcases word_le_one t ht with rfl | rfl
     · simpa using hc0
     · simpa using hc1
-  simp only [cntW] at hcnt
+  simp only [cntC] at hcnt
   split
   · rename_i hlt
     have hi : i.toNat < (if t = 0 then P else Q).nodes.size := by
