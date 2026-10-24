@@ -23,39 +23,12 @@ open L.Arena
 
 /-! ## `sl_all_in`, `sl_set_eq` -/
 
-/-- The model of `sl_all_in`. -/
-def allInW : Nat → Mem → Word → Word → Word → Word → Option Word
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, o1, l1, o2, l2 =>
-    if l1 = 0 then some 1
-    else match containsW n m o2 l2 (rdW (m.arr64 IW) o1) with
-      | none => none
-      | some b => if b = 0 then some 0 else allInW n m (o1 + 1) (l1 - 1) o2 l2
-
-section arms
-variable (n : Nat) (m : Mem) (o1 l1 o2 l2 b : Word)
-theorem allInW_nil (h : l1 = 0) : allInW (n + 1) m o1 l1 o2 l2 = some 1 := by simp [allInW, h]
-theorem allInW_cons (h : l1 ≠ 0) : allInW (n + 1) m o1 l1 o2 l2 =
-    (match containsW n m o2 l2 (rdW (m.arr64 IW) o1) with
-      | none => none
-      | some b => if b = 0 then some 0 else allInW n m (o1 + 1) (l1 - 1) o2 l2) := by
-  simp [allInW, h]
-end arms
-attribute [ind_grind] allInW_nil allInW_cons
-
-theorem slAllIn_spec (p : Prog) (hc : p.lookup "sl_contains" = some slContains)
-    (hp : p.lookup "sl_all_in" = some slAllIn) (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_all_in" [o1, l1, o2, l2]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ allInW n s₀.mem o1 l1 o2 l2 = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp]; simp only [callFn, slAllIn]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp]
-    simp only [callFn, slAllIn]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slContains_spec p hc n, ih] <;>
-      finish (gen := 20)
+/-- **`sl_all_in` is its model `allInW`** (generated). -/
+l_model slAllIn_spec (p : Prog) (hc : p.lookup "sl_contains" = some slContains)
+    (hp : p.lookup "sl_all_in" = some slAllIn)
+  fns [hp ↦ allInW ro]
+  specs [slContains_spec p hc n]
+  grind [arena_grind]
 
 theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : List Word),
     SlR m o1 l1 ws1 → SlR m o2 l2 ws2 → allInW n m o1 l1 o2 l2 = some r →
@@ -65,20 +38,19 @@ theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : Li
   | succ n ih =>
     intro m o1 l1 o2 l2 r ws1 ws2 h1 h2 h
     cases h1 with
-    | nil => rw [allInW_nil n m _ 0 o2 l2 rfl] at h; simp at h; simp [h]
+    | nil => rw [allInW.arm1 n m _ 0 o2 l2 rfl] at h; simp at h; simp [h]
     | @cons _ _ ws hl hs =>
-      rw [allInW_cons n m _ _ o2 l2 hl] at h
+      rw [allInW.arm2 n m _ _ o2 l2 hl] at h
       cases hb : containsW n m o2 l2 (rdW (m.arr64 IW) o1) with
-      | none => rw [hb] at h; simp at h
+      | none => rw [hb] at h; simp [allInW.k1] at h
       | some b =>
         rw [hb] at h
-        simp only at h
         have := containsW_ok n m o2 l2 _ b ws2 h2 hb
         by_cases b0 : b = 0
-        · rw [if_pos b0] at h; simp at h; subst h
+        · rw [allInW.k1.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
           subst b0
           split at this <;> simp_all
-        · rw [if_neg b0] at h
+        · rw [allInW.k1.arm2 _ _ _ _ _ _ _ b0] at h
           rw [ih _ _ _ _ _ _ _ _ hs h2 h]
           split at this <;> simp_all
 
