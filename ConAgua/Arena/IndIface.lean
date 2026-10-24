@@ -638,8 +638,8 @@ count, an unknown tag) aborts, as the twin's `view` fails. The projections `view
 -- con-ron: ConRon/Arena/Monad.lean:153-160 ConRon.Arena.view
 def eView : FunDecl := lfn (h) locals (g, t, i) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if 4294967295 < h { abort };
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return (0, BVAR⟨t⟩[i].i, 0, 0) };

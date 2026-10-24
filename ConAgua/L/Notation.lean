@@ -70,6 +70,7 @@ syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
 syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
 syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
 syntax ident noWs "⟦" lexpr "⟧" : lexpr
+syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
 syntax "len" "(" ident ")" : lexpr
 syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
 syntax "u64" "(" lcond ")" : lexpr
@@ -183,6 +184,11 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
     let h ← transExpr env h
     `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) 0)
+  | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
+    match c.getId with
+    | `tier => `(L.tierE $(← transExpr env h))
+    | `idx => `(L.idxE $(← transExpr env h))
+    | _ => Macro.throwErrorAt c "expected `⟦h⟧.tier` or `⟦h⟧.idx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i
