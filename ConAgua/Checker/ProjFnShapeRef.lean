@@ -107,7 +107,7 @@ theorem ite10_true {b : Bool} (h : b = true) : (if b = true then (1 : Word) else
 /-- **The string test**: on a `str` node's offset and length words holding `s`. -/
 theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
     (hol : (rdW (m.arr64 NSREC) (k + 1)).toNat + (rdW (m.arr64 NSREC) (k + 2)).toNat ≤ m.top.toNat)
-    (hsl : sliceL (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1)).toNat
+    (hsl : sliceL (vpool m) (rdW (m.arr64 NSREC) (k + 1)).toNat
       (rdW (m.arr64 NSREC) (k + 2)).toNat = strWords s)
     (h : pfsStr m k = some r) :
     r = if (s == "proj" || s == "projTable") then 1 else 0 := by
