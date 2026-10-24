@@ -128,7 +128,8 @@ excluded: `L/TRec`, `L/Notation`, `L/ModelGen`, `Arena/StoreFields*`, `StoreLib*
     has a bound condition on the raw address.
 * **Library** (the leak script's exclusions): `L/TRec`, `L/Notation`, `L/ModelGen`,
   `StoreFields`, `StoreLib*`, `StoreRel`, `StoreGrow*`, `ConsLib*`, `SlotGrow*`, `MemoLib*`
-  (memo tables: not tiered), `*Store.lean`, `LpCol`, `ExprMk` (the `mk_*` pushes with their
+  (memo tables: not tiered), `*Store.lean`, `LpCol*` and `DerRel*` (the column relations: `ColT`,
+  `DerR` are the abstract predicates the consumers use), `ExprMk` (the `mk_*` pushes with their
   derived-column writes), and the per-store `*Refine.lean` files (the table instances: schema,
   record relation, the `_raw` iff). A layout change edits these.
 
@@ -136,6 +137,9 @@ excluded: `L/TRec`, `L/Notation`, `L/ModelGen`, `Arena/StoreFields*`, `StoreLib*
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | batch 2 (62f7d23b) | 87 | 57 | 39 | 1102 | 462 | 1056 | 103 | 317 | 2175 / 121 |
 | phase P (tieracc-p) | 0 | 2 | 0 | 2 | 0 | 2 | 4 | 0 | 8 / 5 |
+
+A later kind, `P-col` (a read generic over its array: `rdW (m.arr64 A) (idxW h * 2 + tierW h)`),
+finds 4 more lines (InstLPKeys' tag-indexed name count).
 
 The 8 left: the two tag-indexed name-store counts in L (`keys_ok`, `projTableNameL`:
 `CTL.u64[34 + g * 2 + t]`), WhnfIotaRefine3's `ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4)`
