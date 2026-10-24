@@ -192,10 +192,7 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     cases x with
     | none =>
       refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl, mp0, hM2⟩
-      simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
-      rw [hrun1]
-      simp only [except_ok_bind, StateT.run_bind]
-      rw [hrun2]
+      simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind, hrun1, except_ok_bind, hrun2]
       rfl
     | some t => simp only [decOE] at hout2; rw [hz] at hout2; simp at hout2
   · rw [pccB_ok k no nl us nn r2 m2 hz] at h
@@ -216,10 +213,7 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
         (by simp; omega) hM2
       refine ⟨some (decE r3), a3, ?_, hS3, hg12.trans hg3, ?_, ∅, hM3⟩
       · simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
-        rw [hrun1]
-        simp only [except_ok_bind, StateT.run_bind]
-        rw [hrun2]
-        simp only [except_ok_bind, StateT.run_bind]
+        simp only [hrun1, except_ok_bind, StateT.run_bind, hrun2]
         have h3 : StateT.run (ConRon.Arena.replaceApps names (decI us) 0 nn.toNat (decI (r2.tail.headD 0))) a2 = .ok (decE r3, a3) := hrun3
         rw [← htd, h3]
         rfl
@@ -382,8 +376,7 @@ theorem nestCrest_spec (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl us
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_crest" [no, nl, us, dO, dL, hO, hL, cty]
     ⦃fun r s' => LocEq s' s₀ ∧ pcrW k s₀.mem no nl us dO dL hO hL cty = some (r, s'.mem); ⊤⦄ := by
   have R := L.rx
-  rw [invoke_eq _ L.cr]
-  simp only [callFn, nestCrest]
+  simp only [invoke_eq _ L.cr, callFn, nestCrest]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCanonCrest_spec p R.ha R.hl R.hk L.ng L.np L.ip L.raf L.rap L.rgo L.rnd L.rcl L.ra L.cc k,
@@ -442,10 +435,7 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
       hcH (hR1.frame (posRecW_fr hrec))
     refine ⟨some (decE rr), a3, ?_, ⟨rfl, hH3, rfl⟩, RxPost.of_fr hR ((pccW_fr hpc).trans (posRecW_fr hrec)) hg12 hpost3,
       mp1, rpMR_mfr ((posRecW_mfr hrec).up.trans (rxW_mfr hrx)) (by decide) (by decide) hM1⟩
-    simp only [ConRon.Arena.nestCrest, StateT.run_bind]
-    rw [hdl, hrun1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [← hcd, show (decI (r1.tail.headD 0) : EIdx) = decE (r1.tail.headD 0) from rfl, hrun3]
+    simp only [ConRon.Arena.nestCrest, StateT.run_bind, hdl, hrun1, except_ok_bind, ← hcd, show (decI (r1.tail.headD 0) : EIdx) = decE (r1.tail.headD 0) from rfl, hrun3]
     rfl
 
 end rel

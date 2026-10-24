@@ -89,8 +89,7 @@ theorem keyOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : KeyOKC p dn vis f
   have htwin : (nestContKey V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a =
       (if bc && NS.keys.contains ⟨decI nn, decI us, ds⟩ then pure (NestFieldKind.nested (kb.toNat != 0), NS)
        else nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a2 := by
-    rw [ConRon.Arena.nestContKey.eq_def]
-    simp only [hact, Bool.false_eq_true, ite_false, StateT.run_bind, hrun2', except_ok_bind]
+    simp only [ConRon.Arena.nestContKey.eq_def, hact, Bool.false_eq_true, ite_false, StateT.run_bind, hrun2', except_ok_bind]
   by_cases hr2n : r2.headD 0 ≠ 0
   · rw [if_pos hr2n] at h
     have hbc : bc = true := by cases bc <;> simp_all

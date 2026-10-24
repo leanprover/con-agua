@@ -41,8 +41,7 @@ theorem nestCtorNf_spec (p : Prog) (L : RxLook p) (hp : p.lookup "nest_ctor_nf" 
     (s₀ : St) (ctx po pl us dO dL cv closed : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctor_nf" [ctx, po, pl, us, dO, dL, cv, closed]
     ⦃fun r s' => LocEq s' s₀ ∧ ncnW k s₀.mem ctx po pl us dO dL cv closed = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtorNfL]
+  simp only [invoke_eq _ hp, callFn, nestCtorNfL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       posRec5_specW p L.ha L.h5 k, (rxSpec_all p L k).2.2.2.1, (rxSpec_all p L k).2.2.2.2.2.2.2] <;>
@@ -99,9 +98,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     ⟨M3, G3, hS4, (hg1.trans hg2).trans (hg3.trans hg4), hR3.frame (posRecW_fr h), hk2.trans hk3 hG2,
       UInt64.le_trans hG2 hG3⟩⟩
   · simp only [ConRon.Arena.nestCtorNf, hpl, StateT.run_bind]
-    rw [hrun2]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hrun3]
+    simp only [hrun2, except_ok_bind, StateT.run_bind, hrun3]
     rfl
   · have hn0 := hget4 0 (by simp)
     have hn1 := hget4 1 (by simp)

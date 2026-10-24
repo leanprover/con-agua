@@ -125,8 +125,7 @@ include hv hf hput hgo in
 theorem dpGo_step (n : Nat) (ih : DpNodeSpec p n) : DpGoSpec p (n + 1) := by
   unfold DpNodeSpec at ih
   intro s₀ f h
-  rw [invoke_eq _ hgo]
-  simp only [callFn, depthGo]
+  simp only [invoke_eq _ hgo, callFn, depthGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p hv n, memoFindG_spec dpSch p _ hf n, memoPutG_spec dpSch p _ hput n, ih] <;>
@@ -136,8 +135,7 @@ include hgo hnode in
 theorem dpNode_step (n : Nat) (ih : DpGoSpec p n) : DpNodeSpec p (n + 1) := by
   unfold DpGoSpec at ih
   intro s₀ f1 g x y z
-  rw [invoke_eq _ hnode]
-  simp only [callFn, depthNode]
+  simp only [invoke_eq _ hnode, callFn, depthNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
     finish (gen := 20) [maxW]
@@ -258,10 +256,7 @@ theorem dpNodeBin_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g x
   obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a f1 y d2w mp1 h2 (dpFrame_arena hf1 hA) hy hM1
   refine ⟨max c1 c2 + 1, mp2, ?_, ?_, hM2, hf1.trans hf2⟩
   · simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr2]
-    simp only [except_ok_bind]
+    simp only [hr1, except_ok_bind, StateT.run_bind, hr2]
     rfl
   · rw [fin_toNat hb, maxW_toNat, hb1, hb2]
 
@@ -291,12 +286,7 @@ theorem dpNodeLet_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 x y
     (dpFrame_arena (hf1.trans hf2) hA) hz hM2
   refine ⟨max (max c1 c2) c3 + 1, mp3, ?_, ?_, hM3, (hf1.trans hf2).trans hf3⟩
   · simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr2]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr3]
-    simp only [except_ok_bind]
+    simp only [hr1, except_ok_bind, StateT.run_bind, hr2, hr3]
     rfl
   · rw [fin_toNat hb, maxW_toNat, maxW_toNat, hb1, hb2, hb3]
 
@@ -317,8 +307,7 @@ theorem dpNodeProj_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g 
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 z d1w mp h1 hA hz hM
   refine ⟨c1 + 1, mp1, ?_, ?_, hM1, hf1⟩
   · simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind]
+    simp only [hr1, except_ok_bind]
     rfl
   · rw [fin_toNat hb, hb1]
 
@@ -411,9 +400,7 @@ theorem dpGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) (m m' :
       have hfs : MemFrame [DPM] [dpSch.cs + 1] m1 m2 := msetG_frame dpSch dpSch_wf m1 m2 h 0 rn hset
       refine ⟨d, mp1.insert (decE h) d, ?_, hbb, ?_, hfr1.trans hfs⟩
       · rw [hmiss]
-        simp only [StateT.run_bind]
-        rw [hr1]
-        simp only [except_ok_bind]
+        simp only [StateT.run_bind, hr1, except_ok_bind]
         rfl
       · rw [← hbb]; exact hset'
 
@@ -515,8 +502,7 @@ theorem depth_spec (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ dpConstW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ih := (dpGo_spec p hv hf hput hgo hnode n).1
   unfold DpGoSpec at ih
-  rw [invoke_eq _ hd]
-  simp only [callFn, depth]
+  simp only [invoke_eq _ hd, callFn, depth]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec dpSch p _ hcl n, ih] <;>
     finish
@@ -525,8 +511,7 @@ include hv hf hput hgo hnode hcl hd in
 theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "whnf_walk_fuel" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ wfW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hw]
-  simp only [callFn, whnfWalkFuel]
+  simp only [invoke_eq _ hw, callFn, whnfWalkFuel]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, depth_spec p hv hf hput hgo hnode hcl hd n] <;>
     finish (gen := 20) [wfW]
@@ -563,8 +548,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (by intro x hx; simp [dpSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [dpSch])
   refine ⟨d, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [dpSch] using hx))⟩⟩
-  simp only [ConRon.Arena.depth, StateT.run_bind]
-  rw [hrun]
+  simp only [ConRon.Arena.depth, StateT.run_bind, hrun]
   rfl
 
 theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -585,8 +569,7 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     omega
   refine ⟨dd + 1024, ?_, ?_, hM', hS', hg, hf⟩
   · simp only [ConRon.Arena.whnfWalkFuel, StateT.run_bind]
-    rw [hrun]
-    simp only [except_ok_bind]
+    simp only [hrun, except_ok_bind]
     show (pure (dd + fuelSlack) : AM Nat).run a = _
     rfl
   · rw [UInt64.toNat_add, hdd]
@@ -711,8 +694,7 @@ theorem nestPhsGo_spec (k : Nat) : ∀ (s₀ : St) (q n i : Word),
     rw [invoke_eq _ hp]; simp only [callFn, nestPhsGo]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ q n i
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestPhsGo]
+    simp only [invoke_eq _ hp, callFn, nestPhsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         pinWord_specV p hpw k, internSort_spec p hsf hsp his k, internFVar_spec p hff hfp hif k, ih] <;>
@@ -743,8 +725,7 @@ include ha hpw hsf hsp his hff hfp hif hg hp
 theorem nestPhs_spec (k : Nat) (s₀ : St) (nn : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_phs" [nn]
     ⦃fun r s' => LocEq s' s₀ ∧ phsW k s₀.mem nn = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestPhs]
+  simp only [invoke_eq _ hp, callFn, nestPhs]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       iwAlloc_specW p ha k, nestPhsGo_spec p hpw hsf hsp his hff hfp hif hg k] <;>
@@ -891,15 +872,9 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
         have hzl : zeroLevel.run a = .ok (decI z, a) := by
           rw [hz]; exact pinZeroLevel_run hfull
         have e1 : (phF i.toNat).run a = .ok (decE v, a2) := by
-          simp only [phF, StateT.run_bind]
-          rw [hzl]
-          simp only [except_ok_bind, StateT.run_bind]
-          simp only [ConRon.Arena.internSortE, ConRon.Arena.internFVarE]
-          rw [hr1]
-          simp only [except_ok_bind]
+          simp only [phF, StateT.run_bind, hzl, except_ok_bind, ConRon.Arena.internSortE, ConRon.Arena.internFVarE, hr1]
           exact hr2
-        rw [e1]
-        simp only [except_ok_bind, StateT.run_bind]
+        simp only [e1, except_ok_bind, StateT.run_bind]
         rw [hi1] at hrun
         rw [hrun]
         rfl
@@ -1032,8 +1007,7 @@ include ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp
 theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "nest_canon_crest" [no, nl, us, nn, cty]
     ⦃fun r s' => LocEq s' s₀ ∧ pccW n s₀.mem no nl us nn cty = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCanonCrest]
+  simp only [invoke_eq _ hp, callFn, nestCanonCrest]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,

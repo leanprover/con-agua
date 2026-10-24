@@ -51,8 +51,7 @@ theorem nestOccAny_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "nest_occ_any"
     rw [invoke_eq _ hp]; simp only [callFn, nestOccAnyL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ no nl lo hi off ln
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestOccAnyL]
+    simp only [invoke_eq _ hp, callFn, nestOccAnyL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestOcc_spec' p hl k, ih] <;>
       finish (gen := 20) [Locals.init_cons_zero]
@@ -124,8 +123,7 @@ theorem viewLsLen_specE (p : Prog) (hl : p.lookup "ls_node" = some lsNode)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "view_ls_len" [us]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ lsNodeW s₀.mem us ≠ [] ∧
       r = [1, (lsNodeW s₀.mem us).tail.headD 0]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, viewLsLenL]
+  simp only [invoke_eq _ hp, callFn, viewLsLenL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -205,8 +203,7 @@ theorem nestInstTypeTy_spec (p : Prog) (hl : NtyLook p) (cR : CallM) (hcR : Call
     (vis key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type_ty" [vis, key]
     ⦃fun r s' => LocEq s' s₀ ∧ ntyW cR k s₀.mem vis key = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestInstTypeTyL]
+  simp only [invoke_eq _ hl.hp, callFn, nestInstTypeTyL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, viewLsLen_specE p hl.hls hl.hvl k,
@@ -286,8 +283,7 @@ theorem nestInstType_spec (p : Prog) (hl : NitLook p) (cR : CallM) (hcR : CallSp
     (vis ctx hi key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
     ⦃fun r s' => LocEq s' s₀ ∧ nitW cR k s₀.mem vis ctx hi key = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestInstTypeL]
+  simp only [invoke_eq _ hl.hp, callFn, nestInstTypeL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestInstTypeTy_spec' p hl.ty cR hcR k, piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k,

@@ -95,8 +95,7 @@ theorem sgGo_spec (k : Nat) : ∀ (s₀ : St) (ctx f dO dL q j : Word),
   | succ k ih =>
     intro s₀ ctx f dO dL q j
     have hrx := (rxSpec_all p L.cr.rx k).2.2.2.2.2.2.2
-    rw [invoke_eq _ L.go]
-    simp only [callFn, nestSeedOfGoL]
+    simp only [invoke_eq _ L.go, callFn, nestSeedOfGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         posRp_spec p L k, hrx, ih] <;>
@@ -107,8 +106,7 @@ theorem nestSeedOf_spec (k : Nat) (s₀ : St) (ctx hO hL ind us dO dL nPc : Word
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_seed_of" [ctx, hO, hL, ind, us, dO, dL, nPc]
     ⦃fun r s' => LocEq s' s₀ ∧ sgW k s₀.mem ctx hO hL ind us dO dL nPc = some (r, s'.mem); ⊤⦄ := by
   have R := L.cr.rx
-  rw [invoke_eq _ L.so]
-  simp only [callFn, nestSeedOfL]
+  simp only [invoke_eq _ L.so, callFn, nestSeedOfL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       posRec5_specW p R.ha R.h5 k, posRec4_specW p R.ha R.h4 k, iwAlloc_specW p R.ha k, sgGo_spec p L k] <;>
@@ -208,14 +206,9 @@ theorem sgGoW_ok (k : Nat) :
     (by rw [hj1]; omega) (by rw [hj1]; exact hdec3) (hR2.frame (RfFr.set_iw _ _ _)) hP3
   refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg12.1; omega, ⟨M', G', hR',
     hk2.trans hk' hG2, UInt64.le_trans hG2 hG'⟩, hP'⟩
-  rw [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons]
-  simp only [StateT.run_bind, sgF]
-  rw [← hxd, show (decI x : EIdx) = decE x from rfl, ← hlv]
+  simp only [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons, StateT.run_bind, sgF, ← hxd, show (decI x : EIdx) = decE x from rfl, ← hlv]
   simp only [show ((0 : Word).toNat) = 0 from rfl] at hr1
-  rw [hr1]
-  simp only [except_ok_bind, StateT.run_bind]
-  rw [hr2]
-  simp only [except_ok_bind, StateT.run_bind]
+  simp only [hr1, except_ok_bind, StateT.run_bind, hr2]
   rw [hj1] at hrun
   rw [hrun]
   rfl

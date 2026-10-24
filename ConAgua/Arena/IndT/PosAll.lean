@@ -96,8 +96,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       subst hbo2'
       refine ⟨(.ordinary, w, NS), a1, ?_, hC3, hg12.trans hg3, by simp [decNFK], by simpa using hwH,
         by simpa using hwd, by simpa using hns3, hP3, hA3, c1⟩
-      rw [hfu, nestPos_succ]
-      simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
+      simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
     · rw [if_neg ho2] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -105,8 +104,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       subst hbo2'
       refine ⟨(.ordinary, decI e, NS), a1, ?_, hC3, hg12.trans hg3, by simp [decNFK], by simpa using he,
         by simp, by simpa using hns3, hP3, hA3, c1⟩
-      rw [hfu, nestPos_succ]
-      simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
+      simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
   rw [if_neg ho] at h
   have hbo' : bo = true := by rw [← hbo]; simpa using ho
@@ -125,8 +123,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       by simpa using hns4, hP4, hA4, c1.trans c4⟩
     have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
     rw [hwd] at hrun4
-    rw [hfu, nestPos_succ]
-    simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
+    simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4
   · -- an application
     rw [if_neg h6] at h
@@ -141,8 +138,7 @@ theorem posOKC_step (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n)
       by simpa [hwd] using hx1.symm, by simpa using hns4, hP4, hA4, c1.trans c4⟩
     have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
     rw [hwd, hhi1] at hrun4
-    rw [hfu, nestPos_succ]
-    simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
+    simp only [hfu, nestPos_succ, StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
     simpa using hrun4
 
 end steps

@@ -143,8 +143,7 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
     rw [invoke_eq _ hl.hgo]; simp only [callFn, nestContainerCtorsGo]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ vis C co cl cs ol fp
-    rw [invoke_eq _ hl.hgo]
-    simp only [callFn, nestContainerCtorsGo]
+    simp only [invoke_eq _ hl.hgo, callFn, nestContainerCtorsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
@@ -155,8 +154,7 @@ include hl in
 theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors" [vis, C, co, cl]
     ⦃fun r s' => LocEq s' s₀ ∧ ncWf k s₀.mem vis C co cl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hcc]
-  simp only [callFn, nestContainerCtors]
+  simp only [invoke_eq _ hl.hcc, callFn, nestContainerCtors]
   cases k with
   | zero => vcgen [exec] <;> grind
   | succ k =>
@@ -169,8 +167,7 @@ include hl in
 theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ ntW k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hnt]
-  simp only [callFn, nestContainer]
+  simp only [invoke_eq _ hl.hnt, callFn, nestContainer]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf k, nc_spec p hl k] <;>

@@ -21,8 +21,7 @@ def pinWordV (m : Mem) (k : Word) : Option Word :=
 theorem pinWord_specV (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n : Nat) (s₀ : St) (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_word" [k]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ pinWordV s₀.mem k = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, pinWordL]
+  simp only [invoke_eq _ hp, callFn, pinWordL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -93,8 +92,7 @@ include hf hpw hsf hsp his hff hfp hif hp
 theorem nestCanonSub_spec (n : Nat) (s₀ : St) (no nl us nn c v : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_canon_sub" [no, nl, us, nn, c, v]
     ⦃fun r s' => LocEq s' s₀ ∧ canonW n s₀.mem no nl us nn c v = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCanonSub]
+  simp only [invoke_eq _ hp, callFn, nestCanonSub]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -110,8 +108,7 @@ theorem findIdx_decIP (ws : List Word) (c : Word) (hws : ∀ w ∈ ws, w.toNat <
   induction ws with
   | nil => rfl
   | cons w ws ih =>
-    simp only [List.map_cons, List.findIdx?_cons]
-    rw [decI_beq' w c (hws w (by simp)) hc]
+    simp only [List.map_cons, List.findIdx?_cons, decI_beq' w c (hws w (by simp)) hc]
     by_cases h : w = c
     · simp [h]
     · simp [h]
@@ -205,13 +202,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       refine ⟨some (decE rr), a2, ?_, hS2, (hg1.trans hg2), ?_⟩
       · have hzl : (zeroLevel).run a = .ok (decI z, a) := by
           rw [hz]; exact pinZeroLevel_run hfull
-        simp only [ConRon.Arena.nestCanonSub, hbeq, ite_true, hfi, hwi]
-        simp only [StateT.run_bind]
-        rw [hzl]
-        simp only [except_ok_bind, StateT.run_bind]
-        simp only [ConRon.Arena.internSortE, ConRon.Arena.internFVarE]
-        rw [hrun1]
-        simp only [except_ok_bind, StateT.run_bind]
+        simp only [ConRon.Arena.nestCanonSub, hbeq, ite_true, hfi, hwi, StateT.run_bind, hzl, except_ok_bind, ConRon.Arena.internSortE, ConRon.Arena.internFVarE, hrun1]
         rw [hnn2] at hrun2
         rw [hrun2]
         rfl
@@ -302,8 +293,7 @@ theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word)
     rw [invoke_eq _ hp]; simp only [callFn, nestFrameMatesGoL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ c off l oO oL
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestFrameMatesGoL]
+    simp only [invoke_eq _ hp, callFn, nestFrameMatesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slContains_spec p hc n, slSnoc_specW p ha hcp hsn n, ih] <;> finish (gen := 20)
@@ -399,8 +389,7 @@ theorem contains_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat <
   induction ws with
   | nil => rfl
   | cons w ws ih =>
-    simp only [List.map_cons, List.contains_cons]
-    rw [decI_beq' x w hx (hws w (by simp))]
+    simp only [List.map_cons, List.contains_cons, decI_beq' x w hx (hws w (by simp))]
     have := ih (fun y hy => hws y (by simp [hy]))
     rw [this]
     by_cases h : x = w <;> simp [h]
@@ -529,8 +518,7 @@ theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
         some (ConRon.Arena.nestFrameMates fe (decI c)) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   obtain ⟨hOK1, hOK2, hOK3, hOK4, hOK5⟩ := hS.2
   have hE := hS.1.env
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestFrameMatesL]
+  simp only [invoke_eq _ hp, callFn, nestFrameMatesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestBlockOf_refines p hx hg hf hbo n (dn := dn) (fe := fe),
@@ -663,8 +651,7 @@ include hv hc hf hput hgo in
 theorem maGo_step (n : Nat) (ih : MaNodeSpec p n) : MaGoSpec p (n + 1) := by
   unfold MaNodeSpec at ih
   intro s₀ no nl f h
-  rw [invoke_eq _ hgo]
-  simp only [callFn, mentionsAnyGo]
+  simp only [invoke_eq _ hgo, callFn, mentionsAnyGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p hv n, slContains_spec p hc n, memoFindG_spec maSch p _ hf n,
@@ -674,8 +661,7 @@ include hc hgo hnode in
 theorem maNode_step (n : Nat) (ih : MaGoSpec p n) : MaNodeSpec p (n + 1) := by
   unfold MaGoSpec at ih
   intro s₀ no nl f1 g x y z
-  rw [invoke_eq _ hnode]
-  simp only [callFn, mentionsAnyNode]
+  simp only [invoke_eq _ hnode, callFn, mentionsAnyNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       slContains_spec p hc n, ih] <;> finish (gen := 20)
@@ -789,10 +775,7 @@ theorem maNodeBin_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
     (slR_congr (maFrame_iw hf1) hws) hwlt hM1
   refine ⟨c1 || c2, mp2, ?_, ?_, hM2, hf1.trans hf2⟩
   · simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr2]
-    simp only [except_ok_bind]
+    simp only [hr1, except_ok_bind, StateT.run_bind, hr2]
     rfl
   · rw [← hb1, ← hb2]
     by_cases e1 : b1w = 0 <;> by_cases e2 : b2w = 0 <;> simp [e1, e2]
@@ -822,12 +805,7 @@ theorem maNodeLet_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
     (maFrame_arena (hf1.trans hf2) hA) hz (slR_congr (maFrame_iw (hf1.trans hf2)) hws) hwlt hM2
   refine ⟨c1 || c2 || c3, mp3, ?_, ?_, hM3, (hf1.trans hf2).trans hf3⟩
   · simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr2]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr3]
-    simp only [except_ok_bind]
+    simp only [hr1, except_ok_bind, StateT.run_bind, hr2, hr3]
     rfl
   · rw [← hb1, ← hb2, ← hb3]
     by_cases e1 : b1w = 0 <;> by_cases e2 : b2w = 0 <;> by_cases e3 : b3w = 0 <;> simp [e1, e2, e3]
@@ -852,8 +830,7 @@ theorem maNodeProj_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl
   have hcont := containsW_ok n _ _ _ _ _ _ hws1 h2
   refine ⟨(ws.map (fun w => (decI w : NIdx))).contains (decI x) || c1, mp1, ?_, ?_, hM1, hf1⟩
   · simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind]
+    simp only [hr1, except_ok_bind]
     rfl
   · rw [← hb1, contains_decI ws x hwlt hx, hcont]
     generalize ws.contains x = bc
@@ -987,9 +964,7 @@ theorem maGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → MaGoOK k) (m m' :
       have hfs : MemFrame [MAM] [203] m1 m2 := msetG_frame maSch maSch_wf m1 m2 h 0 rn hset
       refine ⟨bb, mp1.insert (decE h) bb, ?_, hbb, ?_, hfr1.trans hfs⟩
       · rw [hmiss]
-        simp only [StateT.run_bind]
-        rw [hr1]
-        simp only [except_ok_bind]
+        simp only [StateT.run_bind, hr1, except_ok_bind]
         rfl
       · rw [← hbb]; exact hset'
 

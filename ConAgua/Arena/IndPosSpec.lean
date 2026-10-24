@@ -55,8 +55,7 @@ theorem nestFieldKindFlat_refines (p : Prog) (hp : p.lookup "nest_field_kind_fla
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_field_kind_flat" [w]
     ⦃fun r s' => s' = s₀ ∧ (r.headD 0 != 0) = fk.flat; ⊤⦄ := by
   have key := decNFK_flat h
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestFieldKindFlat]
+  simp only [invoke_eq _ hp, callFn, nestFieldKindFlat]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -98,8 +97,7 @@ theorem nestCtxHiAt_refines (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some ne
   have key : rdW (s₀.mem.arr64 IW) (q + 4) + rdW (s₀.mem.arr64 IW) (q + 1) + nf =
       UInt64.ofNat (ctx.hiAt nf.toNat) := by
     rw [hv1, hv2, NestCtx.hiAt, hlen, UInt64.ofNat_add, UInt64.ofNat_add, UInt64.ofNat_toNat]
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtxHiAt]
+  simp only [invoke_eq _ hp, callFn, nestCtxHiAt]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -128,8 +126,7 @@ theorem nestKeyMap_refines (p : Prog) (hp : p.lookup "nest_key_map" = some nestK
     ⦃fun r s' => s' = s₀ ∧ decOE s₀.mem r (ConRon.Arena.nestKeyMap ds holes i.toNat); ⊤⦄ := by
   have hdslen : ds.length = dsLen.toNat := decHL_length s₀.mem hds
   have hholen : holes.length = hoLen.toNat := decHL_length s₀.mem hho
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestKeyMap]
+  simp only [invoke_eq _ hp, callFn, nestKeyMap]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -180,8 +177,7 @@ theorem nestFieldKindFlat_wordSpec (p : Prog)
     (hp : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_field_kind_flat" [w]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = kindFlatW w; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestFieldKindFlat]
+  simp only [invoke_eq _ hp, callFn, nestFieldKindFlat]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -225,8 +221,7 @@ theorem nestKindsFlatInner_spec (hp : p.lookup "nest_kinds_flat_inner" = some ne
     rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlatInner]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKindsFlatInner]
+    simp only [invoke_eq _ hp, callFn, nestKindsFlatInner]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestFieldKindFlat_wordSpec p hf n, ih] <;> finish (gen := 20)
@@ -397,8 +392,7 @@ theorem nestKindsFlatMid_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
     rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlatMid]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKindsFlatMid]
+    simp only [invoke_eq _ hp, callFn, nestKindsFlatMid]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestKindsFlatInner_spec p hf hi n, ih] <;> finish (gen := 20)
@@ -522,8 +516,7 @@ theorem nestKindsFlat_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
     rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlat]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ off cnt
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKindsFlat]
+    simp only [invoke_eq _ hp, callFn, nestKindsFlat]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestKindsFlatMid_spec p hf hi hm n, ih] <;> finish (gen := 20)

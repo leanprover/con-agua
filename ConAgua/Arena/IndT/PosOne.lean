@@ -199,10 +199,7 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
     rw [hcurd] at hrun7
     simp only [oneK, hnod, Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hrun1, except_ok_bind,
       hrun2, hrun3, hrun4]
-    rw [hW5]
-    simp only [StateT.run_bind, hr6, except_ok_bind, Bool.false_eq_true, ite_false]
-    rw [hrun7]
-    simp only [Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hr8, except_ok_bind]
+    simp only [hW5, StateT.run_bind, hr6, except_ok_bind, Bool.false_eq_true, ite_false, hrun7, Bool.not_true, hr8]
   · simp only [List.headD_cons, List.tail_cons]
     exact hks.grow ((((hg3.trans hg4).trans hg5).trans hg6).trans hg7)
   · simp only [List.headD_cons, List.tail_cons]

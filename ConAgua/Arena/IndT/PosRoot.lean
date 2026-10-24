@@ -164,8 +164,7 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
         (by simp [hv1]))
       (fun cs hcs => hcF cs (List.mem_cons_of_mem _ hcs))
     refine ⟨x, a', ?_, hC', hg13.trans hg', hO', hOb', hns', hP', hA', c1.trans c2⟩
-    simp only [ConRon.Arena.nestRoot, StateT.run_bind]
-    rw [hrun1']
+    simp only [ConRon.Arena.nestRoot, StateT.run_bind, hrun1']
     exact hrun
 
 end root
@@ -323,13 +322,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
       hns1P
       (fun k hk x hx => hw k (List.mem_cons_of_mem _ hk) x hx)
     refine ⟨x, a', ?_, hC', hg13.trans hg', hns', hP', hA', (c12.trans c3).trans c4⟩
-    simp only [ConRon.Arena.nestSeeds, StateT.run_bind]
-    rw [hfold']
-    simp only [except_ok_bind]
-    rw [hrun2]
-    simp only [except_ok_bind]
-    rw [hrun3']
-    simp only [except_ok_bind]
+    simp only [ConRon.Arena.nestSeeds, StateT.run_bind, hfold', except_ok_bind, hrun2, hrun3']
     exact hrun
 
 end seeds

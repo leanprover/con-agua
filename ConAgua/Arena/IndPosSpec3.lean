@@ -30,8 +30,7 @@ theorem hiAt_specW (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt
     (ctx nf : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctx_hi_at" [ctx, nf]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = hiW s₀.mem ctx nf; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtxHiAt]
+  simp only [invoke_eq _ hp, callFn, nestCtxHiAt]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -48,8 +47,7 @@ theorem keyMap_specW (p : Prog) (hp : p.lookup "nest_key_map" = some nestKeyMap)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_key_map" [dO, dL, hO, hL, i]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = (kmW s₀.mem dO dL hO hL i).1 ∧
       r.tail.headD 0 = (kmW s₀.mem dO dL hO hL i).2; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestKeyMap]
+  simp only [invoke_eq _ hp, callFn, nestKeyMap]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -384,8 +382,7 @@ include L in
 theorem rxRoot_spec (n : Nat) (s₀ : St) (ctx i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_hole_img_root" [ctx, i]
     ⦃fun r s' => LocEq s' s₀ ∧ rxRootW s₀.mem ctx i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.rt]
-  simp only [callFn, nestHoleImgRoot]
+  simp only [invoke_eq _ L.rt, callFn, nestHoleImgRoot]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -438,8 +435,7 @@ theorem rxMap_step (s₀ : St) (f i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "fv_map_at" [f, i]
     ⦃fun r s' => LocEq s' s₀ ∧ rxMapW (n + 1) s₀.mem f i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨-, hImg, -, -, -, -, -, -⟩ := ih
-  rw [invoke_eq _ L.fma]
-  simp only [callFn, fvMapAt]
+  simp only [invoke_eq _ L.fma, callFn, fvMapAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hImg,
       keyMap_specW p L.km n, pinWord_specV p L.hl.hpw n, internSort_spec p L.hl.hsf L.hl.hsp L.hl.his n,
@@ -450,8 +446,7 @@ theorem rxImg_step (s₀ : St) (ctx po pl nn i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img" [ctx, po, pl, nn, i]
     ⦃fun r s' => LocEq s' s₀ ∧ rxImgW (n + 1) s₀.mem ctx po pl nn i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨-, hImg, hFr, -, -, -, -, -⟩ := ih
-  rw [invoke_eq _ L.img]
-  simp only [callFn, nestHoleImg]
+  simp only [invoke_eq _ L.img, callFn, nestHoleImg]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hImg, hFr,
       rxRoot_spec p L n, hiAt_specW p L.hi n] <;>
@@ -461,8 +456,7 @@ theorem rxFrame_step (s₀ : St) (ctx po pl n1 i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img_frame" [ctx, po, pl, n1, i]
     ⦃fun r s' => LocEq s' s₀ ∧ rxFrameW (n + 1) s₀.mem ctx po pl n1 i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨-, -, -, hDs, -, -, -, -⟩ := ih
-  rw [invoke_eq _ L.fr]
-  simp only [callFn, nestHoleImgFrame]
+  simp only [invoke_eq _ L.fr, callFn, nestHoleImgFrame]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hDs,
       posRec2_specW p L.ha L.h2 n, posRec4_specW p L.ha L.h4 n, posRec5_specW p L.ha L.h5 n,
@@ -473,8 +467,7 @@ theorem rxDs_step (s₀ : St) (f o l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img_ds" [f, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ rxDsW (n + 1) s₀.mem f o l = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨-, -, -, -, hDg, -, -, -⟩ := ih
-  rw [invoke_eq _ L.ds]
-  simp only [callFn, nestHoleImgDs]
+  simp only [invoke_eq _ L.ds, callFn, nestHoleImgDs]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hDg, iwAlloc_specW p L.ha n] <;>
     finish (gen := 20)
@@ -483,8 +476,7 @@ theorem rxDsGo_step (s₀ : St) (f o l q j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img_ds_go" [f, o, l, q, j]
     ⦃fun _ s' => LocEq s' s₀ ∧ rxDsGoW (n + 1) s₀.mem f o l q j = some s'.mem; ⊤⦄ := by
   obtain ⟨-, -, -, -, hDg, -, -, hRf⟩ := ih
-  rw [invoke_eq _ L.dsg]
-  simp only [callFn, nestHoleImgDsGo]
+  simp only [invoke_eq _ L.dsg, callFn, nestHoleImgDsGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hDg, hRf] <;>
     finish (gen := 20) [rdW_eq]
@@ -493,8 +485,7 @@ theorem rxGo_step (s₀ : St) (f fu h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars_go" [f, fu, h]
     ⦃fun r s' => LocEq s' s₀ ∧ rxGoW (n + 1) s₀.mem f fu h = some (r.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨hMap, -, -, -, -, -, hNd, -⟩ := ih
-  rw [invoke_eq _ L.go]
-  simp only [callFn, replaceFVarsGo]
+  simp only [invoke_eq _ L.go, callFn, replaceFVarsGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p L.hl.hv n, hMap, memoFindG_spec rfSch p _ L.rff n,
@@ -505,8 +496,7 @@ theorem rxNode_step (s₀ : St) (f f1 g x y z : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ rxNodeW (n + 1) s₀.mem f f1 g x y z = some (r.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨-, -, -, -, -, hGo, -, -⟩ := ih
   have hk := L.hk
-  rw [invoke_eq _ L.nd]
-  simp only [callFn, replaceFVarsNode]
+  simp only [invoke_eq _ L.nd, callFn, replaceFVarsNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hGo,
       mkApp_spec p hk.hd hk.appF hk.appP hk.appI hk.appM n,
@@ -519,8 +509,7 @@ theorem rxRf_step (s₀ : St) (f e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars" [f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ rxW (n + 1) s₀.mem f e = some (r.headD 0, s'.mem); ⊤⦄ := by
   obtain ⟨-, -, -, -, -, hGo, -, -⟩ := ih
-  rw [invoke_eq _ L.rf]
-  simp only [callFn, replaceFVars]
+  simp only [invoke_eq _ L.rf, callFn, replaceFVars]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hGo,
       bankEnterG_spec 218 p _ L.rfe n, bankLeaveG_spec 218 p _ L.rfl' n] <;> finish (gen := 20)
@@ -947,11 +936,7 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
     obtain ⟨a2, hr2, hS2, hg2⟩ := internFVar_stage hS1 i s (lt_of_notbig hsb) hfv
     refine ⟨some (decE v), a2, ?_, ⟨by simp, rfl⟩,
       hR.post hS2 (hg1.trans hg2) (RfFr.of_low ((sointernW_low hso).trans (fvinternW_low hfv)))⟩
-    rw [ConRon.Arena.fvMapAt.eq_def]
-    simp only [StateT.run_bind, hzl, except_ok_bind, ConRon.Arena.internSortE, ConRon.Arena.internFVarE]
-    rw [hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [hr2]
+    simp only [ConRon.Arena.fvMapAt.eq_def, StateT.run_bind, hzl, except_ok_bind, ConRon.Arena.internSortE, ConRon.Arena.internFVarE, hr1, hr2]
     rfl
   | canon pfvs =>
     obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩⟩ := hfm
@@ -1025,10 +1010,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
       hR.post hS2 (hg1.trans hg2) ((RfFr.of_low (ceinternW_low hci)).trans (RfFr.ofMknF hst))⟩
     have hnm' : c.names.getD (i.toNat - c.nP) default = decI nm := by
       rw [hnmd, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]; rfl
-    simp only [hnm', ConRon.Arena.internConstE, StateT.run_bind]
-    rw [← hlv, hr1]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [show (decE hd : EIdx) = decI hd from rfl, hr2]
+    simp only [hnm', ConRon.Arena.internConstE, StateT.run_bind, ← hlv, hr1, except_ok_bind, show (decE hd : EIdx) = decI hd from rfl, hr2]
     rfl
   · rw [rxRootW_out m ctx i hin2] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h

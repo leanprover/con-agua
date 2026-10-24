@@ -112,8 +112,7 @@ theorem nestGrowGroup_spec (p : Prog) (hl : NitLook p) (h2 : p.lookup "rec2" = s
     rw [invoke_eq _ hp]; simp only [callFn, nestGrowGroupL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ vis ctx hi us dO dL cO cL gO gL
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestGrowGroupL]
+    simp only [invoke_eq _ hp, callFn, nestGrowGroupL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         posRec4_specW p hl.ty.ha h4 k, nestInstType_spec' p hl cR hcR k, posRec2_specW p hl.ty.ha h2 k,
@@ -277,8 +276,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
       (fun j hj => by rw [hcO1, hcL1] at *; have := hcb (j + 1) (by omega); have := hg14.1; omega)
       (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4 ((hP2.fr (posRecW_mfr hpr)).fr (snocW_mfr hsn))
     refine ⟨res, a', ?_, hS', hg14.trans hg', h1, h2, h3, hP', hJ'⟩
-    rw [ConRon.Arena.nestGrowGroup]
-    simp only [StateT.run_bind, hrun2, except_ok_bind]
+    simp only [ConRon.Arena.nestGrowGroup, StateT.run_bind, hrun2, except_ok_bind]
     exact hrun
 
 section census

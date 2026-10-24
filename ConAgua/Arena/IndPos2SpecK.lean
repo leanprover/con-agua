@@ -145,8 +145,7 @@ theorem nestKeyEq_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
     (hp : p.lookup "nest_key_eq" = some nestKeyEqL) (n : Nat) (s₀ : St) (k1 k2 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_key_eq" [k1, k2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ nkeWf n s₀.mem k1 k2 = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestKeyEqL]
+  simp only [invoke_eq _ hp, callFn, nestKeyEqL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -164,8 +163,7 @@ theorem nestKeysContains_spec (p : Prog) (hq : p.lookup "sl_eq" = some slEq)
     intro s₀ o l k; rw [invoke_eq _ hp]; simp only [callFn, nestKeysContainsL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ o l k
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestKeysContainsL]
+    simp only [invoke_eq _ hp, callFn, nestKeysContainsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestKeyEq_spec p hq he n, ih] <;>
       finish (gen := 20) [rdW_eq, LocEq]
@@ -228,8 +226,7 @@ theorem nkeWf_ok {n : Nat} {m : Mem} {k1 k2 r : Word} {K1 K2 : NestKey}
   obtain ⟨ws1, hs1, hd1, hw1⟩ := slR_of_decHL m _ _ _ a4 hb1
   obtain ⟨ws2, hs2, hd2, hw2⟩ := slR_of_decHL m _ _ _ b4 hb2
   simp only [UInt64.ofNat_toNat] at hs1 hs2
-  rw [eqW_ok n m _ _ _ _ r ws1 ws2 hs1 hs2 h, hd1, hd2]
-  simp only [e0, e1, decide_true, Bool.true_and]
+  simp only [eqW_ok n m _ _ _ _ r ws1 ws2 hs1 hs2 h, hd1, hd2, e0, e1, decide_true, Bool.true_and]
   by_cases e : ws1 = ws2
   · subst e; simp
   · have : ¬ (ws1.map (decI : Word → EIdx)) = ws2.map decI :=
@@ -451,8 +448,7 @@ theorem nestAcceptGroup_spec (p : Prog) (L : NagLook p) (n : Nat) :
     rw [invoke_eq _ L.hp]; simp only [callFn, nestAcceptGroupL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ us dO dL gO gL kO kL
-    rw [invoke_eq _ L.hp]
-    simp only [callFn, nestAcceptGroupL]
+    simp only [invoke_eq _ L.hp, callFn, nestAcceptGroupL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         posRec4_specW p L.ha L.h4 n, nestKeysContains_spec p L.hq L.he L.hkc n,

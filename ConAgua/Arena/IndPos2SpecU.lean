@@ -134,8 +134,7 @@ theorem nestSeedsFuel_spec (n : Nat) : ∀ (s₀ : St) (dO dL k f : Word),
     exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
   | succ n ih =>
     intro s₀ dO dL k f
-    rw [invoke_eq _ L.pfuel]
-    simp only [callFn, nestSeedsFuelL]
+    simp only [invoke_eq _ L.pfuel, callFn, nestSeedsFuelL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, whnfWalkFuel_spec' p L.nb n, ih] <;>
       finish (gen := 20) [rdW_eq]
@@ -152,8 +151,7 @@ theorem nestRoot_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ :
     intro s₀ vis ctx hO hL cO cL ns oO oL
     have R := L.nb.ct.cr.rx
     have hCtors := (nbSpec_all L.nb cR hcR n).2.2.2.2.2.2.2.1
-    rw [invoke_eq _ L.proot]
-    simp only [callFn, nestRootL]
+    simp only [invoke_eq _ L.proot, callFn, nestRootL]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         nestCtxHiAt_specE p R.hi n, hCtors, posRec2_specW p R.ha R.h2 n,
         slSnoc_specW p R.ha L.nb.nit.hc2 L.nb.nag.hsn n, ih] <;>
@@ -172,8 +170,7 @@ theorem nestSeeds_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ 
     intro s₀ vis ctx sO sL ns
     have R := L.nb.ct.cr.rx
     have hKey := (nbSpec_all L.nb cR hcR n).2.2.2.2.1
-    rw [invoke_eq _ L.pseeds]
-    simp only [callFn, nestSeedsL]
+    simp only [invoke_eq _ L.pseeds, callFn, nestSeedsL]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         nestCtxHiAt_specE p R.hi n, nestSeedsFuel_spec L n, nestInstType_spec' p L.nb.nit cR hcR n, hKey, ih] <;>
       simp_all [p2sdW_succ, p2sdK1_some, p2sdK2_some, p2sdK3_some, SLACK,

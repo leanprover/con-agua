@@ -236,8 +236,7 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   refine ⟨x, a', ?_, hC9.of_pstep hS10 hA10 p10, hg19.trans hg10, by simpa using hk10, by simpa using hns10,
     hP9.fr (cfW_mfr hcf), hA10, (c12.trans c9).trans (p10.toCore hC9.check)⟩
   rw [hhw] at hrun9
-  rw [ConRon.Arena.nestContNew.eq_def]
-  simp only [StateT.run_bind, hrun1, except_ok_bind, hrun5, hrun9]
+  simp only [ConRon.Arena.nestContNew.eq_def, StateT.run_bind, hrun1, except_ok_bind, hrun5, hrun9]
   exact hrun10
 
 end steps

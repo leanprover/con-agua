@@ -71,8 +71,7 @@ include ha
 theorem posRec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec2" [a, b]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [← posRec2_eq, invoke_eq _ h2]
-  simp only [callFn, rec2]
+  simp only [← posRec2_eq, invoke_eq _ h2, callFn, rec2]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -84,8 +83,7 @@ theorem posRec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (
 theorem posRec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [← posRec4_eq, invoke_eq _ h4]
-  simp only [callFn, rec4]
+  simp only [← posRec4_eq, invoke_eq _ h4, callFn, rec4]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -97,8 +95,7 @@ theorem posRec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (
 theorem posRec5_specW (h5 : p.lookup "rec5" = some rec5) (n : Nat) (s₀ : St) (a b c d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d, e] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [← posRec5_eq, invoke_eq _ h5]
-  simp only [callFn, rec5]
+  simp only [← posRec5_eq, invoke_eq _ h5, callFn, rec5]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -110,8 +107,7 @@ theorem posRec5_specW (h5 : p.lookup "rec5" = some rec5) (n : Nat) (s₀ : St) (
 theorem rec6_specW (h6 : p.lookup "rec6" = some rec6) (n : Nat) (s₀ : St) (a b c d e f : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec6" [a, b, c, d, e, f]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d, e, f] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [← posRec6_eq, invoke_eq _ h6]
-  simp only [callFn, rec6]
+  simp only [← posRec6_eq, invoke_eq _ h6, callFn, rec6]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -185,8 +181,7 @@ theorem decHL_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' 
   simp only [decHL, hslice?]
   apply mapM_opt_congr
   intro j hj
-  simp only [hd?, iwA]
-  rw [h (o + j) (hi j (List.mem_range.mp hj))]
+  simp only [hd?, iwA, h (o + j) (hi j (List.mem_range.mp hj))]
 
 /-- The indices `decNK m k` reads lie in `P`. -/
 def NKIn (m : Mem) (k : Nat) (P : Nat → Prop) : Prop :=
@@ -202,26 +197,20 @@ theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (
   have e2 := iwN_agree h (h4 2 (by omega))
   have e3 := iwN_agree h (h4 3 (by omega))
   refine ⟨?_, h4, fun o l ho hl => hs o l (e2 ▸ ho) (e3 ▸ hl)⟩
-  simp only [decNK]
-  rw [iwH_agree h (show P k from by simpa using h4 0 (by omega)), iwH_agree h (h4 1 (by omega))]
-  simp only [decAt]
-  rw [e2, e3]
+  simp only [decNK, iwH_agree h (show P k from by simpa using h4 0 (by omega)), iwH_agree h (h4 1 (by omega)), decAt, e2, e3]
   rcases ho : iwN m (k + 2) with _ | o; · simp
   rcases hl : iwN m (k + 2 + 1) with _ | l; · simp
   have hl' : iwN m (k + 3) = some l := by simpa using hl
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [decHL_agree h (hs o l ho hl')]
+  simp only [Option.bind_eq_bind, Option.bind_some, decHL_agree h (hs o l ho hl')]
 
 theorem NHIn.agree {m m' : Mem} {P : Nat → Prop} {w : Nat} (hw : NHIn m w P) (h : RdS m m' P) :
     decNH m' w = decNH m w ∧ NHIn m' w P := by
   obtain ⟨h0, h1, hk⟩ := hw
   have e0 := iwN_agree h h0
   refine ⟨?_, h0, h1, fun k hk' => (hk k (e0 ▸ hk')).agree h |>.2⟩
-  simp only [decNH]
-  rw [e0, iwN_agree h h1]
+  simp only [decNH, e0, iwN_agree h h1]
   rcases hkk : iwN m w with _ | k; · simp
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [((hk k hkk).agree h).1]
+  simp only [Option.bind_eq_bind, Option.bind_some, ((hk k hkk).agree h).1]
 
 theorem NKIn.mono {m : Mem} {P Q : Nat → Prop} {k : Nat} (h : NKIn m k P) (hq : ∀ i, P i → Q i) :
     NKIn m k Q := ⟨fun j hj => hq _ (h.1 j hj), fun o l ho hl j hj => hq _ (h.2 o l ho hl j hj)⟩
@@ -319,8 +308,7 @@ theorem rhGo_spec (k : Nat) : ∀ (s₀ : St) (no nl lv po pl nP q j : Word),
     rw [invoke_eq _ hg]; simp only [callFn, nestCtxRootHolesGo]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ no nl lv po pl nP q j
-    rw [invoke_eq _ hg]
-    simp only [callFn, nestCtxRootHolesGo]
+    simp only [invoke_eq _ hg, callFn, nestCtxRootHolesGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         posRec4_specW p ha h4 k, posRec2_specW p ha h2 k, ih] <;>
@@ -331,8 +319,7 @@ theorem rootHoles_spec (hp : p.lookup "nest_ctx_root_holes" = some nestCtxRootHo
     (s₀ : St) (ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctx_root_holes" [ctx]
     ⦃fun r s' => LocEq s' s₀ ∧ rhW k s₀.mem ctx = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtxRootHoles]
+  simp only [invoke_eq _ hp, callFn, nestCtxRootHoles]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       iwAlloc_specW p ha k, rhGo_spec p ha h2 h4 hg k] <;>
@@ -808,8 +795,7 @@ include ha h2 h4 hg hr hc hap hp in
 theorem nestHoleAt_spec (k : Nat) (s₀ : St) (ctx po pl i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_hole_at" [ctx, po, pl, i]
     ⦃fun r s' => LocEq s' s₀ ∧ haW k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestHoleAt]
+  simp only [invoke_eq _ hp, callFn, nestHoleAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       rootHoles_spec' p ha h2 h4 hg hr k, slAppend_specW p ha hc hap k] <;>

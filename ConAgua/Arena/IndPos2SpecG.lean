@@ -100,8 +100,7 @@ theorem nestUniformCs_spec (p : Prog) (hl : NuLook p) (hp : p.lookup "nest_unifo
     rw [invoke_eq _ hp]; simp only [callFn, nestUniformCsL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ ctx o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestUniformCsL]
+    simp only [invoke_eq _ hp, callFn, nestUniformCsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestUniformOk_spec' p hl cR hcR k, ih] <;>
@@ -142,8 +141,7 @@ theorem nestUniform_spec (p : Prog) (hl : NuLook p) (hc : p.lookup "nest_uniform
     rw [invoke_eq _ hp]; simp only [callFn, nestUniformL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ ctx off l
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestUniformL]
+    simp only [invoke_eq _ hp, callFn, nestUniformL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestUniformCs_spec p hl hc cR hcR k, ih] <;>

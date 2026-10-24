@@ -117,15 +117,13 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
       (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hg1 (hP.setDp hf1 ⟨∅, hM1⟩) hA1
       (PStep.refl hC.check.state) h
     refine ⟨ks, nds, cur, ns2, closed, a', fun K => ?_, rest.1, hg1.trans rest.2.1, rest.2.2⟩
-    rw [← hK K, hwd]
-    simp only [walkK, hdec, dite_true, StateT.run_bind, ← decE_eq, hrunw, except_ok_bind]
+    simp only [← hK K, hwd, walkK, hdec, dite_true, StateT.run_bind, ← decE_eq, hrunw, except_ok_bind]
   · rw [if_neg hr] at h
     have hdec : decide (root ≠ 0) = false := by simpa using hr
     obtain ⟨ks, nds, cur, ns2, closed, a', hK, rest⟩ := hF fu m a hC (IWGrow.refl _) hP hA
       (PStep.refl hC.check.state) h
     refine ⟨ks, nds, cur, ns2, closed, a', fun K => ?_, rest⟩
-    rw [← hK K]
-    simp only [walkK, hdec]
+    simp only [← hK K, walkK, hdec]
     rfl
 
 end steps

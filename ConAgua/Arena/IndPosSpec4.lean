@@ -159,11 +159,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
     ⟨hS4, by simp only [decHL, iwA, hiw4]; exact hdec3⟩
   refine ⟨some x, a5, ?_, ⟨by simp, by rw [← hx2]; rfl⟩, ?_⟩
   · simp only [StateT.run_bind]
-    rw [hrun3]
-    simp only [except_ok_bind, ConRon.Arena.internConstE, StateT.run_bind]
-    rw [← hcnd, ← hlvd, hr4]
-    simp only [except_ok_bind, StateT.run_bind]
-    rw [show (decE hd : EIdx) = decI hd from rfl, hr5]
+    simp only [hrun3, except_ok_bind, ConRon.Arena.internConstE, StateT.run_bind, ← hcnd, ← hlvd, hr4, show (decE hd : EIdx) = decI hd from rfl, hr5]
     rfl
   · exact ⟨M3, G3, hS5, ((hg2.trans hg3).trans hg4).trans hg5,
       (hR3.frame (RfFr.of_low (ceinternW_low hci))).frame (RfFr.ofMknF hst), hk3, hG3⟩
@@ -280,10 +276,7 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n
     (by rw [hj1]; omega) (by rw [hj1]; exact hdec2) (hR1.frame (RfFr.set_iw _ _ _))
   refine ⟨decE r :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg1.1; omega, M', G', hR',
     hk1.trans hk' hG1, UInt64.le_trans hG1 hG'⟩
-  rw [List.drop_eq_getElem_cons (show j.toNat < xs.length by omega), List.mapM_cons]
-  simp only [StateT.run_bind]
-  rw [← hxd, show (decI x : EIdx) = decE x from rfl, hr1]
-  simp only [except_ok_bind, StateT.run_bind]
+  simp only [List.drop_eq_getElem_cons (show j.toNat < xs.length by omega), List.mapM_cons, StateT.run_bind, ← hxd, show (decI x : EIdx) = decE x from rfl, hr1, except_ok_bind]
   rw [hj1] at hrun
   rw [hrun]
   rfl
@@ -382,12 +375,7 @@ theorem rxBin_ok (k : Nat) (hGo : GoOK dn fe vis k) (g : Word)
   obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
   refine ⟨mp2, a3, ?_, M2, G2, hS3, (hg1.trans hg2).trans hg3, hR2.frame (RfFr.of_low (hlow _ _ _ _ _ hn)), hb2,
     hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
-  simp only [StateT.run_bind]
-  rw [hr1]
-  simp only [except_ok_bind, StateT.run_bind]
-  rw [hr2]
-  simp only [except_ok_bind, StateT.run_bind]
-  rw [hr3]
+  simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
   rfl
 
 theorem rxLet_ok (k : Nat) (hGo : GoOK dn fe vis k)
@@ -418,13 +406,7 @@ theorem rxLet_ok (k : Nat) (hGo : GoOK dn fe vis k)
   refine ⟨mp3, a4, ?_, M3, G3, hS4, ((hg1.trans hg2).trans hg3).trans hg4,
     hR3.frame (RfFr.of_low (mkLetW_low hn)), hb3, (hk1.trans hk2 hG1).trans hk3 (UInt64.le_trans hG1 hG2),
     UInt64.le_trans (UInt64.le_trans hG1 hG2) hG3⟩
-  simp only [StateT.run_bind]
-  rw [hr1]
-  simp only [except_ok_bind, StateT.run_bind]
-  rw [hr2]
-  simp only [except_ok_bind, StateT.run_bind]
-  rw [hr3]
-  simp only [except_ok_bind, StateT.run_bind]
+  simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
   have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
   rw [hr4']
   rfl
@@ -444,9 +426,7 @@ theorem rxProj_ok (k : Nat) (hGo : GoOK dn fe vis k)
   obtain ⟨mp1, a1, hr1, hP1⟩ := goStep dn fe vis hGo h1 hS hfm hz hR hb
   obtain ⟨a3, hr3, hS3, hg3⟩ := mkProj_stage hP1.choose_spec.choose_spec.1 x y a2 hn
   refine ⟨mp1, a3, ?_, hP1.mk dn fe vis hS3 hg3 (mkProjW_low hn)⟩
-  simp only [StateT.run_bind]
-  rw [hr1]
-  simp only [except_ok_bind, StateT.run_bind]
+  simp only [StateT.run_bind, hr1, except_ok_bind]
   have hr3' : (internProjE (decI x) y.toNat (decE a2)).run a1 = .ok (decE r, a3) := hr3
   rw [hr3']
   rfl
@@ -574,8 +554,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k)
     refine ⟨mp1.insert (decE h) (decE rn), a1, ?_, M1.insert (decE h, gn) (decE rn), G1, hS2, hg1.trans hg2,
       ⟨hR2, hBW2, hF2⟩, hbk2, fun k' gen hgen hne => ?_, hG1⟩
     · rw [hm]
-      simp only [StateT.run_bind]
-      rw [hr1]
+      simp only [StateT.run_bind, hr1]
       rfl
     · rw [Std.HashMap.getElem?_insert]
       have : ¬ ((decE h, gn) == (k', gen)) = true := by simp [Ne.symm hne]
@@ -631,10 +610,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)
     obtain ⟨xo, a1, hrun, hout, M1, G1, hS1, hg1', hR1, hk1, hG1⟩ := hMap m m1 a f _ fm r0 r1 M G gn hmap hS hfm hR
     refine ⟨mp, a1, M1, G1, ?_, hS1, hg1', hR1, hk1.bank hR.2.1.2.2.1 hb, fun k gen hg _ => hk1 k gen hg, hG1⟩
-    rw [hF, replaceFVarsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
-    simp only [StateT.run_bind]
-    rw [← hi, hrun]
-    simp only [except_ok_bind]
+    simp only [hF, replaceFVarsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind, ← hi, hrun]
     cases xo with
     | none =>
       simp only [OptE] at hout

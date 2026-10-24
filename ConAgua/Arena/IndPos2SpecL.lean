@@ -44,8 +44,7 @@ theorem nestBlockOf_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     (hp : p.lookup "nest_block_of" = some nestBlockOfL) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_block_of" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ nboW n s₀.mem vis c = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestBlockOfL]
+  simp only [invoke_eq _ hp, callFn, nestBlockOfL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -82,8 +81,7 @@ structure FmLook (p : Prog) : Prop where
 theorem nestFrameMates_specW (p : Prog) (L : FmLook p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_mates" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ nfmW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.hp]
-  simp only [callFn, nestFrameMatesL]
+  simp only [invoke_eq _ L.hp, callFn, nestFrameMatesL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -187,8 +185,7 @@ theorem slNew1_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "sl_new1" = some slNew1) (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_new1" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ new1W s₀.mem x = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, slNew1]
+  simp only [invoke_eq _ hp, callFn, slNew1]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -291,8 +288,7 @@ theorem nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     rw [invoke_eq _ hp]; simp only [callFn, nestFrameGrpL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ hi us dO dL gO gL pO pL nO nL
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestFrameGrpL]
+    simp only [invoke_eq _ hp, callFn, nestFrameGrpL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         posRec4_specW p ha h4 n, posRec2_specW p ha h2 n, slSnoc_specW p ha hc2 hsn n, ih] <;>
@@ -450,8 +446,7 @@ theorem nestFrameHoles_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     rw [invoke_eq _ hp]; simp only [callFn, nestFrameHolesL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ hi gO gL aO aL
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestFrameHolesL]
+    simp only [invoke_eq _ hp, callFn, nestFrameHolesL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internFVar_spec p hff hfp hif n, slSnoc_specW p ha hc2 hsn n, ih] <;>
@@ -476,8 +471,7 @@ theorem pos2_zipIdx_holes (hi : Nat) : ∀ (grp : List (NIdx × EIdx)) (k : Nat)
       pos2FhT (hi + k) grp
   | [], k => rfl
   | x :: g, k => by
-    simp only [List.zipIdx_cons, List.mapM_cons, pos2FhT]
-    rw [pos2_zipIdx_holes hi g (k + 1), Nat.add_assoc]
+    simp only [List.zipIdx_cons, List.mapM_cons, pos2FhT, pos2_zipIdx_holes hi g (k + 1), Nat.add_assoc]
 
 /-- **`nest_frame_holes`**: the group's holes from `hi` on, appended to the accumulator. -/
 theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : ∀ (n : Nat) (m m' : Mem)
@@ -599,8 +593,7 @@ theorem nestContNewActive_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAll
     rw [invoke_eq _ hp]; simp only [callFn, nestContNewActiveL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ us dO dL gO gL aO aL
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestContNewActiveL]
+    simp only [invoke_eq _ hp, callFn, nestContNewActiveL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         posRec4_specW p ha h4 n, slSnoc_specW p ha hc2 hsn n, ih] <;>
@@ -714,8 +707,7 @@ theorem nestContParamsClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
     rw [invoke_eq _ hp]; simp only [callFn, nestContParamsClosedL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ hpw dO dL
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestContParamsClosedL]
+    simp only [invoke_eq _ hp, callFn, nestContParamsClosedL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         bvarBL_spec p hb n, fvbF_spec p hf n, ih] <;>
@@ -744,8 +736,7 @@ def pos2PinW (m : Mem) (i : Word) : Option (List Word × Mem) :=
 theorem pos2Pin_spec (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ pos2PinW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, pinAtL]
+  simp only [invoke_eq _ hp, callFn, pinAtL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -813,8 +804,7 @@ theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
     (ctx hpw nn dO dL iO iL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_checks" [ctx, hpw, nn, dO, dL, iO, iL]
     ⦃fun r s' => LocEq s' s₀ ∧ p2ccW n s₀.mem ctx hpw nn dO dL iO iL = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestContChecksL]
+  simp only [invoke_eq _ hp, callFn, nestContChecksL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>

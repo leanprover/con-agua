@@ -155,8 +155,7 @@ theorem nestContNewFinish_spec (p : Prog) (L : NagLook p) (hd : DcLook p) (h6 : 
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_new_finish" [ctx, us, dO, dL, gO, gL, ns2, aO, aL, kb]
     ⦃fun r s' => LocEq s' s₀ ∧
       cfW n s₀.mem ctx us dO dL gO gL ns2 aO aL kb = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestContNewFinishL]
+  simp only [invoke_eq _ hp, callFn, nestContNewFinishL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -287,8 +286,7 @@ theorem nestPosHoleKind_spec (p : Prog) (hh : p.lookup "nest_ctx_hi_at" = some n
     (hp : p.lookup "nest_pos_hole_kind" = some nestPosHoleKindL) (n : Nat) (s₀ : St) (ctx kb i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_hole_kind" [ctx, kb, i]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ hkWf n s₀.mem ctx kb i = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestPosHoleKindL]
+  simp only [invoke_eq _ hp, callFn, nestPosHoleKindL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -433,8 +431,7 @@ theorem nestArity_spec' (p : Prog) (hl : NaLook p) (k : Nat) (s₀ : St) (vis c 
 theorem nestPosFvar_spec (p : Prog) (L : PfLook p) (n : Nat) (s₀ : St) (vis ctx po pl kb hi i aO aL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL]
     ⦃fun r s' => LocEq s' s₀ ∧ pfW n s₀.mem vis ctx po pl kb hi i aO aL = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.hp]
-  simp only [callFn, nestPosFvarL]
+  simp only [invoke_eq _ L.hp, callFn, nestPosFvarL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -635,8 +632,7 @@ theorem nestCtorsU4_spec (p : Prog) (L : UslLook p) (hp : p.lookup "nest_ctors_u
     rw [invoke_eq _ hp]; simp only [callFn, nestCtorsU4L]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ ko nF cl i
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestCtorsU4L]
+    simp only [invoke_eq _ hp, callFn, nestCtorsU4L]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, structUsedLater_spec' p L n, ih] <;>
       finish (gen := 20) [rdW_eq]
@@ -798,8 +794,7 @@ theorem nestCtorsResOk_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
     (hp : p.lookup "nest_ctors_res_ok" = some nestCtorsResOkL) (n : Nat) (s₀ : St) (ctx hi cur : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_res_ok" [ctx, hi, cur]
     ⦃fun r s' => LocEq s' s₀ ∧ roW n s₀.mem ctx hi cur = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtorsResOkL]
+  simp only [invoke_eq _ hp, callFn, nestCtorsResOkL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -958,8 +953,7 @@ structure CtLook (p : Prog) : Prop where
 theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis no nl us dO dL hO hL cv hi : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi]
     ⦃fun r s' => LocEq s' s₀ ∧ p2ctW cR n s₀.mem vis no nl us dO dL hO hL cv hi = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.hp]
-  simp only [callFn, nestCtorsCrestL]
+  simp only [invoke_eq _ L.hp, callFn, nestCtorsCrestL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>

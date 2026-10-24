@@ -109,8 +109,7 @@ structure NaLook (p : Prog) : Prop where
 theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestArityL]
+  simp only [invoke_eq _ hl.hp, callFn, nestArityL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf n,
@@ -217,8 +216,7 @@ theorem nestCtxHiAt_specE (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nest
     (s₀ : St) (ctx nf : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctx_hi_at" [ctx, nf]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = nhiW s₀.mem ctx nf; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtxHiAt]
+  simp only [invoke_eq _ hp, callFn, nestCtxHiAt]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -232,8 +230,7 @@ theorem nhiW_toNat {m : Mem} {ctx nf : Word} {c : NestCtx} (hc : decCtx m ctx.to
   obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hc hin hsz
   have hl := decHL_length m hn
   simp only [NestCtx.hiAt] at hhi ⊢
-  simp only [nhiW]
-  rw [UInt64.toNat_add, UInt64.toNat_add, hnP, hl]
+  simp only [nhiW, UInt64.toNat_add, hnP, hl]
   omega
 
 /-- A decoded handle at `o`, as the word L reads there. -/
@@ -284,8 +281,7 @@ theorem dcGo_spec (p : Prog) (hf : HfF p) (hp : p.lookup "nest_ds_closed_go" = s
     rw [invoke_eq _ hp]; simp only [callFn, nestDsClosedGoL]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ hi off l
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestDsClosedGoL]
+    simp only [invoke_eq _ hp, callFn, nestDsClosedGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fvbF_spec p hf n, ih] <;>
@@ -299,8 +295,7 @@ theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some n
     (hp : p.lookup "nest_ds_closed" = some nestDsClosedL) (n : Nat) (s₀ : St) (ctx off l : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ds_closed" [ctx, off, l]
     ⦃fun r s' => LocEq s' s₀ ∧ dcW n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestDsClosedL]
+  simp only [invoke_eq _ hp, callFn, nestDsClosedL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCtxHiAt_specE p hh n, dcGo_spec p hf hg n] <;>
@@ -419,8 +414,7 @@ theorem nestWalkStack_spec (p : Prog) (hl : DcLook p)
     (hp : p.lookup "nest_walk_stack" = some nestWalkStackL) (n : Nat) (s₀ : St) (ctx off l po pl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_walk_stack" [ctx, off, l, po, pl]
     ⦃fun r s' => LocEq s' s₀ ∧ nwsW n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestWalkStackL]
+  simp only [invoke_eq _ hp, callFn, nestWalkStackL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       dc_spec' p hl.hf hl.hh hl.hg hl.hp n] <;>
@@ -565,8 +559,7 @@ theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" =
     rw [invoke_eq _ hp]; simp only [callFn, piDomsOccL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ no nl lo hi n e
-    rw [invoke_eq _ hp]
-    simp only [callFn, piDomsOccL]
+    simp only [invoke_eq _ hp, callFn, piDomsOccL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         eView_spec p hl.hv k, nestOcc_spec' p hl k, ih] <;>
@@ -740,8 +733,7 @@ theorem nestGroupCtors_spec (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" 
     rw [invoke_eq _ hp]; simp only [callFn, nestGroupCtorsL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ vis nPc off l oo ol
-    rw [invoke_eq _ hp]
-    simp only [callFn, nestGroupCtorsL]
+    simp only [invoke_eq _ hp, callFn, nestGroupCtorsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nt_spec' p hl k, slAppend_specW p hl.ha hc hap k, ih] <;>
@@ -838,9 +830,7 @@ theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word
         (fun j hj => by rw [hoff1, hl1] at *; have := hcb (j + 1) (by omega); have := hg1.1; have := hg2.1; omega)
         (by rw [hr21]; simp [hol]) (by rw [hr20]; simp; omega) hcsA
       refine ⟨res, a', ?_, hS', (hg1.trans hg2).trans hg', h1', h2', h3'⟩
-      rw [ConRon.Arena.nestGroupCtors.eq_2]
-      simp only [StateT.run_bind, hrun1, except_ok_bind]
-      simp only [hchk, Bool.not_true]
+      simp only [ConRon.Arena.nestGroupCtors.eq_2, StateT.run_bind, hrun1, except_ok_bind, hchk, Bool.not_true]
       exact hrun
     by_cases hp1 : r1.tail.headD 0 ≠ nPc
     · have hneq : nPc2 ≠ nPc.toNat := fun e => hp1 (UInt64.toNat_inj.mp (by rw [h1, e]))

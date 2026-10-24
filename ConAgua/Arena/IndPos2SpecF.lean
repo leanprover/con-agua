@@ -170,8 +170,7 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
     rw [invoke_eq _ hl.hgo]; simp only [callFn, nestHolesGoL]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ vis ctx mm off l oo ol
-    rw [invoke_eq _ hl.hgo]
-    simp only [callFn, nestHolesGoL]
+    simp only [invoke_eq _ hl.hgo, callFn, nestHolesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
@@ -186,8 +185,7 @@ theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (vis ctx
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_holes" [vis, ctx]
     ⦃fun r s' => LocEq s' s₀ ∧
       nhW k s₀.mem vis ctx = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestHolesL]
+  simp only [invoke_eq _ hl.hp, callFn, nestHolesL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nhGo_spec p hl k] <;>
     finish (gen := 20) [nhW, rdW_eq]
@@ -475,8 +473,7 @@ theorem nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" 
     (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (ctx cv : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_root_canon" [ctx, cv]
     ⦃fun r s' => LocEq s' s₀ ∧ nrcW cR k s₀.mem ctx cv = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp']
-  simp only [callFn, nestRootCanonL]
+  simp only [invoke_eq _ hl.hp', callFn, nestRootCanonL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       cvLps_spec p hl.ha hc he hcv (k + 2), hcR (k + 2) "inst_lp_fast",
@@ -612,8 +609,7 @@ theorem nestUniformOk_spec (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallSp
     (ctx cv : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 4)) "nest_uniform_ok" [ctx, cv]
     ⦃fun r s' => LocEq s' s₀ ∧ nuW cR k s₀.mem ctx cv = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hl.hp]
-  simp only [callFn, nestUniformOkL]
+  simp only [invoke_eq _ hl.hp, callFn, nestUniformOkL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestCtxHiAt_specE p hl.hh (k + 3), piDomsOcc_spec p hl.no hl.hpd (k + 3),

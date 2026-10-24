@@ -133,8 +133,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
       have hqb := hqb hk3
       rw [hci0] at hfound
       have hci := (erecP_ext m).decCI hci0
-      rw [hfound]
-      simp only [if_pos hk3]
+      simp only [hfound, if_pos hk3]
       obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 hci (decCI_indInfo_kind hci)
       obtain rfl : caps = caps' := by
         have := he.symm; simp only [IConstantInfo.indInfo.injEq] at this; exact this.2.symm
@@ -240,8 +239,7 @@ theorem envFind_refines' (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
       (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
   have key := EnvR.find?_eq hE w hw
   have key2 := EnvR.row_dec hE w hw
-  rw [invoke_eq _ hp]
-  simp only [callFn, envFindL]
+  simp only [invoke_eq _ hp, callFn, envFindL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -321,8 +319,7 @@ theorem nestBlockOf_refines (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       hslice? (erA s₀.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestBlockOf fe (decI c));
       ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestBlockOfL]
+  simp only [invoke_eq _ hp, callFn, nestBlockOfL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -378,8 +375,7 @@ theorem nestCtorEntryStrip_spec (p : Prog) (hp : p.lookup "nest_ctor_entry_strip
     (hst : StripProg p) (n : Nat) (s₀ : St) (ciq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry_strip" [ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ stripW s₀.mem ciq = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtorEntryStrip]
+  simp only [invoke_eq _ hp, callFn, nestCtorEntryStrip]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -603,8 +599,7 @@ theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
     (C ciq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry" [C, ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ entryW s₀.mem C ciq = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestCtorEntry]
+  simp only [invoke_eq _ hp, callFn, nestCtorEntry]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -692,11 +687,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       · rw [entryK2_notconst _ _ _ _ hk] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
-        simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
-        rw [hrun1]
-        simp only [except_ok_bind, StateT.run_bind]
-        rw [hrun2]
-        simp only [except_ok_bind]
+        simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2]
         have ht : ¬ (x2.tag == ETag.const) = true := by rw [htagiff]; simpa using hk
         simp only [ht, if_false]; rfl
       · rw [entryK2_const _ _ _ _ hk] at h
@@ -723,14 +714,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
             rw [← hn2]; exact decI_beq' _ _ hn1 hC
           have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
               .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
-            simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
-            rw [hrun1]
-            simp only [except_ok_bind, StateT.run_bind]
-            rw [hrun2]
-            simp only [except_ok_bind]
-            simp only [ht, beq_self_eq_true, if_true, StateT.run_bind, viewConst_run, hview]
-            simp only [except_ok_bind]
-            rw [hbeq]
+            simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, if_true, viewConst_run, hview, hbeq]
             by_cases hcn : vt.headD 0 = C
             · simp only [hcn, decide_true, if_true]; rfl
             · simp only [hcn, decide_false]; rfl
@@ -794,8 +778,7 @@ grind_pattern [ind_grind] resHeadK_some => resHeadK (some (r, m1))
 theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p) (n : Nat) (s₀ : St) (e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_res_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ resHeadW s₀.mem e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hg]
-  simp only [callFn, nestResHeadL]
+  simp only [invoke_eq _ hg, callFn, nestResHeadL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -896,8 +879,7 @@ theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     rw [invoke_eq _ hp]; simp only [callFn, instPisWith]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ ao al e
-    rw [invoke_eq _ hp]
-    simp only [callFn, instPisWith]
+    simp only [invoke_eq _ hp, callFn, instPisWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         eView_spec p hv n, i1F_spec p hi1 n, ih] <;> finish (gen := 20)
@@ -1130,8 +1112,7 @@ theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
     rw [invoke_eq _ hp]; simp only [callFn, closeTelescope]; vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ dO dl i body
-    rw [invoke_eq _ hp]
-    simp only [callFn, closeTelescope]
+    simp only [invoke_eq _ hp, callFn, closeTelescope]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, mkForall_spec p hd hpf hpp hpi hmk n, ih] <;>
@@ -1195,11 +1176,7 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
         obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
         refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
         · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]
-          rw [hrun1]
-          simp only [except_ok_bind, StateT.run_bind]
-          rw [hrun2]
-          simp only [except_ok_bind]
-          rw [← hwd_dec, ← hdec2]
+          simp only [hrun1, except_ok_bind, StateT.run_bind, hrun2, ← hwd_dec, ← hdec2]
           exact hrun3
         · have : rr.toNat < 2 ^ 32 := by
             have : ¬ (4294967296 : Nat) ≤ rr.toNat := hbig

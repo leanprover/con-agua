@@ -40,8 +40,7 @@ theorem mentionsAnyConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     ⦃fun r s' => LocEq s' s₀ ∧ maConstW n s₀.mem no nl e = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ih := (maGo_spec p hv hc hf hput hgo hnode n).1
   unfold MaGoSpec at ih
-  rw [invoke_eq _ hp]
-  simp only [callFn, mentionsAnyConst]
+  simp only [invoke_eq _ hp, callFn, mentionsAnyConst]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
     finish
@@ -78,8 +77,7 @@ theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (by intro x hx; simp [maSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [maSch])
   refine ⟨c, ?_, hbb, hM2, hS', hg'⟩
-  simp only [ConRon.Arena.mentionsAnyConst, StateT.run_bind]
-  rw [hrun]
+  simp only [ConRon.Arena.mentionsAnyConst, StateT.run_bind, hrun]
   rfl
 
 section census3
@@ -230,8 +228,7 @@ include hv hc hf hput hgo in
 theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
   unfold NoNodeSpec at ih
   intro s₀ no nl lo hi f h
-  rw [invoke_eq _ hgo]
-  simp only [callFn, nestOccGo]
+  simp only [invoke_eq _ hgo, callFn, nestOccGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
@@ -241,8 +238,7 @@ include hc hgo hnode in
 theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   unfold NoGoSpec at ih
   intro s₀ no nl lo hi f1 g x y z
-  rw [invoke_eq _ hnode]
-  simp only [callFn, nestOccNode]
+  simp only [invoke_eq _ hnode, callFn, nestOccNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       slContains_spec p hc n, ih] <;> finish (gen := 20)
@@ -496,18 +492,14 @@ theorem noNodeBin_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     have hc1 : c1 = true := by rw [← hb1]; simpa using e1
     refine ⟨true, mp1, ?_, by simp, hM1, hf1⟩
-    simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, hc1, if_true]
+    simp only [StateT.run_bind, hr1, except_ok_bind, hc1, if_true]
     rfl
   · rw [if_neg e1] at hn
     have hc1 : c1 = false := by rw [← hb1]; simpa using e1
     obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m' a no nl lo hi f1 y r ws mp1 hn (noFrame_arena hf1 hA) hy
       (slR_congr (noFrame_iw hf1) hws) hwlt hM1
     refine ⟨c2, mp2, ?_, hb2, hM2, hf1.trans hf2⟩
-    simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, hc1]
+    simp only [StateT.run_bind, hr1, except_ok_bind, hc1]
     simpa using hr2
 
 theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl lo hi f1 x y z r : Word)
@@ -531,9 +523,7 @@ theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     have hc1 : c1 = true := by rw [← hb1]; simpa using e1
     refine ⟨true, mp1, ?_, by simp, hM1, hf1⟩
-    simp only [StateT.run_bind]
-    rw [hr1]
-    simp only [except_ok_bind, hc1, if_true]
+    simp only [StateT.run_bind, hr1, except_ok_bind, hc1, if_true]
     rfl
   · rw [if_neg e1] at hn
     have hc1 : c1 = false := by rw [← hb1]; simpa using e1
@@ -547,22 +537,14 @@ theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       have hc2 : c2 = true := by rw [← hb2]; simpa using e2
       refine ⟨true, mp2, ?_, by simp, hM2, hf1.trans hf2⟩
-      simp only [StateT.run_bind]
-      rw [hr1]
-      simp only [except_ok_bind, hc1, StateT.run_bind, Bool.false_eq_true, ↓reduceIte]
-      rw [hr2]
-      simp only [except_ok_bind, hc2, ↓reduceIte]
+      simp only [StateT.run_bind, hr1, except_ok_bind, hc1, Bool.false_eq_true, ↓reduceIte, hr2, hc2]
       rfl
     · rw [if_neg e2] at hn
       have hc2 : c2 = false := by rw [← hb2]; simpa using e2
       obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m' a no nl lo hi f1 z r ws mp2 hn
         (noFrame_arena (hf1.trans hf2) hA) hz (slR_congr (noFrame_iw (hf1.trans hf2)) hws) hwlt hM2
       refine ⟨c3, mp3, ?_, hb3, hM3, (hf1.trans hf2).trans hf3⟩
-      simp only [StateT.run_bind]
-      rw [hr1]
-      simp only [except_ok_bind, hc1, StateT.run_bind, Bool.false_eq_true, ↓reduceIte]
-      rw [hr2]
-      simp only [except_ok_bind, hc2, Bool.false_eq_true, ↓reduceIte]
+      simp only [StateT.run_bind, hr1, except_ok_bind, hc1, Bool.false_eq_true, ↓reduceIte, hr2, hc2]
       simpa using hr3
 
 theorem noNodeProj_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl lo hi f1 x y z r : Word)
@@ -671,9 +653,7 @@ theorem noGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) (m m' :
       have hfs : MemFrame [NOM] [205] m1 m2 := msetG_frame noSch noSch_wf m1 m2 h 0 rn hset
       refine ⟨bb, mp1.insert (decE h) bb, ?_, hbb, ?_, hfr1.trans hfs⟩
       · rw [hmiss]
-        simp only [noArmI_eq _ _ _ _ _ _ v hnv, StateT.run_bind]
-        rw [hr1]
-        simp only [except_ok_bind]
+        simp only [noArmI_eq _ _ _ _ _ _ v hnv, StateT.run_bind, hr1, except_ok_bind]
         rfl
       · rw [← hbb]; exact hset'
 
@@ -807,8 +787,7 @@ theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     ⦃fun r s' => LocEq s' s₀ ∧ noConstW n s₀.mem no nl lo hi e = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ih := (noGo_spec p hv hc hf hput hgo hnode n).1
   unfold NoGoSpec at ih
-  rw [invoke_eq _ hp]
-  simp only [callFn, nestOcc]
+  simp only [invoke_eq _ hp, callFn, nestOcc]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
     finish
@@ -846,8 +825,7 @@ theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (by intro x hx; simp [noSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [noSch])
   refine ⟨c, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [noSch] using hx))⟩⟩
-  simp only [ConRon.Arena.nestOcc, StateT.run_bind]
-  rw [hrun]
+  simp only [ConRon.Arena.nestOcc, StateT.run_bind, hrun]
   rfl
 
 section census3
@@ -913,8 +891,7 @@ theorem memberIdxAt_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (n : Nat) (s₀ : St) (no nl lvls e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "member_idx_at" [no, nl, lvls, e]
     ⦃fun r s' => LocEq s' s₀ ∧ memW n s₀.mem no nl lvls e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, memberIdxAt]
+  simp only [invoke_eq _ hp, callFn, memberIdxAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
       slFind_spec p hf n] <;> finish (gen := 20)
@@ -1145,8 +1122,7 @@ theorem phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     rw [invoke_eq _ hp]; simp only [callFn, phApp]; vcgen [exec] <;> grind
   | succ k ih =>
     intro s₀ b e n
-    rw [invoke_eq _ hp]
-    simp only [callFn, phApp]
+    simp only [invoke_eq _ hp, callFn, phApp]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv k, ih] <;>
       finish (gen := 20) [St.setLocs_mem']

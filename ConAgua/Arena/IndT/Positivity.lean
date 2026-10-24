@@ -64,8 +64,7 @@ theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
     (hp : p.lookup "block_nest_ctx" = some blockNestCtx) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis q cvO cvL : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 2)) "block_nest_ctx" [vis, q, cvO, cvL]
     ⦃fun r s' => LocEq s' s₀ ∧ bncC cR n s₀.mem vis q cvO cvL = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockNestCtx]
+  simp only [invoke_eq _ hp, callFn, blockNestCtx]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcR (n + 1) "open_pis_at_fvars_f", nck_spec p hP n, nestHoles_spec p hl n] <;>
