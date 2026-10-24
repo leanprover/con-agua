@@ -99,7 +99,73 @@ theorem step_st64t_run (a : ArrId) (t i e : Expr) :
         · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
             pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
 
-/-- A simple expression (a variable, a global, a length, a constant) never fails. -/
+/-! ## Blocks (lane blkcopy) -/
+
+/-- `warr`, without the state. -/
+def warrP (σ : St) : WArr → Except Err ArrId
+  | .plain a => .ok a
+  | .tier a t => (evalP σ t).map (tierA a)
+
+theorem warr_run (σ : St) (w : WArr) : (warr w).run σ = (warrP σ w).map (·, σ) := by
+  cases w with
+  | plain a => rfl
+  | tier a t =>
+    simp only [warr, warrP, StateT.run_bind, evalE_run]
+    cases evalP σ t <;> rfl
+
+theorem step_scan8_run (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) {vi ve : Word}
+    (hi : evalP σ i = .ok vi) (he : evalP σ e = .ok ve) :
+    stepRun p K (.scan8 x s i e c) σ =
+      if vi ≤ ve ∧ ve.toNat ≤ (σ.mem.src8 s).size then
+        .ok (.normal, σ.setLoc x (UInt64.ofNat (scanN (σ.mem.src8 s) c vi.toNat ve.toNat)))
+      else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run, hi]
+  simp only [Except.map, bind, Except.bind]
+  simp only [he, StateT.run_get, pure, Except.pure]
+  by_cases h : vi ≤ ve ∧ ve.toNat ≤ (σ.mem.src8 s).size
+  · simp only [h, and_self, ↓reduceIte]
+    simp [StateT.bind, setLoc, StateT.run, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, pure,
+      StateT.pure, bind, Except.bind, Except.pure]
+  · simp only [h, ↓reduceIte]
+    simp [StateT.run, throw, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind]
+
+theorem step_copy64_run (d s : WArr) (di si n : Expr) {da sa : ArrId} {i j k : Word}
+    (hd : warrP σ d = .ok da) (hs : warrP σ s = .ok sa) (hi : evalP σ di = .ok i) (hj : evalP σ si = .ok j)
+    (hk : evalP σ n = .ok k) :
+    stepRun p K (.copy64 d di s si n) σ =
+      if i.toNat + k.toNat ≤ (σ.mem.arr64 da).size ∧ j.toNat + k.toNat ≤ (σ.mem.arr64 sa).size then
+        .ok (.normal, { σ with mem := σ.mem.copy64 da i sa j k.toNat })
+      else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run, warr_run, hd, hs, hi, hj, hk]
+  simp only [Except.map, bind, Except.bind]
+  simp only [hd, hs, hi, hj, hk, StateT.run_get, pure, Except.pure]
+  by_cases h : i.toNat + k.toNat ≤ (σ.mem.arr64 da).size ∧ j.toNat + k.toNat ≤ (σ.mem.arr64 sa).size
+  · simp only [h, and_self, ↓reduceIte]
+    simp [StateT.bind, StateT.run, set, MonadStateOf.set, StateT.set, pure, StateT.pure, bind, Except.bind,
+      Except.pure]
+  · simp only [h, ↓reduceIte]
+    simp [StateT.run, throw, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind]
+
+theorem step_copy8w_run (d : WArr) (s : BSrc) (di si n : Expr) {da : ArrId} {i j k : Word}
+    (hd : warrP σ d = .ok da) (hi : evalP σ di = .ok i) (hj : evalP σ si = .ok j)
+    (hk : evalP σ n = .ok k) :
+    stepRun p K (.copy8w d di s si n) σ =
+      if i.toNat + k.toNat ≤ (σ.mem.arr64 da).size ∧ j.toNat + k.toNat ≤ (σ.mem.src8 s).size then
+        .ok (.normal, { σ with mem := σ.mem.copy8w da i (σ.mem.src8 s) j k.toNat })
+      else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run, warr_run, hd, hi, hj, hk]
+  simp only [Except.map, bind, Except.bind]
+  simp only [hd, hi, hj, hk, StateT.run_get, pure, Except.pure]
+  by_cases h : i.toNat + k.toNat ≤ (σ.mem.arr64 da).size ∧ j.toNat + k.toNat ≤ (σ.mem.src8 s).size
+  · simp only [h, and_self, ↓reduceIte]
+    simp [StateT.bind, StateT.run, set, MonadStateOf.set, StateT.set, pure, StateT.pure, bind, Except.bind,
+      Except.pure]
+  · simp only [h, ↓reduceIte]
+    simp [StateT.run, throw, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind]
+
 theorem evalP_simple {e : Expr} (h : Expr.isSimple e = true) (σ' : St) : ∃ v, evalP σ' e = .ok v := by
   cases e <;> simp_all [Expr.isSimple, evalP]
 
@@ -211,7 +277,7 @@ theorem evalP_error {σ : St} {e : Expr} {x : Err} (h : evalP σ e = .error x) :
     · split at h
       · rename_i he; cases h; exact ihb he
       · cases h
-  | ld8 _ i ih | ld64 _ i ih | ldc _ i ih =>
+  | ld8 _ i ih | ld64 _ i ih | ldc _ i ih | ld8x8 _ i ih =>
     simp only [evalP, bind, Except.bind] at h
     split at h
     · rename_i he; cases h; exact ih he

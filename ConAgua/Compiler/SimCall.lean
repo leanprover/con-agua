@@ -148,6 +148,7 @@ theorem evalP_setReg {al : List (Var × Reg64)} {r : Reg64} {v : Word} {σ : St}
     intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
     simp only [evalP, iht h.1, ihi h.2]; rfl
   | len64t a t ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ld8x8 b i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
   | _ => intro _; rfl
 
 /-- `Inv` after a write of a register of `allocRegs`, with the ghost state. -/

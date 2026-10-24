@@ -723,6 +723,18 @@ theorem ev_movzxS {d b i : Reg64} {off : Int}
   refine ev_of_regs h ?_
   congr 1; apply BitVec.eq_of_toNat_eq; simp
 
+/-- `movzx r, byte [rcx + rax]`. -/
+theorem ev_movzxR {d : Reg64} (hk : Host.prog[k]? = some
+      (i64 (.movzx (.reg (rr d)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))))
+    {b : UInt8} (hb : s.dmem.get? (s.regs.rcx.toBitVec + s.regs.rax.toBitVec) = some b)
+    (h : Ev Q { s with regs := s.regs.set64 d (b.toUInt64.toBitVec) } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib1]
+  simp only [Reg64s.get64_rax, Reg64s.get64_rcx, loadInt_one_of hb, Effects.All]
+  refine ev_of_regs h ?_
+  congr 1; apply BitVec.eq_of_toNat_eq; simp
+
 /-- `mov rax, [rcx + rax]`: an 8-byte load at a byte address. -/
 theorem ev_ld64b
     (hk : Host.prog[k]? = some (movRM .rax (mbi .rcx .rax .W8)))
