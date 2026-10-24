@@ -14,27 +14,4 @@ namespace L.Checker
 
 open L.Arena L.Ind
 
-set_option maxRecDepth 100000 in
-theorem checkerProg_na : NaF checkerProg :=
-  .cons rfl <| .cons rfl <| .cons rfl .nil
-
-set_option maxRecDepth 100000 in
-theorem checkerProg_nr : NrF checkerProg :=
-  .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <|
-  .cons rfl .nil
-
-set_option maxRecDepth 100000 in
-theorem checkerProg_il : IlF checkerProg :=
-  .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <|
-  .cons rfl <| .cons rfl .nil
-
-set_option maxRecDepth 100000 in
-theorem checkerProg_pt : PtF checkerProg :=
-  .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <| .cons rfl <|
-  .cons rfl <| .cons rfl <| .cons rfl .nil
-
-set_option maxRecDepth 100000 in
-theorem checkerProg_ipf : IpfF checkerProg :=
-  .cons rfl .nil
-
 end L.Checker

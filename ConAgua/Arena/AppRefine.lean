@@ -195,17 +195,4 @@ theorem aintern_correct (w : Word) (m' : Mem) (hI : ainternW m f x = some (w, m'
 
 end intern
 
-/-- `intern_app` refines `internE (.app _ _)` under `AppR`. -/
-theorem internApp_refines (p : Prog) (hpf : p.lookup "app_find" = some appFind)
-    (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)
-    (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : AppR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
-    (hx : x.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_app" [f, x]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.app (decE f) (decE x))) a₀ ∧
-      AppR s'.mem (AM.st (internE (.app (decE f) (decE x))) a₀) ∧
-      AM.res (internE (.app (decE f) (decE x))) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internApp_spec p hpf hpp hp n s₀ f x)
-    (Sim.ofOkD (aintern_correct s₀.mem a₀ hR f x hf hx))
-
 end L.Arena

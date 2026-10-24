@@ -219,18 +219,4 @@ theorem faintern_correct (w : Word) (m' : Mem) (hI : fainternW m ty body = some 
 
 end intern
 
-/-- `intern_forall` refines `internE (.forallE _ _)` under `ForallR`. -/
-theorem internForall_refines (p : Prog) (hpf : p.lookup "forall_find" = some forallFind)
-    (hpp : p.lookup "forall_push" = some forallPush)
-    (hp : p.lookup "intern_forall" = some internForallL) (a₀ : AState) (n : Nat) (s₀ : St)
-    (ty body : Word) (hR : ForallR s₀.mem a₀) (hty : ty.toNat < 2 ^ 32)
-    (hbody : body.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_forall" [ty, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.forallE (decE ty) (decE body))) a₀ ∧
-      ForallR s'.mem (AM.st (internE (.forallE (decE ty) (decE body))) a₀) ∧
-      AM.res (internE (.forallE (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internForallL_spec p hpf hpp hp n s₀ ty body)
-    (Sim.ofOkD (faintern_correct s₀.mem a₀ hR ty body hty hbody))
-
 end L.Arena

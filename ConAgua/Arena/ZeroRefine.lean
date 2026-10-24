@@ -140,7 +140,6 @@ theorem zintern_correct (w : Word) (m' : Mem) (hI : zinternW m = some (w, m')) :
     (internLNode_zero_run a) false rfl [] (by simp [show skipC zeroCS m [] = 0 from rfl])
     (by simp) ⟨rfl, zeroMatchOK m, zeroHomeOK m, zeroNewOK m⟩ w m' hI
 
-
 include hR in
 /-- **The `zero` table's constant bit across `intern_zero`**: `hasParam = false`. -/
 theorem zintern_hp (hC : ConstT2 zeroLens (fun d : LDer => hpW d = 0) a) (w : Word) (m' : Mem)
@@ -150,16 +149,5 @@ theorem zintern_hp (hC : ConstT2 zeroLens (fun d : LDer => hpW d = 0) a) (w : Wo
   exact constMk zeroLens _ a _ _ _ _ _ hC rfl
     (AM.proto_casesG zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
 end intern
-
-/-- `intern_zero` refines `internLNode .zero` under `ZeroR`. -/
-theorem internZero_refines (p : Prog) (hpf : p.lookup "zero_find" = some zeroFind)
-    (hpp : p.lookup "zero_push" = some zeroPush) (hp : p.lookup "intern_zero" = some internZero)
-    (a₀ : AState) (n : Nat) (s₀ : St) (hR : ZeroR s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_zero" []
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode .zero) a₀ ∧
-      ZeroR s'.mem (AM.st (internLNode .zero) a₀) ∧
-      AM.res (internLNode .zero) a₀ = decI (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internZero_spec p hpf hpp hp n s₀) (Sim.ofOkD (zintern_correct s₀.mem a₀ hR))
 
 end L.Arena

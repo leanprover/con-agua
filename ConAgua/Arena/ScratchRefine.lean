@@ -27,12 +27,6 @@ namespace L.Arena
 
 /-! ## Reads of `resetMem` -/
 
-theorem zeroCtl_arr (b : ArrId) (hb : b ≠ CTL) :
-    ∀ (xs : List Word) (m : Mem), (zeroCtl m xs).arr64 b = m.arr64 b := by
-  intro xs; induction xs with
-  | nil => intro m; rfl
-  | cons x xs ih => intro m; rw [zeroCtl, ih, Mem.arr64_set64_ne _ _ _ _ _ hb]
-
 theorem zeroCtl_frame : ∀ (xs : List Word) (m : Mem), MemFrame [] xs m (zeroCtl m xs) := by
   intro xs; induction xs with
   | nil => intro m; exact MemFrame.refl _ _ _
@@ -253,25 +247,6 @@ theorem ArenaD.enter (m : Mem) (a : AState) (hD : ArenaD m a)
   exact ⟨hR.with_memos hf (by simp) (by simp [memoCtl, storeCtl]) hM,
     DerR.of_store _ _ _ (DerR.frameM _ _ _ _ hf (by simp) _ hDer) rfl⟩
 
-/-- **`scratch_enter()` refines `enterScratch`** under `ArenaD`. -/
-theorem scratchEnter_refines (p : Prog) (hp : p.lookup "scratch_enter" = some scratchEnter)
-    (hr : p.lookup "scratch_reset" = some scratchReset)
-    (hb : p.lookup "bm_clear" = some (memoClearG bmSch))
-    (hl : p.lookup "lf_clear" = some (memoClearG lfSch))
-    (hi : p.lookup "if_clear" = some (memoClearG imSch))
-    (hf : p.lookup "fm_clear" = some (memoClearG frSch))
-    (a₀ : AState) (n : Nat) (s₀ : St) (hD : ArenaD s₀.mem a₀) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "scratch_enter" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧ ArenaD s'.mem (AM.st enterScratch a₀); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hlo, h62, c1, c2, c3, c4, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (scratchEnter_spec p hp hr hb hl hi hf n s₀)
-  subst hs
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (enterScratch_run a₀)
-  exact ⟨hloc, hok, by rw [hst, hm]; exact ArenaD.enter _ _ hD hlo h62 c1 c2 c3 c4⟩
-
 /-- **`scratch_drop()` refines `dropScratch`** under `ArenaD`. -/
 theorem scratchDrop_refines (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
     (hr : p.lookup "scratch_reset" = some scratchReset) (hfl : FlushProg p)
@@ -390,14 +365,6 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     · exact flushCtl_lt x h
     · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
 
-/-- The write set of the bracket, from the program text: `CTL` words only. -/
-theorem scratchProg_closed :
-    closedA scratchProg [] (resetCtl ++ memoCtl ++ flushCtl)
-      ["scratch_enter", "scratch_drop", "scratch_reset", "bm_clear", "lf_clear", "if_clear",
-       "fm_clear", "flush_caches", "wc_clear", "wk_clear", "wh_clear", "in_clear", "io_clear",
-       "de_clear", "ct_clear", "cv_clear", "rr_clear", "lq_clear", "lsq_clear"] = true := by
-  decide +kernel
-
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard
   let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 47 #[] }
@@ -407,6 +374,5 @@ theorem scratchProg_closed :
         (m2.arr64 1)[62]! == 8589934592 && (m2.arr64 1)[1]! == 0
     | .error _ => false
   | .error _ => false
-
 
 end L.Arena

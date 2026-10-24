@@ -197,19 +197,4 @@ theorem sintern_hp (hC : ColT2 succLens SHP hpW m a)
 
 end intern
 
-/-- `intern_succ` refines `internLNode (.succ _)` under `SuccR`. -/
-theorem internSucc_refines (p : Prog) (hpf : p.lookup "succ_find" = some succFind)
-    (hpp : p.lookup "succ_push" = some succPush) (hp : p.lookup "intern_succ" = some internSucc)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : SuccR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_succ" [u]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.succ (decI u))) a₀ ∧
-      SuccR s'.mem (AM.st (internLNode (.succ (decI u))) a₀) ∧
-      AM.res (internLNode (.succ (decI u))) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internSucc_spec p hpf hpp hp n s₀ u)
-  subst hs
-  exact ⟨hloc, sintern_correct s.mem a₀ hR u hu _ _ hI⟩
-
 end L.Arena

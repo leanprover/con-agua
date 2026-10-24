@@ -234,17 +234,4 @@ theorem fvintern_lp (hC : ColT2 fvarLens FVLP lpW m a)
 
 end intern
 
-/-- `intern_fvar` refines `internE (.fvar _ _)` under `FVarR`. -/
-theorem internFVar_refines (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFind)
-    (hpp : p.lookup "fvar_push" = some fvarPush) (hp : p.lookup "intern_fvar" = some internFVar)
-    (a₀ : AState) (n : Nat) (s₀ : St) (u ty : Word) (hR : FVarR s₀.mem a₀)
-    (hty : ty.toNat < 2 ^ 32) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_fvar" [u, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.fvar u.toNat (decE ty))) a₀ ∧
-      FVarR s'.mem (AM.st (internE (.fvar u.toNat (decE ty))) a₀) ∧
-      AM.res (internE (.fvar u.toNat (decE ty))) a₀ = decE (r.headD 0); ⊤⦄ :=
-  Sim.tripleD (internFVar_spec p hpf hpp hp n s₀ u ty)
-    (Sim.ofOkD (fvintern_correct s₀.mem a₀ hR u ty hty))
-
 end L.Arena

@@ -80,44 +80,10 @@ def valProg : Prog := [
   ("scan_line", scanLine),
   ("validate", validate)]
 
-/-- Run `validate` on `s` with the L interpreter. -/
-def runValidate (s : String) (fuel : Nat := 100000) : Option Word :=
-  match run valProg fuel "validate" [] { bytes := #[s.toUTF8.data] } with
-  | .ok ([r], _) => some r
-  | _ => none
-
-/-- Run `scan_line` at `0` on `s`. -/
-def runLine (s : String) (fuel : Nat := 100000) : Option (List Word) :=
-  match run valProg fuel "scan_line" [0] { bytes := #[s.toUTF8.data] } with
-  | .ok (r, _) => some r
-  | _ => none
-
 end L.Scan.Validator
 
 namespace L.Scan.Validator
 
 open L L.Scan.Line
-
-/-- Partial correctness of the whole validator: whenever the L program returns, it returns the
-driver model `validN` (`ConAgua.Scan.LineLink` relates it to con-leche), and the memory is
-unchanged. -/
-theorem validate_run (b : Array UInt8) (hb : b.size < 2 ^ 63) (fuel : Nat) (r : List Word)
-    (m' : Mem) (h : run valProg fuel "validate" [] { bytes := #[b] } = .ok (r, m')) :
-    r = [validN b 0 0] ∧ m' = { bytes := #[b] } := by
-  simp only [run] at h
-  cases hr : (invoke valProg (exec valProg fuel) "validate" []).run
-      { mem := { bytes := #[b] }, loc := Locals.init [] } with
-  | error e => simp [hr, Except.map] at h
-  | ok rs =>
-    simp only [hr, Except.map] at h
-    injection h with h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj h
-    have := M.of_run (P := fun s => s = { mem := { bytes := #[b] }, loc := Locals.init [] }) rfl hr
-      (validate_spec valProg b hb rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl fuel _ rfl)
-    grind
-
-/-- The compiler's static check passes (`compile_correct` applies). -/
-theorem valProg_wf : L.Compiler.Prog.wf (L.Compiler.Prog.tab valProg 1 0) valProg = true :=
-  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Scan.Validator

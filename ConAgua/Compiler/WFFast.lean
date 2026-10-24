@@ -23,7 +23,6 @@ namespace L.Compiler
 
 /-! ## Names as numbers (`nameCode`, in `Compile.lean`) -/
 
-
 theorem bytesCode_inj : ∀ {a b : List UInt8}, bytesCode a = bytesCode b → a = b
   | [], [], _ => rfl
   | [], b :: l, h => by simp only [bytesCode] at h; omega
@@ -35,7 +34,6 @@ theorem bytesCode_inj : ∀ {a b : List UInt8}, bytesCode a = bytesCode b → a 
     have h2 : bytesCode l = bytesCode l' := by omega
     rw [UInt8.toNat_inj.mp h1, bytesCode_inj h2]
 
-
 theorem nameCode_inj {a b : String} (h : nameCode a = nameCode b) : a = b := by
   have h := bytesCode_inj h
   apply String.toByteArray_inj.mp
@@ -44,7 +42,6 @@ theorem nameCode_inj {a b : String} (h : nameCode a = nameCode b) : a = b := by
   simp_all [Array.toList_inj]
 
 /-! ## A search tree of names (`NTree`, in `Compile.lean`) -/
-
 
 theorem NTree.find_insert {k v : Nat} : ∀ {t t' : NTree}, t.insert k v = some t' →
     t.find k = none ∧ ∀ k', t'.find k' = if k' = k then some v else t.find k'
@@ -295,26 +292,6 @@ theorem forall_funOk {t : NTree} {tab : Tab} {l : Prog}
     (h : ∀ x ∈ l, FunDecl.wfTN t tab x.2 = true) (hr : ∀ x ∈ l, ∀ d ∈ Stmt.roms x.2.body, romOk tab d = true) :
     ∀ x ∈ l, FunOk t tab x := fun x hx => ⟨h x hx, hr x hx⟩
 
-/-- `Prog.wf`, kernel-fast (see the module doc). -/
-def Prog.wfFast (tab : Tab) (p : Prog) : Bool :=
-  match progTree p with
-  | some t => p.all (fun (_, fd) => FunDecl.wfT t tab fd) &&
-      16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff
-  | none => false
-
-theorem Prog.wf_of_wfFast {tab : Tab} {p : Prog} (h : Prog.wfFast tab p = true) :
-    Prog.wf tab p = true := by
-  unfold Prog.wfFast at h
-  split at h
-  · rename_i t ht
-    obtain ⟨hnd, hf⟩ := progTree_spec ht
-    have hfd : ∀ fd, FunDecl.wfT t tab fd = FunDecl.wf p tab fd := fun fd => by
-      simp only [FunDecl.wfT, FunDecl.wf_eq, FunDecl.wfSpec, Stmt.wfT_eq hf]
-    simp only [Prog.wf_eq, Prog.wfSpec, hfd] at h ⊢
-    simp only [Bool.and_eq_true, decide_eq_true_eq] at h ⊢
-    exact ⟨⟨h.1, hnd⟩, h.2⟩
-  · simp at h
-
 /-! ## Per-function checks composed (`WFSplit.lean`'s `prog_wf`)
 
 `Prog.wf_of_parts`: the program check from the name tree (`progTree p = some t`, which reads only
@@ -348,32 +325,6 @@ theorem forall_of_all {α : Type} (f : α → Bool) (l : List α) (h : l.all f =
     ∀ x ∈ l, f x = true := by
   simpa [List.all_eq_true] using h
 
-theorem forall_mem_append_of {α : Type} {P : α → Prop} {l₁ l₂ : List α} (h₁ : ∀ x ∈ l₁, P x)
-    (h₂ : ∀ x ∈ l₂, P x) : ∀ x ∈ l₁ ++ l₂, P x := by
-  intro x hx
-  rcases List.mem_append.mp hx with hx | hx
-  · exact h₁ x hx
-  · exact h₂ x hx
-
 theorem forall_mem_nil_of {α : Type} (P : α → Prop) : ∀ x ∈ ([] : List α), P x := by simp
-
-/-- `KnotWF`-style checks of some functions of a program (`fs`, often a prefix of `p`) without
-`Prog.wf`: each function's `FunDecl.wf` and the names' distinctness, from the fast check. -/
-def Prog.funsWfFast (tab : Tab) (p fs : Prog) : Bool :=
-  match progTree p with
-  | some t => fs.all fun (_, fd) => FunDecl.wfT t tab fd
-  | none => false
-
-theorem Prog.funsWf_of_fast {tab : Tab} {p fs : Prog} (h : Prog.funsWfFast tab p fs = true) :
-    (fs.all fun (_, fd) => FunDecl.wf p tab fd) = true ∧ decide (p.map (·.1)).Nodup = true := by
-  unfold Prog.funsWfFast at h
-  split at h
-  · rename_i t ht
-    obtain ⟨hnd, hf⟩ := progTree_spec ht
-    have hfd : ∀ fd, FunDecl.wfT t tab fd = FunDecl.wf p tab fd := fun fd => by
-      simp only [FunDecl.wfT, FunDecl.wf_eq, FunDecl.wfSpec, Stmt.wfT_eq hf]
-    simp only [hfd] at h
-    exact ⟨h, by simpa using hnd⟩
-  · simp at h
 
 end L.Compiler

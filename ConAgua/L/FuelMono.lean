@@ -105,13 +105,4 @@ theorem exec_le (p : Prog) {n n' : Nat} (hn : n ≤ n') : KExt (exec p n) (exec 
   | zero => exact fun _ _ _ h => h
   | succ d ih => exact fun c s r h => exec_mono p (n + d) c s r (ih (by omega) c s r h)
 
-/-- **A triple at fuel `n` holds at every fuel `k ≤ n`** (a run at `k` is a run at `n`). Replaces
-the `…UpTo p n := ∀ j ≤ n, Spec p j` families: state and prove the spec at `n`, and pass
-`invoke_fuel_le hk spec` where a smaller fuel is needed. -/
-theorem invoke_fuel_le {p : Prog} {k n : Nat} (hk : k ≤ n) {f : FnName} {vs : List Word}
-    {P : St → Prop} {Q : List Word → St → Prop}
-    (h : ⦃fun s => P s⦄ invoke p (exec p n) f vs ⦃fun r s' => Q r s'; ⊤⦄) :
-    ⦃fun s => P s⦄ invoke p (exec p k) f vs ⦃fun r s' => Q r s'; ⊤⦄ :=
-  M.triple_of_run fun _ _ _ hp hr => M.of_run hp (invoke_mono (exec_le p hk) hr) h
-
 end L

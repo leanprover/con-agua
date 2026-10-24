@@ -94,25 +94,6 @@ theorem checkDecl_defn_eq (pins : List INatOpPinSet) (fe : IFEnv) (cv : IConstan
 
 /-! ## The gates' specs (hypotheses) -/
 
-/-- `defn_nat_gate(vis, w, n)` refines `natGateT` at the extended view `w`. -/
-def NatGateSpec (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEnv) (n : Word),
-    n.toNat < 2 ^ 32 →
-    RefAM p "defn_nat_gate" [vis, w, n] (fun m a => StageR dn w fe2 m a ∧ PinSetsR m pins)
-      (natGateT (fe2.restrictTo vis.toNat) fe2 (decI n))
-      (fun m m' a r x => KeepPost dn w fe2 decUnit m m' a r x ∧ PinSetsR m' pins ∧
-        MemFrame stepA stepC m m')
-
-/-- `defn_div_gate(vis, w, n)` refines `divGateT pins` at the extended view `w`, the variant list
-in memory being `pins`. -/
-def DivGateSpec (p : Prog) (pins : List INatOpPinSet) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv) (n : Word),
-    n.toNat < 2 ^ 32 →
-    RefAM p "defn_div_gate" [vis, w, n] (fun m a => StageR dn w fe2 m a ∧ PinSetsR m pins)
-      (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n))
-      (fun m m' a r x => KeepPost dn w fe2 decUnit m m' a r x ∧ PinSetsR m' pins ∧
-        MemFrame stepA stepC m m')
-
 /-! ## The model -/
 
 section model
@@ -189,12 +170,6 @@ theorem cdf_specW (hp : p.lookup "check_decl_defn" = some checkDeclDefn) (n : Na
       finish (gen := 20) [rdW_eq]
 
 end model
-
-/-- The definition arm's program facts: its text, and the two gates' specs. -/
-structure DefnProg (p : Prog) (pins : List INatOpPinSet) : Prop where
-  df : p.lookup "check_decl_defn" = some checkDeclDefn
-  nat : NatGateSpec p pins
-  div : DivGateSpec p pins
 
 /-- A frame of the step's write set keeps the variant list. -/
 theorem PinSetsR.step {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips)
