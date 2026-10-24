@@ -283,9 +283,10 @@ structure PassProg (p : Prog) : Prop where
   prec : p.lookup "check_block_pass_rec" = some checkBlockPassRec
   pass : p.lookup "check_block_pass" = some checkBlockPass
 
-/-- The pass's callees without a walk-memo lemma. -/
+/-- The pass's callees without a walk-memo lemma (and positivity's `check_abs_ctor_sorts_all`). -/
 def passCallees : List FnName :=
-  ["check_block_inds", "check_block_ctors", "block_nest_ctx", "class_read", "class_read_classes"]
+  ["check_block_inds", "check_block_ctors", "block_nest_ctx", "class_read", "class_read_classes",
+    "check_abs_ctor_sorts_all"]
 
 /-- The pass's callees outside the `abstract1` cascade, which keep its memo (`AbsKeep`, a program
 fact), with those of `check_block_inds` and `check_block_positivity`. -/

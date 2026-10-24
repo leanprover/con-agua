@@ -306,7 +306,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   have hct := ConRon.Bridge.Inductives.checkBlockCtors_types hF3
   obtain ⟨s6, hs6, -, hok6, hC6, hg6, hP6, hA6, hks6, hnf6, hns6, -⟩ := triple_of_callW
     (s₀ := ⟨s5.mem, Locals.init []⟩)
-    (checkBlockPositivity_refinesC hkp hIlpf henv₁ hOpf hLC hLT hP.pos n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
+    (checkBlockPositivity_refinesC hkp hIlpf henv₁ hOpf hLC hLT hP.pos hcl (hfs _ (by decide)) n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
       cvTas ctorsAs hC5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hkP f (List.mem_append_right _ hf))
       hpP5 hcvs5 hca5 hden₅ hT hct) c6
   simp only at hs6 hC6 hg6 hP6 hA6 hks6 hnf6 hns6
