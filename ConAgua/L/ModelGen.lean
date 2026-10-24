@@ -546,6 +546,17 @@ meta def splitArr (id : Ident) : GenM (Term × String) := do
   | .str pre "c8" => return (mkIdentFrom id pre, "c8")
   | _ => throwErrorAt id "expected `A.u8`, `A.u64` or `D.c8`"
 
+/-- A store-record field constant (`APP.a : Word`, an `abbrev` of a numeral) as that numeral, so
+that models and proofs state field offsets as numbers (`tfld m APP t i 1`). -/
+meta def fieldNum (fI : Ident) : GenM Term := do
+  let c ← realizeGlobalConstNoOverload fI
+  let some v := ((← getEnv).find? c).bind (·.value?) | throwErrorAt fI "not a field constant"
+  let v := v.consumeMData
+  let n? := if v.isAppOfArity ``OfNat.ofNat 3 then (v.getArg! 1).consumeMData.rawNatLit? else none
+  match n? with
+  | some n => pure (Syntax.mkNumLit (toString n))
+  | none => throwErrorAt fI m!"field constant {c} is not a numeral: {v}"
+
 mutual
 meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $n:num) => pure (.lit n.getNat)
@@ -560,7 +571,7 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     let ad ← `(L.Record.ad $r $(← (← transE E ctx i).render) $fI)
     pure (.rd ctx.mem (← `(L.Record.arr $r)) (.raw ad))
   | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr].$f:ident) => do
-    let fI := mkIdentFrom f (r.getId ++ f.getId)
+    let fI ← fieldNum (mkIdentFrom f (r.getId ++ f.getId))
     pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r $(← (← transE E ctx t).render)
       $(← (← transE E ctx i).render) $fI)))
   | `(lexpr| $r:ident⟨$t:lexpr⟩[$i:lexpr]) => do
@@ -570,7 +581,7 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     unless c.getId == `count do throwErrorAt c "expected `R⟨t⟩.count`"
     pure (.raw (← `($(mkIdent `L.Arena.tcnt) $(← ctx.mem.render) $r $(← (← transE E ctx t).render))))
   | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
-    let fI := mkIdentFrom f (r.getId ++ f.getId)
+    let fI ← fieldNum (mkIdentFrom f (r.getId ++ f.getId))
     let h ← (← transE E ctx h).render
     pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) $fI)))
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do

@@ -260,49 +260,49 @@ Lane tieracc's migration: each statement is the raw one's, read through `tfld` (
 equal); consumers move to these one by one, then the raw forms go. -/
 
 theorem view_bvarT (hv : viewOK m h BVAR.ca) (hg : h >>> 28 = 0) :
-    a.store.view (decE h) = some (.bvar (tfld m BVAR (tierW h) (idxW h) BVAR.i).toNat) :=
+    a.store.view (decE h) = some (.bvar (tfld m BVAR (tierW h) (idxW h) 0).toNat) :=
   view_bvar m a hR h hh hv hg
 
 theorem view_fvar_idxT (hv : viewOK m h FVAR.ca) (hg : h >>> 28 = 1) :
-    a.store.view (decE h) = some (.fvar (tfld m FVAR (tierW h) (idxW h) FVAR.i).toNat
-      (decE (tfld m FVAR (tierW h) (idxW h) FVAR.ty))) ∧
-    (tfld m FVAR (tierW h) (idxW h) FVAR.ty).toNat < 2 ^ 32 :=
+    a.store.view (decE h) = some (.fvar (tfld m FVAR (tierW h) (idxW h) 0).toNat
+      (decE (tfld m FVAR (tierW h) (idxW h) 1))) ∧
+    (tfld m FVAR (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
   view_fvar_idx m a hR h hh hv hg
 
 theorem view_appT (hv : viewOK m h APP.ca) (hg : h >>> 28 = 4) :
-    a.store.view (decE h) = some (.app (decE (tfld m APP (tierW h) (idxW h) APP.f))
-      (decE (tfld m APP (tierW h) (idxW h) APP.a))) ∧
-    (tfld m APP (tierW h) (idxW h) APP.f).toNat < 2 ^ 32 ∧
-    (tfld m APP (tierW h) (idxW h) APP.a).toNat < 2 ^ 32 :=
+    a.store.view (decE h) = some (.app (decE (tfld m APP (tierW h) (idxW h) 0))
+      (decE (tfld m APP (tierW h) (idxW h) 1))) ∧
+    (tfld m APP (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m APP (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
   view_app m a hR h hh hv hg
 
 theorem view_lamT (hv : viewOK m h LAM.ca) (hg : h >>> 28 = 5) :
-    a.store.view (decE h) = some (.lam (decE (tfld m LAM (tierW h) (idxW h) LAM.ty))
-      (decE (tfld m LAM (tierW h) (idxW h) LAM.b))) ∧
-    (tfld m LAM (tierW h) (idxW h) LAM.ty).toNat < 2 ^ 32 ∧
-    (tfld m LAM (tierW h) (idxW h) LAM.b).toNat < 2 ^ 32 :=
+    a.store.view (decE h) = some (.lam (decE (tfld m LAM (tierW h) (idxW h) 0))
+      (decE (tfld m LAM (tierW h) (idxW h) 1))) ∧
+    (tfld m LAM (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m LAM (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
   view_lam m a hR h hh hv hg
 
 theorem view_forallT (hv : viewOK m h FORALL.ca) (hg : h >>> 28 = 6) :
-    a.store.view (decE h) = some (.forallE (decE (tfld m FORALL (tierW h) (idxW h) FORALL.ty))
-      (decE (tfld m FORALL (tierW h) (idxW h) FORALL.b))) ∧
-    (tfld m FORALL (tierW h) (idxW h) FORALL.ty).toNat < 2 ^ 32 ∧
-    (tfld m FORALL (tierW h) (idxW h) FORALL.b).toNat < 2 ^ 32 :=
+    a.store.view (decE h) = some (.forallE (decE (tfld m FORALL (tierW h) (idxW h) 0))
+      (decE (tfld m FORALL (tierW h) (idxW h) 1))) ∧
+    (tfld m FORALL (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m FORALL (tierW h) (idxW h) 1).toNat < 2 ^ 32 :=
   view_forall m a hR h hh hv hg
 
 theorem view_letT (hv : viewOK m h LET.ca) (hg : h >>> 28 = 7) :
-    a.store.view (decE h) = some (.letE (decE (tfld m LET (tierW h) (idxW h) LET.ty))
-      (decE (tfld m LET (tierW h) (idxW h) LET.v)) (decE (tfld m LET (tierW h) (idxW h) LET.b))) ∧
-    (tfld m LET (tierW h) (idxW h) LET.ty).toNat < 2 ^ 32 ∧
-    (tfld m LET (tierW h) (idxW h) LET.v).toNat < 2 ^ 32 ∧
-    (tfld m LET (tierW h) (idxW h) LET.b).toNat < 2 ^ 32 :=
+    a.store.view (decE h) = some (.letE (decE (tfld m LET (tierW h) (idxW h) 0))
+      (decE (tfld m LET (tierW h) (idxW h) 1)) (decE (tfld m LET (tierW h) (idxW h) 2))) ∧
+    (tfld m LET (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m LET (tierW h) (idxW h) 1).toNat < 2 ^ 32 ∧
+    (tfld m LET (tierW h) (idxW h) 2).toNat < 2 ^ 32 :=
   view_let m a hR h hh hv hg
 
 theorem view_projT (hv : viewOK m h PROJ.ca) (hg : h >>> 28 = 9) :
-    a.store.view (decE h) = some (.proj (decI (tfld m PROJ (tierW h) (idxW h) PROJ.n))
-      (tfld m PROJ (tierW h) (idxW h) PROJ.i).toNat (decE (tfld m PROJ (tierW h) (idxW h) PROJ.e))) ∧
-    (tfld m PROJ (tierW h) (idxW h) PROJ.n).toNat < 2 ^ 32 ∧
-    (tfld m PROJ (tierW h) (idxW h) PROJ.e).toNat < 2 ^ 32 :=
+    a.store.view (decE h) = some (.proj (decI (tfld m PROJ (tierW h) (idxW h) 0))
+      (tfld m PROJ (tierW h) (idxW h) 1).toNat (decE (tfld m PROJ (tierW h) (idxW h) 2))) ∧
+    (tfld m PROJ (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m PROJ (tierW h) (idxW h) 2).toNat < 2 ^ 32 :=
   view_proj m a hR h hh hv hg
 
 end viewTags

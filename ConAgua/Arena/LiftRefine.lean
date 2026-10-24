@@ -80,26 +80,26 @@ def LArmOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h c k fu r : Word), ArenaD m a →
     h.toNat < 2 ^ 32 →
     (viewOK m h 4 → h >>> 28 = 4 → ArmRef n liftAppW
-      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxW h) APP.f))
-        (decE (tfld m APP (tierW h) (idxW h) APP.a))) m m' a h c k fu r) ∧
+      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxW h) 0))
+        (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h c k fu r) ∧
     (viewOK m h 28 → h >>> 28 = 5 → ArmRef n liftLamW
       (liftArmLam k.toNat fu.toNat (decE h) c.toNat
-        (decE (tfld m LAM (tierW h) (idxW h) LAM.ty))
-        (decE (tfld m LAM (tierW h) (idxW h) LAM.b))) m m' a h c k fu r) ∧
+        (decE (tfld m LAM (tierW h) (idxW h) 0))
+        (decE (tfld m LAM (tierW h) (idxW h) 1))) m m' a h c k fu r) ∧
     (viewOK m h 30 → h >>> 28 = 6 → ArmRef n liftForallW
       (liftArmForallE k.toNat fu.toNat (decE h) c.toNat
-        (decE (tfld m FORALL (tierW h) (idxW h) FORALL.ty))
-        (decE (tfld m FORALL (tierW h) (idxW h) FORALL.b))) m m' a h c k fu r) ∧
+        (decE (tfld m FORALL (tierW h) (idxW h) 0))
+        (decE (tfld m FORALL (tierW h) (idxW h) 1))) m m' a h c k fu r) ∧
     (viewOK m h 20 → h >>> 28 = 7 → ArmRef n liftLetW
       (liftArmLet k.toNat fu.toNat (decE h) c.toNat
-        (decE (tfld m LET (tierW h) (idxW h) LET.ty))
-        (decE (tfld m LET (tierW h) (idxW h) LET.v))
-        (decE (tfld m LET (tierW h) (idxW h) LET.b))) m m' a h c k fu r) ∧
+        (decE (tfld m LET (tierW h) (idxW h) 0))
+        (decE (tfld m LET (tierW h) (idxW h) 1))
+        (decE (tfld m LET (tierW h) (idxW h) 2))) m m' a h c k fu r) ∧
     (viewOK m h 32 → h >>> 28 = 9 → ArmRef n liftProjW
       (liftArmProj k.toNat fu.toNat (decE h) c.toNat
-        (decI (tfld m PROJ (tierW h) (idxW h) PROJ.n))
-        (tfld m PROJ (tierW h) (idxW h) PROJ.i).toNat
-        (decE (tfld m PROJ (tierW h) (idxW h) PROJ.e))) m m' a h c k fu r)
+        (decI (tfld m PROJ (tierW h) (idxW h) 0))
+        (tfld m PROJ (tierW h) (idxW h) 1).toNat
+        (decE (tfld m PROJ (tierW h) (idxW h) 2))) m m' a h c k fu r)
 
 /-! ## The dispatcher -/
 
@@ -159,18 +159,18 @@ theorem lgoOK_succ (n : Nat) (ih : LArmOK n) : LGoOK (n + 1) := by
     · rw [liftW] at hb; simp [hfu, hcut, hs, g0, hc] at hb
     rw [view_run _ a _ (view_bvarT m a hR h hh (vok 22 hc) g0)]
     simp only [except_ok_bind]
-    by_cases hl : tfld m BVAR (tierW h) (idxW h) BVAR.i < c
+    by_cases hl : tfld m BVAR (tierW h) (idxW h) 0 < c
     · rw [liftW.arm2 n m h c k fu hfu hcut hs g0 hc hl] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-      have : ¬ (tfld m BVAR (tierW h) (idxW h) BVAR.i).toNat ≥ c.toNat := by
+      have : ¬ (tfld m BVAR (tierW h) (idxW h) 0).toNat ≥ c.toNat := by
         have := UInt64.lt_iff_toNat_lt.mp hl; omega
       simp only [this, ↓reduceIte]; exact ⟨a, rfl, hA⟩
-    by_cases ho : tfld m BVAR (tierW h) (idxW h) BVAR.i + k <
-        tfld m BVAR (tierW h) (idxW h) BVAR.i
+    by_cases ho : tfld m BVAR (tierW h) (idxW h) 0 + k <
+        tfld m BVAR (tierW h) (idxW h) 0
     · rw [liftW] at hb; simp [hfu, hcut, hs, g0, hc, hl, ho] at hb
     rw [liftW.arm3 n m h c k fu hfu hcut hs g0 hc hl ho] at hb
     obtain ⟨hok, hA', hres⟩ := internBVar_D m a hA _ r m' hb
-    have hge : (tfld m BVAR (tierW h) (idxW h) BVAR.i).toNat ≥ c.toNat := by
+    have hge : (tfld m BVAR (tierW h) (idxW h) 0).toNat ≥ c.toNat := by
       have := UInt64.not_lt.mp hl; exact UInt64.le_iff_toNat_le.mp this
     simp only [hge, ↓reduceIte]
     rw [← add_noovf _ _ ho, AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
@@ -300,19 +300,19 @@ include ih hA hh
 
 theorem appArm_ok (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
     ArmRef (n + 1) liftAppW
-      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxW h) APP.f))
-        (decE (tfld m APP (tierW h) (idxW h) APP.a))) m m' a h c k fu r := by
+      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxW h) 0))
+        (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h c k fu r := by
   intro hb
   obtain ⟨-, hfw, haw⟩ := view_appT m a hA.1 h hh hv hg
   rw [liftArmApp]
   refine probe_ok _ _ m m' a hA h c r hh (liftAppW.arm1 n m h c k fu) (fun hr => by rw [liftAppW]; simp [hr])
     (fun hr hh0 hb => ?_) hb
   rw [liftAppW.arm2 n m h c k fu hr (fun h => h hh0)] at hb
-  cases h1 : liftW n m (tfld m APP (tierW h) (idxW h) APP.f) c k fu with
+  cases h1 : liftW n m (tfld m APP (tierW h) (idxW h) 0) c k fu with
   | none => simp [h1, liftAppW.k4] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : liftW n m₁ (tfld m APP (tierW h) (idxW h) APP.a) c k fu with
+  cases h2 : liftW n m₁ (tfld m APP (tierW h) (idxW h) 1) c k fu with
   | none => simp [h1, h2, liftAppW.k4, liftAppW.k3] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
@@ -325,8 +325,8 @@ theorem appArm_ok (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
 theorem lamArm_ok (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
     ArmRef (n + 1) liftLamW
       (liftArmLam k.toNat fu.toNat (decE h) c.toNat
-        (decE (tfld m LAM (tierW h) (idxW h) LAM.ty))
-        (decE (tfld m LAM (tierW h) (idxW h) LAM.b))) m m' a h c k fu r := by
+        (decE (tfld m LAM (tierW h) (idxW h) 0))
+        (decE (tfld m LAM (tierW h) (idxW h) 1))) m m' a h c k fu r := by
   intro hb
   by_cases hc1 : c + 1 = 0
   · rw [liftLamW] at hb; simp [hc1] at hb
@@ -335,11 +335,11 @@ theorem lamArm_ok (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
   refine probe_ok _ _ m m' a hA h c r hh (liftLamW.arm1 n m h c k fu hc1)
     (fun hr => by rw [liftLamW]; simp [hc1, hr]) (fun hr hh0 hb => ?_) hb
   rw [liftLamW.arm2 n m h c k fu hc1 hr (fun h => h hh0)] at hb
-  cases h1 : liftW n m (tfld m LAM (tierW h) (idxW h) LAM.ty) c k fu with
+  cases h1 : liftW n m (tfld m LAM (tierW h) (idxW h) 0) c k fu with
   | none => simp [h1, liftLamW.k2] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : liftW n m₁ (tfld m LAM (tierW h) (idxW h) LAM.b) (c + 1) k fu with
+  cases h2 : liftW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (c + 1) k fu with
   | none => simp [h1, h2, liftLamW.k2, liftLamW.k1] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
@@ -353,8 +353,8 @@ theorem lamArm_ok (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
 theorem forallArm_ok (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
     ArmRef (n + 1) liftForallW
       (liftArmForallE k.toNat fu.toNat (decE h) c.toNat
-        (decE (tfld m FORALL (tierW h) (idxW h) FORALL.ty))
-        (decE (tfld m FORALL (tierW h) (idxW h) FORALL.b))) m m' a h c k fu r := by
+        (decE (tfld m FORALL (tierW h) (idxW h) 0))
+        (decE (tfld m FORALL (tierW h) (idxW h) 1))) m m' a h c k fu r := by
   intro hb
   by_cases hc1 : c + 1 = 0
   · rw [liftForallW] at hb; simp [hc1] at hb
@@ -363,11 +363,11 @@ theorem forallArm_ok (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
   refine probe_ok _ _ m m' a hA h c r hh (liftForallW.arm1 n m h c k fu hc1)
     (fun hr => by rw [liftForallW]; simp [hc1, hr]) (fun hr hh0 hb => ?_) hb
   rw [liftForallW.arm2 n m h c k fu hc1 hr (fun h => h hh0)] at hb
-  cases h1 : liftW n m (tfld m FORALL (tierW h) (idxW h) FORALL.ty) c k fu with
+  cases h1 : liftW n m (tfld m FORALL (tierW h) (idxW h) 0) c k fu with
   | none => simp [h1, liftForallW.k2] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : liftW n m₁ (tfld m FORALL (tierW h) (idxW h) FORALL.b) (c + 1) k fu with
+  cases h2 : liftW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (c + 1) k fu with
   | none => simp [h1, h2, liftForallW.k2, liftForallW.k1] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
@@ -381,9 +381,9 @@ theorem forallArm_ok (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
 theorem letArm_ok (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
     ArmRef (n + 1) liftLetW
       (liftArmLet k.toNat fu.toNat (decE h) c.toNat
-        (decE (tfld m LET (tierW h) (idxW h) LET.ty))
-        (decE (tfld m LET (tierW h) (idxW h) LET.v))
-        (decE (tfld m LET (tierW h) (idxW h) LET.b))) m m' a h c k fu r := by
+        (decE (tfld m LET (tierW h) (idxW h) 0))
+        (decE (tfld m LET (tierW h) (idxW h) 1))
+        (decE (tfld m LET (tierW h) (idxW h) 2))) m m' a h c k fu r := by
   intro hb
   by_cases hc1 : c + 1 = 0
   · rw [liftLetW] at hb; simp [hc1] at hb
@@ -392,15 +392,15 @@ theorem letArm_ok (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
   refine probe_ok _ _ m m' a hA h c r hh (liftLetW.arm1 n m h c k fu hc1)
     (fun hr => by rw [liftLetW]; simp [hc1, hr]) (fun hr hh0 hb => ?_) hb
   rw [liftLetW.arm2 n m h c k fu hc1 hr (fun h => h hh0)] at hb
-  cases h1 : liftW n m (tfld m LET (tierW h) (idxW h) LET.ty) c k fu with
+  cases h1 : liftW n m (tfld m LET (tierW h) (idxW h) 0) c k fu with
   | none => simp [h1, liftLetW.k3] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : liftW n m₁ (tfld m LET (tierW h) (idxW h) LET.v) c k fu with
+  cases h2 : liftW n m₁ (tfld m LET (tierW h) (idxW h) 1) c k fu with
   | none => simp [h1, h2, liftLetW.k3, liftLetW.k2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  cases h3 : liftW n m₂ (tfld m LET (tierW h) (idxW h) LET.b) (c + 1) k fu with
+  cases h3 : liftW n m₂ (tfld m LET (tierW h) (idxW h) 2) (c + 1) k fu with
   | none => simp [h1, h2, h3, liftLetW.k3, liftLetW.k2, liftLetW.k1] at hb
   | some o =>
   obtain ⟨z, m₃⟩ := o
@@ -416,16 +416,16 @@ theorem letArm_ok (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
 theorem projArm_ok (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
     ArmRef (n + 1) liftProjW
       (liftArmProj k.toNat fu.toNat (decE h) c.toNat
-        (decI (tfld m PROJ (tierW h) (idxW h) PROJ.n))
-        (tfld m PROJ (tierW h) (idxW h) PROJ.i).toNat
-        (decE (tfld m PROJ (tierW h) (idxW h) PROJ.e))) m m' a h c k fu r := by
+        (decI (tfld m PROJ (tierW h) (idxW h) 0))
+        (tfld m PROJ (tierW h) (idxW h) 1).toNat
+        (decE (tfld m PROJ (tierW h) (idxW h) 2))) m m' a h c k fu r := by
   intro hb
   obtain ⟨-, -, hew⟩ := view_projT m a hA.1 h hh hv hg
   rw [liftArmProj]
   refine probe_ok _ _ m m' a hA h c r hh (liftProjW.arm1 n m h c k fu)
     (fun hr => by rw [liftProjW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   rw [liftProjW.arm2 n m h c k fu hr (fun h => h hh0)] at hb
-  cases h1 : liftW n m (tfld m PROJ (tierW h) (idxW h) PROJ.e) c k fu with
+  cases h1 : liftW n m (tfld m PROJ (tierW h) (idxW h) 2) c k fu with
   | none => simp [h1, liftProjW.k1] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
