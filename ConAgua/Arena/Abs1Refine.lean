@@ -95,108 +95,33 @@ theorem AbsR.across {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState
 
 theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
     MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
-  unfold mkAppW at hI
-  split at hI
+  unfold mkAppW at hI; split at hI
   · cases hI
-  cases hI₁ : ainternW m f a with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hI₁, mkK_some] at hI
-    split at hI
-    · cases hI
-    rename_i m₂ hP
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    obtain ⟨rfl, rfl⟩ := hI
-    have hI₂ := hI₁
-    have hf1 := consInternM_frame appCS_wf hI₂
-    have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [appCS, appSch, AREC, ASLOT]) (by simp [appCS, appSch])).trans
-      (hf2.mono (by simp) (by simp))
+  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [appCS, appSch, AREC, ASLOT, ADER]) (by simp [appCS, appSch])
 
 theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, m')) :
     MemFrame [LAREC, LASLOT, LADER] [28, 29] m m' := by
-  unfold mkLamW at hI
-  split at hI
+  unfold mkLamW at hI; split at hI
   · cases hI
-  cases hI₁ : lainternW m f a with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hI₁, mkK_some] at hI
-    split at hI
-    · cases hI
-    rename_i m₂ hP
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    obtain ⟨rfl, rfl⟩ := hI
-    have hI₂ := hI₁
-    have hf1 := consInternM_frame lamCS_wf hI₂
-    have hf2 := derPutW_frame LADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [lamCS, lamSch, LAREC, LASLOT]) (by simp [lamCS, lamSch])).trans
-      (hf2.mono (by simp) (by simp))
+  exact (mkK_frame lamCS_wf (by decide) hI).mono (by simp [lamCS, lamSch, LAREC, LASLOT, LADER]) (by simp [lamCS, lamSch])
 
 theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = some (r, m')) :
     MemFrame [FAREC, FASLOT, FADER] [30, 31] m m' := by
-  unfold mkForallW at hI
-  split at hI
+  unfold mkForallW at hI; split at hI
   · cases hI
-  cases hI₁ : fainternW m f a with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hI₁, mkK_some] at hI
-    split at hI
-    · cases hI
-    rename_i m₂ hP
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    obtain ⟨rfl, rfl⟩ := hI
-    have hI₂ := hI₁
-    have hf1 := consInternM_frame forallCS_wf hI₂
-    have hf2 := derPutW_frame FADER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [forallCS, forallSch, FAREC, FASLOT]) (by simp [forallCS, forallSch])).trans
-      (hf2.mono (by simp) (by simp))
+  exact (mkK_frame forallCS_wf (by decide) hI).mono (by simp [forallCS, forallSch, FAREC, FASLOT, FADER]) (by simp [forallCS, forallSch])
 
 theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some (r, m')) :
     MemFrame [LEREC, LESLOT, LEDER] [20, 21] m m' := by
-  unfold mkLetW at hI
-  split at hI
+  unfold mkLetW at hI; split at hI
   · cases hI
-  cases hI₁ : leinternW m t v b with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hI₁, mkK_some] at hI
-    split at hI
-    · cases hI
-    rename_i m₂ hP
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    obtain ⟨rfl, rfl⟩ := hI
-    have hI₂ := hI₁
-    have hf1 := consInternM_frame letCS_wf hI₂
-    have hf2 := derPutW_frame LEDER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [letCS, letSch, LEREC, LESLOT]) (by simp [letCS, letSch])).trans
-      (hf2.mono (by simp) (by simp))
+  exact (mkK_frame letCS_wf (by decide) hI).mono (by simp [letCS, letSch, LEREC, LESLOT, LEDER]) (by simp [letCS, letSch])
 
 theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = some (r, m')) :
     MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m' := by
-  unfold mkProjW at hI
-  split at hI
+  unfold mkProjW at hI; split at hI
   · cases hI
-  cases hI₁ : pjinternW m n i e with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hI₁, mkK_some] at hI
-    split at hI
-    · cases hI
-    rename_i m₂ hP
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    obtain ⟨rfl, rfl⟩ := hI
-    have hI₂ := hI₁
-    have hf1 := consInternM_frame projCS_wf hI₂
-    have hf2 := derPutW_frame PJDER (by decide) _ _ _ _ _ _ hP
-    exact (hf1.mono (by simp [projCS, projSch, PJREC, PJSLOT]) (by simp [projCS, projSch])).trans
-      (hf2.mono (by simp) (by simp))
+  exact (mkK_frame projCS_wf (by decide) hI).mono (by simp [projCS, projSch, PJREC, PJSLOT, PJDER]) (by simp [projCS, projSch])
 
 theorem binternW_frameA (m m' : Mem) (u r : Word) (hI : binternW m u = some (r, m')) :
     MemFrame [BREC, BSLOT] [22, 23] m m' := by

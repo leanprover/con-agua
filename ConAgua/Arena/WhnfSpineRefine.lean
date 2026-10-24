@@ -758,26 +758,10 @@ never touches; this is what is available instead (`mkAppN_refines`/`mkAppNFrom_r
 in `Grows`'s place). -/
 theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
     MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
-  unfold mkAppW at hI
-  split at hI
+  unfold mkAppW at hI; split at hI
   · cases hI
-  cases hI₁ : ainternW m f a with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-    obtain ⟨r₁, m₁⟩ := p
-    simp only [hI₁, mkK_some] at hI
-    cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
-        (packBFL (maxW (derBW m f) (derBW m a)) (maxW (derFW m f) (derFW m a))
-          (exprLPW m f ||| exprLPW m a)) with
-    | none => simp [hP] at hI
-    | some m₂ =>
-      simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
-      obtain ⟨rfl, rfl⟩ := hI
-      have hI₂ := hI₁
-      have hf1 := consInternM_frame appCS_wf hI₂
-      have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
-      exact (hf1.mono (by simp [appCS, appSch, AREC, ASLOT]) (by simp [appCS, appSch])).trans
-        (hf2.mono (by simp) (by simp))
+  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [appCS, appSch, AREC, ASLOT, ADER])
+    (by simp [appCS, appSch])
 
 /-- A slice of the stack survives a writer that leaves `SPN` alone. -/
 theorem SpineR.frame {m m' : Mem} {o n : Word} {xs : Array EIdx} (hx : SpineR m o n xs)

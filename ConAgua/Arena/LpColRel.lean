@@ -47,6 +47,17 @@ theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s
   · cases h
   · cases h; exact MemFrame.set64 m₁ A hA _ _
 
+/-- **The frame of a `mk_*`**: the interning's arrays and counts, then the derived column `A`. -/
+theorem mkK_frame {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : A ≠ CTL) {c s d r : Word}
+    {m m' : Mem} {ks : List Word} (h : mkK A c s d (consInternM C m ks) = some (r, m')) :
+    MemFrame (C.ra :: C.sa :: C.col.toList ++ [A]) [C.ca, C.ca + 1] m m' := by
+  rcases hI : consInternM C m ks with _ | ⟨r₁, m₁⟩ <;> rw [hI] at h
+  · cases h
+  rcases hP : derPutW A c m₁ s r₁ d with _ | m₂ <;> simp only [mkK_some, hP, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ((consInternM_frame hW hI).mono (by simp_all) (by simp)).trans
+    ((derPutW_frame A hA c _ _ _ _ _ hP).mono (by simp) (by simp))
+
 /-- Two record positions `2 i + t` differ when the nodes or the tiers do. -/
 theorem ix_ne (i j : Nat) (t u : Word) (hi : i < 2 ^ 27) (hj : j < 2 ^ 27) (ht : t ≤ 1)
     (hu : u ≤ 1) (h : i ≠ j ∨ t ≠ u) : UInt64.ofNat i * 2 + t ≠ UInt64.ofNat j * 2 + u := by
