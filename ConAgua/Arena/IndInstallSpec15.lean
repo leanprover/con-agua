@@ -108,8 +108,7 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
   intro m m' s l r xs h hS hxs
   by_cases hl : l = 0
   · rw [icvgW_nil p n m s l hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : xs = [] := by
       have h := hxs.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm
@@ -117,25 +116,13 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
     exact ⟨hS, IWGrow.refl m, PSlR.nil decCVp m⟩
   obtain ⟨q, x, rest, rfl, hw, hqb, hdx, hrest⟩ := partsPSl_cons hxs hl
   rw [icvgW_cons p n m s l hl] at h
-  cases h1 : icvgW p n m (s + 1) (l - 1) with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, icvgK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [icvgK1_some] at h
   obtain ⟨hS1, hg1, hd1⟩ := ih m m1 (s + 1) (l - 1) r1 rest h1 hS hrest
-  cases h2 : callW p n "sl_cons" [rdW (m1.arr64 IW) (rdW (m1.arr64 IW) s), r1.headD 0, r1.tail.headD 0] m1 with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, icvgK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [icvgK2_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   -- the record's first word
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hlpos : 0 < l.toNat := by
-    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-    · exact h0
+  have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hsl : s.toNat < iwTop m := by have := hxs.2; omega
   have hw1 : rdW (m1.arr64 IW) s = UInt64.ofNat q := by rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hsl]
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
@@ -171,13 +158,8 @@ theorem installCvTasRun {p : Prog} (hP : CstProg p) {n : Nat} {dn : NIdx → Opt
   rename_i r1 m1 h1
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (icvg_spec p hcg n _ o l) h1
   obtain ⟨hS1, hg1, hd1⟩ := icvgW_ok hP n _ _ o l r1 cvs hW1 hS hcvs
-  cases h2 : callW p n "sl_cons" [c0, r1.headD 0, r1.tail.headD 0] s1.mem with
-  | none => rw [h2] at hW; cases hW
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, icvgK2_some] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  obtain ⟨⟨r2, m2⟩, h2, hW⟩ := of_K hW rfl; rw [icvgK2_some] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hS2, hg2, hd2⟩ := installConsRun hP (fun q => OMono.decCVp q) h2 hS1 hd1
     (hc0.grow (OMono.decCVp _) hg1)
   exact ⟨hS2, hg1.trans hg2, by simpa using hd2⟩

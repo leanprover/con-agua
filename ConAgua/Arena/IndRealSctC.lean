@@ -74,9 +74,8 @@ theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   intro r m' h
   obtain ⟨ks, hks⟩ := hks
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ n =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
       apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
@@ -346,10 +345,8 @@ theorem tblW_okR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   subst htn
   rw [tblK3_some]
   -- `env_find`
-  cases hf : envFindW m3 (rt.headD 0) vis with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rf, m4⟩ := y
+  rcases hf : envFindW m3 (rt.headD 0) vis with _ | ⟨rf, m4⟩
+  · exact Sim.of_none
   by_cases hf0 : rf.headD 0 ≠ 0
   · rw [tblK4_found (h := hf0)]; exact Sim.of_none
   have hf0' : rf.headD 0 = 0 := Decidable.of_not_not hf0
@@ -359,34 +356,26 @@ theorem tblW_okR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   simp only [hmiss, Option.isNone_none, ite_true]
   -- the three copies
   have hg13 := (hg1.trans hg2).trans hg3
-  cases h5 : efW n m3 lo ll with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rl, m5⟩ := y
+  rcases h5 : efW n m3 lo ll with _ | ⟨rl, m5⟩
+  · exact Sim.of_none
   obtain ⟨hS5, hg5, hrl1, hrl0, hsl5, ht5⟩ := efW_stage n h5 hS3
     (by rw [decHL_grow hg13 hlb]; exact hlps) (by have := hg13.1; omega)
   rw [tblK5_some]
   have hg25 := (hg2.trans hg3).trans hg5
-  cases h6 : efW n m5 (rb.tail.headD 0) (rb.tail.tail.headD 0) with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rb2, m6⟩ := y
+  rcases h6 : efW n m5 (rb.tail.headD 0) (rb.tail.tail.headD 0) with _ | ⟨rb2, m6⟩
+  · exact Sim.of_none
   obtain ⟨hS6, hg6, hrb1, hrb0, hsl6, ht6⟩ := efW_stage n h6 hS5
     (by rw [decHL_grow hg25 hbb]; exact hbd) (by have := hg25.1; omega)
   rw [tblK6_some]
   have hg06 := (((hg1.trans hg2).trans hg3).trans hg5).trans hg6
-  cases h7 : efW n m6 go gl with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rg, m7⟩ := y
+  rcases h7 : efW n m6 go gl with _ | ⟨rg, m7⟩
+  · exact Sim.of_none
   obtain ⟨hS7, hg7, hrg1, hrg0, hsl7, ht7⟩ := efW_stage n h7 hS6
     (by rw [decHL_grow hg06 hgb]; exact hgs) (by have := hg06.1; omega)
   rw [tblK7_some]
   -- the record
-  cases h8 : erAllocW m7 14 with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨q, m8⟩ := y
+  rcases h8 : erAllocW m7 14 with _ | ⟨q, m8⟩
+  · exact Sim.of_none
   rw [tblK8_some, tblMem_eq]
   obtain ⟨hSM, hgM, hq, htM, hget⟩ := erRec_stage h8 hS7
     [6, rt.headD 0, T, rl.headD 0, rl.tail.headD 0, nP, C, nF, rs, rb2.headD 0, rb2.tail.headD 0,
@@ -410,10 +399,8 @@ theorem tblW_okR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hlt : q.toNat + 1 < (M.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp (by simpa using h1)).1
     rw [rdW_of_get? (by rw [sumToNat_succ (by have := hSM.2.2.2.2.1; omega)]) (by simpa using h1)]
     simpa using htnl
-  cases hc : callW p (n + 1) "env_push" [vis, q] M with
-  | none => exact Sim.of_none
-  | some y =>
-  obtain ⟨rv, m9⟩ := y
+  rcases hc : callW p (n + 1) "env_push" [vis, q] M with _ | ⟨rv, m9⟩
+  · exact Sim.of_none
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨M, Locals.init []⟩)
     (envPush_specW p hP.hrec (n + 1) ⟨M, Locals.init []⟩ vis q hq1) hc
   subst hs4

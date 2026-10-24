@@ -133,9 +133,8 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
           | some xs => simp [e, e'] at hs
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
     subst hl0
-    cases n with
-    | zero => simp [ikCopyW] at hW
-    | succ n =>
+    rcases n with _ | n
+    · simp [ikCopyW] at hW
     rw [ikCopyW_zero n m s d 0 rfl] at hW; cases hW
     exact ⟨by simp [hslice?], MemFrame.refl _ _ _, fun _ _ => rfl⟩
   | cons x xs ih =>
@@ -153,9 +152,8 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
     obtain ⟨rfl, rfl⟩ := hs
     have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk'
-    cases n with
-    | zero => simp [ikCopyW] at hW
-    | succ n =>
+    rcases n with _ | n
+    · simp [ikCopyW] at hW
     rw [ikCopyW_succ n m s d l hl0] at hW
     have hd1 : (d + 1).toNat = d.toNat + 1 := L.Arena.toNat_succ_lt (by omega)
     have hs1 : (s + 1).toNat = s.toNat + 1 := L.Arena.toNat_succ_lt (by omega)
@@ -201,33 +199,27 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
       (instLPFast f.toNat lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb := by
   apply CoreSpec.of_call
   intro rs m' hc
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
     (instLPFast_specW p hf k _ f po pl us e) hc
   rw [hs'] at hW
   change ilpfW p k s₀.mem f po pl us e = some (rs.headD 0, m') at hW
   unfold ilpfW at hW
-  by_cases hf0 : f ≠ 4000000000
-  · rw [if_pos hf0] at hW; cases hW
-  rw [if_neg hf0] at hW
+  obtain ⟨hf0, hW⟩ := of_ite_none hW
   obtain rfl : f = 4000000000 := by simpa using hf0
   rw [show (4000000000 : Word).toNat = coreWalkFuel from rfl]
   generalize s₀.mem = m at hS hlps hW hsz0
   -- `keys_push_iw`
-  cases h1 : callW p k "keys_push_iw" [po, pl] m with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨bs, m₁⟩ := q
+  rcases h1 : callW p k "keys_push_iw" [po, pl] m with _ | ⟨bs, m₁⟩
+  · rw [h1] at hW; cases hW
   rw [h1, ilwLPK₁_some] at hW
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (keysPushIW_spec p hkp hik k _ po pl) h1
   rw [hs1] at hW1
   change keysPushIWW k m po pl = some (bs.headD 0, m₁) at hW1
-  cases k with
-  | zero => simp [keysPushIWW] at hW1
-  | succ k =>
+  rcases k with _ | k
+  · simp [keysPushIWW] at hW1
   simp only [keysPushIWW] at hW1
   have hsz := hS.spn
   have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ (by omega)
@@ -244,8 +236,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   | none => rw [hcp] at hW1; simp [kpK] at hW1
   | some mc =>
   rw [hcp, kpK_some] at hW1
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW1
-  obtain ⟨hb, rfl⟩ := hW1
+  obtain ⟨hb, rfl⟩ := Prod.mk.inj (Option.some.inj hW1)
   have hnw : po.toNat + pl.toNat < 2 ^ 64 := by
     rcases hslice?_bound_fsz _ _ _ _ hlps with h0 | h0
     · have := po.toNat_lt; omega
@@ -264,13 +255,10 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
     rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
   -- the core
   rw [← hb] at hW
-  cases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with
-  | none => rw [h2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m₂⟩ := q
+  rcases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with _ | ⟨r2, m₂⟩
+  · rw [h2] at hW; cases hW
   rw [h2, ilwLPK₂_some] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)
     (Nat.le_of_eq htop₁.symm) h2
   -- the stack top put back

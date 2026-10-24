@@ -89,8 +89,7 @@ theorem icbcW_ok (p : Prog) (hRp : RecProg p) (hci : p.lookup "ctor_info_rec" = 
   intro m m' a vis fe o l css r h hS hcss
   by_cases hl : l = 0
   · rw [icbcW_nil p n m nP o l vis hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : css = [] := by
       have h := hcss.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm
@@ -108,21 +107,16 @@ theorem icbcW_ok (p : Prog) (hRp : RecProg p) (hci : p.lookup "ctor_info_rec" = 
     have := partsIwLt hcl; have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     rw [UInt64.toNat_add, hq']; simp; omega)
   rw [hwo, hwl] at h
-  cases h1 : callW p n "cons_sum_ctors" [nP, UInt64.ofNat co, UInt64.ofNat cl, vis] m with
-  | none => rw [h1] at h; simp [icbcK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
+  rcases h1 : callW p n "cons_sum_ctors" [nP, UInt64.ofNat co, UInt64.ofNat cl, vis] m with _ | ⟨r1, m1⟩
+  · rw [h1] at h; simp [icbcK1] at h
   rw [h1, icbcK1_some] at h
   obtain ⟨s1, rfl, -, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (consSumCtors_refines p hRp hci hcs n ⟨m, Locals.init []⟩ a dn fe vis nP _ _ cs hS
       (by rw [UInt64.toNat_ofNat_of_lt' hcob, UInt64.toNat_ofNat_of_lt' hclb]; exact hcsd)) h1
-  cases h2 : icbcW p n s1.mem nP (o + 1) (l - 1) (r1.headD 0) with
-  | none => rw [h2] at h; simp [icbcK2] at h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
+  rcases h2 : icbcW p n s1.mem nP (o + 1) (l - 1) (r1.headD 0) with _ | ⟨r2, m2⟩
+  · rw [h2] at h; simp [icbcK2] at h
   rw [h2, icbcK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS2, hg2⟩ := ih s1.mem m2 a (r1.headD 0) _ (o + 1) (l - 1) rest r2 h2 hS1 (hrest.grow decCNS_mono hg1)
   refine ⟨?_, hg1.trans hg2⟩
   simpa [ConRon.Arena.consBlockCtors] using hS2

@@ -72,9 +72,8 @@ theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
     ∃ a', (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a = .ok (decE (r.headD 0), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
-  cases k with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ k =>
+  rcases k with _ | k
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨mp, hmp⟩ := hAb.2.2.2.1
   have hA : ArenaL m (withLLC a mp) := ⟨hS.1.arena.withLLC mp, hmp⟩
   have hbd : o.toNat + l.toNat < 2 ^ 64 := by
@@ -119,9 +118,8 @@ theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a = .ok (decE (r.headD 0), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ m'.arr64 SPN = m.arr64 SPN ∧
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
-  cases k with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ k =>
+  rcases k with _ | k
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hok, hD, hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (instEntry_refines opfP opfP_inst rfl k _ a hS.1.arena e v d he) hc
   rw [hs'] at hD

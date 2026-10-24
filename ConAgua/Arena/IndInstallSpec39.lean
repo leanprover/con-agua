@@ -78,9 +78,8 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', (ConRon.Arena.structElimLevel (decI elim) (large != 0)).run a =
         .ok (decI (r.headD 0), a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (selm_spec p P.sel n s₀ elim large) ?_
   rintro r s' ⟨hl, hm⟩
   refine ⟨hl, ?_⟩
@@ -88,13 +87,10 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
   unfold selmW at hm
   by_cases hlg : large ≠ 0
   · rw [if_pos hlg] at hm
-    cases c : callW p n "intern_param" [elim] s₀.mem with
-    | none => rw [c] at hm; cases hm
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
+    rcases c : callW p n "intern_param" [elim] s₀.mem with _ | ⟨r1, m1⟩
+    · rw [c] at hm; cases hm
     rw [c] at hm
-    simp only [Option.some.injEq, Prod.mk.injEq] at hm
-    obtain ⟨rfl, rfl⟩ := hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
     obtain ⟨s1, hs1, -, hI⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (internParam_spec p P.pf1 P.pp1 P.ip n _ elim) c
     simp only at hs1 hI; rw [hs1] at hI
@@ -106,13 +102,10 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     simp only [List.headD_cons, ConRon.Arena.structElimLevel, hb, ite_true]
     exact hrun
   · rw [if_neg hlg] at hm
-    cases c : callW p n "intern_zero" [] s₀.mem with
-    | none => rw [c] at hm; cases hm
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
+    rcases c : callW p n "intern_zero" [] s₀.mem with _ | ⟨r1, m1⟩
+    · rw [c] at hm; cases hm
     rw [c] at hm
-    simp only [Option.some.injEq, Prod.mk.injEq] at hm
-    obtain ⟨rfl, rfl⟩ := hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
     obtain ⟨s1, hs1, -, hI⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (internZero_spec p P.pf2 P.pp2 P.iz n _) c
     simp only at hs1 hI; rw [hs1] at hI
@@ -276,8 +269,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   intro m m' vis v' j h hS hj hsp
   by_cases h0 : ¬ 0 < j
   · rw [papW_exit (h := h0)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : j.toNat = 0 := by
       have : ¬ 0 < j.toNat := fun e => h0 (UInt64.lt_iff_toNat_lt.mpr (by simpa using e))
       omega
@@ -354,9 +346,8 @@ theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envI
     ⦃fun r s' => LocEq s' s₀ ∧
       StageR dn (r.headD 0) (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) s'.mem a ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (pap_spec p hp n s₀ vis po pl) ?_
   rintro r s' ⟨hl, hm⟩
   have hlen := hpv.length
