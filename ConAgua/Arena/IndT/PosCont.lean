@@ -170,7 +170,7 @@ theorem p2ccW_okW (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-theorem contOKC_step (hIlpf : IlpfF p) (n : Nat) (ih : NbOKC p dn vis fe env n) : ContOKC p dn vis fe env (n + 1) := by
+theorem contOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p) (n : Nat) (ih : NbOKC p dn vis fe env n) : ContOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r ctxP progP nP usP argsP nsP dep h hC hW hnn hus
     hargs hab hns hP hA hc hctx hprog hnP husP hargsP hnsP hwargs
@@ -270,17 +270,19 @@ theorem contOKC_step (hIlpf : IlpfF p) (n : Nat) (ih : NbOKC p dn vis fe env n) 
     have := (hg2.trans hg3).1; omega
   have hA3 : AbsOK m3 := posRecW_afr hk4 hA2
   have hC3 : StageC dn vis fe env m3 a2 := hC.of_pstep hS3 hA3 p12
-  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, hAty⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 (realCall p) (IlpRd.realC hIlpf hC3) (IlpFr.real hIlpf) hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
-    (hP2.fr (posRecW_mfr hk4))
-  have hA4 : AbsOK m4 := nitW_afr hAty hni hA3
   have hx02 := p12.ext
+  have hkey2 : ConRon.Bridge.Inductives.dKey a2.store ⟨decI nn, decI us, args.take nPcW.toNat⟩ =
+      some ⟨nP, usP, argsP.take nPcW.toNat⟩ := by
+    simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hnP hx02,
+      ConRon.Bridge.denoteLs_ext husP hx02,
+      ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx02 _ _ hargsP) nPcW.toNat]
+  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -, hA4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 (realCall p) (IlpRd.realC hIlpf hC3) (IlpFr.real hIlpf) _
+    (nitLe_realC hcl hLC n' _ _ key c _ hC3 hA3 (dCtx_ext _ hx02 _ _ hctx) hkey2) hni hS3
+    ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl (hP2.fr (posRecW_mfr hk4))
   obtain ⟨c4, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt prog.length)
     ⟨decI nn, decI us, args.take nPcW.toNat⟩ ⟨nP, usP, argsP.take nPcW.toNat⟩ a2 a4 xi c2.ok
-    ⟨dCtx_ext _ hx02 _ _ hctx, by simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hnP hx02,
-      ConRon.Bridge.denoteLs_ext husP hx02,
-      ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx02 _ _ hargsP) nPcW.toNat]⟩
-    hrun4
+    ⟨dCtx_ext _ hx02 _ _ hctx, hkey2⟩ hrun4
   have c24 := c2.trans c4
   have hx04 := c24.ext
   have hC4 : StageC dn vis fe env m4 a4 := hC.of_cstep hS4 hA4 c24

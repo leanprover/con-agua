@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.PosFrame
+import ConAgua.Arena.IndT.PosNit
 import ConAgua.Arena.IlpRdReal
 
 /-!
@@ -46,7 +46,7 @@ theorem denoteNList_memN : ∀ {st : NStore} {l : List NIdx} {L : List ConLeche.
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-theorem newOKC_step (hIlpf : IlpfF p) (n : Nat) (ih : NbOKC p dn vis fe env n) : NewOKC p dn vis fe env (n + 1) := by
+theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p) (n : Nat) (ih : NbOKC p dn vis fe env n) : NewOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, -, -, hFrame, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r ctxP progP nP usP dsP ctyP nsP h hC hW hnn hus
     hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni
@@ -143,9 +143,17 @@ theorem newOKC_step (hIlpf : IlpfF p) (n : Nat) (ih : NbOKC p dn vis fe env n) :
   obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, hJ5⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
     dO dL (c.hiAt wp.length) hhw c ds hus (realCall p) (IlpFr.real hIlpf)
     (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
-    (nestFrameMates fe (decI nn)) (fun _ _ hJ => IlpRd.realC hIlpf hJ.1)
+    (nestFrameMates fe (decI nn)) (fun _ _ hJ => IlpRd.realC hIlpf hJ.1) (fun m' _ => AbsOK m')
+    (fun k' _ a' key n0 hJ hn0 => by
+      obtain ⟨hCm, hAm, hxm⟩ := hJ
+      obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
+      have hxa := p1.ext.trans hxm
+      exact nitLe_realC hcl hLC k' _ _ key c _ hCm hAm (dCtx_ext _ hxa _ _ hctx)
+        (keyP := ⟨n0P, usP, dsP⟩) (by
+          simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
+            ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]))
     (fun _ _ _ hJ hf hS' => ⟨hJ.1.of_pstep hS' (hJ.2.1.iw hf) (PStep.refl hJ.1.check.state), hJ.2.1.iw hf, hJ.2.2⟩)
-    (fun _ _ _ a' a'' _ n0 x _ hJ hn0 hnit hrun hS' hty => by
+    (fun _ _ _ a' a'' _ n0 x _ hJ hn0 _ hrun hS' _ hAm' => by
       obtain ⟨hCm, hAm, hxm⟩ := hJ
       obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0
       have hxa := p1.ext.trans hxm
@@ -154,7 +162,6 @@ theorem newOKC_step (hIlpf : IlpfF p) (n : Nat) (ih : NbOKC p dn vis fe env n) :
         ⟨dCtx_ext _ hxa _ _ hctx, by
           simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hxm,
             ConRon.Bridge.denoteLs_ext husP hxa, ConRon.Bridge.denoteEList_ext hxa _ _ hdsP]⟩ hrun
-      have hAm' := nitW_afr hty hnit hAm
       exact ⟨hCm.of_cstep hS' hAm' c4, hAm', hxm.trans c4.ext⟩)
     (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 ⟨hC4, hA4, ConRon.Arena.Ext.refl _⟩

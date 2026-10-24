@@ -301,7 +301,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     obtain ⟨r2, m2⟩ := pr2
     rw [hnit, ggK2_some] at h
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hAty, hQ2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
-      _ r2 cR (hJI m1 a hJ1) hF Qn (hJle (k + 1) m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
+      _ r2 cR (hJI m1 a hJ1) hF Qn (hJle k m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
       (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
     have hJ2 := hJnit k m1 m2 a a2 key n0 x r2 hJ1 (hcsA n0 List.mem_cons_self) hnit hrun2 hS2 hAty hQ2
     -- the pair record and the snoc

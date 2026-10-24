@@ -475,7 +475,7 @@ theorem cbposW_okC (hP : PosBlkProg p) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' :
   rw [h4, cbpK4_some] at h
   obtain ⟨s4, rfl, -, ⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ :=
     triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (nestRoot_refinesC hP.rs hq hIlpf (n + 2) dn vis fe henv hn _ _ (r1.headD 0) (r1.tail.headD 0)
+    (nestRoot_refinesC hP.rs hq hIlpf hLC (n + 2) dn vis fe henv hn _ _ (r1.headD 0) (r1.tail.headD 0)
       (r1.tail.tail.headD 0) caO caL (r3.headD 0) 0 0 c holes css {} [] hC3 (hU1.grow hg13) hhi1 hpn1
       (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
       (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
