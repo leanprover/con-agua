@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndInstallSpec20
+import ConAgua.Arena.IndRealSctC
 
 /-!
 # `checkAbsCtorSorts`, `checkAbsCtorSortsAll` under `StageC` (lane `indstaget`)
@@ -30,7 +31,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop) (hApd : ApdF p)
 
 include hq henv hOpf hLC hLT in
 /-- **`check_abs_ctor_sorts_one` under `StageC`** (twin side: one constructor of con-ron's
@@ -99,7 +100,7 @@ theorem iaoW_simC (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a 
     ⟨ConRon.Bridge.denoteL_ext hsP p1.ext, hxs, rfl, ConRon.Bridge.denoteFEnv_mono p1.ext hfe⟩ hr2
   exact Sim.ret ⟨hC2, hg1.trans hg2, hA2, (p1.toCore hC.check).trans c2⟩
 
-include hq henv hOpf hLC hLT in
+include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts` under `StageC`** (twin side: con-ron's `checkAbsCtorSorts_specF`'s
 proof). -/
 theorem iacW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb : (isP != 0) = b)
@@ -177,11 +178,11 @@ theorem iacW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
       · rw [iacK1_none p n m₁ _ _ _ _ _ _ _ _ _ r h, if_pos h]
       · rw [iacK1_some p n m₁ _ _ _ _ _ _ _ _ _ r h, if_neg h])
     (by
-      have h := installSimStub (p := p) (n := n) (allLevelParamsDefined_spec dn vis fe
-        (UInt64.ofNat lo) (UInt64.ofNat ll) ew hew32 c.lps) ⟨hS, hlpsm⟩
+      have h := apdCall_simR hApd n (UInt64.ofNat lo) (UInt64.ofNat ll) ew hew32 c.lps hS hA
+        hC.check.state hlpsm ⟨_, denoteNList_mapM hl'⟩
       rw [hewe] at h
-      exact Sim.withFr (Sim.withRunC h) (fun _ _ e => callW_stub_afr e (by decide) hA)) ?_
-  rintro r1 ok m1 a1 ⟨⟨⟨hS1, hg1, hok1, -⟩, hr1⟩, hA1⟩
+      exact Sim.withRunC h) ?_
+  rintro r1 ok m1 a1 ⟨⟨hS1, hg1, ⟨hok1, -⟩, hA1, -⟩, hr1⟩
   obtain ⟨h1s, h1c, h1p, -⟩ := ConRon.Bridge.allLevelParamsDefined_run hC.check.state hl' htyNP hr1
   have c1 := ConRon.Bridge.Inductives.BI.coreStep_of_store hC.check h1s h1c h1p
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_check hS1 hA1 c1.ok c1.ext
@@ -249,7 +250,7 @@ theorem iacW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
   rintro _ _ _ _ ⟨hC4, hg4, hA4, c4⟩
   exact ⟨hC4, hg13.trans hg4, hA4, c13.trans c4⟩
 
-include hq henv hOpf hLC hLT in
+include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts` refines `checkAbsCtorSorts`** under `StageC` (the denotations as
 con-ron's `checkAbsCtorSorts_specF` asks): the context decoded below the tops with its holes'
 bound below `2^64`, the constructors and their normal forms slices decoded below the tops. -/
@@ -273,11 +274,11 @@ theorem checkAbsCtorSorts_refinesC (hP : AbsProg p) (n : Nat) (hn : n ≤ 2 ^ 62
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.checkAbsCtorSorts V fe c b cs os) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (iac_spec p hP.abs n s₀ vis ctx isP co cl oo ol) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hC', hg, hA', _⟩ := Sim.run (iacW_simC hq henv hOpf hLC hLT hP ctx isP c b hb hhi n hn _ a₀ co cl oo ol
+    let ⟨hok, hC', hg, hA', _⟩ := Sim.run (iacW_simC hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n hn _ a₀ co cl oo ol
       cs os csP osP hC hA hc hcs hos hctxP hcsP hosP hws hfe) hm
     ⟨hl, hok, hC', hg, hA'⟩
 
-include hq henv hOpf hLC hLT in
+include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts_all` under `StageC`** (twin side: con-ron's
 `checkAbsCtorSortsAll_specF`'s proof). -/
 theorem iaaW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb : (isP != 0) = b)
@@ -333,7 +334,7 @@ theorem iaaW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
       (fun r m₁ => iaaK1_some p n m₁ vis ctx isP so sl oo ol r)
     (Q := fun _ _ m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a')
-    (fun r m' e => iacW_simC hq henv hOpf hLC hLT hP ctx isP c b hb hhi n (by omega) m a co cl oo2 ol2 cs os csP osP hC hA
+    (fun r m' e => iacW_simC hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n (by omega) m a co cl oo2 ol2 cs os csP osP hC hA
       hc ⟨hcd, hcb⟩ ⟨hod, hob⟩ hctxP hcP hoP (hws osP List.mem_cons_self) hfe r m' (by
         obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
           (iac_spec p hP.abs n _ vis ctx isP co cl oo2 ol2) e
@@ -352,7 +353,7 @@ theorem iaaW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
   rintro _ _ _ _ ⟨hC2, hg2, hA2⟩
   exact ⟨hC2, hg1.trans hg2, hA2⟩
 
-include hq henv hOpf hLC hLT in
+include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`** under `StageC` (the denotations
 as con-ron's `checkAbsCtorSortsAll_specF` asks): every member's constructors and normal forms as
 slices of `[off, len]` pointers decoded below the tops. -/
@@ -376,7 +377,7 @@ theorem checkAbsCtorSortsAll_refinesC (hP : AbsProg p) (n : Nat) (hn : n ≤ 2 ^
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (iaa_spec p hP.all n s₀ vis ctx isP so sl oo ol) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (iaaW_simC hq henv hOpf hLC hLT hP ctx isP c b hb hhi n hn _ a₀ so sl oo ol css oss cssP ossP
+    let ⟨hok, hQ⟩ := Sim.run (iaaW_simC hq henv hOpf hLC hLT hApd hP ctx isP c b hb hhi n hn _ a₀ so sl oo ol css oss cssP ossP
       hC hA hc hcss hoss hctxP hcssP hossP hws hfe) hm
     ⟨hl, hok, hQ⟩
 

@@ -359,9 +359,9 @@ theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cv
 section sim
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop) (hApd : ApdF p)
 
-include hq hIlpf henv hOpf hLC hLT in
+include hq hIlpf henv hOpf hLC hLT hApd in
 /-- **`check_block_positivity`'s model refines `checkBlockPositivity` under `StageC`** (con-ron's
 `checkBlockPositivity_spec`'s preconditions). -/
 theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFreeA posFreeC fs = true)
@@ -551,7 +551,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hP7 : PosMR s7.mem := PosMR.ofClosed hclP hfa h7 hP6
   have hOb6 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s6.mem := Nat.le_trans hOb4 hg6.1
   have hx16 := hx14.trans c5.ext
-  obtain ⟨u7, a7, hrun7, hC7, hg7, hA7⟩ := iaaW_simC hq henv hOpf hLC hLT hP.abs (r1.headD 0) (r6.headD 0) c
+  obtain ⟨u7, a7, hrun7, hC7, hg7, hA7⟩ := iaaW_simC hq henv hOpf hLC hLT hApd hP.abs (r1.headD 0) (r6.headD 0) c
     (y == some true) hb6 hhi1 (n + 2) hn s6.mem a6 caO caL (r4.headD 0) (r4.tail.headD 0) css outs cssP outsP
     hC6 hA6 (hc1.grow (decCtx_mono _) hg16) ((pos3_cns hcss).grow decCNS_mono (hg1.trans hg16))
     ⟨hO4.grow hg6, Or.inr hOb6⟩ (by rw [hfind]; exact ConRon.Bridge.Inductives.dCtx_ext _ hx16 _ _ hctx)
@@ -598,9 +598,9 @@ end sim
 section census
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
+  (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop) (hApd : ApdF p)
 
-include hq hIlpf henv hOpf hLC hLT in
+include hq hIlpf henv hOpf hLC hLT hApd in
 /-- **`check_block_positivity` refines `checkBlockPositivity`** under `StageC` (the knot's core
 calls; con-ron's `checkBlockPositivity_spec`'s preconditions: the parts, the formers and the
 members' constructors denoted, their stored types closed, the index denoting `env`). The shape
@@ -637,7 +637,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) {fs : List FnName}
       ⊤⦄ := by
   refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hP hclP hfa n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
+  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hApd hP hclP hfa n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
     hT hct
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩

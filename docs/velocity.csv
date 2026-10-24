@@ -258,3 +258,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-23,indstaget,claude-opus-5-5,20,15,"(helper rcB) real lvls_eq_c/name_rec_i/all_level_params_defined/consts_resolve_ffast; IndStubsT contracts deleted"
 2026-10-23,indstaget,claude-opus-5-5,25,15,"(helper rcC) real inst_lp_fast in the StageC chain (IlpRd contract); AbsKeep for nest_uniform/former_tys_c removed"
 2026-10-24,indstaget,claude-opus-5-5,15,10,"(helper rcD) class_read keeps AbsOK (readW over cR, OpfJ); AbsKeep class_read dropped"
+2026-10-24,indstaget,claude-opus-5-5,20,10,"(helpers rcC/rcF) toi chain, block_large_elim_allowed, lvl_eq_c in target_major_of, open_pis in classesCtors under StageC; C keep lists, hK gone"
+2026-10-24,indstaget,claude-opus-5-5,15,10,"(helper rcE) tables via ctbW_simR, consBlockInds_refinesR (hLz, hlpsDn premise), real apd in iacW"

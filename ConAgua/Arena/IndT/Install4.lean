@@ -2,6 +2,7 @@ import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install3
 import ConAgua.Arena.IndInstallSpec16
+import ConAgua.Arena.IndRealSortDn
 
 /-!
 # `checkBlockInds` under `StageC` (lane `indstaget`)
@@ -94,9 +95,9 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p) (hOpf : OpfF p) (hLC : LvlCacheProg p)
-  (hApd : ApdF p) (hCrk : CrKeep p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hLz : LzcF p)
 
-include hq henv hV hOpf hLC hApd hCrk in
+include hq henv hV hOpf hLC hApd hCrk hLz in
 /-- **`check_block_inds` under `StageC`** (twin side: con-ron's `checkBlockInds_spec`'s proof). -/
 theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {pp isRec : Word} {bs : BlockShape} {b : Bool}
@@ -104,7 +105,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (hcx : ShapeCV m pp) (hb : (isRec != 0) = b) (hA : AbsOK m)
     (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
+    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     Sim (ibiW p n m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
       (fun r x m' a' => IndsOut dn m r x m' a' ∧ AbsOK m' ∧
         (RecsB m pp → RecsB m' (r.tail.tail.tail.headD 0)) ∧ ConRon.Bridge.CoreStep V env fe a a') := by
@@ -154,7 +156,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
         fun _ _ ⟨_, hok, hQ, hA', hc⟩ => ⟨hok, hQ, hA', hc⟩) n hn
       rw [UInt64.toNat_ofNat_of_lt' hnpb] at h; exact Sim.withRunC h) ?_
   rintro r1 ⟨cvTa0, s0⟩ m1 a1 ⟨⟨⟨hC1, hg1, hcv1, hcx1, hs32, hsd⟩, hA1, c1⟩, hr1⟩
-  obtain ⟨-, ⟨cvTa₀P, s0P⟩, ⟨h1a, h1b, hw1⟩, -⟩ := ConRon.Bridge.Inductives.checkBlockTele_specF fe rfl
+  obtain ⟨-, ⟨cvTa₀P, s0P⟩, ⟨h1a, h1b, hw1⟩, hfk1⟩ := ConRon.Bridge.Inductives.checkBlockTele_specF fe rfl
     (ConRon.Bridge.CoreSpec.of_core rfl) henv bs.nP ms0 ms0P a a1 _ hC.check ⟨hm0, hfe⟩ hr1
   dsimp only at h1a h1b hw1
   have hS1 := hC1.stage
@@ -217,6 +219,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     ⟨ConRon.Bridge.Inductives.dShape_ext c13.ext _ _ hbsP,
       ConRon.Bridge.denoteL_ext h1b (c2.ext.trans c3.ext)⟩ hr4
   have c14 := c13.trans c4
+  have hSortDn : SortDn dn s0P :=
+    sortDn_of_member hm0 hC.mem.dnN (hlpsDn ms0 (by rw [hmeq]; exact List.mem_cons_self ..)) hfk1
   have hC4 : StageC dn vis fe env m4 a4 := hC3.of_check hS4 hA4 c4.ok c4.ext
   -- the formers' constants
   refine Sim.mstep (K := ibiK5 p n vis isRec r4) rfl (fun _ _ => rfl) fun r5 m5 h5 => ?_
@@ -249,9 +253,10 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       some ([r6.headD 0, r5.headD 0, r5.tail.headD 0, r4.headD 0], m6)) rfl (fun _ _ => rfl)
     (Sim.withRunC (Sim.callW_pos (fun k => installSimCall
       (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m5 m')
-      (consBlockInds_refines p hP.toConsIndsProg (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0) isRec
-        (r5.headD 0) (r5.tail.headD 0) 0 p1 b _ hb hS5 hp1' hsrc5 hcvT (by have := (r5.tail.headD 0).toNat_lt; simp only [UInt64.toNat_zero, Nat.zero_add]; exact this))
-      fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2⟩) n |>.withFr
+      (consBlockInds_refinesR p hP.toConsIndsProg hLz (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0) isRec
+        (r5.headD 0) (r5.tail.headD 0) 0 p1 b _ hb hS5 hC4.lzFacts.1 (LzFacts.of_stageC hC4 hp1P hSortDn) hp1' hsrc5
+        hcvT (by have := (r5.tail.headD 0).toNat_lt; simp only [UInt64.toNat_zero, Nat.zero_add]; exact this))
+      fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1⟩) n |>.withFr
       (fun _ _ e => hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ e hA5))) ?_
   rintro r6 fe1 m6 a6 ⟨⟨⟨hS6, hg6⟩, hA6⟩, hr6⟩
   obtain ⟨c5, -⟩ := ConRon.Bridge.Inductives.consBlockInds_spec fe p1 _ b _ _ 0 fe env hcoh a4 a6 fe1
@@ -263,7 +268,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     ((hrb4 ((hrb.grow (hg1.trans hg2) (by omega)).grow hg3 (by have := hg1.trans hg2; have := this.1; omega))).grow
       (hg5.trans hg6) (by omega)), c14.trans c5⟩
 
-include hq henv hV hOpf hLC hApd hCrk in
+include hq henv hV hOpf hLC hApd hCrk hLz in
 /-- **`check_block_inds` refines `checkBlockInds`** under `StageC` (stage 1; the shape's and the
 environment's denotations as con-ron's `checkBlockInds_spec` asks): the environment with the
 formers pushed at the returned view, the formers' constants and the shape with its sort below the
@@ -275,7 +280,8 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
     (hsrc : ShapeSrc s₀.mem pp) (hcx : ShapeCV s₀.mem pp) (hb : (isRec != 0) = b) (hA : AbsOK s₀.mem)
     (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a₀.store bs = some bsP)
-    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
+    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds" [vis, pp, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀ ∧
       IndsOut dn s₀.mem r (AM.res (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) s'.mem
@@ -284,7 +290,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀); ⊤⦄ :=
   triple_post (ibi_spec p hP.inds n s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ, hA', hR', hc⟩ :=
-      Sim.run (ibiW_simC hq henv hV hOpf hLC hApd hCrk hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh) hm
+      Sim.run (ibiW_simC hq henv hV hOpf hLC hApd hCrk hLz hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh hlpsDn) hm
     ⟨hl, hok, hQ, hA', hR', hc⟩
 
 end sims
