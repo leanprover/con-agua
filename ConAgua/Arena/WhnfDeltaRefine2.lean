@@ -135,10 +135,10 @@ theorem rawNatLit_run_const {m : Mem} {a : AState} {h : EIdx} {c : NIdx} {us : L
 
 
 theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (c : Word) (hv : viewOK m h c)
-    (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-      (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
-      (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32)) :
+    (c : TRec) (hv : viewOK m h c)
+    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+      (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
+      (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ)) :
     ∃ v, a.store.view (decE h) = some v ∧ (∀ N, v ≠ .lit (.natVal N)) ∧
       (∀ c us, v ≠ .const c us) := by
   rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
@@ -155,11 +155,11 @@ theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.t
 
 theorem rawSimple {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a₀ vis fe M eb) {h : Word} (hh : HW h)
-    (c : Word) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (c : TRec) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hb : ¬ tcnt m c (tierW h) ≤ idxW h)
-    (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-      (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
-      (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32))
+    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+      (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
+      (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ))
     (r : List Word) (hr : r.headD 0 = 0) : RawOut m a₀ h r := by
   obtain ⟨v, hv, hl, hc⟩ := view_other m a₀ hS.arena.1 h hh c ⟨hsc, by simpa using hb⟩ hcg
   exact RawOut.none (rawNatLit_run_other hv hl hc) hr
@@ -181,10 +181,10 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
   -- the tags whose arm only checks the bound
-  have simple : ∀ (c : Word) (g : Prop) [Decidable g], g →
-      (g → (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-        (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
-        (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32)) →
+  have simple : ∀ (c : TRec) (g : Prop) [Decidable g], g →
+      (g → (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+        (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
+        (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ)) →
       (if tcnt s₀.mem c (tierW h) ≤ idxW h then none else
         some ((0 : Word), (0 : Word), (0 : Word), s₀.mem)) =
         some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
@@ -198,17 +198,17 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     exact ⟨hm.symm, rawSimple hC hh c hsc hb (hcg hg) r hf.symm⟩
   by_cases g0 : h >>> 28 = 0
   · rw [if_pos g0] at hW
-    obtain ⟨h1, h2⟩ := simple 22 _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
+    obtain ⟨h1, h2⟩ := simple BVAR _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
     exact ⟨h1, h2⟩
   rw [if_neg g0] at hW
   by_cases g1 : h >>> 28 = 1
   · rw [if_pos g1] at hW
-    obtain ⟨h1, h2⟩ := simple 26 _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
+    obtain ⟨h1, h2⟩ := simple FVAR _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
     exact ⟨h1, h2⟩
   rw [if_neg g1] at hW
   by_cases g2 : h >>> 28 = 2
   · rw [if_pos g2] at hW
-    obtain ⟨h1, h2⟩ := simple 16 _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
+    obtain ⟨h1, h2⟩ := simple SORT _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g2] at hW
   by_cases g3 : h >>> 28 = 3
@@ -271,24 +271,24 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [if_neg g3] at hW
   by_cases g4 : h >>> 28 = 4
   · rw [if_pos g4] at hW
-    obtain ⟨h1, h2⟩ := simple 4 _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
+    obtain ⟨h1, h2⟩ := simple APP _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g4] at hW
   by_cases g5 : h >>> 28 = 5
   · rw [if_pos g5] at hW
-    obtain ⟨h1, h2⟩ := simple 28 _ g5
+    obtain ⟨h1, h2⟩ := simple LAM _ g5
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g5] at hW
   by_cases g6 : h >>> 28 = 6
   · rw [if_pos g6] at hW
-    obtain ⟨h1, h2⟩ := simple 30 _ g6
+    obtain ⟨h1, h2⟩ := simple FORALL _ g6
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g6] at hW
   by_cases g7 : h >>> 28 = 7
   · rw [if_pos g7] at hW
-    obtain ⟨h1, h2⟩ := simple 20 _ g7
+    obtain ⟨h1, h2⟩ := simple LET _ g7
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g7] at hW
@@ -325,7 +325,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   · rw [if_pos g9] at hW; cases hW
   rw [if_neg g9] at hW
   have g9' : h >>> 28 = 9 := by simpa using g9
-  obtain ⟨h1, h2⟩ := simple 32 _ g9'
+  obtain ⟨h1, h2⟩ := simple PROJ _ g9'
     (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩))))))) hW
   exact ⟨h1, h2⟩
 
@@ -784,7 +784,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
-  rw [hE] at hW
+  simp only [tfld_arr_eq (R := LIT) hE] at hW
   cases h2 : callW p n "nat_lit_to_ctor" [tfld s₀.mem LIT (tierW h) (idxW h) 1,
       tfld s₀.mem LIT (tierW h) (idxW h) 2] m₁ with
   | none => rw [h2] at hW; cases hW

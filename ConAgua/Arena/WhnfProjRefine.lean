@@ -346,7 +346,7 @@ theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
     · exact .inr (.inr (UInt64.toNat_inj.mp (by simpa using h)))
   rcases cases3 with g | g | g
   · have hc' : ¬ tcnt m NANON (tierW t) ≤ idxW t := by
-      simpa [g, tierW, idxW] using hc
+      simpa [g, tierW, idxW, tcnt] using hc
     rw [view_of_viewN_run (viewN_anon hR ht32 hv' g hc')]; rfl
   · have hc' : ¬ tcnt m NSTR (tierW t) ≤ idxW t := by
       have e : (34 : Word) + (1 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 36 + tierW t := by
