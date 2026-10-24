@@ -433,11 +433,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   obtain ⟨hd2, hb2, hS2, hg2, hf2⟩ := ih h2 hS1
     (decPL_rl_grow hg1 (by rw [eo, el]; omega) (by rw [eo, el, hl']; simpa using hrest))
     (by rw [eo, el]; have := hg1.1; omega) (hext.hslice? hl) (hext.hslice? hp)
-  cases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with
-  | none => rw [h3] at h; simp [tsrmK3] at h
-  | some x =>
-  obtain ⟨rc, m3⟩ := x
-  rw [h3, tsrmK3_some] at h
+  rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hd3, ht3, hS3, hg3, hf3⟩ := consW_rl h3 hS2 hb2 hd2
     ((IWGrow.erecPExtR hg2).decRule hq1)
@@ -522,11 +518,7 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
     | some x =>
     obtain ⟨rr, m2⟩ := x
     simp only [List.headD_cons, h2, tsrmK2_some] at h
-    cases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with
-    | none => rw [h3] at h; simp [tsrmK3] at h
-    | some x =>
-    obtain ⟨rc, m3⟩ := x
-    rw [h3, tsrmK3_some] at h
+    rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmK3, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact (erAllocW_afr ha).trans (f1.trans ((tsrmW_afr n h2).trans (consW_afr h3)))
 
@@ -694,11 +686,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   have hk0 : k8 = 0 := by
     have : rdW (m1.arr64 IW) (M + 8) = 0 := by simpa using hmem
     rw [e8'] at this; have := congrArg UInt64.toNat this; rwa [t8] at this
-  cases h2 : arfW (k + 1) m1 M rP with
-  | none => rw [h2] at h; simp [tsrK2] at h
-  | some x =>
-  obtain ⟨rf, m2⟩ := x
-  rw [h2, tsrK2_some] at h
+  rcases h2 : arfW (k + 1) m1 M rP with _ | ⟨rf, m2⟩ <;> simp only [h2, tsrK2, reduceCtorEq] at h
   obtain ⟨f, a2, run2, ⟨hS2, hg2, hdf⟩, hA2⟩ := arfW_sim dn vis fe (k + 1) m1 a1 M rP TM hS1
     (hM.grow (decTM_mono _) hg1) (rcPoolSmall hS1) hA1 (rf, m2) h2
   cases f with
@@ -707,17 +695,9 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain ⟨-, ⟨hdl, hbl⟩, ⟨hdp, hbp⟩⟩ := hdf
   simp only [getD_one, getD_two, getD_three, getD_four, show (1 + 1 : Nat) = 2 from rfl,
     show (3 + 1 : Nat) = 4 from rfl] at hdl hbl hdp hbp
-  cases h3 : efF (k + 1) m2 (rf.tail.headD 0) (rf.tail.tail.headD 0) with
-  | none => rw [h3] at h; simp [tsrK3] at h
-  | some x =>
-  obtain ⟨re, m3⟩ := x
-  rw [h3, tsrK3_some] at h
+  rcases h3 : efF (k + 1) m2 (rf.tail.headD 0) (rf.tail.tail.headD 0) with _ | ⟨re, m3⟩ <;> simp only [h3, tsrK3, reduceCtorEq] at h
   obtain ⟨hS3, hg3, hre1, hre0, hsl3, -⟩ := efW_stage k h3 hS2 hdl hbl
-  cases h4 : efF (k + 1) m3 (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0) with
-  | none => rw [h4] at h; simp [tsrK4] at h
-  | some x =>
-  obtain ⟨rp, m4⟩ := x
-  rw [h4, tsrK4_some] at h
+  rcases h4 : efF (k + 1) m3 (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0) with _ | ⟨rp, m4⟩ <;> simp only [h4, tsrK4, reduceCtorEq] at h
   obtain ⟨hS4, hg4, hrp1, hrp0, hsl4, -⟩ := efW_stage k h4 hS3
     (by rw [decHL_grow hg3 hbp]; exact hdp) (by have := hg3.1; omega)
   cases h5 : tsrmW (k + 1) m4 (rs.headD 0) (rs.tail.headD 0) (re.headD 0) (re.tail.headD 0) (rp.headD 0)

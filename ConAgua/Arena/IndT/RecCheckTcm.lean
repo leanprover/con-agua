@@ -37,24 +37,13 @@ theorem thW_afr : ∀ (n : Nat) {m m' : Mem} {tyo tyl base : Word} {r : List Wor
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
       exact AFr.refl _
     rw [thW_cons (h := hl)] at h
-    cases hf : fvinternW m base (rdW (m.arr64 IW) tyo) with
-    | none => rw [hf] at h; simp [thK1] at h
-    | some x =>
-    obtain ⟨v, m1⟩ := x
-    rw [hf] at h
+    rcases hf : fvinternW m base (rdW (m.arr64 IW) tyo) with _ | ⟨v, m1⟩ <;> rw [hf] at h <;>
+      try (simp only [thK1, reduceCtorEq] at h; done)
     by_cases hb : 4294967296 ≤ v
     · rw [thK1_big (h := hb)] at h; cases h
     rw [thK1_ok (h := hb)] at h
-    cases hg : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with
-    | none => rw [hg] at h; simp [thK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [hg, thK2_some] at h
-    cases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [hc] at h; simp [thK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [hc, thK3_some] at h
+    rcases hg : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with _ | ⟨r2, m2⟩ <;> simp only [hg, thK2, reduceCtorEq] at h
+    rcases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, thK3, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact ((fvinternW_afr hf).trans (thW_afr n hg)).trans (consW_afr hc)
 
@@ -90,11 +79,8 @@ theorem tcmW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       AbsOK m' := by
   have hS := hC.stage
   unfold tcmW at h
-  cases h1 : realCall p n "lvls_eq_c" [us, lvls] m with
-  | none => rw [h1] at h; simp [tcmK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1] at h
+  rcases h1 : realCall p n "lvls_eq_c" [us, lvls] m with _ | ⟨r1, m1⟩ <;> rw [h1] at h <;>
+    try (simp only [tcmK1, reduceCtorEq] at h; done)
   obtain ⟨o1, a1, run1, hC1, hg1, hd1, hA1, c1, -⟩ :=
     lvlsEqC_simC p hq.closed hq.knot.lvc n hC hA us lvls hus hlv husP hlvP r1 m1 h1
   have hS1 := hC1.stage
@@ -119,31 +105,20 @@ theorem tcmW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   subst ho1
   have hsz := hS1.2.2.2.1
   have hbs1 := hbs.grow hg1
-  cases h2 : memberNamesW n m1 q with
-  | none => rw [h2] at h; simp [tcmK2] at h
-  | some x =>
-  obtain ⟨rn, m2⟩ := x
-  rw [h2, tcmK2_some] at h
+  rcases h2 : memberNamesW n m1 q with _ | ⟨rn, m2⟩ <;> simp only [h2, tcmK2, reduceCtorEq] at h
   obtain ⟨hS2, hg2, -, hdn, htn⟩ := memberNamesW_stage h2 hS1 hbs1
   have hf2 := (memberNamesW_dec h2 hsz hS1.2.2.2.2.2 hbs1.dec (by have := hbs1.ptop; have := hS1.lt64 (Nat.le_refl _); omega)
     hbs1.2.1 hbs1.2.2).2.2.2.1
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hA2 := AFr.iw hf2 hA1
   have hC2 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
-  cases h3 : lpsW n m2 q with
-  | none => rw [h3] at h; simp [tcmK3] at h
-  | some x =>
-  obtain ⟨rl, m3⟩ := x
-  rw [h3, tcmK3_some] at h
+  rcases h3 : lpsW n m2 q with _ | ⟨rl, m3⟩ <;> simp only [h3, tcmK3, reduceCtorEq] at h
   obtain ⟨hS3, hg3, hdl, hbl⟩ := lpsW_ok' h3 hS2 ((hbs1.1.grow (decBS_mono _) hg2))
   have hP3 := hP2.fr (lpsW_mfr h3)
   have hA3 := lpsW_afr h3 hA2
   have hC3 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
-  cases h4 : plW n m3 (rl.headD 0) (rl.tail.headD 0) with
-  | none => rw [h4] at h; simp [tcmK4] at h
-  | some x =>
-  obtain ⟨rb, m4⟩ := x
-  rw [h4] at h
+  rcases h4 : plW n m3 (rl.headD 0) (rl.tail.headD 0) with _ | ⟨rb, m4⟩ <;> rw [h4] at h <;>
+    try (simp only [tcmK4, reduceCtorEq] at h; done)
   obtain ⟨blv, a4, run4, hS4, hg4, hH4, hdb⟩ := plW_ok dn vis fe n m3 m4 a1 _ _ bs.lps rb h4 hS3 hdl
     (hS3.lt64 hbl) hbl
   have hP4 := hP3.fr (plW_mfr h4)
@@ -158,11 +133,7 @@ theorem tcmW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hd : (pfl + ftl).toNat = pfl.toNat + ftl.toNat := word_add_nowrap hw
   have hg14 := (hg2.trans hg3).trans hg4
   have hg04 := hg1.trans hg14
-  cases h5 : thW n m4 fto ftl pfl with
-  | none => rw [h5] at h; simp [tcmK5] at h
-  | some x =>
-  obtain ⟨rh, m5⟩ := x
-  rw [h5, tcmK5_some] at h
+  rcases h5 : thW n m4 fto ftl pfl with _ | ⟨rh, m5⟩ <;> simp only [h5, tcmK5, reduceCtorEq] at h
   obtain ⟨holes, a5, run5, hS5, hg5, hdh, hbh⟩ := thW_ok dn vis fe n m4 m5 a4 fto ftl pfl rh formerTys h5 hS4
     (by rw [decHL_grow hg04 hftb]; exact hft) (hS.lt64 hftb) (by have := hg04.1; omega)
     (by rw [← hd]; exact (pfl + ftl).toNat_lt)

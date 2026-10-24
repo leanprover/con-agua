@@ -213,20 +213,12 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   have hcvE : decCV (erecP m) (UInt64.ofNat cvp : Word).toNat = some cvv := by rw [t0]; exact decCVp_truncM hcv'
   obtain ⟨hmj, hrp⟩ := bmjW_rpW_eq (r := mm) hbs hsz
   -- the stored rules, at the constructors' view
-  cases h1 : tsrW n m vis2 (UInt64.ofNat cvp) (brpW m pp mm) (UInt64.ofNat mp) (UInt64.ofNat o) (UInt64.ofNat l) with
-  | none => rw [h1] at h; simp [cbrK1] at h
-  | some y =>
-  obtain ⟨rr, m1⟩ := y
-  rw [h1, cbrK1_some] at h
+  rcases h1 : tsrW n m vis2 (UInt64.ofNat cvp) (brpW m pp mm) (UInt64.ofNat mp) (UInt64.ofNat o) (UInt64.ofNat l) with _ | ⟨rr, m1⟩ <;> simp only [h1, cbrK1, reduceCtorEq] at h
   obtain ⟨rules, a1, run1, hd1, hb1, hS1, hg1, hA1⟩ := tsrW_ok dn (fe.restrictTo vis2.toNat) vis2 n h1
     (hS.restrict vis2) hM hrh hA (cvv := cvv)
   have hS1' : StageR dn vis fe m1 a1 := hS1.unrestrict hS.1.env.vis
   rw [hrp] at run1
-  cases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with
-  | none => rw [h2] at h; simp [cbrK2] at h
-  | some y =>
-  obtain ⟨rv, m2⟩ := y
-  rw [h2, cbrK2_some] at h
+  rcases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rv, m2⟩ <;> simp only [h2, cbrK2, reduceCtorEq] at h
   obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1
   rw [hmj, hrp] at hS2
   cases h3 : cbrW p n m2 vis2 pp (mm + 1) (lo + 1) (ll - 1) (rv.headD 0) with

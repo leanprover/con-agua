@@ -75,17 +75,14 @@ theorem taGoW_afr (n : Nat) :
     | some pr =>
       obtain ⟨rn, m1⟩ := pr
       rw [hn, taG4_some] at hg
-      cases hs : msetG taSch m1 h 0 rn with
-      | none => rw [hs] at hg; simp [taG5] at hg
-      | some m2 =>
-        rw [hs, taG5_some] at hg
-        simp only [Option.some.injEq, Prod.mk.injEq] at hg
-        rw [← hg.2]
-        cases j with
-        | zero => simp [taNodeW] at hn
-        | succ i =>
-          exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
-            (AFr.of_frame (msetG_frame taSch taSch_wf m1 m2 h 0 rn hs))
+      rcases hs : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [hs, taG5, reduceCtorEq] at hg
+      simp only [Option.some.injEq, Prod.mk.injEq] at hg
+      rw [← hg.2]
+      cases j with
+      | zero => simp [taNodeW] at hn
+      | succ i =>
+        exact ((ih (i + 1) (by omega)).2 _ _ _ _ _ _ _ _ _ _ _ _ _ hn).trans
+          (AFr.of_frame (msetG_frame taSch taSch_wf m1 m2 h 0 rn hs))
   · intro m m' no nl lvls ho hl f1 g x y z r hn
     unfold taNodeW at hn
     split at hn
@@ -94,30 +91,22 @@ theorem taGoW_afr (n : Nat) :
       | some p1 =>
         obtain ⟨a2, m1⟩ := p1
         rw [h1, taB1_some] at hn
-        cases h2 : taGoW j m1 no nl lvls ho hl f1 y with
-        | none => rw [h2] at hn; simp [taB2] at hn
-        | some p2 =>
-          obtain ⟨x2, m2⟩ := p2
-          rw [h2, taB2_some] at hn
-          exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_afr hn)
+        rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taB2, reduceCtorEq] at hn
+        exact ((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans (rpMkW_afr hn)
     split at hn
     · cases h1 : taGoW j m no nl lvls ho hl f1 x with
       | none => rw [h1] at hn; simp [taL1] at hn
       | some p1 =>
         obtain ⟨a2, m1⟩ := p1
         rw [h1, taL1_some] at hn
-        cases h2 : taGoW j m1 no nl lvls ho hl f1 y with
-        | none => rw [h2] at hn; simp [taL2] at hn
-        | some p2 =>
-          obtain ⟨x2, m2⟩ := p2
-          rw [h2, taL2_some] at hn
-          cases h3 : taGoW j m2 no nl lvls ho hl f1 z with
-          | none => rw [h3] at hn; simp [taL3] at hn
-          | some p3 =>
-            obtain ⟨c2, m3⟩ := p3
-            rw [h3, taL3_some] at hn
-            exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
-              (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_afr hn)
+        rcases h2 : taGoW j m1 no nl lvls ho hl f1 y with _ | ⟨x2, m2⟩ <;> simp only [h2, taL2, reduceCtorEq] at hn
+        cases h3 : taGoW j m2 no nl lvls ho hl f1 z with
+        | none => rw [h3] at hn; simp [taL3] at hn
+        | some p3 =>
+          obtain ⟨c2, m3⟩ := p3
+          rw [h3, taL3_some] at hn
+          exact (((ihG _ _ _ _ _ _ _ _ _ _ h1).trans (ihG _ _ _ _ _ _ _ _ _ _ h2)).trans
+            (ihG _ _ _ _ _ _ _ _ _ _ h3)).trans (rpMkW_afr hn)
     · cases h1 : taGoW j m no nl lvls ho hl f1 z with
       | none => rw [h1] at hn; simp [taP1] at hn
       | some p1 =>

@@ -148,10 +148,8 @@ theorem blockNestedBit_refines (p : Prog)
   | zero => simp [nbW] at h
   | succ n =>
   rw [nbW_eq] at h
-  cases h1 : kindsFlatOutW n s'.mem ko kl with
-  | none => rw [h1] at h; simp [nbK] at h
-  | some f =>
-  rw [h1] at h
+  rcases h1 : kindsFlatOutW n s'.mem ko kl with _ | f <;> rw [h1] at h <;>
+    try (simp only [nbK, reduceCtorEq] at h; done)
   have hf' := kindsFlatOutW_ok n _ _ _ kss f hsz hdec h1
   by_cases hfl : ConRon.Arena.nestKindsFlat kss = true
   · rw [if_pos hfl] at hf'; subst hf'

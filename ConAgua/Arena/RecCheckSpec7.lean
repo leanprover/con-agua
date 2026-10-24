@@ -355,10 +355,8 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
   simp only [UInt64.ofNat_toNat] at hws
   have hlen : ws.length < 2 ^ 64 := by have := decHL_length m hdec; simp at this; omega
   have hhl := decHL_length m hho
-  cases hfw : findW n m no nl nn with
-  | none => rw [hfw] at hc; simp [taCK] at hc
-  | some fr =>
-  rw [hfw] at hc
+  rcases hfw : findW n m no nl nn with _ | fr <;> rw [hfw] at hc <;>
+    try (simp only [taCK, reduceCtorEq] at hc; done)
   have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
   have hfi := findIdx_decIP ws nn hwlt hn
   cases hwi : ws.findIdx? (· == nn) with
@@ -422,30 +420,26 @@ theorem taBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         let r ← iop t2 b2
         pure (r, m2) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ taMR m' mp' := by
-  cases h1 : taGoW k m no nl lvls ho hl f1 x with
-  | none => rw [h1] at hn; simp [taB1] at hn
-  | some p1 =>
-    obtain ⟨a2, m1⟩ := p1
-    rw [h1, taB1_some] at hn
-    cases h2 : taGoW k m1 no nl lvls ho hl f1 y with
-    | none => rw [h2] at hn; simp [taB2] at hn
-    | some p2 =>
-      obtain ⟨x2, m2⟩ := p2
-      rw [h2, taB2_some, hmk] at hn
-      obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl lvls ho hl f1 x a2 names holes mp h1 hS hx hlv
-        hdec hit hho hht hM
-      obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl lvls ho hl f1 y x2 names holes mp1 h2 hS1 hy hlv
-        (by rw [decHL_grow hg1 hit]; exact hdec) (by have := hg1.1; omega)
-        (by rw [decHL_grow hg1 hht]; exact hho) (by have := hg1.1; omega) hM1
-      obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
-      refine ⟨a3, mp2, ?_, hS3, (hg1.trans hg2).trans hg3, taMR_low (hlow m2 m' a2 x2 r hn) hM2⟩
-      simp only [StateT.run_bind]
-      rw [hr1]
-      simp only [except_ok_bind, StateT.run_bind]
-      rw [hr2]
-      simp only [except_ok_bind, StateT.run_bind]
-      rw [hr3]
-      rfl
+  rcases h1 : taGoW k m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taB1, reduceCtorEq] at hn
+  cases h2 : taGoW k m1 no nl lvls ho hl f1 y with
+  | none => rw [h2] at hn; simp [taB2] at hn
+  | some p2 =>
+    obtain ⟨x2, m2⟩ := p2
+    rw [h2, taB2_some, hmk] at hn
+    obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl lvls ho hl f1 x a2 names holes mp h1 hS hx hlv
+      hdec hit hho hht hM
+    obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl lvls ho hl f1 y x2 names holes mp1 h2 hS1 hy hlv
+      (by rw [decHL_grow hg1 hit]; exact hdec) (by have := hg1.1; omega)
+      (by rw [decHL_grow hg1 hht]; exact hho) (by have := hg1.1; omega) hM1
+    obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
+    refine ⟨a3, mp2, ?_, hS3, (hg1.trans hg2).trans hg3, taMR_low (hlow m2 m' a2 x2 r hn) hM2⟩
+    simp only [StateT.run_bind]
+    rw [hr1]
+    simp only [except_ok_bind, StateT.run_bind]
+    rw [hr2]
+    simp only [except_ok_bind, StateT.run_bind]
+    rw [hr3]
+    rfl
 
 theorem taLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : TaGoOK dn fe vis k)
@@ -462,42 +456,38 @@ theorem taLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         let r ← internLetEE t2 v2 b2
         pure (r, m3) : AM (EIdx × Std.HashMap EIdx EIdx)).run a = .ok ((decE r, mp'), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ taMR m' mp' := by
-  cases h1 : taGoW k m no nl lvls ho hl f1 x with
-  | none => rw [h1] at hn; simp [taL1] at hn
-  | some p1 =>
-    obtain ⟨a2, m1⟩ := p1
-    rw [h1, taL1_some] at hn
-    cases h2 : taGoW k m1 no nl lvls ho hl f1 y with
-    | none => rw [h2] at hn; simp [taL2] at hn
-    | some p2 =>
-      obtain ⟨x2, m2⟩ := p2
-      rw [h2, taL2_some] at hn
-      cases h3 : taGoW k m2 no nl lvls ho hl f1 z with
-      | none => rw [h3] at hn; simp [taL3] at hn
-      | some p3 =>
-        obtain ⟨c2, m3⟩ := p3
-        rw [h3, taL3_some, rpMkW_let] at hn
-        obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl lvls ho hl f1 x a2 names holes mp h1 hS hx hlv
-          hdec hit hho hht hM
-        obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl lvls ho hl f1 y x2 names holes mp1 h2 hS1 hy hlv
-          (by rw [decHL_grow hg1 hit]; exact hdec) (by have := hg1.1; omega)
-          (by rw [decHL_grow hg1 hht]; exact hho) (by have := hg1.1; omega) hM1
-        have hg12 := hg1.trans hg2
-        obtain ⟨a3', mp3, hr3, hS3, hg3, hM3⟩ := ih m2 m3 a2' no nl lvls ho hl f1 z c2 names holes mp2 h3 hS2 hz hlv
-          (by rw [decHL_grow hg12 hit]; exact hdec) (by have := hg12.1; omega)
-          (by rw [decHL_grow hg12 hht]; exact hho) (by have := hg12.1; omega) hM2
-        obtain ⟨a4, hr4, hS4, hg4⟩ := mkLet_stage hS3 a2 x2 c2 hn
-        refine ⟨a4, mp3, ?_, hS4, (hg12.trans hg3).trans hg4, taMR_low (mkLetW_low hn) hM3⟩
-        simp only [StateT.run_bind]
-        rw [hr1]
-        simp only [except_ok_bind, StateT.run_bind]
-        rw [hr2]
-        simp only [except_ok_bind, StateT.run_bind]
-        rw [hr3]
-        simp only [except_ok_bind, StateT.run_bind]
-        have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
-        rw [hr4']
-        rfl
+  rcases h1 : taGoW k m no nl lvls ho hl f1 x with _ | ⟨a2, m1⟩ <;> simp only [h1, taL1, reduceCtorEq] at hn
+  cases h2 : taGoW k m1 no nl lvls ho hl f1 y with
+  | none => rw [h2] at hn; simp [taL2] at hn
+  | some p2 =>
+    obtain ⟨x2, m2⟩ := p2
+    rw [h2, taL2_some] at hn
+    cases h3 : taGoW k m2 no nl lvls ho hl f1 z with
+    | none => rw [h3] at hn; simp [taL3] at hn
+    | some p3 =>
+      obtain ⟨c2, m3⟩ := p3
+      rw [h3, taL3_some, rpMkW_let] at hn
+      obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl lvls ho hl f1 x a2 names holes mp h1 hS hx hlv
+        hdec hit hho hht hM
+      obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl lvls ho hl f1 y x2 names holes mp1 h2 hS1 hy hlv
+        (by rw [decHL_grow hg1 hit]; exact hdec) (by have := hg1.1; omega)
+        (by rw [decHL_grow hg1 hht]; exact hho) (by have := hg1.1; omega) hM1
+      have hg12 := hg1.trans hg2
+      obtain ⟨a3', mp3, hr3, hS3, hg3, hM3⟩ := ih m2 m3 a2' no nl lvls ho hl f1 z c2 names holes mp2 h3 hS2 hz hlv
+        (by rw [decHL_grow hg12 hit]; exact hdec) (by have := hg12.1; omega)
+        (by rw [decHL_grow hg12 hht]; exact hho) (by have := hg12.1; omega) hM2
+      obtain ⟨a4, hr4, hS4, hg4⟩ := mkLet_stage hS3 a2 x2 c2 hn
+      refine ⟨a4, mp3, ?_, hS4, (hg12.trans hg3).trans hg4, taMR_low (mkLetW_low hn) hM3⟩
+      simp only [StateT.run_bind]
+      rw [hr1]
+      simp only [except_ok_bind, StateT.run_bind]
+      rw [hr2]
+      simp only [except_ok_bind, StateT.run_bind]
+      rw [hr3]
+      simp only [except_ok_bind, StateT.run_bind]
+      have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
+      rw [hr4']
+      rfl
 
 theorem taProj_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
     (ih : TaGoOK dn fe vis k)
@@ -645,26 +635,23 @@ theorem taGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
       | some pn =>
         obtain ⟨rn, m1⟩ := pn
         rw [hnode, taG4_some] at hb
-        cases hset : msetG taSch m1 h 0 rn with
-        | none => rw [hset] at hb; simp [taG5] at hb
-        | some m2 =>
-          rw [hset, taG5_some] at hb
-          simp only [Option.some.injEq, Prod.mk.injEq] at hb
-          obtain ⟨rfl, rfl⟩ := hb
-          have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
-          obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := taNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl
-            lvls ho hl (f - 1) h rn names holes mp hnode hS hlv hdec hit hho hht hM
-          rw [hF1] at hr1
-          have hset' := memoRG_set taSch taSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
-          have hfs : MemFrame [TAM] [taSch.cs + 1] m1 m2 := msetG_frame taSch taSch_wf m1 m2 h 0 rn hset
-          obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
-            (by intro x hx; simp [taSch] at hx; subst hx; decide) (by decide) (by simp [taSch])
-          refine ⟨a1, mp1.insert (decE h) (decE rn), ?_, hS2, hg1.trans hg2, hset'⟩
-          rw [hmiss]
-          simp only [StateT.run_bind]
-          rw [hr1]
-          simp only [except_ok_bind]
-          rfl
+        rcases hset : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [hset, taG5, reduceCtorEq] at hb
+        simp only [Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+        obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := taNode_arm dn fe vis k (ih k (by omega)) vl v hvr hnv m m1 a no nl
+          lvls ho hl (f - 1) h rn names holes mp hnode hS hlv hdec hit hho hht hM
+        rw [hF1] at hr1
+        have hset' := memoRG_set taSch taSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
+        have hfs : MemFrame [TAM] [taSch.cs + 1] m1 m2 := msetG_frame taSch taSch_wf m1 m2 h 0 rn hset
+        obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
+          (by intro x hx; simp [taSch] at hx; subst hx; decide) (by decide) (by simp [taSch])
+        refine ⟨a1, mp1.insert (decE h) (decE rn), ?_, hS2, hg1.trans hg2, hset'⟩
+        rw [hmiss]
+        simp only [StateT.run_bind]
+        rw [hr1]
+        simp only [except_ok_bind]
+        rfl
 
 theorem taGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (j : Nat)
     (ih : ∀ k, k + 1 < j + 1 → TaGoOK dn fe vis k) : TaGoOK dn fe vis (j + 1) := by

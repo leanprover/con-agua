@@ -78,25 +78,21 @@ theorem tptW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
         obtain ⟨t1, a1, hrun1, hC1, hg1, -, hA1, c1', -⟩ :=
           inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self) _ hi
         dsimp only at hC1 hg1 hA1
-        cases hr : tptW (realCall p) n m1 vis d (xo + 1) (xl - 1) with
-        | none => rw [hr] at h; simp [tptK2] at h
-        | some rm2 =>
-          obtain ⟨r2, m2⟩ := rm2
-          rw [hr, tptK2_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨-, rfl⟩ := h
-          have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
-            rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
-          obtain ⟨a2, hrun2, hC2, hg2, hA2⟩ := ih (by omega) m1 m2 a1 d (xo + 1) (xl - 1) r2 xs' xsP'
-            hr hC1 hA1 hxs1 (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
-            (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
-            (fun y hy => hw y (List.mem_cons_of_mem _ hy))
-          refine ⟨a2, ?_, hC2, hg1.trans hg2, hA2⟩
-          simp only [ConRon.Arena.targetPinTys, StateT.run_bind]
-          rw [← hw3]
-          rw [hrun1]
-          simp only [bind, Except.bind]
-          exact hrun2
+        rcases hr : tptW (realCall p) n m1 vis d (xo + 1) (xl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, tptK2, reduceCtorEq] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨-, rfl⟩ := h
+        have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
+          rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
+        obtain ⟨a2, hrun2, hC2, hg2, hA2⟩ := ih (by omega) m1 m2 a1 d (xo + 1) (xl - 1) r2 xs' xsP'
+          hr hC1 hA1 hxs1 (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
+          (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
+          (fun y hy => hw y (List.mem_cons_of_mem _ hy))
+        refine ⟨a2, ?_, hC2, hg1.trans hg2, hA2⟩
+        simp only [ConRon.Arena.targetPinTys, StateT.run_bind]
+        rw [← hw3]
+        rw [hrun1]
+        simp only [bind, Except.bind]
+        exact hrun2
 
 include hq henv in
 /-- **`target_pin_tys` refines `targetPinTys .verified`** under `StageC` (the knot's
@@ -201,11 +197,7 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
   rw [show Mp + UInt64.ofNat 0 = Mp by simp] at hwi
   rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
   rw [hwi, hwu] at h
-  cases h2 : ceinternW m1 wi wu with
-  | none => rw [h2] at h; simp [tmpK2] at h
-  | some rm2 =>
-  obtain ⟨hd, m2⟩ := rm2
-  rw [h2, tmpK2_some] at h
+  rcases h2 : ceinternW m1 wi wu with _ | ⟨hd, m2⟩ <;> simp only [h2, tmpK2, reduceCtorEq] at h
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 wi wu hwiH hwuH h2
   rw [hwiE, hwuE] at hrun2
   obtain ⟨p2, hhd⟩ := ConRon.Bridge.Inductives.internConstE_run c1.ok.state
@@ -228,11 +220,7 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
     rw [← rl.1]; simp only [rdW]
     rw [show (Mp + 3).toNat = Mp.toNat + 3 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hli]
   rw [e2, e3] at h
-  cases h3 : mknF m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with
-  | none => rw [h3] at h; simp [tmpK3] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, tmpK3_some] at h
+  rcases h3 : mknF m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with _ | ⟨r3, m3⟩ <;> simp only [h3, tmpK3, reduceCtorEq] at h
   have hds2 : decHL m2 (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some M.ds := by
     rw [hoo, hll]; exact (OMono.decHL o l).mono _ _ _ hg12.truncExt hdT
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := mknF_ok dn vis fe hd _ _ hdH M.ds m2 m3 a2 r3 h3 ⟨hS2, hds2⟩
@@ -242,11 +230,7 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
   have hrun3r : (ConRon.Arena.mkAppN (decE hd) M.ds).run a2 = .ok (x3, a3) := hrun3
   have hA3 := mknF_afr h3 hA2
   have hC3 : StageC dn vis fe env m3 a3 := hC2.of_pstep hS3 hA3 p3
-  cases h4 : realCall p N "infer_type_core" [vis, rP, r3.headD 0] m3 with
-  | none => rw [h4] at h; simp [tmpK4] at h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, tmpK4_some] at h
+  rcases h4 : realCall p N "infer_type_core" [vis, rP, r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;> simp only [h4, tmpK4, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   rw [← hx3.2] at happ

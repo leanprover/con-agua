@@ -171,32 +171,28 @@ theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       have hk1 : (k - 1).toNat = k.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp
       have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      cases ha : abF m [CWF, e, k - 1, c] with
-      | none => rw [ha] at h; simp [apK1] at h
-      | some ram =>
-        obtain ⟨ra, m1⟩ := ram
-        rw [ha, apK1_some] at h
-        obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1, hd2⟩, hA1⟩ :=
-          abF_ok dn vis fe e (k - 1) c he m m1 a ra ha ⟨hS, hA⟩
-        cases hr : absPrefW n m1 (k - 1) (c + 1) (ra.headD 0) with
-        | none => rw [hr] at h; simp [apK2] at h
-        | some rm =>
-          obtain ⟨r2, m2⟩ := rm
-          rw [hr, apK2_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨x2, a2, hrun2, hS2, hg2, hd21, hd22, hA2⟩ := ih m1 m2 a1 (k - 1) (c + 1) (ra.headD 0) r2 hr hS1 hd1
-            (by rw [hk1, hc1]; omega) hA1
-          refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, by simpa using hd21, by simpa using hd22, hA2⟩
-          rw [CWF_eq, hk1] at hrun1
-          have hz : k.toNat = (k.toNat - 1) + 1 := by omega
-          rw [hk1, hc1] at hrun2
-          rw [hz]
-          simp only [ConRon.Arena.abstractPrefix, StateT.run_bind]
-          rw [hrun1]
-          simp only [bind, Except.bind]
-          rw [← hd2]
-          exact hrun2
+      rcases ha : abF m [CWF, e, k - 1, c] with _ | ⟨ra, m1⟩ <;> simp only [ha, apK1, reduceCtorEq] at h
+      obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1, hd2⟩, hA1⟩ :=
+        abF_ok dn vis fe e (k - 1) c he m m1 a ra ha ⟨hS, hA⟩
+      cases hr : absPrefW n m1 (k - 1) (c + 1) (ra.headD 0) with
+      | none => rw [hr] at h; simp [apK2] at h
+      | some rm =>
+        obtain ⟨r2, m2⟩ := rm
+        rw [hr, apK2_some] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨x2, a2, hrun2, hS2, hg2, hd21, hd22, hA2⟩ := ih m1 m2 a1 (k - 1) (c + 1) (ra.headD 0) r2 hr hS1 hd1
+          (by rw [hk1, hc1]; omega) hA1
+        refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, by simpa using hd21, by simpa using hd22, hA2⟩
+        rw [CWF_eq, hk1] at hrun1
+        have hz : k.toNat = (k.toNat - 1) + 1 := by omega
+        rw [hk1, hc1] at hrun2
+        rw [hz]
+        simp only [ConRon.Arena.abstractPrefix, StateT.run_bind]
+        rw [hrun1]
+        simp only [bind, Except.bind]
+        rw [← hd2]
+        exact hrun2
 
 /-- **`abstract_prefix` refines `abstractPrefix`** (through the `abstract1_fast` stub). -/
 @[refines ConRon.Arena.abstractPrefix]
@@ -318,39 +314,35 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
       have hdso1 : (dso + 1).toNat = dso.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [hw1] at h
-      cases ha : absPrefW n m rP 0 w with
-      | none => rw [ha] at h; simp [aplK1] at h
-      | some ram =>
-        obtain ⟨ra, m1⟩ := ram
-        rw [ha, aplK1_some] at h
-        obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := absPrefW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
-          (by simpa using hrP) hA
-        simp only [UInt64.toNat_zero] at hrun1
-        cases hr : aplW n m1 rP (dso + 1) (dsl - 1) with
-        | none => rw [hr] at h; simp [aplK2] at h
-        | some rm =>
-          obtain ⟨r2, m2⟩ := rm
-          rw [hr, aplK2_some] at h
-          have hds1 : decHL m1 (dso + 1).toNat (dsl - 1).toNat = some ds' := by
-            rw [hdso1, hdsl1, decHL_grow hg1 (by omega)]; exact hds'
-          obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := ih m1 m2 a1 rP (dso + 1) (dsl - 1) r2 ds' hr hS1 hds1
-            (by rw [hdso1, hdsl1]; omega) (by rw [hdso1, hdsl1]; have := hg1.1; omega) hrP hA1
-          cases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with
-          | none => rw [hc] at h; simp [aplK3] at h
-          | some r3m =>
-            obtain ⟨r3, m3⟩ := r3m
-            rw [hc, aplK3_some] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
-            refine ⟨x1 :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hd12]; simpa using hd3,
-              by simpa using Nat.le_of_eq ht3, hA2.consW hc⟩
-            simp only [ConRon.Arena.abstractPrefixList, StateT.run_bind]
-            rw [← hw3, hrun1]
-            simp only [bind, Except.bind]
-            rw [hrun2]
-            simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
-            rfl
+      rcases ha : absPrefW n m rP 0 w with _ | ⟨ra, m1⟩ <;> simp only [ha, aplK1, reduceCtorEq] at h
+      obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := absPrefW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
+        (by simpa using hrP) hA
+      simp only [UInt64.toNat_zero] at hrun1
+      cases hr : aplW n m1 rP (dso + 1) (dsl - 1) with
+      | none => rw [hr] at h; simp [aplK2] at h
+      | some rm =>
+        obtain ⟨r2, m2⟩ := rm
+        rw [hr, aplK2_some] at h
+        have hds1 : decHL m1 (dso + 1).toNat (dsl - 1).toNat = some ds' := by
+          rw [hdso1, hdsl1, decHL_grow hg1 (by omega)]; exact hds'
+        obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := ih m1 m2 a1 rP (dso + 1) (dsl - 1) r2 ds' hr hS1 hds1
+          (by rw [hdso1, hdsl1]; omega) (by rw [hdso1, hdsl1]; have := hg1.1; omega) hrP hA1
+        cases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with
+        | none => rw [hc] at h; simp [aplK3] at h
+        | some r3m =>
+          obtain ⟨r3, m3⟩ := r3m
+          rw [hc, aplK3_some] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
+          refine ⟨x1 :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hd12]; simpa using hd3,
+            by simpa using Nat.le_of_eq ht3, hA2.consW hc⟩
+          simp only [ConRon.Arena.abstractPrefixList, StateT.run_bind]
+          rw [← hw3, hrun1]
+          simp only [bind, Except.bind]
+          rw [hrun2]
+          simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
+          rfl
 
 /-- **`abstract_prefix_list` refines `abstractPrefixList`** (through the `abstract1_fast` stub). -/
 @[refines ConRon.Arena.abstractPrefixList]
@@ -484,45 +476,42 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       have htyo1 : (tyo + 1).toNat = tyo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hbase1 : (base + 1).toNat = base.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [hw1] at h
-      cases hf : fvinternW m base w with
-      | none => rw [hf] at h; simp [thK1] at h
-      | some vm1 =>
-        obtain ⟨v, m1⟩ := vm1
-        rw [hf] at h
-        by_cases hv : 4294967296 ≤ v
-        · rw [thK1_big n m1 tyo tyl base v hv] at h; simp at h
-        rw [thK1_ok n m1 tyo tyl base v hv] at h
-        have hv32 : v.toNat < 2 ^ 32 := by
-          have : ¬ (4294967296 : Nat) ≤ v.toNat := hv
-          omega
-        obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS base w hw2 hf
-        cases hr : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with
-        | none => rw [hr] at h; simp [thK2] at h
-        | some rm =>
-          obtain ⟨r2, m2⟩ := rm
-          rw [hr, thK2_some] at h
-          have htys1 : decHL m1 (tyo + 1).toNat (tyl - 1).toNat = some tys' := by
-            rw [htyo1, htyl1, decHL_grow hg1 (by omega)]; exact htys'
-          obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (tyo + 1) (tyl - 1) (base + 1) r2 tys' hr hS1
-            htys1 (by rw [htyo1, htyl1]; omega) (by rw [htyo1, htyl1]; have := hg1.1; omega)
-            (by rw [hbase1, htyl1]; omega)
-          cases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with
-          | none => rw [hc] at h; simp [thK3] at h
-          | some r3m =>
-            obtain ⟨r3, m3⟩ := r3m
-            rw [hc, thK3_some] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hv32 hd2
-            refine ⟨decE v :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3, by simpa using Nat.le_of_eq ht3⟩
-            rw [hbase1] at hrun2
-            simp only [ConRon.Arena.targetHoles, ConRon.Arena.internFVarE, StateT.run_bind]
-            rw [← hw3, show (decI w : EIdx) = decE w from rfl]
-            rw [hrun1]
-            simp only [bind, Except.bind]
-            rw [hrun2]
-            simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
-            rfl
+      rcases hf : fvinternW m base w with _ | ⟨v, m1⟩ <;> rw [hf] at h <;>
+        try (simp only [thK1, reduceCtorEq] at h; done)
+      by_cases hv : 4294967296 ≤ v
+      · rw [thK1_big n m1 tyo tyl base v hv] at h; simp at h
+      rw [thK1_ok n m1 tyo tyl base v hv] at h
+      have hv32 : v.toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ v.toNat := hv
+        omega
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS base w hw2 hf
+      cases hr : thW n m1 (tyo + 1) (tyl - 1) (base + 1) with
+      | none => rw [hr] at h; simp [thK2] at h
+      | some rm =>
+        obtain ⟨r2, m2⟩ := rm
+        rw [hr, thK2_some] at h
+        have htys1 : decHL m1 (tyo + 1).toNat (tyl - 1).toNat = some tys' := by
+          rw [htyo1, htyl1, decHL_grow hg1 (by omega)]; exact htys'
+        obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (tyo + 1) (tyl - 1) (base + 1) r2 tys' hr hS1
+          htys1 (by rw [htyo1, htyl1]; omega) (by rw [htyo1, htyl1]; have := hg1.1; omega)
+          (by rw [hbase1, htyl1]; omega)
+        cases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with
+        | none => rw [hc] at h; simp [thK3] at h
+        | some r3m =>
+          obtain ⟨r3, m3⟩ := r3m
+          rw [hc, thK3_some] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hv32 hd2
+          refine ⟨decE v :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3, by simpa using Nat.le_of_eq ht3⟩
+          rw [hbase1] at hrun2
+          simp only [ConRon.Arena.targetHoles, ConRon.Arena.internFVarE, StateT.run_bind]
+          rw [← hw3, show (decI w : EIdx) = decE w from rfl]
+          rw [hrun1]
+          simp only [bind, Except.bind]
+          rw [hrun2]
+          simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
+          rfl
 
 /-- **`target_holes` refines `targetHoles`** (through master's `intern_fvar`). -/
 @[refines ConRon.Arena.targetHoles]
@@ -778,60 +767,56 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       have hxl1 : (xl - 1).toNat = c1 := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
       have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      cases hi : i1F m [CWF, (eViewW m e).getD 2 0, w, 0] with
-      | none => rw [hi] at h; simp [pdK1] at h
-      | some rim =>
-        obtain ⟨ri, m1⟩ := rim
-        rw [hi, pdK1_some] at h
-        obtain ⟨t1, a1, hrun1, hS1, hg1, hd11, hd12⟩ :=
-          i1F_ok dn vis fe ((eViewW m e).getD 2 0) w 0 hblt m m1 a ri hi hS
-        cases hr : pdW n m1 (xo + 1) (xl - 1) (ri.headD 0) with
-        | none => rw [hr] at h; simp [pdK2] at h
-        | some rm =>
-          obtain ⟨r2, m2⟩ := rm
-          rw [hr] at h
-          have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
-            rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
-          obtain ⟨res2, a2, hrun2, hS2, hg2, hres2⟩ := ih m1 m2 a1 (xo + 1) (xl - 1) (ri.headD 0) r2 xs' hr hS1 hd11
-            hxs1 (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
-          have htag : ((decE e).tag == ETag.forallE) = true := by simpa using hftag.mpr hf6
-          have hvb := EStore.viewBind_of_view_forall _ _ _ _ hv
-          have hrun1' : (instantiate1Fast coreWalkFuel bb (decI w) 0) a = .ok (t1, a1) := by
-            have := hrun1
-            have e3 : (decI ((eViewW m e).getD 2 0) : EIdx) = decE ((eViewW m e).getD 2 0) := rfl
-            have h0 : (0 : Word).toNat = 0 := rfl
-            rw [CWF_eq, e3, hbd, h0] at this
-            exact this
-          have hrun2' : (ConRon.Arena.targetPiDomsWith xs' t1) a1 = .ok (res2, a2) := by
-            rw [← hd12]; exact hrun2
-          have e1 : (decI e : EIdx) = decE e := rfl
-          cases res2 with
-          | none =>
-            have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 none htag hvb hrun1' hrun2'
-            have hr0 : r2.headD 0 = 0 := hres2
-            rw [pdK2_none n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr0] at h
+      rcases hi : i1F m [CWF, (eViewW m e).getD 2 0, w, 0] with _ | ⟨ri, m1⟩ <;> simp only [hi, pdK1, reduceCtorEq] at h
+      obtain ⟨t1, a1, hrun1, hS1, hg1, hd11, hd12⟩ :=
+        i1F_ok dn vis fe ((eViewW m e).getD 2 0) w 0 hblt m m1 a ri hi hS
+      cases hr : pdW n m1 (xo + 1) (xl - 1) (ri.headD 0) with
+      | none => rw [hr] at h; simp [pdK2] at h
+      | some rm =>
+        obtain ⟨r2, m2⟩ := rm
+        rw [hr] at h
+        have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
+          rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
+        obtain ⟨res2, a2, hrun2, hS2, hg2, hres2⟩ := ih m1 m2 a1 (xo + 1) (xl - 1) (ri.headD 0) r2 xs' hr hS1 hd11
+          hxs1 (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
+        have htag : ((decE e).tag == ETag.forallE) = true := by simpa using hftag.mpr hf6
+        have hvb := EStore.viewBind_of_view_forall _ _ _ _ hv
+        have hrun1' : (instantiate1Fast coreWalkFuel bb (decI w) 0) a = .ok (t1, a1) := by
+          have := hrun1
+          have e3 : (decI ((eViewW m e).getD 2 0) : EIdx) = decE ((eViewW m e).getD 2 0) := rfl
+          have h0 : (0 : Word).toNat = 0 := rfl
+          rw [CWF_eq, e3, hbd, h0] at this
+          exact this
+        have hrun2' : (ConRon.Arena.targetPiDomsWith xs' t1) a1 = .ok (res2, a2) := by
+          rw [← hd12]; exact hrun2
+        have e1 : (decI e : EIdx) = decE e := rfl
+        cases res2 with
+        | none =>
+          have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 none htag hvb hrun1' hrun2'
+          have hr0 : r2.headD 0 = 0 := hres2
+          rw [pdK2_none n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr0] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
+          rw [e1, ← hw3]; exact hstep
+        | some ds =>
+          have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 (some ds) htag hvb hrun1' hrun2'
+          obtain ⟨hr1, hdd2, hle⟩ := hres2
+          have hr1' : r2.headD 0 ≠ 0 := by rw [hr1]; decide
+          rw [pdK2_ok n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr1'] at h
+          cases hc : consW n m2 ((eViewW m e).getD 1 0) (r2.tail.headD 0) (r2.tail.tail.headD 0) with
+          | none => rw [hc] at h; simp [pdK3] at h
+          | some r3m =>
+            obtain ⟨r3, m3⟩ := r3m
+            rw [hc, pdK3_some] at h
             simp only [Option.some.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
-            refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
-            rw [e1, ← hw3]; exact hstep
-          | some ds =>
-            have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 (some ds) htag hvb hrun1' hrun2'
-            obtain ⟨hr1, hdd2, hle⟩ := hres2
-            have hr1' : r2.headD 0 ≠ 0 := by rw [hr1]; decide
-            rw [pdK2_ok n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr1'] at h
-            cases hc : consW n m2 ((eViewW m e).getD 1 0) (r2.tail.headD 0) (r2.tail.tail.headD 0) with
-            | none => rw [hc] at h; simp [pdK3] at h
-            | some r3m =>
-              obtain ⟨r3, m3⟩ := r3m
-              rw [hc, pdK3_some] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
-              obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 hle hdlt hdd2
-              refine ⟨some (ty :: ds), a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
-              · rw [e1, ← hw3]; exact hstep
-              · refine ⟨rfl, ?_, ?_⟩
-                · rw [← hdd]; simpa [decE_eq] using hd3
-                · simpa using Nat.le_of_eq ht3
+            obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 hle hdlt hdd2
+            refine ⟨some (ty :: ds), a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
+            · rw [e1, ← hw3]; exact hstep
+            · refine ⟨rfl, ?_, ?_⟩
+              · rw [← hdd]; simpa [decE_eq] using hd3
+              · simpa using Nat.le_of_eq ht3
 
 /-- **`target_pi_doms_with` refines `targetPiDomsWith`** (through `e_view`, `instantiate1_fast`
 and `sl_cons`). -/
@@ -1040,30 +1025,27 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       simp only [show UInt64.ofNat 1 = 1 from rfl] at h1
       exact h1.2
     rw [hwl] at h
-    cases hcl : cvLpsW n m c with
-    | none => rw [hcl] at h; simp [tcK1] at h
-    | some rm =>
-      obtain ⟨r1, m1⟩ := rm
-      rw [hcl] at h
-      obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb hlpb
-      simp only [tcK1] at h
-      rw [hE, hwt] at h
-      cases hi : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] m1 with
-      | none => rw [hi] at h; simp [tcK2] at h
-      | some r2m =>
-        obtain ⟨r2, m2⟩ := r2m
-        rw [hi] at h
-        simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨x, a2, hrun, ⟨hS2, hg2, hd1, hd2⟩, -, hA2⟩ :=
-          hI n CWF (r1.headD 0) (r1.tail.headD 0) wl wt cv.levelParams m1 m2 a r2 hwl2 hwtlt
-            ⟨rfl, erToIwW_iwFr hcl⟩ hS1 hdec1 hi
-        refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hd1, by simpa using hd2,
-          (erToIwW_afr hcl).trans hA2⟩
-        simp only [ConRon.Arena.targetCtorAt, hnone]
-        rw [CWF_eq] at hrun
-        rw [← hwl3, ← hwtd]
-        exact hrun
+    rcases hcl : cvLpsW n m c with _ | ⟨r1, m1⟩ <;> rw [hcl] at h <;>
+      try (simp only [tcK1, reduceCtorEq] at h; done)
+    obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb hlpb
+    simp only [tcK1] at h
+    rw [hE, hwt] at h
+    cases hi : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] m1 with
+    | none => rw [hi] at h; simp [tcK2] at h
+    | some r2m =>
+      obtain ⟨r2, m2⟩ := r2m
+      rw [hi] at h
+      simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨x, a2, hrun, ⟨hS2, hg2, hd1, hd2⟩, -, hA2⟩ :=
+        hI n CWF (r1.headD 0) (r1.tail.headD 0) wl wt cv.levelParams m1 m2 a r2 hwl2 hwtlt
+          ⟨rfl, erToIwW_iwFr hcl⟩ hS1 hdec1 hi
+      refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hd1, by simpa using hd2,
+        (erToIwW_afr hcl).trans hA2⟩
+      simp only [ConRon.Arena.targetCtorAt, hnone]
+      rw [CWF_eq] at hrun
+      rw [← hwl3, ← hwtd]
+      exact hrun
   · have hnz : w8 ≠ 0 := fun hh => hz (by rw [hh]; rfl)
     obtain ⟨t0, ht0⟩ : ∃ t0, bigM.member = some t0 := ⟨w8 - 1, by rw [hmem]; simp [decON, hnz]⟩
     simp only [hz, ne_eq, not_false_eq_true, if_true, Option.some.injEq, Prod.mk.injEq] at h

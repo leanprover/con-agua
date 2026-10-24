@@ -128,11 +128,8 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _, PSlR.nil _ _⟩
     rw [soaW_cons n m reco recl k hl] at h
     obtain ⟨pc, rs0, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
-    cases h1 : soaW n m (reco + 1) (recl - 1) k with
-    | none => rw [h1] at h; simp [soaK1] at h
-    | some x1 =>
-    obtain ⟨r1, m1⟩ := x1
-    rw [h1] at h
+    rcases h1 : soaW n m (reco + 1) (recl - 1) k with _ | ⟨r1, m1⟩ <;> rw [h1] at h <;>
+      try (simp only [soaK1, reduceCtorEq] at h; done)
     obtain ⟨hS1, hg1, hown, haux⟩ := ih m m1 a (reco + 1) (recl - 1) k rs' r1 h1 hS hrs'
     -- the recursor's pointer and its target, as the model reads them in `m1`
     have hrlt : reco.toNat < iwTop m := by
