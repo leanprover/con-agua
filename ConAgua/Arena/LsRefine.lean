@@ -98,15 +98,15 @@ abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 +
 words, and the slice's hash. -/
 def LsRecRel (m : Mem) (t i : Word) (k : ListNode) : Prop :=
   (tfld m LVLS t i 0).toNat + (tfld m LVLS t i 1).toNat ≤ m.top.toNat ∧
-  sliceL (m.arr64 POOL) (tfld m LVLS t i 0).toNat (tfld m LVLS t i 1).toNat = lsWords k.us ∧
-  tfld m LVLS t i 2 = hashN (m.arr64 POOL) (tfld m LVLS t i 0).toNat (tfld m LVLS t i 1).toNat
+  sliceL (vpool m) (tfld m LVLS t i 0).toNat (tfld m LVLS t i 1).toNat = lsWords k.us ∧
+  tfld m LVLS t i 2 = hashN (vpool m) (tfld m LVLS t i 0).toNat (tfld m LVLS t i 1).toNat
 
 /-- `LsRecRel` in the raw words (inside the store library). -/
 theorem LsRecRel_raw (m : Mem) (t i : Word) (k : ListNode) :
     LsRecRel m t i k ↔
     (lsO m t i).toNat + (lsL m t i).toNat ≤ m.top.toNat ∧
-    sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
-    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
+    sliceL (vpool m) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
+    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (vpool m) (lsO m t i).toNat (lsL m t i).toNat
   := Iff.rfl
 
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
@@ -122,28 +122,30 @@ theorem lsFrame : RFrame lsSch LsRecRel lshash := by
   rw [fld_ls0, fld_ls0] at h0
   rw [fld_ls, fld_ls] at h1 h2
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [lshash, h2]⟩
-  simpa only [LsRecRel_raw, lsO, lsL, h0, h1, h2, hp, ht] using h
+  simpa only [LsRecRel_raw, lsO, lsL, h0, h1, h2, hp, hpv, hpc, ht] using h
 
 /-! ## The query's obligations -/
 
 /-- The match of `ls_match` on node `i` of tier `t`. -/
-def lsMt (m : Mem) (o l h t i : Word) : Bool := lsmatchW (m.arr64 LSREC) (m.arr64 POOL) t i o l h
+def lsMt (m : Mem) (o l h t i : Word) : Bool := lsmatchW (m.arr64 LSREC) (vpool m) t i o l h
 
 section query
 variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
-  (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us)
+  (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
 
 include hpool hq hk in
 /-- **Matching is equality of level lists**, on a node of a represented tier. -/
 theorem lsMatchOK :
-    MatchOK LsRecRel (lsMt m o l (hashN (m.arr64 POOL) o.toNat l.toNat)) m (lsKey us) := by
+    MatchOK LsRecRel (lsMt m o l (hashN (vpool m) o.toNat l.toNat)) m (lsKey us) := by
   intro t i k hr
   obtain ⟨hsl, hw, hh⟩ := (LsRecRel_raw m t i k).mp hr
   obtain ⟨-, -, hps, htop⟩ := hpool
   simp only [SliceOK] at hq
-  have key := slice_key (m.arr64 POOL) (lsO m t i) (lsL m t i) o l (by omega) (by omega)
+  have key := slice_key (vpool m) (lsO m t i) (lsL m t i) o l (by omega) (by omega)
   simp only [lsMt, lsmatchW, Bool.and_assoc]
   constructor
   · intro h
@@ -154,8 +156,8 @@ theorem lsMatchOK :
     exact congrArg ListNode.mk (lsWords_inj _ _ this)
   · intro h
     subst h
-    have e : sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat =
-        sliceL (m.arr64 POOL) o.toNat l.toNat := by rw [hw, hk]
+    have e : sliceL (vpool m) (lsO m t i).toNat (lsL m t i).toNat =
+        sliceL (vpool m) o.toNat l.toNat := by rw [hw, hk]
     have := key.mpr e
     simp only [Bool.and_eq_true] at this
     simp only [Bool.and_eq_true, this, and_true, beq_iff_eq, hh]
@@ -169,17 +171,19 @@ theorem lsHomeOK (h : Word) : HomeOK lshash (lsMt m o l h) m h := by
 include hq hk in
 /-- The record `ls_push` writes holds the list. -/
 theorem lsNewOK :
-    NewOKR lsSch LsRecRel lshash m [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
-      (lsKey us) (hashN (m.arr64 POOL) o.toNat l.toNat) := by
+    NewOKR lsSch LsRecRel lshash m [o, l, hashN (vpool m) o.toNat l.toNat]
+      (lsKey us) (hashN (vpool m) o.toNat l.toNat) := by
   intro t ht hroom
-  have hp : (newRecM lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
+  have hp : (newRecM lsSch m t [o, l, hashN (vpool m) o.toNat l.toNat]).arr64 POOL = m.arr64 POOL :=
     wrRec_arr_ne lsSch _ _ POOL (by decide) _ _ _
-  have htop : rdW ((newRecM lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]).arr64 CTL) 0 =
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
+  have htop : rdW ((newRecM lsSch m t [o, l, hashN (vpool m) o.toNat l.toNat]).arr64 CTL) 0 =
       rdW (m.arr64 CTL) 0 := by
     rw [newRecM, wrRec_arr_ne lsSch _ _ CTL (by decide)]
-  have e : ∀ f, f < 3 → fld lsSch (newRecM lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]) t
+  have e : ∀ f, f < 3 → fld lsSch (newRecM lsSch m t [o, l, hashN (vpool m) o.toNat l.toNat]) t
       (cntW lsSch m t) f =
-      [o, l, hashN (m.arr64 POOL) o.toNat l.toNat].getD f.toNat 0 := by
+      [o, l, hashN (vpool m) o.toNat l.toNat].getD f.toNat 0 := by
     intro f hf
     have := hroom.1
     have := hroom.2
@@ -189,7 +193,7 @@ theorem lsNewOK :
   have e2 := e 2 (by decide)
   rw [fld_ls0] at e0
   rw [fld_ls] at e1 e2
-  simp only [lsKey, LsRecRel_raw, lshash, lsO, lsL, e0, e1, e2, hp, ← top_rdW] at htop ⊢
+  simp only [lsKey, LsRecRel_raw, lshash, lsO, lsL, e0, e1, e2, hp, hpv, hpc, ← top_rdW] at htop ⊢
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (2 : Word).toNat = 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl, htop]
   exact ⟨⟨hq, hk, trivial⟩, trivial⟩
@@ -227,9 +231,11 @@ theorem lsColFree : ColFree lsCS LsRecRel := by
   simp only [lsCS, Option.some.injEq] at h; subst h
   have hp : (m.set64 LSHP k x).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have hc : (m.set64 LSHP k x).arr64 CTL = m.arr64 CTL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  simpa only [LsRecRel_raw, lsO, lsL, top_rdW, hp, hc,
+  simpa only [LsRecRel_raw, lsO, lsL, top_rdW, hp, hpv, hpc, hc,
     Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)] using hr
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
@@ -241,15 +247,17 @@ theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL] [0] := by
   intro m m' hra hb hc
   have h0 := hc 0 (by simp)
   have hp := hb POOL (by simp)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   simp only [lsSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [lshash, hra]⟩
-  simpa only [LsRecRel_raw, lsO, lsL, hra, hp, top_rdW, h0] using h
+  simpa only [LsRecRel_raw, lsO, lsL, hra, hp, hpv, hpc, top_rdW, h0] using h
 
 /-! ## `intern_ls` refines `internLsNode` -/
 
 section intern
 variable (m : Mem) (a : AState) (hpool : PoolOK m) (hR : LsR m a) (o l : Word)
-  (hq : SliceOK m o l) (us : List LIdx) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us)
+  (hq : SliceOK m o l) (us : List LIdx) (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us)
 
 include hpool hR hq hk in
 /-- **`intern_ls`'s model refines the arena's `internLsNode`** at the list the slice holds. -/

@@ -183,9 +183,9 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
   have hk' : k ≤ 2 ^ 62 := by omega
-  have hw := callW_model (M := fun mm => defnNatCertW p k mm vis w n)
-    (defnNatCert_specW p hc k · vis w n) hcall
-  unfold defnNatCertW at hw
+  have hw := callW_model (M := fun mm => defnNatCertW p (k + 1) mm vis w n)
+    (defnNatCert_specW p hc (k + 1) · vis w n) hcall
+  rw [defnNatCertW.arm1] at hw
   have hE := hN.toNatSubProg.toNatEqProg
   have hG := hE.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
@@ -292,9 +292,9 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
   have hk' : k ≤ 2 ^ 62 := by omega
-  have hw := callW_model (M := fun mm => defnNatGateW p k mm vis w n)
-    (defnNatGate_specW p hg k · vis w n) hcall
-  unfold defnNatGateW at hw
+  have hw := callW_model (M := fun mm => defnNatGateW p (k + 1) mm vis w n)
+    (defnNatGate_specW p hg (k + 1) · vis w n) hcall
+  rw [defnNatGateW.arm1] at hw
   have hE := hN.toNatSubProg.toNatEqProg
   have hT := hE.toNatTyProg
   have hGd := hT.toNatGuardProg
@@ -324,7 +324,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have hC2 := StageC.of_run hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
     hC.check.state (Ext.refl _) rfl rfl
   by_cases e2 : r2.headD 0 = 0
-  · rw [if_pos e2] at hw
+  · rw [if_neg (show ¬ (r2.headD 0 ≠ 0) from fun h => h e2), defnNatGateW.j1] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hf : xs.contains (decI n) = false := by
@@ -332,7 +332,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     refine ⟨a2, ?_, hS2, hC2, hg1.trans hg2, Ext.refl _⟩
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hf]
     rfl
-  rw [if_neg e2] at hw
+  rw [if_pos (show r2.headD 0 ≠ 0 from e2)] at hw
   have hx2t : xs.contains (decI n) = true := by
     rw [← hx2, ← hd2.1]; simpa using e2
   -- the guard
@@ -366,7 +366,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have t5 : x5 = true := by rw [← hd5.1]; simp at e35; simp [e35.2]
   -- the certificate
   replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  simp only [defnNatGateW.j1, Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨-, rfl⟩ := hw
   have hx35 := hx3.trans (hx4.trans hx5)
   obtain ⟨a6, hrun6, hC6, hg6, hx6⟩ := defnNatCert_okC hN hc hq hcl hk' hn h6 hS5 hC5 henv

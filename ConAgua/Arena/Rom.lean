@@ -452,7 +452,7 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
     (hr : RomOK rom) :
     Grows m ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)) ∧
     SliceOK ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)) m.top l ∧
-    sliceL (((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)).arr64 POOL) m.top.toNat l.toNat =
+    sliceL (vpool ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l))) m.top.toNat l.toNat =
       ((rom.drop i.toNat).take l.toNat).map UInt8.toUInt64 ∧
     i.toNat + l.toNat ≤ rom.length := by
   obtain ⟨hw, hc, hps, htop⟩ := hpool
@@ -485,12 +485,14 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
   have htop' := Mem.top_set64 _ (m.top + l) hctl
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, hin⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · intro x hxt; rw [hpool', hx]; simp; omega
+  · exact Agree.vpool (fun x hxt => by rw [hpool', hx]; simp; omega) (by omega)
+      (by rw [hpool', hsz]; omega) (by omega) (by rw [hpool', hsz]; omega)
   · rw [htop', hT]; omega
   · rw [htop', hT, hpool', hsz]; omega
   · rw [hpool', hsz]
   · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', sliceL, List.ext_getElem_iff]
+  · rw [sliceL_vpool _ _ _ (by rw [hpool', hsz]; omega) (by rw [hpool', hsz]; omega), hpool', sliceL,
+      List.ext_getElem_iff]
     refine ⟨by simp; omega, fun k hk₁ hk₂ => ?_⟩
     simp only [List.length_ofFn] at hk₁
     simp only [List.getElem_ofFn, hx, List.getElem_map, List.getElem_take, List.getElem_drop]
@@ -767,8 +769,8 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hg, hsl, hk, -⟩ := romPutW_facts rom m₁ (q₁ + 8) _ hR1.1.lit.1 hok (by simp [RomOK]; omega)
     have hR2 := ArenaD.grow _ _ hg _ hR1
-    have hk' : sliceL (((rputW rom m₁ m₁.top (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
-        (m₁.top + UInt64.ofNat str.toByteArray.size)).arr64 POOL) m₁.top.toNat
+    have hk' : sliceL (vpool ((rputW rom m₁ m₁.top (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
+        (m₁.top + UInt64.ofNat str.toByteArray.size))) m₁.top.toNat
         (UInt64.ofNat str.toByteArray.size).toNat = strWords str := by
       rw [hk, hq8, hlN, ← List.drop_drop, hdq]
       simp [u64B, strWords, List.take_left' hsz]

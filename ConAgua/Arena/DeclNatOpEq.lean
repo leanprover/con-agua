@@ -50,6 +50,8 @@ section opeq
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
 /-- The pin record at `pi` in `m`: the 21 words `nat_op_pins` writes, below the pool's top. -/
+theorem pw_fold (m : Mem) (pi j : Word) : rdW (m.arr64 IW) (pi + j) = pw m pi j := rfl
+
 def PinRecAt (m : Mem) (pi : Word) : Prop :=
   pinW m 0 ≠ 0 ∧ pi.toNat + 21 ≤ iwTop m ∧
     ∀ j (hj : j < 21), (iwA m)[pi.toNat + j]? = some ((pinRecW m)[j]'(by simp [pinRecW]; omega))
@@ -69,33 +71,11 @@ def natEqCtxT (d : Nat) : AM (EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EI
   let bF ← constE (← boolFalseName)
   pure (x, y, z, sN, sx, sy, bT, bF)
 
-def natEqCtxW (p : Prog) (n : Nat) (m : Mem) (pi d : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "const_e" [pw m pi 15] m) fun r1 m1 =>
-  ntBW (callW p n "intern_fvar" [d, r1.headD 0] m1) fun r2 m2 =>
-  ntBW (callW p n "intern_fvar" [d + 1, r1.headD 0] m2) fun r3 m3 =>
-  ntBW (callW p n "const_e" [pw m3 pi 16] m3) fun r4 m4 =>
-  ntBW (callW p n "nat_ap1" [pw m4 pi 17, r2.headD 0] m4) fun r5 m5 =>
-  ntBW (callW p n "nat_ap1" [pw m4 pi 17, r3.headD 0] m5) fun r6 m6 =>
-  ntBW (callW p n "const_e" [pw m6 pi 18] m6) fun r7 m7 =>
-  ntBW (callW p n "const_e" [pw m7 pi 19] m7) fun r8 m8 =>
-  ntBW (callW p n "iw_alloc" [8] m8) fun rq mq =>
-  some ([rq.headD 0], ((((((((mq.set64 IW (rq.headD 0) (r2.headD 0)).set64 IW (rq.headD 0 + 1)
-    (r3.headD 0)).set64 IW (rq.headD 0 + 2) (r4.headD 0)).set64 IW (rq.headD 0 + 3) (pw m4 pi 17)).set64 IW
-    (rq.headD 0 + 4) (r5.headD 0)).set64 IW (rq.headD 0 + 5) (r6.headD 0)).set64 IW (rq.headD 0 + 6)
-    (r7.headD 0)).set64 IW (rq.headD 0 + 7) (r8.headD 0)))
-
-set_option maxHeartbeats 3200000 in
-theorem natEqCtx_specW (p : Prog) (hp : p.lookup "nat_eq_ctx" = some natEqCtx) (n : Nat) (s₀ : St)
-    (pi d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_ctx" [pi, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ natEqCtxW p n s₀.mem pi d = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natEqCtx]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "const_e", callW_spec p n "intern_fvar", callW_spec p n "nat_ap1",
-      callW_spec p n "iw_alloc"] <;>
-    finish (gen := 20) (instances := 10000) [natEqCtxW, ntBW, pw]
+/-- **`nat_eq_ctx` is its model `natEqCtxW`** (generated). -/
+l_model natEqCtx_specW (p : Prog) (hp : p.lookup "nat_eq_ctx" = some natEqCtx)
+  fns [hp ↦ natEqCtxW list]
+  specs [callW_spec p n "const_e", callW_spec p n "intern_fvar", callW_spec p n "nat_ap1", callW_spec p n "iw_alloc"]
+  grind [arena_grind] finish [ntBW, pw] gen 20 heartbeats 3200000 bind ntBW instances 10000
 
 /-- The context record of the dispatch: eight handle words at `cx`, below the pool's top. -/
 def NatCtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
@@ -123,8 +103,8 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
       (fun m a => StageR dn vis fe m a ∧ PinRecAt m pi ∧ H d)
       (natEqCtxT d.toNat) (KeepPost dn vis fe NatCtxR) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hP, hd⟩ hc => ?_
-  have hw := callW_model (M := fun mm => natEqCtxW p k mm pi d) (natEqCtx_specW p hN.lNatEqCtx k · pi d) hc
-  unfold natEqCtxW at hw
+  have hw := callW_model (M := fun mm => natEqCtxW p (k + 1) mm pi d) (natEqCtx_specW p hN.lNatEqCtx (k + 1) · pi d) hc
+  rw [natEqCtxW.arm1] at hw; simp only [pw_fold] at hw
   have hF := hS.1.pins.full hP.1
   have hI := hS.2
   -- pin words at any later memory
@@ -340,22 +320,11 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
 
 /-! ### `nat_op_equations` -/
 
-def natOpEquationsW (p : Prog) (n : Nat) (m : Mem) (d c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "nat_op_pins" [] m) fun rp m1 =>
-  ntBW (callW p n "nat_eq_ctx" [rp.headD 0, d] m1) fun rc m2 =>
-  ntBW (callW p n "nat_eq_disp" [c, rp.headD 0, rc.headD 0] m2) fun rr m3 =>
-  some ([rr.headD 0, rr.tail.headD 0], m3)
-
-theorem natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some natOpEquationsL)
-    (n : Nat) (s₀ : St) (d c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_equations" [d, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpEquationsW p n s₀.mem d c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpEquationsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "nat_op_pins", callW_spec p n "nat_eq_ctx", callW_spec p n "nat_eq_disp"] <;>
-    finish (gen := 20) (instances := 10000) [natOpEquationsW, ntBW]
+/-- **`nat_op_equations` is its model `natOpEquationsW`** (generated). -/
+l_model natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some natOpEquationsL)
+  fns [hp ↦ natOpEquationsW list]
+  specs [callW_spec p n "nat_op_pins", callW_spec p n "nat_eq_ctx", callW_spec p n "nat_eq_disp"]
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 def natEqTailT (c : NIdx) (ctx : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
     AM (List (EIdx × EIdx)) := do
@@ -411,8 +380,8 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
       (fun m a => StageR dn vis fe m a ∧ H d ∧ H c)
       (natOpEquations d.toNat (decI c)) (KeepPost dn vis fe decEqRL) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hd, hc⟩ hw => ?_
-  have hw := callW_model (M := fun mm => natOpEquationsW p k mm d c) (natOpEquations_specW p hN.toNatSubProg.toNatEqProg.lNatOpEquations k · d c) hw
-  unfold natOpEquationsW at hw
+  have hw := callW_model (M := fun mm => natOpEquationsW p (k + 1) mm d c) (natOpEquations_specW p hN.toNatSubProg.toNatEqProg.lNatOpEquations (k + 1) · d c) hw
+  rw [natOpEquationsW.arm1] at hw
   have hF := hS.1.pins.full
   have hGate := hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
   replace hw := ntBW_some hw; obtain ⟨rp, m1, h1, hw⟩ := hw

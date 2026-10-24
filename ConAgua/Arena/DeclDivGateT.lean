@@ -61,9 +61,9 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
   have hk' : k ≤ 2 ^ 62 := by omega
-  have hw := callW_model (M := fun mq => dmCpW p k mq po pl vis vis2 c)
-    (cp_specW p hD.lCheckDivModPin k · po pl vis vis2 c) hcall
-  unfold dmCpW at hw
+  have hw := callW_model (M := fun mq => dmCpW p (k + 1) mq po pl vis vis2 c)
+    (cp_specW p hD.lCheckDivModPin (k + 1) · po pl vis vis2 c) hcall
+  rw [dmCpW.arm1] at hw
   have hD8 := hD.toDmProg8
   have hD7 := hD8.toDmProg7
   -- the environment guard, at the extended view
@@ -183,9 +183,9 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
   | zero => rw [callW_zero] at hcall; exact absurd hcall (by simp)
   | succ k =>
   have hk' : k ≤ 2 ^ 62 := by omega
-  have hw := callW_model (M := fun mq => dgW p k mq vis w n)
-    (dg_specW p hD.lDefnDivGate k · vis w n) hcall
-  unfold dgW at hw
+  have hw := callW_model (M := fun mq => dgW p (k + 1) mq vis w n)
+    (dg_specW p hD.lDefnDivGate (k + 1) · vis w n) hcall
+  simp only [dgW.arm1, dgW.j1.arm1] at hw
   have hfrOf : ∀ {k : Nat} {f : FnName} {args : List Word} {mx my : Mem} {rx : List Word},
       f ∈ dgFns → callW p k f args mx = some (rx, my) → MemFrame stepA stepC mx my := by
     intro k f args mx my rx hf hc

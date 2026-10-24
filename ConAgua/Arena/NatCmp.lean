@@ -129,9 +129,9 @@ is `Lt` by length. -/
 
 /-- The invariant of the comparison loop over the pool `P` (unchanged): both slices have `la`
 limbs and are in bounds, and their limbs at `k` and above agree. -/
-def CmpInv (P : Array Word) (s : St) : Prop :=
-  P.size < 2 ^ 64 ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ P.size ∧ (s.loc 2).toNat + (s.loc 1).toNat ≤ P.size ∧
+def CmpInv (P : Array Word) (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P.size = 2 ^ 64 ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 1).toNat ≤ C ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧
   pv P (s.loc 0).toNat (s.loc 1).toNat + pv P (s.loc 2).toNat (s.loc 4).toNat =
     pv P (s.loc 2).toNat (s.loc 1).toNat + pv P (s.loc 0).toNat (s.loc 4).toNat
@@ -139,12 +139,12 @@ def CmpInv (P : Array Word) (s : St) : Prop :=
 section cmp
 variable (p : Prog)
 
-theorem cmpLoop_spec (n : Nat) (s₀ : St) (h : CmpInv (s₀.mem.arr64 POOL) s₀) :
+theorem cmpLoop_spec (n : Nat) (s₀ : St) (h : CmpInv (vpool s₀.mem) (pcap s₀.mem) s₀) :
     ⦃fun s => s = s₀⦄
     exec p n cmpLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      (r.retOr [1]).headD 0 = cmpW (pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat)
-        (pv (s₀.mem.arr64 POOL) (s₀.loc 2).toNat (s₀.loc 1).toNat); ⊤⦄ := by
+      (r.retOr [1]).headD 0 = cmpW (pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat)
+        (pv (vpool s₀.mem) (s₀.loc 2).toNat (s₀.loc 1).toNat); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -155,12 +155,12 @@ theorem cmpLoop_spec (n : Nat) (s₀ : St) (h : CmpInv (s₀.mem.arr64 POOL) s�
       -- the `pv_succ`/`pv_succ_lt` instances' index side conditions are case splits
       finish (splits := 20) [CmpInv]
 
-theorem cmpLoop_step_spec (n : Nat) (s₀ : St) (h : CmpInv (s₀.mem.arr64 POOL) s₀) :
+theorem cmpLoop_step_spec (n : Nat) (s₀ : St) (h : CmpInv (vpool s₀.mem) (pcap s₀.mem) s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) cmpLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      (r.retOr [1]).headD 0 = cmpW (pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat)
-        (pv (s₀.mem.arr64 POOL) (s₀.loc 2).toNat (s₀.loc 1).toNat); ⊤⦄ :=
+      (r.retOr [1]).headD 0 = cmpW (pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat)
+        (pv (vpool s₀.mem) (s₀.loc 2).toNat (s₀.loc 1).toNat); ⊤⦄ :=
   Triple.step_exec (cmpLoop_spec p (n + 1) s₀ h)
 
 variable (hpc : p.lookup "nat_cmp" = some natCmp)
@@ -168,15 +168,15 @@ variable (hpc : p.lookup "nat_cmp" = some natCmp)
 include hpc in
 /-- `nat_cmp` returns the comparison code of the two normalised slices; it changes nothing. -/
 theorem natCmp_spec (n : Nat) (s₀ : St) (oa la ob lb : Word)
-    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
-    (ha : oa.toNat + la.toNat ≤ (s₀.mem.arr64 POOL).size)
-    (hb : ob.toNat + lb.toNat ≤ (s₀.mem.arr64 POOL).size)
-    (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :
+    (hs : pcap s₀.mem < 2 ^ 64)
+    (ha : oa.toNat + la.toNat ≤ pcap s₀.mem)
+    (hb : ob.toNat + lb.toNat ≤ pcap s₀.mem)
+    (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_cmp" [oa, la, ob, lb]
-    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = cmpW (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-      (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat); ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = cmpW (pv (vpool s₀.mem) oa.toNat la.toNat)
+      (pv (vpool s₀.mem) ob.toNat lb.toNat); ⊤⦄ := by
   rw [invoke_eq _ hpc]
   simp only [callFn, natCmp]
   cases n with

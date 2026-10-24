@@ -72,7 +72,7 @@ theorem nsMatch_spec (n : Nat) (s₀ : St) (t i q o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nstr_match" [t, i, q, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if nsmatchW (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) t i q o l h then 1 else 0]; ⊤⦄ := by
+      r = [if nsmatchW (s₀.mem.arr64 NSREC) (vpool s₀.mem) t i q o l h then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, nsMatch]
   cases n with
@@ -102,7 +102,7 @@ def nshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 +
 
 /-- The slice of a key `[q, o, l]` is in bounds (what `lit_hash`'s spec needs). -/
 def nsKeyOK (m : Mem) (ks : List Word) : Prop :=
-  (m.arr64 POOL).size < 2 ^ 64 ∧ (ks.getD 1 0).toNat + (ks.getD 2 0).toNat ≤ (m.arr64 POOL).size
+  pcap m < 2 ^ 64 ∧ (ks.getD 1 0).toNat + (ks.getD 2 0).toNat ≤ pcap m
 
 def nstrCS : ConsSch where
   ra := NSREC
@@ -128,9 +128,9 @@ def nstrCS : ConsSch where
     h := (h ^ q) * ⟪fnvPrime⟫
   }
   skipW := none
-  mtM m ks t i := nsmatchW (m.arr64 NSREC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0)
+  mtM m ks t i := nsmatchW (m.arr64 NSREC) (vpool m) t i (ks.getD 0 0) (ks.getD 1 0)
     (ks.getD 2 0) (ks.getD 3 0)
-  qhM m ks := nstrHashW (ks.getD 0 0) (hashN (m.arr64 POOL) (ks.getD 1 0).toNat (ks.getD 2 0).toNat)
+  qhM m ks := nstrHashW (ks.getD 0 0) (hashN (vpool m) (ks.getD 1 0).toNat (ks.getD 2 0).toNat)
   hsM := nshash
   vsM as := as
   roomM m _ c := decide (m.len64 NSREC < (c + 1) * 8)
@@ -244,7 +244,7 @@ include hph hpe in
 theorem internNStr_spec (hpm : p.lookup "nstr_match" = some nsMatch)
     (hpf : p.lookup "nstr_find" = some nsFind) (hpp : p.lookup "nstr_push" = some nsPush)
     (hp : p.lookup "intern_nstr" = some internNStr) (n : Nat) (s₀ : St) (q o l : Word)
-    (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64) (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+    (hs : pcap s₀.mem < 2 ^ 64) (hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_nstr" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ nsinternW s₀.mem q o l = some (r.headD 0, s'.mem); ⊤⦄ :=

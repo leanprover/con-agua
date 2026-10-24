@@ -41,14 +41,14 @@ theorem grows_poolSet (m : Mem) (q x : Word) (hc : 0 < (m.arr64 CTL).size)
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
   refine ⟨?_, fun j hj => ?_, by rw [htop]; exact Nat.le_refl _, by rw [htop, size_set64]; omega, size_set64 _ _ _ _ _⟩
   · rw [htop]; exact Frame.set64 _ _ _ _ _ hfr
-  · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  · rw [vpool_set64 _ _ _ hs, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     simp; omega
 
 /-- **Raising the top** over words already written grows the pool. -/
 theorem grows_top (m : Mem) (t : Word) (hc : 0 < (m.arr64 CTL).size) (ht : m.top.toNat ≤ t.toNat)
     (hs : t.toNat ≤ (m.arr64 POOL).size) : Grows m (m.set64 CTL 0 t) := by
   have htop := Mem.top_set64 m t hc
-  refine ⟨?_, fun j _ => by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], by rw [htop]; exact ht,
+  refine ⟨?_, fun j _ => by rw [vpool_set64_ne _ _ _ _ (by decide)], by rw [htop]; exact ht,
     by rw [htop, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hs,
     by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]⟩
   rw [htop]; exact Frame.refl _ _
@@ -330,7 +330,8 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   obtain ⟨r₁, m₁⟩ := x
   rw [hca] at hW
   obtain ⟨a₁, pm₁, us', hrun₁, hD₁, hP₁, hsl₁, hk₁, hcp₁, htop₁, hag₁, hsz₁, hfr₁, he₁, hls₁⟩ :=
-    pool_rel p hp n m a pm f _ _ m.top ids r₁ m₁ hD hP hsl hol (Nat.le_refl _) hroom hca
+    pool_rel p hp n m a pm f _ _ m.top ids r₁ m₁ hD hP
+      (by rw [← sliceL_vpool _ _ _ (by omega) (by omega)]; exact hsl) hol (Nat.le_refl _) hroom hca
   have hc₁ : (m₁.arr64 CTL).size ≠ 0 := by have := ctl_pos hD₁.1; omega
   rw [plsK_some (hc := hc₁)] at hW
   cases n with
@@ -357,7 +358,7 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
   rw [hs₂] at hW₂
   obtain ⟨a₂, hrun₂, hD₂', hpw₂, hcp₂, hfr₂⟩ := piLs_rel p hp n _ a₁ hD₂ m.top
     (tfld m LVLS (tierW h) (idxW h) 1) (by simp only [SliceOK, htop₂, hT]; omega) us'
-    (by rw [hpool₂]; exact hsl₁) hk₁ _ _ hW₂
+    (by rw [vpool_congr hpool₂, sliceL_vpool _ _ _ (by omega) (by omega)]; exact hsl₁) hk₁ _ _ hW₂
   rw [← hm]
   refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [LSREC, LSSLOT, LSHP]) (by simp) hfr₂, hr ▸ hpw₂,
     hcp₂.trans hcp₁, ?_, he₁⟩

@@ -329,10 +329,10 @@ theorem natOpResultOK_of_agree {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = n
     (invoke_memFrame natArmProg_closed n (by decide) _ s₀)
   subst hs
   have hrun' := AM.run_of_ok _ _ hok
-  have hL : LeafStep a₀ (AM.st (natOpResult (decI c) (pv (s.mem.arr64 POOL) oa.toNat la.toNat)
-      (pv (s.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) := by
-    have h := leafOp_natOpResult (decI c) (pv (s.mem.arr64 POOL) oa.toNat la.toNat)
-      (pv (s.mem.arr64 POOL) ob.toNat lb.toNat)
+  have hL : LeafStep a₀ (AM.st (natOpResult (decI c) (pv (vpool s.mem) oa.toNat la.toNat)
+      (pv (vpool s.mem) ob.toNat lb.toNat)) a₀) := by
+    have h := leafOp_natOpResult (decI c) (pv (vpool s.mem) oa.toNat la.toNat)
+      (pv (vpool s.mem) ob.toNat lb.toNat)
     unfold LeafOp at h; exact h _ _ _ hrun'
   obtain ⟨hS', hSt⟩ := hS.of_natOp hR hL hf hPG
   exact ⟨hloc, hok, ⟨MM, hS', KeptAll.refl _ _, hSt⟩, hres, trivial⟩

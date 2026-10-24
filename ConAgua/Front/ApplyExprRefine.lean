@@ -76,11 +76,11 @@ theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 3
   obtain ⟨hok, hD', hres⟩ := L.Arena.internConst_D m a hA f x r hf hx m' hI
   exact ⟨hok, hD', hres, ceinternW_frame (hI := hI)⟩
 
-theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) o.toNat l.toNat)
+theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toNat l.toNat)
     (hI : internW m o l = some (r, m')) :
-    AM.ok (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a ∧
-    ArenaD m' (AM.st (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a) ∧
-    AM.res (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a = decE r ∧
+    AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
+    ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
+    AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r ∧
     MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
@@ -101,7 +101,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) 
       hD₁.letE, hD₁.proj⟩
 
 theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
     (hI : internWStr m o l = some (r, m')) :
     AM.ok (internE (.lit (.strVal s))) a ∧
     ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
@@ -126,7 +126,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
       hD₁.letE, hD₁.proj⟩
 
 theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
+    (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
     AM.ok (internLsNode us) a ∧ ArenaD m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI r ∧
     MemFrame [lsSch.ra, lsSch.sa, LSHP] [lsSch.ca, lsSch.ca + 1] m m' := by
@@ -452,7 +452,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   have hg32' : g.toNat < 2 ^ 32 := by simpa [UInt64.lt_iff_toNat_lt] using hg32
   -- `ls_put`: the pool grew by the items' level handles
   obtain ⟨hW, hc, hps, htop⟩ := hA.1.lit.1
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+  have hlen : (m.len64 POOL).toNat = pcap m := by
     simp only [Mem.len64]; exact toNat_ofNat_size _ hps
   unfold lsPutW at hP
   split at hP
@@ -475,7 +475,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   have hmap := mapM_level m st hD.levels _ us hus F7
   have hwl : ∀ y ∈ listN b.data c, (tblW m LID y).toNat < 2 ^ 32 :=
     fun y hy => (tbl_read hD.levels y (F7 y hy)).2.1
-  have hk : sliceL (m₂.arr64 POOL) m.top.toNat (lsPutL b.data c).toNat =
+  have hk : sliceL (vpool m₂) m.top.toNat (lsPutL b.data c).toNat =
       lsWords ((listN b.data c).map fun y => (decI (tblW m LID y) : LIdx)) := by
     rw [lsWords_map m _ hwl, sliceL, List.ext_getElem_iff]
     simp only [lsPutL, F1, List.length_ofFn, List.length_map, true_and]

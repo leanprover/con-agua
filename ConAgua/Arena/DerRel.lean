@@ -723,11 +723,11 @@ theorem internConst_D (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word)
 
 /-- **`intern_lit` refines `internE (.lit (.natVal _))` under `ArenaD`** (a leaf: range `0`). -/
 theorem internLit_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
-    (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) o.toNat l.toNat) (m' : Mem)
+    (hq : SliceOK m o l) (hn : Norm (vpool m) o.toNat l.toNat) (m' : Mem)
     (hI : internW m o l = some (r, m')) :
-    AM.ok (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a ∧
-    ArenaD m' (AM.st (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a) ∧
-    AM.res (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a = decE r := by
+    AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
+    ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
+    AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
   have hfr := consInternM_frame litCS_wf hI
@@ -791,13 +791,13 @@ theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
     (hp : p.lookup "intern_lit" = some internLit)
     (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hA : ArenaD s₀.mem a₀)
-    (hq : SliceOK s₀.mem o l) (hn : Norm (s₀.mem.arr64 POOL) o.toNat l.toNat) :
+    (hq : SliceOK s₀.mem o l) (hn : Norm (vpool s₀.mem) o.toNat l.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_lit" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
-      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ =
+      AM.ok (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ ∧
+      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
   have ⟨_, _, hps, htop⟩ := hA.1.lit.1
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)

@@ -64,7 +64,7 @@ structure ILWEnv (m : Mem) (a : AState) (ko kc vo vc : Word) (ks : List Name) (u
     (vs : List Level) : Prop where
   keys : NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks
   ktop : ko.toNat + kc.toNat ≤ (spTop m).toNat
-  vals : sliceL (m.arr64 POOL) vo.toNat vc.toNat = lsWords us
+  vals : sliceL (vpool m) vo.toNat vc.toNat = lsWords us
   vtop : vo.toNat + vc.toNat ≤ m.top.toNat
   vden : denoteLList a.store.ls us = some vs
 

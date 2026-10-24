@@ -161,8 +161,8 @@ theorem LvlCnt.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemF
 and the level tables only grew (`lvl`). -/
 structure PoolGrew (m m' : Mem) : Prop where
   top : m.top.toNat ≤ m'.top.toNat
-  size : (m'.arr64 POOL).size = (m.arr64 POOL).size
-  below : Agree (m'.arr64 POOL) (m.arr64 POOL) m.top.toNat
+  size : pcap m' = pcap m
+  below : Agree (vpool m') (vpool m) m.top.toNat
   lvl : LvlCnt m m'
 
 theorem PoolGrew.refl (m : Mem) : PoolGrew m m := ⟨Nat.le_refl _, rfl, Agree.refl _ _, LvlCnt.refl m⟩
@@ -176,11 +176,13 @@ theorem PoolGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : PoolGrew m₁ m₂) (h₂ 
 theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
     (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free) : PoolGrew m m' := by
   have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have ht : m'.top = m.top := by
     have := hf.2.1 0 hC
     simp only [rdW] at this
     simpa [Mem.top] using this
-  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp], LvlCnt.of_frame hf hL⟩
+  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hpv], LvlCnt.of_frame hf hL⟩
 
 theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
   ⟨h.2.2.1, h.2.2.2.2, h.2.1, LvlCnt.of_frame (grows_frame m m' h) (by lvl_free)⟩
@@ -253,13 +255,15 @@ theorem StackKept.of_frameL {m m' : Mem} {A : List ArrId} {C : List Word} (hf : 
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
   have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA.2.2 (by decide)
+  have hpv := vpool_congr hp
+  have hpc := pcap_congr hp
   have ht : m'.top = m.top := by
     have := hf.2.1 0 hC.2.2
     simp only [rdW] at this
     simpa [Mem.top] using this
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1,
-    ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp], hlc⟩⟩
+    ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hpv], hlc⟩⟩
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}

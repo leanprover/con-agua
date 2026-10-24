@@ -278,7 +278,7 @@ theorem zero_A (hI : zinternW m = some (w, m')) :
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
     AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaD m' (AM.st (internNNode (.str (decI q) s)) a) ∧
     AM.res (internNNode (.str (decI q) s)) a = decI w ∧
     MemFrame [nstrSch.ra, nstrSch.sa] [nstrSch.ca, nstrSch.ca + 1] m m' := by
@@ -384,7 +384,7 @@ variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR
 include hR hD
 
 theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
-    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (hk : sliceL (vpool m) o.toNat l.toNat = strWords s)
     (h : applyNStrW m i pre o l = some m') :
     AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a ∧
     ArenaD m' (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a) ∧
@@ -543,7 +543,7 @@ include hL hR hD in
 @[refines_part ConRon.Arena.Frontend.parseNameEntryD "str"]
 theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o l : Word)
     (hq : SliceOK s₀.mem o l) (s : String)
-    (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
+    (hk : sliceL (vpool s₀.mem) o.toNat l.toNat = strWords s) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nstr" [i, pre, o, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀ ∧
