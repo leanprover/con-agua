@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.LamStore
 
@@ -115,7 +115,7 @@ def LaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
 
 /-- **The state relation** of the `lam` store: the library's relation for the two `lam` tables. -/
 def LamR (m : Mem) (a : AState) : Prop :=
-  StoreR lamSch LaRecRel lahash m a.store.scratchOn a.store.pers.lams a.store.scr.lams
+  ConsR lamCS LaRecRel m a.store.scratchOn a.store.pers.lams a.store.scr.lams
 
 /-- A node's relation and hash depend only on its two words. -/
 theorem laFrame : RFrame lamSch LaRecRel lahash := by
@@ -151,14 +151,14 @@ theorem laHomeOK : HomeOK lahash (laMt m ty body) m (lamHashW ty body) := by
 include hty hbody in
 /-- The record `lam_push` writes holds the node. -/
 theorem laNewOK :
-    NewOK lamSch LaRecRel lahash m [ty, body] (laKey (decE ty) (decE body)) (lamHashW ty body) := by
-  intro t j ht hroom
-  have e : ∀ g, g < 2 → fld lamSch (pushG lamSch m t [ty, body] j (cntW lamSch m t)) t
+    NewOKR lamSch LaRecRel lahash m [ty, body] (laKey (decE ty) (decE body)) (lamHashW ty body) := by
+  intro t ht hroom
+  have e : ∀ g, g < 2 → fld lamSch (recW lamSch m t [ty, body]) t
       (cntW lamSch m t) g = [ty, body].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG lamSch lamSch_wf] <;> simp only [lamSch, Schema.ad] at * <;> grind
+    rw [fld_recW lamSch lamSch_wf] <;> simp only [lamSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_la0] at e0
@@ -185,6 +185,16 @@ theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom 
   have := UInt64.toNat_shiftRight (m.len64 LAREC) 2
   simp only [PushRoom, cntW, lacnt, lamSch, len64_eq] at *
   grind
+
+/-- **The `lam` table's shape.** -/
+theorem lamCS_wf : lamCS.WF where
+  sch := lamSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [lamCS] at h
+  colRoom A h := by simp [lamCS] at h
+  room m t h := (lapushOK_room m t ((lapushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, lamCS, hk]
 
 theorem lapushMem_eq (m : Mem) (t ty body j c : Word) :
     lapushMem m t ty body j c = pushG lamSch m t [ty, body] j c := by
@@ -229,16 +239,12 @@ include hR hty hbody in
 theorem laintern_correct (w : Word) (m' : Mem) (hI : lainternW m ty body = some (w, m')) :
     AM.ok (internE (.lam (decE ty) (decE body))) a ∧
     LamR m' (AM.st (internE (.lam (decE ty) (decE body))) a) ∧
-    AM.res (internE (.lam (decE ty) (decE body))) a = decE w := by
-  rw [lainternW_eq] at hI
-  exact intern_correctG lamSch LaRecRel lahash lamSch_wf laFrame lamLens a m hR _ _ _ _ _
-    (internE_lam_run _ _ a) (skLa a (decE ty) (decE body)) rfl _
-    (laskipW_eq m a ty body hty hbody hR.2.1)
-    (fun h => by simp only [skLa] at h; split at h <;> simp_all [lamLens]) _ _
-    (laMatchOK m ty body hty hbody) (laHomeOK m ty body) _ _
-    (probe_homeG lamSch m 0 _ _ (laprobeW_arm m ty body 0) _)
-    (probe_homeG lamSch m 1 _ _ (laprobeW_arm m ty body 1) _) _ (lapushOK_room m) _ rfl
-    (laNewOK m ty body hty hbody) w m' hI
+    AM.res (internE (.lam (decE ty) (decE body))) a = decE w :=
+  consIntern_correct lamCS_wf laFrame (colFree_none _ rfl) lamLens a hR _ _ _ _ _
+    (internE_lam_run _ _ a) (skLa a (decE ty) (decE body)) rfl [ty, body]
+    (laskipW_eq m a ty body hty hbody (ConsR.flag hR))
+    (fun h => by simp only [skLa] at h; split at h <;> simp_all [lamLens])
+    ⟨rfl, laMatchOK m ty body hty hbody, laHomeOK m ty body, laNewOK m ty body hty hbody⟩ w m' hI
 
 end intern
 
