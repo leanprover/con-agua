@@ -121,17 +121,19 @@ theorem internLNode_keep (w : LNodeView) (a a' : AState) (i : LIdx)
 /-! ## Level pointers keep their views across the store's interning -/
 
 /-- The level store's arrays: every level interning writes only there. -/
-abbrev lvArrs : List ArrId := [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SHP, MHP, IHP]
+abbrev lvArrs : List ArrId := [ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT, SHP, MHP, IHP,
+  ZREC + 256, ZSLOT + 256, SREC + 256, SSLOT + 256, MREC + 256, MSLOT + 256, IREC + 256, ISLOT + 256,
+  PREC + 256, PSLOT + 256, SHP + 256, MHP + 256, IHP + 256]
 /-- The level store's counts. -/
 abbrev lvCtl : List Word := [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 section
 set_option maxRecDepth 4000
-theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, zeroSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [succSch.ra, succSch.sa, SHP], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [maxSch.ra, maxSch.sa, MHP], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [imaxSch.ra, imaxSch.sa, IHP], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [paramSch.ra, paramSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
+theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, zeroSch.ra + 256, zeroSch.sa, zeroSch.sa + 256], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [succSch.ra, succSch.ra + 256, succSch.sa, succSch.sa + 256, SHP, SHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [maxSch.ra, maxSch.ra + 256, maxSch.sa, maxSch.sa + 256, MHP, MHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [imaxSch.ra, imaxSch.ra + 256, imaxSch.sa, imaxSch.sa + 256, IHP, IHP + 256], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [paramSch.ra, paramSch.ra + 256, paramSch.sa, paramSch.sa + 256], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]
 end
@@ -539,7 +541,7 @@ theorem arenaD_frame_hi {m m' : Mem} {a : AState} {A : List ArrId} {C : List Wor
     (hA : ArenaD m a) (hf : MemFrame A C m m') (hA' : ∀ b ∈ A, 64 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA' hC m m' hf a hA.1,
-    DerR.frameM A C m m' hf (fun b hb => .inr (by have := hA' b hb; simp only [ArrId] at this ⊢; omega)) a hA.2⟩
+    DerR.frameM A C m m' hf (fun b hb => by have := hA' b hb; simp only [ArrId] at this ⊢; omega) a hA.2⟩
 
 /-- **The model of `caps_never_zero` is `(substPW ks vs pw).isNever`**, the keys an `EREC` name
 slice, the values the readback of the list `us`, the datum `pw` related at `(swd, so, sc)`; it
