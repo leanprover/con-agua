@@ -394,12 +394,57 @@ w("Left axis: share of the twin's Lean lines proven, proven locally (own proof c
   "L code includes named statement blocks (`lblk`, ~2.8k lines) since 2026-10-24, at every point (they were counted as proof before).\n")
 w(f"![Proven share and lines of code per census run]({raw_url('trend.svg')})\n")
 
-# phases
-w("## By phase\n")
-w("Lean lines of con-ron's arena twin per phase.\n")
-w(f"![Lean lines per phase: proven, proven with sorry, L written, not started]({raw_url('phases.svg')})\n")
 
 # performance
+def behind(rev, date):
+    """' (N commits and H h behind master)' when `rev` is not master's HEAD, else ''."""
+    try:
+        n = int(git("rev-list", "--count", f"{rev}..master"))
+    except ValueError:
+        return ""
+    if n == 0:
+        return ""
+    try:
+        t = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M UTC").replace(tzinfo=datetime.timezone.utc)
+        h = (datetime.datetime.now(datetime.timezone.utc) - t).total_seconds() / 3600
+        age = f"{h:.0f} h" if h >= 1.5 else f"{h * 60:.0f} min"
+    except ValueError:
+        age = "?"
+    return f" (**{n} commit{'s' if n != 1 else ''} and {age} behind master**)"
+
+
+def init_bench():
+    """The Init benchmark the census run writes (_tmp/dash/init-bench.json), or None."""
+    try:
+        d = json.loads((dash / "init-bench.json").read_text())
+        fid = next(k for k in d["fixtures"] if "init435" in k)
+        return d, d["fixtures"][fid]
+    except Exception:
+        return None
+
+
+ib = init_bench()
+if perf or ib:
+    w("## Performance\n")
+if ib:
+    d, fx = ib
+    w(f"**Init** (Lean v4.35.0 `Init` export, 57 919 declarations), measured {d['date']} on master `{d['rev']}`{behind(d['rev'], d['date'])}: "
+      f"`scripts/bench.py --set init`, {len(next(iter(fx.values()))['runs'])} interleaved rounds (median), "
+      f"L = the committed `asm/checker.s`, con-ron `--jobs=1`; load {d.get('load', '?')}.\n")
+    w("| | Instructions | Wall | Peak RSS |")
+    w("|---|---:|---:|---:|")
+    for n in d["systems"]:
+        x = fx[n]["stats"]
+        ins = f"{x['instr'] / 1e9:.0f} G" if x.get("instr") else "–"
+        rss = f"{x['rss'] / 2**30:.2f} GB" if x.get("rss") else "–"
+        v = "" if x.get("verdict") == "accept" else f" **{x.get('verdict')}**"
+        w(f"| {n}{v} | {ins} | {x['wall']:.1f} s | {rss} |")
+    if "L" in fx and "con-ron" in fx:
+        a, b = fx["L"]["stats"], fx["con-ron"]["stats"]
+        ri = f"{a['instr'] / b['instr']:.2f}" if a.get("instr") and b.get("instr") else "–"
+        rr = f"{a['rss'] / b['rss']:.2f}" if a.get("rss") and b.get("rss") else "–"
+        w(f"| **L / con-ron** | {ri} | {a['wall'] / b['wall']:.2f} | {rr} |")
+    w("")
 if perf:
     import math
     rows = sorted(perf["rows"], key=lambda r: r["perf"]["L"] / r["perf"]["con-ron"])
@@ -407,9 +452,8 @@ if perf:
     gm = math.exp(sum(math.log(v) for v in ratios) / len(ratios))
     med = (ratios[len(ratios) // 2] + ratios[(len(ratios) - 1) // 2]) / 2
     tl = sum(r["perf"]["L"] for r in rows); tc = sum(r["perf"]["con-ron"] for r in rows)
-    w("## Performance\n")
     w(f"CPU instructions (`perf stat -e instructions:u`, one run each) of the compiled L `check` against `con-ron --jobs=1` on the "
-      f"**{len(rows)}** end-to-end fixtures both accept (of {perf['fixtures']}). Measured {perf['date']} on master `{perf['rev']}` by `scripts/e2e.py`.\n")
+      f"**{len(rows)}** end-to-end fixtures both accept (of {perf['fixtures']}). Measured {perf['date']} on master `{perf['rev']}`{behind(perf['rev'], perf['date'])} by `scripts/e2e.py`.\n")
     w("| Fixtures | Geometric mean L / con-ron | Median | Fastest relative | Slowest relative | Total L | Total con-ron | Total ratio |")
     w("|---:|---:|---:|---|---|---:|---:|---:|")
     w(f"| {len(rows)} | **{gm:.2f}** | {med:.2f} | {ratios[0]:.2f} (`{rows[0]['id']}`) | {ratios[-1]:.2f} (`{rows[-1]['id']}`) | "
