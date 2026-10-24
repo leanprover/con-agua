@@ -330,7 +330,7 @@ theorem piNStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq :
     (hp.get "nstr_find") (hp.get "nstr_push") (hp.get "intern_nstr") n ⟨m.set64 CTL 1 0, Locals.init []⟩ q o l
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := nsintern_correct _ (onA false a) hR₀.lit.1 hR₀.nstr q o l hq.1 hsl₀ s
-    (by rw [hpool]; exact hk) _ _ hI
+    (by rw [hpoolv]; exact hk) _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
   have hR₁ := hR₀.lift_nstr _ _ _ _ hX hf
     (AM.st_proto nstrLens _ _ _ _ _ _ _ (internNNode_str_run _ _ _) hok)
@@ -538,9 +538,9 @@ theorem piLs_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : Sl
     (hp.get "ls_find") (hp.get "ls_push") (hp.get "intern_ls") n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
     (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
   obtain ⟨hok, hX, hres⟩ := lsintern_correct _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us
-    (by rw [hpool]; exact hk) _ _ hI
-  have hL := lsintern_hp _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us (by rw [hpool]; exact hk) hR₀.lsHp
-    (lsOrW_ok _ _ hR₀ o l hsl₀ us (by rw [hpool]; exact hk)) _ _ hI
+    (by rw [hpoolv]; exact hk) _ _ hI
+  have hL := lsintern_hp _ (onA false a) hR₀.lit.1 hR₀.ls o l hsl₀ us (by rw [hpoolv]; exact hk) hR₀.lsHp
+    (lsOrW_ok _ _ hR₀ o l hsl₀ us (by rw [hpoolv]; exact hk)) _ _ hI
   have hf := lsinternW_frame _ o l _ _ hI
   have hR₁ := hR₀.lift_ls _ _ _ _ ⟨hX, hL⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ _ (internLsNode_run _ _) hok)

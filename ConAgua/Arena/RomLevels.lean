@@ -198,24 +198,24 @@ theorem sputW_size (top b k : Word) (a : ArrId) :
     rw [sputW]; simp only [hjn, ↓reduceIte]
     rw [ih _ _ (by omega), size_set64]
 
-theorem stkPoolOK_room (m : Mem) (k : Word) (h : stkPoolOK m k) (hs : pcap m < 2 ^ 63) :
-    m.top.toNat + k.toNat ≤ pcap m := by
+theorem stkPoolOK_room (m : Mem) (k : Word) (h : stkPoolOK m k) (hs : (m.arr64 POOL).size < 2 ^ 63) :
+    m.top.toNat + k.toNat ≤ (m.arr64 POOL).size := by
   obtain ⟨h3, h4⟩ := h
-  have hlen : (m.len64 POOL).toNat = pcap m := by
+  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ hs
   have := UInt64.le_iff_toNat_le.mp h4
   have := UInt64.le_iff_toNat_le.mp h3
   rw [UInt64.toNat_sub_of_le _ _ h3, hlen] at *
   omega
 
-grind_pattern [arena_grind] stkPoolOK_room => stkPoolOK m k, pcap m
+grind_pattern [arena_grind] stkPoolOK_room => stkPoolOK m k, (m.arr64 POOL).size
 
 theorem stkPool_specW (hp : p.lookup "stk_pool" = some stkPool) (n : Nat) (s₀ : St) (b k : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "stk_pool" [b, k]
     ⦃fun r s' => LocEq s' s₀ ∧ stkPoolOK s₀.mem k ∧ r = [s₀.mem.top] ∧
       s'.mem = (sputW s₀.mem s₀.mem.top b k 0).set64 CTL 0 (s₀.mem.top + k) ∧
-      pcap s'.mem = pcap s₀.mem; ⊤⦄ := by
+      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size; ⊤⦄ := by
   have hsz := fun m top => sputW_size top b k POOL _ m 0 rfl
   rw [invoke_eq _ hp]
   simp only [callFn, stkPool]
@@ -308,7 +308,7 @@ section spec
 variable (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
 include hL
 
-theorem romLvlsGo_specW (n : Nat) : ∀ (s₀ : St) (q k : Word), pcap s₀.mem < 2 ^ 63 →
+theorem romLvlsGo_specW (n : Nat) : ∀ (s₀ : St) (q k : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_lvls_go" [q, k]
     ⦃fun r s' => LocEq s' s₀ ∧ romLvlsW rom n s₀.mem q k = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -327,7 +327,7 @@ theorem romLvlsGo_specW (n : Nat) : ∀ (s₀ : St) (q k : Word), pcap s₀.mem 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hl', hp', ih'] <;>
       finish [Keep.size]
 
-theorem romLevels_specW (n : Nat) (s₀ : St) (pos : Word) (hs : pcap s₀.mem < 2 ^ 63) :
+theorem romLevels_specW (n : Nat) (s₀ : St) (pos : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_levels" [pos]
     ⦃fun r s' => LocEq s' s₀ ∧ romLevelsW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
@@ -386,13 +386,13 @@ theorem pushMem_stk (m : Mem) (h x : Word) (hx : (stkTop m).toNat < (m.arr64 RST
 
 theorem sputW_facts (top b n : Word) (hv : b.toNat + n.toNat < 2 ^ 64) :
     ∀ (d : Nat) (m : Mem) (j : Word), n.toNat - j.toNat = d → j ≤ n →
-      top.toNat + n.toNat ≤ pcap m → pcap m < 2 ^ 63 →
+      top.toNat + n.toNat ≤ (m.arr64 POOL).size → (m.arr64 POOL).size < 2 ^ 63 →
       Frame POOL m (sputW m top b n j) ∧
-      ((sputW m top b n j).arr64 POOL).size = pcap m ∧
+      ((sputW m top b n j).arr64 POOL).size = (m.arr64 POOL).size ∧
       ∀ x, ((sputW m top b n j).arr64 POOL)[x]? =
         if top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat then
           some (rdW (m.arr64 RSTK) (b + UInt64.ofNat (x - top.toNat)))
-        else (vpool m)[x]? := by
+        else (m.arr64 POOL)[x]? := by
   intro d
   induction d with
   | zero =>
@@ -424,7 +424,7 @@ theorem sputW_facts (top b n : Word) (hv : b.toNat + n.toNat < 2 ^ 64) :
       · subst h2
         have : b + UInt64.ofNat (top.toNat + j.toNat - top.toNat) = b + j := by
           simp
-        simp [show top.toNat + j.toNat < pcap m by omega, this]
+        simp [show top.toNat + j.toNat < (m.arr64 POOL).size by omega, this]
         intro h; omega
       · simp only [h1, ↓reduceIte, h2, false_and, ↓reduceIte]
         have : ¬ (top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat) := by omega
@@ -435,7 +435,7 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
     (hbk : b.toNat + k.toNat < 2 ^ 63) :
     Grows m ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)) ∧
     SliceOK ((sputW m m.top b k 0).set64 CTL 0 (m.top + k)) m.top k ∧
-    sliceL (((sputW m m.top b k 0).set64 CTL 0 (m.top + k)).arr64 POOL) m.top.toNat k.toNat =
+    sliceL (vpool ((sputW m m.top b k 0).set64 CTL 0 (m.top + k))) m.top.toNat k.toNat =
       (List.range k.toNat).map (fun j => rdW (m.arr64 RSTK) (b + UInt64.ofNat j)) := by
   obtain ⟨hw, hc, hps, htop⟩ := hpool
   have hroom := stkPoolOK_room m k hok hps
@@ -451,12 +451,14 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
   have htop' := Mem.top_set64 _ (m.top + k) hctl
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · intro x hxt; rw [hpool', hx]; simp; omega
+  · exact Agree.vpool (fun x hxt => by rw [hpool', hx]; simp; omega) (by omega)
+      (by rw [hpool', hsz]; omega) (by omega) (by rw [hpool', hsz]; omega)
   · rw [htop', hT]; omega
   · rw [htop', hT, hpool', hsz]; omega
   · rw [hpool', hsz]
   · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', sliceL, List.ext_getElem_iff]
+  · rw [sliceL_vpool _ _ _ (by rw [hpool', hsz]; omega) (by rw [hpool', hsz]; omega), hpool', sliceL,
+      List.ext_getElem_iff]
     refine ⟨by simp, fun j hk₁ hk₂ => ?_⟩
     simp only [List.length_ofFn] at hk₁
     simp only [List.getElem_ofFn, hx, List.getElem_map, List.getElem_range]
@@ -622,9 +624,9 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
       simp only [Mem.top, Mem.arr64_set64_same]; rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       simp
     simp only [SliceOK, this]; exact hsl
-  have hk3 : sliceL ((m₂.set64 CTL 131 (stkTop m)).arr64 POOL) m₁.top.toNat (UInt64.ofNat us.length).toNat =
+  have hk3 : sliceL (vpool (m₂.set64 CTL 131 (stkTop m))) m₁.top.toNat (UInt64.ofNat us.length).toNat =
       lsWords (AM.res (internLevelList us) a) := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hk, hws1, hkN]
+    rw [vpool_set64_ne _ _ _ _ (by decide), hk, hws1, hkN]
   cases hI : lsinternW (m₂.set64 CTL 131 (stkTop m)) m₁.top (UInt64.ofNat us.length) with
   | none => rw [hI] at hW; simp [lsK] at hW
   | some t =>

@@ -612,7 +612,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   dsimp only at hW
   obtain ⟨hok3, hS3, hres3, hfr3, hP3⟩ := callW_natPredLit p hp n ⟨m₂, Locals.init []⟩ _ dn vis fe MM eb o cnt
     hS hs₂ r₃ m₃ h3
-  rw [hPool, hk] at hok3 hS3 hres3
+  rw [hPoolv, hk] at hok3 hS3 hres3
   cases h4 : callW p n "mk_app" [r₂.headD 0, r₃.headD 0] m₃ with
   | none => rw [h4] at hW; cases hW
   | some q₄ =>
@@ -802,14 +802,14 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
       (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)) := by
     unfold SliceOK; rw [hTop]; exact hsl
   have hn₁ : Norm (vpool m₁) (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
-      (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat := by rw [hPool]; exact hnorm
+      (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat := by rw [hPoolv]; exact hnorm
   have hctor := natLitToCtor_refines p hp n ⟨m₁, Locals.init []⟩ _ dn vis fe MM eb _ _ hS1 hs₁ hn₁
   obtain ⟨hok2, hA2, hres2, hrw2⟩ := CoreSpec.of_callW hctor h2
   have hc2 := AM.run_of_ok _ _ hok2
   rw [hres2] at hc2
   dsimp only at hc2 hA2 hrw2
-  rw [hPool, hpv] at hc2
-  rw [hPool, hpv] at hA2
+  rw [hPoolv, hpv] at hc2
+  rw [hPoolv, hpv] at hA2
   have hz := litToCtor_run_sup fe a₀ _ _ h hh hg8 N hview hsup _ hc2
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', ?_, ?_, ?_⟩
