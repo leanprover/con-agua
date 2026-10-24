@@ -410,6 +410,24 @@ theorem MFr.mono {S S' : List ArrId} {T T' : List Word} {m m' : Mem} (h : MFr S 
 theorem MFr.up {S : List ArrId} {T : List Word} {m m' : Mem} (h : MFr [] [] m m') : MFr S T m m' :=
   h.mono (by simp) (by simp)
 
+/-- `mfr_auto h [f₁, …]` proves `MFr S T m m'` from `h : model = some (r, m')` once the model's
+continuations are unfolded at `h`: it splits `h`'s `match`es and `if`s in evaluation order, and at
+each callee hypothesis `callee … = some (x, m₁)` steps the frame by the first `fᵢ` that applies
+to it (an `MFr [] []` frame is weakened to any `S T`). -/
+syntax "mfr_auto" ident "[" term,* "]" : tactic
+macro_rules
+  | `(tactic| mfr_auto $h [$ts,*]) => `(tactic|
+    repeat' (first
+      | with_reducible exact MFr.refl _ _ _
+      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; exact MFr.refl _ _ _)
+      | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact MFr.refl _ _ _)
+      | (simp only [reduceCtorEq] at $h:ident; done)
+      | (first $[| refine MFr.trans ($ts (by with_reducible assumption)) ?_]*)
+      | (first $[| refine MFr.trans (MFr.up ($ts (by with_reducible assumption))) ?_]*)
+      | (first $[| refine MFr.trans (MFr.mono ($ts (by with_reducible assumption)) (by simp) (by simp)) ?_]*)
+      | split at $h:ident))
+
+
 theorem MFr.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b < 201 ∨ 208 < b) (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) : MFr [] [] m m' :=
   ⟨A, C, hf, fun b hb => by rcases hA b hb with h | h; exact .inl h; exact .inr (.inl h),

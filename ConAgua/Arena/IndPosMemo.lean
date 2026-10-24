@@ -150,25 +150,7 @@ theorem piBW_mfr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), p
     obtain ⟨-, rfl⟩ := hh
     exact (piBW_mfr n _ _ _ _ _ h1).trans (consW_mfr h2)
 
-/-! ## Frames of the models, by `mfr_auto`
-
-`mfr_auto h [f₁, …]` proves `MFr S T m m'` from `h : model = some (r, m')` once the model's
-continuations are unfolded at `h`: it splits `h`'s `match`es and `if`s in evaluation order, and at
-each callee hypothesis `callee … = some (x, m₁)` steps the frame by the first `fᵢ` that applies
-to it (an `MFr [] []` frame is weakened to any `S T`). -/
-
-syntax "mfr_auto" ident "[" term,* "]" : tactic
-macro_rules
-  | `(tactic| mfr_auto $h [$ts,*]) => `(tactic|
-    repeat' (first
-      | with_reducible exact MFr.refl _ _ _
-      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; exact MFr.refl _ _ _)
-      | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact MFr.refl _ _ _)
-      | (simp only [reduceCtorEq] at $h:ident; done)
-      | (first $[| refine MFr.trans ($ts (by with_reducible assumption)) ?_]*)
-      | (first $[| refine MFr.trans (MFr.up ($ts (by with_reducible assumption))) ?_]*)
-      | (first $[| refine MFr.trans (MFr.mono ($ts (by with_reducible assumption)) (by simp) (by simp)) ?_]*)
-      | split at $h:ident))
+/-! ## Frames of the models, by `mfr_auto` (`IndPos2SpecC`) -/
 
 /-- Across `fvar_b` (its write set, the `fvarRange` memo). -/
 theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r, m')) : MFr [] [] m m' :=
