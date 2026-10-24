@@ -49,5 +49,4 @@ dead code removed, without changing `ConAgua.Final.checkerFile_accepts_remaining
   [propext, Classical.choice, Quot.sound]. Census: same table, same targets/edges (`T`/`E`/`R`
   lines identical), links = the old ones minus the 33. `asm_file.py --check`, `modules_check.py`,
   `provenance.py check` pass.
-* `scripts/census.py`: `e2e_metrics` read `ASM["src"]`, which is absent when the end-to-end theorem
-  has no sorry sources (a `KeyError` after the table); now `ASM.get("src", [])`.
+* (`scripts/census.py`'s `KeyError` on an empty sorry-source list: fixed on master meanwhile, d1894016.)
