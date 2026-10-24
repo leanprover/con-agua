@@ -610,20 +610,14 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hf' : f = CWF := Decidable.not_not.mp hf
   subst hf'
   generalize htop : rdW (m.arr64 CTL) 136 = top at c'
-  cases c1 : callW gaaProg k "get_app_args" [e] m with
-  | none => rw [c1] at c'; simp at c'
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
+  rcases c1 : callW gaaProg k "get_app_args" [e] m with _ | ⟨r1, m1⟩
+  · rw [c1] at c'; simp at c'
   rw [c1, bW_some] at c'
-  cases ha : allocW m1 (r1.tail.headD 0) with
-  | none => rw [ha] at c'; cases c'
-  | some q2 =>
-  obtain ⟨q, m2⟩ := q2
+  rcases ha : allocW m1 (r1.tail.headD 0) with _ | ⟨q, m2⟩
+  · rw [ha] at c'; cases c'
   rw [ha, gaaK_some] at c'
-  cases c3 : s2iW k m2 q (r1.headD 0) (r1.tail.headD 0) with
-  | none => rw [c3] at c'; simp at c'
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
+  rcases c3 : s2iW k m2 q (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r3, m3⟩
+  · rw [c3] at c'; simp at c'
   rw [c3, bW_some] at c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   -- `get_app_args`

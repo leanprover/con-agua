@@ -566,10 +566,8 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
     obtain ⟨⟨c, hc', -⟩, -, -⟩ := decMS_some hms
     exact partsIwLt hc'
   unfold brrW at hm'
-  cases h1 : memberNamesW n s₀.mem q with
-  | none => rw [h1] at hm'; cases hm'
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases h1 : memberNamesW n s₀.mem q with _ | ⟨r1, m1⟩
+  · rw [h1] at hm'; cases hm'
   rw [h1] at hm'
   simp only at hm'
   obtain ⟨hr1, hd1, hg1, hf1, ht1⟩ := memberNamesW_dec h1 hsz hcl hq' (by omega) hsrc hptr
@@ -592,10 +590,8 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
     (by rw [hkW]; exact decHL_decB hd1 (Nat.le_of_eq ht1)) (by rw [hkW]; omega)
     (memoRG_frame maSch maSch_wf bmKey (fun w : Word => w != 0) [IW] [200] (by decide) (by simp [maSch])
       s₀.mem m1 hf1 mp hmp)
-  cases h2 : brgoW n m1 (rdW (s₀.mem.arr64 CTL) 200) (UInt64.ofNat bs.k) o l with
-  | none => rw [h2] at hm'; cases hm'
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
+  rcases h2 : brgoW n m1 (rdW (s₀.mem.arr64 CTL) 200) (UInt64.ofNat bs.k) o l with _ | ⟨r2, m2⟩
+  · rw [h2] at hm'; cases hm'
   rw [h2] at hm'
   obtain ⟨rfl, hm2⟩ := Prod.mk.inj (Option.some.inj hm')
   obtain ⟨b, a', hrun, hR⟩ := hsim r2 m2 h2

@@ -176,10 +176,8 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') dn q.toNat = some (.indInfo cvv c) ∧ H (rdW (m'.arr64 EREC) (q + 1)) := by
   unfold iirW at h
-  cases h1 : erAllocW m 20 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
+  rcases h1 : erAllocW m 20 with _ | ⟨q1, m1⟩
+  · rw [h1] at h; cases h
   rw [h1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS (iirWs m cv caps) (by simp [iirWs])

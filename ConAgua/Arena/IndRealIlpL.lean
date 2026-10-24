@@ -214,10 +214,8 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   rw [show (4000000000 : Word).toNat = coreWalkFuel from rfl]
   generalize s₀.mem = m at hS hlps hW hsz0
   -- `keys_push_iw`
-  cases h1 : callW p k "keys_push_iw" [po, pl] m with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨bs, m₁⟩ := q
+  rcases h1 : callW p k "keys_push_iw" [po, pl] m with _ | ⟨bs, m₁⟩
+  · rw [h1] at hW; cases hW
   rw [h1, ilwLPK₁_some] at hW
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (keysPushIW_spec p hkp hik k _ po pl) h1
@@ -261,10 +259,8 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
     rw [UInt64.toNat_add]; simp only [spTop] at t1' t2' ⊢; omega
   -- the core
   rw [← hb] at hW
-  cases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with
-  | none => rw [h2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m₂⟩ := q
+  rcases h2 : callW p (k + 1) "inst_lp_core" [spTop m, pl, us, e] (mc.set64 CTL 136 (spTop m + pl)) with _ | ⟨r2, m₂⟩
+  · rw [h2] at hW; cases hW
   rw [h2, ilwLPK₂_some] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)

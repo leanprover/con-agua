@@ -388,18 +388,14 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only at hs' hW
   rw [hs'] at hW
   unfold nriW at hW
-  cases h1 : callW nriProg n "dec_len" [i] m with
-  | none => rw [h1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₁⟩ := q1
+  rcases h1 : callW nriProg n "dec_len" [i] m with _ | ⟨r₁, m₁⟩
+  · rw [h1] at hW; cases hW
   rw [h1] at hW
   simp only at hW
   obtain ⟨rfl, hk⟩ := callW_dl h1
   generalize r₁.headD 0 = k at hW hk
-  cases h2 : callW nriProg n "pool_room" [k + 4] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₂⟩ := q2
+  rcases h2 : callW nriProg n "pool_room" [k + 4] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [h2] at hW; cases hW
   rw [h2] at hW
   simp only at hW
   obtain ⟨ho, hm₂, hno, hroom⟩ := prW_some (callW_pr rfl h2)
@@ -427,10 +423,8 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have eR : (m₁.top + (k + 4)).toNat = m₁.top.toNat + (k + 4).toNat := by
       rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt hno
     simp only [SliceOK, htop4, htop, eR]; omega
-  cases h4 : callW nriProg n "intern_nstr" [x, m₁.top, k + 4] m₄ with
-  | none => rw [h4] at hW; cases hW
-  | some q4 =>
-  obtain ⟨r₄, m₅⟩ := q4
+  rcases h4 : callW nriProg n "intern_nstr" [x, m₁.top, k + 4] m₄ with _ | ⟨r₄, m₅⟩
+  · rw [h4] at hW; cases hW
   rw [h4] at hW
   simp only at hW
   obtain ⟨c, hW⟩ := of_ite_none hW

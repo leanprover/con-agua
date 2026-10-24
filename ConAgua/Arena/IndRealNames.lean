@@ -333,10 +333,8 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   simp only at hs' hW
   rw [hs'] at hW
   unfold nrW at hW
-  cases h1 : callW nrProg n "pool_room" [3] m with
-  | none => rw [h1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₁⟩ := q1
+  rcases h1 : callW nrProg n "pool_room" [3] m with _ | ⟨r₁, m₁⟩
+  · rw [h1] at hW; cases hW
   rw [h1] at hW
   simp only at hW
   obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1)
@@ -344,10 +342,8 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   have hpool : PoolOK m := hS.1.arena.1.lit.1
   obtain ⟨hg, hsl, hk, hsz⟩ := recBytes_ok m hpool hno hroom
   generalize hm₂ : recBytes (m.set64 CTL 0 (m.top + 3)) m.top = m₂ at hW hg hsl hk hsz
-  cases h2 : callW nrProg n "intern_nstr" [x, m.top, 3] m₂ with
-  | none => rw [h2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₃⟩ := q2
+  rcases h2 : callW nrProg n "intern_nstr" [x, m.top, 3] m₂ with _ | ⟨r₂, m₃⟩
+  · rw [h2] at hW; cases hW
   rw [h2] at hW
   simp only at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
@@ -471,24 +467,18 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   simp only at hs' hW
   rw [hs'] at hW
   unfold ilwW at hW
-  cases h1 : callW ilProg n "pool_room" [l] m with
-  | none => rw [h1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₁⟩ := q1
+  rcases h1 : callW ilProg n "pool_room" [l] m with _ | ⟨r₁, m₁⟩
+  · rw [h1] at hW; cases hW
   rw [h1] at hW
   simp only at hW
   obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1)
   rw [ho] at hW
-  cases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with
-  | none => rw [h2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₂⟩ := q2
+  rcases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [h2] at hW; cases hW
   rw [h2] at hW
   simp only at hW
-  cases h3 : callW ilProg n "intern_ls" [m.top, l] m₂ with
-  | none => rw [h3] at hW; cases hW
-  | some q3 =>
-  obtain ⟨r₃, m₃⟩ := q3
+  rcases h3 : callW ilProg n "intern_ls" [m.top, l] m₂ with _ | ⟨r₃, m₃⟩
+  · rw [h3] at hW; cases hW
   rw [h3] at hW
   simp only at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
@@ -632,10 +622,8 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   have hpsz : ((ptMem m o).arr64 POOL).size = (m.arr64 POOL).size := by
     simp only [ptMem, ptBytes, size_set64]
   have hk := ptMem_slice m o hno hsz
-  cases hc1 : callW ptProg n "intern_nstr" [t, o, 9] (ptMem m o) with
-  | none => rw [hc1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₂⟩ := q1
+  rcases hc1 : callW ptProg n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩
+  · rw [hc1] at hW; cases hW
   rw [hc1] at hW
   simp only at hW
   obtain ⟨c7, hW⟩ := of_ite_none hW
@@ -658,10 +646,8 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
     have := mt UInt64.le_iff_toNat_le.mpr c7
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
     rw [e] at this; omega
-  cases hc2 : callW ptProg n "intern_nnum" [r₁.headD 0, 0] m₂ with
-  | none => rw [hc2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₃⟩ := q2
+  rcases hc2 : callW ptProg n "intern_nnum" [r₁.headD 0, 0] m₂ with _ | ⟨r₂, m₃⟩
+  · rw [hc2] at hW; cases hW
   rw [hc2] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨s₃, hs₃, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)

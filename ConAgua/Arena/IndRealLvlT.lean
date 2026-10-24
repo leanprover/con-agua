@@ -64,10 +64,8 @@ theorem lvlEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word) (hu :
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
   rw [if_neg h1] at h
-  cases hl : lvlEqW n m u v with
-  | none => simp [hl, rcdK] at h
-  | some q =>
-  obtain ⟨z₁, m₁⟩ := q
+  rcases hl : lvlEqW n m u v with _ | ⟨z₁, m₁⟩
+  · simp [hl, rcdK] at h
   rw [hl] at h
   cases n with
   | zero => simp [lvlEqW] at hl
@@ -97,10 +95,8 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
   rw [if_neg h1] at h
-  cases hl : lvlsEqW n m us vs with
-  | none => simp [hl, rcdK] at h
-  | some q =>
-  obtain ⟨z₁, m₁⟩ := q
+  rcases hl : lvlsEqW n m us vs with _ | ⟨z₁, m₁⟩
+  · simp [hl, rcdK] at h
   rw [hl] at h
   cases n with
   | zero => simp [lvlsEqW] at hl

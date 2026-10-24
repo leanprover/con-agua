@@ -88,10 +88,8 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
   unfold selmW at hm
   by_cases hlg : large ≠ 0
   · rw [if_pos hlg] at hm
-    cases c : callW p n "intern_param" [elim] s₀.mem with
-    | none => rw [c] at hm; cases hm
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
+    rcases c : callW p n "intern_param" [elim] s₀.mem with _ | ⟨r1, m1⟩
+    · rw [c] at hm; cases hm
     rw [c] at hm
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
     obtain ⟨s1, hs1, -, hI⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
@@ -105,10 +103,8 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     simp only [List.headD_cons, ConRon.Arena.structElimLevel, hb, ite_true]
     exact hrun
   · rw [if_neg hlg] at hm
-    cases c : callW p n "intern_zero" [] s₀.mem with
-    | none => rw [c] at hm; cases hm
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
+    rcases c : callW p n "intern_zero" [] s₀.mem with _ | ⟨r1, m1⟩
+    · rw [c] at hm; cases hm
     rw [c] at hm
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
     obtain ⟨s1, hs1, -, hI⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)

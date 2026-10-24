@@ -262,10 +262,8 @@ theorem crfF_keepsCrOK {m m' : Mem} {args r : List Word} (h : crfF m args = some
   have hW := callW_model (M := fun mm => crffW crfP k mm (args.getD 0 0) (args.getD 1 0))
     (crff_specA crfP crfP_prog k · args) hn
   simp only [crffW] at hW
-  cases h1 : callW crfP k "crm_clear" [] m with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨rc, mc⟩ := q
+  rcases h1 : callW crfP k "crm_clear" [] m with _ | ⟨rc, mc⟩
+  · rw [h1] at hW; cases hW
   rw [h1] at hW
   obtain ⟨s', hmc, -, hw, hclr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (memoClearG_spec crSch crfP "crm_clear" crfP_prog.clear k _) h1
