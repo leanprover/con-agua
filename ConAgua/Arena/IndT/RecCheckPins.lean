@@ -86,10 +86,7 @@ theorem tptW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
           (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
           (fun y hy => hw y (List.mem_cons_of_mem _ hy))
         refine ⟨a2, ?_, hC2, hg1.trans hg2, hA2⟩
-        simp only [ConRon.Arena.targetPinTys, StateT.run_bind]
-        rw [← hw3]
-        rw [hrun1]
-        simp only [bind, Except.bind]
+        rw [ConRon.Arena.targetPinTys, StateT.run_bind, ← hw3, hrun1]
         exact hrun2
 
 include hq henv in

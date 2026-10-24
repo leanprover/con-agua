@@ -182,10 +182,7 @@ theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       have hz : k.toNat = (k.toNat - 1) + 1 := by omega
       rw [hk1, hc1] at hrun2
       rw [hz]
-      simp only [ConRon.Arena.abstractPrefix, StateT.run_bind]
-      rw [hrun1]
-      simp only [bind, Except.bind]
-      rw [← hd2]
+      simp only [ConRon.Arena.abstractPrefix, StateT.run_bind, hrun1, except_ok_bind, ← hd2]
       exact hrun2
 
 /-- **`abstract_prefix` refines `abstractPrefix`** (through the `abstract1_fast` stub). -/
