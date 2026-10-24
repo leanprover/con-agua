@@ -377,7 +377,7 @@ def ilProg : Prog :=
 def ilFns : List FnName := ilProg.map (·.1)
 
 /-- `intern_ls_iw` writes the pool (and its top) and the list table with its column. -/
-theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] ilFns = true := by
+theorem ilProg_closed : closedA ilProg [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] ilFns = true := by
   decide +kernel
 
 abbrev IlF (p : Prog) : Prop := ProgHas p ilProg
@@ -392,7 +392,7 @@ theorem ilF_spec (p : Prog) (hp : IlF p) (n : Nat) (s₀ : St) (args : List Word
   callF_spec ilProg_closed (hp.agree ilFns) (by decide) n s₀ args
 
 theorem ilF_frame {m m' : Mem} {args r : List Word} (h : ilF m args = some (r, m')) :
-    MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' := by
+    MemFrame [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame ilProg_closed (by decide) (run_of_callW hc)).1
 
@@ -512,7 +512,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
   obtain ⟨hca, hpi, -⟩ := internLsNode_keep _ _ _ _ hrun
-  have hfr : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m₃ :=
+  have hfr : MemFrame [POOL, LSREC, LSREC + 256, LSSLOT, LSSLOT + 256, LSHP, LSHP + 256] [0, 40, 41] m m₃ :=
     ((grows_frame m m₂ hg).mono (by simp) (by simp)).trans
       (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
   obtain ⟨hS', hg'⟩ := StageR.of_walk hS hA₃ hfr (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
