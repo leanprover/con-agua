@@ -89,7 +89,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litCS, litCSk, litSch, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -114,7 +114,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
     (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litStrCS, litCSk, litSch, REC, SLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [ConsSch.wset, litStrCS, litCSk, litSch, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -142,15 +142,24 @@ end leaves
 
 /-! ## Frames: nothing at or above array 64 changes -/
 
-/-- No word array and no `CTL` word at or above `64` (the id tables) changes. -/
-def Above64 (m m' : Mem) : Prop := MemFrame (List.range 64) ((List.range 64).map UInt64.ofNat) m m'
+/-- No word array and no `CTL` word at or above `64` (the id tables) changes, but the store tier's
+tier-1 arrays `256‥319`. -/
+def Above64 (m m' : Mem) : Prop :=
+  MemFrame (List.range 64 ++ (List.range 64).map (· + 256)) ((List.range 64).map UInt64.ofNat) m m'
+
+theorem low_tier_mem (b : Nat) (h : b < 64 ∨ (256 ≤ b ∧ b < 320)) :
+    b ∈ List.range 64 ++ (List.range 64).map (· + 256) := by
+  rcases h with h | ⟨h1, h2⟩
+  · exact List.mem_append_left _ (List.mem_range.mpr h)
+  · exact List.mem_append_right _ (List.mem_map.mpr ⟨b - 256, List.mem_range.mpr (by omega),
+      by omega⟩)
 
 theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : Above64 m₂ m₃) : Above64 m₁ m₃ :=
   MemFrame.trans h₁ h₂
 
 theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320)) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
-  hf.mono (fun b hb => List.mem_range.mpr (hA b hb))
+  hf.mono (fun b hb => low_tier_mem b (hA b hb))
     (fun x hx => by
       have := hC x hx
       simp only [List.mem_map, List.mem_range]
@@ -160,9 +169,10 @@ theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above6
     StateDR m' st :=
   h.frame hf (by simp [NID]) (by simp [LID]) (by simp [EID]) (by simp [DECL]) (by simp [DLP])
     (fun x hx h => by
-      have := List.mem_range.mp hx
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
-      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide) (fun x hx => by
+      simp only [List.mem_append, List.mem_range, List.mem_map] at hx
+      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
+        first | (revert hx; decide) | (have h' : (y : Nat) + 256 = _ := hy'; omega)) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx
       obtain ⟨n, hn, rfl⟩ := hx
       intro h
@@ -182,32 +192,36 @@ theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m
     · rename_i m₂ hP
       cases h
       exact (hx _ _ rfl).trans (MemFrame.above (derPutW_frame A hC _ _ _ _ _ _ hP)
-        (by simpa using hA))
+        (fun b hb => by
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+          rcases hb with rfl | rfl
+          · exact .inl hA
+          · exact .inr ⟨Nat.le_add_left _ _, Nat.add_lt_add_right hA 256⟩))
 
 theorem mkAppW_above {m m' : Mem} {f x r : Word} (h : mkAppW m f x = some (r, m')) : Above64 m m' := by
   unfold mkAppW at h; split at h; · cases h
   exact mkK_above ADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [appCS, AREC, ASLOT])) h
+    exact MemFrame.above (consInternM_frame appCS_wf hx) (by simp [ConsSch.wset, appCS, AREC, ASLOT])) h
 theorem mkLamW_above {m m' : Mem} {f x r : Word} (h : mkLamW m f x = some (r, m')) : Above64 m m' := by
   unfold mkLamW at h; split at h; · cases h
   exact mkK_above LADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [lamCS, LAREC, LASLOT])) h
+    exact MemFrame.above (consInternM_frame lamCS_wf hx) (by simp [ConsSch.wset, lamCS, LAREC, LASLOT])) h
 theorem mkForallW_above {m m' : Mem} {f x r : Word} (h : mkForallW m f x = some (r, m')) :
     Above64 m m' := by
   unfold mkForallW at h; split at h; · cases h
   exact mkK_above FADER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
     exact MemFrame.above (consInternM_frame forallCS_wf hx)
-      (by simp [forallCS, forallSch, FAREC, FASLOT])) h
+      (by simp [ConsSch.wset, forallCS, forallSch, FAREC, FASLOT])) h
 theorem mkLetW_above {m m' : Mem} {t v x r : Word} (h : mkLetW m t v x = some (r, m')) :
     Above64 m m' := by
   unfold mkLetW at h; split at h; · cases h
   exact mkK_above LEDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [letCS, LEREC, LESLOT])) h
+    exact MemFrame.above (consInternM_frame letCS_wf hx) (by simp [ConsSch.wset, letCS, LEREC, LESLOT])) h
 theorem mkProjW_above {m m' : Mem} {n i e r : Word} (h : mkProjW m n i e = some (r, m')) :
     Above64 m m' := by
   unfold mkProjW at h; split at h; · cases h
   exact mkK_above PJDER (by decide) (by decide) _ _ _ _ _ _ _ (fun r₁ m₁ hx => by
-    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [projCS, PJREC, PJSLOT])) h
+    exact MemFrame.above (consInternM_frame projCS_wf hx) (by simp [ConsSch.wset, projCS, PJREC, PJSLOT])) h
 
 /-! ## The twin's node -/
 

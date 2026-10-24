@@ -45,6 +45,11 @@ theorem AvoidA.of_lt {k lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < k) 
     AvoidA lo hi A := fun b hb => .inl (Nat.lt_of_lt_of_le (hA b hb) hk)
 theorem AvoidC.of_lt {k lo hi : Nat} {C : List Word} (hC : ∀ x ∈ C, x.toNat < k) (hk : k ≤ lo) :
     AvoidC lo hi C := fun x hx => .inl (Nat.lt_of_lt_of_le (hC x hx) hk)
+/-- A writer of the store tier (arrays below `64` and their tier-1 twins `256‥319`) avoids every
+range inside `[64, 256)`. -/
+theorem AvoidA.of_low {lo hi : Nat} {A : List ArrId} (hA : ∀ b ∈ A, b < 64 ∨ (256 ≤ b ∧ b < 320))
+    (hlo : 64 ≤ lo) (hhi : hi ≤ 256) : AvoidA lo hi A := fun b hb =>
+  (hA b hb).elim (fun h => .inl (Nat.lt_of_lt_of_le h hlo)) (fun h => .inr (Nat.le_trans hhi h.1))
 
 set_option linter.unusedVariables false
 
@@ -562,9 +567,9 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     CheckR dn m' a' vis fe := by
   have hc : a'.caches = a.caches := congrArg Prod.fst hk
   have hp : a'.pins = a.pins := congrArg Prod.snd hk
-  refine ⟨hD, ?_, ?_, hR.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf⟩
-  · rw [hc]; exact hR.core.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf
-  · rw [hp]; exact hR.pins.frame (.of_lt hA (by decide)) hf
+  refine ⟨hD, ?_, ?_, hR.env.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf⟩
+  · rw [hc]; exact hR.core.frame (.of_low hA (by decide) (by decide)) (.of_lt hC (by decide)) hf
+  · rw [hp]; exact hR.pins.frame (.of_low hA (by decide) (by decide)) hf
 
 /-- **Every tier but the arena's above a writer**: arrays from 137 and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
