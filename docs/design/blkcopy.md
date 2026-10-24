@@ -154,7 +154,7 @@ copy). `rom_put` dropped from 217 to 148 instructions per call: names average 4.
 call, the frame and the bounds checks dominate. `rom_u64` went from 105 to 33 per call, and to
 ~8 inline in blk4.
 
-Verdicts: `bench.py --set all --reps 0` over master and blk2: (see below).
+Verdicts: `bench.py --set all --reps 0 --no-conron --no-ref`, master against blk2: 675 fixtures, 0 disagreements (log `_tmp/blkcopy/verdicts2.log`); blk4: 675 fixtures, 0 disagreements (`verdicts4.log`).
 
 ### tierpool
 
