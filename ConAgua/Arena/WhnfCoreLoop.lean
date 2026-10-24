@@ -20,7 +20,7 @@ namespace L.Arena
 /-! ## The dispatcher -/
 
 /-- The result of a stuck arm: `(0, e)` if the view check passes. -/
-def stuckW (m : Mem) (c e : Word) : Option (Word × Word × Mem) :=
+def stuckW (m : Mem) (c : TRec) (e : Word) : Option (Word × Word × Mem) :=
   if tcnt m c (tierW e) ≤ idxW e then none else some (0, e, m)
 
 /-- The model of `whnf_core_step`. -/
@@ -48,12 +48,12 @@ def coreStepW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :
     | none => none
     | some (r, m') => some (1, r.headD 0, m')
   else if e >>> 28 = 0 then none
-  else if e >>> 28 = 1 then stuckW m 26 e
-  else if e >>> 28 = 2 then stuckW m 16 e
-  else if e >>> 28 = 3 then stuckW m 18 e
-  else if e >>> 28 = 5 then stuckW m 28 e
-  else if e >>> 28 = 6 then stuckW m 30 e
-  else if e >>> 28 = 8 then stuckW m 2 e
+  else if e >>> 28 = 1 then stuckW m FVAR e
+  else if e >>> 28 = 2 then stuckW m SORT e
+  else if e >>> 28 = 3 then stuckW m CONST e
+  else if e >>> 28 = 5 then stuckW m LAM e
+  else if e >>> 28 = 6 then stuckW m FORALL e
+  else if e >>> 28 = 8 then stuckW m LIT e
   else none
 
 theorem coreStep_spec (p : Prog) (hp : p.lookup "whnf_core_step" = some whnfCoreStepL) (n : Nat)
@@ -141,7 +141,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   · simp [ht] at hW
   rw [if_neg ht] at hW
   -- the stuck arms
-  have stuck : ∀ c : Word, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
+  have stuck : ∀ c : TRec, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
       viewOK s₀.mem e c ∧ r.headD 0 = 0 ∧ r.tail.headD 0 = e ∧ s'.mem = s₀.mem := by
     intro c h
     simp only [stuckW] at h
@@ -150,7 +150,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     · rename_i hle
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       exact ⟨⟨ht, by simpa using hle⟩, h.1.symm, h.2.1.symm, h.2.2.symm⟩
-  have done : ∀ c : Word, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
+  have done : ∀ c : TRec, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
       (∀ v, a₀.store.view (decE e) = some v → isDoneV v = true → CoreRef (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe
           (cheap != 0) d.toNat (decE e)) a₀ decStep dn s₀.mem vis fe MM eb r s'.mem ResW) := by
     intro c h v hv hd

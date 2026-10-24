@@ -859,7 +859,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
-  have hvOK : viewOK m₂ (rdW (s₀.mem.arr64 EREC) (q + 4)) 30 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK m₂ (rdW (s₀.mem.arr64 EREC) (q + 4)) FORALL := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.1 _ htyl hvOK hg'
   have hz := natSuccOk_run_forall hC.pins cv np nf _ _ _ hl0 hrun' (by
       rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forall _ htyl).mpr hg')) (by rw [hty]; exact hview)

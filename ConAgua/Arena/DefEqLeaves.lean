@@ -895,7 +895,7 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   by_cases hc : tcnt m LS (tierW h) ≤ idxW h
   · simp [g0, hs, hc] at hne
   simp only [g0, hs, hc, ↓reduceIte, List.tail_cons, List.headD_cons]
-  have hi : idxW h < cntC lsCS m (tierW h) := by simpa [cntC, lsCS] using hc
+  have hi : idxW h < cntC lsCS m (tierW h) := UInt64.not_le.mp hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) hi
   have hlen : x.us.length = (tfld m LS (tierW h) (idxW h) 1).toNat := by

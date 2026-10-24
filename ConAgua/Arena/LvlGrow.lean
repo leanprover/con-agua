@@ -88,7 +88,7 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
     (h : lvNodeW m u ≠ []) : lvNodeW m' u ≠ [] := by
   have ht := tierW_le u
   have key : ∀ k : Word, k ∈ ([6, 8, 10, 12, 14] : List Word) →
-      ¬ tcnt m k (tierW u) ≤ idxW u → ¬ tcnt m' k (tierW u) ≤ idxW u := by
+      ¬ rdW (m.arr64 CTL) (k + tierW u) ≤ idxW u → ¬ rdW (m'.arr64 CTL) (k + tierW u) ≤ idxW u := by
     intro k hk h1 h2
     apply h1
     have hx : k + tierW u ∈ lvlCtlW := by
@@ -108,27 +108,27 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
   · simp only [g0, ↓reduceIte] at h ⊢
     by_cases c : tcnt m ZERO (tierW u) ≤ idxW u
     · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (key 8 (by simp) c)]; simp
+    · rw [if_neg (show ¬ tcnt m' ZERO (tierW u) ≤ idxW u from key 8 (by simp) c)]; simp
   by_cases g1 : u >>> 28 = 1
   · simp only [g0, g1, ↓reduceIte] at h ⊢
     by_cases c : tcnt m SUCC (tierW u) ≤ idxW u
     · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (key 6 (by simp) c)]; simp
+    · rw [if_neg (show ¬ tcnt m' SUCC (tierW u) ≤ idxW u from key 6 (by simp) c)]; simp
   by_cases g2 : u >>> 28 = 2
   · simp only [g0, g1, g2, ↓reduceIte] at h ⊢
     by_cases c : tcnt m MAX (tierW u) ≤ idxW u
     · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (key 10 (by simp) c)]; simp
+    · rw [if_neg (show ¬ tcnt m' MAX (tierW u) ≤ idxW u from key 10 (by simp) c)]; simp
   by_cases g3 : u >>> 28 = 3
   · simp only [g0, g1, g2, g3, ↓reduceIte] at h ⊢
     by_cases c : tcnt m IMAX (tierW u) ≤ idxW u
     · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (key 12 (by simp) c)]; simp
+    · rw [if_neg (show ¬ tcnt m' IMAX (tierW u) ≤ idxW u from key 12 (by simp) c)]; simp
   by_cases g4 : u >>> 28 = 4
   · simp only [g0, g1, g2, g3, g4, ↓reduceIte] at h ⊢
     by_cases c : tcnt m PARAM (tierW u) ≤ idxW u
     · rw [if_pos c] at h; exact absurd rfl h
-    · rw [if_neg (key 14 (by simp) c)]; simp
+    · rw [if_neg (show ¬ tcnt m' PARAM (tierW u) ≤ idxW u from key 14 (by simp) c)]; simp
   simp only [g0, g1, g2, g3, g4, ↓reduceIte] at h; exact absurd rfl h
 
 /-- **A level read back before a core run reads back after it** (`LvlCnt` from `PoolGrew`):

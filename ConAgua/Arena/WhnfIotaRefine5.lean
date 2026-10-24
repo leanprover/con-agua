@@ -115,11 +115,11 @@ theorem icfForall_spec (p : Prog) (hp : p.lookup "iota_certs_full_forall" = some
     Sig.retVal, Sig.retOr, rdW, CTL, size_set64]
 
 /-- The count index of a tag's table (`CTL[c + tier]`), `none` past the last tag. -/
-def evoCnt (g : Word) : Option Word :=
-  if g = 0 then some 22 else if g = 1 then some 26 else if g = 2 then some 16
-  else if g = 3 then some 18 else if g = 4 then some 4 else if g = 5 then some 28
-  else if g = 6 then some 30 else if g = 7 then some 20 else if g = 8 then some 2
-  else if g = 9 then some 32 else none
+def evoCnt (g : Word) : Option TRec :=
+  if g = 0 then some BVAR else if g = 1 then some FVAR else if g = 2 then some SORT
+  else if g = 3 then some CONST else if g = 4 then some APP else if g = 5 then some LAM
+  else if g = 6 then some FORALL else if g = 7 then some LET else if g = 8 then some LIT
+  else if g = 9 then some PROJ else none
 
 /-- Model of `expr_view_ok`. -/
 def evoW (m : Mem) (h : Word) : Option Word :=
