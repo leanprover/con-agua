@@ -25,12 +25,12 @@ words (a slot array at least `consMinWords`), `CTL` has at least `ctlMin` words,
 are not empty. -/
 def CapsOK (m : Mem) : Prop :=
   (∀ a < wordArrays, (m.arr64 a).size < 2 ^ 62 ∧ (a ∈ slotArrs → consMinWords ≤ (m.arr64 a).size)) ∧ ctlMin ≤ (m.arr64 CTL).size ∧
-    1 ≤ (m.arr64 67).size ∧ 1 ≤ (m.arr64 68).size
+    1 ≤ (m.arr64 67).size ∧ 1 ≤ (m.arr64 68).size ∧ (m.arr64 0).size < 2 ^ 40
 
 /-- What `cap_check` observes: the lengths as words (`len64`, the size modulo `2^64`). -/
 def CapsW (m : Mem) : Prop :=
   (∀ a < wordArrays, (m.len64 a).toNat < 2 ^ 62 ∧ (a ∈ slotArrs → consMinWords ≤ (m.len64 a).toNat)) ∧ ctlMin ≤ (m.arr64 CTL).size ∧
-    m.len64 67 ≠ 0 ∧ m.len64 68 ≠ 0
+    m.len64 67 ≠ 0 ∧ m.len64 68 ≠ 0 ∧ (m.len64 0).toNat < 2 ^ 40
 
 /-- Every word array the checker names has a size that is a word. -/
 def WordsFit (m : Mem) : Prop := ∀ a < wordArrays, (m.arr64 a).size < 2 ^ 64
@@ -41,8 +41,9 @@ theorem CapsW.capsOK {m : Mem} (h : CapsW m) (hf : WordsFit m) : CapsOK m := by
   have hne : ∀ a < wordArrays, m.len64 a ≠ 0 → 1 ≤ (m.arr64 a).size := fun a ha h => by
     rw [← hsz a ha]
     exact Nat.one_le_iff_ne_zero.2 (fun h0 => h (UInt64.toNat_inj.1 (by simpa using h0)))
-  refine ⟨fun a ha => ?_, h.2.1, hne 67 (by decide) h.2.2.1, hne 68 (by decide) h.2.2.2⟩
-  rw [← hsz a ha]; exact h.1 a ha
+  refine ⟨fun a ha => ?_, h.2.1, hne 67 (by decide) h.2.2.1, hne 68 (by decide) h.2.2.2.1, ?_⟩
+  · rw [← hsz a ha]; exact h.1 a ha
+  · rw [← hsz 0 (by decide)]; exact h.2.2.2.2
 
 theorem run_throw' {α : Type} (e : Err) (s : St) : StateT.run (throw e : M α) s = .error e := rfl
 
@@ -106,8 +107,8 @@ theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
 
 theorem capTail_run {p : Prog} {k : Stmt → M Sig} (s : St) (r : Sig) (s' : St)
     (h : (step p k capTail).run s = .ok (r, s')) :
-    ctlMin ≤ (s.mem.arr64 CTL).size ∧ s.mem.len64 67 ≠ 0 ∧ s.mem.len64 68 ≠ 0 ∧ r = .ret [0] ∧
-      s' = s := by
+    ctlMin ≤ (s.mem.arr64 CTL).size ∧ s.mem.len64 67 ≠ 0 ∧ s.mem.len64 68 ≠ 0 ∧
+      (s.mem.len64 0).toNat < 2 ^ 40 ∧ r = .ret [0] ∧ s' = s := by
   simp [capTail, step, evalC, evalE, evalArgs, Cmp.eval] at h
   by_cases hc : s.mem.len64 CTL < UInt64.ofNat ctlMin
   · simp [hc, run_throw', error_bind'] at h
@@ -120,7 +121,9 @@ theorem capTail_run {p : Prog} {k : Stmt → M Sig} (s : St) (r : Sig) (s' : St)
   · simp [hc, hd, hq, hp] at h
     change Except.ok _ = _ at h
     cases h
-    refine ⟨?_, hd, hq, rfl, rfl⟩
+    have hp' : (s.mem.len64 0).toNat < 2 ^ 40 := by
+      simp only [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hp; exact hp
+    refine ⟨?_, hd, hq, hp', rfl, rfl⟩
     simp only [UInt64.not_lt, UInt64.le_iff_toNat_le, Mem.len64, UInt64.toNat_ofNat'] at hc
     have : ctlMin % 2 ^ 64 = ctlMin := by simp [ctlMin]
     rw [this] at hc
@@ -150,8 +153,8 @@ theorem capCheck_specW (p : Prog) (hp : p.lookup "cap_check" = some capCheckL) (
       have hb' : (step p (exec p n) ((List.range wordArrays).foldr capStep capTail)).run
           { s with loc := Locals.init [] } = .ok (r₁, s₁) := hb
       obtain ⟨h1, h2⟩ := capFold_run capTail _ _ _ _ hb'
-      obtain ⟨h3, h4, h5, -, rfl⟩ := capTail_run _ _ _ h2
-      exact ⟨rfl, rfl, fun a ha => h1 a (List.mem_range.2 ha), h3, h4, h5⟩
+      obtain ⟨h3, h4, h5, h6, -, rfl⟩ := capTail_run _ _ _ h2
+      exact ⟨rfl, rfl, fun a ha => h1 a (List.mem_range.2 ha), h3, h4, h5, h6⟩
 
 /-- **`cap_check()` checks the capacities**: a run that returns leaves the state alone, and on a
 memory whose word arrays' sizes are words (`WordsFit`) the capacities are `CapsOK`. -/

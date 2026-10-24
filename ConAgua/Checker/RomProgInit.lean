@@ -52,8 +52,7 @@ theorem arenaR_loadMem (hc : CapsOK (loadMem b pb s8 s64)) :
     ArenaR (loadMem b pb s8 s64) (AState.init EStore.empty) := by
   have hz := loadMem_rd b pb s8 s64
   have hc' : 64 ≤ ((loadMem b pb s8 s64).arr64 CTL).size := by have := hc.2.1; simp [ctlMin] at this; omega
-  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 63 := by
-    have := hc.1 POOL (by simp [POOL, wordArrays]); omega
+  have hp : ((loadMem b pb s8 s64).arr64 POOL).size < 2 ^ 40 := hc.2.2.2.2
   have hw := loadMem_ctl_lt b pb s8 s64 hc
   have hs : ∀ a, a < wordArrays → a ∈ slotArrs → consMinWords ≤ ((loadMem b pb s8 s64).arr64 a).size ∧
       ((loadMem b pb s8 s64).arr64 a).size < 2 ^ 62 := fun a ha hsl => by
@@ -152,7 +151,6 @@ theorem WordsFit.keep {m m' : Mem} (hk : Keep m m') (h : WordsFit m) : WordsFit 
 theorem CapsOK.ctl {m : Mem} (h : CapsOK m) : 151 < (m.arr64 CTL).size := by
   have := h.2.1; simp [ctlMin] at this; omega
 
-theorem CapsOK.pool {m : Mem} (h : CapsOK m) : (m.arr64 POOL).size < 2 ^ 63 := by
-  have := h.1 POOL (by simp [POOL, wordArrays]); omega
+theorem CapsOK.pool {m : Mem} (h : CapsOK m) : (m.arr64 POOL).size < 2 ^ 40 := h.2.2.2.2
 
 end L.Checker
