@@ -72,11 +72,9 @@ theorem ilw_fvarArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
       | some (x, m₁) => if x.headD 0 = tw then some (h, m₁) else ilwChk (callW p n "intern_fvar" [iw, x.headD 0] m₁))
     (by rw [← hW]; congr 1; cases callW p n "lp_go" [tw, ko, kc, vo, vc, fu] m <;> rfl) ?_
   intro r₃ m₃ _ hY
-  cases h1 : callW p n "lp_go" [tw, ko, kc, vo, vc, fu] m with
-  | none => rw [h1] at hY; simp at hY
-  | some q =>
-  obtain ⟨xs, m₁⟩ := q
-  rw [h1] at hY; dsimp only at hY
+  rcases h1 : callW p n "lp_go" [tw, ko, kc, vo, vc, fu] m with _ | ⟨xs, m₁⟩ <;> rw [h1] at hY
+  · simp at hY
+  dsimp only at hY
   refine ILWStep.bind (ih m m₁ a dn vis fe M eb tw ko kc vo vc fu ks us vs xs hS hM hE hty h1) ?_
   intro a₁ M₁ _ hS₁ hM₁ _ _ hx
   exact ilw_rebuild (c := decE (xs.headD 0) == decE tw)
@@ -103,11 +101,9 @@ theorem ilw_projArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
       | some (x, m₁) => ilwRbProj p n m₁ h nw iw ew (x.headD 0))
     (by rw [← hW]; congr 1; cases callW p n "lp_go" [ew, ko, kc, vo, vc, fu] m <;> rfl) ?_
   intro r₃ m₃ _ hY
-  cases h1 : callW p n "lp_go" [ew, ko, kc, vo, vc, fu] m with
-  | none => rw [h1] at hY; simp at hY
-  | some q =>
-  obtain ⟨xs, m₁⟩ := q
-  rw [h1] at hY; dsimp only at hY
+  rcases h1 : callW p n "lp_go" [ew, ko, kc, vo, vc, fu] m with _ | ⟨xs, m₁⟩ <;> rw [h1] at hY
+  · simp at hY
+  dsimp only at hY
   refine ILWStep.bind (ih m m₁ a dn vis fe M eb ew ko kc vo vc fu ks us vs xs hS hM hE he h1) ?_
   intro a₁ M₁ _ hS₁ hM₁ _ _ hx
   exact ilw_rebuild (c := decE (xs.headD 0) == decE ew)
@@ -148,16 +144,12 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
         simp only [ilwLetK₁_some]
         cases callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ <;> rfl) ?_
   intro r₃ m₃ _ hY
-  cases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-  | none => rw [h1] at hY; simp at hY
-  | some q =>
-  obtain ⟨xs, m₁⟩ := q
-  rw [h1] at hY; dsimp only at hY
-  cases h2 : callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with
-  | none => rw [h2] at hY; simp at hY
-  | some q =>
-  obtain ⟨ys, m₂⟩ := q
-  rw [h2] at hY; dsimp only at hY
+  rcases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with _ | ⟨xs, m₁⟩ <;> rw [h1] at hY
+  · simp at hY
+  dsimp only at hY
+  rcases h2 : callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with _ | ⟨ys, m₂⟩ <;> rw [h2] at hY
+  · simp at hY
+  dsimp only at hY
   refine ILWStep.bind (ih m m₁ a dn vis fe M eb fw ko kc vo vc fu ks us vs xs hS hM hE hf h1) ?_
   intro a₁ M₁ _ hS₁ hM₁ hg₁ hSt₁ hx
   refine ILWStep.bind (ih m₁ m₂ a₁ dn vis fe M₁ eb aw ko kc vo vc fu ks us vs ys hS₁ hM₁
@@ -233,16 +225,12 @@ theorem ilw_binArm (R : ArrId) (mk : FnName) (C : EIdx → EIdx → ENodeView)
         simp only [ilwBinK₁_some]
         cases callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ <;> rfl) ?_
   intro r₃ m₃ _ hY
-  cases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-  | none => rw [h1] at hY; simp at hY
-  | some q =>
-  obtain ⟨xs, m₁⟩ := q
-  rw [h1] at hY; dsimp only at hY
-  cases h2 : callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with
-  | none => rw [h2] at hY; simp at hY
-  | some q =>
-  obtain ⟨ys, m₂⟩ := q
-  rw [h2] at hY; dsimp only at hY
+  rcases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with _ | ⟨xs, m₁⟩ <;> rw [h1] at hY
+  · simp at hY
+  dsimp only at hY
+  rcases h2 : callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with _ | ⟨ys, m₂⟩ <;> rw [h2] at hY
+  · simp at hY
+  dsimp only at hY
   refine ILWStep.bind (ih m m₁ a dn vis fe M eb fw ko kc vo vc fu ks us vs xs hS hM hE hf h1) ?_
   intro a₁ M₁ _ hS₁ hM₁ hg₁ hSt₁ hx
   refine ILWStep.bind (ih m₁ m₂ a₁ dn vis fe M₁ eb aw ko kc vo vc fu ks us vs ys hS₁ hM₁

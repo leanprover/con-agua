@@ -142,17 +142,14 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
     split at hw
     · rename_i h6
       obtain ⟨ty, rfl⟩ := viewR_forall hr h6
-      cases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with
-      | none => rw [hrec] at hw; cases hw
-      | some r' =>
-        rw [hrec, teleK_some] at hw
-        cases hw
-        obtain ⟨h1, h2⟩ := ih _ _ _ hrec
-        simp only
-        rw [run_bind _ _ a _ h1]
-        have hlt : (f - 1).toNat < 2 ^ 64 := UInt64.toNat_lt _
-        have : (r' + 1).toNat = r'.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-        exact ⟨by rw [this]; rfl, by omega⟩
+      rcases hrec : teleW n m (f - 1) ((eViewW m h).tail.tail.headD 0) with _ | r' <;> simp only [hrec, teleK, reduceCtorEq] at hw
+      cases hw
+      obtain ⟨h1, h2⟩ := ih _ _ _ hrec
+      simp only
+      rw [run_bind _ _ a _ h1]
+      have hlt : (f - 1).toNat < 2 ^ 64 := UInt64.toNat_lt _
+      have : (r' + 1).toNat = r'.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      exact ⟨by rw [this]; rfl, by omega⟩
     · rename_i h6
       cases hw
       refine ⟨?_, by simp only [UInt64.toNat_zero]; omega⟩

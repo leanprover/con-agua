@@ -273,11 +273,9 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   | zero => simp [recRW] at h
   | succ n =>
   simp only [recRW] at h
-  cases h1 : allocW m DLP 9 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q1, m₁⟩ := x
-  rw [h1] at h; simp only [allocK] at h
+  rcases h1 : allocW m DLP 9 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
+  · cases h
+  simp only [allocK] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
   simp only [show (9 : Word).toNat = 9 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)

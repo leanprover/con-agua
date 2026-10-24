@@ -166,11 +166,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     (hW : recFireLevelsW p n m fk fvo fvc po pc us qo qc = some (r, m')) :
     ∃ a', (recFireLevels rl lps (decI us) cvjLps).run a = .ok (decI r, a') ∧ RFLOk m m' a a' r := by
   unfold recFireLevelsW at hW
-  cases h1 : callW p n "ls_node" [us] m with
-  | none => rw [h1] at hW; cases hW
-  | some q =>
-  obtain ⟨vs', m₀⟩ := q
-  rw [h1] at hW
+  rcases h1 : callW p n "ls_node" [us] m with _ | ⟨vs', m₀⟩ <;> rw [h1] at hW
+  · cases hW
   obtain ⟨s₁, hs₁m, hs₁, -, hv'⟩ := triple_of_callW (lsNode_spec p hL.ls_node n ⟨m, Locals.init []⟩ us) h1
   have hm₀ : m₀ = m := by rw [← hs₁m, hs₁]
   subst hm₀
@@ -178,11 +175,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
   obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hA.1 hus hvw
   rw [hv', e₁] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
-  cases h2 : callW p n "keys_push" [po, pc] m₀ with
-  | none => rw [h2] at hW; cases hW
-  | some q =>
-  obtain ⟨bs, m₁⟩ := q
-  rw [h2] at hW
+  rcases h2 : callW p n "keys_push" [po, pc] m₀ with _ | ⟨bs, m₁⟩ <;> rw [h2] at hW
+  · cases hW
   obtain ⟨s₂, hs₂m, -, hW₂⟩ := triple_of_callW (keysPush_spec p hL.toLvSubProg n ⟨m₀, Locals.init []⟩ po pc) h2
   rw [hs₂m] at hW₂
   have hk := lp_nmsR_of_hslice a.store.lss.ls.ns m₀ EREC lps ks po pc hlps hpb hks
@@ -236,11 +230,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
         hncl (by rw [herec₁]; exact hq) hqb (by rw [hstl]; exact hqd) hk₁' (by omega)
         (by rw [hpool₁]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
         (by rw [hsz₁]; omega) (by rw [hsz₁]; exact hsz) hW₃
-    cases h4 : callW p n "spn_ls" [spTop m₁, qc] m₂ with
-    | none => rw [h4] at hW; cases hW
-    | some q =>
-    obtain ⟨rs, m₃⟩ := q
-    rw [h4] at hW
+    rcases h4 : callW p n "spn_ls" [spTop m₁, qc] m₂ with _ | ⟨rs, m₃⟩ <;> rw [h4] at hW
+    · cases hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hbc : (bs.headD 0).toNat ≤ (spTop m₁).toNat := by omega
     obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) qc hs rs hsz hctl
@@ -274,11 +265,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
         hlcl (by rw [herec₁]; exact hfv) hfvb (by rw [hstl]; exact hfvd) hk₁' (by omega)
         (by rw [hpool₁]; exact sl₁) (by rw [htopm₁]; exact t₁) (by rw [hstl]; exact hdl')
         (by rw [hsz₁]; omega) (by rw [hsz₁]; exact hsz) hW₃
-    cases h4 : callW p n "spn_ls" [spTop m₁, fvc] m₂ with
-    | none => rw [h4] at hW; cases hW
-    | some q =>
-    obtain ⟨rs, m₃⟩ := q
-    rw [h4] at hW
+    rcases h4 : callW p n "spn_ls" [spTop m₁, fvc] m₂ with _ | ⟨rs, m₃⟩ <;> rw [h4] at hW
+    · cases hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hbc : (bs.headD 0).toNat ≤ (spTop m₁).toNat := by omega
     obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) fvc hs rs hsz hctl

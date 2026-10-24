@@ -76,11 +76,9 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
   · simp [hfu] at hW
   simp only [hfu, ↓reduceIte] at hW
   generalize rs.headD 0 = r at hW ⊢
-  cases h1 : callW p n "der_b" [h] m with
-  | none => rw [h1] at hW; simp [ilwGoK] at hW
-  | some q =>
-  obtain ⟨d, m₁⟩ := q
-  rw [h1, ilwGoK_some] at hW
+  rcases h1 : callW p n "der_b" [h] m with _ | ⟨d, m₁⟩ <;> rw [h1] at hW
+  · simp [ilwGoK] at hW
+  rw [ilwGoK_some] at hW
   obtain ⟨s1, hs1, -, hm1, -, -, hlp⟩ :=
     triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (derB_spec p hp.mkp.spine.derb n _ h) h1
   have hm₁ : m₁ = m := hs1.symm.trans hm1

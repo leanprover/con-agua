@@ -239,11 +239,8 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
     (constE_spec p hp n ⟨m, Locals.init []⟩ nm) h
   subst hs'
   simp only [constEW] at hW
-  cases h1 : callW p n "pin_word" [52] m with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1] at hW
+  rcases h1 : callW p n "pin_word" [52] m with _ | ⟨r1, m1⟩ <;> rw [h1] at hW
+  · cases hW
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (pinWord_specW p hpw n ⟨m, Locals.init []⟩ 52) h1
   subst hs1
@@ -253,11 +250,8 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
   have hF := hS.1.pins.full hflag
   have hz : rdW (m.arr64 PINS) 52 = pinW m 52 := by simp [rdW, pinW]
   simp only [List.headD_cons, hz] at hW
-  cases h2 : callW p n "intern_const" [nm, pinW m 52] s1.mem with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2] at hW
+  rcases h2 : callW p n "intern_const" [nm, pinW m 52] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at hW
+  · cases hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (internConst_spec p hcf hcp hic n ⟨s1.mem, Locals.init []⟩ nm (pinW m 52)) h2

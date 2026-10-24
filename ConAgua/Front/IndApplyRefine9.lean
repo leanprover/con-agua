@@ -116,10 +116,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   rcases h1 : unsafeW n m to tn 0 with _ | u1 <;> simp only [h1, uK, reduceCtorEq] at h
   have hu := unsafeW_twin hTy hTn hto n 0 h1
   -- `vi_nparams`
-  cases h2 : nparamsW n m to tn with
-  | none => rw [h2, wK_none] at h; cases h
-  | some np' =>
-  rw [h2, wK_some] at h
+  rcases h2 : nparamsW n m to tn with _ | np' <;> simp only [h2, wK, reduceCtorEq] at h
   obtain ⟨np1, np2, np3⟩ := nparamsW_twin hTy hTn hto h2
   -- the type names
   rcases h3 : mapW n m to tn 11 0 0 with _ | ⟨⟨tyn, x1⟩, m₁⟩ <;> simp only [h3, pmK, reduceCtorEq] at h

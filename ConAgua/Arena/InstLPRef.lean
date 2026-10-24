@@ -182,11 +182,9 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     | zero => simp [slElemW] at hW
     | succ n =>
     rw [slElemW_cons _ n m o l b ko kc vo vc hl0, hrd] at hW
-    cases hS : lvSubIntW n m w ko kc vo vc with
-    | none => rw [hS] at hW; simp [slElemK] at hW
-    | some r =>
-    obtain ⟨h, m₁⟩ := r
-    rw [hS, slElemK_some] at hW
+    rcases hS : lvSubIntW n m w ko kc vo vc with _ | ⟨h, m₁⟩ <;> rw [hS] at hW
+    · simp [slElemK] at hW
+    rw [slElemK_some] at hW
     by_cases hh : 4294967296 ≤ h
     · simp [hh] at hW
     simp only [hh, ↓reduceIte] at hW
@@ -280,11 +278,8 @@ theorem slpOne_ok (ks : List Name) (vs : List Level) (n : Nat) (m m₁ : Mem) (a
     (hW : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) = some (h, m₁)) :
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧ ArenaD m₁ a₁ ∧
       MemFrame lvArrs lvCtl m m₁ ∧ LKeep a a₁ := by
-  cases e : lookupW SPN POOL n m ko kc vo vc w with
-  | none => rw [e] at hW; simp [slpOne] at hW
-  | some fv =>
-  obtain ⟨f, v⟩ := fv
-  rw [e] at hW
+  rcases e : lookupW SPN POOL n m ko kc vo vc w with _ | ⟨f, v⟩ <;> rw [e] at hW
+  · simp [slpOne] at hW
   rcases lookupW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ _ _ hk hv.toAR hn e with ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
   · rw [slpOne_hit n m w f v hf] at hW
     obtain ⟨a₁, hrun, hA₁, hlt, hfr, hkp, -⟩ := lvInternW_ok _ n m a v h m₁ hA hwf hvl hW
@@ -371,11 +366,9 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     | zero => simp [slpW] at hW
     | succ n =>
     rw [slpW_cons n m o l b ko kc vo vc hl0, hrd] at hW
-    cases hS : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) with
-    | none => rw [hS] at hW; simp [slpK] at hW
-    | some r =>
-    obtain ⟨h, m₁⟩ := r
-    rw [hS, slpK_some] at hW
+    rcases hS : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) with _ | ⟨h, m₁⟩ <;> rw [hS] at hW
+    · simp [slpK] at hW
+    rw [slpK_some] at hW
     by_cases hh : 4294967296 ≤ h
     · simp [hh] at hW
     simp only [hh, ↓reduceIte] at hW
@@ -570,10 +563,9 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
   have hroom : m.top.toNat + l.toNat ≤ (m.arr64 POOL).size := by omega
-  cases hc : spnPoolW n m b m.top l with
-  | none => rw [hc] at hW; simp [spnLsK] at hW
-  | some m₁ =>
-  rw [hc, spnLsK_some] at hW
+  rcases hc : spnPoolW n m b m.top l with _ | m₁ <;> rw [hc] at hW
+  · simp [spnLsK] at hW
+  rw [spnLsK_some] at hW
   obtain ⟨hf₁, -, hsl₁⟩ := spnPoolW_ok n m m₁ b m.top l hc hroom hsz hb
   have hg₁ := spnPoolW_grows n m m₁ b m.top l hc hp (Nat.le_refl _) hroom
   have hc₁ : 0 < (m₁.arr64 CTL).size := by rw [hf₁.2.2.1 CTL]; exact hp2
@@ -586,11 +578,8 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ (Grows.trans _ _ _ hg₁ hg₂) a hA
   have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := by rw [← hm₂, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have htop₂ : m₂.top = m.top + l := by rw [← hm₂]; exact Mem.top_set64 _ _ hc₁
-  cases hI : lsinternW m₂ m.top l with
-  | none => rw [hI] at hW; cases hW
-  | some q =>
-  obtain ⟨r', m₃⟩ := q
-  rw [hI] at hW
+  rcases hI : lsinternW m₂ m.top l with _ | ⟨r', m₃⟩ <;> rw [hI] at hW
+  · cases hW
   by_cases hr : 4294967296 ≤ r'
   · simp [hr] at hW
   simp only [hr, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
@@ -638,10 +627,9 @@ theorem keysPushW_ok {N : Word → Name → Prop} (n : Nat) (m m₁ : Mem) (po p
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
   rw [hlen] at t1'
   have hroom : (spTop m).toNat + pc.toNat ≤ (m.arr64 SPN).size := by omega
-  cases hc : ekCopyW n m po (spTop m) pc with
-  | none => rw [hc] at hW; simp [kpK] at hW
-  | some mc =>
-  rw [hc, kpK_some] at hW
+  rcases hc : ekCopyW n m po (spTop m) pc with _ | mc <;> rw [hc] at hW
+  · simp [kpK] at hW
+  rw [kpK_some] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hk₁, hf₁, hb₁⟩ := ekCopyW_ok ks n m mc po (spTop m) pc hk hroom hsz hc
   have hspn : (mc.set64 CTL 136 (spTop m + pc)).arr64 SPN = mc.arr64 SPN :=

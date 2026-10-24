@@ -112,15 +112,11 @@ theorem ilw_arm {m m' : Mem} {a : AState} {M : ModeMaps} {h r : Word} {body : AM
       hS hM hw
   rw [if_neg hh0] at hW
   have hmiss := ilw_miss hM h hh hr0 hh0
-  cases hY : Y with
-  | none => rw [hY] at hW; simp [ilwSetK] at hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
-  rw [hY, ilwSetK_some] at hW
-  cases h4 : msetG lpSch m₃ h 0 r₃ with
-  | none => rw [h4] at hW; cases hW
-  | some m₄ =>
-  rw [h4] at hW
+  rcases hY : Y with _ | ⟨r₃, m₃⟩ <;> rw [hY] at hW
+  · simp [ilwSetK] at hW
+  rw [ilwSetK_some] at hW
+  rcases h4 : msetG lpSch m₃ h 0 r₃ with _ | m₄ <;> rw [h4] at hW
+  · cases hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨a₃, r3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hM₃, hg₃, hr⟩ := hbody r₃ m₃ hmiss hY
   obtain ⟨hS₄, hSt₄, hM₄⟩ := ilw_set hS₃ hM₃ h r₃ hh hr h4
