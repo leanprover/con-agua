@@ -7,7 +7,8 @@ import ConAgua.Arena.IndT.RecGen19
 `check_block_classes`' model (over the program's own calls); twin side con-ron's
 `checkBlockClasses_spec`'s proof: `classRead` (`classRead_spec`), the classes (L only), the keys
 (`classKeysOf_spec`), the majors (`clmW_simC`, `classMajors_spec`), one class per member (L only).
-The walk memos across the calls by the program facts `AbsKeep`.
+The walk memos across `class_read` by its real `open_pis_at_fvars_f` (`classRead_refinesA`), across
+the other calls by the program facts `AbsKeep`.
 -/
 
 set_option linter.deprecated false
@@ -39,7 +40,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
     (hrecs : RecsDec m (rdW (m.arr64 IW) (pp + 2)) (rdW (m.arr64 IW) (pp + 3)) bs.recs)
     (hcss : PSlR decCNS css co cl m) (hpf : DecB (fun m => decHL m po.toNat pl.toNat) m pfvs)
     (hpfb : po.toNat + pl.toNat ≤ iwTop m) (hPm : PosMR m) (hA : AbsOK m)
-    (hk1 : AbsKeep p "class_read") (hk2 : AbsKeep p "class_read_classes")
+    (hOpf : OpfF p) (hk2 : AbsKeep p "class_read_classes")
     (hk3 : AbsKeep p "check_block_classes_keys")
     {pP : ConLeche.BlockShape} {pfvsP : List ConLeche.Expr}
     {cssP : List (List (ConLeche.ConstantVal × Nat))}
@@ -67,12 +68,11 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [c1] at h
-  obtain ⟨s1, hs1, -, hok1, hS1, hg1, hd1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (classRead_refines p hP.read n _ a dn vis fe pp _ _ _ bs bs.recs hS hb hrecs) c1
-  simp only at hs1 hS1 hg1 hd1
+  obtain ⟨s1, hs1, -, hok1, ⟨hS1, hg1, hd1⟩, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (classRead_refinesA p hP.read hOpf n _ a dn vis fe pp _ _ _ bs bs.recs hS hA hb hrecs) c1
+  simp only at hs1 hS1 hg1 hd1 hA1
   subst hs1
   have hP1 := PosMR.ofClosed hcl hfr c1 hPm
-  have hA1 := hk1 n _ m r1 s1.mem c1 hA
   rw [hnp, hnpT] at hok1 hS1 hd1
   have hrun1 := AM.run_of_ok _ a hok1
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.classRead_spec bs pP env fe bs.nP bs.recs pP.recs a _ _
@@ -225,7 +225,7 @@ theorem checkBlockClasses_refinesC (hP : CbcProg p) {fs : List FnName}
     (hcss : PSlR decCNS css co cl s₀.mem)
     (hpf : DecB (fun m => decHL m po.toNat pl.toNat) s₀.mem pfvs)
     (hpfb : po.toNat + pl.toNat ≤ iwTop s₀.mem) (hPm : PosMR s₀.mem) (hA : AbsOK s₀.mem)
-    (hk1 : AbsKeep p "class_read") (hk2 : AbsKeep p "class_read_classes")
+    (hOpf : OpfF p) (hk2 : AbsKeep p "class_read_classes")
     (hk3 : AbsKeep p "check_block_classes_keys")
     {pP : ConLeche.BlockShape} {pfvsP : List ConLeche.Expr}
     {cssP : List (List (ConLeche.ConstantVal × Nat))}
@@ -245,7 +245,7 @@ theorem checkBlockClasses_refinesC (hP : CbcProg p) {fs : List FnName}
         (AM.st (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀); ⊤⦄ :=
   triple_post (cbc_spec p hP.cbc n s₀ vis pp po pl co cl) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (cbcW_simC hq henv hP hcl hfr hfc n hn _ a₀ pp po pl co cl bs css
-      pfvs hC hb hsrc hrecs hcss hpf hpfb hPm hA hk1 hk2 hk3 hpl hpw hshP hpfP hcssP) hm
+      pfvs hC hb hsrc hrecs hcss hpf hpfb hPm hA hOpf hk2 hk3 hpl hpw hshP hpfP hcssP) hm
     ⟨hl, hok, hQ⟩
 
 end sims

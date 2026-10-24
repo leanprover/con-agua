@@ -65,20 +65,20 @@ def slK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
 
-def slK1 (n : Nat) (p vis np mo ml d dom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def slK1 (cR : CallM) (n : Nat) (p vis np mo ml d dom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 >>> 28 = 2 then slK2 (slotMotW n m1 p vis dom)
-    else slK2 (minorW n m1 np mo ml d dom)
+    else slK2 (minorW cR n m1 np mo ml d dom)
 
 /-- **The model of `class_read_slot`.** -/
-def slotW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def slotW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, p, vis, np, mo, ml, d, dom => slK1 n p vis np mo ml d dom (pirF m [CWF, dom])
+  | n + 1, m, p, vis, np, mo, ml, d, dom => slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom])
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np mo ml d dom mdom iName us ao al : Word)
-  (r r1 r2 r3 r4 r5 r6 : List Word)
+  (r r1 r2 r3 r4 r5 r6 : List Word) (cR : CallM)
 theorem slotMotW_eq : slotMotW (n + 1) m p vis dom = sK1 n p vis (piBW n m CWF dom) := rfl
 theorem sK1_nil (h : r1.tail.headD 0 = 0) : sK1 n p vis (some (r1, m1)) = some ([0, 0], m1) := by
   rw [sK1, if_pos h]
@@ -100,12 +100,12 @@ theorem sK4_some : sK4 iName us ao al (some (r4, m4)) =
     sK5 (recW m4 4 [iName, us, ao, if r4.headD 0 < al then r4.headD 0 else al]) := rfl
 theorem sK5_some : sK5 (some (r5, m5)) = sK6 (recW m5 2 [0, r5.headD 0]) := rfl
 theorem sK6_some : sK6 (some (r6, m6)) = some ([1, r6.headD 0], m6) := rfl
-theorem slotW_eq : slotW (n + 1) m p vis np mo ml d dom =
-    slK1 n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
-theorem slK1_mot (h : r1.headD 0 >>> 28 = 2) : slK1 n p vis np mo ml d dom (some (r1, m1)) =
+theorem slotW_eq : slotW cR (n + 1) m p vis np mo ml d dom =
+    slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
+theorem slK1_mot (h : r1.headD 0 >>> 28 = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
     slK2 (slotMotW n m1 p vis dom) := by rw [slK1, if_pos h]
-theorem slK1_min (h : ¬ r1.headD 0 >>> 28 = 2) : slK1 n p vis np mo ml d dom (some (r1, m1)) =
-    slK2 (minorW n m1 np mo ml d dom) := by rw [slK1, if_neg h]
+theorem slK1_min (h : ¬ r1.headD 0 >>> 28 = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
+    slK2 (minorW cR n m1 np mo ml d dom) := by rw [slK1, if_neg h]
 theorem slK2_some : slK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 end arms
 
@@ -119,9 +119,9 @@ grind_pattern [ind_grind] sK3_some => sK3 n p vis iName us (some (r3, m3))
 grind_pattern [ind_grind] sK4_some => sK4 iName us ao al (some (r4, m4))
 grind_pattern [ind_grind] sK5_some => sK5 (some (r5, m5))
 grind_pattern [ind_grind] sK6_some => sK6 (some (r6, m6))
-grind_pattern [ind_grind] slotW_eq => slotW (n + 1) m p vis np mo ml d dom
-grind_pattern [ind_grind] slK1_mot => slK1 n p vis np mo ml d dom (some (r1, m1))
-grind_pattern [ind_grind] slK1_min => slK1 n p vis np mo ml d dom (some (r1, m1))
+grind_pattern [ind_grind] slotW_eq => slotW cR (n + 1) m p vis np mo ml d dom
+grind_pattern [ind_grind] slK1_mot => slK1 cR n p vis np mo ml d dom (some (r1, m1))
+grind_pattern [ind_grind] slK1_min => slK1 cR n p vis np mo ml d dom (some (r1, m1))
 grind_pattern [ind_grind] slK2_some => slK2 (some (r, m))
 
 /-- The lookups `class_read_slot` needs. -/
@@ -168,10 +168,10 @@ theorem classReadSlotMotive_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : 
         rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2] <;>
       finish (gen := 20) [rdW_eq]
 
-theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : St)
-    (q vis np mo ml d dom : Word) :
+theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat)
+    (s₀ : St) (q vis np mo ml d dom : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_slot" [q, vis, np, mo, ml, d, dom]
-    ⦃fun r s' => LocEq s' s₀ ∧ slotW n s₀.mem q vis np mo ml d dom = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ slotW cR n s₀.mem q vis np mo ml d dom = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.slot]; simp only [callFn, classReadSlot]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -180,7 +180,7 @@ theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : St)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         pirF_spec p hP.ad n, classReadSlotMotive_spec p hP n,
         classReadMinor_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.r2 hP.r5 hP.i1 hP.is hP.fin
-          hP.pb hP.min hP.tl hP.ad n] <;>
+          hP.pb hP.min hP.tl hP.ad cR hcR n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
 /-! ## Relational lemmas -/
@@ -328,37 +328,83 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero] at j0 j1
   exact decCS_motive_stab j0 j1 (hkey.grow hg6)
 
-theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
+theorem nameCopyW_afrR : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m d s l = some m' →
+    AFr m m'
+  | 0, _, _, _, _, _, h => by simp [nameCopyW] at h
+  | n + 1, m, m', d, s, l, h => by
+    by_cases hl : l = 0
+    · rw [nameCopyW_nil n m d s l hl] at h; cases h; exact AFr.refl _
+    · rw [nameCopyW_step n m d s l hl] at h
+      exact (set64IW_afr _ _ _).trans (nameCopyW_afrR n _ _ _ _ _ h)
+
+/-- (`IndT/RecGen19`'s `memberNamesW_afr`, here for the `class_read` chain.) -/
+theorem memberNamesW_afrR {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : memberNamesW n m p = some (r, m')) : AFr m m' := by
+  unfold memberNamesW at h
+  split at h; · cases h
+  rename_i q m1 hal
+  split at h; · cases h
+  rename_i m2 hc
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (allocW_afr hal).trans (nameCopyW_afrR _ _ _ _ _ _ hc)
+
+theorem envFindW_afrR {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
+    AFr m m' := by
+  unfold envFindW at h
+  afr_auto h []
+
+theorem npcW_afr {n : Nat} {m m' : Mem} {p vis i : Word} {r : List Word}
+    (h : npcW n m p vis i = some (r, m')) : AFr m m' := by
+  cases n with
+  | zero => simp [npcW] at h
+  | succ n =>
+  simp only [npcW, npcK1.eq_def, npcK2.eq_def, npcK3.eq_def] at h
+  afr_auto h [memberNamesW_afrR, envFindW_afrR]
+
+theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
+    (h : slotMotW n m p vis dom = some (r, m')) : AFr m m' := by
+  cases n with
+  | zero => simp [slotMotW] at h
+  | succ n =>
+  simp only [slotMotW, sK1.eq_def, sK2.eq_def, sK3.eq_def, sK4.eq_def, sK5.eq_def, sK6.eq_def] at h
+  afr_auto h [piBW_afrR _ _ _ _ _ _, gafF_afrR, gaaF_afr, npcW_afr, recW_afr]
+
+theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
+    (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) (m : Mem)
     (a : AState) (p np mo ml d dom : Word) (bs : BlockShape) (motPos : List Nat)
-    (hS : StageR dn vis fe m a) (hH : H dom) (hb : BSOK m p.toNat bs)
+    (hS : StageR dn vis fe m a) (hJ : J m) (hH : H dom) (hb : BSOK m p.toNat bs)
     (hmot : decNL m mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
-    RSim (slotW n m p vis np mo ml d dom)
-      (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a (KP dn vis fe m decSlot) := by
+    RSim (slotW cR n m p vis np mo ml d dom)
+      (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a
+      (fun b a' x => KP dn vis fe m decSlot b a' x ∧ J b.2) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
   rw [slotW_eq]
-  refine RSim.bind (K := slK1 n p vis np mo ml d dom) rfl (simPiResult hS hH) ?_
-  rintro ⟨r1, m1⟩ r a1 - ⟨hS1, hg1, hb1, rfl⟩
-  dsimp only at hS1 hg1 hb1
+  refine RSim.bind (K := slK1 cR n p vis np mo ml d dom) rfl
+    (RSim.withJ hO.1 (simPiResult hS hH) (fun _ _ hb => pirF_afrR hb) hJ) ?_
+  rintro ⟨r1, m1⟩ r a1 - ⟨⟨hS1, hg1, hb1, rfl⟩, hJ1⟩
+  dsimp only at hS1 hg1 hb1 hJ1
   by_cases ht : r1.headD 0 >>> 28 = 2
   · rw [slK1_mot (h := ht)]
     have ht' : (((decI (r1.headD 0) : EIdx)).tag == ETag.sort) = true :=
       (tag_beq _ hb1 _ 2 (by decide) rfl).mpr ht
     rw [if_pos ht']
-    refine RSim.bindPure (K := slK2) rfl (slotMotW_sim dn vis fe n m1 a1 p dom bs hS1 hH (hb.grow hg1)) ?_
-    rintro ⟨r2, m2⟩ x a2 - ⟨hS2, hg2, hd2⟩
+    refine RSim.bindPure (K := slK2) rfl (RSim.withJ hO.1
+      (slotMotW_sim dn vis fe n m1 a1 p dom bs hS1 hH (hb.grow hg1)) (fun _ _ hb => slotMotW_afr hb) hJ1) ?_
+    rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [slK2_some]
-    exact RSim.pure_some ⟨hS2, hg1.trans hg2, decSlot_pair hd2⟩
+    exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, decSlot_pair hd2⟩, hJ2⟩
   · rw [slK1_min (h := ht)]
     have ht' : ¬ (((decI (r1.headD 0) : EIdx)).tag == ETag.sort) = true :=
       fun e => ht ((tag_beq _ hb1 _ 2 (by decide) rfl).mp e)
     rw [if_neg ht']
-    refine RSim.bindPure (K := slK2) rfl (minorW_sim dn vis fe n m1 a1 np mo ml d dom motPos hS1 hH
-      (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1)) ?_
-    rintro ⟨r2, m2⟩ x a2 - ⟨hS2, hg2, hd2⟩
+    refine RSim.bindPure (K := slK2) rfl (minorW_sim dn vis fe cR J hO n m1 a1 np mo ml d dom motPos hS1
+      hJ1 hH (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1)) ?_
+    rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [slK2_some]
-    exact RSim.pure_some ⟨hS2, hg1.trans hg2, decSlot_pair hd2⟩
+    exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, decSlot_pair hd2⟩, hJ2⟩
 
 /-- **`class_read_slot` refines `classReadSlot`** (through the stubs `pi_result`, `get_app_fn`,
 `get_app_args`, `open_pis_at_fvars_f`, `fvar_type_d`): the slot is a stably decoding record. -/
@@ -374,7 +420,8 @@ theorem classReadSlot_refines (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : St)
       KP dn vis fe s₀.mem decSlot (r, s'.mem)
         (AM.st (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a₀)
         (AM.res (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a₀); ⊤⦄ :=
-  triple_post (classReadSlot_spec p hP n s₀ q vis np mo ml d dom) fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (slotW_sim dn vis fe n _ a₀ q np mo ml d dom bs motPos hS hH hb hmot hmt).am hw⟩
+  triple_post (classReadSlot_spec p hP stubCall (stubCall_spec p) n s₀ q vis np mo ml d dom) fun _ _ ⟨hl, hw⟩ =>
+    ⟨hl, ((slotW_sim dn vis fe stubCall _ (opfJ_stub dn vis fe) n _ a₀ q np mo ml d dom bs motPos hS trivial
+      hH hb hmot hmt).mono fun _ _ _ _ h => h.1).am hw⟩
 
 end L.Ind
