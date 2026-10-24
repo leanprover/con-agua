@@ -534,8 +534,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.size.trans hsz) g2 hrw4
       obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.1 (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1
       have hl4 := hSt₄.pool.lvl.trans hpgT.lvl
-      have hwl' : ∀ (i : Nat) (h : i < (ws.push (rdW (m₃.arr64 SOREC) (idxW (r₃.headD 0) * 2 +
-          tierW (r₃.headD 0)))).size), lvNodeW (tPush m₄ fo lo k (r₄.headD 0)
+      have hwl' : ∀ (i : Nat) (h : i < (ws.push (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0)).size), lvNodeW (tPush m₄ fo lo k (r₄.headD 0)
           (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0))
           (ws.push (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0))[i] ≠ [] := by
         intro i hi
@@ -543,9 +542,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         split
         · exact lvNodeW_mono ((hSt₁.trans (hSt₂.trans hSt₃)).pool.lvl.trans hl4) (hws i _) (hwl i _)
         · exact lvNodeW_mono hl4 hu (lvNodeW_of_den hS₃.arena.1 hu (hS₃.den.sort _ _ hvs))
-      have hws' : ∀ (i : Nat) (h : i < (ws.push (rdW (m₃.arr64 SOREC) (idxW (r₃.headD 0) * 2 +
-          tierW (r₃.headD 0)))).size), HW (ws.push (rdW (m₃.arr64 SOREC) (idxW (r₃.headD 0) * 2 +
-          tierW (r₃.headD 0))))[i] := by
+      have hws' : ∀ (i : Nat) (h : i < (ws.push (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0)).size), HW (ws.push (tfld m₃ SORT (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0))[i] := by
         intro i hi
         rw [Array.getElem_push]
         split

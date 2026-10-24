@@ -406,7 +406,6 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     · rw [if_pos ht] at hx; simp [ht, hx]
     · rw [if_neg ht] at hx; simp [ht, hx]
   obtain ⟨hq, hol, hsl, -⟩ := hrel
-  simp only [] at hq hol hsl
   have hlen := sliceL_length (m.arr64 POOL) (tfld m NSTR (tierW w) (idxW w) 1).toNat
     (tfld m NSTR (tierW w) (idxW w) 2).toNat
   rw [hsl] at hlen

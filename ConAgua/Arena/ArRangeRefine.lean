@@ -345,8 +345,7 @@ theorem rprojArm_ok (hg : h >>> 28 = 9) :
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hew e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW
-      (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (tfld m PROJ (tierW h) (idxW h) 2))
       (decI (tfld m PROJ (tierW h) (idxW h) 0)) (tfld m PROJ (tierW h) (idxW h) 1).toNat (decE x)) _ a₁ h c r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltProj internProjE
     refine rb_ok _ _ _ _ m₁ a₁ hA₁ h r₃ m₃ (fun e1 => by simp [e1]) (fun hn hI => ?_) hr₃

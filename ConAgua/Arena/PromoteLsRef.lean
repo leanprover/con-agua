@@ -252,7 +252,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
       simp only [show (h >>> 27) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
   rw [hview]
   obtain ⟨x, hx, -⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
-    (idxW h) (by simpa [cntC, lsCS] using hc)
+    (idxW h) (UInt64.not_le.mp hc)
   simp only [LsTables.get, decLs_tag0 h hh, show h >>> 28 = 0 from by simpa using g0,
     beq_self_eq_true, ↓reduceIte, Tbl.node?, decLs_idx, apply_ite LsTables.lists, hx,
     Option.map_some]

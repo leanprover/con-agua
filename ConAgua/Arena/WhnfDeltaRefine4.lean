@@ -149,8 +149,7 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
-    have hz := redConst_ne (coreKnot (decMode mode) fe id F) fe d.toNat (decI (rdW (s₀.mem.arr64 CREC)
-      (idxW f * 4 + tierW f * 2))) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
+    have hz := redConst_ne (coreKnot (decMode mode) fe id F) fe d.toNat (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
       (decI (pinW s₀.mem 52)) (decE b) a₀ hel (by
         rw [hbne _ _ hul hC.pins.lv_lt.1]
         have : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ pinW s₀.mem 52 := by
@@ -174,8 +173,7 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
   rw [← hm]
   have hsucc := callW_reduceNatSucc p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM
     eb mode d _ b hS hnl hb r₂ m₂ h2
-  have hcongr := redConst_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decI (rdW (s₀.mem.arr64 CREC)
-      (idxW f * 4 + tierW f * 2))) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
+  have hcongr := redConst_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
       (decI (pinW s₀.mem 52)) (decE b) a₀ hel (by
         rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hne'])
   have hsucc' := CoreRef.congr hcongr.symm hsucc

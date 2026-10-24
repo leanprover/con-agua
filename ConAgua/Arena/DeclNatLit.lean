@@ -349,10 +349,8 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Wo
   if tierW (rdW (m2.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0 then none else
   if tcnt m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) ≤ idxW (rdW (m2.arr64 EREC) (q + 4))
     then none else
-  some ([if rdW (m2.arr64 FAREC) (idxW (rdW (m2.arr64 EREC) (q + 4)) * 4 +
-          tierW (rdW (m2.arr64 EREC) (q + 4)) * 2) = r2.headD 0 ∧
-        rdW (m2.arr64 FAREC) (idxW (rdW (m2.arr64 EREC) (q + 4)) * 4 +
-          tierW (rdW (m2.arr64 EREC) (q + 4)) * 2 + 1) = r2.headD 0 then 1 else 0], m2)
+  some ([if tfld m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) (idxW (rdW (m2.arr64 EREC) (q + 4))) 0 = r2.headD 0 ∧
+        tfld m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) (idxW (rdW (m2.arr64 EREC) (q + 4))) 1 = r2.headD 0 then 1 else 0], m2)
 
 theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOkL) (n : Nat)
     (s₀ : St) (found q : Word) :

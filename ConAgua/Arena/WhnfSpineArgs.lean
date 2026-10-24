@@ -155,9 +155,9 @@ theorem argsW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN)]
+      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
     have h2 : argW (m.set64 SPN k v) e = argW m e := by
-      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN)]
+      simp only [argW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
     simp only [argsW, h1, h2, argsW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -302,7 +302,7 @@ theorem nodesW_set (m : Mem) (k v : Word) : ∀ (c : Nat) (e : Word),
   | 0, _ => rfl
   | c + 1, e => by
     have h1 : fnW (m.set64 SPN k v) e = fnW m e := by
-      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN)]
+      simp only [fnW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : AREC ≠ SPN), tfld_set64_ne (R := APP) (a := SPN) (h := by decide)]
     simp only [nodesW, h1, nodesW_set m k v c]
 
 /-- **The fill writes the spine's arguments into `SPN[o ‥ o + j)`**, nothing else. -/
@@ -646,7 +646,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
 theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC) :
     ∀ (c : Nat) (e : Word), nodesW m' e c = nodesW m e c
   | 0, _ => rfl
-  | c + 1, e => by simp only [nodesW, fnW, h, nodesW_congr h c]
+  | c + 1, e => by simp only [nodesW, fnW, h, nodesW_congr h c, tfld_arr_eq (R := APP) h]
 
 /-- con-ron: ConRon/Arena/Core.lean:2125-2128 ConRon.Arena.getAppSpine
 con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/

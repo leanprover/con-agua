@@ -1323,8 +1323,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   have hvOK : viewOK s₀.mem (r₁.headD 0) CONST := ⟨g1, by simpa using g2⟩
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
     view_const_words s₀.mem a₀ hC.arena.1 (r₁.headD 0) hhw1 hvOK g0'
-  cases h2 : callW p n "env_find" [rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +
-      tierW (r₁.headD 0) * 2), vis] s₀.mem with
+  cases h2 : callW p n "env_find" [tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, vis] s₀.mem with
   | none => rw [h2] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
@@ -1360,9 +1359,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   rw [if_neg g4] at hW
   have g4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 1 := by simpa using g4
   obtain ⟨cv, value, hint, rfl, hcv, hv', hvl⟩ := hdefn g4'
-  cases h3 : callW p n "unfold_defn_at" [e, rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +
-      tierW (r₁.headD 0) * 2), rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +
-      tierW (r₁.headD 0) * 2 + 1), r₂.tail.headD 0] s₀.mem with
+  cases h3 : callW p n "unfold_defn_at" [e, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1, r₂.tail.headD 0] s₀.mem with
   | none => rw [h3] at hW; cases hW
   | some q₃ =>
   obtain ⟨r₃, m₃⟩ := q₃

@@ -477,8 +477,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       rw [recTK2_ne n m1 no nl _ hr] at hrt
       obtain ⟨hvw, hty2, hb2⟩ := view_forall m1 a1 hR1 _ hbl hvok hg6'
       have hdomw : (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0 =
-          rdW (m1.arr64 FAREC) (idxW (r1.tail.tail.tail.headD 0) * 4 +
-            tierW (r1.tail.tail.tail.headD 0) * 2) := by rw [hew]; rfl
+          tfld m1 FORALL (tierW (r1.tail.tail.tail.headD 0)) (idxW (r1.tail.tail.tail.headD 0)) 0 := by rw [hew]; rfl
       have hdomlt : ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0).toNat < 2 ^ 32 := by
         rw [hdomw]; exact hty2
       obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTK3])

@@ -73,21 +73,21 @@ theorem bbW_frame (n : Nat) :
       · cases hb
       rename_i r₁ m₁ hn
       exact (ih.2 _ _ _ _ _ hn).trans (bbSet_frame _ _ _ _ _ hb)
-    · have dead : ∀ c, ¬ viewOK m h c → tcnt m c (tierW h) ≤ idxW h ∨
+    · have dead : ∀ S : TRec, ¬ viewOK m h S → tcnt m S (tierW h) ≤ idxW h ∨
           (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
-        intro c hv
+        intro S hv
         by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
         · exact .inr hs
         · exact .inl (UInt64.not_lt.mp fun hl => hv ⟨hs, hl⟩)
-      have leaf : ∀ c, viewOK m h c → bbNodeW (n + 1) m h c = some (0, m) → BbFrame m m' →
+      have leaf : ∀ S, viewOK m h S → bbNodeW (n + 1) m h c = some (0, m) → BbFrame m m' →
           BbFrame m m' := fun _ _ _ h => h
       clear leaf
       by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
       · rw [bbNodeW, if_pos hs] at hb; cases hb
-      have tagCase : ∀ (c : Word), (viewOK m h c → BbFrame m m') →
-          (tcnt m c (tierW h) ≤ idxW h → BbFrame m m') → BbFrame m m' := by
-        intro c h1 h2
-        by_cases hc : tcnt m c (tierW h) ≤ idxW h
+      have tagCase : ∀ (S : TRec), (viewOK m h S → BbFrame m m') →
+          (tcnt m S (tierW h) ≤ idxW h → BbFrame m m') → BbFrame m m' := by
+        intro S h1 h2
+        by_cases hc : tcnt m S (tierW h) ≤ idxW h
         · exact h2 hc
         · exact h1 ⟨hs, UInt64.not_le.mp hc⟩
       have none_of : ∀ (hn : bbNodeW (n + 1) m h c = none), False := fun hn => by
@@ -96,48 +96,48 @@ theorem bbW_frame (n : Nat) :
         rw [e] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
       by_cases g0 : h >>> 28 = 0
-      · refine tagCase 22 (fun hv => ?_) (fun hc => (none_of ?_).elim)
+      · refine tagCase BVAR (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · by_cases h1 : tfld m BVAR (tierW h) (idxW h) 0 + 1 = 0
           · exact (none_of (by rw [bbNodeW]; simp [hs, g0, h1, UInt64.not_le.mpr hv.2])).elim
           · rw [bbNodeW_bvar n m h c hv g0 h1] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
             obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
         · rw [bbNodeW]; simp [hs, g0, hc]
       by_cases g1 : h >>> 28 = 1
-      · refine tagCase 26 (fun hv => done0 (bbNodeW_fvar n m h c g1 hv)) (fun hc => (none_of ?_).elim)
+      · refine tagCase FVAR (fun hv => done0 (bbNodeW_fvar n m h c g1 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g1, hc]
       by_cases g4 : h >>> 28 = 4
-      · refine tagCase 4 (fun hv => ?_) (fun hc => (none_of ?_).elim)
+      · refine tagCase APP (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_app n m h c hv g4] at hb
           exact BbOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
         · rw [bbNodeW]; simp [hs, g4, hc]
       by_cases g5 : h >>> 28 = 5
-      · refine tagCase 28 (fun hv => ?_) (fun hc => (none_of ?_).elim)
+      · refine tagCase LAM (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_lam n m h c hv g5] at hb
           exact BbOK.bind (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
         · rw [bbNodeW]; simp [hs, g5, hc]
       by_cases g6 : h >>> 28 = 6
-      · refine tagCase 30 (fun hv => ?_) (fun hc => (none_of ?_).elim)
+      · refine tagCase FORALL (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_forall n m h c hv g6] at hb
           exact BbOK.bind (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
         · rw [bbNodeW]; simp [hs, g6, hc]
       by_cases g9 : h >>> 28 = 9
-      · refine tagCase 32 (fun hv => ?_) (fun hc => (none_of ?_).elim)
+      · refine tagCase PROJ (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_proj n m h c hv g9] at hb
           exact ih.1 _ _ _ _ _ hb
         · rw [bbNodeW]; simp [hs, g9, hc]
       by_cases g7 : h >>> 28 = 7
-      · refine tagCase 20 (fun hv => ?_) (fun hc => (none_of ?_).elim)
+      · refine tagCase LET (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_let n m h c hv g7] at hb
           exact BbOK.letE (ih.1 _ _ _) (fun m₁ w => ih.1 m₁ w _) _ _ hb
         · rw [bbNodeW]; simp [hs, g7, hc]
       by_cases g2 : h >>> 28 = 2
-      · refine tagCase 16 (fun hv => done0 (bbNodeW_sort n m h c g2 hv)) (fun hc => (none_of ?_).elim)
+      · refine tagCase SORT (fun hv => done0 (bbNodeW_sort n m h c g2 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g2, hc]
       by_cases g3 : h >>> 28 = 3
-      · refine tagCase 18 (fun hv => done0 (bbNodeW_const n m h c g3 hv)) (fun hc => (none_of ?_).elim)
+      · refine tagCase CONST (fun hv => done0 (bbNodeW_const n m h c g3 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g3, hc]
       by_cases g8 : h >>> 28 = 8
-      · refine tagCase 2 (fun hv => done0 (bbNodeW_lit n m h c g8 hv)) (fun hc => (none_of ?_).elim)
+      · refine tagCase LIT (fun hv => done0 (bbNodeW_lit n m h c g8 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g8, hc]
       exact (none_of (by rw [bbNodeW]; simp [hs, g0, g1, g4, g5, g6, g9, g7, g2, g3, g8])).elim
 

@@ -708,10 +708,8 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (Word ×
         else if tierW (rdW (m₂.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
         else if tcnt m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) ≤
             idxW (rdW (m₂.arr64 EREC) (q + 4)) then none
-        else some (if rdW (m₂.arr64 FAREC) (idxW (rdW (m₂.arr64 EREC) (q + 4)) * 4 +
-              tierW (rdW (m₂.arr64 EREC) (q + 4)) * 2) = r₂.headD 0 ∧
-            rdW (m₂.arr64 FAREC) (idxW (rdW (m₂.arr64 EREC) (q + 4)) * 4 +
-              tierW (rdW (m₂.arr64 EREC) (q + 4)) * 2 + 1) = r₂.headD 0 then 1 else 0, m₂)
+        else some (if tfld m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) (idxW (rdW (m₂.arr64 EREC) (q + 4))) 0 = r₂.headD 0 ∧
+            tfld m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) (idxW (rdW (m₂.arr64 EREC) (q + 4))) 1 = r₂.headD 0 then 1 else 0, m₂)
 
 theorem natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (found q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_succ_ok" [found, q]

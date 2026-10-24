@@ -543,37 +543,28 @@ def reduceNatApW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
   if tcnt m APP (tierW f) ≤ idxW f then none
   else if tfld m APP (tierW f) (idxW f) 0 >>> 28 ≠ 3 then some (0, 0, m)
   else if tierW (tfld m APP (tierW f) (idxW f) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m CONST (tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2))) ≤
+  else if tcnt m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) ≤
       idxW (tfld m APP (tierW f) (idxW f) 0) then none
   else
     match callW p n "pin_word" [52] m with
     | none => none
     | some (r₁, m₁) =>
-      if rdW (m.arr64 CREC) (idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 4 +
-          tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 2 + 1) ≠ r₁.headD 0 then
+      if tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 1 ≠ r₁.headD 0 then
         some (0, 0, m₁)
       else
-        match callW p n "nat_bin_op_name" [rdW (m.arr64 CREC)
-            (idxW (tfld m APP (tierW f) (idxW f) 0) * 4 +
-              tierW (tfld m APP (tierW f) (idxW f) 0) * 2)] m₁ with
+        match callW p n "nat_bin_op_name" [tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0] m₁ with
         | none => none
         | some (r₂, m₂) =>
-        match callW p n "nat_op_stored" [vis, rdW (m.arr64 CREC)
-            (idxW (tfld m APP (tierW f) (idxW f) 0) * 4 +
-              tierW (tfld m APP (tierW f) (idxW f) 0) * 2)] m₂ with
+        match callW p n "nat_op_stored" [vis, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0] m₂ with
         | none => none
         | some (r₃, m₃) =>
         if r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0 then
-          match callW p n "reduce_nat_op" [mode, vis, d, rdW (m.arr64 CREC)
-              (idxW (tfld m APP (tierW f) (idxW f) 0) * 4 +
-                tierW (tfld m APP (tierW f) (idxW f) 0) * 2),
+          match callW p n "reduce_nat_op" [mode, vis, d, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0,
               tfld m APP (tierW f) (idxW f) 1, b] m₃ with
           | none => none
           | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
         else
-          match callW p n "reduce_nat_wf" [mode, vis, d, rdW (m.arr64 CREC)
-              (idxW (tfld m APP (tierW f) (idxW f) 0) * 4 +
-                tierW (tfld m APP (tierW f) (idxW f) 0) * 2),
+          match callW p n "reduce_nat_wf" [mode, vis, d, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0,
               tfld m APP (tierW f) (idxW f) 1, b] m₃ with
           | none => none
           | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
