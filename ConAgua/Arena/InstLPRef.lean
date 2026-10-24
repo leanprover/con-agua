@@ -642,8 +642,7 @@ theorem keysPushW_ok {N : Word → Name → Prop} (n : Nat) (m m₁ : Mem) (po p
   | none => rw [hc] at hW; simp [kpK] at hW
   | some mc =>
   rw [hc, kpK_some] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hk₁, hf₁, hb₁⟩ := ekCopyW_ok ks n m mc po (spTop m) pc hk hroom hsz hc
   have hspn : (mc.set64 CTL 136 (spTop m + pc)).arr64 SPN = mc.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)

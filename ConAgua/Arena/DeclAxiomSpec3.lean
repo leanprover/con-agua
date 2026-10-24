@@ -225,8 +225,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
   · rw [if_pos hf] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpT, hfind]⟩
   rw [if_neg hf] at hW

@@ -205,8 +205,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   by_cases hf : r1.headD 0 = 0
   · -- a miss
     rw [if_pos hf] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hc hf
     refine ⟨false, a, by simp [reduceStoredOk, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   rw [if_neg hf] at hW
@@ -223,8 +222,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   by_cases hk : wk ≠ 0
   · -- another kind
     rw [if_pos hk] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
     have hne := hkn hk
     simp only [reduceStoredOk, hfind, hci]
@@ -400,13 +398,11 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
       rfl
     by_cases hf : r3.headD 0 = 0
     · rw [if_pos hf] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl⟩ := hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨-, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
       refine ⟨false, a4, by rw [htwin, hfind]; rfl, hS4, hg4, by simp [decW0B]⟩
     rw [if_neg hf] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
     obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
     have hci4 : decCI (erA m4) dn (r3.tail.headD 0).toNat = some ci := by
@@ -436,8 +432,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     rcases h3 : envFindW m (pinW m (1 + (29 : Word).toNat)) vis with _ | ⟨r3, m3⟩ <;> simp only [h3, reoB2, reduceCtorEq] at hW
     by_cases hf : r3.headD 0 = 0
     · rw [if_pos hf] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl⟩ := hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨rfl, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
       refine ⟨false, a, by rw [hpre, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
     rw [if_neg hf] at hW
@@ -452,8 +447,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     obtain ⟨hk3, hkn⟩ := decCI_kind3 hci hwk
     by_cases hk : wk ≠ 3
     · rw [if_pos hk] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl⟩ := hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
       rw [hpre, hfind, hci]
       have hne := hkn hk

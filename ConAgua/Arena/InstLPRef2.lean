@@ -241,8 +241,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     | some q =>
     obtain ⟨rs, m₃⟩ := q
     rw [h4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hbc : (bs.headD 0).toNat ≤ (spTop m₁).toNat := by omega
     obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) qc hs rs hsz hctl
       hbc (by omega) hb hf₁ hbel₁ hA₂ (StoreWF.nwf hwf₂) hnc₂ (hlcl.ext hx₂ (by rw [hca₂]))
@@ -280,8 +279,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     | some q =>
     obtain ⟨rs, m₃⟩ := q
     rw [h4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hbc : (bs.headD 0).toNat ≤ (spTop m₁).toNat := by omega
     obtain ⟨a₃, hrun₃, hok⟩ := rflTail_ok p hL n m₀ m₁ m₂ m₃ a a₂ (bs.headD 0) (spTop m₁) fvc hs rs hsz hctl
       hbc (by omega) hb hf₁ hbel₁ hA₂ (StoreWF.nwf hwf₂) (hncl.ext hx₂ (by rw [hca₂])) hlc₂

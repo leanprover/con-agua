@@ -59,8 +59,7 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
       rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> simp only [hs, pK, reduceCtorEq] at h
       obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ ok kk hs
       refine ⟨_, s1, fun x hx => ?_⟩
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hc
       by_cases hok : ok = 0
       · simp [hok] at hx
@@ -74,8 +73,7 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
           | some q =>
           obtain ⟨ok, kk⟩ := q
           rw [hs, pK_some] at h
-          split at h
-          · cases h
+          split at h; cases h
           · exact h
         · exact h
       exact ih (j + 1) hrest k (by rw [hj1]; omega) h2 hT
@@ -102,17 +100,13 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
   rw [wd_eq] at hl
   have hname := (lkW_name hD a hl).1
   rw [c1.1] at hname
-  split at h
-  · cases h
+  split at h; cases h
   rename_i h8
-  split at h
-  · cases h
+  split at h; cases h
   rename_i h7
-  split at h
-  · cases h
+  split at h; cases h
   rename_i h6
-  split at h
-  · cases h
+  split at h; cases h
   rename_i h4
   have e8 : rdW (m.arr64 IFR) (r + 8) = np := Classical.byContradiction h8
   have e7 : rdW (m.arr64 IFR) (r + 7) = tn := Classical.byContradiction h7
@@ -122,8 +116,7 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
     show (6 : Word).toNat = 6 from rfl] at e8 e7 e6
   refine ⟨_, hname, by rw [← c6.1, e8], by rw [← c5.1, e7], by rw [← c4.1, e6], fun kE hkE => ?_, ?_⟩
   · simp only [keOf] at hkE
-    split at hkE
-    · cases hkE
+    split at hkE; cases hkE
     rename_i hk0
     simp only [Option.some.injEq] at hkE
     have e4 : rdW (m.arr64 IFR) (r + 4) = ke - 1 := Classical.byContradiction fun hne => h4 ⟨hk0, hne⟩
@@ -248,8 +241,7 @@ theorem unsafeW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : 
     rename_i hlt
     have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    split at h
-    · cases h
+    split at h; cases h
     rename_i h0
     by_cases hkj : k = j.toNat
     · subst hkj
@@ -279,8 +271,7 @@ theorem npGoW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn d : 
     rename_i hlt
     have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    split at h
-    · cases h
+    split at h; cases h
     rename_i h0
     by_cases hkj : k = j.toNat
     · subst hkj

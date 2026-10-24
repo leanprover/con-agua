@@ -192,8 +192,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     by_cases hb : 4294967296 ≤ zs.headD 0
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hz : HW (zs.headD 0) := by
       unfold HW; have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
     obtain ⟨a₃, r3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hM₃, hg₃, -⟩ :=
@@ -226,8 +225,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     by_cases hb : 4294967296 ≤ zs.headD 0
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hz : HW (zs.headD 0) := by
       unfold HW; have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
     obtain ⟨a₃, r3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hM₃, hg₃, -⟩ :=

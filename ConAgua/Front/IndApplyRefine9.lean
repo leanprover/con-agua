@@ -167,11 +167,9 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   have e14 := e13.trans v2
   -- `ifl_nodup`, the count
   rcases h7 : nodupW n m₄ fo x 0 with _ | u <;> simp only [h7, wK, reduceCtorEq] at h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i hu0
-  split at h
-  · cases h
+  split at h; cases h
   rename_i hxcn
   have hxcn' : x = cn := Classical.byContradiction hxcn
   have hflen : LS.flatten.length = cts.length := by rw [← l5, hxcn', hCn]
@@ -202,8 +200,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
   rcases h10 : orderW n m₄ to tn tyn fo cno co cn fuel np with _ | ⟨oo₅, m₅⟩ <;> simp only [h10, allocK, reduceCtorEq] at h8
   rcases h11 : kExpW n m₅ to tn tyt oo₅ fuel with _ | ⟨ke, m₆⟩ <;> simp only [h11, allocK, reduceCtorEq] at h8
   rcases h12 : recsW n m₆ to tn ro rn np cn ke tyn tyt fuel with _ | u12 <;> simp only [h12, uK, reduceCtorEq] at h8
-  simp only [Option.some.injEq, Prod.mk.injEq] at h8
-  obtain ⟨hoo5, hm6⟩ := h8
+  obtain ⟨hoo5, hm6⟩ := Prod.mk.inj (Option.some.inj h8)
   subst oo₅ m₆
   -- the order
   have hps4 : ∀ i, i ≤ tys.length → psum m₄ to i = fpos LS i := fun i hi => by

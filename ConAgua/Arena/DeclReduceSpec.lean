@@ -80,8 +80,7 @@ theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {f
       ∃ x a', (T w.toNat).run a = .ok (x, a') ∧ KeepPost dn vis fe dec m m' a' r x := by
     intro w hw h
     rcases h2 : callW p n f [w] m with _ | ⟨r2, m2⟩ <;> simp only [h2, selK2, reduceCtorEq] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨x, a', hrun, hS', hg, hd⟩ := hT w hw n m a r2 m2 hS h2
     exact ⟨x, a', hrun, hS', hg, hdec _ _ _ hd⟩
   rw [hm1] at h
@@ -259,8 +258,7 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (internConst_spec p hcf hcp hic n ⟨s1.mem, Locals.init []⟩ nm (pinW m 52)) h2
   rw [hs2, ← hm1] at hW2
@@ -413,8 +411,7 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
   -- `intern_fvar`
   rcases h4 : fvinternW m3 0 (r3.headD 0) with _ | ⟨r4, m4⟩ <;> simp only [h4, rcvK4, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a4, hrun4, hS4, hg4⟩ := internFVar_stage hS3 0 (r3.headD 0) ht h4
   have hrun : (reduceCertVar (decI c)).run a₀ = .ok (decE r4, a4) := by
     rw [reduceCertVar_eq]

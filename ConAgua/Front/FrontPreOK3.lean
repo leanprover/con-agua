@@ -36,8 +36,7 @@ theorem applyAnyW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
   split at h
   · exact (applyExprW_dk _ _ _ _ _ _ _ _ h).grow
   · unfold applyDLineW at h
-    split at h
-    · cases h
+    split at h; cases h
     rename_i _ _ hpl
     have hX : (declLineN b.data j.toUInt64).pl ≠ 0 → DRecR b r (declLineN b.data j.toUInt64) :=
       declLine_link b h64 hsize j true 0 0 .absent DFld.none r e hloop trivial
@@ -111,8 +110,7 @@ theorem lineKW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
     (hsok : ConRon.Bridge.StateOK a₀) (ok nx : Word)
     (h : lineKW p b.data m i.toUInt64 = some (ok, nx, m')) : DGrow m m' := by
   unfold lineKW at h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i r m₁ hW
   split at h
   · simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -125,8 +123,7 @@ end grow
 /-- **`front_init` leaves `DECL`, `DLP` alone.** -/
 theorem initKW_dk (m m' : Mem) (h : initKW m = some m') : DK m m' := by
   unfold initKW at h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i m₂ hW
   split at h
   · cases h

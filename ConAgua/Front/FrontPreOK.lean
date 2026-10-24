@@ -372,8 +372,7 @@ theorem frontRunW_refines_pre_ok (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p
   intro m m₁ a ⟨hm, hA, hD, hok, hoff, hpins, hR⟩ hi
   have hk := initKW_dk m m₁ hi
   unfold initKW at hi
-  split at hi
-  · cases hi
+  split at hi; cases hi
   rename_i m₂ hW
   split at hi
   · rename_i hk'

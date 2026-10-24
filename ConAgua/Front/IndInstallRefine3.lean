@@ -199,8 +199,7 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
   | zero => simp [rulesW] at h
   | succ n =>
   simp only [rulesW] at h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i hbig
   have hl32 : l.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (UInt64.le_iff_toNat_le.mpr (by simp; omega))
@@ -309,8 +308,7 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
     rw [hifr3, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [s0, s1, s2] at h
   rcases h3 : cvW b.data m₃ (q1 + 1) (wd m IFR r.toNat) (wd m IFR (r.toNat + 1)) (wd m IFR (r.toNat + 2)) with _ | m₄ <;> simp only [h3, mK, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hq1 : (q1 + 1).toNat = q1.toNat + 1 := widx2 _ _ (by simp; omega)
   have ht3 : topN m₃ DLP = topN m DLP + 9 + 11 * rc.rules.length := by rw [Q5, ht1]
   have hs3 : (m₃.arr64 DLP).size = (m.arr64 DLP).size := by rw [Q2.size DLP, hs1]

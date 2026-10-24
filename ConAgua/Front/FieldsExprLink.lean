@@ -151,8 +151,7 @@ theorem vk_usz {sb : UInt32} (u : USize) {G : ScanRes α} {x y : ScanErr} (st' :
       R (seen ||| sb) st' (objPut kc v.toUInt64 (rdNatN b.data v.toUInt64 u.toUInt64) o)) :
     VK b F R i v kc seen st r e (if u = 0 then .err x else if i < u then G else .err y) := by
   intro h
-  split at h
-  · cases h
+  split at h; cases h
   split at h
   · rename_i hie
     exact ⟨u, seen ||| sb, st', hval.symm, hie, hG ▸ h, hR⟩
@@ -188,8 +187,7 @@ theorem vk_num {sb : UInt32} {G : ScanRes α} {x y : ScanErr} (st' : σ)
     VK b F R i v kc seen st r e
       (if numEnd b v = v then .err x else if i < numEnd b v then G else .err y) := by
   intro h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i hne
   split at h
   · rename_i hie
@@ -275,8 +273,7 @@ macro_rules
   | `(tactic| vloop_comma $f) => `(tactic| (
       intro i w seen st r e h hc hok; rw [$f:ident, dif_pos h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
-      split at hok
-      · cases hok
+      split at hok; cases hok
       · rename_i hw; exact ⟨by simpa using hw, hok⟩))
 syntax "vloop_quote " ident : tactic
 macro_rules
@@ -295,8 +292,7 @@ macro_rules
   | `(tactic| vloop_close $f) => `(tactic| (
       intro i w seen st r e h hc hok; rw [$f:ident, dif_pos h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
-      split at hok
-      · cases hok
+      split at hok; cases hok
       split at hok
       · cases hok; refine ⟨rfl, fun o ho => ?_⟩
       · cases hok))
@@ -375,8 +371,7 @@ macro_rules
   | `(tactic| vloop_res $f) => `(tactic| (
       intro i w seen st r e h hc hok; rw [$f:ident, dif_pos h] at hok
       simp [uget_byteAt _ i h, hc, isWs] at hok
-      split at hok
-      · cases hok
+      split at hok; cases hok
       split at hok
       · cases hok
         exact ⟨rfl, fun o ho => by simp_all (config := {decide := true}) [ORes, objFld, ExprR]⟩
@@ -588,8 +583,7 @@ theorem constV : VLoop b
   · vloop_ws scanConstExprLoop
   · intro i w seen st r e h hc hok; rw [scanConstExprLoop, dif_pos h] at hok
     simp [uget_byteAt _ i h, hc, isWs] at hok
-    split at hok
-    · cases hok
+    split at hok; cases hok
     split at hok
     · rename_i hm
       cases hok
@@ -719,12 +713,10 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
   rw [h] at hq
   refine ⟨hq.symm, ?_⟩
   unfold scanQuotedNat at h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i h34
   dsimp only at h
-  split at h
-  · cases h
+  split at h; cases h
   rename_i hne
   simp only [Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, not_or, Decidable.not_not] at hne
   obtain ⟨hne1, hq34⟩ := hne
@@ -786,8 +778,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
     by_cases h125 : byteAt b i = 125
     · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
       rw [exprN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125])]
-      split at h
-      · cases h
+      split at h; cases h
       cases pl
       · simp at h
       · exact fun hpl => hP.elim
@@ -802,8 +793,7 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
@@ -814,16 +804,13 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hk
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
@@ -841,10 +828,8 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       all_goals simp (config := {decide := true}) only [exVN, ↓reduceIte, Obj.none,
         UInt64.not_lt_zero, Fld.none, ne_eq, not_true_eq_false, false_implies]
       case kIn | kIl | kIe =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i hne
         split at h
         · rename_i hie
@@ -855,10 +840,8 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact exprLine_link (numEnd b v) false _ _ _ _ r e h hR (ePlR_idx b _ _ _ hP)
         · cases h
       case kBvar | kSort =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i hne
         split at h
         · rename_i hie
@@ -869,10 +852,8 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact exprLine_link (numEnd b v) false _ _ _ _ r e h hI ⟨rfl, hR⟩
         · cases h
       case kApp | kLam | kForallE | kLetE | kConst | kProj =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i r' e' hr
         split at h
         · rename_i hie
@@ -886,10 +867,8 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact exprLine_link e' false _ _ _ _ r e h hI (ePlR_obj b _ _ _ _ hp.2)
         · cases h
       case kNatVal =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i n e' hr
         split at h
         · rename_i hie
@@ -899,10 +878,8 @@ theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact exprLine_link e' false _ _ _ _ r e h hI ⟨rfl, hn, hnv⟩
         · cases h
       case kStrVal =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i s' e' hr
         split at h
         · rename_i hie

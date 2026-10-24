@@ -89,13 +89,10 @@ theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
   have hw0 : rdW (m.arr64 A) 0 = wd m A 0 := rfl
   have e1 : (rdW (m.arr64 A) 0 + 1).toNat = topN m A + 1 := by
     rw [widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]; simp [topN, hw0]
-  split at h
-  · cases h
-  split at h
-  · cases h
+  split at h; cases h
+  split at h; cases h
   rename_i h1
-  split at h
-  · cases h
+  split at h; cases h
   rename_i h2
   cases h
   have h1' := UInt64.not_lt.mp h1

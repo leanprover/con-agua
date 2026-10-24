@@ -153,8 +153,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hv1' : (v + 1).toNat = v.toNat + 1 := usizeStep b v hv
       have hb123 : byteW b.data v.toUInt64 = 123 := by rw [byteW_of_byteAt b h64 hsize v 123 h123']; rfl
       simp only at h
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hp34
       have hp34' : byteAt b (skipWs b (v + 1)) = 34 := by simpa using hp34
       generalize hp : skipWs b (v + 1) = p at h hp34'
@@ -163,8 +162,7 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       have hpN := usizeInBounds b p hpU
       have hpEq : UInt64.ofNat (L.Scan.Leaves.skipWsN b.data (v.toUInt64 + 1).toNat) = p.toUInt64 := by
         rw [← hp, skipWs_toUInt64_eq b h64 hb64, ← succ_toUInt64 b h64 hsize, USize.toNat_toUInt64]
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hke
       have hke' : keyEnd b (p + 1) ≠ 0 := by simpa using hke
       generalize hk : keyEnd b (p + 1) = ke at h hke'
@@ -191,12 +189,10 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
       split at h
       · rename_i hreg
         try simp only at h
-        split at h
-        · cases h
+        split at h; cases h
         rename_i hvp
         generalize hvv : valueAt b p ke = v' at h hvp
-        split at h
-        · cases h
+        split at h; cases h
         split at h
         · simp only [ScanRes.ok.injEq] at h
           obtain ⟨rfl, -⟩ := h
@@ -494,20 +490,16 @@ macro "dloop_comma " f:ident : tactic => `(tactic| (
   intro i w seen st d e h hc hok
   rw [$f:ident, dif_pos h] at hok
   simp [uget_byteAt _ i h, hc, isWs] at hok
-  split at hok
-  · cases hok
+  split at hok; cases hok
   · exact ⟨by simpa using ‹¬w = true›, hok⟩))
 set_option hygiene false in
 macro "dloop_quote " f:ident : tactic => `(tactic| (
   intro i w seen st d e h hc hok
   rw [$f:ident, dif_pos h] at hok
   simp [uget_byteAt _ i h, hc, isWs] at hok
-  split at hok
-  · cases hok
-  split at hok
-  · cases hok
-  split at hok
-  · cases hok
+  split at hok; cases hok
+  split at hok; cases hok
+  split at hok; cases hok
   rename_i hw hk hv
   exact ⟨by simpa using hw, hk, hv⟩))
 set_option hygiene false in
@@ -521,8 +513,7 @@ macro "dloop_close " f:ident : tactic => `(tactic| (
   intro i w seen st f d e h hc hok hR
   rw [$f:ident, dif_pos h] at hok
   simp [uget_byteAt _ i h, hc, isWs] at hok
-  split at hok
-  · cases hok
+  split at hok; cases hok
   split at hok
   rotate_left
   · cases hok
@@ -546,8 +537,7 @@ macro "dkey_num " st:term : tactic => `(tactic| (
   split at hok
   rotate_left
   · cases hok
-  split at hok
-  · cases hok
+  split at hok; cases hok
   rename_i hne
   split at hok
   rotate_left
@@ -563,8 +553,7 @@ macro "dkey_res" : tactic => `(tactic| (
   split at hok
   rotate_left
   · cases hok
-  split at hok
-  · cases hok
+  split at hok; cases hok
   rename_i x e' hx
   split at hok
   rotate_left
@@ -958,8 +947,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
     by_cases h125 : byteAt b i = 125
     · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
       rw [declN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125])]
-      split at h
-      · cases h
+      split at h; cases h
       cases pl
       · simp at h
       · exact hP.elim
@@ -974,8 +962,7 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h44 : byteAt b i = 44
     · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hw
       have hw' : w = false := by simpa using hw
       subst hw'
@@ -986,16 +973,13 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       if_false] at h
     by_cases h34 : byteAt b i = 34
     · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hw
       have hw' : w = true := by simpa using hw
       subst hw'
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hk
-      split at h
-      · cases h
+      split at h; cases h
       rename_i hv
       have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
       have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
@@ -1013,10 +997,8 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
       all_goals (try exact fun h0 => absurd rfl h0)
       all_goals (try exact fun h0 => h0.elim)
       case kAxiom =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i d' e' hd
         split at h
         · rename_i hie
@@ -1025,10 +1007,8 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact declLine_link e' false ik idx (.decl d') _ r e h hD
         · cases h
       case kDef =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i d' e' hd
         split at h
         · rename_i hie
@@ -1037,10 +1017,8 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact declLine_link e' false ik idx (.decl d') _ r e h hD
         · cases h
       case kThm =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i d' e' hd
         split at h
         · rename_i hie
@@ -1049,10 +1027,8 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact declLine_link e' false ik idx (.decl d') _ r e h hD
         · cases h
       case kOpaque =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i d' e' hd
         split at h
         · rename_i hie
@@ -1061,10 +1037,8 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact declLine_link e' false ik idx (.decl d') _ r e h hD
         · cases h
       case kQuot =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i d' e' hd
         split at h
         · rename_i hie
@@ -1073,10 +1047,8 @@ theorem declLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : Line
           exact declLine_link e' false ik idx (.decl d') _ r e h hD
         · cases h
       case kInductive =>
-        split at h
-        · cases h
-        split at h
-        · cases h
+        split at h; cases h
+        split at h; cases h
         rename_i d' e' hd
         split at h
         · rename_i hie

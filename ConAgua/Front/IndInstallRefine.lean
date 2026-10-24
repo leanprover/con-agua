@@ -194,8 +194,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   obtain ⟨y1, y2⟩ := lkR_expr hD a ht
   rw [hnm] at n1; rw [hty] at y1
   unfold lpPutW at hl
-  split at hl
-  · cases hl
+  split at hl; cases hl
   have hrdN : (rdW (m.arr64 DLP) 0).toNat = topN m DLP := rfl
   obtain ⟨F1, F2, F3, F4, F5, F6, F7⟩ := lpLoopM_facts b.data (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
     hl (by rw [hrdN, UInt64.toNat_zero]; omega) hps

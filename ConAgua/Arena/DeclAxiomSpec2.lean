@@ -197,8 +197,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpcK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
   · rw [if_pos hf] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpcT, hfind]⟩
   rw [if_neg hf] at hW
@@ -419,8 +418,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hrun2', exc_ok_bind']
   by_cases e2 : r2.headD 0 = 0
   · rw [if_pos e2] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b2 = false := by rw [← hd2.1]; simpa using e2
     exact ⟨false, a2, by simp [hb]; rfl, hS2, hg2, by simp [decW0B]⟩
   rw [if_neg e2] at hW
@@ -440,8 +438,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hrun4', exc_ok_bind']
   by_cases e4 : r4.headD 0 = 0
   · rw [if_pos e4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hb : b4 = false := by rw [← hd4.1]; simpa using e4
     exact ⟨false, a4, by simp [hb]; rfl, hS4, hg2.trans hg4, by simp [decW0B]⟩
   rw [if_neg e4] at hW

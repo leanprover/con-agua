@@ -168,8 +168,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
       show PIN_EQ = (0 : Word).toNat from rfl, hrun2, hrun3']
   by_cases e4 : r4.headD 0 = 0
   · rw [if_pos e4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : (fe.find? (decI (pinW m1 (1 + (0 : Word).toNat))) == some ea) = false := by
       rw [← hb4]; simpa using e4
     refine ⟨false, a3, ?_, hS4, hg3.trans hg4, by simp [decW0B]⟩
@@ -192,8 +191,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [StateT.run_bind, hrun5, exc_ok_bind']
   by_cases e5 : r5.headD 0 = 0
   · rw [if_pos e5] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : b5 = false := by rw [← hb5]; simpa using e5
     refine ⟨false, a5, by simp [hf]; rfl, hS5, hg3.trans (hg4.trans hg5), by simp [decW0B]⟩
   rw [if_neg e5] at hW
@@ -210,8 +208,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [StateT.run_bind, hrun6, exc_ok_bind']
   by_cases e6 : r6.headD 0 = 0
   · rw [if_pos e6] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hf : b6 = false := by rw [← hb6]; simpa using e6
     refine ⟨false, a6, by simp [hf]; rfl, hS6, hg3.trans (hg4.trans (hg5.trans hg6)),
       by simp [decW0B]⟩
