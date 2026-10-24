@@ -226,6 +226,13 @@ theorem col_room (c t L : Word) (ht : t ≤ 1) (h1 : c < 134217728) (h2 : c < L 
   simp
   omega
 
+/-- The column write of an append is in bounds, as `toNat` (`ConsSch.WF.colRoom`). -/
+theorem colRoom_of (m : Mem) (A : ArrId) (c t : Word) (ht : t ≤ 1) (h1 : c < 134217728)
+    (h2 : c < m.len64 A >>> 1) : (c * 2 + t).toNat < (m.arr64 A).size := by
+  have := col_room c t (m.len64 A) ht h1 h2
+  rw [UInt64.lt_iff_toNat_lt, len64_eq, UInt64.toNat_ofNat'] at this
+  exact Nat.lt_of_lt_of_le this (Nat.mod_le _ _)
+
 /-! ## The relations -/
 
 section col
