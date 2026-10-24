@@ -75,7 +75,7 @@ theorem i1lP_closed : closedA i1lP i1lA i1lC i1lPFns = true := by decide +kernel
 theorem i1lP_prog : I1lProg i1lP := by
   constructor
   · exact (ProgHas.refl i1lP).left.right
-  · constructor <;> exact (ProgHas.refl i1lP).get _
+  · unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons ((ProgHas.refl i1lP).get _) ?_)
   all_goals exact (ProgHas.refl i1lP).get _
 
 /-- The program bundle. -/
