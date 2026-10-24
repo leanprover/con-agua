@@ -66,7 +66,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     simp only [denoteLList, opt2_eq_some_iff] at hd
     obtain ⟨L, Ls', hL, hLs, rfl⟩ := hd
     have hl0 : l ≠ 0 := fun e => by subst e; simp at hk
-    have hrd : rdW (m.arr64 POOL) o = u.word.toUInt64 := hsl1
+    have hrd : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using hsl1
     cases n with
     | zero => simp [slElemW] at hW
     | succ n =>
