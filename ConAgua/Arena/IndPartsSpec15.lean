@@ -15,7 +15,6 @@ The stubs meet it everywhere (`lvlHyp_stub`); the real call under `StageC` meets
 `blockShape?` (`IndRealPartsC2.lvlHyp_real`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -446,14 +445,6 @@ theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {
     (hT : ∀ sv a1, T' sv a1 → T sv a1) : LvlHyp c n dn vis fe m' T' :=
   fun sv a1 s z m1 hT' hf1 hS hs hsv hz => h sv a1 s z m1 (hT _ _ hT') (hf.trans hf1) hS hs hsv hz
 
-/-- The stubs' `lvl_eq_c` meets `LvlHyp` everywhere (`lvlEqStub_spec`). -/
-theorem lvlHyp_stub (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
-    (T : LIdx → AState → Prop) : LvlHyp stubCall n dn vis fe m T := by
-  intro sv a1 s z m1 _ _ hS hs hsv hz
-  have hzh := (pinZero_stage hS hz).2
-  subst hsv
-  exact partsSimStub (lvlEqStub_spec dn vis fe s z hs hzh) hS
-
 /-- A `Sim` also records the model's run. -/
 theorem Sim.withEq {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
@@ -819,23 +810,6 @@ theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP c hc n] <;>
     finish (gen := 20) [bgoK3_some]
 
-/-- **`block_shape` refines `blockShape?`** (through `strip_pis`, `get_app_fn_f`, `lvl_eq_c`,
-`intern_ls_iw`, `intern_nanon`, `name_rec`-free; capacity aborts: `nP + nIdx`, `nP + nF` wrapping,
-counts and recursor record words past `2^32`): the block an `EREC` slice of constant records decoded
-below the tops; the result `(ok, q)`, `q` a `BlockShape` record decoded below the tops (`ShapeR`). -/
-theorem blockShape_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd off l : Word)
-    (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
-    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) s₀.mem blk) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "block_shape" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockShape? nPd.toNat blk) a₀ ∧
-      ShapeR (AM.res (ConRon.Arena.blockShape? nPd.toNat blk) a₀) r s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (bsh_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (bshW_sim stubCall n hS hblk (lvlHyp_stub _ _ _ _ _ _)) hm
-    ⟨hl, hok, hQ⟩
-
 /-- **`block_parts`' model refines `blockParts?`** (`bshW_sim`). -/
 theorem bpW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
     {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
@@ -862,19 +836,5 @@ theorem bpW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     show decBP (truncM m1) _ = _
     simp only [decBP, show decBS (truncM m1) (r1.tail.headD 0).toNat = some bs from hd, bind, pure,
       Option.bind_some, List.headD_cons, List.tail_cons]
-
-/-- **`block_parts` refines `blockParts?`** (as `blockShape?`). -/
-theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd off l : Word)
-    (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
-    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) s₀.mem blk) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockParts? nPd.toNat blk) a₀ ∧
-      PartsR (AM.res (ConRon.Arena.blockParts? nPd.toNat blk) a₀) r s'.mem ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockParts? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (bpa_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (bpW_sim stubCall n hS hblk (lvlHyp_stub _ _ _ _ _ _)) hm
-    ⟨hl, hok, hQ⟩
 
 end L.Ind

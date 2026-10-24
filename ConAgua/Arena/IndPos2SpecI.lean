@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPos2SpecH
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestInstType`'s
 relational side, `nestGrowGroup`. -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -191,15 +190,6 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (hg35.trans hg6), hx6H, hx6d, (AFr.iw (stripF_frame hst)).trans ((AFr.iw (erToIwW_iwFr hlp)).trans
       (hA5.trans (instW_afr _ _ _ _ _ _ _ hiw)))⟩
 
-theorem lveW_mfr {m m' : Mem} {u v : Word} {r : List Word} (h : lveW m u v = some (r, m')) : MFr [] [] m m' := by
-  unfold lveW at h
-  split at h; · simp at h
-  rename_i r1 m1 hs
-  split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
-  exact MFr.stub (by decide) hs
-
 theorem ntyW_mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
     (h : ntyW cR k m vis key = some (r, m')) : MFr [] [] m m' := by
   unfold ntyW at h
@@ -273,16 +263,6 @@ def NitLe (cR : CallM) (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wor
     lveC cR k m3 uw (rdW (m3.arr64 IW) (ctx + 9)) = some (r4, m4) →
     ∃ b a6, (lvlEq? (decI uw) c.sort).run a5 = .ok (some b, a6) ∧ StageR dn vis fe m4 a6 ∧
       IWGrow m3 m4 ∧ MFr [] [] m3 m4 ∧ r4.headD 0 = (if b then 1 else 0) ∧ Q m4 a6
-
-/-- The stubs' `lvl_eq_fueled` meets `NitLe` (`lveW_ok`). -/
-theorem nitLe_stub (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (ctx hi key : Word) (c : NestCtx) (kk : NestKey) (m : Mem) (a : AState) :
-    NitLe stubCall k dn vis fe ctx hi key c kk (fun _ _ => True) m a := by
-  intro m1 m2 m3 m4 r1 rs r3 r4 cv caps q a3 a4 a5 tl ty bs e uw _ _ _ _ _ _ _ _ _ _ hS3 _ hu hv hvd hle
-  have hle' := lveC_stub_some hle
-  obtain ⟨b, a6, hrun, hS4, hg4, hr4⟩ := lveW_ok dn vis fe m3 m4 a5 _ _ hu hv r4 hle' hS3
-  rw [hvd] at hrun
-  exact ⟨b, a6, hrun, hS4, hg4, lveW_mfr hle', hr4, trivial⟩
 
 theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (c : NestCtx) (m m' : Mem) (a : AState) (key : Word) (kk : NestKey) (r : List Word)
@@ -376,34 +356,9 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     rfl
   · simp only [List.headD_cons]; exact (decHL_length _ hdecbs).symm
 
-
 section census
 variable (p : Prog) (hl : NitLook p)
 include hl
-
-/-- **`nest_inst_type` refines `nestInstType`** (through the `strip_pis`/`inst_lp_fast`/
-`instantiate1_fast`/`lvl_eq` stubs; the key's `ds` slice ends below the top; the walk memos well formed in the
-memory at hand, `PosMR`, and again after). -/
-@[refines ConRon.Arena.nestInstType]
-theorem nestInstType_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx hi key : Word) (c : NestCtx) (kk : NestKey) (hS : StageR dn vis fe s₀.mem a₀)
-    (hU : UCtx dn vis fe s₀.mem ctx c) (hk : decNK s₀.mem key.toNat = some kk)
-    (hkin : NKIn s₀.mem key.toNat (· < iwTop s₀.mem)) (hksl : NKSl s₀.mem key) (hP : PosMR s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      (r.headD 0).toNat = (AM.res (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀).1 ∧
-      H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = (AM.res (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀).2 ∧
-      PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (nestInstType_spec p hl stubCall (stubCall_spec p) k s₀ vis ctx hi key) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2, h3, hP', -, -⟩ := nitW_ok k dn fe vis ctx hi hi.toNat rfl c _ _ a₀ key kk _
-    stubCall IlpRd.stub IlpFr.stub _ (nitLe_stub _ _ _ _ _ _ _ _ _ _ _) hm hS
-    hU hk hkin hksl hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by simpa using h2,
-    by rw [hres]; simpa using h3, hP'⟩
 
 end census
 

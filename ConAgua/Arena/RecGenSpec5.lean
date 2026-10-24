@@ -4,7 +4,6 @@ import ConAgua.Arena.RecGenSpec4
 # `RecGen`: `classFormerTy` (lane `indproofs2`, helper `rec`)
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -287,24 +286,5 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     refine ⟨x, a4, ?_, hS4, hg3.trans hg4, hx4, (erToIwW_afr h3).trans hA4⟩
     simp only [ConRon.Arena.classFormerTy, hmem', hfci]
     exact hrun4
-
-
-/-- **`class_former_ty` refines `classFormerTy`** (through the stub `inst_lp_fast`; the
-interned `bvar 0` guarded below `2^32`). -/
-@[refines ConRon.Arena.classFormerTy]
-theorem classFormerTy_refines (p : Prog) (hp : CftProg p) (N : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l mp : Word) (M : TargetMajor)
-    (cvTas : List IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
-    (hM : DecB (fun m => decTM m mp.toNat) s₀.mem M)
-    (hcv : decPL s₀.mem (decCVp s₀.mem) o.toNat l.toNat = some cvTas) (hol : o.toNat + l.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_former_ty" [vis, o, l, mp]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classFormerTy fe cvTas M) a₀ ∧
-      KP dn vis fe s₀.mem decW0E (r, s'.mem) (AM.st (ConRon.Arena.classFormerTy fe cvTas M) a₀)
-        (AM.res (ConRon.Arena.classFormerTy fe cvTas M) a₀); ⊤⦄ := by
-  refine triple_post (classFormerTy_spec p hp stubCall (stubCall_spec p) N s₀ vis o l mp) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hd, -⟩ := cftW_ok stubCall IlpRd.stub hm hS hM hcv hol
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
 end L.Ind

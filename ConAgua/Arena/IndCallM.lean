@@ -33,9 +33,6 @@ def CallSpec (p : Prog) (c : CallM) : Prop :=
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
     ⦃fun r s' => LocEq s' s₀ ∧ c n f args s₀.mem = some (r, s'.mem); ⊤⦄
 
-theorem stubCall_spec (p : Prog) : CallSpec p stubCall :=
-  fun n f args s₀ => stubM_spec p f n s₀ args
-
 theorem realCall_spec (p : Prog) : CallSpec p (realCall p) :=
   fun n f args s₀ => callW_spec p n f args s₀
 

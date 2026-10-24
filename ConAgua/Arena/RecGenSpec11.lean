@@ -9,7 +9,6 @@ a caller has: `rec3RecsOK_of_decB`, `rec3SlotsExt_of_decB`. (`CVExt`, `CKExt` al
 any offset, which is all a decoding below the tops can say about it.)
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -111,23 +110,6 @@ theorem rec3SlotsExt_of_decB {m : Mem} {so sl : Nat} {slots : List ClassSlot}
     simp [ClassSlot.isMinor] at h0
 
 /-! ## The refinements with the hypotheses discharged -/
-
-/-- **`class_stream_recs` refines `classStreamRecs`** from the recursor shapes decoded below the
-tops (`RecsOK` derived). -/
-@[refines ConRon.Arena.classStreamRecs]
-theorem classStreamRecs_refines_decB (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
-    (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_stream_recs" = some classStreamRecsL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis rcso rcsl : Word) (recs : List RecShape)
-    (hS : StageR dn vis fe s₀.mem a₀)
-    (hrecs : DecB (fun m => decPL m (decRS m) rcso.toNat rcsl.toNat) s₀.mem recs)
-    (hb : rcso.toNat + rcsl.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_stream_recs" [vis, rcso, rcsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classStreamRecs V fe recs) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ CsRes s'.mem r (AM.res (ConRon.Arena.classStreamRecs V fe recs) a₀);
-      ⊤⦄ :=
-  classStreamRecs_refines p hc ha hsc hp n s₀ a₀ dn fe vis rcso rcsl recs hS (rec3RecsOK_of_decB hrecs hb)
 
 /-- **`class_read_classes` refines `ClassRead.classes`** from the slots decoded below the tops
 (`SlotsExt` derived). -/

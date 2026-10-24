@@ -6,7 +6,6 @@ import ConAgua.Arena.IndRealAbsPos
 # `RecGen`: `classRecTyOk` (lane `indproofs2`, helper `rec2`)
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -200,29 +199,6 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-! ## The `abstract1` memo across `class_const_ok` -/
 
-/-- `install_header` keeps the `abstract1` memo. -/
-theorem ihHdrW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word}
-    (h : L.Arena.ihW stubCall n m vis q = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [L.Arena.ihW] at h
-  | succ n =>
-  simp only [stubCall, L.Arena.ihW, L.Arena.ihK1.eq_def, L.Arena.ihK2.eq_def, L.Arena.ihK3.eq_def, L.Arena.ihK4.eq_def,
-    L.Arena.ihK5.eq_def, L.Arena.ihK6.eq_def, L.Arena.ihK7.eq_def, L.Arena.ihK8.eq_def, L.Arena.ihK9.eq_def] at h
-  afr_auto h [envFindW_afr, ipfF_afr, cvLpsA_afr, lbbF_afr, hffF_afr, stub_afr]
-
-theorem ccoW_afr {n : Nat} {m m' : Mem} {vis q : Word} {r : List Word} (h : ccoW stubCall n m vis q = some (r, m')) :
-    AFr m m' := by
-  cases n with
-  | zero => simp [ccoW] at h
-  | succ n =>
-  simp only [ccoW, ccoK1.eq_def] at h
-  split at h
-  · cases h
-  rename_i r1 m1 h1
-  refine (ihHdrW_afr h1).trans ?_
-  simp only [ccoK2.eq_def, ccoK3.eq_def, stubCall] at h
-  afr_auto h [stub_afr]
-
 /-- A `RSim` whose post also records the twin's run. -/
 theorem RSim.withRun {β α : Type} {o : Option β} {op : AM α} {a : AState}
     {Q : β → AState → α → Prop} (h : RSim o op a Q) :
@@ -356,83 +332,6 @@ theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word
 /-- `class_rec_ty_ok`'s result: a constant record below the record top. -/
 def decCVR (m' : Mem) (r : List Word) (cv : IConstantVal) : Prop :=
   decCVp m' (r.headD 0).toNat = some cv ∧ CVExt m' (r.headD 0).toNat
-
-theorem rtoW_sim (n : Nat) (m : Mem) (a : AState) (g k rc cvRi c : Word) (G : ClassGen) (RS : RecShape)
-    (CVRi : IConstantVal) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS)
-    (hcvR : ∀ q, iwN m rc.toNat = some q → CVExt m q)
-    (hcvRi : DecB (fun m => decCVp m cvRi.toNat) m CVRi) (hA : AbsOK m) :
-    RSim (rtoW stubCall n m vis g k rc cvRi c) (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a
-      (fun b a' x => KP dn vis fe m decCVR b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
-  rw [rtoW_eq]
-  unfold ConRon.Arena.classRecTyOk
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
-  refine rgW_sim n m a g k rc c G RS hS hG hns hrc hA (rtoK1 stubCall (n + 1) vis g rc cvRi c) rfl _ _ ?_
-  intro m1 a1 _ _ hS1 hg1 hA1
-  rw [rtoK1_some]
-  refine RSim.bind (K := rtoK2 stubCall (n + 1) vis rc cvRi) rfl
-    (gtW_sim dn vis fe (n + 1) m1 a1 g c G hS1 (hG.grow (decCG_mono _) hg1) hns hA1) ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho⟩, hA2⟩
-  dsimp only at hS2 hg2 ho
-  cases o with
-  | none => rw [rtoK2_fail (h := ho)]; exact RSim.none
-  | some gty =>
-  obtain ⟨h21, hgH, hgd⟩ := ho
-  rw [rtoK2_ok (h := by rw [h21]; decide)]
-  subst hgd
-  have hg12 := hg1.trans hg2
-  obtain ⟨q0, hq0, -⟩ := rec2DecRS_parts (show decRS (truncM m) rc.toNat = some RS from hrc)
-  obtain ⟨hrct, hq0m⟩ := rec2IwN_trunc hq0
-  have hq2 : iwN m2 rc.toNat = some q0 := by rw [iwN_grow hg12 hrct]; exact hq0m
-  obtain ⟨q0', hq0', hcv2, -⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m2 hg12)
-  rw [hq2] at hq0'; cases hq0'
-  have hext2 := CVExt_grow hg12 (hcvR q0 hq0m)
-  obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.2.2.2.1
-  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at erc
-  rw [erc]
-  refine RSim.lstep (K := rtoK3 stubCall (n + 1) vis cvRi (r2.tail.headD 0)) rfl fun ⟨q, m3⟩ h3 => ?_
-  obtain ⟨hS3, hg3, hq, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
-    (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
-  rw [rtoK3_some]
-  have hext3 : CVExt m3 q.toNat := ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.2.1⟩
-  have hqb : q.toNat + 3 < 2 ^ 64 := by
-    obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
-    omega
-  have hA3 := cvNewW_afr h3 hA2
-  refine RSim.bind (K := rtoK4 stubCall (n + 1) vis cvRi (r2.tail.headD 0) q) rfl
-    (RSim.withF (ccoW_sim dn vis fe (n + 1) m3 a2 q _ hS3 (rec2DecCV_erecP hdec3 hext3) hqb)
-      (fun _ hb => ccoW_afr hb)) ?_
-  rintro ⟨r4, m4⟩ u a4 - ⟨⟨hS4, hg4, -⟩, hf4⟩
-  dsimp only at hS4 hg4
-  rw [rtoK4_some]
-  have hg14 := hg12.trans (hg3.trans hg4)
-  have hri := hcvRi.stab (OMono.decCVp _) m4 hg14
-  obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hri
-  have hEi := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE64 := hS4.2.2.2.2.1
-  have et : rdW (m4.arr64 EREC) (cvRi + 3) = wt :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hEi ⊢; omega) hwt
-  rw [et]
-  have hi := (isDefEqCore_spec dn vis fe 0 wt (r2.tail.headD 0) hwtH hgH).sim hS4
-  rw [show (0 : Word).toNat = 0 from rfl, ← hwtE] at hi
-  refine RSim.bind (K := rtoK5 q) rfl (RSim.withF hi (fun _ hb => stub_afr hb)) ?_
-  rintro ⟨r5, m5⟩ bb a5 - ⟨⟨hS5, hg5, hbb, -⟩, hf5⟩
-  dsimp only at hS5 hg5 hbb
-  by_cases h50 : r5.headD 0 = 0
-  · rw [rtoK5_fail (h := h50)]; exact RSim.none
-  rw [rtoK5_ok (h := h50)]
-  have hbt : bb = true := by rw [← hbb]; simpa using h50
-  subst hbt
-  simp only [if_true]
-  have hg35 := hg4.trans hg5
-  refine RSim.pure_some ⟨⟨hS5, hg14.trans hg5, ?_, CVExt_grow hg35 hext3⟩, hf5 (hf4 hA3)⟩
-  show decCVp m5 q.toNat = _
-  rw [decCVp_grow_r hg35 hext3, hdec3]
 
 end sims
 

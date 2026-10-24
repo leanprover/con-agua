@@ -530,25 +530,4 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     rfl
   · rw [if_neg eq12] at h; cases h
 
-/-- **The axiom arm at the stage relation.** -/
-theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
-    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
-    {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
-    (h : cdaW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a)
-    (hN : L.Rom.NamesDn dn a L.Rom.quotNames) :
-    ∃ fe' a', (checkDecl V pins fe (.axiomDecl cv)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
-  obtain ⟨fe', a', h1, h2, h3, -⟩ := cdaW_gen (pins := pins) hX hdn (fun _ => True)
-    (fun _ _ => trivial) (fun _ _ _ => trivial)
-    (fun {k} {r1} {r3} {m1} {m3} _ _ hS1 hcv1 hqb e3 => by
-      obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-        (checkConstantVal_refines p hX.val k ⟨m1, Locals.init []⟩ a dn fe vis (r1.headD 0 + 1) cv
-          hS1 hcv1 (by have : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := toNat_add_small _ 1 (by omega); omega)) e3
-      subst hs3
-      exact ⟨hok3, hS3, hg3, trivial⟩)
-    h hS trivial hD hi hd hok hN
-  exact ⟨fe', a', h1, h2, h3⟩
-
 end L.Arena

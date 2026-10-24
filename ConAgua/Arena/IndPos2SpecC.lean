@@ -3,7 +3,6 @@ import ConAgua.Arena.StageInst1
 
 /-! Continued from `IndPos2SpecB.lean` (split by size; lane `indproofs`). -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -47,7 +46,6 @@ theorem mentionsAnyConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
     finish
 
-
 theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
     (hb : maConstW n m no nl e = some (r, m')) (hS : StageR dn vis fe m a) (hh : H e)
@@ -88,7 +86,6 @@ theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     simp only [ConRon.Arena.mentionsAnyConst, StateT.run_bind]
     rw [hrun]
     rfl
-
 
 section census3
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
@@ -267,7 +264,6 @@ theorem noGo_spec (n : Nat) : NoGoSpec p n ∧ NoNodeSpec p n := by
 
 end spec
 
-
 def noArm (names : List NIdx) (lo hi : Nat) (memo : Std.HashMap EIdx Bool) (fuel : Nat) :
     ENodeView → AM (Bool × Std.HashMap EIdx Bool)
   | .app f a => do
@@ -425,11 +421,6 @@ theorem MFr.of_iw {m m' : Mem} (h : MemFrame [IW] [200] m m') : MFr [] [] m m' :
 
 theorem MFr.set_iw (m : Mem) (x v : Word) : MFr [] [] m (m.set64 IW x v) := MFr.of_iw (set64IW_frame m x v)
 
-theorem MFr.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word}
-    (h : stubM f m args = some (r, m')) : MFr [] [] m m' := by
-  obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hf m m' args r h
-  exact MFr.of_frame hfr hA hC
-
 /-- `instantiate1_fast` writes the expression tables and its memo only (`instA`, `instC`). -/
 theorem MFr.ofI1F {m m' : Mem} {args r : List Word} (h : i1F m args = some (r, m')) : MFr [] [] m m' := by
   obtain ⟨n, hc⟩ := callF_run h
@@ -511,7 +502,6 @@ theorem noNodeBin_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
       simp only [except_ok_bind, hc1]
       simpa using hr2
 
-
 theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl lo hi f1 x y z r : Word)
     (ws : List Word) (mp : Std.HashMap EIdx Bool) (hx : H x) (hy : H y) (hz : H z)
     (hn : noNodeW (n + 1) m no nl lo hi f1 7 x y z = some (r, m')) (hA : ArenaR m a) (hws : SlR m no nl ws)
@@ -574,7 +564,6 @@ theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
           rw [hr2]
           simp only [except_ok_bind, hc2, Bool.false_eq_true, ↓reduceIte]
           simpa using hr3
-
 
 theorem noNodeProj_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl lo hi f1 x y z r : Word)
     (ws : List Word) (mp : Std.HashMap EIdx Bool) (hz : H z)
@@ -695,7 +684,6 @@ theorem noGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) (m m' :
             rfl
           · rw [← hbb]; exact hset'
 
-
 theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK (j + 1) := by
   intro m m' a no nl lo hi f h r ws mp hb hA hh hws hwlt hM
   by_cases hf0 : f = 0
@@ -774,9 +762,6 @@ theorem noGoOK (n : Nat) : NoGoOK n := by
     | zero => intro m m' a no nl lo hi f h r ws mp hb; simp [noGoW] at hb
     | succ j => exact noGo_step_ok j (fun k hk => ih k (by omega))
 
-
-
-
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
   (hf : p.lookup "no_find" = some (memoFindG noSch)) (hput : p.lookup "no_put" = some (memoPutG noSch))
@@ -810,7 +795,6 @@ theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
 
 end census
 
-
 /-! ### `nest_occ` -/
 
 def noClrK : Option (Word × Mem) → Option (Word × Mem)
@@ -842,7 +826,6 @@ theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
     finish
-
 
 theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl lo hi e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
@@ -885,7 +868,6 @@ theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     simp only [ConRon.Arena.nestOcc, StateT.run_bind]
     rw [hrun]
     rfl
-
 
 section census3
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
@@ -957,7 +939,6 @@ theorem memberIdxAt_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
       slFind_spec p hf n] <;> finish (gen := 20)
-
 
 /-- `(ok, idx)` against an `Option Nat`. -/
 def MemIdxOut (r : List Word) : Option Nat → Prop
@@ -1107,7 +1088,6 @@ theorem EStore.viewApp_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.app) 
 theorem viewApp_run' (h : EIdx) (a : AState) :
     (ConRon.Arena.viewApp h).run a = .ok (a.store.viewApp h, a) := rfl
 
-
 theorem ETables.getFVarIdx_of_get' (t : ETables) (i : EIdx) (ht : i.tag = ETag.fvar) (k : Nat) (ty : EIdx)
     (h : t.get i = some (.fvar k ty)) : t.getFVarIdx i = some k := by
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar] at h
@@ -1129,7 +1109,6 @@ theorem EStore.viewFVarIdx_of_view' (st : EStore) (i : EIdx) (ht : i.tag = ETag.
 
 theorem viewFVarIdx_run'' (h : EIdx) (a : AState) :
     (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
-
 
 mutual
 def phW : Nat → Mem → Word → Word → Word → Option (List Word)
@@ -1200,7 +1179,6 @@ theorem phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv k, ih] <;>
       finish (gen := 20) [St.setLocs_mem']
-
 
 theorem tag_app_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
     ((decI w : EIdx).tag == ETag.app) = decide (w >>> 28 = 4) := by
@@ -1373,7 +1351,6 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                       obtain ⟨w1, w2, hr, h1, h2, h3, h4⟩ := hpo
                       subst hr
                       exact ⟨w1, w2, rfl, h1, h2, h3, h4⟩
-
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hp : p.lookup "ph_app" = some phApp)

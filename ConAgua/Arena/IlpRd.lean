@@ -43,19 +43,10 @@ leave the twin state: the start's twin state, an `IW` frame from the start memor
 def IlpBase (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop :=
   a = a₀ ∧ MemFrame [IW] [200] m₀ m
 
-theorem IlpRd.stub {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {Pre : Mem → AState → Prop} : IlpRd stubCall dn vis fe Pre := by
-  intro k f o l us e ks m m' a r hu he _ hS hd h
-  obtain ⟨x, a', hrun, hK⟩ := instLPFast_spec dn vis fe f o l us e hu he ks m m' a r h ⟨hS, hd⟩
-  exact ⟨x, a', hrun, hK, stubM_memoFrame _ (by decide) _ _ _ _ h, stub_afr h⟩
-
 /-- **Every call of a reading of `inst_lp_fast` writes no stage memo.** -/
 def IlpFr (cR : CallM) : Prop :=
   ∀ (k : Nat) (args : List Word) (m m' : Mem) (r : List Word), cR k "inst_lp_fast" args m = some (r, m') →
     StageMemoFr m m'
-
-theorem IlpFr.stub : IlpFr stubCall :=
-  fun _ _ _ _ _ h => stubM_memoFrame _ (by decide) _ _ _ _ h
 
 theorem IlpRd.mono {cR : CallM} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {Pre Pre' : Mem → AState → Prop} (h : IlpRd cR dn vis fe Pre)

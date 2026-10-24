@@ -5,7 +5,6 @@ import ConAgua.Arena.StageInst1
 # `RecClass`: `classReadSlots` (lane `indproofs2`, helper `rec`)
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -490,24 +489,5 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       rw [nextW_min (h := by rw [hrd.1]; simp [ClassSlot.isMinor])]
       exact slotsRest_sim dn vis fe cR J hO p np bs N ih1 m m a n d _ _ _ mo ml k motPos
         (.minor c cn ihs) hS hJ (IWGrow.refl m) hdomH hbodyH hb hmot hmt hk hd hsl
-
-/-- **`class_read_slots` refines `classReadSlots`** (through the stubs of `class_read_slot` and
-`instantiate1_fast`): the slots read are a stable slice of stably decoding records. -/
-@[refines ConRon.Arena.classReadSlots]
-theorem classReadSlots_refines (p : Prog) (hP : SlotsProg p) (N : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q np n mo ml d e : Word)
-    (bs : BlockShape) (motPos : List Nat) (hS : StageR dn vis fe s₀.mem a₀) (hH : H e)
-    (hb : BSOK s₀.mem q.toNat bs) (hmot : decNL s₀.mem mo.toNat ml.toNat = some motPos)
-    (hmt : mo.toNat + ml.toNat ≤ iwTop s₀.mem) (hd : d.toNat + n.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_slots" [q, vis, np, n, mo, ml, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.classReadSlots bs fe np.toNat n.toNat motPos d.toNat (decI e)) a₀ ∧
-      KP dn vis fe s₀.mem decSlots (r, s'.mem)
-        (AM.st (ConRon.Arena.classReadSlots bs fe np.toNat n.toNat motPos d.toNat (decI e)) a₀)
-        (AM.res (ConRon.Arena.classReadSlots bs fe np.toNat n.toNat motPos d.toNat (decI e)) a₀); ⊤⦄ :=
-  triple_post ((classReadSlots_specs p hP stubCall (stubCall_spec p) N).1 s₀ q vis np n mo ml d e)
-    fun _ _ ⟨hl, hw⟩ =>
-    ⟨hl, (((slots_sims dn vis fe stubCall _ (opfJ_stub dn vis fe) q np bs N).1 _ a₀ n mo ml d e motPos hS
-      trivial hH hb hmot hmt hd).mono fun _ _ _ _ h => h.1).am hw⟩
 
 end L.Ind
