@@ -368,8 +368,7 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   by_cases hh : (mfindG lplSch m u 0).headD 0 ≠ 0
   · -- a hit: the memo's value
     simp only [ne_eq, hh, not_false_eq_true, ↓reduceIte] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hw, rfl⟩ := hW
+    obtain ⟨hw, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨v, hv, hvv, hvl⟩ := memoRV_hit lplSch ilKey VI m _ hM.lpl u 0 hr hh ⟨hu, rfl⟩
     have hval : mvG lplSch m ((mfindG lplSch m u 0).tail.headD 0) = rs.headD 0 := hw
     rw [hval] at hvv hvl
@@ -396,12 +395,8 @@ theorem slMemo_ok (p : Prog) (hp : ILWLevProg p) : SlMemoOK p := by
   by_cases hb : 4294967296 ≤ r₁.headD 0
   · simp only [hb, ↓reduceIte] at hW; cases hW
   simp only [hb, ↓reduceIte] at hW
-  cases h2 : msetG lplSch m₁ u 0 (r₁.headD 0) with
-  | none => rw [h2] at hW; cases hW
-  | some m₂ =>
-  rw [h2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr₁, rfl⟩ := hW
+  rcases h2 : msetG lplSch m₁ u 0 (r₁.headD 0) with _ | m₂ <;> simp only [h2, reduceCtorEq] at hW
+  obtain ⟨hr₁, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [← hr₁]
   have hM₁ : ILWMemo m₁ a₁ := ILWMemo.frame (a := { a with caches := { a.caches with readLC := X } })
     (hM.congr rfl rfl) o.frame (by decide) (by decide) o.memos o.grow

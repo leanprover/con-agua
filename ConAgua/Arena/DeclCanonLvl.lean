@@ -124,10 +124,7 @@ theorem nmW_ok {n : Nat} {m : Mem} {po pl co cl x y : Word} {ps cs : List NIdx}
   | zero => simp [nmW] at h
   | succ n =>
   simp only [nmW] at h
-  cases hf : findW n m po pl x with
-  | none => simp [hf] at h
-  | some r =>
-  simp only [hf] at h
+  rcases hf : findW n m po pl x with _ | r <;> simp only [hf, reduceCtorEq] at h
   have hr := findW_handle hps hpb hx hf
   unfold ConRon.Arena.canonNameMap
   by_cases h0 : r.headD 0 = 0

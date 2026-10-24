@@ -149,8 +149,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i r4 m4 hcons
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hd3u := decRL_unpack hd3
     obtain ⟨hSc, hgc, hdc, htc⟩ := consW_stage hcons hS3 hd3u.2 hh1 hd3u.1
     obtain ⟨-, -, -, hfr, -, -⟩ := consW_dec hcons hS3.2.2.2.1 hS3.2.2.2.2.2 hd3u.2 hh1 hd3u.1
@@ -210,11 +209,7 @@ theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n
   | zero => simp [cnW] at hr
   | succ n =>
   simp only [cnW] at hr
-  cases hg0 : gnW n m 0 k with
-  | none => rw [hg0] at hr; simp at hr
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [hg0] at hr
+  rcases hg0 : gnW n m 0 k with _ | ⟨r0, m0⟩ <;> simp only [hg0, reduceCtorEq] at hr
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hr)
   obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a 0 k r0 hg0 hS
     (by have := UInt64.toNat_lt k; simpa using this) hP

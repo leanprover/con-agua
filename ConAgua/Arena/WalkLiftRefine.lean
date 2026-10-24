@@ -667,11 +667,7 @@ theorem i1lAppArm_ok (hvw : viewOK m h 4) (hg : h >>> 28 = 4) :
   | none => simp [h1, i1lAppW.k4] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : i1lW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) d v fu with
-  | none => simp [h1, h2, i1lAppW.k4, i1lAppW.k3] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, i1lAppW.k4, i1lAppW.k3] at hb
+  rcases h2 : i1lW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) d v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lAppW.k4, i1lAppW.k3, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ haw hv h2
   obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh
@@ -695,11 +691,7 @@ theorem i1lLamArm_ok (hvw : viewOK m h 28) (hg : h >>> 28 = 5) :
   | none => simp [h1, i1lLamW.k2] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : i1lW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) v fu with
-  | none => simp [h1, h2, i1lLamW.k2, i1lLamW.k1] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, i1lLamW.k2, i1lLamW.k1] at hb
+  rcases h2 : i1lW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lLamW.k2, i1lLamW.k1, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw hv h2
   rw [succW_toNat d hd1] at ha₂
@@ -724,11 +716,7 @@ theorem i1lForallArm_ok (hvw : viewOK m h 30) (hg : h >>> 28 = 6) :
   | none => simp [h1, i1lForallW.k2] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : i1lW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) v fu with
-  | none => simp [h1, h2, i1lForallW.k2, i1lForallW.k1] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, i1lForallW.k2, i1lForallW.k1] at hb
+  rcases h2 : i1lW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lForallW.k2, i1lForallW.k1, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw hv h2
   rw [succW_toNat d hd1] at ha₂
@@ -758,11 +746,7 @@ theorem i1lLetArm_ok (hvw : viewOK m h 20) (hg : h >>> 28 = 7) :
   | none => simp [h1, h2, i1lLetW.k3, i1lLetW.k2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  cases h3 : i1lW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (d + 1) v fu with
-  | none => simp [h1, h2, h3, i1lLetW.k3, i1lLetW.k2, i1lLetW.k1] at hb
-  | some o =>
-  obtain ⟨z, m₃⟩ := o
-  simp only [h1, h2, h3, i1lLetW.k3, i1lLetW.k2, i1lLetW.k1] at hb
+  rcases h3 : i1lW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (d + 1) v fu with _ | ⟨z, m₃⟩ <;> simp only [h3, h1, h2, i1lLetW.k3, i1lLetW.k2, i1lLetW.k1, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA htw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ hvw' hv h2
   obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (d + 1) v fu z hA₂ hbw hv h3
@@ -783,11 +767,7 @@ theorem i1lProjArm_ok (hvw : viewOK m h 32) (hg : h >>> 28 = 9) :
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lProjW.arm1 n m h d v fu)
     (fun hr => by rw [i1lProjW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   rw [i1lProjW.arm2 n m h d v fu hr (fun h => h hh0)] at hb
-  cases h1 : i1lW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d v fu with
-  | none => simp [h1, i1lProjW.k1] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  simp only [h1, i1lProjW.k1] at hb
+  rcases h1 : i1lW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d v fu with _ | ⟨x, m₁⟩ <;> simp only [h1, i1lProjW.k1, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hew hv h1
   obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₁ h d r m' hh
     (fun r₃ m₃ h => mkProj_okI m₁ a₁ hA₁ _ _ x r₃ m₃ h) hb

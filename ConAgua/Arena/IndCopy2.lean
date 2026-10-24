@@ -299,10 +299,7 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : copyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp : copyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
@@ -417,14 +414,8 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp1 : copyW (n - 1) m1 q o1 l1 with
-  | none => simp [hcp1] at h
-  | some m2 =>
-  simp only [hcp1] at h
-  cases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with
-  | none => simp [hcp2] at h
-  | some m3 =>
-  simp only [hcp2, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp1 : copyW (n - 1) m1 q o1 l1 with _ | m2 <;> simp only [hcp1, reduceCtorEq] at h
+  rcases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with _ | m3 <;> simp only [hcp2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
@@ -637,10 +628,7 @@ theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List 
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : erCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *

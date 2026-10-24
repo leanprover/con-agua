@@ -448,11 +448,7 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
   · cases hI
   rename_i hg
   obtain ⟨hf, hx⟩ := or_shr32 f x (by simpa using hg)
-  cases hI₁ : ainternW m f x with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
+  rcases hI₁ : ainternW m f x with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
   cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
       (packBFL (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))
         (exprLPW m f ||| exprLPW m x)) with
@@ -492,11 +488,7 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
   · cases hI
   rename_i hg
   obtain ⟨ht, hb⟩ := or_shr32 t b (by simpa using hg)
-  cases hI₁ : lainternW m t b with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
+  rcases hI₁ : lainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
   cases hP : derPutW LADER 28 m₁ (cnt2 m 28) r₁
       (packBFL (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))
         (exprLPW m t ||| exprLPW m b)) with
@@ -538,11 +530,7 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
   · cases hI
   rename_i hg
   obtain ⟨ht, hb⟩ := or_shr32 t b (by simpa using hg)
-  cases hI₁ : fainternW m t b with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
+  rcases hI₁ : fainternW m t b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
   cases hP : derPutW FADER 30 m₁ (cnt2 m 30) r₁
       (packBFL (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))
         (exprLPW m t ||| exprLPW m b)) with
@@ -585,11 +573,7 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
   rename_i hg
   obtain ⟨htv, hb⟩ := or_shr32 _ b (by simpa using hg)
   obtain ⟨ht, hv⟩ := or_lt32 t v htv
-  cases hI₁ : leinternW m t v b with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
+  rcases hI₁ : leinternW m t v b with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
   cases hP : derPutW LEDER 20 m₁ (cnt2 m 20) r₁
       (packBFL (maxW (maxW (derBW m t) (derBW m v)) (satPredW (derBW m b)))
         (maxW (maxW (derFW m t) (derFW m v)) (derFW m b))
@@ -635,15 +619,8 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
   · cases hI
   rename_i hg
   obtain ⟨hn, he⟩ := or_shr32 n e (by simpa using hg)
-  cases hI₁ : pjinternW m n i e with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
-  cases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBFL (derBW m e) (derFW m e) (exprLPW m e)) with
-  | none => simp [hP] at hI
-  | some m₂ =>
-  simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
+  rcases hI₁ : pjinternW m n i e with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
+  rcases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBFL (derBW m e) (derFW m e) (exprLPW m e)) with _ | m₂ <;> simp only [hP, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := pjintern_correct m a hR.proj n i e hn he _ _ hI₁
   have hI₂ := hI₁

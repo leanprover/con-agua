@@ -277,11 +277,7 @@ theorem whnfLoopW_ok (p : Prog) (N : Nat) (hk : KnotUpTo p N) (hws : WhnfStepUpT
     intro hkn K hK m m' a MM eb e v hS heb he h
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     simp only [whnfLoopW] at h
-    cases hc : callW p k "whnf_step" [mode, vis, d, e] m with
-    | none => simp [hc] at h
-    | some q =>
-    obtain ⟨r, m₁⟩ := q
-    simp only [hc] at h
+    rcases hc : callW p k "whnf_step" [mode, vis, d, e] m with _ | ⟨r, m₁⟩ <;> simp only [hc, reduceCtorEq] at h
     have hstep := hws k (by omega) F ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d e (by omega)
       ⟨hS, hmode, heb⟩ he (hk.mono (by omega))
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep hc
@@ -366,9 +362,7 @@ theorem whnf_refines (n : Nat) (hn : n ≤ 2 ^ 62) (hk : KnotUpTo p n) (hloop : 
   have ht : whnfStuckTag (decE e) = false := by rw [whnfStuck_iff e he]; simpa using hst
   rw [whnfW_run _ _ _ _ _ _ _ hst, hkey] at hW
   unfold memoSlotW at hW
-  by_cases h0 : mfindG whSch s.mem e (genW 0 eb) = []
-  · simp [h0] at hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.wh.findE hS.core.eb1 e he h0
   by_cases h1 : (mfindG whSch s.mem e (genW 0 eb)).headD 0 ≠ 0
   · rw [if_pos h1] at hW
@@ -379,20 +373,13 @@ theorem whnf_refines (n : Nat) (hn : n ≤ 2 ^ 62) (hk : KnotUpTo p n) (hloop : 
     rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
   rw [if_neg h1] at hW
   have hmiss := hf.2 (by simpa using h1)
-  cases hcall : callW p n "whnf_loop" [mode, vis, d, e] s.mem with
-  | none => simp [hcall] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [hcall] at hW
+  rcases hcall : callW p n "whnf_loop" [mode, vis, d, e] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, reduceCtorEq] at hW
   have hbody : CoreSpec p n "whnf_loop" [mode, vis, d, e]
       (whnfBody (coreKnot (decMode mode) fe id F') fe d.toNat (decE e)) decH s a₀ dn vis fe MM eb :=
     hloop F' whnfLoopFuel s a₀ dn vis fe MM eb mode d e (by omega)
       (by simp only [whnfLoopFuel]; omega) hs he hk
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
-  cases hset : msetG whSch m₁ e (genW 0 eb) (r₁.headD 0) with
-  | none => rw [hset] at hW; cases hW
-  | some m₂ =>
-  rw [hset] at hW
+  rcases hset : msetG whSch m₁ e (genW 0 eb) (r₁.headD 0) with _ | m₂ <;> simp only [hset, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wh e (r₁.headD 0) he hrw hset
   have hrun := knot_whnf_miss _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)

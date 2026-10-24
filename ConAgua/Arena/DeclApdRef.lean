@@ -208,8 +208,7 @@ theorem apd_const_ok {m : Mem} {a : AState} (hA : ArenaR m a) (env : ApdEnv a) (
     | none => rw [e] at hn; simp [apdR1] at hn
     | some z =>
       rw [e, apdR1_some] at hn
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       exact ⟨rfl, alpdLsW_ok (nameN_rel _ env.nwf) n m o l _ _ z Ls ks hlv hps e⟩
 
 /-! ## The twin's readbacks -/
@@ -361,8 +360,7 @@ theorem apdBin_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
     · rw [if_neg hz] at hn
       simp only [ne_eq, Decidable.not_not] at hz
       subst hz
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
       exact Or.inl ⟨hb, rfl, rfl⟩
 
@@ -413,15 +411,13 @@ theorem apdLet_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
         · rw [if_neg hz2] at hn
           simp only [ne_eq, Decidable.not_not] at hz2
           subst hz2
-          simp only [Option.some.injEq, Prod.mk.injEq] at hn
-          obtain ⟨rfl, rfl⟩ := hn
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
           have hb : b₂ = false := by revert hb2; cases b₂ <;> simp
           exact Or.inl ⟨hb, rfl, rfl⟩
     · rw [if_neg hz] at hn
       simp only [ne_eq, Decidable.not_not] at hz
       subst hz
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
       exact Or.inl ⟨hb, rfl, rfl⟩
 
@@ -457,15 +453,13 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     obtain ⟨hg, -⟩ := hvr
     rw [apdNodeW_leaf n m o l f _ _ _ _ (by rw [hg]; decide) (by rw [hg]; decide)
       (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)] at hn
-    simp only [Option.some.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
   | lit i =>
     simp only [ViewR] at hvr
     rw [apdNodeW_leaf n m o l f _ _ _ _ (by rw [hvr]; decide) (by rw [hvr]; decide)
       (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide)] at hn
-    simp only [Option.some.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
     exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
   | sort u =>
     simp only [ViewR, getD1_eq'] at hvr
@@ -475,8 +469,7 @@ theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F :
     | none => rw [e] at hn; simp [apdR1] at hn
     | some y =>
       rw [e, apdR1_some] at hn
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
       obtain ⟨L, hL⟩ := env.sort (decE h) u hv
       have hy := apd_sort_ok hA env n o l _ y ks hps hx L (by rw [hdx]; exact hL) e
       refine ⟨L.allParamsDefined ks, mp, ?_, hy, hM, MemFrame.refl _ _ _⟩
@@ -575,8 +568,7 @@ theorem apdGo_step_ok (n : Nat) (ih : ApdGoOK a n) : ApdGoOK a (n + 1) := by
   · rw [apdG2_abort n m o l f h _ hfr] at hb; simp at hb
   by_cases hhit : (mfindG apdSch m h 0).headD 0 ≠ 0
   · rw [apdG2_hit n m o l f h _ hfr hhit] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     obtain ⟨b, hb1, hb2⟩ := memoRV_hit apdSch bmKey apdVR m mp hM h 0 hfr hhit ⟨hh, rfl⟩
     have hk : bmKey.dk h 0 = decE h := rfl
     rw [hk] at hb1
@@ -602,8 +594,7 @@ theorem apdGo_step_ok (n : Nat) (ih : ApdGoOK a n) : ApdGoOK a (n + 1) := by
       | none => rw [hset] at hb; simp [apdG5] at hb
       | some m2 =>
         rw [hset, apdG5_some] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         obtain ⟨b, mp1, harm, hr, hM1, hfr1⟩ :=
           apdNode_ok env n ih m m1 o l f F h vl v rn mp ks hF1 hvr hv hA hps hM hnode
         obtain ⟨hrun, hM2, hfs⟩ := apdFinish (a := a) h hh ks mp mp1 F v b rn hv hmiss harm hr hM1 hset
@@ -628,9 +619,7 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     ∃ b, (ConRon.Arena.allLevelParamsDefined lps (decE e)).run a = .ok (b, a) ∧
       r = (if b then 1 else 0) ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ ∃ mp, apdMR m' mp := by
   unfold apdEntryW at hb
-  by_cases h0 : rdW (m.arr64 CTL) apdSch.cs + 2 = 0
-  · simp [h0] at hb
-  rw [if_neg h0] at hb
+  obtain ⟨h0, hb⟩ := of_ite_none hb
   have hf0 : MemFrame [] [apdSch.cs, apdSch.cs + 1] m (mclearG apdSch m) := mclearG_frame apdSch m
   have hM0 := hM h0
   have hA0 : ArenaR (mclearG apdSch m) a :=

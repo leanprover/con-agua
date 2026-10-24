@@ -86,11 +86,7 @@ theorem CoreSpec.of_call1W {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : 
     (hdec : ∀ r r' : List Word, r.headD 0 = r'.headD 0 → dec r = dec r') {r : List Word} {m' : Mem}
     (hc : call1W p n f args s₀.mem = some (r.headD 0, m')) :
     CoreRef T a₀ dec dn s₀.mem vis fe M eb r m' := by
-  cases hcall : callW p n f args s₀.mem with
-  | none => simp [call1W, hcall] at hc
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hc
+  rcases hcall : callW p n f args s₀.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, call1W, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hc
   obtain ⟨hw, rfl⟩ := hc
   obtain ⟨h1, h2, h3, h4⟩ := CoreSpec.of_callW h hcall
   exact ⟨h1, h2, h3.trans (hdec _ _ hw), by unfold ResH at h4 ⊢; rw [← hw]; exact h4⟩
@@ -327,9 +323,7 @@ theorem infer_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) :
   have hS := hs.rel
   rw [ebKey_eq mode eb hs.eb_mode] at hW
   unfold memoSlotW at hW
-  by_cases h0 : mfindG inSch s.mem e (genW 0 eb) = []
-  · simp [h0] at hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.inf.findE hS.core.eb1 e he h0
   by_cases h1 : (mfindG inSch s.mem e (genW 0 eb)).headD 0 ≠ 0
   · rw [if_pos h1] at hW
@@ -370,9 +364,7 @@ theorem inferIO_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n)
   have hS := hs.rel
   rw [ebKey_eq mode eb hs.eb_mode] at hW
   unfold memoSlotW at hW
-  by_cases h0 : mfindG ioSch s.mem e (genW 0 eb) = []
-  · simp [h0] at hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.io.findE hS.core.eb1 e he h0
   by_cases h1 : (mfindG ioSch s.mem e (genW 0 eb)).headD 0 ≠ 0
   · rw [if_pos h1] at hW
@@ -420,9 +412,7 @@ theorem defeq_refines (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) :
   have hkey : y ||| ebKey mode = genW y eb := by rw [hs.eb_mode]; rfl
   rw [hkey] at hW
   unfold memoSlotD at hW
-  by_cases h0 : mfindG deSch s.mem x (genW y eb) = []
-  · simp [h0] at hW
-  rw [if_neg h0] at hW
+  obtain ⟨h0, hW⟩ := of_ite_none hW
   have hf := hS.core.de.findD hS.core.eb1 x y hx hy h0
   by_cases h1 : (mfindG deSch s.mem x (genW y eb)).headD 0 ≠ 0
   · rw [if_pos h1] at hW
@@ -587,11 +577,7 @@ theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) := 
     (defeqE_spec p hp n s₀ mode vis d x y)
   subst hs0
   refine ⟨hloc, ?_⟩
-  cases hcall : callW p n "defeq" [mode ||| 2, vis, d, x, y] s.mem with
-  | none => simp [call1W, hcall] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases hcall : callW p n "defeq" [mode ||| 2, vis, d, x, y] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, call1W, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   have hdec : decBool r₁ = decBool r := by simp only [decBool, hr]
   have hok₁ : ResH r₁ → ResH r := fun h => by unfold ResH at h ⊢; rw [← hr]; exact h

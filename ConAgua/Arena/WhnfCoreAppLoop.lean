@@ -433,8 +433,7 @@ theorem apW_ref (k : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.
     | some q =>
     obtain ⟨r, m'⟩ := q
     rw [hc] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hok, hD, hres, hfr, hhw⟩ := callW_mkApp p hp.spine k ⟨m, Locals.init []⟩ a hS.arena
       v aW r m' hc
     have hrun := AM.run_of_ok _ _ hok
@@ -529,8 +528,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         | some q =>
         obtain ⟨r₁, m₁⟩ := q
         rw [hcall] at hF
-        simp only [Option.some.injEq, Prod.mk.injEq] at hF
-        obtain ⟨rfl, rfl, rfl⟩ := hF
+        obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
         cases k with
         | zero => rw [callW_zero_app] at hcall; cases hcall
         | succ k' =>
@@ -671,8 +669,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             | some q2 =>
             obtain ⟨r', m₄⟩ := q2
             rw [hcM] at hF
-            simp only [Option.some.injEq, Prod.mk.injEq] at hF
-            obtain ⟨rfl, rfl, rfl⟩ := hF
+            obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
             have haoT : ao.toNat + an.toNat ≤ top.toNat := by omega
             have hx3 : SpineR m₃ ao an args := har₀.keepT top hsz₃ hb₃ haoT hspn0
             obtain ⟨hok2, hD2, hres2, hfr2, hhw2⟩ := callW_mkAppNFrom p hp.spine (k' + 1)
@@ -732,8 +729,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             appStepT]
           exact hrun'
     · rw [appFull_exit hlt] at hF
-      simp only [Option.some.injEq, Prod.mk.injEq] at hF
-      obtain ⟨rfl, rfl, rfl⟩ := hF
+      obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
       have hnlt : ¬ i.toNat < args.size := by
         rw [hlt_args]; exact fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
       have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v)

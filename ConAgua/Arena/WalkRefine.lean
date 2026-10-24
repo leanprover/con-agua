@@ -115,8 +115,7 @@ theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
   · rw [bbW] at hb; simp [hc, hr] at hb
   by_cases hh0 : (mfindG bmSch m h 0).headD 0 ≠ 0
   · rw [bbW_hit n m h c hc hr hh0] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memos.bvar h 0 hr hh0 ⟨hh, rfl⟩]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0

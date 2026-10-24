@@ -473,11 +473,7 @@ theorem of_call1W {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem
     (h : ∀ s₀ : St, ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
       ⦃fun r s' => LocEq s' s₀ ∧ X s₀.mem (r.headD 0) s'.mem; ⊤⦄)
     (hc : call1W p n f vs m = some (w, m')) : X m w m' := by
-  cases hcall : callW p n f vs m with
-  | none => simp [call1W, hcall] at hc
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hc
+  rcases hcall : callW p n f vs m with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, call1W, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   obtain ⟨s', hs', -, hX⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (h _) hcall
   rw [hs'] at hX; exact hX
@@ -514,15 +510,9 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
     hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   simp only [faK3] at hW
-  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
-  by_cases g2 : tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
-  by_cases g3 : rdW (m₂.arr64 CTL) (16 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  obtain ⟨g1, hW⟩ := of_ite_none hW
+  obtain ⟨g2, hW⟩ := of_ite_none hW
+  obtain ⟨g3, hW⟩ := of_ite_none hW
   have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
   have htag : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ h₂.2.2.2 hg

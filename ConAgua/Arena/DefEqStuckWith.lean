@@ -343,8 +343,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   refine growRef_bindS (GrowRef.of_core h₂) (fun M₂ hS₂ => ?_)
   by_cases h20 : r₂.headD 0 = 0
   · rw [stK2_no (h := h20)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h20]
     exact growRef_pure hS₂ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   rw [stK2_yes (h := h20)] at hW

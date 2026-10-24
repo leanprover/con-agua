@@ -172,8 +172,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [ctcW_def] at h
   by_cases h5 : rdW (m.arr64 EREC) x ≤ 5
   · rw [if_pos h5] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨cv, hd, hrun⟩ := ctcW_small hS hci h5
     exact ⟨cv, a, hrun, hS, IWGrow.refl _, by simpa using hd⟩
   rw [if_neg h5] at h
@@ -251,21 +250,11 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have rll := cnRdW_grow hg13 hsz3 (x := x) (k := 4) (kn := 3 + 1) rfl hwl
   rw [rn, rlo, rll] at h
   simp only [ctcK4] at h
-  cases hcn : cvNewW m3 wn wo wl t with
-  | none => rw [hcn] at h; simp at h
-  | some qm =>
-  obtain ⟨q, m4⟩ := qm
-  rw [hcn] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hcn : cvNewW m3 wn wo wl t with _ | ⟨q, m4⟩ <;> simp only [hcn, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   simp only [cvNewW] at hcn
-  cases hal : erAllocW m3 4 with
-  | none => rw [hal] at hcn; simp at hcn
-  | some qm1 =>
-  obtain ⟨q1, m5⟩ := qm1
-  rw [hal] at hcn
-  simp only [Option.some.injEq, Prod.mk.injEq] at hcn
-  obtain ⟨rfl, rfl⟩ := hcn
+  rcases hal : erAllocW m3 4 with _ | ⟨q1, m5⟩ <;> simp only [hal, reduceCtorEq] at hcn
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hcn)
   rw [cvNewMem_eq]
   obtain ⟨hS4, hg4, hq, htop, hget⟩ := erRec_stage hal hS3 [wn, wo, wl, t] (by simp)
   refine ⟨⟨decI wn, l3, decE t⟩, a3, ?_, hS4, hg13.trans hg4, ?_⟩

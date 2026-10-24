@@ -214,8 +214,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
       (etaCtorShape fe (decE e)).run a₀ = .ok (v, a₀) → v = (x != 0) →
       CoreRef (etaCtorShape fe (decE e)) a₀ decBool dn s.mem vis fe MM eb r s'.mem := by
     intro x hxy hx v hv hvx
-    simp only [Option.some.injEq, Prod.mk.injEq] at hxy
-    obtain ⟨h1, h3⟩ := hxy
+    obtain ⟨h1, h3⟩ := Prod.mk.inj (Option.some.inj hxy)
     rw [← h3]
     refine coreRef_pure hS hv ?_ ?_
     · rw [hvx, decBool, ← h1]

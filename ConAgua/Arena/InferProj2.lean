@@ -186,16 +186,10 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.1 hrw2 hc3
   -- the head constant
   simp only [ipHead] at hW
-  by_cases g1 : r₃.headD 0 >>> 28 ≠ 3
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  obtain ⟨g1, hW⟩ := of_ite_none hW
   have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
-  by_cases g2 : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
-  by_cases g3 : rdW (m₃.arr64 CTL) (18 + tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  obtain ⟨g2, hW⟩ := of_ite_none hW
+  obtain ⟨g3, hW⟩ := of_ite_none hW
   have hvOK : viewOK m₃ (r₃.headD 0) 18 := ⟨g2, by simpa using g3⟩
   obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ := view_const_words m₃ _ hS₂.arena.1 (r₃.headD 0) hhw hvOK g1'
   generalize rdW (m₃.arr64 CREC) (idxW (r₃.headD 0) * 4 + tierW (r₃.headD 0) * 2) = wT at hcT hcTw hW
@@ -210,9 +204,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   have hrun4 := ipRun_of_ref h₄
   obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
   have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erec n "find_proj" _ m₃ r₄ m₄ (Or.inl rfl) hc4
-  by_cases g4 : r₄.headD 0 = 0
-  · rw [if_pos g4] at hW; cases hW
-  rw [if_neg g4] at hW
+  obtain ⟨g4, hW⟩ := of_ite_none hW
   obtain ⟨tbl, hdt, hfe⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
   have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by

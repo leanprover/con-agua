@@ -497,9 +497,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLe
   · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
     subst e
     rw [if_neg (by decide), if_neg (by decide), if_pos rfl] at h
-    by_cases hg : 1152921504606846976 ≤ rdW (m.arr64 DLP) (s + 8)
-    · rw [if_pos hg] at h; cases h
-    rw [if_neg hg] at h
+    obtain ⟨hg, h⟩ := of_ite_none h
     have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
     have h11 : (11 * rdW (m.arr64 DLP) (s + 8)).toNat = 11 * (rdW (m.arr64 DLP) (s + 8)).toNat := by
@@ -662,12 +660,8 @@ theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List 
   obtain ⟨o, m1⟩ := x
   rw [ha] at h
   simp only at h
-  cases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with
-  | none => rw [hg] at h; cases h
-  | some m2 =>
-  rw [hg] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with _ | m2 <;> simp only [hg, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hC : 129 < (m.arr64 CTL).size := by omega
   obtain ⟨ho, ht1, hE1', hW1⟩ := erAllocW_facts ha hC hEs
   have hw1 := hW1 (fun j => erTop m ≤ j)

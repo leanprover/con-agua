@@ -41,10 +41,6 @@ def LitInj (a : AState) : Prop :=
   ∀ (x y : EIdx) (l : ConLeche.Literal), a.store.view x = some (.lit l) →
     a.store.view y = some (.lit l) → x = y
 
-theorem view_run' {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view h = some v) :
-    (view h).run a = .ok (v, a) := by
-  simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-
 theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel x y r : Word) (ps qs cs : List NIdx),
     ceW n m po pl qo ql co cl fuel x y = some (r, m') → StageR dn vis fe m a →
@@ -67,8 +63,8 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
     obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.1.arena.1 x hne.1
     obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.1.arena.1 y hne.2
     have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := toNat_pred hf
-    rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run' hvx, exc_ok_bind',
-      StateT.run_bind, view_run' hvy, exc_ok_bind']
+    rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run _ _ _ hvx, exc_ok_bind',
+      StateT.run_bind, view_run _ _ _ hvy, exc_ok_bind']
     generalize eViewW m x = ru at *
     generalize eViewW m y = rv at *
     cases vx <;> cases vy <;> simp only [ViewR, cnGetD1', getD2', getD3'] at hrx hry
@@ -160,61 +156,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
           exact decide_eq_false e
         simp only [hnn]
         exact ⟨false, rfl, rfl, hS, IWGrow.refl _, hP⟩
-    case neg.app.app =>
-      rename_i f1 x1 f2 x2
-      dsimp only
-      obtain ⟨e0, hw1, hf1, hw1', hx1⟩ := hrx
-      obtain ⟨f0, hw2, hf2, hw2', hx2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
-      cases hc : ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
-      | none => rw [hc] at h; simp [ceK1] at h
-      | some xx =>
-      obtain ⟨r1, m1⟩ := xx
-      rw [hc, ceK1_some] at h
-      obtain ⟨b1, hb1, hr1, hS1, hg1, hP1⟩ := ih m m1 a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
-        hS hC hL hP hw1 hw2
-      rw [hf1, hf2] at hb1
-      obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
-        hb1 hr1
-        (fun hne => by
-          rw [if_neg hne] at h
-          obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h
-            hS1 (hC.grow hg1) hL hP1 hw1' hw2'
-          rw [hx1, hx2] at hb2
-          exact ⟨b2, hb2, hr2, hS2, hg1.trans hg2, hP2⟩)
-        (fun h0 => by
-          rw [if_pos h0] at h
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-          exact ⟨rfl, hS1, hg1, hP1⟩)
-      exact ⟨b, hb, hr, hq1, hq2, hq3⟩
-    case neg.lam.lam =>
-      rename_i f1 x1 f2 x2
-      dsimp only
-      obtain ⟨e0, hw1, hf1, hw1', hx1⟩ := hrx
-      obtain ⟨f0, hw2, hf2, hw2', hx2⟩ := hry
-      simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, ite_true] at h
-      cases hc : ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
-      | none => rw [hc] at h; simp [ceK1] at h
-      | some xx =>
-      obtain ⟨r1, m1⟩ := xx
-      rw [hc, ceK1_some] at h
-      obtain ⟨b1, hb1, hr1, hS1, hg1, hP1⟩ := ih m m1 a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
-        hS hC hL hP hw1 hw2
-      rw [hf1, hf2] at hb1
-      obtain ⟨b, hb, hr, hq1, hq2, hq3⟩ := andThen_ok' (Q := StageR dn vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m')
-        hb1 hr1
-        (fun hne => by
-          rw [if_neg hne] at h
-          obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h
-            hS1 (hC.grow hg1) hL hP1 hw1' hw2'
-          rw [hx1, hx2] at hb2
-          exact ⟨b2, hb2, hr2, hS2, hg1.trans hg2, hP2⟩)
-        (fun h0 => by
-          rw [if_pos h0] at h
-          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-          exact ⟨rfl, hS1, hg1, hP1⟩)
-      exact ⟨b, hb, hr, hq1, hq2, hq3⟩
-    case neg.forallE.forallE =>
+    case neg.app.app | neg.lam.lam | neg.forallE.forallE =>
       rename_i f1 x1 f2 x2
       dsimp only
       obtain ⟨e0, hw1, hf1, hw1', hx1⟩ := hrx
