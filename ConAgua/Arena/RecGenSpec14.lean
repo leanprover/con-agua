@@ -115,56 +115,10 @@ theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Na
 
 /-! ## `check_block_classes_keys` -/
 
-def ckkK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-def ckkK2 (p : Prog) (n : Nat) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ckkK3 (callW p n "sl_cons" [r1.headD 0, r.headD 0, r.tail.headD 0] m)
-
-mutual
-/-- **The model of `check_block_classes_keys(nP, po, pl, ko, kl)`** at exec fuel `n`. -/
-def ckkW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, nP, po, pl, ko, kl =>
-    if kl = 0 then some ([0, 0], m)
-    else ckkK1 p n nP po pl ko kl (callW p n "class_key_of" [nP, po, pl, rdW (m.arr64 IW) ko] m)
-def ckkK1 (p : Prog) (n : Nat) (nP po pl ko kl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ckkK2 p n r (ckkW p n m nP po pl (ko + 1) (kl - 1))
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (nP po pl ko kl : Word) (r r1 : List Word)
-theorem ckkW_zero : ckkW p 0 m nP po pl ko kl = none := by simp [ckkW]
-theorem ckkW_nil (h : kl = 0) : ckkW p (n + 1) m nP po pl ko kl = some ([0, 0], m) := by simp [ckkW, h]
-theorem ckkW_cons (h : kl ≠ 0) : ckkW p (n + 1) m nP po pl ko kl =
-    ckkK1 p n nP po pl ko kl (callW p n "class_key_of" [nP, po, pl, rdW (m.arr64 IW) ko] m) := by
-  simp [ckkW, h]
-theorem ckkK1_some : ckkK1 p n nP po pl ko kl (some (r, m)) =
-    ckkK2 p n r (ckkW p n m nP po pl (ko + 1) (kl - 1)) := by simp [ckkK1]
-theorem ckkK2_some : ckkK2 p n r1 (some (r, m)) =
-    ckkK3 (callW p n "sl_cons" [r1.headD 0, r.headD 0, r.tail.headD 0] m) := rfl
-theorem ckkK3_some : ckkK3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] ckkW_nil ckkW_cons ckkK1_some ckkK2_some ckkK3_some
-
-theorem ckk_spec (p : Prog) (hp : p.lookup "check_block_classes_keys" = some checkBlockClassesKeys)
-    (n : Nat) : ∀ (s₀ : St) (nP po pl ko kl : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_classes_keys" [nP, po, pl, ko, kl]
-    ⦃fun r s' => LocEq s' s₀ ∧ ckkW p n s₀.mem nP po pl ko kl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ nP po pl ko kl; rw [invoke_eq _ hp]; simp only [callFn, checkBlockClassesKeys]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nP po pl ko kl
-    rw [invoke_eq _ hp]
-    simp only [callFn, checkBlockClassesKeys]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "class_key_of", callW_spec p n "sl_cons", ih] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
+l_model ckk_spec (p : Prog) (hp : p.lookup "check_block_classes_keys" = some checkBlockClassesKeys)
+  fns [hp ↦ ckkW]
+  specs [callW_spec p n "class_key_of", callW_spec p n "sl_cons"]
+  grind [arena_grind] simp [getElem_rdW']
 
 /-- **`check_block_classes_keys`' model simulates `ks.mapM (classKeyOf nP params)`.** -/
 theorem ckkW_sim {p : Prog} (hP : KeysProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -176,11 +130,11 @@ theorem ckkW_sim {p : Prog} (hP : KeysProg p) (dn : NIdx → Option ConLeche.Nam
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         PSlR decCK x (r.headD 0) (r.tail.headD 0) m' ∧ PosMR m') := by
   induction n with
-  | zero => intro m a ko kl ks _ _ _ _ _; rw [ckkW_zero]; exact Sim.of_none
+  | zero => intro m a ko kl ks _ _ _ _ _; rw [ckkW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a ko kl ks hS hpf hpb hks hPm
   by_cases hkl : kl = 0
-  · rw [ckkW_nil p n m nP po pl ko kl hkl]
+  · rw [ckkW.arm1 p n m nP po pl ko kl hkl]
     have : ks = [] := by
       have h := hks.1; simp only [DecB, hkl] at h
       simpa [decPL] using h.symm
@@ -188,18 +142,20 @@ theorem ckkW_sim {p : Prog} (hP : KeysProg p) (dn : NIdx → Option ConLeche.Nam
     exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decCK m, hPm⟩
   obtain ⟨q, k0, ks', rfl, hw, hqb, hdk, hks'⟩ := partsPSl_cons hks hkl
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  rw [ckkW_cons p n m nP po pl ko kl hkl, hw]
+  rw [ckkW.arm2 p n m nP po pl ko kl hkl, hw]
   simp only [List.mapM_cons]
-  refine Sim.bindK (K := ckkK1 p n nP po pl ko kl) (body := fun r1 m1 => ckkK2 p n r1
-      (ckkW p n m1 nP po pl (ko + 1) (kl - 1))) (by simp [ckkK1]) (fun r m₁ => ckkK1_some p n m₁ nP po pl ko kl r)
+  refine Sim.bindK (K := ckkW.k_class_key_of p n nP po pl ko kl) (body := fun r1 m1 =>
+      ckkW.k_check_block_classes_keys p n (r1.headD 0) (ckkW p n m1 nP po pl (ko + 1) (kl - 1)))
+    (by simp [ckkW.k_class_key_of]) (fun r m₁ => ckkW.k_class_key_of.arm1 p n nP po pl ko kl r m₁)
     (kofCall_sim hP.toKofProg n hS (hpf.get (OMono.decHL _ _)) hpb (by rw [hq']; exact hdk) hPm) ?_
   rintro r1 x1 m1 a1 ⟨hd1, hS1, hg1, hP1⟩
-  refine Sim.bindK (K := ckkK2 p n r1) (body := fun r2 m2 => ckkK3 (callW p n "sl_cons"
+  refine Sim.bindK (K := ckkW.k_check_block_classes_keys p n (r1.headD 0)) (body := fun r2 m2 =>
+      ckkW.k_sl_cons p (callW p n "sl_cons"
       [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2)) rfl (fun _ _ => rfl)
     (ih m1 a1 (ko + 1) (kl - 1) ks' hS1 (hpf.grow (OMono.decHL _ _) hg1) (Nat.le_trans hpb hg1.1)
       (hks'.grow decCK_mono hg1) hP1) ?_
   rintro r2 xs m2 a2 ⟨hS2, hg2, hd2, hP2⟩
-  refine Sim.mstep (K := ckkK3) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
+  refine Sim.mstep (K := ckkW.k_sl_cons p) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
   obtain ⟨hS3, hg3, hd3, hf3⟩ := clsCons hP decCK_mono h3 hS2 hd2 (hd1.grow (decCK_mono _) hg2)
   exact Sim.ret ⟨hS3, (hg1.trans hg2).trans hg3, by simpa using hd3, hP2.fr hf3⟩
 
