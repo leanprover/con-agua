@@ -132,29 +132,38 @@ variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → 
 arrays `A₀` and the `CTL` words `C₀` (for `lit`: the pool and its top `CTL[0]`). (`RFrame` is the
 same fact for the table's own appends; this one is for every other writer.) -/
 def RLocal (A₀ : List ArrId) (C₀ : List Word) : Prop :=
-  ∀ m m', m'.arr64 S.ra = m.arr64 S.ra → (∀ b ∈ A₀, m'.arr64 b = m.arr64 b) →
+  ∀ m m', (∀ t, m'.arr64 (tierA S.ra t) = m.arr64 (tierA S.ra t)) → (∀ b ∈ A₀, m'.arr64 b = m.arr64 b) →
     (∀ x ∈ C₀, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) →
     (∀ t i a, R m t i a → R m' t i a) ∧ ∀ t i, hs m' t i = hs m t i
 
 /-- A table (and the arrays `A₀` and words `C₀` its records refer to) is apart from a writer of
-`A` and `C`. -/
+`A` and `C` (the table's arrays in both tiers: `a` and `a + 256`). -/
 def Apart (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word) : Prop :=
-  S.ra ∉ A ∧ S.sa ∉ A ∧ (∀ b ∈ A₀, b ∉ A ∧ b ≠ CTL) ∧ S.ca ∉ C ∧ S.ca + 1 ∉ C ∧
-    (1 : Word) ∉ C ∧ SCB ∉ C ∧ ∀ x ∈ C₀, x ∉ C
+  S.ra ∉ A ∧ S.ra + 256 ∉ A ∧ S.sa ∉ A ∧ S.sa + 256 ∉ A ∧ (∀ b ∈ A₀, b ∉ A ∧ b ≠ CTL) ∧
+    S.ca ∉ C ∧ S.ca + 1 ∉ C ∧ (1 : Word) ∉ C ∧ SCB ∉ C ∧ ∀ x ∈ C₀, x ∉ C
 
 instance (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word) :
     Decidable (Apart S A₀ C₀ A C) := by
-  unfold Apart; exact instDecidableAnd (dp := inferInstance) (dq := instDecidableAnd)
+  unfold Apart
+  exact instDecidableAnd (dq := instDecidableAnd (dq := instDecidableAnd (dq := instDecidableAnd (dq := instDecidableAnd))))
 
 /-- **`Apart` by bounds**: a table below array `ka` and below `CTL` word `kc` is apart from any
-writer of arrays `≥ ka` and `CTL` words `≥ kc` (`ArenaR.frame_above`, `ArenaR.frame_ext`). -/
+writer of arrays `≥ ka` (and not the tier-1 twins `256 + b` of arrays `b < ka`) and `CTL` words
+`≥ kc` (`ArenaR.frame_above`, `ArenaR.frame_ext`). -/
 theorem apart_hi (ka kc : Nat) (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word)
     (hlo : S.ra < ka ∧ S.sa < ka ∧ S.ca.toNat + 1 < kc ∧ (∀ b ∈ A₀, b < ka ∧ b ≠ CTL) ∧
       ∀ x ∈ C₀, x.toNat < kc) (hk : 62 < kc) (hkc : kc < 2 ^ 64)
-    (hA : ∀ b ∈ A, ka ≤ b) (hC : ∀ x ∈ C, kc ≤ x.toNat) : Apart S A₀ C₀ A C := by
+    (hA : ∀ b ∈ A, ka ≤ b ∧ (b < 256 ∨ 256 + ka ≤ b)) (hC : ∀ x ∈ C, kc ≤ x.toNat) :
+    Apart S A₀ C₀ A C := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hlo
-  refine ⟨fun h => Nat.not_le_of_lt h1 (hA _ h), fun h => Nat.not_le_of_lt h2 (hA _ h),
-    fun b hb => ⟨fun h => Nat.not_le_of_lt (h4 b hb).1 (hA _ h), (h4 b hb).2⟩,
+  have tw : ∀ r : ArrId, r < ka → r + 256 ∉ A := fun r hr h => by
+    rcases (hA _ h).2 with h' | h'
+    · exact absurd h' (Nat.not_lt.mpr (Nat.le_add_left 256 r))
+    · exact absurd hr (Nat.not_lt.mpr
+        (Nat.le_of_add_le_add_right (by rwa [Nat.add_comm 256 ka] at h')))
+  refine ⟨fun h => Nat.not_le_of_lt h1 (hA _ h).1, tw _ h1,
+    fun h => Nat.not_le_of_lt h2 (hA _ h).1, tw _ h2,
+    fun b hb => ⟨fun h => Nat.not_le_of_lt (h4 b hb).1 (hA _ h).1, (h4 b hb).2⟩,
     fun h => by have := hC _ h; omega, fun h => ?_,
     fun h => by have := hC _ h; simp at this; omega,
     fun h => by have := hC _ h; simp [SCB] at this; omega,
