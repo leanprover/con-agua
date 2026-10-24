@@ -440,23 +440,18 @@ theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_congr (hK.normal σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)) ?_
       simp only [List.length_append]; omega
-    · intro σ2 d2 hr2 hI2 hS2
-      exact hK.brk σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)
+    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)
     · intro v σ2 d2 hr2 hI2 hS2 hv
       exact hK.ret v σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_seq_run, hr1]; exact hr2, hne⟩ (hS1.trans_g hG2)
-    · intro d2 hG2
-      exact hK.exh d2 (hS1.trans_g hG2)
+    · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_seq_run, hr1]; exact hr2
-  · intro σ1 d1 hr1 hI1 hS1
-    exact hK.brk σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1
-  · intro v σ1 d1 hr1 hI1 hS1 hv
-    exact hK.ret v σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1 hv
+  · exact fun σ1 d1 hr1 hI1 hS1 => hK.brk σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1
+  · exact fun v σ1 d1 hr1 hI1 hS1 hv => hK.ret v σ1 d1 (by rw [step_seq_run, hr1]) hI1 hS1 hv
   · intro d1 ⟨e, hr1, hne⟩ hG1
     exact hK.err d1 ⟨e, by rw [step_seq_run, hr1], hne⟩ hG1
-  · intro d1 hG1
-    exact hK.exh d1 hG1
+  · exact fun d1 hG1 => hK.exh d1 hG1
   · exact hK.tail_fwd rfl rfl (SPost.refl d) fun vs σ' hr1 => by rw [step_seq_run, hr1]
 
 omit hG hTab in
@@ -477,8 +472,7 @@ theorem sim_ifAbort (c : Cond) : SimS p G (stepRun p K) P (.ite c .abort .skip) 
   refine sim_cond hG ctx hT hTab F hF c _ true _ 0 k hc hwf.1.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
   · intro d1 hcv hE1
     exact hK.err d1 ⟨.abort, by rw [step_ite_run, hcv]; rfl, by simp⟩ (hE1.spost (G := G) hI.lo).gpost
-  · intro d1 hcv hE1
-    exact hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) (hI.ofE hG hE1) (hE1.spost hI.lo)
+  · exact fun d1 hcv hE1 => hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) (hI.ofE hG hE1) (hE1.spost hI.lo)
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       (hE1.spost (G := G) hI.lo).gpost
@@ -510,14 +504,12 @@ theorem sim_ite (c : Cond) (s t : Stmt)
       refine ev_label hc3.right.head ?_
       refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)) ?_
       simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · intro σ2 d2 hr2 hI2 hS2
-      exact hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)
+    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)
     · intro v σ2 d2 hr2 hI2 hS2 hv
       exact hK.ret v σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_ite_run, hc1v]; exact hr2, hne⟩ (hS1.trans_g hG2)
-    · intro d2 hG2
-      exact hK.exh d2 (hS1.trans_g hG2)
+    · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_ite_run, hc1v]; exact hr2
   · -- the condition is true: the then branch
     intro d1 hc1v hE1
@@ -531,14 +523,12 @@ theorem sim_ite (c : Cond) (s t : Stmt)
       refine ev_label hc3.right.head ?_
       refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)) ?_
       simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · intro σ2 d2 hr2 hI2 hS2
-      exact hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)
+    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)
     · intro v σ2 d2 hr2 hI2 hS2 hv
       exact hK.ret v σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_ite_run, hc1v]; exact hr2, hne⟩ (hS1.trans_g hG2)
-    · intro d2 hG2
-      exact hK.exh d2 (hS1.trans_g hG2)
+    · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr2 => by rw [step_ite_run, hc1v]; exact hr2
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
@@ -608,8 +598,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
           exact hK.ret v σ2 d4 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2) hI4 (hS13.trans hS4) hv
         · intro d4 ⟨e, hr2, hne⟩ hG4
           exact hK.err d4 ⟨e, by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2, hne⟩ (hS13.trans_g hG4)
-        · intro d4 hG4
-          exact hK.exh d4 (hS13.trans_g hG4)
+        · exact fun d4 hG4 => hK.exh d4 (hS13.trans_g hG4)
         · exact hK.tail_fwd rfl rfl hS13 fun vs σ' hr2 => by
             rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2
     · -- `break`: leave the loop
@@ -623,8 +612,7 @@ theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
       exact hK.ret v σ1 d2 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr1, hne⟩ hG2
       exact hK.err d2 ⟨e, by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1], hne⟩ (hS1.trans_g hG2)
-    · intro d2 hG2
-      exact hK.exh d2 (hS1.trans_g hG2)
+    · exact fun d2 hG2 => hK.exh d2 (hS1.trans_g hG2)
     · exact hK.tail_fwd rfl rfl hS1 fun vs σ' hr1 => by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]
   · intro d1 ⟨e, he⟩ hE1
     exact hK.err d1 ⟨e, by rw [step_while_run, he], by rw [evalCP_error he]; simp⟩
