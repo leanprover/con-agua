@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfCoreAppLoop
-import ConAgua.L.ModelGen
 
 /-!
 # `whnf_core_step` and its `app` arm refine `whnfCoreStep`
@@ -30,38 +29,59 @@ def whnfCoreAppT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap 
   let hv ← headAndArgs v
   whnfApp mode r fe depth v hv.1 hv.2 same sp.2.1 sp.2.2 0
 
-/-- **`whnf_core_app2` is its model `coreApp2W`** (generated). -/
-l_model coreApp2_spec (p : Prog) (hp : p.lookup "whnf_core_app2" = some whnfCoreApp2L)
-  fns [hp ↦ coreApp2W tuple]
-  specs [callW_spec p n "head_and_args", callW_spec p n "whnf_app"]
-  grind [arena_grind] finish [St.setLocs_mem'] gen 20 heartbeats 1000000
-  sym "(gen := 80) (instances := 5000)"
+/-- The model of `whnf_core_app2`. -/
+def coreApp2W (p : Prog) (n : Nat) (m : Mem) (mode vis d v h so sn : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "head_and_args" [v] m with
+  | none => none
+  | some (r₃, m₃) =>
+    match callW p n "whnf_app" [mode, vis, d, v, r₃.headD 0, r₃.tail.headD 0, r₃.tail.tail.headD 0,
+        Cmp.evalW .eq v h, so, sn, 0] m₃ with
+    | none => none
+    | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄.set64 CTL 136 (rdW (m.arr64 CTL) 136))
 
-/-- **`whnf_core_app` is its model `coreAppW`** (generated). -/
-l_model coreApp_spec (p : Prog) (hp : p.lookup "whnf_core_app" = some whnfCoreAppL)
-  fns [hp ↦ coreAppW tuple]
-  specs [callW_spec p n "get_app_spine", callW_spec p n "whnf_core", callW_spec p n "whnf_core_app2"]
-  grind [arena_grind] finish [St.setLocs_mem'] gen 20 heartbeats 1000000
-  sym "(gen := 80) (instances := 5000)"
+theorem coreApp2_spec (p : Prog) (hp : p.lookup "whnf_core_app2" = some whnfCoreApp2L) (n : Nat)
+    (s₀ : St) (mode vis d v h so sn : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_app2" [mode, vis, d, v, h, so, sn]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      coreApp2W p n s₀.mem mode vis d v h so sn = some (r.headD 0, r.tail.headD 0, s'.mem) ∧
+      (136 : Word).toNat < (s'.mem.arr64 CTL).size; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, whnfCoreApp2L]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callW_spec p n "whnf_app", callW_spec p n "head_and_args"] <;>
+  simp_all [coreApp2W, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL, size_set64] <;>
+  (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
 
-/-- `StackKept.restore` without the bound on `CTL`: out of bounds the store is void and the top
-reads `0`, so a top that did not drop is kept. -/
-theorem StackKept.restore' {m m₁ : Mem} (hk : ∀ i : Word, i < spTop m → spW m₁ i = spW m i)
-    (hsz : (m₁.arr64 SPN).size = (m.arr64 SPN).size) (hb : BKept m m₁) (hp : PoolGrew m m₁)
-    (ht : spTop m ≤ spTop m₁) : StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
-  by_cases h136 : (136 : Word).toNat < (m₁.arr64 CTL).size
-  · exact StackKept.restore hk hsz hb hp h136
-  have hfs := MemFrame.setCtl m₁ 136 (rdW (m.arr64 CTL) 136)
-  have hspn : (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)).arr64 SPN = m₁.arr64 SPN :=
-    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨?_, by rw [hspn, hsz], fun i hi => by simp only [spW, hspn]; exact hk i hi,
-    hb.trans (BKept.of_frame hfs (by decide) (by decide)),
-    hp.trans (PoolGrew.of_frame hfs (by decide) (by decide))⟩
-  have h0 : spTop m₁ = 0 := by simp only [spTop, rdW]; rw [Array.getElem?_eq_none (by omega)]; rfl
-  have e : spTop (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) = spTop m₁ := by
-    simp only [spTop, rdW_set64, h136, and_false, ↓reduceIte]
-  rw [e, h0]; rw [h0] at ht
-  exact (UInt64.le_antisymm ht UInt64.zero_le).symm
+/-- The model of `whnf_core_app`. -/
+def coreAppW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "get_app_spine" [e] m with
+  | none => none
+  | some (r₁, m₁) =>
+    match callW p n "whnf_core" [mode, cheap, vis, d, r₁.headD 0] m₁ with
+    | none => none
+    | some (r₂, m₂) =>
+      match callW p n "whnf_core_app2" [mode, vis, d, r₂.headD 0, r₁.headD 0, r₁.tail.headD 0,
+          r₁.tail.tail.headD 0] m₂ with
+      | none => none
+      | some (r₄, m₄) =>
+        some (r₄.headD 0, r₄.tail.headD 0, m₄.set64 CTL 136 (rdW (m.arr64 CTL) 136))
+
+theorem coreApp_spec (p : Prog) (hp : p.lookup "whnf_core_app" = some whnfCoreAppL) (n : Nat)
+    (s₀ : St) (mode cheap vis d e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_app" [mode, cheap, vis, d, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      coreAppW p n s₀.mem mode cheap vis d e = some (r.headD 0, r.tail.headD 0, s'.mem) ∧
+      (136 : Word).toNat < (s'.mem.arr64 CTL).size; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, whnfCoreAppL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callW_spec p n "get_app_spine", callW_spec p n "whnf_core", callW_spec p n "whnf_core_app2"] <;>
+  simp_all [coreAppW, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL, size_set64] <;>
+  (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
 
 /-! ## `whnf_core_app2` refines the reduct's spine and the β/ι walk -/
 
@@ -83,24 +103,23 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
         args nodes) decStep s₀ a₀ dn vis fe MM eb ResW := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (coreApp2_spec p hp.capp2 (n + 2) s₀ mode vis d v h so sn)
+  obtain ⟨hloc, hW, h136⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (coreApp2_spec p hp.capp2 (n + 1) s₀ mode vis d v h so sn)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
-  rw [coreApp2W.arm1] at hW
+  simp only [coreApp2W] at hW
   cases h3 : callW p (n + 1) "head_and_args" [v] s.mem with
-  | none => rw [h3, coreApp2W.k_head_and_args.none] at hW; cases hW
+  | none => simp [h3] at hW
   | some q =>
   obtain ⟨r₃, m₃⟩ := q
-  simp only [h3, coreApp2W.k_head_and_args] at hW
-  rw [show (if v = h then (1 : Word) else 0) = Cmp.evalW .eq v h by simp [Cmp.evalW, Cmp.eval]] at hW
+  simp only [h3] at hW
   cases h4 : callW p (n + 1) "whnf_app" [mode, vis, d, v, r₃.headD 0, r₃.tail.headD 0,
       r₃.tail.tail.headD 0, Cmp.evalW .eq v h, so, sn, 0] m₃ with
-  | none => rw [h4, coreApp2W.k_whnf_app.none] at hW; cases hW
+  | none => rw [h4] at hW; simp at hW
   | some q =>
   obtain ⟨r₄, m₄⟩ := q
-  simp only [h4, coreApp2W.k_whnf_app, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [h4, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   obtain ⟨t₃, ht₃, -, hf₃, hg₃, hhw, ho3, htop3, xs, hha, hxs⟩ := triple_of_callW
     (headAndArgs_refines p hp.spine (n + 1) s a₀ hS.arena.1 v hv hS.spn htop) h3
@@ -124,11 +143,12 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
         d.toNat (decE v) (decE (r₃.headD 0)) xs (decE v == decE h) args nodes 0).run a₀ := by
     simp only [whnfCoreApp2T, StateT.run_bind, hha, except_ok_bind]
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ (by rw [hrun₁]; exact AM.run_of_ok _ _ hok)
+  have h136' : (136 : Word).toNat < (m₄.arr64 CTL).size := by
+    rw [← hm, size_set64] at h136; exact h136
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     refine ⟨M', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₄, ?_⟩
-    apply StackKept.restore' _ (by rw [hSt₄.size, hgsz]) (hgb.trans hSt₄.bstk) (hgp.trans hSt₄.pool)
-      (by rw [hSt₄.top]; exact hgt)
+    apply StackKept.restore _ (by rw [hSt₄.size, hgsz]) (hgb.trans hSt₄.bstk) (hgp.trans hSt₄.pool) h136'
     intro i hi
     rw [hSt₄.below i (UInt64.lt_of_lt_of_le hi hgt)]; exact hgk i hi
   · rw [hres', hres]; simp only [decStep, hr0, hr1]
@@ -145,6 +165,10 @@ theorem whnfCoreAppT_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) 
       let v ← r.whnfCore cheap depth sp.1
       whnfCoreApp2T mode r fe depth v sp.1 sp.2.1 sp.2.2) := rfl
 
+theorem coreApp2W_zero (p : Prog) (m : Mem) (mode vis d v h so sn : Word) :
+    coreApp2W p 0 m mode vis d v h so sn = none := by
+  simp [coreApp2W, callW_zero]
+
 section app
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
 
@@ -158,28 +182,28 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
       decStep s₀ a₀ dn vis fe MM eb ResW := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (coreApp_spec p hp.capp (N + 1) s₀ mode cheap vis d e)
+  obtain ⟨hloc, hW, h136⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (coreApp_spec p hp.capp N s₀ mode cheap vis d e)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
-  rw [coreAppW.arm1] at hW
+  simp only [coreAppW] at hW
   cases h1 : callW p N "get_app_spine" [e] s.mem with
-  | none => rw [h1, coreAppW.k_get_app_spine.none] at hW; cases hW
+  | none => rw [h1] at hW; simp at hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  simp only [h1, coreAppW.k_get_app_spine] at hW
+  simp only [h1] at hW
   cases h2 : callW p N "whnf_core" [mode, cheap, vis, d, r₁.headD 0] m₁ with
-  | none => rw [h2, coreAppW.k_whnf_core.none] at hW; cases hW
+  | none => rw [h2] at hW; simp at hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
-  simp only [h2, coreAppW.k_whnf_core] at hW
+  simp only [h2] at hW
   cases h4 : callW p N "whnf_core_app2" [mode, vis, d, r₂.headD 0, r₁.headD 0, r₁.tail.headD 0,
       r₁.tail.tail.headD 0] m₂ with
-  | none => rw [h4, coreAppW.k_whnf_core_app2.none] at hW; cases hW
+  | none => rw [h4] at hW; simp at hW
   | some q =>
   obtain ⟨r₄, m₄⟩ := q
-  simp only [h4, coreAppW.k_whnf_core_app2, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [h4, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   -- the spine
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, ns, hsp, hxs, hns⟩ := triple_of_callW
@@ -197,9 +221,9 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
   | succ N =>
   cases N with
   | zero =>
-    obtain ⟨t, -, -, hz⟩ := triple_of_callW (coreApp2_spec p hp.capp2 1 ⟨m₂, Locals.init []⟩
+    obtain ⟨t, -, -, hz, -⟩ := triple_of_callW (coreApp2_spec p hp.capp2 0 ⟨m₂, Locals.init []⟩
       mode vis d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0) (r₁.tail.tail.headD 0)) h4
-    rw [coreApp2W.arm1, callW_zero, coreApp2W.k_head_and_args.none] at hz; cases hz
+    simp [coreApp2W_zero] at hz
   | succ n' =>
   have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hS₁.spn
   have hb1 := hxs.bound
@@ -232,13 +256,15 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     rw [hres₂]
     exact AM.run_of_ok _ _ hok₄
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
+  have h136' : (136 : Word).toNat < (m₄.arr64 CTL).size := by
+    rw [← hm, size_set64] at h136; exact h136
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     refine ⟨M'', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₂.trans hK₄, ?_⟩
     have h22 := hSt₂.1
     simp only at h22
-    apply StackKept.restore' _ (by rw [hSt₄.size, hSt₂.size, hgsz]) ((hgb.trans hSt₂.bstk).trans hSt₄.bstk)
-      ((hgp.trans hSt₂.pool).trans hSt₄.pool) (by rw [hSt₄.top, h22]; exact hgt)
+    apply StackKept.restore _ (by rw [hSt₄.size, hSt₂.size, hgsz]) ((hgb.trans hSt₂.bstk).trans hSt₄.bstk)
+      ((hgp.trans hSt₂.pool).trans hSt₄.pool) h136'
     intro i hi
     have hi1 : i < spTop m₁ := UInt64.lt_of_lt_of_le hi hgt
     rw [hSt₄.below i (by rw [h22]; exact hi1), hSt₂.below i hi1, hgk i hi]
