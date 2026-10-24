@@ -39,6 +39,8 @@ def Expr.toPB : Expr → Expr
   | .cmpw c a b => .cmpw c a.toPB b.toPB
   | .ldc _ i => .ld8 L.Rom.PB i.toPB
   | .glob g => .glob g
+  | .ld64t a t i => .ld64t a t.toPB i.toPB
+  | .len64t a t => .len64t a t.toPB
 
 def Cond.toPB : Cond → Cond
   | .cmp c a b => .cmp c a.toPB b.toPB
@@ -59,6 +61,7 @@ def Stmt.toPB : Stmt → Stmt
   | .call xs f args => .call xs f (args.map Expr.toPB)
   | .abort => .abort
   | .gset g e => .gset g e.toPB
+  | .st64t a t i e => .st64t a t.toPB i.toPB e.toPB
 
 -- con-ron: none — the transform of a ROM reader into a pin-data reader (no twin)
 def FunDecl.toPB (fd : FunDecl) : FunDecl := { fd with body := fd.body.toPB }

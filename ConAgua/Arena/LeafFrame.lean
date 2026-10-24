@@ -62,6 +62,10 @@ theorem step_frI (p : Prog) (gs : List FnName) (hW : WFrame ctl A C Fr) (k : Stm
       · simp at hst
     · simp only [Stmt.okW, hc, ite_false, decide_eq_true_eq] at hst
       vcgen [step, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
+  | st64t a t i e =>
+    simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
+    have := tierA_cases a
+    vcgen [step, evalE_same t, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
   | seq s t ihs iht =>
     simp only [Stmt.okW, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind

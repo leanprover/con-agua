@@ -66,6 +66,7 @@ theorem exec_agree (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.loo
       simp only [step, hi]
     | «abort» => rfl
     | «gset» g e => rfl
+    | st64t a t i e => rfl
 
 theorem invoke_agree (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f)
     (n : Nat) {f : FnName} (hf : f ∈ fs) : invoke p (exec p n) f = invoke q (exec q n) f := by

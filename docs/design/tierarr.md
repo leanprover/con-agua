@@ -309,3 +309,84 @@ In all: **~25–35 lane-days** without step 6. Step 2 parallelises across 3–4 
 the calendar time is shorter. Steps 1 and 2 can start now. Step 3 waits for kstp-proof. Step 2 alone
 already meets the encapsulation requirement, and step 3 alone already brings the RSS cut measured
 above.
+
+## Phase 2a: tiered arrays in L and the compiler, with proofs (2026-10-24)
+
+Coordinator's decisions (2026-10-24): approved; phase 2a = the compiler feature with proofs, no
+program conversion; lane `tieracc` does the accessor refactor on today's layout in parallel (it
+owns the L library and proof accessors, this lane the compiler; the interface is below); frozen
+buffer: route A (`mprotect`, a trusted-harness assumption) first; pool tier = phase: approved for
+later.
+
+### What is in the language now
+
+* **Syntax / semantics** (`L/Syntax.lean`, `L/Semantics.lean`): `Expr.ld64t a t i`,
+  `Expr.len64t a t`, `Stmt.st64t a t i e`; `tierOff = 256`, `tierA a t = a + 256 · (t & 1)`.
+  `evalE`/`step` evaluate `t` first, then index and value, and access array `tierA a t`. `Mem` is
+  unchanged: tier 1 of `a` is word array `a + 256`.
+* **Notation** (`L/Notation.lean`): `A⟨t⟩[i]`, `len(A⟨t⟩)`, `A⟨t⟩[i] := e`, records
+  `R⟨t⟩[i].f` and `R⟨t⟩[i].f := e` (word arrays only; no `.u64` suffix).
+* **Restriction (WF):** a store's tier must be simple (`Expr.isSimple`: a local, a global, a
+  length, a constant); a load's tier may be any expression (`A⟨h >> 27⟩[…]`). `Expr.wf`/`Stmt.wf`
+  require `a + tierOff < nw`; `Prog.arrs` counts `a + tierOff + 1`, so the table and the abi stub
+  give tier-1 ids descriptors and slots automatically (`abiVals` covers every id `< nw`).
+* **Pure evaluation** (`L/PureEval.lean`): `Expr.pval (.ld64t a t i) = rd64 m (tierA a t') i'`;
+  `evalE_spec` covers the new cases.
+* **Write sets** (`L/WriteSet.lean`, `Compiler/WriteSetSplit.lean`): `st64t a …` is allowed iff
+  both `a` and `a + tierOff` are in the write set and neither is `ctl`; `tierA_cases` (`tierA a t
+  = a ∨ tierA a t = a + tierOff`) for frames.
+* **ModelGen** (`l_model`): a tiered load becomes `rdW (m.arr64 (tierA A t)) i`, `len(A⟨t⟩)`
+  `m.len64 (tierA A t)`, a store `Mem.set64 m (tierA A t) i v` (as plain stores, pass
+  `extra [L.st64]`). Checked on a load (`getW m h = rdW (m.arr64 (tierA R (h >>> 27))) … +
+  m.len64 (tierA R (h >>> 27))`, with `grind [arena_grind]`) and a store
+  (`_tmp/tierarr/scratch/T3.lean`, not committed).
+* The structural functions with fallbacks that would have been silently wrong were extended:
+  `Expr.readsReg` (the `retDirect` register check), `Expr.roms`/`nglob`/`uses`, `mapE`/`mapS`
+  (ConsLib), `shiftE`/`shiftS` (SlotGrow), `Rom/Subst`, `E2E/Ser` (tokens `l64t`, `n64t`,
+  `s64t`) and `E2E/Trace`.
+
+### Codegen
+
+```
+ld64t, t simple:   <i → rax>; rdx := t; and rdx,1; shl rdx,12; add rdx,r15;
+                   cmp rax,[rdx+len64(a)]; jae ca_error; mov rcx,[rdx+base64(a)]; mov rax,[rcx+rax*8]
+ld64t, otherwise:  <t → rax>; [tmp] := rax; <i → rax>; rdx := [tmp]; (as above from `and`)
+len64t:            <t → rax>; and rax,1; shl rax,12; add rax,r15; mov rax,[rax+len64(a)]
+st64t (t simple):  <i → rax, e → rdx as st64>; rcx := t; and rcx,1; shl rcx,12; add rcx,r15;
+                   cmp rax,[rcx+len64(a)]; jae ca_error; mov rcx,[rcx+base64(a)]; mov [rcx+rax*8],rdx
+```
+
+`tierDesc r` (`and`, `shl 12`, `add r15`) computes the address of tier `t`'s descriptor block,
+`T + 4096 (t & 1)`; no new addressing mode (base + displacement only).
+
+### Proofs
+
+* New machine steps (`Compiler/Step.lean`): `ev_shlRI` (any register), `ev_addR15`, `ev_cmpRMb`
+  (`cmp rax, [b + off]`, any base).
+* `SimExpr.lean`: `evalP`/`evalE_run` cases; `sim_tierDesc` (the three instructions leave
+  `T + 4096 (u & 1)` in the register), `tierDesc_val`, `tier_off` (the descriptor offsets of
+  `tierA a u` from `a`'s), `tier_T` (no wrap-around: the table has `a + tierOff + 1` arrays),
+  `sim_ld64t_tail`, and the `ld64t`/`len64t` cases of `sim_expr` (both paths).
+* `RunEq.lean`: `step_st64t_run`, `evalP_simple`, `evalP_error` cases; `SimStore.lean`:
+  `sim_st64t_tail`, `sim_st64t`; `Correct.lean`: the `st64t` arm of `stepSim`.
+* `compile_correct`, `Layout`, `MemRel` and the end-to-end statements are unchanged; no new axiom.
+* `Compiler/Tests.lean`: a differential test (`tiers`: stores with a variable tier, loads with a
+  simple and a computed tier, lengths of both tiers, out of bounds in one tier only), Kraken against
+  `L.run`; `Prog.wf { nw := 257 }`.
+
+### Interface for lane tieracc (accessors)
+
+* An accessor macro for field `f` of a node handle `h` of a store with record array `R` and
+  width `w` is, after the switch, `R⟨h >> 27⟩[(h & 134217727) * w + f]` — one tiered load with a
+  computed tier (no local needed). Today's layout: `R.u64[(h & M) * 2w + ((h >> 27) & 1) * w + f]`.
+  Keep the macro's arguments `(R, w, f, h)` or `(R, w, f, t, i)` so that the switch changes only
+  the macro body.
+* Stores (pushes) take the tier as a parameter (a local): `R⟨t⟩[c * w + f] := v`.
+* Model side: `rdW (m.arr64 (tierA R t)) (i * w + f)` after the switch; a proof accessor
+  `fld S m t i f` that hides it will survive unchanged in statement.
+* Tier-1 array ids are `a + 256`: no other code may use ids `≥ 256` for unrelated arrays.
+
+### Cost
+
+`asm/checker.s` is byte-identical (no program uses the constructors). Build: the change touches
+`L/Syntax.lean`, so everything rebuilds once.
