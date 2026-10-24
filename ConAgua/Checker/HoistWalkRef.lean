@@ -284,6 +284,13 @@ theorem two_ok (ih : WalkOK n) (R : ArrId) (hR1 : R ≠ IW) (hR2 : R ≠ HSEEN) 
   rw [W1.arr R hR1 hR2 hR3] at hb
   exact walk_then ih hA W1 h2w hf hb
 
+theorem tier_ok (a : ArrId) (t : Word)
+    (h : ∀ b ∈ [a, a + 256], b ≠ IW ∧ b ≠ HSEEN ∧ b ≠ CTL) :
+    tierA a t ≠ IW ∧ tierA a t ≠ HSEEN ∧ tierA a t ≠ CTL := by
+  rcases tierA_cases' a t with e | e <;> rw [e]
+  · exact h a (by simp)
+  · exact h (a + 256) (by simp)
+
 theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e APP) (hg : e >>> 28 = 4)
     (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat
@@ -293,7 +300,8 @@ theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
       (decE (tfld m APP (tierW e) (idxW e) 0)) >>= f) a := by
   obtain ⟨-, h1w, h2w⟩ := view_app m a hA e he hv hg
   rw [hAppW.arm1, hAppW.k_hoist_walk.eq_def] at hb
-  exact two_ok ih AREC (by decide) (by decide) (by decide) _ _ hA hs h1w h2w hf hb
+  obtain ⟨n1, n2, n3⟩ := tier_ok AREC (tierW e) (by decide)
+  exact two_ok ih _ n1 n2 n3 _ _ hA hs h1w h2w hf hb
 
 theorem lam_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e LAM) (hg : e >>> 28 = 5)
@@ -304,7 +312,8 @@ theorem lam_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
       (decE (tfld m LAM (tierW e) (idxW e) 0)) >>= f) a := by
   obtain ⟨-, h1w, h2w⟩ := view_lam m a hA e he hv hg
   rw [hLamW.arm1, hLamW.k_hoist_walk.eq_def] at hb
-  exact two_ok ih LAREC (by decide) (by decide) (by decide) _ _ hA hs h1w h2w hf hb
+  obtain ⟨n1, n2, n3⟩ := tier_ok LAREC (tierW e) (by decide)
+  exact two_ok ih _ n1 n2 n3 _ _ hA hs h1w h2w hf hb
 
 theorem forall_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e FORALL) (hg : e >>> 28 = 6)
@@ -315,7 +324,8 @@ theorem forall_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.
       (decE (tfld m FORALL (tierW e) (idxW e) 0)) >>= f) a := by
   obtain ⟨-, h1w, h2w⟩ := view_forall m a hA e he hv hg
   rw [hForallW.arm1, hForallW.k_hoist_walk.eq_def] at hb
-  exact two_ok ih FAREC (by decide) (by decide) (by decide) _ _ hA hs h1w h2w hf hb
+  obtain ⟨n1, n2, n3⟩ := tier_ok FAREC (tierW e) (by decide)
+  exact two_ok ih _ n1 n2 n3 _ _ hA hs h1w h2w hf hb
 
 theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
     (hv : viewOK m e LET) (hg : e >>> 28 = 7)
@@ -335,8 +345,10 @@ theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   refine wres_bind W1 fun seen₁ ns₁ hs1 _ => ?_
   rw [hf]
   have heq := W1.arr LEREC (by decide) (by decide) (by decide)
-  simp only [tfld_arr_eq (R := LET) heq.symm] at h2w h3w ⊢
-  exact two_ok ih LEREC (by decide) (by decide) (by decide) _ _ (W1.arena hA) hs1 h2w h3w
+  have heq' := W1.arr (LEREC + 256) (by decide) (by decide) (by decide)
+  simp only [tfld_arr_eq (R := LET) heq.symm heq'.symm] at h2w h3w ⊢
+  obtain ⟨n1, n2, n3⟩ := tier_ok LEREC (tierW e) (by decide)
+  exact two_ok ih _ n1 n2 n3 _ _ (W1.arena hA) hs1 h2w h3w
     (fun _ _ => rfl) hb
 
 end arms
@@ -431,7 +443,8 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     simp only at hb
     have hfr := hNoteW_iw h1
     have heq : m₁.arr64 PJREC = m₀.arr64 PJREC := hfr.1 _ (by decide) (by decide)
-    rw [tfld_arr_eq (R := PROJ) heq] at hb
+    have heq' : m₁.arr64 (PJREC + 256) = m₀.arr64 (PJREC + 256) := hfr.1 _ (by decide) (by decide)
+    rw [tfld_arr_eq (R := PROJ) heq heq'] at hb
     exact wres_cons hnw h1 ((ih n' rfl) _ _ _ _ _ _ _ _ _ _ _ _ _
       (iw_arena hfr hA₀) hxw
       (memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by decide) _ _ hfr _ hs₀) hb)

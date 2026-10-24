@@ -186,7 +186,7 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   ctl : 151 < (mem.arr64 CTL).size
   top : erecTop mem ≤ (mem.arr64 EREC).size
 
-theorem hiA : ∀ b ∈ ([EREC] : List ArrId), 64 ≤ b := by decide
+theorem hiA : ∀ b ∈ ([EREC] : List ArrId), 64 ≤ b ∧ b < 256 := by decide
 theorem hiC : ∀ x ∈ ([129, 150, 151] : List Word), 64 ≤ x.toNat := by simp
 theorem hiC' : ∀ x ∈ ([132, 148, 149] : List Word), 64 ≤ x.toNat := by simp
 
