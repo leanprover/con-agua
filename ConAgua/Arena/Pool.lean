@@ -124,6 +124,96 @@ theorem Frame.set64_both (a b : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m 
   · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h3 c hc]
 grind_pattern [arena_grind] Frame.set64_both => Frame a (m.set64 b i v) (m'.set64 b i v)
 
+
+/-! ## The virtual pool: the pool as proofs see it (lane tierpool)
+
+Proofs read the pool only through `vpool m`, an array with a word for every word address `x`:
+`prd m x`, what the L load of the pool at `x` reads (`0` where it aborts). On today's layout
+that is word `x` of the pool array; when the pool becomes a tiered array (`docs/design/tierpool.md`)
+only `prd`, the access lemmas below and `PoolOK`/`SliceOK`/`Grows` change. So that the switch
+stays inside this file, proofs outside it never unfold `vpool`/`prd`, and bound the pool with
+`pcap`, never with `(vpool m).size` (which is `2^64`). -/
+
+/-- The pool word at address `x`: what the L load of the pool at `x` reads, `0` where it aborts. -/
+def prd (m : Mem) (x : Word) : Word := (m.arr64 POOL)[x.toNat]?.getD 0
+
+/-- The pool's capacity: the words an address can reach. -/
+def pcap (m : Mem) : Nat := (m.arr64 POOL).size
+
+/-- **The virtual pool**: word `j` is `prd m j`, for every word address `j`. -/
+def vpool (m : Mem) : Array Word := Array.ofFn fun j : Fin (2 ^ 64) => prd m (UInt64.ofNat j)
+
+@[arena_grind =] theorem vpool_size (m : Mem) : (vpool m).size = 2 ^ 64 := by
+  rw [vpool, Array.size_ofFn]
+
+-- not `simp [vpool]`: it evaluates the `2^64`-element array (16 GB)
+theorem vpool_get? (m : Mem) (x : Word) : (vpool m)[x.toNat]? = some (prd m x) := by
+  have h : x.toNat < 2 ^ 64 := x.toNat_lt
+  rw [vpool, Array.getElem?_ofFn]; simp only [h, ↓reduceDIte]
+  exact congrArg (fun y => some (prd m y)) (UInt64.ofNat_toNat)
+
+-- no tactic may unfold the `2^64`-element array
+attribute [irreducible] vpool
+
+theorem vpool_getNat? (m : Mem) (j : Nat) (h : j < 2 ^ 64) :
+    (vpool m)[j]? = some ((m.arr64 POOL)[j]?.getD 0) := by
+  have hx : (UInt64.ofNat j).toNat = j := by
+    simp only [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt h
+  rw [← hx, vpool_get?, prd, hx]
+
+/-- An L load of the pool, in bounds, reads the virtual pool. -/
+theorem vpool_ld (m : Mem) (j : Nat) (h : j < (m.arr64 POOL).size) (h' : j < (vpool m).size) :
+    (m.arr64 POOL)[j] = (vpool m)[j] := by
+  have h64 : j < 2 ^ 64 := vpool_size m ▸ h'
+  have e := vpool_getNat? m j h64
+  rw [Array.getElem?_eq_getElem h', Array.getElem?_eq_getElem h, Option.getD_some] at e
+  exact (Option.some.inj e).symm
+grind_pattern [arena_grind] vpool_ld => (m.arr64 POOL)[j], vpool m
+
+/-- Below the capacity, the virtual pool is the pool. -/
+theorem vpool_agree (m : Mem) (h : pcap m < 2 ^ 64) : Agree (vpool m) (m.arr64 POOL) (pcap m) := by
+  intro j hj
+  simp only [pcap] at hj h
+  rw [vpool_getNat? m j (by omega), Array.getElem?_eq_getElem hj]; rfl
+
+/-- An L store into the pool, in bounds, is a store into the virtual pool. -/
+theorem vpool_set64 (m : Mem) (i v : Word) (h : i.toNat < pcap m) :
+    vpool (m.set64 POOL i v) = (vpool m).set! i.toNat v := by
+  apply Array.ext_getElem?
+  intro j
+  simp only [pcap] at h
+  rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  by_cases hj : j < 2 ^ 64
+  · rw [vpool_getNat? _ j hj, vpool_getNat? m j hj, Mem.arr64_set64_same,
+      Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    have hi : i.toNat < (vpool m).size := by rw [vpool_size]; exact i.toNat_lt
+    by_cases hij : i.toNat = j
+    · subst hij; simp [h, hi]
+    · simp [hij]
+  · have e1 : (vpool (m.set64 POOL i v))[j]? = none :=
+      Array.getElem?_eq_none (by rw [vpool_size]; omega)
+    have e2 : (vpool m)[j]? = none := Array.getElem?_eq_none (by rw [vpool_size]; omega)
+    have hij : i.toNat ≠ j := fun e => hj (e ▸ i.toNat_lt)
+    simp [e1, e2, hij]
+grind_pattern [arena_grind] vpool_set64 => vpool (m.set64 POOL i v)
+
+/-- Stores elsewhere leave the virtual pool alone. -/
+theorem vpool_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ POOL) :
+    vpool (m.set64 a i v) = vpool m := by
+  simp only [vpool, prd, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
+grind_pattern [arena_grind] vpool_set64_ne => vpool (m.set64 a i v)
+
+/-- The virtual pool reads only the pool. -/
+theorem vpool_congr {m m' : Mem} (h : m'.arr64 POOL = m.arr64 POOL) : vpool m' = vpool m := by
+  simp only [vpool, prd, h]
+
+@[arena_grind =] theorem pcap_set64 (m : Mem) (a : ArrId) (i v : Word) :
+    pcap (m.set64 a i v) = pcap m := by
+  simp only [pcap]
+  by_cases h : a = POOL
+  · subst h; rw [Mem.size_arr64_set64]
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]
+
 /-! ## The pool invariant -/
 
 /-- The pool top, `CTL[0]`. -/
