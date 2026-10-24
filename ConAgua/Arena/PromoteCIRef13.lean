@@ -99,7 +99,7 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
       by rw [hg4.2.2, hg3.2.2, hE2, hE1]⟩
   refine ⟨a1, pm1, a2, pm2, a3, pm3, a4, pm4, decI (c9.headD 0), decI (c10.headD 0), bs', gs',
     wl3, wl4, hrun1, hrun2, hrun3, hrun4, hD4, hP4, hcp4.trans (hcp3.trans (hcp2.trans hcp1)),
-    (((hfr1.mono (by simp) (by simp)).trans (hfr2.mono (by simp) (by simp))).trans hfr3).trans hfr4,
+    (((eFrame_cons hfr1).trans (eFrame_cons hfr2)).trans hfr3).trans hfr4,
     hg04, hts4, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [← hlist]; exact hpw1
   · rw [← hlist] <;> rfl
