@@ -145,14 +145,7 @@ end leaves
 /-- No word array and no `CTL` word at or above `64` (the id tables) changes, but the store tier's
 tier-1 arrays `256‥319`. -/
 def Above64 (m m' : Mem) : Prop :=
-  MemFrame (List.range 64 ++ (List.range 64).map (· + 256)) ((List.range 64).map UInt64.ofNat) m m'
-
-theorem low_tier_mem (b : Nat) (h : b < 64 ∨ (256 ≤ b ∧ b < 320)) :
-    b ∈ List.range 64 ++ (List.range 64).map (· + 256) := by
-  rcases h with h | ⟨h1, h2⟩
-  · exact List.mem_append_left _ (List.mem_range.mpr h)
-  · exact List.mem_append_right _ (List.mem_map.mpr ⟨b - 256, List.mem_range.mpr (by omega),
-      by omega⟩)
+  MemFrame lowTierArrs ((List.range 64).map UInt64.ofNat) m m'
 
 theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : Above64 m₂ m₃) : Above64 m₁ m₃ :=
   MemFrame.trans h₁ h₂
@@ -170,7 +163,7 @@ theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above6
   h.frame hf (by simp [NID]) (by simp [LID]) (by simp [EID]) (by simp [DECL]) (by simp [DLP])
     (fun x hx h => by
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
-      simp only [List.mem_append, List.mem_range, List.mem_map] at hx
+      simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at hx
       rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> rcases hx with hx | ⟨y, hy, hy'⟩ <;>
         first | (revert hx; decide) | (have h' : (y : Nat) + 256 = _ := hy'; omega)) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx

@@ -536,7 +536,7 @@ theorem ekCopyW_ok {N : Word → Name → Prop} : ∀ (ks : List Name) (n : Nat)
 /-! ## `caps_never_zero` refines `capsNeverZero`'s computation -/
 
 theorem arenaD_frame_hi {m m' : Mem} {a : AState} {A : List ArrId} {C : List Word}
-    (hA : ArenaD m a) (hf : MemFrame A C m m') (hA' : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) :
+    (hA : ArenaD m a) (hf : MemFrame A C m m') (hA' : ∀ b ∈ A, 64 ≤ b ∧ b < 256) (hC : ∀ x ∈ C, 64 ≤ x.toNat) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA' hC m m' hf a hA.1,
     DerR.frameM A C m m' hf (fun b hb => .inr (by have := hA' b hb; simp only [ArrId] at this ⊢; omega)) a hA.2⟩

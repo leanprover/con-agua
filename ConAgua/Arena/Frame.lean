@@ -48,6 +48,15 @@ theorem MemFrame.tier {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFram
   · exact h.1 B hB hc
   · exact h.1 _ hB' (by simp [CTL])
 
+/-- The arrays below `64` and their tier-1 twins `256‥319` (the store tier's), as a list. -/
+def lowTierArrs : List ArrId := List.range 64 ++ (List.range 64).map (· + 256)
+
+theorem low_tier_mem (b : Nat) (h : b < 64 ∨ (256 ≤ b ∧ b < 320)) : b ∈ lowTierArrs := by
+  rcases h with h | ⟨h1, h2⟩
+  · exact List.mem_append_left _ (List.mem_range.mpr h)
+  · exact List.mem_append_right _ (List.mem_map.mpr ⟨b - 256, List.mem_range.mpr (by omega),
+      by omega⟩)
+
 /-- A word write to array `a ≠ CTL` is a frame of `[a]`. -/
 theorem MemFrame.set64 (m : Mem) (a : ArrId) (ha : a ≠ CTL) (k v : Word) :
     MemFrame [a] [] m (m.set64 a k v) := by
