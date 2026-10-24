@@ -84,6 +84,11 @@ theorem preludeBytes_eq : preludeBytes = ConRon.Arena.Frontend.preludeText.data.
 /-- The prelude's length, as a word. -/
 def preludeLenW : Word := UInt64.ofNat preludeBytes.length
 
+/-- A block's byte source, renamed: the input's bytes are the prelude's. -/
+def preB : BSrc → BSrc
+  | .arr a => if a = 0 then .rom preludeBytes else .arr a
+  | .rom d => .rom d
+
 /-- An expression of the frontend, renamed: the input's bytes are the prelude's. -/
 def preE : Expr → Expr
   | .ld8 a i => if a = 0 then .ldc preludeBytes (preE i) else .ld8 a (preE i)
@@ -94,7 +99,12 @@ def preE : Expr → Expr
   | .ldc d i => .ldc d (preE i)
   | .ld64t a t i => .ld64t a (preE t) (preE i)
   | .len64t a t => .len64t a (preE t)
+  | .ld8x8 b i => .ld8x8 (preB b) (preE i)
   | e => e
+
+def preW : WArr → WArr
+  | .plain a => .plain a
+  | .tier a t => .tier a (preE t)
 
 def preC : Cond → Cond
   | .cmp c a b => .cmp c (preE a) (preE b)
@@ -119,6 +129,9 @@ def preS (t : NTree) : Stmt → Stmt
   | .call xs f args => .call xs (preName t f) (args.map preE)
   | .gset g e => .gset g (preE e)
   | .st64t a t i e => .st64t a (preE t) (preE i) (preE e)
+  | .copy64 d di s si n => .copy64 (preW d) (preE di) (preW s) (preE si) (preE n)
+  | .copy8w d di s si n => .copy8w (preW d) (preE di) (preB s) (preE si) (preE n)
+  | .scan8 x s i e c => .scan8 x (preB s) (preE i) (preE e) c
   | s => s
 
 /-- **A frontend function, reading the prelude's bytes** (`t`: the copied functions). -/

@@ -44,6 +44,11 @@ def dataIdx (d : List UInt8) : SerM Nat := do
   | some i => pure i
   | none => set (ds.push d); pure ds.size
 
+def serB : BSrc → SerM String
+  | .arr a => pure s!"(ba {a})"
+  | .rom d => return s!"(br {← dataIdx d})"
+
+mutual
 partial def serE : Expr → SerM String
   | .const w => pure s!"(c {w.toNat})"
   | .var x => pure s!"(v {x})"
@@ -57,6 +62,12 @@ partial def serE : Expr → SerM String
   | .glob g => pure s!"(g {g.id})"
   | .ld64t a t i => return s!"(l64t {a} {← serE t} {← serE i})"
   | .len64t a t => return s!"(n64t {a} {← serE t})"
+  | .ld8x8 b i => return s!"(l8x8 {← serB b} {← serE i})"
+
+partial def serW : WArr → SerM String
+  | .plain a => pure s!"(wp {a})"
+  | .tier a t => return s!"(wt {a} {← serE t})"
+end
 
 partial def serC : Cond → SerM String
   | .cmp c a b => return s!"(cmp {cmpTok c} {← serE a} {← serE b})"
@@ -79,6 +90,9 @@ partial def serS : Stmt → SerM String
   | .abort => pure "abort"
   | .gset g e => return s!"(gset {g.id} {← serE e})"
   | .st64t a t i e => return s!"(s64t {a} {← serE t} {← serE i} {← serE e})"
+  | .copy64 d di s si n => return s!"(cp64 {← serW d} {← serE di} {← serW s} {← serE si} {← serE n})"
+  | .copy8w d di s si n => return s!"(cp8w {← serW d} {← serE di} {← serB s} {← serE si} {← serE n})"
+  | .scan8 x s i e c => return s!"(scan {x} {← serB s} {← serE i} {← serE e} {← dataIdx c})"
 
 /-! ## Reading it back -/
 
@@ -145,6 +159,17 @@ def cmpOf : String → P Cmp
   | "eq" => pure .eq | "ne" => pure .ne | "ult" => pure .ult | "ule" => pure .ule
   | "slt" => pure .slt | "sle" => pure .sle | s => throw s!"bad cmp {s}"
 
+def parseB : P BSrc := do
+  open_
+  let h ← atom
+  let b ← match h with
+    | "ba" => do pure (.arr (← nat))
+    | "br" => do let k ← nat; pure (.rom ((← get).data[k]?.getD []))
+    | s => throw s!"bad source {s}"
+  close
+  return b
+
+mutual
 partial def parseE : P Expr := do
   open_
   let h ← atom
@@ -164,9 +189,21 @@ partial def parseE : P Expr := do
       let k ← nat
       let d := (← get).data[k]?.getD []
       pure (.ldc d (← parseE))
+    | "l8x8" => do let b ← parseB; pure (.ld8x8 b (← parseE))
     | s => throw s!"bad expr {s}"
   close
   return e
+
+partial def parseW : P WArr := do
+  open_
+  let h ← atom
+  let w ← match h with
+    | "wp" => do pure (.plain (← nat))
+    | "wt" => do let a ← nat; pure (.tier a (← parseE))
+    | s => throw s!"bad block operand {s}"
+  close
+  return w
+end
 
 partial def parseC : P Cond := do
   open_
@@ -217,6 +254,15 @@ partial def parseS : P Stmt := do
         let f ← atom
         let args ← parseList parseE
         pure (.call xs f args)
+      | "cp64" => do
+        let d ← parseW; let di ← parseE; let s ← parseW; let si ← parseE; let n ← parseE
+        pure (.copy64 d di s si n)
+      | "cp8w" => do
+        let d ← parseW; let di ← parseE; let s ← parseB; let si ← parseE; let n ← parseE
+        pure (.copy8w d di s si n)
+      | "scan" => do
+        let x ← nat; let s ← parseB; let i ← parseE; let e ← parseE; let k ← nat
+        pure (.scan8 x s i e ((← get).data[k]?.getD []))
       | s => throw s!"bad stmt {s}"
     close
     return s

@@ -69,6 +69,8 @@ theorem _root_.L.Stmt.okW_subPB (bs : List UInt8) {ctl : ArrId} {A : List ArrId}
   | .st8 .., h => by simp [Stmt.okW] at h
   | .call .., h => by simpa [Stmt.okW, Stmt.subPB] using h
   | .st64t .., h => by simpa [Stmt.okW, Stmt.subPB] using h
+  | .copy64 d .., h | .copy8w d .., h => by cases d <;> simpa [Stmt.okW, Stmt.subPB, WArr.okW, WArr.subPB] using h
+  | .scan8 .., _ => rfl
   | .skip, _ | .set .., _ | .brk, _ | .ret _, _ | .abort, _ | .gset .., _ => rfl
 
 theorem closedW_subPB (bs : List UInt8) {ctl : ArrId} {p : Prog} {A : List ArrId} {C : List Word}

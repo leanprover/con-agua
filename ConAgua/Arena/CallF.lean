@@ -67,6 +67,9 @@ theorem exec_agree (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.loo
     | «abort» => rfl
     | «gset» g e => rfl
     | st64t a t i e => rfl
+    | copy64 d di s si n => rfl
+    | copy8w d di s si n => rfl
+    | scan8 x s i e c => rfl
 
 theorem invoke_agree (hq : closedW ctl q A C fs = true) (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f)
     (n : Nat) {f : FnName} (hf : f ∈ fs) : invoke p (exec p n) f = invoke q (exec q n) f := by
