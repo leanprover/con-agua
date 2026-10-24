@@ -321,17 +321,17 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero] at j0 j1
   exact decCS_motive_stab j0 j1 (hkey.grow hg6)
 
-theorem nameCopyW_afrR : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m d s l = some m' →
+theorem nameCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m d s l = some m' →
     AFr m m'
   | 0, _, _, _, _, _, h => by simp [nameCopyW] at h
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
     · rw [nameCopyW_nil n m d s l hl] at h; cases h; exact AFr.refl _
     · rw [nameCopyW_step n m d s l hl] at h
-      exact (set64IW_afr _ _ _).trans (nameCopyW_afrR n _ _ _ _ _ h)
+      exact (set64IW_afr _ _ _).trans (nameCopyW_afr n _ _ _ _ _ h)
 
-/-- (`IndT/RecGen19`'s `memberNamesW_afr`, here for the `class_read` chain.) -/
-theorem memberNamesW_afrR {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+/-- `memberNamesW` keeps `AbsOK`. -/
+theorem memberNamesW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : memberNamesW n m p = some (r, m')) : AFr m m' := by
   unfold memberNamesW at h
   split at h; · cases h
@@ -340,7 +340,7 @@ theorem memberNamesW_afrR {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
   rename_i m2 hc
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
-  exact (allocW_afr hal).trans (nameCopyW_afrR _ _ _ _ _ _ hc)
+  exact (allocW_afr hal).trans (nameCopyW_afr _ _ _ _ _ _ hc)
 
 theorem envFindW_afrR {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     AFr m m' := by
@@ -353,7 +353,7 @@ theorem npcW_afr {n : Nat} {m m' : Mem} {p vis i : Word} {r : List Word}
   | zero => simp [npcW] at h
   | succ n =>
   simp only [npcW, npcK1.eq_def, npcK2.eq_def, npcK3.eq_def] at h
-  afr_auto h [memberNamesW_afrR, envFindW_afrR]
+  afr_auto h [memberNamesW_afr, envFindW_afrR]
 
 theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
     (h : slotMotW n m p vis dom = some (r, m')) : AFr m m' := by
@@ -361,7 +361,7 @@ theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
   | zero => simp [slotMotW] at h
   | succ n =>
   simp only [slotMotW, sK1.eq_def, sK2.eq_def, sK3.eq_def, sK4.eq_def, sK5.eq_def, sK6.eq_def] at h
-  afr_auto h [piBW_afrR _ _ _ _ _ _, gafF_afrR, gaaF_afr, npcW_afr, recW_afr]
+  afr_auto h [piBW_afrR _ _ _ _ _ _, gafF_afr, gaaF_afr, npcW_afr, recW_afr]
 
 theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (n : Nat) (m : Mem)

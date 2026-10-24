@@ -82,7 +82,7 @@ ENTRIES = ["check", "check_np"]
 ROOTS = ENTRIES + ["e2e_front", "whnf", "whnf_core", "infer"]
 E2E_SOURCE = "L.E2E.e2eProg"
 # modules never imported by the dump: executables (a `main`), the spike, the census exe
-SKIP_MODS = re.compile(r"^ConAgua\.(Spike\.|Census\.Main$|E2E\.(Main|Ref|Explore.*)$)")
+SKIP_MODS = re.compile(r"^ConAgua\.(Census\.Main$|E2E\.(Main|Ref|Explore.*)$)")
 
 
 def log(*a):
