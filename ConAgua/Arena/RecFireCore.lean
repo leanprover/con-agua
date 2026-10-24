@@ -429,7 +429,7 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hspn)
   have hE : ILWEnv m₁ { a₀ with caches := { a₀.caches with readNC := X, readLsC := Y } }
       (bs.headD 0) pc (lsO m₀ (tierW us) (idxW us)) (lsL m₀ (tierW us) (idxW us)) ks ids vs :=
-    ⟨hk₁, by omega, by rw [hpool₁]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
+    ⟨hk₁, by omega, by rw [hpool₁v]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
   unfold rflK at hW
   rcases hfc with ⟨hfk, hpl, hq, cks, hcks⟩ | ⟨hfk, lvls, pins, hnest, hfv, hfvd⟩
   · -- plain
