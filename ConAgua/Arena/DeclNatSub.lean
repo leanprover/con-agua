@@ -117,76 +117,11 @@ structure NatSubProg (p : Prog) : Prop extends NatEqProg p where
   lIwCopy : p.lookup "iw_copy" = some iwCopy
   lSubstConst0Pairs : p.lookup "subst_const0_pairs" = some substConst0PairsL
 
-section scmodel
-variable (p : Prog) (n : Nat)
-
-def sc0K4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-def sc0K3 (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m) => sc0K4 (callW p n "mk_app" [r1.headD 0, r2.headD 0] m)
-
-def sc0K2 (nm r fuel : Word) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1', m) => sc0K3 p n r1' (callW p n "subst_const0" [nm, r, fuel - 1, r1.tail.tail.headD 0] m)
-
-def sc0K5 (nm r h : Word) (rv : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (re, m2) =>
-    if rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0 then some ([r], m2)
-    else some ([h], m2)
-
-def sc0K1 (nm r fuel h : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m) =>
-    if rv.headD 0 = 3 then sc0K5 nm r h rv (callW p n "pin_word" [52] m)
-    else if rv.headD 0 = 4 then
-      sc0K2 p n nm r fuel rv (callW p n "subst_const0" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else some ([h], m)
-
-end scmodel
-
-def sc0W (p : Prog) (n : Nat) (m : Mem) (nm r fuel h : Word) : Option (List Word × Mem) :=
-  if fuel = 0 then none else sc0K1 p n nm r fuel h (callW p n "e_view" [h] m)
-
-
-section scarms
-variable (p : Prog) (n : Nat) (nm r fuel h : Word) (rv r1 r2 re : List Word) (m : Mem)
-theorem sc0K4_some : sc0K4 (some (r2, m)) = some ([r2.headD 0], m) := rfl
-theorem sc0K3_some : sc0K3 p n r1 (some (r2, m)) =
-    sc0K4 (callW p n "mk_app" [r1.headD 0, r2.headD 0] m) := rfl
-theorem sc0K2_some : sc0K2 p n nm r fuel rv (some (r1, m)) =
-    sc0K3 p n r1 (callW p n "subst_const0" [nm, r, fuel - 1, rv.tail.tail.headD 0] m) := rfl
-theorem sc0K5_some : sc0K5 nm r h rv (some (re, m)) =
-    if rv.tail.headD 0 = nm ∧ rv.tail.tail.headD 0 = re.headD 0 then some ([r], m)
-    else some ([h], m) := rfl
-theorem sc0K1_some : sc0K1 p n nm r fuel h (some (rv, m)) =
-    if rv.headD 0 = 3 then sc0K5 nm r h rv (callW p n "pin_word" [52] m)
-    else if rv.headD 0 = 4 then
-      sc0K2 p n nm r fuel rv (callW p n "subst_const0" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else some ([h], m) := rfl
-end scarms
-
-grind_pattern [ind_grind] sc0K4_some => sc0K4 (some (r2, m))
-grind_pattern [ind_grind] sc0K3_some => sc0K3 p n r1 (some (r2, m))
-grind_pattern [ind_grind] sc0K2_some => sc0K2 p n nm r fuel rv (some (r1, m))
-grind_pattern [ind_grind] sc0K5_some => sc0K5 nm r h rv (some (re, m))
-grind_pattern [ind_grind] sc0K1_some => sc0K1 p n nm r fuel h (some (rv, m))
-
-theorem sc0_specW (p : Prog) (hp : p.lookup "subst_const0" = some substConst0L) (n : Nat)
-    (s₀ : St) (nm r fuel h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "subst_const0" [nm, r, fuel, h]
-    ⦃fun res s' => LocEq s' s₀ ∧ sc0W p n s₀.mem nm r fuel h = some (res, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, substConst0L]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "e_view", callW_spec p n "pin_word", callW_spec p n "subst_const0",
-    callW_spec p n "mk_app"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, rd64_eq_rdW] at *)
-  all_goals grind (gen := 20) (instances := 10000) [lang_grind, arena_grind, ind_grind, sc0W]
-
+/-- **`subst_const0` is its model `sc0W`** (generated). -/
+l_model sc0_specW (p : Prog) (hp : p.lookup "subst_const0" = some substConst0L)
+  fns [hp ↦ sc0W list]
+  specs [callW_spec p n "e_view", callW_spec p n "pin_word", callW_spec p n "subst_const0", callW_spec p n "mk_app"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
 theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     ∀ (f : Nat) (fuel : Word), fuel.toNat = f → ∀ (h : Word) (k : Nat) (m : Mem) (a : AState)
@@ -201,23 +136,23 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => sc0W p k mm nm r fuel h) (sc0_specW p hN.lSubstConst0 k · nm r fuel h) hc
+    have hw := callW_model (M := fun mm => sc0W p (k + 1) mm nm r fuel h) (sc0_specW p hN.lSubstConst0 (k + 1) · nm r fuel h) hc
     have hz : fuel = 0 := UInt64.toNat_inj.mp (by simpa using hf)
-    simp [sc0W, hz] at hw
+    simp [sc0W.eq_2, hz] at hw
   | succ f ih =>
     intro fuel hf h k m a res m' hS hn hr hh hc
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => sc0W p k mm nm r fuel h) (sc0_specW p hN.lSubstConst0 k · nm r fuel h) hc
+    have hw := callW_model (M := fun mm => sc0W p (k + 1) mm nm r fuel h) (sc0_specW p hN.lSubstConst0 (k + 1) · nm r fuel h) hc
     have hnz : fuel ≠ 0 := fun e => by simp [e] at hf
-    unfold sc0W at hw
+    rw [sc0W.eq_2] at hw
     rw [if_neg hnz] at hw
     cases h1 : callW p k "e_view" [h] m with
-    | none => rw [h1] at hw; simp [sc0K1] at hw
+    | none => rw [h1] at hw; simp [ntBW] at hw
     | some q1 =>
     obtain ⟨rv, m1⟩ := q1
-    rw [h1, sc0K1_some] at hw
+    rw [h1, bW_some] at hw
     obtain ⟨vv, a1, hrun1, hS1, hg1, hvr⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p) h hN.lEView k m a rv m1 hS h1
     have hrun1' : (view (decE h)).run a = .ok (vv, a1) := hrun1
     have hfuel1 : (fuel - 1).toNat = f := by
@@ -227,10 +162,10 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
     · -- a constant
       rw [if_pos h3] at hw
       cases h2 : callW p k "pin_word" [52] m1 with
-      | none => rw [h2] at hw; simp [sc0K5] at hw
+      | none => rw [h2] at hw; simp [ntBW] at hw
       | some q2 =>
       obtain ⟨re, m2⟩ := q2
-      rw [h2, sc0K5_some] at hw
+      rw [h2, bW_some] at hw
       obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := pinWord52_ref (dn := dn) (vis := vis) (fe := fe) p
         hN.lPinWord k m1 a1 re m2 hS1 h2
       subst hvv hcd hud
@@ -256,24 +191,24 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       rw [if_neg (by rw [h4]; decide), if_pos h4] at hw
       subst hvv hfd had
       cases h2 : callW p k "subst_const0" [nm, r, fuel - 1, rv.tail.headD 0] m1 with
-      | none => rw [h2] at hw; simp [sc0K2] at hw
+      | none => rw [h2] at hw; simp [ntBW] at hw
       | some q2 =>
       obtain ⟨r1, m2⟩ := q2
-      rw [h2, sc0K2_some] at hw
+      rw [h2, bW_some] at hw
       obtain ⟨x2, a2, hrun2, hK2⟩ := ih (fuel - 1) hfuel1 (rv.tail.headD 0) k m1 a1 r1 m2 hS1 hn hr hf0 h2
       obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
       cases h3 : callW p k "subst_const0" [nm, r, fuel - 1, rv.tail.tail.headD 0] m2 with
-      | none => rw [h3] at hw; simp [sc0K3] at hw
+      | none => rw [h3] at hw; simp [ntBW] at hw
       | some q3 =>
       obtain ⟨r2, m3⟩ := q3
-      rw [h3, sc0K3_some] at hw
+      rw [h3, bW_some] at hw
       obtain ⟨x3, a3, hrun3, hK3⟩ := ih (fuel - 1) hfuel1 (rv.tail.tail.headD 0) k m2 a2 r2 m3 hS2 hn hr ha0 h3
       obtain ⟨hS3, hg3, hl3, hx3⟩ := hK3
       cases h4' : callW p k "mk_app" [r1.headD 0, r2.headD 0] m3 with
-      | none => rw [h4'] at hw; simp [sc0K4] at hw
+      | none => rw [h4'] at hw; simp [ntBW] at hw
       | some q4 =>
       obtain ⟨r3, m4⟩ := q4
-      rw [h4', sc0K4_some] at hw
+      rw [h4', bW_some] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := mkApp_ref (dn := dn) (vis := vis) (fe := fe) hN.toMasterProg

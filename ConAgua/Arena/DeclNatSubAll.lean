@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatSub
 import ConAgua.Arena.DeclDivMod5
 
@@ -31,114 +32,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 structure NatSubAllProg (p : Prog) : Prop extends NatSubProg p where
   lSubstConstAll : p.lookup "subst_const_all" = some substConstAllL
 
-section scamodel
-variable (p : Prog) (n : Nat)
-
-/-- The second recursive call of a binary arm, then the interner `mk`. -/
-def scaB2 (mk : FnName) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m) => sc0K4 (callW p n mk [r1.headD 0, r2.headD 0] m)
-
-def scaB1 (mk : FnName) (nm r fuel y : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => scaB2 p n mk r1 (callW p n "subst_const_all" [nm, r, fuel - 1, y] m)
-
-def scaL3 (r1 r2 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m) => sc0K4 (callW p n "mk_let" [r1.headD 0, r2.headD 0, r3.headD 0] m)
-
-def scaL2 (nm r fuel z : Word) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m) => scaL3 p n r1 r2 (callW p n "subst_const_all" [nm, r, fuel - 1, z] m)
-
-def scaL1 (nm r fuel y z : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => scaL2 p n nm r fuel z r1 (callW p n "subst_const_all" [nm, r, fuel - 1, y] m)
-
-def scaP1 (x y : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => sc0K4 (callW p n "mk_proj" [x, y, r1.headD 0] m)
-
-/-- The arms after `e_view`, dispatched on the view's tag. -/
-def scaK1 (nm r fuel h : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m) =>
-    if rv.headD 0 = 3 then sc0K5 nm r h rv (callW p n "pin_word" [52] m)
-    else if rv.headD 0 = 4 then
-      scaB1 p n "mk_app" nm r fuel (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 5 then
-      scaB1 p n "mk_lam" nm r fuel (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 6 then
-      scaB1 p n "mk_forall" nm r fuel (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 7 then
-      scaL1 p n nm r fuel (rv.tail.tail.headD 0) (rv.tail.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 9 then
-      scaP1 p n (rv.tail.headD 0) (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.tail.tail.headD 0] m)
-    else some ([h], m)
-
-end scamodel
-
-/-- The model of one call of `subst_const_all`. -/
-def scaW (p : Prog) (n : Nat) (m : Mem) (nm r fuel h : Word) : Option (List Word × Mem) :=
-  if fuel = 0 then none else scaK1 p n nm r fuel h (callW p n "e_view" [h] m)
-
-section scaarms
-variable (p : Prog) (n : Nat) (mk : FnName) (nm r fuel h x y z : Word) (rv r1 r2 : List Word) (m : Mem)
-theorem scaB2_some : scaB2 p n mk r1 (some (r2, m)) = sc0K4 (callW p n mk [r1.headD 0, r2.headD 0] m) := rfl
-theorem scaB1_some : scaB1 p n mk nm r fuel y (some (r1, m)) =
-    scaB2 p n mk r1 (callW p n "subst_const_all" [nm, r, fuel - 1, y] m) := rfl
-theorem scaL3_some (r3 : List Word) : scaL3 p n r1 r2 (some (r3, m)) =
-    sc0K4 (callW p n "mk_let" [r1.headD 0, r2.headD 0, r3.headD 0] m) := rfl
-theorem scaL2_some : scaL2 p n nm r fuel z r1 (some (r2, m)) =
-    scaL3 p n r1 r2 (callW p n "subst_const_all" [nm, r, fuel - 1, z] m) := rfl
-theorem scaL1_some : scaL1 p n nm r fuel y z (some (r1, m)) =
-    scaL2 p n nm r fuel z r1 (callW p n "subst_const_all" [nm, r, fuel - 1, y] m) := rfl
-theorem scaP1_some : scaP1 p n x y (some (r1, m)) = sc0K4 (callW p n "mk_proj" [x, y, r1.headD 0] m) := rfl
-theorem scaK1_some : scaK1 p n nm r fuel h (some (rv, m)) =
-    if rv.headD 0 = 3 then sc0K5 nm r h rv (callW p n "pin_word" [52] m)
-    else if rv.headD 0 = 4 then
-      scaB1 p n "mk_app" nm r fuel (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 5 then
-      scaB1 p n "mk_lam" nm r fuel (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 6 then
-      scaB1 p n "mk_forall" nm r fuel (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 7 then
-      scaL1 p n nm r fuel (rv.tail.tail.headD 0) (rv.tail.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.headD 0] m)
-    else if rv.headD 0 = 9 then
-      scaP1 p n (rv.tail.headD 0) (rv.tail.tail.headD 0)
-        (callW p n "subst_const_all" [nm, r, fuel - 1, rv.tail.tail.tail.headD 0] m)
-    else some ([h], m) := rfl
-end scaarms
-
-grind_pattern [ind_grind] scaB2_some => scaB2 p n mk r1 (some (r2, m))
-grind_pattern [ind_grind] scaB1_some => scaB1 p n mk nm r fuel y (some (r1, m))
-grind_pattern [ind_grind] scaL3_some => scaL3 p n r1 r2 (some (r3, m))
-grind_pattern [ind_grind] scaL2_some => scaL2 p n nm r fuel z r1 (some (r2, m))
-grind_pattern [ind_grind] scaL1_some => scaL1 p n nm r fuel y z (some (r1, m))
-grind_pattern [ind_grind] scaP1_some => scaP1 p n x y (some (r1, m))
-grind_pattern [ind_grind] scaK1_some => scaK1 p n nm r fuel h (some (rv, m))
-
-theorem sca_specW (p : Prog) (hp : p.lookup "subst_const_all" = some substConstAllL) (n : Nat)
-    (s₀ : St) (nm r fuel h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "subst_const_all" [nm, r, fuel, h]
-    ⦃fun res s' => LocEq s' s₀ ∧ scaW p n s₀.mem nm r fuel h = some (res, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, substConstAllL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "e_view", callW_spec p n "pin_word", callW_spec p n "subst_const_all",
-    callW_spec p n "mk_app", callW_spec p n "mk_lam", callW_spec p n "mk_forall",
-    callW_spec p n "mk_let", callW_spec p n "mk_proj"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, rd64_eq_rdW] at *)
-  all_goals grind (gen := 20) (instances := 10000) [lang_grind, arena_grind, ind_grind, scaW]
+/-- **`subst_const_all` is its model `scaW`** (generated). -/
+l_model sca_specW (p : Prog) (hp : p.lookup "subst_const_all" = some substConstAllL)
+  fns [hp ↦ scaW list]
+  specs [callW_spec p n "e_view", callW_spec p n "pin_word", callW_spec p n "subst_const_all", callW_spec p n "mk_app", callW_spec p n "mk_lam", callW_spec p n "mk_forall", callW_spec p n "mk_let", callW_spec p n "mk_proj"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
 /-- The induction hypothesis of `sca_ref`: every returning call at a fuel word of value `f`. -/
 def ScaIH (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nm r : Word)
@@ -157,29 +55,31 @@ theorem sca_bin {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f) (mk : Fn
     {fuel x y : Word} (hf : (fuel - 1).toNat = f) {k : Nat} {m1 : Mem} {a1 : AState}
     {res : List Word} {m' : Mem} (hS1 : StageR dn vis fe m1 a1) (hn : H nm) (hr : H r)
     (hx : H x) (hy : H y)
-    (hw : scaB1 p k mk nm r fuel y (callW p k "subst_const_all" [nm, r, fuel - 1, x] m1) =
+    (hw : (ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, x] m1) fun r1 m2 =>
+      ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, y] m2) fun r2 m3 =>
+      ntBW (callW p k mk [r1.headD 0, r2.headD 0] m3) fun r3 m4 => some ([r3.headD 0], m4)) =
       some (res, m')) :
     ∃ e a', (do
         let f' ← substConstAll (decI nm) (decE r) f (decE x)
         let a' ← substConstAll (decI nm) (decE r) f (decE y)
         I f' a').run a1 = .ok (e, a') ∧ KeepPost dn vis fe decW0E m1 m' a' res e := by
   cases h2 : callW p k "subst_const_all" [nm, r, fuel - 1, x] m1 with
-  | none => rw [h2] at hw; simp [scaB1] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨r1, m2⟩ := q2
-  rw [h2, scaB1_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := ih (fuel - 1) hf x k m1 a1 r1 m2 hS1 hn hr hx h2
   cases h3 : callW p k "subst_const_all" [nm, r, fuel - 1, y] m2 with
-  | none => rw [h3] at hw; simp [scaB2] at hw
+  | none => rw [h3] at hw; simp [ntBW] at hw
   | some q3 =>
   obtain ⟨r2, m3⟩ := q3
-  rw [h3, scaB2_some] at hw
+  rw [h3, bW_some] at hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hl3, hx3⟩ := ih (fuel - 1) hf y k m2 a2 r2 m3 hS2 hn hr hy h3
   cases h4 : callW p k mk [r1.headD 0, r2.headD 0] m3 with
-  | none => rw [h4] at hw; simp [sc0K4] at hw
+  | none => rw [h4] at hw; simp [ntBW] at hw
   | some q4 =>
   obtain ⟨r3, m4⟩ := q4
-  rw [h4, sc0K4_some] at hw
+  rw [h4, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := hmk (r1.headD 0) (r2.headD 0) k m3 a3 r3 m4 hS3 h4
@@ -192,36 +92,39 @@ theorem sca_let (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis
     {fuel x y z : Word} (hf : (fuel - 1).toNat = f) {k : Nat} {m1 : Mem} {a1 : AState}
     {res : List Word} {m' : Mem} (hS1 : StageR dn vis fe m1 a1) (hn : H nm) (hr : H r)
     (hx : H x) (hy : H y) (hz : H z)
-    (hw : scaL1 p k nm r fuel y z (callW p k "subst_const_all" [nm, r, fuel - 1, x] m1) =
-      some (res, m')) :
+    (hw : (ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, x] m1) fun r1 m2 =>
+      ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, y] m2) fun r2 m3 =>
+      ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, z] m3) fun r3 m4 =>
+      ntBW (callW p k "mk_let" [r1.headD 0, r2.headD 0, r3.headD 0] m4) fun r5 m5 =>
+      some ([r5.headD 0], m5)) = some (res, m')) :
     ∃ e a', (do
         let t' ← substConstAll (decI nm) (decE r) f (decE x)
         let v' ← substConstAll (decI nm) (decE r) f (decE y)
         let b' ← substConstAll (decI nm) (decE r) f (decE z)
         internE (.letE t' v' b')).run a1 = .ok (e, a') ∧ KeepPost dn vis fe decW0E m1 m' a' res e := by
   cases h2 : callW p k "subst_const_all" [nm, r, fuel - 1, x] m1 with
-  | none => rw [h2] at hw; simp [scaL1] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨r1, m2⟩ := q2
-  rw [h2, scaL1_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := ih (fuel - 1) hf x k m1 a1 r1 m2 hS1 hn hr hx h2
   cases h3 : callW p k "subst_const_all" [nm, r, fuel - 1, y] m2 with
-  | none => rw [h3] at hw; simp [scaL2] at hw
+  | none => rw [h3] at hw; simp [ntBW] at hw
   | some q3 =>
   obtain ⟨r2, m3⟩ := q3
-  rw [h3, scaL2_some] at hw
+  rw [h3, bW_some] at hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hl3, hx3⟩ := ih (fuel - 1) hf y k m2 a2 r2 m3 hS2 hn hr hy h3
   cases h4 : callW p k "subst_const_all" [nm, r, fuel - 1, z] m3 with
-  | none => rw [h4] at hw; simp [scaL3] at hw
+  | none => rw [h4] at hw; simp [ntBW] at hw
   | some q4 =>
   obtain ⟨r3, m4⟩ := q4
-  rw [h4, scaL3_some] at hw
+  rw [h4, bW_some] at hw
   obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := ih (fuel - 1) hf z k m3 a3 r3 m4 hS3 hn hr hz h4
   cases h5 : callW p k "mk_let" [r1.headD 0, r2.headD 0, r3.headD 0] m4 with
-  | none => rw [h5] at hw; simp [sc0K4] at hw
+  | none => rw [h5] at hw; simp [ntBW] at hw
   | some q5 =>
   obtain ⟨r5, m5⟩ := q5
-  rw [h5, sc0K4_some] at hw
+  rw [h5, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨x5, a5, hrun5, hS5, hg5, hl5, hx5⟩ := mkLet_ref (dn := dn) (vis := vis) (fe := fe) hM
@@ -234,22 +137,24 @@ theorem sca_let (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis
 theorem sca_proj (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p dn vis fe nm r f)
     {fuel x y z : Word} (hf : (fuel - 1).toNat = f) {k : Nat} {m1 : Mem} {a1 : AState}
     {res : List Word} {m' : Mem} (hS1 : StageR dn vis fe m1 a1) (hn : H nm) (hr : H r) (hz : H z)
-    (hw : scaP1 p k x y (callW p k "subst_const_all" [nm, r, fuel - 1, z] m1) = some (res, m')) :
+    (hw : (ntBW (callW p k "subst_const_all" [nm, r, fuel - 1, z] m1) fun r1 m2 =>
+      ntBW (callW p k "mk_proj" [x, y, r1.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)) =
+      some (res, m')) :
     ∃ e a', (do
         let e' ← substConstAll (decI nm) (decE r) f (decE z)
         internE (.proj (decI x) y.toNat e')).run a1 = .ok (e, a') ∧
       KeepPost dn vis fe decW0E m1 m' a' res e := by
   cases h2 : callW p k "subst_const_all" [nm, r, fuel - 1, z] m1 with
-  | none => rw [h2] at hw; simp [scaP1] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨r1, m2⟩ := q2
-  rw [h2, scaP1_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hl2, hx2⟩ := ih (fuel - 1) hf z k m1 a1 r1 m2 hS1 hn hr hz h2
   cases h3 : callW p k "mk_proj" [x, y, r1.headD 0] m2 with
-  | none => rw [h3] at hw; simp [sc0K4] at hw
+  | none => rw [h3] at hw; simp [ntBW] at hw
   | some q3 =>
   obtain ⟨r3, m3⟩ := q3
-  rw [h3, sc0K4_some] at hw
+  rw [h3, bW_some] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hl3, hx3⟩ := mkProj_ref (dn := dn) (vis := vis) (fe := fe) hM
@@ -266,23 +171,23 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => scaW p k mm nm r fuel h) (sca_specW p hN.lSubstConstAll k · nm r fuel h) hc
+    have hw := callW_model (M := fun mm => scaW p (k + 1) mm nm r fuel h) (sca_specW p hN.lSubstConstAll (k + 1) · nm r fuel h) hc
     have hz : fuel = 0 := UInt64.toNat_inj.mp (by simpa using hf)
-    simp [scaW, hz] at hw
+    simp [scaW.eq_2, hz] at hw
   | succ f ih =>
     intro fuel hf h k m a res m' hS hn hr hh hc
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => scaW p k mm nm r fuel h) (sca_specW p hN.lSubstConstAll k · nm r fuel h) hc
+    have hw := callW_model (M := fun mm => scaW p (k + 1) mm nm r fuel h) (sca_specW p hN.lSubstConstAll (k + 1) · nm r fuel h) hc
     have hnz : fuel ≠ 0 := fun e => by simp [e] at hf
-    unfold scaW at hw
+    rw [scaW.eq_2] at hw
     rw [if_neg hnz] at hw
     cases h1 : callW p k "e_view" [h] m with
-    | none => rw [h1] at hw; simp [scaK1] at hw
+    | none => rw [h1] at hw; simp [ntBW] at hw
     | some q1 =>
     obtain ⟨rv, m1⟩ := q1
-    rw [h1, scaK1_some] at hw
+    rw [h1, bW_some] at hw
     obtain ⟨vv, a1, hrun1, hS1, hg1, hvr⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p) h hN.lEView k m a rv m1 hS h1
     have hrun1' : (view (decE h)).run a = .ok (vv, a1) := hrun1
     have hfuel1 : (fuel - 1).toNat = f := by
@@ -306,10 +211,10 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p dn vis fe 
       obtain ⟨h3, hc0, hcd, hu0, hud⟩ := hvr
       rw [if_pos h3] at hw
       cases h2 : callW p k "pin_word" [52] m1 with
-      | none => rw [h2] at hw; simp [sc0K5] at hw
+      | none => rw [h2] at hw; simp [ntBW] at hw
       | some q2 =>
       obtain ⟨re, m2⟩ := q2
-      rw [h2, sc0K5_some] at hw
+      rw [h2, bW_some] at hw
       obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := pinWord52_ref (dn := dn) (vis := vis) (fe := fe) p
         hN.lPinWord k m1 a1 re m2 hS1 h2
       subst hcd hud
