@@ -163,12 +163,8 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold foW at hW
-  cases c1 : callW p n "pin_word" [53] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₁⟩ := q1
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p n "pin_word" [53] s.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨t1, ht1, -, hpw⟩ := triple_of_callW
     (pinWord_specM p hp.pinw n ⟨s.mem, Locals.init []⟩ 53) c1
   have hpw' : pinWordM s.mem 53 = some (r₁, m₁) := by simpa [ht1] using hpw
@@ -188,12 +184,8 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   rcases Nat.lt_or_ge n 2 with hsm | hbig
   · rw [lvlEqC_small p hp.lvl.c n hsm] at hW; cases hW
   obtain ⟨n', rfl⟩ : ∃ n', n = n' + 2 := ⟨n - 2, by omega⟩
-  cases c2 : callW p (n' + 2) "lvl_eq_c" [w8, r₁.headD 0] s.mem with
-  | none => rw [c2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨o, m₂⟩ := q2
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p (n' + 2) "lvl_eq_c" [w8, r₁.headD 0] s.mem with _ | ⟨o, m₂⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨⟨lu, hdu⟩, ⟨lz, hdz⟩⟩ := hden dn s.mem a₀ vis fe M eb cT tbl hS hfe
   rw [hss'] at hdu
   have hzl : a₀.pins.zeroLevel = decI (r₁.headD 0) := by rw [hP.zeroLevel, hz]
@@ -216,8 +208,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   have hT := fireOk_run (tbl.entry i.toNat) (decI us) a₀ _ _ _ hrunZ hrunL'
   by_cases b : o.headD 0 < 2
   · rw [if_pos b] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr0, hm⟩ := hW
+    obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hno : ¬ decO (o.headD 0) = some true := by
       unfold decO; split
       · simp
@@ -282,14 +273,10 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
     lvlEq?_store _ _ _ _ _ lu lz hdu hdz hS.readL hrunL
   have hlps : hslice? (m₂.arr64 EREC) w3.toNat w4.toNat = some tbl.levelParams := by
     rw [hE2]; exact hsl3
-  cases c3 : callW p (n' + 2) "field_sort_zero" [rdW (m₂.arr64 EREC) (q + 3),
-      rdW (m₂.arr64 EREC) (q + 4), us, foFs m₂ q i] m₂ with
-  | none => rw [c3] at hW; cases hW
-  | some q3 =>
-  obtain ⟨r₃, m₃⟩ := q3
-  rw [c3] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr0, hm⟩ := hW
+  rcases c3 : callW p (n' + 2) "field_sort_zero" [rdW (m₂.arr64 EREC) (q + 3),
+      rdW (m₂.arr64 EREC) (q + 4), us, foFs m₂ q i] m₂ with _ | ⟨r₃, m₃⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
+  obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [hrd3, hrd4] at c3
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
     (hfz (n' + 2) ⟨m₂, Locals.init []⟩ (AM.st (lvlEq? (decI w8) (decI (r₁.headD 0))) a₀) dn vis fe

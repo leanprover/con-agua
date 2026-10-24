@@ -130,22 +130,18 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
         (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (coreStep_spec p hp.step n s₀ mode cheap vis d e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (coreStep_spec p hp.step n s₀ mode cheap vis d e) fun r s' ⟨hloc, hW⟩ =>
+    ⟨hloc, ?_⟩
   have hS := hs.rel
   have hR := hS.arena.1
   have hh : e.toNat < 2 ^ 32 := he
   simp only [coreStepW] at hW
-  by_cases ht : tierW e ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  by_cases ht : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [ht] at hW
   rw [if_neg ht] at hW
   -- the stuck arms
-  have stuck : ∀ c : Word, stuckW s.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
-      viewOK s.mem e c ∧ r.headD 0 = 0 ∧ r.tail.headD 0 = e ∧ s'.mem = s.mem := by
+  have stuck : ∀ c : Word, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
+      viewOK s₀.mem e c ∧ r.headD 0 = 0 ∧ r.tail.headD 0 = e ∧ s'.mem = s₀.mem := by
     intro c h
     simp only [stuckW] at h
     split at h
@@ -153,30 +149,27 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     · rename_i hle
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       exact ⟨⟨ht, by simpa using hle⟩, h.1.symm, h.2.1.symm, h.2.2.symm⟩
-  have done : ∀ c : Word, stuckW s.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
+  have done : ∀ c : Word, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
       (∀ v, a₀.store.view (decE e) = some v → isDoneV v = true → CoreRef (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe
-          (cheap != 0) d.toNat (decE e)) a₀ decStep dn s.mem vis fe MM eb r s'.mem ResW) := by
+          (cheap != 0) d.toNat (decE e)) a₀ decStep dn s₀.mem vis fe MM eb r s'.mem ResW) := by
     intro c h v hv hd
     obtain ⟨-, h0, h1, hm⟩ := stuck c h
     rw [hm]
     exact stepRef_done hS (step_run_done v hv hd) he h0 h1
   by_cases g4 : e >>> 28 = 4
   · rw [if_pos g4] at hW
-    by_cases hc4 : rdW (s.mem.arr64 CTL) (4 + tierW e) ≤ idxW e
+    by_cases hc4 : rdW (s₀.mem.arr64 CTL) (4 + tierW e) ≤ idxW e
     · simp [hc4] at hW
     rw [if_neg hc4] at hW
     -- application
-    cases hca : callW p n "whnf_core_app" [mode, cheap, vis, d, e] s.mem with
-    | none => simp [hca] at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [hca, Option.some.injEq, Prod.mk.injEq] at hW
+    rcases hca : callW p n "whnf_core_app" [mode, cheap, vis, d, e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hca, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     cases n with
     | zero => simp [callW_zero] at hca
     | succ N =>
-    have hv := (view_app s.mem a₀ hR e hh ⟨ht, by simpa using hc4⟩ g4).1
-    have happ := coreApp_refines p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn vis fe
+    have hv := (view_app s₀.mem a₀ hR e hh ⟨ht, by simpa using hc4⟩ g4).1
+    have happ := coreApp_refines p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe
       MM eb mode cheap d e hs he
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW happ hca
     refine whnf_coreRef_congr (step_run_app _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
@@ -185,28 +178,25 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   rw [if_neg g4] at hW
   by_cases g9 : e >>> 28 = 9
   · rw [if_pos g9] at hW
-    by_cases hc9 : rdW (s.mem.arr64 CTL) (32 + tierW e) ≤ idxW e
+    by_cases hc9 : rdW (s₀.mem.arr64 CTL) (32 + tierW e) ≤ idxW e
     · simp [hc9] at hW
     rw [if_neg hc9] at hW
     -- projection
-    cases hca : callW p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
-        rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3),
-        rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1),
-        rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)] s.mem with
-    | none => simp [hca] at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [hca, Option.some.injEq, Prod.mk.injEq] at hW
+    rcases hca : callW p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
+        rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3),
+        rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1),
+        rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hca, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     cases n with
     | zero => simp [callW_zero] at hca
     | succ N =>
-    obtain ⟨hv, hsn, hpe⟩ := view_proj s.mem a₀ hR e hh ⟨ht, by simpa using hc9⟩ g9
+    obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh ⟨ht, by simpa using hc9⟩ g9
     have hpr := whnfCoreStepProj_refines' p hp hwc.strLitSupported hwc.strLitCtor hcc.toProjCallees
-      hp.lsn hcc.erec N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn
-      vis fe MM eb mode cheap d e (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3))
-      (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1))
-      (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe (hsup fe)
+      hp.lsn hcc.erec N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
+      vis fe MM eb mode cheap d e (rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3))
+      (rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1))
+      (rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe (hsup fe)
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hpr hca
     refine whnf_coreRef_congr (step_run_proj _ _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
     · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
@@ -214,29 +204,26 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   rw [if_neg g9] at hW
   by_cases g7 : e >>> 28 = 7
   · rw [if_pos g7] at hW
-    by_cases hc7 : rdW (s.mem.arr64 CTL) (20 + tierW e) ≤ idxW e
+    by_cases hc7 : rdW (s₀.mem.arr64 CTL) (20 + tierW e) ≤ idxW e
     · simp [hc7] at hW
     rw [if_neg hc7] at hW
     -- let
-    cases hca : callW p n "inst1" [rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2),
-        rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1), 0] s.mem with
-    | none => simp [hca] at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [hca, Option.some.injEq, Prod.mk.injEq] at hW
+    rcases hca : callW p n "inst1" [rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2),
+        rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1), 0] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hca, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
-    obtain ⟨hv, -, hvv, hbb⟩ := view_let s.mem a₀ hR e hh ⟨ht, by simpa using hc7⟩ g7
-    have hi := hcc.inst1 n s a₀ dn vis fe MM eb _ _ 0 hS hbb hvv
+    obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh ⟨ht, by simpa using hc7⟩ g7
+    have hi := hcc.inst1 n s₀ a₀ dn vis fe MM eb _ _ 0 hS hbb hvv
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hi hca
     have hrun := AM.run_of_ok _ _ hok
     refine whnf_coreRef_congr (step_run_let _ _ _ hv) ?_
     have hrun' : (instantiate1Fast coreWalkFuel
-        (decE (rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
-        (decE (rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0 >>=
+        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
+        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0 >>=
         fun e' => pure (WhnfStep.cont e') : AM WhnfStep).run a₀ =
         .ok (.cont (decE (r₁.headD 0)), AM.st (instantiate1Fast coreWalkFuel
-        (decE (rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
-        (decE (rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0) a₀) := by
+        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
+        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0) a₀) := by
       simp only [StateT.run_bind]
       rw [show ((0 : Word).toNat) = 0 from rfl] at hrun hres
       rw [hrun, hres]; rfl
@@ -252,35 +239,35 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   by_cases g1 : e >>> 28 = 1
   · rw [if_pos g1] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
-    obtain ⟨i, ty, hv'⟩ := view_fvar s.mem a₀ hR e hh hv g1
+    obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh hv g1
     exact done _ hW _ hv' rfl
   rw [if_neg g1] at hW
   by_cases g2 : e >>> 28 = 2
   · rw [if_pos g2] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
-    obtain ⟨u, hv'⟩ := view_sort s.mem a₀ hR e hh hv g2
+    obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh hv g2
     exact done _ hW _ hv' rfl
   rw [if_neg g2] at hW
   by_cases g3 : e >>> 28 = 3
   · rw [if_pos g3] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
-    obtain ⟨c, us, hv'⟩ := view_const s.mem a₀ hR e hh hv g3
+    obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh hv g3
     exact done _ hW _ hv' rfl
   rw [if_neg g3] at hW
   by_cases g5 : e >>> 28 = 5
   · rw [if_pos g5] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
-    exact done _ hW _ (view_lam s.mem a₀ hR e hh hv g5).1 rfl
+    exact done _ hW _ (view_lam s₀.mem a₀ hR e hh hv g5).1 rfl
   rw [if_neg g5] at hW
   by_cases g6 : e >>> 28 = 6
   · rw [if_pos g6] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
-    exact done _ hW _ (view_forall s.mem a₀ hR e hh hv g6).1 rfl
+    exact done _ hW _ (view_forall s₀.mem a₀ hR e hh hv g6).1 rfl
   rw [if_neg g6] at hW
   by_cases g8 : e >>> 28 = 8
   · rw [if_pos g8] at hW
     obtain ⟨hv, -⟩ := stuck _ hW
-    obtain ⟨l, hv'⟩ := view_lit s.mem a₀ hR e hh hv g8
+    obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh hv g8
     exact done _ hW _ hv' rfl
   rw [if_neg g8] at hW
   simp at hW
@@ -308,11 +295,8 @@ theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
   | succ k ih =>
     intro hkn K hK m m' a MM eb e v hS heb he h
     simp only [coreLoopW] at h
-    cases hc : callW p k "whnf_core_step" [mode, cheap, vis, d, e] m with
-    | none => simp [hc] at h
-    | some q =>
-    obtain ⟨r, m₁⟩ := q
-    simp only [hc] at h
+    rcases hc : callW p k "whnf_core_step" [mode, cheap, vis, d, e] m with _ | ⟨r, m₁⟩ <;>
+      simp only [hc, reduceCtorEq] at h
     cases k with
     | zero => simp [callW_zero] at hc
     | succ j =>
@@ -324,8 +308,7 @@ theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     rw [hres] at hsr
     by_cases h0 : r.headD 0 = 0
     · rw [if_pos h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       simp only [decStep, h0, ↓reduceIte] at hsr
       have hrun := whnfCoreLoop_done (decMode mode) (coreKnot (decMode mode) fe id F) fe
         (cheap != 0) d.toNat K' (decE e) _ a _ hsr
@@ -352,14 +335,10 @@ theorem whnfCoreLoop_refines' (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n 
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
       (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
         (decE e)) decH s₀ a₀ dn vis fe MM eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (whnfCoreLoop_spec p hp n s₀ mode cheap vis d e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (whnfCoreLoop_spec p hp n s₀ mode cheap vis d e) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+    ?_⟩
   obtain ⟨hok, hA, hres, hrw⟩ := coreLoopW_ok p hp hwc hcc hsup n hk F hF hn dn vis fe mode cheap d hs.mode4
-    (n + 1) (Nat.le_refl _) K (by omega) s.mem s'.mem a₀ MM eb e (r.headD 0) hs.rel hs.eb_mode he hW
+    (n + 1) (Nat.le_refl _) K (by omega) s₀.mem s'.mem a₀ MM eb e (r.headD 0) hs.rel hs.eb_mode he hW
   exact ⟨hok, hA, hres, hrw⟩
 
 include hp hwc hcc hsup in
@@ -388,19 +367,13 @@ the body's callees), `whnf_core` at `n + 1` refines the slot of `coreKnot mode f
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) := by
   intro F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (whnfCore_spec p hp n s₀ mode cheap vis d e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (whnfCore_spec p hp n s₀ mode cheap vis d e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   have hS := hs.rel
   have heb := hS.core.eb1
   have hkey : ebKey mode = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   by_cases hst : e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0
   · rw [whnfCoreW_stuck _ _ _ _ _ _ _ _ hst] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ (knot_whnfCore_stuck _ fe F' (cheap != 0) d.toNat _ a₀ ht)
     refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact he⟩
@@ -411,37 +384,32 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     have hcb : (cheap != 0) = true := by simpa using hc
     rw [hcb]
     unfold memoSlotW at hW
-    by_cases h0 : mfindG wkSch s.mem e (genW 0 eb) = []
+    by_cases h0 : mfindG wkSch s₀.mem e (genW 0 eb) = []
     · simp [h0] at hW
     rw [if_neg h0] at hW
     have hf := hS.core.wk.findE heb e he h0
-    by_cases h1 : (mfindG wkSch s.mem e (genW 0 eb)).headD 0 ≠ 0
+    by_cases h1 : (mfindG wkSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
     · rw [if_pos h1] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
+      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitK _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
       refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
       rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
     rw [if_neg h1] at hW
     have hmiss := hf.2 (by simpa using h1)
-    cases hcall : callW p n "whnf_core_loop" [mode, 1, vis, d, e] s.mem with
-    | none => simp [hcall] at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [hcall] at hW
+    rcases hcall : callW p n "whnf_core_loop" [mode, 1, vis, d, e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hcall, reduceCtorEq] at hW
     cases n with
     | zero => simp [callW_zero] at hcall
     | succ n' =>
-    have hbody := whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
+    have hbody := whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn vis
       fe MM eb mode 1 d e hs he
     obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
     cases hset : msetG wkSch m₁ e (genW 0 eb) (r₁.headD 0) with
     | none => rw [hset] at hW; cases hW
     | some m₂ =>
     rw [hset] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wk e (r₁.headD 0) he hrw hset
     have hb1 : ((1 : Word) != 0) = true := rfl
     rw [hb1] at hok hres
@@ -456,37 +424,32 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     have hcb : (cheap != 0) = false := by simp [hc0]
     rw [hcb]
     unfold memoSlotW at hW
-    by_cases h0 : mfindG wcSch s.mem e (genW 0 eb) = []
+    by_cases h0 : mfindG wcSch s₀.mem e (genW 0 eb) = []
     · simp [h0] at hW
     rw [if_neg h0] at hW
     have hf := hS.core.wc.findE heb e he h0
-    by_cases h1 : (mfindG wcSch s.mem e (genW 0 eb)).headD 0 ≠ 0
+    by_cases h1 : (mfindG wcSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
     · rw [if_pos h1] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨hr, hm⟩ := hW
+      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitF _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
       refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
       rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
     rw [if_neg h1] at hW
     have hmiss := hf.2 (by simpa using h1)
-    cases hcall : callW p n "whnf_core_loop" [mode, 0, vis, d, e] s.mem with
-    | none => simp [hcall] at hW
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
-    simp only [hcall] at hW
+    rcases hcall : callW p n "whnf_core_loop" [mode, 0, vis, d, e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+      simp only [hcall, reduceCtorEq] at hW
     cases n with
     | zero => simp [callW_zero] at hcall
     | succ n' =>
-    have hbody := whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
+    have hbody := whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn vis
       fe MM eb mode 0 d e hs he
     obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
     cases hset : msetG wcSch m₁ e (genW 0 eb) (r₁.headD 0) with
     | none => rw [hset] at hW; cases hW
     | some m₂ =>
     rw [hset] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wc e (r₁.headD 0) he hrw hset
     have hb0 : ((0 : Word) != 0) = false := rfl
     rw [hb0] at hok hres

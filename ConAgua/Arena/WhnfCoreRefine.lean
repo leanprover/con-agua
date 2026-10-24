@@ -176,11 +176,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   subst hs0
   refine ⟨hloc, ?_⟩
   simp only [projCertW] at hW
-  cases hc : callW p n "env_find" [k, vis] s.mem with
-  | none => simp [hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [hc] at hW
+  rcases hc : callW p n "env_find" [k, vis] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hc, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW
     (envFind_refines p hp.envix hp.envrow hp.envfind n s vis k hS.env hk) hc
   obtain ⟨t₁', ht₁', hm₁', -, hfound⟩ := triple_of_callW
@@ -189,8 +185,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   subst hm₁
   by_cases h0 : r₁.headD 0 = 0
   · rw [if_pos h0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
       rw [hnone] at h; cases h)
@@ -209,8 +204,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   have hctor := decCI_ctor hci (erecP_ext _) hS.erec
   by_cases h4 : rdW (s.mem.arr64 EREC) (r₁.tail.headD 0) ≠ 4
   · rw [if_pos h4] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
       rw [hfind'] at h; cases h; exact hctor.2 h4 cv np nf rfl)
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
@@ -221,11 +215,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg h4] at hW
   obtain ⟨cv, np, nf, rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
-  cases hc2 : callW p n "peel_pis" [an, rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4)] s.mem with
-  | none => rw [hc2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [hc2, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases hc2 : callW p n "peel_pis" [an, rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW
     (peelPis_refines p hp.spine n s a₀ hS.arena.1 an _ htw) hc2

@@ -108,9 +108,8 @@ theorem apdF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (allLevelParamsDefined lps (decI e)) (KeepPostT dn vis fe decW0B) := by
   intro m m' a r h ⟨hT, hdec, ks, hks⟩
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ n =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
       apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls

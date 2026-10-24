@@ -139,11 +139,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option Con
     rw [this]; exact UInt64.toNat_lt _
   unfold icfW at h
   -- the member names
-  cases h1 : callW p n "block_shape_member_names" [pp] m with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, icaK2_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [icaK2_some] at h
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.alloc hP.namesCopy hP.names n _ pp) h1
   simp only at hW1; subst hs1
@@ -154,22 +150,14 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option Con
   subst hr1
   simp only [List.headD_cons, List.tail_cons] at h
   -- their `EREC` copy
-  cases h2 : callW p n "block_caps_at_er_copy" [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k] s1.mem with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, icaK3_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [icaK3_some] at h
   obtain ⟨hS2, hg2, hE2⟩ := installErCopy hP h2 hS1
     (by rw [UInt64.toNat_ofNat_of_lt' hkb]; exact hd1)
     (by rw [UInt64.toNat_ofNat_of_lt' hkb]; omega)
   -- the ctor names
   have hcs2 := hcs.grow decCN_mono (hg1.trans hg2)
   obtain ⟨hI2, hE2', hsz2, hEs2, hcl2⟩ := hS2.2
-  cases h3 : callW p n "block_caps_ctor_names" [coff, clen] m2 with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, icaK4_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [icaK4_some] at h
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (blockCapsCtorNames_spec p hP.alloc hP.namesCopy hP.ctorNames n _ coff clen) h3
   simp only at hW3; subst hs3
@@ -191,35 +179,18 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option Con
   subst hr3
   simp only [List.headD_cons, List.tail_cons, List.map_map] at h hd3
   -- their `EREC` copy
-  cases h4 : callW p n "block_caps_at_er_copy" [rdW (m2.arr64 CTL) 200, clen] s3.mem with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, icaK5_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [icaK5_some] at h
   obtain ⟨hS4, hg4, hE4⟩ := installErCopy hP h4 hS3 hd3 (by omega)
   have hg04 := ((hg1.trans hg2).trans hg3).trans hg4
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg04 hq hq9
   rw [hnpw] at h
   -- the three records
-  cases h5 : recW m4 5 [w0, w1, w2, w3, w4] with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, icaK5b_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [icaK5b_some] at h
   obtain ⟨hS5, hg5, hr5, hq5, hw5, ht5⟩ := installRec5 h5 hS4 rfl
-  cases h6 : recW m5 5 [w2, w6, z0, z1, z2] with
-  | none => rw [h6] at h; cases h
-  | some x6 =>
-  obtain ⟨r6, m6⟩ := x6
-  rw [h6, icaK6_some] at h
+  obtain ⟨⟨r6, m6⟩, h6, h⟩ := of_K h rfl; rw [icaK6_some] at h
   obtain ⟨hS6, hg6, -, -, hw6, ht6⟩ := installRec5 h6 hS5 rfl
-  cases h7 : recW m6 5 [r2.headD 0, r2.tail.headD 0, UInt64.ofNat bs.nP, r4.headD 0, r4.tail.headD 0] with
-  | none => rw [h7] at h; cases h
-  | some x7 =>
-  obtain ⟨r7, m7⟩ := x7
-  rw [h7, icaK7_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨⟨r7, m7⟩, h7, h⟩ := of_K h rfl; rw [icaK7_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS7, hg7, -, -, hw7, ht7⟩ := installRec5 h7 hS6 rfl
   have hg47 := (hg5.trans hg6).trans hg7
   refine ⟨hS7, hg04.trans hg47, r2.headD 0, r2.tail.headD 0, r4.headD 0, r4.tail.headD 0, ?_,

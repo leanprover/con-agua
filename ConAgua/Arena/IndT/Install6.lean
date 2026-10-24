@@ -219,9 +219,8 @@ theorem iacW_simC (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb
   have hhiw : (UInt64.ofNat (c.hiAt 0) : Word).toNat = c.hiAt 0 := UInt64.toNat_ofNat_of_lt' hhi
   have htyP1 : denoteE a1.store (decI ew) = some tyNP := by
     rw [hewe]; exact ConRon.Bridge.denote_ext htyNP c1.ext
-  cases n with
-  | zero => rw [callW_zero]; simp only [iacK3]; exact Sim.of_none
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero]; simp only [iacK3]; exact Sim.of_none
   refine Sim.bindK (K := iacK3 p (k + 1) vis ctx isP co cl oo ol) (body := fun _ m3 => iacK4
       (iacW p (k + 1) m3 vis ctx isP (co + 1) (cl - 1) (oo + 1) (ol - 1))) (by simp [iacK3])
       (fun r m₁ => iacK3_some p (k + 1) m₁ vis ctx isP co cl oo ol r)

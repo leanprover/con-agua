@@ -61,18 +61,14 @@ theorem lvlEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word) (hu :
   rw [if_neg h0] at h
   by_cases h1 : (mfindG lqSch m u v).headD 0 ≠ 0
   · rw [if_pos h1] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
   rw [if_neg h1] at h
-  cases hl : lvlEqW n m u v with
-  | none => simp [hl, rcdK] at h
-  | some q =>
-  obtain ⟨z₁, m₁⟩ := q
+  rcases hl : lvlEqW n m u v with _ | ⟨z₁, m₁⟩
+  · simp [hl, rcdK] at h
   rw [hl] at h
-  cases n with
-  | zero => simp [lvlEqW] at hl
-  | succ n =>
+  rcases n with _ | n
+  · simp [lvlEqW] at hl
   simp only [lvlEqW] at hl
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
     ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
@@ -95,18 +91,14 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
   rw [if_neg h0] at h
   by_cases h1 : (mfindG lsqSch m us vs).headD 0 ≠ 0
   · rw [if_pos h1] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
   rw [if_neg h1] at h
-  cases hl : lvlsEqW n m us vs with
-  | none => simp [hl, rcdK] at h
-  | some q =>
-  obtain ⟨z₁, m₁⟩ := q
+  rcases hl : lvlsEqW n m us vs with _ | ⟨z₁, m₁⟩
+  · simp [hl, rcdK] at h
   rw [hl] at h
-  cases n with
-  | zero => simp [lvlsEqW] at hl
-  | succ n =>
+  rcases n with _ | n
+  · simp [lvlsEqW] at hl
   simp only [lvlsEqW] at hl
   have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [if_pos c] at hl; cases hl
   rw [if_neg hn] at hl

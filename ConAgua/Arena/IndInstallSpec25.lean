@@ -70,20 +70,11 @@ theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp hM h0
   obtain ⟨hS0, -⟩ := StageR.frame_hi hS hf0 (by simp) (by
       intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
-  cases hu : ulW n (mclearG hbSch m) cty nP nF 0 with
-  | none => rw [hu] at h; cases h
-  | some x =>
-  obtain ⟨u, m2⟩ := x
-  rw [hu, spgK2_some] at h
+  obtain ⟨⟨u, m2⟩, hu, h⟩ := of_K h rfl; rw [spgK2_some] at h
   obtain ⟨-, mp', -, -, -, -, -, hM2, -, -⟩ :=
     ulW_ok n _ _ a cty nP nF 0 u ∅ (by simpa using hb) hc' hS0 hM0 hu
-  cases hr : rowW n m2 (u.headD 0) (u.tail.headD 0) so sl z 0 nF with
-  | none => rw [hr] at h; cases h
-  | some y =>
-  obtain ⟨rr, m3⟩ := y
-  rw [hr, spgK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨⟨rr, m3⟩, hr, h⟩ := of_K h rfl; rw [spgK3_some] at h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ⟨mp', hbMR_mfr (rowW_mfr _ _ _ _ _ _ _ _ _ _ _ hr) (by simp) (by simp) hM2⟩
 
 /-! ## `check_struct_proj_table` -/

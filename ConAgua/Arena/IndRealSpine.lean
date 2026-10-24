@@ -41,6 +41,32 @@ namespace L.Ind
 
 open L.Arena
 
+/-- **An adapter `g_f(f, e)` over a spine walk `g(e)`** (`get_app_fn_f`, `pi_result_f`): its
+model refines the twin's walk `op`, memory and twin state unchanged. -/
+theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
+    (hspec : ∀ k s₀ f e, ⦃fun s => s = s₀⦄ invoke P (exec P (k + 1)) fF [f, e]
+      ⦃fun r s' => LocEq s' s₀ ∧ (if f ≠ CWF then none else
+        ntBW (callW P k g [e] s₀.mem) fun r m' => some ([r.headD 0], m')) = some (r, s'.mem); ⊤⦄)
+    (href : ∀ k s₀ a₀, ArenaR s₀.mem a₀ → ∀ e, HW e → ⦃fun s => s = s₀⦄ invoke P (exec P k) g [e]
+      ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ HW (r.headD 0) ∧
+        (op coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
+    RelW (callF P fF) [f, e] (StageR dn vis fe) (op f.toNat (decI e)) (KeepPost dn vis fe decW0E) := by
+  intro m m' a r h hS
+  obtain ⟨n, hc⟩ := callF_run h
+  rcases n with _ | k
+  · simp [callW_zero] at hc
+  have c' := callW_model (M := fun mm => if f ≠ CWF then none else
+    ntBW (callW P k g [e] mm) fun r m' => some ([r.headD 0], m')) (fun s => hspec k s f e) hc
+  obtain ⟨hf, c1⟩ := of_ite_none c'
+  obtain rfl : f = CWF := Decidable.not_not.mp hf
+  obtain ⟨⟨r', m''⟩, c'', c'⟩ := of_K (K := (ntBW · _)) c1 rfl; rw [bW_some] at c'
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW (href k ⟨m, Locals.init []⟩ a hS.1.arena.1 e he) c''
+  have e_m : m = m'' := by rw [← ht, hm]
+  subst e_m
+  exact ⟨decE (r'.headD 0), a, by rw [CWF_eq]; exact hrun, hS, IWGrow.refl _, hHW, rfl⟩
+
 /-! ## `get_app_fn_f` -/
 
 /-- The adapter `get_app_fn_f(f, e)` over its callee's run. -/
@@ -81,31 +107,8 @@ theorem gafF_spec0 (p : Prog) (hp : GafF p) (n : Nat) (s₀ : St) (args : List W
 /-- **`get_app_fn_f`'s model refines `getAppFn`** (replaces `IndStubs.getAppFn_spec`): memory and
 twin state unchanged. -/
 theorem gafF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
-    RelW gafF [f, e] (StageR dn vis fe) (getAppFn f.toNat (decI e)) (KeepPost dn vis fe decW0E) := by
-  intro m m' a r h hS
-  obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
-  have c' := callW_model (M := fun mm => gafAdW gafProg k mm f e)
-    (fun s => gafAd_spec gafProg rfl k s f e) hc
-  simp only [gafAdW] at c'
-  by_cases hf : f ≠ CWF
-  · rw [if_pos hf] at c'; cases c'
-  rw [if_neg hf] at c'
-  have hf' : f = CWF := Decidable.not_not.mp hf
-  subst hf'
-  cases c'' : callW gafProg k "get_app_fn" [e] m with
-  | none => rw [c''] at c'; simp at c'
-  | some q =>
-  obtain ⟨r', m''⟩ := q
-  rw [c'', bW_some] at c'
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW
-    (getAppFn_refines' gafProg rfl k ⟨m, Locals.init []⟩ a hS.1.arena.1 e he) c''
-  have e_m : m = m'' := by rw [← ht, hm]
-  subst e_m
-  exact ⟨decE (r'.headD 0), a, by rw [CWF_eq]; exact hrun, hS, IWGrow.refl _, hHW, rfl⟩
+    RelW gafF [f, e] (StageR dn vis fe) (getAppFn f.toNat (decI e)) (KeepPost dn vis fe decW0E) :=
+  adF_ok (fun k s f e => gafAd_spec gafProg rfl k s f e) (getAppFn_refines' gafProg rfl) dn vis fe f e he
 
 /-- `get_app_fn_f` writes nothing. -/
 theorem gafF_frame {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) :
@@ -153,31 +156,8 @@ theorem pirF_spec0 (p : Prog) (hp : PirF p) (n : Nat) (s₀ : St) (args : List W
 /-- **`pi_result_f`'s model refines `piResult`** (replaces `IndStubs.piResult_spec`): memory and
 twin state unchanged. -/
 theorem pirF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
-    RelW pirF [f, e] (StageR dn vis fe) (piResult f.toNat (decI e)) (KeepPost dn vis fe decW0E) := by
-  intro m m' a r h hS
-  obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
-  have c' := callW_model (M := fun mm => pirAdW pirProg k mm f e)
-    (fun s => pirAd_spec pirProg rfl k s f e) hc
-  simp only [pirAdW] at c'
-  by_cases hf : f ≠ CWF
-  · rw [if_pos hf] at c'; cases c'
-  rw [if_neg hf] at c'
-  have hf' : f = CWF := Decidable.not_not.mp hf
-  subst hf'
-  cases c'' : callW pirProg k "pi_result" [e] m with
-  | none => rw [c''] at c'; simp at c'
-  | some q =>
-  obtain ⟨r', m''⟩ := q
-  rw [c'', bW_some] at c'
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW
-    (piResult_refines' pirProg rfl k ⟨m, Locals.init []⟩ a hS.1.arena.1 e he) c''
-  have e_m : m = m'' := by rw [← ht, hm]
-  subst e_m
-  exact ⟨decE (r'.headD 0), a, by rw [CWF_eq]; exact hrun, hS, IWGrow.refl _, hHW, rfl⟩
+    RelW pirF [f, e] (StageR dn vis fe) (piResult f.toNat (decI e)) (KeepPost dn vis fe decW0E) :=
+  adF_ok (fun k s f e => pirAd_spec pirProg rfl k s f e) (piResult_refines' pirProg rfl) dn vis fe f e he
 
 /-- `pi_result_f` writes nothing. -/
 theorem pirF_frame {m m' : Mem} {args r : List Word} (h : pirF m args = some (r, m')) :
@@ -240,16 +220,9 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
       subst hl
       exact ⟨MemFrame.refl _ _ _, rfl, fun j hj => absurd hj (by simp), fun _ _ => rfl⟩
     rw [i2sW_cons k m d s l hl] at h
-    cases h1 : i2sW k (m.set64 SPN d (rdW (m.arr64 IW) s)) (d + 1) (s + 1) (l - 1) with
-    | none => rw [h1] at h; simp at h
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [h1, bW_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K (K := (ntBW · _)) h rfl; rw [bW_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hl0 : 0 < l.toNat := by
-      rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-      · exact h0
+    have hl0 : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
     have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1 : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
@@ -333,29 +306,20 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (mkAppN (decI f) xs) (KeepPost dn vis fe decW0E) := by
   intro m m' a r h ⟨hS, hxs⟩
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
+  rcases n with _ | k
+  · simp [callW_zero] at hc
   have c' := callW_model (M := fun mm => mknAdW mknProg k mm f o l)
     (fun s => mknAd_spec mknProg rfl k s f o l) hc
   simp only [mknAdW] at c'
-  by_cases g1 : m.len64 SPN < rdW (m.arr64 CTL) 136
-  · rw [if_pos g1] at c'; cases c'
-  rw [if_neg g1] at c'
-  by_cases g2 : m.len64 SPN - rdW (m.arr64 CTL) 136 < l
-  · rw [if_pos g2] at c'; cases c'
-  rw [if_neg g2] at c'
+  obtain ⟨g1, c'⟩ := of_ite_none c'
+  obtain ⟨g2, c'⟩ := of_ite_none c'
   generalize htop : rdW (m.arr64 CTL) 136 = top at c' g1 g2
   cases c1 : callW mknProg k "iw_to_spn" [top, o, l] m with
   | none => rw [c1] at c'; simp at c'
   | some q1 =>
   obtain ⟨r1', m1⟩ := q1
   rw [c1, bW_some] at c'
-  cases c2 : callW mknProg k "mk_app_n" [f, top, l] (m1.set64 CTL 136 (top + l)) with
-  | none => rw [c2] at c'; simp at c'
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2, bW_some] at c'
+  obtain ⟨⟨r2, m2⟩, c2, c'⟩ := of_K (K := (ntBW · _)) c' rfl; rw [bW_some] at c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   -- the room: `top + l ≤ len64 SPN ≤ |SPN|`, no wrap
   have hlen : (m.len64 SPN).toNat ≤ (m.arr64 SPN).size ∧ (m.len64 SPN).toNat < 2 ^ 64 := by

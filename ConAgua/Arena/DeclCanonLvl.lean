@@ -124,10 +124,7 @@ theorem nmW_ok {n : Nat} {m : Mem} {po pl co cl x y : Word} {ps cs : List NIdx}
   | zero => simp [nmW] at h
   | succ n =>
   simp only [nmW] at h
-  cases hf : findW n m po pl x with
-  | none => simp [hf] at h
-  | some r =>
-  simp only [hf] at h
+  rcases hf : findW n m po pl x with _ | r <;> simp only [hf, reduceCtorEq] at h
   have hr := findW_handle hps hpb hx hf
   unfold ConRon.Arena.canonNameMap
   by_cases h0 : r.headD 0 = 0
@@ -301,11 +298,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
   | succ n ih =>
     intro m a po pl qo ql co cl fuel u v r ps qs cs h hR hC hu hv
     rw [clW_succ] at h
-    by_cases hf : fuel = 0
-    · rw [if_pos hf] at h; simp at h
+    have hf : ¬ fuel = 0 := fun hf => by rw [if_pos hf] at h; simp at h
     rw [if_neg hf, cnClK0_def] at h
-    by_cases hne : lvNodeW m u = [] ∨ lvNodeW m v = []
-    · rw [if_pos hne] at h; simp at h
+    have hne : ¬ (lvNodeW m u = [] ∨ lvNodeW m v = []) := fun hne => by rw [if_pos hne] at h; simp at h
     rw [if_neg hne] at h
     rw [not_or] at hne
     obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne.1

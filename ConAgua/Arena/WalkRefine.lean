@@ -106,38 +106,31 @@ def NodeOK (n : Nat) : Prop :=
 
 theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
   intro F m m' a h c r hF hR hh hb
-  by_cases hc : c = 0
-  · rw [bbW] at hb; simp [hc] at hb
+  have hc : ¬ c = 0 := fun hc => by rw [bbW] at hb; simp [hc] at hb
   have hc1 := ctrW_toNat c hc
   obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
   rw [bvarBoundGo_succ', StateT.run_bind, bvarBGet_run]
-  by_cases hr : mfindG bmSch m h 0 = []
-  · rw [bbW] at hb; simp [hc, hr] at hb
+  have hr : ¬ mfindG bmSch m h 0 = [] := fun hr => by rw [bbW] at hb; simp [hc, hr] at hb
   by_cases hh0 : (mfindG bmSch m h 0).headD 0 ≠ 0
   · rw [bbW_hit n m h c hc hr hh0] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memos.bvar h 0 hr hh0 ⟨hh, rfl⟩]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [bbW_miss n m h c hc hr hh0] at hb
     rw [show a.memos.bvarBC[decE h]? = none from
       memoRG_miss bmSch bmKey _ m _ hR.memos.bvar h 0 ⟨hh, rfl⟩ hr hh0]
-    cases hn : bbNodeW n m h (c - 1) with
-    | none => simp [bbK, hn] at hb
-    | some p =>
-      obtain ⟨r₁, m₁⟩ := p
-      simp only [hn, bbK, bbSet_eq] at hb
-      cases hs : msetG bmSch m₁ h 0 r₁ with
-      | none => simp [hs, setK] at hb
-      | some m₂ =>
-        simp only [hs, setK, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨a₁, ha₁, hR₁⟩ := ih G m m₁ a h (c - 1) r₁ (by omega) hR hh hn
-        refine ⟨_, ?_, ArenaR.memo_set m₁ m₂ a₁ hR₁ h r₁ hh hs⟩
-        change StateT.run (do let r ← bbNodeA G (decE h); bvarBSet (decE h) r; pure r) a = _
-        simp only [StateT.run_bind, ha₁]
-        rfl
+    rcases hn : bbNodeW n m h (c - 1) with _ | ⟨r₁, m₁⟩ <;> simp only [hn, bbK, bbSet_eq, reduceCtorEq] at hb
+    cases hs : msetG bmSch m₁ h 0 r₁ with
+    | none => simp [hs, setK] at hb
+    | some m₂ =>
+      simp only [hs, setK, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨a₁, ha₁, hR₁⟩ := ih G m m₁ a h (c - 1) r₁ (by omega) hR hh hn
+      refine ⟨_, ?_, ArenaR.memo_set m₁ m₂ a₁ hR₁ h r₁ hh hs⟩
+      change StateT.run (do let r ← bbNodeA G (decE h); bvarBSet (decE h) r; pure r) a = _
+      simp only [StateT.run_bind, ha₁]
+      rfl
 
 /-- The `app` arm: two children, `max x y`. -/
 theorem bbAppArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
@@ -149,18 +142,14 @@ theorem bbAppArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
   | none => simp only [h1, bbAppK₁, reduceCtorEq] at hb
   | some p =>
     obtain ⟨x, m₁⟩ := p
-    cases h2 : bbW n m₁ aw c with
-    | none => simp only [h1, h2, bbAppK₁, bbAppK₁.bbAppK₂, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨y, m₂⟩ := q
-      simp only [h1, h2, bbAppK₁, bbAppK₁.bbAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR hf h1
-      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ ha h2
-      refine ⟨a₂, ?_, hR₂⟩
-      rw [maxW_toNat]
-      simp only [bvarBoundArmApp, StateT.run_bind, ha₁, except_ok_bind, ha₂]
-      rfl
+    rcases h2 : bbW n m₁ aw c with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, bbAppK₁, bbAppK₁.bbAppK₂, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR hf h1
+    obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ ha h2
+    refine ⟨a₂, ?_, hR₂⟩
+    rw [maxW_toNat]
+    simp only [bvarBoundArmApp, StateT.run_bind, ha₁, except_ok_bind, ha₂]
+    rfl
 
 /-- The binder arm (`lam`, `forallE`): two children, `max x (y - 1)`. -/
 theorem bbBindArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
@@ -172,18 +161,14 @@ theorem bbBindArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
   | none => simp only [h1, bbBindK₁, reduceCtorEq] at hb
   | some p =>
     obtain ⟨x, m₁⟩ := p
-    cases h2 : bbW n m₁ bw c with
-    | none => simp only [h1, h2, bbBindK₁, bbBindK₁.bbBindK₂, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨y, m₂⟩ := q
-      simp only [h1, h2, bbBindK₁, bbBindK₁.bbBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR ht h1
-      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ hb' h2
-      refine ⟨a₂, ?_, hR₂⟩
-      rw [maxW_toNat, predW_toNat]
-      simp only [bvarBoundArmBind, StateT.run_bind, ha₁, except_ok_bind, ha₂]
-      rfl
+    rcases h2 : bbW n m₁ bw c with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, bbBindK₁, bbBindK₁.bbBindK₂, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR ht h1
+    obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ hb' h2
+    refine ⟨a₂, ?_, hR₂⟩
+    rw [maxW_toNat, predW_toNat]
+    simp only [bvarBoundArmBind, StateT.run_bind, ha₁, except_ok_bind, ha₂]
+    rfl
 
 /-- The `letE` arm: three children, `max (max x y) (z - 1)`. -/
 theorem bbLetArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
@@ -323,16 +308,14 @@ theorem bbMemoW_correctF (n F : Nat) (m m' : Mem) (a : AState) (hR : ArenaR m a)
     (hb : bbMemoW n m h c = some (r, m')) :
     ∃ a', (bvarBoundMemo F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   simp only [bbMemoW] at hb
-  by_cases h0 : rdW (m.arr64 CTL) 24 + 2 = 0
-  · simp [h0] at hb
+  have h0 : ¬ rdW (m.arr64 CTL) 24 + 2 = 0 := fun h0 => by simp [h0] at hb
   simp only [h0, ↓reduceIte] at hb
   have hR₀ := ArenaR.memo_clear m a hR h0
   cases hw : bbW n (mclearG bmSch m) h c with
   | none => simp [hw, clrK] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
-    by_cases h1 : rdW (m₁.arr64 CTL) 24 + 2 = 0
-    · simp [hw, clrK, h1] at hb
+    have h1 : ¬ rdW (m₁.arr64 CTL) 24 + 2 = 0 := fun h1 => by simp [hw, clrK, h1] at hb
     simp only [hw, clrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hR₁⟩ := (goOK n).1 F _ _ _ h c r₁ hF hR₀ hh hw

@@ -281,8 +281,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   | some q₃ =>
   obtain ⟨r, m₃⟩ := q₃
   rw [e₄, fszK₃_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨he₃, hr⟩ := equivW_ok hN n _ _ _ _ _ _ Level.zero (hx.mono he₂) (.zero hy) e₄
   -- the frame
   have hf₁ : MemFrame [LH] [192] m m₃ :=
