@@ -33,13 +33,14 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     {A : List ArrId} {C : List Word}
     (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hA : ∀ b ∈ A, b < 42 ∨ (256 ≤ b ∧ b < 298)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
     (hv : ∀ t, (L.setP a t).store.view = a.store.view ∧ (L.setS a t).store.view = a.store.view) :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => .inl (hA b hb)) a hS.1.arena.2
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf
+    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a hS.1.arena.2
   have hcs := AM.st_proto L op key tag pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
@@ -48,7 +49,8 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
   have hrun' := AM.run_of_ok op a hok
   rw [hres] at hrun'
-  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf (fun b hb => Nat.lt_trans (hA b hb) (by decide)) hC hDk.2
+  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf
+    (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hC hDk.2
   have hvw : (AM.st op a).store.view = a.store.view := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact (hv t).1
@@ -64,7 +66,7 @@ theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (
   have hfr := consInternM_frame nanonCS_wf hI₂
   exact stage_of_name hS (internNNode_anon_run a) hok
     (hR.lift_nanon _ _ _ _ hX hfr (AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok))
-    hres hfr (by simp [nanonCS, nanonSch, NAREC, NASLOT]) (by simp [nanonCS, nanonSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [ConsSch.wset, nanonCS, nanonSch, NAREC, NASLOT]) (by simp [ConsSch.wset, nanonCS, nanonSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
 
 theorem internNNum_stage (hS : StageR dn vis fe m a) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
@@ -78,7 +80,7 @@ theorem internNNum_stage (hS : StageR dn vis fe m a) (pre u : Word) (hpre : pre.
   have hfr := consInternM_frame nnumCS_wf hI₂
   exact stage_of_name hS (internNNode_num_run _ _ a) hok
     (hR.lift_nnum _ _ _ _ hX hfr (AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok))
-    hres hfr (by simp [nnumCS, nnumSch, NNREC, NNSLOT]) (by simp [nnumCS, nnumSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    hres hfr (by simp [ConsSch.wset, nnumCS, nnumSch, NNREC, NNSLOT]) (by simp [ConsSch.wset, nnumCS, nnumSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
 
 end names
