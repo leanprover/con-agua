@@ -231,14 +231,9 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   have hspn := hS.spn
   have hadd : (to + tn).toNat = to.toNat + tn.toNat := addW _ _ (by omega)
   simp only [ptaK1] at hW
-  by_cases g1 : m₁.len64 SPN ≤ to + tn
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
-  by_cases g2 : ¬ (to + tn).toNat < (m₁.arr64 SPN).size
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
-  by_cases g3 : ¬ (136 : Word).toNat < (m₁.arr64 CTL).size
-  · rw [if_pos g3] at hW; cases hW
+  obtain ⟨g1, hW⟩ := of_ite_none hW
+  obtain ⟨g2, hW⟩ := of_ite_none hW
+  have g3 : ¬ ¬ (136 : Word).toNat < (m₁.arr64 CTL).size := fun g3 => by rw [if_pos g3] at hW; cases hW
   rw [if_neg g3, ptPush_eq] at hW
   have g2' : (to + tn).toNat < (m₁.arr64 SPN).size := Classical.not_not.mp g2
   have g3' : (136 : Word).toNat < (m₁.arr64 CTL).size := Classical.not_not.mp g3
@@ -256,11 +251,8 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   have hrun2 := ipRun_of_ref h₂
   obtain ⟨-, ⟨M₂, hS₂', hK₂, hSt₂⟩, -, hrw2⟩ := h₂
   simp only [ptaK2] at hW
-  by_cases g4 : ¬ (136 : Word).toNat < (m₂.arr64 CTL).size
-  · rw [if_pos g4] at hW; cases hW
-  rw [if_neg g4] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨g4, hW⟩ := of_ite_none hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   rw [← hm]
   have hfin : to + tn = rdW (s.mem.arr64 CTL) 136 := htop.symm
   have h0 : (0 : Word).toNat = 0 := rfl
@@ -536,13 +528,9 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
   have hE₁ : m₁.arr64 EREC = s.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
   have hq₁ : decTbl (m₁.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
   simp only [ipaK1] at hW
-  by_cases g1 : T ≠ sn
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  obtain ⟨g1, hW⟩ := of_ite_none hW
   have hTs : T = sn := Classical.not_not.mp g1
-  by_cases g2 : r₁.tail.headD 0 ≠ rdW (m₁.arr64 EREC) (q + 5)
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  obtain ⟨g2, hW⟩ := of_ite_none hW
   have g2' : r₁.tail.headD 0 = rdW (m₁.arr64 EREC) (q + 5) := Classical.not_not.mp g2
   -- `ls_node`
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
@@ -558,9 +546,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat := lsNodeW_viewLen hS₁.arena.1 hus hl₂
   simp only [ipaK2] at hW
-  by_cases g3 : ([o₂, l₂] : List Word).tail.headD 0 ≠ rdW (m₂.arr64 EREC) (q + 4)
-  · rw [if_pos g3] at hW; cases hW
-  rw [if_neg g3] at hW
+  obtain ⟨g3, hW⟩ := of_ite_none hW
   have g3' : l₂ = rdW (m₂.arr64 EREC) (q + 4) := by simpa using g3
   -- the table's words
   obtain ⟨hlp, hnp, -, -, -⟩ := decTbl_words hq₁ hS₁.erec
@@ -627,9 +613,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erecProj _ _ _ _ _ _ (Or.inr rfl) hc4
     have hq₄ : decTbl (m₄.arr64 EREC) q.toNat = some tbl := by rw [hE₄]; exact hq₃
     simp only [ipaK4] at hW
-    by_cases g5 : r₄.headD 0 = 0
-    · rw [if_pos g5] at hW; cases hW
-    rw [if_neg g5] at hW
+    obtain ⟨g5, hW⟩ := of_ite_none hW
     have hb : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact g5
     have hfs : (tbl.entry i.toNat).fieldSort = decI (guardW m₃ q i) := hfdec.symm
     have hT2 := fszTail_run (tbl.entry i.toNat) (decI us) xs (decE pe) _ _ _
@@ -645,11 +629,8 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     have hrun5 := ipRun_of_ref h₅
     obtain ⟨-, ⟨M₅, hS₅, hK₅, hSt₅⟩, -, hrw5⟩ := h₅
     simp only [ipaK5] at hW
-    by_cases g6 : ¬ (136 : Word).toNat < (m₅.arr64 CTL).size
-    · rw [if_pos g6] at hW; cases hW
-    rw [if_neg g6] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨g6, hW⟩ := of_ite_none hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [← hm]
     have hgK := hg₁.trans (hSt14.trans hSt₅).toGrew
     refine ipRef_of_run (M' := M₅) (v := decH r₅)
@@ -668,11 +649,8 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     have hrun5 := ipRun_of_ref h₅
     obtain ⟨-, ⟨M₅, hS₅, hK₅, hSt₅⟩, -, hrw5⟩ := h₅
     simp only [ipaK5] at hW
-    by_cases g6 : ¬ (136 : Word).toNat < (m₅.arr64 CTL).size
-    · rw [if_pos g6] at hW; cases hW
-    rw [if_neg g6] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨g6, hW⟩ := of_ite_none hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [← hm]
     have hgK := hg₁.trans (hSt₃.trans hSt₅).toGrew
     refine ipRef_of_run (M' := M₅) (v := decH r₅) (by rw [hT1]; exact hrun5)

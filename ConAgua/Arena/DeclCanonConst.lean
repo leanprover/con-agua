@@ -26,10 +26,8 @@ theorem decRL_two {k : IdxKind} {m : Mem} {r : List Word} {xs : List (Idx k)}
 theorem allocW_mem' {m m1 : Mem} {q k : Word} (h : allocW m k = some (q, m1)) :
     m1 = allocMem m k := by
   simp only [allocW] at h
-  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
-  · simp [h1] at h
-  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < k
-  · simp [h1, h2] at h
+  have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
+  have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < k := fun h2 => by simp [h1, h2] at h
   simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
   exact h.2.symm
 
@@ -48,15 +46,8 @@ theorem erCopyW_size (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d 
 theorem erToIwW_size {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) : ∀ b, (m'.arr64 b).size = (m.arr64 b).size := by
   simp only [erToIwW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  simp only [hal] at h
-  cases hcp : erCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hal : allocW m l with _ | ⟨q, m1⟩ <;> simp only [hal, reduceCtorEq] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨-, rfl⟩ := h
   intro b
   have hm1 : m1 = allocMem m l := allocW_mem' hal
@@ -196,8 +187,7 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have hcv2 : decCV (erecP m2) cq.toNat = some cv' :=
     ArrExt.decCV (IWGrow.erecPExtR (hg1.trans hg2)) hcv'
   obtain ⟨hS3, hg3, hd3, hz3⟩ := cvLpsW_ok h3 hS2 hcv2
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hu1 := decRL_unpack hd1
   have hu2 := decRL_unpack hd2
   have hu3 := decRL_unpack hd3

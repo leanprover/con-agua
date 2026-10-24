@@ -266,10 +266,8 @@ theorem allocW_facts {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1))
     q = rdW (m.arr64 CTL) 200 ∧ m1 = allocMem m k ∧
     q.toNat + k.toNat ≤ (m.arr64 IW).size := by
   simp only [allocW] at h
-  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
-  · simp [h1] at h
-  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < k
-  · simp [h1, h2] at h
+  have h1 : ¬ m.len64 IW < rdW (m.arr64 CTL) 200 := fun h1 => by simp [h1] at h
+  have h2 : ¬ m.len64 IW - rdW (m.arr64 CTL) 200 < k := fun h2 => by simp [h1, h2] at h
   simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   refine ⟨rfl, rfl, ?_⟩
@@ -290,8 +288,7 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
     (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
   simp only [snocW] at h
-  by_cases h0 : l + 1 = 0
-  · simp [h0] at h
+  have h0 : ¬ l + 1 = 0 := fun h0 => by simp [h0] at h
   simp only [h0, if_false] at h
   cases hal : allocW m (l + 1) with
   | none => simp [hal] at h
@@ -299,10 +296,7 @@ theorem snocW_dec {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : Li
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : copyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp : copyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
@@ -408,8 +402,7 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l1 + l2).toNat = l1.toNat + l2.toNat ∧
     (rdW (m.arr64 CTL) 200).toNat + (l1 + l2).toNat = iwTop m' := by
   simp only [appendW] at h
-  by_cases h0 : l1 + l2 < l1
-  · simp [h0] at h
+  have h0 : ¬ l1 + l2 < l1 := fun h0 => by simp [h0] at h
   simp only [h0, if_false] at h
   cases hal : allocW m (l1 + l2) with
   | none => simp [hal] at h
@@ -417,14 +410,8 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp1 : copyW (n - 1) m1 q o1 l1 with
-  | none => simp [hcp1] at h
-  | some m2 =>
-  simp only [hcp1] at h
-  cases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with
-  | none => simp [hcp2] at h
-  | some m3 =>
-  simp only [hcp2, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp1 : copyW (n - 1) m1 q o1 l1 with _ | m2 <;> simp only [hcp1, reduceCtorEq] at h
+  rcases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with _ | m3 <;> simp only [hcp2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
@@ -637,10 +624,7 @@ theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List 
   obtain ⟨q, m1⟩ := qm
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : erCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *

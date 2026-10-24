@@ -164,11 +164,7 @@ theorem mkAppW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : 
   unfold mkAppW at hI
   split at hI
   · cases hI
-  cases hI₁ : ainternW m f x with
-  | none => simp [hI₁, mkK] at hI
-  | some p =>
-  obtain ⟨r₁, m₁⟩ := p
-  simp only [hI₁, mkK_some] at hI
+  rcases hI₁ : ainternW m f x with _ | ⟨r₁, m₁⟩ <;> simp only [hI₁, mkK, mkK_some, reduceCtorEq] at hI
   cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
       (packBFL (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))
         (exprLPW m f ||| exprLPW m x)) with
@@ -195,17 +191,13 @@ theorem mkAppNFromW_hw : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word),
     have hiw : i < n := hin
     rw [mkAppNFromW] at hL
     simp only [hiw, ↓reduceIte] at hL
-    cases hmk : mkAppW m f (spW m (o + i)) with
-    | none => simp [hmk] at hL
-    | some p =>
-      obtain ⟨f₁, m₁⟩ := p
-      simp only [hmk] at hL
-      have hi1 : (i + 1).toNat = i.toNat + 1 := by
-        rw [UInt64.toNat_add]; simp
-        have := n.toNat_lt
-        omega
-      obtain ⟨-, hArenaD, -⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
-      exact ih m₁ _ f₁ o n (i + 1) (by omega) hArenaD (mkAppW_hw m a hD f _ f₁ m₁ hmk) r m' hL
+    rcases hmk : mkAppW m f (spW m (o + i)) with _ | ⟨f₁, m₁⟩ <;> simp only [hmk, reduceCtorEq] at hL
+    have hi1 : (i + 1).toNat = i.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp
+      have := n.toNat_lt
+      omega
+    obtain ⟨-, hArenaD, -⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
+    exact ih m₁ _ f₁ o n (i + 1) (by omega) hArenaD (mkAppW_hw m a hD f _ f₁ m₁ hmk) r m' hL
 
 /-- **`mk_app` as a run**: the twin's interning, `ArenaD` after it, the result word is a handle and
 only the `app` tables and their derived-range cache are written. -/
@@ -655,8 +647,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         | some q2 =>
         obtain ⟨r₂, m₂⟩ := q2
         rw [h2] at hF; dsimp only at hF
-        simp only [Option.some.injEq, Prod.mk.injEq] at hF
-        obtain ⟨rfl, rfl, rfl⟩ := hF
+        obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
         have hinst := hil k ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
           acc hS ht hacc (by rw [hspT]; omega)
         obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1
@@ -696,13 +687,8 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         · exact peel_restore hco hb hsz hbk hpg hSt2 htop hcn64 h136'
     · rw [peelFull_exit _ _ _ _ _ _ _ _ _ _ hlt] at hF
       unfold peelTail at hF
-      cases h1 : callW p n "inst_list" [t, co, cn, 0] m with
-      | none => rw [h1] at hF; simp at hF
-      | some q =>
-      obtain ⟨r₁, m₃⟩ := q
-      rw [h1] at hF
-      simp only [Option.some.injEq, Prod.mk.injEq] at hF
-      obtain ⟨rfl, rfl, rfl⟩ := hF
+      rcases h1 : callW p n "inst_list" [t, co, cn, 0] m with _ | ⟨r₁, m₃⟩ <;> simp only [h1, reduceCtorEq] at hF
+      obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
       have hinst := hil n ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
         acc hS ht hacc (by rw [hspT]; omega)
       obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1

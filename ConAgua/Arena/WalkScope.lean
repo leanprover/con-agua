@@ -173,66 +173,55 @@ theorem wscW_miss (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG wsSch m h d
   rw [wscW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, wsK]
 
 theorem wsNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h 22) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
 theorem wsNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
 theorem wsNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
 theorem wsNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : wsNodeW (n + 1) m h d c = some (1, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
 theorem wsNodeW_fvar_lt (hg : h >>> 28 = 1) (hv : viewOK m h 26)
     (hl : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d) :
     wsNodeW (n + 1) m h d c = wscW n m (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))
       (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) c := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, hl]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, hl]
 
 theorem wsNodeW_fvar_ge (hg : h >>> 28 = 1) (hv : viewOK m h 26)
     (hl : ¬ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d) :
     wsNodeW (n + 1) m h d c = some (0, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, hl]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, hl]
 
 theorem wsNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
     wsNodeW (n + 1) m h d c = wsAndK n (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) d c
       (wscW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d c) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, wsAndK]
+  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
   simp
 
 theorem wsNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
     wsNodeW (n + 1) m h d c = wsAndK n (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) d c
       (wscW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d c) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, wsAndK]
+  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
   simp
 
 theorem wsNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
     wsNodeW (n + 1) m h d c = wsAndK n (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) d c
       (wscW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d c) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, wsAndK]
+  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
   simp
 
 theorem wsNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
     wsNodeW (n + 1) m h d c = wscW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d c := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
 theorem wsNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
     wsNodeW (n + 1) m h d c = wsLetK n (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
       (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) d c
       (wscW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d c) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [wsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, wsLetK, wsAndK]
+  rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsLetK, wsAndK]
   split <;> simp_all
 
 end arms

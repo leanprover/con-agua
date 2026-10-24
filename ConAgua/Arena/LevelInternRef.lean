@@ -70,13 +70,7 @@ theorem internName_denote_run (a : AState) (hwf : NStoreWF a.store.lss.ls.ns) :
     | anonymous =>
       simp only [Option.some.injEq] at h; subst h
       exact internNNode_view_run a hwf hv
-    | str p s =>
-      simp only [Option.map_eq_some_iff] at h
-      obtain ⟨q, hq, rfl⟩ := h
-      have hp := ih p q hq
-      simp only [internName, StateT.run_bind, hp]
-      exact internNNode_view_run a hwf hv
-    | num p k =>
+    | str p _ | num p _ =>
       simp only [Option.map_eq_some_iff] at h
       obtain ⟨q, hq, rfl⟩ := h
       have hp := ih p q hq
@@ -186,8 +180,7 @@ theorem liNode_ok (op : AM LIdx) (W : Mem → Option (Word × Mem))
     split at hW
     · simp at hW
     rename_i hlt
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨ok, hR, res, hf⟩ := hop m a _ _ hA hI
     exact ⟨ok, hR, res, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, hf⟩
 
@@ -405,8 +398,7 @@ theorem lp_nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
         | none => simp [e] at hs
         | some x =>
           cases e' : (hslice? (m.arr64 A) (o.toNat + 1) j : Option (List NIdx)) with
-          | none => simp [e, e'] at hs
-          | some xs => simp [e, e'] at hs
+          | none | some xs => simp [e, e'] at hs
     have : k = 0 := UInt64.toNat_inj.mp (by simpa using hk)
     subst this; exact .nil
   | cons x xs ih =>
@@ -575,10 +567,8 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   | zero => simp [keysPushW, capsK1] at hW
   | succ n =>
   simp only [keysPushW] at hW
-  by_cases t1 : m.len64 SPN < spTop m
-  · simp [t1, capsK1] at hW
-  by_cases t2 : m.len64 SPN - spTop m < pc
-  · simp [t1, t2, capsK1] at hW
+  have t1 : ¬ m.len64 SPN < spTop m := fun t1 => by simp [t1, capsK1] at hW
+  have t2 : ¬ m.len64 SPN - spTop m < pc := fun t2 => by simp [t1, t2, capsK1] at hW
   simp only [t1, t2, ↓reduceIte] at hW
   have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ hsz
   have t1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t1)
@@ -586,10 +576,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
   rw [hlen] at t1'
   have hroom : (spTop m).toNat + pc.toNat ≤ (m.arr64 SPN).size := by omega
-  cases hc : ekCopyW n m po (spTop m) pc with
-  | none => simp [hc, kpK, capsK1] at hW
-  | some m₁ =>
-  rw [hc, kpK_some, capsK1_some] at hW
+  rcases hc : ekCopyW n m po (spTop m) pc with _ | m₁ <;> simp only [hc, kpK, capsK1, kpK_some, capsK1_some, reduceCtorEq] at hW
   obtain ⟨hk₁, hf₁, hb₁⟩ := ekCopyW_ok ks n m m₁ po (spTop m) pc hk hroom hsz hc
   generalize hm₂ : (m₁.set64 CTL 136 (spTop m + pc)).set64 CTL 192 0 = m₂ at hW
   have hf₂ : MemFrame [SPN] [136, 192] m m₂ := hm₂ ▸
@@ -612,8 +599,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   | some r =>
   obtain ⟨x₃, m₃⟩ := r
   rw [hS, capsK2_some] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨he, hz⟩ := substPWW_ok (nameN_rel _ hwf) (KA := SPN) (VA := POOL) (PA := EREC)
     (by decide) (by decide) (by decide) ks vs (n + 1) _ _ _ _ _ _ _ _ _ _ pw hp₂ (hk₁.of_arr hspn₂)
     hl.toAR hS
