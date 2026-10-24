@@ -74,7 +74,7 @@ structure NatEqProg (p : Prog) : Prop extends NatTyProg p where
 l_model natAp1_specW (p : Prog) (hp : p.lookup "nat_ap1" = some natAp1L)
   fns [hp ↦ natAp1W list]
   specs [callW_spec p n "const_e", callW_spec p n "mk_app"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natAp1_ref (hN : NatEqProg p) (nm a : Word) :
     CallRef p "nat_ap1" [nm, a] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a)
@@ -91,7 +91,7 @@ theorem natAp1_ref (hN : NatEqProg p) (nm a : Word) :
 l_model natAp2_specW (p : Prog) (hp : p.lookup "nat_ap2" = some natAp2L)
   fns [hp ↦ natAp2W list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "mk_app"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natAp2_ref (hN : NatEqProg p) (nm a b : Word) :
     CallRef p "nat_ap2" [nm, a, b] (fun m s => StageR dn vis fe m s ∧ H nm ∧ H a ∧ H b)
@@ -205,7 +205,7 @@ theorem emit_sim (hal : p.lookup "iw_alloc" = some iwAlloc) {n : Nat} {m m0 : Me
 l_model natEqList2_specW (p : Prog) (hp : p.lookup "nat_eq_list2" = some natEqList2)
   fns [hp ↦ natEqList2W list]
   specs [callW_spec p n "rec2", callW_spec p n "iw_alloc"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
     CallRef p "nat_eq_list2" [a1, b1, a2, b2] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2)
@@ -221,7 +221,7 @@ theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
 l_model natEqList3_specW (p : Prog) (hp : p.lookup "nat_eq_list3" = some natEqList3)
   fns [hp ↦ natEqList3W list]
   specs [callW_spec p n "rec2", callW_spec p n "iw_alloc"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqList3_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 : Word) :
     CallRef p "nat_eq_list3" [a1, b1, a2, b2, a3, b3] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3)
@@ -238,7 +238,7 @@ theorem natEqList3_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 : Word) :
 l_model natEqList4_specW (p : Prog) (hp : p.lookup "nat_eq_list4" = some natEqList4)
   fns [hp ↦ natEqList4W list]
   specs [callW_spec p n "rec2", callW_spec p n "iw_alloc"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqList4_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) :
     CallRef p "nat_eq_list4" [a1, b1, a2, b2, a3, b3, a4, b4] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3 ∧ H a4 ∧ H b4)
@@ -268,7 +268,7 @@ def natEqPrT (c : NIdx) (z : EIdx) (x : EIdx) (sx : EIdx) : AM (List (EIdx × EI
 l_model natEqPr_specW (p : Prog) (hp : p.lookup "nat_eq_pr" = some natEqPr)
   fns [hp ↦ natEqPrW list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqPr_ref (hN : NatEqProg p) (c z x sx : Word) :
     CallRef p "nat_eq_pr" [c, z, x, sx] (fun m s => StageR dn vis fe m s ∧ H c ∧ H z ∧ H x ∧ H sx)
@@ -295,7 +295,7 @@ def natEqUnT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (w : NIdx) 
 l_model natEqUn_specW (p : Prog) (hp : p.lookup "nat_eq_un" = some natEqUn)
   fns [hp ↦ natEqUnW list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqUn_ref (hN : NatEqProg p) (c x y z sy w : Word) :
     CallRef p "nat_eq_un" [c, x, y, z, sy, w] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H w)
@@ -326,7 +326,7 @@ def natEqMuT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (ad : NIdx)
 l_model natEqMu_specW (p : Prog) (hp : p.lookup "nat_eq_mu" = some natEqMu)
   fns [hp ↦ natEqMuW list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqMu_ref (hN : NatEqProg p) (c x y z sy ad : Word) :
     CallRef p "nat_eq_mu" [c, x, y, z, sy, ad] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H ad)
@@ -358,7 +358,7 @@ def natEqPoT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (sN : NIdx)
 l_model natEqPo_specW (p : Prog) (hp : p.lookup "nat_eq_po" = some natEqPo)
   fns [hp ↦ natEqPoW list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqPo_ref (hN : NatEqProg p) (c x y z sy sN mu : Word) :
     CallRef p "nat_eq_po" [c, x, y, z, sy, sN, mu] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H sN ∧ H mu)
@@ -392,7 +392,7 @@ def natEqBeT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sx : EIdx) (sy : EIdx)
 l_model natEqBe_specW (p : Prog) (hp : p.lookup "nat_eq_be" = some natEqBe)
   fns [hp ↦ natEqBeW list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list4"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqBe_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
     CallRef p "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
@@ -425,7 +425,7 @@ def natEqBlT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sx : EIdx) (sy : EIdx)
 l_model natEqBl_specW (p : Prog) (hp : p.lookup "nat_eq_bl" = some natEqBl)
   fns [hp ↦ natEqBlW list]
   specs [callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list3"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem natEqBl_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
     CallRef p "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)

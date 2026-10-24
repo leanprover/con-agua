@@ -66,7 +66,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 l_model boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCtorOkL)
   fns [hp ↦ boolCtorOkW list]
   specs [callW_spec p n "ci_to_cv", callW_spec p n "pin_at", callW_spec p n "const_e"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     CallRef p "bool_ctor_ok" [c]
@@ -151,7 +151,7 @@ theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : N
 l_model boolCtors_specW (p : Prog) (hp : p.lookup "nat_op_bool_ctors" = some natOpBoolCtorsL)
   fns [hp ↦ boolCtorsW list]
   specs [callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "bool_ctor_ok"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 /-! ### `nat_op_guard` -/
 

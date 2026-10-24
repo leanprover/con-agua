@@ -178,7 +178,7 @@ theorem cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some div
 l_model cgs_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard" = some divModCertsGuardL)
   fns [hp ↦ cgsW list]
   specs [callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs", callW_spec p n "div_mod_certs_guard_go"]
-  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 end guards
 

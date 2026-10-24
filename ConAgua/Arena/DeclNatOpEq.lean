@@ -324,7 +324,7 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
 l_model natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some natOpEquationsL)
   fns [hp ↦ natOpEquationsW list]
   specs [callW_spec p n "nat_op_pins", callW_spec p n "nat_eq_ctx", callW_spec p n "nat_eq_disp"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 def natEqTailT (c : NIdx) (ctx : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
     AM (List (EIdx × EIdx)) := do

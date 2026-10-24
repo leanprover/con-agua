@@ -39,7 +39,7 @@ l_model defnNatGate_specW (p : Prog) (hp : p.lookup "defn_nat_gate" = some defnN
   fns [hp ↦ defnNatGateW list]
   specs [callW_spec p n "nat_op_names", callW_spec p n "sl_contains", callW_spec p n "nat_op_guard",
     callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "defn_nat_cert"]
-  grind [arena_grind] finish [ntBW] gen 20 heartbeats 6400000 bind ntBW instances 10000
+  grind [arena_grind] heartbeats 6400000 bind ntBW simp [ntBW]
 
 theorem decCI_defn_val {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}

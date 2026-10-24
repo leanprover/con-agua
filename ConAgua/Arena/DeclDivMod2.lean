@@ -122,7 +122,7 @@ theorem RelW.simS {α : Type} {W : Mem → List Word → Option (List Word × Me
 l_model natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL)
   fns [hp ↦ natVarW list]
   specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "intern_fvar"]
-  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 theorem natVar_ref (hD : DmProg2 p) (i : Word) :
     CallRef p "nat_var" [i] (StageR dn vis fe) (natVar i.toNat) (KeepPost dn vis fe decW0E) := by
@@ -141,7 +141,7 @@ theorem natVar_ref (hD : DmProg2 p) (i : Word) :
 l_model natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL)
   fns [hp ↦ natOneW list]
   specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "nat_ap1"]
-  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 theorem natOne_ref (hD : DmProg2 p) :
     CallRef p "nat_one" [] (StageR dn vis fe) natOne (KeepPost dn vis fe decW0E) := by
@@ -174,7 +174,7 @@ theorem slNew1_dec {κ : IdxKind} {m m1 : Mem} {r : List Word} {x : Word} (hR : 
 l_model eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (hil : IlF p)
   fns [hp ↦ eqAt1W list]
   specs [callW_spec p n "pin_word", callW_spec p n "intern_succ", callW_spec p n "sl_new1", ilF_spec p hil n, callW_spec p n "pin_at", callW_spec p n "intern_const", callW_spec p n "mk_app"]
-  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
     CallRef p "eq_at1" [ty, a, b] (StageR dn vis fe)

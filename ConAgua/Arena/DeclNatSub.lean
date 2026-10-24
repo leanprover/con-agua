@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecClassSpec
 
@@ -299,26 +300,11 @@ theorem substConst0_refines (hN : NatSubProg p) (nm r fuel h : Word) :
 
 /-! ### `subst_const0_pairs` -/
 
-def pairsW (p : Prog) (n : Nat) (m : Mem) (nm r o l : Word) : Option (List Word × Mem) :=
-  if l = 0 then some ([0, 0], m) else
-  ntBW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) (rdW (m.arr64 IW) o)] m) fun r1 m1 =>
-  ntBW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m1.arr64 IW) (rdW (m.arr64 IW) o + 1)] m1) fun r2 m2 =>
-  ntBW (callW p n "subst_const0_pairs" [nm, r, o + 1, l - 1] m2) fun r3 m3 =>
-  ntBW (callW p n "rec2" [r1.headD 0, r2.headD 0] m3) fun r4 m4 =>
-  ntBW (callW p n "sl_cons" [r4.headD 0, r3.headD 0, r3.tail.headD 0] m4) fun r5 m5 =>
-  some ([r5.headD 0, r5.tail.headD 0], m5)
-
-theorem pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substConst0PairsL) (n : Nat)
-    (s₀ : St) (nm r o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "subst_const0_pairs" [nm, r, o, l]
-    ⦃fun res s' => LocEq s' s₀ ∧ pairsW p n s₀.mem nm r o l = some (res, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, substConst0PairsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "subst_const0", callW_spec p n "subst_const0_pairs", callW_spec p n "rec2",
-      callW_spec p n "sl_cons"] <;>
-    finish (gen := 20) (instances := 10000) [pairsW, ntBW]
+/-- **`subst_const0_pairs` is its model `pairsW`** (generated). -/
+l_model pairs_specW (p : Prog) (hp : p.lookup "subst_const0_pairs" = some substConst0PairsL)
+  fns [hp ↦ pairsW list]
+  specs [callW_spec p n "subst_const0", callW_spec p n "subst_const0_pairs", callW_spec p n "rec2", callW_spec p n "sl_cons"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
 theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (ps : List (EIdx × EIdx)) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word)
@@ -334,8 +320,8 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => pairsW p k mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs k · nm r o l) hc
-    simp only [pairsW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    have hw := callW_model (M := fun mm => pairsW p (k + 1) mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs (k + 1) · nm r o l) hc
+    simp only [pairsW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨[], a, rfl, hS, IWGrow.refl _, by
       refine ⟨by simp, by simp, fun j hj => by simp at hj⟩⟩
@@ -345,8 +331,8 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     obtain ⟨pp, ea, eb, hl0, hpp, hrec, hea, heb, he, hrest⟩ := hE.cons
-    have hw := callW_model (M := fun mm => pairsW p k mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs k · nm r o l) hc
-    unfold pairsW at hw
+    have hw := callW_model (M := fun mm => pairsW p (k + 1) mm nm r o l) (pairs_specW p hN.lSubstConst0Pairs (k + 1) · nm r o l) hc
+    rw [pairsW.eq_2] at hw
     rw [if_neg (fun h => hl0 (by simp [h]))] at hw
     have hpp' : rdW (m.arr64 IW) o = pp := by
       simp only [iwA] at hpp; simp [rdW, hpp]

@@ -326,7 +326,7 @@ theorem rec3_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 l_model ntSlNew1_specW (p : Prog) (hp : p.lookup "sl_new1" = some slNew1)
   fns [hp ↦ slNew1W list]
   specs [callW_spec p n "iw_alloc"]
-  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
+  grind [arena_grind] bind ntBW simp [ntBW]
 
 theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "sl_new1" = some slNew1) (x : Word) :

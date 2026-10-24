@@ -126,7 +126,7 @@ variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 l_model cp_specW (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL)
   fns [hp ↦ dmCpW list]
   specs [callW_spec p n "div_mod_env_guard", callW_spec p n "env_find", callW_spec p n "check_div_mod_pin_loop"]
-  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq, getElem_rdW']
 
 end pin
 

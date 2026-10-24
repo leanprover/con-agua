@@ -587,22 +587,11 @@ theorem slice_succ {o l : Word} (hl0 : l ≠ 0) (hb : o.toNat + l.toNat < 2 ^ 64
 
 /-! ### `nat_op_stored_ok_all` -/
 
-def okAllW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
-  if l = 0 then some ([1], m) else
-  ntBW (callW p n "nat_op_stored_ok" [vis, rdW (m.arr64 IW) o] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  ntBW (callW p n "nat_op_stored_ok_all" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
-
-theorem okAll_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok_all" = some natOpStoredOkAllL)
-    (n : Nat) (s₀ : St) (vis o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_stored_ok_all" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ okAllW p n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpStoredOkAllL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_op_stored_ok", callW_spec p n "nat_op_stored_ok_all"] <;>
-    finish (gen := 20) [okAllW, ntBW]
+/-- **`nat_op_stored_ok_all` is its model `okAllW`** (generated). -/
+l_model okAll_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok_all" = some natOpStoredOkAllL)
+  fns [hp ↦ okAllW list]
+  specs [callW_spec p n "nat_op_stored_ok", callW_spec p n "nat_op_stored_ok_all"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
 theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     ∀ (k : Nat) (m : Mem) (a : AState) (r : List Word) (m' : Mem), StageR dn vis fe m a →
@@ -618,8 +607,8 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => okAllW p k mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll k · vis o l) hc
-    simp only [okAllW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    have hw := callW_model (M := fun mm => okAllW p (k + 1) mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll (k + 1) · vis o l) hc
+    simp only [okAllW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | cons n ns ih =>
@@ -628,8 +617,8 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
-    have hw := callW_model (M := fun mm => okAllW p k mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll k · vis o l) hc
-    unfold okAllW at hw
+    have hw := callW_model (M := fun mm => okAllW p (k + 1) mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll (k + 1) · vis o l) hc
+    rw [okAllW.eq_2] at hw
     rw [if_neg hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     subst hn

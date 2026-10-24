@@ -117,7 +117,7 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
 l_model dg_specW (p : Prog) (hp : p.lookup "defn_div_gate" = some defnDivGate)
   fns [hp ↦ dgW list]
   specs [callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains", callW_spec p n "rom_pin_sets", callW_spec p n "check_div_mod_pin"]
-  grind [arena_grind] finish [ntBW] gen 30 heartbeats 1600000 bind ntBW instances 10000
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 /-- The gate and its callees. -/
 def dgFns : List FnName :=
