@@ -230,9 +230,9 @@ theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) 
   rw [invoke_eq _ hp.ptn]
   simp only [callFn, projTableNameL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, evalE_tierE, evalE_idxE,
       callW_spec p n "intern_nstr", callW_spec p n "intern_nnum"] <;>
-    finish [ptnW, ptMem, ptBytes]
+    finish [ptnW, ptMem, ptBytes, tierW, idxW]
 
 /-! ## The pool bytes -/
 

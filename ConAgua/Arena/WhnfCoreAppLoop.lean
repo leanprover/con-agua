@@ -120,9 +120,10 @@ theorem whnfAppLamW_spec (p : Prog) (n : Nat) (s₀ : St) :
           s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 8 = s₀.loc 8 ∧ s'.loc 9 = s₀.loc 9 ∧ s'.loc 10 = s₀.loc 10 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 14 = s₀.loc 14 ∧ s'.loc 15 = s₀.loc 15 ∧ s'.loc 16 = s₀.loc 16 ∧ s'.loc 17 = s₀.loc 17 ∧ s'.loc 18 = s₀.loc 18 ∧ s'.loc 19 = s₀.loc 19; ⊤⦄ := by
   rw [exec]; unfold whnfAppLamW L.Notation.blk
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+      evalE_tierE, evalE_idxE, st64,
       callW_spec p n "beta_peel"] <;>
-    finish [lamW, tierW, idxW, St.setLoc_loc, St.setLoc_mem]
+    finish [lamW, tierW, idxW, tfld, tcnt, TRec.ad, St.setLoc_loc, St.setLoc_mem]
 
 /-- The model of the ι arm at callee fuel `k`. -/
 def iotaW (p : Prog) (k : Nat) (m : Mem) (mode vis d hd vo vn ao an i top : Word) :

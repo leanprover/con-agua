@@ -349,9 +349,10 @@ theorem natPred_spec (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (e : 
   rw [invoke_eq _ hp.np]
   simp only [callFn, natPredL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "nat_pred_lit", pinAt_rd p hp.leaf.pinat n, pinWord_rd p hp.leaf.pinword n] <;>
-    finish [natPredW, npLitF, Option.bind_some, tierW, idxW]
+    finish [natPredW, npLitF, Option.bind_some, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem am_eq_run {α : Type} [Inhabited α] {T T' : AM α} {a : AState} (h : T.run a = T'.run a) :
     AM.ok T a = AM.ok T' a ∧ AM.st T a = AM.st T' a ∧ AM.res T a = AM.res T' a := by
@@ -542,8 +543,9 @@ theorem litEq_spec (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
   rw [invoke_eq _ hle]
   simp only [callFn, litEqL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hlq n] <;>
-    finish [litEqW, tierW, idxW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE, limbsEq_spec p hlq n] <;>
+    finish [litEqW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- **A `lit` node's record**, past the view checks: a `natVal` is a normalised slice of its value,
 a `strVal` a slice of its bytes; kind word `0`/`1`; the slice below the pool top. -/

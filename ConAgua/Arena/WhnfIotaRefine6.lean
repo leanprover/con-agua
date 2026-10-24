@@ -45,8 +45,9 @@ theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constN
   rw [invoke_eq _ hp]
   simp only [callFn, constNameOfL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-    finish [cnoW, tierW, idxW]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE] <;>
+    finish [cnoW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 /-- Model of `ind_caps_check` (callees at fuel `n`). -/
 def iccW (p : Prog) (n : Nat) (m : Mem) (indP us : Word) : Option (Word × Mem) :=

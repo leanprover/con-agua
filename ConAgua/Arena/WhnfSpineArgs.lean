@@ -96,8 +96,9 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := appFillLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE, st64, ih] <;>
+      finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem appFillLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -259,8 +260,9 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := appFillNLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
+        evalE_tierE, evalE_idxE, st64, ih] <;>
+      finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem appFillNLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄

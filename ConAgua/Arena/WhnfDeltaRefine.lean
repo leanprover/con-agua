@@ -719,9 +719,10 @@ theorem natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
   rw [invoke_eq _ hp.natSuccOk]
   simp only [callFn, natSuccOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
+      tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
-    finish [natSuccOkW, tierW, idxW]
+    finish [natSuccOkW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
 

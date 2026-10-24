@@ -117,10 +117,12 @@ theorem stuckStr_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧ strK p n mode vis d a b side lt fo s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hq.stuckStr]
   simp only [callFn, stuckStrL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_word", callW_spec p n "pin_at", callW_spec p n "str_lit_supported",
       callW_spec p n "str_lit_ctor", callW_spec p n "defeq", callW_spec p n "stuck_irrel"] <;>
-  simp_all [strK, strK1, strK2, strK3, strK4, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [strK, strK1, strK2, strK3, strK4, call1W, tierW, idxW, tfld, tcnt, TRec.ad, LocEq,
+    BinOp.eval, St.setLocs_cons,
     CTL, REC, CREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
