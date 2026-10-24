@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec41
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
 import ConRon.Bridge.Inductives.BlockRec
@@ -119,7 +120,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     (hC : StageC dn vis fe env m a) (hbs : BSOK m pp.toNat bs) (hrb : RecsB m pp)
     (hrd : DecB (fun m => decCR m rd.toNat) m rdv)
     (hms : PSlR decTM ms mO mL m) (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block)
-    (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCallees, AbsKeep p f)
+    (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
     {pP : ConLeche.BlockShape} {blockP : List ConLeche.ConstantInfo}
     (hsh : dShape a.store bs = some pP)
     (hblkP : Frontend.denoteCIList a.store block = some blockP) :
@@ -183,7 +184,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hrun1 := AM.run_of_ok _ a hok1
   generalize AM.st (ConRon.Arena.targetRecPins bs block) a = a1 at hrun1 hS1
   have hP1 := RcMR.ofClosed hclR (hfR _ (by decide)) c1 hP
-  have hA1 := hkeep _ (by simp [grcKeepCallees]) _ _ _ _ _ c1 hA
+  have hA1 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c1 hA
   have hk1 := callW_keepW c1
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.targetRecPins_spec bs pP block blockP a a1 _
     hC.check.state hC.check.pins ⟨hsh, hblkP⟩ hrun1

@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec35
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install5
 import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Arena.IndT.ArmMemos
@@ -54,7 +55,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
     {m : Mem} {a : AState} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
     (hn : n ≤ 2 ^ 62) (hC : StageC dn vis fe env₁ m a) (hq : BPassR vis fe m q bp)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hM : HbMemo m) (hA : AbsOK m)
-    (hkeep : ∀ f ∈ tailKeepCallees, AbsKeep p f) (hR : RcMR m)
+    (hkeep : ∀ f ∈ tailKeepCalleesC, AbsKeep p f) (hR : RcMR m)
     (hrb : RecsB m (rdW (m.arr64 IW) (q + 3)))
     (hlp : ClassesLp m (rdW (m.arr64 IW) (q + 15)) (rdW (m.arr64 IW) (q + 16)))
 
@@ -150,7 +151,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
   obtain ⟨s2, rfl, -, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 dn fe _ _ _ vis ctorsAs hS1 hca1) h2
   have hM2 : HbMemo s2.mem := HbMemo.ofClosed hcl (hfs _ (by decide)) h2 hM1
-  have hA2 : AbsOK s2.mem := hkeep _ (by simp [tailKeepCallees]) _ _ _ _ _ h2 hA1
+  have hA2 : AbsOK s2.mem := hkeep _ (by simp [tailKeepCalleesC, grcKeepCalleesC]) _ _ _ _ _ h2 hA1
   have hR2 : RcMR s2.mem := RcMR.ofClosed hclR (hfR _ (by decide)) h2 hR1
   have hk2 := hk1.trans (callW_keepW h2)
   rw [UInt64.toNat_ofNat_of_lt' (partsShapeWords (IWGrow.refl m) hbsD hq9).2.1] at hS2
@@ -292,7 +293,7 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
         _ bs.members ctorsAs sss
         hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
         (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 hA6
-        (fun f hf => hkeep f (by simp_all [tablesKeepCallees, tailKeepCallees])) r s7.mem hW7
+        (fun f hf => hkeep f (by simp_all [tablesKeepCallees, tailKeepCalleesC, grcKeepCalleesC])) r s7.mem hW7
       exact ⟨x, a', h1, h2, h3, h4.1, h4.2, RcMR.ofClosedHb hclH hfH e7 hR6 h4.1⟩)
     (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
 
@@ -308,7 +309,7 @@ theorem checkBlockTail_refinesC (hP : TailProg p) (L : CbrLook p) {fs : List FnN
     {vis : Word} {fe : IFEnv} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
     (hC : StageC dn vis fe env₁ s₀.mem a₀) (hq : BPassR vis fe s₀.mem q bp)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hM : HbMemo s₀.mem)
-    (hA : AbsOK s₀.mem) (hk : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hA : AbsOK s₀.mem) (hk : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hR : RcMR s₀.mem) (hrb : RecsB s₀.mem (rdW (s₀.mem.arr64 IW) (q + 3)))
     (hlp : ClassesLp s₀.mem (rdW (s₀.mem.arr64 IW) (q + 15)) (rdW (s₀.mem.arr64 IW) (q + 16)))
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a₀.store fe = some env₁)

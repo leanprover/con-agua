@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec37
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Pass
 
 /-!
@@ -44,7 +45,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
     (hC : StageC dn vis fe env m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
     (hcx : ShapeCV m p0) (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block)
     (hPm : PosMR m) (hma : ∃ mp, maMR m mp) (hA : AbsOK m)
-    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     (hta : ∃ mp, taMR m mp) (hrb : RecsB m p0)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a.store fe = some env)
@@ -301,7 +302,7 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block)
     (hPm : PosMR s₀.mem) (hma : ∃ mp, maMR s₀.mem mp) (hA : AbsOK s₀.mem)
-    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec") (hta : ∃ mp, taMR s₀.mem mp)
     (hrb : RecsB s₀.mem p0)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a₀.store fe = some env)
