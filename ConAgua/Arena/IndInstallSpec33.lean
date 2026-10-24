@@ -49,8 +49,7 @@ theorem pos3_memberNamesW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
   rename_i q m1 hal
   split at h; · cases h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (pos3_nameCopyW_mfr _ _ _ _ _ _ hc)
 
 theorem pos3_nIdxsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
@@ -60,8 +59,7 @@ theorem pos3_nIdxsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
   rename_i q m1 hal
   split at h; · cases h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (pos3_nIdxsCopyW_mfr _ _ _ _ _ _ hc)
 
 theorem pos3_lpsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
@@ -160,8 +158,7 @@ theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h
     | some y =>
       obtain ⟨q, m5⟩ := y
       rw [ha] at h hm
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact (f123.trans (pos3_plW_mfr h4)).trans (posRecW_mfr hm.symm)
 
 theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Word) (r : List Word),

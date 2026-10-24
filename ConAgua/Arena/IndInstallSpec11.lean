@@ -89,8 +89,7 @@ theorem icbcW_ok (p : Prog) (hRp : RecProg p) (hci : p.lookup "ctor_info_rec" = 
   intro m m' a vis fe o l css r h hS hcss
   by_cases hl : l = 0
   · rw [icbcW_nil p n m nP o l vis hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : css = [] := by
       have h := hcss.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm

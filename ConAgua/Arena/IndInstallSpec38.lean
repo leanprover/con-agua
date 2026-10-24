@@ -177,11 +177,7 @@ theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some
   refine triple_post (gft_spec p hp n s₀ cO cL) ?_
   rintro r s' ⟨hl, hm⟩
   rw [gftF_eq] at hm
-  cases c0 : callW p n "iw_alloc" [cL] s₀.mem with
-  | none => rw [c0] at hm; cases hm
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [c0, gftK1_some] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gftK1_some] at hm
   cases c1 : gftW (n + 1) m0 cO cL (r0.headD 0) 0 with
   | none => rw [c1] at hm; cases hm
   | some mF =>
@@ -405,11 +401,7 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
   refine triple_post (gfc_spec p hp n s₀ vis cO cL mO mL) ?_
   rintro r s' ⟨hl, hm⟩
   rw [gfcF_eq] at hm
-  cases c0 : callW p n "iw_alloc" [mL] s₀.mem with
-  | none => rw [c0] at hm; cases hm
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [c0, gfcF1_some] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl; rw [gfcF1_some] at hm
   cases c1 : gfcW p (n + 1) m0 vis cO cL mO mL (r0.headD 0) 0 with
   | none => rw [c1] at hm; cases hm
   | some mF =>
@@ -605,8 +597,7 @@ theorem mk1W_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlot
   have hjl' : j.toNat ≤ sl.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < sl
   · rw [mk1W_exit (h := hj)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hj' : j.toNat = sl.toNat := by
       have : ¬ j.toNat < sl.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
       omega
@@ -650,8 +641,7 @@ theorem mk2W_ok (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Wo
   have hjl' : j.toNat ≤ cl.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < cl
   · rw [mk2W_exit (h := hj)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hj' : j.toNat = cl.toNat := by
       have : ¬ j.toNat < cl.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
       omega
@@ -686,8 +676,7 @@ theorem mk2W_ok (m : Mem) (co cl : Word) (ctors : List (List ClassCtor)) (c : Wo
     omega
   by_cases ho : t + w < t
   · rw [mk2W_ovf (h := hj) (ho := by rw [hw]; exact ho)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hov : 2 ^ 64 ≤ t.toNat + w.toNat := by
       have h1 := UInt64.lt_iff_toNat_lt.mp ho
       rw [UInt64.toNat_add] at h1
@@ -722,19 +711,10 @@ theorem genRecCheckMinorOk_refines {p : Prog} (hm : p.lookup "class_slot_is_mino
   refine triple_post (mk_spec p hp n s₀ so sl co cl) ?_
   rintro r s' ⟨hl, hmk⟩
   rw [mkF_eq] at hmk
-  cases c1 : mk1W p (n + 1) s₀.mem so sl 0 0 with
-  | none => rw [c1] at hmk; cases hmk
-  | some x1 =>
-  obtain ⟨c, m1⟩ := x1
-  rw [c1, mkF1_some] at hmk
+  obtain ⟨⟨c, m1⟩, c1, hmk⟩ := of_K hmk rfl; rw [mkF1_some] at hmk
   obtain ⟨rfl, hc⟩ := mk1W_ok hm so sl slots (n + 1) s₀.mem m1 0 0 c c1 hsl hslb UInt64.zero_le (by simp)
-  cases c2 : mk2W (n + 1) s₀.mem co cl 0 0 with
-  | none => rw [c2] at hmk; cases hmk
-  | some x2 =>
-  obtain ⟨sg, t⟩ := x2
-  rw [c2, mkF2_some] at hmk
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmk
-  obtain ⟨rfl, hmem⟩ := hmk
+  obtain ⟨⟨sg, t⟩, c2, hmk⟩ := of_K hmk rfl; rw [mkF2_some] at hmk
+  obtain ⟨rfl, hmem⟩ := Prod.mk.inj (Option.some.inj hmk)
   have := mk2W_ok s₀.mem co cl ctors c hct hctb hsz (n + 1) 0 0 t sg c2 UInt64.zero_le (by simp)
   refine ⟨hl, hmem.symm, ?_⟩
   rw [this, ← hc]

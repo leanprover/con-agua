@@ -145,21 +145,11 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
   have e2 := put _ _ _ _ _ _ _ _ _ h2
   have i2 : m2.arr64 IW = m.arr64 IW := by rw [e2, wrER_IW, hI1]
   rw [i2] at h
-  cases h3 : callW p (n + 1) "er_put5" [q + 5, rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1),
-      rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] m2 with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, iirK3_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [iirK3_some] at h
   have e3 := put _ _ _ _ _ _ _ _ _ h3
   have i3 : m3.arr64 IW = m.arr64 IW := by rw [e3, wrER_IW, i2]
   rw [i3] at h
-  cases h4 : callW p (n + 1) "er_put5" [q + 10, rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6),
-      rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9)] m3 with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, iirK4_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [iirK4_some] at h
   have e4 := put _ _ _ _ _ _ _ _ _ h4
   have i4 : m4.arr64 IW = m.arr64 IW := by rw [e4, wrER_IW, i3]
   rw [i4] at h
@@ -204,8 +194,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   | some x =>
   obtain ⟨q1, m1⟩ := x
   rw [h1] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS (iirWs m cv caps) (by simp [iirWs])
   have hlen : (iirWs m cv caps).length = 20 := by simp [iirWs]
   rw [hlen] at htop hget

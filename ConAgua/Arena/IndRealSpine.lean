@@ -90,9 +90,7 @@ theorem gafF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have c' := callW_model (M := fun mm => gafAdW gafProg k mm f e)
     (fun s => gafAd_spec gafProg rfl k s f e) hc
   simp only [gafAdW] at c'
-  by_cases hf : f ≠ CWF
-  · rw [if_pos hf] at c'; cases c'
-  rw [if_neg hf] at c'
+  obtain ⟨hf, c'⟩ := of_ite_none c'
   have hf' : f = CWF := Decidable.not_not.mp hf
   subst hf'
   cases c'' : callW gafProg k "get_app_fn" [e] m with
@@ -162,9 +160,7 @@ theorem pirF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have c' := callW_model (M := fun mm => pirAdW pirProg k mm f e)
     (fun s => pirAd_spec pirProg rfl k s f e) hc
   simp only [pirAdW] at c'
-  by_cases hf : f ≠ CWF
-  · rw [if_pos hf] at c'; cases c'
-  rw [if_neg hf] at c'
+  obtain ⟨hf, c'⟩ := of_ite_none c'
   have hf' : f = CWF := Decidable.not_not.mp hf
   subst hf'
   cases c'' : callW pirProg k "pi_result" [e] m with
@@ -240,11 +236,7 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
       subst hl
       exact ⟨MemFrame.refl _ _ _, rfl, fun j hj => absurd hj (by simp), fun _ _ => rfl⟩
     rw [i2sW_cons k m d s l hl] at h
-    cases h1 : i2sW k (m.set64 SPN d (rdW (m.arr64 IW) s)) (d + 1) (s + 1) (l - 1) with
-    | none => rw [h1] at h; simp at h
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [h1, bW_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K (K := (ntBW · _)) h rfl; rw [bW_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hl0 : 0 < l.toNat := by
       rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
@@ -339,23 +331,15 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have c' := callW_model (M := fun mm => mknAdW mknProg k mm f o l)
     (fun s => mknAd_spec mknProg rfl k s f o l) hc
   simp only [mknAdW] at c'
-  by_cases g1 : m.len64 SPN < rdW (m.arr64 CTL) 136
-  · rw [if_pos g1] at c'; cases c'
-  rw [if_neg g1] at c'
-  by_cases g2 : m.len64 SPN - rdW (m.arr64 CTL) 136 < l
-  · rw [if_pos g2] at c'; cases c'
-  rw [if_neg g2] at c'
+  obtain ⟨g1, c'⟩ := of_ite_none c'
+  obtain ⟨g2, c'⟩ := of_ite_none c'
   generalize htop : rdW (m.arr64 CTL) 136 = top at c' g1 g2
   cases c1 : callW mknProg k "iw_to_spn" [top, o, l] m with
   | none => rw [c1] at c'; simp at c'
   | some q1 =>
   obtain ⟨r1', m1⟩ := q1
   rw [c1, bW_some] at c'
-  cases c2 : callW mknProg k "mk_app_n" [f, top, l] (m1.set64 CTL 136 (top + l)) with
-  | none => rw [c2] at c'; simp at c'
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2, bW_some] at c'
+  obtain ⟨⟨r2, m2⟩, c2, c'⟩ := of_K (K := (ntBW · _)) c' rfl; rw [bW_some] at c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   -- the room: `top + l ≤ len64 SPN ≤ |SPN|`, no wrap
   have hlen : (m.len64 SPN).toNat ≤ (m.arr64 SPN).size ∧ (m.len64 SPN).toNat < 2 ^ 64 := by

@@ -433,11 +433,8 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨r₄, m₅⟩ := q4
   rw [h4] at hW
   simp only at hW
-  by_cases c : 4294967296 ≤ r₄.headD 0
-  · rw [if_pos c] at hW; cases hW
-  rw [if_neg c] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨c, hW⟩ := of_ite_none hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₄ : ArenaR m₄ a := ArenaR.grow m₁ m₄ hg4 a hS.1.arena.1
   have hps : (m₁.arr64 POOL).size < 2 ^ 63 := hpool.2.2.1
   obtain ⟨s₅, hs₅, -, hok, hR₅, hres⟩ := triple_of_callW

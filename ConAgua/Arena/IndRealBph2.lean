@@ -313,11 +313,7 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   rw [if_pos (by simpa using heq)]
   have hne : bl.toNat ≠ 0 := by rw [← hl, ← hl1]; exact hpne
   -- `er_to_iw`
-  cases h2 : callW p f "er_to_iw" [bo, bl] m1 with
-  | none => rw [h2] at h; cases h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
-  rw [h2, bphK3_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [bphK3_some] at h
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (L.Ind.erToIw_specW p P.iw_alloc P.er_copy P.er_to_iw f ⟨m1, Locals.init []⟩ _ _) h2
   subst hs2
@@ -326,12 +322,7 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   obtain ⟨hp1, hpb1⟩ := decRBlk_canon hDR1 hpne
   have hp2 := decPL_growAP hp1 hpb1 hg2
   -- `canon_eq_list`
-  cases h3 : callW p f "canon_eq_list"
-      [r2.headD 0, r2.tail.headD 0, r1.headD 0, r1.tail.headD 0] s2.mem with
-  | none => rw [h3] at h; cases h
-  | some x =>
-  obtain ⟨r3, m3⟩ := x
-  rw [h3, bphK4_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [bphK4_some] at h
   rw [hl2] at h3
   obtain ⟨s3, hs3, -, hok3, ⟨⟨hS3, hg3, hd3⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (canonEqList_refines p P.canon dn vis fe _ _ _ _ blk pinned f ⟨s2.mem, Locals.init []⟩ a1

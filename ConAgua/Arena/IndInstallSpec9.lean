@@ -183,8 +183,7 @@ theorem _root_.L.Arena.Sim.post {β γ α : Type} {K : Option (β × Mem) → Op
   | some x =>
     obtain ⟨r₁, m₁⟩ := x
     rw [hmo, hs] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨y, a', h1, h2⟩ := h r₁ m₁ hmo
     exact ⟨y, a', h1, hq _ _ _ _ h2⟩
 

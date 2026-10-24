@@ -248,8 +248,7 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         simp only [fvarTypeDs, StateT.run_bind, hrun1, except_ok_bind, hrun, List.map_cons]
         rfl
     · rw [ftdsGoW_ge o l q f m k hk] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hkl' : k.toNat = l.toNat := by
         have : ¬ k.toNat < l.toNat := hk
         omega
@@ -537,11 +536,7 @@ theorem s2iW_wr : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl; rfl
     rw [s2iW_cons k m d s l hl] at h
-    cases h1 : s2iW k (m.set64 IW d (rdW (m.arr64 SPN) s)) (d + 1) (s + 1) (l - 1) with
-    | none => rw [h1] at h; simp at h
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [h1, bW_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K (K := (ntBW · _)) h rfl; rw [bW_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hl0 : 0 < l.toNat := by
       rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
@@ -623,9 +618,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have c' := callW_model (M := fun mm => gaaAdW gaaProg k mm f e)
     (fun s => gaaAd_spec gaaProg rfl rfl rfl k s f e) hc
   simp only [gaaAdW] at c'
-  by_cases hf : f ≠ CWF
-  · rw [if_pos hf] at c'; cases c'
-  rw [if_neg hf] at c'
+  obtain ⟨hf, c'⟩ := of_ite_none c'
   have hf' : f = CWF := Decidable.not_not.mp hf
   subst hf'
   generalize htop : rdW (m.arr64 CTL) 136 = top at c'

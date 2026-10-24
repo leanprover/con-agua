@@ -131,24 +131,15 @@ theorem icboW_simC (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a
       rw [hnm, hrse, h8, h7, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib] at h
       exact h) ?_
   rintro r1 ⟨cs, ss⟩ m1 a1 ⟨hC1, hg1, hcs1, hss1, hA1, c1⟩ r' m' e
-  cases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] m1 with
-  | none => rw [h2] at e; cases e
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, icboK2_some] at e
+  obtain ⟨⟨r2, m2⟩, h2, e⟩ := of_K e rfl; rw [icboK2_some] at e
   obtain ⟨hS2, hg2, hd2⟩ := installRec2PSl hP decCN_mono h2 hC1.stage hcs1
   have hd2b := installRec2PSlB hP decCN_mono h2 hC1.stage hcs1
   have hA2 : AbsOK m2 := by
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
       (rec2_specW p hP.alloc n hP.rec2 _ _ _) h2
     exact recW_afr hW hA1
-  cases h3 : callW p n "rec2" [r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0] m2 with
-  | none => rw [h3] at e; cases e
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, icboK3_some] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨⟨r3, m3⟩, h3, e⟩ := of_K e rfl; rw [icboK3_some] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   obtain ⟨hS3, hg3, hd3⟩ := installRec2PSl hP decIS_mono h3 hS2 (hss1.grow decIS_mono hg2)
   have hA3 : AbsOK m3 := by
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)

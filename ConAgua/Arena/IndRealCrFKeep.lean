@@ -204,11 +204,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
   simp only [crfW] at hW
   split at hW
   · cases hW
-  cases hv : callW crfP k "e_view" [h] m with
-  | none => rw [hv] at hW; cases hW
-  | some q =>
-  obtain ⟨rv, mv⟩ := q
-  rw [hv] at hW
+  obtain ⟨⟨rv, mv⟩, hv, hW⟩ := of_K hW rfl
   obtain ⟨s', hmv, hs', hne, hrv⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (eView_spec crfP crfP_prog.view k _ h) hv
   subst hs'
@@ -226,11 +222,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
       simp only [crfLf, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
       exact ⟨(hg _ _ hl).1, by simpa using (hg _ _ hl).2⟩
-  cases hfd : callW crfP k "crm_find" [h, 0] m with
-  | none => rw [hfd] at hW; cases hW
-  | some q =>
-  obtain ⟨rf, mf⟩ := q
-  rw [hfd] at hW
+  obtain ⟨⟨rf, mf⟩, hfd, hW⟩ := of_K hW rfl
   obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (memoFindG_spec crSch crfP "crm_find" crfP_prog.find k _ h 0) hfd
   subst hs'
@@ -239,8 +231,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
   simp only [crfM] at hW
   split at hW
   · rename_i hhit
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨memo, hR⟩ := hM
     obtain ⟨bv, -, hw⟩ := memoRV_hit crSch bmKey CrV m memo hR h 0 hne' hhit ⟨hh, rfl⟩
     refine ⟨⟨memo, hR⟩, ?_⟩

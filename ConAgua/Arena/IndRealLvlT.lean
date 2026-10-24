@@ -61,8 +61,7 @@ theorem lvlEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word) (hu :
   rw [if_neg h0] at h
   by_cases h1 : (mfindG lqSch m u v).headD 0 ≠ 0
   · rw [if_pos h1] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
   rw [if_neg h1] at h
   cases hl : lvlEqW n m u v with
@@ -95,8 +94,7 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
   rw [if_neg h0] at h
   by_cases h1 : (mfindG lsqSch m us vs).headD 0 ≠ 0
   · rw [if_pos h1] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact hit_three _
   rw [if_neg h1] at h
   cases hl : lvlsEqW n m us vs with

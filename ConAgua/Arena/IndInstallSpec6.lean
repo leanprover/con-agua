@@ -168,8 +168,7 @@ theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   | succ n =>
   by_cases hl0 : l = 0
   · rw [lpsW_nil n m q (by rw [hlw, hl0])] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : bs.members = [] := by have := decPL_length _ (show decPL _ _ _ _ = _ from hdm); rw [hl0] at this; simpa using this
     refine ⟨hS, IWGrow.refl _, ?_, by simp⟩
     simp [BlockShape.lps, this, decHL, hslice?]

@@ -157,13 +157,8 @@ theorem iisW_simC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
       have := hxPos i (by rw [UInt64.toNat_ofNat_of_lt' hnib]; exact hi) x hx
       rwa [UInt64.toNat_ofNat_of_lt' hnpb] at this) a1 a2 isorts hC1.check
     ⟨ConRon.Bridge.denoteL_ext hsP p1.ext, hxsd, rfl, ConRon.Bridge.denoteFEnv_mono p1.ext hfe⟩ hr2
-  cases h3 : callW p n "rec2" [r2.headD 0, r2.tail.headD 0] m2 with
-  | none => rw [h3] at e; cases e
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, iisK3_some] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨⟨r3, m3⟩, h3, e⟩ := of_K e rfl; rw [iisK3_some] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (rec2_specW p hP.alloc n hP.rec2 _ _ _) h3
   obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage hW3 hC2.stage rfl

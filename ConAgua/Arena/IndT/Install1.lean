@@ -101,8 +101,7 @@ theorem domsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (o
     by_cases hj : j = 0
     · subst hj
       rw [domsW_zero (realCall p) n m vis off fo fl dO dl 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, hm⟩ := h
+      obtain ⟨-, hm⟩ := Prod.mk.inj (Option.some.inj h)
       subst hm
       exact ⟨(), a, rfl, hC, IWGrow.refl m, hA⟩
     have hjpos : 1 ≤ j.toNat := by
@@ -218,11 +217,7 @@ theorem sdomsW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (off fo
       (fun b a' _ => StageC dn vis fe env b.2 a' ∧ IWGrow m b.2 ∧ AbsOK b.2) := by
   intro ⟨r, m'⟩ e
   rw [sdomsW_eq] at e
-  cases hd : domsW (realCall p) n m vis off fo fl dO dl j with
-  | none => rw [hd] at e; cases e
-  | some x =>
-  obtain ⟨r0, m0⟩ := x
-  rw [hd] at e
+  obtain ⟨⟨r0, m0⟩, hd, e⟩ := of_K e rfl
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at e
   obtain ⟨-, rfl⟩ := e
   obtain ⟨u, a', hrun, hQ⟩ := domsW_simC hq henv n hn m a off fo fl dO dl j fvs doms fvsP domsP hC hA

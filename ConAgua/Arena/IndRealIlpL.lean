@@ -209,9 +209,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   rw [hs'] at hW
   change ilpfW p k s₀.mem f po pl us e = some (rs.headD 0, m') at hW
   unfold ilpfW at hW
-  by_cases hf0 : f ≠ 4000000000
-  · rw [if_pos hf0] at hW; cases hW
-  rw [if_neg hf0] at hW
+  obtain ⟨hf0, hW⟩ := of_ite_none hW
   obtain rfl : f = 4000000000 := by simpa using hf0
   rw [show (4000000000 : Word).toNat = coreWalkFuel from rfl]
   generalize s₀.mem = m at hS hlps hW hsz0
@@ -244,8 +242,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   | none => rw [hcp] at hW1; simp [kpK] at hW1
   | some mc =>
   rw [hcp, kpK_some] at hW1
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW1
-  obtain ⟨hb, rfl⟩ := hW1
+  obtain ⟨hb, rfl⟩ := Prod.mk.inj (Option.some.inj hW1)
   have hnw : po.toNat + pl.toNat < 2 ^ 64 := by
     rcases hslice?_bound_fsz _ _ _ _ hlps with h0 | h0
     · have := po.toNat_lt; omega
@@ -269,8 +266,7 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   | some q =>
   obtain ⟨r2, m₂⟩ := q
   rw [h2, ilwLPK₂_some] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hok, ⟨M', hS₂, hK₂, hSt₂⟩, hres, hw⟩ := ilwCore_ok hp k hS₁ he hus (by rw [hspn₁]; exact hsl)
     (Nat.le_of_eq htop₁.symm) h2
   -- the stack top put back

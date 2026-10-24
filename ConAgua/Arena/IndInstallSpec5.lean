@@ -202,8 +202,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hF]
     by_cases h6 : (eViewW m e).headD 0 ≠ 6
     · rw [pdmK_nf (h := hv) (h6 := h6)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have htag : ¬ ((decE e).tag == ETag.forallE) = true := by
         simp only [beq_iff_eq]; rw [decE_tag_forall _ he]; rw [← hhd]; exact h6
       refine ⟨false, a, ?_, rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
@@ -246,13 +245,8 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hc : c = false := by rw [← hbc]; simpa using hb0
     subst hc
     simp only [Bool.false_eq_true, if_false]
-    cases h2 : pdmW (n' + 1) m1 no nl (f - 1) (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) with
-    | none => rw [h2] at h; cases h
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2, pdmK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pdmK3_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hf1 : (f - 1).toNat = F := partsPred_of hF
     obtain ⟨b2, a2, hr2, hR2, ha2, hM2, hS2, hg2⟩ := ih m1 a (f - 1) _ ∅ hS1 hb (hns.grow (OMono.decHL _ _) hg1)
       (Nat.le_trans hnb hg1.1) hM1 r2 m2 h2
@@ -606,8 +600,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
   rw [h2] at hm'
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm'
-  obtain ⟨rfl, hm2⟩ := hm'
+  obtain ⟨rfl, hm2⟩ := Prod.mk.inj (Option.some.inj hm')
   obtain ⟨b, a', hrun, hR⟩ := hsim r2 m2 h2
   obtain ⟨hr2, ha', hM2, hS2, hg2⟩ := hR
   subst ha'

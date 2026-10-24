@@ -166,9 +166,7 @@ theorem lt32_of_not {w : Word} (h : ¬ 4294967295 < w) : w.toNat < 2 ^ 32 := by
 theorem ipfW_run {m : Mem} {a : AState} (hR : ArenaR m a) {n w : Word} (h : ipfW m n = some w) :
     (NIdx.isProjFnShape (decI n)).run a = .ok (w != 0, a) ∧ w.toNat ≤ 1 := by
   unfold ipfW at h
-  by_cases c1 : 4294967295 < n
-  · rw [if_pos c1] at h; cases h
-  rw [if_neg c1] at h
+  obtain ⟨c1, h⟩ := of_ite_none h
   have hn := lt32_of_not c1
   have htag : ((decI n : NIdx).tag == NTag.num) = decide (n >>> 28 = 2) := by
     have := decI_tag_eq (k := .name) n hn 2 (by decide)
@@ -182,18 +180,12 @@ theorem ipfW_run {m : Mem} {a : AState} (hR : ArenaR m a) {n w : Word} (h : ipfW
     rfl
   rw [if_neg c2] at h
   have c2' : n >>> 28 = 2 := Decidable.of_not_not c2
-  by_cases c3 : tierW n ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos c3] at h; cases h
-  rw [if_neg c3] at h
-  by_cases c4 : rdW (m.arr64 CTL) (38 + tierW n) ≤ idxW n
-  · rw [if_pos c4] at h; cases h
-  rw [if_neg c4] at h
+  obtain ⟨c3, h⟩ := of_ite_none h
+  obtain ⟨c4, h⟩ := of_ite_none h
   obtain ⟨hv1, hq⟩ := viewN_num hR hn c3 c2' c4
   generalize nnQ m (tierW n) (idxW n) = q at h hv1 hq
   unfold ipfS at h
-  by_cases d1 : 4294967295 < q
-  · rw [if_pos d1] at h; cases h
-  rw [if_neg d1] at h
+  obtain ⟨d1, h⟩ := of_ite_none h
   have hqt : ((decI q : NIdx).tag == NTag.str) = decide (q >>> 28 = 1) := by
     have := decI_tag_eq (k := .name) q hq 1 (by decide)
     by_cases e : q >>> 28 = 1
@@ -207,12 +199,8 @@ theorem ipfW_run {m : Mem} {a : AState} (hR : ArenaR m a) {n w : Word} (h : ipfW
     rfl
   rw [if_neg d2] at h
   have d2' : q >>> 28 = 1 := Decidable.of_not_not d2
-  by_cases d3 : tierW q ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos d3] at h; cases h
-  rw [if_neg d3] at h
-  by_cases d4 : rdW (m.arr64 CTL) (36 + tierW q) ≤ idxW q
-  · rw [if_pos d4] at h; cases h
-  rw [if_neg d4] at h
+  obtain ⟨d3, h⟩ := of_ite_none h
+  obtain ⟨d4, h⟩ := of_ite_none h
   cases h
   obtain ⟨s, hv2, hsl, hk, -⟩ := viewN_str hR hq d3 d2' d4
   have hpool := hR.lit.1

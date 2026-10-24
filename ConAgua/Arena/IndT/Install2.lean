@@ -51,8 +51,7 @@ theorem lveC_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   by_cases h0 : r1.headD 0 = 0
   · rw [if_pos h0] at h; exact absurd h (by simp)
   rw [if_neg h0] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a1, hrun, hC1, hg, hdec, hA1, hp⟩ :=
     lvlEqC_simC p hcl hLC n hC hA u v hu hv lu lv hdu hdv r1 m1 hs
   simp only [decLvlEq] at hdec

@@ -93,8 +93,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     | some x =>
     obtain ⟨r1, m1⟩ := x
     rw [c] at hm
-    simp only [Option.some.injEq, Prod.mk.injEq] at hm
-    obtain ⟨rfl, rfl⟩ := hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
     obtain ⟨s1, hs1, -, hI⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (internParam_spec p P.pf1 P.pp1 P.ip n _ elim) c
     simp only at hs1 hI; rw [hs1] at hI
@@ -111,8 +110,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     | some x =>
     obtain ⟨r1, m1⟩ := x
     rw [c] at hm
-    simp only [Option.some.injEq, Prod.mk.injEq] at hm
-    obtain ⟨rfl, rfl⟩ := hm
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
     obtain ⟨s1, hs1, -, hI⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (internZero_spec p P.pf2 P.pp2 P.iz n _) c
     simp only at hs1 hI; rw [hs1] at hI
@@ -276,8 +274,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   intro m m' vis v' j h hS hj hsp
   by_cases h0 : ¬ 0 < j
   · rw [papW_exit (h := h0)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : j.toNat = 0 := by
       have : ¬ 0 < j.toNat := fun e => h0 (UInt64.lt_iff_toNat_lt.mpr (by simpa using e))
       omega
