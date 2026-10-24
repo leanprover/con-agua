@@ -245,63 +245,63 @@ con-ron: ConRon/Arena/ExprOps.lean:1098-1106 ConRon.Arena.fvarLeavesGoArmLet -/
   ConRon.Arena.fvarLeavesGoArmLet]
 def flNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return k };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return k };
   if g == 1 {
-    if CTL.u64[26 + t] <= i { abort };
+    if FVAR⟨t⟩.count <= i { abort };
     if len(LVS.u64) >> 1 <= k { abort };
-    f := FVREC.u64[i * 4 + t * 2];
-    a := FVREC.u64[i * 4 + t * 2 + 1];
+    f := FVAR⟨t⟩[i].i;
+    a := FVAR⟨t⟩[i].ty;
     LVS.u64[k * 2] := f;
     LVS.u64[k * 2 + 1] := a;
     x := call fl_go(a, k + 1, c);
     return x
   };
   if g == 4 {
-    if CTL.u64[4 + t] <= i { abort };
-    f := AREC.u64[i * 4 + t * 2];
-    a := AREC.u64[i * 4 + t * 2 + 1];
+    if APP⟨t⟩.count <= i { abort };
+    f := APP⟨t⟩[i].f;
+    a := APP⟨t⟩[i].a;
     x := call fl_go(f, k, c);
     x := call fl_go(a, x, c);
     return x
   };
   if g == 5 {
-    if CTL.u64[28 + t] <= i { abort };
-    f := LAREC.u64[i * 4 + t * 2];
-    a := LAREC.u64[i * 4 + t * 2 + 1];
+    if LAM⟨t⟩.count <= i { abort };
+    f := LAM⟨t⟩[i].ty;
+    a := LAM⟨t⟩[i].b;
     x := call fl_go(f, k, c);
     x := call fl_go(a, x, c);
     return x
   };
   if g == 6 {
-    if CTL.u64[30 + t] <= i { abort };
-    f := FAREC.u64[i * 4 + t * 2];
-    a := FAREC.u64[i * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= i { abort };
+    f := FORALL⟨t⟩[i].ty;
+    a := FORALL⟨t⟩[i].b;
     x := call fl_go(f, k, c);
     x := call fl_go(a, x, c);
     return x
   };
   if g == 9 {
-    if CTL.u64[32 + t] <= i { abort };
-    f := PJREC.u64[i * 6 + t * 3 + 2];
+    if PROJ⟨t⟩.count <= i { abort };
+    f := PROJ⟨t⟩[i].e;
     x := call fl_go(f, k, c);
     return x
   };
   if g == 7 {
-    if CTL.u64[20 + t] <= i { abort };
-    f := LEREC.u64[i * 6 + t * 3];
-    a := LEREC.u64[i * 6 + t * 3 + 1];
-    b := LEREC.u64[i * 6 + t * 3 + 2];
+    if LET⟨t⟩.count <= i { abort };
+    f := LET⟨t⟩[i].ty;
+    a := LET⟨t⟩[i].v;
+    b := LET⟨t⟩[i].b;
     x := call fl_go(f, k, c);
     x := call fl_go(a, x, c);
     x := call fl_go(b, x, c);
     return x
   };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return k };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return k };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return k };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return k };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return k };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return k };
   abort
 }
 
@@ -665,57 +665,57 @@ con-ron: ConRon/Arena/ExprOps.lean:1201-1211 ConRon.Arena.leavesSubArmLet -/
   ConRon.Arena.leavesSubArmLet]
 def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return 1 };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return 1 };
   if g == 1 {
-    if CTL.u64[26 + t] <= i { abort };
-    f := FVREC.u64[i * 4 + t * 2];
-    a := FVREC.u64[i * 4 + t * 2 + 1];
+    if FVAR⟨t⟩.count <= i { abort };
+    f := FVAR⟨t⟩[i].i;
+    a := FVAR⟨t⟩[i].ty;
     x := call leaf_mem(k, f, a);
     if x == 0 { return 0 };
     x := call lsb_go(a, k, c);
     return x
   };
   if g == 4 {
-    if CTL.u64[4 + t] <= i { abort };
-    f := AREC.u64[i * 4 + t * 2];
-    a := AREC.u64[i * 4 + t * 2 + 1];
+    if APP⟨t⟩.count <= i { abort };
+    f := APP⟨t⟩[i].f;
+    a := APP⟨t⟩[i].a;
     x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
     x := call lsb_go(a, k, c);
     return x
   };
   if g == 5 {
-    if CTL.u64[28 + t] <= i { abort };
-    f := LAREC.u64[i * 4 + t * 2];
-    a := LAREC.u64[i * 4 + t * 2 + 1];
+    if LAM⟨t⟩.count <= i { abort };
+    f := LAM⟨t⟩[i].ty;
+    a := LAM⟨t⟩[i].b;
     x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
     x := call lsb_go(a, k, c);
     return x
   };
   if g == 6 {
-    if CTL.u64[30 + t] <= i { abort };
-    f := FAREC.u64[i * 4 + t * 2];
-    a := FAREC.u64[i * 4 + t * 2 + 1];
+    if FORALL⟨t⟩.count <= i { abort };
+    f := FORALL⟨t⟩[i].ty;
+    a := FORALL⟨t⟩[i].b;
     x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
     x := call lsb_go(a, k, c);
     return x
   };
   if g == 9 {
-    if CTL.u64[32 + t] <= i { abort };
-    f := PJREC.u64[i * 6 + t * 3 + 2];
+    if PROJ⟨t⟩.count <= i { abort };
+    f := PROJ⟨t⟩[i].e;
     x := call lsb_go(f, k, c);
     return x
   };
   if g == 7 {
-    if CTL.u64[20 + t] <= i { abort };
-    f := LEREC.u64[i * 6 + t * 3];
-    a := LEREC.u64[i * 6 + t * 3 + 1];
-    b := LEREC.u64[i * 6 + t * 3 + 2];
+    if LET⟨t⟩.count <= i { abort };
+    f := LET⟨t⟩[i].ty;
+    a := LET⟨t⟩[i].v;
+    b := LET⟨t⟩[i].b;
     x := call lsb_go(f, k, c);
     if x == 0 { return 0 };
     x := call lsb_go(a, k, c);
@@ -723,9 +723,9 @@ def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
     x := call lsb_go(b, k, c);
     return x
   };
-  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return 1 };
-  if g == 3 { if CTL.u64[18 + t] <= i { abort }; return 1 };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return 1 };
+  if g == 2 { if SORT⟨t⟩.count <= i { abort }; return 1 };
+  if g == 3 { if CONST⟨t⟩.count <= i { abort }; return 1 };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return 1 };
   abort
 }
 
