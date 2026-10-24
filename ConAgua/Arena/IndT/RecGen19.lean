@@ -91,12 +91,13 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     rw [← h.2]; exact ckc2W_afr n _ _ _ _ _ _ h3
 
 theorem toiW_afr {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
-    (h : toiW N m vis I us dso dsl = some (r, m')) : AFr m m' := by
+    (h : toiW stubCall N m vis I us dso dsl = some (r, m')) : AFr m m' := by
   cases N with
   | zero => simp [toiW] at h
   | succ N =>
   rw [toiW_eq] at h
   unfold toiK1 toiK2 toiK3 toiK4 toiK5 at h
+  simp only [stubCall] at h
   afr_auto h [envFindW_afr, erToIwW_afr, stub_afr, instW_afr _ _ _ _ _ _ _, piBW_afr _ _ _ _ _ _]
 
 section calls
@@ -240,7 +241,7 @@ theorem occC_afr (hN : NoProg p)
 theorem toiC_afr (hP : ToiProg p) {vis I us dso dsl : Word}
     (h : callW p n "target_outside_inst" [vis, I, us, dso, dsl] m = some (r, m')) : AFr m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetOutsideInst_spec p hP n _ vis I us dso dsl) h
+    (targetOutsideInst_spec p hP stubCall (stubCall_spec p) n _ vis I us dso dsl) h
   exact toiW_afr hW
 
 theorem stubC_afr {f : FnName} {args : List Word} (h : callW p n f args m = some (r, m'))

@@ -199,14 +199,20 @@ theorem tco_spec (p : Prog) (hl : NtLook p) (hp : p.lookup "target_ctors_of" = s
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nt_spec' p hl k] <;>
     finish (gen := 20)
 
-theorem toiW_mfr {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
-    (h : toiW N m vis I us dso dsl = some (r, m')) : MFr [] [] m m' := by
+/-- A call of an `inst_lp_fast` reading meeting `IlpFr` writes no walk memo. -/
+theorem IlpFr.mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {args r : List Word} {m m' : Mem}
+    (h : cR k "inst_lp_fast" args m = some (r, m')) : MFr [] [] m m' :=
+  let ⟨_, _, hA, hC, hf⟩ := hF _ _ _ _ _ h
+  MFr.of_frame hf hA hC
+
+theorem toiW_mfr {cR : CallM} (hF : IlpFr cR) {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
+    (h : toiW cR N m vis I us dso dsl = some (r, m')) : MFr [] [] m m' := by
   cases N with
   | zero => simp [toiW] at h
   | succ N =>
   rw [toiW_eq] at h
   unfold toiK1 toiK2 toiK3 toiK4 toiK5 at h
-  mfr_auto h [envFindW_mfr, erToIwW_mfr, MFr.ofStub, instW_mfr _ _ _ _ _ _ _, piBW_mfr _ _ _ _ _ _]
+  mfr_auto h [envFindW_mfr, erToIwW_mfr, IlpFr.mfr hF, instW_mfr _ _ _ _ _ _ _, piBW_mfr _ _ _ _ _ _]
 
 /-- **A constructor slice read by `nest_container` is decoded below the tops.** -/
 theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsAt m o xs (· < iwTop m))
@@ -353,9 +359,9 @@ theorem tmtW_sim {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name
     (Q := fun r x m' a' => ToiR r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
   · intro r1 m1 e1
     obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (targetOutsideInst_spec p hP.toi n _ vis I us dso dsl) e1
-    obtain ⟨x, a', hrun, hS1, hg1, hT1⟩ := toiW_ok hW1 hS hI hus hds hdsb
-    exact ⟨x, a', hrun, hT1, hS1, hg1, hPm.fr (toiW_mfr hW1)⟩
+      (targetOutsideInst_spec p hP.toi stubCall (stubCall_spec p) n _ vis I us dso dsl) e1
+    obtain ⟨x, a', hrun, hS1, hg1, hT1, -⟩ := toiW_ok IlpRd.stub hW1 hS hI hus hds hdsb
+    exact ⟨x, a', hrun, hT1, hS1, hg1, hPm.fr (toiW_mfr IlpFr.stub hW1)⟩
   rintro r1 ⟨nIdx, sI⟩ m1 a1 ⟨⟨hr1, hn1, hsH, hsd⟩, hS1, hg1, hP1⟩
   obtain ⟨-, -, hrsH, hrsd⟩ := partsShapeWords hg1 hq hq9
   rw [tmtK1_some]
