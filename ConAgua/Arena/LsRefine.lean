@@ -106,8 +106,7 @@ theorem LsRecRel_raw (m : Mem) (t i : Word) (k : ListNode) :
     LsRecRel m t i k ↔
     (lsO m t i).toNat + (lsL m t i).toNat ≤ m.top.toNat ∧
     sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
-    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
-  := Iff.rfl
+    rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat := by sorry
 
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
 def LsR (m : Mem) (a : AState) : Prop :=

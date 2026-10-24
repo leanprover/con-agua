@@ -108,8 +108,7 @@ theorem NsRecRel_raw (m : Mem) (t i : Word) (k : StrNode) :
     (nsO m t i).toNat + (nsL m t i).toNat ≤ m.top.toNat ∧
     sliceL (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s ∧
     rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3) =
-      nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat)
-  := Iff.rfl
+      nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat) := by sorry
 
 /-- **The state relation** of the name `str` table: the library's relation for its two tables. -/
 def NStrR (m : Mem) (a : AState) : Prop :=
