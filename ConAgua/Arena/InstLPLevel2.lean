@@ -29,7 +29,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     ∀ (ids : List LIdx) (Ls : List Level) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     CoreS dn m a vis fe M eb → ILWMemo m a → ILWEnv m a ko kc vo vc ks us vs →
     denoteLList a.store.ls ids = some Ls →
-    sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords ids → o.toNat + l.toNat ≤ m.top.toNat →
+    sliceL (vpool m) o.toNat l.toNat = lsWords ids → o.toNat + l.toNat ≤ m.top.toNat →
     (spTop m).toNat ≤ b.toNat → b.toNat + l.toNat ≤ (m.arr64 SPN).size →
     slElemW POOL n m o l b ko kc vo vc = some m' →
     ∃ hs a', (internLevelList (substLevelList ks vs Ls)).run a = .ok (hs, a') ∧
@@ -158,13 +158,13 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   simp only [spnLsW] at hW
   have hp := hS.arena.1.lit.1
   obtain ⟨hp1, hp2, hsz, htop⟩ := id hp
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := L.Front.toNat_ofNat_size _ hsz
+  have hlen : (m.len64 POOL).toNat = pcap m := L.Front.toNat_ofNat_size _ hsz
   have t1 : ¬ m.len64 POOL < m.top := fun t1 => by simp [t1] at hW
   have t2 : ¬ m.len64 POOL - m.top < l := fun t2 => by simp [t1, t2] at hW
   simp only [t1, t2, ↓reduceIte] at hW
   have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
-  have hroom : m.top.toNat + l.toNat ≤ (m.arr64 POOL).size := by omega
+  have hroom : m.top.toNat + l.toNat ≤ pcap m := by omega
   cases hc : spnPoolW n m b m.top l with
   | none => rw [hc] at hW; simp [spnLsK] at hW
   | some m₁ =>
@@ -181,6 +181,8 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
   have hK := CoreK.grow (dn := dn) (vis := vis) (fe := fe) (M := M) (eb := eb) (m₀ := m)
     ⟨hS, StackKept.refl _⟩ (Grows.trans _ _ _ hg₁ hg₂)
   have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := by rw [← hm₂, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hpool₂v := vpool_congr hpool₂
+  have hpool₂c := pcap_congr hpool₂
   have htop₂ : m₂.top = m.top + l := by rw [← hm₂]; exact Mem.top_set64 _ _ hc₁
   cases hI : lsinternW m₂ m.top l with
   | none => rw [hI] at hW; cases hW
