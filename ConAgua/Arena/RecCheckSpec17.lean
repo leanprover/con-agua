@@ -424,11 +424,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
     rw [UInt64.toNat_ofNat_of_lt' hrd.2]; exact hrl0
   obtain ⟨hS1, hg1, hf1, hq1⟩ := rmRec_stage ha hS hold hl hp
   generalize hM : rmMem m1 q (UInt64.ofNat pp) flo fll fpo fpl = M at h hS1 hg1 hf1 hq1
-  cases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with
-  | none => simp only [h2] at h; simp [tsrmK2] at h
-  | some x =>
-  obtain ⟨rr, m2⟩ := x
-  simp only [h2, tsrmK2_some] at h
+  rcases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with _ | ⟨rr, m2⟩ <;> simp only [h2, tsrmK2, reduceCtorEq] at h
   have hext := IWGrow.erecPExtR hg1
   obtain ⟨hd2, hb2, hS2, hg2, hf2⟩ := ih h2 hS1
     (decPL_rl_grow hg1 (by rw [eo, el]; omega) (by rw [eo, el, hl']; simpa using hrest))
@@ -453,16 +449,8 @@ theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (vis nP cO cL rO rL o : Word) (r :
     simp only [rgoW] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    · cases h1 : rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))] with
-      | none => rw [h1] at h; cases h
-      | some x =>
-      obtain ⟨kr, m1⟩ := x
-      rw [h1, rgoK1] at h
-      cases h2 : erAllocW m1 11 with
-      | none => rw [h2] at h; cases h
-      | some y =>
-      obtain ⟨q, m2⟩ := y
-      rw [h2, rgoK2] at h
+    · rcases h1 : rrbF m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))] with _ | ⟨kr, m1⟩ <;> simp only [h1, rgoK1, reduceCtorEq] at h
+      rcases h2 : erAllocW m1 11 with _ | ⟨q, m2⟩ <;> simp only [h2, rgoK2, reduceCtorEq] at h
       cases h3 : rgoW n ((ruleMem m2 q _ _ nP _ (kr.headD 0) (kr.tail.headD 0)).set64 IW o q) vis nP
           (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) with
       | none => rw [h3] at h; cases h
@@ -477,16 +465,8 @@ theorem rulesW_afr {n : Nat} {m m' : Mem} {vis nP cO cL rO rL : Word} {r : List 
     (h : rulesW n m vis nP cO cL rO rL = some (r, m')) : AFr m m' := by
   simp only [rulesW] at h
   generalize hk : (if rL < cL then rL else cL) = k at h
-  cases h1 : allocW m k with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨o, m1⟩ := x
-  rw [h1, rulesK1] at h
-  cases h2 : rgoW n m1 vis nP cO cL rO rL o with
-  | none => rw [h2] at h; cases h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2, rulesK2] at h
+  rcases h1 : allocW m k with _ | ⟨o, m1⟩ <;> simp only [h1, rulesK1, reduceCtorEq] at h
+  rcases h2 : rgoW n m1 vis nP cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesK2, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ _ _ h2)
 
@@ -700,12 +680,8 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   rcases h4 : efF (k + 1) m3 (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0) with _ | ⟨rp, m4⟩ <;> simp only [h4, tsrK4, reduceCtorEq] at h
   obtain ⟨hS4, hg4, hrp1, hrp0, hsl4, -⟩ := efW_stage k h4 hS3
     (by rw [decHL_grow hg3 hbp]; exact hdp) (by have := hg3.1; omega)
-  cases h5 : tsrmW (k + 1) m4 (rs.headD 0) (rs.tail.headD 0) (re.headD 0) (re.tail.headD 0) (rp.headD 0)
-      (rp.tail.headD 0) with
-  | none => rw [h5] at h; simp [tsrK5] at h
-  | some x =>
-  obtain ⟨r5, m5⟩ := x
-  rw [h5, tsrK5_some] at h
+  rcases h5 : tsrmW (k + 1) m4 (rs.headD 0) (rs.tail.headD 0) (re.headD 0) (re.tail.headD 0) (rp.headD 0)
+      (rp.tail.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, tsrK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hg24 := (hg2.trans hg3).trans hg4
   rw [← hre1] at hsl3; rw [← hrp1] at hsl4

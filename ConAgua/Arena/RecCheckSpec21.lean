@@ -152,11 +152,7 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       rw [UInt64.toNat_ofNat_of_lt' hpb]; exact hrs0.grow (decRS_mono _) hg1
     by_cases hc : rs0.tgt < k.toNat
     · rw [soaK1_own n m1 reco k r1 (by rw [hw3, hlt]; exact hc), hw1] at h
-      cases h2 : consW n m1 (UInt64.ofNat pc) (r1.headD 0) (r1.tail.headD 0) with
-      | none => rw [h2] at h; cases h
-      | some x2 =>
-      obtain ⟨r2, m2⟩ := x2
-      rw [h2, soaOwn_some] at h
+      rcases h2 : consW n m1 (UInt64.ofNat pc) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [h2, soaOwn, reduceCtorEq] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨hS2, hg2, hd2, -⟩ := consW_pslr (fun q => decRS_mono q) h2 hS1 hown hy
@@ -167,11 +163,7 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
           List.headD_cons, List.tail_cons]
         exact haux.grow (fun q => decRS_mono q) hg2
     · rw [soaK1_aux n m1 reco k r1 (by rw [hw3, hlt]; exact hc), hw1] at h
-      cases h2 : consW n m1 (UInt64.ofNat pc) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with
-      | none => rw [h2] at h; cases h
-      | some x2 =>
-      obtain ⟨r2, m2⟩ := x2
-      rw [h2, soaAux_some] at h
+      rcases h2 : consW n m1 (UInt64.ofNat pc) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [h2, soaAux, reduceCtorEq] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨hS2, hg2, hd2, -⟩ := consW_pslr (fun q => decRS_mono q) h2 hS1 haux hy
@@ -278,11 +270,7 @@ theorem wanW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (by simp [bggK3]) (fun _ _ => bggK3_some ..) hrec ?_
     rintro r2 xs m2 a2 ⟨hd2, hb2, hS2, hg2⟩
     intro r m' e
-    cases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [h3] at e; cases e
-    | some x3 =>
-    obtain ⟨r3, m3⟩ := x3
-    rw [h3, bgoK3_some] at e
+    rcases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [h3, bgoK3, reduceCtorEq] at e
     simp only [Option.some.injEq, Prod.mk.injEq] at e
     obtain ⟨rfl, rfl⟩ := e
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hx1l hd2

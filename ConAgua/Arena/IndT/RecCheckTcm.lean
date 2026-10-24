@@ -151,12 +151,8 @@ theorem tcmW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hC5 := hC4.of_pstep hS5 hA5 q5
   have hg05 := hg04.trans hg5
   have c15 := c14.trans (q5.toCore hC4.check)
-  cases h6 : pdeW (realCall p) n m5 vis (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0)
-      (rh.headD 0) (rh.tail.headD 0) pfo pfl dso dsl edso edsl with
-  | none => rw [h6] at h; simp [tcmK6] at h
-  | some x =>
-  obtain ⟨r6, m6⟩ := x
-  rw [h6, tcmK6_some] at h
+  rcases h6 : pdeW (realCall p) n m5 vis (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0)
+      (rh.headD 0) (rh.tail.headD 0) pfo pfl dso dsl edso edsl with _ | ⟨r6, m6⟩ <;> simp only [h6, tcmK6, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hg25 := (hg3.trans hg4).trans hg5
   have hdP : (pfl + ftl).toNat = pfvsP.length + formerTysP.length := by

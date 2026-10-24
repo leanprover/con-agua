@@ -276,11 +276,7 @@ theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
     · rw [rteGoW_nil (h := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [rteGoW_cons (h := h0)] at h
-    cases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with
-    | none => rw [h2] at h; cases h
-    | some x =>
-    obtain ⟨r2, m2⟩ := x
-    rw [h2, rteK1_some] at h
+    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteK1, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact (show AFr m (cpMem m b (rdW (m.arr64 IW) ro)) by simp only [cpMem]; afr_set).trans
       (rteGoW_afr n _ _ _ _ _ _ h2)

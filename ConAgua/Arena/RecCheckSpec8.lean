@@ -118,11 +118,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl] at evl
   rw [evl]
   intro b hb
-  cases h1 : viewLsW n m vl with
-  | none => rw [h1] at hb; cases hb
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, arfK1_some] at hb
+  rcases h1 : viewLsW n m vl with _ | ⟨r1, m1⟩ <;> simp only [h1, arfK1, reduceCtorEq] at hb
   obtain ⟨ids, hrun1, hS1, hg1, hd1, -⟩ := viewLsW_ok h1 hS hvlH hP
   have hA1 := hA.iw (viewLsW_iwFrame h1)
   -- the `ds` slice, below the tops
@@ -143,11 +139,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [decRL, getD_zero, Nat.zero_add, getD_one] at hv1
   obtain ⟨hv1d, hv1b⟩ := hv1
   rcases rec3IwSlice (show decHL (truncM m) o' l' = some TM.ds from hds') with hbnd | hl0
-  · cases h2 : aplW n m1 rP (UInt64.ofNat o') (UInt64.ofNat l') with
-    | none => rw [h2] at hb; cases hb
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2, arfK2_some] at hb
+  · rcases h2 : aplW n m1 rP (UInt64.ofNat o') (UInt64.ofNat l') with _ | ⟨r2, m2⟩ <;> simp only [h2, arfK2, reduceCtorEq] at hb
     cases hb
     obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := aplW_ok dn vis fe n m1 m2 a rP _ _ r2 TM.ds h2 hS1 hds1
       (by rw [to, tl]; have := hS.2.1; omega) (by rw [to, tl]; have := hg1.1; omega) rP.toNat_lt hA1

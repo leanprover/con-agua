@@ -258,11 +258,7 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
   have hrun1 := partsRunOfOk hok2
   rw [hc1] at hrun1
   -- `block_rec_split_own_aux`
-  cases h3 : callW p (n + 2) "block_rec_split_own_aux" [ro, rl, ml] s2.mem with
-  | none => rw [h3] at e; cases e
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, trpK3_some] at e
+  rcases h3 : callW p (n + 2) "block_rec_split_own_aux" [ro, rl, ml] s2.mem with _ | ⟨r3, m3⟩ <;> simp only [h3, trpK3, reduceCtorEq] at e
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (soa_spec p L.toIndPartsProg L.soa (n + 2) _ ro rl ml) h3
   dsimp only at hW3

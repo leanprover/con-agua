@@ -237,12 +237,8 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl] at e11 e12 e1 e2 e3
   rw [e11, e12, e1, e2, e3] at h
-  cases h8 : tcmF (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
-      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with
-  | none => rw [h8] at h; simp [tkaK8] at h
-  | some x =>
-  obtain ⟨r8, m8⟩ := x
-  rw [h8, tkaK8_some] at h
+  rcases h8 : tcmF (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with _ | ⟨r8, m8⟩ <;> simp only [h8, tkaK8, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hpfl := ConRon.Bridge.Inductives.denoteEList_length (denoteEList_ext q14.ext _ _ hMpf)
   obtain ⟨c, a8, run8, hc, hC8, hg8, hP8, hA8⟩ := tcmF_okC hq henv n (by omega) h8 hC6 hA6
@@ -388,12 +384,8 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
   rw [tkhK4_ok (h := hi) (h2 := hl2)] at h
   have hll : (la.length == ma.length) = true := by
     simp only [beq_iff_eq, hlen1, hlen2]; exact congrArg UInt64.toNat (by simpa using hl2)
-  cases h5 : tkaW (realCall p) n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0)
-      (rb.tail.headD 0) with
-  | none => rw [h5] at h; simp [tkhK5] at h
-  | some x =>
-  obtain ⟨r5, m5⟩ := x
-  rw [h5, tkhK5_some] at h
+  rcases h5 : tkaW (realCall p) n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0)
+      (rb.tail.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, tkhK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨c, a5, run5, hc, hC5, hg5, hP5, hA5⟩ := tkaW_okC hq henv n (by omega) h5 hC4 hA4
     (hbs.grow hg14) (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega)

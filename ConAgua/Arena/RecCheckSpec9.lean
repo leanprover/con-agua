@@ -104,16 +104,8 @@ theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     ∃ a', (ConRon.Arena.eraseFVarTys (decE e)).run a = .ok (decE (r.headD 0), a') ∧ H (r.headD 0) ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   unfold eftW at h
-  cases ha : allocW m 1 with
-  | none => rw [ha] at h; cases h
-  | some x =>
-  obtain ⟨f, m1⟩ := x
-  rw [ha, eftK1_some] at h
-  cases hr : rxW n (m1.set64 IW f 2) f e with
-  | none => rw [hr] at h; cases h
-  | some y =>
-  obtain ⟨z, m2⟩ := y
-  rw [hr, eftK2_some] at h
+  rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
+  rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hrec : recW m 1 [2] = some ([f], m1.set64 IW f 2) := by simp [recW, ha, wrIW]
@@ -196,19 +188,11 @@ theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
       · exact absurd h1 h0
       · exact ⟨pfo, by simp [h0], hpf.1, h1⟩
   rw [← hpo] at h
-  cases hrec : recW m 3 [3, po, pfl] with
-  | none => rw [hrec] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [hrec, tcpK1_some] at h
+  rcases hrec : recW m 3 [3, po, pfl] with _ | ⟨r1, m1⟩ <;> simp only [hrec, tcpK1, reduceCtorEq] at h
   obtain ⟨hr0, hq, hget, hS1, hg1, hf1, ht1⟩ := rcFresh hrec hS rfl
   subst hr0
   simp only [List.headD_cons] at h
-  cases hr : rxW n m1 (rdW (m.arr64 CTL) 200) e with
-  | none => rw [hr] at h; cases h
-  | some y =>
-  obtain ⟨z, m2⟩ := y
-  rw [hr, eftK2_some] at h
+  rcases hr : rxW n m1 (rdW (m.arr64 CTL) 200) e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   simp only [List.length_cons, List.length_nil] at ht1
@@ -304,11 +288,7 @@ theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word)
     (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.targetCtorsOf fe (decI I)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x ∧ MFr [] [] m m' := by
-  cases hn : ntW n m vis I with
-  | none => rw [hn] at h; cases h
-  | some y =>
-  obtain ⟨r1, m1⟩ := y
-  rw [hn, tcoK_some] at h
+  rcases hn : ntW n m vis I with _ | ⟨r1, m1⟩ <;> simp only [hn, tcoK, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis I hI n m _ a r1 hn hS

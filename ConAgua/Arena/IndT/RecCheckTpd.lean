@@ -162,11 +162,7 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     habs _ (ConLeche.targetCanonParams_WScoped hpw yP
       (ConLeche.Expr.fvarsBelow_iff.mpr (ConLeche.Expr.fvarB_eq yP ▸ hfy)))
   -- the canon form of `x`
-  cases h5 : tcpF n m pfo pfl x with
-  | none => rw [h5] at h; cases h
-  | some p5 =>
-  obtain ⟨r5, m5⟩ := p5
-  rw [h5, pdsK5_some] at h
+  rcases h5 : tcpF n m pfo pfl x with _ | ⟨r5, m5⟩ <;> simp only [h5, pdsK5, reduceCtorEq] at h
   obtain ⟨a5, run5, hH5, hS5, hg5, hP5⟩ := tcpF_ok dn fe vis n h5 hC.stage hpf hx hP
   have hA5 := tcpF_afr h5 hA
   obtain ⟨q5, hR5⟩ := ConRon.Bridge.Inductives.targetCanonParams_spec pfvs pfvsP (decE x) xP a a5 _
@@ -192,11 +188,7 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hg56 := hg5.trans hg6
   have q56 := q5.trans q6
   -- the canon form of `y`
-  cases h7 : tcpF n m6 pfo pfl y with
-  | none => rw [h7] at h; cases h
-  | some p7 =>
-  obtain ⟨r7, m7⟩ := p7
-  rw [h7, pdsK7_some] at h
+  rcases h7 : tcpF n m6 pfo pfl y with _ | ⟨r7, m7⟩ <;> simp only [h7, pdsK7, reduceCtorEq] at h
   obtain ⟨a7, run7, hH7, hS7, hg7, hP7⟩ := tcpF_ok dn fe vis n h7 hS6 (hpf.grow hg56) hy hP6
   have hA7 := tcpF_afr h7 hA6
   obtain ⟨q7, hR7⟩ := ConRon.Bridge.Inductives.targetCanonParams_spec pfvs pfvsP (decE y) yP a6 a7 _
@@ -234,25 +226,13 @@ theorem pdsR_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hne : (decE av == decE bv) = false := by
     simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decE_inj av bv hav hbv e)
   -- the knot
-  cases h9 : realCall p n "infer_type_core" [vis, d, av] m8 with
-  | none => rw [h9] at h; cases h
-  | some p9 =>
-  obtain ⟨r9, m9⟩ := p9
-  rw [h9, pdsK9_some] at h
+  rcases h9 : realCall p n "infer_type_core" [vis, d, av] m8 with _ | ⟨r9, m9⟩ <;> simp only [h9, pdsK9, reduceCtorEq] at h
   obtain ⟨t9, a9, run9, hC9, hg9, -, hA9, c9, -⟩ :=
     inferC_rsim hq henv n hn hC8 hA8 d av hav hR6' hwx _ h9
-  cases h10 : realCall p n "infer_type_core" [vis, d, bv] m9 with
-  | none => rw [h10] at h; cases h
-  | some p10 =>
-  obtain ⟨r10, m10⟩ := p10
-  rw [h10, pdsK10_some] at h
+  rcases h10 : realCall p n "infer_type_core" [vis, d, bv] m9 with _ | ⟨r10, m10⟩ <;> simp only [h10, pdsK10, reduceCtorEq] at h
   obtain ⟨t10, a10, run10, hC10, hg10, -, hA10, c10, -⟩ :=
     inferC_rsim hq henv n hn hC9 hA9 d bv hbv (denote_ext hR8 c9.ext) hwy _ h10
-  cases h11 : realCall p n "is_def_eq_core" [vis, d, av, bv] m10 with
-  | none => rw [h11] at h; cases h
-  | some p11 =>
-  obtain ⟨r11, m11⟩ := p11
-  rw [h11, pdsK11_some] at h
+  rcases h11 : realCall p n "is_def_eq_core" [vis, d, av, bv] m10 with _ | ⟨r11, m11⟩ <;> simp only [h11, pdsK11, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨c, a11, run11, hC11, hg11, hd11, hA11, c11⟩ :=
     isDefEqC_rsim hq henv n hn hC10 hA10 d av bv hav hbv (denote_ext hR6' (c9.trans c10).ext)
@@ -391,11 +371,7 @@ theorem pdeW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [pdeK1_go (h := hr1)] at h
   have : c = true := by rw [← hc]; simpa using hr1
   subst this
-  cases h2 : pdeW (realCall p) (k + 1) m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1) with
-  | none => rw [h2] at h; cases h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [h2, pdsK11_some] at h
+  rcases h2 : pdeW (realCall p) (k + 1) m1 vis d no nl lvls ho hl pfo pfl (ao + 1) (al - 1) (bo + 1) (bl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, pdsK11, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hgo := hg1.1
   obtain ⟨c2, a2, run2, hc2, hC2, hg2, hP2, hA2⟩ := ih (by omega) h2 hC1 hA1 hlv

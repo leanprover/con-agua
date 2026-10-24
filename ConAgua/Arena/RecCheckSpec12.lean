@@ -44,13 +44,9 @@ theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW
   | k + 1, m, m', o, l, r, h => by
     by_cases hl : l = 0
     · rw [plgW_nil (hl := hl)] at h
-      cases ha : allocW m 0 with
-      | none => rw [ha] at h; cases h
-      | some x =>
-        obtain ⟨q, m1⟩ := x
-        rw [ha, plK0_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-        exact allocW_mfr ha
+      rcases ha : allocW m 0 with _ | ⟨q, m1⟩ <;> simp only [ha, plK0, reduceCtorEq] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+      exact allocW_mfr ha
     rw [plgW_cons (hl := hl)] at h
     rcases hp : pinternW m (rdW (m.arr64 IW) o) with _ | ⟨u, m1⟩ <;> rw [hp] at h <;>
       try (simp only [plK1, reduceCtorEq] at h; done)
@@ -68,16 +64,8 @@ theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m
   | zero => simp [plW] at h
   | succ k =>
   rw [plW_succ] at h
-  cases hg : plgW k m o l with
-  | none => rw [hg] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [hg, plK4_some] at h
-  cases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [hs] at h; cases h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [hs, plK5_some] at h
+  rcases hg : plgW k m o l with _ | ⟨r1, m1⟩ <;> simp only [hg, plW.plK4, reduceCtorEq] at h
+  rcases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨r2, m2⟩ <;> simp only [hs, plW.plK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (plgW_mfr k hg).trans (MFr.of_frame (ilF_frame hs) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp))
 
