@@ -303,7 +303,20 @@ def assumptions_section(w):
     named = [h for h in hyps if h["name"] in owners]
     other = [h["name"] for h in hyps if h["prop"] and h["name"] not in owners]
     w("## What the end-to-end theorem still assumes\n")
-    w(f"`{d['theorem'].rsplit('.', 1)[-1]}` is the x64 theorem \"the machine code accepts only what the twin accepts\" "
+    ax = d.get("axioms", [])
+    thm = d['theorem'].rsplit('.', 1)[-1]
+    if not named and not srcs and "sorryAx" not in ax:
+        # nothing open: say so, and list what the statement still takes (the harness interface)
+        w(f"**Done:** `{thm}` is proved with no open hypotheses beyond the harness interface; "
+          f"axioms: {', '.join(ax) if ax else 'none'}.\n")
+        prem = [h for h in hyps if h["prop"] and not h["name"].startswith("inst")]
+        if prem:
+            w("Its premises (the call as `harness/main.c` makes it; not proof obligations):\n")
+            for h in prem:
+                w(f"- `{h['name']} : {_shorten(h['type'], 90)}`")
+            w("")
+        return
+    w(f"`{thm}` is the x64 theorem \"the machine code accepts only what the twin accepts\" "
       f"from exactly {len(named)} open hypotheses; each landing discharges one. Owning lane in brackets "
       "(`docs/assumption-owners.json`).\n")
     for h in named:
@@ -313,7 +326,6 @@ def assumptions_section(w):
     if other:
         w(f"_Plus {len(other)} harness and statement premises, not proof obligations of the pipeline: "
           + ", ".join(f"`{n}`" for n in other) + "._\n")
-    ax = d.get("axioms", [])
     std = {"propext", "Classical.choice", "Quot.sound"}
     extra = [a for a in ax if a not in std and a != "sorryAx"]
     if extra:

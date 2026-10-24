@@ -42,6 +42,10 @@
    now **D28b** (the `frontRun` D28, cited by the audit, keeps its id; `docs/design/stubs.md`
    updated). `scripts/gist_report.py` now accepts an id with a letter suffix (`D\d+[a-z]?`);
    checked by running a copy that writes to the scratchpad (not `--publish`).
+8. **Gist, "What the end-to-end theorem still assumes"** (coordinator): with no open hypotheses,
+   no sorry sources and no `sorryAx` it now says "Done: … proved with no open hypotheses beyond
+   the harness interface", the axioms, and lists the statement's premises (`hcode`, `h64`, `hb`,
+   `hpb`, `hc : AbiCall …`).
 
 ## Cost note
 
