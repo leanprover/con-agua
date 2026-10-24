@@ -444,7 +444,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
-  · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
+  · refine ⟨hw, by rw [hc]; omega, by rw [pcap, hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
   · exact memosR_init sizes hctl
 
@@ -738,7 +738,7 @@ theorem lsOrW_slice : ∀ (n : Nat) (o : Word) (us : List LIdx), o.toNat + n < 2
       obtain ⟨h1, h2⟩ := hk
       have ho : (o + 1).toNat = o.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
-      have hrd : rdW (vpool m) o = u.word.toUInt64 := by simpa [rdW] using h1
+      have hrd : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW, vpool_getD] using h1
       rw [lsOrW_cons, hrd, ih (o + 1) us (by omega) (by rw [ho]; exact h2),
         lvlHPW_ok m a hR _ (by simp; exact UInt32.toNat_lt _)]
       have hu : (decI u.word.toUInt64 : LIdx) = u := ((word_decI u _ (by simp; exact UInt32.toNat_lt _)).mp rfl).symm
