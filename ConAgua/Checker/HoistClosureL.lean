@@ -802,10 +802,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
       have hjc : jj < c := hE.nixlt g jj hgi
       have hci : (UInt64.ofNat i + 1 < UInt64.ofNat (jj + 1)) ↔ i < jj := by
         rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat', UInt64.toNat_ofNat']
-        simp only [UInt64.toNat_one]
-        rw [Nat.mod_eq_of_lt (by omega : i < 2 ^ 64), Nat.mod_eq_of_lt (by omega : i + 1 < 2 ^ 64),
-          Nat.mod_eq_of_lt (by omega : jj + 1 < 2 ^ 64)]
-        omega
+        simp only [UInt64.toNat_one]; omega
       by_cases hij : i < jj
       · dsimp only
         rw [if_pos (by omega : jj > i)]
