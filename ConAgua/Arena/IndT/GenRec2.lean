@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.GenRec1
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.RecGen7
 import ConAgua.Arena.IndT.RecGen27
 
@@ -294,7 +295,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     (hcvR : DecB (fun m => decPL m (decCVp m) cRo.toNat cRl.toNat) m cvRis)
     (hns : bs.nP + rdv.slots.length < 2 ^ 64) (hnpk : bs.nP + bs.k < 2 ^ 64)
     (hsz5 : (m.arr64 IW).size + 5 < 2 ^ 64) (hP : RcMR m) (hA : AbsOK m)
-    (hkeep : ∀ f ∈ grcKeepCallees, AbsKeep p f)
+    (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor}
     {cvTasP cvRisP : List ConLeche.ConstantVal}
@@ -345,7 +346,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   simp only at hs1 hS1 hg1 hf1 hft1 hftb1; subst hs1
   have hP1 := hP.fr hf1
   have hk1 := callW_keepW c1
-  have hA1 := hkeep _ (by simp [grcKeepCallees]) _ _ _ _ _ c1 hA
+  have hA1 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c1 hA
   have hC1 : StageC dn vis fe env s1.mem a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
   -- `classes_nfs`
   cases c2 : callW p n "classes_nfs" [vis, pp, r1.headD 0, r1.tail.headD 0, tO, tL, mO, mL] s1.mem with
@@ -482,7 +483,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hP6 := RcMR.ofClosed hclR (hfRc _ (by decide)) c6' hP5
   rw [hel5', hL] at hrun6
   have hg16 := hg15.trans hg6
-  have hA6 := hkeep _ (by simp [grcKeepCallees]) _ _ _ _ _ c6' hA5
+  have hA6 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c6' hA5
   have hsh5 := ConRon.Bridge.Inductives.dShape_ext c46.ext _ _ hsh
   obtain ⟨p7, helim⟩ := ConRon.Bridge.Inductives.structElimLevel_spec bs.elim pP.elim bs.large a5 a6 _
     hC5.check.state (ConRon.Bridge.Inductives.dShape_inv hsh5).2.2.2.1 hrun6

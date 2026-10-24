@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec42
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndRealPartsC2
 import ConAgua.Arena.IndT.Block
 import ConAgua.Arena.IndT.ArmMemos
@@ -44,7 +45,7 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
     (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (hclC : closedA p cidFreeA cidFreeC fsC = true)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
-    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCallees, AbsKeep p f)
+    (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m m' : Mem}

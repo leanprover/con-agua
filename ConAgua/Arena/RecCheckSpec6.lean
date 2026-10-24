@@ -37,34 +37,34 @@ def toiK3 (N : Nat) (dso dsl : Word) : Option (List Word × Mem) → Option (Lis
   | none => none
   | some (r3, m3) => toiK4 N (instW N m3 dso dsl (r3.headD 0))
 
-def toiK2 (N : Nat) (us dso dsl q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def toiK2 (cR : CallM) (N : Nat) (us dso dsl q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => toiK3 N dso dsl (stubM "inst_lp_fast" m2
-      [CWF, r2.headD 0, r2.tail.headD 0, us, rdW (m2.arr64 EREC) (q + 4)])
+  | some (r2, m2) => toiK3 N dso dsl (cR N "inst_lp_fast"
+      [CWF, r2.headD 0, r2.tail.headD 0, us, rdW (m2.arr64 EREC) (q + 4)] m2)
 
-def toiK1 (N : Nat) (us dso dsl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def toiK1 (cR : CallM) (N : Nat) (us dso dsl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 0 then none
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 3 then none
-    else toiK2 N us dso dsl (r1.tail.headD 0) (erToIwW N m1 (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 2))
+    else toiK2 cR N us dso dsl (r1.tail.headD 0) (erToIwW N m1 (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 2))
       (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 3)))
 
-/-- **The model of `target_outside_inst`.** -/
-def toiW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
+/-- **The model of `target_outside_inst`** (its `inst_lp_fast` read through `cR`). -/
+def toiW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | N + 1, m, vis, I, us, dso, dsl => toiK1 N us dso dsl (envFindW m I vis)
+  | N + 1, m, vis, I, us, dso, dsl => toiK1 cR N us dso dsl (envFindW m I vis)
 
 section arms
-variable (N : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis I us dso dsl q : Word) (r1 r2 r3 r4 r5 : List Word)
-theorem toiW_eq : toiW (N + 1) m vis I us dso dsl = toiK1 N us dso dsl (envFindW m I vis) := rfl
-theorem toiK1_some : toiK1 N us dso dsl (some (r1, m1)) =
+variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis I us dso dsl q : Word) (r1 r2 r3 r4 r5 : List Word)
+theorem toiW_eq : toiW cR (N + 1) m vis I us dso dsl = toiK1 cR N us dso dsl (envFindW m I vis) := rfl
+theorem toiK1_some : toiK1 cR N us dso dsl (some (r1, m1)) =
     if r1.headD 0 = 0 then none
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 3 then none
-    else toiK2 N us dso dsl (r1.tail.headD 0) (erToIwW N m1 (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 2))
+    else toiK2 cR N us dso dsl (r1.tail.headD 0) (erToIwW N m1 (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 2))
       (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 3))) := rfl
-theorem toiK2_some : toiK2 N us dso dsl q (some (r2, m2)) = toiK3 N dso dsl (stubM "inst_lp_fast" m2
-      [CWF, r2.headD 0, r2.tail.headD 0, us, rdW (m2.arr64 EREC) (q + 4)]) := rfl
+theorem toiK2_some : toiK2 cR N us dso dsl q (some (r2, m2)) = toiK3 N dso dsl (cR N "inst_lp_fast"
+      [CWF, r2.headD 0, r2.tail.headD 0, us, rdW (m2.arr64 EREC) (q + 4)] m2) := rfl
 theorem toiK3_some : toiK3 N dso dsl (some (r3, m3)) = toiK4 N (instW N m3 dso dsl (r3.headD 0)) := rfl
 theorem toiK4_some : toiK4 N (some (r4, m4)) =
     if r4.headD 0 = 0 then none else toiK5 (piBW N m4 CWF (r4.tail.headD 0)) := rfl
@@ -74,9 +74,9 @@ theorem toiK5_some : toiK5 (some (r5, m5)) =
     else some ([r5.tail.headD 0, (eViewW m5 (r5.tail.tail.headD 0)).tail.headD 0], m5) := rfl
 end arms
 
-grind_pattern [ind_grind] toiW_eq => toiW (N + 1) m vis I us dso dsl
-grind_pattern [ind_grind] toiK1_some => toiK1 N us dso dsl (some (r1, m1))
-grind_pattern [ind_grind] toiK2_some => toiK2 N us dso dsl q (some (r2, m2))
+grind_pattern [ind_grind] toiW_eq => toiW cR (N + 1) m vis I us dso dsl
+grind_pattern [ind_grind] toiK1_some => toiK1 cR N us dso dsl (some (r1, m1))
+grind_pattern [ind_grind] toiK2_some => toiK2 cR N us dso dsl q (some (r2, m2))
 grind_pattern [ind_grind] toiK3_some => toiK3 N dso dsl (some (r3, m3))
 grind_pattern [ind_grind] toiK4_some => toiK4 N (some (r4, m4))
 grind_pattern [ind_grind] toiK5_some => toiK5 (some (r5, m5))
@@ -97,9 +97,10 @@ structure ToiProg (p : Prog) : Prop where
   ipw : p.lookup "inst_pis_with" = some instPisWith
   toi : p.lookup "target_outside_inst" = some targetOutsideInst
 
-theorem targetOutsideInst_spec (p : Prog) (h : ToiProg p) (N : Nat) (s₀ : St) (vis I us dso dsl : Word) :
+theorem targetOutsideInst_spec (p : Prog) (h : ToiProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
+    (vis I us dso dsl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "target_outside_inst" [vis, I, us, dso, dsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ toiW N s₀.mem vis I us dso dsl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ toiW cR N s₀.mem vis I us dso dsl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.toi]
   simp only [callFn, targetOutsideInst]
   cases N with
@@ -108,7 +109,7 @@ theorem targetOutsideInst_spec (p : Prog) (h : ToiProg p) (N : Nat) (s₀ : St) 
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p h.ix h.rowGet h.find N, erToIw_specW p h.alloc h.copy h.eti N,
-        stubM_spec p "inst_lp_fast" N, instPisWith_spec p h.v h.ipw h.hi1 N,
+        hcR N "inst_lp_fast", instPisWith_spec p h.v h.ipw h.hi1 N,
         piBinders_spec' p h.alloc h.icopy h.v h.sc h.pb N, eView_spec p h.v N] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -138,12 +139,17 @@ def ToiR (r : List Word) (x : Nat × LIdx) : Prop :=
   r = [r.headD 0, r.tail.headD 0] ∧ (r.headD 0).toNat = x.1 ∧ (r.tail.headD 0).toNat < 2 ^ 32 ∧
     decI (r.tail.headD 0) = x.2
 
+/-- `AbsOK` across `target_outside_inst`'s callees after `inst_lp_fast` (`IndT/RecGenTmf.toiAfr`). -/
+def ToiAfr : Prop :=
+  ∀ (N : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), piBW N m fuel h = some (r, m') → AFr m m'
+
 theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {N : Nat} {m m' : Mem} {I us dso dsl : Word} {r : List Word} {ds : List EIdx}
-    (h : toiW N m vis I us dso dsl = some (r, m')) (hS : StageR dn vis fe m a) (hI : H I) (hu : H us)
+    {N : Nat} {m m' : Mem} {I us dso dsl : Word} {r : List Word} {ds : List EIdx} {cR : CallM}
+    (hIl : IlpRd cR dn vis fe (IlpBase m a))
+    (h : toiW cR N m vis I us dso dsl = some (r, m')) (hS : StageR dn vis fe m a) (hI : H I) (hu : H us)
     (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds) (hb : dso.toNat + dsl.toNat < 2 ^ 64) :
     ∃ x a', (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ ToiR r x := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ ToiR r x ∧ (ToiAfr → AFr m m') := by
   cases N with
   | zero => simp [toiW] at h
   | succ N =>
@@ -203,13 +209,13 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
   rw [et] at h
-  cases h4 : stubM "inst_lp_fast" m3 [CWF, r3.headD 0, w2, us, wt] with
+  cases h4 : cR N "inst_lp_fast" [CWF, r3.headD 0, w2, us, wt] m3 with
   | none => rw [h4] at h; simp [toiK3] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, toiK3_some] at h
-  obtain ⟨x4, a4, hrun4, hS4, hg4, hx4⟩ := instLPFast_spec dn vis fe CWF (r3.headD 0) w2 us wt hu hwtH
-    cv.levelParams m3 m4 a r4 h4 ⟨hS3, hdecL⟩
+  obtain ⟨x4, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := hIl N CWF (r3.headD 0) w2 us wt cv.levelParams m3 m4 a r4
+    hu hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
   rw [CWF_eq, ← hwtE] at hrun4
   have hg34 := (hg3.trans hg4)
   cases h5 : instW N m4 dso dsl (r4.headD 0) with
@@ -250,7 +256,9 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   case sort u =>
     obtain ⟨-, hu1, hu2⟩ := hvr
     rw [getD_one] at hu1 hu2
-    refine ⟨(bs.length, u), a5, ?_, hS6, hg34.trans (hg5.trans hg6), rfl, ?_, hu1, hu2⟩
+    refine ⟨(bs.length, u), a5, ?_, hS6, hg34.trans (hg5.trans hg6), ⟨rfl, ?_, hu1, hu2⟩,
+      fun hT => (((AFr.iw (erToIwW_iwFr h3)).trans hA4).trans (instW_afr _ _ _ _ _ _ _ h5)).trans
+        (hT _ _ _ _ _ _ h6)⟩
     · simp only [ConRon.Arena.targetOutsideInst, hfci, StateT.run_bind, hrun4, exc_ok_bind', hrun5,
         hrun6, view_run _ _ _ hv]
       rfl
@@ -270,9 +278,9 @@ theorem targetOutsideInst_refines (p : Prog) (hp : ToiProg p) (N : Nat) (s₀ : 
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       ToiR r (AM.res (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds) a₀); ⊤⦄ := by
-  refine triple_post (targetOutsideInst_spec p hp N s₀ vis I us dso dsl) ?_
+  refine triple_post (targetOutsideInst_spec p hp stubCall (stubCall_spec p) N s₀ vis I us dso dsl) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hd⟩ := toiW_ok hm hS hI hu hds hb
+  obtain ⟨x, a', hrun, hS', hg, hd, -⟩ := toiW_ok IlpRd.stub hm hS hI hu hds hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 

@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.GenRec2
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.RecGen10
 
 /-!
@@ -50,7 +51,7 @@ theorem grpW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA r
     (htbl : PSlR decNCN tbl tO tL m) (hrd : DecB (fun m => decCR m rd.toNat) m rdv)
     (hms : PSlR decTM ms mO mL m) (hcv : PSlR decCVp cvTas cO cL m)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hlp : ClassesLp m mO mL)
-    (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCallees, AbsKeep p f)
+    (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
     {blockP : List ConLeche.ConstantInfo}
@@ -109,7 +110,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
     (htbl : PSlR decNCN tbl tO tL m) (hrd : DecB (fun m => decCR m rd.toNat) m rdv)
     (hms : PSlR decTM ms mO mL m) (hcv : PSlR decCVp cvTas cO cL m)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hlp : ClassesLp m mO mL)
-    (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCallees, AbsKeep p f)
+    (hP : RcMR m) (hA : AbsOK m) (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f)
     (hcoh : ConRon.Bridge.IFEnvCoh fe)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
@@ -163,7 +164,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       hcg1 (hrcD.grow (OMono.decNL _ _) hg1)) c2
   simp only at hs2 hS2 hg2 hpv2; subst hs2
   have hP2 := RcMR.ofClosed hclR (hfRc _ (by decide)) c2 hP1
-  have hA2 := hkeep _ (by simp [grcKeepCallees]) _ _ _ _ _ c2 hA1
+  have hA2 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c2 hA1
   -- the twin's pushed index, and the constructors' view inside it
   have hsh1 := ConRon.Bridge.Inductives.dShape_ext c1'.ext _ _ hsh
   have hfeR : ConRon.Bridge.IFEnvOK (ConLeche.consBlockRecsBare pP 0
@@ -249,7 +250,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       (hpv2.grow (hg3.trans hg4))) c5
   simp only at hs5 hS5 hg5; subst hs5
   have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) c5 hP4
-  have hA5 := hkeep _ (by simp [grcKeepCallees]) _ _ _ _ _ c5 hA4
+  have hA5 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c5 hA4
   -- the flush back
   cases c6 : callW p (n + 1) "flush_caches" [] s5.mem with
   | none => rw [c6] at h; cases h
@@ -303,7 +304,7 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
     (hms : PSlR decTM ms mO mL s₀.mem) (hcv : PSlR decCVp cvTas cO cL s₀.mem)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block) (hlp : ClassesLp s₀.mem mO mL)
     (hP : RcMR s₀.mem) (hA : AbsOK s₀.mem)
-    (hkeep : ∀ f ∈ grcKeepCallees, AbsKeep p f) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f) (hcoh : ConRon.Bridge.IFEnvCoh fe)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
     {blockP : List ConLeche.ConstantInfo}
@@ -354,7 +355,7 @@ theorem checkBlockRec_refinesC (hp : p.lookup "check_block_rec" = some checkBloc
         PSlR decTM ms mO mL s₀.mem ∧ PSlR decCVp cvTas cO cL s₀.mem ∧
         DecB (fun m => decEBlk dn m bO.toNat bL.toNat) s₀.mem block)
     (hrb : RecsB s₀.mem pp) (hlp : ClassesLp s₀.mem mO mL) (hP : RcMR s₀.mem) (hA : AbsOK s₀.mem)
-    (hkeep : ∀ f ∈ grcKeepCallees, AbsKeep p f) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hkeep : ∀ f ∈ grcKeepCalleesC, AbsKeep p f) (hcoh : ConRon.Bridge.IFEnvCoh fe)
     {pP : ConLeche.BlockShape} {paramsP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
     {rdP : ConLeche.ClassRead} {MsP : List ConLeche.TargetMajor} {cvTasP : List ConLeche.ConstantVal}
     {blockP : List ConLeche.ConstantInfo}

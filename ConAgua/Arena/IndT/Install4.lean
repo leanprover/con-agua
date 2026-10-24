@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.Install2
+import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install3
 import ConAgua.Arena.IndInstallSpec16
 
@@ -101,7 +102,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     {pp isRec : Word} {bs : BlockShape} {b : Bool}
     (hC : StageC dn vis fe env m a) (hqd : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hcx : ShapeCV m pp) (hb : (isRec != 0) = b) (hA : AbsOK m)
-    (hk : ∀ f ∈ indsKeepCallees, AbsKeep p f) {bsP : ConLeche.BlockShape}
+    (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
     Sim (ibiW p n m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
@@ -209,7 +210,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (Sim.withRunC (Sim.withFr (installWithSortSimC hq.closed hLC hP.alloc hP.pinWord hP.withSort n hC3 hA3
       (hqd.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc) hs32
       (ConRon.Bridge.denoteL_ext h1b (c2.ext.trans c3.ext)))
-      (fun _ _ e => hk _ (by simp [indsKeepCallees]) _ _ _ _ _ e hA3))) ?_
+      (fun _ _ e => hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ e hA3))) ?_
   rintro r4 p1 m4 a4 ⟨⟨⟨hS4, hg4, hp1, hsrc4, hrb4⟩, hA4⟩, hr4⟩
   obtain ⟨c4, hp1P⟩ := ConRon.Bridge.Inductives.BlockShape.withSort_spec fe bs bsP
     (decI (r1.tail.headD 0)) s0P a3 a4 p1 hC3.check
@@ -222,7 +223,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   obtain ⟨hS5, hg5, hcvT⟩ := installCvTasRun hP.toCstProg hP.cvTas hP.cvTasGo h5 hS4
     ((hc0.grow (OMono.decCVp _) ((hg2.trans hg3).trans hg4)))
     (hcvs.grow decTele_mono (hg3.trans hg4))
-  have hA5 := hk _ (by simp [indsKeepCallees]) _ _ _ _ _ h5 hA4
+  have hA5 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ h5 hA4
   -- the formers consed
   have hp1' := hp1.grow (decBS_mono _) hg5
   obtain ⟨-, hp9, -⟩ := partsShapeFacts hp1 hsrc4
@@ -251,7 +252,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       (consBlockInds_refines p hP.toConsIndsProg (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0) isRec
         (r5.headD 0) (r5.tail.headD 0) 0 p1 b _ hb hS5 hp1' hsrc5 hcvT (by have := (r5.tail.headD 0).toNat_lt; simp only [UInt64.toNat_zero, Nat.zero_add]; exact this))
       fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2⟩) n |>.withFr
-      (fun _ _ e => hk _ (by simp [indsKeepCallees]) _ _ _ _ _ e hA5))) ?_
+      (fun _ _ e => hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ e hA5))) ?_
   rintro r6 fe1 m6 a6 ⟨⟨⟨hS6, hg6⟩, hA6⟩, hr6⟩
   obtain ⟨c5, -⟩ := ConRon.Bridge.Inductives.consBlockInds_spec fe p1 _ b _ _ 0 fe env hcoh a4 a6 fe1
     hC4.check ⟨hp1P, hcvTas, ConRon.Bridge.denoteFEnv_mono c14.ext hfe⟩ hr6
@@ -272,7 +273,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
     (pp isRec : Word) (bs : BlockShape)
     (b : Bool) (hC : StageC dn vis fe env s₀.mem a₀) (hqd : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
     (hsrc : ShapeSrc s₀.mem pp) (hcx : ShapeCV s₀.mem pp) (hb : (isRec != 0) = b) (hA : AbsOK s₀.mem)
-    (hk : ∀ f ∈ indsKeepCallees, AbsKeep p f) {bsP : ConLeche.BlockShape}
+    (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a₀.store bs = some bsP)
     (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds" [vis, pp, isRec]

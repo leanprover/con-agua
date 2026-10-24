@@ -205,3 +205,20 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   - `hclH`/`hfH` (`rcHbFree`, `check_block_tables`);
   - `hclM`/`hfM` (`maFree`, pass and tail);
   - `hclMc`/`hfMc` (`mcFree`, `check_block`).
+
+## Landings 11‥13: real calls in the StageC chain; no AbsKeep for the walks
+
+* Helpers made these calls real in the StageC chain:
+  - **rcA:** open_pis_at_fvars_f, lvl_eq_c, lv_leq_top.
+  - **rcB:** lvls_eq_c, name_rec_i, all_level_params_defined, consts_resolve_ffast, and ihW/ccvW. Both IndStubsT contracts are deleted.
+  - **rcC:** inst_lp_fast, through the `IlpRd` contract.
+  - **rcD:** class_read (readW and its sub-models over `cR`, with `OpfJ`).
+* The top theorems gained program facts, each discharged in Checker/IndArm by `prog_bundle`: `hOpf hLC hLT hApd hCrk hIlpf`.
+* No `AbsKeep` for walk callees. Every callee whose closure writes the walk memos now hands back `AbsOK`:
+  - `check_constant_val`: `checkConstantVal_absOK`, from `ccvW_okTA`.
+  - `block_nest_ctx`: `bncC_simA`, with `nckW_afr`/`nhW_afr` in IndT/BncAfr.
+  - `class_read`: `classRead_refinesA`.
+  - `nest_uniform`, `gen_rec_check_former_tys_c`: rcC's J-invariant sims.
+  - The rest already do in their StageC posts.
+* The keep lists the C chain takes are now `IndT/KeepC`'s `*KeepCalleesC`, which hold only write-set frames. So Checker/IndArm proves every `AbsKeep` by `absKeep_of_closed`, and `indArmSpec_checker` has no `hK`. `loopStage_of_walkKeep`'s `_hK` is now unused, so Final/Remaining can drop it.
+* `hkc` is gone everywhere.
