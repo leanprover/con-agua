@@ -184,8 +184,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         rw [List.getElem?_eq_getElem (by omega)] at hwx; exact Option.some.inj hwx
       by_cases h6 : h >>> 28 ≠ 6
       · rw [ipalGoW_nopi f o l n m h k hk h6] at hW
-        simp only [Option.some.injEq, Prod.mk.injEq] at hW
-        obtain ⟨rfl, rfl⟩ := hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         refine ⟨none, a, ?_, ⟨hS, IWGrow.refl _, rfl⟩, hA⟩
         have ht : ¬ ((decI h : EIdx).tag == ETag.forallE) = true := by
           rw [tag_forall_iff h hh]; simpa using h6
@@ -211,10 +210,8 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hy3 : decE (vt.tail.headD 0) = bd := by simpa using hy2
       have hbind : a.store.viewBind (decE h) = some (ty, bd) :=
         EStore.viewBind_of_view _ _ ht ty bd hvw
-      cases hst : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with
-      | none => rw [ipalGoW_none f o l n m h k hk h6 hv hst] at hW; cases hW
-      | some rm =>
-      obtain ⟨rb, m1⟩ := rm
+      rcases hst : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with _ | ⟨rb, m1⟩
+      · rw [ipalGoW_none f o l n m h k hk h6 hv hst] at hW; cases hW
       rw [ipalGoW_step f o l n m m1 h k rb hk h6 hv hst] at hW
       rw [hvl, hw] at hst
       simp only [List.tail_cons] at hst
@@ -240,8 +237,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       rw [← hdec1, ← hk1]
       exact hrun3
     · rw [ipalGoW_ge f o l n m h k hk] at hW
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl⟩ := hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hkl' : k.toNat = l.toNat := by
         have := mt UInt64.lt_iff_toNat_lt.mpr hk; omega
       have hnil : xs.drop k.toNat = [] := List.drop_eq_nil_of_le (by omega)
@@ -258,9 +254,8 @@ theorem ipalF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun m m' a r x => KeepPost dn vis fe decOE m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hA, hdec⟩
   obtain ⟨n, hW⟩ := ipalF_W h
-  cases n with
-  | zero => cases hW
-  | succ n =>
+  rcases n with _ | n
+  · cases hW
   have := ipalGoW_ok dn vis fe f o l xs (n + 1) m m' a e 0 r hW hS hA he (by simp) hdec
   simpa using this
 

@@ -130,48 +130,25 @@ theorem iirK_eq {p : Prog} (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m 
       (erPut5_spec p hp n _ d x0 x1 x2 x3 x4) hc
     exact h2
   unfold iirW
-  cases h1 : erAllocW m 20 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q, m1⟩ := x
+  rcases h1 : erAllocW m 20 with _ | ⟨q, m1⟩
+  · rw [h1] at h; cases h
   obtain ⟨hI1, hE1⟩ := erAllocW_arr h1
   rw [h1, iirK_some] at h
-  cases h2 : callW p (n + 1) "er_put5" [q, 3, rdW (m1.arr64 EREC) cv, rdW (m1.arr64 EREC) (cv + 1),
-      rdW (m1.arr64 EREC) (cv + 2), rdW (m1.arr64 EREC) (cv + 3)] m1 with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, iirK2_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [iirK2_some] at h
   have e2 := put _ _ _ _ _ _ _ _ _ h2
   have i2 : m2.arr64 IW = m.arr64 IW := by rw [e2, wrER_IW, hI1]
   rw [i2] at h
-  cases h3 : callW p (n + 1) "er_put5" [q + 5, rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1),
-      rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] m2 with
-  | none => rw [h3] at h; cases h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, iirK3_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [iirK3_some] at h
   have e3 := put _ _ _ _ _ _ _ _ _ h3
   have i3 : m3.arr64 IW = m.arr64 IW := by rw [e3, wrER_IW, i2]
   rw [i3] at h
-  cases h4 : callW p (n + 1) "er_put5" [q + 10, rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6),
-      rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9)] m3 with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, iirK4_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [iirK4_some] at h
   have e4 := put _ _ _ _ _ _ _ _ _ h4
   have i4 : m4.arr64 IW = m.arr64 IW := by rw [e4, wrER_IW, i3]
   rw [i4] at h
-  cases h5 : callW p (n + 1) "er_put5" [q + 15, rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11),
-      rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)] m4 with
-  | none => rw [h5] at h; cases h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, iirK5_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [iirK5_some] at h
   have e5 := put _ _ _ _ _ _ _ _ _ h5
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨q, rfl, ?_⟩
   rw [hE1] at e2
   subst e2 e3 e4 e5
@@ -199,13 +176,10 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') dn q.toNat = some (.indInfo cvv c) ∧ H (rdW (m'.arr64 EREC) (q + 1)) := by
   unfold iirW at h
-  cases h1 : erAllocW m 20 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
+  rcases h1 : erAllocW m 20 with _ | ⟨q1, m1⟩
+  · rw [h1] at h; cases h
   rw [h1] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS (iirWs m cv caps) (by simp [iirWs])
   have hlen : (iirWs m cv caps).length = 20 := by simp [iirWs]
   rw [hlen] at htop hget
@@ -391,10 +365,7 @@ theorem icbiW_simG {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLec
   refine Sim.mstep (K := icbiK2 p n p1 isRec o l vis i) (by simp [icbiK2])
     (fun r m₁ => icbiK2_some p n m₁ p1 isRec o l vis i r) fun r2 m2 h2 => ?_
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hlpos : 0 < l.toNat := by
-    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-    · exact h0
+  have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hol : o.toNat < iwTop m := by have := hcvs.2; omega
   have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
     rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hol]

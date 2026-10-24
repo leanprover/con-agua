@@ -292,9 +292,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     have hok3 := (ConRon.Bridge.BasisKind.decls_run hok hrun3').1
     generalize r3.headD 0 = o3 at h hD3
     generalize r3.tail.headD 0 = l3 at h hD3
-    by_cases hl : l3 ≤ 4
-    · rw [if_pos hl] at h; cases h
-    rw [if_neg hl] at h
+    obtain ⟨hl, h⟩ := of_ite_none h
     have hlt : 4 < (l3).toNat := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hl); simpa using this
     obtain ⟨v, ci, hv, hci, hget⟩ := decPL_get _ _ _ hD3 4 hlt
@@ -319,11 +317,8 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
           poolSmall_of_stage hS3, fun x y l hx hy => hok3.view_inj hx hy⟩) e4
     subst hs4
     have hrun4 := AM.run_of_ok _ _ hok4
-    by_cases z4 : r4.headD 0 = 0
-    · rw [if_pos z4] at h; cases h
-    rw [if_neg z4] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨z4, h⟩ := of_ite_none h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hb : AM.res ((IConstantInfo.axiomInfo cv).canonEq ci) a3 = true := by
       rw [← hb4]; simpa using z4
     rw [hb] at hrun4
@@ -372,8 +367,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
     | some rmx =>
     obtain ⟨ry, my⟩ := rmx
     rw [e, cdaRet_some] at hx
-    simp only [Option.some.injEq, Prod.mk.injEq] at hx
-    obtain ⟨rfl, rfl⟩ := hx
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hx)
     obtain ⟨hSy, hgy⟩ := push_call hX.val.rcp e hSx (ArrExt.decCI (IWGrow.erecPExt hgx) hci1)
     exact ⟨by simpa using hSy, hgy, hJ (by simp [cdaLeaves]) e hJx⟩
   by_cases z4 : r4.headD 0 ≠ 0
@@ -412,9 +406,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) e6
     subst hs6
     have hrun6 := AM.run_of_ok _ _ hok6
-    by_cases z6 : r6.headD 0 = 0
-    · rw [if_pos z6] at h; cases h
-    rw [if_neg z6] at h
+    obtain ⟨z6, h⟩ := of_ite_none h
     have ht6 : AM.res (trustCompilerOk fe cv) a4 = true := by rw [← hb6]; simpa using z6
     rw [ht6] at hrun6
     obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS6 (hg3.trans (hg4.trans hg6))
@@ -464,9 +456,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) e9
     subst hs9
     have hrun9 := AM.run_of_ok _ _ hok9
-    by_cases z9 : r9.headD 0 = 0
-    · rw [if_pos z9] at h; cases h
-    rw [if_neg z9] at h
+    obtain ⟨z9, h⟩ := of_ite_none h
     have ht9 : AM.res (ofReduceAxOk fe cv) a4 = true := by rw [← hb9]; simpa using z9
     rw [ht9] at hrun9
     obtain ⟨hS', hg', hJ'⟩ := push (rx := []) (mf := m) hS9 (hg3.trans (hg4.trans hg9))
@@ -497,9 +487,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨hm11, hr11, hl11, hrun11⟩ := pinAtW_ok e11 hS4.1.pins
   have ep11 : r11.headD 0 = pinW s4.mem (1 + (33 : Word).toNat) := by rw [hr11]; rfl
   rw [hm11] at h
-  by_cases eq11 : wn = pinW s4.mem (1 + (32 : Word).toNat) ∨ wn = r11.headD 0
-  · rw [if_pos eq11] at h; cases h
-  rw [if_neg eq11] at h
+  obtain ⟨eq11, h⟩ := of_ite_none h
   rw [ep11] at eq11
   have hb10 := decI_beq (k := .name) wn _ hwnl hl10
   have hb11 := decI_beq (k := .name) wn _ hwnl hl11
@@ -520,8 +508,7 @@ theorem cdaW_gen {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name}
   rw [hm12] at h
   by_cases eq12 : wn = r12.headD 0
   · rw [if_pos eq12] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [ep12] at eq12
     have hb12 := decI_beq (k := .name) wn _ hwnl hl12
     refine ⟨fe, a4, ?_, by simpa using hS4, hg1.trans (hg3.trans hg4), hJ4⟩

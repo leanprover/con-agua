@@ -239,8 +239,7 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   have hR := hS.1.arena.1
   unfold viewLsW at h
-  by_cases hne : lsNodeW m us = []
-  · rw [if_pos hne] at h; simp at h
+  have hne : ¬ lsNodeW m us = [] := fun hne => by rw [if_pos hne] at h; simp at h
   rw [if_neg hne] at h
   obtain ⟨ids, hv⟩ := lsView_of_lsNodeW hR hu hne
   obtain ⟨hlsn, hbnd, hsl⟩ := lsNodeW_store hR hu hv
@@ -248,15 +247,8 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   simp only [List.headD_cons, List.tail_cons] at h
   generalize lsO m (tierW us) (idxW us) = o at *
   generalize lsL m (tierW us) (idxW us) = l at *
-  cases hal : allocW m l with
-  | none => rw [hal] at h; simp at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  simp only [hal] at h
-  cases hcp : poolCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  rcases hal : allocW m l with _ | ⟨q, m1⟩ <;> simp only [hal, reduceCtorEq] at h
+  rcases hcp : poolCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   subst hq hm1

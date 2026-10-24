@@ -90,18 +90,10 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
       exact ⟨[], rfl, .nil⟩
     rw [if_neg hl] at hk
     generalize hw : rdW (m.arr64 SPN) o = w at hk
-    by_cases h1 : 4294967296 ≤ w
-    · rw [if_pos h1] at hk; cases hk
-    rw [if_neg h1] at hk
-    by_cases h2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-    · rw [if_pos h2] at hk; cases hk
-    rw [if_neg h2] at hk
-    by_cases h3 : (3 : Word) ≤ w >>> 28
-    · rw [if_pos h3] at hk; cases hk
-    rw [if_neg h3] at hk
-    by_cases h4 : rdW (m.arr64 CTL) ((34 : Word) + (w >>> 28) * 2 + tierW w) ≤ idxW w
-    · rw [if_pos h4] at hk; cases hk
-    rw [if_neg h4] at hk
+    obtain ⟨h1, hk⟩ := of_ite_none hk
+    obtain ⟨h2, hk⟩ := of_ite_none hk
+    obtain ⟨h3, hk⟩ := of_ite_none hk
+    obtain ⟨h4, hk⟩ := of_ite_none hk
     have hww : w.toNat < 2 ^ 32 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h1); simpa using this
     -- the key reads back

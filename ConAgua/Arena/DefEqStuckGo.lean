@@ -274,11 +274,7 @@ theorem GrowSpec.of_call1W {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : 
     (hdec : ∀ r r' : List Word, r.headD 0 = r'.headD 0 → dec r = dec r') {r : List Word} {m' : Mem}
     (hc : call1W p n f args s₀.mem = some (r.headD 0, m')) :
     GrowRef T a₀ dec dn s₀.mem vis fe M eb r m' := by
-  cases hcall : callW p n f args s₀.mem with
-  | none => simp [call1W, hcall] at hc
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hc
+  rcases hcall : callW p n f args s₀.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, call1W, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hc
   obtain ⟨hw, rfl⟩ := hc
   obtain ⟨h1, h2, h3, h4⟩ := GrowSpec.of_callW h hcall
   exact ⟨h1, h2, h3.trans (hdec _ _ hw), by unfold ResH at h4 ⊢; rw [← hw]; exact h4⟩

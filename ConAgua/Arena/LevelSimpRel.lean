@@ -160,11 +160,8 @@ theorem imaxW_ok (n : Nat) (m m' : Mem) (x y z : Word) (S T : Level)
     obtain ⟨he, hz⟩ := mk_imax h hx hy
     refine ⟨he, ?_⟩
     cases hy with
-    | zero hv => simp_all [lvG]
-    | succ hv _ => simp_all [lvG]
-    | max _ _ _ => simpa [simpImax, hif] using hz
-    | imax _ _ _ => simpa [simpImax, hif] using hz
-    | param _ _ => simpa [simpImax, hif] using hz
+    | zero hv | succ hv _ => simp_all [lvG]
+    | max _ _ _ | imax _ _ _ | param _ _ => simpa [simpImax, hif] using hz
 
 /-- **`lv_simp` is `simplify`.** -/
 @[refines ConLeche.Level.simplify]

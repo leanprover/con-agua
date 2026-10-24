@@ -55,10 +55,8 @@ theorem erAllocW_facts {m m1 : Mem} {k o : Word} (h : erAllocW m k = some (o, m1
     o.toNat = erTop m ∧ erTop m1 = erTop m + k.toNat ∧ m1.arr64 EREC = m.arr64 EREC ∧
       (∀ W, ErW W m m1) := by
   simp only [erAllocW] at h
-  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
-  · simp [h1] at h
-  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
-  · simp [h1, h2] at h
+  have h1 : ¬ m.len64 EREC < rdW (m.arr64 CTL) 129 := fun h1 => by simp [h1] at h
+  have h2 : ¬ m.len64 EREC - rdW (m.arr64 CTL) 129 < k := fun h2 => by simp [h1, h2] at h
   simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
@@ -126,8 +124,7 @@ theorem dindCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), dindCopyW n m
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, if_false]
-    by_cases hs : s = 0
-    · rw [dindCopyW_src n m d s l hl hs] at h; cases h
+    have hs : ¬ s = 0 := fun hs => by rw [dindCopyW_src n m d s l hl hs] at h; cases h
     rw [dindCopyW_step n m d s l hl hs] at h
     have hl0 : 0 < l.toNat := by
       have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
@@ -497,9 +494,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLe
   · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
     subst e
     rw [if_neg (by decide), if_neg (by decide), if_pos rfl] at h
-    by_cases hg : 1152921504606846976 ≤ rdW (m.arr64 DLP) (s + 8)
-    · rw [if_pos hg] at h; cases h
-    rw [if_neg hg] at h
+    obtain ⟨hg, h⟩ := of_ite_none h
     have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
     have h11 : (11 * rdW (m.arr64 DLP) (s + 8)).toNat = 11 * (rdW (m.arr64 DLP) (s + 8)).toNat := by
@@ -662,12 +657,8 @@ theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List 
   obtain ⟨o, m1⟩ := x
   rw [ha] at h
   simp only at h
-  cases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with
-  | none => rw [hg] at h; cases h
-  | some m2 =>
-  rw [hg] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with _ | m2 <;> simp only [hg, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hC : 129 < (m.arr64 CTL).size := by omega
   obtain ⟨ho, ht1, hE1', hW1⟩ := erAllocW_facts ha hC hEs
   have hw1 := hW1 (fun j => erTop m ≤ j)

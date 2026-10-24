@@ -254,8 +254,7 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) (n : Nat) (dn : NIdx → Opti
   dsimp only at hF
   by_cases h136 : (136 : Word).toNat < (m₁.arr64 CTL).size
   · rw [if_pos h136] at hF
-    simp only [Option.some.injEq, Prod.mk.injEq] at hF
-    obtain ⟨rfl, rfl⟩ := hF
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
     have hinst := hil n ⟨m, Locals.init []⟩ a dn vis fe M eb ty co cn 0 acc hS ht hacc
       (by rw [htop, hadd]; exact Nat.le_refl _)
     obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1
@@ -438,9 +437,7 @@ theorem inferSpineIO_refines (p : Prog) (hq : SpineInferProg p) (hil : InstListO
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   unfold spioFn at hW
-  by_cases hc : s.mem.len64 SPN < rdW (s.mem.arr64 CTL) 136
-  · rw [if_pos hc] at hW; cases hW
-  rw [if_neg hc] at hW
+  obtain ⟨hc, hW⟩ := of_ite_none hW
   have hcle := len64_not_lt hS.spn hc
   obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := spioFull_ref p hil n hk F hF hn n dn vis fe
     mode d ao an args eb _ hs.mode4 hs.eb_mode s.mem har rfl hlo (n + 1) (Nat.le_refl _) s.mem a₀ M
@@ -477,16 +474,8 @@ theorem headAndArgs_app (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a�
   refine ⟨hloc, ?_⟩
   simp only [haaW] at hW
   rw [if_pos h4] at hW
-  cases h1 : callW p n "get_app_fn" [v] s.mem with
-  | none => rw [h1] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
-  simp only [h1] at hW
-  cases h2 : callW p n "get_app_args" [v] m₁ with
-  | none => rw [h2] at hW; simp at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
-  simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
+  rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
+  rcases h2 : callW p n "get_app_args" [v] m₁ with _ | ⟨r₂, m₂⟩ <;> simp only [h2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr0, hr1, hr2, hm⟩ := hW
   obtain ⟨t₁, ht₁, hm₁, -, hhw, hfnrun⟩ := triple_of_callW (getAppFn_refines' p hp.fn n s a₀ hR v hv) h1
   rw [ht₁] at hm₁
@@ -588,8 +577,7 @@ theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p
   have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
     refine Classical.byContradiction fun h => ?_; rw [if_neg h] at hW; cases hW
   rw [if_pos h136] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   -- the head and the arguments
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW
     (headAndArgs_app p hsp n s a₀ hS.arena.1 e he h4 hS.spn) hc1

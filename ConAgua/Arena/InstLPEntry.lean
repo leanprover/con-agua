@@ -231,8 +231,7 @@ theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
         | none => simp [e] at hs
         | some x =>
           cases e' : (hslice? (m.arr64 EREC) (s.toNat + 1) j : Option (List NIdx)) with
-          | none => simp [e, e'] at hs
-          | some xs => simp [e, e'] at hs
+          | none | some xs => simp [e, e'] at hs
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
     subst hl0
     cases n with
