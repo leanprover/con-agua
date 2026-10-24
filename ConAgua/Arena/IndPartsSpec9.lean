@@ -390,9 +390,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [bgoW_cons n m no nl lvls nP co cl mm hl, hcw, partsFilter_step]
     have hnlen : names.length < 2 ^ 64 := by
       have := decHL_length _ (show decHL (truncM m) no.toNat nl.toNat = some names from hnm); omega
-    refine Sim.bindK (K := bgoK1 n no nl lvls nP co cl mm (UInt64.ofNat pc))
-      (body := fun r1 m1 => bgoK2 n (UInt64.ofNat pc) mm r1 (bgoW n m1 no nl lvls nP (co + 1) (cl - 1) mm))
-      (by simp [bgoK1]) (fun _ _ => bgoK1_some ..) (Q := fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
+    refine Sim.bindK (by simp [bgoK1]) (fun _ _ => by rw [bgoK1]) (Q := fun r o m' a' => MemIdxOut r o ∧ (∀ i, o = some i → i < names.length) ∧
         StageR dn vis fe m' a' ∧ IWGrow m m') ?_ ?_
     · cases n with
       | zero => exact Sim.of_none
@@ -535,9 +533,7 @@ theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hmm1 : (mm + 1).toNat = mm.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; have := k.toNat_lt; omega
     rw [hL, List.range'_succ, List.mapM_cons]
-    refine Sim.bindK (K := bggK1 n no nl lvls nP co cl mm k)
-      (body := fun r1 m1 => bggK2 n no nl lvls nP co cl mm k (posRecW m1 [r1.headD 0, r1.tail.headD 0]))
-      (by simp [bggK1]) (fun _ _ => bggK1_some ..) (bgoW_sim hlv n m a co cl cs hS hcs hnm hnb) ?_
+    refine Sim.bindK (by simp [bggK1]) (fun _ _ => by rw [bggK1]) (bgoW_sim hlv n m a co cl cs hS hcs hnm hnb) ?_
     rintro r1 gs m1 a1 ⟨hgs, hS1, hg1⟩
     intro r m' e
     rcases h2 : posRecW m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨h0, m2⟩ <;> rw [h2] at e
@@ -549,8 +545,7 @@ theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (Nat.le_trans hnb hg02.1)
     rw [hmm1, show k.toNat - (mm.toNat + 1) = L by omega, show mm.toNat + 1 = mm.toNat + 1 from rfl] at hrec
     revert r m' e
-    refine Sim.bindK (K := bggK3 n h0) (body := fun r3 m3 => bgoK3 (consW n m3 h0 (r3.headD 0) (r3.tail.headD 0)))
-      (by simp [bggK3]) (fun _ _ => bggK3_some ..) hrec ?_
+    refine Sim.bindK (by simp [bggK3]) (fun _ _ => by rw [bggK3]) hrec ?_
     rintro r3 gss m3 a3 ⟨hgss, hS3, hg3⟩
     intro r m' e
     rcases h4 : consW n m3 h0 (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e

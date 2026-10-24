@@ -263,12 +263,9 @@ theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [List.mapM_cons]
     have h1 := partsSimW (nrF_ok dn vis fe _ hnl) hS
     rw [hne] at h1
-    refine Sim.bindK (K := brwK1 n mo ml) (body := fun r1 m1 => bggK3 n (r1.headD 0) (brwW n m1 (mo + 1) (ml - 1)))
-      (by simp [brwK1]) (fun _ _ => brwK1_some ..) h1 ?_
+    refine Sim.bindK (by simp [brwK1]) (fun _ _ => by rw [brwK1]) h1 ?_
     rintro r1 x1 m1 a1 ⟨hS1, hg1, hx1l, hx1⟩
-    refine Sim.bindK (K := bggK3 n (r1.headD 0))
-      (body := fun r2 m2 => bgoK3 (consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0)))
-      (by simp [bggK3]) (fun _ _ => bggK3_some ..) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 ⟨(hms'.grow decMS_mono hg1).1, Or.inr (hms'.grow decMS_mono hg1).2⟩) ?_
+    refine Sim.bindK (by simp [bggK3]) (fun _ _ => by rw [bggK3]) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 ⟨(hms'.grow decMS_mono hg1).1, Or.inr (hms'.grow decMS_mono hg1).2⟩) ?_
     rintro r2 xs m2 a2 ⟨hd2, hb2, hS2, hg2⟩
     intro r m' e
     rcases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e

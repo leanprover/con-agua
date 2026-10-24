@@ -559,10 +559,7 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [List.mapM_cons]
     simp only [brsF, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
-    refine Sim.bindK (K := brsK1 n no nl ro rl (UInt64.ofNat pc))
-      (body := fun r1 m1 => brsK2 n no nl ro rl (UInt64.ofNat pc) (r1.headD 0)
-        (brhW n m1 (rdW (m1.arr64 IW) (UInt64.ofNat pc + 3)) (rdW (m1.arr64 IW) (UInt64.ofNat pc + 4))))
-      (by simp [brsK1]) (fun _ _ => brsK1_some ..)
+    refine Sim.bindK (by simp [brsK1]) (fun _ _ => by rw [brsK1])
       (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
@@ -605,8 +602,7 @@ theorem brsW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       simp only [decRS, decAt, g0, g1, g2, g3, hcv3, bind, Option.bind_some, pure, Nat.add_assoc,
         show 4 + 1 = 5 from rfl, g4, g5, hrh3]
     revert r m' e
-    refine Sim.bindK (K := bggK3 n rc) (body := fun r4 m4 => bgoK3 (consW n m4 rc (r4.headD 0) (r4.tail.headD 0)))
-      (by simp [bggK3]) (fun _ _ => bggK3_some ..)
+    refine Sim.bindK (by simp [bggK3]) (fun _ _ => by rw [bggK3])
       (ih m3 a1 (ro + 1) (rl - 1) rs' hS3 (hrs'.grow decSR_mono hg03) (hnm.grow (OMono.decHL _ _) hg03)
         (Nat.le_trans hnb hg03.1)) ?_
     rintro r4 xs m4 a4 ⟨hR4, hS4, hg4⟩

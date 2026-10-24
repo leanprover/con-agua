@@ -278,11 +278,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [partsFindM_cons]
     simp only [bmfPred, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
-    refine Sim.bindK (K := bmfK1 n no nl ro rl mm (UInt64.ofNat pc) (UInt64.ofNat mI))
-      (body := fun r1 m1 => if r1.headD 0 = mm then some ([1, UInt64.ofNat mI,
-          rdW (m1.arr64 IW) (UInt64.ofNat pc + 2)], m1)
-        else bmfK2 (bmfW n m1 no nl (ro + 1) (rl - 1) mm)) (by simp [bmfK1])
-      (fun _ _ => by simp only [bmfK1])
+    refine Sim.bindK (by simp [bmfK1]) (fun _ _ => by rw [bmfK1])
       (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
@@ -432,11 +428,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
     have hrl : rs.length = rl.toNat := (decPL_length _ hrs.1)
-    refine Sim.bindK (K := bmgK1 n nPd k nC no nl ro rl cto ctl idx (UInt64.ofNat pc))
-      (body := fun r1 m1 => if 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0 then none
-        else bmgK2 n nPd k nC no nl ro rl cto ctl idx (bcW n m1 nPd k nC rl (UInt64.ofNat pc) (r1.headD 0)
-          (r1.tail.headD 0) (r1.tail.tail.headD 0)))
-      (by simp [bmgK1]) (fun _ _ => by simp only [bmgK1]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
+    refine Sim.bindK (by simp [bmgK1]) (fun _ _ => by rw [bmgK1]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
     rintro r1 x m1 a1 ⟨rfl, hxb, hS1, hg1⟩
     by_cases hbig : 4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0 ∨
         4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0
@@ -456,10 +448,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
       omega
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
-    refine Sim.bindK (K := bmgK2 n nPd k nC no nl ro rl cto ctl idx)
-      (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-        else bmgK3 n (r2.tail.tail.headD 0) (bmgW n m2 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1)))
-      (by simp [bmgK2]) (fun _ _ => by simp only [bmgK2])
+    refine Sim.bindK (by simp [bmgK2]) (fun _ _ => by rw [bmgK2])
       (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
         StageR dn vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
     · revert hE
@@ -500,11 +489,7 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
       (by rw [hidx1, hctl1]; have := hg02.1; omega)
     rw [hidx1] at hrec
-    refine Sim.bindK (K := bmgK3 n ((encONN (some (c1, c2))).tail.tail.headD 0))
-      (body := fun r3 m3 => if r3.headD 0 = 0 then some ([0, 0, 0], m3)
-        else bsK3 (consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0)
-          (r3.tail.tail.headD 0)))
-      (by simp [bmgK3]) (fun _ _ => by simp only [bmgK3]) hrec ?_
+    refine Sim.bindK (by simp [bmgK3]) (fun _ _ => by rw [bmgK3]) hrec ?_
     rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩
     cases x3 with
     | none =>
