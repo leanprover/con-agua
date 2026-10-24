@@ -382,8 +382,7 @@ theorem fvarTypeDW1_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : I
   | some rm =>
     obtain ⟨r1, m1⟩ := rm
     rw [hs] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨t, a', hrun, hS', hg, hd1, hd2⟩ := ftdF_ok dn vis fe x hx m m1 a r1 hs hS
     exact ⟨t, a', hrun, hS', hg, hd1, by simpa using hd2⟩
 
@@ -576,8 +575,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       by_cases hne : eViewW m1 w = []
       · rw [if_pos hne] at h; simp at h
       rw [if_neg hne] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hne
       have htag : (decE w).tag = ETag.fvar := by
         rw [decE_tag w hd1, hf]; rfl
@@ -615,8 +613,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       | lit l => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
       | proj f x y => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
     · rw [if_neg hf] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have htag : ¬ (decE w).tag = ETag.fvar := by
         rw [decE_tag w hd1]
         intro hc
@@ -762,8 +759,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
     intro m m' a bo bl i body bs r h hS hb hbs hbo hbt hib hA
     by_cases hbl : bl = 0
     · rw [closeLamsW_nil n m bo bl i body hbl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hl0 : bl.toNat = 0 := by rw [hbl]; rfl
       rw [hl0] at hbs
       simp [decHL, hslice?] at hbs
@@ -803,8 +799,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
         by_cases hbig : 4294967296 ≤ rb
         · rw [clK3_big m3 rb hbig] at h; simp at h
         rw [clK3_ok m3 rb hbig] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨a3, hrun3, hS3, hg3⟩ := mkLam_stage hS2 w (ra.headD 0) hm
         have hlt : rb.toNat < 2 ^ 32 := by
           have : ¬ (4294967296 : Nat) ≤ rb.toNat := hbig

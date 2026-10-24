@@ -178,8 +178,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   by_cases hz : r5.headD 0 = 0
   · rw [cbcK5_some_bad _ _ _ _ hz] at h; cases h
   rw [cbcK5_some_ok _ _ _ _ hz] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hall : (List.range bs.k).all (fun t => (ms.filter (·.member == some t)).length == 1) = true := by
     have : (r5.headD 0 != 0) = true := by simpa using hz
     rw [this] at hgood; exact hgood.symm

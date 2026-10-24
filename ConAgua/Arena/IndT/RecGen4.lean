@@ -116,8 +116,7 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
   by_cases hb5 : r5.headD 0 = 0
   · rw [if_pos hb5] at h; simp at h
   rw [if_neg hb5] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have ex5 : x5 = true := by rw [← hx5]; simpa using hb5
   subst ex5
   obtain ⟨p4, -⟩ := ConRon.Bridge.Inductives.constsResolveFFast_pstep c13.ok.toR
@@ -206,8 +205,7 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
   by_cases hb : r5.headD 0 = 0
   · rw [if_pos hb] at h; cases h
   rw [if_neg hb] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have eb : b = true := by rw [← hb5.1]; simpa using hb
   subst eb
   refine ⟨a8, ?_, hC4.of_check (hS5.unrestrict hC.stage.1.env.vis) hA5 c18.ok (p8.ext),

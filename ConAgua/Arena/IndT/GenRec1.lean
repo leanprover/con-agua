@@ -235,8 +235,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       ∃ cvRisP : List ConLeche.ConstantVal, cvRis.mapM (Frontend.denoteCV a'.store) = some cvRisP ∧
         ∀ cv ∈ cvRisP, ConLeche.Expr.WScoped 0 cv.type := by
     intro m4 a4 hC4 hg4 hP4 hk4 hA4 hcs4 hrun hc4 hcv4 e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     refine ⟨cvRis, a4, hrun, hC4, hg4, hP4, hk4, ?_, hA4, hc4, cvRisP, hcv4, hwRis⟩
     obtain ⟨ptrs, h1, h2, h3, h4⟩ := hcs4
     exact ⟨ptrs, h1, h2, h3, h4⟩

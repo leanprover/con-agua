@@ -302,8 +302,7 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     | some y =>
     obtain ⟨r, m'⟩ := y
     rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW2
-    obtain ⟨rfl, hm'⟩ := hW2
+    obtain ⟨rfl, hm'⟩ := Prod.mk.inj (Option.some.inj hW2)
     obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok dn fe vis I hI k' m m' a r hnt hS
     have hf : MFr [] [] m m' := ntWf_mfr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt)
     have hA2 : AbsOK m' := ntWf_afr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt) hA

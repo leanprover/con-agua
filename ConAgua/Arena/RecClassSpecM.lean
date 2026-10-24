@@ -316,8 +316,7 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
   · rw [fcgW_miss (h := hl) (h2 := by rw [ep, ew]; exact hhit)] at h
     obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
     rw [fcK_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have := iwN_lt hpm
     have hio1 : (io + 1).toNat = io.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hil1 : (il - 1).toNat = k := by
@@ -379,8 +378,7 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   rw [elp, eio, eil] at h
   obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
   rw [fcK_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have iolt := (iwN_rdW hiom (by have := iwN_lt hiom; omega)).2
   have illt := (iwN_rdW hilm (by have := iwN_lt hilm; omega)).2
   obtain ⟨hm, hres⟩ := fcgW_ok n m m'' _ _ cn r' (cts[c.toNat]'(by omega)) hr

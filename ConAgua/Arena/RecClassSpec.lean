@@ -451,8 +451,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
     intro m m' a nP mo ml ro rl r recs motPos h hS hJ hrecs hstab hmot hmt hb
     by_cases hrl : rl = 0
     · rw [crW_nil cR n m nP mo ml ro rl hrl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : rl.toNat = 0 := by rw [hrl]; rfl
       rw [hz] at hrecs
       simp [decPL] at hrecs
@@ -520,8 +519,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
         | none =>
           have h0 : r1'.headD 0 = 0 := hdec1
           rw [crK1, if_pos h0] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           exact ⟨none, a1, cr_fail1 nP.toNat motPos rc rest a a1 hrun1', hS1, hg1, rfl, hJ1⟩
         | some xl =>
           obtain ⟨xs, concl⟩ := xl
@@ -550,8 +548,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
             | none =>
               have hr20 : r2.headD 0 = 0 := by rw [hr2]; rfl
               rw [crK2, if_pos hr20] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
+              obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
               exact ⟨none, a2, cr_fail2 nP.toNat motPos rc rest a a1 a2 xs concl hrun1' hrun2',
                 hS2, hg1.trans hg2, rfl, hJ2⟩
             | some i =>
@@ -579,8 +576,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
                   rw [co] at hcm
                   have hr30 : r3.headD 0 = 0 := by rw [hcm]; rfl
                   rw [crK3, if_pos hr30] at h
-                  simp only [Option.some.injEq, Prod.mk.injEq] at h
-                  obtain ⟨rfl, rfl⟩ := h
+                  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
                   exact ⟨none, a2, cr_fail3 nP.toNat motPos rc rest a a1 a2 xs concl i hrun1' hrun2' co,
                     hS2, hg1.trans hg2, rfl, hJ2⟩
                 | some cc =>
@@ -613,8 +609,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
                   | none =>
                     have hr40 : r4.headD 0 = 0 := hres4
                     rw [crK4, if_pos hr40] at h
-                    simp only [Option.some.injEq, Prod.mk.injEq] at h
-                    obtain ⟨rfl, rfl⟩ := h
+                    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
                     exact ⟨none, a4, cr_fail4 nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc hrun1' hrun2' co hrun4,
                       hS4, hg14, rfl, hJ4⟩
                   | some cs =>
@@ -623,8 +618,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
                     rw [crK4, if_neg hr40] at h
                     obtain ⟨⟨r5, m5⟩, hcw, h⟩ := of_K h rfl
                     rw [crK5_some] at h
-                    simp only [Option.some.injEq, Prod.mk.injEq] at h
-                    obtain ⟨rfl, rfl⟩ := h
+                    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
                     obtain ⟨hS5, hg5, hdn5, htop5⟩ := consW_stageN hcw hS4 hle4 hdn4
                     refine ⟨some (cc :: cs), a4, cr_ok nP.toNat motPos rc rest a a1 a2 a4 xs concl i cc cs
                       hrun1' hrun2' co hrun4, hS5, hg14.trans hg5, ?_, hO.1 _ _ (consW_afr hcw) hJ4⟩
@@ -856,8 +850,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
     intro m m' so sl r slots h hS hslots hext
     by_cases hsl : sl = 0
     · rw [rcW_nil n m so sl hsl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : sl.toNat = 0 := by rw [hsl]; rfl
       rw [hz] at hslots
       simp [decPL] at hslots
@@ -900,8 +893,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
         have hnz : rdW (m1.arr64 IW) (UInt64.ofNat sp) ≠ 0 := by
           rw [hspw]; simp [ClassSlot.isMinor]
         rw [rcK1_min n m1 (UInt64.ofNat sp) r2 hnz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨hS1, hg1, ptrs, ?_, ?_, hext1, ?_⟩
         · simpa using hdn1
         · simpa [ConRon.Arena.ClassRead.classes] using hdp1
@@ -926,8 +918,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
         rw [hrk1] at h
         obtain ⟨⟨r3, m2⟩, hcw, h⟩ := of_K h rfl
         rw [rcK2_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS2, hg2, hdn2, ht2⟩ := consW_stageN hcw hS1 htop1 hdn1
         have hg12 := hg1.trans hg2
         have hkb : (UInt64.ofNat kp).toNat = kp := UInt64.toNat_ofNat_of_lt' (by

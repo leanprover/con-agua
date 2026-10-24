@@ -391,8 +391,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   rw [hnF8] at h
   obtain ⟨⟨r9, m9⟩, c9, h⟩ := of_K h rfl
   rw [cxoK9_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s9, hs9, -, hw9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
     (rec6_specW p P.ha P.r6 (n + 1) _ _ _ _ _ _ _) c9
   simp only at hs9 hw9; subst hs9

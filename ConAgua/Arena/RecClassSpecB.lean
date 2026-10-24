@@ -944,8 +944,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
     rw [ihK1_some, if_pos h0] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a1, ?_, hS1, hg1, rfl, hA1⟩
     simp only [ConRon.Arena.ClassGen.ihParts, StateT.run_bind]
     rw [hrun1]
@@ -1023,8 +1022,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       · left; obtain ⟨-, -, hsz2, -, -⟩ := hS2.2; omega
     by_cases hlt : UInt64.ofNat N < r2.tail.headD 0
     · rw [if_pos hlt] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hNl : N < (r2.tail.headD 0).toNat := by
         have := UInt64.lt_iff_toNat_lt.mp hlt
         rwa [hTW] at this
@@ -1044,8 +1042,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       · show (r2.headD 0 + UInt64.ofNat N).toNat + (r2.tail.headD 0 - UInt64.ofNat N).toNat ≤ iwTop m2
         rw [hsum, hsub]; omega
     · rw [if_neg hlt] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hNl : (r2.tail.headD 0).toNat ≤ N := by
         have : ¬ (UInt64.ofNat N).toNat < (r2.tail.headD 0).toNat := fun hh =>
           hlt (UInt64.lt_iff_toNat_lt.mpr hh)

@@ -338,8 +338,7 @@ theorem memberNamesW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
   rename_i q m1 hal
   split at h; · cases h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_afr hal).trans (nameCopyW_afr _ _ _ _ _ _ hc)
 
 theorem envFindW_afrR {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :

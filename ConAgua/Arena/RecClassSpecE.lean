@@ -299,8 +299,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   by_cases hc : ws.contains i = true
   · rw [if_pos hc] at hcb
     rw [npcK2_hit (h := hcb)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hnp := (decBS_some hb.dec).2.2.1
     have hrd := iwN_rdW_at (w := p) (k := 4) hnp hS.2.2.2.1
     have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.2.1; have := hS.2.2.2.1; omega
@@ -323,8 +322,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have hnc : ¬ bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
   by_cases h0 : r3.headD 0 = 0
   · rw [npcK3_none (h := h0)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hfn : fe.find? (decI i) = none := by rw [hfind, decFound, if_pos h0]
     rw [npc_none hnc hfn]
     exact ⟨hS1, hg1, rfl, by decide⟩
@@ -335,8 +333,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
   rcases hcase with ⟨rfl, cv, caps, rfl, hnp⟩ | ⟨hk3, hni⟩
   · rw [npcK3_ind (h := h0) (h3 := by rw [hkr.1]; rfl)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hr17 := erec_nat (w := r3.tail.headD 0) (c := 17) hnp (by decide)
     rw [npc_ind hnc hfci]
     refine ⟨hS1, hg1, ?_, hr17.2⟩
@@ -347,8 +344,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this
       exact hk3 this
     rw [npcK3_other (h := h0) (h3 := hne)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [npc_other hnc hfci hni]
     exact ⟨hS1, hg1, rfl, by decide⟩
 

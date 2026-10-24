@@ -478,8 +478,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     (by rw [hcvo1, hcvl1, hjv]; exact hcvsT.grow hg03) (by simp at hrcs; omega) (by omega)
   obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
   rw [ferK5_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS5, hg5, hsp5⟩ := SPL.cons h5 hS4 hsp4 (hentS.grow hg4)
   have htw : ConRon.Arena.classFeR.go P M.toNat ((cv :: cvs').zip (rc0 :: rcs')) fe [] =
       ((ConRon.Arena.classFeR.go P (M.toNat + 1) (cvs'.zip rcs')
@@ -514,8 +513,7 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   rw [cfaW_eq] at hm
   obtain ⟨⟨r1, m1⟩, h1, hm⟩ := of_K hm rfl
   rw [ferK5'_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   have hP' : decBS (truncM s₀.mem) pp.toNat = some P := hP
   simp only [decBS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hP'
   obtain ⟨_m1, _hm1, rs, hrs, _x2, _h2, _x3, _h3, _x4, _h4, _x5, _h5, _x6, _h6, hPe⟩ := hP'

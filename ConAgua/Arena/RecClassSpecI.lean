@@ -188,8 +188,7 @@ theorem rec2SimInstW (n : Nat) (hS : StageR dn vis fe m a) {ao al e : Word} (he 
     | zero => simp [instW] at h
     | succ n =>
     rw [instW_nil n m ao al e hal] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : args = [] := by
       have h0 : al.toNat = 0 := by rw [hal]; rfl
       rw [h0] at hd0; simpa [decHL, hslice?] using hd0.symm

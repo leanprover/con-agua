@@ -62,8 +62,7 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
   rw [cr1W_ok (h := hb)] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   rw [cr1K_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hApd henvR (by omega) h1 hC hgen
     (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP hie
   have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =

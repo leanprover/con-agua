@@ -172,8 +172,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
     intro m o l i x y ihs h hd hb hsz
     by_cases hl : l = 0
     · rw [cfhW_nil n m o l i hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : l.toNat = 0 := by rw [hl]; rfl
       rw [hz] at hd
       simp [decPL] at hd
@@ -210,8 +209,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
         rw [hf]
         by_cases hc : c0 = 0
         · rw [cfhK_first m i _ c0 k0 hmatch hc] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hnil : ys.filter (fun h => h.1 == i.toNat) = [] := by
             apply List.eq_nil_of_length_eq_zero; rw [← g1, hc]; rfl
           rw [hnil]
@@ -220,8 +218,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
           subst hh'
           exact ⟨hw2, hb64⟩
         · rw [cfhK_more m i _ c0 k0 hmatch hc] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hpos : 0 < c0.toNat := by
             rcases Nat.eq_zero_or_pos c0.toNat with h0 | h0
             · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hc
@@ -235,8 +232,7 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
             simp only [List.length_cons] at this
             omega
       · rw [cfhK_miss m i _ c0 k0 hmatch] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hai : ¬ hh.1 = i.toNat := by
           intro e; apply hmatch
           rw [hw1, e]; exact UInt64.ofNat_toNat

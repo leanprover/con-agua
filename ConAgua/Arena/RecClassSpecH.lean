@@ -264,8 +264,7 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   intro m m' j r h hS hsp hj
   by_cases he : sl ≤ j
   · rw [motPosW_end (h := he)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : sl.toNat - j.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp he; omega
     refine ⟨hS, IWGrow.refl m, ?_, by simp⟩
     simp [this, decNL]
@@ -292,8 +291,7 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have hsplit : sl.toNat - j.toNat = (sl.toNat - (j.toNat + 1)) + 1 := by omega
   by_cases hm : (slots[j.toNat]'hlen).isMinor = true
   · rw [mpK1_min (h := by rw [hrd1, hrq.1]; simp [hm])] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hf : motF slots j.toNat = false := by
       simp only [motF, List.getElem?_eq_getElem hlen]
       revert hm; generalize slots[j.toNat] = x; cases x <;> simp [ClassSlot.isMinor]
@@ -303,8 +301,7 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   · rw [mpK1_mot (h := by rw [hrd1, hrq.1]; simp at hm; simp [hm])] at h
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     rw [mpK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hd2, ht2⟩ := consW_stageN h2 hS1 ht1 hd1
     have hf : motF slots j.toNat = true := by
       simp only [motF, List.getElem?_eq_getElem hlen]

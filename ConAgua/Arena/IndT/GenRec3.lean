@@ -248,8 +248,7 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       { a4 with caches := Caches.empty } :=
     ⟨hok13.state, hok13.caches, hok13.pins,
       ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? hok13.ienv (feq_find hpop)⟩
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨(prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR, out), { a4 with caches := Caches.empty }, ?_,
     hC.of_checkE (by simpa using hS6) hA6 hok13' hext12, hg1.trans (hg23.trans (hg4.trans (hg5.trans hg6))),
     by have := hd4.grow (hg5.trans hg6); simp only [decRRS] at this ⊢; simpa using this, hA6, hP6,

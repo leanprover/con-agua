@@ -160,8 +160,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       simp
     by_cases hlt : rdW (m.arr64 IW) (mp + 8) - 1 < l
     · rw [cftW_mem (h := hk0) (h2 := hlt)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       rw [hkw] at hlt ⊢
       have hlt' : k - 1 < l.toNat := by
         have := UInt64.lt_iff_toNat_lt.mp hlt
@@ -189,8 +188,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       by_cases hbig : 4294967296 ≤ e
       · rw [if_pos hbig] at h; cases h
       rw [if_neg hbig] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨a1, hrun, hS1, hg1⟩ := internBVar_stage hS 0 hb
       have hge : ¬ k - 1 < cvTas.length := by
         rw [hkw] at hlt; intro h'; apply hlt
@@ -266,8 +264,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hwu, et] at h
     obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
     rw [cftK4_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨x, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := hI N CWF (r3.headD 0) w2 wu wt cv.levelParams m3 m4 a r4
       hwuH hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
     rw [CWF_eq, hwuE, ← hwtE] at hrun4

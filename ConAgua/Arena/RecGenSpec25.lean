@@ -97,8 +97,7 @@ theorem callW_keepW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : M
   | ok q =>
     obtain ⟨r1, s1⟩ := q
     rw [hr] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact M.of_run (P := fun s => KeepW m s.mem) (Q := fun _ s => KeepW m s.mem) (KeepW.refl m) hr
       (invoke_keepW p (exec p n) (exec_keepW p n) f m vs)
 

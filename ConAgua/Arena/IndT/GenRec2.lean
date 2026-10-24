@@ -231,8 +231,7 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hcv2 := ConRon.Bridge.Inductives.dExt_denoteCV.list c19.ext _ _ hcvP
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [grpC4_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hPP
   obtain ⟨s3, hs3, -, hok3, ⟨hC3, hg3, hd3⟩, hA3⟩ := triple_of_callW (s₀ := ⟨grpPMem s2.mem g o l, Locals.init []⟩)
     (classRecTysOk_refinesC hkp hApd hCrk henv P.rts n hn _ a2 g (UInt64.ofNat bs.k) _ _ cRo cRl _ _ _ bs.recs cvRis

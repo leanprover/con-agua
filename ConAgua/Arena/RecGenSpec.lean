@@ -503,8 +503,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     have e1 : (decI leaf : EIdx) = decE leaf := rfl
     by_cases hf : w >>> 28 ≠ 3
     · rw [if_pos hf] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
       have hct := ctag_iff w hd1 3 (by decide)
       have : ¬ (decE w).tag = ETag.const := fun hc => hf (by simpa using hct.mp hc)
@@ -520,8 +519,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       by_cases hev : eViewW m1 w = []
       · rw [if_pos hev] at h; simp at h
       rw [if_neg hev] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hev
       have hhead := eViewW_head3 m1 w hev hf3
       have hdec : ∃ nn us : _, v = ENodeView.const nn us ∧ (eViewW m1 w).tail.headD 0 = (eViewW m1 w).getD 1 0 ∧

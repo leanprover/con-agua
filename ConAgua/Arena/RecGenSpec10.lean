@@ -50,8 +50,7 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   rw [tmdK2_some] at h
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
   rw [tmdK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨-, -, hsz, -, hc⟩ := hS1.2
   simp only [mkTMW] at hmk
   cases hal : allocW m1 13 with
@@ -59,8 +58,7 @@ theorem rec3TmdW_decB {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   | some qm =>
   obtain ⟨q, m1a⟩ := qm
   rw [hal] at hmk
-  simp only [Option.some.injEq, Prod.mk.injEq] at hmk
-  obtain ⟨rfl, rfl⟩ := hmk
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmk)
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
   subst hq
   have hroom' : (rdW (m1.arr64 CTL) 200).toNat + 13 ≤ (m1.arr64 IW).size := by simpa using hroom

@@ -471,8 +471,7 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
   rw [piBK2_some] at hp
   obtain ⟨⟨r2, m2⟩, hcons, hp⟩ := of_K hp rfl
   rw [piBK3_some] at hp
-  simp only [Option.some.injEq, Prod.mk.injEq] at hp
-  obtain ⟨-, rfl⟩ := hp
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hp)
   obtain ⟨-, hty, hb⟩ := view_forall m a hR h hh hvok hg6
   have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
   have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
@@ -519,8 +518,7 @@ theorem piBW_afrR : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), 
     rw [piBK2_some] at hh
     obtain ⟨⟨r2, m2⟩, h2, hh⟩ := of_K hh rfl
     rw [piBK3_some] at hh
-    simp only [Option.some.injEq, Prod.mk.injEq] at hh
-    obtain ⟨-, rfl⟩ := hh
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
     exact (piBW_afrR n _ _ _ _ _ h1).trans (consW_afr h2)
 
 theorem ih1W_afr {n : Nat} {m m' : Mem} {nP mo ml d x : Word} {r : List Word}

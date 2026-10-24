@@ -70,8 +70,7 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := fun x hx h2 => by
     obtain ⟨⟨r3, m3⟩, h3, h2⟩ := of_K h2 rfl
     rw [mpsK_some] at h2
-    simp only [Option.some.injEq, Prod.mk.injEq] at h2
-    obtain ⟨rfl, rfl⟩ := h2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h2)
     obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
     have hroom := snocW_room h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
     refine ⟨stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hroom), hg, ?_, ?_⟩

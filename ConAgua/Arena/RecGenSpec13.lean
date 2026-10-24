@@ -396,8 +396,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   | some p4 =>
   obtain ⟨nkw, m3⟩ := p4
   rw [hr4] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS3, hg3, hk3, ht3, hget3⟩ := posRecW_stage hr4 hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hqb : q.toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 := by have := hg12.1; omega
@@ -475,8 +474,7 @@ theorem ckc2W_ok (n : Nat) :
     by_cases hl : l = 0
     · subst hl
       rw [ckc2W_nil n m nP o 0 rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : xs = [] := by simpa [decHL, hslice?] using hd.symm
       subst this
       exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
@@ -491,8 +489,7 @@ theorem ckc2W_ok (n : Nat) :
       obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) w rb hw32 h2
       by_cases hz : rb ≠ 0
       · rw [ckc2K1_open n m1 nP o l w rb hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hk : rb.toNat ≠ 0 := fun e => hz (UInt64.toNat_inj.mp (by simpa using e))
         refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
         simp only [List.allM_cons, StateT.run_bind, keyClosedTest]
@@ -521,8 +518,7 @@ theorem ckc2W_ok (n : Nat) :
           rfl
         by_cases hn' : nP < rf.headD 0
         · rw [ckc2K2_open n m2 nP o l rf hn'] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           have hn'' := hlt.mp hn'
           refine ⟨false, a2, ?_, hS2, hg12, by simp [decW0B]⟩
           simp only [List.allM_cons, StateT.run_bind]
@@ -533,8 +529,7 @@ theorem ckc2W_ok (n : Nat) :
           have hn'' : kf ≤ nP.toNat := by have := mt hlt.mpr hn'; omega
           obtain ⟨⟨r4, m3⟩, h4, h⟩ := of_K h rfl
           rw [ckcK3_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 h4 hS2
             (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
           refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
@@ -565,8 +560,7 @@ theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : L
   by_cases h0 : r2.headD 0 = 0
   · rw [kofK2_fail (h := h0)] at h; cases h
   rw [kofK2_ok (h := h0)] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hbt : b = true := by rw [← hb2]; exact bne_iff_ne.mpr h0
   subst hbt
   refine ⟨ckOfNk nk, a2, ?_, ?_, by simpa using (by have := hg2.1; omega : (r1.headD 0).toNat + 4 ≤ iwTop m2), ?_,
