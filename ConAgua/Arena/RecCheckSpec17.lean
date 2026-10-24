@@ -159,43 +159,11 @@ def rmMem (m1 : Mem) (q old flo fll fpo fpl : Word) : Mem :=
   let m7 := m6.set64 EREC (q + 9) (rdW (m6.arr64 EREC) (old + 9))
   m7.set64 EREC (q + 10) (rdW (m7.arr64 EREC) (old + 10))
 
-def tsrmK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rc, m) => some ([rc.headD 0, rc.tail.headD 0], m)
-
-def tsrmK2 (n : Nat) (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rr, m) => tsrmK3 (consW n m q (rr.headD 0) (rr.tail.headD 0))
-
 /-- **The model of `tgt_rule_nested`.** -/
 def trnW (m : Mem) (old flo fll fpo fpl : Word) : Option (List Word × Mem) :=
   match erAllocW m 11 with
   | none => none
   | some (q, m1) => some ([q], rmMem m1 q old flo fll fpo fpl)
-
-def tsrmK1 (n : Nat) (k : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rq, m1) => tsrmK2 n (rq.headD 0) (k m1)
-
-/-- **The model of `tgt_stored_rules_remap`** (exec fuel). -/
-def tsrmW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, ro, rl, flo, fll, fpo, fpl =>
-    if rl = 0 then some ([0, 0], m)
-    else tsrmK1 n (fun m1 => tsrmW n m1 (ro + 1) (rl - 1) flo fll fpo fpl) (trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl)
-
-section arms
-variable (n : Nat) (m m1 : Mem) (ro rl flo fll fpo fpl old q : Word) (rr rc rq : List Word)
-  (k : Mem → Option (List Word × Mem))
-theorem tsrmW_nil (h : rl = 0) : tsrmW (n + 1) m ro rl flo fll fpo fpl = some ([0, 0], m) := by simp [tsrmW, h]
-theorem tsrmW_cons (h : ¬ rl = 0) : tsrmW (n + 1) m ro rl flo fll fpo fpl =
-    tsrmK1 n (fun m1 => tsrmW n m1 (ro + 1) (rl - 1) flo fll fpo fpl) (trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl) := by
-  simp [tsrmW, h]
-theorem tsrmK1_some : tsrmK1 n k (some (rq, m1)) = tsrmK2 n (rq.headD 0) (k m1) := rfl
-theorem tsrmK2_some : tsrmK2 n q (some (rr, m)) = tsrmK3 (consW n m q (rr.headD 0) (rr.tail.headD 0)) := rfl
-theorem tsrmK3_some : tsrmK3 (some (rc, m)) = some ([rc.headD 0, rc.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] tsrmW_nil tsrmW_cons tsrmK1_some tsrmK2_some tsrmK3_some
 
 /-- The lookups of `tgt_stored_rules`. -/
 structure TsrLook (p : Prog) : Prop where
@@ -226,22 +194,10 @@ theorem trn_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (old flo fll f
         erecAlloc_specW p L.ea n] <;>
       finish [trnW, rmMem]
 
-theorem tsrm_spec (p : Prog) (L : TsrLook p) (n : Nat) :
-    ∀ (s₀ : St) (ro rl flo fll fpo fpl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tgt_stored_rules_remap" [ro, rl, flo, fll, fpo, fpl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tsrmW n s₀.mem ro rl flo fll fpo fpl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ro rl flo fll fpo fpl
-    rw [invoke_eq _ L.tsrm]; simp only [callFn, tgtStoredRulesRemap]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl flo fll fpo fpl
-    rw [invoke_eq _ L.tsrm]
-    simp only [callFn, tgtStoredRulesRemap]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, trn_spec p L n, ih,
-        slCons_specW p L.rc.rx.ha L.ic L.sc n] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5]
+l_model tsrm_spec (p : Prog) (hL : TsrLook p)
+  fns [hL.tsrm ↦ tsrmW]
+  specs [trn_spec p hL n, slCons_specW p hL.rc.rx.ha hL.ic hL.sc n]
+  grind [arena_grind] simp [getElem_rdW']
 
 /-! ## The rebuilt record under the stage relation -/
 
@@ -394,7 +350,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   | succ n ih =>
   intro m m' ro rl flo fll fpo fpl r rules lvls pins h hS hd hb hl hp
   by_cases h0 : rl = 0
-  · rw [tsrmW_nil (h := h0)] at h
+  · rw [tsrmW.arm1 (hc1 := h0)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     subst h0
     have : rules = [] := by have := decPL_length _ hd; simpa using this
@@ -407,25 +363,25 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   obtain ⟨pp, rl0, rest, rfl, hpp, hrl0, hrest⟩ := decPL_cons hd
   have hrd := iwN_rdW hpp (by omega)
   rw [UInt64.ofNat_toNat] at hrd
-  rw [tsrmW_cons (h := h0)] at h
+  rw [tsrmW.arm2 (hc1 := h0)] at h
   cases ha : erAllocW m 11 with
-  | none => rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha]] at h; cases h
+  | none => rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha], tsrmW.k_tgt_rule_nested.none] at h; cases h
   | some x =>
   obtain ⟨q, m1⟩ := x
   rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl)
-    by simp [trnW, ha], tsrmK1_some] at h
+    by simp [trnW, ha], tsrmW.k_tgt_rule_nested.arm1] at h
   simp only [List.headD_cons] at h
   rw [hrd.1] at h
   have hold : rlDec m (UInt64.ofNat pp : Word).toNat = some rl0 := by
     rw [UInt64.toNat_ofNat_of_lt' hrd.2]; exact hrl0
   obtain ⟨hS1, hg1, hf1, hq1⟩ := rmRec_stage ha hS hold hl hp
   generalize hM : rmMem m1 q (UInt64.ofNat pp) flo fll fpo fpl = M at h hS1 hg1 hf1 hq1
-  rcases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with _ | ⟨rr, m2⟩ <;> simp only [h2, tsrmK2, reduceCtorEq] at h
+  rcases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with _ | ⟨rr, m2⟩ <;> simp only [h2, tsrmW.k_tgt_stored_rules_remap, reduceCtorEq] at h
   have hext := IWGrow.erecPExtR hg1
   obtain ⟨hd2, hb2, hS2, hg2, hf2⟩ := ih h2 hS1
     (decPL_rl_grow hg1 (by rw [eo, el]; omega) (by rw [eo, el, hl']; simpa using hrest))
     (by rw [eo, el]; have := hg1.1; omega) (hext.hslice? hl) (hext.hslice? hp)
-  rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmK3, reduceCtorEq] at h
+  rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmW.k_sl_cons, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hd3, ht3, hS3, hg3, hf3⟩ := consW_rl h3 hS2 hb2 hd2
     ((IWGrow.erecPExtR hg2).decRule hq1)
@@ -471,15 +427,15 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [tsrmW] at h
   | n + 1, m, m', ro, rl, flo, fll, fpo, fpl, r, h => by
     by_cases h0 : rl = 0
-    · rw [tsrmW_nil (h := h0)] at h
+    · rw [tsrmW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    rw [tsrmW_cons (h := h0)] at h
+    rw [tsrmW.arm2 (hc1 := h0)] at h
     cases ha : erAllocW m 11 with
-    | none => rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha]] at h; cases h
+    | none => rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl = none by simp [trnW, ha], tsrmW.k_tgt_rule_nested.none] at h; cases h
     | some x =>
     obtain ⟨q, m1⟩ := x
     rw [show trnW m (rdW (m.arr64 IW) ro) flo fll fpo fpl =
-      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW, ha], tsrmK1_some] at h
+      some ([q], rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) by simp [trnW, ha], tsrmW.k_tgt_rule_nested.arm1] at h
     have f1 : AFr m1 (rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl) := by
       simp only [rmMem]
       exact AFr.of_frame (((((((((((MemFrame.set64 _ EREC (by decide) _ _).trans
@@ -490,11 +446,11 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
         (MemFrame.set64 _ EREC (by decide) _ _)).trans (MemFrame.set64 _ EREC (by decide) _ _))
     generalize rmMem m1 q (rdW (m.arr64 IW) ro) flo fll fpo fpl = M at h f1
     cases h2 : tsrmW n M (ro + 1) (rl - 1) flo fll fpo fpl with
-    | none => simp only [List.headD_cons, h2] at h; simp [tsrmK2] at h
+    | none => simp only [List.headD_cons, h2] at h; simp [tsrmW.k_tgt_stored_rules_remap] at h
     | some x =>
     obtain ⟨rr, m2⟩ := x
-    simp only [List.headD_cons, h2, tsrmK2_some] at h
-    rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmK3, reduceCtorEq] at h
+    simp only [List.headD_cons, h2, tsrmW.k_tgt_stored_rules_remap.arm1] at h
+    rcases h3 : consW n m2 q (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, tsrmW.k_sl_cons, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact (erAllocW_afr ha).trans (f1.trans ((tsrmW_afr n h2).trans (consW_afr h3)))
 
@@ -513,54 +469,6 @@ def rulesF : Nat → Mem → Word → Word → Word → Word → Word → Word �
   | 0, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, nP, cO, cL, rO, rL => rulesW n m vis nP cO cL rO rL
 
-def tsrK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-def tsrK4 (n : Nat) (ro rl : Word) (re : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rp, m) => tsrK5 (tsrmW n m ro rl (re.headD 0) (re.tail.headD 0) (rp.headD 0) (rp.tail.headD 0))
-
-def tsrK3 (n : Nat) (ro rl : Word) (rf : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (re, m) => tsrK4 n ro rl re (efF n m (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0))
-
-def tsrK2 (n : Nat) (ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rf, m) => tsrK3 n ro rl rf (efF n m (rf.tail.headD 0) (rf.tail.tail.headD 0))
-
-def tsrK1 (n : Nat) (rP M : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rs, m) =>
-    if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([rs.headD 0, rs.tail.headD 0], m)
-    else tsrK2 n (rs.headD 0) (rs.tail.headD 0) (arfW n m M rP)
-
-/-- **The model of `tgt_stored_rules`** (exec fuel). -/
-def tsrW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, _, rP, M, rhso, rhsl =>
-    tsrK1 n rP M (rulesF n m vis (rdW (m.arr64 IW) (M + 4)) (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7))
-      rhso rhsl)
-
-section arms
-variable (n : Nat) (m : Mem) (vis cv rP M rhso rhsl ro rl : Word) (r rs rf re rp : List Word)
-theorem tsrW_succ : tsrW (n + 1) m vis cv rP M rhso rhsl =
-    tsrK1 n rP M (rulesF n m vis (rdW (m.arr64 IW) (M + 4)) (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7))
-      rhso rhsl) := rfl
-theorem tsrK1_mem (h : rdW (m.arr64 IW) (M + 8) ≠ 0) : tsrK1 n rP M (some (rs, m)) =
-    some ([rs.headD 0, rs.tail.headD 0], m) := by simp only [tsrK1]; rw [if_pos h]
-theorem tsrK1_out (h : ¬ rdW (m.arr64 IW) (M + 8) ≠ 0) : tsrK1 n rP M (some (rs, m)) =
-    tsrK2 n (rs.headD 0) (rs.tail.headD 0) (arfW n m M rP) := by simp only [tsrK1]; rw [if_neg h]
-theorem tsrK2_some : tsrK2 n ro rl (some (rf, m)) = tsrK3 n ro rl rf (efF n m (rf.tail.headD 0) (rf.tail.tail.headD 0)) :=
-  rfl
-theorem tsrK3_some : tsrK3 n ro rl rf (some (re, m)) =
-    tsrK4 n ro rl re (efF n m (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0)) := rfl
-theorem tsrK4_some : tsrK4 n ro rl re (some (rp, m)) =
-    tsrK5 (tsrmW n m ro rl (re.headD 0) (re.tail.headD 0) (rp.headD 0) (rp.tail.headD 0)) := rfl
-theorem tsrK5_some : tsrK5 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-end arms
-attribute [ind_grind] tsrW_succ tsrK1_mem tsrK1_out tsrK2_some tsrK3_some tsrK4_some tsrK5_some
-
 theorem rulesF_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules" [vis, recName, nP, cO, cL, rO, rL]
     ⦃fun r s' => LocEq s' s₀ ∧ rulesF n s₀.mem vis nP cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
@@ -575,18 +483,10 @@ theorem efF_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (o l : Word) :
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   | succ n => exact efW_spec p L.ea L.efg L.ef n s₀ o l
 
-theorem tsr_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (vis cv rP M rhso rhsl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "tgt_stored_rules" [vis, cv, rP, M, rhso, rhsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tsrW n s₀.mem vis cv rP M rhso rhsl = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
-    rw [invoke_eq _ L.tsr]
-    simp only [callFn, tgtStoredRules]
-    sym (gen := 80) (instances := 20000) only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, rulesF_spec p L n,
-        auxRuleFire_spec p L.arf n, efF_spec p L n, tsrm_spec p L n] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5]
+l_model tsr_spec (p : Prog) (hL : TsrLook p)
+  fns [hL.tsr ↦ tsrW]
+  specs [rulesF_spec p hL n, auxRuleFire_spec p hL.arf n, efF_spec p hL n, tsrm_spec p hL n]
+  grind [arena_grind] simp [getElem_rdW']
 
 /-- A pointer-slice field `(off, len)` of a record decoded in the cut pools, at its word addresses. -/
 theorem truncPl {α : Type} {f : Mem → Nat → Option α} {m : Mem} {w : Word} {i o l : Nat} {xs : List α}
@@ -615,7 +515,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
       AbsOK m' := by
   obtain _ | n := n
   · simp [tsrW] at h
-  rw [tsrW_succ] at h
+  rw [tsrW.arm1] at h
   have hsz := hS.2.2.2.1
   have hM0 : decTM (truncM m) M.toNat = some TM := hM
   -- the constructors' slice, the parameter count, the member word
@@ -635,11 +535,11 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain ⟨e8, t8⟩ := rec2RdN (w := M) (k := 8) hk8m hsz
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl] at e8
   cases n with
-  | zero => simp [rulesF, tsrK1] at h
+  | zero => simp [rulesF, tsrW.k_sum_rules] at h
   | succ k =>
   cases h1 : rulesW k m vis (rdW (m.arr64 IW) (M + 4)) (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7))
       rhso rhsl with
-  | none => simp only [rulesF] at h; rw [h1] at h; simp [tsrK1] at h
+  | none => simp only [rulesF] at h; rw [h1] at h; simp [tsrW.k_sum_rules] at h
   | some x =>
   obtain ⟨rs, m1⟩ := x
   simp only [rulesF] at h; rw [h1] at h
@@ -650,18 +550,18 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   have e8' : rdW (m1.arr64 IW) (M + 8) = UInt64.ofNat k8 := by
     rw [rdW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega), e8]
   by_cases hmem : rdW (m1.arr64 IW) (M + 8) ≠ 0
-  · rw [tsrK1_mem (h := hmem)] at h
+  · rw [tsrW.k_sum_rules.arm1 (hc1 := hmem)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     have hk0 : k8 ≠ 0 := by intro e; apply hmem; rw [e8', e]; rfl
     refine ⟨rules, a1, ?_, by simpa using hd1, by simpa using hb1, hS1, hg1, hA1⟩
     simp only [ConRon.Arena.tgtStoredRules, StateT.run_bind, eCs, eNP, run1, except_ok_bind, eMem, decON, hk0,
       if_false]
     rfl
-  rw [tsrK1_out (h := hmem)] at h
+  rw [tsrW.k_sum_rules.arm2 (hc1 := Decidable.of_not_not hmem)] at h
   have hk0 : k8 = 0 := by
     have : rdW (m1.arr64 IW) (M + 8) = 0 := by simpa using hmem
     rw [e8'] at this; have := congrArg UInt64.toNat this; rwa [t8] at this
-  rcases h2 : arfW (k + 1) m1 M rP with _ | ⟨rf, m2⟩ <;> simp only [h2, tsrK2, reduceCtorEq] at h
+  rcases h2 : arfW (k + 1) m1 M rP with _ | ⟨rf, m2⟩ <;> simp only [h2, tsrW.k_aux_rule_fire, reduceCtorEq] at h
   obtain ⟨f, a2, run2, ⟨hS2, hg2, hdf⟩, hA2⟩ := arfW_sim dn vis fe (k + 1) m1 a1 M rP TM hS1
     (hM.grow (decTM_mono _) hg1) (rcPoolSmall hS1) hA1 (rf, m2) h2
   cases f with
@@ -670,13 +570,13 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain ⟨-, ⟨hdl, hbl⟩, ⟨hdp, hbp⟩⟩ := hdf
   simp only [getD_one, getD_two, getD_three, getD_four, show (1 + 1 : Nat) = 2 from rfl,
     show (3 + 1 : Nat) = 4 from rfl] at hdl hbl hdp hbp
-  rcases h3 : efF (k + 1) m2 (rf.tail.headD 0) (rf.tail.tail.headD 0) with _ | ⟨re, m3⟩ <;> simp only [h3, tsrK3, reduceCtorEq] at h
+  rcases h3 : efF (k + 1) m2 (rf.tail.headD 0) (rf.tail.tail.headD 0) with _ | ⟨re, m3⟩ <;> simp only [h3, tsrW.k_er_from_iw, reduceCtorEq] at h
   obtain ⟨hS3, hg3, hre1, hre0, hsl3, -⟩ := efW_stage k h3 hS2 hdl hbl
-  rcases h4 : efF (k + 1) m3 (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0) with _ | ⟨rp, m4⟩ <;> simp only [h4, tsrK4, reduceCtorEq] at h
+  rcases h4 : efF (k + 1) m3 (rf.tail.tail.tail.headD 0) (rf.tail.tail.tail.tail.headD 0) with _ | ⟨rp, m4⟩ <;> simp only [h4, tsrW.k_er_from_iw_2, reduceCtorEq] at h
   obtain ⟨hS4, hg4, hrp1, hrp0, hsl4, -⟩ := efW_stage k h4 hS3
     (by rw [decHL_grow hg3 hbp]; exact hdp) (by have := hg3.1; omega)
   rcases h5 : tsrmW (k + 1) m4 (rs.headD 0) (rs.tail.headD 0) (re.headD 0) (re.tail.headD 0) (rp.headD 0)
-      (rp.tail.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, tsrK5, reduceCtorEq] at h
+      (rp.tail.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, tsrW.k_tgt_stored_rules_remap, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hg24 := (hg2.trans hg3).trans hg4
   rw [← hre1] at hsl3; rw [← hrp1] at hsl4
