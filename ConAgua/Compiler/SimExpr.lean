@@ -812,12 +812,7 @@ theorem evalC_run (σ : St) (c : Cond) : (evalC c).run σ = (evalCP σ c).map (�
     simp only [evalC, evalCP, StateT.run_bind, evalE_run]
     cases evalP σ a <;> simp [Except.map, bind, Except.bind]
     · cases evalP σ b <;> rfl
-  | and p q ihp ihq =>
-    simp only [evalC, evalCP, StateT.run_bind, ihp]
-    cases evalCP σ p with
-    | error => rfl
-    | ok b => cases b <;> simp [Except.map, bind, Except.bind, ihq] <;> rfl
-  | or p q ihp ihq =>
+  | and p q ihp ihq | or p q ihp ihq =>
     simp only [evalC, evalCP, StateT.run_bind, ihp]
     cases evalCP σ p with
     | error => rfl
