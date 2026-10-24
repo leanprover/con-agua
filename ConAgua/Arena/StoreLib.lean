@@ -870,23 +870,23 @@ theorem tierR_other (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m 
 
 /-- A tier stays represented when its arrays, count and base stay and its nodes' relations and
 hashes do (the pool growing under the `lit` table). -/
-theorem tierR_mono (hkf : KFrame S hs KP) (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
+theorem tierR_mono (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
     (hra : m'.arr64 S.ra = m.arr64 S.ra) (hsa : m'.arr64 S.sa = m.arr64 S.sa)
     (hc : cntW S m' t = cntW S m t) (hbase : baseW m' t = baseW m t)
     (hR : ∀ i a, R m t i a → R m' t i a)
-    (hh : ∀ i, hs m' t i = hs m t i) (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
+    (hh : ∀ i, hs m' t i = hs m t i) (hKP : ∀ i K, KP m t i K → KP m' t i K)
+    (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
   obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
   have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, knW, Mem.len64, hsa]
   have hn : nSl S m' t = nSl S m t := by simp only [nSl, knW, hsa]
   have hsl' : ∀ j, slotW S m' t j = slotW S m t j := fun j => by simp only [slotW, hsa, hbase, hk]
   have hsk' : ∀ j, slotK S m' t j = slotK S m t j := fun j => by simp only [slotK, hsa, hk]
-  have hfe : ∀ i f, f < S.w → fld S m' t i f = fld S m t i f := fun i f _ => by simp only [fld, hra]
   refine ⟨by rw [hc]; exact hc', hcap, by rw [hra]; exact hrs,
     fun i a h => hR i a (hrec i a h), hsome, hback, ?_, ?_, ?_⟩
   · intro j hj; rw [hsl']; exact hsl j (by rw [← hn]; exact hj)
   · intro j hj hne
     rw [hsl'] at hne ⊢; rw [hsk']
-    exact hkf m m' t _ (hfe _) (hh _) _ (hkp j (by rw [← hn]; exact hj) hne)
+    exact hKP _ _ (hkp j (by rw [← hn]; exact hj) hne)
   · intro i hi
     obtain ⟨d, h1, h2⟩ := hrun i hi
     exact ⟨d, by simp only [hsl', hn, homeS, hh]; exact h1,
@@ -929,8 +929,9 @@ theorem storeR_reset (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m
   have hfld : ∀ t i f, f < S.w → fld S m' t i f = fld S m t i f := fun t i f _ => by
     simp only [fld, hra]
   refine ⟨⟨by omega, by omega⟩, hfl, ?_, ?_, hG'⟩
-  · exact tierR_mono S R hs KP hkf m m' 0 tbP hra hsa hc0 (by simp [baseW])
-      (fun i a h => (hfr m m' 0 i hout (hfld 0 i)).1 a h) (fun i => (hfr m m' 0 i hout (hfld 0 i)).2) hT0
+  · exact tierR_mono S R hs KP m m' 0 tbP hra hsa hc0 (by simp [baseW])
+      (fun i a h => (hfr m m' 0 i hout (hfld 0 i)).1 a h) (fun i => (hfr m m' 0 i hout (hfld 0 i)).2)
+      (fun i K h => hkf m m' 0 i (hfld 0 i) (hfr m m' 0 i hout (hfld 0 i)).2 K h) hT0
   · have hn : nSl S m' 1 = nSl S m 1 := by simp only [nSl, knW, hsa]
     have hk : krW S.sa m' 1 = krW S.sa m 1 := by simp only [krW, koW, knW, Mem.len64, hsa]
     obtain ⟨hc, hcap, -, -, -, -, hsl, -, -⟩ := hT1

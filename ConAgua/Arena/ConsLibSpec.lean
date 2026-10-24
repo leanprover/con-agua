@@ -1009,14 +1009,19 @@ theorem kgrowIf_growK (C : ConsSch) (t : Word) (m₀ M : Mem) (c : Word) :
 /-- The key word a push stores, from its inputs `as` (`cpKey`): the key's hash recomputed (a
 fingerprint table without a stored hash), else the key word of the key and the stored hash. -/
 def kwP (C : ConsSch) (m : Mem) (as : List Word) : Word :=
-  if C.exact = false ∧ C.np = C.nk then C.qhM m (as.take C.nk)
-  else kwQ C (as.take C.nk) (as.getD C.nk 0)
+  if C.exact then kwQ C as 0
+  else if C.nk < C.np then as.getD C.nk 0
+  else C.qhM m (as.take C.nk)
 
 theorem kwP_mem (p : Prog) {C : ConsSch} (hO : ConsOK p C) (m m' : Mem) (as : List Word) :
     kwP C m as = kwP C m' as := by
+  have hn := hO.push_np
   unfold kwP; split
-  · rename_i h; exact hO.qpure h.1 h.2 _ _ _
   · rfl
+  · split
+    · rfl
+    · rename_i hx hlt
+      exact hO.qpure (by simpa using hx) (by omega) _ _ _
 
 theorem argsOf_take (base nk np : Nat) (h : nk ≤ np) (s : St) :
     (argsOf base np s).take nk = argsOf base nk s := by
@@ -1104,17 +1109,16 @@ theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : 
   | true =>
     simp only [↓reduceIte]
     vcgen [step, evalE_spec, setLoc]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, kwE_pval, kwP, hx, Bool.true_eq_false,
-      false_and, ↓reduceIte, argsOf_take 1 C.nk C.np hn.1, kwQ] at *)
-    all_goals grind [lang_grind, KeepLo]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, kwE_pval, kwP, hx, ↓reduceIte, kwQ] at *)
+    all_goals grind [lang_grind, KeepLo, argsOf, List.getD_eq_getElem?_getD]
   | false =>
     simp only [Bool.false_eq_true, ↓reduceIte]
     by_cases hlt : C.nk < C.np
     · simp only [hlt, ↓reduceIte]
       vcgen [step, evalE_spec, setLoc]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval] at *)
-      all_goals (simp only [kwP, kwQ, hx, Bool.false_eq_true, ↓reduceIte,
-        show ¬ C.np = C.nk by omega, and_false, argsOf_getD 1 C.nk C.np hlt] at *)
+      all_goals (simp only [kwP, kwQ, hx, Bool.false_eq_true, ↓reduceIte, hlt,
+        argsOf_getD 1 C.nk C.np hlt] at *)
       all_goals grind [lang_grind, KeepLo]
     · have he : C.np = C.nk := by omega
       simp only [hlt, ↓reduceIte]
@@ -1123,7 +1127,8 @@ theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : 
       vcgen [step, evalE_spec, setLoc, hI n]
       all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, argsOf_copyS _ _
         (show C.nk + 1 ≤ gO C + 14 by simp [gO]; omega)] at *)
-      all_goals (simp only [kwP, hx, he, true_and, ↓reduceIte, argsOf_take 1 C.nk C.nk (Nat.le_refl _)] at *)
+      all_goals (simp only [kwP, hx, he, Bool.false_eq_true, Nat.lt_irrefl, ↓reduceIte,
+        argsOf_take 1 C.nk C.nk (Nat.le_refl _)] at *)
       all_goals grind [lang_grind, KeepLo, copyS_loc, copyS_mem]
 
 theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : St)
@@ -1360,22 +1365,27 @@ theorem ciChk_pos {C : ConsSch} (h : C.exact = true ∧ C.nk = 2) :
 theorem ciChk_neg {C : ConsSch} (h : ¬ (C.exact = true ∧ C.nk = 2)) : ciChk C = [] := by
   simp only [ciChk, h, ↓reduceIte]
 
-theorem kwP_pushArgs (C : ConsSch) (hn : C.nk ≤ C.np ∧ C.np ≤ 1 + C.nk) (m : Mem)
-    (ks : List Word) (hks : ks.length = C.nk) :
+theorem kwP_pushArgs (C : ConsSch) (m : Mem) (ks : List Word) (hks : ks.length = C.nk) :
     kwP C m (pushArgs C ks (C.qhM m ks)) = kwQ C ks (C.qhM m ks) := by
   have ht : (pushArgs C ks (C.qhM m ks)).take C.nk = ks := by
     simp [pushArgs, ← hks]
-  unfold kwP
-  rw [ht]
-  split
-  · rename_i h; simp [kwQ, h.1]
-  · rename_i h
-    unfold kwQ
+  cases hx : C.exact
+  · simp only [kwP, kwQ, hx, Bool.false_eq_true, ↓reduceIte]
+    split
+    · rename_i hlt
+      simp [pushArgs, hlt, List.getD_eq_getElem?_getD, List.getElem?_append_right, hks]
+    · rw [ht]
+  · simp only [kwP, kwQ, hx, ↓reduceIte]
     split
     · rfl
-    · have hlt : C.nk < C.np := by
-        rcases Bool.eq_false_or_eq_true C.exact with e | e <;> simp_all <;> omega
-      simp [pushArgs, hlt, List.getD_eq_getElem?_getD, List.getElem?_append_right, hks]
+    · rename_i h1
+      simp only [pushArgs, List.getD_eq_getElem?_getD]
+      rw [List.getElem?_append_left (by omega)]
+    · rename_i h0 h1
+      have a0 : C.nk ≠ 0 := h0
+      have a1 : C.nk ≠ 1 := h1
+      simp only [pushArgs, List.getD_eq_getElem?_getD]
+      rw [List.getElem?_append_left (by omega), List.getElem?_append_left (by omega)]
 
 /-- **The L model of `intern_X(k)`**: the handle and the memory after, `none` where the L code
 aborts (an oversized exact key, a full table). The persistent probe unless skipped, the scratch probe if the scratch tier is open, the
