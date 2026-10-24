@@ -425,7 +425,6 @@ theorem ev_pop {r : Reg64} (hk : Host.prog[k]? = some (i64 (.pop (.reg (rr r))))
   simp only [hi, Effects.All]
   exact h
 
-end
 
 /-! ## The flags of `cmp` -/
 
@@ -532,16 +531,6 @@ def OpReads (s : MachineData) (o : Operand .W64) (v : Word) : Prop :=
   ∃ r, o = oR r ∧ s.regs.get64 r = v.toBitVec
 
 /-! ## Simple operands: memory and immediate operands, immediate shift counts -/
-
-section
-variable {k : Nat} {s : MachineData} {Q : MachineState → Prop}
-
-local macro "run_instr" : tactic =>
-  `(tactic| (refine ev_instr (by assumption) (by rintro ⟨⟩) ?_;
-             simp only [Instr.interp, Operation.interp, Operand.interp, RegOrMem.interp,
-               RelRegOrMem.interp, ConstExpr.interp, MachineData.load, MachineData.store,
-               MachineData.set, MachineData.setReg, Reg64s.set_low_W64, Reg64s.get_low_W64,
-               AddrExpr.zeroExtend_interp_base_disp, Width.bytes, Effects.All]))
 
 theorem ev_movRO {r : Reg64} {o : Operand .W64} {v : Word}
     (hk : Host.prog[k]? = some (i64 (.mov (.reg (rr r)) o))) (hr : OpReads s o v)
