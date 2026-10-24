@@ -131,9 +131,8 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   -- the prep
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   rw [gckK1_some] at h
-  cases n with
-  | zero => rw [callW_zero] at c1; cases c1
-  | succ n =>
+  rcases n with _ | n
+  · rw [callW_zero] at c1; cases c1
   obtain ⟨s1, rfl, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (grp_spec p P.prep n _ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) c1
   obtain ⟨G, cvGs, a1, hrunP, hC1, hg1, hG1, hns1, -, hcg1, hA1, hP1, c1', gP, cvGsP, hgP, hcvGs, hfrG, henvR⟩ :=
@@ -297,9 +296,8 @@ theorem genRecCheck_refinesC (P : GrcProg p) {fsR : List FnName}
         block) a₀).2 ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl
         rdv ms cvTas block) a₀); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (gck_spec p P.grc n s₀ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hQ⟩ := Sim.run (gckW_simC hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl

@@ -47,9 +47,8 @@ theorem crgW_okC (hApd : ApdF p) {visR : Word} {feR : IFEnv} {envR : ConLeche.En
       (constsResolveFFast feR (decI gen)).run a4 = .ok (true, a5) ∧
       StageC dn visR feR envR m' a5 ∧ IWGrow m m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V envR feR a a5 ∧ genP.hasFvar = false := by
-  cases N with
-  | zero => simp [crgW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [crgW] at h
   rw [crgW_eq] at h
   have hS := hC.stage
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
@@ -140,9 +139,8 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
     ∃ a', (ConRon.Arena.classRuleOk .verified visT.toNat feR cv n.toNat (decI gen)).run a =
       .ok (decI gen, a') ∧ StageC dn visR feR envR m' a' ∧ IWGrow m m' ∧ r = [gen] ∧
       AbsOK m' ∧ ConRon.Bridge.CoreStep V envR feR a a' := by
-  cases N with
-  | zero => simp [cruleW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [cruleW] at h
   rw [cruleW_eq] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   rw [cruK1_some] at h

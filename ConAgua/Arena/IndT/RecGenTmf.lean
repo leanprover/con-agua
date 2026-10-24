@@ -66,9 +66,8 @@ variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
 theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
     (h : callW p n "target_major_of_member" [pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, I, us, t] m =
       some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (tmm_spec p hP.mem k _ pp cao cal pfo pfl fvo fvl ao al I us t) h
   unfold tmmW at hW
@@ -103,9 +102,8 @@ theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Wor
 
 theorem noC_afr (hN : NoProg p) {no nl lo hi e : Word}
     (h : callW p n "nest_occ" [no, nl, lo, hi, e] m = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (nestOcc_spec p hN.hv hN.hc hN.hf hN.hput hN.hgo hN.hnode hN.hcl hN.hp k _ no nl lo hi e) h
   exact noConstWf_afr (n := k + 1) hW
@@ -276,16 +274,13 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     (Q := fun r x m' a' => NcOut m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' ∧
       StageC dn vis fe env m' a' ∧ AbsOK m' ∧ PStep a a') ?_ ?_
   · intro r2 m2 e2
-    cases n with
-    | zero => rw [callW_zero] at e2; cases e2
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e2; cases e2
     obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tco_spec p hP.nt hP.tco k _ vis I) e2
-    cases k with
-    | zero => simp [ntWf, tcoPK] at hW2
-    | succ k' =>
-    cases hnt : ntW k' m vis I with
-    | none => rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoPK] at hW2
-    | some y =>
+    rcases k with _ | k'
+    · simp [ntWf, tcoPK] at hW2
+    rcases hnt : ntW k' m vis I with _ | y
+    · rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoPK] at hW2
     obtain ⟨r, m'⟩ := y
     rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
     obtain ⟨rfl, hm'⟩ := Prod.mk.inj (Option.some.inj hW2)
@@ -383,9 +378,8 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
       IWGrow m4 m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
   · intro r5 m5 e5
-    cases n with
-    | zero => rw [callW_zero] at e5; cases e5
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e5; cases e5
     obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
       (tmt_spec p hP.tmt.tail k _ vis pp pfo pfl I us ao _ _ _) e5
     have hcsd := csAt_decB hcsat hcb
@@ -472,9 +466,8 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
       (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow s4.mem m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
     · intro r6 m6 e6
-      cases n with
-      | zero => rw [callW_zero] at e6; cases e6
-      | succ k =>
+      rcases n with _ | k
+      · rw [callW_zero] at e6; cases e6
       obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
         (tmm_spec p hP.tmm.mem k _ pp cao cal pfo pfl fvo fvl ao al x y (UInt64.ofNat i)) e6
       have := tmmW_sim hP.tmm k (t := UInt64.ofNat i) (bs := bs) (css := css) hS4 (hq.grow (decBS_mono _) hg4)
@@ -494,9 +487,8 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
       (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow s4.mem m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
     · intro r6 m6 e6
-      cases n with
-      | zero => rw [callW_zero] at e6; cases e6
-      | succ k =>
+      rcases n with _ | k
+      · rw [callW_zero] at e6; cases e6
       obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
         (tmo_spec p hP.tmo.out k _ vis pp pfo pfl x y ao al _ _) e6
       exact tmoW_simC hP.tmo hIlpf hcore hLC k hS4 (hq.grow (decBS_mono _) hg4) (by have := hg4.1; omega) hsl hwlt
@@ -580,9 +572,8 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
     (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
       IWGrow m2 m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
   · intro r6 m6 e6
-    cases n with
-    | zero => rw [callW_zero] at e6; cases e6
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e6; cases e6
     obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmc_spec p hP.tmc k _ vis pp cao cal pfo pfl fvo fvl _ _ _ _) e6
     exact tmcW_simC hP hIlpf hcore hLC k hS2 (hq.grow (decBS_mono _) hg12)

@@ -63,9 +63,8 @@ theorem classesNfs_refinesLpC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem ∧
       (KeepW s₀.mem s'.mem → ClassesLp s'.mem (r.headD 0) (r.tail.headD 0)); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (cnfs_spec p P.cns n s₀ vis q fto ftl tblo tbll mo ml) ?_
   rintro r s' ⟨hl, hm⟩
   rw [cnfsW_eq] at hm

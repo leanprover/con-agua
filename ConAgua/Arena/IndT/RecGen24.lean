@@ -28,9 +28,8 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem leafAtW_afr {m m' : Mem} {mm leaf : Word} {r : List Word} (h : leafAtW m mm leaf = some (r, m')) :
     AFr m m' := by
   simp only [leafAtW] at h
-  cases h1 : gafF m [CWF, leaf] with
-  | none => rw [h1] at h; cases h
-  | some x =>
+  rcases h1 : gafF m [CWF, leaf] with _ | x
+  · rw [h1] at h; cases h
   obtain ⟨r1, m1⟩ := x
   simp only [h1] at h
   refine (gafF_afr h1).trans ?_
@@ -188,11 +187,9 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   have hC3 := hC2.of_pstep hS3 hA3 q3
   -- `class_leaf_at`
   obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
-  cases k with
-  | zero =>
-    obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩) (invoke_exec_zero p _ _ _) c4
+  rcases k with _ | k'
+  · obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩) (invoke_exec_zero p _ _ _) c4
     exact hf.elim
-  | succ k' =>
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (classLeafAt_refines p P.cla P.hv P.ad k' _ a3 dn vis fe (r3.headD 0) (r2.tail.tail.tail.headD 0) tm hS3 hlwH
       (hTM.get (decTM_mono _)) (decTM_lt_top hTM)) c4

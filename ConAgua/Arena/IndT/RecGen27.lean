@@ -106,9 +106,8 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
 
 theorem cfoW_afr {n : Nat} {m m' : Mem} {q io il i fo fl : Word} {r : List Word}
     (h : cfoW n m q io il i fo fl = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [cfoW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [cfoW] at h
   rw [cfoW_eq] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   rw [cfoK_some] at h
@@ -172,11 +171,9 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   rw [h9, h10, hca] at h
   -- `class_ctor_of_nfs`
   obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
-  cases n with
-  | zero =>
-    obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (invoke_exec_zero p _ _ _) c2
+  rcases n with _ | n
+  · obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (invoke_exec_zero p _ _ _) c2
     exact hf.elim
-  | succ n =>
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (cnf_spec p P.ha P.cnf n _ (UInt64.ofNat no) (UInt64.ofNat nl) (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) c2
   simp only at hs2 hw2; subst hs2
@@ -433,9 +430,8 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
       StabA (iwTop s₀.mem) (fun m => decCC m (r.headD 0).toNat) s'.mem
         (AM.res (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a₀) ∧ RcMR s'.mem ∧
       AbsOK s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (cxo_spec p P.cxo n s₀ vis q fto ftl rd mo ml c cA) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', run, hC', hg, hd, hP', hA'⟩ := cxoW_okC hq henv P hIlpf hOpf dn fe n (by omega) hm hC hA hbs hft hftb
@@ -646,9 +642,8 @@ theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
       SPLA (iwTop s₀.mem) decCC s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat
         (AM.res (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat cAs) a₀) ∧ RcMR s'.mem ∧
       AbsOK s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (cos_spec p P.ha P.cos n s₀ vis q fto ftl rd mo ml c ao al) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨xs, a', run, hC', hg, hd, hP', hA'⟩ := cosF_okC hkp henv P hIlpf hOpf dn fe n (by omega) hm hC hA hbs hft hftb
@@ -743,11 +738,9 @@ theorem ccsW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
   -- `class_ctors_of`
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   rw [ccsK1_some] at h
-  cases k with
-  | zero =>
-    obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_exec_zero p _ _ _) c1
+  rcases k with _ | k'
+  · obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_exec_zero p _ _ _) c1
     exact hf.elim
-  | succ k' =>
   obtain ⟨s1, hs1, -, hok1, hC1, hg1, hd1, hP1, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classCtorsOf_refinesC hkp henv P.toCosProg hIlpf hOpf (k' + 1) (by omega) _ a dn fe vis q fto ftl rd mo ml c
       (UInt64.ofNat o) (UInt64.ofNat l) bs formerTys R ms ms[c.toNat].ctors hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft)
@@ -896,9 +889,8 @@ theorem classesCtors_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
       SPLA (iwTop s₀.mem) (fun m p => decLH m (decPL m (decCC m)) p) s'.mem (r.headD 0).toNat
         (r.tail.headD 0).toNat (AM.res (ConRon.Arena.classesCtors V fe bs formerTys R ms 0 ms) a₀) ∧
       RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (ccs_spec p P.ha P.ccs n s₀ vis q fto ftl rd mo ml) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨xss, a', run, hC', hg, hd, hP', hA'⟩ := ccsF_okC hkp henv P hIlpf hOpf dn fe n (by omega) hm hC hA hbs hft
