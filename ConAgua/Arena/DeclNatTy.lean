@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatGuard
 
 /-!
@@ -33,97 +34,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-! ### `nat_op_cod` -/
 
-section codmodel
-variable (p : Prog) (n : Nat) (vis c e : Word)
-
-def ncK10 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([if e = r.headD 0 then 1 else 0], m)
-
-def ncK9 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ncK10 e (callW p n "const_e" [r.headD 0] m)
-
-def ncK7 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (s1, m) =>
-    if rdW (m.arr64 EREC) (q + 2) ≠ 0 then some ([0], m)
-    else some ([if rdW (m.arr64 EREC) (q + 3) = s1.headD 0 then 1 else 0], m)
-
-def ncK6 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => ncK7 (r.headD 0) (callW p n "pin_word" [54] m)
-
-def ncK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0], m) else ncK6 p n (callW p n "ci_to_cv" [r.tail.headD 0] m)
-
-def ncK4 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m) =>
-    if e ≠ r4.headD 0 then some ([0], m)
-    else ncK5 p n (callW p n "env_find" [r3.headD 0, vis] m)
-
-def ntNcK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m) => ncK4 p n vis e r3 (callW p n "const_e" [r3.headD 0] m)
-
-def ntNcK2 (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m) =>
-    if c = r1.headD 0 ∨ c = r2.headD 0 then ntNcK3 p n vis e (callW p n "pin_at" [29] m)
-    else ncK9 p n e (callW p n "pin_at" [1] m)
-
-def ntNcK1 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => ntNcK2 p n vis c e r1 (callW p n "pin_at" [20] m)
-
-end codmodel
-
-def natOpCodW (p : Prog) (n : Nat) (m : Mem) (vis c e : Word) : Option (List Word × Mem) :=
-  ntNcK1 p n vis c e (callW p n "pin_at" [19] m)
-
-section codarms
-variable (p : Prog) (n : Nat) (vis c e : Word) (r r1 r3 : List Word) (m : Mem) (q : Word)
-theorem ncK10_some : ncK10 e (some (r, m)) = some ([if e = r.headD 0 then 1 else 0], m) := rfl
-theorem ncK9_some : ncK9 p n e (some (r, m)) = ncK10 e (callW p n "const_e" [r.headD 0] m) := rfl
-theorem ncK7_some : ncK7 q (some (r, m)) =
-    if rdW (m.arr64 EREC) (q + 2) ≠ 0 then some ([0], m)
-    else some ([if rdW (m.arr64 EREC) (q + 3) = r.headD 0 then 1 else 0], m) := rfl
-theorem ncK6_some : ncK6 p n (some (r, m)) = ncK7 (r.headD 0) (callW p n "pin_word" [54] m) := rfl
-theorem ncK5_some : ncK5 p n (some (r, m)) = if r.headD 0 = 0 then some ([0], m)
-    else ncK6 p n (callW p n "ci_to_cv" [r.tail.headD 0] m) := rfl
-theorem ncK4_some : ncK4 p n vis e r3 (some (r, m)) = if e ≠ r.headD 0 then some ([0], m)
-    else ncK5 p n (callW p n "env_find" [r3.headD 0, vis] m) := rfl
-theorem ncK3_some : ntNcK3 p n vis e (some (r, m)) = ncK4 p n vis e r (callW p n "const_e" [r.headD 0] m) := rfl
-theorem ncK2_some : ntNcK2 p n vis c e r1 (some (r, m)) =
-    if c = r1.headD 0 ∨ c = r.headD 0 then ntNcK3 p n vis e (callW p n "pin_at" [29] m)
-    else ncK9 p n e (callW p n "pin_at" [1] m) := rfl
-theorem ncK1_some : ntNcK1 p n vis c e (some (r, m)) = ntNcK2 p n vis c e r (callW p n "pin_at" [20] m) := rfl
-end codarms
-
-grind_pattern [ind_grind] ncK10_some => ncK10 e (some (r, m))
-grind_pattern [ind_grind] ncK9_some => ncK9 p n e (some (r, m))
-grind_pattern [ind_grind] ncK7_some => ncK7 q (some (r, m))
-grind_pattern [ind_grind] ncK6_some => ncK6 p n (some (r, m))
-grind_pattern [ind_grind] ncK5_some => ncK5 p n (some (r, m))
-grind_pattern [ind_grind] ncK4_some => ncK4 p n vis e r3 (some (r, m))
-grind_pattern [ind_grind] ncK3_some => ntNcK3 p n vis e (some (r, m))
-grind_pattern [ind_grind] ncK2_some => ntNcK2 p n vis c e r1 (some (r, m))
-grind_pattern [ind_grind] ncK1_some => ntNcK1 p n vis c e (some (r, m))
-
-theorem natOpCod_specW (p : Prog) (hp : p.lookup "nat_op_cod" = some natOpCodL) (n : Nat)
-    (s₀ : St) (vis c e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_cod" [vis, c, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpCodW p n s₀.mem vis c e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpCodL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "env_find",
-    callW_spec p n "ci_to_cv", callW_spec p n "pin_word"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, decide_eq_true_eq, rd64_eq_rdW] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, natOpCodW]
+/-- **`nat_op_cod` is its model `natOpCodW`** (generated). -/
+l_model natOpCod_specW (p : Prog) (hp : p.lookup "nat_op_cod" = some natOpCodL)
+  fns [hp ↦ natOpCodW list]
+  specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "env_find", callW_spec p n "ci_to_cv", callW_spec p n "pin_word"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
 theorem decI_bne_word {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
     ((decI x : Idx κ) != decI y) = decide (x ≠ y) := by
@@ -133,20 +48,20 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     CallRef p "nat_op_cod" [vis, c, e] (fun m a => StageR dn vis fe m a ∧ H c ∧ H e)
       (natOpCod fe (decI c) (decI e)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hc, he⟩ hcall => ?_
-  have hw := callW_model (M := fun mm => natOpCodW p k mm vis c e) (natOpCod_specW p hN.lNatOpCod k · vis c e) hcall
-  unfold natOpCodW at hw
+  have hw := callW_model (M := fun mm => natOpCodW p (k + 1) mm vis c e) (natOpCod_specW p hN.lNatOpCod (k + 1) · vis c e) hcall
+  rw [natOpCodW.arm1] at hw
   cases h1 : callW p k "pin_at" [19] m with
-  | none => rw [h1] at hw; simp [ntNcK1] at hw
+  | none => rw [h1] at hw; simp [ntBW] at hw
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
-  rw [h1, ncK1_some] at hw
+  rw [h1, bW_some] at hw
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 20) rfl h1
   rw [hm1] at hw
   cases h2 : callW p k "pin_at" [20] m with
-  | none => rw [h2] at hw; simp [ntNcK2] at hw
+  | none => rw [h2] at hw; simp [ntBW] at hw
   | some q2 =>
   obtain ⟨r2, m2⟩ := q2
-  rw [h2, ncK2_some] at hw
+  rw [h2, bW_some] at hw
   obtain ⟨hm2, -, hr2⟩ := pinAt_call hN.lPinAt (j := 21) rfl h2
   rw [hm2] at hw
   have hF := hS.1.pins.full h0
@@ -162,20 +77,20 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
   by_cases hP : c = r1.headD 0 ∨ c = r2.headD 0
   · rw [if_pos hP] at hw
     cases h3 : callW p k "pin_at" [29] m with
-    | none => rw [h3] at hw; simp [ntNcK3] at hw
+    | none => rw [h3] at hw; simp [ntBW] at hw
     | some q3 =>
     obtain ⟨r3, m3⟩ := q3
-    rw [h3, ncK3_some] at hw
+    rw [h3, bW_some] at hw
     obtain ⟨hm3, -, hr3⟩ := pinAt_call hN.lPinAt (j := 30) rfl h3
     rw [hm3] at hw
     have hp3 : H (r3.headD 0) := by rw [hr3]; exact hF.names_lt 29 (by decide)
     have e3 : (pinAt 29).run a = .ok (decI (r3.headD 0), a) := by
       have := pinAt_run hF 29 (by decide); rw [hr3]; exact this
     cases h4 : callW p k "const_e" [r3.headD 0] m with
-    | none => rw [h4] at hw; simp [ncK4] at hw
+    | none => rw [h4] at hw; simp [ntBW] at hw
     | some q4 =>
     obtain ⟨r4, m4⟩ := q4
-    rw [h4, ncK4_some] at hw
+    rw [h4, bW_some] at hw
     obtain ⟨x4, a4, hrun4, hS4, hg4, hx4l, hx4⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
       hN.toMasterProg (r3.headD 0) k m a r4 m4 ⟨hS, hp3⟩ h4
     have hne : (decI e != x4) = decide (e ≠ r4.headD 0) := by
@@ -191,10 +106,10 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     · rw [if_neg hee] at hw
       have hee' : e = r4.headD 0 := by simpa using hee
       cases h5 : callW p k "env_find" [r3.headD 0, vis] m4 with
-      | none => rw [h5] at hw; simp [ncK5] at hw
+      | none => rw [h5] at hw; simp [ntBW] at hw
       | some q5 =>
       obtain ⟨rf, m5⟩ := q5
-      rw [h5, ncK5_some] at hw
+      rw [h5, bW_some] at hw
       obtain ⟨hm5, hfd⟩ := envFind_call hN.toMasterProg (r3.headD 0) hp3 hS4.1.env h5
       rw [hm5] at hw
       cases hf : fe.find? (decI (r3.headD 0)) with
@@ -214,17 +129,17 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         have hnz : ¬ rf.headD 0 = 0 := by rw [hf1]; decide
         rw [if_neg hnz] at hw
         cases h6 : callW p k "ci_to_cv" [rf.tail.headD 0] m4 with
-        | none => rw [h6] at hw; simp [ncK6] at hw
+        | none => rw [h6] at hw; simp [ntBW] at hw
         | some q6 =>
         obtain ⟨r6, m6⟩ := q6
-        rw [h6, ncK6_some] at hw
+        rw [h6, bW_some] at hw
         obtain ⟨cv, a6, hrun6, hS6, hg6, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe)
           hN.toNatCvProg (rf.tail.headD 0) ci k m4 a4 r6 m6 ⟨hS4, hci⟩ h6
         cases h7 : callW p k "pin_word" [54] m6 with
-        | none => rw [h7] at hw; simp [ncK7] at hw
+        | none => rw [h7] at hw; simp [ntBW] at hw
         | some q7 =>
         obtain ⟨r7, m7⟩ := q7
-        rw [h7, ncK7_some] at hw
+        rw [h7, bW_some] at hw
         obtain ⟨hm7, h07, hr7⟩ := callW_pinWord' hN.lPinWord h7
         rw [hm7] at hw
         have hF6 := hS6.1.pins.full h07
@@ -260,20 +175,20 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
           rfl
   · rw [if_neg hP] at hw
     cases h3 : callW p k "pin_at" [1] m with
-    | none => rw [h3] at hw; simp [ncK9] at hw
+    | none => rw [h3] at hw; simp [ntBW] at hw
     | some q3 =>
     obtain ⟨r3, m3⟩ := q3
-    rw [h3, ncK9_some] at hw
+    rw [h3, bW_some] at hw
     obtain ⟨hm3, -, hr3⟩ := pinAt_call hN.lPinAt (j := 2) rfl h3
     rw [hm3] at hw
     have hp3 : H (r3.headD 0) := by rw [hr3]; exact hF.names_lt 1 (by decide)
     have e3 : (pinAt 1).run a = .ok (decI (r3.headD 0), a) := by
       have := pinAt_run hF 1 (by decide); rw [hr3]; exact this
     cases h4 : callW p k "const_e" [r3.headD 0] m with
-    | none => rw [h4] at hw; simp [ncK10] at hw
+    | none => rw [h4] at hw; simp [ntBW] at hw
     | some q4 =>
     obtain ⟨r4, m4⟩ := q4
-    rw [h4, ncK10_some] at hw
+    rw [h4, bW_some] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨x4, a4, hrun4, hS4, hg4, hx4l, hx4⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
@@ -583,56 +498,23 @@ theorem natOpTyPinned_refines (hN : NatTyProg p) (c ty : Word) :
 
 /-! ### `nat_op_stored_ok` -/
 
-def osK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-def osK1 (p : Prog) (n : Nat) (vis w : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rf, m) =>
-    if rf.headD 0 = 0 then some ([0], m)
-    else if rdW (m.arr64 EREC) (rf.tail.headD 0) ≠ 1 then some ([0], m)
-    else if rdW (m.arr64 EREC) (rf.tail.headD 0 + 3) ≠ 0 then some ([0], m)
-    else osK2 (callW p n "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (rf.tail.headD 0 + 4)] m)
-
-def natOpStoredOkW (p : Prog) (n : Nat) (m : Mem) (vis w : Word) : Option (List Word × Mem) :=
-  osK1 p n vis w (callW p n "env_find" [w, vis] m)
-
-section osarms
-variable (p : Prog) (n : Nat) (vis w : Word) (r : List Word) (m : Mem)
-theorem osK2_some : osK2 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem osK1_some : osK1 p n vis w (some (r, m)) =
-    if r.headD 0 = 0 then some ([0], m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 1 then some ([0], m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0 + 3) ≠ 0 then some ([0], m)
-    else osK2 (callW p n "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (r.tail.headD 0 + 4)] m) := rfl
-end osarms
-
-grind_pattern [ind_grind] osK2_some => osK2 (some (r, m))
-grind_pattern [ind_grind] osK1_some => osK1 p n vis w (some (r, m))
-
-theorem natOpStoredOk_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok" = some natOpStoredOkL)
-    (n : Nat) (s₀ : St) (vis w : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_stored_ok" [vis, w]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpStoredOkW p n s₀.mem vis w = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpStoredOkL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "env_find", callW_spec p n "nat_op_ty_pinned"] <;>
-    finish (gen := 20) [natOpStoredOkW]
+/-- **`nat_op_stored_ok` is its model `natOpStoredOkW`** (generated). -/
+l_model natOpStoredOk_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok" = some natOpStoredOkL)
+  fns [hp ↦ natOpStoredOkW list]
+  specs [callW_spec p n "env_find", callW_spec p n "nat_op_ty_pinned"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW instances 10000
 
 theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
     CallRef p "nat_op_stored_ok" [vis, w] (fun m a => StageR dn vis fe m a ∧ H w)
       (natOpStoredOk fe (decI w)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hw⟩ hcall => ?_
-  have hW := callW_model (M := fun mm => natOpStoredOkW p k mm vis w) (natOpStoredOk_specW p hN.lNatOpStoredOk k · vis w) hcall
-  unfold natOpStoredOkW at hW
+  have hW := callW_model (M := fun mm => natOpStoredOkW p (k + 1) mm vis w) (natOpStoredOk_specW p hN.lNatOpStoredOk (k + 1) · vis w) hcall
+  rw [natOpStoredOkW.arm1] at hW
   cases h1 : callW p k "env_find" [w, vis] m with
-  | none => rw [h1] at hW; simp [osK1] at hW
+  | none => rw [h1] at hW; simp [ntBW] at hW
   | some q1 =>
   obtain ⟨rf, m1⟩ := q1
-  rw [h1, osK1_some] at hW
+  rw [h1, bW_some] at hW
   obtain ⟨hm1, hfd⟩ := envFind_call hN.toMasterProg w hw hS.1.env h1
   rw [hm1] at hW
   cases hf : fe.find? (decI w) with
@@ -666,10 +548,10 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
       by_cases hl : rdW (m.arr64 EREC) (rf.tail.headD 0 + 3) = 0
       · rw [if_neg (by simpa using hl)] at hW
         cases h2 : callW p k "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (rf.tail.headD 0 + 4)] m with
-        | none => rw [h2] at hW; simp [osK2] at hW
+        | none => rw [h2] at hW; simp [ntBW] at hW
         | some q2 =>
         obtain ⟨rt, m2⟩ := q2
-        rw [h2, osK2_some] at hW
+        rw [h2, bW_some] at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
         obtain ⟨rfl, rfl⟩ := hW
         rw [hrd] at h2
