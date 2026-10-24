@@ -76,7 +76,7 @@ def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjL
 
 /-- What `rec_fire_levels` writes. -/
 abbrev rflArrs : List ArrId :=
-  LH :: SPN :: POOL :: LSREC :: LSSLOT :: LSHP :: LSREC + 256 :: LSSLOT + 256 :: LSHP + 256 :: lvArrs
+  LH :: SPN :: POOL :: LSREC :: LSSLOT :: LSHP :: (LSREC + 256) :: (LSSLOT + 256) :: (LSHP + 256) :: lvArrs
 abbrev rflCtl : List Word := 136 :: 192 :: 0 :: 40 :: 41 :: lvCtl
 
 /-- **What a run of `rec_fire_levels` gives**: the twin's state and the memory facts a core
