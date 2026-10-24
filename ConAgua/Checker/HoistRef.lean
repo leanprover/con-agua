@@ -83,8 +83,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     ordR_low (iwTop m) hO (by omega) (by omega) (fun x _ => by rw [hIWc])
       (hfc.1 DECL (by simp) (by decide)) (hfc.1 DLP (by simp) (by decide))
   rcases hix : hIndexGoW n (mclearG hnSch m) ord cw 0 with _ | ⟨z₁, m₁⟩ <;> rw [hix] at h
-  · simp [hNatOpGroundW.k6.eq_1] at h
-  rw [hNatOpGroundW.k6.arm1] at h
+  · simp [hNatOpGroundW.k_hoist_index_go.eq_1] at h
+  rw [hNatOpGroundW.k_hoist_index_go.arm1] at h
   obtain ⟨hR₁, hf₁⟩ := hoistIndexGo_ok n _ m₁ ord cw 0 z₁ ds ∅ hOc hc hc60 (by omega)
     UInt64.zero_le hRc hix
   simp only [UInt64.toNat_zero] at hR₁
@@ -99,18 +99,18 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       by rw [hER]; exact h4, by rw [hf₀₁.2.2.1 CTL]; exact h5⟩
   -- the targets and the stack
   rcases ha₁ : allocW m₁ cw with _ | ⟨tg, m₂⟩ <;> rw [ha₁] at h
-  · simp [hNatOpGroundW.k5.eq_1] at h
-  rw [hNatOpGroundW.k5.arm1] at h
+  · simp [hNatOpGroundW.k_iw_alloc.eq_1] at h
+  rw [hNatOpGroundW.k_iw_alloc.arm1] at h
   obtain ⟨hA₂, htg, htop₂, hroom₂⟩ := allocW_afr ha₁ hI₁
   rcases ha₂ : allocW m₂ cw with _ | ⟨ws, m₃⟩ <;> rw [ha₂] at h
-  · simp [hNatOpGroundW.k4.eq_1] at h
-  rw [hNatOpGroundW.k4.arm1] at h
+  · simp [hNatOpGroundW.k_iw_alloc_2.eq_1] at h
+  rw [hNatOpGroundW.k_iw_alloc_2.arm1] at h
   obtain ⟨hA₃, hws, htop₃, hroom₃⟩ := allocW_afr ha₂ hA₂.2.2
   have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.2.2.1 IW, hIW₁]
   have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hA₃.1.2.2.1 IW, hsz₂]
   rcases hz : hZeroW n m₃ tg cw 0 with _ | ⟨z₄, m₄⟩ <;> rw [hz] at h
-  · simp [hNatOpGroundW.k3.eq_1] at h
-  rw [hNatOpGroundW.k3.arm1] at h
+  · simp [hNatOpGroundW.k_hoist_zero.eq_1] at h
+  rw [hNatOpGroundW.k_hoist_zero.arm1] at h
   obtain ⟨hf₄, hrd₄⟩ := hZero_ok n m₃ m₄ tg cw 0 z₄ (by rw [hsz₃]; omega) (by rw [hsz₃]; exact hsz) hz
   have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hf₄.2.2.1 IW, hsz₃]
   have htop₄ : iwTop m₄ = iwTop m₃ := by simp only [iwTop]; rw [hf₄.2.1 200 (by simp)]
@@ -150,8 +150,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   have hP₄ : PinsR m₄ a.pins := hP.congr (hfA.1 PINS (by decide) (by decide))
   -- the targets pass
   rcases ht : hTargetsGoW p n m₄ ord cw tg ws 0 with _ | ⟨z₅, m₅⟩ <;> rw [ht] at h
-  · simp [hNatOpGroundW.k2.eq_1] at h
-  rw [hNatOpGroundW.k2.arm1] at h
+  · simp [hNatOpGroundW.k_hoist_targets_go.eq_1] at h
+  rw [hNatOpGroundW.k_hoist_targets_go.arm1] at h
   obtain ⟨T, hrunT, hE₅, hT₅, hTv₅, hlt₅, hP₅, hlow₅⟩ :=
     targets_ok hx cw rfl n m₄ m₅ ∅ 0 z₅ hE₄ hT₄ (fun _ _ h => by simp at h)
       (fun _ _ h => by simp at h) (fun _ _ h => by simp at h) (by simp) hP₄ ht
@@ -159,7 +159,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   have hrunH : (hoistTargets ds).run a = .ok (T, a) := hrunT
   -- `hoist_any`
   rcases hy : hAnyW n m₅ tg cw 0 with _ | ⟨av, m₆⟩ <;> rw [hy] at h
-  · simp [hNatOpGroundW.k1.eq_1] at h
+  · simp [hNatOpGroundW.k_hoist_any.eq_1] at h
   obtain ⟨hm6, hav⟩ := hoistAny_ok n m₅ m₆ tg cw 0 av T hT₅ (by have := hE₅.rg3; omega) hlt₅ hy
   subst m₆
   simp only [UInt64.toNat_zero] at hav
@@ -179,13 +179,13 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     simp only [hoistNatOpGround]
     rw [HoistTwin.run_bind, hrunH]
   by_cases hav0 : av = 0
-  · rw [hNatOpGroundW.k1.arm1 _ _ _ _ _ _ _ hav0] at h
+  · rw [hNatOpGroundW.k_hoist_any.arm1 _ _ _ _ _ _ _ hav0] at h
     cases h
     have hempty : T.isEmpty = true :=
       tgt_isEmpty T _ hT₅.2 (fun j _ hj => (hav.mp hav0) j (Nat.zero_le _) hj)
     refine ⟨(ds, #[]), by rw [hrun0, hempty]; rfl, hc, hE₅.ordR, hE₅.arena, hE₅.iwok,
       hgrow₅, by have := hgrow₅.1; omega, hP₅, hfrm₅⟩
-  · rw [hNatOpGroundW.k1.arm2 _ _ _ _ _ _ _ hav0] at h
+  · rw [hNatOpGroundW.k_hoist_any.arm2 _ _ _ _ _ _ _ hav0] at h
     have hne : T.isEmpty = false := by
       cases e : T.isEmpty with
       | false => rfl

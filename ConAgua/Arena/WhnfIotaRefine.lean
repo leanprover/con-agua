@@ -339,8 +339,8 @@ theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true 
 def islW (m : Mem) (h : Word) : Option Word :=
   if h >>> 28 ≠ 8 then some 0
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none
-  else some (if rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 1 then 1 else 0)
+  else if tcnt m LIT (tierW h) ≤ idxW h then none
+  else some (if tfld m LIT (tierW h) (idxW h) 0 = 1 then 1 else 0)
 
 theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (k : Nat)
     (s₀ : St) (h : Word) :
@@ -354,10 +354,10 @@ theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (
   | succ k =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW, tfld, tcnt, TRec.ad]
+        tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW]
 
 theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) :
+    (hv : viewOK m h LIT) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ RecRel m (tierW h) (idxW h) ⟨l⟩ := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   refine ⟨k.l, ?_, hkr⟩
@@ -394,7 +394,7 @@ theorem isStrLit_refines (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL
     by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
     · simp [hv1] at hW
     simp only [hv1, ↓reduceIte] at hW
-    by_cases hv2 : rdW (s₀.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
+    by_cases hv2 : tcnt s₀.mem LIT (tierW h) ≤ idxW h
     · simp [hv2] at hW
     simp only [hv2, ↓reduceIte, Option.some.injEq] at hW
     obtain ⟨l, hl, hrel⟩ := viewLit_ok s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩
@@ -437,11 +437,11 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
 /-! ## `is_ctor_app(vis, e)` -/
 
 theorem view_const_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
-    a.store.view (decE h) = some (.const (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)))
-      (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
-    (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)).toNat < 2 ^ 32 ∧
-    (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    a.store.view (decE h) = some (.const (decI (tfld m CONST (tierW h) (idxW h) 0))
+      (decI (tfld m CONST (tierW h) (idxW h) 1))) ∧
+    (tfld m CONST (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
+    (tfld m CONST (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   rw [hn, hu, decI_word, decI_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
@@ -454,9 +454,9 @@ def icaW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
   | some (r₁, m₁) =>
     if r₁.headD 0 >>> 28 ≠ 3 then some (0, m₁)
     else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-    else if rdW (m₁.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
+    else if tcnt m₁ CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
     else match callW p n "env_find"
-        [rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2), vis] m₁ with
+        [tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, vis] m₁ with
       | none => none
       | some (r₂, m₂) =>
         if r₂.headD 0 = 0 then some (0, m₂)
@@ -471,7 +471,7 @@ theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [icaW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [icaW, tierW, idxW]
 
 theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :
@@ -521,7 +521,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   obtain ⟨hv2, hW⟩ := of_ite_none hW
   have h3 := h3'
   obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
-  generalize rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2) = cw at hvw hn32 hW
+  generalize tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0 = cw at hvw hn32 hW
   rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
     simp only [hc2, reduceCtorEq] at hW
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
@@ -879,9 +879,9 @@ def pirW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Option
     if i < an then
       if e >>> 28 ≠ 6 then some ([0, 0], m)
       else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e then none
+      else if tcnt m FORALL (tierW e) ≤ idxW e then none
       else match callW p k "inst_entry"
-          [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m with
+          [tfld m FORALL (tierW e) (idxW e) 1, rdW (m.arr64 SPN) (ao + i), 0] m with
         | none => none
         | some (r, m₁) => pirW p k m₁ (r.headD 0) ao an (i + 1)
     else some ([1, e], m)
@@ -901,15 +901,15 @@ theorem pirW_ab1 (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
 
 theorem pirW_ab2 (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
     (h6 : ¬ e >>> 28 ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e) :
+    (h2 : tcnt m FORALL (tierW e) ≤ idxW e) :
     pirW p (k + 1) m e ao an i = none := by
   simp only [pirW, h, h6, h1, h2]; simp
 
 theorem pirW_cont (p : Prog) (k : Nat) (m m₁ : Mem) (e ao an i : Word) (r : List Word)
     (h : i < an) (h6 : ¬ e >>> 28 ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e)
+    (h2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (hc : callW p k "inst_entry"
-          [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m =
+          [tfld m FORALL (tierW e) (idxW e) 1, rdW (m.arr64 SPN) (ao + i), 0] m =
         some (r, m₁)) :
     pirW p (k + 1) m e ao an i = pirW p k m₁ (r.headD 0) ao an (i + 1) := by
   simp only [pirW, h, h6, h1, h2, hc]; simp
@@ -927,7 +927,7 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE,
         callW_spec p k "inst_entry", ih] <;>
-      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW, tfld, tcnt, TRec.ad]
+      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
 
 
 theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidualL) (k : Nat)
@@ -1014,10 +1014,10 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     have h6' : e >>> 28 = 6 := by simpa using h6
     by_cases hv1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
     · rw [pirW_ab1 p k m e ao an i hlt h6 hv1] at hL; cases hL
-    by_cases hv2 : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e
+    by_cases hv2 : tcnt m FORALL (tierW e) ≤ idxW e
     · rw [pirW_ab2 p k m e ao an i hlt h6 hv1 hv2] at hL; cases hL
     rcases hc : callW p k "inst_entry"
-        [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m with _ | ⟨r₁, m₁⟩
+        [tfld m FORALL (tierW e) (idxW e) 1, rdW (m.arr64 SPN) (ao + i), 0] m with _ | ⟨r₁, m₁⟩
     · simp [pirW, hlt, h6, hv1, hv2, hc] at hL
     rw [pirW_cont p k m m₁ e ao an i r₁ hlt h6 hv1 hv2 hc] at hL
     obtain ⟨hvb, hbw, -⟩ := view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
@@ -1030,7 +1030,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
     have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hlt
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1, hL2⟩ :=
-      ih k m₁ (AM.st (instantiate1Fast coreWalkFuel (decE (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)))
+      ih k m₁ (AM.st (instantiate1Fast coreWalkFuel (decE (tfld m FORALL (tierW e) (idxW e) 1))
         (decE (rdW (m.arr64 SPN) (ao + i))) (UInt64.toNat 0)) a) M₁ (r₁.headD 0) (i + 1) L m'
         (by omega) (by omega) hS₁ hr₁ hsp₁ htop₁ hL
     have hget : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := by
@@ -1038,7 +1038,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
       simpa [spW] using this
     have hrunR := AM.run_of_ok _ _ hok2
     rw [h1] at hrunR
-    have hrun := piResidual_cons_run (decE e) args[i.toNat] (decE (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)))
+    have hrun := piResidual_cons_run (decE e) args[i.toNat] (decE (tfld m FORALL (tierW e) (idxW e) 1))
       (decH r₁) (args.toList.drop (i.toNat + 1)) a _ _ _ ((decE_tag_forall e he).mpr h6') _ hvb'
       (by rw [hget]; exact hrunT) hrunR
     rw [h1] at hS₂ hres2

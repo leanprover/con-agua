@@ -336,7 +336,7 @@ def lpProj : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, nm,
 
 /-- con-ron: none — the substitution's keys checked to be stored names (the twin reads them back,
 `readNamesM`, and fails on a handle that does not view; `keys_ok` aborts there instead) -/
-def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r) {
+def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r, c) {
   if l == 0 { return 0 };
   w := SPN.u64[o];
   if w >= 4294967296 { abort };
@@ -345,7 +345,10 @@ def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r) {
   i := ⟦w⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g >= 3 { abort };
-  if CTL.u64[34 + g * 2 + t] <= i { abort };
+  c := NANON⟨t⟩.count;
+  if g == 1 { c := NSTR⟨t⟩.count };
+  if g == 2 { c := NNUM⟨t⟩.count };
+  if c <= i { abort };
   r := call keys_ok(o + 1, l - 1);
   return r
 }

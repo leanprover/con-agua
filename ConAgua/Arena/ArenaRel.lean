@@ -95,32 +95,32 @@ theorem litLocal : RLocal litSch RecRel litH [POOL] [0] := by
   simp only [litSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [litH, hra]⟩
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
-  · simp only [RecRel, NatRec, hra, hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
-  · simp only [RecRel, StrRec, hra, hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
+  · simp only [RecRel, NatRec, tfld_arr_eq (R := LIT) hra, hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
+  · simp only [RecRel, StrRec, tfld_arr_eq (R := LIT) hra, hp, hpv, hpc, top_rdW, h0] at h ⊢; exact h
 
 theorem appLocal : RLocal appSch ARecRel ahash [] [] := by
   intro m m' hra _ _; simp only [appSch] at hra
-  exact ⟨fun t i k h => by simpa only [ARecRel, hra] using h, fun t i => by simp only [ahash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [ARecRel, tfld_arr_eq (R := APP) hra] using h, fun t i => by simp only [ahash, hra]⟩
 theorem letELocal : RLocal letSch LeRecRel lehash [] [] := by
   intro m m' hra _ _; simp only [letSch] at hra
-  exact ⟨fun t i k h => by simpa only [LeRecRel, hra] using h, fun t i => by simp only [lehash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [LeRecRel, tfld_arr_eq (R := LET) hra] using h, fun t i => by simp only [lehash, hra]⟩
 theorem bvarLocal : RLocal bvarSch BRecRel bhash [] [] := by
   intro m m' hra _ _; simp only [bvarSch] at hra
-  exact ⟨fun t i k h => by simpa only [BRecRel, hra] using h, fun t i => by simp only [bhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [BRecRel, tfld_arr_eq (R := BVAR) hra] using h, fun t i => by simp only [bhash, hra]⟩
 theorem lamLocal : RLocal lamSch LaRecRel lahash [] [] := by
   intro m m' hra _ _; simp only [lamSch] at hra
-  exact ⟨fun t i k h => by simpa only [LaRecRel, hra] using h, fun t i => by simp only [lahash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [LaRecRel, tfld_arr_eq (R := LAM) hra] using h, fun t i => by simp only [lahash, hra]⟩
 theorem forallELocal : RLocal forallSch FaRecRel fahash [] [] := by
   intro m m' hra _ _; simp only [forallSch] at hra
-  exact ⟨fun t i k h => by simpa only [FaRecRel, hra] using h, fun t i => by simp only [fahash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [FaRecRel, tfld_arr_eq (R := FORALL) hra] using h, fun t i => by simp only [fahash, hra]⟩
 theorem projLocal : RLocal projSch PJRecRel pjhash [] [] := by
   intro m m' hra _ _; simp only [projSch] at hra
-  exact ⟨fun t i k h => by simpa only [PJRecRel, hra] using h, fun t i => by simp only [pjhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [PJRecRel, tfld_arr_eq (R := PROJ) hra] using h, fun t i => by simp only [pjhash, hra]⟩
 theorem zeroLocal : RLocal zeroSch ZRecRel zhash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
 theorem paramLocal : RLocal paramSch PRecRel phash [] [] := by
   intro m m' hra _ _; simp only [paramSch] at hra
-  exact ⟨fun t i k h => by simpa only [PRecRel, hra] using h, fun t i => by simp only [phash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [PRecRel, tfld_arr_eq (R := PARAM) hra] using h, fun t i => by simp only [phash, hra]⟩
 
 theorem nanonLocal : RLocal nanonSch NaRecRel nahash [] [] :=
   fun _ _ _ _ _ => ⟨fun _ _ _ h => h, fun _ _ => rfl⟩
@@ -132,11 +132,11 @@ theorem nstrLocal : RLocal nstrSch NsRecRel nshash [POOL] [0] := by
   have hpc := pcap_congr hp
   simp only [nstrSch] at hra
   refine ⟨fun t i k h => ?_, fun t i => by simp only [nshash, hra]⟩
-  simpa only [NsRecRel, nsQ, nsO, nsL, hra, hp, hpv, hpc, top_rdW, h0] using h
+  simpa only [NsRecRel, nsQ, nsO, nsL, tfld_arr_eq (R := NSTR) hra, hra, hp, hpv, hpc, top_rdW, h0] using h
 
 theorem nnumLocal : RLocal nnumSch NnRecRel nnhash [] [] := by
   intro m m' hra _ _; simp only [nnumSch] at hra
-  exact ⟨fun t i k h => by simpa only [NnRecRel, hra] using h, fun t i => by simp only [nnhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [NnRecRel, tfld_arr_eq (R := NNUM) hra] using h, fun t i => by simp only [nnhash, hra]⟩
 
 /-! ## Each table relation across a writer it is apart from -/
 

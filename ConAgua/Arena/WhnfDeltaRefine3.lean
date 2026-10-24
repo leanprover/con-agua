@@ -513,14 +513,14 @@ theorem reduceNatWf_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
 /-- The model of `reduce_nat_k`: `(flag, result, memory)`. -/
 def reduceNatKW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
     Option (Word × Word × Mem) :=
-  if rdW (m.arr64 CTL) (18 + tierW f) ≤ idxW f then none
+  if tcnt m CONST (tierW f) ≤ idxW f then none
   else
     match callW p n "pin_word" [52] m with
     | none => none
     | some (r₁, m₁) =>
-      if rdW (m.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) ≠ r₁.headD 0 then some (0, 0, m₁)
+      if tfld m CONST (tierW f) (idxW f) 1 ≠ r₁.headD 0 then some (0, 0, m₁)
       else
-        match callW p n "reduce_nat_succ" [mode, vis, d, rdW (m.arr64 CREC) (idxW f * 4 + tierW f * 2),
+        match callW p n "reduce_nat_succ" [mode, vis, d, tfld m CONST (tierW f) (idxW f) 0,
             b] m₁ with
         | none => none
         | some (r₂, m₂) => some (r₂.headD 0, r₂.tail.headD 0, m₂)
@@ -535,46 +535,37 @@ theorem reduceNatK_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_word", callW_spec p n "reduce_nat_succ"] <;>
-    finish (gen := 30) [reduceNatKW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [reduceNatKW, tierW, idxW]
 
 /-- The model of `reduce_nat_ap`: `(flag, result, memory)`. -/
 def reduceNatApW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
     Option (Word × Word × Mem) :=
-  if rdW (m.arr64 CTL) (4 + tierW f) ≤ idxW f then none
-  else if rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2) >>> 28 ≠ 3 then some (0, 0, m)
-  else if tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2))) ≤
-      idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) then none
+  if tcnt m APP (tierW f) ≤ idxW f then none
+  else if tfld m APP (tierW f) (idxW f) 0 >>> 28 ≠ 3 then some (0, 0, m)
+  else if tierW (tfld m APP (tierW f) (idxW f) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if tcnt m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) ≤
+      idxW (tfld m APP (tierW f) (idxW f) 0) then none
   else
     match callW p n "pin_word" [52] m with
     | none => none
     | some (r₁, m₁) =>
-      if rdW (m.arr64 CREC) (idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 4 +
-          tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 2 + 1) ≠ r₁.headD 0 then
+      if tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 1 ≠ r₁.headD 0 then
         some (0, 0, m₁)
       else
-        match callW p n "nat_bin_op_name" [rdW (m.arr64 CREC)
-            (idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 4 +
-              tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 2)] m₁ with
+        match callW p n "nat_bin_op_name" [tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0] m₁ with
         | none => none
         | some (r₂, m₂) =>
-        match callW p n "nat_op_stored" [vis, rdW (m.arr64 CREC)
-            (idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 4 +
-              tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 2)] m₂ with
+        match callW p n "nat_op_stored" [vis, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0] m₂ with
         | none => none
         | some (r₃, m₃) =>
         if r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0 then
-          match callW p n "reduce_nat_op" [mode, vis, d, rdW (m.arr64 CREC)
-              (idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 4 +
-                tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 2),
-              rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2 + 1), b] m₃ with
+          match callW p n "reduce_nat_op" [mode, vis, d, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0,
+              tfld m APP (tierW f) (idxW f) 1, b] m₃ with
           | none => none
           | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
         else
-          match callW p n "reduce_nat_wf" [mode, vis, d, rdW (m.arr64 CREC)
-              (idxW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 4 +
-                tierW (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2)) * 2),
-              rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2 + 1), b] m₃ with
+          match callW p n "reduce_nat_wf" [mode, vis, d, tfld m CONST (tierW (tfld m APP (tierW f) (idxW f) 0)) (idxW (tfld m APP (tierW f) (idxW f) 0)) 0,
+              tfld m APP (tierW f) (idxW f) 1, b] m₃ with
           | none => none
           | some (r₄, m₄) => some (r₄.headD 0, r₄.tail.headD 0, m₄)
 
@@ -590,7 +581,7 @@ theorem reduceNatAp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_word", callW_spec p n "nat_bin_op_name", callW_spec p n "nat_op_stored",
       callW_spec p n "reduce_nat_op", callW_spec p n "reduce_nat_wf"] <;>
-    finish (gen := 30) [reduceNatApW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [reduceNatApW, tierW, idxW]
 
 /-- The model of `reduce_nat_head`: `(flag, result, memory)`. -/
 def reduceNatHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
@@ -605,21 +596,21 @@ def reduceNatHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis d f b : Word) :
       | none => none
       | some (r₁, m₁) => some (r₁.headD 0, r₁.tail.headD 0, m₁))
   else if f >>> 28 = 0 then
-    (if rdW (m.arr64 CTL) (22 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m BVAR (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 = 1 then
-    (if rdW (m.arr64 CTL) (26 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m FVAR (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 = 2 then
-    (if rdW (m.arr64 CTL) (16 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m SORT (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 = 5 then
-    (if rdW (m.arr64 CTL) (28 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m LAM (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 = 6 then
-    (if rdW (m.arr64 CTL) (30 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m FORALL (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 = 7 then
-    (if rdW (m.arr64 CTL) (20 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m LET (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 = 8 then
-    (if rdW (m.arr64 CTL) (2 + tierW f) ≤ idxW f then none else some (0, 0, m))
+    (if tcnt m LIT (tierW f) ≤ idxW f then none else some (0, 0, m))
   else if f >>> 28 ≠ 9 then none
-  else if rdW (m.arr64 CTL) (32 + tierW f) ≤ idxW f then none
+  else if tcnt m PROJ (tierW f) ≤ idxW f then none
   else some (0, 0, m)
 
 theorem reduceNatHead_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
@@ -633,17 +624,17 @@ theorem reduceNatHead_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : S
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "reduce_nat_k", callW_spec p n "reduce_nat_ap"] <;>
-    finish (gen := 30) [reduceNatHeadW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [reduceNatHeadW, tierW, idxW]
 
 /-- The model of `reduce_nat`: `(flag, result, memory)`. -/
 def reduceNatW (p : Prog) (n : Nat) (m : Mem) (mode vis d e : Word) :
     Option (Word × Word × Mem) :=
   if e >>> 28 ≠ 4 then some (0, 0, m)
   else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e then none
+  else if tcnt m APP (tierW e) ≤ idxW e then none
   else
-    match callW p n "reduce_nat_head" [mode, vis, d, rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2),
-        rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1)] m with
+    match callW p n "reduce_nat_head" [mode, vis, d, tfld m APP (tierW e) (idxW e) 0,
+        tfld m APP (tierW e) (idxW e) 1] m with
     | none => none
     | some (r₁, m₁) => some (r₁.headD 0, r₁.tail.headD 0, m₁)
 
@@ -657,7 +648,7 @@ theorem reduceNat_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "reduce_nat_head"] <;>
-    finish (gen := 30) [reduceNatW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [reduceNatW, tierW, idxW]
 
 theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
     (h : (natAddArm u v).run a₁ = .ok (some x, a₂)) :

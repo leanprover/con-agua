@@ -222,8 +222,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
     have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
     rw [hlen] at u1'
-    cases h3 : callW p n "slp_go" [qo, qc, spTop m₁, bs.headD 0, pc, lsO m₀ (tierW us) (idxW us),
-        lsL m₀ (tierW us) (idxW us)] m₁ with
+    cases h3 : callW p n "slp_go" [qo, qc, spTop m₁, bs.headD 0, pc, tfld m₀ LVLS (tierW us) (idxW us) 0,
+        tfld m₀ LVLS (tierW us) (idxW us) 1] m₁ with
     | none => rw [h3] at hW; cases hW
     | some q =>
     obtain ⟨xs, m₂⟩ := q
@@ -257,8 +257,8 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
     have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
     rw [hlen] at u1'
-    cases h3 : callW p n "sle_go" [fvo, fvc, spTop m₁, bs.headD 0, pc, lsO m₀ (tierW us) (idxW us),
-        lsL m₀ (tierW us) (idxW us)] m₁ with
+    cases h3 : callW p n "sle_go" [fvo, fvc, spTop m₁, bs.headD 0, pc, tfld m₀ LVLS (tierW us) (idxW us) 0,
+        tfld m₀ LVLS (tierW us) (idxW us) 1] m₁ with
     | none => rw [h3] at hW; cases hW
     | some q =>
     obtain ⟨xs, m₂⟩ := q

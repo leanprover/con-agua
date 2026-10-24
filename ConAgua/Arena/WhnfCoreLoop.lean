@@ -20,8 +20,8 @@ namespace L.Arena
 /-! ## The dispatcher -/
 
 /-- The result of a stuck arm: `(0, e)` if the view check passes. -/
-def stuckW (m : Mem) (c e : Word) : Option (Word × Word × Mem) :=
-  if rdW (m.arr64 CTL) (c + tierW e) ≤ idxW e then none else some (0, e, m)
+def stuckW (m : Mem) (c : TRec) (e : Word) : Option (Word × Word × Mem) :=
+  if tcnt m c (tierW e) ≤ idxW e then none else some (0, e, m)
 
 /-- The model of `whnf_core_step`. -/
 def coreStepW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :
@@ -30,30 +30,30 @@ def coreStepW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :
   let i := idxW e
   if t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if e >>> 28 = 4 then
-    if rdW (m.arr64 CTL) (4 + t) ≤ i then none else
+    if tcnt m APP t ≤ i then none else
     match callW p n "whnf_core_app" [mode, cheap, vis, d, e] m with
     | none => none
     | some (r, m') => some (r.headD 0, r.tail.headD 0, m')
   else if e >>> 28 = 9 then
-    if rdW (m.arr64 CTL) (32 + t) ≤ i then none else
+    if tcnt m PROJ t ≤ i then none else
     match callW p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
-        rdW (m.arr64 PJREC) (i * 6 + t * 3), rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1),
-        rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2)] m with
+        tfld m PROJ t i 0, tfld m PROJ t i 1,
+        tfld m PROJ t i 2] m with
     | none => none
     | some (r, m') => some (r.headD 0, r.tail.headD 0, m')
   else if e >>> 28 = 7 then
-    if rdW (m.arr64 CTL) (20 + t) ≤ i then none else
-    match callW p n "inst1" [rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2),
-        rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1), 0] m with
+    if tcnt m LET t ≤ i then none else
+    match callW p n "inst1" [tfld m LET t i 2,
+        tfld m LET t i 1, 0] m with
     | none => none
     | some (r, m') => some (1, r.headD 0, m')
   else if e >>> 28 = 0 then none
-  else if e >>> 28 = 1 then stuckW m 26 e
-  else if e >>> 28 = 2 then stuckW m 16 e
-  else if e >>> 28 = 3 then stuckW m 18 e
-  else if e >>> 28 = 5 then stuckW m 28 e
-  else if e >>> 28 = 6 then stuckW m 30 e
-  else if e >>> 28 = 8 then stuckW m 2 e
+  else if e >>> 28 = 1 then stuckW m FVAR e
+  else if e >>> 28 = 2 then stuckW m SORT e
+  else if e >>> 28 = 3 then stuckW m CONST e
+  else if e >>> 28 = 5 then stuckW m LAM e
+  else if e >>> 28 = 6 then stuckW m FORALL e
+  else if e >>> 28 = 8 then stuckW m LIT e
   else none
 
 theorem coreStep_spec (p : Prog) (hp : p.lookup "whnf_core_step" = some whnfCoreStepL) (n : Nat)
@@ -67,7 +67,7 @@ theorem coreStep_spec (p : Prog) (hp : p.lookup "whnf_core_step" = some whnfCore
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "whnf_core_app", callW_spec p n "whnf_core_step_proj", callW_spec p n "inst1"] <;>
-    finish [coreStepW, stuckW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [coreStepW, stuckW, tierW, idxW]
 
 /-! ## The dispatcher refines `whnfCoreStep` -/
 
@@ -141,7 +141,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   · simp [ht] at hW
   rw [if_neg ht] at hW
   -- the stuck arms
-  have stuck : ∀ c : Word, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
+  have stuck : ∀ c : TRec, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
       viewOK s₀.mem e c ∧ r.headD 0 = 0 ∧ r.tail.headD 0 = e ∧ s'.mem = s₀.mem := by
     intro c h
     simp only [stuckW] at h
@@ -150,7 +150,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     · rename_i hle
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       exact ⟨⟨ht, by simpa using hle⟩, h.1.symm, h.2.1.symm, h.2.2.symm⟩
-  have done : ∀ c : Word, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
+  have done : ∀ c : TRec, stuckW s₀.mem c e = some (r.headD 0, r.tail.headD 0, s'.mem) →
       (∀ v, a₀.store.view (decE e) = some v → isDoneV v = true → CoreRef (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe
           (cheap != 0) d.toNat (decE e)) a₀ decStep dn s₀.mem vis fe MM eb r s'.mem ResW) := by
     intro c h v hv hd
@@ -159,7 +159,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     exact stepRef_done hS (step_run_done v hv hd) he h0 h1
   by_cases g4 : e >>> 28 = 4
   · rw [if_pos g4] at hW
-    by_cases hc4 : rdW (s₀.mem.arr64 CTL) (4 + tierW e) ≤ idxW e
+    by_cases hc4 : tcnt s₀.mem APP (tierW e) ≤ idxW e
     · simp [hc4] at hW
     rw [if_neg hc4] at hW
     -- application
@@ -179,14 +179,14 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   rw [if_neg g4] at hW
   by_cases g9 : e >>> 28 = 9
   · rw [if_pos g9] at hW
-    by_cases hc9 : rdW (s₀.mem.arr64 CTL) (32 + tierW e) ≤ idxW e
+    by_cases hc9 : tcnt s₀.mem PROJ (tierW e) ≤ idxW e
     · simp [hc9] at hW
     rw [if_neg hc9] at hW
     -- projection
     rcases hca : callW p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
-        rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3),
-        rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1),
-        rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+        tfld s₀.mem PROJ (tierW e) (idxW e) 0,
+        tfld s₀.mem PROJ (tierW e) (idxW e) 1,
+        tfld s₀.mem PROJ (tierW e) (idxW e) 2] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hca, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     cases n with
@@ -195,9 +195,9 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh ⟨ht, by simpa using hc9⟩ g9
     have hpr := whnfCoreStepProj_refines' p hp hwc.strLitSupported hwc.strLitCtor hcc.toProjCallees
       hp.lsn hcc.erec N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
-      vis fe MM eb mode cheap d e (rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3))
-      (rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1))
-      (rdW (s₀.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe (hsup fe)
+      vis fe MM eb mode cheap d e (tfld s₀.mem PROJ (tierW e) (idxW e) 0)
+      (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
+      (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hpr hca
     refine whnf_coreRef_congr (step_run_proj _ _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
     · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
@@ -205,12 +205,12 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
   rw [if_neg g9] at hW
   by_cases g7 : e >>> 28 = 7
   · rw [if_pos g7] at hW
-    by_cases hc7 : rdW (s₀.mem.arr64 CTL) (20 + tierW e) ≤ idxW e
+    by_cases hc7 : tcnt s₀.mem LET (tierW e) ≤ idxW e
     · simp [hc7] at hW
     rw [if_neg hc7] at hW
     -- let
-    rcases hca : callW p n "inst1" [rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2),
-        rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1), 0] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
+    rcases hca : callW p n "inst1" [tfld s₀.mem LET (tierW e) (idxW e) 2,
+        tfld s₀.mem LET (tierW e) (idxW e) 1, 0] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [hca, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh ⟨ht, by simpa using hc7⟩ g7
@@ -219,12 +219,12 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     have hrun := AM.run_of_ok _ _ hok
     refine whnf_coreRef_congr (step_run_let _ _ _ hv) ?_
     have hrun' : (instantiate1Fast coreWalkFuel
-        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
-        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0 >>=
+        (decE (tfld s₀.mem LET (tierW e) (idxW e) 2))
+        (decE (tfld s₀.mem LET (tierW e) (idxW e) 1)) 0 >>=
         fun e' => pure (WhnfStep.cont e') : AM WhnfStep).run a₀ =
         .ok (.cont (decE (r₁.headD 0)), AM.st (instantiate1Fast coreWalkFuel
-        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
-        (decE (rdW (s₀.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0) a₀) := by
+        (decE (tfld s₀.mem LET (tierW e) (idxW e) 2))
+        (decE (tfld s₀.mem LET (tierW e) (idxW e) 1)) 0) a₀) := by
       simp only [StateT.run_bind]
       rw [show ((0 : Word).toNat) = 0 from rfl] at hrun hres
       rw [hrun, hres]; rfl

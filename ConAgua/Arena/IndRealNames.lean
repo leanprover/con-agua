@@ -101,7 +101,7 @@ theorem poolRoom_specW (p : Prog) (hp : p.lookup "pool_room" = some L.Stubs.pool
   rw [invoke_eq _ hp]
   simp only [callFn, L.Stubs.poolRoom]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64] <;>
     finish [prW]
 
 /-- No call returns at fuel `0`. -/
@@ -181,7 +181,7 @@ theorem iwPool_specW (p : Prog) (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) 
     rw [invoke_eq _ hp]
     simp only [callFn, L.Stubs.iwPool]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, ih] <;>
       finish
 
 theorem callW_ip {p : Prog} (hp : p.lookup "iw_pool" = some L.Stubs.iwPool) {n : Nat}
@@ -280,7 +280,7 @@ theorem nameRec_specW (p : Prog) (hp : p.lookup "name_rec" = some L.Stubs.nameRe
   rw [invoke_eq _ hp]
   simp only [callFn, L.Stubs.nameRecL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
       callW_spec p n "pool_room", callW_spec p n "intern_nstr"] <;>
     finish [nrW, recBytes]
 
@@ -415,7 +415,7 @@ theorem internLsIw_specW (p : Prog) (hp : p.lookup "intern_ls_iw" = some L.Stubs
   rw [invoke_eq _ hp]
   simp only [callFn, L.Stubs.internLsIwL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64,
       callW_spec p n "pool_room", callW_spec p n "iw_pool", callW_spec p n "intern_ls"] <;>
     finish [ilwW]
 
@@ -567,9 +567,9 @@ theorem ptnW_spec' (p : Prog) (hp : p.lookup "proj_table_name" = some projTableN
   rw [invoke_eq _ hp]
   simp only [callFn, projTableNameL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, evalE_tierE, evalE_idxE,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, evalE_tierE, evalE_idxE,
       callW_spec p n "intern_nstr", callW_spec p n "intern_nnum"] <;>
-    finish [ptnW, ptMem, ptBytes, tierW, idxW]
+    finish [ptnW, ptMem, ptBytes, tierW, idxW, nameCnt]
 
 /-- **`proj_table_name`'s model refines `projTableName`** under the stage relation (replaces
 `IndStubs.projTableName_spec`; lane `whnf`'s `projTableName_refines` is under `CoreS`). -/
@@ -588,8 +588,7 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
   obtain ⟨c1, hW⟩ := of_ite_none hW
   obtain ⟨c2, hW⟩ := of_ite_none hW
   obtain ⟨c3, hW⟩ := of_ite_none hW
-  by_cases c4 : rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) +
-      ((t >>> (27 : Word)) &&& 1)) ≤ (t &&& 134217727)
+  by_cases c4 : nameCnt m (t >>> 28) ((t >>> 27) &&& 1) ≤ (t &&& 134217727)
   · rw [if_pos c4] at hW; cases hW
   rw [if_neg c4] at hW
   obtain ⟨c5, hW⟩ := of_ite_none hW

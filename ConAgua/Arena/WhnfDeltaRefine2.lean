@@ -23,39 +23,39 @@ namespace L.Arena
 def rawNatLitW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Word × Word × Mem) :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if h >>> 28 = 0 then
-    (if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m BVAR (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 1 then
-    (if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m FVAR (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 2 then
-    (if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m SORT (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 3 then
-    (if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none else
+    (if tcnt m CONST (tierW h) ≤ idxW h then none else
       match callW p n "pin_at" [2] m with
       | none => none
       | some (r₁, m₁) =>
         match callW p n "pin_word" [52] m₁ with
         | none => none
         | some (r₂, m₂) =>
-          if rdW (m₂.arr64 CREC) (idxW h * 4 + tierW h * 2) = r₁.headD 0 ∧
-              rdW (m₂.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = r₂.headD 0 then
+          if tfld m₂ CONST (tierW h) (idxW h) 0 = r₁.headD 0 ∧
+              tfld m₂ CONST (tierW h) (idxW h) 1 = r₂.headD 0 then
             some (1, rdW (m₂.arr64 CTL) 0, 0, m₂)
           else some (0, 0, 0, m₂))
   else if h >>> 28 = 4 then
-    (if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m APP (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 5 then
-    (if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m LAM (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 6 then
-    (if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m FORALL (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 7 then
-    (if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none else some (0, 0, 0, m))
+    (if tcnt m LET (tierW h) ≤ idxW h then none else some (0, 0, 0, m))
   else if h >>> 28 = 8 then
-    (if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none
-      else if rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 then
-        some (1, rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
-          rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2), m)
+    (if tcnt m LIT (tierW h) ≤ idxW h then none
+      else if tfld m LIT (tierW h) (idxW h) 0 = 0 then
+        some (1, tfld m LIT (tierW h) (idxW h) 1,
+          tfld m LIT (tierW h) (idxW h) 2, m)
       else some (0, 0, 0, m))
   else if h >>> 28 ≠ 9 then none
-  else if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none else some (0, 0, 0, m)
+  else if tcnt m PROJ (tierW h) ≤ idxW h then none else some (0, 0, 0, m)
 
 theorem rawNatLit_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "raw_nat_lit" [h]
@@ -67,7 +67,7 @@ theorem rawNatLit_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "pin_at", callW_spec p n "pin_word"] <;>
-    finish (gen := 30) [rawNatLitW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [rawNatLitW, tierW, idxW]
 
 
 theorem rdW_ctl_top' (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
@@ -76,10 +76,10 @@ theorem rdW_ctl_top' (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
 /-- **A `lit` node past the view checks**: the kind word `0` says `natVal`, with the record's
 slice; any other kind says `strVal`. -/
 theorem view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
-    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 →
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (tfld m LIT (tierW h) (idxW h) 0 = 0 →
       ∃ N, a.store.view (decE h) = some (.lit (.natVal N)) ∧ NatRec m (tierW h) (idxW h) N) ∧
-    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 0 →
+    (tfld m LIT (tierW h) (idxW h) 0 ≠ 0 →
       ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   have hview : ∀ l, k = ⟨l⟩ → a.store.view (decE h) = some (.lit l) := by
@@ -135,10 +135,10 @@ theorem rawNatLit_run_const {m : Mem} {a : AState} {h : EIdx} {c : NIdx} {us : L
 
 
 theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (c : Word) (hv : viewOK m h c)
-    (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-      (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
-      (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32)) :
+    (c : TRec) (hv : viewOK m h c)
+    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+      (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
+      (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ)) :
     ∃ v, a.store.view (decE h) = some v ∧ (∀ N, v ≠ .lit (.natVal N)) ∧
       (∀ c us, v ≠ .const c us) := by
   rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
@@ -155,11 +155,11 @@ theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.t
 
 theorem rawSimple {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a₀ vis fe M eb) {h : Word} (hh : HW h)
-    (c : Word) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hb : ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h)
-    (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-      (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
-      (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32))
+    (c : TRec) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hb : ¬ tcnt m c (tierW h) ≤ idxW h)
+    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+      (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
+      (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ))
     (r : List Word) (hr : r.headD 0 = 0) : RawOut m a₀ h r := by
   obtain ⟨v, hv, hl, hc⟩ := view_other m a₀ hS.arena.1 h hh c ⟨hsc, by simpa using hb⟩ hcg
   exact RawOut.none (rawNatLit_run_other hv hl hc) hr
@@ -181,16 +181,16 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
   -- the tags whose arm only checks the bound
-  have simple : ∀ (c : Word) (g : Prop) [Decidable g], g →
-      (g → (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-        (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
-        (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32)) →
-      (if rdW (s₀.mem.arr64 CTL) (c + tierW h) ≤ idxW h then none else
+  have simple : ∀ (c : TRec) (g : Prop) [Decidable g], g →
+      (g → (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+        (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
+        (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ)) →
+      (if tcnt s₀.mem c (tierW h) ≤ idxW h then none else
         some ((0 : Word), (0 : Word), (0 : Word), s₀.mem)) =
         some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
       s'.mem = s₀.mem ∧ RawOut s₀.mem a₀ h r := by
     intro c g _ hg hcg hW'
-    by_cases hb : rdW (s₀.mem.arr64 CTL) (c + tierW h) ≤ idxW h
+    by_cases hb : tcnt s₀.mem c (tierW h) ≤ idxW h
     · rw [if_pos hb] at hW'; cases hW'
     rw [if_neg hb] at hW'
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
@@ -198,22 +198,22 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     exact ⟨hm.symm, rawSimple hC hh c hsc hb (hcg hg) r hf.symm⟩
   by_cases g0 : h >>> 28 = 0
   · rw [if_pos g0] at hW
-    obtain ⟨h1, h2⟩ := simple 22 _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
+    obtain ⟨h1, h2⟩ := simple BVAR _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
     exact ⟨h1, h2⟩
   rw [if_neg g0] at hW
   by_cases g1 : h >>> 28 = 1
   · rw [if_pos g1] at hW
-    obtain ⟨h1, h2⟩ := simple 26 _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
+    obtain ⟨h1, h2⟩ := simple FVAR _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
     exact ⟨h1, h2⟩
   rw [if_neg g1] at hW
   by_cases g2 : h >>> 28 = 2
   · rw [if_pos g2] at hW
-    obtain ⟨h1, h2⟩ := simple 16 _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
+    obtain ⟨h1, h2⟩ := simple SORT _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g2] at hW
   by_cases g3 : h >>> 28 = 3
   · rw [if_pos g3] at hW
-    by_cases hb : rdW (s₀.mem.arr64 CTL) (18 + tierW h) ≤ idxW h
+    by_cases hb : tcnt s₀.mem CONST (tierW h) ≤ idxW h
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
     cases h1 : callW p n "pin_at" [2] s₀.mem with
@@ -233,21 +233,21 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     subst m₂
     dsimp only at hW
     simp only [show (2 : Word).toNat = 2 from rfl, show (52 : Word).toNat = 52 from rfl] at hr₁ hr₂
-    have hvOK : viewOK s₀.mem h 18 := ⟨hsc, by simpa using hb⟩
+    have hvOK : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hb⟩
     obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 h hh hvOK g3
     have hrun := rawNatLit_run_const hC.pins hview
     rw [hn, hu] at hrun
-    have hbool : ((decI (rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2)) : NIdx) ==
+    have hbool : ((decI (tfld s₀.mem CONST (tierW h) (idxW h) 0) : NIdx) ==
             decI (pinW s₀.mem 3) &&
-            (decI (rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) : LsIdx) ==
+            (decI (tfld s₀.mem CONST (tierW h) (idxW h) 1) : LsIdx) ==
               decI (pinW s₀.mem 52)) =
-        decide (rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = r₁.headD 0 ∧
-          rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = r₂.headD 0) := by
+        decide (tfld s₀.mem CONST (tierW h) (idxW h) 0 = r₁.headD 0 ∧
+          tfld s₀.mem CONST (tierW h) (idxW h) 1 = r₂.headD 0) := by
       rw [decI_beq _ _ hnl (hC.pins.names_lt 2 (by decide)), decI_beq _ _ hul hC.pins.lv_lt.1,
         Bool.decide_and, hr₁, hr₂]
     rw [hbool] at hrun
-    by_cases hcond : rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = r₁.headD 0 ∧
-        rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = r₂.headD 0
+    by_cases hcond : tfld s₀.mem CONST (tierW h) (idxW h) 0 = r₁.headD 0 ∧
+        tfld s₀.mem CONST (tierW h) (idxW h) 1 = r₂.headD 0
     · rw [if_pos hcond] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
@@ -271,35 +271,35 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [if_neg g3] at hW
   by_cases g4 : h >>> 28 = 4
   · rw [if_pos g4] at hW
-    obtain ⟨h1, h2⟩ := simple 4 _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
+    obtain ⟨h1, h2⟩ := simple APP _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g4] at hW
   by_cases g5 : h >>> 28 = 5
   · rw [if_pos g5] at hW
-    obtain ⟨h1, h2⟩ := simple 28 _ g5
+    obtain ⟨h1, h2⟩ := simple LAM _ g5
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g5] at hW
   by_cases g6 : h >>> 28 = 6
   · rw [if_pos g6] at hW
-    obtain ⟨h1, h2⟩ := simple 30 _ g6
+    obtain ⟨h1, h2⟩ := simple FORALL _ g6
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g6] at hW
   by_cases g7 : h >>> 28 = 7
   · rw [if_pos g7] at hW
-    obtain ⟨h1, h2⟩ := simple 20 _ g7
+    obtain ⟨h1, h2⟩ := simple LET _ g7
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))) hW
     exact ⟨h1, h2⟩
   rw [if_neg g7] at hW
   by_cases g8 : h >>> 28 = 8
   · rw [if_pos g8] at hW
-    by_cases hb : rdW (s₀.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
+    by_cases hb : tcnt s₀.mem LIT (tierW h) ≤ idxW h
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
-    have hvOK : viewOK s₀.mem h 2 := ⟨hsc, by simpa using hb⟩
+    have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hb⟩
     obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK g8
-    by_cases hk : rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) = 0
+    by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0
     · rw [if_pos hk] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hf, ho, hcn, hm⟩ := hW
@@ -325,7 +325,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   · rw [if_pos g9] at hW; cases hW
   rw [if_neg g9] at hW
   have g9' : h >>> 28 = 9 := by simpa using g9
-  obtain ⟨h1, h2⟩ := simple 32 _ g9'
+  obtain ⟨h1, h2⟩ := simple PROJ _ g9'
     (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩))))))) hW
   exact ⟨h1, h2⟩
 
@@ -655,14 +655,14 @@ end refs11
 def litToCtorIfNatW (p : Prog) (n : Nat) (m : Mem) (vis h : Word) : Option (Word × Mem) :=
   if h >>> 28 ≠ 8 then some (h, m)
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none
-  else if rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 0 then some (h, m)
+  else if tcnt m LIT (tierW h) ≤ idxW h then none
+  else if tfld m LIT (tierW h) (idxW h) 0 ≠ 0 then some (h, m)
   else match callW p n "nat_lit_supported" [vis] m with
     | none => none
     | some (r₁, m₁) =>
       if r₁.headD 0 = 0 then some (h, m₁)
-      else match callW p n "nat_lit_to_ctor" [rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
-          rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)] m₁ with
+      else match callW p n "nat_lit_to_ctor" [tfld m₁ LIT (tierW h) (idxW h) 1,
+          tfld m₁ LIT (tierW h) (idxW h) 2] m₁ with
         | none => none
         | some (r₂, m₂) => some (r₂.headD 0, m₂)
 
@@ -675,7 +675,7 @@ theorem litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "nat_lit_supported", callW_spec p n "nat_lit_to_ctor"] <;>
-    finish (gen := 30) [litToCtorIfNatW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [litToCtorIfNatW, tierW, idxW]
 
 
 theorem litToCtor_run_notlit (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : h >>> 28 ≠ 8) :
@@ -735,12 +735,12 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
-  by_cases hbd : rdW (s₀.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
+  by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW
-  have hvOK : viewOK s₀.mem h 2 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK hg8
-  by_cases hk : rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 0
+  by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 0
   · rw [if_pos hk] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -749,7 +749,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     exact (CRef.pure hC _ (litToCtor_run_str fe a₀ h hh hg8 s hv) (by simp only [decH, ← hr]) (by
       unfold ResH; rw [← hr]; exact hh)).core
   rw [if_neg hk] at hW
-  have hk' : rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 := by simpa using hk
+  have hk' : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0 := by simpa using hk
   obtain ⟨N, hview, hnat⟩ := hk0 hk'
   obtain ⟨-, hsl, hnorm, hpv, -⟩ := hnat
   cases h1 : callW p n "nat_lit_supported" [vis] s₀.mem with
@@ -788,9 +788,9 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hPoolc := pcap_congr hPool
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
-  rw [hE] at hW
-  cases h2 : callW p n "nat_lit_to_ctor" [rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
-      rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)] m₁ with
+  simp only [tfld_arr_eq (R := LIT) hE] at hW
+  cases h2 : callW p n "nat_lit_to_ctor" [tfld s₀.mem LIT (tierW h) (idxW h) 1,
+      tfld s₀.mem LIT (tierW h) (idxW h) 2] m₁ with
   | none => rw [h2] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
@@ -798,11 +798,11 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   dsimp only at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
-  have hs₁ : SliceOK m₁ (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1))
-      (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)) := by
+  have hs₁ : SliceOK m₁ (tfld s₀.mem LIT (tierW h) (idxW h) 1)
+      (tfld s₀.mem LIT (tierW h) (idxW h) 2) := by
     unfold SliceOK; rw [hTop]; exact hsl
-  have hn₁ : Norm (vpool m₁) (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
-      (rdW (s₀.mem.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat := by rw [hPoolv]; exact hnorm
+  have hn₁ : Norm (vpool m₁) (tfld s₀.mem LIT (tierW h) (idxW h) 1).toNat
+      (tfld s₀.mem LIT (tierW h) (idxW h) 2).toNat := by rw [hPoolv]; exact hnorm
   have hctor := natLitToCtor_refines p hp n ⟨m₁, Locals.init []⟩ _ dn vis fe MM eb _ _ hS1 hs₁ hn₁
   obtain ⟨hok2, hA2, hres2, hrw2⟩ := CoreSpec.of_callW hctor h2
   have hc2 := AM.run_of_ok _ _ hok2
@@ -982,8 +982,8 @@ end refs13
 def unfoldDefnAtW (p : Prog) (n : Nat) (m : Mem) (e nw usw q : Word) : Option (Word × Word × Mem) :=
   if usw >>> 28 ≠ 0 then none
   else if tierW usw ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (40 + tierW usw) ≤ idxW usw then none
-  else if rdW (m.arr64 LSREC) (idxW usw * 6 + tierW usw * 3 + 1) ≠ rdW (m.arr64 EREC) (q + 3) then
+  else if tcnt m LVLS (tierW usw) ≤ idxW usw then none
+  else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ rdW (m.arr64 EREC) (q + 3) then
     some (0, 0, m)
   else
   match callW p n "const_val_at" [nw, rdW (m.arr64 EREC) (q + 2), rdW (m.arr64 EREC) (q + 3),
@@ -1009,7 +1009,7 @@ theorem unfoldDefnAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
       tcntM, evalE_tierE, evalE_idxE, st64,
       callW_spec p n "const_val_at", callW_spec p n "get_app_args",
       callW_spec p n "mk_app_n"] <;>
-    finish (gen := 30) [unfoldDefnAtW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [unfoldDefnAtW, tierW, idxW]
 
 /-- The model of `unfold_definition`: `(flag, result, memory)`. -/
 def unfoldDefinitionW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) :
@@ -1019,9 +1019,9 @@ def unfoldDefinitionW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) :
   | some (r₁, m₁) =>
   if r₁.headD 0 >>> 28 ≠ 3 then some (0, 0, m₁)
   else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-  else if rdW (m₁.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
+  else if tcnt m₁ CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
   else
-  match callW p n "env_find" [rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2),
+  match callW p n "env_find" [tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0,
       vis] m₁ with
   | none => none
   | some (r₂, m₂) =>
@@ -1029,8 +1029,8 @@ def unfoldDefinitionW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) :
   else if rdW (m₂.arr64 EREC) (r₂.tail.headD 0) ≠ 1 then some (0, 0, m₂)
   else
   match callW p n "unfold_defn_at" [e,
-      rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2),
-      rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1),
+      tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0,
+      tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1,
       r₂.tail.headD 0] m₂ with
   | none => none
   | some (r₃, m₃) => some (r₃.headD 0, r₃.tail.headD 0, m₃)
@@ -1045,7 +1045,7 @@ theorem unfoldDefinition_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ 
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "unfold_defn_at"] <;>
-    finish (gen := 30) [unfoldDefinitionW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 30) [unfoldDefinitionW, tierW, idxW]
 
 
 /-- The twin's tail of `unfoldDefinition`, once the head is a `defnInfo` constant. -/
@@ -1139,22 +1139,22 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   by_cases g2 : tierW usw ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos g2] at hW; cases hW
   rw [if_neg g2] at hW
-  by_cases g3 : rdW (s₀.mem.arr64 CTL) (40 + tierW usw) ≤ idxW usw
+  by_cases g3 : tcnt s₀.mem LVLS (tierW usw) ≤ idxW usw
   · rw [if_pos g3] at hW; cases hW
   rw [if_neg g3] at hW
   -- the level list's view
-  have hls : lsNodeW s₀.mem usw = [rdW (s₀.mem.arr64 LSREC) (idxW usw * 6 + tierW usw * 3),
-      rdW (s₀.mem.arr64 LSREC) (idxW usw * 6 + tierW usw * 3 + 1)] := by
+  have hls : lsNodeW s₀.mem usw = [tfld s₀.mem LVLS (tierW usw) (idxW usw) 0,
+      tfld s₀.mem LVLS (tierW usw) (idxW usw) 1] := by
     unfold lsNodeW
     rw [if_neg (by simpa using g1'), if_neg g2, if_neg g3]
   have hvl' := lsNodeW_viewLen hC.arena.1 hus hls
   rw [LsStore.viewLen_eq_map] at hvl'
   obtain ⟨l, hview, hllen⟩ : ∃ l, a₀.store.lss.view (decI usw) = some l ∧
-      l.length = (rdW (s₀.mem.arr64 LSREC) (idxW usw * 6 + tierW usw * 3 + 1)).toNat := by
+      l.length = (tfld s₀.mem LVLS (tierW usw) (idxW usw) 1).toNat := by
     cases hv : a₀.store.lss.view (decI usw) with
     | none => rw [hv] at hvl'; cases hvl'
     | some l => rw [hv] at hvl'; exact ⟨l, rfl, Option.some.inj hvl'⟩
-  by_cases g4 : rdW (s₀.mem.arr64 LSREC) (idxW usw * 6 + tierW usw * 3 + 1) ≠
+  by_cases g4 : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 ≠
       rdW (s₀.mem.arr64 EREC) (q + 3)
   · rw [if_pos g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -1168,7 +1168,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [if_neg g4] at hW
-  have g4' : rdW (s₀.mem.arr64 LSREC) (idxW usw * 6 + tierW usw * 3 + 1) =
+  have g4' : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 =
       rdW (s₀.mem.arr64 EREC) (q + 3) := by simpa using g4
   have hleneq : l.length = cv.levelParams.length := by rw [hllen, hlen, g4']
   -- const_val_at
@@ -1321,14 +1321,13 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   by_cases g1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos g1] at hW; cases hW
   rw [if_neg g1] at hW
-  by_cases g2 : rdW (s₀.mem.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
+  by_cases g2 : tcnt s₀.mem CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
   · rw [if_pos g2] at hW; cases hW
   rw [if_neg g2] at hW
-  have hvOK : viewOK s₀.mem (r₁.headD 0) 18 := ⟨g1, by simpa using g2⟩
+  have hvOK : viewOK s₀.mem (r₁.headD 0) CONST := ⟨g1, by simpa using g2⟩
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
     view_const_words s₀.mem a₀ hC.arena.1 (r₁.headD 0) hhw1 hvOK g0'
-  cases h2 : callW p n "env_find" [rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +
-      tierW (r₁.headD 0) * 2), vis] s₀.mem with
+  cases h2 : callW p n "env_find" [tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, vis] s₀.mem with
   | none => rw [h2] at hW; cases hW
   | some q₂ =>
   obtain ⟨r₂, m₂⟩ := q₂
@@ -1364,9 +1363,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   rw [if_neg g4] at hW
   have g4' : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) = 1 := by simpa using g4
   obtain ⟨cv, value, hint, rfl, hcv, hv', hvl⟩ := hdefn g4'
-  cases h3 : callW p n "unfold_defn_at" [e, rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +
-      tierW (r₁.headD 0) * 2), rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +
-      tierW (r₁.headD 0) * 2 + 1), r₂.tail.headD 0] s₀.mem with
+  cases h3 : callW p n "unfold_defn_at" [e, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1, r₂.tail.headD 0] s₀.mem with
   | none => rw [h3] at hW; cases hW
   | some q₃ =>
   obtain ⟨r₃, m₃⟩ := q₃

@@ -462,7 +462,7 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   obtain ⟨g1, hcno⟩ := of_ite_none hcno
   obtain ⟨g2, hcno⟩ := of_ite_none hcno
   simp only [Option.some.injEq] at hcno
-  have hvc : viewOK m (r3'.headD 0) 18 := ⟨g1, UInt64.not_le.mp g2⟩
+  have hvc : viewOK m (r3'.headD 0) CONST := ⟨g1, UInt64.not_le.mp g2⟩
   obtain ⟨hvw, hn32, -⟩ := L.Arena.view_const_f m a hR (r3'.headD 0) hHW3 hvc h3'
   rw [hcno] at hvw hn32
   -- the head's record

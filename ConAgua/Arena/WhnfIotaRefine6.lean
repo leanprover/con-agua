@@ -35,8 +35,8 @@ theorem eRecGet_spec (p : Prog) (hp : p.lookup "e_rec_get" = some eRecGetL) (n :
 /-- Model of `const_name_of`. -/
 def cnoW (m : Mem) (hh : Word) : Option Word :=
   if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
-  else some (rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2))
+  else if tcnt m CONST (tierW hh) ≤ idxW hh then none
+  else some (tfld m CONST (tierW hh) (idxW hh) 0)
 
 theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constNameOfL) (n : Nat)
     (s₀ : St) (hh : Word) :
@@ -47,7 +47,7 @@ theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constN
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [cnoW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [cnoW, tierW, idxW]
 
 /-- Model of `ind_caps_check` (callees at fuel `n`). -/
 def iccW (p : Prog) (n : Nat) (m : Mem) (indP us : Word) : Option (Word × Mem) :=
@@ -200,8 +200,8 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 /-! ## The head name of a `const` handle -/
 
 theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
-    a.store.viewConstName (decE h) = some (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))) := by
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
   have e : a.store.viewConstName (decE h) =
@@ -498,7 +498,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   obtain ⟨g1, hcno⟩ := of_ite_none hcno
   obtain ⟨g2, hcno⟩ := of_ite_none hcno
   simp only [Option.some.injEq] at hcno
-  have hvc : viewOK s₀.mem (r2.headD 0) 18 := ⟨g1, UInt64.not_le.mp g2⟩
+  have hvc : viewOK s₀.mem (r2.headD 0) CONST := ⟨g1, UInt64.not_le.mp g2⟩
   obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
   have hvn := viewConstName_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
   rw [hcno] at hvn hn32

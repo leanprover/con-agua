@@ -126,9 +126,9 @@ def ecsK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m) =>
     if r.headD 0 >>> 28 ≠ 3 then some (0, m)
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (18 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
     else ecsK2 p n a (callW p n "env_find"
-      [rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2), vis] m)
+      [tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0, vis] m)
 
 end ecs
 
@@ -141,7 +141,7 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
-  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, tfld, tcnt, TRec.ad, LocEq, BinOp.eval,
+  simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, CREC, Cmp.eval, Cmp.evalW,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ, size_set64]
@@ -230,12 +230,12 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     exact hres 0 hW hw0 _
       (etaCtorShape_run_nonconst fe _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
   have hs : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hs => by simp [h3, hs] at hW
-  have hcc : ¬ rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h := fun hcc => by simp [h3, hs, hcc] at hW
+  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hs, hcc] at hW
   simp only [h3, hs, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have hvo : viewOK s.mem h 18 := ⟨hs, by simpa using hcc⟩
+  have hvo : viewOK s.mem h CONST := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
   simp only [ecsK2] at hW

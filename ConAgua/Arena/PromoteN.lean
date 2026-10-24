@@ -53,22 +53,22 @@ def pnNumK (p : Prog) (n : Nat) (u : Word) : Option (List Word × Mem) → Optio
   | some (q, m₁) => hd1 (callW p n "pi_nnum" [q.headD 0, u] m₁)
 
 /-- The `num` record's two words. -/
-abbrev nnQ (m : Mem) (t i : Word) : Word := rdW (m.arr64 NNREC) (i * 4 + t * 2)
-abbrev nnU (m : Mem) (t i : Word) : Word := rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)
+abbrev nnQ (m : Mem) (t i : Word) : Word := tfld m NNUM t i 0
+abbrev nnU (m : Mem) (t i : Word) : Word := tfld m NNUM t i 1
 
 /-- **The model of `pn_arm(f, h)`.** -/
 def pnArmW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
   if 4294967295 < h then none
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if h >>> 28 = 0 then
-    if rdW (m.arr64 CTL) (34 + tierW h) ≤ idxW h then none
+    if tcnt m NANON (tierW h) ≤ idxW h then none
     else hd1 (callW p n "pi_nanon" [] m)
   else if h >>> 28 = 1 then
-    if rdW (m.arr64 CTL) (36 + tierW h) ≤ idxW h then none
-    else pnStrK p n (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h))
-      (callW p n "promote_n" [f, nsQ m (tierW h) (idxW h)] m)
+    if tcnt m NSTR (tierW h) ≤ idxW h then none
+    else pnStrK p n (tfld m NSTR (tierW h) (idxW h) 1) (tfld m NSTR (tierW h) (idxW h) 2)
+      (callW p n "promote_n" [f, tfld m NSTR (tierW h) (idxW h) 0] m)
   else if h >>> 28 = 2 then
-    if rdW (m.arr64 CTL) (38 + tierW h) ≤ idxW h then none
+    if tcnt m NNUM (tierW h) ≤ idxW h then none
     else pnNumK p n (nnU m (tierW h) (idxW h)) (callW p n "promote_n" [f, nnQ m (tierW h) (idxW h)] m)
   else none
 
@@ -102,18 +102,18 @@ theorem pnW_miss (hf : f ≠ 0) (ht : tierW h ≠ 0) (h0 : mfindG pnSch m h 0 �
   unfold pnW; rw [if_neg hf, if_neg ht, if_neg h0, if_neg (fun h2 => h2 h1)]
 
 theorem pnArmW_anon (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hg : h >>> 28 = 0) (hc : ¬ rdW (m.arr64 CTL) (34 + tierW h) ≤ idxW h) :
+    (hg : h >>> 28 = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW h) :
     pnArmW p n m f h = hd1 (callW p n "pi_nanon" [] m) := by
   rw [pnArmW]; simp only [hh, hv, hg, hc, ↓reduceIte]
 
 theorem pnArmW_str (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hg : h >>> 28 = 1) (hc : ¬ rdW (m.arr64 CTL) (36 + tierW h) ≤ idxW h) :
-    pnArmW p n m f h = pnStrK p n (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h))
-      (callW p n "promote_n" [f, nsQ m (tierW h) (idxW h)] m) := by
+    (hg : h >>> 28 = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
+    pnArmW p n m f h = pnStrK p n (tfld m NSTR (tierW h) (idxW h) 1) (tfld m NSTR (tierW h) (idxW h) 2)
+      (callW p n "promote_n" [f, tfld m NSTR (tierW h) (idxW h) 0] m) := by
   rw [pnArmW]; simp only [hh, hv, hg, hc, ↓reduceIte]; simp
 
 theorem pnArmW_num (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hg : h >>> 28 = 2) (hc : ¬ rdW (m.arr64 CTL) (38 + tierW h) ≤ idxW h) :
+    (hg : h >>> 28 = 2) (hc : ¬ tcnt m NNUM (tierW h) ≤ idxW h) :
     pnArmW p n m f h = pnNumK p n (nnU m (tierW h) (idxW h))
       (callW p n "promote_n" [f, nnQ m (tierW h) (idxW h)] m) := by
   rw [pnArmW]; simp only [hh, hv, hg, hc, ↓reduceIte]; simp
@@ -135,7 +135,7 @@ theorem promoteN_spec (f h : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec pnSch p _ (hp.get "pn_find") n, memoPutG_spec pnSch p _ (hp.get "pn_put") n,
       callW_spec p n "pn_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [pnW_pers, pnW_hit, pnW_miss, memoK_some, mvG, tierW, tfld, tcnt, TRec.ad]
+    finish [pnW_pers, pnW_hit, pnW_miss, memoK_some, mvG, tierW]
 
 theorem pnArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pn_arm" [f, h]
@@ -147,7 +147,7 @@ theorem pnArm_spec (f h : Word) :
       callW_spec p n "pi_nanon", callW_spec p n "promote_n", callW_spec p n "pi_nstr",
       callW_spec p n "pi_nnum", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [pnArmW_anon, pnArmW_str, pnArmW_num, pnStrK_some, pnNumK_some, hd1_some, tierW,
-      idxW, tfld, tcnt, TRec.ad]
+      idxW]
 
 end specs
 

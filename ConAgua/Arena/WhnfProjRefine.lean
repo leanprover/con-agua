@@ -213,7 +213,7 @@ def ptnW (p : Prog) (n : Nat) (m : Mem) (t : Word) : Option (Word × Mem) :=
   if 4294967295 < t then none
   else if (2 : Word) < (t >>> 28) then none
   else if ((t >>> 27) &&& 1) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) + ((t >>> (27 : Word)) &&& 1)) ≤ (t &&& 134217727) then none
+  else if nameCnt m (t >>> 28) ((t >>> 27) &&& 1) ≤ (t &&& 134217727) then none
   else if rdW (m.arr64 CTL) 0 + 9 < rdW (m.arr64 CTL) 0 then none
   else if m.len64 POOL < rdW (m.arr64 CTL) 0 + 9 then none
   else match callW p n "intern_nstr" [t, rdW (m.arr64 CTL) 0, 9] (ptMem m (rdW (m.arr64 CTL) 0)) with
@@ -230,9 +230,9 @@ theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) 
   rw [invoke_eq _ hp.ptn]
   simp only [callFn, projTableNameL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, evalE_tierE, evalE_idxE,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, evalE_tierE, evalE_idxE,
       callW_spec p n "intern_nstr", callW_spec p n "intern_nnum"] <;>
-    finish [ptnW, ptMem, ptBytes, tierW, idxW]
+    finish [ptnW, ptMem, ptBytes, tierW, idxW, nameCnt]
 
 /-! ## The pool bytes -/
 
@@ -330,7 +330,7 @@ theorem view_of_viewN_run {a a' : AState} {h : NIdx} {v : NNodeView}
 theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
     (ht : ¬ 4294967295 < t) (hg : ¬ (2 : Word) < (t >>> 28))
     (hv : ¬ (((t >>> 27) &&& 1) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc : ¬ rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) + ((t >>> (27 : Word)) &&& 1)) ≤
+    (hc : ¬ nameCnt m (t >>> 28) ((t >>> 27) &&& 1) ≤
       (t &&& 134217727)) :
     (a.store.lss.ls.ns.view (decI t)).isSome = true := by
   have ht32 : t.toNat < 2 ^ 32 := by
@@ -345,23 +345,15 @@ theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
     · exact .inr (.inl (UInt64.toNat_inj.mp (by simpa using h)))
     · exact .inr (.inr (UInt64.toNat_inj.mp (by simpa using h)))
   rcases cases3 with g | g | g
-  · have hc' : ¬ rdW (m.arr64 CTL) (34 + tierW t) ≤ idxW t := by
-      simpa [g, tierW, idxW] using hc
+  · have hc' : ¬ tcnt m NANON (tierW t) ≤ idxW t := by
+      simpa [g, tierW, idxW, nameCnt] using hc
     rw [view_of_viewN_run (viewN_anon hR ht32 hv' g hc')]; rfl
-  · have hc' : ¬ rdW (m.arr64 CTL) (36 + tierW t) ≤ idxW t := by
-      have e : (34 : Word) + (1 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 36 + tierW t := by
-        have k : ∀ x : Word, (34 : Word) + (1 : Word) * (2 : Word) + x = 36 + x := fun x => by
-          rw [show (34 : Word) + (1 : Word) * (2 : Word) = 36 by decide]
-        exact k _
-      rw [g, e] at hc; exact hc
+  · have hc' : ¬ tcnt m NSTR (tierW t) ≤ idxW t := by
+      simpa [g, tierW, idxW, nameCnt] using hc
     obtain ⟨_, hr, -⟩ := viewN_str hR ht32 hv' g hc'
     rw [view_of_viewN_run hr]; rfl
-  · have hc' : ¬ rdW (m.arr64 CTL) (38 + tierW t) ≤ idxW t := by
-      have e : (34 : Word) + (2 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 38 + tierW t := by
-        have k : ∀ x : Word, (34 : Word) + (2 : Word) * (2 : Word) + x = 38 + x := fun x => by
-          rw [show (34 : Word) + (2 : Word) * (2 : Word) = 38 by decide]
-        exact k _
-      rw [g, e] at hc; exact hc
+  · have hc' : ¬ tcnt m NNUM (tierW t) ≤ idxW t := by
+      simpa [g, tierW, idxW, nameCnt] using hc
     rw [view_of_viewN_run (viewN_num hR ht32 hv' g hc').1]; rfl
 
 /-! ## `proj_table_name` refines `projTableName` -/
@@ -408,8 +400,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   obtain ⟨c1, hW⟩ := of_ite_none hW
   obtain ⟨c2, hW⟩ := of_ite_none hW
   obtain ⟨c3, hW⟩ := of_ite_none hW
-  by_cases c4 : rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) +
-      ((t >>> (27 : Word)) &&& 1)) ≤ (t &&& 134217727)
+  by_cases c4 : nameCnt m (t >>> 28) ((t >>> 27) &&& 1) ≤ (t &&& 134217727)
   · rw [if_pos c4] at hW; cases hW
   rw [if_neg c4] at hW
   obtain ⟨c5, hW⟩ := of_ite_none hW

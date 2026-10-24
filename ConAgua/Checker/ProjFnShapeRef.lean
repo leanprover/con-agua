@@ -28,18 +28,18 @@ namespace L.Checker
 /-! ## The model -/
 
 /-- `is_proj_fn_shape`'s string test, at the `str` node's first word `k`. -/
-def pfsStr (m : Mem) (k : Word) : Option Word :=
-  if rdW (m.arr64 NSREC) (k + 2) ≠ 4 ∧ rdW (m.arr64 NSREC) (k + 2) ≠ 9 then some 0
-  else if ¬ (rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1)) = 112 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 1) = 114 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 2) = 111 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 3) = 106) then some 0
-  else if rdW (m.arr64 NSREC) (k + 2) = 4 then some 1
-  else if ¬ (rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 4) = 84 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 5) = 97 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 6) = 98 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 7) = 108 ∧
-      rdW (m.arr64 POOL) (rdW (m.arr64 NSREC) (k + 1) + 8) = 101) then some 0
+def pfsStr (m : Mem) (t i : Word) : Option Word :=
+  if tfld m NSTR t i 2 ≠ 4 ∧ tfld m NSTR t i 2 ≠ 9 then some 0
+  else if ¬ (rdW (m.arr64 POOL) (tfld m NSTR t i 1) = 112 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 1) = 114 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 2) = 111 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 3) = 106) then some 0
+  else if tfld m NSTR t i 2 = 4 then some 1
+  else if ¬ (rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 4) = 84 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 5) = 97 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 6) = 98 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 7) = 108 ∧
+      rdW (m.arr64 POOL) (tfld m NSTR t i 1 + 8) = 101) then some 0
   else some 1
 
 /-- `is_proj_fn_shape`'s prefix step: the `num` node's prefix word `q`. -/
@@ -47,21 +47,21 @@ def pfsPre (m : Mem) (q : Word) : Option Word :=
   if 4294967295 < q then none
   else if q >>> 28 ≠ 1 then some 0
   else if tierW q ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (36 + tierW q) ≤ idxW q then none
-  else pfsStr m (idxW q * 8 + tierW q * 4)
+  else if tcnt m NSTR (tierW q) ≤ idxW q then none
+  else pfsStr m (tierW q) (idxW q)
 
 /-- **The model of `is_proj_fn_shape(n)`.** -/
 def pfsW (m : Mem) (n : Word) : Option Word :=
   if 4294967295 < n then none
   else if n >>> 28 ≠ 2 then some 0
   else if tierW n ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (38 + tierW n) ≤ idxW n then none
-  else pfsPre m (rdW (m.arr64 NNREC) (idxW n * 4 + tierW n * 2))
+  else if tcnt m NNUM (tierW n) ≤ idxW n then none
+  else pfsPre m (tfld m NNUM (tierW n) (idxW n) 0)
 
 /-! ## The spec -/
 
-theorem pfsStr_eq (m : Mem) (k : Word) :
-    pfsStr m k = some (L.Ind.ipfStrW m (rdW (m.arr64 NSREC) (k + 1)) (rdW (m.arr64 NSREC) (k + 2))) := by
+theorem pfsStr_eq (m : Mem) (t i : Word) :
+    pfsStr m t i = some (L.Ind.ipfStrW m (tfld m NSTR t i 1) (tfld m NSTR t i 2)) := by
   unfold pfsStr L.Ind.ipfStrW
   simp only [Classical.not_and_iff_not_or_not, Classical.not_not]
   repeat' split
@@ -105,15 +105,15 @@ theorem ite10_true {b : Bool} (h : b = true) : (if b = true then (1 : Word) else
   simp [h]
 
 /-- **The string test**: on a `str` node's offset and length words holding `s`. -/
-theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
-    (hol : (rdW (m.arr64 NSREC) (k + 1)).toNat + (rdW (m.arr64 NSREC) (k + 2)).toNat ≤ m.top.toNat)
-    (hsl : sliceL (vpool m) (rdW (m.arr64 NSREC) (k + 1)).toNat
-      (rdW (m.arr64 NSREC) (k + 2)).toNat = strWords s)
-    (h : pfsStr m k = some r) :
+theorem pfsStr_ok (m : Mem) (t i : Word) (s : String) (r : Word)
+    (hol : (tfld m NSTR t i 1).toNat + (tfld m NSTR t i 2).toNat ≤ m.top.toNat)
+    (hsl : sliceL (vpool m) (tfld m NSTR t i 1).toNat
+      (tfld m NSTR t i 2).toNat = strWords s)
+    (h : pfsStr m t i = some r) :
     r = if (s == "proj" || s == "projTable") then 1 else 0 := by
   unfold pfsStr at h
-  generalize rdW (m.arr64 NSREC) (k + 1) = o at hol hsl h
-  generalize rdW (m.arr64 NSREC) (k + 2) = lw at hol hsl h
+  generalize tfld m NSTR t i 1 = o at hol hsl h
+  generalize tfld m NSTR t i 2 = lw at hol hsl h
   have hlen := sliceL_length (vpool m) o.toNat lw.toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
@@ -237,7 +237,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   · cases h
   rename_i hc
   obtain ⟨x, hx, hq, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
-    (by simp only [cntC, cntW, nnumCS, nnumSch]; exact UInt64.not_le.mp hc)
+    (UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.num x.pre x.n, a) := by
     apply L.Front.Ind.viewN_run
     rw [EStore.ns, hv, NTables.get, L.Front.Ind.decN_tag w hw, hg]
@@ -287,7 +287,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
   · cases h
   rename_i hc'
   obtain ⟨y, hy, hrel⟩ := ConsR.node hR.nstr (tierW q) ht1' (idxW q)
-    (by simp only [cntC, cntW, nstrCS, nstrSch]; exact UInt64.not_le.mp hc')
+    (UInt64.not_le.mp hc')
   have hview' : (viewN (decI q)).run a = .ok (.str y.pre y.s, a) := by
     apply L.Front.Ind.viewN_run
     rw [EStore.ns, hv', NTables.get, L.Front.Ind.decN_tag q hq32, hg']
@@ -296,7 +296,7 @@ theorem pfsW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w r : Word) (h : pfsW 
     · simp only [ht, ↓reduceIte] at hy; simp [ht, hy]
     · simp only [ht, ↓reduceIte] at hy; simp [ht, hy]
   obtain ⟨-, hol, hsl, -⟩ := hrel
-  refine ⟨y.s == "proj" || y.s == "projTable", ?_, pfsStr_ok m _ y.s r hol hsl h⟩
+  refine ⟨y.s == "proj" || y.s == "projTable", ?_, pfsStr_ok m _ _ y.s r hol hsl h⟩
   simp only [htagS, ite_true]
   rw [L.Front.Ind.run_bind _ _ a _ hview']
   rfl

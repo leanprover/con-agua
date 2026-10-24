@@ -80,59 +80,59 @@ def frNodeW : Nat → Mem → Word → Word → Option (Word × Mem)
   | n + 1, m, h, c =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if h >>> 28 = 0 then
-      if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none else some (0, m)
+      if tcnt m BVAR (tierW h) ≤ idxW h then none else some (0, m)
     else if h >>> 28 = 1 then
-      if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
-      else if rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1 = 0 then none
-      else some (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1, m)
+      if tcnt m FVAR (tierW h) ≤ idxW h then none
+      else if tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0 then none
+      else some (tfld m FVAR (tierW h) (idxW h) 0 + 1, m)
     else if h >>> 28 = 4 then
-      if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+      if tcnt m APP (tierW h) ≤ idxW h then none
       else
-        match frW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c with
+        match frW n m (tfld m APP (tierW h) (idxW h) 0) c with
         | none => none
         | some (x, m₁) =>
-          match frW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) c with
+          match frW n m₁ (tfld m APP (tierW h) (idxW h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x y, m₂)
     else if h >>> 28 = 5 then
-      if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+      if tcnt m LAM (tierW h) ≤ idxW h then none
       else
-        match frW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c with
+        match frW n m (tfld m LAM (tierW h) (idxW h) 0) c with
         | none => none
         | some (x, m₁) =>
-          match frW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) c with
+          match frW n m₁ (tfld m LAM (tierW h) (idxW h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x y, m₂)
     else if h >>> 28 = 6 then
-      if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+      if tcnt m FORALL (tierW h) ≤ idxW h then none
       else
-        match frW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c with
+        match frW n m (tfld m FORALL (tierW h) (idxW h) 0) c with
         | none => none
         | some (x, m₁) =>
-          match frW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) c with
+          match frW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x y, m₂)
     else if h >>> 28 = 9 then
-      if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
-      else frW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c
+      if tcnt m PROJ (tierW h) ≤ idxW h then none
+      else frW n m (tfld m PROJ (tierW h) (idxW h) 2) c
     else if h >>> 28 = 7 then
-      if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+      if tcnt m LET (tierW h) ≤ idxW h then none
       else
-        match frW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c with
+        match frW n m (tfld m LET (tierW h) (idxW h) 0) c with
         | none => none
         | some (x, m₁) =>
-          match frW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) c with
+          match frW n m₁ (tfld m LET (tierW h) (idxW h) 1) c with
           | none => none
           | some (y, m₂) =>
-            match frW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) c with
+            match frW n m₂ (tfld m LET (tierW h) (idxW h) 2) c with
             | none => none
             | some (z, m₃) => some (maxW (maxW x y) z, m₃)
     else if h >>> 28 = 2 then
-      if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none else some (0, m)
+      if tcnt m SORT (tierW h) ≤ idxW h then none else some (0, m)
     else if h >>> 28 = 3 then
-      if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none else some (0, m)
+      if tcnt m CONST (tierW h) ≤ idxW h then none else some (0, m)
     else if h >>> 28 = 8 then
-      if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none else some (0, m)
+      if tcnt m LIT (tierW h) ≤ idxW h then none else some (0, m)
     else none
 end
 
@@ -201,58 +201,58 @@ theorem frW_miss (hc : c ≠ 0) (hr : mfindG frSch m h 0 ≠ []) (hh : (mfindG f
     frW (n + 1) m h c = frK h (frNodeW n m h (c - 1)) := by
   rw [frW]; simp only [hc, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, frK]
 
-theorem frNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h 22) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h BVAR) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_fvar (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (h1 : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1 ≠ 0) :
-    frNodeW (n + 1) m h c = some (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1, m) := by
+theorem frNodeW_fvar (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+    (h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 ≠ 0) :
+    frNodeW (n + 1) m h c = some (tfld m FVAR (tierW h) (idxW h) 0 + 1, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, h1]; simp [UInt64.not_le.mpr hv2]
 
-theorem frNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h SORT) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h CONST) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h LIT) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
-    frNodeW (n + 1) m h c = frAppK₁ n c (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
-      (frW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c) := by
+theorem frNodeW_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
+    frNodeW (n + 1) m h c = frAppK₁ n c (tfld m APP (tierW h) (idxW h) 1)
+      (frW n m (tfld m APP (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frAppK₁, frAppK₁.frAppK₂]
   simp
 
-theorem frNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
-    frNodeW (n + 1) m h c = frBindK₁ n c (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
-      (frW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c) := by
+theorem frNodeW_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
+    frNodeW (n + 1) m h c = frBindK₁ n c (tfld m LAM (tierW h) (idxW h) 1)
+      (frW n m (tfld m LAM (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frBindK₁, frBindK₁.frBindK₂]
   simp
 
-theorem frNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
-    frNodeW (n + 1) m h c = frBindK₁ n c (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
-      (frW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c) := by
+theorem frNodeW_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
+    frNodeW (n + 1) m h c = frBindK₁ n c (tfld m FORALL (tierW h) (idxW h) 1)
+      (frW n m (tfld m FORALL (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frBindK₁, frBindK₁.frBindK₂]
   simp
 
-theorem frNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
-    frNodeW (n + 1) m h c = frW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c := by
+theorem frNodeW_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
+    frNodeW (n + 1) m h c = frW n m (tfld m PROJ (tierW h) (idxW h) 2) c := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
-    frNodeW (n + 1) m h c = frLetK₁ n c (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-      (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
-      (frW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c) := by
+theorem frNodeW_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
+    frNodeW (n + 1) m h c = frLetK₁ n c (tfld m LET (tierW h) (idxW h) 1)
+      (tfld m LET (tierW h) (idxW h) 2)
+      (frW n m (tfld m LET (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frLetK₁, frLetK₁.frLetK₂,
     frLetK₁.frLetK₃]
@@ -386,7 +386,7 @@ theorem frNode_step (n : Nat) (ih : FrGoSpec p n) : FrNodeSpec p (n + 1) := by
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, ih] <;>
-    finish [tfld, tcnt, TRec.ad, viewOK, tierW, idxW, maxW]
+    finish [viewOK, tierW, idxW, maxW]
 
 include hpf hps hp hpn in
 /-- **`fr_go` and `fr_node` are their models**, at every fuel. -/

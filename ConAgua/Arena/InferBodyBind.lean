@@ -368,9 +368,9 @@ def lamsLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
   | n + 1, m, mode, vis, d, peel, t, k, fo, lo =>
     if peel ≠ 0 ∧ t >>> 28 = 5 then
       if tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if rdW (m.arr64 CTL) (28 + tierW t) ≤ idxW t then none
+      else if tcnt m LAM (tierW t) ≤ idxW t then none
       else
-        match callW p n "inst_list" [rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2), fo, k, 0] m with
+        match callW p n "inst_list" [tfld m LAM (tierW t) (idxW t) 0, fo, k, 0] m with
         | none => none
         | some (r₁, m₁) =>
           match callW p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with
@@ -386,7 +386,7 @@ def lamsLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
                 | some (r₄, m₄) =>
                   if tPushOK m₄ fo lo k then
                     lamsLoop p n (tPush m₄ fo lo k (r₄.headD 0) (r₁.headD 0)) mode vis d (peel - 1)
-                      (rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2 + 1)) (k + 1) fo lo
+                      (tfld m LAM (tierW t) (idxW t) 1) (k + 1) fo lo
                   else none
     else some (t, k, m)
 
@@ -405,8 +405,7 @@ theorem lamsW_spec (p : Prog) (n : Nat) (s₀ : St) :
       callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
       callW_spec p n "intern_fvar", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     simp_all [lamsLoop, tPush, tPushOK, Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons,
-      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne,
-      tfld, tcnt, TRec.ad]
+      St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, size_set64, w_lt_false, Mem.arr64_set64_ne]
 
 /-- **The model of `infer_lams`.** -/
 def lamsFull (p : Prog) (n k : Nat) (m : Mem) (mode vis d peel t kk fo lo : Word) : Option (Word × Mem) :=
@@ -594,12 +593,12 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     · obtain ⟨hp0, ht5⟩ := hc
       have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun g => by
         simp only [lamsFull, lamsLoop, hp0, ht5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-      have hc2 : ¬ rdW (m.arr64 CTL) (28 + tierW t) ≤ idxW t := fun g => by
+      have hc2 : ¬ tcnt m LAM (tierW t) ≤ idxW t := fun g => by
         simp only [lamsFull, lamsLoop, hp0, ht5, hc1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-      have hv : viewOK m t 28 := ⟨hc1, UInt64.not_le.mp hc2⟩
+      have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
       obtain ⟨-, hty, hbody⟩ := view_lam m a hS.arena.1 t ht hv ht5
       have hvb := viewBind_lam m a hS.arena.1 t ht hv ht5
-      cases h1 : callW p j "inst_list" [rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2), fo, k, 0] m with
+      cases h1 : callW p j "inst_list" [tfld m LAM (tierW t) (idxW t) 0, fo, k, 0] m with
       | none => simp only [lamsFull, lamsLoop, hp0, ht5, hc1, hc2, h1, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
       | some q =>
       obtain ⟨r₁, m₁⟩ := q
@@ -620,7 +619,7 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       have g2 : tPushOK m₄ fo lo k := Classical.byContradiction fun g => by
         simp only [lamsFull, lamsLoop, hp0, ht5, hc1, hc2, h1, h2, h3, g1, h4, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
       have hF' : lamsFull p N j (tPush m₄ fo lo k (r₄.headD 0) (r₁.headD 0)) mode vis d (peel - 1)
-          (rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2 + 1)) (k + 1) fo lo = some (w, mF) := by
+          (tfld m LAM (tierW t) (idxW t) 1) (k + 1) fo lo = some (w, mF) := by
         simpa only [lamsFull, lamsLoop, hp0, ht5, hc1, hc2, h1, h2, h3, g1, h4, g2, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] using hF
       have h0 : (0 : Word).toNat = 0 := rfl
       -- the domain opened

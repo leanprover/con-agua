@@ -364,12 +364,12 @@ def strCtorW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
   | some (t, m₁) =>
   if h >>> 28 ≠ 8 then none
   else if tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-  else if rdW (m₁.arr64 CTL) (2 + tierW h) ≤ idxW h then none
-  else if rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1 then none
+  else if tcnt m₁ LIT (tierW h) ≤ idxW h then none
+  else if tfld m₁ LIT (tierW h) (idxW h) 0 ≠ 1 then none
   else match callW p n "str_cons_spine" [t.headD 0, t.tail.headD 0, t.tail.tail.headD 0,
-      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
-      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1) +
-        rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)] m₁ with
+      tfld m₁ LIT (tierW h) (idxW h) 1,
+      tfld m₁ LIT (tierW h) (idxW h) 1 +
+        tfld m₁ LIT (tierW h) (idxW h) 2] m₁ with
   | none => none
   | some (sp, m₂) =>
   match callW p n "pin_at" [6] m₂ with
@@ -393,7 +393,7 @@ theorem strLitCtor_spec (p : Prog) (hp : p.lookup "str_lit_ctor" = some strLitCt
       callW_spec p n "str_ctor_pre", callW_spec p n "str_cons_spine", callW_spec p n "pin_at",
       callW_spec p n "const_e", callW_spec p n "mk_app", evalE_tld, tld, evalE_cnt, tcntM,
         evalE_tierE, evalE_idxE] <;>
-    finish (gen := 20) [strCtorW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish (gen := 20) [strCtorW, tierW, idxW]
 
 section ctor
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
@@ -416,16 +416,16 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   by_cases gs : tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
   · rw [if_pos gs] at hW; cases hW
   rw [if_neg gs] at hW
-  by_cases gb : rdW (m₁.arr64 CTL) (2 + tierW h) ≤ idxW h
+  by_cases gb : tcnt m₁ LIT (tierW h) ≤ idxW h
   · rw [if_pos gb] at hW; cases hW
   rw [if_neg gb] at hW
-  by_cases gk : rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1
+  by_cases gk : tfld m₁ LIT (tierW h) (idxW h) 0 ≠ 1
   · rw [if_pos gk] at hW; cases hW
   rw [if_neg gk] at hW
   wstep hW, h2 : callW p n "str_cons_spine" [t.headD 0, t.tail.headD 0, t.tail.tail.headD 0,
-      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
-      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1) +
-        rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)] m₁ => sp, m₂
+      tfld m₁ LIT (tierW h) (idxW h) 1,
+      tfld m₁ LIT (tierW h) (idxW h) 1 +
+        tfld m₁ LIT (tierW h) (idxW h) 2] m₁ => sp, m₂
   wstep hW, h3 : callW p n "pin_at" [6] m₂ => q, m₃
   wstep hW, h4 : callW p n "const_e" [q.headD 0] m₃ => sl, m₄
   wstep hW, h5 : callW p n "mk_app" [sl.headD 0, sp.headD 0] m₄ => r₅, m₅
@@ -438,16 +438,16 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   have hv₁ : (AM.st ctorPreT a).store.view (decE h) = some (.lit (.strVal s)) :=
     vmono_ctorPreT.run (AM.run_of_ok _ _ c1.1) hv
   have g8' : h >>> 28 = 8 := by simpa using g8
-  have hvOK : viewOK m₁ h 2 := ⟨gs, by simpa using gb⟩
+  have hvOK : viewOK m₁ h LIT := ⟨gs, by simpa using gb⟩
   obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.1 h hh hvOK g8' _ hv₁
   obtain ⟨-, hsl⟩ := hstr s rfl
   have hpool := hS₁.arena.1.lit.1
   have hsize := hpool.2.2.1
   have htop' := hpool.2.2.2
-  have hoc : (rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1) +
-      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat =
-      (rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat +
-      (rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat := by
+  have hoc : (tfld m₁ LIT (tierW h) (idxW h) 1 +
+      tfld m₁ LIT (tierW h) (idxW h) 2).toNat =
+      (tfld m₁ LIT (tierW h) (idxW h) 1).toNat +
+      (tfld m₁ LIT (tierW h) (idxW h) 2).toNat := by
     rw [UInt64.toNat_add]; omega
   unfold ctorRestT
   have c2 := spine_call p hp (t.headD 0) (t.tail.headD 0) (t.tail.tail.headD 0) c1.2.2.2.2.2

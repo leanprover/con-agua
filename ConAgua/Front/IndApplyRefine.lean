@@ -339,7 +339,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     split at h; cases h; rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW w) ht1 (idxW w)
-      (by simp only [cntC, cntW, nanonCS, nanonSch]; exact UInt64.not_le.mp hc)
+      (UInt64.not_le.mp hc)
     refine ⟨.anonymous, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, decN_idx, Tbl.node?]
@@ -352,7 +352,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     split at h; cases h; rename_i hc
     cases h
     obtain ⟨x, hx, -⟩ := ConsR.node hR.nnum (tierW w) ht1 (idxW w)
-      (by simp only [cntC, cntW, nnumCS, nnumSch]; exact UInt64.not_le.mp hc)
+      (UInt64.not_le.mp hc)
     refine ⟨.num x.pre x.n, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
     simp only [NTag.anonymous, NTag.str, NTag.num, decN_idx, Tbl.node?]
@@ -363,7 +363,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   have hg : w >>> 28 = 1 := by simpa using hg1
   split at h; cases h; rename_i hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.nstr (tierW w) ht1 (idxW w)
-    (by simp only [cntC, cntW, nstrCS, nstrSch]; exact UInt64.not_le.mp hc)
+    (UInt64.not_le.mp hc)
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by
     apply viewN_run
     rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
@@ -372,14 +372,13 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     · rw [if_pos ht] at hx; simp [ht, hx]
     · rw [if_neg ht] at hx; simp [ht, hx]
   obtain ⟨hq, hol, hsl, -⟩ := hrel
-  simp only [nsQ, nsO, nsL] at hq hol hsl
-  have hlen := sliceL_length (vpool m) (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1)).toNat
-    (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2)).toNat
+  have hlen := sliceL_length (vpool m) (tfld m NSTR (tierW w) (idxW w) 1).toNat
+    (tfld m NSTR (tierW w) (idxW w) 2).toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
   unfold nrpStr at h
-  generalize ho : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1) = o at hol hsl hlen h
-  generalize hlw : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2) = lw at hol hsl hlen h
+  generalize ho : tfld m NSTR (tierW w) (idxW w) 1 = o at hol hsl hlen h
+  generalize hlw : tfld m NSTR (tierW w) (idxW w) 2 = lw at hol hsl hlen h
   have e1 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 1) = (vpool m)[o.toNat + 1]?.getD 0 :=
     fun h3 => by
       rw [rdW_add (m.arr64 POOL) o 1 (by simp; omega), vpool_getD_nat m (o.toNat + 1) (by omega)]; rfl

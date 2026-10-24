@@ -131,10 +131,10 @@ theorem pCopy_ok (ord c t : Word) (n : Nat) : ∀ (m m' : Mem) (i z : Word), i.t
       rw [word_le] at hci
       have hi1 := toNat_succ i (by omega)
       cases hrc : pCopyRecW n m t (1 + 8 * rdW (m.arr64 IW) (ord + i)) i 0 with
-      | none => rw [hrc] at h; simp [pCopyW.k1] at h
+      | none => rw [hrc] at h; simp [pCopyW.k_prep_copy_rec] at h
       | some p =>
         obtain ⟨z₁, m₁⟩ := p
-        rw [hrc, pCopyW.k1.arm1] at h
+        rw [hrc, pCopyW.k_prep_copy_rec.arm1] at h
         obtain ⟨hf1, hr1⟩ := pCopyRec_ok t _ i n m m₁ 0 z₁ (by decide) (by omega) hs hrc
         have h0 : (0 : Word).toNat = 0 := rfl
         rw [h0] at hr1
@@ -177,10 +177,10 @@ theorem pBack_ok (t c : Word) (n : Nat) : ∀ (m m' : Mem) (i z : Word), i.toNat
       rw [word_le] at hci
       have hi1 := toNat_succ i (by omega)
       cases hrc : pBackRecW n m t i 0 with
-      | none => rw [hrc] at h; simp [pBackW.k1] at h
+      | none => rw [hrc] at h; simp [pBackW.k_prep_back_rec] at h
       | some p =>
         obtain ⟨z₁, m₁⟩ := p
-        rw [hrc, pBackW.k1.arm1] at h
+        rw [hrc, pBackW.k_prep_back_rec.arm1] at h
         obtain ⟨hf1, hr1⟩ := pBackRec_ok t i n m m₁ 0 z₁ (by decide) (by omega) hs hrc
         have h0 : (0 : Word).toNat = 0 := rfl
         rw [h0] at hr1

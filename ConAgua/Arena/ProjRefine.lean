@@ -95,9 +95,17 @@ theorem fld_pj (m : Mem) (t i f : Word) :
 
 /-- Node `i` of tier `t` holds `proj k.n k.i k.e`: the two handle words and the index word. -/
 def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
-  rdW (m.arr64 PJREC) (i * 6 + t * 3) = k.n.word.toUInt64 ∧
-  (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
-  rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
+  tfld m PROJ t i 0 = k.n.word.toUInt64 ∧
+  (tfld m PROJ t i 1).toNat = k.i ∧
+  tfld m PROJ t i 2 = k.e.word.toUInt64
+
+/-- `PJRecRel` in the raw words (inside the store library). -/
+theorem PJRecRel_raw (m : Mem) (t i : Word) (k : ProjNode) :
+    PJRecRel m t i k ↔
+    rdW (m.arr64 PJREC) (i * 6 + t * 3) = k.n.word.toUInt64 ∧
+    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
+    rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
 tables. -/
@@ -113,7 +121,7 @@ theorem projFrame : RFrame projSch PJRecRel pjhash := by
   rw [fld_pj0, fld_pj0] at h0
   rw [fld_pj, fld_pj] at h1
   rw [fld_pj, fld_pj] at h2
-  exact ⟨fun a h => by simpa only [PJRecRel, h0, h1, h2] using h,
+  exact ⟨fun a h => by simpa only [PJRecRel_raw, h0, h1, h2] using h,
     by simp only [pjhash, h0, h1, h2]⟩
 
 /-! ## The query's obligations -/
@@ -132,7 +140,7 @@ theorem pjMatchOK :
   have := word_decI k.n n hn
   have := word_decI k.e e he
   obtain ⟨kn, ki, ke⟩ := k
-  simp only [PJRecRel] at hr
+  simp only [PJRecRel_raw] at hr
   simp only [pjMt, pjmatchW, Bool.and_eq_true, beq_iff_eq, pjKey, ProjNode.mk.injEq, decE_eq]
   grind [UInt64.toNat_inj]
 
@@ -163,7 +171,7 @@ theorem pjNewOK :
     show (2 : Word).toNat = 0 + 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl] at e0 e1 e2
   have := word_decI (decI (k := .name) n) n hn
   have := word_decI (decE e) e he
-  simp only [PJRecRel, pjhash, pjKey, e0, e1, e2]
+  simp only [PJRecRel_raw, pjhash, pjKey, e0, e1, e2]
   grind [decE_eq]
 
 end query
