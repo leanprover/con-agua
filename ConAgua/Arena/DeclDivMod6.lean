@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclDivMod5
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclRomStubs
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the guards (lane `decls3`, `decls3-divmod`)
@@ -35,26 +36,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-! ## `bool_ctor_typed` -/
 
-def dmBctW (p : Prog) (n : Nat) (m : Mem) (v nm : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "env_find" [nm, v] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  ntBW (callW p n "ci_to_cv" [r1.tail.headD 0] m1) fun r2 m2 =>
-  ntBW (callW p n "pin_at" [29] m2) fun r3 m3 =>
-  ntBW (callW p n "const_e" [r3.headD 0] m3) fun r4 m4 =>
-  some ([if rdW (m4.arr64 EREC) (r2.headD 0 + 3) = r4.headD 0 then 1 else 0], m4)
-
-set_option maxHeartbeats 1600000 in
-theorem bct_specW (p : Prog) (hp : p.lookup "bool_ctor_typed" = some boolCtorTypedL) (n : Nat)
-    (s₀ : St) (v nm : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "bool_ctor_typed" [v, nm]
-    ⦃fun r s' => LocEq s' s₀ ∧ dmBctW p n s₀.mem v nm = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, boolCtorTypedL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "env_find", callW_spec p n "ci_to_cv", callW_spec p n "pin_at",
-      callW_spec p n "const_e"] <;>
-    finish (gen := 30) (instances := 10000) [dmBctW, ntBW, rdW_eq]
+/-- **`bool_ctor_typed` is its model `dmBctW`** (generated). -/
+l_model bct_specW (p : Prog) (hp : p.lookup "bool_ctor_typed" = some boolCtorTypedL)
+  fns [hp ↦ dmBctW list]
+  specs [callW_spec p n "env_find", callW_spec p n "ci_to_cv", callW_spec p n "pin_at", callW_spec p n "const_e"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem DmProg2.cvProg (hD : DmProg2 p) : NatCvProg p :=
   hD.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg
@@ -63,9 +49,9 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     CallRef p "bool_ctor_typed" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
       (boolCtorTyped fe (decI nm)) (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hn⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => dmBctW p k mq vis nm)
-    (bct_specW p hD.lBoolCtorTyped k · vis nm) hcall
-  unfold dmBctW at hw
+  have hw := callW_model (M := fun mq => dmBctW p (k + 1) mq vis nm)
+    (bct_specW p hD.lBoolCtorTyped (k + 1) · vis nm) hcall
+  rw [dmBctW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
   obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.1.env h1
   subst hm1
@@ -165,47 +151,19 @@ theorem StmtL.cons {m : Mem} {so sl : Word} {s : List EIdx × EIdx} {ss : List (
   obtain ⟨q2, hq2, hs2⟩ := hj (j + 1) (by simpa using hj')
   exact ⟨q2, by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hq2, by simpa using hs2⟩
 
-def cggoW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
-  if sl = 0 ∨ pl = 0 then some ([1], m) else
-  ntBW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
-    rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 2),
-    rdW (m.arr64 IW) po] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  ntBW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m1) fun r2 m2 =>
-    some ([r2.headD 0], m2)
-
-set_option maxHeartbeats 1600000 in
-theorem cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some divModCertsGuardGoL)
-    (n : Nat) (s₀ : St) (vs c annVal so sl po pl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_certs_guard_go" [vs, c, annVal, so, sl, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cggoW p n s₀.mem vs c annVal so sl po pl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertsGuardGoL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_cert_guard", callW_spec p n "div_mod_certs_guard_go"] <;>
-    finish (gen := 30) (instances := 10000) [cggoW, ntBW, rdW_eq]
+/-- **`div_mod_certs_guard_go` is its model `cggoW`** (generated). -/
+l_model cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some divModCertsGuardGoL)
+  fns [hp ↦ cggoW list]
+  specs [callW_spec p n "div_mod_cert_guard", callW_spec p n "div_mod_certs_guard_go"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 /-! ## `div_mod_certs_guard` -/
 
-def cgsW (p : Prog) (n : Nat) (m : Mem) (ps vs c annVal : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "div_mod_cert_stmts" [c] m) fun r1 m1 =>
-  ntBW (callW p n "div_mod_cert_proofs" [ps, c] m1) fun r2 m2 =>
-  ntBW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, r1.headD 0, r1.tail.headD 0, r2.headD 0,
-    r2.tail.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
-
-set_option maxHeartbeats 1600000 in
-theorem cgs_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard" = some divModCertsGuardL)
-    (n : Nat) (s₀ : St) (ps vs c annVal : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_certs_guard" [ps, vs, c, annVal]
-    ⦃fun r s' => LocEq s' s₀ ∧ cgsW p n s₀.mem ps vs c annVal = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertsGuardL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
-      callW_spec p n "div_mod_certs_guard_go"] <;>
-    finish (gen := 20) [cgsW, ntBW]
+/-- **`div_mod_certs_guard` is its model `cgsW`** (generated). -/
+l_model cgs_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard" = some divModCertsGuardL)
+  fns [hp ↦ cgsW list]
+  specs [callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs", callW_spec p n "div_mod_certs_guard_go"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 end guards
 

@@ -244,7 +244,7 @@ Branch `lmretro` (worktree `_tmp/wt/lmodel2`), helpers `lmretro-dm`, `lmretro-na
 ### R2: `DefEq*`/`Whnf*` 1-file models (branch `lmretro-r2`, helper `lmretro-whnf`)
 
 27 functions retrofitted, all with the `simp` step mode; files' non-blank lines 5756 → 4856
-(−900), elaboration (`instructions:u`, master `52943682` vs branch) 691 G → 321 G:
+(−900), elaboration (`instructions:u`, master `52943682` vs branch) 675 G → 293 G:
 
 | file | functions | lines | G |
 |---|---|---:|---:|
@@ -269,3 +269,24 @@ models with call-hypothesis arms used by the loop refinements: not cheap); `lams
 read in `IndPartsSpec5`); `lds_left`/`lds_right` (shared continuation `llK3`); `whnf_core_app`,
 `whnf_core_app2` (`WhnfCoreStep`: +52 %, the generator's fixed cost of ~4 G per function in a
 6 G file).
+
+### R1: `bind` families `DeclDivMod*`, `DeclNat*` (branch `lmretro-dm`, helpers `lmretro-dm`, `lmretro-nat`)
+
+61 functions retrofitted (scripted: `_tmp/lmretro/dm/retro.py`, `_tmp/lmretro/nat/conv*.py`,
+hand fixes), the `simp` step mode where it proves and is faster; 22 files' non-blank lines
+8718 → 7638 (−1080), elaboration 1515 G → 1303 G (largest increase `DeclNatSubAll` +12 %,
+`DeclNatTy` 99 → 74, `DeclNatEq` 118 → 28, `DeclDivMod3` 60 → 19). Self-recursive functions
+(`pairsW`, `sc0W`, `scaW`, `depsStoredW`, `okAllW`, `sc0ListW`, `cggoW`, `loopW`) go through
+their own spec (the hand models' `callW` self-call; refinements unchanged up to fuel `k + 1`).
+Restated (one internal user each): `CertCtxR.f0` (`rdW … cx` for `cx + 0`). Skipped:
+`CallM`-parameterised models (`craW`, `dmCgW`, `dmPgW`, `cmW`, `cpaW`, `certW`), fuel-free
+models (`divModSlotW`, pin models), memory-only functions (`certCtxPins`, `certCtxMain`),
+`certCtxW` (fails in `simp`, 265 s in `finish`), `natEqDispW` (+83 % in `simp`),
+`natOpDepsW` (> 10 min), models read outside the family (`natOpPins`, `natOpNames`,
+`natDivModNames`, `constEW`), `DeclNatLit` (tieracc in flight then), `Rom/CIReadRefW` (models
+with `rdU` abbreviations and `where` helpers read by 8 `CIReadRef*` files: not cheap).
+`simp` mode: proves where `finish` does in most functions, but fails on loads whose locals
+stay as `setLocs` chains inside `arr[i.toNat]` (`certCtx`, 9 of `DeclDivMod4`); a `vcgen`
+spec answering `ld64` with `rdW` would fix that (open). `getElem_rdW'` as a hint helps some
+and breaks others.
+

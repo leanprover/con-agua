@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclDivMod9
 import ConAgua.Arena.DeclArmDefn
 import ConAgua.Rom.PinReadSpec
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate: `defn_div_gate` (lane `decls3`, `decls3-divmod`)
@@ -112,27 +113,11 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
 
 /-! ## `defn_div_gate` -/
 
-def dgW (p : Prog) (n : Nat) (m : Mem) (vs w nm : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "nat_div_mod_names" [] m) fun r1 m1 =>
-  ntBW (callW p n "sl_contains" [r1.headD 0, r1.tail.headD 0, nm] m1) fun r2 m2 =>
-  if r2.headD 0 ≠ 0 then
-    ntBW (callW p n "rom_pin_sets" [] m2) fun r3 m3 =>
-    ntBW (callW p n "check_div_mod_pin" [r3.headD 0, r3.tail.headD 0, vs, w, nm] m3) fun r4 m4 =>
-      some ([0], m4)
-  else some ([0], m2)
-
-set_option maxHeartbeats 1600000 in
-theorem dg_specW (p : Prog) (hp : p.lookup "defn_div_gate" = some defnDivGate) (n : Nat) (s₀ : St)
-    (vs w nm : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defn_div_gate" [vs, w, nm]
-    ⦃fun r s' => LocEq s' s₀ ∧ dgW p n s₀.mem vs w nm = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, defnDivGate]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains",
-      callW_spec p n "rom_pin_sets", callW_spec p n "check_div_mod_pin"] <;>
-    finish (gen := 30) (instances := 10000) [dgW, ntBW]
+/-- **`defn_div_gate` is its model `dgW`** (generated). -/
+l_model dg_specW (p : Prog) (hp : p.lookup "defn_div_gate" = some defnDivGate)
+  fns [hp ↦ dgW list]
+  specs [callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains", callW_spec p n "rom_pin_sets", callW_spec p n "check_div_mod_pin"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
 
 /-- The gate and its callees. -/
 def dgFns : List FnName :=

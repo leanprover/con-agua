@@ -1,3 +1,4 @@
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatCv
 
 /-!
@@ -104,24 +105,11 @@ theorem defnMono_words {m : Mem} {dn : NIdx → Option ConLeche.Name} {q : Word}
 
 /-! ## `nat_op_deps_stored` -/
 
-def depsStoredW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
-  if l = 0 then some ([1], m) else
-  ntBW (callW p n "env_find" [rdW (m.arr64 IW) o, vis] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 1 then some ([0], m1) else
-  if rdW (m1.arr64 EREC) (r1.tail.headD 0 + 3) ≠ 0 then some ([0], m1) else
-  ntBW (callW p n "nat_op_deps_stored" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
-
-theorem depsStored_specW (p : Prog) (hp : p.lookup "nat_op_deps_stored" = some natOpDepsStoredL)
-    (n : Nat) (s₀ : St) (vis o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_deps_stored" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ depsStoredW p n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpDepsStoredL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "env_find", callW_spec p n "nat_op_deps_stored"] <;>
-    finish (gen := 20) [depsStoredW, ntBW]
+/-- **`nat_op_deps_stored` is its model `depsStoredW`** (generated). -/
+l_model depsStored_specW (p : Prog) (hp : p.lookup "nat_op_deps_stored" = some natOpDepsStoredL)
+  fns [hp ↦ depsStoredW list]
+  specs [callW_spec p n "env_find", callW_spec p n "nat_op_deps_stored"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
 theorem natOpDepsStored_cons (fe : IFEnv) (n : NIdx) (ns : List NIdx) :
     natOpDepsStored fe (n :: ns) = (match fe.find? n with
@@ -181,8 +169,8 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => depsStoredW p k mm vis o l) (depsStored_specW p hN.lNatOpDepsStored k · vis o l) hc
-    simp only [depsStoredW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
+    simp only [depsStoredW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   | cons n ns ih =>
@@ -191,8 +179,8 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
     obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
-    have hw := callW_model (M := fun mm => depsStoredW p k mm vis o l) (depsStored_specW p hN.lNatOpDepsStored k · vis o l) hc
-    unfold depsStoredW at hw
+    have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
+    rw [depsStoredW.eq_2] at hw
     rw [if_neg hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.1.env h1

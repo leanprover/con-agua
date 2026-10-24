@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclDivMod8
 import ConAgua.Arena.DeclReducePin
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the variant loop and the gate (lane `decls3`, `decls3-divmod`)
@@ -48,31 +49,11 @@ structure DmProg9 (p : Prog) : Prop extends DmProg8 p
 section loop
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
-def loopW (p : Prog) (n : Nat) (m : Mem) (vs c value po pl : Word) : Option (List Word × Mem) :=
-  if pl = 0 then none else
-  ntBW (callW p n "div_mod_pin_guard" [rdW (m.arr64 IW) po, vs, c] m) fun r1 m1 =>
-  ntBW (callW p n "div_mod_certs_guard" [rdW (m.arr64 IW) po, vs, c, value] m1) fun r2 m2 =>
-  if r1.headD 0 ≠ 0 ∧ r2.headD 0 ≠ 0 then
-    ntBW (callW p n "check_div_mod_pin_at" [vs, c, value, rdW (m.arr64 IW) po] m2) fun r3 m3 =>
-    if r3.headD 0 ≠ 0 then some ([0], m3) else
-    ntBW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m3) fun r4 m4 =>
-      some ([r4.headD 0], m4)
-  else
-    ntBW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m2) fun r4 m4 =>
-      some ([r4.headD 0], m4)
-
-set_option maxHeartbeats 3200000 in
-theorem loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
-    (n : Nat) (s₀ : St) (vs c value po pl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin_loop" [vs, c, value, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ loopW p n s₀.mem vs c value po pl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkDivModPinLoopL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard",
-      callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"] <;>
-    finish (gen := 30) (instances := 10000) [loopW, ntBW, rdW_eq]
+/-- **`check_div_mod_pin_loop` is its model `loopW`** (generated). -/
+l_model loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
+  fns [hp ↦ loopW list]
+  specs [callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard", callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 3200000 bind ntBW instances 10000
 
 /-- The twin's attempt step, on a successful attempt. -/
 theorem orElse_run_ok {att : AM Bool} {b : Bool} {a a' : AState} (h : att.run a = Except.ok (b, a')) :
@@ -121,27 +102,11 @@ local notation "V" => ConLeche.CheckMode.verified
 section pin
 variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
-def dmCpW (p : Prog) (n : Nat) (m : Mem) (po pl vs vs2 c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "div_mod_env_guard" [vs2, c] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then none else
-  ntBW (callW p n "env_find" [c, vs2] m1) fun r2 m2 =>
-  if r2.headD 0 = 0 then none else
-  if rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 1 then none else
-  ntBW (callW p n "check_div_mod_pin_loop" [vs, c, rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5), po, pl] m2)
-    fun r3 m3 => some ([0], m3)
-
-set_option maxHeartbeats 1600000 in
-theorem cp_specW (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL) (n : Nat)
-    (s₀ : St) (po pl vs vs2 c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin" [po, pl, vs, vs2, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ dmCpW p n s₀.mem po pl vs vs2 c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkDivModPinL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_env_guard", callW_spec p n "env_find",
-      callW_spec p n "check_div_mod_pin_loop"] <;>
-    finish (gen := 30) (instances := 10000) [dmCpW, ntBW, rdW_eq]
+/-- **`check_div_mod_pin` is its model `dmCpW`** (generated). -/
+l_model cp_specW (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL)
+  fns [hp ↦ dmCpW list]
+  specs [callW_spec p n "div_mod_env_guard", callW_spec p n "env_find", callW_spec p n "check_div_mod_pin_loop"]
+  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq, getElem_rdW']
 
 end pin
 
