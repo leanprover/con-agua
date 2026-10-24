@@ -40,13 +40,16 @@ namespace L.Arena
 /-- `proj_table_name(t)`: the reserved name `num (str t "projTable") 0`. -/
 -- con-ron: ConRon/Arena/Env.lean:195-199 ConRon.Arena.projTableName
 @[l_impl ConRon.Arena.projTableName]
-def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k) {
+def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k, c) {
   if 4294967295 < t { abort };
   g := t >> 28;
   if 2 < g { abort };
   k := ⟦t⟧.tier;
   if k != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[34 + g * 2 + k] <= (⟦t⟧.idx) { abort };
+  c := NANON⟨k⟩.count;
+  if g == 1 { c := NSTR⟨k⟩.count };
+  if g == 2 { c := NNUM⟨k⟩.count };
+  if c <= ⟦t⟧.idx { abort };
   o := CTL.u64[0];
   if o + 9 < o { abort };
   if len(POOL.u64) < o + 9 { abort };
