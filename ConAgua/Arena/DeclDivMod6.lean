@@ -151,26 +151,11 @@ theorem StmtL.cons {m : Mem} {so sl : Word} {s : List EIdx × EIdx} {ss : List (
   obtain ⟨q2, hq2, hs2⟩ := hj (j + 1) (by simpa using hj')
   exact ⟨q2, by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hq2, by simpa using hs2⟩
 
-def cggoW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
-  if sl = 0 ∨ pl = 0 then some ([1], m) else
-  ntBW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
-    rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 2),
-    rdW (m.arr64 IW) po] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  ntBW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m1) fun r2 m2 =>
-    some ([r2.headD 0], m2)
-
-set_option maxHeartbeats 1600000 in
-theorem cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some divModCertsGuardGoL)
-    (n : Nat) (s₀ : St) (vs c annVal so sl po pl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_certs_guard_go" [vs, c, annVal, so, sl, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ cggoW p n s₀.mem vs c annVal so sl po pl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertsGuardGoL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_cert_guard", callW_spec p n "div_mod_certs_guard_go"] <;>
-    finish (gen := 30) (instances := 10000) [cggoW, ntBW, rdW_eq]
+/-- **`div_mod_certs_guard_go` is its model `cggoW`** (generated). -/
+l_model cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some divModCertsGuardGoL)
+  fns [hp ↦ cggoW list]
+  specs [callW_spec p n "div_mod_cert_guard", callW_spec p n "div_mod_certs_guard_go"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 /-! ## `div_mod_certs_guard` -/
 

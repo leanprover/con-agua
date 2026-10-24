@@ -128,25 +128,11 @@ theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : Lis
 
 /-! ## `subst_const0_list` -/
 
-def sc0ListW (p : Prog) (n : Nat) (m : Mem) (nm r o l : Word) : Option (List Word × Mem) :=
-  if l = 0 then some ([0, 0], m) else
-  ntBW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m) fun r1 m1 =>
-  ntBW (callW p n "subst_const0_list" [nm, r, o + 1, l - 1] m1) fun r2 m2 =>
-  ntBW (callW p n "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
-  some ([r3.headD 0, r3.tail.headD 0], m3)
-
-set_option maxHeartbeats 1600000 in
-theorem sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some substConst0ListL)
-    (n : Nat) (s₀ : St) (nm r o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "subst_const0_list" [nm, r, o, l]
-    ⦃fun res s' => LocEq s' s₀ ∧ sc0ListW p n s₀.mem nm r o l = some (res, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, substConst0ListL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "subst_const0", callW_spec p n "subst_const0_list",
-      callW_spec p n "sl_cons"] <;>
-    finish (gen := 30) (instances := 10000) [sc0ListW, ntBW, rdW_eq]
+/-- **`subst_const0_list` is its model `sc0ListW`** (generated). -/
+l_model sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some substConst0ListL)
+  fns [hp ↦ sc0ListW list]
+  specs [callW_spec p n "subst_const0", callW_spec p n "subst_const0_list", callW_spec p n "sl_cons"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (hn : H nm) (hr : H r) :
     ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
@@ -164,9 +150,9 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    have hw := callW_model (M := fun mm => sc0ListW p k mm nm r o l)
-      (sc0List_specW p hD.lSubstConst0List k · nm r o l) hc
-    simp only [sc0ListW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    have hw := callW_model (M := fun mm => sc0ListW p (k + 1) mm nm r o l)
+      (sc0List_specW p hD.lSubstConst0List (k + 1) · nm r o l) hc
+    simp only [sc0ListW.eq_2, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨[], a, rfl, hS, IWGrow.refl _, ?_⟩
     simp only [decRL, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil]
@@ -178,9 +164,9 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     | succ k =>
     obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
     subst hh
-    have hw := callW_model (M := fun mm => sc0ListW p k mm nm r o l)
-      (sc0List_specW p hD.lSubstConst0List k · nm r o l) hc
-    unfold sc0ListW at hw
+    have hw := callW_model (M := fun mm => sc0ListW p (k + 1) mm nm r o l)
+      (sc0List_specW p hD.lSubstConst0List (k + 1) · nm r o l) hc
+    rw [sc0ListW.eq_2] at hw
     rw [if_neg hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hs0 nm r _ hn hr hwlt k m a r1 m1 hS h1

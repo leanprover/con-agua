@@ -529,9 +529,9 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
-    have hw := callW_model (M := fun mq => cggoW p k mq vis c annVal so sl po pl)
-      (cggo_specW p hD.lCertsGuardGo k · vis c annVal so sl po pl) hc'
-    simp only [cggoW, hsl, true_or, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    have hw := callW_model (M := fun mq => cggoW p (k + 1) mq vis c annVal so sl po pl)
+      (cggo_specW p hD.lCertsGuardGo (k + 1) · vis c annVal so sl po pl) hc'
+    simp only [cggoW.eq_2, hsl, true_or, if_true, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     exact ⟨true, a, by cases proofs <;> rfl, hC, CoreStep.refl hC.check, IWGrow.refl _,
       by simp [decW0B]⟩
@@ -546,9 +546,9 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     cases k with
     | zero => rw [callW_zero] at hc'; cases hc'
     | succ k =>
-    have hw := callW_model (M := fun mq => cggoW p k mq vis c annVal so sl po pl)
-      (cggo_specW p hD.lCertsGuardGo k · vis c annVal so sl po pl) hc'
-    unfold cggoW at hw
+    have hw := callW_model (M := fun mq => cggoW p (k + 1) mq vis c annVal so sl po pl)
+      (cggo_specW p hD.lCertsGuardGo (k + 1) · vis c annVal so sl po pl) hc'
+    rw [cggoW.eq_2] at hw
     have hS := hC.stage
     cases proofs with
     | nil =>

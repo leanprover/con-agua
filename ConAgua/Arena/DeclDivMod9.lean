@@ -49,31 +49,11 @@ structure DmProg9 (p : Prog) : Prop extends DmProg8 p
 section loop
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
-def loopW (p : Prog) (n : Nat) (m : Mem) (vs c value po pl : Word) : Option (List Word × Mem) :=
-  if pl = 0 then none else
-  ntBW (callW p n "div_mod_pin_guard" [rdW (m.arr64 IW) po, vs, c] m) fun r1 m1 =>
-  ntBW (callW p n "div_mod_certs_guard" [rdW (m.arr64 IW) po, vs, c, value] m1) fun r2 m2 =>
-  if r1.headD 0 ≠ 0 ∧ r2.headD 0 ≠ 0 then
-    ntBW (callW p n "check_div_mod_pin_at" [vs, c, value, rdW (m.arr64 IW) po] m2) fun r3 m3 =>
-    if r3.headD 0 ≠ 0 then some ([0], m3) else
-    ntBW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m3) fun r4 m4 =>
-      some ([r4.headD 0], m4)
-  else
-    ntBW (callW p n "check_div_mod_pin_loop" [vs, c, value, po + 1, pl - 1] m2) fun r4 m4 =>
-      some ([r4.headD 0], m4)
-
-set_option maxHeartbeats 3200000 in
-theorem loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
-    (n : Nat) (s₀ : St) (vs c value po pl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin_loop" [vs, c, value, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ loopW p n s₀.mem vs c value po pl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkDivModPinLoopL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard",
-      callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"] <;>
-    finish (gen := 30) (instances := 10000) [loopW, ntBW, rdW_eq]
+/-- **`check_div_mod_pin_loop` is its model `loopW`** (generated). -/
+l_model loop_specW (p : Prog) (hp : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL)
+  fns [hp ↦ loopW list]
+  specs [callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard", callW_spec p n "check_div_mod_pin_at", callW_spec p n "check_div_mod_pin_loop"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 3200000 bind ntBW instances 10000
 
 /-- The twin's attempt step, on a successful attempt. -/
 theorem orElse_run_ok {att : AM Bool} {b : Bool} {a a' : AState} (h : att.run a = Except.ok (b, a')) :
