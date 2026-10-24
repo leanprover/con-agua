@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPartsSpec15
+import ConAgua.Arena.IndPartsSpec14
 import ConAgua.Arena.IndRealAbsPos
 
 /-!

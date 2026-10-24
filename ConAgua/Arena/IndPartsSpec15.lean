@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPartsSpec14
+import ConAgua.Arena.IndRealPartsC1
 
 /-!
 # Refinements of `IndParts`, part 15 (lane `indproofs2`, helper `parts`): `blockShape?`, relations
@@ -7,6 +8,11 @@ The twin's `blockShape?` cut at the L functions' boundaries (`blockShape_eq`, by
 `tailJP` — the result sort's match with the twin's join point — and `finJP`), and the relational lemmas
 of `block_shape_seal`, `block_shape_fin`, `block_shape_tail`, `block_shape_build`, `block_shape`,
 `block_parts`.
+
+The sims read `lvl_eq_c` through a `CallM` `c` and a hypothesis on it, `LvlHyp`: the call's `Sim` at
+every twin state the twin's prefix reaches (`T`) and every memory the model's prefix reaches (`AFr`).
+The stubs meet it everywhere (`lvlHyp_stub`); the real call under `StageC` meets it at the prefix of
+`blockShape?` (`IndRealPartsC2.lvlHyp_real`).
 -/
 
 
@@ -425,8 +431,37 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 /-! ## `block_shape_tail` -/
 
+/-- **What the sims need of the `lvl_eq_c` call** (at fuel `n + 2`, through `c`): its `Sim` at every
+twin state `a1` the twin's prefix reaches with the sort `sv` (`T sv a1`) and every memory `m1` the
+model's prefix reaches from `m` (`AFr m m1`). -/
+def LvlHyp (c : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (m : Mem) (T : LIdx → AState → Prop) : Prop :=
+  ∀ (sv : LIdx) (a1 : AState) (s z : Word) (m1 : Mem), T sv a1 → AFr m m1 → StageR dn vis fe m1 a1 →
+    H s → decI s = sv → pinWordV m1 53 = some z →
+    Sim (c (n + 2) "lvl_eq_c" [s, z] m1) (lvlEq? sv (decI z)) a1
+      (fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x)
+
+theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {T T' : LIdx → AState → Prop} (h : LvlHyp c n dn vis fe m T) (hf : AFr m m')
+    (hT : ∀ sv a1, T' sv a1 → T sv a1) : LvlHyp c n dn vis fe m' T' :=
+  fun sv a1 s z m1 hT' hf1 hS hs hsv hz => h sv a1 s z m1 (hT _ _ hT') (hf.trans hf1) hS hs hsv hz
+
+/-- The stubs' `lvl_eq_c` meets `LvlHyp` everywhere (`lvlEqStub_spec`). -/
+theorem lvlHyp_stub (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
+    (T : LIdx → AState → Prop) : LvlHyp stubCall n dn vis fe m T := by
+  intro sv a1 s z m1 _ _ hS hs hsv hz
+  have hzh := (pinZero_stage hS hz).2
+  subst hsv
+  exact partsSimStub (lvlEqStub_spec dn vis fe s z hs hzh) hS
+
+/-- A `Sim` also records the model's run. -/
+theorem Sim.withEq {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+    {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
+    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ mo = some (r, m')) := by
+  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, e⟩
+
 /-- **`block_shape_tail`'s model refines the twin's result sort and the rest (`tailJP`).** -/
-theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl no nl io lo ll : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
     {nIdxs : List Nat} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
@@ -435,8 +470,9 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m ((cvT0 :: cvTs).map (·.name)))
     (hnb : no.toNat + nl.toNat ≤ iwTop m)
     (hns : DecB (fun m => decNL m io.toNat ctl.toNat) m nIdxs) (hnsb : io.toNat + ctl.toNat ≤ iwTop m)
-    (hl : decHL m lo.toNat ll.toNat = some cvT0.levelParams) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
-    Sim (btW stubCall n m nPd cto ctl cso csl rso rsl no nl io ctl lo ll)
+    (hl : decHL m lo.toNat ll.toNat = some cvT0.levelParams) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
+    (hc : LvlHyp c n dn vis fe m (fun sv a1 => (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (sv, a1))) :
+    Sim (btW c n m nPd cto ctl cso csl rso rsl no nl io ctl lo ll)
       (tailJP nPd.toNat nIdxs cvT0.type
         (finJP nPd.toNat (cvT0 :: cvTs) nIdxs cvT0.levelParams cs (r0 :: rs) r0.1)) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
@@ -447,28 +483,30 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [tailJP_eq]
   unfold btW
   rw [hw]
-  refine Sim.bindK (K := btK1 stubCall n nPd cto ctl cso csl rso rsl no nl io lo ll)
-    (body := fun r1 m1 => btK2 stubCall n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0) m1 (pinWordV m1 53))
+  refine Sim.bindK (K := btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll)
+    (body := fun r1 m1 => btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0) m1 (pinWordV m1 53))
     rfl (fun _ _ => rfl)
-    (Q := fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') ?_ ?_
+    (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') ∧
+      (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (s, a')) ∧
+      bsoW m nPd io ctl (rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
   · have := bsoW_sim (nP := nPd) (ty := rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
-    rwa [htye] at this
-  rintro r1 sv m1 a1 ⟨hs, hsv, hS1, hg1⟩
+    rw [htye] at this
+    exact this.withRun.withEq
+  rintro r1 sv m1 a1 ⟨⟨⟨hs, hsv, hS1, hg1⟩, hrun1⟩, he1⟩
   rw [finJP_eq]
   intro r m' e
   cases hz : pinWordV m1 53 with
   | none => rw [hz] at e; cases e
   | some z =>
   rw [hz, btK2_some] at e
-  obtain ⟨hzrun, hzh⟩ := pinZero_stage hS1 hz
+  obtain ⟨hzrun, -⟩ := pinZero_stage hS1 hz
   revert r m' e
   refine Sim.bind_twin hzrun ?_
-  refine Sim.bindK (K := btK3 stubCall n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0))
+  refine Sim.bindK (K := btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0))
     (body := fun r2 m2 => bgoK3 (bfW n m2 nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0)
       (if r2.headD 0 = 2 then 1 else 0))) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x) ?_ ?_
-  · have := partsSimStub (lvlEqStub_spec dn vis fe (r1.headD 0) z hs hzh) hS1
-    rw [hsv] at this; exact this
+  · exact hc sv a1 (r1.headD 0) z m1 hrun1 (bsoW_afr he1) hS1 hs hsv hz
   rintro r2 x2 m2 a2 ⟨hS2, hg2, hd2⟩
   have hg02 := hg1.trans hg2
   refine Sim.k3 (bfW_sim n hS2 (hts.grow (fun _ => OMono.decCVp _) hg02) (hcs.grow decSC_mono hg02)
@@ -557,14 +595,30 @@ theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word
   rw [resContW_step] at h2
   intro h0; rw [if_pos h0] at h2; cases h2
 
+/-- The twin's prefix of `buildTwin` up to `lvlEq?`: the counts, the reserved names, the result sort
+`sv` (`LvlHyp`'s `T`). -/
+def TbbT (nP : Nat) (cvT0 : IConstantVal) (cvTs : List IConstantVal) (cs : List (IConstantVal × Nat × Nat))
+    (rs : List (IConstantVal × Nat × Nat × List IRecRule)) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
+  ∃ nIdxs a2 R a3,
+    (ConRon.Arena.blockMemberCounts? nP cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs).run a =
+      .ok (some nIdxs, a2) ∧
+    (reservedBasisNames : AM (List NIdx)).run a2 = .ok (R, a3) ∧
+    (bsoTwin nP nIdxs cvT0.type).run a3 = .ok (sv, a1)
+
+/-- The twin's prefix of `blockShape?` up to `lvlEq?`: the split, then `TbbT`. -/
+def TshT (nP : Nat) (blk : List IConstantInfo) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
+  ∃ cvT0 cvTs cs r0 rs, ConRon.Arena.blockSplit blk = some (cvT0 :: cvTs, cs, r0 :: rs) ∧
+    TbbT nP cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a sv a1
+
 /-- **`block_shape_build`'s model refines `buildTwin`.** -/
-theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
     {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
     (hS : StageR dn vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
-    (hrs : PSlR decSR (r0 :: rs) rso rsl m) :
-    Sim (bbW stubCall n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
+    (hrs : PSlR decSR (r0 :: rs) rso rsl m)
+    (hc : LvlHyp c n dn vis fe m (TbbT nPd.toNat cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a)) :
+    Sim (bbW c n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -588,13 +642,13 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hmc := bmcW_sim (n + 2) (nPd := nPd) (k := ctl) (nC := csl) hS1 (hts.grow (fun _ => OMono.decCVp _) hg1)
     (hrs.grow decSR_mono hg1) (decHL_decB hd1 hb1) hb1
   rw [← hlen, ← hclen] at hmc
-  refine Sim.bindK (K := bbH2 stubCall n nPd cto ctl cso csl rso rsl (UInt64.ofNat p0) (r1.headD 0) (r1.tail.headD 0))
+  refine Sim.bindK (K := bbH2 c n nPd cto ctl cso csl rso rsl (UInt64.ofNat p0) (r1.headD 0) (r1.tail.headD 0))
     (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0], m2)
-      else bbH3 stubCall n nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
+      else bbH3 c n nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
         (r2.tail.tail.headD 0) (erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1))
           (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2))))
-    rfl (fun _ _ => rfl) hmc.withRun ?_
-  rintro r2 x2 m2 a2 ⟨⟨hR2, hS2, hg2⟩, hrun2⟩
+    rfl (fun _ _ => rfl) hmc.withRun.withEq ?_
+  rintro r2 x2 m2 a2 ⟨⟨⟨hR2, hS2, hg2⟩, hrun2⟩, he2⟩
   have hg02 := hg1.trans hg2
   cases x2 with
   | none =>
@@ -644,11 +698,13 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     simp only [List.length_range] at e1
     rw [← e1, bmc_length _ _ _ _ _ hrun2, hlen]
   rw [hil] at hd2 hb2 ⊢
-  refine Sim.k3 (btW_sim n hS4 (hts.grow (fun _ => OMono.decCVp _) hg04) (hcs.grow decSC_mono hg04)
+  refine Sim.k3 (btW_sim c n hS4 (hts.grow (fun _ => OMono.decCVp _) hg04) (hcs.grow decSC_mono hg04)
     (hrs.grow decSR_mono hg04) ((decHL_decB hd1 hb1).grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4)))
     (Nat.le_trans hb1 (hg2.trans (hg3.trans hg4)).1) (hd2.grow (OMono.decNL _ _) (hg3.trans hg4))
     (Nat.le_trans hb2 (hg3.trans hg4).1) (by rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3)
-    (Nat.le_trans (Nat.le_of_eq ht3) hg4.1)) ?_
+    (Nat.le_trans (Nat.le_of_eq ht3) hg4.1)
+    (hc.mono ((bsnW_afr _ _ _ _ _ _ h1).trans ((bmcW_afr he2).trans ((erToIwW_afr h3).trans (bpoW_afr h4))))
+      (fun sv a1 h => ⟨nIdxs, a2, _, a2, hrun2, hRrun, h⟩))) ?_
   rintro r x m5 a5 ⟨hR, hS5, hg5⟩
   exact ⟨by cases x <;> exact hR, hS5, hg04.trans hg5⟩
 
@@ -685,10 +741,11 @@ theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l 
   · intro e; subst e; exact UInt64.toNat_inj.mp (by simpa using this.symm)
 
 /-- **`block_shape`'s model refines `blockShape?`.** -/
-theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
-    {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
-    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk) :
-    Sim (bshW stubCall n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
+theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
+    {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
+    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk)
+    (hc : LvlHyp c n dn vis fe m (TshT nPd.toNat blk a)) :
+    Sim (bshW c n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   rw [blockShape_eq]
   intro r m' e
@@ -741,7 +798,8 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     | cons c cs' => exact ⟨c, cs', rfl⟩
   revert r m' e
   show Sim _ (buildTwin nPd.toNat (cvT0 :: cvTs') cvT0 cs (r0 :: rs') r0.1) a _
-  refine Sim.k3 (bbW_sim n hS1 hts hcs hrs) ?_
+  refine Sim.k3 (bbW_sim c n hS1 hts hcs hrs
+    (hc.mono (bsW_afr _ _ _ _ _ _ h1) (fun sv a1 h => ⟨cvT0, cvTs', cs, r0, rs', hsp, h⟩))) ?_
   rintro r x m2 a2 ⟨hR, hS2, hg2⟩
   exact ⟨by cases x <;> exact hR, hS2, hg1.trans hg2⟩
 
@@ -775,8 +833,35 @@ theorem blockShape_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : S
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
   triple_post (bsh_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (bshW_sim n hS hblk) hm
+    let ⟨hok, hQ⟩ := Sim.run (bshW_sim stubCall n hS hblk (lvlHyp_stub _ _ _ _ _ _)) hm
     ⟨hl, hok, hQ⟩
+
+/-- **`block_parts`' model refines `blockParts?`** (`bshW_sim`). -/
+theorem bpW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
+    {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
+    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk)
+    (hc : LvlHyp c n dn vis fe m (TshT nPd.toNat blk a)) :
+    Sim (bgoK3 (bshW c n m nPd off l)) (ConRon.Arena.blockParts? nPd.toNat blk) a
+      (fun r x m' a' => PartsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  unfold ConRon.Arena.blockParts?
+  intro r m' e
+  cases h1 : bshW c n m nPd off l with
+  | none => rw [h1] at e; cases e
+  | some x =>
+  obtain ⟨r1, m1⟩ := x
+  rw [h1, bgoK3_some] at e
+  simp only [Option.some.injEq, Prod.mk.injEq] at e
+  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨x, a', hrun, hR, hS', hg'⟩ := bshW_sim c n hS hblk hc r1 m1 h1
+  cases x with
+  | none =>
+    exact ⟨none, a', by simp only [StateT.run_bind, hrun]; rfl, hR, hS', hg'⟩
+  | some bs =>
+    obtain ⟨h1', hd, hsl⟩ := hR
+    refine ⟨some ⟨bs⟩, a', by simp only [StateT.run_bind, hrun]; rfl, ⟨h1', ?_, hsl⟩, hS', hg'⟩
+    show decBP (truncM m1) _ = _
+    simp only [decBP, show decBS (truncM m1) (r1.tail.headD 0).toNat = some bs from hd, bind, pure,
+      Option.bind_some, List.headD_cons, List.tail_cons]
 
 /-- **`block_parts` refines `blockParts?`** (as `blockShape?`). -/
 theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -787,31 +872,9 @@ theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : S
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockParts? nPd.toNat blk) a₀ ∧
       PartsR (AM.res (ConRon.Arena.blockParts? nPd.toNat blk) a₀) r s'.mem ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockParts? nPd.toNat blk) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (bpa_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) ?_
-  rintro r s' ⟨hl, hm⟩
-  have hsim : Sim (bgoK3 (bshW stubCall n s₀.mem nPd off l)) (ConRon.Arena.blockParts? nPd.toNat blk) a₀
-      (fun r x m' a' => PartsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow s₀.mem m') := by
-    unfold ConRon.Arena.blockParts?
-    intro r m' e
-    cases h1 : bshW stubCall n s₀.mem nPd off l with
-    | none => rw [h1] at e; cases e
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
-    rw [h1, bgoK3_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
-    obtain ⟨x, a', hrun, hR, hS', hg'⟩ := bshW_sim n hS hblk r1 m1 h1
-    cases x with
-    | none =>
-      exact ⟨none, a', by simp only [StateT.run_bind, hrun]; rfl, hR, hS', hg'⟩
-    | some bs =>
-      obtain ⟨h1', hd, hsl⟩ := hR
-      refine ⟨some ⟨bs⟩, a', by simp only [StateT.run_bind, hrun]; rfl, ⟨h1', ?_, hsl⟩, hS', hg'⟩
-      show decBP (truncM m1) _ = _
-      simp only [decBP, show decBS (truncM m1) (r1.tail.headD 0).toNat = some bs from hd, bind, pure,
-        Option.bind_some, List.headD_cons, List.tail_cons]
-  obtain ⟨hok, hQ⟩ := Sim.run hsim hm
-  exact ⟨hl, hok, hQ⟩
+      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (bpa_spec p hP stubCall (stubCall_spec p) n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (bpW_sim stubCall n hS hblk (lvlHyp_stub _ _ _ _ _ _)) hm
+    ⟨hl, hok, hQ⟩
 
 end L.Ind
