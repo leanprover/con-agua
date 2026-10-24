@@ -148,11 +148,8 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     have := (r1.tail.tail.headD 0 + UInt64.ofNat bs.k).toNat_lt
     rw [decHL_length _ hfd]; omega
   intro r m' e
-  cases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with
-  | none => rw [h2] at e; cases e
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, bncK2_some] at e
+  rcases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at e; · cases e
+  rw [bncK2_some] at e
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hok2, hd2, hS2, hg2, hin2, hsl2⟩ := nckW_ok n ⟨m1, Locals.init []⟩ ⟨m2, Locals.init []⟩ a1 dn vis fe q
     (r1.tail.headD 0) (r1.tail.tail.headD 0) bs fvs hS1 (hq.grow (decBS_mono _) hg1)
@@ -170,11 +167,7 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     rw [hnc]; simp only [NestCtx.hiAt, BlockShape.memberNames, List.length_map]
     have : bs.k = bs.members.length := rfl
     omega
-  cases h3 : nhW n m2 vis (r2.headD 0) with
-  | none => rw [h3] at e; simp [bncK3] at e
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3] at e
+  rcases h3 : nhW n m2 vis (r2.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e; · simp [bncK3] at e
   obtain ⟨holes, a3, hrun3, hR3, hS3, hg3⟩ := nhW_sim n hS2 (hd2.get (decCtx_mono _)) hin2 hsl2 hhi' r3 m3 h3
   cases holes with
   | none =>
@@ -202,11 +195,8 @@ theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cv
   unfold bncC at h
   split at h; · cases h
   split at h; · cases h
-  cases h1 : realCall p (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (q + 4),
-      rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0] m with
-  | none => rw [h1] at h; simp [bncK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases h1 : realCall p (n + 1) "open_pis_at_fvars_f" [rdW (m.arr64 IW) (q + 4),
+      rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvO + 3), 0] m with _ | ⟨r1, m1⟩; · rw [h1] at h; simp [bncK1] at h
   rw [h1] at h
   have f1 := MFr.of_frame (opfF_frame (callW_opfF hOpf h1)) opfA_stage opfC_stage
   by_cases h0 : r1.headD 0 = 0
@@ -214,17 +204,10 @@ theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cv
   by_cases hov : r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0
   · rw [bncK1_ov n m1 vis q r1 h0 hov] at h; cases h
   rw [bncK1_some n m1 vis q r1 h0 hov] at h
-  cases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with
-  | none => rw [h2] at h; simp [bncK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, bncK2_some] at h
+  rcases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h; · simp [bncK2] at h
+  rw [bncK2_some] at h
   have f2 := f1.trans (pos3_nckW_mfr h2)
-  cases h3 : nhW n m2 vis (r2.headD 0) with
-  | none => rw [h3] at h; simp [bncK3] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3] at h
+  rcases h3 : nhW n m2 vis (r2.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h; · simp [bncK3] at h
   by_cases h30 : r3.headD 0 = 0
   · rw [bncK3_none m3 (r2.headD 0) r3 h30] at h; cases h
   rw [bncK3_some m3 (r2.headD 0) r3 h30] at h
@@ -268,11 +251,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     fun cs hcs c hc => ConLeche.Cached.ws0_hasFvar (hct cs hcs c hc)
   unfold cbposW at h
   -- the walk's context
-  cases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with
-  | none => rw [h1] at h; simp [cbposK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, cbposK1_some] at h
+  rcases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cbposK1] at h
+  rw [cbposK1_some] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (bnc_specC p hP.nck hP.nh hP.bnc (realCall p) (realCall_spec p) n _ vis q cvO cvL) h1
   obtain ⟨⟨c, holes⟩, a1, hrun1, hc1, hho1, hhob1, hS1, hg1, hin1, hsl1, hhi1, hpn1, hA1⟩ :=
@@ -287,11 +267,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hU1 : UCtx dn vis fe s1.mem (r1.headD 0) c := ⟨hc1.get (decCtx_mono _), hin1, hsl1⟩
   obtain ⟨hlen, hcb1, hcss1⟩ := pos3_cssAt (hcss.grow decCNSB_mono hg1)
   -- `nest_uniform`
-  cases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with
-  | none => rw [h2] at h; simp [cbposK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, cbposK2_some] at h
+  rcases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at h; · simp [cbposK2] at h
+  rw [cbposK2_some] at h
   obtain ⟨s2, rfl, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (nestUniform_spec p hP.nu hP.nuCs hP.nuP (realCall p) (realCall_spec p) (n + 2) _ (r1.headD 0) caO caL) h2
   have hcss1P := ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP
@@ -329,11 +306,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hA2 : AbsOK s2.mem := hJ2.2.1
   have hC2 := hC1.of_cstep hS2 hA2 c2
   -- the empty state
-  cases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with
-  | none => rw [h3] at h; simp [cbposK3] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, cbposK3_some] at h
+  rcases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with _ | ⟨r3, m3⟩ <;> rw [h3] at h; · simp [cbposK3] at h
+  rw [cbposK3_some] at h
   obtain ⟨hS3, hg3, hf3, hns3⟩ := pos3_init hP h3 hS2
   have hA3 : AbsOK m3 := hk _ (by simp [posKeepCalleesC]) _ _ _ _ _ h3 hA2
   have hC3 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
@@ -345,11 +319,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hholes2 := ConRon.Bridge.denoteEList_ext c2.ext _ _ hholes
   have hlenP : ctxP.names.length ≤ holesP.length := by
     rw [ConLeche.nestHoles_length hnh]; exact Nat.le_refl _
-  cases h4 : callW p (n + 2) "nest_root" [vis, r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, caO, caL,
-      r3.headD 0, 0, 0] m3 with
-  | none => rw [h4] at h; simp [cbpK4] at h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
+  rcases h4 : callW p (n + 2) "nest_root" [vis, r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, caO, caL,
+      r3.headD 0, 0, 0] m3 with _ | ⟨r4, m4⟩; · rw [h4] at h; simp [cbpK4] at h
   rw [h4, cbpK4_some] at h
   obtain ⟨s4, rfl, -, ⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ :=
     triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
@@ -367,11 +338,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hS4 := hC4.stage
   have hg14 := hg13.trans hg4
   -- `pin_word(53)`
-  cases h5 : callW p (n + 2) "pin_word" [53] s4.mem with
-  | none => rw [h5] at h; simp [cbpK5] at h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, cbpK5_some] at h
+  rcases h5 : callW p (n + 2) "pin_word" [53] s4.mem with _ | ⟨r5, m5⟩ <;> rw [h5] at h; · simp [cbpK5] at h
+  rw [cbpK5_some] at h
   obtain ⟨s5, rfl, -, hm5, hz5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (pinWord_specV p hP.pin (n + 2) _ 53) h5
   simp only at hm5 hz5
@@ -380,20 +348,14 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   obtain ⟨-, hz⟩ := ConRon.Bridge.Inductives.zeroLevel_run hC4.check.pins hrunz
   -- `lvl_eq_true`
   obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.2.2.2.1
-  cases h6 : callW p (n + 2) "lvl_eq_true" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with
-  | none => rw [h6] at h; simp [cbpK6] at h
-  | some x6 =>
-  obtain ⟨r6, m6⟩ := x6
-  rw [h6, cbpK6_some] at h
+  rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6, m6⟩ <;> rw [h6] at h; · simp [cbpK6] at h
+  rw [cbpK6_some] at h
   obtain ⟨s6, rfl, -, he6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (eqTrue_specC p hP.eqt (realCall p) (realCall_spec p) (n + 2) _ _ _) h6
   simp only at he6
   rw [eqTrueC_succ] at he6
-  cases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with
-  | none => rw [hs6] at he6; simp [eqTrueK] at he6
-  | some y6 =>
-  obtain ⟨r6', m6'⟩ := y6
-  rw [hs6, eqTrueK_some] at he6
+  rcases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6', m6'⟩ <;> rw [hs6] at he6; · simp [eqTrueK] at he6
+  rw [eqTrueK_some] at he6
   simp only [Option.some.injEq, Prod.mk.injEq] at he6
   obtain ⟨hr6, hm6⟩ := he6
   subst hm6
@@ -416,11 +378,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     rcases y with _ | _ | _ <;> simp_all
   -- the fields' universes at the holes
   have hg16 := hg14.trans hg6
-  cases h7 : callW p (n + 2) "check_abs_ctor_sorts_all" [vis, r1.headD 0, r6.headD 0, caO, caL, r4.headD 0,
-      r4.tail.headD 0] s6.mem with
-  | none => rw [h7] at h; simp [cbpK7] at h
-  | some x7 =>
-  obtain ⟨r7, m7⟩ := x7
+  rcases h7 : callW p (n + 2) "check_abs_ctor_sorts_all" [vis, r1.headD 0, r6.headD 0, caO, caL, r4.headD 0,
+      r4.tail.headD 0] s6.mem with _ | ⟨r7, m7⟩; · rw [h7] at h; simp [cbpK7] at h
   rw [h7, cbpK7_some] at h
   obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (iaa_spec p hP.abs.all (n + 2) _ _ _ _ _ _ _ _) h7
@@ -435,11 +394,8 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     (ConRon.Bridge.Inductives.dOutss_ext c5.ext _ _ houts) hwN
     (ConRon.Bridge.denoteFEnv_mono (c1.ext.trans hx16) hfe) r7 s7.mem hW7
   -- the normal forms
-  cases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with
-  | none => rw [h8] at h; simp [cbpK8] at h
-  | some x8 =>
-  obtain ⟨r8, m8⟩ := x8
-  rw [h8, cbpK8_some] at h
+  rcases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with _ | ⟨r8, m8⟩ <;> rw [h8] at h; · simp [cbpK8] at h
+  rw [cbpK8_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s8, rfl, -, hW8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)

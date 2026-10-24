@@ -28,10 +28,7 @@ theorem lveC_real_mfr {p : Prog} (hcl : CoreStageClosed p) {k : Nat} {m m' : Mem
   | zero => simp [lveC] at h
   | succ k =>
   simp only [lveC] at h
-  cases hs : realCall p k "lvl_eq_c" [u, v] m with
-  | none => simp [hs] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
+  rcases hs : realCall p k "lvl_eq_c" [u, v] m with _ | ⟨r1, m1⟩; · simp [hs] at h
   simp only [hs] at h
   split at h; · simp at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h

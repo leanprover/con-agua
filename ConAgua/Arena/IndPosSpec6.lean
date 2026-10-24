@@ -62,11 +62,8 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
       DecB (fun m => decNCN m nf.toNat) m' x ∧ nf.toNat + 5 ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g := by
   unfold ncnW at h
   have hpl : prog.length = pl.toNat := hs.1
-  cases hr1 : posRecW m [0, ctx, po, pl, pl] with
-  | none => rw [hr1] at h; simp [ncnK1] at h
-  | some p1 =>
-  obtain ⟨f, m1⟩ := p1
-  rw [hr1, ncnK1_some] at h
+  rcases hr1 : posRecW m [0, ctx, po, pl, pl] with _ | ⟨f, m1⟩ <;> rw [hr1] at h; · simp [ncnK1] at h
+  rw [ncnK1_some] at h
   obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
   simp only [List.length_cons, List.length_nil] at ht1
   have g0 := iwN_of_get (by simpa using hget1 0 (by simp))
@@ -79,19 +76,13 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     ⟨by simpa using g0, by omega, ⟨ctx.toNat, g1, by rw [ec]; exact hc, hci1⟩,
       ⟨po.toNat, pl.toNat, g2, g3, hs.grow hg1⟩, g4, hb⟩
   have hR1 := hR.frame (posRecW_fr hr1)
-  cases hd : rxDsW k m1 f dO dL with
-  | none => rw [hd] at h; simp [ncnK2] at h
-  | some p2 =>
-  obtain ⟨q, l, m2⟩ := p2
-  rw [hd, ncnK2_some] at h
+  rcases hd : rxDsW k m1 f dO dL with _ | ⟨q, l, m2⟩ <;> rw [hd] at h; · simp [ncnK2] at h
+  rw [ncnK2_some] at h
   obtain ⟨ys, a2, hrun2, hdec2, hq2, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all dn fe vis k).2.2.2.1 m1 m2 a f dO dL
     q l _ ds M G g hd hS1 hfm (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds)
     (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1) hR1
-  cases hrx : rxW k m2 f closed with
-  | none => rw [hrx] at h; simp [ncnK3] at h
-  | some p3 =>
-  obtain ⟨ty, m3⟩ := p3
-  rw [hrx, ncnK3_some] at h
+  rcases hrx : rxW k m2 f closed with _ | ⟨ty, m3⟩ <;> rw [hrx] at h; · simp [ncnK3] at h
+  rw [ncnK3_some] at h
   obtain ⟨a3, hrun3, hty, M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := (rxOK_all dn fe vis k).2.2.2.2.2.2 m2 m3 a2 f closed _
     ty M2 G2 g hrx hS2 (hfm.grow hg2) hcl hR2
   obtain ⟨hS4, hg4, hf4, ht4, hget4⟩ := posRecW_stage h hS3 (by simp)

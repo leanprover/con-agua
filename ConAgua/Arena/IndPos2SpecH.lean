@@ -92,11 +92,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     obtain ⟨mp0, hM0⟩ := hP.no
-    cases hno : noConstWf k m no nl lo hi (rdW (m.arr64 IW) off) with
-    | none => rw [hno] at h; simp [noaK] at h
-    | some pr =>
-    obtain ⟨b1, m1⟩ := pr
-    rw [hno] at h
+    rcases hno : noConstWf k m no nl lo hi (rdW (m.arr64 IW) off) with _ | ⟨b1, m1⟩ <;> rw [hno] at h; · simp [noaK] at h
     obtain ⟨c1, hrun1, hc1, hM1, hS1, hg1, hf1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi _ b1 names mp0 hno hS hxH
       hn (by omega) hM0
     have hP1 := hP.setNo hf1 ⟨∅, hM1⟩

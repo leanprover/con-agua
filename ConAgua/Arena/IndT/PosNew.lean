@@ -61,11 +61,8 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   | zero => simp [nwsWf, nbNewK1] at h
   | succ n' =>
   simp only [nwsWf] at h
-  cases hws : nwsW n' m ctx dO dL po pl with
-  | none => rw [hws] at h; simp [nbNewK1] at h
-  | some pr =>
-  obtain ⟨rw, m1⟩ := pr
-  rw [hws, nbNewK1_some] at h
+  rcases hws : nwsW n' m ctx dO dL po pl with _ | ⟨rw, m1⟩ <;> rw [hws] at h; · simp [nbNewK1] at h
+  rw [nbNewK1_some] at h
   obtain ⟨wp, a1, hrun1, hS1, hg1, hwp⟩ := nwsW_ok dn fe vis n' m m1 a ctx dO dL po pl c ds prog rw hws hS
     hW.u.dec hW.u.inn hhi0 hdsD (fun j hj => by omega)
   have hWp : WCtx dn vis fe m1 ctx (rw.headD 0) (rw.tail.headD 0) c wp := by
@@ -91,28 +88,19 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
     · exact hwds
   have c1 := p1.toCore hC.check
   -- the mates
-  cases hfm : nfmW (n' + 1) m1 vis nn with
-  | none => rw [hfm] at h; simp [nbNewK2] at h
-  | some pr2 =>
-  obtain ⟨rm, m2⟩ := pr2
-  rw [hfm, nbNewK2_some] at h
+  rcases hfm : nfmW (n' + 1) m1 vis nn with _ | ⟨rm, m2⟩ <;> rw [hfm] at h; · simp [nbNewK2] at h
+  rw [nbNewK2_some] at h
   obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok hfm hS1 hnn
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   have hWp2 := hWp.grow hg2
   have hhw : (nhiW m2 ctx (rw.tail.headD 0)).toNat = c.hiAt wp.length := hWp2.hi htop2
   -- the group, from the instantiation met
-  cases hpr : posRecW m2 [nn, cty] with
-  | none => rw [hpr] at h; simp [nbNewK3] at h
-  | some pr3 =>
-  obtain ⟨pw, m3⟩ := pr3
-  rw [hpr, nbNewK3_some] at h
+  rcases hpr : posRecW m2 [nn, cty] with _ | ⟨pw, m3⟩ <;> rw [hpr] at h; · simp [nbNewK3] at h
+  rw [nbNewK3_some] at h
   obtain ⟨hS3, hg3, hpq, ht3, hget3⟩ := posRecW_stage hpr hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
-  cases hn1 : new1W m3 pw with
-  | none => rw [hn1] at h; simp [nbNewK4] at h
-  | some pr4 =>
-  obtain ⟨g0, m4⟩ := pr4
-  rw [hn1, nbNewK4_some] at h
+  rcases hn1 : new1W m3 pw with _ | ⟨g0, m4⟩ <;> rw [hn1] at h; · simp [nbNewK4] at h
+  rw [nbNewK4_some] at h
   obtain ⟨hn1r, hg0⟩ := new1W_rec hn1
   obtain ⟨hS4, hg4, hg0q, ht4, hget4⟩ := posRecW_stage hn1r hS3 (by simp)
   simp only [List.length_cons, List.length_nil] at ht4
@@ -133,11 +121,8 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
     (ConRon.Bridge.denoteN_ext hnP p1.ext)
   have hA4 : AbsOK m4 := new1W_afr hn1 (posRecW_afr hpr (nfmW_afr hfm (nwsW_afr hws hA)))
   have hC4 : StageC dn vis fe env m4 a1 := hC.of_pstep hS4 hA4 p1
-  cases hgg : ggW (realCall p) (n' + 1) m4 vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us dO dL (rm.headD 0)
-      (rm.tail.headD 0) (g0.headD 0) 1 with
-  | none => rw [hgg] at h; simp [nbNewK5] at h
-  | some pr5 =>
-  obtain ⟨rg, m5⟩ := pr5
+  rcases hgg : ggW (realCall p) (n' + 1) m4 vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us dO dL (rm.headD 0)
+      (rm.tail.headD 0) (g0.headD 0) 1 with _ | ⟨rg, m5⟩; · rw [hgg] at h; simp [nbNewK5] at h
   rw [hgg, nbNewK5_some] at h
   have hg14 := hg1.trans (hg2.trans hg24)
   obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, hJ5⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
@@ -184,22 +169,16 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   have hg15 := hg14.trans hg5
   have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
   -- its keys, then the active list
-  cases hca : caW (n' + 1) m5 us dO dL (rg.headD 0) (rg.tail.headD 0) 0 0 with
-  | none => rw [hca] at h; simp [nbNewK6] at h
-  | some pr6 =>
-  obtain ⟨ra, m6⟩ := pr6
-  rw [hca, nbNewK6_some] at h
+  rcases hca : caW (n' + 1) m5 us dO dL (rg.headD 0) (rg.tail.headD 0) 0 0 with _ | ⟨ra, m6⟩ <;> rw [hca] at h; · simp [nbNewK6] at h
+  rw [nbNewK6_some] at h
   obtain ⟨hS6, hg6, hka, hkab⟩ := caW_ok dn vis fe us dO dL ds hus (n' + 1) m5 m6 a5 _ _ 0 0 grp [] ra hca hS5
     (hds.grow (OMono.decHL _ _) hg15) (by simpa using hgl5) hgb5 hgrp5 (KsB.nil _ _) (by simp)
   simp only [List.nil_append] at hka
   obtain ⟨hp6, hk0, ha0, hn0⟩ := nsb_words hns htop
   have hg16 := hg15.trans hg6
   rw [pos2_ns_rd hg16 hp6 htop 2 (by decide), pos2_ns_rd hg16 hp6 htop 3 (by decide)] at h
-  cases hap : appendW (n' + 1) m6 (ra.headD 0) (ra.tail.headD 0) (rdW (m.arr64 IW) (ns + 2))
-      (rdW (m.arr64 IW) (ns + 3)) with
-  | none => rw [hap] at h; simp [nbNewK7] at h
-  | some pr7 =>
-  obtain ⟨rap, m7⟩ := pr7
+  rcases hap : appendW (n' + 1) m6 (ra.headD 0) (ra.tail.headD 0) (rdW (m.arr64 IW) (ns + 2))
+      (rdW (m.arr64 IW) (ns + 3)) with _ | ⟨rap, m7⟩; · rw [hap] at h; simp [nbNewK7] at h
   rw [hap, nbNewK7_some] at h
   obtain ⟨hS7, hg7, h70, h71, ht7, hw71, hw72⟩ := appendW_stage hap hS6 hkab
     (by have := hns.b2; have := hg16.1; omega)
@@ -210,11 +189,8 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   have hg17 := hg16.trans hg7
   rw [pos2_rd_grow hg17 (by omega), pos2_ns_rd hg17 hp6 htop 1 (by decide), pos2_ns_rd hg17 hp6 htop 4 (by decide),
     pos2_ns_rd hg17 hp6 htop 5 (by decide)] at h
-  cases hq1 : posRecW m7 [rdW (m.arr64 IW) ns, rdW (m.arr64 IW) (ns + 1), rap.headD 0, rap.tail.headD 0,
-      rdW (m.arr64 IW) (ns + 4), rdW (m.arr64 IW) (ns + 5)] with
-  | none => rw [hq1] at h; simp [nbNewK8] at h
-  | some pr8 =>
-  obtain ⟨ns1, m8⟩ := pr8
+  rcases hq1 : posRecW m7 [rdW (m.arr64 IW) ns, rdW (m.arr64 IW) (ns + 1), rap.headD 0, rap.tail.headD 0,
+      rdW (m.arr64 IW) (ns + 4), rdW (m.arr64 IW) (ns + 5)] with _ | ⟨ns1, m8⟩; · rw [hq1] at h; simp [nbNewK8] at h
   rw [hq1, nbNewK8_some] at h
   obtain ⟨hS8, hg8, hq8, ht8, hget8⟩ := posRecW_stage hq1 hS7 (by simp)
   simp only [List.length_cons, List.length_nil] at ht8
@@ -227,11 +203,8 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   have hA8 : AbsOK m8 := posRecW_afr hq1 (appendW_afr hap (caW_afr _ _ _ _ _ _ _ _ _ _ _ hca hA5))
   have hC8 : StageC dn vis fe env m8 a5 := hC.of_cstep hS8 hA8 c12
   -- the frame
-  cases hfr : nbFrameW (realCall p) (n' + 1) m8 vis ctx fu (rw.headD 0) (rw.tail.headD 0) (nhiW m2 ctx (rw.tail.headD 0))
-      us dO dL nPc (rg.headD 0) (rg.tail.headD 0) ns1 with
-  | none => rw [hfr] at h; simp [nbNewK9] at h
-  | some pr9 =>
-  obtain ⟨r9, m9⟩ := pr9
+  rcases hfr : nbFrameW (realCall p) (n' + 1) m8 vis ctx fu (rw.headD 0) (rw.tail.headD 0) (nhiW m2 ctx (rw.tail.headD 0))
+      us dO dL nPc (rg.headD 0) (rg.tail.headD 0) ns1 with _ | ⟨r9, m9⟩; · rw [hfr] at h; simp [nbNewK9] at h
   rw [hfr, nbNewK9_some] at h
   have hg58 := (hg6.trans hg7).trans hg8
   have hhwP : (nhiW m2 ctx (rw.tail.headD 0)).toNat = ctxP.hiAt (ConLeche.nestWalkStack ctxP progP dsP).length := by
@@ -250,11 +223,8 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
     (by rw [hhwP]; exact hdsw) (fun x hx => by rw [hhwP]; exact hgs x hx _ hdsw)
   have hg19 := hg18.trans hg9
   rw [pos2_ns_rd hg19 hp6 htop 2 (by decide), pos2_ns_rd hg19 hp6 htop 3 (by decide)] at h
-  cases hcf : cfW (n' + 1) m9 ctx us dO dL (rg.headD 0) (rg.tail.headD 0) (r9.headD 0) (rdW (m.arr64 IW) (ns + 2))
-      (rdW (m.arr64 IW) (ns + 3)) kb with
-  | none => rw [hcf] at h; simp [nbAppK6] at h
-  | some pr10 =>
-  obtain ⟨r10, m10⟩ := pr10
+  rcases hcf : cfW (n' + 1) m9 ctx us dO dL (rg.headD 0) (rg.tail.headD 0) (r9.headD 0) (rdW (m.arr64 IW) (ns + 2))
+      (rdW (m.arr64 IW) (ns + 3)) kb with _ | ⟨r10, m10⟩; · rw [hcf] at h; simp [nbAppK6] at h
   rw [hcf, nbAppK6_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h

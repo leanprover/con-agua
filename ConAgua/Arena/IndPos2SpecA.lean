@@ -185,17 +185,15 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
           have hk := decCI_indInfo_kind hfc
           have := erN_rdW hk hqlt
           rwa [UInt64.ofNat_toNat] at this)
-      cases hm : fe.find? (decI c) with
-      | none => simp [hslice?]
-      | some ci =>
-        cases ci with
-        | indInfo cv caps => exact absurd hm (hnind cv caps)
-        | axiomInfo _ => simp [hslice?]
-        | defnInfo _ _ _ => simp [hslice?]
-        | thmInfo _ => simp [hslice?]
-        | ctorInfo _ _ _ => simp [hslice?]
-        | recInfo _ _ _ _ => simp [hslice?]
-        | projInfo _ => simp [hslice?]
+      rcases hm : fe.find? (decI c) with _ | ci; · simp [hslice?]
+      cases ci with
+      | indInfo cv caps => exact absurd hm (hnind cv caps)
+      | axiomInfo _ => simp [hslice?]
+      | defnInfo _ _ _ => simp [hslice?]
+      | thmInfo _ => simp [hslice?]
+      | ctorInfo _ _ _ => simp [hslice?]
+      | recInfo _ _ _ _ => simp [hslice?]
+      | projInfo _ => simp [hslice?]
 
 /-- `nat?` reads inside the array. -/
 theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? a i = some k) : i < a.size := by
@@ -495,41 +493,37 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     obtain ⟨rfl, rfl, rfl⟩ : cv = cv' ∧ nPc = nPc' ∧ nF = nF' := by
       simp only [IConstantInfo.ctorInfo.injEq] at hc; exact ⟨hc.1, hc.2.1, hc.2.2⟩
     refine ⟨hsum, ?_⟩
-    cases hs : stripF 6 m [UInt64.ofNat nPc + UInt64.ofNat nF, wt] with
-    | none => rw [hs] at h; simp [stripK] at h
-    | some rm =>
-      obtain ⟨r1, m1⟩ := rm
-      rw [hs] at h
-      have hk' : (UInt64.ofNat nPc + UInt64.ofNat nF).toNat = nPc + nF := by
-        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2, UInt64.toNat_ofNat_of_lt' hF.2]
-        exact Nat.mod_eq_of_lt hsum
-      obtain ⟨x, a1, hrun, hS1, hg, hdec⟩ :=
-        stripF_pis_ok dn vis fe (UInt64.ofNat nPc + UInt64.ofNat nF) wt hwtlt m m1 a r1 hs hS
-      rw [hk', hwtd] at hrun
-      refine ⟨x, a1, hrun, ?_⟩
-      by_cases hz : r1.headD 0 = 0
-      · rw [stripK_fail _ _ _ _ _ hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        cases x with
-        | none => exact ⟨hS1, hg, rfl⟩
-        | some xv =>
-          obtain ⟨l, e⟩ := xv
-          simp only [decOLE] at hdec
-          exact absurd hdec.1 (by rw [hz]; decide)
-      · rw [stripK_ok _ _ _ _ _ hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        cases x with
-        | none => simp only [decOLE] at hdec; exact absurd hdec hz
-        | some xv =>
-          obtain ⟨l, e⟩ := xv
-          simp only [decOLE, decW0E] at hdec
-          obtain ⟨-, -, hel, hed⟩ := hdec
-          refine ⟨hS1, hg, r1.tail.tail.tail.headD 0, rfl, ?_, ?_, ?_⟩
-          · rwa [drop3_eq] at hel
-          · rwa [drop3_eq] at hed
-          · exact hcv
+    rcases hs : stripF 6 m [UInt64.ofNat nPc + UInt64.ofNat nF, wt] with _ | ⟨r1, m1⟩ <;> rw [hs] at h; · simp [stripK] at h
+    have hk' : (UInt64.ofNat nPc + UInt64.ofNat nF).toNat = nPc + nF := by
+      rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2, UInt64.toNat_ofNat_of_lt' hF.2]
+      exact Nat.mod_eq_of_lt hsum
+    obtain ⟨x, a1, hrun, hS1, hg, hdec⟩ :=
+      stripF_pis_ok dn vis fe (UInt64.ofNat nPc + UInt64.ofNat nF) wt hwtlt m m1 a r1 hs hS
+    rw [hk', hwtd] at hrun
+    refine ⟨x, a1, hrun, ?_⟩
+    by_cases hz : r1.headD 0 = 0
+    · rw [stripK_fail _ _ _ _ _ hz] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      cases x with
+      | none => exact ⟨hS1, hg, rfl⟩
+      | some xv =>
+        obtain ⟨l, e⟩ := xv
+        simp only [decOLE] at hdec
+        exact absurd hdec.1 (by rw [hz]; decide)
+    · rw [stripK_ok _ _ _ _ _ hz] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      cases x with
+      | none => simp only [decOLE] at hdec; exact absurd hdec hz
+      | some xv =>
+        obtain ⟨l, e⟩ := xv
+        simp only [decOLE, decW0E] at hdec
+        obtain ⟨-, -, hel, hed⟩ := hdec
+        refine ⟨hS1, hg, r1.tail.tail.tail.headD 0, rfl, ?_, ?_, ?_⟩
+        · rwa [drop3_eq] at hel
+        · rwa [drop3_eq] at hed
+        · exact hcv
   · have hker : rdW (m.arr64 EREC) ciq ≠ 4 := by
       rw [hk0.1]; intro h4
       have := congrArg UInt64.toNat h4
@@ -672,108 +666,100 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     ∃ x a', (ConRon.Arena.nestCtorEntry (decI C) ci).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ EntryOut m' r ciq x := by
   unfold entryW at h
-  cases h0 : stripW m ciq with
-  | none => rw [h0] at h; simp [entryK1] at h
-  | some rm0 =>
-    obtain ⟨r0, m0⟩ := rm0
-    rw [h0] at h
-    obtain ⟨hctor, hnon⟩ := stripW_ok h0 hS hci
-    by_cases hc : ∃ cv nPc nF, ci = .ctorInfo cv nPc nF
-    · obtain ⟨cv, nPc, nF, rfl⟩ := hc
-      obtain ⟨hsum, x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF rfl
-      cases x with
-      | none =>
-        simp only [StripOut] at hout
-        subst hout
-        rw [entryK1_fail _ _ _ (by rfl)] at h
+  rcases h0 : stripW m ciq with _ | ⟨r0, m0⟩ <;> rw [h0] at h; · simp [entryK1] at h
+  obtain ⟨hctor, hnon⟩ := stripW_ok h0 hS hci
+  by_cases hc : ∃ cv nPc nF, ci = .ctorInfo cv nPc nF
+  · obtain ⟨cv, nPc, nF, rfl⟩ := hc
+    obtain ⟨hsum, x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF rfl
+    cases x with
+    | none =>
+      simp only [StripOut] at hout
+      subst hout
+      rw [entryK1_fail _ _ _ (by rfl)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨none, a1, ?_, hS1, hg1, rfl⟩
+      simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
+      rw [hrun1]; rfl
+    | some xv =>
+      obtain ⟨l, b⟩ := xv
+      obtain ⟨w, rfl, hwlt, hwd, hcvm0⟩ := hout
+      rw [entryK1_ok _ _ _ (by simp)] at h
+      simp only [List.tail_cons, List.headD_cons] at h
+      rcases hg : gafF m0 [CWF, w] with _ | ⟨r2, m2⟩ <;> rw [hg] at h; · simp [entryK2] at h
+      obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
+        gafF_ok dn vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
+      rw [CWF_eq, hwd] at hrun2
+      have htagiff := tag_const_iff (r2.headD 0) hlt2
+      rw [hdec2] at htagiff
+      by_cases hk : r2.headD 0 >>> 28 ≠ 3
+      · rw [entryK2_notconst _ _ _ _ hk] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        refine ⟨none, a1, ?_, hS1, hg1, rfl⟩
+        refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
         simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
-        rw [hrun1]; rfl
-      | some xv =>
-        obtain ⟨l, b⟩ := xv
-        obtain ⟨w, rfl, hwlt, hwd, hcvm0⟩ := hout
-        rw [entryK1_ok _ _ _ (by simp)] at h
-        simp only [List.tail_cons, List.headD_cons] at h
-        cases hg : gafF m0 [CWF, w] with
-        | none => rw [hg] at h; simp [entryK2] at h
-        | some rm2 =>
-          obtain ⟨r2, m2⟩ := rm2
-          rw [hg] at h
-          obtain ⟨x2, a2, hrun2, hS2, hg2, hlt2, hdec2⟩ :=
-            gafF_ok dn vis fe CWF w hwlt m0 m2 a1 r2 hg hS1
-          rw [CWF_eq, hwd] at hrun2
-          have htagiff := tag_const_iff (r2.headD 0) hlt2
-          rw [hdec2] at htagiff
-          by_cases hk : r2.headD 0 >>> 28 ≠ 3
-          · rw [entryK2_notconst _ _ _ _ hk] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
+        rw [hrun1]
+        simp only [except_ok_bind, StateT.run_bind]
+        rw [hrun2]
+        simp only [except_ok_bind]
+        have ht : ¬ (x2.tag == ETag.const) = true := by rw [htagiff]; simpa using hk
+        simp only [ht, if_false]; rfl
+      · rw [entryK2_const _ _ _ _ hk] at h
+        have hk3 : r2.headD 0 >>> 28 = 3 := by simpa using hk
+        cases hvl : eViewW m2 (r2.headD 0) with
+        | nil => rw [hvl] at h; simp [entryK3] at h
+        | cons g vt =>
+          have hne : eViewW m2 (r2.headD 0) ≠ [] := by rw [hvl]; simp
+          rw [hvl] at h
+          obtain ⟨v, hv, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.1 (r2.headD 0) hne
+          rw [hvl] at hvr
+          have hdE : decE (r2.headD 0) = x2 := hdec2
+          have ht : x2.tag = ETag.const := by
+            have := htagiff
+            rw [show decide (r2.headD 0 >>> 28 = 3) = true by rw [hk3]; decide] at this
+            simpa using this
+          obtain ⟨n0, us0, rfl⟩ := EStore.view_const a2.store x2 ht v (hdE ▸ hv)
+          simp only [ViewR, getD1_eq] at hvr
+          obtain ⟨-, hn1, hn2, -, -⟩ := hvr
+          simp only [List.tail_cons, List.headD_cons] at hn1 hn2
+          have hview : a2.store.viewConst x2 = some (n0, us0) :=
+            EStore.viewConst_of_view _ _ ht n0 us0 (hdE ▸ hv)
+          have hbeq : (n0 == decI C) = decide (vt.headD 0 = C) := by
+            rw [← hn2]; exact decI_beq' _ _ hn1 hC
+          have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
+              .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
             simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
             rw [hrun1]
             simp only [except_ok_bind, StateT.run_bind]
             rw [hrun2]
             simp only [except_ok_bind]
-            have ht : ¬ (x2.tag == ETag.const) = true := by rw [htagiff]; simpa using hk
-            simp only [ht, if_false]; rfl
-          · rw [entryK2_const _ _ _ _ hk] at h
-            have hk3 : r2.headD 0 >>> 28 = 3 := by simpa using hk
-            cases hvl : eViewW m2 (r2.headD 0) with
-            | nil => rw [hvl] at h; simp [entryK3] at h
-            | cons g vt =>
-              have hne : eViewW m2 (r2.headD 0) ≠ [] := by rw [hvl]; simp
-              rw [hvl] at h
-              obtain ⟨v, hv, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.1 (r2.headD 0) hne
-              rw [hvl] at hvr
-              have hdE : decE (r2.headD 0) = x2 := hdec2
-              have ht : x2.tag = ETag.const := by
-                have := htagiff
-                rw [show decide (r2.headD 0 >>> 28 = 3) = true by rw [hk3]; decide] at this
-                simpa using this
-              obtain ⟨n0, us0, rfl⟩ := EStore.view_const a2.store x2 ht v (hdE ▸ hv)
-              simp only [ViewR, getD1_eq] at hvr
-              obtain ⟨-, hn1, hn2, -, -⟩ := hvr
-              simp only [List.tail_cons, List.headD_cons] at hn1 hn2
-              have hview : a2.store.viewConst x2 = some (n0, us0) :=
-                EStore.viewConst_of_view _ _ ht n0 us0 (hdE ▸ hv)
-              have hbeq : (n0 == decI C) = decide (vt.headD 0 = C) := by
-                rw [← hn2]; exact decI_beq' _ _ hn1 hC
-              have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
-                  .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
-                simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind]
-                rw [hrun1]
-                simp only [except_ok_bind, StateT.run_bind]
-                rw [hrun2]
-                simp only [except_ok_bind]
-                simp only [ht, beq_self_eq_true, if_true, StateT.run_bind, viewConst_run, hview]
-                simp only [except_ok_bind]
-                rw [hbeq]
-                by_cases hcn : vt.headD 0 = C
-                · simp only [hcn, decide_true, if_true]; rfl
-                · simp only [hcn, decide_false]; rfl
-              by_cases hcn : vt.headD 0 = C
-              · rw [entryK3_hit _ _ _ _ (by simp) (by simpa using hcn)] at h
-                simp only [Option.some.injEq, Prod.mk.injEq] at h
-                obtain ⟨rfl, rfl⟩ := h
-                refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
-                simp only [hcn, if_true, EntryOut]
-                exact ⟨rfl, (erecP_ext_grow (hg1.trans hg2)).decCV hcvm0, hsum⟩
-              · rw [entryK3_miss _ _ _ _ (by simp) (by simpa using hcn)] at h
-                simp only [Option.some.injEq, Prod.mk.injEq] at h
-                obtain ⟨rfl, rfl⟩ := h
-                refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
-                simp only [hcn, if_false, EntryOut]
-    · have hne : ∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF := fun cv n f hh => hc ⟨cv, n, f, hh⟩
-      obtain ⟨rfl, rfl⟩ := hnon hne
-      rw [entryK1_fail _ _ _ (by rfl)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
-      cases ci with
-      | ctorInfo cv n f => exact absurd ⟨cv, n, f, rfl⟩ hc
-      | _ => rfl
+            simp only [ht, beq_self_eq_true, if_true, StateT.run_bind, viewConst_run, hview]
+            simp only [except_ok_bind]
+            rw [hbeq]
+            by_cases hcn : vt.headD 0 = C
+            · simp only [hcn, decide_true, if_true]; rfl
+            · simp only [hcn, decide_false]; rfl
+          by_cases hcn : vt.headD 0 = C
+          · rw [entryK3_hit _ _ _ _ (by simp) (by simpa using hcn)] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
+            simp only [hcn, if_true, EntryOut]
+            exact ⟨rfl, (erecP_ext_grow (hg1.trans hg2)).decCV hcvm0, hsum⟩
+          · rw [entryK3_miss _ _ _ _ (by simp) (by simpa using hcn)] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
+            simp only [hcn, if_false, EntryOut]
+  · have hne : ∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF := fun cv n f hh => hc ⟨cv, n, f, hh⟩
+    obtain ⟨rfl, rfl⟩ := hnon hne
+    rw [entryK1_fail _ _ _ (by rfl)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
+    cases ci with
+    | ctorInfo cv n f => exact absurd ⟨cv, n, f, rfl⟩ hc
+    | _ => rfl
 
 section census
 variable (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
@@ -830,29 +816,25 @@ theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wor
     ∃ a', (ConRon.Arena.nestResHead (decI e)).run a = .ok (r.headD 0 != 0, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   unfold resHeadW at h
-  cases hs : gafF m [CWF, e] with
-  | none => rw [hs] at h; simp [resHeadK] at h
-  | some rm =>
-    obtain ⟨r1, m1⟩ := rm
-    rw [hs] at h
-    simp only [resHeadK, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
-    refine ⟨a1, ?_, hS1, hg⟩
-    rw [CWF_eq] at hrun
-    have htag : (x.tag == ETag.fvar) = decide (r1.headD 0 >>> 28 = 1) := by
-      rw [← hdec]
-      have := decE_tag_eq (r1.headD 0) hlt 1 (by decide)
-      have e1 : (ETag.fvar : UInt32) = UInt32.ofNat 1 := rfl
-      show ((decE (r1.headD 0)).tag == ETag.fvar) = _
-      rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
-      exact Iff.rfl
-    simp only [ConRon.Arena.nestResHead, StateT.run_bind]
-    rw [hrun]
-    simp only [bind, Except.bind, pure, StateT.run_pure, StateT.pure, htag]
-    show (StateT.pure (decide (r1.headD 0 >>> 28 = 1))).run a1 = _
-    generalize r1.headD 0 = w
-    by_cases hc : w >>> 28 = 1 <;> simp [hc, StateT.pure, StateT.run, pure, Except.pure]
+  rcases hs : gafF m [CWF, e] with _ | ⟨r1, m1⟩ <;> rw [hs] at h; · simp [resHeadK] at h
+  simp only [resHeadK, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
+  refine ⟨a1, ?_, hS1, hg⟩
+  rw [CWF_eq] at hrun
+  have htag : (x.tag == ETag.fvar) = decide (r1.headD 0 >>> 28 = 1) := by
+    rw [← hdec]
+    have := decE_tag_eq (r1.headD 0) hlt 1 (by decide)
+    have e1 : (ETag.fvar : UInt32) = UInt32.ofNat 1 := rfl
+    show ((decE (r1.headD 0)).tag == ETag.fvar) = _
+    rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
+    exact Iff.rfl
+  simp only [ConRon.Arena.nestResHead, StateT.run_bind]
+  rw [hrun]
+  simp only [bind, Except.bind, pure, StateT.run_pure, StateT.pure, htag]
+  show (StateT.pure (decide (r1.headD 0 >>> 28 = 1))).run a1 = _
+  generalize r1.headD 0 = w
+  by_cases hc : w >>> 28 = 1 <;> simp [hc, StateT.pure, StateT.run, pure, Except.pure]
 
 /-- **`nest_res_head` refines `nestResHead`** (through the `get_app_fn` stub). -/
 @[refines ConRon.Arena.nestResHead]
@@ -1034,47 +1016,41 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           rw [UInt64.ofNat_toNat] at hwa_eq
           rw [hwa_eq] at h
           simp only [List.tail_cons] at h
-          cases hst : i1F m [CWF, vt.tail.headD 0, wa, 0] with
-          | none => rw [hst] at h; simp [instK2] at h
-          | some rm =>
-            obtain ⟨rb, m1⟩ := rm
-            rw [hst, instK2_some] at h
-            obtain ⟨x1, a1, hrun1, hS1, hg1, hlt1, hdec1⟩ :=
-              i1F_ok dn vis fe (vt.tail.headD 0) wa 0 hy2' m m1 a rb hst hS
-            cases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with
-            | none => rw [hw] at h; simp [instK3] at h
-            | some rm3 =>
-              obtain ⟨r3, m3⟩ := rm3
-              rw [hw, instK3_some] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
-              have hao1 : (ao + 1).toNat = ao.toNat + 1 := toNat_add_one' (by omega)
-              have hal1 : (al - 1).toNat = al.toNat - 1 := toNat_sub_one' hal
-              have hdec' : decHL m1 (ao + 1).toNat (al - 1).toNat = some rest := by
-                rw [hao1, hal1, decHL_grow hg1 (by omega)]; exact hrest
-              obtain ⟨x3, a3, hrun3, hS3, hg3, hout3⟩ :=
-                ih dn fe vis m1 m3 a1 (ao + 1) (al - 1) (rb.headD 0) rest r3 hw hS1 hlt1 hdec'
-                  (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.1; omega)
-              refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
-              · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
-                  rw [tag_forall_iff e he, he6]; decide
-                simp only [ConRon.Arena.instPisWith, htag, if_true, StateT.run_bind]
-                rw [show (decI e : EIdx) = decE e from rfl, viewBind_run, except_ok_bind, hbind]
-                simp only [except_ok_bind, StateT.run_bind]
-                rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, hwa_dec, CWF_eq,
-                  show (0 : Word).toNat = 0 from rfl] at hrun1
-                rw [hrun1]
-                simp only [except_ok_bind]
-                rw [← hdec1]
-                exact hrun3
-              · cases x3 with
-                | none =>
-                  simp only [decOE] at hout3 ⊢
-                  exact hout3
-                | some e3 =>
-                  simp only [decOE, decW0E] at hout3 ⊢
-                  obtain ⟨h1, h2, h3⟩ := hout3
-                  exact ⟨h1, by simpa using h2, by simpa using h3⟩
+          rcases hst : i1F m [CWF, vt.tail.headD 0, wa, 0] with _ | ⟨rb, m1⟩ <;> rw [hst] at h; · simp [instK2] at h
+          rw [instK2_some] at h
+          obtain ⟨x1, a1, hrun1, hS1, hg1, hlt1, hdec1⟩ :=
+            i1F_ok dn vis fe (vt.tail.headD 0) wa 0 hy2' m m1 a rb hst hS
+          rcases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hw] at h; · simp [instK3] at h
+          rw [instK3_some] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          have hao1 : (ao + 1).toNat = ao.toNat + 1 := toNat_add_one' (by omega)
+          have hal1 : (al - 1).toNat = al.toNat - 1 := toNat_sub_one' hal
+          have hdec' : decHL m1 (ao + 1).toNat (al - 1).toNat = some rest := by
+            rw [hao1, hal1, decHL_grow hg1 (by omega)]; exact hrest
+          obtain ⟨x3, a3, hrun3, hS3, hg3, hout3⟩ :=
+            ih dn fe vis m1 m3 a1 (ao + 1) (al - 1) (rb.headD 0) rest r3 hw hS1 hlt1 hdec'
+              (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.1; omega)
+          refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
+          · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
+              rw [tag_forall_iff e he, he6]; decide
+            simp only [ConRon.Arena.instPisWith, htag, if_true, StateT.run_bind]
+            rw [show (decI e : EIdx) = decE e from rfl, viewBind_run, except_ok_bind, hbind]
+            simp only [except_ok_bind, StateT.run_bind]
+            rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, hwa_dec, CWF_eq,
+              show (0 : Word).toNat = 0 from rfl] at hrun1
+            rw [hrun1]
+            simp only [except_ok_bind]
+            rw [← hdec1]
+            exact hrun3
+          · cases x3 with
+            | none =>
+              simp only [decOE] at hout3 ⊢
+              exact hout3
+            | some e3 =>
+              simp only [decOE, decW0E] at hout3 ⊢
+              obtain ⟨h1, h2, h3⟩ := hout3
+              exact ⟨h1, by simpa using h2, by simpa using h3⟩
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -1206,52 +1182,42 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       have hdo1 : (dO + 1).toNat = dO.toNat + 1 := toNat_add_one' (by omega)
       have hdl1 : (dl - 1).toNat = dl.toNat - 1 := toNat_sub_one' hdl
       have hi1 : (i + 1).toNat = i.toNat + 1 := toNat_add_one' (by omega)
-      cases hr1 : closeW n m (dO + 1) (dl - 1) (i + 1) body with
-      | none => rw [hr1] at h; simp [closeK1] at h
-      | some rm1 =>
-        obtain ⟨r1, m1⟩ := rm1
-        rw [hr1, closeK1_some] at h
-        obtain ⟨x1, a1, hrun1, hS1, hg1, ⟨hlt1, hdec1⟩, hA1⟩ :=
-          ih dn fe vis m m1 a (dO + 1) (dl - 1) (i + 1) body bs r1 hr1 hS hbody
-            (by rw [hdo1, hdl1]; exact hbs) (by rw [hdo1, hdl1]; omega) (by rw [hdo1, hdl1]; omega)
-            (by rw [hi1, hdl1]; omega) hA
-        rw [hi1] at hrun1
-        cases hr2 : abF m1 [CWF, r1.headD 0, i, 0] with
-        | none => rw [hr2] at h; simp [closeK2] at h
-        | some rm2 =>
-          obtain ⟨r2, m2⟩ := rm2
-          rw [hr2, closeK2_some] at h
-          obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hlt2, hdec2⟩, hA2⟩ :=
-            abF_ok dn vis fe (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 ⟨hS1, hA1⟩
-          rw [CWF_eq, hdec1, show (0 : Word).toNat = 0 from rfl] at hrun2
-          have hg12 := hg1.trans hg2
-          have hd0 : dO.toNat < iwTop m := by omega
-          obtain ⟨wd, hwd_eq, hwd_lt, hwd_dec⟩ := iwH_rdW hdd (by omega)
-          rw [UInt64.ofNat_toNat] at hwd_eq
-          rw [rdW_grow hg12 hd0, hwd_eq] at h
-          cases hm : mkForallW m2 wd (r2.headD 0) with
-          | none => rw [hm] at h; simp [closeK3] at h
-          | some rm3 =>
-            obtain ⟨rr, m3⟩ := rm3
-            rw [hm] at h
-            by_cases hbig : 4294967296 ≤ rr
-            · rw [closeK3_big _ _ hbig] at h; simp at h
-            · rw [closeK3_ok _ _ hbig] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
-              obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
-              refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
-              · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]
-                rw [hrun1]
-                simp only [except_ok_bind, StateT.run_bind]
-                rw [hrun2]
-                simp only [except_ok_bind]
-                rw [← hwd_dec, ← hdec2]
-                exact hrun3
-              · have : rr.toNat < 2 ^ 32 := by
-                  have : ¬ (4294967296 : Nat) ≤ rr.toNat := hbig
-                  omega
-                simpa using this
+      rcases hr1 : closeW n m (dO + 1) (dl - 1) (i + 1) body with _ | ⟨r1, m1⟩ <;> rw [hr1] at h; · simp [closeK1] at h
+      rw [closeK1_some] at h
+      obtain ⟨x1, a1, hrun1, hS1, hg1, ⟨hlt1, hdec1⟩, hA1⟩ :=
+        ih dn fe vis m m1 a (dO + 1) (dl - 1) (i + 1) body bs r1 hr1 hS hbody
+          (by rw [hdo1, hdl1]; exact hbs) (by rw [hdo1, hdl1]; omega) (by rw [hdo1, hdl1]; omega)
+          (by rw [hi1, hdl1]; omega) hA
+      rw [hi1] at hrun1
+      rcases hr2 : abF m1 [CWF, r1.headD 0, i, 0] with _ | ⟨r2, m2⟩ <;> rw [hr2] at h; · simp [closeK2] at h
+      rw [closeK2_some] at h
+      obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hlt2, hdec2⟩, hA2⟩ :=
+        abF_ok dn vis fe (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 ⟨hS1, hA1⟩
+      rw [CWF_eq, hdec1, show (0 : Word).toNat = 0 from rfl] at hrun2
+      have hg12 := hg1.trans hg2
+      have hd0 : dO.toNat < iwTop m := by omega
+      obtain ⟨wd, hwd_eq, hwd_lt, hwd_dec⟩ := iwH_rdW hdd (by omega)
+      rw [UInt64.ofNat_toNat] at hwd_eq
+      rw [rdW_grow hg12 hd0, hwd_eq] at h
+      rcases hm : mkForallW m2 wd (r2.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hm] at h; · simp [closeK3] at h
+      by_cases hbig : 4294967296 ≤ rr
+      · rw [closeK3_big _ _ hbig] at h; simp at h
+      · rw [closeK3_ok _ _ hbig] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
+        refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
+        · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]
+          rw [hrun1]
+          simp only [except_ok_bind, StateT.run_bind]
+          rw [hrun2]
+          simp only [except_ok_bind]
+          rw [← hwd_dec, ← hdec2]
+          exact hrun3
+        · have : rr.toNat < 2 ^ 32 := by
+            have : ¬ (4294967296 : Nat) ≤ rr.toNat := hbig
+            omega
+          simpa using this
 
 section census
 variable (p : Prog) (hd : p.lookup "der_b" = some derB)

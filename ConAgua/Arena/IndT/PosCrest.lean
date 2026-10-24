@@ -64,20 +64,14 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   obtain ⟨hcvn, hcvl, hcvt⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP
   -- the level parameters
-  cases hlp : cvLpsW k m cv with
-  | none => rw [hlp] at h; simp [p2ctK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hlp, p2ctK1_eq] at h
+  rcases hlp : cvLpsW k m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [p2ctK1] at h
+  rw [p2ctK1_eq] at h
   obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := pos2_cvLpsW_stage hlp hS hcv hcv3
   have hA1 : AbsOK m1 := erToIwW_afr (show erToIwW _ m _ _ = some (r1, m1) from hlp) hA
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨ws, hws, hwsd, hwH⟩ := slR_of_decHL m1 _ _ _ hdec1 (by omega)
   simp only [UInt64.ofNat_toNat] at hws
-  cases hnd : nodupW k m1 (r1.headD 0) (r1.tail.headD 0) with
-  | none => rw [hnd] at h; cases h
-  | some b =>
-  rw [hnd] at h
+  rcases hnd : nodupW k m1 (r1.headD 0) (r1.tail.headD 0) with _ | b <;> rw [hnd] at h; · cases h
   simp only at h
   by_cases hb0 : b = 0
   · rw [if_pos hb0] at h; cases h
@@ -95,11 +89,8 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
     rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
   rw [hrdt] at h
-  cases hil : realCall p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with
-  | none => rw [hil] at h; simp [p2ctK2] at h
-  | some pr2 =>
-  obtain ⟨r2, m2⟩ := pr2
-  rw [hil, p2ctK2_some] at h
+  rcases hil : realCall p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hil] at h; · simp [p2ctK2] at h
+  rw [p2ctK2_some] at h
   obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
     IlpRd.realC hIlpf hC k CWF _ _ _ _ cvv.levelParams m1 m2 a r2 hus hwtH ⟨rfl, erToIwW_iwFr hlp⟩ hS1 hdec1 hil
   rw [CWF_eq, ← hwtd] at hrun1
@@ -118,11 +109,8 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   | zero => simp [pcrWf, p2ctK3] at h
   | succ k =>
   simp only [pcrWf] at h
-  cases hpc : pcrW k m2 no nl us dO dL hO hL (r2.headD 0) with
-  | none => rw [hpc] at h; simp [p2ctK3] at h
-  | some pr3 =>
-  obtain ⟨r3, m3⟩ := pr3
-  rw [hpc, p2ctK3_eq] at h
+  rcases hpc : pcrW k m2 no nl us dO dL hO hL (r2.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hpc] at h; · simp [p2ctK3] at h
+  rw [p2ctK3_eq] at h
   have hP2 : PosMR m2 := (hP.fr (posmemo_cvLpsW_mfr hlp)).fr (MFr.of_frame hfr2 hA2s hC2s)
   obtain ⟨M, G, g, hR⟩ := hP2.rf
   obtain ⟨mp2, hM2⟩ := hP2.rp
@@ -153,11 +141,8 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   have hxH' : H (r3.tail.headD 0) := by simpa using hxH
   have hxd' : decI (r3.tail.headD 0) = crest := by simpa [decE_eq] using hxd
   -- its type
-  cases hit2 : realCall p (k + 1 + 1 + 1) "infer_type_core" [vis, hi, r3.tail.headD 0] m3 with
-  | none => rw [hit2] at h; simp [p2ctK4] at h
-  | some pr4 =>
-  obtain ⟨r4, m4⟩ := pr4
-  rw [hit2, p2ctK4_eq] at h
+  rcases hit2 : realCall p (k + 1 + 1 + 1) "infer_type_core" [vis, hi, r3.tail.headD 0] m3 with _ | ⟨r4, m4⟩ <;> rw [hit2] at h; · simp [p2ctK4] at h
+  rw [p2ctK4_eq] at h
   obtain ⟨ty, a3, hrun3, hC4, hg4, hdec4, hA4, c4, tyP, htyP, hwty⟩ :=
     inferC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC3 hA3 hi (r3.tail.headD 0) hxH'
       (by rw [hxd']; exact hcrest) hwc _ hit2
@@ -165,11 +150,7 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   rw [hxd'] at hrun3
   have hP4 : PosMR m4 := hP3.fr (coreF_mfr hq (by decide) hit2)
   -- its sort
-  cases hes : realCall p (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with
-  | none => rw [hes] at h; cases h
-  | some pr5 =>
-  obtain ⟨r5, m5⟩ := pr5
-  rw [hes] at h
+  rcases hes : realCall p (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with _ | ⟨r5, m5⟩ <;> rw [hes] at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨so, a4, hrun4, hC5, hg5, -, hA5, c5, -⟩ :=

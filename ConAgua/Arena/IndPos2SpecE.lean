@@ -42,16 +42,10 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     · rw [hr, piBK1_nil] at hpb; simp at hpb
     obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr
     rw [piBK1_ne n m fuel _ hr] at hpb
-    cases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-    | none => rw [hrec] at hpb; simp [piBK2] at hpb
-    | some rm =>
-    obtain ⟨rs1, m1⟩ := rm
-    rw [hrec, piBK2_some] at hpb
-    cases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with
-    | none => rw [hcons] at hpb; simp [piBK3] at hpb
-    | some rm2 =>
-    obtain ⟨r2, m2⟩ := rm2
-    rw [hcons, piBK3_some] at hpb
+    rcases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with _ | ⟨rs1, m1⟩ <;> rw [hrec] at hpb; · simp [piBK2] at hpb
+    rw [piBK2_some] at hpb
+    rcases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with _ | ⟨r2, m2⟩ <;> rw [hcons] at hpb; · simp [piBK3] at hpb
+    rw [piBK3_some] at hpb
     simp only [Option.some.injEq, Prod.mk.injEq] at hpb
     obtain ⟨-, rfl⟩ := hpb
     obtain ⟨-, hty, hb⟩ := view_forall m a hR h hh hvok hg6
@@ -135,11 +129,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
       IWGrow m m' ∧ (r.headD 0).toNat = x := by
   have hE := hS.1.env
   unfold naW at h
-  cases hef : envFindW m C vis with
-  | none => rw [hef] at h; simp [naK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hef] at h
+  rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [naK1] at h
   have hm1 := envFindW_mem hef
   rw [hm1] at h hef
   by_cases hf0 : r1.headD 0 = 0
@@ -186,11 +176,8 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     rw [word_add_toNat (by have := hS.2.2.1; have := hS.2.2.2.2.1; simp; omega)]; rfl
   have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
   rw [hrw] at h
-  cases hpb : piBW n m CWF w with
-  | none => rw [hpb] at h; simp [naK2] at h
-  | some pr =>
-  obtain ⟨rs, m2⟩ := pr
-  rw [hpb, naK2_some] at h
+  rcases hpb : piBW n m CWF w with _ | ⟨rs, m2⟩ <;> rw [hpb] at h; · simp [naK2] at h
+  rw [naK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨bs, e, hrun, hdec, -, -, hS2, hg2, -⟩ := piBW_cwf hpb hS hwH
@@ -356,11 +343,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    cases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with
-    | none => rw [hst] at h; simp [dcK] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hst] at h
+    rcases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with _ | ⟨r1, m1⟩ <;> rw [hst] at h; · simp [dcK] at h
     obtain ⟨k, a1, hrun1, hS1, hg1, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a r1 hst hS
     rw [CWF_eq, hxd] at hrun1
     rw [List.allM_cons]
@@ -463,11 +446,7 @@ theorem nwsW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     ∃ x a', (ConRon.Arena.nestWalkStack c prog ds).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ ((x = [] ∧ r = [0, 0]) ∨ (x = prog ∧ r = [po, pl])) := by
   unfold nwsW at h
-  cases hd : dcWf n m ctx off l with
-  | none => rw [hd] at h; simp [nwsK] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hd] at h
+  rcases hd : dcWf n m ctx off l with _ | ⟨r1, m1⟩ <;> rw [hd] at h; · simp [nwsK] at h
   obtain ⟨b, a', hrun, hS', hg, hr⟩ := dcWf_ok dn fe vis n m m1 a ctx off l c ds r1 hd hS hc hin hhi hds hdi
   rw [nestWalkStack_eq]
   cases b with
@@ -642,11 +621,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     simp only [List.tail_cons, List.headD_cons] at h
     generalize hd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2) = d at h hty hvb
     generalize hbd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1) = b at h hb hvb
-    cases hnc : noConstWf k m no nl lo hi d with
-    | none => rw [hnc] at h; simp [pdoK1] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hnc] at h
+    rcases hnc : noConstWf k m no nl lo hi d with _ | ⟨r1, m1⟩ <;> rw [hnc] at h; · simp [pdoK1] at h
     have hnb' : no.toNat + nl.toNat < 2 ^ 64 := by
       rcases Nat.eq_zero_or_pos nl.toNat with hz | hz
       · rw [hz]; simpa using no.toNat_lt
@@ -829,11 +804,7 @@ theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word
     | zero => simp [ntWf, gcK1] at h
     | succ k =>
     simp only [ntWf] at h
-    cases hnt : ntW k m vis (rdW (m.arr64 IW) off) with
-    | none => rw [hnt] at h; simp [gcK1] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hnt] at h
+    rcases hnt : ntW k m vis (rdW (m.arr64 IW) off) with _ | ⟨r1, m1⟩ <;> rw [hnt] at h; · simp [gcK1] at h
     obtain ⟨x, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis _ hcH k m m1 a r1 hnt hS
     rw [hcd] at hrun1
     cases x with
@@ -889,19 +860,13 @@ theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word
       · rw [gcK1_bad (h := hne0) (h1 := hp1) (h3 := hp3)] at h; simp at h
       rw [gcK1_empty (h := hne0) (h1 := hp1) (h3 := hp3)] at h
       have hlen0 : ctors.length = 0 := by rw [← h3, show r1.tail.tail.tail.headD 0 = 0 by simpa using hp3]; rfl
-      cases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with
-      | none => rw [hap] at h; simp [gcK2] at h
-      | some pr2 =>
-      obtain ⟨r2, m2⟩ := pr2
-      rw [hap, gcK2_some] at h
+      rcases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · simp [gcK2] at h
+      rw [gcK2_some] at h
       exact hok r2 m2 hap h (by simp [hlen0])
     · have heq : nPc2 = nPc.toNat := by rw [← h1, show r1.tail.headD 0 = nPc by simpa using hp1]
       rw [gcK1_same (h := hne0) (h1 := hp1)] at h
-      cases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with
-      | none => rw [hap] at h; simp [gcK2] at h
-      | some pr2 =>
-      obtain ⟨r2, m2⟩ := pr2
-      rw [hap, gcK2_some] at h
+      rcases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · simp [gcK2] at h
+      rw [gcK2_some] at h
       exact hok r2 m2 hap h (by simp [heq])
 
 section census

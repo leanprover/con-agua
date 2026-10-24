@@ -62,30 +62,26 @@ theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
       (fun x hx => by simp [maSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.1.arena.1
   have hws0 : SlR (mclearG maSch m) no nl ws := slR_congr (hf0.1 IW (by simp) (by decide)) hws
-  cases hg : maGoW n (mclearG maSch m) no nl CWF e with
-  | none => rw [hg] at hb; simp [maClrK] at hb
-  | some p1 =>
-    obtain ⟨r1, m1⟩ := p1
-    rw [hg] at hb
-    by_cases h1 : rdW (m1.arr64 CTL) maSch.cs + 2 = 0
-    · simp [maClrK, h1] at hb
-    rw [maClrK_some r1 m1 h1] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
-    obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := maGoOK n _ _ a no nl CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
-    rw [CWF_eq] at hrun
-    have hM2 := memoRG_clear maSch maSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h1
-    have hf2 := mclearG_frame maSch m1
-    have hfall : MemFrame [MAM] [maSch.cs, maSch.cs + 1] m (mclearG maSch m1) :=
-      ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [maSch]))).trans
-        (hf2.mono (by simp) (by simp))
-    obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
-      (by intro x hx; simp [maSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
-      (by simp [maSch])
-    refine ⟨c, ?_, hbb, hM2, hS', hg'⟩
-    simp only [ConRon.Arena.mentionsAnyConst, StateT.run_bind]
-    rw [hrun]
-    rfl
+  rcases hg : maGoW n (mclearG maSch m) no nl CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [maClrK] at hb
+  by_cases h1 : rdW (m1.arr64 CTL) maSch.cs + 2 = 0
+  · simp [maClrK, h1] at hb
+  rw [maClrK_some r1 m1 h1] at hb
+  simp only [Option.some.injEq, Prod.mk.injEq] at hb
+  obtain ⟨rfl, rfl⟩ := hb
+  obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := maGoOK n _ _ a no nl CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
+  rw [CWF_eq] at hrun
+  have hM2 := memoRG_clear maSch maSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h1
+  have hf2 := mclearG_frame maSch m1
+  have hfall : MemFrame [MAM] [maSch.cs, maSch.cs + 1] m (mclearG maSch m1) :=
+    ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [maSch]))).trans
+      (hf2.mono (by simp) (by simp))
+  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp [maSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+    (by simp [maSch])
+  refine ⟨c, ?_, hbb, hM2, hS', hg'⟩
+  simp only [ConRon.Arena.mentionsAnyConst, StateT.run_bind]
+  rw [hrun]
+  rfl
 
 section census3
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
@@ -493,31 +489,28 @@ theorem noNodeBin_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
           AM (Bool × Std.HashMap EIdx Bool)).run a = .ok ((b, mp'), a) ∧
       (r != 0) = b ∧ noMR m' mp' ∧ MemFrame [NOM] [205] m m' := by
   rw [noNodeW_bin n m no nl lo hi f1 g x y z hg] at hn
-  cases h1 : noGoW n m no nl lo hi f1 x with
-  | none => rw [h1] at hn; simp [noB1] at hn
-  | some p1 =>
-    obtain ⟨b1w, m1⟩ := p1
-    rw [h1, noB1_some] at hn
-    obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl lo hi f1 x b1w ws mp h1 hA hx hws hwlt hM
-    by_cases e1 : b1w ≠ 0
-    · rw [if_pos e1] at hn
-      simp only [Option.some.injEq, Prod.mk.injEq] at hn
-      obtain ⟨rfl, rfl⟩ := hn
-      have hc1 : c1 = true := by rw [← hb1]; simpa using e1
-      refine ⟨true, mp1, ?_, by simp, hM1, hf1⟩
-      simp only [StateT.run_bind]
-      rw [hr1]
-      simp only [except_ok_bind, hc1, if_true]
-      rfl
-    · rw [if_neg e1] at hn
-      have hc1 : c1 = false := by rw [← hb1]; simpa using e1
-      obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m' a no nl lo hi f1 y r ws mp1 hn (noFrame_arena hf1 hA) hy
-        (slR_congr (noFrame_iw hf1) hws) hwlt hM1
-      refine ⟨c2, mp2, ?_, hb2, hM2, hf1.trans hf2⟩
-      simp only [StateT.run_bind]
-      rw [hr1]
-      simp only [except_ok_bind, hc1]
-      simpa using hr2
+  rcases h1 : noGoW n m no nl lo hi f1 x with _ | ⟨b1w, m1⟩ <;> rw [h1] at hn; · simp [noB1] at hn
+  rw [noB1_some] at hn
+  obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl lo hi f1 x b1w ws mp h1 hA hx hws hwlt hM
+  by_cases e1 : b1w ≠ 0
+  · rw [if_pos e1] at hn
+    simp only [Option.some.injEq, Prod.mk.injEq] at hn
+    obtain ⟨rfl, rfl⟩ := hn
+    have hc1 : c1 = true := by rw [← hb1]; simpa using e1
+    refine ⟨true, mp1, ?_, by simp, hM1, hf1⟩
+    simp only [StateT.run_bind]
+    rw [hr1]
+    simp only [except_ok_bind, hc1, if_true]
+    rfl
+  · rw [if_neg e1] at hn
+    have hc1 : c1 = false := by rw [← hb1]; simpa using e1
+    obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m' a no nl lo hi f1 y r ws mp1 hn (noFrame_arena hf1 hA) hy
+      (slR_congr (noFrame_iw hf1) hws) hwlt hM1
+    refine ⟨c2, mp2, ?_, hb2, hM2, hf1.trans hf2⟩
+    simp only [StateT.run_bind]
+    rw [hr1]
+    simp only [except_ok_bind, hc1]
+    simpa using hr2
 
 theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl lo hi f1 x y z r : Word)
     (ws : List Word) (mp : Std.HashMap EIdx Bool) (hx : H x) (hy : H y) (hz : H z)
@@ -532,55 +525,49 @@ theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
           AM (Bool × Std.HashMap EIdx Bool)).run a = .ok ((b, mp'), a) ∧
       (r != 0) = b ∧ noMR m' mp' ∧ MemFrame [NOM] [205] m m' := by
   rw [noNodeW_let n m no nl lo hi f1 7 x y z rfl] at hn
-  cases h1 : noGoW n m no nl lo hi f1 x with
-  | none => rw [h1] at hn; simp [noL1] at hn
-  | some p1 =>
-    obtain ⟨b1w, m1⟩ := p1
-    rw [h1, noL1_some] at hn
-    obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl lo hi f1 x b1w ws mp h1 hA hx hws hwlt hM
-    by_cases e1 : b1w ≠ 0
-    · rw [if_pos e1] at hn
+  rcases h1 : noGoW n m no nl lo hi f1 x with _ | ⟨b1w, m1⟩ <;> rw [h1] at hn; · simp [noL1] at hn
+  rw [noL1_some] at hn
+  obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl lo hi f1 x b1w ws mp h1 hA hx hws hwlt hM
+  by_cases e1 : b1w ≠ 0
+  · rw [if_pos e1] at hn
+    simp only [Option.some.injEq, Prod.mk.injEq] at hn
+    obtain ⟨rfl, rfl⟩ := hn
+    have hc1 : c1 = true := by rw [← hb1]; simpa using e1
+    refine ⟨true, mp1, ?_, by simp, hM1, hf1⟩
+    simp only [StateT.run_bind]
+    rw [hr1]
+    simp only [except_ok_bind, hc1, if_true]
+    rfl
+  · rw [if_neg e1] at hn
+    have hc1 : c1 = false := by rw [← hb1]; simpa using e1
+    rcases h2 : noGoW n m1 no nl lo hi f1 y with _ | ⟨b2w, m2⟩ <;> rw [h2] at hn; · simp [noL2] at hn
+    rw [noL2_some] at hn
+    have hA1 := noFrame_arena hf1 hA
+    have hws1 := slR_congr (noFrame_iw hf1) hws
+    obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a no nl lo hi f1 y b2w ws mp1 h2 hA1 hy hws1 hwlt hM1
+    by_cases e2 : b2w ≠ 0
+    · rw [if_pos e2] at hn
       simp only [Option.some.injEq, Prod.mk.injEq] at hn
       obtain ⟨rfl, rfl⟩ := hn
-      have hc1 : c1 = true := by rw [← hb1]; simpa using e1
-      refine ⟨true, mp1, ?_, by simp, hM1, hf1⟩
+      have hc2 : c2 = true := by rw [← hb2]; simpa using e2
+      refine ⟨true, mp2, ?_, by simp, hM2, hf1.trans hf2⟩
       simp only [StateT.run_bind]
       rw [hr1]
-      simp only [except_ok_bind, hc1, if_true]
+      simp only [except_ok_bind, hc1, StateT.run_bind, Bool.false_eq_true, ↓reduceIte]
+      rw [hr2]
+      simp only [except_ok_bind, hc2, ↓reduceIte]
       rfl
-    · rw [if_neg e1] at hn
-      have hc1 : c1 = false := by rw [← hb1]; simpa using e1
-      cases h2 : noGoW n m1 no nl lo hi f1 y with
-      | none => rw [h2] at hn; simp [noL2] at hn
-      | some p2 =>
-        obtain ⟨b2w, m2⟩ := p2
-        rw [h2, noL2_some] at hn
-        have hA1 := noFrame_arena hf1 hA
-        have hws1 := slR_congr (noFrame_iw hf1) hws
-        obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a no nl lo hi f1 y b2w ws mp1 h2 hA1 hy hws1 hwlt hM1
-        by_cases e2 : b2w ≠ 0
-        · rw [if_pos e2] at hn
-          simp only [Option.some.injEq, Prod.mk.injEq] at hn
-          obtain ⟨rfl, rfl⟩ := hn
-          have hc2 : c2 = true := by rw [← hb2]; simpa using e2
-          refine ⟨true, mp2, ?_, by simp, hM2, hf1.trans hf2⟩
-          simp only [StateT.run_bind]
-          rw [hr1]
-          simp only [except_ok_bind, hc1, StateT.run_bind, Bool.false_eq_true, ↓reduceIte]
-          rw [hr2]
-          simp only [except_ok_bind, hc2, ↓reduceIte]
-          rfl
-        · rw [if_neg e2] at hn
-          have hc2 : c2 = false := by rw [← hb2]; simpa using e2
-          obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m' a no nl lo hi f1 z r ws mp2 hn
-            (noFrame_arena (hf1.trans hf2) hA) hz (slR_congr (noFrame_iw (hf1.trans hf2)) hws) hwlt hM2
-          refine ⟨c3, mp3, ?_, hb3, hM3, (hf1.trans hf2).trans hf3⟩
-          simp only [StateT.run_bind]
-          rw [hr1]
-          simp only [except_ok_bind, hc1, StateT.run_bind, Bool.false_eq_true, ↓reduceIte]
-          rw [hr2]
-          simp only [except_ok_bind, hc2, Bool.false_eq_true, ↓reduceIte]
-          simpa using hr3
+    · rw [if_neg e2] at hn
+      have hc2 : c2 = false := by rw [← hb2]; simpa using e2
+      obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m' a no nl lo hi f1 z r ws mp2 hn
+        (noFrame_arena (hf1.trans hf2) hA) hz (slR_congr (noFrame_iw (hf1.trans hf2)) hws) hwlt hM2
+      refine ⟨c3, mp3, ?_, hb3, hM3, (hf1.trans hf2).trans hf3⟩
+      simp only [StateT.run_bind]
+      rw [hr1]
+      simp only [except_ok_bind, hc1, StateT.run_bind, Bool.false_eq_true, ↓reduceIte]
+      rw [hr2]
+      simp only [except_ok_bind, hc2, Bool.false_eq_true, ↓reduceIte]
+      simpa using hr3
 
 theorem noNodeProj_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl lo hi f1 x y z r : Word)
     (ws : List Word) (mp : Std.HashMap EIdx Bool) (hz : H z)
@@ -675,31 +662,26 @@ theorem noGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) (m m' :
     cases j with
     | zero => simp [noNodeW, noG4] at hb
     | succ k =>
-      cases hnode : noNodeW (k + 1) m no nl lo hi (f - 1) (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
-          (vl.tail.tail.tail.headD 0) with
-      | none => rw [hnode] at hb; simp [noG4] at hb
-      | some pn =>
-        obtain ⟨rn, m1⟩ := pn
-        rw [hnode, noG4_some] at hb
-        cases hset : msetG noSch m1 h 0 rn with
-        | none => rw [hset] at hb; simp [noG5] at hb
-        | some m2 =>
-          rw [hset, noG5_some] at hb
-          simp only [Option.some.injEq, Prod.mk.injEq] at hb
-          obtain ⟨rfl, rfl⟩ := hb
-          have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
-          obtain ⟨bb, mp1, hr1, hbb, hM1, hfr1⟩ := noNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a no nl lo hi
-            (f - 1) rn ws mp hnode hA hws hwlt hM
-          rw [hF1] at hr1
-          have hset' := memoRG_set noSch noSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
-          have hfs : MemFrame [NOM] [205] m1 m2 := msetG_frame noSch noSch_wf m1 m2 h 0 rn hset
-          refine ⟨bb, mp1.insert (decE h) bb, ?_, hbb, ?_, hfr1.trans hfs⟩
-          · rw [hmiss]
-            simp only [noArmI_eq _ _ _ _ _ _ v hnv, StateT.run_bind]
-            rw [hr1]
-            simp only [except_ok_bind]
-            rfl
-          · rw [← hbb]; exact hset'
+      rcases hnode : noNodeW (k + 1) m no nl lo hi (f - 1) (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
+          (vl.tail.tail.tail.headD 0) with _ | ⟨rn, m1⟩; · rw [hnode] at hb; simp [noG4] at hb
+      rw [hnode, noG4_some] at hb
+      rcases hset : msetG noSch m1 h 0 rn with _ | m2 <;> rw [hset] at hb; · simp [noG5] at hb
+      rw [noG5_some] at hb
+      simp only [Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+      obtain ⟨bb, mp1, hr1, hbb, hM1, hfr1⟩ := noNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a no nl lo hi
+        (f - 1) rn ws mp hnode hA hws hwlt hM
+      rw [hF1] at hr1
+      have hset' := memoRG_set noSch noSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
+      have hfs : MemFrame [NOM] [205] m1 m2 := msetG_frame noSch noSch_wf m1 m2 h 0 rn hset
+      refine ⟨bb, mp1.insert (decE h) bb, ?_, hbb, ?_, hfr1.trans hfs⟩
+      · rw [hmiss]
+        simp only [noArmI_eq _ _ _ _ _ _ v hnv, StateT.run_bind]
+        rw [hr1]
+        simp only [except_ok_bind]
+        rfl
+      · rw [← hbb]; exact hset'
 
 theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK (j + 1) := by
   intro m m' a no nl lo hi f h r ws mp hb hA hh hws hwlt hM
@@ -741,18 +723,16 @@ theorem noGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → NoGoOK k) : NoGoOK
       obtain ⟨hg3, hx, hdx, -⟩ := hvr
       have hg3' : (g :: vt).headD 0 = 3 := hg3
       rw [noG1_const j m no nl lo hi f h _ (by simp) (by rw [hg3']; decide) (by rw [hg3']; decide) hg3'] at hb
-      cases hc : containsW j m no nl ((g :: vt).tail.headD 0) with
-      | none => rw [hc] at hb; simp [noC] at hb
-      | some rc =>
-        rw [hc, noC_some] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
-        have hcv := containsW_ok j _ _ _ _ _ _ hws hc
-        refine ⟨(ws.map (fun w => (decI w : NIdx))).contains nn, mp, ?_, ?_, hM, MemFrame.refl _ _ _⟩
-        · rfl
-        · rw [hcv, ← hdx, contains_decI ws _ hwlt hx]
-          generalize ws.contains _ = bc
-          cases bc <;> simp
+      rcases hc : containsW j m no nl ((g :: vt).tail.headD 0) with _ | rc <;> rw [hc] at hb; · simp [noC] at hb
+      rw [noC_some] at hb
+      simp only [Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      have hcv := containsW_ok j _ _ _ _ _ _ hws hc
+      refine ⟨(ws.map (fun w => (decI w : NIdx))).contains nn, mp, ?_, ?_, hM, MemFrame.refl _ _ _⟩
+      · rfl
+      · rw [hcv, ← hdx, contains_decI ws _ hwlt hx]
+        generalize ws.contains _ = bc
+        cases bc <;> simp
     | fvar i ty =>
       rw [hF, nestOccGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
       simp only [ViewR, getD1_eq'] at hvr
@@ -861,30 +841,26 @@ theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
       (fun x hx => by simp [noSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.1.arena.1
   have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.1 IW (by simp) (by decide)) hws
-  cases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with
-  | none => rw [hg] at hb; simp [noClrK] at hb
-  | some p1 =>
-    obtain ⟨r1, m1⟩ := p1
-    rw [hg] at hb
-    by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
-    · simp [noClrK, h1] at hb
-    rw [noClrK_some r1 m1 h1] at hb
-    simp only [Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, rfl⟩ := hb
-    obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := noGoOK n _ _ a no nl lo hi CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
-    rw [CWF_eq] at hrun
-    have hM2 := memoRG_clear noSch noSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h1
-    have hf2 := mclearG_frame noSch m1
-    have hfall : MemFrame [NOM] [noSch.cs, noSch.cs + 1] m (mclearG noSch m1) :=
-      ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [noSch]))).trans
-        (hf2.mono (by simp) (by simp))
-    obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
-      (by intro x hx; simp [noSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
-      (by simp [noSch])
-    refine ⟨c, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [noSch] using hx))⟩⟩
-    simp only [ConRon.Arena.nestOcc, StateT.run_bind]
-    rw [hrun]
-    rfl
+  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [noClrK] at hb
+  by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
+  · simp [noClrK, h1] at hb
+  rw [noClrK_some r1 m1 h1] at hb
+  simp only [Option.some.injEq, Prod.mk.injEq] at hb
+  obtain ⟨rfl, rfl⟩ := hb
+  obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := noGoOK n _ _ a no nl lo hi CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
+  rw [CWF_eq] at hrun
+  have hM2 := memoRG_clear noSch noSch_wf bmKey (fun w : Word => w != 0) m1 mp1 hM1 h1
+  have hf2 := mclearG_frame noSch m1
+  have hfall : MemFrame [NOM] [noSch.cs, noSch.cs + 1] m (mclearG noSch m1) :=
+    ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [noSch]))).trans
+      (hf2.mono (by simp) (by simp))
+  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp [noSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+    (by simp [noSch])
+  refine ⟨c, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [noSch] using hx))⟩⟩
+  simp only [ConRon.Arena.nestOcc, StateT.run_bind]
+  rw [hrun]
+  rfl
 
 section census3
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hc : p.lookup "sl_contains" = some slContains)
@@ -1003,23 +979,20 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
         rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
         simp only [this, if_false]; rfl
       · rw [memK_find n m no nl lvls _ (by simp) hl] at h
-        cases hfw : findW n m no nl ((g :: vt).tail.headD 0) with
-        | none => rw [hfw] at h; simp at h
-        | some fr =>
-          rw [hfw] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
-          have hl' : (g :: vt).tail.tail.headD 0 = lvls := by simpa using hl
-          have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
-          have hfi := findIdx_decIP ws ((g :: vt).tail.headD 0) hwlt hx
-          refine ⟨rfl, (ws.map (fun w => (decI w : NIdx))).findIdx? (· == nn), ?_, ?_⟩
-          · simp only [ConRon.Arena.memberIdxAt?, htg, if_true, StateT.run_bind]
-            rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
-            have : (us0 == decI lvls) = true := by rw [hbeq]; simpa using hl'
-            simp only [this, if_true]; rfl
-          · rw [← hdx, hfi, hfr]
-            cases hwi : ws.findIdx? (· == (g :: vt).tail.headD 0) <;> simp [MemIdxOut]
+        rcases hfw : findW n m no nl ((g :: vt).tail.headD 0) with _ | fr <;> rw [hfw] at h; · simp at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
+        have hl' : (g :: vt).tail.tail.headD 0 = lvls := by simpa using hl
+        have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
+        have hfi := findIdx_decIP ws ((g :: vt).tail.headD 0) hwlt hx
+        refine ⟨rfl, (ws.map (fun w => (decI w : NIdx))).findIdx? (· == nn), ?_, ?_⟩
+        · simp only [ConRon.Arena.memberIdxAt?, htg, if_true, StateT.run_bind]
+          rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
+          have : (us0 == decI lvls) = true := by rw [hbeq]; simpa using hl'
+          simp only [this, if_true]; rfl
+        · rw [← hdx, hfi, hfr]
+          cases hwi : ws.findIdx? (· == (g :: vt).tail.headD 0) <;> simp [MemIdxOut]
 
 section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)

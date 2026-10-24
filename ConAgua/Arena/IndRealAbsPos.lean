@@ -342,11 +342,7 @@ theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} 
   | zero => simp [cfW] at h
   | succ k =>
   simp only [cfW] at h
-  cases h1 : dcWf k m ctx dO dL with
-  | none => rw [h1] at h; simp [cfK1] at h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [h1] at h
+  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cfK1] at h
   refine (dcWf_afr h1).trans ?_
   simp only [cfK1] at h
   split at h
@@ -406,10 +402,7 @@ theorem resHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e =
 -- from IndPosMemo
 theorem hbInsW_afr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : AFr m m' := by
   unfold hbInsW at h
-  cases hs : msetG hbSch m e i r with
-  | none => rw [hs] at h; simp at h
-  | some m2 =>
-  rw [hs] at h
+  rcases hs : msetG hbSch m e i r with _ | m2 <;> rw [hs] at h; · simp at h
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   exact AFr.of_frame (msetG_frame hbSch hbSch_wf m m2 e i r hs)
@@ -468,10 +461,7 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   simp only [noConstWf, noConstW] at h
   split at h; · cases h
   refine (mclearG_afrS noSch rfl m).trans ?_
-  cases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with
-  | none => rw [hg] at h; simp [noClrK] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
+  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩; · rw [hg] at h; simp [noClrK] at h
   rw [hg] at h; simp only [noClrK] at h
   split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
@@ -507,10 +497,7 @@ theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m'
   rename_i x heq
   split at heq; · cases heq
   revert heq
-  cases hg : dpGoW n (mclearG dpSch m) CWF e with
-  | none => simp [dpClrK]
-  | some y =>
-  obtain ⟨r1, m1⟩ := y
+  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩; · simp [dpClrK]
   simp only [dpClrK]
   intro heq
   split at heq; · cases heq

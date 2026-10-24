@@ -33,15 +33,10 @@ theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
   simp only [h0, if_false] at h
-  cases hal : allocW m (l + 1) with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩; · simp [hal] at h
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp : copyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
+  rcases hcp : copyW (n - 1) m1 q o l with _ | m2; · simp [hcp] at h
   simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
@@ -176,14 +171,10 @@ theorem nestGrowGroup_spec (p : Prog) (hl : NitLook p) (h2 : p.lookup "rec2" = s
 theorem posRecW_iwFr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) :
     MemFrame [IW] [200] m m' := by
   simp only [posRecW] at h
-  cases hal : allocW m (UInt64.ofNat ws.length) with
-  | none => rw [hal] at h; simp at h
-  | some pr =>
-    obtain ⟨q1, m1⟩ := pr
-    rw [hal] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact (allocW_iwFrame hal).trans (wrIW_frame _ _ _)
+  rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  exact (allocW_iwFrame hal).trans (wrIW_frame _ _ _)
 
 /-- `snocW` writes the record pool only. -/
 theorem snocW_iwFr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : snocW n m o l x = some (r, m')) :
@@ -254,11 +245,8 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     have hcL1 : (cL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     -- the key record
-    cases hk : posRecW m [cw, us, dO, dL] with
-    | none => rw [hk] at h; simp [ggK1] at h
-    | some pr1 =>
-    obtain ⟨key, m1⟩ := pr1
-    rw [hk, ggK1_some] at h
+    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩ <;> rw [hk] at h; · simp [ggK1] at h
+    rw [ggK1_some] at h
     obtain ⟨hS1, hg1, hkq, ht1, hget1⟩ := posRecW_stage hk hS (by simp)
     have hJ1 := hJiw m m1 a hJ (posRecW_iwFr hk) hS1
     simp only [List.length_cons, List.length_nil] at ht1
@@ -294,30 +282,21 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     | zero => simp [nitWf, ggK2] at h
     | succ k =>
     simp only [nitWf] at h
-    cases hnit : nitW cR k m1 vis ctx hi key with
-    | none => rw [hnit] at h; simp [ggK2] at h
-    | some pr2 =>
-    obtain ⟨r2, m2⟩ := pr2
-    rw [hnit, ggK2_some] at h
+    rcases hnit : nitW cR k m1 vis ctx hi key with _ | ⟨r2, m2⟩ <;> rw [hnit] at h; · simp [ggK2] at h
+    rw [ggK2_some] at h
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hAty, hQ2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
       _ r2 cR (hJI m1 a hJ1) hF Qn (hJle k m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
       (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
     have hJ2 := hJnit k m1 m2 a a2 key n0 x r2 hJ1 (hcsA n0 List.mem_cons_self) hnit hrun2 hS2 hAty hQ2
     -- the pair record and the snoc
-    cases hpr : posRecW m2 [cw, r2.tail.headD 0] with
-    | none => rw [hpr] at h; simp [ggK3] at h
-    | some pr3 =>
-    obtain ⟨pw, m3⟩ := pr3
-    rw [hpr, ggK3_some] at h
+    rcases hpr : posRecW m2 [cw, r2.tail.headD 0] with _ | ⟨pw, m3⟩ <;> rw [hpr] at h; · simp [ggK3] at h
+    rw [ggK3_some] at h
     obtain ⟨hS3, hg3, hpq, ht3, hget3⟩ := posRecW_stage hpr hS2 (by simp)
     have hJ3 := hJiw m2 m3 a2 hJ2 (posRecW_iwFr hpr) hS3
     simp only [List.length_cons, List.length_nil] at ht3
     have hg13 := (hg1.trans hg2).trans hg3
-    cases hsn : snocW (k + 1) m3 gO gL pw with
-    | none => rw [hsn] at h; simp [ggK4] at h
-    | some pr4 =>
-    obtain ⟨r4, m4⟩ := pr4
-    rw [hsn, ggK4_some] at h
+    rcases hsn : snocW (k + 1) m3 gO gL pw with _ | ⟨r4, m4⟩ <;> rw [hsn] at h; · simp [ggK4] at h
+    rw [ggK4_some] at h
     obtain ⟨hS4, hg4, hr40, hr41, ht4, hw4, hx4⟩ := snocW_words hsn hS3 (by have := hg13.1; omega)
     have hJ4 := hJiw m3 m4 a2 hJ3 (snocW_iwFr hsn) hS4
     have hg14 := hg13.trans hg4

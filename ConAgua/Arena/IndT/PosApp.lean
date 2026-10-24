@@ -32,9 +32,7 @@ theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List N
   have h2 : (pfK fe c prog kb hi i args (fun k => (pure k : AM NestFieldKind))) a = .ok (x, a') := h _
   unfold pfK at h2
   have hrel := ConRon.Bridge.Inductives.nestHoleAt_rel hctx hprog i
-  cases hh : ConRon.Arena.nestHoleAt c prog i with
-  | none => rw [hh] at h2; exact absurd h2 (fun hc => ConRon.Bridge.AM.fail_ok hc)
-  | some hole =>
+  rcases hh : ConRon.Arena.nestHoleAt c prog i with _ | hole; · rw [hh] at h2; exact absurd h2 (fun hc => ConRon.Bridge.AM.fail_ok hc)
   rw [hh] at h2 hrel
   obtain ⟨hP, -, hdh⟩ := hrel
   simp only at h2
@@ -70,22 +68,16 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
   have hS := hC.stage
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbAppW_succ] at h
-  cases hga : gaaF m [CWF, w] with
-  | none => rw [hga] at h; simp [nbAppK1] at h
-  | some pr =>
-  obtain ⟨ra, m1⟩ := pr
-  rw [hga, nbAppK1_some] at h
+  rcases hga : gaaF m [CWF, w] with _ | ⟨ra, m1⟩ <;> rw [hga] at h; · simp [nbAppK1] at h
+  rw [nbAppK1_some] at h
   obtain ⟨args, a1, hrun1, hS1, hg1, hargs, hargsb⟩ := gaaF_ok dn vis fe CWF w hw m m1 a ra hga hS
   rw [CWF_eq] at hrun1
   obtain ⟨ha1, hargsP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hwP hrun1
   subst ha1
   have e0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
   rw [e0, getD1_eq] at hargs hargsb
-  cases hgf : gafF m1 [CWF, w] with
-  | none => rw [hgf] at h; simp [nbAppK2] at h
-  | some pr2 =>
-  obtain ⟨rh, m2⟩ := pr2
-  rw [hgf, nbAppK2_some] at h
+  rcases hgf : gafF m1 [CWF, w] with _ | ⟨rh, m2⟩ <;> rw [hgf] at h; · simp [nbAppK2] at h
+  rw [nbAppK2_some] at h
   obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := gafF_ok dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
   rw [CWF_eq] at hrun2
   obtain ⟨ha2, hhdP⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hwP hrun2
@@ -109,11 +101,8 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
       cases v <;> simp only [ViewR] at hvr <;> (try (rw [h1] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
     obtain ⟨-, hi1, -, -⟩ := hvr
     rw [getD1_eq] at hi1
-    cases hpf : pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) (ra.headD 0) (ra.tail.headD 0) with
-    | none => rw [hpf] at h; simp [nbAppK4] at h
-    | some pr3 =>
-    obtain ⟨rp, m3⟩ := pr3
-    rw [hpf, nbAppK4_some] at h
+    rcases hpf : pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) (ra.headD 0) (ra.tail.headD 0) with _ | ⟨rp, m3⟩ <;> rw [hpf] at h; · simp [nbAppK4] at h
+    rw [nbAppK4_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
@@ -145,10 +134,8 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
   have hne2 := ctx_names_end (hW.grow hg12).u.dec (hW.grow hg12).u.inn (hW.grow hg12).u.sl htop2
   obtain ⟨ws, hws, hwsd, hwsH⟩ := slR_of_decHL m2 _ _ _ hn2 (by omega)
   simp only [UInt64.ofNat_toNat] at hws
-  cases hco : containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1))
-      ((eViewW m2 (rh.headD 0)).tail.headD 0) with
-  | none => rw [hco] at h; simp [nbAppK5] at h
-  | some o =>
+  rcases hco : containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1))
+      ((eViewW m2 (rh.headD 0)).tail.headD 0) with _ | o; · rw [hco] at h; simp [nbAppK5] at h
   rw [hco, nbAppK5_some] at h
   have ho := containsW_ok n m2 _ _ _ o ws hws hco
   by_cases hon : o ≠ 0
@@ -159,11 +146,8 @@ theorem appOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : AppOKC p dn vis f
     cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with
     | false => rfl
     | true => rw [e] at ho; simp at hon; rw [hon] at ho; exact absurd ho (by decide)
-  cases hct : nbContW (realCall p) n m2 vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
-      ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns with
-  | none => rw [hct] at h; simp [nbAppK6] at h
-  | some pr4 =>
-  obtain ⟨rc, m4⟩ := pr4
+  rcases hct : nbContW (realCall p) n m2 vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
+      ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns with _ | ⟨rc, m4⟩; · rw [hct] at h; simp [nbAppK6] at h
   rw [hct, nbAppK6_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h

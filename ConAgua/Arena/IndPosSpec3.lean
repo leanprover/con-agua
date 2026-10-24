@@ -597,19 +597,15 @@ theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r
 
 theorem posRecW_fr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) : RfFr m m' := by
   simp only [posRecW] at h
-  cases hal : allocW m (UInt64.ofNat ws.length) with
-  | none => rw [hal] at h; simp at h
-  | some pr =>
-    obtain ⟨q1, m1⟩ := pr
-    rw [hal] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    simp only [allocW] at hal
-    split at hal; · simp at hal
-    split at hal; · simp at hal
-    simp only [Option.some.injEq, Prod.mk.injEq] at hal
-    obtain ⟨rfl, rfl⟩ := hal
-    exact RfFr.of_iw ((allocMem_frame m _).trans (wrIW_frame _ _ _))
+  rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  simp only [allocW] at hal
+  split at hal; · simp at hal
+  split at hal; · simp at hal
+  simp only [Option.some.injEq, Prod.mk.injEq] at hal
+  obtain ⟨rfl, rfl⟩ := hal
+  exact RfFr.of_iw ((allocMem_frame m _).trans (wrIW_frame _ _ _))
 
 theorem allocW_fr {m m' : Mem} {k q : Word} (h : allocW m k = some (q, m')) : RfFr m m' := by
   simp only [allocW] at h
@@ -939,25 +935,16 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
     obtain ⟨h0, hb⟩ := hfm
     have e2 : rdW (m.arr64 IW) f = 2 := UInt64.toNat_inj.mp (by rw [rdIW0 h0]; rfl)
     rw [rxMapW_er n m f i e2] at h
-    cases hpw : pinWordV m 53 with
-    | none => rw [hpw] at h; simp [erK1] at h
-    | some z =>
-    rw [hpw, erK1_some] at h
+    rcases hpw : pinWordV m 53 with _ | z <;> rw [hpw] at h; · simp [erK1] at h
+    rw [erK1_some] at h
     obtain ⟨hzl, hzH⟩ := pinZero_stage hS hpw
-    cases hso : sointernW m z with
-    | none => rw [hso] at h; simp [erK2] at h
-    | some p1 =>
-    obtain ⟨s, m1⟩ := p1
-    rw [hso] at h
+    rcases hso : sointernW m z with _ | ⟨s, m1⟩ <;> rw [hso] at h; · simp [erK2] at h
     by_cases hsb : 4294967296 ≤ s
     · rw [erK2_big (h := hsb)] at h; simp at h
     rw [erK2_ok (h := hsb)] at h
     obtain ⟨a1, hr1, hS1, hg1⟩ := internSort_stage hS z hzH hso
-    cases hfv : fvinternW m1 i s with
-    | none => rw [hfv] at h; simp [erK3] at h
-    | some p2 =>
-    obtain ⟨v, m2⟩ := p2
-    rw [hfv, erK3_some] at h
+    rcases hfv : fvinternW m1 i s with _ | ⟨v, m2⟩ <;> rw [hfv] at h; · simp [erK3] at h
+    rw [erK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     obtain ⟨a2, hr2, hS2, hg2⟩ := internFVar_stage hS1 i s (lt_of_notbig hsb) hfv
@@ -1024,22 +1011,15 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     obtain ⟨hnmH, hnmd⟩ := rd_iwH (p := rdW (m.arr64 IW) ctx) (i := i - rdW (m.arr64 IW) (ctx + 4))
       (by rw [hsub]; exact decHL_getI hn _ (by omega)) (by rw [hsub]; have := hn' (i.toNat - c.nP) (by omega); omega)
     generalize rdW (m.arr64 IW) (rdW (m.arr64 IW) ctx + (i - rdW (m.arr64 IW) (ctx + 4))) = nm at h hnmH hnmd
-    cases hci : ceinternW m nm (rdW (m.arr64 IW) (ctx + 10)) with
-    | none => rw [hci] at h; simp [rtK1] at h
-    | some p1 =>
-    obtain ⟨hd, m1⟩ := p1
-    rw [hci] at h
+    rcases hci : ceinternW m nm (rdW (m.arr64 IW) (ctx + 10)) with _ | ⟨hd, m1⟩ <;> rw [hci] at h; · simp [rtK1] at h
     by_cases hdb : 4294967296 ≤ hd
     · rw [rtK1_big (h := hdb)] at h; simp at h
     rw [rtK1_ok (h := hdb)] at h
     obtain ⟨a1, hr1, hS1, hg1⟩ := internConst_stage hS nm _ hnmH hlvH hci
     have hiw : m1.arr64 IW = m.arr64 IW := lowFr_iw (ceinternW_low hci)
     rw [hiw] at h
-    cases hst : mknF m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with
-    | none => rw [hst] at h; simp [rtK2] at h
-    | some p2 =>
-    obtain ⟨rr, m2⟩ := p2
-    rw [hst, rtK2_some] at h
+    rcases hst : mknF m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with _ | ⟨rr, m2⟩ <;> rw [hst] at h; · simp [rtK2] at h
+    rw [rtK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mknF_ok dn vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst

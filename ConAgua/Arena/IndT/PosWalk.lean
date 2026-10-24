@@ -55,11 +55,8 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
     intro fu' m1 a1 hC1 hg1 hP1 hA1 p1 h
     have hS1 := hC1.stage
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
-    cases hf : nbFieldsW (realCall p) n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0 with
-    | none => rw [hf] at h; simp [nbWalkK2] at h
-    | some pr =>
-    obtain ⟨rf, m2⟩ := pr
-    rw [hf, nbWalkK2_some] at h
+    rcases hf : nbFieldsW (realCall p) n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0 with _ | ⟨rf, m2⟩ <;> rw [hf] at h; · simp [nbWalkK2] at h
+    rw [nbWalkK2_some] at h
     have hctx1 := dCtx_ext _ p1.ext _ _ hctx
     have hprog1 := dProg_ext p1.ext _ _ hprog
     have hcr1 := ConRon.Bridge.denote_ext hcrP p1.ext
@@ -76,11 +73,8 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
       (.invalid "nested positivity") nF.toNat 0 (decI crest) crestP NS nsP [] [] [] (by simpa using hwc)
       a1 a2 x hC1.check ⟨hctx1, hprog1, hcr1, hns1, rfl⟩ (by simp only [UInt64.toNat_zero] at hrun; exact hrun)
     simp only [List.nil_append] at hnds
-    cases hcl : closeW n m2 (rf.tail.tail.headD 0) (rf.tail.tail.tail.headD 0) hi (rf.tail.tail.tail.tail.headD 0) with
-    | none => rw [hcl] at h; simp [nbWalkK3] at h
-    | some pr2 =>
-    obtain ⟨rc, m3⟩ := pr2
-    rw [hcl, nbWalkK3_some] at h
+    rcases hcl : closeW n m2 (rf.tail.tail.headD 0) (rf.tail.tail.tail.headD 0) hi (rf.tail.tail.tail.tail.headD 0) with _ | ⟨rc, m3⟩ <;> rw [hcl] at h; · simp [nbWalkK3] at h
+    rw [nbWalkK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp only [List.headD_cons, List.tail_cons]
@@ -115,11 +109,7 @@ theorem walkOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : WalkOKC p dn vis
     | zero => simp [wfWf, nbWalkK1] at h
     | succ n'' =>
     simp only [wfWf] at h
-    cases hw : wfW n'' m crest with
-    | none => rw [hw] at h; simp [nbWalkK1] at h
-    | some pr =>
-    obtain ⟨wf, m1⟩ := pr
-    rw [hw] at h
+    rcases hw : wfW n'' m crest with _ | ⟨wf, m1⟩ <;> rw [hw] at h; · simp [nbWalkK1] at h
     simp only [nbWalkK1_some, List.headD_cons] at h
     obtain ⟨mp, hmp⟩ := hP.dp
     obtain ⟨d, hrunw, hwd, hM1, hS1, hg1, hf1⟩ := wfW_ok n'' dn fe vis m m1 a crest wf mp hw hS hcr hmp

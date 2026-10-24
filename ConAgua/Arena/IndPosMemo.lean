@@ -289,10 +289,7 @@ abbrev HbFr (m m' : Mem) : Prop := MFr [HBM] [214, 215] m m'
 
 theorem hbInsW_mfr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : HbFr m m' := by
   unfold hbInsW at h
-  cases hs : msetG hbSch m e i r with
-  | none => rw [hs] at h; simp at h
-  | some m2 =>
-  rw [hs] at h
+  rcases hs : msetG hbSch m e i r with _ | m2 <;> rw [hs] at h; · simp at h
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   exact ⟨_, _, msetG_frame hbSch hbSch_wf m m2 e i r hs, by simp [hbSch], by simp [hbSch]⟩

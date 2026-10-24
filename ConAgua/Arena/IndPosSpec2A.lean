@@ -38,18 +38,15 @@ theorem posRecW_eq (m : Mem) (ws : List Word) (k : Word) (hk : k = UInt64.ofNat 
       | some (q, _) => some (q, wrIW (allocMem m k) (rdW (m.arr64 CTL) 200) ws)) := by
   subst hk
   simp only [posRecW]
-  cases h : allocW m (UInt64.ofNat ws.length) with
-  | none => rfl
-  | some pr =>
-    obtain ⟨q, m1⟩ := pr
-    simp only [allocW] at h
-    split at h
-    · simp at h
-    split at h
-    · simp at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    rfl
+  rcases h : allocW m (UInt64.ofNat ws.length) with _ | ⟨q, m1⟩; · rfl
+  simp only [allocW] at h
+  split at h
+  · simp at h
+  split at h
+  · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rfl
 
 theorem posRec2_eq (m : Mem) (a b : Word) :
     (match allocW m 2 with | none => none | some (q, _) => some (q, rec2Mem m a b)) =
@@ -140,27 +137,23 @@ theorem posRecW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ iwTop m' = iwTop m + ws.length ∧
       (∀ j < ws.length, (m'.arr64 IW)[q.toNat + j]? = ws[j]?) := by
   simp only [posRecW] at h
-  cases hal : allocW m (UInt64.ofNat ws.length) with
-  | none => rw [hal] at h; simp at h
-  | some pr =>
-    obtain ⟨q1, m1⟩ := pr
-    rw [hal] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
-    obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal h3
-    subst hm1
-    have hk : (UInt64.ofNat ws.length).toNat = ws.length := UInt64.toNat_ofNat_of_lt' hl
-    rw [hk] at hroom
-    obtain ⟨hget, hg, hf, htop⟩ := recMem_post m ws (UInt64.ofNat ws.length) hk h5
-      (by rw [← hq]; exact hroom) h3
-    rw [← hq] at hget hg hf htop
-    have hqi : q1.toNat = iwTop m := by simp only [iwTop, hq]
-    have htop' : iwTop (wrIW (allocMem m (UInt64.ofNat ws.length)) q1 ws) = iwTop m + ws.length := by
-      simp only [iwTop] at hqi ⊢
-      rw [htop, UInt64.toNat_add, hk, ← hq]
-      exact Nat.mod_eq_of_lt (by omega)
-    exact ⟨StageR.wrIW (hS.alloc hal).1 q1 ws, hg, hqi, htop', hget⟩
+  rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal h3
+  subst hm1
+  have hk : (UInt64.ofNat ws.length).toNat = ws.length := UInt64.toNat_ofNat_of_lt' hl
+  rw [hk] at hroom
+  obtain ⟨hget, hg, hf, htop⟩ := recMem_post m ws (UInt64.ofNat ws.length) hk h5
+    (by rw [← hq]; exact hroom) h3
+  rw [← hq] at hget hg hf htop
+  have hqi : q1.toNat = iwTop m := by simp only [iwTop, hq]
+  have htop' : iwTop (wrIW (allocMem m (UInt64.ofNat ws.length)) q1 ws) = iwTop m + ws.length := by
+    simp only [iwTop] at hqi ⊢
+    rw [htop, UInt64.toNat_add, hk, ← hq]
+    exact Nat.mod_eq_of_lt (by omega)
+  exact ⟨StageR.wrIW (hS.alloc hal).1 q1 ws, hg, hqi, htop', hget⟩
 
 /-! ## Agreement on a set of pool indices -/
 
@@ -215,15 +208,11 @@ theorem NKIn.agree {m m' : Mem} {P : Nat → Prop} {k : Nat} (hk : NKIn m k P) (
   rw [iwH_agree h (show P k from by simpa using h4 0 (by omega)), iwH_agree h (h4 1 (by omega))]
   simp only [decAt]
   rw [e2, e3]
-  cases ho : iwN m (k + 2) with
-  | none => simp
-  | some o =>
-    cases hl : iwN m (k + 2 + 1) with
-    | none => simp
-    | some l =>
-      have hl' : iwN m (k + 3) = some l := by simpa using hl
-      simp only [Option.bind_eq_bind, Option.bind_some]
-      rw [decHL_agree h (hs o l ho hl')]
+  rcases ho : iwN m (k + 2) with _ | o; · simp
+  rcases hl : iwN m (k + 2 + 1) with _ | l; · simp
+  have hl' : iwN m (k + 3) = some l := by simpa using hl
+  simp only [Option.bind_eq_bind, Option.bind_some]
+  rw [decHL_agree h (hs o l ho hl')]
 
 theorem NHIn.agree {m m' : Mem} {P : Nat → Prop} {w : Nat} (hw : NHIn m w P) (h : RdS m m' P) :
     decNH m' w = decNH m w ∧ NHIn m' w P := by
@@ -232,11 +221,9 @@ theorem NHIn.agree {m m' : Mem} {P : Nat → Prop} {w : Nat} (hw : NHIn m w P) (
   refine ⟨?_, h0, h1, fun k hk' => (hk k (e0 ▸ hk')).agree h |>.2⟩
   simp only [decNH]
   rw [e0, iwN_agree h h1]
-  cases hkk : iwN m w with
-  | none => simp
-  | some k =>
-    simp only [Option.bind_eq_bind, Option.bind_some]
-    rw [((hk k hkk).agree h).1]
+  rcases hkk : iwN m w with _ | k; · simp
+  simp only [Option.bind_eq_bind, Option.bind_some]
+  rw [((hk k hkk).agree h).1]
 
 theorem NKIn.mono {m : Mem} {P Q : Nat → Prop} {k : Nat} (h : NKIn m k P) (hq : ∀ i, P i → Q i) :
     NKIn m k Q := ⟨fun j hj => hq _ (h.1 j hj), fun o l ho hl j hj => hq _ (h.2 o l ho hl j hj)⟩
@@ -450,17 +437,11 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     -- the member's name
     obtain ⟨hwH, hwd⟩ := rd_iwH (decHL_getI hn j.toNat hjl) (by have := hno j.toNat hjl; omega)
     generalize hw : rdW (m.arr64 IW) (no + j) = w at h hwH hwd
-    cases hr1 : posRecW m [w, lv, po, pl] with
-    | none => rw [hr1] at h; simp [rhK1] at h
-    | some pr1 =>
-    obtain ⟨key, m1⟩ := pr1
-    rw [hr1, rhK1_some] at h
+    rcases hr1 : posRecW m [w, lv, po, pl] with _ | ⟨key, m1⟩ <;> rw [hr1] at h; · simp [rhK1] at h
+    rw [rhK1_some] at h
     obtain ⟨hS1, hg1, hk1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
-    cases hr2 : posRecW m1 [key, nP] with
-    | none => rw [hr2] at h; simp [rhK2] at h
-    | some pr2 =>
-    obtain ⟨hh, m2⟩ := pr2
-    rw [hr2, rhK2_some] at h
+    rcases hr2 : posRecW m1 [key, nP] with _ | ⟨hh, m2⟩ <;> rw [hr2] at h; · simp [rhK2] at h
+    rw [rhK2_some] at h
     obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht1 ht2
     have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
@@ -537,12 +518,10 @@ theorem decAt_agree {α : Type} {g g' : Nat → Nat → Option (List α)} {m m' 
     (hg : ∀ o l, iwN m i = some o → iwN m (i + 1) = some l → g' o l = g o l) :
     decAt m' g' i = decAt m g i := by
   simp only [decAt, h0, h1]
-  cases ho : iwN m i with
+  rcases ho : iwN m i with _ | o; · simp
+  cases hl : iwN m (i + 1) with
   | none => simp
-  | some o =>
-    cases hl : iwN m (i + 1) with
-    | none => simp
-    | some l => simp only [Option.bind_eq_bind, Option.bind_some]; exact hg o l ho hl
+  | some l => simp only [Option.bind_eq_bind, Option.bind_some]; exact hg o l ho hl
 
 theorem decNL_agree {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
     (hi : ∀ j < l, P (o + j)) : decNL m' o l = decNL m o l := by
@@ -627,17 +606,12 @@ theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     simp [NestCtx.rootHoles, decHL_length m hn]
   have hrh : c.rootHoles = rhList c.names (decI lv) c.params nP.toNat := by
     simp [NestCtx.rootHoles, rhList, hlv, hnP]
-  cases hal : allocW m nl with
-  | none => rw [hal] at h; simp [rhA] at h
-  | some pq =>
-  obtain ⟨q, m1⟩ := pq
-  rw [hal, rhA_some] at h
+  rcases hal : allocW m nl with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [rhA] at h
+  rw [rhA_some] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
-  cases hgo : rhGoW k m1 no nl lv po pl nP q 0 with
-  | none => rw [hgo] at h; simp [rhB] at h
-  | some m2 =>
-  rw [hgo, rhB_some] at h
+  rcases hgo : rhGoW k m1 no nl lv po pl nP q 0 with _ | m2 <;> rw [hgo] at h; · simp [rhB] at h
+  rw [rhB_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS2, hGX, hH⟩ := rhGoW_ok dn fe vis a no nl lv po pl nP q c.names c.params k m1 m2 0 hgo hS1
@@ -708,20 +682,13 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   by_cases h0 : l1 + l2 < l1
   · simp [h0] at h
   simp only [h0, if_false] at h
-  cases hal : allocW m (l1 + l2) with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  rcases hal : allocW m (l1 + l2) with _ | ⟨q, m1⟩; · simp [hal] at h
   obtain ⟨hS1, -, -, -, -⟩ := hS.alloc hal
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   simp only [hal] at h
-  cases hcp1 : copyW (n - 1) m1 q o1 l1 with
-  | none => simp [hcp1] at h
-  | some m2 =>
+  rcases hcp1 : copyW (n - 1) m1 q o1 l1 with _ | m2; · simp [hcp1] at h
   simp only [hcp1] at h
-  cases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with
-  | none => simp [hcp2] at h
-  | some m3 =>
+  rcases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with _ | m3; · simp [hcp2] at h
   simp only [hcp2, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hS3 := StageR.ofCopyW _ hcp2 (StageR.ofCopyW _ hcp1 hS1)
@@ -884,18 +851,11 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   | zero => simp [rhWf, haK1] at h
   | succ k =>
   simp only [rhWf] at h
-  cases hrh : rhW k m ctx with
-  | none => rw [hrh] at h; simp [haK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hrh, haK1_some] at h
+  rcases hrh : rhW k m ctx with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · simp [haK1] at h
+  rw [haK1_some] at h
   obtain ⟨hS1, hg1, hl1, hb1, hH1⟩ := rhW_ok k dn fe vis a m m1 ctx r1 c hrh hS hc hin
   obtain ⟨hplen, hpb, hpH⟩ := hpr
-  cases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with
-  | none => rw [hap] at h; simp [haK2] at h
-  | some pr2 =>
-  obtain ⟨r2, m2⟩ := pr2
-  rw [hap] at h
+  rcases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · simp [haK2] at h
   obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by rw [hl1]; exact hb1)
     (by have := hg1.1; omega)
   rw [hl1] at hr21 hw1 ht2 hw2

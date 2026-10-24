@@ -177,11 +177,8 @@ theorem sgGoW_ok (k : Nat) :
   | zero => simp [posRpW, sgK1] at h
   | succ k' =>
   simp only [posRpW] at h
-  cases hra : rpConstW k' m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 10)) 0
-      (rdW (m.arr64 IW) (ctx + 4)) x with
-  | none => rw [hra] at h; simp [sgK1] at h
-  | some p1 =>
-  obtain ⟨y, m1⟩ := p1
+  rcases hra : rpConstW k' m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 10)) 0
+      (rdW (m.arr64 IW) (ctx + 4)) x with _ | ⟨y, m1⟩; · rw [hra] at h; simp [sgK1] at h
   rw [hra] at h
   obtain ⟨mp0, hM⟩ := hP.rp
   obtain ⟨a1, hr1, hM1, hS1, hg1⟩ := rpConstW_ok k' dn fe vis m m1 a _ _ _ 0 _ x y c.nP c.names mp0 hra hS hxH hlvH hn
@@ -190,11 +187,8 @@ theorem sgGoW_ok (k : Nat) :
   by_cases hyb : 4294967296 ≤ y
   · rw [sgK1_big (h := hyb)] at h; simp at h
   rw [sgK1_ok (h := hyb)] at h
-  cases hrf : rxW (k' + 1) m1 f y with
-  | none => rw [hrf] at h; simp [sgK2] at h
-  | some p2 =>
-  obtain ⟨z, m2⟩ := p2
-  rw [hrf, sgK2_some] at h
+  rcases hrf : rxW (k' + 1) m1 f y with _ | ⟨z, m2⟩ <;> rw [hrf] at h; · simp [sgK2] at h
+  rw [sgK2_some] at h
   have hg01 := hg0.trans hg1
   obtain ⟨a2, hr2, hzH, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all dn fe vis (k' + 1)).2.2.2.2.2.2 m1 m2 a1 f y
     _ z M G g hrf hS1 (hfm.grow hg01) (lt_of_notbig hyb) hR1
@@ -247,11 +241,7 @@ theorem sgW_ok (k : Nat)
       rd_iwN (m := m) (p := ctx) (i := 8) (by simpa using hl) (by simp; omega)]
     exact hsl 7 (by omega) o l ho hl
   unfold sgW at h
-  cases hr1 : posRecW m [1, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), hO, hL] with
-  | none => rw [hr1] at h; simp [sgA] at h
-  | some p1 =>
-  obtain ⟨f, m1⟩ := p1
-  rw [hr1] at h
+  rcases hr1 : posRecW m [1, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), hO, hL] with _ | ⟨f, m1⟩ <;> rw [hr1] at h; · simp [sgA] at h
   simp only [sgA] at h
   obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
   simp only [List.length_cons, List.length_nil] at ht1
@@ -266,29 +256,18 @@ theorem sgW_ok (k : Nat)
   obtain ⟨ec1, hci1⟩ := hin.grow hg1
   have hsl1 := hsl.grow hin hg1
   have hR1 := hR.frame (posRecW_fr hr1)
-  cases hal : allocW m1 dL with
-  | none => rw [hal] at h; simp [sgB] at h
-  | some p2 =>
-  obtain ⟨q, m2⟩ := p2
-  rw [hal] at h
+  rcases hal : allocW m1 dL with _ | ⟨q, m2⟩ <;> rw [hal] at h; · simp [sgB] at h
   simp only [sgB] at h
   obtain ⟨hS2, hg2, hqd, hroom, htop2⟩ := hS1.alloc hal
   have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
-  cases hgo : sgGoW k m2 ctx f dO dL q 0 with
-  | none => rw [hgo] at h; simp at h
-  | some m3 =>
-  rw [hgo] at h
+  rcases hgo : sgGoW k m2 ctx f dO dL q 0 with _ | m3 <;> rw [hgo] at h; · simp at h
   simp only at h
   obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, ⟨M3, G3, hR3, hk3, hG3⟩, hP3⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
     dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
     (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
     ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
-  cases hr4 : posRecW m3 [ind, us, q, dL] with
-  | none => rw [hr4] at h; simp [sgC] at h
-  | some p4 =>
-  obtain ⟨key, m4⟩ := p4
-  rw [hr4] at h
+  rcases hr4 : posRecW m3 [ind, us, q, dL] with _ | ⟨key, m4⟩ <;> rw [hr4] at h; · simp [sgC] at h
   simp only [sgC, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)

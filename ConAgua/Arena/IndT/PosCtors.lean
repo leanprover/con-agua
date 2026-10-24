@@ -72,11 +72,8 @@ theorem ctorsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : CtorsOKC p dn v
   have hq3 : q + 3 < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_lt m; omega
   -- one constructor
-  cases ho : nbOneW (realCall p) n m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) w)
-      (rdW (m.arr64 IW) (w + 1)) ns with
-  | none => rw [ho] at h; simp [nbCtorsK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
+  rcases ho : nbOneW (realCall p) n m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) w)
+      (rdW (m.arr64 IW) (w + 1)) ns with _ | ⟨r1, m1⟩; · rw [ho] at h; simp [nbCtorsK1] at h
   rw [ho, nbCtorsK1_some] at h
   obtain ⟨ks, closed, NS3, a1, hK1, hC1, hg1, hks, hksb, hclH, hcld, hns3, hP1, hA1, c1, ⟨oP, hoP, -⟩,
       ⟨nsP3, hns3P⟩⟩ :=
@@ -86,19 +83,13 @@ theorem ctorsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : CtorsOKC p dn v
   have hS1 := hC1.stage
   rw [hrn] at hK1
   -- its record, appended
-  cases hr3 : posRecW m1 [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0] with
-  | none => rw [hr3] at h; simp [nbCtorsK2] at h
-  | some pr2 =>
-  obtain ⟨rec, m2⟩ := pr2
-  rw [hr3, nbCtorsK2_some] at h
+  rcases hr3 : posRecW m1 [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0] with _ | ⟨rec, m2⟩ <;> rw [hr3] at h; · simp [nbCtorsK2] at h
+  rw [nbCtorsK2_some] at h
   obtain ⟨hS2, hg2, hrq2, ht2, hget2⟩ := posRecW_stage hr3 hS1 (by simp)
   simp only [List.length_cons, List.length_nil] at ht2
   have hke := pos2_ke_rec (by omega) hget2 (hks.grow hg2) hclH hcld
-  cases hsn : snocW n m2 oO oL rec with
-  | none => rw [hsn] at h; simp [nbCtorsK3] at h
-  | some pr3 =>
-  obtain ⟨ro, m3⟩ := pr3
-  rw [hsn, nbCtorsK3_some] at h
+  rcases hsn : snocW n m2 oO oL rec with _ | ⟨ro, m3⟩ <;> rw [hsn] at h; · simp [nbCtorsK3] at h
+  rw [nbCtorsK3_some] at h
   have hg12 := hg1.trans hg2
   obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.1; omega)
   have hout3 : OutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outs ++ [(ks, closed)]) := by

@@ -222,11 +222,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hqn; exact hqn
     have hrq : rdW (m.arr64 IW) w = q := by simp [rdW, hq]
     rw [hrw, hrq] at h
-    cases hnu : nuWf cR k m ctx q with
-    | none => rw [hnu] at h; simp [ucK] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hnu] at h
+    rcases hnu : nuWf cR k m ctx q with _ | ⟨r1, m1⟩ <;> rw [hnu] at h; · simp [ucK] at h
     have hPx := hPc x List.mem_cons_self
     obtain ⟨b1, a1, hrun1, hS1, hg1, hr1, hP1, hA1⟩ := nuWf_ok k dn fe vis m m1 a ctx q c x.1 r1 cR
       (hJI m a q x.1 hJ hPx hcvv) hnu hS hU.dec hU.inn hU.sl hcvv hhi hP
@@ -317,11 +313,7 @@ theorem unW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       have := hS.2.1; have := hS.2.2.2.1; simp; omega)
     have r3 : rdW (m.arr64 IW) (hdr + 1) = ll := by simp [rdW, hh1, h3]
     rw [r1, r2, r3] at h
-    cases huc : ucW cR k m ctx o ll with
-    | none => rw [huc] at h; simp [unK] at h
-    | some pr =>
-    obtain ⟨r, m1⟩ := pr
-    rw [huc] at h
+    rcases huc : ucW cR k m ctx o ll with _ | ⟨r, m1⟩ <;> rw [huc] at h; · simp [unK] at h
     obtain ⟨b, a1, hrun1, hS1, hg1, hr, hP1, hJ1⟩ := ucW_ok dn fe vis ctx c hhi cR J Pcv hJI hJnu k m m1 a o ll cs r
       huc hS hJ (hPc cs List.mem_cons_self) hU
       h6 (by omega) h8 hP

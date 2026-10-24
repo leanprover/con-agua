@@ -176,69 +176,58 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ x a', (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x ∧ ∃ mp, rpMR m' mp := by
   unfold pccW at h
-  cases hph : phsW k m nn with
-  | none => rw [hph] at h; simp [pccA] at h
-  | some p1 =>
-    obtain ⟨r1, m1⟩ := p1
-    rw [hph, pccA_some] at h
-    obtain ⟨phs, a1, hrun1, hS1, hg1, hdec1, hbd1⟩ := phsW_ok k dn fe vis m m1 a nn r1 hph hS
-    have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-      have : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
-      omega
-    cases hin : instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty with
-    | none => rw [hin] at h; simp [pccB] at h
-    | some p2 =>
-      obtain ⟨r2, m2⟩ := p2
-      rw [hin] at h
-      obtain ⟨x, a2, hrun2, hS2, hg2, hout2⟩ := instW_ok (k + 1) dn fe vis m1 m2 a1 (r1.headD 0) (r1.tail.headD 0)
-        cty phs r2 hin hS1 hcty hdec1 hb1 hbd1
-      have hM2 : rpMR m2 mp0 :=
-        rpMR_mfr ((phsW_mfr hph).trans (instW_mfr _ _ _ _ _ _ _ hin)) (by decide) (by decide) hM
-      by_cases hz : r2.headD 0 = 0
-      · rw [pccB_zero k no nl us nn r2 m2 hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        cases x with
-        | none =>
-          refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl, mp0, hM2⟩
-          simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
-          rw [hrun1]
-          simp only [except_ok_bind, StateT.run_bind]
-          rw [hrun2]
-          rfl
-        | some t => simp only [decOE] at hout2; rw [hz] at hout2; simp at hout2
-      · rw [pccB_ok k no nl us nn r2 m2 hz] at h
-        cases x with
-        | none => exact absurd hout2 hz
-        | some t =>
-          simp only [decOE, decW0E] at hout2
-          obtain ⟨-, htlt, htd⟩ := hout2
-          cases hrc : rpConstW k m2 no nl us 0 nn (r2.tail.headD 0) with
-          | none => rw [hrc] at h; simp [pccC] at h
-          | some p3 =>
-            obtain ⟨r3, m3⟩ := p3
-            rw [hrc] at h
-            by_cases hb3 : 4294967296 ≤ r3
-            · rw [pccC_big _ _ _ hb3] at h; simp at h
-            rw [pccC_some _ _ _ hb3] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            have hg12 := hg1.trans hg2
-            have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
-            obtain ⟨a3, hrun3, hM3, hS3, hg3⟩ := rpConstW_ok k dn fe vis m2 m3 a2 no nl us 0 nn (r2.tail.headD 0) r3
-              nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.1; omega) rfl hnn
-              (by simp; omega) hM2
-            refine ⟨some (decE r3), a3, ?_, hS3, hg12.trans hg3, ?_, ∅, hM3⟩
-            · simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
-              rw [hrun1]
-              simp only [except_ok_bind, StateT.run_bind]
-              rw [hrun2]
-              simp only [except_ok_bind, StateT.run_bind]
-              have h3 : StateT.run (ConRon.Arena.replaceApps names (decI us) 0 nn.toNat (decI (r2.tail.headD 0))) a2 = .ok (decE r3, a3) := hrun3
-              rw [← htd, h3]
-              rfl
-            · simp only [decOE, decW0E]
-              exact ⟨rfl, lt_of_notbig hb3, rfl⟩
+  rcases hph : phsW k m nn with _ | ⟨r1, m1⟩ <;> rw [hph] at h; · simp [pccA] at h
+  rw [pccA_some] at h
+  obtain ⟨phs, a1, hrun1, hS1, hg1, hdec1, hbd1⟩ := phsW_ok k dn fe vis m m1 a nn r1 hph hS
+  have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
+    have : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
+    omega
+  rcases hin : instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty with _ | ⟨r2, m2⟩ <;> rw [hin] at h; · simp [pccB] at h
+  obtain ⟨x, a2, hrun2, hS2, hg2, hout2⟩ := instW_ok (k + 1) dn fe vis m1 m2 a1 (r1.headD 0) (r1.tail.headD 0)
+    cty phs r2 hin hS1 hcty hdec1 hb1 hbd1
+  have hM2 : rpMR m2 mp0 :=
+    rpMR_mfr ((phsW_mfr hph).trans (instW_mfr _ _ _ _ _ _ _ hin)) (by decide) (by decide) hM
+  by_cases hz : r2.headD 0 = 0
+  · rw [pccB_zero k no nl us nn r2 m2 hz] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    cases x with
+    | none =>
+      refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl, mp0, hM2⟩
+      simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
+      rw [hrun1]
+      simp only [except_ok_bind, StateT.run_bind]
+      rw [hrun2]
+      rfl
+    | some t => simp only [decOE] at hout2; rw [hz] at hout2; simp at hout2
+  · rw [pccB_ok k no nl us nn r2 m2 hz] at h
+    cases x with
+    | none => exact absurd hout2 hz
+    | some t =>
+      simp only [decOE, decW0E] at hout2
+      obtain ⟨-, htlt, htd⟩ := hout2
+      rcases hrc : rpConstW k m2 no nl us 0 nn (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hrc] at h; · simp [pccC] at h
+      by_cases hb3 : 4294967296 ≤ r3
+      · rw [pccC_big _ _ _ hb3] at h; simp at h
+      rw [pccC_some _ _ _ hb3] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hg12 := hg1.trans hg2
+      have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
+      obtain ⟨a3, hrun3, hM3, hS3, hg3⟩ := rpConstW_ok k dn fe vis m2 m3 a2 no nl us 0 nn (r2.tail.headD 0) r3
+        nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.1; omega) rfl hnn
+        (by simp; omega) hM2
+      refine ⟨some (decE r3), a3, ?_, hS3, hg12.trans hg3, ?_, ∅, hM3⟩
+      · simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
+        rw [hrun1]
+        simp only [except_ok_bind, StateT.run_bind]
+        rw [hrun2]
+        simp only [except_ok_bind, StateT.run_bind]
+        have h3 : StateT.run (ConRon.Arena.replaceApps names (decI us) 0 nn.toNat (decI (r2.tail.headD 0))) a2 = .ok (decE r3, a3) := hrun3
+        rw [← htd, h3]
+        rfl
+      · simp only [decOE, decW0E]
+        exact ⟨rfl, lt_of_notbig hb3, rfl⟩
 
 
 section census3
@@ -420,11 +409,7 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
       decOE m' r x ∧ RxPost dn fe vis m m' a' M G g ∧ ∃ mp, rpMR m' mp := by
   unfold pcrW at h
   have hdl := decHL_length m hds
-  cases hpc : pccW k m no nl us dL cty with
-  | none => rw [hpc] at h; simp [pcrK1] at h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [hpc] at h
+  rcases hpc : pccW k m no nl us dL cty with _ | ⟨r1, m1⟩ <;> rw [hpc] at h; · simp [pcrK1] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, hout1, mp1, hM1⟩ := pccW_ok k dn fe vis m m1 a no nl us dL cty names r1 hpc hS hcty
     hus hdec hno hit hnn mp0 hMr
   have hR1 := hR.frame (pccW_fr hpc)
@@ -440,11 +425,8 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
   | some c =>
     obtain ⟨h1, hcH, hcd⟩ := hout1
     rw [pcrK1_ok (h := by rw [h1]; decide)] at h
-    cases hrec : posRecW m1 [1, dO, dL, hO, hL] with
-    | none => rw [hrec] at h; simp [pcrK2] at h
-    | some p2 =>
-    obtain ⟨f, m2⟩ := p2
-    rw [hrec, pcrK2_some] at h
+    rcases hrec : posRecW m1 [1, dO, dL, hO, hL] with _ | ⟨f, m2⟩ <;> rw [hrec] at h; · simp [pcrK2] at h
+    rw [pcrK2_some] at h
     obtain ⟨hS2, hg2, hf2, ht2, hget2⟩ := posRecW_stage hrec hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hg12 := hg1.trans hg2
@@ -457,11 +439,8 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
       ⟨by simpa using g0, by omega, ⟨dO.toNat, dL.toNat, g1, g2, by rw [decHL_grow hg12 hdsb]; exact hds,
         by have := hg12.1; omega⟩, ⟨hO.toNat, hL.toNat, g3, g4, by rw [decHL_grow hg12 hhob]; exact hho,
         by have := hg12.1; omega⟩⟩
-    cases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with
-    | none => rw [hrx] at h; simp [pcrK3] at h
-    | some p3 =>
-    obtain ⟨rr, m3⟩ := p3
-    rw [hrx, pcrK3_some] at h
+    rcases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hrx] at h; · simp [pcrK3] at h
+    rw [pcrK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨a3, hrun3, hH3, hpost3⟩ := (rxOK_all dn fe vis (k + 2)).2.2.2.2.2.2 m2 m3 a1 f _ _ rr M G g hrx hS2 hfm

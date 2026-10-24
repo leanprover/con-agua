@@ -435,11 +435,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     rw [hwE] at h
     have hE := hS.1.env
     rw [List.filterMapM_cons]
-    cases hef : envFindW m w vis with
-    | none => rw [hef] at h; simp [ncK1] at h
-    | some pr =>
-    obtain ⟨r1, m1⟩ := pr
-    rw [hef] at h
+    rcases hef : envFindW m w vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ncK1] at h
     have hm1 := envFindW_mem hef
     rw [hm1] at h hef
     by_cases hf0 : r1.headD 0 = 0
@@ -455,11 +451,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     obtain ⟨-, hfind, ci, hci⟩ := envFindW_hit hef hE hwH hf0
     rw [hci] at hfind
     generalize r1.tail.headD 0 = ciq at h hfind hci
-    cases hent : entryW m C ciq with
-    | none => rw [hent] at h; simp [ncK2] at h
-    | some pr2 =>
-    obtain ⟨r2, m2⟩ := pr2
-    rw [hent] at h
+    rcases hent : entryW m C ciq with _ | ⟨r2, m2⟩ <;> rw [hent] at h; · simp [ncK2] at h
     obtain ⟨x, a1, hrun1, hS2, hg2, hout⟩ := entryW_ok hC hent hS hci
     have hE2 : ArrExt (erecP m) (erecP m2) := (GrowX.of_grow (q := 0) (n := 0) hg2).erecP
     have hstep : ncF fe (decI C) (decI w) = ConRon.Arena.nestCtorEntry (decI C) ci := by
@@ -504,11 +496,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
       have hnPc : (UInt64.ofNat nPc).toNat = nPc := UInt64.toNat_ofNat_of_lt' (by omega)
       have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
-      cases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with
-      | none => rw [hrec] at h; simp [ncK3] at h
-      | some pr3 =>
-      obtain ⟨q3, m3⟩ := pr3
-      rw [hrec] at h
+      rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · simp [ncK3] at h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
       have hcol : (cs + ol).toNat = cs.toNat + ol.toNat := word_add_toNat (by omega)
@@ -598,19 +586,12 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
       CsAt m' (r.headD 0).toNat (ys.map ncProj) (· < iwTop m') ∧
       (r.tail.tail.headD 0).toNat = (ys.head?.map (·.2.1)).getD 0 := by
   unfold ncW at h
-  cases hal : allocW m cl with
-  | none => rw [hal] at h; simp at h
-  | some pq =>
-  obtain ⟨cs, m1⟩ := pq
-  rw [hal] at h
+  rcases hal : allocW m cl with _ | ⟨cs, m1⟩ <;> rw [hal] at h; · simp at h
   simp only at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : cs.toNat = iwTop m := by simp only [iwTop, hqd]
-  cases hgo : ncGoW k m1 vis C co cl cs 0 0 with
-  | none => rw [hgo] at h; simp [ncB] at h
-  | some pr =>
-  obtain ⟨r1, m2⟩ := pr
-  rw [hgo, ncB_some] at h
+  rcases hgo : ncGoW k m1 vis C co cl cs 0 0 with _ | ⟨r1, m2⟩ <;> rw [hgo] at h; · simp [ncB] at h
+  rw [ncB_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hE1 : ArrExt (erecP m) (erecP m1) := (GrowX.of_grow (q := 0) (n := 0) hg1).erecP
@@ -661,11 +642,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
       IWGrow m m' ∧ NcOut m' r x := by
   have hE := hS.1.env
   unfold ntW at h
-  cases hef : envFindW m C vis with
-  | none => rw [hef] at h; simp [ntK1] at h
-  | some pr =>
-  obtain ⟨r1, m1⟩ := pr
-  rw [hef] at h
+  rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ntK1] at h
   have hm1 := envFindW_mem hef
   rw [hm1] at h hef
   by_cases hf0 : r1.headD 0 = 0
@@ -719,11 +696,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   | zero => simp [ncWf, ntK2] at h
   | succ k =>
   simp only [ncWf] at h
-  cases hnc : ncW k m vis C co cl with
-  | none => rw [hnc] at h; simp [ntK2] at h
-  | some pr =>
-  obtain ⟨r2, m2⟩ := pr
-  rw [hnc] at h
+  rcases hnc : ncW k m vis C co cl with _ | ⟨r2, m2⟩ <;> rw [hnc] at h; · simp [ntK2] at h
   obtain ⟨ys, a', hrun, hS2, hg2, h1, h2, h3', h4⟩ := ncW_ok dn fe vis C hC k m m2 a co cl caps.ctors r2 hnc hS
     (by rw [ro, rl]; exact hns)
   have hrun' : (do
