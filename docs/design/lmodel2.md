@@ -85,6 +85,22 @@ landing.
 
 ## Measurements
 
+Method: a retrofit of the real file in a scratch copy (`_tmp/lmodel2/r/`): the hand model, its
+continuations, equations, patterns, loop spec and function spec replaced by one `l_model2`, the
+refinements in the same file adapted until the file elaborates. Lines: non-blank, whole file.
+Cost: `perf stat -e instructions:u` of `lake env lean <file>` (one run; the import baseline,
+2.7 G, is in both). Churn: lines of the kept declarations (refinements) that changed.
+
+| file | functions (kind) | lines before → after | churn (kept decls) | G instr before → after | max RSS |
+|---|---|---:|---:|---:|---|
+| `DefEqMidLoops` | `defeq_lst`, `defeq_list_rev` (returning loops, `callW`) | 389 → 288 (−101) | 16 of 191 | 37.3 → 26.5 | equal |
+| `InferBodyBindPi` | `infer_pis_leaf` (loop with outs, 5 callees) | 780 → 724 (−56) | 17 of 165 | 81.6 → 88.2 | +50 MB |
+| `IndPartsSpec10` | `block_rec_want`, `block_rec_got` (several results, recursive) | 361 → 302 (−59) | 10 of 76 | 27.7 → 23.7 | equal |
+| `DefEqLeaves` | `head_hint` (tuple, 2 callees, aborts) | 1164 → 1117 (−47) | 12 of 62 | 280.7 → 276.8 | equal |
+| `WhnfM2CRefine` | `reserved_contains` (returning loop, list) | 677 → 628 (−49) | 9 of 84 | 109.7 → 109.8 | equal |
+| `WhnfIotaRefine` | `pi_residual` (returning loop with outs, list) | 984 → 930 (−54) | 10 of 107 | 61.1 → 61.9 | equal |
+| `DefEqMidLazy` | `lds_both` (tuple, 5 callees) | 792 → 744 (−48) | 13 of 96 | 217.3 → 250.6 | equal |
+
 (in progress)
 
 ## Log

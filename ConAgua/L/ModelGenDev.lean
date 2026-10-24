@@ -577,6 +577,10 @@ meta structure LoopMeta where
   sig : Bool
   ro : Bool
   called : Array String
+  /-- fused: the code after the loop is `return (e₀, …)` (its results over the final state `s'`)
+  or `abort` (`#[]`, `abortRest`); the loop's model returns the function's result -/
+  fusedD : Option (Array Term) := none
+  abortRest : Bool := false
   deriving Inhabited
 
 /-- Inside a loop's body: where `break`, `return` and the end of the body go. -/
@@ -585,6 +589,9 @@ meta structure LoopInfo where
   params : Array Nat
   outs : Array Nat
   sig : Bool
+  /-- fused: `return` is the function's result, the exit runs these statements (the function's
+  last) -/
+  exitStmts : Option (List (TSyntax `lstmt)) := none
   deriving Inhabited
 
 meta structure GenState where
@@ -819,6 +826,7 @@ meta def loopLeaf (ctx : Ctx) (L : LoopInfo) (sig : Option MT) : MR :=
 meta def retLeaf (ctx : Ctx) (vs : Array MT) : GenM MR := do
   match ctx.loop with
   | some L =>
+    if L.exitStmts.isSome then return ctx.ret vs
     let l ← (MT.list vs).render
     return loopLeaf ctx L (some (.raw (← `(L.Sig.ret $l))))
   | none => return ctx.ret vs
@@ -1003,7 +1011,10 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       retLeaf ctx (← (#[e] ++ es.getElems).mapM (transE E ctx))
     | `(lstmt| break) => do
       match ctx.loop with
-      | some L => return loopLeaf ctx L none
+      | some L =>
+        match L.exitStmts with
+        | some ex => transS E { ctx with ft := none } ex
+        | none => return loopLeaf ctx L none
       | none => throwErrorAt s "l_model: `break` outside a loop"
     | `(lstmt| while $c:lcond $b:lblock) => do
       transLoop E ctx none (some s) c (← blockStmts b) rest
@@ -1222,6 +1233,44 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   let lcnt := (st0.loops.filter (·.model == st0.base)).size
   let name := st0.base ++ Name.mkSimple s!"loop{lcnt + 1}"
   let raws (xs : Array Name) : Array MT := xs.map fun x => MT.raw (mkIdent x)
+  -- fused: a loop with a `return`, followed by the function's last statement, `return …` or
+  -- `abort`: the loop's model returns the function's result (the hand models' shape, the spec
+  -- `fW.loopᵢ … = some ((r.retOr [e…]).headD 0, s'.mem)`)
+  let fuse? : Option (Option (Array (TSyntax `lexpr))) :=
+    if !(sig && ctx.ft.isNone) then none else
+    match rest with
+    | [s] => match s with
+      | `(lstmt| return $e:lexpr) => some (some #[e])
+      | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => some (some (#[e] ++ es.getElems))
+      | `(lstmt| abort) => some none
+      | _ => none
+    | _ => none
+  if let some retEs? := fuse? then
+    let outUses : Array Nat := (retEs?.getD #[]).foldl (fun acc e => unionN acc (usesOf ctx e)) #[]
+    let P := (liveS.loopLive E ctx c body outUses).qsort (· < ·)
+    let envL : Array MT := ctx.names.mapIdx fun i n => if P.contains i then .raw (mkIdent n) else .lit 0
+    let L : LoopInfo := { name, params := P, outs := #[], sig, exitStmts := some rest }
+    let ctxL : Ctx := { ctx with env := envL, mem := .raw (mkIdent memIdent), ft := none, loop := some L }
+    let saved := (← get).called
+    modify fun st => { st with called := #[] }
+    let cond ← transC E ctxL c
+    let bodyR ← transS E ctxL body
+    let exitR ← transS E ctxL rest
+    let lbody := MR.ite cond bodyR exitR
+    let calledL := (← get).called
+    modify fun st => { st with called := saved }
+    -- the results of `rest` over the final state `s'`
+    let ctxS : Ctx := { ctx with env := ctx.names.mapIdx (fun j _ => MT.raw (Syntax.mkApp (mkIdent `L.St.loc)
+      #[mkIdent `s', mkNum j])), mem := .raw (Syntax.mkApp (mkIdent `L.St.mem) #[mkIdent `s']) }
+    let D ← (retEs?.getD #[]).mapM fun e => do (← transE E ctxS e).render
+    let usedL := idents (← lbody.render).raw
+    let st ← get
+    let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
+    let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := true, binder := 7, res := `r, body := lbody, key := toString name, refs }
+    let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs := #[], frames := #[], sig, ro := ctx.ro, called := calledL, fusedD := some D, abortRest := retEs?.isNone }
+    modify fun st => { st with ks := st.ks.push kd, loops := st.loops.push lm, loopsCalled := st.loopsCalled.push name }
+    return .tail (.app name (raws E.mps ++ #[.raw (← `($(mkIdent `n) + 1))] ++ #[ctx.mem] ++
+      P.map (ctx.env[·]!)))
   -- 1. the code after the loop, over the loop's result
   let envK : Array MT := ctx.names.map fun n => .raw (mkIdent n)
   let memK : MT := if ctx.ro then .raw (mkIdent memIdent) else .raw (mkIdent mem1Ident)
@@ -1503,6 +1552,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let rT ← match loopOf with
       | some l => do
         let some lm := st.loops.find? (·.name == l) | throwError "l_model: lost loop {l}"
+        if lm.fusedD.isSome then resT fi else
         `(Option $(← loopResT lm))
       | none => resT fi
     pure (kd, binders, argT, pat, body, rT)
@@ -1748,9 +1798,21 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let rI := mkIdent `r
     let sigC ← if lm.sig then `($rI ≠ L.Sig.brk) else `($rI = L.Sig.normal)
     let mut conj : Array Term := #[sigC]
+    if lm.abortRest then conj := conj.push (← `($rI ≠ L.Sig.normal))
     for j in lm.frames do conj := conj.push (← `($(← locT sP j) = $(← locT s0 j)))
     if lm.ro then conj := conj.push (← `(L.St.mem $sP = L.St.mem $s0))
-    conj := conj.push (← `($lhs = Option.some $(← tupP res)))
+    match lm.fusedD with
+    | none => conj := conj.push (← `($lhs = Option.some $(← tupP res)))
+    | some D =>
+      -- the function's result: `r.retOr [the results of the code after the loop]`
+      let l ← `(L.Sig.retOr $rI [$D,*])
+      let comps : Array Term ← if fi.tup > 0 then
+          (List.range fi.tup).toArray.mapM fun i => do
+            let mut e : Term := l
+            for _ in [0:i] do e ← `(List.tail $e)
+            `(List.headD $e 0)
+        else if fi.multi then pure #[l] else pure #[← `(List.headD $l 0)]
+      conj := conj.push (← `($lhs = Option.some $(← tupP (comps ++ (if lm.ro then #[] else #[memSP])))))
     let post ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64", "L.st64", "L.setG"] ++
