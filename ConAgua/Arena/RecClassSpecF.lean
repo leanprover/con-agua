@@ -54,7 +54,7 @@ l_model classReadSlotMotive_spec (p : Prog) (hP : SlotProg p)
     gaaF_spec p hP.ad n, eView_spec p hP.v n,
     classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
     rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2]
-  grind [arena_grind] finish [rdW_eq] gen 20
+  grind [arena_grind] simp [rdW_eq, getElem_rdW']
 
 /-- After `class_n_pc_of`: the join point of `cnt := min n al`. -/
 theorem slotMotW_npc_some (iName us ao al : Word) (r : List Word) (m : Mem) :
