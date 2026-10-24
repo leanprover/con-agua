@@ -227,16 +227,13 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
   have hsrc' := hsrc o l ho hl
   have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
   simp only [memberNamesW, ho', hl'] at h
-  cases hal : allocW m (UInt64.ofNat l) with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
+  · simp [hal] at h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
   simp only [hal] at h
-  cases hcp : nameCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with
-  | none => simp [hcp] at h
-  | some m2 =>
+  rcases hcp : nameCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with _ | m2
+  · simp [hcp] at h
   simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq' hm1
@@ -286,14 +283,13 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
       obtain ⟨nm, hnm, lv, -, ce, -, hcvT⟩ := hcv
       have hnmE : nm = y.cvT.name := by rw [← hcvT]
       obtain ⟨w, hw, hwl', hnm'⟩ : ∃ w, (m.arr64 EREC)[a]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = nm := by
-        cases hw : (m.arr64 EREC)[a]? with
-        | none => simp [hd?, erA, hw] at hnm
-        | some w =>
-          by_cases hwl : w.toNat < 2 ^ 32
-          · refine ⟨w, rfl, hwl, ?_⟩
-            simp [hd?, erA, hw, hwl] at hnm
-            simp [hnm]
-          · simp [hd?, erA, hw, hwl] at hnm
+        rcases hw : (m.arr64 EREC)[a]? with _ | w
+        · simp [hd?, erA, hw] at hnm
+        by_cases hwl : w.toNat < 2 ^ 32
+        · refine ⟨w, rfl, hwl, ?_⟩
+          simp [hd?, erA, hw, hwl] at hnm
+          simp [hnm]
+        · simp [hd?, erA, hw, hwl] at hnm
       have hrd : rdW (m.arr64 EREC) (UInt64.ofNat a) = w := by
         have : (UInt64.ofNat a).toNat = a := by simp; omega
         simp [rdW, this, hw]
@@ -404,12 +400,10 @@ theorem erToIwW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     (rdW (m.arr64 CTL) 200).toNat + l.toNat ≤ (m.arr64 IW).size := by
   simp only [erToIwW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
-    rw [← hq]; exact hroom
+  rcases hal : allocW m l with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
+  rw [← hq]; exact hroom
 
 /-- **`erToIwW_dec` when the slice decodes**: a successful `hslice?` of the source already bounds it
 (a nonempty slice lies in `EREC`; an empty one reads nothing). -/
@@ -445,17 +439,14 @@ theorem erToIwW_decS {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List
 theorem erToIwW_two {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) : r = [r.headD 0, r.tail.headD 0] := by
   simp only [erToIwW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    simp only [hal] at h
-    cases hcp : erCopyW (n - 1) m1 q o l with
-    | none => simp [hcp] at h
-    | some m2 =>
-      simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, -⟩ := h
-      rfl
+  rcases hal : allocW m l with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  simp only [hal] at h
+  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2
+  · simp [hcp] at h
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, -⟩ := h
+  rfl
 
 /-- `er_to_iw`'s spec with the result's shape (two words) spelt out. -/
 theorem erToIw_specW2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -527,8 +518,7 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
   by_cases hl0 : l = 0
   · have hz : rdW (m.arr64 IW) (p + 1) = 0 := by rw [hl', hl0]; rfl
     rw [lpsW_nil n m p hz] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hms : bs.members = [] := List.eq_nil_of_length_eq_zero (by omega)
     refine ⟨rfl, ?_, IWGrow.refl m, MemFrame.refl _ _ m, by simp, IWRoom.refl m⟩
     simp [BlockShape.lps, hms, decHL, hslice?]

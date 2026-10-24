@@ -204,8 +204,7 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
     | none => rw [hc] at h; simp at h
     | some m2 =>
       rw [hc] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       rcases hsd with h0 | hsd
       · have hz : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) = 0 := UInt64.toNat_inj.mp (by simpa using h0)
         rw [hz] at hc hd ⊢
@@ -331,11 +330,9 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       have e3 : UInt64.ofNat v + 3 = UInt64.ofNat (v + 3) := by
         apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
       rw [acGoW_cons n m off l q k hl] at h
-      cases hc1 : ccW n m off q k with
-      | none => rw [hc1] at h; simp [acK1] at h
-      | some rm1 =>
-      obtain ⟨cl, m1⟩ := rm1
-      rw [hc1, acK1_some] at h
+      rcases hc1 : ccW n m off q k with _ | ⟨cl, m1⟩ <;> rw [hc1] at h
+      · simp [acK1] at h
+      rw [acK1_some] at h
       have hcoW : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2) = UInt64.ofNat co := by
         rw [hvw, e2]; exact hcow
       have hclW : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) = UInt64.ofNat cl' := by
@@ -435,25 +432,19 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
   have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hob)
   have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hlb)
   simp only [acW, ho', hl'] at h
-  cases hn : numCtorsOfW n m (UInt64.ofNat o) (UInt64.ofNat l) with
-  | none => rw [hn] at h; simp at h
-  | some tot =>
-  rw [hn] at h
+  rcases hn : numCtorsOfW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | tot <;> rw [hn] at h
+  · simp at h
   dsimp only at h
   obtain ⟨htot, hnc⟩ := numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) tot bs.members hsz
     (by rw [hoo, hll]; exact hol) (by rw [hoo, hll]; exact hgm) hn
-  cases hal : allocW m tot with
-  | none => rw [hal] at h; simp at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  rw [hal] at h
+  rcases hal : allocW m tot with _ | ⟨q, m1⟩ <;> rw [hal] at h
+  · simp at h
   dsimp only at h
   cases hgo : acGoW n m1 (UInt64.ofNat o) (UInt64.ofNat l) q 0 with
   | none => rw [hgo] at h; simp at h
   | some m2' =>
   rw [hgo] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hqq, hm1, hroom⟩ := allocW_facts hal hsz
   subst hm1
   have hIW1 : (allocMem m tot).arr64 IW = m.arr64 IW := allocMem_IW m tot

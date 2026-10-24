@@ -95,19 +95,18 @@ theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = 
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, hnm, lv, -, ty, -, hcv⟩ := h
   have hnm' : nm = cv.name := by rw [← hcv]
-  cases hw : (erA m)[q]? with
-  | none => simp [hd?, hw] at hnm
-  | some w =>
-    by_cases hl : w.toNat < 2 ^ 32
-    · simp [hd?, hw, hl] at hnm
-      have hrd : rdW (m.arr64 EREC) (UInt64.ofNat q) = w := by
-        have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-        simp only [rdW, e]
-        have : (m.arr64 EREC)[q]? = some w := hw
-        rw [this]; rfl
-      rw [hrd]
-      exact ⟨hl, by rw [← hnm', ← hnm]⟩
-    · simp [hd?, hw, hl] at hnm
+  rcases hw : (erA m)[q]? with _ | w
+  · simp [hd?, hw] at hnm
+  by_cases hl : w.toNat < 2 ^ 32
+  · simp [hd?, hw, hl] at hnm
+    have hrd : rdW (m.arr64 EREC) (UInt64.ofNat q) = w := by
+      have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+      simp only [rdW, e]
+      have : (m.arr64 EREC)[q]? = some w := hw
+      rw [this]; rfl
+    rw [hrd]
+    exact ⟨hl, by rw [← hnm', ← hnm]⟩
+  · simp [hd?, hw, hl] at hnm
 
 theorem decPL_tail {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x : α} {xs : List α}
     (h : decPL m f o (k + 1) = some (x :: xs)) : decPL m f (o + 1) k = some xs := by
@@ -136,8 +135,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     intro dn fe vis m0 m m' a ro rl r recs h hg0 hS hdec hb
     by_cases hl : rl = 0
     · rw [recUW_nil n m ro rl hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hrecs : recs = [] := by
         have := hdec m hg0
         rw [hl] at this
@@ -167,31 +165,24 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
           rdW (m.arr64 EREC) (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h
-      cases hra : rrnF m [rdW (m.arr64 EREC) (UInt64.ofNat a0)] with
-      | none => rw [hra] at h; simp [recUK1] at h
-      | some rm1 =>
-      obtain ⟨r1, m1⟩ := rm1
-      rw [hra] at h
+      rcases hra : rrnF m [rdW (m.arr64 EREC) (UInt64.ofNat a0)] with _ | ⟨r1, m1⟩ <;> rw [hra] at h
+      · simp [recUK1] at h
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
         rrnF_ok dn vis fe _ hn32 m m1 a r1 hra hS
       rw [hnI] at hrun1
       by_cases hhit : r1.headD 0 ≠ 0
       · rw [recUK1_hit n m1 ro rl r1 hhit] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hx : x1 = true := by rw [← hx1]; simpa using hhit
         refine ⟨false, a1, ?_, rfl, hS1, hg1⟩
         simp only [ConRon.Arena.blockRecNamesUnreserved, StateT.run_bind, hrun1, except_ok_bind, hx]
         rfl
       · have hmiss : r1.headD 0 = 0 := by simpa using hhit
         rw [recUK1_miss n m1 ro rl r1 hmiss] at h
-        cases hrec : recUW n m1 (ro + 1) (rl - 1) with
-        | none => rw [hrec] at h; simp [recUK2] at h
-        | some rm2 =>
-        obtain ⟨r2, m2⟩ := rm2
-        rw [hrec, recUK2_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        rcases hrec : recUW n m1 (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> rw [hrec] at h
+        · simp [recUK2] at h
+        rw [recUK2_some] at h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hx : x1 = false := by
           rw [← hx1, hmiss]; rfl
         have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -509,10 +500,9 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   | zero => simp [wsC] at h
   | succ n =>
   rw [wsC_step] at h
-  cases hpz : pinWordV m 53 with
-  | none => rw [hpz] at h; simp [wsK1C] at h
-  | some z =>
-  rw [hpz, wsK1C_some] at h
+  rcases hpz : pinWordV m 53 with _ | z <;> rw [hpz] at h
+  · simp [wsK1C] at h
+  rw [wsK1C_some] at h
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hpz
   have hz : z = pinW m 53 := by
@@ -522,21 +512,15 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   have hfull := hS.1.pins.full hpin0
   have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
   have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
-  cases hrb : cR n "lvl_eq_c" [s, z] m with
-  | none => rw [hrb] at h; simp [wsK2] at h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [hrb, wsK2_some] at h
+  rcases hrb : cR n "lvl_eq_c" [s, z] m with _ | ⟨r2, m2⟩ <;> rw [hrb] at h
+  · simp [wsK2] at h
+  rw [wsK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hdec2⟩ :=
     hlvl n r2 m2 hpin0 (by rw [← hz]; exact hrb)
   rw [← hz] at hrun2
-  cases hal : allocW m2 9 with
-  | none => rw [hal] at h; simp at h
-  | some qm =>
-  obtain ⟨q, m3⟩ := qm
-  rw [hal] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hal : allocW m2 9 with _ | ⟨q, m3⟩ <;> rw [hal] at h
+  · simp at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hg12 : IWGrow m m2 := hg2
   obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.2
   obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2

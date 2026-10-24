@@ -106,17 +106,14 @@ theorem consW_two {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
   simp only [h0, if_false] at h
-  cases hal : allocW m (l + 1) with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    simp only [hal] at h
-    cases hcp : copyW (n - 1) (m1.set64 IW q x) (q + 1) o l with
-    | none => simp [hcp] at h
-    | some m2 =>
-      simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, -⟩ := h
-      rfl
+  rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩
+  · simp [hal] at h
+  simp only [hal] at h
+  rcases hcp : copyW (n - 1) (m1.set64 IW q x) (q + 1) o l with _ | m2
+  · simp [hcp] at h
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, -⟩ := h
+  rfl
 
 theorem slConsSpec2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hp : p.lookup "sl_cons" = some slCons) (n : Nat)
@@ -173,8 +170,7 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
     · rw [piBW_fuel0 n m fuel h hf] at hpb; simp at hpb
     by_cases hg : h >>> 28 ≠ 6
     · rw [piBW_leaf n m fuel h hf hg] at hpb
-      simp only [Option.some.injEq, Prod.mk.injEq] at hpb
-      obtain ⟨rfl, rfl⟩ := hpb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hpb)
       obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero
         (fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0)))
       have htag : (decE h).tag ≠ ETag.forallE := fun h' => hg ((decE_tag_forall h hh).mp h')
@@ -187,57 +183,52 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
       · rw [hr, piBK1_nil] at hpb; simp at hpb
       obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr
       rw [piBK1_ne n m fuel _ hr] at hpb
-      cases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-      | none => rw [hrec] at hpb; simp [piBK2] at hpb
-      | some rm =>
-        obtain ⟨rs1, m1⟩ := rm
-        rw [hrec, piBK2_some] at hpb
-        cases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with
-        | none => rw [hcons] at hpb; simp [piBK3] at hpb
-        | some rm2 =>
-          obtain ⟨r2, m2⟩ := rm2
-          rw [hcons, piBK3_some] at hpb
-          simp only [Option.some.injEq, Prod.mk.injEq] at hpb
-          obtain ⟨rfl, rfl⟩ := hpb
-          obtain ⟨hvw, hty, hb⟩ := view_forall m a hR h hh hvok hg6
-          have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
-          have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
-          have hbeq : (eViewW m h).getD 2 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1) := by
-            rw [hew]; rfl
-          have hteq : (eViewW m h).getD 1 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2) := by
-            rw [hew]; rfl
-          have hfm1 : (fuel - 1).toNat = fuel.toNat - 1 := by
-            have : fuel.toNat ≠ 0 := fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0))
-            rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
-          obtain ⟨bs1, e1, hrun1, hsh1, hdec1, hbe1, hbe2, hg1, hf1, hle1⟩ :=
-            ih m m1 a (fuel - 1) _ rs1 hR hrec hb2 hsz hc
-          have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
-          have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
-          obtain ⟨hr2, hdec2, hg2, hf2, hl1, htop2⟩ :=
-            consW_dec hcons hsz1 hc1 hle1 hty2 hdec1
-          have hk : fuel.toNat = (fuel.toNat - 1) + 1 := by
-            have : fuel.toNat ≠ 0 := fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0))
-            omega
-          refine ⟨decE ((eViewW m h).getD 1 0) :: bs1, e1, ?_, ?_, ?_, ?_, ?_, hg1.trans hg2,
-            hf1.trans hf2, ?_⟩
-          · rw [hk, ConRon.Arena.piBinders, (decE_tag_forall h hh).mpr hg6]
-            have hvb := viewBind_forall m a hR h hh hvok hg6
-            rw [← hbeq, ← hteq] at hvb
-            simp only [beq_self_eq_true, if_true, StateT.run_bind, viewBind_run' _ a, hvb,
-              except_ok_bind]
-            rw [← hfm1]
-            rw [hrun1]
-            rfl
-          · simp
-          · simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
-            rw [hr2]
-            simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
-            exact hdec2
-          · simp only [List.getD_cons_succ, List.getD_cons_zero]; exact hbe1
-          · simp only [List.getD_cons_succ, List.getD_cons_zero]; exact hbe2
-          · rw [hr2]
-            simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
-            omega
+      rcases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with _ | ⟨rs1, m1⟩ <;> rw [hrec] at hpb
+      · simp [piBK2] at hpb
+      rw [piBK2_some] at hpb
+      rcases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with _ | ⟨r2, m2⟩ <;> rw [hcons] at hpb
+      · simp [piBK3] at hpb
+      rw [piBK3_some] at hpb
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hpb)
+      obtain ⟨hvw, hty, hb⟩ := view_forall m a hR h hh hvok hg6
+      have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
+      have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
+      have hbeq : (eViewW m h).getD 2 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1) := by
+        rw [hew]; rfl
+      have hteq : (eViewW m h).getD 1 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2) := by
+        rw [hew]; rfl
+      have hfm1 : (fuel - 1).toNat = fuel.toNat - 1 := by
+        have : fuel.toNat ≠ 0 := fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0))
+        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+      obtain ⟨bs1, e1, hrun1, hsh1, hdec1, hbe1, hbe2, hg1, hf1, hle1⟩ :=
+        ih m m1 a (fuel - 1) _ rs1 hR hrec hb2 hsz hc
+      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
+      have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
+      obtain ⟨hr2, hdec2, hg2, hf2, hl1, htop2⟩ :=
+        consW_dec hcons hsz1 hc1 hle1 hty2 hdec1
+      have hk : fuel.toNat = (fuel.toNat - 1) + 1 := by
+        have : fuel.toNat ≠ 0 := fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      refine ⟨decE ((eViewW m h).getD 1 0) :: bs1, e1, ?_, ?_, ?_, ?_, ?_, hg1.trans hg2,
+        hf1.trans hf2, ?_⟩
+      · rw [hk, ConRon.Arena.piBinders, (decE_tag_forall h hh).mpr hg6]
+        have hvb := viewBind_forall m a hR h hh hvok hg6
+        rw [← hbeq, ← hteq] at hvb
+        simp only [beq_self_eq_true, if_true, StateT.run_bind, viewBind_run' _ a, hvb,
+          except_ok_bind]
+        rw [← hfm1]
+        rw [hrun1]
+        rfl
+      · simp
+      · simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
+        rw [hr2]
+        simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
+        exact hdec2
+      · simp only [List.getD_cons_succ, List.getD_cons_zero]; exact hbe1
+      · simp only [List.getD_cons_succ, List.getD_cons_zero]; exact hbe2
+      · rw [hr2]
+        simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
+        omega
 
 /-- **`pi_binders` is `piBinders`**: under `ArenaR`, a returning run is a successful twin run
 (no state change) whose binders are the new `IW` slice and whose body is the third result. -/
@@ -449,19 +440,15 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
   | succ n =>
   have hnl : nl.toNat = names.length := (decHL_length m hnames).symm
   rw [recTW_step] at hrt
-  cases hra : stripF 6 m [mI, ty] with
-  | none => rw [hra] at hrt; simp [recTK1] at hrt
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [hra] at hrt
+  rcases hra : stripF 6 m [mI, ty] with _ | ⟨r1, m1⟩ <;> rw [hra] at hrt
+  · simp [recTK1] at hrt
   obtain ⟨x1, a1, hrun1, hS1, hg1, hdec1⟩ := stripF_pis_ok dn vis fe mI ty hty m m1 a r1 hra hS
   have hty' : (decI ty : EIdx) = decE ty := rfl
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hdec1
     rw [recTK1_some_nil n m1 no nl r1 h0] at hrt
-    simp only [Option.some.injEq, Prod.mk.injEq] at hrt
-    obtain ⟨rfl, rfl⟩ := hrt
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
     refine ⟨names.length, a1, ?_, ?_, hS1, hg1⟩
     · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind]
       rfl
@@ -485,8 +472,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     have hnamesz : names.length = nl.toNat := hnl.symm
     by_cases hg6 : r1.tail.tail.tail.headD 0 >>> 28 ≠ 6
     · rw [recTK1_some_nf n m1 no nl r1 h1ne hg6] at hrt
-      simp only [Option.some.injEq, Prod.mk.injEq] at hrt
-      obtain ⟨rfl, rfl⟩ := hrt
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
       have htag : e1.tag ≠ ETag.forallE := by
         rw [← hbe]; exact fun h' => hg6 ((decE_tag_forall _ hbl).mp h')
       refine ⟨names.length, a1, ?_, ?_, hS1, hg1⟩
@@ -507,19 +493,15 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             tierW (r1.tail.tail.tail.headD 0) * 2) := by rw [hew]; rfl
       have hdomlt : ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0).toNat < 2 ^ 32 := by
         rw [hdomw]; exact hty2
-      cases hra3 : gafF m1 [CWF, (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0] with
-      | none => rw [hra3] at hrt; simp [recTK3] at hrt
-      | some rm3 =>
-      obtain ⟨r3, m3⟩ := rm3
-      rw [hra3] at hrt
+      rcases hra3 : gafF m1 [CWF, (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0] with _ | ⟨r3, m3⟩ <;> rw [hra3] at hrt
+      · simp [recTK3] at hrt
       obtain ⟨x3, a3, hrun3, hS3, hg3, hdl3, hdI3⟩ :=
         gafF_ok dn vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
       have hR3 : ArenaR m3 a3 := hS3.1.arena.1
       have hvb := viewBind_forall m1 a1 hR1 _ hbl hvok hg6'
       by_cases hc : r3.headD 0 >>> 28 ≠ 3
       · rw [recTK3_some_nc n m3 no nl r3 hc] at hrt
-        simp only [Option.some.injEq, Prod.mk.injEq] at hrt
-        obtain ⟨rfl, rfl⟩ := hrt
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
         have htag : x3.tag ≠ ETag.const := by
           rw [← hdI3]; exact fun h' => hc ((decE_tag_const _ hdl3).mp h')
         refine ⟨names.length, a3, ?_, ?_, hS3, hg1.trans hg3⟩
@@ -560,9 +542,8 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         have hlen : ws.length < 2 ^ 64 := by
           have := decHL_length m3 hnames3
           rw [hnm] at this; simp at this; omega
-        cases hf : findW n m3 no nl ((eViewW m3 (r3.headD 0)).getD 1 0) with
-        | none => rw [hf] at hrt; simp [recTK5] at hrt
-        | some rf =>
+        rcases hf : findW n m3 no nl ((eViewW m3 (r3.headD 0)).getD 1 0) with _ | rf
+        · rw [hf] at hrt; simp [recTK5] at hrt
         have hfk := findW_ok n m3 no nl _ rf ws hws hf hlen
         have hfi := findIdx_decI_parts ws _ hwlt hxlt
         rw [← hnm] at hfi
@@ -584,8 +565,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [hf] at hrt
         by_cases hf0 : rf.headD 0 = 0
         · rw [recTK5_miss m3 nl rf hf0] at hrt
-          simp only [Option.some.injEq, Prod.mk.injEq] at hrt
-          obtain ⟨rfl, rfl⟩ := hrt
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
           have hnone : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) = none := by
             rw [hfk] at hf0
             cases h' : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) with
@@ -598,8 +578,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           · have : UInt64.ofNat names.length = nl := by rw [← hnl]; exact ofNat_toNat_word nl
             rw [this]
         · rw [recTK5_hit m3 nl rf hf0] at hrt
-          simp only [Option.some.injEq, Prod.mk.injEq] at hrt
-          obtain ⟨rfl, rfl⟩ := hrt
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
           obtain ⟨i, hi⟩ : ∃ i, ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) = some i := by
             rw [hfk] at hf0
             cases h' : ws.findIdx? (· == (eViewW m3 (r3.headD 0)).getD 1 0) with
@@ -741,17 +720,15 @@ theorem bchW_two {n : Nat} {m m' : Mem} {cvT : Word} {r : List Word}
   | zero => simp [bchW] at h
   | succ n =>
     rw [bchW_step] at h
-    cases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with
-    | none => rw [hp] at h; simp [bchW.bchK1] at h
-    | some rm =>
-      obtain ⟨rs, m1⟩ := rm
-      rw [hp, bchK1_some] at h
-      by_cases hr : eViewW m1 (rs.getD 2 0) = []
-      · rw [hr] at h; simp [bchW.bchK2] at h
-      rw [bchK2_ne _ _ _ hr] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, -⟩ := h
-      rfl
+    rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
+    · simp [bchW.bchK1] at h
+    rw [bchK1_some] at h
+    by_cases hr : eViewW m1 (rs.getD 2 0) = []
+    · rw [hr] at h; simp [bchW.bchK2] at h
+    rw [bchK2_ne _ _ _ hr] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, -⟩ := h
+    rfl
 
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -853,27 +830,24 @@ theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word
   | zero => simp [bchW] at h
   | succ n =>
     rw [bchW_step] at h
-    cases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with
-    | none => rw [hp] at h; simp [bchW.bchK1] at h
-    | some rm =>
-      obtain ⟨rs, m1'⟩ := rm
-      rw [hp, bchK1_some] at h
-      by_cases hr : eViewW m1' (rs.getD 2 0) = []
-      · rw [hr] at h; simp [bchW.bchK2] at h
-      rw [bchK2_ne _ _ _ hr] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨bs, e, hrun, hsh, hdec, hb1, hb2, hg, hf, -⟩ :=
-        piBW_ok n m m1' a CWF _ rs hR hp hty hsz hc
-      have hR1 : ArenaR m1' a := arenaR_frame_iw hf hR
-      obtain ⟨v, hv, hvr⟩ := eViewW_ok m1' a hR1 _ hr
-      have hlen := decHL_length m1' hdec
-      refine ⟨bs, e, v, ?_, rfl, ?_, ?_, ?_, hg, hf⟩
-      · rw [← CWF_eq]; exact hrun
-      · simp only [List.headD_cons]; exact hlen.symm
-      · rw [← hb2]; exact hv
-      · simp only [List.getD_cons_succ, List.getD_cons_zero]
-        exact sort_head_iff _ _ _ hvr
+    rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1'⟩ <;> rw [hp] at h
+    · simp [bchW.bchK1] at h
+    rw [bchK1_some] at h
+    by_cases hr : eViewW m1' (rs.getD 2 0) = []
+    · rw [hr] at h; simp [bchW.bchK2] at h
+    rw [bchK2_ne _ _ _ hr] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨bs, e, hrun, hsh, hdec, hb1, hb2, hg, hf, -⟩ :=
+      piBW_ok n m m1' a CWF _ rs hR hp hty hsz hc
+    have hR1 : ArenaR m1' a := arenaR_frame_iw hf hR
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1' a hR1 _ hr
+    have hlen := decHL_length m1' hdec
+    refine ⟨bs, e, v, ?_, rfl, ?_, ?_, ?_, hg, hf⟩
+    · rw [← CWF_eq]; exact hrun
+    · simp only [List.headD_cons]; exact hlen.symm
+    · rw [← hb2]; exact hv
+    · simp only [List.getD_cons_succ, List.getD_cons_zero]
+      exact sort_head_iff _ _ _ hvr
 
 theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
     (hb : q.toNat + 3 < 2 ^ 64) :
@@ -881,17 +855,16 @@ theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toN
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, -, lv, -, ty, hty, hcv⟩ := h
   have hty' : ty = cv.type := by rw [← hcv]
-  cases hw : (erA m)[q.toNat + 3]? with
-  | none => simp [hd?, hw] at hty
-  | some w =>
-    by_cases hl : w.toNat < 2 ^ 32
-    · simp [hd?, hw, hl] at hty
-      have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-      have hrd : rdW (m.arr64 EREC) (q + 3) = w := by
-        simp only [rdW, e]; exact (by simpa [erA] using hw : (m.arr64 EREC)[q.toNat + 3]? = some w) ▸ rfl
-      rw [hrd]
-      exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
-    · simp [hd?, hw, hl] at hty
+  rcases hw : (erA m)[q.toNat + 3]? with _ | w
+  · simp [hd?, hw] at hty
+  by_cases hl : w.toNat < 2 ^ 32
+  · simp [hd?, hw, hl] at hty
+    have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+    have hrd : rdW (m.arr64 EREC) (q + 3) = w := by
+      simp only [rdW, e]; exact (by simpa [erA] using hw : (m.arr64 EREC)[q.toNat + 3]? = some w) ▸ rfl
+    rw [hrd]
+    exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
+  · simp [hd?, hw, hl] at hty
 
 /-- `Option (Nat × Nat)` as the words `(ok, a, b)`. -/
 def encONN : Option (Nat × Nat) → List Word
@@ -1021,13 +994,10 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
   | zero => simp [bcW] at h
   | succ n =>
   rw [bcW_def] at h
-  cases hh : bchW n m cvT with
-  | none => rw [hh] at h; simp [bcK] at h
-  | some rm =>
-  obtain ⟨r1, m1⟩ := rm
-  rw [hh, bcK_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hh : bchW n m cvT with _ | ⟨r1, m1⟩ <;> rw [hh] at h
+  · simp [bcK] at h
+  rw [bcK_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hty32, hty⟩ := decCVp_type hcv hb
   obtain ⟨bs, res, v, hrun, hsh, hlen, hview, hiff, hg, hf⟩ :=
     bchW_ok n m m1 a cvT r1 hR hh hty32 hsz hc

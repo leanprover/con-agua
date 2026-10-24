@@ -41,18 +41,16 @@ theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : Li
     | nil => rw [allInW.arm1 n m _ 0 o2 l2 rfl] at h; simp at h; simp [h]
     | @cons _ _ ws hl hs =>
       rw [allInW.arm2 n m _ _ o2 l2 hl] at h
-      cases hb : containsW n m o2 l2 (rdW (m.arr64 IW) o1) with
-      | none => rw [hb] at h; simp [allInW.k1] at h
-      | some b =>
-        rw [hb] at h
-        have := containsW_ok n m o2 l2 _ b ws2 h2 hb
-        by_cases b0 : b = 0
-        · rw [allInW.k1.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
-          subst b0
-          split at this <;> simp_all
-        · rw [allInW.k1.arm2 _ _ _ _ _ _ _ b0] at h
-          rw [ih _ _ _ _ _ _ _ _ hs h2 h]
-          split at this <;> simp_all
+      rcases hb : containsW n m o2 l2 (rdW (m.arr64 IW) o1) with _ | b <;> rw [hb] at h
+      · simp [allInW.k1] at h
+      have := containsW_ok n m o2 l2 _ b ws2 h2 hb
+      by_cases b0 : b = 0
+      · rw [allInW.k1.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
+        subst b0
+        split at this <;> simp_all
+      · rw [allInW.k1.arm2 _ _ _ _ _ _ _ b0] at h
+        rw [ih _ _ _ _ _ _ _ _ hs h2 h]
+        split at this <;> simp_all
 
 /-- The model of `sl_set_eq`. -/
 def setEqW (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) : Option Word :=
@@ -85,19 +83,17 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
   · rw [if_neg hl] at h
     have hl' : l1 = l2 := by simpa using hl
     have hlen : ws1.length = ws2.length := by rw [e1, e2, hl']
-    cases ha : allInW n m o1 l1 o2 l2 with
-    | none => rw [ha] at h; simp at h
-    | some b =>
-      rw [ha] at h
-      simp only at h
-      have hb := allInW_ok n m o1 l1 o2 l2 b ws1 ws2 h1 h2 ha
-      by_cases b0 : b = 0
-      · rw [if_pos b0] at h; simp at h; subst h
-        subst b0
-        split at hb <;> simp_all
-      · rw [if_neg b0] at h
-        have hb2 := allInW_ok n m o2 l2 o1 l1 r ws2 ws1 h2 h1 h
-        split at hb <;> simp_all
+    rcases ha : allInW n m o1 l1 o2 l2 with _ | b <;> rw [ha] at h
+    · simp at h
+    simp only at h
+    have hb := allInW_ok n m o1 l1 o2 l2 b ws1 ws2 h1 h2 ha
+    by_cases b0 : b = 0
+    · rw [if_pos b0] at h; simp at h; subst h
+      subst b0
+      split at hb <;> simp_all
+    · rw [if_neg b0] at h
+      have hb2 := allInW_ok n m o2 l2 o1 l1 r ws2 ws1 h2 h1 h
+      split at hb <;> simp_all
 
 /-! ## `block_rec_want`, `block_rec_got` -/
 
@@ -218,31 +214,25 @@ theorem brgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     intro m m' a ro rl recs r h hS hrs
     by_cases hl : rl = 0
     · rw [brgW_nil n m ro rl hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl; rw [partsPSl_nil hrs]
       exact ⟨hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
     rw [brgW_cons n m ro rl hl] at h
     obtain ⟨pc, rs0, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     rw [hw] at h
-    cases h1 : brgW n m (ro + 1) (rl - 1) with
-    | none => rw [h1] at h; simp [brgW.brgK] at h
-    | some x1 =>
-    obtain ⟨r1, m1⟩ := x1
-    rw [h1, brgK_some] at h
+    rcases h1 : brgW n m (ro + 1) (rl - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+    · simp [brgW.brgK] at h
+    rw [brgK_some] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 1) (rl - 1) rs' r1 h1 hS hrs'
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decRS_some (show decRS (truncM m) pc = some rs0 from hrs0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)
     have hpclt : pc < iwTop m := partsIwLt hca
     rw [partsRdIW_grow hg1 (by rw [UInt64.toNat_ofNat_of_lt' hpb]; exact hpclt), hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName hg1 (show DecB (fun m => decCVp m ca) m rs0.cvR from hcv) hcab
-    cases h2 : consW n m1 (rdW (m1.arr64 EREC) (UInt64.ofNat ca)) (r1.headD 0) (r1.tail.headD 0) with
-    | none => rw [h2] at h; cases h
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2, bgoK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    rcases h2 : consW n m1 (rdW (m1.arr64 EREC) (UInt64.ofNat ca)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+    · cases h
+    rw [bgoK3_some] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hd2, ht2⟩ := consW_stage h2 hS1 hb1 hnl hd1
     refine ⟨hS2, hg1.trans hg2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
     simp only [List.headD_cons, List.tail_cons, List.map_cons]
@@ -283,13 +273,10 @@ theorem brwW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (by simp [bggK3]) (fun _ _ => bggK3_some ..) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 ⟨(hms'.grow decMS_mono hg1).1, Or.inr (hms'.grow decMS_mono hg1).2⟩) ?_
     rintro r2 xs m2 a2 ⟨hd2, hb2, hS2, hg2⟩
     intro r m' e
-    cases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [h3] at e; cases e
-    | some x3 =>
-    obtain ⟨r3, m3⟩ := x3
-    rw [h3, bgoK3_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+    · cases e
+    rw [bgoK3_some] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hx1l hd2
     refine ⟨x1 :: xs, a2, rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega, hS3,
       (hg1.trans hg2).trans hg3⟩
@@ -391,19 +378,13 @@ theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s
           | some b => some ([b], m2)) rfl (fun _ _ => rfl) (brwW_sim (n + 1) _ a₀ mo ml ms hS hms) ?_
     rintro r1 want m1 a1 ⟨hd1, hb1, hS1, hg1⟩
     intro r m' e
-    cases h2 : brgW (n + 1) m1 ro rl with
-    | none => rw [h2] at e; cases e
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2] at e
+    rcases h2 : brgW (n + 1) m1 ro rl with _ | ⟨r2, m2⟩ <;> rw [h2] at e
+    · cases e
     simp only at e
     obtain ⟨hS2, hg2, hd2, hb2⟩ := brgW_ok (n + 1) m1 m2 a1 ro rl recs r2 h2 hS1 (hrs.grow decRS_mono hg1)
-    cases h3 : setEqW n m2 (r2.headD 0) (r2.tail.headD 0) (r1.headD 0) (r1.tail.headD 0) with
-    | none => rw [h3] at e; cases e
-    | some b =>
-    rw [h3] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h3 : setEqW n m2 (r2.headD 0) (r2.tail.headD 0) (r1.headD 0) (r1.tail.headD 0) with _ | b <;> rw [h3] at e
+    · cases e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     have hT : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt
     have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some want := by
       rw [decHL_grow3 hg2 hb1]; exact hd1

@@ -215,8 +215,7 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     intro m m' a off l blk r h hS hblk
     by_cases hl : l = 0
     · rw [bsrW_nil n m off l hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       rw [hl] at hblk
       rw [partsBlk_nil hblk]
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _⟩
@@ -234,26 +233,21 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     by_cases h5 : ciKind x ≠ 5
     · have hne : UInt64.ofNat (ciKind x) ≠ 5 := fun e => h5 ((ciKind_w x 5 (by omega)).1 e)
       rw [bsrW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨hS, IWGrow.refl _, ?_⟩
       cases x <;> first | exact absurd rfl h5 | simp [RecsR, ConRon.Arena.blockSplitRecs]
     cases x with
     | recInfo cv mI rP rules =>
       obtain ⟨hcv, hmI, hrP, ro, rl, hro, hrl, hrules⟩ := hfl
       rw [bsrW_rec n m off l hl (by rw [hoff, hkw]; rfl), hoff] at h
-      cases h1 : bsrW n m (off + 1) (l - 1) with
-      | none => rw [h1] at h; simp [bsrK1] at h
-      | some x1 =>
-      obtain ⟨r1, m1⟩ := x1
-      rw [h1] at h
+      rcases h1 : bsrW n m (off + 1) (l - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+      · simp [bsrK1] at h
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
       cases hrs : ConRon.Arena.blockSplitRecs rest with
       | none =>
         rw [hrs] at hR1
         rw [bsrK1_fail n m1 _ r1 hR1] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp [RecsR, ConRon.Arena.blockSplitRecs, hrs]⟩
       | some rs =>
       rw [hrs] at hR1
@@ -288,13 +282,10 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         show decSR (truncM m2) rc.toNat = _
         simp only [decSR, g0, g1, g2, g3, g4, hcv2, hru2, Nat.add_assoc, bind, Option.bind_some,
           pure]
-      cases h3 : consW n m2 rc (r1.tail.headD 0) (r1.tail.tail.headD 0) with
-      | none => rw [h3] at h; simp [bsK3] at h
-      | some x3 =>
-      obtain ⟨r3, m3⟩ := x3
-      rw [h3, bsK3_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      rcases h3 : consW n m2 rc (r1.tail.headD 0) (r1.tail.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
+      · simp [bsK3] at h
+      rw [bsK3_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hsl2 := hsl1.grow decSR_mono hg2
       obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decSR_mono h3 hS2 hsl2.2 hsl2.1 hdec
       refine ⟨hS3, hg02.trans hg3, ?_⟩
@@ -338,8 +329,7 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     intro m m' a off l blk r h hS hblk
     by_cases hl : l = 0
     · rw [bscW_nil n m off l hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       rw [hl] at hblk
       rw [partsBlk_nil hblk]
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _, PSlR.nil _ _⟩
@@ -358,42 +348,33 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     by_cases h4 : ciKind x ≠ 4
     · have hne : UInt64.ofNat (ciKind x) ≠ 4 := fun e => h4 ((ciKind_w x 4 (by omega)).1 e)
       rw [bscW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
-      cases h1 : bsrW n m off l with
-      | none => rw [h1] at h; simp [bscKR] at h
-      | some x1 =>
-      obtain ⟨r1, m1⟩ := x1
-      rw [h1] at h
+      rcases h1 : bsrW n m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+      · simp [bscKR] at h
       obtain ⟨hS1, hg1, hR1⟩ := bsrW_ok n m m1 a off l _ r1 h1 hS hblk0
       rw [partsTwinCtors_no rest h4]
       cases hrs : ConRon.Arena.blockSplitRecs (x :: rest) with
       | none =>
         rw [hrs] at hR1
         rw [bscKR_fail m1 r1 hR1] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp [CtorsR]⟩
       | some rs =>
         rw [hrs] at hR1
         rw [bscKR_ok m1 r1 (by rw [hR1.1]; decide)] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp only [Option.map_some, CtorsR]; exact ⟨rfl, PSlR.nil _ _, hR1.2⟩⟩
     cases x with
     | ctorInfo cv nP nF =>
       obtain ⟨hcv, hnP, hnF⟩ := hfl
       rw [bscW_ctor n m off l hl (by rw [hoff, hkw]; rfl), hoff] at h
-      cases h1 : bscW n m (off + 1) (l - 1) with
-      | none => rw [h1] at h; simp [bscK1] at h
-      | some x1 =>
-      obtain ⟨r1, m1⟩ := x1
-      rw [h1] at h
+      rcases h1 : bscW n m (off + 1) (l - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+      · simp [bscK1] at h
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
       cases hcs : ConRon.Arena.blockSplitCtors rest with
       | none =>
         rw [hcs] at hR1
         rw [bscK1_fail n m1 _ r1 hR1] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp [CtorsR, ConRon.Arena.blockSplitCtors, hcs]⟩
       | some cr =>
       obtain ⟨cs, rs⟩ := cr
@@ -421,13 +402,9 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
           at g0 g1 g2
         show decSC (truncM m2) c.toNat = _
         simp only [decSC, g0, g1, g2, hcv2, Nat.add_assoc, bind, Option.bind_some, pure]
-      cases h3 : consW n m2 c (r1.tail.headD 0) (r1.tail.tail.headD 0) with
-      | none => rw [h3] at h; simp at h
-      | some x3 =>
-      obtain ⟨r3, m3⟩ := x3
-      rw [h3] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      rcases h3 : consW n m2 c (r1.tail.headD 0) (r1.tail.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
+      · simp at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hsl2 := hsl1.grow decSC_mono hg2
       obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decSC_mono h3 hS2 hsl2.2 hsl2.1 hdec
       refine ⟨hS3, hg02.trans hg3, ?_⟩
@@ -501,13 +478,9 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
     · rw [bsW_nil n m off l hl] at h
       rw [hl] at hblk
       rw [partsBlk_nil hblk]
-      cases h1 : posRecW m [0, 0, 0, 0, 0, 0] with
-      | none => rw [h1] at h; cases h
-      | some x1 =>
-      obtain ⟨q, m1⟩ := x1
-      rw [h1] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      rcases h1 : posRecW m [0, 0, 0, 0, 0, 0] with _ | ⟨q, m1⟩ <;> rw [h1] at h
+      · cases h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hR⟩ := partsRec6 h1 hS (PSlR.nil _ _) (PSlR.nil _ _) (PSlR.nil _ _)
       exact ⟨hS1, hg1, by simp [SplitR, ConRon.Arena.blockSplit, ConRon.Arena.blockSplitCtors,
         ConRon.Arena.blockSplitRecs]; exact hR⟩
@@ -526,19 +499,15 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
     by_cases h3 : ciKind x ≠ 3
     · have hne : UInt64.ofNat (ciKind x) ≠ 3 := fun e => h3 ((ciKind_w x 3 (by omega)).1 e)
       rw [bsW_no n m off l hl (by rw [hoff, hkw]; exact hne)] at h
-      cases h1 : bscW n m off l with
-      | none => rw [h1] at h; simp [bsKC] at h
-      | some x1 =>
-      obtain ⟨r1, m1⟩ := x1
-      rw [h1] at h
+      rcases h1 : bscW n m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+      · simp [bsKC] at h
       obtain ⟨hS1, hg1, hR1⟩ := bscW_ok n m m1 a off l _ r1 h1 hS hblk0
       rw [partsTwinSplit_no rest h3]
       cases hcs : ConRon.Arena.blockSplitCtors (x :: rest) with
       | none =>
         rw [hcs] at hR1
         rw [bsKC_fail m1 r1 hR1] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp [SplitR]⟩
       | some cr =>
         obtain ⟨cs, rs⟩ := cr
@@ -551,26 +520,21 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         | some x2 =>
         obtain ⟨q2, m2⟩ := x2
         rw [h2] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS2, hg2, hR⟩ := partsRec6 h2 hS1 (PSlR.nil _ _) hc1 hr1
         exact ⟨hS2, hg1.trans hg2, by simp only [Option.map_some, SplitR]; exact ⟨rfl, hR⟩⟩
     cases x with
     | indInfo cv caps =>
       have hcv := hfl
       rw [bsW_ind n m off l hl (by rw [hoff, hkw]; rfl), hoff] at h
-      cases h1 : bsW n m (off + 1) (l - 1) with
-      | none => rw [h1] at h; simp [bsK1] at h
-      | some x1 =>
-      obtain ⟨r1, m1⟩ := x1
-      rw [h1] at h
+      rcases h1 : bsW n m (off + 1) (l - 1) with _ | ⟨r1, m1⟩ <;> rw [h1] at h
+      · simp [bsK1] at h
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
       cases hsp : ConRon.Arena.blockSplit rest with
       | none =>
         rw [hsp] at hR1
         rw [bsK1_fail n m1 _ r1 hR1] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp [SplitR, ConRon.Arena.blockSplit, hsp]⟩
       | some t =>
       obtain ⟨ts, cs, rs⟩ := t
@@ -583,11 +547,9 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         have := partsDecCV_lt hcv; rw [UInt64.toNat_add, hqw]; simp; omega
       have hy : DecB (fun m => decCVp m (UInt64.ofNat q + 1).toNat) m1 cv := by
         rw [hq1']; exact (show DecB (fun m => decCVp m (q + 1)) m cv from hcv).grow (OMono.decCVp _) hg1
-      cases h2 : consW n m1 (UInt64.ofNat q + 1) (rdW (m1.arr64 IW) q1) (rdW (m1.arr64 IW) (q1 + 1)) with
-      | none => rw [h2] at h; simp [bsK2] at h
-      | some x2 =>
-      obtain ⟨r2, m2⟩ := x2
-      rw [h2, bsK2_some] at h
+      rcases h2 : consW n m1 (UInt64.ofNat q + 1) (rdW (m1.arr64 IW) q1) (rdW (m1.arr64 IW) (q1 + 1)) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+      · simp [bsK2] at h
+      rw [bsK2_some] at h
       obtain ⟨hS2, hg2, hd2, ht2⟩ := partsConsPL (fun _ => OMono.decCVp _) h2 hS1 hts1.2 hts1.1 hy
       have hlt1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
       have e : ∀ i, i < 6 → rdW (m2.arr64 IW) (q1 + UInt64.ofNat i) = rdW (m1.arr64 IW) (q1 + UInt64.ofNat i) :=
@@ -603,8 +565,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       | some x3 =>
       obtain ⟨q3, m3⟩ := x3
       rw [h3] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hR⟩ := partsRec6 h3 hS2 ⟨hd2, Nat.le_of_eq ht2⟩ (hcs1.grow decSC_mono hg2)
         (hrs1.grow decSR_mono hg2)
       refine ⟨hS3, (hg1.trans hg2).trans hg3, ?_⟩

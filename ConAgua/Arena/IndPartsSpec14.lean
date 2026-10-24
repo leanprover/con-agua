@@ -109,12 +109,11 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (∀ z, H z → R [z] (decI z) m1 a1) →
       Sim (match pinWordV m1 53 with | none => none | some z => some ([z], m1)) zeroLevel a1 R := by
     intro R hR r m' e
-    cases hp : pinWordV m1 53 with
-    | none => rw [hp] at e; cases e
-    | some z =>
-      rw [hp] at e; simp only [Option.some.injEq, Prod.mk.injEq] at e; obtain ⟨rfl, rfl⟩ := e
-      obtain ⟨hrun, hzh⟩ := pinZero_stage hS1 hp
-      exact ⟨_, a1, hrun, hR z hzh⟩
+    rcases hp : pinWordV m1 53 with _ | z
+    · rw [hp] at e; cases e
+    rw [hp] at e; simp only [Option.some.injEq, Prod.mk.injEq] at e; obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨hrun, hzh⟩ := pinZero_stage hS1 hp
+    exact ⟨_, a1, hrun, hR z hzh⟩
   cases x1 with
   | none =>
     have h0 : r1.headD 0 = 0 := hd1
@@ -136,8 +135,7 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     simp only [StateT.run_bind, hvrun]
     split at e
     · rename_i h2
-      simp only [Option.some.injEq, Prod.mk.injEq] at e
-      obtain ⟨rfl, rfl⟩ := e
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
       obtain ⟨u, rfl⟩ := (sort_head_iff m1 _ v hvr).mp h2
       obtain ⟨-, hul, hue⟩ := hvr
       exact ⟨u, a1, rfl, hul, hue, hS1, hg1⟩

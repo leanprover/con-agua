@@ -121,17 +121,11 @@ theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | zero => cases hm
   | succ k =>
   rw [plW_succ] at hm
-  cases h1 : plgW k m o l with
-  | none => rw [h1] at hm; cases hm
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1] at hm
+  rcases h1 : plgW k m o l with _ | ⟨r1, m1⟩ <;> rw [h1] at hm
+  · cases hm
   simp only [plW.plK4] at hm
-  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [h2] at hm; cases hm
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2] at hm
+  rcases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨r2, m2⟩ <;> rw [h2] at hm
+  · cases hm
   simp only [plW.plK5, Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, rfl⟩ := hm
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -227,32 +221,24 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     simp only [List.headD_cons] at h1
     simp only [List.tail_cons, List.headD_cons] at he hee
     rw [if_pos (by rw [h1]; decide)] at e
-    cases h2 : posRecW m [mo, ml, ro2, rl2, nPd, elimw, s, 1, ip] with
-    | none => rw [h2] at e; cases e
-    | some x =>
-    obtain ⟨q, m2⟩ := x
-    rw [h2, bbPack_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h2 : posRecW m [mo, ml, ro2, rl2, nPd, elimw, s, 1, ip] with _ | ⟨q, m2⟩ <;> rw [h2] at e
+    · cases e
+    rw [bbPack_some] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS hms hrs he hs
     refine ⟨_, a, rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg2⟩
     rw [← hee, ← hsv, ← hip]; exact hd2
   | none =>
     have h1 : lgw = 0 := hlg
     rw [if_neg (by rw [h1]; decide)] at e
-    cases h3 : naF m [] with
-    | none => rw [h3] at e; cases e
-    | some x =>
-    obtain ⟨r3, m3⟩ := x
-    rw [h3, bbK14_some] at e
+    rcases h3 : naF m [] with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+    · cases e
+    rw [bbK14_some] at e
     obtain ⟨an, a3, hrun3, hS3, hg3, hal, hae⟩ := naF_ok dn vis fe m m3 a r3 h3 hS
-    cases h2 : posRecW m3 [mo, ml, ro2, rl2, nPd, r3.headD 0, s, 0, ip] with
-    | none => rw [h2] at e; cases e
-    | some x =>
-    obtain ⟨q, m2⟩ := x
-    rw [h2, bbPack_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    rcases h2 : posRecW m3 [mo, ml, ro2, rl2, nPd, r3.headD 0, s, 0, ip] with _ | ⟨q, m2⟩ <;> rw [h2] at e
+    · cases e
+    rw [bbPack_some] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS3 (hms.grow decMS_mono hg3) (hrs.grow decRS_mono hg3) hal hs
     refine ⟨some ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
       by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg3.trans hg2⟩
@@ -265,15 +251,12 @@ theorem _root_.L.Arena.Sim.k3 {α : Type} {mo : Option (List Word × Mem)} {op :
     {Q R : List Word → α → Mem → AState → Prop} (h : Sim mo op a Q)
     (hq : ∀ r x m a', Q r x m a' → R [r.headD 0, r.tail.headD 0] x m a') : Sim (bgoK3 mo) op a R := by
   intro r m' e
-  cases hm : mo with
-  | none => rw [hm] at e; cases e
-  | some y =>
-    obtain ⟨r1, m1⟩ := y
-    rw [hm, bgoK3_some] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
-    obtain ⟨x, a', h1, h2⟩ := h r1 m1 hm
-    exact ⟨x, a', h1, hq _ _ _ _ h2⟩
+  rcases hm : mo with _ | ⟨r1, m1⟩ <;> rw [hm] at e
+  · cases e
+  rw [bgoK3_some] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+  obtain ⟨x, a', h1, h2⟩ := h r1 m1 hm
+  exact ⟨x, a', h1, hq _ _ _ _ h2⟩
 
 /-- A `Sim` also records the twin's run. -/
 theorem _root_.L.Arena.Sim.withRun {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
@@ -358,11 +341,9 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   unfold bfW at e
   rw [hw, hcw] at e
   -- `block_shape_ctors_of` (model only)
-  cases h1 : bctW (n + 1) m cso csl with
-  | none => rw [h1] at e; cases e
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, bbK8_some] at e
+  rcases h1 : bctW (n + 1) m cso csl with _ | ⟨r1, m1⟩ <;> rw [h1] at e
+  · cases e
+  rw [bbK8_some] at e
   obtain ⟨hS1, hg1, hct⟩ := bctW_ok (n + 1) m m1 a cso csl cs r1 h1 hS hcs
   revert r m' e
   unfold finRest
@@ -388,11 +369,9 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [hgl] at hgs
   -- `block_shape_members_of` (model only)
   intro r m' e
-  cases h4 : bmoW (n + 1) m3 cto ctl io (r3.headD 0) with
-  | none => rw [h4] at e; cases e
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, bbK11_some] at e
+  rcases h4 : bmoW (n + 1) m3 cto ctl io (r3.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+  · cases e
+  rw [bbK11_some] at e
   obtain ⟨hS4, hg4, hms⟩ := bmoW_ok (n + 1) m3 m4 a3 cto ctl io (r3.headD 0) cvTs nIdxs gss r4 h4 hS3
     (hts.grow (fun _ => OMono.decCVp _) hg03) (hns.grow (OMono.decNL _ _) hg03)
     (Nat.le_trans hnsb hg03.1) hgs
@@ -409,11 +388,8 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hg05 := hg04.trans hg5
   -- `block_shape_large` (model only)
   intro r m' e
-  cases h6 : bslW n m5 (UInt64.ofNat cvp) lo ll with
-  | none => rw [h6] at e; cases e
-  | some x6 =>
-  obtain ⟨r6, m6⟩ := x6
-  rw [h6] at e
+  rcases h6 : bslW n m5 (UInt64.ofNat cvp) lo ll with _ | ⟨r6, m6⟩ <;> rw [h6] at e
+  · cases e
   simp only [bbK13'] at e
   obtain ⟨hS6, hg6, hlg⟩ := bslW_ok h6 hS5 (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact (show DecB (fun m => decCVp m cvp) m r0.1 from hcv).grow (OMono.decCVp _) hg05)
     (by rw [decHL_grow3 hg05 hlb]; exact hl) (Nat.le_trans hlb hg05.1)
@@ -486,10 +462,9 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rintro r1 sv m1 a1 ⟨⟨⟨hs, hsv, hS1, hg1⟩, hrun1⟩, he1⟩
   rw [finJP_eq]
   intro r m' e
-  cases hz : pinWordV m1 53 with
-  | none => rw [hz] at e; cases e
-  | some z =>
-  rw [hz, btK2_some] at e
+  rcases hz : pinWordV m1 53 with _ | z <;> rw [hz] at e
+  · cases e
+  rw [btK2_some] at e
   obtain ⟨hzrun, -⟩ := pinZero_stage hS1 hz
   revert r m' e
   refine Sim.bind_twin hzrun ?_
@@ -556,13 +531,10 @@ theorem bmcW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hsim := bmgW_sim (b nPd (fun h => hg (Or.inl h))) (b k (fun h => hg (Or.inr (Or.inl h))))
     (b nC (fun h => hg (Or.inr (Or.inr (Or.inl h))))) (b rl (fun h => hg (Or.inr (Or.inr (Or.inr h))))) n
     m a cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.2; omega)
-  cases hb : bmgW n m nPd k nC no nl ro rl cto ctl 0 with
-  | none => rw [hb] at hm; cases hm
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [hb, bmfK2_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
+  rcases hb : bmgW n m nPd k nC no nl ro rl cto ctl 0 with _ | ⟨r1, m1⟩ <;> rw [hb] at hm
+  · cases hm
+  rw [bmfK2_some] at hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨x, a', h1, hR, hS', hg'⟩ := hsim r1 m1 hb
   exact ⟨x, a', h1, NsR_three hR, hS', hg'⟩
 
@@ -570,16 +542,14 @@ theorem bmcW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
 theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word}
     (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hc : ctl ≠ 0) : pinW m 0 ≠ 0 := by
   unfold bpoW at h
-  cases h1 : bpfW n m cto ctl lo ll with
-  | none => rw [h1] at h; cases h
-  | some x =>
+  rcases h1 : bpfW n m cto ctl lo ll with _ | x
+  · rw [h1] at h; cases h
   cases n with
   | zero => simp [bpfW] at h1
   | succ n =>
   rw [bpfW_cons n m cto ctl lo ll hc] at h1
-  cases h2 : resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto)) with
-  | none => rw [h2] at h1; simp [bpfK1] at h1
-  | some b =>
+  rcases h2 : resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto)) with _ | b
+  · rw [h2] at h1; simp [bpfK1] at h1
   cases n with
   | zero => simp [resContW] at h2
   | succ n =>
@@ -621,11 +591,9 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   unfold bbW at e
   rw [hw] at e
   -- names (model only)
-  cases h1 : bsnW (n + 3) m cto ctl with
-  | none => rw [h1] at e; cases e
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, bbH1_some] at e
+  rcases h1 : bsnW (n + 3) m cto ctl with _ | ⟨r1, m1⟩ <;> rw [h1] at e
+  · cases e
+  rw [bbH1_some] at e
   obtain ⟨hS1, hg1, hd1, hb1⟩ := bsnW_ok (n + 3) m m1 a cto ctl (cvT0 :: cvTs) r1 h1 hS hts
   revert r m' e
   unfold buildTwin
@@ -651,19 +619,14 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   simp only [h21, show (1 : Word) ≠ 0 by decide, if_false]
   -- level parameters (model only)
   intro r m' e
-  cases h3 : erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1)) (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2)) with
-  | none => rw [h3] at e; cases e
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3, bbH3_some] at e
+  rcases h3 : erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1)) (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+  · cases e
+  rw [bbH3_some] at e
   obtain ⟨hS3, hg3, hd3, ht3⟩ := partsLpsCopy h3 hS2 (hcv0.grow (OMono.decCVp _) hg02) hpb
   have hg03 := hg02.trans hg3
   -- the pins
-  cases h4 : bpoW (n + 2) m3 nPd cto ctl (r3.headD 0) (r3.tail.headD 0) rso rsl cso csl with
-  | none => rw [h4] at e; cases e
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4] at e
+  rcases h4 : bpoW (n + 2) m3 nPd cto ctl (r3.headD 0) (r3.tail.headD 0) rso rsl cso csl with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+  · cases e
   have h0 := bpoW_ready h4 hctl
   have hRrun := pinReserved_run (hS3.1.pins.full h0)
   obtain ⟨hS4, hg4, hr4⟩ := bpoW_ok hRrun h4 hS3 (hts.grow (fun _ => OMono.decCVp _) hg03)
@@ -741,11 +704,8 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   rw [blockShape_eq]
   intro r m' e
   unfold bshW at e
-  cases h1 : bsW (n + 4) m off l with
-  | none => rw [h1] at e; cases e
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1] at e
+  rcases h1 : bsW (n + 4) m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at e
+  · cases e
   simp only at e
   obtain ⟨hS1, hg1, hR1⟩ := bsW_ok (n + 4) m m1 a off l blk r1 h1 hS hblk
   revert r m' e
@@ -755,8 +715,7 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have h0 : r1.headD 0 = 0 := hR1
     intro r m' e
     rw [if_pos h0] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     exact ⟨none, a, rfl, rfl, hS1, hg1⟩
   | some t =>
   obtain ⟨cvTs, cs, rs⟩ := t
@@ -768,8 +727,7 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   generalize hq : r1.tail.headD 0 = q at e hq6 hts hcs hrs
   by_cases hz : rdW (m1.arr64 IW) (q + 1) = 0 ∨ rdW (m1.arr64 IW) (q + 5) = 0
   · rw [if_pos hz] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     have : cvTs = [] ∨ rs = [] := by
       rcases hz with hz | hz
       · exact Or.inl ((partsW0 hts).mp hz)
@@ -819,13 +777,10 @@ theorem bpW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       (fun r x m' a' => PartsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   unfold ConRon.Arena.blockParts?
   intro r m' e
-  cases h1 : bshW c n m nPd off l with
-  | none => rw [h1] at e; cases e
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, bgoK3_some] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  rcases h1 : bshW c n m nPd off l with _ | ⟨r1, m1⟩ <;> rw [h1] at e
+  · cases e
+  rw [bgoK3_some] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   obtain ⟨x, a', hrun, hR, hS', hg'⟩ := bshW_sim c n hS hblk hc r1 m1 h1
   cases x with
   | none =>
