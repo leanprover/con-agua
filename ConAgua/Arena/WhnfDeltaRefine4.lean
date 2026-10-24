@@ -122,7 +122,7 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatK_spec p hp.toWhnfDeltaProg n s₀ mode vis d f b) h
   unfold reduceNatKW at hW
-  by_cases hbd : rdW (s₀.mem.arr64 CTL) (18 + tierW f) ≤ idxW f
+  by_cases hbd : tcnt s₀.mem CONST (tierW f) ≤ idxW f
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
@@ -144,25 +144,24 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
   have hel : emptyLevels.run a₀ = .ok (decI (pinW s₀.mem 52), a₀) := pinEmptyLevels_run hC.pins
   have hbne : ∀ v w : Word, HW v → HW w → ((decI v : LsIdx) != decI w) = !decide (v = w) := by
     intro v w hv hw; simp only [bne, decI_beq v w hv hw]
-  by_cases hne : rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) ≠ r₁.headD 0
+  by_cases hne : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ r₁.headD 0
   · rw [if_pos hne] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
-    have hz := redConst_ne (coreKnot (decMode mode) fe id F) fe d.toNat (decI (rdW (s₀.mem.arr64 CREC)
-      (idxW f * 4 + tierW f * 2))) (decI (rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1)))
+    have hz := redConst_ne (coreKnot (decMode mode) fe id F) fe d.toNat (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
       (decI (pinW s₀.mem 52)) (decE b) a₀ hel (by
         rw [hbne _ _ hul hC.pins.lv_lt.1]
-        have : rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) ≠ pinW s₀.mem 52 := by
+        have : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ pinW s₀.mem 52 := by
           rw [← hr₁]; exact hne
         simp [this])
     refine (CRef.pure hC _ hz ?_ ?_).core
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [if_neg hne] at hW
-  have hne' : rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = pinW s₀.mem 52 := by
+  have hne' : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 := by
     rw [← hr₁]; simpa using hne
-  cases h2 : callW p n "reduce_nat_succ" [mode, vis, d, rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2),
+  cases h2 : callW p n "reduce_nat_succ" [mode, vis, d, tfld s₀.mem CONST (tierW f) (idxW f) 0,
       b] s₀.mem with
   | none => rw [h2] at hW; cases hW
   | some q₂ =>
@@ -174,8 +173,7 @@ theorem callW_reduceNatK (hp : WhnfDeltaProg' p) (N F : Nat) (hF : N ≤ F) (hn2
   rw [← hm]
   have hsucc := callW_reduceNatSucc p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM
     eb mode d _ b hS hnl hb r₂ m₂ h2
-  have hcongr := redConst_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decI (rdW (s₀.mem.arr64 CREC)
-      (idxW f * 4 + tierW f * 2))) (decI (rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1)))
+  have hcongr := redConst_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1))
       (decI (pinW s₀.mem 52)) (decE b) a₀ hel (by
         rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hne'])
   have hsucc' := CoreRef.congr hcongr.symm hsucc
@@ -215,7 +213,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (reduceNatAp_spec p hp.toWhnfDeltaProg n s₀ mode vis d f b) h
   unfold reduceNatApW at hW
-  by_cases hbd : rdW (s₀.mem.arr64 CTL) (4 + tierW f) ≤ idxW f
+  by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg4
@@ -223,8 +221,8 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   have hvf' := Option.some.inj hvf
   injection hvf' with hg' hx'
   subst hg' hx'
-  generalize rdW (s₀.mem.arr64 AREC) (idxW f * 4 + tierW f * 2) = gw at hW hgw hviewf
-  generalize rdW (s₀.mem.arr64 AREC) (idxW f * 4 + tierW f * 2 + 1) = xw at hW hxw hviewf
+  generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hW hgw hviewf
+  generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hW hxw hviewf
   by_cases g3 : gw >>> 28 ≠ 3
   · rw [if_pos g3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -242,15 +240,15 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
   by_cases hs2 : tierW (gw) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos hs2] at hW; cases hW
   rw [if_neg hs2] at hW
-  by_cases hb2 : rdW (s₀.mem.arr64 CTL) (18 + tierW (gw)) ≤
+  by_cases hb2 : tcnt s₀.mem CONST (tierW (gw)) ≤
       idxW (gw)
   · rw [if_pos hb2] at hW; cases hW
   rw [if_neg hb2] at hW
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 _ hgw
     ⟨hs2, by simpa using hb2⟩ g3'
   subst hn hu
-  generalize rdW (s₀.mem.arr64 CREC) (idxW gw * 4 + tierW gw * 2) = cw at *
-  generalize rdW (s₀.mem.arr64 CREC) (idxW gw * 4 + tierW gw * 2 + 1) = uw at *
+  generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 0 = cw at *
+  generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 1 = uw at *
   cases h1 : callW p n "pin_word" [52] s₀.mem with
   | none => rw [h1] at hW; cases hW
   | some q₁ =>
@@ -360,10 +358,10 @@ end refs22
 
 
 theorem view_nca (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (c : Word) (hv : viewOK m h c)
-    (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
-      (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨ (h >>> 28 = 7 ∧ c = 20) ∨
-      (h >>> 28 = 8 ∧ c = 2) ∨ (h >>> 28 = 9 ∧ c = 32)) :
+    (c : TRec) (hv : viewOK m h c)
+    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
+      (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨ (h >>> 28 = 7 ∧ c = LET) ∨
+      (h >>> 28 = 8 ∧ c = LIT) ∨ (h >>> 28 = 9 ∧ c = PROJ)) :
     ∃ v, a.store.view (decE h) = some v ∧ (∀ c us, v ≠ .const c us) ∧ (∀ g x, v ≠ .app g x) := by
   rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
   · exact ⟨_, view_bvar m a hR h hh hv g, fun c us => nofun, fun c us => nofun⟩
@@ -399,15 +397,15 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
   -- the tags that only check a bound
-  have simple : ∀ (c : Word), (f >>> 28 = 0 ∧ c = 22) ∨ (f >>> 28 = 1 ∧ c = 26) ∨ (f >>> 28 = 2 ∧ c = 16) ∨
-      (f >>> 28 = 5 ∧ c = 28) ∨ (f >>> 28 = 6 ∧ c = 30) ∨ (f >>> 28 = 7 ∧ c = 20) ∨
-      (f >>> 28 = 8 ∧ c = 2) ∨ (f >>> 28 = 9 ∧ c = 32) →
-      (if rdW (s₀.mem.arr64 CTL) (c + tierW f) ≤ idxW f then none else
+  have simple : ∀ (c : TRec), (f >>> 28 = 0 ∧ c = BVAR) ∨ (f >>> 28 = 1 ∧ c = FVAR) ∨ (f >>> 28 = 2 ∧ c = SORT) ∨
+      (f >>> 28 = 5 ∧ c = LAM) ∨ (f >>> 28 = 6 ∧ c = FORALL) ∨ (f >>> 28 = 7 ∧ c = LET) ∨
+      (f >>> 28 = 8 ∧ c = LIT) ∨ (f >>> 28 = 9 ∧ c = PROJ) →
+      (if tcnt s₀.mem c (tierW f) ≤ idxW f then none else
         some ((0 : Word), (0 : Word), s₀.mem)) = some (r.headD 0, r.tail.headD 0, s'.mem) →
       CoreRef (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀ decOptR dn
         s₀.mem vis fe MM eb r s'.mem ResW := by
     intro c hcg hW'
-    by_cases hbd : rdW (s₀.mem.arr64 CTL) (c + tierW f) ≤ idxW f
+    by_cases hbd : tcnt s₀.mem c (tierW f) ≤ idxW f
     · rw [if_pos hbd] at hW'; cases hW'
     rw [if_neg hbd] at hW'
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
@@ -428,7 +426,7 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
-    by_cases hbd : rdW (s₀.mem.arr64 CTL) (18 + tierW f) ≤ idxW f
+    by_cases hbd : tcnt s₀.mem CONST (tierW f) ≤ idxW f
     · cases n with
       | zero => rw [callW_zero] at h1; cases h1
       | succ n' =>
@@ -457,7 +455,7 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
-    by_cases hbd : rdW (s₀.mem.arr64 CTL) (4 + tierW f) ≤ idxW f
+    by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
     · cases n with
       | zero => rw [callW_zero] at h1; cases h1
       | succ n' =>
@@ -475,33 +473,33 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
     · unfold ResW at hrw ⊢; rw [← hr0, ← hr1]; exact hrw
   rw [if_neg g4] at hW
   by_cases g0 : f >>> 28 = 0
-  · rw [if_pos g0] at hW; exact simple 22 (Or.inl ⟨g0, rfl⟩) hW
+  · rw [if_pos g0] at hW; exact simple BVAR (Or.inl ⟨g0, rfl⟩) hW
   rw [if_neg g0] at hW
   by_cases g1 : f >>> 28 = 1
-  · rw [if_pos g1] at hW; exact simple 26 (Or.inr (Or.inl ⟨g1, rfl⟩)) hW
+  · rw [if_pos g1] at hW; exact simple FVAR (Or.inr (Or.inl ⟨g1, rfl⟩)) hW
   rw [if_neg g1] at hW
   by_cases g2 : f >>> 28 = 2
-  · rw [if_pos g2] at hW; exact simple 16 (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
+  · rw [if_pos g2] at hW; exact simple SORT (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
   rw [if_neg g2] at hW
   by_cases g5 : f >>> 28 = 5
-  · rw [if_pos g5] at hW; exact simple 28 (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
+  · rw [if_pos g5] at hW; exact simple LAM (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
   rw [if_neg g5] at hW
   by_cases g6 : f >>> 28 = 6
-  · rw [if_pos g6] at hW; exact simple 30 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
+  · rw [if_pos g6] at hW; exact simple FORALL (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
   rw [if_neg g6] at hW
   by_cases g7 : f >>> 28 = 7
   · rw [if_pos g7] at hW
-    exact simple 20 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
+    exact simple LET (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
   rw [if_neg g7] at hW
   by_cases g8 : f >>> 28 = 8
   · rw [if_pos g8] at hW
-    exact simple 2 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩))))))) hW
+    exact simple LIT (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩))))))) hW
   rw [if_neg g8] at hW
   by_cases g9 : f >>> 28 ≠ 9
   · rw [if_pos g9] at hW; cases hW
   rw [if_neg g9] at hW
   have g9' : f >>> 28 = 9 := by simpa using g9
-  exact simple 32 (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))))
+  exact simple PROJ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))))
     (by simpa using hW)
 
 end refs23
@@ -552,12 +550,12 @@ theorem callW_reduceNat (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : N
   by_cases hsc : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
-  by_cases hbd : rdW (s₀.mem.arr64 CTL) (4 + tierW e) ≤ idxW e
+  by_cases hbd : tcnt s₀.mem APP (tierW e) ≤ idxW e
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW
   obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
-  generalize rdW (s₀.mem.arr64 AREC) (idxW e * 4 + tierW e * 2) = fw at hW hview hfw
-  generalize rdW (s₀.mem.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1) = bw at hW hview hbw
+  generalize tfld s₀.mem APP (tierW e) (idxW e) 0 = fw at hW hview hfw
+  generalize tfld s₀.mem APP (tierW e) (idxW e) 1 = bw at hW hview hbw
   cases h1 : callW p n "reduce_nat_head" [mode, vis, d, fw, bw] s₀.mem with
   | none => rw [h1] at hW; cases hW
   | some q₁ =>

@@ -599,8 +599,8 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
     simp only [hew, List.tail_cons, List.headD_cons] at h
-    generalize hd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2) = d at h hty hvb
-    generalize hbd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1) = b at h hb hvb
+    generalize hd : tfld m FORALL (tierW e) (idxW e) 0 = d at h hty hvb
+    generalize hbd : tfld m FORALL (tierW e) (idxW e) 1 = b at h hb hvb
     rcases hnc : noConstWf k m no nl lo hi d with _ | ⟨r1, m1⟩ <;> rw [hnc] at h; · simp [pdoK1] at h
     have hnb' : no.toNat + nl.toNat < 2 ^ 64 := by
       rcases Nat.eq_zero_or_pos nl.toNat with hz | hz

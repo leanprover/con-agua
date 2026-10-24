@@ -190,84 +190,84 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
   have hF' : c.toNat ≤ F ∨ n ≤ F := by omega
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [frNodeW] at hb; simp only [ite_eq_left hs, reduceCtorEq] at hb
-  have vok : ∀ c, ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → viewOK m h c :=
+  have vok : ∀ c, ¬ tcnt m c (tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
   have zero : ∀ v, a.store.view (decE h) = some v → frArm F v = pure 0 → r = 0 → m' = m →
       ∃ a', (frNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
     intro v hv hx hr hm; subst hr hm
     exact ⟨a, by rw [frNodeA_run F _ a _ hv, hx]; rfl, hR⟩
   by_cases g0 : h >>> 28 = 0
-  · by_cases hc : rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g0, hc] at hb
-    rw [frNodeW_bvar n m h c g0 (vok 22 hc)] at hb
+    rw [frNodeW_bvar n m h c g0 (vok BVAR hc)] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    exact zero _ (view_bvar m a hR h hh (vok 22 hc) g0) rfl rfl rfl
+    exact zero _ (view_bvar m a hR h hh (vok BVAR hc) g0) rfl rfl rfl
   by_cases g1 : h >>> 28 = 1
-  · by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g1, hc] at hb
-    by_cases h1 : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1 = 0
+    by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
     · rw [frNodeW] at hb; simp [hs, g1, hc, h1] at hb
-    rw [frNodeW_fvar n m h c (vok 26 hc) g1 h1] at hb
+    rw [frNodeW_fvar n m h c (vok FVAR hc) g1 h1] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    obtain ⟨hv, -⟩ := view_fvar_idx m a hR h hh (vok 26 hc) g1
+    obtain ⟨hv, -⟩ := view_fvar_idx m a hR h hh (vok FVAR hc) g1
     refine ⟨a, ?_, hR⟩
     rw [frNodeA_run F _ a _ hv, show frArm F (.fvar _ _) = pure (_ + 1) from rfl,
       succW_toNat _ h1]
     rfl
   by_cases g4 : h >>> 28 = 4
-  · by_cases hc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g4, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok 4 hc) g4
-    rw [frNodeW_app n m h c (vok 4 hc) g4] at hb
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
+    rw [frNodeW_app n m h c (vok APP hc) g4] at hb
     obtain ⟨a', h1, h2⟩ := frAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g5 : h >>> 28 = 5
-  · by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g5, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok 28 hc) g5
-    rw [frNodeW_lam n m h c (vok 28 hc) g5] at hb
+    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok LAM hc) g5
+    rw [frNodeW_lam n m h c (vok LAM hc) g5] at hb
     obtain ⟨a', h1, h2⟩ := frBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g6 : h >>> 28 = 6
-  · by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g6, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok 30 hc) g6
-    rw [frNodeW_forall n m h c (vok 30 hc) g6] at hb
+    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok FORALL hc) g6
+    rw [frNodeW_forall n m h c (vok FORALL hc) g6] at hb
     obtain ⟨a', h1, h2⟩ := frBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g7 : h >>> 28 = 7
-  · by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g7, hc] at hb
-    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok 20 hc) g7
-    rw [frNodeW_let n m h c (vok 20 hc) g7] at hb
+    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok LET hc) g7
+    rw [frNodeW_let n m h c (vok LET hc) g7] at hb
     obtain ⟨a', h1, h2⟩ := frLetArm_ok n ih F m m' a hR c _ _ _ r ht hv' hb' hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g9 : h >>> 28 = 9
-  · by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g9, hc] at hb
-    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok 32 hc) g9
-    rw [frNodeW_proj n m h c (vok 32 hc) g9] at hb
+    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok PROJ hc) g9
+    rw [frNodeW_proj n m h c (vok PROJ hc) g9] at hb
     obtain ⟨a', h1, h2⟩ := ih F m m' a _ c r hF' hR he hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g2 : h >>> 28 = 2
-  · by_cases hc : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m SORT (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g2, hc] at hb
-    rw [frNodeW_sort n m h c g2 (vok 16 hc)] at hb
-    obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok 16 hc) g2
+    rw [frNodeW_sort n m h c g2 (vok SORT hc)] at hb
+    obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok SORT hc) g2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
   by_cases g3 : h >>> 28 = 3
-  · by_cases hc : rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g3, hc] at hb
-    rw [frNodeW_const n m h c g3 (vok 18 hc)] at hb
-    obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok 18 hc) g3
+    rw [frNodeW_const n m h c g3 (vok CONST hc)] at hb
+    obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok CONST hc) g3
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
   by_cases g8 : h >>> 28 = 8
-  · by_cases hc : rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h
+  · by_cases hc : tcnt m LIT (tierW h) ≤ idxW h
     · rw [frNodeW] at hb; simp [hs, g8, hc] at hb
-    rw [frNodeW_lit n m h c g8 (vok 2 hc)] at hb
-    obtain ⟨_, hv⟩ := view_lit m a hR h hh (vok 2 hc) g8
+    rw [frNodeW_lit n m h c g8 (vok LIT hc)] at hb
+    obtain ⟨_, hv⟩ := view_lit m a hR h hh (vok LIT hc) g8
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
   rw [frNodeW] at hb; simp [hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb

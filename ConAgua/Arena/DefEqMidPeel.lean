@@ -335,8 +335,8 @@ theorem peelDom_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : N
 /-! ## `e_view` runs -/
 
 theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW m h ≠ []) :
-    viewOK m h 28 ∧ L.Ind.eViewW m h = [5, rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2),
-      rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1), 0] := by
+    viewOK m h LAM ∧ L.Ind.eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
+      tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold L.Ind.eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
   simp only [h1, ite_false] at hne ⊢
@@ -349,7 +349,7 @@ theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW 
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
   simp only [n0, n1, n2, n3, n4, hg, ite_false, ite_true] at hne ⊢
-  by_cases c : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
+  by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, ite_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
@@ -359,8 +359,8 @@ theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW 
 theorem eView_forall_callW {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
     {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h) (hg : h >>> 28 = 6)
     {r : List Word} (hc : callW p n "e_view" [h] m = some (r, m')) :
-    m' = m ∧ r.tail.headD 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2) ∧
-      r.tail.tail.headD 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1) ∧
+    m' = m ∧ r.tail.headD 0 = tfld m FORALL (tierW h) (idxW h) 0 ∧
+      r.tail.tail.headD 0 = tfld m FORALL (tierW h) (idxW h) 1 ∧
       HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0) ∧
       a.store.viewBind (decE h) = some (decE (r.tail.headD 0), decE (r.tail.tail.headD 0)) := by
   obtain ⟨s', hm, rfl, hne, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

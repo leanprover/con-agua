@@ -275,8 +275,8 @@ def unfoldDefnAtL : FunDecl :=
   tu := ⟦us⟧.tier;
   iu := ⟦us⟧.idx;
   if tu != 0 && CTL.u64[1] == 0 { abort };
-  if LS⟨tu⟩.count <= iu { abort };
-  usl := LS⟨tu, iu⟩.l;
+  if LVLS⟨tu⟩.count <= iu { abort };
+  usl := LVLS⟨tu, iu⟩.l;
   lpl := EREC.u64[p + 3];
   if usl != lpl { return (0, 0) };
   po := EREC.u64[p + 2];

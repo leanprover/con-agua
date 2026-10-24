@@ -93,8 +93,15 @@ theorem fld_const (m : Mem) (t i f : Word) :
 
 /-- Node `i` of tier `t` holds the `const` node `k`: its two handle words. -/
 def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
-  rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
-  rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
+  tfld m CONST t i 0 = k.n.word.toUInt64 ∧
+  tfld m CONST t i 1 = k.us.word.toUInt64
+
+/-- `CeRecRel` in the raw words (inside the store library). -/
+theorem CeRecRel_raw (m : Mem) (t i : Word) (k : ConstNode) :
+    CeRecRel m t i k ↔
+    rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
+    rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
 def ConstR (m : Mem) (a : AState) : Prop :=
@@ -107,7 +114,7 @@ theorem constFrame : RFrame constSch CeRecRel cehash := by
   have h1 := hf 1 (by decide)
   rw [fld_const0, fld_const0] at h0
   rw [fld_const, fld_const] at h1
-  exact ⟨fun a h => by simpa only [CeRecRel, h0, h1] using h, by simp only [cehash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [CeRecRel_raw, h0, h1] using h, by simp only [cehash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -124,7 +131,7 @@ theorem constMatchOK : MatchOK CeRecRel (ceMt m f a) m (constKey ((decI (k := .n
   have := word_decI k.n f hf
   have := word_decI k.us a ha
   obtain ⟨kn, kus⟩ := k
-  grind [ceMt, cematchW, CeRecRel]
+  grind [ceMt, cematchW, CeRecRel_raw]
 
 theorem constHomeOK : HomeOK cehash (ceMt m f a) m (constHashW f a) := by
   intro t i hm
@@ -149,7 +156,7 @@ theorem constNewOK : NewOKR constSch CeRecRel cehash m [f, a] (constKey ((decI (
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI ((decI (k := .name) f)) f hf
   have := word_decI ((decI (k := .levels) a)) a ha
-  simp only [CeRecRel, cehash, constKey, e0, e1]
+  simp only [CeRecRel_raw, cehash, constKey, e0, e1]
   grind
 
 end query
@@ -193,7 +200,7 @@ theorem constCS_wf : constCS.WF where
 theorem constColFree : ColFree constCS CeRecRel := by
   intro A h m k x t i a hr
   simp only [constCS, Option.some.injEq] at h; subst h
-  simpa only [CeRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)] using hr
+  simpa only [CeRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)] using hr
 
 /-- **What `intern_const` changes**: the table's arrays, the column, the counts. -/
 theorem ceinternW_frame (m : Mem) (f a : Word) (w : Word) (m' : Mem) (hI : ceinternW m f a = some (w, m')) :
@@ -202,7 +209,7 @@ theorem ceinternW_frame (m : Mem) (f a : Word) (w : Word) (m' : Mem) (hI : ceint
 
 theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by
   intro m m' hra _ _; simp only [constSch] at hra
-  exact ⟨fun t i k h => by simpa only [CeRecRel, hra] using h, fun t i => by simp only [cehash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [CeRecRel_raw, hra] using h, fun t i => by simp only [cehash, hra]⟩
 
 /-- The L skip test is the arena's. -/
 theorem ceskipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)

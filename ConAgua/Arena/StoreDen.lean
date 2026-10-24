@@ -193,12 +193,12 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
     rw [← h1, ← h2, hctl 1 (.inl rfl)]
   have hsi : ∀ (t i : Word) x y, SoRecRel m t i x → SoRecRel m' t i y → x = y := by
     intro t i x y h1 h2
-    simp only [SoRecRel, hs] at h1 h2
+    simp only [SoRecRel, tfld_arr_eq (R := SORT) hs] at h1 h2
     cases x; cases y; simp only [SortNode.mk.injEq]
     exact word_toUInt64_inj (h1.symm.trans h2)
   have hci : ∀ (t i : Word) x y, CeRecRel m t i x → CeRecRel m' t i y → x = y := by
     intro t i x y h1 h2
-    simp only [CeRecRel, hc] at h1 h2
+    simp only [CeRecRel, tfld_arr_eq (R := CONST) hc] at h1 h2
     cases x; cases y; simp only [ConstNode.mk.injEq]
     exact ⟨word_toUInt64_inj (h1.1.symm.trans h2.1), word_toUInt64_inj (h1.2.symm.trans h2.2)⟩
   simp only [scTabs, Prod.mk.injEq]

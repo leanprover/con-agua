@@ -109,8 +109,15 @@ theorem fld_fa (m : Mem) (t i f : Word) :
 
 /-- Node `i` of tier `t` holds the `forallE` node `k`: its two handle words. -/
 def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
-  rdW (m.arr64 FAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
-  rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
+  tfld m FORALL t i 0 = k.ty.word.toUInt64 ∧
+  tfld m FORALL t i 1 = k.body.word.toUInt64
+
+/-- `FaRecRel` in the raw words (inside the store library). -/
+theorem FaRecRel_raw (m : Mem) (t i : Word) (k : BindNode) :
+    FaRecRel m t i k ↔
+    rdW (m.arr64 FAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
+    rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `forallE` store: the library's relation for the two `forallE`
 tables. -/
@@ -124,7 +131,7 @@ theorem faFrame : RFrame forallSch FaRecRel fahash := by
   have h1 := hf 1 (by decide)
   rw [fld_fa0, fld_fa0] at h0
   rw [fld_fa, fld_fa] at h1
-  exact ⟨fun a h => by simpa only [FaRecRel, h0, h1] using h, by simp only [fahash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [FaRecRel_raw, h0, h1] using h, by simp only [fahash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -141,7 +148,7 @@ theorem faMatchOK : MatchOK FaRecRel (faMt m ty body) m (faKey (decE ty) (decE b
   have := word_decI k.ty ty hty
   have := word_decI k.body body hbody
   obtain ⟨kty, kbody⟩ := k
-  grind [faMt, famatchW, FaRecRel, decE_eq]
+  grind [faMt, famatchW, FaRecRel_raw, decE_eq]
 
 theorem faHomeOK : HomeOK fahash (faMt m ty body) m (forallHashW ty body) := by
   intro t i hm
@@ -168,7 +175,7 @@ theorem faNewOK :
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE ty) ty hty
   have := word_decI (decE body) body hbody
-  simp only [FaRecRel, fahash, faKey, e0, e1]
+  simp only [FaRecRel_raw, fahash, faKey, e0, e1]
   grind [decE_eq]
 
 end query

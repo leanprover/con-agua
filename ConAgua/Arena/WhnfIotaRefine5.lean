@@ -46,9 +46,9 @@ theorem icfCheck_spec (p : Prog) (hp : p.lookup "iota_certs_full_check" = some i
 /-- Model of `iota_certs_full_parts`. -/
 def icfPartsW (m : Mem) (h : Word) : Option (List Word) :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
-  else some [rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2),
-    rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)]
+  else if tcnt m FORALL (tierW h) ≤ idxW h then none
+  else some [tfld m FORALL (tierW h) (idxW h) 0,
+    tfld m FORALL (tierW h) (idxW h) 1]
 
 theorem icfParts_spec (p : Prog) (hp : p.lookup "iota_certs_full_parts" = some iotaCertsFullPartsL)
     (n : Nat) (s₀ : St) (h : Word) :
@@ -61,7 +61,7 @@ theorem icfParts_spec (p : Prog) (hp : p.lookup "iota_certs_full_parts" = some i
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [icfPartsW, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [icfPartsW, tierW, idxW]
 
 /-- Model of `spn_get`. -/
 def spnGetW (m : Mem) (k : Word) : Option Word :=
@@ -115,18 +115,18 @@ theorem icfForall_spec (p : Prog) (hp : p.lookup "iota_certs_full_forall" = some
     Sig.retVal, Sig.retOr, rdW, CTL, size_set64]
 
 /-- The count index of a tag's table (`CTL[c + tier]`), `none` past the last tag. -/
-def evoCnt (g : Word) : Option Word :=
-  if g = 0 then some 22 else if g = 1 then some 26 else if g = 2 then some 16
-  else if g = 3 then some 18 else if g = 4 then some 4 else if g = 5 then some 28
-  else if g = 6 then some 30 else if g = 7 then some 20 else if g = 8 then some 2
-  else if g = 9 then some 32 else none
+def evoCnt (g : Word) : Option TRec :=
+  if g = 0 then some BVAR else if g = 1 then some FVAR else if g = 2 then some SORT
+  else if g = 3 then some CONST else if g = 4 then some APP else if g = 5 then some LAM
+  else if g = 6 then some FORALL else if g = 7 then some LET else if g = 8 then some LIT
+  else if g = 9 then some PROJ else none
 
 /-- Model of `expr_view_ok`. -/
 def evoW (m : Mem) (h : Word) : Option Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else match evoCnt (h >>> 28) with
     | none => none
-    | some c => if rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h then none else some 0
+    | some c => if tcnt m c (tierW h) ≤ idxW h then none else some 0
 
 theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprViewOkL) (n : Nat)
     (s₀ : St) (h : Word) :
@@ -137,7 +137,7 @@ theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprView
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [evoW, evoCnt, tierW, idxW, tfld, tcnt, TRec.ad]
+    finish [evoW, evoCnt, tierW, idxW]
 
 /-- Model of `iota_certs_full_flush` (callees at fuel `n`). -/
 def icfFlushW (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
@@ -482,7 +482,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   | some c =>
   rw [hc] at hev
   simp only at hev
-  by_cases g2 : rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h
+  by_cases g2 : tcnt m c (tierW h) ≤ idxW h
   · rw [if_pos g2] at hev; cases hev
   have hv : viewOK m h c := ⟨g1, UInt64.not_le.mp g2⟩
   simp only [evoCnt] at hc

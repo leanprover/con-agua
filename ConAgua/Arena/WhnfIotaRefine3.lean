@@ -547,7 +547,7 @@ def lmW (p : Prog) (k : Nat) (m : Mem) (mode vis d h : Word) : Option (List Word
     | none => none
     | some (r, m₁) => some ([r.headD 0], m₁)
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none
+  else if tcnt m LIT (tierW h) ≤ idxW h then none
   else match ldE (m.arr64 REC) (idxW h * 8 + tierW h * 4) with
     | none => none
     | some kind =>
@@ -581,7 +581,7 @@ theorem litMajorToCtor_spec (p : Prog) (hp : p.lookup "lit_major_to_ctor" = some
     finish (gen := 20) [lmW, ldE, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ a.store.view (decE h) = some (.lit l) ∧
       RecRel m (tierW h) (idxW h) ⟨l⟩ := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2

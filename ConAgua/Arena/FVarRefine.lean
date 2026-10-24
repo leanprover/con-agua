@@ -94,8 +94,15 @@ theorem fld_fvar (m : Mem) (t i f : Word) :
 /-- Node `i` of tier `t` holds `fvar k.idx k.ty`: its first word is the index, its second the
 child's handle word. -/
 def FVRecRel (m : Mem) (t i : Word) (k : FVarNode) : Prop :=
-  (rdW (m.arr64 FVREC) (i * 4 + t * 2)).toNat = k.idx ∧
-  rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64
+  (tfld m FVAR t i 0).toNat = k.idx ∧
+  tfld m FVAR t i 1 = k.ty.word.toUInt64
+
+/-- `FVRecRel` in the raw words (inside the store library). -/
+theorem FVRecRel_raw (m : Mem) (t i : Word) (k : FVarNode) :
+    FVRecRel m t i k ↔
+    (rdW (m.arr64 FVREC) (i * 4 + t * 2)).toNat = k.idx ∧
+    rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64
+  := Iff.rfl
 
 /-- **The state relation** of the `fvar` store: the library's relation for the two `fvar`
 tables. -/
@@ -109,7 +116,7 @@ theorem fvarFrame : RFrame fvarSch FVRecRel fvhash := by
   have h1 := hf 1 (by decide)
   rw [fld_fvar0, fld_fvar0] at h0
   rw [fld_fvar, fld_fvar] at h1
-  exact ⟨fun a h => by simpa only [FVRecRel, h0, h1] using h, by simp only [fvhash, h0, h1]⟩
+  exact ⟨fun a h => by simpa only [FVRecRel_raw, h0, h1] using h, by simp only [fvhash, h0, h1]⟩
 
 /-! ## The query's obligations -/
 
@@ -125,7 +132,7 @@ theorem fvMatchOK : MatchOK FVRecRel (fvMt m u ty) m (fvKey u.toNat (decE ty)) :
   intro t i k hr
   have := word_decI k.ty ty hty
   obtain ⟨kidx, kty⟩ := k
-  simp only [FVRecRel] at hr
+  simp only [FVRecRel_raw] at hr
   simp only [fvMt, fvmatchW, Bool.and_eq_true, beq_iff_eq, fvKey, FVarNode.mk.injEq, decE_eq]
   grind [UInt64.toNat_inj]
 
@@ -152,7 +159,7 @@ theorem fvNewOK : NewOKR fvarSch FVRecRel fvhash m [u, ty] (fvKey u.toNat (decE 
   simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
     show (0 : Word).toNat = 0 from rfl] at e0 e1
   have := word_decI (decE ty) ty hty
-  simp only [FVRecRel, fvhash, fvKey, e0, e1]
+  simp only [FVRecRel_raw, fvhash, fvKey, e0, e1]
   grind [decE_eq]
 
 end query
@@ -196,7 +203,7 @@ theorem fvarCS_wf : fvarCS.WF where
 theorem fvarColFree : ColFree fvarCS FVRecRel := by
   intro A h m k x t i a hr
   simp only [fvarCS, Option.some.injEq] at h; subst h
-  simpa only [FVRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)] using hr
+  simpa only [FVRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)] using hr
 
 /-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/
 theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
@@ -205,7 +212,7 @@ theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvin
 
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by
   intro m m' hra _ _; simp only [fvarSch] at hra
-  exact ⟨fun t i k h => by simpa only [FVRecRel, hra] using h, fun t i => by simp only [fvhash, hra]⟩
+  exact ⟨fun t i k h => by simpa only [FVRecRel_raw, hra] using h, fun t i => by simp only [fvhash, hra]⟩
 
 /-- The L skip test is the arena's. -/
 theorem fvskipW_eq (m : Mem) (a : AState) (ty : Word) (hty : ty.toNat < 2 ^ 32)

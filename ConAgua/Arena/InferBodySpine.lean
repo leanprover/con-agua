@@ -100,12 +100,12 @@ def spioLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
     if i < an then
       if ty >>> 28 = 6 then
         if tierW ty ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-        else if rdW (m.arr64 CTL) (30 + tierW ty) ≤ idxW ty then none
+        else if tcnt m FORALL (tierW ty) ≤ idxW ty then none
         else if m.len64 SPN ≤ co + cn then none
         else if ¬ (co + cn).toNat < (m.arr64 SPN).size then none
         else if ¬ (136 : Word).toNat < (m.arr64 CTL).size then none
         else spioLoop p k (spPush m co cn (rdW (m.arr64 SPN) (ao + i))) mode vis d
-          (rdW (m.arr64 FAREC) (idxW ty * 4 + tierW ty * 2 + 1)) ao an (i + 1) co (cn + 1)
+          (tfld m FORALL (tierW ty) (idxW ty) 1) ao an (i + 1) co (cn + 1)
       else
         match callW p k "inst_list" [ty, co, cn, 0] m with
         | none => none
@@ -115,12 +115,12 @@ def spioLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
           | some (r₂, m₂) =>
             if r₂.headD 0 >>> 28 ≠ 6 then none
             else if tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
-            else if rdW (m₂.arr64 CTL) (30 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) then none
+            else if tcnt m₂ FORALL (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) then none
             else if m₂.len64 SPN ≤ co then none
             else if ¬ co.toNat < (m₂.arr64 SPN).size then none
             else if ¬ (136 : Word).toNat < (m₂.arr64 CTL).size then none
             else spioLoop p k (spPush m₂ co 0 (rdW (m.arr64 SPN) (ao + i))) mode vis d
-              (rdW (m₂.arr64 FAREC) (idxW (r₂.headD 0) * 4 + tierW (r₂.headD 0) * 2 + 1)) ao an
+              (tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 1) ao an
               (i + 1) co 1
     else some (ty, cn, m)
 
@@ -313,7 +313,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         by_cases c1 : tierW ty ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
         · rw [if_pos c1] at hF; cases hF
         rw [if_neg c1] at hF
-        by_cases c2 : rdW (m.arr64 CTL) (30 + tierW ty) ≤ idxW ty
+        by_cases c2 : tcnt m FORALL (tierW ty) ≤ idxW ty
         · rw [if_pos c2] at hF; cases hF
         rw [if_neg c2] at hF
         by_cases c3 : m.len64 SPN ≤ co + cn
@@ -325,7 +325,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         by_cases c5 : ¬ (136 : Word).toNat < (m.arr64 CTL).size
         · rw [if_pos c5] at hF; cases hF
         rw [if_neg c5] at hF
-        have hv : viewOK m ty 30 := ⟨c1, UInt64.not_le.mp c2⟩
+        have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
         obtain ⟨hacc', htop', hb', hsz', h136', hbk', hpg'⟩ := spPush_step hspn hacc hb hsz hbk hpg h136m
@@ -351,7 +351,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
           simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have g2 : ¬ (tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0) := fun g => by
           simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-        have g3 : ¬ rdW (m₂.arr64 CTL) (30 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) := fun g => by
+        have g3 : ¬ tcnt m₂ FORALL (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) := fun g => by
           simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have g4 : ¬ m₂.len64 SPN ≤ co := fun g => by
           simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
@@ -360,7 +360,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         have g6 : (136 : Word).toNat < (m₂.arr64 CTL).size := Classical.byContradiction fun g => by
           simp only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g4, g5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have hF' : spioFull p n k (spPush m₂ co 0 (rdW (m.arr64 SPN) (ao + i))) mode vis d
-            (rdW (m₂.arr64 FAREC) (idxW (r₂.headD 0) * 4 + tierW (r₂.headD 0) * 2 + 1)) ao an
+            (tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 1) ao an
             (i + 1) co 1 = some (w, mF) := by
           simpa only [spioFull, spioLoop, hlt, ht6, h1, h2, g1, g2, g3, g4, g5, g6, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] using hF
         -- `inst_list` at the accumulator, then `whnf`
@@ -380,7 +380,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
             have := UInt64.lt_iff_toNat_lt.mp hj; omega
           exact (hSt12.below j hj').trans (hb j hj)
         have hsz₂ : (m₂.arr64 SPN).size = (m₀.arr64 SPN).size := hSt12.size.trans hsz
-        have hv : viewOK m₂ (r₂.headD 0) 30 := ⟨g2, UInt64.not_le.mp g3⟩
+        have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hacc0 := SpineR.empty m₂ co (by omega)
