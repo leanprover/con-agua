@@ -427,8 +427,7 @@ theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = [])
   intro xs
   induction xs with
   | nil =>
-    intro k σ s _ _ _ hI h
-    exact ev_congr (h s hI rfl (Pres.refl _ _)) (by simp)
+    exact fun k σ s _ _ _ hI h => ev_congr (h s hI rfl (Pres.refl _ _)) (by simp)
   | cons x xs ih =>
     intro k σ s hc hxs hoff hI h
     simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at hxs
@@ -504,8 +503,7 @@ theorem sim_zeroRes (Q : MachineState → Prop) :
   intro n
   induction n with
   | zero =>
-    intro i k s _ _ h
-    exact h s rfl rfl rfl rfl rfl (fun j h1 h2 => absurd h2 (by omega)) (fun _ _ _ => rfl)
+    exact fun i k s _ _ h => h s rfl rfl rfl rfl rfl (fun j h1 h2 => absurd h2 (by omega)) (fun _ _ _ => rfl)
   | succ n ih =>
     intro i k s hc hn h
     simp only [zeroRes] at hc

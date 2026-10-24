@@ -162,8 +162,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
       simp only [hca, ite_false] at hk'
       rw [get?_store1_A hx (by omega) ?_]
       · exact hm.get8 c hc k hk'
-      intro he
-      exact hG.arr8_disj a ha c hc hca _ hin (he ▸ ⟨by omega, by omega⟩)
+      exact fun he => hG.arr8_disj a ha c hc hca _ hin (he ▸ ⟨by omega, by omega⟩)
   · intro c hc k hk
     have hk2 : k < (m.arr64 c).size := hk
     have hsc := hm.size64 c hc
@@ -181,8 +180,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     simp only [Layout.tabEnd] at this
     rw [get?_store1_A hx (by omega) ?_]
     · exact hm.rom k hk
-    intro he
-    exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inl ⟨a, ha, he ▸ hin⟩)
+    exact fun he => hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inl ⟨a, ha, he ▸ hin⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
   · intro x hx; exact isSome_get?_storeInt (hm.res x hx)
   · intro g hg

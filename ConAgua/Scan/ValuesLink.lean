@@ -301,8 +301,7 @@ theorem scanHints_eq_hintsN (i : USize) :
           rw [if_pos h6b, if_pos h6']
         · have h6' : ¬ UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) = 0 := by
             rw [← hke_eq]
-            intro hx
-            exact h6 ((eq_toUInt64_iff _ _).mpr (by rw [hx]; rfl))
+            exact fun hx => h6 ((eq_toUInt64_iff _ _).mpr (by rw [hx]; rfl))
           have h6b : ¬ (keyEnd b (p + 1) == 0) = true := by simpa using h6
           rw [if_neg h6b, if_neg h6']
           have hge := keyEnd_ne_zero_ge b (p + 1) h6
@@ -395,8 +394,7 @@ theorem scanHints_eq_hintsN (i : USize) :
           · have h7' : ¬ keyAtN b.data p.toUInt64
                 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) - (p.toUInt64 + 1)) = 51 := by
               rw [← hkeyAt]
-              intro hx
-              exact h7 ((key_ctorIdx_word_eq_regular_iff _).mp hx)
+              exact fun hx => h7 ((key_ctorIdx_word_eq_regular_iff _).mp hx)
             rw [if_pos (show keyAtN b.data p.toUInt64
                 (UInt64.ofNat (keyEndN b.data (p.toUInt64 + 1).toNat) - (p.toUInt64 + 1)) ≠ 51
               from h7')]

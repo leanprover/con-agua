@@ -518,8 +518,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
   intro e
   induction e with
   | const w =>
-    intro t k hc _ _ σ s Q hI hok _
-    exact ev_movRI hc.head (hok w _ rfl (by simp) (EPost.regs' (by simp) _))
+    exact fun t k hc _ _ σ s Q hI hok _ => ev_movRI hc.head (hok w _ rfl (by simp) (EPost.regs' (by simp) _))
   | var x =>
     intro t k hc hwf _ σ s Q hI hok _
     simp only [Expr.wf, decide_eq_true_eq] at hwf

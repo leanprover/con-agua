@@ -195,8 +195,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       | false => rfl
       | true =>
         exfalso; apply hav0; apply hav.mpr
-        intro j _ _
-        exact Std.HashMap.getElem?_of_isEmpty e
+        exact fun j _ _ => Std.HashMap.getElem?_of_isEmpty e
     have hord₅ : ord.toNat + cw.toNat ≤ iwTop m₅ := by have := hgrow₅.1; omega
     have htg₅ : tg.toNat + cw.toNat ≤ iwTop m₅ := by have := hE₅.top; have := hE₅.rg2; omega
     obtain ⟨hI', hgrow', hf', hout, hout', hget⟩ :=
