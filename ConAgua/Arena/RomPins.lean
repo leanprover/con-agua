@@ -204,7 +204,7 @@ theorem romNamesToW_ok (ns : List ConLeche.Name) (hns : ns.all nameFits = true) 
     · intro i hi
       rw [hkeep2 i (by rw [hd1]; simp at hi; omega), pinW_set _ _ _ _ hdlt]
       have : i ≠ d.toNat := by simp at hi; omega
-      simp [this, pinW, hf1.1 PINS (by simp [StoreA, PINS]) (by decide)]
+      simp [this, pinW, hf1.1 PINS (by decide) (by decide)]
 
 end namesToRef
 
@@ -373,7 +373,7 @@ theorem internReservedPins_run (a : AState)
 
 theorem pinW_frame {C : List Word} {m m' : Mem} (h : MemFrame StoreA C m m') (i : Nat) :
     pinW m' i = pinW m i := by
-  simp only [pinW, h.1 PINS (by simp [StoreA, PINS]) (by decide)]
+  simp only [pinW, h.1 PINS (by decide) (by decide)]
 
 theorem pinW_fill (m : Mem) (us z s1 : Word) (i : Nat) (hs : 55 ≤ (m.arr64 PINS).size) :
     pinW (irpFill m us z s1) i =
