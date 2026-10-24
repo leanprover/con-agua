@@ -69,15 +69,10 @@ theorem classesNfs_refinesLpC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   refine triple_post (cnfs_spec p P.cns n s₀ vis q fto ftl tblo tbll mo ml) ?_
   rintro r s' ⟨hl, hm⟩
   rw [cnfsW_eq] at hm
-  cases c0 : callW p n "iw_alloc" [ml] s₀.mem with
-  | none => rw [c0] at hm; cases hm
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [c0, cnfsK1_some] at hm
-  cases c1 : cnsW p (n + 1) m0 vis q fto ftl tblo tbll mo ml (r0.headD 0) 0 with
-  | none => rw [c1] at hm; cases hm
-  | some mF =>
-  rw [c1, cnfsK2_some] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl
+  rw [cnfsK1_some] at hm
+  obtain ⟨mF, c1, hm⟩ := of_K hm rfl
+  rw [cnfsK2_some] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
   obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
   simp only at hs0 hw0; subst hs0
@@ -172,11 +167,8 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       exact this
   refine ⟨hcap, ?_⟩
   -- `target_rec_pins`
-  cases c1 : callW p n "target_rec_pins" [pp, bO, bL] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1, grpK1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [grpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (targetRecPins_refines p P.rp n _ a dn vis fe pp bO bL bs block hS hbs.1 hblk)
     (callW_mono c1 (Nat.le_add_right n 3))
@@ -200,11 +192,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   rw [hw2, hw3] at h
   have hrecs1 := hrecsP.grow (fun q => decRS_mono q) hg1
   have hrecs1P := ConRon.Bridge.Inductives.dRec_ext.list c1'.ext _ _ hrecsP0
-  cases c2 : callW p n "class_stream_recs" [vis, rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] s1.mem with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   obtain ⟨s2, hs2, -, hok2, hC2, hg2, hcs2, hA2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classStreamRecs_refinesC hq henv hV hApd hCrk P.cpy P.ia P.slc P.csr n hn _ a1 fe vis _ _ bs.recs pP.recs hC1
       hA1 (rec3RecsOK_of_decB hrecs1.1 hrecs1.2) hrecs1P) c2
@@ -275,20 +263,13 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hsrc2 : ShapeSrc s2.mem pp := partsHsrc_grow hg12 (partsShapeFacts hbs.1 hbs.2.1).2.1 hbs.2.1
   by_cases hn0 : nested = 0
   · rw [grpK2_any (h1 := hk0) (h := h7) (hn := hn0)] at h
-    cases c3 : callW p n "gen_rec_check_any_no_member" [mO, mL] s2.mem with
-    | none => rw [c3] at h; cases h
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [c3, grpK3_some] at h
+    obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+    rw [grpK3_some] at h
     obtain ⟨s3, hs3, -, hm3, hany, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
       (genRecCheckAnyNoMember_refines p P.anm n _ mO mL ms hmsD hmsb hS2.2.2.2.1) c3
     simp only at hs3 hm3 hany; subst hs3
     rw [hm3] at h
-    cases c4 : callW p n "block_large_elim_allowed" [pp, r3.headD 0] s2.mem with
-    | none => rw [c4] at h; cases h
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [c4] at h
+    obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
     obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
       (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
     subst hm4
@@ -301,11 +282,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       (hlarge_run _ a2 a4 al (by rw [hany, hn0]; rfl) hr4 hal rfl) (c12.trans c3')
       (ConRon.Bridge.Inductives.dExt_denoteCV.list c3'.ext _ _ hcvRis) h
   · rw [grpK2_nested (h1 := hk0) (h := h7) (hn := hn0)] at h
-    cases c4 : callW p n "block_large_elim_allowed" [pp, nested] s2.mem with
-    | none => rw [c4] at h; cases h
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [c4] at h
+    obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
     obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
       (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
     subst hm4
