@@ -185,7 +185,7 @@ theorem appOK : ConsOK p appCS where
       Cmp.eval, BinOp.eval, List.range_succ]
   ghash := appHash_ok p
   ihash := by
-    intro k s₀
+    intro n s₀
     simp only [appCS, L.Notation.blk]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
@@ -201,6 +201,8 @@ theorem appOK : ConsOK p appCS where
     simp only [appCS, Option.some.injEq] at he
     subst he
     simp [appCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
+  pre := rfl
+  colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
 
@@ -210,7 +212,7 @@ theorem appFind_spec (hp : p.lookup "app_find" = some appFind) (n : Nat) (s₀ :
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) t f a
         (baseW s₀.mem t) (nSlotsA s₀.mem) (homeW h (nSlotsA s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p appCS ((appOK p).match_) hp n s₀ t [f, a] rfl h
+  consFindG_spec p appCS ((appOK p).match_) hp n s₀ t [f, a] rfl h trivial
 
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x
@@ -243,7 +245,7 @@ theorem internApp_spec (hpf : p.lookup "app_find" = some appFind)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_app" [f, a]
     ⦃fun r s' => LocEq s' s₀ ∧ ainternW s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ :=
-  consInternG_spec p appCS (appOK p) hpf hpp "intern_app" hp n s₀ [f, a] rfl
+  consInternG_spec p appCS (appOK p) hpf hpp "intern_app" hp n s₀ [f, a] rfl trivial
 
 end specs
 

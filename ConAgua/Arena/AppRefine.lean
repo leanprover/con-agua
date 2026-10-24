@@ -181,7 +181,8 @@ theorem ainternW_eq (m : Mem) (f a : Word) :
     intro t j c; rw [← apushMem_eq, apushMem_eqC]; rfl
   have ec : ∀ t, cntC appCS m t = cntW appSch m t := fun t => rfl
   have eh : appCS.qhM m [f, a] = appHashW f a := rfl
-  simp only [ainternW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh]
+  simp only [ainternW, consInternM, internM, pushM, pushC, pushMX_none (C := appCS) rfl, ep, em, ec,
+    e0, e1, eh]
   rfl
 
 /-- The L skip test is the arena's. -/

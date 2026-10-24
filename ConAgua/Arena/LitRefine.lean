@@ -499,7 +499,7 @@ theorem probeW_arm (m : Mem) (o l h t : Word) :
     ∀ j d, probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m) j d =
       probeArm litSch m t (litMt m o l h t)
         (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m)) j d := by
-  intro j d; rw [probeW]; rfl
+  intro j d; rw [probeW, cprobeW]; rfl
 
 theorem pushOK_room (m : Mem) (t : Word) (h : pushOK m t = true) : PushRoom litSch m t := by
   simp only [pushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -525,7 +525,15 @@ theorem internW_eq (m : Mem) (o l : Word) :
     simp [hdW, litSch, litP, ETag.lit]
   have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
     simp [hdW, litSch, litS, ETag.lit]
-  simp only [internW, internM, pushM, pushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC litCS m t = pushOK m t := fun t => (pushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX litCS m t (litCS.vsM (pushArgs litCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat)))
+      (litCS.colM m (pushArgs litCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat))) j c =
+      pushG litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j c := by
+    intro t j c; rw [pushMX_none (C := litCS) rfl, ← pushMem_eq, pushMem_eqC]; rfl
+  have ec : ∀ t, cntC litCS m t = cntW litSch m t := fun t => rfl
+  have eh : litCS.qhM m [o, l] = hashN (m.arr64 POOL) o.toNat l.toNat := rfl
+  have es : skipC litCS m [o, l] = 0 := rfl
+  simp only [internW, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-! ## `intern_lit` refines `internE (.lit (.natVal _))` -/
@@ -564,7 +572,7 @@ theorem probeWStr_arm (m : Mem) (o l h t : Word) :
     ∀ j d, probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m) j d =
       probeArm litSch m t (litMtStr m o l h t)
         (probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m)) j d := by
-  intro j d; rw [probeWStr]; rfl
+  intro j d; rw [probeWStr, cprobeW]; rfl
 
 theorem pushMemStr_eq (m : Mem) (t o l h j c : Word) :
     pushMemStr m t o l h j c = pushG litSch m t [1, o, l, h] j c := by
@@ -584,7 +592,15 @@ theorem internWStr_eq (m : Mem) (o l : Word) :
     simp [hdW, litSch, litP, ETag.lit]
   have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
     simp [hdW, litSch, litS, ETag.lit]
-  simp only [internWStr, internM, pushM, pushMemStr_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC litStrCS m t = pushOK m t := fun t => (pushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX litStrCS m t (litStrCS.vsM (pushArgs litStrCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat)))
+      (litStrCS.colM m (pushArgs litStrCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat))) j c =
+      pushG litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j c := by
+    intro t j c; rw [pushMX_none (C := litStrCS) rfl, ← pushMemStr_eq, pushMemStr_eqC]; rfl
+  have ec : ∀ t, cntC litStrCS m t = cntW litSch m t := fun t => rfl
+  have eh : litStrCS.qhM m [o, l] = hashN (m.arr64 POOL) o.toNat l.toNat := rfl
+  have es : skipC litStrCS m [o, l] = 0 := rfl
+  simp only [internWStr, consInternM, internM, pushM, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 section internStr

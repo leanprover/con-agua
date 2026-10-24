@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.Store
+public import ConAgua.Arena.SlotGrowSpec
+public import ConAgua.Arena.Pool
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 import ConAgua.Census.Attr
@@ -134,6 +135,15 @@ structure ConsSch where
   vsM : List Word → List Word
   roomM : Mem → Word → Word → Bool
   skM : List Word → Word := fun _ => 0
+  /-- A derived column written by the push (`col[2 c + t] := x`), its value `x` (variable
+  `4 + np`) computed by the prelude `pre` with `xloc` locals of its own, and its model `colM`
+  (from the push's inputs). -/
+  xloc : Nat := 0
+  pre : Option Stmt := none
+  col : Option ArrId := none
+  colM : Mem → List Word → Word := fun _ _ => 0
+  /-- What the find's match and `ihash` may assume of the key (e.g. a pool slice in bounds). -/
+  keyOK : Mem → List Word → Prop := fun _ _ => True
 
 /-- The growth schema of a cons table (`SlotGrow.lean`). -/
 def ConsSch.GS (C : ConsSch) : GrowSch := ⟨C.sa, C.ra, C.w, C.ca, C.ghash⟩
@@ -173,8 +183,8 @@ def cpHead (C : ConsSch) : List Stmt :=
   [lblk (t, j, c, k, gn, gk) { c := CTL.u64[⟪C.ca⟫ + t] },
    lblk (t, j, c, k, gn, gk) { if c >= 134217728 { abort } }]
 def cpMid (C : ConsSch) : List Stmt :=
-  [lblk (t, j, c, k, gn, gk) { k := c * ⟪C.st⟫ + t * ⟪C.w⟫ },
-   lblk (t, j, c, k, gn, gk) { gk := C.sa.u64[len(C.sa.u64) - 1] }]
+  [mapS (lvF C.np) (lblk (t, j, c, k, gn, gk) { k := c * ⟪C.st⟫ + t * ⟪C.w⟫ }),
+   .set (5 + C.xloc + C.np) (.ld64 C.sa (.bin .sub (.len64 C.sa) (.const 1)))]
 
 /-- The record words: word `f` of the new record is `e` (`k` = `np + 3`). -/
 def cpWr (C : ConsSch) : Nat → List Expr → Stmt → Stmt
@@ -187,21 +197,26 @@ def cpTail (C : ConsSch) : List Stmt :=
   [lblk (t, j, c, k, gn, gk) { C.sa.u64[j * 2 + t] := CTL.u64[62] * t + c + 1 },
    lblk (t, j, c, k, gn, gk) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 }]
 def cpGrowIf (C : ConsSch) : Stmt :=
-  .ite (.cmp .ult (.bin .add (.var (5 + C.np)) (.const SN0))
+  .ite (.cmp .ult (.bin .add (.var (5 + C.xloc + C.np)) (.const SN0))
       (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 2)))
-    (growBlkG C.GS (4 + C.np)) .skip
+    (growBlkG C.GS (4 + C.xloc + C.np)) .skip
 
-/-- The push's tail: the slot, the count, the growth, the return. -/
+/-- The derived column's write, `col[c * 2 + t] := x`. -/
+def cpColW (C : ConsSch) : Option Stmt :=
+  C.col.map fun A => .st64 A (.bin .add (.bin .mul (.var (2 + C.np)) (.const 2)) (.var 0))
+    (.var (4 + C.np))
+
+/-- The push's tail: the slot, the count, the column, the growth, the return. -/
 def cpRest (C : ConsSch) : Stmt :=
-  seqs ((cpTail C).map (mapS (lvF C.np))) (.seq (cpGrowIf C) (.ret [.var (2 + C.np)]))
+  seqs ((cpTail C).map (mapS (lvF C.np)))
+    (seqO (cpColW C) (.seq (cpGrowIf C) (.ret [.var (2 + C.np)])))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def consPushG (C : ConsSch) : FunDecl :=
-  { nparams := 2 + C.np, nlocals := 13 + C.np,
-    body := seqs ((cpHead C).map (mapS (lvF C.np)))
+  { nparams := 2 + C.np, nlocals := 13 + C.xloc + C.np,
+    body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
       (.seq (.ite C.room .abort .skip)
-        (seqs ((cpMid C).map (mapS (lvF C.np)))
-          (cpWr C 0 C.recW (cpRest C)))) }
+        (seqs (cpMid C) (cpWr C 0 C.recW (cpRest C))))) }
 
 /-! ## `intern_X(k₁ … k_nk)`: hash-cons the node with key `k`
 

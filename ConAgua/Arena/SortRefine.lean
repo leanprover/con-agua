@@ -144,7 +144,7 @@ end query
 theorem soprobeW_arm (m : Mem) (u t : Word) :
     ∀ j d, soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (baseW m t) (nSlotsSo m) j d =
       probeArm sortSch m t (soMt m u t) (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (baseW m t) (nSlotsSo m)) j d := by
-  intro j d; rw [soprobeW]; rfl
+  intro j d; rw [soprobeW, cprobeW]; rfl
 
 theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom sortSch m t := by
   simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -165,7 +165,14 @@ theorem sointernW_eq (m : Mem) (u : Word) :
     simp [hdW, sortSch, sortP, ETag.sort]
   have e1 : ∀ x, hdW sortSch.tag.toUInt64 1 x = sortS + x := fun x => by
     simp [hdW, sortSch, sortS, ETag.sort]
-  simp only [sointernW, internMD, sopushMem_eq, e0, e1]
+  have ep : ∀ t, pushOKC sortCS m t = sopushOK m t := fun t => (sopushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX sortCS m t (sortCS.vsM (pushArgs sortCS [u] (sortHashW u)))
+      (sortCS.colM m (pushArgs sortCS [u] (sortHashW u))) j c =
+      (pushG sortSch m t [u] j c).set64 SOLP (c * 2 + t) (lvlHPW m u) := by
+    intro t j c; rw [← sopushMem_eq, sopushMem_eqC]; rfl
+  have ec : ∀ t, cntC sortCS m t = cntW sortSch m t := fun t => rfl
+  have eh : sortCS.qhM m [u] = sortHashW u := rfl
+  simp only [sointernW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh]
   rfl
 
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/

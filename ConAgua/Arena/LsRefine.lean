@@ -191,7 +191,7 @@ theorem lsprobeW_arm (m : Mem) (o l h t : Word) :
     ∀ j d, lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (baseW m t) (nSlotsLs m) j d =
       probeArm lsSch m t (lsMt m o l h t)
         (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (baseW m t) (nSlotsLs m)) j d := by
-  intro j d; rw [lsprobeW]; rfl
+  intro j d; rw [lsprobeW, cprobeW]; rfl
 
 theorem lspushOK_room (m : Mem) (t : Word) (h : lspushOK m t = true) : PushRoom lsSch m t := by
   simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -216,7 +216,16 @@ theorem lsinternW_eq (m : Mem) (o l : Word) :
     simp [hdW, lsSch, lsP, LsTag.list]
   have e1 : ∀ x, hdW lsSch.tag.toUInt64 1 x = lsS + x := fun x => by
     simp [hdW, lsSch, lsS, LsTag.list]
-  simp only [lsinternW, internMD, lspushMem_eq, e0, e1, true_and]
+  have ep : ∀ t, pushOKC lsCS m t = lspushOK m t := fun t => (lspushOK_eqC m t).symm
+  have em : ∀ t j c, pushMX lsCS m t (lsCS.vsM (pushArgs lsCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat)))
+      (lsCS.colM m (pushArgs lsCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat))) j c =
+      (pushG lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j c).set64 LSHP (c * 2 + t)
+        (lsOrW m o l.toNat) := by
+    intro t j c; rw [← lspushMem_eq, lspushMem_eqC]; rfl
+  have ec : ∀ t, cntC lsCS m t = cntW lsSch m t := fun t => rfl
+  have eh : lsCS.qhM m [o, l] = hashN (m.arr64 POOL) o.toNat l.toNat := rfl
+  have es : skipC lsCS m [o, l] = 0 := rfl
+  simp only [lsinternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
   rfl
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
