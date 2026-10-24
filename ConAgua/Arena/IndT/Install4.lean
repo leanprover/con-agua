@@ -2,7 +2,7 @@ import ConAgua.Arena.IndT.Install2
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.Install3
 import ConAgua.Arena.IndInstallSpec16
-import ConAgua.Arena.IndRealCapsC
+import ConAgua.Arena.IndRealSortDn
 
 /-!
 # `checkBlockInds` under `StageC` (lane `indstaget`)
@@ -91,15 +91,6 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
   rw [g0, hp0] at h1; rw [g1, hp1] at h2
   exact Nat.le_trans (hsrc o l h1 h2) hg.1
 
-/-- **PLACEHOLDER, `sorry`** (lane `indproofs4` proves the real fact): member 0's former's sort
-reads back to a level whose zero-ness names have `dn` handles (`consBlockInds_refinesR`'s
-`LzFacts`). As stated (any read-back level of a handle) it is stronger than the real fact, which
-uses that the sort's level parameters are among the block's, decoded through `decEBlk`; replace
-this lemma, with the premises the real one needs, when it lands. -/
-theorem sortDn_pending {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {env : ConLeche.Env} {m : Mem} {a a' : AState} (_hC : StageC dn vis fe env m a) {s : LIdx}
-    {sP : ConLeche.Level} (_h : denoteL a'.store.ls s = some sP) : SortDn dn sP := sorry
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -114,7 +105,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (hcx : ShapeCV m pp) (hb : (isRec != 0) = b) (hA : AbsOK m)
     (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
-    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
+    (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     Sim (ibiW p n m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
       (fun r x m' a' => IndsOut dn m r x m' a' ∧ AbsOK m' ∧
         (RecsB m pp → RecsB m' (r.tail.tail.tail.headD 0)) ∧ ConRon.Bridge.CoreStep V env fe a a') := by
@@ -164,7 +156,7 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
         fun _ _ ⟨_, hok, hQ, hA', hc⟩ => ⟨hok, hQ, hA', hc⟩) n hn
       rw [UInt64.toNat_ofNat_of_lt' hnpb] at h; exact Sim.withRunC h) ?_
   rintro r1 ⟨cvTa0, s0⟩ m1 a1 ⟨⟨⟨hC1, hg1, hcv1, hcx1, hs32, hsd⟩, hA1, c1⟩, hr1⟩
-  obtain ⟨-, ⟨cvTa₀P, s0P⟩, ⟨h1a, h1b, hw1⟩, -⟩ := ConRon.Bridge.Inductives.checkBlockTele_specF fe rfl
+  obtain ⟨-, ⟨cvTa₀P, s0P⟩, ⟨h1a, h1b, hw1⟩, hfk1⟩ := ConRon.Bridge.Inductives.checkBlockTele_specF fe rfl
     (ConRon.Bridge.CoreSpec.of_core rfl) henv bs.nP ms0 ms0P a a1 _ hC.check ⟨hm0, hfe⟩ hr1
   dsimp only at h1a h1b hw1
   have hS1 := hC1.stage
@@ -227,7 +219,8 @@ theorem ibiW_simC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     ⟨ConRon.Bridge.Inductives.dShape_ext c13.ext _ _ hbsP,
       ConRon.Bridge.denoteL_ext h1b (c2.ext.trans c3.ext)⟩ hr4
   have c14 := c13.trans c4
-  have hSortDn : SortDn dn s0P := sortDn_pending hC h1b
+  have hSortDn : SortDn dn s0P :=
+    sortDn_of_member hm0 hC.mem.dnN (hlpsDn ms0 (by rw [hmeq]; exact List.mem_cons_self ..)) hfk1
   have hC4 : StageC dn vis fe env m4 a4 := hC3.of_check hS4 hA4 c4.ok c4.ext
   -- the formers' constants
   refine Sim.mstep (K := ibiK5 p n vis isRec r4) rfl (fun _ _ => rfl) fun r5 m5 h5 => ?_
@@ -287,7 +280,8 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
     (hsrc : ShapeSrc s₀.mem pp) (hcx : ShapeCV s₀.mem pp) (hb : (isRec != 0) = b) (hA : AbsOK s₀.mem)
     (hk : ∀ f ∈ indsKeepCalleesC, AbsKeep p f) {bsP : ConLeche.BlockShape}
     (hbsP : ConRon.Bridge.Inductives.dShape a₀.store bs = some bsP)
-    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe) :
+    (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_block_inds" [vis, pp, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀ ∧
       IndsOut dn s₀.mem r (AM.res (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀) s'.mem
@@ -296,7 +290,7 @@ theorem checkBlockInds_refinesC (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) 
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a₀); ⊤⦄ :=
   triple_post (ibi_spec p hP.inds n s₀ vis pp isRec) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ, hA', hR', hc⟩ :=
-      Sim.run (ibiW_simC hq henv hV hOpf hLC hApd hCrk hLz hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh) hm
+      Sim.run (ibiW_simC hq henv hV hOpf hLC hApd hCrk hLz hP n hn hC hqd hsrc hcx hb hA hk hbsP hfe hcoh hlpsDn) hm
     ⟨hl, hok, hQ, hA', hR', hc⟩
 
 end sims

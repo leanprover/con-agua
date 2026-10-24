@@ -60,7 +60,8 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
     (hcx : ShapeCV m p0) (hb : (isRec != 0) = b) (hPm : PosMR m) (hA : AbsOK m)
     (hk : ∀ f ∈ passKeepCalleesC, AbsKeep p f)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a.store fe = some env)
-    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some shP) :
+    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a.store bs = some shP)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     Sim (icpW p (n + 3) m vis p0 isRec) (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b) a
       (fun r x m' a' => (StageR dn (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' a' ∧ IWGrow m m' ∧
         BPassR (rdW (m'.arr64 IW) (r.headD 0)) x.env1 m' (r.headD 0) x ∧ PosMR m' ∧ AbsOK m' ∧
@@ -85,7 +86,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   rw [c1, icpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hout, hA1, hrb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (checkBlockInds_refinesC hkp henv hV hOpf hLC hApd hCrk hLz hP.inds (n + 2) (by omega) _ a p0 isRec bs b hC hq hsrc hcx hb hA
-      (fun f hf => hkP f (List.mem_append_left _ (List.mem_append_right _ hf))) hshP hden hcoh) c1
+      (fun f hf => hkP f (List.mem_append_left _ (List.mem_append_right _ hf))) hshP hden hcoh hlpsDn) c1
   simp only at hs1 hout
   subst hs1
   have hrun1 := AM.run_of_ok _ a hok1
@@ -481,7 +482,8 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
     (hsrc : ShapeSrc s₀.mem p0) (hcx : ShapeCV s₀.mem p0) (hb : (isRec != 0) = b)
     (hPm : PosMR s₀.mem) (hA : AbsOK s₀.mem) (hk : ∀ f ∈ passKeepCalleesC, AbsKeep p f)
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a₀.store fe = some env)
-    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a₀.store bs = some shP) :
+    {shP : ConLeche.BlockShape} (hshP : ConRon.Bridge.Inductives.dShape a₀.store bs = some shP)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 4)) "check_block_pass" [vis, p0, isRec]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ x a', (ConRon.Arena.checkBlockPass V fe ⟨bs⟩ b).run a₀ = .ok (x, a') ∧
       (StageR dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
@@ -491,7 +493,7 @@ theorem checkBlockPass_refinesC (hP : PassProg p) {fs : List FnName}
       ∃ env₁, StageC dn (rdW (s'.mem.arr64 IW) (r.headD 0)) x.env1 env₁ s'.mem a' ∧ PassTwin a₀ a' x env₁;
       ⊤⦄ :=
   triple_post (icp_spec p hP.pass (n + 3) s₀ vis p0 isRec) fun r s' ⟨hl, hm⟩ =>
-    ⟨hl, icpW_simC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs n hn hC hq hsrc hcx hb hPm hA hk hcoh hden hshP r s'.mem hm⟩
+    ⟨hl, icpW_simC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs n hn hC hq hsrc hcx hb hPm hA hk hcoh hden hshP hlpsDn r s'.mem hm⟩
 
 end sims
 

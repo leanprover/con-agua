@@ -54,7 +54,8 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
     {fsH fsM : List FnName} (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH)
     (hclM : closedA p maFreeA maFreeC fsM = true)
-    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM) :
+    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     Sim (icbW p (n + 4) m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m' ∧ RcMR m' ∧
         ∃ mp, maMR m' mp) := by
@@ -256,7 +257,7 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
       hden8, henv₁, hqP, hTw, henv₂, hMs⟩ :=
     triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (checkBlockPass_refinesC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP.pass hcl hfs n hn _ _ hC7 hq7 hsrc7 hcx7 (b := raw)
-      (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP) c8
+      (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP hlpsDn) c8
   simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8 hC8
   subst hs8
   have hma8 := maMR.ofClosed hclM (hfM _ (by simp)) c8 hma7
@@ -311,7 +312,8 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
     {fsH fsM : List FnName} (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH)
     (hclM : closedA p maFreeA maFreeC fsM = true)
-    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM) :
+    (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "check_block" [vis, bO, bL, p0]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
@@ -319,7 +321,7 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ :=
   triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (icbW_simC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hC hq
-      hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM) hm
+      hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM hlpsDn) hm
     ⟨hl, hok, hQ⟩
 
 end sims
