@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.AppStore
 
@@ -93,7 +93,7 @@ def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
 
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
 def AppR (m : Mem) (a : AState) : Prop :=
-  StoreR appSch ARecRel ahash m a.store.scratchOn a.store.pers.apps a.store.scr.apps
+  ConsR appCS ARecRel m a.store.scratchOn a.store.pers.apps a.store.scr.apps
 
 /-- A node's relation and hash depend only on its two words. -/
 theorem appFrame : RFrame appSch ARecRel ahash := by
@@ -128,14 +128,14 @@ theorem appHomeOK : HomeOK ahash (aMt m f a) m (appHashW f a) := by
 
 include hf ha in
 /-- The record `app_push` writes holds the node. -/
-theorem appNewOK : NewOK appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a)) (appHashW f a) := by
-  intro t j ht hroom
-  have e : ∀ g, g < 2 → fld appSch (pushG appSch m t [f, a] j (cntW appSch m t)) t
+theorem appNewOK : NewOKR appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a)) (appHashW f a) := by
+  intro t ht hroom
+  have e : ∀ g, g < 2 → fld appSch (recW appSch m t [f, a]) t
       (cntW appSch m t) g = [f, a].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG appSch appSch_wf] <;> simp only [appSch, Schema.ad] at * <;> grind
+    rw [fld_recW appSch appSch_wf] <;> simp only [appSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_app0] at e0
@@ -161,6 +161,16 @@ theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom ap
   have := UInt64.toNat_shiftRight (m.len64 AREC) 2
   simp only [PushRoom, cntW, acnt, appSch, len64_eq] at *
   grind
+
+/-- **The `app` table's shape.** -/
+theorem appCS_wf : appCS.WF where
+  sch := appSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [appCS] at h
+  colRoom A h := by simp [appCS] at h
+  room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, appCS, hk]
 
 theorem apushMem_eq (m : Mem) (t f a j c : Word) :
     apushMem m t f a j c = pushG appSch m t [f, a] j c := by
@@ -204,15 +214,12 @@ include hR hf hx in
 theorem aintern_correct (w : Word) (m' : Mem) (hI : ainternW m f x = some (w, m')) :
     AM.ok (internE (.app (decE f) (decE x))) a ∧
     AppR m' (AM.st (internE (.app (decE f) (decE x))) a) ∧
-    AM.res (internE (.app (decE f) (decE x))) a = decE w := by
-  rw [ainternW_eq] at hI
-  exact intern_correctG appSch ARecRel ahash appSch_wf appFrame appLens a m hR _ _ _ _ _
-    (internE_app_run _ _ a) (skA a (decE f) (decE x)) rfl _ (askipW_eq m a f x hf hx hR.2.1)
-    (fun h => by simp only [skA] at h; split at h <;> simp_all [appLens]) _ _
-    (appMatchOK m f x hf hx) (appHomeOK m f x) _ _
-    (probe_homeG appSch m 0 _ _ (aprobeW_arm m f x 0) _)
-    (probe_homeG appSch m 1 _ _ (aprobeW_arm m f x 1) _) _ (apushOK_room m) _ rfl
-    (appNewOK m f x hf hx) w m' hI
+    AM.res (internE (.app (decE f) (decE x))) a = decE w :=
+  consIntern_correct appCS_wf appFrame (colFree_none _ rfl) appLens a hR _ _ _ _ _
+    (internE_app_run _ _ a) (skA a (decE f) (decE x)) rfl [f, x]
+    (askipW_eq m a f x hf hx (ConsR.flag hR))
+    (fun h => by simp only [skA] at h; split at h <;> simp_all [appLens])
+    ⟨rfl, appMatchOK m f x hf hx, appHomeOK m f x, appNewOK m f x hf hx⟩ w m' hI
 
 end intern
 

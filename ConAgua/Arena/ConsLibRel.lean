@@ -51,6 +51,8 @@ structure ConsSch.WF (C : ConsSch) : Prop where
     ∀ (m : Mem) (k x t i : Word), C.hsM (m.set64 A k x) t i = C.hsM m t i
   room : ∀ (m : Mem) (t : Word), pushOKC C m t = true →
     C.st.toNat * ((cntC C m t).toNat + 1) ≤ (m.arr64 C.ra).size
+  colRoom : ∀ A, C.col = some A → ∀ (m : Mem) (t : Word), t ≤ 1 → pushOKC C m t = true →
+    (cntC C m t * 2 + t).toNat < (m.arr64 A).size
   vs : ∀ (ks : List Word) (h : Word), ks.length = C.nk →
     (C.vsM (pushArgs C ks h)).length = C.w.toNat
 
@@ -350,7 +352,7 @@ theorem fld_recW (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) 
   simp only [fld, UInt64.toNat_zero, Nat.zero_le, true_and, Nat.sub_zero, Nat.zero_add, hl]
   grind
 
-theorem newOK_of (S : Schema) (hS : S.WF) (hfr : RFrame S R hs) (m : Mem) (vs : List Word)
+theorem newOK_of (S : Schema) {hs : Mem → Word → Word → Word} (hS : S.WF) (hfr : RFrame S R hs) (m : Mem) (vs : List Word)
     (key : α) (qh : Word) (h : NewOKR S R hs m vs key qh) : NewOK S R hs m vs key qh := by
   intro t j ht hroom
   obtain ⟨h1, h2⟩ := h t ht hroom
@@ -435,6 +437,34 @@ theorem OutSa.colW (C : ConsSch) (hW : C.WF) {M₁ M₂ : Mem} (h : OutSa C.sa M
   unfold L.Arena.colW; split
   · exact h
   · rename_i A hA; exact h.set64 (hW.col A hA).2.1 _ _
+
+/-- Outside the table's records, counts and column, `pushRec` is the old memory. -/
+theorem pushRec_arr (C : ConsSch) (m : Mem) (t : Word) (ks : List Word) (b : ArrId)
+    (hb : b ≠ C.ra) (hc : b ≠ CTL) (hcol : C.col ≠ some b) :
+    (pushRec C m t ks).arr64 b = m.arr64 b := by
+  rw [pushRec, colW_arr C _ _ _ _ b hcol, Mem.arr64_set64_ne _ _ _ _ _ hc, wrRecK_eq,
+    wrRec_arr_ne C.sch _ _ b hb]
+
+/-- **The column after the append**: the new node's word at `2 c + t`. -/
+theorem pushRec_col (C : ConsSch) (hW : C.WF) {A : ArrId} (hA : C.col = some A) (m : Mem)
+    (t : Word) (ks : List Word) :
+    (pushRec C m t ks).arr64 A = (m.arr64 A).set! (cntC C m t * 2 + t).toNat
+      (C.colM m (pushArgs C ks (C.qhM m ks))) := by
+  obtain ⟨hra, -, hc, -⟩ := hW.col A hA
+  simp only [pushRec, colW, hA, Mem.arr64_set64_same]
+  rw [Mem.arr64_set64_ne _ _ _ _ _ hc, wrRecK_eq, wrRec_arr_ne C.sch _ _ A hra]
+
+/-- **The counts after the append**: tier `t`'s up by one. -/
+theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (ks : List Word)
+    (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size) (t' : Word) (ht' : t' ≤ 1) :
+    cntC C (pushRec C m t ks) t' = if t' = t then cntC C m t + 1 else cntC C m t' := by
+  have hcol : C.col ≠ some CTL := fun e => (hW.col CTL e).2.2.1 rfl
+  have hca := hW.sch.ca
+  simp only [ConsSch.sch] at hca
+  simp only [cntC, pushRec, colW_arr C _ _ _ _ CTL hcol, rdW_set64, wrRecK_eq,
+    wrRec_arr_ne C.sch _ _ CTL (Ne.symm hW.sch.ra_ctl)]
+  rcases word_le_one t ht with rfl | rfl <;> rcases word_le_one t' ht' with rfl | rfl <;>
+    simp [UInt64.toNat_add] <;> first | omega | (intro h; have := congrArg UInt64.toNat h; simp [UInt64.toNat_add] at this; omega)
 
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to tier `t`: the
 handle is the tier's base plus the count, and outside the slot array the memory is `pushRec`. -/

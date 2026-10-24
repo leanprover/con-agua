@@ -1,4 +1,4 @@
-import ConAgua.Arena.Frame
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.LpCol
 
 /-!
@@ -701,5 +701,89 @@ theorem colMk (A : ArrId) (f : δ → Word) (m m₁ m' : Mem) (a a' : AState) (k
       rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hq⟩, hdd]
 
 end colMk
+
+section colMkC
+variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]
+
+/-- **The column across an interning** (`consInternM`, any table with a column `A`): the column
+holds of the arena state after and the memory after, if the word the push writes is `f` of the
+new record. -/
+theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
+    {R : Mem → Word → Word → α → Prop} (L : Lens α δ k) (f : δ → Word)
+    {m m' : Mem} {a a' : AState} {ks : List Word} {w : Word} {key : α} {d : δ} {y : Idx k}
+    (hR : ConsR C R m (L.on a) (L.getP a) (L.getS a))
+    (hR' : ConsR C R m' (L.on a') (L.getP a') (L.getS a'))
+    (hc : ColT2 L A f m a) (hI : consInternM C m ks = some (w, m'))
+    (hst : a' = a ∨
+      (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
+        y = decI (hdW C.tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+        a' = L.setP a ((L.getP a).push key d y)) ∨
+      (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
+        y = decI (hdW C.tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+        a' = L.setS a ((L.getS a).push key d y)))
+    (hdd : C.colM m (pushArgs C ks (C.qhM m ks)) = f d) : ColT2 L A f m' a' := by
+  obtain ⟨-, hAsa, -, -⟩ := hW.col A hA
+  have c0 := hR.cnt 0 (by decide)
+  have c1 := hR.cnt 1 (by decide)
+  have d0 := hR'.cnt 0 (by decide)
+  have d1 := hR'.cnt 1 (by decide)
+  have k0 := hR.cap 0 (by decide)
+  have k1 := hR.cap 1 (by decide)
+  simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1 k0 k1
+  have hp0 := (tbl_push_size (L.getP a) key d y).1
+  have hp1 := (tbl_push_size (L.getS a) key d y).1
+  rcases consInternM_out hW hI with rfl | ⟨t, ht, hok, -, he, -, -⟩
+  · rcases hst with rfl | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩
+    · exact hc
+    · rw [L.getP_setP] at d0; omega
+    · rw [L.getS_setS] at d1; omega
+  have hcm : ∀ t', t' ≤ 1 → cntC C m' t' = if t' = t then cntC C m t + 1 else cntC C m t' := by
+    intro t' ht'
+    rw [show cntC C m' t' = cntC C (pushRec C m t ks) t' by
+      simp only [cntC, he CTL hW.sch.sa_ctl.symm]]
+    exact pushRec_cnt C hW m t ht ks hR.ctl t' ht'
+  have hAm := pushRec_col C hW hA m t ks
+  rw [← he A hAsa] at hAm
+  have hq := hW.colRoom A hA m t ht hok
+  have hc27 : (cntC C m t).toNat < 2 ^ 27 := by
+    simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
+  have hsucc : (cntC C m t + 1).toNat = (cntC C m t).toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hct : cntC C m t = UInt64.ofNat (cntC C m t).toNat := (UInt64.ofNat_toNat).symm
+  -- reads of the column after the append
+  have rd : ∀ i t', i < 2 ^ 27 → t' ≤ 1 → (i ≠ (cntC C m t).toNat ∨ t' ≠ t) →
+      rdW (m'.arr64 A) (UInt64.ofNat i * 2 + t') = rdW (m.arr64 A) (UInt64.ofNat i * 2 + t') := by
+    intro i t' hi ht' hne
+    rw [hAm, rdW_set!]
+    have := ix_ne _ _ _ _ hc27 hi ht ht' (hne.elim (fun h => .inl (Ne.symm h)) (fun h => .inr (Ne.symm h)))
+    rw [← hct] at this
+    exact if_neg (fun h => this (UInt64.toNat_inj.mp h.1))
+  have rdn : rdW (m'.arr64 A) (UInt64.ofNat (cntC C m t).toNat * 2 + t) = f d := by
+    rw [hAm, rdW_set!, ← hct, if_pos ⟨rfl, hq⟩, hdd]
+  rcases word_le_one t ht with rfl | rfl
+  · have e0 := hcm 0 (by decide)
+    have e1 := hcm 1 (by decide)
+    simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at e0 e1
+    rcases hst with rfl | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩
+    · rw [e0, hsucc] at d0; omega
+    · rw [L.getP_setP] at d0
+      simp only [ColT2, L.getP_setP, L.getS_setP]
+      refine ⟨colT_push hc.1 key d y (fun i hi => rd i 0 (by omega) (by decide) (.inl (by omega))) ?_,
+        colT_mono hc.2 (fun i hi => rd i 1 (by omega) (by decide) (.inr (by decide)))⟩
+      rw [← c0]; exact rdn
+    · rw [L.getS_setS, e1] at d1; omega
+  · have e0 := hcm 0 (by decide)
+    have e1 := hcm 1 (by decide)
+    simp only [ite_true, show (0 : Word) ≠ 1 by decide, ite_false] at e0 e1
+    rcases hst with rfl | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩
+    · rw [e1, hsucc] at d1; omega
+    · rw [L.getP_setP, e0] at d0; omega
+    · rw [L.getS_setS] at d1
+      simp only [ColT2, L.getP_setS, L.getS_setS]
+      refine ⟨colT_mono hc.1 (fun i hi => rd i 0 (by omega) (by decide) (.inr (by decide))),
+        colT_push hc.2 key d y (fun i hi => rd i 1 (by omega) (by decide) (.inl (by omega))) ?_⟩
+      rw [← c1]; exact rdn
+
+end colMkC
 
 end L.Arena
