@@ -257,7 +257,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
       ilwDispW p n m₁ h ko kc vo vc fu =
         (if tcnt m₁ c (tierW h) ≤ idxW h then none
          else ilwHd (callW p n fn [h, ko, kc, vo, vc, fu - 1] m₁)) →
-      ∃ k rs2, n = k + 1 ∧ viewOK m₁ h c.ca ∧
+      ∃ k rs2, n = k + 1 ∧ viewOK m₁ h c ∧
         callW (p) (k + 1) fn [h, ko, kc, vo, vc, fu - 1] m₁ = some (rs2, m') ∧ r = rs2.headD 0 := by
     intro g c fn _ he
     rw [he] at hW
@@ -271,7 +271,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     rw [h2, ilwHd_some] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨k, rfl⟩ := armK fn rs2 m₂ h2
-    exact ⟨k, rs2, rfl, vok c.ca hc0 hs, h2, rfl⟩
+    exact ⟨k, rs2, rfl, vok c hc0 hs, h2, rfl⟩
   by_cases g1 : h >>> 28 = 1
   · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 1 FVAR "lp_fvar" g1 (ilwDispW_fvar p n m₁ h ko kc vo vc fu hs g1)
     obtain ⟨hv, hty⟩ := view_fvar_idx m₁ a hR h hh hvk g1
