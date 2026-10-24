@@ -328,11 +328,7 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
       refine ⟨x1 :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hd12]; simpa using hd3,
         by simpa using Nat.le_of_eq ht3, hA2.consW hc⟩
-      simp only [ConRon.Arena.abstractPrefixList, StateT.run_bind]
-      rw [← hw3, hrun1]
-      simp only [bind, Except.bind]
-      rw [hrun2]
-      simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
+      simp only [ConRon.Arena.abstractPrefixList, StateT.run_bind, ← hw3, hrun1, except_ok_bind, hrun2]
       rfl
 
 /-- **`abstract_prefix_list` refines `abstractPrefixList`** (through the `abstract1_fast` stub). -/
@@ -476,10 +472,7 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       rw [hbase1] at hrun2
       simp only [ConRon.Arena.targetHoles, ConRon.Arena.internFVarE, StateT.run_bind]
       rw [← hw3, show (decI w : EIdx) = decE w from rfl]
-      rw [hrun1]
-      simp only [bind, Except.bind]
-      rw [hrun2]
-      simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
+      simp only [hrun1, except_ok_bind, hrun2]
       rfl
 
 /-- **`target_holes` refines `targetHoles`** (through master's `intern_fvar`). -/
