@@ -172,7 +172,7 @@ variable (p : Prog) (Pg : Array Word) (C : Nat)
 /-- What both loops of `nat_shl` keep: the pool agrees with the entry pool below `top`, `a` lies
 below `top`, the `w + la + 1` result limbs fit above it, and the bit shift is below `64`. -/
 def ShlBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 4).toNat + (s.loc 6).toNat + (s.loc 1).toNat + 1 ≤ C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧ (s.loc 7).toNat < 64

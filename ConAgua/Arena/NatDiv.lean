@@ -170,7 +170,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
 
 /-- The invariant of `div_shl1`'s pass, over the entry pool `P0`. -/
 def Shl1Inv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 3).toNat ≤ (s.loc 1).toNat ∧
   (s.loc 4).toNat ≤ 1 ∧ Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 3).toNat ∧
   pv (vpool s.mem) (s.loc 0).toNat (s.loc 3).toNat + (s.loc 4).toNat * wt (s.loc 3).toNat =
@@ -195,7 +195,7 @@ theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
 
 /-- The invariant of `div_sub`'s pass. -/
 def DSubInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
   Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
@@ -225,7 +225,7 @@ theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
 
 /-- The invariant of `div_add`'s pass. -/
 def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
   Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
@@ -597,7 +597,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
 quotient's `la` limbs at `top` and the remainder's `n = lb + 1` limbs at `ro = top + la` fit;
 `a` and `b` lie below `top`; `b > 0`. -/
 def DivBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  POOL < s.mem.words.size ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 6).toNat = (s.loc 4).toNat + (s.loc 1).toNat ∧ (s.loc 5).toNat = (s.loc 3).toNat + 1 ∧
   (s.loc 6).toNat + (s.loc 5).toNat ≤ C ∧

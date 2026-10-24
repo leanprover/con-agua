@@ -126,7 +126,7 @@ variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
 /-- What all three loops of `nat_mul` keep: the pool agrees with the entry pool `Pg` below
 `top`, the operands lie below `top`, and the `la + lb` result limbs fit above it. -/
 def MulBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 63 ∧ Pg.size = 2 ^ 64 ∧ pcap s.mem = C ∧
+  C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 5).toNat = (s.loc 1).toNat + (s.loc 3).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧

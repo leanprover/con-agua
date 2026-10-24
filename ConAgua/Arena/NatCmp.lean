@@ -130,7 +130,7 @@ is `Lt` by length. -/
 /-- The invariant of the comparison loop over the pool `P` (unchanged): both slices have `la`
 limbs and are in bounds, and their limbs at `k` and above agree. -/
 def CmpInv (P : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 64 ∧ P.size = 2 ^ 64 ∧
+  C < 2 ^ 64 ∧ P.size = 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 1).toNat ≤ C ∧
   (s.loc 4).toNat ≤ (s.loc 1).toNat ∧
   pv P (s.loc 0).toNat (s.loc 1).toNat + pv P (s.loc 2).toNat (s.loc 4).toNat =
