@@ -67,22 +67,22 @@ theorem itail_ok (op : AM EIdx) (mkr : Option (Word × Mem)) (a₂ : AState) (h 
     (hh : h.toNat < 2 ^ 32)
     (hmk : ∀ r₃ m₃, mkr = some (r₃, m₃) →
       AM.ok op a₂ ∧ ArenaD m₃ (AM.st op a₂) ∧ AM.res op a₂ = decE r₃)
-    (hb : instAppW.k2 h c mkr = some (r, m')) :
+    (hb : instAppW.k_mk_app h c mkr = some (r, m')) :
     ∃ a', (do let r ← op; inst1Set (decE h, c.toNat) r; pure r : AM EIdx).run a₂ =
       .ok (decE r, a') ∧ ArenaD m' a' := by
   cases h3 : mkr with
-  | none => simp [h3, instAppW.k2] at hb
+  | none => simp [h3, instAppW.k_mk_app] at hb
   | some q =>
     obtain ⟨r₃, m₃⟩ := q
     rw [h3] at hb
     by_cases hr : mfindG imSch m₃ h c = []
-    · simp [instAppW.k2, hr] at hb
-    rw [instAppW.k2.arm1 h c r₃ m₃ hr] at hb
+    · simp [instAppW.k_mk_app, hr] at hb
+    rw [instAppW.k_mk_app.arm1 h c r₃ m₃ hr] at hb
     cases h4 : mputG imSch m₃ h c r₃ ((mfindG imSch m₃ h c).headD 0)
         ((mfindG imSch m₃ h c).tail.headD 0) with
-    | none => rw [h4] at hb; simp [instAppW.k1] at hb
+    | none => rw [h4] at hb; simp [instAppW.k_if_put] at hb
     | some m₄ =>
-      rw [h4, instAppW.k1.arm1, Option.some.injEq, Prod.mk.injEq] at hb
+      rw [h4, instAppW.k_if_put.arm1, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
       have hs : msetG imSch m₃ h c r₃ = some m₄ := by rw [msetG, ite_eq_right hr]; exact h4
       obtain ⟨hok, hA₃, hres⟩ := hmk r₃ m₃ h3
@@ -267,17 +267,17 @@ theorem iappArm_ok (hg : h >>> 28 = 4) :
   · rw [instAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
   have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp hc⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1 h hh hv hg
-  rw [instAppW.arm2 n m h d v fu hr (fun h => h hh0) hs hc] at hb
+  rw [instAppW.arm2 n m h d v fu hr hh0 hs hc] at hb
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1 h hh hv, except_ok_bind]
   cases h1 : instW n m (tfld m APP (tierW h) (idxW h) 0) d v fu with
-  | none => simp [h1, instAppW.k4] at hb
+  | none => simp [h1, instAppW.k_inst_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : instW n m₁ (tfld m APP (tierW h) (idxW h) 1) d v fu with
-  | none => simp [h1, h2, instAppW.k4, instAppW.k3] at hb
+  | none => simp [h1, h2, instAppW.k_inst_go, instAppW.k_inst_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, instAppW.k4, instAppW.k3] at hb
+  simp only [h1, h2, instAppW.k_inst_go, instAppW.k_inst_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ haw h2
   obtain ⟨a', h3, h4⟩ := itail_ok _ _ a₂ h d r m' hh (fun r₃ m₃ h => mkApp_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
@@ -297,17 +297,17 @@ theorem ilamArm_ok (hg : h >>> 28 = 5) :
   · rw [instLamW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
   have hv : viewOK m h LAM := ⟨hs, UInt64.not_le.mp hc⟩
   obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1 h hh hv hg
-  rw [instLamW.arm2 n m h d v fu hd1 hr (fun h => h hh0) hs hc] at hb
+  rw [instLamW.arm2 n m h d v fu hd1 hr hh0 hs hc] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1 h hh hv hg, except_ok_bind]
   cases h1 : instW n m (tfld m LAM (tierW h) (idxW h) 0) d v fu with
-  | none => simp [h1, instLamW.k2] at hb
+  | none => simp [h1, instLamW.k_inst_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : instW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (d + 1) v fu with
-  | none => simp [h1, h2, instLamW.k2, instLamW.k1] at hb
+  | none => simp [h1, h2, instLamW.k_inst_go, instLamW.k_inst_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, instLamW.k2, instLamW.k1] at hb
+  simp only [h1, h2, instLamW.k_inst_go, instLamW.k_inst_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw h2
   rw [succW_toNat d hd1] at ha₂
@@ -331,17 +331,17 @@ theorem iforallArm_ok (hg : h >>> 28 = 6) :
   · rw [instForallW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
   have hv : viewOK m h FORALL := ⟨hs, UInt64.not_le.mp hc⟩
   obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1 h hh hv hg
-  rw [instForallW.arm2 n m h d v fu hd1 hr (fun h => h hh0) hs hc] at hb
+  rw [instForallW.arm2 n m h d v fu hd1 hr hh0 hs hc] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1 h hh hv hg, except_ok_bind]
   cases h1 : instW n m (tfld m FORALL (tierW h) (idxW h) 0) d v fu with
-  | none => simp [h1, instForallW.k2] at hb
+  | none => simp [h1, instForallW.k_inst_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : instW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (d + 1) v fu with
-  | none => simp [h1, h2, instForallW.k2, instForallW.k1] at hb
+  | none => simp [h1, h2, instForallW.k_inst_go, instForallW.k_inst_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, instForallW.k2, instForallW.k1] at hb
+  simp only [h1, h2, instForallW.k_inst_go, instForallW.k_inst_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (d + 1) v fu y hA₁ haw h2
   rw [succW_toNat d hd1] at ha₂
@@ -365,21 +365,21 @@ theorem iletArm_ok (hg : h >>> 28 = 7) :
   · rw [instLetW] at hb; simp only [ne_eq] at hs; simp only [hd1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
   have hv : viewOK m h LET := ⟨hs, UInt64.not_le.mp hc⟩
   obtain ⟨-, htw, hvw, hbw⟩ := view_let m a hA.1 h hh hv hg
-  rw [instLetW.arm2 n m h d v fu hd1 hr (fun h => h hh0) hs hc] at hb
+  rw [instLetW.arm2 n m h d v fu hd1 hr hh0 hs hc] at hb
   rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1 h hh hv, except_ok_bind]
   cases h1 : instW n m (tfld m LET (tierW h) (idxW h) 0) d v fu with
-  | none => simp [h1, instLetW.k3] at hb
+  | none => simp [h1, instLetW.k_inst_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : instW n m₁ (tfld m LET (tierW h) (idxW h) 1) d v fu with
-  | none => simp [h1, h2, instLetW.k3, instLetW.k2] at hb
+  | none => simp [h1, h2, instLetW.k_inst_go, instLetW.k_inst_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
   cases h3 : instW n m₂ (tfld m LET (tierW h) (idxW h) 2) (d + 1) v fu with
-  | none => simp [h1, h2, h3, instLetW.k3, instLetW.k2, instLetW.k1] at hb
+  | none => simp [h1, h2, h3, instLetW.k_inst_go, instLetW.k_inst_go_2, instLetW.k_inst_go_3] at hb
   | some o =>
   obtain ⟨z, m₃⟩ := o
-  simp only [h1, h2, h3, instLetW.k3, instLetW.k2, instLetW.k1] at hb
+  simp only [h1, h2, h3, instLetW.k_inst_go, instLetW.k_inst_go_2, instLetW.k_inst_go_3] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA htw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ hvw h2
   obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (d + 1) v fu z hA₂ hbw h3
@@ -400,13 +400,13 @@ theorem iprojArm_ok (hg : h >>> 28 = 9) :
   · rw [instProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, not_false_eq_true, and_self, and_true, reduceCtorEq] at hb
   have hv : viewOK m h PROJ := ⟨hs, UInt64.not_le.mp hc⟩
   obtain ⟨-, -, hew⟩ := view_proj m a hA.1 h hh hv hg
-  rw [instProjW.arm2 n m h d v fu hr (fun h => h hh0) hs hc] at hb
+  rw [instProjW.arm2 n m h d v fu hr hh0 hs hc] at hb
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1 h hh hv, except_ok_bind]
   cases h1 : instW n m (tfld m PROJ (tierW h) (idxW h) 2) d v fu with
-  | none => simp [h1, instProjW.k1] at hb
+  | none => simp [h1, instProjW.k_inst_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  simp only [h1, instProjW.k1] at hb
+  simp only [h1, instProjW.k_inst_go] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hew h1
   obtain ⟨a', h3, h4⟩ := itail_ok _ _ a₁ h d r m' hh
     (fun r₃ m₃ h => mkProj_ok m₁ a₁ hA₁ _ _ x r₃ m₃ h) hb
@@ -463,12 +463,12 @@ theorem instEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   rw [instEntryW.arm1 n m e v d (by rw [hcs]; exact h0)] at hb
   have hA₀ := ArenaD.imemo_clear m a hA h0
   cases hw : instW n (mclearG imSch m) e d v 4000000000 with
-  | none => simp [hw, instEntryW.k1] at hb
+  | none => simp [hw, instEntryW.k_inst_go] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
     by_cases h1 : rdW (m₁.arr64 CTL) 44 + 2 = 0
-    · simp [hw, instEntryW.k1, hcs, h1] at hb
-    rw [hw, instEntryW.k1.arm1 r₁ m₁ (by rw [hcs]; exact h1), Option.some.injEq,
+    · simp [hw, instEntryW.k_inst_go, hcs, h1] at hb
+    rw [hw, instEntryW.k_inst_go.arm1 r₁ m₁ (by rw [hcs]; exact h1), Option.some.injEq,
       Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (instOK n).1 _ _ _ e d v 4000000000 r₁ hA₀ he hw

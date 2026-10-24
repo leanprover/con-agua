@@ -213,7 +213,7 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
     rw [ho] at hr
     simp only [tgW] at hr
     subst hr
-    rw [hNoteW.k1.arm2 _ _ _ _ _ _ _ (by simp)] at h
+    rw [hNoteW.k_hoist_ix.arm2 _ _ _ _ _ _ _ (by simp)] at h
     cases h
     exact Or.inr ⟨by simp, rfl, rfl⟩
   | some j =>
@@ -240,7 +240,7 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       | some t => simp only [reduceCtorEq, iff_false]; exact tgW_ne_zero t (by have := hTv j t hTj; omega)
     by_cases hcond : i < j ∧ j ≠ k ∧ T[j]? = none
     · obtain ⟨h1, h2, h3⟩ := hcond
-      rw [hNoteW.k1.arm1 _ _ _ _ _ _ _ ⟨by
+      rw [hNoteW.k_hoist_ix.arm1 _ _ _ _ _ _ _ ⟨by
           intro e; have := congrArg UInt64.toNat e
           rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at this; simp at this,
         hci.mpr h1, hck.mpr h2, hcz.mpr h3⟩] at h
@@ -299,7 +299,7 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
           simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
           rw [if_pos trivial, if_pos (by rw [Array.size_setIfInBounds]; omega)]
           simp [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega : j < 2 ^ 64)]
-    · rw [hNoteW.k1.arm2 _ _ _ _ _ _ _ (by
+    · rw [hNoteW.k_hoist_ix.arm2 _ _ _ _ _ _ _ (by
           rintro ⟨-, a1, a2, a3⟩; exact hcond ⟨hci.mp a1, hck.mp a2, hcz.mp a3⟩)] at h
       cases h
       right
@@ -483,8 +483,8 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   obtain ⟨hr59, hD, hok⟩ := hE.ordR kw.toNat hks
   rw [← hkw'] at hr59 hD hok
   rcases hd : hDepsOfW n m kw (UInt64.ofNat i) (1 + 8 * rdW (m.arr64 IW) (ord + kw)) tg ws (sp - 1) with _ | ⟨sp₁, m₁⟩ <;> rw [hd] at h
-  · simp [hCloseGoW.k1.eq_1] at h
-  rw [hCloseGoW.k1.arm1] at h
+  · simp [hCloseGoW.k_hoist_deps_of.eq_1] at h
+  rw [hCloseGoW.k_hoist_deps_of.arm1] at h
   obtain ⟨ns, hrun, hns, hseen₁, mn, hnotes, hfr₁⟩ :=
     hoistDepsOf_ok n m m₁ a kw (UInt64.ofNat i) _ tg ws (sp - 1) sp₁ ds[kw.toNat] hE.arena hE.seen
       hr59 hD hok (hE.walk _ hks) hd
@@ -612,7 +612,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     exact ⟨T'', hrun, hE, tgtR_congr hT e, fun x t hx => hTv x t (by rw [← e x]; exact hx),
       HFr.refl _ _ _ _, fun x t hx => hTi x t (by rw [← e x]; exact hx), fun k _ => e k,
       fun x t hx => hlt x t (by rw [← e x]; exact hx)⟩
-  rw [hClosureW.arm2 _ _ _ _ _ _ _ hm] at h
+  rw [hClosureW.arm2 _ _ _ _ _ _ _ (Decidable.of_not_not hm)] at h
   have hTj : T[j]? = none := by
     cases e : T[j]? with
     | none => rfl
@@ -786,7 +786,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
       simpa using hp'
     have hl1 : (q + 1).toNat + gs.length = l.toNat := by rw [hq1]; simp at hl; omega
     rcases hx : hIxW m (rdW (m.arr64 IW) (o + q)) with _ | ⟨rw', m₁⟩ <;> rw [hx] at h
-    · simp [hDepsW.k3.eq_1] at h
+    · simp [hDepsW.k_hoist_ix.eq_1] at h
     obtain ⟨hm1, hr⟩ := hoistIx_ok m m₁ _ rw' idx hE.nix hw hx
     subst m₁
     rw [hg] at hr
@@ -795,7 +795,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
     cases hgi : idx[g]? with
     | none =>
       rw [hgi] at hr; simp only [tgW] at hr; subst hr
-      rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (by simp), hDepsW.k1.arm1] at h
+      rw [hDepsW.k_hoist_ix.arm2 _ _ _ _ _ _ _ _ _ _ (by simp), hDepsW.j1.arm1] at h
       exact ih n m m' T (q + 1) r hE hT hTv hTi hlt (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
     | some jj =>
       rw [hgi] at hr; simp only [tgW] at hr; subst hr
@@ -809,12 +809,12 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         have hne : UInt64.ofNat (jj + 1) ≠ 0 := by
           intro e; have := congrArg UInt64.toNat e
           rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at this; simp at this
-        rw [hDepsW.k3.arm1 _ _ _ _ _ _ _ _ _ _ ⟨hne, hci.mpr hij⟩] at h
+        rw [hDepsW.k_hoist_ix.arm1 _ _ _ _ _ _ _ _ _ _ ⟨hne, hci.mpr hij⟩] at h
         have hj1 : UInt64.ofNat (jj + 1) - 1 = UInt64.ofNat jj := by rw [UInt64.ofNat_add]; simp
         rw [hj1] at h
         rcases hcl : hClosureW n m (UInt64.ofNat i) (UInt64.ofNat jj) ord tg ws with _ | ⟨z, m₁⟩ <;> rw [hcl] at h
-        · simp [hDepsW.k2.eq_1] at h
-        rw [hDepsW.k2.arm1, hDepsW.k1.arm1] at h
+        · simp [hDepsW.k_hoist_closure.eq_1] at h
+        rw [hDepsW.k_hoist_closure.arm1, hDepsW.j1.arm1] at h
         obtain ⟨T₁, hrun, hE₁, hT₁, hTv₁, hfr₁, hTi₁, -, hlt₁⟩ :=
           closure_ok hi hjc n m m₁ T z hE hT hTv hTi hij hlt hcl
         obtain ⟨T'', hrun', hE', hT', hTv', hTi', hfr', hlt'⟩ :=
@@ -824,7 +824,7 @@ theorem deps_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx N
         exact hrun'
       · dsimp only
         rw [if_neg (by omega)]
-        rw [hDepsW.k3.arm2 _ _ _ _ _ _ _ _ _ _ (fun ⟨_, h2⟩ => hij (hci.mp h2)), hDepsW.k1.arm1] at h
+        rw [hDepsW.k_hoist_ix.arm2 _ _ _ _ _ _ _ _ _ _ (fun ⟨_, h2⟩ => hij (hci.mp h2)), hDepsW.j1.arm1] at h
         exact ih n m m' T (q + 1) r hE hT hTv hTi hlt (hG1 m (HFr.refl _ _ _ _)) hl1 (fun _ => ho) hol h
 
 end L.Checker

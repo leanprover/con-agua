@@ -194,3 +194,78 @@ Generator work that would make R2/R3 cheaper (each small):
   final `l_model` (`_tmp/lmodel2/final/`) still elaborate where master did not change the file
   meanwhile (`DeclDivMod4`, `DefEqMidLazy`, `DefEqMidLoops`, `IndPartsSpec10`); the other four are
   stale against master's newer refinements, not against the generator.
+
+## Retrofit (lane `lmretro`)
+
+Branch `lmretro` (worktree `_tmp/wt/lmodel2`), helpers `lmretro-dm`, `lmretro-nat`.
+
+### Step 0: stable names and natural hypotheses (generator)
+
+* **Continuations are named after the call they follow**: `fW.k_g` for the code after a call
+  to `g`, `fW.k_g_2`, `fW.k_g_3`, … for the later calls to `g` in the same model, in source
+  order; `fW.k_loopᵢ` after loop `i`; join points `fW.jᵢ` (numbered among join points). A
+  change elsewhere in the function (a new call to another callee, a new `if`) no longer
+  renumbers them. Implementation: provisional names `base.stem.<pre-order number>` during
+  translation, final names by a pass over the continuations and models afterwards
+  (`finalNames`, `MR.rename`); sharing of equal continuations is unchanged.
+* **Negative-branch hypotheses in natural form**: the arm (and abort) equations take `a = b` on
+  the `else` side of `a ≠ b` (proved by `ite_eq_right (not_not_intro h)`), `a ≠ b` on the
+  `else` side of `a = b`, `p` on the `else` side of `¬ p`; other conditions (`<`, `≤`, `∧`,
+  `∨`) stay `¬ c`. Refinements that passed `(fun h => h hh0)` now pass `hh0`; those whose
+  hypothesis comes from a `by_cases h : x ≠ 0` pass `(Decidable.of_not_not h)` (6 places).
+* **Loops that call their own group**: not done (not cheap: the loop spec would need the group's
+  induction hypothesis at every smaller fuel; no retrofit candidate needs it).
+* Existing families adapted by `_tmp/lmretro/rename.py` (old → new map collected from the
+  generator, 111 continuations in 7 `l_model` files, applied to 17 refinement files): 18 files,
+  +79 net lines in `ModelGen.lean` (+99 −20: the rename pass), refinements unchanged in size
+  (`scripts/loc.py`: proofs 306968 → 307028). Elaboration (`instructions:u`, master vs branch,
+  interleaved): `Lift` 212.6 → 212.7 G, `Hoist` 356.0 → 356.1, `WalkLift` 130.9 → 130.7,
+  `Prelude` 169.0 → 169.1, `Inst1` 148.9 → 149.0, `HoistWalkRef` 12.3 → 12.3, `LiftRefine`
+  8.2 → 8.2: unchanged. Full `ConAgua` build passes.
+
+* **Callees of the group through their spec**: a member of the group that is also listed in
+  `specs` (`callW_spec p n "f"`) is called through that spec, so a self-call stays
+  `callW p n "f" …` in the model (the shape of the hand models whose refinements do induction
+  over `callW`, `DeclDivMod9.loopW` and others; tested), and a loop may call its own function
+  this way. This is the cheap form of "loops that call their own group".
+* **Length conjuncts**: a callee post conjunct `r = [r.headD 0, r.tail.headD 0, …]` is ignored
+  (`erToIw_specW2`).
+* **`simp [lemmas]` step mode**: each step is `vcgen [...] <;> (try simp_all [locals lemmas,
+  the models' and continuations' equations, lemmas]) <;> grind [attrs]` instead of
+  `sym … => vcgen … <;> finish` (PLAN.md's "no `sym … finish` on a function with many
+  paths"); an unused IH is cleared first. On the 21 retrofitted `DefEqMid*` functions (R2,
+  not yet landed) it cuts their files from 566 G to 183 G instructions; on the existing
+  families (Lift, Inst1, WalkLift, Hoist, Prelude) it changes little (±5 %, 3 Hoist/Prelude
+  members and `LevelSimp` fail in it), so they stay in the `finish` mode.
+* Merged master after tieracc-p: its versions of `Inst1Refine`, `WalkLiftRefine`,
+  `HoistWalkRef`, `LiftRefine` taken, the renames reapplied by `_tmp/lmretro/rename.py`
+  (map `_tmp/lmretro/map2.txt`) plus the `hh0`/`Decidable.of_not_not` edits; full build passes.
+
+### R2: `DefEq*`/`Whnf*` 1-file models (branch `lmretro-r2`, helper `lmretro-whnf`)
+
+27 functions retrofitted, all with the `simp` step mode; files' non-blank lines 5756 → 4856
+(−900), elaboration (`instructions:u`, master `52943682` vs branch) 691 G → 321 G:
+
+| file | functions | lines | G |
+|---|---|---:|---:|
+| `DefEqMid` | no_fvars, lazy_fold_ok, bool_true_shortcut, try_unfold_proj_app, delta_quick, defeq_offset, defeq_lams_inner | 762 → 568 | 97.1 → 22.0 |
+| `DefEqMidLams` | lams_inst, lam_pair | 539 → 484 | 54.8 → 48.9 |
+| `DefEqMidLazy` | lds_both, lds_unfold2, lds_same, lazy_delta_step | 792 → 610 | 217.5 → 41.7 |
+| `DefEqMidLazy2` | lazy_nat, lazy_iter | 563 → 465 | 104.8 → 25.2 |
+| `DefEqMidSpine` | spine_head, spine_cmp, defeq_spine2, defeq_spine | 516 → 405 | 54.7 → 18.3 |
+| `DefEqMidLoops` | defeq_lst, defeq_list_rev | 389 → 288 | 37.4 → 26.9 |
+| `WhnfDeltaSlot` | whnf_loop | 342 → 307 | 22.2 → 22.0 |
+| `WhnfIotaRecRefine3` | iota_rec_at, iota_rec_c | 345 → 297 | 12.0 → 13.1 |
+| `WhnfIotaRefine2` | tower_slots_all, inst_spine | 1172 → 1112 | 56.7 → 56.4 |
+| `WhnfProjRefine2` | find_proj | 336 → 320 | 18.2 → 18.7 |
+
+Refinement churn as in the measurements: `rw [fW.arm1] at hW` after the spec (now taken at
+`n + 1`), `xK_t (h := h)` → `fW.k_g.armᵢ (hc1 := h)`, `cases`/`.none` for failed calls, the
+generic tails over the shared continuation (`ldsStepW.k_delta_quick p (callW …)`); a
+continuation that ends in a call is definitionally `call1W` (`change call1W p _ _ _ _ = _ at hW`).
+Hand models with a store guard (`s2K3`'s `136 < size`) need the bound from the relation instead
+(`CoreS` memos, as `CoreS.ctl136`). Skipped: `defeq_lams`, `lazy_delta_reduction` (hand loop
+models with call-hypothesis arms used by the loop refinements: not cheap); `lams_open` (model
+read in `IndPartsSpec5`); `lds_left`/`lds_right` (shared continuation `llK3`); `whnf_core_app`,
+`whnf_core_app2` (`WhnfCoreStep`: +52 %, the generator's fixed cost of ~4 G per function in a
+6 G file).

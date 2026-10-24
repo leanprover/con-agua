@@ -52,42 +52,11 @@ def lamsInstT (depth : Nat) (ty₂ body₁ body₂ : EIdx) : AM (EIdx × EIdx) :
 /-- `(b1, b2)`. -/
 def decPair (r : List Word) : EIdx × EIdx := (decE (r.headD 0), decE (r.tail.headD 0))
 
-section liK
-variable (p : Prog) (n : Nat) (body₂ : Word)
-
-def linK3 (b₁ : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => some (b₁, r.headD 0, m)
-
-def linK2 (fv : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => linK3 (r.headD 0) (callW p n "inst1" [body₂, fv, 0] m)
-
-def linK1 (body₁ : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => linK2 p n body₂ (r.headD 0) (callW p n "inst1" [body₁, r.headD 0, 0] m)
-
-variable (r : List Word) (m : Mem) (b₁ fv body₁ : Word)
-theorem linK3_s : linK3 b₁ (some (r, m)) = some (b₁, r.headD 0, m) := rfl
-theorem linK2_s : linK2 p n body₂ fv (some (r, m)) =
-    linK3 (r.headD 0) (callW p n "inst1" [body₂, fv, 0] m) := rfl
-theorem linK1_s : linK1 p n body₂ body₁ (some (r, m)) =
-    linK2 p n body₂ (r.headD 0) (callW p n "inst1" [body₁, r.headD 0, 0] m) := rfl
-end liK
-
-theorem lamsInst_spec (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (d ty₂ body₁ body₂ : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lams_inst" [d, ty₂, body₁, body₂]
-    ⦃fun r s' => LocEq s' s₀ ∧ linK1 p n body₂ body₁ (callW p n "intern_fvar" [d, ty₂] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.inst]
-  simp only [callFn, lamsInstL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "intern_fvar",
-      callW_spec p n "inst1"] <;>
-    finish [linK1_s, linK2_s, linK3_s]
+/-- **`lams_inst` is its model `linW`** (generated). -/
+l_model lamsInst_spec (p : Prog) (hp : LamsProg p)
+  fns [hp.inst ↦ linW tuple]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1"]
+  grind [arena_grind] simp []
 
 /-- **`lams_inst` refines `lamsInstT`.** -/
 theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat) (s₀ : St)
@@ -99,22 +68,23 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (lamsInst_spec p hp n s₀ d ty₂ body₁ body₂)
+    (lamsInst_spec p hp (n + 1) s₀ d ty₂ body₁ body₂)
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold lamsInstT internFVarE
+  rw [linW.arm1] at hW
   cases hc1 : callW p n "intern_fvar" [d, ty₂] s.mem with
   | none => rw [hc1] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [hc1, linK1_s] at hW
+  rw [hc1, linW.k_intern_fvar.arm1] at hW
   have e₁ := (peel_internFVar_core hp.peel hS d ty₂ h₂ r₁ hc1).1
   refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
   cases hc2 : callW p n "inst1" [body₁, r₁.headD 0, 0] m₁ with
   | none => rw [hc2] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, linK2_s] at hW
+  rw [hc2, linW.k_inst1.arm1] at hW
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (hi n _ _ dn vis fe M₁ eb body₁ (r₁.headD 0) 0 hS₁ hb₁ e₁.2.2.2) hc2
   rw [toNat_zero_w] at e₂
@@ -123,7 +93,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   | none => rw [hc3] at hW; cases hW
   | some q =>
   obtain ⟨r₃, m₃⟩ := q
-  rw [hc3, linK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  rw [hc3, linW.k_inst1_2.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, hm⟩ := hW
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (hi n _ _ dn vis fe M₂ eb body₂ (r₁.headD 0) 0 hS₂ hb₂ e₁.2.2.2) hc3
@@ -232,46 +202,11 @@ theorem lamsOpen_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
 
 /-! ## `lam_pair` -/
 
-section lpK
-variable (p : Prog) (n : Nat) (b : Word)
-
-def lpK2 (ra : List Word) (res : Option (List Word × Mem)) :
-    Option (Word × Word × Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (rb, m) => some (1, ra.tail.headD 0, ra.tail.tail.headD 0, rb.tail.headD 0,
-      rb.tail.tail.headD 0, m)
-
-def lpK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (ra, m) => lpK2 ra (callW p n "e_view" [b] m)
-
-/-- The model of `lam_pair`. -/
-def lpeelW (m : Mem) (a : Word) : Option (Word × Word × Word × Word × Word × Mem) :=
-  if a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5 then some (0, 0, 0, 0, 0, m)
-  else lpK1 p n b (callW p n "e_view" [a] m)
-
-variable (ra rb : List Word) (m : Mem) (a : Word)
-theorem lpK2_s : lpK2 ra (some (rb, m)) = some (1, ra.tail.headD 0, ra.tail.tail.headD 0,
-    rb.tail.headD 0, rb.tail.tail.headD 0, m) := rfl
-theorem lpK1_s : lpK1 p n b (some (ra, m)) = lpK2 ra (callW p n "e_view" [b] m) := rfl
-theorem lpW_no (h : a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5) : lpeelW p n b m a = some (0, 0, 0, 0, 0, m) := by
-  simp only [lpeelW, h, ↓reduceIte]
-theorem lpW_go (h : ¬ (a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5)) :
-    lpeelW p n b m a = lpK1 p n b (callW p n "e_view" [a] m) := by
-  simp only [lpeelW, h, ↓reduceIte]
-end lpK
-
-theorem lamPair_spec (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lam_pair" [a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ lpeelW p n b s₀.mem a = some (r.headD 0, r.tail.headD 0,
-      r.tail.tail.headD 0, r.tail.tail.tail.headD 0, r.tail.tail.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pair]
-  simp only [callFn, lamPairL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "e_view"] <;>
-    finish (gen := 50) [lpW_no, lpW_go, lpK1_s, lpK2_s, St.setLocs_mem']
+/-- **`lam_pair` is its model `lpeelW`** (generated). -/
+l_model lamPair_spec (p : Prog) (hp : LamsProg p)
+  fns [hp.pair ↦ lpeelW tuple]
+  specs [callW_spec p n "e_view"]
+  grind [arena_grind] simp [St.setLocs_mem']
 
 /-- `(f, ty1, body1, ty2, body2)`. -/
 def decLP (r : List Word) : Option (EIdx × EIdx × EIdx × EIdx) :=
@@ -296,13 +231,13 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
       Res5 := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lamPair_spec p hp n s₀ a b)
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lamPair_spec p hp (n + 1) s₀ a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold lamPair?
   simp only [tag_lam_beq a ha, tag_lam_beq b hb, Bool.and_eq_true, decide_eq_true_eq]
   by_cases hno : a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5
-  · rw [lpW_no (h := hno), Option.some.injEq] at hW
+  · rw [lpeelW.arm1 (hc1 := hno), Option.some.injEq] at hW
     simp only [Prod.mk.injEq] at hW
     obtain ⟨g1, g2, g3, g4, g5, hm⟩ := hW
     have hc : ¬ (a >>> 28 = 5 ∧ b >>> 28 = 5) := fun h => hno.elim (fun h' => h' h.1) (fun h' => h' h.2)
@@ -310,7 +245,7 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
     rw [← hm]
     exact coreRef_ret hS (by simp only [decLP, ← g1, ↓reduceIte])
       ⟨g1 ▸ hw0, g2 ▸ hw0, g3 ▸ hw0, g4 ▸ hw0, g5 ▸ hw0⟩
-  rw [lpW_go (h := hno)] at hW
+  rw [lpeelW.arm2 (hc1 := hno)] at hW
   have h5a : a >>> 28 = 5 := Classical.byContradiction fun h => hno (.inl h)
   have h5b : b >>> 28 = 5 := Classical.byContradiction fun h => hno (.inr h)
   simp only [h5a, h5b, and_self, ↓reduceIte]
@@ -318,13 +253,13 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   | none => rw [hc1] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [hc1, lpK1_s] at hW
+  rw [hc1, lpeelW.k_e_view.arm1] at hW
   obtain ⟨rfl, ha1, ha2, hva⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.1 ha h5a hc1
   cases hc2 : callW p n "e_view" [b] s.mem with
   | none => rw [hc2] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
-  rw [hc2, lpK2_s, Option.some.injEq] at hW
+  rw [hc2, lpeelW.k_e_view_2.arm1, Option.some.injEq] at hW
   simp only [Prod.mk.injEq] at hW
   obtain ⟨g1, g2, g3, g4, g5, hm⟩ := hW
   obtain ⟨rfl, hb1, hb2, hvb⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.1 hb h5b hc2

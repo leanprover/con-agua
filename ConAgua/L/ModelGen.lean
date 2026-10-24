@@ -16,8 +16,10 @@ public section
   with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
   group member as that member's model at fuel `n`, a call to another function as the model its
   spec states (`specs`), and the code after an effectful call as a first-order continuation
-  `fW.kᵢ` (`| none => none | some (x, m₁) => …`) over the locals it reads. The code after an `if`
-  whose branches both fall through is a join point `fW.kᵢ` over the locals and the memory (no
+  `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
+  callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
+  that a change elsewhere in the code does not rename it. The code after an `if`
+  whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
   copy of it). Equal continuations of the group are shared;
 * a function with **several results** (`return (a, b, …)`) gets a list model
   `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
@@ -35,8 +37,9 @@ public section
   becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
   Named blocks without a loop are inlined;
 * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
-  continuation (the path's conditions as hypotheses, in order), each with a `grind_pattern` in the
-  `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.kᵢ.none` for each continuation (no
+  continuation (the path's conditions as hypotheses, in order; on the negative side in their
+  natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
+  `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
   patterns);
 * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
   fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
@@ -69,17 +72,22 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `r.tail.headD 0`, …), `F = some r` (several results, read-only), `F = some (r.headD 0,
   r.tail.headD 0, …[, s'.mem])` (a tuple: a continuation over `some (r₀, r₁, …, m₁)`). A spec for
   any argument list (`invoke p (exec p n) "f" vs`, `callW_spec p n "f"`) applies to every call.
+  A member of the group listed here is called through its spec, not as its model (a recursive
+  call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
+  `r = [r.headD 0, …]` (the result's length) is ignored.
 * `fold`: named functions whose bodies are folded back into the model: word arithmetic
   (`tierW h = (h >>> 27) &&& 1`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` instead of a named one (`bind ntBW`: the hand models of `Decl*`).
 * `extra`: more lemmas for `vcgen` (the default is `exec, step, evalE, evalC, evalArgs, setLoc,
   setLocs, ld64, st64, setG`); `finish`, `gen`, `instances`: the hints and configuration of
-  `finish`; `sym "…"`: options of `sym`; `heartbeats`: per step theorem; `trace`: log the
+  `finish`; `sym "…"`: options of `sym`; `simp [lemmas]`: prove each step by `vcgen` and
+  `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
+  `sym … finish` (cheaper for many paths and small functions); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
 
 Not supported (an error names the statement or the callee): nested loops, a loop that calls a
-member of its own group, byte stores, `FunDecl`s with parameters (`memoFindG S`) and models with
+member of its own group (unless through its spec, above), byte stores, `FunDecl`s with parameters (`memoFindG S`) and models with
 Lean parameters, members that only change the memory. Array bounds are not modelled: a load is
 `rdW` (`0` out of bounds), a store is `Mem.set64` (no change out of bounds); where L aborts, the
 spec says nothing.
@@ -436,7 +444,12 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         if a == s' && b == s0 then memSame := true
         else if a == memS' && b == memE then memSame := true
         else if a == memS' then memTot := some b
-        else if a == r then listF := some b
+        else if a == r then
+          -- `r = [r.headD 0, r.tail.headD 0, …]` (the result's length) says nothing for the model
+          let shape := match b.listLit? with
+            | some (_, es) => (es.toArray.mapIdx fun i e => resIdx r e == some i).all id
+            | none => false
+          unless shape do listF := some b
         else if let some i := resIdx r a then pures := pures.push (i, b)
         else
           -- `(c₀, c₁, …)`
@@ -641,7 +654,12 @@ meta structure GenState where
   base : Name := .anonymous
   /-- the functions called by the function being translated -/
   called : Array String := #[]
+  /-- the callee of the call being translated (names its continuation `fW.k_f`) -/
+  callHint : String := ""
+  /-- the next pre-order number of a continuation (`provName`) -/
+  seq : Nat := 0
   deriving Inhabited
+
 
 /-- A join point: its name, whether it takes the fuel, the locals it takes, whether it takes the
 memory. -/
@@ -672,6 +690,11 @@ meta def memIdent : Name := `m
 meta def mem1Ident : Name := `m₁
 
 abbrev GenM := StateRefT GenState TermElabM
+
+/-- A provisional continuation name `base.stem.i` (`i` in source order of creation); `finalNames`
+turns them into `base.stem`, `base.stem_2`, … (join points `base.j1`, `base.j2`, …). -/
+meta def provName (stem : String) (seq : Nat) : GenM Name := do
+  return Name.mkNum ((← get).base ++ Name.mkSimple stem) seq
 
 meta structure Env where
   /-- the members: L name, model, read-only, several results (a list), tuple arity -/
@@ -1075,7 +1098,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
 meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) : GenM MR := do
   let fname := f.getId.toString
-  modify fun st => { st with called := st.called.push fname }
+  modify fun st => { st with called := st.called.push fname, callHint := fname }
   let argsT ← args.mapM fun a => do (← transE E ctx a).render
   let memT ← ctx.mem.render
   let xk ← xs.mapM fun x => match ctx.idx x with
@@ -1103,7 +1126,11 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     match g with
     | `($a ≠ $b) => return .cmp "=" (.raw a) (.raw b)
     | _ => return .not (.cmp "=" (.raw (← `(decide $g))) (.raw (← `(true))))
-  if let some (_, w, wro, wlist, wtup) := E.group.find? (·.1 == fname) then
+  -- a member of the group with a spec in `specs` is called through that spec (`callW_spec p n
+  -- "f"`: the self-call stays a `callW` in the model, as in hand models whose refinements do
+  -- induction over `callW`)
+  let viaSpec := E.callees.any (·.1 == fname)
+  if let some (_, w, wro, wlist, wtup) := (if viaSpec then none else E.group.find? (·.1 == fname)) then
     if ctx.loop.isSome then
       throwErrorAt f "l_model: a loop calls a member of the group (not supported)"
     let t ← `($(mkIdent w) $(E.mps.map (fun x => (mkIdent x : Term)))* $(mkIdent `n) $memT $argsT*)
@@ -1178,6 +1205,8 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
 reads. -/
 meta partial def mkK (E : Env) (ctx : Ctx) (binder : Nat) (res : Option Nat) (xk : Array Nat)
     (callT : MT) (rest : List (TSyntax `lstmt)) (tupN : Nat := 0) (tupRo : Bool := false) : GenM MR := do
+  let hint := (← get).callHint
+  let seq ← modifyGet fun st => (st.seq, { st with seq := st.seq + 1 })
   -- binder `5` (a callee with `tupN` results): `some (r₀, r₁, …, m₁)`
   let lres : Array Name := (List.range tupN).toArray.map fun i => Name.mkSimple s!"r{subDigits i}"
   let resName := match res with
@@ -1217,8 +1246,7 @@ meta partial def mkK (E : Env) (ctx : Ctx) (binder : Nat) (res : Option Nat) (xk
   let name ← match st.ks.find? (·.key == k) with
     | some kd => pure kd.name
     | none => do
-      let cnt := (st.ks.filter (fun kd => kd.name.getPrefix == st.base && kd.binder != 7)).size
-      let name := st.base ++ Name.mkSimple s!"k{cnt + 1}"
+      let name ← provName s!"k_{hint}" seq
       let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
       let kd : KDef := { name, fuel, caps, capMem, binder, res := resName, body, key := k, refs, inLoop := ctx.loop.map (·.name), lres, lro := tupRo }
       modify fun st => { st with ks := st.ks.push kd }
@@ -1248,6 +1276,7 @@ meta partial def bindK (E : Env) (ctx : Ctx) (xk : Array Nat) (callT : MT)
 as a definition over the locals it reads and the memory; the branches end by applying it. -/
 meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
     GenM Join := do
+  let seq ← modifyGet fun st => (st.seq, { st with seq := st.seq + 1 })
   let env : Array MT := ctx.names.map fun n => .raw (mkIdent n)
   let ctx' : Ctx := { ctx with env, mem := .raw (mkIdent memIdent) }
   let body ← transS E ctx' rest
@@ -1266,8 +1295,7 @@ meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
   let name ← match st.ks.find? (·.key == k) with
     | some kd => pure kd.name
     | none => do
-      let cnt := (st.ks.filter (fun kd => kd.name.getPrefix == st.base && kd.binder != 7)).size
-      let name := st.base ++ Name.mkSimple s!"k{cnt + 1}"
+      let name ← provName "j" seq
       let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
       let kd : KDef := { name, fuel, caps, capMem, binder := 3, res := `r, body, key := k, refs, inLoop := ctx.loop.map (·.name) }
       modify fun st => { st with ks := st.ks.push kd }
@@ -1359,8 +1387,7 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
     | some kd => pure kd.name
     | none => do
       let st ← get
-      let cnt := (st.ks.filter (fun kd => kd.name.getPrefix == st.base && kd.binder != 7)).size
-      let kn := st.base ++ Name.mkSimple s!"k{cnt + 1}"
+      let kn ← provName s!"k_{name.getString!}" 0
       let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
       let kd : KDef := { name := kn, fuel := fuelK, caps, capMem := capMemK, binder := 5, res := `r, body := bodyK, key := kkey, refs, lres, lsig := sig, lro := ctx.ro, inLoop := ctx.loop.map (·.name) }
       modify fun st => { st with ks := st.ks.push kd }
@@ -1390,6 +1417,55 @@ meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : O
   return .tail (.app kName (raws E.mps ++ (if fuelK then #[MT.raw (mkIdent `n)] else #[]) ++ capVals ++
     (if capMemK then #[ctx.mem] else #[]) ++ #[loopCall]))
 end
+
+/-! ## Final continuation names -/
+
+/-- Rename the identifiers of a term. -/
+meta def renameT (rn : Name → Option Name) (t : Term) : Term :=
+  ⟨replaceStx t.raw fun s => match s with
+    | .ident _ _ n _ => (rn n).map fun n' => (mkIdent n').raw
+    | _ => none⟩
+
+meta partial def MT.rename (rn : Name → Option Name) : MT → MT
+  | .op o a b => .op o (a.rename rn) (b.rename rn)
+  | .rd m a i => .rd (m.rename rn) (renameT rn a) (i.rename rn)
+  | .rd8 m a i => .rd8 (m.rename rn) (renameT rn a) (i.rename rn)
+  | .app f as => .app ((rn f).getD f) (as.map (·.rename rn))
+  | .raw t => .raw (renameT rn t)
+  | .list xs => .list (xs.map (·.rename rn))
+  | t => t
+
+meta partial def MC.rename (rn : Name → Option Name) : MC → MC
+  | .cmp o a b => .cmp o (a.rename rn) (b.rename rn)
+  | .and p q => .and (p.rename rn) (q.rename rn)
+  | .or p q => .or (p.rename rn) (q.rename rn)
+  | .not p => .not (p.rename rn)
+
+meta partial def MR.rename (rn : Name → Option Name) : MR → MR
+  | .some v m => .some (v.rename rn) (m.rename rn)
+  | .someW v => .someW (v.rename rn)
+  | .ite c t e => .ite (c.rename rn) (t.rename rn) (e.rename rn)
+  | .tail t => .tail (t.rename rn)
+  | .tup vs => .tup (vs.map (·.rename rn))
+  | .none => .none
+
+/-- The final names of the provisional ones (`provName`): per model and stem in source order,
+`stem`, `stem_2`, … (join points `j1`, `j2`, …). -/
+meta def finalNames (ks : Array KDef) : Std.HashMap Name Name := Id.run do
+  let prov := ks.filterMap fun kd => match kd.name with
+    | .num p i => some (p, i, kd.name)
+    | _ => none
+  let prov := prov.qsort fun (p, i, _) (q, j, _) => p.toString < q.toString || (p == q && i < j)
+  let mut m : Std.HashMap Name Name := {}
+  let mut cnt : Std.HashMap Name Nat := {}
+  for (p, _, n) in prov do
+    let c := cnt.getD p 0 + 1
+    cnt := cnt.insert p c
+    let stem := p.getString!
+    let fin := if stem == "j" then p.getPrefix ++ Name.mkSimple s!"j{c}"
+      else if c == 1 then p else p.getPrefix ++ Name.mkSimple s!"{stem}_{c}"
+    m := m.insert n fin
+  return m
 
 /-! ## Leaves and guarded equations -/
 
@@ -1425,6 +1501,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" sym " str)?
   (&" bind " ident)?
   (&" instances " num)?
+  (&" simp " "[" term,* "]")?
   (&" trace")? : command
 
 meta structure FnInfo where
@@ -1470,7 +1547,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let symCfg : String := if stx[15].getNumArgs == 0 then "" else (stx[15][1].isStrLit?.getD "") ++ " "
   let bindC : Option Name := if stx[16].getNumArgs == 0 then none else some stx[16][1].getId
   let instN : Option Nat := if stx[17].getNumArgs == 0 then none else stx[17][1].isNatLit?
-  let doTrace := stx[18].getNumArgs != 0
+  let simpTs? : Option (Array Term) := if stx[18].getNumArgs == 0 then none else some ((optList 18).map (⟨·⟩))
+  let doTrace := stx[19].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -1549,7 +1627,14 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     go.run {}
   let calledBy := bodies.map (·.2.1)
   let loopsBy := bodies.map (·.2.2)
-  let bodies := bodies.map (·.1)
+  -- the final names of the continuations
+  let fin := finalNames st.ks
+  let rn (n : Name) : Option Name := fin.get? n
+  let rnKD (kd : KDef) : KDef :=
+    { kd with name := (rn kd.name).getD kd.name, refs := kd.refs.map (fun r => (rn r).getD r),
+              body := kd.body.rename rn }
+  let st : GenState := { st with ks := st.ks.map rnKD }
+  let bodies := bodies.map (·.1.rename rn)
   -- a single member that needs no fuel (no recursion, no fuel-dependent callee, no continuation
   -- that needs it) gets a model without the fuel argument
   let noFuel : Bool ← do
@@ -1718,6 +1803,20 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       progress := true
     unless progress do throwError "l_model: cannot order the definitions"
   -- guarded equations, one per leaf that is not `none`
+  -- a path condition as a hypothesis, in its natural form on the negative side (`a = b` for
+  -- `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), and its rewrite rule
+  let hypOf (c : MC) (pos : Bool) (h : Ident) :
+      CommandElabM (Term × TSyntax ``Lean.Parser.Tactic.rwRule) := liftTermElabM do
+    if pos then return (← c.render, ← `(Lean.Parser.Tactic.rwRule| ite_eq_left $h:ident))
+    match c with
+    | .cmp "≠" a b =>
+      return (← `($(← a.render) = $(← b.render)),
+        ← `(Lean.Parser.Tactic.rwRule| ite_eq_right (not_not_intro $h:ident)))
+    | .cmp "=" a b =>
+      return (← `($(← a.render) ≠ $(← b.render)), ← `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
+    | .not p =>
+      return (← p.render, ← `(Lean.Parser.Tactic.rwRule| ite_eq_right (not_not_intro $h:ident)))
+    | _ => return (← `(¬ $(← c.render)), ← `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
   let attrsOf (thm : Ident) (lhs : Term) : CommandElabM Unit := do
     for a in attrIds do
       emit doTrace (← `(command| grind_pattern [$a:ident] $thm:ident => $lhs))
@@ -1733,12 +1832,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let mut j := 0
       for (c, pos) in path do
         j := j + 1
-        let ct ← liftTermElabM c.render
         let h := mkIdent (Name.mkSimple s!"hc{j}")
-        let ty ← if pos then pure ct else `(¬ $ct)
+        let (ty, rule) ← hypOf c pos h
         hyps := hyps.push (← `(Lean.Parser.Term.bracketedBinderF| ($h : $ty)))
-        rules := rules.push (← if pos then `(Lean.Parser.Tactic.rwRule| ite_eq_left $h:ident)
-          else `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
+        rules := rules.push rule
       let rhs ← liftTermElabM leaf.render
       let thm := mkIdent (name ++ Name.mkSimple s!"arm{k}")
       emit doTrace (← `(command|
@@ -1753,12 +1850,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let mut j := 0
       for (c, pos) in path do
         j := j + 1
-        let ct ← liftTermElabM c.render
         let h := mkIdent (Name.mkSimple s!"hc{j}")
-        let ty ← if pos then pure ct else `(¬ $ct)
+        let (ty, rule) ← hypOf c pos h
         hyps := hyps.push (← `(Lean.Parser.Term.bracketedBinderF| ($h : $ty)))
-        rules := rules.push (← if pos then `(Lean.Parser.Tactic.rwRule| ite_eq_left $h:ident)
-          else `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
+        rules := rules.push rule
       let thm := mkIdent (name ++ Name.mkSimple s!"abort{a}")
       emit doTrace (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = Option.none := by rw [$rules,*]))
@@ -1820,6 +1915,19 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let genTxt := (match genN with | some g => s!"(gen := {g}) " | none => "") ++
     (match instN with | some i => s!"(instances := {i}) " | none => "")
   let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
+  -- `simp [..]`: the steps by `vcgen` then `simp_all` over the models' equations (PLAN.md, "no
+  -- `sym … finish` on a function with many paths"), instead of `sym … => vcgen … <;> finish`
+  let simpTxt? ← simpTs?.mapM fun ts => do
+    let user ← ts.toList.mapM (pp ·.raw)
+    let base := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
+      "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
+      "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
+      "List.tail_cons", "List.tail_nil"]
+    let models := (fis.toList.map (s!"{·.model}")) ++ (st.ks.toList.map (s!"{·.name}"))
+    pure (String.intercalate ", " (base ++ models ++ user))
+  let stepTac (attrs vcg : String) : String := match simpTxt? with
+    | some l => s!"(vcgen [{vcg}] <;> (try simp_all [{l}]) <;> grind [{attrs}])"
+    | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
     if doTrace then logInfo m!"{txt}"
     match Parser.runParserCategory (← getEnv) `tactic s!"({txt})" with
@@ -1880,7 +1988,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64", "L.st64", "L.setG"] ++
         extraTxt).eraseDups ++ calleeSpecs lm.called ++ ["ih"])
-    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; sym {symCfg}only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; {stepTac attrsTxt vcg}"
     emit doTrace (← withHB (← `(command|
       /-- The loop's spec (generated by `l_model`): its model is its meaning. -/
       theorem $(mkIdent (lm.name ++ `spec)):ident $bs* ($nI : Nat) ($s0 : L.St) :
@@ -1956,8 +2064,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let pre := s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {unf}]"
     let g := if k == 1 then "" else s!"case g{i+1} => "
     zero := zero ++ s!"\n    {g}({pre}; vcgen [L.exec] <;> grind)"
-    let ihTxt := if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
-    let tac ← parseTac s!"{ihTxt}; {pre}; sym {symCfg}only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    -- under `simp`, an unused induction hypothesis is cleared (`simp_all` would rewrite it)
+    let ihTxt := if simpTs?.isSome && !fis.any (called.contains ·.lname) then "clear ih"
+      else if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
+    let tac ← parseTac s!"{ihTxt}; {pre}; {stepTac attrsTxt vcg}"
     let stepName := mkIdent (specName.getId ++ Name.mkSimple s!"step{i+1}")
     emit doTrace (← withHB (← `(command|
       theorem $stepName:ident $bs* $nB:bracketedBinder $ihB:bracketedBinder : $ci := by $(⟨tac⟩):tactic)))

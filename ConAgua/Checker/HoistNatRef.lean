@@ -211,20 +211,20 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
   | succ k =>
   rw [hNatOpRecW.arm1] at h
   rcases h1 : callW p k "nat_div_mod_names" [] m with _ | ⟨r1, ma⟩ <;> rw [h1] at h
-  · simp [hNatOpRecW.k4] at h
-  rw [hNatOpRecW.k4.arm1] at h
+  · simp [hNatOpRecW.k_nat_div_mod_names] at h
+  rw [hNatOpRecW.k_nat_div_mod_names.arm1] at h
   obtain ⟨h0, hS1⟩ := natDivModNames_call hx k m r1 ma hI h1
   have hF := hP h0
   rcases h2 : callW p k "nat_op_names" [] ma with _ | ⟨r2, mb⟩ <;> rw [h2] at h
-  · simp [hNatOpRecW.k3] at h
-  rw [hNatOpRecW.k3.arm1] at h
+  · simp [hNatOpRecW.k_nat_op_names] at h
+  rw [hNatOpRecW.k_nat_op_names.arm1] at h
   obtain ⟨_, hS2⟩ := natOpNames_call hx k ma r2 mb hS1.1.2.2 h2
   cases ha : hSliceHasW k mb (r1.headD 0) (r1.tail.headD 0) w 0 with
-  | none => rw [ha] at h; simp [hNatOpRecW.k2] at h
+  | none => rw [ha] at h; simp [hNatOpRecW.k_slice_has] at h
   | some av =>
-  rw [ha, hNatOpRecW.k2.arm1] at h
+  rw [ha, hNatOpRecW.k_slice_has.arm1] at h
   rcases hb : hSliceHasW k mb (r2.headD 0) (r2.tail.headD 0) w 0 with _ | bv <;> rw [hb] at h
-  · simp [hNatOpRecW.k1] at h
+  · simp [hNatOpRecW.k_slice_has_2] at h
   have ha' := hS1.has hS2.1.2.1 ha
   have hb' := hS2.has (IWGrow.refl mb) hb
   simp only [hS1.1.pinW_eq] at hb'
@@ -241,14 +241,14 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
   simp only [List.map_cons, List.map_nil] at hc1 hc2
   have hop : op ≠ 0 ↔ (av ≠ 0 ∨ bv ≠ 0) := by
     by_cases hc : av ≠ 0 ∨ bv ≠ 0
-    · rw [hNatOpRecW.k1.arm1 _ _ _ _ hc] at h; cases h; simp only [hc, iff_true]; decide
-    · rw [hNatOpRecW.k1.arm2 _ _ _ _ hc] at h; cases h; simp only [hc, iff_false]; decide
+    · rw [hNatOpRecW.k_slice_has_2.arm1 _ _ _ _ hc] at h; cases h; simp only [hc, iff_true]; decide
+    · rw [hNatOpRecW.k_slice_has_2.arm2 _ _ _ _ hc] at h; cases h; simp only [hc, iff_false]; decide
   refine ⟨hF, _, _, natDivModNames_run hF, natOpNames_run hF, ?_, ?_⟩
   · rw [hop, Bool.or_eq_true, hc1, hc2, ha', hb']
   · have hm : m₁ = mb := by
       by_cases hc : av ≠ 0 ∨ bv ≠ 0
-      · rw [hNatOpRecW.k1.arm1 _ _ _ _ hc] at h; cases h; rfl
-      · rw [hNatOpRecW.k1.arm2 _ _ _ _ hc] at h; cases h; rfl
+      · rw [hNatOpRecW.k_slice_has_2.arm1 _ _ _ _ hc] at h; cases h; rfl
+      · rw [hNatOpRecW.k_slice_has_2.arm2 _ _ _ _ hc] at h; cases h; rfl
     subst hm
     exact hS1.1.trans hS2.1
 

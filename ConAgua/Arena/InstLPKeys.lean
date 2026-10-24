@@ -29,7 +29,7 @@ def keysOkW : Nat → Mem → Word → Word → Option Unit
     else if 4294967296 ≤ rdW (m.arr64 SPN) o then none
     else if tierW (rdW (m.arr64 SPN) o) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if (3 : Word) ≤ rdW (m.arr64 SPN) o >>> 28 then none
-    else if rdW (m.arr64 CTL) ((34 : Word) + (rdW (m.arr64 SPN) o >>> 28) * 2 + tierW (rdW (m.arr64 SPN) o)) ≤
+    else if nameCnt m (rdW (m.arr64 SPN) o >>> 28) (tierW (rdW (m.arr64 SPN) o)) ≤
         idxW (rdW (m.arr64 SPN) o) then none
     else keysOkW n m (o + 1) (l - 1)
 
@@ -39,7 +39,7 @@ def keysOkW : Nat → Mem → Word → Word → Option Unit
       else if 4294967296 ≤ rdW (m.arr64 SPN) o then none
       else if tierW (rdW (m.arr64 SPN) o) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
       else if (3 : Word) ≤ rdW (m.arr64 SPN) o >>> 28 then none
-      else if rdW (m.arr64 CTL) ((34 : Word) + (rdW (m.arr64 SPN) o >>> 28) * 2 + tierW (rdW (m.arr64 SPN) o)) ≤
+      else if nameCnt m (rdW (m.arr64 SPN) o >>> 28) (tierW (rdW (m.arr64 SPN) o)) ≤
           idxW (rdW (m.arr64 SPN) o) then none
       else keysOkW n m (o + 1) (l - 1) := rfl
 
@@ -55,7 +55,7 @@ theorem keysOk_spec (p : Prog) (hk : p.lookup "keys_ok" = some keysOk) (n : Nat)
     simp only [callFn, keysOk]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, ih] <;>
-      finish [tierW, idxW]
+      finish [tierW, idxW, nameCnt]
 
 /-- A name handle that views reads back. -/
 theorem viewN_den {a : AState} (hwf : NStoreWF a.store.lss.ls.ns) {h : NIdx} {v : NNodeView} {a' : AState}
@@ -110,18 +110,12 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
         · exact .inr (.inr (e 2 (by omega) e0))
       rcases hg with hg | hg | hg
       · rw [hg] at h4
-        exact viewN_den hwf (viewN_anon hR hww h2 hg (by simpa [tcnt] using h4))
+        exact viewN_den hwf (viewN_anon hR hww h2 hg (by simpa [nameCnt] using h4))
       · rw [hg] at h4
-        obtain ⟨s, hr, -⟩ := viewN_str hR hww h2 hg (by
-          have : (34 : Word) + 1 * 2 + tierW w = 36 + tierW w := by
-            rw [show (34 : Word) + 1 * 2 = 36 by decide]
-          rwa [this] at h4)
+        obtain ⟨s, hr, -⟩ := viewN_str hR hww h2 hg (by simpa [nameCnt] using h4)
         exact viewN_den hwf hr
       · rw [hg] at h4
-        obtain ⟨hr, -⟩ := viewN_num hR hww h2 hg (by
-          have : (34 : Word) + 2 * 2 + tierW w = 38 + tierW w := by
-            rw [show (34 : Word) + 2 * 2 = 38 by decide]
-          rwa [this] at h4)
+        obtain ⟨hr, -⟩ := viewN_num hR hww h2 hg (by simpa [nameCnt] using h4)
         exact viewN_den hwf hr
     obtain ⟨x, hx⟩ := hx
     -- the rest
