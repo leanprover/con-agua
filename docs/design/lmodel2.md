@@ -189,4 +189,8 @@ Generator work that would make R2/R3 cheaper (each small):
 * 2026-10-24: survey; several results (list, tuple), loops, SCC emission; tests on
   `block_rec_want`, `defeq_lst`, `infer_pis_leaf`, `app_fill`, `dec_len`, `reserved_contains`,
   `head_hint`, `lds_both`; fused loop exits, abort/none lemmas, `bind`; scratch retrofits of 8
-  files (23 functions); folded into `ModelGen.lean`.
+  files (23 functions); folded into `ModelGen.lean`; full build of `ConAgua` passes before and after merging master
+  (tieracc batch 2), the existing `l_model` families unchanged. The scratch copies with the
+  final `l_model` (`_tmp/lmodel2/final/`) still elaborate where master did not change the file
+  meanwhile (`DeclDivMod4`, `DefEqMidLazy`, `DefEqMidLoops`, `IndPartsSpec10`); the other four are
+  stale against master's newer refinements, not against the generator.
