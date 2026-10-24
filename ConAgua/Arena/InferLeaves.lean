@@ -306,11 +306,11 @@ theorem mkForall_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   have hS' : CoreS dn m' _ vis fe M eb := hS.arena_frame hD (Keeps.run (keeps_cpl_internForall _ _) hrun) hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by simp [FADER, FAREC, FASLOT, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
