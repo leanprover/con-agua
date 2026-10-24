@@ -99,6 +99,8 @@ meta inductive MR where
   | ite (c : MC) (t e : MR)
   /-- a term of the model's result type (a callee's model, a continuation) -/
   | tail (t : MT)
+  /-- `some (v₁, …, vₖ)` (a loop's result) -/
+  | tup (vs : Array MT)
   deriving Inhabited
 
 meta def mkNum (n : Nat) : Term := Syntax.mkNumLit (toString n)
@@ -157,6 +159,12 @@ meta partial def MR.render : MR → MetaM Term
     let e ← e.render
     `(if $c then $t else $e)
   | .tail t => t.render
+  | .tup vs => do
+    let vs ← vs.mapM MT.render
+    match vs.size with
+    | 0 => `(Option.some ())
+    | 1 => `(Option.some $(vs[0]!))
+    | _ => `(Option.some ($(vs[0]!), $(vs.extract 1 vs.size),*))
 
 /-- The string form of a term (for comparisons). -/
 meta def key (t : Term) : String := toString t.raw
@@ -475,7 +483,7 @@ meta partial def shiftPos (s : Syntax) (off : Nat) : Syntax :=
 
 /-- The `lfn` term of `c`, read back from its source file (this file, or the `.lean` file of the
 module that declares it, found from the module name relative to the working directory). -/
-meta def lfnSyntax (c : Name) : CommandElabM Syntax := do
+meta def declSyntax (c : Name) (kw : String := "lfn") : TermElabM Syntax := do
   let some rs ← findDeclarationRanges? c | throwError "l_model: no source for {c}"
   let env ← getEnv
   let (fm, here) ← match env.getModuleIdxFor? c with
@@ -488,13 +496,15 @@ meta def lfnSyntax (c : Name) : CommandElabM Syntax := do
   let p1 := fm.ofPosition rs.range.pos
   let p2 := fm.ofPosition rs.range.endPos
   let txt := (String.Pos.Raw.extract src p1 p2)
-  let parts := txt.splitOn ":= lfn "
-  let some i := parts.tail.head? |>.map (fun s => "lfn " ++ s)
-    | throwError "l_model: {c} is not `… := lfn …`"
+  let parts := txt.splitOn s!":= {kw} "
+  let some i := parts.tail.head? |>.map (fun s => s!"{kw} " ++ s)
+    | throwError "l_model: {c} is not `… := {kw} …`"
   let off := p1.byteIdx + parts.head!.utf8ByteSize + ":= ".length
   match Parser.runParserCategory (← getEnv) `term i with
   | .ok stx => return if here then shiftPos stx off else stx
   | .error e => throwError "l_model: cannot re-parse the L text of {c}: {e}"
+
+meta def lfnSyntax (c : Name) : CommandElabM Syntax := liftTermElabM (declSyntax c)
 
 /-! ## Translation -/
 
@@ -513,10 +523,45 @@ meta structure KDef where
   key : String
   /-- the continuations its body applies -/
   refs : Array Name
+  /-- binder `5` (after a loop): the loop's results (`lsig`: its signal first; `lro`: no memory) -/
+  lres : Array Name := #[]
+  lsig : Bool := false
+  lro : Bool := false
+  /-- inside a loop's body: the loop (the definition returns the loop's result) -/
+  inLoop : Option Name := none
+  deriving Inhabited
+
+/-- A loop (binder `7` in `GenState.ks`): `name n m x₁ … xₖ` runs `exec p n` on the loop
+statement from the locals `params` (indices into the function's locals). -/
+meta structure LoopMeta where
+  name : Name
+  model : Name
+  /-- the loop statement's constant (a named block, or generated: `name.stmt`) -/
+  stmt : Name
+  /-- for a `while` written in the `lfn`: its syntax (it becomes `name.stmt`) -/
+  direct : Option Syntax
+  params : Array Nat
+  outs : Array Nat
+  /-- the locals the code after the loop reads that the loop does not assign -/
+  frames : Array Nat
+  sig : Bool
+  ro : Bool
+  called : Array String
+  deriving Inhabited
+
+/-- Inside a loop's body: where `break`, `return` and the end of the body go. -/
+meta structure LoopInfo where
+  name : Name
+  params : Array Nat
+  outs : Array Nat
+  sig : Bool
   deriving Inhabited
 
 meta structure GenState where
   ks : Array KDef := #[]
+  loops : Array LoopMeta := #[]
+  /-- the loops called by the function (or loop) being translated -/
+  loopsCalled : Array Name := #[]
   dups : Nat := 0
   base : Name := .anonymous
   /-- the functions called by the function being translated -/
@@ -543,6 +588,8 @@ meta structure Ctx where
   ft : Option Join := none
   /-- the models' Lean parameters (`Env.mps`): L names equal to one get a prime -/
   clash : Array Name := #[]
+  /-- the loop whose body this is -/
+  loop : Option LoopInfo := none
 
 meta def memIdent : Name := `m
 meta def mem1Ident : Name := `m₁
@@ -559,6 +606,9 @@ meta structure Env where
   /-- the models' Lean parameters: the command's explicit binders that the callees' models
   mention (`p` in `callW p n "f" [..] m`); every model and continuation takes them first -/
   mps : Array Name := #[]
+  /-- the named blocks spliced (`⟪X⟫`): the key of `X`, its constant, its statements, whether
+  it is a single `while` -/
+  blocks : Array (String × Name × List (TSyntax `lstmt) × Bool) := #[]
 
 /-- L names that would clash with the model's own binders get a prime. -/
 meta def sanitize (n : Name) (clash : Array Name := #[]) : Name :=
@@ -715,12 +765,134 @@ meta partial def hasMultiRet (s : Syntax) : Bool :=
     | _ => false
   here || s.getArgs.any hasMultiRet
 
+/-- A loop's leaf: its result `(signal, outs…, memory)` (the signal only if the loop has a
+`return`, the memory only if the model writes). -/
+meta def loopLeaf (ctx : Ctx) (L : LoopInfo) (sig : Option MT) : MR :=
+  let sigV : Array MT := if L.sig then #[sig.getD (.raw (mkIdent `L.Sig.normal))] else #[]
+  .tup (sigV ++ L.outs.map (ctx.env[·]!) ++ (if ctx.ro then #[] else #[ctx.mem]))
+
+/-- `return (v₀, …)`: the function's result, or inside a loop the loop's result `Sig.ret […]`. -/
+meta def retLeaf (ctx : Ctx) (vs : Array MT) : GenM MR := do
+  match ctx.loop with
+  | some L =>
+    let l ← (MT.list vs).render
+    return loopLeaf ctx L (some (.raw (← `(L.Sig.ret $l))))
+  | none => return ctx.ret vs
+
+/-- The function's result for a list of results `l` (a loop's `Sig.retVal r`). -/
+meta def Ctx.retList (ctx : Ctx) (l : Term) : GenM MR := do
+  let hd ← `(List.headD $l 0)
+  let v : MT := if ctx.multi then .raw l else .raw hd
+  return if ctx.ro then .someW v else .some v ctx.mem
+
+/-! ### Syntactic facts about statement lists (for loops) -/
+
+/-- The locals (indices) a statement list assigns, at any depth. -/
+meta partial def assignedIn (ctx : Ctx) (s : Syntax) (acc : Array Nat := #[]) : Array Nat :=
+  let add (acc : Array Nat) (x : Ident) : Array Nat :=
+    match ctx.idx x with
+    | some k => if acc.contains k then acc else acc.push k
+    | none => acc
+  let acc := match (⟨s⟩ : TSyntax `lstmt) with
+    | `(lstmt| $x:ident := call $_:ident($_,*)) => add acc x
+    | `(lstmt| ($x:ident, $xs:ident,* ) := call $_:ident($_,*)) => xs.getElems.foldl add (add acc x)
+    | `(lstmt| $x:ident := $_:lexpr) => add acc x
+    | `(lstmt| $x:ident += $_:lexpr) => add acc x
+    | `(lstmt| $x:ident -= $_:lexpr) => add acc x
+    | _ => acc
+  s.getArgs.foldl (fun acc a => assignedIn ctx a acc) acc
+
+/-- Replace the first-found nodes `f` maps to something. -/
+meta partial def replaceStx (s : Syntax) (f : Syntax → Option Syntax) : Syntax :=
+  match f s with
+  | some t => t
+  | none => match s with
+    | .node i k args => .node i k (args.map (replaceStx · f))
+    | s => s
+
+/-- The named blocks spliced as statements (`⟪X⟫`). -/
+meta partial def splices (s : Syntax) (acc : Array Ident := #[]) : Array Ident :=
+  let acc := match (⟨s⟩ : TSyntax `lstmt) with
+    | `(lstmt| ⟪$t⟫) => match t with
+      | `($x:ident) => acc.push x
+      | _ => acc
+    | _ => acc
+  s.getArgs.foldl (fun acc a => splices a acc) acc
+
+/-- Does a statement list contain `return`? -/
+meta partial def hasReturn (s : Syntax) : Bool :=
+  let here : Bool := match (⟨s⟩ : TSyntax `lstmt) with
+    | `(lstmt| return $_:lexpr) => true
+    | `(lstmt| return ($_:lexpr, $_:lexpr,*)) => true
+    | _ => false
+  here || s.getArgs.any hasReturn
+
+/-- The locals (indices) an expression or condition reads. -/
+meta def usesOf (ctx : Ctx) (s : Syntax) : Array Nat :=
+  (idents s).toList.filterMap (fun x => ctx.names.idxOf? (sanitize x ctx.clash)) |>.toArray
+
+meta def unionN (a b : Array Nat) : Array Nat := b.foldl (fun a x => if a.contains x then a else a.push x) a
+
+/-- The locals live before a statement list, given those live after it (`out`) and at a `break`
+(`brk`): read before they are written. -/
+meta partial def liveS (E : Env) (ctx : Ctx) (ss : List (TSyntax `lstmt)) (out brk : Array Nat) :
+    Array Nat :=
+  match ss with
+  | [] => out
+  | s :: rest =>
+    let after := liveS E ctx rest out brk
+    let kill (xs : Array Ident) (l : Array Nat) : Array Nat :=
+      let ks := xs.filterMap ctx.idx
+      l.filter (!ks.contains ·)
+    let blk (b : TSyntax `lblock) : List (TSyntax `lstmt) := match b with
+      | `(lblock| { $ss;* }) => ss.getElems.toList
+      | _ => []
+    match s with
+    | `(lstmt| $x:ident := call $_:ident($args,*)) =>
+      unionN (kill #[x] after) (usesOf ctx (mkNullNode (args.getElems.map (·.raw))))
+    | `(lstmt| ($x:ident, $xs:ident,* ) := call $_:ident($args,*)) =>
+      unionN (kill (#[x] ++ xs.getElems) after) (usesOf ctx (mkNullNode (args.getElems.map (·.raw))))
+    | `(lstmt| $x:ident := $e:lexpr) => unionN (kill #[x] after) (usesOf ctx e)
+    | `(lstmt| if $c:lcond $b:lblock) =>
+      unionN (unionN (usesOf ctx c) (liveS E ctx (blk b) after brk)) after
+    | `(lstmt| if $c:lcond $b:lblock else $t:lblock) =>
+      unionN (usesOf ctx c) (unionN (liveS E ctx (blk b) after brk) (liveS E ctx (blk t) after brk))
+    | `(lstmt| if $c:lcond $b:lblock else $t:lstmt) =>
+      unionN (usesOf ctx c) (unionN (liveS E ctx (blk b) after brk) (liveS E ctx [t] after brk))
+    | `(lstmt| while $c:lcond $b:lblock) => loopLive ctx c (blk b) after
+    | `(lstmt| break) => brk
+    | `(lstmt| return $e:lexpr) => usesOf ctx e
+    | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => unionN (usesOf ctx e) (usesOf ctx (mkNullNode (es.getElems.map (·.raw))))
+    | `(lstmt| abort) => #[]
+    | `(lstmt| ⟪$t⟫) =>
+      match E.blocks.find? (·.1 == key t) with
+      | some (_, _, ss, _) => liveS E ctx (ss ++ rest) out brk
+      | none => unionN after (usesOf ctx s)
+    -- `x += e`, stores, `skip`: read everything they mention
+    | _ => unionN after (usesOf ctx s)
+where
+  /-- The locals live at a loop's head: a fixpoint (the end of the body goes back to the head). -/
+  loopLive (ctx : Ctx) (c : TSyntax `lcond) (body : List (TSyntax `lstmt)) (out : Array Nat) :
+      Array Nat := Id.run do
+    let mut h := unionN (usesOf ctx c) out
+    for _ in [0:ctx.names.size + 2] do
+      let h' := unionN h (liveS E ctx body h out)
+      if h'.size == h.size then return h
+      h := h'
+    return h
+
 mutual
 meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM MR
   | [] => match ctx.ft with
     | some j => pure (.tail (.app j.name (E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if j.fuel then #[MT.raw (mkIdent `n)] else #[]) ++
         j.caps.map (ctx.env[·]!) ++ (if j.capMem then #[ctx.mem] else #[]))))
-    | none => pure (ctx.ret #[])
+    | none =>
+      match ctx.loop with
+      | some L =>
+        -- the end of a loop's body: the next iteration
+        pure (.tail (.app L.name (E.mps.map (fun x => MT.raw (mkIdent x)) ++ #[MT.raw (mkIdent `n)] ++
+          (if ctx.ro then #[] else #[ctx.mem]) ++ L.params.map (ctx.env[·]!))))
+      | none => pure (ctx.ret #[])
   | s :: rest => do
     let assignOp (x : Ident) (o : String) (e : TSyntax `lexpr) : GenM MR := do
       let v ← transE E ctx e
@@ -774,10 +946,25 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
     | `(lstmt| if $c:lcond $b:lblock else $t:lblock) => ite c (← blockStmts b) (← blockStmts t)
     | `(lstmt| if $c:lcond $b:lblock else $t:lstmt) => ite c (← blockStmts b) [t]
     | `(lstmt| return $e:lexpr) => do
-      return ctx.ret #[← transE E ctx e]
+      retLeaf ctx #[← transE E ctx e]
     | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => do
       unless ctx.multi do throwErrorAt s "l_model: several results in a model with one"
-      return ctx.ret (← (#[e] ++ es.getElems).mapM (transE E ctx))
+      retLeaf ctx (← (#[e] ++ es.getElems).mapM (transE E ctx))
+    | `(lstmt| break) => do
+      match ctx.loop with
+      | some L => return loopLeaf ctx L none
+      | none => throwErrorAt s "l_model: `break` outside a loop"
+    | `(lstmt| while $c:lcond $b:lblock) => do
+      transLoop E ctx none (some s) c (← blockStmts b) rest
+    | `(lstmt| ⟪$t⟫) => do
+      match E.blocks.find? (·.1 == key t) with
+      | some (_, c, ss, isLoop) =>
+        if isLoop then
+          let some w := ss.head? | throwErrorAt s "l_model: empty block"
+          let `(lstmt| while $c':lcond $b:lblock) := w | throwErrorAt s "l_model: not a loop block"
+          transLoop E ctx (some c) none c' (← blockStmts b) rest
+        else transS E ctx (ss ++ rest)
+      | none => throwErrorAt s "l_model: unknown named block"
     | `(lstmt| abort) => pure .none
     | `(lstmt| skip) => transS E ctx rest
     | _ => throwErrorAt s "l_model: unsupported L statement"
@@ -814,6 +1001,8 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     | `($a ≠ $b) => return .cmp "=" (.raw a) (.raw b)
     | _ => return .not (.cmp "=" (.raw (← `(decide $g))) (.raw (← `(true))))
   if let some (_, w, wro, wlist) := E.group.find? (·.1 == fname) then
+    if ctx.loop.isSome then
+      throwErrorAt f "l_model: a loop calls a member of the group (not supported)"
     let t ← `($(mkIdent w) $(E.mps.map (fun x => (mkIdent x : Term)))* $(mkIdent `n) $memT $argsT*)
     if wro && wlist then return ← mkK E ctx 6 none xk (.raw t) rest
     if wlist then
@@ -913,10 +1102,10 @@ meta partial def mkK (E : Env) (ctx : Ctx) (binder : Nat) (res : Option Nat) (xk
   let name ← match st.ks.find? (·.key == k) with
     | some kd => pure kd.name
     | none => do
-      let cnt := (st.ks.filter (·.name.getPrefix == st.base)).size
+      let cnt := (st.ks.filter (fun kd => kd.name.getPrefix == st.base && kd.binder != 7)).size
       let name := st.base ++ Name.mkSimple s!"k{cnt + 1}"
       let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
-      let kd : KDef := { name, fuel, caps, capMem, binder, res := resName, body, key := k, refs }
+      let kd : KDef := { name, fuel, caps, capMem, binder, res := resName, body, key := k, refs, inLoop := ctx.loop.map (·.name) }
       modify fun st => { st with ks := st.ks.push kd }
       pure name
   let args := E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if fuel then #[MT.raw (mkIdent `n)] else #[]) ++
@@ -945,13 +1134,91 @@ meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
   let name ← match st.ks.find? (·.key == k) with
     | some kd => pure kd.name
     | none => do
-      let cnt := (st.ks.filter (·.name.getPrefix == st.base)).size
+      let cnt := (st.ks.filter (fun kd => kd.name.getPrefix == st.base && kd.binder != 7)).size
       let name := st.base ++ Name.mkSimple s!"k{cnt + 1}"
       let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
-      let kd : KDef := { name, fuel, caps, capMem, binder := 3, res := `r, body, key := k, refs }
+      let kd : KDef := { name, fuel, caps, capMem, binder := 3, res := `r, body, key := k, refs, inLoop := ctx.loop.map (·.name) }
       modify fun st => { st with ks := st.ks.push kd }
       pure name
   return { name, fuel, caps := capIdx, capMem }
+
+/-- A loop `while c { body }` (written in the `lfn`: `direct`; or the named block `cst`) followed
+by `rest`. The loop is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop, so the
+enclosing code applies it at `n + 1`), over the locals it reads before writing them; its result
+is `(signal, outs…, memory)`: the signal (`Sig.normal` or `Sig.ret vs`) if the loop has a
+`return`, the locals it assigns that `rest` reads, the memory unless the model is read-only. The
+code after the loop is a continuation of that result. -/
+meta partial def transLoop (E : Env) (ctx : Ctx) (cst : Option Name) (direct : Option Syntax)
+    (c : TSyntax `lcond) (body : List (TSyntax `lstmt)) (rest : List (TSyntax `lstmt)) :
+    GenM MR := do
+  if ctx.loop.isSome then throwError "l_model: nested loops are not supported"
+  let bodyNode := mkNullNode (body.toArray.map (·.raw))
+  let A := (assignedIn ctx bodyNode).qsort (· < ·)
+  let sig := hasReturn bodyNode
+  let st0 ← get
+  let lcnt := (st0.loops.filter (·.model == st0.base)).size
+  let name := st0.base ++ Name.mkSimple s!"loop{lcnt + 1}"
+  let raws (xs : Array Name) : Array MT := xs.map fun x => MT.raw (mkIdent x)
+  -- 1. the code after the loop, over the loop's result
+  let envK : Array MT := ctx.names.map fun n => .raw (mkIdent n)
+  let memK : MT := if ctx.ro then .raw (mkIdent memIdent) else .raw (mkIdent mem1Ident)
+  let ctxK : Ctx := { ctx with env := envK, mem := memK }
+  let bodyK ← transS E ctxK rest
+  let rI := mkIdent `r
+  let bodyK ← if sig then do
+      let retB ← ctxK.retList (← `(L.Sig.retVal $rI))
+      pure (MR.ite (.cmp "=" (.raw rI) (.raw (mkIdent `L.Sig.normal))) bodyK retB)
+    else pure bodyK
+  let bodyKT ← bodyK.render
+  let used := idents bodyKT.raw
+  let outs := A.filter (used.contains ctx.names[·]!)
+  let fuelK := used.contains `n
+  let capMemK := ctx.ro && used.contains memIdent
+  let mut caps : Array Name := #[]
+  let mut capVals : Array MT := #[]
+  let mut frames : Array Nat := #[]
+  for i in [0:ctx.names.size] do
+    if A.contains i then continue
+    if used.contains ctx.names[i]! then
+      caps := caps.push ctx.names[i]!
+      capVals := capVals.push ctx.env[i]!
+      frames := frames.push i
+  let lres := outs.map (ctx.names[·]!)
+  let kkey := toString (fuelK, caps, capMemK, 5, lres, sig, ctx.ro, key bodyKT)
+  let kName ← match (← get).ks.find? (·.key == kkey) with
+    | some kd => pure kd.name
+    | none => do
+      let st ← get
+      let cnt := (st.ks.filter (fun kd => kd.name.getPrefix == st.base && kd.binder != 7)).size
+      let kn := st.base ++ Name.mkSimple s!"k{cnt + 1}"
+      let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
+      let kd : KDef := { name := kn, fuel := fuelK, caps, capMem := capMemK, binder := 5, res := `r, body := bodyK, key := kkey, refs, lres, lsig := sig, lro := ctx.ro, inLoop := ctx.loop.map (·.name) }
+      modify fun st => { st with ks := st.ks.push kd }
+      pure kn
+  -- 2. the loop's parameters: the locals live at its head
+  let P := (liveS.loopLive E ctx c body outs).qsort (· < ·)
+  -- 3. the loop's body
+  let envL : Array MT := ctx.names.mapIdx fun i n => if P.contains i then .raw (mkIdent n) else .lit 0
+  let L : LoopInfo := { name, params := P, outs, sig }
+  let ctxL : Ctx := { ctx with env := envL, mem := .raw (mkIdent memIdent), ft := none, loop := some L }
+  let saved := (← get).called
+  modify fun st => { st with called := #[] }
+  let cond ← transC E ctxL c
+  let bodyR ← transS E ctxL body
+  let lbody := MR.ite cond bodyR (loopLeaf ctxL L none)
+  let calledL := (← get).called
+  modify fun st => { st with called := saved }
+  let usedL := idents (← lbody.render).raw
+  let st ← get
+  let refs := st.ks.filterMap fun kd => if usedL.contains kd.name then some kd.name else none
+  let kd : KDef := { name, fuel := true, caps := P.map (ctx.names[·]!), capMem := !ctx.ro, binder := 7, res := `r, body := lbody, key := toString name, refs }
+  let lm : LoopMeta := { name, model := st.base, stmt := cst.getD (name ++ `stmt), direct, params := P, outs, frames, sig, ro := ctx.ro, called := calledL }
+  modify fun st => { st with ks := st.ks.push kd, loops := st.loops.push lm, loopsCalled := st.loopsCalled.push name }
+  -- 4. the enclosing code: the continuation, applied to the loop at `n + 1`
+  let loopCall : MT := .app name (raws E.mps ++ #[.raw (← `($(mkIdent `n) + 1))] ++
+    (if ctx.ro then #[] else #[ctx.mem]) ++ P.map (ctx.env[·]!))
+  return .tail (.app kName (raws E.mps ++ (if fuelK then #[MT.raw (mkIdent `n)] else #[]) ++ capVals ++
+    (if capMemK then #[ctx.mem] else #[]) ++ #[loopCall]))
 end
 
 /-! ## Leaves and guarded equations -/
@@ -991,6 +1258,9 @@ meta structure FnInfo where
   params : Array Name
   lcls : Array Name
   body : TSyntax `lblock
+  /-- the `lfn` term as read back, and its variables as written -/
+  lfnStx : Syntax
+  vars : Array Ident
   deriving Inhabited
 
 meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
@@ -1062,20 +1332,37 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let params := ps.getElems.map (sanitize ·.getId mps)
     let locals' := ((ls.map (·.getElems.map (sanitize ·.getId mps))).getD #[])
     let multi := list || hasMultiRet body
-    fis := fis.push { lname, decl, model, ro, multi, lookup, params, lcls := locals', body }
+    let vars := ps.getElems ++ ((ls.map (·.getElems)).getD #[])
+    fis := fis.push { lname, decl, model, ro, multi, lookup, params, lcls := locals', body, lfnStx := s, vars }
   let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi)
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps }
+  -- the named blocks spliced into the bodies
+  let mut blocks : Array (String × Name × List (TSyntax `lstmt) × Bool) := #[]
+  for fi in fis do
+    for t in splices fi.body do
+      if blocks.any (·.1 == key t) then continue
+      let c ← liftTermElabM (realizeGlobalConstNoOverload t)
+      let bs ← liftTermElabM (declSyntax c "lblk")
+      let `(lblk ($_,*) { $ss;* }) := bs | throwErrorAt t "l_model: {c} is not `… := lblk …`"
+      let ss := ss.getElems.toList
+      let isLoop := match ss with
+        | [w] => match w with
+          | `(lstmt| while $_:lcond $_:lblock) => true
+          | _ => false
+        | _ => false
+      blocks := blocks.push (key t, c, ss, isLoop)
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
-    let go : GenM (Array (MR × Array String)) := fis.mapM fun fi => do
-      modify fun st => { st with base := fi.model, called := #[] }
+    let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
+      modify fun st => { st with base := fi.model, called := #[], loopsCalled := #[] }
       let names := fi.params ++ fi.lcls
       let env := names.mapIdx fun i n => if i < fi.params.size then MT.raw (mkIdent n) else .lit 0
       let ctx0 : Ctx := { names, env, mem := .raw (mkIdent memIdent), ro := fi.ro, multi := fi.multi, clash := mps }
       let b ← transS E ctx0 (← blockStmts fi.body)
-      return (b, (← get).called)
+      return (b, (← get).called, (← get).loopsCalled)
     go.run {}
-  let calledBy := bodies.map (·.2)
+  let calledBy := bodies.map (·.2.1)
+  let loopsBy := bodies.map (·.2.2)
   let bodies := bodies.map (·.1)
   -- a single member that needs no fuel (no recursion, no fuel-dependent callee, no continuation
   -- that needs it) gets a model without the fuel argument
@@ -1088,6 +1375,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     logInfo m!"l_model: {st.dups} join point(s) duplicated the code after them"
   -- render
   let wordT ← `(L.Word)
+  let sigTy ← `(L.Sig)
+  let memTy ← `(L.Mem)
   let nI := mkIdent `n
   let resT (ro list : Bool) : CommandElabM Term :=
     match ro, list with
@@ -1095,82 +1384,150 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     | false, false => `(Option (L.Word × L.Mem))
     | true, true => `(Option (List L.Word))
     | false, true => `(Option (List L.Word × L.Mem))
-  -- Ks without fuel come first (they call no model of the group)
+  let tupT (ts : Array Term) : CommandElabM Term :=
+    match ts.size with
+    | 0 => `(Unit)
+    | 1 => pure ts[0]!
+    | _ => ts.pop.foldrM (init := ts.back!) fun t acc => `($t × $acc)
+  let tupP (xs : Array Term) : CommandElabM Term :=
+    match xs.size with
+    | 0 => `(())
+    | 1 => pure xs[0]!
+    | _ => `(($(xs[0]!), $(xs.extract 1 xs.size),*))
+  -- a loop's result: `(signal, outs…, memory)`
+  let loopResT (lm : LoopMeta) : CommandElabM Term := do
+    tupT ((if lm.sig then #[sigTy] else #[]) ++ lm.outs.map (fun _ => wordT) ++
+      (if lm.ro then #[] else #[memTy]))
   let kDefs ← st.ks.mapM fun kd => do
     let fi := fis.find? (fun fi => kd.name.getPrefix == fi.model) |>.getD fis[0]!
     let nB ← if kd.fuel then `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat)) else `(Lean.Parser.Term.bracketedBinderF| (_n : Unit))
     let capB ← kd.caps.mapM fun c => `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent c) : $wordT))
     let memB ← if kd.capMem then pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] else pure #[]
-    let binders := mpBinders ++ (if kd.fuel then #[nB] else #[]) ++ capB ++ memB
+    let binders := if kd.binder == 7 then mpBinders ++ #[nB] ++ memB ++ capB
+      else mpBinders ++ (if kd.fuel then #[nB] else #[]) ++ capB ++ memB
+    -- binder 5: the result of a loop
+    let lresB : Array Term := (if kd.lsig then #[(mkIdent kd.res : Term)] else #[]) ++
+      kd.lres.map (fun x => (mkIdent x : Term)) ++ (if kd.lro then #[] else #[(mkIdent mem1Ident : Term)])
     let argT ← match kd.binder with
       | 0 => `(Option (L.Word × L.Mem))
       | 4 => `(Option (List L.Word × L.Mem))
       | 6 => `(Option (List L.Word))
+      | 5 => do `(Option $(← tupT ((if kd.lsig then #[sigTy] else #[]) ++
+          kd.lres.map (fun _ => wordT) ++ (if kd.lro then #[] else #[memTy]))))
       | 1 => `(Option L.Mem)
       | _ => `(Option L.Word)
     let pat ← match kd.binder with
       | 0 | 4 => `(Option.some ($(mkIdent kd.res), $(mkIdent mem1Ident)))
       | 1 => `(Option.some $(mkIdent mem1Ident))
+      | 5 => do `(Option.some $(← tupP lresB))
       | _ => `(Option.some $(mkIdent kd.res))
     let body ← liftTermElabM kd.body.render
-    let rT ← resT fi.ro fi.multi
+    let loopOf : Option Name := if kd.binder == 7 then some kd.name else kd.inLoop
+    let rT ← match loopOf with
+      | some l => do
+        let some lm := st.loops.find? (·.name == l) | throwError "l_model: lost loop {l}"
+        `(Option $(← loopResT lm))
+      | none => resT fi.ro fi.multi
     pure (kd, binders, argT, pat, body, rT)
-  -- the continuations in the mutual block: those that reach a model of the group
+  -- the definitions, in dependency order: each strongly connected component of the reference
+  -- graph is one definition or one `mutual` block; a recursive one with a continuation or a loop
+  -- in it is well-founded on `(fuel, depth)`, one of models only is structural on the fuel
   let models := fis.map (·.model)
-  let mut mutK : NameSet := {}
+  let modelBodies ← bodies.mapM fun b => liftTermElabM b.render
+  let nodes : Array Name := models ++ st.ks.map (·.name)
+  let mut usedOf : Array NameSet := modelBodies.map (idents ·.raw)
+  for kd in st.ks do
+    usedOf := usedOf.push (idents (← liftTermElabM kd.body.render).raw)
+  let edges : Array (Array Nat) := usedOf.map fun u =>
+    (List.range nodes.size).toArray.filter (u.contains nodes[·]!)
+  -- reachability (by at least one edge)
+  let reach : Array (Array Bool) := (List.range nodes.size).toArray.map fun i => Id.run do
+    let mut seen := Array.replicate nodes.size false
+    let mut todo := edges[i]!
+    while !todo.isEmpty do
+      let j := todo.back!
+      todo := todo.pop
+      if seen[j]! then continue
+      seen := seen.set! j true
+      todo := todo ++ edges[j]!
+    return seen
   let mut depth : Std.HashMap Name Nat := {}
   for kd in st.ks do
-    let used := idents (← liftTermElabM kd.body.render).raw
-    if models.any used.contains || kd.refs.any mutK.contains then mutK := mutK.insert kd.name
     depth := depth.insert kd.name (1 + kd.refs.foldl (fun d r => max d (depth.getD r 0)) 0)
-  let fuelKs := kDefs.filter (mutK.contains ·.1.name)
-  let plainKs := kDefs.filter (!mutK.contains ·.1.name)
-  let wf := !fuelKs.isEmpty
-  for (kd, binders, argT, pat, body, rT) in plainKs do
-    if kd.binder == 3 then
-      emit doTrace (← `(command| def $(mkIdent kd.name):ident $binders* : $rT := $body))
+  let maxDep := st.ks.foldl (fun d kd => max d (depth.getD kd.name 0)) 0
+  -- the definitions' texts, by node; `wf`: with its `termination_by`
+  let defOf (i : Nat) (wf : Bool) : CommandElabM (TSyntax `command) := do
+    if h : i < fis.size then
+      let fi := fis[i]
+      let pbs ← fi.params.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent x) : L.Word))
+      let wbs := mpBinders ++ #[← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat)), ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
+      let body := modelBodies[i]!
+      let rT ← resT fi.ro fi.multi
+      let mbs := mpBinders ++ #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
+      if noFuel then
+        `(command| def $(mkIdent fi.model):ident $mbs* : $rT := $body)
+      else if wf then
+        `(command|
+          def $(mkIdent fi.model):ident $wbs* : $rT :=
+            match $nI:ident with
+            | 0 => Option.none
+            | $nI:ident + 1 => $body
+          termination_by ($nI, $(mkNum (maxDep + 1))))
+      else
+        `(command|
+          def $(mkIdent fi.model):ident $wbs* : $rT :=
+            match $nI:ident with
+            | 0 => Option.none
+            | $nI:ident + 1 => $body)
     else
-      emit doTrace (← `(command|
-        def $(mkIdent kd.name):ident $binders* : $argT → $rT
-          | Option.none => Option.none
-          | $pat => $body))
-  let mut defs : Array (TSyntax `command) := #[]
-  for fi in fis, b in bodies do
-    let pbs ← fi.params.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent x) : L.Word))
-    let wbs := mpBinders ++ #[← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat)), ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
-    let body ← liftTermElabM b.render
-    let rT ← resT fi.ro fi.multi
-    let mbs := mpBinders ++ #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
-    let d ← if noFuel then
-      `(command| def $(mkIdent fi.model):ident $mbs* : $rT := $body)
-    else if wf then
-      `(command|
-        def $(mkIdent fi.model):ident $wbs* : $rT :=
-          match $nI:ident with
-          | 0 => Option.none
-          | $nI:ident + 1 => $body
-        termination_by ($nI, 0))
-    else
-      `(command|
-        def $(mkIdent fi.model):ident $wbs* : $rT :=
-          match $nI:ident with
-          | 0 => Option.none
-          | $nI:ident + 1 => $body)
-    defs := defs.push d
-  for (kd, binders, argT, pat, body, rT) in fuelKs do
-    let dep := depth.getD kd.name 1
-    if kd.binder == 3 then
-      defs := defs.push (← `(command|
-        def $(mkIdent kd.name):ident $binders* : $rT := $body
-        termination_by ($nI, $(mkNum dep))))
-    else
-      defs := defs.push (← `(command|
-        def $(mkIdent kd.name):ident $binders* : $argT → $rT
-          | Option.none => Option.none
-          | $pat => $body
-        termination_by _ => ($nI, $(mkNum dep))))
-  if defs.size == 1 then emit doTrace defs[0]!
-  else emit doTrace (← `(command| mutual $defs* end))
+      let (kd, binders, argT, pat, body, rT) := kDefs[i - fis.size]!
+      let dep := mkNum (depth.getD kd.name 1)
+      match kd.binder, wf with
+      | 7, true => `(command|
+          def $(mkIdent kd.name):ident $binders* : $rT :=
+            match $nI:ident with
+            | 0 => Option.none
+            | $nI:ident + 1 => $body
+          termination_by ($nI, $dep))
+      | 7, false => `(command|
+          def $(mkIdent kd.name):ident $binders* : $rT :=
+            match $nI:ident with
+            | 0 => Option.none
+            | $nI:ident + 1 => $body)
+      | 3, true => `(command|
+          def $(mkIdent kd.name):ident $binders* : $rT := $body
+          termination_by ($nI + 1, $dep))
+      | 3, false => `(command| def $(mkIdent kd.name):ident $binders* : $rT := $body)
+      | _, true => `(command|
+          def $(mkIdent kd.name):ident $binders* : $argT → $rT
+            | Option.none => Option.none
+            | $pat => $body
+          termination_by _ => ($nI + 1, $dep))
+      | _, false => `(command|
+          def $(mkIdent kd.name):ident $binders* : $argT → $rT
+            | Option.none => Option.none
+            | $pat => $body)
+  -- emit the components, each after the ones it refers to
+  let mut emitted := Array.replicate nodes.size false
+  let mut left := nodes.size
+  while left > 0 do
+    let mut progress := false
+    for i in [0:nodes.size] do
+      if emitted[i]! then continue
+      let comp := (List.range nodes.size).toArray.filter fun j =>
+        j == i || (reach[i]![j]! && reach[j]![i]!)
+      -- ready: every edge out of the component goes to an emitted node
+      let ready := comp.all fun c => edges[c]!.all fun e => emitted[e]! || comp.contains e
+      unless ready do continue
+      let recursive := comp.size > 1 || reach[i]![i]!
+      let wf := recursive && comp.any (· ≥ fis.size)
+      let defs ← comp.mapM (defOf · wf)
+      if defs.size == 1 then emit doTrace defs[0]!
+      else emit doTrace (← `(command| mutual $defs* end))
+      for c in comp do emitted := emitted.set! c true
+      left := left - comp.size
+      progress := true
+    unless progress do throwError "l_model: cannot order the definitions"
   -- guarded equations, one per leaf that is not `none`
   let attrsOf (thm : Ident) (lhs : Term) : CommandElabM Unit := do
     for a in attrIds do
@@ -1213,7 +1570,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let lhs ← `($(mkIdent fi.model) $mpArgs* ($nI + 1) $(mkIdent memIdent) $ps*)
       nEqns := nEqns + (← eqns fi.model wbs lhs b)
   for (kd, binders, _, pat, _, _) in kDefs do
-    let resB ← match kd.binder with
+    let resB : Array (TSyntax ``Lean.Parser.Term.bracketedBinder) ← match kd.binder with
       | 0 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Word)),
                     ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent mem1Ident) : L.Mem))]
       | 4 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : List L.Word)),
@@ -1221,19 +1578,110 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | 1 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent mem1Ident) : L.Mem))]
       | 2 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Word))]
       | 6 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : List L.Word))]
+      | 5 => do
+        let mut bs : Array (TSyntax ``Lean.Parser.Term.bracketedBinder) := #[]
+        if kd.lsig then bs := bs.push (← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Sig)))
+        for x in kd.lres do bs := bs.push (← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent x) : L.Word)))
+        unless kd.lro do bs := bs.push (← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent mem1Ident) : L.Mem)))
+        pure bs
       | _ => pure #[]
     let args : Array Term := mpArgs ++ (if kd.fuel then #[(nI : Term)] else #[]) ++ kd.caps.map (mkIdent ·) ++
       (if kd.capMem then #[(mkIdent memIdent : Term)] else #[])
-    if kd.binder == 3 then
+    if kd.binder == 7 then
+      let largs : Array Term := mpArgs ++ #[← `($nI + 1)] ++
+        (if kd.capMem then #[(mkIdent memIdent : Term)] else #[]) ++ kd.caps.map (mkIdent ·)
+      let lhs ← `($(mkIdent kd.name) $largs*)
+      nEqns := nEqns + (← eqns kd.name binders lhs kd.body)
+    else if kd.binder == 3 then
       let lhs ← `($(mkIdent kd.name) $args*)
       nEqns := nEqns + (← eqns kd.name binders lhs kd.body `eq_1)
     else
       let lhs ← `($(mkIdent kd.name) $args* $pat)
       nEqns := nEqns + (← eqns kd.name (binders ++ resB) lhs kd.body)
-  -- the spec of the group
-  let userNames : NameSet := bs.foldl (fun acc b => idents b.raw acc) {}
+  -- the proofs, as text
+  let pp (t : Syntax) : CommandElabM String := do
+    return toString (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩))
+  let attrsTxt := String.intercalate ", " ("lang_grind" :: (attrIds.toList.map (·.getId.toString)))
+  let specsTxt ← specTs.toList.mapM (pp ·.raw)
+  let extraTxt ← extraTs.toList.mapM (pp ·.raw)
+  let hintsTxt ← hintTs.toList.mapM (pp ·.raw)
+  let genTxt := match genN with | some g => s!"(gen := {g}) " | none => ""
+  let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
+  let parseTac (txt : String) : CommandElabM Syntax := do
+    if doTrace then logInfo m!"{txt}"
+    match Parser.runParserCategory (← getEnv) `tactic s!"({txt})" with
+    | .ok t => pure (reposition t stx)
+    | .error e => throwError "l_model: generated proof does not parse: {e}\n{txt}"
+  let withHB (thm : TSyntax `command) : CommandElabM (TSyntax `command) := do
+    match hbN with
+    | some h => `(command| set_option maxHeartbeats $(Syntax.mkNumLit (toString h)):num in $thm)
+    | none => pure thm
+  -- the explicit binders, passed on to the steps
+  let mut explicitArgs : Array String := #[]
+  for b in bs do
+    if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $_)) := b then
+      for x in xs do explicitArgs := explicitArgs.push (toString x.raw.getId)
+  let argsTxt := String.intercalate " " explicitArgs.toList
+  let calleeSpecs (called : Array String) : List String :=
+    ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1)
+  let loopSpecTxt (l : Name) : String := s!"fun s => L.Triple.step_exec ({l}.spec {argsTxt} (n + 1) s)"
   let pName := mkIdent `p
   let s0 := mkIdent `s₀
+  let sP := mkIdent `s'
+  -- the loops: their statements (a `while` written in the `lfn` becomes a named block), specs
+  for lm in st.loops do
+    let fi := fis.find? (·.model == lm.model) |>.getD fis[0]!
+    if let some w := lm.direct then
+      let w : TSyntax `lstmt := ⟨w⟩
+      emit doTrace (← `(command|
+        /-- A loop of the L code, named for its spec (generated by `l_model`). -/
+        def $(mkIdent lm.stmt):ident : L.Stmt := lblk ($fi.vars,*) { $w:lstmt }))
+    let locT (st : Ident) (i : Nat) : CommandElabM Term := `(L.St.loc $st $(mkNum i))
+    let args ← lm.params.mapM (locT s0)
+    let outs ← lm.outs.mapM (locT sP)
+    let memSP ← `(L.St.mem $sP)
+    let memS0 ← `(L.St.mem $s0)
+    let res : Array Term := (if lm.sig then #[(mkIdent `r : Term)] else #[]) ++ outs ++
+      (if lm.ro then #[] else #[memSP])
+    let memA : Array Term := if lm.ro then #[] else #[memS0]
+    let lhs ← `($(mkIdent lm.name) $mpArgs* $nI $memA* $args*)
+    let rI := mkIdent `r
+    let sigC ← if lm.sig then `($rI ≠ L.Sig.brk) else `($rI = L.Sig.normal)
+    let mut conj : Array Term := #[sigC]
+    for j in lm.frames do conj := conj.push (← `($(← locT sP j) = $(← locT s0 j)))
+    if lm.ro then conj := conj.push (← `(L.St.mem $sP = L.St.mem $s0))
+    conj := conj.push (← `($lhs = Option.some $(← tupP res)))
+    let post ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
+    let vcg := String.intercalate ", "
+      (["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64"] ++ extraTxt ++
+        calleeSpecs lm.called ++ ["ih"])
+    let tac ← parseTac s!"induction n generalizing s₀ with\n  | zero => vcgen [L.exec] <;> grind\n  | succ n ih => rw [L.exec, L.step_while (w := {lm.stmt}) rfl]; sym only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    emit doTrace (← withHB (← `(command|
+      /-- The loop's spec (generated by `l_model`): its model is its meaning. -/
+      theorem $(mkIdent (lm.name ++ `spec)):ident $bs* ($nI : Nat) ($s0 : L.St) :
+        Std.WP.Triple (L.exec $pName $nI $(mkIdent lm.stmt)) (fun s => s = $s0) (fun $(mkIdent `r) $sP => $post)
+          Lean.Order.top := by $(⟨tac⟩):tactic)))
+  -- a function with a `while` in its text: its `lfn` with the loop as a named block
+  let mut unfoldOf : Array String := #[]
+  for fi in fis do
+    let direct := st.loops.filter (fun lm => lm.model == fi.model && lm.direct.isSome)
+    if direct.isEmpty then
+      unfoldOf := unfoldOf.push s!"{fi.decl}"
+      continue
+    let mut lstx := fi.lfnStx
+    for lm in direct do
+      let some w := lm.direct | continue
+      let sp ← `(lstmt| ⟪$(mkIdent lm.stmt)⟫)
+      lstx := replaceStx lstx fun t =>
+        if t.getKind == w.getKind && t.getPos? == w.getPos? && t.getTailPos? == w.getTailPos? then
+          some sp.raw else none
+    let eqName := mkIdent (fi.model ++ `lfn_eq)
+    emit doTrace (← `(command|
+      /-- The function, with its loops as named blocks (generated by `l_model`). -/
+      theorem $eqName:ident : $(mkIdent fi.decl) = $(⟨lstx⟩) := rfl))
+    unfoldOf := unfoldOf.push s!"{fi.model}.lfn_eq"
+  -- the spec of the group
+  let userNames : NameSet := bs.foldl (fun acc b => idents b.raw acc) {}
   let mkConj (fuel : Term) : CommandElabM (Array Term) := fis.mapM fun fi => do
     let ps : Array Ident := fi.params.map fun x => mkIdent (if userNames.contains x then x.appendAfter "'" else x)
     let pbs ← ps.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($x : L.Word))
@@ -1254,46 +1702,23 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         (fun s => s = $s0) $post Lean.Order.top)
   let conj ← mkConj nI
   let stmt ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
-  -- the proofs, as text: one step theorem per member, then the induction
-  let pp (t : Syntax) : CommandElabM String := do
-    return toString (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩))
+  -- one step theorem per member, then the induction
   let k := fis.size
   let goals := String.intercalate ", " ((List.range k).map fun i => s!"?g{i+1}")
   let ihs := String.intercalate ", " ((List.range k).map fun i => s!"ih{i+1}")
-  let attrsTxt := String.intercalate ", " ("lang_grind" :: (attrIds.toList.map (·.getId.toString)))
-  let specsTxt ← specTs.toList.mapM (pp ·.raw)
-  let extraTxt ← extraTs.toList.mapM (pp ·.raw)
-  let hintsTxt ← hintTs.toList.mapM (pp ·.raw)
-  let vcgOf (called : Array String) : String := String.intercalate ", "
+  let vcgOf (called : Array String) (loops : Array Name) : String := String.intercalate ", "
     (["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64"] ++
-      extraTxt ++ ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
+      extraTxt ++ calleeSpecs called ++ (loops.toList.map loopSpecTxt) ++
       ((List.range k).filter (called.contains fis[·]!.lname)).map fun i => s!"ih{i+1}")
-  let genTxt := match genN with | some g => s!"(gen := {g}) " | none => ""
-  let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
-  let parseTac (txt : String) : CommandElabM Syntax := do
-    if doTrace then logInfo m!"{txt}"
-    match Parser.runParserCategory (← getEnv) `tactic s!"({txt})" with
-    | .ok t => pure (reposition t stx)
-    | .error e => throwError "l_model: generated proof does not parse: {e}\n{txt}"
-  let withHB (thm : TSyntax `command) : CommandElabM (TSyntax `command) := do
-    match hbN with
-    | some h => `(command| set_option maxHeartbeats $(Syntax.mkNumLit (toString h)):num in $thm)
-    | none => pure thm
-  -- the explicit binders, passed on to the steps
-  let mut explicitArgs : Array String := #[]
-  for b in bs do
-    if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $_)) := b then
-      for x in xs do explicitArgs := explicitArgs.push (toString x.raw.getId)
-  let argsTxt := String.intercalate " " explicitArgs.toList
   let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
   let ihB ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent `ih) : $stmt))
   let conjS ← mkConj (← `($nI + 1))
   let mut zero := ""
   let mut steps : Array String := #[]
-  for fi in fis, i in List.range k, called in calledBy, ci in conjS do
-    let vcg := vcgOf called
+  for fi in fis, i in List.range k, called in calledBy, loops in loopsBy, ci in conjS, unf in unfoldOf do
+    let vcg := vcgOf called loops
     let lk ← pp fi.lookup.raw
-    let pre := s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {fi.decl}]"
+    let pre := s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {unf}]"
     let g := if k == 1 then "" else s!"case g{i+1} => "
     zero := zero ++ s!"\n    {g}({pre}; vcgen [L.exec] <;> grind)"
     let ihTxt := if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
@@ -1308,6 +1733,6 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   emit doTrace (← withHB (← `(command|
     $[$doc?:docComment]? theorem $specName:ident $bs* $nB:bracketedBinder : $stmt := by $(⟨tac⟩):tactic)))
   if doTrace then
-    logInfo m!"l_model: {fis.size} model(s), {st.ks.size} continuation(s), {nEqns} guarded equation(s)"
+    logInfo m!"l_model: {fis.size} model(s), {st.ks.size} continuation(s) and loop(s), {nEqns} guarded equation(s)"
 
 end L.ModelGenDev
