@@ -38,7 +38,7 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
   intro m m' so sl j c cn r slots h hsl hsz hcn hj P hP
   have hlen := decPL_length m hsl
   by_cases hend : sl ≤ j
-  · rw [fsgW_end (h := hend)] at h
+  · rw [fsgW.arm1 (hc1 := hend)] at h
     cases h
     have : sl.toNat - j.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hend; omega
     refine ⟨rfl, fun _ => rfl, fun k s' e => ?_⟩
@@ -90,14 +90,14 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
         apply UInt64.toNat_inj.mp; rw [tc, e1']
   rw [hzip, List.find?_cons, hP]
   by_cases hh : rec2SlotHit c.toNat (decI cn) (slots[j.toNat]'(by omega)) = true
-  · rw [fsgW_hit (h := hend) (h2 := hcond.mpr hh)] at h
+  · rw [fsgW.arm2 (hc1 := hend) (hc2 := hcond.mpr hh)] at h
     cases h
     refine ⟨rfl, fun e => ?_, fun k s' e => ?_⟩
     · simp [hh] at e
     · simp [hh] at e; obtain ⟨rfl, -⟩ := e; exact ⟨rfl, by simp⟩
-  · rw [fsgW_miss (h := hend) (h2 := fun x => hh (hcond.mp x))] at h
+  · rw [fsgW.arm3 (hc1 := hend) (hc2 := fun x => hh (hcond.mp x))] at h
     obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
-    rw [fcK_some] at h
+    rw [fsgW.k_class_gen_rule_find_slot_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := sl.toNat_lt; omega
     obtain ⟨hm, h1, h2⟩ := ih m m'' so sl (j + 1) c cn r' slots hr hsl hsz hcn (by omega) P hP
@@ -278,23 +278,23 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   -- `class_gen_rule_call1_tail`
   rcases n with _ | n
   · intro b hb; simp [c1tW, fcK, hK] at hb
-  rw [c1tW_eq]
-  refine RSim.bind (K := fun o => K (fcK (c1tK1 n pvo pvl rlvls _ _ _ _ _ e o))) hK
+  rw [c1tW.arm1]
+  refine RSim.bind (K := fun o => K (fcK (c1tW.k_expr_get_d n pvo pvl rlvls _ _ _ _ _ e o))) hK
     (RSim.withF (rec2SimExprGetD n hS2 (by rw [decHL_grow hg12 hfb]; exact hfvs) (hS2.lt64 (Nat.le_trans hfb hg12.1)))
       (fun _ hb => exprGetDF_afr hb)) ?_
   rintro ⟨r4, m4⟩ f a4 - ⟨⟨hS4, hg4, hfH, hfd⟩, hf4⟩
   dsimp only at hS4 hg4 hfH hfd
   subst hfd
-  rw [c1tK1_some]
-  refine RSim.bind (K := fun o => K (fcK (c1tK2 n pvo pvl rlvls _ _ _ _ _ e o))) hK
+  rw [c1tW.k_expr_get_d.arm1]
+  refine RSim.bind (K := fun o => K (fcK (c1tW.k_mk_app_n_f n pvo pvl rlvls _ _ _ _ _ e o))) hK
     (RSim.withF ((mknF_ok dn vis fe _ _ _ hfH xs).sim ⟨hS4, by rw [decHL_grow hg4 hxb]; exact hxs⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r5, m5⟩ fx a5 - ⟨⟨hS5, hg5, hfxH, hfxd⟩, hf5⟩
   dsimp only at hS5 hg5 hfxH hfxd
   subst hfxd
-  rw [c1tK2_some]
+  rw [c1tW.k_mk_app_n_f.arm1]
   have hg25 := hg4.trans hg5
-  refine RSim.bind (K := fun o => K (fcK (c1tK3 n pvo pvl _ _ _ _ e (r5.headD 0) o))) hK
+  refine RSim.bind (K := fun o => K (fcK (c1tW.k_intern_const n pvo pvl _ _ _ _ e (r5.headD 0) o))) hK
     (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨rc, m6⟩ h6
     obtain ⟨a', hrun, hS', hg⟩ := internConst_stage hS5 _ rlvls hnH hrl h6
@@ -302,48 +302,48 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rintro ⟨rc, m6⟩ x a6 - ⟨hS6, hg6, rfl, hA6⟩
   dsimp only at hS6 hg6
   by_cases hbig : 4294967296 ≤ rc
-  · rw [c1tK3_big (h := hbig)]; simp only [fcK, hK]; exact RSim.none
-  rw [c1tK3_ok (h := hbig)]
+  · rw [c1tW.k_intern_const.abort1 (hc1 := hbig)]; simp only [fcK, hK]; exact RSim.none
+  rw [c1tW.k_intern_const.arm1 (hc1 := hbig)]
   have hrcH : H rc := by
     have : ¬ (4294967296 : Word).toNat ≤ rc.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
     simp at this; exact this
   have hg26 := hg25.trans hg6
   have hg06 := hg12.trans hg26
-  refine RSim.lstep (K := fun o => K (fcK (c1tK4 n _ _ e rc (r5.headD 0) o))) hK fun ⟨r7, m7⟩ h7 => ?_
+  refine RSim.lstep (K := fun o => K (fcK (c1tW.k_sl_append n _ _ e (r5.headD 0) rc o))) hK fun ⟨r7, m7⟩ h7 => ?_
   obtain ⟨hS7, hg7, hd7, hb7⟩ := rec2AppendW_dec h7 hS6
     (decHL_decB (by rw [decHL_grow hg06 hpb]; exact hpv) (Nat.le_trans hpb hg06.1))
     (by rw [decHL_grow hg26 hidb]; exact hidx) (Nat.le_trans hidb hg26.1)
-  rw [c1tK4_some]
-  refine RSim.lstep (K := fun o => K (fcK (c1tK5 n _ _ e rc o))) hK fun ⟨r8, m8⟩ h8 => ?_
+  rw [c1tW.k_sl_append.arm1]
+  refine RSim.lstep (K := fun o => K (fcK (c1tW.k_sl_snoc n _ _ e rc o))) hK fun ⟨r8, m8⟩ h8 => ?_
   obtain ⟨hr8, hd8, hg8, -, -, ht8⟩ := snocW_dec h8 hS7.2.2.2.1 hS7.2.2.2.2.2 hb7 hfxH hd7
   have hS8 := snocW_stage h8 hS7
   have hA8 := snocW_afr h8 (appendW_afr h7 hA6)
-  rw [c1tK5_some, hr8]
+  rw [c1tW.k_sl_snoc.arm1, hr8]
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := fun o => K (fcK (c1tK6 n _ _ e o))) hK
+  refine RSim.bind (K := fun o => K (fcK (c1tW.k_mk_app_n_f_2 n _ _ e o))) hK
     (RSim.withF ((mknF_ok dn vis fe _ _ _ hrcH (pvars ++ idx ++ [decI (r5.headD 0)])).sim ⟨hS8, hd8⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r9, m9⟩ app a9 - ⟨⟨hS9, hg9, happH, happd⟩, hf9⟩
   dsimp only at hS9 hg9 happH happd
   subst happd
-  rw [c1tK6_some, rec2MapM_genBinder]
+  rw [c1tW.k_mk_app_n_f_2.arm1, rec2MapM_genBinder]
   have hg29 := hg26.trans (hg7.trans (hg8.trans hg9))
   -- `class_gen_rule_call1_close`
   rcases n with _ | n
-  · intro b hb; simp [c1cW, fcK, hK] at hb
-  rw [c1cW_eq]
-  refine RSim.bind (K := fun o => K (fcK (fcK (c1cK1 n e (r9.headD 0) o)))) hK
+  · intro b hb; simp [c1cW, c1tW.k_class_gen_rule_call1_close, fcK, hK] at hb
+  rw [c1cW.arm1]
+  refine RSim.bind (K := fun o => K (fcK (c1tW.k_class_gen_rule_call1_close (c1cW.k_fvar_type_ds n e (r9.headD 0) o)))) hK
     (RSim.withF ((ftdsF_ok dn vis fe _ _ xs).sim
       ⟨hS9, by rw [decHL_grow hg29 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg29.1⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r10, m10⟩ bs a10 - ⟨⟨hS10, hg10, hbs, hbb⟩, hf10⟩
   dsimp only at hS10 hg10 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
   by_cases hov : e + r10.tail.headD 0 < e
-  · rw [c1cK1_big (h := hov)]; simp only [fcK, hK]; exact RSim.none
-  rw [c1cK1_ok (h := hov)]
+  · rw [c1cW.k_fvar_type_ds.abort1 (hc1 := hov)]; simp only [c1tW.k_class_gen_rule_call1_close, fcK, hK]; exact RSim.none
+  rw [c1cW.k_fvar_type_ds.arm1 (hc1 := hov)]
   have hel : e.toNat + (r10.tail.headD 0).toNat < 2 ^ 64 := by
     have := nctAddNowrap (a := r10.tail.headD 0) (b := e) (by rwa [UInt64.add_comm]); omega
-  refine RSim.bind (K := fun o => K (fcK (fcK (c1cK2 o)))) hK (Q1 := fun b a' x =>
+  refine RSim.bind (K := fun o => K (fcK (c1tW.k_class_gen_rule_call1_close (c1cW.k_close_lams o)))) hK (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m10 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
   · rintro ⟨r11, m11⟩ h11
@@ -353,7 +353,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rintro ⟨r11, m11⟩ cll a11 - ⟨hS11, hg11, hcH, hcd, hA11⟩
   dsimp only at hS11 hg11 hcH hcd
   subst hcd
-  simp only [c1cK2, fcK, List.headD_cons, List.tail_cons]
+  simp only [c1cW.k_close_lams, c1tW.k_class_gen_rule_call1_close, fcK, List.headD_cons, List.tail_cons]
   exact hsome m11 a11 _ hS11 (hg12.trans (hg29.trans (hg10.trans hg11))) hcH hA11
 
 end sims
@@ -457,11 +457,11 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
       let fbs ← List.mapM G.binder fvs
       let r ← ConRon.Arena.closeLams (G.pre ++ fbs) 0 body
       pure (some r)) a (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  rw [grcW_eq]
+  rw [grcW.arm1]
   have hsz := hS.2.2.2.1
   obtain ⟨hnP, -⟩ := rec2CG_get (hG.get (decCG_mono _))
   have hgt : g.toNat < iwTop m := by have := (rec2CG_parts hG).2.1; omega
-  refine RSim.bind (K := grcK1 n g fo fl ihso ihsl) rfl (Q1 := fun b a' x =>
+  refine RSim.bind (K := grcW.k_class_gen_slot_var n g fo fl ihso ihsl) rfl (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ H (b.1.headD 0) ∧ decE (b.1.headD 0) = x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r, m'⟩ h
     obtain ⟨x, a', hrun, hS', hg', h1, h2⟩ := slotVarW_ok dn vis fe m m' a g s G r hS hnP hgt hs h
@@ -469,34 +469,34 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
   rintro ⟨r1, m1⟩ sv a1 - ⟨hS1, hg1, hsvH, hsvd, hA1⟩
   dsimp only at hS1 hg1 hsvH hsvd
   subst hsvd
-  rw [grcK1_some]
-  refine RSim.lstep (K := grcK2 n g fo fl (r1.headD 0)) rfl fun ⟨r2, m2⟩ h2 => ?_
+  rw [grcW.k_class_gen_slot_var.arm1]
+  refine RSim.lstep (K := grcW.k_sl_append n g fo fl (r1.headD 0)) rfl fun ⟨r2, m2⟩ h2 => ?_
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (decHL_decB (by rw [decHL_grow hg1 hfb]; exact hfvs)
     (Nat.le_trans hfb hg1.1)) (by rw [decHL_grow hg1 hib]; exact hihs) (Nat.le_trans hib hg1.1)
-  rw [grcK2_some]
-  refine RSim.bind (K := grcK3 n g fo fl) rfl
+  rw [grcW.k_sl_append.arm1]
+  refine RSim.bind (K := grcW.k_mk_app_n_f n g fo fl) rfl
     (RSim.withF ((mknF_ok dn vis fe _ _ _ hsvH (fvs ++ ihs)).sim ⟨hS2, hd2⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r3, m3⟩ body a3 - ⟨⟨hS3, hg3, hbH, hbd⟩, hf3⟩
   dsimp only at hS3 hg3 hbH hbd
   subst hbd
-  rw [grcK3_some, rec2MapM_genBinder]
+  rw [grcW.k_mk_app_n_f.arm1, rec2MapM_genBinder]
   have hg13 := hg1.trans (hg2.trans hg3)
-  refine RSim.bind (K := grcK4 n g (r3.headD 0)) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ fvs).sim
+  refine RSim.bind (K := grcW.k_fvar_type_ds n g (r3.headD 0)) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ fvs).sim
       ⟨hS3, by rw [decHL_grow hg13 hfb]; exact hfvs, fun _ => Nat.le_trans hfb hg13.1⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ fbs a4 - ⟨⟨hS4, hg4, hfbs, hfbb⟩, hf4⟩
   dsimp only at hS4 hg4 hfbs hfbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hfbs hfbb
-  rw [grcK4_some]
+  rw [grcW.k_fvar_type_ds.arm1]
   have hg14 := hg13.trans hg4
   obtain ⟨-, -, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts (hG.grow (decCG_mono _) (hg14))
   obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) h12 hS4.2.2.2.1
   obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS4.2.2.2.1
   simp only [show UInt64.ofNat 12 = (12 : Word) from rfl, show UInt64.ofNat 13 = (13 : Word) from rfl] at e12 e13
   rw [e12, e13]
-  refine RSim.lstep (K := grcK5 n (r3.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
+  refine RSim.lstep (K := grcW.k_sl_append_2 n (r3.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hS5, hg5, hd5, hb5⟩ := rec2AppendW_dec h5 hS4 (by rw [t12, t13]; exact hpre) hfbs hfbb
-  rw [grcK5_some]
-  refine RSim.bind (K := c1cK2) rfl (Q1 := fun b a' x =>
+  rw [grcW.k_sl_append_2.arm1]
+  refine RSim.bind (K := grcW.k_close_lams) rfl (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
@@ -505,7 +505,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
       (appendW_afr h5 (hf4 (hf3 (appendW_afr h2 hA1))))
     exact ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩
   rintro ⟨r6, m6⟩ x a6 - ⟨hS6, hg6, hx1, hx2, hA6⟩
-  rw [c1cK2_some]
+  rw [grcW.k_close_lams.arm1]
   exact RSim.pure_some ⟨⟨hS6, hg14.trans (hg5.trans hg6), rfl, by simpa using hx1, by simpa using hx2⟩, hA6⟩
 
 end sims
@@ -543,8 +543,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only [show UInt64.ofNat 7 = (7 : Word) from rfl, show UInt64.ofNat 8 = (8 : Word) from rfl] at e7 e8
   rcases n with _ | n
   · intro b hb; simp [gfsW, ruK1] at hb
-  rw [gfsW_eq, e7, e8]
-  refine RSim.lstep (K := fun o => ruK1 (n + 1) g rco rcl cgo cgl rlvls x (UInt64.ofNat l12) (fcK o)) rfl
+  rw [gfsW.arm1, e7, e8]
+  refine RSim.lstep (K := fun o => ruK1 (n + 1) g rco rcl cgo cgl rlvls x (UInt64.ofNat l12) (gfsW.k_class_gen_rule_find_slot_go o)) rfl
     fun ⟨r1, m1⟩ h1 => ?_
   obtain ⟨hm1, hnone1, hsome1⟩ := fsgW_ok n m m1 _ _ 0 c nw r1 G.slots h1 (by rw [t7, t8]; exact hsls) hsz hnwH
     (by simp)
@@ -558,11 +558,11 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only [← hslen, ← List.range_eq_range'] at hnone1 hsome1
   split
   next heq =>
-    rw [fcK_some, ruK1_fail (h := by simpa using hnone1 heq)]
+    rw [gfsW.k_class_gen_rule_find_slot_go.arm1, ruK1_fail (h := by simpa using hnone1 heq)]
     exact RSim.pure_some ⟨⟨hS, IWGrow.refl _, rfl⟩, hA⟩
   next s0 sn heq =>
   obtain ⟨h11, h12'⟩ := hsome1 s0 sn heq
-  rw [fcK_some, ruK1_ok (h := by simp only [List.headD_cons]; rw [h11]; decide)]
+  rw [gfsW.k_class_gen_rule_find_slot_go.arm1, ruK1_ok (h := by simp only [List.headD_cons]; rw [h11]; decide)]
   simp only [List.tail_cons, List.headD_cons]
   rw [h12']
   have hs0 : s0 < G.slots.length := by simpa using (List.of_mem_zip (List.mem_of_find?_eq_some heq)).1
@@ -586,13 +586,13 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨fvs, res⟩ := p2
   obtain ⟨h21, ⟨hfvs, hfb⟩, -, -⟩ := ho2
   simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hfb
-  rw [ruK2_ok (h := by rw [h21]; decide), rbW_eq]
+  rw [ruK2_ok (h := by rw [h21]; decide), rbW.arm1]
   have hX2 := hX.stab (decCC_mono _) m2 hg2
   obtain ⟨-, -, htyN2⟩ := rec2CC_parts hX2
   obtain ⟨vN, evN, hvN, dvN⟩ := iwH_rdW_at (w := x) (k := 5) htyN2 hS2.2.2.2.1
   simp only [show UInt64.ofNat 5 = (5 : Word) from rfl] at evN
   rw [evN]
-  refine RSim.bind (K := fun o => fcK (rbK1 n g rco rcl cgo cgl rlvls x _ _ _ _ o)) rfl (Q1 := fun b a' x =>
+  refine RSim.bind (K := fun o => fcK (rbW.k_target_pi_doms_with n g rco rcl cgo cgl rlvls x _ _ _ _ o)) rfl (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m2 b.2 ∧ PdRes b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r3, m3⟩ h3
     obtain ⟨res', a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n m2 m3 a2 _ _ vN r3 fvs h3 hS2 hvN hfvs
@@ -602,15 +602,15 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rintro ⟨r3, m3⟩ o3 a3 - ⟨hS3, hg3, ho3, hA3⟩
   dsimp only at hS3 hg3 ho3
   rcases o3 with _ | ws
-  · rw [rbK1_fail (h := ho3), fcK_some]; exact RSim.pure_some ⟨⟨hS3, hg2.trans hg3, rfl⟩, hA3⟩
+  · rw [rbW.k_target_pi_doms_with.arm1 (hc1 := ho3), fcK_some]; exact RSim.pure_some ⟨⟨hS3, hg2.trans hg3, rfl⟩, hA3⟩
   obtain ⟨h31, hws, hwb⟩ := ho3
-  rw [rbK1_ok (h := by rw [h31]; decide)]
+  rw [rbW.k_target_pi_doms_with.arm2 (hc1 := by rw [h31]; decide)]
   have hg23 := hg2.trans hg3
   have hpv := pvW_sim dn vis fe G g (UInt64.ofNat l12) hns
     (fun i => if i < G.nP then ConRon.Arena.exprGetD G.params i else G.slotVar (i - G.nP)) (fun _ => rfl) n m3 a3 0
     hS3 (hG.grow (decCG_mono _) hg23) (by simp)
   simp only [UInt64.toNat_zero, Nat.sub_zero, ← List.range_eq_range', hrP] at hpv
-  refine RSim.bind (K := fun o => fcK (rbK2 n g rco rcl cgo cgl rlvls x _ _ _ _ _ _ o)) rfl
+  refine RSim.bind (K := fun o => fcK (rbW.k_class_gen_rule_pvars_go n g rco rcl cgo cgl rlvls x _ _ _ _ _ _ o)) rfl
     (RSim.withF hpv (fun _ hb => pvW_afr _ _ _ _ _ _ _ hb)) ?_
   rintro ⟨r4, m4⟩ pvars a4 - ⟨⟨hS4, hg4, hpd, hpb⟩, hf4⟩
   have hA4 := hf4 hA3
@@ -622,8 +622,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨enF4, -⟩ := rec2RdN (w := x) (k := 1) hnF4 hS4.2.2.2.1
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl] at enF4
   by_cases hov : UInt64.ofNat l12 + rdW (m4.arr64 IW) (x + 1) < UInt64.ofNat l12
-  · rw [rbK2_big (h := hov)]; exact RSim.none
-  rw [rbK2_ok (h := hov), enF4]
+  · rw [rbW.k_class_gen_rule_pvars_go.abort1 (hc1 := hov)]; exact RSim.none
+  rw [rbW.k_class_gen_rule_pvars_go.arm1 (hc1 := hov), enF4]
   rw [enF4] at hov
   have he : (UInt64.ofNat l12 + UInt64.ofNat X.nF : Word).toNat = G.pre.length + X.nF := by
     have := nctAddNowrap (a := UInt64.ofNat X.nF) (b := UInt64.ofNat l12) (by rwa [UInt64.add_comm])
@@ -635,24 +635,24 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (hrc.grow (OMono.decNL _ _) hg24) (hcg.grow (OMono.decPL (fun q => OMono.decCVp q) _ _) hg24)
     (by simp [tnF]; omega) hA4
   simp only [tnF, UInt64.toNat_zero] at hcg
-  refine RSim.bind (K := fun o => fcK (rbK3 n g (UInt64.ofNat s0) _ _ o)) rfl hcg ?_
+  refine RSim.bind (K := fun o => fcK (rbW.k_class_gen_rule_calls_go n g (UInt64.ofNat s0) _ _ o)) rfl hcg ?_
   rintro ⟨r5, m5⟩ o5 a5 - ⟨hS5, hg5, ho5, hA5⟩
   dsimp only at hS5 hg5 ho5
   rcases o5 with _ | ihs
-  · rw [rbK3_fail (h := ho5), fcK_some]; exact RSim.pure_some ⟨⟨hS5, hg24.trans hg5, rfl⟩, hA5⟩
+  · rw [rbW.k_class_gen_rule_calls_go.arm1 (hc1 := ho5), fcK_some]; exact RSim.pure_some ⟨⟨hS5, hg24.trans hg5, rfl⟩, hA5⟩
   obtain ⟨h51, hihs, hib⟩ := ho5
-  rw [rbK3_ok (h := by rw [h51]; decide)]
+  rw [rbW.k_class_gen_rule_calls_go.arm2 (hc1 := by rw [h51]; decide)]
   have hg25 := hg24.trans hg5
   have hm25 := hm24.trans hg5
   rcases n with _ | n
-  · intro b hb; simp [grcW, fcK] at hb
+  · intro b hb; simp [grcW, rbW.k_class_gen_rule_close, fcK] at hb
   have hc := grcW_sim (dn := dn) (vis := vis) (fe := fe) n m5 a5 g (UInt64.ofNat s0) _ _ _ _ G fvs ihs hS5
     (hG.grow (decCG_mono _) hg25) (by rw [ts0]; omega)
     (by rw [decHL_grow hm25 hfb]; exact hfvs) (Nat.le_trans hfb hm25.1) hihs hib hA5
   rw [ts0] at hc
-  refine RSim.bindPure (K := fun o => fcK (fcK o)) rfl hc ?_
+  refine RSim.bindPure (K := fun o => fcK (rbW.k_class_gen_rule_close o)) rfl hc ?_
   rintro ⟨r6, m6⟩ o6 a6 - ⟨⟨hS6, hg6, ho6⟩, hA6⟩
-  simp only [fcK_some]
+  simp only [rbW.k_class_gen_rule_close.arm1, fcK_some]
   refine RSim.pure_some ⟨⟨hS6, hg25.trans hg6, ?_⟩, hA6⟩
   cases o6 with
   | none => exact ho6
