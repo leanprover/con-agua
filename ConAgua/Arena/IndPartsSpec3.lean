@@ -274,7 +274,7 @@ theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
 
 /-- A returning `e_view` of a `const` handle. -/
 theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h ≠ []) :
-    viewOK m h 18 ∧ eViewW m h = [3, tfld m CONST (tierW h) (idxW h) 0,
+    viewOK m h CONST ∧ eViewW m h = [3, tfld m CONST (tierW h) (idxW h) 0,
       tfld m CONST (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
@@ -293,7 +293,7 @@ theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h 
 
 /-- The `viewConst` projection of a `const` handle. -/
 theorem viewConst_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) :
+    (hv : viewOK m h CONST) :
     a.store.viewConst (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0),
       decI (tfld m CONST (tierW h) (idxW h) 1)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2

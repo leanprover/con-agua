@@ -256,13 +256,13 @@ theorem arNodeW_let (hg : h >>> 28 = 7) : arNodeW (n + 1) m h c d k fu = arLetW 
 theorem arNodeW_proj (hg : h >>> 28 = 9) : arNodeW (n + 1) m h c d k fu = arProjW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_fvar_in (hv : viewOK m h 26) (hg : h >>> 28 = 1)
+theorem arNodeW_fvar_in (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
     (hdk : ¬ d + k < d) (hi : d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k)
     (ho : ¬ c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0) < c) :
     arNodeW (n + 1) m h c d k fu = binternW m (c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0)) := by
   rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi, ho]; simp
 
-theorem arNodeW_fvar_out (hv : viewOK m h 26) (hg : h >>> 28 = 1)
+theorem arNodeW_fvar_out (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
     (hdk : ¬ d + k < d) (hi : ¬ (d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k)) :
     arNodeW (n + 1) m h c d k fu = some (h, m) := by
   rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi]; simp
@@ -278,7 +278,7 @@ theorem arAppW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).h
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arAppW_miss (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 = 0)
-    (hvk : viewOK m h 4) :
+    (hvk : viewOK m h APP) :
     arAppW (n + 1) m h c d k fu =
       rappK₁ n h c d k fu (tfld m APP (tierW h) (idxW h) 0)
         (tfld m APP (tierW h) (idxW h) 1)
@@ -293,7 +293,7 @@ theorem arLamW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
   rw [arLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arLamW_miss (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
-    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h 28) :
+    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h LAM) :
     arLamW (n + 1) m h c d k fu =
       rlamK₁ n h c d k fu (tfld m LAM (tierW h) (idxW h) 0)
         (tfld m LAM (tierW h) (idxW h) 1)
@@ -308,7 +308,7 @@ theorem arForallW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
   rw [arForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arForallW_miss (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
-    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h 30) :
+    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h FORALL) :
     arForallW (n + 1) m h c d k fu =
       rfaK₁ n h c d k fu (tfld m FORALL (tierW h) (idxW h) 0)
         (tfld m FORALL (tierW h) (idxW h) 1)
@@ -323,7 +323,7 @@ theorem arLetW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
   rw [arLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arLetW_miss (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
-    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h 20) :
+    (hh : (mfindG abSch m h c).headD 0 = 0) (hvk : viewOK m h LET) :
     arLetW (n + 1) m h c d k fu =
       rleK₁ n h c d k fu (tfld m LET (tierW h) (idxW h) 0)
         (tfld m LET (tierW h) (idxW h) 1)
@@ -342,7 +342,7 @@ theorem arProjW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).
   rw [arProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arProjW_miss (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 = 0)
-    (hvk : viewOK m h 32) :
+    (hvk : viewOK m h PROJ) :
     arProjW (n + 1) m h c d k fu =
       rpjK₁ h c (tfld m PROJ (tierW h) (idxW h) 0)
         (tfld m PROJ (tierW h) (idxW h) 1)

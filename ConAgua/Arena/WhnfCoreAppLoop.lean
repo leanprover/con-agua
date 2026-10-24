@@ -530,7 +530,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         cases k with
         | zero => rw [callW_zero_app] at hcall; cases hcall
         | succ k' =>
-        have hvw : viewOK m v 28 := ⟨c1, UInt64.not_le.mp c2⟩
+        have hvw : viewOK m v LAM := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.1 v hv hvw hlam
         have hvb := viewBind_lam m a hS.arena.1 v hv hvw hlam
         have hbeta := betaPeel_refines' p hp hwc.instList k' ⟨m, Locals.init []⟩ a dn vis fe MM eb _

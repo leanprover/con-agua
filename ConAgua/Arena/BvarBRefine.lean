@@ -73,7 +73,7 @@ theorem bbW_frame (n : Nat) :
       · cases hb
       rename_i r₁ m₁ hn
       exact (ih.2 _ _ _ _ _ hn).trans (bbSet_frame _ _ _ _ _ hb)
-    · have dead : ∀ c, ¬ viewOK m h c → rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h ∨
+    · have dead : ∀ c, ¬ viewOK m h c → tcnt m c (tierW h) ≤ idxW h ∨
           (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro c hv
         by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -85,9 +85,9 @@ theorem bbW_frame (n : Nat) :
       by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
       · rw [bbNodeW, if_pos hs] at hb; cases hb
       have tagCase : ∀ (c : Word), (viewOK m h c → BbFrame m m') →
-          (rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → BbFrame m m') → BbFrame m m' := by
+          (tcnt m c (tierW h) ≤ idxW h → BbFrame m m') → BbFrame m m' := by
         intro c h1 h2
-        by_cases hc : rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h
+        by_cases hc : tcnt m c (tierW h) ≤ idxW h
         · exact h2 hc
         · exact h1 ⟨hs, UInt64.not_le.mp hc⟩
       have none_of : ∀ (hn : bbNodeW (n + 1) m h c = none), False := fun hn => by

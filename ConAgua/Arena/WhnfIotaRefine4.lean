@@ -15,7 +15,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 theorem view_sort_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
+    (hv : viewOK m h SORT) (hg : h >>> 28 = 2) :
     a.store.view (decE h) = some (.sort (decI (tfld m SORT (tierW h) (idxW h) 0))) ∧
     (tfld m SORT (tierW h) (idxW h) 0).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hu⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2

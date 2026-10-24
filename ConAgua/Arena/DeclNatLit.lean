@@ -423,7 +423,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             rw [if_neg hv2] at hw
             simp only [Option.some.injEq, Prod.mk.injEq] at hw
             obtain ⟨rfl, rfl⟩ := hw
-            have hvok : viewOK m2 wt 30 := ⟨hv1, by
+            have hvok : viewOK m2 wt FORALL := ⟨hv1, by
               rw [UInt64.lt_iff_toNat_lt]
               exact Nat.lt_of_not_le (fun e => hv2 (UInt64.le_iff_toNat_le.mpr e))⟩
             obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.1.arena.1 wt hlt hvok h6

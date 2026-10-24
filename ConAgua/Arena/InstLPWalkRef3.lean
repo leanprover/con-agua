@@ -143,7 +143,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     simp only [except_ok_bind, hlp', Bool.not_true, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
       view_run _ _ _ hv]
     exact hT
-  have vok : ∀ c, ¬ rdW (m₁.arr64 CTL) (c + tierW h) ≤ idxW h →
+  have vok : ∀ c, ¬ tcnt m₁ c (tierW h) ≤ idxW h →
       ¬ (tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0) → viewOK m₁ h c := fun c hc hs => ⟨hs, by simpa using hc⟩
   by_cases hs : tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
   · rw [ilwDispW_sc p n m₁ h ko kc vo vc fu hs] at hW; cases hW
@@ -160,21 +160,21 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     · simp [hc0] at hW
     simp only [hc0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    exact hrun _ (view_bvar m₁ a hR h hh (vok 22 hc0 hs) g0) _ rfl (ILWStep.refl rfl hS hM hh)
+    exact hrun _ (view_bvar m₁ a hR h hh (vok BVAR hc0 hs) g0) _ rfl (ILWStep.refl rfl hS hM hh)
   by_cases g8 : h >>> 28 = 8
   · rw [ilwDispW_lit p n m₁ h ko kc vo vc fu hs g8] at hW
     by_cases hc0 : tcnt m₁ LIT (tierW h) ≤ idxW h
     · simp [hc0] at hW
     simp only [hc0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    obtain ⟨l, hv⟩ := view_lit m₁ a hR h hh (vok 2 hc0 hs) g8
+    obtain ⟨l, hv⟩ := view_lit m₁ a hR h hh (vok LIT hc0 hs) g8
     exact hrun _ hv _ rfl (ILWStep.refl rfl hS hM hh)
   by_cases g2 : h >>> 28 = 2
   · rw [ilwDispW_sort p n m₁ h ko kc vo vc fu hs g2] at hW
     by_cases hc0 : tcnt m₁ SORT (tierW h) ≤ idxW h
     · simp [hc0] at hW
     simp only [hc0, ↓reduceIte] at hW
-    obtain ⟨hv, hx⟩ := L.Ind.view_sort_f m₁ a hR h hh (vok 16 hc0 hs) g2
+    obtain ⟨hv, hx⟩ := L.Ind.view_sort_f m₁ a hR h hh (vok SORT hc0 hs) g2
     generalize tfld m₁ SORT (tierW h) (idxW h) 0 = x at hW hv hx
     refine hrun _ hv _ rfl ?_
     cases h2 : callW p n "sl_memo" [x, ko, kc, vo, vc] m₁ with
@@ -215,7 +215,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     by_cases hc0 : tcnt m₁ CONST (tierW h) ≤ idxW h
     · simp [hc0] at hW
     simp only [hc0, ↓reduceIte] at hW
-    obtain ⟨hv, hcw, hx⟩ := L.Ind.view_const_f m₁ a hR h hh (vok 18 hc0 hs) g3
+    obtain ⟨hv, hcw, hx⟩ := L.Ind.view_const_f m₁ a hR h hh (vok CONST hc0 hs) g3
     generalize tfld m₁ CONST (tierW h) (idxW h) 0 = cw at hW hv hcw
     generalize tfld m₁ CONST (tierW h) (idxW h) 1 = x at hW hv hx
     refine hrun _ hv _ rfl ?_

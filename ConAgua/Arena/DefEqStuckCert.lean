@@ -210,7 +210,7 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
   have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
-  have hvo : viewOK s.mem h 18 := ⟨hsc, by simpa using hcc⟩
+  have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
   generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
@@ -424,7 +424,7 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
   have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
-  have hvo : viewOK s.mem h 18 := ⟨hsc, by simpa using hcc⟩
+  have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
   generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv

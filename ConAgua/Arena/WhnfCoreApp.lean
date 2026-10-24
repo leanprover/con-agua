@@ -586,7 +586,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         have hc3 : ¬ m.len64 SPN ≤ co + cn := fun h => by
           simp [peelFull, peelLoop, hlt, ht5, hc1, hc2, h] at hF
         rw [peelFull_step _ _ _ _ _ _ _ _ _ _ hlt (fun h => h ht5) hc1 hc2 hc3] at hF
-        have hv : viewOK m t 28 := ⟨hc1, UInt64.not_le.mp hc2⟩
+        have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
         obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.1 t ht hv ht5
         have hvb := viewBind_lam m a hS.arena.1 t ht hv ht5
         have hlt' : i.toNat < args.size := by

@@ -201,55 +201,55 @@ theorem frW_miss (hc : c ≠ 0) (hr : mfindG frSch m h 0 ≠ []) (hh : (mfindG f
     frW (n + 1) m h c = frK h (frNodeW n m h (c - 1)) := by
   rw [frW]; simp only [hc, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, frK]
 
-theorem frNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h 22) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h BVAR) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_fvar (hv : viewOK m h 26) (hg : h >>> 28 = 1)
+theorem frNodeW_fvar (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
     (h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 ≠ 0) :
     frNodeW (n + 1) m h c = some (tfld m FVAR (tierW h) (idxW h) 0 + 1, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, h1]; simp [UInt64.not_le.mpr hv2]
 
-theorem frNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h SORT) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h CONST) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : frNodeW (n + 1) m h c = some (0, m) := by
+theorem frNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h LIT) : frNodeW (n + 1) m h c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
+theorem frNodeW_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
     frNodeW (n + 1) m h c = frAppK₁ n c (tfld m APP (tierW h) (idxW h) 1)
       (frW n m (tfld m APP (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frAppK₁, frAppK₁.frAppK₂]
   simp
 
-theorem frNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
+theorem frNodeW_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
     frNodeW (n + 1) m h c = frBindK₁ n c (tfld m LAM (tierW h) (idxW h) 1)
       (frW n m (tfld m LAM (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frBindK₁, frBindK₁.frBindK₂]
   simp
 
-theorem frNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
+theorem frNodeW_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
     frNodeW (n + 1) m h c = frBindK₁ n c (tfld m FORALL (tierW h) (idxW h) 1)
       (frW n m (tfld m FORALL (tierW h) (idxW h) 0) c) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, frBindK₁, frBindK₁.frBindK₂]
   simp
 
-theorem frNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
+theorem frNodeW_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
     frNodeW (n + 1) m h c = frW n m (tfld m PROJ (tierW h) (idxW h) 2) c := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [frNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem frNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
+theorem frNodeW_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
     frNodeW (n + 1) m h c = frLetK₁ n c (tfld m LET (tierW h) (idxW h) 1)
       (tfld m LET (tierW h) (idxW h) 2)
       (frW n m (tfld m LET (tierW h) (idxW h) 0) c) := by

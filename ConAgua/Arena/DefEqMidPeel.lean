@@ -335,7 +335,7 @@ theorem peelDom_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : N
 /-! ## `e_view` runs -/
 
 theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW m h ≠ []) :
-    viewOK m h 28 ∧ L.Ind.eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
+    viewOK m h LAM ∧ L.Ind.eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
       tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold L.Ind.eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne

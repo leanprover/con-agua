@@ -596,7 +596,7 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         simp only [lamsFull, lamsLoop, hp0, ht5, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
       have hc2 : ¬ tcnt m LAM (tierW t) ≤ idxW t := fun g => by
         simp only [lamsFull, lamsLoop, hp0, ht5, hc1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-      have hv : viewOK m t 28 := ⟨hc1, UInt64.not_le.mp hc2⟩
+      have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
       obtain ⟨-, hty, hbody⟩ := view_lam m a hS.arena.1 t ht hv ht5
       have hvb := viewBind_lam m a hS.arena.1 t ht hv ht5
       cases h1 : callW p j "inst_list" [tfld m LAM (tierW t) (idxW t) 0, fo, k, 0] m with

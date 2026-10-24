@@ -126,7 +126,7 @@ def evoW (m : Mem) (h : Word) : Option Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else match evoCnt (h >>> 28) with
     | none => none
-    | some c => if rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h then none else some 0
+    | some c => if tcnt m c (tierW h) ≤ idxW h then none else some 0
 
 theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprViewOkL) (n : Nat)
     (s₀ : St) (h : Word) :
@@ -482,7 +482,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   | some c =>
   rw [hc] at hev
   simp only at hev
-  by_cases g2 : rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h
+  by_cases g2 : tcnt m c (tierW h) ≤ idxW h
   · rw [if_pos g2] at hev; cases hev
   have hv : viewOK m h c := ⟨g1, UInt64.not_le.mp g2⟩
   simp only [evoCnt] at hc

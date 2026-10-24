@@ -205,46 +205,46 @@ theorem bbW_miss (hc : c ≠ 0) (hr : mfindG bmSch m h 0 ≠ []) (hh : (mfindG b
     bbW (n + 1) m h c = bbK h (bbNodeW n m h (c - 1)) := by
   rw [bbW]; simp only [hc, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, bbK]
 
-theorem bbNodeW_bvar (hv : viewOK m h 22) (hg : h >>> 28 = 0)
+theorem bbNodeW_bvar (hv : viewOK m h BVAR) (hg : h >>> 28 = 0)
     (h1 : tfld m BVAR (tierW h) (idxW h) 0 + 1 ≠ 0) :
     bbNodeW (n + 1) m h c = some (tfld m BVAR (tierW h) (idxW h) 0 + 1, m) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, h1]; simp [UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h SORT) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h CONST) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_fvar (hg : h >>> 28 = 1) (hv : viewOK m h 26) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_fvar (hg : h >>> 28 = 1) (hv : viewOK m h FVAR) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h LIT) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
+theorem bbNodeW_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
     bbNodeW (n + 1) m h c = bbAppK₁ n c (tfld m APP (tierW h) (idxW h) 1)
       (bbW n m (tfld m APP (tierW h) (idxW h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbAppK₁, bbAppK₁.bbAppK₂]
   simp
 
-theorem bbNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
+theorem bbNodeW_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
     bbNodeW (n + 1) m h c = bbBindK₁ n c (tfld m LAM (tierW h) (idxW h) 1)
       (bbW n m (tfld m LAM (tierW h) (idxW h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbBindK₁, bbBindK₁.bbBindK₂]
   simp
 
-theorem bbNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
+theorem bbNodeW_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
     bbNodeW (n + 1) m h c = bbBindK₁ n c (tfld m FORALL (tierW h) (idxW h) 1)
       (bbW n m (tfld m FORALL (tierW h) (idxW h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbBindK₁, bbBindK₁.bbBindK₂]
   simp
 
-theorem bbNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
+theorem bbNodeW_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
     bbNodeW (n + 1) m h c = bbW n m (tfld m PROJ (tierW h) (idxW h) 2) c := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
+theorem bbNodeW_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
     bbNodeW (n + 1) m h c = bbLetK₁ n c (tfld m LET (tierW h) (idxW h) 1)
       (tfld m LET (tierW h) (idxW h) 2)
       (bbW n m (tfld m LET (tierW h) (idxW h) 0) c) := by

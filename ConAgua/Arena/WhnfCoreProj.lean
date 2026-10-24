@@ -61,7 +61,7 @@ theorem decE_lit_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.lit) = (h >>
 /-- **Under `ArenaR`, on a `lit` node past the view checks, the kind word says whether the
 literal is a `strVal`** (the converse direction of `view_lit`, exposing the kind word). -/
 theorem view_lit_kind (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
     (tfld m LIT (tierW h) (idxW h) 0 = 1 →
       ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) ∧
     (tfld m LIT (tierW h) (idxW h) 0 ≠ 1 →
@@ -151,7 +151,7 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
   have htag8 : h >>> 28 = 8 := by simpa using htag
   obtain ⟨hsc, hW⟩ := of_ite_none hW
   obtain ⟨hbd, hW⟩ := of_ite_none hW
-  have hvOK : viewOK s.mem h 2 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK s.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hviewS, hviewN⟩ := view_lit_kind s.mem a₀ hS.arena.1 h hh hvOK htag8
   by_cases hkind : tfld s.mem LIT (tierW h) (idxW h) 0 ≠ 1
   · rw [if_pos hkind] at hW
@@ -906,7 +906,7 @@ theorem decE_const_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.const) = (
 /-- **A `const` node past the view checks**: its name and level-list handles are the record's
 words. -/
 theorem view_const_words (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
     ∃ n us, a.store.view (decE h) = some (.const n us) ∧
       n = decI (tfld m CONST (tierW h) (idxW h) 0) ∧
       us = decI (tfld m CONST (tierW h) (idxW h) 1) ∧
@@ -999,7 +999,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   have g3 : r₁.headD 0 >>> 28 = 3 := by simpa using g
   obtain ⟨hsc, hW⟩ := of_ite_none hW
   obtain ⟨hbd, hW⟩ := of_ite_none hW
-  have hvOK : viewOK s.mem (r₁.headD 0) 18 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK s.mem (r₁.headD 0) CONST := ⟨hsc, by simpa using hbd⟩
   obtain ⟨n', us', hv, hn, hus, hhn, hhus⟩ := view_const_words s.mem a₀ hS.arena.1 (r₁.headD 0)
     hhw hvOK g3
   cases hc2 : callW p n "reduce_proj_fire" [mode, vis, e1, q, i,

@@ -357,7 +357,7 @@ theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (
         tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW, tfld, tcnt, TRec.ad]
 
 theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) :
+    (hv : viewOK m h LIT) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ RecRel m (tierW h) (idxW h) ⟨l⟩ := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   refine ⟨k.l, ?_, hkr⟩
@@ -437,7 +437,7 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
 /-! ## `is_ctor_app(vis, e)` -/
 
 theorem view_const_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
     a.store.view (decE h) = some (.const (decI (tfld m CONST (tierW h) (idxW h) 0))
       (decI (tfld m CONST (tierW h) (idxW h) 1))) ∧
     (tfld m CONST (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧

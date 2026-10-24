@@ -172,52 +172,52 @@ theorem wscW_miss (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG wsSch m h d
     wscW (n + 1) m h d c = wsK h d (wsNodeW n m h d (c - 1)) := by
   rw [wscW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, wsK]
 
-theorem wsNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h 22) : wsNodeW (n + 1) m h d c = some (1, m) := by
+theorem wsNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h BVAR) : wsNodeW (n + 1) m h d c = some (1, m) := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem wsNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : wsNodeW (n + 1) m h d c = some (1, m) := by
+theorem wsNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h SORT) : wsNodeW (n + 1) m h d c = some (1, m) := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem wsNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : wsNodeW (n + 1) m h d c = some (1, m) := by
+theorem wsNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h CONST) : wsNodeW (n + 1) m h d c = some (1, m) := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem wsNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : wsNodeW (n + 1) m h d c = some (1, m) := by
+theorem wsNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h LIT) : wsNodeW (n + 1) m h d c = some (1, m) := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem wsNodeW_fvar_lt (hg : h >>> 28 = 1) (hv : viewOK m h 26)
+theorem wsNodeW_fvar_lt (hg : h >>> 28 = 1) (hv : viewOK m h FVAR)
     (hl : tfld m FVAR (tierW h) (idxW h) 0 < d) :
     wsNodeW (n + 1) m h d c = wscW n m (tfld m FVAR (tierW h) (idxW h) 1)
       (tfld m FVAR (tierW h) (idxW h) 0) c := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, hl]
 
-theorem wsNodeW_fvar_ge (hg : h >>> 28 = 1) (hv : viewOK m h 26)
+theorem wsNodeW_fvar_ge (hg : h >>> 28 = 1) (hv : viewOK m h FVAR)
     (hl : ¬ tfld m FVAR (tierW h) (idxW h) 0 < d) :
     wsNodeW (n + 1) m h d c = some (0, m) := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, hl]
 
-theorem wsNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
+theorem wsNodeW_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
     wsNodeW (n + 1) m h d c = wsAndK n (tfld m APP (tierW h) (idxW h) 1) d c
       (wscW n m (tfld m APP (tierW h) (idxW h) 0) d c) := by
   rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
   simp
 
-theorem wsNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
+theorem wsNodeW_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
     wsNodeW (n + 1) m h d c = wsAndK n (tfld m LAM (tierW h) (idxW h) 1) d c
       (wscW n m (tfld m LAM (tierW h) (idxW h) 0) d c) := by
   rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
   simp
 
-theorem wsNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
+theorem wsNodeW_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
     wsNodeW (n + 1) m h d c = wsAndK n (tfld m FORALL (tierW h) (idxW h) 1) d c
       (wscW n m (tfld m FORALL (tierW h) (idxW h) 0) d c) := by
   rw [wsNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, wsAndK]
   simp
 
-theorem wsNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
+theorem wsNodeW_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
     wsNodeW (n + 1) m h d c = wscW n m (tfld m PROJ (tierW h) (idxW h) 2) d c := by
   rw [wsNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem wsNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
+theorem wsNodeW_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
     wsNodeW (n + 1) m h d c = wsLetK n (tfld m LET (tierW h) (idxW h) 1)
       (tfld m LET (tierW h) (idxW h) 2) d c
       (wscW n m (tfld m LET (tierW h) (idxW h) 0) d c) := by

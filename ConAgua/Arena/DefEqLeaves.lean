@@ -386,7 +386,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   by_cases hc : tcnt m APP (tierW h) ≤ idxW h
   · simp [h4, hs, hc] at hW
   simp only [h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have hvo : viewOK m h 4 := ⟨hs, by simpa using hc⟩
+  have hvo : viewOK m h APP := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, -⟩ := view_app m a hR h hh hvo h4
   simp only [isEagerReduce, tag_beq_app h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR h hh hvo, except_ok_bind]
@@ -402,7 +402,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   by_cases fc : tcnt m APP (tierW f) ≤ idxW f
   · simp [f4, fs, fc] at hW
   simp only [f4, fs, fc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have fvo : viewOK m f 4 := ⟨fs, by simpa using fc⟩
+  have fvo : viewOK m f APP := ⟨fs, by simpa using fc⟩
   obtain ⟨-, hg, -⟩ := view_app m a hR f hf fvo f4
   simp only [tag_beq_app f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR f hf fvo, except_ok_bind]
@@ -418,7 +418,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   by_cases gc : tcnt m CONST (tierW g) ≤ idxW g
   · simp [g3, gs, gc] at hW
   simp only [g3, gs, gc, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
-  have gvo : viewOK m g 18 := ⟨gs, by simpa using gc⟩
+  have gvo : viewOK m g CONST := ⟨gs, by simpa using gc⟩
   obtain ⟨-, hn, -⟩ := L.Ind.view_const_f m a hR g hg gvo g3
   have her := hP.names_lt 50 (by decide)
   rw [pinW_rdW m (1 + 50) (1 + 50) rfl] at her
@@ -461,7 +461,7 @@ theorem pv_eq_zero_iff (p : Array Word) (o l : Nat) (hn : Norm p o l) : pv p o l
 /-- **A `lit` node past the view checks**: kind word `0` is a `natVal` whose value is `0` iff the
 length word is; another kind word is a `strVal`. -/
 theorem defeq_view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
     (tfld m LIT (tierW h) (idxW h) 0 = 0 →
       ∃ N, a.store.view (decE h) = some (.lit (.natVal N)) ∧
         (N = 0 ↔ tfld m LIT (tierW h) (idxW h) 2 = 0)) ∧
@@ -524,7 +524,7 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
     by_cases hc : tcnt m LIT (tierW e) ≤ idxW e
     · simp [hs, hc] at hW
     simp only [hs, hc, ↓reduceIte] at hW
-    have hvo : viewOK m e 2 := ⟨hs, by simpa using hc⟩
+    have hvo : viewOK m e LIT := ⟨hs, by simpa using hc⟩
     obtain ⟨hnat, hstr⟩ := defeq_view_lit_nat m a hR e he hvo h8
     simp only [isNatZero, tag_beq_lit e he, h8, decide_true, ↓reduceIte, StateT.run_bind]
     by_cases hk : tfld m LIT (tierW e) (idxW e) 0 = 0
@@ -558,7 +558,7 @@ theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m 
   · simp [hs, hc] at hW
   simp only [hs, hc, ↓reduceIte, Option.some.injEq] at hW
   subst hW
-  have hvo : viewOK m e 18 := ⟨hs, by simpa using hc⟩
+  have hvo : viewOK m e CONST := ⟨hs, by simpa using hc⟩
   obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f m a hR e he hvo h3
   have hel := hP.lv_lt.1
   rw [pinW_rdW m 52 52 rfl] at hel
@@ -806,7 +806,7 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
   · simp [hhHead, h3, hs, hcc] at hW
   rw [hhHead_go p n _ vis h h3 hs hcc] at hW
-  have hvo : viewOK s₀.mem h 18 := ⟨hs, by simpa using hcc⟩
+  have hvo : viewOK s₀.mem h CONST := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3
   have hrun1 := headHint_run_const fe _ a₀ _ _ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3]) hv
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hrun1
@@ -1029,7 +1029,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
   · simp [h3, hs, hcc] at hW
   simp only [h3, hs, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have hvo : viewOK s₀.mem h 18 := ⟨hs, by simpa using hcc⟩
+  have hvo : viewOK s₀.mem h CONST := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
   generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv
@@ -1191,7 +1191,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   by_cases ac : tcnt s₀.mem APP (tierW a) ≤ idxW a
   · simp [a4, as, ac] at hW
   simp only [a4, as, ac, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have avo : viewOK s₀.mem a 4 := ⟨as, by simpa using ac⟩
+  have avo : viewOK s₀.mem a APP := ⟨as, by simpa using ac⟩
   obtain ⟨hva, hf1, -⟩ := view_app s₀.mem a₀ hR a ha avo a4
   have hpre : ∀ T : AM Bool, (sameConstHeads (decE a) (decE b)).run a₀ = (do
       if (decE b).tag == ETag.app then
@@ -1226,7 +1226,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   by_cases bc : tcnt s₀.mem APP (tierW b) ≤ idxW b
   · simp [b4, bs, bc] at hW
   simp only [b4, bs, bc, not_true_eq_false, ↓reduceIte] at hW
-  have bvo : viewOK s₀.mem b 4 := ⟨bs, by simpa using bc⟩
+  have bvo : viewOK s₀.mem b APP := ⟨bs, by simpa using bc⟩
   obtain ⟨hvb, hf2, -⟩ := view_app s₀.mem a₀ hR b hb bvo b4
   simp only [tag_beq_app b hb, b4, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvb,
     except_ok_bind] at hres
@@ -1250,7 +1250,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   by_cases gc : tcnt s₀.mem CONST (tierW g1) ≤ idxW g1
   · simp [g3, gs, gc] at hW
   simp only [g3, gs, gc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have gvo : viewOK s₀.mem g1 18 := ⟨gs, by simpa using gc⟩
+  have gvo : viewOK s₀.mem g1 CONST := ⟨gs, by simpa using gc⟩
   obtain ⟨hvg, hn1, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR g1 hh1 gvo g3
   simp only [tag_beq_const g1 hh1, g3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvg,
     except_ok_bind] at hres
@@ -1273,7 +1273,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   by_cases kc : tcnt s₀.mem CONST (tierW g2) ≤ idxW g2
   · simp [k3, ks, kc] at hW
   simp only [k3, ks, kc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have kvo : viewOK s₀.mem g2 18 := ⟨ks, by simpa using kc⟩
+  have kvo : viewOK s₀.mem g2 CONST := ⟨ks, by simpa using kc⟩
   obtain ⟨hvk, hn2, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR g2 hh2 kvo k3
   refine hres _ hW (by split <;> first | exact hw0 | exact hw1) ?_
   simp only [tag_beq_const g2 hh2, k3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvk,

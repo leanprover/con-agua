@@ -200,7 +200,7 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 /-! ## The head name of a `const` handle -/
 
 theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -498,7 +498,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   obtain ⟨g1, hcno⟩ := of_ite_none hcno
   obtain ⟨g2, hcno⟩ := of_ite_none hcno
   simp only [Option.some.injEq] at hcno
-  have hvc : viewOK s₀.mem (r2.headD 0) 18 := ⟨g1, UInt64.not_le.mp g2⟩
+  have hvc : viewOK s₀.mem (r2.headD 0) CONST := ⟨g1, UInt64.not_le.mp g2⟩
   obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
   have hvn := viewConstName_f s₀.mem a₀ hR (r2.headD 0) hHW2 hvc h3'
   rw [hcno] at hvn hn32

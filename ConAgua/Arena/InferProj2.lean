@@ -192,7 +192,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
   have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
   obtain ⟨g2, hW⟩ := of_ite_none hW
   obtain ⟨g3, hW⟩ := of_ite_none hW
-  have hvOK : viewOK m₃ (r₃.headD 0) 18 := ⟨g2, by simpa using g3⟩
+  have hvOK : viewOK m₃ (r₃.headD 0) CONST := ⟨g2, by simpa using g3⟩
   obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ := view_const_words m₃ _ hS₂.arena.1 (r₃.headD 0) hhw hvOK g1'
   generalize tfld m₃ CONST (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0 = wT at hcT hcTw hW
   generalize tfld m₃ CONST (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 1 = wu at hcu hcuw hW

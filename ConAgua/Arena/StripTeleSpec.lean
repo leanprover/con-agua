@@ -39,7 +39,7 @@ open L.Arena
 /-- A returning `e_view` of a `forallE` handle: the view checks hold and the words are the
 binder's. -/
 theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
-    viewOK m h 30 ∧ eViewW m h = [6, tfld m FORALL (tierW h) (idxW h) 0,
+    viewOK m h FORALL ∧ eViewW m h = [6, tfld m FORALL (tierW h) (idxW h) 0,
       tfld m FORALL (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
@@ -61,7 +61,7 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
 
 /-- A returning `e_view` of a `lam` handle. -/
 theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h ≠ []) :
-    viewOK m h 28 ∧ eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
+    viewOK m h LAM ∧ eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
       tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne

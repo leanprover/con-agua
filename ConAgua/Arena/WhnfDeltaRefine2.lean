@@ -76,7 +76,7 @@ theorem rdW_ctl_top' (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
 /-- **A `lit` node past the view checks**: the kind word `0` says `natVal`, with the record's
 slice; any other kind says `strVal`. -/
 theorem view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
     (tfld m LIT (tierW h) (idxW h) 0 = 0 →
       ∃ N, a.store.view (decE h) = some (.lit (.natVal N)) ∧ NatRec m (tierW h) (idxW h) N) ∧
     (tfld m LIT (tierW h) (idxW h) 0 ≠ 0 →
@@ -156,7 +156,7 @@ theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.t
 theorem rawSimple {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a₀ vis fe M eb) {h : Word} (hh : HW h)
     (c : Word) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hb : ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h)
+    (hb : ¬ tcnt m c (tierW h) ≤ idxW h)
     (hcg : (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
       (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
       (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32))
@@ -185,12 +185,12 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       (g → (h >>> 28 = 0 ∧ c = 22) ∨ (h >>> 28 = 1 ∧ c = 26) ∨ (h >>> 28 = 2 ∧ c = 16) ∨
         (h >>> 28 = 4 ∧ c = 4) ∨ (h >>> 28 = 5 ∧ c = 28) ∨ (h >>> 28 = 6 ∧ c = 30) ∨
         (h >>> 28 = 7 ∧ c = 20) ∨ (h >>> 28 = 9 ∧ c = 32)) →
-      (if rdW (s₀.mem.arr64 CTL) (c + tierW h) ≤ idxW h then none else
+      (if tcnt s₀.mem c (tierW h) ≤ idxW h then none else
         some ((0 : Word), (0 : Word), (0 : Word), s₀.mem)) =
         some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
       s'.mem = s₀.mem ∧ RawOut s₀.mem a₀ h r := by
     intro c g _ hg hcg hW'
-    by_cases hb : rdW (s₀.mem.arr64 CTL) (c + tierW h) ≤ idxW h
+    by_cases hb : tcnt s₀.mem c (tierW h) ≤ idxW h
     · rw [if_pos hb] at hW'; cases hW'
     rw [if_neg hb] at hW'
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
@@ -233,7 +233,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     subst m₂
     dsimp only at hW
     simp only [show (2 : Word).toNat = 2 from rfl, show (52 : Word).toNat = 52 from rfl] at hr₁ hr₂
-    have hvOK : viewOK s₀.mem h 18 := ⟨hsc, by simpa using hb⟩
+    have hvOK : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hb⟩
     obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 h hh hvOK g3
     have hrun := rawNatLit_run_const hC.pins hview
     rw [hn, hu] at hrun
@@ -297,7 +297,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     by_cases hb : tcnt s₀.mem LIT (tierW h) ≤ idxW h
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
-    have hvOK : viewOK s₀.mem h 2 := ⟨hsc, by simpa using hb⟩
+    have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hb⟩
     obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK g8
     by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0
     · rw [if_pos hk] at hW
@@ -736,7 +736,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW
-  have hvOK : viewOK s₀.mem h 2 := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK hg8
   by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 0
   · rw [if_pos hk] at hW
@@ -1320,7 +1320,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   by_cases g2 : tcnt s₀.mem CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
   · rw [if_pos g2] at hW; cases hW
   rw [if_neg g2] at hW
-  have hvOK : viewOK s₀.mem (r₁.headD 0) 18 := ⟨g1, by simpa using g2⟩
+  have hvOK : viewOK s₀.mem (r₁.headD 0) CONST := ⟨g1, by simpa using g2⟩
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
     view_const_words s₀.mem a₀ hC.arena.1 (r₁.headD 0) hhw1 hvOK g0'
   cases h2 : callW p n "env_find" [rdW (s₀.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 +

@@ -232,7 +232,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   have hs : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hs => by simp [h3, hs] at hW
   have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hs, hcc] at hW
   simp only [h3, hs, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have hvo : viewOK s.mem h 18 := ⟨hs, by simpa using hcc⟩
+  have hvo : viewOK s.mem h CONST := ⟨hs, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
   generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv

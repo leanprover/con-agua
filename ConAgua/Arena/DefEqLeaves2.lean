@@ -380,7 +380,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     by_cases hc : tcnt s₀.mem LIT (tierW e) ≤ idxW e
     · simp [hs, hc] at hW
     simp only [hs, hc, ↓reduceIte] at hW
-    have hvo : viewOK s₀.mem e 2 := ⟨hs, by simpa using hc⟩
+    have hvo : viewOK s₀.mem e LIT := ⟨hs, by simpa using hc⟩
     have htl : ((decE e).tag == ETag.lit) = true := by rw [tag_beq_lit e he]; simp [h8]
     obtain ⟨k, hk, hkr⟩ := node_of s₀.mem a₀ e litCS RecRel (·.lits) _ hR.lit.2 hvo.2
     have hview : ∀ l, k = ⟨l⟩ → a₀.store.view (decE e) = some (.lit l) := by
@@ -449,7 +449,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   by_cases hc : tcnt s₀.mem APP (tierW e) ≤ idxW e
   · simp [hs, hc] at hW
   simp only [hs, hc, ↓reduceIte] at hW
-  have hvo : viewOK s₀.mem e 4 := ⟨hs, by simpa using hc⟩
+  have hvo : viewOK s₀.mem e APP := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, hx⟩ := view_app s₀.mem a₀ hR e he hvo h4
   have hpre : (natPred? (decE e)).run a₀ = (do
       let f := decE (tfld s₀.mem APP (tierW e) (idxW e) 0)
@@ -479,7 +479,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   by_cases fc : tcnt s₀.mem CONST (tierW f) ≤ idxW f
   · simp [f3, fs, fc] at hW
   simp only [f3, fs, fc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have fvo : viewOK s₀.mem f 18 := ⟨fs, by simpa using fc⟩
+  have fvo : viewOK s₀.mem f CONST := ⟨fs, by simpa using fc⟩
   obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f s₀.mem a₀ hR f hf fvo f3
   have hel := hP.lv_lt.1
   rw [pinW_rdW s₀.mem 52 52 rfl] at hel
@@ -537,7 +537,7 @@ theorem litEq_spec (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
 /-- **A `lit` node's record**, past the view checks: a `natVal` is a normalised slice of its value,
 a `strVal` a slice of its bytes; kind word `0`/`1`; the slice below the pool top. -/
 theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) (l : ConLeche.Literal)
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) (l : ConLeche.Literal)
     (hl : a.store.view (decE h) = some (.lit l)) :
     (tfld m LIT (tierW h) (idxW h) 1).toNat +
       (tfld m LIT (tierW h) (idxW h) 2).toNat ≤ m.top.toNat ∧

@@ -64,7 +64,7 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Opt
 
 /-- The head name of a `const` handle (the store's projection). -/
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -137,7 +137,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   by_cases hv2 : tcnt m CONST (tierW hh) ≤ idxW hh
   · simp [hv1, hv2] at hW
   simp only [hv1, hv2, ↓reduceIte] at hW
-  have hvo : viewOK m hh 18 := ⟨hv1, UInt64.not_le.mp hv2⟩
+  have hvo : viewOK m hh CONST := ⟨hv1, UInt64.not_le.mp hv2⟩
   have hvn := pr_viewConstName m a hR hh hhh hvo h3
   have hcw := (L.Ind.view_const_f m a hR hh hhh hvo h3).2.1
   generalize tfld m CONST (tierW hh) (idxW hh) 0 = cn at hvn hcw hW

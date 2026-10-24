@@ -21,7 +21,7 @@ namespace L.Arena
 
 /-- The result of a stuck arm: `(0, e)` if the view check passes. -/
 def stuckW (m : Mem) (c e : Word) : Option (Word × Word × Mem) :=
-  if rdW (m.arr64 CTL) (c + tierW e) ≤ idxW e then none else some (0, e, m)
+  if tcnt m c (tierW e) ≤ idxW e then none else some (0, e, m)
 
 /-- The model of `whnf_core_step`. -/
 def coreStepW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :

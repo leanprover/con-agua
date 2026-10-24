@@ -352,7 +352,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
           simp only [spFull, spLoop, hlt, ht6, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
         have c2 : ¬ tcnt m FORALL (tierW ty) ≤ idxW ty := fun g => by
           simp only [spFull, spLoop, hlt, ht6, c1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-        have hv : viewOK m ty 30 := ⟨c1, UInt64.not_le.mp c2⟩
+        have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
         cases h1 : callW p k "inst_list" [tfld m FORALL (tierW ty) (idxW ty) 0, co, cn, 0] m with
@@ -434,7 +434,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have hw := CoreSpec.of_callW ((hk k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
           mode d (r₁.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hrw1) h2
         obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := hw
-        have hv : viewOK m₂ (r₂.headD 0) 30 := ⟨g2, UInt64.not_le.mp g3⟩
+        have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have harg := CoreSpec.of_callW (inferSpineArg_any p hp hkp hq he k (hk.mono (by omega)) F

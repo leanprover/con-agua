@@ -347,12 +347,12 @@ theorem absNodeW_let (hg : h >>> 28 = 7) : absNodeW (n + 1) m h k d fu = absLetW
 theorem absNodeW_proj (hg : h >>> 28 = 9) : absNodeW (n + 1) m h k d fu = absProjW n m h k d fu := by
   rw [absNodeW]; simp [hg]
 
-theorem absNodeW_fvar_eq (hv : viewOK m h 26) (hg : h >>> 28 = 1)
+theorem absNodeW_fvar_eq (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
     (he : tfld m FVAR (tierW h) (idxW h) 0 = d) :
     absNodeW (n + 1) m h k d fu = binternW m k := by
   rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
 
-theorem absNodeW_fvar_ne (hv : viewOK m h 26) (hg : h >>> 28 = 1)
+theorem absNodeW_fvar_ne (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
     (he : tfld m FVAR (tierW h) (idxW h) 0 ≠ d) :
     absNodeW (n + 1) m h k d fu = some (h, m) := by
   rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
@@ -368,7 +368,7 @@ theorem absAppW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).
   rw [absAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absAppW_miss (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 = 0)
-    (hvk : viewOK m h 4) :
+    (hvk : viewOK m h APP) :
     absAppW (n + 1) m h k d fu =
       aappK₁ n h k d fu (tfld m APP (tierW h) (idxW h) 0)
         (tfld m APP (tierW h) (idxW h) 1)
@@ -383,7 +383,7 @@ theorem absLamW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
   rw [absLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absLamW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h 28) :
+    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h LAM) :
     absLamW (n + 1) m h k d fu =
       alamK₁ n h k d fu (tfld m LAM (tierW h) (idxW h) 0)
         (tfld m LAM (tierW h) (idxW h) 1)
@@ -398,7 +398,7 @@ theorem absForallW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
   rw [absForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absForallW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h 30) :
+    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h FORALL) :
     absForallW (n + 1) m h k d fu =
       afaK₁ n h k d fu (tfld m FORALL (tierW h) (idxW h) 0)
         (tfld m FORALL (tierW h) (idxW h) 1)
@@ -413,7 +413,7 @@ theorem absLetW_hit (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
   rw [absLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absLetW_miss (h1 : k + 1 ≠ 0) (hr : mfindG abSch m h k ≠ [])
-    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h 20) :
+    (hh : (mfindG abSch m h k).headD 0 = 0) (hvk : viewOK m h LET) :
     absLetW (n + 1) m h k d fu =
       aleK₁ n h k d fu (tfld m LET (tierW h) (idxW h) 0)
         (tfld m LET (tierW h) (idxW h) 1)
@@ -432,7 +432,7 @@ theorem absProjW_hit (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k)
   rw [absProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem absProjW_miss (hr : mfindG abSch m h k ≠ []) (hh : (mfindG abSch m h k).headD 0 = 0)
-    (hvk : viewOK m h 32) :
+    (hvk : viewOK m h PROJ) :
     absProjW (n + 1) m h k d fu =
       apjK₁ h k (tfld m PROJ (tierW h) (idxW h) 0)
         (tfld m PROJ (tierW h) (idxW h) 1)

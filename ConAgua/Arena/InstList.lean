@@ -444,25 +444,25 @@ theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : h >>> 28 ≠ 0) (h
     ilgW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilgW]; simp [hf, hc, h0, h4, h5, h6, h7, h9]
 
-theorem ilAppW_miss (hvk : viewOK m h 4) :
+theorem ilAppW_miss (hvk : viewOK m h APP) :
     ilAppW (n + 1) m h d o l fu =
       lappK₁ n d o l fu (tfld m APP (tierW h) (idxW h) 1)
         (ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilAppW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
   cases ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
-theorem ilLamW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 28) :
+theorem ilLamW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h LAM) :
     ilLamW (n + 1) m h d o l fu =
       llamK₁ n d o l fu (tfld m LAM (tierW h) (idxW h) 1)
         (ilW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilLamW]; simp only [h1, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
   cases ilW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu <;> rfl
-theorem ilForallW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 30) :
+theorem ilForallW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h FORALL) :
     ilForallW (n + 1) m h d o l fu =
       lfaK₁ n d o l fu (tfld m FORALL (tierW h) (idxW h) 1)
         (ilW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilForallW]; simp only [h1, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
   cases ilW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu <;> rfl
-theorem ilLetW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 20) :
+theorem ilLetW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h LET) :
     ilLetW (n + 1) m h d o l fu =
       lleK₁ n d o l fu (tfld m LET (tierW h) (idxW h) 1)
         (tfld m LET (tierW h) (idxW h) 2)
@@ -473,7 +473,7 @@ theorem ilLetW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 20) :
   | some p =>
     obtain ⟨x, m₁⟩ := p
     cases ilW n m₁ (tfld m LET (tierW h) (idxW h) 1) d o l fu <;> rfl
-theorem ilProjW_miss (hvk : viewOK m h 32) :
+theorem ilProjW_miss (hvk : viewOK m h PROJ) :
     ilProjW (n + 1) m h d o l fu =
       lpjK₁ (tfld m PROJ (tierW h) (idxW h) 0)
         (tfld m PROJ (tierW h) (idxW h) 1)
@@ -481,17 +481,17 @@ theorem ilProjW_miss (hvk : viewOK m h 32) :
   rw [ilProjW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
   cases ilW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu <;> rfl
 
-theorem ilBVarW_lt (hvk : viewOK m h 22) (hj : tfld m BVAR (tierW h) (idxW h) 0 < d) :
+theorem ilBVarW_lt (hvk : viewOK m h BVAR) (hj : tfld m BVAR (tierW h) (idxW h) 0 < d) :
     ilBVarW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilBVarW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2, hj]
-theorem ilBVarW_in (hvk : viewOK m h 22) (hj : ¬ tfld m BVAR (tierW h) (idxW h) 0 < d)
+theorem ilBVarW_in (hvk : viewOK m h BVAR) (hj : ¬ tfld m BVAR (tierW h) (idxW h) 0 < d)
     (hq : tfld m BVAR (tierW h) (idxW h) 0 - d < l) :
     ilBVarW (n + 1) m h d o l fu =
       ilVW n m (slW m (o + (l - 1 - (tfld m BVAR (tierW h) (idxW h) 0 - d)))) d
         (o + (l - (tfld m BVAR (tierW h) (idxW h) 0 - d)))
         (tfld m BVAR (tierW h) (idxW h) 0 - d) fu := by
   rw [ilBVarW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2, hj, hq]; rfl
-theorem ilBVarW_out (hvk : viewOK m h 22) (hj : ¬ tfld m BVAR (tierW h) (idxW h) 0 < d)
+theorem ilBVarW_out (hvk : viewOK m h BVAR) (hj : ¬ tfld m BVAR (tierW h) (idxW h) 0 < d)
     (hq : ¬ tfld m BVAR (tierW h) (idxW h) 0 - d < l) :
     ilBVarW (n + 1) m h d o l fu = binternW m (tfld m BVAR (tierW h) (idxW h) 0 - l) := by
   rw [ilBVarW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2, hj, hq]
@@ -505,7 +505,7 @@ theorem ilgAppW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgAppW_miss (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 = 0)
-    (hvk : viewOK m h 4) :
+    (hvk : viewOK m h APP) :
     ilgAppW (n + 1) m h d o l fu =
       gappK₁ n h d o l fu (tfld m APP (tierW h) (idxW h) 1)
         (ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
@@ -517,7 +517,7 @@ theorem ilgLamW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgLamW_miss (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
-    (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h 28) :
+    (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h LAM) :
     ilgLamW (n + 1) m h d o l fu =
       glamK₁ n h d o l fu (tfld m LAM (tierW h) (idxW h) 1)
         (ilgW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu) := by
@@ -529,7 +529,7 @@ theorem ilgForallW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgForallW_miss (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
-    (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h 30) :
+    (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h FORALL) :
     ilgForallW (n + 1) m h d o l fu =
       gfaK₁ n h d o l fu (tfld m FORALL (tierW h) (idxW h) 1)
         (ilgW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu) := by
@@ -541,7 +541,7 @@ theorem ilgLetW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgLetW_miss (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
-    (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h 20) :
+    (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h LET) :
     ilgLetW (n + 1) m h d o l fu =
       gleK₁ n h d o l fu (tfld m LET (tierW h) (idxW h) 1)
         (tfld m LET (tierW h) (idxW h) 2)
@@ -557,7 +557,7 @@ theorem ilgProjW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d)
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgProjW_miss (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 = 0)
-    (hvk : viewOK m h 32) :
+    (hvk : viewOK m h PROJ) :
     ilgProjW (n + 1) m h d o l fu =
       gpjK₁ h d (tfld m PROJ (tierW h) (idxW h) 0)
         (tfld m PROJ (tierW h) (idxW h) 1)

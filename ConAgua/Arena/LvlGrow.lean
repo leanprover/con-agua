@@ -88,7 +88,7 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
     (h : lvNodeW m u ≠ []) : lvNodeW m' u ≠ [] := by
   have ht := tierW_le u
   have key : ∀ k : Word, k ∈ ([6, 8, 10, 12, 14] : List Word) →
-      ¬ rdW (m.arr64 CTL) (k + tierW u) ≤ idxW u → ¬ rdW (m'.arr64 CTL) (k + tierW u) ≤ idxW u := by
+      ¬ tcnt m k (tierW u) ≤ idxW u → ¬ tcnt m' k (tierW u) ≤ idxW u := by
     intro k hk h1 h2
     apply h1
     have hx : k + tierW u ∈ lvlCtlW := by

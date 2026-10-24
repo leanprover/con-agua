@@ -325,7 +325,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         by_cases c5 : ¬ (136 : Word).toNat < (m.arr64 CTL).size
         · rw [if_pos c5] at hF; cases hF
         rw [if_neg c5] at hF
-        have hv : viewOK m ty 30 := ⟨c1, UInt64.not_le.mp c2⟩
+        have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
         obtain ⟨hacc', htop', hb', hsz', h136', hbk', hpg'⟩ := spPush_step hspn hacc hb hsz hbk hpg h136m
@@ -380,7 +380,7 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
             have := UInt64.lt_iff_toNat_lt.mp hj; omega
           exact (hSt12.below j hj').trans (hb j hj)
         have hsz₂ : (m₂.arr64 SPN).size = (m₀.arr64 SPN).size := hSt12.size.trans hsz
-        have hv : viewOK m₂ (r₂.headD 0) 30 := ⟨g2, UInt64.not_le.mp g3⟩
+        have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hacc0 := SpineR.empty m₂ co (by omega)

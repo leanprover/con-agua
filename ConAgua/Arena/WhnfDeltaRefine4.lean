@@ -402,12 +402,12 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
   have simple : ∀ (c : Word), (f >>> 28 = 0 ∧ c = 22) ∨ (f >>> 28 = 1 ∧ c = 26) ∨ (f >>> 28 = 2 ∧ c = 16) ∨
       (f >>> 28 = 5 ∧ c = 28) ∨ (f >>> 28 = 6 ∧ c = 30) ∨ (f >>> 28 = 7 ∧ c = 20) ∨
       (f >>> 28 = 8 ∧ c = 2) ∨ (f >>> 28 = 9 ∧ c = 32) →
-      (if rdW (s₀.mem.arr64 CTL) (c + tierW f) ≤ idxW f then none else
+      (if tcnt s₀.mem c (tierW f) ≤ idxW f then none else
         some ((0 : Word), (0 : Word), s₀.mem)) = some (r.headD 0, r.tail.headD 0, s'.mem) →
       CoreRef (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀ decOptR dn
         s₀.mem vis fe MM eb r s'.mem ResW := by
     intro c hcg hW'
-    by_cases hbd : rdW (s₀.mem.arr64 CTL) (c + tierW f) ≤ idxW f
+    by_cases hbd : tcnt s₀.mem c (tierW f) ≤ idxW f
     · rw [if_pos hbd] at hW'; cases hW'
     rw [if_neg hbd] at hW'
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'

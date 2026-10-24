@@ -153,7 +153,7 @@ theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASt
 /-! ## `residual_pw` -/
 
 theorem pr_viewSort_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
+    (hv : viewOK m h SORT) (hg : h >>> 28 = 2) :
     a.store.viewSort (decE h) = some (decI (tfld m SORT (tierW h) (idxW h) 0)) := by
   have hvs := (L.Ind.view_sort_f m a hR h hh hv hg).1
   unfold EStore.view at hvs; unfold EStore.viewSort EStore.persGetSort
@@ -210,7 +210,7 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   by_cases hv2 : tcnt m SORT (tierW h) ≤ idxW h
   · simp [hv1, hv2] at hW
   simp only [hv1, hv2, ↓reduceIte] at hW
-  have hvo : viewOK m h 16 := ⟨hv1, UInt64.not_le.mp hv2⟩
+  have hvo : viewOK m h SORT := ⟨hv1, UInt64.not_le.mp hv2⟩
   obtain ⟨hview, hu⟩ := L.Ind.view_sort_f m a hR h hh hvo hg
   have hvs := pr_viewSort_ok m a hR h hh hvo hg
   generalize hw : tfld m SORT (tierW h) (idxW h) 0 = u at hW hview hu hvs

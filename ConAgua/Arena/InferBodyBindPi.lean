@@ -461,7 +461,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         simp only [pisFull, pisLoop, hp0, ht6, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
       have hc2 : ¬ tcnt m FORALL (tierW t) ≤ idxW t := fun g => by
         simp only [pisFull, pisLoop, hp0, ht6, hc1, g, ↓reduceIte, ne_eq, not_true_eq_false, not_false_eq_true, reduceCtorEq, Option.some.injEq, and_self, true_and, and_true] at hF
-      have hv : viewOK m t 30 := ⟨hc1, UInt64.not_le.mp hc2⟩
+      have hv : viewOK m t FORALL := ⟨hc1, UInt64.not_le.mp hc2⟩
       obtain ⟨-, hty, hbody⟩ := view_forall m a hS.arena.1 t ht hv ht6
       have hvb := viewBind_forall m a hS.arena.1 t ht hv ht6
       cases h1 : callW p j "inst_list" [tfld m FORALL (tierW t) (idxW t) 0, fo, k, 0] m with

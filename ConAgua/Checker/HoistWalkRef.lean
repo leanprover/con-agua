@@ -289,7 +289,7 @@ theorem two_ok (ih : WalkOK n) (R : ArrId) (hR1 : R ≠ IW) (hR2 : R ≠ HSEEN) 
     exact walk_then ih hA W1 h2w hf hb
 
 theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
-    (hv : viewOK m e 4) (hg : e >>> 28 = 4)
+    (hv : viewOK m e APP) (hg : e >>> 28 = 4)
     (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat
       (decE (tfld m APP (tierW e) (idxW e) 1)))
     (hb : hAppW (n + 1) m e i k tg ws sp fu = some (sp', m')) :
@@ -300,7 +300,7 @@ theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   exact two_ok ih AREC (by decide) (by decide) (by decide) _ _ hA hs h1w h2w hf hb
 
 theorem lam_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
-    (hv : viewOK m e 28) (hg : e >>> 28 = 5)
+    (hv : viewOK m e LAM) (hg : e >>> 28 = 5)
     (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat
       (decE (tfld m LAM (tierW e) (idxW e) 1)))
     (hb : hLamW (n + 1) m e i k tg ws sp fu = some (sp', m')) :
@@ -311,7 +311,7 @@ theorem lam_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toN
   exact two_ok ih LAREC (by decide) (by decide) (by decide) _ _ hA hs h1w h2w hf hb
 
 theorem forall_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
-    (hv : viewOK m e 30) (hg : e >>> 28 = 6)
+    (hv : viewOK m e FORALL) (hg : e >>> 28 = 6)
     (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat
       (decE (tfld m FORALL (tierW e) (idxW e) 1)))
     (hb : hForallW (n + 1) m e i k tg ws sp fu = some (sp', m')) :
@@ -322,7 +322,7 @@ theorem forall_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.
   exact two_ok ih FAREC (by decide) (by decide) (by decide) _ _ hA hs h1w h2w hf hb
 
 theorem let_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
-    (hv : viewOK m e 20) (hg : e >>> 28 = 7)
+    (hv : viewOK m e LET) (hg : e >>> 28 = 7)
     (hf : ∀ s ac, f (s, ac) = (usedConstsGo s ac fu.toNat
       (decE (tfld m LET (tierW e) (idxW e) 1)) >>= fun x =>
         usedConstsGo x.1 x.2 fu.toNat (decE (tfld m LET (tierW e) (idxW e) 2))))
@@ -380,9 +380,9 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
   refine wres_pre hf₀ ?_
   by_cases hsc : tierW e ≠ 0 ∧ rdW (m₀.arr64 CTL) 1 = 0
   · rw [hWalkW.k1.eq_def] at hb; simp [hsc] at hb
-  have vok : ∀ c0, ¬ rdW (m₀.arr64 CTL) (c0 + tierW e) ≤ idxW e → viewOK m₀ e c0 :=
+  have vok : ∀ c0, ¬ tcnt m₀ c0 (tierW e) ≤ idxW e → viewOK m₀ e c0 :=
     fun c0 hc => ⟨hsc, UInt64.not_le.mp hc⟩
-  have bad : ∀ c0, rdW (m₀.arr64 CTL) (c0 + tierW e) ≤ idxW e →
+  have bad : ∀ c0, tcnt m₀ c0 (tierW e) ≤ idxW e →
       hWalkW.k1 n e i k tg ws sp fu (some m₀) = none → False := fun _ _ h => by rw [h] at hb; cases hb
   -- arms at `n`: `n = 0` is no call
   have arm0 : ∀ (X : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (Word × Mem)),
@@ -396,7 +396,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
   · by_cases hc : tcnt m₀ CONST (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, hc])).elim
     rw [hWalkW.k1.arm1 n e i k tg ws sp fu m₀ hsc g3 hc] at hb
-    obtain ⟨hv, hw, -⟩ := view_const_f m₀ a hA₀ e he (vok 18 hc) g3
+    obtain ⟨hv, hw, -⟩ := view_const_f m₀ a hA₀ e he (vok CONST hc) g3
     refine wres_view hv (wres_cons hw hb ?_)
     exact wres_pure (memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by decide) _ _
       (hNoteW_iw hb) _ hs₀)
@@ -405,35 +405,35 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, hc])).elim
     rw [hWalkW.k1.arm2 n e i k tg ws sp fu m₀ hsc g3 g4 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hAppW.eq_def]) hb
-    exact wres_view (view_app m₀ a hA₀ e he (vok 4 hc) g4).1
-      (app_ok (ih n' rfl) hA₀ hs₀ he (vok 4 hc) g4 (fun _ _ => rfl) hb)
+    exact wres_view (view_app m₀ a hA₀ e he (vok APP hc) g4).1
+      (app_ok (ih n' rfl) hA₀ hs₀ he (vok APP hc) g4 (fun _ _ => rfl) hb)
   by_cases g5 : e >>> 28 = 5
   · by_cases hc : tcnt m₀ LAM (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, hc])).elim
     rw [hWalkW.k1.arm3 n e i k tg ws sp fu m₀ hsc g3 g4 g5 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hLamW.eq_def]) hb
-    exact wres_view (view_lam m₀ a hA₀ e he (vok 28 hc) g5).1
-      (lam_ok (ih n' rfl) hA₀ hs₀ he (vok 28 hc) g5 (fun _ _ => rfl) hb)
+    exact wres_view (view_lam m₀ a hA₀ e he (vok LAM hc) g5).1
+      (lam_ok (ih n' rfl) hA₀ hs₀ he (vok LAM hc) g5 (fun _ _ => rfl) hb)
   by_cases g6 : e >>> 28 = 6
   · by_cases hc : tcnt m₀ FORALL (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, hc])).elim
     rw [hWalkW.k1.arm4 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hForallW.eq_def]) hb
-    exact wres_view (view_forall m₀ a hA₀ e he (vok 30 hc) g6).1
-      (forall_ok (ih n' rfl) hA₀ hs₀ he (vok 30 hc) g6 (fun _ _ => rfl) hb)
+    exact wres_view (view_forall m₀ a hA₀ e he (vok FORALL hc) g6).1
+      (forall_ok (ih n' rfl) hA₀ hs₀ he (vok FORALL hc) g6 (fun _ _ => rfl) hb)
   by_cases g7 : e >>> 28 = 7
   · by_cases hc : tcnt m₀ LET (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, hc])).elim
     rw [hWalkW.k1.arm5 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hLetW.eq_def]) hb
-    exact wres_view (view_let m₀ a hA₀ e he (vok 20 hc) g7).1
-      (let_ok (ih n' rfl) hA₀ hs₀ he (vok 20 hc) g7 (fun _ _ => rfl) hb)
+    exact wres_view (view_let m₀ a hA₀ e he (vok LET hc) g7).1
+      (let_ok (ih n' rfl) hA₀ hs₀ he (vok LET hc) g7 (fun _ _ => rfl) hb)
   by_cases g9 : e >>> 28 = 9
   · by_cases hc : tcnt m₀ PROJ (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, hc])).elim
     rw [hWalkW.k1.arm6 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hProjW.eq_def]) hb
-    obtain ⟨hv, hnw, hxw⟩ := view_proj m₀ a hA₀ e he (vok 32 hc) g9
+    obtain ⟨hv, hnw, hxw⟩ := view_proj m₀ a hA₀ e he (vok PROJ hc) g9
     refine wres_view hv ?_
     rw [hProjW.arm1, hProjW.k1.eq_def] at hb
     cases h1 : hNoteW m₀ (tfld m₀ PROJ (tierW e) (idxW e) 0) i k tg ws sp with
@@ -453,7 +453,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, hc])).elim
     rw [hWalkW.k1.arm7 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hFvarW.eq_def]) hb
-    obtain ⟨hv, hxw⟩ := view_fvar_idx m₀ a hA₀ e he (vok 26 hc) g1
+    obtain ⟨hv, hxw⟩ := view_fvar_idx m₀ a hA₀ e he (vok FVAR hc) g1
     rw [hFvarW.arm1] at hb
     exact wres_view hv ((ih n' rfl) _ _ _ _ _ _ _ _ _ _ _ _ _ hA₀ hxw hs₀ hb)
   have fin : hWalkW.k1 n e i k tg ws sp fu (some m₀) = some (sp, m₀) → sp = sp' ∧ m₀ = m' := by
@@ -462,18 +462,18 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
   · by_cases hc : tcnt m₀ BVAR (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, hc])).elim
     obtain ⟨rfl, rfl⟩ := fin (hWalkW.k1.arm8 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 g0 hc)
-    exact wres_view (view_bvar m₀ a hA₀ e he (vok 22 hc) g0) (wres_pure hs₀)
+    exact wres_view (view_bvar m₀ a hA₀ e he (vok BVAR hc) g0) (wres_pure hs₀)
   by_cases g2 : e >>> 28 = 2
   · by_cases hc : tcnt m₀ SORT (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, g2, hc])).elim
     obtain ⟨rfl, rfl⟩ := fin (hWalkW.k1.arm9 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 g0 g2 hc)
-    obtain ⟨_, hv⟩ := view_sort m₀ a hA₀ e he (vok 16 hc) g2
+    obtain ⟨_, hv⟩ := view_sort m₀ a hA₀ e he (vok SORT hc) g2
     exact wres_view hv (wres_pure hs₀)
   by_cases g8 : e >>> 28 = 8
   · by_cases hc : tcnt m₀ LIT (tierW e) ≤ idxW e
     · exact (bad _ hc (by rw [hWalkW.k1.eq_def]; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, g2, g8, hc])).elim
     obtain ⟨rfl, rfl⟩ := fin (hWalkW.k1.arm10 n e i k tg ws sp fu m₀ hsc g3 g4 g5 g6 g7 g9 g1 g0 g2 g8 hc)
-    obtain ⟨_, hv⟩ := view_lit m₀ a hA₀ e he (vok 2 hc) g8
+    obtain ⟨_, hv⟩ := view_lit m₀ a hA₀ e he (vok LIT hc) g8
     exact wres_view hv (wres_pure hs₀)
   rw [hWalkW.k1.eq_def] at hb; simp [hsc, g3, g4, g5, g6, g7, g9, g1, g0, g2, g8] at hb
 

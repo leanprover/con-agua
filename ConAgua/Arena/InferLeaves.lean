@@ -499,7 +499,7 @@ theorem inferLit_spec (n : Nat) (s₀ : St) (vis e : Word) :
 end il
 
 theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
   obtain ⟨k, hk, hu⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   exact ⟨k, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl, hu⟩
