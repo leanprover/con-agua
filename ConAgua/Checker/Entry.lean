@@ -29,33 +29,36 @@ open L L.Arena L.Ind
 
 /-! ## Capacities at entry (ROADMAP §3, the driver lane's requirement) -/
 
-/-- The word arrays the checker names (`0‥wordArrays - 1`; `checkerProg_arrs` checks it). -/
+/-- The word arrays the checker names (`0‥wordArrays - 1`, the tier-1 arrays `256 + a` included;
+`checkerProg_arrs` checks it). -/
 def wordArrays : Nat := 318
 
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
 (the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
 def ctlMin : Nat := 256
 
-/-- The slot arrays of the 19 cons tables (`ConsLib.lean`): at least `consMinWords` words each
-(the two tiers' initial tables, `consR_init`). -/
+/-- The slot arrays of the 19 cons tables (`ConsLib.lean`), both tiers (tier 1 of array `a` is
+`a + 256`): at least `consMinWords` words each (the initial table, `consR_init`) and below `2^61`
+(the growth's offsets, `TierLay`). -/
 def slotArrs : List Nat := [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 26, 28, 30, 32, 34, 36, 38, 40,
   259, 261, 263, 265, 267, 269, 271, 273, 275, 277, 279, 282, 284, 286, 288, 290, 292, 294, 296]
 
 /-- The slot arrays' least length, as a word. -/
 def capMin : Word := UInt64.ofNat consMinWords
 
-/-- `2^62 - consMinWords`, the slot arrays' wrapping bound. -/
-def capLo : Word := UInt64.ofNat (2 ^ 62 - consMinWords)
+/-- `2^61 - consMinWords`, the slot arrays' wrapping bound. -/
+def capLo : Word := UInt64.ofNat (2 ^ 61 - consMinWords)
 
-/-- One array's capacity test: `2^62 ≤ len(b.u64)`, for a slot array also
-`len(b.u64) < consMinWords` (as one wrapping comparison, `2^62 - consMinWords ≤ len - consMinWords`). -/
+/-- One array's capacity test: `2^62 ≤ len(b.u64)`, for a slot array
+`len(b.u64) < consMinWords` or `2^61 ≤ len(b.u64)` (as one wrapping comparison,
+`2^61 - consMinWords ≤ len - consMinWords`). -/
 def capCond (b : Nat) : Cond :=
   if b ∈ slotArrs then .cmp .ule (.const capLo) (.bin .sub (.len64 b) (.const capMin))
   else .cmp .ule (.const 4611686018427387904) (.len64 b)
 
 /-- The body of `cap_check()`: every word array shorter than `2^62` words (handles, offsets and
 counts are words; `arenaR_init`'s pool bound, the inductive lines' scratch arrays), the slot
-arrays at least `consMinWords` words long (`slotArrs`), `CTL` at
+arrays at least `consMinWords` and below `2^61` words long (`slotArrs`), `CTL` at
 least `ctlMin` words, and the declaration arrays `DECL` (67) and `DLP` (68) not empty (their word
 `0` is a count, `StateDR`). -/
 def capCheckBody : Stmt :=

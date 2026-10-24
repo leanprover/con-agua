@@ -59,7 +59,7 @@ def fvP : Word → Nat → FVarNode → UInt64 → Prop :=
 (`packBFL`; lane `exprops3` widened this from the bvar range alone, helper `whnf4-d23` added the
 bit). -/
 def cP {α : Type} (A : ArrId) (m : Mem) : Word → Nat → α → UInt64 → Prop :=
-  fun t i _ d => rdW (m.arr64 A) (UInt64.ofNat i * 2 + t) =
+  fun t i _ d => rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) =
     packBFL (bvarOfData d) (fvarOfData d) (lpW d)
 
 /-- **The derived range relation.** -/
@@ -233,7 +233,7 @@ theorem satSuccW_eq (w : Word) : satSuccW w = satSucc w.toNat := by
 /-- A compound tier's range, from `DerT` and the L count. -/
 theorem derC {α : Type} [BEq α] [Hashable α] (A : ArrId) (m : Mem) (tb : Tbl α EIdx UInt64)
     (t : Word) (hD : DerT tb (cP A m t)) (i : Word) (hc : (i.toNat < tb.nodes.size)) :
-    rdW (m.arr64 A) (i * 2 + t) =
+    rdW (m.arr64 (tierA A t)) i =
       packBFL (bvarOfData (tb.derAt i.toNat)) (fvarOfData (tb.derAt i.toNat))
         (lpW (tb.derAt i.toNat)) := by
   obtain ⟨x, hx⟩ : ∃ x, tb.nodes[i.toNat]? = some x := ⟨_, Array.getElem?_eq_getElem hc⟩
@@ -254,7 +254,7 @@ theorem derBW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
       (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
       (hd : DerT2 a g (cP A m)),
       (if cntC C m (tierW h) ≤ idxW h then (0 : Word)
-       else rdW (m.arr64 A) (idxW h * 2 + tierW h) &&& 32767) =
+       else rdW (m.arr64 (tierA A (tierW h))) (idxW h) &&& 32767) =
         bvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
     intro α _ _ C R g A hT hd
     have hc := ConsR.cnt hT (tierW h) ht
@@ -332,7 +332,7 @@ theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
       (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
       (hd : DerT2 a g (cP A m)),
       (if cntC C m (tierW h) ≤ idxW h then (0 : Word)
-       else (rdW (m.arr64 A) (idxW h * 2 + tierW h) >>> 15) &&& 32767) =
+       else (rdW (m.arr64 (tierA A (tierW h))) (idxW h) >>> 15) &&& 32767) =
         fvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
     intro α _ _ C R g A hT hd
     have hc := ConsR.cnt hT (tierW h) ht
@@ -420,7 +420,7 @@ theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
       (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
       (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
       (hd : DerT2 a g (cP A m)),
-      (if idxW h < cntC C m (tierW h) then rdW (m.arr64 A) (idxW h * 2 + tierW h) >>> 30
+      (if idxW h < cntC C m (tierW h) then rdW (m.arr64 (tierA A (tierW h))) (idxW h) >>> 30
        else (0 : Word)) = lpW ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
     intro α _ _ C R g A hT hd
     have hc := ConsR.cnt hT (tierW h) ht
@@ -440,7 +440,7 @@ theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
       (A : ArrId) (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
       (hgP : L.getP a = g a.store.pers) (hgS : L.getS a = g a.store.scr)
       (hc : ColT2 L A lpW m a),
-      (if idxW h < rdW (m.arr64 CTL) (C.ca + tierW h) then rdW (m.arr64 A) (idxW h * 2 + tierW h)
+      (if idxW h < rdW (m.arr64 CTL) (C.ca + tierW h) then rdW (m.arr64 (tierA A (tierW h))) (idxW h)
        else (0 : Word)) = lpW ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
     intro α _ _ C R L g A hT hgP hgS hc
     have := col_read A lpW m _ _ _ hT (hgP ▸ hc.1) (hgS ▸ hc.2) rfl (tierW h) (idxW h) ht
