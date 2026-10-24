@@ -95,12 +95,8 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   | succ n =>
   obtain ⟨hec, hall, hcts, hsortz⟩ := decCaps_words hcaps
   -- the parts
-  cases hca : callW p (n + 1) "caps_parts" [f, s] m with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨cr, m₃⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨cr, m₃⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨s1, hs1, -, hW1⟩ := callW_triple (capsParts_spec p hp n ⟨m, Locals.init []⟩ f s) hca
   rw [hs1] at hW1
   simp only [capsPW] at hW1
@@ -110,12 +106,8 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   -- name
   have hd1 : hd? (erecP m) (s + 1).toNat = some caps.etaCtor := by
     rw [e1]; exact (preE_mono m hDt).hd? hec
-  cases hcb : callW p n "pn_at" [f, s + 1] m with
-  | none => rw [hcb] at hW1; cases hW1
-  | some x =>
-  obtain ⟨c, m₁⟩ := x
-  rw [hcb] at hW1
-  simp only [Option.bind_some] at hW1
+  obtain ⟨⟨c, m₁⟩, hcb, hW1⟩ := Option.bind_eq_some_iff.mp hW1
+  dsimp only at hW1
   obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1⟩ :=
     pnAt_rel p hp n m a pm f (s + 1) caps.etaCtor c m₁ hD hP hsz hd1 hcb
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
@@ -124,12 +116,8 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   -- all
   have hl10 : hlist? (erecP m₁) (s + 10).toNat = some caps.all := by
     rw [hP1', e10]; exact (preE_mono m hDt).hlist? hall
-  cases hcc : callW p n "ps_at" [0, f, s + 10] m₁ with
-  | none => rw [hcc] at hW1; cases hW1
-  | some x =>
-  obtain ⟨x1, m₂⟩ := x
-  rw [hcc] at hW1
-  simp only [Option.bind_some] at hW1
+  obtain ⟨⟨x1, m₂⟩, hcc, hW1⟩ := Option.bind_eq_some_iff.mp hW1
+  dsimp only at hW1
   obtain ⟨wo1, wl1, hn1, hn1', hsl1, a2, pm2, al', hrun2, hD2, hP2, hcp2, hfr2, hq2, hg2, hT2, hts2,
     hsl2⟩ := psAt0_rel p hp n m₁ a1 pm1 f (s + 10) caps.all x1 m₂ hD1 hP1 hsz1 hl10 hcc
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hg2.2.2]; exact hsz1
@@ -158,12 +146,8 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     ⟨by rw [← hT1]; exact Nat.le_trans hg2.1 hg3.1, hE3m, hsz3⟩
   have hts3' : erecTop m₃' ≤ (m₃'.arr64 EREC).size := hts3
   -- the copy
-  cases hce : callW p (n + 1) "erec_cp" [d, s, 15] m₃' with
-  | none => rw [hce] at hW; cases hW
-  | some x =>
-  obtain ⟨z, m₄⟩ := x
-  rw [hce] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨z, m₄⟩, hce, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨k1, k2, k3, k4⟩ := cp_rel p hp (n + 1) m₃' d s 15 z m₄ (by simp only [show ((15 : Word)).toNat = 15 from rfl]; omega)
     (by simp only [show ((15 : Word)).toNat = 15 from rfl]; omega) (by rw [hsz3]; exact hsz) hce
   simp only [show ((15 : Word)).toNat = 15 from rfl] at k3 k4

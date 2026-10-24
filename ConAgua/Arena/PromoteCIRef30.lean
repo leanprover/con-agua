@@ -155,12 +155,8 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hcL : Lc.length = c.toNat := hLl
   have hkc : c.toNat ≤ k.toNat := by omega
   -- erase
-  cases hca : callW p n "erase_installed" [n0 - 1, c] m₁ with
-  | none => rw [hca] at hW; cases hW
-  | some x =>
-  obtain ⟨r₁, m₂⟩ := x
-  rw [hca] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₁, m₂⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hE₂, hfr₂⟩ := erase_rel p hp dn n m₁ vis (n0 - 1) c _ Lc r₁ m₂ hE₁ hsz₁ hLl.symm hj1 hCA' hca
   obtain ⟨hD₂, hP₂⟩ := arenaD_rows hD₁ hP₁ hfr₂
   have hEE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hfr₂.1 EREC (by decide) (by decide)
@@ -173,12 +169,8 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   have hg₁₂ : ErecGrow m₁ m₂ := ErecGrow.of_eq hEE₂ hT₂
   have h128₂ : rdW (m₂.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := hfr₂.2.1 128 (by simp)
   -- promote
-  cases hcb : callW p n "promote_ci_list" [L.Ind.CWF, n0 - 1, c] m₂ with
-  | none => rw [hcb] at hW; cases hW
-  | some x =>
-  obtain ⟨r₂, m₃⟩ := x
-  rw [hcb] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨r₂, m₃⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨a₃, pm₃, Lc', hrun₃, hD₃, hP₃, hcp₃, hfr₃, hg₂₃, hts₃, hlen₃, hcons₃, hout₃, hszE₃⟩ :=
     ciList_rel p hp dn n m₂ a pm L.Ind.CWF (n0 - 1) c (erecTop m₂) Lc r₂ m₃ hD₂ hP₂ hsz₂ hts₂ hLl.symm
       hj1 (by rw [← erecP_eq_preE, hP₂e, hEC₂]; exact hCA') (Nat.le_refl _) hcb

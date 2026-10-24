@@ -52,12 +52,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     | some k => exact ⟨k, rfl⟩
   obtain ⟨kk, hkk⟩ := hkk
   obtain ⟨kw, hkwm, hkwk, hqD0⟩ := nat_word_pre hkk
-  cases hrd : callW p n "erec_rd1" [q] m with
-  | none => rw [hrd] at hW; cases hW
-  | some x =>
-  obtain ⟨rr, m0⟩ := x
-  rw [hrd] at hW
-  simp only [Option.bind_some] at hW
+  obtain ⟨⟨rr, m0⟩, hrd, hW⟩ := Option.bind_eq_some_iff.mp hW
+  dsimp only at hW
   obtain ⟨hm0, hr0, -⟩ := rd1_call p hp hrd
   obtain rfl := hm0.symm
   rw [rd1W_of hsz (by simpa using hkwm)] at hr0
@@ -74,12 +70,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ((0:Word) = 0 ∨ (0:Word) = 2) by decide, show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, show ¬((0:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "pci_plain" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
@@ -99,12 +91,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, show ((1:Word) = 1) by decide, show ¬((1:Word) = 3) by decide, show ¬((1:Word) = 4) by decide, show ¬((1:Word) = 5) by decide, show ¬((1:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "pci_defn" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
@@ -136,12 +124,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ((2:Word) = 0 ∨ (2:Word) = 2) by decide, show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, show ¬((2:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "pci_plain" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
@@ -161,12 +145,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, show ((3:Word) = 3) by decide, show ¬((3:Word) = 4) by decide, show ¬((3:Word) = 5) by decide, show ¬((3:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "pci_ind" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
@@ -187,12 +167,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, show ((4:Word) = 4) by decide, show ¬((4:Word) = 5) by decide, show ¬((4:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "pci_ctor" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
@@ -214,12 +190,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, show ((5:Word) = 5) by decide, show ¬((5:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "pci_rec" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
@@ -244,12 +216,8 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hkw0
     simp only [show ¬((6:Word) = 0 ∨ (6:Word) = 2) by decide, show ¬((6:Word) = 1) by decide, show ¬((6:Word) = 3) by decide, show ¬((6:Word) = 4) by decide, show ¬((6:Word) = 5) by decide, show ((6:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [promoteArmK] at hW
-    cases hcl : callW p n "promote_proj_table" [f, q] m with
-    | none => rw [hcl] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hcl] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hcl, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨hr, hm1⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr

@@ -27,59 +27,34 @@ open L.Arena L.Ind
 theorem ciEntries_ci (i : Nat) (hi : i < 8) :
     ciEntries[10 + i]'(by rw [ciEntries_len]; omega) = (encCI [] (romCiVals[i]'(by simp [romCiVals]; omega))).1 := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
-  | 5, _ => rfl
-  | 6, _ => rfl
-  | 7, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ | 5, _ | 6, _ | 7, _ => rfl
   | _ + 8, h => exact absurd h (by omega)
 
 theorem ciEntries_cv (i : Nat) (hi : i < 10) :
     ciEntries[18 + i]'(by rw [ciEntries_len]; omega) = (encCV [] (romCvVals[i]'(by simp [romCvVals]; omega))).1 := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
-  | 5, _ => rfl
-  | 6, _ => rfl
-  | 7, _ => rfl
-  | 8, _ => rfl
-  | 9, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ | 5, _ | 6, _ | 7, _ | 8, _ | 9, _ => rfl
   | _ + 10, h => exact absurd h (by omega)
 
 theorem ciEntries_ex (i : Nat) (hi : i < 2) :
     ciEntries[28 + i]'(by rw [ciEntries_len]; omega) =
       (encExprM [] (romExprVals[i]'(by simp [romExprVals]; omega))).1 := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
+  | 0, _ | 1, _ => rfl
   | _ + 2, h => exact absurd h (by omega)
 
 theorem ciEntries_b (i : Nat) (hi : i < 5) :
     ciEntries[i]'(by rw [ciEntries_len]; omega) =
       encBlock (ConLeche.BasisKind.decls (basisKinds[i]'(by simp [basisKinds]; omega))) := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ => rfl
   | _ + 5, h => exact absurd h (by omega)
 
 theorem ciEntries_bA (i : Nat) (hi : i < 5) :
     ciEntries[5 + i]'(by rw [ciEntries_len]; omega) =
       encBlock (ConLeche.BasisKind.declsA (basisKinds[i]'(by simp [basisKinds]; omega))) := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ => rfl
   | _ + 5, h => exact absurd h (by omega)
 
 theorem ciEntries_and : ciEntries[30]'(by rw [ciEntries_len]; omega) = encBlock ConLeche.andPin := rfl
@@ -87,45 +62,24 @@ theorem ciEntries_and : ciEntries[30]'(by rw [ciEntries_len]; omega) = encBlock 
 theorem romCiT_eq (i : Nat) (hi : i < 8) :
     romCiT i = ConRon.Arena.internCI (romCiVals[i]'(by simp [romCiVals]; omega)) := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
-  | 5, _ => rfl
-  | 6, _ => rfl
-  | 7, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ | 5, _ | 6, _ | 7, _ => rfl
   | _ + 8, h => exact absurd h (by omega)
 
 theorem romCvT_eq (i : Nat) (hi : i < 10) :
     romCvT i = ConRon.Arena.internCV (romCvVals[i]'(by simp [romCvVals]; omega)) := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
-  | 5, _ => rfl
-  | 6, _ => rfl
-  | 7, _ => rfl
-  | 8, _ => rfl
-  | 9, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ | 5, _ | 6, _ | 7, _ | 8, _ | 9, _ => rfl
   | _ + 10, h => exact absurd h (by omega)
 
 theorem romExprT_eq (i : Nat) (hi : i < 2) :
     romExprT i = ConRon.Arena.internExpr (romExprVals[i]'(by simp [romExprVals]; omega)) := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
+  | 0, _ | 1, _ => rfl
   | _ + 2, h => exact absurd h (by omega)
 
 theorem basisOfW_eq (i : Nat) (hi : i < 5) : basisOfW i = basisKinds[i]'(by simp [basisKinds]; omega) := by
   match i, hi with
-  | 0, _ => rfl
-  | 1, _ => rfl
-  | 2, _ => rfl
-  | 3, _ => rfl
-  | 4, _ => rfl
+  | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ => rfl
   | _ + 5, h => exact absurd h (by omega)
 
 theorem word_add_toNat (c : Nat) (w : Word) (h : c + w.toNat < 2 ^ 64) :
@@ -133,6 +87,15 @@ theorem word_add_toNat (c : Nat) (w : Word) (h : c + w.toNat < 2 ^ 64) :
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
 
 /-! ## The entries -/
+
+/-- A model that answers its callee's first two words. -/
+theorem ntBW_pair {mo : Option (List Word × Mem)} {r : List Word} {m' : Mem}
+    (hw : ntBW mo (fun r m1 => some ([r.headD 0, r.tail.headD 0], m1)) = some (r, m')) :
+    ∃ r1, mo = some (r1, m') ∧ r = [r1.headD 0, r1.tail.headD 0] := by
+  match mo, hw with
+  | some (r1, m1), hw =>
+    simp only [bW_some, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw; exact ⟨r1, rfl, rfl⟩
 
 section entries
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom) (rest : List UInt8)
@@ -151,31 +114,19 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   have hw := callW_model (M := fun mq => ciEntryW p n mq id) (ciEntry_specW rom p hL n · id) hc
   unfold ciEntryW at hw
   rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  cases h1 : callW p n "rci_slot" [10 + id] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h10 : (10 + id).toNat = 10 + id.toNat := word_add_toNat 10 id (by omega)
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (10 + id) (by omega)
   simp only [h10, ciEntries_ci id.toNat hid] at hpos
   have hI0 := RInv.refl hS
-  cases h2 : callW p n "rci_fresh" [] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m2⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
   obtain ⟨hI2, hM2, hs2, -, -, -, -⟩ := freshCall hL hI0 h2
   cases n with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ n =>
-  cases h3 : callW p (n + 1) "rci_ci" [ciOff + u64W rom (ciOff + 8 * (10 + id))] m2 with
-  | none => simp only [List.headD_cons] at hw; rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m3⟩ := t3
   simp only [List.headD_cons] at hw
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : ciFits (romCiVals[id.toNat]'(by simp [romCiVals]; omega)) = true := by
@@ -209,37 +160,21 @@ theorem romCvRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   have hw := callW_model (M := fun mq => cvEntryW p n mq id) (cvEntry_specW rom p hL n · id) hc
   unfold cvEntryW at hw
   rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  cases h1 : callW p n "rci_slot" [18 + id] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h18 : (18 + id).toNat = 18 + id.toNat := word_add_toNat 18 id (by omega)
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (18 + id) (by omega)
   simp only [h18, ciEntries_cv id.toNat hid] at hpos
   have hI0 := RInv.refl hS
-  cases h2 : callW p n "erec_alloc" [4] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m2⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
   obtain ⟨hI2, ho2, ht2, -, -, -⟩ := hI0.erAlloc (erAllocCall hL h2)
-  cases h3 : callW p n "rci_fresh" [] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m3⟩ := t3
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
   obtain ⟨hI3, hM3, hs3, -, -, ht3, -⟩ := freshCall hL hI2 h3
   cases n with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ n =>
   simp only [List.headD_cons] at hw
-  cases h4 : callW p (n + 1) "rci_cv" [ciOff + u64W rom (ciOff + 8 * (18 + id)), r2.headD 0] m3 with
-  | none => rw [h4] at hw; simp at hw
-  | some t4 =>
-  obtain ⟨r4, m4⟩ := t4
-  rw [h4, bW_some] at hw
+  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : cvFits (romCvVals[id.toNat]'(by simp [romCvVals]; omega)) = true :=
@@ -266,28 +201,16 @@ theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   have hw := callW_model (M := fun mq => exprPinW p n mq id) (exprPin_specW rom p hL n · id) hc
   unfold exprPinW at hw
   rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  cases h1 : callW p n "rci_slot" [28 + id] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h28 : (28 + id).toNat = 28 + id.toNat := word_add_toNat 28 id (by omega)
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (28 + id) (by omega)
   simp only [h28, ciEntries_ex id.toNat hid] at hpos
   have hI0 := RInv.refl hS
-  cases h2 : callW p n "rci_fresh" [] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m2⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
   obtain ⟨hI2, hM2, hs2, -, -, -, -⟩ := freshCall hL hI0 h2
   simp only [List.headD_cons] at hw
-  cases h3 : callW p n "rom_expr" [ciOff + u64W rom (ciOff + 8 * (28 + id))] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m3⟩ := t3
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : exprFits (romExprVals[id.toNat]'(by simp [romExprVals]; omega)) = true :=
@@ -316,11 +239,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | succ n =>
   have hw := callW_model (M := fun mq => blockW p n mq s) (block_specW rom p hL n · s) hc
   unfold blockW at hw
-  cases h1 : callW p n "rci_slot" [s] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   simp only [List.headD_cons] at hw
   replace hw := rdU_some hL hw
@@ -336,29 +255,16 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [hc0] at hw
   have hcN : (UInt64.ofNat cs.length).toNat = cs.length := ofNat_toNat_lt (by omega)
   have hI0 := RInv.refl hS
-  cases h2 : callW p n "rci_fresh" [] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m2⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
   obtain ⟨hI2, hM2, hs2, -, -, -, hi2⟩ := freshCall hL hI0 h2
-  cases h3 : callW p n "iw_alloc" [UInt64.ofNat cs.length] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some t3 =>
-  obtain ⟨r3, m3⟩ := t3
-  rw [h3, bW_some] at hw
+  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
   have hal := iwAllocCall hL h3
   obtain ⟨hI3, ho3, ht3, -, -, -⟩ := hI2.iwAlloc hal
   obtain ⟨-, rfl, -⟩ := allocW_facts hal hI2.ok.2.2.1
   have hf3 := allocMem_frame m2 (UInt64.ofNat cs.length)
   have hM3 := hM2.frameG hf3 (by decide) (by decide)
   have hs3 : stkTop (allocMem m2 (UInt64.ofNat cs.length)) = stkTop m2 := hf3.2.1 131 (by decide)
-  cases h4 : callW p n "rci_block_to" [ciOff + u64W rom (ciOff + 8 * s) + 8, r3.headD 0,
-      UInt64.ofNat cs.length] (allocMem m2 (UInt64.ofNat cs.length)) with
-  | none => rw [h4] at hw; simp at hw
-  | some t4 =>
-  obtain ⟨r4, m4⟩ := t4
-  rw [h4, bW_some] at hw
+  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hq8 : (ciOff + u64W rom (ciOff + 8 * s) + 8).toNat = (ciOff + u64W rom (ciOff + 8 * s)).toNat + 8 := by
@@ -398,13 +304,7 @@ theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   | succ n =>
   have hw := callW_model (M := fun mq => andPinW p n mq) (andPin_specW rom p hL n ·) hc
   unfold andPinW at hw
-  cases h1 : callW p n "rci_block" [30] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
     blockCall hL hr rest hrom dn vis fe 30 (by decide) ConLeche.andPin ciEntries_and andPin_fit.1
       andPin_fit.2.1 hS (.inl andPin_fit.2.2) h1
@@ -424,13 +324,7 @@ theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   have hw := callW_model (M := fun mq => basisW p n mq k 0) (basis_specW rom p hL n · k) hc
   unfold basisW at hw
   rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  cases h1 : callW p n "rci_block" [k + 0] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   have hk0 : (k + 0).toNat = k.toNat := by simp
   obtain ⟨hf1, hf2, hf3⟩ := basisDecls_fit k.toNat hk
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
@@ -453,13 +347,7 @@ theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   have hw := callW_model (M := fun mq => basisW p n mq k 5) (basisA_specW rom p hL n · k) hc
   unfold basisW at hw
   rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  cases h1 : callW p n "rci_block" [k + 5] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   have hk5 : (k + 5).toNat = 5 + k.toNat := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨hf1, hf2, hf3⟩ := basisDeclsA_fit k.toNat hk
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
@@ -481,13 +369,7 @@ theorem romBasisRef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   have hw := callW_model (M := fun mq => basisW p n mq 4 0) (basis_specW rom p hL n · 4) hc
   unfold basisW at hw
   rw [if_neg (by decide)] at hw
-  cases h1 : callW p n "rci_block" [4 + 0] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   obtain ⟨hf1, hf2, hf3⟩ := basisDeclsQ_fit
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
     blockCall hL hr rest hrom dn vis fe (4 + 0) (by decide) (ConLeche.BasisKind.decls .quotK)
@@ -506,13 +388,7 @@ theorem romBasisARef_quot (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe 
   have hw := callW_model (M := fun mq => basisW p n mq 4 5) (basisA_specW rom p hL n · 4) hc
   unfold basisW at hw
   rw [if_neg (by decide)] at hw
-  cases h1 : callW p n "rci_block" [4 + 5] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨r1, h1, rfl⟩ := ntBW_pair hw
   obtain ⟨hf1, hf2, hf3⟩ := basisDeclsAQ_fit
   obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
     blockCall hL hr rest hrom dn vis fe (4 + 5) (by decide) (ConLeche.BasisKind.declsA .quotK)

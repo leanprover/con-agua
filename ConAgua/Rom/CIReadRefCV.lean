@@ -86,11 +86,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   have hw := callW_model (M := fun mq => cvW p k mq q pp) (cv_specW rom p hL k · q pp) hc
   unfold cvW at hw
   -- the name
-  cases h1 : callW p k "rom_name" [q] m with
-  | none => rw [h1] at hw; simp at hw
-  | some t1 =>
-  obtain ⟨r1, m1⟩ := t1
-  rw [h1, bW_some] at hw
+  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   have hd0 : rom.drop q.toNat = encName cv.name ++
       (encNameL cv.levelParams ++ ((encExprM seen cv.type).1 ++ rest)) := by
     rw [hd]; simp [encCV, List.append_assoc]
@@ -108,11 +104,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
-  cases h2 : callW p (k + 1) "rci_name_sl" [r1.tail.headD 0, pp + 1] (m1.set64 EREC pp (r1.headD 0)) with
-  | none => rw [h2] at hw; simp at hw
-  | some t2 =>
-  obtain ⟨r2, m3⟩ := t2
-  rw [h2, bW_some] at hw
+  obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
   have hp1 : (pp + 1).toNat = pp.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hp3 : (pp + 3).toNat = pp.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have hdl : rom.drop (r1.tail.headD 0).toNat =
@@ -122,11 +114,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
     nameSl_rel hL hr seen memo cv.levelParams hfl k _ a1 _ (pp + 1) _ _ m3 hI2 hM2 hdl
       (by omega) (by rw [ht2, ht1]; omega) h2
   -- the type
-  cases h4 : callW p (k + 1) "rom_expr" [r2.headD 0] m3 with
-  | none => rw [h4] at hw; simp at hw
-  | some t4 =>
-  obtain ⟨r4, m4⟩ := t4
-  rw [h4, bW_some] at hw
+  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hdt : rom.drop (r2.headD 0).toNat = (encExprM seen cv.type).1 ++ rest :=

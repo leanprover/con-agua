@@ -85,12 +85,8 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     have hrd : rdW (m.arr64 ECON) j = ptr := by
       rw [pci_rdW_of_get? _ j (by simpa using hptr)]
     rw [hrd] at hW
-    cases hca : callW p n "promote_ci" [f, ptr] m with
-    | none => rw [hca] at hW; cases hW
-    | some x =>
-    obtain ⟨dl, m1⟩ := x
-    rw [hca] at hW
-    simp only [Option.bind_some] at hW
+    obtain ⟨⟨dl, m1⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
+    dsimp only at hW
     obtain ⟨a1, pm1, ci', hrun1, hD1, hP1, hcp1, hfr1, hg1, hts1, hlo, hhi, hdec1⟩ :=
       ci_rel p hp n m a pm f ptr D dn ci dl m1 hD hP hsz hts hdec hDt hca
     have hE1 : m1.arr64 ECON = m.arr64 ECON := hfr1.1 ECON (by decide) (by decide)
