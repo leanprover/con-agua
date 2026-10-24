@@ -290,3 +290,32 @@ stay as `setLocs` chains inside `arr[i.toNat]` (`certCtx`, 9 of `DeclDivMod4`); 
 spec answering `ld64` with `rdW` would fix that (open). `getElem_rdW'` as a hint helps some
 and breaks others.
 
+
+### R3: `Ind*`, `RecClass*`, `RecGen*`/`RecCheck*` (branches `lmretro-ind`, `-cls`, `-gen`; one helper each)
+
+75 functions retrofitted (1- and 2-file models; the second file's refinements adapted), mostly
+in the `simp` step mode (`simp [getElem_rdW']` where loads need it), `finish … gen 40
+instances 20000` where `simp` fails:
+
+| family | functions | files | lines | G |
+|---|---:|---:|---:|---:|
+| `Ind*` (IndInstallSpec, IndPartsSpec, IndPos2Spec, IndSumSpec6, IndRealFvt + 9 readers) | 24 | 28 | 11837 → 10789 | 2101 → 1911 |
+| `RecClass*` (+ D, L, O, IndInstallSpec41 readers) | 34 | 15 | 8038 → 6626 | 1438 → 1351 |
+| `RecGen*`, `RecCheck*` (+ 6 readers) | 17 | 18 | 6728 → 6139 | 1250 → 1162 |
+| **R3** | **75** | **61** | **26603 → 23554 (−3049)** | **4789 → 4424** |
+
+Largest per-file increase: `IndInstallSpec34` +25 % (`finish`, `gen 40`), `RecGenSpec2` +13 %.
+Statements changed only where used in the edited files (fuel `n + 1` at callers, the list
+form of `nestBlockOf_specW`, the tuple post of `classFieldsOfHits_spec`, `classGenMajorCi_spec`
+by fields, fuel-free `bseal*`). Skipped: `CallM`-parameterised models (12), models read in 3+
+files (8), hand models with bounds the refinements use (`msW`, `classMinorSlot*`), mutual
+groups over continuations shared by several files (`misW`, `cgW`), closures plus join points
+(`class_fields_of_go`, `class_fe_r_go`, `class_nodes_agree`, `class_fields_agree`), nested loops
+(`classes_nfs`), mixed callee fuels (`block_shape_fin`), pure total fuel-free `nest_key_map`, and
+four functions whose `lfn` is followed by a newline (`check_block_rec`, `gen_rec_check`,
+`class_gen_rule_call1`, `check_block_pass_rec`: fixed in the generator since, retry open).
+
+Generator findings (R3): `lfn` followed by a newline was not found (fixed: `c92a79f4`); a
+command binder named `L` captured the generated proofs' `L.invoke_eq` (fixed: library names
+root-qualified); continuations take the model's Lean parameters even when unused (noise
+only); equations of continuations in a well-founded group are not `rfl` (`X.none`).

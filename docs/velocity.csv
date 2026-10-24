@@ -286,3 +286,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,lmretro,claude-opus-5-5,60,40,"R1: 61 DeclDivMod*/DeclNat* functions on l_model (bind ntBW; self-calls via spec; simp mode), -1080 lines, 1515 G -> 1303 G (2 helpers)"
 2026-10-24,tierpool,claude-opus-5-5,270,45,"tierpool-acc batch 1: proof side over the pool accessors vpool/prd/pcap (83 files, +3101/-1598), no L change"
 2026-10-24,blkcopy,claude-opus-5-5,90,70,"conversions to blocks: skip_ws, skip_digits, key_end, has_escape (scan!), rom_u64 (le64!); asm regenerated; Init -1.56%, default geomean 0.960"
+2026-10-24,lmretro,claude-opus-5-5,40,30,"R3 RecGen*/RecCheck*: 17 functions on l_model (helper), -589 lines, 1250 G -> 1162 G; R3 journal"
