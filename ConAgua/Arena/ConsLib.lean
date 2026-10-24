@@ -253,7 +253,7 @@ def cpKey (C : ConsSch) : Stmt :=
 /-- The slot write: value and key word at slot `j` of tier `t`'s table (`r` at `gO + 3`; the slot
 count's word `g` at `gO + 1`). -/
 def cpSlot (C : ConsSch) : Stmt :=
-  mapS (fun x => if x < 4 then (lvF C.np x) else x - 4 + gO C + 1)
+  mapS (fun x => if x < 4 then (lvF C.np x) else gO C + (x - 3))
     (lblk (t, j, c, k, g, q, r) {
       r := C.sa.u64[t * 2 + 1];
       if t == 0 { r := r + 4 } else { r := len(C.sa.u64) - r - (g + ⟪SN0⟫) * 2 };

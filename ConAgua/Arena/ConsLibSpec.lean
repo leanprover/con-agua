@@ -954,7 +954,6 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
     rw [kgrowM_eq _ _ _ _ hc]
     exact hw
 
-#exit
 /-! ## `X_push`: the append -/
 
 /-- The node count of tier `t`. -/
@@ -969,13 +968,16 @@ def wrRecK (ra : ArrId) (k : Word) : Mem → Word → List Word → Mem
   | m, _, [] => m
   | m, f, v :: vs => wrRecK ra k (m.set64 ra (k + f) v) (f + 1) vs
 
-/-- After the record: register node `c` of tier `t` at slot `j`, count it. -/
-def tailM (C : ConsSch) (t j c : Word) (m : Mem) : Mem :=
-  (m.set64 C.sa (j * 2 + t) (rdW (m.arr64 CTL) SCB * t + c + 1)).set64 CTL (C.ca + (t &&& 1)) (c + 1)
+/-- After the record: register node `c` of tier `t` at slot `j` of its table (the value word,
+and the key word `q`), count it. -/
+def tailM (C : ConsSch) (t j c q : Word) (m : Mem) : Mem :=
+  ((m.set64 C.sa (krW C.sa m t + j * 2) (rdW (m.arr64 CTL) SCB * t + c + 1)).set64 C.sa
+    (krW C.sa m t + j * 2 + 1) q).set64 CTL (C.ca + (t &&& 1)) (c + 1)
 
-/-- **The memory after the append** of node `c` (record `vs`) to tier `t`, registered at `j`. -/
-def pushMC (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (j c : Word) : Mem :=
-  tailM C t j c (wrRecK C.ra (c * C.st + t * C.w) m 0 vs)
+/-- **The memory after the append** of node `c` (record `vs`, key word `q`) to tier `t`,
+registered at `j`. -/
+def pushMC (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (j c q : Word) : Mem :=
+  tailM C t j c q (wrRecK C.ra (c * C.st + t * C.w) m 0 vs)
 
 /-- The derived column's write, `col[2 c + t] := x` (none without a column). -/
 def colW (C : ConsSch) (t c x : Word) (m : Mem) : Mem :=
@@ -984,54 +986,324 @@ def colW (C : ConsSch) (t c x : Word) (m : Mem) : Mem :=
   | some A => m.set64 A (c * 2 + t) x
 
 /-- **The memory after the append** with the derived column's word `x`. -/
-def pushMX (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (x j c : Word) : Mem :=
-  colW C t c x (pushMC C m t vs j c)
+def pushMX (C : ConsSch) (m : Mem) (t : Word) (vs : List Word) (x j c q : Word) : Mem :=
+  colW C t c x (pushMC C m t vs j c q)
 
 theorem pushMX_none {C : ConsSch} (h : C.col = none) (m : Mem) (t : Word) (vs : List Word)
-    (x j c : Word) : pushMX C m t vs x j c = pushMC C m t vs j c := by
+    (x j c q : Word) : pushMX C m t vs x j c q = pushMC C m t vs j c q := by
   simp [pushMX, colW, h]
 
-/-- The growth if node count `c + 1` passes half of the slot count `g + SN0` read before. -/
-def growK (C : ConsSch) (g c : Word) (m : Mem) : Option Mem :=
-  if g + SN0 < (c + 1) * 2 then growM C.sa C.ca C.hsM m else some m
+/-- The growth of tier `t` if node count `c + 1` passes half of its slot count `g + SN0` (`g` its
+count word, read before the push's writes). -/
+def growK (C : ConsSch) (t g c : Word) (m : Mem) : Option Mem :=
+  if g + SN0 < (c + 1) * 2 then kgrowM C.sa (ghC C) t m else some m
 
-theorem growIf_growK (C : ConsSch) (m₀ M : Mem) (c : Word) :
-    growIf C.sa C.ca C.hsM m₀ M c = growK C (gexpW C.sa m₀) c M := rfl
+/-- **A push's tail**: from the memory `m` after the push's writes, grow tier `t` if node count
+`c + 1` passes half of its slot count in the memory `m₀` before them. -/
+def kgrowIf (C : ConsSch) (t : Word) (m₀ m : Mem) (c : Word) : Option Mem :=
+  if knW C.sa m₀ t < (c + 1) * 2 then kgrowM C.sa (ghC C) t m else some m
 
-theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : St) :
+theorem kgrowIf_growK (C : ConsSch) (t : Word) (m₀ M : Mem) (c : Word) :
+    kgrowIf C t m₀ M c = growK C t (rdW (m₀.arr64 C.sa) (t * 2)) c M := rfl
+
+/-- The key word a push stores, from its inputs `as` (`cpKey`): the key's hash recomputed (a
+fingerprint table without a stored hash), else the key word of the key and the stored hash. -/
+def kwP (C : ConsSch) (m : Mem) (as : List Word) : Word :=
+  if C.exact = false ∧ C.np = C.nk then C.qhM m (as.take C.nk)
+  else kwQ C (as.take C.nk) (as.getD C.nk 0)
+
+theorem kwP_mem (p : Prog) {C : ConsSch} (hO : ConsOK p C) (m m' : Mem) (as : List Word) :
+    kwP C m as = kwP C m' as := by
+  unfold kwP; split
+  · rename_i h; exact hO.qpure h.1 h.2 _ _ _
+  · rfl
+
+theorem argsOf_take (base nk np : Nat) (h : nk ≤ np) (s : St) :
+    (argsOf base np s).take nk = argsOf base nk s := by
+  simp only [argsOf, ← List.map_take, List.take_range, Nat.min_eq_left h]
+
+theorem argsOf_getD (base nk np : Nat) (h : nk < np) (s : St) :
+    (argsOf base np s).getD nk 0 = s.loc (nk + base) := by
+  simp [argsOf, List.getD_eq_getElem?_getD, List.getElem?_range, h]
+
+/-! ### Copying the key words -/
+
+/-- `s` with the words `1 ‥ k` copied to `o ‥ o + k - 1`. -/
+def copyS (o : Nat) : Nat → St → St
+  | 0, s => s
+  | k + 1, s => (copyS o k s).setLoc (o + k) (s.loc (1 + k))
+
+theorem copyS_mem (o k : Nat) (s : St) : (copyS o k s).mem = s.mem := by
+  induction k with
+  | zero => rfl
+  | succ k ih => simp only [copyS, St.setLoc_mem, ih]
+
+theorem copyS_loc (o k : Nat) (s : St) (x : Nat) :
+    (copyS o k s).loc x = if o ≤ x ∧ x < o + k then s.loc (x - o + 1) else s.loc x := by
+  induction k with
+  | zero =>
+    simp only [copyS, Nat.add_zero]
+    split
+    · rename_i h; omega
+    · rfl
+  | succ k ih =>
+    simp only [copyS, St.setLoc_loc, ih]
+    by_cases hx : x = o + k
+    · subst hx
+      simp only [↓reduceIte, show o ≤ o + k ∧ o + k < o + (k + 1) from ⟨by omega, by omega⟩, and_self]
+      rw [show o + k - o + 1 = 1 + k by omega]
+    · simp only [hx, ↓reduceIte]
+      by_cases h1 : o ≤ x ∧ x < o + k
+      · simp only [h1, show o ≤ x ∧ x < o + (k + 1) from ⟨h1.1, by omega⟩, and_self, ↓reduceIte]
+      · simp only [h1, ↓reduceIte]
+        rw [if_neg (fun h => h1 ⟨h.1, by omega⟩)]
+
+theorem seqs_append_one (l : List Stmt) (x t : Stmt) : seqs (l ++ [x]) t = seqs l (.seq x t) := by
+  induction l with
+  | nil => rfl
+  | cons y l ih => simp [seqs, ih]
+
+theorem copies_spec (p : Prog) (n o : Nat) :
+    ∀ (k : Nat), k + 1 ≤ o → ∀ (t : Stmt) (s₀ : St) (Q : Sig → St → Prop),
+      ⦃fun s => s = copyS o k s₀⦄ step p (exec p n) t ⦃Q; ⊤⦄ →
+      ⦃fun s => s = s₀⦄
+      step p (exec p n) (seqs ((List.range k).map fun i => .set (o + i) (.var (1 + i))) t) ⦃Q; ⊤⦄
+  | 0, _, t, s₀, Q, ht => ht
+  | k + 1, hk, t, s₀, Q, ht => by
+    rw [List.range_succ, List.map_append, List.map_singleton, seqs_append_one]
+    refine copies_spec p n o k (by omega) _ s₀ Q ?_
+    refine triple_seq (· = copyS o (k + 1) s₀) ?_ (fun s₁ h₁ => h₁ ▸ ht)
+    have e : (copyS o k s₀).loc (1 + k) = s₀.loc (1 + k) := by
+      rw [copyS_loc]; rw [if_neg (by omega)]
+    vcgen [step, evalE_spec, setLoc]
+    rename_i h
+    subst h
+    simp only [Expr.pval, e]
+    rfl
+
+theorem argsOf_copyS (o k : Nat) (hk : k + 1 ≤ o) (s : St) : argsOf o k (copyS o k s) = argsOf 1 k s := by
+  simp only [argsOf]
+  apply List.map_congr_left
+  intro i hi
+  have := List.mem_range.mp hi
+  rw [copyS_loc, if_pos ⟨by omega, by omega⟩, Nat.add_sub_cancel]
+
+/-! ### The tail -/
+
+/-- The key word the push computes from its state `s` (after the record). -/
+abbrev pkw (C : ConsSch) (s : St) : Word := kwP C s.mem (argsOf 1 C.np s)
+
+theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁⦄
+    step p (exec p n) (cpKey C)
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₁.mem ∧ KeepLo (gO C + 2) s₁ s' ∧
+      s'.loc (gO C + 2) = pkw C s₁; ⊤⦄ := by
+  have hn := hO.push_np
+  unfold cpKey
+  cases hx : C.exact with
+  | true =>
+    simp only [↓reduceIte]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, kwE_pval, kwP, hx, Bool.true_eq_false,
+      false_and, ↓reduceIte, argsOf_take 1 C.nk C.np hn.1, kwQ] at *)
+    all_goals grind [lang_grind, KeepLo]
+  | false =>
+    simp only [Bool.false_eq_true, ↓reduceIte]
+    by_cases hlt : C.nk < C.np
+    · simp only [hlt, ↓reduceIte]
+      vcgen [step, evalE_spec, setLoc]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval] at *)
+      all_goals (simp only [kwP, kwQ, hx, Bool.false_eq_true, ↓reduceIte,
+        show ¬ C.np = C.nk by omega, and_false, argsOf_getD 1 C.nk C.np hlt] at *)
+      all_goals grind [lang_grind, KeepLo]
+    · have he : C.np = C.nk := by omega
+      simp only [hlt, ↓reduceIte]
+      have hI := hO.ihashG (.inr he)
+      refine copies_spec p n (gO C + 14) C.nk (by simp [gO]; omega) _ s₁ _ ?_
+      vcgen [step, evalE_spec, setLoc, hI n]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, argsOf_copyS _ _
+        (show C.nk + 1 ≤ gO C + 14 by simp [gO]; omega)] at *)
+      all_goals (simp only [kwP, hx, he, true_and, ↓reduceIte, argsOf_take 1 C.nk C.nk (Nat.le_refl _)] at *)
+      all_goals grind [lang_grind, KeepLo, copyS_loc, copyS_mem]
+
+theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : St)
+    (hg : s₁.loc (gO C + 1) = rdW (s₁.mem.arr64 C.sa) (s₁.loc 0 * 2)) :
     ⦃fun s => s = s₁⦄
     step p (exec p n) (cpRest C)
     ⦃fun r s' => r = .ret [s₁.loc (2 + C.np)] ∧
-      growK C (s₁.loc (5 + C.xloc + C.np)) (s₁.loc (2 + C.np))
+      growK C (s₁.loc 0) (s₁.loc (gO C + 1)) (s₁.loc (2 + C.np))
         (colW C (s₁.loc 0) (s₁.loc (2 + C.np)) (s₁.loc (4 + C.np))
-          (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np)) s₁.mem)) = some s'.mem; ⊤⦄ := by
-  sorry -- KSTP: proof pending
+          (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np)) (pkw C s₁) s₁.mem)) =
+        some s'.mem; ⊤⦄ := by
+  have hsa := hO.arrs.2.1
+  have hgO : 4 + C.np ≤ gO C := by simp only [gO]; omega
+  simp only [cpRest, seqs]
+  refine triple_seq _ (cpKey_spec p C hO n s₁) (fun s₂ h₂ => ?_)
+  obtain ⟨m2, k2, q2⟩ := h₂
+  have l0 : s₂.loc 0 = s₁.loc 0 := k2 0 (by omega)
+  have l1 : s₂.loc (1 + C.np) = s₁.loc (1 + C.np) := k2 _ (by omega)
+  have l2 : s₂.loc (2 + C.np) = s₁.loc (2 + C.np) := k2 _ (by omega)
+  have l4 : s₂.loc (4 + C.np) = s₁.loc (4 + C.np) := k2 _ (by omega)
+  have lg : s₂.loc (gO C + 1) = s₁.loc (gO C + 1) := k2 _ (by omega)
+  cases hc : C.col with
+  | none =>
+    simp only [cpSlot, cpCnt, cpGrowIf, cpColW, hc, Option.map_none, seqO, mapS, mapE, mapC, lvF,
+      L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff, ↓reduceIte, Nat.reduceSub, Nat.zero_add]
+    vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, st64, kgrowBlk_spec p C hO n]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+          Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, ↓reduceIte, Nat.add_eq_zero_iff,
+          false_and, and_false, Sig.retVal, colW, hc] at *)
+    all_goals grind [lang_grind, growK, tailM, krW, knW, koW]
+  | some A =>
+    have hA := hO.colA A hc
+    simp only [cpSlot, cpCnt, cpGrowIf, cpColW, hc, Option.map_some, seqO, mapS, mapE, mapC, lvF,
+      L.Notation.blk, Nat.reduceLT, Nat.reduceEqDiff, ↓reduceIte, Nat.reduceSub, Nat.zero_add]
+    vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, st64, kgrowBlk_spec p C hO n]
+    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+          Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, ↓reduceIte, Nat.add_eq_zero_iff,
+          false_and, and_false, Sig.retVal, colW, hc] at *)
+    all_goals grind [lang_grind, growK, tailM, krW, knW, koW]
+
 theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
     ∀ (es : List Expr), (∀ e ∈ es, LocOnly e) → ∀ (f : Nat) (s₁ : St),
+    s₁.loc (gO C + 1) = rdW (s₁.mem.arr64 C.sa) (s₁.loc 0 * 2) →
     ⦃fun s => s = s₁⦄
     step p (exec p n) (cpWr C f es (cpRest C))
     ⦃fun r s' => r = .ret [s₁.loc (2 + C.np)] ∧
-      growK C (s₁.loc (5 + C.xloc + C.np)) (s₁.loc (2 + C.np))
+      growK C (s₁.loc 0) (s₁.loc (gO C + 1)) (s₁.loc (2 + C.np))
         (colW C (s₁.loc 0) (s₁.loc (2 + C.np)) (s₁.loc (4 + C.np))
-          (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np))
+          (tailM C (s₁.loc 0) (s₁.loc (1 + C.np)) (s₁.loc (2 + C.np)) (pkw C s₁)
             (wrRecK C.ra (s₁.loc (3 + C.np)) s₁.mem (UInt64.ofNat f) (es.map (Expr.pval s₁))))) =
         some s'.mem; ⊤⦄ := by
-  sorry -- KSTP: proof pending
+  have hrs := hO.arrs.2.2
+  intro es
+  induction es with
+  | nil =>
+    intro _ f s₁ hg
+    simp only [cpWr, List.map_nil, wrRecK]
+    exact cpRest_spec p C hO n s₁ hg
+  | cons e es ih =>
+    intro hl f s₁ hg
+    have hes : ∀ e' ∈ es, LocOnly e' := fun e' h => hl e' (List.mem_cons_of_mem _ h)
+    have hmap : ∀ s : St, s.loc = s₁.loc → es.map (Expr.pval s) = es.map (Expr.pval s₁) :=
+      fun s h => List.map_congr_left (fun e' he' => hes e' he' s s₁ h)
+    have ef : UInt64.ofNat (f + 1) = UInt64.ofNat f + 1 := by simp [UInt64.ofNat_add]
+    have e0 : UInt64.ofNat 0 = 0 := rfl
+    have hkw : ∀ (M : Mem), pkw C { mem := M, loc := s₁.loc } = pkw C s₁ := fun M => by
+      simp only [pkw, argsOf]; exact kwP_mem p hO _ _ _
+    have hsa : ∀ (k v : Word), (s₁.mem.set64 C.ra k v).arr64 C.sa = s₁.mem.arr64 C.sa :=
+      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hrs)
+    simp only [cpWr]
+    by_cases hf0 : f = 0
+    · subst hf0
+      simp only [↓reduceIte]
+      vcgen [step, evalE_spec, st64, ih hes (0 + 1)]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, Expr.pval, List.map_cons, wrRecK, ef, e0,
+        UInt64.add_zero, Nat.zero_add, hkw, hsa] at *)
+      all_goals (try simp only [hmap _ rfl] at *)
+      all_goals grind
+    · simp only [hf0, ↓reduceIte]
+      vcgen [step, evalE_spec, st64, ih hes (f + 1)]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Expr.pval, List.map_cons,
+        wrRecK, ef, hkw, hsa] at *)
+      all_goals (try simp only [hmap _ rfl] at *)
+      all_goals grind
+
+theorem addnp_eq_gO (C : ConsSch) (k j : Nat) (h : k < 4 + j) : (k + C.np = gO C + j) = False := by
+  simp only [gO, eq_iff_iff, iff_false]; omega
+
+theorem gO_eq_addnp (C : ConsSch) (k j : Nat) (h : k < 4 + j) : (gO C + j = k + C.np) = False := by
+  simp only [gO, eq_iff_iff, iff_false]; omega
+
+theorem argsOf_setLoc_gO (C : ConsSch) (j : Nat) (s : St) (v : Word) :
+    argsOf 1 C.np (s.setLoc (gO C + j) v) = argsOf 1 C.np s :=
+  argsOf_setLoc 1 C.np _ (by simp only [gO]; omega) s v
+
+theorem pkw_init (p : Prog) {C : ConsSch} (hO : ConsOK p C) (m m' : Mem) (vs : List Word) :
+    pkw C { mem := m, loc := Locals.init vs } = kwP C m' (argsL 1 C.np vs) := by
+  simp only [pkw, argsOf_mk]; exact kwP_mem p hO _ _ _
+
 /-- **`X_push(t, args, j)`** appends node `cntC` to tier `t` (record `vsM args`, column word
-`colM args`) at slot `j`, then grows if the tier passed half load (any argument list: `t`, the
-inputs, `j` are its words `0`, `1 ‥ np`, `np + 1`). -/
+`colM args`, key word `kwP args`) at slot `j`, then grows the tier if it passed half load (any
+argument list: `t`, the inputs, `j` are its words `0`, `1 ‥ np`, `np + 1`). -/
 theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (vs : List Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) C.pname vs
     ⦃fun r s' => LocEq s' s₀ ∧ pushOKC C s₀.mem (Locals.init vs 0) = true ∧
       r = [cntC C s₀.mem (Locals.init vs 0)] ∧
-      growIf C.sa C.ca C.hsM s₀.mem (pushMX C s₀.mem (Locals.init vs 0) (C.vsM (argsL 1 C.np vs))
-        (C.colM s₀.mem (argsL 1 C.np vs)) (Locals.init vs (1 + C.np))
-        (cntC C s₀.mem (Locals.init vs 0)))
+      kgrowIf C (Locals.init vs 0) s₀.mem (pushMX C s₀.mem (Locals.init vs 0)
+        (C.vsM (argsL 1 C.np vs)) (C.colM s₀.mem (argsL 1 C.np vs)) (Locals.init vs (1 + C.np))
+        (cntC C s₀.mem (Locals.init vs 0)) (kwP C s₀.mem (argsL 1 C.np vs)))
         (cntC C s₀.mem (Locals.init vs 0)) = some s'.mem; ⊤⦄ := by
-  sorry -- KSTP: proof pending
+  have hV := hO.recs.2
+  have hPO := hO.pre
+  unfold PreOK at hPO
+  rw [invoke_eq _ hp]
+  simp only [callFn, consPushG, cpHead, cpMid, seqs, List.map, mapS, mapE, mapC, lvF, L.Notation.blk]
+  cases hpre : C.pre with
+  | none =>
+    simp only [hpre] at hPO
+    simp only [seqO]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64,
+        cpWr_spec p C hO n C.recW hO.recs.1 0]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+          Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
+          Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
+          argsOf_setLoc_add 1 C.np 3 (by decide),
+          zero_ne_add 1 C.np (by decide), zero_ne_add 2 C.np (by decide),
+argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np (by omega),
+          lit_eq_add_false 0 5 C.xloc (by decide), lit_eq_add_false 1 5 C.xloc (by decide),
+          lit_eq_add_false 2 5 C.xloc (by decide), lit_eq_add_false 3 5 C.xloc (by decide),
+          lit_eq_add_false 4 5 C.xloc (by decide), add_eq_lit_false 2 5 C.xloc (by decide),
+          add_eq_lit_false 3 5 C.xloc (by decide), add_eq_lit_false 4 5 C.xloc (by decide),
+          add_eq_lit_false 1 5 C.xloc (by decide), Nat.add_comm C.np 1,
+          zero_ne_add 3 C.np (by decide), argsOf_mk, pkw_init p hO _ s₀.mem,
+          addnp_eq_gO C 1 1 (by decide), addnp_eq_gO C 2 1 (by decide), addnp_eq_gO C 3 1 (by decide), addnp_eq_gO C 4 1 (by decide), gO_eq_addnp C 4 1 (by decide),
+          gO_eq_addnp C 1 1 (by decide), gO_eq_addnp C 2 1 (by decide), gO_eq_addnp C 3 1 (by decide),
+          argsOf_setLoc_gO, zero_eq_addlit,
+          hO.room_eq, hO.recs.2, ofNat_zero', pushMX, colW, hPO,
+          ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, kgrowIf_growK, pushMC, pushOKC,
+          cntC] at *)
+      all_goals grind [lang_grind, arena_grind]
+  | some b =>
+    simp only [hpre] at hPO
+    simp only [seqO]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hPO n,
+        cpWr_spec p C hO n C.recW hO.recs.1 0]
+      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+          Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.add_right_cancel_iff,
+          Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
+          argsOf_setLoc_add 1 C.np 3 (by decide),
+          zero_ne_add 1 C.np (by decide), zero_ne_add 2 C.np (by decide),
+argsOf_setLoc_add 1 C.np (5 + C.xloc) (by omega), zero_ne_add (5 + C.xloc) C.np (by omega),
+          lit_eq_add_false 0 5 C.xloc (by decide), lit_eq_add_false 1 5 C.xloc (by decide),
+          lit_eq_add_false 2 5 C.xloc (by decide), lit_eq_add_false 3 5 C.xloc (by decide),
+          lit_eq_add_false 4 5 C.xloc (by decide), add_eq_lit_false 2 5 C.xloc (by decide),
+          add_eq_lit_false 3 5 C.xloc (by decide), add_eq_lit_false 4 5 C.xloc (by decide),
+          add_eq_lit_false 1 5 C.xloc (by decide), Nat.add_comm C.np 1,
+          zero_ne_add 3 C.np (by decide), argsOf_mk, pkw_init p hO _ s₀.mem,
+          addnp_eq_gO C 1 1 (by decide), addnp_eq_gO C 2 1 (by decide), addnp_eq_gO C 3 1 (by decide), addnp_eq_gO C 4 1 (by decide), gO_eq_addnp C 4 1 (by decide),
+          gO_eq_addnp C 1 1 (by decide), gO_eq_addnp C 2 1 (by decide), gO_eq_addnp C 3 1 (by decide),
+          argsOf_setLoc_gO, zero_eq_addlit,
+          hO.room_eq, hO.recs.2, ofNat_zero', pushMX,
+          ↓reduceIte, Nat.add_eq_zero_iff, false_and, and_false, kgrowIf_growK, pushMC, pushOKC,
+          cntC] at *)
+      all_goals (obtain ⟨hm1, hk1, hx1⟩ := ‹_ ∧ KeepLo _ _ _ ∧ _›
+                 have e0 := hk1 0 (by omega)
+                 have e1 := hk1 (1 + C.np) (by omega)
+                 have ea := argsOf_keepLo 1 C.np (2 + C.np) (by omega) _ _ hk1
+                 simp only [argsOf_mk] at ea e0 e1
+                 simp only [e0, e1, ea, hm1, hx1, Nat.add_comm 1 C.np] at *)
+      all_goals grind [lang_grind, arena_grind]
 
+#exit
 /-- `X_push(t, args, j)` at `np` inputs. -/
 theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     (hp : p.lookup C.pname = some (consPushG C)) (n : Nat) (s₀ : St) (t : Word)
@@ -1039,8 +1311,8 @@ theorem consPushG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) C.pname (t :: (as ++ [j]))
     ⦃fun r s' => LocEq s' s₀ ∧ pushOKC C s₀.mem t = true ∧ r = [cntC C s₀.mem t] ∧
-      growIf C.sa C.ca C.hsM s₀.mem (pushMX C s₀.mem t (C.vsM as) (C.colM s₀.mem as) j
-        (cntC C s₀.mem t)) (cntC C s₀.mem t) = some s'.mem; ⊤⦄ := by
+      kgrowIf C t s₀.mem (pushMX C s₀.mem t (C.vsM as) (C.colM s₀.mem as) j
+        (cntC C s₀.mem t) (kwP C s₀.mem as)) (cntC C s₀.mem t) = some s'.mem; ⊤⦄ := by
   have ek := argsL_eq [t] as [j] C.np has
   have ej := init_last t as j C.np has
   simp only [List.length_singleton, List.singleton_append] at ek
