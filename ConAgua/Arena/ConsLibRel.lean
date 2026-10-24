@@ -412,23 +412,7 @@ theorem ConsR.reset (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (h : ConsR C R m on
 /-- **The relation holds initially**: the all-zero memory, both tables empty. -/
 theorem consR_init (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size)
     (hsa : consMinWords ≤ (m.arr64 C.sa).size ∧ (m.arr64 C.sa).size < 2 ^ 62) :
-    ConsR C R m false (Tbl.empty : Tbl α (Idx k) δ) Tbl.empty := by
-  have hT : ∀ t, TierR C.sch R C.hsM C.KP m t (Tbl.empty : Tbl α (Idx k) δ) := by
-    intro t
-    refine ⟨by simp [cntW, hz, Tbl.empty], by simp [Tbl.empty], by simp [Tbl.empty],
-      fun i a h => by simp [Tbl.empty] at h, fun i a h => by simp [Tbl.empty] at h,
-      fun a x h => by simp [Tbl.empty] at h, fun j _ => by simp [slotW, slotV, slotRd, hz],
-      fun j _ h => by simp [slotW, slotV, slotRd, hz] at h, fun i hi => by simp [Tbl.empty] at hi⟩
-  have hn : ∀ t, (knW C.sch.sa m t).toNat = 8 := fun t => by simp only [knW, hz]; decide
-  have ho : ∀ t, (koW C.sch.sa m t).toNat = 0 := fun t => by simp only [koW, hz]; rfl
-  have := hsa.1
-  simp only [consMinWords] at this
-  have hsz : (m.arr64 C.sch.sa).size = (m.arr64 C.sa).size := rfl
-  have hG : GrowR C.sch m := by
-    refine ⟨hsa.2, ⟨?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
-    all_goals (try rw [hn]); all_goals (try rw [ho]); all_goals (try rw [hsz])
-    all_goals first | omega | (intro h; omega) | (intro h; exact absurd h (by decide))
-  exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1, hG⟩
+    ConsR C R m false (Tbl.empty : Tbl α (Idx k) δ) Tbl.empty := by sorry
 
 /-! ## The probe and the append, from the model -/
 

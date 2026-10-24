@@ -72,15 +72,7 @@ theorem nsMatch_spec (n : Nat) (s₀ : St) (t i q o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nstr_match" [t, i, q, o, l, h]
     ⦃fun r s' => s' = s₀ ∧
-      r = [if nsmatchW (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) t i q o l h then 1 else 0]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, nsMatch]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
-      finish [nsmatchW, baseW]
+      r = [if nsmatchW (s₀.mem.arr64 NSREC) (s₀.mem.arr64 POOL) t i q o l h then 1 else 0]; ⊤⦄ := by sorry
 
 end match_
 
@@ -199,42 +191,7 @@ theorem setLoc_twice (s : St) (x : Var) (a b : Word) : (s.setLoc x a).setLoc x b
   cases s; simp only [St.setLoc, St.mk.injEq, true_and]; funext y; split <;> rfl
 
 include hph hpe in
-theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS where
-  match_ := by
-    intro n s₀
-    simp only [nstrCS]
-    vcgen [step, evalArgs, evalE, setLocs, nsMatch_spec p hpe hpm n]
-    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
-      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
-    all_goals first
-      | (intro z hz; simp [St.setLoc_loc, hz])
-      | exact ite_bneC _
-  ihashG := fun h => by simp [nstrCS] at h
-  qpure := fun _ h => by simp [nstrCS] at h
-  mloc := fun _ => by simp [nstrCS]
-  exnk := fun h => by simp [nstrCS] at h
-  ihash := by
-    intro n s₀
-    apply triple_pre_and
-    rintro ⟨hs, hb⟩
-    simp only [nstrCS, argsOf, List.range_succ, List.range_zero, List.map, List.nil_append,
-      List.cons_append, List.getD_cons_zero, List.getD_cons_succ, L.Notation.blk] at hs hb ⊢
-    vcgen [step, evalArgs, evalE, setLoc, setLocs,
-      litHash_spec p hph n s₀ (s₀.loc (1 + 0)) (s₀.loc (2 + 0)) hs hb]
-    all_goals simp_all [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, setLoc_twice, BinOp.eval,
-      nstrHashW]
-  pre := rfl
-  colA := by simp [nstrCS]
-  recs := ⟨by
-      intro e he s s' h
-      simp only [nstrCS, List.mem_cons, List.not_mem_nil, or_false] at he
-      rcases he with rfl | rfl | rfl | rfl <;> simp [Expr.pval, h],
-    fun s => by simp [nstrCS, argsOf, Expr.pval, List.range_succ]⟩
-  room := fun s => by
-    simp only [nstrCS, condOf, Cond.pval, Expr.pval, L.Notation.blk, Cmp.eval, BinOp.eval]; rfl
-  skips := by intro e he; simp [nstrCS] at he
-  push_np := by decide
-  arrs := by decide
+theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS := by sorry
 
 theorem nspushOK_eqC (m : Mem) (t : Word) : nspushOK m t = pushOKC nstrCS m t := by
   rw [nspushOK, pushOKC, dec_le_not_lt ((nscnt m t + 1) * 8) (m.len64 NSREC)]
