@@ -373,18 +373,18 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     · rw [if_neg ht] at hx; simp [ht, hx]
   obtain ⟨hq, hol, hsl, -⟩ := hrel
   simp only [nsQ, nsO, nsL] at hq hol hsl
-  have hlen := sliceL_length (m.arr64 POOL) (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1)).toNat
+  have hlen := sliceL_length (vpool m) (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1)).toNat
     (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2)).toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
   unfold nrpStr at h
   generalize ho : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1) = o at hol hsl hlen h
   generalize hlw : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2) = lw at hol hsl hlen h
-  have e1 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 1) = (m.arr64 POOL)[o.toNat + 1]?.getD 0 :=
+  have e1 : lw.toNat = 3 → rdW (vpool m) (o + 1) = (vpool m)[o.toNat + 1]?.getD 0 :=
     fun h3 => rdW_add _ _ _ (by simp; omega)
-  have e2 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 2) = (m.arr64 POOL)[o.toNat + 2]?.getD 0 :=
+  have e2 : lw.toNat = 3 → rdW (vpool m) (o + 2) = (vpool m)[o.toNat + 2]?.getD 0 :=
     fun h3 => rdW_add _ _ _ (by simp; omega)
-  have e0 : rdW (m.arr64 POOL) o = (m.arr64 POOL)[o.toNat]?.getD 0 := rfl
+  have e0 : rdW (vpool m) o = (vpool m)[o.toNat]?.getD 0 := rfl
   refine ⟨_, hview, ?_, ?_⟩
   · intro hf
     split at h
