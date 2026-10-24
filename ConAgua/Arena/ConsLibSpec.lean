@@ -840,8 +840,8 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
 
 
 
-/-- The model is opaque outside the library: users read it through the lemmas above and in
-`ConsLibRel.lean`. -/
+-- The model is opaque outside the library: users read it through the lemmas above and in
+-- `ConsLibRel.lean`.
 attribute [irreducible] consInternM
 
 end L.Arena

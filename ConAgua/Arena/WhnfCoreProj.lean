@@ -354,9 +354,8 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   rw [hpers]
   rcases word_le_one (tierW h) ht1 with h0 | h1
   · -- persistent
-    have hT := hR.ls.2.2.1
     have hlt : (idxW h).toNat < a.store.lss.pers.lists.nodes.size := by
-      rw [← hT.1]
+      rw [← ConsR.cntP hR.ls]
       have : ¬ rdW (m.arr64 CTL) (40 + 0) ≤ idxW h := by rw [h0] at hbd; exact hbd
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.pers.lists.nodes[(idxW h).toNat]? = some x :=
@@ -374,9 +373,8 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   · have hsc' : rdW (m.arr64 CTL) 1 ≠ 0 := fun e => hsc ⟨by rw [h1]; decide, e⟩
     have hon : a.store.lss.scratchOn = true := by
       rw [← hfl]; simpa using hsc'
-    have hT := hR.ls.2.2.2.1
     have hlt : (idxW h).toNat < a.store.lss.scr.lists.nodes.size := by
-      rw [← hT.1]
+      rw [← ConsR.cntS hR.ls]
       have : ¬ rdW (m.arr64 CTL) (40 + 1) ≤ idxW h := by rw [h1] at hbd; exact hbd
       exact UInt64.not_le.mp this
     obtain ⟨x, hx⟩ : ∃ x, a.store.lss.scr.lists.nodes[(idxW h).toNat]? = some x :=
