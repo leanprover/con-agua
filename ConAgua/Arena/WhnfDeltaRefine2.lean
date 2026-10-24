@@ -396,11 +396,11 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
   hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (by simp [natA, POOL, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)

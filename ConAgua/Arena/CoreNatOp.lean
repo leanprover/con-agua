@@ -213,7 +213,7 @@ theorem natLitFns_closed : closedA natArmProg [REC, SLOT] [2, 3] natLitFns = tru
 /-- `nat_beq_lit`/`nat_ble_lit` and their callees: the `const` table only. -/
 def natCmpFns : List FnName :=
   ["nat_beq_lit", "nat_ble_lit", "nat_cmp", "intern_const", "const_find", "const_push"]
-theorem natCmpFns_closed : closedA natArmProg [CREC, CSLOT, CLP] [18, 19] natCmpFns = true := by
+theorem natCmpFns_closed : closedA natArmProg [CREC, CREC + 256, CSLOT, CSLOT + 256, CLP, CLP + 256] [18, 19] natCmpFns = true := by
   decide +kernel
 
 theorem internLit_armsP (m₀ : Mem) : InternSpec natArmProg (ArenaP m₀) := by
