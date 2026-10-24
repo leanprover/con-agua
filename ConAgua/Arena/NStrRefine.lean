@@ -97,9 +97,9 @@ top holding the string's bytes, and the hash. -/
 def NsRecRel (m : Mem) (t i : Word) (k : StrNode) : Prop :=
   tfld m NSTR t i 0 = k.pre.word.toUInt64 ∧
   (tfld m NSTR t i 1).toNat + (tfld m NSTR t i 2).toNat ≤ m.top.toNat ∧
-  sliceL (m.arr64 POOL) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat = strWords k.s ∧
+  sliceL (vpool m) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat = strWords k.s ∧
   tfld m NSTR t i 3 =
-    nstrHashW (tfld m NSTR t i 0) (hashN (m.arr64 POOL) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat)
+    nstrHashW (tfld m NSTR t i 0) (hashN (vpool m) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat)
 
 /-- `NsRecRel` in the raw words (inside the store library). -/
 theorem NsRecRel_raw (m : Mem) (t i : Word) (k : StrNode) :
