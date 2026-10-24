@@ -1,6 +1,5 @@
 import ConAgua.Arena.WhnfIotaRecRefine2
 import ConAgua.Arena.WhnfM2CRefine5
-import ConAgua.L.ModelGen
 
 /-!
 # `iota_rec_at`'s pieces, part 3: the recursor's block and the top
@@ -285,11 +284,28 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
 
 /-! ## `iota_rec_at(mode, vis, d, hd, so, sn)` -/
 
-/-- **`iota_rec_at` is its model `irAtW`** (generated). -/
-l_model iotaRecAt_spec (p : Prog) (hp : p.lookup "iota_rec_at" = some iotaRecAtL)
-  fns [hp ↦ irAtW tuple]
-  specs [callW_spec p n "iota_rec_head", callW_spec p n "iota_rec_c"]
-  grind [arena_grind]
+/-- Model of `iota_rec_at`. -/
+def irAtW (p : Prog) (n : Nat) (m : Mem) (mode vis d hd so sn : Word) : Option (Word × Word × Mem) :=
+  match callW p n "iota_rec_head" [hd] m with
+  | none => none
+  | some (rv, m1) =>
+  if rv.headD 0 = 0 then some (0, 0, m1) else
+  match callW p n "iota_rec_c" [mode, vis, d, rv.tail.headD 0, rv.tail.tail.headD 0, so, sn] m1 with
+  | none => none
+  | some (rc, m2) => some (rc.headD 0, rc.tail.headD 0, m2)
+
+theorem iotaRecAt_spec (p : Prog) (hp : p.lookup "iota_rec_at" = some iotaRecAtL) (n : Nat)
+    (s₀ : St) (mode vis d hd so sn : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "iota_rec_at" [mode, vis, d, hd, so, sn]
+    ⦃fun r s' => LocEq s' s₀ ∧ irAtW p n s₀.mem mode vis d hd so sn =
+      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, iotaRecAtL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callW_spec p n "iota_rec_head", callW_spec p n "iota_rec_c"] <;>
+  simp_all [irAtW, BinOp.eval, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 section atRun
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (hd : EIdx)
@@ -320,11 +336,11 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := by
   intro F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat
   have hS := hpre.rel
-  refine triple_post (iotaRecAt_spec p hp.iotaRecAt (n + 1) s₀ mode vis d hd so sn) fun r s' ⟨hloc, hW⟩
+  refine triple_post (iotaRecAt_spec p hp.iotaRecAt n s₀ mode vis d hd so sn) fun r s' ⟨hloc, hW⟩
     => ⟨hloc, ?_⟩
-  rw [irAtW.arm1] at hW
+  simp only [irAtW] at hW
   rcases c1 : callW p n "iota_rec_head" [hd] s₀.mem with _ | ⟨rv, m1⟩ <;>
-    simp only [c1, irAtW.k_iota_rec_head, reduceCtorEq] at hW
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.1 hd hhd rv m1 c1
   subst m1
   by_cases v0 : rv.headD 0 = 0
@@ -342,7 +358,7 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   | zero => rw [callW_zero] at hW; cases hW
   | succ N =>
   rcases c2 : callW p (N + 1) "iota_rec_c" [mode, vis, d, rv.tail.headD 0, rv.tail.tail.headD 0, so, sn]
-      s₀.mem with _ | ⟨rc, m2⟩ <;> simp only [c2, irAtW.k_iota_rec_c, reduceCtorEq] at hW
+      s₀.mem with _ | ⟨rc, m2⟩ <;> simp only [c2, reduceCtorEq] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h0, h1, hm⟩ := hW
   obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
