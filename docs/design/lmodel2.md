@@ -240,3 +240,32 @@ Branch `lmretro` (worktree `_tmp/wt/lmodel2`), helpers `lmretro-dm`, `lmretro-na
 * Merged master after tieracc-p: its versions of `Inst1Refine`, `WalkLiftRefine`,
   `HoistWalkRef`, `LiftRefine` taken, the renames reapplied by `_tmp/lmretro/rename.py`
   (map `_tmp/lmretro/map2.txt`) plus the `hh0`/`Decidable.of_not_not` edits; full build passes.
+
+### R2: `DefEq*`/`Whnf*` 1-file models (branch `lmretro-r2`, helper `lmretro-whnf`)
+
+27 functions retrofitted, all with the `simp` step mode; files' non-blank lines 5756 → 4856
+(−900), elaboration (`instructions:u`, master `52943682` vs branch) 691 G → 321 G:
+
+| file | functions | lines | G |
+|---|---|---:|---:|
+| `DefEqMid` | no_fvars, lazy_fold_ok, bool_true_shortcut, try_unfold_proj_app, delta_quick, defeq_offset, defeq_lams_inner | 762 → 568 | 97.1 → 22.0 |
+| `DefEqMidLams` | lams_inst, lam_pair | 539 → 484 | 54.8 → 48.9 |
+| `DefEqMidLazy` | lds_both, lds_unfold2, lds_same, lazy_delta_step | 792 → 610 | 217.5 → 41.7 |
+| `DefEqMidLazy2` | lazy_nat, lazy_iter | 563 → 465 | 104.8 → 25.2 |
+| `DefEqMidSpine` | spine_head, spine_cmp, defeq_spine2, defeq_spine | 516 → 405 | 54.7 → 18.3 |
+| `DefEqMidLoops` | defeq_lst, defeq_list_rev | 389 → 288 | 37.4 → 26.9 |
+| `WhnfDeltaSlot` | whnf_loop | 342 → 307 | 22.2 → 22.0 |
+| `WhnfIotaRecRefine3` | iota_rec_at, iota_rec_c | 345 → 297 | 12.0 → 13.1 |
+| `WhnfIotaRefine2` | tower_slots_all, inst_spine | 1172 → 1112 | 56.7 → 56.4 |
+| `WhnfProjRefine2` | find_proj | 336 → 320 | 18.2 → 18.7 |
+
+Refinement churn as in the measurements: `rw [fW.arm1] at hW` after the spec (now taken at
+`n + 1`), `xK_t (h := h)` → `fW.k_g.armᵢ (hc1 := h)`, `cases`/`.none` for failed calls, the
+generic tails over the shared continuation (`ldsStepW.k_delta_quick p (callW …)`); a
+continuation that ends in a call is definitionally `call1W` (`change call1W p _ _ _ _ = _ at hW`).
+Hand models with a store guard (`s2K3`'s `136 < size`) need the bound from the relation instead
+(`CoreS` memos, as `CoreS.ctl136`). Skipped: `defeq_lams`, `lazy_delta_reduction` (hand loop
+models with call-hypothesis arms used by the loop refinements: not cheap); `lams_open` (model
+read in `IndPartsSpec5`); `lds_left`/`lds_right` (shared continuation `llK3`); `whnf_core_app`,
+`whnf_core_app2` (`WhnfCoreStep`: +52 %, the generator's fixed cost of ~4 G per function in a
+6 G file).
