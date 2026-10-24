@@ -171,7 +171,7 @@ theorem soaW_ok0 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       PSlR decRS (recs.filter fun rc => !decide (rc.tgt < k.toNat)) (r.tail.tail.headD 0)
         (r.tail.tail.tail.headD 0) m' := by
   by_cases hl : recl = 0
-  · rw [soaW_nil n m reco recl k hl] at h
+  · rw [soaW.arm1 n m reco recl k hl] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [hrs.nil hl]
     exact ⟨hS, IWGrow.refl _, PSlR.nil _ _, PSlR.nil _ _⟩
