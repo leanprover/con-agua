@@ -146,11 +146,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem mprobeW_arm (m : Mem) (u v t : Word) :
-    ∀ j d, mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m) j d =
-      probeArm maxSch m t (mMt m u v t) (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m)) j d := by
-  intro j d; rw [mprobeW, cprobeW]; rfl
-
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 MREC) 2
@@ -180,49 +175,10 @@ theorem maxColFree : ColFree maxCS MRecRel := by
   simp only [maxCS, Option.some.injEq] at h; subst h
   simpa only [MRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)] using hr
 
-theorem mpushMem_eq (m : Mem) (t u v j c : Word) :
-    mpushMem m t u v j c = (pushG maxSch m t [u, v] j c).set64 MHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
-  simp [mpushMem, pushG, wrRec, Schema.ad, maxSch]
-
-theorem minternW_eq (m : Mem) (u v : Word) :
-    minternW m u v = internMD maxSch MHP (lvlHPW m u ||| lvlHPW m v) m 0 (mpushOK m) [u, v]
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      mhash := by
-  have e0 : ∀ x, hdW maxSch.tag.toUInt64 0 x = maxP + x := fun x => by
-    simp [hdW, maxSch, maxP, LTag.max]
-  have e1 : ∀ x, hdW maxSch.tag.toUInt64 1 x = maxS + x := fun x => by
-    simp [hdW, maxSch, maxS, LTag.max]
-  have ep : ∀ t, pushOKC maxCS m t = mpushOK m t := fun t => (mpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX maxCS m t (maxCS.vsM (pushArgs maxCS [u, v] (maxHashW u v)))
-      (maxCS.colM m (pushArgs maxCS [u, v] (maxHashW u v))) j c =
-      (pushG maxSch m t [u, v] j c).set64 MHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
-    intro t j c; rw [← mpushMem_eq, mpushMem_eqC]; rfl
-  have ec : ∀ t, cntC maxCS m t = cntW maxSch m t := fun t => rfl
-  have eh : maxCS.qhM m [u, v] = maxHashW u v := rfl
-  have es : skipC maxCS m [u, v] = 0 := rfl
-  simp only [minternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
-
 /-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
 theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
     MemFrame [MREC, MSLOT, MHP] [10, 11] m m' :=
   consInternM_frame maxCS_wf hI
-
-/-- `intern_max`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem minternW_eqK (m : Mem) (u v : Word) (hctl : maxSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    minternW m u v = mkK MHP maxSch.ca (cnt2 m maxSch.ca) (lvlHPW m u ||| lvlHPW m v)
-      (internM maxSch m 0 (mpushOK m) [u, v]
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) mhash) := by
-  rw [minternW_eq]
-  refine internMD_mkK maxSch maxSch_wf _ _ _ _ _ _ _ _ mhash (by decide) (by decide)
-    (fun m k x t i => by simp only [mhash, Mem.arr64_set64_ne _ _ _ _ _ (show MREC ≠ MHP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by
   intro m m' hra _ _; simp only [maxSch] at hra

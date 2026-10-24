@@ -106,15 +106,8 @@ def constCS : ConsSch where
 
 /-! ## `const_find(t, n, us, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def ceprobeW (sl r : Array Word) (t f a b n j d : Word) : List Word :=
-  cprobeW sl (fun i => cematchW r t i f a) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def constFind : FunDecl := consFindG constCS
-
-/-- The slot count of a tier of the `const` table. -/
-def nSlotsCe (m : Mem) : Word := rdW (m.arr64 CSLOT) (m.len64 CSLOT - 1) + SN0
 
 /-! ## `const_push(t, n, us, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -125,11 +118,6 @@ def cecnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (18 + t)
 def cepushOK (m : Mem) (t : Word) : Bool :=
   decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 CREC >>> (2 : Word)) &&
     decide (cecnt m t < m.len64 CLP >>> (1 : Word))
-
-/-- The memory after `const_push(t, n, us, j)` appended node `c`. -/
-def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
-  ((((m.set64 CREC (c * 4 + t * 2) f).set64 CREC (c * 4 + t * 2 + 1) a).set64 CSLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1)).set64 CLP (c * 2 + t) (lsHPW m a)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def constPush : FunDecl := consPushG constCS
@@ -231,34 +219,9 @@ theorem constOK : ConsOK p constCS where
   push_np := by decide
   arrs := by decide
 
-theorem constFind_spec (hp : p.lookup "const_find" = some constFind) (n : Nat) (s₀ : St)
-    (t f a h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "const_find" [t, f, a, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) t f a
-        (baseW s₀.mem t) (nSlotsCe s₀.mem) (homeW h (nSlotsCe s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p constCS ((constOK p).match_) hp n s₀ t [f, a] rfl h trivial
-
 theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
   simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
   rfl
-
-theorem cepushMem_eqC (m : Mem) (t f a j c : Word) :
-    cepushMem m t f a j c = pushMX constCS m t [f, a] (lsHPW m a) j c := by
-  simp [cepushMem, pushMX, colW, pushMC, tailM, wrRecK, constCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ CREC by decide)]
-
-theorem constPush_spec (hp : p.lookup "const_push" = some constPush) (n : Nat) (s₀ : St)
-    (t f a j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "const_push" [t, f, a, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ cepushOK s₀.mem t = true ∧ r = [cecnt s₀.mem t] ∧
-      growIf CSLOT 18 cehash s₀.mem (cepushMem s₀.mem t f a j (cecnt s₀.mem t))
-        (cecnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [cepushOK_eqC]
-  simp only [cepushMem_eqC]
-  exact consPushG_spec p constCS (constOK p) hp n s₀ t [f, a] rfl j
 
 theorem internConst_spec (hpf : p.lookup "const_find" = some constFind)
     (hpp : p.lookup "const_push" = some constPush) (hp : p.lookup "intern_const" = some internConst)

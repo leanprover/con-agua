@@ -170,12 +170,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem pjprobeW_arm (m : Mem) (n u e t : Word) :
-    ∀ j d, pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m) j d =
-      probeArm projSch m t (pjMt m n u e t)
-        (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m)) j d := by
-  intro j d; rw [pjprobeW, cprobeW]; rfl
-
 theorem pjpushOK_room (m : Mem) (t : Word) (h : pjpushOK m t = true) : PushRoom projSch m t := by
   simp only [pjpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [PushRoom, cntW, pjcnt, projSch, len64_eq] at *
@@ -190,30 +184,6 @@ theorem projCS_wf : projCS.WF where
   colRoom A h := by simp [projCS] at h
   room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, projCS, hk]
-
-theorem pjpushMem_eq (m : Mem) (t n u e j c : Word) :
-    pjpushMem m t n u e j c = pushG projSch m t [n, u, e] j c := by
-  simp [pjpushMem, pushG, wrRec, Schema.ad, projSch]
-
-theorem pjinternW_eq (m : Mem) (n u e : Word) :
-    pjinternW m n u e = internM projSch m (pjskipW m n e) (pjpushOK m) [n, u, e]
-      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (baseW m 0) (nSlotsPj m)
-        (homeW (projHashW n u e) (nSlotsPj m)) 0)
-      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (baseW m 1) (nSlotsPj m)
-        (homeW (projHashW n u e) (nSlotsPj m)) 0)
-      pjhash := by
-  have e0 : ∀ x, hdW projSch.tag.toUInt64 0 x = projP + x := fun x => by
-    simp [hdW, projSch, projP, ETag.proj]
-  have e1 : ∀ x, hdW projSch.tag.toUInt64 1 x = projS + x := fun x => by
-    simp [hdW, projSch, projS, ETag.proj]
-  have ep : ∀ t, pushOKC projCS m t = pjpushOK m t := fun t => (pjpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC projCS m t (projCS.vsM (pushArgs projCS [n, u, e] (projHashW n u e))) j c =
-      pushG projSch m t [n, u, e] j c := by
-    intro t j c; rw [← pjpushMem_eq, pjpushMem_eqC]; rfl
-  have ec : ∀ t, cntC projCS m t = cntW projSch m t := fun t => rfl
-  have eh : projCS.qhM m [n, u, e] = projHashW n u e := rfl
-  simp only [pjinternW, consInternM, internM, pushM, pushC, pushMX_none (C := projCS) rfl, ep, em, ec, e0, e1, eh]
-  rfl
 
 /-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/
 theorem pjskipW_eq (m : Mem) (a : AState) (n e : Word) (hn : n.toNat < 2 ^ 32)

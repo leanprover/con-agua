@@ -112,11 +112,6 @@ theorem naNewOK (m : Mem) : NewOKR nanonSch NaRecRel nahash m [0] naKey nahashW 
 
 /-! ## The bridges from the L models -/
 
-theorem naprobeW_arm (m : Mem) (t : Word) :
-    ∀ j d, naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (baseW m t) (nSlotsNA m) j d =
-      probeArm nanonSch m t (naMt m t) (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (baseW m t) (nSlotsNA m)) j d := by
-  intro j d; rw [naprobeW, cprobeW]; rfl
-
 theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom nanonSch m t := by
   simp only [napushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 NAREC) 1
@@ -132,30 +127,6 @@ theorem nanonCS_wf : nanonCS.WF where
   colRoom A h := by simp [nanonCS] at h
   room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nanonCS, hk]
-
-theorem napushMem_eq (m : Mem) (t j c : Word) :
-    napushMem m t j c = pushG nanonSch m t [0] j c := by
-  simp [napushMem, pushG, wrRec, Schema.ad, nanonSch]
-
-theorem nainternW_eq (m : Mem) :
-    nainternW m = internM nanonSch m 0 (napushOK m) [0]
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (baseW m 0) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
-      nahash := by
-  have e0 : ∀ x, hdW nanonSch.tag.toUInt64 0 x = naP + x := fun x => by
-    simp [hdW, nanonSch, naP, NTag.anonymous]
-  have e1 : ∀ x, hdW nanonSch.tag.toUInt64 1 x = naS + x := fun x => by
-    simp [hdW, nanonSch, naS, NTag.anonymous]
-  have ep : ∀ t, pushOKC nanonCS m t = napushOK m t := fun t => (napushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC nanonCS m t (nanonCS.vsM (pushArgs nanonCS [] (nahashW))) j c =
-      pushG nanonSch m t [0] j c := by
-    intro t j c; rw [← napushMem_eq, napushMem_eqC]; rfl
-  have ec : ∀ t, cntC nanonCS m t = cntW nanonSch m t := fun t => rfl
-  have eh : nanonCS.qhM m [] = nahashW := rfl
-  have es : skipC nanonCS m [] = 0 := rfl
-  simp only [nainternW, consInternM, internM, pushM, pushC, pushMX_none (C := nanonCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
 
 /-! ## `intern_nanon` refines `internNNode .anonymous` -/
 

@@ -174,12 +174,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem laprobeW_arm (m : Mem) (ty body t : Word) :
-    ∀ j d, laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body (baseW m t) (nSlotsLa m) j d =
-      probeArm lamSch m t (laMt m ty body t) (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body
-        (baseW m t) (nSlotsLa m)) j d := by
-  intro j d; rw [laprobeW, cprobeW]; rfl
-
 theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom lamSch m t := by
   simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 LAREC) 2
@@ -195,30 +189,6 @@ theorem lamCS_wf : lamCS.WF where
   colRoom A h := by simp [lamCS] at h
   room m t h := (lapushOK_room m t ((lapushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, lamCS, hk]
-
-theorem lapushMem_eq (m : Mem) (t ty body j c : Word) :
-    lapushMem m t ty body j c = pushG lamSch m t [ty, body] j c := by
-  simp [lapushMem, pushG, wrRec, Schema.ad, lamSch]
-
-theorem lainternW_eq (m : Mem) (ty body : Word) :
-    lainternW m ty body = internM lamSch m (laskipW m ty body) (lapushOK m) [ty, body]
-      (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 0 ty body (baseW m 0) (nSlotsLa m)
-        (homeW (lamHashW ty body) (nSlotsLa m)) 0)
-      (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 1 ty body (baseW m 1) (nSlotsLa m)
-        (homeW (lamHashW ty body) (nSlotsLa m)) 0)
-      lahash := by
-  have e0 : ∀ x, hdW lamSch.tag.toUInt64 0 x = lamP + x := fun x => by
-    simp [hdW, lamSch, lamP, ETag.lam]
-  have e1 : ∀ x, hdW lamSch.tag.toUInt64 1 x = lamS + x := fun x => by
-    simp [hdW, lamSch, lamS, ETag.lam]
-  have ep : ∀ t, pushOKC lamCS m t = lapushOK m t := fun t => (lapushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC lamCS m t (lamCS.vsM (pushArgs lamCS [ty, body] (lamHashW ty body))) j c =
-      pushG lamSch m t [ty, body] j c := by
-    intro t j c; rw [← lapushMem_eq, lapushMem_eqC]; rfl
-  have ec : ∀ t, cntC lamCS m t = cntW lamSch m t := fun t => rfl
-  have eh : lamCS.qhM m [ty, body] = lamHashW ty body := rfl
-  simp only [lainternW, consInternM, internM, pushM, pushC, pushMX_none (C := lamCS) rfl, ep, em, ec, e0, e1, eh]
-  rfl
 
 /-- The L skip test is the arena's. -/
 theorem laskipW_eq (m : Mem) (a : AState) (ty body : Word) (hty : ty.toNat < 2 ^ 32)

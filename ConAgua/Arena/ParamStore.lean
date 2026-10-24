@@ -88,15 +88,8 @@ def paramCS : ConsSch where
 
 /-! ## `param_find(t, u, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def pprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  cprobeW sl (fun i => pmatchW r t i u) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def paramFind : FunDecl := consFindG paramCS
-
-/-- The slot count of a tier of the `param` table. -/
-def nSlotsP (m : Mem) : Word := rdW (m.arr64 PSLOT) (m.len64 PSLOT - 1) + SN0
 
 /-! ## `param_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -106,10 +99,6 @@ def pcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (14 + t)
 /-- `param_push`'s room checks: the handle index, the record array. -/
 def ppushOK (m : Mem) (t : Word) : Bool :=
   decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 PREC >>> (1 : Word))
-
-/-- The memory after `param_push(t, u, j)` appended node `c`. -/
-def ppushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def paramPush : FunDecl := consPushG paramCS
@@ -187,31 +176,8 @@ theorem paramOK : ConsOK p paramCS where
   push_np := by decide
   arrs := by decide
 
-theorem paramFind_spec (hp : p.lookup "param_find" = some paramFind) (n : Nat) (s₀ : St) (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "param_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = pprobeW (s₀.mem.arr64 PSLOT) (s₀.mem.arr64 PREC) t u
-        (baseW s₀.mem t) (nSlotsP s₀.mem) (homeW h (nSlotsP s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p paramCS (((paramOK p).match_)) hp n s₀ t [u] rfl h trivial
-
 theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
   simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl
-
-theorem ppushMem_eqC (m : Mem) (t u j c : Word) :
-    ppushMem m t u j c = pushMC paramCS m t [u] j c := by
-  simp [ppushMem, pushMC, tailM, wrRecK, paramCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PREC by decide)]
-
-theorem paramPush_spec (hp : p.lookup "param_push" = some paramPush) (n : Nat) (s₀ : St) (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "param_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ ppushOK s₀.mem t = true ∧ r = [pcnt s₀.mem t] ∧
-      growIf PSLOT 14 phash s₀.mem (ppushMem s₀.mem t u j (pcnt s₀.mem t))
-        (pcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [ppushOK_eqC]
-  simp only [ppushMem_eqC]
-  exact consPushG_spec p paramCS (paramOK p) hp n s₀ t [u] rfl j
 
 theorem internParam_spec (hpf : p.lookup "param_find" = some paramFind)
     (hpp : p.lookup "param_push" = some paramPush) (hp : p.lookup "intern_param" = some internParam)

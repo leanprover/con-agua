@@ -155,12 +155,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem nnprobeW_arm (m : Mem) (pre u t : Word) :
-    ∀ j d, nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (baseW m t) (nSlotsNN m) j d =
-      probeArm nnumSch m t (nnMt m pre u t)
-        (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (baseW m t) (nSlotsNN m)) j d := by
-  intro j d; rw [nnprobeW, cprobeW]; rfl
-
 theorem nnpushOK_room (m : Mem) (t : Word) (h : nnpushOK m t = true) : PushRoom nnumSch m t := by
   simp only [nnpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 NNREC) 2
@@ -176,32 +170,6 @@ theorem nnumCS_wf : nnumCS.WF where
   colRoom A h := by simp [nnumCS] at h
   room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, nnumCS, hk]
-
-theorem nnpushMem_eq (m : Mem) (t pre u j c : Word) :
-    nnpushMem m t pre u j c = pushG nnumSch m t [pre, u] j c := by
-  simp [nnpushMem, pushG, wrRec, Schema.ad, nnumSch]
-
-theorem nninternW_eq (m : Mem) (pre u : Word) :
-    nninternW m pre u = internM nnumSch m 0 (nnpushOK m) [pre, u]
-      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (baseW m 0) (nSlotsNN m)
-        (homeW (nnumHashW pre u) (nSlotsNN m)) 0)
-      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (baseW m 1) (nSlotsNN m)
-        (homeW (nnumHashW pre u) (nSlotsNN m)) 0)
-      nnhash := by
-  have e0 : ∀ x, hdW nnumSch.tag.toUInt64 0 x = nnP + x := fun x => by
-    simp [hdW, nnumSch, nnP, NTag.num]
-  have e1 : ∀ x, hdW nnumSch.tag.toUInt64 1 x = nnS + x := fun x => by
-    simp [hdW, nnumSch, nnS, NTag.num]
-  have ep : ∀ t, pushOKC nnumCS m t = nnpushOK m t := fun t => (nnpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC nnumCS m t (nnumCS.vsM (pushArgs nnumCS [pre, u] (nnumHashW pre u))) j c =
-      pushG nnumSch m t [pre, u] j c := by
-    intro t j c; rw [← nnpushMem_eq, nnpushMem_eqC]; rfl
-  have ec : ∀ t, cntC nnumCS m t = cntW nnumSch m t := fun t => rfl
-  have eh : nnumCS.qhM m [pre, u] = nnumHashW pre u := rfl
-  have es : skipC nnumCS m [pre, u] = 0 := rfl
-  simp only [nninternW, consInternM, internM, pushM, pushC, pushMX_none (C := nnumCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
 
 /-! ## `intern_nnum` refines `internNNode (.num _ _)` -/
 

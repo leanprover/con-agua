@@ -141,11 +141,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem soprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (baseW m t) (nSlotsSo m) j d =
-      probeArm sortSch m t (soMt m u t) (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (baseW m t) (nSlotsSo m)) j d := by
-  intro j d; rw [soprobeW, cprobeW]; rfl
-
 theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom sortSch m t := by
   simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 SOREC) 1
@@ -175,48 +170,10 @@ theorem sortColFree : ColFree sortCS SoRecRel := by
   simp only [sortCS, Option.some.injEq] at h; subst h
   simpa only [SoRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)] using hr
 
-theorem sopushMem_eq (m : Mem) (t u j c : Word) :
-    sopushMem m t u j c = (pushG sortSch m t [u] j c).set64 SOLP (c * 2 + t) (lvlHPW m u) := by
-  simp [sopushMem, pushG, wrRec, Schema.ad, sortSch]
-
-theorem sointernW_eq (m : Mem) (u : Word) :
-    sointernW m u = internMD sortSch SOLP (lvlHPW m u) m (soskipW m u) (sopushOK m) [u]
-      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-      sohash := by
-  have e0 : ∀ x, hdW sortSch.tag.toUInt64 0 x = sortP + x := fun x => by
-    simp [hdW, sortSch, sortP, ETag.sort]
-  have e1 : ∀ x, hdW sortSch.tag.toUInt64 1 x = sortS + x := fun x => by
-    simp [hdW, sortSch, sortS, ETag.sort]
-  have ep : ∀ t, pushOKC sortCS m t = sopushOK m t := fun t => (sopushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX sortCS m t (sortCS.vsM (pushArgs sortCS [u] (sortHashW u)))
-      (sortCS.colM m (pushArgs sortCS [u] (sortHashW u))) j c =
-      (pushG sortSch m t [u] j c).set64 SOLP (c * 2 + t) (lvlHPW m u) := by
-    intro t j c; rw [← sopushMem_eq, sopushMem_eqC]; rfl
-  have ec : ∀ t, cntC sortCS m t = cntW sortSch m t := fun t => rfl
-  have eh : sortCS.qhM m [u] = sortHashW u := rfl
-  simp only [sointernW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh]
-  rfl
-
 /-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
 theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
     MemFrame [SOREC, SOSLOT, SOLP] [16, 17] m m' :=
   consInternM_frame sortCS_wf hI
-
-/-- `intern_sort`'s model as the library's interning and the `mk_*` tail (`mkK`), given the
-count words. -/
-theorem sointernW_eqK (m : Mem) (u : Word) (hctl : sortSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    sointernW m u = mkK SOLP sortSch.ca (cnt2 m sortSch.ca) (lvlHPW m u)
-      (internM sortSch m (soskipW m u) (sopushOK m) [u]
-        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) sohash) := by
-  rw [sointernW_eq]
-  refine internMD_mkK sortSch sortSch_wf _ _ _ _ _ _ _ _ sohash (by decide) (by decide)
-    (fun m k x t i => by simp only [sohash, Mem.arr64_set64_ne _ _ _ _ _ (show SOREC ≠ SOLP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by
   intro m m' hra _ _; simp only [sortSch] at hra

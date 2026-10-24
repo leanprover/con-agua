@@ -103,15 +103,8 @@ def forallCS : ConsSch where
 
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def faprobeW (sl r : Array Word) (t ty body b n j d : Word) : List Word :=
-  cprobeW sl (fun i => famatchW r t i ty body) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def forallFind : FunDecl := consFindG forallCS
-
-/-- The slot count of a tier of the `forallE` table. -/
-def nSlotsFa (m : Mem) : Word := rdW (m.arr64 FASLOT) (m.len64 FASLOT - 1) + SN0
 
 /-! ## `forall_push(t, ty, body, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -121,11 +114,6 @@ def facnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (30 + t)
 /-- `forall_push`'s room checks: the handle index, the record array. -/
 def fapushOK (m : Mem) (t : Word) : Bool :=
   decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 FAREC >>> (2 : Word))
-
-/-- The memory after `forall_push(t, ty, body, j)` appended node `c`. -/
-def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
-  ((((m.set64 FAREC (c * 4 + t * 2) ty).set64 FAREC (c * 4 + t * 2 + 1) body).set64 FASLOT
-    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def forallPush : FunDecl := consPushG forallCS
@@ -226,33 +214,8 @@ theorem forallOK : ConsOK p forallCS where
   push_np := by decide
   arrs := by decide
 
-theorem forallFind_spec (hp : p.lookup "forall_find" = some forallFind) (n : Nat) (s₀ : St)
-    (t ty body h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "forall_find" [t, ty, body, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) t ty body
-        (baseW s₀.mem t) (nSlotsFa s₀.mem) (homeW h (nSlotsFa s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p forallCS ((forallOK p).match_) hp n s₀ t [ty, body] rfl h trivial
-
 theorem fapushOK_eqC (m : Mem) (t : Word) : fapushOK m t = pushOKC forallCS m t := by
   simp only [fapushOK, pushOKC, forallCS, facnt, cntC, ← decide_not, UInt64.not_le]; rfl
-
-theorem fapushMem_eqC (m : Mem) (t ty body j c : Word) :
-    fapushMem m t ty body j c = pushMC forallCS m t [ty, body] j c := by
-  simp [fapushMem, pushMC, tailM, wrRecK, forallCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ FAREC by decide)]
-
-theorem forallPush_spec (hp : p.lookup "forall_push" = some forallPush) (n : Nat) (s₀ : St)
-    (t ty body j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "forall_push" [t, ty, body, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ fapushOK s₀.mem t = true ∧ r = [facnt s₀.mem t] ∧
-      growIf FASLOT 30 fahash s₀.mem (fapushMem s₀.mem t ty body j (facnt s₀.mem t))
-        (facnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [fapushOK_eqC]
-  simp only [fapushMem_eqC]
-  exact consPushG_spec p forallCS (forallOK p) hp n s₀ t [ty, body] rfl j
 
 theorem internForallL_spec (hpf : p.lookup "forall_find" = some forallFind)
     (hpp : p.lookup "forall_push" = some forallPush)

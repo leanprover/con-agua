@@ -137,11 +137,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem pprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (baseW m t) (nSlotsP m) j d =
-      probeArm paramSch m t (pMt m u t) (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (baseW m t) (nSlotsP m)) j d := by
-  intro j d; rw [pprobeW, cprobeW]; rfl
-
 theorem ppushOK_room (m : Mem) (t : Word) (h : ppushOK m t = true) : PushRoom paramSch m t := by
   simp only [ppushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 PREC) 1
@@ -157,30 +152,6 @@ theorem paramCS_wf : paramCS.WF where
   colRoom A h := by simp [paramCS] at h
   room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, paramCS, hk]
-
-theorem ppushMem_eq (m : Mem) (t u j c : Word) :
-    ppushMem m t u j c = pushG paramSch m t [u] j c := by
-  simp [ppushMem, pushG, wrRec, Schema.ad, paramSch]
-
-theorem pinternW_eq (m : Mem) (u : Word) :
-    pinternW m u = internM paramSch m 0 (ppushOK m) [u]
-      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 0 u (baseW m 0) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0)
-      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 1 u (baseW m 1) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0)
-      phash := by
-  have e0 : ∀ x, hdW paramSch.tag.toUInt64 0 x = paramP + x := fun x => by
-    simp [hdW, paramSch, paramP, LTag.param]
-  have e1 : ∀ x, hdW paramSch.tag.toUInt64 1 x = paramS + x := fun x => by
-    simp [hdW, paramSch, paramS, LTag.param]
-  have ep : ∀ t, pushOKC paramCS m t = ppushOK m t := fun t => (ppushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC paramCS m t (paramCS.vsM (pushArgs paramCS [u] (paramHashW u))) j c =
-      pushG paramSch m t [u] j c := by
-    intro t j c; rw [← ppushMem_eq, ppushMem_eqC]; rfl
-  have ec : ∀ t, cntC paramCS m t = cntW paramSch m t := fun t => rfl
-  have eh : paramCS.qhM m [u] = paramHashW u := rfl
-  have es : skipC paramCS m [u] = 0 := rfl
-  simp only [pinternW, consInternM, internM, pushM, pushC, pushMX_none (C := paramCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
 
 /-! ## `intern_param` refines `internLNode (.param _)` -/
 

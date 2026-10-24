@@ -146,11 +146,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem iimprobeW_arm (m : Mem) (u v t : Word) :
-    ∀ j d, improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (baseW m t) (nSlotsI m) j d =
-      probeArm imaxSch m t (imMt m u v t) (improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (baseW m t) (nSlotsI m)) j d := by
-  intro j d; rw [improbeW, cprobeW]; rfl
-
 theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
   simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 IREC) 2
@@ -180,49 +175,10 @@ theorem imaxColFree : ColFree imaxCS IRecRel := by
   simp only [imaxCS, Option.some.injEq] at h; subst h
   simpa only [IRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)] using hr
 
-theorem iimpushMem_eq (m : Mem) (t u v j c : Word) :
-    impushMem m t u v j c = (pushG imaxSch m t [u, v] j c).set64 IHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
-  simp [impushMem, pushG, wrRec, Schema.ad, imaxSch]
-
-theorem iiminternW_eq (m : Mem) (u v : Word) :
-    iminternW m u v = internMD imaxSch IHP (lvlHPW m u ||| lvlHPW m v) m 0 (impushOK m) [u, v]
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      imhash := by
-  have e0 : ∀ x, hdW imaxSch.tag.toUInt64 0 x = imaxP + x := fun x => by
-    simp [hdW, imaxSch, imaxP, LTag.imax]
-  have e1 : ∀ x, hdW imaxSch.tag.toUInt64 1 x = imaxS + x := fun x => by
-    simp [hdW, imaxSch, imaxS, LTag.imax]
-  have ep : ∀ t, pushOKC imaxCS m t = impushOK m t := fun t => (impushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX imaxCS m t (imaxCS.vsM (pushArgs imaxCS [u, v] (imaxHashW u v)))
-      (imaxCS.colM m (pushArgs imaxCS [u, v] (imaxHashW u v))) j c =
-      (pushG imaxSch m t [u, v] j c).set64 IHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
-    intro t j c; rw [← iimpushMem_eq, impushMem_eqC]; rfl
-  have ec : ∀ t, cntC imaxCS m t = cntW imaxSch m t := fun t => rfl
-  have eh : imaxCS.qhM m [u, v] = imaxHashW u v := rfl
-  have es : skipC imaxCS m [u, v] = 0 := rfl
-  simp only [iminternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
-
 /-- **What `intern_imax` changes**: the table's arrays, the column, the counts. -/
 theorem iminternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
     MemFrame [IREC, ISLOT, IHP] [12, 13] m m' :=
   consInternM_frame imaxCS_wf hI
-
-/-- `intern_imax`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem iminternW_eqK (m : Mem) (u v : Word) (hctl : imaxSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    iminternW m u v = mkK IHP imaxSch.ca (cnt2 m imaxSch.ca) (lvlHPW m u ||| lvlHPW m v)
-      (internM imaxSch m 0 (impushOK m) [u, v]
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) imhash) := by
-  rw [iiminternW_eq]
-  refine internMD_mkK imaxSch iimaxSch_wf _ _ _ _ _ _ _ _ imhash (by decide) (by decide)
-    (fun m k x t i => by simp only [imhash, Mem.arr64_set64_ne _ _ _ _ _ (show IREC ≠ IHP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem imaxLocal : RLocal imaxSch IRecRel imhash [] [] := by
   intro m m' hra _ _; simp only [imaxSch] at hra

@@ -91,15 +91,8 @@ def nanonCS : ConsSch where
 
 /-! ## `nanon_find(t, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def naprobeW (sl r : Array Word) (t b n j d : Word) : List Word :=
-  cprobeW sl (fun i => namatchW r t i) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nanonFind : FunDecl := consFindG nanonCS
-
-/-- The slot count of a tier of the `anonymous` table. -/
-def nSlotsNA (m : Mem) : Word := rdW (m.arr64 NASLOT) (m.len64 NASLOT - 1) + SN0
 
 /-! ## `nanon_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -109,10 +102,6 @@ def nacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (34 + t)
 /-- `nanon_push`'s room checks: the handle index, the record array. -/
 def napushOK (m : Mem) (t : Word) : Bool :=
   decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 NAREC >>> (1 : Word))
-
-/-- The memory after `nanon_push(t, j)` appended node `c`. -/
-def napushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nanonPush : FunDecl := consPushG nanonCS
@@ -190,31 +179,8 @@ theorem nanonOK : ConsOK p nanonCS where
   push_np := by decide
   arrs := by decide
 
-theorem nanonFind_spec (hp : p.lookup "nanon_find" = some nanonFind) (n : Nat) (s₀ : St) (t h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nanon_find" [t, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) t
-        (baseW s₀.mem t) (nSlotsNA s₀.mem) (homeW h (nSlotsNA s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p nanonCS (((nanonOK p).match_)) hp n s₀ t [] rfl h trivial
-
 theorem napushOK_eqC (m : Mem) (t : Word) : napushOK m t = pushOKC nanonCS m t := by
   simp only [napushOK, pushOKC, nacnt, cntC, nanonCS, ← decide_not, UInt64.not_le]; rfl
-
-theorem napushMem_eqC (m : Mem) (t j c : Word) :
-    napushMem m t j c = pushMC nanonCS m t [0] j c := by
-  simp [napushMem, pushMC, tailM, wrRecK, nanonCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ NAREC by decide)]
-
-theorem nanonPush_spec (hp : p.lookup "nanon_push" = some nanonPush) (n : Nat) (s₀ : St) (t j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nanon_push" [t, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ napushOK s₀.mem t = true ∧ r = [nacnt s₀.mem t] ∧
-      growIf NASLOT 34 nahash s₀.mem (napushMem s₀.mem t j (nacnt s₀.mem t))
-        (nacnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [napushOK_eqC]
-  simp only [napushMem_eqC]
-  exact consPushG_spec p nanonCS (nanonOK p) hp n s₀ t [] rfl j
 
 theorem internNAnon_spec (hpf : p.lookup "nanon_find" = some nanonFind)
     (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)

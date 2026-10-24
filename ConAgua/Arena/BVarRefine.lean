@@ -128,11 +128,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem bprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m) j d =
-      probeArm bvarSch m t (bMt m u t) (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m)) j d := by
-  intro j d; rw [bprobeW, cprobeW]; rfl
-
 theorem bpushOK_room (m : Mem) (t : Word) (h : bpushOK m t = true) : PushRoom bvarSch m t := by
   simp only [bpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 BREC) 1
@@ -148,30 +143,6 @@ theorem bvarCS_wf : bvarCS.WF where
   colRoom A h := by simp [bvarCS] at h
   room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, bvarCS, hk]
-
-theorem bpushMem_eq (m : Mem) (t u j c : Word) :
-    bpushMem m t u j c = pushG bvarSch m t [u] j c := by
-  simp [bpushMem, pushG, wrRec, Schema.ad, bvarSch]
-
-theorem binternW_eq (m : Mem) (u : Word) :
-    binternW m u = internM bvarSch m 0 (bpushOK m) [u]
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 0 u (baseW m 0) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 1 u (baseW m 1) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
-      bhash := by
-  have e0 : ∀ x, hdW bvarSch.tag.toUInt64 0 x = bvarP + x := fun x => by
-    simp [hdW, bvarSch, bvarP, ETag.bvar]
-  have e1 : ∀ x, hdW bvarSch.tag.toUInt64 1 x = bvarS + x := fun x => by
-    simp [hdW, bvarSch, bvarS, ETag.bvar]
-  have ep : ∀ t, pushOKC bvarCS m t = bpushOK m t := fun t => (bpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC bvarCS m t (bvarCS.vsM (pushArgs bvarCS [u] (bvarHashW u))) j c =
-      pushG bvarSch m t [u] j c := by
-    intro t j c; rw [← bpushMem_eq, bpushMem_eqC]; rfl
-  have ec : ∀ t, cntC bvarCS m t = cntW bvarSch m t := fun t => rfl
-  have eh : bvarCS.qhM m [u] = bvarHashW u := rfl
-  have es : skipC bvarCS m [u] = 0 := rfl
-  simp only [binternW, consInternM, internM, pushM, pushC, pushMX_none (C := bvarCS) rfl,
-    ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
 
 /-! ## `intern_bvar` refines `internE (.bvar _)` -/
 

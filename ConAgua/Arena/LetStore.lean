@@ -99,15 +99,8 @@ def letCS : ConsSch where
 
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def leprobeW (sl r : Array Word) (t ty val body b n j d : Word) : List Word :=
-  cprobeW sl (fun i => lematchW r t i ty val body) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := consFindG letCS
-
-/-- The slot count of a tier of the `letE` table. -/
-def nSlotsLe (m : Mem) : Word := rdW (m.arr64 LESLOT) (m.len64 LESLOT - 1) + SN0
 
 /-! ## `letE_push(t, ty, val, body, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -120,11 +113,6 @@ multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly 
 `PLAN.md`, "the language L"). -/
 def lepushOK (m : Mem) (t : Word) : Bool :=
   decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 6 ≤ m.len64 LEREC)
-
-/-- The memory after `letE_push(t, ty, val, body, j)` appended node `c`. -/
-def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
-  ((((m.set64 LEREC (c * 6 + t * 3) ty).set64 LEREC (c * 6 + t * 3 + 1) val).set64 LEREC
-    (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := consPushG letCS
@@ -215,33 +203,8 @@ theorem letOK : ConsOK p letCS where
   push_np := by decide
   arrs := by decide
 
-theorem letFind_spec (hp : p.lookup "letE_find" = some letFind) (n : Nat) (s₀ : St)
-    (t ty val body h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "letE_find" [t, ty, val, body, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) t ty val body
-        (baseW s₀.mem t) (nSlotsLe s₀.mem) (homeW h (nSlotsLe s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p letCS ((letOK p).match_) hp n s₀ t [ty, val, body] rfl h trivial
-
 theorem lepushOK_eqC (m : Mem) (t : Word) : lepushOK m t = pushOKC letCS m t := by
   simp only [lepushOK, pushOKC, letCS, lecnt, cntC, ← decide_not, UInt64.not_lt]; rfl
-
-theorem lepushMem_eqC (m : Mem) (t ty val body j c : Word) :
-    lepushMem m t ty val body j c = pushMC letCS m t [ty, val, body] j c := by
-  simp [lepushMem, pushMC, tailM, wrRecK, letCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ LEREC by decide)]
-
-theorem letPush_spec (hp : p.lookup "letE_push" = some letPush) (n : Nat) (s₀ : St)
-    (t ty val body j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "letE_push" [t, ty, val, body, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ lepushOK s₀.mem t = true ∧ r = [lecnt s₀.mem t] ∧
-      growIf LESLOT 20 lehash s₀.mem (lepushMem s₀.mem t ty val body j (lecnt s₀.mem t))
-        (lecnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [lepushOK_eqC]
-  simp only [lepushMem_eqC]
-  exact consPushG_spec p letCS (letOK p) hp n s₀ t [ty, val, body] rfl j
 
 theorem internLet_spec (hpf : p.lookup "letE_find" = some letFind)
     (hpp : p.lookup "letE_push" = some letPush) (hp : p.lookup "intern_letE" = some internLet)

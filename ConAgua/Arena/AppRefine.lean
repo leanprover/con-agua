@@ -151,11 +151,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem aprobeW_arm (m : Mem) (f a t : Word) :
-    ∀ j d, aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (baseW m t) (nSlotsA m) j d =
-      probeArm appSch m t (aMt m f a t) (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (baseW m t) (nSlotsA m)) j d := by
-  intro j d; rw [aprobeW, cprobeW]; rfl
-
 theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
   simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 AREC) 2
@@ -171,29 +166,6 @@ theorem appCS_wf : appCS.WF where
   colRoom A h := by simp [appCS] at h
   room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, appCS, hk]
-
-theorem apushMem_eq (m : Mem) (t f a j c : Word) :
-    apushMem m t f a j c = pushG appSch m t [f, a] j c := by
-  simp [apushMem, pushG, wrRec, Schema.ad, appSch]
-
-theorem ainternW_eq (m : Mem) (f a : Word) :
-    ainternW m f a = internM appSch m (askipW m f a) (apushOK m) [f, a]
-      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (baseW m 0) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
-      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (baseW m 1) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
-      ahash := by
-  have e0 : ∀ x, hdW appSch.tag.toUInt64 0 x = appP + x := fun x => by
-    simp [hdW, appSch, appP, ETag.app]
-  have e1 : ∀ x, hdW appSch.tag.toUInt64 1 x = appS + x := fun x => by
-    simp [hdW, appSch, appS, ETag.app]
-  have ep : ∀ t, pushOKC appCS m t = apushOK m t := fun t => (apushOK_eqC m t).symm
-  have em : ∀ t j c, pushMC appCS m t (appCS.vsM (pushArgs appCS [f, a] (appHashW f a))) j c =
-      pushG appSch m t [f, a] j c := by
-    intro t j c; rw [← apushMem_eq, apushMem_eqC]; rfl
-  have ec : ∀ t, cntC appCS m t = cntW appSch m t := fun t => rfl
-  have eh : appCS.qhM m [f, a] = appHashW f a := rfl
-  simp only [ainternW, consInternM, internM, pushM, pushC, pushMX_none (C := appCS) rfl, ep, em, ec,
-    e0, e1, eh]
-  rfl
 
 /-- The L skip test is the arena's. -/
 theorem askipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)

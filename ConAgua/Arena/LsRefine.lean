@@ -189,12 +189,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem lsprobeW_arm (m : Mem) (o l h t : Word) :
-    ∀ j d, lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (baseW m t) (nSlotsLs m) j d =
-      probeArm lsSch m t (lsMt m o l h t)
-        (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (baseW m t) (nSlotsLs m)) j d := by
-  intro j d; rw [lsprobeW, cprobeW]; rfl
-
 theorem lspushOK_room (m : Mem) (t : Word) (h : lspushOK m t = true) : PushRoom lsSch m t := by
   simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [PushRoom, cntW, lscnt, lsSch, len64_eq] at *
@@ -228,60 +222,10 @@ theorem lsColFree : ColFree lsCS LsRecRel := by
   simpa only [LsRecRel, lsO, lsL, top_rdW, hp, hc,
     Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)] using hr
 
-theorem lspushMem_eq (m : Mem) (t o l h j c : Word) :
-    lspushMem m t o l h j c = (pushG lsSch m t [o, l, h] j c).set64 LSHP (c * 2 + t) (lsOrW m o l.toNat) := by
-  simp [lspushMem, pushG, wrRec, Schema.ad, lsSch]
-
-theorem lsinternW_eq (m : Mem) (o l : Word) :
-    lsinternW m o l = internMD lsSch LSHP (lsOrW m o l.toNat) m 0 (lspushOK m)
-      [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
-      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlotsLs m)
-        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)
-      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlotsLs m)
-        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)
-      lshash := by
-  have e0 : ∀ x, hdW lsSch.tag.toUInt64 0 x = lsP + x := fun x => by
-    simp [hdW, lsSch, lsP, LsTag.list]
-  have e1 : ∀ x, hdW lsSch.tag.toUInt64 1 x = lsS + x := fun x => by
-    simp [hdW, lsSch, lsS, LsTag.list]
-  have ep : ∀ t, pushOKC lsCS m t = lspushOK m t := fun t => (lspushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX lsCS m t (lsCS.vsM (pushArgs lsCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat)))
-      (lsCS.colM m (pushArgs lsCS [o, l] (hashN (m.arr64 POOL) o.toNat l.toNat))) j c =
-      (pushG lsSch m t [o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j c).set64 LSHP (c * 2 + t)
-        (lsOrW m o l.toNat) := by
-    intro t j c; rw [← lspushMem_eq, lspushMem_eqC]; rfl
-  have ec : ∀ t, cntC lsCS m t = cntW lsSch m t := fun t => rfl
-  have eh : lsCS.qhM m [o, l] = hashN (m.arr64 POOL) o.toNat l.toNat := rfl
-  have es : skipC lsCS m [o, l] = 0 := rfl
-  simp only [lsinternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh, es, true_and]
-  rfl
-
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
 theorem lsinternW_frame (m : Mem) (o l : Word) (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :
     MemFrame [LSREC, LSSLOT, LSHP] [40, 41] m m' :=
   consInternM_frame lsCS_wf hI
-
-/-- `intern_ls`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem lsinternW_eqK (m : Mem) (o l : Word) (hctl : lsSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    lsinternW m o l = mkK LSHP lsSch.ca (cnt2 m lsSch.ca) (lsOrW m o l.toNat)
-      (internM lsSch m 0 (lspushOK m)
-      [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
-      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlotsLs m)
-        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)
-      (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlotsLs m)
-        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0) lshash) := by
-  rw [lsinternW_eq]
-  refine internMD_mkK lsSch lsSch_wf _ _ _ _ _ _ _ _ lshash (by decide) (by decide)
-    (fun m k x t i => by simp only [lshash, Mem.arr64_set64_ne _ _ _ _ _ (show LSREC ≠ LSHP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem lsLocal : RLocal lsSch LsRecRel lshash [POOL] [0] := by
   intro m m' hra hb hc

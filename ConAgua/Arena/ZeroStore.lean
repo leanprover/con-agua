@@ -92,15 +92,8 @@ def zeroCS : ConsSch where
 
 /-! ## `zero_find(t, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def zprobeW (sl r : Array Word) (t b n j d : Word) : List Word :=
-  cprobeW sl (fun i => zmatchW r t i) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def zeroFind : FunDecl := consFindG zeroCS
-
-/-- The slot count of a tier of the `zero` table. -/
-def nSlotsZ (m : Mem) : Word := rdW (m.arr64 ZSLOT) (m.len64 ZSLOT - 1) + SN0
 
 /-! ## `zero_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -110,10 +103,6 @@ def zcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (8 + t)
 /-- `zero_push`'s room checks: the handle index, the record array. -/
 def zpushOK (m : Mem) (t : Word) : Bool :=
   decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 ZREC >>> (1 : Word))
-
-/-- The memory after `zero_push(t, j)` appended node `c`. -/
-def zpushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def zeroPush : FunDecl := consPushG zeroCS
@@ -189,31 +178,8 @@ theorem zeroOK : ConsOK p zeroCS where
   push_np := by decide
   arrs := by decide
 
-theorem zeroFind_spec (hp : p.lookup "zero_find" = some zeroFind) (n : Nat) (s₀ : St) (t h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "zero_find" [t, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) t
-        (baseW s₀.mem t) (nSlotsZ s₀.mem) (homeW h (nSlotsZ s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p zeroCS (((zeroOK p).match_)) hp n s₀ t [] rfl h trivial
-
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl
-
-theorem zpushMem_eqC (m : Mem) (t j c : Word) :
-    zpushMem m t j c = pushMC zeroCS m t [0] j c := by
-  simp [zpushMem, pushMC, tailM, wrRecK, zeroCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ZREC by decide)]
-
-theorem zeroPush_spec (hp : p.lookup "zero_push" = some zeroPush) (n : Nat) (s₀ : St) (t j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "zero_push" [t, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ zpushOK s₀.mem t = true ∧ r = [zcnt s₀.mem t] ∧
-      growIf ZSLOT 8 zhash s₀.mem (zpushMem s₀.mem t j (zcnt s₀.mem t))
-        (zcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [zpushOK_eqC]
-  simp only [zpushMem_eqC]
-  exact consPushG_spec p zeroCS (zeroOK p) hp n s₀ t [] rfl j
 
 theorem internZero_spec (hpf : p.lookup "zero_find" = some zeroFind)
     (hpp : p.lookup "zero_push" = some zeroPush) (hp : p.lookup "intern_zero" = some internZero)

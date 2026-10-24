@@ -101,15 +101,8 @@ def succCS : ConsSch where
 
 /-! ## `succ_find(t, u, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def sprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
-  cprobeW sl (fun i => smatchW r t i u) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def succFind : FunDecl := consFindG succCS
-
-/-- The slot count of a tier of the `succ` table. -/
-def nSlotsS (m : Mem) : Word := rdW (m.arr64 SSLOT) (m.len64 SSLOT - 1) + SN0
 
 /-! ## `succ_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -120,11 +113,6 @@ def scnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (6 + t)
 def spushOK (m : Mem) (t : Word) : Bool :=
   decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 SREC >>> (1 : Word)) &&
     decide (scnt m t < m.len64 SHP >>> (1 : Word))
-
-/-- The memory after `succ_push(t, u, j)` appended node `c`. -/
-def spushMem (m : Mem) (t u j c : Word) : Mem :=
-  ((((m.set64 SREC (c * 2 + t) u).set64 SSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (6 + (t &&& 1)) (c + 1)).set64
-    SHP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def succPush : FunDecl := consPushG succCS
@@ -226,34 +214,9 @@ theorem succOK : ConsOK p succCS where
   push_np := by decide
   arrs := by decide
 
-theorem succFind_spec (hp : p.lookup "succ_find" = some succFind) (n : Nat) (s₀ : St)
-    (t u h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "succ_find" [t, u, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) t u
-        (baseW s₀.mem t) (nSlotsS s₀.mem) (homeW h (nSlotsS s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p succCS ((succOK p).match_) hp n s₀ t [u] rfl h trivial
-
 theorem spushOK_eqC (m : Mem) (t : Word) : spushOK m t = pushOKC succCS m t := by
   simp only [spushOK, pushOKC, succCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
   rfl
-
-theorem spushMem_eqC (m : Mem) (t u j c : Word) :
-    spushMem m t u j c = pushMX succCS m t [u] (lvlHPW m u) j c := by
-  simp [spushMem, pushMX, colW, pushMC, tailM, wrRecK, succCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SREC by decide)]
-
-theorem succPush_spec (hp : p.lookup "succ_push" = some succPush) (n : Nat) (s₀ : St)
-    (t u j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "succ_push" [t, u, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ spushOK s₀.mem t = true ∧ r = [scnt s₀.mem t] ∧
-      growIf SSLOT 6 shash s₀.mem (spushMem s₀.mem t u j (scnt s₀.mem t))
-        (scnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [spushOK_eqC]
-  simp only [spushMem_eqC]
-  exact consPushG_spec p succCS (succOK p) hp n s₀ t [u] rfl j
 
 theorem internSucc_spec (hpf : p.lookup "succ_find" = some succFind)
     (hpp : p.lookup "succ_push" = some succPush) (hp : p.lookup "intern_succ" = some internSucc)

@@ -198,12 +198,13 @@ theorem idxW_lt (h : Word) : idxW h < 134217728 := by
   simp only [idxW, UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
   exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
-/-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, slots `S`,
-range words `D`; `apushMem`, `lapushMem`, `fapushMem`), with the new node's range slot zeroed. -/
-def pushZ (R S D : ArrId) (k : Word) (m : Mem) (t f a j : Word) : Mem :=
+/-- The memory after appending node `c = CTL[k + t]` to a binary table (records `R`, slot array
+`S`, range words `D`), outside the slot array (the library's `pushRec`), with the new node's range
+slot zeroed. -/
+def pushZ (R S D : ArrId) (k : Word) (m : Mem) (t f a : Word) : Mem :=
   let c := rdW (m.arr64 CTL) (k + t)
-  (((((m.set64 R (c * 4 + t * 2) f).set64 R (c * 4 + t * 2 + 1) a).set64 S (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (k + (t &&& 1)) (c + 1)).set64 D (c * 2 + t) 0)
+  ((((m.set64 R (c * 4 + t * 2 + 0) f).set64 R (c * 4 + t * 2 + 1) a).set64 CTL (k + (t &&& 1))
+    (c + 1)).set64 D (c * 2 + t) 0)
 
 /-- The three binary tables `mk_*` read lazily. -/
 def BinTbl (R S D : ArrId) (k : Word) : Prop :=
@@ -211,14 +212,14 @@ def BinTbl (R S D : ArrId) (k : Word) : Prop :=
     (R = FAREC ∧ S = FASLOT ∧ D = FADER ∧ k = 30)
 
 section pushZ
-variable {R S D : ArrId} {k : Word} (m : Mem) (t f a j : Word)
+variable {R S D : ArrId} {k : Word} (m : Mem) (t f a : Word)
 
 theorem pushZ_arr (b : ArrId) (h1 : b ≠ CTL) (h2 : b ≠ R) (h3 : b ≠ S) (h4 : b ≠ D) :
-    (pushZ R S D k m t f a j).arr64 b = m.arr64 b := by
+    (pushZ R S D k m t f a).arr64 b = m.arr64 b := by
   simp [pushZ, Mem.arr64_set64_ne, *]
 
 theorem pushZ_ctl (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
-    rdW ((pushZ R S D k m t f a j).arr64 CTL) x =
+    rdW ((pushZ R S D k m t f a).arr64 CTL) x =
       if k + t = x ∧ (k + t).toNat < (m.arr64 CTL).size then rdW (m.arr64 CTL) (k + t) + 1
       else rdW (m.arr64 CTL) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
@@ -227,7 +228,7 @@ theorem pushZ_ctl (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
     FADER, FAREC, FASLOT]
 
 theorem pushZ_der (hT : BinTbl R S D k) (x : Word) :
-    rdW ((pushZ R S D k m t f a j).arr64 D) x =
+    rdW ((pushZ R S D k m t f a).arr64 D) x =
       if rdW (m.arr64 CTL) (k + t) * 2 + t = x ∧
           (rdW (m.arr64 CTL) (k + t) * 2 + t).toNat < (m.arr64 D).size then 0
       else rdW (m.arr64 D) x := by
@@ -241,8 +242,8 @@ handle: a handle other than the new node reads what it read before (its slot is 
 the new node reads `0` (before: its index was past the count). -/
 theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (k + t) < 134217728)
     (h : Word) :
-    derBW (pushZ R S D k m t f a j) h = derBW m h ∧ derFW (pushZ R S D k m t f a j) h = derFW m h ∧
-      exprLPW (pushZ R S D k m t f a j) h = exprLPW m h := by
+    derBW (pushZ R S D k m t f a) h = derBW m h ∧ derFW (pushZ R S D k m t f a) h = derFW m h ∧
+      exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
   have hs := slot_eq_iff hc (idxW_lt h) ht (tierW_le h)
   have key : rdW (m.arr64 CTL) (k + t) ≤ idxW h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxW h →
       idxW h = rdW (m.arr64 CTL) (k + t) := by
@@ -252,8 +253,8 @@ theorem der_pushZ (hT : BinTbl R S D k) (ht : t ≤ 1) (hc : rdW (m.arr64 CTL) (
     omega
   have oob : ∀ (b : ArrId) x, ¬x.toNat + 1 ≤ (m.arr64 b).size → rdW (m.arr64 b) x = 0 := by
     intro b x hx; simp only [rdW]; grind
-  have hd := pushZ_der m t f a j hT
-  have hctl := pushZ_ctl m t f a j hT ht
+  have hd := pushZ_der m t f a hT
+  have hctl := pushZ_ctl m t f a hT ht
   refine ⟨?_, ?_, ?_⟩ <;> (try unfold derBW) <;> (try unfold derFW) <;> (try unfold exprLPW) <;> simp only [hctl] <;>
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
   simp (config := {decide := true}) only [hd, pushZ_arr, BREC, FVREC, FVLP, SOLP, CLP, ADER, LADER,
@@ -297,19 +298,19 @@ theorem der_congr {S : ArrId} (hS : S = ASLOT ∨ S = LASLOT ∨ S = FASLOT) {m�
 
 theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 4 ≠ cnt2 m 4) :
-    ∃ t j, t ≤ 1 ∧ acnt m t < 134217728 ∧
-      growIf ASLOT 4 ahash m (apushMem m t f a j (acnt m t)) (acnt m t) = some m₁ ∧
+    ∃ t, t ≤ 1 ∧ acnt m t < 134217728 ∧
+      (∀ b, b ≠ ASLOT → m₁.arr64 b = (pushRec appCS m t [f, a]).arr64 b) ∧
       idxW r = acnt m t ∧ tierW r = t := by
-  rcases consInternM_cases (C := appCS) hI with rfl | ⟨t, j, ht, hok, hg, rfl⟩
+  rcases consInternM_outA (C := appCS) (by decide) (fun A h => by simp [appCS] at h) hI with
+    rfl | ⟨t, ht, hok, rfl, he, -, -⟩
   · exact absurd rfl hc
   have h : acnt m t < 134217728 := by
     rw [← apushOK_eqC] at hok
     simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
-  refine ⟨t, j, ht, h, ?_, ?_⟩
-  · rw [apushMem_eqC]; rw [pushMX_none (C := appCS) rfl] at hg; exact hg
-  · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
-    · rw [show appCS.P = 8 * 134217728 from rfl]; exact hw_fields _ _ h
-    · rw [show appCS.S = 9 * 134217728 from rfl]; exact hw_fields _ _ h
+  refine ⟨t, ht, h, he, ?_⟩
+  rcases h01 t ht with rfl | rfl
+  · rw [show appCS.P = 8 * 134217728 from rfl]; exact hw_fields _ _ h
+  · rw [show appCS.S = 9 * 134217728 from rfl]; exact hw_fields _ _ h
 
 /-- After a miss of `intern_app` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
@@ -318,11 +319,16 @@ theorem ainternW_der {m m₁ : Mem} {f a r q : Word} (hI : ainternW m f a = some
     (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
     derBW (m₁.set64 ADER q 0) x = derBW m x ∧ derFW (m₁.set64 ADER q 0) x = derFW m x ∧
       exprLPW (m₁.set64 ADER q 0) x = exprLPW m x := by
-  obtain ⟨t, j, ht, hc', hg, hi, htr⟩ := ainternW_grow hI hc
+  obtain ⟨t, ht, hc', he, hi, htr⟩ := ainternW_grow hI hc
   simp only [idxW, tierW] at hi htr
   rw [hq, hi, htr]
-  obtain ⟨e1, e2, e3⟩ := der_congr (.inl rfl) (growIf_set64_out hg ADER _ 0) x
-  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a j
+  have ez : (pushRec appCS m t [f, a]).set64 ADER (acnt m t * 2 + t) 0 =
+      pushZ AREC ASLOT ADER 4 m t f a := by
+    simp only [pushRec, colW, appCS, wrRecK, cntC, acnt, pushZ, pushArgs]; rfl
+  obtain ⟨e1, e2, e3⟩ := der_congr (.inl rfl)
+    (fun b hb => (OutSa.set64 (fun b hb => he b hb) (show ADER ≠ ASLOT by decide) _ _ b hb).trans
+      (by rw [ez])) x
+  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a
     (.inl ⟨rfl, rfl, rfl, rfl⟩) ht hc' x
   exact ⟨e1.trans f1, e2.trans f2, e3.trans f3⟩
 
@@ -330,19 +336,19 @@ grind_pattern [arena_grind] ainternW_der => ainternW m f a, (r, m₁), derBW (Me
 
 theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 28 ≠ cnt2 m 28) :
-    ∃ t j, t ≤ 1 ∧ lacnt m t < 134217728 ∧
-      growIf LASLOT 28 lahash m (lapushMem m t f a j (lacnt m t)) (lacnt m t) = some m₁ ∧
+    ∃ t, t ≤ 1 ∧ lacnt m t < 134217728 ∧
+      (∀ b, b ≠ LASLOT → m₁.arr64 b = (pushRec lamCS m t [f, a]).arr64 b) ∧
       idxW r = lacnt m t ∧ tierW r = t := by
-  rcases consInternM_cases (C := lamCS) hI with rfl | ⟨t, j, ht, hok, hg, rfl⟩
+  rcases consInternM_outA (C := lamCS) (by decide) (fun A h => by simp [lamCS] at h) hI with
+    rfl | ⟨t, ht, hok, rfl, he, -, -⟩
   · exact absurd rfl hc
   have h : lacnt m t < 134217728 := by
     rw [← lapushOK_eqC] at hok
     simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
-  refine ⟨t, j, ht, h, ?_, ?_⟩
-  · rw [lapushMem_eqC]; rw [pushMX_none (C := lamCS) rfl] at hg; exact hg
-  · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
-    · rw [show lamCS.P = 10 * 134217728 from rfl]; exact hw_fields _ _ h
-    · rw [show lamCS.S = 11 * 134217728 from rfl]; exact hw_fields _ _ h
+  refine ⟨t, ht, h, he, ?_⟩
+  rcases h01 t ht with rfl | rfl
+  · rw [show lamCS.P = 10 * 134217728 from rfl]; exact hw_fields _ _ h
+  · rw [show lamCS.S = 11 * 134217728 from rfl]; exact hw_fields _ _ h
 
 /-- After a miss of `intern_lam` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
@@ -351,11 +357,16 @@ theorem lainternW_der {m m₁ : Mem} {f a r q : Word} (hI : lainternW m f a = so
     (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
     derBW (m₁.set64 LADER q 0) x = derBW m x ∧ derFW (m₁.set64 LADER q 0) x = derFW m x ∧
       exprLPW (m₁.set64 LADER q 0) x = exprLPW m x := by
-  obtain ⟨t, j, ht, hc', hg, hi, htr⟩ := lainternW_grow hI hc
+  obtain ⟨t, ht, hc', he, hi, htr⟩ := lainternW_grow hI hc
   simp only [idxW, tierW] at hi htr
   rw [hq, hi, htr]
-  obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inl rfl)) (growIf_set64_out hg LADER _ 0) x
-  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a j
+  have ez : (pushRec lamCS m t [f, a]).set64 LADER (lacnt m t * 2 + t) 0 =
+      pushZ LAREC LASLOT LADER 28 m t f a := by
+    simp only [pushRec, colW, lamCS, wrRecK, cntC, lacnt, pushZ, pushArgs]; rfl
+  obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inl rfl))
+    (fun b hb => (OutSa.set64 (fun b hb => he b hb) (show LADER ≠ LASLOT by decide) _ _ b hb).trans
+      (by rw [ez])) x
+  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a
     (.inr (.inl ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
   exact ⟨e1.trans f1, e2.trans f2, e3.trans f3⟩
 
@@ -363,19 +374,19 @@ grind_pattern [arena_grind] lainternW_der => lainternW m f a, (r, m₁), derBW (
 
 theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 30 ≠ cnt2 m 30) :
-    ∃ t j, t ≤ 1 ∧ facnt m t < 134217728 ∧
-      growIf FASLOT 30 fahash m (fapushMem m t f a j (facnt m t)) (facnt m t) = some m₁ ∧
+    ∃ t, t ≤ 1 ∧ facnt m t < 134217728 ∧
+      (∀ b, b ≠ FASLOT → m₁.arr64 b = (pushRec forallCS m t [f, a]).arr64 b) ∧
       idxW r = facnt m t ∧ tierW r = t := by
-  rcases consInternM_cases (C := forallCS) hI with rfl | ⟨t, j, ht, hok, hg, rfl⟩
+  rcases consInternM_outA (C := forallCS) (by decide) (fun A h => by simp [forallCS] at h) hI with
+    rfl | ⟨t, ht, hok, rfl, he, -, -⟩
   · exact absurd rfl hc
   have h : facnt m t < 134217728 := by
     rw [← fapushOK_eqC] at hok
     simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
-  refine ⟨t, j, ht, h, ?_, ?_⟩
-  · rw [fapushMem_eqC]; rw [pushMX_none (C := forallCS) rfl] at hg; exact hg
-  · rcases (show t = 0 ∨ t = 1 by grind) with rfl | rfl
-    · rw [show forallCS.P = 12 * 134217728 from rfl]; exact hw_fields _ _ h
-    · rw [show forallCS.S = 13 * 134217728 from rfl]; exact hw_fields _ _ h
+  refine ⟨t, ht, h, he, ?_⟩
+  rcases h01 t ht with rfl | rfl
+  · rw [show forallCS.P = 12 * 134217728 from rfl]; exact hw_fields _ _ h
+  · rw [show forallCS.S = 13 * 134217728 from rfl]; exact hw_fields _ _ h
 
 /-- After a miss of `intern_forall` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
@@ -384,11 +395,16 @@ theorem fainternW_der {m m₁ : Mem} {f a r q : Word} (hI : fainternW m f a = so
     (hq : q = (r &&& (134217727 : Word)) * 2 + ((r >>> (27 : Word)) &&& 1)) (x : Word) :
     derBW (m₁.set64 FADER q 0) x = derBW m x ∧ derFW (m₁.set64 FADER q 0) x = derFW m x ∧
       exprLPW (m₁.set64 FADER q 0) x = exprLPW m x := by
-  obtain ⟨t, j, ht, hc', hg, hi, htr⟩ := fainternW_grow hI hc
+  obtain ⟨t, ht, hc', he, hi, htr⟩ := fainternW_grow hI hc
   simp only [idxW, tierW] at hi htr
   rw [hq, hi, htr]
-  obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inr rfl)) (growIf_set64_out hg FADER _ 0) x
-  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a j
+  have ez : (pushRec forallCS m t [f, a]).set64 FADER (facnt m t * 2 + t) 0 =
+      pushZ FAREC FASLOT FADER 30 m t f a := by
+    simp only [pushRec, colW, forallCS, wrRecK, cntC, facnt, pushZ, pushArgs]; rfl
+  obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inr rfl))
+    (fun b hb => (OutSa.set64 (fun b hb => he b hb) (show FADER ≠ FASLOT by decide) _ _ b hb).trans
+      (by rw [ez])) x
+  obtain ⟨f1, f2, f3⟩ := der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a
     (.inr (.inr ⟨rfl, rfl, rfl, rfl⟩)) ht hc' x
   exact ⟨e1.trans f1, e2.trans f2, e3.trans f3⟩
 

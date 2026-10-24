@@ -159,12 +159,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem fvprobeW_arm (m : Mem) (u ty t : Word) :
-    ∀ j d, fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (baseW m t) (nSlotsFv m) j d =
-      probeArm fvarSch m t (fvMt m u ty t)
-        (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (baseW m t) (nSlotsFv m)) j d := by
-  intro j d; rw [fvprobeW, cprobeW]; rfl
-
 theorem fvpushOK_room (m : Mem) (t : Word) (h : fvpushOK m t = true) : PushRoom fvarSch m t := by
   simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 FVREC) 2
@@ -194,52 +188,10 @@ theorem fvarColFree : ColFree fvarCS FVRecRel := by
   simp only [fvarCS, Option.some.injEq] at h; subst h
   simpa only [FVRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)] using hr
 
-theorem fvpushMem_eq (m : Mem) (t u ty j c : Word) :
-    fvpushMem m t u ty j c = (pushG fvarSch m t [u, ty] j c).set64 FVLP (c * 2 + t) (exprLPW m ty) := by
-  simp [fvpushMem, pushG, wrRec, Schema.ad, fvarSch]
-
-theorem fvinternW_eq (m : Mem) (u ty : Word) :
-    fvinternW m u ty = internMD fvarSch FVLP (exprLPW m ty) m (fvskipW m ty) (fvpushOK m) [u, ty]
-      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
-      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
-      fvhash := by
-  have e0 : ∀ x, hdW fvarSch.tag.toUInt64 0 x = fvarP + x := fun x => by
-    simp [hdW, fvarSch, fvarP, ETag.fvar]
-  have e1 : ∀ x, hdW fvarSch.tag.toUInt64 1 x = fvarS + x := fun x => by
-    simp [hdW, fvarSch, fvarS, ETag.fvar]
-  have ep : ∀ t, pushOKC fvarCS m t = fvpushOK m t := fun t => (fvpushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX fvarCS m t (fvarCS.vsM (pushArgs fvarCS [u, ty] (fvarHashW u ty)))
-      (fvarCS.colM m (pushArgs fvarCS [u, ty] (fvarHashW u ty))) j c =
-      (pushG fvarSch m t [u, ty] j c).set64 FVLP (c * 2 + t) (exprLPW m ty) := by
-    intro t j c; rw [← fvpushMem_eq, fvpushMem_eqC]; rfl
-  have ec : ∀ t, cntC fvarCS m t = cntW fvarSch m t := fun t => rfl
-  have eh : fvarCS.qhM m [u, ty] = fvarHashW u ty := rfl
-  simp only [fvinternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh]
-  rfl
-
 /-- **What `intern_fvar` changes**: the table's arrays, the column, the counts. -/
 theorem fvinternW_frame (m : Mem) (u ty : Word) (w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
     MemFrame [FVREC, FVSLOT, FVLP] [26, 27] m m' :=
   consInternM_frame fvarCS_wf hI
-
-/-- `intern_fvar`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem fvinternW_eqK (m : Mem) (u ty : Word) (hctl : fvarSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    fvinternW m u ty = mkK FVLP fvarSch.ca (cnt2 m fvarSch.ca) (exprLPW m ty)
-      (internM fvarSch m (fvskipW m ty) (fvpushOK m) [u, ty]
-      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
-      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
-        (homeW (fvarHashW u ty) (nSlotsFv m)) 0) fvhash) := by
-  rw [fvinternW_eq]
-  refine internMD_mkK fvarSch fvarSch_wf _ _ _ _ _ _ _ _ fvhash (by decide) (by decide)
-    (fun m k x t i => by simp only [fvhash, Mem.arr64_set64_ne _ _ _ _ _ (show FVREC ≠ FVLP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by
   intro m m' hra _ _; simp only [fvarSch] at hra

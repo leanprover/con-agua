@@ -106,15 +106,8 @@ def fvarCS : ConsSch where
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
 
-/-- The model of the probe, from slot `j` after `d` steps (the library's `cprobeW`). -/
-def fvprobeW (sl r : Array Word) (t u ty b n j d : Word) : List Word :=
-  cprobeW sl (fun i => fvmatchW r t i u ty) t b n j d
-
 /-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := consFindG fvarCS
-
-/-- The slot count of a tier of the `fvar` table. -/
-def nSlotsFv (m : Mem) : Word := rdW (m.arr64 FVSLOT) (m.len64 FVSLOT - 1) + SN0
 
 /-! ## `fvar_push(t, u, ty, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -125,12 +118,6 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 def fvpushOK (m : Mem) (t : Word) : Bool :=
   decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 FVREC >>> (2 : Word)) &&
     decide (fvcnt m t < m.len64 FVLP >>> (1 : Word))
-
-/-- The memory after `fvar_push(t, u, ty, j)` appended node `c`. -/
-def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
-  ((((m.set64 FVREC (c * 4 + t * 2) u).set64 FVREC (c * 4 + t * 2 + 1) ty).set64 FVSLOT
-    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1)).set64 FVLP (c * 2 + t)
-    (exprLPW m ty)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := consPushG fvarCS
@@ -234,34 +221,9 @@ theorem fvarOK : ConsOK p fvarCS where
   push_np := by decide
   arrs := by decide
 
-theorem fvarFind_spec (hp : p.lookup "fvar_find" = some fvarFind) (n : Nat) (s₀ : St)
-    (t u ty h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "fvar_find" [t, u, ty, h]
-    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
-      r = fvprobeW (s₀.mem.arr64 FVSLOT) (s₀.mem.arr64 FVREC) t u ty
-        (baseW s₀.mem t) (nSlotsFv s₀.mem) (homeW h (nSlotsFv s₀.mem)) 0; ⊤⦄ :=
-  consFindG_spec p fvarCS ((fvarOK p).match_) hp n s₀ t [u, ty] rfl h trivial
-
 theorem fvpushOK_eqC (m : Mem) (t : Word) : fvpushOK m t = pushOKC fvarCS m t := by
   simp only [fvpushOK, pushOKC, fvarCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
   rfl
-
-theorem fvpushMem_eqC (m : Mem) (t u ty j c : Word) :
-    fvpushMem m t u ty j c = pushMX fvarCS m t [u, ty] (exprLPW m ty) j c := by
-  simp [fvpushMem, pushMX, colW, pushMC, tailM, wrRecK, fvarCS, baseW,
-    Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ FVREC by decide)]
-
-theorem fvarPush_spec (hp : p.lookup "fvar_push" = some fvarPush) (n : Nat) (s₀ : St)
-    (t u ty j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "fvar_push" [t, u, ty, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ fvpushOK s₀.mem t = true ∧ r = [fvcnt s₀.mem t] ∧
-      growIf FVSLOT 26 fvhash s₀.mem (fvpushMem s₀.mem t u ty j (fvcnt s₀.mem t))
-        (fvcnt s₀.mem t) = some s'.mem; ⊤⦄ := by
-  rw [fvpushOK_eqC]
-  simp only [fvpushMem_eqC]
-  exact consPushG_spec p fvarCS (fvarOK p) hp n s₀ t [u, ty] rfl j
 
 theorem internFVar_spec (hpf : p.lookup "fvar_find" = some fvarFind)
     (hpp : p.lookup "fvar_push" = some fvarPush) (hp : p.lookup "intern_fvar" = some internFVar)

@@ -156,11 +156,6 @@ end query
 
 /-! ## The bridges from the L models -/
 
-theorem ceprobeW_arm (m : Mem) (f a t : Word) :
-    ∀ j d, ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) t f a (baseW m t) (nSlotsCe m) j d =
-      probeArm constSch m t (ceMt m f a t) (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) t f a (baseW m t) (nSlotsCe m)) j d := by
-  intro j d; rw [ceprobeW, cprobeW]; rfl
-
 theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom constSch m t := by
   simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 CREC) 2
@@ -190,48 +185,10 @@ theorem constColFree : ColFree constCS CeRecRel := by
   simp only [constCS, Option.some.injEq] at h; subst h
   simpa only [CeRecRel, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)] using hr
 
-theorem cepushMem_eq (m : Mem) (t f a j c : Word) :
-    cepushMem m t f a j c = (pushG constSch m t [f, a] j c).set64 CLP (c * 2 + t) (lsHPW m a) := by
-  simp [cepushMem, pushG, wrRec, Schema.ad, constSch]
-
-theorem ceinternW_eq (m : Mem) (f a : Word) :
-    ceinternW m f a = internMD constSch CLP (lsHPW m a) m (ceskipW m f a) (cepushOK m) [f, a]
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
-      cehash := by
-  have e0 : ∀ x, hdW constSch.tag.toUInt64 0 x = constP + x := fun x => by
-    simp [hdW, constSch, constP, ETag.const]
-  have e1 : ∀ x, hdW constSch.tag.toUInt64 1 x = constS + x := fun x => by
-    simp [hdW, constSch, constS, ETag.const]
-  have ep : ∀ t, pushOKC constCS m t = cepushOK m t := fun t => (cepushOK_eqC m t).symm
-  have em : ∀ t j c, pushMX constCS m t (constCS.vsM (pushArgs constCS [f, a] (constHashW f a)))
-      (constCS.colM m (pushArgs constCS [f, a] (constHashW f a))) j c =
-      (pushG constSch m t [f, a] j c).set64 CLP (c * 2 + t) (lsHPW m a) := by
-    intro t j c; rw [← cepushMem_eq, cepushMem_eqC]; rfl
-  have ec : ∀ t, cntC constCS m t = cntW constSch m t := fun t => rfl
-  have eh : constCS.qhM m [f, a] = constHashW f a := rfl
-  simp only [ceinternW, consInternM, internMD, pushC, ep, em, ec, e0, e1, eh]
-  rfl
-
 /-- **What `intern_const` changes**: the table's arrays, the column, the counts. -/
 theorem ceinternW_frame (m : Mem) (f a : Word) (w : Word) (m' : Mem) (hI : ceinternW m f a = some (w, m')) :
     MemFrame [CREC, CSLOT, CLP] [18, 19] m m' :=
   consInternM_frame constCS_wf hI
-
-/-- `intern_const`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
-words. -/
-theorem ceinternW_eqK (m : Mem) (f a : Word) (hctl : constSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
-    ceinternW m f a = mkK CLP constSch.ca (cnt2 m constSch.ca) (lsHPW m a)
-      (internM constSch m (ceskipW m f a) (cepushOK m) [f, a]
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0) cehash) := by
-  rw [ceinternW_eq]
-  refine internMD_mkK constSch constSch_wf _ _ _ _ _ _ _ _ cehash (by decide) (by decide)
-    (fun m k x t i => by simp only [cehash, Mem.arr64_set64_ne _ _ _ _ _ (show CREC ≠ CLP by decide)])
-    hctl (fun t ht hp => ?_)
-  simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
-  obtain ⟨⟨h1, -⟩, h2⟩ := hp
-  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
 
 theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by
   intro m m' hra _ _; simp only [constSch] at hra
