@@ -440,10 +440,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
       s₀ a₀ dn vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb ctorP us cvj cnP cnF hS hus hci
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n' =>
   refine triple_post (iotaCtorNeverProp_spec p hp.iotaCtorNeverProp n' s₀ vis ctorP us) fun r s'
     ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
@@ -604,10 +601,7 @@ theorem iotaCase3_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p
       vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb rlk ctorP us rl cvj cnP cnF hS hus hrl hci
   cases n with
-  | zero =>
-    apply L.M.triple_of_run
-    intro s r s' _ hrun
-    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | zero => exact invoke_zero_triple
   | succ n' =>
   refine triple_post (iotaCase3_spec p hp.iotaCase3 n' s₀ rlk vis ctorP us) fun r s' ⟨hloc, hW⟩ =>
     ⟨hloc, ?_⟩

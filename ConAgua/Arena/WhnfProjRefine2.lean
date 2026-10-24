@@ -200,19 +200,15 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   cases n with
   | zero => exact CoreSpec.zeroW hp.findProj _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (findProj_spec p hp n s₀ vis T i)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (findProj_spec p hp n s₀ vis T i) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   unfold findProjW at hW
-  rcases hc1 : callW p n "proj_table_name" [T] s.mem with _ | ⟨r₁, m₁⟩ <;>
+  rcases hc1 : callW p n "proj_table_name" [T] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
     simp only [hc1, reduceCtorEq] at hW
   by_cases c1 : 4294967296 ≤ r₁.headD 0
   · rw [if_pos c1] at hW; cases hW
   rw [if_neg c1] at hW
   obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, -⟩ :=
-    CoreSpec.of_callW (projTableName_refines p hp n s a₀ dn vis fe M eb T hS) hc1
+    CoreSpec.of_callW (projTableName_refines p hp n s₀ a₀ dn vis fe M eb T hS) hc1
   obtain ⟨hE1, h129⟩ := proj_frame_erec hp (by decide) hc1
   have hw : (r₁.headD 0).toNat < 2 ^ 32 := by
     have := mt UInt64.le_iff_toNat_le.mpr c1
@@ -228,17 +224,17 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   rw [res1] at hrunT
   obtain ⟨okT, stT, resT⟩ := AM.of_run_ok _ _ _ _ hrunT
   have hfind := EnvR.find?_eq hS1.env (r₁.headD 0) hw ht
-  have hEs : m₂.arr64 EREC = s.mem.arr64 EREC := hE1
+  have hEs : m₂.arr64 EREC = s₀.mem.arr64 EREC := hE1
   -- the result words and the twin's answer, by the model's branches
   have key : s'.mem = m₂ ∧ r.headD 0 ≤ 1 ∧ fpRes (fe.find? (decI (r₁.headD 0))) i.toNat =
-      decEntry (s.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat := by
+      decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat := by
     simp only [efW] at hf hq
     by_cases b0 : r₂.headD 0 = 0
     · rw [if_pos b0] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, -, hm⟩ := hW
       refine ⟨hm.symm, by rw [← hr0]; decide, ?_⟩
-      rw [← hr0, show decEntry (s.mem.arr64 EREC) 0 (r.tail.headD 0) i.toNat = none by simp [decEntry]]
+      rw [← hr0, show decEntry (s₀.mem.arr64 EREC) 0 (r.tail.headD 0) i.toNat = none by simp [decEntry]]
       rw [hfind]
       by_cases z : rowC m₂ (r₁.headD 0) = 0
       · rw [if_pos z]; rfl
@@ -264,7 +260,7 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, -, hm⟩ := hW
       refine ⟨hm.symm, by rw [← hr0]; decide, ?_⟩
-      rw [← hr0, show decEntry (s.mem.arr64 EREC) 0 (r.tail.headD 0) i.toNat = none by simp [decEntry]]
+      rw [← hr0, show decEntry (s₀.mem.arr64 EREC) 0 (r.tail.headD 0) i.toNat = none by simp [decEntry]]
       cases ci with
       | projInfo tbl =>
         have := decCI_proj hciF
