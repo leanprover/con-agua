@@ -66,11 +66,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
   have hw := callW_model (M := fun mq => dmBctW p k mq vis nm)
     (bct_specW p hD.lBoolCtorTyped k · vis nm) hcall
   unfold dmBctW at hw
-  cases h1 : callW p k "env_find" [nm, vis] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨rf, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
   obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.1.env h1
   subst hm1
   cases hf : fe.find? (decI nm) with

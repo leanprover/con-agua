@@ -125,11 +125,7 @@ theorem certW_okT (hN : NatEqProg p) (hq : KnotStageProg p) (o l : Word)
       rfl
     · rw [if_neg hz] at hw
       have hx : x1 = true := by rw [← hx1]; simpa [decBool] using hz
-      cases h2 : callW p k "certify_nat_eqs" [vis, o + 1, l - 1] m1 with
-      | none => rw [h2] at hw; simp at hw
-      | some q2 =>
-      obtain ⟨r2, m2⟩ := q2
-      rw [h2, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -192,11 +188,7 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
   unfold defnNatCertW at hw
   have hE := hN.toNatSubProg.toNatEqProg
   have hG := hE.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
-  cases h1 : callW p k "env_find" [n, w] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.1.env h1
   subst hm1
   cases hf : fe2.find? (decI n) with
@@ -239,11 +231,7 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
   subst hci'
   have hv : decE wv = v := hwd
   -- the equations
-  cases h2 : callW p k "nat_op_equations" [0, n] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ :=
     natOpEquations_ref hN 0 n k m1 a r2 m2 ⟨hSw, by decide, hn⟩ h2
   have hrun2' : (natOpEquations 0 (decI n)).run a = .ok (x2, a2) := hrun2
@@ -256,11 +244,7 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
     simp only [rdW, hq5]; rw [hg2.2.2.2 _ hqlt, erecP_get hk5]; rfl
   rw [e5'] at hw
   -- their substitution
-  cases h3 : callW p k "subst_const0_pairs" [n, wv, r2.headD 0, r2.tail.headD 0] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := pairs_ref hN.toNatSubProg n wv hn hwl x2 (r2.headD 0)
     (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.2) h3
   have hvP2 : denoteE a2.store (decE wv) = some vP := by
@@ -271,11 +255,7 @@ theorem defnNatCert_okC (hN : NatSubProg' p) (hc : p.lookup "defn_nat_cert" = so
     hst3 hx3 hc3 hp3
   have hE3 := decEqRL_headD hd3
   -- the certificate, at the pre-insertion view
-  cases h4 : callW p k "certify_nat_eqs" [vis, r3.headD 0, r3.tail.headD 0] m3 with
-  | none => rw [h4] at hw; simp at hw
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [h4, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
   obtain ⟨x4, a4, hrun4, hC4, hg4, hd4, hx4⟩ := certW_okC hE hq henv hk' hC3 hE3
     (EqL.lt64 hE3 hS3.2) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) h4
   by_cases e4 : r4.headD 0 = 0
@@ -322,11 +302,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have hvb : fe2.visibleBelow = w.toNat := hSw.1.env.vis
   rw [natGateT_eq]
   -- the operation names
-  cases h1 : callW p k "nat_op_names" [] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨xs, a1, hrun1, hS1, hg1, hd1⟩ := natOpNames_ref hG k m a r1 m1 hSw h1
   obtain ⟨e1, -⟩ := ConRon.Bridge.natOpNames_run hC.check.pins hrun1
   have e1' := e1.symm
@@ -335,11 +311,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     hC.check.state (Ext.refl _) rfl rfl
   obtain ⟨hdh1, hb1⟩ := decRL0 hd1
   -- membership
-  cases h2 : callW p k "sl_contains" [r1.headD 0, r1.tail.headD 0, n] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hG.lSlContains (r1.headD 0)
     (r1.tail.headD 0) n xs hn k m1 a r2 m2 ⟨hS1, hdh1⟩ h2
   have ha2 : a2 = a := by
@@ -364,11 +336,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have hx2t : xs.contains (decI n) = true := by
     rw [← hx2, ← hd2.1]; simpa using e2
   -- the guard
-  cases h3 : callW p k "nat_op_guard" [w, n] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := natOpGuard_ref hGd n k m2 a2 r3 m3 ⟨hS2, hn⟩ h3
   obtain ⟨hst3, hx3, hc3, hp3, -⟩ :=
     ConRon.Bridge.natOpGuard_run hC2.check.state hC2.check.pins hie.ienv hnm hrun3
@@ -376,11 +344,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     hst3 hx3 hc3 hp3
   have hnm3 := ConRon.Bridge.denoteN_ext hnm hx3
   -- the dependencies
-  cases h4 : callW p k "nat_op_deps" [n] m3 with
-  | none => rw [h4] at hw; simp at hw
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [h4, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
   obtain ⟨ds, a4, hrun4, hS4, hg4, hd4⟩ := natOpDeps_ref hG n k m3 a3 r4 m4 ⟨hS3, hn⟩ h4
   obtain ⟨hst4, hx4, hc4, hp4, hdeps⟩ :=
     ConRon.Bridge.natOpDeps_run hst3 hC3.check.pins hnm3 hrun4
@@ -388,11 +352,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
     hst4 hx4 hc4 hp4
   obtain ⟨hdh4, hb4⟩ := decRL0 hd4
   -- the stored dependencies
-  cases h5 : callW p k "nat_op_stored_ok_all" [w, r4.headD 0, r4.tail.headD 0] m4 with
-  | none => rw [h5] at hw; simp at hw
-  | some q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [h5, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r5, m5, h5, hw⟩ := hw
   obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ :=
     okAll_ref hT (r4.headD 0) (r4.tail.headD 0) ds k m4 a4 r5 m5 hS4 hdh4 hb4 h5
   obtain ⟨hst5, hx5, hc5, hp5, -⟩ := ConRon.Bridge.natOpStoredOkAll_run hst4 hC4.check.pins
@@ -405,11 +365,7 @@ theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
   have t3 : x3 = true := by rw [← hd3.1]; simp at e35; simp [e35.1]
   have t5 : x5 = true := by rw [← hd5.1]; simp at e35; simp [e35.2]
   -- the certificate
-  cases h6 : callW p k "defn_nat_cert" [vis, w, n] m5 with
-  | none => rw [h6] at hw; simp at hw
-  | some q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [h6, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨-, rfl⟩ := hw
   have hx35 := hx3.trans (hx4.trans hx5)

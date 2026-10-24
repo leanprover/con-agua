@@ -103,93 +103,40 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
       (fun m s => StageR dn vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
         ho.toNat + hl.toNat ≤ iwTop m)
       (divModCertApplied (decE pr) hyps) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_succ fun k m s rr mm ⟨hS, hpr, hd, hb⟩ hcall => ?_
-  have hw := callW_model (M := fun mq => appliedW p k mq pr ho hl)
-    (applied_specW p hD.lDivModCertApplied k · pr ho hl) hcall
-  unfold appliedW at hw
-  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hl1, rfl⟩, hw⟩ :=
-    (natVar_ref hD.toDmProg2 (0 : Word)).bind_ hS hw
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hl2, rfl⟩, hw⟩ :=
-    (natVar_ref hD.toDmProg2 (1 : Word)).bind_ hS1 hw
-  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hl3, rfl⟩, hw⟩ :=
-    (mkApp_ref hD.toMasterProg pr (r1.headD 0)).bind_ hS2 hw
-  obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
-    (mkApp_ref hD.toMasterProg (r3.headD 0) (r2.headD 0)).bind_ hS3 hw
-  have hG4 : IWGrow m m4 := hg1.trans (hg2.trans (hg3.trans hg4))
-  simp only [decE_eq_decI] at hrun3 hrun4
+  refine CallRef.of_sim (M := fun k mq => appliedW p k mq pr ho hl)
+    (fun k s₀ => applied_specW p hD.lDivModCertApplied k s₀ pr ho hl) fun k m s ⟨hS, hpr, hd, hb⟩ => ?_
+  unfold appliedW divModCertApplied
+  have hM := hD.toMasterProg
+  refine Sim.ntB ((natVar_ref hD.toDmProg2 0).simG hS (.refl m)) fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
+  refine Sim.ntB ((natVar_ref hD.toDmProg2 1).simG hS1 hg1) fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
+  refine Sim.ntB ((mkApp_ref hM pr (r1.headD 0)).simG hS2 hg2) fun r3 _ m3 a3 ⟨hS3, hg3, hl3, rfl⟩ => ?_
+  refine Sim.ntB ((mkApp_ref hM (r3.headD 0) (r2.headD 0)).simG hS3 hg3) fun r4 _ m4 a4 ⟨hS4, hG4, hl4, rfl⟩ => ?_
   have hlen := decHL_length m hd
-  have h0w : (0 : Word).toNat = 0 := rfl
   have h1w : (1 : Word).toNat = 1 := rfl
   have h2w : (2 : Word).toNat = 2 := rfl
-  have h3w : (3 : Word).toNat = 3 := rfl
-  rw [h0w] at hrun1
-  rw [h1w] at hrun2
   rcases hyps with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩
   · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen
     have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
-    rw [if_neg hn1, if_neg hn2] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    refine ⟨_, a4, ?_, hS4, hG4, hl4, rfl⟩
-    simp only [divModCertApplied, StateT.run_bind, exc_ok_bind', decE_eq_decI, hrun1, hrun2, hrun3,
-      hrun4]
-    rfl
-  · have e1 : hl = 1 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
-    subst e1
-    obtain ⟨-, hwlt, ha, -⟩ := decHL_cons_iw hS.2.2.2.1 hd
-    have hlt : ho.toNat < iwTop m := by simp only [h1w, h2w] at hb; omega
-    rw [if_pos rfl, iw_rd_grow hG4 hlt] at hw
-    obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-      (internFVar_ref hD.toMasterProg 2 (rdW (m.arr64 IW) ho) hwlt).bind_ hS4 hw
-    obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6, rfl⟩, hw⟩ :=
-      (mkApp_ref hD.toMasterProg (r4.headD 0) (r5.headD 0)).bind_ hS5 hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    refine ⟨_, a6, ?_, hS6, hG4.trans (hg5.trans hg6), hl6, rfl⟩
-    rw [h2w] at hrun5
-    try simp only [decE_eq_decI] at hrun5 hrun6
-    simp only [divModCertApplied, StateT.run_bind, exc_ok_bind', decE_eq_decI, hrun1, hrun2, hrun3,
-      hrun4, ha]
-    simp only [hrun5, exc_ok_bind']
-    exact hrun6
-  · have e2 : hl = 2 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
-    subst e2
-    have hn1 : (2 : Word) ≠ 1 := by decide
-    obtain ⟨-, hwlt, ha, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
-    obtain ⟨-, hwlt2, hb2, -⟩ := decHL_cons_iw hS.2.2.2.1 hrest
-    have hlt : ho.toNat < iwTop m := by simp only [h1w, h2w] at hb; omega
+    rw [if_neg hn1, if_neg hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
+  · obtain rfl : hl = 1 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
+    obtain ⟨-, hwlt, rfl, -⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    rw [if_pos rfl, iw_rd_grow hG4 (by simp only [h1w] at hb; omega)]
+    refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
+    exact Sim.ntRet ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun _ _ _ _ _ h => h
+  · obtain rfl : hl = 2 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
+    obtain ⟨-, hwlt, rfl, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.2.2.2.1 hrest
     have hlt2 : (ho + 1).toNat < iwTop m := by
-      have h1 := hS.2.1; have h2 := hS.2.2.2.1; simp only [h1w, h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
-    rw [if_neg hn1, if_pos rfl, iw_rd_grow hG4 hlt] at hw
-    obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hl5, rfl⟩, hw⟩ :=
-      (internFVar_ref hD.toMasterProg 2 (rdW (m.arr64 IW) ho) hwlt).bind_ hS4 hw
-    obtain ⟨r6, m6, x6, a6, hrun6, ⟨hS6, hg6, hl6, rfl⟩, hw⟩ :=
-      (mkApp_ref hD.toMasterProg (r4.headD 0) (r5.headD 0)).bind_ hS5 hw
-    have hG6 : IWGrow m m6 := hG4.trans (hg5.trans hg6)
-    rw [iw_rd_grow hG6 hlt2] at hw
-    obtain ⟨r7, m7, x7, a7, hrun7, ⟨hS7, hg7, hl7, rfl⟩, hw⟩ :=
-      (internFVar_ref hD.toMasterProg 3 (rdW (m.arr64 IW) (ho + 1)) hwlt2).bind_ hS6 hw
-    obtain ⟨r8, m8, x8, a8, hrun8, ⟨hS8, hg8, hl8, rfl⟩, hw⟩ :=
-      (mkApp_ref hD.toMasterProg (r6.headD 0) (r7.headD 0)).bind_ hS7 hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    refine ⟨_, a8, ?_, hS8, hG6.trans (hg7.trans hg8), hl8, rfl⟩
-    rw [h2w] at hrun5
-    rw [h3w] at hrun7
-    try simp only [decE_eq_decI] at hrun5 hrun6 hrun7 hrun8
-    simp only [divModCertApplied, StateT.run_bind, exc_ok_bind', decE_eq_decI, hrun1, hrun2, hrun3,
-      hrun4, ha, hb2]
-    simp only [hrun5, exc_ok_bind', hrun6, hrun7]
-    exact hrun8
+      have h1 := hS.2.1; have h2 := hS.2.2.2.1; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
+    rw [if_neg (by decide), if_pos rfl, iw_rd_grow hG4 (by simp only [h2w] at hb; omega)]
+    refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
+    refine Sim.ntB ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
+    rw [iw_rd_grow hg6 hlt2]
+    refine Sim.ntB ((internFVar_ref hM 3 _ hwlt2).simG hS6 hg6) fun r7 _ m7 a7 ⟨hS7, hg7, hl7, rfl⟩ => ?_
+    exact Sim.ntRet ((mkApp_ref hM (r6.headD 0) (r7.headD 0)).simG hS7 hg7) fun _ _ _ _ _ h => h
   · have hn1 : hl ≠ 1 := fun e => by rw [e] at hlen; simp at hlen
     have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
-    rw [if_neg hn1, if_neg hn2] at hw
-    simp only [Option.some.injEq, Prod.mk.injEq] at hw
-    obtain ⟨rfl, rfl⟩ := hw
-    refine ⟨_, a4, ?_, hS4, hG4, hl4, rfl⟩
-    simp only [divModCertApplied, StateT.run_bind, exc_ok_bind', decE_eq_decI, hrun1, hrun2, hrun3,
-      hrun4]
-    rfl
+    rw [if_neg hn1, if_neg hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
 
 @[refines ConRon.Arena.divModCertApplied]
 theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
@@ -255,17 +202,9 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
       (sc0List_specW p hD.lSubstConst0List k · nm r o l) hc
     unfold sc0ListW at hw
     rw [if_neg hl0] at hw
-    cases h1 : callW p k "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hs0 nm r _ hn hr hwlt k m a r1 m1 hS h1
-    cases h2 : callW p k "subst_const0_list" [nm, r, o + 1, l - 1] m1 with
-    | none => rw [h2] at hw; simp at hw
-    | some q2 =>
-    obtain ⟨r2, m2⟩ := q2
-    rw [h2, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
     have hsz := hS.2.2.2.1
     have hI1 := hS.2.1
@@ -279,11 +218,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
       rw [decHL_grow hg1 (by omega)]; exact hrest
     obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1
       (by rw [ho1, hl1']; have := hg1.1; omega) h2
-    cases h3 : callW p k "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
-    | none => rw [h3] at hw; simp at hw
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [h3, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)

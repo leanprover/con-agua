@@ -81,11 +81,7 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   have hrun1' : (divModEnvGuard fe2 (decI c)).run a = .ok (true, a1) := by
     rw [← hxt]; exact hrun1
   -- the stored value
-  cases h2 : callW p k "env_find" [c, vis2] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
   obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.1.env h2
   subst hm2
   cases hf : fe2.find? (decI c) with
@@ -137,11 +133,7 @@ theorem cpC {p : Prog} (hD : DmProg9 p) (hq : KnotStageProg p) (hcl : LeafClosed
   obtain ⟨hfv, -, -, -⟩ := hwc.2.2.2.2.1 cv' v' hint rfl
   have hwsv : ConLeche.Expr.WScoped 0 v' := ConLeche.Expr.WScoped.of_not_hasFvar hfv
   -- the variant loop, at the pre-insertion view
-  cases h3 : callW p k "check_div_mod_pin_loop" [vis, c, wv, po, pl] m2 with
-  | none => rw [h3] at hw; simp at hw
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [h3, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hv1 : denoteE a1.store (decE wv) = some v' := by
@@ -208,11 +200,7 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
     obtain ⟨a', hr, hS', hC', hx, hg⟩ := H
     exact ⟨a', hr, hS', hC', hx, hg, PinSetsR.step hP hg hfr, hfr⟩
   -- the family's names
-  cases h1 : callW p k "nat_div_mod_names" [] m with
-  | none => rw [h1] at hw; simp at hw
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨x1, a1, hrun1, hS1, hg1, hd1⟩ :=
     natDivModNames_ref hN (vis := w) (fe := fe2) (dn := dn) k m a r1 m1 hS h1
   obtain ⟨e1, -⟩ := ConRon.Bridge.natDivModNames_run hC.check.pins hrun1
@@ -223,11 +211,7 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
   unfold decRL at hd1
   simp only [Nat.zero_add, ntGetD0, ntGetD1] at hd1
   -- the membership
-  cases h2 : callW p k "sl_contains" [r1.headD 0, r1.tail.headD 0, n] m1 with
-  | none => rw [h2] at hw; simp at hw
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [h2, bW_some] at hw
+  replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
   have hCr2 := hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr)
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hN.lSlContains (vis := w) (fe := fe2)
     (dn := dn) (r1.headD 0) (r1.tail.headD 0) n x1 (by exact_mod_cast hn) k m1 a r2 m2 ⟨hS1, hd1.1⟩ h2
@@ -244,20 +228,12 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
     have hx2 := decW0B_true hd2 z2
     have hx2' : x1.contains (decI n) = true := by rw [← hx2e]; exact hx2
     -- the variant records
-    cases h3 : callW p k "rom_pin_sets" [] m2 with
-    | none => rw [h3] at hw; simp at hw
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [h3, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     obtain ⟨hS3, hg3, hP3, hI3⟩ := romPinSets_ref hD hS2 hP2 h3
     have hC3 := StageC.of_core hC2 (hS3.restrict vis)
       (callW_leafFrame hcl (leaf_mem _ (by decide)) h3) (CoreStep.refl hC2.check)
     -- the gate
-    cases h4 : callW p k "check_div_mod_pin" [r3.headD 0, r3.tail.headD 0, vis, w, n] m3 with
-    | none => rw [h4] at hw; simp at hw
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [h4, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨a4, hrun4, hS4, hC4, c4, hg4⟩ := cpC hD.toDmProg9 hq hcl hkp hdn (hs0 dn vis _)

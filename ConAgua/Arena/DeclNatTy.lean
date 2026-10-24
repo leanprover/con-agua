@@ -749,11 +749,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     have hw := callW_model (M := fun mm => okAllW p k mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll k · vis o l) hc
     unfold okAllW at hw
     rw [if_neg hl0] at hw
-    cases h1 : callW p k "nat_op_stored_ok" [vis, rdW (m.arr64 IW) o] m with
-    | none => rw [h1] at hw; simp at hw
-    | some q1 =>
-    obtain ⟨r1, m1⟩ := q1
-    rw [h1, bW_some] at hw
+    replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     subst hn
     obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natOpStoredOk_ref (dn := dn) (vis := vis) (fe := fe) hN
       (rdW (m.arr64 IW) o) k m a r1 m1 ⟨hS, hwlt⟩ h1
@@ -769,11 +765,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
       have hx : x1 = true := by
         have := hx1.1; have hne : (r1.headD 0 != 0) = true := by simpa using hz
         rw [hne] at this; exact this.symm
-      cases h2 : callW p k "nat_op_stored_ok_all" [vis, o + 1, l - 1] m1 with
-      | none => rw [h2] at hw; simp at hw
-      | some q2 =>
-      obtain ⟨r2, m2⟩ := q2
-      rw [h2, bW_some] at hw
+      replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some ns := by
