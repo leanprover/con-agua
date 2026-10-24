@@ -32,9 +32,15 @@ def RciA : List ArrId := EREC :: IW :: ExprA
 def RciC : List Word := 129 :: 200 :: ExprC
 
 theorem rciA_mem {b : Nat} (h : b ∈ RciA) :
-    b = 136 ∨ b = 200 ∨ b = 139 ∨ b = 150 ∨ b = 138 ∨ b < 64 := by
-  simp only [RciA, ExprA, RomA, StoreA, EREC, IW, RMEMO, RSET, RSTK, List.mem_cons,
-    List.mem_range] at h; omega
+    b = 136 ∨ b = 200 ∨ b = 139 ∨ b = 150 ∨ b = 138 ∨ b < 64 ∨ (256 ≤ b ∧ b < 320) := by
+  simp only [RciA, ExprA, RomA, StoreA, EREC, IW, RMEMO, RSET, RSTK, List.mem_cons] at h
+  rcases h with h | h | h | h | h | h
+  any_goals (subst h; simp)
+  simp only [lowTierArrs, List.mem_append, List.mem_range, List.mem_map] at h
+  rcases h with h | ⟨y, hy, e⟩
+  · omega
+  · have e' : (y : Nat) + 256 = b := e
+    omega
 
 theorem rciC_mem {x : Word} (h : x ∈ RciC) :
     x = 129 ∨ x = 200 ∨ x = 132 ∨ x = 148 ∨ x = 149 ∨ x = 131 ∨ x.toNat < 64 := by
@@ -46,13 +52,13 @@ theorem rciC_mem {x : Word} (h : x ∈ RciC) :
 
 theorem rciA_core : AvoidA 96 128 RciA := by
   intro b hb
-  rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h
-  all_goals first | decide | exact Or.inl (Nat.lt_of_lt_of_le h (by decide))
+  rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h | h
+  all_goals first | decide | (left; omega) | (right; omega)
 
 theorem rciA_pins : AvoidA 128 132 RciA := by
   intro b hb
-  rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h
-  all_goals first | decide | exact Or.inl (Nat.lt_of_lt_of_le h (by decide))
+  rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h | h
+  all_goals first | decide | (left; omega) | (right; omega)
 
 theorem rciC_core : AvoidC 96 128 RciC := by
   intro x hx
@@ -84,7 +90,7 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   · rw [hc]; exact hS.1.core.frame rciA_core rciC_core hf
   · rw [hp]; exact hS.1.pins.frame rciA_pins hf
   · exact EnvR.grow (fun b h1 h2 => hf.1 b (fun hm => by
-        rcases rciA_mem hm with rfl | rfl | rfl | rfl | rfl | h <;> first | (revert h1 h2; decide) | omega)
+        rcases rciA_mem hm with rfl | rfl | rfl | rfl | rfl | h | h <;> first | (revert h1 h2; decide) | omega)
         (fun hm => by subst hm; simp [CTL] at h1))
       (hf.2.1 128 (by decide)) hg hS.1.env
 
