@@ -221,6 +221,15 @@ theorem vpool_set64 (m : Mem) (i v : Word) (h : i.toNat < pcap m) :
     simp [e1, e2, hij]
 grind_pattern [arena_grind] vpool_set64 => vpool (m.set64 POOL i v)
 
+/-- A pool store leaves the other words of the virtual pool alone (in bounds or not). -/
+theorem vpool_set64_get (m : Mem) (i v : Word) (j : Nat) (hij : i.toNat ≠ j) :
+    (vpool (m.set64 POOL i v))[j]? = (vpool m)[j]? := by
+  by_cases hj : j < 2 ^ 64
+  · rw [vpool_getNat? _ j hj, vpool_getNat? m j hj, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
+      Array.getElem?_setIfInBounds]
+    simp [hij]
+  · rw [Array.getElem?_eq_none (by rw [vpool_size]; omega), Array.getElem?_eq_none (by rw [vpool_size]; omega)]
+
 /-- Stores elsewhere leave the virtual pool alone. -/
 theorem vpool_set64_ne (m : Mem) (a : ArrId) (i v : Word) (h : a ≠ POOL) :
     vpool (m.set64 a i v) = vpool m := by

@@ -43,7 +43,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
   | nil =>
     intro Ls n m m' a o l b hS hM hE hd hsl hot hb hbs hW
     have hl : l.toNat = 0 := by
-      have := sliceL_length (m.arr64 POOL) o.toNat l.toNat
+      have := sliceL_length (vpool m) o.toNat l.toNat
       rw [hsl] at this; simpa [lsWords] using this.symm
     have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
     subst hl0
@@ -56,7 +56,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
       fun _ _ => rfl, by simp⟩
   | cons u ids ih =>
     intro Ls n m m' a o l b hS hM hE hd hsl hot hb hbs hW
-    have hlen := sliceL_length (m.arr64 POOL) o.toNat l.toNat
+    have hlen := sliceL_length (vpool m) o.toNat l.toNat
     rw [hsl] at hlen
     simp only [lsWords, List.length_map, List.length_cons] at hlen
     obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨ids.length, hlen.symm⟩

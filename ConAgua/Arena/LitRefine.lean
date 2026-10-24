@@ -254,6 +254,12 @@ theorem sliceL_vpool (m : Mem) (o l : Nat) (h : o + l ≤ pcap m) (hs : pcap m <
     sliceL (vpool m) o l = sliceL (m.arr64 POOL) o l :=
   Agree.sliceL _ _ _ _ _ (vpool_agree m hs) h
 
+theorem sliceL_vpool' (m : Mem) (o l : Nat) (h : l = 0 ∨ o + l ≤ pcap m) (hs : pcap m < 2 ^ 64) :
+    sliceL (vpool m) o l = sliceL (m.arr64 POOL) o l := by
+  rcases h with h | h
+  · subst h; rfl
+  · exact sliceL_vpool m o l h hs
+
 /-- **A slice key matches iff the word lists are equal**: for a record slice `(a, la)` and a
 query slice `(b, lb)` that do not wrap, the L match (lengths, then `limbs_eq`) holds iff the two
 slices hold the same words. -/

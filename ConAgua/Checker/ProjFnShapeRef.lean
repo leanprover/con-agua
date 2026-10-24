@@ -114,7 +114,7 @@ theorem pfsStr_ok (m : Mem) (k : Word) (s : String) (r : Word)
   unfold pfsStr at h
   generalize rdW (m.arr64 NSREC) (k + 1) = o at hol hsl h
   generalize rdW (m.arr64 NSREC) (k + 2) = lw at hol hsl h
-  have hlen := sliceL_length (m.arr64 POOL) o.toNat lw.toNat
+  have hlen := sliceL_length (vpool m) o.toNat lw.toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
   have e : ∀ c : Word, c.toNat < lw.toNat →

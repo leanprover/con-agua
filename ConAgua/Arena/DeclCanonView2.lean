@@ -288,7 +288,8 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       rw [if_pos (by omega)]
       congr 1; omega
     rw [e1]
-    exact hslice_sliceL (by rcases hB with h0 | h0 <;> omega) hsl
+    exact hslice_sliceL (by rcases hB with h0 | h0 <;> omega)
+      (by rw [← sliceL_vpool' _ _ _ (by rcases hB with h0 | h0 <;> omega) (by omega)]; exact hsl)
   have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
   have hSt : StageR dn vis fe m2 a := by
     refine ⟨CheckR.frame_iw hfr hS.1, hroom2, ?_, ?_, ?_, ?_⟩

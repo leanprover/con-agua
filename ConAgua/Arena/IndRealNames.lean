@@ -151,9 +151,7 @@ theorem grows_set_above {m m' : Mem} (hg : Grows m m') {q x : Word} (hq : m.top.
   refine ⟨?_, fun j hj => ?_, by rw [htop']; exact ht1, by rw [htop', size_set64]; exact ht2,
     by rw [size_set64, hps]⟩
   · rw [htop']; exact Frame.set64 _ _ _ _ _ hfr
-  · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    have : ¬ q.toNat = j := by omega
-    simp only [this, if_false]
+  · rw [vpool_set64_get _ _ _ _ (by omega)]
     exact hag j hj
 
 /-- **The model of `iw_pool(s, d, l)`**: `POOL[d + j] := IW[s + j]`. -/
@@ -235,7 +233,7 @@ theorem iwpW_ok {m₀ : Mem} : ∀ (n : Nat) (m m' : Mem) (s d l : Word), iwpW n
       have e2 : rdW ((m.set64 POOL d (rdW (m.arr64 IW) s)).arr64 POOL) d = rdW (m.arr64 IW) s := by
         rw [rdW_set64]; simp [show d.toNat < pcap m by omega]
       simp only [rdW] at e1 e2 ⊢
-      rw [e1, e2]
+      rw [vpool_getD, e1, e2]
 
 /-! ## `name_rec(n)` (the pool bytes `rec`, master's `intern_nstr`) -/
 
@@ -293,7 +291,7 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 3 < 2 ^ 64
     (hs : m.top.toNat + 3 ≤ pcap m) :
     Grows m (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) ∧
       SliceOK (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) m.top 3 ∧
-      sliceL ((recBytes (m.set64 CTL 0 (m.top + 3)) m.top).arr64 POOL) m.top.toNat 3 = strWords "rec" ∧
+      sliceL (vpool (recBytes (m.set64 CTL 0 (m.top + 3)) m.top)) m.top.toNat 3 = strWords "rec" ∧
       ((recBytes (m.set64 CTL 0 (m.top + 3)) m.top).arr64 POOL).size = pcap m := by
   have hc := hpool.2.1
   have e1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -309,7 +307,7 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m) (hno : m.top.toNat + 3 < 2 ^ 64
   have hsz : ((recBytes (m.set64 CTL 0 (m.top + 3)) m.top).arr64 POOL).size = pcap m := by
     simp only [recBytes, size_set64]
   refine ⟨g3, by simp only [SliceOK, htop, e3]; simp, ?_, hsz⟩
-  rw [strWords_recB]
+  rw [sliceL_vpool _ _ _ (by rw [hsz]; omega) (by rw [hsz]; have := hpool.2.2.1; omega), strWords_recB]
   simp only [sliceL, recBytes, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide),
     Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, e1, e2,
     List.ofFn_succ, List.ofFn_zero, Fin.val_zero, Fin.val_succ, Array.getElem?_setIfInBounds,
@@ -618,7 +616,9 @@ theorem ptF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (t
     simp only [SliceOK, hm1top, h9]; simp
   have hpsz : ((ptMem m o).arr64 POOL).size = pcap m := by
     simp only [ptMem, ptBytes, size_set64]
-  have hk := ptMem_slice m o hno hsz
+  have hk : sliceL (vpool (ptMem m o)) o.toNat 9 = strWords "projTable" := by
+    rw [sliceL_vpool _ _ _ (by rw [hpsz]; omega) (by rw [hpsz]; omega)]
+    exact ptMem_slice m o hno hsz
   rcases hc1 : callW ptProg n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩
   · rw [hc1] at hW; cases hW
   rw [hc1] at hW
