@@ -682,6 +682,60 @@ theorem ev_cmpRMb {b : Reg64} {off : Int} (hk : Host.prog[k]? = some (i64 (.cmp 
   simp only [hi, Effects.All]
   exact h
 
+
+/-! ### Blocks (lane blkcopy) -/
+
+omit [Host] in
+theorem addr_sib1d [Labels] (b i : Reg64) (off : Int) (regs : Reg64s) (rng : Std.Rco Int64) :
+    ((AddrExpr.interp (address_size := .mk .W64) (a := ⟨some (.reg b), some ⟨i, .W8⟩, .int64 (Int64.ofInt off)⟩)
+      regs rng).zeroExtend 64) = regs.get64 b + regs.get64 i + BitVec.ofInt 64 (Int64.ofInt off).toInt := by
+  simp only [AddrExpr.interp, ConstExpr.interp, BitVec.toAddressSize, Reg64s.get64]
+  have htake : ∀ x : BitVec 64, x.take Width.W64.bits = x := by
+    intro x; simp [BitVec.take, BitVec.extractLsb']
+  rw [htake, htake]
+  have hsigned : ∀ x : BitVec 64, x.signed = x.toInt := fun _ => rfl
+  rw [hsigned, hsigned,
+    show ∀ y : BitVec Width.W64.bits, BitVec.zeroExtend 64 y = y from fun _ => rfl]
+  apply BitVec.eq_of_toInt_eq
+  simp [BitVec.toInt_add, BitVec.toInt_ofInt]
+
+/-- `movzx r, byte [b + off]`. -/
+theorem ev_movzxM {d b : Reg64} {off : Int}
+    (hk : Host.prog[k]? = some (i64 (.movzx (.reg (rr d)) (w' := .W8) (.mem (mb b off)))))
+    (hoff : SmallOff off) {v : UInt8} (hv : s.dmem.get? (A ((s.regs.get64 b).toNat + off.toNat)) = some v)
+    (h : Ev Q { s with regs := s.regs.set64 d v.toUInt64.toBitVec } (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_disp _ _ hoff.1 (by omega)]
+  simp only [loadInt_one_of hv, Effects.All]
+  refine ev_of_regs h ?_
+  congr 1; apply BitVec.eq_of_toNat_eq; simp
+
+/-- `movzx r, byte [b + i + off]`. -/
+theorem ev_movzxS {d b i : Reg64} {off : Int}
+    (hk : Host.prog[k]? = some (i64 (.movzx (.reg (rr d)) (w' := .W8)
+      (.mem ⟨some (.reg b), some ⟨i, .W8⟩, .int64 (Int64.ofInt off)⟩))))
+    {v : UInt8}
+    (hv : s.dmem.get? (s.regs.get64 b + s.regs.get64 i + BitVec.ofInt 64 (Int64.ofInt off).toInt) = some v)
+    (h : Ev Q { s with regs := s.regs.set64 d v.toUInt64.toBitVec } (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib1d]
+  simp only [loadInt_one_of hv, Effects.All]
+  refine ev_of_regs h ?_
+  congr 1; apply BitVec.eq_of_toNat_eq; simp
+
+/-- `mov rax, [rcx + rax]`: an 8-byte load at a byte address. -/
+theorem ev_ld64b
+    (hk : Host.prog[k]? = some (movRM .rax (mbi .rcx .rax .W8)))
+    {v : Word} (hv : rdW s.dmem (s.regs.rcx.toBitVec + s.regs.rax.toBitVec) = some v)
+    (h : Ev Q { s with regs := s.regs.set64 .rax v.toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib1]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  simp only [Reg64s.get64_rax, Reg64s.get64_rcx, hi, Effects.All]
+  exact h
+
 end
 
 end L.Compiler

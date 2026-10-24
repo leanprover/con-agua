@@ -1,5 +1,6 @@
 import ConAgua.Checker.Prelude
 import ConAgua.L.FuelMono
+import ConAgua.L.Blocks
 
 /-!
 # The prelude's copies of the frontend are the frontend on the prelude's bytes (lane `pipeline`)
@@ -32,6 +33,11 @@ def _root_.L.St.setIn (s : St) (x : Array UInt8) : St := { s with mem := s.mem.s
 /-- The prelude's bytes, as the input array. -/
 def preIn : Array UInt8 := preludeBytes.toArray
 
+/-- A byte source other than byte array `0`. -/
+def _root_.L.BSrc.noIn : BSrc → Bool
+  | .arr a => a != 0
+  | .rom _ => true
+
 /-- No access to byte array `0`. -/
 def _root_.L.Expr.noIn : Expr → Bool
   | .ld8 a i => a != 0 && i.noIn
@@ -40,7 +46,12 @@ def _root_.L.Expr.noIn : Expr → Bool
   | .bin _ a b | .cmpw _ a b => a.noIn && b.noIn
   | .ld64t _ t i => t.noIn && i.noIn
   | .len64t _ t => t.noIn
+  | .ld8x8 b i => b.noIn && i.noIn
   | _ => true
+
+def _root_.L.WArr.noIn : WArr → Bool
+  | .plain _ => true
+  | .tier _ t => t.noIn
 
 def _root_.L.Cond.noIn : Cond → Bool
   | .cmp _ a b => a.noIn && b.noIn
@@ -57,6 +68,9 @@ def _root_.L.Stmt.noIn : Stmt → Bool
   | .while c s => c.noIn && s.noIn
   | .ret es | .call _ _ es => es.all Expr.noIn
   | .st64t _ t i e => t.noIn && i.noIn && e.noIn
+  | .copy64 d di s si n => d.noIn && di.noIn && s.noIn && si.noIn && n.noIn
+  | .copy8w d di s si n => d.noIn && di.noIn && s.noIn && si.noIn && n.noIn
+  | .scan8 _ s i e _ => s.noIn && i.noIn && e.noIn
   | _ => true
 
 /-- No store into byte array `0`. -/
@@ -119,6 +133,18 @@ theorem _root_.L.Mem.arr8_set8_ne {m : Mem} {a b : ArrId} (ha : a ≠ b) (i v : 
 @[simp] theorem _root_.L.Mem.set8_size (m : Mem) (a : ArrId) (i v : Word) :
     (m.set8 a i v).bytes.size = m.bytes.size := by
   simp [Mem.set8]
+
+theorem _root_.L.Mem.copy64_setIn (m : Mem) (x : Array UInt8) (d : ArrId) (di : Word) (s : ArrId)
+    (si : Word) (n : Nat) : (m.copy64 d di s si n).setIn x = (m.setIn x).copy64 d di s si n := by
+  induction n generalizing m di si with
+  | zero => rfl
+  | succ n ih => simp only [Mem.copy64_succ, ih]; rfl
+
+theorem _root_.L.Mem.copy8w_setIn (m : Mem) (x : Array UInt8) (d : ArrId) (di : Word) (b : Array UInt8)
+    (si : Word) (n : Nat) : (m.copy8w d di b si n).setIn x = (m.setIn x).copy8w d di b si n := by
+  induction n generalizing m di si with
+  | zero => rfl
+  | succ n ih => simp only [Mem.copy8w_succ, ih]; rfl
 
 theorem _root_.L.St.setLocs_setIn (s : St) (x : Array UInt8) (xs : List Var) (vs : List Word) :
     (s.setIn x).setLocs xs vs = (s.setLocs xs vs).setIn x := by
@@ -300,6 +326,41 @@ theorem erel_len64t {a : ArrId} {ct ot : Expr} (ht : ERel ct ot) :
     (fun _ _ => rfl) s v s1 h0 h2
   exact ⟨this.1, run_bind_of h1' this.2⟩
 
+/-- A byte source of the copy reads, on a state, what the original's reads on the renamed state. -/
+def BRel (cb ob : BSrc) : Prop := ∀ s : St, 0 < s.mem.bytes.size → (s.setIn preIn).mem.src8 ob = s.mem.src8 cb
+
+theorem brel_preB : ∀ b, BRel (preB b) b
+  | .arr a, s, h0 => by
+    by_cases ha : a = 0
+    · subst ha; simp [preB, Mem.src8, Mem.arr8_setIn_zero h0, preIn]
+    · simp [preB, ha, Mem.src8, Mem.arr8_setIn_ne ha]
+  | .rom d, _, _ => rfl
+
+theorem brel_noIn : ∀ b, b.noIn = true → BRel b b
+  | .arr a, h, s, _ => by
+    simp only [BSrc.noIn, bne_iff_ne] at h
+    simp [Mem.src8, Mem.arr8_setIn_ne h]
+  | .rom d, _, _, _ => rfl
+
+theorem ld8x8_run (b : BSrc) (j : Word) (s : St) :
+    (ld8x8 b j).run s = if j.toNat + 8 ≤ (s.mem.src8 b).size
+      then .ok (le64 (s.mem.src8 b) j.toNat, s) else .error .oob := by
+  unfold ld8x8
+  simp only [StateT.run_bind, StateT.run_get, pure_bind]
+  split <;> rfl
+
+theorem erel_ld8x8 {cb ob : BSrc} (hb : BRel cb ob) {ci oi : Expr} (hi : ERel ci oi) :
+    ERel (.ld8x8 cb ci) (.ld8x8 ob oi) := by
+  refine ERel.load hi (fc := ld8x8 cb) (fo := ld8x8 ob) ?_ (fun _ => rfl) (fun _ => rfl)
+  intro s j v s1 h0 h
+  rw [ld8x8_run] at h ⊢
+  rw [hb s h0]
+  split at h
+  · simp only [Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp_all
+  · cases h
+
 theorem erel_preE : ∀ e, ERel (preE e) e
   | .const w => erel_leaf (fun _ => w) (fun _ => w) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
   | .var x => erel_leaf (fun s => s.loc x) (fun s => s.loc x) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
@@ -311,6 +372,7 @@ theorem erel_preE : ∀ e, ERel (preE e) e
   | .ldc d i => erel_ldc (erel_preE i)
   | .ld64t a t i => erel_ld64t (erel_preE t) (erel_preE i)
   | .len64t a t => erel_len64t (erel_preE t)
+  | .ld8x8 b i => erel_ld8x8 (brel_preB b) (erel_preE i)
   | .ld8 a i => by
     by_cases ha : a = 0
     · subst ha; simp only [preE, ite_true]; exact erel_ld8_zero (erel_preE i)
@@ -342,6 +404,9 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
     simp only [Expr.noIn, Bool.and_eq_true] at h
     exact erel_ld64t (erel_noIn t h.1) (erel_noIn i h.2)
   | .len64t a t, h => erel_len64t (erel_noIn t h)
+  | .ld8x8 b i, h => by
+    simp only [Expr.noIn, Bool.and_eq_true] at h
+    exact erel_ld8x8 (brel_noIn b h.1) (erel_noIn i h.2)
   | .ld8 a i, h => by
     simp only [Expr.noIn, Bool.and_eq_true, bne_iff_ne] at h
     exact erel_ld8_ne h.1 (erel_noIn i h.2)
@@ -349,6 +414,31 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
     simp only [Expr.noIn, bne_iff_ne] at h
     refine erel_leaf (fun s => s.mem.len8 a) (fun s => s.mem.len8 a) (fun _ => rfl) (fun _ => rfl) (fun s _ => ?_)
     simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_ne h]
+
+/-- A block operand of the copy names, on a state, the original's array on the renamed state. -/
+def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : ArrId) (s1 : St), 0 < s.mem.bytes.size →
+  (warr cw).run s = .ok (a, s1) → s = s1 ∧ (warr ow).run (s.setIn preIn) = .ok (a, s.setIn preIn)
+
+theorem wrel_of {ct ot : Expr} (ht : ERel ct ot) (a : ArrId) : WRel (.tier a ct) (.tier a ot) := by
+  intro s b s1 h0 h
+  simp only [warr] at h ⊢
+  obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
+  obtain ⟨rfl, rfl⟩ := pure_run_ok h2
+  exact ⟨rfl, run_bind_of h1' rfl⟩
+
+theorem wrel_plain (a : ArrId) : WRel (.plain a) (.plain a) := by
+  intro s b s1 _ h
+  obtain ⟨rfl, rfl⟩ := pure_run_ok h
+  exact ⟨rfl, rfl⟩
+
+theorem wrel_preW : ∀ w, WRel (preW w) w
+  | .plain a => wrel_plain a
+  | .tier a t => wrel_of (erel_preE t) a
+
+theorem wrel_noIn : ∀ w, w.noIn = true → WRel w w
+  | .plain a, _ => wrel_plain a
+  | .tier a t, h => wrel_of (erel_noIn t h) a
 
 theorem CRel.cmp {c : Cmp} {ca cb oa ob : Expr} (ha : ERel ca oa) (hb : ERel cb ob) :
     CRel (.cmp c ca cb) (.cmp c oa ob) := by
@@ -456,6 +546,14 @@ inductive Sim (t : NTree) (S : FnName → Bool) : Stmt → Stmt → Prop
       Sim t S (.st64 a ci ce) (.st64 a oi oe)
   | st64t (a : ArrId) {ct ot ci oi ce oe : Expr} : ERel ct ot → ERel ci oi → ERel ce oe →
       Sim t S (.st64t a ct ci ce) (.st64t a ot oi oe)
+  | copy64 {cd od cs os : WArr} {cdi odi csi osi cn on : Expr} : WRel cd od → ERel cdi odi →
+      WRel cs os → ERel csi osi → ERel cn on →
+      Sim t S (.copy64 cd cdi cs csi cn) (.copy64 od odi os osi on)
+  | copy8w {cd od : WArr} {cs os : BSrc} {cdi odi csi osi cn on : Expr} : WRel cd od → ERel cdi odi →
+      BRel cs os → ERel csi osi → ERel cn on →
+      Sim t S (.copy8w cd cdi cs csi cn) (.copy8w od odi os osi on)
+  | scan8 (x : Var) {cs os : BSrc} {ci oi ce oe : Expr} (c : List UInt8) : BRel cs os → ERel ci oi →
+      ERel ce oe → Sim t S (.scan8 x cs ci ce c) (.scan8 x os oi oe c)
   | seq {c₁ c₂ o₁ o₂ : Stmt} : Sim t S c₁ o₁ → Sim t S c₂ o₂ → Sim t S (.seq c₁ c₂) (.seq o₁ o₂)
   | ite {cc co : Cond} {c₁ c₂ o₁ o₂ : Stmt} : CRel cc co → Sim t S c₁ o₁ → Sim t S c₂ o₂ →
       Sim t S (.ite cc c₁ c₂) (.ite co o₁ o₂)
@@ -488,6 +586,11 @@ theorem sim_preS {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noSt8In = t
     exact .st8 h (erel_preE i) (erel_preE e)
   | .st64 a i e, _, _ => .st64 a (erel_preE i) (erel_preE e)
   | .st64t a tt i e, _, _ => .st64t a (erel_preE tt) (erel_preE i) (erel_preE e)
+  | .copy64 d di s si n, _, _ =>
+    .copy64 (wrel_preW d) (erel_preE di) (wrel_preW s) (erel_preE si) (erel_preE n)
+  | .copy8w d di s si n, _, _ =>
+    .copy8w (wrel_preW d) (erel_preE di) (brel_preB s) (erel_preE si) (erel_preE n)
+  | .scan8 x s i e c, _, _ => .scan8 x c (brel_preB s) (erel_preE i) (erel_preE e)
   | .ret es, _, _ => .ret (arel_preE es)
   | .seq s u, h, hc => by
     simp only [Stmt.noSt8In, Stmt.callsIn, Bool.and_eq_true] at h hc
@@ -524,6 +627,17 @@ theorem sim_noIn {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noIn = true
   | .st64t a tt i e, h, _ => by
     simp only [Stmt.noIn, Bool.and_eq_true] at h
     exact .st64t a (erel_noIn tt h.1.1) (erel_noIn i h.1.2) (erel_noIn e h.2)
+  | .copy64 d di s si n, h, _ => by
+    simp only [Stmt.noIn, Bool.and_eq_true] at h
+    exact .copy64 (wrel_noIn d h.1.1.1.1) (erel_noIn di h.1.1.1.2) (wrel_noIn s h.1.1.2)
+      (erel_noIn si h.1.2) (erel_noIn n h.2)
+  | .copy8w d di s si n, h, _ => by
+    simp only [Stmt.noIn, Bool.and_eq_true] at h
+    exact .copy8w (wrel_noIn d h.1.1.1.1) (erel_noIn di h.1.1.1.2) (brel_noIn s h.1.1.2)
+      (erel_noIn si h.1.2) (erel_noIn n h.2)
+  | .scan8 x s i e c, h, _ => by
+    simp only [Stmt.noIn, Bool.and_eq_true] at h
+    exact .scan8 x c (brel_noIn s h.1.1) (erel_noIn i h.1.2) (erel_noIn e h.2)
   | .ret es, h, _ => .ret (arel_noIn es h)
   | .seq s u, h, hc => by
     simp only [Stmt.noIn, Stmt.callsIn, Bool.and_eq_true] at h hc
@@ -724,6 +838,89 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       rw [st64_run]
       exact ite_eq_left hlt
     · cases h5
+  | copy64 hd hdi hs hsi hn =>
+    intro s r s1 h0 h
+    simp only [step] at h ⊢
+    obtain ⟨da, s2, h1, h2⟩ := run_bind_ok h
+    obtain ⟨rfl, h1'⟩ := hd s da s2 h0 h1
+    obtain ⟨i, s3, h3, h4⟩ := run_bind_ok h2
+    obtain ⟨rfl, h3'⟩ := hdi s i s3 h0 h3
+    obtain ⟨sa, s5, h5, h6⟩ := run_bind_ok h4
+    obtain ⟨rfl, h5'⟩ := hs s sa s5 h0 h5
+    obtain ⟨j, s7, h7, h8⟩ := run_bind_ok h6
+    obtain ⟨rfl, h7'⟩ := hsi s j s7 h0 h7
+    obtain ⟨k, s9, h9, h10⟩ := run_bind_ok h8
+    obtain ⟨rfl, h9'⟩ := hn s k s9 h0 h9
+    obtain ⟨st, s11, h11, h12⟩ := run_bind_ok h10
+    simp only [StateT.run_get] at h11
+    obtain ⟨rfl, rfl⟩ := h11
+    split at h12
+    · rename_i hc
+      obtain ⟨u, s13, h13, h14⟩ := run_bind_ok h12
+      simp only [StateT.run_set] at h13
+      obtain ⟨-, rfl⟩ := h13
+      obtain ⟨rfl, rfl⟩ := pure_run_ok h14
+      refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of h5' (run_bind_of h7' (run_bind_of h9'
+        (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_))))),
+        Mem.copy64_arr8 _ _ _ _ _ _ _, by simp [Mem.copy64_bytes]⟩
+      rw [if_pos hc]
+      refine run_bind_of (a := ()) (s' := ({ s with mem := s.mem.copy64 da i sa j k.toNat } : St).setIn preIn) ?_ rfl
+      simp only [StateT.run_set, St.setIn, Mem.copy64_setIn]
+    · cases h12
+  | copy8w hd hdi hs hsi hn =>
+    intro s r s1 h0 h
+    simp only [step] at h ⊢
+    obtain ⟨da, s2, h1, h2⟩ := run_bind_ok h
+    obtain ⟨rfl, h1'⟩ := hd s da s2 h0 h1
+    obtain ⟨i, s3, h3, h4⟩ := run_bind_ok h2
+    obtain ⟨rfl, h3'⟩ := hdi s i s3 h0 h3
+    obtain ⟨j, s7, h7, h8⟩ := run_bind_ok h4
+    obtain ⟨rfl, h7'⟩ := hsi s j s7 h0 h7
+    obtain ⟨k, s9, h9, h10⟩ := run_bind_ok h8
+    obtain ⟨rfl, h9'⟩ := hn s k s9 h0 h9
+    obtain ⟨st, s11, h11, h12⟩ := run_bind_ok h10
+    simp only [StateT.run_get] at h11
+    obtain ⟨rfl, rfl⟩ := h11
+    have hb := hs s h0
+    split at h12
+    · rename_i hc
+      obtain ⟨u, s13, h13, h14⟩ := run_bind_ok h12
+      simp only [StateT.run_set] at h13
+      obtain ⟨-, rfl⟩ := h13
+      obtain ⟨rfl, rfl⟩ := pure_run_ok h14
+      refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of h7' (run_bind_of h9'
+        (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_)))),
+        Mem.copy8w_arr8 _ _ _ _ _ _ _, by simp [Mem.copy8w_bytes]⟩
+      simp only [St.setIn_mem] at hb
+      rw [if_pos (by rw [St.setIn_mem, hb]; exact hc)]
+      refine run_bind_of (a := ())
+        (s' := ({ s with mem := s.mem.copy8w da i (s.mem.src8 cs) j k.toNat } : St).setIn preIn) ?_ rfl
+      simp only [StateT.run_set, St.setIn, St.setIn_mem, hb, Mem.copy8w_setIn]
+    · cases h12
+  | scan8 x c hs hi he =>
+    intro s r s1 h0 h
+    simp only [step] at h ⊢
+    obtain ⟨vi, s2, h1, h2⟩ := run_bind_ok h
+    obtain ⟨rfl, h1'⟩ := hi s vi s2 h0 h1
+    obtain ⟨ve, s3, h3, h4⟩ := run_bind_ok h2
+    obtain ⟨rfl, h3'⟩ := he s ve s3 h0 h3
+    obtain ⟨st, s11, h11, h12⟩ := run_bind_ok h4
+    simp only [StateT.run_get] at h11
+    obtain ⟨rfl, rfl⟩ := h11
+    have hb := hs s h0
+    simp only [St.setIn_mem] at hb
+    split at h12
+    · rename_i hc
+      obtain ⟨u, s13, h13, h14⟩ := run_bind_ok h12
+      simp only [setLoc, StateT.run_modify] at h13
+      obtain ⟨-, rfl⟩ := h13
+      obtain ⟨rfl, rfl⟩ := pure_run_ok h14
+      refine ⟨run_bind_of h1' (run_bind_of h3'
+        (run_bind_of (a := s.setIn preIn) (s' := s.setIn preIn) rfl ?_)), Keep.of_mem rfl⟩
+      simp only [St.setIn_mem, hb]
+      rw [if_pos hc]
+      rfl
+    · cases h12
   | seq _ _ ih1 ih2 =>
     intro s r s1 h0 h
     simp only [step] at h ⊢

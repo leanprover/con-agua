@@ -49,7 +49,13 @@ def mapE (f : Var → Var) : Expr → Expr
   | .ldc d i => .ldc d (mapE f i)
   | .ld64t a t i => .ld64t a (mapE f t) (mapE f i)
   | .len64t a t => .len64t a (mapE f t)
+  | .ld8x8 b i => .ld8x8 b (mapE f i)
   | e => e
+
+/-- A block operand with its tier expression renamed. -/
+def mapW (f : Var → Var) : WArr → WArr
+  | .plain a => .plain a
+  | .tier a t => .tier a (mapE f t)
 
 /-- Condition `c` with every variable renamed by `f`. -/
 def mapC (f : Var → Var) : Cond → Cond
@@ -70,6 +76,9 @@ def mapS (f : Var → Var) : Stmt → Stmt
   | .call xs g args => .call (xs.map f) g (args.map (mapE f))
   | .gset g e => .gset g (mapE f e)
   | .st64t a t i e => .st64t a (mapE f t) (mapE f i) (mapE f e)
+  | .copy64 d di s si n => .copy64 (mapW f d) (mapE f di) (mapW f s) (mapE f si) (mapE f n)
+  | .copy8w d di s si n => .copy8w (mapW f d) (mapE f di) s (mapE f si) (mapE f n)
+  | .scan8 x s i e c => .scan8 (f x) s (mapE f i) (mapE f e) c
   | s => s
 
 /-- The template's variable `x` in a function whose first parameter is the tier and whose next

@@ -506,15 +506,15 @@ def Expr.isOpnd : Expr → Bool
 /-- The operand of a block operand `e` (`Expr.isOpnd e`). -/
 def opnd (ctx : Ctx) (e : Expr) : Operand .W64 := (simpleOp ctx e).getD (oI 0)
 
-/-- `cmp r, len(s)`: the length of a byte source. -/
-def srcLen (ctx : Ctx) (r : Reg64) : BSrc → Program
-  | .arr a => [i64 (.cmp (.reg (rr r)) (oM (mb .r15 (ctx.tab.len8 a))))]
-  | .rom d => [i64 (.cmp (.reg (rr r)) (oI d.length))]
+/-- `r := len(s)`: the length of a byte source. -/
+def srcLen (ctx : Ctx) (r : Reg64) : BSrc → Directive
+  | .arr a => movRM r (mb .r15 (ctx.tab.len8 a))
+  | .rom d => movRI r (UInt64.ofNat d.length)
 
 /-- `rcx :=` the address of byte `0` of a byte source. -/
-def srcBase (ctx : Ctx) : BSrc → Program
-  | .arr a => [movRM .rcx (mb .r15 (ctx.tab.base8 a))]
-  | .rom d => [i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom)))]
+def srcBase (ctx : Ctx) : BSrc → Directive
+  | .arr a => movRM .rcx (mb .r15 (ctx.tab.base8 a))
+  | .rom d => i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom)))
 
 /-- The code that points `r` at the descriptor block of a block operand (`tierDesc`), and that
 register (`r15` for a plain array: no code). -/
@@ -522,9 +522,11 @@ def warrDesc (ctx : Ctx) (r : Reg64) : WArr → Program × Reg64
   | .plain _ => ([], .r15)
   | .tier _ t => ([i64 (.mov (.reg (rr r)) (opnd ctx t))] ++ tierDesc r, r)
 
-/-- `rax := o + n`, to `ca_error` on a carry. -/
-def addChk (ctx : Ctx) (o n : Expr) : Program :=
-  [i64 (.mov (.reg (rr .rax)) (opnd ctx o)), i64 (.add (.reg (rr .rax)) (opnd ctx n)), jccL .c errorL]
+/-- From `rax` = a length: `n ≤ rax` and `o ≤ rax - n`, else to `ca_error` (`o + n ≤ len`
+without a carry). -/
+def lenChk (ctx : Ctx) (o n : Expr) : Program :=
+  [i64 (.cmp (.reg (rr .rax)) (opnd ctx n)), jccL .c errorL,
+   i64 (.sub (.reg (rr .rax)) (opnd ctx n)), i64 (.cmp (.reg (rr .rax)) (opnd ctx o)), jccL .c errorL]
 
 /-- `r := base + 8 o` for a word array whose descriptor block is at `R`, through `rax`. -/
 def wordPtr (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) : Program :=
@@ -538,12 +540,8 @@ def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n
   let (cs, Rs) := warrDesc ctx .rcx s
   let (cd, Rd) := warrDesc ctx .rdx d
   let e := ctx.tmp 0
-  cs ++ addChk ctx si n ++
-  [i64 (.cmp (.reg (rr .rax)) (oM (mb Rs (ctx.tab.len64 s.arr)))), jccL .a errorL] ++
-  wordPtr ctx .rcx Rs s.arr si ++
-  cd ++ addChk ctx di n ++
-  [i64 (.cmp (.reg (rr .rax)) (oM (mb Rd (ctx.tab.len64 d.arr)))), jccL .a errorL] ++
-  wordPtr ctx .rdx Rd d.arr di ++
+  cs ++ [movRM .rax (mb Rs (ctx.tab.len64 s.arr))] ++ lenChk ctx si n ++ wordPtr ctx .rcx Rs s.arr si ++
+  cd ++ [movRM .rax (mb Rd (ctx.tab.len64 d.arr))] ++ lenChk ctx di n ++ wordPtr ctx .rdx Rd d.arr di ++
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
    i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
@@ -558,11 +556,10 @@ def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n
 def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) : Program :=
   let (cd, Rd) := warrDesc ctx .rdx d
   let e := ctx.tmp 0
-  addChk ctx si n ++ srcLen ctx .rax s ++ [jccL .a errorL] ++ srcBase ctx s ++
-  [i64 (.mov (.reg (rr .rax)) (opnd ctx si)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movRR .rcx .rax] ++
-  cd ++ addChk ctx di n ++
-  [i64 (.cmp (.reg (rr .rax)) (oM (mb Rd (ctx.tab.len64 d.arr)))), jccL .a errorL] ++
-  wordPtr ctx .rdx Rd d.arr di ++
+  [srcLen ctx .rax s] ++ lenChk ctx si n ++
+  [srcBase ctx s, i64 (.mov (.reg (rr .rax)) (opnd ctx si)), i64 (.add (.reg (rr .rax)) (oR .rcx)),
+   movRR .rcx .rax] ++
+  cd ++ [movRM .rax (mb Rd (ctx.tab.len64 d.arr))] ++ lenChk ctx di n ++ wordPtr ctx .rdx Rd d.arr di ++
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
    i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X"),
    .label (ctx.lbl path "L"),
@@ -571,17 +568,20 @@ def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n
    i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c (ctx.lbl path "L"),
    .label (ctx.lbl path "X")]
 
-/-- `x := scan S.u8[i .. e] until c`: `rcx` = the source, `rax` = the position; per byte a load,
-the class table's byte (constant data), and the tests: 7 instructions. -/
+/-- The address `[r15 + rdx + off]` (the class table, indexed by a byte). -/
+abbrev tblAddr (off : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨.rdx, .W8⟩, .int64 (Int64.ofInt off)⟩
+
+/-- `x := scan S.u8[i .. e] until c`: `rcx` = the source, `rax` = the position; per byte the
+byte, its class (constant data) and the tests: 7 instructions. -/
 def scan8Code (ctx : Ctx) (path : Path) (s : BSrc) (i e : Expr) (c : List UInt8) : Program :=
-  [i64 (.mov (.reg (rr .rax)) (opnd ctx e))] ++ srcLen ctx .rax s ++ [jccL .a errorL] ++
-  [i64 (.mov (.reg (rr .rax)) (opnd ctx i)), i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .a errorL] ++
-  srcBase ctx s ++
-  [i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .nc (ctx.lbl path "X"),
+  [srcLen ctx .rdx s, i64 (.mov (.reg (rr .rax)) (opnd ctx e)), i64 (.cmp (.reg (rr .rax)) (oR .rdx)),
+   jccL .a errorL,
+   i64 (.mov (.reg (rr .rax)) (opnd ctx i)), i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .a errorL,
+   srcBase ctx s,
+   i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .nc (ctx.lbl path "X"),
    .label (ctx.lbl path "L"),
    i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   i64 (.movzx (.reg (rr .rdx)) (w' := .W8)
-     (.mem ⟨some (.reg .r15), some ⟨.rdx, .W8⟩, .int64 (Int64.ofInt (ctx.tab.romBase + romIdx c ctx.tab.rom))⟩)),
+   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr (ctx.tab.romBase + romIdx c ctx.tab.rom)))),
    i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz (ctx.lbl path "X"),
    i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .c (ctx.lbl path "L"),
    .label (ctx.lbl path "X")]
@@ -639,8 +639,10 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        movRM .rax (mbi .rcx .rax .W64)]
   | .len64t a t, k => compileE ctx t k ++ tierDesc .rax ++ [movRM .rax (mb .rax (ctx.tab.len64 a))]
   | .ld8x8 s i, k =>
-    compileE ctx i k ++ [movRR .rdx .rax, i64 (.add (.reg (rr .rdx)) (oI 8)), jccL .c errorL] ++
-      srcLen ctx .rdx s ++ [jccL .a errorL] ++ srcBase ctx s ++ [movRM .rax (mbi .rcx .rax .W8)]
+    compileE ctx i k ++
+      [srcLen ctx .rdx s, i64 (.cmp (.reg (rr .rdx)) (oI 8)), jccL .c errorL,
+       i64 (.sub (.reg (rr .rdx)) (oI 8)), i64 (.cmp (.reg (rr .rax)) (oR .rdx)), jccL .a errorL,
+       srcBase ctx s, movRM .rax (mbi .rcx .rax .W8)]
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode

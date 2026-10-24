@@ -37,6 +37,11 @@ def ctlIdx : Expr → Option (List Word)
   | .bin .add (.const k) (.bin .and _ (.const 1)) => some [k, k + 1]
   | _ => none
 
+/-- A block destination allowed by the write set: never `ctl`, both tiers of a tiered one. -/
+def WArr.okW (ctl : ArrId) (A : List ArrId) : WArr → Bool
+  | .plain a => a ≠ ctl && a ∈ A
+  | .tier a _ => a ≠ ctl && a + tierOff ≠ ctl && a ∈ A && a + tierOff ∈ A
+
 /-- Stores only into word arrays of `A` (never `ctl`) and into `ctl` words of `C`, no byte
 stores; calls only into `fs` (global variables: any). -/
 def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) : Stmt → Bool
@@ -45,6 +50,7 @@ def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) :
     if a = ctl then (match ctlIdx i with | some ws => ws.all (· ∈ C) | none => false)
     else a ∈ A
   | .st64t a _ _ _ => a ≠ ctl && a + tierOff ≠ ctl && a ∈ A && a + tierOff ∈ A
+  | .copy64 d .. | .copy8w d .. => d.okW ctl A
   | .seq s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .ite _ s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .while _ s => s.okW ctl A C fs
@@ -143,6 +149,31 @@ theorem st64_fr (hW : WFrame ctl A C Fr) (m₀ : Mem) (a : ArrId) (j v : Word) :
   have := hW.st64
   vcgen [L.st64] <;> grind
 
+theorem WFrame.copy64 (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : ArrId}
+    (ha : a ≠ ctl ∧ a ∈ A) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
+    Fr m₀ (m.copy64 a di s si n) := by
+  induction n generalizing m di si with
+  | zero => exact h
+  | succ n ih => exact ih (hW.st64 _ _ _ _ _ h (.inl ha)) _ _
+
+theorem WFrame.copy8w (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : ArrId}
+    (ha : a ≠ ctl ∧ a ∈ A) (di : Word) (b : Array UInt8) (si : Word) (n : Nat) :
+    Fr m₀ (m.copy8w a di b si n) := by
+  induction n generalizing m di si with
+  | zero => exact h
+  | succ n ih => exact ih (hW.st64 _ _ _ _ _ h (.inl ha)) _ _
+
+theorem warr_okW (w : WArr) (hw : w.okW ctl A = true) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ warr w ⦃fun a s => s = s₀ ∧ a ≠ ctl ∧ a ∈ A; ⊤⦄ := by
+  cases w with
+  | plain a =>
+    simp only [WArr.okW, Bool.and_eq_true, decide_eq_true_eq] at hw
+    vcgen [warr] <;> grind
+  | tier a t =>
+    simp only [WArr.okW, Bool.and_eq_true, decide_eq_true_eq] at hw
+    have := tierA_cases a
+    vcgen [warr, evalE_same t] <;> grind
+
 theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A C Fr)
     (k : Stmt → M Sig) (hk : FrK ctl A C fs Fr k) : FrK ctl A C fs Fr (step p k) := by
   intro st hst m₀
@@ -165,6 +196,17 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
     have := tierA_cases a
     vcgen [step, evalE_same t, evalE_same i, evalE_same e, st64_fr hW m₀] <;> grind
+  | copy64 d di s si n =>
+    simp only [Stmt.okW] at hst
+    have h1 : ∀ m a di s si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy64 a di s si n) :=
+      fun _ _ _ _ _ _ h ha => hW.copy64 h ha _ _ _ _
+    vcgen [step, warr_okW d hst, warr_same s, evalE_same di, evalE_same si, evalE_same n] <;> grind
+  | copy8w d di s si n =>
+    simp only [Stmt.okW] at hst
+    have h1 : ∀ m a di b si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy8w a di b si n) :=
+      fun _ _ _ _ _ _ h ha => hW.copy8w h ha _ _ _ _
+    vcgen [step, warr_okW d hst, evalE_same di, evalE_same si, evalE_same n] <;> grind
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
   | seq s t ihs iht =>
     simp only [Stmt.okW, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind
@@ -269,6 +311,14 @@ theorem GFrame.set64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : A
 theorem GFrame.set8 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : ArrId) (i v : Word) :
     GFrame G m₀ (m.set8 a i v) := h
 
+theorem GFrame.copy64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : ArrId) (di : Word)
+    (s : ArrId) (si : Word) (n : Nat) : GFrame G m₀ (m.copy64 d di s si n) := fun g hg => by
+  rw [Mem.copy64_glob]; exact h g hg
+
+theorem GFrame.copy8w {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (d : ArrId) (di : Word)
+    (b : Array UInt8) (si : Word) (n : Nat) : GFrame G m₀ (m.copy8w d di b si n) := fun g hg => by
+  rw [Mem.copy8w_glob]; exact h g hg
+
 theorem GFrame.setG {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) {g : GVar} (hg : g ∈ G)
     (v : Word) : GFrame G m₀ (m.setG g v) := fun g' hg' => by
   simp only [Mem.setG]
@@ -319,6 +369,12 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
   | st64 a i e => vcgen [step, L.st64, evalE_same i, evalE_same e] <;> grind [GFrame.set64]
   | st64t a t i e =>
     vcgen [step, L.st64, evalE_same t, evalE_same i, evalE_same e] <;> grind [GFrame.set64]
+  | copy64 d di s si n =>
+    vcgen [step, warr_same d, warr_same s, evalE_same di, evalE_same si, evalE_same n] <;>
+      grind [GFrame.copy64]
+  | copy8w d di s si n =>
+    vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [GFrame.copy8w]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
   | seq s t ihs iht =>
     simp only [Stmt.okG, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind
