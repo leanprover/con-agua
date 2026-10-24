@@ -560,7 +560,7 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
   have hbv := vpool_congr hb
   have hbc := pcap_congr hb
   have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, pcap, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
+  simp only [PoolOK, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
   exact hpool
 
 end intern
@@ -588,7 +588,7 @@ theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w
   have hbv := vpool_congr hb
   have hbc := pcap_congr hb
   have htop := hfr.2.1 0 (by decide)
-  simp only [PoolOK, pcap, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
+  simp only [PoolOK, top_rdW, hb, hbv, hbc, htop, hfr.2.2.2, hfr.2.2.1 CTL] at hpool ⊢
   exact hpool
 
 end internStr
