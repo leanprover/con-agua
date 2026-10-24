@@ -9,7 +9,6 @@ on the map's rank); in L, eight functions, the memo banked (`rf_bank_enter`/`rf_
 `MemoBank.lean`). Word models by exec fuel (`rx*W`), the L specs by `vcgen`, then the relational
 lemma by strong induction on the exec fuel. -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -232,7 +231,6 @@ def rxL2 (n : Nat) (f f1 z a2 : Word) : Option (Word × Mem) → Option (Word ×
   | none => none
   | some (x2, m2) => rxL3 a2 x2 (rxGoW n m2 f f1 z)
 end
-
 
 end L.Ind
 
@@ -536,7 +534,6 @@ theorem rxSpec_all (p : Prog) (L : RxLook p) (n : Nat) : RxSpec p n := by
     exact ⟨rxMap_step p L n ih, rxImg_step p L n ih, rxFrame_step p L n ih, rxDs_step p L n ih,
       rxDsGo_step p L n ih, rxGo_step p L n ih, rxNode_step p L n ih, rxRf_step p L n ih⟩
 
-
 end L.Ind
 
 /-! ## The relational side: the banked memo's invariant -/
@@ -586,13 +583,6 @@ theorem RfFr.set_iw (m : Mem) (x v : Word) : RfFr m (m.set64 IW x v) := RfFr.of_
 
 theorem RfFr.ofMknF {m m' : Mem} {args r : List Word} (h : mknF m args = some (r, m')) : RfFr m m' :=
   ⟨_, _, mknF_frame h, by simp [RFM, SPN, AREC, ASLOT, ADER], by simp, by simp, by simp⟩
-
-theorem RfFr.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word}
-    (h : stubM f m args = some (r, m')) : RfFr m m' := by
-  obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hf m m' args r h
-  refine ⟨A, C, hfr, fun hh => ?_, fun hh => ?_, fun hh => ?_, fun hh => ?_⟩
-  · have := hA _ hh; simp [RFM] at this
-  all_goals (have := hC _ hh; simp at this)
 
 theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (h : RfInv m M G g)
     (hf : RfFr m m') : RfInv m' M G g := by

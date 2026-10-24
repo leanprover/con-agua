@@ -14,7 +14,6 @@ carried across the other callees by their write sets (`stubM_memoFrame` for the 
 `fvar_type_d`, `MemFrame [IW] [200]` for the records and `pi_binders`).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -28,12 +27,6 @@ namespace L.Ind
 open L.Arena
 
 /-! ## `noMR` across the callees -/
-
-theorem rec2NoMR_stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word}
-    {mp : Std.HashMap EIdx Bool} (h : stubM f m args = some (r, m')) (hM : noMR m mp) : noMR m' mp := by
-  obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hf m m' args r h
-  exact memoRG_frame noSch noSch_wf bmKey _ A C (fun hm => by have := hA _ hm; simp [noSch, NOM] at this)
-    (fun hm => by have := hC _ hm; simp [noSch] at this) m m' hfr mp hM
 
 theorem rec2NoMR_ftd {m m' : Mem} {args r : List Word} {mp : Std.HashMap EIdx Bool}
     (h : ftdF m args = some (r, m')) (hM : noMR m mp) : noMR m' mp :=

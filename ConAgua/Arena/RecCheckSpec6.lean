@@ -7,7 +7,6 @@ import ConAgua.Arena.StageInst1
 # More refinements of `RecCheck` (lane `indproofs2`, helper `rec`): `targetOutsideInst`
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -266,22 +265,5 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       rw [getD_one] at hdec6
       exact (decHL_length _ hdec6).symm
   all_goals (exfalso; revert hvr; simp only [ViewR, h2']; simp)
-
-/-- **`target_outside_inst` refines `targetOutsideInst`** (through the stub `inst_lp_fast`). -/
-@[refines ConRon.Arena.targetOutsideInst]
-theorem targetOutsideInst_refines (p : Prog) (hp : ToiProg p) (N : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (I us dso dsl : Word) (ds : List EIdx)
-    (hS : StageR dn vis fe s₀.mem a₀) (hI : H I) (hu : H us)
-    (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) s₀.mem ds) (hb : dso.toNat + dsl.toNat < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "target_outside_inst" [vis, I, us, dso, dsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      ToiR r (AM.res (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds) a₀); ⊤⦄ := by
-  refine triple_post (targetOutsideInst_spec p hp stubCall (stubCall_spec p) N s₀ vis I us dso dsl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hd, -⟩ := toiW_ok IlpRd.stub hm hS hI hu hds hb
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
 end L.Ind

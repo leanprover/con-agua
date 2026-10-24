@@ -7,7 +7,6 @@ The formers' constants `cvTa₀ :: cvs.map (·.1)` (`check_block_inds_cv_tas`, `
 D18), `block_shape_with_sort` below the tops, then stage 1: the formers checked, agreed, consed.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -193,47 +192,6 @@ theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') 
   rw [iwN_grow hg (by omega)] at ho
   rw [iwN_grow hg h3] at hl
   exact Nat.le_trans (h o l ho hl) hg.1
-
-/-- `block_shape_with_sort` as a `Sim`: the new record decoded below the tops, its members' slice
-below the top, its recursors' slice below the top if the input's is (the copy's words `+ 2`, `+ 3`). -/
-theorem installWithSortSim {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hpw : p.lookup "pin_word" = some pinWordL)
-    (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort) (n : Nat)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp s : Word}
-    {bs : BlockShape} (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
-    (hsrc : ShapeSrc m pp) (hs : H s) :
-    Sim (callW p n "block_shape_with_sort" [pp, s] m) (bs.withSort (decI s)) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-        DecB (fun m => decBS m (r.headD 0).toNat) m' x ∧ ShapeSrc m' (r.headD 0) ∧
-        (RecsB m pp → RecsB m' (r.headD 0))) := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeWithSort_spec p ha hpw hp n _ pp s) e
-  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  obtain ⟨bs', a', q, hrun, rfl, -, hS', hg, htopq, hcell, hD⟩ :=
-    wsW_ok n dn fe vis m s'.mem a pp s r bs hW hS hs (fun m'' hg => hq.stab (decBS_mono _) m'' hg) hq9
-  refine ⟨bs', a', hrun, hS', hg, by simpa using hD hq, ?_, fun hrb o l h1 h2 => ?_⟩
-  rotate_left
-  · simp only [List.headD_cons] at h1 h2
-    have e2 := hcell 2 (by decide) (by decide) (by decide)
-    have e3 := hcell 3 (by decide) (by decide) (by decide)
-    have hp2 : iwN s'.mem (pp.toNat + 2) = iwN m (pp.toNat + 2) := iwN_grow hg (by omega)
-    have hp3 : iwN s'.mem (pp.toNat + 3) = iwN m (pp.toNat + 3) := iwN_grow hg (by omega)
-    have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, e2]
-    have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, e3]
-    rw [g2, hp2] at h1; rw [g3, hp3] at h2
-    exact Nat.le_trans (hrb o l h1 h2) hg.1
-  intro o l h1 h2
-  simp only [List.headD_cons] at h1 h2
-  have e0 := hcell 0 (by decide) (by decide) (by decide)
-  have e1 := hcell 1 (by decide) (by decide) (by decide)
-  simp only [Nat.add_zero] at e0
-  have hp0 : iwN s'.mem pp.toNat = iwN m pp.toNat := iwN_grow hg (by omega)
-  have hp1 : iwN s'.mem (pp.toNat + 1) = iwN m (pp.toNat + 1) := iwN_grow hg (by omega)
-  have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, e0]
-  have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, e1]
-  rw [g0, hp0] at h1; rw [g1, hp1] at h2
-  exact Nat.le_trans (hsrc o l h1 h2) hg.1
 
 /-- Every member's former constant record lies below the tops (`CVExt`). -/
 def ShapeCV (m : Mem) (q : Word) : Prop :=

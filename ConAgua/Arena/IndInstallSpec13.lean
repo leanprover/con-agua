@@ -9,7 +9,6 @@ record's decoding `CapsAt`: in every array that holds the 15 words and agrees wi
 below its top, `decCaps` reads the twin's `IIndCaps`.
 -/
 
-
 noncomputable section
 
 set_option linter.deprecated false
@@ -498,22 +497,6 @@ theorem icaW_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option C
     exact hlz [0, 0, 0, 0, 0, 0] (c :: c2 :: cs) co cl _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
       (fun _ => rfl)
 
-/-- **`block_caps_at`'s model refines `blockCapsAt`** (through `lv_zero_caps`' stub contract). -/
-theorem icaW_sim {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
-    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp mi isRec : Word} {bs : BlockShape} {b : Bool}
-    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
-    (hb : (isRec != 0) = b) :
-    Sim (icaW p n m pp mi isRec) (ConRon.Arena.blockCapsAt bs mi.toNat b) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x) := by
-  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
-  have h := icaW_simG (T := fun _ => True) hP n hq hsrc hb (mi := mi) fun k => by
-    have h := installSimKeep (p := p) (n := k) (lvZeroCaps_spec dn vis fe _ hrs32) hS
-    rw [hrse] at h
-    exact Sim.mono h fun _ _ _ _ hq => ⟨hq, trivial⟩
-  exact Sim.mono h fun _ _ _ _ hq => hq.1
-
 /-- **`block_caps_at` refines `blockCapsAt`, as a call** (`icaW_simG`: from a refinement of its
 `lv_zero_caps` call, whose extra post `T` is passed through). -/
 theorem blockCapsAt_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
@@ -531,22 +514,5 @@ theorem blockCapsAt_simG {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → O
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (ica_spec p hP.caps k _ pp mi isRec) e
   exact icaW_simG hP k hq hsrc hb hLZ r _ hW
-
-/-- **`block_caps_at` refines `blockCapsAt`** (through `lv_zero_caps`' stub contract): the shape
-record decoded below the tops with its members' slice below the top, `is_rec` a word for the
-twin's `Bool`; the capability record as 15 `IW` words (`CapsAt`), its name lists `EREC` slices. -/
-@[refines ConRon.Arena.blockCapsAt]
-theorem blockCapsAt_refines (p : Prog) (hP : CapsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp mi isRec : Word) (bs : BlockShape)
-    (b : Bool) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
-    (hsrc : ShapeSrc s₀.mem pp) (hb : (isRec != 0) = b) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_caps_at" [pp, mi, isRec]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockCapsAt bs mi.toNat b) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockCapsAt bs mi.toNat b) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      CapsAt dn s'.mem (r.headD 0).toNat (AM.res (ConRon.Arena.blockCapsAt bs mi.toNat b) a₀); ⊤⦄ :=
-  triple_post (ica_spec p hP.caps n s₀ pp mi isRec) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icaW_sim hP n hS hq hsrc hb) hm
-    ⟨hl, hok, hQ⟩
 
 end L.Ind

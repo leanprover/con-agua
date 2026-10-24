@@ -8,7 +8,6 @@ Per member: `check_sum_ctors` (`IndSumSpec13`'s refinement, `installSimSumCtors`
 two results wrapped (`rec2`), recursion as the twin's with both pointers consed (D18).
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -25,34 +24,6 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `check_sum_ctors` as a callee (lane `indproofs2`'s `IndSumSpec13`) -/
-
-/-- **`check_sum_ctors(vis, vis, T, lps.off, lps.len, nP, nIdx, resSort, isProp, large, cvTa,
-ctors.off, ctors.len)` as a `Sim`** on its run (`sctsW_ok`), at one environment (`vis0 = vis`, as
-`check_block_pass` calls it; the stage relation gives `fe.restrictTo vis = fe`): the stored
-constructors and their fields' sorts, two slices of pointers decoded below the tops. Its hypotheses
-are the caller's (`icboW_sim` discharges each from its own). -/
-theorem installSimSumCtors {p : Prog} (hP : SumProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
-    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (T lo ll nP nIdx rs isP lg cvTa co cl : Word) (hT : H T) (hrs : H rs) (lps : List NIdx)
-    (cvv : IConstantVal) (cs : List (IConstantVal × Nat))
-    (hpre : StageR dn vis fe m a ∧ decHL m lo.toNat ll.toNat = some lps ∧
-        lo.toNat + ll.toNat ≤ iwTop m ∧ DecB (fun m => decCVp m cvTa.toNat) m cvv ∧
-        DecB (fun m => decPL m (decCN m) co.toNat cl.toNat) m cs ∧ AbsOK m) :
-    Sim (callW p n "check_sum_ctors" [vis, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, co, cl] m)
-      (checkSumCtors V fe fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvv cs) a
-      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-        PSlR decCN x.1 (r.headD 0) (r.tail.headD 0) m' ∧
-        PSlR decIS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧ AbsOK m') := by
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (sctsW_spec p hP stubCall (stubCall_spec p) n _ vis vis T lo ll nP nIdx rs isP lg cvTa co cl) e
-  obtain ⟨hS, hl, hlb, hcv, hcs, hA⟩ := hpre
-  have hfe : fe.restrictTo vis.toNat = fe := by rw [← hS.1.env.vis]; rfl
-  have h := sctsW_ok (dn := dn) (vis := vis) (fe := fe) vis T lo ll nP nIdx rs isP lg cvTa lps cvv
-    hT hrs n m a co cl cs hS hl hlb hcv hcs hA r s'.mem hW
-  rw [hfe] at h
-  obtain ⟨x, a', h1, hS', hg', hd1, hb1, hd2, hb2, hA'⟩ := h
-  exact ⟨x, a', h1, hS', hg', ⟨hd1, hb1⟩, ⟨hd2, hb2⟩, hA'⟩
 
 /-! ## `check_block_ctors_one` -/
 

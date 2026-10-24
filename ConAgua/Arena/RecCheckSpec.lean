@@ -29,7 +29,6 @@ callee on the branch this round leaves unproven (`target_major_default`'s intern
 spec.
 -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -146,7 +145,6 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
         abF_spec p hab n, ih] <;>
       finish (gen := 20)
 
-
 theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k c e : Word) (r : List Word),
     absPrefW n m k c e = some (r, m') → StageR dn vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
@@ -218,7 +216,6 @@ theorem abstractPrefix_refines (p : Prog) (hp : p.lookup "abstract_prefix" = som
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2, hA'⟩
 
-
 /-! ## `abstract_prefix_list` (the round-1 `while` rewritten as a self-recursion: first element,
 then the rest, then `sl_cons`) -/
 
@@ -284,7 +281,6 @@ theorem abstractPrefixList_spec (p : Prog) (hap : p.lookup "abstract_prefix" = s
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abstractPrefix_spec p hap hab n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
-
 
 theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (rP dso dsl : Word) (r : List Word) (ds : List EIdx),
@@ -356,7 +352,6 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
             simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
             rfl
 
-
 /-- **`abstract_prefix_list` refines `abstractPrefixList`** (through the `abstract1_fast` stub). -/
 @[refines ConRon.Arena.abstractPrefixList]
 theorem abstractPrefixList_refines (p : Prog) (hap : p.lookup "abstract_prefix" = some abstractPrefix)
@@ -379,7 +374,6 @@ theorem abstractPrefixList_refines (p : Prog) (hap : p.lookup "abstract_prefix" 
     rP.toNat_lt hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.abstractPrefixList rP.toNat ds) a₀ a' xs hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd, hA'⟩
-
 
 /-! ## `target_holes` (loop rewritten as recursion: first hole, the rest, `sl_cons`) -/
 
@@ -452,7 +446,6 @@ theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internFVar_spec p hff hfp hif n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
-
 
 theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (tyo tyl base : Word) (r : List Word) (tys : List EIdx),
@@ -531,7 +524,6 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
             simp only [bind, Except.bind, pure, StateT.pure, Except.pure]
             rfl
 
-
 /-- **`target_holes` refines `targetHoles`** (through master's `intern_fvar`). -/
 @[refines ConRon.Arena.targetHoles]
 theorem targetHoles_refines (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
@@ -554,7 +546,6 @@ theorem targetHoles_refines (p : Prog) (hff : p.lookup "fvar_find" = some fvarFi
   obtain ⟨xs, a', hrun, hS', hg, hd, -⟩ := thW_ok dn vis fe n _ _ a₀ tyo tyl base r tys hm hS htys hb hbt hbase
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.targetHoles tys base.toNat) a₀ a' xs hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
-
 
 /-! ## `target_pin_tys` (loop rewritten as recursion) -/
 
@@ -609,86 +600,7 @@ theorem targetPinTys_spec (p : Prog) (hp : p.lookup "target_pin_tys" = some targ
         hcR n "infer_type_core", ih] <;>
       finish (gen := 20)
 
-
 local notation "V" => ConLeche.CheckMode.verified
-
-theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
-    ∀ (m m' : Mem) (a : AState) (vis d xo xl : Word) (r : List Word) (xs : List EIdx),
-    tptW stubCall n m vis d xo xl = some (r, m') → StageR dn vis fe m a →
-    decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
-    xo.toNat + xl.toNat ≤ iwTop m →
-    ∃ a', (ConRon.Arena.targetPinTys V fe d.toNat xs).run a = .ok ((), a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  induction n with
-  | zero => intro m m' a vis d xo xl r xs h; simp [tptW] at h
-  | succ n ih =>
-    intro m m' a vis d xo xl r xs h hS hxs hb hbt
-    by_cases hxl : xl = 0
-    · rw [tptW_nil stubCall n m vis d xo xl hxl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h
-      have hz : xl.toNat = 0 := by rw [hxl]; rfl
-      rw [hz] at hxs
-      simp [decHL, hslice?] at hxs
-      subst hxs
-      exact ⟨a, rfl, hS, IWGrow.refl m⟩
-    · rw [tptW_cons stubCall n m vis d xo xl hxl] at h
-      have hpos : 1 ≤ xl.toNat := by
-        rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
-        · omega
-      obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
-      rw [hc1] at hxs
-      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
-      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
-      rw [UInt64.ofNat_toNat] at hw1
-      have hxl1 : (xl - 1).toNat = c1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
-      have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      rw [hw1] at h
-      cases hi : stubCall n "infer_type_core" [vis, d, w] m with
-      | none => rw [hi] at h; simp [tptK] at h
-      | some rm =>
-        obtain ⟨ri, m1⟩ := rm
-        rw [hi, tptK_some stubCall] at h
-        obtain ⟨t1, a1, hrun1, hS1, hg1, -⟩ := inferTypeCore_spec dn vis fe d w hw2 m m1 a ri hi hS
-        cases hr : tptW stubCall n m1 vis d (xo + 1) (xl - 1) with
-        | none => rw [hr] at h; simp [tptK2] at h
-        | some rm2 =>
-          obtain ⟨r2, m2⟩ := rm2
-          rw [hr, tptK2_some] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨-, rfl⟩ := h
-          have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
-            rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
-          obtain ⟨a2, hrun2, hS2, hg2⟩ := ih m1 m2 a1 vis d (xo + 1) (xl - 1) r2 xs' hr hS1 hxs1
-            (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
-          refine ⟨a2, ?_, hS2, hg1.trans hg2⟩
-          simp only [ConRon.Arena.targetPinTys, StateT.run_bind]
-          rw [← hw3]
-          have e : (decI w : EIdx) = decI w := rfl
-          rw [hrun1]
-          simp only [bind, Except.bind]
-          exact hrun2
-
-
-/-- **`target_pin_tys` refines `targetPinTys .verified`** (through the `infer_type_core` stub).
-Under `StageR`; the census link is `targetPinTys_refinesC`. -/
-theorem targetPinTys_refines (p : Prog) (hp : p.lookup "target_pin_tys" = some targetPinTys) (n : Nat)
-    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis d xo xl : Word)
-    (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
-    (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs) (hb : xo.toNat + xl.toNat < 2 ^ 64)
-    (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pin_tys" [vis, d, xo, xl]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetPinTys V fe d.toNat xs) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (targetPinTys_spec p hp stubCall (stubCall_spec p) n s₀ vis d xo xl) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := tptW_ok dn fe n _ _ a₀ vis d xo xl r xs hm hS hxs hb hbt
-  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ a₀ a' () hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
-
 
 /-! ## `target_pi_doms_with` (loop rewritten as recursion on the binder telescope) -/
 
@@ -772,7 +684,6 @@ theorem targetPiDomsWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
         eView_spec p hv n, i1F_spec p hi1 n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
-
 theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState) (res : Option (List EIdx))
     (htag : ((decE e).tag == ETag.forallE) = true) (hvb : a.store.viewBind (decE e) = some (d, b))
     (h1 : (instantiate1Fast coreWalkFuel b x 0) a = .ok (b', a1))
@@ -785,7 +696,6 @@ theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState
   simp only [bind, StateT.bind, e2, Except.bind]
   simp only [h1, Except.bind, h2]
   cases res <;> rfl
-
 
 theorem viewBind_run_r (h : EIdx) (a : AState) :
     (ConRon.Arena.viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
@@ -926,7 +836,6 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
                 · rw [← hdd]; simpa [decE_eq] using hd3
                 · simpa using Nat.le_of_eq ht3
 
-
 /-- **`target_pi_doms_with` refines `targetPiDomsWith`** (through `e_view`, `instantiate1_fast`
 and `sl_cons`). -/
 @[refines ConRon.Arena.targetPiDomsWith]
@@ -948,7 +857,6 @@ theorem targetPiDomsWith_refines (p : Prog) (hv : p.lookup "e_view" = some eView
   obtain ⟨res, a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n _ _ a₀ xo xl e r xs hm hS he hxs hb hbt
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀ a' res hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
-
 
 /-! ## `er_to_iw` and `cv_lps` under the stage relation -/
 
@@ -1009,7 +917,6 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   · rw [hE]; exact hEs
   · rw [hf.2.2.1 CTL]; exact hc
 
-
 /-- The model of `cv_lps(q)`. -/
 def cvLpsW (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
   erToIwW (n - 1) m (rdW (m.arr64 EREC) (q + 1)) (rdW (m.arr64 EREC) (q + 2))
@@ -1063,7 +970,6 @@ theorem cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   refine ⟨hS', hg, hE, ?_, ht⟩
   · rw [hdec]; rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hs
 
-
 theorem decTM_fields {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m (p + 1) = some M.lvls ∧ ∃ w8, iwN m (p + 8) = some w8 ∧ M.member = decON w8 := by
   simp only [decTM, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -1099,7 +1005,6 @@ theorem targetCtorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       cvLps_spec p ha hc he hcv n, hcR n "inst_lp_fast"] <;>
     finish (gen := 20) [tcW, tcK1, tcK2]
-
 
 theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m m' : Mem)
     (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word) (cR : CallM)
@@ -1169,32 +1074,5 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     rw [hwt]
     refine ⟨cv.type, a, ?_, hS, IWGrow.refl m, by simpa using hwtlt, by simpa using hwtd, AFr.refl _⟩
     simp [ConRon.Arena.targetCtorAt, ht0]; rfl
-
-
-/-- **`target_ctor_at` refines `targetCtorAt`** (member: the stored type; outside: instantiated at the
-major's levels, through `cv_lps` and the `inst_lp_fast` stub). Replaces round 2's `refines_part
-"member"`. -/
-@[refines ConRon.Arena.targetCtorAt]
-theorem targetCtorAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
-    (hcv' : p.lookup "cv_lps" = some cvLps) (hp : p.lookup "target_ctor_at" = some targetCtorAt)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
-    (hM : decTM s₀.mem Mp.toNat = some bigM) (hcv : decCVp s₀.mem c.toNat = some cv)
-    (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
-    (hlpb : (rdW (s₀.mem.arr64 EREC) (c + 2)).toNat = 0 ∨
-      (rdW (s₀.mem.arr64 EREC) (c + 1)).toNat + (rdW (s₀.mem.arr64 EREC) (c + 2)).toNat ≤
-      (s₀.mem.arr64 EREC).size) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_ctor_at" [Mp, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCtorAt bigM cv) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCtorAt bigM cv) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
-      decI (r.headD 0) = AM.res (ConRon.Arena.targetCtorAt bigM cv) a₀; ⊤⦄ := by
-  refine triple_post (targetCtorAt_spec p ha hc he hcv' hp stubCall (stubCall_spec p) n s₀ Mp c) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2, -⟩ := tcW_ok dn vis fe n _ _ a₀ Mp c bigM cv r stubCall IlpRd.stub
-    hS hM hcv hMb hcb hlpb hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.targetCtorAt bigM cv) a₀ a' x hrun
-  exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
 
 end L.Ind

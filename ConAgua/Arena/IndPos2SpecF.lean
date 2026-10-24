@@ -5,7 +5,6 @@ import ConAgua.Arena.StageInst1
 /-! # `IndPos2`'s leaves, continued (lane `indproofs2`, helper `pos`, fork E): `nestHoles`,
 `nestRootCanon`, … -/
 
-
 noncomputable section
 
 set_option experimental.vcgen true
@@ -74,7 +73,6 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     have hlp : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size := by
       rw [hr1, hr2, UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; simpa [erA] using hb
     exact cvLpsW_stage h hS hcv hq (.inr hlp)
-
 
 /-! ## `nest_holes(_go)` refines `nestHoles(.go)` -/
 
@@ -603,27 +601,7 @@ variable (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" = some erCopy)
   (he : p.lookup "er_to_iw" = some erToIw) (hcv : p.lookup "cv_lps" = some cvLps)
 include hl hc he hcv
 
-/-- **`nest_root_canon` refines `nestRootCanon`** (through `inst_lp_fast`'s and `nest_canon_crest`'s
-stubs; the walk memos well formed in the memory at hand, `PosMR`, and again after). -/
-@[refines ConRon.Arena.nestRootCanon]
-theorem nestRootCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
-    (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
-    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv)
-    (hnn : c.nP + c.names.length < 2 ^ 64) (hP : PosMR s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_root_canon" [ctx, cv]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestRootCanon c cvv) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestRootCanon c cvv) a₀) ∧ IWGrow s₀.mem s'.mem ∧
-      decOE s'.mem r (AM.res (ConRon.Arena.nestRootCanon c cvv) a₀) ∧ PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (nestRootCanon_spec p hl hc he hcv stubCall (stubCall_spec p) k s₀ ctx cv) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout, hP', -⟩ := nrcW_ok k dn fe vis _ _ a₀ ctx cv c cvv r stubCall IlpRd.stub hm hS
-    hcx hin hsl hcvv hnn hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout, hP'⟩
-
 end census
-
 
 /-! ## `nest_uniform_ok` refines `nestUniformOk` -/
 
@@ -789,26 +767,6 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
 section census
 variable (p : Prog) (hl : NuLook p)
 include hl
-
-/-- **`nest_uniform_ok` refines `nestUniformOk`** (through `nest_root_canon`'s stubs; the
-walk memos well formed in the memory at hand, `PosMR`, and again after). -/
-@[refines ConRon.Arena.nestUniformOk]
-theorem nestUniformOk_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
-    (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
-    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv)
-    (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR s₀.mem) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 4)) "nest_uniform_ok" [ctx, cv]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestUniformOk c cvv) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestUniformOk c cvv) a₀) ∧ IWGrow s₀.mem s'.mem ∧
-      r = [if AM.res (ConRon.Arena.nestUniformOk c cvv) a₀ then 1 else 0] ∧ PosMR s'.mem; ⊤⦄ := by
-  refine triple_post (nestUniformOk_spec p hl stubCall (stubCall_spec p) k s₀ ctx cv) ?_
-  rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hout, hP', -⟩ := nuW_ok k dn fe vis _ _ a₀ ctx cv c cvv r stubCall
-    (fun _ _ _ _ _ _ _ => IlpRd.stub) hm hS hcx hin hsl hcvv
-    hhi hP
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout, hP'⟩
 
 end census
 
