@@ -269,3 +269,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,shrink,claude-opus-5-5,50,40,"measurement+plan; batch 1: Capstone/DriverLink/Spike deleted, natOpDeps table-driven, DeclNatEq Sim chains, Sim/AFr dedup, loc.py lblk (-2.2k proof lines)"
 2026-10-24,shrink,claude-opus-5-5,70,60,"batch 2: A pilot (l_model cross-file; low yield), dead-code cone (-834), helpers decl/promote/whnf (-2.9k); -3.8k proof lines"
 2026-10-24,shrink,claude-opus-5-5,40,50,"batch 3: program bundles as ProgHas for the six largest (-318); small ones reverted (not worth it); UpTo item infeasible"
+2026-10-24,shrink,claude-opus-5-5,20,40,"batch 4: helpers pos/rec/chk (-5.7k proof lines)"
