@@ -233,11 +233,10 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   rw [grpC4_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hPP
-  obtain ⟨s3, hs3, -, hok3, ⟨hC3, hg3, hd3⟩, hA3⟩ := triple_of_callW (s₀ := ⟨grpPMem s2.mem g o l, Locals.init []⟩)
+  obtain ⟨s3, rfl, -, hok3, ⟨hC3, hg3, hd3⟩, hA3⟩ := triple_of_callW (s₀ := ⟨grpPMem s2.mem g o l, Locals.init []⟩)
     (classRecTysOk_refinesC hkp hApd hCrk henv P.rts n hn _ a2 g (UInt64.ofNat bs.k) _ _ cRo cRl _ _ _ bs.recs cvRis
       rdv.recCls hCP hG hns hrcs (rec3RecsOK_of_decB hrcs (Nat.le_trans hrecsP.2 hgP.1)) (hcv.grow (OMono.decPL
         (fun q => OMono.decCVp q) _ _) hgP) (hrcD.grow (OMono.decNL _ _) hgP) hAP hgPd hrecs2 hcv2 hwRis) c3
-  simp only at hs3 hC3 hg3 hd3 hA3; subst hs3
   have hrun3 := AM.run_of_ok _ a2 hok3
   rw [UInt64.toNat_ofNat_of_lt' hkb] at hrun3 hC3 hd3
   obtain ⟨c10, cvGsP, ⟨hcvGs, hfrG⟩, hF10⟩ := ConRon.Bridge.Inductives.classRecTysOk_spec fe
@@ -378,11 +377,10 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     partsRdIW_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
   rw [er0, er1] at h
   obtain ⟨⟨r4, m4⟩, c4', h⟩ := of_K h rfl
-  obtain ⟨s4, hs4, -, hm4, hmo⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+  obtain ⟨s4, rfl, -, hm4, hmo⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (genRecCheckMinorOk_refines P.csm P.gmo n _ _ _ _ _ rdv.slots ctors
       ((hslD.grow (OMono.decPL decCS_mono _ _) hg13).get (OMono.decPL decCS_mono _ _)) hslb
       (hctD.get (OMono.decPL decCC_lh_mono _ _)) (hS3.lt64 hsp3.2.1) hS3.2.2.2.1) c4'
-  simp only at hs4 hm4 hmo; subst hs4
   by_cases h0 : r4.headD 0 = 0
   · rw [grpB4_bad (h := h0)] at h; cases h
   rw [grpB4_ok (h := h0), hm4] at h
@@ -442,9 +440,8 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   rw [ew5, ew7] at h
   obtain ⟨⟨r6, m6⟩, c6', h⟩ := of_K h rfl
   rw [grpB6_some] at h
-  obtain ⟨s6, hs6, -, a6, hrun6, hS6, hg6, hel6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+  obtain ⟨s6, rfl, -, a6, hrun6, hS6, hg6, hel6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (structElimLevel_stage P.sel n _ a5 _ _ hS5 hel5) c6'
-  simp only at hs6 hrun6 hS6 hg6 hel6; subst hs6
   have hP6 := RcMR.ofClosed hclR (hfRc _ (by decide)) c6' hP5
   rw [hel5', hL] at hrun6
   have hg16 := hg15.trans hg6

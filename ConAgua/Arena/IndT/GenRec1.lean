@@ -74,8 +74,7 @@ theorem classesNfs_refinesLpC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   obtain ⟨mF, c1, hm⟩ := of_K hm rfl
   rw [cnfsK2_some] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
-  obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
-  simp only at hs0 hw0; subst hs0
+  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
   have hA0 := allocW_afr hw0 hA
   obtain ⟨rest, a', run, hSF, hgF, htF, hPF, hAF, ws', hws', hacc'⟩ := cnsW_okC hkp henv P dn fe vis q fto ftl
@@ -264,9 +263,8 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   · rw [grpK2_any (h1 := hk0) (h := h7) (hn := hn0)] at h
     obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
     rw [grpK3_some] at h
-    obtain ⟨s3, hs3, -, hm3, hany, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    obtain ⟨s3, rfl, -, hm3, hany, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
       (genRecCheckAnyNoMember_refines p P.anm n _ mO mL ms hmsD hmsb hS2.2.2.2.1) c3
-    simp only at hs3 hm3 hany; subst hs3
     rw [hm3] at h
     obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
     obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2

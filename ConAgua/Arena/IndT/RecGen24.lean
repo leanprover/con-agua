@@ -49,9 +49,8 @@ theorem cfaFv_afr {p : Prog} (P : CfaProg p) {k : Nat} {m m0 : Mem} {fvo fvl i :
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact AFr.refl _
   · rw [cfaFv_out (h := hi)] at h
-    obtain ⟨s0, hs0, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    obtain ⟨s0, rfl, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (internBVar_spec p P.bf P.bp P.ib k _ 0) h
-    simp only at hs0 hb; subst hs0
     exact binternW_afr hb
 
 section sims
@@ -139,9 +138,8 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   -- `fvar_type_d`
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   rw [cfaK2_some] at h
-  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
+  obtain ⟨s1, rfl, -, hw1⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
     (ftdF_spec p P.ad k _ [r0.headD 0]) c1
-  simp only at hs1 hw1; subst hs1
   obtain ⟨fty, a1, run1, hS1, hg1, hH1, hD1⟩ := ftdF_ok dn vis fe (r0.headD 0) hH0 _ _ a0 r1 hw1 hS0
   have hP1 := hP0.fr (MFr.of_frame (ftdF_frame hw1) (by simp) (by simp))
   have hA1 := ftdF_afr hw1 hA0
@@ -150,11 +148,10 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   have hC1 := hC0.of_pstep hS1 hA1 (PStep.refl hC0.check.state)
   -- `strip_pis`
   obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+  obtain ⟨s2, rfl, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (stripPis_refines p P.strip dn vis fe (UInt64.ofNat tl) (r1.headD 0) hH1 k _ a0 hS1) c2
   obtain ⟨s2', hs2', -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (stripPis_specW p P.strip k _ (UInt64.ofNat tl) (r1.headD 0)) c2
-  simp only at hs2 hS2 hg2 hd2 hs2' hw2; subst hs2
   rw [hs2'] at hw2
   have hP2 := hP1.fr (MFr.ofStripF (stripF_of_TW hw2))
   have hA2 := stripF_afr (stripF_of_TW hw2) hA1
@@ -180,9 +177,8 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   -- `target_major_at`
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [cfaK4_some] at h
-  obtain ⟨s3, hs3, -, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+  obtain ⟨s3, rfl, -, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na k _ mo ml (UInt64.ofNat t)) c3
-  simp only at hs3 hw3; subst hs3
   obtain ⟨tm, a3, run3, hS3, hg3, hTM⟩ := rec3TMA_sim dn vis fe k s2.mem a0 mo ml (UInt64.ofNat t) ms hS2
     (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg02) hmsb _ hw3
   have hP3 := hP2.fr (tmaW_mfr hw3)

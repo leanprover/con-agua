@@ -449,8 +449,7 @@ theorem classesNfs_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.E
   obtain ⟨mF, c1, hm⟩ := of_K hm rfl
   rw [cnfsK2_some] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
-  obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
-  simp only at hs0 hw0; subst hs0
+  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
   have hA0 := allocW_afr hw0 hA
   obtain ⟨rest, a', run, hSF, hgF, htF, hPF, hAF, ws', hws', hacc'⟩ := cnsW_okC hkp henv P dn fe vis q fto ftl

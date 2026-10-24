@@ -134,9 +134,8 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   cases n with
   | zero => rw [callW_zero] at c1; cases c1
   | succ n =>
-  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s1, rfl, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (grp_spec p P.prep n _ vis pp nested pO pL tO tL rd mO mL cO cL bO bL) c1
-  simp only at hs1 hw1; subst hs1
   obtain ⟨G, cvGs, a1, hrunP, hC1, hg1, hG1, hns1, -, hcg1, hA1, hP1, c1', gP, cvGsP, hgP, hcvGs, hfrG, henvR⟩ :=
     grpW_okC hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hw1 hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA
       hkeep hsh hparP htblP hrdP hmsP hcvTP hblkP hT hMsT hfRc
@@ -149,10 +148,9 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   -- the pushes
   obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   rw [gckK2_some] at h
-  obtain ⟨s2, hs2, -, hS2, hg2, hpv2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+  obtain ⟨s2, rfl, -, hS2, hg2, hpv2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classFeR_refines p P.cfr (n + 1) _ a1 dn vis fe pp _ _ _ _ bs cvGs rdv.recCls hS1 (hbs.1.grow (decBS_mono _) hg1)
       hcg1 (hrcD.grow (OMono.decNL _ _) hg1)) c2
-  simp only at hs2 hS2 hg2 hpv2; subst hs2
   have hP2 := RcMR.ofClosed hclR (hfRc _ (by decide)) c2 hP1
   have hA2 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c2 hA1
   -- the twin's pushed index, and the constructors' view inside it
@@ -180,9 +178,8 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   -- the flush into the rule-less recursors' environment
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [gckK3_some] at h
-  obtain ⟨s3, hs3, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+  obtain ⟨s3, rfl, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c3
-  simp only at hs3 hfok hfm; subst hs3
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hP2
   obtain ⟨hS3, hg3⟩ := flush_stage hS2 hfok
   rw [← hfm] at hS3 hg3
@@ -207,11 +204,10 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have henvR' := henvR (fun c => c)
   obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
   rw [gckK4_some] at h
-  obtain ⟨s4, hs4, -, hok4, ⟨hC4, hg4, hd4⟩, hA4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
+  obtain ⟨s4, rfl, -, hok4, ⟨hC4, hg4, hd4⟩, hA4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (classRecsRulesOk_refinesC hkp hApd P.crr (n + 1) (by omega) _ _ henvR' vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G
       rdv.recCls cvGs hC3 (hG1.grow (decCG_mono _) hg23) hns1 (hrcD.grow (OMono.decNL _ _) hg13) hrcb hcg3
       (hS3.lt64 hcg3.1) hA3 hgP hcvGs hie) c4
-  simp only at hs4 hC4 hg4 hd4 hA4; subst hs4
   have hP4 := RcMR.ofClosed hclR (hfRc _ (by decide)) c4 hP3
   have hrun4 := AM.run_of_ok _ _ hok4
   obtain ⟨c12', -⟩ := ConRon.Bridge.Inductives.classRecsRulesOk_spec feR vis.toNat
@@ -224,18 +220,16 @@ theorem gckW_simC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   -- the pops
   obtain ⟨⟨r5, m5⟩, c5, h⟩ := of_K h rfl
   rw [gckK5_some] at h
-  obtain ⟨s5, hs5, -, hS5, hg5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+  obtain ⟨s5, rfl, -, hS5, hg5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (genRecCheckPopAll_refines P.eix P.ers P.ept P.gpa (n + 1) _ a4 dn (r2.headD 0) feR _ _ prevs hC4.stage
       (hpv2.grow (hg3.trans hg4))) c5
-  simp only at hs5 hS5 hg5; subst hs5
   have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) c5 hP4
   have hA5 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c5 hA4
   -- the flush back
   obtain ⟨⟨r6, m6⟩, c6, h⟩ := of_K h rfl
   rw [gckK6_some] at h
-  obtain ⟨s6, hs6, -, hfok6, hfm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+  obtain ⟨s6, rfl, -, hfok6, hfm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c6
-  simp only at hs6 hfok6 hfm6; subst hs6
   have hP6 := RcMR.ofClosed hclR (hfRc _ (by decide)) c6 hP5
   obtain ⟨hS6, hg6⟩ := flush_stage hS5 hfok6
   have hA6 : AbsOK s6.mem := by rw [hfm6]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA5

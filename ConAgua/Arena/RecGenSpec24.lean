@@ -367,9 +367,8 @@ theorem cfaFv_ok {k : Nat} {m m0 : Mem} {a : AState} {i : Word} {r0 : List Word}
     rw [← hw3]
     simp [ConRon.Arena.exprGetD, hit, decHL_length m hfv]; rfl
   · rw [cfaFv_out (h := hi)] at h
-    obtain ⟨s0, hs0, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    obtain ⟨s0, rfl, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (internBVar_spec p P.bf P.bp P.ib k _ 0) h
-    simp only at hs0 hb; subst hs0
     obtain ⟨a', hrun, hS', hg⟩ := internBVar_stage hS 0 hb
     have hH := binternW_hw _ a hS.1.arena.1.bvar _ _ _ hb
     refine ⟨a', ?_, hH, hS', hg, hP.fr (MFr.of_frame (binternW_frame _ _ _ _ hb) (by simp [BREC, BSLOT]) (by simp))⟩

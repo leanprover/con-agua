@@ -159,9 +159,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   -- `target_major_at`
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   rw [cxoK1_some] at h
-  obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s1, rfl, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na n _ mo ml c) c1
-  simp only at hs1 hw1; subst hs1
   obtain ⟨tm, a1, run1, hS1, hg1, hTM⟩ := rec3TMA_sim dn vis fe n m a mo ml c ms hS hms hmsb _ hw1
   dsimp only at hS1 hg1 hTM
   have hP1 := hP.fr (tmaW_mfr hw1)
@@ -227,9 +226,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   -- `class_minor_slot`
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [cxoK3_some] at h
-  obtain ⟨s3, hs3, -, hm3, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+  obtain ⟨s3, rfl, -, hm3, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (classMinorSlot_spec p P.cmsg P.cms n _ rd c (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) c3
-  simp only at hs3 hm3 hw3; subst hs3
   rw [hm3] at h
   have hsz5' : (s2.mem.arr64 IW).size + 5 < 2 ^ 64 := by rw [hk2 IW, hk1 IW]; exact hsz5
   obtain ⟨s, ihs, hhits, -, hihs⟩ := cms_decB n hw3 (hR.grow (decCR_mono _) hg12) hnmH hsz5'
@@ -251,10 +249,9 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
     apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
   rw [hnF2, hq4, hq1, hsum] at h
   obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
-  obtain ⟨s4, hs4, -, hw4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+  obtain ⟨s4, rfl, -, hw4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (opfF_spec p hOpf (n + 1) _ [UInt64.ofNat cA'.2, rdW (s2.mem.arr64 IW) (e0w + 4),
       UInt64.ofNat (bs.nP + bs.k)]) c4
-  simp only at hs4 hw4; subst hs4
   obtain ⟨ox, a4, run4, ⟨hS4, hg4, hd4⟩, hA4⟩ := opfF_ok dn vis fe _ _ (UInt64.ofNat (bs.nP + bs.k)) htyH
     _ _ a1 r4 hw4 ⟨hS2, hA2⟩
   have hP4 := hP2.fr (MFr.ofOpfF hw4)
@@ -346,10 +343,9 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
     have e2 : (UInt64.ofNat ca + 2 : Word).toNat = ca + 2 := by rw [UInt64.toNat_add]; simp <;> omega
     rw [rdW_er_grow hgm6 (by rw [e2]; omega), rdW_er_grow hgm6 (by rw [e1]; omega), hkm6 EREC]
     have := hlp; simp only [CtorLp] at this; rw [hcam] at this; exact this
-  obtain ⟨s7, hs7, -, hw7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
+  obtain ⟨s7, rfl, -, hw7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (targetCtorAt_spec p P.ha P.erc P.eri P.cvl P.tca (realCall p) (realCall_spec p) n _ (r1.headD 0)
       (UInt64.ofNat ca)) c7
-  simp only at hs7 hw7; subst hs7
   obtain ⟨t7, a7, run7, hS7, hg7, ht7H, ht7D, hA7f⟩ := tcW_ok dn vis fe n _ _ a6 (r1.headD 0) (UInt64.ofNat ca)
     tm cA'.1 r7 (realCall p) (IlpRd.realC hIlpf hC6) hS6 ((hTM.grow (decTM_mono _) hg26).get (decTM_mono _))
       (by rw [hcaT]; exact (hcv.grow (OMono.decCVp _) hg26).get (OMono.decCVp _)) hmw13 (by rw [hcaT]; omega)
@@ -367,9 +363,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hsz7 := hS7.2.2.2.1
   obtain ⟨-, hds7, -⟩ := decTM_slices (hTM.grow (decTM_mono _) (hg26.trans hg7)) hsz7
   obtain ⟨⟨r8, m8⟩, c8, h⟩ := of_K h rfl
-  obtain ⟨s8, hs8, -, hw8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
+  obtain ⟨s8, rfl, -, hw8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (instPisWith_spec p P.hv P.ipw P.hi1 (n + 1) _ _ _ _) c8
-  simp only at hs8 hw8; subst hs8
   obtain ⟨ox, a8, run8, hS8, hg8, hd8⟩ := instW_ok0 (n + 1) hw8 hS7 ht7H hds7
   have hP8 := hP7.fr (instW_mfr _ _ _ _ _ _ _ hw8)
   have hA8 := instW_afr _ _ _ _ _ _ _ hw8 hA7
