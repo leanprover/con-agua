@@ -40,53 +40,11 @@ def NatW (r : List Word) : Prop := r.headD 0 = 0 ∨ r.headD 0 = 1 ∨ r.headD 0
 /-- `(k, 0, 0)`: `3` none, else `some (k != 0)`. -/
 def decNat (r : List Word) : Option Bool := if r.headD 0 = 3 then none else some (r.headD 0 != 0)
 
-section lnK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-def lnK4 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => some (if r.headD 0 ≠ 0 then 1 else 0, 0, 0, m)
-
-def lnK2 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then lnK4 (callW p n "defeq" [mode, vis, d, a, r.tail.headD 0] m)
-    else some (3, 0, 0, m)
-
-def lnK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then lnK4 (callW p n "defeq" [mode, vis, d, r.tail.headD 0, b] m)
-    else lnK2 p n mode vis d a (callW p n "reduce_nat" [mode, vis, d, b] m)
-
-variable (r : List Word) (m : Mem)
-theorem lnK4_s : lnK4 (some (r, m)) = some (if r.headD 0 ≠ 0 then 1 else 0, 0, 0, m) := rfl
-theorem lnK2_t (h : r.headD 0 ≠ 0) : lnK2 p n mode vis d a (some (r, m)) =
-    lnK4 (callW p n "defeq" [mode, vis, d, a, r.tail.headD 0] m) := by
-  simp only [lnK2, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem lnK2_f (h : r.headD 0 = 0) : lnK2 p n mode vis d a (some (r, m)) = some (3, 0, 0, m) := by
-  simp only [lnK2, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem lnK1_t (h : r.headD 0 ≠ 0) : lnK1 p n mode vis d a b (some (r, m)) =
-    lnK4 (callW p n "defeq" [mode, vis, d, r.tail.headD 0, b] m) := by
-  simp only [lnK1, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem lnK1_f (h : r.headD 0 = 0) : lnK1 p n mode vis d a b (some (r, m)) =
-    lnK2 p n mode vis d a (callW p n "reduce_nat" [mode, vis, d, b] m) := by
-  simp only [lnK1, h, ne_eq, not_true_eq_false, ↓reduceIte]
-end lnK
-
-theorem lazyNat_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lazy_nat" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ lnK1 p n mode vis d a b (callW p n "reduce_nat" [mode, vis, d, a] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.nat]
-  simp only [callFn, lazyNatL]
-  sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "reduce_nat",
-      callW_spec p n "defeq"] <;>
-    finish [lnK1_t, lnK1_f, lnK2_t, lnK2_f, lnK4_s, St.setLocs_mem']
+/-- **`lazy_nat` is its model `lnW`** (generated). -/
+l_model lazyNat_spec (p : Prog) (hp : LazyProg p)
+  fns [hp.nat ↦ lnW tuple]
+  specs [callW_spec p n "reduce_nat", callW_spec p n "defeq"]
+  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
 
 theorem decNat_ite (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) else 0) = r.headD 0) :
     decNat r = some (w != 0) := by
@@ -106,11 +64,12 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
       M eb NatW := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lazyNat_spec p hp n s₀ mode vis d a b)
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (lazyNat_spec p hp (n + 1) s₀ mode vis d a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
   unfold natT
+  rw [lnW.arm1] at hW
   cases hc1 : callW p n "reduce_nat" [mode, vis, d, a] s.mem with
   | none => rw [hc1] at hW; cases hW
   | some q =>
@@ -121,7 +80,7 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
   -- a `defeq` run, then `pure (some v)`
   have dq : ∀ (x y : Word) (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
       HW x → HW y →
-      lnK4 (callW p n "defeq" [mode, vis, d, x, y] m₂) =
+      lnW.k_defeq p (callW p n "defeq" [mode, vis, d, x, y] m₂) =
         some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
       CoreRef ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y) >>= fun v =>
         pure (some v)) a₂ decNat dn m₂ vis fe M₂ eb r s'.mem NatW := by
@@ -130,7 +89,7 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     | none => rw [hc2] at h; cases h
     | some q =>
     obtain ⟨r₂, m₃⟩ := q
-    rw [hc2, lnK4_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
+    rw [hc2, lnW.k_defeq.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
     obtain ⟨g1, g2, g3, hm⟩ := h
     have e₂ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
       ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d x y hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
@@ -142,11 +101,11 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
       · exact .inr (.inl rfl)
       · exact .inl rfl)
   by_cases h1 : r₁.headD 0 ≠ 0
-  · rw [lnK1_t (h := h1)] at hW
+  · rw [lnW.k_reduce_nat.arm1 (hc1 := h1)] at hW
     rw [decOptR_some h1]
     exact dq _ _ _ _ _ hS₁ e₁.2.2.2.2 hb hW
   have h1' : r₁.headD 0 = 0 := by simpa using h1
-  rw [lnK1_f (h := h1')] at hW
+  rw [lnW.k_reduce_nat.arm2 (hc1 := h1')] at hW
   rw [decOptR_none h1']
   cases hc2 : callW p n "reduce_nat" [mode, vis, d, b] m₁ with
   | none => rw [hc2] at hW; cases hW
@@ -157,11 +116,11 @@ theorem lazyNat_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     (hc.reduceNat n hn F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb hk) hc2
   refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
   by_cases h2 : r₂.headD 0 ≠ 0
-  · rw [lnK2_t (h := h2)] at hW
+  · rw [lnW.k_reduce_nat_2.arm1 (hc1 := h2)] at hW
     rw [decOptR_some h2]
     exact dq _ _ _ _ _ hS₂ ha e₂.2.2.2.2 hW
   have h2' : r₂.headD 0 = 0 := by simpa using h2
-  rw [lnK2_f (h := h2'), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  rw [lnW.k_reduce_nat_2.arm2 (hc1 := h2'), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨g1, g2, g3, hm⟩ := hW
   rw [decOptR_none h2', ← hm]
   exact coreRef_ret hS₂ (by simp only [decNat, ← g1, ↓reduceIte]) (.inr (.inr g1.symm))
