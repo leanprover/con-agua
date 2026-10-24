@@ -426,7 +426,7 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   have hlen : (m₁.len64 SPN).toNat = (m₀.arr64 SPN).size := by
     rw [← hsz₁]; exact L.Front.toNat_ofNat_size _ (by rw [hsz₁]; exact hspn)
   have hE : ILWEnv m₁ { a₀ with caches := { a₀.caches with readNC := X, readLsC := Y } }
-      (bs.headD 0) pc (lsO m₀ (tierW us) (idxW us)) (lsL m₀ (tierW us) (idxW us)) ks ids vs :=
+      (bs.headD 0) pc (tfld m₀ LS (tierW us) (idxW us) 0) (tfld m₀ LS (tierW us) (idxW us) 1) ks ids vs :=
     ⟨hk₁, by omega, by rw [hpool₁]; exact sl₁, by rw [htopm₁]; exact t₁, hdl'⟩
   unfold rflK at hW
   rcases hfc with ⟨hfk, hpl, hq, cks, hcks⟩ | ⟨hfk, lvls, pins, hnest, hfv, hfvd⟩
@@ -441,8 +441,8 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
     have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
     rw [hlen] at u1'
-    cases h3 : callW p n "slp_go" [qo, qc, spTop m₁, bs.headD 0, pc, lsO m₀ (tierW us) (idxW us),
-        lsL m₀ (tierW us) (idxW us)] m₁ with
+    cases h3 : callW p n "slp_go" [qo, qc, spTop m₁, bs.headD 0, pc, tfld m₀ LS (tierW us) (idxW us) 0,
+        tfld m₀ LS (tierW us) (idxW us) 1] m₁ with
     | none => rw [h3] at hW; cases hW
     | some q =>
     obtain ⟨xs, m₂⟩ := q
@@ -481,8 +481,8 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
     have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
     rw [hlen] at u1'
-    cases h3 : callW p n "sle_go" [fvo, fvc, spTop m₁, bs.headD 0, pc, lsO m₀ (tierW us) (idxW us),
-        lsL m₀ (tierW us) (idxW us)] m₁ with
+    cases h3 : callW p n "sle_go" [fvo, fvc, spTop m₁, bs.headD 0, pc, tfld m₀ LS (tierW us) (idxW us) 0,
+        tfld m₀ LS (tierW us) (idxW us) 1] m₁ with
     | none => rw [h3] at hW; cases hW
     | some q =>
     obtain ⟨xs, m₂⟩ := q

@@ -93,10 +93,10 @@ theorem viewN_anon (hg : h >>> 28 = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW 
 
 /-- The scratch view of a `str` record: its prefix word and a slice holding the string. -/
 theorem viewN_str (hg : h >>> 28 = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
-    ∃ s, (viewN (decI h)).run a = .ok (.str (decI (nsQ m (tierW h) (idxW h))) s, a) ∧
-      SliceOK m (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h)) ∧
-      sliceL (m.arr64 POOL) (nsO m (tierW h) (idxW h)).toNat (nsL m (tierW h) (idxW h)).toNat =
-        strWords s ∧ (nsQ m (tierW h) (idxW h)).toNat < 2 ^ 32 := by
+    ∃ s, (viewN (decI h)).run a = .ok (.str (decI (tfld m NSTR (tierW h) (idxW h) 0)) s, a) ∧
+      SliceOK m (tfld m NSTR (tierW h) (idxW h) 1) (tfld m NSTR (tierW h) (idxW h) 2) ∧
+      sliceL (m.arr64 POOL) (tfld m NSTR (tierW h) (idxW h) 1).toNat (tfld m NSTR (tierW h) (idxW h) 2).toNat =
+        strWords s ∧ (tfld m NSTR (tierW h) (idxW h) 0).toNat < 2 ^ 32 := by
   have e1 : ((decI h : NIdx).tag = 1) := (decI_tag_eq h hh 1 (by decide)).mpr (by rw [hg]; rfl)
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.nstr (tierW h) (tierW_le h)
     (idxW h) (by simpa [cntC, nstrCS] using hc)

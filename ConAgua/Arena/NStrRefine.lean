@@ -95,11 +95,11 @@ abbrev nsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 +
 /-- Node `i` of tier `t` holds `str k.pre k.s`: the prefix's handle word, a slice below the pool
 top holding the string's bytes, and the hash. -/
 def NsRecRel (m : Mem) (t i : Word) (k : StrNode) : Prop :=
-  nsQ m t i = k.pre.word.toUInt64 ∧
-  (nsO m t i).toNat + (nsL m t i).toNat ≤ m.top.toNat ∧
-  sliceL (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s ∧
+  tfld m NSTR t i 0 = k.pre.word.toUInt64 ∧
+  (tfld m NSTR t i 1).toNat + (tfld m NSTR t i 2).toNat ≤ m.top.toNat ∧
+  sliceL (m.arr64 POOL) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat = strWords k.s ∧
   tfld m NSTR t i 3 =
-    nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat)
+    nstrHashW (tfld m NSTR t i 0) (hashN (m.arr64 POOL) (tfld m NSTR t i 1).toNat (tfld m NSTR t i 2).toNat)
 
 /-- `NsRecRel` in the raw words (inside the store library). -/
 theorem NsRecRel_raw (m : Mem) (t i : Word) (k : StrNode) :

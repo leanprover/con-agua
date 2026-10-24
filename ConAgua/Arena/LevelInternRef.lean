@@ -593,8 +593,8 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
     rcases hp with ⟨h1, h2⟩ | ⟨h1, ps, h2, hps⟩
     · exact .inl ⟨h1, h2⟩
     · exact .inr ⟨h1, ps, h2, hps.of_arr herec₂⟩
-  cases hS : substPWW SPN POOL EREC (n + 1) m₂ swd so sc (spTop m) pc (lsO m (tierW us) (idxW us))
-      (lsL m (tierW us) (idxW us)) with
+  cases hS : substPWW SPN POOL EREC (n + 1) m₂ swd so sc (spTop m) pc (tfld m LS (tierW us) (idxW us) 0)
+      (tfld m LS (tierW us) (idxW us) 1) with
   | none => rw [hS] at hW; simp [capsK2] at hW
   | some r =>
   obtain ⟨x₃, m₃⟩ := r

@@ -245,8 +245,8 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hlsn, hbnd, hsl⟩ := lsNodeW_store hR hu hv
   rw [hlsn] at h
   simp only [List.headD_cons, List.tail_cons] at h
-  generalize lsO m (tierW us) (idxW us) = o at *
-  generalize lsL m (tierW us) (idxW us) = l at *
+  generalize tfld m LS (tierW us) (idxW us) 0 = o at *
+  generalize tfld m LS (tierW us) (idxW us) 1 = l at *
   rcases hal : allocW m l with _ | ⟨q, m1⟩ <;> simp only [hal, reduceCtorEq] at h
   rcases hcp : poolCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h

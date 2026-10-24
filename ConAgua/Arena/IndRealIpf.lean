@@ -73,7 +73,7 @@ def ipfS (m : Mem) (p : Word) : Option Word :=
   else if p >>> 28 ≠ 1 then some 0
   else if tierW p ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m NSTR (tierW p) ≤ idxW p then none
-  else some (ipfStrW m (nsO m (tierW p) (idxW p)) (nsL m (tierW p) (idxW p)))
+  else some (ipfStrW m (tfld m NSTR (tierW p) (idxW p) 1) (tfld m NSTR (tierW p) (idxW p) 2))
 
 /-- `is_proj_fn_shape`'s body. -/
 def ipfW (m : Mem) (n : Word) : Option Word :=

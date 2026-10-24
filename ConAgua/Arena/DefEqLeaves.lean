@@ -898,9 +898,9 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   have hi : idxW h < cntC lsCS m (tierW h) := by simpa [cntC, lsCS] using hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) hi
-  have hlen : x.us.length = (lsL m (tierW h) (idxW h)).toNat := by
-    have := sliceL_length (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat
-      (lsL m (tierW h) (idxW h)).toNat
+  have hlen : x.us.length = (tfld m LS (tierW h) (idxW h) 1).toNat := by
+    have := sliceL_length (m.arr64 POOL) (tfld m LS (tierW h) (idxW h) 0).toNat
+      (tfld m LS (tierW h) (idxW h) 1).toNat
     rw [hrel.2.1] at this; simpa [lsWords] using this
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
     rw [isPersistent_decI h hh]; rfl

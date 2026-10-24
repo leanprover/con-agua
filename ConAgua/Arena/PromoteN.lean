@@ -65,8 +65,8 @@ def pnArmW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
     else hd1 (callW p n "pi_nanon" [] m)
   else if h >>> 28 = 1 then
     if tcnt m NSTR (tierW h) ≤ idxW h then none
-    else pnStrK p n (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h))
-      (callW p n "promote_n" [f, nsQ m (tierW h) (idxW h)] m)
+    else pnStrK p n (tfld m NSTR (tierW h) (idxW h) 1) (tfld m NSTR (tierW h) (idxW h) 2)
+      (callW p n "promote_n" [f, tfld m NSTR (tierW h) (idxW h) 0] m)
   else if h >>> 28 = 2 then
     if tcnt m NNUM (tierW h) ≤ idxW h then none
     else pnNumK p n (nnU m (tierW h) (idxW h)) (callW p n "promote_n" [f, nnQ m (tierW h) (idxW h)] m)
@@ -108,8 +108,8 @@ theorem pnArmW_anon (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.
 
 theorem pnArmW_str (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hg : h >>> 28 = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
-    pnArmW p n m f h = pnStrK p n (nsO m (tierW h) (idxW h)) (nsL m (tierW h) (idxW h))
-      (callW p n "promote_n" [f, nsQ m (tierW h) (idxW h)] m) := by
+    pnArmW p n m f h = pnStrK p n (tfld m NSTR (tierW h) (idxW h) 1) (tfld m NSTR (tierW h) (idxW h) 2)
+      (callW p n "promote_n" [f, tfld m NSTR (tierW h) (idxW h) 0] m) := by
   rw [pnArmW]; simp only [hh, hv, hg, hc, ↓reduceIte]; simp
 
 theorem pnArmW_num (hh : ¬ 4294967295 < h) (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
