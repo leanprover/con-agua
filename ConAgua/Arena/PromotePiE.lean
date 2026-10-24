@@ -254,11 +254,12 @@ theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
+    have hpoolv := vpool_congr hpool
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLit_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "lit_match")
       (hp.get "lit_find") (hp.get "lit_push") (hp.get "intern_lit") n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
       (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
-    obtain ⟨hok, hD₁, hres⟩ := internLit_D _ (onA false a) (hD.flag 0) o l _ hsl₀ (by rw [hpool]; exact hn) _ hI
-    rw [hpool] at hok hD₁ hres
+    obtain ⟨hok, hD₁, hres⟩ := internLit_D _ (onA false a) (hD.flag 0) o l _ hsl₀ (by rw [hpoolv]; exact hn) _ hI
+    rw [hpoolv] at hok hD₁ hres
     exact ⟨hok, hD₁, hres, consInternM_pw litCS_wf (hD.flag 0).1.lit.2 (flag0 hD) hI,
       (consInternM_frame litCS_wf hI).mono (by simp [litCS, litCSk, litSch]) (by simp [litCS, litCSk, litSch])⟩)
     (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
@@ -273,12 +274,13 @@ theorem piLitStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl 
   pi_gen p n hD (fun _ _ hcall => by
     have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
+    have hpoolv := vpool_congr hpool
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLitStr_spec p (hp.get "lit_hash") (hp.get "limbs_eq")
       (hp.get "lit_match_str") (hp.get "lit_find_str") (hp.get "lit_push_str") (hp.get "intern_lit_str") n
       ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
       (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
     obtain ⟨hok, hD₁, hres⟩ := internLitStr_D _ (onA false a) (hD.flag 0) o l _ hsl₀ s
-      (by rw [hpool]; exact hk) _ hI
+      (by rw [hpoolv]; exact hk) _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw litStrCS_wf (litR_str.mp (hD.flag 0).1.lit.2) (flag0 hD) hI,
       (consInternM_frame litStrCS_wf hI).mono (by simp [litStrCS, litCSk, litSch])
         (by simp [litStrCS, litCSk, litSch])⟩)

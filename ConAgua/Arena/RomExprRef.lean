@@ -842,11 +842,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       have hP1 : ((litWordMem mem (UInt64.ofNat k)).arr64 POOL)[mem.top.toNat]? = some (UInt64.ofNat k) := by
         simp only [litWordMem, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide), Mem.arr64_set64_same]
         simp [Array.set!_eq_setIfInBounds, hroom']
+      have hP1v : (vpool (litWordMem mem (UInt64.ofNat k)))[mem.top.toNat]? = some (UInt64.ofNat k) := by
+        rw [vpool_getNat? _ _ (by have := hpool.2.2.1; omega), hP1]; rfl
       obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D (litWordMem mem (UInt64.ofNat k)) a hA1 h mem' mem.top 1
         (by simp only [SliceOK, litWordMem, htop1, hn1]; simp)
-        (by intro _; simp [hP1]; exact hk0) hI
-      have hpv : pv ((litWordMem mem (UInt64.ofNat k)).arr64 POOL) mem.top.toNat (UInt64.toNat 1) = k := by
-        simp [pv, hP1, wt, hkN]
+        (by intro _; simp [hP1v]; exact hk0) hI
+      have hpv : pv (vpool (litWordMem mem (UInt64.ofNat k))) mem.top.toNat (UInt64.toNat 1) = k := by
+        simp [pv, hP1v, wt, hkN]
       rw [hpv] at ok hR res
       have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
       have hg' := frame_grows hg
