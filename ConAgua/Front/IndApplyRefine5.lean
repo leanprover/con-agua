@@ -152,10 +152,7 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
     have hnn : rdW (m.arr64 IFL) (fo + pos) = wd m₀ IFL (fo.toNat + pos.toNat) := by
       rw [wd_eq, hfp, hI.2 _ hf1]
     rw [hnn] at h
-    cases hc : ctorW n m (wd m₀ IFL (fo.toNat + pos.toNat)) jj tt np fuel cno cn co with
-    | none => rw [hc, wK_none] at h; cases h
-    | some c =>
-    rw [hc, wK_some] at h
+    rcases hc : ctorW n m (wd m₀ IFL (fo.toNat + pos.toNat)) jj tt np fuel cno cn co with _ | c <;> simp only [hc, wK, reduceCtorEq] at h
     -- the constructor, against the twin
     have hCN' : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32 := fun k hk => by
       rw [hI.2 _ (by omega)]; exact hCN k hk
@@ -251,11 +248,7 @@ theorem orderGoW_twin : ∀ (n : Nat) (m m' : Mem) (ti pos : Word),
     rw [htt] at h
     have hmono := psum_mono m₀ to (ti.toNat + 1) tn.toNat (by omega)
     rw [psum_succ] at hmono
-    cases hin : orderInW n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with
-    | none => rw [hin, allocK_none] at h; cases h
-    | some q =>
-    obtain ⟨q, m₁⟩ := q
-    rw [hin, allocK_some] at h
+    rcases hin : orderInW n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with _ | ⟨q, m₁⟩ <;> simp only [hin, allocK, reduceCtorEq] at h
     have ht : (to + 11 * ti).toNat = to.toNat + 11 * ti.toNat := by
       have := widx to 11 ti 0 (by simp; omega); simpa using this
     have hc4 : wd m₀ IFR ((to + 11 * ti).toNat + 4) = wd m₀ IFR (to.toNat + 11 * ti.toNat + 4) := by rw [ht]

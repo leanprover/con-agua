@@ -412,10 +412,6 @@ theorem sim_fnBody (t : NTree)
   simp only [fnBody, List.append_assoc, List.singleton_append] at hc hepi
   have hbrk : ctx.brk = ctx.endL := by rw [hctx]; rfl
   have hfix : ∀ r, r ∉ allocRegs → ∀ x, ctx.alloc.lookup x ≠ some r := fun r hr => not_lookup_fixed hok hr
-  have hn_rsp : Reg64.rsp ∉ allocRegs := by decide
-  have hn_rbp : Reg64.rbp ∉ allocRegs := by decide
-  have hn_r14 : Reg64.r14 ∉ allocRegs := by decide
-  have hn_r15 : Reg64.r15 ∉ allocRegs := by decide
   generalize hsp : s4.regs.rsp.toNat = sp at *
   -- the body proper, from the state `s6` with the locals in place
   have H : ∀ s6 : MachineData, s6.regs.rsp = s4.regs.rsp → s6.regs.rbp = s4.regs.rbp →
@@ -470,15 +466,13 @@ theorem sim_fnBody (t : NTree)
       exact this
     · intro σ2 d2 hr hI2 hS2
       rw [hbrk]; exact hZ σ2 d2 (.inr hr) hI2 hS2
-    · intro v σ2 d2 hr hm2 hS2 hv
-      exact hepi' v σ2 d2 (hrun _ _ hr) hm2 hS2 (by rw [← hnr]; exact hv)
+    · exact fun v σ2 d2 hr hm2 hS2 hv => hepi' v σ2 d2 (hrun _ _ hr) hm2 hS2 (by rw [← hnr]; exact hv)
     · intro d2 ⟨e, hr, hne⟩ hG2
       refine herr d2 ⟨e, ?_, hne⟩ ⟨hG2.rbp.trans r2, hP6.trans (htop ▸ hG2.mem)⟩
       rw [invoke_eq vs hlk, callFn_run]
       have : (exec p n fd.body).run { σ with loc := Locals.init vs } = .error e := hr
       rw [this]
-    · intro d2 hG2
-      exact hexh d2 ⟨hG2.rbp.trans r2, hP6.trans (htop ▸ hG2.mem)⟩
+    · exact fun d2 hG2 => hexh d2 ⟨hG2.rbp.trans r2, hP6.trans (htop ▸ hG2.mem)⟩
     · intro Fw hFw
       have e := htF Fw hFw
       refine ⟨e, fun vs' σ2 d2 ra hr hm2 hT2 hO hra => ?_⟩
@@ -511,10 +505,10 @@ theorem sim_fnBody (t : NTree)
     intro s6 hO6 hall6 hz6 hzr6 hk6
     have hfx : ∀ r, r ∉ allocRegs → s6.regs.get64 r = s5.regs.get64 r := fun r hr =>
       hk6 r fun x _ _ => hfix r hr x
-    have e1 : s6.regs.rsp = s4.regs.rsp := (UInt64.toBitVec_inj.mp (hfx _ hn_rsp)).trans q1
-    have e2 : s6.regs.rbp = s4.regs.rbp := (UInt64.toBitVec_inj.mp (hfx _ hn_rbp)).trans q2
-    have e3 : s6.regs.r14 = s4.regs.r14 := (UInt64.toBitVec_inj.mp (hfx _ hn_r14)).trans q3
-    have e4 : s6.regs.r15 = s4.regs.r15 := (UInt64.toBitVec_inj.mp (hfx _ hn_r15)).trans q4
+    have e1 : s6.regs.rsp = s4.regs.rsp := (UInt64.toBitVec_inj.mp (hfx .rsp (by decide))).trans q1
+    have e2 : s6.regs.rbp = s4.regs.rbp := (UInt64.toBitVec_inj.mp (hfx .rbp (by decide))).trans q2
+    have e3 : s6.regs.r14 = s4.regs.r14 := (UInt64.toBitVec_inj.mp (hfx .r14 (by decide))).trans q3
+    have e4 : s6.regs.r15 = s4.regs.r15 := (UInt64.toBitVec_inj.mp (hfx .r15 (by decide))).trans q4
     have hD6 : s6.dmem = s4.dmem ∨ (Only sp (sp + 8 * fd.nlocals) s4.dmem s6.dmem ∧ fd.nlocals ≤ F') := by
       rcases hframe with hall | hle
       · left
@@ -645,10 +639,8 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
         · simp [Reg64s.set64_rsp]; exact hS2.r15
         · simp [Reg64s.set64_rsp]; exact hS2.r14
         · exact ⟨hrax.1.set64 (r := .rsp) (by simp) _, hrax.2⟩
-    · intro d2 he hG2
-      exact hKerr d2 he ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
-    · intro d2 hG2
-      exact hKexh d2 ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
+    · exact fun d2 he hG2 => hKerr d2 he ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
+    · exact fun d2 hG2 => hKexh d2 ⟨hG2.rbp, by simpa [top] using hG2.mem⟩
     · intro Fw h; simp [fnCtx, hleaf'] at h
     · intro _ _ _ _ h; simp [fnCtx, hleaf'] at h
   -- a frame of `F` words, after the stack check

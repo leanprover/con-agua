@@ -222,15 +222,10 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   | zero => simp [fpW] at hW
   | succ n =>
   rw [fpW_step] at hW
-  cases h1 : envFindW m nm vis with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, fpK1_some] at hW
+  rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
   · rw [if_pos hf] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpT, hfind]⟩
   rw [if_neg hf] at hW
@@ -266,20 +261,12 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   obtain ⟨cvT, hshape⟩ := fp_pass hsz hk hciA hkw hc
   have hcvP := fpShape_cv hci hshape
   -- the pin's constant
-  cases h2 : callW p n "rom_ci" [id] m1 with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, fpK2_some] at hW
+  rcases h2 : callW p n "rom_ci" [id] m1 with _ | ⟨r2, m2⟩ <;> simp only [h2, fpK2, reduceCtorEq] at hW
   obtain ⟨pci, a2, hrun2, hS2, hg2, hpci⟩ := h.red.rom.ci dn vis fe id hid n m1 a r2 m2 hS h2
   have hpciP : decCI (erecP m2) dn (r2.headD 0).toNat = some pci :=
     ArrExt.decCI (truncM_erecP m2) hpci
   -- its constant value
-  cases h3 : callW p n "ci_to_cv" [r2.headD 0] m2 with
-  | none => rw [h3] at hW; cases hW
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, fpK3_some] at hW
+  rcases h3 : callW p n "ci_to_cv" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, fpK3, reduceCtorEq] at hW
   obtain ⟨s3, hs3, -, hok3, hS3, hg3, hcv3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (ciToCv_refines p h.red.canon dn vis fe (r2.headD 0) pci n ⟨m2, Locals.init []⟩ a2
       ⟨hS2, hpciP⟩) h3
@@ -338,107 +325,59 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
   simp only [bind_assoc]
   congr 1; funext pn
   split
-  · congr 1; funext en; congr 1; funext ea
-    split
-    · rfl
-    · congr 1; funext x1
-      cases h1 : fe.find? x1 with
-      | none => simp [h1]
-      | some c1 =>
-        cases c1 with
-        | indInfo v1 caps1 =>
-          simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
+  congr 1; funext en; congr 1; funext ea
+  split
+  rfl
+  rotate_left
+  congr 1; funext cn
+  split
+  rotate_left
+  rfl
+  all_goals
+    congr 1; funext x1
+    cases h1 : fe.find? x1 with
+    | none => simp [h1]
+    | some c1 =>
+      cases c1
+      all_goals try (simp [h1, fpShape]; done)
+      simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
+      congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+      split
+      · rfl
+      congr 1; funext x2
+      cases h2 : fe.find? x2 with
+      | none => simp [h2]
+      | some c2 =>
+        cases c2
+        all_goals try (simp [h2, fpShape]; done)
+        simp only [h2, Option.bind_some, fpShape, true_and, bind_assoc, pure_bind]
+        split
+        · rename_i heq
+          simp only [Option.some.injEq, IConstantInfo.ctorInfo.injEq] at heq
+          obtain ⟨rfl, rfl, rfl⟩ := heq
+          simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc, pure_bind]
           congr 1; funext c; congr 1; funext cv'; congr 1; funext b
           split
           · rfl
-          · congr 1; funext x2
-            cases h2 : fe.find? x2 with
-            | none => simp [h2]
-            | some c2 =>
-              cases c2 with
-              | ctorInfo v np nf =>
-                by_cases e : np = 2 ∧ nf = 2
-                · obtain ⟨rfl, rfl⟩ := e
-                  simp only [h2, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
-                    show (2 : Word).toNat = 2 from rfl, and_self, ↓reduceIte]
-                  congr 1; funext c; congr 1; funext cv'; congr 1; funext b
-                  split
-                  · rfl
-                  · congr 1; funext x3
-                    cases h3 : fe.find? x3 with
-                    | none => simp [h3]
-                    | some c3 =>
-                      cases c3 with
-                      | recInfo v mi rp rules =>
-                        by_cases e : mi = 4 ∧ rp = 4
-                        · obtain ⟨rfl, rfl⟩ := e
-                          simp only [h3, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
-                            show (4 : Word).toNat = 4 from rfl, and_self, ↓reduceIte]
-                          congr 1
-                        · have e' : ¬ (mi = (4 : Word).toNat ∧ rp = (4 : Word).toNat) := e
-                          simp only [h3, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
-                          split
-                          · rename_i heq; simp at heq; omega
-                          · simp
-                      | _ => simp [h3, fpShape]
-                · have e' : ¬ (np = (2 : Word).toNat ∧ nf = (2 : Word).toNat) := e
-                  simp only [h2, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
-                  split
-                  · rename_i heq; simp at heq; omega
-                  · simp
-              | _ => simp [h2, fpShape]
-        | _ => simp [h1, fpShape]
-  · congr 1; funext cn
-    split
-    · congr 1; funext x1
-      cases h1 : fe.find? x1 with
-      | none => simp [h1]
-      | some c1 =>
-        cases c1 with
-        | indInfo v1 caps1 =>
-          simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
-          congr 1; funext c; congr 1; funext cv'; congr 1; funext b
-          split
-          · rfl
-          · congr 1; funext x2
-            cases h2 : fe.find? x2 with
-            | none => simp [h2]
-            | some c2 =>
-              cases c2 with
-              | ctorInfo v np nf =>
-                by_cases e : np = 1 ∧ nf = 1
-                · obtain ⟨rfl, rfl⟩ := e
-                  simp only [h2, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
-                    show (1 : Word).toNat = 1 from rfl, and_self, ↓reduceIte]
-                  congr 1; funext c; congr 1; funext cv'; congr 1; funext b
-                  split
-                  · rfl
-                  · congr 1; funext x3
-                    cases h3 : fe.find? x3 with
-                    | none => simp [h3]
-                    | some c3 =>
-                      cases c3 with
-                      | recInfo v mi rp rules =>
-                        by_cases e : mi = 3 ∧ rp = 3
-                        · obtain ⟨rfl, rfl⟩ := e
-                          simp only [h3, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
-                            show (3 : Word).toNat = 3 from rfl, and_self, ↓reduceIte]
-                          congr 1
-                        · have e' : ¬ (mi = (3 : Word).toNat ∧ rp = (3 : Word).toNat) := e
-                          simp only [h3, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
-                          split
-                          · rename_i heq; simp at heq; omega
-                          · simp
-                      | _ => simp [h3, fpShape]
-                · have e' : ¬ (np = (1 : Word).toNat ∧ nf = (1 : Word).toNat) := e
-                  simp only [h2, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
-                  split
-                  · rename_i heq; simp at heq; omega
-                  · simp
-              | _ => simp [h2, fpShape]
-        | _ => simp [h1, fpShape]
-    · rfl
-
+          congr 1; funext x3
+          cases h3 : fe.find? x3 with
+          | none => simp [h3]
+          | some c3 =>
+            cases c3
+            all_goals try (simp [h3, fpShape]; done)
+            simp only [h3, Option.bind_some, fpShape, true_and, bind_assoc, pure_bind]
+            split
+            · rename_i heq
+              simp only [Option.some.injEq, IConstantInfo.recInfo.injEq] at heq
+              obtain ⟨rfl, rfl, rfl, rfl⟩ := heq
+              simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc, pure_bind]
+              congr 1
+            · rename_i hne
+              rw [if_neg (by rintro ⟨rfl, rfl⟩; exact hne _ _ rfl)]
+              simp
+        · rename_i hne
+          rw [if_neg (by rintro ⟨rfl, rfl⟩; exact hne _ rfl)]
+          simp
 
 theorem clausePT_of_fp {fe : IFEnv} {nm : NIdx} {k ca cb : Word} {T : AM IConstantVal}
     {a a' : AState} {b : Bool} (h : FpT fe nm k ca cb T a b a') :

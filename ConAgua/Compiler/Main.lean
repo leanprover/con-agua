@@ -76,8 +76,7 @@ theorem sim_loadArgs [Host] {G : Layout} (tab : Tab) (hT : tab = G.tab) (vs : Li
   intro rs
   induction rs with
   | nil =>
-    intro i k s _ _ _ _ _ _ _ hK
-    exact hK s rfl (fun _ _ => rfl) (fun j h => absurd h (by simp))
+    exact fun i k s _ _ _ _ _ _ _ hK => hK s rfl (fun _ _ => rfl) (fun j h => absurd h (by simp))
   | cons r rs ih =>
     intro i k s hc h15 hrs hnd hlen hoff hv hK
     simp only [loadArgs] at hc
@@ -282,8 +281,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
   intro s8 h8sp h8bp h815 h814 h8si h8m
   -- facts about the argument cells (in the table, so outside both stacks)
   have hcell : ∀ i, i < args.length → ∀ j < 8, G.InTab (G.T + G.tab.args.toNat + 8 * i + j) := by
-    intro i hi j hj
-    exact ⟨by omega, by omega⟩
+    exact fun i hi j hj => ⟨by omega, by omega⟩
   have hcellS : ∀ i, i < args.length → G.T + G.tab.args.toNat + 8 * i + 8 ≤ G.lo ∨
       G.hi ≤ G.T + G.tab.args.toNat + 8 * i := by
     intro i hi

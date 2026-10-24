@@ -431,8 +431,7 @@ theorem sim_zeroVars {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = [])
   intro xs
   induction xs with
   | nil =>
-    intro k σ s _ _ _ hI h
-    exact ev_congr (h s hI rfl (Pres.refl _ _)) (by simp)
+    exact fun k σ s _ _ _ hI h => ev_congr (h s hI rfl (Pres.refl _ _)) (by simp)
   | cons x xs ih =>
     intro k σ s hc hxs hoff hI h
     simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at hxs
@@ -508,8 +507,7 @@ theorem sim_zeroRes (Q : MachineState → Prop) :
   intro n
   induction n with
   | zero =>
-    intro i k s _ _ h
-    exact h s rfl rfl rfl rfl rfl (fun j h1 h2 => absurd h2 (by omega)) (fun _ _ _ => rfl)
+    exact fun i k s _ _ h => h s rfl rfl rfl rfl rfl (fun j h1 h2 => absurd h2 (by omega)) (fun _ _ _ => rfl)
   | succ n ih =>
     intro i k s hc hn h
     simp only [zeroRes] at hc
@@ -601,9 +599,7 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
           rw [hR2.keep r hne.1 hne.2.1 hne.2.2.1 hnr]; exact hr1
         | succ i => simpa using hregs i (by simpa using hi)
       · simp only [List.length_append]; omega
-    · intro s2 he hR2
-      obtain ⟨x, hx⟩ := he
-      exact herr s2 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩
+    · exact fun s2 ⟨x, hx⟩ hR2 => herr s2 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩
         ((hR1.trans hR2).mono fun r' h => h.elim (fun h => h ▸ List.mem_cons_self)
           (fun h => List.mem_cons_of_mem _ h))
 
@@ -667,9 +663,7 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
           have := hregs j (by simpa using hj)
           simpa [show i + 1 + j = i + (j + 1) by omega] using this
       · simp only [List.length_append]; omega
-    · intro s2 he hR2
-      obtain ⟨x, hx⟩ := he
-      exact herr s2 ⟨x, by simp [evalArgsP, hv0, hx]; rfl⟩
+    · exact fun s2 ⟨x, hx⟩ hR2 => herr s2 ⟨x, by simp [evalArgsP, hv0, hx]; rfl⟩
         ((hR1.trans hR2).mono fun r' h => h.elim (fun h => ⟨i, Nat.le_refl _, by simp only [List.length_cons]; omega, h⟩)
           (fun ⟨j, h1, h2, h3⟩ => ⟨j, by omega, by simp only [List.length_cons]; omega, h3⟩))
 
@@ -723,12 +717,8 @@ theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < 
             rw [h2rsp] at this
             rw [← this]; congr 2; omega
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
-      · intro s3 herr3 hE3
-        obtain ⟨x, hx⟩ := herr3
-        exact herr s3 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩ (hE2.trans hE3 (by omega))
-    · intro s1 herr1 hE1
-      obtain ⟨x, hx⟩ := herr1
-      exact herr s1 ⟨x, by simp [evalArgsP, hx]; rfl⟩ hE1
+      · exact fun s3 ⟨x, hx⟩ hE3 => herr s3 ⟨x, by simp [evalArgsP, hv, hx]; rfl⟩ (hE2.trans hE3 (by omega))
+    · exact fun s1 ⟨x, hx⟩ hE1 => herr s1 ⟨x, by simp [evalArgsP, hx]; rfl⟩ hE1
 
 omit hTab in
 theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.lo ≤ t) (hx : t ≤ x)
@@ -845,9 +835,7 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
         (hI1.mem.only_res hG hO (fun x a b => Layout.inRes_of a b)) ((hE1.spost hI.lo).trans ?_)
         ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega), by omega⟩)
       exact ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩
-    · intro s1 herr hE1
-      obtain ⟨y, hy⟩ := herr
-      refine hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
+    · exact fun s1 ⟨y, hy⟩ hE1 => hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalArgsP_error hy]; simp⟩
         (hE1.spost hI.lo).gpost
 
 omit [Host] hG hTab in

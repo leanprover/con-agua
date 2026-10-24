@@ -71,11 +71,7 @@ theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {f
   | zero => simp [selW] at h
   | succ n =>
   simp only [selW] at h
-  cases h1 : pinAtW m k with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, selK_some] at h
+  rcases h1 : pinAtW m k with _ | ⟨r1, m1⟩ <;> simp only [h1, selK, reduceCtorEq] at h
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
   have e1 : r1.headD 0 = pinW m (1 + k.toNat) := by rw [hr1]; rfl
   have hbeq : ((decI c : NIdx) == decI (pinW m (1 + k.toNat))) = decide (c = pinW m (1 + k.toNat)) :=
@@ -83,13 +79,8 @@ theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {f
   have tail : ∀ w, (w = i ∨ w = j) → selK2 (callW p n f [w] m) = some (r, m') →
       ∃ x a', (T w.toNat).run a = .ok (x, a') ∧ KeepPost dn vis fe dec m m' a' r x := by
     intro w hw h
-    cases h2 : callW p n f [w] m with
-    | none => rw [h2] at h; cases h
-    | some rm2 =>
-    obtain ⟨r2, m2⟩ := rm2
-    rw [h2, selK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    rcases h2 : callW p n f [w] m with _ | ⟨r2, m2⟩ <;> simp only [h2, selK2, reduceCtorEq] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨x, a', hrun, hS', hg, hd⟩ := hT w hw n m a r2 m2 hS h2
     exact ⟨x, a', hrun, hS', hg, hdec _ _ _ hd⟩
   rw [hm1] at h
@@ -248,11 +239,8 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
     (constE_spec p hp n ⟨m, Locals.init []⟩ nm) h
   subst hs'
   simp only [constEW] at hW
-  cases h1 : callW p n "pin_word" [52] m with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1] at hW
+  rcases h1 : callW p n "pin_word" [52] m with _ | ⟨r1, m1⟩ <;> rw [h1] at hW
+  · cases hW
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (pinWord_specW p hpw n ⟨m, Locals.init []⟩ 52) h1
   subst hs1
@@ -262,13 +250,9 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
   have hF := hS.1.pins.full hflag
   have hz : rdW (m.arr64 PINS) 52 = pinW m 52 := by simp [rdW, pinW]
   simp only [List.headD_cons, hz] at hW
-  cases h2 : callW p n "intern_const" [nm, pinW m 52] s1.mem with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, rfl⟩ := hW
+  rcases h2 : callW p n "intern_const" [nm, pinW m 52] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at hW
+  · cases hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (internConst_spec p hcf hcp hic n ⟨s1.mem, Locals.init []⟩ nm (pinW m 52)) h2
   rw [hs2, ← hm1] at hW2
@@ -378,11 +362,7 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   | zero => simp [rcvW] at h
   | succ n =>
   rw [rcvW_step] at h
-  cases h1 : pinAtW s₀.mem 43 with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, rcvK1_some] at h
+  rcases h1 : pinAtW s₀.mem 43 with _ | ⟨r1, m1⟩ <;> simp only [h1, rcvK1, reduceCtorEq] at h
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
   subst hm1
   generalize s₀.mem = m1 at *
@@ -416,11 +396,7 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
       simpa using hrun
   obtain ⟨rfl, hnl, hrun2⟩ := hname
   -- `const_e`
-  cases h3 : callW p n "const_e" [r2.headD 0] m2 with
-  | none => rw [h3] at h; cases h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, rcvK3_some] at h
+  rcases h3 : callW p n "const_e" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, rcvK3, reduceCtorEq] at h
   obtain ⟨a3, hrun3, hS3, hg3⟩ := constE_stage hp.ce hp.pw hp.cf hp.cp hp.ic h3 hS hnl
   by_cases hb : 4294967296 ≤ r3.headD 0
   · rw [if_pos hb] at h; cases h
@@ -428,13 +404,8 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   have ht : (r3.headD 0).toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
   -- `intern_fvar`
-  cases h4 : fvinternW m3 0 (r3.headD 0) with
-  | none => rw [h4] at h; cases h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, rcvK4_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases h4 : fvinternW m3 0 (r3.headD 0) with _ | ⟨r4, m4⟩ <;> simp only [h4, rcvK4, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a4, hrun4, hS4, hg4⟩ := internFVar_stage hS3 0 (r3.headD 0) ht h4
   have hrun : (reduceCertVar (decI c)).run a₀ = .ok (decE r4, a4) := by
     rw [reduceCertVar_eq]

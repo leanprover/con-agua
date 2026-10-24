@@ -123,14 +123,8 @@ theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp
   have r2 : rdW (m.arr64 IFL) (rp + 2) = wd m IFL (rp.toNat + 2) := by
     rw [rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h
-  cases hn : lkW m NID (wd m IFL rp.toNat) with
-  | none => rw [hn, wK_none] at h; cases h
-  | some nh =>
-  rw [hn, wK_some] at h
-  cases he : lkW m EID (wd m IFL (rp.toNat + 2)) with
-  | none => rw [he, wK_none] at h; cases h
-  | some eh =>
-  rw [he, wK_some] at h
+  rcases hn : lkW m NID (wd m IFL rp.toNat) with _ | nh <;> simp only [hn, wK, reduceCtorEq] at h
+  rcases he : lkW m EID (wd m IFL (rp.toNat + 2)) with _ | eh <;> simp only [he, wK, reduceCtorEq] at h
   simp only [Option.some.injEq] at h
   subst h
   obtain ⟨n1, n2⟩ := lkR_name hD a hn
@@ -168,10 +162,7 @@ theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List R
     rename_i hlj
     have hjl : j.toNat < rules.length := by
       rw [← hl]; exact Classical.byContradiction fun h' => hlj (UInt64.le_iff_toNat_le.mpr (by omega))
-    cases h1 : ruleW m (lo + 11 * j) (o + 3 * j) with
-    | none => rw [h1, mK_none] at h; cases h
-    | some m₁ =>
-    rw [h1, mK_some] at h
+    rcases h1 : ruleW m (lo + 11 * j) (o + 3 * j) with _ | m₁ <;> simp only [h1, mK, reduceCtorEq] at h
     have hw1 : (lo + 11 * j).toNat = lo.toNat + 11 * j.toNat := w_addmul lo j 11 (by decide) (by omega)
     have hw3 : (o + 3 * j).toNat = o.toNat + 3 * j.toNat := w_addmul o j 3 (by decide) (by omega)
     obtain ⟨R1, R2, R3, R4⟩ := ruleW_twin a hL (by rw [hw3]; exact hRF _ hjl) (by omega)
@@ -208,20 +199,11 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
   | zero => simp [rulesW] at h
   | succ n =>
   simp only [rulesW] at h
-  split at h
-  · cases h
-  rename_i hbig
+  split at h; cases h; rename_i hbig
   have hl32 : l.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (UInt64.le_iff_toNat_le.mpr (by simp; omega))
-  cases h1 : allocW m DLP (11 * l) with
-  | none => rw [h1, allocK_none] at h; cases h
-  | some r =>
-  obtain ⟨lo1, m₁⟩ := r
-  rw [h1, allocK_some] at h
-  cases h2 : rulesGoW n m₁ lo1 o l 0 with
-  | none => rw [h2, sliceK_none] at h; cases h
-  | some m₂ =>
-  rw [h2, sliceK_some] at h
+  rcases h1 : allocW m DLP (11 * l) with _ | ⟨lo1, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
+  rcases h2 : rulesGoW n m₁ lo1 o l 0 with _ | m₂ <;> simp only [h2, sliceK, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
   have h11 : (11 * l).toNat = 11 * rules.length := by
@@ -291,11 +273,9 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   | zero => simp [recRW] at h
   | succ n =>
   simp only [recRW] at h
-  cases h1 : allocW m DLP 9 with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨q1, m₁⟩ := x
-  rw [h1] at h; simp only [allocK] at h
+  rcases h1 : allocW m DLP 9 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
+  · cases h
+  simp only [allocK] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
   simp only [show (9 : Word).toNat = 9 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
@@ -311,11 +291,7 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   have r10 : rdW (m₁.arr64 IFR) (r + 10) = wd m IFR (r.toNat + 10) := by
     rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r9, r10] at h
-  cases h2 : rulesW n (m₁.set64 DLP q1 5) (wd m IFR (r.toNat + 9)) (wd m IFR (r.toNat + 10)) with
-  | none => rw [h2, pmK_none] at h; cases h
-  | some x =>
-  obtain ⟨⟨lo, ln⟩, m₃⟩ := x
-  rw [h2, pmK_some] at h
+  rcases h2 : rulesW n (m₁.set64 DLP q1 5) (wd m IFR (r.toNat + 9)) (wd m IFR (r.toNat + 10)) with _ | ⟨⟨lo, ln⟩, m₃⟩ <;> simp only [h2, pmK, reduceCtorEq] at h
   have hifl1 : (m₁.set64 DLP q1 5).arr64 IFL = m.arr64 IFL := Pq.other IFL (by decide) (by decide)
   obtain ⟨Q1, Q2, Q3, Q4, Q5, Q6, Q7⟩ := rulesW_twin a hL1 fL (fun k hk => (fR k hk).congr hifl1)
     (by omega) h2
@@ -328,12 +304,8 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   have s2 : rdW (m₃.arr64 IFR) (r + 2) = wd m IFR (r.toNat + 2) := by
     rw [hifr3, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [s0, s1, s2] at h
-  cases h3 : cvW b.data m₃ (q1 + 1) (wd m IFR r.toNat) (wd m IFR (r.toNat + 1)) (wd m IFR (r.toNat + 2)) with
-  | none => rw [h3, mK_none] at h; cases h
-  | some m₄ =>
-  rw [h3, mK_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases h3 : cvW b.data m₃ (q1 + 1) (wd m IFR r.toNat) (wd m IFR (r.toNat + 1)) (wd m IFR (r.toNat + 2)) with _ | m₄ <;> simp only [h3, mK, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hq1 : (q1 + 1).toNat = q1.toNat + 1 := widx2 _ _ (by simp; omega)
   have ht3 : topN m₃ DLP = topN m DLP + 9 + 11 * rc.rules.length := by rw [Q5, ht1]
   have hs3 : (m₃.arr64 DLP).size = (m.arr64 DLP).size := by rw [Q2.size DLP, hs1]

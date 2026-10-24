@@ -70,14 +70,9 @@ theorem kExpW_twin {n : Nat} {m m' : Mem} {a : AState} (hR : ArenaR m a)
     exact ⟨MemFrame.refl _ _ _, fun _ => rfl, fun _ h2 => absurd h2 hc⟩
   rename_i hc
   have hc' : rdW (m.arr64 IFR) (to + 4) = 1 := Classical.byContradiction hc
-  cases hp : piResW n m fuel (rdW (m.arr64 IFL) tyt) with
-  | none => rw [hp, keK1_none] at h; cases h
-  | some r =>
-  rw [hp, keK1_some] at h
+  rcases hp : piResW n m fuel (rdW (m.arr64 IFL) tyt) with _ | r <;> simp only [hp, keK1, reduceCtorEq] at h
   have hrun := piResW_ok m a hR n fuel _ r hp
-  split at h
-  · cases h
-  rename_i hne
+  split at h; cases h; rename_i hne
   obtain ⟨v, hv, hvr⟩ := view_ok' m a hR r hne
   split at h
   · rename_i h2
@@ -95,16 +90,8 @@ theorem kExpW_twin {n : Nat} {m m' : Mem} {a : AState} (hR : ArenaR m a)
     rw [hv']; congr 1
     exact (viewR_sort hr' h2').1
   obtain ⟨L, hL⟩ := denoteL_of_sort hok hview
-  cases hl : lhMkW (m.set64 CTL 192 0) 0 0 0 with
-  | none => rw [hl, keK2_none] at h; cases h
-  | some q =>
-  obtain ⟨z, m₂⟩ := q
-  rw [hl, keK2_some] at h
-  cases he : equivW n m₂ ((eViewW m r).tail.headD 0) z with
-  | none => rw [he, keK3_none] at h; cases h
-  | some q =>
-  obtain ⟨x, m₃⟩ := q
-  rw [he, keK3_some] at h
+  rcases hl : lhMkW (m.set64 CTL 192 0) 0 0 0 with _ | ⟨z, m₂⟩ <;> simp only [hl, keK2, reduceCtorEq] at h
+  rcases he : equivW n m₂ ((eViewW m r).tail.headD 0) z with _ | ⟨x, m₃⟩ <;> simp only [he, keK3, reduceCtorEq] at h
   -- both levels are related on `m₂`
   have hR₁ : ArenaR (m.set64 CTL 192 0) a := ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
   obtain ⟨hx1, hx2, -⟩ := lhMkW_ext hl
