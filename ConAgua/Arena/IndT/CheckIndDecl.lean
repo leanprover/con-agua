@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec42
+import ConAgua.Arena.IndRealPartsC2
 import ConAgua.Arena.IndT.Block
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndRealAbsT
@@ -146,7 +147,9 @@ theorem cidW_okC (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   obtain ⟨r4, m4⟩ := q4
   rw [c4, cidK4_some] at h
   obtain ⟨s4, hs4, -, hok4, hR4, hS4, hg4⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (blockParts_refines p P.parts n ⟨m1, Locals.init []⟩ a1 dn vis fe w o l block hS1 hblk1)
+    (blockParts_refinesC p hkp.closed hLC P.parts n ⟨m1, Locals.init []⟩ a1 w o l block
+      (StageC.of_parts hS1 k1.ok hM1.2.2.1 (dnE k1.ext)) hM1.2.2.1
+      (ConRon.Bridge.denoteCIList_mono k1.ext _ _ hbP) hblk1)
     (callW_mono c4 (by omega))
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4

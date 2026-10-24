@@ -355,36 +355,40 @@ theorem installIirRun {p : Prog} (hP : ConsIndsProg p) {n : Nat} {m m' : Mem} {c
     | some x => obtain ⟨q, m1⟩ := x; simp only [h1, iirK_some, callW_zero] at hK; cases hK
   exact iirK_eq hP.put5 hK
 
-/-- **`cons_block_inds`' model refines `consBlockInds`.** -/
-theorem icbiW_sim {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLeche.Name)
-    (p1 isRec : Word) (bs : BlockShape) (b : Bool) (hb : (isRec != 0) = b) (n : Nat) :
+/-- **`cons_block_inds`' model refines `consBlockInds`**, from a refinement `hLZ` of the
+`lv_zero_caps` call of each member's `block_caps_at` at every state of the loop's invariant `T`
+(`T` holds after it). -/
+theorem icbiW_simG {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLeche.Name)
+    (p1 isRec : Word) (bs : BlockShape) (b : Bool) (hb : (isRec != 0) = b) {T : AState → Prop}
+    (hLZ : ∀ (k : Nat) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv), StageR dn vis fe m a → T a →
+      DecB (fun m => decBS m p1.toNat) m bs → ShapeSrc m p1 →
+      Sim (callW p k "lv_zero_caps" [rdW (m.arr64 IW) (p1 + 6)] m) (readLevelM bs.resSort) a
+        (fun r x m' a' => (StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decZC dn m' r x) ∧ T a'))
+    (n : Nat) :
     ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (o l i : Word) (cvs : List IConstantVal),
-    StageR dn vis fe m a → DecB (fun m => decBS m p1.toNat) m bs → ShapeSrc m p1 →
+    StageR dn vis fe m a → T a → DecB (fun m => decBS m p1.toNat) m bs → ShapeSrc m p1 →
     PSlR decCVp cvs o l m → i.toNat + l.toNat < 2 ^ 64 →
     Sim (icbiW p n m p1 isRec o l vis i) (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m') := by
+      (fun r x m' a' => (StageR dn (r.headD 0) x m' a' ∧ IWGrow m m') ∧ T a') := by
   induction n with
-  | zero => intro m a vis fe o l i cvs _ _ _ _ _; rw [icbiW_zero]; exact Sim.of_none
+  | zero => intro m a vis fe o l i cvs _ _ _ _ _ _; rw [icbiW_zero]; exact Sim.of_none
   | succ n ih =>
-  intro m a vis fe o l i cvs hS hq hsrc hcvs hil
+  intro m a vis fe o l i cvs hS hT0 hq hsrc hcvs hil
   by_cases hl : l = 0
   · rw [icbiW_nil p n m p1 isRec o l vis i hl]
     have : cvs = [] := by
       have h := hcvs.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm
     subst this
-    exact Sim.ret ⟨hS, IWGrow.refl m⟩
+    exact Sim.ret ⟨⟨hS, IWGrow.refl m⟩, hT0⟩
   obtain ⟨q, cv, rest, rfl, hw, hqb, hdcv, hrest⟩ := partsPSl_cons hcvs hl
   rw [icbiW_cons p n m p1 isRec o l vis i hl]
   simp only [ConRon.Arena.consBlockInds]
   refine Sim.bindK (K := icbiK1 p n p1 isRec o l vis i) (body := fun r1 m1 => icbiK2 p n p1 isRec o l vis i
       (callW p n "ind_info_rec" [rdW (m1.arr64 IW) o, r1.headD 0] m1)) (by simp [icbiK1])
       (fun r m₁ => icbiK1_some p n m₁ p1 isRec o l vis i r)
-    (Sim.callW_pos (fun k => installSimCall
-      (Q := fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CapsAt dn m' (r.headD 0).toNat x)
-      (blockCapsAt_refines p hP.toCapsProg k ⟨m, Locals.init []⟩ a dn vis fe p1 i isRec bs b hS hq hsrc hb)
-      fun _ _ h => ⟨h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2⟩) n) ?_
-  rintro r1 caps m1 a1 ⟨hS1, hg1, hca⟩
+    (blockCapsAt_simG hP.toCapsProg n hq hsrc hb (fun k => hLZ k m a vis fe hS hT0 hq hsrc)) ?_
+  rintro r1 caps m1 a1 ⟨⟨hS1, hg1, hca⟩, hT1⟩
   refine Sim.mstep (K := icbiK2 p n p1 isRec o l vis i) (by simp [icbiK2])
     (fun r m₁ => icbiK2_some p n m₁ p1 isRec o l vis i r) fun r2 m2 h2 => ?_
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -411,13 +415,32 @@ theorem icbiW_sim {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLech
   have hl1 : (l - 1).toNat = l.toNat - 1 := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  have hrec := ih s3.mem a1 (r3.headD 0) (fe.push (.indInfo cv caps)) (o + 1) (l - 1) (i + 1) rest hS3
+  have hrec := ih s3.mem a1 (r3.headD 0) (fe.push (.indInfo cv caps)) (o + 1) (l - 1) (i + 1) rest hS3 hT1
     (hq.grow (decBS_mono _) hg13) (partsHsrc_grow hg13 hq9 hsrc)
     (hrest.grow (fun q => OMono.decCVp q) hg13) (by omega)
   rw [hi1] at hrec
   refine Sim.post (K := icbiK4) rfl (fun _ _ => rfl) hrec ?_
-  rintro r x m' a' ⟨hS', hg'⟩
-  exact ⟨hS', hg13.trans hg'⟩
+  rintro r x m' a' ⟨⟨hS', hg'⟩, hT'⟩
+  exact ⟨⟨hS', hg13.trans hg'⟩, hT'⟩
+
+/-- **`cons_block_inds`' model refines `consBlockInds`** (through `lv_zero_caps`' stub
+contract). -/
+theorem icbiW_sim {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLeche.Name)
+    (p1 isRec : Word) (bs : BlockShape) (b : Bool) (hb : (isRec != 0) = b) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (o l i : Word) (cvs : List IConstantVal),
+    StageR dn vis fe m a → DecB (fun m => decBS m p1.toNat) m bs → ShapeSrc m p1 →
+    PSlR decCVp cvs o l m → i.toNat + l.toNat < 2 ^ 64 →
+    Sim (icbiW p n m p1 isRec o l vis i) (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) a
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m') := by
+  intro m a vis fe o l i cvs hS hq hsrc hcvs hil
+  refine Sim.mono (icbiW_simG (T := fun _ => True) hP dn p1 isRec bs b hb (fun k m a vis fe hS _ hq hsrc => ?_)
+    n m a vis fe o l i cvs hS trivial hq hsrc hcvs hil) fun _ _ _ _ h => h.1
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
+  obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
+  have h := installSimKeep (p := p) (n := k) (lvZeroCaps_spec dn vis fe _ hrs32) hS
+  rw [hrse] at h
+  exact Sim.mono h fun _ _ _ _ hq => ⟨hq, trivial⟩
 
 /-- **`cons_block_inds` refines `consBlockInds`** (through `blockCapsAt`'s `lv_zero_caps` stub
 contract): the shape record decoded below the tops with its members' slice below the top, the

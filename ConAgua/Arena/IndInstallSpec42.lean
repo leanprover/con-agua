@@ -18,7 +18,7 @@ refinements:
 * `blockParts_refines` (`IndPartsSpec15`; its record's slices lie below the top, `ShapeSl`, which
   gives `check_block`'s `ShapeSrc` and `RecsB`),
 * `checkBlock_refines` (`IndInstallSpec37`),
-* `checkShapeless_refines` (`IndPartsSpec4`).
+* `checkShapeless_never` (no callee contract: the function aborts).
 
 `ShapeCV` (the members' constant records within `EREC`) follows from the record's decoding below
 the tops (`shapeCV_of_decB`).
@@ -100,8 +100,24 @@ grind_pattern [ind_grind] cidK3_some => cidK3 p n vis o l w (some (r3, m3))
 grind_pattern [ind_grind] cidK4_some => cidK4 p n vis o l (some (r4, m4))
 grind_pattern [ind_grind] cidK2_some => cidK2 (some (r, m))
 
+/-- **`check_shapeless` never returns**: it calls `check_shapeless_formers` (whatever that
+does) and then aborts. Unlike `checkShapeless_refines` this needs no contract of the callee. -/
+theorem checkShapeless_never (p : Prog)
+    (hp : p.lookup "check_shapeless" = some checkShapeless) (n : Nat) (s₀ : St)
+    (vis off cnt : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_shapeless" [vis, off, cnt]
+    ⦃fun _ _ => False; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkShapeless]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        callW_spec p n "check_shapeless_formers"] <;>
+      finish
+
 theorem cid_specW (hp : p.lookup "check_ind_decl" = some checkIndDecl)
-    (hsf : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
     (hsl : p.lookup "check_shapeless" = some checkShapeless) (n : Nat) (s₀ : St) (vis o l w : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_ind_decl" [vis, o, l, w]
     ⦃fun r s' => LocEq s' s₀ ∧ cidW p n s₀.mem vis o l w = some (r, s'.mem); ⊤⦄ := by
@@ -114,7 +130,7 @@ theorem cid_specW (hp : p.lookup "check_ind_decl" = some checkIndDecl)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         callW_spec p n "basis_pin_hit", callW_spec p n "check_basis_decl",
         callW_spec p n "ind_params_ok", callW_spec p n "block_parts", callW_spec p n "check_block",
-        checkShapeless_refines p hsf hsl n] <;>
+        checkShapeless_never p hsl n] <;>
       finish (gen := 20)
 
 end model
