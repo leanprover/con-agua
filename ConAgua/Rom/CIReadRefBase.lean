@@ -53,12 +53,12 @@ theorem rciC_mem {x : Word} (h : x ∈ RciC) :
 theorem rciA_core : AvoidA 96 128 RciA := by
   intro b hb
   rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h | h
-  all_goals first | decide | (left; omega) | (right; omega)
+  all_goals first | decide | (simp only [ArrId] at *; omega)
 
 theorem rciA_pins : AvoidA 128 132 RciA := by
   intro b hb
   rcases rciA_mem hb with rfl | rfl | rfl | rfl | rfl | h | h
-  all_goals first | decide | (left; omega) | (right; omega)
+  all_goals first | decide | (simp only [ArrId] at *; omega)
 
 theorem rciC_core : AvoidC 96 128 RciC := by
   intro x hx
