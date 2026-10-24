@@ -84,3 +84,30 @@ dead code removed, without changing `ConAgua.Final.checkerFile_accepts_remaining
 * Full rebuild 23 min; exes, `core_fns`/`loop_fns`/`leaf_fns`/`preloop_ws --check`,
   `asm_file --check`, `provenance check`, `modules_check` pass. Census: same table, same
   targets/edges, same links as after batch 1.
+* Landed after merging master while lane `conslib2` had 30 overlapping files in flight
+  (coordinator's call: cleanup first; conslib2 merges master, restores any lemma it still needs,
+  and keeps its own versions of `RecGenSpec6.rec2RecW_decCF` and `SimLib.Sim.withM`, the only two
+  textual conflicts in a trial merge). No further deletions in those 30 files until conslib2 lands.
+
+### Wind-down (2026-10-24)
+
+* **Totals** (master f9f965b6 → batch 2 landed as 37ab4bba): **846 declarations, 14 modules,
+  about 20.9k lines** deleted; `sorry` outside comments and strings: 18 → **0**;
+  `checkerFile_accepts_remaining` unchanged, axioms [propext, Classical.choice, Quot.sound]; census
+  1328 proven / 0 sorry / 1352 targets, same targets and edges; links 2108 → 2075 (the 33
+  sorry-dependent StageR links, whose targets stay proven through their callers' StageC links).
+* Headers of `IndStubs` (now the stage's shared predicates: `AbsOK` and its memo parts, `RelAM`,
+  decoders, the opaque `stubM` a few live models still name) and `IndCallM` (`realCall` only)
+  rewritten.
+* **Not done:**
+  * *`cR` parameters.* With `stubCall` gone every model's `CallM` argument is `realCall p`, but
+    dropping it changes the statements of live theorems (they say `model (realCall p) …`); that is
+    not statement-preserving, so the parameters stay.
+  * *Dead code left on purpose:* unused lemmas in the libraries (`L.*`, `Compiler.*`, `AsmFile.*`,
+    `Scan.*`), `Capstone` and `Scan.DriverLink` (milestone theorems), the `conslib2` files and
+    generated files, `Checker.IndRealNames` (dead; name overlaps conslib2's list), and dead
+    declarations the textual check kept because their short name also names a live constant
+    (`RelAM.bind_`, …). A later pass can rerun the cone (method above) once conslib2 has landed.
+  * The duplicated AFr lemmas (`piBW_afrR`, `gafF_afrR`, `memberNamesW_afrR`, `nameCopyW_afrR`)
+    and the `cpW_okW`/`p2ccW_okW` duplicates are live (in the cone), so deduplicating them means
+    moving the originals upstream: not done (several of those files are among the 30).
