@@ -398,7 +398,7 @@ theorem ainternW_grow {m m₁ : Mem} {f a r : Word} (hI : ainternW m f a = some 
 
 /-- After a miss of `intern_app` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
-theorem ainternW_der {m m₁ : Mem} {f a r q : Word} (hI : ainternW m f a = some (r, m₁))
+theorem ainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : ainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 4 ≠ cnt2 m 4)
     (hq : q = r &&& (134217727 : Word)) (hu : u = (r >>> (27 : Word)) &&& 1) (x : Word) :
     derBW (m₁.set64 (tierA ADER u) q 0) x = derBW m x ∧
@@ -439,7 +439,7 @@ theorem lainternW_grow {m m₁ : Mem} {f a r : Word} (hI : lainternW m f a = som
 
 /-- After a miss of `intern_lam` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
-theorem lainternW_der {m m₁ : Mem} {f a r q : Word} (hI : lainternW m f a = some (r, m₁))
+theorem lainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : lainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 28 ≠ cnt2 m 28)
     (hq : q = r &&& (134217727 : Word)) (hu : u = (r >>> (27 : Word)) &&& 1) (x : Word) :
     derBW (m₁.set64 (tierA LADER u) q 0) x = derBW m x ∧
@@ -480,7 +480,7 @@ theorem fainternW_grow {m m₁ : Mem} {f a r : Word} (hI : fainternW m f a = som
 
 /-- After a miss of `intern_forall` (the counts changed), the zeroed slot hides the append from
 `der_b`'s three reads. -/
-theorem fainternW_der {m m₁ : Mem} {f a r q : Word} (hI : fainternW m f a = some (r, m₁))
+theorem fainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : fainternW m f a = some (r, m₁))
     (hc : cnt2 m₁ 30 ≠ cnt2 m 30)
     (hq : q = r &&& (134217727 : Word)) (hu : u = (r >>> (27 : Word)) &&& 1) (x : Word) :
     derBW (m₁.set64 (tierA FADER u) q 0) x = derBW m x ∧
