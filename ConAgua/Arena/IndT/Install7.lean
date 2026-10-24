@@ -197,9 +197,8 @@ theorem icbgW_simC (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP :
   simp only [ConRon.Arena.checkBlockCtors]
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
-  cases n with
-  | zero => rw [callW_zero]; simp only [icbgK1]; exact Sim.of_none
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero]; simp only [icbgK1]; exact Sim.of_none
   refine Sim.bindK (K := icbgK1 p (k + 1) vis vis pp lo ll mo ml co cl) (body := fun r1 m1 => icbgK2 p (k + 1) r1
       (icbgW p (k + 1) m1 vis vis pp lo ll (mo + 1) (ml - 1) (co + 1) (cl - 1))) (by simp [icbgK1])
       (fun r m₁ => icbgK1_some p (k + 1) m₁ vis vis pp lo ll mo ml co cl r)

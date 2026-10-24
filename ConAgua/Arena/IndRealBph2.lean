@@ -359,9 +359,8 @@ theorem basisPinHit_ok {p : Prog} (P : BphProg p) :
       | none => r.headD 0 = 0
       | some k => r.headD 0 ≠ 0 ∧ (r.tail.headD 0).toNat < 4 ∧ basisOfW (r.tail.headD 0).toNat = k := by
   intro n dn vis fe m m' a o l blk r hS hok hB hc
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ n =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (bph_specW p P.bph n ⟨m, Locals.init []⟩ o l) hc
   subst hs'

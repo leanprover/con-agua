@@ -226,9 +226,8 @@ theorem iisrW_simC (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLech
   rw [iisrW_cons p n m vis pp mo ml co cl hml hcl, hw, hwc, installIdx_cons]
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
-  cases n with
-  | zero => rw [callW_zero]; simp only [iisrK1]; exact Sim.of_none
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero]; simp only [iisrK1]; exact Sim.of_none
   refine Sim.bindK (K := iisrK1 p (k + 1) vis pp mo ml co cl) (body := fun r1 m1 => iisrK2 p (k + 1) (r1.headD 0)
       (iisrW p (k + 1) m1 vis pp (mo + 1) (ml - 1) (co + 1) (cl - 1))) (by simp [iisrK1])
       (fun r m₁ => iisrK1_some p (k + 1) m₁ vis pp mo ml co cl r)

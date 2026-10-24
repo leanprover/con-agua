@@ -391,9 +391,8 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       (fun m m' a r x => KeepPost dn vis fe decOLE m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hAb⟩
   obtain ⟨N, hc⟩ := callF_run h
-  cases N with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ K =>
+  rcases N with _ | K
+  · rw [callW_zero] at hc; cases hc
   have c' := callW_model (M := fun mm => opfTopK opfP K mm k e i)
     (fun s => opfTopK_spec opfP rfl rfl rfl K s k e i) hc
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1

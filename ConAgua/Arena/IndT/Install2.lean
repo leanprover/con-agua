@@ -39,9 +39,8 @@ theorem lveC_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
     (hdv : denoteL a.store.ls (decI v) = some lv) :
     ∃ b a', (lvlEq? (decI u) (decI v)).run a = .ok (some b, a') ∧ StageC dn vis fe env m' a' ∧
       IWGrow m m' ∧ AbsOK m' ∧ PStep a a' ∧ r.headD 0 = (if b then 1 else 0) := by
-  cases n with
-  | zero => simp [lveC] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [lveC] at h
   simp only [lveC] at h
   rcases hs : realCall p n "lvl_eq_c" [u, v] m with _ | ⟨r1, m1⟩
   · simp [hs] at h

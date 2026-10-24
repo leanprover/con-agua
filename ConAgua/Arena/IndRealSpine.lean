@@ -54,9 +54,8 @@ theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
     RelW (callF P fF) [f, e] (StageR dn vis fe) (op f.toNat (decI e)) (KeepPost dn vis fe decW0E) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
+  rcases n with _ | k
+  · simp [callW_zero] at hc
   have c' := callW_model (M := fun mm => if f ≠ CWF then none else
     ntBW (callW P k g [e] mm) fun r m' => some ([r.headD 0], m')) (fun s => hspec k s f e) hc
   obtain ⟨hf, c1⟩ := of_ite_none c'
@@ -307,9 +306,8 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (mkAppN (decI f) xs) (KeepPost dn vis fe decW0E) := by
   intro m m' a r h ⟨hS, hxs⟩
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
+  rcases n with _ | k
+  · simp [callW_zero] at hc
   have c' := callW_model (M := fun mm => mknAdW mknProg k mm f o l)
     (fun s => mknAd_spec mknProg rfl k s f o l) hc
   simp only [mknAdW] at c'

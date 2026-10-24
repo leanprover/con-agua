@@ -353,18 +353,16 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl, hWk⟩
   have hfr := abF_frame h
   obtain ⟨n, hc⟩ := callF_run h
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (abAdapter_spec n _ CWF e d k) hc
   obtain ⟨⟨rI, mI⟩, hi, hm⟩ := of_K hm rfl
   simp only [fwd1, Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, hmI⟩ := hm
   rw [hs'] at hmI
   subst hmI
-  match n, hi with
-  | 0, hi => rw [callW_zero] at hi; cases hi
-  | j + 1, hi =>
+  rcases n with _ | j
+  · rw [callW_zero] at hi; cases hi
   have hA : ArenaA m { a with memos := { a.memos with abs1C := mp } } :=
     ⟨hS.1.arena.memo_irrel a.memos.instLC mp, hmp⟩
   obtain ⟨s'', hs'', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

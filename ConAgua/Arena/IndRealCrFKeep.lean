@@ -71,9 +71,8 @@ theorem clpL_01 {k : Nat} {vis : Word} (ks : List Word) :
 theorem leaf_01 {n : Nat} {m m' : Mem} {vis g x h : Word} {r : List Word}
     (hc : callW crfP n "cr_leaf" [vis, g, x, h] m = some (r, m')) :
     r.headD 0 = 0 ∨ r.headD 0 = 1 := by
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at hc; cases hc
   have hW := callW_model (M := fun mm => clW crfP k mm vis g x h) (cl_spec crfP crfP_prog k · vis g x h) hc
   simp only [clW] at hW
   split at hW
@@ -87,9 +86,8 @@ theorem leaf_01 {n : Nat} {m m' : Mem} {vis g x h : Word} {r : List Word}
     simp only [ntBW, hl, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -⟩ := hW
     simp only [List.headD_cons]
-    cases k with
-    | zero => rw [callW_zero] at hl; cases hl
-    | succ k =>
+    rcases k with _ | k
+    · rw [callW_zero] at hl; cases hl
     have hP := callW_model (M := fun mm => clpW crfP k mm vis (q.1.headD 0))
       (clp_spec crfP crfP_prog k · vis _) hl
     simp only [clpW] at hP
@@ -256,9 +254,8 @@ theorem crff_specA (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (args : Lis
 theorem crfF_keepsCrOK {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m'))
     (hc : CrOK m) : CrOK m' := by
   obtain ⟨n, hn⟩ := callF_run h
-  cases n with
-  | zero => rw [callW_zero] at hn; cases hn
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at hn; cases hn
   have hW := callW_model (M := fun mm => crffW crfP k mm (args.getD 0 0) (args.getD 1 0))
     (crff_specA crfP crfP_prog k · args) hn
   simp only [crffW] at hW

@@ -171,9 +171,8 @@ theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some
     ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a ∧ IWGrow s₀.mem s'.mem ∧ MFr [] [] s₀.mem s'.mem ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some (cvTas.map (·.type)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (gft_spec p hp n s₀ cO cL) ?_
   rintro r s' ⟨hl, hm⟩
   rw [gftF_eq] at hm
@@ -393,9 +392,8 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
         some (AM.res (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧
       J s'.mem (AM.st (ms.mapM (ConRon.Arena.classFormerTy fe cvTas)) a₀); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (gfc_spec p hp n s₀ vis cO cL mO mL) ?_
   rintro r s' ⟨hl, hm⟩
   rw [gfcF_eq] at hm
@@ -701,9 +699,8 @@ theorem genRecCheckMinorOk_refines {p : Prog} (hm : p.lookup "class_slot_is_mino
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "gen_rec_check_minor_ok" [so, sl, co, cl]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       (r.headD 0 != 0) = ((slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (mk_spec p hp n s₀ so sl co cl) ?_
   rintro r s' ⟨hl, hmk⟩
   rw [mkF_eq] at hmk

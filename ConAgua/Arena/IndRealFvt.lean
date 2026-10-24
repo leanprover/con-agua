@@ -264,9 +264,8 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fvarTypeDs xs) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
   intro m m' a r h ⟨hS, hxs, hol⟩
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
+  rcases n with _ | k
+  · simp [callW_zero] at hc
   have c' := callW_model (M := fun mm => ftdsW (k + 1) mm o l)
     (fun s => ftds_specW ftdsProg (ProgHas.refl _) (k + 1) s o l) hc
   rcases ha : allocW m l with _ | ⟨q, m1⟩
@@ -366,9 +365,8 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
   intro s r s' hs0 hrun
   subst hs0
   obtain ⟨hloc, hcall⟩ := M.of_run (P := fun x => x = s) rfl hrun (callW_spec p n "get_app_args" [e] s)
-  cases n with
-  | zero => rw [callW_zero] at hcall; cases hcall
-  | succ n =>
+  rcases n with _ | n
+  · rw [callW_zero] at hcall; cases hcall
   obtain ⟨t, ht, -, hW, h136⟩ := triple_of_callW (gaa_spec p hg n s e) hcall
   rw [ht] at hW h136
   refine ⟨hloc, ?_⟩
@@ -597,9 +595,8 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
-  cases n with
-  | zero => simp [callW_zero] at hc
-  | succ k =>
+  rcases n with _ | k
+  · simp [callW_zero] at hc
   have c' := callW_model (M := fun mm => gaaAdW gaaProg k mm f e)
     (fun s => gaaAd_spec gaaProg rfl rfl rfl k s f e) hc
   simp only [gaaAdW] at c'

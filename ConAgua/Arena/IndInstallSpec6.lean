@@ -163,9 +163,8 @@ theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   obtain ⟨how, -, -⟩ := partsIwRd ho rfl
   obtain ⟨hlw, -, -⟩ := partsIwRd hl (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
   rw [ofNat_toNat_word] at how hlw
-  cases n with
-  | zero => simp [lpsW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [lpsW] at h
   by_cases hl0 : l = 0
   · rw [lpsW_nil n m q (by rw [hlw, hl0])] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

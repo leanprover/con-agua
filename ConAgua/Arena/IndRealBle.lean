@@ -173,9 +173,8 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
     simp only [Bool.false_eq_true, ite_false] at hx
     by_cases hnb : nb = 0
     · rw [bleK1_go (h1 := hx) (h2 := hnb)] at h
-      cases n with
-      | zero => rw [callW_zero] at h; cases h
-      | succ k =>
+      rcases n with _ | k
+      · rw [callW_zero] at h; cases h
       obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl; rw [bleK2_some] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨s2, hs2, hm2, hnc⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

@@ -223,9 +223,8 @@ theorem isProjFnShape_refines {p : Prog}
   intro n s₀ a₀ hS
   refine triple_post (callW_spec p n "is_proj_fn_shape" [x] s₀) ?_
   rintro r s' ⟨hl, hc⟩
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s'', hs'', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
     (isProjFnShape_specW p hp k _ x) hc
   simp only at hm hW

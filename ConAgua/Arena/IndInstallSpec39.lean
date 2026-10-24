@@ -78,9 +78,8 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', (ConRon.Arena.structElimLevel (decI elim) (large != 0)).run a =
         .ok (decI (r.headD 0), a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (selm_spec p P.sel n s₀ elim large) ?_
   rintro r s' ⟨hl, hm⟩
   refine ⟨hl, ?_⟩
@@ -347,9 +346,8 @@ theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envI
     ⦃fun r s' => LocEq s' s₀ ∧
       StageR dn (r.headD 0) (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) fe) s'.mem a ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (pap_spec p hp n s₀ vis po pl) ?_
   rintro r s' ⟨hl, hm⟩
   have hlen := hpv.length

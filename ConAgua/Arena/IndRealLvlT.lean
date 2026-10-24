@@ -67,9 +67,8 @@ theorem lvlEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word) (hu :
   rcases hl : lvlEqW n m u v with _ | ⟨z₁, m₁⟩
   · simp [hl, rcdK] at h
   rw [hl] at h
-  cases n with
-  | zero => simp [lvlEqW] at hl
-  | succ n =>
+  rcases n with _ | n
+  · simp [lvlEqW] at hl
   simp only [lvlEqW] at hl
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
     ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
@@ -98,9 +97,8 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
   rcases hl : lvlsEqW n m us vs with _ | ⟨z₁, m₁⟩
   · simp [hl, rcdK] at h
   rw [hl] at h
-  cases n with
-  | zero => simp [lvlsEqW] at hl
-  | succ n =>
+  rcases n with _ | n
+  · simp [lvlsEqW] at hl
   simp only [lvlsEqW] at hl
   have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [if_pos c] at hl; cases hl
   rw [if_neg hn] at hl

@@ -254,9 +254,8 @@ theorem ipalF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (fun m m' a r x => KeepPost dn vis fe decOE m m' a r x ∧ AbsOK m') := by
   intro m m' a r h ⟨hS, hA, hdec⟩
   obtain ⟨n, hW⟩ := ipalF_W h
-  cases n with
-  | zero => cases hW
-  | succ n =>
+  rcases n with _ | n
+  · cases hW
   have := ipalGoW_ok dn vis fe f o l xs (n + 1) m m' a e 0 r hW hS hA he (by simp) hdec
   simpa using this
 
