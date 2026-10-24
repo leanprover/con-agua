@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.DeclMasterStage
+import ConAgua.L.ProgHas
 
 /-!
 # Record equalities in L, word models and specs (lane `decls3`, helper `decls3-canon`)
@@ -27,75 +28,35 @@ namespace L.Ind
 
 open L.Arena
 
+/-- The functions of `CanonProg`. -/
+def canonProgFns : Prog :=
+  [("er_sl_eq", L.Ind.erSlEq), ("b_eq", L.Ind.bEq), ("cv_eq", L.Ind.cvEq),
+   ("hint_eq", L.Ind.hintEq), ("pw_eq", L.Ind.pwEq), ("caps_eq", L.Ind.capsEq),
+   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs), ("rules_eq", L.Ind.rulesEq), ("tbl_eq", L.Ind.tblEq),
+   ("ci_eq", L.Ind.ciEq), ("er_sl_at", L.Ind.erSlAt), ("caps_eq_a", L.Ind.capsEqA),
+   ("caps_eq_b", L.Ind.capsEqB), ("caps_eq_c", L.Ind.capsEqC), ("rule_eq_a", L.Ind.ruleEqA),
+   ("rule_eq_b", L.Ind.ruleEqB), ("tbl_eq_a", L.Ind.tblEqA), ("ci_eq_rest", L.Ind.ciEqRest),
+   ("canon_ctx", L.Ind.canonCtx), ("ci_canon_defn", L.Ind.ciCanonDefn),
+   ("ci_canon_rec", L.Ind.ciCanonRec), ("find_is", L.Ind.findIs), ("env_find", envFindL),
+   ("env_row_get", envRowGetL), ("env_ix", envIxL), ("ci_to_cv", L.Ind.ciToCv),
+   ("intern_zero", internZero), ("zero_find", zeroFind), ("zero_push", zeroPush),
+   ("intern_succ", internSucc), ("succ_find", succFind), ("succ_push", succPush),
+   ("intern_sort", internSort), ("sort_find", sortFind), ("sort_push", sortPush),
+   ("cv_new", cvNew), ("erec_alloc", erecAlloc), ("canon_names_go", L.Ind.canonNamesGo),
+   ("canon_names", L.Ind.canonNames), ("intern_nanon", internNAnon), ("nanon_find", nanonFind),
+   ("nanon_push", nanonPush), ("intern_nnum", internNNum), ("nnum_find", nnumFind),
+   ("nnum_push", nnumPush), ("sl_cons", slCons), ("iw_alloc", iwAlloc), ("iw_copy", iwCopy),
+   ("sl_find", slFind), ("sl_getd", slGetD), ("canon_name_map", L.Ind.canonNameMap),
+   ("canon_level_eq", L.Ind.canonLevelEq), ("lv_node", lvNode),
+   ("canon_level_list_eq", L.Ind.canonLevelListEq), ("canon_levels_eq", L.Ind.canonLevelsEq),
+   ("view_ls", viewLsL), ("ls_node", lsNode), ("pool_copy", poolCopy),
+   ("canon_expr_eq", L.Ind.canonExprEq), ("e_view", eView), ("cv_canon_eq", L.Ind.cvCanonEq),
+   ("cv_lps", cvLps), ("er_to_iw", erToIw), ("er_copy", erCopy),
+   ("canon_rules_eq", L.Ind.canonRulesEq), ("ci_canon_eq", L.Ind.ciCanonEq),
+   ("canon_eq_list", L.Ind.canonEqListL)]
+
 /-- **The lookups of every function the canonical-form chain reaches.** -/
-structure CanonProg (p : Prog) : Prop where
-  er_sl_eq : p.lookup "er_sl_eq" = some L.Ind.erSlEq
-  b_eq : p.lookup "b_eq" = some L.Ind.bEq
-  cv_eq : p.lookup "cv_eq" = some L.Ind.cvEq
-  hint_eq : p.lookup "hint_eq" = some L.Ind.hintEq
-  pw_eq : p.lookup "pw_eq" = some L.Ind.pwEq
-  caps_eq : p.lookup "caps_eq" = some L.Ind.capsEq
-  rule_eq_but_rhs : p.lookup "rule_eq_but_rhs" = some L.Ind.ruleEqButRhs
-  rules_eq : p.lookup "rules_eq" = some L.Ind.rulesEq
-  tbl_eq : p.lookup "tbl_eq" = some L.Ind.tblEq
-  ci_eq : p.lookup "ci_eq" = some L.Ind.ciEq
-  er_sl_at : p.lookup "er_sl_at" = some L.Ind.erSlAt
-  caps_eq_a : p.lookup "caps_eq_a" = some L.Ind.capsEqA
-  caps_eq_b : p.lookup "caps_eq_b" = some L.Ind.capsEqB
-  caps_eq_c : p.lookup "caps_eq_c" = some L.Ind.capsEqC
-  rule_eq_a : p.lookup "rule_eq_a" = some L.Ind.ruleEqA
-  rule_eq_b : p.lookup "rule_eq_b" = some L.Ind.ruleEqB
-  tbl_eq_a : p.lookup "tbl_eq_a" = some L.Ind.tblEqA
-  ci_eq_rest : p.lookup "ci_eq_rest" = some L.Ind.ciEqRest
-  canon_ctx : p.lookup "canon_ctx" = some L.Ind.canonCtx
-  ci_canon_defn : p.lookup "ci_canon_defn" = some L.Ind.ciCanonDefn
-  ci_canon_rec : p.lookup "ci_canon_rec" = some L.Ind.ciCanonRec
-  find_is : p.lookup "find_is" = some L.Ind.findIs
-  env_find : p.lookup "env_find" = some envFindL
-  env_row_get : p.lookup "env_row_get" = some envRowGetL
-  env_ix : p.lookup "env_ix" = some envIxL
-  ci_to_cv : p.lookup "ci_to_cv" = some L.Ind.ciToCv
-  intern_zero : p.lookup "intern_zero" = some internZero
-  zero_find : p.lookup "zero_find" = some zeroFind
-  zero_push : p.lookup "zero_push" = some zeroPush
-  intern_succ : p.lookup "intern_succ" = some internSucc
-  succ_find : p.lookup "succ_find" = some succFind
-  succ_push : p.lookup "succ_push" = some succPush
-  intern_sort : p.lookup "intern_sort" = some internSort
-  sort_find : p.lookup "sort_find" = some sortFind
-  sort_push : p.lookup "sort_push" = some sortPush
-  cv_new : p.lookup "cv_new" = some cvNew
-  erec_alloc : p.lookup "erec_alloc" = some erecAlloc
-  canon_names_go : p.lookup "canon_names_go" = some L.Ind.canonNamesGo
-  canon_names : p.lookup "canon_names" = some L.Ind.canonNames
-  intern_nanon : p.lookup "intern_nanon" = some internNAnon
-  nanon_find : p.lookup "nanon_find" = some nanonFind
-  nanon_push : p.lookup "nanon_push" = some nanonPush
-  intern_nnum : p.lookup "intern_nnum" = some internNNum
-  nnum_find : p.lookup "nnum_find" = some nnumFind
-  nnum_push : p.lookup "nnum_push" = some nnumPush
-  sl_cons : p.lookup "sl_cons" = some slCons
-  iw_alloc : p.lookup "iw_alloc" = some iwAlloc
-  iw_copy : p.lookup "iw_copy" = some iwCopy
-  sl_find : p.lookup "sl_find" = some slFind
-  sl_getd : p.lookup "sl_getd" = some slGetD
-  canon_name_map : p.lookup "canon_name_map" = some L.Ind.canonNameMap
-  canon_level_eq : p.lookup "canon_level_eq" = some L.Ind.canonLevelEq
-  lv_node : p.lookup "lv_node" = some lvNode
-  canon_level_list_eq : p.lookup "canon_level_list_eq" = some L.Ind.canonLevelListEq
-  canon_levels_eq : p.lookup "canon_levels_eq" = some L.Ind.canonLevelsEq
-  view_ls : p.lookup "view_ls" = some viewLsL
-  ls_node : p.lookup "ls_node" = some lsNode
-  pool_copy : p.lookup "pool_copy" = some poolCopy
-  canon_expr_eq : p.lookup "canon_expr_eq" = some L.Ind.canonExprEq
-  e_view : p.lookup "e_view" = some eView
-  cv_canon_eq : p.lookup "cv_canon_eq" = some L.Ind.cvCanonEq
-  cv_lps : p.lookup "cv_lps" = some cvLps
-  er_to_iw : p.lookup "er_to_iw" = some erToIw
-  er_copy : p.lookup "er_copy" = some erCopy
-  canon_rules_eq : p.lookup "canon_rules_eq" = some L.Ind.canonRulesEq
-  ci_canon_eq : p.lookup "ci_canon_eq" = some L.Ind.ciCanonEq
-  canon_eq_list : p.lookup "canon_eq_list" = some L.Ind.canonEqListL
+abbrev CanonProg (p : Prog) : Prop := ProgHas p canonProgFns
 
 /-! ## The models -/
 
@@ -283,11 +244,11 @@ theorem erSlEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
       r.headD 0 = if erSlEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
   induction n with
   | zero =>
-    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp.er_sl_eq]; simp only [callFn, erSlEq]
+    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ (hp.get "er_sl_eq")]; simp only [callFn, erSlEq]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp.er_sl_eq]
+    rw [invoke_eq _ (hp.get "er_sl_eq")]
     simp only [callFn, erSlEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
@@ -296,7 +257,7 @@ theorem erSlEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
 theorem bEq_spec (n : Nat) (s₀ : St) (x y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "b_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = if bEqB x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.b_eq]
+  rw [invoke_eq _ (hp.get "b_eq")]
   simp only [callFn, bEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -310,7 +271,7 @@ theorem cvEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if cvEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.cv_eq]
+  rw [invoke_eq _ (hp.get "cv_eq")]
   simp only [callFn, cvEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -323,7 +284,7 @@ theorem hintEq_spec (n : Nat) (s₀ : St) (h : Word) (g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "hint_eq" [h, g]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if hintEqB (s₀.mem.arr64 EREC) h g then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.hint_eq]
+  rw [invoke_eq _ (hp.get "hint_eq")]
   simp only [callFn, hintEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -336,7 +297,7 @@ theorem pwEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pw_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if pwEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.pw_eq]
+  rw [invoke_eq _ (hp.get "pw_eq")]
   simp only [callFn, pwEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -349,7 +310,7 @@ theorem erSlAt_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_at" [x, y, i]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if erSlAtB (s₀.mem.arr64 EREC) x y i then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.er_sl_at]
+  rw [invoke_eq _ (hp.get "er_sl_at")]
   simp only [callFn, erSlAt]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -362,7 +323,7 @@ theorem capsEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_a" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if capsEqAB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.caps_eq_a]
+  rw [invoke_eq _ (hp.get "caps_eq_a")]
   simp only [callFn, capsEqA]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -375,7 +336,7 @@ theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_b" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if capsEqBB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.caps_eq_b]
+  rw [invoke_eq _ (hp.get "caps_eq_b")]
   simp only [callFn, capsEqB]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -388,7 +349,7 @@ theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq_c" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if capsEqCB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.caps_eq_c]
+  rw [invoke_eq _ (hp.get "caps_eq_c")]
   simp only [callFn, capsEqC]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -401,7 +362,7 @@ theorem capsEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "caps_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if capsEqAll (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.caps_eq]
+  rw [invoke_eq _ (hp.get "caps_eq")]
   simp only [callFn, capsEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -414,7 +375,7 @@ theorem ruleEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_a" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if ruleEqAB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.rule_eq_a]
+  rw [invoke_eq _ (hp.get "rule_eq_a")]
   simp only [callFn, ruleEqA]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -427,7 +388,7 @@ theorem ruleEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_b" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if ruleEqBB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.rule_eq_b]
+  rw [invoke_eq _ (hp.get "rule_eq_b")]
   simp only [callFn, ruleEqB]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -440,7 +401,7 @@ theorem ruleEqButRhs_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_eq_but_rhs" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if ruleEqButRhsB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.rule_eq_but_rhs]
+  rw [invoke_eq _ (hp.get "rule_eq_but_rhs")]
   simp only [callFn, ruleEqButRhs]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -453,7 +414,7 @@ theorem tblEqA_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_eq_a" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if tblEqAB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.tbl_eq_a]
+  rw [invoke_eq _ (hp.get "tbl_eq_a")]
   simp only [callFn, tblEqA]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -466,7 +427,7 @@ theorem tblEq_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "tbl_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if tblEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.tbl_eq]
+  rw [invoke_eq _ (hp.get "tbl_eq")]
   simp only [callFn, tblEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -481,11 +442,11 @@ theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
       r.headD 0 = if rulesEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
   induction n with
   | zero =>
-    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp.rules_eq]; simp only [callFn, rulesEq]
+    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ (hp.get "rules_eq")]; simp only [callFn, rulesEq]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp.rules_eq]
+    rw [invoke_eq _ (hp.get "rules_eq")]
     simp only [callFn, rulesEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
@@ -496,7 +457,7 @@ theorem ciEqRest_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq_rest" [x, y, k]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if ciEqRestB (s₀.mem.arr64 EREC) x y k then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.ci_eq_rest]
+  rw [invoke_eq _ (hp.get "ci_eq_rest")]
   simp only [callFn, ciEqRest]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -509,7 +470,7 @@ theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_eq" [x, y]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if ciEqB (s₀.mem.arr64 EREC) x y then 1 else 0; ⊤⦄ := by
-  rw [invoke_eq _ hp.ci_eq]
+  rw [invoke_eq _ (hp.get "ci_eq")]
   simp only [callFn, ciEq]
   cases n with
   | zero => vcgen [exec] <;> grind
@@ -521,14 +482,14 @@ theorem ciEq_spec' (n : Nat) (s₀ : St) (x : Word) (y : Word) :
 theorem findIs_spec' (n : Nat) (s₀ : St) (nm vis pin : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_is" [vis, nm, pin]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ findIsW s₀.mem nm vis pin = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp.find_is]
+  rw [invoke_eq _ (hp.get "find_is")]
   simp only [callFn, findIs]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p hp.env_ix hp.env_row_get hp.env_find n, ciEq_spec' p hp n] <;>
+        envFind_specW p (hp.get "env_ix") (hp.get "env_row_get") (hp.get "env_find") n, ciEq_spec' p hp n] <;>
       finish (gen := 20) [findIsW, cnEnvFindW_mem]
 
 end specs

@@ -28,8 +28,7 @@ open L.Arena
 theorem opfP_il : InstListProg opfP := (ProgHas.refl opfP).left.right.left
 
 theorem opfP_inst : L.Arena.InstProg opfP :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
-    rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
+  ⟨by unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_),
     rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 section

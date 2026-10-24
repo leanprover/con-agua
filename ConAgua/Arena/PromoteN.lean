@@ -129,18 +129,18 @@ include hp
 theorem promoteN_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_n" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ pnW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.promote_n]
+  rw [invoke_eq _ (hp.get "promote_n")]
   simp only [callFn, promoteNL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec pnSch p _ hp.pn_find n, memoPutG_spec pnSch p _ hp.pn_put n,
+      memoFindG_spec pnSch p _ (hp.get "pn_find") n, memoPutG_spec pnSch p _ (hp.get "pn_put") n,
       callW_spec p n "pn_arm"] <;>
     finish [pnW_pers, pnW_hit, pnW_miss, memoK_some, mvG, tierW]
 
 theorem pnArm_spec (f h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pn_arm" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ pnArmW p n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.pn_arm]
+  rw [invoke_eq _ (hp.get "pn_arm")]
   simp only [callFn, pnArm]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,

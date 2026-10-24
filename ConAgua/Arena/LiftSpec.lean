@@ -40,7 +40,7 @@ def liftEntry : FunDecl := lfn (h, k, c, f) locals (r, u) {
 l_model liftEntry_spec (p : Prog) (hp : LiftProg p)
   (he : p.lookup "lift_entry" = some liftEntry)
   fns [he ↦ liftEntryW]
-  specs [memoClearG_spec lfSch p _ hp.lfc n, (liftGo_spec p hp n).1]
+  specs [memoClearG_spec lfSch p _ (hp.get "lf_clear") n, (liftGo_spec p hp n).1]
   grind [arena_grind]
 
 /-- The walk, the memo, the `mk_*` and the stores they call, as one program. -/

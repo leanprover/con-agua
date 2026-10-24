@@ -64,7 +64,7 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     obtain ⟨⟨z, m1⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
     obtain ⟨s1, hs1, -, hE1⟩ := callW_triple
-      (envErase_spec p hp.env_ix hp.env_row_set hp.env_erase n ⟨m, Locals.init []⟩ (fe := fe) vis w hE hwl) hcb
+      (envErase_spec p (hp.get "env_ix") (hp.get "env_row_set") (hp.get "env_erase") n ⟨m, Locals.init []⟩ (fe := fe) vis w hE hwl) hcb
     obtain ⟨s2, hs2, hmem, -, hrt, -⟩ := callW_triple
       (envErase_mem p hp n ⟨m, Locals.init []⟩ w hwl) hcb
     have hfr : MemFrame [EIXA, EIXS, EIXN] [] m m1 := by

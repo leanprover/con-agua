@@ -188,3 +188,28 @@ statements may change; census targets/links and the end-to-end statement/axioms 
 * Totals batch 2: `loc.py` proof lines 318947 → 315175 (**−3772**); since the lane started
   321147 → 315175 (−5972, −1.9 %). Full rebuild of the merged state 13.5 min wall (69 CPU-min).
   Census unchanged (1328/0/1352, links 2075); axioms unchanged.
+
+### Batch 3: program bundles (D) (2026-10-24)
+
+* **Conversion.** A bundle `structure X (p : Prog) : Prop where f : p.lookup "g" = some G …` becomes
+  the function list (packed, ~3 entries a line, or the existing test-program list) plus
+  `abbrev X (p : Prog) : Prop := ProgHas p xFns`; a field access `h.f` becomes `(h.get "g")`
+  (scripted: `_tmp/shrink-cone/conv.py`, `nested.py` for `hb.pr.f` through a bundle-typed field);
+  constructions become `unfold X xFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)`
+  (the same `rfl` lookups as before, so no extra kernel cost). Elaboration of the users unchanged
+  (PromoteERef 4.5 → 5.2 s, within noise).
+* **Landed for six bundles** with ≥ 31 fields: `PromoteProg` (176 fields; the list `promoteProg`
+  existed already), `ScanLookups` (72), `CanonProg` (67), `DeclFieldLookups` (64), `LiftProg` (33),
+  `PropReadProg` (31): **−318 lines**.
+* **Not worth it for the small ones.** 19 more bundles of 5–23 fields gave only −62 lines in all
+  (a field line becomes a list entry plus a longer `(h.get "…")` at each use) and needed many
+  manual fixes (a binder name reused for an unconverted bundle in the same file, projections like
+  `crfP_prog.eix` on named theorems, `constructor` constructions): reverted. Bundles that other
+  bundles `extend` (`MasterProg`, `WhnfDeltaProg`, `IotaProg`, `LevelProg`, …) would need the
+  `extends` chains rewritten into fields: not done. The explicit lookup hypotheses in statements
+  (~2.7k lines) stay: replacing them changes statements and every call site, for ~1 line saved per
+  3–4 hypotheses.
+* **Revised estimate for D: ~0.5k lines** (the review's 3–4k counted every lookup line as removable).
+* `KnotUpTo` → `exec_mono` (item I): **not possible as stated.** `KnotOK p k` quantifies over twin
+  fuels `F ≥ k`; `KnotOK p n` gives only `F ≥ n`, so the smaller-fuel instances do not follow from
+  fuel monotonicity of L (which goes the other way). The `UpTo` hypotheses stay.

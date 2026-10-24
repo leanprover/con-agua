@@ -76,11 +76,11 @@ theorem canonRulesEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel o1
   induction n with
   | zero =>
     intro s₀ po pl qo ql co cl fuel o1 l1 o2 l2
-    rw [invoke_eq _ hp.canon_rules_eq]; simp only [callFn, canonRulesEq]
+    rw [invoke_eq _ (hp.get "canon_rules_eq")]; simp only [callFn, canonRulesEq]
     vcgen [exec] <;> grind
   | succ n ih =>
     intro s₀ po pl qo ql co cl fuel o1 l1 o2 l2
-    rw [invoke_eq _ hp.canon_rules_eq]
+    rw [invoke_eq _ (hp.get "canon_rules_eq")]
     simp only [callFn, canonRulesEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,

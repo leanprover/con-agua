@@ -7,6 +7,7 @@ import ConAgua.Front.ApplyDecl
 import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Census.Attr
 import ConAgua.Front.RunModel
+import ConAgua.L.ProgHas
 
 /-!
 # One line of the export, applied: `front_line`
@@ -174,80 +175,45 @@ theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some 
 
 /-! ## The spec -/
 
+/-- The functions of `ScanLookups`. -/
+def scanLookupsFns : Prog :=
+  [("skip_ws", L.Scan.Leaves.skipWs), ("skip_digits", L.Scan.Leaves.skipDigits),
+   ("key_end", L.Scan.Leaves.keyEnd), ("num_end", L.Scan.Leaves.numEnd),
+   ("key_at_g1", L.Scan.Key.keyAtG1), ("key_at_g2", L.Scan.Key.keyAtG2),
+   ("key_at_g3", L.Scan.Key.keyAtG3), ("key_at_g4", L.Scan.Key.keyAtG4),
+   ("key_at_g5", L.Scan.Key.keyAtG5), ("key_at_g6", L.Scan.Key.keyAtG6),
+   ("key_at", L.Scan.Key.keyAt), ("value_at", L.Scan.Key.valueAt),
+   ("next_member", L.Scan.Member.nextMember), ("slot_nat", L.Scan.Values.slotNat),
+   ("match_word", L.Scan.Values.matchWord), ("scan_binder_info", L.Scan.Values.scanBinderInfo),
+   ("hints_num", L.Scan.Values.hintsNum), ("hints_obj", L.Scan.Values.hintsObj),
+   ("scan_hints", L.Scan.Values.scanHints), ("scan_nat_list", L.Scan.Values.scanNatList),
+   ("match_lit", L.Scan.Lit.matchLit), ("scan_bool", L.Scan.Lit.scanBool),
+   ("utf8_char", L.Scan.Utf8.utf8Char), ("utf8_valid", L.Scan.Str.utf8Valid),
+   ("byte_in", L.Scan.Str.byteIn), ("hex_val", L.Scan.Str.hexVal), ("hex4", L.Scan.Str.hex4),
+   ("hex3", L.Scan.Str.hex3), ("u_next", L.Scan.Str.uNext), ("unescape", L.Scan.Str.unescape),
+   ("str_close", L.Examples.strClose), ("has_escape", L.Scan.Leaves.hasEscape),
+   ("scan_string", L.Scan.Str.scanString), ("scan_str_name", L.Scan.Records.scanStrName),
+   ("scan_num_name", L.Scan.Records.scanNumName), ("scan_app", L.Scan.Records.scanApp),
+   ("scan_binder", L.Scan.Records.scanBinder), ("scan_let", L.Scan.Records.scanLetE),
+   ("scan_const", L.Scan.Records.scanConstE), ("scan_proj", L.Scan.Records.scanProj),
+   ("scan_rule", L.Scan.Records.scanRule), ("scan_rules", L.Scan.Records.scanRules),
+   ("scan_ind_rec", L.Scan.Records.scanIndRec), ("scan_ind_recs", L.Scan.Records.scanIndRecs),
+   ("scan_ind_type", L.Scan.Records.scanIndType), ("scan_ind_types", L.Scan.Records.scanIndTypes),
+   ("scan_ind_ctor", L.Scan.Records.scanIndCtor), ("scan_ind_ctors", L.Scan.Records.scanIndCtors),
+   ("scan_axiom", L.Scan.Records.scanAxiomD), ("scan_def", L.Scan.Records.scanDefD),
+   ("scan_thm", L.Scan.Records.scanThmD), ("scan_opaque", L.Scan.Records.scanOpaqueD),
+   ("scan_quot", L.Scan.Records.scanQuotD), ("scan_ind_decl", L.Scan.Records.scanIndD),
+   ("skip_braced", L.Examples.skipBraced), ("scan_quoted_nat", L.Scan.Values.scanQuotedNat),
+   ("scan_line_loop", L.Scan.Line.scanLineLoop), ("scan_line", L.Scan.Line.scanLine),
+   ("validate", L.Scan.Line.validate), ("read_nat", L.Front.Fields.readNat),
+   ("rec_nat_list", L.Front.Fields.recNatList), ("rec_str_name", L.Front.Fields.recStrName),
+   ("rec_num_name", L.Front.Fields.recNumName), ("rec_line_loop", L.Front.Fields.recLineLoop),
+   ("obj_val", L.Front.Fields.objVal), ("rec_obj", L.Front.Fields.recObj),
+   ("expr_val", L.Front.Fields.exprVal), ("rec_expr_loop", L.Front.Fields.recExprLoop),
+   ("esc_sur", escSur), ("esc_one", escOne), ("utf8_put", utf8Put), ("str_put_esc", strPutEsc)]
+
 /-- Every function of the validator and of the fields pass, at its name in `p`. -/
-structure ScanLookups (p : Prog) : Prop where
-  skip_ws : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs
-  skip_digits : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits
-  key_end : p.lookup "key_end" = some L.Scan.Leaves.keyEnd
-  num_end : p.lookup "num_end" = some L.Scan.Leaves.numEnd
-  key_at_g1 : p.lookup "key_at_g1" = some L.Scan.Key.keyAtG1
-  key_at_g2 : p.lookup "key_at_g2" = some L.Scan.Key.keyAtG2
-  key_at_g3 : p.lookup "key_at_g3" = some L.Scan.Key.keyAtG3
-  key_at_g4 : p.lookup "key_at_g4" = some L.Scan.Key.keyAtG4
-  key_at_g5 : p.lookup "key_at_g5" = some L.Scan.Key.keyAtG5
-  key_at_g6 : p.lookup "key_at_g6" = some L.Scan.Key.keyAtG6
-  key_at : p.lookup "key_at" = some L.Scan.Key.keyAt
-  value_at : p.lookup "value_at" = some L.Scan.Key.valueAt
-  next_member : p.lookup "next_member" = some L.Scan.Member.nextMember
-  slot_nat : p.lookup "slot_nat" = some L.Scan.Values.slotNat
-  match_word : p.lookup "match_word" = some L.Scan.Values.matchWord
-  scan_binder_info : p.lookup "scan_binder_info" = some L.Scan.Values.scanBinderInfo
-  hints_num : p.lookup "hints_num" = some L.Scan.Values.hintsNum
-  hints_obj : p.lookup "hints_obj" = some L.Scan.Values.hintsObj
-  scan_hints : p.lookup "scan_hints" = some L.Scan.Values.scanHints
-  scan_nat_list : p.lookup "scan_nat_list" = some L.Scan.Values.scanNatList
-  match_lit : p.lookup "match_lit" = some L.Scan.Lit.matchLit
-  scan_bool : p.lookup "scan_bool" = some L.Scan.Lit.scanBool
-  utf8_char : p.lookup "utf8_char" = some L.Scan.Utf8.utf8Char
-  utf8_valid : p.lookup "utf8_valid" = some L.Scan.Str.utf8Valid
-  byte_in : p.lookup "byte_in" = some L.Scan.Str.byteIn
-  hex_val : p.lookup "hex_val" = some L.Scan.Str.hexVal
-  hex4 : p.lookup "hex4" = some L.Scan.Str.hex4
-  hex3 : p.lookup "hex3" = some L.Scan.Str.hex3
-  u_next : p.lookup "u_next" = some L.Scan.Str.uNext
-  unescape : p.lookup "unescape" = some L.Scan.Str.unescape
-  str_close : p.lookup "str_close" = some L.Examples.strClose
-  has_escape : p.lookup "has_escape" = some L.Scan.Leaves.hasEscape
-  scan_string : p.lookup "scan_string" = some L.Scan.Str.scanString
-  scan_str_name : p.lookup "scan_str_name" = some L.Scan.Records.scanStrName
-  scan_num_name : p.lookup "scan_num_name" = some L.Scan.Records.scanNumName
-  scan_app : p.lookup "scan_app" = some L.Scan.Records.scanApp
-  scan_binder : p.lookup "scan_binder" = some L.Scan.Records.scanBinder
-  scan_let : p.lookup "scan_let" = some L.Scan.Records.scanLetE
-  scan_const : p.lookup "scan_const" = some L.Scan.Records.scanConstE
-  scan_proj : p.lookup "scan_proj" = some L.Scan.Records.scanProj
-  scan_rule : p.lookup "scan_rule" = some L.Scan.Records.scanRule
-  scan_rules : p.lookup "scan_rules" = some L.Scan.Records.scanRules
-  scan_ind_rec : p.lookup "scan_ind_rec" = some L.Scan.Records.scanIndRec
-  scan_ind_recs : p.lookup "scan_ind_recs" = some L.Scan.Records.scanIndRecs
-  scan_ind_type : p.lookup "scan_ind_type" = some L.Scan.Records.scanIndType
-  scan_ind_types : p.lookup "scan_ind_types" = some L.Scan.Records.scanIndTypes
-  scan_ind_ctor : p.lookup "scan_ind_ctor" = some L.Scan.Records.scanIndCtor
-  scan_ind_ctors : p.lookup "scan_ind_ctors" = some L.Scan.Records.scanIndCtors
-  scan_axiom : p.lookup "scan_axiom" = some L.Scan.Records.scanAxiomD
-  scan_def : p.lookup "scan_def" = some L.Scan.Records.scanDefD
-  scan_thm : p.lookup "scan_thm" = some L.Scan.Records.scanThmD
-  scan_opaque : p.lookup "scan_opaque" = some L.Scan.Records.scanOpaqueD
-  scan_quot : p.lookup "scan_quot" = some L.Scan.Records.scanQuotD
-  scan_ind_decl : p.lookup "scan_ind_decl" = some L.Scan.Records.scanIndD
-  skip_braced : p.lookup "skip_braced" = some L.Examples.skipBraced
-  scan_quoted_nat : p.lookup "scan_quoted_nat" = some L.Scan.Values.scanQuotedNat
-  scan_line_loop : p.lookup "scan_line_loop" = some L.Scan.Line.scanLineLoop
-  scan_line : p.lookup "scan_line" = some L.Scan.Line.scanLine
-  validate : p.lookup "validate" = some L.Scan.Line.validate
-  read_nat : p.lookup "read_nat" = some L.Front.Fields.readNat
-  rec_nat_list : p.lookup "rec_nat_list" = some L.Front.Fields.recNatList
-  rec_str_name : p.lookup "rec_str_name" = some L.Front.Fields.recStrName
-  rec_num_name : p.lookup "rec_num_name" = some L.Front.Fields.recNumName
-  rec_line_loop : p.lookup "rec_line_loop" = some L.Front.Fields.recLineLoop
-  obj_val : p.lookup "obj_val" = some L.Front.Fields.objVal
-  rec_obj : p.lookup "rec_obj" = some L.Front.Fields.recObj
-  expr_val : p.lookup "expr_val" = some L.Front.Fields.exprVal
-  rec_expr_loop : p.lookup "rec_expr_loop" = some L.Front.Fields.recExprLoop
-  esc_sur : p.lookup "esc_sur" = some escSur
-  esc_one : p.lookup "esc_one" = some escOne
-  utf8_put : p.lookup "utf8_put" = some utf8Put
-  str_put_esc : p.lookup "str_put_esc" = some strPutEsc
+abbrev ScanLookups (p : Prog) : Prop := ProgHas p scanLookupsFns
 
 section spec
 variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
@@ -277,8 +243,8 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
           strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
           Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hS.byte_in hS.hex_val hS.hex4 hS.hex3
-        hS.esc_sur hS.esc_one hS.utf8_put hS.str_put_esc n s₁ hm₁ c d)
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3")
+        (hS.get "esc_sur") (hS.get "esc_one") (hS.get "utf8_put") (hS.get "str_put_esc") n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
         applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
@@ -324,11 +290,11 @@ theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   | succ n =>
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Front.Fields.recLineLoop_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.skip_braced hS.read_nat hS.rec_nat_list hS.rec_str_name hS.rec_num_name hS.rec_line_loop n,
-        L.Front.Fields.recExprLoop_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.scan_quoted_nat hS.match_word hS.scan_binder_info hS.scan_nat_list hS.match_lit hS.scan_bool hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.read_nat hS.obj_val hS.rec_obj hS.expr_val hS.rec_expr_loop n,
+        L.Front.Fields.recLineLoop_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "skip_braced") (hS.get "read_nat") (hS.get "rec_nat_list") (hS.get "rec_str_name") (hS.get "rec_num_name") (hS.get "rec_line_loop") n,
+        L.Front.Fields.recExprLoop_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "scan_quoted_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "read_nat") (hS.get "obj_val") (hS.get "rec_obj") (hS.get "expr_val") (hS.get "rec_expr_loop") n,
         applyRec_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n,
-        applyExpr_spec p hE b hb hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.esc_sur hS.esc_one
-          hS.utf8_put hS.str_put_esc n,
+        applyExpr_spec p hE b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "esc_sur") (hS.get "esc_one")
+          (hS.get "utf8_put") (hS.get "str_put_esc") n,
         applyDLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;>
         finish [applyAnyW, Fld.enc]
 
@@ -345,8 +311,8 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
-        L.Scan.Line.scanLine_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.match_word hS.scan_binder_info hS.hints_num hS.hints_obj hS.scan_hints hS.scan_nat_list hS.match_lit hS.scan_bool hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.scan_str_name hS.scan_num_name hS.scan_app hS.scan_binder hS.scan_let hS.scan_const hS.scan_proj hS.scan_rule hS.scan_rules hS.scan_ind_rec hS.scan_ind_recs hS.scan_ind_type hS.scan_ind_types hS.scan_ind_ctor hS.scan_ind_ctors hS.scan_axiom hS.scan_def hS.scan_thm hS.scan_opaque hS.scan_quot hS.scan_ind_decl hS.skip_braced hS.scan_quoted_nat hS.scan_line_loop hS.scan_line hS.validate n,
-        L.Scan.Leaves.skipWs_spec p hS.skip_ws b hb64 n,
+        L.Scan.Line.scanLine_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") (hS.get "validate") n,
+        L.Scan.Leaves.skipWs_spec p (hS.get "skip_ws") b hb64 n,
         applyAny_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;> finish [frontLineW]
 
 end spec

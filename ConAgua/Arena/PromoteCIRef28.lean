@@ -66,7 +66,7 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     obtain ⟨⟨z, m1⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
     dsimp only at hW
     obtain ⟨s2, hs2, hmem, -, hrt, hrb⟩ := callW_triple
-      (envRowSet_spec p hp.env_ix hp.env_row_set n ⟨m, Locals.init []⟩ w c ptr hwl) hcb
+      (envRowSet_spec p (hp.get "env_ix") (hp.get "env_row_set") n ⟨m, Locals.init []⟩ w c ptr hwl) hcb
     have hm1 : m1 = rowSet m w c ptr := by rw [← hs2]; exact hmem
     subst hm1
     have hfr : MemFrame [EIXA, EIXS, EIXN] [] m (rowSet m w c ptr) := rowSet_frame _ _ _ _ hrt

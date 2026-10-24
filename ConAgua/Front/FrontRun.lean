@@ -246,7 +246,8 @@ set_option maxRecDepth 100000
 
 theorem frontAllProg_noSt8 : frontAllProg.noSt8 = true := by decide +kernel
 
-theorem frontAllProg_scan : ScanLookups frontAllProg := by constructor <;> rfl
+theorem frontAllProg_scan : ScanLookups frontAllProg := by
+  unfold ScanLookups scanLookupsFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)
 
 theorem frontAllProg_front : FrontLookups frontAllProg := by constructor <;> rfl
 
@@ -256,7 +257,8 @@ theorem frontAllProg_expr : ExprLookups frontAllProg := by
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     frontAllProg_noSt8⟩ <;> rfl
 
-theorem frontAllProg_dfields : DeclFieldLookups frontAllProg := by constructor <;> rfl
+theorem frontAllProg_dfields : DeclFieldLookups frontAllProg := by
+  unfold DeclFieldLookups declFieldLookupsFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)
 
 theorem frontAllProg_decl : DeclLookups frontAllProg :=
   ⟨frontAllProg_expr, rfl, rfl, rfl, rfl, rfl⟩

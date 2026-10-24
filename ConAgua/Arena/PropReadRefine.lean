@@ -224,7 +224,7 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   obtain ⟨r, m₁⟩ := q
   rw [hc] at hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (lvZero_spec p hp.node hp.push hp.zero n ⟨m, Locals.init []⟩ u) hc
+    (lvZero_spec p (hp.get "lv_node") (hp.get "lh_push") (hp.get "lv_zero") n ⟨m, Locals.init []⟩ u) hc
   rw [ht] at hz
   obtain ⟨he, hZ⟩ := zeroW_ok n _ _ _ _ _ hlv hz
   have hrun : (residualPW (decOpt fl h)).run a = .ok (some (Level.zeronessOf l), a) := by
@@ -397,7 +397,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   obtain ⟨r, m₁⟩ := q
   rw [hc] at hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (lvSpw_spec EREC POOL LH p hp.lvl hp.node hp.push hp.zero hp.spw n ⟨m, Locals.init []⟩ _ _ _ _ _ _)
+    (lvSpw_spec EREC POOL LH p (hp.get "lv_lookup") (hp.get "lv_node") (hp.get "lh_push") (hp.get "lv_zero") (hp.get "lv_spw") n ⟨m, Locals.init []⟩ _ _ _ _ _ _)
     hc
   rw [ht] at hz
   obtain ⟨he, hZ⟩ := spwW_ok_lh hN (by decide) (by decide) ks vs n _ _ _ _ _ _ _ _ _ _ hnm hb hkr
