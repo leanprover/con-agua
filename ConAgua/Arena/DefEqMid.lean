@@ -132,40 +132,11 @@ theorem call1W_succ {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : M
 
 /-! ## `defeq_no_fvars` -/
 
-/-- The model past the second `has_fvar` run. -/
-def noFvarsK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₂) => some (if r.headD 0 = 0 then 1 else 0, m₂)
-
-/-- The model past the first `has_fvar` run. -/
-def noFvarsK (p : Prog) (n : Nat) (b : Word) (res : Option (List Word × Mem)) :
-    Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₁) => if r.headD 0 ≠ 0 then some (0, m₁) else noFvarsK2 (callW p n "has_fvar" [b] m₁)
-
-section nf
-variable (p : Prog) (n : Nat) (b : Word) (r : List Word) (m₁ : Mem)
-
-theorem noFvarsK_t (h : r.headD 0 ≠ 0) : noFvarsK p n b (some (r, m₁)) = some (0, m₁) := by
-  simp only [noFvarsK, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem noFvarsK_f (h : r.headD 0 = 0) :
-    noFvarsK p n b (some (r, m₁)) = noFvarsK2 (callW p n "has_fvar" [b] m₁) := by
-  simp only [noFvarsK, h, ne_eq, not_true_eq_false, ↓reduceIte]
-theorem noFvarsK2_some : noFvarsK2 (some (r, m₁)) = some (if r.headD 0 = 0 then 1 else 0, m₁) := rfl
-
-end nf
-
-theorem defeqNoFvars_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_no_fvars" [a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      noFvarsK p n b (callW p n "has_fvar" [a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.noFvars]
-  simp only [callFn, defeqNoFvarsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "has_fvar"] <;>
-    finish [noFvarsK_t, noFvarsK_f, noFvarsK2_some]
+/-- **`defeq_no_fvars` is its model `noFvW`** (generated). -/
+l_model defeqNoFvars_spec (p : Prog) (hp : DefEqMidProg p)
+  fns [hp.noFvars ↦ noFvW]
+  specs [callW_spec p n "has_fvar"]
+  grind [arena_grind]
 
 /-- **`defeq_no_fvars` refines `defeqNoFvars`**, from `has_fvar`'s spec. -/
 @[refines ConRon.Arena.defeqNoFvars]
@@ -174,19 +145,20 @@ theorem defeqNoFvars_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p)
     (M : ModeMaps) (eb a b : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "defeq_no_fvars" [a, b] (defeqNoFvars (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe M eb := by
-  refine CoreSpec.of_model (defeqNoFvars_spec p hp n s₀ a b) fun r s hW => ?_
+  refine CoreSpec.of_model (defeqNoFvars_spec p hp (n + 1) s₀ a b) fun r s hW => ?_
+  rw [noFvW.arm1] at hW
   refine coreRef_callK hW rfl (hf n _ a₀ dn vis fe M eb a hS ha) fun r₁ m₁ hW _ M₁ hS₁ => ?_
   by_cases h0 : r₁.headD 0 ≠ 0
-  · rw [noFvarsK_t p n b r₁ m₁ h0, Option.some.injEq, Prod.mk.injEq] at hW
+  · rw [noFvW.k_has_fvar.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, rfl⟩ := hW
     rw [decBool_t h0]
     exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
   have h0' : r₁.headD 0 = 0 := by simpa using h0
-  rw [noFvarsK_f p n b r₁ m₁ h0'] at hW
+  rw [noFvW.k_has_fvar.arm2 (hc1 := h0')] at hW
   rw [decBool_f h0']
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine coreRef_callK hW rfl (hf n _ _ dn vis fe M₁ eb b hS₁ hb) fun r₂ m₂ hW _ M₂ hS₂ => ?_
-  rw [noFvarsK2_some, Option.some.injEq, Prod.mk.injEq] at hW
+  rw [noFvW.k_has_fvar_2.arm1, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
   refine coreRef_ret hS₂ ?_ (resH_of hw1 hw0 hr)
   simp only [decBool, ← hr]
@@ -195,26 +167,11 @@ theorem defeqNoFvars_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p)
 
 /-! ## `lazy_fold_ok` -/
 
-/-- The model of `lazy_fold_ok`. -/
-def lazyFoldOkW (p : Prog) (n : Nat) (m : Mem) (mode a b : Word) : Option (Word × Mem) :=
-  if (mode >>> 1) &&& 1 ≠ 0 then some (1, m) else call1W p n "defeq_no_fvars" [a, b] m
-
-theorem lazyFoldOkW_e (p : Prog) (n : Nat) (m : Mem) (mode a b : Word) (h : (mode >>> 1) &&& 1 ≠ 0) :
-    lazyFoldOkW p n m mode a b = some (1, m) := by
-  simp only [lazyFoldOkW, h, ne_eq, not_false_eq_true, ↓reduceIte]
-
-theorem lazyFoldOkW_p (p : Prog) (n : Nat) (m : Mem) (mode a b : Word) (h : (mode >>> 1) &&& 1 = 0) :
-    lazyFoldOkW p n m mode a b = call1W p n "defeq_no_fvars" [a, b] m := by
-  simp only [lazyFoldOkW, h, ne_eq, not_true_eq_false, ↓reduceIte]
-
-theorem lazyFoldOk_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lazy_fold_ok" [mode, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ lazyFoldOkW p n s₀.mem mode a b = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.foldOk]
-  simp only [callFn, lazyFoldOkL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq_no_fvars"] <;>
-    finish [lazyFoldOkW_e, lazyFoldOkW_p, call1W_some]
+/-- **`lazy_fold_ok` is its model `lazyFoldOkW`** (generated). -/
+l_model lazyFoldOk_spec (p : Prog) (hp : DefEqMidProg p)
+  fns [hp.foldOk ↦ lazyFoldOkW]
+  specs [callW_spec p n "defeq_no_fvars"]
+  grind [arena_grind]
 
 theorem mode_eager_bit (mode : Word) (h : mode < 4) :
     (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by
@@ -231,18 +188,19 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (lazyFoldOk_spec p hp n s₀ mode a b)
+    (lazyFoldOk_spec p hp (n + 1) s₀ mode a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have he := mode_eager_bit mode hm
   by_cases h0 : (mode >>> 1) &&& 1 ≠ 0
-  · rw [lazyFoldOkW_e p _ _ mode a b h0, Option.some.injEq, Prod.mk.injEq] at hW
+  · rw [lazyFoldOkW.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm'⟩ := hW
     rw [← hm']
     simp only [lazyFoldOk, he, h0, ne_eq, not_false_eq_true, decide_true, ↓reduceIte]
     exact coreRef_ret hS (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw1)
   have h0' : (mode >>> 1) &&& 1 = 0 := by simpa using h0
-  rw [lazyFoldOkW_p p _ _ mode a b h0'] at hW
+  rw [lazyFoldOkW.arm2 (hc1 := h0')] at hW
+  change call1W p _ _ _ _ = _ at hW
   simp only [lazyFoldOk, he, h0', ne_eq, not_true_eq_false, decide_false, Bool.false_eq_true,
     ↓reduceIte]
   obtain ⟨n, rfl⟩ := call1W_succ hW
@@ -252,25 +210,11 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
 
 /-! ## `bool_true_shortcut` -/
 
-/-- The model of `bool_true_shortcut` past `whnf`'s run. -/
-def btsK (p : Prog) (n : Nat) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₁) => call1W p n "is_bool_true" [r.headD 0] m₁
-
-theorem btsK_some (p : Prog) (n : Nat) (r : List Word) (m₁ : Mem) :
-    btsK p n (some (r, m₁)) = call1W p n "is_bool_true" [r.headD 0] m₁ := rfl
-
-theorem boolTrueShortcut_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode vis d a : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "bool_true_shortcut" [mode, vis, d, a]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      btsK p n (callW p n "whnf" [mode, vis, d, a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.bts]
-  simp only [callFn, boolTrueShortcutL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "whnf",
-      callW_spec p n "is_bool_true"] <;>
-    finish [btsK_some, call1W_some]
+/-- **`bool_true_shortcut` is its model `btsW`** (generated). -/
+l_model boolTrueShortcut_spec (p : Prog) (hp : DefEqMidProg p)
+  fns [hp.bts ↦ btsW]
+  specs [callW_spec p n "whnf", callW_spec p n "is_bool_true"]
+  grind [arena_grind]
 
 /-- **`bool_true_shortcut` refines `boolTrueShortcut`** at the knot. -/
 @[refines ConRon.Arena.boolTrueShortcut]
@@ -284,14 +228,15 @@ theorem boolTrueShortcut_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (boolTrueShortcut_spec p hp n s₀ mode vis d a)
+    (boolTrueShortcut_spec p hp (n + 1) s₀ mode vis d a)
   subst hs0
   refine ⟨hloc, ?_⟩
   cases hc : callW p n "whnf" [mode, vis, d, a] s.mem with
-  | none => rw [hc] at hW; simp [btsK] at hW
+  | none => rw [btsW.arm1, hc, btsW.k_whnf.none] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  rw [hc, btsK_some] at hW
+  rw [btsW.arm1, hc, btsW.k_whnf.arm1] at hW
+  change call1W p _ _ _ _ = _ at hW
   have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).whnf F s a₀ dn vis fe M eb mode d a hF hn hs ha) hc
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   obtain ⟨k, rfl⟩ := call1W_succ hW
@@ -301,46 +246,11 @@ theorem boolTrueShortcut_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
 
 /-! ## `try_unfold_proj_app` -/
 
-/-- The model of `try_unfold_proj_app` past `whnf_core`'s run. -/
-def tupaK2 (e : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₂) => if r.headD 0 = e then some (0, 0, m₂) else some (1, r.headD 0, m₂)
-
-/-- The model of `try_unfold_proj_app` past `head_is_proj`'s run. -/
-def tupaK (p : Prog) (n : Nat) (mode vis d e : Word) (res : Option (List Word × Mem)) :
-    Option (Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₁) =>
-    if r.headD 0 = 0 then some (0, 0, m₁)
-    else tupaK2 e (callW p n "whnf_core" [mode, 0, vis, d, e] m₁)
-
-section tupa
-variable (p : Prog) (n : Nat) (mode vis d e : Word) (r : List Word) (m₁ : Mem)
-
-theorem tupaK_z (h : r.headD 0 = 0) : tupaK p n mode vis d e (some (r, m₁)) = some (0, 0, m₁) := by
-  simp only [tupaK, h, ↓reduceIte]
-theorem tupaK_nz (h : r.headD 0 ≠ 0) : tupaK p n mode vis d e (some (r, m₁)) =
-    tupaK2 e (callW p n "whnf_core" [mode, 0, vis, d, e] m₁) := by
-  simp only [tupaK, h, ↓reduceIte]
-theorem tupaK2_eq (h : r.headD 0 = e) : tupaK2 e (some (r, m₁)) = some (0, 0, m₁) := by
-  simp only [tupaK2, h, ↓reduceIte]
-theorem tupaK2_ne (h : r.headD 0 ≠ e) : tupaK2 e (some (r, m₁)) = some (1, r.headD 0, m₁) := by
-  simp only [tupaK2, h, ↓reduceIte]
-
-end tupa
-
-theorem tryUnfoldProjApp_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "try_unfold_proj_app" [mode, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ tupaK p n mode vis d e (callW p n "head_is_proj" [e] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.tupa]
-  simp only [callFn, tryUnfoldProjAppL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "head_is_proj",
-      callW_spec p n "whnf_core"] <;>
-    finish [tupaK_z, tupaK_nz, tupaK2_eq, tupaK2_ne]
+/-- **`try_unfold_proj_app` is its model `tupaW`** (generated). -/
+l_model tryUnfoldProjApp_spec (p : Prog) (hp : DefEqMidProg p)
+  fns [hp.tupa ↦ tupaW tuple]
+  specs [callW_spec p n "head_is_proj", callW_spec p n "whnf_core"]
+  grind [arena_grind]
 
 theorem decE_beq_eq (x y : Word) (hx : HW x) (hy : HW y) : (decE x == decE y) = decide (x = y) :=
   decI_beq x y hx hy
@@ -360,11 +270,12 @@ theorem tryUnfoldProjApp_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (tryUnfoldProjApp_spec p hp n s₀ mode vis d e)
+    (tryUnfoldProjApp_spec p hp (n + 1) s₀ mode vis d e)
   subst hs0
   refine ⟨hloc, ?_⟩
+  rw [tupaW.arm1] at hW
   cases hc : callW p n "head_is_proj" [e] s.mem with
-  | none => rw [hc] at hW; simp [tupaK] at hW
+  | none => rw [hc, tupaW.k_head_is_proj.none] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc] at hW
@@ -372,16 +283,16 @@ theorem tryUnfoldProjApp_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
   have h₁ := CoreSpec.of_callW (headIsProj_refines p hp.leaf k s a₀ dn vis fe M eb e hs.rel he) hc
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [tupaK_z _ _ _ _ _ _ _ _ h0, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [tupaW.k_head_is_proj.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hr2, hm⟩ := hW
     rw [decBool_f h0, ← hm]
     exact coreRef_ret hS₁ (by simp only [decOptR, decOpt, ← hr, ↓reduceIte])
       (resW_of _ _ r hw0 hw0 hr hr2)
-  rw [tupaK_nz _ _ _ _ _ _ _ _ h0] at hW
+  rw [tupaW.k_head_is_proj.arm2 (hc1 := h0)] at hW
   rw [decBool_t h0]
   simp only [↓reduceIte]
   cases hc2 : callW p (k + 1) "whnf_core" [mode, 0, vis, d, e] m₁ with
-  | none => rw [hc2] at hW; simp [tupaK2] at hW
+  | none => rw [hc2, tupaW.k_whnf_core.none] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
   rw [hc2] at hW
@@ -394,13 +305,13 @@ theorem tryUnfoldProjApp_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
   have hw2 : HW (r₂.headD 0) := h₂.2.2.2
   simp only [decH, decE_beq_eq _ _ hw2 he]
   by_cases h3 : r₂.headD 0 = e
-  · rw [tupaK2_eq (h := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [tupaW.k_whnf_core.arm1 (hc1 := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hr2, hm⟩ := hW
     rw [← hm]
     simp only [h3, decide_true, ↓reduceIte]
     exact coreRef_ret hS₂ (by simp only [decOptR, decOpt, ← hr, ↓reduceIte])
       (resW_of _ _ r hw0 hw0 hr hr2)
-  · rw [tupaK2_ne (h := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [tupaW.k_whnf_core.arm2 (hc1 := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hr2, hm⟩ := hW
     rw [← hm]
     simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte]
@@ -445,35 +356,11 @@ def QuickDefeqSpec (p : Prog) (n : Nat) : Prop :=
 
 /-! ## `delta_quick` -/
 
-/-- The model of `delta_quick` past `quick_defeq`'s run. -/
-def dqK (a b : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m₁) =>
-    if r.headD 0 = 0 then some (0, a, b, m₁)
-    else if r.tail.headD 0 ≠ 0 then some (1, 0, 0, m₁) else some (2, 0, 0, m₁)
-
-section dqs
-variable (a b : Word) (r : List Word) (m₁ : Mem)
-theorem dqK_n (h : r.headD 0 = 0) : dqK a b (some (r, m₁)) = some (0, a, b, m₁) := by
-  simp only [dqK, h, ↓reduceIte]
-theorem dqK_t (h : r.headD 0 ≠ 0) (h2 : r.tail.headD 0 ≠ 0) :
-    dqK a b (some (r, m₁)) = some (1, 0, 0, m₁) := by
-  simp only [dqK, h, h2, ↓reduceIte, ne_eq, not_false_eq_true]
-theorem dqK_f (h : r.headD 0 ≠ 0) (h2 : r.tail.headD 0 = 0) :
-    dqK a b (some (r, m₁)) = some (2, 0, 0, m₁) := by
-  simp only [dqK, h, h2, ↓reduceIte, ne_eq, not_true_eq_false]
-end dqs
-
-theorem deltaQuick_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "delta_quick" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ dqK a b (callW p n "quick_defeq" [mode, vis, d, a, b] s₀.mem) =
-      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.dq]
-  simp only [callFn, deltaQuickL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "quick_defeq"] <;>
-    finish [dqK_n, dqK_t, dqK_f]
+/-- **`delta_quick` is its model `dqW`** (generated). -/
+l_model deltaQuick_spec (p : Prog) (hp : DefEqMidProg p)
+  fns [hp.dq ↦ dqW tuple]
+  specs [callW_spec p n "quick_defeq"]
+  grind [arena_grind]
 
 theorem res3_of {x y z : Word} {r : List Word} (hx : HW x) (hy : HW y) (hz : HW z)
     (h1 : x = r.headD 0) (h2 : y = r.tail.headD 0) (h3 : z = r.tail.tail.headD 0) : Res3 r :=
@@ -494,25 +381,26 @@ theorem deltaQuick_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : Quic
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (deltaQuick_spec p hp n s₀ mode vis d a b)
+    (deltaQuick_spec p hp (n + 1) s₀ mode vis d a b)
   subst hs0
   refine ⟨hloc, ?_⟩
+  rw [dqW.arm1] at hW
   cases hc : callW p n "quick_defeq" [mode, vis, d, a, b] s.mem with
-  | none => rw [hc] at hW; simp [dqK] at hW
+  | none => rw [hc, dqW.k_quick_defeq.none] at hW; cases hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc] at hW
   have h₁ := CoreSpec.of_callW (hq F s a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd) hc
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
-  · rw [dqK_n (h := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
+  · rw [dqW.k_quick_defeq.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hr2, hr3, hm⟩ := hW
     have hd : decOB r₁ = none := by simp only [decOB, h0, ↓reduceIte]
     rw [hd, ← hm]
     exact coreRef_ret hS₁ (by simp only [decDS, ← hr, ← hr2, ← hr3, ↓reduceIte])
       (res3_of hw0 ha hb hr hr2 hr3)
   by_cases h2 : r₁.tail.headD 0 ≠ 0
-  · rw [dqK_t (h := h0) (h2 := h2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
+  · rw [dqW.k_quick_defeq.arm2 (hc1 := h0) (hc2 := h2), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
       Prod.mk.injEq] at hW
     obtain ⟨hr, hr2, hr3, hm⟩ := hW
     have hd : decOB r₁ = some true := by
@@ -520,7 +408,7 @@ theorem deltaQuick_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hq : Quic
     rw [hd, ← hm]
     exact coreRef_ret hS₁ (by simp only [decDS, ← hr]; rfl) (res3_of hw1 hw0 hw0 hr hr2 hr3)
   · have h2' : r₁.tail.headD 0 = 0 := by simpa using h2
-    rw [dqK_f (h := h0) (h2 := h2'), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
+    rw [dqW.k_quick_defeq.arm3 (hc1 := h0) (hc2 := h2'), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq,
       Prod.mk.injEq] at hW
     obtain ⟨hr, hr2, hr3, hm⟩ := hW
     have hd : decOB r₁ = some false := by
