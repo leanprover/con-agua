@@ -3,6 +3,7 @@ import ConAgua.Arena.IndRealWalk
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndCopy
 import ConAgua.Arena.IndRealApdT
+import ConAgua.L.ModelGen
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: applying a certificate (lane `decls3`, `decls3-divmod`)
@@ -63,32 +64,11 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-! ## `div_mod_cert_applied` -/
 
-def appliedW (p : Prog) (n : Nat) (m : Mem) (pr ho hl : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "nat_var" [0] m) fun r1 m1 =>
-  ntBW (callW p n "nat_var" [1] m1) fun r2 m2 =>
-  ntBW (callW p n "mk_app" [pr, r1.headD 0] m2) fun r3 m3 =>
-  ntBW (callW p n "mk_app" [r3.headD 0, r2.headD 0] m3) fun r4 m4 =>
-  if hl = 1 then
-    ntBW (callW p n "intern_fvar" [2, rdW (m4.arr64 IW) ho] m4) fun r5 m5 =>
-    ntBW (callW p n "mk_app" [r4.headD 0, r5.headD 0] m5) fun r6 m6 => some ([r6.headD 0], m6)
-  else if hl = 2 then
-    ntBW (callW p n "intern_fvar" [2, rdW (m4.arr64 IW) ho] m4) fun r5 m5 =>
-    ntBW (callW p n "mk_app" [r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
-    ntBW (callW p n "intern_fvar" [3, rdW (m6.arr64 IW) (ho + 1)] m6) fun r7 m7 =>
-    ntBW (callW p n "mk_app" [r6.headD 0, r7.headD 0] m7) fun r8 m8 => some ([r8.headD 0], m8)
-  else some ([r4.headD 0], m4)
-
-set_option maxHeartbeats 1600000 in
-theorem applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some divModCertAppliedL)
-    (n : Nat) (s₀ : St) (pr ho hl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_cert_applied" [pr, ho, hl]
-    ⦃fun r s' => LocEq s' s₀ ∧ appliedW p n s₀.mem pr ho hl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divModCertAppliedL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "nat_var", callW_spec p n "mk_app", callW_spec p n "intern_fvar"] <;>
-    finish (gen := 30) (instances := 10000) [appliedW, ntBW, rdW_eq]
+/-- **`div_mod_cert_applied` is its model `appliedW`** (generated). -/
+l_model applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some divModCertAppliedL)
+  fns [hp ↦ appliedW list]
+  specs [callW_spec p n "nat_var", callW_spec p n "mk_app", callW_spec p n "intern_fvar"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
 
 theorem iw_rd_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by
@@ -103,9 +83,9 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
       (fun m s => StageR dn vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
         ho.toNat + hl.toNat ≤ iwTop m)
       (divModCertApplied (decE pr) hyps) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mq => appliedW p k mq pr ho hl)
-    (fun k s₀ => applied_specW p hD.lDivModCertApplied k s₀ pr ho hl) fun k m s ⟨hS, hpr, hd, hb⟩ => ?_
-  unfold appliedW divModCertApplied
+  refine CallRef.of_sim (M := fun k mq => appliedW p (k + 1) mq pr ho hl)
+    (fun k s₀ => applied_specW p hD.lDivModCertApplied (k + 1) s₀ pr ho hl) fun k m s ⟨hS, hpr, hd, hb⟩ => ?_
+  rw [appliedW.arm1]; unfold divModCertApplied
   have hM := hD.toMasterProg
   refine Sim.ntB ((natVar_ref hD.toDmProg2 0).simG hS (.refl m)) fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((natVar_ref hD.toDmProg2 1).simG hS1 hg1) fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_

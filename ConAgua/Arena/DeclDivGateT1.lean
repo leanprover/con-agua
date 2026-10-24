@@ -625,9 +625,9 @@ theorem cgsC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subst
   cases k with
   | zero => rw [callW_zero] at hcall; cases hcall
   | succ k =>
-  have hw := callW_model (M := fun mq => cgsW p k mq ps vis c annVal)
-    (cgs_specW p hD.lCertsGuard k · ps vis c annVal) hcall
-  unfold cgsW at hw
+  have hw := callW_model (M := fun mq => cgsW p (k + 1) mq ps vis c annVal)
+    (cgs_specW p hD.lCertsGuard (k + 1) · ps vis c annVal) hcall
+  rw [cgsW.arm1] at hw
   obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hf1, hCr1, hw⟩ :=
     (divModCertStmts_ref hD.toDmProg5.toDmProg2 c).bindLC hcl (leaf_mem _ (by decide)) hkp
       (im_mem _ rfl) ⟨hC.stage, hc⟩ hCr hw

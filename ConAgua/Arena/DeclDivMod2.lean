@@ -3,6 +3,7 @@ import ConAgua.Arena.Keeps
 import ConAgua.Arena.RomCI
 import ConAgua.Arena.IndStubs
 import ConAgua.Arena.IndRealNames
+import ConAgua.L.ModelGen
 
 
 noncomputable section
@@ -117,27 +118,17 @@ theorem RelW.simS {α : Type} {W : Mem → List Word → Option (List Word × Me
 
 /-! ## `nat_var` -/
 
-def natVarW (p : Prog) (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
-  ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
-  ntBW (callW p n "intern_fvar" [i, r2.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
-
-theorem natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL) (n : Nat) (s₀ : St)
-    (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_var" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ natVarW p n s₀.mem i = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natVarL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "intern_fvar"] <;>
-    finish (gen := 20) (instances := 10000) [natVarW, ntBW]
+/-- **`nat_var` is its model `natVarW`** (generated). -/
+l_model natVar_specW (p : Prog) (hp : p.lookup "nat_var" = some natVarL)
+  fns [hp ↦ natVarW list]
+  specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "intern_fvar"]
+  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
 
 theorem natVar_ref (hD : DmProg2 p) (i : Word) :
     CallRef p "nat_var" [i] (StageR dn vis fe) (natVar i.toNat) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mm => natVarW p k mm i) (fun k s₀ => natVar_specW p hD.lNatVar k s₀ i)
+  refine CallRef.of_sim (M := fun k mm => natVarW p (k + 1) mm i) (fun k s₀ => natVar_specW p hD.lNatVar (k + 1) s₀ i)
     fun k m a hS => ?_
-  unfold natVarW natVar
+  rw [natVarW.arm1]; unfold natVar
   refine Sim.ntB ((pinSlot_ref p hD.lPinAt 1 pinNat rfl).simG hS (.refl m))
     fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((constE_ref hD.toMasterProg (r1.headD 0)).simG ⟨hS1, hl1⟩ hg1)
@@ -146,27 +137,17 @@ theorem natVar_ref (hD : DmProg2 p) (i : Word) :
 
 /-! ## `nat_one` -/
 
-def natOneW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
-  ntBW (callW p n "pin_at" [3] m) fun r1 m1 =>
-  ntBW (callW p n "pin_at" [2] m1) fun r2 m2 =>
-  ntBW (callW p n "const_e" [r2.headD 0] m2) fun r3 m3 =>
-  ntBW (callW p n "nat_ap1" [r1.headD 0, r3.headD 0] m3) fun r4 m4 => some ([r4.headD 0], m4)
-
-theorem natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_one" []
-    ⦃fun r s' => LocEq s' s₀ ∧ natOneW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOneL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "nat_ap1"] <;>
-    finish (gen := 20) (instances := 10000) [natOneW, ntBW]
+/-- **`nat_one` is its model `natOneW`** (generated). -/
+l_model natOne_specW (p : Prog) (hp : p.lookup "nat_one" = some natOneL)
+  fns [hp ↦ natOneW list]
+  specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "nat_ap1"]
+  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
 
 theorem natOne_ref (hD : DmProg2 p) :
     CallRef p "nat_one" [] (StageR dn vis fe) natOne (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mm => natOneW p k mm) (fun k s₀ => natOne_specW p hD.lNatOne k s₀)
+  refine CallRef.of_sim (M := fun k mm => natOneW p (k + 1) mm) (fun k s₀ => natOne_specW p hD.lNatOne (k + 1) s₀)
     fun k m a hS => ?_
-  unfold natOneW natOne
+  rw [natOneW.arm1]; unfold natOne
   refine Sim.ntB ((pinSlot_ref p hD.lPinAt 3 pinNatSucc rfl).simG hS (.refl m))
     fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((pinSlot_ref p hD.lPinAt 2 pinNatZero rfl).simG hS1 hg1)
@@ -189,36 +170,18 @@ theorem slNew1_dec {κ : IdxKind} {m m1 : Mem} {r : List Word} {x : Word} (hR : 
     (fun j hj => by simpa [iwA] using hget j hj)
   simpa using this
 
-def eqAt1W (p : Prog) (n : Nat) (m : Mem) (ty a b : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "pin_word" [53] m) fun r1 m1 =>
-  ntBW (callW p n "intern_succ" [r1.headD 0] m1) fun r2 m2 =>
-  ntBW (callW p n "sl_new1" [r2.headD 0] m2) fun r3 m3 =>
-  ntBW (ilF m3 [r3.headD 0, r3.tail.headD 0]) fun r4 m4 =>
-  ntBW (callW p n "pin_at" [0] m4) fun r5 m5 =>
-  ntBW (callW p n "intern_const" [r5.headD 0, r4.headD 0] m5) fun r6 m6 =>
-  ntBW (callW p n "mk_app" [r6.headD 0, ty] m6) fun r7 m7 =>
-  ntBW (callW p n "mk_app" [r7.headD 0, a] m7) fun r8 m8 =>
-  ntBW (callW p n "mk_app" [r8.headD 0, b] m8) fun r9 m9 => some ([r9.headD 0], m9)
-
-theorem eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (hil : IlF p) (n : Nat) (s₀ : St)
-    (ty a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "eq_at1" [ty, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ eqAt1W p n s₀.mem ty a b = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, eqAt1L]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "pin_word", callW_spec p n "intern_succ", callW_spec p n "sl_new1",
-      ilF_spec p hil n, callW_spec p n "pin_at", callW_spec p n "intern_const",
-      callW_spec p n "mk_app"] <;>
-    finish (gen := 20) (instances := 10000) [eqAt1W, ntBW]
+/-- **`eq_at1` is its model `eqAt1W`** (generated). -/
+l_model eqAt1_specW (p : Prog) (hp : p.lookup "eq_at1" = some eqAt1L) (hil : IlF p)
+  fns [hp ↦ eqAt1W list]
+  specs [callW_spec p n "pin_word", callW_spec p n "intern_succ", callW_spec p n "sl_new1", ilF_spec p hil n, callW_spec p n "pin_at", callW_spec p n "intern_const", callW_spec p n "mk_app"]
+  grind [arena_grind] finish [ntBW] gen 20 heartbeats 1600000 bind ntBW instances 10000
 
 theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
     CallRef p "eq_at1" [ty, a, b] (StageR dn vis fe)
       (eqAt1 (decE ty) (decE a) (decE b)) (KeepPost dn vis fe decW0E) := by
-  refine CallRef.of_sim (M := fun k mm => eqAt1W p k mm ty a b)
-    (fun k s₀ => eqAt1_specW p hD.lEqAt1 hD.lIl k s₀ ty a b) fun k m s hS => ?_
-  unfold eqAt1W eqAt1 zeroLevel
+  refine CallRef.of_sim (M := fun k mm => eqAt1W p (k + 1) mm ty a b)
+    (fun k s₀ => eqAt1_specW p hD.lEqAt1 hD.lIl (k + 1) s₀ ty a b) fun k m s hS => ?_
+  rw [eqAt1W.arm1]; unfold eqAt1 zeroLevel
   refine Sim.ntB ((pinWord53_ref p hD.lPinWord).simG hS (.refl m)) fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((internSucc_ref hD.toMasterProg (r1.headD 0) hl1).simG hS1 hg1)
     fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
@@ -703,7 +666,7 @@ theorem certCtx_ref (hD : DmProg2 p) :
 /-! ### The context's fields -/
 
 theorem CertCtxR.f0 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
-    rdW (m.arr64 IW) (cx + 0) = c.natTy.word.toUInt64 := h.rd 0 (by decide)
+    rdW (m.arr64 IW) cx = c.natTy.word.toUInt64 := by simpa using h.rd 0 (by decide)
 
 theorem CertCtxR.f1 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 1) = c.x.word.toUInt64 := h.rd 1 (by decide)
