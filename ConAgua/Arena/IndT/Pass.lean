@@ -269,7 +269,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   obtain ⟨r5, m5⟩ := q5
   rw [c5, icpK5_some] at h
   obtain ⟨s5, hs5, -, hok5, hC5, hg5, hrd5, hms5, hP5, hA5, -⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-    (checkBlockClasses_refinesC hkp henv₁ hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide))
+    (checkBlockClasses_refinesC hkp hIlpf henv₁ hP.cbc hcl (hfs _ (by decide)) (hfs _ (by decide))
       (n + 2) (by omega) _ a4 _ _ _ _ _ bs1 ctorsAs c.params hC4 hBS hsrc4 hRD hca4 hpfD hpfb hP4 hA4
       hOpf (hk' _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]))
       (hk' _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC])) hpl4 hparN hsh4 hpfP hca4P) c5

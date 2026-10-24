@@ -26,9 +26,9 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
-variable {p : Prog} (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (henv : ConLeche.EnvWF env)
 
-include hq henv in
+include hq hIlpf henv in
 /-- **`check_block_classes` under `StageC`** (`cbcW_sim`'s). -/
 theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfr : "class_read" ∈ fs)
@@ -155,7 +155,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   simp only at hs4 hW4
   subst hs4
   obtain ⟨ms, a4, hrun4, hC4, hg4, hms, hP4, hA4⟩ :=
-    clmW_simC hq henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
+    clmW_simC hq hIlpf henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
       keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
       (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.1) hks
       hP3 (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩)
@@ -210,7 +210,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
     rfl
   · exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.2.2.2.1
 
-include hq henv in
+include hq hIlpf henv in
 /-- **`check_block_classes` refines `checkBlockClasses`** under `StageC` (the inputs' denotations
 as con-ron's `checkBlockClasses_spec` asks; the walk memos across the callees by `AbsKeep`). -/
 @[refines ConRon.Arena.checkBlockClasses]
@@ -244,7 +244,7 @@ theorem checkBlockClasses_refinesC (hP : CbcProg p) {fs : List FnName}
       ConRon.Bridge.CoreStep V env fe a₀
         (AM.st (ConRon.Arena.checkBlockClasses V fe bs pfvs css) a₀); ⊤⦄ :=
   triple_post (cbc_spec p hP.cbc n s₀ vis pp po pl co cl) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (cbcW_simC hq henv hP hcl hfr hfc n hn _ a₀ pp po pl co cl bs css
+    let ⟨hok, hQ⟩ := Sim.run (cbcW_simC hq hIlpf henv hP hcl hfr hfc n hn _ a₀ pp po pl co cl bs css
       pfvs hC hb hsrc hrecs hcss hpf hpfb hPm hA hOpf hk2 hk3 hpl hpw hshP hpfP hcssP) hm
     ⟨hl, hok, hQ⟩
 
