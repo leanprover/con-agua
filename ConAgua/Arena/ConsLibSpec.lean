@@ -618,6 +618,8 @@ theorem mapE_shiftE (f : Var → Var) (o o' : Nat) (hf : ∀ x, f (x + o) = x + 
   | .cmpw c a b => by simp [mapE, shiftE, mapE_shiftE f o o' hf a, mapE_shiftE f o o' hf b]
   | .ldc d i => by simp [mapE, shiftE, mapE_shiftE f o o' hf i]
   | .glob _ => rfl
+  | .ld64t a t i => by simp [mapE, shiftE, mapE_shiftE f o o' hf t, mapE_shiftE f o o' hf i]
+  | .len64t a t => by simp [mapE, shiftE, mapE_shiftE f o o' hf t]
 
 theorem mapC_shiftC (f : Var → Var) (o o' : Nat) (hf : ∀ x, f (x + o) = x + o') :
     ∀ c, mapC f (shiftC o c) = shiftC o' c
@@ -642,6 +644,7 @@ theorem mapS_shiftS (f : Var → Var) (o o' : Nat) (hf : ∀ x, f (x + o) = x + 
   | .call xs g args => by simp [mapS, shiftS, mapE_shiftE f o o' hf, hf]
   | .abort => rfl
   | .gset g e => by simp [mapS, shiftS, mapE_shiftE f o o' hf]
+  | .st64t a t i e => by simp [mapS, shiftS, mapE_shiftE f o o' hf]
 
 theorem argsOf_zero (o : Nat) (s : St) : argsOf o 0 s = [] := rfl
 theorem argsOf_one (o : Nat) (s : St) : argsOf o 1 s = [s.loc o] := by simp [argsOf]
