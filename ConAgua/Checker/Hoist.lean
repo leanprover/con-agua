@@ -151,23 +151,23 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
   if fd != 0 { return sp };
   z := call hs_put(e, 0, 1, fd, j);
   g := e >> 28;
-  t := (e >> 27) & 1;
-  x := e & 134217727;
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 3 {
-    if CTL.u64[18 + t] <= x { abort };
-    r := call hoist_note(CREC.u64[x * 4 + t * 2], i, k, tg, ws, sp);
+    if CONST⟨t⟩.count <= x { abort };
+    r := call hoist_note(CONST⟨t⟩[x].n, i, k, tg, ws, sp);
     return r
   };
-  if g == 4 { if CTL.u64[4 + t] <= x { abort }; r := call hoist_app(e, i, k, tg, ws, sp, fu - 1); return r };
-  if g == 5 { if CTL.u64[28 + t] <= x { abort }; r := call hoist_lam(e, i, k, tg, ws, sp, fu - 1); return r };
-  if g == 6 { if CTL.u64[30 + t] <= x { abort }; r := call hoist_forall(e, i, k, tg, ws, sp, fu - 1); return r };
-  if g == 7 { if CTL.u64[20 + t] <= x { abort }; r := call hoist_let(e, i, k, tg, ws, sp, fu - 1); return r };
-  if g == 9 { if CTL.u64[32 + t] <= x { abort }; r := call hoist_proj(e, i, k, tg, ws, sp, fu - 1); return r };
-  if g == 1 { if CTL.u64[26 + t] <= x { abort }; r := call hoist_fvar(e, i, k, tg, ws, sp, fu - 1); return r };
-  if g == 0 { if CTL.u64[22 + t] <= x { abort }; return sp };
-  if g == 2 { if CTL.u64[16 + t] <= x { abort }; return sp };
-  if g == 8 { if CTL.u64[2 + t] <= x { abort }; return sp };
+  if g == 4 { if APP⟨t⟩.count <= x { abort }; r := call hoist_app(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 5 { if LAM⟨t⟩.count <= x { abort }; r := call hoist_lam(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 6 { if FORALL⟨t⟩.count <= x { abort }; r := call hoist_forall(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 7 { if LET⟨t⟩.count <= x { abort }; r := call hoist_let(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 9 { if PROJ⟨t⟩.count <= x { abort }; r := call hoist_proj(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 1 { if FVAR⟨t⟩.count <= x { abort }; r := call hoist_fvar(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 0 { if BVAR⟨t⟩.count <= x { abort }; return sp };
+  if g == 2 { if SORT⟨t⟩.count <= x { abort }; return sp };
+  if g == 8 { if LIT⟨t⟩.count <= x { abort }; return sp };
   abort
 }
 
@@ -175,10 +175,10 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
 fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 def hoistAppL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
-  t := (e >> 27) & 1;
-  x := e & 134217727;
-  sp := call hoist_walk(AREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(AREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
+  sp := call hoist_walk(APP⟨t⟩[x].f, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(APP⟨t⟩[x].a, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -186,10 +186,10 @@ def hoistAppL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
 fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 def hoistLamL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
-  t := (e >> 27) & 1;
-  x := e & 134217727;
-  sp := call hoist_walk(LAREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(LAREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
+  sp := call hoist_walk(LAM⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LAM⟨t⟩[x].b, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -197,10 +197,10 @@ def hoistLamL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
 fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 def hoistForallL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
-  t := (e >> 27) & 1;
-  x := e & 134217727;
-  sp := call hoist_walk(FAREC.u64[x * 4 + t * 2], i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(FAREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
+  sp := call hoist_walk(FORALL⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(FORALL⟨t⟩[x].b, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -208,11 +208,11 @@ def hoistForallL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
 fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 def hoistLetL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
-  t := (e >> 27) & 1;
-  x := e & 134217727;
-  sp := call hoist_walk(LEREC.u64[x * 6 + t * 3], i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(LEREC.u64[x * 6 + t * 3 + 1], i, k, tg, ws, sp, fu);
-  sp := call hoist_walk(LEREC.u64[x * 6 + t * 3 + 2], i, k, tg, ws, sp, fu);
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
+  sp := call hoist_walk(LET⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LET⟨t⟩[x].v, i, k, tg, ws, sp, fu);
+  sp := call hoist_walk(LET⟨t⟩[x].b, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -220,10 +220,10 @@ def hoistLetL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
 fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 def hoistProjL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
-  t := (e >> 27) & 1;
-  x := e & 134217727;
-  sp := call hoist_note(PJREC.u64[x * 6 + t * 3], i, k, tg, ws, sp);
-  sp := call hoist_walk(PJREC.u64[x * 6 + t * 3 + 2], i, k, tg, ws, sp, fu);
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
+  sp := call hoist_note(PROJ⟨t⟩[x].n, i, k, tg, ws, sp);
+  sp := call hoist_walk(PROJ⟨t⟩[x].e, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -231,9 +231,9 @@ def hoistProjL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
 fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:46-70 ConRon.Arena.Frontend.usedConstsGo
 def hoistFvarL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
-  t := (e >> 27) & 1;
-  x := e & 134217727;
-  sp := call hoist_walk(FVREC.u64[x * 4 + t * 2 + 1], i, k, tg, ws, sp, fu);
+  t := ⟦e⟧.tier;
+  x := ⟦e⟧.idx;
+  sp := call hoist_walk(FVAR⟨t⟩[x].ty, i, k, tg, ws, sp, fu);
   return sp
 }
 
@@ -544,7 +544,9 @@ l_model hoistWalk_spec (p : Prog) (hp : HoistProg p)
     hp.get "hoist_fvar" ↦ hFvarW]
   specs [memoFindG_spec hsSch p _ (hp.get "hs_find") n,
     memoPutG_spec hsSch p _ (hp.get "hs_put") n, hoistNote_spec p hp n]
-  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-- **`hoist_rules_go` is its model `hRulesGoW`** (generated). -/
 l_model hoistRulesGo_spec (p : Prog) (hp : HoistProg p)

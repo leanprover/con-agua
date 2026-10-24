@@ -32,7 +32,7 @@ theorem lpGo_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ ilwGoW p n s₀.mem h ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.go]
   simp only [callFn, lpGo]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
     callW_spec p n "der_b", callW_spec p n "sl_memo", callW_spec p n "sls_memo",
     callW_spec p n "intern_sort", callW_spec p n "intern_const", callW_spec p n "lp_fvar",
     callW_spec p n "lp_app", callW_spec p n "lp_lam", callW_spec p n "lp_forall",

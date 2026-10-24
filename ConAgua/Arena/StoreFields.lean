@@ -208,6 +208,16 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 
 /-! ## Frames -/
 
+/-- A field depends only on its record array. -/
+theorem tfld_arr_eq {m m' : Mem} {R : TRec} (h : m.arr64 R.arr = m'.arr64 R.arr) (t i f : Word) :
+    tfld m R t i f = tfld m' R t i f := by
+  simp only [tfld, h]
+
+/-- A node count depends only on `CTL`. -/
+theorem tcnt_arr_eq {m m' : Mem} (R : TRec) (h : m.arr64 CTL = m'.arr64 CTL) (t : Word) :
+    tcnt m R t = tcnt m' R t := by
+  simp only [tcnt, h]
+
 theorem tfld_set64_ne (m : Mem) (R : TRec) (a : ArrId) (k v t i f : Word) (h : a ≠ R.arr) :
     tfld (m.set64 a k v) R t i f = tfld m R t i f := by
   simp only [tfld, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]

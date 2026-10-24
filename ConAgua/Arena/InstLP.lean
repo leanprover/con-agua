@@ -180,14 +180,14 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   (x, y, r) := call der_b(h);
   if r == 0 { return h };
   g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
-  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return h };
-  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return h };
+  if g == 0 { if BVAR⟨t⟩.count <= i { abort }; return h };
+  if g == 8 { if LIT⟨t⟩.count <= i { abort }; return h };
   if g == 2 {
-    if CTL.u64[16 + t] <= i { abort };
-    x := SOREC.u64[i * 2 + t];
+    if SORT⟨t⟩.count <= i { abort };
+    x := SORT⟨t⟩[i].u;
     y := call sl_memo(x, ko, kc, vo, vc);
     if y == x { return h };
     r := call intern_sort(y);
@@ -195,21 +195,21 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
     return r
   };
   if g == 3 {
-    if CTL.u64[18 + t] <= i { abort };
-    x := CREC.u64[i * 4 + t * 2 + 1];
-    r := CREC.u64[i * 4 + t * 2];
+    if CONST⟨t⟩.count <= i { abort };
+    x := CONST⟨t⟩[i].us;
+    r := CONST⟨t⟩[i].n;
     y := call sls_memo(x, ko, kc, vo, vc);
     if y == x { return h };
     r := call intern_const(r, y);
     if r >= 4294967296 { abort };
     return r
   };
-  if g == 1 { if CTL.u64[26 + t] <= i { abort }; r := call lp_fvar(h, ko, kc, vo, vc, fu - 1); return r };
-  if g == 4 { if CTL.u64[4 + t] <= i { abort }; r := call lp_app(h, ko, kc, vo, vc, fu - 1); return r };
-  if g == 5 { if CTL.u64[28 + t] <= i { abort }; r := call lp_lam(h, ko, kc, vo, vc, fu - 1); return r };
-  if g == 6 { if CTL.u64[30 + t] <= i { abort }; r := call lp_forall(h, ko, kc, vo, vc, fu - 1); return r };
-  if g == 7 { if CTL.u64[20 + t] <= i { abort }; r := call lp_let(h, ko, kc, vo, vc, fu - 1); return r };
-  if g == 9 { if CTL.u64[32 + t] <= i { abort }; r := call lp_proj(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 1 { if FVAR⟨t⟩.count <= i { abort }; r := call lp_fvar(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 4 { if APP⟨t⟩.count <= i { abort }; r := call lp_app(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 5 { if LAM⟨t⟩.count <= i { abort }; r := call lp_lam(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 6 { if FORALL⟨t⟩.count <= i { abort }; r := call lp_forall(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 7 { if LET⟨t⟩.count <= i { abort }; r := call lp_let(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 9 { if PROJ⟨t⟩.count <= i { abort }; r := call lp_proj(h, ko, kc, vo, vc, fu - 1); return r };
   abort
 }
 
@@ -218,10 +218,10 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
 def lpFVar : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, ix, ty, x, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  ix := FVREC.u64[i * 4 + t * 2];
-  ty := FVREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  ix := FVAR⟨t⟩[i].i;
+  ty := FVAR⟨t⟩[i].ty;
   x := call lp_go(ty, ko, kc, vo, vc, fu);
   if x == ty { r := h } else { r := call intern_fvar(ix, x); if r >= 4294967296 { abort } };
   (fd, j, e0) := call ilp_find(h, 0);
@@ -234,10 +234,10 @@ def lpFVar : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, ix,
 def lpApp : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := AREC.u64[i * 4 + t * 2];
-  a := AREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := APP⟨t⟩[i].f;
+  a := APP⟨t⟩[i].a;
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
   if x == f && y == a { r := h } else { r := call mk_app(x, y); if r >= 4294967296 { abort } };
@@ -251,10 +251,10 @@ def lpApp : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
 def lpLam : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := LAREC.u64[i * 4 + t * 2];
-  a := LAREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := LAM⟨t⟩[i].ty;
+  a := LAM⟨t⟩[i].b;
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
   if x == f && y == a { r := h } else { r := call mk_lam(x, y); if r >= 4294967296 { abort } };
@@ -268,10 +268,10 @@ def lpLam : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
 def lpForall : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := FAREC.u64[i * 4 + t * 2];
-  a := FAREC.u64[i * 4 + t * 2 + 1];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := FORALL⟨t⟩[i].ty;
+  a := FORALL⟨t⟩[i].b;
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
   if x == f && y == a { r := h } else { r := call mk_forall(x, y); if r >= 4294967296 { abort } };
@@ -285,11 +285,11 @@ def lpForall : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f
 def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, b, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  f := LEREC.u64[i * 6 + t * 3];
-  a := LEREC.u64[i * 6 + t * 3 + 1];
-  b := LEREC.u64[i * 6 + t * 3 + 2];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  f := LET⟨t⟩[i].ty;
+  a := LET⟨t⟩[i].v;
+  b := LET⟨t⟩[i].b;
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
   r := call lp_let_tail(h, f, a, b, x, y, ko, kc, vo, vc, fu);
@@ -320,11 +320,11 @@ def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
 def lpProj : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  nm := PJREC.u64[i * 6 + t * 3];
-  ix := PJREC.u64[i * 6 + t * 3 + 1];
-  e := PJREC.u64[i * 6 + t * 3 + 2];
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  nm := PROJ⟨t⟩[i].n;
+  ix := PROJ⟨t⟩[i].i;
+  e := PROJ⟨t⟩[i].e;
   x := call lp_go(e, ko, kc, vo, vc, fu);
   if x == e { r := h } else { r := call mk_proj(nm, ix, x); if r >= 4294967296 { abort } };
   (fd, j, e0) := call ilp_find(h, 0);
@@ -341,8 +341,8 @@ def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r) {
   w := SPN.u64[o];
   if w >= 4294967296 { abort };
   g := w >> 28;
-  t := (w >> 27) & 1;
-  i := w & 134217727;
+  t := ⟦w⟧.tier;
+  i := ⟦w⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g >= 3 { abort };
   if CTL.u64[34 + g * 2 + t] <= i { abort };
