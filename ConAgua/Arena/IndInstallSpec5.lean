@@ -352,6 +352,29 @@ def RawR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem
     List Word → Bool → Mem → AState → Prop :=
   fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR dn vis fe m' a ∧ IWGrow m m'
 
+/-- **One element of an `anyM`** (`brrK`): the element's test, then, if it fails, the rest. -/
+theorem brrK_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat}
+    {rest : Mem → Option (List Word × Mem)} {mo : Option (List Word × Mem)} {hd tl : AM Bool} {m : Mem}
+    {a : AState} (h1 : Sim mo hd a (RawR (dn := dn) (vis := vis) (fe := fe) m a))
+    (h2 : ∀ m1 mp1, StageR dn vis fe m1 a → IWGrow m m1 → maMR m1 mp1 →
+      Sim (rest m1) tl a (RawR (dn := dn) (vis := vis) (fe := fe) m1 a)) :
+    Sim (brrK n rest mo) (do let b ← hd; if b then pure true else tl) a
+      (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
+  refine Sim.bindK (K := brrK n rest) (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
+    else pdmK3 (rest m1)) rfl (fun _ _ => rfl) h1 ?_
+  rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
+  cases b with
+  | true =>
+    simp only [if_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
+    exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
+  | false =>
+    simp only [Bool.false_eq_true, if_false, List.headD_cons, ne_eq, not_true_eq_false]
+    refine Sim.congr (op := tl >>= pure) ?_ (bind_pure _)
+    refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
+      (h2 m1 mp1 hS1 hg1 hM1) ?_
+    rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
+    exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
+
 /-- **`block_raw_rec_member`'s model refines a member's `ctors.anyM`.** -/
 theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (coff clen : Word) (cs : List (IConstantVal × Nat))
@@ -381,24 +404,9 @@ theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hw, hcw, partsAnyM_cons]
     have h1 := pdmW_sim (names := names) n m a CWF _ mp hS htyl hns hnb hM
     rw [CWF_eq, show decE (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
-    refine Sim.bindK (K := brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1)))
-      (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
-        else pdmK3 (brmW n m1 no nl (coff + 1) (clen - 1))) rfl (fun _ _ => rfl) h1 ?_
-    rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
-    cases b with
-    | true =>
-      simp only [if_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
-      exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
-    | false =>
-      simp only [Bool.false_eq_true, if_false, List.headD_cons, ne_eq, not_true_eq_false]
-      refine Sim.congr (op := List.anyM (fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) cs' >>= pure)
-        ?_ (bind_pure _)
-      refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
-        (ih m1 a1 (coff + 1) (clen - 1) cs' mp1 hS1 (hcs'.grow decCN_mono hg1).1
-          (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
-          (Nat.le_trans hnb hg1.1) hM1) ?_
-      rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
-      exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
+    exact brrK_sim h1 fun m1 mp1 hS1 hg1 hM1 => ih m1 a (coff + 1) (clen - 1) cs' mp1 hS1
+      (hcs'.grow decCN_mono hg1).1 (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
+      (Nat.le_trans hnb hg1.1) hM1
 
 /-- A pointer slice decoded below the tops, nonempty, lies below the top. -/
 theorem partsPL_bound {α : Type} {f : Mem → Nat → Option α} {m : Mem} {o l : Nat} {xs : List α}
@@ -463,25 +471,9 @@ theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     obtain ⟨how, -, -⟩ := partsIwRd ho hp2
     obtain ⟨hlw, -, -⟩ := partsIwRd hl' (by rw [hp3])
     rw [hw, how, hlw, ofNat_toNat_word, ofNat_toNat_word, partsAnyM_cons]
-    refine Sim.bindK (K := brrK n (fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1)))
-      (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
-        else pdmK3 (brgoW n m1 no nl (moff + 1) (mlen - 1))) rfl (fun _ _ => rfl)
-      (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) ?_
-    rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
-    cases b with
-    | true =>
-      simp only [if_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
-      exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
-    | false =>
-      simp only [Bool.false_eq_true, if_false, List.headD_cons, ne_eq, not_true_eq_false]
-      refine Sim.congr (op := List.anyM (fun ms => ms.ctors.anyM fun c =>
-        ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) ms' >>= pure) ?_ (bind_pure _)
-      refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
-        (ih m1 a1 (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
-          (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
-          (Nat.le_trans hnb hg1.1) hM1) ?_
-      rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
-      exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
+    exact brrK_sim (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) fun m1 mp1 hS1 hg1 hM1 =>
+      ih m1 a (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
+        (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1) (Nat.le_trans hnb hg1.1) hM1
 
 /-- **The model of `block_raw_rec`** (at exec fuel `n + 1`). -/
 def brrW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
