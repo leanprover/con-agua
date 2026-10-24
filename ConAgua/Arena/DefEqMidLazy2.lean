@@ -44,7 +44,7 @@ def decNat (r : List Word) : Option Bool := if r.headD 0 = 3 then none else some
 l_model lazyNat_spec (p : Prog) (hp : LazyProg p)
   fns [hp.nat ↦ lnW tuple]
   specs [callW_spec p n "reduce_nat", callW_spec p n "defeq"]
-  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] simp [St.setLocs_mem']
 
 theorem decNat_ite (w : Word) (r : List Word) (h : (if w ≠ 0 then (1 : Word) else 0) = r.headD 0) :
     decNat r = some (w != 0) := by
@@ -224,7 +224,7 @@ l_model lazyIter_spec (p : Prog) (hp : LazyProg p)
   fns [hp.iter ↦ itW tuple]
   specs [callW_spec p n "defeq_offset", callW_spec p n "lazy_fold_ok", callW_spec p n "lazy_nat",
     callW_spec p n "lazy_delta_step"]
-  grind [arena_grind] finish [St.setLocs_mem'] heartbeats 1000000 sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] heartbeats 1000000 simp [St.setLocs_mem']
 
 /-- **`lazy_iter` refines `iterT`** at the knot. -/
 theorem lazyIter_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)

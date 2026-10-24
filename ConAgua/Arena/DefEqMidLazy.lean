@@ -270,7 +270,7 @@ def unfold2T (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
 l_model ldsUnfold2_spec (p : Prog) (hp : LazyProg p)
   fns [hp.unfold2 ↦ uW tuple]
   specs [callW_spec p n "unfold_definition", callW_spec p n "whnf_core", callW_spec p n "delta_quick"]
-  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] simp [St.setLocs_mem']
 
 /-- **`lds_unfold2` refines `unfold2T`** at the knot. -/
 theorem ldsUnfold2_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
@@ -341,7 +341,7 @@ def sameT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) 
 l_model ldsSame_spec (p : Prog) (hp : LazyProg p)
   fns [hp.same ↦ smW tuple]
   specs [callW_spec p n "same_const_heads", callW_spec p n "defeq_spine", callW_spec p n "lds_unfold2"]
-  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] simp [St.setLocs_mem']
 
 theorem sameRegular_w (ka ha kb hb : Word) :
     ConLeche.ReducibilityHint.sameRegular (decHintW ka ha) (decHintW kb hb) =
@@ -444,8 +444,7 @@ l_model ldsBoth_spec (p : Prog) (hp : LazyProg p)
   fns [hp.both ↦ bothW tuple]
   specs [callW_spec p n "head_hint", callW_spec p n "hint_lt", callW_spec p n "lds_left",
     callW_spec p n "lds_right", callW_spec p n "lds_same"]
-  grind [arena_grind] finish [St.setLocs_mem'] gen 20 heartbeats 1000000
-  sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] heartbeats 1000000 simp [St.setLocs_mem']
 
 /-- **`lds_both` refines `bothT`** at the knot. -/
 theorem ldsBoth_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
@@ -562,7 +561,7 @@ l_model lazyDeltaStep_spec (p : Prog) (hp : LazyProg p)
   specs [callW_spec p n "unfoldable_head", callW_spec p n "try_unfold_proj_app",
     callW_spec p n "delta_quick", callW_spec p n "lds_left", callW_spec p n "lds_right",
     callW_spec p n "lds_both"]
-  grind [arena_grind] finish [St.setLocs_mem'] heartbeats 1000000 sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] heartbeats 1000000 simp [St.setLocs_mem']
 
 /-- **`lazy_delta_step` refines `lazyDeltaStep`** at the knot. -/
 @[refines ConRon.Arena.lazyDeltaStep]

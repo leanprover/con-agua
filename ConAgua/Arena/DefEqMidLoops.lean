@@ -92,7 +92,7 @@ theorem resH_ite (c : Prop) [Decidable c] : ResH [if c then (1 : Word) else 0] :
 l_model defeqLst_spec (p : Prog) (hp : p.lookup "defeq_lst" = some defeqLstL)
   fns [hp ↦ lstW]
   specs [callW_spec p n "defeq"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 section lstRef
 variable (p : Prog)
@@ -203,7 +203,7 @@ end lstRef
 l_model defeqListRev_spec (p : Prog) (hp : p.lookup "defeq_list_rev" = some defeqListRevL)
   fns [hp ↦ lrevW]
   specs [callW_spec p n "defeq"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 
 theorem take_rev_succ {α : Type} (xs : List α) (i : Nat) (h : i < xs.length) :

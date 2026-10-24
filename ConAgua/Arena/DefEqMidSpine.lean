@@ -51,7 +51,7 @@ def decSH (r : List Word) : Option (NIdx × LsIdx) :=
 l_model spineHead_spec (p : Prog) (hp : SpineDProg p)
   fns [hp.head ↦ shW tuple]
   specs [callW_spec p n "get_app_fn", callW_spec p n "e_view"]
-  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80)"
+  grind [arena_grind] simp [St.setLocs_mem']
 
 theorem viewR_const {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h3 : r.headD 0 = 3) :
     v = .const (decI (r.tail.headD 0)) (decI (r.tail.tail.headD 0)) ∧ HW (r.tail.headD 0) ∧
@@ -125,7 +125,7 @@ def spineCmpT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (n : NIdx) (us : LsIdx) 
 l_model spineCmp_spec (p : Prog) (hp : SpineDProg p)
   fns [hp.cmp ↦ scW]
   specs [callW_spec p n "lvls_eq_c", callW_spec p n "defeq_list_rev"]
-  grind [arena_grind] sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] simp []
 
 /-- `lvls_eq_c` does not return at fuel `1`. -/
 theorem lvlsEqC_one (p : Prog) (hp : LvlCacheProg p) (u v : Word) (m m' : Mem) (r : List Word) :
@@ -243,7 +243,7 @@ def spine2T (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (n : NIdx) (u
 l_model defeqSpine2_spec (p : Prog) (hp : SpineDProg p)
   fns [hp.sp2 ↦ s2W]
   specs [callW_spec p n "get_app_args", callW_spec p n "spine_cmp"]
-  grind [arena_grind] finish [rdW_eq, St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] simp [rdW_eq, St.setLocs_mem']
 
 /-- **`defeq_spine2` refines `spine2T`** at the knot: the two argument slices pushed, compared, the
 stack top put back. -/
@@ -355,7 +355,7 @@ theorem defeqSpine_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
 l_model defeqSpine_spec (p : Prog) (hp : SpineDProg p)
   fns [hp.sp ↦ dsW]
   specs [callW_spec p n "spine_head", callW_spec p n "defeq_spine2"]
-  grind [arena_grind] finish [St.setLocs_mem'] sym "(gen := 80) (instances := 5000)"
+  grind [arena_grind] simp [St.setLocs_mem']
 
 theorem decSH_none {r : List Word} (h : r.headD 0 = 0) : decSH r = none := by
   simp only [decSH, h, ↓reduceIte]

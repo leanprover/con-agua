@@ -56,7 +56,7 @@ def decPair (r : List Word) : EIdx × EIdx := (decE (r.headD 0), decE (r.tail.he
 l_model lamsInst_spec (p : Prog) (hp : LamsProg p)
   fns [hp.inst ↦ linW tuple]
   specs [callW_spec p n "intern_fvar", callW_spec p n "inst1"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 /-- **`lams_inst` refines `lamsInstT`.** -/
 theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat) (s₀ : St)
@@ -206,7 +206,7 @@ theorem lamsOpen_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
 l_model lamPair_spec (p : Prog) (hp : LamsProg p)
   fns [hp.pair ↦ lpeelW tuple]
   specs [callW_spec p n "e_view"]
-  grind [arena_grind] finish [St.setLocs_mem'] gen 50
+  grind [arena_grind] simp [St.setLocs_mem']
 
 /-- `(f, ty1, body1, ty2, body2)`. -/
 def decLP (r : List Word) : Option (EIdx × EIdx × EIdx × EIdx) :=

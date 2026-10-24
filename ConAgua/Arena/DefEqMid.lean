@@ -136,7 +136,7 @@ theorem call1W_succ {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : M
 l_model defeqNoFvars_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.noFvars ↦ noFvW]
   specs [callW_spec p n "has_fvar"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 /-- **`defeq_no_fvars` refines `defeqNoFvars`**, from `has_fvar`'s spec. -/
 @[refines ConRon.Arena.defeqNoFvars]
@@ -171,7 +171,7 @@ theorem defeqNoFvars_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p)
 l_model lazyFoldOk_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.foldOk ↦ lazyFoldOkW]
   specs [callW_spec p n "defeq_no_fvars"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 theorem mode_eager_bit (mode : Word) (h : mode < 4) :
     (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by
@@ -214,7 +214,7 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
 l_model boolTrueShortcut_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.bts ↦ btsW]
   specs [callW_spec p n "whnf", callW_spec p n "is_bool_true"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 /-- **`bool_true_shortcut` refines `boolTrueShortcut`** at the knot. -/
 @[refines ConRon.Arena.boolTrueShortcut]
@@ -250,7 +250,7 @@ theorem boolTrueShortcut_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk 
 l_model tryUnfoldProjApp_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.tupa ↦ tupaW tuple]
   specs [callW_spec p n "head_is_proj", callW_spec p n "whnf_core"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 theorem decE_beq_eq (x y : Word) (hx : HW x) (hy : HW y) : (decE x == decE y) = decide (x = y) :=
   decI_beq x y hx hy
@@ -360,7 +360,7 @@ def QuickDefeqSpec (p : Prog) (n : Nat) : Prop :=
 l_model deltaQuick_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.dq ↦ dqW tuple]
   specs [callW_spec p n "quick_defeq"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 theorem res3_of {x y z : Word} {r : List Word} (hx : HW x) (hy : HW y) (hz : HW z)
     (h1 : x = r.headD 0) (h2 : y = r.tail.headD 0) (h3 : z = r.tail.tail.headD 0) : Res3 r :=
@@ -433,7 +433,7 @@ search). -/
 l_model defeqOffset_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.off ↦ offW tuple]
   specs [callW_spec p n "is_nat_zero", callW_spec p n "nat_pred", callW_spec p n "defeq"]
-  grind [arena_grind] gen 30
+  grind [arena_grind] simp []
 
 theorem decOptR_some {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
@@ -549,7 +549,7 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
 l_model defeqLamsInner_spec (p : Prog) (hp : DefEqMidProg p)
   fns [hp.lamsInner ↦ liW]
   specs [callW_spec p n "defeq", callW_spec p n "infer"]
-  grind [arena_grind]
+  grind [arena_grind] simp []
 
 theorem mode_verified (mode : Word) (h : mode < 4) :
     (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by
