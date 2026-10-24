@@ -454,9 +454,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [ssK1b_some]
     refine RSim.pure_some ⟨⟨hS2, hg1.trans hg2, ?_⟩, hJ2⟩
-    cases x with
-    | none => exact hd2
-    | some _ => exact hd2
+    cases x <;> exact hd2
   · have htag := decCS_tag hsl.get
     have hsz := hS.2.2.2.1
     have hrd := iwN_rdW htag (by have := iwN_lt htag; omega)

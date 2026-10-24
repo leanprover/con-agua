@@ -402,10 +402,8 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   have hnpe : (UInt64.ofNat bs.nP : Word).toNat = bs.nP := UInt64.toNat_ofNat_of_lt' hnpb
   have hmin : ∀ x : Word, (if UInt64.ofNat bs.nP < x then UInt64.ofNat bs.nP else x).toNat = min bs.nP x.toNat := by
     intro x
-    by_cases hx : UInt64.ofNat bs.nP < x
-    · rw [if_pos hx]; have := UInt64.lt_iff_toNat_lt.mp hx; rw [hnpe] at this ⊢; omega
-    · rw [if_neg hx]; have : ¬ (UInt64.ofNat bs.nP).toNat < x.toNat := fun h => hx (UInt64.lt_iff_toNat_lt.mpr h)
-      rw [hnpe] at this; omega
+    have := @UInt64.lt_iff_toNat_lt (UInt64.ofNat bs.nP) x
+    split <;> rename_i hx <;> simp only [hx, hnpe, true_iff, false_iff] at this ⊢ <;> omega
   have hagT : decHL (truncM m) ao.toNat al.toNat = some args := hag
   have hfvT : decHL (truncM m) fvo.toNat fvl.toNat = some fvs := hfv
   have hal := decHL_length _ hagT
@@ -444,10 +442,7 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
   by_cases h3 : r3.headD 0 = 0
   · rw [if_pos h3]; exact Sim.of_none
   rw [if_neg h3]
-  have hws : ws1 = ws2 := by
-    rcases Decidable.em (ws1 = ws2) with h | hne
-    · exact h
-    · rw [if_neg hne] at heq; exact absurd heq h3
+  have hws : ws1 = ws2 := Decidable.byContradiction fun hne => h3 (by rwa [if_neg hne] at heq)
   have hc : (decI us == blv && args.take bs.nP == fvs.take bs.nP) = true := by
     rw [← hd2, hu', hws1, hws2, hws]; simp
   simp only [hc, if_true]
@@ -457,8 +452,7 @@ theorem tmmW_sim {p : Prog} (hP : TmmProg p) {dn : NIdx → Option ConLeche.Name
     (mkTargetMajor_spec p hP.alloc hP.mkTm n _ _ _ _ _ _ _ _ _ _ _ _ _ _) e4
   rw [mkTMW_eq, Option.map_eq_some_iff] at hW4
   obtain ⟨⟨q, m4'⟩, hpr, he⟩ := hW4
-  simp only [Prod.mk.injEq] at he
-  obtain ⟨rfl, rfl⟩ := he
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj he
   rw [hm3] at hpr
   obtain ⟨hS4, hg4, hq4, ht4, hget4⟩ := posRecW_stage hpr hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht4

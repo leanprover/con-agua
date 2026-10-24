@@ -500,9 +500,7 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rintro ⟨r3, m3⟩ x a3 - ⟨⟨hS3, hg3, hd3⟩, hJ3⟩
   rw [rdK3_some]
   refine RSim.pure_some ⟨⟨hS3, hg12.trans hg3, ?_⟩, hJ3⟩
-  cases x with
-  | none => exact hd3
-  | some _ => exact hd3
+  cases x <;> exact hd3
 
 end L.Ind
 

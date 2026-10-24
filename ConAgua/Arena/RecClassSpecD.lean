@@ -488,21 +488,8 @@ theorem piBW_afrR : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), 
     AFr m m'
   | 0, _, _, _, _, _, hh => by simp [piBW] at hh
   | n + 1, m, m', fuel, h, r, hh => by
-    by_cases hf : fuel = 0
-    · rw [piBW_fuel0 (hf := hf)] at hh; cases hh
-    by_cases hg : h >>> 28 ≠ 6
-    · rw [piBW_leaf (hf := hf) (hg := hg)] at hh
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]; exact AFr.refl _
-    rw [piBW_node (hf := hf) (hg := hg)] at hh
-    by_cases hr : eViewW m h = []
-    · rw [hr, piBK1_nil] at hh; cases hh
-    rw [piBK1_ne (hr := hr)] at hh
-    obtain ⟨⟨rs, m1⟩, h1, hh⟩ := of_K hh rfl
-    rw [piBK2_some] at hh
-    obtain ⟨⟨r2, m2⟩, h2, hh⟩ := of_K hh rfl
-    rw [piBK3_some] at hh
-    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
-    exact (piBW_afrR n _ _ _ _ _ h1).trans (consW_afr h2)
+    simp only [piBW, piBK1, piBK2.eq_def, piBK3.eq_def] at hh
+    afr_auto hh [piBW_afrR n _ _ _ _ _, consW_afr]
 
 theorem ih1W_afr {n : Nat} {m m' : Mem} {nP mo ml d x : Word} {r : List Word}
     (h : ih1W n m nP mo ml d x = some (r, m')) : AFr m m' := by

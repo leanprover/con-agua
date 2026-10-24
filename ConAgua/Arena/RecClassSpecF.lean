@@ -331,12 +331,7 @@ theorem nameCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m
 theorem memberNamesW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : memberNamesW n m p = some (r, m')) : AFr m m' := by
   unfold memberNamesW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact (allocW_afr hal).trans (nameCopyW_afr _ _ _ _ _ _ hc)
+  afr_auto h [allocW_afr, nameCopyW_afr _ _ _ _ _ _]
 
 theorem envFindW_afrR {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
     AFr m m' := by

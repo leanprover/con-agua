@@ -167,7 +167,6 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
         rwa [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; have := hrk.2; omega)] at this
       obtain ⟨v, hv, hcvv⟩ := decPL_getH m hcv (k - 1) hlt'
       have hrv := iwN_rdW_at (w := o) (k := k - 1) hv hsz
-      have hvw : o + UInt64.ofNat (k - 1) = o + UInt64.ofNat (k - 1) := rfl
       rw [hrv.1]
       have hv64 := hrv.2
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
@@ -185,9 +184,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     · rw [cftW_out (h := hk0) (h2 := hlt)] at h
       obtain ⟨⟨e, m1⟩, hb, h⟩ := of_K h rfl
       rw [cftK1_some] at h
-      by_cases hbig : 4294967296 ≤ e
-      · rw [if_pos hbig] at h; cases h
-      rw [if_neg hbig] at h
+      obtain ⟨hbig, h⟩ := of_ite_none h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨a1, hrun, hS1, hg1⟩ := internBVar_stage hS 0 hb
       have hge : ¬ k - 1 < cvTas.length := by
@@ -198,14 +195,11 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       · simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_none (by omega : cvTas.length ≤ k - 1)]
         exact hrun
       · show e.toNat < 2 ^ 32
-        have : ¬ (4294967296 : Word).toNat ≤ e.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
-        simp at this; exact this
+        have : ¬ (4294967296 : Word).toNat ≤ e.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x); simpa using this
   · rw [cftW_ext (h := hk0)] at h
     have hk00 : k = 0 := by
-      have : rdW (m.arr64 IW) (mp + 8) = 0 := by simpa using hk0
-      rw [hrk.1] at this
-      have := congrArg UInt64.toNat this
-      rwa [UInt64.toNat_ofNat_of_lt' hrk.2] at this
+      have := congrArg UInt64.toNat ((show rdW (m.arr64 IW) (mp + 8) = 0 by simpa using hk0).symm.trans hrk.1)
+      rw [UInt64.toNat_ofNat_of_lt' hrk.2] at this; exact this.symm
     have hmem' : M.member = none := by rw [hmem, hk00]; rfl
     obtain ⟨wi, hwi, hwiH, hwiE⟩ := iwH_rdW_at (w := mp) (k := 0) (by simpa using decTM_ind hM0) hsz
     rw [show mp + UInt64.ofNat 0 = mp by simp] at hwi
@@ -214,22 +208,16 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [cftK2_some] at h
     obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.1.env hwiH
     subst m2
-    by_cases hf0 : r2.headD 0 = 0
-    · rw [if_pos hf0] at h; cases h
-    rw [if_neg hf0] at h
-    by_cases hk3 : rdW (m.arr64 EREC) (r2.tail.headD 0) ≠ 3
-    · rw [if_pos hk3] at h; cases h
-    rw [if_neg hk3] at h
+    obtain ⟨hf0, h⟩ := of_ite_none h
+    obtain ⟨hk3, h⟩ := of_ite_none h
     obtain ⟨ci, hci⟩ := hdec hf0
     have hfci : fe.find? M.ind = some ci := by rw [← hwiE, hfind, decFound, if_neg hf0, hci]
     obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
     have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
     rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
     have hkind : kk = 3 := by
-      have : rdW (m.arr64 EREC) (r2.tail.headD 0) = 3 := by simpa using hk3
-      rw [hkr.1] at this
-      have := congrArg UInt64.toNat this
-      rwa [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this
+      have := congrArg UInt64.toNat ((show rdW (m.arr64 EREC) (r2.tail.headD 0) = 3 by simpa using hk3).symm.trans hkr.1)
+      rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this; exact this.symm
     obtain ⟨-, cv, caps, rfl, -⟩ := hcase.resolve_right (fun ⟨hne, _⟩ => hne hkind)
     have hcvP := decCI_ind_cv hci
     have hcvA : decCV (erA m) ((r2.tail.headD 0).toNat + 1) = some cv :=

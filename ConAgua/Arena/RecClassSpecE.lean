@@ -121,20 +121,17 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   have key2 := EnvR.row_dec hE w hw htag
   rw [rowCW_eq m w hw ht2, rowPW_eq m w hw ht2] at h
   by_cases hc : rowC m w = 0
-  · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+  · rw [if_pos hc] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     simp [key, hc, decFound]
   rw [if_neg hc] at h
   by_cases hv : rowC m w - 1 < vis
-  · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+  · rw [if_pos hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
     have hv' : (rowC m w).toNat - 1 < vis.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp hv
       rwa [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))] at this
     refine ⟨rfl, by simp [key, hc, hv', decFound], fun _ => key2 hc⟩
-  rw [if_neg hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rw [if_neg hv] at h; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hc' : (rowC m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
   have : ¬ (rowC m w).toNat - 1 < vis.toNat := by
     intro e; apply hv; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _

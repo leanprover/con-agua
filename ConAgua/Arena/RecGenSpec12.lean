@@ -217,10 +217,8 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') dn q.toNat = some (.recInfo cv mi.toNat rp3.toNat []) := by
-  cases h1 : erAllocW m 9 with
-  | none => simp [cfrRecW, h1] at h
-  | some x =>
-  obtain ⟨q1, m1⟩ := x
+  rcases h1 : erAllocW m 9 with _ | ⟨q1, m1⟩
+  · simp [cfrRecW, h1] at h
   have e : cfrRecW m cq mi rp3 = if 4294967296 ≤ rdW ((cfrMem m1 q1 cq mi rp3).arr64 EREC) (q1 + 1)
       then none else some (q1, cfrMem m1 q1 cq mi rp3) := by simp [cfrRecW, h1]
   rw [e] at h
@@ -231,16 +229,12 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     have := decCV_type hcv; intro e; simp [hd?, e] at this
   have hcq : cq.toNat + 4 ≤ erTop m := by
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
-  have hE1 : m1.arr64 EREC = m.arr64 EREC := by
+  have ⟨hq1, hE1⟩ : q1.toNat = erTop m ∧ m1.arr64 EREC = m.arr64 EREC := by
     simp only [erAllocW] at h1; split at h1; · cases h1
     split at h1; · cases h1
-    simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨-, rfl⟩ := h1
-    simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
+    exact ⟨rfl, by simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
   obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
-  have hq1 : q1.toNat = erTop m := by
-    simp only [erAllocW] at h1; split at h1; · cases h1
-    split at h1; · cases h1
-    simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨rfl, -⟩ := h1; rfl
   obtain ⟨hS', hg, -, htop', hget⟩ := erRec_stage h1 hS [5, rdW (m.arr64 EREC) cq,
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, 0, 0]
     (by simp)
@@ -387,28 +381,24 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   | succ k ih =>
   intro m m' a vis fe cvo cvl rcl M cvs rcs r h hS hrecs hcvs hrcs hMb
   have hsz := hS.2.2.2.1
-  by_cases hvl : cvl = 0
-  · have he := ferW_nil1 p k m cvo cvl rcl ro rl vis M hvl
-    rw [he] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-    have : cvs = [] := by
-      have := hcvs.length; rw [hvl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
-    subst this
-    refine ⟨by simpa [ConRon.Arena.classFeR.go.eq_1] using hS, IWGrow.refl m, ?_⟩
-    simpa [ConRon.Arena.classFeR.go.eq_1] using SPL.nil (dec := decPrev dn) (m := m) 0 (by omega)
-  by_cases hcl : rcl = 0
-  · have he := ferW_nil2 p k m cvo cvl rcl ro rl vis M hvl hcl
-    rw [he] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-    have : rcs = [] := List.eq_nil_of_length_eq_zero (by rw [hrcs, hcl]; rfl)
-    subst this
-    refine ⟨by simpa [ConRon.Arena.classFeR.go.eq_1] using hS, IWGrow.refl m, ?_⟩
-    simpa [ConRon.Arena.classFeR.go.eq_1] using SPL.nil (dec := decPrev dn) (m := m) 0 (by omega)
+  by_cases hz : cvl = 0 ∨ rcl = 0
+  · have hz' : cvs.zip rcs = [] := by
+      rcases hz with hvl | hcl
+      · have := hcvs.length; rw [hvl] at this; simp [List.eq_nil_of_length_eq_zero (by simpa using this)]
+      · simp [List.eq_nil_of_length_eq_zero (show rcs.length = 0 by rw [hrcs, hcl]; rfl)]
+    rw [show ferW p (k + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) by
+      by_cases hvl : cvl = 0
+      · exact ferW_nil1 p k m cvo cvl rcl ro rl vis M hvl
+      · exact ferW_nil2 p k m cvo cvl rcl ro rl vis M hvl (hz.resolve_left hvl)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h); rw [hz']
+    exact ⟨by simpa [ConRon.Arena.classFeR.go.eq_1] using hS, IWGrow.refl m,
+      by simpa [ConRon.Arena.classFeR.go.eq_1] using SPL.nil (dec := decPrev dn) (m := m) 0 (by omega)⟩
+  obtain ⟨hvl, hcl⟩ := not_or.mp hz
   obtain ⟨jv, hjv⟩ : ∃ j, cvl.toNat = j + 1 :=
     ⟨cvl.toNat - 1, by have : cvl.toNat ≠ 0 := fun e => hvl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   obtain ⟨p0, cv, cvs', rfl, hp0, hp0t, hcvS, hcvsT⟩ := rec3SPL_uncons (by rw [← hjv]; exact hcvs)
-  obtain ⟨rc0, rcs', rfl⟩ : ∃ rc0 rcs', rcs = rc0 :: rcs' := by
-    cases rcs with
-    | nil => exfalso; apply hcl; apply UInt64.toNat_inj.mp; simpa using hrcs.symm
-    | cons x xs => exact ⟨x, xs, rfl⟩
+  obtain _ | ⟨rc0, rcs'⟩ := rcs
+  · exact absurd (UInt64.toNat_inj.mp (by simpa using hrcs.symm)) hcl
   obtain ⟨e0, t0⟩ := rec2RdN (w := cvo) (k := 0) (by simpa using hp0) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e0
   obtain ⟨hcvp, hcvx⟩ := rec3CVX hcvS
@@ -438,9 +428,8 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
   obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (by simp only [ferK2])
   rw [ferK2_some] at h
-  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (envPush_specW p hp.rp k ⟨m1, Locals.init []⟩ vis kq hwn') h2
-  subst hs2
   obtain ⟨hS2, hg2⟩ := envPushW_ok hW2 hS1 hci
   -- the displaced row
   obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (by simp only [ferK3])
