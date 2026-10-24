@@ -1515,7 +1515,6 @@ theorem consInternG_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C)
         bne_iff_ne, beq_iff_eq, ne_eq, LocEq, Sig.retOr, bigK] at *)
       all_goals (simp_all [Locals.init, argsOf, List.range_succ])
 
-#exit
 /-! ## What an interning does to memory -/
 
 /-- **An interning hits** (the memory is unchanged) **or appends** node `cntC` to a tier, with its
@@ -1523,8 +1522,9 @@ growth. -/
 theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Word}
     (h : consInternM C m ks = some (r, m₁)) :
     m₁ = m ∨ ∃ t j, t ≤ 1 ∧ pushOKC C m t = true ∧
-      growIf C.sa C.ca C.hsM m (pushMX C m t (C.vsM (pushArgs C ks (C.qhM m ks)))
-        (C.colM m (pushArgs C ks (C.qhM m ks))) j (cntC C m t))
+      kgrowIf C t m (pushMX C m t (C.vsM (pushArgs C ks (C.qhM m ks)))
+        (C.colM m (pushArgs C ks (C.qhM m ks))) j (cntC C m t)
+        (kwP C m (pushArgs C ks (C.qhM m ks))))
         (cntC C m t) = some m₁ ∧ r = (if t = 0 then C.P else C.S) + cntC C m t := by
   simp only [consInternM, pushC] at h
   repeat' split at h
@@ -1537,6 +1537,17 @@ theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Wor
          | exact .inr ⟨0, _, by decide, ‹_›, ‹_›, by simp⟩)
 
 /-! ## The memory outside the slot array -/
+
+/-- **The growth writes only the slot array** (and keeps every size). -/
+theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
+    (h : kgrowIf C t m₀ m c = some m') :
+    (∀ b, b ≠ C.sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
+      m'.words.size = m.words.size := by
+  change GFr C.sa m m'
+  unfold kgrowIf at h
+  split at h
+  · exact kgrowM_fr _ _ _ _ _ h
+  · cases h; exact GFr.refl _ _
 
 theorem arr64_size_set64 (m : Mem) (a b : ArrId) (i v : Word) :
     ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
@@ -1619,13 +1630,13 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
   rcases consInternM_cases h with e | ⟨t, j, ht, hok, hg, hr⟩
   · exact .inl e
   refine .inr ⟨t, ht, hok, hr, ?_⟩
-  obtain ⟨g1, g2, g3⟩ := growIf_frame _ _ _ _ _ _ _ hg
+  obtain ⟨g1, g2, g3⟩ := kgrowIf_frame _ _ _ _ _ _ hg
   refine ⟨fun b hb => ?_, fun b => ?_, ?_⟩
   · rw [g1 b hb]
     simp only [pushMX, pushMC, tailM, pushRec]
     refine OutSa.colW C hcol (fun b hb => ?_) _ _ _ b hb
     refine OutSa.set64 (fun b hb => ?_) hsc.symm _ _ b hb
-    exact OutSa.set64_sa (fun _ _ => rfl) _ _ b hb
+    exact OutSa.set64_sa (OutSa.set64_sa (fun _ _ => rfl) _ _) _ _ b hb
   · rw [g2 b]
     simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]
   · rw [g3]
