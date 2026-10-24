@@ -169,6 +169,15 @@ theorem PMemoR.setL {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word) (h
 theorem nFrame_l {m m' : Mem} (h : MemFrame nArrs nCtl m m') : MemFrame lArrs lCtl m m' :=
   h.mono (by simp) (by simp)
 
+/-- **The end of a chain into `PLOk`.** -/
+theorem PLOk.of_sim {α : Type} {op : AM (PMemo × α)} {dec : Word → α} {m : Mem} {a : AState}
+    {pm : PMemo} {mo : Option (Word × Mem)} (h : Sim mo op a fun r x m' a' => x.2 = dec r ∧
+      ArenaD m' a' ∧ PMemoR m' x.1 ∧ PW r ∧ cp a' = cp a ∧ MemFrame lArrs lCtl m m' ∧
+      x.1.eM = pm.eM ∧ x.1.lsM = pm.lsM)
+    {r : Word} {m' : Mem} (hm : mo = some (r, m')) : PLOk op dec m a pm r m' := by
+  obtain ⟨⟨pm', y⟩, a', h1, e, h2⟩ := h r m' hm
+  subst e; exact ⟨a', pm', h1, h2⟩
+
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
@@ -259,154 +268,74 @@ theorem pl_rel : ∀ n : Nat,
     cases v with
     | zero =>
       simp only [plK, lvEnc, List.headD_cons, ↓reduceIte] at hW
-      cases hca : callW p (n + 1) "pi_zero" [] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (piZero_spec p hp n ⟨m, Locals.init []⟩) hca
-      rw [hs₁, hm] at hW₁
-      obtain ⟨a₁, hrun, hD₁, hpw, hcp, hfr⟩ := piZero_rel p hp n m a hD _ _ hW₁
-      refine ⟨a₁, pm, ?_, hD₁, hP.frameLo (by simp [ZREC, ZSLOT]) (by simp) hfr, hr ▸ hpw, hcp,
+      refine PLOk.of_sim (Sim.bind_twin hv0 ?_) hW
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piZero_spec p hp n s₀) fun n _ _ h =>
+        piZero_rel p hp n m a hD _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
+      exact ⟨rfl, hD₁, hP.frameLo (by simp [ZREC, ZSLOT]) (by simp) hfr, hpw, hcp,
         hfr.mono (by simp) (by simp), rfl, rfl⟩
-      rw [run_bind_ok hv0]
-      simp only [run_bind_ok hrun, ← hr]; rfl
     | succ u =>
       simp (config := { decide := true }) only [plK, lvEnc, List.headD_cons, List.tail_cons,
         ↓reduceIte] at hW
-      cases hca : callW p (n + 1) "promote_l" [f, u.word.toUInt64] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, pl1K_some] at hW
-      obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hls₁⟩ :=
-        ih.1 m a pm f _ r₁ m₁ hD hP (word_lt u) hca
-      rw [decI_word] at hrun₁
-      cases hcb : callW p (n + 1) "pi_succ" [r₁.headD 0] m₁ with
-      | none => rw [hcb] at hW; cases hW
-      | some q₂ =>
-      obtain ⟨r₂, m₂⟩ := q₂
-      rw [hcb, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₂, hs₂, -, hW₂⟩ := callW_triple (piSucc_spec p hp n ⟨m₁, Locals.init []⟩ _) hcb
-      rw [hs₂] at hW₂
-      obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piSucc_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ hW₂
-      rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [SREC, SSLOT, SHP]) (by simp) hfr₂, hr ▸ hpw₂,
+      refine PLOk.of_sim (Sim.bind_twin hv0 ?_) hW
+      refine Sim.bindK rfl (fun _ _ => rfl) ((Sim.ofP (ih.1 m a pm f _ · · hD hP (word_lt u))).congr
+        (by rw [decI_word])) ?_
+      rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hls₁⟩
+      dsimp only [pl1K]
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piSucc_spec p hp n s₀ _) fun n _ _ h =>
+        piSucc_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [SREC, SSLOT, SHP]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hls₁⟩
-      rw [run_bind_ok hv0]
-      simp only
-      rw [run_bind_ok hrun₁]
-      simp only
-      rw [run_bind_ok hrun₂, ← hr]; rfl
     | max u w =>
       simp (config := { decide := true }) only [plK, lvEnc, List.headD_cons, List.tail_cons,
         ↓reduceIte] at hW
-      cases hca : callW p (n + 1) "promote_l" [f, u.word.toUInt64] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, pl2K_some] at hW
-      obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hls₁⟩ :=
-        ih.1 m a pm f _ r₁ m₁ hD hP (word_lt u) hca
-      rw [decI_word] at hrun₁
-      cases hcb : callW p (n + 1) "promote_l" [f, w.word.toUInt64] m₁ with
-      | none => rw [hcb] at hW; cases hW
-      | some q =>
-      obtain ⟨r₂, m₂⟩ := q
-      rw [hcb, pl2K₂_some] at hW
-      obtain ⟨a₂, pm₂, hrun₂, hD₂, hP₂, hpw₂, hcp₂, hfr₂, he₂, hls₂⟩ :=
-        ih.1 m₁ a₁ pm₁ f _ r₂ m₂ hD₁ hP₁ (word_lt w) hcb
-      rw [decI_word] at hrun₂
-      cases hcc : callW p (n + 1) "pi_max" [r₁.headD 0, r₂.headD 0] m₂ with
-      | none => rw [hcc] at hW; cases hW
-      | some q₃ =>
-      obtain ⟨r₃, m₃⟩ := q₃
-      rw [hcc, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₃, hs₃, -, hW₃⟩ := callW_triple (piMax_spec p hp n ⟨m₂, Locals.init []⟩ _ _) hcc
-      rw [hs₃] at hW₃
-      obtain ⟨a₃, hrun₃, hD₃, hpw₃, hcp₃, hfr₃⟩ := piMax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ hW₃
-      rw [← hm]
-      refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [MREC, MSLOT, MHP]) (by simp) hfr₃, hr ▸ hpw₃,
+      refine PLOk.of_sim (Sim.bind_twin hv0 ?_) hW
+      refine Sim.bindK rfl (fun _ _ => rfl) ((Sim.ofP (ih.1 m a pm f _ · · hD hP (word_lt u))).congr
+        (by rw [decI_word])) ?_
+      rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hls₁⟩
+      dsimp only [pl2K]
+      refine Sim.bindK rfl (fun _ _ => rfl) ((Sim.ofP (ih.1 m₁ a₁ pm₁ f _ · · hD₁ hP₁ (word_lt w))).congr
+        (by rw [decI_word])) ?_
+      rintro r₂ ⟨pm₂, _⟩ m₂ a₂ ⟨rfl, hD₂, hP₂, hpw₂, hcp₂, hfr₂, he₂, hls₂⟩
+      dsimp only [pl2K.pl2K₂]
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piMax_spec p hp n s₀ _ _) fun n _ _ h =>
+        piMax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
+      exact ⟨rfl, hD₃, hP₂.frameLo (by simp [MREC, MSLOT, MHP]) (by simp) hfr₃, hpw₃,
         hcp₃.trans (hcp₂.trans hcp₁), (hfr₁.trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
         he₂.trans he₁, hls₂.trans hls₁⟩
-      rw [run_bind_ok hv0]
-      simp only
-      rw [run_bind_ok hrun₁]
-      simp only
-      rw [run_bind_ok hrun₂]
-      simp only
-      rw [run_bind_ok hrun₃, ← hr]; rfl
     | imax u w =>
       simp (config := { decide := true }) only [plK, lvEnc, List.headD_cons, List.tail_cons,
         ↓reduceIte] at hW
-      cases hca : callW p (n + 1) "promote_l" [f, u.word.toUInt64] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, pl2K_some] at hW
-      obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hls₁⟩ :=
-        ih.1 m a pm f _ r₁ m₁ hD hP (word_lt u) hca
-      rw [decI_word] at hrun₁
-      cases hcb : callW p (n + 1) "promote_l" [f, w.word.toUInt64] m₁ with
-      | none => rw [hcb] at hW; cases hW
-      | some q =>
-      obtain ⟨r₂, m₂⟩ := q
-      rw [hcb, pl2K₂_some] at hW
-      obtain ⟨a₂, pm₂, hrun₂, hD₂, hP₂, hpw₂, hcp₂, hfr₂, he₂, hls₂⟩ :=
-        ih.1 m₁ a₁ pm₁ f _ r₂ m₂ hD₁ hP₁ (word_lt w) hcb
-      rw [decI_word] at hrun₂
-      cases hcc : callW p (n + 1) "pi_imax" [r₁.headD 0, r₂.headD 0] m₂ with
-      | none => rw [hcc] at hW; cases hW
-      | some q₃ =>
-      obtain ⟨r₃, m₃⟩ := q₃
-      rw [hcc, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₃, hs₃, -, hW₃⟩ := callW_triple (piImax_spec p hp n ⟨m₂, Locals.init []⟩ _ _) hcc
-      rw [hs₃] at hW₃
-      obtain ⟨a₃, hrun₃, hD₃, hpw₃, hcp₃, hfr₃⟩ :=
-        piImax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ hW₃
-      rw [← hm]
-      refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [IREC, ISLOT, IHP]) (by simp) hfr₃, hr ▸ hpw₃,
+      refine PLOk.of_sim (Sim.bind_twin hv0 ?_) hW
+      refine Sim.bindK rfl (fun _ _ => rfl) ((Sim.ofP (ih.1 m a pm f _ · · hD hP (word_lt u))).congr
+        (by rw [decI_word])) ?_
+      rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hls₁⟩
+      dsimp only [pl2K]
+      refine Sim.bindK rfl (fun _ _ => rfl) ((Sim.ofP (ih.1 m₁ a₁ pm₁ f _ · · hD₁ hP₁ (word_lt w))).congr
+        (by rw [decI_word])) ?_
+      rintro r₂ ⟨pm₂, _⟩ m₂ a₂ ⟨rfl, hD₂, hP₂, hpw₂, hcp₂, hfr₂, he₂, hls₂⟩
+      dsimp only [pl2K.pl2K₂]
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piImax_spec p hp n s₀ _ _) fun n _ _ h =>
+        piImax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₃, hpw₃, hcp₃, hfr₃⟩
+      exact ⟨rfl, hD₃, hP₂.frameLo (by simp [IREC, ISLOT, IHP]) (by simp) hfr₃, hpw₃,
         hcp₃.trans (hcp₂.trans hcp₁), (hfr₁.trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
         he₂.trans he₁, hls₂.trans hls₁⟩
-      rw [run_bind_ok hv0]
-      simp only
-      rw [run_bind_ok hrun₁]
-      simp only
-      rw [run_bind_ok hrun₂]
-      simp only
-      rw [run_bind_ok hrun₃, ← hr]; rfl
     | param x =>
       simp (config := { decide := true }) only [plK, lvEnc, List.headD_cons, List.tail_cons,
         ↓reduceIte] at hW
-      cases hca : callW p (n + 1) "promote_n" [f, x.word.toUInt64] m with
-      | none => rw [hca] at hW; cases hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
-      rw [hca, pl1K_some] at hW
-      obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩ :=
-        (pn_rel p hp (n + 1)).1 m a pm f _ r₁ m₁ hD hP (word_lt x) hca
-      rw [decI_word] at hrun₁
-      cases hcb : callW p (n + 1) "pi_param" [r₁.headD 0] m₁ with
-      | none => rw [hcb] at hW; cases hW
-      | some q₂ =>
-      obtain ⟨r₂, m₂⟩ := q₂
-      rw [hcb, hd1_some] at hW
-      obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨s₂, hs₂, -, hW₂⟩ := callW_triple (piParam_spec p hp n ⟨m₁, Locals.init []⟩ _) hcb
-      rw [hs₂] at hW₂
-      obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piParam_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ hW₂
-      rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [PREC, PSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+      refine PLOk.of_sim (Sim.bind_twin hv0 ?_) hW
+      refine Sim.bindK rfl (fun _ _ => rfl) ((Sim.ofP ((pn_rel p hp (n + 1)).1 m a pm f _ · · hD hP
+        (word_lt x))).congr (by rw [decI_word])) ?_
+      rintro r₁ ⟨pm₁, _⟩ m₁ a₁ ⟨rfl, hD₁, hP₁, hpw₁, hcp₁, hfr₁, he₁, hl₁, hls₁⟩
+      dsimp only [pl1K]
+      refine (Sim.hd1 (sim_pi (fun n s₀ => piParam_spec p hp n s₀ _) fun n _ _ h =>
+        piParam_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ h)).mono ?_
+      rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂⟩
+      exact ⟨rfl, hD₂, hP₁.frameLo (by simp [PREC, PSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, (nFrame_l hfr₁).trans (hfr₂.mono (by simp) (by simp)), he₁, hls₁⟩
-      rw [run_bind_ok hv0]
-      simp only
-      rw [run_bind_ok hrun₁]
-      simp only
-      rw [run_bind_ok hrun₂, ← hr]; rfl
 
 /-- **`promote_l` refines `promoteL`** (`PLOk`). -/
 @[refines ConRon.Arena.promoteL]
