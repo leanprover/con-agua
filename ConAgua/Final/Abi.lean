@@ -178,17 +178,15 @@ theorem abiCall_geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Wor
     AbiGeom tab dm.regs.r8.toNat dm.regs.r9.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size :=
   ⟨hneed, hc.hfits, hc.hinEnd, hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj⟩
 
-/-- **The final theorem, from the entry stub.** A Kraken host holds the stub and the compiled
-checker `p` (any program with `PipelineRefines`, for a table `tab` the stub supports); the harness
-calls `ca_start` as `AbiCall` says. Then the machine returns to the caller, and if it reports
-`rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
+/-- **`checker_x64_accepts_abi` with the registers**: in addition, the caller's callee-saved
+registers are intact on return (`RegsRestored`), on the decline path of the stub too. -/
+theorem checker_x64_accepts_abi_regs [Host] (p : Prog) (hP : PipelineRefines p)
     (tab : Tab) (hok : abiTabOk tab = true) (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres)
     (k0 : Nat) (hcode : Code (abiStub tab ++ compileProg tab p "check") k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
     (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
@@ -202,8 +200,13 @@ theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
     simp only [abiNeed, hnb, abiSlot] at hneed
     rw [hL]; omega
   · rw [toBitVec_eq_A]; exact hc.hra
-  · intro st hpc hrdx
-    exact ⟨hpc, fun h0 => absurd (hrdx ▸ h0) (by decide)⟩
+  · intro st hpc hrdx hsp hbp h14 h15
+    refine ⟨hpc, ⟨?_, hbp, h14, h15⟩, fun h0 => absurd (hrdx ▸ h0) (by decide)⟩
+    have e := congrArg BitVec.toNat hsp
+    rw [BitVec.toNat_add, show (8 : BitVec 64).toNat = 8 from rfl] at e
+    simp only [UInt64.toNat_toBitVec] at e
+    have := hc.hcs8
+    omega
   intro hneed s1 hs1 hrdi hrsi hregs
   have hneed' := hneed
   simp only [abiNeed, hnb, abiSlot] at hneed'
@@ -215,8 +218,20 @@ theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
     exact UInt64.toBitVec_inj.mp (by simpa using this)
   have hcs := hc.hcs
   have hmem := abi_memRel tab hok b pb dm ra hc hneed
+  have hRR : ∀ r, RegsRestored s1.regs r → RegsRestored dm.regs r := by
+    have hkeep : ∀ q : Reg64, q ≠ .rax → q ≠ .rdi → q ≠ .rsi →
+        (s1.regs.get64 q = dm.regs.get64 q) := hregs
+    rintro r ⟨h1, h2, h3, h4⟩
+    refine ⟨by rw [h1, hsp], ?_, ?_, ?_⟩
+    · rw [h2]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .rbp (by decide) (by decide) (by decide))
+    · rw [h3]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r14 (by decide) (by decide) (by decide))
+    · rw [h4]; exact UInt64.toBitVec_inj.mp (by simpa using hkeep .r15 (by decide) (by decide) (by decide))
   rw [← hs1] at hmem honly
-  refine checker_x64_accepts p hP _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf hnres
+  refine eventually_weaken _ (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+      RegsRestored s1.regs st.data.regs ∧
+      (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b])) _ _
+    (fun _ ⟨hpc, hr, h⟩ => ⟨hpc, hRR _ hr, h⟩) ?_
+  refine checker_x64_accepts_regs p hP _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf hnres
     (k0 + (abiStub tab).length) hcode.right fd hentry hnp rfl b pb h64 hb hpb [] _ abiFuel
     (by simp [abiFuel]) s1 ra hmem ?_
   constructor
@@ -255,5 +270,22 @@ theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
       simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4; omega
   · rw [hsp]; exact hc.hcs24
   · rw [hsp]; exact hc.hcs8
+
+/-- **The final theorem, from the entry stub.** A Kraken host holds the stub and the compiled
+checker `p` (any program with `PipelineRefines`, for a table `tab` the stub supports); the harness
+calls `ca_start` as `AbiCall` says. Then the machine returns to the caller, and if it reports
+`rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
+theorem checker_x64_accepts_abi [Host] (p : Prog) (hP : PipelineRefines p)
+    (tab : Tab) (hok : abiTabOk tab = true) (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres)
+    (k0 : Nat) (hcode : Code (abiStub tab ++ compileProg tab p "check") k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+      dm (label abiStartL) :=
+  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
+    (checker_x64_accepts_abi_regs p hP tab hok hwf hnres k0 hcode fd hentry hnp b pb h64 hb hpb
+      dm ra hc)
 
 end ConAgua.Final

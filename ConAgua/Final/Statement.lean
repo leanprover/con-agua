@@ -113,11 +113,17 @@ structure HarnessCall (G : L.Compiler.Layout) (N : Nat) (dm : MachineData) (ra :
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-/-- **The final theorem.** A Kraken host holds the compiled checker `p` (any program with
-`PipelineRefines`); the loader put the input bytes `b`, any pin-data bytes `pb` and zeroed arrays
-of any sizes in the layout `G`; the harness calls `ca_enter` with fuel `N < 2^62`. Then the machine returns to the caller, and
-if it reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
-theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
+/-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
+`rsp` is past the return address and `rbp`, `r14`, `r15` hold their values from the call. These
+are the callee-saved registers (SysV) the code writes; `rbx`, `r12` and `r13` do not occur in
+`asm/checker.s` (not a theorem). Together with the verdict in `rdx`/`rax` this is all the harness
+relies on after the call. -/
+def RegsRestored (r0 r : Reg64s) : Prop :=
+  r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15
+
+/-- **`checker_x64_accepts` with the registers**: in addition, the caller's callee-saved
+registers are intact on return (`RegsRestored`, from `compile_correct`). -/
+theorem checker_x64_accepts_regs [Host] (p : Prog) (hP : PipelineRefines p)
     (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
     (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
@@ -126,7 +132,7 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
     (hpb : pb.size < 2 ^ 63)
     (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
     (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label enterL) := by
   have hargs : ([] : List Word).length = fd.nparams := hnp.symm
@@ -134,8 +140,8 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
     (compile_correct p "check" G hG hwf k0 hcode fd hentry [] hargs hnargs
       (loadMem b pb s8 s64) N dm ra hc.hT hc.hN hmem hc.hroom hc.htop (fun i h => absurd h (by simp))
       hc.hra hc.hcs hc.hcs24 hc.hcs8)
-  intro st ⟨hpc, _, _, _, _, hout⟩
-  refine ⟨hpc, fun hrdx hacc => ?_⟩
+  intro st ⟨hpc, hsp, hbp, h14, h15, hout⟩
+  refine ⟨hpc, ⟨hsp, hbp, h14, h15⟩, fun hrdx hacc => ?_⟩
   rcases hout with h1 | hout
   · rw [hrdx] at h1; exact absurd h1 (by decide)
   rcases hrun : L.run p N "check" [] (loadMem b pb s8 s64) with e | ⟨rs, m'⟩
@@ -158,6 +164,26 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
         simp [loadMem, Mem.arr64, ha]
       omega
     exact hP b pb s8 s64 N rs m' h64 hb hpb hs64 hN62 hrun (hrax ▸ hacc)
+
+/-- **The final theorem.** A Kraken host holds the compiled checker `p` (any program with
+`PipelineRefines`); the loader put the input bytes `b`, any pin-data bytes `pb` and zeroed arrays
+of any sizes in the layout `G`; the harness calls `ca_enter` with fuel `N < 2^62`. Then the machine returns to the caller, and
+if it reports `rdx = 0` with `rax = ACCEPT`, the twin's pipeline accepts `[b]`. -/
+theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
+    (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
+    (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (hnargs : G.nargs = 0)
+    (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
+    (hpb : pb.size < 2 ^ 63)
+    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
+    (hmem : MemRel G (loadMem b pb s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+      dm (label enterL) :=
+  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h⟩ => ⟨hpc, h⟩)
+    (checker_x64_accepts_regs p hP G hG hwf hnres k0 hcode fd hentry hnp hnargs b pb h64 hb hpb s8 s64
+      N hN62 dm ra hmem hc)
 
 /-- **Corollary: an accepted file has a model.** Under `checker_x64_accepts`'s premises, if the
 machine reports accept, con-leche's parser reads `b` into records `rc`, con-leche's pure fold
