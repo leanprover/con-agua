@@ -612,7 +612,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     exact ⟨T'', hrun, hE, tgtR_congr hT e, fun x t hx => hTv x t (by rw [← e x]; exact hx),
       HFr.refl _ _ _ _, fun x t hx => hTi x t (by rw [← e x]; exact hx), fun k _ => e k,
       fun x t hx => hlt x t (by rw [← e x]; exact hx)⟩
-  rw [hClosureW.arm2 _ _ _ _ _ _ _ hm] at h
+  rw [hClosureW.arm2 _ _ _ _ _ _ _ (Decidable.of_not_not hm)] at h
   have hTj : T[j]? = none := by
     cases e : T[j]? with
     | none => rfl

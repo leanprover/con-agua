@@ -96,7 +96,7 @@ theorem pDecl_ok (n : Nat) (m : Mem) (i w r : Word) (d : IDeclaration)
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind
     obtain ⟨h6, -, t, ht, hb⟩ := hD
-    rw [pDeclW.arm3 n m i w (by rw [e0, h6]; simp), e2, e3] at h
+    rw [pDeclW.arm3 n m i w (by rw [e0, h6]), e2, e3] at h
     rw [declares, pl_names_ind]
     exact pDeclGo_ok n m _ _ 0 w r _ t b rfl ht (hok.2 h6).1 (by simpa using hb) hw h
   · have hD' := hix_declAtF (fun b nP e => hind ⟨b, nP, e⟩) hD
@@ -131,7 +131,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
     obtain ⟨h6, -, t, ht, hb⟩ := hD
     have hne6 : ¬rdW (m.arr64 DECL) (1 + 8 * i) ≠ 6 := by rw [e0, h6]; simp
     by_cases hc : dw (m.arr64 DECL) i.toNat 3 = 0
-    · rw [pKeyW.arm3 m i hne6 (by rw [e3]; simpa using hc)] at h
+    · rw [pKeyW.arm3 m i (Decidable.of_not_not hne6) (by rw [e3]; simpa using hc)] at h
       rw [hc] at hb
       simp [decCIs] at hb; subst hb
       obtain ⟨hok', hX, hres⟩ := naintern_correct m a hA.nanon r m' h
@@ -148,7 +148,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
         · intro e; subst e; revert hb; decide
         · intro hm; simp [nanonCS] at hm; rcases hm with rfl | rfl <;> revert hx <;> decide
       · rcases hst with e | ⟨_, e⟩ | ⟨_, e⟩ <;> rw [e] <;> exact ⟨rfl, rfl, rfl⟩
-    · rw [pKeyW.arm2 m i hne6 (by rw [e3]; intro e; exact hc (by simpa using e)), e2] at h
+    · rw [pKeyW.arm2 m i (Decidable.of_not_not hne6) (by rw [e3]; intro e; exact hc (by simpa using e)), e2] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have ho := (hok.2 h6).1
@@ -220,7 +220,7 @@ theorem pFind_ok (n : Nat) (m : Mem) (dsAll : Array IDeclaration) (mk nw w j r :
           · rw [pFindW.k_decl_declares.arm1 n mk nw w j m dv hdv] at h
             cases h
             exact .inl ⟨hz, hdec.mp hdv, rfl⟩
-          · rw [pFindW.k_decl_declares.arm2 n mk nw w j m dv hdv, pFindW.j1.arm1] at h
+          · rw [pFindW.k_decl_declares.arm2 n mk nw w j m dv (Decidable.of_not_not hdv), pFindW.j1.arm1] at h
             refine .inr ⟨fun _ => ?_, h⟩
             cases e : declares (decI w) dsAll[j.toNat]
             · rfl
