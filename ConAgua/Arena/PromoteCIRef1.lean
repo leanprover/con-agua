@@ -28,6 +28,12 @@ theorem eFrame_erec {m m' : Mem} (h : MemFrame eArrs eCtl m m') :
   refine ⟨h.1 EREC (by decide) (by decide), ?_⟩
   simp only [erecTop]; rw [h.2.1 129 (by decide)]
 
+/-- A promotion's frame inside the record pool's (by membership: `simp` over the long array
+lists runs out of recursion depth). -/
+theorem eFrame_cons {m m' : Mem} (h : MemFrame eArrs eCtl m m') :
+    MemFrame (EREC :: eArrs) (129 :: eCtl) m m' :=
+  h.mono (fun _ h => List.mem_cons_of_mem _ h) (fun _ h => List.mem_cons_of_mem _ h)
+
 /-- **What a promoted stored slice gives**: a fresh slice at the old top. -/
 def SlOk {k : IdxKind} (op : AM (PMemo × List (Idx k))) (m : Mem) (a : AState) (r : Word)
     (wl : Word) (m' : Mem) : Prop :=
