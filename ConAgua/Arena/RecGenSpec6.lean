@@ -394,9 +394,8 @@ theorem cfgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have htop := hS.2.1
   by_cases hfl : fl = 0
   · rw [cfgW_nil (h := hfl)]
-    have : fs = [] := by
+    obtain rfl : fs = [] := by
       have := decHL_length m hfs; rw [hfl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
-    subst this
     rw [ConRon.Arena.classFieldsOf]
     exact RSim.pure_some ⟨hS, IWGrow.refl m,
       (by simpa using SPLA.nil (b := iwTop m) (dec := decCF) (m := m) 0 (by omega)), ⟨mp0, hM⟩, MFr.refl _ _ _⟩

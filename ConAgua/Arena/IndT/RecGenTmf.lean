@@ -44,33 +44,21 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2W_nil n m nP o l hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ckc2W_cons n m nP o l hl] at h
-    cases h1 : bvbW n m (rdW (m.arr64 IW) o) CWF with
-    | none => rw [h1] at h; simp [ckc2K1] at h
-    | some p1 =>
-    obtain ⟨rb, m1⟩ := p1
-    rw [h1] at h
+    obtain ⟨⟨rb, m1⟩, h1, h⟩ := of_K h (by simp only [ckc2K1])
     refine (bvbW_afr h1).trans ?_
     by_cases hb : rb ≠ 0
     · rw [ckc2K1_open (h := hb)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ckc2K1_closed (h := hb)] at h
-    cases h2 : fvbF m1 [CWF, rdW (m.arr64 IW) o] with
-    | none => rw [h2] at h; simp [ckc2K2] at h
-    | some p2 =>
-    obtain ⟨rf, m2⟩ := p2
-    rw [h2] at h
+    obtain ⟨⟨rf, m2⟩, h2, h⟩ := of_K h (by simp only [ckc2K2])
     refine (fvbF_afr h2).trans ?_
     by_cases hf : nP < rf.headD 0
     · rw [ckc2K2_open (h := hf)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ckc2K2_closed (h := hf)] at h
-    cases h3 : ckc2W n m2 nP (o + 1) (l - 1) with
-    | none => rw [h3] at h; simp [ckcK3] at h
-    | some p3 =>
-    obtain ⟨r3, m3⟩ := p3
-    rw [h3, ckcK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact ckc2W_afr n _ _ _ _ _ _ h3
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [ckcK3_some] at h
+    cases h; exact ckc2W_afr n _ _ _ _ _ _ h3
 
 section calls
 variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
@@ -78,9 +66,8 @@ variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
 theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
     (h : callW p n "target_major_of_member" [pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, I, us, t] m =
       some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (tmm_spec p hP.mem k _ pp cao cal pfo pfl fvo fvl ao al I us t) h
   unfold tmmW at hW
@@ -115,9 +102,8 @@ theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Wor
 
 theorem noC_afr (hN : NoProg p) {no nl lo hi e : Word}
     (h : callW p n "nest_occ" [no, nl, lo, hi, e] m = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (nestOcc_spec p hN.hv hN.hc hN.hf hN.hput hN.hgo hN.hnode hN.hcl hN.hp k _ no nl lo hi e) h
   exact noConstWf_afr (n := k + 1) hW
@@ -130,23 +116,15 @@ theorem ocW_afr (hN : NoProg p) : ∀ (n : Nat) (m m' : Mem) (no nl o l : Word) 
     · rw [ocW_nil p n m no nl o l hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ocW_cons p n m no nl o l hl] at h
-    cases h1 : callW p n "nest_occ" [no, nl, 0, 0, rdW (m.arr64 IW) o] m with
-    | none => rw [h1] at h; simp [ocK1] at h
-    | some x =>
-    obtain ⟨r1, m1⟩ := x
-    rw [h1] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp only [ocK1])
     refine (noC_afr hN h1).trans ?_
     by_cases hb : r1.headD 0 ≠ 0
     · rw [ocK1_hit p n m1 no nl o l r1 hb] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ocK1_miss p n m1 no nl o l r1 hb] at h
-    cases h2 : ocW p n m1 no nl (o + 1) (l - 1) with
-    | none => rw [h2] at h; simp [ocK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2, ocK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact ocW_afr hN n _ _ _ _ _ _ _ h2
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [ocK2_some] at h
+    cases h; exact ocW_afr hN n _ _ _ _ _ _ _ h2
 
 theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "mk_target_major" = some mkTargetMajor)
@@ -296,20 +274,16 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     (Q := fun r x m' a' => NcOut m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' ∧
       StageC dn vis fe env m' a' ∧ AbsOK m' ∧ PStep a a') ?_ ?_
   · intro r2 m2 e2
-    cases n with
-    | zero => rw [callW_zero] at e2; cases e2
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e2; cases e2
     obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tco_spec p hP.nt hP.tco k _ vis I) e2
-    cases k with
-    | zero => simp [ntWf, tcoPK] at hW2
-    | succ k' =>
-    cases hnt : ntW k' m vis I with
-    | none => rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoPK] at hW2
-    | some y =>
+    rcases k with _ | k'
+    · simp [ntWf, tcoPK] at hW2
+    rcases hnt : ntW k' m vis I with _ | y
+    · rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoPK] at hW2
     obtain ⟨r, m'⟩ := y
     rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW2
-    obtain ⟨rfl, hm'⟩ := hW2
+    obtain ⟨rfl, hm'⟩ := Prod.mk.inj (Option.some.inj hW2)
     obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok dn fe vis I hI k' m m' a r hnt hS
     have hf : MFr [] [] m m' := ntWf_mfr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt)
     have hA2 : AbsOK m' := ntWf_afr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt) hA
@@ -324,8 +298,7 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rintro r2 x m2 a2 ⟨hnc, hS2, hg2, hP2, hC2, hA2, p2⟩
   rw [tmoK2_some]
   rcases x with _ | ⟨nPc, cs⟩
-  · have h0 : r2.headD 0 = 0 := hnc
-    simp only [h0, if_true]; exact Sim.of_none
+  · simp only [show r2.headD 0 = 0 from hnc, if_true]; exact Sim.of_none
   obtain ⟨h1, hnP, hcl, hcb, hcsat⟩ := hnc
   simp only [h1, show (1 : Word) ≠ 0 by decide, if_false]
   by_cases hal : al < r2.tail.headD 0
@@ -363,11 +336,8 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     exact ⟨b, a', hrun, hb3, hS3, hg3, hP2.fr (ckc2W_mfr _ _ _ _ _ _ _ hW3), hC2.of_pstep hS3 hA3 p3, hA3, p3⟩
   rintro r3 b m3 a3 ⟨hb3, hS3, hg3, hP3, hC3, hA3, p3⟩
   rw [tmoK2b_some]
-  cases b with
-  | false =>
-    have h0 : r3.headD 0 = 0 := by simpa using hb3
-    simp only [h0, if_true]; exact Sim.of_none
-  | true =>
+  cases b
+  · simp only [show r3.headD 0 = 0 by simpa using hb3, if_true]; exact Sim.of_none
   have h0 : r3.headD 0 ≠ 0 := by simpa using hb3
   simp only [h0, if_false, Bool.not_true, Bool.false_eq_true]
   have hg03 := hg2.trans hg3
@@ -398,23 +368,18 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     exact ⟨b, a', hrun, hb4, hS4', hg4', hP4', hC3.of_pstep hS4' hA4 p4, hA4, p4⟩
   rintro r4 b m4 a4 ⟨hb4, hS4, hg4, hP4, hC4, hA4, p4⟩
   rw [tmoK3_some]
-  cases b with
-  | false =>
-    have h0 : r4.headD 0 = 0 := by simpa using hb4
-    simp only [h0, if_true]; exact Sim.of_none
-  | true =>
+  cases b
+  · simp only [show r4.headD 0 = 0 by simpa using hb4, if_true]; exact Sim.of_none
   have h0 : r4.headD 0 ≠ 0 := by simpa using hb4
-  simp only [h0, if_false]
-  simp only [if_true]
+  simp only [h0, if_false, if_true]
   have hg04 := hg03.trans hg4
   -- the tail
   refine Sim.post (K := tmoK4) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
       IWGrow m4 m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
   · intro r5 m5 e5
-    cases n with
-    | zero => rw [callW_zero] at e5; cases e5
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e5; cases e5
     obtain ⟨s5, rfl, -, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
       (tmt_spec p hP.tmt.tail k _ vis pp pfo pfl I us ao _ _ _) e5
     have hcsd := csAt_decB hcsat hcb
@@ -501,9 +466,8 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
       (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow s4.mem m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
     · intro r6 m6 e6
-      cases n with
-      | zero => rw [callW_zero] at e6; cases e6
-      | succ k =>
+      rcases n with _ | k
+      · rw [callW_zero] at e6; cases e6
       obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
         (tmm_spec p hP.tmm.mem k _ pp cao cal pfo pfl fvo fvl ao al x y (UInt64.ofNat i)) e6
       have := tmmW_sim hP.tmm k (t := UInt64.ofNat i) (bs := bs) (css := css) hS4 (hq.grow (decBS_mono _) hg4)
@@ -523,9 +487,8 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
       (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow s4.mem m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
     · intro r6 m6 e6
-      cases n with
-      | zero => rw [callW_zero] at e6; cases e6
-      | succ k =>
+      rcases n with _ | k
+      · rw [callW_zero] at e6; cases e6
       obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
         (tmo_spec p hP.tmo.out k _ vis pp pfo pfl x y ao al _ _) e6
       exact tmoW_simC hP.tmo hIlpf hcore hLC k hS4 (hq.grow (decBS_mono _) hg4) (by have := hg4.1; omega) hsl hwlt
@@ -609,9 +572,8 @@ theorem tmfW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
     (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
       IWGrow m2 m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
   · intro r6 m6 e6
-    cases n with
-    | zero => rw [callW_zero] at e6; cases e6
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e6; cases e6
     obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmc_spec p hP.tmc k _ vis pp cao cal pfo pfl fvo fvl _ _ _ _) e6
     exact tmcW_simC hP hIlpf hcore hLC k hS2 (hq.grow (decBS_mono _) hg12)

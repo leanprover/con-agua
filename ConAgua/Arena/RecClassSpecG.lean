@@ -47,11 +47,10 @@ theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   simp only [snocW] at h
   have h0 : l + 1 ≠ 0 := by intro e0; simp [e0] at h
   simp only [h0, if_false] at h
-  cases hal : allocW m (l + 1) with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
-    rw [← htop, ← hq]; exact hroom
+  rcases hal : allocW m (l + 1) with _ | qm
+  · simp [hal] at h
+  obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
+  rw [← htop, ← hq]; exact hroom
 
 /-- `class_read_slots_snoc` under the stage relation. -/
 theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -61,20 +60,15 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  cases N with
-  | zero => simp [motSnocW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [motSnocW] at h
   have key : ∀ x, x.toNat = d.toNat - np.toNat → mpsK (snocW N m mo ml x) = some (r, m') →
       StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := fun x hx h2 => by
-    cases h3 : snocW N m mo ml x with
-    | none => rw [h3] at h2; cases h2
-    | some rm =>
-    obtain ⟨r3, m3⟩ := rm
-    rw [h3, mpsK_some] at h2
-    simp only [Option.some.injEq, Prod.mk.injEq] at h2
-    obtain ⟨rfl, rfl⟩ := h2
+    obtain ⟨⟨r3, m3⟩, h3, h2⟩ := of_K h2 rfl
+    rw [mpsK_some] at h2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h2)
     obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
     have hroom := snocW_room h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
     refine ⟨stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hroom), hg, ?_, ?_⟩
@@ -93,12 +87,11 @@ theorem classReadSlotsSnoc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_slots_snoc" [mo, ml, np, d]
     ⦃fun r s' => LocEq s' s₀ ∧ motSnocW N s₀.mem mo ml np d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classReadSlotsSnoc]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slSnoc_specW p ha hc hsn N] <;>
-      finish (gen := 20)
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slSnoc_specW p ha hc hsn N] <;>
+    finish (gen := 20)
 
 mutual
 /-- **The model of `class_read_slots`.** -/
@@ -317,9 +310,8 @@ end sims
 
 theorem motSnocW_afr {N : Nat} {m m' : Mem} {mo ml np d : Word} {r : List Word}
     (h : motSnocW N m mo ml np d = some (r, m')) : AFr m m' := by
-  cases N with
-  | zero => simp [motSnocW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [motSnocW] at h
   simp only [motSnocW, mpsK.eq_def] at h
   afr_auto h [snocW_afr]
 
@@ -382,18 +374,15 @@ theorem slotsRest_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
   rintro ⟨r5, m5⟩ o a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
   dsimp only at hS5 hg5 hd5 hJ5
   have hg25 := hg24.trans hg5
-  cases o with
-  | none =>
-    rw [ssK6_fail (h := hd5)]
-    exact RSim.pure_some ⟨⟨hS5, hg.trans hg25, rfl⟩, hJ5⟩
-  | some rest =>
-    obtain ⟨h51, hsp⟩ := hd5
-    rw [ssK6_ok (h := by rw [h51]; decide)]
-    refine RSim.lstep (K := ssK7) (by rw [ssK7]) ?_
-    rintro ⟨r6, m6⟩ h6
-    obtain ⟨hS6, hg6, hsp6⟩ := SPL.cons h6 hS5 hsp (hsl.grow hg25)
-    rw [ssK7_some]
-    exact RSim.pure_some ⟨⟨hS6, (hg.trans hg25).trans hg6, rfl, hsp6⟩, hO.1 _ _ (consW_afr h6) hJ5⟩
+  rcases o with _ | rest
+  · rw [ssK6_fail (h := hd5)]; exact RSim.pure_some ⟨⟨hS5, hg.trans hg25, rfl⟩, hJ5⟩
+  obtain ⟨h51, hsp⟩ := hd5
+  rw [ssK6_ok (h := by rw [h51]; decide)]
+  refine RSim.lstep (K := ssK7) (by rw [ssK7]) ?_
+  rintro ⟨r6, m6⟩ h6
+  obtain ⟨hS6, hg6, hsp6⟩ := SPL.cons h6 hS5 hsp (hsl.grow hg25)
+  rw [ssK7_some]
+  exact RSim.pure_some ⟨⟨hS6, (hg.trans hg25).trans hg6, rfl, hsp6⟩, hO.1 _ _ (consW_afr h6) hJ5⟩
 
 /-- The twin's `classReadSlots` after the slot. -/
 def slotsNext (bs : BlockShape) (fe : IFEnv) (np k : Nat) (motPos : List Nat) (d : Nat)
@@ -455,11 +444,8 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         hmot hmt) ?_
     rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, hd1⟩, hJ1⟩
     dsimp only at hS1 hg1 hd1 hJ1
-    cases o with
-    | none =>
-      rw [ssK1_fail (h := hd1)]
-      exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
-    | some slot =>
+    rcases o with _ | slot
+    · rw [ssK1_fail (h := hd1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
     obtain ⟨h11, hsl⟩ := hd1
     rw [ssK1_ok (h := by rw [h11]; decide)]
     refine RSim.bindPure (K := ssK1b) (by rw [ssK1b])
@@ -468,9 +454,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [ssK1b_some]
     refine RSim.pure_some ⟨⟨hS2, hg1.trans hg2, ?_⟩, hJ2⟩
-    cases x with
-    | none => exact hd2
-    | some _ => exact hd2
+    cases x <;> exact hd2
   · have htag := decCS_tag hsl.get
     have hsz := hS.2.2.2.1
     have hrd := iwN_rdW htag (by have := iwN_lt htag; omega)

@@ -73,9 +73,8 @@ theorem cvLpsA_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
     · exact .inl h0
     · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-  cases n with
-  | zero => simp [L.Arena.cvLpsW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [L.Arena.cvLpsW] at h
   rw [L.Arena.cvLpsW_step, e1, e2] at h
   obtain ⟨-, hr4t, hdec4, hS4, hg4, htop4⟩ := L.Arena.erToIwW_stage h hS hsrc
   rw [hr4t]
@@ -195,30 +194,28 @@ theorem classRuleOkGuards_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : 
     ⦃fun r s' => LocEq s' s₀ ∧ crgW cR N s₀.mem visR cvR gen = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.guards]
   simp only [callFn, classRuleOkGuards]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        lbbF_spec p h.bvb N, hffF_spec p h.hf N,
-        L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps N,
-        hcR N "all_level_params_defined", crfF_spec p h.hcr N] <;>
-      finish (gen := 20)
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      lbbF_spec p h.bvb N, hffF_spec p h.hf N,
+      L.Arena.cvLps_specW p h.alloc h.copy h.eti h.lps N,
+      hcR N "all_level_params_defined", crfF_spec p h.hcr N] <;>
+    finish (gen := 20)
 
 theorem classRuleOk_spec (p : Prog) (h : CruleProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St) (visT visR cvR n gen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_rule_ok" [visT, visR, cvR, n, gen]
     ⦃fun r s' => LocEq s' s₀ ∧ cruleW cR N s₀.mem visT visR cvR n gen = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rule]
   simp only [callFn, classRuleOkL]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classRuleOkGuards_spec p h cR hcR N, hcR N "infer_type_core",
-        flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
-        classRuleOkDomains_spec p h.dom h.hcr N] <;>
-      finish (gen := 20) [loc_init4]
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      classRuleOkGuards_spec p h cR hcR N, hcR N "infer_type_core",
+      flushCaches_spec p h.toFlushProg N, stripLams_specF p h.strip N,
+      classRuleOkDomains_spec p h.dom h.hcr N] <;>
+    finish (gen := 20) [loc_init4]
 
 end L.Ind
 

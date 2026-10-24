@@ -44,9 +44,8 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
     ∃ a', (ConRon.Arena.classRuleOk V visT.toNat feR cv (G.nP + G.slots.length + X.nF)
         (decI gen)).run a = .ok (decI gen, a') ∧ StageC dn visR feR envR m' a' ∧ IWGrow m m' ∧
       r = [gen] ∧ AbsOK m' ∧ ConRon.Bridge.CoreStep V envR feR a a' := by
-  cases N with
-  | zero => simp [cr1W] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [cr1W] at h
   have hsz := hC.stage.2.2.2.1
   obtain ⟨hnP, -⟩ := rec2CG_parts hG
   obtain ⟨hsl, -⟩ := rec3CG_parts hG
@@ -60,14 +59,9 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
       rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)
   · rw [cr1W_big (h := hb)] at h; cases h
   rw [cr1W_ok (h := hb)] at h
-  cases h1 : cruleW (realCall p) N m visT visR cvR
-      (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)) gen with
-  | none => rw [h1] at h; cases h
-  | some rm =>
-  obtain ⟨r1, m1⟩ := rm
-  rw [h1, cr1K_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [cr1K_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hApd henvR (by omega) h1 hC hgen
     (rec2DecCV_erecP hcv hext) (rec3CVExt_lt hC.stage hext) hA hcvP hgP hie
   have hn : (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)).toNat =
@@ -161,9 +155,8 @@ theorem crsW_simC (henv : ConLeche.EnvWF env) (visT visR : Word) (feR : IFEnv) {
         dExt_denoteCV.list p1.ext _ _ hcvsP, hRl⟩) ?_
   rintro ⟨r3, m3⟩ o3 a3 - ⟨hC3, ⟨⟨hS3, hg3, ho3⟩, hA3⟩, hR3, p2⟩
   dsimp only at hS3 hg3 ho3 hC3
-  cases o3 with
-  | none => rw [crsK3_fail (h := ho3)]; exact RSim.none
-  | some gen =>
+  rcases o3 with _ | gen
+  · rw [crsK3_fail (h := ho3)]; exact RSim.none
   obtain ⟨genP, -, hgenP⟩ := hR3
   obtain ⟨h31, hgH, hgd⟩ := ho3
   rw [crsK3_ok (h := by rw [h31]; decide)]

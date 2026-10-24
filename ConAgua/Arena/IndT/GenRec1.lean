@@ -63,24 +63,17 @@ theorem classesNfs_refinesLpC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
       StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem ∧
       (KeepW s₀.mem s'.mem → ClassesLp s'.mem (r.headD 0) (r.tail.headD 0)); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   refine triple_post (cnfs_spec p P.cns n s₀ vis q fto ftl tblo tbll mo ml) ?_
   rintro r s' ⟨hl, hm⟩
   rw [cnfsW_eq] at hm
-  cases c0 : callW p n "iw_alloc" [ml] s₀.mem with
-  | none => rw [c0] at hm; cases hm
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [c0, cnfsK1_some] at hm
-  cases c1 : cnsW p (n + 1) m0 vis q fto ftl tblo tbll mo ml (r0.headD 0) 0 with
-  | none => rw [c1] at hm; cases hm
-  | some mF =>
-  rw [c1, cnfsK2_some] at hm
+  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl
+  rw [cnfsK1_some] at hm
+  obtain ⟨mF, c1, hm⟩ := of_K hm rfl
+  rw [cnfsK2_some] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
-  obtain ⟨s0, hs0, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
-  simp only at hs0 hw0; subst hs0
+  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
   have hA0 := allocW_afr hw0 hA
   obtain ⟨rest, a', run, hSF, hgF, htF, hPF, hAF, ws', hws', hacc'⟩ := cnsW_okC hkp henv P dn fe vis q fto ftl
@@ -140,15 +133,9 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hrecsP0 := (ConRon.Bridge.Inductives.dShape_inv hsh).2.1
   unfold grpAW at h
   -- the capacity guards
-  by_cases g1 : m.len64 IW + 5 < 5
-  · rw [if_pos g1] at h; cases h
-  rw [if_neg g1] at h
-  by_cases g2 : rdW (m.arr64 IW) (pp + 4) + rdW (m.arr64 IW) (pp + 1) < rdW (m.arr64 IW) (pp + 4)
-  · rw [if_pos g2] at h; cases h
-  rw [if_neg g2] at h
-  by_cases g3 : rdW (m.arr64 IW) (pp + 4) + rdW (m.arr64 IW) (rd + 1) < rdW (m.arr64 IW) (pp + 4)
-  · rw [if_pos g3] at h; cases h
-  rw [if_neg g3] at h
+  obtain ⟨g1, h⟩ := of_ite_none h
+  obtain ⟨g2, h⟩ := of_ite_none h
+  obtain ⟨g3, h⟩ := of_ite_none h
   have hcap : (m.arr64 IW).size + 5 < 2 ^ 64 ∧ bs.nP + bs.k < 2 ^ 64 ∧ bs.nP + rdv.slots.length < 2 ^ 64 := by
     obtain ⟨e4, hnP64, -, -⟩ := partsShapeWords (IWGrow.refl m) hbs.1 (by omega)
     have hkb : bs.k < 2 ^ 64 := by
@@ -172,11 +159,8 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
       exact this
   refine ⟨hcap, ?_⟩
   -- `target_rec_pins`
-  cases c1 : callW p n "target_rec_pins" [pp, bO, bL] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1, grpK1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [grpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (targetRecPins_refines p P.rp n _ a dn vis fe pp bO bL bs block hS hbs.1 hblk)
     (callW_mono c1 (Nat.le_add_right n 3))
@@ -200,11 +184,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   rw [hw2, hw3] at h
   have hrecs1 := hrecsP.grow (fun q => decRS_mono q) hg1
   have hrecs1P := ConRon.Bridge.Inductives.dRec_ext.list c1'.ext _ _ hrecsP0
-  cases c2 : callW p n "class_stream_recs" [vis, rdW (m.arr64 IW) (pp + 2), rdW (m.arr64 IW) (pp + 3)] s1.mem with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   obtain ⟨s2, hs2, -, hok2, hC2, hg2, hcs2, hA2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classStreamRecs_refinesC hq henv hV hApd hCrk P.cpy P.ia P.slc P.csr n hn _ a1 fe vis _ _ bs.recs pP.recs hC1
       hA1 (rec3RecsOK_of_decB hrecs1.1 hrecs1.2) hrecs1P) c2
@@ -233,93 +213,49 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   have hL : (rdW (s2.mem.arr64 IW) (pp + 7) != 0) = bs.large := by
     rw [partsRdIW_grow hg12 (by rw [UInt64.toNat_add]; simp; omega)]
     exact installIwB (k := 7) hlarge hsz
-  have hgoal : ∀ (m4 : Mem) (a4 : AState), StageC dn vis fe env m4 a4 → IWGrow m m4 → RcMR m4 →
-      KeepW m m4 → AbsOK m4 → CsRes m4 r2 cvRis →
+  obtain ⟨a4, hC4, hrun, hc4, hcv4, h⟩ : ∃ a4, StageC dn vis fe env s2.mem a4 ∧
       (∀ {β : Type} (k : List IConstantVal → AM β),
-        (grcTwinA V fe bs (nested != 0) ms block k).run a = (k cvRis).run a4) →
-      ConRon.Bridge.CoreStep V env fe a a4 →
-      cvRis.mapM (Frontend.denoteCV a4.store) = some cvRisP →
-      some ([r2.headD 0, r2.tail.headD 0], m4) = some (r, m') →
-      ∃ cvRis a', (∀ {β : Type} (k : List IConstantVal → AM β),
-        (grcTwinA V fe bs (nested != 0) ms block k).run a = (k cvRis).run a') ∧
-      StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ KeepW m m' ∧ CsRes m' r cvRis ∧
-      AbsOK m' ∧ ConRon.Bridge.CoreStep V env fe a a' ∧
-      ∃ cvRisP : List ConLeche.ConstantVal, cvRis.mapM (Frontend.denoteCV a'.store) = some cvRisP ∧
-        ∀ cv ∈ cvRisP, ConLeche.Expr.WScoped 0 cv.type := by
-    intro m4 a4 hC4 hg4 hP4 hk4 hA4 hcs4 hrun hc4 hcv4 e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
-    refine ⟨cvRis, a4, hrun, hC4, hg4, hP4, hk4, ?_, hA4, hc4, cvRisP, hcv4, hwRis⟩
-    obtain ⟨ptrs, h1, h2, h3, h4⟩ := hcs4
-    exact ⟨ptrs, h1, h2, h3, h4⟩
-  by_cases h7 : rdW (s2.mem.arr64 IW) (pp + 7) = 0
-  · rw [grpK2_small (h1 := hk0) (h := h7)] at h
-    have hl : bs.large = false := by rw [← hL, h7]; rfl
-    refine hgoal s2.mem a2 hC2 hg12 hP2 (hk1.trans hk2) hA2 hcs2 (fun k => ?_) c12 hcvRis h
-    simp only [grcTwinA, StateT.run_bind, hrun1, except_ok_bind, hrun2, hkb, hl, Bool.false_eq_true, ite_false]
-  have hl : bs.large = true := by rw [← hL]; simpa using h7
-  -- the twin's large branch, from `blockLargeElimAllowed`'s run
-  have hlarge_run : ∀ (nb : Bool) (a3 a4 : AState) (allowed : Bool),
-      nb = ((nested != 0) || ms.any (·.member.isNone)) →
-      (ConRon.Arena.blockLargeElimAllowed bs nb).run a3 = .ok (allowed, a4) → allowed = true → a3 = a2 →
-      ∀ {β : Type} (k : List IConstantVal → AM β),
-        (grcTwinA V fe bs (nested != 0) ms block k).run a = (k cvRis).run a4 := by
-    intro nb a3 a4 allowed hnb hr hal ha3 β k
-    subst hnb ha3 hal
-    simp only [grcTwinA, StateT.run_bind, hrun1, except_ok_bind, hrun2, hkb, hl, hr, Bool.false_eq_true,
+        (grcTwinA V fe bs (nested != 0) ms block k).run a = (k cvRis).run a4) ∧
+      ConRon.Bridge.CoreStep V env fe a a4 ∧ cvRis.mapM (Frontend.denoteCV a4.store) = some cvRisP ∧
+      some ([r2.headD 0, r2.tail.headD 0], s2.mem) = some (r, m') := by
+    by_cases h7 : rdW (s2.mem.arr64 IW) (pp + 7) = 0
+    · rw [grpK2_small (h1 := hk0) (h := h7)] at h
+      have hl : bs.large = false := by rw [← hL, h7]; rfl
+      refine ⟨a2, hC2, fun k => ?_, c12, hcvRis, h⟩
+      simp only [grcTwinA, StateT.run_bind, hrun1, except_ok_bind, hrun2, hkb, hl, Bool.false_eq_true, ite_false]
+    have hl : bs.large = true := by rw [← hL]; simpa using h7
+    have hmsD : decPL s2.mem (decTM s2.mem) mO.toNat mL.toNat = some ms :=
+      (hms.1.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg12).get (OMono.decPL (fun q => decTM_mono q) _ _)
+    have hmsb : mO.toNat + mL.toNat < 2 ^ 64 := hS.lt64 hms.2
+    have hsh2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
+    have hsrc2 : ShapeSrc s2.mem pp := partsHsrc_grow hg12 (partsShapeFacts hbs.1 hbs.2.1).2.1 hbs.2.1
+    obtain ⟨w, hw, h⟩ : ∃ w : Word, (w != 0) = ((nested != 0) || ms.any (·.member.isNone)) ∧
+        grpK4 (fun m => some ([r2.headD 0, r2.tail.headD 0], m))
+          (callW p n "block_large_elim_allowed" [pp, w] s2.mem) = some (r, m') := by
+      by_cases hn0 : nested = 0
+      · rw [grpK2_any (h1 := hk0) (h := h7) (hn := hn0)] at h
+        obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+        obtain ⟨s3, rfl, -, hm3, hany, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+          (genRecCheckAnyNoMember_refines p P.anm n _ mO mL ms hmsD hmsb hS2.2.2.2.1) c3
+        rw [grpK3_some, hm3] at h
+        exact ⟨_, by rw [hany, hn0]; rfl, h⟩
+      · rw [grpK2_nested (h1 := hk0) (h := h7) (hn := hn0)] at h
+        exact ⟨nested, by rw [show (nested != 0) = true by simpa using hn0]; rfl, h⟩
+    obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
+    obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
+      (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
+    subst hm4
+    have c3' := p4.toCore hC2.check
+    have h0 : ¬ (r4.headD 0 = 0) := fun h0 => by rw [grpK4_bad (h := h0)] at h; cases h
+    rw [grpK4_ok (h := h0)] at h
+    have hal : al = true := by rw [← hd4.1]; simpa using h0
+    refine ⟨a4, hC4, fun k => ?_, c12.trans c3', ConRon.Bridge.Inductives.dExt_denoteCV.list c3'.ext _ _ hcvRis, h⟩
+    rw [hw] at hr4; subst hal
+    simp only [grcTwinA, StateT.run_bind, hrun1, except_ok_bind, hrun2, hkb, hl, hr4, Bool.false_eq_true,
       ite_false, ite_true]
-  have hmsD : decPL s2.mem (decTM s2.mem) mO.toNat mL.toNat = some ms :=
-    (hms.1.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg12).get (OMono.decPL (fun q => decTM_mono q) _ _)
-  have hmsb : mO.toNat + mL.toNat < 2 ^ 64 := hS.lt64 hms.2
-  have hsh2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
-  have hsrc2 : ShapeSrc s2.mem pp := partsHsrc_grow hg12 (partsShapeFacts hbs.1 hbs.2.1).2.1 hbs.2.1
-  by_cases hn0 : nested = 0
-  · rw [grpK2_any (h1 := hk0) (h := h7) (hn := hn0)] at h
-    cases c3 : callW p n "gen_rec_check_any_no_member" [mO, mL] s2.mem with
-    | none => rw [c3] at h; cases h
-    | some q3 =>
-    obtain ⟨r3, m3⟩ := q3
-    rw [c3, grpK3_some] at h
-    obtain ⟨s3, hs3, -, hm3, hany, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-      (genRecCheckAnyNoMember_refines p P.anm n _ mO mL ms hmsD hmsb hS2.2.2.2.1) c3
-    simp only at hs3 hm3 hany; subst hs3
-    rw [hm3] at h
-    cases c4 : callW p n "block_large_elim_allowed" [pp, r3.headD 0] s2.mem with
-    | none => rw [c4] at h; cases h
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [c4] at h
-    obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
-      (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
-    subst hm4
-    have c3' := p4.toCore hC2.check
-    by_cases h0 : r4.headD 0 = 0
-    · rw [grpK4_bad (h := h0)] at h; cases h
-    rw [grpK4_ok (h := h0)] at h
-    have hal : al = true := by rw [← hd4.1]; simpa using h0
-    refine hgoal s2.mem a4 hC4 hg12 hP2 (hk1.trans hk2) hA2 hcs2
-      (hlarge_run _ a2 a4 al (by rw [hany, hn0]; rfl) hr4 hal rfl) (c12.trans c3')
-      (ConRon.Bridge.Inductives.dExt_denoteCV.list c3'.ext _ _ hcvRis) h
-  · rw [grpK2_nested (h1 := hk0) (h := h7) (hn := hn0)] at h
-    cases c4 : callW p n "block_large_elim_allowed" [pp, nested] s2.mem with
-    | none => rw [c4] at h; cases h
-    | some q4 =>
-    obtain ⟨r4, m4⟩ := q4
-    rw [c4] at h
-    obtain ⟨al, a4, hr4, hC4, hm4, hd4, p4, -⟩ := blockLargeElimAllowed_simC P.ble n hC2 hA2
-      (hbs.1.grow (decBS_mono _) hg12) hsrc2 hsh2 r4 m4 c4
-    subst hm4
-    have c3' := p4.toCore hC2.check
-    by_cases h0 : r4.headD 0 = 0
-    · rw [grpK4_bad (h := h0)] at h; cases h
-    rw [grpK4_ok (h := h0)] at h
-    have hal : al = true := by rw [← hd4.1]; simpa using h0
-    have hnb : (nested != 0) = ((nested != 0) || ms.any (·.member.isNone)) := by
-      have : (nested != 0) = true := by simpa using hn0
-      rw [this]; rfl
-    refine hgoal s2.mem a4 hC4 hg12 hP2 (hk1.trans hk2) hA2 hcs2
-      (hlarge_run _ a2 a4 al hnb hr4 hal rfl) (c12.trans c3')
-      (ConRon.Bridge.Inductives.dExt_denoteCV.list c3'.ext _ _ hcvRis) h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨ptrs, h1, h2, h3, h4⟩ := hcs2
+  exact ⟨cvRis, a4, hrun, hC4, hg12, hP2, hk1.trans hk2, ⟨ptrs, h1, h2, h3, h4⟩, hA2, hc4, cvRisP, hcv4, hwRis⟩
 
 end partA
 
