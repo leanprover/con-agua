@@ -130,10 +130,11 @@ def PushRoom (t : Word) : Prop :=
   (cntW S m t).toNat < 2 ^ 27 ∧ S.w.toNat * ((cntW S m t).toNat + 1) ≤ (m.arr64 (tierA S.ra t)).size
 
 /-- **Tier `t`'s table in its slot array**: the array below `2^62` words (so the growth's
-offsets do not wrap), a multiple of 8 slots (at least 8), at offset `0` or four times its slot
-count, from word `2` on. -/
+offsets do not wrap: below `2^61` words, the growth's new offset `8 n` and its end stay below
+`2^64`), a multiple of 8 slots (at least 8), at offset `0` or four times its slot count, from word
+`2` on. -/
 def TierLay (t : Word) : Prop :=
-  (m.arr64 (tierA S.sa t)).size < 2 ^ 62 ∧
+  (m.arr64 (tierA S.sa t)).size < 2 ^ 61 ∧
   8 ≤ (knW S.sa m t).toNat ∧ (knW S.sa m t).toNat % 8 = 0 ∧
   ((koW S.sa m t).toNat = 0 ∨ (koW S.sa m t).toNat = 4 * (knW S.sa m t).toNat) ∧
   2 + (koW S.sa m t).toNat + 2 * (knW S.sa m t).toNat ≤ (m.arr64 (tierA S.sa t)).size
@@ -163,7 +164,7 @@ theorem GrowR.tier (hG : GrowR S m) (t : Word) (ht : t ≤ 1) : TierLay S m t :=
   · exact hG.2
 
 theorem knW_toNat (hG : GrowR S m) (t : Word) (ht : t ≤ 1) :
-    (knW S.sa m t).toNat < 2 ^ 61 ∧ (koW S.sa m t).toNat < 2 ^ 62 := by
+    (knW S.sa m t).toNat < 2 ^ 60 ∧ (koW S.sa m t).toNat < 2 ^ 61 := by
   have := hG.tier S m t ht
   obtain ⟨a0, -, -, -, a4⟩ := this
   omega
