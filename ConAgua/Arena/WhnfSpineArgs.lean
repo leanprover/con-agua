@@ -367,6 +367,39 @@ theorem fillNW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
 
 /-! ## The count walk refines `getAppArgs` -/
 
+/-- A count loop at fuel zero ends with fuel zero. -/
+theorem gafLoopW_f0 {m : Mem} {e e' f' : Word} (hL : gafLoopW m e 0 = some (e', f')) : f' = 0 := by
+  by_cases hc : e >>> 28 = 4
+  · rw [gafLoopW] at hL; simp [hc] at hL
+  · rw [gafLoopW_done m e 0 hc] at hL
+    exact (Prod.mk.inj (Option.some.inj hL)).2.symm
+
+/-- **One step of the count loop at an `app` node**: the guards pass and the loop goes on at the
+function. -/
+theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e', f'))
+    (hc : e >>> 28 = 4) :
+    f.toNat ≠ 0 ∧ ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
+      idxW e < rdW (m.arr64 CTL) (4 + tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
+      (f - 1).toNat = f.toNat - 1 := by
+  have hf0 : f ≠ 0 := by
+    intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
+  have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
+    rw [gafLoopW] at hL
+    simp only [hc, ↓reduceIte, hf0] at hL
+    by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
+    · simp [hv] at hL
+    · exact hv
+  have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+    rw [gafLoopW] at hL
+    simp only [hc, ↓reduceIte, hf0, hv1] at hL
+    by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
+    · simp [hv] at hL
+    · exact hv
+  have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
+  refine ⟨hf0', hv1, UInt64.not_le.mp hv2, ?_, ?_⟩
+  · rw [fnW, ← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
+  · rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+
 /-- **The count loop's run refines `getAppArgs`**: when `gafLoopW` from `(e, f)` ends at
 `(e', f')` with `f' ≠ 0`, the twin's walk at fuel `f` returns the `f - f'` argument words. -/
 theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
@@ -381,35 +414,12 @@ theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
-    · rw [gafLoopW] at hL; simp [hc] at hL
-    · rw [gafLoopW_done m e 0 hc] at hL
-      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      exact absurd rfl hf'
+    exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
     by_cases hc : e >>> 28 = 4
-    · have hf0 : f ≠ 0 := by
-        intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
-      have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0] at hL
-        by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-        · simp [hv] at hL
-        · exact hv
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
-        · simp [hv] at hL
-        · exact hv
-      have hL' : gafLoopW m (fnW m e) (f - 1) = some (e', f') := by
-        rw [fnW, ← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
-      have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
-      have hfm1 : (f - 1).toNat = f.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+    · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have hb := view_app m a hR e he ⟨hv1, hcnt⟩ hc
       obtain ⟨ihr, ihw, ihle⟩ := ih _ (f - 1) e' f' hfm1N hb.2.1 hL' hf'
@@ -452,35 +462,12 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
-    · rw [gafLoopW] at hL; simp [hc] at hL
-    · rw [gafLoopW_done m e 0 hc] at hL
-      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
-      exact absurd rfl hf'
+    exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
     by_cases hc : e >>> 28 = 4
-    · have hf0 : f ≠ 0 := by
-        intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
-      have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0] at hL
-        by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
-        · simp [hv] at hL
-        · exact hv
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
-        rw [gafLoopW] at hL
-        simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        by_cases hv : rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e
-        · simp [hv] at hL
-        · exact hv
-      have hL' : gafLoopW m (fnW m e) (f - 1) = some (e', f') := by
-        rw [fnW, ← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
-      have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
-      have hfm1 : (f - 1).toNat = f.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
+    · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have hb := view_app m a hR e he ⟨hv1, hcnt⟩ hc
       obtain ⟨ihr, ihw, ihe⟩ := ih _ (f - 1) e' f' hfm1N hb.2.1 hL' hf'
