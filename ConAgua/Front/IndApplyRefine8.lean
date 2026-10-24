@@ -45,15 +45,8 @@ theorem orderW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : St
   | zero => simp [orderW] at h
   | succ n =>
   simp only [orderW] at h
-  cases ha : allocW m IFL cn with
-  | none => rw [ha, allocK_none] at h; cases h
-  | some q =>
-  obtain ⟨oo', m₁⟩ := q
-  rw [ha, allocK_some] at h
-  cases hg : orderGoW n m₁ to tn tyn fo cno co cn fuel np oo' 0 0 with
-  | none => rw [hg, mK_none] at h; cases h
-  | some m₂ =>
-  rw [hg, mK_some] at h
+  rcases ha : allocW m IFL cn with _ | ⟨oo', m₁⟩ <;> simp only [ha, allocK, reduceCtorEq] at h
+  rcases hg : orderGoW n m₁ to tn tyn fo cno co cn fuel np oo' 0 0 with _ | m₂ <;> simp only [hg, mK, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT ha

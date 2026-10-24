@@ -53,26 +53,13 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
     hbig (.inr (.inr (UInt64.le_iff_toNat_le.mpr (by simp; omega))))
   have hN : (tn + cn + rn).toNat = tys.length + cts.length + rcs.length := by
     rw [UInt64.toNat_add, UInt64.toNat_add]; omega
-  cases h1 : allocW m DLP (tn + cn + rn) with
-  | none => rw [h1, allocK_none] at h; cases h
-  | some x =>
-  obtain ⟨bo, m₁⟩ := x
-  rw [h1, allocK_some] at h
+  rcases h1 : allocW m DLP (tn + cn + rn) with _ | ⟨bo, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
   rw [hN] at P3 P4
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
-  cases h2 : instTypesW n b.data m₁ bo to tn 0 with
-  | none => rw [h2, mK_none] at h; cases h
-  | some m₂ =>
-  rw [h2, mK_some] at h
-  cases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with
-  | none => rw [h3, mK_none] at h; cases h
-  | some m₃ =>
-  rw [h3, mK_some] at h
-  cases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with
-  | none => rw [h4, mK_none] at h; cases h
-  | some m₄ =>
-  rw [h4, mK_some] at h
+  rcases h2 : instTypesW n b.data m₁ bo to tn 0 with _ | m₂ <;> simp only [h2, mK, reduceCtorEq] at h
+  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, mK, reduceCtorEq] at h
+  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, mK, reduceCtorEq] at h
   have hifr1 : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types
@@ -182,22 +169,14 @@ theorem applyIndW_grow {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   | zero => simp [applyIndW] at h
   | succ n =>
   simp only [applyIndW] at h
-  cases h1 : indFieldsW b.data m v.toUInt64 with
-  | none => rw [h1, lK_none] at h; cases h
-  | some x =>
-  obtain ⟨r, m₁⟩ := x
-  rw [h1, lK_some] at h
+  rcases h1 : indFieldsW b.data m v.toUInt64 with _ | ⟨r, m₁⟩ <;> simp only [h1, lK, reduceCtorEq] at h
   have hifs := hD.ifs
   obtain ⟨to, tn, co, cn, ro, rn, rfl, hF, hfR⟩ :=
     indFields_link b h64 hsize m m₁ ⟨by omega, by omega⟩ v tys cts rcs e hscan _ h1
   have hfr1 : MemFrame [IFR, IFL] [] m m₁ := hfR.1
   have hRoom : Room m₁ := hfR.2
   simp only [List.headD, List.tail] at h
-  cases h2 : validateW n m₁ to tn co cn ro rn with
-  | none => rw [h2, pmK_none] at h; cases h
-  | some x =>
-  obtain ⟨⟨oo, np⟩, m₂⟩ := x
-  rw [h2, pmK_some] at h
+  rcases h2 : validateW n m₁ to tn co cn ro rn with _ | ⟨⟨oo, np⟩, m₂⟩ <;> simp only [h2, pmK, reduceCtorEq] at h
   have hA1 : ArenaD m₁ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩

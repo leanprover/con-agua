@@ -163,11 +163,7 @@ theorem ilw_rebuild {c : Bool} {I : AM EIdx} {a : AState} {m m' : Mem} {M : Mode
   | false =>
     show ILWStep I _ _ _ _ _ _ _ _ _
     rw [hYr] at hY; simp only [Bool.false_eq_true, ↓reduceIte] at hY
-    cases h5 : Yn with
-    | none => rw [h5] at hY; cases hY
-    | some q =>
-    obtain ⟨zs, m₅⟩ := q
-    rw [h5, ilwChk_some] at hY
+    rcases h5 : Yn with _ | ⟨zs, m₅⟩ <;> simp only [h5, ilwChk, reduceCtorEq] at hY
     by_cases hb : 4294967296 ≤ zs.headD 0
     · rw [if_pos hb] at hY; cases hY
     rw [if_neg hb] at hY

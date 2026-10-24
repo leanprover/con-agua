@@ -185,18 +185,9 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   have hps := hD.psize
   have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
   unfold cvW at h
-  cases hn : lkW m NID nm with
-  | none => rw [hn, wK_none] at h; cases h
-  | some nh =>
-  rw [hn, wK_some] at h
-  cases ht : lkW m EID ty with
-  | none => rw [ht, wK_none] at h; cases h
-  | some th =>
-  rw [ht, wK_some] at h
-  cases hl : lpPutW b.data m lps with
-  | none => rw [hl, mK_none] at h; cases h
-  | some m₁ =>
-  rw [hl, mK_some] at h
+  rcases hn : lkW m NID nm with _ | nh <;> simp only [hn, wK, reduceCtorEq] at h
+  rcases ht : lkW m EID ty with _ | th <;> simp only [ht, wK, reduceCtorEq] at h
+  rcases hl : lpPutW b.data m lps with _ | m₁ <;> simp only [hl, mK, reduceCtorEq] at h
   simp only [Option.some.injEq] at h
   subst h
   obtain ⟨n1, n2⟩ := lkR_name hD a hn

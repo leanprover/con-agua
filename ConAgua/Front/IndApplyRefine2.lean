@@ -120,11 +120,7 @@ theorem pushLW_factsA {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 6
     wd m' IFL o.toNat = x ∧ (∀ i, i ≠ 0 → i ≠ o.toNat → wd m' IFL i = wd m IFL i) ∧
     MemFrame [IFL] [] m m' := by
   unfold pushLW at h
-  cases ha : allocW m IFL 1 with
-  | none => rw [ha] at h; cases h
-  | some q =>
-  obtain ⟨o', m₁⟩ := q
-  rw [ha, pushK_some] at h
+  rcases ha : allocW m IFL 1 with _ | ⟨o', m₁⟩ <;> simp only [ha, pushK, reduceCtorEq] at h
   cases h
   obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_factsA (by decide) hs ht ha
   have hs1 : (m₁.arr64 IFL).size = (m.arr64 IFL).size := a5.2.2.1 IFL
@@ -239,11 +235,7 @@ theorem mapGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l sz s f j : Word),
     | none => rw [hk, lkPushK_none, restK_none] at h; cases h
     | some w =>
     rw [hk, lkPushK_some] at h
-    cases hp : pushLW m w with
-    | none => rw [hp, restK_none] at h; cases h
-    | some q =>
-    obtain ⟨o1, m₁⟩ := q
-    rw [hp, restK_some] at h
+    rcases hp : pushLW m w with _ | ⟨o1, m₁⟩ <;> simp only [hp, restK, reduceCtorEq] at h
     obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
     have hj1 := wsucc j l hjl'
     obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l sz s f (j + 1) h x2
@@ -286,11 +278,7 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
     | none => rw [hk, lkPushK_none, restK_none] at h; cases h
     | some w =>
     rw [hk, lkPushK_some] at h
-    cases hp : pushLW m w with
-    | none => rw [hp, restK_none] at h; cases h
-    | some q =>
-    obtain ⟨o1, m₁⟩ := q
-    rw [hp, restK_some] at h
+    rcases hp : pushLW m w with _ | ⟨o1, m₁⟩ <;> simp only [hp, restK, reduceCtorEq] at h
     obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
     have hk1 := wsucc k l hkl'
     obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l (k + 1) h x2
@@ -406,15 +394,8 @@ theorem mapW_twin {α : Type} {kd : IdxKind} {n : Nat} {m m' : Mem} {o l sz s f 
   | zero => simp [mapW] at h
   | succ n =>
   simp only [mapW] at h
-  cases ha : allocW m IFL 0 with
-  | none => rw [ha, allocK_none] at h; cases h
-  | some q =>
-  obtain ⟨lo', m₁⟩ := q
-  rw [ha, allocK_some] at h
-  cases hg : mapGoW n m₁ o l sz s f 0 with
-  | none => rw [hg, sliceK_none] at h; cases h
-  | some m₂ =>
-  rw [hg, sliceK_some] at h
+  rcases ha : allocW m IFL 0 with _ | ⟨lo', m₁⟩ <;> simp only [ha, allocK, reduceCtorEq] at h
+  rcases hg : mapGoW n m₁ o l sz s f 0 with _ | m₂ <;> simp only [hg, sliceK, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
   obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT ha

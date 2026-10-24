@@ -587,16 +587,8 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
     · obtain ⟨x, e₁, hS, hie, h'⟩ := HG.item i acc w l e hi h123 h
       rw [listLoopW_open _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h123]; decide)
         (by rw [byteW_eq b h64 hsize, h123]; rfl), hfa] at hm
-      cases hal : allocW m A (indSizeN sub) with
-      | none => rw [hal, listK1_none] at hm; cases hm
-      | some qm =>
-      obtain ⟨q, m₁⟩ := qm
-      rw [hal, listK1_some] at hm
-      cases hob : objW b.data (flagsW m₁ sub q) i.toUInt64 sub q with
-      | none => rw [hob, listK2_none] at hm; cases hm
-      | some em =>
-      obtain ⟨e₂, m₂⟩ := em
-      rw [hob, listK2_some] at hm
+      rcases hal : allocW m A (indSizeN sub) with _ | ⟨q, m₁⟩ <;> simp only [hal, listK1, reduceCtorEq] at hm
+      rcases hob : objW b.data (flagsW m₁ sub q) i.toUInt64 sub q with _ | ⟨e₂, m₂⟩ <;> simp only [hob, listK2, reduceCtorEq] at hm
       obtain ⟨t1, t2, t3, t4, t5, t6⟩ := item i m m₁ q x e₁ e₂ m₂ hi h123 hS hR hal hob
       subst t1
       rw [if_pos ((lt_toUInt64_iff _ _).mp hie)] at hm

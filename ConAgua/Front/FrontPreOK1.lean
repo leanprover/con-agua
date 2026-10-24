@@ -290,11 +290,7 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
     (pl name lps type value hk hn flag : Word)
     (h : applyDeclW b m pl name lps type value hk hn flag = some m') : DGrow m m' := by
   unfold applyDeclW at h
-  cases hK : declKindW pl hk hn flag with
-  | none => rw [hK, declK0_none] at h; cases h
-  | some kq =>
-  obtain ⟨k, q⟩ := kq
-  rw [hK, declK0_some] at h
+  rcases hK : declKindW pl hk hn flag with _ | ⟨k, q⟩ <;> simp only [hK, declK0, reduceCtorEq] at h
   have hk5 : k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 := by
     rcases declKindW_some _ _ _ _ _ _ hK with ⟨-, -, h⟩ | ⟨-, -, h, -⟩ | ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, h, -⟩ <;>
       simp [h]
@@ -305,10 +301,7 @@ theorem applyDeclW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : State
   simp only [hok, and_self, ↓reduceIte] at h
   have hwn := (hD.names.read _ _ _ _ hok.1).2
   have hwt := (hD.exprs.read _ _ _ _ hok.2).2
-  cases hP : lpPutW b m lps with
-  | none => rw [hP, declK1_none] at h; cases h
-  | some m₁ =>
-  rw [hP, declK1_some] at h
+  rcases hP : lpPutW b m lps with _ | m₁ <;> simp only [hP, declK1, reduceCtorEq] at h
   have hDR := hD.decls
   unfold lpPutW at hP
   split at hP

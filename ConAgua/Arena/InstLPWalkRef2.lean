@@ -167,22 +167,14 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
   cases n with
   | zero => rw [callW_zero] at hY; cases hY
   | succ k =>
-  cases h4 : callW p (k + 1) "lp_let_tail" [h, fw, aw, bw, xs.headD 0, ys.headD 0, ko, kc, vo, vc, fu] m₂ with
-  | none => rw [h4] at hY; cases hY
-  | some q =>
-  obtain ⟨ts, m₅⟩ := q
-  rw [h4, ilwHd_some] at hY
+  rcases h4 : callW p (k + 1) "lp_let_tail" [h, fw, aw, bw, xs.headD 0, ys.headD 0, ko, kc, vo, vc, fu] m₂ with _ | ⟨ts, m₅⟩ <;> simp only [h4, ilwHd, reduceCtorEq] at hY
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (lpLetTail_spec p hil k _ h fw aw bw (xs.headD 0) (ys.headD 0) ko kc vo vc fu) h4
   rw [hs4] at hW4
   change ilwLetTW p k m₂ h fw aw bw _ _ ko kc vo vc fu = some (ts.headD 0, m₅) at hW4
   rw [hY] at hW4
   unfold ilwLetTW at hW4
-  cases h3 : callW p k "lp_go" [bw, ko, kc, vo, vc, fu] m₂ with
-  | none => rw [h3] at hW4; cases hW4
-  | some q =>
-  obtain ⟨zs, m₄⟩ := q
-  rw [h3, ilwLetTK_some] at hW4
+  rcases h3 : callW p k "lp_go" [bw, ko, kc, vo, vc, fu] m₂ with _ | ⟨zs, m₄⟩ <;> simp only [h3, ilwLetTK, reduceCtorEq] at hW4
   refine ILWStep.bind (ih' k rfl m₂ m₄ a₂ dn vis fe M₂ eb bw ko kc vo vc fu ks us vs zs hS₂ hM₂
     ((hE.keep hSt₁ hg₁).keep hSt₂ hg₂) hb h3) ?_
   intro a₃ M₃ _ hS₃ hM₃ _ _ hz
@@ -190,11 +182,7 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
   cases k with
   | zero => rw [callW_zero] at hW4; cases hW4
   | succ j =>
-  cases h5 : callW p (j + 1) "lp_rb_let" [h, fw, aw, bw, xs.headD 0, ys.headD 0, zs.headD 0] m₄ with
-  | none => rw [h5] at hW4; cases hW4
-  | some q =>
-  obtain ⟨ws, m₆⟩ := q
-  rw [h5, ilwHd_some] at hW4
+  rcases h5 : callW p (j + 1) "lp_rb_let" [h, fw, aw, bw, xs.headD 0, ys.headD 0, zs.headD 0] m₄ with _ | ⟨ws, m₆⟩ <;> simp only [h5, ilwHd, reduceCtorEq] at hW4
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨m₄, Locals.init []⟩)
     (lpRbLet_spec p hil j _ h fw aw bw (xs.headD 0) (ys.headD 0) (zs.headD 0)) h5
   rw [hs5] at hW5

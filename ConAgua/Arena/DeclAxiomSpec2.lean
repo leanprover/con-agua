@@ -194,11 +194,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   | zero => simp [fpcW] at hW
   | succ n =>
   rw [fpcW_step] at hW
-  cases h1 : envFindW m nm vis with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, fpcK1_some] at hW
+  rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpcK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
   · rw [if_pos hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -237,11 +233,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   obtain ⟨cvT, hshape, -⟩ := fpc_pass hsz hk hciA hkw hc
   have hcvP := fpcShape_cv hci hshape
   -- the pin
-  cases h2 : callW p n "rom_cv" [id] m1 with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, fpcK2_some] at hW
+  rcases h2 : callW p n "rom_cv" [id] m1 with _ | ⟨r2, m2⟩ <;> simp only [h2, fpcK2, reduceCtorEq] at hW
   obtain ⟨pin, a2, hrun2, hS2, hg2, hpin⟩ := hR.cv dn vis fe id hid n m1 a r2 m2 hS h2
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvP
@@ -414,21 +406,13 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [tcoW_step] at hW
   rw [trustCompilerOk_eq]
   -- the `True` clause
-  cases h1 : pinAtW m 40 with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, tcoK1_some] at hW
+  rcases h1 : pinAtW m 40 with _ | ⟨r1, m1⟩ <;> simp only [h1, tcoK1, reduceCtorEq] at hW
   obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
   rw [hm1, hr1] at hW
   simp only [List.headD_cons] at hW
   simp only [trueName, pinTrue, show PIN_TRUE = (40 : Word).toNat from rfl, StateT.run_bind, hrun1,
     exc_ok_bind']
-  cases h2 : callW p n "find_pinned_cv" [vis, pinW m (1 + (40 : Word).toNat), 3, 2] m with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, tcoK2_some] at hW
+  rcases h2 : callW p n "find_pinned_cv" [vis, pinW m (1 + (40 : Word).toNat), 3, 2] m with _ | ⟨r2, m2⟩ <;> simp only [h2, tcoK2, reduceCtorEq] at hW
   obtain ⟨b2, a2, hrun2, hS2, hg2, hd2⟩ := fpc_call h h2 hS hl1 (.inl rfl) (by decide)
   have hrun2' : (clauseT fe (decI (pinW m (1 + (40 : Word).toNat))) 3 trueCvA).run a =
       .ok (b2, a2) := hrun2
@@ -443,21 +427,13 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   have hb2 : b2 = true := by rw [← hd2.1]; simpa using e2
   simp only [hb2, Bool.not_true, Bool.false_eq_true, if_false]
   -- the `True.intro` clause
-  cases h3 : pinAtW m2 41 with
-  | none => rw [h3] at hW; cases hW
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, tcoK3_some] at hW
+  rcases h3 : pinAtW m2 41 with _ | ⟨r3, m3⟩ <;> simp only [h3, tcoK3, reduceCtorEq] at hW
   obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok h3 hS2.1.pins
   rw [hm3, hr3] at hW
   simp only [List.headD_cons] at hW
   simp only [trueIntroName, pinTrueIntro, show PIN_TRUE_INTRO = (41 : Word).toNat from rfl,
     StateT.run_bind, hrun3, exc_ok_bind']
-  cases h4 : callW p n "find_pinned_cv" [vis, pinW m2 (1 + (41 : Word).toNat), 4, 3] m2 with
-  | none => rw [h4] at hW; cases hW
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, tcoK4_some] at hW
+  rcases h4 : callW p n "find_pinned_cv" [vis, pinW m2 (1 + (41 : Word).toNat), 4, 3] m2 with _ | ⟨r4, m4⟩ <;> simp only [h4, tcoK4, reduceCtorEq] at hW
   obtain ⟨b4, a4, hrun4, hS4, hg4, hd4⟩ := fpc_call h h4 hS2 hl3 (.inr rfl) (by decide)
   have hrun4' : (clauseT fe (decI (pinW m2 (1 + (41 : Word).toNat))) 4 trueIntroCvA).run a2 =
       .ok (b4, a4) := hrun4
@@ -472,11 +448,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   have hb4 : b4 = true := by rw [← hd4.1]; simpa using e4
   simp only [hb4, Bool.not_true, Bool.false_eq_true, if_false]
   -- the axiom's pin
-  cases h5 : callW p n "rom_cv" [4] m4 with
-  | none => rw [h5] at hW; cases hW
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, tcoK5_some] at hW
+  rcases h5 : callW p n "rom_cv" [4] m4 with _ | ⟨r5, m5⟩ <;> simp only [h5, tcoK5, reduceCtorEq] at hW
   obtain ⟨pin, a5, hrun5, hS5, hg5, hpin⟩ := h.red.rom.cv dn vis fe 4 (by decide) n m4 a4 r5 m5 hS4 h5
   have hrun5' : trustCompilerA.run a4 = .ok (pin, a5) := hrun5
   have hg := hg2.trans (hg4.trans hg5)

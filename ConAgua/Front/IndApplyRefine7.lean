@@ -56,11 +56,7 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
     by_cases hk : k = j.toNat
     · subst hk
       rw [if_pos hT] at h
-      cases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with
-      | none => rw [hs, pK_none] at h; cases h
-      | some q =>
-      obtain ⟨ok, kk⟩ := q
-      rw [hs, pK_some] at h
+      rcases hs : sortTeleW n m fuel (wd m IFL (tyt.toNat + j.toNat)) with _ | ⟨ok, kk⟩ <;> simp only [hs, pK, reduceCtorEq] at h
       obtain ⟨s1, -⟩ := sortTeleW_ok m a hR n fuel _ ok kk hs
       refine ⟨_, s1, fun x hx => ?_⟩
       split at h
@@ -102,10 +98,7 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
   have ix : ∀ s : Word, s.toNat ≤ 10 → rdW (m.arr64 IFR) (r + s) = wd m IFR (r.toNat + s.toNat) := by
     intro s hs; rw [wd_eq, widx2 _ _ (by omega)]
   obtain ⟨⟨c1, -, -⟩, c2, c3, c4, c5, c6, -⟩ := hrec
-  cases hl : lkW m NID (rdW (m.arr64 IFR) r) with
-  | none => rw [hl, wK_none] at h; cases h
-  | some rnw =>
-  rw [hl, wK_some] at h
+  rcases hl : lkW m NID (rdW (m.arr64 IFR) r) with _ | rnw <;> simp only [hl, wK, reduceCtorEq] at h
   rw [wd_eq] at hl
   have hname := (lkW_name hD a hl).1
   rw [c1.1] at hname
@@ -188,10 +181,7 @@ theorem recsGoW_twin {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     rename_i hlt
     have hj1 := wsucc j rn (UInt64.not_le.mp hlt)
     have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
-    cases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with
-    | none => rw [hr, uK_none] at h; cases h
-    | some u =>
-    rw [hr, uK_some] at h
+    rcases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with _ | u <;> simp only [hr, uK, reduceCtorEq] at h
     by_cases hkj : k = j.toNat
     · subst hkj
       have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
@@ -320,10 +310,7 @@ theorem nparamsW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn n
     simp
   rename_i h0
   have hne : tys ≠ [] := fun e => h0 (by apply UInt64.toNat_inj.mp; rw [htn, e]; rfl)
-  cases hg : npGoW n m to tn (rdW (m.arr64 IFR) (to + 10)) 0 with
-  | none => rw [hg, unitK_none] at h; cases h
-  | some u =>
-  rw [hg, unitK_some] at h
+  rcases hg : npGoW n m to tn (rdW (m.arr64 IFR) (to + 10)) 0 with _ | u <;> simp only [hg, unitK, reduceCtorEq] at h
   cases h
   have hall := npGoW_twin hL htn hto n 0 hg
   have h0' : 0 < tys.length := by cases tys with | nil => exact absurd rfl hne | cons _ _ => simp

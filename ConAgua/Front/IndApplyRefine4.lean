@@ -37,11 +37,7 @@ theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD
   | zero => simp [ctorW] at h
   | succ n =>
   simp only [ctorW] at h
-  cases hf : findLastW n m cno nn cn with
-  | none => rw [hf, pK_none] at h; cases h
-  | some q =>
-  obtain ⟨f, k⟩ := q
-  rw [hf, pK_some] at h
+  rcases hf : findLastW n m cno nn cn with _ | ⟨f, k⟩ <;> simp only [hf, pK, reduceCtorEq] at h
   split at h
   · cases h
   rename_i hf0
@@ -115,10 +111,7 @@ theorem ctorW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD
       rw [widx2 _ _ (by rw [c4.1]; have := c4.2; omega), c4.1]
   split at h
   · rename_i hfl
-    cases hl : lkW m NID (rdW (m.arr64 IFR) (co + 10 * k + 9)) with
-    | none => rw [hl, wK_none] at h; cases h
-    | some x =>
-    rw [hl, wK_some] at h
+    rcases hl : lkW m NID (rdW (m.arr64 IFR) (co + 10 * k + 9)) with _ | x <;> simp only [hl, wK, reduceCtorEq] at h
     split at h
     · cases h
     rename_i hxt

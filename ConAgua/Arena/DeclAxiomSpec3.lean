@@ -222,11 +222,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   | zero => simp [fpW] at hW
   | succ n =>
   rw [fpW_step] at hW
-  cases h1 : envFindW m nm vis with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, fpK1_some] at hW
+  rcases h1 : envFindW m nm vis with _ | ⟨r1, m1⟩ <;> simp only [h1, fpK1, reduceCtorEq] at hW
   by_cases hf : r1.headD 0 = 0
   · rw [if_pos hf] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -266,20 +262,12 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   obtain ⟨cvT, hshape⟩ := fp_pass hsz hk hciA hkw hc
   have hcvP := fpShape_cv hci hshape
   -- the pin's constant
-  cases h2 : callW p n "rom_ci" [id] m1 with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, fpK2_some] at hW
+  rcases h2 : callW p n "rom_ci" [id] m1 with _ | ⟨r2, m2⟩ <;> simp only [h2, fpK2, reduceCtorEq] at hW
   obtain ⟨pci, a2, hrun2, hS2, hg2, hpci⟩ := h.red.rom.ci dn vis fe id hid n m1 a r2 m2 hS h2
   have hpciP : decCI (erecP m2) dn (r2.headD 0).toNat = some pci :=
     ArrExt.decCI (truncM_erecP m2) hpci
   -- its constant value
-  cases h3 : callW p n "ci_to_cv" [r2.headD 0] m2 with
-  | none => rw [h3] at hW; cases hW
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, fpK3_some] at hW
+  rcases h3 : callW p n "ci_to_cv" [r2.headD 0] m2 with _ | ⟨r3, m3⟩ <;> simp only [h3, fpK3, reduceCtorEq] at hW
   obtain ⟨s3, hs3, -, hok3, hS3, hg3, hcv3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (ciToCv_refines p h.red.canon dn vis fe (r2.headD 0) pci n ⟨m2, Locals.init []⟩ a2
       ⟨hS2, hpciP⟩) h3

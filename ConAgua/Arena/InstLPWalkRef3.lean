@@ -177,11 +177,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨hv, hx⟩ := L.Ind.view_sort_f m₁ a hR h hh (vok 16 hc0 hs) g2
     generalize rdW (m₁.arr64 SOREC) (idxW h * 2 + tierW h) = x at hW hv hx
     refine hrun _ hv _ rfl ?_
-    cases h2 : callW p n "sl_memo" [x, ko, kc, vo, vc] m₁ with
-    | none => rw [h2] at hW; cases hW
-    | some q =>
-    obtain ⟨ys, m₂⟩ := q
-    rw [h2, ilwSortK_some] at hW
+    rcases h2 : callW p n "sl_memo" [x, ko, kc, vo, vc] m₁ with _ | ⟨ys, m₂⟩ <;> simp only [h2, ilwSortK, reduceCtorEq] at hW
     obtain ⟨a₂, r2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hM₂, hg₂, hy, hdy⟩ :=
       slMemo_ok p hp.lev n m₁ m₂ a dn vis fe M eb x ko kc vo vc ks us vs ys hS hM hE hx
         (hS.den.sort _ _ hv) h2
@@ -192,11 +188,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
       simp only [StateT.run_bind, r2, except_ok_bind, ilw_beqI hy hx, same, decide_true, beq_self_eq_true,
         internRebuiltSort, ↓reduceIte]; rfl
     simp only [same, ↓reduceIte] at hW
-    cases h3 : callW p n "intern_sort" [ys.headD 0] m₂ with
-    | none => rw [h3] at hW; cases hW
-    | some q =>
-    obtain ⟨zs, m₃⟩ := q
-    rw [h3, ilwChk_some] at hW
+    rcases h3 : callW p n "intern_sort" [ys.headD 0] m₂ with _ | ⟨zs, m₃⟩ <;> simp only [h3, ilwChk, reduceCtorEq] at hW
     by_cases hb : 4294967296 ≤ zs.headD 0
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
@@ -219,11 +211,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     generalize rdW (m₁.arr64 CREC) (idxW h * 4 + tierW h * 2) = cw at hW hv hcw
     generalize rdW (m₁.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = x at hW hv hx
     refine hrun _ hv _ rfl ?_
-    cases h2 : callW p n "sls_memo" [x, ko, kc, vo, vc] m₁ with
-    | none => rw [h2] at hW; cases hW
-    | some q =>
-    obtain ⟨ys, m₂⟩ := q
-    rw [h2, ilwConstK_some] at hW
+    rcases h2 : callW p n "sls_memo" [x, ko, kc, vo, vc] m₁ with _ | ⟨ys, m₂⟩ <;> simp only [h2, ilwConstK, reduceCtorEq] at hW
     obtain ⟨a₂, r2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hM₂, hg₂, hy, hdy⟩ :=
       slsMemo_ok p hp.lev n m₁ m₂ a dn vis fe M eb x ko kc vo vc ks us vs ys hS hM hE hx
         (hS.den.constLs _ _ _ hv) h2
@@ -234,11 +222,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
       simp only [StateT.run_bind, r2, except_ok_bind, ilw_beqI hy hx, same, decide_true, beq_self_eq_true,
         internRebuiltConst, ↓reduceIte]; rfl
     simp only [same, ↓reduceIte] at hW
-    cases h3 : callW p n "intern_const" [cw, ys.headD 0] m₂ with
-    | none => rw [h3] at hW; cases hW
-    | some q =>
-    obtain ⟨zs, m₃⟩ := q
-    rw [h3, ilwChk_some] at hW
+    rcases h3 : callW p n "intern_const" [cw, ys.headD 0] m₂ with _ | ⟨zs, m₃⟩ <;> simp only [h3, ilwChk, reduceCtorEq] at hW
     by_cases hb : 4294967296 ≤ zs.headD 0
     · rw [if_pos hb] at hW; cases hW
     rw [if_neg hb] at hW
@@ -264,11 +248,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     by_cases hc0 : rdW (m₁.arr64 CTL) (c + tierW h) ≤ idxW h
     · simp [hc0] at hW
     simp only [hc0, ↓reduceIte] at hW
-    cases h2 : callW p n fn [h, ko, kc, vo, vc, fu - 1] m₁ with
-    | none => rw [h2] at hW; cases hW
-    | some q =>
-    obtain ⟨rs2, m₂⟩ := q
-    rw [h2, ilwHd_some] at hW
+    rcases h2 : callW p n fn [h, ko, kc, vo, vc, fu - 1] m₁ with _ | ⟨rs2, m₂⟩ <;> simp only [h2, ilwHd, reduceCtorEq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨k, rfl⟩ := armK fn rs2 m₂ h2
     exact ⟨k, rs2, rfl, vok c hc0 hs, h2, rfl⟩
