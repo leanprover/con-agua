@@ -27,17 +27,17 @@ def poolCopyW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, d, s, l =>
     if l = 0 then some m
-    else if (m.arr64 POOL).size ≤ s.toNat then none
+    else if pcap m ≤ s.toNat then none
     else poolCopyW n (m.set64 IW d (rdW (m.arr64 POOL) s)) (d + 1) (s + 1) (l - 1)
 
 section arms
 variable (n : Nat) (m : Mem) (d s l : Word)
 theorem poolCopyW_nil (hl : l = 0) : poolCopyW (n + 1) m d s l = some m := by simp [poolCopyW, hl]
-theorem poolCopyW_step (hl : l ≠ 0) (hs : s.toNat < (m.arr64 POOL).size) :
+theorem poolCopyW_step (hl : l ≠ 0) (hs : s.toNat < pcap m) :
     poolCopyW (n + 1) m d s l =
       poolCopyW n (m.set64 IW d (rdW (m.arr64 POOL) s)) (d + 1) (s + 1) (l - 1) := by
   simp [poolCopyW, hl]; omega
-theorem poolCopyW_oob (hl : l ≠ 0) (hs : (m.arr64 POOL).size ≤ s.toNat) :
+theorem poolCopyW_oob (hl : l ≠ 0) (hs : pcap m ≤ s.toNat) :
     poolCopyW (n + 1) m d s l = none := by
   simp [poolCopyW, hl, hs]
 end arms
@@ -63,9 +63,9 @@ theorem poolCopy_spec (p : Prog) (hp : p.lookup "pool_copy" = some poolCopy) (n 
 /-- **What a `POOL → IW` copy leaves**: the source in bounds, every array but `IW` as it was,
 `IW` the same size, the destination holding the `POOL` source, the rest of `IW` unchanged. -/
 theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m d s l = some m' →
-    (m.arr64 POOL).size < 2 ^ 64 → d.toNat + l.toNat ≤ (m.arr64 IW).size →
+    pcap m < 2 ^ 64 → d.toNat + l.toNat ≤ (m.arr64 IW).size →
     (m.arr64 IW).size < 2 ^ 64 →
-    (l.toNat = 0 ∨ s.toNat + l.toNat ≤ (m.arr64 POOL).size) ∧
+    (l.toNat = 0 ∨ s.toNat + l.toNat ≤ pcap m) ∧
     (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
     m'.words.size = m.words.size ∧
     ∀ i, (m'.arr64 IW)[i]? =
@@ -83,9 +83,9 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, if_false]
-    · by_cases hso : (m.arr64 POOL).size ≤ s.toNat
+    · by_cases hso : pcap m ≤ s.toNat
       · rw [poolCopyW_oob n m d s l hl hso] at h; simp at h
-      have hsl : s.toNat < (m.arr64 POOL).size := by omega
+      have hsl : s.toNat < pcap m := by omega
       rw [poolCopyW_step n m d s l hl hsl] at h
       have hl0 : 0 < l.toNat := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
@@ -101,6 +101,8 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
         rw [hm1, Mem.arr64_set64_same]; simp
       have hE1 : m1.arr64 POOL = m.arr64 POOL := by
         rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      have hE1v := vpool_congr hE1
+      have hE1c := pcap_congr hE1
       have hget1 : ∀ i, (m1.arr64 IW)[i]? = if i = d.toNat then (m.arr64 POOL)[s.toNat]?
           else (m.arr64 IW)[i]? := by
         intro i
@@ -229,7 +231,7 @@ theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
 /-- **`view_ls` refines `viewLs` under the stage relation**: the twin's view succeeds without
 changing the state, the stage relation holds after, the pool only grew, and the new slice (below
 the top) holds the list's handles. -/
-def PoolSmall (m : Mem) : Prop := (m.arr64 POOL).size < 2 ^ 64
+def PoolSmall (m : Mem) : Prop := pcap m < 2 ^ 64
 
 theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {us : Word} {r : List Word} (h : viewLsW n m us = some (r, m'))
@@ -256,7 +258,9 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hIW := allocMem_IW m l
   have hPP : (allocMem m l).arr64 POOL = m.arr64 POOL := by
     simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hPsz : (m.arr64 POOL).size < 2 ^ 64 := hP
+  have hPPv := vpool_congr hPP
+  have hPPc := pcap_congr hPP
+  have hPsz : pcap m < 2 ^ 64 := hP
   obtain ⟨hB, hA, hS2, hW, hG⟩ := poolCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hPP]; exact hPsz)
     (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hIW] at hS2 hG
