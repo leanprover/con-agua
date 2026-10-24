@@ -161,35 +161,29 @@ theorem blockShapeRulePrefixAt_refines (p : Prog)
   have hlo : (UInt64.ofNat l).toNat = l := by simp [hlb]
   rw [BlockShape.rulePrefixAt]
   by_cases hlen : l < r.toNat + 1
-  · have hNone : bs.recs[r.toNat]? = none := by
-      rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
-    rw [hNone]
-    have hc : UInt64.ofNat l ≤ r := by
-      apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeRulePrefixAt]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      sym only [lang_grind, arena_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-        finish
-  · obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
-    obtain ⟨-, hrP, -, -, -⟩ := decRS_some hf
-    rw [hget]
-    have hovv := hov o l v ho hl hv
-    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
-    have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
-      rw [ofNat_add_word, ofNat_toNat_word]
-    rw [ev] at hv'
-    obtain ⟨hw1, -⟩ := iwN_rdW hrP (by omega)
-    have ew : UInt64.ofNat (v + 1) = UInt64.ofNat v + 1 := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    rw [ew] at hw1
-    have hc : ¬ UInt64.ofNat l ≤ r := by
-      intro hcontra
-      have := UInt64.le_iff_toNat_le.mp hcontra
-      rw [hlo] at this; omega
+  have hNone : bs.recs[r.toNat]? = none := by
+    rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
+  rw [hNone]
+  have hc : UInt64.ofNat l ≤ r := by
+    apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
+  rotate_left
+  obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
+  obtain ⟨-, hrP, -, -, -⟩ := decRS_some hf
+  rw [hget]
+  have hovv := hov o l v ho hl hv
+  obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+  have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
+    rw [ofNat_add_word, ofNat_toNat_word]
+  rw [ev] at hv'
+  obtain ⟨hw1, -⟩ := iwN_rdW hrP (by omega)
+  have ew : UInt64.ofNat (v + 1) = UInt64.ofNat v + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ew] at hw1
+  have hc : ¬ UInt64.ofNat l ≤ r := by
+    intro hcontra
+    have := UInt64.le_iff_toNat_le.mp hcontra
+    rw [hlo] at this; omega
+  all_goals
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapeRulePrefixAt]
     cases n with
@@ -223,35 +217,29 @@ theorem blockShapeMajorIdxAt_refines (p : Prog)
   have hlo : (UInt64.ofNat l).toNat = l := by simp [hlb]
   rw [BlockShape.majorIdxAt]
   by_cases hlen : l < r.toNat + 1
-  · have hNone : bs.recs[r.toNat]? = none := by
-      rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
-    rw [hNone]
-    have hc : UInt64.ofNat l ≤ r := by
-      apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeMajorIdxAt]
-    cases n with
-    | zero => vcgen [exec] <;> grind
-    | succ n =>
-      sym only [lang_grind, arena_grind] =>
-        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-        finish
-  · obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
-    obtain ⟨-, -, hmI, -, -⟩ := decRS_some hf
-    rw [hget]
-    have hovv := hov o l v ho hl hv
-    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
-    have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
-      rw [ofNat_add_word, ofNat_toNat_word]
-    rw [ev] at hv'
-    obtain ⟨hw1, -⟩ := iwN_rdW hmI (by omega)
-    have ew : UInt64.ofNat (v + 2) = UInt64.ofNat v + 2 := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    rw [ew] at hw1
-    have hc : ¬ UInt64.ofNat l ≤ r := by
-      intro hcontra
-      have := UInt64.le_iff_toNat_le.mp hcontra
-      rw [hlo] at this; omega
+  have hNone : bs.recs[r.toNat]? = none := by
+    rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
+  rw [hNone]
+  have hc : UInt64.ofNat l ≤ r := by
+    apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
+  rotate_left
+  obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
+  obtain ⟨-, -, hmI, -, -⟩ := decRS_some hf
+  rw [hget]
+  have hovv := hov o l v ho hl hv
+  obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+  have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
+    rw [ofNat_add_word, ofNat_toNat_word]
+  rw [ev] at hv'
+  obtain ⟨hw1, -⟩ := iwN_rdW hmI (by omega)
+  have ew : UInt64.ofNat (v + 2) = UInt64.ofNat v + 2 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ew] at hw1
+  have hc : ¬ UInt64.ofNat l ≤ r := by
+    intro hcontra
+    have := UInt64.le_iff_toNat_le.mp hcontra
+    rw [hlo] at this; omega
+  all_goals
     rw [invoke_eq _ hp]
     simp only [callFn, blockShapeMajorIdxAt]
     cases n with

@@ -979,7 +979,6 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     bchW_ok n m m1 a cvT r1 hR hh hty32 hsz hc
   have hvr := view_run res a v hview
   have hl32 : (r1.headD 0).toNat = bs.length := hlen
-  have hrdy : ∀ X : Option (Nat × Nat), (∀ w, (ENodeView.sort w = v) → True) → True := fun _ _ => trivial
   by_cases hs : r1.getD 1 0 = 2
   · obtain ⟨u, rfl⟩ := hiff.mp hs
     by_cases hl : r1.headD 0 < nPd
