@@ -317,6 +317,41 @@ def kwalkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
   }
 }
 
+/-- The growth's head (`kgrowH`): the new slot count and offset, the room check, the count and
+offset words, the old and new tables' first words (`ob`, `nb`), the zero loop's start and count. -/
+def kgrowH1 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  H := len(C.sa.u64) >> 1;
+  n := C.sa.u64[t * 2] + ⟪SN0⟫;
+  n2 := n * 2;
+  ob := C.sa.u64[t * 2 + 1];
+  nb := 0;
+  if ob == 0 { nb := n2 * 4 };
+  if t == 0 { Q := H - 4 } else { Q := len(C.sa.u64) - H }
+}
+
+def kgrowH2 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  if Q < nb + n2 * 2 { abort };
+  C.sa.u64[t * 2] := n2 - ⟪SN0⟫;
+  C.sa.u64[t * 2 + 1] := nb
+}
+
+def kgrowH3 (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  if t == 0 { ob := ob + 4; nb := nb + 4 } else {
+    ob := len(C.sa.u64) - ob - n * 2;
+    nb := len(C.sa.u64) - nb - n2 * 2
+  };
+  x := nb;
+  e := n >> 1
+}
+
+/-- The growth's head: the new slot count and offset, the room check, the count and offset
+words, the old and new tables' first words (`ob`, `nb`), the zero loop's start and count. -/
+def kgrowH (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  ⟪kgrowH1 C⟫;
+  ⟪kgrowH2 C⟫;
+  ⟪kgrowH3 C⟫
+}
+
 /-- The growth of tier `t`: double its slot count `n` into its other position (zeroed first,
 `n / 2` steps of 8 words), walking the old region's `n` slots in order and re-inserting the live
 ones (linear probing from the home of the key word's hash). Abort if the tier's half (`Q` words)
@@ -324,22 +359,7 @@ cannot hold it. The two loops count down `e` (not an address against a bound: no
 reason about). Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the
 others from `gO`). -/
 def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  H := len(C.sa.u64) >> 1;
-  n := C.sa.u64[t * 2] + ⟪SN0⟫;
-  n2 := n * 2;
-  ob := C.sa.u64[t * 2 + 1];
-  nb := 0;
-  if ob == 0 { nb := n2 * 4 };
-  if t == 0 { Q := H - 4 } else { Q := len(C.sa.u64) - H };
-  if Q < nb + n2 * 2 { abort };
-  C.sa.u64[t * 2] := n2 - ⟪SN0⟫;
-  C.sa.u64[t * 2 + 1] := nb;
-  if t == 0 { ob := ob + 4; nb := nb + 4 } else {
-    ob := len(C.sa.u64) - ob - n * 2;
-    nb := len(C.sa.u64) - nb - n2 * 2
-  };
-  x := nb;
-  e := n >> 1;
+  ⟪kgrowH C⟫;
   ⟪kzeroL C⟫;
   bt := CTL.u64[62] * t;
   x := ob;

@@ -759,6 +759,201 @@ theorem kwalkL_step_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s
         (s₀.loc (gO C + 7)).toNat (s₀.loc (gO C + 6)) s₀.mem = some s'.mem; ⊤⦄ :=
   Triple.step_exec (kwalkL_spec p C hO (n + 1) s₀)
 
+theorem self_ne_addlit (a k : Nat) (h : 0 < k) : a ≠ a + k := by omega
+
+theorem addlit_ne_addlit (a i j : Nat) (h : i ≠ j) : a + i ≠ a + j := by omega
+
+theorem lt_ne_addlit (z a k : Nat) (h : z < a) : z ≠ a + k := by omega
+
+theorem zero_lt_gO (C : ConsSch) : 0 < gO C := by simp only [gO]; omega
+
+theorem zero_eq_gO (C : ConsSch) : (0 = gO C) = False := by
+  simp only [gO, eq_iff_iff, iff_false]; omega
+
+theorem gO_eq_zero (C : ConsSch) : (gO C = 0) = False := by
+  simp only [gO, eq_iff_iff, iff_false]; omega
+
+/-- Sequential composition, with the intermediate assertion `R`. -/
+theorem triple_seq {p : Prog} {k : Stmt → M Sig} {a b : Stmt} {s₀ : St} {Q : Sig → St → Prop}
+    (R : St → Prop)
+    (ha : ⦃fun s => s = s₀⦄ step p k a ⦃fun r s => r = .normal ∧ R s; ⊤⦄)
+    (hb : ∀ s₁, R s₁ → ⦃fun s => s = s₁⦄ step p k b ⦃Q; ⊤⦄) :
+    ⦃fun s => s = s₀⦄ step p k (.seq a b) ⦃Q; ⊤⦄ := by
+  vcgen [step, ha, hb] <;> assumption
+
+/-- A weaker postcondition. -/
+theorem triple_post {p : Prog} {k : Stmt → M Sig} {a : Stmt} {s₀ : St} {Q Q' : Sig → St → Prop}
+    (ha : ⦃fun s => s = s₀⦄ step p k a ⦃Q; ⊤⦄) (h : ∀ r s, Q r s → Q' r s) :
+    ⦃fun s => s = s₀⦄ step p k a ⦃Q'; ⊤⦄ := by
+  vcgen [ha] <;> grind
+
+section head
+variable (sa : ArrId) (t : Word) (m : Mem)
+
+/-- The growth's new offset. -/
+def gnbW : Word := if koW sa m t = 0 then knW sa m t * 2 * 4 else 0
+
+/-- The room the growth's tier has (`Q`). -/
+def gQW : Word := if t = 0 then (m.len64 sa >>> 1) - 4 else m.len64 sa - (m.len64 sa >>> 1)
+
+/-- The growth's room check (`true`: abort). -/
+def gchkW : Prop := gQW sa t m < gnbW sa t m + knW sa m t * 2 * 2
+
+/-- The new table's first word. -/
+def gnbsW : Word :=
+  if t = 0 then gnbW sa t m + 4 else m.len64 sa - gnbW sa t m - knW sa m t * 2 * 2
+
+/-- The old table's first word. -/
+def gobsW : Word :=
+  if t = 0 then koW sa m t + 4 else m.len64 sa - koW sa m t - knW sa m t * 2
+
+/-- The memory after the count and offset words. -/
+def gm1W : Mem := (m.set64 sa (t * 2) (knW sa m t * 2 - SN0)).set64 sa (t * 2 + 1) (gnbW sa t m)
+
+end head
+
+theorem kgrowM_eq (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem)
+    (hc : ¬ gchkW sa t m) :
+    kgrowM sa G t m =
+      kwalkW sa G (knW sa m t * 2) (gnbsW sa t m) (rdW (m.arr64 CTL) SCB * t)
+        (knW sa m t).toNat (gobsW sa t m)
+        (kzeroW sa (gnbsW sa t m) (knW sa m t >>> 1).toNat (gm1W sa t m)) := by
+  simp only [gchkW, gnbW, gQW] at hc
+  simp only [kgrowM, gnbsW, gobsW, gm1W, gnbW]
+  simp only [hc, ↓reduceIte]
+
+theorem kgrowH1_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (mapS (gmap C) (kgrowH1 C))
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ KeepLo (gO C) s₀ s' ∧
+      s'.loc (gO C) = knW C.sa s₀.mem (s₀.loc 0) * 2 ∧
+      s'.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) ∧
+      s'.loc (gO C + 3) = gQW C.sa (s₀.loc 0) s₀.mem ∧
+      s'.loc (gO C + 4) = koW C.sa s₀.mem (s₀.loc 0) ∧
+      s'.loc (gO C + 5) = gnbW C.sa (s₀.loc 0) s₀.mem; ⊤⦄ := by
+  unfold kgrowH1
+  simp (disch := decide) only [L.Notation.blk, mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub,
+    Nat.add_zero]
+  vcgen [step, evalE_spec, evalC_spec, setLoc, ld64]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
+    bne_iff_ne, ne_eq, beq_iff_eq, rd64_rdWC, self_eq_addlit, addlit_eq_self, zero_eq_addlit,
+    addlit_eq_zero, zero_eq_gO, gO_eq_zero, ↓reduceIte] at *)
+  all_goals grind [lang_grind, KeepLo, gQW, gnbW, knW, koW, lt_ne_addlit]
+
+theorem kgrowH2_spec (p : Prog) (C : ConsSch) (n : Nat) (s₁ : St) :
+    ⦃fun s => s = s₁⦄
+    step p (exec p n) (mapS (gmap C) (kgrowH2 C))
+    ⦃fun r s' => r = .normal ∧ ¬ s₁.loc (gO C + 3) < s₁.loc (gO C + 5) + s₁.loc (gO C) * 2 ∧
+      s'.mem = (s₁.mem.set64 C.sa (s₁.loc 0 * 2) (s₁.loc (gO C) - SN0)).set64 C.sa
+        (s₁.loc 0 * 2 + 1) (s₁.loc (gO C + 5)) ∧ s'.loc = s₁.loc; ⊤⦄ := by
+  unfold kgrowH2
+  simp (disch := decide) only [L.Notation.blk, mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub,
+    Nat.add_zero]
+  vcgen [step, evalE_spec, evalC_spec, setLoc, st64]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq] at *)
+  all_goals grind [lang_grind]
+
+theorem kgrowH3_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
+    ⦃fun s => s = s₂⦄
+    step p (exec p n) (mapS (gmap C) (kgrowH3 C))
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧ KeepLo (gO C) s₂ s' ∧
+      s'.loc (gO C) = s₂.loc (gO C) ∧ s'.loc (gO C + 1) = s₂.loc (gO C + 1) ∧
+      s'.loc (gO C + 4) = (if s₂.loc 0 = 0 then s₂.loc (gO C + 4) + 4
+        else s₂.mem.len64 C.sa - s₂.loc (gO C + 4) - s₂.loc (gO C + 1) * 2) ∧
+      s'.loc (gO C + 5) = (if s₂.loc 0 = 0 then s₂.loc (gO C + 5) + 4
+        else s₂.mem.len64 C.sa - s₂.loc (gO C + 5) - s₂.loc (gO C) * 2) ∧
+      s'.loc (gO C + 6) = s'.loc (gO C + 5) ∧
+      s'.loc (gO C + 7) = s₂.loc (gO C + 1) >>> 1; ⊤⦄ := by
+  unfold kgrowH3
+  simp (disch := decide) only [L.Notation.blk, mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub,
+    Nat.add_zero]
+  vcgen [step, evalE_spec, evalC_spec, setLoc]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
+    bne_iff_ne, ne_eq, beq_iff_eq, self_eq_addlit, addlit_eq_self, zero_eq_addlit,
+    addlit_eq_zero, zero_eq_gO, gO_eq_zero, ↓reduceIte] at *)
+  all_goals grind [lang_grind, KeepLo, lt_ne_addlit]
+
+/-- **The growth's head**: it aborts on the room check, else writes the count and offset words and
+sets `n2 n ob nb x e`. -/
+theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (mapS (gmap C) (kgrowH C))
+    ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧ ¬ gchkW C.sa (s₀.loc 0) s₀.mem ∧
+      s'.mem = gm1W C.sa (s₀.loc 0) s₀.mem ∧
+      s'.loc (gO C) = knW C.sa s₀.mem (s₀.loc 0) * 2 ∧
+      s'.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) ∧
+      s'.loc (gO C + 4) = gobsW C.sa (s₀.loc 0) s₀.mem ∧
+      s'.loc (gO C + 5) = gnbsW C.sa (s₀.loc 0) s₀.mem ∧
+      s'.loc (gO C + 6) = gnbsW C.sa (s₀.loc 0) s₀.mem ∧
+      s'.loc (gO C + 7) = knW C.sa s₀.mem (s₀.loc 0) >>> 1; ⊤⦄ := by
+  unfold kgrowH
+  simp only [L.Notation.blk, mapS]
+  refine triple_seq _ (kgrowH1_spec p C n s₀) (fun s₁ h₁ => ?_)
+  obtain ⟨m1, k1, a0, a1, a3, a4, a5⟩ := h₁
+  refine triple_seq _ (kgrowH2_spec p C n s₁) (fun s₂ h₂ => ?_)
+  obtain ⟨hc, m2, l2⟩ := h₂
+  have e0 : s₂.loc 0 = s₀.loc 0 := by rw [l2, k1 0 (zero_lt_gO C)]
+  have L : s₂.mem.len64 C.sa = s₀.mem.len64 C.sa := by
+    simp only [m2, Mem.len64, Mem.size_arr64_set64, m1]
+  refine triple_post (kgrowH3_spec p C n s₂) (fun r s ⟨hr, m3, k3, b0, b1, b4, b5, b6, b7⟩ => ?_)
+  have kk : ∀ z, z < gO C → s.loc z = s₀.loc z := fun z hz => by rw [k3 z hz, l2, k1 z hz]
+  simp only [l2, e0, L, a0, a1, a4, a5] at b0 b1 b4 b5 b7
+  refine ⟨hr, kk, ?_, ?_, b0, b1, ?_, ?_, ?_, b7⟩
+  · rw [a3, a5, a0] at hc; exact hc
+  · rw [m3, m2, m1, k1 0 (zero_lt_gO C), a0, a5]; rfl
+  · rw [b4]; simp only [gobsW]
+  · rw [b5]; simp only [gnbsW]
+  · rw [b6, b5]; simp only [gnbsW]
+
+theorem kzeroW_arr (sa : ArrId) (x : Word) (e : Nat) (m : Mem) (b : ArrId) (hb : b ≠ sa) :
+    (kzeroW sa x e m).arr64 b = m.arr64 b := (kzeroW_fr sa e x m).1 b hb
+
+theorem gm1W_arr (sa : ArrId) (t : Word) (m : Mem) (b : ArrId) (hb : b ≠ sa) :
+    (gm1W sa t m).arr64 b = m.arr64 b := by
+  simp only [gm1W, Mem.arr64_set64_ne _ _ _ _ _ hb]
+
+/-- **The growth block** (renamed into the push): it keeps the push's variables (below `gO`) and
+leaves `kgrowM`'s memory. -/
+theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (kgrowBlk C)
+    ⦃fun r s' => r = .normal ∧ KeepLo (gO C) s₀ s' ∧
+      kgrowM C.sa (ghC C) (s₀.loc 0) s₀.mem = some s'.mem; ⊤⦄ := by
+  have hsc := hO.arrs.2.1
+  unfold kgrowBlk kgrowB
+  simp only [L.Notation.blk, mapS]
+  refine triple_seq _ (kgrowH_spec p C n s₀) (fun s₁ h₁ => ?_)
+  obtain ⟨hk1, hc, hm1, e0, e1, e4, e5, e6, e7⟩ := h₁
+  refine triple_seq _ (kzeroL_step_spec p C n s₁) (fun s₂ h₂ => ?_)
+  obtain ⟨hk2, hm2⟩ := h₂
+  have f : ∀ z, z < gO C → s₂.loc z = s₀.loc z := fun z hz => by
+    rw [hk2 z (lt_ne_addlit _ _ _ hz) (lt_ne_addlit _ _ _ hz), hk1 z hz]
+  have g : ∀ z, z = gO C ∨ z = gO C + 1 ∨ z = gO C + 4 ∨ z = gO C + 5 → s₂.loc z = s₁.loc z :=
+    fun z hz => by
+      rcases hz with rfl | rfl | rfl | rfl
+      · exact hk2 _ (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide))
+      all_goals exact hk2 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide))
+  have hctl : s₂.mem.arr64 CTL = s₀.mem.arr64 CTL := by
+    rw [hm2, kzeroW_arr _ _ _ _ _ (Ne.symm hsc), hm1, gm1W_arr _ _ _ _ (Ne.symm hsc)]
+  simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub, Nat.add_zero]
+  vcgen [step, evalE_spec, setLoc, ld64, kwalkL_step_spec p C hO n]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+    Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, addlit_eq_self,
+    zero_eq_addlit, addlit_eq_zero, zero_eq_gO, gO_eq_zero, ↓reduceIte] at *)
+  · intro z hz
+    have hk3 := (‹KeepLo (gO C) _ _ ∧ kwalkW _ _ _ _ _ _ _ _ = _›).1
+    rw [hk3 z hz]
+    simp only [St.setLoc_loc, lt_ne_addlit _ _ _ hz, ↓reduceIte]
+    exact f z hz
+  · have hw := (‹KeepLo (gO C) _ _ ∧ kwalkW _ _ _ _ _ _ _ _ = _›).2
+    rw [g _ (.inl rfl), g _ (.inr (.inl rfl)), g _ (.inr (.inr (.inl rfl))),
+      g _ (.inr (.inr (.inr rfl))), e0, e1, e4, e5, f 0 (zero_lt_gO C), hctl, hm2, e6, e7, hm1] at hw
+    rw [kgrowM_eq _ _ _ _ hc]
+    exact hw
+
 #exit
 /-! ## `X_push`: the append -/
 

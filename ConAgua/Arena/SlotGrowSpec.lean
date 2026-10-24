@@ -80,16 +80,18 @@ def kwalkW (sa : ArrId) (G : Mem → Word → Word) (n nb bt : Word) : Nat → W
 
 /-- **The growth of tier `t`** (`kgrowB`): the memory after it, `none` where it aborts. -/
 def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Option Mem :=
-  let n := rdW (m.arr64 sa) (t * 2) + SN0
-  let ob := rdW (m.arr64 sa) (t * 2 + 1)
-  let nb := if ob = 0 then n * 2 * 4 else 0
-  if (if t = 0 then (m.len64 sa >>> 1) - 4 else m.len64 sa - (m.len64 sa >>> 1)) < nb + n * 2 * 2
+  let nb := if koW sa m t = 0 then knW sa m t * 2 * 4 else 0
+  if (if t = 0 then (m.len64 sa >>> 1) - 4 else m.len64 sa - (m.len64 sa >>> 1)) <
+      nb + knW sa m t * 2 * 2
   then none
   else
-    kwalkW sa G (n * 2) (if t = 0 then nb + 4 else m.len64 sa - nb - n * 2 * 2)
-      (rdW (m.arr64 CTL) SCB * t) n.toNat (if t = 0 then ob + 4 else m.len64 sa - ob - n * 2)
-      (kzeroW sa (if t = 0 then nb + 4 else m.len64 sa - nb - n * 2 * 2) (n >>> 1).toNat
-        ((m.set64 sa (t * 2) (n * 2 - SN0)).set64 sa (t * 2 + 1) nb))
+    kwalkW sa G (knW sa m t * 2)
+      (if t = 0 then nb + 4 else m.len64 sa - nb - knW sa m t * 2 * 2)
+      (rdW (m.arr64 CTL) SCB * t) (knW sa m t).toNat
+      (if t = 0 then koW sa m t + 4 else m.len64 sa - koW sa m t - knW sa m t * 2)
+      (kzeroW sa (if t = 0 then nb + 4 else m.len64 sa - nb - knW sa m t * 2 * 2)
+        (knW sa m t >>> 1).toNat
+        ((m.set64 sa (t * 2) (knW sa m t * 2 - SN0)).set64 sa (t * 2 + 1) nb))
 
 /-! ## The frame of the growth -/
 
