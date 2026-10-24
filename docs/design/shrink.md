@@ -236,3 +236,21 @@ statements may change; census targets/links and the end-to-end statement/axioms 
 * Totals batch 4: `loc.py` proof lines 314857 → 309108 (**−5749**); since the lane started
   321147 → 309108 (−12039, −3.7 %). Full rebuild of the merged state 13 min wall (105 CPU-min).
   Census unchanged (1328/0/1352, links 2075); axioms unchanged.
+
+### Batch 5: helpers `shrink-inst`, `shrink-iota`, `shrink-core` (2026-10-24)
+
+* **`shrink-inst`** (IndInstall*, IndReal*, IndT/Install*): scripted one-line callee/fuel splits
+  (`ntBW_some`, `of_K`, `of_ite_none`, `rcases`), shared `erCopy_get`, `erAllocCopy_frame`,
+  `brrK_sim`, `adF_ok`: **14616 → 13993 (−623, −4 %) in 46 files**; elaboration 334 → 266 s summed.
+* **`shrink-iota`** (WhnfIota*Refine, WhnfM2CRefine*, WhnfProjRefine*, PropReadRefine*,
+  DefEqLeaves*, WhnfCoreLoop, WhnfSpineArgs): scripted callee splits, `CoreSpec.run`,
+  `triple_post`/`invoke_zero_triple` prologues, a generalized `CoreRef.of_run`, 13 single-use
+  `*_step_spec` lemmas inlined into `vcgen`: **17425 → 16001 (−1424, −8 %) in 25 files**;
+  elaboration unchanged.
+* **`shrink-core`** (Arena long tail: Knot*, Walk*, Level*, Infer*, DeclCanon*, Abs1*, DerRel, …):
+  one generic `CoreS.set_core` (+`MemoRV.frame1`, `ModeR.frame1`, `Kept0.insert`) for the six
+  47-line `CoreS.set_*` memo-slot proofs (the review's §3.3 lever), `mkK_frame` for six `mk*`
+  frame lemmas, `tbl_push_get`, scripted splits, merged identical alternatives:
+  **33557 → 32457 (−1100) in 69 files**; DeclCanonExpr2 5.2 → 3.2 s, WhnfSpineRefine 4.1 → 2.8 s.
+* Totals batch 5: `loc.py` proof lines on master 310312 (other lanes added ~1.2k since batch 4)
+  → 307165 (**−3147**). Full rebuild 18 min wall (119 CPU-min). Census unchanged; axioms unchanged.

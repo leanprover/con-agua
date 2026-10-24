@@ -39,20 +39,16 @@ theorem lveC_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
     (hdv : denoteL a.store.ls (decI v) = some lv) :
     ∃ b a', (lvlEq? (decI u) (decI v)).run a = .ok (some b, a') ∧ StageC dn vis fe env m' a' ∧
       IWGrow m m' ∧ AbsOK m' ∧ PStep a a' ∧ r.headD 0 = (if b then 1 else 0) := by
-  cases n with
-  | zero => simp [lveC] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [lveC] at h
   simp only [lveC] at h
-  cases hs : realCall p n "lvl_eq_c" [u, v] m with
-  | none => simp [hs] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
+  rcases hs : realCall p n "lvl_eq_c" [u, v] m with _ | ⟨r1, m1⟩
+  · simp [hs] at h
   simp only [hs] at h
   by_cases h0 : r1.headD 0 = 0
   · rw [if_pos h0] at h; exact absurd h (by simp)
   rw [if_neg h0] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a1, hrun, hC1, hg, hdec, hA1, hp⟩ :=
     lvlEqC_simC p hcl hLC n hC hA u v hu hv lu lv hdu hdv r1 m1 hs
   simp only [decLvlEq] at hdec
@@ -89,10 +85,8 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   have hStage := hC.stage
   have hz : UInt64.toNat 0 = 0 := rfl
   simp only [agW, Nat.add_sub_cancel] at h
-  cases hra : realCall p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with
-  | none => rw [hra] at h; simp [agK1] at h
-  | some ram1 =>
-  obtain ⟨ra, m1⟩ := ram1
+  rcases hra : realCall p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m with _ | ⟨ra, m1⟩
+  · rw [hra] at h; simp [agK1] at h
   rw [hra] at h
   by_cases h0 : ra.headD 0 = 0
   · rw [agK1_abort0 (realCall p) n m1 _ _ _ _ _ _ ra h0] at h; simp at h
@@ -116,10 +110,8 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   have hlen1 := decHL_length m1 hfv1
   have hlen0 := decHL_length m hfvs0
   rw [hL] at hlen1
-  cases hrb : ftdsF m1 [fvs0O, fvs0L] with
-  | none => rw [hrb] at h; simp [agK2] at h
-  | some rdm2 =>
-  obtain ⟨rd, m2⟩ := rdm2
+  rcases hrb : ftdsF m1 [fvs0O, fvs0L] with _ | ⟨rd, m2⟩
+  · rw [hrb] at h; simp [agK2] at h
   rw [hrb, agK2_some] at h
   have hbound1 : fvs0O.toNat + fvs0L.toNat ≤ iwTop m1 := by have := hg1.1; omega
   obtain ⟨x2, a2, hrun2, hSt2, hg2, hdec2⟩ :=
@@ -131,11 +123,9 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hSt2 hA2 p2
   simp only [decRL, show (0:Nat) + 1 = 1 from rfl, agGetD0, agGetD1] at hdec2
   obtain ⟨hdm2, hdb2⟩ := hdec2
-  cases hw : domsW (realCall p) n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0)
-      (rd.tail.headD 0) nP with
-  | none => rw [hw] at h; simp [agK3] at h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
+  rcases hw : domsW (realCall p) n m2 vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0) (rd.headD 0)
+      (rd.tail.headD 0) nP with _ | ⟨r3, m3⟩
+  · rw [hw] at h; simp [agK3] at h
   rw [hw, agK3_some] at h
   obtain ⟨hjf, hjd⟩ := domsW_le hw
   have hlt1 := UInt64.toNat_lt (ra.tail.headD 0)
@@ -163,16 +153,13 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockDomsAt_specF fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD) hc ht
     nP.toNat a2 a3 u3 hC2.check ⟨hxs1', hdoms⟩ hrun3
-  cases hl : lveC (realCall p) n m3 s s0 with
-  | none => rw [hl] at h; simp [agK4] at h
-  | some rem4 =>
-  obtain ⟨re, m4⟩ := rem4
+  rcases hl : lveC (realCall p) n m3 s s0 with _ | ⟨re, m4⟩
+  · rw [hl] at h; simp [agK4] at h
   rw [hl] at h
   by_cases hre : re.headD 0 = 0
   · rw [agK4_abort (m1 := m4) (re := re) hre] at h; simp at h
   rw [agK4_ok (m1 := m4) (re := re) hre] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
   obtain ⟨b, a4, hrun4, hC4, hg4, hA4, -, hbre⟩ := lveC_okC hq.closed hLC hl hC3 hA3 hs hs0
     (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03)

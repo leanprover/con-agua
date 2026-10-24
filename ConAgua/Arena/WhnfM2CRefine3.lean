@@ -116,24 +116,16 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   cases N with
   | zero => simp [callW_zero] at hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "mk_proj" [T, 0, major] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N' + 1) "mk_proj" [T, 0, major] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨ok1, hD1, res1, hfr1, hh1⟩ := callW_mkProj p hp.toIotaProg' (N' + 1) ⟨m, Locals.init []⟩ a
     hS.arena T 0 major r1 m1 c1
   have hrun1 := AM.run_of_ok _ _ ok1
   rw [res1, show (0 : Word).toNat = 0 from rfl] at hrun1
   have hS1 := hS.of_proj hD1 (Keeps.run (keeps_cpl_internProj _ _ _) hrun1) hfr1
   obtain ⟨e1, t1⟩ := store_spn hfr1.pjStore
-  cases c2 : callW p (N' + 1) "mk_proj" [T, 1, major] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p (N' + 1) "mk_proj" [T, 1, major] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨ok2, hD2, res2, hfr2, hh2⟩ := callW_mkProj p hp.toIotaProg' (N' + 1) ⟨m1, Locals.init []⟩ _
     hS1.arena T 1 major r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
@@ -147,12 +139,8 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   rw [c3] at hW
   simp only at hW
   obtain ⟨hS3, hg3, hsp3⟩ := and2Push_ok hS2 hsp2 (by rw [t2, t1]; exact htop) hh1 hh2 c3
-  cases c4 : callW p (N' + 1) "intern_const" [ctor, ust] m3 with
-  | none => rw [c4] at hW; cases hW
-  | some q =>
-  obtain ⟨r4, m4⟩ := q
-  rw [c4] at hW
-  simp only at hW
+  rcases c4 : callW p (N' + 1) "intern_const" [ctor, ust] m3 with _ | ⟨r4, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
   obtain ⟨ok4, hD4, res4, hfr4, hh4⟩ := callW_internConst' p hp.constFind' hp.constPush'
     hp.internConst' (N' + 1) m3 _ hS3.arena ctor ust hctor hus r4 m4 c4
   have hrun4 := AM.run_of_ok _ _ ok4
@@ -165,22 +153,15 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
       (.inr ⟨_, _, rfl⟩) hx1
     exact hS3.den.constLs _ _ _ hx2)
   have hsp4 := hsp3.of_spn_core (const_spn hfr4)
-  cases c5 : callW p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with
-  | none => rw [c5] at hW; cases hW
-  | some q =>
-  obtain ⟨r5, m5⟩ := q
-  rw [c5] at hW
-  simp only at hW
+  rcases c5 : callW p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with _ | ⟨r5, m5⟩ <;>
+    simp only [c5, reduceCtorEq] at hW
   obtain ⟨ok5, hD5, res5, hfr5, hh5⟩ := callW_mkAppN' p hp.spine (N' + 1) m4 _ hS4.arena
     (r4.headD 0) to (tn + 2) _ hh4 hsp4 r5 m5 c5
   have hrun5 := AM.run_of_ok _ _ ok5
   rw [res5] at hrun5
   have hS5 := hS4.of_app hD5 (Keeps.run (keeps_cpl_mkAppN' _ _) hrun5) hfr5
-  cases c6 : callW p (N' + 1) "m2c_check" [mode, vis, d, tmaj, r5.headD 0, major] m5 with
-  | none => rw [c6] at hW; cases hW
-  | some q =>
-  obtain ⟨r6, m6⟩ := q
-  rw [c6] at hW
+  rcases c6 : callW p (N' + 1) "m2c_check" [mode, vis, d, tmaj, r5.headD 0, major] m5 with _ | ⟨r6, m6⟩ <;>
+    simp only [c6, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   obtain ⟨ok6, ⟨M6, hS6, hK6, hSt6⟩, res6, hr6⟩ := m2cCheck_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _))
     (by omega) (by omega) dn vis fe eb mode d tmaj (r5.headD 0) major hm4 hebm htm hh5 hmaj m5 _ M
@@ -222,12 +203,8 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   cases N with
   | zero => simp [callW_zero] at hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "pin_at" [11] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N' + 1) "pin_at" [11] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨t1, ht1, hm1, -, hanHW, hpin⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (pinAt_refines p hp.pinat (N' + 1) _ a ⟨fun _ => hS.pins⟩ 11) c1
   have hm1' : m1 = m := ht1.symm.trans hm1
@@ -244,12 +221,8 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   rw [if_neg g1] at hW
   have g1' : T = r1.headD 0 := by simpa using g1
   have hTan : (decI T : NIdx) = decI (r1.headD 0) := by rw [g1']
-  cases c2 : callW p (N' + 1) "m2c_pre" [mode, vis, d, major] m with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨L, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p (N' + 1) "m2c_pre" [mode, vis, d, major] m with _ | ⟨L, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨a2, hpre, ⟨M2, hS2, hK2, hSt2⟩, -, hhw⟩ := m2cPre_ok p hp hE N' F
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d major hm4 hebm hmaj m a M hS
     L m2 c2
@@ -264,28 +237,18 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, -, hll, hvl⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
-  cases c3 : callW p (N' + 1) "get_app_args" [L.tail.headD 0] m2 with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨r3, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
+  rcases c3 : callW p (N' + 1) "get_app_args" [L.tail.headD 0] m2 with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, -, hfr3, hg3, htop3, htop3', xs, hargs, hsp3⟩ := triple_of_callW
     (s₀ := ⟨m2, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a2 hS2.arena.1 _ htm hS2.spn) c3
   rw [ht3] at hfr3 hg3 hsp3 htop3'
   have hS3 := hS2.frame_stk hfr3 (by simp) (by simp)
   have hlen : xs.length = (r3.tail.headD 0).toNat := by simpa using hsp3.size
-  cases c4 : callW p (N' + 1) "and_rescue_slots" [vis, ctor, cnP, L.tail.tail.tail.headD 0] m3 with
-  | none => rw [c4] at hW; cases hW
-  | some q =>
-  obtain ⟨r4, m4⟩ := q
-  rw [c4] at hW
-  simp only at hW
-  obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, -⟩ := CoreSpec.of_callW
+  rcases c4 : callW p (N' + 1) "and_rescue_slots" [vis, ctor, cnP, L.tail.tail.tail.headD 0] m3 with _ | ⟨r4, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
+  obtain ⟨hrun4, ⟨M4, hS4, hK4, hSt4⟩, -⟩ := CoreSpec.run
     (andRescueSlots_refines' p hp.toIotaProg' hcc (N' + 1) ⟨m3, Locals.init []⟩ a2 dn vis fe M2 eb
       ctor cnP _ hS3 hctor hus (hpre.cview g0)) c4
-  have hrun4 := AM.run_of_ok _ _ ok4
-  rw [res4] at hrun4
   have hA4 : CoreAfterG dn m m4 (AM.st (andRescueSlots fe (decI ctor) cnP.toNat
       (decI (L.tail.tail.tail.headD 0))) a2) vis fe M eb :=
     ⟨M4, hS4, hK2.trans hK4, hSt2.toGrew.trans (hg3.trans hSt4.toGrew)⟩
@@ -335,12 +298,9 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = cnP.toNat ∧
       lpl.toNat = (L.tail.tail.tail.tail.headD 0).toNat ∧ decBool r4 = true :=
     ⟨by rw [g2'], by rw [hlen, g3'], by rw [g4'], decBool_t_m2c g5⟩
-  cases c5 : callW p (N' + 1) "m2c_and2" [mode, vis, d, ctor, T, L.tail.headD 0, r3.headD 0,
-      r3.tail.headD 0, L.tail.tail.tail.headD 0, major] m4 with
-  | none => rw [c5] at hW; cases hW
-  | some q =>
-  obtain ⟨r5, m5⟩ := q
-  rw [c5] at hW
+  rcases c5 : callW p (N' + 1) "m2c_and2" [mode, vis, d, ctor, T, L.tail.headD 0, r3.headD 0,
+      r3.tail.headD 0, L.tail.tail.tail.headD 0, major] m4 with _ | ⟨r5, m5⟩ <;>
+    simp only [c5, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   have hspn3 : (m3.arr64 SPN).size < 2 ^ 63 := hS3.spn
   have htop4 : r3.headD 0 + r3.tail.headD 0 = spTop m4 := by

@@ -218,11 +218,8 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   have hlv : LvR (nameN a.store.lss.ls.ns) m u l := by
     have := denoteL_lvR hR (decI u) l hl
     rwa [decI_word_self u hu] at this
-  cases hc : callW p n "lv_zero" [u] m with
-  | none => rw [hc] at hW; cases hW
-  | some q =>
-  obtain ⟨r, m₁⟩ := q
-  rw [hc] at hW
+  rcases hc : callW p n "lv_zero" [u] m with _ | ⟨r, m₁⟩ <;> rw [hc] at hW
+  · cases hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvZero_spec p (hp.get "lv_node") (hp.get "lh_push") (hp.get "lv_zero") n ⟨m, Locals.init []⟩ u) hc
   rw [ht] at hz
@@ -390,11 +387,9 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   have hkr : NmsR (nameN a.store.lss.ls.ns) m EREC lo lc ks :=
     nmsR_of_hslice _ _ lc.toNat lps ks lo lc rfl hl hbound hk
   -- the run
-  cases hc : callW p n "lv_spw" [o, c, lo, lc, lsO m (tierW us) (idxW us),
-      lsL m (tierW us) (idxW us)] m with
-  | none => rw [hc] at hW; cases hW
-  | some q =>
-  obtain ⟨r, m₁⟩ := q
+  rcases hc : callW p n "lv_spw" [o, c, lo, lc, lsO m (tierW us) (idxW us),
+      lsL m (tierW us) (idxW us)] m with _ | ⟨r, m₁⟩
+  · rw [hc] at hW; cases hW
   rw [hc] at hW
   obtain ⟨t, ht, -, hz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvSpw_spec EREC POOL LH p (hp.get "lv_lookup") (hp.get "lv_node") (hp.get "lh_push") (hp.get "lv_zero") (hp.get "lv_spw") n ⟨m, Locals.init []⟩ _ _ _ _ _ _)

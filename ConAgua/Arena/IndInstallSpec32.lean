@@ -210,8 +210,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   intro m m' a o l pairs r h hS hpr
   by_cases hl : l = 0
   · rw [pnmW_nil p n m o l hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [hpr.nil hl]
     exact ⟨hS, IWGrow.refl _, MFr.refl _ _ _, by simp [decHL, hslice?], by simp⟩
   rw [pnmW_cons p n m o l hl] at h
@@ -228,11 +227,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     hS.2.2.2.1
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
   -- the rest
-  cases h1 : pnmW p n m (o + 1) (l - 1) with
-  | none => rw [h1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1, pnmK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [pnmK1_some] at h
   obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := ih m m1 a (o + 1) (l - 1) pairs' r1 h1 hS ⟨hrest.1, Or.inr hrest.2⟩
   have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hq2 : (UInt64.ofNat q + 2 : Word).toNat = q + 2 := by
@@ -241,13 +236,8 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     rw [← hew]; simp only [rdW]
     rw [hq2, hg1.2.2.1 _ heelt]
   rw [hew1] at h
-  cases h2 : callW p n "sl_cons" [ew, r1.headD 0, r1.tail.headD 0] m1 with
-  | none => rw [h2] at h; cases h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2, pnmK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmK2_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS2, hg2, hf2, hd2, hb2⟩ := pos3_consH hP h2 hS1 hb1 hew32 hd1
   refine ⟨hS2, hg1.trans hg2, hf1.trans hf2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
   simp only [List.headD_cons, List.tail_cons, List.map_cons, hd2, hewe]
@@ -349,8 +339,7 @@ theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   intro m m' a s l outss r h hS hos
   by_cases hl : l = 0
   · rw [pnfW_nil p n m s l hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : outss = [] := by
       have h1 := hos.1; simp only [DecB, hl] at h1
       simpa [decPL] using h1.symm
@@ -368,36 +357,25 @@ theorem pnfW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   rw [UInt64.ofNat_toNat] at w1 w2
   rw [hw, w1, w2] at h
   -- the member
-  cases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with
-  | none => rw [h1] at h; simp [pnfK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
+  rcases h1 : callW p n "check_block_positivity_nfs_member" [po, pl] m with _ | ⟨r1, m1⟩
+  · rw [h1] at h; simp [pnfK1] at h
   rw [h1, pnfK1_some] at h
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (pnm_spec p hP.mem n _ po pl) h1
   obtain ⟨hS1, hg1, hf1, hd1, hb1⟩ := pnmW_ok hP n m s1.mem a po pl pairs r1 hW1 hS ⟨hpd, hpb⟩
   -- its header
-  cases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with
-  | none => rw [h2] at h; simp [pnfK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
+  rcases h2 : callW p n "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with _ | ⟨r2, m2⟩
+  · rw [h2] at h; simp [pnfK2] at h
   rw [h2, pnfK2_some] at h
   obtain ⟨hS2, hg2, hf2, hd2⟩ := pos3_rec2H hP h2 hS1 hd1 hb1
   -- the rest
-  cases h3 : pnfW p n m2 (s + 1) (l - 1) with
-  | none => rw [h3] at h; simp [pnfK3] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
+  rcases h3 : pnfW p n m2 (s + 1) (l - 1) with _ | ⟨r3, m3⟩
+  · rw [h3] at h; simp [pnfK3] at h
   rw [h3, pnfK3_some] at h
   have hg12 := hg1.trans hg2
   obtain ⟨hS3, hg3, hf3, hd3⟩ := ih m2 m3 a (s + 1) (l - 1) outss' r3 h3 hS2 (hrest.grow decKES_mono hg12)
   -- the cons
-  cases h4 : callW p n "sl_cons" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3 with
-  | none => rw [h4] at h; cases h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, pnmK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [pnmK2_some] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ _ _ _) h4
   obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decNFS_mono hW4 hS3 hd3.2 hd3.1 (hd2.grow (decNFS_mono _) hg3)

@@ -253,10 +253,8 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   have hkn : k.toNat < 4 := by simpa using UInt64.lt_iff_toNat_lt.mp hk
   have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   rw [bphKinds_drop _ hkn]
-  cases h1 : callW p f "rom_basis_decls" [k] m with
-  | none => rw [bphGoW_none1 p f m bo bl k hk h1] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
+  rcases h1 : callW p f "rom_basis_decls" [k] m with _ | ⟨r1, m1⟩
+  · rw [bphGoW_none1 p f m bo bl k hk h1] at h; cases h
   rw [bphGoW_step p f m m1 bo bl k r1 hk h1] at h
   obtain ⟨pinned, a1, hrun1, hS1, hg1, hDR1⟩ := P.rom.basis dn vis fe k hkn f m a r1 m1 hS h1
   have hrun1' : BasisKind.decls (basisOfW k.toNat) a = .ok (pinned, a1) := hrun1
@@ -313,11 +311,7 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   rw [if_pos (by simpa using heq)]
   have hne : bl.toNat ≠ 0 := by rw [← hl, ← hl1]; exact hpne
   -- `er_to_iw`
-  cases h2 : callW p f "er_to_iw" [bo, bl] m1 with
-  | none => rw [h2] at h; cases h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
-  rw [h2, bphK3_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [bphK3_some] at h
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (L.Ind.erToIw_specW p P.iw_alloc P.er_copy P.er_to_iw f ⟨m1, Locals.init []⟩ _ _) h2
   subst hs2
@@ -326,12 +320,7 @@ theorem bphGoW_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.Name
   obtain ⟨hp1, hpb1⟩ := decRBlk_canon hDR1 hpne
   have hp2 := decPL_growAP hp1 hpb1 hg2
   -- `canon_eq_list`
-  cases h3 : callW p f "canon_eq_list"
-      [r2.headD 0, r2.tail.headD 0, r1.headD 0, r1.tail.headD 0] s2.mem with
-  | none => rw [h3] at h; cases h
-  | some x =>
-  obtain ⟨r3, m3⟩ := x
-  rw [h3, bphK4_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [bphK4_some] at h
   rw [hl2] at h3
   obtain ⟨s3, hs3, -, hok3, ⟨⟨hS3, hg3, hd3⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (canonEqList_refines p P.canon dn vis fe _ _ _ _ blk pinned f ⟨s2.mem, Locals.init []⟩ a1
@@ -370,9 +359,8 @@ theorem basisPinHit_ok {p : Prog} (P : BphProg p) :
       | none => r.headD 0 = 0
       | some k => r.headD 0 ≠ 0 ∧ (r.tail.headD 0).toNat < 4 ∧ basisOfW (r.tail.headD 0).toNat = k := by
   intro n dn vis fe m m' a o l blk r hS hok hB hc
-  cases n with
-  | zero => rw [callW_zero] at hc; cases hc
-  | succ n =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (bph_specW p P.bph n ⟨m, Locals.init []⟩ o l) hc
   subst hs'

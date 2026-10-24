@@ -307,8 +307,7 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
         (by rw [hd2']; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hvb)) hc1
       refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
       simp only [dsLv] at hW1
-      by_cases z0 : r₁.headD 0 = 0
-      · simp only [z0, ↓reduceIte] at hW1; cases hW1
+      have z0 : ¬ r₁.headD 0 = 0 := fun z0 => by simp only [z0, ↓reduceIte] at hW1; cases hW1
       simp only [z0, ↓reduceIte] at hW1
       by_cases z1 : r₁.headD 0 = 1
       · simp only [z1, ne_eq, not_true_eq_false, ↓reduceIte] at hW1

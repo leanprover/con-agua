@@ -216,9 +216,7 @@ theorem defeqBody_refines (n : Nat) : DefeqBodySpec p n := by
     exact coreRef_true hS hW
   rw [if_neg hxy] at hW
   simp only [hxy, decide_false, Bool.false_eq_true, ↓reduceIte]
-  by_cases hd0 : d >>> 63 ≠ 0
-  · rw [if_pos hd0] at hW; cases hW
-  rw [if_neg hd0] at hW
+  obtain ⟨hd0, hW⟩ := of_ite_none hW
   have hd := depth_lt_of_shr d (by simpa using hd0)
   obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
   obtain ⟨k, rfl⟩ := callW_succ hc1

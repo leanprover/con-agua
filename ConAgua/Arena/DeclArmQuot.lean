@@ -118,8 +118,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   generalize r1.tail.headD 0 = l at hW hD1 hlen
   by_cases hl : l ≤ UInt64.ofNat k.slot
   · rw [if_pos hl] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have hn : blk[k.slot]? = none := by
       apply List.getElem?_eq_none; rw [hlen]
       have := UInt64.le_iff_toNat_le.mp hl; omega
@@ -339,8 +338,7 @@ theorem cdqW_gen {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Nam
     simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]
     exact hrun3
   · rw [if_neg ht] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨fe, a2, ?_, by simpa using hS2, hg1.trans hg2, hJ2⟩
     cases k with
     | type => exact absurd rfl ht

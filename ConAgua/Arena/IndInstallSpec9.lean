@@ -59,10 +59,7 @@ theorem MemsOK.cons {m : Mem} {o l : Word} {mss : List MemberShape} (h : MemsOK 
   obtain ⟨q, x, rest, rfl, hw, hqb, hdx, hrest⟩ := partsPSl_cons hp hl
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hlpos : 0 < l.toNat := by
-    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
-    · exact h0
+  have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 := ⟨l.toNat - 1, by omega⟩
   have hd1 : decPL (truncM m) (decMS (truncM m)) o.toNat (L + 1) = some (x :: rest) := by
     have := hp.1; simp only [DecB, hL] at this; exact this
@@ -183,8 +180,7 @@ theorem _root_.L.Arena.Sim.post {β γ α : Type} {K : Option (β × Mem) → Op
   | some x =>
     obtain ⟨r₁, m₁⟩ := x
     rw [hmo, hs] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨y, a', h1, h2⟩ := h r₁ m₁ hmo
     exact ⟨y, a', h1, hq _ _ _ _ h2⟩
 

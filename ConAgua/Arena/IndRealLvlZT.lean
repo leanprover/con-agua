@@ -41,10 +41,7 @@ theorem hslice_of_nmsR (ns : NStore) {m : Mem} {A : ArrId} {o k : Word} {ps : Li
   | nil => intro _ arr q _; exact ⟨[], by simp [hslice?], rfl⟩
   | @cons o k x xs hk hx _ ih =>
     intro hb arr q hget
-    have hk1 : 1 ≤ k.toNat := by
-      rcases Nat.eq_zero_or_pos k.toNat with e | e
-      · exact absurd (UInt64.toNat_inj.mp (by simpa using e)) hk
-      · exact e
+    have hk1 : 1 ≤ k.toNat := Nat.pos_of_ne_zero fun h0 => hk (UInt64.toNat_inj.mp (by simpa using h0))
     have ho : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hk' : (k - 1).toNat = k.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp

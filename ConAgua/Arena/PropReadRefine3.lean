@@ -110,14 +110,13 @@ theorem htr_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (headTypeRes_spec p hp n ⟨m, Locals.init []⟩ vis f k ty) hc
   rw [ht] at hW
-  rcases hc1 : callW p n "peel_pis_w" [vis, f, k, ty] m with _ | ⟨r₁, m₁⟩
-  · rw [hc1] at hW; cases hW
-  rw [hc1] at hW
+  rcases hc1 : callW p n "peel_pis_w" [vis, f, k, ty] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
+  · cases hW
   obtain ⟨hrun₁, hRd₁, hb₁⟩ := ppw_ok hp n hS hf hty hc1
   simp only [htrK] at hW
-  rcases hc2 : callW p n "residual_pw" [r₁.headD 0, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
+  rcases hc2 : callW p n "residual_pw" [r₁.headD 0, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩ <;>
+    rw [hc2] at hW
+  · cases hW
   simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, h3, rfl⟩ := hW
   obtain ⟨res, hrun₂, hRd₂, hd⟩ := rpw_call hp hden hRd₁.rel hb₁ hc2
@@ -162,9 +161,8 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     (hW : cArmK1 p n us sub (callW p n "env_find" [cn, vis] m) = some (k, o, c, m')) :
     ∃ res a', (cArmT fe T (decI cn) (decI us)).run a = .ok (res, a') ∧
       RdAfter dn m m' a a' vis fe M eb ∧ PWD (nameN a.store.lss.ls.ns) m' k o c res := by
-  rcases hc1 : callW p n "env_find" [cn, vis] m with _ | ⟨r₁, m₁⟩
-  · rw [hc1] at hW; cases hW
-  rw [hc1] at hW
+  rcases hc1 : callW p n "env_find" [cn, vis] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
+  · cases hW
   obtain ⟨rfl, hfind, hfound⟩ := pr_envFind hp hS.env hcn hc1
   simp only [cArmK1] at hW
   by_cases h0 : r₁.headD 0 = 0
@@ -209,9 +207,9 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [hl, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   have hlen' : ids.length = cv.levelParams.length := hlen.mpr (by simpa using hl)
   -- the datum of the type
-  rcases hc2 : sub (rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
+  rcases hc2 : sub (rdW (m₁.arr64 EREC) (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
+    rw [hc2] at hW
+  · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := hsub hS hw4 hc2
   rw [decE_eq, ← hty] at hrun₂
   have hpre2 : (cArmT fe T (decI cn) (decI us)).run a =
@@ -331,9 +329,8 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       have hdi : (d - 1 - w.tail.headD 0).toNat = d.toNat - 1 - i := by
         have h1 : (d - 1).toNat = d.toNat - 1 := pr_word_sub1 d (by intro e; subst e; simp at hlt')
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, h1]; omega), h1, hi]
-      rcases hb : bdW m (d - 1 - w.tail.headD 0) root with _ | ⟨bf, bd⟩
-      · rw [hb] at hW; cases hW
-      rw [hb] at hW
+      rcases hb : bdW m (d - 1 - w.tail.headD 0) root with _ | ⟨bf, bd⟩ <;> rw [hb] at hW
+      · cases hW
       obtain ⟨hbrun, hbb⟩ := bdW_ok m a hR _ _ _ bf bd (Nat.le_refl _) hroot hb
       rw [hdi] at hbrun
       simp only [htpK] at hW
@@ -344,9 +341,8 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
         rw [hpre]; simp only [hlt', ↓reduceIte, StateT.run_bind, hbrun, except_ok_bind, hb0,
           decOpt]; rfl
       simp only [hb0, ↓reduceIte] at hW
-      rcases hc2 : callW p n "head_type_res" [vis, f, k, bd] m with _ | ⟨r₂, m₂⟩
-      · rw [hc2] at hW; cases hW
-      rw [hc2] at hW
+      rcases hc2 : callW p n "head_type_res" [vis, f, k, bd] m with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
+      · cases hW
       simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
       obtain ⟨res, hrun₂, hRd₂, hd₂⟩ := htr_call hp hden hS hf (hbb hb0) hc2
@@ -362,9 +358,9 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · obtain ⟨hg, -, hty, hty'⟩ := hVR
     rw [pr_getD2] at hty hty'
     simp only [vG, vY, hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
-    rcases hc2 : callW p n "head_type_res" [vis, f, k, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩
-    · rw [hc2] at hW; cases hW
-    rw [hc2] at hW
+    rcases hc2 : callW p n "head_type_res" [vis, f, k, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩ <;>
+      rw [hc2] at hW
+    · cases hW
     simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     obtain ⟨res, hrun₂, hRd₂, hd₂⟩ := htr_call hp hden hS hf hty hc2
@@ -433,9 +429,8 @@ theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
   have hR := hS.arena.1
   unfold tspW at hW
-  rcases hL : tsLoopW m f rt 0 with _ | ⟨f', rr, d⟩
-  · rw [hL] at hW; cases hW
-  rw [hL] at hW
+  rcases hL : tsLoopW m f rt 0 with _ | ⟨f', rr, d⟩ <;> rw [hL] at hW
+  · cases hW
   simp only at hW
   have hcwf : coreWalkFuel < 2 ^ 64 := by simp [coreWalkFuel]
   obtain ⟨hrun, hrr, -, hn6⟩ := tsLoopW_ok m a hR fe (decE rt) _ f rt 0 f' rr d (Nat.le_refl _) hrt
@@ -465,14 +460,13 @@ theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   simp only [h2, ↓reduceIte] at hW
   have hs : ((decE rr).tag == ETag.sort) = false := by
     rw [tag_beq_w rr hrr 2 (by decide) ETag.sort rfl 2 rfl]; simp [h2]
-  rcases hA : acaW m rr (f' - 1) with _ | ⟨cnt, fn⟩
-  · rw [hA] at hW; cases hW
-  rw [hA] at hW
+  rcases hA : acaW m rr (f' - 1) with _ | ⟨cnt, fn⟩ <;> rw [hA] at hW
+  · cases hW
   simp only at hW
   obtain ⟨hgaf, hna, hfn, -⟩ := acaW_ok hR hrr hA
-  rcases hc2 : callW p n "head_type_pw" [vis, f' - 1, rt, d, fn, cnt] m with _ | ⟨r₂, m₂⟩
-  · rw [hc2] at hW; cases hW
-  rw [hc2] at hW
+  rcases hc2 : callW p n "head_type_pw" [vis, f' - 1, rt, d, fn, cnt] m with _ | ⟨r₂, m₂⟩ <;>
+    rw [hc2] at hW
+  · cases hW
   simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
   have hf' : (f' - 1).toNat ≤ coreWalkFuel := by

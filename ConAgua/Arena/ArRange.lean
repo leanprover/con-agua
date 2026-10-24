@@ -260,14 +260,12 @@ theorem arNodeW_fvar_in (hv : viewOK m h 26) (hg : h >>> 28 = 1)
     (hdk : ¬ d + k < d) (hi : d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)
     (ho : ¬ c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) < c) :
     arNodeW (n + 1) m h c d k fu = binternW m (c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [arNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, hdk, hi, ho]; simp
+  rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi, ho]; simp
 
 theorem arNodeW_fvar_out (hv : viewOK m h 26) (hg : h >>> 28 = 1)
     (hdk : ¬ d + k < d) (hi : ¬ (d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)) :
     arNodeW (n + 1) m h c d k fu = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [arNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, hdk, hi]; simp
+  rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi]; simp
 
 theorem arNodeW_leaf (h1 : h >>> 28 ≠ 1)
     (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7)
