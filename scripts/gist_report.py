@@ -131,14 +131,13 @@ def trend_svg(pts):
         o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
     def col(k):
         return [float(p[k]) if p.get(k) not in (None, "") else None for p in pts]
-    srcs = col("sorry_sources")
-    n0 = next((v for v in srcs if v), None)  # first recorded count of sorry sources
-    elim = [None if v is None or not n0 else 100 * (1 - v / n0) for v in srcs]
+    LEAKS0 = 2447  # layout-leak lines when lane tieracc started (master 6b186593)
+    enc = [None if v is None else 100 * (1 - v / LEAKS0) for v in col("layout_leaks")]
     series = [("proven", lean, yl, "#2e7d5b", ""), ("proven locally", cnt, yl, "#7aa6d6", ""),
               ("L written", wr, yl, "#d9a520", ""),
               ("StageC migration", col("stagec_pct"), yl, "#e07b39", ''),
               ("sorry-free e2e cone", col("cone_pct"), yl, "#1b1b1b", 'stroke-dasharray="2 3"'),
-              (f"sorry sources removed (of {int(n0) if n0 else '?'})", elim, yl, "#d6457f", 'stroke-dasharray="10 3 2 3"'),
+              (f"layout encapsulated (of {LEAKS0} lines)", enc, yl, "#d6457f", 'stroke-dasharray="10 3 2 3"'),
               ("proof lines (k)", pk, yr, "#8a5cb8", 'stroke-dasharray="6 4"'), ("L code lines (k)", lk, yr, "#c0504d", 'stroke-dasharray="6 4"')]
     for name, vals, y, c, dash in series:
         line(vals, y, c, dash)
@@ -394,12 +393,74 @@ w("Left axis: share of the twin's Lean lines proven, proven locally (own proof c
   "L code includes named statement blocks (`lblk`, ~2.8k lines) since 2026-10-24, at every point (they were counted as proof before).\n")
 w(f"![Proven share and lines of code per census run]({raw_url('trend.svg')})\n")
 
-# phases
-w("## By phase\n")
-w("Lean lines of con-ron's arena twin per phase.\n")
-w(f"![Lean lines per phase: proven, proven with sorry, L written, not started]({raw_url('phases.svg')})\n")
 
 # performance
+def behind(rev, date):
+    """' (N commits and H h behind master)' when `rev` is not master's HEAD, else ''."""
+    try:
+        n = int(git("rev-list", "--count", f"{rev}..master"))
+    except ValueError:
+        return ""
+    if n == 0:
+        return ""
+    try:
+        t = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M UTC").replace(tzinfo=datetime.timezone.utc)
+        h = (datetime.datetime.now(datetime.timezone.utc) - t).total_seconds() / 3600
+        age = f"{h:.0f} h" if h >= 1.5 else f"{h * 60:.0f} min"
+    except ValueError:
+        age = "?"
+    return f" (**{n} commit{'s' if n != 1 else ''} and {age} behind master**)"
+
+
+def init_bench():
+    """The Init benchmark the census run writes (_tmp/dash/init-bench.json), or None."""
+    try:
+        d = json.loads((dash / "init-bench.json").read_text())
+        fid = next(k for k in d["fixtures"] if "init435" in k)
+        return d, d["fixtures"][fid]
+    except Exception:
+        return None
+
+
+def layout_leaks():
+    """`scripts/layout_leaks.py`'s summary line (raw store-layout arithmetic outside the store library), or None."""
+    try:
+        r = subprocess.run([sys.executable, str(root / "scripts" / "layout_leaks.py")], capture_output=True, text=True, timeout=300)
+        m = re.search(r"lines (\d+) in (\d+) files", r.stdout)
+        return (int(m.group(1)), int(m.group(2)), r.stdout.strip().split(" | ")[0]) if m else None
+    except Exception:
+        return None
+
+
+ll = layout_leaks()
+if ll:
+    w("## Layout encapsulation\n")
+    w(f"Lines outside the store library that still compute the interleaved record layout themselves (`scripts/layout_leaks.py`, "
+      f"lane `tieracc`; goal 0, then the switch to tiered arrays is library-only): **{ll[0]} lines in {ll[1]} files** "
+      f"(started at 2447 in 132). By kind: {ll[2]}.\n")
+
+ib = init_bench()
+if perf or ib:
+    w("## Performance\n")
+if ib:
+    d, fx = ib
+    w(f"**Init** (Lean v4.35.0 `Init` export, 57 919 declarations), measured {d['date']} on master `{d['rev']}`{behind(d['rev'], d['date'])}: "
+      f"`scripts/bench.py --set init`, {len(next(iter(fx.values()))['runs'])} interleaved rounds (median), "
+      f"L = the committed `asm/checker.s`, con-ron `--jobs=1`; load {d.get('load', '?')}.\n")
+    w("| | Instructions | Wall | Peak RSS |")
+    w("|---|---:|---:|---:|")
+    for n in d["systems"]:
+        x = fx[n]["stats"]
+        ins = f"{x['instr'] / 1e9:.0f} G" if x.get("instr") else "–"
+        rss = f"{x['rss'] / 2**30:.2f} GB" if x.get("rss") else "–"
+        v = "" if x.get("verdict") == "accept" else f" **{x.get('verdict')}**"
+        w(f"| {n}{v} | {ins} | {x['wall']:.1f} s | {rss} |")
+    if "L" in fx and "con-ron" in fx:
+        a, b = fx["L"]["stats"], fx["con-ron"]["stats"]
+        ri = f"{a['instr'] / b['instr']:.2f}" if a.get("instr") and b.get("instr") else "–"
+        rr = f"{a['rss'] / b['rss']:.2f}" if a.get("rss") and b.get("rss") else "–"
+        w(f"| **L / con-ron** | {ri} | {a['wall'] / b['wall']:.2f} | {rr} |")
+    w("")
 if perf:
     import math
     rows = sorted(perf["rows"], key=lambda r: r["perf"]["L"] / r["perf"]["con-ron"])
@@ -407,9 +468,8 @@ if perf:
     gm = math.exp(sum(math.log(v) for v in ratios) / len(ratios))
     med = (ratios[len(ratios) // 2] + ratios[(len(ratios) - 1) // 2]) / 2
     tl = sum(r["perf"]["L"] for r in rows); tc = sum(r["perf"]["con-ron"] for r in rows)
-    w("## Performance\n")
     w(f"CPU instructions (`perf stat -e instructions:u`, one run each) of the compiled L `check` against `con-ron --jobs=1` on the "
-      f"**{len(rows)}** end-to-end fixtures both accept (of {perf['fixtures']}). Measured {perf['date']} on master `{perf['rev']}` by `scripts/e2e.py`.\n")
+      f"**{len(rows)}** end-to-end fixtures both accept (of {perf['fixtures']}). Measured {perf['date']} on master `{perf['rev']}`{behind(perf['rev'], perf['date'])} by `scripts/e2e.py`.\n")
     w("| Fixtures | Geometric mean L / con-ron | Median | Fastest relative | Slowest relative | Total L | Total con-ron | Total ratio |")
     w("|---:|---:|---:|---|---|---:|---:|---:|")
     w(f"| {len(rows)} | **{gm:.2f}** | {med:.2f} | {ratios[0]:.2f} (`{rows[0]['id']}`) | {ratios[-1]:.2f} (`{rows[-1]['id']}`) | "

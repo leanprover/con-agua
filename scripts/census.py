@@ -447,7 +447,18 @@ def e2e_metrics(targets):
     return dict(
         stagec_pct=round(100 * STAGEC["done"] / STAGEC["total"], 1) if STAGEC.get("total") else None,
         cone_pct=round(100 * int(cone[0]["type"]) / int(cone[0]["name"]), 1) if cone and int(cone[0]["name"]) else None,
-        sorry_sources=nsrc if nsrc is not None else None)
+        sorry_sources=nsrc if nsrc is not None else None,
+        layout_leaks=layout_leaks())
+
+
+def layout_leaks():
+    """Lines outside the store library that compute the store record layout themselves (scripts/layout_leaks.py), or None."""
+    try:
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "layout_leaks.py")], capture_output=True, text=True, timeout=300, cwd=ROOT)
+        m = re.search(r"lines (\d+) in \d+ files", r.stdout)
+        return int(m.group(1)) if m else None
+    except Exception:
+        return None
 
 
 ASM = {}  # the end-to-end theorem's `A` lines (ConAgua/Census/Main.lean `asmLines`), by kind
@@ -804,7 +815,7 @@ CSV_FIELDS = ["date", "commit", "targets", "proven", "sorry", "written", "todo",
               "lean_all", "lean_proven", "lean_sorry", "lean_written",
               "rust_all", "rust_proven", "rust_sorry", "rust_written", "parts_proven",
               "local", "lean_local", "na", "lean_na", "rust_na", "pending", "lean_pending",
-              "stagec_pct", "cone_pct", "sorry_sources"]  # appended at the end: older rows lack them
+              "stagec_pct", "cone_pct", "sorry_sources", "layout_leaks"]  # appended at the end: older rows lack them
 
 
 def append_csv(targets, path):
