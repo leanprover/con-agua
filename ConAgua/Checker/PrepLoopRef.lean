@@ -296,7 +296,7 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             have hk' := addW_toNat ord k (by omega)
             rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega),
               ite_f (by rw [hmx', hk']; omega)]
-        · rw [pFrontW.k_prep_find.arm2 _ _ _ _ _ _ _ _ hfz, pFrontW.j1.arm1] at h
+        · rw [pFrontW.k_prep_find.arm2 _ _ _ _ _ _ _ _ (Decidable.of_not_not hfz), pFrontW.j1.arm1] at h
           have hf00 : f = 0 := by simpa using hfz
           refine ⟨_, aw, none, by omega, rfl, ?_, MemFrame.set64 _ IW (by decide) _ _, ?_, ?_, ?_, h⟩
           · have hU : unm (m1.set64 IW (ord + aw) aw) mk np.toNat nw.toNat = unm m mk np.toNat nw.toNat := by

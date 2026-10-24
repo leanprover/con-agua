@@ -361,7 +361,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [seenR_hit hs he hr hh, ite_eq_left rfl]
     exact wres_pure hs
-  rw [hWalkW.arm2 n m e i k tg ws sp fu hfu hr hh] at hb
+  rw [hWalkW.arm2 n m e i k tg ws sp fu hfu hr (Decidable.of_not_not hh)] at hb
   rw [seenR_miss hs he hr (Decidable.of_not_not hh), ite_eq_right Bool.false_ne_true]
   rcases hp : mputG hsSch m e 0 1 ((mfindG hsSch m e 0).headD 0) ((mfindG hsSch m e 0).tail.headD 0) with _ | m₀ <;> rw [hp] at hb
   · simp [hWalkW.k_hs_put.eq_def] at hb

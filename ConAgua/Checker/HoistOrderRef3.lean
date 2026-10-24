@@ -127,7 +127,7 @@ theorem hAny_ok (n : Nat) (m : Mem) (tg c : Word) (T : Std.HashMap Nat Nat)
         refine ⟨rfl, ?_⟩
         refine ⟨fun h => absurd h (by decide), fun hall => ?_⟩
         exact (hne (by rw [hrd, hz]; exact hall _ (Nat.le_refl _) (by omega))).elim
-      · rw [hAnyW.arm3 n m tg c k (by rw [word_le]; omega) hne] at h
+      · rw [hAnyW.arm3 n m tg c k (by rw [word_le]; omega) (Decidable.of_not_not hne)] at h
         obtain ⟨rfl, hr⟩ := ih (k + 1) r m' h
         refine ⟨rfl, ?_⟩
         rw [hr, toNat_succ k (by omega)]

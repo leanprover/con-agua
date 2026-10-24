@@ -212,7 +212,7 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind
     obtain ⟨h6, -, t, ht, hb⟩ := hD
-    rw [hNamesW.arm2 n m k _ (by rw [e0, h6]; simp), e2, e3] at h
+    rw [hNamesW.arm2 n m k _ (by rw [e0, h6]), e2, e3] at h
     cases hg : hNamesGoW n m k (dw (m.arr64 DECL) r.toNat 2) (dw (m.arr64 DECL) r.toNat 3) 0 with
     | none => rw [hg] at h; cases h
     | some zm =>

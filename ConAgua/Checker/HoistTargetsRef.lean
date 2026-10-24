@@ -189,7 +189,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
         ((LowFr.ofAFr hf₂ (by have := hE₁.top; omega)).trans (LowFr.ofHFr hfr₃))).trans h7⟩
     · rw [if_neg (fun hh => hop0 (hop.mpr hh))]
       simp only
-      rw [hTargetsGoW.k_nat_op_record.arm2 _ _ _ _ _ _ _ _ _ _ hop0, hTargetsGoW.j1.arm1] at h
+      rw [hTargetsGoW.k_nat_op_record.arm2 _ _ _ _ _ _ _ _ _ _ (Decidable.of_not_not hop0), hTargetsGoW.j1.arm1] at h
       obtain ⟨T'', h1, h2, h3, h4, h5, h6, h7⟩ := hnext m₁ T hE₁ hT₁ hTv hTi1 hlt hP₁ h
       exact ⟨T'', h1, h2, h3, h4, h5, h6, (LowFr.ofAFr hf₁ (by omega)).trans h7⟩
   · rw [hTargetsGoW.arm3 _ _ _ _ _ _ _ _ hend (by rw [hrw]; exact hk2), hTargetsGoW.j1.arm1] at h
