@@ -206,12 +206,8 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   subst hs0
   refine ⟨hloc, ?_⟩
   unfold findProjW at hW
-  cases hc1 : callW p n "proj_table_name" [T] s.mem with
-  | none => rw [hc1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₁⟩ := q1
-  rw [hc1] at hW
-  simp only at hW
+  rcases hc1 : callW p n "proj_table_name" [T] s.mem with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc1, reduceCtorEq] at hW
   by_cases c1 : 4294967296 ≤ r₁.headD 0
   · rw [if_pos c1] at hW; cases hW
   rw [if_neg c1] at hW
@@ -222,12 +218,8 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
     have := mt UInt64.le_iff_toNat_le.mpr c1
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
     rw [e] at this; omega
-  cases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₂⟩ := q2
-  rw [hc2] at hW
-  simp only at hW
+  rcases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
   obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (envFind_specWP p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
   have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem
@@ -327,12 +319,8 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
     (findProj_spec p hp n _ vis T i) hc
   simp only at hW
   unfold findProjW at hW
-  cases hc1 : callW p n "proj_table_name" [T] m with
-  | none => rw [hc1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₁⟩ := q1
-  rw [hc1] at hW
-  simp only at hW
+  rcases hc1 : callW p n "proj_table_name" [T] m with _ | ⟨r₁, m₁⟩ <;>
+    simp only [hc1, reduceCtorEq] at hW
   by_cases c1 : 4294967296 ≤ r₁.headD 0
   · rw [if_pos c1] at hW; cases hW
   rw [if_neg c1] at hW
@@ -343,12 +331,8 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
     have := mt UInt64.le_iff_toNat_le.mpr c1
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
     rw [e] at this; omega
-  cases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with
-  | none => rw [hc2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₂⟩ := q2
-  rw [hc2] at hW
-  simp only at hW
+  rcases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with _ | ⟨r₂, m₂⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
   obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (envFind_specWP p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
   have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem

@@ -419,11 +419,9 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
       have hNpos : N ≠ 0 := by
         rw [← hpv]; intro h
         exact hl0 (UInt64.toNat_inj.mp (by simpa using (pv_eq_zero_iff _ _ _ hn).mp h))
-      cases hc2 : callW p n "nat_pred_lit" [rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 1),
-        rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 2)] s₀.mem with
-      | none => simp [hc2] at hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
+      rcases hc2 : callW p n "nat_pred_lit" [rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 1),
+        rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 2)] s₀.mem with _ | ⟨r₁, m₁⟩
+      · simp [hc2] at hW
       rw [hc2, Option.bind_some, npLitF, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, hr1, hm⟩ := hW
       obtain ⟨t, ht, -, hok, hK, hres', hhw⟩ := triple_of_callW

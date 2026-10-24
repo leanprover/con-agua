@@ -1018,11 +1018,9 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     · rw [pirW_ab1 p k m e ao an i hlt h6 hv1] at hL; cases hL
     by_cases hv2 : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e
     · rw [pirW_ab2 p k m e ao an i hlt h6 hv1 hv2] at hL; cases hL
-    cases hc : callW p k "inst_entry"
-        [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m with
-    | none => simp [pirW, hlt, h6, hv1, hv2, hc] at hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc : callW p k "inst_entry"
+        [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m with _ | ⟨r₁, m₁⟩
+    · simp [pirW, hlt, h6, hv1, hv2, hc] at hL
     rw [pirW_cont p k m m₁ e ao an i r₁ hlt h6 hv1 hv2 hc] at hL
     obtain ⟨hvb, hbw, -⟩ := view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
     have hvb' := viewBind_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'

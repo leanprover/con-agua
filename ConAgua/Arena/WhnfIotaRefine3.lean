@@ -272,10 +272,8 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     cases k with
     | zero => simp [iotaArW] at hL
     | succ k =>
-    cases hc1 : callW p k "find_proj" [vis, anW, j] m with
-    | none => simp only [iotaArW, hlt, ↓reduceIte, hc1] at hL; cases hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc1 : callW p k "find_proj" [vis, anW, j] m with _ | ⟨r₁, m₁⟩
+    · simp only [iotaArW, hlt, ↓reduceIte, hc1] at hL; cases hL
     obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
       (hcc.findProj k ⟨m, Locals.init []⟩ a dn vis fe M eb anW j hS hanW) hc1
     have hres1' : AM.res (fe.findProj? (decI anW) j.toNat) a =
@@ -300,10 +298,8 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
         some (tbl.entry j.toNat) := by
       simp only [decEntry, if_neg h0, htbl, Option.map_some]
     rw [hsome] at hrunF
-    cases hc2 : callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with
-    | none => simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
-    | some q =>
-    obtain ⟨r₂, m₂⟩ := q
+    rcases hc2 : callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with _ | ⟨r₂, m₂⟩
+    · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
     obtain ⟨hrunB, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
       (hcc.fireOk k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb (r₁.tail.headD 0) j us tbl hS₁ hus
         (by rw [hEr1]; exact htbl) hfe (by simpa [IProjTable.entry] using findProj?_lt hrunF)
@@ -976,10 +972,8 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hspn := hS.spn
     have hoj : (o + j).toNat = o.toNat + j.toNat := by
       rw [UInt64.toNat_add]; simp; omega
-    cases hc1 : callW p k "mk_proj" [T, j, b] m with
-    | none => simp only [etpW, hlt, ↓reduceIte, hc1] at hL; cases hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc1 : callW p k "mk_proj" [T, j, b] m with _ | ⟨r₁, m₁⟩
+    · simp only [etpW, hlt, ↓reduceIte, hc1] at hL; cases hL
     by_cases hgn : ¬ (o + j).toNat < (m₁.arr64 SPN).size
     · rw [etpW_bad p T b nF o k m m₁ j r₁ hlt hc1 hgn] at hL; cases hL
     have hg := Classical.not_not.mp hgn

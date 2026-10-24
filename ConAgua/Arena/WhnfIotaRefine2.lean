@@ -219,10 +219,8 @@ theorem dlW_ok (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
       unfold HW; simpa [spW, toUInt64_toNat_self] using this
     rw [hga] at hdra
     rw [hgb] at hdrb
-    cases hc : callW p k "defeq" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), rdW (m.arr64 SPN) (bo + i)] m with
-    | none => simp [dlW, hn.1, hn.2, hc] at hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc : callW p k "defeq" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), rdW (m.arr64 SPN) (bo + i)] m with _ | ⟨r₁, m₁⟩
+    · simp [dlW, hn.1, hn.2, hc] at hL
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
       ((hknot k (by omega)).defeq F ⟨m, Locals.init []⟩ a dn vis fe M eb mode d _ _ (by omega)
         (by omega) ⟨hS, hm4, hebm⟩ hxa hxb) hc
@@ -606,10 +604,8 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
     cases k with
     | zero => simp [tsW] at hL
     | succ k =>
-    cases hc : callW p k "find_proj" [vis, T, j] m with
-    | none => simp [tsW, hlt, hc] at hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc : callW p k "find_proj" [vis, T, j] m with _ | ⟨r₁, m₁⟩
+    · simp [tsW, hlt, hc] at hL
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
       (hfp k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
     have hrunF := AM.run_of_ok _ _ hok
@@ -766,10 +762,8 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
     cases k with
     | zero => simp [isW] at hL
     | succ k =>
-    cases hc : callW p k "inst_entry" [e, rdW (m.arr64 SPN) (ao + i), t] m with
-    | none => simp [isW, hlt, hc] at hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc : callW p k "inst_entry" [e, rdW (m.arr64 SPN) (ao + i), t] m with _ | ⟨r₁, m₁⟩
+    · simp [isW, hlt, hc] at hL
     rw [isW_cont p ao an k m m₁ t e i r₁ hlt hc] at hL
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb e (rdW (m.arr64 SPN) (ao + i)) t hS he) hc
@@ -1138,10 +1132,8 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
       have := hsp.lt j.toNat hlt'
       unfold HW; simpa [spW, toUInt64_toNat_self] using this
     rw [hget] at hdrop
-    cases hc1 : callW p k "inst_lp" [po, pl, us, rdW (m.arr64 SPN) (pvo + j)] m with
-    | none => simp only [ispW, hlt, ↓reduceIte, hc1] at hL; cases hL
-    | some q =>
-    obtain ⟨r₁, m₁⟩ := q
+    rcases hc1 : callW p k "inst_lp" [po, pl, us, rdW (m.arr64 SPN) (pvo + j)] m with _ | ⟨r₁, m₁⟩
+    · simp only [ispW, hlt, ↓reduceIte, hc1] at hL; cases hL
     obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
       (hw.instLP k ⟨m, Locals.init []⟩ a dn vis fe M eb po pl us _ lps hS hpinw hus hlps) hc1
     have hSt₁ : StackKept m m₁ := hSt₁
@@ -1151,10 +1143,8 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
     have hsa₁ : SpineR m₁ ao an args := hsa.keep hSt₁.size hSt₁.below (by omega) hspn
     have hat₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by
       rw [hSt₁.1]; omega
-    cases hc2 : callW p k "inst_spine" [ao, an, rP - 1, r₁.headD 0] m₁ with
-    | none => simp only [ispW, hlt, ↓reduceIte, hc1, hc2] at hL; cases hL
-    | some q =>
-    obtain ⟨r₂, m₂⟩ := q
+    rcases hc2 : callW p k "inst_spine" [ao, an, rP - 1, r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
+    · simp only [ispW, hlt, ↓reduceIte, hc1, hc2] at hL; cases hL
     have hrP : an.toNat ≤ (rP - 1).toNat + 1 := by
       by_cases h0 : rP = 0
       · subst h0; simp at hanr; omega

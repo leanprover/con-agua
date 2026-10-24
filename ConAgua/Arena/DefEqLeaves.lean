@@ -245,10 +245,8 @@ theorem headIsProj_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "head_is_proj" [e] (headIsProj (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
   refine triple_post (headIsProj_spec p hp n s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  cases hc : callW p n "get_app_fn" [e] s₀.mem with
-  | none => simp [headIsProjW, hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
+  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
+  · simp [headIsProjW, hc] at hW
   rw [headIsProjW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
@@ -289,10 +287,8 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "io_neutral" [e] (ioNeutral (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
   refine triple_post (ioNeutral_spec p hp n s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  cases hc : callW p n "get_app_fn" [e] s₀.mem with
-  | none => simp [ioNeutralW, hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
+  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
+  · simp [ioNeutralW, hc] at hW
   rw [ioNeutralW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
@@ -801,10 +797,8 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "head_hint" [vis, e] (headHint fe (decE e)) decHintR s₀ a₀ dn vis fe MM eb := by
   refine triple_post (headHint_spec p hp n s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  cases hc : callW p n "get_app_fn" [e] s₀.mem with
-  | none => simp [headHintW, hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
+  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
+  · simp [headHintW, hc] at hW
   rw [headHintW_eq p n _ _ vis e r₁ hc] at hW
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
   have hR := hS.arena.1
@@ -832,10 +826,8 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   obtain ⟨hv, hnw, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3
   have hrun1 := headHint_run_const fe _ a₀ _ _ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3]) hv
   generalize rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW hrun1
-  cases hc2 : callW p n "env_find" [k, vis] s₀.mem with
-  | none => simp [hhEnv, hc2] at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
+  rcases hc2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
+  · simp [hhEnv, hc2] at hW
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
     (envFind_refines p hp.core.envix hp.core.envrow hp.core.envfind n s₀ vis k hS.env hnw) hc2
   obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
@@ -1035,10 +1027,8 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
     · rw [hvx, decBool, ← h1]
     · unfold ResH; rw [← h1]; exact hx
   unfold unfoldableHeadW at hW
-  cases hc : callW p n "get_app_fn" [e] s₀.mem with
-  | none => simp [hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
+  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
+  · simp [hc] at hW
   rw [hc, Option.bind_some] at hW
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
   unfold ufHeadF at hW
@@ -1057,10 +1047,8 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
   generalize rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW hv
-  cases hc2 : callW p n "env_find" [k, vis] s₀.mem with
-  | none => simp [hc2] at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
+  rcases hc2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
+  · simp [hc2] at hW
   rw [hc2, Option.bind_some] at hW
   obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
     (envFind_refines p hp.core.envix hp.core.envrow hp.core.envfind n s₀ vis k hS.env hnw) hc2
@@ -1087,10 +1075,8 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
       (fun cv v hint e => hdefn.2 h1 cv v hint (by rw [hfind'] at e; exact Option.some.inj e))) rfl
   simp only [h0, h1, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   obtain ⟨cv, v, hci_eq, hlen, -⟩ := hdefn.1 h1
-  cases hc3 : callW p n "ls_node" [rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)] s₀.mem with
-  | none => simp [hc3] at hW
-  | some q =>
-  obtain ⟨r₃, m₃⟩ := q
+  rcases hc3 : callW p n "ls_node" [rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)] s₀.mem with _ | ⟨r₃, m₃⟩
+  · simp [hc3] at hW
   rw [hc3, Option.bind_some] at hW
   obtain ⟨t₃, ht₃, heq, hne, hr₃⟩ := triple_of_callW
     (lsNode_spec p hp.core.lsn n s₀ (rdW (s₀.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))) hc3
@@ -1258,10 +1244,8 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
     except_ok_bind] at hres
   generalize rdW (s₀.mem.arr64 AREC) (idxW a * 4 + tierW a * 2) = f1 at hf1 hW hres
   generalize rdW (s₀.mem.arr64 AREC) (idxW b * 4 + tierW b * 2) = f2 at hf2 hW hres
-  cases hc : callW p n "get_app_fn" [f1] s₀.mem with
-  | none => simp [hc] at hW
-  | some q =>
-  obtain ⟨r₁, m₁⟩ := q
+  rcases hc : callW p n "get_app_fn" [f1] s₀.mem with _ | ⟨r₁, m₁⟩
+  · simp [hc] at hW
   rw [hc, Option.bind_some] at hW
   obtain ⟨rfl, hh1, hgaf1⟩ := getAppFn_callW hp hR hf1 hc
   simp only [hgaf1, except_ok_bind] at hres
@@ -1283,10 +1267,8 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   simp only [tag_beq_const g1 hh1, g3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvg,
     except_ok_bind] at hres
   generalize rdW (s₀.mem.arr64 CREC) (idxW g1 * 4 + tierW g1 * 2) = n1 at hn1 hW hres
-  cases hc2 : callW p n "get_app_fn" [f2] s₀.mem with
-  | none => simp [hc2] at hW
-  | some q =>
-  obtain ⟨r₂, m₂⟩ := q
+  rcases hc2 : callW p n "get_app_fn" [f2] s₀.mem with _ | ⟨r₂, m₂⟩
+  · simp [hc2] at hW
   rw [hc2, Option.bind_some] at hW
   obtain ⟨rfl, hh2, hgaf2⟩ := getAppFn_callW hp hR hf2 hc2
   simp only [hgaf2, except_ok_bind] at hres

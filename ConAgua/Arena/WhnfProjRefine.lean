@@ -441,12 +441,8 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have hpsz : ((ptMem m o).arr64 POOL).size = (m.arr64 POOL).size := by
     simp only [ptMem, ptBytes, size_set64]
   have hk := ptMem_slice m o hno hsz
-  cases hc1 : callW p n "intern_nstr" [t, o, 9] (ptMem m o) with
-  | none => rw [hc1] at hW; cases hW
-  | some q1 =>
-  obtain ⟨r₁, m₂⟩ := q1
-  rw [hc1] at hW
-  simp only at hW
+  rcases hc1 : callW p n "intern_nstr" [t, o, 9] (ptMem m o) with _ | ⟨r₁, m₂⟩ <;>
+    simp only [hc1, reduceCtorEq] at hW
   obtain ⟨c7, hW⟩ := of_ite_none hW
   have hW1 := callW_nstr p hp n _ t o 9 (by omega) (by rw [hpsz]; simpa using hsz) hc1
   have ht32 : t.toNat < 2 ^ 32 := by
@@ -467,11 +463,8 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     have := mt UInt64.le_iff_toNat_le.mpr c7
     have e : (4294967296 : Word).toNat = 4294967296 := rfl
     rw [e] at this; omega
-  cases hc2 : callW p n "intern_nnum" [r₁.headD 0, 0] m₂ with
-  | none => rw [hc2] at hW; cases hW
-  | some q2 =>
-  obtain ⟨r₂, m₃⟩ := q2
-  rw [hc2] at hW
+  rcases hc2 : callW p n "intern_nnum" [r₁.headD 0, 0] m₂ with _ | ⟨r₂, m₃⟩ <;>
+    simp only [hc2, reduceCtorEq] at hW
   obtain ⟨hr, hm3⟩ := Prod.mk.inj (Option.some.inj hW)
   have hW2 := callW_nnum p hp n _ _ _ hc2
   have tr2 := internNNum_refinesA p hp.nnFind hp.nnPush hp.nnum
