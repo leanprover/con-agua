@@ -572,7 +572,8 @@ meta def declSyntax (c : Name) (kw : String := "lfn") : TermElabM Syntax := do
   for part in parts.tail do
     pos := pos + ":=".length
     let body := String.ofList (part.toList.dropWhile Char.isWhitespace)
-    if body.startsWith s!"{kw} " || body.startsWith s!"{kw}(" then
+    if body.startsWith s!"{kw}(" ||
+        (body.startsWith kw && ((body.drop kw.length).toString.front).isWhitespace) then
       found := some (pos + (part.utf8ByteSize - body.utf8ByteSize))
       break
     pos := pos + part.utf8ByteSize
@@ -1522,6 +1523,17 @@ meta structure FnInfo where
   vars : Array Ident
   deriving Inhabited
 
+/-- `L.x` (not part of a longer name) as `_root_.L.x`. -/
+meta def rootL (txt : String) : String := Id.run do
+  let cs := txt.toList.toArray
+  let mut out : String := ""
+  for i in [0:cs.size] do
+    let c := cs[i]!
+    let prevId := i > 0 && (cs[i-1]!.isAlphanum || cs[i-1]! == '_' || cs[i-1]! == '.' || cs[i-1]! == '\'')
+    if c == 'L' && cs[i+1]? == some '.' && !prevId then out := out ++ "_root_."
+    out := out.push c
+  return out
+
 meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   if doTrace then logInfo m!"{cmd}"
   elabCommand cmd
@@ -1929,6 +1941,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     | some l => s!"(vcgen [{vcg}] <;> (try simp_all [{l}]) <;> grind [{attrs}])"
     | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
   let parseTac (txt : String) : CommandElabM Syntax := do
+    -- the library's names root-qualified, so that a binder `L` does not capture them
+    let txt := rootL txt
     if doTrace then logInfo m!"{txt}"
     match Parser.runParserCategory (← getEnv) `tactic s!"({txt})" with
     | .ok t => pure (reposition t stx)

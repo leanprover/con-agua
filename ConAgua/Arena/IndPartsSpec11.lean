@@ -131,56 +131,15 @@ def bmfK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m)
 
-mutual
-/-- **The model of `block_member_counts_find`.** -/
-def bmfW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, no, nl, ro, rl, mm =>
-    if rl = 0 then some ([0, 0, 0], m)
-    else bmfK1 n no nl ro rl mm (rdW (m.arr64 IW) ro)
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 1))
-      (recTW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 1))
-        (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3)))
-/-- After `rec_target_of`. -/
-def bmfK1 (n : Nat) (no nl ro rl mm e mI : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 = mm then some ([1, mI, rdW (m1.arr64 IW) (e + 2)], m1)
-    else bmfK2 (bmfW n m1 no nl (ro + 1) (rl - 1) mm)
-end
-
-section arms
-variable (n : Nat) (m m1 : Mem) (no nl ro rl mm e mI : Word) (r1 : List Word)
-theorem bmfW_nil (h : rl = 0) : bmfW (n + 1) m no nl ro rl mm = some ([0, 0, 0], m) := by
-  simp [bmfW, h]
-theorem bmfW_cons (h : rl ≠ 0) : bmfW (n + 1) m no nl ro rl mm =
-    bmfK1 n no nl ro rl mm (rdW (m.arr64 IW) ro) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 1))
-      (recTW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 1))
-        (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3))) := by simp [bmfW, h]
-theorem bmfK1_hit (h : r1.headD 0 = mm) : bmfK1 n no nl ro rl mm e mI (some (r1, m1)) =
-    some ([1, mI, rdW (m1.arr64 IW) (e + 2)], m1) := by simp only [bmfK1]; exact if_pos h
-theorem bmfK1_miss (h : r1.headD 0 ≠ mm) : bmfK1 n no nl ro rl mm e mI (some (r1, m1)) =
-    bmfK2 (bmfW n m1 no nl (ro + 1) (rl - 1) mm) := by simp only [bmfK1]; exact if_neg h
-theorem bmfK2_some : bmfK2 (some (r1, m1)) =
+theorem bmfK2_some (m1 : Mem) (r1 : List Word) : bmfK2 (some (r1, m1)) =
     some ([r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0], m1) := rfl
-end arms
-attribute [ind_grind] bmfW_nil bmfW_cons bmfK1_hit bmfK1_miss bmfK2_some
+attribute [ind_grind] bmfK2_some
 
-theorem bmf_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) : ∀ (s₀ : St) (no nl ro rl mm : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_member_counts_find" [no, nl, ro, rl, mm]
-    ⦃fun r s' => LocEq s' s₀ ∧ bmfW n s₀.mem no nl ro rl mm = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ no nl ro rl mm; rw [invoke_eq _ hP.mcFind]; simp only [callFn, blockMemberCountsFind]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ no nl ro rl mm
-    rw [invoke_eq _ hP.mcFind]
-    simp only [callFn, blockMemberCountsFind]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-- **`block_member_counts_find` is its model `bmfW`** (generated). -/
+l_model bmf_spec (p : Prog) (hP : IndPartsProg4 p)
+  fns [hP.mcFind ↦ bmfW]
+  specs [recTargetOf_spec p hP.view hP.find hP.target hP.strip hP.ad n]
+  grind [ind_grind] finish [rdW_eq] gen 20
 
 theorem decSR_fields {m : Mem} {p : Nat} {cv : IConstantVal} {mI rP : Nat} {rules : List IRecRule}
     (h : decSR m p = some (cv, mI, rP, rules)) :
@@ -254,14 +213,14 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         (∀ q, x = some q → q.2.1 < 2 ^ 64 ∧ q.2.2.1 < 2 ^ 64) ∧ StageR dn vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
-  | zero => intro m a ro rl rs _ _ _ _ r m' e; simp [bmfW] at e
+  | zero => intro m a ro rl rs _ _ _ _ r m' e; rw [bmfW.eq_1] at e; cases e
   | succ n ih =>
     intro m a ro rl rs hS hrs hnm hnb
     by_cases hl : rl = 0
-    · rw [bmfW_nil n m no nl ro rl mm hl]
+    · rw [bmfW.arm1 n m no nl ro rl mm hl]
       subst hl; rw [partsPSl_nil hrs]
       exact Sim.ret ⟨rfl, by simp, hS, IWGrow.refl _⟩
-    rw [bmfW_cons n m no nl ro rl mm hl]
+    rw [bmfW.arm2 n m no nl ro rl mm hl]
     obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -278,7 +237,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [partsFindM_cons]
     simp only [bmfPred, bind_assoc, pure_bind]
     have hnames : decHL m no.toNat nl.toNat = some names := hnm.get (OMono.decHL _ _)
-    refine Sim.bindK (by simp [bmfK1]) (fun _ _ => by rw [bmfK1])
+    refine Sim.bindK (bmfW.k_rec_target_of.none ..) (fun _ _ => by rw [bmfW.k_rec_target_of.eq_2])
       (Q := fun r t m1 a1 => r = [UInt64.ofNat t] ∧ t ≤ names.length ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1)
       ?_ ?_
     · intro r1 m1 e
@@ -304,7 +263,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
       simp only [hc, hb, if_false, Bool.false_eq_true]
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
-      refine Sim.bindK rfl (fun _ _ => by rw [bmfK2])
+      refine Sim.bindK rfl (fun _ _ => by rw [bmfW.k_block_member_counts_find])
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
           (Nat.le_trans hnb hg1.1)) ?_
       rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
