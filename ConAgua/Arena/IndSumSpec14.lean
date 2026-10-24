@@ -140,8 +140,7 @@ theorem efW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   rw [efK1_some] at h
   obtain ⟨r2, m2, hc, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [efK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨ws, hws, rfl, hwl⟩ := slR_of_decHL m _ _ xs hd (hS.lt64 hb)
   simp only [UInt64.ofNat_toNat] at hws
   have hI1 : m1.arr64 IW = m.arr64 IW := by

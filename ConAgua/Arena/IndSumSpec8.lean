@@ -160,8 +160,7 @@ theorem spgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rcases hr : rowW n m2 (u.headD 0) nF so sl z 0 nF with _ | ⟨rr, m3⟩
   · rw [hl, hr] at e; cases e
   rw [hl, hr, spgK3_some] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   have hst2 : so.toNat + sl.toNat ≤ iwTop m2 := Nat.le_trans hst hg2.1
   obtain ⟨gs, a3, hrun, hS3, hg3, hd3, ht3⟩ := rowW_ok dn vis fe n m2 m3 a2 _ _ so sl z 0 nF rr bs sorts
     hr hS2 hu (by rw [decHL_grow hg2 hst]; exact hs) (hS2.lt64 (by omega)) (hS2.lt64 hst2) (by omega)

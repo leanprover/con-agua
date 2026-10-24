@@ -125,8 +125,7 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
       ConRon.Bridge.denoteNListE_ext c3.ext _ _ hl, htyd, hty]
   obtain ⟨r5, m5, h5, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [ctsK5_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hqx : CVExt m4 q.toNat := ⟨by omega, fun lo ll e1 e2 => by
     rcases hsl4 lo ll e1 e2 with h' | h'
     · left; omega
@@ -227,8 +226,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
     · rw [ctK1_fast0 (realCall p) k m1 vis cv n cvTa0 r1 hf hne] at h; cases h
     rw [ctK1_fast (realCall p) k m1 vis cv n cvTa0 r1 hf hne] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a hS1.1.arena.1 _ hne
     have h2 := eViewW_head2 m1 _ hf.2 hne
     have htag : (decE (r1.tail.tail.tail.headD 0)).tag = ETag.sort :=
@@ -259,8 +257,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
   · rw [ctK1_slow (realCall p) k m1 vis cv n cvTa0 r1 hf] at h
     obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
     rw [ctK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hApd hCrk k (by omega)
       m1 m2 a cv n cvTa0 r2 cvv cvTa h2 hC1 hcv1 (by have := hg1.2.1; omega)
       (fun lo ll e1 e2 => by

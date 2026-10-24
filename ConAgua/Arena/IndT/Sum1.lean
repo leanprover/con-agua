@@ -65,8 +65,7 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
     generalize hv : eViewW m1 w = v at h
     by_cases hs : v.headD 0 = 2 ∧ n = 0
     · rw [wtK2_sort (realCall p) k m1 vis i n v hs.1 hs.2] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hne : v ≠ [] := fun h0 => by rw [h0] at hs; simp at hs
       obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w (hv ▸ hne)
       rw [hv] at hVR
@@ -160,8 +159,7 @@ theorem wtW_simC (k : Nat) (hk : k ≤ 2 ^ 62) :
         rcases h5 : consW k m4 x (rr.headD 0) (rr.tail.headD 0) with _ | ⟨ro, m5⟩
         · rw [h5] at h; simp [wtK6] at h
         rw [h5, wtK6_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS5, hg5, hd5, ht5⟩ := consW_stage h5 hC4.stage ht4 hx32 hd4
         have hA5 := consW_afr h5 hA4
         refine ⟨(ty :: bs, s'), a4, ?_, hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state),

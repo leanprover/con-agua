@@ -141,8 +141,7 @@ theorem plW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   rw [plK4_some] at h
   obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [plK5_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
     ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
@@ -267,8 +266,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     | none => rw [he] at h; cases h
     | some e =>
     rw [he] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have htk := decHL_take hargs5 _ hle'
     obtain ⟨ws1, hs1, hm1, hb1⟩ := slR_of_decHL m5 _ _ _ htk (by omega)
     obtain ⟨ws2, hs2, hm2, hb2⟩ := slR_of_decHL m5 _ _ _ hps (by omega)
@@ -289,8 +287,7 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     refine ⟨_, a5, (hrun _).mpr rfl, hS5, hgall, ?_⟩
     exact srRes_ok _ _ _ _ _ _ _ _ _ hfn hln hb3
   · rw [srK5_gt k m5 nP nIdx hd' (rf.headD 0) (ra.headD 0) (ra.tail.headD 0) rp hle] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hgt : (ra.tail.headD 0).toNat < (rp.tail.headD 0).toNat := by
       have : ¬ (rp.tail.headD 0).toNat ≤ (ra.tail.headD 0).toNat :=
         fun h' => hle (UInt64.le_iff_toNat_le.mpr h')

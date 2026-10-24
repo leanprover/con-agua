@@ -108,8 +108,7 @@ theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rw [plgW_nil k m o 0 rfl] at h
       obtain ⟨q, m1, h0, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [plK0_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
       have : lps = [] := by simpa [decHL, hslice?] using hd.symm
       subst this
@@ -129,8 +128,7 @@ theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         (by rw [decHL_grow hg1 (by omega)]; exact hd') (by omega) (by have := hg1.1; omega)
       obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [plK3_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 (Nat.le_of_eq ht2) hu32 hd2
       refine ⟨decI u :: us, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hd3, by simpa using ht3⟩
       simp only [paramLevels.go, StateT.run_bind, hrun1]
@@ -223,8 +221,7 @@ theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (
   rw [plK4_some] at hm
   obtain ⟨r2, m2, h2, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
   rw [plK5_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
   obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
     ilF_ok dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
@@ -389,8 +386,7 @@ theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     by_cases hk : k = 0
     · subst hk
       rw [colW_nil n m uo ul so sl z j 0 acc rfl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact ⟨decI acc, a, by simp [structProjGuards.col]; rfl, hS, IWGrow.refl m, by simpa using hacc,
         by simp⟩
     have hk1 : 1 ≤ k.toNat := by
@@ -413,8 +409,7 @@ theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨a1, hrun1, hS1, hg1⟩ := internMax_stage hS acc _ hacc hsj32 h1
       obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [colK2_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ := ih m1 m2 a1 uo ul so sl z (j + 1) (k - 1) mx r2
         used sorts h2 hS1 (by rw [decBL_grow hg1 hut]; exact hu) (by rw [decHL_grow hg1 hst]; exact hs)
         hub hsb (by have := hg1.1; omega) (by have := hg1.1; omega) hz hmx32 (by omega)
@@ -429,8 +424,7 @@ theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rw [colW_skip n m uo ul so sl z j k acc hk hd'] at h
       obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [colK2_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ := ih m m2 a uo ul so sl z (j + 1) (k - 1) acc r2
         used sorts h2 hS hu hs hub hsb hut hst hz hacc (by omega)
       refine ⟨x, a2, ?_, hS2, hg2, by simpa using hH, by simpa using hx⟩
@@ -556,8 +550,7 @@ theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       rw [rowW_nil n m uo ul so sl z i 0 rfl] at h
       obtain ⟨q, m1, h0, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [plK0_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
       exact ⟨[], a, by simp [structProjGuards.row]; rfl, hS1, hg1, by simp [decHL, hslice?],
         by simp [htop, hq]⟩
@@ -582,8 +575,7 @@ theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       hub hsb (by have := hg1.1; omega) (by have := hg1.1; omega) hz (by omega)
     obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
     rw [plK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 (Nat.le_of_eq ht2) hH1 hd2
     refine ⟨g :: gs, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hg]; exact hd3, ht3⟩
     rw [hks]
@@ -645,8 +637,7 @@ theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       rw [psGoW_nil n m o nP 0 k rfl] at h
       obtain ⟨q, m1, h0, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [psK0_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
       exact ⟨[], a, by simp [structPsAt.go]; rfl, hS1, hg1, by simp [decHL, hslice?], by simp [htop, hq]⟩
     · rw [psGoW_cons n m o nP N k hN] at h
@@ -667,8 +658,7 @@ theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
         ih m1 m2 a1 o nP (N - 1) (k + 1) r2 hr hS1 hon (by rw [hk1, hN1']; omega)
       obtain ⟨r3, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [psK3_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcw hS2 (Nat.le_of_eq ht2) hb32 hd2
       refine ⟨decE b :: xs, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3,
         by simpa using ht3⟩
@@ -697,8 +687,7 @@ theorem psAtW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     rw [psAtW_succ] at h
     obtain ⟨r0, m0, hg, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
     rw [psK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨xs, a', hrun, hS', hgr, hd, ht⟩ := psGoW_stage dn vis fe n m m0 a o nP nP 0 r0 hg hS hon (by simp)
     exact ⟨xs, a', by simpa [structPsAt] using hrun, hS', hgr, by simpa using hd, by simpa using ht⟩
 

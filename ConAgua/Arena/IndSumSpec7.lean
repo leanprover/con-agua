@@ -111,8 +111,7 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   | none =>
     have hz : rs.headD 0 = 0 := hdec
     rw [usgK1_some_zero hz] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, mp, a1, ?_, rfl, hM1, hS1, hg1⟩
     simp only [structUsedLaterGo, StateT.run_bind]
     rw [hrun]
@@ -150,8 +149,7 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   | none =>
     have hz : rs.headD 0 = 0 := hdec
     rw [ustK1_some_zero hz] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, ?_, rfl, ⟨mp, hM1⟩, hS1, hg1⟩
     simp only [structUsedLater, StateT.run_bind]
     rw [hrun]
@@ -336,8 +334,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     · rw [ulW_zero k m cty nP n base hn0] at h
       obtain ⟨q, m1, hal, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [ulK0_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage hal hS
       obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
       obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
@@ -375,8 +372,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
           ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
         obtain ⟨rc, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
         rw [ulK3_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
         have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
         have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by

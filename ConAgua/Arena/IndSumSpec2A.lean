@@ -421,8 +421,7 @@ theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
   | some y =>
   obtain ⟨e, m2⟩ := y
   rw [h2, spaK2_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
   obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
   have hrun : (structProjArgP (decI T) j.toNat).run a₀ = .ok (decE e, a2) := by
@@ -514,8 +513,7 @@ theorem psAtW_ok (n : Nat) (m m' : Mem) (a : AState) (o nP : Word) (r : List Wor
     | some x =>
     obtain ⟨r0, m0⟩ := x
     rw [hg, psK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨xs, a', hrun, hR', hgr, hs, hd, ht⟩ :=
       psGoW_ok n m m0 a o nP nP 0 r0 hg hR hsz hc hon (by simp)
     exact ⟨xs, a', by simpa [structPsAt] using hrun, hR', hgr, hs, by simpa using hd, by simpa using ht⟩
@@ -568,8 +566,7 @@ theorem structProjPs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
   | some x =>
   obtain ⟨r0, m0⟩ := x
   rw [h1, psK3_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm
-  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ h1 hR hsz hc2 (by simpa using hon)
   have hrun' : (structProjPs nP.toNat).run a₀ = .ok (xs, a') := by simpa [structProjPs] using hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'

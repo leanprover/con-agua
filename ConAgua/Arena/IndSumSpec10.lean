@@ -60,8 +60,7 @@ theorem sumSim_map {β γ α : Type} {K : Option (β × Mem) → Option (γ × M
   rcases hmo : mo with _ | ⟨r1, m1⟩
   · rw [hmo, hn] at e; cases e
   rw [hmo, hs] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   obtain ⟨x, a', h1, h2⟩ := h r1 m1 hmo
   exact ⟨x, a', h1, hq _ _ _ _ h2⟩
 

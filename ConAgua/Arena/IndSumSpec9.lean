@@ -247,8 +247,7 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     intro m m' a vis fe nP o l cs r h hS hcs
     by_cases hl : l = 0
     · rw [cscW_nil p k m nP o l vis hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : cs = [] := by
         have := hcs; simp only [DecB, hl, decPL] at this; simpa using this.symm
       subst this
@@ -293,8 +292,7 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     rcases h3 : cscW p k s4.mem nP (o + 1) (l - 1) (rv.headD 0) with _ | ⟨rr, m3⟩
     · rw [h3] at h; simp [cscK3] at h
     rw [h3, cscK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1 : (l - 1).toNat = L := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega

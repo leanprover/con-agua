@@ -134,8 +134,7 @@ theorem spaW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [spaK_some] at h
   obtain ⟨e, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [spaK2_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
   obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
   refine ⟨a2, ?_, hS2, hg1.trans hg2⟩
@@ -191,8 +190,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     by_cases hk : k = 0
     · subst hk
       rw [pbW_nil n m T 0 i h rfl] at hm
-      simp only [Option.some.injEq, Prod.mk.injEq] at hm
-      obtain ⟨rfl, rfl⟩ := hm
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
       refine ⟨some [], a, by simp [structProjBodiesGo]; rfl, hS, IWGrow.refl m, ?_, hA⟩
       simp [PBDec, decHL, hslice?]
     have hk1 : 1 ≤ k.toNat := by
@@ -258,16 +256,14 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         | none =>
           have hz : rr.headD 0 = 0 := hdec3
           rw [pbK3_none n m3 x rr hz] at hm
-          simp only [Option.some.injEq, Prod.mk.injEq] at hm
-          obtain ⟨rfl, rfl⟩ := hm
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
           exact ⟨none, a3, htwin _ _ _ hrun3 rfl, hS3, hg13, rfl, hA3⟩
         | some l =>
           obtain ⟨h1', hdl, htl⟩ := hdec3
           rw [pbK3_some n m3 x rr (by rw [h1']; decide)] at hm
           obtain ⟨ro, m4, h4, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
           rw [pbK4_some] at hm
-          simp only [Option.some.injEq, Prod.mk.injEq] at hm
-          obtain ⟨rfl, rfl⟩ := hm
+          obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
           obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stage h4 hS3 htl hx32 hdl
           refine ⟨some (ty :: l), a3, htwin _ _ _ hrun3 rfl, hS4, hg13.trans hg4, ⟨rfl, ?_, ?_⟩,
             consW_afr h4 hA3⟩
@@ -275,8 +271,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
           · simp only [List.tail_cons, List.headD_cons]; omega
       | _ => simp only [ViewR] at hVR <;> (rw [h6] at hVR) <;> simp at hVR
     · rw [pbW_tag n m T k i h hk ht] at hm
-      simp only [Option.some.injEq, Prod.mk.injEq] at hm
-      obtain ⟨rfl, rfl⟩ := hm
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
       refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl, hA⟩
       rw [hks, structProjBodiesGo, ← decE_eq,
         if_neg (fun e => ht (htf.mp e))]
@@ -416,8 +411,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [projPsW_succ] at h1
   obtain ⟨r0, m0, h0, h1⟩ := kSome_inv h1 rfl (fun _ _ => rfl)
   rw [psK3_some] at h1
-  simp only [Option.some.injEq, Prod.mk.injEq] at h1
-  obtain ⟨rfl, rfl⟩ := h1
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
   obtain ⟨ps, a1, hrun1, hS1, hg1, hps, -⟩ := psAtW_stage dn vis fe k' m m0 a 1 nP r0 h0 hS (by simpa using hnP)
   have hA0 : AbsOK m0 := psAtW_afr h0 hA
   simp only [List.headD_cons, List.tail_cons] at h
@@ -439,8 +433,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | none =>
     have hz : ri.headD 0 = 0 := hdec2
     rw [spbK2_none (k' + 1) m2 T nF ri hz] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl, hA2⟩
     simp only [structProjBodies]
     rw [hrun0]; rfl
@@ -455,8 +448,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     | none =>
       have hz : rg.headD 0 = 0 := hdec3
       rw [spbK3_none m3 rg hz] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨none, a3, ?_, hS3, (hg1.trans hg2).trans hg3, rfl, hA3⟩
       simp only [structProjBodies]
       rw [hrun0]
@@ -464,8 +456,7 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     | some l =>
       obtain ⟨hl1, hdl, htl⟩ := hdec3
       rw [spbK3_some m3 rg (by rw [hl1]; decide)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨some l.toArray, a3, ?_, hS3, (hg1.trans hg2).trans hg3, ⟨rfl, by simpa using hdl,
         by simpa using htl⟩, hA3⟩
       simp only [structProjBodies]
