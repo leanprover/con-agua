@@ -146,6 +146,12 @@ def tfld (m : Mem) (R : TRec) (t i f : Word) : Word := rdW (m.arr64 R.arr) (R.ad
 /-- The node count of tier `t`. -/
 def tcnt (m : Mem) (R : TRec) (t : Word) : Word := rdW (m.arr64 CTL) (R.ca + t)
 
+/-- The node count of tier `t` of the name table with tag `g` (`0` anonymous, `1` str, else
+num): what L reads as `c := NANON⟨t⟩.count; if g == 1 { c := NSTR⟨t⟩.count }; if g == 2 { c :=
+NNUM⟨t⟩.count }`. -/
+def nameCnt (m : Mem) (g t : Word) : Word :=
+  if g = 0 then tcnt m NANON t else if g = 1 then tcnt m NSTR t else tcnt m NNUM t
+
 /-- The checked read of a field, as `vcgen` sees it after `evalE_tld`: `oob` out of bounds. -/
 def tld (R : TRec) (t i f : Word) : M Word := do
   let m := (← get).mem
