@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.NNumStore
 
@@ -95,7 +95,7 @@ def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
 /-- **The state relation** of the `num` store: the library's relation for the name store's two
 `num` tables. -/
 def NNumR (m : Mem) (a : AState) : Prop :=
-  StoreR nnumSch NnRecRel nnhash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.nums
+  ConsR nnumCS NnRecRel m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.nums
     a.store.lss.ls.ns.scr.nums
 
 /-- A node's relation and hash depend only on its two words. -/
@@ -132,15 +132,15 @@ theorem nnumHomeOK : HomeOK nnhash (nnMt m pre u) m (nnumHashW pre u) := by
 
 include hpre in
 /-- The record `nnum_push` writes holds the node. -/
-theorem nnumNewOK : NewOK nnumSch NnRecRel nnhash m [pre, u] (nnKey (decI pre) u.toNat)
+theorem nnumNewOK : NewOKR nnumSch NnRecRel nnhash m [pre, u] (nnKey (decI pre) u.toNat)
     (nnumHashW pre u) := by
-  intro t j ht hroom
-  have e : ∀ g, g < 2 → fld nnumSch (pushG nnumSch m t [pre, u] j (cntW nnumSch m t)) t
+  intro t ht hroom
+  have e : ∀ g, g < 2 → fld nnumSch (recW nnumSch m t [pre, u]) t
       (cntW nnumSch m t) g = [pre, u].getD g.toNat 0 := by
     intro g hg
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG nnumSch nnumSch_wf] <;> simp only [nnumSch, Schema.ad] at * <;> grind
+    rw [fld_recW nnumSch nnumSch_wf] <;> simp only [nnumSch, Schema.ad] at * <;> grind
   have e0 := e 0 (by decide)
   have e1 := e 1 (by decide)
   rw [fld_nn0] at e0
@@ -166,6 +166,16 @@ theorem nnpushOK_room (m : Mem) (t : Word) (h : nnpushOK m t = true) : PushRoom 
   have := UInt64.toNat_shiftRight (m.len64 NNREC) 2
   simp only [PushRoom, cntW, nncnt, nnumSch, len64_eq] at *
   grind
+
+/-- **The `nnum` table's shape.** -/
+theorem nnumCS_wf : nnumCS.WF where
+  sch := nnumSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [nnumCS] at h
+  colRoom A h := by simp [nnumCS] at h
+  room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, nnumCS, hk]
 
 theorem nnpushMem_eq (m : Mem) (t pre u j c : Word) :
     nnpushMem m t pre u j c = pushG nnumSch m t [pre, u] j c := by
@@ -203,13 +213,10 @@ include hR hpre in
 theorem nnintern_correct (w : Word) (m' : Mem) (hI : nninternW m pre u = some (w, m')) :
     AM.ok (internNNode (.num (decI pre) u.toNat)) a ∧
     NNumR m' (AM.st (internNNode (.num (decI pre) u.toNat)) a) ∧
-    AM.res (internNNode (.num (decI pre) u.toNat)) a = decI w := by
-  rw [nninternW_eq] at hI
-  exact intern_correctG nnumSch NnRecRel nnhash nnumSch_wf nnFrame nnumLens a m hR _ _ _ _ _
-    (internNNode_num_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (nnumMatchOK m pre u hpre)
-    (nnumHomeOK m pre u) _ _ (probe_homeG nnumSch m 0 _ _ (nnprobeW_arm m pre u 0) _)
-    (probe_homeG nnumSch m 1 _ _ (nnprobeW_arm m pre u 1) _) _ (nnpushOK_room m) _ rfl
-    (nnumNewOK m pre u hpre) w m' hI
+    AM.res (internNNode (.num (decI pre) u.toNat)) a = decI w :=
+  consIntern_correct nnumCS_wf nnFrame (colFree_none _ rfl) nnumLens a hR _ _ _ _ _
+    (internNNode_num_run _ _ a) false rfl [pre, u] (by simp [skipC, nnumCS]) (by simp)
+    ⟨rfl, nnumMatchOK m pre u hpre, nnumHomeOK m pre u, nnumNewOK m pre u hpre⟩ w m' hI
 
 end intern
 
