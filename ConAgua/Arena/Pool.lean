@@ -449,6 +449,36 @@ theorem Agree.lv (p q : Array Word) (t o l i : Nat) (h : Agree p q t) (hk : o + 
   · rfl
 grind_pattern [arena_grind] Agree.lv => Agree p q t, lv p o l i
 
+/-! ## The virtual pool against the pool (today's layout): the bridges for models that still
+read the pool array -/
+
+theorem Agree.symm' {p q : Array Word} {t : Nat} (h : Agree p q t) : Agree q p t :=
+  fun j hj => (h j hj).symm
+
+theorem Agree.trans'' {p q r : Array Word} {t : Nat} (h₁ : Agree p q t) (h₂ : Agree q r t) :
+    Agree p r t := fun j hj => (h₁ j hj).trans (h₂ j hj)
+
+theorem Agree.mono' {p q : Array Word} {t t' : Nat} (h : Agree p q t) (ht : t' ≤ t) :
+    Agree p q t' := fun j hj => h j (by omega)
+
+/-- A pool-array agreement below `t` is a virtual-pool agreement below `t`. -/
+theorem Agree.vpool {m m' : Mem} {t : Nat} (h : Agree (m'.arr64 POOL) (m.arr64 POOL) t)
+    (ht : t ≤ pcap m) (ht' : t ≤ pcap m') (hs : pcap m < 2 ^ 64) (hs' : pcap m' < 2 ^ 64) :
+    Agree (vpool m') (vpool m) t :=
+  ((vpool_agree m' hs').mono' ht').trans'' (h.trans'' ((vpool_agree m hs).mono' ht).symm')
+
+theorem pv_vpool (m : Mem) (o l : Nat) (h : o + l ≤ pcap m) (hs : pcap m < 2 ^ 64) :
+    pv (vpool m) o l = pv (m.arr64 POOL) o l :=
+  Agree.pv _ _ _ _ _ (vpool_agree m hs) h
+
+theorem Norm_vpool (m : Mem) (o l : Nat) (h : o + l ≤ pcap m) (hs : pcap m < 2 ^ 64) :
+    Norm (vpool m) o l ↔ Norm (m.arr64 POOL) o l := by
+  have ha := vpool_agree m hs
+  simp only [Norm]
+  constructor <;> intro hn hl
+  · rw [← ha _ (by omega)]; exact hn hl
+  · rw [ha _ (by omega)]; exact hn hl
+
 theorem Norm.zero (p : Array Word) (o : Nat) : Norm p o 0 := by simp [Norm]
 grind_pattern [arena_grind] Norm.zero => Norm p o 0
 

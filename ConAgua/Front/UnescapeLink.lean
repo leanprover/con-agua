@@ -300,30 +300,30 @@ theorem escCL_valid (B : ByteArray) (j : USize) (v : UInt32) (j' : USize)
 /-- The loop has written the bytes `L` at `POOL[top ‥ top + k)`, and changed nothing else of the
 memory `m₀` it started from. -/
 def PoolInv (m₀ m : Mem) (top k : Word) (L : List UInt8) : Prop :=
-  Frame POOL m₀ m ∧ pcap m = pcap m₀ ∧
-  Agree (vpool m) (vpool m₀) top.toNat ∧ top.toNat + k.toNat ≤ pcap m ∧
-  k.toNat = L.length ∧ sliceL (vpool m) top.toNat k.toNat = L.map UInt8.toUInt64
+  Frame POOL m₀ m ∧ (m.arr64 POOL).size = (m₀.arr64 POOL).size ∧
+  Agree (m.arr64 POOL) (m₀.arr64 POOL) top.toNat ∧ top.toNat + k.toNat ≤ (m.arr64 POOL).size ∧
+  k.toNat = L.length ∧ sliceL (m.arr64 POOL) top.toNat k.toNat = L.map UInt8.toUInt64
 
 theorem poolInv_init (m : Mem) (hp : PoolOK m) : PoolInv m m m.top 0 [] := by
   obtain ⟨-, -, -, ht⟩ := hp
   refine ⟨Frame.refl _ _, rfl, fun _ _ => rfl, by simpa using ht, rfl, by simp [sliceL]⟩
 
 section inv
-variable (m₀ : Mem) (hs : pcap m₀ < 2 ^ 63) (top : Word)
+variable (m₀ : Mem) (hs : (m₀.arr64 POOL).size < 2 ^ 63) (top : Word)
 include hs
 
 theorem poolInv_write (m : Mem) (k : Word) (L : List UInt8) (h : PoolInv m₀ m top k L)
     (hl : ¬ m.len64 POOL ≤ top + k) (x : UInt8) :
     PoolInv m₀ (m.set64 POOL (top + k) x.toUInt64) top (k + 1) (L ++ [x]) := by
   obtain ⟨hf, hsz, hag, hb, hk, hsl⟩ := h
-  have hlen : (m.len64 POOL).toNat = pcap m := by
+  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have htk : (top + k).toNat = top.toNat + k.toNat := by rw [UInt64.toNat_add]; simp; omega
-  have hlt : top.toNat + k.toNat < pcap m := by
+  have hlt : top.toNat + k.toNat < (m.arr64 POOL).size := by
     rw [UInt64.le_iff_toNat_le, hlen, htk] at hl; omega
   have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hset : (m.set64 POOL (top + k) x.toUInt64).arr64 POOL =
-      (vpool m).set! (top.toNat + k.toNat) x.toUInt64 := by
+      (m.arr64 POOL).set! (top.toNat + k.toNat) x.toUInt64 := by
     rw [Mem.arr64_set64_same, htk]
   refine ⟨Frame.set64 _ _ _ _ _ hf, by rw [Mem.size_arr64_set64, hsz], fun j hj => ?_, ?_, ?_, ?_⟩
   · rw [hset, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, if_neg (by omega)]
@@ -343,10 +343,10 @@ theorem poolInv_write (m : Mem) (k : Word) (L : List UInt8) (h : PoolInv m₀ m 
     · have hik : i = k.toNat := by omega
       subst hik
       rw [if_pos (by omega), List.getElem_append_right (by simp; omega)]
-      simp [hk, show top.toNat + L.length < pcap m by omega]
+      simp [hk, show top.toNat + L.length < (m.arr64 POOL).size by omega]
 
 theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8),
-    PoolInv m₀ m top k L → top.toNat + k.toNat + bs.length ≤ pcap m →
+    PoolInv m₀ m top k L → top.toNat + k.toNat + bs.length ≤ (m.arr64 POOL).size →
     PoolInv m₀ (wrs m (top + k) (bs.map UInt8.toUInt64)) top (k + UInt64.ofNat bs.length) (L ++ bs) := by
   induction bs with
   | nil =>
@@ -357,7 +357,7 @@ theorem poolInv_wrs (bs : List UInt8) : ∀ (m : Mem) (k : Word) (L : List UInt8
   | cons x xs ih =>
     intro m k L h hb
     have hsz := h.2.1
-    have hlen : (m.len64 POOL).toNat = pcap m := by
+    have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
       simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
     have htk : (top + k).toNat = top.toNat + k.toNat := by rw [UInt64.toNat_add]; simp; omega
     have hl : ¬ m.len64 POOL ≤ top + k := by
@@ -421,7 +421,7 @@ theorem poolInv_u8 (m : Mem) (k : Word) (L : List UInt8) (v : UInt32) (k' : Word
     rw [← hw, List.length_map]
   have hsz := h.2.1
   have hb := h.2.2.2.1
-  have hlen : (m.len64 POOL).toNat = pcap m := by
+  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have hc : (UInt64.ofNat ((encW v.toUInt64).length - 1)).toNat = (encW v.toUInt64).length - 1 :=
     UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
@@ -447,7 +447,7 @@ theorem fromUTF8?_toByteArray' (a : ByteArray) (str : String) (h : String.fromUT
 
 section main
 variable (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : b.size < 2 ^ 63) (s e : Word)
-    (hse : s.toNat ≤ e.toNat) (he : e.toNat ≤ b.size) (m₀ : Mem) (hs : pcap m₀ < 2 ^ 63)
+    (hse : s.toNat ≤ e.toNat) (he : e.toNat ≤ b.size) (m₀ : Mem) (hs : (m₀.arr64 POOL).size < 2 ^ 63)
     (top : Word)
 include h64 hsize hse he hs
 
@@ -682,12 +682,13 @@ theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
   · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
-  · rw [hpool']; exact hag
+  · rw [vpool_set64_ne _ _ _ _ (by decide)]
+    exact Agree.vpool hag (by omega) (by omega) (by omega) (by omega)
   · rw [htop', hT]; omega
   · rw [htop', hT, hpool']; omega
   · rw [hpool', hsz]
   · simp only [SliceOK, htop', hT]; omega
-  · rw [hpool', hsl, strWords]
+  · rw [vpool_set64_ne _ _ _ _ (by decide), sliceL_vpool _ _ _ (by omega) (by omega), hsl, strWords]
 
 /-- The pool growing keeps `DerR` (it reads none of the pool). -/
 theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : ConRon.Arena.AState) (hD : DerR m a) : DerR m' a :=
