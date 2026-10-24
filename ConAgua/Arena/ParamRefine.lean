@@ -1,4 +1,4 @@
-import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ConsLibRel
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.ParamStore
 import ConAgua.Arena.LpColRel
@@ -88,7 +88,7 @@ def PRecRel (m : Mem) (t i : Word) (k : ParamNode) : Prop :=
 /-- **The state relation** of the `param` store: the library's relation for the level store's two
 `param` tables. -/
 def ParamR (m : Mem) (a : AState) : Prop :=
-  StoreR paramSch PRecRel phash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.params
+  ConsR paramCS PRecRel m a.store.lss.ls.scratchOn a.store.lss.ls.pers.params
     a.store.lss.ls.scr.params
 
 /-- A node's relation and hash depend only on its word. -/
@@ -121,13 +121,13 @@ theorem paramHomeOK : HomeOK phash (pMt m u) m (paramHashW u) := by
 
 include hu in
 /-- The record `param_push` writes holds the node. -/
-theorem paramNewOK : NewOK paramSch PRecRel phash m [u] (paramKey (decI u)) (paramHashW u) := by
-  intro t j ht hroom
-  have e : fld paramSch (pushG paramSch m t [u] j (cntW paramSch m t)) t
+theorem paramNewOK : NewOKR paramSch PRecRel phash m [u] (paramKey (decI u)) (paramHashW u) := by
+  intro t ht hroom
+  have e : fld paramSch (recW paramSch m t [u]) t
       (cntW paramSch m t) 0 = u := by
     have := hroom.1
     have := hroom.2
-    rw [fld_pushG paramSch paramSch_wf] <;> simp only [paramSch, Schema.ad] at * <;> grind
+    rw [fld_recW paramSch paramSch_wf] <;> simp only [paramSch, Schema.ad] at * <;> grind
   rw [fld_param0] at e
   have := word_decI (decI u : NIdx) u hu
   simp only [PRecRel, phash, paramKey, e]
@@ -147,6 +147,16 @@ theorem ppushOK_room (m : Mem) (t : Word) (h : ppushOK m t = true) : PushRoom pa
   have := UInt64.toNat_shiftRight (m.len64 PREC) 1
   simp only [PushRoom, cntW, pcnt, paramSch, len64_eq] at *
   grind
+
+/-- **The `param` table's shape.** -/
+theorem paramCS_wf : paramCS.WF where
+  sch := paramSch_wf
+  P := by decide
+  S := by decide
+  col A h := by simp [paramCS] at h
+  colRoom A h := by simp [paramCS] at h
+  room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
+  vs ks h hk := by simp [pushArgs, paramCS, hk]
 
 theorem ppushMem_eq (m : Mem) (t u j c : Word) :
     ppushMem m t u j c = pushG paramSch m t [u] j c := by
@@ -182,13 +192,10 @@ include hR hu in
 theorem pintern_correct (w : Word) (m' : Mem) (hI : pinternW m u = some (w, m')) :
     AM.ok (internLNode (.param (decI u))) a ∧
     ParamR m' (AM.st (internLNode (.param (decI u))) a) ∧
-    AM.res (internLNode (.param (decI u))) a = decI w := by
-  rw [pinternW_eq] at hI
-  exact intern_correctG paramSch PRecRel phash paramSch_wf paramFrame paramLens a m hR _ _ _ _ _
-    (internLNode_param_run _ a) false rfl 0 (by simp) (by simp) _ _ (paramMatchOK m u hu)
-    (paramHomeOK m u) _ _ (probe_homeG paramSch m 0 _ _ (pprobeW_arm m u 0) _)
-    (probe_homeG paramSch m 1 _ _ (pprobeW_arm m u 1) _) _ (ppushOK_room m) _ rfl
-    (paramNewOK m u hu) w m' hI
+    AM.res (internLNode (.param (decI u))) a = decI w :=
+  consIntern_correct paramCS_wf paramFrame (colFree_none _ rfl) paramLens a hR _ _ _ _ _
+    (internLNode_param_run _ a) false rfl [u] (by simp [show skipC paramCS m [u] = 0 from rfl])
+    (by simp) ⟨rfl, paramMatchOK m u hu, paramHomeOK m u, paramNewOK m u hu⟩ w m' hI
 
 
 include hR hu in
