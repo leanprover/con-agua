@@ -170,8 +170,7 @@ theorem WRes.frame {x : AM (Std.HashSet EIdx × Array NIdx)} (h : WRes m m₁ i 
 
 theorem WRes.arena {x : AM (Std.HashSet EIdx × Array NIdx)} (h : WRes m m₁ i k tg ws sp sp₁ acc x a)
     (hA : ArenaR m a) : ArenaR m₁ a :=
-  ArenaR.frame_ext _ _ (by intro b hb; simp at hb; rcases hb with rfl | rfl <;> decide)
-    (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) m m₁ h.frame a hA
+  ArenaR.frame_ext _ _ (by decide) (by simp) m m₁ h.frame a hA
 
 theorem WRes.arr {x : AM (Std.HashSet EIdx × Array NIdx)} (h : WRes m m₁ i k tg ws sp sp₁ acc x a)
     (b : ArrId) (hb1 : b ≠ IW) (hb2 : b ≠ HSEEN) (hb3 : b ≠ CTL) : m₁.arr64 b = m.arr64 b :=
@@ -344,12 +343,11 @@ end arms
 
 theorem frame_ext' {m m' : Mem} {a : AState} (hf : MemFrame [HSEEN] [73, 74] m m') (hA : ArenaR m a) :
     ArenaR m' a :=
-  ArenaR.frame_ext _ _ (by intro b hb; simp at hb; subst hb; decide)
-    (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) m m' hf a hA
+  ArenaR.frame_ext _ _ (by decide) (by simp) m m' hf a hA
 
 theorem iw_arena {m m' : Mem} {a : AState} (hf : MemFrame [IW] [] m m') (hA : ArenaR m a) :
     ArenaR m' a :=
-  ArenaR.frame_ext _ _ (by intro b hb; simp at hb; subst hb; decide) (by simp) m m' hf a hA
+  ArenaR.frame_ext _ _ (by decide) (by simp) m m' hf a hA
 
 theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n + 1) := by
   intro m m' a e i k tg ws sp fu sp' seen acc hA he hs hb
