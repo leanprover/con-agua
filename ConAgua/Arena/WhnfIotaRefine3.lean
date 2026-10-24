@@ -512,8 +512,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   by_cases h0 : r₁.headD 0 = 0
   · rw [if_pos h0] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : decBool r₁ = false := by simp only [decBool]; rw [h0]; rfl
-    rw [hb] at hrun1
+    rw [decBool_f_m2c h0] at hrun1
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
       (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
@@ -522,8 +521,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
     · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h0] at hW
-  have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
-  rw [hb] at hrun1
+  rw [decBool_t_m2c h0] at hrun1
   rcases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with _ | ⟨r₂, m₂⟩ <;>
     simp only [hc2, reduceCtorEq] at hW
   obtain ⟨hrun2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hr₂⟩ := CoreSpec.run
@@ -533,8 +531,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   by_cases h20 : r₂.headD 0 = 0
   · rw [if_pos h20] at hW
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb2 : decBool r₂ = false := by simp only [decBool]; rw [h20]; rfl
-    rw [hb2] at hrun2
+    rw [decBool_f_m2c h20] at hrun2
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
       (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
     have hr0 : r.headD 0 = 0 := by simpa using hr.symm
@@ -543,8 +540,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
     · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
     · unfold ResH HW; rw [hr0]; decide
   rw [if_neg h20] at hW
-  have hb2 : decBool r₂ = true := by simp only [decBool]; simpa using h20
-  rw [hb2] at hrun2
+  rw [decBool_t_m2c h20] at hrun2
   rcases hc3 : callW p n "leaf_guard" [fab, major] m₂ with _ | ⟨r₃, m₃⟩ <;>
     simp only [hc3, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -714,8 +710,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
       by_cases h0 : r₁.headD 0 = 0
       · rw [if_pos h0] at hW
         obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-        have hb : decBool r₁ = false := by simp only [decBool]; rw [h0]; rfl
-        rw [hb] at hrun1
+        rw [decBool_f_m2c h0] at hrun1
         obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
           (litMajorToCtor_run_str_unsup (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) a₀ _ htag
             str hview hrun1)
@@ -725,8 +720,7 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
         · rw [hresF]; simp only [decH]; rw [hr1]
         · unfold ResH HW; rw [hr1]; exact hh
       · rw [if_neg h0] at hW
-        have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
-        rw [hb] at hrun1
+        rw [decBool_t_m2c h0] at hrun1
         rcases hc2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩ <;>
           simp only [hc2, reduceCtorEq] at hW
         have hviewA : (AM.st (strLitSupported fe) a₀).store.view (decE h) = some (.lit (.strVal str)) :=

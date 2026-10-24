@@ -557,8 +557,7 @@ theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
   by_cases hc4 : r4.headD 0 ≠ 0
   · rw [if_pos hc4] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hb : decBool r4 = true := by unfold decBool; exact bne_iff_ne.mpr hc4
-    rw [hb] at hrun4
+    rw [decBool_t_m2c hc4] at hrun4
     exact ⟨_, Or.inl ⟨hrun4, rfl⟩, ⟨M4, hS4, hK4, hSt4⟩, hme⟩
   rw [if_neg hc4] at h
   have hb : decBool r4 = false := by

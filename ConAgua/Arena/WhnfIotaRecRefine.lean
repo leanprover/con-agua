@@ -1142,8 +1142,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   by_cases g0 : rc.headD 0 = 0
   · rw [if_pos g0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : decBool rc = false := by unfold decBool; rw [g0]; rfl
-    rw [hb] at hrun2
+    rw [decBool_f_m2c g0] at hrun2
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_cmp (coreKnot (decMode mode) fe id F)
       fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _
       hrun1 hrun2)
@@ -1183,8 +1182,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   by_cases f0 : rf.headD 0 = 0
   · rw [if_pos f0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : decBool rf = false := by unfold decBool; rw [f0]; rfl
-    rw [hb] at hrun4
+    rw [decBool_f_m2c f0] at hrun4
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (vckT_run_cert (coreKnot (decMode mode) fe id F)
       fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL) a₀ _ _ _ _
       _ hrun1 hrun2 hrun3 hrun4)
@@ -1193,8 +1191,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     · rw [hresF]; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg f0] at hW
-  have hb4 : decBool rf = true := by unfold decBool; exact bne_iff_ne.mpr f0
-  rw [hb4] at hrun4
+  rw [decBool_t_m2c f0] at hrun4
   -- the indices
   rw [e4] at hW
   have hsa4 : SpineR m4 so sn args := hsa.keep hSt14.size hSt14.below hsat hspn

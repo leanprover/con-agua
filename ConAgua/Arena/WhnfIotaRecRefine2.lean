@@ -150,8 +150,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   by_cases g0 : r3.headD 0 = 0
   · rw [if_pos g0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : decBool r3 = false := by unfold decBool; rw [g0]; rfl
-    rw [hb] at hrun2
+    rw [decBool_f_m2c g0] at hrun2
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (famT_run_nc3 (decMode mode)
       (coreKnot (decMode mode) fe id F) fe d.toNat _ _ lps (decI us) args.toList (decI usj) cvj rule
       margs.toList a₀ _ _ _ hvc hrun1 hrun2)
@@ -159,8 +158,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     · rw [hresF]; unfold decBool; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [if_neg g0] at hW
-  have hb : decBool r3 = true := by unfold decBool; exact bne_iff_ne.mpr g0
-  rw [hb] at hrun2
+  rw [decBool_t_m2c g0] at hrun2
   -- the checks
   rcases c3 : callW p (N + 1) "iota_rec_vck" [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn,
       rv.headD 0] m2 with _ | ⟨rk, m3⟩ <;> simp only [c3, reduceCtorEq] at hW
@@ -494,13 +492,11 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   · rw [if_pos g0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
-    have hb : decBool rf = false := by unfold decBool; rw [g0]; rfl
-    rw [hb] at hrun1
+    rw [decBool_f_m2c g0] at hrun1
     exact hres0 m1 _ M1 hS1 hK1 hSt1 h0.symm h1.symm hm.symm
       (fire2T_run_fam _ _ _ _ _ _ _ _ _ _ _ _ _ _ a₀ _ hlen hrun1)
   rw [if_neg g0] at hW
-  have hb : decBool rf = true := by unfold decBool; exact bne_iff_ne.mpr g0
-  rw [hb] at hrun1
+  rw [decBool_t_m2c g0] at hrun1
   rw [e1] at hW
   -- the right-hand side
   rcases c2 : callW p (N + 1) "rule_rhs_at" [c, rdW E rl, rdW E (recP + 2), rdW E (recP + 3),
