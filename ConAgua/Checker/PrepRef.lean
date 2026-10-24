@@ -109,25 +109,25 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     have := UInt64.not_lt.mp hlt; rw [UInt64.le_iff_toNat_le] at this; exact this
   -- the two slices
   cases ha₁ : allocW m nw with
-  | none => rw [ha₁] at h; simp [pPrepW.k9.eq_1] at h
+  | none => rw [ha₁] at h; simp [pPrepW.k_iw_alloc.eq_1] at h
   | some rr =>
   obtain ⟨ord, m₁⟩ := rr
-  rw [ha₁, pPrepW.k9.arm1] at h
+  rw [ha₁, pPrepW.k_iw_alloc.arm1] at h
   obtain ⟨hA₁, hord, htop₁, hroom₁⟩ := allocW_afr ha₁ hI
   cases ha₂ : allocW m₁ nw with
-  | none => rw [ha₂] at h; simp [pPrepW.k8.eq_1] at h
+  | none => rw [ha₂] at h; simp [pPrepW.k_iw_alloc_2.eq_1] at h
   | some rr =>
   obtain ⟨mk, m₂⟩ := rr
-  rw [ha₂, pPrepW.k8.arm1] at h
+  rw [ha₂, pPrepW.k_iw_alloc_2.arm1] at h
   obtain ⟨hA₂, hmk, htop₂, hroom₂⟩ := allocW_afr ha₂ hA₁.2.2
   have hsz₁ : (m₁.arr64 IW).size = (m.arr64 IW).size := hA₁.1.2.2.1 IW
   have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.2.2.1 IW, hsz₁]
   -- the marks zeroed
   cases hz : hZeroW n m₂ mk nw 0 with
-  | none => rw [hz] at h; simp [pPrepW.k7.eq_1] at h
+  | none => rw [hz] at h; simp [pPrepW.k_hoist_zero.eq_1] at h
   | some rr =>
   obtain ⟨z₃, m₃⟩ := rr
-  rw [hz, pPrepW.k7.arm1] at h
+  rw [hz, pPrepW.k_hoist_zero.arm1] at h
   obtain ⟨hf₃, hrd₃⟩ := hZero_ok n m₂ m₃ mk nw 0 z₃ (by rw [hsz₂]; omega) (by rw [hsz₂]; exact hsz) hz
   have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hf₃.2.2.1 IW, hsz₂]
   have htop₃ : iwTop m₃ = iwTop m₂ := by simp only [iwTop]; rw [hf₃.2.1 200 (by simp)]
@@ -160,10 +160,10 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     simp
   -- the front
   cases hfr : pFrontW n m₃ np nw ord mk 0 with
-  | none => rw [hfr] at h; simp [pPrepW.k6.eq_1] at h
+  | none => rw [hfr] at h; simp [pPrepW.k_prep_front.eq_1] at h
   | some rr =>
   obtain ⟨z₄, m₄⟩ := rr
-  rw [hfr, pPrepW.k6.arm1] at h
+  rw [hfr, pPrepW.k_prep_front.arm1] at h
   obtain ⟨front, rest, a₁, hrunF, hfs, hfront, hrest, hE₄, hpins₁, hpe₁, hse₁, hpf₄⟩ :=
     pFront_ok dsAll np nw ord mk n m₃ m₄ a 0 z₄ #[] hE₃ (by simp) rfl (by simp) hfr
   have hpre : (dsAll.toList.take np.toNat).drop (0 : Word).toNat = pre.decls.toList := by
@@ -175,10 +175,10 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   rw [hpre, hstream] at hrunF
   -- the rest
   cases hrs : pRestW n m₄ nw ord mk np np with
-  | none => rw [hrs] at h; simp [pPrepW.k5.eq_1] at h
+  | none => rw [hrs] at h; simp [pPrepW.k_prep_rest.eq_1] at h
   | some rr =>
   obtain ⟨c, m₅⟩ := rr
-  rw [hrs, pPrepW.k5.arm1] at h
+  rw [hrs, pPrepW.k_prep_rest.arm1] at h
   have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hpf₄.2.2.1 IW, hsz₃]
   obtain ⟨hc, hrestW, hmf₅', hkeep₅⟩ := pRest_ok nw ord mk n m₄ m₅ np np c hE₄.rg1
     (by have := hE₄.rg2; have := hE₄.iwok.1; omega) (by rw [hsz₄]; exact hsz) (Nat.le_refl _) hnpn hrs
@@ -253,33 +253,33 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide)
       (by simp) m₄ m₅ hmf₅' a₁ hE₄.arena
   cases hho : hNatOpGroundW p n m₅ ord c with
-  | none => rw [hho] at h; simp [pPrepW.k4.eq_1] at h
+  | none => rw [hho] at h; simp [pPrepW.k_hoist_nat_op_ground.eq_1] at h
   | some rr =>
   obtain ⟨ord', m₆⟩ := rr
-  rw [hho, pPrepW.k4.arm1] at h
+  rw [hho, pPrepW.k_hoist_nat_op_ground.arm1] at h
   obtain ⟨res, hrunH, hres, hO₆, hA₆, hI₆, hG₆, hord₆, hP₆, hmf₆⟩ :=
     hNatOpGround_ok p hx n m₅ m₆ a₁ (front ++ rest) ord c ord' hA₅ (seen_mf hmf₅ hseen)
       (nix_mf hmf₅ hnix) hO₅ hFR (by omega) hW₅ hI₅ (by rw [htop₅]; omega) hP₅ hho
   -- the rewrite of `DECL`
   cases ha₃ : allocW m₆ (8 * c) with
-  | none => rw [ha₃] at h; simp [pPrepW.k3.eq_1] at h
+  | none => rw [ha₃] at h; simp [pPrepW.k_iw_alloc_3.eq_1] at h
   | some rr =>
   obtain ⟨t, m₇⟩ := rr
-  rw [ha₃, pPrepW.k3.arm1] at h
+  rw [ha₃, pPrepW.k_iw_alloc_3.arm1] at h
   have hc8 : (8 * c).toNat = 8 * c.toNat := by
     rw [UInt64.toNat_mul]; have : (8 : Word).toNat = 8 := rfl; rw [this]; omega
   obtain ⟨hA₇, ht, htop₇, hroom₇⟩ := allocW_afr ha₃ hI₆
   rw [hc8] at htop₇ hroom₇
   cases hcp : pCopyW n m₇ ord' c t 0 with
-  | none => rw [hcp] at h; simp [pPrepW.k2.eq_1] at h
+  | none => rw [hcp] at h; simp [pPrepW.k_prep_copy.eq_1] at h
   | some rr =>
   obtain ⟨z₈, m₈⟩ := rr
-  rw [hcp, pPrepW.k2.arm1] at h
+  rw [hcp, pPrepW.k_prep_copy.arm1] at h
   cases hbk : pBackW n m₈ t c 0 with
-  | none => rw [hbk] at h; simp [pPrepW.k1.eq_1] at h
+  | none => rw [hbk] at h; simp [pPrepW.k_prep_back.eq_1] at h
   | some rr =>
   obtain ⟨z₉, m₉⟩ := rr
-  rw [hbk, pPrepW.k1.arm1] at h
+  rw [hbk, pPrepW.k_prep_back.arm1] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
   have hD₆ : m₆.arr64 DECL = m₅.arr64 DECL := hmf₆.1 DECL (by decide) (by decide)

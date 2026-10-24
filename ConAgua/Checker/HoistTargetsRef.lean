@@ -130,7 +130,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     have hw : (dw (m.arr64 DECL) rw.toNat 1).toNat < 2 ^ 32 := (hok.1 (by rw [← hkind, hk2]; decide)).1
     rw [hname] at h
     cases hrec : hNatOpRecW p n m (dw (m.arr64 DECL) rw.toNat 1) with
-    | none => rw [hrec, hTargetsGoW.k4.eq_1] at h; cases h
+    | none => rw [hrec, hTargetsGoW.k_nat_op_record.eq_1] at h; cases h
     | some rr =>
     obtain ⟨op, m₁⟩ := rr
     rw [hrec] at h
@@ -155,10 +155,10 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     by_cases hop0 : op ≠ 0
     · rw [if_pos (hop.mp hop0)]
       simp only
-      rw [hTargetsGoW.k4.arm1 _ _ _ _ _ _ _ _ _ _ hop0] at h
+      rw [hTargetsGoW.k_nat_op_record.arm1 _ _ _ _ _ _ _ _ _ _ hop0] at h
       rcases hdc : callW p n "nat_op_deps" [dw (m.arr64 DECL) rw.toNat 1] m₁ with _ | ⟨rs, m₂⟩ <;> rw [hdc] at h
-      · simp [hTargetsGoW.k3.eq_1] at h
-      rw [hTargetsGoW.k3.arm1] at h
+      · simp [hTargetsGoW.k_nat_op_deps.eq_1] at h
+      rw [hTargetsGoW.k_nat_op_deps.arm1] at h
       obtain ⟨gs, hgs, hG, hl, habove, hf₂⟩ :=
         natOpDepsCall_ok p hx n m₁ m₂ a _ rs hE₁.iwok hPF₁ hw hdc
       have hE₂ := hE₁.frameA hf₂
@@ -166,8 +166,8 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
       rw [HoistTwin.run_bind, hgs]
       simp only
       rcases hdp : hDepsW n m₂ iw (rs.headD 0) (rs.tail.headD 0) 0 ord tg ws with _ | ⟨z, m₃⟩ <;> rw [hdp] at h
-      · simp [hTargetsGoW.k2.eq_1] at h
-      rw [hTargetsGoW.k2.arm1, hTargetsGoW.k1.arm1] at h
+      · simp [hTargetsGoW.k_hoist_deps.eq_1] at h
+      rw [hTargetsGoW.k_hoist_deps.arm1, hTargetsGoW.j1.arm1] at h
       rw [hiw'] at hdp
       have hsz2 : iwTop m₂ ≤ (m₂.arr64 IW).size := hf₂.2.2.1
       obtain ⟨T₃, hrun₃, hE₃, hT₃, hTv₃, hTi₃, hfr₃, hlt₃⟩ :=
@@ -189,10 +189,10 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
         ((LowFr.ofAFr hf₂ (by have := hE₁.top; omega)).trans (LowFr.ofHFr hfr₃))).trans h7⟩
     · rw [if_neg (fun hh => hop0 (hop.mpr hh))]
       simp only
-      rw [hTargetsGoW.k4.arm2 _ _ _ _ _ _ _ _ _ _ hop0, hTargetsGoW.k1.arm1] at h
+      rw [hTargetsGoW.k_nat_op_record.arm2 _ _ _ _ _ _ _ _ _ _ hop0, hTargetsGoW.j1.arm1] at h
       obtain ⟨T'', h1, h2, h3, h4, h5, h6, h7⟩ := hnext m₁ T hE₁ hT₁ hTv hTi1 hlt hP₁ h
       exact ⟨T'', h1, h2, h3, h4, h5, h6, (LowFr.ofAFr hf₁ (by omega)).trans h7⟩
-  · rw [hTargetsGoW.arm3 _ _ _ _ _ _ _ _ hend (by rw [hrw]; exact hk2), hTargetsGoW.k1.arm1] at h
+  · rw [hTargetsGoW.arm3 _ _ _ _ _ _ _ _ hend (by rw [hrw]; exact hk2), hTargetsGoW.j1.arm1] at h
     rw [hnot (by rw [← hkind]; exact hk2)]
     simp only [HoistTwin.run_bind]
     exact hnext m T hE hT hTv hTi1 hlt hP h

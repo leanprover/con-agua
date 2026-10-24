@@ -244,22 +244,22 @@ theorem tail_ok (op : AM EIdx) (mkr : Option (Word × Mem)) (a₂ : AState) (h c
     (hh : h.toNat < 2 ^ 32)
     (hmk : ∀ r₃ m₃, mkr = some (r₃, m₃) →
       AM.ok op a₂ ∧ ArenaD m₃ (AM.st op a₂) ∧ AM.res op a₂ = decE r₃)
-    (hb : liftAppW.k2 h c mkr = some (r, m')) :
+    (hb : liftAppW.k_mk_app h c mkr = some (r, m')) :
     ∃ a', (do let r ← op; liftSet (decE h, c.toNat) r; pure r : AM EIdx).run a₂ =
       .ok (decE r, a') ∧ ArenaD m' a' := by
   cases h3 : mkr with
-  | none => simp [h3, liftAppW.k2] at hb
+  | none => simp [h3, liftAppW.k_mk_app] at hb
   | some q =>
     obtain ⟨r₃, m₃⟩ := q
     rw [h3] at hb
     by_cases hr : mfindG lfSch m₃ h c = []
-    · simp [liftAppW.k2, hr] at hb
-    rw [liftAppW.k2.arm1 h c r₃ m₃ hr] at hb
+    · simp [liftAppW.k_mk_app, hr] at hb
+    rw [liftAppW.k_mk_app.arm1 h c r₃ m₃ hr] at hb
     cases h4 : mputG lfSch m₃ h c r₃ ((mfindG lfSch m₃ h c).headD 0)
         ((mfindG lfSch m₃ h c).tail.headD 0) with
-    | none => rw [h4] at hb; simp [liftAppW.k1] at hb
+    | none => rw [h4] at hb; simp [liftAppW.k_lf_put] at hb
     | some m₄ =>
-      rw [h4, liftAppW.k1.arm1, Option.some.injEq, Prod.mk.injEq] at hb
+      rw [h4, liftAppW.k_lf_put.arm1, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
       have hs : msetG lfSch m₃ h c r₃ = some m₄ := by rw [msetG, ite_eq_right hr]; exact h4
       obtain ⟨hok, hA₃, hres⟩ := hmk r₃ m₃ h3
@@ -307,16 +307,16 @@ theorem appArm_ok (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
   rw [liftArmApp]
   refine probe_ok _ _ m m' a hA h c r hh (liftAppW.arm1 n m h c k fu) (fun hr => by rw [liftAppW]; simp [hr])
     (fun hr hh0 hb => ?_) hb
-  rw [liftAppW.arm2 n m h c k fu hr (fun h => h hh0)] at hb
+  rw [liftAppW.arm2 n m h c k fu hr hh0] at hb
   cases h1 : liftW n m (tfld m APP (tierW h) (idxW h) 0) c k fu with
-  | none => simp [h1, liftAppW.k4] at hb
+  | none => simp [h1, liftAppW.k_lift_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : liftW n m₁ (tfld m APP (tierW h) (idxW h) 1) c k fu with
-  | none => simp [h1, h2, liftAppW.k4, liftAppW.k3] at hb
+  | none => simp [h1, h2, liftAppW.k_lift_go, liftAppW.k_lift_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, liftAppW.k4, liftAppW.k3] at hb
+  simp only [h1, h2, liftAppW.k_lift_go, liftAppW.k_lift_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ c k fu y hA₁ haw h2
   obtain ⟨a', h3, h4⟩ := tail_ok _ _ a₂ h c r m' hh (fun r₃ m₃ h => mkApp_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
@@ -334,16 +334,16 @@ theorem lamArm_ok (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
   rw [liftArmLam]
   refine probe_ok _ _ m m' a hA h c r hh (liftLamW.arm1 n m h c k fu hc1)
     (fun hr => by rw [liftLamW]; simp [hc1, hr]) (fun hr hh0 hb => ?_) hb
-  rw [liftLamW.arm2 n m h c k fu hc1 hr (fun h => h hh0)] at hb
+  rw [liftLamW.arm2 n m h c k fu hc1 hr hh0] at hb
   cases h1 : liftW n m (tfld m LAM (tierW h) (idxW h) 0) c k fu with
-  | none => simp [h1, liftLamW.k2] at hb
+  | none => simp [h1, liftLamW.k_lift_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : liftW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (c + 1) k fu with
-  | none => simp [h1, h2, liftLamW.k2, liftLamW.k1] at hb
+  | none => simp [h1, h2, liftLamW.k_lift_go, liftLamW.k_lift_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, liftLamW.k2, liftLamW.k1] at hb
+  simp only [h1, h2, liftLamW.k_lift_go, liftLamW.k_lift_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (c + 1) k fu y hA₁ haw h2
   rw [succW_toNat c hc1] at ha₂
@@ -362,16 +362,16 @@ theorem forallArm_ok (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
   rw [liftArmForallE]
   refine probe_ok _ _ m m' a hA h c r hh (liftForallW.arm1 n m h c k fu hc1)
     (fun hr => by rw [liftForallW]; simp [hc1, hr]) (fun hr hh0 hb => ?_) hb
-  rw [liftForallW.arm2 n m h c k fu hc1 hr (fun h => h hh0)] at hb
+  rw [liftForallW.arm2 n m h c k fu hc1 hr hh0] at hb
   cases h1 : liftW n m (tfld m FORALL (tierW h) (idxW h) 0) c k fu with
-  | none => simp [h1, liftForallW.k2] at hb
+  | none => simp [h1, liftForallW.k_lift_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : liftW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (c + 1) k fu with
-  | none => simp [h1, h2, liftForallW.k2, liftForallW.k1] at hb
+  | none => simp [h1, h2, liftForallW.k_lift_go, liftForallW.k_lift_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, liftForallW.k2, liftForallW.k1] at hb
+  simp only [h1, h2, liftForallW.k_lift_go, liftForallW.k_lift_go_2] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA hfw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (c + 1) k fu y hA₁ haw h2
   rw [succW_toNat c hc1] at ha₂
@@ -391,20 +391,20 @@ theorem letArm_ok (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
   rw [liftArmLet]
   refine probe_ok _ _ m m' a hA h c r hh (liftLetW.arm1 n m h c k fu hc1)
     (fun hr => by rw [liftLetW]; simp [hc1, hr]) (fun hr hh0 hb => ?_) hb
-  rw [liftLetW.arm2 n m h c k fu hc1 hr (fun h => h hh0)] at hb
+  rw [liftLetW.arm2 n m h c k fu hc1 hr hh0] at hb
   cases h1 : liftW n m (tfld m LET (tierW h) (idxW h) 0) c k fu with
-  | none => simp [h1, liftLetW.k3] at hb
+  | none => simp [h1, liftLetW.k_lift_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
   cases h2 : liftW n m₁ (tfld m LET (tierW h) (idxW h) 1) c k fu with
-  | none => simp [h1, h2, liftLetW.k3, liftLetW.k2] at hb
+  | none => simp [h1, h2, liftLetW.k_lift_go, liftLetW.k_lift_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q
   cases h3 : liftW n m₂ (tfld m LET (tierW h) (idxW h) 2) (c + 1) k fu with
-  | none => simp [h1, h2, h3, liftLetW.k3, liftLetW.k2, liftLetW.k1] at hb
+  | none => simp [h1, h2, h3, liftLetW.k_lift_go, liftLetW.k_lift_go_2, liftLetW.k_lift_go_3] at hb
   | some o =>
   obtain ⟨z, m₃⟩ := o
-  simp only [h1, h2, h3, liftLetW.k3, liftLetW.k2, liftLetW.k1] at hb
+  simp only [h1, h2, h3, liftLetW.k_lift_go, liftLetW.k_lift_go_2, liftLetW.k_lift_go_3] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA htw h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ c k fu y hA₁ hvw h2
   obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (c + 1) k fu z hA₂ hbw h3
@@ -424,12 +424,12 @@ theorem projArm_ok (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
   rw [liftArmProj]
   refine probe_ok _ _ m m' a hA h c r hh (liftProjW.arm1 n m h c k fu)
     (fun hr => by rw [liftProjW]; simp [hr]) (fun hr hh0 hb => ?_) hb
-  rw [liftProjW.arm2 n m h c k fu hr (fun h => h hh0)] at hb
+  rw [liftProjW.arm2 n m h c k fu hr hh0] at hb
   cases h1 : liftW n m (tfld m PROJ (tierW h) (idxW h) 2) c k fu with
-  | none => simp [h1, liftProjW.k1] at hb
+  | none => simp [h1, liftProjW.k_lift_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  simp only [h1, liftProjW.k1] at hb
+  simp only [h1, liftProjW.k_lift_go] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ c k fu x hA hew h1
   obtain ⟨a', h3, h4⟩ := tail_ok _ _ a₁ h c r m' hh
     (fun r₃ m₃ h => mkProj_ok m₁ a₁ hA₁ _ _ x r₃ m₃ h) hb
@@ -471,12 +471,12 @@ theorem liftEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   rw [liftEntryW.arm1 n m h k c f (by rw [hcs]; exact h0)] at hb
   have hA₀ := ArenaD.lmemo_clear m a hA h0
   cases hw : liftW n (mclearG lfSch m) h c k f with
-  | none => simp [hw, liftEntryW.k1] at hb
+  | none => simp [hw, liftEntryW.k_lift_go] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
     by_cases h1 : rdW (m₁.arr64 CTL) 42 + 2 = 0
-    · simp [hw, liftEntryW.k1, hcs, h1] at hb
-    rw [hw, liftEntryW.k1.arm1 r₁ m₁ (by rw [hcs]; exact h1), Option.some.injEq,
+    · simp [hw, liftEntryW.k_lift_go, hcs, h1] at hb
+    rw [hw, liftEntryW.k_lift_go.arm1 r₁ m₁ (by rw [hcs]; exact h1), Option.some.injEq,
       Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (liftOK n).1 _ _ _ h c k f r₁ hA₀ hh hw

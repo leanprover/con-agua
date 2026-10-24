@@ -212,20 +212,20 @@ theorem pFind_ok (n : Nat) (m : Mem) (dsAll : Array IDeclaration) (mk nw w j r :
       by_cases hz : rdW (m.arr64 IW) (mk + j) = 0
       · rw [pFindW.arm2 n m mk nw w j hnj hz] at h
         cases hd : pDeclW n m j w with
-        | none => rw [hd] at h; simp [pFindW.k2] at h
+        | none => rw [hd] at h; simp [pFindW.k_decl_declares] at h
         | some dv =>
           have hdec := pDecl_ok n m j w dv dsAll[j.toNat] hDj hokj (by omega) hw hd
           rw [hd] at h
           by_cases hdv : dv ≠ 0
-          · rw [pFindW.k2.arm1 n mk nw w j m dv hdv] at h
+          · rw [pFindW.k_decl_declares.arm1 n mk nw w j m dv hdv] at h
             cases h
             exact .inl ⟨hz, hdec.mp hdv, rfl⟩
-          · rw [pFindW.k2.arm2 n mk nw w j m dv hdv, pFindW.k1.arm1] at h
+          · rw [pFindW.k_decl_declares.arm2 n mk nw w j m dv hdv, pFindW.j1.arm1] at h
             refine .inr ⟨fun _ => ?_, h⟩
             cases e : declares (decI w) dsAll[j.toNat]
             · rfl
             · exact absurd (hdec.mpr e) hdv
-      · rw [pFindW.arm3 n m mk nw w j hnj hz, pFindW.k1.arm1] at h
+      · rw [pFindW.arm3 n m mk nw w j hnj hz, pFindW.j1.arm1] at h
         exact .inr ⟨fun e => absurd e hz, h⟩
     rcases key with ⟨hz, hdec, rfl⟩ | ⟨hex, h'⟩
     · have hr1 : (j + 1).toNat - 1 = j.toNat := by omega
