@@ -1,4 +1,5 @@
 import ConAgua.Arena.LoopT
+import ConAgua.Arena.IndArmLps
 import ConAgua.Arena.StageC
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclCrpT
@@ -62,13 +63,9 @@ def FrontDecls (ds : Array IDeclaration) : Prop :=
   ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → FrontBlock b
 
 /-- **The block's level-parameter handles have decoder names**: `L.Ind.BlockLpsDn dn block`
-(`Arena/IndArmLps.lean`) unfolded. Stated here, not imported, while lane `indstaget`'s provisional
-`L.Ind.BlockLpsDn dn w block` (`IndT/CheckIndDecl.lean`) shares the name; the two forms are
-definitionally equal, so the inductive arm passes it on unchanged once `cidW_okC` takes the
-block form. -/
-def BlockLpsDnA (dn : NIdx → Option ConLeche.Name) (block : List IConstantInfo) : Prop :=
-  ∀ (cv : IConstantVal) (caps : IIndCaps), IConstantInfo.indInfo cv caps ∈ block →
-    ∀ k ∈ cv.levelParams, (dn k).isSome
+(`Arena/IndArmLps.lean`), what `cidW_okC` takes; the loop has it from `DeclsLpsDn`. -/
+abbrev BlockLpsDnA (dn : NIdx → Option ConLeche.Name) (block : List IConstantInfo) : Prop :=
+  L.Ind.BlockLpsDn dn block
 
 /-- **Every inductive record's level-parameter handles have decoder names** (`BlockLpsDnA`), a
 fact about the records and the loop's decoder alone: the loop's start discharges it from the

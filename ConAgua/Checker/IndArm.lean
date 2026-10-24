@@ -28,11 +28,6 @@ def armAbsWalk : List FnName :=
 theorem armAbs_split : ∀ f ∈ passKeepCalleesC ++ tailKeepCalleesC ++ ["block_raw_rec"],
     f ∈ armAbsFns := by decide +kernel
 
-/-- **PLACEHOLDER, `sorry`** (lane `indstaget`, until lane `indproofs4` discharges `BlockLpsDn` at
-the declaration loop): `indArmSpec_of`'s level-parameter premise. As stated (every `dn`) it is
-stronger than what holds; the loop's `dn` names the block's level parameters. -/
-theorem blockLpsDn_pending : ∀ dn, DnInj dn → ∀ (block : List ConRon.Arena.IConstantInfo),
-    BlockLpsDn dn block := sorry
 
 /-- **The inductive arm's contract at the substituted checker program**, from `AbsKeep` of the
 callees that reach the walks. -/
@@ -77,7 +72,6 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (closedW_subPB bs checkerProg_armRcHb) (by decide +kernel)
     (closedW_subPB bs checkerProg_armMa) (by decide +kernel)
     (closedW_subPB bs checkerProg_armMc) (by decide +kernel)
-    blockLpsDn_pending
 
 /-- **The declaration loop is the pipeline's last stage**, from `AbsKeep` of the arm's callees
 that reach the walks (`loopStage_of_rom`, `indArmSpec_checker`). -/
