@@ -341,15 +341,19 @@ structure TmtProg (p : Prog) : Prop where
   mkTm : p.lookup "mk_target_major" = some mkTargetMajor
   tail : p.lookup "target_major_of_outside_tail" = some targetMajorOfOutsideTail
 
-/-- **`target_major_of_outside_tail`'s model simulates the outside branch's tail.** -/
-theorem tmtW_sim {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+/-- **`target_major_of_outside_tail`'s model simulates the outside branch's tail**, from a contract of
+its `target_outside_inst` call. -/
+theorem tmtW_simG {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso csl : Word} {bs : BlockShape}
     {pfvs ds : List EIdx} {ctors : List (IConstantVal × Nat)}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
     (hI : H I) (hus : H us) (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds)
     (hdsb : dso.toNat + dsl.toNat < 2 ^ 64)
     (hct : DecB (fun m => decPL m (decCN m) cso.toNat csl.toNat) m ctors)
-    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hPm : PosMR m) :
+    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hPm : PosMR m)
+    (hToi : ∀ r1 m1, callW p n "target_outside_inst" [vis, I, us, dso, dsl] m = some (r1, m1) →
+      ∃ x a', (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds).run a = .ok (x, a') ∧ ToiR r1 x ∧
+        StageR dn vis fe m1 a' ∧ IWGrow m m1 ∧ PosMR m1) :
     Sim (tmtW p n m vis pp pfo pfl I us dso dsl cso csl)
       (tmoTailT fe bs pfvs ds dsl.toNat ctors (decI I) (decI us)) a
       (fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
@@ -357,11 +361,7 @@ theorem tmtW_sim {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name
   unfold tmtW tmoTailT
   refine Sim.bindK (K := tmtK1 p n pp I us dso dsl cso csl pfo pfl) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => ToiR r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
-  · intro r1 m1 e1
-    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (targetOutsideInst_spec p hP.toi stubCall (stubCall_spec p) n _ vis I us dso dsl) e1
-    obtain ⟨x, a', hrun, hS1, hg1, hT1, -⟩ := toiW_ok IlpRd.stub hW1 hS hI hus hds hdsb
-    exact ⟨x, a', hrun, hT1, hS1, hg1, hPm.fr (toiW_mfr IlpFr.stub hW1)⟩
+  · exact hToi
   rintro r1 ⟨nIdx, sI⟩ m1 a1 ⟨⟨hr1, hn1, hsH, hsd⟩, hS1, hg1, hP1⟩
   obtain ⟨-, -, hrsH, hrsd⟩ := partsShapeWords hg1 hq hq9
   rw [tmtK1_some]
@@ -411,6 +411,25 @@ theorem tmtW_sim {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name
   have hn1' : (r1.head?.getD 0).toNat = nIdx := by simpa using hn1
   rw [hn1'] at hdec
   exact Sim.ret ⟨by simpa [decON] using hdec, hS4, hg04, hP2.fr (posRecW_mfr hpr)⟩
+
+/-- **`target_major_of_outside_tail`'s model simulates the outside branch's tail** (`inst_lp_fast`'s stub). -/
+theorem tmtW_sim {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso csl : Word} {bs : BlockShape}
+    {pfvs ds : List EIdx} {ctors : List (IConstantVal × Nat)}
+    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
+    (hI : H I) (hus : H us) (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds)
+    (hdsb : dso.toNat + dsl.toNat < 2 ^ 64)
+    (hct : DecB (fun m => decPL m (decCN m) cso.toNat csl.toNat) m ctors)
+    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hPm : PosMR m) :
+    Sim (tmtW p n m vis pp pfo pfl I us dso dsl cso csl)
+      (tmoTailT fe bs pfvs ds dsl.toNat ctors (decI I) (decI us)) a
+      (fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
+        IWGrow m m' ∧ PosMR m') :=
+  tmtW_simG hP n hS hq hq9 hI hus hds hdsb hct hpf hPm fun r1 m1 e1 => by
+    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (targetOutsideInst_spec p hP.toi stubCall (stubCall_spec p) n _ vis I us dso dsl) e1
+    obtain ⟨x, a', hrun, hS1, hg1, hT1, -⟩ := toiW_ok IlpRd.stub hW1 hS hI hus hds hdsb
+    exact ⟨x, a', hrun, hT1, hS1, hg1, hPm.fr (toiW_mfr IlpFr.stub hW1)⟩
 
 theorem clsDecI_inj {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
     ((decI x : Idx κ) = decI y) ↔ x = y :=
