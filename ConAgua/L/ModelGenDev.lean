@@ -1293,6 +1293,13 @@ meta def leaves : MR → List (List (MC × Bool) × MR)
     (leaves e).map (fun (p, l) => ((c, false) :: p, l))
   | l => [([], l)]
 
+/-- The paths to the `none` leaves (the aborts). -/
+meta def aborts : MR → List (List (MC × Bool))
+  | .none => [[]]
+  | .ite c t e =>
+    (aborts t).map ((c, true) :: ·) ++ (aborts e).map ((c, false) :: ·)
+  | _ => []
+
 /-! ## The command -/
 
 syntax lmodelFn2 := term " ↦ " ident (&" ro")? (&" list")? (&" tuple")?
@@ -1625,6 +1632,24 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       emit doTrace (← `(command|
         theorem $thm:ident $binders* $hyps* : $lhs = $rhs := by rw [$rules,*]))
       attrsOf thm lhs
+    -- the aborts: `name.abortᵢ`, without patterns
+    let mut a := 0
+    for path in aborts body do
+      a := a + 1
+      let mut hyps : Array (TSyntax ``Lean.Parser.Term.bracketedBinder) := #[]
+      let mut rules : Array (TSyntax ``Lean.Parser.Tactic.rwRule) := #[← `(Lean.Parser.Tactic.rwRule| $eq2:ident)]
+      let mut j := 0
+      for (c, pos) in path do
+        j := j + 1
+        let ct ← liftTermElabM c.render
+        let h := mkIdent (Name.mkSimple s!"hc{j}")
+        let ty ← if pos then pure ct else `(¬ $ct)
+        hyps := hyps.push (← `(Lean.Parser.Term.bracketedBinderF| ($h : $ty)))
+        rules := rules.push (← if pos then `(Lean.Parser.Tactic.rwRule| ite_eq_left $h:ident)
+          else `(Lean.Parser.Tactic.rwRule| ite_eq_right $h:ident))
+      let thm := mkIdent (name ++ Name.mkSimple s!"abort{a}")
+      emit doTrace (← `(command|
+        theorem $thm:ident $binders* $hyps* : $lhs = Option.none := by rw [$rules,*]))
     return k
   let mut nEqns := 0
   for fi in fis, b in bodies do
@@ -1668,6 +1693,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     else
       let lhs ← `($(mkIdent kd.name) $args* $pat)
       nEqns := nEqns + (← eqns kd.name (binders ++ resB) lhs kd.body)
+      -- the failed call
+      let thm := mkIdent (kd.name ++ `none)
+      emit doTrace (← `(command|
+        theorem $thm:ident $binders* : $(mkIdent kd.name) $args* Option.none = Option.none := by
+          rw [$(mkIdent (kd.name ++ `eq_1)):ident]))
   -- the proofs, as text
   let pp (t : Syntax) : CommandElabM String := do
     return toString (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩))
