@@ -132,8 +132,8 @@ def MulBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
   (s.loc 5).toNat = (s.loc 1).toNat + (s.loc 3).toNat ∧
   (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
   s.loc 12 = s.loc 4 >>> 40 ∧ s.loc 13 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
-  (s.loc 13).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 12))).size ∧
-  (s.mem.arr64 (tierA POOL (s.loc 12))).size ≤ 2 ^ 40 ∧ (s.loc 12).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 13).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA 0 (s.loc 12))).size ∧
+  (s.mem.arr64 (tierA 0 (s.loc 12))).size ≤ 2 ^ 40 ∧ (s.loc 12).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
   (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat
 

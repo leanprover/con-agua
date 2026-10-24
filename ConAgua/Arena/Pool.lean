@@ -406,6 +406,19 @@ theorem tag_rel (T k : Word) (hT : T.toNat < 2 ^ 41)
   rw [tag_tier_toNat, e1, e2]; omega
 grind_pattern [arena_grind] tag_rel => (T - ((T >>> 40) <<< 40) + k).toNat
 
+/-- A writer's store `POOL⟨⦃T⦄.tier⟩[(T - ⦃T⦄.base) + k] := v`, in bounds, is a store into the
+virtual pool at `T + k`. -/
+theorem vpool_strel (m : Mem) (T k v : Word) (hT : T.toNat < 2 ^ 41)
+    (hi : (T - ((T >>> 40) <<< 40) + k).toNat < (m.arr64 (tierA POOL (T >>> 40))).size)
+    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hk : (T - ((T >>> 40) <<< 40)).toNat + k.toNat < 2 ^ 40) :
+    vpool (m.set64 (tierA POOL (T >>> 40)) (T - ((T >>> 40) <<< 40) + k) v) =
+      (vpool m).set! (T + k).toNat v := by
+  have ht : (T >>> 40).toNat ≤ 1 := by rw [tag_tier_toNat]; omega
+  rw [vpool_set64t m _ _ v ht hi hs, tag_rel T k hT hk]
+grind_pattern [arena_grind] vpool_strel =>
+  vpool (m.set64 (tierA POOL (T >>> 40)) (T - ((T >>> 40) <<< 40) + k) v)
+
 /-- A writer's load `POOL⟨⦃T⦄.tier⟩[(T - ⦃T⦄.base) + k]` (its top `T`, the tier and the relative
 base decoded once), in bounds, reads the virtual pool at `T + k`. -/
 theorem vpool_ldrel (m : Mem) (T k : Word) (hT : T.toNat < 2 ^ 41)
@@ -508,6 +521,13 @@ theorem PFrame.arr64 {m m' : Mem} (b : ArrId) (h : PFrame m m') (h0 : b ≠ POOL
     m'.arr64 b = m.arr64 b := h.arr b h0.1 h0.2
 grind_pattern [arena_grind] PFrame.arr64 => PFrame m m', m'.arr64 b
 
+theorem PFrame.tsize {m m' : Mem} (t : Word) (h : PFrame m m') :
+    (m'.arr64 (tierA POOL t)).size = (m.arr64 (tierA POOL t)).size := by
+  rcases tierA_pool t with e | e <;> rw [e]
+  · exact h.size0
+  · exact h.size1
+grind_pattern [arena_grind] PFrame.tsize => PFrame m m', (m'.arr64 (tierA POOL t)).size
+
 theorem PFrame.pcap {m m' : Mem} (h : PFrame m m') : pcap m' = pcap m :=
   pcap_congr h.size0 h.size1
 grind_pattern [arena_grind] PFrame.pcap => PFrame m m', pcap m'
@@ -561,11 +581,16 @@ def PoolOK (m : Mem) : Prop :=
 changed, the pool below the old top did not, and the top only moved up, inside its tier. Every
 pool function posts it; a state relation that refers only to slices below the top is preserved
 by it (`L.Arena.Refine`, `hgrow`). -/
-def Grows (m m' : Mem) : Prop :=
-  PFrame (m.set64 CTL 0 m'.top) m' ∧ Agree (vpool m') (vpool m) m.top.toNat ∧
-  m.top.toNat ≤ m'.top.toNat ∧ m'.top.toNat ≤ pcap m' ∧ pcap m' = pcap m ∧
-  (m'.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ m.top.toNat) ∧
-  (m'.top - ((m'.top >>> 40) <<< 40)).toNat ≤ (m'.arr64 (tierA POOL (m'.top >>> 40))).size
+structure Grows (m m' : Mem) : Prop where
+  frame : PFrame (m.set64 CTL 0 m'.top) m'
+  agree : Agree (vpool m') (vpool m) m.top.toNat
+  le : m.top.toNat ≤ m'.top.toNat
+  cap : m'.top.toNat ≤ pcap m'
+  pcapEq : pcap m' = pcap m
+  tier : m'.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ m.top.toNat
+  inn : (m'.top - ((m'.top >>> 40) <<< 40)).toNat ≤ (m'.arr64 (tierA POOL (m'.top >>> 40))).size
+
+attribute [arena_grind →] Grows.agree Grows.le Grows.cap Grows.pcapEq
 
 /-- A slice of the pool in use: below the top, and, while the scratch tier is open (the top in
 tier 1), a slice of tier 0 lies below the saved tier-0 top `PTOP0` (the words of tier 0 above
