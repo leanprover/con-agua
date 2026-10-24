@@ -569,20 +569,20 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
 /-- **Every tier but the arena's above a writer**: arrays from 137 and `CTL` words from 130 up
 (the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
 theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
-    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b)
+    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b ∧ b < 256)
     (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
     CheckR dn m' a vis fe := by
   have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by
-    have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    have := (hA b hb).1; simp only [ArrId] at this ⊢; omega)
   have hC' : ∀ lo hi, hi ≤ 130 → AvoidC lo hi C := fun lo hi hh x hx => .inr (by
     have := hC x hx; omega)
   refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
     h.pins.frame (hA' _ _ (by decide)) hf,
     h.env.frameN (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf⟩
-  · exact ArenaR.frame_ext A C (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+  · exact ArenaR.frame_ext A C (fun b hb => by
+      have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) m m' hf a h.arena.1
-  · exact DerR.frame m m' a h.arena.2 (fun B hB => hf.1 B (fun hm => by
-      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
-      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))
+  · exact DerR.frameM A C m m' hf (fun b hb => by
+      have := hA b hb; simp only [ArrId] at this ⊢; omega) a h.arena.2
 
 end L.Arena

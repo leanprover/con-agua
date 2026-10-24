@@ -55,7 +55,7 @@ include hA
 theorem internBVar_DF (u : Word) (hI : binternW m u = some (r, m')) :
     AM.ok (internE (.bvar u.toNat)) a ∧ ArenaD m' (AM.st (internE (.bvar u.toNat)) a) ∧
     AM.res (internE (.bvar u.toNat)) a = decE r ∧
-    MemFrame [bvarSch.ra, bvarSch.sa] [bvarSch.ca, bvarSch.ca + 1] m m' := by
+    MemFrame [bvarSch.ra, bvarSch.ra + 256, bvarSch.sa, bvarSch.sa + 256] [bvarSch.ca, bvarSch.ca + 1] m m' := by
   obtain ⟨hok, hD, hres⟩ := internBVar_D m a hA u r m' hI
   have hI₂ := hI
   exact ⟨hok, hD, hres, consInternM_frame bvarCS_wf hI₂⟩
@@ -63,7 +63,7 @@ theorem internBVar_DF (u : Word) (hI : binternW m u = some (r, m')) :
 theorem internSort_D (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sointernW m u = some (r, m')) :
     AM.ok (internE (.sort (decI u))) a ∧ ArenaD m' (AM.st (internE (.sort (decI u))) a) ∧
     AM.res (internE (.sort (decI u))) a = decI r ∧
-    MemFrame [sortSch.ra, sortSch.sa, SOLP] [sortSch.ca, sortSch.ca + 1] m m' := by
+    MemFrame [sortSch.ra, sortSch.ra + 256, sortSch.sa, sortSch.sa + 256, SOLP, SOLP + 256] [sortSch.ca, sortSch.ca + 1] m m' := by
   obtain ⟨hok, hD', hres⟩ := L.Arena.internSort_D m a hA u r hu m' hI
   exact ⟨hok, hD', hres, sointernW_frame (hI := hI)⟩
 
@@ -72,7 +72,7 @@ theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 3
     AM.ok (internE (.const (decI f) (decI x))) a ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a) ∧
     AM.res (internE (.const (decI f) (decI x))) a = decI r ∧
-    MemFrame [constSch.ra, constSch.sa, CLP] [constSch.ca, constSch.ca + 1] m m' := by
+    MemFrame [constSch.ra, constSch.ra + 256, constSch.sa, constSch.sa + 256, CLP, CLP + 256] [constSch.ca, constSch.ca + 1] m m' := by
   obtain ⟨hok, hD', hres⟩ := L.Arena.internConst_D m a hA f x r hf hx m' hI
   exact ⟨hok, hD', hres, ceinternW_frame (hI := hI)⟩
 
@@ -81,7 +81,7 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
     AM.ok (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a ∧
     ArenaD m' (AM.st (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a) ∧
     AM.res (internE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))) a = decE r ∧
-    MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
+    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
   have hI₂ := hI
@@ -106,7 +106,7 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
     AM.ok (internE (.lit (.strVal s))) a ∧
     ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
     AM.res (internE (.lit (.strVal s))) a = decE r ∧
-    MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
+    MemFrame [litSch.ra, litSch.ra + 256, litSch.sa, litSch.sa + 256] [litSch.ca, litSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
   have hI₂ := hI
@@ -129,7 +129,7 @@ theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
     (hk : sliceL (vpool m) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
     AM.ok (internLsNode us) a ∧ ArenaD m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI r ∧
-    MemFrame [lsSch.ra, lsSch.sa, LSHP] [lsSch.ca, lsSch.ca + 1] m m' := by
+    MemFrame [lsSch.ra, lsSch.ra + 256, lsSch.sa, lsSch.sa + 256, LSHP, LSHP + 256] [lsSch.ca, lsSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk _ _ hI
   have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI

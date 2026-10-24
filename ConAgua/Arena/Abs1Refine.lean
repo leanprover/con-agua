@@ -94,38 +94,38 @@ theorem AbsR.across {A : List ArrId} {C : List Word} {m m' : Mem} {a a' : AState
 /-! ## The frames of the stores (L side) -/
 
 theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
-    MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
+    MemFrame [AREC, ASLOT, ADER, AREC + 256, ASLOT + 256, ADER + 256] [4, 5] m m' := by
   unfold mkAppW at hI; split at hI
   · cases hI
-  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [appCS, appSch, AREC, ASLOT, ADER]) (by simp [appCS, appSch])
+  exact (mkK_frame appCS_wf (by decide) hI).mono (by simp [ConsSch.wset, appCS, appSch, AREC, ASLOT, ADER]) (by simp [appCS, appSch])
 
 theorem mkLamW_frameA (m m' : Mem) (f a r : Word) (hI : mkLamW m f a = some (r, m')) :
-    MemFrame [LAREC, LASLOT, LADER] [28, 29] m m' := by
+    MemFrame [LAREC, LASLOT, LADER, LAREC + 256, LASLOT + 256, LADER + 256] [28, 29] m m' := by
   unfold mkLamW at hI; split at hI
   · cases hI
-  exact (mkK_frame lamCS_wf (by decide) hI).mono (by simp [lamCS, lamSch, LAREC, LASLOT, LADER]) (by simp [lamCS, lamSch])
+  exact (mkK_frame lamCS_wf (by decide) hI).mono (by simp [ConsSch.wset, lamCS, lamSch, LAREC, LASLOT, LADER]) (by simp [lamCS, lamSch])
 
 theorem mkForallW_frameA (m m' : Mem) (f a r : Word) (hI : mkForallW m f a = some (r, m')) :
-    MemFrame [FAREC, FASLOT, FADER] [30, 31] m m' := by
+    MemFrame [FAREC, FASLOT, FADER, FAREC + 256, FASLOT + 256, FADER + 256] [30, 31] m m' := by
   unfold mkForallW at hI; split at hI
   · cases hI
-  exact (mkK_frame forallCS_wf (by decide) hI).mono (by simp [forallCS, forallSch, FAREC, FASLOT, FADER]) (by simp [forallCS, forallSch])
+  exact (mkK_frame forallCS_wf (by decide) hI).mono (by simp [ConsSch.wset, forallCS, forallSch, FAREC, FASLOT, FADER]) (by simp [forallCS, forallSch])
 
 theorem mkLetW_frameA (m m' : Mem) (t v b r : Word) (hI : mkLetW m t v b = some (r, m')) :
-    MemFrame [LEREC, LESLOT, LEDER] [20, 21] m m' := by
+    MemFrame [LEREC, LESLOT, LEDER, LEREC + 256, LESLOT + 256, LEDER + 256] [20, 21] m m' := by
   unfold mkLetW at hI; split at hI
   · cases hI
-  exact (mkK_frame letCS_wf (by decide) hI).mono (by simp [letCS, letSch, LEREC, LESLOT, LEDER]) (by simp [letCS, letSch])
+  exact (mkK_frame letCS_wf (by decide) hI).mono (by simp [ConsSch.wset, letCS, letSch, LEREC, LESLOT, LEDER]) (by simp [letCS, letSch])
 
 theorem mkProjW_frameA (m m' : Mem) (n i e r : Word) (hI : mkProjW m n i e = some (r, m')) :
-    MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m' := by
+    MemFrame [PJREC, PJSLOT, PJDER, PJREC + 256, PJSLOT + 256, PJDER + 256] [32, 33] m m' := by
   unfold mkProjW at hI; split at hI
   · cases hI
-  exact (mkK_frame projCS_wf (by decide) hI).mono (by simp [projCS, projSch, PJREC, PJSLOT, PJDER]) (by simp [projCS, projSch])
+  exact (mkK_frame projCS_wf (by decide) hI).mono (by simp [ConsSch.wset, projCS, projSch, PJREC, PJSLOT, PJDER]) (by simp [projCS, projSch])
 
 theorem binternW_frameA (m m' : Mem) (u r : Word) (hI : binternW m u = some (r, m')) :
-    MemFrame [BREC, BSLOT] [22, 23] m m' := by
-  exact (consInternM_frame bvarCS_wf hI).mono (by simp [bvarCS])
+    MemFrame [BREC, BSLOT, BREC + 256, BSLOT + 256] [22, 23] m m' := by
+  exact (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS])
     (by simp [bvarCS, bvarSch])
 
 /-! ## The twin's interning keeps `abs1C` -/
