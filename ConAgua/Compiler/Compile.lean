@@ -534,6 +534,12 @@ def wordPtr (ctx : Ctx) (r R : Reg64) (a : ArrId) (o : Expr) : Program :=
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
    i64 (.add (.reg (rr .rax)) (oR r)), movRR r .rax]
 
+/-- The copy loop of `copy64`: from `rcx` (source), `rdx` (destination) up to the end in `e`. -/
+def copy64Loop (Lb : Label) (e : AddrExpr) : Program :=
+  [.label Lb, movRM .rax (mb .rcx 0), movMR (mb .rdx 0) .rax,
+   i64 (.add (.reg (rr .rcx)) (oI 8)), i64 (.add (.reg (rr .rdx)) (oI 8)),
+   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c Lb]
+
 /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
 destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
 def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
@@ -545,12 +551,14 @@ def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
    i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
    i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
-   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X"),
-   .label (ctx.lbl path "L"),
-   movRM .rax (mb .rcx 0), movMR (mb .rdx 0) .rax,
-   i64 (.add (.reg (rr .rcx)) (oI 8)), i64 (.add (.reg (rr .rdx)) (oI 8)),
-   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c (ctx.lbl path "L"),
-   .label (ctx.lbl path "X")]
+   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X")] ++
+  copy64Loop (ctx.lbl path "L") e ++ [.label (ctx.lbl path "X")]
+
+/-- The copy loop of `copy8w`. -/
+def copy8wLoop (Lb : Label) (e : AddrExpr) : Program :=
+  [.label Lb, i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mb .rcx 0))), movMR (mb .rdx 0) .rax,
+   i64 (.add (.reg (rr .rcx)) (oI 1)), i64 (.add (.reg (rr .rdx)) (oI 8)),
+   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c Lb]
 
 /-- `copy D[di ..] := S.u8[si ..] for n`, 6 instructions per byte. -/
 def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) : Program :=
@@ -561,30 +569,36 @@ def copy8wCode (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : BSrc) (si n
    movRR .rcx .rax] ++
   cd ++ [movRM .rax (mb Rd (ctx.tab.len64 d.arr))] ++ lenChk ctx di n ++ wordPtr ctx .rdx Rd d.arr di ++
   [i64 (.mov (.reg (rr .rax)) (opnd ctx n)), i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR e .rax,
-   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X"),
-   .label (ctx.lbl path "L"),
-   i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mb .rcx 0))), movMR (mb .rdx 0) .rax,
-   i64 (.add (.reg (rr .rcx)) (oI 1)), i64 (.add (.reg (rr .rdx)) (oI 8)),
-   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .c (ctx.lbl path "L"),
-   .label (ctx.lbl path "X")]
+   i64 (.cmp (.reg (rr .rcx)) (oM e)), jccL .nc (ctx.lbl path "X")] ++
+  copy8wLoop (ctx.lbl path "L") e ++ [.label (ctx.lbl path "X")]
 
 /-- The address `[r15 + rdx + off]` (the class table, indexed by a byte). -/
 abbrev tblAddr (off : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨.rdx, .W8⟩, .int64 (Int64.ofInt off)⟩
 
-/-- `x := scan S.u8[i .. e] until c`: `rcx` = the source, `rax` = the position; per byte the
-byte, its class (constant data) and the tests: 7 instructions. -/
+/-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+tests, 7 instructions. -/
+def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+  [.label Lb,
+   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+   i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+
+/-- `x := scan S.u8[i .. e] until c`: `rcx` = the source, `rax` = the position. -/
 def scan8Code (ctx : Ctx) (path : Path) (s : BSrc) (i e : Expr) (c : List UInt8) : Program :=
   [srcLen ctx .rdx s, i64 (.mov (.reg (rr .rax)) (opnd ctx e)), i64 (.cmp (.reg (rr .rax)) (oR .rdx)),
    jccL .a errorL,
    i64 (.mov (.reg (rr .rax)) (opnd ctx i)), i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .a errorL,
    srcBase ctx s,
-   i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .nc (ctx.lbl path "X"),
-   .label (ctx.lbl path "L"),
-   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-   i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr (ctx.tab.romBase + romIdx c ctx.tab.rom)))),
-   i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz (ctx.lbl path "X"),
-   i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .c (ctx.lbl path "L"),
-   .label (ctx.lbl path "X")]
+   i64 (.cmp (.reg (rr .rax)) (opnd ctx e)), jccL .nc (ctx.lbl path "X")] ++
+  scanLoop (ctx.lbl path "L") (ctx.lbl path "X") (ctx.tab.romBase + romIdx c ctx.tab.rom) (opnd ctx e) ++
+  [.label (ctx.lbl path "X")]
+
+/-- `x := rax`. -/
+def storeRax (ctx : Ctx) (x : Var) : Directive :=
+  match ctx.alloc.lookup x with
+  | some r => movRR r .rax
+  | none => movMR (mb .rsp (8 * x)) .rax
 
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
@@ -866,10 +880,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
        movMR (mbi .rcx .rax .W64) .rdx]
   | .copy64 d di s si n => copy64Code ctx path d di s si n
   | .copy8w d di s si n => copy8wCode ctx path d di s si n
-  | .scan8 x s i e c => scan8Code ctx path s i e c ++
-      [match ctx.alloc.lookup x with
-       | some r => movRR r .rax
-       | none => movMR (mb .rsp (8 * x)) .rax]
+  | .scan8 x s i e c => scan8Code ctx path s i e c ++ [storeRax ctx x]
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
