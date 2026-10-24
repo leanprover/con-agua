@@ -16,6 +16,13 @@ reads/writes of the top `CTL[0]`.
 | frontend | `nat_dec` (`nat_mad`, `dec_loop`), `ls_put`, `node_lit`, `node_lit_str`, `apply_str` |
 | ROM / pins | `rom_put`, `rom_put_pb`, `stk_pool`, `rom_lit` |
 
+**Method note (missed once):** besides `POOL.u64[…]`/`len(POOL…)` in L text, grep `checkerProg`
+(`Checker/Prog.lean` and the sub-programs) for every *template* instantiated with the pool (or
+any tiered array) as an argument: `lv_lookup = lvLookupG EREC POOL` reads its value array with a
+plain `VA.u64[vo]`; it slipped through the text inventory and broke the scratch-flag version on 7
+fixtures (natop_*, k_major_raw, init-prelude, Init). It now reads `VA⦃vo⦄`; no other entry of
+`checkerProg` passes the pool to a template.
+
 Proof side: 1474 mentions of `POOL` in 119 files (`pv (m.arr64 POOL) o l`, `Norm`, `sliceL`,
 `hashN`, frames `m'.arr64 POOL = m.arr64 POOL`, `Grows`, `PoolOK`, `SliceOK`).
 
@@ -58,6 +65,12 @@ are already copied (`pls_arm` → `promote_l_pool`).
 | version | instructions | cycles | wall |
 |---|---:|---:|---:|
 | tier = phase, per-store `- base` | 1.015 | 1.012 | 1.010 |
+| tier = phase, per-loop base | 1.015 | 0.989 | 1.002 |
+| tier = scratch flag, per-loop base (+ `lv_lookup` fix) | 1.014 | 1.003 | 0.996 |
+
+Scratch-flag version: `long_line_5mib` +8.5 %, small fixtures +1.3–2.5 %, big kernel runs
++0.01–0.03 %, Init +0.26 %; Init's peak RSS 1507 → 1388 MB (−8 %): the scratch tier's limbs are
+dropped with it (D10 across declarations).
 
 Big kernel runs +0.01–0.03 % (app-lam, beta/let-ladder, c04a, c05b, c03d), Init v4.35 +0.26 %,
 the 8 small fixtures +1.3–3 % (ROM/pin byte copies into the pool), `long_line_5mib` +9.5 % (string
