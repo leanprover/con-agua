@@ -92,8 +92,7 @@ theorem viewLsW_iwFrame {n : Nat} {m m' : Mem} {us : Word} {r : List Word}
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_iwFrame hal).trans (poolCopyW_iwFrame _ _ _ _ _ _ hc)
 
 /-- The fire `(1, lvls, pins)` as words. -/

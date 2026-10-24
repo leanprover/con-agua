@@ -126,8 +126,7 @@ theorem instW_okB {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     | zero => simp [instW] at h
     | succ n =>
     rw [instW_nil (h := UInt64.toNat_inj.mp (by simpa using hl0))] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : args = [] := by rw [hl0] at hds; simpa [decHL, hslice?] using hds.symm
     subst this
     exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
@@ -225,8 +224,7 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   by_cases hs2 : (eViewW m6 (r6.tail.tail.headD 0)).headD 0 ≠ 2
   · rw [if_pos hs2] at h; cases h
   rw [if_neg hs2] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.1 _ hne
   rw [getD_two] at he6
   rw [he6] at hv

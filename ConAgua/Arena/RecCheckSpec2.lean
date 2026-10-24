@@ -397,8 +397,7 @@ theorem mkTMW_dec {m m' : Mem} {r : List Word} (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a1
   | some qm =>
   obtain ⟨q, m1⟩ := qm
   rw [hal] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, hm2⟩ := h
+  obtain ⟨rfl, hm2⟩ := Prod.mk.inj (Option.some.inj h)
   rw [← hm2]
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
   subst hm1
@@ -436,8 +435,7 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
   have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
   rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.2
   have hdec0 : ∀ {k : IdxKind} (mm : Mem), (decHL mm (0 : Word).toNat (0 : Word).toNat : Option (List (Idx k))) = some [] := by
     intro k mm; simp [decHL, hslice?]

@@ -344,8 +344,7 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
   | succ n =>
   by_cases hv : vus ≠ lvls
   · rw [taCW_ne (hv := hv)] at hc
-    simp only [Option.some.injEq, Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
     have : ¬ ((decI vus : LsIdx) == decI lvls) = true := by rw [decI_beq' vus lvls hvus hlv]; simpa using hv
     refine ⟨rfl, ?_⟩
     simp only [taConstT, this]; rfl
@@ -363,8 +362,7 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
   | none =>
     rw [hwi] at hfr; subst hfr
     rw [taCK_miss (h0 := rfl)] at hc
-    simp only [Option.some.injEq, Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
     refine ⟨rfl, ?_⟩
     simp only [taConstT, hbeq, ite_true, hfi, hwi]
   | some i =>
@@ -373,8 +371,7 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
     have hi : (UInt64.ofNat i : Word).toNat = i := UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)
     by_cases hout : hl ≤ UInt64.ofNat i
     · rw [taCK_out (h0 := by simp) (h1 := by simpa using hout)] at hc
-      simp only [Option.some.injEq, Prod.mk.injEq] at hc
-      obtain ⟨rfl, rfl⟩ := hc
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
       have : holes.length ≤ i := by
         have h1 := UInt64.le_iff_toNat_le.mp hout; rw [hi] at h1; rw [hhl]; exact h1
       refine ⟨rfl, ?_⟩

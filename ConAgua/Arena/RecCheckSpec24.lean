@@ -172,8 +172,7 @@ theorem soaW_ok0 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         (r.tail.tail.tail.headD 0) m' := by
   by_cases hl : recl = 0
   · rw [soaW_nil n m reco recl k hl] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     rw [hrs.nil hl]
     exact ⟨hS, IWGrow.refl _, PSlR.nil _ _, PSlR.nil _ _⟩
   · exact soaW_ok (n + 1) m m' a reco recl k recs r h hS (hrs.pslr hl)
@@ -297,8 +296,7 @@ theorem trpW_ok (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLec
     refine Classical.byContradiction fun hc => ?_; rw [trpK6_zero _ _ (by rw [hr6]; simp [hc])] at e; cases e
   subst hc4
   rw [trpK6_ok _ _ (by rw [hr6]; decide)] at e
-  simp only [Option.some.injEq, Prod.mk.injEq] at e
-  obtain ⟨rfl, rfl⟩ := e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   have h4' : splitOk bs blk = true := by
     change Except.ok (splitOk bs blk, _) = Except.ok (true, _) at hrun4
     simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4; exact hrun4.1

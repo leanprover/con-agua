@@ -122,8 +122,7 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     intro m m' a reco recl k recs r h hS hrs
     by_cases hl : recl = 0
     · rw [soaW_nil n m reco recl k hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl; rw [partsPSl_nil hrs]
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _, PSlR.nil _ _⟩
     rw [soaW_cons n m reco recl k hl] at h
@@ -153,8 +152,7 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     by_cases hc : rs0.tgt < k.toNat
     · rw [soaK1_own n m1 reco k r1 (by rw [hw3, hlt]; exact hc), hw1] at h
       rcases h2 : consW n m1 (UInt64.ofNat pc) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [h2, soaOwn, reduceCtorEq] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS2, hg2, hd2, -⟩ := consW_pslr (fun q => decRS_mono q) h2 hS1 hown hy
       refine ⟨hS2, hg1.trans hg2, ?_, ?_⟩
       · simp only [List.filter_cons, decide_eq_true hc, if_true, List.headD_cons, List.tail_cons]
@@ -164,8 +162,7 @@ theorem soaW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         exact haux.grow (fun q => decRS_mono q) hg2
     · rw [soaK1_aux n m1 reco k r1 (by rw [hw3, hlt]; exact hc), hw1] at h
       rcases h2 : consW n m1 (UInt64.ofNat pc) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [h2, soaAux, reduceCtorEq] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS2, hg2, hd2, -⟩ := consW_pslr (fun q => decRS_mono q) h2 hS1 haux hy
       refine ⟨hS2, hg1.trans hg2, ?_, ?_⟩
       · simp only [List.filter_cons, decide_eq_false hc, Bool.false_eq_true, if_false, List.headD_cons,
@@ -271,8 +268,7 @@ theorem wanW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rintro r2 xs m2 a2 ⟨hd2, hb2, hS2, hg2⟩
     intro r m' e
     rcases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [h3, bgoK3, reduceCtorEq] at e
-    simp only [Option.some.injEq, Prod.mk.injEq] at e
-    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hx1l hd2
     refine ⟨x1 :: xs, a2, rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega, hS3,
       (hg1.trans hg2).trans hg3⟩

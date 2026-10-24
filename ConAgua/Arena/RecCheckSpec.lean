@@ -158,8 +158,7 @@ theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     intro m m' a k c e r h hS he hb hA
     by_cases hk : k = 0
     · rw [absPrefW_nil n m k c e hk] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hk0 : k.toNat = 0 := by rw [hk]; rfl
       rw [hk0]
       exact ⟨decI e, a, rfl, hS, IWGrow.refl m, by simpa using he, rfl, hA⟩
@@ -175,8 +174,7 @@ theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1, hd2⟩, hA1⟩ :=
         abF_ok dn vis fe e (k - 1) c he m m1 a ra ha ⟨hS, hA⟩
       rcases hr : absPrefW n m1 (k - 1) (c + 1) (ra.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [hr, apK2, reduceCtorEq] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨x2, a2, hrun2, hS2, hg2, hd21, hd22, hA2⟩ := ih m1 m2 a1 (k - 1) (c + 1) (ra.headD 0) r2 hr hS1 hd1
         (by rw [hk1, hc1]; omega) hA1
       refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, by simpa using hd21, by simpa using hd22, hA2⟩
@@ -289,8 +287,7 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     intro m m' a rP dso dsl r ds h hS hds hb hbt hrP hA
     by_cases hdsl : dsl = 0
     · rw [aplW_nil n m rP dso dsl hdsl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : dsl.toNat = 0 := by rw [hdsl]; rfl
       rw [hz] at hds
       simp [decHL, hslice?] at hds
@@ -320,8 +317,7 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := ih m1 m2 a1 rP (dso + 1) (dsl - 1) r2 ds' hr hS1 hds1
         (by rw [hdso1, hdsl1]; omega) (by rw [hdso1, hdsl1]; have := hg1.1; omega) hrP hA1
       rcases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, aplK3, reduceCtorEq] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
       refine ⟨x1 :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by rw [← hd12]; simpa using hd3,
         by simpa using Nat.le_of_eq ht3, hA2.consW hc⟩
@@ -442,8 +438,7 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     intro m m' a tyo tyl base r tys h hS htys hb hbt hbase
     by_cases htyl : tyl = 0
     · rw [thW_nil n m tyo tyl base htyl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : tyl.toNat = 0 := by rw [htyl]; rfl
       rw [hz] at htys
       simp [decHL, hslice?] at htys
@@ -480,8 +475,7 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         htys1 (by rw [htyo1, htyl1]; omega) (by rw [htyo1, htyl1]; have := hg1.1; omega)
         (by rw [hbase1, htyl1]; omega)
       rcases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, thK3, reduceCtorEq] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hv32 hd2
       refine ⟨decE v :: xs2, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3, by simpa using Nat.le_of_eq ht3⟩
       rw [hbase1] at hrun2
@@ -685,8 +679,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     intro m m' a xo xl e r xs h hS he hxs hb hbt
     by_cases hxl : xl = 0
     · rw [pdW_nil n m xo xl e hxl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : xl.toNat = 0 := by rw [hxl]; rfl
       rw [hz] at hxs
       simp [decHL, hslice?] at hxs
@@ -703,8 +696,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := ctag_iff e he 6 (by decide)
       by_cases hf : e >>> 28 ≠ 6
       · rw [pdW_nf n m xo xl e hxl hf] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl⟩
         have : ¬ (decE e).tag = ETag.forallE := fun hc => hf (hftag.mp hc)
         have htag' : ((decE e).tag == ETag.forallE) = false := by simpa using this
@@ -763,8 +755,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 none htag hvb hrun1' hrun2'
         have hr0 : r2.headD 0 = 0 := hres2
         rw [pdK2_none n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr0] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
         rw [e1, ← hw3]; exact hstep
       | some ds =>
@@ -773,8 +764,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         have hr1' : r2.headD 0 ≠ 0 := by rw [hr1]; decide
         rw [pdK2_ok n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr1'] at h
         rcases hc : consW n m2 ((eViewW m e).getD 1 0) (r2.tail.headD 0) (r2.tail.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, pdK3, reduceCtorEq] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 hle hdlt hdd2
         refine ⟨some (ty :: ds), a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
         · rw [e1, ← hw3]; exact hstep

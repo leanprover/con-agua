@@ -47,8 +47,7 @@ theorem tptW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
     intro m m' a d xo xl r xs xsP h hC hA hxs hb hbt hxsP hw
     by_cases hxl : xl = 0
     · rw [tptW_nil (realCall p) n m vis d xo xl hxl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨-, rfl⟩ := h
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hz : xl.toNat = 0 := by rw [hxl]; rfl
       rw [hz] at hxs
       simp [decHL, hslice?] at hxs
@@ -79,8 +78,7 @@ theorem tptW_okC (n : Nat) (hn : n ≤ 2 ^ 62) :
           inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self) _ hi
         dsimp only at hC1 hg1 hA1
         rcases hr : tptW (realCall p) n m1 vis d (xo + 1) (xl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, tptK2, reduceCtorEq] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨-, rfl⟩ := h
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
           rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
         obtain ⟨a2, hrun2, hC2, hg2, hA2⟩ := ih (by omega) m1 m2 a1 d (xo + 1) (xl - 1) r2 xs' xsP'
@@ -139,8 +137,7 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
   rw [show UInt64.ofNat 8 = (8 : Word) from rfl] at hrk
   by_cases hk0 : rdW (m.arr64 IW) (Mp + 8) ≠ 0
   · rw [tmpW_mem (h := hk0)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hk0' : k ≠ 0 := by intro e; apply hk0; rw [hrk.1, e]; rfl
     have hmem' : M.member = some (k - 1) := by rw [hmem]; simp [decON, hk0']
     exact ⟨a, by simp [ConRon.Arena.targetMajorPins, hmem']; rfl, hC, IWGrow.refl m, hA⟩
@@ -179,8 +176,7 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
       | zero => simp [tptW] at h1
       | succ N =>
       rw [tptW_nil (realCall p) N m vis rP (UInt64.ofNat o) (UInt64.ofNat 0) rfl] at h1
-      simp only [Option.some.injEq, Prod.mk.injEq] at h1
-      obtain ⟨rfl, rfl⟩ := h1
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
       exact ⟨a, m, [], rfl, by rw [hnil]; rfl, hC, IWGrow.refl m, hA⟩
     have hbnd := decHL_truncM_bound hdT hl0
     obtain ⟨a1, hrun1, hC1, hg1, hA1⟩ := tptW_okC hq henv N (by omega) m m1 a rP _ _ r1 M.ds MP.ds
@@ -231,8 +227,7 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
   have hA3 := mknF_afr h3 hA2
   have hC3 : StageC dn vis fe env m3 a3 := hC2.of_pstep hS3 hA3 p3
   rcases h4 : realCall p N "infer_type_core" [vis, rP, r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;> simp only [h4, tmpK4, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   rw [← hx3.2] at happ
   obtain ⟨x4, a4, hrun4, hC4, hg4, -, hA4, -⟩ := inferC_rsim hq henv N (by omega) hC3 hA3 rP
     (r3.headD 0) hx3.1 happ

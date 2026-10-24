@@ -90,8 +90,7 @@ theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   simp only [recW] at h
   rcases hal : allocW m k with _ | ⟨q, m0⟩ <;> rw [hal] at h
   · cases h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact StageR.wrIW (allocW_stage hal hS).1 q ws
 
 /-- `erase_fvar_tys` simulates `eraseFVarTys`. -/
@@ -103,8 +102,7 @@ theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
   unfold eftW at h
   rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
   rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hrec : recW m 1 [2] = some ([f], m1.set64 IW f 2) := by simp [recW, ha, wrIW]
   obtain ⟨hr0, hq, hget, hS1, hg1, hf1, ht1⟩ := rcFresh hrec hS rfl
   simp only [List.cons.injEq, and_true] at hr0
@@ -190,8 +188,7 @@ theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
   subst hr0
   simp only [List.headD_cons] at h
   rcases hr : rxW n m1 (rdW (m.arr64 CTL) 200) e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   simp only [List.length_cons, List.length_nil] at ht1
   have g0 := hget 0 (by simp)
   have g1 := hget 1 (by simp)
@@ -286,8 +283,7 @@ theorem tcoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis I : Word)
     ∃ x a', (ConRon.Arena.targetCtorsOf fe (decI I)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x ∧ MFr [] [] m m' := by
   rcases hn : ntW n m vis I with _ | ⟨r1, m1⟩ <;> simp only [hn, tcoK, reduceCtorEq] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok dn fe vis I hI n m _ a r1 hn hS
   exact ⟨x, a', hrun, hS', hg, hout.tco, ntWf_mfr (show ntWf (n + 1) m vis I = some (r1, m1) from hn)⟩
 

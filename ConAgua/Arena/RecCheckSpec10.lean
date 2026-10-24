@@ -181,8 +181,7 @@ theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n : N
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
       · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
-        simp only [Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   have hk : sp a' = sp a := by
     rw [bvarB_run] at hrun
