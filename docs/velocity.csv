@@ -271,3 +271,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-24,shrink,claude-opus-5-5,40,50,"batch 3: program bundles as ProgHas for the six largest (-318); small ones reverted (not worth it); UpTo item infeasible"
 2026-10-24,shrink,claude-opus-5-5,20,40,"batch 4: helpers pos/rec/chk (-5.7k proof lines)"
 2026-10-24,kstp-proof,claude-opus-5-5,190,35,KSTP cons tables proved: models, template specs, KP relation, growth (StoreGrow), consMinWords plumbing, D34
+2026-10-24,shrink,claude-opus-5-5,15,45,"batch 5: helpers inst/iota/core (-3.1k proof lines)"

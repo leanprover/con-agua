@@ -172,13 +172,11 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [ctcW_def] at h
   by_cases h5 : rdW (m.arr64 EREC) x ≤ 5
   · rw [if_pos h5] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨cv, hd, hrun⟩ := ctcW_small hS hci h5
     exact ⟨cv, a, hrun, hS, IWGrow.refl _, by simpa using hd⟩
   rw [if_neg h5] at h
-  by_cases h6 : rdW (m.arr64 EREC) x ≠ 6
-  · rw [if_pos h6] at h; simp at h
+  have h6 : ¬ rdW (m.arr64 EREC) x ≠ 6 := fun h6 => by rw [if_pos h6] at h; simp at h
   rw [if_neg h6] at h
   have h6' : rdW (m.arr64 EREC) x = 6 := by simpa using h6
   obtain ⟨wk, e, hk⟩ := ciD hci
@@ -213,8 +211,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | some zm =>
   obtain ⟨z, m1⟩ := zm
   rw [hz, ctcK1_some] at h
-  by_cases hz32 : 4294967296 ≤ z
-  · rw [if_pos hz32] at h; simp at h
+  have hz32 : ¬ 4294967296 ≤ z := fun hz32 => by rw [if_pos hz32] at h; simp at h
   rw [if_neg hz32] at h
   have hz' : z.toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Word).toNat ≤ z.toNat := fun e => hz32 (UInt64.le_iff_toNat_le.mpr e)
@@ -225,8 +222,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | some om =>
   obtain ⟨o, m2⟩ := om
   rw [hs, ctcK2_some] at h
-  by_cases ho32 : 4294967296 ≤ o
-  · rw [if_pos ho32] at h; simp at h
+  have ho32 : ¬ 4294967296 ≤ o := fun ho32 => by rw [if_pos ho32] at h; simp at h
   rw [if_neg ho32] at h
   have ho' : o.toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Word).toNat ≤ o.toNat := fun e => ho32 (UInt64.le_iff_toNat_le.mpr e)
@@ -237,8 +233,7 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | some tm =>
   obtain ⟨t, m3⟩ := tm
   rw [hso, ctcK3_some] at h
-  by_cases ht32 : 4294967296 ≤ t
-  · rw [if_pos ht32] at h; simp at h
+  have ht32 : ¬ 4294967296 ≤ t := fun ht32 => by rw [if_pos ht32] at h; simp at h
   rw [if_neg ht32] at h
   have ht' : t.toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Word).toNat ≤ t.toNat := fun e => ht32 (UInt64.le_iff_toNat_le.mpr e)
@@ -251,21 +246,11 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   have rll := cnRdW_grow hg13 hsz3 (x := x) (k := 4) (kn := 3 + 1) rfl hwl
   rw [rn, rlo, rll] at h
   simp only [ctcK4] at h
-  cases hcn : cvNewW m3 wn wo wl t with
-  | none => rw [hcn] at h; simp at h
-  | some qm =>
-  obtain ⟨q, m4⟩ := qm
-  rw [hcn] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  rcases hcn : cvNewW m3 wn wo wl t with _ | ⟨q, m4⟩ <;> simp only [hcn, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   simp only [cvNewW] at hcn
-  cases hal : erAllocW m3 4 with
-  | none => rw [hal] at hcn; simp at hcn
-  | some qm1 =>
-  obtain ⟨q1, m5⟩ := qm1
-  rw [hal] at hcn
-  simp only [Option.some.injEq, Prod.mk.injEq] at hcn
-  obtain ⟨rfl, rfl⟩ := hcn
+  rcases hal : erAllocW m3 4 with _ | ⟨q1, m5⟩ <;> simp only [hal, reduceCtorEq] at hcn
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hcn)
   rw [cvNewMem_eq]
   obtain ⟨hS4, hg4, hq, htop, hget⟩ := erRec_stage hal hS3 [wn, wo, wl, t] (by simp)
   refine ⟨⟨decI wn, l3, decE t⟩, a3, ?_, hS4, hg13.trans hg4, ?_⟩

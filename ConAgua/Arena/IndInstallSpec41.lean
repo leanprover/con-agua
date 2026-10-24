@@ -388,9 +388,8 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
       (fun b a' x => (KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) ∧
         (∀ pre, x = some pre → iwTop m ≤ (b.1.tail.headD 0).toNat)) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [gpbW_eq]
   unfold ConRon.Arena.ClassGen.prefixBinders
   rw [rec2MapM_genBinder]

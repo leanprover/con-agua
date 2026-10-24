@@ -350,14 +350,12 @@ theorem absNodeW_proj (hg : h >>> 28 = 9) : absNodeW (n + 1) m h k d fu = absPro
 theorem absNodeW_fvar_eq (hv : viewOK m h 26) (hg : h >>> 28 = 1)
     (he : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) = d) :
     absNodeW (n + 1) m h k d fu = binternW m k := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [absNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, he]
+  rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
 
 theorem absNodeW_fvar_ne (hv : viewOK m h 26) (hg : h >>> 28 = 1)
     (he : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ≠ d) :
     absNodeW (n + 1) m h k d fu = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [absNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, he]
+  rw [absNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2, he]
 
 theorem absNodeW_leaf (h1 : h >>> 28 ≠ 1)
     (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7)

@@ -149,11 +149,7 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
   obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
   have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
   unfold bleW at h
-  cases c1 : callW p n "lv_nz" [rdW (m.arr64 IW) (pp + 6)] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   obtain ⟨s1, hs1, -, hm1, hnz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvNz_spec p P.node P.nz n _ (rdW (m.arr64 IW) (pp + 6))) c1
   simp only at hs1 hm1 hnz
@@ -177,16 +173,10 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
     simp only [Bool.false_eq_true, ite_false] at hx
     by_cases hnb : nb = 0
     · rw [bleK1_go (h1 := hx) (h2 := hnb)] at h
-      cases n with
-      | zero => rw [callW_zero] at h; cases h
-      | succ k =>
-      cases c2 : callW p (k + 1) "block_shape_num_ctors" [pp] m with
-      | none => rw [c2] at h; cases h
-      | some q2 =>
-      obtain ⟨r2, m2⟩ := q2
-      rw [c2, bleK2_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      rcases n with _ | k
+      · rw [callW_zero] at h; cases h
+      obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl; rw [bleK2_some] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨s2, hs2, hm2, hnc⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
         (blockShapeNumCtorsW_spec p P.nco P.nc k _ pp) c2
       subst hm2
@@ -208,16 +198,14 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
       simp only [hK, hnc']
       exact bleT_dec hkb hncb hL
     · rw [bleK1_nb (h1 := hx) (h2 := hnb)] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, _, htw _ _ (by
         simp only [hnv, Bool.false_eq_true, ite_false, show (nb != 0) = true by simpa using hnb, ite_true]; rfl),
         hSX, rfl, ⟨rfl, by decide⟩, rfl, hcX⟩
   · rw [hnv] at hx
     simp only [ite_true] at hx
     rw [bleK1_nz (h := by rw [hx]; decide)] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact ⟨true, _, htw _ _ (by simp only [hnv, ite_true]; rfl), hSX, rfl, ⟨rfl, by decide⟩, rfl, hcX⟩
 
 /-- **`block_large_elim_allowed` refines `blockLargeElimAllowed`, as a call**, under `StageR`, the

@@ -271,10 +271,8 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     have hp4 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 4) = w := by
       rw [hpw', ← hwr]; congr 1; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
     rw [hp4] at h
-    cases hst : L.Front.Ind.sortTeleW k m CWF w with
-    | none => rw [hst, ipoT_none] at h; cases h
-    | some okn =>
-    obtain ⟨ok, n⟩ := okn
+    rcases hst : L.Front.Ind.sortTeleW k m CWF w with _ | ⟨ok, n⟩
+    · rw [hst, ipoT_none] at h; cases h
     rw [hst] at h
     obtain ⟨hrun, hnlt⟩ := L.Front.Ind.sortTeleW_ok m a hR k CWF w ok n hst
     rw [CWF_eq, decE_eq, hwd] at hrun

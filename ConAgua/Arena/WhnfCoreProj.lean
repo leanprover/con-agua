@@ -142,26 +142,20 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
   unfold projLitToCtorW at hW
   by_cases htag : h >>> 28 ≠ 8
   · rw [if_pos htag] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun' := projLitToCtor_run_not_lit (coreKnot (decMode mode) fe id F) fe d.toNat h hh htag a₀
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
     refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact hh⟩
     rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
   rw [if_neg htag] at hW
   have htag8 : h >>> 28 = 8 := by simpa using htag
-  by_cases hsc : tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · simp [hsc] at hW
-  rw [if_neg hsc] at hW
-  by_cases hbd : rdW (s.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
-  · simp [hbd] at hW
-  rw [if_neg hbd] at hW
+  obtain ⟨hsc, hW⟩ := of_ite_none hW
+  obtain ⟨hbd, hW⟩ := of_ite_none hW
   have hvOK : viewOK s.mem h 2 := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hviewS, hviewN⟩ := view_lit_kind s.mem a₀ hS.arena.1 h hh hvOK htag8
   by_cases hkind : rdW (s.mem.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1
   · rw [if_pos hkind] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨l, hv, hne⟩ := hviewN hkind
     have hrun' := projLitToCtor_run_plain (coreKnot (decMode mode) fe id F) fe d.toNat h hh htag8 a₀
       l hv hne
@@ -176,8 +170,7 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
     CoreSpec.of_callW (hStrSup n s a₀ dn vis fe MM eb hS) hcall1
   by_cases hsup0 : r₁.headD 0 = 0
   · rw [if_pos hsup0] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hsupF : (strLitSupported fe).run a₀ = .ok (false, AM.st (strLitSupported fe) a₀) := by
       have hrr := AM.run_of_ok _ _ hok1
       rw [hres1] at hrr
@@ -1004,12 +997,8 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
   rw [if_neg g] at hW
   have g3 : r₁.headD 0 >>> 28 = 3 := by simpa using g
-  by_cases hsc : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · rw [if_pos hsc] at hW; cases hW
-  rw [if_neg hsc] at hW
-  by_cases hbd : rdW (s.mem.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
-  · rw [if_pos hbd] at hW; cases hW
-  rw [if_neg hbd] at hW
+  obtain ⟨hsc, hW⟩ := of_ite_none hW
+  obtain ⟨hbd, hW⟩ := of_ite_none hW
   have hvOK : viewOK s.mem (r₁.headD 0) 18 := ⟨hsc, by simpa using hbd⟩
   obtain ⟨n', us', hv, hn, hus, hhn, hhus⟩ := view_const_words s.mem a₀ hS.arena.1 (r₁.headD 0)
     hhw hvOK g3

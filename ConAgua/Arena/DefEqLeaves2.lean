@@ -30,13 +30,6 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
 
-theorem erSliceEqLoop_step_spec (p : Prog) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) erSliceEqLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
-        then 1 else 0]; ⊤⦄ :=
-  Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :
@@ -47,7 +40,7 @@ theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, erSliceEqLoop_step_spec p n] <;> finish
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
 
 theorem mapM_get {α β : Type} {f : α → Option β} :
     ∀ {xs : List α} {l : List β}, xs.mapM f = some l →
@@ -364,17 +357,13 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb e : Word) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "nat_pred" [e] (natPred? (decE e)) decOptR s₀ a₀ dn vis fe MM eb ResW := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (natPred_spec p hp n s₀ e)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (natPred_spec p hp n s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   have hR := hS.arena.1
   have hP := hS.pins
   -- the arms that keep the state
-  have hres : ∀ (x y : Word), some (x, y, s.mem) = some (r.headD 0, r.tail.headD 0, s'.mem) →
+  have hres : ∀ (x y : Word), some (x, y, s₀.mem) = some (r.headD 0, r.tail.headD 0, s'.mem) →
       HW x → HW y → (natPred? (decE e)).run a₀ = .ok (decOpt x y, a₀) →
-      CoreRef (natPred? (decE e)) a₀ decOptR dn s.mem vis fe MM eb r s'.mem ResW := by
+      CoreRef (natPred? (decE e)) a₀ decOptR dn s₀.mem vis fe MM eb r s'.mem ResW := by
     intro x y hxy hx hy hv
     simp only [Option.some.injEq, Prod.mk.injEq] at hxy
     obtain ⟨h1, h2, h3⟩ := hxy
@@ -386,23 +375,23 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   unfold natPredW at hW
   by_cases h8 : e >>> 28 = 8
   · simp only [h8, ↓reduceIte] at hW
-    by_cases hs : tierW e ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+    by_cases hs : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
     · simp [hs] at hW
-    by_cases hc : rdW (s.mem.arr64 CTL) (2 + tierW e) ≤ idxW e
+    by_cases hc : rdW (s₀.mem.arr64 CTL) (2 + tierW e) ≤ idxW e
     · simp [hs, hc] at hW
     simp only [hs, hc, ↓reduceIte] at hW
-    have hvo : viewOK s.mem e 2 := ⟨hs, by simpa using hc⟩
+    have hvo : viewOK s₀.mem e 2 := ⟨hs, by simpa using hc⟩
     have htl : ((decE e).tag == ETag.lit) = true := by rw [tag_beq_lit e he]; simp [h8]
-    obtain ⟨k, hk, hkr⟩ := node_of s.mem a₀ e litCS RecRel (·.lits) _ hR.lit.2 hvo.2
+    obtain ⟨k, hk, hkr⟩ := node_of s₀.mem a₀ e litCS RecRel (·.lits) _ hR.lit.2 hvo.2
     have hview : ∀ l, k = ⟨l⟩ → a₀.store.view (decE e) = some (.lit l) := by
       intro l hl
-      rw [view_tier s.mem a₀ hR e he hvo.1, get_lit _ e he h8, Tbl.node?, hk, hl]
+      rw [view_tier s₀.mem a₀ hR e he hvo.1, get_lit _ e he h8, Tbl.node?, hk, hl]
       rfl
     obtain ⟨l⟩ := k
     cases l with
     | strVal str =>
       simp only [RecRel_strVal, StrRec] at hkr
-      have h1 : rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4) ≠ 0 := by rw [hkr.1]; decide
+      have h1 : rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4) ≠ 0 := by rw [hkr.1]; decide
       simp only [h1, ne_eq, not_false_eq_true, ↓reduceIte] at hW
       refine hres 0 0 hW hw0 hw0 ?_
       simp only [natPred?, htl, ↓reduceIte, StateT.run_bind, view_run _ _ _ (hview _ rfl),
@@ -412,7 +401,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
       simp only [RecRel_natVal, NatRec] at hkr
       obtain ⟨h0, hsl, hn, hpv, -⟩ := hkr
       simp only [h0, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-      by_cases hl0 : rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 2) = 0
+      by_cases hl0 : rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 2) = 0
       · simp only [hl0, ↓reduceIte] at hW
         have hN : N = 0 := by rw [← hpv, hl0]; rfl
         subst hN
@@ -424,19 +413,17 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
       have hNpos : N ≠ 0 := by
         rw [← hpv]; intro h
         exact hl0 (UInt64.toNat_inj.mp (by simpa using (pv_eq_zero_iff _ _ _ hn).mp h))
-      cases hc2 : callW p n "nat_pred_lit" [rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 1),
-        rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 2)] s.mem with
-      | none => simp [hc2] at hW
-      | some q =>
-      obtain ⟨r₁, m₁⟩ := q
+      rcases hc2 : callW p n "nat_pred_lit" [rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 1),
+        rdW (s₀.mem.arr64 REC) (idxW e * 8 + tierW e * 4 + 2)] s₀.mem with _ | ⟨r₁, m₁⟩
+      · simp [hc2] at hW
       rw [hc2, Option.bind_some, npLitF, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, hr1, hm⟩ := hW
       obtain ⟨t, ht, -, hok, hK, hres', hhw⟩ := triple_of_callW
-        (natPredLit_refines_hw p (CoreK dn vis fe MM eb s.mem) (fun _ _ h => h.1.arena.1.lit.1)
+        (natPredLit_refines_hw p (CoreK dn vis fe MM eb s₀.mem) (fun _ _ h => h.1.arena.1.lit.1)
           (fun m m' a h hg => h.grow hg)
           (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern hlw dn vis fe MM eb
-            s.mem)
-          hp.limb hp.sbb hp.trim hp.sub hp.npl n s a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl) hc2
+            s₀.mem)
+          hp.limb hp.sbb hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl) hc2
       rw [hpv] at hok hK hres'
       have hrun : (natPred? (decE e)).run a₀ = (natPredArm N).run a₀ := by
         obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by omega⟩
@@ -457,62 +444,62 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     simp only [natPred?, htl, tag_beq_app e he, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   simp only [h4, ↓reduceIte] at hW
-  by_cases hs : tierW e ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  by_cases hs : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [hs] at hW
-  by_cases hc : rdW (s.mem.arr64 CTL) (4 + tierW e) ≤ idxW e
+  by_cases hc : rdW (s₀.mem.arr64 CTL) (4 + tierW e) ≤ idxW e
   · simp [hs, hc] at hW
   simp only [hs, hc, ↓reduceIte] at hW
-  have hvo : viewOK s.mem e 4 := ⟨hs, by simpa using hc⟩
-  obtain ⟨-, hf, hx⟩ := view_app s.mem a₀ hR e he hvo h4
+  have hvo : viewOK s₀.mem e 4 := ⟨hs, by simpa using hc⟩
+  obtain ⟨-, hf, hx⟩ := view_app s₀.mem a₀ hR e he hvo h4
   have hpre : (natPred? (decE e)).run a₀ = (do
-      let f := decE (rdW (s.mem.arr64 AREC) (idxW e * 4 + tierW e * 2))
+      let f := decE (rdW (s₀.mem.arr64 AREC) (idxW e * 4 + tierW e * 2))
       if f.tag == ETag.const then
         match ← view f with
         | .const c us => do
           let el ← emptyLevels
           let ns ← pinNatSucc
           if c == ns && us == el then
-            pure (some (decE (rdW (s.mem.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1))))
+            pure (some (decE (rdW (s₀.mem.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1))))
           else pure none
         | _ => pure none
       else pure none : AM (Option EIdx)).run a₀ := by
     simp only [natPred?, htl, tag_beq_app e he, h4, decide_true, Bool.false_eq_true, ↓reduceIte,
-      StateT.run_bind, viewApp_run', viewApp_ok s.mem a₀ hR e he hvo, except_ok_bind]
+      StateT.run_bind, viewApp_run', viewApp_ok s₀.mem a₀ hR e he hvo, except_ok_bind]
     rfl
-  generalize rdW (s.mem.arr64 AREC) (idxW e * 4 + tierW e * 2) = f at hf hW hpre
-  generalize rdW (s.mem.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1) = x at hx hW hpre
+  generalize rdW (s₀.mem.arr64 AREC) (idxW e * 4 + tierW e * 2) = f at hf hW hpre
+  generalize rdW (s₀.mem.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1) = x at hx hW hpre
   rcases (Classical.em (f >>> 28 = 3)).symm with f3 | f3
   · simp only [ne_eq, f3, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 0 hW hw0 hw0 ?_
     rw [hpre]
     simp only [tag_beq_const f hf, f3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
-  by_cases fs : tierW f ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  by_cases fs : tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [f3, fs] at hW
-  by_cases fc : rdW (s.mem.arr64 CTL) (18 + tierW f) ≤ idxW f
+  by_cases fc : rdW (s₀.mem.arr64 CTL) (18 + tierW f) ≤ idxW f
   · simp [f3, fs, fc] at hW
   simp only [f3, fs, fc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have fvo : viewOK s.mem f 18 := ⟨fs, by simpa using fc⟩
-  obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f s.mem a₀ hR f hf fvo f3
+  have fvo : viewOK s₀.mem f 18 := ⟨fs, by simpa using fc⟩
+  obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f s₀.mem a₀ hR f hf fvo f3
   have hel := hP.lv_lt.1
-  rw [pinW_rdW s.mem 52 52 rfl] at hel
+  rw [pinW_rdW s₀.mem 52 52 rfl] at hel
   have hns := hP.names_lt 3 (by decide)
-  rw [pinW_rdW s.mem (1 + 3) (1 + 3) rfl] at hns
+  rw [pinW_rdW s₀.mem (1 + 3) (1 + 3) rfl] at hns
   have hrun2 : (natPred? (decE e)).run a₀ = .ok (
-      if rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s.mem.arr64 PINS) (1 + 3) ∧
-        rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s.mem.arr64 PINS) 52
+      if rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s₀.mem.arr64 PINS) (1 + 3) ∧
+        rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s₀.mem.arr64 PINS) 52
       then some (decE x) else none, a₀) := by
     rw [hpre]
     simp only [tag_beq_const f hf, f3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv,
       except_ok_bind, emptyLevels, pinEmptyLevels_run hP, pinNatSucc, PIN_NAT_SUCC,
-      pinAt_run hP 3 (by decide), pinW_rdW s.mem 52 52 rfl, pinW_rdW s.mem (1 + 3) (1 + 3) rfl]
+      pinAt_run hP 3 (by decide), pinW_rdW s₀.mem 52 52 rfl, pinW_rdW s₀.mem (1 + 3) (1 + 3) rfl]
     rw [decI_beq _ _ hn hns, decI_beq _ _ hu hel]
-    by_cases h1 : rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s.mem.arr64 PINS) (1 + 3) <;>
-    by_cases h2 : rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s.mem.arr64 PINS) 52 <;>
+    by_cases h1 : rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s₀.mem.arr64 PINS) (1 + 3) <;>
+    by_cases h2 : rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s₀.mem.arr64 PINS) 52 <;>
     simp only [h1, h2, decide_true, decide_false, Bool.and_true, Bool.and_false, Bool.false_eq_true,
       and_true, and_false, ↓reduceIte] <;> rfl
-  by_cases hc2 : rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s.mem.arr64 PINS) (1 + 3) ∧
-      rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s.mem.arr64 PINS) 52
+  by_cases hc2 : rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s₀.mem.arr64 PINS) (1 + 3) ∧
+      rdW (s₀.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s₀.mem.arr64 PINS) 52
   · simp only [hc2, and_self, ↓reduceIte] at hW hrun2
     exact hres 1 x hW hw1 hx (by rw [hrun2, decOpt_ne _ _ (by decide)])
   · simp only [hc2, ↓reduceIte] at hW hrun2
@@ -587,31 +574,26 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
     (hv₁ : a₀.store.view (decE a) = some (.lit l₁)) (hv₂ : a₀.store.view (decE b) = some (.lit l₂)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lit_eq" [a, b]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ decBool r = (l₁ == l₂) ∧ ResH r; ⊤⦄ := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (litEq_spec p hle hlq n s₀ a b)
-  subst hs0
-  refine ⟨hm, hloc, ?_⟩
+  refine triple_post (litEq_spec p hle hlq n s₀ a b) fun r s' ⟨hm, hloc, hW⟩ => ⟨hm, hloc, ?_⟩
   unfold litEqW at hW
-  by_cases as : tierW a ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  by_cases as : tierW a ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [as] at hW
-  by_cases ac : rdW (s.mem.arr64 CTL) (2 + tierW a) ≤ idxW a
+  by_cases ac : rdW (s₀.mem.arr64 CTL) (2 + tierW a) ≤ idxW a
   · simp [as, ac] at hW
-  by_cases bs : tierW b ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  by_cases bs : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [as, ac, bs] at hW
-  by_cases bc : rdW (s.mem.arr64 CTL) (2 + tierW b) ≤ idxW b
+  by_cases bc : rdW (s₀.mem.arr64 CTL) (2 + tierW b) ≤ idxW b
   · simp [as, ac, bs, bc] at hW
   simp only [as, ac, bs, bc, ↓reduceIte] at hW
-  obtain ⟨sl₁, hn₁, hs₁⟩ := lit_rec s.mem a₀ hR a ha ⟨as, by simpa using ac⟩ ha8 l₁ hv₁
-  obtain ⟨sl₂, hn₂, hs₂⟩ := lit_rec s.mem a₀ hR b hb ⟨bs, by simpa using bc⟩ hb8 l₂ hv₂
+  obtain ⟨sl₁, hn₁, hs₁⟩ := lit_rec s₀.mem a₀ hR a ha ⟨as, by simpa using ac⟩ ha8 l₁ hv₁
+  obtain ⟨sl₂, hn₂, hs₂⟩ := lit_rec s₀.mem a₀ hR b hb ⟨bs, by simpa using bc⟩ hb8 l₂ hv₂
   have ⟨_, _, hps, htop⟩ := hR.lit.1
-  generalize rdW (s.mem.arr64 REC) (idxW a * 8 + tierW a * 4) = k₁ at hW hn₁ hs₁
-  generalize rdW (s.mem.arr64 REC) (idxW b * 8 + tierW b * 4) = k₂ at hW hn₂ hs₂
-  generalize rdW (s.mem.arr64 REC) (idxW a * 8 + tierW a * 4 + 1) = o₁ at hW hn₁ hs₁ sl₁
-  generalize rdW (s.mem.arr64 REC) (idxW b * 8 + tierW b * 4 + 1) = o₂ at hW hn₂ hs₂ sl₂
-  generalize rdW (s.mem.arr64 REC) (idxW a * 8 + tierW a * 4 + 2) = c₁ at hW hn₁ hs₁ sl₁
-  generalize rdW (s.mem.arr64 REC) (idxW b * 8 + tierW b * 4 + 2) = c₂ at hW hn₂ hs₂ sl₂
+  generalize rdW (s₀.mem.arr64 REC) (idxW a * 8 + tierW a * 4) = k₁ at hW hn₁ hs₁
+  generalize rdW (s₀.mem.arr64 REC) (idxW b * 8 + tierW b * 4) = k₂ at hW hn₂ hs₂
+  generalize rdW (s₀.mem.arr64 REC) (idxW a * 8 + tierW a * 4 + 1) = o₁ at hW hn₁ hs₁ sl₁
+  generalize rdW (s₀.mem.arr64 REC) (idxW b * 8 + tierW b * 4 + 1) = o₂ at hW hn₂ hs₂ sl₂
+  generalize rdW (s₀.mem.arr64 REC) (idxW a * 8 + tierW a * 4 + 2) = c₁ at hW hn₁ hs₁ sl₁
+  generalize rdW (s₀.mem.arr64 REC) (idxW b * 8 + tierW b * 4 + 2) = c₂ at hW hn₂ hs₂ sl₂
   have hb₁ : o₁.toNat + c₁.toNat < 2 ^ 64 := by omega
   have hb₂ : o₂.toNat + c₂.toNat < 2 ^ 64 := by omega
   have hres : ∀ c : Prop, [Decidable c] → some (if c then (1 : Word) else 0) = some (r.headD 0) →
@@ -665,7 +647,7 @@ theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
       obtain ⟨hk₂, hS₂⟩ := hs₂ s₂ rfl
       subst hk₁ hk₂
       simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
-      have hkey := slice_key (s.mem.arr64 POOL) o₁ c₁ o₂ c₂ hb₁ hb₂
+      have hkey := slice_key (s₀.mem.arr64 POOL) o₁ c₁ o₂ c₂ hb₁ hb₂
       rw [hS₁, hS₂] at hkey
       by_cases hc : c₁ = c₂
       · subst hc

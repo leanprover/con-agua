@@ -323,10 +323,8 @@ theorem suHead_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW1
     exact hres 0 hW1 hw0 _
       (suHead_nonconst _ fe _ _ _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
-  by_cases hsc : tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
-  · simp [h3, hsc] at hW1
-  by_cases hcc : rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h
-  · simp [h3, hsc, hcc] at hW1
+  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
+  have hcc : ¬ rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
   have hvo : viewOK s.mem h 18 := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3

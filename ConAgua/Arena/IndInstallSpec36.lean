@@ -47,13 +47,10 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
       ∀ j (hj : j < 19), (m'.arr64 IW)[q.toNat + j]? =
         [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16, w17, w18][j]? := by
   unfold icprW at h
-  cases c1 : callW p n "iw_alloc" [19] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨rq, m1⟩ := q1
+  rcases c1 : callW p n "iw_alloc" [19] m with _ | ⟨rq, m1⟩
+  · rw [c1] at h; cases h
   rw [c1] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p ha n _ 19) c1
   simp only at hs1 hal
   subst hs1

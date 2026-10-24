@@ -337,8 +337,7 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
   subst hs0
   refine ⟨hloc, ?_⟩
   have hK := hk n (Nat.le_refl _)
-  by_cases hd : d + 1 = 0
-  · simp only [ecbK, hd, ↓reduceIte] at hW; cases hW
+  have hd : ¬ d + 1 = 0 := fun hd => by simp only [ecbK, hd, ↓reduceIte] at hW; cases hW
   rw [ecbK_ok (h := hd)] at hW
   have hd1 := toNat_succ_of_ne hd
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
@@ -364,8 +363,7 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
   refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
   by_cases h0 : r₄.headD 0 = 0
   · rw [ecbK4_no (h := h0)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h0]
     exact coreRef_pure hS₄ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   rw [decBool_true_of h0, decMode_vc mode hs.mode4]
@@ -378,8 +376,7 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
         ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd h₂.2.2.2 hcod h₁.2.2.2)
       (fun r r' h => by simp only [decBool, h]) hW
   · rw [ecbK4_tr (h := h0) (hm := hm)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact coreRef_pure hS₄ rfl (decBool_true_of (by rw [← hr]; decide)).symm
       (by unfold ResH; rw [← hr]; exact hw1)
@@ -423,8 +420,7 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   by_cases h0 : r₁.headD 0 = 0
   · rw [ecK1_no (h := h0)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h0]
     exact coreRef_pure hS₁ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   rw [ecK1_yes (h := h0)] at hW
@@ -444,8 +440,7 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   simp only [tag_beq_w _ hh3 6 (by decide) ETag.forallE rfl 6 rfl]
   by_cases h6 : r₃.headD 0 >>> 28 ≠ 6
   · rw [ecK3_no (h := h6)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact coreRef_pure hS₃ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   have h6' : r₃.headD 0 >>> 28 = 6 := by simpa using h6
@@ -465,8 +460,7 @@ theorem etaCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
   by_cases h40 : r₄.headD 0 = 0
   · rw [ecK4_no (h := h40)] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, rfl⟩ := hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [decBool_false_of h40]
     exact coreRef_pure hS₄ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
   rw [ecK4_yes (h := h40)] at hW

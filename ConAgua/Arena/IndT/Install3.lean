@@ -223,9 +223,8 @@ theorem ibtsW_simC (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   obtain ⟨xP, restP, rfl, hxP, hrestP⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmssP
   rw [ibtsW_cons p n m vis nP o l hl, hw]
   unfold ConRon.Arena.checkBlockTeles
-  cases n with
-  | zero => rw [callW_zero]; simp only [ibtsK1]; exact Sim.of_none
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero]; simp only [ibtsK1]; exact Sim.of_none
   refine Sim.bindK (K := ibtsK1 p (k + 1) vis nP o l) (body := fun r1 m1 => ibtsK2 p (k + 1) vis nP o l
       (callW p (k + 1) "rec2" [r1.headD 0, r1.tail.headD 0] m1)) (by simp [ibtsK1])
       (fun r m₁ => ibtsK1_some p (k + 1) m₁ vis nP o l r)

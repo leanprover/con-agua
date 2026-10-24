@@ -170,8 +170,7 @@ theorem allocW_iwFrame {m m' : Mem} {k q : Word} (h : allocW m k = some (q, m'))
   simp only [allocW] at h
   split at h; · simp at h
   split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact allocMem_frame m k
 
 theorem copyW_iwFrame : ∀ (n : Nat) (m m' : Mem) (d s l : Word), copyW n m d s l = some m' →
@@ -191,8 +190,7 @@ theorem consW_iwFrame {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   rename_i q m1 hal
   split at h; · simp at h
   rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ((allocW_iwFrame hal).trans (set64IW_frame _ _ _)).trans (copyW_iwFrame _ _ _ _ _ _ hc)
 
 /-- Across `sl_cons`. -/
@@ -227,8 +225,7 @@ theorem erAllocW_afr {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m'))
   simp only [erAllocW] at h
   split at h; · simp at h
   split at h; · simp at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact AFr.of_frame (MemFrame.setCtl m 129 _)
 
 theorem wrER_afr (ws : List Word) (m : Mem) (q : Word) : AFr m (wrER m q ws) :=
@@ -356,22 +353,16 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   intro m m' a r h ⟨hS, ⟨mp, hmp⟩, hI1, hCr, hIl, hWk⟩
   have hfr := abF_frame h
   obtain ⟨n, hc⟩ := callF_run h
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (abAdapter_spec n _ CWF e d k) hc
-  cases hi : callW abProg n "abs_entry" [e, d, k] m with
-  | none => rw [hi] at hm; cases hm
-  | some x =>
-  obtain ⟨rI, mI⟩ := x
-  rw [hi] at hm
+  obtain ⟨⟨rI, mI⟩, hi, hm⟩ := of_K hm rfl
   simp only [fwd1, Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, hmI⟩ := hm
   rw [hs'] at hmI
   subst hmI
-  match n, hi with
-  | 0, hi => rw [callW_zero] at hi; cases hi
-  | j + 1, hi =>
+  rcases n with _ | j
+  · rw [callW_zero] at hi; cases hi
   have hA : ArenaA m { a with memos := { a.memos with abs1C := mp } } :=
     ⟨hS.1.arena.memo_irrel a.memos.instLC mp, hmp⟩
   obtain ⟨s'', hs'', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

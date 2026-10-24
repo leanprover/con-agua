@@ -119,8 +119,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i a1 m1 hna
-    by_cases ha32 : 4294967296 ≤ a1
-    · rw [if_pos ha32] at h; simp at h
+    have ha32 : ¬ 4294967296 ≤ a1 := fun ha32 => by rw [if_pos ha32] at h; simp at h
     rw [if_neg ha32] at h
     have ha1 : a1.toNat < 2 ^ 32 := by
       have : ¬ (4294967296 : Word).toNat ≤ a1.toNat := fun e => ha32 (UInt64.le_iff_toNat_le.mpr e)
@@ -130,8 +129,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i h1 m2 hnn
-    by_cases hh32 : 4294967296 ≤ h1
-    · rw [if_pos hh32] at h; simp at h
+    have hh32 : ¬ 4294967296 ≤ h1 := fun hh32 => by rw [if_pos hh32] at h; simp at h
     rw [if_neg hh32] at h
     have hh1 : h1.toNat < 2 ^ 32 := by
       have : ¬ (4294967296 : Word).toNat ≤ h1.toNat := fun e => hh32 (UInt64.le_iff_toNat_le.mpr e)
@@ -149,8 +147,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     split at h
     · simp at h
     rename_i r4 m4 hcons
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hd3u := decRL_unpack hd3
     obtain ⟨hSc, hgc, hdc, htc⟩ := consW_stage hcons hS3 hd3u.2 hh1 hd3u.1
     obtain ⟨-, -, -, hfr, -, -⟩ := consW_dec hcons hS3.2.2.2.1 hS3.2.2.2.2.2 hd3u.2 hh1 hd3u.1
@@ -210,11 +207,7 @@ theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n
   | zero => simp [cnW] at hr
   | succ n =>
   simp only [cnW] at hr
-  cases hg0 : gnW n m 0 k with
-  | none => rw [hg0] at hr; simp at hr
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [hg0] at hr
+  rcases hg0 : gnW n m 0 k with _ | ⟨r0, m0⟩ <;> simp only [hg0, reduceCtorEq] at hr
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hr)
   obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a 0 k r0 hg0 hS
     (by have := UInt64.toNat_lt k; simpa using this) hP

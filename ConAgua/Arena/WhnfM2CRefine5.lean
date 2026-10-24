@@ -120,11 +120,8 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   | succ N' =>
   by_cases g9 : w9 ≠ 0
   · rw [if_pos g9] at hW
-    cases c1 : callW p (N' + 1) "m2c_k" [mode, vis, d, T, major, w0, w3, w5] m with
-    | none => rw [c1] at hW; cases hW
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [c1] at hW
+    rcases c1 : callW p (N' + 1) "m2c_k" [mode, vis, d, T, major, w0, w3, w5] m with _ | ⟨r1, m1⟩ <;>
+      simp only [c1, reduceCtorEq] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     have hK := m2cK_ok p hp hc hpi hE N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS r1 m1 c1
@@ -140,11 +137,8 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hk' : rl.k = false := by rw [hkk]; simpa using g9
   by_cases g10 : w10 ≠ 0
   · rw [if_pos g10] at hW
-    cases c1 : callW p (N' + 1) "m2c_eta" [mode, vis, d, T, indP, major] m with
-    | none => rw [c1] at hW; cases hW
-    | some q =>
-    obtain ⟨r1, m1⟩ := q
-    rw [c1] at hW
+    rcases c1 : callW p (N' + 1) "m2c_eta" [mode, vis, d, T, indP, major] m with _ | ⟨r1, m1⟩ <;>
+      simp only [c1, reduceCtorEq] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     obtain ⟨ok1, hA1, res1, hr1⟩ := m2cEta_ok p hp hc hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega)
       (by omega) dn vis fe eb mode d T indP major hm4 hebm hT hmaj cvT caps m a M hS hci hfe r1 m1 c1
@@ -157,11 +151,8 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     exact ⟨ok1, hA1, by rw [res1]; unfold decH; rw [hr], by unfold ResH at hr1 ⊢; rw [← hr]; exact hr1⟩
   rw [if_neg g10] at hW
   have he' : rl.eta = false := by rw [heta]; simpa using g10
-  cases c1 : callW p (N' + 1) "m2c_and" [mode, vis, d, T, major, w0, w3, w5] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
+  rcases c1 : callW p (N' + 1) "m2c_and" [mode, vis, d, T, major, w0, w3, w5] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   obtain ⟨ok1, hA1, res1, hr1⟩ := m2cAnd_ok p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS r1 m1 c1
@@ -195,24 +186,15 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hA0 : CoreAfterG dn m m a vis fe M eb :=
     CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
   have hR := hS.arena.1
-  cases c1 : callW p N "pi_result" [w4] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p N "pi_result" [w4] m with _ | ⟨r1, m1⟩ <;> simp only [c1, reduceCtorEq] at hW
   obtain ⟨t1, ht1, hm1, -, hh1, hpr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (piResult_refines' p hp.spine.pires N _ a hR w4 l4) c1
   have hm1' : m1 = m := ht1.symm.trans hm1
   rw [hm1'] at hW
   have hpr' : (piResult coreWalkFuel cvj.type).run a = .ok (decE (r1.headD 0), a) := by
     rw [hty]; exact hpr
-  cases c2 : callW p N "get_app_fn" [r1.headD 0] m with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p N "get_app_fn" [r1.headD 0] m with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨t2, ht2, hm2, -, hh2, hga⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (getAppFn_refines' p hp.spine.fn N _ a hR (r1.headD 0) hh1) c2
   have hm2' : m2 = m := ht2.symm.trans hm2
@@ -228,34 +210,22 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have g2' : r2.headD 0 >>> 28 = 3 := by simpa using g2
   have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hh2]; simpa using g2'
-  cases c3 : callW p N "m2c_const_view" [r2.headD 0] m with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨r3, m3⟩ := q
-  rw [c3] at hW
-  simp only at hW
+  rcases c3 : callW p N "m2c_const_view" [r2.headD 0] m with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, -, hm3, hcv⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (m2cConstView_spec p hp.constView N _ (r2.headD 0)) c3
   have hm3' : m3 = m := ht3.symm.trans hm3
   rw [hm3'] at hW
   simp only [cvwW] at hcv
-  by_cases v1 : tierW (r2.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos v1] at hcv; cases hcv
-  rw [if_neg v1] at hcv
-  by_cases v2 : rdW (m.arr64 CTL) (18 + tierW (r2.headD 0)) ≤ idxW (r2.headD 0)
-  · rw [if_pos v2] at hcv; cases hcv
-  rw [if_neg v2] at hcv
+  obtain ⟨v1, hcv⟩ := of_ite_none hcv
+  obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr3 := (Option.some.inj hcv).symm
   obtain ⟨hvw, hn32, -⟩ := view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
   have hn0 : rdW (m.arr64 CREC) (idxW (r2.headD 0) * 4 + tierW (r2.headD 0) * 2) = r3.headD 0 := by
     rw [hr3]; rfl
   rw [hn0] at hvw hn32
-  cases c4 : callW p N "env_find" [r3.headD 0, vis] m with
-  | none => rw [c4] at hW; cases hW
-  | some q =>
-  obtain ⟨r4, m4⟩ := q
-  rw [c4] at hW
-  simp only at hW
+  rcases c4 : callW p N "env_find" [r3.headD 0, vis] m with _ | ⟨r4, m4⟩ <;>
+    simp only [c4, reduceCtorEq] at hW
   obtain ⟨hm4', hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' N m vis _ hS.env hn32 r4 m4 c4
   rw [hm4'] at hW
   have hview := view_run _ _ _ hvw
@@ -283,11 +253,8 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     | _ => rfl
   rw [if_neg g5] at hW
   obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
-  cases c5 : callW p N "m2c_arms" [mode, vis, d, ro, cvjP, r3.headD 0, r4.tail.headD 0, major] m with
-  | none => rw [c5] at hW; cases hW
-  | some q =>
-  obtain ⟨r5, m5⟩ := q
-  rw [c5] at hW
+  rcases c5 : callW p N "m2c_arms" [mode, vis, d, ro, cvjP, r3.headD 0, r4.tail.headD 0, major] m with _ | ⟨r5, m5⟩ <;>
+    simp only [c5, reduceCtorEq] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   cases N with
   | zero => rw [callW_zero] at c5; cases c5
@@ -320,16 +287,10 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   cases N with
   | zero => simp [callW_zero] at hW
   | succ N' =>
-  cases c1 : callW p (N' + 1) "is_ctor_app" [vis, major] m with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
-  obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, -⟩ := CoreSpec.of_callW
+  rcases c1 : callW p (N' + 1) "is_ctor_app" [vis, major] m with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, -⟩ := CoreSpec.run
     (isCtorApp_refines p hp.toIotaProg' N' ⟨m, Locals.init []⟩ a dn vis fe M eb major hS hmaj) c1
-  have hrun1 := AM.run_of_ok _ _ ok1
-  rw [res1] at hrun1
   have e1 : m1.arr64 EREC = m.arr64 EREC := hE _ _ _ _ _ _ (by simp) c1
   have hA1 : CoreAfterG dn m m1 (AM.st (isCtorApp fe (decE major)) a) vis fe M eb :=
     CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩
@@ -373,12 +334,8 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨⟨w0, e0, l0, hctor⟩, -, -⟩ := decRule_words _ _ _ hrl
   have r0 : rdW (m1.arr64 EREC) ro = w0 := by rw [e1]; simp only [rdW, e0]; rfl
   rw [r0] at hW
-  cases c2 : callW p (N' + 1) "env_find" [w0, vis] m1 with
-  | none => rw [c2] at hW; cases hW
-  | some q =>
-  obtain ⟨r2, m2⟩ := q
-  rw [c2] at hW
-  simp only at hW
+  rcases c2 : callW p (N' + 1) "env_find" [w0, vis] m1 with _ | ⟨r2, m2⟩ <;>
+    simp only [c2, reduceCtorEq] at hW
   obtain ⟨hm2, hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' (N' + 1) m1 vis _ hS1.env l0 r2 m2 c2
   rw [hm2] at hW
   by_cases g3 : r2.headD 0 = 0
@@ -406,11 +363,8 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     | _ => rfl
   rw [if_neg g4] at hW
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
-  cases c3 : callW p (N' + 1) "m2c_ctor" [mode, vis, d, ro, r2.tail.headD 0, major] m1 with
-  | none => rw [c3] at hW; cases hW
-  | some q =>
-  obtain ⟨r3, m3⟩ := q
-  rw [c3] at hW
+  rcases c3 : callW p (N' + 1) "m2c_ctor" [mode, vis, d, ro, r2.tail.headD 0, major] m1 with _ | ⟨r3, m3⟩ <;>
+    simp only [c3, reduceCtorEq] at hW
   obtain ⟨hr', rfl⟩ := ret_eq hW
   obtain ⟨ok3, hA3, res3, hr3⟩ := m2cCtor_ok p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ro _ major hm4 hebm hmaj rl cvj cnP cnF m1 _ M1 hS1
@@ -424,29 +378,20 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
 /-- **`major_to_ctor` refines `majorToCtor`** (the callees' specs as hypotheses). -/
 theorem majorToCtor_refines' : MajorToCtorOK p := by
   intro n hk F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (majorToCtor_spec p hp.majorToCtor n s₀ mode vis d rec ro rc major)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+  refine triple_post (majorToCtor_spec p hp.majorToCtor n s₀ mode vis d rec ro rc major) fun r s'
+    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   simp only [mtcW] at hW
   cases n with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N =>
-  cases c1 : callW p (N + 1) "m2c_head" [mode, vis, d, ro, rc, major] s.mem with
-  | none => rw [c1] at hW; cases hW
-  | some q =>
-  obtain ⟨r1, m1⟩ := q
-  rw [c1] at hW
-  simp only at hW
+  rcases c1 : callW p (N + 1) "m2c_head" [mode, vis, d, ro, rc, major] s₀.mem with _ | ⟨r1, m1⟩ <;>
+    simp only [c1, reduceCtorEq] at hW
   obtain ⟨ok1, ⟨M1, hS1, hK1, hg1⟩, res1, hr1⟩ := m2cHead_ok p hp hc hpi hE hcc N F
     (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d ro rc major hm4 hebm hmaj rules
-    s.mem a₀ MM hS hr r1 m1 c1
+    s₀.mem a₀ MM hS hr r1 m1 c1
   by_cases h136 : 136 < (m1.arr64 CTL).size
   · rw [if_pos h136] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr0, hm⟩ := hW
+    obtain ⟨hr0, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [majorToCtor_eq]
     refine ⟨ok1, ⟨M1, ?_, hK1, ?_⟩, ?_, ?_⟩
     · rw [← hm]; exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)

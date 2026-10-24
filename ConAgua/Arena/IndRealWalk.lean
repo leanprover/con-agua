@@ -67,9 +67,8 @@ theorem lbbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   intro m m' a r h hS
   have hfr := lbbF_frame h
   obtain ⟨n, hc⟩ := callF_run h
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hok, hD, hres, hle⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lbbFast_refines bvbProg bvbProg_ok n _ a hS.1.arena f k e he) hc
   rw [hs'] at hD
@@ -144,9 +143,8 @@ theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     RelW fvbF [f, e] (StageR dn vis fe) (fvarB f.toNat (decI e)) (KeepPost dn vis fe decW0Nat) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fvarBL_spec hfProg hfProg_abs rfl n _ f e) hc
   rw [hs'] at hm
@@ -162,16 +160,13 @@ theorem hffF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     RelW hffF [f, e] (StageR dn vis fe) (hasFvarFast f.toNat (decI e)) (KeepPost dn vis fe decW0B) := by
   intro m m' a r h hS
   obtain ⟨n, hc⟩ := callF_run h
-  match n, hc with
-  | 0, hc => rw [callW_zero] at hc; cases hc
-  | n + 1, hc =>
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hasFvarFastL_spec hfProg hfProg_abs rfl n _ f e) hc
   rw [hs'] at hI
-  cases hw : fvbW n m e f with
-  | none => rw [hw] at hI; cases hI
-  | some q =>
-  obtain ⟨x, m₁⟩ := q
+  rcases hw : fvbW n m e f with _ | ⟨x, m₁⟩
+  · rw [hw] at hI; cases hI
   have hle := hfK_le _ _ _ hI
   rw [hw, hfK_some] at hI
   obtain ⟨hr0, rfl⟩ := Prod.mk.inj (Option.some.inj hI)
