@@ -126,11 +126,7 @@ theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word
   | succ n =>
   rw [ccoW_eq]
   rintro b hb
-  cases h1 : L.Arena.ihW (realCall p) n m vis q with
-  | none => rw [h1] at hb; cases hb
-  | some rm =>
-  obtain ⟨r1, m1⟩ := rm
-  rw [h1] at hb
+  obtain ⟨⟨r1, m1⟩, h1, hb⟩ := of_K hb rfl
   obtain ⟨a1, hrun, hS1, hg1, -, hA1⟩ := ihW_okT hApd hCrk.crf h1 hS hq' hqb hlps hA.crMemo.crOK
   have hq1 : decCV (erA m1) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg1) hq'
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1

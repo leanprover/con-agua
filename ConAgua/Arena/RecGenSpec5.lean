@@ -184,11 +184,8 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : k - 1 < cvTas.length)]
       rfl
     · rw [cftW_out (h := hk0) (h2 := hlt)] at h
-      cases hb : binternW m 0 with
-      | none => rw [hb] at h; simp [cftK1] at h
-      | some em =>
-      obtain ⟨e, m1⟩ := em
-      rw [hb, cftK1_some] at h
+      obtain ⟨⟨e, m1⟩, hb, h⟩ := of_K h rfl
+      rw [cftK1_some] at h
       by_cases hbig : 4294967296 ≤ e
       · rw [if_pos hbig] at h; cases h
       rw [if_neg hbig] at h
@@ -215,11 +212,8 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨wi, hwi, hwiH, hwiE⟩ := iwH_rdW_at (w := mp) (k := 0) (by simpa using decTM_ind hM0) hsz
     rw [show mp + UInt64.ofNat 0 = mp by simp] at hwi
     rw [hwi] at h
-    cases h2 : envFindW m wi vis with
-    | none => rw [h2] at h; simp [cftK2] at h
-    | some rm2 =>
-    obtain ⟨r2, m2⟩ := rm2
-    rw [h2, cftK2_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [cftK2_some] at h
     obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.1.env hwiH
     subst m2
     by_cases hf0 : r2.headD 0 = 0
@@ -254,11 +248,8 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
       · exact .inl h0
       · exact .inr (hslice?_bound _ _ _ _ hsl h0)
-    cases h3 : erToIwW N m w1 w2 with
-    | none => rw [h3] at h; simp [cftK3] at h
-    | some rm3 =>
-    obtain ⟨r3, m3⟩ := rm3
-    rw [h3, cftK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [cftK3_some] at h
     obtain ⟨-, hr3t, hdec3, hS3, hg3, -⟩ := L.Arena.erToIwW_stage h3 hS hsrc
     rw [hr3t] at h
     have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
@@ -273,11 +264,8 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
       rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
     rw [hwu, et] at h
-    cases h4 : cR N "inst_lp_fast" [CWF, r3.headD 0, w2, wu, wt] m3 with
-    | none => rw [h4] at h; simp [cftK4] at h
-    | some rm4 =>
-    obtain ⟨r4, m4⟩ := rm4
-    rw [h4, cftK4_some] at h
+    obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
+    rw [cftK4_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨x, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := hI N CWF (r3.headD 0) w2 wu wt cv.levelParams m3 m4 a r4

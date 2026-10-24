@@ -62,12 +62,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   have hnpT : (UInt64.ofNat bs.nP : Word).toNat = bs.nP := UInt64.toNat_ofNat_of_lt' hnpb
   unfold cbcW at h
   -- `class_read`
-  cases c1 : callW p n "class_read" [pp, vis, rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (pp + 2),
-      rdW (m.arr64 IW) (pp + 3)] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   obtain ⟨s1, hs1, -, hok1, ⟨hS1, hg1, hd1⟩, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classRead_refinesA p hP.read hOpf n _ a dn vis fe pp _ _ _ bs bs.recs hS hA hb hrecs) c1
   simp only at hs1 hS1 hg1 hd1 hA1
@@ -105,11 +100,8 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   have hslT : (UInt64.ofNat sl : Word).toNat = sl := UInt64.toNat_ofNat_of_lt' hwslb
   obtain ⟨hslots, hext⟩ := slots_ok hspl hsz1
   -- `class_read_classes` (L only)
-  cases c2 : callW p n "class_read_classes" [UInt64.ofNat so, UInt64.ofNat sl] s1.mem with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2, cbcK2_some] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
+  rw [cbcK2_some] at h
   obtain ⟨s2, hs2, -, hS2, hg2, hcc⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classReadClasses_refines p hP.clm.keys.copy hP.ha hP.clm.keys.cons hP.crc n _ a1 dn vis fe
       (UInt64.ofNat so) (UInt64.ofNat sl) rd.slots hS1 (by rw [hsoT, hslT]; exact hslots)
@@ -123,12 +115,8 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   -- the keys
   obtain ⟨hnp2, -, -, -⟩ := partsShapeWords hg02 hbsD hq9
   rw [hnp2] at h
-  cases c3 : callW p n "check_block_classes_keys" [UInt64.ofNat bs.nP, po, pl, r2.headD 0,
-      r2.tail.headD 0] s2.mem with
-  | none => rw [c3] at h; cases h
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [c3, cbcK3_some] at h
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+  rw [cbcK3_some] at h
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (ckk_spec p hP.clm.keys.keys n _ (UInt64.ofNat bs.nP) po pl (r2.headD 0) (r2.tail.headD 0)) c3
   simp only at hs3 hW3
@@ -145,11 +133,8 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
   have hC3 : StageC dn vis fe env s3.mem a3 := hC2.of_check hS3 hA3 c2'.ok c2'.ext
   have hg03 := hg02.trans hg3
   -- the majors
-  cases c4 : callW p n "class_majors" [vis, pp, co, cl, po, pl, r3.headD 0, r3.tail.headD 0] s3.mem with
-  | none => rw [c4] at h; cases h
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [c4, cbcK4_some] at h
+  obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
+  rw [cbcK4_some] at h
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (clm_spec p hP.clm.cm n _ vis pp co cl po pl (r3.headD 0) (r3.tail.headD 0)) c4
   simp only at hs4 hW4
@@ -169,12 +154,7 @@ theorem cbcW_simC (hP : CbcProg p) {fs : List FnName}
       ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP, hkeys⟩ hrun4
   have hg04 := hg03.trans hg4
   -- one class per member (L only)
-  cases c5 : callW p n "check_block_classes_one_per_member"
-      [0, rdW (s4.mem.arr64 IW) (pp + 1), r4.headD 0, r4.tail.headD 0] s4.mem with
-  | none => rw [c5] at h; cases h
-  | some q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [c5] at h
+  obtain ⟨⟨r5, m5⟩, c5, h⟩ := of_K h rfl
   obtain ⟨s5, hs5, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (opm_spec p hP.cnt hP.opm n _ 0 (rdW (s4.mem.arr64 IW) (pp + 1)) (r4.headD 0) (r4.tail.headD 0)) c5
   simp only at hs5 hm5 hW5

@@ -54,16 +54,10 @@ theorem cnfW_afr : ∀ (k : Nat) (m m' : Mem) (nfo nfl nm q j rp r : Word),
 theorem cnfF_afr {n : Nat} {m m' : Mem} {nfo nfl nm : Word} {r : List Word}
     (h : cnfF n m nfo nfl nm = some (r, m')) : AFr m m' := by
   simp only [cnfF] at h
-  cases hal : allocW m nfl with
-  | none => rw [hal] at h; cases h
-  | some x =>
-  obtain ⟨q, m1⟩ := x
-  rw [hal, cnfK1_some] at h
-  cases hl : cnfW (n + 1) m1 nfo nfl nm q 0 0 with
-  | none => rw [hl] at h; cases h
-  | some y =>
-  obtain ⟨rp, m2⟩ := y
-  rw [hl, cnfK2_some] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h rfl
+  rw [cnfK1_some] at h
+  obtain ⟨⟨rp, m2⟩, hl, h⟩ := of_K h rfl
+  rw [cnfK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr hal).trans (cnfW_afr _ _ _ _ _ _ _ _ _ _ hl)
 
@@ -75,17 +69,11 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
     · rw [cfgW_nil (h := hl)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [cfgW_cons (h := hl)] at h
-    cases h1 : ftdF m [rdW (m.arr64 IW) fo] with
-    | none => rw [h1] at h; simp [cfgK1] at h
-    | some x1 =>
-    obtain ⟨r1, m1⟩ := x1
-    rw [h1, cfgK1_some] at h
+    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+    rw [cfgK1_some] at h
     refine (ftdF_afr h1).trans ?_
-    cases h2 : noConstWf n m1 mo ml 0 0 (r1.headD 0) with
-    | none => rw [h2] at h; simp [cfgK2] at h
-    | some x2 =>
-    obtain ⟨occ, m2⟩ := x2
-    rw [h2, cfgK2_some] at h
+    obtain ⟨⟨occ, m2⟩, h2, h⟩ := of_K h rfl
+    rw [cfgK2_some] at h
     refine (noConstWf_afr h2).trans ?_
     -- after the kind: the record, the rest, the cons
     have tail : ∀ (r5 : List Word) (m5 : Mem), recW m2 1 [0] = some (r5, m5) ∨
@@ -94,11 +82,7 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
       rintro r5 m5 (h5 | ⟨r4, m4, cls, h4, h5⟩)
       · exact recW_afr h5
       · exact (piBW_afr _ _ _ _ _ _ h4).trans (recW_afr h5)
-    cases h3 : cfhW n m2 io il i with
-    | none => rw [h3] at h; simp [cfgK3] at h
-    | some hcc =>
-    obtain ⟨hc, cls⟩ := hcc
-    rw [h3] at h
+    obtain ⟨⟨hc, cls⟩, h3, h⟩ := of_K h rfl
     have fin : ∀ (o5 : Option (List Word × Mem)), (∀ r5 m5, o5 = some (r5, m5) → AFr m2 m5) →
         cfgK5 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) o5 = some (r, m') →
         AFr m2 m' := by
@@ -108,16 +92,10 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
       | some x5 =>
       obtain ⟨r5, m5⟩ := x5
       rw [cfgK5_some] at h5
-      cases h6 : cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1) with
-      | none => rw [h6] at h5; simp [cfgK7] at h5
-      | some x6 =>
-      obtain ⟨r6, m6⟩ := x6
-      rw [h6, cfgK7_some] at h5
-      cases h7 : consW n m6 (r5.headD 0) (r6.headD 0) (r6.tail.headD 0) with
-      | none => rw [h7] at h5; simp [cfgK6] at h5
-      | some x7 =>
-      obtain ⟨r7, m7⟩ := x7
-      rw [h7, cfgK6_some] at h5
+      obtain ⟨⟨r6, m6⟩, h6, h5⟩ := of_K h5 rfl
+      rw [cfgK7_some] at h5
+      obtain ⟨⟨r7, m7⟩, h7, h5⟩ := of_K h5 rfl
+      rw [cfgK6_some] at h5
       simp only [Option.some.injEq, Prod.mk.injEq] at h5; rw [← h5.2]
       exact ((hA5 r5 m5 rfl).trans (cfgW_afr n _ _ _ _ _ _ _ _ _ _ h6)).trans (consW_afr h7)
     by_cases c0 : occ = 0 ∧ hc = 0
@@ -125,11 +103,8 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
       exact fin _ (fun r5 m5 e => tail r5 m5 (.inl e)) h
     by_cases c1 : occ ≠ 0 ∧ hc = 1
     · rw [cfgK3_rec (h0 := c0) (h := c1)] at h
-      cases h4 : piBW n m2 CWF (r1.headD 0) with
-      | none => rw [h4] at h; simp [cfgK4] at h
-      | some x4 =>
-      obtain ⟨r4, m4⟩ := x4
-      rw [h4, cfgK4_some] at h
+      obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
+      rw [cfgK4_some] at h
       exact fin _ (fun r5 m5 e => tail r5 m5 (.inr ⟨r4, m4, cls, h4, e⟩)) h
     · rw [cfgK3_bad (h0 := c0) (h := c1)] at h; cases h
 
@@ -139,16 +114,10 @@ theorem cfoW_afr {n : Nat} {m m' : Mem} {q io il i fo fl : Word} {r : List Word}
   | zero => simp [cfoW] at h
   | succ n =>
   rw [cfoW_eq] at h
-  cases h1 : memberNamesW n m q with
-  | none => rw [h1] at h; simp [cfoK] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, cfoK_some] at h
-  cases h2 : cfgW n m1 (r1.headD 0) (r1.tail.headD 0) io il i fo fl with
-  | none => rw [h2] at h; simp [cfgK6] at h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2, cfgK6_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [cfoK_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+  rw [cfgK6_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
   exact (memberNamesW_afr h1).trans (cfgW_afr _ _ _ _ _ _ _ _ _ _ _ h2)
 
@@ -188,11 +157,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hq64 := hS.lt64 hq9
   unfold cxoW at h
   -- `target_major_at`
-  cases c1 : callW p n "target_major_at" [mo, ml, c] m with
-  | none => rw [c1] at h; cases h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [c1, cxoK1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [cxoK1_some] at h
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na n _ mo ml c) c1
   simp only at hs1 hw1; subst hs1
@@ -211,12 +177,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   obtain ⟨cam, hcam, hca3m, -, -, -, -, -, hcAt⟩ := decCN_words hcA hsz
   rw [h9, h10, hca] at h
   -- `class_ctor_of_nfs`
-  cases c2 : callW p n "class_ctor_of_nfs" [UInt64.ofNat no, UInt64.ofNat nl,
-      rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca)] s1.mem with
-  | none => rw [c2] at h; simp [cxoK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   cases n with
   | zero =>
     obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (invoke_exec_zero p _ _ _) c2
@@ -264,11 +225,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
     rdW_er_grow hg2 (by rw [hcaT]; omega)
   rw [hER2] at h
   -- `class_minor_slot`
-  cases c3 : callW p (n + 1) "class_minor_slot" [rd, c, rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca)] s2.mem with
-  | none => rw [c3] at h; simp [cxoK3] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [c3, cxoK3_some] at h
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+  rw [cxoK3_some] at h
   obtain ⟨s3, hs3, -, hm3, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (classMinorSlot_spec p P.cmsg P.cms n _ rd c (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) c3
   simp only at hs3 hm3 hw3; subst hs3
@@ -292,12 +250,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hsum : (UInt64.ofNat bs.nP + UInt64.ofNat bs.k : Word) = UInt64.ofNat (bs.nP + bs.k) := by
     apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
   rw [hnF2, hq4, hq1, hsum] at h
-  cases c4 : callW p (n + 1) "open_pis_at_fvars_f" [UInt64.ofNat cA'.2, rdW (s2.mem.arr64 IW) (e0w + 4),
-      UInt64.ofNat (bs.nP + bs.k)] s2.mem with
-  | none => rw [c4] at h; simp [cxoK4] at h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [c4] at h
+  obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
   obtain ⟨s4, hs4, -, hw4⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (opfF_spec p hOpf (n + 1) _ [UInt64.ofNat cA'.2, rdW (s2.mem.arr64 IW) (e0w + 4),
       UInt64.ofNat (bs.nP + bs.k)]) c4
@@ -322,12 +275,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hg14 := hg12.trans hg4
   -- `class_fields_of`
   obtain ⟨mp0, hM0⟩ := hP4.pos.no
-  cases c5 : callW p (n + 1) "class_fields_of" [q, r3.tail.headD 0, r3.tail.tail.headD 0, 0, r4.tail.headD 0,
-      r4.tail.tail.headD 0] s4.mem with
-  | none => rw [c5] at h; simp [cxoK5] at h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [c5, cxoK5_some] at h
+  obtain ⟨⟨r5, m5⟩, c5, h⟩ := of_K h rfl
+  rw [cxoK5_some] at h
   have hihB := hihs.grow (OMono.decPL (fun q => decNN_mono q) _ _) hg24
   have hib : (r3.tail.headD 0).toNat + (r3.tail.tail.headD 0).toNat < 2 ^ 64 := by
     rcases decB_decPL_bound hihB with h0 | h0
@@ -355,12 +304,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hg15 := hg14.trans hg5
   have hk5 := callW_keepW c5
   -- `class_fields_agree`
-  cases c6 : callW p (n + 1) "class_fields_agree" [vis, q, fto, ftl, mo, ml, r4.tail.headD 0,
-      r4.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0, 0, r5.headD 0, r5.tail.headD 0] s5.mem with
-  | none => rw [c6] at h; simp [cxoK6] at h
-  | some x6 =>
-  obtain ⟨r6, m6⟩ := x6
-  rw [c6, cxoK6_some] at h
+  obtain ⟨⟨r6, m6⟩, c6, h⟩ := of_K h rfl
+  rw [cxoK6_some] at h
   obtain ⟨s6, hs6, -, hok6, hC6, hg6, hP6, hA6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (classFieldsAgree_refinesC hq henv P.toCfaProg vis q fto ftl mo ml (r4.tail.headD 0)
       (r4.tail.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) (r5.headD 0) (r5.tail.headD 0) bs formerTys ms fvs
@@ -387,11 +332,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hg16 := hg15.trans hg6
   have hk6 := callW_keepW c6
   -- `target_ctor_at`
-  cases c7 : callW p (n + 1) "target_ctor_at" [r1.headD 0, UInt64.ofNat ca] s6.mem with
-  | none => rw [c7] at h; simp [cxoK7] at h
-  | some x7 =>
-  obtain ⟨r7, m7⟩ := x7
-  rw [c7, cxoK7_some] at h
+  obtain ⟨⟨r7, m7⟩, c7, h⟩ := of_K h rfl
+  rw [cxoK7_some] at h
   have hgm6 := hg16
   have hg26 : IWGrow s1.mem s6.mem := hg2.trans (hg4.trans (hg5.trans hg6))
   have hca3' : ca + 3 < 2 ^ 64 := by
@@ -424,12 +366,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   -- `inst_pis_with`
   have hsz7 := hS7.2.2.2.1
   obtain ⟨-, hds7, -⟩ := decTM_slices (hTM.grow (decTM_mono _) (hg26.trans hg7)) hsz7
-  cases c8 : callW p (n + 1) "inst_pis_with" [rdW (s7.mem.arr64 IW) (r1.headD 0 + 2),
-      rdW (s7.mem.arr64 IW) (r1.headD 0 + 3), r7.headD 0] s7.mem with
-  | none => rw [c8] at h; simp [cxoK8] at h
-  | some x8 =>
-  obtain ⟨r8, m8⟩ := x8
-  rw [c8] at h
+  obtain ⟨⟨r8, m8⟩, c8, h⟩ := of_K h rfl
   obtain ⟨s8, hs8, -, hw8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (instPisWith_spec p P.hv P.ipw P.hi1 (n + 1) _ _ _ _) c8
   simp only at hs8 hw8; subst hs8
@@ -452,12 +389,8 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   obtain ⟨hty8H, hty8D⟩ := decNCN_ty (he0.grow (decNCN_mono _) (hg4.trans (hg5.trans (hg6.trans (hg7.trans hg8)))))
     hsz8
   rw [hnF8] at h
-  cases c9 : callW p (n + 1) "rec6" [UInt64.ofNat ca, UInt64.ofNat cA'.2, r5.headD 0, r5.tail.headD 0,
-      r8.tail.headD 0, rdW (s8.mem.arr64 IW) (e0w + 4)] s8.mem with
-  | none => rw [c9] at h; simp [cxoK9] at h
-  | some x9 =>
-  obtain ⟨r9, m9⟩ := x9
-  rw [c9, cxoK9_some] at h
+  obtain ⟨⟨r9, m9⟩, c9, h⟩ := of_K h rfl
+  rw [cxoK9_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨s9, hs9, -, hw9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
@@ -598,11 +531,7 @@ theorem cosW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
   rw [List.drop_eq_getElem_cons (by rw [hlen]; omega)] at hcsP
   obtain ⟨cAP, csP', rfl, hcAP, hcsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hcsP
   -- `class_ctor_of`
-  cases c1 : callW p k "class_ctor_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat v] m with
-  | none => rw [c1] at h; simp [cosK] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [c1] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   obtain ⟨s1, hs1, -, hok1, hC1, hg1, hd1, hP1, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classCtorOf_refinesC hkp henv P.toCxoProg hIlpf hOpf k (by omega) _ a dn fe vis q fto ftl rd mo ml c (UInt64.ofNat v) bs
       formerTys R ms cAs[j.toNat] hC hA (hbs.grow hg) (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.1)
@@ -684,15 +613,10 @@ theorem cosF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vi
       StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
       SPLA (iwTop m) decCC m' (r.headD 0).toNat (r.tail.headD 0).toNat xs ∧ RcMR m' ∧ AbsOK m' := by
   rw [cosF_eq] at h
-  cases hal : allocW m al with
-  | none => rw [hal] at h; cases h
-  | some x =>
-  obtain ⟨qo, m1⟩ := x
-  rw [hal, cosK1_some] at h
-  cases hl : cosW p (n + 1) m1 vis q fto ftl rd mo ml c ao al qo 0 with
-  | none => rw [hl] at h; cases h
-  | some m2 =>
-  rw [hl, cosK2_some] at h
+  obtain ⟨⟨qo, m1⟩, hal, h⟩ := of_K h rfl
+  rw [cosK1_some] at h
+  obtain ⟨m2, hl, h⟩ := of_K h rfl
+  rw [cosK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hC.stage
   have hf1 := allocW_mfr hal
@@ -831,11 +755,8 @@ theorem ccsW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
   obtain ⟨mP, lP', rfl, hmP, hlP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hlP
   have hmc := (ConRon.Bridge.Inductives.dMajor_inv hmP).2.2.2.2.2.1
   -- `class_ctors_of`
-  cases c1 : callW p k "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat o, UInt64.ofNat l] m with
-  | none => rw [c1] at h; simp [ccsK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [c1, ccsK1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [ccsK1_some] at h
   cases k with
   | zero =>
     obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (invoke_exec_zero p _ _ _) c1
@@ -857,11 +778,7 @@ theorem ccsW_okC (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toNat 
   have hS1 := hC1.stage
   have hk1 := callW_keepW c1
   -- `rec2`
-  cases c2 : callW p (k' + 1) "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with
-  | none => rw [c2] at h; simp [ccsK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (rec2_specW p P.ha (k' + 1) P.r2 _ (r1.headD 0) (r1.tail.headD 0)) c2
   simp only at hs2 hw2; subst hs2
@@ -947,15 +864,10 @@ theorem ccsF_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vi
       SPLA (iwTop m) (fun m p => decLH m (decPL m (decCC m)) p) m' (r.headD 0).toNat (r.tail.headD 0).toNat xss ∧
       RcMR m' ∧ AbsOK m' := by
   rw [ccsF_eq] at h
-  cases hal : allocW m ml with
-  | none => rw [hal] at h; cases h
-  | some x =>
-  obtain ⟨qo, m1⟩ := x
-  rw [hal, ccsK3_some] at h
-  cases hl : ccsW p (n + 1) m1 vis q fto ftl rd mo ml qo 0 with
-  | none => rw [hl] at h; cases h
-  | some m2 =>
-  rw [hl, ccsK4_some] at h
+  obtain ⟨⟨qo, m1⟩, hal, h⟩ := of_K h rfl
+  rw [ccsK3_some] at h
+  obtain ⟨m2, hl, h⟩ := of_K h rfl
+  rw [ccsK4_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hC.stage
   have hf1 := allocW_mfr hal

@@ -84,11 +84,7 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   generalize hE : rdW (m.arr64 IW) (eo + j) = ew at h hnf0
   obtain ⟨htyH, htyD⟩ := decNCN_ty hnf0 hsz
   -- `target_pi_doms_with`
-  cases c1 : callW p k "target_pi_doms_with" [fvo, fvl, rdW (m.arr64 IW) (ew + 4)] m with
-  | none => rw [c1] at h; simp [cnaK1] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [c1] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (targetPiDomsWith_spec p P.hv P.hc P.ha P.hsc P.pd P.hi1 k _ fvo fvl (rdW (m.arr64 IW) (ew + 4))) c1
   simp only at hs1 hw1
@@ -124,11 +120,7 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   rw [← decE_eq] at hget
   obtain ⟨fP, -, hfd⟩ := (ConRon.Bridge.Inductives.denoteEList_getElem? hdoms i.toNat).2 _ hget
   -- `target_k53`
-  cases c2 : callW p k "target_k53" [vis, q, fto, ftl, mc, teo, tel, leaf, w] s1.mem with
-  | none => rw [c2] at h; simp [cnaK2] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (tk_spec p P.k53 (realCall p) (realCall_spec p) k _ vis q fto ftl mc teo tel leaf w) c2
   simp only at hs2 hw2

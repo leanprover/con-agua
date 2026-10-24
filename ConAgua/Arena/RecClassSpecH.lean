@@ -274,11 +274,7 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have := sl.toNat_lt
   have hlen : j.toNat < slots.length := by rw [hsp.length]; exact hjl
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  cases h1 : motPosW N m so sl (j + 1) with
-  | none => rw [h1] at h; simp [mpK1] at h
-  | some rm =>
-  obtain ⟨r1, m1⟩ := rm
-  rw [h1] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   obtain ⟨hS1, hg1, hd1, ht1⟩ := ih m m1 (j + 1) r1 h1 hS hsp (by rw [hj1]; omega)
   rw [hj1] at hd1
   obtain ⟨q, hq, hst⟩ := hsp.get j.toNat hjl
@@ -305,11 +301,8 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     simp only [List.headD_cons, List.tail_cons]
     rw [hsplit, range'_filter_step, hf]; simpa using hd1
   · rw [mpK1_mot (h := by rw [hrd1, hrq.1]; simp at hm; simp [hm])] at h
-    cases h2 : consW N m1 j (r1.headD 0) (r1.tail.headD 0) with
-    | none => rw [h2] at h; simp [mpK2] at h
-    | some rm2 =>
-    obtain ⟨r2, m2⟩ := rm2
-    rw [h2, mpK2_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [mpK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨hS2, hg2, hd2, ht2⟩ := consW_stageN h2 hS1 ht1 hd1

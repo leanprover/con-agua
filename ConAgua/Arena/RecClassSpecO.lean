@@ -96,11 +96,8 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
     · simp [hh] at e
     · simp [hh] at e; obtain ⟨rfl, -⟩ := e; exact ⟨rfl, by simp⟩
   · rw [fsgW_miss (h := hend) (h2 := fun x => hh (hcond.mp x))] at h
-    cases hr : fsgW n m so sl (j + 1) c cn with
-    | none => rw [hr] at h; cases h
-    | some rm =>
-    obtain ⟨r', m''⟩ := rm
-    rw [hr, fcK_some] at h
+    obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
+    rw [fcK_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := sl.toNat_lt; omega

@@ -108,13 +108,10 @@ theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plg
   | k + 1, m, m', o, l, r, h => by
     by_cases hl : l = 0
     · rw [plgW_nil k m o l hl] at h
-      cases ha : allocW m 0 with
-      | none => rw [ha] at h; cases h
-      | some x =>
-        obtain ⟨q, m1⟩ := x
-        rw [ha, plK0_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        rw [← h.2]; exact allocW_mfr ha
+      obtain ⟨⟨q, m1⟩, ha, h⟩ := of_K h rfl
+      rw [plK0_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      rw [← h.2]; exact allocW_mfr ha
     rw [plgW_cons k m o l hl] at h
     cases h1 : pinternW m (rdW (m.arr64 IW) o) with
     | none => rw [h1] at h; simp [plK1] at h
@@ -125,17 +122,11 @@ theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plg
     · rw [plK1_big (h := hb)] at h; cases h
     rw [plK1_ok (h := hb)] at h
     refine (pinternW_mfrP h1).trans ?_
-    cases h2 : plgW k m1 (o + 1) (l - 1) with
-    | none => rw [h2] at h; simp [plK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2, plK2_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [plK2_some] at h
     refine (plgW_mfrP k _ _ _ _ _ h2).trans ?_
-    cases h3 : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
-    | none => rw [h3] at h; simp [plK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [h3, plK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [plK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact consW_mfr h3
 
@@ -145,17 +136,11 @@ theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k 
   | zero => simp [plW] at h
   | succ k =>
   rw [plW_succ] at h
-  cases h1 : plgW k m o l with
-  | none => rw [h1] at h; simp [plW.plK4] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, plK4_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [plK4_some] at h
   refine (plgW_mfrP k _ _ _ _ _ h1).trans ?_
-  cases h2 : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-  | none => rw [h2] at h; simp [plW.plK5] at h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2, plK5_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+  rw [plK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [POOL, LSREC, LSSLOT, LSHP]) (by simp)
 

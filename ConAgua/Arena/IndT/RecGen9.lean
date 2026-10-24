@@ -60,12 +60,8 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
       rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8)
   · rw [cr1W_big (h := hb)] at h; cases h
   rw [cr1W_ok (h := hb)] at h
-  cases h1 : cruleW (realCall p) N m visT visR cvR
-      (rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1)) gen with
-  | none => rw [h1] at h; cases h
-  | some rm =>
-  obtain ⟨r1, m1⟩ := rm
-  rw [h1, cr1K_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [cr1K_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨a', hrun, hC', hg, rfl, hA', hc'⟩ := cruleW_okC hq hApd henvR (by omega) h1 hC hgen

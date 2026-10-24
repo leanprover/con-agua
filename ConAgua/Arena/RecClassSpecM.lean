@@ -314,11 +314,8 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
     simp only [List.find?_cons, this]
     exact ⟨rfl, by rw [ep]; simp only [List.headD_cons, List.tail_cons]; rw [tp]; exact hX0⟩
   · rw [fcgW_miss (h := hl) (h2 := by rw [ep, ew]; exact hhit)] at h
-    cases hr : fcgW n m (io + 1) (il - 1) cn with
-    | none => rw [hr] at h; cases h
-    | some rm =>
-    obtain ⟨r', m''⟩ := rm
-    rw [hr, fcK_some] at h
+    obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
+    rw [fcK_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have := iwN_lt hpm
@@ -380,11 +377,8 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
     show UInt64.ofNat 1 = (1 : Word) from rfl] at eio eil
   rw [elp, eio, eil] at h
-  cases hr : fcgW n m (UInt64.ofNat xo) (UInt64.ofNat xl) cn with
-  | none => rw [hr] at h; cases h
-  | some rm =>
-  obtain ⟨r', m''⟩ := rm
-  rw [hr, fcK_some] at h
+  obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
+  rw [fcK_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have iolt := (iwN_rdW hiom (by have := iwN_lt hiom; omega)).2

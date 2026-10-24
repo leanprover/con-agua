@@ -93,11 +93,8 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   obtain ⟨hrd3, hslD, hrcD, hrcb, -⟩ := crWords hrd
   unfold grpCW at h
   -- `iw_alloc(14)`
-  cases c1 : callW p n "iw_alloc" [14] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1, grpC1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [grpC1_some] at h
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p P.ia n _ 14) c1
   simp only at hs1 hal; subst hs1
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
@@ -152,11 +149,7 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hCG : StageC dn vis fe env mG a := hC.of_pstep hS1G hAG (PStep.refl hC.check.state)
   -- the prefix
   unfold grpDW at h
-  cases c2 : callW p n "class_gen_prefix_binders" [g] mG with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   obtain ⟨s2, hs2, -, hgp⟩ := triple_of_callW (s₀ := ⟨mG, Locals.init []⟩) (prefixBinders_spec p P.pb n _ g) c2
   simp only at hs2 hgp; subst hs2
   obtain ⟨x2, a2, hrun2, hC2, ⟨⟨⟨hS2, hg2, hd2⟩, hA2⟩, hfr2⟩, hR2, p9⟩ :=
@@ -236,13 +229,8 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hrcs := hrecsP.1.grow (OMono.decPL decRS_mono _ _) hgP
   have hrecs2 := ConRon.Bridge.Inductives.dRec_ext.list c19.ext _ _ hrecsP0
   have hcv2 := ConRon.Bridge.Inductives.dExt_denoteCV.list c19.ext _ _ hcvP
-  cases c3 : callW p n "class_rec_tys_ok" [vis, g, UInt64.ofNat bs.k, rdW (m.arr64 IW) (pp + UInt64.ofNat 2),
-      rdW (m.arr64 IW) (pp + UInt64.ofNat 3), cRo, cRl, rdW (m.arr64 IW) (rd + UInt64.ofNat 2),
-      rdW (m.arr64 IW) (rd + UInt64.ofNat 3)] (grpPMem s2.mem g o l) with
-  | none => rw [c3] at h; cases h
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [c3, grpC4_some] at h
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+  rw [grpC4_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hPP
@@ -336,11 +324,8 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hftP := ConRon.Bridge.Inductives.GR.types_denote hcvTP
   unfold grpBW at h
   -- the formers' types
-  cases c1 : callW p n "gen_rec_check_former_tys" [cO, cL] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1, grpB1_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [grpB1_some] at h
   obtain ⟨s1, hs1, -, hS1, hg1, hf1, hft1, hftb1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (genRecCheckFormerTys_refines P.ia P.gft n _ a cO cL cvTas hS hcv) c1
   simp only at hs1 hS1 hg1 hf1 hft1 hftb1; subst hs1
@@ -349,11 +334,8 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hA1 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c1 hA
   have hC1 : StageC dn vis fe env s1.mem a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
   -- `classes_nfs`
-  cases c2 : callW p n "classes_nfs" [vis, pp, r1.headD 0, r1.tail.headD 0, tO, tL, mO, mL] s1.mem with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2, grpB2_some] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
+  rw [grpB2_some] at h
   obtain ⟨s2, hs2, -, hok2, hms2, hC2, hg2, hP2, hA2, hlp2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classesNfs_refinesLpC hkp henv P.cns n hn _ a dn fe vis pp _ _ tO tL mO mL bs (cvTas.map (·.type)) tbl ms
       hC1 hA1 (hbs.grow hg1) hft1 hftb1 (htbl.grow (fun q => decNCN_mono q) hg1)
@@ -373,12 +355,8 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hsh2 := ConRon.Bridge.Inductives.dShape_ext c4.ext _ _ hsh
   have hftP2 := ConRon.Bridge.denoteEList_ext c4.ext _ _ hftP
   have hrdP2 := ConRon.Bridge.Inductives.dClassRead_ext c4.ext _ _ hrdP
-  cases c3 : callW p n "classes_ctors" [vis, pp, r1.headD 0, r1.tail.headD 0, rd, r2.headD 0, r2.tail.headD 0]
-      s2.mem with
-  | none => rw [c3] at h; cases h
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [c3, grpB3_some] at h
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+  rw [grpB3_some] at h
   obtain ⟨s3, hs3, -, hok3, hC3, hg3, hsp3, hP3, hA3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (classesCtors_refinesC hkp henv P.ccs hIlpf P.opf n hn _ a2 dn fe vis pp _ _ rd _ _ bs (cvTas.map (·.type)) rdv ms2 hC2 hA2
       (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.1)
@@ -400,12 +378,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have er1 : rdW (s3.mem.arr64 IW) (rd + 1) = rdW (m.arr64 IW) (rd + 1) :=
     partsRdIW_grow hg13 (by rw [UInt64.toNat_add]; simp; omega)
   rw [er0, er1] at h
-  cases c4' : callW p n "gen_rec_check_minor_ok" [rdW (m.arr64 IW) rd, rdW (m.arr64 IW) (rd + 1), r3.headD 0,
-      r3.tail.headD 0] s3.mem with
-  | none => rw [c4'] at h; cases h
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [c4'] at h
+  obtain ⟨⟨r4, m4⟩, c4', h⟩ := of_K h rfl
   obtain ⟨s4, hs4, -, hm4, hmo⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (genRecCheckMinorOk_refines P.csm P.gmo n _ _ _ _ _ rdv.slots ctors
       ((hslD.grow (OMono.decPL decCS_mono _ _) hg13).get (OMono.decPL decCS_mono _ _)) hslb
@@ -417,11 +390,8 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have hcount : ((rdv.slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum) = true := by
     rw [← hmo]; simpa using h0
   -- the classes' formers
-  cases c5' : callW p n "gen_rec_check_former_tys_c" [vis, cO, cL, r2.headD 0, r2.tail.headD 0] s3.mem with
-  | none => rw [c5'] at h; cases h
-  | some q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [c5', grpB5_some] at h
+  obtain ⟨⟨r5, m5⟩, c5', h⟩ := of_K h rfl
+  rw [grpB5_some] at h
   have hms3P := ConRon.Bridge.Inductives.dMajor_ext.list c5.ext _ _ hms2P
   have hcv3P := ConRon.Bridge.Inductives.dExt_denoteCV.list (c4.trans c5).ext _ _ hcvTP
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hftc5, hftcb5, hJ5⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
@@ -471,12 +441,8 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have ew7 : rdW (s5.mem.arr64 IW) (pp + 7) = rdW (m.arr64 IW) (pp + UInt64.ofNat 7) :=
     partsRdIW_grow hg15 (by rw [UInt64.toNat_add]; simp; omega)
   rw [ew5, ew7] at h
-  cases c6' : callW p n "struct_elim_level" [rdW (m.arr64 IW) (pp + UInt64.ofNat 5),
-      rdW (m.arr64 IW) (pp + UInt64.ofNat 7)] s5.mem with
-  | none => rw [c6'] at h; cases h
-  | some q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [c6', grpB6_some] at h
+  obtain ⟨⟨r6, m6⟩, c6', h⟩ := of_K h rfl
+  rw [grpB6_some] at h
   obtain ⟨s6, hs6, -, a6, hrun6, hS6, hg6, hel6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (structElimLevel_stage P.sel n _ a5 _ _ hS5 hel5) c6'
   simp only at hs6 hrun6 hS6 hg6 hel6; subst hs6

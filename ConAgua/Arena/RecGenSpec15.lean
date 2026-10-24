@@ -71,11 +71,7 @@ theorem sgW_nksl (k : Nat)
       rd_iwN (m := m) (p := ctx) (i := 8) (by simpa using hl) (by simp; omega)]
     exact hsl 7 (by omega) o l ho hl
   unfold sgW at h
-  cases hr1 : posRecW m [1, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), hO, hL] with
-  | none => rw [hr1] at h; simp [sgA] at h
-  | some p1 =>
-  obtain ⟨f, m1⟩ := p1
-  rw [hr1] at h
+  obtain ⟨⟨f, m1⟩, hr1, h⟩ := of_K h rfl
   simp only [sgA] at h
   obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
   simp only [List.length_cons, List.length_nil] at ht1
@@ -90,11 +86,7 @@ theorem sgW_nksl (k : Nat)
   obtain ⟨ec1, hci1⟩ := hin.grow hg1
   have hsl1 := hsl.grow hin hg1
   have hR1 := hR.frame (posRecW_fr hr1)
-  cases hal : allocW m1 dL with
-  | none => rw [hal] at h; simp [sgB] at h
-  | some p2 =>
-  obtain ⟨q, m2⟩ := p2
-  rw [hal] at h
+  obtain ⟨⟨q, m2⟩, hal, h⟩ := of_K h rfl
   simp only [sgB] at h
   obtain ⟨hS2, hg2, hqd, hroom, htop2⟩ := hS1.alloc hal
   have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
@@ -108,11 +100,7 @@ theorem sgW_nksl (k : Nat)
     (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
     ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
-  cases hr4 : posRecW m3 [ind, us, q, dL] with
-  | none => rw [hr4] at h; simp [sgC] at h
-  | some p4 =>
-  obtain ⟨key, m4⟩ := p4
-  rw [hr4] at h
+  obtain ⟨⟨key, m4⟩, hr4, h⟩ := of_K h rfl
   simp only [sgC, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)

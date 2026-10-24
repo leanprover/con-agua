@@ -454,19 +454,10 @@ theorem tcW_mfr {cR : CallM} {n : Nat} (hF : IlpFr cR) {m m' : Mem} {M c : Word}
   simp only [tcW] at h
   split at h
   · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  cases h1 : cvLpsW n m c with
-  | none => rw [h1] at h; simp [tcK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   simp only [tcK1] at h
   refine (posmemo_cvLpsW_mfr h1).trans ?_
-  cases h2 : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, rdW (m.arr64 IW) (M + 1),
-      rdW (m1.arr64 EREC) (c + 3)] m1 with
-  | none => rw [h2] at h; simp [tcK2] at h
-  | some y =>
-  obtain ⟨r2, m2⟩ := y
-  rw [h2] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   obtain ⟨A, C, hA, hC, hfr⟩ := hF _ _ _ _ _ h2

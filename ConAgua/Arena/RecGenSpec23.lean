@@ -184,21 +184,14 @@ theorem pdW_mfr : ∀ (n : Nat) (m m' : Mem) (xo xl e : Word) (r : List Word),
     obtain ⟨r1, m1⟩ := x
     rw [h1, pdK1_some] at h
     refine (MFr.ofI1F h1).trans ?_
-    cases h2 : pdW n m1 (xo + 1) (xl - 1) (r1.headD 0) with
-    | none => rw [h2] at h; simp [pdK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     refine (pdW_mfr n _ _ _ _ _ _ h2).trans ?_
     by_cases h3 : r2.headD 0 = 0
     · rw [pdK2_none (h := h3)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [pdK2_ok (h := h3)] at h
-    cases h4 : consW n m2 ((eViewW m e).tail.headD 0) (r2.tail.headD 0) (r2.tail.tail.headD 0) with
-    | none => rw [h4] at h; simp [pdK3] at h
-    | some z =>
-    obtain ⟨r3, m3⟩ := z
-    rw [h4, pdK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h4, h⟩ := of_K h rfl
+    rw [pdK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
     exact consW_mfr h4
 

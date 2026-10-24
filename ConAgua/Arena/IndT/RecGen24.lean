@@ -129,22 +129,16 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   have htlT : (UInt64.ofNat tl : Word).toNat = tl := UInt64.toNat_ofNat_of_lt' htlb
   have hfvb64 := hS.lt64 hfvb
   -- the datum variable
-  cases c0 : cfaFv p k m fvo fvl i with
-  | none => rw [c0] at h; simp [cfaK1] at h
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [c0, cfaK1_some] at h
+  obtain ⟨⟨r0, m0⟩, c0, h⟩ := of_K h rfl
+  rw [cfaK1_some] at h
   obtain ⟨a0, run0, hH0, hS0, hg0, hP0⟩ := cfaFv_ok P dn fe vis fvo fvl fvs c0 hS hfv hfvb64 hP
   have hA0 := cfaFv_afr P c0 hA
   obtain ⟨q0, hfv0⟩ := ConRon.Bridge.Inductives.exprGetD_spec fvs fvsP i.toNat a a0 _ hC.check.state
     hfvP run0
   have hC0 := hC.of_pstep hS0 hA0 q0
   -- `fvar_type_d`
-  cases c1 : callW p k "fvar_type_d" [r0.headD 0] m0 with
-  | none => rw [c1] at h; simp [cfaK2] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [c1, cfaK2_some] at h
+  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
+  rw [cfaK2_some] at h
   obtain ⟨s1, hs1, -, hw1⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
     (ftdF_spec p P.ad k _ [r0.headD 0]) c1
   simp only at hs1 hw1; subst hs1
@@ -155,11 +149,7 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   subst a1
   have hC1 := hC0.of_pstep hS1 hA1 (PStep.refl hC0.check.state)
   -- `strip_pis`
-  cases c2 : callW p k "strip_pis" [UInt64.ofNat tl, r1.headD 0] s1.mem with
-  | none => rw [c2] at h; simp [cfaK3] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [c2] at h
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
   obtain ⟨s2, hs2, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (stripPis_refines p P.strip dn vis fe (UInt64.ofNat tl) (r1.headD 0) hH1 k _ a0 hS1) c2
   obtain ⟨s2', hs2', -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -188,11 +178,8 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   rw [hl3] at hlwH hlwD
   have hg02 := (hg0.trans hg1).trans hg2
   -- `target_major_at`
-  cases c3 : callW p k "target_major_at" [mo, ml, UInt64.ofNat t] s2.mem with
-  | none => rw [c3] at h; simp [cfaK4] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [c3, cfaK4_some] at h
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
+  rw [cfaK4_some] at h
   obtain ⟨s3, hs3, -, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na k _ mo ml (UInt64.ofNat t)) c3
   simp only at hs3 hw3; subst hs3
@@ -205,11 +192,7 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     hC2.check.pins (ConRon.Bridge.Inductives.dMajor_ext.list q0.ext _ _ hmsP) run3
   have hC3 := hC2.of_pstep hS3 hA3 q3
   -- `class_leaf_at`
-  cases c4 : callW p k "class_leaf_at" [r3.headD 0, r2.tail.tail.tail.headD 0] s3.mem with
-  | none => rw [c4] at h; simp [cfaK5] at h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [c4] at h
+  obtain ⟨⟨r4, m4⟩, c4, h⟩ := of_K h rfl
   cases k with
   | zero =>
     obtain ⟨_, _, hf⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩) (invoke_exec_zero p _ _ _) c4
@@ -240,12 +223,8 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   have q04 := (q0.trans q3).trans q4
   have q34 := q3.trans q4
   -- `class_nodes_agree`
-  cases c5 : callW p (k' + 1) "class_nodes_agree" [vis, q, fto, ftl, r3.headD 0, r2.tail.headD 0,
-      r2.tail.tail.headD 0, r2.tail.tail.tail.headD 0, fvo, fvl, i, eo, el] s4.mem with
-  | none => rw [c5] at h; simp [cfaK6] at h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [c5, cfaK6_some] at h
+  obtain ⟨⟨r5, m5⟩, c5, h⟩ := of_K h rfl
+  rw [cfaK6_some] at h
   have hlP : denoteE a4.store (decE (r2.tail.tail.tail.headD 0)) = some leafP := by
     rw [decE_eq, hlwD]; exact denote_ext hleaf q34.ext
   obtain ⟨s5, hs5, -, hok5, hC5, hg5, hP5, hA5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)

@@ -68,11 +68,8 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
       StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := fun x hx h2 => by
-    cases h3 : snocW N m mo ml x with
-    | none => rw [h3] at h2; cases h2
-    | some rm =>
-    obtain ⟨r3, m3⟩ := rm
-    rw [h3, mpsK_some] at h2
+    obtain ⟨⟨r3, m3⟩, h3, h2⟩ := of_K h2 rfl
+    rw [mpsK_some] at h2
     simp only [Option.some.injEq, Prod.mk.injEq] at h2
     obtain ⟨rfl, rfl⟩ := h2
     obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs

@@ -281,11 +281,8 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | zero => simp [npcW] at h
   | succ n =>
   rw [npcW_eq] at h
-  cases h1 : memberNamesW n m p with
-  | none => rw [h1] at h; simp [npcK1] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, npcK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [npcK1_some] at h
   obtain ⟨hS1, hg1, hr1, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
     have := hS1.2.1; have := hS1.2.2.2.1; omega

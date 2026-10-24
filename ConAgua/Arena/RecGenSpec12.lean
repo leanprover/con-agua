@@ -471,19 +471,13 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   have hcvl1 := rec2ToNat_pred hvl
   have hrcl1 := rec2ToNat_pred hcl
   have hM1 : (M + 1).toNat = M.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  cases h4 : ferW p k m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl (rv.headD 0) (M + 1) with
-  | none => rw [h4] at h; simp [ferK4] at h
-  | some x4 =>
-  obtain ⟨r4, m4⟩ := x4
-  rw [h4, ferK4_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
+  rw [ferK4_some] at h
   obtain ⟨hS4, hg4, hsp4⟩ := ih m3 m4 a (rv.headD 0) _ (cvo + 1) (cvl - 1) (rcl - 1) (M + 1) cvs' rcs' r4 h4 hS3
     (hrecs.grow (OMono.decPL (fun q => decRS_mono q) _ _) hg03)
     (by rw [hcvo1, hcvl1, hjv]; exact hcvsT.grow hg03) (by simp at hrcs; omega) (by omega)
-  cases h5 : consW k m4 (re.headD 0) (r4.tail.headD 0) (r4.tail.tail.headD 0) with
-  | none => rw [h5] at h; simp [ferK5] at h
-  | some x5 =>
-  obtain ⟨r5, m5⟩ := x5
-  rw [h5, ferK5_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
+  rw [ferK5_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS5, hg5, hsp5⟩ := SPL.cons h5 hS4 hsp4 (hentS.grow hg4)
@@ -518,11 +512,8 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   | zero => simp [ferAW] at hm
   | succ n =>
   rw [cfaW_eq] at hm
-  cases h1 : ferW p n s₀.mem cgo cgl rcl (rdW (s₀.mem.arr64 IW) (pp + 2)) (rdW (s₀.mem.arr64 IW) (pp + 3)) vis 0 with
-  | none => rw [h1] at hm; cases hm
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, ferK5'_some] at hm
+  obtain ⟨⟨r1, m1⟩, h1, hm⟩ := of_K hm rfl
+  rw [ferK5'_some] at hm
   simp only [Option.some.injEq, Prod.mk.injEq] at hm
   obtain ⟨rfl, rfl⟩ := hm
   have hP' : decBS (truncM s₀.mem) pp.toNat = some P := hP

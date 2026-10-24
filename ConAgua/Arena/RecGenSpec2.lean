@@ -193,60 +193,56 @@ theorem cfhW_ok (n : Nat) : ∀ (m : Mem) (o l i x y : Word) (ihs : List (Nat ×
         exact iwN_lt hb'
       obtain ⟨hw1, ha64, hw2, hb64⟩ := decNN_words hx (by omega)
       rw [cfhW_cons n m o l i hl, hrd.1] at h
-      cases h2 : cfhW n m (o + 1) (l - 1) i with
-      | none => rw [h2] at h; simp [cfhK] at h
-      | some cc =>
-        obtain ⟨c0, k0⟩ := cc
-        rw [h2] at h
-        have hl1' : (l - 1).toNat = l1 := by omega
-        have hys' : decPL m (decNN m) (o + 1).toNat (l - 1).toNat = some ys := by
-          rw [hco1, hl1']; exact hys
-        obtain ⟨g1, g2⟩ := ih m (o + 1) (l - 1) i c0 k0 ys h2 hys' (by omega) hsz
-        have hlen := decPL_length m hys
-        have hfl := List.length_filter_le (fun h => h.1 == i.toNat) ys
-        by_cases hmatch : rdW (m.arr64 IW) (UInt64.ofNat pp) = i
-        · have hai : hh.1 = i.toNat := by
-            rw [hw1] at hmatch
-            have := congrArg UInt64.toNat hmatch
-            rw [UInt64.toNat_ofNat_of_lt' ha64] at this; exact this
-          have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) =
-              hh :: ys.filter (fun h => h.1 == i.toNat) := by simp [List.filter_cons, hai]
-          rw [hf]
-          by_cases hc : c0 = 0
-          · rw [cfhK_first m i _ c0 k0 hmatch hc] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            have hnil : ys.filter (fun h => h.1 == i.toNat) = [] := by
-              apply List.eq_nil_of_length_eq_zero; rw [← g1, hc]; rfl
-            rw [hnil]
-            refine ⟨by simp, fun h' hh' => ?_⟩
-            simp only [List.cons.injEq, and_true] at hh'
-            subst hh'
-            exact ⟨hw2, hb64⟩
-          · rw [cfhK_more m i _ c0 k0 hmatch hc] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            have hpos : 0 < c0.toNat := by
-              rcases Nat.eq_zero_or_pos c0.toNat with h0 | h0
-              · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hc
-              · exact h0
-            refine ⟨?_, fun h' hh' => ?_⟩
-            · have hc1 : (c0 + 1).toNat = c0.toNat + 1 := by
-                rw [UInt64.toNat_add]; simp; omega
-              rw [hc1, g1]; simp
-            · exfalso
-              have : (hh :: ys.filter (fun h => h.1 == i.toNat)).length = 1 := by rw [hh']; rfl
-              simp only [List.length_cons] at this
-              omega
-        · rw [cfhK_miss m i _ c0 k0 hmatch] at h
+      obtain ⟨⟨c0, k0⟩, h2, h⟩ := of_K h rfl
+      have hl1' : (l - 1).toNat = l1 := by omega
+      have hys' : decPL m (decNN m) (o + 1).toNat (l - 1).toNat = some ys := by
+        rw [hco1, hl1']; exact hys
+      obtain ⟨g1, g2⟩ := ih m (o + 1) (l - 1) i c0 k0 ys h2 hys' (by omega) hsz
+      have hlen := decPL_length m hys
+      have hfl := List.length_filter_le (fun h => h.1 == i.toNat) ys
+      by_cases hmatch : rdW (m.arr64 IW) (UInt64.ofNat pp) = i
+      · have hai : hh.1 = i.toNat := by
+          rw [hw1] at hmatch
+          have := congrArg UInt64.toNat hmatch
+          rw [UInt64.toNat_ofNat_of_lt' ha64] at this; exact this
+        have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) =
+            hh :: ys.filter (fun h => h.1 == i.toNat) := by simp [List.filter_cons, hai]
+        rw [hf]
+        by_cases hc : c0 = 0
+        · rw [cfhK_first m i _ c0 k0 hmatch hc] at h
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          have hai : ¬ hh.1 = i.toNat := by
-            intro e; apply hmatch
-            rw [hw1, e]; exact UInt64.ofNat_toNat
-          have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) = ys.filter (fun h => h.1 == i.toNat) := by
-            simp [List.filter_cons, hai]
-          rw [hf]; exact ⟨g1, g2⟩
+          have hnil : ys.filter (fun h => h.1 == i.toNat) = [] := by
+            apply List.eq_nil_of_length_eq_zero; rw [← g1, hc]; rfl
+          rw [hnil]
+          refine ⟨by simp, fun h' hh' => ?_⟩
+          simp only [List.cons.injEq, and_true] at hh'
+          subst hh'
+          exact ⟨hw2, hb64⟩
+        · rw [cfhK_more m i _ c0 k0 hmatch hc] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          have hpos : 0 < c0.toNat := by
+            rcases Nat.eq_zero_or_pos c0.toNat with h0 | h0
+            · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hc
+            · exact h0
+          refine ⟨?_, fun h' hh' => ?_⟩
+          · have hc1 : (c0 + 1).toNat = c0.toNat + 1 := by
+              rw [UInt64.toNat_add]; simp; omega
+            rw [hc1, g1]; simp
+          · exfalso
+            have : (hh :: ys.filter (fun h => h.1 == i.toNat)).length = 1 := by rw [hh']; rfl
+            simp only [List.length_cons] at this
+            omega
+      · rw [cfhK_miss m i _ c0 k0 hmatch] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hai : ¬ hh.1 = i.toNat := by
+          intro e; apply hmatch
+          rw [hw1, e]; exact UInt64.ofNat_toNat
+        have hf : (hh :: ys).filter (fun h => h.1 == i.toNat) = ys.filter (fun h => h.1 == i.toNat) := by
+          simp [List.filter_cons, hai]
+        rw [hf]; exact ⟨g1, g2⟩
 
 /-! ## `gen_rec_check_any_no_member`: `ms.any (·.member.isNone)` -/
 

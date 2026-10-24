@@ -330,21 +330,19 @@ theorem cmvW_ok (n : Nat) (m : Mem) (nP o l pv : Word) (r : List Word) (ns : Lis
     have : ¬ nP.toNat ≤ pv.toNat := by have := UInt64.lt_iff_toNat_lt.mp hlt; omega
     simp [ConRon.Arena.classOfMotiveVar, this]
   · rw [cmvW_ge n m nP o l pv hlt] at h
-    cases hr : findW n m o l (pv - nP) with
-    | none => rw [hr] at h; simp [cmvK] at h
-    | some r0 =>
-      rw [hr, cmvK_some] at h
-      simp only [Option.some.injEq] at h
-      have hle' : nP.toNat ≤ pv.toNat := by
-        have : ¬ pv.toNat < nP.toNat := fun hh => hlt (UInt64.lt_iff_toNat_lt.mpr hh)
-        omega
-      have hle : nP ≤ pv := UInt64.le_iff_toNat_le.mpr hle'
-      have hsub : (pv - nP).toNat = pv.toNat - nP.toNat := UInt64.toNat_sub_of_le _ _ hle
-      have hk := findW_ok n _ _ _ _ _ _ hws hr hlen
-      subst h
-      rw [hk]
-      simp only [ConRon.Arena.classOfMotiveVar, hle', ite_true, ← hsub, findIdx_toNat]
-      cases List.findIdx? (fun x => x == pv - nP) ws <;> rfl
+    obtain ⟨r0, hr, h⟩ := of_K h rfl
+    rw [cmvK_some] at h
+    simp only [Option.some.injEq] at h
+    have hle' : nP.toNat ≤ pv.toNat := by
+      have : ¬ pv.toNat < nP.toNat := fun hh => hlt (UInt64.lt_iff_toNat_lt.mpr hh)
+      omega
+    have hle : nP ≤ pv := UInt64.le_iff_toNat_le.mpr hle'
+    have hsub : (pv - nP).toNat = pv.toNat - nP.toNat := UInt64.toNat_sub_of_le _ _ hle
+    have hk := findW_ok n _ _ _ _ _ _ hws hr hlen
+    subst h
+    rw [hk]
+    simp only [ConRon.Arena.classOfMotiveVar, hle', ite_true, ← hsub, findIdx_toNat]
+    cases List.findIdx? (fun x => x == pv - nP) ws <;> rfl
 
 /-! ## `class_binder`, `class_gen_binder`: one `fvar_type_d` call -/
 
@@ -783,59 +781,48 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hlpos))]; simp; omega
       have hbo1 : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      cases hr : closeLamsW n m (bo + 1) (bl - 1) (i + 1) body with
-      | none => rw [hr] at h; simp [clK1] at h
-      | some rm =>
-        obtain ⟨r1, m1⟩ := rm
-        rw [hr, clK1_some] at h
-        obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := ih m m1 a (bo + 1) (bl - 1) (i + 1) body rest r1 hr hS hb
-          (by rw [hbo1, hbl1]; exact hrest) (by omega) (by omega) (by omega) hA
-        cases ha : abF m1 [CWF, r1.headD 0, i, 0] with
-        | none => rw [ha] at h; simp [clK2] at h
-        | some ram =>
-          obtain ⟨ra, m2⟩ := ram
-          rw [ha] at h
-          obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hd21, hd22⟩, hA2⟩ :=
-            abF_ok dn vis fe (r1.headD 0) i 0 hd11 m1 m2 a1 ra ha ⟨hS1, hA1⟩
-          by_cases hoob : bo.toNat < (m2.arr64 IW).size
-          · rw [clK2_ok m2 bo ra hoob] at h
-            obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hdom (by omega)
-            rw [UInt64.ofNat_toNat] at hw1
-            have hrd : rdW (m2.arr64 IW) bo = w := by
-              have hg := hg1.trans hg2
-              have := hg.2.2.1 bo.toNat (by omega)
-              simp only [rdW] at this hw1 ⊢
-              have e : (m2.arr64 IW)[bo.toNat]? = (m.arr64 IW)[bo.toNat]? := this
-              rw [e]; exact hw1
-            rw [hrd] at h
-            cases hm : mkLamW m2 w (ra.headD 0) with
-            | none => rw [hm] at h; simp [clK3] at h
-            | some rbm =>
-              obtain ⟨rb, m3⟩ := rbm
-              rw [hm] at h
-              by_cases hbig : 4294967296 ≤ rb
-              · rw [clK3_big m3 rb hbig] at h; simp at h
-              rw [clK3_ok m3 rb hbig] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
-              obtain ⟨a3, hrun3, hS3, hg3⟩ := mkLam_stage hS2 w (ra.headD 0) hm
-              have hlt : rb.toNat < 2 ^ 32 := by
-                have : ¬ (4294967296 : Nat) ≤ rb.toNat := hbig
-                omega
-              refine ⟨decE rb, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hlt, by simp [decE_eq],
-                mkLamW_afr hm hA2⟩
-              rw [CWF_eq] at hrun2
-              have hz : (0 : Word).toNat = 0 := rfl
-              rw [hz] at hrun2
-              rw [hi1] at hrun1
-              simp only [ConRon.Arena.closeLams, StateT.run_bind]
-              rw [hrun1]
-              simp only [bind, Except.bind]
-              rw [← hd12, hrun2]
-              simp only [bind, Except.bind]
-              rw [← hw3, ← hd22]
-              exact hrun3
-          · rw [clK2_oob m2 bo ra hoob] at h; simp at h
+      obtain ⟨⟨r1, m1⟩, hr, h⟩ := of_K h rfl
+      rw [clK1_some] at h
+      obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := ih m m1 a (bo + 1) (bl - 1) (i + 1) body rest r1 hr hS hb
+        (by rw [hbo1, hbl1]; exact hrest) (by omega) (by omega) (by omega) hA
+      obtain ⟨⟨ra, m2⟩, ha, h⟩ := of_K h rfl
+      obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hd21, hd22⟩, hA2⟩ :=
+        abF_ok dn vis fe (r1.headD 0) i 0 hd11 m1 m2 a1 ra ha ⟨hS1, hA1⟩
+      by_cases hoob : bo.toNat < (m2.arr64 IW).size
+      · rw [clK2_ok m2 bo ra hoob] at h
+        obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hdom (by omega)
+        rw [UInt64.ofNat_toNat] at hw1
+        have hrd : rdW (m2.arr64 IW) bo = w := by
+          have hg := hg1.trans hg2
+          have := hg.2.2.1 bo.toNat (by omega)
+          simp only [rdW] at this hw1 ⊢
+          have e : (m2.arr64 IW)[bo.toNat]? = (m.arr64 IW)[bo.toNat]? := this
+          rw [e]; exact hw1
+        rw [hrd] at h
+        obtain ⟨⟨rb, m3⟩, hm, h⟩ := of_K h rfl
+        by_cases hbig : 4294967296 ≤ rb
+        · rw [clK3_big m3 rb hbig] at h; simp at h
+        rw [clK3_ok m3 rb hbig] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨a3, hrun3, hS3, hg3⟩ := mkLam_stage hS2 w (ra.headD 0) hm
+        have hlt : rb.toNat < 2 ^ 32 := by
+          have : ¬ (4294967296 : Nat) ≤ rb.toNat := hbig
+          omega
+        refine ⟨decE rb, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hlt, by simp [decE_eq],
+          mkLamW_afr hm hA2⟩
+        rw [CWF_eq] at hrun2
+        have hz : (0 : Word).toNat = 0 := rfl
+        rw [hz] at hrun2
+        rw [hi1] at hrun1
+        simp only [ConRon.Arena.closeLams, StateT.run_bind]
+        rw [hrun1]
+        simp only [bind, Except.bind]
+        rw [← hd12, hrun2]
+        simp only [bind, Except.bind]
+        rw [← hw3, ← hd22]
+        exact hrun3
+      · rw [clK2_oob m2 bo ra hoob] at h; simp at h
 
 
 /-- **`close_lams` refines `closeLams`** (through the `abstract1_fast` and `mk_lam` stubs). -/

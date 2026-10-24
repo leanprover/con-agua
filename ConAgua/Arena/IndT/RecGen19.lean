@@ -57,11 +57,8 @@ theorem tptW_mfrR : ∀ (n : Nat) (m m' : Mem) (vis d xo xl : Word) (r : List Wo
     obtain ⟨r1, m1⟩ := x
     rw [h1, tptK_some] at h
     refine (coreC_mfr hq h1).trans ?_
-    cases h2 : tptW (realCall p) n m1 vis d (xo + 1) (xl - 1) with
-    | none => rw [h2] at h; simp [tptK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2, tptK2_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [tptK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact tptW_mfrR n _ _ _ _ _ _ _ h2
 
@@ -75,32 +72,20 @@ theorem tmpW_mfrR {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word}
   · rw [tmpW_mem (realCall p) N m vis rP M hm] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
   rw [tmpW_out (realCall p) N m vis rP M hm] at h
-  cases h1 : tptW (realCall p) N m vis rP (rdW (m.arr64 IW) (M + 2)) (rdW (m.arr64 IW) (M + 3)) with
-  | none => rw [h1] at h; simp [tmpK1] at h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, tmpK1_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
+  rw [tmpK1_some] at h
   refine (tptW_mfrR hq _ _ _ _ _ _ _ _ h1).trans ?_
-  cases h2 : ceinternW m1 (rdW (m1.arr64 IW) M) (rdW (m1.arr64 IW) (M + 1)) with
-  | none => rw [h2] at h; simp [tmpK2] at h
-  | some y =>
-  obtain ⟨hd, m2⟩ := y
-  rw [h2, tmpK2_some] at h
+  obtain ⟨⟨hd, m2⟩, h2, h⟩ := of_K h rfl
+  rw [tmpK2_some] at h
   refine (ceinternW_mfr h2).trans ?_
   by_cases hb : 4294967296 ≤ hd
   · rw [if_pos hb] at h; cases h
   rw [if_neg hb] at h
-  cases h3 : mknF m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)] with
-  | none => rw [h3] at h; simp [tmpK3] at h
-  | some z =>
-  obtain ⟨r3, m3⟩ := z
-  rw [h3, tmpK3_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+  rw [tmpK3_some] at h
   refine (MFr.ofMknF h3).trans ?_
-  cases h4 : realCall p N "infer_type_core" [vis, rP, r3.headD 0] m3 with
-  | none => rw [h4] at h; simp [tmpK4] at h
-  | some w =>
-  obtain ⟨r4, m4⟩ := w
-  rw [h4, tmpK4_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
+  rw [tmpK4_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]; exact coreC_mfr hq h4
 

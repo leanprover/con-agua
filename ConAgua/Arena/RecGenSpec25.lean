@@ -305,16 +305,10 @@ theorem cnfF_ok (n : Nat) {m m' : Mem} {r : List Word} (h : cnfF n m nfo nfl nm 
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       PSlR decNCN (nfs.filter (fun e => e.ctor == decI nm)) (r.headD 0) (r.tail.headD 0) m' := by
   simp only [cnfF] at h
-  cases hal : allocW m nfl with
-  | none => rw [hal] at h; cases h
-  | some x =>
-  obtain ⟨q, m1⟩ := x
-  rw [hal, cnfK1_some] at h
-  cases hl : cnfW (n + 1) m1 nfo nfl nm q 0 0 with
-  | none => rw [hl] at h; cases h
-  | some y =>
-  obtain ⟨rp, m2⟩ := y
-  rw [hl, cnfK2_some] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h rfl
+  rw [cnfK1_some] at h
+  obtain ⟨⟨rp, m2⟩, hl, h⟩ := of_K h rfl
+  rw [cnfK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
   obtain ⟨hS2, hg2, ht2, hf2, hr2, hd2⟩ := cnfW_ok m nfo nfl nm q nfs hnfs hnm hq (n + 1) m1 m2 0 0 rp hl hS1

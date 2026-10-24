@@ -226,21 +226,13 @@ theorem cfa_spec (p : Prog) (hp : p.lookup "class_fields_agree" = some classFiel
 
 theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr [] [] m m' := by
   rw [tmdW_eq] at h
-  cases h1 : naF m [] with
-  | none => rw [h1] at h; simp [tmdK1] at h
-  | some x1 =>
-  obtain ⟨ra, m1⟩ := x1
-  rw [h1, tmdK1_some] at h
+  obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
+  rw [tmdK1_some] at h
   refine (MFr.of_frame (naF_frame h1) (by simp [NAREC, NASLOT]) (by simp)).trans ?_
-  cases hp : pinWordV m1 52 with
-  | none => rw [hp] at h; simp [tmdK2] at h
-  | some ls =>
-  rw [hp, tmdK2_some] at h
-  cases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with
-  | none => rw [hmk] at h; simp [tmdK3] at h
-  | some x3 =>
-  obtain ⟨r3, m2⟩ := x3
-  rw [hmk, tmdK3_some] at h
+  obtain ⟨ls, hp, h⟩ := of_K h rfl
+  rw [tmdK2_some] at h
+  obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
+  rw [tmdK3_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   simp only [mkTMW] at hmk
@@ -266,11 +258,8 @@ theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tm
   · rw [tmaW_hit n m mo ml c hc] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
   rw [tmaW_miss n m mo ml c hc] at h
-  cases ho : fuelW n (tmdW m) with
-  | none => rw [ho] at h; cases h
-  | some b0 =>
-  obtain ⟨r0, m0⟩ := b0
-  rw [ho, tmaK_some] at h
+  obtain ⟨⟨r0, m0⟩, ho, h⟩ := of_K h rfl
+  rw [tmaK_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
   cases n with
   | zero => cases ho

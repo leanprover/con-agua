@@ -64,11 +64,8 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2K2_open (h := hf)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ckc2K2_closed (h := hf)] at h
-    cases h3 : ckc2W n m2 nP (o + 1) (l - 1) with
-    | none => rw [h3] at h; simp [ckcK3] at h
-    | some p3 =>
-    obtain ⟨r3, m3⟩ := p3
-    rw [h3, ckcK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [ckcK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact ckc2W_afr n _ _ _ _ _ _ h3
 
@@ -140,11 +137,8 @@ theorem ocW_afr (hN : NoProg p) : ∀ (n : Nat) (m m' : Mem) (no nl o l : Word) 
     · rw [ocK1_hit p n m1 no nl o l r1 hb] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     rw [ocK1_miss p n m1 no nl o l r1 hb] at h
-    cases h2 : ocW p n m1 no nl (o + 1) (l - 1) with
-    | none => rw [h2] at h; simp [ocK2] at h
-    | some y =>
-    obtain ⟨r2, m2⟩ := y
-    rw [h2, ocK2_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
+    rw [ocK2_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact ocW_afr hN n _ _ _ _ _ _ _ h2
 

@@ -467,26 +467,20 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
   · rw [hr, piBK1_nil] at hp; simp at hp
   obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr
   rw [piBK1_ne n m fuel _ hr] at hp
-  cases hrec : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-  | none => rw [hrec] at hp; simp [piBK2] at hp
-  | some rm =>
-    obtain ⟨rs1, m1⟩ := rm
-    rw [hrec, piBK2_some] at hp
-    cases hcons : consW n m1 ((eViewW m h).getD 1 0) (rs1.headD 0) (rs1.getD 1 0) with
-    | none => rw [hcons] at hp; simp [piBK3] at hp
-    | some rm2 =>
-      obtain ⟨r2, m2⟩ := rm2
-      rw [hcons, piBK3_some] at hp
-      simp only [Option.some.injEq, Prod.mk.injEq] at hp
-      obtain ⟨-, rfl⟩ := hp
-      obtain ⟨-, hty, hb⟩ := view_forall m a hR h hh hvok hg6
-      have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
-      have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
-      obtain ⟨bs1, e1, -, -, hdec1, -, -, -, hf1, hle1⟩ :=
-        piBW_ok n m m1 a (fuel - 1) _ rs1 hR hrec hb2 hsz hc
-      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
-      have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
-      exact consW_room hcons hsz1 hc1 hle1 hty2 hdec1
+  obtain ⟨⟨rs1, m1⟩, hrec, hp⟩ := of_K hp rfl
+  rw [piBK2_some] at hp
+  obtain ⟨⟨r2, m2⟩, hcons, hp⟩ := of_K hp rfl
+  rw [piBK3_some] at hp
+  simp only [Option.some.injEq, Prod.mk.injEq] at hp
+  obtain ⟨-, rfl⟩ := hp
+  obtain ⟨-, hty, hb⟩ := view_forall m a hR h hh hvok hg6
+  have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
+  have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
+  obtain ⟨bs1, e1, -, -, hdec1, -, -, -, hf1, hle1⟩ :=
+    piBW_ok n m m1 a (fuel - 1) _ rs1 hR hrec hb2 hsz hc
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
+  have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
+  exact consW_room hcons hsz1 hc1 hle1 hty2 hdec1
 
 /-- `pi_binders` as a simulation: the twin keeps its state, the binders a slice below the top. -/
 theorem simPiBinders {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
@@ -521,16 +515,10 @@ theorem piBW_afrR : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), 
     by_cases hr : eViewW m h = []
     · rw [hr, piBK1_nil] at hh; cases hh
     rw [piBK1_ne (hr := hr)] at hh
-    cases h1 : piBW n m (fuel - 1) ((eViewW m h).getD 2 0) with
-    | none => rw [h1] at hh; simp [piBK2] at hh
-    | some p1 =>
-    obtain ⟨rs, m1⟩ := p1
-    rw [h1, piBK2_some] at hh
-    cases h2 : consW n m1 ((eViewW m h).getD 1 0) (rs.headD 0) (rs.getD 1 0) with
-    | none => rw [h2] at hh; simp [piBK3] at hh
-    | some p2 =>
-    obtain ⟨r2, m2⟩ := p2
-    rw [h2, piBK3_some] at hh
+    obtain ⟨⟨rs, m1⟩, h1, hh⟩ := of_K hh rfl
+    rw [piBK2_some] at hh
+    obtain ⟨⟨r2, m2⟩, h2, hh⟩ := of_K hh rfl
+    rw [piBK3_some] at hh
     simp only [Option.some.injEq, Prod.mk.injEq] at hh
     obtain ⟨-, rfl⟩ := hh
     exact (piBW_afrR n _ _ _ _ _ h1).trans (consW_afr h2)

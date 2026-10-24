@@ -380,10 +380,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   simp only at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqd]
-  cases hgo : ckgW k m1 po pl (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) q 0 with
-  | none => rw [hgo] at h; simp [kcK] at h
-  | some m2 =>
-  rw [hgo] at h
+  obtain ⟨m2, hgo, h⟩ := of_K h rfl
   obtain ⟨ys, a2, hrun, hdec2, hS2, hg12, ht2, hP2⟩ := ckgW_ok dn fe vis k m m1 m2 a po pl _ _ q 0 pfvs nk.ds []
     hgo hS1 hg1 (by omega) (by omega) hpf hpb hds hdsb (by simp) (by simp [decHL, hslice?])
     (hP.fr (allocW_mfr hal))
@@ -460,11 +457,8 @@ theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     · rw [ckc2K2_open (h := hf)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     rw [ckc2K2_closed (h := hf)] at h
-    cases h3 : ckc2W n m2 nP (o + 1) (l - 1) with
-    | none => rw [h3] at h; simp [ckcK3] at h
-    | some p3 =>
-    obtain ⟨r3, m3⟩ := p3
-    rw [h3, ckcK3_some] at h
+    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
+    rw [ckcK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.2]; exact ckc2W_mfr n _ _ _ _ _ _ h3
 
@@ -537,11 +531,8 @@ theorem ckc2W_ok (n : Nat) :
           rfl
         · rw [ckc2K2_closed n m2 nP o l rf hn'] at h
           have hn'' : kf ≤ nP.toNat := by have := mt hlt.mpr hn'; omega
-          cases h4 : ckc2W n m2 nP (o + 1) (l - 1) with
-          | none => rw [h4] at h; simp [ckcK3] at h
-          | some x4 =>
-          obtain ⟨r4, m3⟩ := x4
-          rw [h4, ckcK3_some] at h
+          obtain ⟨⟨r4, m3⟩, h4, h⟩ := of_K h rfl
+          rw [ckcK3_some] at h
           simp only [Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
           obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 h4 hS2
@@ -562,20 +553,13 @@ theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : L
       (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
   unfold kofW at h
-  cases hc : kcW k m po pl key with
-  | none => rw [hc] at h; cases h
-  | some p1 =>
-  obtain ⟨r1, m1⟩ := p1
-  rw [hc, kofK1_some] at h
+  obtain ⟨⟨r1, m1⟩, hc, h⟩ := of_K h rfl
+  rw [kofK1_some] at h
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ := kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck hc hS hpf hpb hk hP
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
-  cases hcl : ckc2W (k + 1) m1 nP (rdW (m1.arr64 IW) (r1.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.headD 0 + 3)) with
-  | none => rw [hcl] at h; simp [kofK2] at h
-  | some p2 =>
-  obtain ⟨r2, m2⟩ := p2
-  rw [hcl] at h
+  obtain ⟨⟨r2, m2⟩, hcl, h⟩ := of_K h rfl
   obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 hcl hS1 hds
     (by omega) hds1
   by_cases h0 : r2.headD 0 = 0
