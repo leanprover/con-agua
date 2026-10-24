@@ -229,6 +229,131 @@ theorem sim_storeRax {ctx : Ctx} {F : Nat} (hF : 8 * F + 8 < maxOff) {x : Var} (
     · have := hI.lo; omega
     · have := hI.hi; simp only [top, hKR.rsp]; lomega
 
+/-- From `rax = L`: `n ≤ L` and `o ≤ L - n`, else `ca_error`. -/
+theorem sim_lenChk {ctx : Ctx} {o n : Expr} {k : Nat} (hc : Code (lenChk ctx o n) k) {s : MachineData}
+    {L vo vn : Word} {Q : MachineState → Prop} (hrax : s.regs.get64 .rax = L.toBitVec)
+    (hro : ∀ s', s'.dmem = s.dmem → KeepR s' s → OpReads s' (opnd ctx o) vo)
+    (hrn : ∀ s', s'.dmem = s.dmem → KeepR s' s → OpReads s' (opnd ctx n) vn)
+    (herr : ∀ s', s'.dmem = s.dmem → KeepR s' s → ¬ vo.toNat + vn.toNat ≤ L.toNat → Ev Q s' (label errorL))
+    (hok : ∀ s', s'.dmem = s.dmem → KeepR s' s → vo.toNat + vn.toNat ≤ L.toNat → Ev Q s' (at_ (k + 5))) :
+    Ev Q s (at_ k) := by
+  simp only [lenChk] at hc
+  have hrax' : s.regs.rax = L := by
+    apply UInt64.toBitVec_inj.mp; simpa using hrax
+  refine ev_cmpRO (v := vn) hc.head (hrn _ rfl (KeepR.refl s)) ?_
+  rw [hrax]
+  refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · rw [interp_c] at hcc
+    refine herr _ rfl ((KeepR.refl s).ofEq (by keep_tac)) ?_
+    simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at hcc; omega
+  rw [interp_c] at hcc
+  have h1 : vn.toNat ≤ L.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hcc
+  refine ev_binO (op := .sub) rfl hc.tail.tail.head (hrn _ rfl ((KeepR.refl s).ofEq (by keep_tac))) fun st => ?_
+  simp only [hrax, hrax', UInt64.ofBitVec_toBitVec, BinOp.eval]
+  refine ev_cmpRO (v := vo) hc.tail.tail.tail.head (hro _ rfl ((KeepR.refl s).ofEq (by keep_tac))) ?_
+  simp only [rget_set, ↓reduceIte]
+  refine ev_jcc hc.tail.tail.tail.tail.head (fun hcc2 => ?_) (fun hcc2 => ?_)
+  · rw [interp_c] at hcc2
+    refine herr _ rfl ((KeepR.refl s).ofEq (by keep_tac)) ?_
+    simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
+      (UInt64.le_iff_toNat_le.mpr h1)] at hcc2
+    omega
+  · rw [interp_c] at hcc2
+    simp only [decide_eq_false_iff_not, UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _
+      (UInt64.le_iff_toNat_le.mpr h1)] at hcc2
+    exact ev_congr (hok _ rfl ((KeepR.refl s).ofEq (by keep_tac)) (by omega)) (by omega)
+
+/-- Where a block operand's descriptor block is: `R`. -/
+structure DescAt (G : Layout) (ctx : Ctx) (D : DataMem) (R : Nat) (wa aw : ArrId) : Prop where
+  arr : aw < G.tab.nw
+  len : rdW D (A (R + (ctx.tab.len64 wa).toNat)) = some (UInt64.ofNat (G.s64 aw))
+  base : rdW D (A (R + (ctx.tab.base64 wa).toNat)) = some (UInt64.ofNat (G.b64 aw))
+  offl : SmallOff (ctx.tab.len64 wa)
+  offb : SmallOff (ctx.tab.base64 wa)
+  rlt : R < 2 ^ 64
+
+/-- The descriptor block of a block operand: none for a plain array (`r15`), `tierDesc` into `r`
+for a tiered one. -/
+theorem sim_warrDesc {ctx : Ctx} (hT : ctx.tab = G.tab) {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St}
+    {s : MachineData} (hI : Inv G ctx F σ s) {w : WArr} (hw : WArr.wf ctx.nl G.tab w = true) {r : Reg64}
+    (hr : r = .rcx ∨ r = .rdx) {k : Nat} (hc : Code (warrDesc ctx r w).1 k) {aw : ArrId}
+    (hwp : warrP σ w = .ok aw) {Q : MachineState → Prop}
+    (h : ∀ s' (R : Nat), s'.dmem = s.dmem → KeepR s' s → s'.regs.get64 (warrDesc ctx r w).2 = A R →
+      DescAt G ctx s.dmem R w.arr aw → Ev Q s' (at_ (k + (warrDesc ctx r w).1.length))) :
+    Ev Q s (at_ k) := by
+  have hTab' := hTab; simp only [maxOff] at hTab'
+  have hTE := hG.tab_end
+  simp only [Layout.tabEnd] at hTE
+  cases w with
+  | plain a =>
+    simp only [WArr.wf, decide_eq_true_eq] at hw
+    simp only [warrP, Except.ok.injEq] at hwp
+    subst hwp
+    simp only [warrDesc, List.length_nil, Nat.add_zero] at h ⊢
+    refine h s G.T rfl (KeepR.refl s) ?_ ⟨hw, ?_, ?_, ?_, ?_, by omega⟩
+    · apply BitVec.eq_of_toNat_eq; simp [A, hI.r15]; omega
+    · simpa [WArr.arr, hT] using hI.mem.len64 a hw
+    · simpa [WArr.arr, hT] using hI.mem.base64 a hw
+    · rw [hT]; simp [Tab.len64, WArr.arr]; lomega
+    · rw [hT]; simp [Tab.base64, WArr.arr]; lomega
+  | tier a t =>
+    simp only [WArr.wf, Bool.and_eq_true, decide_eq_true_eq] at hw
+    obtain ⟨⟨ha, hto⟩, hwt⟩ := hw
+    obtain ⟨u, hu⟩ := opnd_ok (σ := σ) (nl := ctx.nl) (G := G) (e := t) (by simp [Expr.opndWf, hto, hwt])
+    simp only [warrP, hu, Except.map, Except.ok.injEq] at hwp
+    subst hwp
+    simp only [warrDesc] at hc h ⊢
+    refine ev_movRO hc.head (opnd_reads hG hTab hT hF hI (by simp [Expr.opndWf, hto, hwt]) hu) ?_
+    refine sim_tierDesc (r := r) (u := u) (by rcases hr with rfl | rfl <;> simp) hc.tail (by simp [rget_set]) fun st => ?_
+    have hta : tierA a u < G.tab.nw := Nat.lt_of_le_of_lt (tierA_le a u) ha
+    have hTT := tier_T hG ha
+    have hb := tier_bit u
+    have hoff := tier_off G.tab a u
+    refine ev_congr (h _ (G.T + 4096 * (u &&& 1).toNat) rfl ((KeepR.refl s).ofEq ?_) ?_
+      ⟨hta, ?_, ?_, ?_, ?_, by omega⟩) ?_
+    · rcases hr with rfl | rfl <;> keep_tac
+    · simp only [rget_set, ↓reduceIte]
+      rw [show (s.regs.set64 r u.toBitVec).r15 = s.regs.r15 by rcases hr with rfl | rfl <;> rfl]
+      apply BitVec.eq_of_toNat_eq; simp [A, hI.r15]
+    · simp only [WArr.arr]
+      rw [hT, show G.T + 4096 * (u &&& 1).toNat + (G.tab.len64 a).toNat = G.T + (G.tab.len64 (tierA a u)).toNat by
+        omega]
+      exact hI.mem.len64 _ hta
+    · simp only [WArr.arr]
+      rw [hT, show G.T + 4096 * (u &&& 1).toNat + (G.tab.base64 a).toNat = G.T + (G.tab.base64 (tierA a u)).toNat by
+        omega]
+      exact hI.mem.base64 _ hta
+    · rw [hT]; simp [Tab.len64, WArr.arr]; lomega
+    · rw [hT]; simp [Tab.base64, WArr.arr]; lomega
+    · simp [tierDesc]
+
+/-- `r := base + 8 o` for the block operand whose descriptor block is at `R`. -/
+theorem sim_wordPtr {ctx : Ctx} {r R : Reg64} (hr : r = .rcx ∨ r = .rdx) (hR : R ≠ .rax) {a aw : ArrId}
+    {o : Expr} {k : Nat} (hc : Code (wordPtr ctx r R a o) k) {s : MachineData} {RV : Nat} {D : DataMem}
+    {Q : MachineState → Prop} {vo : Word} (hd : s.dmem = D) (hRV : s.regs.get64 R = A RV)
+    (hdesc : DescAt G ctx D RV a aw) (hvo : vo.toNat ≤ G.s64 aw)
+    (hro : ∀ s', s'.dmem = D → KeepR s' s → OpReads s' (opnd ctx o) vo)
+    (h : ∀ s', s'.dmem = D → KeepR s' s → s'.regs.get64 r = A (G.b64 aw + 8 * vo.toNat) →
+      Ev Q s' (at_ (k + 5))) :
+    Ev Q s (at_ k) := by
+  simp only [wordPtr] at hc
+  have hend := hG.end64 aw hdesc.arr
+  have hRlt := hdesc.rlt
+  refine ev_movRM hc.head hdesc.offb (v := UInt64.ofNat (G.b64 aw)) ?_ ?_
+  · rw [hRV, hd]
+    simpa [A, Nat.mod_eq_of_lt hRlt] using hdesc.base
+  refine ev_movRO hc.tail.head (hro _ hd ((KeepR.refl s).ofEq (by rcases hr with rfl | rfl <;> keep_tac))) ?_
+  refine ev_shlRI (n := 3) (by decide) hc.tail.tail.head fun st => ?_
+  refine ev_binO (op := .add) rfl hc.tail.tail.tail.head (v := UInt64.ofNat (G.b64 aw))
+    (.inr (.inr ⟨r, rfl, by rcases hr with rfl | rfl <;> simp [rget_set]⟩)) fun st2 => ?_
+  refine ev_movRR hc.tail.tail.tail.tail.head ?_
+  refine h _ hd ((KeepR.refl s).ofEq (by rcases hr with rfl | rfl <;> keep_tac)) ?_
+  rcases hr with rfl | rfl <;>
+  · simp only [rget_set, ↓reduceIte, reduceCtorEq, UInt64.ofBitVec_toBitVec, BinOp.eval]
+    apply BitVec.eq_of_toNat_eq
+    simp [UInt64.toNat_add, UInt64.toNat_shiftLeft, A, Nat.shiftLeft_eq]
+    congr 1; omega
+
 theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
     SimS p G (stepRun p K) P (.scan8 x s i e c) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK

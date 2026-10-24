@@ -102,7 +102,7 @@ inductive WArr where
   deriving Repr, DecidableEq, Inhabited
 
 /-- The array id of a block operand (tier `0`'s for a tiered one). -/
-def WArr.arr : WArr → ArrId
+@[expose] def WArr.arr : WArr → ArrId
   | .plain a => a
   | .tier a _ => a
 
