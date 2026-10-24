@@ -51,7 +51,6 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 /-- The pin record at `pi` in `m`: the 21 words `nat_op_pins` writes, below the pool's top. -/
 theorem pw_fold (m : Mem) (pi j : Word) : rdW (m.arr64 IW) (pi + j) = pw m pi j := rfl
-theorem pw_fold0 (m : Mem) (pi : Word) : rdW (m.arr64 IW) pi = pw m pi 0 := by simp [pw]
 
 def PinRecAt (m : Mem) (pi : Word) : Prop :=
   pinW m 0 ≠ 0 ∧ pi.toNat + 21 ≤ iwTop m ∧
@@ -233,11 +232,29 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
 
 /-! ### The dispatch -/
 
-/-- **`nat_eq_disp` is its model `natEqDispW`** (generated). -/
-l_model natEqDisp_specW (p : Prog) (hp : p.lookup "nat_eq_disp" = some natEqDisp)
-  fns [hp ↦ natEqDispW list]
-  specs [callW_spec p n "nat_eq_pr", callW_spec p n "nat_eq_un", callW_spec p n "nat_eq_mu", callW_spec p n "nat_eq_po", callW_spec p n "nat_eq_be", callW_spec p n "nat_eq_bl"]
-  grind [arena_grind] finish [ntBW, pw] gen 20 heartbeats 6400000 bind ntBW instances 10000
+def natEqDispW (p : Prog) (n : Nat) (m : Mem) (c pi cx : Word) : Option (List Word × Mem) :=
+  let fin := fun (r : List Word) (m' : Mem) => some ([r.headD 0, r.tail.headD 0], m')
+  if c = pw m pi 0 then ntBW (callW p n "nat_eq_pr" [c, pw m cx 2, pw m cx 0, pw m cx 4] m) fin else
+  if c = pw m pi 1 then ntBW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3] m) fin else
+  if c = pw m pi 2 then ntBW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 0] m) fin else
+  if c = pw m pi 3 then ntBW (callW p n "nat_eq_mu" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 1] m) fin else
+  if c = pw m pi 4 then ntBW (callW p n "nat_eq_po" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3, pw m pi 3] m) fin else
+  if c = pw m pi 5 then ntBW (callW p n "nat_eq_be" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
+  if c = pw m pi 6 then ntBW (callW p n "nat_eq_bl" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
+  some ([0, 0], m)
+
+set_option maxHeartbeats 6400000 in
+theorem natEqDisp_specW (p : Prog) (hp : p.lookup "nat_eq_disp" = some natEqDisp) (n : Nat) (s₀ : St)
+    (c pi cx : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_disp" [c, pi, cx]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqDispW p n s₀.mem c pi cx = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqDisp]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "nat_eq_pr", callW_spec p n "nat_eq_un", callW_spec p n "nat_eq_mu",
+      callW_spec p n "nat_eq_po", callW_spec p n "nat_eq_be", callW_spec p n "nat_eq_bl"] <;>
+    finish (gen := 20) (instances := 10000) [natEqDispW, ntBW, pw]
 
 def natEqDispT (c pr ad su mu po be bl : NIdx) (x y z : EIdx) (sN : NIdx) (sx sy bT bF : EIdx) :
     AM (List (EIdx × EIdx)) :=
@@ -283,11 +300,11 @@ theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z s
       (natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
         (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF))
       (KeepPost dn vis fe decEqRL) := by
-  refine CallRef.of_sim (M := fun k mm => natEqDispW p (k + 1) mm c pi cx)
-    (fun k s₀ => natEqDisp_specW p hN.lNatEqDisp (k + 1) s₀ c pi cx) fun k m a ⟨hS, hc, h0, h1, h2, h3, h4, h5, h6,
+  refine CallRef.of_sim (M := fun k mm => natEqDispW p k mm c pi cx)
+    (fun k s₀ => natEqDisp_specW p hN.lNatEqDisp k s₀ c pi cx) fun k m a ⟨hS, hc, h0, h1, h2, h3, h4, h5, h6,
       hx, hy, hz, hsN, hsx, hsy, hbT, hbF, e0, e1, e2, e3, e4, e5, e6, f0, f1, f2, f3, f4, f5, f6, f7⟩ => ?_
   have hE := hN.toNatSubProg.toNatEqProg
-  rw [natEqDispW.eq_2]; simp only [pw_fold]; simp only [pw_fold0]; unfold natEqDispT
+  unfold natEqDispW natEqDispT
   simp only [e0, e1, e2, e3, e4, e5, e6, f0, f1, f2, f3, f4, f5, f6, f7]
   refine Sim.iteH hc h0 (fun _ => (natEqPr_ref hE c z x sx).simPairE ⟨hS, hc, hz, hx, hsx⟩) fun _ => ?_
   refine Sim.iteH hc h1 (fun _ => (natEqUn_ref hE c x y z sy sN).simPairE ⟨hS, hc, hx, hy, hz, hsy, hsN⟩) fun _ => ?_
