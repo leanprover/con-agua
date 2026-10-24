@@ -1075,17 +1075,22 @@ theorem ntyWf_afr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word}
 
 /-- `nest_inst_type` keeps `AbsOK` if its `nest_inst_type_ty` part does (`ntyWf_afr` for the stubs,
 `nitW_ok`'s last conclusion for any reading). -/
+theorem lveC_stub_afr {k : Nat} {m m' : Mem} {u v : Word} {r : List Word}
+    (h : lveC stubCall k m u v = some (r, m')) : AFr m m' :=
+  lveW_afr (lveC_stub_some h)
+
 theorem nitW_afr {cR : CallM} {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
     (hty : ∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1)
+    (hle : ∀ {m3 m4 : Mem} {u v : Word} {r4 : List Word}, lveC cR k m3 u v = some (r4, m4) → AFr m3 m4)
     (h : nitW cR k m vis ctx hi key = some (r, m')) : AFr m m' := by
   simp only [nitW, nitK1.eq_def, nitK2.eq_def, nitK4.eq_def, nitK5.eq_def] at h
-  afr_auto h [hty _ _, piBW_afr _ _ _ _ _ _, noaW_afr _ _ _ _ _ _ _ _ _ _, lveW_afr]
+  afr_auto h [hty _ _, piBW_afr _ _ _ _ _ _, noaW_afr _ _ _ _ _ _ _ _ _ _, hle]
 
 theorem nitWf_afr {k : Nat} {m m' : Mem} {vis ctx hi key : Word} {r : List Word}
     (h : nitWf stubCall k m vis ctx hi key = some (r, m')) : AFr m m' := by
   cases k with
   | zero => simp [nitWf] at h
-  | succ k => exact nitW_afr (fun _ _ e => ntyWf_afr e) h
+  | succ k => exact nitW_afr (fun _ _ e => ntyWf_afr e) lveC_stub_afr h
 
 theorem pfW_afr {k : Nat} {m m' : Mem} {vis ctx po pl kb hi i aO aL : Word} {r : List Word}
     (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) : AFr m m' := by

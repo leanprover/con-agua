@@ -25,14 +25,14 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 section root
-variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx)
   {ctxP : ConLeche.NestCtx} (hc : ConLeche.NestCtxOk ctxP) {holesP : List ConLeche.Expr}
   (hholes : ∀ x ∈ holesP, ConLeche.Expr.WScoped (ctxP.hiAt 0) x)
   (hlen : ctxP.names.length ≤ holesP.length)
   (hpar : ∀ x ∈ ctxP.params, ConLeche.Expr.WScoped (ctxP.hiAt 0) x)
 
-include hq hIlpf henv hc hholes hlen hpar in
+include hq hIlpf hLC henv hc hholes hlen hpar in
 /-- **`nest_root`** simulated by `nestRoot` under `StageC`. -/
 theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState) (cO cL ns oO oL : Word)
     (css : List (List (IConstantVal × Nat))) (NS : NestState) (outss : List (List (List NestFieldKind × EIdx)))
@@ -110,7 +110,7 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
         (ctxP.lps.map .param) ctxP.params ctxP.names holesP :=
       ⟨by rw [husd0]; exact hlv, hpar', hcn, hholesP, by rw [hhi0, hhiP]; exact hpar,
         by rw [hhi0, hhiP]; exact hholes, hlen⟩
-    have hCt := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf henv n (by omega)).2.2.2.2.2.2.2.1
+    have hCt := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv n (by omega)).2.2.2.2.2.2.2.1
     cases hct : nbCtorsW (realCall p) n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
         (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx)
         (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with
@@ -183,11 +183,11 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
 end root
 
 section seeds
-variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (ctx : Word) (c : NestCtx)
   {ctxP : ConLeche.NestCtx} (hc : ConLeche.NestCtxOk ctxP)
 
-include hq hIlpf henv hc in
+include hq hIlpf hLC henv hc in
 /-- **`nest_seeds`** simulated by `nestSeeds` under `StageC`. -/
 theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState) (r : List Word)
@@ -274,8 +274,10 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     rw [hni, p2sdK2_some] at h
     have hW : WCtx dn vis fe m ctx 0 0 c [] := ⟨hU, by simp [HSl, HolesAt], by simpa using hhi⟩
     have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
-    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, hAty⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2 a1
-      key kk r2 (realCall p) (IlpRd.realC hIlpf hC1) (IlpFr.real hIlpf) hni hS1 (hU.grow hg1) (hkd'.get (decNK_mono _) |>.symm ▸ (hkd'.stab (decNK_mono _) m1 hg1))
+    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2
+      a1 key kk r2 (realCall p) (IlpRd.realC hIlpf hC1) (IlpFr.real hIlpf) _
+      (nitLe_realC hq.closed hLC n' _ _ key c kk hC1 hA1 (dCtx_ext _ p1.ext _ _ hctx)
+        (ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey)) hni hS1 (hU.grow hg1) (hkd'.get (decNK_mono _) |>.symm ▸ (hkd'.stab (decNK_mono _) m1 hg1))
       (pos2_nk_in (hkd'.grow (decNK_mono _) hg1)).2 ((hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
         obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'
         have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.2.2.1 _ (by omega)]; exact h0w
@@ -283,7 +285,6 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
         rw [this] at h0'; cases h0'
         rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
         exact hksl') hP1
-    have hA2 := nitW_afr hAty hni hA1
     have c1 := p1.toCore hC.check
     obtain ⟨c2, niP, ⟨-, hni2, hni3⟩, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c (c.hiAt 0) kk keyP
       a1 a2 x2 c1.ok ⟨dCtx_ext _ p1.ext _ _ hctx, ConRon.Bridge.Inductives.dKey_ext p1.ext _ _ hkey⟩ hrun2
@@ -301,7 +302,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
-    have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf henv (n' + 1) (by omega)).2.2.2.2.1
+    have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv (n' + 1) (by omega)).2.2.2.2.1
     cases hk3 : nbKeyW (realCall p) (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
@@ -360,9 +361,9 @@ end seeds
 /-! ## Census -/
 
 section census
-variable {p : Prog} (L : RsLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+variable {p : Prog} (L : RsLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)
   (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-include L hq hIlpf henv
+include L hq hIlpf hLC henv
 
 /-- **`nest_root` refines `nestRoot`** under `StageC` (the knot's core calls; con-ron's
 `nestRoot_spec`'s preconditions). -/
@@ -390,7 +391,7 @@ theorem nestRoot_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx h
       PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
   refine triple_post (nestRoot_spec L (realCall p) (realCall_spec p) n s₀ vis ctx hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2rtW_okC hq hIlpf dn vis fe henv ctx hO hL c holes hc hholesW hlen hpar n hn s₀.mem s'.mem a₀ cO cL ns oO oL css
+  have := p2rtW_okC hq hIlpf hLC dn vis fe henv ctx hO hL c holes hc hholesW hlen hpar n hn s₀.mem s'.mem a₀ cO cL ns oO oL css
     NS outss _ cssP nsP outssP hm hC hU hhi hpn hho hhob hcl hcb hcss hns hout houtb hP hA hctx hholesP hcssP hnsP
     houtsP hcF
   exact ⟨hlc, by simpa using this⟩
@@ -414,7 +415,7 @@ theorem nestSeeds_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ctx 
       ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
   refine triple_post (nestSeeds_spec L (realCall p) (realCall_spec p) n s₀ vis ctx sO sL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2sdW_okC hq hIlpf dn vis fe henv ctx c hc n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ seedsP nsP hm hC hU hhi hsl
+  have := p2sdW_okC hq hIlpf hLC dn vis fe henv ctx c hc n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ seedsP nsP hm hC hU hhi hsl
     hsd hns hP hA hctx hseedsP hnsP hw
   exact ⟨hlc, by simpa using this⟩
 

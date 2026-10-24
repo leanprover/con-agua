@@ -249,15 +249,51 @@ theorem ntyW_mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {m m' : Mem} {vis key : 
 
 /-! ## `nest_inst_type` refines `nestInstType` -/
 
+/-- **What `nest_inst_type`'s `lvl_eq_fueled` call (read through `cR`) must do**, from the
+start `(m, a)`: given the calls and the twin's steps before it (`nest_inst_type_ty`, `pi_binders`,
+`nest_occ_any`; `stripPis`, `instLPFast`, `instPisWith`, `piBinders`, the result's sort), refine
+`liftFueled (← lvlEq? s ctx.sort)` and establish `Q` (the stubs: `nitLe_stub`; the real call
+under `StageC`: `IndT/PosNit.lean`). -/
+def NitLe (cR : CallM) (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (ctx hi key : Word) (c : NestCtx) (kk : NestKey) (Q : Mem → AState → Prop) (m : Mem) (a : AState) :
+    Prop :=
+  ∀ (m1 m2 m3 m4 : Mem) (r1 rs r3 r4 : List Word) (cv : IConstantVal) (caps : IIndCaps)
+    (q : List EIdx × EIdx) (a3 a4 a5 : AState) (tl ty : EIdx) (bs : List EIdx) (e : EIdx) (uw : Word),
+    ntyWf cR k m vis key = some (r1, m1) → AFr m m1 → piBW k m1 CWF (r1.headD 0) = some (rs, m2) →
+    noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
+      (rs.headD 0) (rs.getD 1 0) = some (r3, m3) →
+    fe.find? kk.cname = some (.indInfo cv caps) →
+    (stripPis kk.ds.length cv.type).run a = .ok (some q, a3) →
+    (instLPFast coreWalkFuel cv.levelParams kk.lvls cv.type).run a3 = .ok (tl, a4) →
+    (ConRon.Arena.instPisWith kk.ds tl).run a4 = .ok (some ty, a5) →
+    (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e), a5) →
+    (view e).run a5 = .ok (.sort (decI uw), a5) →
+    StageR dn vis fe m3 a5 → IWGrow m m3 → H uw → H (rdW (m3.arr64 IW) (ctx + 9)) →
+    decI (rdW (m3.arr64 IW) (ctx + 9)) = c.sort →
+    lveC cR k m3 uw (rdW (m3.arr64 IW) (ctx + 9)) = some (r4, m4) →
+    ∃ b a6, (lvlEq? (decI uw) c.sort).run a5 = .ok (some b, a6) ∧ StageR dn vis fe m4 a6 ∧
+      IWGrow m3 m4 ∧ MFr [] [] m3 m4 ∧ r4.headD 0 = (if b then 1 else 0) ∧ Q m4 a6
+
+/-- The stubs' `lvl_eq_fueled` meets `NitLe` (`lveW_ok`). -/
+theorem nitLe_stub (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (ctx hi key : Word) (c : NestCtx) (kk : NestKey) (m : Mem) (a : AState) :
+    NitLe stubCall k dn vis fe ctx hi key c kk (fun _ _ => True) m a := by
+  intro m1 m2 m3 m4 r1 rs r3 r4 cv caps q a3 a4 a5 tl ty bs e uw _ _ _ _ _ _ _ _ _ _ hS3 _ hu hv hvd hle
+  have hle' := lveC_stub_some hle
+  obtain ⟨b, a6, hrun, hS4, hg4, hr4⟩ := lveW_ok dn vis fe m3 m4 a5 _ _ hu hv r4 hle' hS3
+  rw [hvd] at hrun
+  exact ⟨b, a6, hrun, hS4, hg4, lveW_mfr hle', hr4, trivial⟩
+
 theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (c : NestCtx) (m m' : Mem) (a : AState) (key : Word) (kk : NestKey) (r : List Word)
-    (cR : CallM) (hI : IlpRd cR dn vis fe (IlpBase m a)) (hF : IlpFr cR)
+    (cR : CallM) (hI : IlpRd cR dn vis fe (IlpBase m a)) (hF : IlpFr cR) (Q : Mem → AState → Prop)
+    (hLE : NitLe cR k dn vis fe ctx hi key c kk Q m a)
     (h : nitW cR k m vis ctx hi key = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m))
     (hksl : NKSl m key) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestInstType fe c HI kk).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat = x.1 ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2 ∧
-      PosMR m' ∧ (∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1) := by
+      PosMR m' ∧ (∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1) ∧ Q m' a' := by
   unfold nitW at h
   cases k with
   | zero => simp [ntyWf, nitK1] at h
@@ -314,24 +350,27 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   have hU3 := hU2.grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
   obtain ⟨-, -, -, -, -, -, -, hsH, hsd, -⟩ := ctx_fields hU3.dec hU3.inn htop3
-  cases hle : lveW m3 ((eViewW m2 (rs.getD 2 0)).tail.headD 0) (rdW (m3.arr64 IW) (ctx + 9)) with
+  cases hle : lveC cR (k + 1) m3 ((eViewW m2 (rs.getD 2 0)).tail.headD 0) (rdW (m3.arr64 IW) (ctx + 9)) with
   | none => rw [hle] at h; simp [nitK5] at h
   | some pr4 =>
   obtain ⟨r4, m4⟩ := pr4
   rw [hle] at h
   have huH' : H ((eViewW m2 (rs.getD 2 0)).tail.headD 0) := by rw [← getD1_eq]; exact huH
-  obtain ⟨b', a6, hrunle, hS4, hg4, hr4⟩ := lveW_ok dn vis fe m3 m4 a5 _ _ huH' hsH r4 hle hS3
-  rw [← getD1_eq, hud, hsd] at hrunle
+  have hrunpb' : (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e), a5) := htyd ▸ hrunpb
+  have hview' : (view e).run a5 = .ok (.sort u, a5) := view_run _ _ _ (hresd ▸ hview)
+  have hud' : decI ((eViewW m2 (rs.getD 2 0)).tail.headD 0) = u := by rw [← getD1_eq]; exact hud
+  obtain ⟨b', a6, hrunle, hS4, hg4, hf4, hr4, hQ⟩ := hLE m1 m2 m3 m4 r1 rs r3 r4 cv caps q a3 a4 a5 tl ty bs e _
+    hty hA1 hpb hoa hfind hrun3 hrun4 hrun5 hrunpb' (by rw [hud']; exact hview') hS3
+    ((hg1.trans hg2).trans hg3) huH' hsH hsd hle
+  rw [hud'] at hrunle
   cases b' with
   | false => rw [nitK5_none (h := by rw [hr4]; decide)] at h; simp at h
   | true =>
   rw [nitK5_some (h := by rw [hr4]; decide)] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  refine ⟨(bs.length, ty), a6, ?_, hS4, (hg12.trans hg3).trans hg4, ?_, htyH, htyd, hP3.fr (lveW_mfr hle), hAty⟩
-  · have hrunpb' : (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e), a5) := htyd ▸ hrunpb
-    have hview' : (view e).run a5 = .ok (.sort u, a5) := view_run _ _ _ (hresd ▸ hview)
-    simp only [ConRon.Arena.nestInstType, hfind, unwrapOr, StateT.run_bind, StateT.run_pure, pure_bind,
+  refine ⟨(bs.length, ty), a6, ?_, hS4, (hg12.trans hg3).trans hg4, ?_, htyH, htyd, hP3.fr hf4, hAty, hQ⟩
+  · simp only [ConRon.Arena.nestInstType, hfind, unwrapOr, StateT.run_bind, StateT.run_pure, pure_bind,
       viewLsLen_run, hvl, bne_self_eq_false, Bool.false_eq_true, ite_false, hrun3, except_ok_bind, hrun4,
       hrun5, hrunpb', hview', hrunoa, hrunle, liftFueled, ite_true]
     rfl
@@ -359,8 +398,8 @@ theorem nestInstType_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestInstType_spec p hl stubCall (stubCall_spec p) k s₀ vis ctx hi key) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2, h3, hP', -⟩ := nitW_ok k dn fe vis ctx hi hi.toNat rfl c _ _ a₀ key kk _
-    stubCall IlpRd.stub IlpFr.stub hm hS
+  obtain ⟨x, a', hrun, hS', hg, h1, h2, h3, hP', -, -⟩ := nitW_ok k dn fe vis ctx hi hi.toNat rfl c _ _ a₀ key kk _
+    stubCall IlpRd.stub IlpFr.stub _ (nitLe_stub _ _ _ _ _ _ _ _ _ _ _) hm hS
     hU hk hkin hksl hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by simpa using h2,

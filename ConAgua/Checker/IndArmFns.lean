@@ -14,7 +14,8 @@ open L
 
 /-- `check_block_pass`' callees and `block_raw_rec`, closed under calls. -/
 def armPosFns : List FnName :=
-  ["check_block_inds", "check_block_tele", "check_constant_val", "install_header", "env_find",
+  ["check_abs_ctor_sorts_all", "check_abs_ctor_sorts", "check_abs_ctor_sorts_one", "nest_ctx_hi_at",
+    "check_block_inds", "check_block_tele", "check_constant_val", "install_header", "env_find",
     "env_row_get", "env_ix", "reserved_contains", "reserved_from", "is_proj_fn_shape", "cv_lps",
     "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "loose_bvars_bounded_fast",
     "bvar_b", "der_b", "bb_memo", "bm_clear", "bb_go", "bm_find", "bb_node", "bm_put",

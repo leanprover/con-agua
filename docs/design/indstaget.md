@@ -222,3 +222,14 @@ The parameter follows the models' direct model-call chains (rtoW → ccoW, rtsW 
   - The rest already do in their StageC posts.
 * The keep lists the C chain takes are now `IndT/KeepC`'s `*KeepCalleesC`, which hold only write-set frames. So Checker/IndArm proves every `AbsKeep` by `absKeep_of_closed`, and `indArmSpec_checker` has no `hK`. `loopStage_of_walkKeep`'s `_hK` is now unused, so Final/Remaining can drop it.
 * `hkc` is gone everywhere.
+
+## Landing 14: the end-to-end theorem sorry-free
+
+* What landed:
+  - Helper rcE: tables via `ctbW_simR`, `consBlockInds_refinesR` (`hLz`, the `BlockLpsDn` premise), and the real `all_level_params_defined` in `iacW`.
+  - Helper rcF: the real `block_large_elim_allowed`, `lvl_eq_c` in `target_major_of`, and `open_pis` in `classesCtors`.
+  - rcF's positivity leftovers:
+    - `nitW` over `lveC cR`, through `NitLe`/`nitLe_realC` in IndT/PosNit;
+    - `iaaW` memos by write set, adding `check_abs_ctor_sorts_all` to `passCallees`/`armPosFns`.
+  - Mine: `ctorX_spec`'s small-fuel cases read `check_constant_val` through `cR`.
+* After merging indproofs4's 188dde4b, `#print axioms ConAgua.Final.checkerFile_accepts_remaining` gives [propext, Classical.choice, Quot.sound].

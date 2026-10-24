@@ -307,7 +307,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   have hct := ConRon.Bridge.Inductives.checkBlockCtors_types hF3
   obtain ⟨s6, hs6, -, hok6, hC6, hg6, hP6, hA6, hks6, hnf6, hns6, -⟩ := triple_of_callW
     (s₀ := ⟨s5.mem, Locals.init []⟩)
-    (checkBlockPositivity_refinesC hkp hIlpf henv₁ hOpf hLC hLT hApd hP.pos n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
+    (checkBlockPositivity_refinesC hkp hIlpf henv₁ hOpf hLC hLT hApd hP.pos hcl (hfs _ (by decide)) n (by omega) _ a5 _ _ _ _ _ ⟨bs1⟩
       cvTas ctorsAs hC5 hbs5 hsrc5 hcv5 hcb5 hP5 hA5 (fun f hf => hkP f (List.mem_append_right _ hf))
       hpP5 hcvs5 hca5 hden₅ hT hct) c6
   simp only at hs6 hC6 hg6 hP6 hA6 hks6 hnf6 hns6
@@ -370,7 +370,7 @@ theorem icpW_simC (hP : PassProg p) {fs : List FnName}
   rw [c8, icpK8_some] at h
   obtain ⟨s8, hs8, -, ns, a8, hrun8, hC8, hg8, hns8, hP8, hA8, k8⟩ :=
     triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (nestSeeds_refinesC hP.rs hkp hIlpf (n + 3) dn (r1.headD 0) fe1 henv₁ (by omega) _ a7 _ _ _ _ c seeds NS
+    (nestSeeds_refinesC hP.rs hkp hIlpf hLC (n + 3) dn (r1.headD 0) fe1 henv₁ (by omega) _ a7 _ _ _ _ c seeds NS
       hC7 hU7 hhi4 hsd7.2.1 hsd7.2.2.2 hns7 hP7 hA7 hctxOk
       (ConRon.Bridge.Inductives.dCtx_ext _ (x46.trans x67) _ _ hctx) hseeds
       (ConRon.Bridge.Inductives.dState_ext x67 _ _ hpos)
