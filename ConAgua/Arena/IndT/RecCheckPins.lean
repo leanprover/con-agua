@@ -122,9 +122,8 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
     (hds : MP.member = none → ∀ x ∈ MP.ds, ConLeche.Expr.WScoped rP.toNat x) :
     ∃ a', (ConRon.Arena.targetMajorPins V fe rP.toNat M).run a = .ok ((), a') ∧
       StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
-  cases N with
-  | zero => simp [tmpW] at h
-  | succ N =>
+  obtain _ | N := N
+  · simp [tmpW] at h
   have hS := hC.stage
   have hsz := hS.2.2.2.1
   have hM0 := hM.get (decTM_mono _)
@@ -169,9 +168,8 @@ theorem tmpW_okC {a : AState} {N : Nat} (hN : N ≤ 2 ^ 62) {m m' : Mem} {rP Mp 
     by_cases hl0 : l = 0
     · subst hl0
       have hnil : M.ds = [] := by simpa [decHL, hslice?] using hdsm.symm
-      cases N with
-      | zero => simp [tptW] at h1
-      | succ N =>
+      obtain _ | N := N
+      · simp [tptW] at h1
       rw [tptW_nil (realCall p) N m vis rP (UInt64.ofNat o) (UInt64.ofNat 0) rfl] at h1
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
       exact ⟨a, m, [], rfl, by rw [hnil]; rfl, hC, IWGrow.refl m, hA⟩

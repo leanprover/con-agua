@@ -163,9 +163,8 @@ theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r 
     (hbs : HSl0 m bso bsl bs) (htl : HSl0 m teo tel tele) (hP : RcMR m) :
     ∃ c a', (tkTele bs tele).run a = .ok (c, a') ∧ (r.headD 0 != 0) = c ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  cases n with
-  | zero => simp [tteW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tteW] at h
   rw [tteW_succ] at h
   rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
   obtain ⟨ys1, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hbs hP
@@ -252,9 +251,8 @@ theorem noF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl e r : Word} {names : L
     (hno : decHL m no.toNat nl.toNat = some names) (hnob : no.toNat + nl.toNat ≤ iwTop m) (hP : RcMR m) :
     ∃ b, (ConRon.Arena.nestOcc names 0 0 (decE e)).run a = .ok (b, a) ∧ (r != 0) = b ∧
       StageR dn vis fe m' a ∧ IWGrow m m' ∧ RcMR m' := by
-  cases n with
-  | zero => simp [noF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [noF] at h
   obtain ⟨ws, hws, hwm, hwl⟩ := slR_of_decHL m _ _ _ hno (hS.lt64 hnob)
   simp only [UInt64.ofNat_toNat] at hws
   obtain ⟨mp, hM⟩ := hP.pos.no

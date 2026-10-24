@@ -613,9 +613,8 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       AbsOK m' := by
-  cases n with
-  | zero => simp [tsrW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tsrW] at h
   rw [tsrW_succ] at h
   have hsz := hS.2.2.2.1
   have hM0 : decTM (truncM m) M.toNat = some TM := hM

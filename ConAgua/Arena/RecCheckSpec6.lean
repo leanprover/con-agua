@@ -148,9 +148,8 @@ theorem toiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds) (hb : dso.toNat + dsl.toNat < 2 ^ 64) :
     ∃ x a', (ConRon.Arena.targetOutsideInst fe (decI I) (decI us) ds).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ ToiR r x ∧ (ToiAfr → AFr m m') := by
-  cases N with
-  | zero => simp [toiW] at h
-  | succ N =>
+  obtain _ | N := N
+  · simp [toiW] at h
   rw [toiW_eq] at h
   rcases h2 : envFindW m I vis with _ | ⟨r2, m2⟩ <;> simp only [h2, toiK1, reduceCtorEq] at h
   obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.1.env hI

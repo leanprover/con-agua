@@ -36,9 +36,8 @@ theorem MFr.ofCore {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈
 
 theorem tcpF_afr {n : Nat} {m m' : Mem} {pfo pfl e : Word} {r : List Word}
     (h : tcpF n m pfo pfl e = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [tcpF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tcpF] at h
   simp only [tcpF, tcpW, tcpK1.eq_def, eftK2.eq_def] at h
   afr_auto h [recW_afr, rxW_afr]
 
@@ -100,9 +99,8 @@ theorem taGoW_afr (n : Nat) :
 
 theorem taF_afr {n : Nat} {m m' : Mem} {no nl lvls ho hl e r : Word}
     (h : taF n m no nl lvls ho hl e = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [taF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [taF] at h
   simp only [taF] at h
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at h

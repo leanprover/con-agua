@@ -60,9 +60,8 @@ theorem plgW_mfr : ∀ (k : Nat) {m m' : Mem} {o l : Word} {r : List Word}, plgW
 
 theorem plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
     MFr [] [] m m' := by
-  cases k with
-  | zero => simp [plW] at h
-  | succ k =>
+  obtain _ | k := k
+  · simp [plW] at h
   rw [plW_succ] at h
   rcases hg : plgW k m o l with _ | ⟨r1, m1⟩ <;> simp only [hg, plW.plK4, reduceCtorEq] at h
   rcases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with _ | ⟨r2, m2⟩ <;> simp only [hs, plW.plK5, reduceCtorEq] at h

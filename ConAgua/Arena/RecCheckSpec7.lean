@@ -339,9 +339,8 @@ theorem taCW_ok (n : Nat) {m m' : Mem} {no nl lvls ho hl h nn vus r : Word} {nam
     (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hho : decHL m ho.toNat hl.toNat = some holes) (hhb : ho.toNat + hl.toNat < 2 ^ 64) :
     m' = m ∧ decE r = taConstT names (decI lvls) holes (decE h) (decI nn) (decI vus) := by
-  cases n with
-  | zero => simp [taCW] at hc
-  | succ n =>
+  obtain _ | n := n
+  · simp [taCW] at hc
   by_cases hv : vus ≠ lvls
   · rw [taCW_ne (hv := hv)] at hc
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)

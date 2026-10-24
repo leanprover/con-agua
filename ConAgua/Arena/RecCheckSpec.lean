@@ -790,12 +790,10 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
     obtain ⟨-, hm1, -⟩ := allocW_facts hal hsz
     simp only [hal] at h
-    cases n with
-    | zero => simp [erCopyW] at h
-    | succ n =>
-    cases n with
-    | zero => simp [erCopyW] at h
-    | succ n =>
+    obtain _ | n := n
+    · simp [erCopyW] at h
+    obtain _ | n := n
+    · simp [erCopyW] at h
     simp only [Nat.add_sub_cancel, erCopyW_nil n _ _ _ _ rfl, Option.some.injEq,
       Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h

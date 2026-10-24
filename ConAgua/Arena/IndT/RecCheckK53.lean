@@ -30,9 +30,8 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem eftF_afr {n : Nat} {m m' : Mem} {e : Word} {r : List Word} (h : eftF n m e = some (r, m')) :
     AFr m m' := by
-  cases n with
-  | zero => simp [eftF] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [eftF] at h
   simp only [eftF, eftW] at h
   rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
   rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
@@ -70,9 +69,8 @@ theorem eraseAll_spec (xs : List EIdx) (xsP : List ConLeche.Expr) :
 
 theorem tteW_afr {n : Nat} {m m' : Mem} {bso bsl teo tel : Word} {r : List Word}
     (h : tteW n m bso bsl teo tel = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [tteW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tteW] at h
   rw [tteW_succ] at h
   rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
   rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteK2, reduceCtorEq] at h
@@ -128,9 +126,8 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       (r.headD 0 != 0) = c ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AbsOK m' := by
   have hS := hC.stage
   obtain ⟨-, hMlv, hMds, hMnpc, -, -, -, -, hMpf⟩ := ConRon.Bridge.Inductives.dMajor_inv hMcP
-  cases n with
-  | zero => simp [tkaW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tkaW] at h
   rw [tkaW_succ] at h
   have hsz := hS.2.2.2.1
   obtain ⟨hlvH, hlvD, hdsS, hnP, hpfS, hMt⟩ := tmFields hMc hsz
@@ -276,9 +273,8 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
     ∃ c a', (tkHeads fe bs formerTys TM (decE leafW) (decE majDom)).run a = .ok (c, a') ∧
       (r.headD 0 != 0) = c ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧ AbsOK m' := by
   have hS := hC.stage
-  cases n with
-  | zero => simp [tkhW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tkhW] at h
   rw [tkhW_succ] at h
   rcases h1 : gafF m [CWF, leafW] with _ | ⟨rl, m1⟩ <;> simp only [h1, tkhK1, reduceCtorEq] at h
   obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m m1 a rl h1 hS
@@ -417,9 +413,8 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
       .ok (c, a') ∧ (r.headD 0 != 0) = c ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ RcMR m' ∧
       AbsOK m' := by
   have hS := hC.stage
-  cases n with
-  | zero => simp [tkW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [tkW] at h
   rw [tkW_succ] at h
   rw [tk53_eq]
   rcases h1 : stripF 6 m [tel, f] with _ | ⟨rs, m1⟩ <;> rw [h1] at h <;>

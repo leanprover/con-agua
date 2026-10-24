@@ -156,9 +156,8 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · subst hl0
     have hnil : TM.ds = [] := by
       have := decHL_length _ hds'; simpa using this
-    cases n with
-    | zero => simp [aplW, arfK2] at hb
-    | succ n =>
+    obtain _ | n := n
+    · simp [aplW, arfK2] at hb
     rw [show (UInt64.ofNat 0 : Word) = 0 from rfl, aplW_nil (h := rfl), arfK2_some] at hb
     cases hb
     refine ⟨.nested ids [], a, ?_, ⟨hS1, hg1, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, hA1⟩

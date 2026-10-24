@@ -144,9 +144,8 @@ theorem blockNestedBit_refines (p : Prog)
   refine triple_post (blockNestedBit_spec p hf hi hm hk hg hp n s₀ q ko kl) ?_
   rintro r s' ⟨rfl, h⟩
   refine ⟨rfl, ?_⟩
-  cases n with
-  | zero => simp [nbW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [nbW] at h
   rw [nbW_eq] at h
   rcases h1 : kindsFlatOutW n s'.mem ko kl with _ | f <;> rw [h1] at h <;>
     try (simp only [nbK, reduceCtorEq] at h; done)

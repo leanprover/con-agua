@@ -149,9 +149,8 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (hb : ro.toNat + rl.toNat ≤ iwTop m) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
       decRules (erecP m') (r.headD 0).toNat rl.toNat = some rules ∧ MFr [] [] m m' := by
-  cases n with
-  | zero => simp [rteW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [rteW] at h
   by_cases hbig : 4294967296 ≤ rl
   · rw [rteW_big (h := hbig)] at h; cases h
   rw [rteW_ok' (h := hbig)] at h
@@ -283,9 +282,8 @@ theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
 
 theorem rteW_afr {n : Nat} {m m' : Mem} {ro rl : Word} {r : List Word}
     (h : rteW n m ro rl = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [rteW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [rteW] at h
   by_cases hb : 4294967296 ≤ rl
   · rw [rteW_big (h := hb)] at h; cases h
   rw [rteW_ok' (h := hb)] at h
@@ -313,9 +311,8 @@ theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (hb : ro.toNat + rl.toNat ≤ iwTop m) :
     StageR dn (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' ∧
       AFr m m' := by
-  cases n with
-  | zero => simp [cbpW] at h
-  | succ n =>
+  obtain _ | n := n
+  · simp [cbpW] at h
   rw [cbpW_succ] at h
   rcases h1 : rteW n m ro rl with _ | ⟨re, m1⟩ <;> simp only [h1, cbpK1, reduceCtorEq] at h
   obtain ⟨hS1, hg1, hre, hru, -⟩ := rteW_ok dn fe vis n h1 hS hd hb
