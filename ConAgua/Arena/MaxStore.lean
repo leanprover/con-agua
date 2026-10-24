@@ -41,12 +41,6 @@ abbrev MREC : ArrId := 10
 /-- The `max` cons-table slots, both tiers interleaved. -/
 abbrev MSLOT : ArrId := 11
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def maxGS : GrowSch :=
-  ⟨MSLOT, MREC, 2, 10, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ MREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ MREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `max` record (FNV-1a over its two words). -/
 def maxHashW (u v : Word) : Word := ((fnvBasis ^^^ u) * fnvPrime ^^^ v) * fnvPrime
 
@@ -89,7 +83,6 @@ def maxCS : ConsSch where
   room := condOf (lblk (t, u, v, j, c) {
     if len(MREC.u64) >> 2 <= c || len(MHP.u64) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := maxGS.hash
   ihash := lblk (u, v, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫ }
   skipW := none
   xloc := 5
@@ -161,13 +154,6 @@ def internMaxs (m : Mem) : List (Word × Word) → Option (List Word)
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `mhash`. -/
-theorem mhash_ok : HashOK p maxGS 11 mhash := by
-  intro k s₀
-  simp only [maxGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [mhash, maxHashW, LocEq, St.setLoc]
-
 theorem mPre_spec (k : Stmt → M Sig) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p k mPre
@@ -184,10 +170,14 @@ theorem maxOK : ConsOK p maxCS where
     intro s
     simp [maxCS, condOf, Cond.pval, Expr.pval, mmatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := mhash_ok p
   ihash := by
     intro n s₀
     simp only [maxCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, maxHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, maxCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, maxHashW, argsOf, BinOp.eval]
   pre := by
@@ -215,6 +205,9 @@ theorem maxOK : ConsOK p maxCS where
     simp [maxCS] at he
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [maxCS] at h
+  mloc := fun h => by simp [maxCS] at h
+  exnk := fun _ => by decide
 
 theorem mpushOK_eqC (m : Mem) (t : Word) : mpushOK m t = pushOKC maxCS m t := by
   simp only [mpushOK, pushOKC, maxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

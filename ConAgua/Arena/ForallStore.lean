@@ -49,12 +49,6 @@ abbrev FAREC : ArrId := 29
 /-- The `forallE` cons-table slots, both tiers interleaved. -/
 abbrev FASLOT : ArrId := 30
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def forallGS : GrowSch :=
-  ⟨FASLOT, FAREC, 2, 30, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ FAREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ FAREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `forallE` record (FNV-1a over its two words). -/
 def forallHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
@@ -92,7 +86,6 @@ def forallCS : ConsSch where
   np := 2
   room := condOf (lblk (t, ty, body, j, c) { if len(FAREC.u64) >> 2 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := forallGS.hash
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
   mtM m ks t i := famatchW (m.arr64 FAREC) t i (ks.getD 0 0) (ks.getD 1 0)
@@ -179,23 +172,20 @@ the scratch tier; a scratch child (`0x68000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `fahash`. -/
-theorem fahash_ok : HashOK p forallGS 6 fahash := by
-  intro k s₀
-  simp only [forallGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [fahash, forallHashW, LocEq, St.setLoc]
-
 /-- **The `forallE` table's obligations.** -/
 theorem forallOK : ConsOK p forallCS where
   match_ := by
     intro s
     simp [forallCS, condOf, Cond.pval, Expr.pval, famatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := fahash_ok p
   ihash := by
     intro n s₀
     simp only [forallCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, forallHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, forallCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, forallHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -214,6 +204,9 @@ theorem forallOK : ConsOK p forallCS where
   colA := by simp [forallCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [forallCS] at h
+  mloc := fun h => by simp [forallCS] at h
+  exnk := fun _ => by decide
 
 theorem fapushOK_eqC (m : Mem) (t : Word) : fapushOK m t = pushOKC forallCS m t := by
   simp only [fapushOK, pushOKC, forallCS, facnt, cntC, ← decide_not, UInt64.not_le]; rfl

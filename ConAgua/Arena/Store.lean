@@ -54,12 +54,6 @@ abbrev REC : ArrId := 2
 /-- The `lit` cons-table slots, both tiers interleaved. -/
 abbrev SLOT : ArrId := 3
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def litGS : GrowSch :=
-  ⟨SLOT, REC, 4, 2, lblk (n, k, t, i, c, h) {
-    h := REC.u64[i * 8 + t * 4 + 3]
-  }⟩
-
 
 /-! ## `lit_hash(o, l)`: FNV-1a over the limbs of a slice -/
 
@@ -306,7 +300,6 @@ def litCSk (kd : Word) (mf fname pname : String) (mt : Array Word → Array Word
   np := 3
   room := condOf (lblk (t, o, l, h, j, c) { if len(REC.u64) >> 3 <= c { skip } })
   recW := [.const kd, .var 1, .var 2, .var 3]
-  ghash := litGS.hash
   ihash := .call [2] "lit_hash" [.var 0, .var 1]
   skipW := none
   mtM m ks t i := mt (m.arr64 REC) (m.arr64 POOL) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
@@ -479,13 +472,6 @@ theorem dec_lt_not_le' (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `litH`. -/
-theorem litH_ok : HashOK p litGS 7 litH := by
-  intro k s₀
-  simp only [litGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [litH, LocEq, St.setLoc]
-
 theorem litCSk_room (kd : Word) (mf fname pname : String)
     (mt : Array Word → Array Word → Word → Word → Word → Word → Word → Bool) :
     RoomOK (litCSk kd mf fname pname mt) := fun s => by
@@ -522,7 +508,10 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
-  ghash := litH_ok p
+  ihashG := fun h => by simp [litCS, litCSk] at h
+  qpure := fun _ h => by simp [litCS, litCSk] at h
+  mloc := fun _ => by simp [litCS, litCSk]
+  exnk := fun h => by simp [litCS, litCSk] at h
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
   colA := by simp [litCS, litCSk]
@@ -544,7 +533,10 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
-  ghash := litH_ok p
+  ihashG := fun h => by simp [litStrCS, litCSk] at h
+  qpure := fun _ h => by simp [litStrCS, litCSk] at h
+  mloc := fun _ => by simp [litStrCS, litCSk]
+  exnk := fun h => by simp [litStrCS, litCSk] at h
   ihash := litCSk_ihash p _ _ _ _ _ hph
   pre := rfl
   colA := by simp [litStrCS, litCSk]

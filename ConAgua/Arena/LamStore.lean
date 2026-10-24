@@ -49,12 +49,6 @@ abbrev LAREC : ArrId := 27
 /-- The `lam` cons-table slots, both tiers interleaved. -/
 abbrev LASLOT : ArrId := 28
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def lamGS : GrowSch :=
-  ⟨LASLOT, LAREC, 2, 28, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ LAREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ LAREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `lam` record (FNV-1a over its two words). -/
 def lamHashW (ty body : Word) : Word := ((fnvBasis ^^^ ty) * fnvPrime ^^^ body) * fnvPrime
 
@@ -92,7 +86,6 @@ def lamCS : ConsSch where
   np := 2
   room := condOf (lblk (t, ty, body, j, c) { if len(LAREC.u64) >> 2 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := lamGS.hash
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
   mtM m ks t i := lamatchW (m.arr64 LAREC) t i (ks.getD 0 0) (ks.getD 1 0)
@@ -176,23 +169,20 @@ the scratch tier; a scratch child (`0x58000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `lahash`. -/
-theorem lahash_ok : HashOK p lamGS 6 lahash := by
-  intro k s₀
-  simp only [lamGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [lahash, lamHashW, LocEq, St.setLoc]
-
 /-- **The `lam` table's obligations.** -/
 theorem lamOK : ConsOK p lamCS where
   match_ := by
     intro s
     simp [lamCS, condOf, Cond.pval, Expr.pval, lamatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := lahash_ok p
   ihash := by
     intro n s₀
     simp only [lamCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, lamHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, lamCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, lamHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -211,6 +201,9 @@ theorem lamOK : ConsOK p lamCS where
   colA := by simp [lamCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [lamCS] at h
+  mloc := fun h => by simp [lamCS] at h
+  exnk := fun _ => by decide
 
 theorem lapushOK_eqC (m : Mem) (t : Word) : lapushOK m t = pushOKC lamCS m t := by
   simp only [lapushOK, pushOKC, lamCS, lacnt, cntC, ← decide_not, UInt64.not_le]; rfl

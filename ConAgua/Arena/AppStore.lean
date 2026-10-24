@@ -42,12 +42,6 @@ abbrev AREC : ArrId := 4
 /-- The `app` cons-table slots, both tiers interleaved. -/
 abbrev ASLOT : ArrId := 5
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def appGS : GrowSch :=
-  ⟨ASLOT, AREC, 2, 4, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ AREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ AREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of an `app` record (FNV-1a over its two words). -/
 def appHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
@@ -85,7 +79,6 @@ def appCS : ConsSch where
   np := 2
   room := condOf (lblk (t, f, a, j, c) { if len(AREC.u64) >> 2 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := appGS.hash
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
   mtM m ks t i := amatchW (m.arr64 AREC) t i (ks.getD 0 0) (ks.getD 1 0)
@@ -160,23 +153,20 @@ the scratch tier; a scratch child (`0x48000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `ahash`. -/
-theorem appHash_ok : HashOK p appGS 6 ahash := by
-  intro k s₀
-  simp only [appGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [ahash, appHashW, LocEq, St.setLoc]
-
 /-- **The `app` table's obligations.** -/
 theorem appOK : ConsOK p appCS where
   match_ := by
     intro s
     simp [appCS, condOf, Cond.pval, Expr.pval, amatchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := appHash_ok p
   ihash := by
     intro n s₀
     simp only [appCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, appCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, appHashW, argsOf, BinOp.eval]
   recs := ⟨by
@@ -195,6 +185,9 @@ theorem appOK : ConsOK p appCS where
   colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [appCS] at h
+  mloc := fun h => by simp [appCS] at h
+  exnk := fun _ => by decide
 
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x

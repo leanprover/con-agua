@@ -47,12 +47,6 @@ abbrev CREC : ArrId := 18
 /-- The `const` cons-table slots, both tiers interleaved. -/
 abbrev CSLOT : ArrId := 19
 
-/-- The growth schema of this table (`SlotGrow.lean`). -/
-def constGS : GrowSch :=
-  ⟨CSLOT, CREC, 2, 18, lblk (n, k, t, i, c, h) {
-    h := ((⟪fnvBasis⟫ ^ CREC.u64[i * 4 + t * 2]) * ⟪fnvPrime⟫ ^ CREC.u64[i * 4 + t * 2 + 1]) * ⟪fnvPrime⟫
-  }⟩
-
 /-- The hash of a `const` record (FNV-1a over its two words). -/
 def constHashW (f a : Word) : Word := ((fnvBasis ^^^ f) * fnvPrime ^^^ a) * fnvPrime
 
@@ -91,7 +85,6 @@ def constCS : ConsSch where
   room := condOf (lblk (t, f, a, j, c) {
     if len(CREC.u64) >> 2 <= c || len(CLP.u64) >> 1 <= c { skip } })
   recW := [.var 1, .var 2]
-  ghash := constGS.hash
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
   skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
   xloc := 4
@@ -173,23 +166,20 @@ the scratch tier; a scratch child (`0x38000000`) skips the persistent probe. -/
 section specs
 variable (p : Prog)
 
-/-- The growth's hash block computes `cehash`. -/
-theorem cehash_ok : HashOK p constGS 10 cehash := by
-  intro k s₀
-  simp only [constGS, shiftS, shiftE, L.Notation.blk]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalArgs, setLoc, ld64] <;> finish [cehash, constHashW, LocEq, St.setLoc]
-
 /-- **The `const` table's obligations.** -/
 theorem constOK : ConsOK p constCS where
   match_ := by
     intro s
     simp [constCS, condOf, Cond.pval, Expr.pval, cematchW, argsOf, rd64_rdWC, L.Notation.blk,
       Cmp.eval, BinOp.eval, List.range_succ]
-  ghash := cehash_ok p
   ihash := by
     intro n s₀
     simp only [constCS, L.Notation.blk]
+    vcgen [step, evalE_spec, setLoc]
+    all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
+  ihashG := fun _ => by
+    intro n s₀
+    simp only [ihashAt, constCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
     vcgen [step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, constHashW, argsOf, BinOp.eval]
   pre := by
@@ -219,6 +209,9 @@ theorem constOK : ConsOK p constCS where
     simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
+  qpure := fun h => by simp [constCS] at h
+  mloc := fun h => by simp [constCS] at h
+  exnk := fun _ => by decide
 
 theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
   simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]
