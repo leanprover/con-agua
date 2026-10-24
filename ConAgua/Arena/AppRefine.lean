@@ -81,15 +81,15 @@ def appSch : Schema := ⟨AREC, ASLOT, 2, 4, 4, ETag.app⟩
 theorem appSch_wf : appSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 AREC) (i * 4 + t * 2) := by
+theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = tfld m APP t i 0 := by
   simp [fld, Schema.ad, appSch]
 theorem fld_app (m : Mem) (t i f : Word) :
     fld appSch m t i f = rdW (m.arr64 AREC) (i * 4 + t * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `app` node `k`: its two handle words. -/
 def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
-  rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
-  rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
+  tfld m APP t i 0 = k.f.word.toUInt64 ∧
+  tfld m APP t i 1 = k.a.word.toUInt64
 
 /-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
 def AppR (m : Mem) (a : AState) : Prop :=

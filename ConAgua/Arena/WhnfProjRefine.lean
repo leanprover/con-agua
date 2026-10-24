@@ -345,10 +345,10 @@ theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
     · exact .inr (.inl (UInt64.toNat_inj.mp (by simpa using h)))
     · exact .inr (.inr (UInt64.toNat_inj.mp (by simpa using h)))
   rcases cases3 with g | g | g
-  · have hc' : ¬ rdW (m.arr64 CTL) (34 + tierW t) ≤ idxW t := by
+  · have hc' : ¬ tcnt m NANON (tierW t) ≤ idxW t := by
       simpa [g, tierW, idxW] using hc
     rw [view_of_viewN_run (viewN_anon hR ht32 hv' g hc')]; rfl
-  · have hc' : ¬ rdW (m.arr64 CTL) (36 + tierW t) ≤ idxW t := by
+  · have hc' : ¬ tcnt m NSTR (tierW t) ≤ idxW t := by
       have e : (34 : Word) + (1 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 36 + tierW t := by
         have k : ∀ x : Word, (34 : Word) + (1 : Word) * (2 : Word) + x = 36 + x := fun x => by
           rw [show (34 : Word) + (1 : Word) * (2 : Word) = 36 by decide]
@@ -356,7 +356,7 @@ theorem name_view_isSome {m : Mem} {a : AState} (hR : ArenaR m a) (t : Word)
       rw [g, e] at hc; exact hc
     obtain ⟨_, hr, -⟩ := viewN_str hR ht32 hv' g hc'
     rw [view_of_viewN_run hr]; rfl
-  · have hc' : ¬ rdW (m.arr64 CTL) (38 + tierW t) ≤ idxW t := by
+  · have hc' : ¬ tcnt m NNUM (tierW t) ≤ idxW t := by
       have e : (34 : Word) + (2 : Word) * (2 : Word) + ((t >>> (27 : Word)) &&& 1) = 38 + tierW t := by
         have k : ∀ x : Word, (34 : Word) + (2 : Word) * (2 : Word) + x = 38 + x := fun x => by
           rw [show (34 : Word) + (2 : Word) * (2 : Word) = 38 by decide]

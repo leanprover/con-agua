@@ -51,8 +51,8 @@ theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) 
   obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 e hne
   obtain ⟨-, hw⟩ := eViewW_forall m e hg hne
   rw [hw] at hvr ⊢
-  generalize rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2) = x at hvr ⊢
-  generalize rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1) = y at hvr ⊢
+  generalize tfld m FORALL (tierW e) (idxW e) 0 = x at hvr ⊢
+  generalize tfld m FORALL (tierW e) (idxW e) 1 = y at hvr ⊢
   refine ⟨rfl, ?_⟩
   cases v <;> simp [ViewR] at hvr
   simp only [List.tail_cons, List.headD_cons]

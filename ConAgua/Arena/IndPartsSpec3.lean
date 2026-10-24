@@ -192,9 +192,9 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
       obtain ⟨hvw, hty, hb⟩ := view_forall m a hR h hh hvok hg6
       have hty2 : ((eViewW m h).getD 1 0).toNat < 2 ^ 32 := by rw [hew]; exact hty
       have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
-      have hbeq : (eViewW m h).getD 2 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1) := by
+      have hbeq : (eViewW m h).getD 2 0 = tfld m FORALL (tierW h) (idxW h) 1 := by
         rw [hew]; rfl
-      have hteq : (eViewW m h).getD 1 0 = rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2) := by
+      have hteq : (eViewW m h).getD 1 0 = tfld m FORALL (tierW h) (idxW h) 0 := by
         rw [hew]; rfl
       have hfm1 : (fuel - 1).toNat = fuel.toNat - 1 := by
         have : fuel.toNat ≠ 0 := fun h0 => hf (UInt64.toNat_inj.mp (by simpa using h0))
@@ -274,8 +274,8 @@ theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
 
 /-- A returning `e_view` of a `const` handle. -/
 theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h ≠ []) :
-    viewOK m h 18 ∧ eViewW m h = [3, rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2),
-      rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), 0] := by
+    viewOK m h 18 ∧ eViewW m h = [3, tfld m CONST (tierW h) (idxW h) 0,
+      tfld m CONST (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
   simp only [h1, if_false] at hne ⊢
@@ -286,7 +286,7 @@ theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h 
   have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
   have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
   simp only [n0, n1, n2, hg, if_false, if_true] at hne ⊢
-  by_cases c : rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h
+  by_cases c : tcnt m CONST (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, if_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
@@ -294,8 +294,8 @@ theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h 
 /-- The `viewConst` projection of a `const` handle. -/
 theorem viewConst_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 18) :
-    a.store.viewConst (decE h) = some (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)),
-      decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))) := by
+    a.store.viewConst (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0),
+      decI (tfld m CONST (tierW h) (idxW h) 1)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   simp only [EStore.viewConst, EStore.persGetConst]
   rw [proj_tier m a hR h hh (fun t i => t.getConst i) hv.1]
@@ -516,7 +516,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [recTK4_ne n m3 no nl _ hr2] at hrt
         obtain ⟨hvc, hn2, hu2⟩ := view_const_f m3 a3 hR3 _ hdl3 hvok2 hc3
         have hxw : (eViewW m3 (r3.headD 0)).getD 1 0 =
-            rdW (m3.arr64 CREC) (idxW (r3.headD 0) * 4 + tierW (r3.headD 0) * 2) := by
+            tfld m3 CONST (tierW (r3.headD 0)) (idxW (r3.headD 0)) 0 := by
           rw [hew2]; rfl
         have hxlt : ((eViewW m3 (r3.headD 0)).getD 1 0).toNat < 2 ^ 32 := by rw [hxw]; exact hn2
         have hvcc := viewConst_ok m3 a3 hR3 _ hdl3 hvok2

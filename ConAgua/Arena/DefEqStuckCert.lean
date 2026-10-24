@@ -124,11 +124,11 @@ def wbK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m) =>
     if r.headD 0 >>> 28 ≠ 3 then some (0, m)
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (18 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
     else wbK2 p n mode vis d b us c pc ao an wtb
-      (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2))
-      (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2 + 1))
-      (callW p n "env_find" [rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2), vis] m)
+      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
+      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
+      (callW p n "env_find" [tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0, vis] m)
 
 variable (r : List Word) (m : Mem) (T us2 q : Word)
 
@@ -208,13 +208,13 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
     exact hres 0 hW1 hw0 _
       (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
-  have hcc : ¬ rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
+  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
   have hvo : viewOK s.mem h 18 := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW1 hv
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = us2 at huw hW1 hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us2 at huw hW1 hv
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
   simp only [wbK2] at hW2
@@ -315,11 +315,11 @@ def swK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m) =>
     if r.headD 0 >>> 28 ≠ 3 then some (0, m)
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (18 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
     else swK1' p n mode vis d a b wtb
-      (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2))
-      (rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2 + 1))
-      (callW p n "env_find" [rdW (m.arr64 CREC) (idxW (r.headD 0) * 4 + tierW (r.headD 0) * 2), vis] m)
+      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
+      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
+      (callW p n "env_find" [tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0, vis] m)
 
 end swK
 
@@ -422,13 +422,13 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     exact hres 0 hW1 hw0 _
       (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf (by rw [tag_beq_const _ hh]; simp [h3])) rfl
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
-  have hcc : ¬ rdW (s.mem.arr64 CTL) (18 + tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
+  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
   simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
   have hvo : viewOK s.mem h 18 := ⟨hsc, by simpa using hcc⟩
   obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
   have hct : ((decE h).tag == ETag.const) = true := by rw [tag_beq_const _ hh]; simp [h3]
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2) = k at hnw hW1 hv
-  generalize rdW (s.mem.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1) = us at huw hW1 hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
+  generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us at huw hW1 hv
   obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
   obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
   simp only [swK1'] at hW2

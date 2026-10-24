@@ -118,7 +118,7 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
   by_cases g8 : h >>> 28 = 8
   · simp only [g8] at h8
     simp (config := { decide := true }) only [↓reduceIte] at h8
-    by_cases c : rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h
+    by_cases c : tcnt m LIT (tierW h) ≤ idxW h
     · simp [c] at h8
     exact ⟨hh, ⟨c2, by simpa using c⟩, g8⟩
   exfalso

@@ -87,16 +87,16 @@ theorem letSch_wf : letSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_let0 (m : Mem) (t i : Word) :
-    fld letSch m t i 0 = rdW (m.arr64 LEREC) (i * 6 + t * 3) := by
+    fld letSch m t i 0 = tfld m LET t i 0 := by
   simp [fld, Schema.ad, letSch]
 theorem fld_let (m : Mem) (t i f : Word) :
     fld letSch m t i f = rdW (m.arr64 LEREC) (i * 6 + t * 3 + f) := rfl
 
 /-- Node `i` of tier `t` holds `letE k.ty k.val k.body`: its three handle words. -/
 def LeRecRel (m : Mem) (t i : Word) (k : LetNode) : Prop :=
-  rdW (m.arr64 LEREC) (i * 6 + t * 3) = k.ty.word.toUInt64 ∧
-  rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1) = k.val.word.toUInt64 ∧
-  rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2) = k.body.word.toUInt64
+  tfld m LET t i 0 = k.ty.word.toUInt64 ∧
+  tfld m LET t i 1 = k.val.word.toUInt64 ∧
+  tfld m LET t i 2 = k.body.word.toUInt64
 
 /-- **The state relation** of the `letE` store: the library's relation for the two `letE`
 tables. -/

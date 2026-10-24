@@ -97,7 +97,7 @@ theorem bbW_frame (n : Nat) :
         obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
       by_cases g0 : h >>> 28 = 0
       · refine tagCase 22 (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · by_cases h1 : rdW (m.arr64 BREC) (idxW h * 2 + tierW h) + 1 = 0
+        · by_cases h1 : tfld m BVAR (tierW h) (idxW h) 0 + 1 = 0
           · exact (none_of (by rw [bbNodeW]; simp [hs, g0, h1, UInt64.not_le.mpr hv.2])).elim
           · rw [bbNodeW_bvar n m h c hv g0 h1] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
             obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _

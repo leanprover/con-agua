@@ -420,7 +420,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
       (lsL m (tierW h) (idxW h)).toNat = ids.length := by
   have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
-  have hc : ¬ rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h := fun c => hne (by
+  have hc : ¬ tcnt m LS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
   have hval : lsNodeW m h = [lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h)] := by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]

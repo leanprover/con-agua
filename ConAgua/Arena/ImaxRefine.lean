@@ -75,15 +75,15 @@ def imaxSch : Schema := ⟨IREC, ISLOT, 2, 4, 12, LTag.imax⟩
 theorem iimaxSch_wf : imaxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 IREC) (i * 4 + t * 2) := by
+theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = tfld m IMAX t i 0 := by
   simp [fld, Schema.ad, imaxSch]
 theorem fld_imax (m : Mem) (t i f : Word) :
     fld imaxSch m t i f = rdW (m.arr64 IREC) (i * 4 + t * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `imax` node `k`: its two handle words. -/
 def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
-  rdW (m.arr64 IREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-  rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+  tfld m IMAX t i 0 = k.u.word.toUInt64 ∧
+  tfld m IMAX t i 1 = k.v.word.toUInt64
 
 /-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
 def ImaxR (m : Mem) (a : AState) : Prop :=

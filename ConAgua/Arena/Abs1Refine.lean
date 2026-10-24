@@ -203,7 +203,7 @@ theorem internBVar_A (m : Mem) (a : AState) (hA : ArenaA m a) (u r : Word) (m' :
 
 theorem viewFVarIdx_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 26) :
-    a.store.viewFVarIdx (decE h) = some (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat := by
+    a.store.viewFVarIdx (decE h) = some (tfld m FVAR (tierW h) (idxW h) 0).toNat := by
   obtain ⟨k, hk, hi, -⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   simp only [EStore.viewFVarIdx, EStore.persGetFVarIdx]
   rw [proj_tier m a hR h hh (fun t i => t.getFVarIdx i) hv.1]
@@ -292,7 +292,7 @@ theorem frW_frame (n : Nat) :
         rw [frNodeW]; simp [hs, g0, hc]
       by_cases g1 : h >>> 28 = 1
       · refine tagCase 26 (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · by_cases h1 : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1 = 0
+        · by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
           · exact (none_of (by rw [frNodeW]; simp [hs, g1, h1, UInt64.not_le.mpr hv.2])).elim
           · rw [frNodeW_fvar n m h c hv g1 h1] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
             obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
@@ -628,14 +628,14 @@ theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
       rw [absNodeW] at hb; simp [g4, g5, g6, g1, hs, hc] at hb⟩
     rw [abstract1ArmFVar, StateT.run_bind, viewFVarIdx_run, viewFVarIdx_ok m a hA.1.1 h hh hv]
     simp only [except_ok_bind]
-    by_cases he : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) = d
+    by_cases he : tfld m FVAR (tierW h) (idxW h) 0 = d
     · rw [absNodeW_fvar_eq n m h k d fu hv g1 he] at hb
       obtain ⟨hok, hA', hres⟩ := internBVar_A m a hA _ r m' hb
       simp only [he, ↓reduceIte, internBVarE]
       rw [AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
     · rw [absNodeW_fvar_ne n m h k d fu hv g1 he] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-      have he' : ¬ (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat = d.toNat :=
+      have he' : ¬ (tfld m FVAR (tierW h) (idxW h) 0).toNat = d.toNat :=
         fun e => he (UInt64.toNat_inj.mp e)
       simp only [he', ↓reduceIte]; exact ⟨a, rfl, hA⟩
   have g1' : ¬ (h >>> 28).toUInt32 = 1 := fun e => g1 (t1.mpr e)
@@ -681,14 +681,14 @@ theorem aappArm_ok (hg : h >>> 28 = 4) :
   refine Sim.bindD (K := aappK₁.aappK₂ h k _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ k d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltApp (decE h)
-      (decE x == decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) && decE y == decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))) (decE x) (decE y))
+      (decE x == decE (tfld m APP (tierW h) (idxW h) 0) && decE y == decE (tfld m APP (tierW h) (idxW h) 1)) (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltApp
     refine rb_ok _ _ _ _ m₂ a₂ hA₂ h r₃ m₃ (fun ⟨e1, e2⟩ => by simp [e1, e2]) (fun hn hI => ?_) hr₃
     obtain ⟨hx, hy⟩ := mkAppW_lt m₂ x y r₃ m₃ hI
     refine ⟨?_, mkApp_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
-    rcases Decidable.em (decE x = decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))) with e1 | e1
-    · have e2 : decE y ≠ decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) :=
+    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxW h) 0)) with e1 | e1
+    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxW h) 1) :=
         fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
@@ -715,15 +715,15 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
-      (decE x == decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) && decE y == decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))) (decE h).tag (decE x) (decE y))
+      (decE x == decE (tfld m LAM (tierW h) (idxW h) 0) && decE y == decE (tfld m LAM (tierW h) (idxW h) 1)) (decE h).tag (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltBind
     rw [hbind]
     refine rb_ok _ _ _ _ m₂ a₂ hA₂ h r₃ m₃ (fun ⟨e1, e2⟩ => by simp [e1, e2]) (fun hn hI => ?_) hr₃
     obtain ⟨hx, hy⟩ := mkLamW_lt m₂ x y r₃ m₃ hI
     refine ⟨?_, mkLam_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
-    rcases Decidable.em (decE x = decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))) with e1 | e1
-    · have e2 : decE y ≠ decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) :=
+    rcases Decidable.em (decE x = decE (tfld m LAM (tierW h) (idxW h) 0)) with e1 | e1
+    · have e2 : decE y ≠ decE (tfld m LAM (tierW h) (idxW h) 1) :=
         fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
@@ -750,15 +750,15 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
-      (decE x == decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) && decE y == decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))) (decE h).tag (decE x) (decE y))
+      (decE x == decE (tfld m FORALL (tierW h) (idxW h) 0) && decE y == decE (tfld m FORALL (tierW h) (idxW h) 1)) (decE h).tag (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltBind
     rw [hbind]
     refine rb_ok _ _ _ _ m₂ a₂ hA₂ h r₃ m₃ (fun ⟨e1, e2⟩ => by simp [e1, e2]) (fun hn hI => ?_) hr₃
     obtain ⟨hx, hy⟩ := mkForallW_lt m₂ x y r₃ m₃ hI
     refine ⟨?_, mkForall_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
-    rcases Decidable.em (decE x = decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))) with e1 | e1
-    · have e2 : decE y ≠ decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) :=
+    rcases Decidable.em (decE x = decE (tfld m FORALL (tierW h) (idxW h) 0)) with e1 | e1
+    · have e2 : decE y ≠ decE (tfld m FORALL (tierW h) (idxW h) 1) :=
         fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
@@ -785,17 +785,17 @@ theorem aletArm_ok (hg : h >>> 28 = 7) :
     simpa only [succW_toNat k hk1] using ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw e)
         fun z m₃ a₃ hA₃ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltLetE (decE h)
-      (decE x == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) && decE y == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) && decE z == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))
+      (decE x == decE (tfld m LET (tierW h) (idxW h) 0) && decE y == decE (tfld m LET (tierW h) (idxW h) 1) && decE z == decE (tfld m LET (tierW h) (idxW h) 2))
       (decE x) (decE y) (decE z)) _ a₃ h k r m' hh (fun r₄ m₄ hr₄ => by
     unfold internRebuiltLetE internLetEE
     refine rb_ok _ _ _ _ m₃ a₃ hA₃ h r₄ m₄ (fun ⟨e1, e2, e3⟩ => by simp [e1, e2, e3])
       (fun hn hI => ?_) hr₄
     obtain ⟨hx, hy, hz⟩ := mkLetW_lt m₃ x y z r₄ m₄ hI
     refine ⟨?_, mkLet_okA m₃ a₃ hA₃ x y z r₄ m₄ hI⟩
-    rcases Decidable.em (decE x = decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))) with e1 | e1
-    · rcases Decidable.em (decE y = decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)))
+    rcases Decidable.em (decE x = decE (tfld m LET (tierW h) (idxW h) 0)) with e1 | e1
+    · rcases Decidable.em (decE y = decE (tfld m LET (tierW h) (idxW h) 1))
         with e2 | e2
-      · have e3 : decE z ≠ decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) :=
+      · have e3 : decE z ≠ decE (tfld m LET (tierW h) (idxW h) 2) :=
           fun e3 => hn ⟨decE_inj _ _ hx htw e1, decE_inj _ _ hy hvw e2, decE_inj _ _ hz hbw e3⟩
         simp [e1, e2, e3]
       · simp [e1, e2]
@@ -818,12 +818,12 @@ theorem aprojArm_ok (hg : h >>> 28 = 9) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hew e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW
       (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
-      (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))) (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat (decE x)) _ a₁ h k r m' hh (fun r₃ m₃ hr₃ => by
+      (decI (tfld m PROJ (tierW h) (idxW h) 0)) (tfld m PROJ (tierW h) (idxW h) 1).toNat (decE x)) _ a₁ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltProj internProjE
     refine rb_ok _ _ _ _ m₁ a₁ hA₁ h r₃ m₃ (fun e1 => by simp [e1]) (fun hn hI => ?_) hr₃
     have hx := mkProjW_lt m₁ _ _ x r₃ m₃ hI
     refine ⟨?_, mkProj_okA m₁ a₁ hA₁ _ _ x r₃ m₃ hI⟩
-    have e1 : decE x ≠ decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) :=
+    have e1 : decE x ≠ decE (tfld m PROJ (tierW h) (idxW h) 2) :=
       fun e1 => hn (decE_inj _ _ hx hew e1)
     simp [e1]) hb
 

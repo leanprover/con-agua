@@ -39,8 +39,8 @@ open L.Arena
 /-- A returning `e_view` of a `forallE` handle: the view checks hold and the words are the
 binder's. -/
 theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
-    viewOK m h 30 ∧ eViewW m h = [6, rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2),
-      rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1), 0] := by
+    viewOK m h 30 ∧ eViewW m h = [6, tfld m FORALL (tierW h) (idxW h) 0,
+      tfld m FORALL (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
   simp only [h1, if_false] at hne ⊢
@@ -54,15 +54,15 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
   have n5 : ¬ h >>> 28 = 5 := by rw [hg]; decide
   simp only [n0, n1, n2, n3, n4, n5, hg, if_false, if_true] at hne ⊢
-  by_cases c : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
+  by_cases c : tcnt m FORALL (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, if_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-- A returning `e_view` of a `lam` handle. -/
 theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h ≠ []) :
-    viewOK m h 28 ∧ eViewW m h = [5, rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2),
-      rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1), 0] := by
+    viewOK m h 28 ∧ eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
+      tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
   have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
   simp only [h1, if_false] at hne ⊢
@@ -75,7 +75,7 @@ theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h �
   have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
   have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
   simp only [n0, n1, n2, n3, n4, hg, if_false, if_true] at hne ⊢
-  by_cases c : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
+  by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
   simp only [c, if_false]
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩

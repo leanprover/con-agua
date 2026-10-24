@@ -47,7 +47,7 @@ def pfsPre (m : Mem) (q : Word) : Option Word :=
   if 4294967295 < q then none
   else if q >>> 28 ≠ 1 then some 0
   else if tierW q ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (36 + tierW q) ≤ idxW q then none
+  else if tcnt m NSTR (tierW q) ≤ idxW q then none
   else pfsStr m (idxW q * 8 + tierW q * 4)
 
 /-- **The model of `is_proj_fn_shape(n)`.** -/
@@ -55,8 +55,8 @@ def pfsW (m : Mem) (n : Word) : Option Word :=
   if 4294967295 < n then none
   else if n >>> 28 ≠ 2 then some 0
   else if tierW n ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (38 + tierW n) ≤ idxW n then none
-  else pfsPre m (rdW (m.arr64 NNREC) (idxW n * 4 + tierW n * 2))
+  else if tcnt m NNUM (tierW n) ≤ idxW n then none
+  else pfsPre m (tfld m NNUM (tierW n) (idxW n) 0)
 
 /-! ## The spec -/
 

@@ -706,7 +706,7 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (Word ×
       | some (r₂, m₂) =>
         if rdW (m₂.arr64 EREC) (q + 4) >>> 28 ≠ 6 then some (0, m₂)
         else if tierW (rdW (m₂.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
-        else if rdW (m₂.arr64 CTL) (30 + tierW (rdW (m₂.arr64 EREC) (q + 4))) ≤
+        else if tcnt m₂ FORALL (tierW (rdW (m₂.arr64 EREC) (q + 4))) ≤
             idxW (rdW (m₂.arr64 EREC) (q + 4)) then none
         else some (if rdW (m₂.arr64 FAREC) (idxW (rdW (m₂.arr64 EREC) (q + 4)) * 4 +
               tierW (rdW (m₂.arr64 EREC) (q + 4)) * 2) = r₂.headD 0 ∧
@@ -854,7 +854,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   by_cases hsc : tierW (rdW (s₀.mem.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
   · rw [if_pos hsc] at hW; cases hW
   rw [if_neg hsc] at hW
-  by_cases hbd : rdW (m₂.arr64 CTL) (30 + tierW (rdW (s₀.mem.arr64 EREC) (q + 4))) ≤
+  by_cases hbd : tcnt m₂ FORALL (tierW (rdW (s₀.mem.arr64 EREC) (q + 4))) ≤
       idxW (rdW (s₀.mem.arr64 EREC) (q + 4))
   · rw [if_pos hbd] at hW; cases hW
   rw [if_neg hbd] at hW

@@ -81,7 +81,7 @@ theorem nnumSch_wf : nnumSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nn0 (m : Mem) (t i : Word) :
-    fld nnumSch m t i 0 = rdW (m.arr64 NNREC) (i * 4 + t * 2) := by
+    fld nnumSch m t i 0 = tfld m NNUM t i 0 := by
   simp [fld, Schema.ad, nnumSch]
 theorem fld_nn (m : Mem) (t i f : Word) :
     fld nnumSch m t i f = rdW (m.arr64 NNREC) (i * 4 + t * 2 + f) := rfl
@@ -89,8 +89,8 @@ theorem fld_nn (m : Mem) (t i f : Word) :
 /-- Node `i` of tier `t` holds the `num` node `k`: its prefix's handle word, and its number as a
 word. -/
 def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
-  rdW (m.arr64 NNREC) (i * 4 + t * 2) = k.pre.word.toUInt64 ∧
-  (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n
+  tfld m NNUM t i 0 = k.pre.word.toUInt64 ∧
+  (tfld m NNUM t i 1).toNat = k.n
 
 /-- **The state relation** of the `num` store: the library's relation for the name store's two
 `num` tables. -/

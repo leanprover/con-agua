@@ -49,8 +49,8 @@ def gafLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
   if e >>> 28 = 4 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e then none
-    else gafLoopW m (rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)) (f - 1)
+    else if tcnt m APP (tierW e) ≤ idxW e then none
+    else gafLoopW m (tfld m APP (tierW e) (idxW e) 0) (f - 1)
   else some (e, f)
 termination_by f.toNat
 decreasing_by
@@ -68,8 +68,8 @@ theorem gafLoopW_done (m : Mem) (e f : Word) (h : e >>> 28 ≠ 4) : gafLoopW m e
 
 theorem gafLoopW_step (m : Mem) (e f e' : Word) (h : e >>> 28 = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)) :
+    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
+    (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
     gafLoopW m e f = gafLoopW m e' (f - 1) := by
   subst he'; rw [gafLoopW]
   simp only [h, ↓reduceIte, hf, hv2, hv1]
@@ -181,20 +181,20 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         simp only [hc, ↓reduceIte, hf0] at hL
         have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
         · exact hv
-      have hv2 : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
         rw [gafLoopW] at hL
         simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        have hv : ¬ rdW (m.arr64 CTL) (4 + tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
+        have hv : ¬ tcnt m APP (tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
         · exact hv
-      have hL' : gafLoopW m (rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)) (f - 1) = some (e', f') := by
+      have hL' : gafLoopW m (tfld m APP (tierW e) (idxW e) 0) (f - 1) = some (e', f') := by
         rw [← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
       have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
       have hfm1 : (f - 1).toNat = f.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (4 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
-      have h1 : (rdW (m.arr64 AREC) (idxW e * 4 + tierW e * 2)).toNat < 2 ^ 32 :=
+      have h1 : (tfld m APP (tierW e) (idxW e) 0).toNat < 2 ^ 32 :=
         (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' hfm1N h1 hL' hf'
       have heq : getAppFn f.toNat (decE e) = getAppFn ((f.toNat - 1) + 1) (decE e) := by
@@ -271,8 +271,8 @@ def priLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
   if e >>> 28 = 6 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e then none
-    else priLoopW m (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) (f - 1)
+    else if tcnt m FORALL (tierW e) ≤ idxW e then none
+    else priLoopW m (tfld m FORALL (tierW e) (idxW e) 1) (f - 1)
   else some (e, f)
 termination_by f.toNat
 decreasing_by
@@ -290,8 +290,8 @@ theorem priLoopW_done (m : Mem) (e f : Word) (h : e >>> 28 ≠ 6) : priLoopW m e
 
 theorem priLoopW_step (m : Mem) (e f e' : Word) (h : e >>> 28 = 6) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) :
+    (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
+    (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
     priLoopW m e f = priLoopW m e' (f - 1) := by
   subst he'; rw [priLoopW]
   simp only [h, ↓reduceIte, hf, hv2, hv1]
@@ -371,21 +371,21 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         simp only [hc, ↓reduceIte, hf0] at hL
         have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
         · exact hv
-      have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
         rw [priLoopW] at hL
         simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        have hv : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
+        have hv : ¬ tcnt m FORALL (tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
         · exact hv
-      have hL' : priLoopW m (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) (f - 1) =
+      have hL' : priLoopW m (tfld m FORALL (tierW e) (idxW e) 1) (f - 1) =
           some (e', f') := by
         rw [← priLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
       have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
       have hfm1 : (f - 1).toNat = f.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < rdW (m.arr64 CTL) (30 + tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxW e < tcnt m FORALL (tierW e) := UInt64.not_le.mp hv2
       have hvb := viewBind_forall m a hR e he ⟨hv1, hcnt⟩ hc
-      have h1 : (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)).toNat < 2 ^ 32 :=
+      have h1 : (tfld m FORALL (tierW e) (idxW e) 1).toNat < 2 ^ 32 :=
         (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.2
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' hfm1N h1 hL' hf'
       have heq : piResult f.toNat (decE e) = piResult ((f.toNat - 1) + 1) (decE e) := by
@@ -461,8 +461,8 @@ def peelPisW (m : Mem) (k e : Word) : Option (Word × Word) :=
   if k = 0 then some (1, e)
   else if e >>> 28 ≠ 6 then some (0, 0)
   else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e then none
-  else peelPisW m (k - 1) (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1))
+  else if tcnt m FORALL (tierW e) ≤ idxW e then none
+  else peelPisW m (k - 1) (tfld m FORALL (tierW e) (idxW e) 1)
 termination_by k.toNat
 decreasing_by
   have hk0 : k ≠ 0 := by assumption
@@ -483,8 +483,8 @@ theorem peelPisW_miss (m : Mem) (k e : Word) (hk : k ≠ 0) (h : e >>> 28 ≠ 6)
 
 theorem peelPisW_step (m : Mem) (k e e' : Word) (hk : k ≠ 0) (h : e >>> 28 = 6)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e)
-    (he' : e' = rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) :
+    (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
+    (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
     peelPisW m k e = peelPisW m (k - 1) e' := by
   subst he'; rw [peelPisW]
   simp [hk, ↓reduceIte, h, hv2, hv1]
@@ -570,20 +570,20 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
           simp only [hk0, ↓reduceIte, hc] at hL
           have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
           · exact hv
-        have hv2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := by
+        have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
           rw [peelPisW] at hL
           simp only [hk0, ↓reduceIte, hc, hv1] at hL
-          have hv : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
+          have hv : ¬ tcnt m FORALL (tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
           · exact hv
-        have hL' : peelPisW m (k - 1) (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)) =
+        have hL' : peelPisW m (k - 1) (tfld m FORALL (tierW e) (idxW e) 1) =
             some (flag, val) := by
           rw [← peelPisW_step m k e _ hk0 hc hv1 hv2 rfl]; exact hL
         have hkm1 : (k - 1).toNat = k.toNat - 1 := by
           rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
         have hkm1N : (k - 1).toNat ≤ N := by rw [hkm1]; omega
-        have hcnt : idxW e < rdW (m.arr64 CTL) (30 + tierW e) := UInt64.not_le.mp hv2
+        have hcnt : idxW e < tcnt m FORALL (tierW e) := UInt64.not_le.mp hv2
         have hvb := viewBind_forall m a hR e he ⟨hv1, hcnt⟩ hc
-        have h1 : (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)).toNat < 2 ^ 32 :=
+        have h1 : (tfld m FORALL (tierW e) (idxW e) 1).toNat < 2 ^ 32 :=
           (view_forall m a hR e he ⟨hv1, hcnt⟩ hc).2.2
         obtain ⟨ihr, ihb, ih0⟩ := ih _ _ flag val hkm1N h1 hL'
         refine ⟨?_, ihb, ih0⟩

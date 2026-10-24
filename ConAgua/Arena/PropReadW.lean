@@ -42,8 +42,8 @@ def rpwW (p : Prog) (n : Nat) (m : Mem) (fl h : Word) : Option (Word × Word × 
   if fl = 0 then some (0, 0, 0, m)
   else if h >>> 28 ≠ 2 then some (0, 0, 0, m)
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none
-  else pushedK (htop m) (callW p n "lv_zero" [rdW (m.arr64 SOREC) (idxW h * 2 + tierW h)] m)
+  else if tcnt m SORT (tierW h) ≤ idxW h then none
+  else pushedK (htop m) (callW p n "lv_zero" [tfld m SORT (tierW h) (idxW h) 0] m)
 
 theorem residualPW_spec (p : Prog) (hp : p.lookup "residual_pw" = some residualPWL) (n : Nat)
     (s₀ : St) (fl h : Word) :
@@ -269,8 +269,8 @@ def uwsW (p : Prog) (n : Nat) (m : Mem) (vis f e : Word) : Option (Word × Word 
   | some (_, hh) =>
     if hh >>> 28 ≠ 3 then some (0, 0, m)
     else if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
-    else uwsK1 p n f e (callW p n "env_find" [rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2), vis] m)
+    else if tcnt m CONST (tierW hh) ≤ idxW hh then none
+    else uwsK1 p n f e (callW p n "env_find" [tfld m CONST (tierW hh) (idxW hh) 0, vis] m)
 
 theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis f e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "unwrap_step" [vis, f, e]
@@ -312,8 +312,8 @@ theorem unwrapIdDefs_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
 /-- At a `∀` node `u`: its body, one binder fewer. -/
 def ppwK2 (p : Prog) (n : Nat) (vis f k u : Word) (m : Mem) : Option (Word × Word × Mem) :=
   if tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (30 + tierW u) ≤ idxW u then none
-  else t2W (callW p n "peel_pis_w" [vis, f, k - 1, rdW (m.arr64 FAREC) (idxW u * 4 + tierW u * 2 + 1)] m)
+  else if tcnt m FORALL (tierW u) ≤ idxW u then none
+  else t2W (callW p n "peel_pis_w" [vis, f, k - 1, tfld m FORALL (tierW u) (idxW u) 1] m)
 
 /-- After unwrapping a non-`∀`. -/
 def ppwK1 (p : Prog) (n : Nat) (vis f k : Word) : Option (Word × Mem) → Option (Word × Word × Mem)

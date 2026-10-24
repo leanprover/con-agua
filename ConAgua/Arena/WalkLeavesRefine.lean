@@ -291,16 +291,16 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
     have hl : ¬ m.len64 LVS >>> 1 ≤ k := fun hl => by rw [flNodeW] at hb; simp [hs, g1, UInt64.not_le.mpr hvo.2, hl] at hb
     obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
     rw [flNodeW_fvar n m h k c g1 hvo hl] at hb
-    have hfp : FlFrame m (lvsPush m k (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))) :=
-      (lvsPush_frame m k (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
-        (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))).mono (by simp) (by simp)
-    have hL₁ := hL.push (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) _ hl hty
+    have hfp : FlFrame m (lvsPush m k (tfld m FVAR (tierW h) (idxW h) 0)
+        (tfld m FVAR (tierW h) (idxW h) 1)) :=
+      (lvsPush_frame m k (tfld m FVAR (tierW h) (idxW h) 0)
+        (tfld m FVAR (tierW h) (idxW h) 1)).mono (by simp) (by simp)
+    have hL₁ := hL.push (tfld m FVAR (tierW h) (idxW h) 0) _ hl hty
     obtain ⟨acc', seen', ha, hM', hL', hf'⟩ :=
       ih _ m' a seen _ _ (k + 1) c k' (hfp.arenaD hD)
         (memoRG_frame flSch flSch_wf bmKey decU [LVS] [] (by decide) (by decide) _ _
-          (lvsPush_frame m k (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
-            (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))) seen hM)
+          (lvsPush_frame m k (tfld m FVAR (tierW h) (idxW h) 0)
+            (tfld m FVAR (tierW h) (idxW h) 1)) seen hM)
         hL₁ hty hb
     exact ⟨acc', seen', by rw [flNodeA_run _ _ _ _ a _ hv]; exact ha, hM', hL', hfp.trans hf'⟩
   by_cases g4 : h >>> 28 = 4
@@ -330,7 +330,7 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
     rw [flNodeW_let n m h k c hvo g7] at hb
     rw [flNodeA_run _ _ _ _ a _ hv]
     simp only [flArm, fvarLeavesGoArmLet]
-    rcases h1 : flW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeq3K, flSeq3K_some, reduceCtorEq] at hb
+    rcases h1 : flW n m (tfld m LET (tierW h) (idxW h) 0) k c with _ | ⟨k₁, m₁⟩ <;> simp only [h1, flSeq3K, flSeq3K_some, reduceCtorEq] at hb
     obtain ⟨acc₁, seen₁, ha₁, hM₁, hL₁, hf₁⟩ := ih m m₁ a seen acc _ k c k₁ hD hM hL ht h1
     obtain ⟨acc₂, seen₂, ha₂, hM₂, hL₂, hf₂⟩ :=
       flSeq_ok n ih m₁ m' a seen₁ acc₁ (hf₁.arenaD hD) hM₁ k₁ hL₁ _ _ c k' hv' hb' hb
@@ -525,13 +525,13 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
   by_cases g1 : h >>> 28 = 1
   · have hvo := vok 26 fun hc => by rw [lsbNodeW] at hb; simp [hs, g1, hc] at hb
     obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
-    have hlm := lfmW_ok (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
-      (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) hty k.toNat k rfl hk62 hL.hw
+    have hlm := lfmW_ok (m.arr64 LVS) (tfld m FVAR (tierW h) (idxW h) 0)
+      (tfld m FVAR (tierW h) (idxW h) 1) hty k.toNat k rfl hk62 hL.hw
     rw [← hL.eq] at hlm
     rw [lsbNodeA_run _ _ _ _ a _ hv]
     simp only [lsbArm]
-    by_cases hin : leafMem bl (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat
-        (decE (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1))) = true
+    by_cases hin : leafMem bl (tfld m FVAR (tierW h) (idxW h) 0).toNat
+        (decE (tfld m FVAR (tierW h) (idxW h) 1)) = true
     · rw [hin] at hlm
       rw [lsbNodeW_fvar_in n m h k c g1 hvo (by rw [hlm]; decide)] at hb
       simp only [hin, ↓reduceIte]
@@ -565,7 +565,7 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
     rw [lsbNodeW_let n m h k c hvo g7] at hb
     rw [lsbNodeA_run _ _ _ _ a _ hv]
     simp only [lsbArm, leavesSubArmLet]
-    cases h1 : lsbW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with
+    cases h1 : lsbW n m (tfld m LET (tierW h) (idxW h) 0) k c with
     | none => simp only [h1, lsbLetK, reduceCtorEq] at hb
     | some q =>
       obtain ⟨x, m₁⟩ := q

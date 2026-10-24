@@ -35,8 +35,8 @@ theorem eRecGet_spec (p : Prog) (hp : p.lookup "e_rec_get" = some eRecGetL) (n :
 /-- Model of `const_name_of`. -/
 def cnoW (m : Mem) (hh : Word) : Option Word :=
   if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
-  else some (rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2))
+  else if tcnt m CONST (tierW hh) ≤ idxW hh then none
+  else some (tfld m CONST (tierW hh) (idxW hh) 0)
 
 theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constNameOfL) (n : Nat)
     (s₀ : St) (hh : Word) :
@@ -201,7 +201,7 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 
 theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
-    a.store.viewConstName (decE h) = some (decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))) := by
+    a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
   have e : a.store.viewConstName (decE h) =

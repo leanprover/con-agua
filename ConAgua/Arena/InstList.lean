@@ -74,12 +74,12 @@ def ilAppW : Nat → Mem → Word → Word → Word → Word → Word → Option
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, h, d, o, l, fu =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxW h then none
     else
-      match ilW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d o l fu with
+      match ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) d o l fu with
+        match ilW n m₁ (tfld m APP (tierW h) (idxW h) 1) d o l fu with
         | none => none
         | some (y, m₂) => mkAppW m₂ x y
 
@@ -89,12 +89,12 @@ def ilLamW : Nat → Mem → Word → Word → Word → Word → Word → Option
   | n + 1, m, h, d, o, l, fu =>
     if d + 1 = 0 then none
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+    else if tcnt m LAM (tierW h) ≤ idxW h then none
     else
-      match ilW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d o l fu with
+      match ilW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) o l fu with
+        match ilW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (d + 1) o l fu with
         | none => none
         | some (y, m₂) => mkLamW m₂ x y
 
@@ -104,12 +104,12 @@ def ilForallW : Nat → Mem → Word → Word → Word → Word → Word → Opt
   | n + 1, m, h, d, o, l, fu =>
     if d + 1 = 0 then none
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+    else if tcnt m FORALL (tierW h) ≤ idxW h then none
     else
-      match ilW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d o l fu with
+      match ilW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) o l fu with
+        match ilW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (d + 1) o l fu with
         | none => none
         | some (y, m₂) => mkForallW m₂ x y
 
@@ -119,15 +119,15 @@ def ilLetW : Nat → Mem → Word → Word → Word → Word → Word → Option
   | n + 1, m, h, d, o, l, fu =>
     if d + 1 = 0 then none
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+    else if tcnt m LET (tierW h) ≤ idxW h then none
     else
-      match ilW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d o l fu with
+      match ilW n m (tfld m LET (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) d o l fu with
+        match ilW n m₁ (tfld m LET (tierW h) (idxW h) 1) d o l fu with
         | none => none
         | some (y, m₂) =>
-          match ilW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (d + 1) o l fu with
+          match ilW n m₂ (tfld m LET (tierW h) (idxW h) 2) (d + 1) o l fu with
           | none => none
           | some (z, m₃) => mkLetW m₃ x y z
 
@@ -136,13 +136,13 @@ def ilProjW : Nat → Mem → Word → Word → Word → Word → Word → Optio
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, h, d, o, l, fu =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+    else if tcnt m PROJ (tierW h) ≤ idxW h then none
     else
-      match ilW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d o l fu with
+      match ilW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu with
       | none => none
       | some (x, m₁) =>
-        mkProjW m₁ (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)) x
+        mkProjW m₁ (tfld m PROJ (tierW h) (idxW h) 0)
+          (tfld m PROJ (tierW h) (idxW h) 1) x
 
 /-- **The model of `il_bvar`**: below `d` the handle; inside the slice its entry (cut off, or
 instantiated over the slice's last `j - d` entries); past it `bvar (j - l)`. -/
@@ -150,12 +150,12 @@ def ilBVarW : Nat → Mem → Word → Word → Word → Word → Word → Optio
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, h, d, o, l, fu =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none
-    else if rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < d then some (h, m)
-    else if rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d < l then
-      if derBW m (slW m (o + (l - 1 - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d)))) < 32767 ∧ derBW m (slW m (o + (l - 1 - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d)))) ≤ d then some (slW m (o + (l - 1 - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d))), m)
-      else ilW n m (slW m (o + (l - 1 - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d)))) d (o + (l - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d))) (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d) fu
-    else binternW m (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - l)
+    else if tcnt m BVAR (tierW h) ≤ idxW h then none
+    else if tfld m BVAR (tierW h) (idxW h) 0 < d then some (h, m)
+    else if tfld m BVAR (tierW h) (idxW h) 0 - d < l then
+      if derBW m (slW m (o + (l - 1 - (tfld m BVAR (tierW h) (idxW h) 0 - d)))) < 32767 ∧ derBW m (slW m (o + (l - 1 - (tfld m BVAR (tierW h) (idxW h) 0 - d)))) ≤ d then some (slW m (o + (l - 1 - (tfld m BVAR (tierW h) (idxW h) 0 - d))), m)
+      else ilW n m (slW m (o + (l - 1 - (tfld m BVAR (tierW h) (idxW h) 0 - d)))) d (o + (l - (tfld m BVAR (tierW h) (idxW h) 0 - d))) (tfld m BVAR (tierW h) (idxW h) 0 - d) fu
+    else binternW m (tfld m BVAR (tierW h) (idxW h) 0 - l)
 end
 
 /-- The `bvar` arm's replacement `v`: cut off, or instantiated over the shorter slice. -/
@@ -195,12 +195,12 @@ def ilgAppW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxW h then none
     else
-      match ilgW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d o l fu with
+      match ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilgW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) d o l fu with
+        match ilgW n m₁ (tfld m APP (tierW h) (idxW h) 1) d o l fu with
         | none => none
         | some (y, m₂) => ilsetK h d (mkAppW m₂ x y)
 
@@ -213,12 +213,12 @@ def ilgLamW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+    else if tcnt m LAM (tierW h) ≤ idxW h then none
     else
-      match ilgW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d o l fu with
+      match ilgW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilgW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) o l fu with
+        match ilgW n m₁ (tfld m LAM (tierW h) (idxW h) 1) (d + 1) o l fu with
         | none => none
         | some (y, m₂) => ilsetK h d (mkLamW m₂ x y)
 
@@ -231,12 +231,12 @@ def ilgForallW : Nat → Mem → Word → Word → Word → Word → Word → Op
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+    else if tcnt m FORALL (tierW h) ≤ idxW h then none
     else
-      match ilgW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d o l fu with
+      match ilgW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilgW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (d + 1) o l fu with
+        match ilgW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) (d + 1) o l fu with
         | none => none
         | some (y, m₂) => ilsetK h d (mkForallW m₂ x y)
 
@@ -249,15 +249,15 @@ def ilgLetW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
+    else if tcnt m LET (tierW h) ≤ idxW h then none
     else
-      match ilgW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d o l fu with
+      match ilgW n m (tfld m LET (tierW h) (idxW h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilgW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) d o l fu with
+        match ilgW n m₁ (tfld m LET (tierW h) (idxW h) 1) d o l fu with
         | none => none
         | some (y, m₂) =>
-          match ilgW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (d + 1) o l fu with
+          match ilgW n m₂ (tfld m LET (tierW h) (idxW h) 2) (d + 1) o l fu with
           | none => none
           | some (z, m₃) => ilsetK h d (mkLetW m₃ x y z)
 
@@ -269,13 +269,13 @@ def ilgProjW : Nat → Mem → Word → Word → Word → Word → Word → Opti
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+    else if tcnt m PROJ (tierW h) ≤ idxW h then none
     else
-      match ilgW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d o l fu with
+      match ilgW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu with
       | none => none
       | some (x, m₁) =>
-        ilsetK h d (mkProjW m₁ (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)) x)
+        ilsetK h d (mkProjW m₁ (tfld m PROJ (tierW h) (idxW h) 0)
+          (tfld m PROJ (tierW h) (idxW h) 1) x)
 end
 
 /-! ### Continuations and guarded equations -/
@@ -446,54 +446,54 @@ theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : h >>> 28 ≠ 0) (h
 
 theorem ilAppW_miss (hvk : viewOK m h 4) :
     ilAppW (n + 1) m h d o l fu =
-      lappK₁ n d o l fu (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
-        (ilW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d o l fu) := by
+      lappK₁ n d o l fu (tfld m APP (tierW h) (idxW h) 1)
+        (ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilAppW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d o l fu <;> rfl
+  cases ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
 theorem ilLamW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 28) :
     ilLamW (n + 1) m h d o l fu =
-      llamK₁ n d o l fu (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (ilW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d o l fu) := by
+      llamK₁ n d o l fu (tfld m LAM (tierW h) (idxW h) 1)
+        (ilW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilLamW]; simp only [h1, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d o l fu <;> rfl
+  cases ilW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu <;> rfl
 theorem ilForallW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 30) :
     ilForallW (n + 1) m h d o l fu =
-      lfaK₁ n d o l fu (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (ilW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d o l fu) := by
+      lfaK₁ n d o l fu (tfld m FORALL (tierW h) (idxW h) 1)
+        (ilW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilForallW]; simp only [h1, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d o l fu <;> rfl
+  cases ilW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu <;> rfl
 theorem ilLetW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h 20) :
     ilLetW (n + 1) m h d o l fu =
-      lleK₁ n d o l fu (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
-        (ilW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d o l fu) := by
+      lleK₁ n d o l fu (tfld m LET (tierW h) (idxW h) 1)
+        (tfld m LET (tierW h) (idxW h) 2)
+        (ilW n m (tfld m LET (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilLetW]; simp only [h1, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d o l fu with
+  cases ilW n m (tfld m LET (tierW h) (idxW h) 0) d o l fu with
   | none => rfl
   | some p =>
     obtain ⟨x, m₁⟩ := p
-    cases ilW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) d o l fu <;> rfl
+    cases ilW n m₁ (tfld m LET (tierW h) (idxW h) 1) d o l fu <;> rfl
 theorem ilProjW_miss (hvk : viewOK m h 32) :
     ilProjW (n + 1) m h d o l fu =
-      lpjK₁ (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-        (ilW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d o l fu) := by
+      lpjK₁ (tfld m PROJ (tierW h) (idxW h) 0)
+        (tfld m PROJ (tierW h) (idxW h) 1)
+        (ilW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu) := by
   rw [ilProjW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d o l fu <;> rfl
+  cases ilW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu <;> rfl
 
-theorem ilBVarW_lt (hvk : viewOK m h 22) (hj : rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < d) :
+theorem ilBVarW_lt (hvk : viewOK m h 22) (hj : tfld m BVAR (tierW h) (idxW h) 0 < d) :
     ilBVarW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilBVarW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2, hj]
-theorem ilBVarW_in (hvk : viewOK m h 22) (hj : ¬ rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < d)
-    (hq : rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d < l) :
+theorem ilBVarW_in (hvk : viewOK m h 22) (hj : ¬ tfld m BVAR (tierW h) (idxW h) 0 < d)
+    (hq : tfld m BVAR (tierW h) (idxW h) 0 - d < l) :
     ilBVarW (n + 1) m h d o l fu =
-      ilVW n m (slW m (o + (l - 1 - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d)))) d
-        (o + (l - (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d)))
-        (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d) fu := by
+      ilVW n m (slW m (o + (l - 1 - (tfld m BVAR (tierW h) (idxW h) 0 - d)))) d
+        (o + (l - (tfld m BVAR (tierW h) (idxW h) 0 - d)))
+        (tfld m BVAR (tierW h) (idxW h) 0 - d) fu := by
   rw [ilBVarW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2, hj, hq]; rfl
-theorem ilBVarW_out (hvk : viewOK m h 22) (hj : ¬ rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < d)
-    (hq : ¬ rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - d < l) :
-    ilBVarW (n + 1) m h d o l fu = binternW m (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) - l) := by
+theorem ilBVarW_out (hvk : viewOK m h 22) (hj : ¬ tfld m BVAR (tierW h) (idxW h) 0 < d)
+    (hq : ¬ tfld m BVAR (tierW h) (idxW h) 0 - d < l) :
+    ilBVarW (n + 1) m h d o l fu = binternW m (tfld m BVAR (tierW h) (idxW h) 0 - l) := by
   rw [ilBVarW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2, hj, hq]
 theorem ilVW_cut (hc : ilCut m h d) : ilVW n m h d o l fu = some (h, m) := by
   rw [ilVW]; simp only [hc, and_self, ↓reduceIte]
@@ -507,10 +507,10 @@ theorem ilgAppW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).
 theorem ilgAppW_miss (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 = 0)
     (hvk : viewOK m h 4) :
     ilgAppW (n + 1) m h d o l fu =
-      gappK₁ n h d o l fu (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
-        (ilgW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d o l fu) := by
+      gappK₁ n h d o l fu (tfld m APP (tierW h) (idxW h) 1)
+        (ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilgAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) d o l fu <;> rfl
+  cases ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
 theorem ilgLamW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 ≠ 0) :
     ilgLamW (n + 1) m h d o l fu =
@@ -519,10 +519,10 @@ theorem ilgLamW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
 theorem ilgLamW_miss (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h 28) :
     ilgLamW (n + 1) m h d o l fu =
-      glamK₁ n h d o l fu (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (ilgW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d o l fu) := by
+      glamK₁ n h d o l fu (tfld m LAM (tierW h) (idxW h) 1)
+        (ilgW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilgLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) d o l fu <;> rfl
+  cases ilgW n m (tfld m LAM (tierW h) (idxW h) 0) d o l fu <;> rfl
 theorem ilgForallW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 ≠ 0) :
     ilgForallW (n + 1) m h d o l fu =
@@ -531,10 +531,10 @@ theorem ilgForallW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
 theorem ilgForallW_miss (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h 30) :
     ilgForallW (n + 1) m h d o l fu =
-      gfaK₁ n h d o l fu (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (ilgW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d o l fu) := by
+      gfaK₁ n h d o l fu (tfld m FORALL (tierW h) (idxW h) 1)
+        (ilgW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilgForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) d o l fu <;> rfl
+  cases ilgW n m (tfld m FORALL (tierW h) (idxW h) 0) d o l fu <;> rfl
 theorem ilgLetW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 ≠ 0) :
     ilgLetW (n + 1) m h d o l fu =
@@ -543,15 +543,15 @@ theorem ilgLetW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
 theorem ilgLetW_miss (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 = 0) (hvk : viewOK m h 20) :
     ilgLetW (n + 1) m h d o l fu =
-      gleK₁ n h d o l fu (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
-        (ilgW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d o l fu) := by
+      gleK₁ n h d o l fu (tfld m LET (tierW h) (idxW h) 1)
+        (tfld m LET (tierW h) (idxW h) 2)
+        (ilgW n m (tfld m LET (tierW h) (idxW h) 0) d o l fu) := by
   rw [ilgLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d o l fu with
+  cases ilgW n m (tfld m LET (tierW h) (idxW h) 0) d o l fu with
   | none => rfl
   | some p =>
     obtain ⟨x, m₁⟩ := p
-    cases ilgW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) d o l fu <;> rfl
+    cases ilgW n m₁ (tfld m LET (tierW h) (idxW h) 1) d o l fu <;> rfl
 theorem ilgProjW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 ≠ 0) :
     ilgProjW (n + 1) m h d o l fu =
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
@@ -559,11 +559,11 @@ theorem ilgProjW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d)
 theorem ilgProjW_miss (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 = 0)
     (hvk : viewOK m h 32) :
     ilgProjW (n + 1) m h d o l fu =
-      gpjK₁ h d (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-        (ilgW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d o l fu) := by
+      gpjK₁ h d (tfld m PROJ (tierW h) (idxW h) 0)
+        (tfld m PROJ (tierW h) (idxW h) 1)
+        (ilgW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu) := by
   rw [ilgProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) d o l fu <;> rfl
+  cases ilgW n m (tfld m PROJ (tierW h) (idxW h) 2) d o l fu <;> rfl
 
 end arms
 

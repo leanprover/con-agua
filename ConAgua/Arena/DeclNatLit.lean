@@ -347,7 +347,7 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Wo
   ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
   if rdW (m2.arr64 EREC) (q + 4) >>> 28 ≠ 6 then some ([0], m2) else
   if tierW (rdW (m2.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0 then none else
-  if rdW (m2.arr64 CTL) (30 + tierW (rdW (m2.arr64 EREC) (q + 4))) ≤ idxW (rdW (m2.arr64 EREC) (q + 4))
+  if tcnt m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) ≤ idxW (rdW (m2.arr64 EREC) (q + 4))
     then none else
   some ([if rdW (m2.arr64 FAREC) (idxW (rdW (m2.arr64 EREC) (q + 4)) * 4 +
           tierW (rdW (m2.arr64 EREC) (q + 4)) * 2) = r2.headD 0 ∧
@@ -418,7 +418,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             by_cases hv1 : tierW wt ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0
             · rw [if_pos hv1] at hw; cases hw
             rw [if_neg hv1] at hw
-            by_cases hv2 : rdW (m2.arr64 CTL) (30 + tierW wt) ≤ idxW wt
+            by_cases hv2 : tcnt m2 FORALL (tierW wt) ≤ idxW wt
             · rw [if_pos hv2] at hw; cases hw
             rw [if_neg hv2] at hw
             simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -428,8 +428,8 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
               exact Nat.lt_of_not_le (fun e => hv2 (UInt64.le_iff_toNat_le.mpr e))⟩
             obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.1.arena.1 wt hlt hvok h6
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a =
-                .ok (decide (rdW (m2.arr64 FAREC) (idxW wt * 4 + tierW wt * 2) = r2.headD 0 ∧
-                  rdW (m2.arr64 FAREC) (idxW wt * 4 + tierW wt * 2 + 1) = r2.headD 0), a2) := by
+                .ok (decide (tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
+                  tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by
               simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, if_false, hty]
               rw [tagForallIff wt hlt]
@@ -440,8 +440,8 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
               rfl
             refine ⟨_, a2, hrun, hS2, hg2, ?_⟩
             simp only [decW0B, List.headD_cons]
-            by_cases he : rdW (m2.arr64 FAREC) (idxW wt * 4 + tierW wt * 2) = r2.headD 0 ∧
-                rdW (m2.arr64 FAREC) (idxW wt * 4 + tierW wt * 2 + 1) = r2.headD 0
+            by_cases he : tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
+                tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0
             · rw [if_pos he, decide_eq_true he]; decide
             · rw [if_neg he, decide_eq_false he]; decide
           · rw [if_pos (by simpa using h6)] at hw

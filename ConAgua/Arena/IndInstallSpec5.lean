@@ -221,7 +221,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     obtain ⟨ws, hws, hnm', hwlt⟩ := slR_of_decHL m _ _ _ hns' (by omega)
     rw [ofNat_toNat_word, ofNat_toNat_word] at hws
-    rcases hma : maConstWk n m no nl (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2)) with _ | ⟨b, m1⟩
+    rcases hma : maConstWk n m no nl (tfld m FORALL (tierW e) (idxW e) 0) with _ | ⟨b, m1⟩
     · rw [hma] at h; simp [pdmK2] at h
     rw [hma] at h
     cases n with

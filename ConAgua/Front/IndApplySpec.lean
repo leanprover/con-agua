@@ -141,10 +141,10 @@ def nrpStr (m : Mem) (k : Word) : Option (Word × Word) :=
 def nrpW (m : Mem) (h : Word) : Option (Word × Word) :=
   if 4294967295 < h then none
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if h >>> 28 = 0 then (if rdW (m.arr64 CTL) (34 + tierW h) ≤ idxW h then none else some (0, 0))
-  else if h >>> 28 = 2 then (if rdW (m.arr64 CTL) (38 + tierW h) ≤ idxW h then none else some (0, 0))
+  else if h >>> 28 = 0 then (if tcnt m NANON (tierW h) ≤ idxW h then none else some (0, 0))
+  else if h >>> 28 = 2 then (if tcnt m NNUM (tierW h) ≤ idxW h then none else some (0, 0))
   else if h >>> 28 ≠ 1 then none
-  else if rdW (m.arr64 CTL) (36 + tierW h) ≤ idxW h then none
+  else if tcnt m NSTR (tierW h) ≤ idxW h then none
   else nrpStr m (idxW h * 8 + tierW h * 4)
 
 /-! ## `IFL` slices -/

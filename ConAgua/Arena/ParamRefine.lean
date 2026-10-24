@@ -78,12 +78,12 @@ theorem paramSch_wf : paramSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_param0 (m : Mem) (t i : Word) :
-    fld paramSch m t i 0 = rdW (m.arr64 PREC) (i * 2 + t) := by
+    fld paramSch m t i 0 = tfld m PARAM t i 0 := by
   simp [fld, Schema.ad, paramSch]
 
 /-- Node `i` of tier `t` holds `param k.n`: its word is the name's handle word. -/
 def PRecRel (m : Mem) (t i : Word) (k : ParamNode) : Prop :=
-  rdW (m.arr64 PREC) (i * 2 + t) = k.n.word.toUInt64
+  tfld m PARAM t i 0 = k.n.word.toUInt64
 
 /-- **The state relation** of the `param` store: the library's relation for the level store's two
 `param` tables. -/

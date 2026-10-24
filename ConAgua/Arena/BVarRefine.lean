@@ -73,12 +73,12 @@ def bvarSch : Schema := ⟨BREC, BSLOT, 1, 2, 22, ETag.bvar⟩
 theorem bvarSch_wf : bvarSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 BREC) (i * 2 + t) := by
+theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = tfld m BVAR t i 0 := by
   simp [fld, Schema.ad, bvarSch]
 
 /-- Node `i` of tier `t` holds `bvar k.i`: its word is the index, which fits in a word. -/
 def BRecRel (m : Mem) (t i : Word) (k : BVarNode) : Prop :=
-  (rdW (m.arr64 BREC) (i * 2 + t)).toNat = k.i
+  (tfld m BVAR t i 0).toNat = k.i
 
 /-- **The state relation** of the `bvar` store: the library's relation for the two `bvar`
 tables. -/

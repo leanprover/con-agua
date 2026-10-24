@@ -472,7 +472,7 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
   by_cases g0 : h >>> 28 = 0
   · by_cases hc : tcnt m₁ BVAR (tierW h) ≤ idxW h
     · rw [i1lW.k1] at hb; simp [hcut, hs, g0, hc] at hb
-    rw [view_run _ a₁ _ (view_bvarT m₁ a₁ hR h hh (vok 22 hc) g0)]
+    rw [view_run _ a₁ _ (view_bvar m₁ a₁ hR h hh (vok 22 hc) g0)]
     simp only [except_ok_bind]
     by_cases he : tfld m₁ BVAR (tierW h) (idxW h) 0 = d
     · rw [i1lW.k1.arm2 n h d v fu x m₁ hcut hs g0 hc he] at hb
@@ -548,31 +548,31 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
   by_cases g4 : h >>> 28 = 4
   · by_cases hc : tcnt m₁ APP (tierW h) ≤ idxW h
     · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, hc] at hb
-    rw [view_run _ a₁ _ (view_appT m₁ a₁ hR h hh (vok 4 hc) g4).1]
+    rw [view_run _ a₁ _ (view_app m₁ a₁ hR h hh (vok 4 hc) g4).1]
     rw [i1lW.k1.arm9 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 hc] at hb
     exact arm.1 (vok 4 hc) g4 hb
   by_cases g5 : h >>> 28 = 5
   · by_cases hc : tcnt m₁ LAM (tierW h) ≤ idxW h
     · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, hc] at hb
-    rw [view_run _ a₁ _ (view_lamT m₁ a₁ hR h hh (vok 28 hc) g5).1]
+    rw [view_run _ a₁ _ (view_lam m₁ a₁ hR h hh (vok 28 hc) g5).1]
     rw [i1lW.k1.arm10 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 hc] at hb
     exact arm.2.1 (vok 28 hc) g5 hb
   by_cases g6 : h >>> 28 = 6
   · by_cases hc : tcnt m₁ FORALL (tierW h) ≤ idxW h
     · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, g6, hc] at hb
-    rw [view_run _ a₁ _ (view_forallT m₁ a₁ hR h hh (vok 30 hc) g6).1]
+    rw [view_run _ a₁ _ (view_forall m₁ a₁ hR h hh (vok 30 hc) g6).1]
     rw [i1lW.k1.arm11 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 g6 hc] at hb
     exact arm.2.2.1 (vok 30 hc) g6 hb
   by_cases g7 : h >>> 28 = 7
   · by_cases hc : tcnt m₁ LET (tierW h) ≤ idxW h
     · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, g6, g7, hc] at hb
-    rw [view_run _ a₁ _ (view_letT m₁ a₁ hR h hh (vok 20 hc) g7).1]
+    rw [view_run _ a₁ _ (view_let m₁ a₁ hR h hh (vok 20 hc) g7).1]
     rw [i1lW.k1.arm12 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 g6 g7 hc] at hb
     exact arm.2.2.2.1 (vok 20 hc) g7 hb
   by_cases g9 : h >>> 28 = 9
   · by_cases hc : tcnt m₁ PROJ (tierW h) ≤ idxW h
     · rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g8, g4, g5, g6, g7, g9, hc] at hb
-    rw [view_run _ a₁ _ (view_projT m₁ a₁ hR h hh (vok 32 hc) g9).1]
+    rw [view_run _ a₁ _ (view_proj m₁ a₁ hR h hh (vok 32 hc) g9).1]
     rw [i1lW.k1.arm13 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 g5 g6 g7 g9 hc] at hb
     exact arm.2.2.2.2 (vok 32 hc) g9 hb
   rw [i1lW.k1] at hb; simp [hcut, hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
@@ -642,7 +642,7 @@ theorem i1lAppArm_ok (hvw : viewOK m h 4) (hg : h >>> 28 = 4) :
         (decE (tfld m APP (tierW h) (idxW h) 0))
         (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h d v fu r := by
   intro hb
-  obtain ⟨-, hfw, haw⟩ := view_appT m a hA.1.1 h hh hvw hg
+  obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hvw hg
   rw [inst1LiftArmApp]
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lAppW.arm1 n m h d v fu)
     (fun hr => by rw [i1lAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
@@ -665,7 +665,7 @@ theorem i1lLamArm_ok (hvw : viewOK m h 28) (hg : h >>> 28 = 5) :
         (decE (tfld m LAM (tierW h) (idxW h) 1))) m m' a h d v fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [i1lLamW] at hb; simp [hd1] at hb
-  obtain ⟨-, hfw, haw⟩ := view_lamT m a hA.1.1 h hh hvw hg
+  obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1.1 h hh hvw hg
   rw [inst1LiftArmLam]
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lLamW.arm1 n m h d v fu hd1)
     (fun hr => by rw [i1lLamW]; simp [hd1, hr]) (fun hr hh0 hb => ?_) hb
@@ -689,7 +689,7 @@ theorem i1lForallArm_ok (hvw : viewOK m h 30) (hg : h >>> 28 = 6) :
         (decE (tfld m FORALL (tierW h) (idxW h) 1))) m m' a h d v fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [i1lForallW] at hb; simp [hd1] at hb
-  obtain ⟨-, hfw, haw⟩ := view_forallT m a hA.1.1 h hh hvw hg
+  obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1.1 h hh hvw hg
   rw [inst1LiftArmForallE]
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lForallW.arm1 n m h d v fu hd1)
     (fun hr => by rw [i1lForallW]; simp [hd1, hr]) (fun hr hh0 hb => ?_) hb
@@ -714,7 +714,7 @@ theorem i1lLetArm_ok (hvw : viewOK m h 20) (hg : h >>> 28 = 7) :
         (decE (tfld m LET (tierW h) (idxW h) 2))) m m' a h d v fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [i1lLetW] at hb; simp [hd1] at hb
-  obtain ⟨-, htw, hvw', hbw⟩ := view_letT m a hA.1.1 h hh hvw hg
+  obtain ⟨-, htw, hvw', hbw⟩ := view_let m a hA.1.1 h hh hvw hg
   rw [inst1LiftArmLet]
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lLetW.arm1 n m h d v fu hd1)
     (fun hr => by rw [i1lLetW]; simp [hd1, hr]) (fun hr hh0 hb => ?_) hb
@@ -743,7 +743,7 @@ theorem i1lProjArm_ok (hvw : viewOK m h 32) (hg : h >>> 28 = 9) :
         (tfld m PROJ (tierW h) (idxW h) 1).toNat
         (decE (tfld m PROJ (tierW h) (idxW h) 2))) m m' a h d v fu r := by
   intro hb
-  obtain ⟨-, -, hew⟩ := view_projT m a hA.1.1 h hh hvw hg
+  obtain ⟨-, -, hew⟩ := view_proj m a hA.1.1 h hh hvw hg
   rw [inst1LiftArmProj]
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lProjW.arm1 n m h d v fu)
     (fun hr => by rw [i1lProjW]; simp [hr]) (fun hr hh0 hb => ?_) hb

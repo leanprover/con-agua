@@ -597,7 +597,7 @@ theorem lbvarArm_ok (hg : h >>> 28 = 0) :
     rw [ilBVarW] at hb; simp only [ne_eq] at hs; simp only [hs, hc, ↓reduceIte, reduceCtorEq] at hb⟩
   rw [StateT.run_bind, viewBVar_run, viewBVar_ok m a hA.1.1 h hh hv, except_ok_bind]
   simp only
-  generalize hJ : rdW (m.arr64 BREC) (idxW h * 2 + tierW h) = J at hb ⊢
+  generalize hJ : tfld m BVAR (tierW h) (idxW h) 0 = J at hb ⊢
   by_cases hj : J < d
   · rw [ilBVarW_lt n m h d o l fu hv (hJ ▸ hj)] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)

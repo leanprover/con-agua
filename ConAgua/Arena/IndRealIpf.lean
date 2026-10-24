@@ -72,7 +72,7 @@ def ipfS (m : Mem) (p : Word) : Option Word :=
   if 4294967295 < p then none
   else if p >>> 28 ≠ 1 then some 0
   else if tierW p ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (36 + tierW p) ≤ idxW p then none
+  else if tcnt m NSTR (tierW p) ≤ idxW p then none
   else some (ipfStrW m (nsO m (tierW p) (idxW p)) (nsL m (tierW p) (idxW p)))
 
 /-- `is_proj_fn_shape`'s body. -/
@@ -80,7 +80,7 @@ def ipfW (m : Mem) (n : Word) : Option Word :=
   if 4294967295 < n then none
   else if n >>> 28 ≠ 2 then some 0
   else if tierW n ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (38 + tierW n) ≤ idxW n then none
+  else if tcnt m NNUM (tierW n) ≤ idxW n then none
   else ipfS m (nnQ m (tierW n) (idxW n))
 
 set_option maxHeartbeats 3200000 in

@@ -85,21 +85,21 @@ def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 6, 40, LsTag.list⟩
 theorem lsSch_wf : lsSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 LSREC) (i * 6 + t * 3) := by
+theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = tfld m LS t i 0 := by
   simp [fld, Schema.ad, lsSch]
 theorem fld_ls (m : Mem) (t i f : Word) :
     fld lsSch m t i f = rdW (m.arr64 LSREC) (i * 6 + t * 3 + f) := rfl
 
 /-- The offset and length words of node `i` of tier `t`. -/
-abbrev lsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3)
-abbrev lsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 LSREC) (i * 6 + t * 3 + 1)
+abbrev lsO (m : Mem) (t i : Word) : Word := tfld m LS t i 0
+abbrev lsL (m : Mem) (t i : Word) : Word := tfld m LS t i 1
 
 /-- Node `i` of tier `t` holds the list `k.us`: a slice below the pool top holding its handle
 words, and the slice's hash. -/
 def LsRecRel (m : Mem) (t i : Word) (k : ListNode) : Prop :=
   (lsO m t i).toNat + (lsL m t i).toNat ≤ m.top.toNat ∧
   sliceL (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us ∧
-  rdW (m.arr64 LSREC) (i * 6 + t * 3 + 2) = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
+  tfld m LS t i 2 = hashN (m.arr64 POOL) (lsO m t i).toNat (lsL m t i).toNat
 
 /-- **The state relation** of the level-list store: the library's relation for its two tables. -/
 def LsR (m : Mem) (a : AState) : Prop :=

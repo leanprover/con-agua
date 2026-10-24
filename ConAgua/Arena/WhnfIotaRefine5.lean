@@ -46,9 +46,9 @@ theorem icfCheck_spec (p : Prog) (hp : p.lookup "iota_certs_full_check" = some i
 /-- Model of `iota_certs_full_parts`. -/
 def icfPartsW (m : Mem) (h : Word) : Option (List Word) :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
-  else some [rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2),
-    rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)]
+  else if tcnt m FORALL (tierW h) ≤ idxW h then none
+  else some [tfld m FORALL (tierW h) (idxW h) 0,
+    tfld m FORALL (tierW h) (idxW h) 1]
 
 theorem icfParts_spec (p : Prog) (hp : p.lookup "iota_certs_full_parts" = some iotaCertsFullPartsL)
     (n : Nat) (s₀ : St) (h : Word) :

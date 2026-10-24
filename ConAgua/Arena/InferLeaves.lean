@@ -50,15 +50,15 @@ def ensureSortK (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | some (r, m₁) =>
     if r.headD 0 >>> 28 ≠ 2 then none
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-    else if rdW (m₁.arr64 CTL) (16 + tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else some (rdW (m₁.arr64 SOREC) (idxW (r.headD 0) * 2 + tierW (r.headD 0)), m₁)
+    else if tcnt m₁ SORT (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
+    else some (tfld m₁ SORT (tierW (r.headD 0)) (idxW (r.headD 0)) 0, m₁)
 
 theorem ensureSortK_ok (m₁ : Mem) (r : List Word) (h1 : r.headD 0 >>> 28 = 2)
     (h2 : ¬ (tierW (r.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0))
-    (h3 : idxW (r.headD 0) < rdW (m₁.arr64 CTL) (16 + tierW (r.headD 0))) :
+    (h3 : idxW (r.headD 0) < tcnt m₁ SORT (tierW (r.headD 0))) :
     ensureSortK (some (r, m₁)) =
-      some (rdW (m₁.arr64 SOREC) (idxW (r.headD 0) * 2 + tierW (r.headD 0)), m₁) := by
-  have h3' : ¬ rdW (m₁.arr64 CTL) (16 + tierW (r.headD 0)) ≤ idxW (r.headD 0) := by
+      some (tfld m₁ SORT (tierW (r.headD 0)) (idxW (r.headD 0)) 0, m₁) := by
+  have h3' : ¬ tcnt m₁ SORT (tierW (r.headD 0)) ≤ idxW (r.headD 0) := by
     simpa using h3
   simp only [ensureSortK, h1, h2, h3', ne_eq, not_true_eq_false, ↓reduceIte]
 
@@ -449,8 +449,8 @@ def litArmK (p : Prog) (n : Nat) (k : Word) (res : Option (List Word × Mem)) : 
 /-- **The model of `infer_lit`.** -/
 def inferLitK (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
   if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e then none
-  else if rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) = 0 then
+  else if tcnt m LIT (tierW e) ≤ idxW e then none
+  else if tfld m LIT (tierW e) (idxW e) 0 = 0 then
     litArmK p n 1 (callW p n "nat_lit_supported" [vis] m)
   else litArmK p n 5 (callW p n "str_lit_supported" [vis] m)
 
@@ -464,17 +464,17 @@ theorem litArmK_ok (h : r.headD 0 ≠ 0) :
   simp only [litArmK, h, ↓reduceIte]
 
 theorem inferLitK_nat (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : idxW e < rdW (m.arr64 CTL) (2 + tierW e))
-    (h3 : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) = 0) :
+    (h2 : idxW e < tcnt m LIT (tierW e))
+    (h3 : tfld m LIT (tierW e) (idxW e) 0 = 0) :
     inferLitK p n m vis e = litArmK p n 1 (callW p n "nat_lit_supported" [vis] m) := by
-  have h2' : ¬ rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e := by simpa using h2
+  have h2' : ¬ tcnt m LIT (tierW e) ≤ idxW e := by simpa using h2
   simp only [inferLitK, h1, h2', h3, ↓reduceIte]
 
 theorem inferLitK_str (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : idxW e < rdW (m.arr64 CTL) (2 + tierW e))
-    (h3 : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) ≠ 0) :
+    (h2 : idxW e < tcnt m LIT (tierW e))
+    (h3 : tfld m LIT (tierW e) (idxW e) 0 ≠ 0) :
     inferLitK p n m vis e = litArmK p n 5 (callW p n "str_lit_supported" [vis] m) := by
-  have h2' : ¬ rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e := by simpa using h2
+  have h2' : ¬ tcnt m LIT (tierW e) ≤ idxW e := by simpa using h2
   simp only [inferLitK, h1, h2', h3, ↓reduceIte]
 
 end litK
@@ -562,7 +562,7 @@ theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees
   have hl : l = k.l := by simpa using hk
   subst hl
   obtain ⟨l⟩ := k
-  by_cases h3 : rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4) = 0
+  by_cases h3 : tfld s.mem LIT (tierW e) (idxW e) 0 = 0
   · rw [if_pos h3] at hW
     cases l with
     | strVal str => simp [RecRel, StrRec, h3] at hrel

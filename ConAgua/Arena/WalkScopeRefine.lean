@@ -199,19 +199,19 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
   by_cases g1 : h >>> 28 = 1
   · have hvo := vok 26 fun hc => by rw [wsNodeW] at hb; simp [hs, g1, hc] at hb
     obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
-    by_cases hl : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d
+    by_cases hl : tfld m FVAR (tierW h) (idxW h) 0 < d
     · rw [wsNodeW_fvar_lt n m h d c g1 hvo hl] at hb
       obtain ⟨memo', ha, hM', hle, hf⟩ := ih m m' a memo _ _ c r hD hM hty hb
       refine ⟨memo', ?_, hM', hle, hf⟩
       rw [wsNodeA_run _ _ _ _ a _ hv]
-      have : (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat < d.toNat := UInt64.lt_iff_toNat_lt.mp hl
+      have : (tfld m FVAR (tierW h) (idxW h) 0).toNat < d.toNat := UInt64.lt_iff_toNat_lt.mp hl
       simp only [wsArm, this, ↓reduceIte]
       exact ha
     · rw [wsNodeW_fvar_ge n m h d c g1 hvo hl] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       refine ⟨memo, ?_, hM, by decide, MemFrame.refl _ _ _⟩
       rw [wsNodeA_run _ _ _ _ a _ hv]
-      have : ¬ (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat < d.toNat :=
+      have : ¬ (tfld m FVAR (tierW h) (idxW h) 0).toNat < d.toNat :=
         fun e => hl (UInt64.lt_iff_toNat_lt.mpr e)
       simp only [wsArm, this, ↓reduceIte]; rfl
   by_cases g4 : h >>> 28 = 4
@@ -238,7 +238,7 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
     rw [wsNodeW_let n m h d c hvo g7] at hb
     rw [wsNodeA_run _ _ _ _ a _ hv]
     simp only [wsArm, wscopedBGoArmLet]
-    cases h1 : wscW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d c with
+    cases h1 : wscW n m (tfld m LET (tierW h) (idxW h) 0) d c with
     | none => simp only [h1, wsLetK, reduceCtorEq] at hb
     | some q =>
       obtain ⟨x, m₁⟩ := q

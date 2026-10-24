@@ -100,9 +100,9 @@ inductive StepOut
 def lamW (p : Prog) (k : Nat) (m : Mem) (v a ao an i top : Word) : Option StepOut :=
   if v >>> 28 = 5 then
     if tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v then none
+    else if tcnt m LAM (tierW v) ≤ idxW v then none
     else
-      match callW p k "beta_peel" [rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1), a, ao, an,
+      match callW p k "beta_peel" [tfld m LAM (tierW v) (idxW v) 1, a, ao, an,
           i + 1] m with
       | none => none
       | some (r, m₁) => some (.ret (r.headD 0) (r.tail.headD 0) (m₁.set64 CTL 136 top))
@@ -345,16 +345,16 @@ theorem bodyW_lam {p : Prog} {k : Nat} {m : Mem} {mode vis d v hd vo vn same ao 
     (h : v >>> 28 = 5) :
     bodyW p k m mode vis d v hd vo vn same ao an i top =
       if tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v then none
+      else if tcnt m LAM (tierW v) ≤ idxW v then none
       else
-        match callW p k "beta_peel" [rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1),
+        match callW p k "beta_peel" [tfld m LAM (tierW v) (idxW v) 1,
             rdW (m.arr64 SPN) (ao + i), ao, an, i + 1] m with
         | none => none
         | some (r, m₁) => some (.ret (r.headD 0) (r.tail.headD 0) (m₁.set64 CTL 136 top)) := by
   simp only [bodyW, lamW, h, ↓reduceIte]
   by_cases c1 : tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1]
-  by_cases c2 : rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v
+  by_cases c2 : tcnt m LAM (tierW v) ≤ idxW v
   · simp [c1, c2]
   simp only [c1, c2, ↓reduceIte]
   rcases callW p k "beta_peel" _ m with _ | ⟨r, m₁⟩ <;> rfl
@@ -518,9 +518,9 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       by_cases hlam : v >>> 28 = 5
       · rw [appFull_body hlt, bodyW_lam hlam] at hF
         have c1 : ¬ (tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c1 => by simp [c1] at hF
-        have c2 : ¬ rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v := fun c2 => by simp [c1, c2] at hF
+        have c2 : ¬ tcnt m LAM (tierW v) ≤ idxW v := fun c2 => by simp [c1, c2] at hF
         simp only [c1, c2, ↓reduceIte] at hF
-        cases hcall : callW p k "beta_peel" [rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1),
+        cases hcall : callW p k "beta_peel" [tfld m LAM (tierW v) (idxW v) 1,
             rdW (m.arr64 SPN) (ao + i), ao, an, i + 1] m with
         | none => rw [hcall] at hF; simp at hF
         | some q =>
@@ -542,9 +542,9 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           rw [decE_tag_lam v hv]; simp [hlam]
         have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v)
             (decE hd) va (same != 0) args nodes i.toNat).run a =
-            .ok (AM.res (betaPeel (decE (rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1)))
+            .ok (AM.res (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
               #[decE (rdW (m.arr64 SPN) (ao + i))] args (i.toNat + 1)) a,
-              AM.st (betaPeel (decE (rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1)))
+              AM.st (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
               #[decE (rdW (m.arr64 SPN) (ao + i))] args (i.toNat + 1)) a) := by
           rw [whnfApp]
           simp only [hlt', dite_true, hlamtag, ite_true, StateT.run_bind, viewBind_run', hvb,

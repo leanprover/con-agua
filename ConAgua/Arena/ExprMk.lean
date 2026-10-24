@@ -65,23 +65,23 @@ in bits 0‥14, fvar range in bits 15‥29, `derFW` below): `& 32767` is `packBF
 def derBW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 0 then
-    if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then 0
-    else satSuccW (rdW (m.arr64 BREC) (idxW h * 2 + tierW h))
+    if tcnt m BVAR (tierW h) ≤ idxW h then 0
+    else satSuccW (tfld m BVAR (tierW h) (idxW h) 0)
   else if h >>> 28 = 4 then
-    if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 ADER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxW h then 0
+    else tfld m APP_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 5 then
-    if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 LADER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m LAM (tierW h) ≤ idxW h then 0
+    else tfld m LAM_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 6 then
-    if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 FADER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m FORALL (tierW h) ≤ idxW h then 0
+    else tfld m FORALL_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 7 then
-    if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 LEDER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m LET (tierW h) ≤ idxW h then 0
+    else tfld m LET_DER (tierW h) (idxW h) 0 &&& 32767
   else if h >>> 28 = 9 then
-    if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then 0
-    else rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) &&& 32767
+    if tcnt m PROJ (tierW h) ≤ idxW h then 0
+    else tfld m PROJ_DER (tierW h) (idxW h) 0 &&& 32767
   else 0
 
 /-- **The model of the second result of `der_b`: the fvar range** (lane `exprops3`). `bvar`/`sort`/
@@ -91,23 +91,23 @@ read the SAME packed word shifted and masked (`(>> 15) & 32767` is `packBFL_fvar
 def derFW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 1 then
-    if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then 0
-    else satSuccW (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
+    if tcnt m FVAR (tierW h) ≤ idxW h then 0
+    else satSuccW (tfld m FVAR (tierW h) (idxW h) 0)
   else if h >>> 28 = 4 then
-    if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 ADER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxW h then 0
+    else (tfld m APP_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 5 then
-    if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 LADER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m LAM (tierW h) ≤ idxW h then 0
+    else (tfld m LAM_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 6 then
-    if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 FADER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m FORALL (tierW h) ≤ idxW h then 0
+    else (tfld m FORALL_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 7 then
-    if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 LEDER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m LET (tierW h) ≤ idxW h then 0
+    else (tfld m LET_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else if h >>> 28 = 9 then
-    if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then 0
-    else (rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) >>> 15) &&& 32767
+    if tcnt m PROJ (tierW h) ≤ idxW h then 0
+    else (tfld m PROJ_DER (tierW h) (idxW h) 0 >>> 15) &&& 32767
   else 0
 
 /-- con-ron: none — reads L's derived-range array (the twin's `bvarOfData (derived h)`); returns the

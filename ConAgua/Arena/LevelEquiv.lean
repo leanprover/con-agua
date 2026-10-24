@@ -281,8 +281,8 @@ L code aborts (a tag other than `0`, a closed scratch tier, an index past the co
 def lsNodeW (m : Mem) (h : Word) : List Word :=
   if h >>> 28 ≠ 0 then []
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
-  else if rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h then []
-  else [rdW (m.arr64 LSREC) (idxW h * 6 + tierW h * 3), rdW (m.arr64 LSREC) (idxW h * 6 + tierW h * 3 + 1)]
+  else if tcnt m LS (tierW h) ≤ idxW h then []
+  else [tfld m LS (tierW h) (idxW h) 0, tfld m LS (tierW h) (idxW h) 1]
 
 /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {

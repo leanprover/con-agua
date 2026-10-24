@@ -83,12 +83,12 @@ theorem sortSch_wf : sortSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_sort0 (m : Mem) (t i : Word) :
-    fld sortSch m t i 0 = rdW (m.arr64 SOREC) (i * 2 + t) := by
+    fld sortSch m t i 0 = tfld m SORT t i 0 := by
   simp [fld, Schema.ad, sortSch]
 
 /-- Node `i` of tier `t` holds `sort k.u`: its word is the child's handle word. -/
 def SoRecRel (m : Mem) (t i : Word) (k : SortNode) : Prop :=
-  rdW (m.arr64 SOREC) (i * 2 + t) = k.u.word.toUInt64
+  tfld m SORT t i 0 = k.u.word.toUInt64
 
 /-- **The state relation** of the `sort` store: the library's relation for the two `sort`
 tables. -/

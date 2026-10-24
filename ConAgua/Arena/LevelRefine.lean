@@ -73,12 +73,12 @@ def succSch : Schema := ⟨SREC, SSLOT, 1, 2, 6, LTag.succ⟩
 theorem succSch_wf : succSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SREC) (i * 2 + t) := by
+theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = tfld m SUCC t i 0 := by
   simp [fld, Schema.ad, succSch]
 
 /-- Node `i` of tier `t` holds `succ k.u`: its word is the child's handle word. -/
 def SRecRel (m : Mem) (t i : Word) (k : SuccNode) : Prop :=
-  rdW (m.arr64 SREC) (i * 2 + t) = k.u.word.toUInt64
+  tfld m SUCC t i 0 = k.u.word.toUInt64
 
 /-- **The state relation** of the `succ` store: the library's relation for the level store's two
 `succ` tables. -/

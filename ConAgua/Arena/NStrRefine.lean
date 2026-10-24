@@ -82,15 +82,15 @@ theorem nstrSch_wf : nstrSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nstr0 (m : Mem) (t i : Word) :
-    fld nstrSch m t i 0 = rdW (m.arr64 NSREC) (i * 8 + t * 4) := by
+    fld nstrSch m t i 0 = tfld m NSTR t i 0 := by
   simp [fld, Schema.ad, nstrSch]
 theorem fld_nstr (m : Mem) (t i f : Word) :
     fld nstrSch m t i f = rdW (m.arr64 NSREC) (i * 8 + t * 4 + f) := rfl
 
 /-- The prefix, offset and length words of node `i` of tier `t`. -/
-abbrev nsQ (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4)
-abbrev nsO (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 1)
-abbrev nsL (m : Mem) (t i : Word) : Word := rdW (m.arr64 NSREC) (i * 8 + t * 4 + 2)
+abbrev nsQ (m : Mem) (t i : Word) : Word := tfld m NSTR t i 0
+abbrev nsO (m : Mem) (t i : Word) : Word := tfld m NSTR t i 1
+abbrev nsL (m : Mem) (t i : Word) : Word := tfld m NSTR t i 2
 
 /-- Node `i` of tier `t` holds `str k.pre k.s`: the prefix's handle word, a slice below the pool
 top holding the string's bytes, and the hash. -/
@@ -98,7 +98,7 @@ def NsRecRel (m : Mem) (t i : Word) (k : StrNode) : Prop :=
   nsQ m t i = k.pre.word.toUInt64 ∧
   (nsO m t i).toNat + (nsL m t i).toNat ≤ m.top.toNat ∧
   sliceL (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s ∧
-  rdW (m.arr64 NSREC) (i * 8 + t * 4 + 3) =
+  tfld m NSTR t i 3 =
     nstrHashW (nsQ m t i) (hashN (m.arr64 POOL) (nsO m t i).toNat (nsL m t i).toNat)
 
 /-- **The state relation** of the name `str` table: the library's relation for its two tables. -/

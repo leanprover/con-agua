@@ -239,7 +239,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   · simp [g0] at hne
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [g0, hsc] at hne
-  by_cases hc : rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h
+  by_cases hc : tcnt m LS (tierW h) ≤ idxW h
   · simp [g0, hsc, hc] at hne
   have hview : a.store.lss.view (decI h) =
       (if tierW h = 0 then a.store.lss.pers else a.store.lss.scr).get (decI h) := by

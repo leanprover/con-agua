@@ -400,10 +400,10 @@ def peelLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
           | none => none
           | some (r₂, m₂) => some (.ret 1 (r₂.headD 0) (m₂.set64 CTL 136 co))
       else if tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if rdW (m.arr64 CTL) (28 + tierW t) ≤ idxW t then none
+      else if tcnt m LAM (tierW t) ≤ idxW t then none
       else if m.len64 SPN ≤ co + cn then none
       else peelLoop p k ((m.set64 SPN (co + cn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
-          (co + cn + 1)) (rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2 + 1)) ao an (i + 1) co (cn + 1)
+          (co + cn + 1)) (tfld m LAM (tierW t) (idxW t) 1) ao an (i + 1) co (cn + 1)
     else some (.exit t cn m)
 
 /-- The end of a loop run, as the model's: a `return`, or the exit with the tail's locals. -/
@@ -509,10 +509,10 @@ theorem peelFull_ret (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) (
 
 theorem peelFull_step (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) (h : i < an)
     (ht : ¬ t >>> 28 ≠ 5) (h1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (h2 : ¬ rdW (m.arr64 CTL) (28 + tierW t) ≤ idxW t) (h3 : ¬ m.len64 SPN ≤ co + cn) :
+    (h2 : ¬ tcnt m LAM (tierW t) ≤ idxW t) (h3 : ¬ m.len64 SPN ≤ co + cn) :
     peelFull p n (k + 1) m t ao an i co cn =
       peelFull p n k ((m.set64 SPN (co + cn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
-          (co + cn + 1)) (rdW (m.arr64 LAREC) (idxW t * 4 + tierW t * 2 + 1)) ao an (i + 1) co
+          (co + cn + 1)) (tfld m LAM (tierW t) (idxW t) 1) ao an (i + 1) co
           (cn + 1) := by
   simp only [peelFull, peelLoop, h, ht, h1, h2, h3, ↓reduceIte, ne_eq, not_false_eq_true,
     not_true_eq_false]
@@ -581,7 +581,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
       · -- the λ step: the argument is pushed and the loop goes on with the body
         have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun h => by
           simp [peelFull, peelLoop, hlt, ht5, h] at hF
-        have hc2 : ¬ rdW (m.arr64 CTL) (28 + tierW t) ≤ idxW t := fun h => by
+        have hc2 : ¬ tcnt m LAM (tierW t) ≤ idxW t := fun h => by
           simp [peelFull, peelLoop, hlt, ht5, hc1, h] at hF
         have hc3 : ¬ m.len64 SPN ≤ co + cn := fun h => by
           simp [peelFull, peelLoop, hlt, ht5, hc1, hc2, h] at hF

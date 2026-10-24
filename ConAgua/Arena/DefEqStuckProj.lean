@@ -329,16 +329,16 @@ def ppK (m : Mem) : Option (Word × Mem) :=
   if a >>> 28 ≠ 9 then some (0, m)
   else if b >>> 28 ≠ 9 then some (0, m)
   else if tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (32 + tierW a) ≤ idxW a then none
+  else if tcnt m PROJ (tierW a) ≤ idxW a then none
   else if tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (32 + tierW b) ≤ idxW b then none
-  else if rdW (m.arr64 PJREC) (idxW a * 6 + tierW a * 3) ≠ rdW (m.arr64 PJREC) (idxW b * 6 + tierW b * 3)
+  else if tcnt m PROJ (tierW b) ≤ idxW b then none
+  else if tfld m PROJ (tierW a) (idxW a) 0 ≠ tfld m PROJ (tierW b) (idxW b) 0
     then some (0, m)
-  else if rdW (m.arr64 PJREC) (idxW a * 6 + tierW a * 3 + 1) ≠
-      rdW (m.arr64 PJREC) (idxW b * 6 + tierW b * 3 + 1) then some (0, m)
+  else if tfld m PROJ (tierW a) (idxW a) 1 ≠
+      tfld m PROJ (tierW b) (idxW b) 1 then some (0, m)
   else call1W p n "lazy_delta_proj_reduction" [mode, vis, d,
-    rdW (m.arr64 PJREC) (idxW a * 6 + tierW a * 3), rdW (m.arr64 PJREC) (idxW a * 6 + tierW a * 3 + 1),
-    rdW (m.arr64 PJREC) (idxW a * 6 + tierW a * 3 + 2), rdW (m.arr64 PJREC) (idxW b * 6 + tierW b * 3 + 2)] m
+    tfld m PROJ (tierW a) (idxW a) 0, tfld m PROJ (tierW a) (idxW a) 1,
+    tfld m PROJ (tierW a) (idxW a) 2, tfld m PROJ (tierW b) (idxW b) 2] m
 
 end ppK
 
@@ -439,12 +439,12 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
   have hboth : ((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = true := by
     rw [htag a ha, htag b hb]; simp [g1', g2']
   refine coreRef_congr (pp_both _ _ fe _ _ _ a₀ hboth _ _ _ _ _ _ hva hvb) ?_
-  generalize rdW (s.mem.arr64 PJREC) (idxW a * 6 + tierW a * 3) = x1 at hW hx1
-  generalize rdW (s.mem.arr64 PJREC) (idxW b * 6 + tierW b * 3) = y1 at hW hy1
-  generalize rdW (s.mem.arr64 PJREC) (idxW a * 6 + tierW a * 3 + 1) = x2 at hW
-  generalize rdW (s.mem.arr64 PJREC) (idxW b * 6 + tierW b * 3 + 1) = y2 at hW
-  generalize rdW (s.mem.arr64 PJREC) (idxW a * 6 + tierW a * 3 + 2) = x3 at hW hx3
-  generalize rdW (s.mem.arr64 PJREC) (idxW b * 6 + tierW b * 3 + 2) = y3 at hW hy3
+  generalize tfld s.mem PROJ (tierW a) (idxW a) 0 = x1 at hW hx1
+  generalize tfld s.mem PROJ (tierW b) (idxW b) 0 = y1 at hW hy1
+  generalize tfld s.mem PROJ (tierW a) (idxW a) 1 = x2 at hW
+  generalize tfld s.mem PROJ (tierW b) (idxW b) 1 = y2 at hW
+  generalize tfld s.mem PROJ (tierW a) (idxW a) 2 = x3 at hW hx3
+  generalize tfld s.mem PROJ (tierW b) (idxW b) 2 = y3 at hW hy3
   by_cases e1 : x1 ≠ y1
   · rw [if_pos e1] at hW
     obtain ⟨hr, hm⟩ := some_pair_inj hW

@@ -711,9 +711,9 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
 def irHeadW (m : Mem) (hh : Word) : Option (List Word) :=
   if hh >>> 28 ≠ 3 then some [0, 0, 0]
   else if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
-  else some [1, rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2),
-    rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2 + 1)]
+  else if tcnt m CONST (tierW hh) ≤ idxW hh then none
+  else some [1, tfld m CONST (tierW hh) (idxW hh) 0,
+    tfld m CONST (tierW hh) (idxW hh) 1]
 
 theorem iotaRecHead_spec (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL) (k : Nat)
     (s₀ : St) (hh : Word) :

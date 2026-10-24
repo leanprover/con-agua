@@ -164,7 +164,7 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
     ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids := by
   have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
-  have hc : ¬ rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h := fun c => hne (by
+  have hc : ¬ tcnt m LS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (by simp only [cntC, lsCS]; simpa using hc)

@@ -86,15 +86,15 @@ def constSch : Schema := ⟨CREC, CSLOT, 2, 4, 18, ETag.const⟩
 theorem constSch_wf : constSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 CREC) (i * 4 + t * 2) := by
+theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = tfld m CONST t i 0 := by
   simp [fld, Schema.ad, constSch]
 theorem fld_const (m : Mem) (t i f : Word) :
     fld constSch m t i f = rdW (m.arr64 CREC) (i * 4 + t * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `const` node `k`: its two handle words. -/
 def CeRecRel (m : Mem) (t i : Word) (k : ConstNode) : Prop :=
-  rdW (m.arr64 CREC) (i * 4 + t * 2) = k.n.word.toUInt64 ∧
-  rdW (m.arr64 CREC) (i * 4 + t * 2 + 1) = k.us.word.toUInt64
+  tfld m CONST t i 0 = k.n.word.toUInt64 ∧
+  tfld m CONST t i 1 = k.us.word.toUInt64
 
 /-- **The state relation** of the `const` store: the library's relation for the two `const` tables. -/
 def ConstR (m : Mem) (a : AState) : Prop :=

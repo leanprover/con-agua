@@ -88,16 +88,16 @@ theorem projSch_wf : projSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_pj0 (m : Mem) (t i : Word) :
-    fld projSch m t i 0 = rdW (m.arr64 PJREC) (i * 6 + t * 3) := by
+    fld projSch m t i 0 = tfld m PROJ t i 0 := by
   simp [fld, Schema.ad, projSch]
 theorem fld_pj (m : Mem) (t i f : Word) :
     fld projSch m t i f = rdW (m.arr64 PJREC) (i * 6 + t * 3 + f) := rfl
 
 /-- Node `i` of tier `t` holds `proj k.n k.i k.e`: the two handle words and the index word. -/
 def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
-  rdW (m.arr64 PJREC) (i * 6 + t * 3) = k.n.word.toUInt64 ∧
-  (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
-  rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
+  tfld m PROJ t i 0 = k.n.word.toUInt64 ∧
+  (tfld m PROJ t i 1).toNat = k.i ∧
+  tfld m PROJ t i 2 = k.e.word.toUInt64
 
 /-- **The state relation** of the `proj` store: the library's relation for the two `proj`
 tables. -/

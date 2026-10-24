@@ -98,14 +98,14 @@ def strK1 (co uo : Word) (res : Option (List Word × Mem)) : Option (Word × Mem
 /-- **The model of `stuck_str`.** -/
 def strK (fo : Word) (m : Mem) : Option (Word × Mem) :=
   if tierW lt ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (2 + tierW lt) ≤ idxW lt then none
-  else if rdW (m.arr64 REC) (idxW lt * 8 + tierW lt * 4) ≠ 1 then
+  else if tcnt m LIT (tierW lt) ≤ idxW lt then none
+  else if tfld m LIT (tierW lt) (idxW lt) 0 ≠ 1 then
     call1W p n "stuck_irrel" [mode, vis, d, a, b] m
   else if fo >>> 28 ≠ 3 then call1W p n "stuck_irrel" [mode, vis, d, a, b] m
   else if tierW fo ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if rdW (m.arr64 CTL) (18 + tierW fo) ≤ idxW fo then none
-  else strK1 p n mode vis d a b side lt (rdW (m.arr64 CREC) (idxW fo * 4 + tierW fo * 2))
-    (rdW (m.arr64 CREC) (idxW fo * 4 + tierW fo * 2 + 1)) (callW p n "pin_word" [52] m)
+  else if tcnt m CONST (tierW fo) ≤ idxW fo then none
+  else strK1 p n mode vis d a b side lt (tfld m CONST (tierW fo) (idxW fo) 0)
+    (tfld m CONST (tierW fo) (idxW fo) 1) (callW p n "pin_word" [52] m)
 
 end strK
 
@@ -169,11 +169,11 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
   subst hkl
   cases kl with
   | natVal N =>
-    have h0 : rdW (s.mem.arr64 REC) (idxW lt * 8 + tierW lt * 4) = 0 := hrec.1
+    have h0 : tfld s.mem LIT (tierW lt) (idxW lt) 0 = 0 := hrec.1
     simp only [h0, ne_eq, show ¬ ((0 : Word) = 1) by decide, not_false_eq_true, ↓reduceIte] at hW
     exact hirr a₀ s.mem M hS hW
   | strVal st =>
-    have h0 : rdW (s.mem.arr64 REC) (idxW lt * 8 + tierW lt * 4) = 1 := hrec.1
+    have h0 : tfld s.mem LIT (tierW lt) (idxW lt) 0 = 1 := hrec.1
     simp only [h0, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
     · simp only [h3, not_false_eq_true, ↓reduceIte] at hW
@@ -186,8 +186,8 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     obtain ⟨h5, hW⟩ := of_ite_none hW
     obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR fo hfo ⟨h4, by simpa using h5⟩ h3
     have hct : ((decE fo).tag == ETag.const) = true := by rw [tag_beq_const _ hfo]; simp [h3]
-    generalize rdW (s.mem.arr64 CREC) (idxW fo * 4 + tierW fo * 2) = co at hnw hW hv
-    generalize rdW (s.mem.arr64 CREC) (idxW fo * 4 + tierW fo * 2 + 1) = uo at huw hW hv
+    generalize tfld s.mem CONST (tierW fo) (idxW fo) 0 = co at hnw hW hv
+    generalize tfld s.mem CONST (tierW fo) (idxW fo) 1 = uo at huw hW hv
     -- the pins
     obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
     obtain ⟨t₁, ht₁, hm₁, -, hr₁⟩ := triple_of_callW (s₀ := ⟨s.mem, Locals.init []⟩)

@@ -75,15 +75,15 @@ def maxSch : Schema := ⟨MREC, MSLOT, 2, 4, 10, LTag.max⟩
 theorem maxSch_wf : maxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
-theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 MREC) (i * 4 + t * 2) := by
+theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = tfld m MAX t i 0 := by
   simp [fld, Schema.ad, maxSch]
 theorem fld_max (m : Mem) (t i f : Word) :
     fld maxSch m t i f = rdW (m.arr64 MREC) (i * 4 + t * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `max` node `k`: its two handle words. -/
 def MRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
-  rdW (m.arr64 MREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
-  rdW (m.arr64 MREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+  tfld m MAX t i 0 = k.u.word.toUInt64 ∧
+  tfld m MAX t i 1 = k.v.word.toUInt64
 
 /-- **The state relation** of the `max` store: the library's relation for the two `max` tables. -/
 def MaxR (m : Mem) (a : AState) : Prop :=

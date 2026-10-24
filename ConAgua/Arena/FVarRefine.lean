@@ -86,7 +86,7 @@ theorem fvarSch_wf : fvarSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_fvar0 (m : Mem) (t i : Word) :
-    fld fvarSch m t i 0 = rdW (m.arr64 FVREC) (i * 4 + t * 2) := by
+    fld fvarSch m t i 0 = tfld m FVAR t i 0 := by
   simp [fld, Schema.ad, fvarSch]
 theorem fld_fvar (m : Mem) (t i f : Word) :
     fld fvarSch m t i f = rdW (m.arr64 FVREC) (i * 4 + t * 2 + f) := rfl
@@ -94,8 +94,8 @@ theorem fld_fvar (m : Mem) (t i f : Word) :
 /-- Node `i` of tier `t` holds `fvar k.idx k.ty`: its first word is the index, its second the
 child's handle word. -/
 def FVRecRel (m : Mem) (t i : Word) (k : FVarNode) : Prop :=
-  (rdW (m.arr64 FVREC) (i * 4 + t * 2)).toNat = k.idx ∧
-  rdW (m.arr64 FVREC) (i * 4 + t * 2 + 1) = k.ty.word.toUInt64
+  (tfld m FVAR t i 0).toNat = k.idx ∧
+  tfld m FVAR t i 1 = k.ty.word.toUInt64
 
 /-- **The state relation** of the `fvar` store: the library's relation for the two `fvar`
 tables. -/

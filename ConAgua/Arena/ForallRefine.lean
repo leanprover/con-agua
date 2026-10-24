@@ -102,15 +102,15 @@ theorem forallSch_wf : forallSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_fa0 (m : Mem) (t i : Word) :
-    fld forallSch m t i 0 = rdW (m.arr64 FAREC) (i * 4 + t * 2) := by
+    fld forallSch m t i 0 = tfld m FORALL t i 0 := by
   simp [fld, Schema.ad, forallSch]
 theorem fld_fa (m : Mem) (t i f : Word) :
     fld forallSch m t i f = rdW (m.arr64 FAREC) (i * 4 + t * 2 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `forallE` node `k`: its two handle words. -/
 def FaRecRel (m : Mem) (t i : Word) (k : BindNode) : Prop :=
-  rdW (m.arr64 FAREC) (i * 4 + t * 2) = k.ty.word.toUInt64 ∧
-  rdW (m.arr64 FAREC) (i * 4 + t * 2 + 1) = k.body.word.toUInt64
+  tfld m FORALL t i 0 = k.ty.word.toUInt64 ∧
+  tfld m FORALL t i 1 = k.body.word.toUInt64
 
 /-- **The state relation** of the `forallE` store: the library's relation for the two `forallE`
 tables. -/
