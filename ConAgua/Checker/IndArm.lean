@@ -74,10 +74,7 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
 
 /-- **The declaration loop is the pipeline's last stage**, from `AbsKeep` of the arm's callees
 that reach the walks (`loopStage_of_rom`, `indArmSpec_checker`). -/
-theorem loopStage_of_walkKeep
-    (_hK : ∀ bs, RomOK bs → bs = romData ++ bs.drop romData.length →
-      ∀ f ∈ armAbsWalk, AbsKeep (Prog.subPB bs checkerProg) f) :
-    LoopStage checkerProg checkerRels :=
+theorem loopStage_checker : LoopStage checkerProg checkerRels :=
   loopStage_of_rom fun bs hr hpre => indArmSpec_checker bs hr hpre
 
 end L.Checker
