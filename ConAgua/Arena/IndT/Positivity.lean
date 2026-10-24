@@ -364,7 +364,7 @@ variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Opti
 include hq hIlpf henv hOpf hLC hLT in
 /-- **`check_block_positivity`'s model refines `checkBlockPositivity` under `StageC`** (con-ron's
 `checkBlockPositivity_spec`'s preconditions). -/
-theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hcl : closedA p posFreeA posFreeC fs = true)
+theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFreeA posFreeC fs = true)
     (hfa : "check_abs_ctor_sorts_all" ∈ fs) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     {q cvO cvL caO caL : Word} {P : BlockParts} {cvTas : List IConstantVal}
     {css : List (List (IConstantVal × Nat))} {r : List Word} {pP : ConLeche.BlockParts}
@@ -548,7 +548,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hcl : closedA p posFr
   rw [h7, cbpK7_some] at h
   obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (iaa_spec p hP.abs.all (n + 2) _ _ _ _ _ _ _ _) h7
-  have hP7 : PosMR s7.mem := PosMR.ofClosed hcl hfa h7 hP6
+  have hP7 : PosMR s7.mem := PosMR.ofClosed hclP hfa h7 hP6
   have hOb6 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s6.mem := Nat.le_trans hOb4 hg6.1
   have hx16 := hx14.trans c5.ext
   obtain ⟨u7, a7, hrun7, hC7, hg7, hA7⟩ := iaaW_simC hq henv hOpf hLC hLT hP.abs (r1.headD 0) (r6.headD 0) c
@@ -610,7 +610,7 @@ grown, the walk memos still well formed, the kinds (`decKSS`), the normal forms 
 walk's state (`NSB`), the twin's run a `CoreStep`. -/
 @[refines ConRon.Arena.checkBlockPositivity]
 theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) {fs : List FnName}
-    (hcl : closedA p posFreeA posFreeC fs = true) (hfa : "check_abs_ctor_sorts_all" ∈ fs) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (s₀ : St)
+    (hclP : closedA p posFreeA posFreeC fs = true) (hfa : "check_abs_ctor_sorts_all" ∈ fs) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (q cvO cvL caO caL : Word) (P : BlockParts)
     (cvTas : List IConstantVal) (css : List (List (IConstantVal × Nat)))
     (hC : StageC dn vis fe env s₀.mem a₀) (hqd : DecB (fun m => decBS m q.toNat) s₀.mem P.shape)
@@ -637,7 +637,7 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) {fs : List FnName}
       ⊤⦄ := by
   refine triple_post (cbpos_spec p hP.cbp (n + 2) s₀ vis q cvO cvL caO caL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hP hcl hfa n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
+  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hP hclP hfa n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
     hT hct
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
