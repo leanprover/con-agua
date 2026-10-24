@@ -96,9 +96,8 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   intro b hb'
   obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe n m a mo ml c ms hS hms0 hb b hb'
   refine ⟨tm, a', hrun, hS', hg, ?_⟩
-  cases n with
-  | zero => simp [tmaW] at hb'
-  | succ n =>
+  rcases n with _ | n
+  · simp [tmaW] at hb'
   by_cases hcl : c < ml
   · rw [tmaW_hit n m mo ml c hcl] at hb'
     cases hb'
@@ -119,9 +118,8 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     obtain ⟨⟨r0, m0⟩, ho, hb'⟩ := of_K hb' rfl
     rw [tmaK_some] at hb'
     cases hb'
-    cases n with
-    | zero => cases ho
-    | succ n =>
+    rcases n with _ | n
+    · cases ho
     simp only [fuelW_succ] at ho
     simp only [List.headD_cons] at hd ⊢
     exact rec3TmdW_decB ho hS hd
@@ -355,12 +353,11 @@ theorem classRecsRulesOk_spec (p : Prog) (h : CrrProg p) (cR : CallM) (hcR : Cal
     ⦃fun r s' => LocEq s' s₀ ∧ crraW cR n s₀.mem visT visR g rco rcl cgo cgl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.top]
   simp only [callFn, classRecsRulesOkL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, classRecsRulesOkGo_spec p h cR hcR n] <;>
-      finish (gen := 20) [loc_init4, loc_init5, loc_init6]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, classRecsRulesOkGo_spec p h cR hcR n] <;>
+    finish (gen := 20) [loc_init4, loc_init5, loc_init6]
 
 /-! ## The relational lemma -/
 

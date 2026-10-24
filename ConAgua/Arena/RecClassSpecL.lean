@@ -84,9 +84,8 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   subst hbd
   rw [c2K2b_some, rec2MapM_genBinder]
   have hg13 := hg1.trans (hg2.trans hg3)
-  cases n with
-  | zero => intro b hb; simp [mcW, c2K3] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [mcW, c2K3] at hb
   rw [mcW_eq]
   refine RSim.bind (K := fun o => c2K3 (mcK1 n d ihso ihsl (r3.headD 0) o)) rfl
     (RSim.withF ((ftdsF_ok dn vis fe _ _ fvs).sim
@@ -189,9 +188,8 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
   subst hcd
   rw [cK3_some]
   have hg14 := hg12.trans (hg3.trans hg4)
-  cases n with
-  | zero => intro b hb; simp [c2W, cK4] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c2W, cK4] at hb
   refine RSim.bindPure (K := cK4) rfl (c2W_sim n m4 a4 g c d nPc fo fl ihso ihsl _ _ _ G NPC fvs ihs ra hS4
     (hG.grow (decCG_mono _) hg14) hns hnpc (by rw [decHL_grow hg14 hfb]; exact hfvs) (Nat.le_trans hfb hg14.1)
     (by rw [decHL_grow hg14 hib]; exact hihs) (Nat.le_trans hib hg14.1)
@@ -225,9 +223,8 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (hX : DecB (fun m => decCC m x.toNat) m X) (hA : AbsOK m) :
     RSim (mnW n m g c x d) (ConRon.Arena.ClassGen.minorTy G c.toNat X d.toNat) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [mnW_eq]
   unfold ConRon.Arena.ClassGen.minorTy
   have hsz := hS.2.2.2.1
@@ -258,9 +255,8 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at evl eo el en
   rw [evl, eo, el, en]
   rw [← to, ← tl] at hds1
-  cases n with
-  | zero => intro b hb; simp [bW, cK4] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [bW, cK4] at hb
   rw [bW_eq]
   -- the constructor's words
   have hX1 := hX.stab (decCC_mono _) m1 hg1
@@ -323,9 +319,8 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨h41, hihs, hib⟩ := ho4
   rw [mbK3_ok (h := by rw [h41]; decide)]
   have hg14 := hg13.trans hg4
-  cases n with
-  | zero => intro b hb; simp [cW, cK4] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [cW, cK4] at hb
   have hc := cW_sim (dn := dn) (vis := vis) (fe := fe) n m4 a4 g c x d vl _ _ _ _ _ _ _ _ G X tm.lvls tm.nPc
     tm.ds fvs ihs hS4 (hG.grow (decCG_mono _) hg14) hns (hX.grow (decCC_mono _) hg14) hrH hvl dvl
     (hds1.grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4))) tn (by rw [decHL_grow (hg3.trans hg4) hfb]; exact hfvs)

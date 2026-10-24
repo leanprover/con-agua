@@ -247,12 +247,11 @@ theorem rec2SimExprGetD {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     {a : AState} (n : Nat) (hS : StageR dn vis fe m a) {o l i : Word} {xs : List EIdx}
     (hxs : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
     RSim (fuelW n (exprGetDW m o l i)) (ConRon.Arena.exprGetD xs i.toNat) a (KP dn vis fe m decW0E) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
-    rintro ⟨r, m'⟩ h
-    obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok dn vis fe m m' a o l i xs r h hS hxs hb
-    exact ⟨x, a', hrun, hS', hg, h1, h2⟩
+  rcases n with _ | n
+  · exact RSim.none
+  rintro ⟨r, m'⟩ h
+  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok dn vis fe m m' a o l i xs r h hS hxs hb
+  exact ⟨x, a', hrun, hS', hg, h1, h2⟩
 
 /-! ## `class_gen_major`: the model -/
 
@@ -396,27 +395,25 @@ theorem classGenMajorTail_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (
     ⦃fun r s' => LocEq s' s₀ ∧ mjtW n s₀.mem ind lvls ds0 dl0 fo fl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.mjt]
   simp only [callFn, classGenMajorTail]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n,
-        mknF_spec p h.ad n] <;>
-      finish (gen := 20)
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n,
+      mknF_spec p h.ad n] <;>
+    finish (gen := 20)
 
 theorem classGenMajorOpen_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (ind lvls ds0 dl0 nIdx ty d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_major_open" [ind, lvls, ds0, dl0, nIdx, ty, d]
     ⦃fun r s' => LocEq s' s₀ ∧ mjoW n s₀.mem ind lvls ds0 dl0 nIdx ty d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.mjo]
   simp only [callFn, classGenMajorOpen]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        opfF_spec p h.opf n, classGenMajorTail_spec p h n] <;>
-      finish (gen := 20) [loc_init4, loc_init5, loc_init6]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      opfF_spec p h.opf n, classGenMajorTail_spec p h n] <;>
+    finish (gen := 20) [loc_init4, loc_init5, loc_init6]
 
 theorem classGenMajorCi_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (ci : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_major_ci" [ci]
@@ -425,27 +422,25 @@ theorem classGenMajorCi_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (ci
         rdW (s₀.mem.arr64 IW) (ci + 3), rdW (s₀.mem.arr64 IW) (ci + 5)]; ⊤⦄ := by
   rw [invoke_eq _ h.mci]
   simp only [callFn, classGenMajorCi]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    finish (gen := 20) [rdW_eq]
 
 theorem classGenMajor_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (g c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_major" [g, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ mjW n s₀.mem g c d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.mj]
   simp only [callFn, classGenMajor]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n,
-        rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, instPisWith_spec p h.ev h.ipw h.hi1 n,
-        classGenMajorOpen_spec p h n, classGenMajorCi_spec p h n] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n,
+      rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, instPisWith_spec p h.ev h.ipw h.hi1 n,
+      classGenMajorOpen_spec p h n, classGenMajorCi_spec p h n] <;>
+    finish (gen := 20) [rdW_eq]
 
 /-! ## `class_gen_major` refines `ClassGen.major` -/
 
@@ -478,9 +473,8 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     (hds : DecB (fun m => (decHL m ds0.toNat dl0.toNat : Option (List EIdx))) m ds)
     (hifs : decHL m fo.toNat fl.toNat = some ifs) (hfb : fo.toNat + fl.toNat ≤ iwTop m) :
     RSim (mjtW n m ind lvls ds0 dl0 fo fl) (rec2MajTail I U ds ifs) a (KP dn vis fe m decOLE) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [mjtW_eq]
   obtain ⟨hI1, rfl⟩ := hI
   obtain ⟨hU1, rfl⟩ := hU
@@ -533,17 +527,15 @@ theorem tmdW_afr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : AFr 
 
 theorem tmaW_afr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
     AFr m m' := by
-  cases n with
-  | zero => simp [tmaW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [tmaW] at h
   simp only [tmaW, tmaK.eq_def] at h
   cases n <;> simp only [fuelW] at h <;> afr_auto h [tmdW_afr]
 
 theorem mjtW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 fo fl : Word} {r : List Word}
     (h : mjtW n m ind lvls ds0 dl0 fo fl = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [mjtW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [mjtW] at h
   simp only [mjtW, mjtK1.eq_def, mjtK2.eq_def, mjtK3.eq_def] at h
   afr_auto h [ceinternW_afr, appendW_afr, mknF_afr]
 
@@ -560,9 +552,8 @@ theorem mjoW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 nIdx ty d : 
     (hA : AbsOK m) :
     RSim (mjoW n m ind lvls ds0 dl0 nIdx ty d) (rec2MajOpen I U ds nIdx.toNat (decI ty) d.toNat) a
       (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [mjoW_eq]
   refine RSim.bind (K := mjoK n ind lvls ds0 dl0) rfl (simOpenPisF hS hA hty) ?_
   rintro ⟨r4, m4⟩ o a4 - ⟨⟨hS4, hg4, ho⟩, hA4⟩
@@ -603,9 +594,8 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (hG : DecB (fun m => decCG m g.toNat) m G) (hA : AbsOK m) :
     RSim (mjW n m g c d) (ConRon.Arena.ClassGen.major G c.toNat d.toNat) a
       (fun b a' x => KP dn vis fe m decOLE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [mjW_eq, rec2Major_eq]
   have hsz := hS.2.2.2.1
   have htop := hS.2.1
@@ -789,15 +779,14 @@ theorem classGenMotiveTy_spec (p : Prog) (h : MtProg p) (n : Nat) (s₀ : St) (g
     ⦃fun r s' => LocEq s' s₀ ∧ motW n s₀.mem g c d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.mot]
   simp only [callFn, classGenMotiveTy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
-        mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
-        closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
+      mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
+      closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n] <;>
+    finish (gen := 20) [rdW_eq]
 
 /-- The decoded result of an `Option EIdx` producer. -/
 theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
@@ -805,9 +794,8 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (hG : DecB (fun m => decCG m g.toNat) m G) (hA : AbsOK m) :
     RSim (motW n m g c d) (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [motW_eq]
   unfold ConRon.Arena.ClassGen.motiveTy
   refine RSim.bind (K := motK1 n g d) rfl

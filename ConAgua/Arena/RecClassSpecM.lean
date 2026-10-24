@@ -205,12 +205,11 @@ theorem findCtor_spec (n : Nat) (s₀ : St) (g c cn : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ fcW n s₀.mem g c cn = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.fc]
   simp only [callFn, classGenPrefixBindersFindCtor]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, findCtorGo_spec p h n] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, findCtorGo_spec p h n] <;>
+    finish (gen := 20) [rdW_eq]
 
 /-- The specs of the slot walk at exec fuel `n`. -/
 def SlotsSpec (n : Nat) : Prop :=
@@ -259,13 +258,12 @@ theorem prefixBinders_spec (n : Nat) (s₀ : St) (g : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ gpbW n s₀.mem g = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.pb]
   simp only [callFn, classGenPrefixBinders]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n] <;>
+    finish (gen := 20) [rdW_eq]
 
 end specs
 
@@ -336,9 +334,8 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
     (h : fcW n m g c cn = some (r, m')) (hG : DecB (fun m => decCG m g.toNat) m G) (hcn : H cn)
     (hsz : (m.arr64 IW).size < 2 ^ 64) :
     m' = m ∧ FcRes m r ((G.ctors.getD c.toNat []).find? (fun x => x.cv.name == decI cn)) := by
-  cases n with
-  | zero => simp [fcW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [fcW] at h
   have hG' : decCG (truncM m) g.toNat = some G := hG
   simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
   obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, rfl⟩ := hG'
@@ -463,9 +460,8 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   induction n using Nat.strongRecOn with
   | ind n ih =>
   intro m a s mc hS hG hsl hmc hA
-  cases n with
-  | zero => intro b hb; simp [psW] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [psW] at hb
   have hsz := hS.2.2.2.1
   obtain ⟨hnP, hslots⟩ := rec2CG_get (hG.get (decCG_mono _))
   obtain ⟨so, sl, hso, hsl', hsls⟩ := decAt_some hslots
@@ -503,9 +499,8 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     obtain ⟨e00, -⟩ := rec2RdN (w := UInt64.ofNat p) (k := 0) (by simpa [UInt64.toNat_ofNat_of_lt' plt] using h0) hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e00
     rw [psW_mot (h := hend) (h2 := by rw [ep, e00]), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_2]
-    cases n with
-    | zero => intro b hb; simp [smW, pfR] at hb
-    | succ n =>
+    rcases n with _ | n
+    · intro b hb; simp [smW, pfR] at hb
     rw [smW_eq]
     have hm := motW_sim dn vis fe n m a g mc (rdW (m.arr64 IW) g + s) G hS hG hA
     rw [hmc, hd] at hm
@@ -536,9 +531,8 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       show UInt64.ofNat 2 = (2 : Word) from rfl] at e01 ec ecw
     rw [psW_min (h := hend) (h2 := by rw [ep, e01]; decide), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_3]
     rw [ep, ec, ecw]
-    cases n with
-    | zero => intro b hb; simp [snW, pfR] at hb
-    | succ n =>
+    rcases n with _ | n
+    · intro b hb; simp [snW, pfR] at hb
     rw [snW_eq]
     refine RSim.lstep (K := fun o => pfR (pfK4 n (fun m1 => psW n m1 g (s + 1) mc) g _ _ o)) rfl
       fun ⟨r4, m4⟩ h4 => ?_
@@ -577,9 +571,8 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (hns : G.nP + G.slots.length < 2 ^ 64) (hA : AbsOK m) :
     RSim (gpbW n m g) (ConRon.Arena.ClassGen.prefixBinders G) a
       (fun b a' x => KP dn vis fe m decIHO b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [gpbW_eq]
   unfold ConRon.Arena.ClassGen.prefixBinders
   rw [rec2MapM_genBinder]

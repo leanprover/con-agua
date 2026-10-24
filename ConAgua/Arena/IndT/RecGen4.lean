@@ -176,12 +176,8 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
   subst hs7
   have hC4 : StageC dn visR feR envR m4 { a6 with caches := Caches.empty } :=
     hC3.of_check hS4 hA4 hok6 (Ext.refl _)
-  cases x7 with
-  | none =>
-    have h0 : r4.headD 0 = 0 := hd4
-    rw [cruK3_some, if_pos h0] at h; cases h
-  | some rb =>
-  obtain ⟨rbs, body⟩ := rb
+  rcases x7 with _ | ⟨rbs, body⟩
+  · rw [cruK3_some, if_pos (show r4.headD 0 = 0 from hd4)] at h; cases h
   obtain ⟨h41, ⟨hdl, htl⟩, -⟩ := hd4
   rw [cruK3_some, if_neg (by rw [h41]; decide)] at h
   simp only [getD_one, getD_two, Nat.reduceAdd] at hdl htl
@@ -202,9 +198,7 @@ theorem cruleW_okC (hApd : ApdF p) {visT visR : Word} {feR : IFEnv} {envR env₂
     ⟨hok6.state, hok6.pins, (hie.mono c16.ext) _ rfl⟩
   obtain ⟨p8, -⟩ := ConRon.Bridge.Inductives.allM_domains_resolve rbs rbsP _ a8 b hr6 hrbs hdom'
   have c18 := c16.trans (p8.toCore hok6)
-  by_cases hb : r5.headD 0 = 0
-  · rw [if_pos hb] at h; cases h
-  rw [if_neg hb] at h
+  obtain ⟨hb, h⟩ := of_ite_none h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have eb : b = true := by rw [← hb5.1]; simpa using hb
   subst eb

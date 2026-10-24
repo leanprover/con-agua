@@ -217,9 +217,8 @@ theorem classRecsRulesOk_refinesC (hp : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (classRecsRulesOk_spec p hp (realCall p) (realCall_spec p) n s₀ visT visR g rco
     rcl cgo cgl) fun _ _ ⟨hl, hw⟩ => ?_
-  cases n with
-  | zero => simp [crraW] at hw
-  | succ n =>
+  rcases n with _ | n
+  · simp [crraW] at hw
   rw [crraW_eq] at hw
   have h := RSim.am (RSim.bindPure (K := crrK5) rfl (crrW_simC hq hApd henv visT visR feR (env₂ := env₂)
     g rco rcl cgo cgl G recCls cvGs hns hrcb hcgb gP cvGsP n (by omega) s₀.mem a₀ cgo cgl rco rcl

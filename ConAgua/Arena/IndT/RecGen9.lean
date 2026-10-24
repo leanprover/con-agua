@@ -44,9 +44,8 @@ theorem cr1W_relC {visT visR : Word} {feR : IFEnv} {envR env₂ : ConLeche.Env}
     ∃ a', (ConRon.Arena.classRuleOk V visT.toNat feR cv (G.nP + G.slots.length + X.nF)
         (decI gen)).run a = .ok (decI gen, a') ∧ StageC dn visR feR envR m' a' ∧ IWGrow m m' ∧
       r = [gen] ∧ AbsOK m' ∧ ConRon.Bridge.CoreStep V envR feR a a' := by
-  cases N with
-  | zero => simp [cr1W] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [cr1W] at h
   have hsz := hC.stage.2.2.2.1
   obtain ⟨hnP, -⟩ := rec2CG_parts hG
   obtain ⟨hsl, -⟩ := rec3CG_parts hG

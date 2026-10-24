@@ -276,9 +276,8 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   dsimp only
   rw [← hnd]
   -- `class_gen_rule_call1_tail`
-  cases n with
-  | zero => intro b hb; simp [c1tW, fcK, hK] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c1tW, fcK, hK] at hb
   rw [c1tW_eq]
   refine RSim.bind (K := fun o => K (fcK (c1tK1 n pvo pvl rlvls _ _ _ _ _ e o))) hK
     (RSim.withF (rec2SimExprGetD n hS2 (by rw [decHL_grow hg12 hfb]; exact hfvs) (hS2.lt64 (Nat.le_trans hfb hg12.1)))
@@ -330,9 +329,8 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
   rw [c1tK6_some, rec2MapM_genBinder]
   have hg29 := hg26.trans (hg7.trans (hg8.trans hg9))
   -- `class_gen_rule_call1_close`
-  cases n with
-  | zero => intro b hb; simp [c1cW, fcK, hK] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c1cW, fcK, hK] at hb
   rw [c1cW_eq]
   refine RSim.bind (K := fun o => K (fcK (fcK (c1cK1 n e (r9.headD 0) o)))) hK
     (RSim.withF ((ftdsF_ok dn vis fe _ _ xs).sim
@@ -416,9 +414,8 @@ theorem cgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   dsimp only
   rw [← he, ← tt, ← tte]
   rw [cgW_rec (h := h0) (ht := ht), et, ete]
-  cases n with
-  | zero => intro b hb; simp [c1W, cgK1] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [c1W, cgK1] at hb
   refine c1W_sim n m a g _ _ wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl i e G ws fvs pvars recCls cvGs
     hS hG hns hws hwb hfvs hfb hpv hpb hrl hrc hrcb hcg hcgb hA
     (cgK1 (n + 1) g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i) (by simp [cgK1]) _ _ ?_ ?_
@@ -527,9 +524,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (hA : AbsOK m) :
     RSim (ruW n m g rco rcl cgo cgl rlvls c x) (ConRon.Arena.classGenRule G recCls cvGs (decI rlvls) c.toNat X) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [ruW_eq]
   unfold ConRon.Arena.classGenRule
   dsimp only
@@ -548,9 +544,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨e7, t7⟩ := rec2RdN (w := g) (k := 7) hso hsz
   obtain ⟨e8, t8⟩ := rec2RdN (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz
   simp only [show UInt64.ofNat 7 = (7 : Word) from rfl, show UInt64.ofNat 8 = (8 : Word) from rfl] at e7 e8
-  cases n with
-  | zero => intro b hb; simp [gfsW, ruK1] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [gfsW, ruK1] at hb
   rw [gfsW_eq, e7, e8]
   refine RSim.lstep (K := fun o => ruK1 (n + 1) g rco rcl cgo cgl rlvls x (UInt64.ofNat l12) (fcK o)) rfl
     fun ⟨r1, m1⟩ h1 => ?_
@@ -659,9 +654,8 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [rbK3_ok (h := by rw [h51]; decide)]
   have hg25 := hg24.trans hg5
   have hm25 := hm24.trans hg5
-  cases n with
-  | zero => intro b hb; simp [grcW, fcK] at hb
-  | succ n =>
+  rcases n with _ | n
+  · intro b hb; simp [grcW, fcK] at hb
   have hc := grcW_sim (dn := dn) (vis := vis) (fe := fe) n m5 a5 g (UInt64.ofNat s0) _ _ _ _ G fvs ihs hS5
     (hG.grow (decCG_mono _) hg25) (by rw [ts0]; omega)
     (by rw [decHL_grow hm25 hfb]; exact hfvs) (Nat.le_trans hfb hm25.1) hihs hib hA5

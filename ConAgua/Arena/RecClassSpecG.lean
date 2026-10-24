@@ -60,9 +60,8 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  cases N with
-  | zero => simp [motSnocW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [motSnocW] at h
   have key : ∀ x, x.toNat = d.toNat - np.toNat → mpsK (snocW N m mo ml x) = some (r, m') →
       StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (xs ++ [d.toNat - np.toNat]) ∧
@@ -88,12 +87,11 @@ theorem classReadSlotsSnoc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_slots_snoc" [mo, ml, np, d]
     ⦃fun r s' => LocEq s' s₀ ∧ motSnocW N s₀.mem mo ml np d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classReadSlotsSnoc]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slSnoc_specW p ha hc hsn N] <;>
-      finish (gen := 20)
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slSnoc_specW p ha hc hsn N] <;>
+    finish (gen := 20)
 
 mutual
 /-- **The model of `class_read_slots`.** -/
@@ -312,9 +310,8 @@ end sims
 
 theorem motSnocW_afr {N : Nat} {m m' : Mem} {mo ml np d : Word} {r : List Word}
     (h : motSnocW N m mo ml np d = some (r, m')) : AFr m m' := by
-  cases N with
-  | zero => simp [motSnocW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [motSnocW] at h
   simp only [motSnocW, mpsK.eq_def] at h
   afr_auto h [snocW_afr]
 

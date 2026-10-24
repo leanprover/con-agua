@@ -142,9 +142,8 @@ theorem cna_spec (p : Prog) (hp : p.lookup "class_nodes_agree" = some classNodes
       [vis, q, fto, ftl, mc, teo, tel, leaf, fvo, fvl, i, eo, el]
     ⦃fun _ s' => LocEq s' s₀ ∧
       cnaW p n s₀.mem vis q fto ftl mc teo tel leaf fvo fvl i eo el 0 = some s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   rw [invoke_eq _ hp, classNodesAgreeL_eq]
   simp only [callFn, classNodesAgreeL']
   sym only [lang_grind, arena_grind, ind_grind] =>

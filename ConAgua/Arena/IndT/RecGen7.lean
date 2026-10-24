@@ -69,14 +69,12 @@ theorem rtoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc c
     RSim (rtoW (realCall p) n m vis g k rc cvRi c)
       (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a
       (fun b a' x => KPC dn vis fe env m decCVR b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [rtoW_eq]
   unfold ConRon.Arena.classRecTyOk
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   obtain ⟨-, -, hcls, -, -, -, -, -⟩ := dClassGen_inv hgP
   refine rgW_sim n m a g k rc c G RS hC.stage hG hns hrc hA
     (rtoK1 (realCall p) (n + 1) vis g rc cvRi c) rfl _ _ ?_

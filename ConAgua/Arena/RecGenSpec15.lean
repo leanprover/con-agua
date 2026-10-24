@@ -180,9 +180,8 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     obtain ⟨w, hw, hwe⟩ := this
     exact ⟨w, hw, hwe⟩
   intro i hi
-  cases i with
-  | zero =>
-    obtain ⟨w, hw0, hwe⟩ := hw 0 (by omega)
+  rcases i with _ | i
+  · obtain ⟨w, hw0, hwe⟩ := hw 0 (by omega)
     have hwx : w = x := UInt64.toNat_inj.mp (by simpa using hwe)
     rw [hwx] at hw0
     have hgt := hg.1
@@ -190,20 +189,19 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     have hb0 : (r.headD 0).toNat + 0 < iwTop s'.mem := by rw [← htop']; omega
     refine ⟨x, key, nPc, hw0, hb0, hx1', by rw [hg.2.2.1 x.toNat (Nat.lt_of_succ_lt hx1)]; exact hx0,
       by rw [hg.2.2.1 _ hx1]; exact hxk, hk.grow (decNK_mono _) hg, hksl.grow' hk hg htop, by simpa using hn⟩
-  | succ i =>
-    have hi' : i < l.toNat := by simp only [List.length_cons] at hi; omega
-    obtain ⟨sp, key', nPc', h1, h2, rest⟩ := hat' i (by rw [← hlen]; exact hi')
-    obtain ⟨w, hwi, hwe⟩ := hw (i + 1) (by omega)
-    have hold := decNL_at hps i hi'
-    rw [show o.toNat + i = o.toNat + i from rfl] at hold
-    have hsp : (m.arr64 IW)[o.toNat + i]? = some sp := by
-      rw [← hg.2.2.1 (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
-    have e1 : sp.toNat = ps[i]'(by have := decNL_length m hps; omega) := by
-      have := iwN_of_get hsp; rw [hold] at this; exact (Option.some.inj this).symm
-    have : w = sp := UInt64.toNat_inj.mp (by rw [hwe, e1]; simp)
-    subst this
-    exact ⟨w, key', nPc', by rw [show (r.headD 0).toNat + (i + 1) = (r.headD 0).toNat + (i + 1) from rfl]; exact hwi,
-      by omega, by simpa using rest⟩
+  have hi' : i < l.toNat := by simp only [List.length_cons] at hi; omega
+  obtain ⟨sp, key', nPc', h1, h2, rest⟩ := hat' i (by rw [← hlen]; exact hi')
+  obtain ⟨w, hwi, hwe⟩ := hw (i + 1) (by omega)
+  have hold := decNL_at hps i hi'
+  rw [show o.toNat + i = o.toNat + i from rfl] at hold
+  have hsp : (m.arr64 IW)[o.toNat + i]? = some sp := by
+    rw [← hg.2.2.1 (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
+  have e1 : sp.toNat = ps[i]'(by have := decNL_length m hps; omega) := by
+    have := iwN_of_get hsp; rw [hold] at this; exact (Option.some.inj this).symm
+  have : w = sp := UInt64.toNat_inj.mp (by rw [hwe, e1]; simp)
+  subst this
+  exact ⟨w, key', nPc', by rw [show (r.headD 0).toNat + (i + 1) = (r.headD 0).toNat + (i + 1) from rfl]; exact hwi,
+    by omega, by simpa using rest⟩
 
 /-! ## `class_seeds` -/
 
@@ -291,9 +289,8 @@ theorem sgCall_sim {p : Prog} (L : SgLook p) {dn : NIdx → Option ConLeche.Name
         (r.tail.headD 0).toNat = x.2 ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
   intro r m' e
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
-  cases n with
-  | zero => rw [callW_zero] at e; cases e
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at e; cases e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (nestSeedOf_spec p L k _ ctx hO hL _ _ _ _ _) e
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields (decTM_decNK hdt) htop

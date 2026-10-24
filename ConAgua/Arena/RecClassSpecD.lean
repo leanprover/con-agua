@@ -146,9 +146,8 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (a : AState) (nP mo ml d x : Word) (motPos : List Nat) (hS : StageR dn vis fe m a) (hx : H x)
     (hmot : decNL m mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (ih1W n m nP mo ml d x) (ihStep nP.toNat motPos d.toNat (decI x)) a (KP dn vis fe m decIH) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   have hmb : mo.toNat + ml.toNat < 2 ^ 64 := by
     have := hS.2.1; have := hS.2.2.2.1; omega
   refine RSim.bind (K := ih1K1 n nP mo ml d) rfl (simFvarTypeD hS hx) ?_
@@ -390,9 +389,8 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (finW n m nP mo ml d fo fl hd c) (minorFin nP.toNat motPos d.toNat c.toNat fvs (decI hd)) a
       (KP dn vis fe m decSlot) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   by_cases hg : hd >>> 28 ≠ 3
   · rw [finW_tag (h := hg)]
     have ht : ¬ (((decI hd : EIdx)).tag == ETag.const) = true := by
@@ -438,9 +436,8 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
     (hR : ArenaR m a) (hp : piBW n m fuel h = some (rs, m')) (hh : H h)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size)
     (htop : iwTop m ≤ (m.arr64 IW).size) : iwTop m' ≤ (m'.arr64 IW).size := by
-  cases n with
-  | zero => simp [piBW] at hp
-  | succ n =>
+  rcases n with _ | n
+  · simp [piBW] at hp
   by_cases hf : fuel = 0
   · rw [piBW_fuel0 n m fuel h hf] at hp; simp at hp
   by_cases hg : h >>> 28 ≠ 6
@@ -509,9 +506,8 @@ theorem piBW_afrR : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), 
 
 theorem ih1W_afr {n : Nat} {m m' : Mem} {nP mo ml d x : Word} {r : List Word}
     (h : ih1W n m nP mo ml d x = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [ih1W] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [ih1W] at h
   simp only [ih1W, ih1K1.eq_def, ih1K2.eq_def, ih1K3.eq_def, ih1K4.eq_def, ih1K5.eq_def,
     ih1K6.eq_def] at h
   afr_auto h [ftdF_afr, pirF_afrR, fvarHeadW_afr, gaaF_afr]
@@ -525,17 +521,15 @@ theorem ihsW_afr : ∀ (n : Nat) (m m' : Mem) (nP mo ml d fo fl : Word) (r : Lis
 
 theorem finW_afr {n : Nat} {m m' : Mem} {nP mo ml d fo fl hd c : Word} {r : List Word}
     (h : finW n m nP mo ml d fo fl hd c = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [finW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [finW] at h
   simp only [finW, finK1.eq_def, finK2.eq_def] at h
   afr_auto h [ihsW_afr n _ _ _ _ _ _ _ _ _, recW_afr]
 
 theorem tailW_afr {n : Nat} {m m' : Mem} {nP mo ml d fo fl concl c : Word} {r : List Word}
     (h : tailW n m nP mo ml d fo fl concl c = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [tailW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [tailW] at h
   simp only [tailW, tK1.eq_def, tK2.eq_def, tK3.eq_def] at h
   afr_auto h [gaaF_afr, gafF_afr, finW_afr]
 
@@ -564,9 +558,8 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (tailW n m nP mo ml d fo fl concl c)
       (minorTail nP.toNat motPos d.toNat c.toNat fvs (decI concl)) a (KP dn vis fe m decSlot) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [tailW_eq]
   refine RSim.bind (K := tK1 n nP mo ml d fo fl c) rfl (simGetAppArgs hS hH) ?_
   rintro ⟨r5, m5⟩ rargs a5 - ⟨hS5, hg5, hd5, ht5⟩
@@ -606,9 +599,8 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (hmot : decNL m mo.toNat ml.toNat = some motPos) (hmt : mo.toNat + ml.toNat ≤ iwTop m) :
     RSim (minorW cR n m nP mo ml d dom) (ConRon.Arena.classReadMinor nP.toNat motPos d.toNat (decI dom)) a
       (fun b a' x => KP dn vis fe m decSlot b a' x ∧ J b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   have hmb : mo.toNat + ml.toNat < 2 ^ 64 := by
     have h1 : iwTop m ≤ (m.arr64 IW).size := hS.2.1
     have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1

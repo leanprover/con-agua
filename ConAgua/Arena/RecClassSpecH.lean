@@ -180,40 +180,37 @@ theorem classReadFinish_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : Ca
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_finish" [nP, so, sl, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ readFinW cR N s₀.mem nP so sl ro rl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.rfin]; simp only [callFn, classReadFinish]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        classReadMotPos_spec p hP N,
-        classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.ad cR hcR N,
-        rec4_specW p hP.a N hP.r4] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      classReadMotPos_spec p hP N,
+      classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.ad cR hcR N,
+      rec4_specW p hP.a N hP.r4] <;>
+    finish (gen := 20) [rdW_eq]
 
 theorem classReadNSlots_spec (p : Prog) (hP : ReadProg p) (N : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_n_slots" [a, b]
     ⦃fun r s' => s' = s₀ ∧ r = [tsubW a b]; ⊤⦄ := by
   rw [invoke_eq _ hP.ns]; simp only [callFn, classReadNSlots]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      finish (gen := 20)
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    finish (gen := 20)
 
 theorem classRead_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
     (q vis nP ro rl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read" [q, vis, nP, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ readW cR N s₀.mem q vis nP ro rl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.rd]; simp only [callFn, classRead]
-  cases N with
-  | zero => vcgen [exec] <;> grind
-  | succ N =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hcR N "open_pis_at_fvars_f", classReadNSlots_spec p hP N,
-        (classReadSlots_specs p hP.toSlotsProg cR hcR N).1, classReadFinish_spec p hP cR hcR N] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
+  rcases N with _ | N
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      hcR N "open_pis_at_fvars_f", classReadNSlots_spec p hP N,
+      (classReadSlots_specs p hP.toSlotsProg cR hcR N).1, classReadFinish_spec p hP cR hcR N] <;>
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 end L.Ind
 
@@ -357,9 +354,8 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
     (hrecs : RecsDec m ro rl recs) :
     RSim (readFinW cR N m nP so sl ro rl) (readFinTw nP.toNat slots recs) a
       (fun b a' x => KP dn vis fe m decRead b a' x ∧ J b.2) := by
-  cases N with
-  | zero => exact RSim.none
-  | succ N =>
+  rcases N with _ | N
+  · exact RSim.none
   rw [readFinW_eq]
   refine RSim.lstep (K := frK1 cR N nP so sl ro rl) rfl ?_
   rintro ⟨r1, m1⟩ h1
@@ -422,9 +418,8 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hS : StageR dn vis fe m a) (hJ : J m) (hb : BSOK m p.toNat bs) (hrecs : RecsDec m ro rl recs) :
     RSim (readW cR N m p vis nP ro rl) (ConRon.Arena.classRead bs fe nP.toNat recs) a
       (fun b a' x => KP dn vis fe m decRead b a' x ∧ J b.2) := by
-  cases N with
-  | zero => exact RSim.none
-  | succ N =>
+  rcases N with _ | N
+  · exact RSim.none
   have hdp := hrecs.dec (IWGrow.refl m)
   have hsz := hS.2.2.2.1
   have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1

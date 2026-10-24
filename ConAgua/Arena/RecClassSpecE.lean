@@ -236,14 +236,13 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ npcW n s₀.mem q vis i = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classNPcOf]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
-        envFind_specW p hx hg hef n] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
+      envFind_specW p hx hg hef n] <;>
+    finish (gen := 20) [rdW_eq]
 
 theorem npc_mem {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : bs.memberNames.contains i = true) :
     ConRon.Arena.classNPcOf bs fe i = bs.nP := by
@@ -274,9 +273,8 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       r = [UInt64.ofNat (ConRon.Arena.classNPcOf bs fe (decI i))] ∧
       ConRon.Arena.classNPcOf bs fe (decI i) < 2 ^ 64 := by
-  cases n with
-  | zero => simp [npcW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [npcW] at h
   rw [npcW_eq] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   rw [npcK1_some] at h

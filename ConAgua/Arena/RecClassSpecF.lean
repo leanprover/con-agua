@@ -156,31 +156,29 @@ theorem classReadSlotMotive_spec (p : Prog) (hP : SlotProg p) (n : Nat) (s₀ : 
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_slot_motive" [q, vis, dom]
     ⦃fun r s' => LocEq s' s₀ ∧ slotMotW n s₀.mem q vis dom = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.smot]; simp only [callFn, classReadSlotMotive]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        piBinders_spec' p hP.a hP.c hP.v hP.sc hP.pb n, gafF_spec p hP.ad n,
-        gaaF_spec p hP.ad n, eView_spec p hP.v n,
-        classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
-        rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2] <;>
-      finish (gen := 20) [rdW_eq]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      piBinders_spec' p hP.a hP.c hP.v hP.sc hP.pb n, gafF_spec p hP.ad n,
+      gaaF_spec p hP.ad n, eView_spec p hP.v n,
+      classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
+      rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2] <;>
+    finish (gen := 20) [rdW_eq]
 
 theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat)
     (s₀ : St) (q vis np mo ml d dom : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_read_slot" [q, vis, np, mo, ml, d, dom]
     ⦃fun r s' => LocEq s' s₀ ∧ slotW cR n s₀.mem q vis np mo ml d dom = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.slot]; simp only [callFn, classReadSlot]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        pirF_spec p hP.ad n, classReadSlotMotive_spec p hP n,
-        classReadMinor_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.r2 hP.r5 hP.i1 hP.is hP.fin
-          hP.pb hP.min hP.tl hP.ad cR hcR n] <;>
-      finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
+  rcases n with _ | n
+  · vcgen [exec] <;> grind
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      pirF_spec p hP.ad n, classReadSlotMotive_spec p hP n,
+      classReadMinor_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.r2 hP.r5 hP.i1 hP.is hP.fin
+        hP.pb hP.min hP.tl hP.ad cR hcR n] <;>
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6]
 
 /-! ## Relational lemmas -/
 
@@ -216,9 +214,8 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
     (a : AState) (p dom : Word) (bs : BlockShape) (hS : StageR dn vis fe m a) (hH : H dom)
     (hb : BSOK m p.toNat bs) :
     RSim (slotMotW n m p vis dom) (slotMot bs fe (decI dom)) a (KP dn vis fe m decSlot) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [slotMotW_eq]
   refine RSim.bind (K := sK1 n p vis) rfl (simPiBinders n hS hH) ?_
   rintro ⟨r1, m1⟩ ⟨bss, e⟩ a1 - ⟨hS1, hg1, hd1, ht1⟩
@@ -348,17 +345,15 @@ theorem envFindW_afrR {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW 
 
 theorem npcW_afr {n : Nat} {m m' : Mem} {p vis i : Word} {r : List Word}
     (h : npcW n m p vis i = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [npcW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [npcW] at h
   simp only [npcW, npcK1.eq_def, npcK2.eq_def, npcK3.eq_def] at h
   afr_auto h [memberNamesW_afr, envFindW_afrR]
 
 theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
     (h : slotMotW n m p vis dom = some (r, m')) : AFr m m' := by
-  cases n with
-  | zero => simp [slotMotW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [slotMotW] at h
   simp only [slotMotW, sK1.eq_def, sK2.eq_def, sK3.eq_def, sK4.eq_def, sK5.eq_def, sK6.eq_def] at h
   afr_auto h [piBW_afrR _ _ _ _ _ _, gafF_afr, gaaF_afr, npcW_afr, recW_afr]
 
@@ -370,9 +365,8 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     RSim (slotW cR n m p vis np mo ml d dom)
       (ConRon.Arena.classReadSlot bs fe np.toNat motPos d.toNat (decI dom)) a
       (fun b a' x => KP dn vis fe m decSlot b a' x ∧ J b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [slotW_eq]
   refine RSim.bind (K := slK1 cR n p vis np mo ml d dom) rfl
     (RSim.withJ hO.1 (simPiResult hS hH) (fun _ _ hb => pirF_afrR hb) hJ) ?_

@@ -58,8 +58,7 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
     rw [ckc2K2_closed (h := hf)] at h
     obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
     rw [ckcK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact ckc2W_afr n _ _ _ _ _ _ h3
+    cases h; exact ckc2W_afr n _ _ _ _ _ _ h3
 
 section calls
 variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
@@ -127,8 +126,7 @@ theorem ocW_afr (hN : NoProg p) : ∀ (n : Nat) (m m' : Mem) (no nl o l : Word) 
     rw [ocK1_miss p n m1 no nl o l r1 hb] at h
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     rw [ocK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact ocW_afr hN n _ _ _ _ _ _ _ h2
+    cases h; exact ocW_afr hN n _ _ _ _ _ _ _ h2
 
 theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "mk_target_major" = some mkTargetMajor)
@@ -305,8 +303,7 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
   rintro r2 x m2 a2 ⟨hnc, hS2, hg2, hP2, hC2, hA2, p2⟩
   rw [tmoK2_some]
   rcases x with _ | ⟨nPc, cs⟩
-  · have h0 : r2.headD 0 = 0 := hnc
-    simp only [h0, if_true]; exact Sim.of_none
+  · simp only [show r2.headD 0 = 0 from hnc, if_true]; exact Sim.of_none
   obtain ⟨h1, hnP, hcl, hcb, hcsat⟩ := hnc
   simp only [h1, show (1 : Word) ≠ 0 by decide, if_false]
   by_cases hal : al < r2.tail.headD 0
@@ -344,11 +341,8 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     exact ⟨b, a', hrun, hb3, hS3, hg3, hP2.fr (ckc2W_mfr _ _ _ _ _ _ _ hW3), hC2.of_pstep hS3 hA3 p3, hA3, p3⟩
   rintro r3 b m3 a3 ⟨hb3, hS3, hg3, hP3, hC3, hA3, p3⟩
   rw [tmoK2b_some]
-  cases b with
-  | false =>
-    have h0 : r3.headD 0 = 0 := by simpa using hb3
-    simp only [h0, if_true]; exact Sim.of_none
-  | true =>
+  cases b
+  · simp only [show r3.headD 0 = 0 by simpa using hb3, if_true]; exact Sim.of_none
   have h0 : r3.headD 0 ≠ 0 := by simpa using hb3
   simp only [h0, if_false, Bool.not_true, Bool.false_eq_true]
   have hg03 := hg2.trans hg3
@@ -379,14 +373,10 @@ theorem tmoW_simC {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreSt
     exact ⟨b, a', hrun, hb4, hS4', hg4', hP4', hC3.of_pstep hS4' hA4 p4, hA4, p4⟩
   rintro r4 b m4 a4 ⟨hb4, hS4, hg4, hP4, hC4, hA4, p4⟩
   rw [tmoK3_some]
-  cases b with
-  | false =>
-    have h0 : r4.headD 0 = 0 := by simpa using hb4
-    simp only [h0, if_true]; exact Sim.of_none
-  | true =>
+  cases b
+  · simp only [show r4.headD 0 = 0 by simpa using hb4, if_true]; exact Sim.of_none
   have h0 : r4.headD 0 ≠ 0 := by simpa using hb4
-  simp only [h0, if_false]
-  simp only [if_true]
+  simp only [h0, if_false, if_true]
   have hg04 := hg03.trans hg4
   -- the tail
   refine Sim.post (K := tmoK4) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)

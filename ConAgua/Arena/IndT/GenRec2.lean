@@ -160,12 +160,10 @@ theorem grpCW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
   have c19 := p9.toCore hC.check
   have hk2 := callW_keepW c2
   have hP2 := RcMR.ofClosed hclR (hfRc _ (by decide)) c2 hPG
-  by_cases h0 : r2.headD 0 = 0
-  · rw [grpC3_bad (h := h0)] at h; cases h
+  have h0 : ¬ (r2.headD 0 = 0) := fun h0 => by rw [grpC3_bad (h := h0)] at h; cases h
   rw [grpC3_ok (h := h0)] at h
-  cases x2 with
-  | none => exact absurd hd2 h0
-  | some pre =>
+  rcases x2 with _ | pre
+  · exact absurd hd2 h0
   obtain ⟨preP, -, hpreP⟩ := hR2
   obtain ⟨-, hpreD, hpreb⟩ := hd2
   have hfr := hfr2 pre rfl
@@ -381,8 +379,7 @@ theorem grpBW_okC (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     (genRecCheckMinorOk_refines P.csm P.gmo n _ _ _ _ _ rdv.slots ctors
       ((hslD.grow (OMono.decPL decCS_mono _ _) hg13).get (OMono.decPL decCS_mono _ _)) hslb
       (hctD.get (OMono.decPL decCC_lh_mono _ _)) (hS3.lt64 hsp3.2.1) hS3.2.2.2.1) c4'
-  by_cases h0 : r4.headD 0 = 0
-  · rw [grpB4_bad (h := h0)] at h; cases h
+  have h0 : ¬ (r4.headD 0 = 0) := fun h0 => by rw [grpB4_bad (h := h0)] at h; cases h
   rw [grpB4_ok (h := h0), hm4] at h
   have hcount : ((rdv.slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum) = true := by
     rw [← hmo]; simpa using h0

@@ -62,9 +62,8 @@ theorem tptW_mfrR : ∀ (n : Nat) (m m' : Mem) (vis d xo xl : Word) (r : List Wo
 include hq in
 theorem tmpW_mfrR {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word}
     (h : tmpW (realCall p) N m vis rP M = some (r, m')) : MFr [] [] m m' := by
-  cases N with
-  | zero => simp [tmpW] at h
-  | succ N =>
+  rcases N with _ | N
+  · simp [tmpW] at h
   by_cases hm : rdW (m.arr64 IW) (M + 8) ≠ 0
   · rw [tmpW_mem (realCall p) N m vis rP M hm] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
@@ -211,9 +210,8 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
       ConRon.Bridge.CoreStep V env fe a2 a' ∧ ∃ MP, dMajor a'.store x = some MP ∧
         ∀ y ∈ MP.ds, ConLeche.Expr.WScoped pP.nP y) ?_ ?_
   · intro r3 m3 e3
-    cases n with
-    | zero => rw [callW_zero] at e3; cases e3
-    | succ k =>
+    rcases n with _ | k
+    · rw [callW_zero] at e3; cases e3
     obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
       (tmf_spec p hP.tmf.tmf k _ vis pp cao cal pfo pfl pfo pfl (r2.headD 0)) e3
     have hshP2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh

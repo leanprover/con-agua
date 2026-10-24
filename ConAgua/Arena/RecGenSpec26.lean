@@ -471,9 +471,8 @@ theorem instW_ok0 (n : Nat) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {v
   · subst h0
     have : args = [] := by have := decHL_length _ hsl.1; simpa using this
     subst this
-    cases n with
-    | zero => simp [instW] at h
-    | succ n =>
+    rcases n with _ | n
+    · simp [instW] at h
     rw [instW_nil (h := rfl)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
     exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩

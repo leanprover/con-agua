@@ -87,17 +87,13 @@ theorem cfgW_afr : ∀ (n : Nat) (m m' : Mem) (mo ml io il i fo fl : Word) (r : 
         cfgK5 n (fun m5 => cfgW n m5 mo ml io il (i + 1) (fo + 1) (fl - 1)) o5 = some (r, m') →
         AFr m2 m' := by
       intro o5 hA5 h5
-      cases o5 with
-      | none => simp [cfgK5] at h5
-      | some x5 =>
-      obtain ⟨r5, m5⟩ := x5
+      obtain ⟨⟨r5, m5⟩, rfl, h5⟩ := of_K h5 (by simp only [cfgK5])
       rw [cfgK5_some] at h5
       obtain ⟨⟨r6, m6⟩, h6, h5⟩ := of_K h5 rfl
       rw [cfgK7_some] at h5
       obtain ⟨⟨r7, m7⟩, h7, h5⟩ := of_K h5 rfl
       rw [cfgK6_some] at h5
-      simp only [Option.some.injEq, Prod.mk.injEq] at h5; rw [← h5.2]
-      exact ((hA5 r5 m5 rfl).trans (cfgW_afr n _ _ _ _ _ _ _ _ _ _ h6)).trans (consW_afr h7)
+      cases h5; exact ((hA5 r5 m5 rfl).trans (cfgW_afr n _ _ _ _ _ _ _ _ _ _ h6)).trans (consW_afr h7)
     by_cases c0 : occ = 0 ∧ hc = 0
     · rw [cfgK3_ord (h := c0)] at h
       exact fin _ (fun r5 m5 e => tail r5 m5 (.inl e)) h
@@ -118,8 +114,7 @@ theorem cfoW_afr {n : Nat} {m m' : Mem} {q io il i fo fl : Word} {r : List Word}
   rw [cfoK_some] at h
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
   rw [cfgK6_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
-  exact (memberNamesW_afr h1).trans (cfgW_afr _ _ _ _ _ _ _ _ _ _ _ h2)
+  cases h; exact (memberNamesW_afr h1).trans (cfgW_afr _ _ _ _ _ _ _ _ _ _ _ h2)
 
 section rel
 variable {p : Prog} (hq : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -194,8 +189,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hk2 := callW_keepW c2
   have hg12 := hg1.trans hg2
   -- the first entry
-  by_cases hel : r2.tail.headD 0 = 0
-  · rw [cxoK2_bad (h := hel)] at h; cases h
+  have hel : ¬ (r2.tail.headD 0 = 0) := fun hel => by rw [cxoK2_bad (h := hel)] at h; cases h
   rw [cxoK2_ok (h := hel)] at h
   -- the class's entries: the first
   obtain ⟨e0', es', hes_eq, he0, -⟩ := hes.uncons hel hS2.2.2.2.1
@@ -260,8 +254,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hC4 := hC2.of_pstep hS4 hA4 q4
   have hk4 := callW_keepW c4
   rcases ox with _ | ⟨fvs, body⟩
-  · have h0 : r4.headD 0 = 0 := hd4
-    rw [cxoK4_bad (h := h0)] at h; cases h
+  · rw [cxoK4_bad (h := hd4)] at h; cases h
   obtain ⟨h41, ⟨hdl, hbl⟩, -⟩ := hd4
   obtain ⟨fvsP, -, -, hfvsP, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho4
   have q14 := q1.trans q4
@@ -373,8 +366,7 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   have hC8 := hC7.of_pstep hS8 hA8 q8
   have hg18 := hg17.trans hg8
   rcases ox with _ | tyD
-  · have h0 : r8.headD 0 = 0 := hd8
-    rw [cxoK8_bad (h := h0)] at h; cases h
+  · rw [cxoK8_bad (h := hd8)] at h; cases h
   obtain ⟨h81, h8H, h8D⟩ := hd8
   have h0 : ¬ r8.headD 0 = 0 := by rw [h81]; decide
   rw [cxoK8_ok (h := h0)] at h

@@ -121,9 +121,8 @@ theorem ccoW_simT (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) :
     RSim (ccoW (realCall p) n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun b a' x => KPT dn vis fe m decUnit b a' x ∧ AbsOK b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+  rcases n with _ | n
+  · exact RSim.none
   rw [ccoW_eq]
   rintro b hb
   obtain ⟨⟨r1, m1⟩, h1, hb⟩ := of_K hb rfl

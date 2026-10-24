@@ -211,9 +211,8 @@ theorem cfa_spec (p : Prog) (hp : p.lookup "class_fields_agree" = some classFiel
       [vis, q, fto, ftl, mo, ml, fvo, fvl, eo, el, i0, ko, kl]
     ⦃fun _ s' => LocEq s' s₀ ∧
       cfaW p n s₀.mem vis q fto ftl mo ml fvo fvl eo el ko kl 0 i0 = some s'.mem; ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
+  rcases n with _ | n
+  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   rw [invoke_eq _ hp, classFieldsAgreeL_eq]
   simp only [callFn, classFieldsAgreeL']
   sym only [lang_grind, arena_grind, ind_grind] =>
@@ -250,9 +249,8 @@ theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr 
 
 theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
     MFr [] [] m m' := by
-  cases n with
-  | zero => simp [tmaW] at h
-  | succ n =>
+  rcases n with _ | n
+  · simp [tmaW] at h
   by_cases hc : c < ml
   · rw [tmaW_hit n m mo ml c hc] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _

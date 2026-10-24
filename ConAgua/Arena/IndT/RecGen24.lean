@@ -163,8 +163,7 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   rw [e2] at hS2 run2
   have hC2 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
   rcases x2 with _ | ⟨teleB, leafE⟩
-  · have h0 : r2.headD 0 = 0 := hd2
-    rw [cfaK3_bad (h := h0)] at h; cases h
+  · rw [cfaK3_bad (h := hd2)] at h; cases h
   obtain ⟨teleP, leafP, -, hteleB, hleaf⟩ := ConRon.Bridge.Inductives.denoteBP_some hbp
   obtain ⟨h21, ⟨hdl, hbl⟩, hlwH, hlwD⟩ := hd2
   have h0 : ¬ r2.headD 0 = 0 := by rw [h21]; decide
@@ -210,8 +209,7 @@ theorem cfaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
   obtain ⟨q4, -⟩ := ConRon.Bridge.Inductives.classLeafAt_spec tm _ leafE leafP a3 a4 b4
     hC3.check.state ⟨hmt, denote_ext hleaf q3.ext⟩ run4
   have hC4 := hC3.of_pstep hS4 hA4 q4
-  by_cases hz : r4.headD 0 = 0
-  · rw [cfaK5_bad (h := hz)] at h; cases h
+  have hz : ¬ (r4.headD 0 = 0) := fun hz => by rw [cfaK5_bad (h := hz)] at h; cases h
   rw [cfaK5_ok (h := hz)] at h
   have hbt : b4 = true := by rw [← hb4]; simpa using hz
   subst hbt

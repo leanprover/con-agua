@@ -103,13 +103,11 @@ theorem kofCall_sim {p : Prog} (L : KofProg p) {dn : NIdx → Option ConLeche.Na
       (fun r x m' a' => DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow m m' ∧ PosMR m') := by
   intro r m' e
-  cases n with
-  | zero => rw [callW_zero] at e; cases e
-  | succ k =>
+  rcases n with _ | k
+  · rw [callW_zero] at e; cases e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (kof_specG L k _ nP po pl key) e
-  cases k with
-  | zero => rw [kofG_zero] at hW; cases hW
-  | succ k =>
+  rcases k with _ | k
+  · rw [kofG_zero] at hW; cases hW
   rw [kofG_succ] at hW
   obtain ⟨x, a', hrun, h1, -, -, h4, h5, h6⟩ := kofW_ok dn fe vis k m s'.mem a nP po pl key r pfvs ck hW hS hpf hpb hk
     hP
