@@ -26,58 +26,11 @@ theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       (r.tail.headD 0).toNat = l.toNat + 1 ∧ iwTop m' = iwTop m + l.toNat + 1 ∧
       (∀ i < l.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o.toNat + i]?) ∧
       (m'.arr64 IW)[iwTop m + l.toNat]? = some x := by
-  have hsz := hS.2.2.2.1
-  have hc := hS.2.2.2.2.2
-  have hS' := snocW_stage h hS
-  simp only [snocW] at h
-  by_cases h0 : l + 1 = 0
-  · simp [h0] at h
-  simp only [h0, if_false] at h
-  rcases hal : allocW m (l + 1) with _ | ⟨q, m1⟩; · simp [hal] at h
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
-  simp only [hal] at h
-  rcases hcp : copyW (n - 1) m1 q o l with _ | m2; · simp [hcp] at h
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  subst hq hm1
-  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
-  have hqt : q.toNat = iwTop m := by simp only [iwTop, hqq]
-  have hl1 : (l + 1).toNat = l.toNat + 1 := by
-    rcases Nat.lt_or_ge (l.toNat + 1) (2 ^ 64) with hlt | hge
-    · exact word_add_toNat (by simpa using hlt)
-    · exfalso; apply h0; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; have := l.toNat_lt; simp; omega
-  rw [hl1] at hroom
-  have hIW := allocMem_IW m (l + 1)
-  obtain ⟨hA1, hS1', hW1, hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by rw [hqt]; exact hsrc)
-    (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
-  rw [hIW] at hS1' hG1
-  have hql : (q + l).toNat = q.toNat + l.toNat := word_add_toNat (by omega)
-  have hfr : MemFrame [IW] [200] m (m2.set64 IW (q + l) x) :=
-    ((allocMem_frame m (l + 1)).trans (copy_frame hA1 (by rw [hS1', hIW]) hW1)).trans
-      (set64IW_frame _ _ _)
-  have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
-      if i = q.toNat + l.toNat then some x
-      else if q.toNat ≤ i ∧ i < q.toNat + l.toNat then (m.arr64 IW)[o.toNat + (i - q.toNat)]?
-      else (m.arr64 IW)[i]? := by
-    intro i
-    rw [set64IW_get, hql, hS1']
-    by_cases he : i = q.toNat + l.toNat
-    · rw [if_pos ⟨he, by omega⟩, if_pos he]
-    · rw [if_neg (fun hh => he hh.1), if_neg he, hG1]
-  have htop : rdW ((m2.set64 IW (q + l) x).arr64 CTL) 200 = q + (l + 1) := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA1 CTL (by decide), allocMem_top m _ hc, hqq]
-  have hsum : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
-    rw [UInt64.toNat_add, hl1]; simp; omega
-  refine ⟨hS', ?_, by simp [hqt], by simp [hl1], ?_, fun i hi => ?_, ?_⟩
-  · refine iwGrow_of_frame hfr (N := l + 1) ?_ ?_ hsz ?_
-    · rw [htop, hqq]
-    · simp only [iwTop, hqq, hl1]; omega
-    · intro i hi
-      simp only [iwTop, hqq] at hi
-      rw [hget, if_neg (by omega), if_neg (by omega)]
-  · simp only [iwTop, htop, hsum]; simp only [iwTop] at hqt; omega
-  · rw [hget, ← hqt, if_neg (by omega), if_pos (by omega)]; congr 2; omega
-  · rw [hget, ← hqt, if_pos rfl]
+  obtain ⟨hr, hl1, hqt, -, hg, htop, hget⟩ := snocW_core h hS.2.2.2.1 hS.2.2.2.2.2 hsrc
+  subst hr
+  refine ⟨snocW_stage h hS, hg, by simp [hqt], by simp [hl1], by omega, fun i hi => ?_, ?_⟩
+  · rw [hget, if_neg (by omega), if_pos (by omega)]; congr 2; omega
+  · rw [hget, if_pos rfl]
 
 /-! ## `nest_grow_group` refines `nestGrowGroup` -/
 

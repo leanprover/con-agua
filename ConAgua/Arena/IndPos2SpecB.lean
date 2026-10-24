@@ -310,14 +310,15 @@ theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word)
 
 end spec
 
-theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : List (Idx k)}
+/-- **`sl_snoc`'s pool**: the new slice at the old top, the source's words then `x`. -/
+theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
-    (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
-    r = [rdW (m.arr64 CTL) 200, l + 1] ∧
-    decHL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (xs ++ [decI x]) ∧
-    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
-    (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m) :
+    r = [rdW (m.arr64 CTL) 200, l + 1] ∧ (l + 1).toNat = l.toNat + 1 ∧ (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧
+    MemFrame [IW] [200] m m' ∧ IWGrow m m' ∧ iwTop m' = iwTop m + (l.toNat + 1) ∧
+    ∀ i, (m'.arr64 IW)[i]? = if i = iwTop m + l.toNat then some x
+      else if iwTop m ≤ i ∧ i < iwTop m + l.toNat then (m.arr64 IW)[o.toNat + (i - iwTop m)]?
+      else (m.arr64 IW)[i]? := by
   simp only [snocW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
@@ -329,21 +330,22 @@ theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List
   simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   subst hq hm1
+  have hqt : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
-  have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun e => h0 (by
-    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [e])
   have hl1 : (l + 1).toNat = l.toNat + 1 := by
+    have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun e => h0 (by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [e])
     rw [UInt64.toNat_add]; simp; have := l.toNat_lt; omega
   rw [hl1] at hroom
   have hql : (q + l).toNat = q.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   have hIW := allocMem_IW m (l + 1)
-  obtain ⟨hA, hS, hW, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by simp only [iwTop, hqq] at hsrc; omega)
+  obtain ⟨hA, hS, hW, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by omega)
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
-  have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | (rw [hW]) | (rw [hW]; simp [allocMem])))
-  have hfr' := hfr.trans (set64IW_frame m2 (q + l) x)
+  have hfr : MemFrame [IW] [200] m (m2.set64 IW (q + l) x) :=
+    ((allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | (rw [hW]) | (rw [hW]; simp [allocMem])))).trans
+      (set64IW_frame m2 (q + l) x)
   have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
       if i = q.toNat + l.toNat then some x
       else if q.toNat ≤ i ∧ i < q.toNat + l.toNat then (m.arr64 IW)[o.toNat + (i - q.toNat)]?
@@ -353,38 +355,44 @@ theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List
     by_cases h1 : i = q.toNat + l.toNat
     · rw [if_pos ⟨h1, by omega⟩, if_pos h1]
     · rw [if_neg (by omega), if_neg h1]
-  have hCTL : (m2.set64 IW (q + l) x).arr64 CTL = (allocMem m (l + 1)).arr64 CTL := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA CTL (by decide)]
   have htop : rdW ((m2.set64 IW (q + l) x).arr64 CTL) 200 = q + (l + 1) := by
-    rw [hCTL, allocMem_top m _ hc, hqq]
-  have hq' : q + (l + 1) = q + (l + 1) := rfl
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
     rw [UInt64.toNat_add, hl1]; simp; omega
-  refine ⟨rfl, ?_, ?_, hfr', hl1, ?_⟩
-  · simp only [decHL]
-    rw [hl1, hslice?_add]
-    have h1 : (hslice? (iwA (m2.set64 IW (q + l) x)) q.toNat l.toNat : Option (List (Idx k))) =
-        some xs := by
-      rw [← hxs]; simp only [decHL]
-      apply hslice?_congr
-      intro j hj
-      simp only [iwA, hget]
-      rw [if_neg (by omega), if_pos (by omega)]
-      congr 1; omega
-    have h2 : (hslice? (iwA (m2.set64 IW (q + l) x)) (q.toNat + l.toNat) 1 :
-        Option (List (Idx k))) = some [decI x] := by
-      rw [hslice?_succ]
-      have : (hd? (iwA (m2.set64 IW (q + l) x)) (q.toNat + l.toNat) : Option (Idx k)) =
-          some (decI x) := by simp [hd?, iwA, hget, hx]
-      rw [this]; simp [hslice?]
-    rw [h1, h2]; simp
-  · refine iwGrow_of_frame hfr' (N := l + 1) ?_ ?_ hsz ?_
-    · rw [htop, hqq]
-    · simp only [iwTop, hqq]; omega
-    · intro i hi
-      simp only [iwTop, hqq] at hi
-      rw [hget, if_neg (by omega), if_neg (by omega)]
-  · simp only [iwTop, htop, hsum]; omega
+  have htop' : iwTop (m2.set64 IW (q + l) x) = iwTop m + (l.toNat + 1) := by
+    simp only [iwTop, htop, hsum, hqt]
+  refine ⟨rfl, hl1, hqt, hfr, ?_, htop', by rw [← hqt]; exact hget⟩
+  refine iwGrow_of_frame hfr (N := l + 1) ?_ ?_ hsz ?_
+  · rw [htop, hqq]
+  · omega
+  · intro i hi
+    simp only [iwTop, hqq] at hi
+    rw [hget, if_neg (by omega), if_neg (by omega)]
+
+theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : List (Idx k)}
+    (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
+    r = [rdW (m.arr64 CTL) 200, l + 1] ∧
+    decHL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (xs ++ [decI x]) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
+    (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
+  obtain ⟨hr, hl1, hqt, hfr, hg, htop, hget⟩ := snocW_core h hsz hc hsrc
+  refine ⟨hr, ?_, hg, hfr, hl1, by omega⟩
+  simp only [decHL]
+  rw [hl1, hslice?_add, hqt]
+  have h1 : (hslice? (iwA m') (iwTop m) l.toNat : Option (List (Idx k))) = some xs := by
+    rw [← hxs]; simp only [decHL]
+    apply hslice?_congr
+    intro j hj
+    simp only [iwA, hget]
+    rw [if_neg (by omega), if_pos (by omega)]
+    congr 1; omega
+  have h2 : (hslice? (iwA m') (iwTop m + l.toNat) 1 : Option (List (Idx k))) = some [decI x] := by
+    rw [hslice?_succ]
+    have : (hd? (iwA m') (iwTop m + l.toNat) : Option (Idx k)) = some (decI x) := by simp [hd?, iwA, hget, hx]
+    rw [this]; simp [hslice?]
+  rw [h1, h2]; simp
 
 theorem contains_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32) :
     (ws.map (fun w => (decI w : NIdx))).contains (decI x) = ws.contains x := by
