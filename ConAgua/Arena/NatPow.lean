@@ -122,10 +122,12 @@ def powLoop : Stmt := lblk (oa, la, e, o, l, j, t) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t) {
+def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   o := CTL.u64[0];
-  if len(POOL.u64) <= o { abort };
-  POOL.u64[o] := 1;
+  t := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  if len(POOL⟨t⟩) <= o - pb { abort };
+  POOL⟨t⟩[o - pb] := 1;
   CTL.u64[0] := o + 1;
   l := 1;
   j := 25;

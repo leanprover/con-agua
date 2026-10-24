@@ -153,22 +153,24 @@ theorem dlW_ok : ∀ (f : Nat) (x k r : Word), dlW f x k = some r →
 
 /-- `name_rec_i`'s digit loop (named, for its spec). -/
 -- con-ron: none — `nameRecIL`'s own loop (`rfl`), a named block for the proof
-def digLoop : Stmt := lblk (n, i, k, o, j, x, q, s) {
+def digLoop : Stmt := lblk (n, i, k, o, j, x, q, s, pt, pb) {
   while o + 4 < j {
     j -= 1;
     q := mulhi(x, 14757395258967641293) >> 3;
-    POOL.u64[j] := 48 + (x - q * 10);
+    POOL⟨pt⟩[j - pb] := 48 + (x - q * 10);
     x := q
   }
 }
 
-theorem nameRecI_eq : L.Stubs.nameRecIL = lfn (n, i) locals (k, o, j, x, q, s) {
+theorem nameRecI_eq : L.Stubs.nameRecIL = lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   k := call dec_len(i);
   o := call pool_room(k + 4);
-  POOL.u64[o] := 114;
-  POOL.u64[o + 1] := 101;
-  POOL.u64[o + 2] := 99;
-  POOL.u64[o + 3] := 95;
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  POOL⟨pt⟩[o - pb] := 114;
+  POOL⟨pt⟩[o + 1 - pb] := 101;
+  POOL⟨pt⟩[o + 2 - pb] := 99;
+  POOL⟨pt⟩[o + 3 - pb] := 95;
   j := o + 4 + k;
   x := i;
   ⟪digLoop⟫;

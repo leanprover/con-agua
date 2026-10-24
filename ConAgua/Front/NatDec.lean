@@ -79,18 +79,20 @@ grind_pattern [lang_grind] chunkN_step => chunkN b i k j ch pw, b[(i + j).toNat]
 
 /-! ## `nat_mad(o, n, w, y)` -/
 
-def madLoop : Stmt := lblk (o, n, w, y, i, x, lo) {
+def madLoop : Stmt := lblk (o, n, w, y, i, x, lo, pt, pb) {
   while i < n {
-    x := POOL.u64[o + i];
+    x := POOL⦃o + i⦄;
     lo := x * w + y;
     y := mulhi(x, w) + u64(lo < y);
-    POOL.u64[o + i] := lo;
+    POOL⟨pt⟩[pb + i] := lo;
     i += 1
   }
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
-def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo) {
+def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo, pt, pb) {
+  pt := ⦃o⦄.tier;
+  pb := o - ⦃o⦄.base;
   ⟪madLoop⟫;
   return y
 }
@@ -141,15 +143,15 @@ grind_pattern [lang_grind] madW_arr8 => (madW m o n w y i).1.arr8 a
 
 /-! ## `nat_dec(c, d)` -/
 
-def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
+def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy, pt, pb) {
   while i < d {
     k := d - i;
     if 19 < k { k := 19 };
     (ch, pw) := call dec_chunk(i, k);
     cy := call nat_mad(top, n, pw, ch);
     if cy != 0 {
-      if len(POOL.u64) <= top + n { abort };
-      POOL.u64[top + n] := cy;
+      if len(POOL⟨pt⟩) <= pb + n { abort };
+      POOL⟨pt⟩[pb + n] := cy;
       n += 1
     };
     i += k
@@ -159,9 +161,11 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:103-112 ConLeche.Frontend.readNat
 @[l_impl ConLeche.Frontend.readNat64 ConLeche.Frontend.readNat]
-def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy) {
+def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy, pt, pb) {
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
+  if len(POOL⟨pt⟩) < pb { abort };
   i := c;
   ⟪decLoop⟫;
   CTL.u64[0] := top + n;

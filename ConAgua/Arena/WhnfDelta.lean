@@ -315,10 +315,12 @@ def unfoldDefinitionL : FunDecl :=
 one-limb `1` at the pool top, `nat_add_lit`. (`reduce_nat`'s `Nat.succ` arm, as its own function:
 a behaviour-preserving split, whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
-def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh) {
+def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh, pt, pb) {
   oo := CTL.u64[0];
-  if len(POOL.u64) <= oo { abort };
-  POOL.u64[oo] := 1;
+  pt := ⦃oo⦄.tier;
+  pb := ⦃oo⦄.base;
+  if len(POOL⟨pt⟩) <= oo - pb { abort };
+  POOL⟨pt⟩[oo - pb] := 1;
   CTL.u64[0] := oo + 1;
   xh := call nat_add_lit(o, cnt, oo, 1);
   return xh

@@ -200,10 +200,12 @@ end divmod
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
 -- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
-def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h) {
+def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
   o := CTL.u64[0];
-  if len(POOL.u64) <= o { abort };
-  POOL.u64[o] := 1;
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.base;
+  if len(POOL⟨pt⟩) <= o - pb { abort };
+  POOL⟨pt⟩[o - pb] := 1;
   CTL.u64[0] := o + 1;
   l := call nat_sub(oa, la, o, 1);
   h := call intern_lit(o + 1, l);
@@ -275,7 +277,7 @@ else `(1, h)` with `h` the interned power. An exponent of two or more limbs is a
 @[l_impl ConRon.Arena.natOpResult]
 def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
   if 1 < lb { return (0, 0) };
-  if lb == 1 { e := POOL.u64[ob] };
+  if lb == 1 { e := POOL⦃ob⦄ };
   if 16777216 < e { return (0, 0) };
   (o, l) := call nat_pow(oa, la, e);
   h := call intern_lit(o, l);

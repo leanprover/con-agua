@@ -98,19 +98,20 @@ def lsHPW (m : Mem) (us : Word) : Word :=
   else 0
 
 /-- **The `hasParam` bit of the level list in the pool slice at `o`, of length `k`**: the `or` of
-its elements' bits (`ls_push`'s loop; con-ron's `LsStore.derOfView`). -/
+its elements' bits (`ls_push`'s loop; con-ron's `LsStore.derOfView`). It reads the slice
+through tagged addresses (`prd`), as the loop does. -/
 def lsOrW (m : Mem) (o : Word) : Nat → Word
   | 0 => 0
-  | k + 1 => lsOrW m o k ||| lvlHPW m (rdW (m.arr64 POOL) (o + UInt64.ofNat k))
+  | k + 1 => lsOrW m o k ||| lvlHPW m (prd m (o + UInt64.ofNat k))
 
 theorem lsOrW_zero (m : Mem) (o : Word) : lsOrW m o 0 = 0 := rfl
 
 theorem lsOrW_succ (m : Mem) (o : Word) (k : Nat) :
-    lsOrW m o (k + 1) = lsOrW m o k ||| lvlHPW m (rdW (m.arr64 POOL) (o + UInt64.ofNat k)) := rfl
+    lsOrW m o (k + 1) = lsOrW m o k ||| lvlHPW m (prd m (o + UInt64.ofNat k)) := rfl
 
 /-- `lsOrW` from the front: the first element's bit, then the rest's. -/
 theorem lsOrW_cons (m : Mem) (o : Word) : ∀ n : Nat,
-    lsOrW m o (n + 1) = lvlHPW m (rdW (m.arr64 POOL) o) ||| lsOrW m (o + 1) n := by
+    lsOrW m o (n + 1) = lvlHPW m (prd m o) ||| lsOrW m (o + 1) n := by
   intro n
   induction n with
   | zero => simp [lsOrW]
@@ -289,7 +290,7 @@ def hpBlkL : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
 /-- `ls_push`'s loop: `x := x | lvlHP(u)` for each element `u` of the slice `(o, l)`, from `q`. -/
 def hpLoopLs : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
   while q < l {
-    u := POOL.u64[o + q];
+    u := POOL⦃o + q⦄;
     ⟪hpBlkL⟫;
     x := x | y;
     q += 1
@@ -358,7 +359,7 @@ theorem lpBlkF_spec (s₀ : St) :
 
 /-- One more element of the slice (`k' = q + 1`, as words: `q < l`). -/
 theorem lsOrW_step (m : Mem) (o q : Word) (k' : Nat) (hk : k' = q.toNat + 1) :
-    lsOrW m o k' = lsOrW m o q.toNat ||| lvlHPW m (rdW (m.arr64 POOL) (o + q)) := by
+    lsOrW m o k' = lsOrW m o q.toNat ||| lvlHPW m (prd m (o + q)) := by
   subst hk; simp [lsOrW_succ]
 
 theorem hpLoopLs_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)

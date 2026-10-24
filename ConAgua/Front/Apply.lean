@@ -177,21 +177,23 @@ variable (m m' : Mem) (top vs n j j' : Word)
 
 end putArms
 
-def putLoop : Stmt := lblk (vs, ve, top, n, j) {
+def putLoop : Stmt := lblk (vs, ve, top, n, j, pt, pb) {
   while j < n {
-    POOL.u64[top + j] := IN.u8[vs + j];
+    POOL⟨pt⟩[pb + j] := IN.u8[vs + j];
     j += 1
   }
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
-def strPut : FunDecl := lfn (vs, ve) locals (top, n, j) {
+def strPut : FunDecl := lfn (vs, ve) locals (top, n, j, pt, pb) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   n := ve - vs;
-  if len(POOL.u64) < top { abort };
-  if len(POOL.u64) - top < n { abort };
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < n { abort };
   ⟪putLoop⟫;
   CTL.u64[0] := top + n;
   return (top, n)

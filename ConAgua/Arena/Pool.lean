@@ -32,6 +32,10 @@ open L
 
 /-- The limb pool: word array 0. -/
 abbrev POOL : ArrId := 0
+/-- The tier-0 pool top while the scratch tier is open (`CTL[0]` then holds the tier-1 top;
+lane tierpool): saved by `scratch_reset` when it leaves tier 0, restored when it drops the
+scratch tier. -/
+abbrev PTOP0 : GVar := ⟨0⟩
 /-- The control words: word array 1; word 0 is the pool top. -/
 abbrev CTL : ArrId := 1
 

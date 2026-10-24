@@ -110,17 +110,17 @@ grind_pattern [natop_grind] pv_one => pv p o 1, p[o]
 
 /-! ## `nat_shl(oa, la, ob, lb)` -/
 
-def shlZero : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
+def shlZero : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c, pt, pb) {
   while i < w {
-    POOL.u64[top + i] := 0;
+    POOL⟨pt⟩[pb + i] := 0;
     i += 1
   }
 }
 
-def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
+def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c, pt, pb) {
   while i < la {
-    x := POOL.u64[oa + i];
-    POOL.u64[top + w + i] := (x << b) | c;
+    x := POOL⦃oa + i⦄;
+    POOL⟨pt⟩[pb + w + i] := (x << b) | c;
     c := (x >> 1) >> (63 - b);
     i += 1
   }
@@ -128,19 +128,21 @@ def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
 
 /-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
-def natShl : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, c) {
+def natShl : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, c, pt, pb) {
   top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
   if la != 0 {
     if 1 < lb { abort };
-    if lb == 1 { w := POOL.u64[ob] };
+    if lb == 1 { w := POOL⦃ob⦄ };
     b := w & 63;
     w := w >> 6;
-    if len(POOL.u64) - top <= la { abort };
-    if len(POOL.u64) - top - la - 1 < w { abort };
+    if len(POOL⟨pt⟩) - pb <= la { abort };
+    if len(POOL⟨pt⟩) - pb - la - 1 < w { abort };
     ⟪shlZero⟫;
     i := 0;
     ⟪shlLoop⟫;
-    POOL.u64[top + w + la] := c;
+    POOL⟨pt⟩[pb + w + la] := c;
     n := call nat_trim(top, w + la + 1)
   };
   CTL.u64[0] := top + n;

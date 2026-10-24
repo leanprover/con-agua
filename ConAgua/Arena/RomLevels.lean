@@ -138,18 +138,20 @@ theorem sputW_step (m m' : Mem) (top b k j j' : Word) (hj : j < k) (hj' : j' = j
 grind_pattern [arena_grind] sputW_end => sputW m top b k j
 grind_pattern [arena_grind] sputW_step => sputW m top b k j, sputW m' top b k j'
 
-def sputLoop : Stmt := lblk (b, k, top, j) {
+def sputLoop : Stmt := lblk (b, k, top, j, pt, pb) {
   while j < k {
-    POOL.u64[top + j] := RSTK.u64[b + j];
+    POOL⟨pt⟩[pb + j] := RSTK.u64[b + j];
     j += 1
   }
 }
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
-def stkPool : FunDecl := lfn (b, k) locals (top, j) {
+def stkPool : FunDecl := lfn (b, k) locals (top, j, pt, pb) {
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
-  if len(POOL.u64) - top < k { abort };
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < k { abort };
   ⟪sputLoop⟫;
   CTL.u64[0] := top + k;
   return top

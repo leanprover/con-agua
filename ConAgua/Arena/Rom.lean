@@ -280,21 +280,23 @@ def asciiLoop : Stmt := lblk (i, l, top, j) {
   }
 }
 
-def rputLoop : Stmt := lblk (i, l, top, j) {
+def rputLoop : Stmt := lblk (i, l, top, j, pt, pb) {
   while j < l {
-    POOL.u64[top + j] := rom.c8[i + j];
+    POOL⟨pt⟩[pb + j] := rom.c8[i + j];
     j += 1
   }
 }
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
-def romPut : FunDecl := lfn (i, l) locals (top, j) {
+def romPut : FunDecl := lfn (i, l) locals (top, j, pt, pb) {
   if len(rom.c8) < i + l || i + l < i { abort };
   ⟪asciiLoop rom⟫;
   j := 0;
   top := CTL.u64[0];
-  if len(POOL.u64) < top { abort };
-  if len(POOL.u64) - top < l { abort };
+  pt := ⦃top⦄.tier;
+  pb := top - ⦃top⦄.base;
+  if len(POOL⟨pt⟩) < pb { abort };
+  if len(POOL⟨pt⟩) - pb < l { abort };
   ⟪rputLoop rom⟫;
   CTL.u64[0] := top + l;
   return top

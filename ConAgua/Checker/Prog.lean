@@ -1667,6 +1667,8 @@ def checkerProg : Prog := [
   ("pl_find", L.Arena.memoFindG L.Arena.plSch),
   ("pl_put", L.Arena.memoPutG L.Arena.plSch),
   ("pls_arm", L.Arena.plsArm),
+  ("pool_alloc0", L.Arena.poolAlloc0),
+  ("pool_copy0", L.Arena.poolCopy0),
   ("pls_clear", L.Arena.memoClearG L.Arena.plsSch),
   ("pls_find", L.Arena.memoFindG L.Arena.plsSch),
   ("pls_put", L.Arena.memoPutG L.Arena.plsSch),
