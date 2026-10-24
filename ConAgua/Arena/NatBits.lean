@@ -257,7 +257,7 @@ theorem natLand_spec (hpa : p.lookup "nat_land" = some natLand) (n : Nat) (s₀ 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         andLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows, pcap]
+      finish (gen := 25) [BitInv, BitPost, Grows]
 
 include hpl hpt in
 theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : St)
@@ -282,7 +282,7 @@ theorem natLor_spec (hpo : p.lookup "nat_lor" = some natLor) (n : Nat) (s₀ : S
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         orLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows, pcap]
+      finish (gen := 25) [BitInv, BitPost, Grows]
 
 include hpl hpt in
 theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : St)
@@ -307,7 +307,7 @@ theorem natXor_spec (hpx : p.lookup "nat_xor" = some natXor) (n : Nat) (s₀ : S
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         xorLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n,
         natTrim_spec p hpt n] <;>
-      finish (gen := 25) [BitInv, BitPost, Grows, pcap]
+      finish (gen := 25) [BitInv, BitPost, Grows]
 
 end bitFn
 

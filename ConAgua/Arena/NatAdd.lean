@@ -256,7 +256,7 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         addLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
-      finish (gen := 20) [AddInv, Grows, pcap]
+      finish (gen := 20) [AddInv, Grows]
 
 end addFn
 

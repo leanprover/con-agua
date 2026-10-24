@@ -280,7 +280,7 @@ theorem natShr_spec (n : Nat) (sâ‚€ : St) (oa la ob lb : Word) (hok : PoolOK sâ‚
       Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
       UInt64.toNat_zero] at *)
     all_goals (try and_intros)
-    all_goals (try (set_option maxHeartbeats 200000 in grind (splits := 40) [arena_grind, lang_grind, natop_grind, pcap]))
+    all_goals (try (set_option maxHeartbeats 200000 in grind (splits := 40) [arena_grind, lang_grind, natop_grind]))
 
 end shrFn
 

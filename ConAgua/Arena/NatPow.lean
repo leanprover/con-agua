@@ -180,7 +180,7 @@ theorem powLoop_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowInv A 
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
         natMul_spec p hph hpt hpm n] <;>
-      finish [PowInv, PowPost, PoolOK, SliceOK, Grows, pcap]
+      finish [PowInv, PowPost, PoolOK, SliceOK, Grows]
 
 include hph hpt hpm in
 theorem powLoop_step_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowInv A m₀ s₀) :
@@ -215,7 +215,7 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         powLoop_step_spec p hph hpt hpm (pv (vpool s₀.mem) oa.toNat la.toNat) s₀.mem n] <;>
       -- depth, not search: the initial state is several `setLoc`s and two stores deep
-      finish (gen := 20) (splits := 20) [PowInv, PowPost, PoolOK, SliceOK, Grows, pcap]
+      finish (gen := 20) (splits := 20) [PowInv, PowPost, PoolOK, SliceOK, Grows]
 
 end powFn
 

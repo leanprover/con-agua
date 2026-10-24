@@ -138,7 +138,7 @@ stays inside this file, proofs outside it never unfold `vpool`/`prd`, and bound 
 def prd (m : Mem) (x : Word) : Word := (m.arr64 POOL)[x.toNat]?.getD 0
 
 /-- The pool's capacity: the words an address can reach. -/
-def pcap (m : Mem) : Nat := (m.arr64 POOL).size
+macro "pcap " m:term:max : term => `((L.Mem.arr64 $m POOL).size)
 
 /-- A value the kernel cannot unfold, with its equation. -/
 structure Sealed (α : Type) (a : α) where
@@ -195,7 +195,6 @@ grind_pattern [arena_grind] vpool_getD => (vpool m)[x.toNat]?.getD 0
 /-- Below the capacity, the virtual pool is the pool. -/
 theorem vpool_agree (m : Mem) (h : pcap m < 2 ^ 64) : Agree (vpool m) (m.arr64 POOL) (pcap m) := by
   intro j hj
-  simp only [pcap] at hj h
   rw [vpool_getNat? m j (by omega), Array.getElem?_eq_getElem hj]; rfl
 
 /-- An L store into the pool, in bounds, is a store into the virtual pool. -/
@@ -203,7 +202,6 @@ theorem vpool_set64 (m : Mem) (i v : Word) (h : i.toNat < pcap m) :
     vpool (m.set64 POOL i v) = (vpool m).set! i.toNat v := by
   apply Array.ext_getElem?
   intro j
-  simp only [pcap] at h
   rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   by_cases hj : j < 2 ^ 64
   · rw [vpool_getNat? _ j hj, vpool_getNat? m j hj, Mem.arr64_set64_same,
@@ -230,11 +228,10 @@ theorem vpool_congr {m m' : Mem} (h : m'.arr64 POOL = m.arr64 POOL) : vpool m' =
   simp only [vpool, prd, h]
 
 theorem pcap_congr {m m' : Mem} (h : m'.arr64 POOL = m.arr64 POOL) : pcap m' = pcap m := by
-  simp only [pcap, h]
+  rw [h]
 
 @[arena_grind =] theorem pcap_set64 (m : Mem) (a : ArrId) (i v : Word) :
     pcap (m.set64 a i v) = pcap m := by
-  simp only [pcap]
   by_cases h : a = POOL
   · subst h; rw [Mem.size_arr64_set64]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm h)]

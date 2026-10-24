@@ -188,7 +188,7 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         subLoop_step_spec p hpl hps (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
-      finish (gen := 20) [SubInv, SubPost, Grows, pcap]
+      finish (gen := 20) [SubInv, SubPost, Grows]
 
 end subFn
 

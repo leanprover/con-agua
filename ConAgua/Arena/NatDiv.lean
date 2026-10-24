@@ -751,7 +751,7 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
       UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals (try (set_option maxHeartbeats 400000 in
-      grind (splits := 40) [arena_grind, lang_grind, natcmp_grind, natop_grind, pcap]))
+      grind (splits := 40) [arena_grind, lang_grind, natcmp_grind, natop_grind]))
 
 end divFn
 

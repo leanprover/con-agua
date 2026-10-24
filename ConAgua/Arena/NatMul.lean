@@ -197,7 +197,7 @@ theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
+    all_goals grind (splits := 40) [arena_grind, lang_grind]
 
 include hph in
 theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
@@ -236,7 +236,7 @@ theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
+    all_goals grind (splits := 40) [arena_grind, lang_grind]
 
 include hph in
 theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
@@ -294,7 +294,7 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
+    all_goals grind (splits := 40) [arena_grind, lang_grind]
 
 end mulFn
 

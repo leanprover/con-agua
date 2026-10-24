@@ -233,7 +233,7 @@ theorem shlLoop_spec (n : Nat) (s₀ : St) (h : ShlInv Pg C s₀) :
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind, pcap]
+    all_goals grind (splits := 40) [arena_grind, lang_grind]
 
 theorem shlLoop_step_spec (n : Nat) (s₀ : St) (h : ShlInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) shlLoop ⦃fun r s' => ShlPost Pg C s₀ r s'; ⊤⦄ :=
@@ -275,7 +275,7 @@ theorem natShl_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     -- One `grind` per goal (no `and_intros`: 218 goals re-preprocess the same context).
-    all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind, pcap]
+    all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]
 
 end shlFn
 

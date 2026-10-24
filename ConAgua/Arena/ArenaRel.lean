@@ -444,7 +444,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩, ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩,
     ⟨colT_empty _ _ _ _, colT_empty _ _ _ _⟩⟩
-  · refine ⟨hw, by rw [hc]; omega, by rw [pcap, hp]; exact hpool, ?_⟩
+  · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
   · exact memosR_init sizes hctl
 
