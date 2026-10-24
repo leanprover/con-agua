@@ -28,6 +28,10 @@ lfn (b_dummy, j) locals (c) {
 * `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
   the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
   `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
+* `R⟨t⟩[i].f` reads field `f` of node `i` of tier `t` of the tiered store record `R : L.TRec`
+  (`R⟨t⟩[i]` a one-word column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count`
+  the node count of tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index;
+  `R⟨t⟩[i].f := e` writes a field (`L/TRec.lean`; the stores: `Arena/StoreFields.lean`).
 * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
   `len(D.c8)` is its length (a constant).
 * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
