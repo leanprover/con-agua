@@ -209,8 +209,7 @@ theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cv
   rcases h3 : nhW n m2 vis (r2.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h; · simp [bncK3] at h
   by_cases h30 : r3.headD 0 = 0
   · rw [bncK3_none m3 (r2.headD 0) r3 h30] at h; cases h
-  rw [bncK3_some m3 (r2.headD 0) r3 h30] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  simp only [bncK3_some m3 (r2.headD 0) r3 h30, Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   exact f2.trans (pos3_nhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ h3)
 

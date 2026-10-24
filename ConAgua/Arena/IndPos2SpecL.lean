@@ -112,8 +112,7 @@ theorem matesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
       | none => rw [hs] at h; simp [matesK2] at h
       | some pr =>
         obtain ⟨r2, m2⟩ := pr
-        rw [hs] at h
-        simp only [matesK2] at h
+        simp only [hs, matesK2] at h
         cases hr : matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) with
         | none => rw [hr] at h; simp [matesK3] at h
         | some pr => rw [hr, matesK3_some] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr (snocW_stage hs hS)
@@ -155,8 +154,7 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [if_neg h3]
     exact ⟨_, _, rfl, blk_k3 _ _ hfound h0 hex (by simpa using h3)⟩
   obtain ⟨o, l, ho, hsl⟩ := hblk
-  rw [ho, nfmK_some] at h
-  simp only [List.headD_cons, List.tail_cons] at h
+  simp only [ho, nfmK_some, List.headD_cons, List.tail_cons] at h
   rcases hmt : matesW (n + 1) m c o l 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h; · simp [matesK3] at h
   rw [matesK3_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

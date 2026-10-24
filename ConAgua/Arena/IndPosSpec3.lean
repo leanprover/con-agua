@@ -905,8 +905,7 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
   | keyMap ds holes =>
     obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩, ⟨o2, l2, ho2, hl2, hd2, hol2⟩⟩ := hfm
     have e1 : rdW (m.arr64 IW) f = 1 := UInt64.toNat_inj.mp (by rw [rdIW0 h0]; rfl)
-    rw [rxMapW_km n m f i e1] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    simp only [rxMapW_km n m f i e1, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     have r1 := rdIW (i := 1) (by simpa using ho) (by omega) (by decide)
     have r2 := rdIW (i := 2) (by simpa using hl) (by omega) (by decide)
@@ -930,8 +929,7 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
     rw [erK2_ok (h := hsb)] at h
     obtain ⟨a1, hr1, hS1, hg1⟩ := internSort_stage hS z hzH hso
     rcases hfv : fvinternW m1 i s with _ | ⟨v, m2⟩ <;> rw [hfv] at h; · simp [erK3] at h
-    rw [erK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    simp only [erK3_some, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     obtain ⟨a2, hr2, hS2, hg2⟩ := internFVar_stage hS1 i s (lt_of_notbig hsb) hfv
     refine ⟨some (decE v), a2, ?_, ⟨by simp, rfl⟩,
@@ -1001,8 +999,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     have hiw : m1.arr64 IW = m.arr64 IW := lowFr_iw (ceinternW_low hci)
     rw [hiw] at h
     rcases hst : mknF m1 [hd, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8)] with _ | ⟨rr, m2⟩ <;> rw [hst] at h; · simp [rtK2] at h
-    rw [rtK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    simp only [rtK2_some, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mknF_ok dn vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
       ⟨hS1, by simp only [decHL, iwA, hiw]; exact hpa⟩

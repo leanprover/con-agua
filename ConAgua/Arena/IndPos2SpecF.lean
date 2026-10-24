@@ -40,9 +40,7 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   · subst h0
     have : cv.levelParams = [] := by simpa [hslice?] using hs.symm
     rw [this]
-    simp only [cvLpsW, hr2] at h
-    rw [show (UInt64.ofNat 0 : Word) = 0 from rfl] at h
-    simp only [erToIwW] at h
+    simp only [cvLpsW, hr2, show (UInt64.ofNat 0 : Word) = 0 from rfl, erToIwW] at h
     obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
     rcases hal : allocW m 0 with _ | ⟨q0, m1⟩; · rw [hal] at h; simp at h
     obtain ⟨hS1, hg1, -, -⟩ := allocW_stage hal hS
@@ -249,9 +247,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hl : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
     have hns2 := hns
-    simp only [decHL] at hns2
-    rw [hl', hslice?_succ] at hns2
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hns2
+    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hns2
     obtain ⟨nn, hnn, ns', hns', rfl⟩ := hns2
     obtain ⟨hwH, hwd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.name) (by simpa [iwH, iwA] using hnn)
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
@@ -386,8 +382,7 @@ theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := nhGoW_ok dn fe vis ctx c k _ _ a₀ 0 _ _ 0 0 c.names [] _ hm hS hc hin
     hsl hn hnb (by simp [decHL, hslice?]) (by simp) (by have := hlen; simp [NestCtx.hiAt] at hhi; simp; omega)
   have he : ConRon.Arena.nestHoles fe c = ConRon.Arena.nestHoles.go fe c 0 c.names [] := rfl
-  rw [show (0 : Word).toNat = 0 from rfl] at hrun
-  rw [← he] at hrun
+  simp only [show (0 : Word).toNat = 0 from rfl, ← he] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hlc, hok, by rw [hst]; exact hS', hg, ?_⟩
   rw [hres]

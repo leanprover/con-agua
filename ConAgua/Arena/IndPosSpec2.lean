@@ -318,8 +318,7 @@ theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' :
   | error e => rw [h1] at h; contradiction
   | ok p =>
     obtain ⟨o, a1⟩ := p
-    rw [h1] at h
-    simp only [except_ok_bind] at h
+    simp only [h1, except_ok_bind] at h
     cases o with
     | none => exact absurd h (by simp [StateT.run, StateT.pure, pure, Except.pure])
     | some q =>
@@ -328,16 +327,14 @@ theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' :
       | error e => rw [h2] at h; contradiction
       | ok p2 =>
         obtain ⟨hd, a2⟩ := p2
-        rw [h2] at h
-        simp only [except_ok_bind] at h
+        simp only [h2, except_ok_bind] at h
         split at h
         · simp only [StateT.run_bind] at h
           cases h3 : (viewConst hd).run a2 with
           | error e => rw [h3] at h; contradiction
           | ok p3 =>
             obtain ⟨o3, a3⟩ := p3
-            rw [h3] at h
-            simp only [except_ok_bind] at h
+            simp only [h3, except_ok_bind] at h
             cases o3 with
             | none =>
               simp only [failDanglingE] at h

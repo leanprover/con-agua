@@ -137,8 +137,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
       obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 hci (decCI_indInfo_kind hci)
       obtain rfl : caps = caps' := by
         have := he.symm; simp only [IConstantInfo.indInfo.injEq] at this; exact this.2.symm
-      rw [decCaps] at hcaps
-      simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+      simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
       obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, hcapseq⟩ := hcaps
       obtain ⟨actors, -, heq⟩ := hcapseq
       have hallcaps : caps.all = vall := by
@@ -205,8 +204,7 @@ theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn p = some (.indInfo cv caps)) :
     p + 16 < a.size := by
   obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
-  rw [decCaps] at hcaps
-  simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
   obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, hcapseq⟩ := hcaps
   obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
   have := nat?_idx hl

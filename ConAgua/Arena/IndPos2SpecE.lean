@@ -323,9 +323,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     have hl : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
     have hds' := hds
-    simp only [decHL] at hds'
-    rw [hl', hslice?_succ] at hds'
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
+    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
     have hsz := hS.2.2.2.1
@@ -600,8 +598,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hr
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
-    rw [hew] at h
-    simp only [List.tail_cons, List.headD_cons] at h
+    simp only [hew, List.tail_cons, List.headD_cons] at h
     generalize hd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2) = d at h hty hvb
     generalize hbd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1) = b at h hb hvb
     rcases hnc : noConstWf k m no nl lo hi d with _ | ⟨r1, m1⟩ <;> rw [hnc] at h; · simp [pdoK1] at h
@@ -769,9 +766,7 @@ theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word
     have hl : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
     have hcs2 := hcs'
-    simp only [decHL] at hcs2
-    rw [hl', hslice?_succ] at hcs2
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hcs2
+    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hcs2
     obtain ⟨c, hc, cs', hcs'', rfl⟩ := hcs2
     obtain ⟨hcH, hcd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.name) (by simpa [iwH, iwA] using hc)
     have hsz := hS.2.2.2.1

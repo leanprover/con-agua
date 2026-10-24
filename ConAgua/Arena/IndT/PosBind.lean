@@ -38,8 +38,7 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h
   obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hw h6 hev
-  rw [hv] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [hv, List.tail_cons, List.headD_cons] at h
   -- the twin's view of the `Π`
   obtain ⟨-, hvbS⟩ := ConRon.Bridge.Inductives.viewBind_run hvb
   obtain ⟨dP, bP, rfl, hdP, hbP⟩ := ConRon.Bridge.denote_forallE_inv hC.check.state.wf
@@ -66,15 +65,13 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   rw [if_neg hd1] at h
   by_cases hk1 : kb + 1 = 0
   · rw [if_pos hk1] at h; cases h
-  rw [if_neg hk1] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [if_neg hk1, List.tail_cons, List.headD_cons] at h
   -- the variable, the body opened
   rcases hfv : fvinternW m1 dep d with _ | ⟨fv, m2⟩ <;> rw [hfv] at h; · simp [nbBindK2] at h
   rw [nbBindK2_some] at h
   by_cases hfvb : 4294967296 ≤ fv
   · rw [if_pos hfvb] at h; cases h
-  rw [if_neg hfvb] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [if_neg hfvb, List.tail_cons, List.headD_cons] at h
   have hfvH : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this
@@ -82,8 +79,7 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   have e2 : (internFVarE dep.toNat (decI d)).run a = .ok (decI fv, a2) := by simpa [internFVarE, decE_eq] using hrun2
   obtain ⟨p2, hfvP⟩ := ConRon.Bridge.Inductives.internFVarE_run hC.check.state hdP e2
   rcases hin : i1F m2 [CWF, b, fv, 0] with _ | ⟨rb, m3⟩ <;> rw [hin] at h; · simp [nbBindK3] at h
-  rw [nbBindK3_some] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [nbBindK3_some, List.tail_cons, List.headD_cons] at h
   obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := i1F_ok dn vis fe b fv 0 hb m2 m3 a2 rb hin hS2
   rw [CWF_eq] at hrun3
   have e3 : (instantiate1Fast coreWalkFuel (decI b) (decI fv) 0).run a2 = .ok (b2, a3) := by simpa using hrun3
@@ -116,8 +112,7 @@ theorem bindOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) : BindOKC p dn vis
   rcases hab : abF m4 [CWF, rp.tail.headD 0, dep, 0] with _ | ⟨ra, m5⟩ <;> rw [hab] at h; · simp [nbBindK5] at h
   rw [nbBindK5_some] at h
   obtain ⟨nb2, a5, hrun5, ⟨hS5, hg5, hnb2H, hnb2d⟩, hA5⟩ := abF_ok dn vis fe _ dep 0 hnbH m4 m5 a4 ra hab ⟨hS4, hA4⟩
-  rw [CWF_eq] at hrun5
-  rw [hnbd] at hrun5
+  simp only [CWF_eq, hnbd] at hrun5
   have e5 : (abstract1Fast coreWalkFuel x.2.1 dep.toNat 0).run a4 = .ok (nb2, a5) := by simpa using hrun5
   obtain ⟨r1, r2, r3, r4, -, r7⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a4) rfl e5
     (ConRon.Bridge.ExprOps.abstract1Fast_spec ConRon.Bridge.Core.fvarBSpec coreWalkFuel a4 x.2.1 dep.toNat 0

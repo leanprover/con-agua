@@ -22,8 +22,7 @@ theorem pos2_hslice_get {k : IdxKind} {a : Array Word} :
     l.length = n ∧ ∀ j, j < n → ∃ w, a[o + j]? = some w ∧ H w ∧ l[j]? = some (decI w)
   | o, 0, l, h => by simp [hslice?] at h; subst h; simp
   | o, n + 1, l, h => by
-    rw [hslice?_succ] at h
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+    simp only [hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
     obtain ⟨x, hx, xs, hxs, rfl⟩ := h
     obtain ⟨h1, h2⟩ := pos2_hslice_get hxs
     obtain ⟨w, hw, hwl, rfl⟩ := hd?_some hx

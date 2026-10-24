@@ -58,8 +58,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h
   obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hcur h6' hev
-  rw [hv] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [hv, List.tail_cons, List.headD_cons] at h
   have hbj : (base + j).toNat = base.toNat + j.toNat := pos2_word_add hov
   have hbj1 : (base + j + 1).toNat = base.toNat + j.toNat + 1 := by rw [pos2_word_succ hov1, hbj]
   obtain ⟨nF', hnF'⟩ : ∃ nF', nF.toNat = nF' + 1 := ⟨nF.toNat - 1, by
@@ -71,8 +70,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   simp only [ConLeche.Expr.WScoped] at hw
   -- the field's domain walked
   rcases hp : nbPosW (realCall p) n m vis ctx fu po pl (base + j) 0 d ns with _ | ⟨rp, m1⟩ <;> rw [hp] at h; · simp [nbFieldsK1] at h
-  rw [nbFieldsK1_some] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [nbFieldsK1_some, List.tail_cons, List.headD_cons] at h
   obtain ⟨x1, a1, hrun1, hC1, hg1, hk1, hnd1H, hnd1, hns1, hP1, hA1, c1⟩ := hPos m m1 a ctx fu po pl
     (base + j) 0 d ns c prog NS rp ctxP progP dP nsP hp hC hW hd hns hP hA hc hctx hprog hdP hnsP
     (by rw [hbj]; exact hw.1)
@@ -85,8 +83,7 @@ theorem fieldsOKC_step (n : Nat) (ih : NbOKC p dn vis fe env n) :
   rw [nbFieldsK2_some] at h
   by_cases hfvb : 4294967296 ≤ fv
   · rw [if_pos hfvb] at h; cases h
-  rw [if_neg hfvb] at h
-  simp only [List.tail_cons, List.headD_cons] at h
+  simp only [if_neg hfvb, List.tail_cons, List.headD_cons] at h
   have hfvH : H fv := by
     have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
     simp only [H]; simpa using this

@@ -652,8 +652,7 @@ theorem decKL_get {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : decKL m o
   induction l generalizing o ks with
   | zero => simp [decKL] at h; subst h; simp
   | succ l ih =>
-    rw [decKL_succ] at h
-    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+    simp only [decKL_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
     obtain ⟨w, hw, x, hx, xs, hxs, rfl⟩ := h
     obtain ⟨h1, h2⟩ := ih hxs
     refine ⟨by simp [h1], fun j hj => ?_⟩

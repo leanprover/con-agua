@@ -97,8 +97,7 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
         rw [hcw] at hh; simp [ahC] at hh
       | some pc =>
         obtain ⟨rc, m1⟩ := pc
-        simp only [List.tail_cons, List.headD_cons] at hh
-        rw [hcw, ahC_some] at hh
+        simp only [List.tail_cons, List.headD_cons, hcw, ahC_some] at hh
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
         obtain ⟨x, a', hrun', hS', hg, hout⟩ := canonW_ok n dn fe vis m m1 a no nl us nn w1 w2 names rc hcw hS
           hw1 hus hw2 hdec hno hnn
@@ -709,8 +708,7 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
   | zero => simp [ahWf, rpA1] at hn
   | succ j =>
     rcases hah : ahW j m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hn; rw [hah] at hn; simp [rpA1] at hn
-    simp only [ahWf] at hn
-    rw [hah] at hn
+    simp only [ahWf, hah] at hn
     obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok j dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus hb
       hdec hno hnn
     rw [show (decI h : EIdx) = decE h from rfl] at hrun1
@@ -910,8 +908,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
       | zero => simp [ahWf, rpH] at hb
       | succ i =>
         rcases hah : ahW i m no nl us b nn h with _ | ⟨rr, m1⟩; · simp only [ahWf] at hb; rw [hah] at hb; simp [rpH] at hb
-        simp only [ahWf] at hb
-        rw [hah, rpH_some] at hb
+        simp only [ahWf, hah, rpH_some] at hb
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         obtain ⟨xo, a1, hrun1, hS1, hg1, hout⟩ := ahW_ok i dn fe vis m m1 a no nl us b nn h N names rr hah hS hN hh hus
           hbN hdec hno hnn

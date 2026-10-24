@@ -71,8 +71,7 @@ theorem decCtx_some {m : Mem} {p : Nat} {ctx : NestCtx} (h : decCtx m p = some c
     iwN m (p + 4) = some ctx.nP ∧ decAt m (decNL m) (p + 5) = some ctx.nIdxs ∧
     decAt m (decHL m) (p + 7) = some ctx.params ∧ iwH m (p + 9) = some ctx.sort ∧
     iwH m (p + 10) = some ctx.lvls := by
-  rw [decCtx] at h
-  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [decCtx, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, rfl⟩ := h
   exact ⟨ha, hb, hc, hd, he, hf, hg⟩
 

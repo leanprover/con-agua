@@ -79,8 +79,7 @@ theorem p2rtW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     cases hcs1 : css'.mapM (dCtors a.store) with
     | none => rw [hc1, hcs1] at hcssP; simp at hcssP
     | some cssP' =>
-    rw [hc1, hcs1] at hcssP
-    simp only [Option.bind_some, Option.some.injEq] at hcssP
+    simp only [hc1, hcs1, Option.bind_some, Option.some.injEq] at hcssP
     subst hcssP
     obtain ⟨hcn, -, -, hpar', hlv, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
     have hhiP : c.hiAt 0 = ctxP.hiAt 0 := ConRon.Bridge.Inductives.hiAt_eq hctx 0
@@ -213,8 +212,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     cases hks1 : seeds'.mapM (fun k => (ConRon.Bridge.Inductives.dKey a.store k.1).map (·, k.2)) with
     | none => rw [hk1, hks1] at hseedsP; simp at hseedsP
     | some ksP' =>
-    rw [hk1, hks1] at hseedsP
-    simp only [Option.bind_some, Option.some.injEq] at hseedsP
+    simp only [hk1, hks1, Option.bind_some, Option.some.injEq] at hseedsP
     subst hseedsP
     simp only [Option.map_eq_some_iff] at hk1
     obtain ⟨keyP, hkey, rfl⟩ := hk1
@@ -248,8 +246,7 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     | zero => simp [nitWf, p2sdK2] at h
     | succ n' =>
     rcases hni : nitW (realCall p) n' m1 vis ctx (nhiW m ctx 0) key with _ | ⟨r2, m2⟩; · simp only [nitWf] at h; rw [hni] at h; simp [p2sdK2] at h
-    simp only [nitWf] at h
-    rw [hni, p2sdK2_some] at h
+    simp only [nitWf, hni, p2sdK2_some] at h
     have hW : WCtx dn vis fe m ctx 0 0 c [] := ⟨hU, by simp [HSl, HolesAt], by simpa using hhi⟩
     have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
     obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2, -, hA2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2

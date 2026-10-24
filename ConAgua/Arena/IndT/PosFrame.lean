@@ -82,8 +82,7 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
       simp only [dGrp, List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hgrpP
       rcases hx : ConRon.Bridge.Inductives.dGE a.store x with _ | y; · rw [hx] at hgrpP; simp at hgrpP
       rcases hxs : grp'.mapM (ConRon.Bridge.Inductives.dGE a.store) with _ | ys; · rw [hx, hxs] at hgrpP; simp at hgrpP
-      rw [hx, hxs] at hgrpP
-      simp only [Option.bind_some, Option.some.injEq] at hgrpP
+      simp only [hx, hxs, Option.bind_some, Option.some.injEq] at hgrpP
       subst hgrpP
       simp only [ConRon.Bridge.Inductives.dGE, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hx
       obtain ⟨cP, hcP, tyP, htyP, rfl⟩ := hx

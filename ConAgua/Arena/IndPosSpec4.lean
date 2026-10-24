@@ -152,8 +152,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   obtain ⟨a4, hr4, hS4, hg4⟩ := internConst_stage hS3 _ _ hcnH hlvH hci
   have hiw4 : m4.arr64 IW = m3.arr64 IW := lowFr_iw (ceinternW_low hci)
   rcases hst : mknF m4 [hd, q, l3] with _ | ⟨rr, m5⟩ <;> rw [hst] at hk; · simp [frK5] at hk
-  rw [frK5_some] at hk
-  simp only [Option.some.injEq, Prod.mk.injEq] at hk
+  simp only [frK5_some, Option.some.injEq, Prod.mk.injEq] at hk
   obtain ⟨rfl, rfl, rfl⟩ := hk
   obtain ⟨x, a5, hr5, hS5, hg5, hx1, hx2⟩ := mknF_ok dn vis fe hd q l3 (lt_of_notbig hdb) ys m4 m5 a4 rr hst
     ⟨hS4, by simp only [decHL, iwA, hiw4]; exact hdec3⟩
@@ -231,8 +230,7 @@ theorem dsOK_step (n : Nat) (hDg : DsGoOK dn fe vis n) : DsOK dn fe vis (n + 1) 
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : q1.toNat = iwTop m := by simp only [iwTop, hqd]
   rcases hgo : rxDsGoW n m1 f o l q1 0 with _ | m2 <;> rw [hgo] at h; · simp [dsB] at h
-  rw [dsB_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  simp only [dsB_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl, rfl⟩ := h
   obtain ⟨ys, a', hrun, hdec, hS', hg', ht', M', G', hR', hk', hG'⟩ := hDg m m1 m2 a f o l q1 0 fm xs [] M G g hgo hS1
     hg1 (by omega) (by omega) hfm hxs hsl (by simp) (by simp [decHL, hslice?]) (hR.frame (allocW_fr hal))
