@@ -423,6 +423,23 @@ def init_bench():
         return None
 
 
+def layout_leaks():
+    """`scripts/layout_leaks.py`'s summary line (raw store-layout arithmetic outside the store library), or None."""
+    try:
+        r = subprocess.run([sys.executable, str(root / "scripts" / "layout_leaks.py")], capture_output=True, text=True, timeout=300)
+        m = re.search(r"lines (\d+) in (\d+) files", r.stdout)
+        return (int(m.group(1)), int(m.group(2)), r.stdout.strip().split(" | ")[0]) if m else None
+    except Exception:
+        return None
+
+
+ll = layout_leaks()
+if ll:
+    w("## Layout encapsulation\n")
+    w(f"Lines outside the store library that still compute the interleaved record layout themselves (`scripts/layout_leaks.py`, "
+      f"lane `tieracc`; goal 0, then the switch to tiered arrays is library-only): **{ll[0]} lines in {ll[1]} files** "
+      f"(started at 2447 in 132). By kind: {ll[2]}.\n")
+
 ib = init_bench()
 if perf or ib:
     w("## Performance\n")
