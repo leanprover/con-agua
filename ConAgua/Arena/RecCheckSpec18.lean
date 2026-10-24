@@ -52,19 +52,6 @@ def rteGoW : Nat → Mem → Word → Word → Word → Option (List Word × Mem
     if rl = 0 then some ([0], m)
     else rteK1 (rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1))
 
-def rteK3 (b rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([b, rl], m)
-
-def rteK2 (n : Nat) (ro rl : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (b, m) => rteK3 b rl (rteGoW n m b ro rl)
-
-/-- **The model of `rules_to_erec`** (exec fuel). -/
-def rteW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, ro, rl => if 4294967296 ≤ rl then none else rteK2 n ro rl (erAllocW m (rl * 11))
-
 section arms
 variable (n : Nat) (m : Mem) (b ro rl : Word) (r : List Word)
 theorem rcW_eq (old : Word) : rcpW m b old = some ([0], cpMem m b old) := rfl
@@ -72,13 +59,8 @@ theorem rteGoW_nil (h : rl = 0) : rteGoW (n + 1) m b ro rl = some ([0], m) := by
 theorem rteGoW_cons (h : ¬ rl = 0) : rteGoW (n + 1) m b ro rl =
     rteK1 (rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1)) := by simp [rteGoW, h]
 theorem rteK1_some : rteK1 (some (r, m)) = some ([0], m) := rfl
-theorem rteW_big (h : 4294967296 ≤ rl) : rteW (n + 1) m ro rl = none := by simp [rteW, h]
-theorem rteW_ok' (h : ¬ 4294967296 ≤ rl) : rteW (n + 1) m ro rl = rteK2 n ro rl (erAllocW m (rl * 11)) := by
-  simp [rteW, h]
-theorem rteK2_some : rteK2 n ro rl (some (b, m)) = rteK3 b rl (rteGoW n m b ro rl) := rfl
-theorem rteK3_some : rteK3 b rl (some (r, m)) = some ([b, rl], m) := rfl
 end arms
-attribute [ind_grind] rcW_eq rteGoW_nil rteGoW_cons rteK1_some rteW_big rteW_ok' rteK2_some rteK3_some
+attribute [ind_grind] rcW_eq rteGoW_nil rteGoW_cons rteK1_some
 
 /-- The lookups of `cons_block_recs_tf`. -/
 structure CbrLook (p : Prog) : Prop where
@@ -121,18 +103,10 @@ theorem rteGo_spec (p : Prog) (L : CbrLook p) (n : Nat) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, rc_spec p L n, ih] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq]
 
-theorem rte_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (ro rl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rules_to_erec" [ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ rteW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
-    rw [invoke_eq _ L.rte]
-    simp only [callFn, rulesToErec]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, erecAlloc_specW p L.tsr.ea n,
-        rteGo_spec p L n] <;>
-      finish (gen := 20)
+l_model rte_spec (p : Prog) (hL : CbrLook p)
+  fns [hL.rte ↦ rteW]
+  specs [erecAlloc_specW p hL.tsr.ea n, rteGo_spec p hL n]
+  grind [arena_grind] simp []
 
 /-! ## `rules_to_erec`: the copied run decodes as the rules -/
 
